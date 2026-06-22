@@ -144,7 +144,6 @@ class FV(object):
         overlap,
         unknowns,
         auxiliary_variables,
-        solvers_before_in_coupling: list=[],
         fuse_compute_kernels=False,
         baseline_action_set_descend_invocation_order=0,
     ):
@@ -173,23 +172,11 @@ class FV(object):
            unknowns and auxiliary_variables are merged into one big vector if we
            work with AoS. But the solver has to be able to distinguish them, as
            only the unknowns are subject to a hyperbolic formulation.
-
-        solvers_before_in_coupling: list[exahype2.solvers]
-            List of solvers that come before this solver in a coupled simulation.
         """
         self._name = name
 
         self._patch_size = patch_size
         self._overlap = overlap
-
-        self._solvers_before_in_coupling = solvers_before_in_coupling
-
-        """!
-        Adapted so that this solver class has an attribute of type exahype2.solver,
-        which is supposed to be the last solver that is solving. Therefore, after it, all solvers
-        reset themselves. This attribute should thus be the same for all instances of this class.
-        """
-        self._last_solver = None  # TODO: This can be done better. With Python we can easily index the last solver in the array above
 
         self._dimensions = 2
         self._namespace = ""
@@ -1019,11 +1006,6 @@ and additional AMR levels is configured by the executable at runtime.
         d["SOLVER_CONSTANTS"] = self._solver_constants
         d["SOLVER_INCLUDES"] = self.user_solver_includes
 
-        d["SOLVERS_BEFORE_IN_COUPLING"] = [(solver.get_name_of_global_instance(), solver.name) for solver in self._solvers_before_in_coupling]
-        if self._last_solver is None:
-            self._last_solver = self
-        d["LAST_SOLVER"] = (self._last_solver.get_name_of_global_instance(), self._last_solver.name)
-
         d["INITIAL_CONDITIONS_IMPLEMENTATION"] = self._initial_conditions_implementation
         d["BOUNDARY_CONDITIONS_IMPLEMENTATION"] = self._boundary_conditions_implementation
         d["REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
@@ -1180,14 +1162,6 @@ and additional AMR levels is configured by the executable at runtime.
     @property
     def patch_size(self):
         return self._patch_size
-
-    @property
-    def last_solver(self):
-        return self._last_solver
-
-    @last_solver.setter
-    def last_solver(self, solver):
-        self._last_solver = solver
 
     @property
     def auxiliary_variables(self):

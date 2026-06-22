@@ -17,7 +17,6 @@ class GlobalAdaptiveTimeStep(SingleSweep):
         time_step_relaxation,
         reconstruction=None,
         overlap=2,
-        solvers_before_in_coupling=[],
         fuse_compute_kernels=False,
     ):
         super(GlobalAdaptiveTimeStep, self).__init__(
@@ -27,7 +26,6 @@ class GlobalAdaptiveTimeStep(SingleSweep):
             unknowns=unknowns,
             auxiliary_variables=auxiliary_variables,
             fuse_compute_kernels=fuse_compute_kernels,
-            solvers_before_in_coupling=solvers_before_in_coupling,
         )
         if self._fuse_compute_kernels:
             raise NotImplementedError(

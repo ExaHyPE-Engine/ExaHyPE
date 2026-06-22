@@ -12,7 +12,6 @@ from .ErrorMeasurement import ErrorMeasurement
 
 _LAZY_MODULES = {
     "fv": "exahype2.solvers.fv",
-    "fd": "exahype2.solvers.fd",
     "rkdg": "exahype2.solvers.rkdg",
     "aderdg": "exahype2.solvers.aderdg",
     "limiting": "exahype2.solvers.limiting",

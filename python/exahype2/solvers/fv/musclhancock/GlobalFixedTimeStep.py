@@ -17,7 +17,6 @@ class GlobalFixedTimeStep(SingleSweep):
         normalised_time_step_size,
         reconstruction=None,
         overlap=2,
-        solvers_before_in_coupling=[],
         fuse_compute_kernels=False,
     ):
         super(GlobalFixedTimeStep, self).__init__(
@@ -27,7 +26,6 @@ class GlobalFixedTimeStep(SingleSweep):
             unknowns=unknowns,
             auxiliary_variables=auxiliary_variables,
             fuse_compute_kernels=fuse_compute_kernels,
-            solvers_before_in_coupling=solvers_before_in_coupling,
         )
         if self._fuse_compute_kernels:
             raise NotImplementedError(

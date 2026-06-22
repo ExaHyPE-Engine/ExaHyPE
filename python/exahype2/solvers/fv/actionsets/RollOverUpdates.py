@@ -85,11 +85,7 @@ class RollOverUpdates(AbstractFVActionSet):
         AbstractFVActionSet.__init__(self, solver)
         cell_guard += (
             " and "
-            + "("
-            + f"repositories::{solver.get_name_of_global_instance()}.getSolverState() == Abstract{solver.name}::SolverState::IsSolving"
-            + " or "
-            + f"repositories::{solver.get_name_of_global_instance()}.getSolverState() == Abstract{solver.name}::SolverState::IsSolvingAfterGridInitialisation"
-            + ")"
+            + f"repositories::{solver.get_name_of_global_instance()}.getSolverState() == Abstract{solver.name}::SolverState::TimeStep"
         )
         self.d = {}
         self.d["FACE_GUARD"] = face_guard

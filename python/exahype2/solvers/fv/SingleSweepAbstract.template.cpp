@@ -113,82 +113,14 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridInitialisationStep() {
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridInitialisationStep() {}
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
-  switch(_solverState) {
-  case SolverState::Suspended:
-    // Checks if _solverState is in the Suspended state and return.
-    // Prevents nullification of eigenvalues if the solver is suspended.
-{% if SOLVERS_BEFORE_IN_COUPLING | length == 0 -%}
-    // This solver can solve in the very first grid sweep of the TimeStep observer
-    // as no solvers come before it in the coupling.
-    // In this case, this just means that the eigenvalue is not set to 0
-    // as the solver was suspended before or is already done with solving.
-    _solverState = SolverState::IsSolving;
-{% else -%}
-    _solverState = SolverState::StillNeedsToSolve;
-{%- endif %}
+  if (_solverState == SolverState::Suspended) {
+    // Resume solving without resetting the per-time-step accumulators below, so
+    // that a suspended solver does not nullify its eigenvalue / time step sizes.
+    _solverState = SolverState::TimeStep;
     return;
-  case SolverState::GridInitialisation:
-{% if SOLVERS_BEFORE_IN_COUPLING | length == 0 -%}
-    // This solver can solve in the very first grid sweep of the TimeStep observer
-    // as no solvers come before it in the coupling.
-    _solverState = SolverState::IsSolvingAfterGridInitialisation;
-    break;
-{% else -%}
-    _solverState = SolverState::StillNeedsToSolveAfterGridInitialisation;
-    return;
-{%- endif %}
-  case SolverState::StillNeedsToSolveAfterGridInitialisation:
-    {
-      bool maySolve = true;
-{% for item in SOLVERS_BEFORE_IN_COUPLING -%}
-      maySolve &= repositories::{{item[0]}}.getSolverState() == Abstract{{item[1]}}::SolverState::HasSolved;
-{%- endfor %}
-      if (not maySolve) {
-        // Do not change state
-        _solverState = SolverState::StillNeedsToSolveAfterGridInitialisation;
-        return;
-      }
-    }
-    _solverState = SolverState::IsSolvingAfterGridInitialisation;
-    break;
-  case SolverState::StillNeedsToSolve:
-    {
-      bool maySolve = true;
-{% for item in SOLVERS_BEFORE_IN_COUPLING -%}
-      maySolve &= repositories::{{item[0]}}.getSolverState() == Abstract{{item[1]}}::SolverState::HasSolved;
-{%- endfor %}
-      if (not maySolve) {
-        // Do not change state
-        _solverState = SolverState::StillNeedsToSolve;
-        return;
-      }
-    }
-    _solverState = SolverState::IsSolving;
-    break;
-  case SolverState::IsSolvingAfterGridInitialisation:
-  case SolverState::IsSolving:
-    _solverState = SolverState::HasSolved;
-    return;
-  case SolverState::HasSolved:
-    // Nothing to do anymore
-    _solverState = SolverState::HasSolved;
-    return;
-  default:
-    // All other solver states such as plotting should lead to this
-    {
-      bool maySolve = true;
-{% for item in SOLVERS_BEFORE_IN_COUPLING -%}
-      maySolve &= repositories::{{item[0]}}.getSolverState() == Abstract{{item[1]}}::SolverState::HasSolved;
-{%- endfor %}
-      if (not maySolve) {
-        // Wait until allowed to solve
-        _solverState = SolverState::StillNeedsToSolve;
-        return;
-      }
-    }
-    _solverState = SolverState::IsSolving;
-    break;
   }
+
+  _solverState = SolverState::TimeStep;
 
   {{START_TIME_STEP_IMPLEMENTATION}}
 
@@ -297,25 +229,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
     _minVolumeH      = _minVolumeHThisTimeStep;
     _maxVolumeH      = _maxVolumeHThisTimeStep;
   }
-
-  // Reset solvers if last one has finished solving
-  if
-    (
-      repositories::{{LAST_SOLVER[0]}}.getSolverState() == Abstract{{LAST_SOLVER[1]}}::SolverState::IsSolving
-      or
-      repositories::{{LAST_SOLVER[0]}}.getSolverState() == Abstract{{LAST_SOLVER[1]}}::SolverState::IsSolvingAfterGridInitialisation
-    ) {
-    _solverState = SolverState::StillNeedsToSolve;
-  }
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep() {
-  if ( _solverState== SolverState::GridInitialisation) {
-    _solverState = SolverState::PlottingAfterGridInitialisation;
-  } else {
-    assertion(mayPlot() or tarch::hasNonCriticalAssertionBeenViolated());
-    _solverState = SolverState::Plotting;
-  }
+  assertion(mayPlot() or tarch::hasNonCriticalAssertionBeenViolated());
+  _solverState = SolverState::Plotting;
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishPlottingStep() {}
@@ -326,20 +244,10 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
       return "GridConstruction";
     case SolverState::GridInitialisation:
       return "GridInitialisation";
-    case SolverState::StillNeedsToSolveAfterGridInitialisation:
-      return "{{SOLVER_NAME}}StillNeedsToSolveAfterGridInitialisation";
-    case SolverState::StillNeedsToSolve:
-      return "{{SOLVER_NAME}}StillNeedsToSolve";
-    case SolverState::IsSolvingAfterGridInitialisation:
-      return "{{SOLVER_NAME}}IsSolvingAfterGridInitialisation";
-    case SolverState::IsSolving:
-      return "{{SOLVER_NAME}}IsSolving";
-    case SolverState::HasSolved:
-      return "{{SOLVER_NAME}}HasSolved";
+    case SolverState::TimeStep:
+      return "TimeStep";
     case SolverState::Plotting:
       return "Plotting";
-    case SolverState::PlottingAfterGridInitialisation:
-      return "PlottingAfterGridInitialisation";
     case SolverState::Suspended:
       return "Suspended";
   }
@@ -350,20 +258,17 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
   return
     _solverState == SolverState::GridInitialisation
     or
-    // After the last solver, all solvers revert back to StillNeedsToSolve so we may plot then
-    _solverState == SolverState::StillNeedsToSolve or _solverState == SolverState::StillNeedsToSolveAfterGridInitialisation;
+    // The solver rests in TimeStep between time steps, so we may plot then.
+    isLastGridSweepOfTimeStep();
 }
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() const {
-  return _solverState == SolverState::IsSolving or _solverState == SolverState::IsSolvingAfterGridInitialisation;
+  return _solverState == SolverState::TimeStep;
 }
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() const {
-  // Last GridSweepOfTimeStep for this solver is during it's solving run
-  return
-    (_solverState != SolverState::Suspended)
-    and
-    (_solverState == SolverState::IsSolving or _solverState == SolverState::IsSolvingAfterGridInitialisation);
+  // The single-sweep solver does all its work in the TimeStep state.
+  return _solverState == SolverState::TimeStep;
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {
