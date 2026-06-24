@@ -12,6 +12,7 @@ from SBH import FD4SolverWithoutLimiter
 #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_inputs]
 from toolbox.loadbalancing.api.input.RegularGridGenerator import RegularGridGenerator
 import toolbox.loadbalancing.api.strategies.SplitTrees as SplitTrees
+from toolbox.loadbalancing.api.output.Hardcoded import create_constructor_initialisation_string
 #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_inputs]
 
 
@@ -203,22 +204,14 @@ if __name__ == "__main__":
         ]
         print("  destination_ranks  =", destination_ranks)
         
-        # @todo Dmitry: I don't like the hardcoded_mode. Can we use the Hardcoded.py routine create_constructor_initialisation_string() instead and force it to return the 
-        #               right string
-        
-        hardcoded_mode = "peano4::SplitInstruction::Mode::AggressiveTopDown"
-        hardcoded_config = (
-            "{"
-            f"{{{', '.join(map(str, grid_sweeps))}}}, "
-            f"{{{', '.join(map(str, splitting_trees))}}}, "
-            f"{{{', '.join(map(str, number_of_cells))}}}, "
-            f"{{{', '.join(map(str, destination_ranks))}}}, "
-            f"{hardcoded_mode}"
-            "}"
+        hardcoded_config, hardcoded_mode = create_constructor_initialisation_string(
+            tree,
+            destination_ranks,
         )
         
         print( "Arguments to hardcoded strategy: ")
         print( hardcoded_config )
+        print( "  hardcoded_mode  =", hardcoded_mode )
         
         project.set_load_balancing(
             "toolbox::loadbalancing::strategies::Hardcoded",
@@ -246,27 +239,21 @@ if __name__ == "__main__":
         print("  number_of_cells =", number_of_cells)
         print("  subtrees       =", subtrees)        
 
-# @todo Dmitry: INsert that call here that does the bottom-up analysis. Afterwards ping me please.
         destination_ranks = [
             tree_number % args.ranks for tree_number in subtrees
         ]
         print("  destination_ranks  =", destination_ranks)
         
-        hardcoded_mode = "peano4::SplitInstruction::Mode::AggressiveTopDown"
-        hardcoded_config = (
-            "{"
-            f"{{{', '.join(map(str, grid_sweeps))}}}, "
-            f"{{{', '.join(map(str, splitting_trees))}}}, "
-            f"{{{', '.join(map(str, number_of_cells))}}}, "
-            f"{{{', '.join(map(str, destination_ranks))}}}, "
-            f"{hardcoded_mode}"
-            "}"
+        hardcoded_config, hardcoded_mode = create_constructor_initialisation_string(
+            tree,
+            destination_ranks,
         )
         
         project.set_load_balancing(
             "toolbox::loadbalancing::strategies::Hardcoded",
             hardcoded_config
         )
+        print("  hardcoded_mode  =", hardcoded_mode)
         #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_regular_bottom_up]
         pass
     else:
