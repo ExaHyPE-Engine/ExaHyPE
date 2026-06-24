@@ -84,11 +84,7 @@ class UpdatePatch(AbstractFVActionSet):
         self.guard = (
             "not marker.willBeRefined() and not marker.hasBeenRefined()"
             + " and "
-            + "("
-            + f"repositories::{solver.get_name_of_global_instance()}.getSolverState() == Abstract{solver.name}::SolverState::IsSolving"
-            + " or "
-            + f"repositories::{solver.get_name_of_global_instance()}.getSolverState() == Abstract{solver.name}::SolverState::IsSolvingAfterGridInitialisation"
-            + ")"
+            + f"repositories::{solver.get_name_of_global_instance()}.getSolverState() == Abstract{solver.name}::SolverState::TimeStep"
         )
         self.old_accessor = "fineGridCell" + solver.previous_unknown_identifier()
         self.new_accessor = "fineGridCell" + solver.current_unknown_identifier()

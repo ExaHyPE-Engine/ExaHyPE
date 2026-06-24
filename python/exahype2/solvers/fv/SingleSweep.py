@@ -34,7 +34,6 @@ class SingleSweep(FV):
         unknowns,
         auxiliary_variables,
         fuse_compute_kernels=False,
-        solvers_before_in_coupling: list=[],
     ):
         super(SingleSweep, self).__init__(
             name=name,
@@ -43,7 +42,6 @@ class SingleSweep(FV):
             unknowns=unknowns,
             auxiliary_variables=auxiliary_variables,
             fuse_compute_kernels=fuse_compute_kernels,
-            solvers_before_in_coupling=solvers_before_in_coupling,
         )
 
         self._solver_template_file_class_name = "SingleSweep"

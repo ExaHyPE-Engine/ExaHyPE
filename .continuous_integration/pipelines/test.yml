@@ -68,25 +68,6 @@ FV Tracers:
     - job: Build
   retry: 0
 
-FV Coupling:
-  stage: Test
-  parallel:
-    matrix:
-    - dimensions: [2, 3]
-      build_type: [Release, Debug]
-  script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fv-coupling && PYTHONPATH=$CI_PROJECT_DIR/python python3 fv-coupling.py --dimensions $dimensions --build-mode $build_type"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fv-coupling && $PARALLEL_LAUNCH ./ExaHyPE -ns 0 -lmin ${MIN_GRID_LEVELS} -lmax ${MIN_GRID_LEVELS}"
-  allow_failure: false
-  extends:
-    - .Tags
-    - .Variables
-    - .RunOnlyOnMain
-    - .BeforeScriptSanitiser
-  needs:
-    - job: Build
-  retry: 0
-
 FV Static AMR:
   stage: Test
   parallel:
@@ -116,44 +97,6 @@ FV Dynamic AMR:
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fv-dynamic-amr && PYTHONPATH=$CI_PROJECT_DIR/python python3 $test.py --dimensions $dimensions --build-mode $build_type"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fv-dynamic-amr && $PARALLEL_LAUNCH ./ExaHyPE -ns 0 -lmin ${MIN_GRID_LEVELS} -lmax ${MAX_GRID_LEVELS}"
-  allow_failure: false
-  extends:
-    - .Tags
-    - .Variables
-    - .RunOnlyOnMain
-    - .BeforeScriptSanitiser
-  needs:
-    - job: Build
-  retry: 0
-
-FD:
-  stage: Test
-  parallel:
-    matrix:
-    - dimensions: [2, 3]
-      build_type: [Release, Debug]
-  script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fd && PYTHONPATH=$CI_PROJECT_DIR/python python3 fd.py --dimensions $dimensions --build-mode $build_type"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fd && $PARALLEL_LAUNCH ./ExaHyPE -ns 0 -lmin ${MIN_GRID_LEVELS} -lmax ${MIN_GRID_LEVELS}"
-  allow_failure: false
-  extends:
-    - .Tags
-    - .Variables
-    - .RunOnDev
-    - .BeforeScriptSanitiser
-  needs:
-    - job: Build
-  retry: 0
-
-FV-FD Coupling:
-  stage: Test
-  parallel:
-    matrix:
-    - dimensions: [2, 3]
-      build_type: [Release, Debug]
-  script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fv-fd-coupling && PYTHONPATH=$CI_PROJECT_DIR/python python3 fv-fd-coupling.py --dimensions $dimensions --build-mode $build_type"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fv-fd-coupling && $PARALLEL_LAUNCH ./ExaHyPE -ns 0 -lmin ${MIN_GRID_LEVELS} -lmax ${MIN_GRID_LEVELS}"
   allow_failure: false
   extends:
     - .Tags

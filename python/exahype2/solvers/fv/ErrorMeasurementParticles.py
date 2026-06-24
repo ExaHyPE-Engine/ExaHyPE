@@ -35,7 +35,7 @@ class ErrorMeasurementParticles(BaseErrorMeasurementParticles):
             clear_database_after_flush=clear_database_after_flush,
         )
         solver._finish_time_step_implementation += create_finish_time_step_implementation_for_error_measurement(
-            guard="_solverState == SolverState::GridInitialisation or (_solverState == SolverState::IsSolving and isLastGridSweepOfTimeStep())"
+            guard="_solverState == SolverState::GridInitialisation or isLastGridSweepOfTimeStep()"
         )
 
         solver._action_set_postprocess_solution = ParticleWisePostprocessSolution(

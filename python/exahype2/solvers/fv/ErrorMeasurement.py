@@ -32,7 +32,7 @@ class ErrorMeasurement(exahype2.solvers.ErrorMeasurement):
         )
 
         solver._finish_time_step_implementation += create_finish_time_step_implementation_for_error_measurement(
-            guard="_solverState == SolverState::GridInitialisation or (_solverState == SolverState::IsSolving and isLastGridSweepOfTimeStep())"
+            guard="_solverState == SolverState::GridInitialisation or isLastGridSweepOfTimeStep()"
         )
 
         solver._action_set_postprocess_solution = VolumeWisePostprocessSolution(solver)
