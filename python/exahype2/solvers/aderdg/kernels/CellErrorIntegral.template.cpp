@@ -6,7 +6,7 @@
 
 #include "exahype2/dg/DGUtils.h"
 
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 
 void {{FULL_QUALIFIED_NAMESPACE}}::cellErrorIntegral(
   std::function<void(

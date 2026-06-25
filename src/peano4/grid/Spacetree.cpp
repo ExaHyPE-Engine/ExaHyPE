@@ -9,7 +9,7 @@
 #include "StackTopology.h"
 #include "VertexType.h"
 #include "SpacetreeHelper.h"
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 #include "tarch/mpi/Rank.h"
 
 namespace {
@@ -202,8 +202,8 @@ void peano4::grid::Spacetree::traverse(GridTraversalObserver& observer) {
       } else {
         entry(d) = 1;
       }
-      vertices[vertexScalar].adjacentRanks[peano4::utils::dLinearised(entry, 2)] = RankOfPeriodicBoundaryCondition;
-      vertices[vertexScalar].backupOfAdjacentRanks[peano4::utils::dLinearised(entry, 2)] = RankOfPeriodicBoundaryCondition;
+      vertices[vertexScalar].adjacentRanks[peano4::dLinearised(entry, 2)] = RankOfPeriodicBoundaryCondition;
+      vertices[vertexScalar].backupOfAdjacentRanks[peano4::dLinearised(entry, 2)] = RankOfPeriodicBoundaryCondition;
       enddforx logDebug("Set periodic boundary conditions: " << vertices[vertexScalar].toString());
       enddforx
     }
@@ -540,7 +540,7 @@ bool peano4::grid::Spacetree::shouldEraseAdjacencyInformation(
 
     position = position / 3;
 
-    const auto& adjacentRanks = coarseGridVertices[utils::dLinearised(position, 2)].adjacentRanks;
+    const auto& adjacentRanks = coarseGridVertices[peano4::dLinearised(position, 2)].adjacentRanks;
     return std::find(std::begin(adjacentRanks), std::end(adjacentRanks), _id) == std::end(adjacentRanks);
   };
 
@@ -1151,10 +1151,10 @@ void peano4::grid::Spacetree::descend(const AutomatonState& state, GridVertex ve
   AutomatonState fineGridStates[THREE_POWER_D];
   AutomatonState::refineState(state, fineGridStates);
 
-  peano4::utils::LoopDirection loopDirection = PeanoCurve::getLoopDirection(state);
+  peano4::LoopDirection loopDirection = PeanoCurve::getLoopDirection(state);
   zfor3(k, loopDirection)
     traceEnter("Grid bookkeeping before enter");
-    const auto kLinearised = utils::dLinearised(k, 3);
+    const auto kLinearised = peano4::dLinearised(k, 3);
 
     VertexType vertexTypes[TWO_POWER_D];
     getVertexTypes(vertices, k, vertexTypes);

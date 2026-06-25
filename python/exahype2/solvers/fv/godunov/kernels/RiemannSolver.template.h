@@ -4,7 +4,7 @@
 
 #include "{{SOLVER_NAME}}.h"
 
-#include "peano4/utils/Loop.h"     // for TWO_TIMES_D
+#include "peano4/Loop.h"     // for TWO_TIMES_D
 #include "tarch/la/Vector.h"
 
 {% for item in NAMESPACE -%}

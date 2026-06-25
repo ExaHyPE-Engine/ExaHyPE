@@ -3,7 +3,7 @@ Build:
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} python3 -m compileall -f ./
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "mkdir build && cd build && CC=${CC} CXX=${CXX} cmake .. -GNinja ${CONFIGURATION_OPTIONS} ${EXTRA_CONFIGURATION_OPTIONS} -DCMAKE_INSTALL_PREFIX=../install"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build && ninja && ctest -VV && ninja install"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build && ninja && ctest --output-on-failure --timeout 600 && ninja install"
     - echo "Build artifact size overview before upload"
     - du -sh install
     - du -sh install/* 2>/dev/null | sort -h || true
@@ -24,9 +24,9 @@ Build:
       - ./install/CITATION.cff
     expire_in: 24 hours
   allow_failure: false
+  timeout: 60m
   extends:
     - .Tags
     - .Variables
     - .RunOnDev
     - .BeforeScript
-  retry: 0

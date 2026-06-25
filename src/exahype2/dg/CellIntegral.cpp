@@ -1,6 +1,6 @@
 #include "CellIntegral.h"
 
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 
 void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
   ::exahype2::CellData<double, double>&          cellData,
@@ -40,7 +40,7 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
     //const int nodesPerCell = getNodesPerCell(nodesPerAxis);
 
     dfor( dof, order+1 ) {
-      const int dofSerialised = peano4::utils::dLinearised(dof, nodesPerAxis);
+      const int dofSerialised = peano4::dLinearised(dof, nodesPerAxis);
       for(int var=0; var<unknowns; var++){
         cellQout[dofSerialised * outputStride + var] = 0.0;
       }
@@ -58,7 +58,7 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
               contributingNodeIndex,
               order,
               quadratureNodes);
-          const int contributingNodeSerialised = peano4::utils::dLinearised(contributingNodeIndex, nodesPerAxis);
+          const int contributingNodeSerialised = peano4::dLinearised(contributingNodeIndex, nodesPerAxis);
 
           flux( &cellQin[contributingNodeSerialised * inputStride],
                 position,
@@ -142,7 +142,7 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
           for(int node=0; node<nodesPerAxis; node++){
             contributingNodeIndex[dim] = node;
             const double coeffDerivative = invDx * derivativeOperator[node + nodesPerAxis*dof(dim)];
-            const int contributingNodeSerialised = peano4::utils::dLinearised(contributingNodeIndex, nodesPerAxis);
+            const int contributingNodeSerialised = peano4::dLinearised(contributingNodeIndex, nodesPerAxis);
 
             for(int var=0; var<strideQ; var++){
               gradientValues[var] += coeffDerivative * cellQin[contributingNodeSerialised * inputStride + var];
@@ -195,7 +195,7 @@ void exahype2::dg::reduceMaxEigenvalue_patchwise_functors(
     double eigenvalue = std::numeric_limits<double>::min();
 
     dfor(k,order+1) {
-      const int dofSerialised = peano4::utils::dLinearised(k, order + 1);
+      const int dofSerialised = peano4::dLinearised(k, order + 1);
       for(int direction=0; direction<DIMENSIONS; direction++) {
         double nodeEigenvalue = maxEigenvalue(
           cellData.QOut[cellIndex] + dofSerialised * stride,
@@ -230,7 +230,7 @@ void exahype2::dg::internal::copySolution(
   const tarch::la::Vector<DIMENSIONS,int>&      node,
   double* NOALIAS                          cellQout
 ) {
-  const int nodeSerialised = peano4::utils::dLinearised( node, order+1 );
+  const int nodeSerialised = peano4::dLinearised( node, order+1 );
   for(int var=0; var<unknowns+auxiliaryVariables; var++) {
     cellQout[nodeSerialised+var] = cellQin[nodeSerialised+var];
   }
@@ -248,7 +248,7 @@ void exahype2::dg::multiplyWithInvertedMassMatrix_GaussLegendre(
 
   for (int currentCell=0; currentCell<cellData.numberOfCells; currentCell++) {
     dfor( dof, order+1 ) {
-      const int dofSerialised = peano4::utils::dLinearised(dof, order + 1);
+      const int dofSerialised = peano4::dLinearised(dof, order + 1);
       double* NOALIAS  cellQInOut = cellData.QOut[currentCell];
 
       #if DIMENSIONS==2

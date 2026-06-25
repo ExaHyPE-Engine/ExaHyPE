@@ -41,11 +41,11 @@ void toolbox::blockstructured::internal::
         overlap,
         normal
       );
-      int fineVolumeLeftSrcLinearised = peano4::utils::dLinearised(
+      int fineVolumeLeftSrcLinearised = peano4::dLinearised(
         fineVolumeLeftSrc,
         numberOfDoFsPerAxisInPatch
       );
-      int fineVolumeRightSrcLinearised = peano4::utils::dLinearised(
+      int fineVolumeRightSrcLinearised = peano4::dLinearised(
         fineVolumeRightSrc,
         numberOfDoFsPerAxisInPatch
       );
@@ -856,7 +856,7 @@ void toolbox::blockstructured::
   assertion(numberOfDoFsPerAxisInDestinationPatch > numberOfDoFsPerAxisInSourcePatch);
 
   dfor(destinationVolume, numberOfDoFsPerAxisInDestinationPatch + 2 * haloDestinationPatch) {
-    const int baseIndexDestination = peano4::utils::dLinearised(
+    const int baseIndexDestination = peano4::dLinearised(
       destinationVolume,
       numberOfDoFsPerAxisInDestinationPatch + 2 * haloDestinationPatch
     ) * unknowns;
@@ -905,7 +905,7 @@ void toolbox::blockstructured::
         }
       }
 
-      int baseIndexSource = peano4::utils::dLinearised(
+      int baseIndexSource = peano4::dLinearised(
         amendedSourceVolume,
         numberOfDoFsPerAxisInSourcePatch + 2 * haloSourcePatch
       ) * unknowns;
@@ -1020,7 +1020,7 @@ void toolbox::blockstructured::
         ) {
           stencil[stencilSize] = stencilOffset + offset
                                  - tarch::la::Vector<DIMENSIONS, int>(1);
-          indices[stencilSize] = peano4::utils::dLinearised(
+          indices[stencilSize] = peano4::dLinearised(
             sourceVolume + offset + stencilOffset
               - tarch::la::Vector<DIMENSIONS, int>(1),
             numberOfDoFsPerAxisInSourcePatch + 2 * haloSourcePatch
@@ -1029,7 +1029,7 @@ void toolbox::blockstructured::
         }
       }
 
-      int centerIndex = peano4::utils::dLinearised(
+      int centerIndex = peano4::dLinearised(
         sourceVolume,
         numberOfDoFsPerAxisInSourcePatch + 2 * haloSourcePatch
       );
@@ -1150,7 +1150,7 @@ void toolbox::blockstructured::
       dfor(localDestinationVolume, destinationSpan) {
         tarch::la::Vector<DIMENSIONS, int>
             destinationVolume = destinationCorner1 + localDestinationVolume;
-        int destinationIndex  = peano4::utils::dLinearised(
+        int destinationIndex  = peano4::dLinearised(
           destinationVolume,
           numberOfDoFsPerAxisInDestinationPatch + 2 * haloDestinationPatch
         );
@@ -1180,7 +1180,7 @@ void toolbox::blockstructured::
   assertion(numberOfDoFsPerAxisInDestinationPatch > numberOfDoFsPerAxisInSourcePatch);
 
   dfor(destinationVolume, numberOfDoFsPerAxisInDestinationPatch + 2 * haloDestinationPatch) {
-    const int baseIndexDestination = peano4::utils::dLinearised(
+    const int baseIndexDestination = peano4::dLinearised(
       destinationVolume,
       numberOfDoFsPerAxisInDestinationPatch + 2 * haloDestinationPatch
     ) * unknowns;

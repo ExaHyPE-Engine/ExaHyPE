@@ -197,7 +197,7 @@ double {full_qualified_classname}::_timeStepSize;
     def get_includes(self):
         result = jinja2.Template(
             """
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
 #include "repositories/SolverRepository.h"

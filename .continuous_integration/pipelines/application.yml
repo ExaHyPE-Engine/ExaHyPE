@@ -15,7 +15,6 @@ ExaSkred Tsunami:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  retry: 0
 
 ExaSkred Meteotsunami:
   stage: Application
@@ -34,7 +33,6 @@ ExaSkred Meteotsunami:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  retry: 0
 
 ExaSkred Landslide:
   stage: Application
@@ -53,7 +51,6 @@ ExaSkred Landslide:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  retry: 0
 
 ExaSkred Coupled:
   stage: Application
@@ -72,7 +69,6 @@ ExaSkred Coupled:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  retry: 0
 
 ExaSeis:
   stage: Application
@@ -89,7 +85,6 @@ ExaSeis:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  retry: 0
 
 ExaGRyPE:
   stage: Application
@@ -109,4 +104,3 @@ ExaGRyPE:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  retry: 0

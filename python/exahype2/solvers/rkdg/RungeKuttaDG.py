@@ -506,27 +506,27 @@ We use RK("""
         )
 
         self._estimate_projection.generator.includes += """
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 #include "repositories/SolverRepository.h"
 """
 
         self._old_solution_projection.generator.includes += """
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 #include "repositories/SolverRepository.h"
 """
 
         self._current_time_step.generator.includes += """
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 #include "repositories/SolverRepository.h"
 """
 
         self._rhs_estimates.generator.includes += """
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 #include "repositories/SolverRepository.h"
 """
 
         self._linear_combination_of_estimates.generator.includes += """
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 #include "repositories/SolverRepository.h"
 """
         self._estimate_projection.generator.send_condition              = "false"
@@ -879,7 +879,7 @@ We use RK("""
 #include "tarch/la/Vector.h"
 
 #include "peano4/Globals.h"
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 
 #include "repositories/SolverRepository.h"
 """

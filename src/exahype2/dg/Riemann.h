@@ -12,7 +12,7 @@
 
 #include "peano4/datamanagement/FaceMarker.h"
 #include "peano4/grid/GridControlEvent.h"
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 #include "peano4/Globals.h"
 
 /**

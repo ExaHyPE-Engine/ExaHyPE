@@ -64,7 +64,7 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
     constexpr int valuesPerDoF = {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     
     dfor( dof, {{ORDER}}+1 ) {
-      const int dofSerialised = peano4::utils::dLinearised(dof, {{ORDER}}+1);
+      const int dofSerialised = peano4::dLinearised(dof, {{ORDER}}+1);
       const int solutionOffset = dofSerialised * valuesPerDoF;
       for (int unknown=0; unknown<{{NUMBER_OF_UNKNOWNS}}; unknown++) {
         {% for WEIGHT_NO in range(0,WEIGHTS|length) %}
@@ -216,6 +216,6 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
         return (
             super(ComputeFinalLinearCombination, self).get_includes()
             + """
-#include "peano4/utils/Linearised.h"
+#include "peano4/Loop.h"
 """
         )

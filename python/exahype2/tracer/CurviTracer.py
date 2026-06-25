@@ -409,7 +409,7 @@ if(_fault_coordinates.empty()){
         return jinja2.Template(
             """
 #include "tarch/multicore/Lock.h"
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 #include "repositories/SolverRepository.h"
 #include "exahype2/RuntimeParameters.h"
 #include "exahype2/dg/Tracer.h"

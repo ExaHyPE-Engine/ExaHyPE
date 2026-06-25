@@ -121,7 +121,7 @@ class PatchAMRPlotter(BasePlotter):
       );
       #endif
 
-      int currentDoF = ::peano4::utils::dLinearised(k, {{DOFS_PER_AXIS}}) * {{UNKNOWNS}};
+      int currentDoF = ::peano4::dLinearised(k, {{DOFS_PER_AXIS}}) * {{UNKNOWNS}};
       const auto* data = fineGridCell{{NAME}}.data() + currentDoF;
 
 {% if DESCRIPTION %}

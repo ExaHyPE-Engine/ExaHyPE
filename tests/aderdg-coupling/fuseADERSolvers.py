@@ -118,7 +118,7 @@ def same_basis_postprocessing_kernel(condition, solver_name):
 def dg2dgFace():
    return """
 #pragma once
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 
 template<typename pTo, typename pFrom>
 inline void dg2dgFace(pTo* Qto, const pFrom* Qfrom, const double* proj, int toPoints, int fromPoints, int numVars){

@@ -4,7 +4,7 @@
 
 #include <vector>
 
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 #include "tarch/tests/TestMacros.h"
 
 exahype2::fv::tests::CopyPatchTest::CopyPatchTest():
@@ -23,8 +23,8 @@ void exahype2::fv::tests::CopyPatchTest::testCopyPatch() {
 
   dfor(k, NumberOfVolumesPerAxisInPatch) {
     tarch::la::Vector<DIMENSIONS, int> tmpSource                = k + tarch::la::Vector<DIMENSIONS, int>(HaloSize);
-    int                                tmpSourceSerialised      = peano4::utils::dLinearised(tmpSource, NumberOfVolumesPerAxisInPatch + HaloSize * 2);
-    int                                tmpDestinationSerialised = peano4::utils::dLinearised(k, NumberOfVolumesPerAxisInPatch);
+    int                                tmpSourceSerialised      = peano4::dLinearised(tmpSource, NumberOfVolumesPerAxisInPatch + HaloSize * 2);
+    int                                tmpDestinationSerialised = peano4::dLinearised(k, NumberOfVolumesPerAxisInPatch);
     source.push_back(tmpSourceSerialised);
     dest.push_back(tmpDestinationSerialised);
   }

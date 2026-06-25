@@ -10,7 +10,6 @@ Acoustic:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  retry: 0
 
 SWE:
   stage: Tutorial
@@ -24,7 +23,6 @@ SWE:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  retry: 0
 
 Euler:
   stage: Tutorial
@@ -38,4 +36,3 @@ Euler:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  retry: 0

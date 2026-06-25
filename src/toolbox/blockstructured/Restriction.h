@@ -11,7 +11,7 @@
 #include "tarch/la/GramSchmidt.h"
 #include "tarch/la/LUDecomposition.h"
 
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/FaceMarker.h"
 

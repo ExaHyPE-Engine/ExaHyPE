@@ -403,11 +403,11 @@ and additional AMR levels is configured by the executable at runtime.
         )
 
         self._patch_overlap_old.generator.includes += """
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 #include "repositories/SolverRepository.h"
 """
         self._patch_overlap_new.generator.includes += """
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 #include "repositories/SolverRepository.h"
 """
 
@@ -735,7 +735,7 @@ and additional AMR levels is configured by the executable at runtime.
 #include "tarch/la/Vector.h"
 
 #include "peano4/Globals.h"
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 
 #include "repositories/SolverRepository.h"
 """

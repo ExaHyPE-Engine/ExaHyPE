@@ -69,9 +69,7 @@ set(SOURCES
   stacks/tests/TestDataOnHeapWithContainer.cpp
   stacks/tests/TestDataOnStack.cpp
 
-  utils/Linearised.cpp
-  utils/Loop.cpp
-  utils/tests/LinearisedTest.cpp
+  tests/LoopTest.cpp
 )
 
 install_peano_headers(

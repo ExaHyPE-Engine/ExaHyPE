@@ -157,7 +157,7 @@ void exahype2::dg::tests::CellIntegralTest::runEulerOrder2OnStationarySetup() {
 
 
   dfor(dof,order+1) {
-    int dofLinearised = peano4::utils::dLinearised(dof,order+1);
+    int dofLinearised = peano4::dLinearised(dof,order+1);
     validateNumericalEqualsWithParams2( QOut[dofLinearised*(unknowns+auxiliaryVariables)+0], 0.0, dof, plotCell( QOut, order, unknowns, auxiliaryVariables ) );
     if (dof(0)<(order+1)/2) {
       validateWithParams2( QOut[dofLinearised*(unknowns+auxiliaryVariables)+1]<0.0, dof, plotCell( QOut, order, unknowns, auxiliaryVariables ) );

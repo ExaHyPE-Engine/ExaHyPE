@@ -14,7 +14,7 @@ DataType exahype2::fv::internal::projectValueOntoParticle_piecewiseConstant(
     marker, voxelsPerAxis, particleX
   );
 
-  int voxelIndex = peano4::utils::dLinearised(voxel, voxelsPerAxis);
+  int voxelIndex = peano4::dLinearised(voxel, voxelsPerAxis);
 
   return Q[voxelIndex * unknownsPerVoxel + unknown];
 }
@@ -38,7 +38,7 @@ DataType exahype2::fv::internal::projectValueOntoParticle_piecewiseLinear(
     tarch::la::Vector<DIMENSIONS, double>       currentVoxelX = getVolumeCentre(
       marker.getX(), marker.getH(), voxelsPerAxis, currentVoxel
     );
-    int    currentVoxelIndex = peano4::utils::dLinearised(currentVoxel, voxelsPerAxis);
+    int    currentVoxelIndex = peano4::dLinearised(currentVoxel, voxelsPerAxis);
     double weight            = 1.0;
     for (int d = 0; d < DIMENSIONS; d++) {
       double relativeDistance = std::abs(currentVoxelX(d) - particleX(d)) / h;

@@ -17,7 +17,7 @@
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/FaceEnumerator.h"
 #include "peano4/peano4.h"
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 #include "tarch/instrumentation/Log.h"
 #include "tarch/instrumentation/Measurement.h"
 #include "tarch/instrumentation/Watch.h"
@@ -308,7 +308,7 @@ void applyInitialConditions() {
       double* QOut = DataRepository::getInstance().getCellQNew(marker.getX(), marker.getH());
       // Initialise cell data with initial conditions.
       dfor(volume, AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch) {
-        int linearIndex = peano4::utils::dLinearised(volume, AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch)
+        int linearIndex = peano4::dLinearised(volume, AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch)
                           * (AbstractFVSolver::NumberOfUnknowns + AbstractFVSolver::NumberOfAuxiliaryVariables);
         FVSolver::initialCondition(
           QOut + linearIndex,

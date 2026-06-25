@@ -264,7 +264,7 @@ class ADERDG(object):
             get_face_overlap_merge_implementation(self._rhs_estimates_projection)
         )
         self._rhs_estimates_projection.generator.includes += """
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 #include "repositories/SolverRepository.h"
 """
 
@@ -272,7 +272,7 @@ class ADERDG(object):
             get_face_overlap_merge_implementation(self._flux_estimates_projection)
         )
         self._flux_estimates_projection.generator.includes += """
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 #include "repositories/SolverRepository.h"
 """
 
@@ -538,7 +538,7 @@ class ADERDG(object):
 #include "tarch/la/Vector.h"
 
 #include "peano4/Globals.h"
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 
 #include "repositories/SolverRepository.h"
 """ + "#include <stdfloat>" if self._use_half_precision else ""

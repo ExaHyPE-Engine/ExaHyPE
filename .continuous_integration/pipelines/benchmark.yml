@@ -13,7 +13,6 @@ FV Kernels:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  retry: 0
 
 ADERDG Kernels:
   stage: Benchmark
@@ -30,4 +29,3 @@ ADERDG Kernels:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  retry: 0

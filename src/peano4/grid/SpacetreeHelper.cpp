@@ -3,7 +3,7 @@
 #include "SpacetreeHelper.h"
 
 #include "GridTraversalObserver.h"
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 
 #include <tuple>
 #include <utility>

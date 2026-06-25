@@ -180,10 +180,6 @@ class AbstractSolverDeclarations:
     ) = 0;
     {% endif %}
     {% endfor %}
-
-    {% if INIT_POINT_SOURCES_IMPLEMENTATION=="<user-defined>" and INIT_POINT_SOURCES_IMPLEMENTATION!="<none>" %}
-    virtual void initPointSourceLocations(double location[NumberOfPointSources][DIMENSIONS]) = 0;
-    {% endif %}
 """,
             undefined=jinja2.DebugUndefined,
         )

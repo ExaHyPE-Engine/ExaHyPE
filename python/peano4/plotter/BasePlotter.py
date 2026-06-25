@@ -115,7 +115,7 @@ class BasePlotter(ActionSet):
 #include "tarch/mpi/Rank.h"
 #include "tarch/plotter/FileWriter.h"
 #include "tarch/plotter/TimeSeriesWriter.h"
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 #include "peano4/parallel/Node.h"
 #include "peano4/parallel/SpacetreeSet.h"
 #include "exahype2/RuntimeParameters.h"

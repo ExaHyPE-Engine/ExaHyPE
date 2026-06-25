@@ -774,9 +774,7 @@ void toolbox::blockstructured::restrictCellIntoOverlappingCell_inject(
       / static_cast<double>(numberOfDoFsPerAxisInDestinationPatch);
   dfor(destinationVolume, numberOfDoFsPerAxisInDestinationPatch) {
     const int baseIndexDestination
-      = peano4::utils::
-          dLinearised(destinationVolume, numberOfDoFsPerAxisInDestinationPatch)
-        * unknowns;
+      = peano4::dLinearised(destinationVolume, numberOfDoFsPerAxisInDestinationPatch) * unknowns;
 
     tarch::la::Vector<DIMENSIONS, int> sourceVolume;
     for (int d = 0; d < DIMENSIONS; d++) {
@@ -786,7 +784,7 @@ void toolbox::blockstructured::restrictCellIntoOverlappingCell_inject(
       );
     }
 
-    const int baseIndexSource = peano4::utils::dLinearised(
+    const int baseIndexSource = peano4::dLinearised(
                                   sourceVolume,
                                   numberOfDoFsPerAxisInSourcePatch
                                 )
@@ -817,9 +815,7 @@ void toolbox::blockstructured::
       / static_cast<double>(numberOfDoFsPerAxisInDestinationPatch);
   dfor(destinationVolume, numberOfDoFsPerAxisInDestinationPatch) {
     const int baseIndexDestination
-      = peano4::utils::
-          dLinearised(destinationVolume, numberOfDoFsPerAxisInDestinationPatch)
-        * unknowns;
+      = peano4::dLinearised(destinationVolume, numberOfDoFsPerAxisInDestinationPatch) * unknowns;
 
     tarch::la::Vector<DIMENSIONS, int> sourceVolume;
     for (int d = 0; d < DIMENSIONS; d++) {
@@ -829,7 +825,7 @@ void toolbox::blockstructured::
       );
     }
 
-    const int baseIndexSource = peano4::utils::dLinearised(
+    const int baseIndexSource = peano4::dLinearised(
                                   sourceVolume,
                                   numberOfDoFsPerAxisInSourcePatch
                                 )
@@ -863,11 +859,11 @@ void toolbox::blockstructured::restrictCell_AoS_inject(
     }
 
     if (restrictThisVolume) {
-      int coarseVolumeLinearised = peano4::utils::dLinearised(
+      int coarseVolumeLinearised = peano4::dLinearised(
         coarseVolume,
         numberOfDoFsPerAxisInPatch
       );
-      int fineVolumeLinearised = peano4::utils::dLinearised(
+      int fineVolumeLinearised = peano4::dLinearised(
         fineVolume,
         numberOfDoFsPerAxisInPatch
       );
@@ -942,11 +938,11 @@ void toolbox::blockstructured::restrictCell_AoS_averaging(
       [[maybe_unused]] double                                coarseVolumeH,
       [[maybe_unused]] double                                fineVolumeH
     ) -> void {
-      int coarseVolumeLinearised = peano4::utils::dLinearised(
+      int coarseVolumeLinearised = peano4::dLinearised(
         coarseVolume,
         numberOfDoFsPerAxisInPatch
       );
-      int fineVolumeLinearised = peano4::utils::dLinearised(
+      int fineVolumeLinearised = peano4::dLinearised(
         fineVolume,
         numberOfDoFsPerAxisInPatch
       );

@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "ReconstructPatch.h"
 
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 
 #include "toolbox/blockstructured/Enumeration.h"
 
@@ -23,8 +23,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::reconstructPatch(
     //
     const tarch::la::Vector<DIMENSIONS, int> sourceCell = ::exahype2::fv::toVolumeIndex(x, y {% if DIMENSIONS==3 %}, z {% endif %});
     const tarch::la::Vector<DIMENSIONS, int> destinationCell = sourceCell + tarch::la::Vector<DIMENSIONS, int>({{OVERLAP}});
-    const int sourceCellSerialised      = ::peano4::utils::dLinearised(sourceCell, {{DOFS_PER_AXIS}});
-    const int destinationCellSerialised = ::peano4::utils::dLinearised(destinationCell, {{DOFS_PER_AXIS}} + 2 * {{OVERLAP}});
+    const int sourceCellSerialised      = ::peano4::dLinearised(sourceCell, {{DOFS_PER_AXIS}});
+    const int destinationCellSerialised = ::peano4::dLinearised(destinationCell, {{DOFS_PER_AXIS}} + 2 * {{OVERLAP}});
 
     #if defined(PEANO_WITH_OPENMP)
     #pragma omp simd
@@ -47,7 +47,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::reconstructPatch(
         sourceCell(d)                 = i;
         destinationCell(d)            = i;
         int sourceCellSerialised      = toolbox::blockstructured::serialiseVoxelIndexInOverlap(sourceCell, {{DOFS_PER_AXIS}}, {{OVERLAP}}, d);
-        int destinationCellSerialised = ::peano4::utils::dLinearised(destinationCell, {{DOFS_PER_AXIS}} + 2 * {{OVERLAP}});
+        int destinationCellSerialised = ::peano4::dLinearised(destinationCell, {{DOFS_PER_AXIS}} + 2 * {{OVERLAP}});
 
         #if defined(PEANO_WITH_OPENMP)
         #pragma omp simd
@@ -62,7 +62,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::reconstructPatch(
         sourceCell(d)             = i + {{OVERLAP}};
         destinationCell(d)        = i + {{DOFS_PER_AXIS}} + {{OVERLAP}};
         sourceCellSerialised      = toolbox::blockstructured::serialiseVoxelIndexInOverlap(sourceCell, {{DOFS_PER_AXIS}}, {{OVERLAP}}, d);
-        destinationCellSerialised = ::peano4::utils::dLinearised(destinationCell, {{DOFS_PER_AXIS}} + 2 * {{OVERLAP}});
+        destinationCellSerialised = ::peano4::dLinearised(destinationCell, {{DOFS_PER_AXIS}} + 2 * {{OVERLAP}});
 
         #if defined(PEANO_WITH_OPENMP)
         #pragma omp simd

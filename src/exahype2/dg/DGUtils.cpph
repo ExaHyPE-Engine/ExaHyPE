@@ -23,7 +23,7 @@ QStoreType exahype2::dg::evaluatePolynomial(
         }
       }
     }
-    int dofLinearised = peano4::utils::dLinearised(currentDoF,order+1);
+    int dofLinearised = peano4::dLinearised(currentDoF,order+1);
     result += enumerator/denominator * Q[ dofLinearised * unknownsPerDoF + unknown ];
   }
   return result;

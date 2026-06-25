@@ -2,7 +2,7 @@
 #include "DGUtils.h"
 
 #include "peano4/Globals.h"
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 
 #include "tarch/instrumentation/Log.h"
 

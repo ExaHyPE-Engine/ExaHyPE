@@ -7,8 +7,8 @@
   //
   const tarch::la::Vector<DIMENSIONS, int> sourceCell = ::exahype2::fv::toVolumeIndex(x, y {% if DIMENSIONS==3 %}, z {% endif %});
   const tarch::la::Vector<DIMENSIONS, int> destinationCell = sourceCell + tarch::la::Vector<DIMENSIONS, int>({{OVERLAP}});
-  const int sourceCellSerialised      = peano4::utils::dLinearised(sourceCell, {{DOFS_PER_AXIS}});
-  const int destinationCellSerialised = peano4::utils::dLinearised(destinationCell, {{DOFS_PER_AXIS}} + 2 * {{OVERLAP}});
+  const int sourceCellSerialised      = peano4::dLinearised(sourceCell, {{DOFS_PER_AXIS}});
+  const int destinationCellSerialised = peano4::dLinearised(destinationCell, {{DOFS_PER_AXIS}} + 2 * {{OVERLAP}});
 
   #if defined(PEANO_WITH_OPENMP)
   #pragma omp simd
@@ -45,7 +45,7 @@
       sourceCell(d)                 = i;
       destinationCell(d)            = i;
       int sourceCellSerialised      = serialisePatchIndex(sourceCell, d);
-      int destinationCellSerialised = peano4::utils::dLinearised(destinationCell, {{DOFS_PER_AXIS}} + 2 * {{OVERLAP}});
+      int destinationCellSerialised = peano4::dLinearised(destinationCell, {{DOFS_PER_AXIS}} + 2 * {{OVERLAP}});
 
       auto faceIndex = faceIndices[patchIndex * TWO_TIMES_D + d];
 
@@ -64,7 +64,7 @@
       sourceCell(d)             = i + {{OVERLAP}};
       destinationCell(d)        = i + {{DOFS_PER_AXIS}} + {{OVERLAP}};
       sourceCellSerialised      = serialisePatchIndex(sourceCell, d);
-      destinationCellSerialised = peano4::utils::dLinearised(destinationCell, {{DOFS_PER_AXIS}} + 2 * {{OVERLAP}});
+      destinationCellSerialised = peano4::dLinearised(destinationCell, {{DOFS_PER_AXIS}} + 2 * {{OVERLAP}});
 
       faceIndex = faceIndices[patchIndex * TWO_TIMES_D + d + DIMENSIONS];
 

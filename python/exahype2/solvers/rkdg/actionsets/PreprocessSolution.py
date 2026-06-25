@@ -88,7 +88,7 @@ class DoFWisePreprocessSolution(AbstractRungeKuttaDGActionSet):
     constexpr int valuesPerDoF = {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     dfor( index, {{DG_ORDER}}+1 ) {
       double* values   = fineGridCell{{UNKNOWN_IDENTIFIER}}.data()
-        + peano4::utils::dLinearised(index, {{DG_ORDER}}+1) * valuesPerDoF;
+        + peano4::dLinearised(index, {{DG_ORDER}}+1) * valuesPerDoF;
       auto    x        = ::exahype2::dg::getQuadraturePoint(
         marker.getX(), marker.getH(), index, repositories::{{SOLVER_INSTANCE}}.DGOrder, repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d
       );
@@ -118,7 +118,7 @@ class DoFWisePreprocessSolution(AbstractRungeKuttaDGActionSet):
 
   def get_includes(self):
     return super(DoFWisePreprocessSolution,self).get_includes() + """
-#include "peano4/utils/Linearised.h"
+#include "peano4/Loop.h"
 """
 
 

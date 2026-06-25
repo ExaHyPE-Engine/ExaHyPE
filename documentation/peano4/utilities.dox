@@ -14,7 +14,7 @@ particular dimension d is done at compile time via the flag
 `-DDimension=d`. As everything is generic w.r.t. dimensions, I have many
 places in the code where I need d-dimensional loops.
 
-Peano's utility directory/namespace `peano4::utils` offers a header
+Peano's `peano4` namespace offers a header
 `Loop` which comprises a set of macros that support d-dimensional loops.
 Details can be found in the source code documentatation within the file
 or online, but the collection of macros allows you to write code alike
@@ -36,10 +36,10 @@ forth and back through an array similar to the Peano curve.
 
 To use the d-dimensional loops, you have to include
 
-          #include "peano4/utils/Loop.h"
+          #include "peano4/Loop.h"
 
 For Cartesian meshes, arrays, the file also offers a routine
-peano4::utils::dLinearised() which converts the d-dimensional loop
+peano4::dLinearised() which converts the d-dimensional loop
 counter into one integer. Again, I do offer variants of this routine
 which are optimised to particular choices of d or array ranges.
 

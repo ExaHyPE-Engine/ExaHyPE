@@ -5,7 +5,7 @@
 #include "peano4/grid/PeanoCurve.h"
 #include "peano4/grid/StackTopology.h"
 #include "peano4/grid/VertexLookupTable.h"
-#include "peano4/utils/Linearised.h"
+#include "peano4/Loop.h"
 #include "tarch/la/Vector.h"
 
 namespace {
@@ -61,7 +61,7 @@ void peano4::grid::tests::VertexLookupTableTest::validateLookupTableMatchesPeano
       validateEquals(lut.vPos[i][d], relativePosition[d] + vertexOffset[d]);
     }
 
-    validateEquals(expectedVertexIndex, peano4::utils::dLinearised(vertexOffset, 2));
+    validateEquals(expectedVertexIndex, peano4::dLinearised(vertexOffset, 2));
 
     const int expectedReadStack  = peano4::grid::PeanoCurve::getVertexReadStackNumber(state, expectedVertexIndex);
     const int expectedWriteStack = peano4::grid::PeanoCurve::getVertexWriteStackNumber(state, expectedVertexIndex);

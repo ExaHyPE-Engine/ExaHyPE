@@ -21,7 +21,7 @@ void exahype2::fv::particles::projection::depositMass_PiecewiseConstant(
     voxel = exahype2::fv::particles::interpolation::internal::mapParticleOntoVoxel(marker, voxelsPerAxis, particleX);
   std::cout << "  mapped voxel = " << voxel << "\n";
 
-  int voxelIndex = peano4::utils::dLinearised(voxel, voxelsPerAxis);
+  int voxelIndex = peano4::dLinearised(voxel, voxelsPerAxis);
   std::cout << "  voxelIndex = " << voxelIndex << "\n";
 
   int index = voxelIndex * unknownsPerVoxel + unknownIndex;

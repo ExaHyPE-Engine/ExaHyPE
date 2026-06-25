@@ -1,8 +1,7 @@
 #include "NodeTest.h"
 #include "peano4/parallel/Node.h"
 
-#include "peano4/utils/Linearised.h"
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 #include "tarch/la/Vector.h"
 
 #include "peano4/grid/SpacetreeHelper.h"
@@ -166,7 +165,7 @@ void peano4::parallel::tests::NodeTest::testBitsetBasedPeriodicBoundaryEnumerati
       dfor2(k) tarch::la::Vector<DIMENSIONS, int> entry;
       entry                 = k;
       entry(d % DIMENSIONS) = d / DIMENSIONS;
-      allFlagsSet &= flags[peano4::utils::dLinearised(entry, 2)] == peano4::grid::SpacetreeHelper::RankOfPeriodicBoundaryCondition;
+      allFlagsSet &= flags[peano4::dLinearised(entry, 2)] == peano4::grid::SpacetreeHelper::RankOfPeriodicBoundaryCondition;
       enddforx if (allFlagsSet) { result.set(d); }
     }
 
@@ -184,7 +183,7 @@ void peano4::parallel::tests::NodeTest::testBitsetBasedPeriodicBoundaryEnumerati
         tarch::la::Vector<DIMENSIONS, int> entry(point);
         entry(d % DIMENSIONS) = d / DIMENSIONS;
 
-        const bool current = flags[peano4::utils::dLinearised(entry, 2)] == peano4::grid::SpacetreeHelper::RankOfPeriodicBoundaryCondition;
+        const bool current = flags[peano4::dLinearised(entry, 2)] == peano4::grid::SpacetreeHelper::RankOfPeriodicBoundaryCondition;
         allFlagsSet        = allFlagsSet && current;
       }
       if (allFlagsSet) {

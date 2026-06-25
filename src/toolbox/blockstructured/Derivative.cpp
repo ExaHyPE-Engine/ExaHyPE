@@ -1,5 +1,5 @@
 #include "Derivative.h"
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 
 #include <iostream>
 
@@ -29,9 +29,9 @@ void toolbox::blockstructured::computeGradient(
         sourceVolumeLeft(d)--;
       }
 
-      int sourceVolumeLeftLinearised  = peano4::utils::dLinearised(sourceVolumeLeft,  numberOfDoFsPerAxisInPatch+2*sourceHalo);
-      int sourceVolumeRightLinearised = peano4::utils::dLinearised(sourceVolumeRight, numberOfDoFsPerAxisInPatch+2*sourceHalo);
-      int destVolumeLinearised        = peano4::utils::dLinearised(destVolume,        numberOfDoFsPerAxisInPatch+2*destHalo);
+      int sourceVolumeLeftLinearised  = peano4::dLinearised(sourceVolumeLeft,  numberOfDoFsPerAxisInPatch+2*sourceHalo);
+      int sourceVolumeRightLinearised = peano4::dLinearised(sourceVolumeRight, numberOfDoFsPerAxisInPatch+2*sourceHalo);
+      int destVolumeLinearised        = peano4::dLinearised(destVolume,        numberOfDoFsPerAxisInPatch+2*destHalo);
 
       double grad = ( source[sourceVolumeRightLinearised*sourceUnknowns+sourceIndex] - source[sourceVolumeLeftLinearised*sourceUnknowns+sourceIndex] ) / volumeH(d) / numberOfDoFsPerAxisInPatch;
 
@@ -67,9 +67,9 @@ double toolbox::blockstructured::computeGradientAndReturnMaxDifference(
         sourceVolumeLeft(d)--;
       }
 
-      int sourceVolumeLeftLinearised  = peano4::utils::dLinearised(sourceVolumeLeft,  numberOfDoFsPerAxisInPatch+2*sourceHalo);
-      int sourceVolumeRightLinearised = peano4::utils::dLinearised(sourceVolumeRight, numberOfDoFsPerAxisInPatch+2*sourceHalo);
-      int destVolumeLinearised        = peano4::utils::dLinearised(destVolume,        numberOfDoFsPerAxisInPatch+2*destHalo);
+      int sourceVolumeLeftLinearised  = peano4::dLinearised(sourceVolumeLeft,  numberOfDoFsPerAxisInPatch+2*sourceHalo);
+      int sourceVolumeRightLinearised = peano4::dLinearised(sourceVolumeRight, numberOfDoFsPerAxisInPatch+2*sourceHalo);
+      int destVolumeLinearised        = peano4::dLinearised(destVolume,        numberOfDoFsPerAxisInPatch+2*destHalo);
 
       double grad = ( source[sourceVolumeRightLinearised*sourceUnknowns+sourceIndex] - source[sourceVolumeLeftLinearised*sourceUnknowns+sourceIndex] ) / volumeH(d) / numberOfDoFsPerAxisInPatch;
 

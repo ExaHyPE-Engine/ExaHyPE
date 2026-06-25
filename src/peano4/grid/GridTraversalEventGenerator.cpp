@@ -10,7 +10,7 @@
 #include "Spacetree.h"
 #include "SpacetreeHelper.h"
 #include "StackTopology.h"
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 
 peano4::grid::GridTraversalEventGenerator::GridTraversalEventGenerator(int id):
   _treeNumber(id) {}

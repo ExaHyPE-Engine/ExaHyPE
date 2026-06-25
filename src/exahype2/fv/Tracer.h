@@ -3,7 +3,7 @@
 #pragma once
 
 #include "PatchUtils.h"
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 #include "peano4/Globals.h"
 #include "peano4/datamanagement/CellMarker.h"
 
@@ -269,7 +269,7 @@ namespace exahype2 {
        *
        * You can convert the result via
        *
-       *       int voxelIndex = peano4::utils::dLinearised(voxel,voxelsPerAxis);
+       *       int voxelIndex = peano4::dLinearised(voxel,voxelsPerAxis);
        *
        * into an index to access your Q array. The whole construct assumes that
        * Q is not surrounded by a halo layer. If you have a halo layer, you have
