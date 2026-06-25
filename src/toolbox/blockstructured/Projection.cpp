@@ -1,6 +1,6 @@
 #include "Projection.h"
 
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 #include "toolbox/blockstructured/Enumeration.h"
 
 #include <iostream>
@@ -76,7 +76,7 @@ void toolbox::blockstructured::projectPatchSolutionOntoFaces(
         patchCell(d)   = i;
         overlapCell(d) = i+haloSize;
           
-        int patchCellSerialised   = peano4::utils::dLinearised(patchCell,numberOfVolumesPerAxisInPatch);
+        int patchCellSerialised   = peano4::dLinearised(patchCell,numberOfVolumesPerAxisInPatch);
         int overlapCellSerialised = toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell,numberOfVolumesPerAxisInPatch,haloSize,d);
         for (int j=0; j<unknowns; j++) {
           assertion(
@@ -90,7 +90,7 @@ void toolbox::blockstructured::projectPatchSolutionOntoFaces(
         patchCell(d)   = i+numberOfVolumesPerAxisInPatch-haloSize;
         overlapCell(d) = i;
           
-        patchCellSerialised   = peano4::utils::dLinearised(patchCell, numberOfVolumesPerAxisInPatch);
+        patchCellSerialised   = peano4::dLinearised(patchCell, numberOfVolumesPerAxisInPatch);
         overlapCellSerialised = toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell, numberOfVolumesPerAxisInPatch, haloSize, d);
         for (int j=0; j<unknowns; j++) {
           assertion(
@@ -177,7 +177,7 @@ void toolbox::blockstructured::projectPatchHaloOntoFaces(
         patchCell(d)   = i;
         overlapCell(d) = i; // this is correct
 
-        int patchCellSerialised   = peano4::utils::dLinearised(patchCell,numberOfVolumesPerAxisInPatch+2*haloSize);
+        int patchCellSerialised   = peano4::dLinearised(patchCell,numberOfVolumesPerAxisInPatch+2*haloSize);
         int overlapCellSerialised = toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell,numberOfVolumesPerAxisInPatch,haloSize,d);
 
         for (int j=0; j<unknowns+auxiliaryVariables; j++) {
@@ -188,7 +188,7 @@ void toolbox::blockstructured::projectPatchHaloOntoFaces(
         patchCell(d)   = i+numberOfVolumesPerAxisInPatch+haloSize;
         overlapCell(d) = i+haloSize;
 
-        patchCellSerialised   = peano4::utils::dLinearised(patchCell,numberOfVolumesPerAxisInPatch+2*haloSize);
+        patchCellSerialised   = peano4::dLinearised(patchCell,numberOfVolumesPerAxisInPatch+2*haloSize);
         overlapCellSerialised = toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell,numberOfVolumesPerAxisInPatch,haloSize,d);
         for (int j=0; j<unknowns+auxiliaryVariables; j++) {
           faces[d+DIMENSIONS][overlapCellSerialised*(unknowns+auxiliaryVariables)+j] =
@@ -272,7 +272,7 @@ void toolbox::blockstructured::extrapolatePatchSolutionAndProjectExtrapolatedHal
         patchCell(d)   = i;
         overlapCell(d) = i; // this is correct
 
-        int patchCellSerialised   = peano4::utils::dLinearised(patchCell,numberOfVolumesPerAxisInPatch+2*haloSize);
+        int patchCellSerialised   = peano4::dLinearised(patchCell,numberOfVolumesPerAxisInPatch+2*haloSize);
         int overlapCellSerialised = toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell,numberOfVolumesPerAxisInPatch,haloSize,d);
 
         for (int j=0; j<unknowns+auxiliaryVariables; j++) {
@@ -283,7 +283,7 @@ void toolbox::blockstructured::extrapolatePatchSolutionAndProjectExtrapolatedHal
         patchCell(d)   = i+numberOfVolumesPerAxisInPatch+haloSize;
         overlapCell(d) = i+haloSize;
 
-        patchCellSerialised   = peano4::utils::dLinearised(patchCell,numberOfVolumesPerAxisInPatch+2*haloSize);
+        patchCellSerialised   = peano4::dLinearised(patchCell,numberOfVolumesPerAxisInPatch+2*haloSize);
         overlapCellSerialised = toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell,numberOfVolumesPerAxisInPatch,haloSize,d);
         for (int j=0; j<unknowns+auxiliaryVariables; j++) {
           faces[d+DIMENSIONS][overlapCellSerialised*(unknowns+auxiliaryVariables)+j] =

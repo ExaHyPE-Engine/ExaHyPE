@@ -10,7 +10,7 @@
       patchCell(d)   = i;
       overlapCell(d) = i + {{OVERLAP}};
 
-      int patchCellSerialised   = peano4::utils::dLinearised(patchCell, {{DOFS_PER_AXIS}});
+      int patchCellSerialised   = peano4::dLinearised(patchCell, {{DOFS_PER_AXIS}});
       int overlapCellSerialised = toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell, {{DOFS_PER_AXIS}}, {{OVERLAP}}, d);
 
       auto faceIndex = faceIndices[patchIndex * TWO_TIMES_D + d];
@@ -29,7 +29,7 @@
       patchCell(d)   = i + {{DOFS_PER_AXIS}} - {{OVERLAP}};
       overlapCell(d) = i;
 
-      patchCellSerialised   = peano4::utils::dLinearised(patchCell, {{DOFS_PER_AXIS}});
+      patchCellSerialised   = peano4::dLinearised(patchCell, {{DOFS_PER_AXIS}});
       overlapCellSerialised = toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell, {{DOFS_PER_AXIS}}, {{OVERLAP}}, d);
 
       faceIndex = faceIndices[patchIndex * TWO_TIMES_D + d + DIMENSIONS];

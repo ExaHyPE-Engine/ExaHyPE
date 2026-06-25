@@ -6,7 +6,7 @@
 
 #include "exahype2/dg/DGUtils.h"
 
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 
 double {{FULL_QUALIFIED_NAMESPACE}}::maxScaledEigenvalue(
   [[maybe_unused]] {{FULL_QUALIFIED_SOLVER_NAME}}&  solver,

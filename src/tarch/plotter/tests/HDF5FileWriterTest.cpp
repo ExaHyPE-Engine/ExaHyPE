@@ -68,7 +68,7 @@ void tarch::plotter::tests::HDF5FileWriterTest::run() {
 void tarch::plotter::tests::HDF5FileWriterTest::test2DSimpleTriangle() {
   const std::string filename = "HDF5Test2DTriangle";
 
-  HDF5FileWriter plotter(".", 1);
+  HDF5FileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
   auto           v = plotter.createVertexPlotter(0);
   auto           c = plotter.createCellPlotter(0);
 
@@ -86,10 +86,10 @@ void tarch::plotter::tests::HDF5FileWriterTest::test2DSimpleTriangle() {
   // Validate XMF Metadata
   // Topology Type 4 is Triangle in XDMF/VTK
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    validateXMFContent(filename + ".xmf", "TopologyType=\"Mixed\"");
-    validateXMFContent(filename + ".xmf", "GeometryType=\"XYZ\"");
-    validateXMFContent(filename + ".xmf", filename + ".h5:/geometry");
-    cleanup(filename + ".xmf");
+    validateXMFContent((tarch::tests::getWritableTestDirectory() / (filename + ".xmf")).string(), "TopologyType=\"Mixed\"");
+    validateXMFContent((tarch::tests::getWritableTestDirectory() / (filename + ".xmf")).string(), "GeometryType=\"XYZ\"");
+    validateXMFContent((tarch::tests::getWritableTestDirectory() / (filename + ".xmf")).string(), filename + ".h5:/geometry");
+    cleanup((tarch::tests::getWritableTestDirectory() / (filename + ".xmf")).string());
   }
   tarch::mpi::Rank::getInstance().barrier();
 }
@@ -97,7 +97,7 @@ void tarch::plotter::tests::HDF5FileWriterTest::test2DSimpleTriangle() {
 void tarch::plotter::tests::HDF5FileWriterTest::test2DParticlesWithData() {
   const std::string filename = "HDF5Test2DParticles";
 
-  HDF5FileWriter plotter(".", 1);
+  HDF5FileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
   auto           v  = plotter.createVertexPlotter(0);
   auto           vd = plotter.createVertexDataPlotter(0, "Mass", 1);
 
@@ -112,9 +112,9 @@ void tarch::plotter::tests::HDF5FileWriterTest::test2DParticlesWithData() {
 
   tarch::mpi::Rank::getInstance().barrier();
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    validateXMFContent(filename + ".xmf", "Attribute Name=\"Mass\" AttributeType=\"Scalar\"");
-    validateXMFContent(filename + ".xmf", "Center=\"Node\"");
-    cleanup(filename + ".xmf");
+    validateXMFContent((tarch::tests::getWritableTestDirectory() / (filename + ".xmf")).string(), "Attribute Name=\"Mass\" AttributeType=\"Scalar\"");
+    validateXMFContent((tarch::tests::getWritableTestDirectory() / (filename + ".xmf")).string(), "Center=\"Node\"");
+    cleanup((tarch::tests::getWritableTestDirectory() / (filename + ".xmf")).string());
   }
   tarch::mpi::Rank::getInstance().barrier();
 }
@@ -122,7 +122,7 @@ void tarch::plotter::tests::HDF5FileWriterTest::test2DParticlesWithData() {
 void tarch::plotter::tests::HDF5FileWriterTest::test3DCellData() {
   const std::string filename = "HDF5Test3DCellData";
 
-  HDF5FileWriter plotter(".", 1);
+  HDF5FileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
   auto           v  = plotter.createVertexPlotter(0);
   auto           c  = plotter.createCellPlotter(0);
   auto           cd = plotter.createCellDataPlotter(0, "Density", 1);
@@ -140,9 +140,9 @@ void tarch::plotter::tests::HDF5FileWriterTest::test3DCellData() {
 
   tarch::mpi::Rank::getInstance().barrier();
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    validateXMFContent(filename + ".xmf", "Attribute Name=\"Density\" AttributeType=\"Scalar\"");
-    validateXMFContent(filename + ".xmf", "Center=\"Cell\"");
-    cleanup(filename + ".xmf");
+    validateXMFContent((tarch::tests::getWritableTestDirectory() / (filename + ".xmf")).string(), "Attribute Name=\"Density\" AttributeType=\"Scalar\"");
+    validateXMFContent((tarch::tests::getWritableTestDirectory() / (filename + ".xmf")).string(), "Center=\"Cell\"");
+    cleanup((tarch::tests::getWritableTestDirectory() / (filename + ".xmf")).string());
   }
   tarch::mpi::Rank::getInstance().barrier();
 }
@@ -150,7 +150,7 @@ void tarch::plotter::tests::HDF5FileWriterTest::test3DCellData() {
 void tarch::plotter::tests::HDF5FileWriterTest::testAttributeTypes() {
   const std::string filename = "HDF5TestTypes";
 
-  HDF5FileWriter plotter(".", 1);
+  HDF5FileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
   auto           v  = plotter.createVertexPlotter(0);
   int            p0 = v->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
 
@@ -171,24 +171,24 @@ void tarch::plotter::tests::HDF5FileWriterTest::testAttributeTypes() {
 
   tarch::mpi::Rank::getInstance().barrier();
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    validateXMFContent(filename + ".xmf", "Name=\"ScalarField\" AttributeType=\"Scalar\"");
-    validateXMFContent(filename + ".xmf", "Name=\"VectorField\" AttributeType=\"Vector\"");
-    validateXMFContent(filename + ".xmf", "Name=\"TensorField\" AttributeType=\"Matrix\"");
-    cleanup(filename + ".xmf");
+    validateXMFContent((tarch::tests::getWritableTestDirectory() / (filename + ".xmf")).string(), "Name=\"ScalarField\" AttributeType=\"Scalar\"");
+    validateXMFContent((tarch::tests::getWritableTestDirectory() / (filename + ".xmf")).string(), "Name=\"VectorField\" AttributeType=\"Vector\"");
+    validateXMFContent((tarch::tests::getWritableTestDirectory() / (filename + ".xmf")).string(), "Name=\"TensorField\" AttributeType=\"Matrix\"");
+    cleanup((tarch::tests::getWritableTestDirectory() / (filename + ".xmf")).string());
   }
   tarch::mpi::Rank::getInstance().barrier();
 }
 
 void tarch::plotter::tests::HDF5FileWriterTest::testEmptyPlotter() {
   const std::string filename = "HDF5TestEmpty";
-  HDF5FileWriter    plotter(".", 1);
+  HDF5FileWriter    plotter(tarch::tests::getWritableTestDirectory().string(), 1);
   plotter.writeToFile(filename, 0);
 
   tarch::mpi::Rank::getInstance().barrier();
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     // Should create a valid empty file
-    validateXMFContent(filename + ".xmf", "NumberOfElements=\"0\"");
-    cleanup(filename + ".xmf");
+    validateXMFContent((tarch::tests::getWritableTestDirectory() / (filename + ".xmf")).string(), "NumberOfElements=\"0\"");
+    cleanup((tarch::tests::getWritableTestDirectory() / (filename + ".xmf")).string());
   }
   tarch::mpi::Rank::getInstance().barrier();
 }
@@ -198,7 +198,7 @@ void tarch::plotter::tests::HDF5FileWriterTest::testInconsistentDataSizeThrows()
 
   bool exceptionThrown = false;
   try {
-    HDF5FileWriter plotter(".", 1);
+    HDF5FileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
     auto           v  = plotter.createVertexPlotter(0);
     auto           vd = plotter.createVertexDataPlotter(0, "BrokenField", 1);
 
@@ -219,14 +219,14 @@ void tarch::plotter::tests::HDF5FileWriterTest::testInconsistentDataSizeThrows()
   if (not exceptionThrown) {
     // Clean up if it failed to throw
     if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-      cleanup(filename + ".xmf");
+      cleanup((tarch::tests::getWritableTestDirectory() / (filename + ".xmf")).string());
     }
     throw std::runtime_error("HDF5FileWriter did not throw on inconsistent data size!");
   }
 
   tarch::mpi::Rank::getInstance().barrier();
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    cleanup(filename + ".xmf");
+    cleanup((tarch::tests::getWritableTestDirectory() / (filename + ".xmf")).string());
   }
   tarch::mpi::Rank::getInstance().barrier();
 }

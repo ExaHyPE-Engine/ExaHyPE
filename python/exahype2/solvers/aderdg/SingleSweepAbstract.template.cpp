@@ -354,6 +354,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {
   kernels::{{SOLVER_NAME}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initDGMatrices();
 {% endfor %}
 
+{% if USE_POINT_SOURCE %}
+  // Point source locations are global constants. We set them up exactly once here.
+  initPointSourceLocations(pointSourceLocation);
+{% endif %}
+
   {{START_SIMULATION_IMPLEMENTATION}}
 }
 

@@ -313,7 +313,7 @@ public:
    * ~~~~~~~~~~~~~~~~~~~~~~~~~~
    *       if ( marker.coincidesWithCoarseGridVertex() ) {
    *         tarch::la::Vector<DIMENSIONS,int> parent = marker.getRelativePositionWithinFatherCell() / 3;
-   *         coarseGridVerticesX( peano4::utils::dLinearised(parent,2) ).set...
+   *         coarseGridVerticesX( peano4::dLinearised(parent,2) ).set...
    *       }
    * ~~~~~~~~~~~~~~~~~~~~~~~~~~
    *

@@ -153,7 +153,7 @@ if (
         result = jinja2.Template(
             """
 #include "tarch/multicore/Lock.h"
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
 #include "repositories/SolverRepository.h"

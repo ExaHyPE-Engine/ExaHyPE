@@ -5,11 +5,39 @@
 #include "TestMacros.h"
 #include "tarch/CompilerSpecificSettings.h"
 
+#include <filesystem>
 #include <string>
 
 namespace tarch {
   namespace tests {
     class TestCase;
+
+    /**
+     * Directory into which tests may write scratch/fixture files.
+     *
+     * Any test that needs to create a file on disk should obtain its target
+     * location through this function rather than hard-coding "./" or
+     * std::filesystem::temp_directory_path(). On the shared CI nodes the system
+     * temp directory ($TMPDIR // /tmp) is not reliably writable for a job (a
+     * per-job scratch dir that was already cleaned, restrictive permissions, or
+     * a stale fixture owned by another user), which intermittently made
+     * file-writing tests fail with "Permission denied" - and, because such a
+     * failure typically escapes the test as an exception, abort the whole unit
+     * test binary.
+     *
+     * This helper returns a directory that is verified to be writable. It is the
+     * same directory on every MPI rank, which is essential: the parallel
+     * plotters write collectively to a single shared file (nc_create_par,
+     * H5Pset_fapl_mpio), so a per-rank path would deadlock the collective open.
+     * It therefore prefers the current working directory (identical for all
+     * ranks of a run, owned by the job, hence writable, and isolated per job)
+     * and only falls back to the system temp directory if the working directory
+     * is not writable. The result is determined once and cached.
+     *
+     * Combine it with the desired file name via std::filesystem::path, e.g.
+     * `getWritableTestDirectory() / "my-fixture.nc"`.
+     */
+    std::filesystem::path getWritableTestDirectory();
   } // namespace tests
 } // namespace tarch
 

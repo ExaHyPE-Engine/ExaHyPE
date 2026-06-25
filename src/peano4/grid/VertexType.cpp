@@ -3,7 +3,7 @@
 #include "VertexType.h"
 
 #include "GridVertex.h"
-#include "peano4/utils/Linearised.h"
+#include "peano4/Loop.h"
 
 std::ostream& operator<<(std::ostream& out, const peano4::grid::VertexType& type) {
   return (out << peano4::grid::toString(type));
@@ -62,7 +62,7 @@ inline peano4::grid::VertexType getVertexType(
   int                                dimension
 ) {
   if (dimension < 0) {
-    int linearIndex = peano4::utils::dLinearised(position, 2);
+    int linearIndex = peano4::dLinearised(position, 2);
     return getCoarseGridVertexType(coarseGridVertices[linearIndex]);
   }
 
@@ -109,10 +109,10 @@ inline peano4::grid::VertexType getVertexType(
   assertion(position(1) >= 0 and position(1) <= 3);
 
   // Precompute the 4 coarse-corner types once.
-  VertexType c00 = getCoarseGridVertexType(coarseGridVertices[peano4::utils::dLinearised({0, 0}, 2)]);
-  VertexType c01 = getCoarseGridVertexType(coarseGridVertices[peano4::utils::dLinearised({0, 1}, 2)]);
-  VertexType c10 = getCoarseGridVertexType(coarseGridVertices[peano4::utils::dLinearised({1, 0}, 2)]);
-  VertexType c11 = getCoarseGridVertexType(coarseGridVertices[peano4::utils::dLinearised({1, 1}, 2)]);
+  VertexType c00 = getCoarseGridVertexType(coarseGridVertices[peano4::dLinearised({0, 0}, 2)]);
+  VertexType c01 = getCoarseGridVertexType(coarseGridVertices[peano4::dLinearised({0, 1}, 2)]);
+  VertexType c10 = getCoarseGridVertexType(coarseGridVertices[peano4::dLinearised({1, 0}, 2)]);
+  VertexType c11 = getCoarseGridVertexType(coarseGridVertices[peano4::dLinearised({1, 1}, 2)]);
 
   const int x = position(0), y = position(1);
 
@@ -148,7 +148,7 @@ inline peano4::grid::VertexType getVertexType(
 
   // Precompute the 8 coarse-corner types once.
   auto C = [&](int ix, int iy, int iz) -> VertexType {
-    return getCoarseGridVertexType(coarseGridVertices[peano4::utils::dLinearised({ix, iy, iz}, 2)]);
+    return getCoarseGridVertexType(coarseGridVertices[peano4::dLinearised({ix, iy, iz}, 2)]);
   };
   VertexType c000 = C(0, 0, 0), c001 = C(0, 0, 1), c010 = C(0, 1, 0), c011 = C(0, 1, 1), c100 = C(1, 0, 0),
              c101 = C(1, 0, 1), c110 = C(1, 1, 0), c111 = C(1, 1, 1);
@@ -256,16 +256,16 @@ inline peano4::grid::VertexType getVertexTypeFromPreviousTreeSweep(
   assertion(position(1) >= 0 and position(1) <= 3);
 
   VertexType c00 = getCoarseGridVertexTypeFromPreviousTreeSweep(
-    coarseGridVertices[peano4::utils::dLinearised({0, 0}, 2)]
+    coarseGridVertices[peano4::dLinearised({0, 0}, 2)]
   );
   VertexType c01 = getCoarseGridVertexTypeFromPreviousTreeSweep(
-    coarseGridVertices[peano4::utils::dLinearised({0, 1}, 2)]
+    coarseGridVertices[peano4::dLinearised({0, 1}, 2)]
   );
   VertexType c10 = getCoarseGridVertexTypeFromPreviousTreeSweep(
-    coarseGridVertices[peano4::utils::dLinearised({1, 0}, 2)]
+    coarseGridVertices[peano4::dLinearised({1, 0}, 2)]
   );
   VertexType c11 = getCoarseGridVertexTypeFromPreviousTreeSweep(
-    coarseGridVertices[peano4::utils::dLinearised({1, 1}, 2)]
+    coarseGridVertices[peano4::dLinearised({1, 1}, 2)]
   );
 
   const int x = position(0), y = position(1);
@@ -299,7 +299,7 @@ inline peano4::grid::VertexType getVertexTypeFromPreviousTreeSweep(
 
   auto C = [&](int ix, int iy, int iz) -> VertexType {
     return getCoarseGridVertexTypeFromPreviousTreeSweep(
-      coarseGridVertices[peano4::utils::dLinearised({ix, iy, iz}, 2)]
+      coarseGridVertices[peano4::dLinearised({ix, iy, iz}, 2)]
     );
   };
   VertexType c000 = C(0, 0, 0), c001 = C(0, 0, 1), c010 = C(0, 1, 0), c011 = C(0, 1, 1), c100 = C(1, 0, 0),
@@ -371,7 +371,7 @@ inline peano4::grid::VertexType getVertexTypeFromPreviousTreeSweep(
   // Recursive fallback for higher dimensions
   auto getVertexTypeRec = [&](auto&& self, tarch::la::Vector<DIMENSIONS, int> pos, int dim) -> VertexType {
     if (dim < 0) {
-      const int linearIndex = peano4::utils::dLinearised(pos, 2);
+      const int linearIndex = peano4::dLinearised(pos, 2);
       return getCoarseGridVertexTypeFromPreviousTreeSweep(coarseGridVertices[linearIndex]);
     }
     if (pos(dim) == 0) {

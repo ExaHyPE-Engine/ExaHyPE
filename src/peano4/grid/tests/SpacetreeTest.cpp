@@ -6,7 +6,7 @@
 #include "peano4/grid/GridTraversalObserver.h"
 #include "peano4/grid/Spacetree.h"
 #include "peano4/grid/SpacetreeHelper.h"
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 #include "tarch/la/Vector.h"
 
 #include <bitset>

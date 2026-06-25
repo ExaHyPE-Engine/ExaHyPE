@@ -94,7 +94,7 @@ tarch::la::DynamicMatrix* toolbox::blockstructured::internal::
   dfor3(patchIndex) dfor(volumeIndex, numberOfDoFsPerAxisInPatch) {
     tarch::la::Vector<DIMENSIONS, int>
       sourceCell = (volumeIndex + patchIndex * numberOfDoFsPerAxisInPatch) / 3;
-    int sourceCellLinearised = peano4::utils::dLinearised(
+    int sourceCellLinearised = peano4::dLinearised(
       sourceCell,
       numberOfDoFsPerAxisInPatch
     );

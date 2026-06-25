@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 
 namespace peano4::grid {
   class PeanoCurve;
@@ -18,7 +18,7 @@ public:
    * Holds a set bit for each dimension along which the traversal is
    * positive.
    */
-  static peano4::utils::LoopDirection getLoopDirection(const AutomatonState& state);
+  static peano4::LoopDirection getLoopDirection(const AutomatonState& state);
 
   static void setExitFace(AutomatonState& cell, int axis);
   static void setEntryFace(AutomatonState& cell, int axis);

@@ -3,7 +3,7 @@
 #include "internal.h"
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/VertexMarker.h"
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 #include "tarch/la/VectorVectorOperations.h"
 #include "toolbox/particles/assignmentchecks/TracingAPI.h"
 

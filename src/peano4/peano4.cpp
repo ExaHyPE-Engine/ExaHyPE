@@ -99,9 +99,6 @@ void peano4::init(
   const tarch::la::Vector<DIMENSIONS, double>& width,
   const std::bitset<DIMENSIONS>&               periodicBC
 ) {
-  peano4::utils::setupLookupTableForDLinearised();
-  peano4::utils::setupLookupTableForDDelinearised();
-
   if (tarch::mpi::Rank::getInstance().init(argc, argv)) {
     peano4::parallel::Node::initMPIDatatypes();
 

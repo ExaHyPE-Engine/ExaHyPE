@@ -40,7 +40,7 @@ class InitialCondition(AbstractFVActionSet):
     TemplateInitialCondition = """
   if ({{PREDICATE}}) {
     dfor(volume, {{NUMBER_OF_VOLUMES_PER_AXIS}}) {
-      int index = peano4::utils::dLinearised(volume,{{NUMBER_OF_VOLUMES_PER_AXIS}}) * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}});
+      int index = peano4::dLinearised(volume,{{NUMBER_OF_VOLUMES_PER_AXIS}}) * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}});
       {% if STATELESS_INITIAL_CONDITIONS==True %}
       {{FULL_QUALIFIED_SOLVER_NAME}}::initialCondition(
         {{CELL_ACCESSOR}}.data() + index,

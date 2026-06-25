@@ -102,7 +102,7 @@ std::string exahype2::fv::plotPatch(
   }
 #else
   dfor(k, PatchSize) {
-    int index = peano4::utils::dLinearised(k, PatchSize) * (unknowns + auxiliaryVariables);
+    int index = peano4::dLinearised(k, PatchSize) * (unknowns + auxiliaryVariables);
 
     // It is a diagonal entry if this counter is bigger than 1. If it equals
     // 0, it is interior. If it equals 1, then this is a face-connected halo

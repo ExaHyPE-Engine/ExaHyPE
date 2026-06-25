@@ -3,7 +3,7 @@
 #pragma once
 
 #include "peano4/Globals.h"
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 #include "tarch/Assertions.h"
 #include "tarch/NonCriticalAssertions.h"
 #include "tarch/accelerator/accelerator.h"

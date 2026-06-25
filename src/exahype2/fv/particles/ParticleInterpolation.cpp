@@ -72,7 +72,7 @@ double exahype2::fv::particles::interpolation::internal::projectValueOntoParticl
   int                                          unknown
 ) {
   tarch::la::Vector<DIMENSIONS, int> voxel      = mapParticleOntoVoxel(marker, voxelsPerAxis, particleX);
-  int                                voxelIndex = peano4::utils::dLinearised(voxel, voxelsPerAxis);
+  int                                voxelIndex = peano4::dLinearised(voxel, voxelsPerAxis);
 
   return Q[voxelIndex * unknownsPerVoxel + unknown];
 }
@@ -125,7 +125,7 @@ double exahype2::fv::particles::interpolation::internal::projectValueOntoParticl
   }
 
   if (weight > 1e-10) {
-    int idx = peano4::utils::dLinearised(currentVoxel, voxelsPerAxis);
+    int idx = peano4::dLinearised(currentVoxel, voxelsPerAxis);
     result += weight * Q[idx * unknownsPerVoxel + unknown];
     sumWeights += weight;
   }

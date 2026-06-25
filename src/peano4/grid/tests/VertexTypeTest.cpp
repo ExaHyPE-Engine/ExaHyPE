@@ -4,7 +4,7 @@
 
 #include "peano4/grid/GridVertex.h"
 #include "peano4/grid/VertexType.h"
-#include "peano4/utils/Linearised.h"
+#include "peano4/Loop.h"
 
 #include <bitset>
 
@@ -23,7 +23,7 @@ void peano4::grid::tests::VertexTypeTest::testGetVertexTypes() {
   auto cornerIndex = [&](int cornerBits) -> int {
     std::bitset<DIMENSIONS>            bits(cornerBits);
     tarch::la::Vector<DIMENSIONS, int> coords(bits);
-    return peano4::utils::dLinearised(coords, 2);
+    return peano4::dLinearised(coords, 2);
   };
 
   auto setAll = [&](GridVertex::State state) {
@@ -102,7 +102,7 @@ void peano4::grid::tests::VertexTypeTest::testGetVertexTypesFromPreviousTreeSwee
   auto cornerIndex = [&](int cornerBits) -> int {
     std::bitset<DIMENSIONS>            bits(cornerBits);
     tarch::la::Vector<DIMENSIONS, int> coords(bits);
-    return peano4::utils::dLinearised(coords, 2);
+    return peano4::dLinearised(coords, 2);
   };
 
   auto setAll = [&](GridVertex::State state, bool prevHangingFlag) {

@@ -226,7 +226,7 @@ class DynamicAMR(ActionSet):
     def get_includes(self):
         return (
             """
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 #include "toolbox/blockstructured/Enumeration.h"
 #include "toolbox/blockstructured/Interpolation.h"
 #include "toolbox/blockstructured/Restriction.h"

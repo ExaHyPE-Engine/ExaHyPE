@@ -2,11 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "Compare.h"
-#include "Decrement.h"
-#include "Increment.h"
-#include "Linearised.h"
-#include "LoopDirection.h"
 #include "peano4/Globals.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/accelerator.h"
@@ -15,64 +10,111 @@
 #include <bitset>
 
 namespace peano4 {
-  namespace utils {
-    /**
-     * Construct start vector (0,0,....) for d-dimensional loop
-     *
-     * @return a vector containing zero values only.
-     */
-    INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> dStartVector();
+  /**
+   * Is used by the z-loop. See the macros zfor and zfor3.
+   */
+  typedef std::bitset<DIMENSIONS> LoopDirection;
 
-    /**
-     * @return a vector containing only zero values besides the dim-th entry. This
-     *         entry is set value.
-     */
-    INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> dStartVector(int dim, int value);
+  /**
+   * Construct start vector (0,0,....) for d-dimensional loop
+   *
+   * @return a vector containing zero values only.
+   */
+  INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> dStartVector();
 
-    /**
-     * Creates a start vector. Each component is set either 0 or max-1 depending
-     * on direction: If direction is true, then the value 0 is zero.
-     *
-     * @return a start vector for an oscillating loop.
-     */
-    INLINE_METHOD tarch::la::Vector<DIMENSIONS, int> dStartVector(int max, const LoopDirection& direction);
-  }
-}
+  /**
+   * @return a vector containing only zero values besides the dim-th entry. This
+   *         entry is set value.
+   */
+  INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> dStartVector(int dim, int value);
+
+  /**
+   * Creates a start vector. Each component is set either 0 or max-1 depending
+   * on direction: If direction is true, then the value 0 is zero. Used to seed
+   * the generic zfor z-loop.
+   *
+   * @return a start vector for an oscillating loop.
+   */
+  INLINE_METHOD tarch::la::Vector<DIMENSIONS, int> dStartVector(int max, const LoopDirection& direction);
+
+  /**
+   * d-dimensional counterpart of increment operator
+   *
+   * This operation performs a d-dimensional increment on a given integer vector:
+   * The first component of the vector is incremented. If the first component is
+   * greater than max-1, the component is set zero and the next component is
+   * incremented by one. This operation is used often by d-dimensional for-loops.
+   */
+  INLINE_METHOD GPU_CALLABLE_METHOD void dInc(tarch::la::Vector<DIMENSIONS, int>& counter, int max);
+
+  /**
+   * d-dimensional counterpart of increment, where individual vector components have different max values
+   *
+   * This operation performs a d-dimensional increment on a given integer vector:
+   * The first component of the vector is incremented. If the first component is
+   * greater than max(0)-1, the component is set zero and the next component is
+   * incremented by one. This operation is used often by d-dimensional for-loops.
+   */
+  INLINE_METHOD GPU_CALLABLE_METHOD void dInc(
+    tarch::la::Vector<DIMENSIONS, int>&       counter,
+    const tarch::la::Vector<DIMENSIONS, int>& max
+  );
+
+  /**
+   * Same operation as dInc(tarch::la::Vector<DIMENSIONS,int>,int), but now one dimension is not taken
+   * into consideration. This is the increment behind the dfore (exclusive) loop.
+   */
+  INLINE_METHOD GPU_CALLABLE_METHOD void dInc(tarch::la::Vector<DIMENSIONS, int>& counter, int max, int doNotExamine);
+
+  /**
+   * Operation similar to dInc, but is given a direction bitset that identifies
+   * whether the counters has to be incremented or decremented. This is the
+   * increment behind the generic zfor z-loop (used for DIMENSIONS > 3; for
+   * DIMENSIONS 2 and 3 zfor3 is table-driven). See the zfor macro for an
+   * example how to use it.
+   */
+  INLINE_METHOD GPU_CALLABLE_METHOD void dInc(
+    tarch::la::Vector<DIMENSIONS, int>& counter,
+    int                                 max,
+    LoopDirection&                      direction
+  );
+
+  /**
+   * Element-wise comparison for the for d-dimensional for loops
+   *
+   * @return true if all entries of counter are smaller max
+   */
+  INLINE_METHOD GPU_CALLABLE_METHOD int dCmp(const tarch::la::Vector<DIMENSIONS, int>& counter, int max);
+
+  /**
+   * Element-wise comparison for the for d-dimensional for loops
+   *
+   * Element-wise comparison for the loops. Different to the other dCmp()
+   * operation, this one works fine even if the max range per vector entry is
+   * different.
+   *
+   * @return true if all entries of counter are smaller than their corresponding
+   *         entries in max
+   */
+  INLINE_METHOD GPU_CALLABLE_METHOD int dCmp(
+    const tarch::la::Vector<DIMENSIONS, int>& counter,
+    const tarch::la::Vector<DIMENSIONS, int>& max
+  );
+
+  /**
+   * Map d-dimensional vector onto integer index
+   *
+   * @return the linearisation of the counter, i.e. the k-th component is
+   *         multiplied by max^k and the results are accumulated. Component 0
+   *         is therefore the fastest running index.
+   */
+  INLINE_METHOD GPU_CALLABLE_METHOD int dLinearised(const tarch::la::Vector<DIMENSIONS, int>& counter, int max);
+} // namespace peano4
 
 #define dfor(counter, max) \
-  for (tarch::la::Vector<DIMENSIONS, int> counter = ::peano4::utils::dStartVector(); \
-       ::peano4::utils::dCmp(counter, max); \
-       ::peano4::utils::dInc(counter, max))
-
-#define d2for(counter, max) \
-  for (int counter##Scalar = 0; counter##Scalar < tarch::la::aPowI(2, max); counter##Scalar++) { \
-    tarch::la::Vector<2, int> counter; \
-    { \
-      int copy##counter##Scalar = counter##Scalar; \
-      for (int counter##ddd = 2 - 1; counter##ddd >= 0; counter##ddd--) { \
-        int counter##aPowI = 1; \
-        for (int counter##jjj = 0; counter##jjj < counter##ddd; counter##jjj++) { \
-          counter##aPowI *= max; \
-        } \
-        counter(counter##ddd) = copy##counter##Scalar / counter##aPowI; \
-        copy##counter##Scalar -= counter(counter##ddd) * counter##aPowI; \
-      } \
-    }
-
-#define d3for(counter, max) \
-  for (int counter##Scalar = 0; counter##Scalar < tarch::la::aPowI(3, max); counter##Scalar++) { \
-    tarch::la::Vector<3, int> counter; \
-    { \
-      int copy##counter##Scalar = counter##Scalar; \
-      for (int counter##ddd = 3 - 1; counter##ddd >= 0; counter##ddd--) { \
-        int counter##aPowI = 1; \
-        for (int counter##jjj = 0; counter##jjj < counter##ddd; counter##jjj++) { \
-          counter##aPowI *= max; \
-        } \
-        counter(counter##ddd) = copy##counter##Scalar / counter##aPowI; \
-        copy##counter##Scalar -= counter(counter##ddd) * counter##aPowI; \
-      } \
-    }
+  for (tarch::la::Vector<DIMENSIONS, int> counter = ::peano4::dStartVector(); \
+       ::peano4::dCmp(counter, max); \
+       ::peano4::dInc(counter, max))
 
 #if DIMENSIONS == 2
 #define dfor2(counter) \
@@ -123,49 +165,67 @@ namespace peano4 {
  * throughout the for-loop.
  */
 #define dfore(counter, max, dim, value) \
-  for (tarch::la::Vector<DIMENSIONS, int> counter = peano4::utils::dStartVector(dim, value); \
-       peano4::utils::dCmp(counter, max); \
-       peano4::utils::dInc(counter, max, dim))
+  for (tarch::la::Vector<DIMENSIONS, int> counter = peano4::dStartVector(dim, value); \
+       peano4::dCmp(counter, max); \
+       peano4::dInc(counter, max, dim))
 
 /**
- * This is a d-dimensional z-loop. A z-loop is a d-dimensional loop the
- * counter direction changes every time an inner loop direction has changed.
- * So this is the loop corresponding to a Peano curve. The for loop is passed
- * a counter name, the number of steps to perform in each direction and a
- * direction flag that identifies the initial direction. Note that this
- * argument has to be a real variable, it might not be a constant. The
- * direction flag array identifies for each direction, whether the initial
- * loop goes along the axis or not. The type of direction is LoopDirection.
+ * Generic d-dimensional z-loop.
+ *
+ * A z-loop is a d-dimensional loop whose counter direction changes every time an
+ * inner loop direction has changed, i.e. the loop corresponding to a Peano
+ * curve. The loop is passed a counter name, the number of steps to perform in
+ * each direction (max) and a direction flag that identifies the initial
+ * direction. Note that direction has to be a real variable, not a constant. The
+ * direction flag (type LoopDirection) identifies for each axis whether the
+ * initial loop runs along the axis.
+ *
+ * This generic variant works for any number of dimensions and any max. For the
+ * common case max = 3 and DIMENSIONS 2 or 3 use the table-driven zfor3 instead,
+ * which is what zfor3 falls back to here for DIMENSIONS > 3.
+ *
+ * \code
+ *   LoopDirection d(3);  // equals {true,true}, the standard Peano Leitmotiv
+ *   zfor( a, 3, d ) {
+ *     std::cout << a;
+ *   } endzfor
+ * \endcode
+ * yields in [0,0],[1,0],[2,0],[2,1],[1,1],[0,1],[0,2],[1,2],[2,2].
+ */
+#define zfor(counter, max, direction) \
+  { \
+    for (tarch::la::Vector<DIMENSIONS, int> counter = peano4::dStartVector(max, direction); \
+         peano4::dCmp(counter, max); \
+         peano4::dInc(counter, max, direction)) {
+
+/**
+ * d-dimensional z-loop (Peano space-filling-curve order) for max = 3.
+ *
+ * A z-loop is a d-dimensional loop whose counter direction changes every time an
+ * inner loop direction has changed, i.e. the loop corresponding to a Peano
+ * curve. It is passed a counter name and a direction flag of type LoopDirection
+ * that identifies, per axis, whether the initial loop runs along the axis. For
+ * DIMENSIONS 2 and 3 it is fully table-driven (lookupzfor3); for higher
+ * dimensions it falls back to the generic zfor.
  *
  * Here are some examples for two dimensions:
  * \code
  *   LoopDirection d(3);  // equals {true,true} and identifies the standard
  *                        // Peano Leitmotiv
- *   zfor( a, 3, d ) {
+ *   zfor3( a, d ) {
  *     std::cout << a;
- *   }
+ *   } endzfor
  * \endcode
  * yields in [0,0],[1,0],[2,0],[2,1],[1,1],[0,1],[0,2],[1,2],[2,2].
  *
  * \code
  *   LoopDirection d(1);  // equals {true, false} and specifies a Peano curve
  *                        // from the left top to right bottom
- *   zfor( a, 3, d ) {
+ *   zfor3( a, d ) {
  *     std::cout << a;
- *   }
+ *   } endzfor
  * \endcode
  * yields in [0,2],[1,2],[2,2],[2,1],[1,1],[0,1],[0,0],[1,0],[2,0].
- */
-#define zfor(counter, max, direction) \
-  { \
-    for (tarch::la::Vector<DIMENSIONS, int> counter = peano4::utils::dStartVector(max, direction); \
-         peano4::utils::dCmp(counter, max); \
-         peano4::utils::dInc(counter, max, direction)) {
-
-/*
- * zfor3 is an optimised version of zfor for max = 3
- * A lookup table is used for dim=2 and dim=3, for higher dimensions
- * the standard zfor is used instead.
  */
 #if DIMENSIONS == 2
 // First entry is direction, second entry is cell, third entry is tuples

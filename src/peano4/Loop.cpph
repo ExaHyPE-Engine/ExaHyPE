@@ -1,0 +1,151 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::dStartVector() {
+  tarch::la::Vector<DIMENSIONS, int> result(0);
+  return result;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::dStartVector(int dim, int value) {
+  tarch::la::Vector<DIMENSIONS, int> result(0);
+  assertion(dim >= 0, dim, value);
+  assertion(dim < DIMENSIONS, dim, value);
+  assertion(value >= 0, dim, value);
+  result(dim) = value;
+  return result;
+}
+
+INLINE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::dStartVector(int max, const LoopDirection& direction) {
+  tarch::la::Vector<DIMENSIONS, int> result;
+  assertion(max > 0, max, direction);
+  for (int i = 0; i < DIMENSIONS; i++) {
+    if (direction[i]) {
+      result(i) = 0;
+    } else {
+      result(i) = max - 1;
+    }
+  }
+  return result;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void peano4::dInc(tarch::la::Vector<DIMENSIONS, int>& counter, int max) {
+  counter(0)++;
+  for (int i = 0; i < DIMENSIONS - 1; i++) {
+    if (counter(i) >= max) {
+      counter(i) = 0;
+      counter(i + 1)++;
+    } else {
+      break;
+    }
+  }
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void peano4::dInc(
+  tarch::la::Vector<DIMENSIONS, int>&       counter,
+  const tarch::la::Vector<DIMENSIONS, int>& max
+) {
+  counter(0)++;
+  for (int i = 0; i < DIMENSIONS - 1; i++) {
+    if (counter(i) >= max(i)) {
+      counter(i) = 0;
+      counter(i + 1)++;
+    } else {
+      break;
+    }
+  }
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void peano4::dInc(tarch::la::Vector<DIMENSIONS, int>& counter, int max, int doNotExamine) {
+  assertion(doNotExamine < DIMENSIONS);
+  assertion(doNotExamine >= -1);
+
+  if (doNotExamine != 0) {
+    counter(0)++;
+  } else {
+    counter(1)++;
+  }
+  for (int i = 0; i < DIMENSIONS - 1; i++) {
+    if (counter(i) >= max) {
+      counter(i) = 0;
+      if (doNotExamine != i + 1) {
+        counter(i + 1)++;
+      } else {
+        if (doNotExamine != DIMENSIONS - 1) {
+          counter(i + 2)++;
+        } else {
+          counter(DIMENSIONS - 1) = max;
+        }
+      }
+    }
+  }
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD void peano4::dInc(
+  tarch::la::Vector<DIMENSIONS, int>& counter,
+  int                                 max,
+  LoopDirection&                      direction
+) {
+  for (int i = 0; i < DIMENSIONS; i++) {
+    if (direction[i]) {
+      counter(i)++;
+      bool greater = counter(i) >= max;
+      if (greater && (i == DIMENSIONS - 1)) {
+        counter(i) = max;
+        return;
+      } else if (greater) {
+        counter(i)--;
+        direction[i] = !direction[i];
+      } else
+        return;
+    } else {
+      counter(i)--;
+      bool smaller = counter(i) < 0;
+      if (smaller && (i == DIMENSIONS - 1)) {
+        counter(i) = max;
+        return;
+      } else if (smaller) {
+        counter(i)++;
+        direction[i] = !direction[i];
+      } else
+        return;
+    }
+  }
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD int peano4::dCmp(
+  const tarch::la::Vector<DIMENSIONS, int>& counter,
+  const tarch::la::Vector<DIMENSIONS, int>& max
+) {
+  int result = true;
+  for (int i = 0; i < DIMENSIONS; i++) {
+    assertion(counter(i) <= max(i), counter, max);
+    assertion(counter(i) >= 0, counter, max);
+    result &= (counter(i) < max(i));
+  }
+  return result;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD int peano4::dCmp(const tarch::la::Vector<DIMENSIONS, int>& counter, int max) {
+  int result = true;
+  for (int i = 0; i < DIMENSIONS; i++) {
+    assertion(counter(i) <= max, counter, max);
+    assertion(counter(i) >= 0, counter, max);
+    result &= (counter(i) < max);
+  }
+  return result;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD int peano4::dLinearised(
+  const tarch::la::Vector<DIMENSIONS, int>& counter,
+  int                                       max
+) {
+  int result = counter(DIMENSIONS - 1);
+  assertion(counter(DIMENSIONS - 1) >= 0, counter, max);
+  assertion(counter(DIMENSIONS - 1) < max, counter, max);
+  for (int d = DIMENSIONS - 2; d >= 0; d--) {
+    assertion(counter(d) >= 0, counter(d), max);
+    assertion(counter(d) < max, counter(d), max);
+    result = result * max + counter(d);
+  }
+  return result;
+}

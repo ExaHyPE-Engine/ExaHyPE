@@ -8,7 +8,6 @@ set(SOURCES
   StackSizeLimitDetection.cpp
   Assertions.cpp
   CPUFeatureDetection.cpp
-  Enumerator.cpp
   FloatingPointExceptions.cpp
   NonCriticalAssertions.cpp
   UnitTests.cpp

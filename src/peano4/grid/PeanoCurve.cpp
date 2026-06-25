@@ -20,8 +20,8 @@ bool peano4::grid::PeanoCurve::isTraversePositiveAlongAxis(const AutomatonState&
   return evenParity ^ state.getInverted();
 }
 
-peano4::utils::LoopDirection peano4::grid::PeanoCurve::getLoopDirection(const AutomatonState& state) {
-  peano4::utils::LoopDirection result;
+peano4::LoopDirection peano4::grid::PeanoCurve::getLoopDirection(const AutomatonState& state) {
+  peano4::LoopDirection result;
   for (int i = 0; i < DIMENSIONS; i++) {
     result[i] = isTraversePositiveAlongAxis(state, i);
   }

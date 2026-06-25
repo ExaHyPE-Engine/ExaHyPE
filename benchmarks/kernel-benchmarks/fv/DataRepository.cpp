@@ -5,8 +5,7 @@
 #include "FVSolver.h"
 #include "exahype2/RuntimeParameters.h"
 #include "exahype2/fv/BoundaryConditions.h"
-#include "peano4/utils/Linearised.h"
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 
 #include <algorithm>
 #include <cmath>
@@ -138,7 +137,7 @@ namespace benchmarks::exahype2::kernelbenchmarks {
     tarch::la::Vector<DIMENSIONS, int>    cellIndex        = tarch::la::convertScalar<int>(
       tarch::la::floor(tarch::la::divideComponents(cellCentreOffset, cellSize))
     );
-    int index = peano4::utils::dLinearised(cellIndex, std::pow(3, depth));
+    int index = peano4::dLinearised(cellIndex, std::pow(3, depth));
     return _depthLevels[depth - 1].QNew[index].data();
   }
 
@@ -152,7 +151,7 @@ namespace benchmarks::exahype2::kernelbenchmarks {
     tarch::la::Vector<DIMENSIONS, int>    cellIndex        = tarch::la::convertScalar<int>(
       tarch::la::floor(tarch::la::divideComponents(cellCentreOffset, cellSize))
     );
-    int index = peano4::utils::dLinearised(cellIndex, std::pow(3, depth));
+    int index = peano4::dLinearised(cellIndex, std::pow(3, depth));
     return _depthLevels[depth - 1].QOld[index].data();
   }
 

@@ -163,7 +163,7 @@ class PosterioriLimiting(object):
         )
 
         self._min_and_max_projection.generator.includes += """
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 #include "repositories/SolverRepository.h"
 """
 
@@ -428,7 +428,7 @@ class PosterioriLimiting(object):
 #include "tarch/la/Vector.h"
 
 #include "peano4/Globals.h"
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 
 #include "repositories/SolverRepository.h"
 """

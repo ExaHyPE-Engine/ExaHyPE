@@ -15,7 +15,7 @@
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/FaceEnumerator.h"
 #include "peano4/peano4.h"
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 #include "tarch/instrumentation/Log.h"
 #include "tarch/instrumentation/Measurement.h"
 #include "tarch/instrumentation/Watch.h"

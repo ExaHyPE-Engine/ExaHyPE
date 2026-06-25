@@ -3,7 +3,7 @@
 #include "VertexMarker.h"
 
 #include "peano4/grid/GridTraversalObserver.h"
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 
 std::ostream& operator<<(std::ostream& out, const peano4::datamanagement::VertexMarker& marker) {
   out << marker.toString();
@@ -174,7 +174,7 @@ std::bitset<TWO_POWER_D> peano4::datamanagement::VertexMarker::areAdjacentCellsL
   tarch::la::Vector<DIMENSIONS, int> selectedVertex(selectedVertexAsBitset);
   dfor2(j) {
     tarch::la::Vector<DIMENSIONS, int> entryIn3x3Patch = selectedVertex + j;
-    result[jScalar] = _isAdjacentCellLocal[peano4::utils::dLinearised(entryIn3x3Patch, 3)];
+    result[jScalar] = _isAdjacentCellLocal[peano4::dLinearised(entryIn3x3Patch, 3)];
   }
   enddforx
 

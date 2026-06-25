@@ -72,7 +72,7 @@ void peano4::grid::AutomatonState::refineState(
   int                                axis
 ) {
   if (axis == -1) {
-    int arrayIndex                   = peano4::utils::dLinearised(fineGridStatesPosition, 3);
+    int arrayIndex                   = peano4::dLinearised(fineGridStatesPosition, 3);
     fineGridStates[arrayIndex]       = coarseGrid;
     fineGridStates[arrayIndex].level = coarseGrid.level + 1;
   } else {

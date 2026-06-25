@@ -27,7 +27,7 @@ namespace {
     static std::atomic<int> counter = 0;
 
     const std::filesystem::path path
-      = std::filesystem::temp_directory_path()
+      = tarch::tests::getWritableTestDirectory()
         / std::filesystem::path(
           stem + "-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) + "-"
           + std::to_string(counter++) + ".nc"

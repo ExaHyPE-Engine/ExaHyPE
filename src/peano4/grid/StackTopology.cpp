@@ -3,7 +3,7 @@
 #include "StackTopology.h"
 
 #include "SpacetreeHelper.h"
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 
 #include <unordered_set>
 
@@ -37,7 +37,7 @@ std::bitset<2 * DIMENSIONS> peano4::grid::StackTopology::getPeriodicBoundaryNumb
     dfor2(k) tarch::la::Vector<DIMENSIONS, int> entry;
     entry                 = k;
     entry(d % DIMENSIONS) = d / DIMENSIONS;
-    allFlagsSet &= flags[utils::dLinearised(entry, 2)] == SpacetreeHelper::RankOfPeriodicBoundaryCondition;
+    allFlagsSet &= flags[peano4::dLinearised(entry, 2)] == SpacetreeHelper::RankOfPeriodicBoundaryCondition;
     enddforx if (allFlagsSet) { result.set(d); }
   }
   return result;
@@ -48,7 +48,7 @@ int peano4::grid::StackTopology::getOutputStackForPeriodicBoundaryExchange(int f
   int                                normal    = faceNumber % DIMENSIONS;
   bool                               lookRight = faceNumber < DIMENSIONS;
   neighbour(normal) += lookRight ? 1 : -1;
-  int linearisedIndex = utils::dLinearised(neighbour, 3);
+  int linearisedIndex = peano4::dLinearised(neighbour, 3);
   if (linearisedIndex >= THREE_POWER_D / 2) {
     linearisedIndex--;
   }

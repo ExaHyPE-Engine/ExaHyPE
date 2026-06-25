@@ -55,7 +55,7 @@ void tarch::plotter::tests::VTUFileWriterTest::run() {
 void tarch::plotter::tests::VTUFileWriterTest::test2DSimpleTriangle() {
   const std::string filename = "VTUTest2DTriangle";
 
-  VTUFileWriter plotter("./", 1);
+  VTUFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
 
   auto v = plotter.createVertexPlotter(0);
   // Triangle (0,0), (1,0), (0,1)
@@ -74,14 +74,14 @@ void tarch::plotter::tests::VTUFileWriterTest::test2DSimpleTriangle() {
   plotter.writeToFile(filename, 0);
 
   const int   rank    = tarch::mpi::Rank::getInstance().getRank();
-  std::string vtuPath = std::string("./") + filename + "-rank-" + std::to_string(rank) + ".vtu";
+  std::string vtuPath = (tarch::tests::getWritableTestDirectory() / (filename + "-rank-" + std::to_string(rank) + ".vtu")).string();
 
   // Check for the VTK XML tag and correct piece info
   validateFileContent(vtuPath, "<Piece NumberOfPoints=\"3\" NumberOfCells=\"1\">");
   validateFileContent(vtuPath, "Name=\"types\""); // Check types array exists
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    std::string pvtuPath = std::string("./") + filename + ".pvtu";
+    std::string pvtuPath = (tarch::tests::getWritableTestDirectory() / (filename + ".pvtu")).string();
     validateFileContent(pvtuPath, "<VTKFile type=\"PUnstructuredGrid\"");
     fs::remove(pvtuPath);
   }
@@ -92,7 +92,7 @@ void tarch::plotter::tests::VTUFileWriterTest::test2DSimpleTriangle() {
 void tarch::plotter::tests::VTUFileWriterTest::test3DSimpleHexahedron() {
   const std::string filename = "VTUTest3DHex";
 
-  VTUFileWriter plotter("./", 1);
+  VTUFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
   auto          v = plotter.createVertexPlotter(0);
 
   // Unit Cube
@@ -113,12 +113,12 @@ void tarch::plotter::tests::VTUFileWriterTest::test3DSimpleHexahedron() {
   plotter.writeToFile(filename, 0);
 
   const int   rank    = tarch::mpi::Rank::getInstance().getRank();
-  std::string vtuPath = std::string("./") + filename + "-rank-" + std::to_string(rank) + ".vtu";
+  std::string vtuPath = (tarch::tests::getWritableTestDirectory() / (filename + "-rank-" + std::to_string(rank) + ".vtu")).string();
 
   validateFileContent(vtuPath, "<Piece NumberOfPoints=\"8\" NumberOfCells=\"1\">");
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    std::string pvtuPath = std::string("./") + filename + ".pvtu";
+    std::string pvtuPath = (tarch::tests::getWritableTestDirectory() / (filename + ".pvtu")).string();
     validateFileContent(pvtuPath, "<VTKFile type=\"PUnstructuredGrid\"");
     fs::remove(pvtuPath);
   }
@@ -129,7 +129,7 @@ void tarch::plotter::tests::VTUFileWriterTest::test3DSimpleHexahedron() {
 void tarch::plotter::tests::VTUFileWriterTest::test2DParticlesWithData() {
   const std::string filename = "VTUTest2DParticles";
 
-  VTUFileWriter plotter("./", 1);
+  VTUFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
   auto          v  = plotter.createVertexPlotter(0);
   auto          vd = plotter.createVertexDataPlotter(0, "Mass", 1);
   auto          vv = plotter.createVertexDataPlotter(0, "Velocity", 3); // 3D vector on 2D point
@@ -145,7 +145,7 @@ void tarch::plotter::tests::VTUFileWriterTest::test2DParticlesWithData() {
   plotter.writeToFile(filename, 0);
 
   const int   rank    = tarch::mpi::Rank::getInstance().getRank();
-  std::string vtuPath = std::string("./") + filename + "-rank-" + std::to_string(rank) + ".vtu";
+  std::string vtuPath = (tarch::tests::getWritableTestDirectory() / (filename + "-rank-" + std::to_string(rank) + ".vtu")).string();
 
   validateFileContent(vtuPath, "<PointData>");
   validateFileContent(vtuPath, "Name=\"Mass\"");
@@ -153,7 +153,7 @@ void tarch::plotter::tests::VTUFileWriterTest::test2DParticlesWithData() {
   validateFileContent(vtuPath, "<Piece NumberOfPoints=\"5\" NumberOfCells=\"0\">");
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    std::string pvtuPath = std::string("./") + filename + ".pvtu";
+    std::string pvtuPath = (tarch::tests::getWritableTestDirectory() / (filename + ".pvtu")).string();
     validateFileContent(pvtuPath, "<VTKFile type=\"PUnstructuredGrid\"");
     fs::remove(pvtuPath);
   }
@@ -164,7 +164,7 @@ void tarch::plotter::tests::VTUFileWriterTest::test2DParticlesWithData() {
 void tarch::plotter::tests::VTUFileWriterTest::test3DCellData() {
   const std::string filename = "VTUTest3DCellData";
 
-  VTUFileWriter plotter("./", 1);
+  VTUFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
   auto          v  = plotter.createVertexPlotter(0);
   auto          c  = plotter.createCellPlotter(0);
   auto          cd = plotter.createCellDataPlotter(0, "Pressure", 1);
@@ -189,14 +189,14 @@ void tarch::plotter::tests::VTUFileWriterTest::test3DCellData() {
   plotter.writeToFile(filename, 0);
 
   const int   rank    = tarch::mpi::Rank::getInstance().getRank();
-  std::string vtuPath = std::string("./") + filename + "-rank-" + std::to_string(rank) + ".vtu";
+  std::string vtuPath = (tarch::tests::getWritableTestDirectory() / (filename + "-rank-" + std::to_string(rank) + ".vtu")).string();
 
   validateFileContent(vtuPath, "<CellData>");
   validateFileContent(vtuPath, "Name=\"Pressure\"");
   validateFileContent(vtuPath, "NumberOfCells=\"2\"");
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    std::string pvtuPath = std::string("./") + filename + ".pvtu";
+    std::string pvtuPath = (tarch::tests::getWritableTestDirectory() / (filename + ".pvtu")).string();
     validateFileContent(pvtuPath, "<VTKFile type=\"PUnstructuredGrid\"");
     fs::remove(pvtuPath);
   }
@@ -207,7 +207,7 @@ void tarch::plotter::tests::VTUFileWriterTest::test3DCellData() {
 void tarch::plotter::tests::VTUFileWriterTest::test2DAMRGrid() {
   const std::string filename = "VTUTest2DAMR";
 
-  VTUFileWriter plotter("./", 1);
+  VTUFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
   auto          dataPlotter = plotter.createCellDataPlotter(0, "RefinementLevel", 1);
 
   AMRPlotter amrPlotter(plotter, 0, 0.5, 0.1);
@@ -228,13 +228,13 @@ void tarch::plotter::tests::VTUFileWriterTest::test2DAMRGrid() {
   plotter.writeToFile(filename, 0);
 
   const int   rank    = tarch::mpi::Rank::getInstance().getRank();
-  std::string vtuPath = std::string("./") + filename + "-rank-" + std::to_string(rank) + ".vtu";
+  std::string vtuPath = (tarch::tests::getWritableTestDirectory() / (filename + "-rank-" + std::to_string(rank) + ".vtu")).string();
 
   validateFileContent(vtuPath, "NumberOfCells=\"5\""); // 1 + 4
   validateFileContent(vtuPath, "Name=\"RefinementLevel\"");
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    std::string pvtuPath = std::string("./") + filename + ".pvtu";
+    std::string pvtuPath = (tarch::tests::getWritableTestDirectory() / (filename + ".pvtu")).string();
     validateFileContent(pvtuPath, "<VTKFile type=\"PUnstructuredGrid\"");
     fs::remove(pvtuPath);
   }
@@ -245,7 +245,7 @@ void tarch::plotter::tests::VTUFileWriterTest::test2DAMRGrid() {
 void tarch::plotter::tests::VTUFileWriterTest::test3DAMRGrid() {
   const std::string filename = "VTUTest3DAMR";
 
-  VTUFileWriter plotter("./", 1);
+  VTUFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
   auto          dataPlotter = plotter.createCellDataPlotter(0, "RefinementLevel", 1);
 
   AMRPlotter amrPlotter(plotter, 0, 0.5, 0.1);
@@ -267,12 +267,12 @@ void tarch::plotter::tests::VTUFileWriterTest::test3DAMRGrid() {
   plotter.writeToFile(filename, 0);
 
   const int   rank    = tarch::mpi::Rank::getInstance().getRank();
-  std::string vtuPath = std::string("./") + filename + "-rank-" + std::to_string(rank) + ".vtu";
+  std::string vtuPath = (tarch::tests::getWritableTestDirectory() / (filename + "-rank-" + std::to_string(rank) + ".vtu")).string();
 
   validateFileContent(vtuPath, "NumberOfCells=\"3\"");
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    std::string pvtuPath = std::string("./") + filename + ".pvtu";
+    std::string pvtuPath = (tarch::tests::getWritableTestDirectory() / (filename + ".pvtu")).string();
     validateFileContent(pvtuPath, "<VTKFile type=\"PUnstructuredGrid\"");
     fs::remove(pvtuPath);
   }
@@ -284,20 +284,20 @@ void tarch::plotter::tests::VTUFileWriterTest::testEmptyPlotter() {
   const std::string filename = "VTUTestEmpty";
 
   {
-    VTUFileWriter plotter("./", 1);
+    VTUFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
     // Do nothing, just close/write
     plotter.writeToFile(filename, 0);
   }
 
   const int   rank    = tarch::mpi::Rank::getInstance().getRank();
-  std::string vtuPath = std::string("./") + filename + "-rank-" + std::to_string(rank) + ".vtu";
+  std::string vtuPath = (tarch::tests::getWritableTestDirectory() / (filename + "-rank-" + std::to_string(rank) + ".vtu")).string();
 
   // Validate it created a file with 0 points/cells
   validateFileContent(vtuPath, "NumberOfPoints=\"0\"");
   validateFileContent(vtuPath, "NumberOfCells=\"0\"");
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    std::string pvtuPath = std::string("./") + filename + ".pvtu";
+    std::string pvtuPath = (tarch::tests::getWritableTestDirectory() / (filename + ".pvtu")).string();
     validateFileContent(pvtuPath, "<VTKFile type=\"PUnstructuredGrid\"");
     fs::remove(pvtuPath);
   }
@@ -309,7 +309,7 @@ void tarch::plotter::tests::VTUFileWriterTest::testMixedEmptySubdomains() {
   const std::string filename = "VTUTestMixedEmpty";
 
   // Simulate 2 subdomains (e.g. threads or local partitions)
-  VTUFileWriter plotter("./", 2);
+  VTUFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 2);
 
   // Subdomain 0: HAS DATA
   auto v0      = plotter.createVertexPlotter(0);
@@ -324,14 +324,14 @@ void tarch::plotter::tests::VTUFileWriterTest::testMixedEmptySubdomains() {
   plotter.writeToFile(filename, 0);
 
   const int   rank    = tarch::mpi::Rank::getInstance().getRank();
-  std::string vtuPath = std::string("./") + filename + "-rank-" + std::to_string(rank) + ".vtu";
+  std::string vtuPath = (tarch::tests::getWritableTestDirectory() / (filename + "-rank-" + std::to_string(rank) + ".vtu")).string();
 
   // Validate: Should contain the data from SD 0 and ignore SD 1
   validateFileContent(vtuPath, "NumberOfPoints=\"2\"");
   validateFileContent(vtuPath, "NumberOfCells=\"1\"");
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    std::string pvtuPath = std::string("./") + filename + ".pvtu";
+    std::string pvtuPath = (tarch::tests::getWritableTestDirectory() / (filename + ".pvtu")).string();
     validateFileContent(pvtuPath, "<VTKFile type=\"PUnstructuredGrid\"");
     fs::remove(pvtuPath);
   }
@@ -344,7 +344,7 @@ void tarch::plotter::tests::VTUFileWriterTest::testOversizedDataThrows() {
 
   bool exceptionThrown = false;
   try {
-    VTUFileWriter plotter("./", 1);
+    VTUFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
     auto          v = plotter.createVertexPlotter(0);
 
     int i0 = v->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
@@ -361,7 +361,7 @@ void tarch::plotter::tests::VTUFileWriterTest::testOversizedDataThrows() {
   }
 
   const int   rank    = tarch::mpi::Rank::getInstance().getRank();
-  std::string vtuPath = std::string("./") + filename + "-rank-" + std::to_string(rank) + ".vtu";
+  std::string vtuPath = (tarch::tests::getWritableTestDirectory() / (filename + "-rank-" + std::to_string(rank) + ".vtu")).string();
 
   // If the file was somehow created (test failed), clean it up
   if (fs::exists(vtuPath)) {
@@ -376,7 +376,7 @@ void tarch::plotter::tests::VTUFileWriterTest::testInconsistentSchemaThrows() {
 
   bool exceptionThrown = false;
   try {
-    VTUFileWriter plotter("./", 2);
+    VTUFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 2);
 
     // Subdomain 0: Defines "Pressure" (Scalar)
     auto v0 = plotter.createVertexPlotter(0);
@@ -397,7 +397,7 @@ void tarch::plotter::tests::VTUFileWriterTest::testInconsistentSchemaThrows() {
   }
 
   const int   rank    = tarch::mpi::Rank::getInstance().getRank();
-  std::string vtuPath = std::string("./") + filename + "-rank-" + std::to_string(rank) + ".vtu";
+  std::string vtuPath = (tarch::tests::getWritableTestDirectory() / (filename + "-rank-" + std::to_string(rank) + ".vtu")).string();
 
   if (fs::exists(vtuPath)) {
     fs::remove(vtuPath);

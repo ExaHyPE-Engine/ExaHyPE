@@ -42,10 +42,10 @@ void tarch::plotter::tests::NetCDFFileWriterTest::run() {
 
 void tarch::plotter::tests::NetCDFFileWriterTest::test2DSimpleTriangle() {
   const std::string filename = "NetCDFTestTriangle";
-  const std::string fullPath = filename + ".nc";
+  const std::string fullPath = (tarch::tests::getWritableTestDirectory() / (filename + ".nc")).string();
 
   {
-    NetCDFFileWriter plotter(".", 1);
+    NetCDFFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
     auto             v = plotter.createVertexPlotter(0);
     auto             c = plotter.createCellPlotter(0);
 
@@ -69,10 +69,10 @@ void tarch::plotter::tests::NetCDFFileWriterTest::test2DSimpleTriangle() {
 
 void tarch::plotter::tests::NetCDFFileWriterTest::test2DQuadWithData() {
   const std::string filename = "NetCDFTestQuad";
-  const std::string fullPath = filename + ".nc";
+  const std::string fullPath = (tarch::tests::getWritableTestDirectory() / (filename + ".nc")).string();
 
   {
-    NetCDFFileWriter plotter(".", 1);
+    NetCDFFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
     auto             v  = plotter.createVertexPlotter(0);
     auto             c  = plotter.createCellPlotter(0);
     auto             vd = plotter.createVertexDataPlotter(0, "Pressure", 1);
@@ -107,10 +107,10 @@ void tarch::plotter::tests::NetCDFFileWriterTest::test2DQuadWithData() {
 
 void tarch::plotter::tests::NetCDFFileWriterTest::testEmptyPlotter() {
   const std::string filename = "NetCDFTestEmpty";
-  const std::string fullPath = filename + ".nc";
+  const std::string fullPath = (tarch::tests::getWritableTestDirectory() / (filename + ".nc")).string();
 
   {
-    NetCDFFileWriter plotter(".", 1);
+    NetCDFFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
     // Write without adding any data
     plotter.writeToFile(filename, 0);
   }
@@ -126,11 +126,11 @@ void tarch::plotter::tests::NetCDFFileWriterTest::testEmptyPlotter() {
 
 void tarch::plotter::tests::NetCDFFileWriterTest::testInconsistentDataSizeThrows() {
   const std::string filename = "NetCDFTestInconsistent";
-  const std::string fullPath = filename + ".nc";
+  const std::string fullPath = (tarch::tests::getWritableTestDirectory() / (filename + ".nc")).string();
 
   bool exceptionThrown = false;
   try {
-    NetCDFFileWriter plotter(".", 1);
+    NetCDFFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
     auto             v  = plotter.createVertexPlotter(0);
     auto             vd = plotter.createVertexDataPlotter(0, "BrokenField", 1);
 
@@ -168,7 +168,7 @@ void tarch::plotter::tests::NetCDFFileWriterTest::testUnsupportedCellType() {
 
   bool exceptionThrown = false;
   try {
-    NetCDFFileWriter plotter(".", 1);
+    NetCDFFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
     auto             v = plotter.createVertexPlotter(0);
     auto             c = plotter.createCellPlotter(0);
 
@@ -196,7 +196,7 @@ void tarch::plotter::tests::NetCDFFileWriterTest::testUnsupportedCellType() {
   tarch::mpi::Rank::getInstance().barrier();
   if (not exceptionThrown) {
     if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-      cleanup(filename + ".nc");
+      cleanup((tarch::tests::getWritableTestDirectory() / (filename + ".nc")).string());
     }
     throw std::runtime_error("NetCDFFileWriter did not throw on unsupported cell type!");
   }

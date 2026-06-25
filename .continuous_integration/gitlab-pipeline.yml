@@ -19,3 +19,25 @@ stages:
 
 default:
   interruptible: true
+  # A hung job (e.g. an MPI deadlock) frees the shared runner after this instead
+  # of burning the project-wide default. The long compile-and-test Build job
+  # raises it (see build.yml).
+  timeout: 30m
+  retry:
+    max: 2
+    # Retry only on infrastructure failures so genuine build/test failures are
+    # never masked.
+    when:
+      - runner_system_failure
+      - scheduler_failure
+      - api_failure
+      - stuck_or_timeout_failure
+  hooks:
+    # The shell executor reuses a persistent build directory on the shared
+    # filesystem. Because the jobs are interruptible, a push of a new commit can
+    # cancel an in-flight job mid-fetch (SIGKILL), leaving git's config lock
+    # behind. The next job then fails in "Getting source from Git repository"
+    # with: could not lock config file ...gitlab-runner.ext.conf: File exists.
+    # Clear any such stale lock before fetching sources.
+    pre_get_sources_script:
+      - rm -f "${CI_PROJECT_DIR}.tmp/.gitlab-runner.ext.conf.lock" 2>/dev/null || true

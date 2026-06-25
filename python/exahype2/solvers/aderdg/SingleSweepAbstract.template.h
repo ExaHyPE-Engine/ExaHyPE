@@ -78,6 +78,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 {% if USE_POINT_SOURCE %}
     static constexpr int NumberOfPointSources = {{NUMBER_OF_POINT_SOURCES}};
     static double pointSourceLocation[NumberOfPointSources][DIMENSIONS];
+    virtual void initPointSourceLocations([[maybe_unused]] double location[NumberOfPointSources][DIMENSIONS]) {}
 {% endif %}
 
     {{CLASSNAME}}();

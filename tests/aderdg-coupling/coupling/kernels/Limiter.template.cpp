@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "Limiter.h"
 
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 
 void {{FULL_QUALIFIED_NAMESPACE}}::regularToLimiterFace(
   const {{REGULAR_SOLVER_CORRECTION_PRECISION}}* Qfrom,

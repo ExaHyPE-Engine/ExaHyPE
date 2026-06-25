@@ -258,7 +258,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::projectOnFVSpaceWithoutHaloFromFVWithHalo(
   }
 }
 
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 
 // For a given DG cell, this checks whether the solver function "isPhysicallyAdmissible"
 // returns false at any of the nodes of that DG cell.

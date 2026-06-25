@@ -5,7 +5,6 @@
 #if defined(PEANO_WITH_GPU_BACKEND_OMPT)
 
 #include "tarch/Assertions.h"
-#include "tarch/accelerator/Device.h"
 #include "tarch/accelerator/MemoryAllocationCache.h"
 #include "tarch/accelerator/accelerator.h"
 

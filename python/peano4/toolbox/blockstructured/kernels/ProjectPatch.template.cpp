@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "ProjectPatch.h"
 
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 
 #include "toolbox/blockstructured/Enumeration.h"
 #include "toolbox/blockstructured/Projection.h"
@@ -26,7 +26,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::projectPatch(
         patchCell(d)   = i;
         overlapCell(d) = i + {{OVERLAP}};
 
-        int patchCellSerialised   = ::peano4::utils::dLinearised(patchCell, {{DOFS_PER_AXIS}});
+        int patchCellSerialised   = ::peano4::dLinearised(patchCell, {{DOFS_PER_AXIS}});
         int overlapCellSerialised = toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell, {{DOFS_PER_AXIS}}, {{OVERLAP}}, d);
         for (int j = 0; j < {{UNKNOWNS}}; j++) {
           assertion({{ASSERTION_PREFIX}} or QIn[patchCellSerialised * {{UNKNOWNS}} + j] == QIn[patchCellSerialised * {{UNKNOWNS}} + j], QIn[patchCellSerialised * {{UNKNOWNS}} + j], j, i, sourceCell, d, patchCell, overlapCell);
@@ -36,7 +36,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::projectPatch(
         patchCell(d)   = i + {{DOFS_PER_AXIS}} - {{OVERLAP}};
         overlapCell(d) = i;
 
-        patchCellSerialised   = ::peano4::utils::dLinearised(patchCell, {{DOFS_PER_AXIS}});
+        patchCellSerialised   = ::peano4::dLinearised(patchCell, {{DOFS_PER_AXIS}});
         overlapCellSerialised = toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell, {{DOFS_PER_AXIS}}, {{OVERLAP}}, d);
         for (int j = 0; j < {{UNKNOWNS}}; j++) {
           assertion({{ASSERTION_PREFIX}} or QIn[patchCellSerialised * {{UNKNOWNS}} + j] == QIn[patchCellSerialised * {{UNKNOWNS}} + j], QIn[patchCellSerialised * {{UNKNOWNS}} + j], j, i, sourceCell, d, patchCell, overlapCell);

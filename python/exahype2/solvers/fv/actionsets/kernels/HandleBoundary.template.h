@@ -3,7 +3,7 @@
 #pragma once
 
 #include "peano4/Globals.h"
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 #include "toolbox/blockstructured/Enumeration.h"
 #include "toolbox/blockstructured/Projection.h"
 #include "tarch/la/Vector.h"

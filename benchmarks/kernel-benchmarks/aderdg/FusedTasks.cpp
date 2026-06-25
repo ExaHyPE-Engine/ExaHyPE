@@ -10,7 +10,7 @@
 #include "kernels/AderSolver/FusedSpaceTimePredictorVolumeIntegral.h"
 #include "kernels/AderSolver/MaxScaledEigenvalue.h"
 #include "kernels/AderSolver/RiemannSolver.h"
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 
 void benchmarks::exahype2::kernelbenchmarks::handleBoundaryFused(
   benchmarks::exahype2::kernelbenchmarks::AderSolver& solver,

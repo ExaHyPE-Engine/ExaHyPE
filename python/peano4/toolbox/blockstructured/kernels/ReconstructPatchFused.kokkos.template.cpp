@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "ReconstructPatchFused.h"
 
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 
 #include "toolbox/blockstructured/Enumeration.h"
 

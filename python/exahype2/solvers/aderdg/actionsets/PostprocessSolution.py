@@ -103,7 +103,7 @@ class DoFWisePostprocessSolution(EmptyPostprocessSolution):
 
     dfor(index, {{ORDER}} + 1) {
       double* values   = fineGridCell{{UNKNOWN_IDENTIFIER}}.data()
-        + peano4::utils::dLinearised(index, {{ORDER}} + 1) * valuesPerDoF;
+        + peano4::dLinearised(index, {{ORDER}} + 1) * valuesPerDoF;
       auto    x        =         ::exahype2::aderdg::getQuadraturePoint(
         marker.getX(),
         marker.getH(),
@@ -124,7 +124,7 @@ class DoFWisePostprocessSolution(EmptyPostprocessSolution):
         return (
             super(DoFWisePostprocessSolution, self).get_includes()
             + """
-#include "peano4/utils/Linearised.h"
+#include "peano4/Loop.h"
 """
         )
 

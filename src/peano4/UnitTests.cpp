@@ -22,7 +22,7 @@
 #endif
 #include "stacks/tests/StackTest.h"
 #include "tarch/tests/TreeTestCaseCollection.h"
-#include "utils/tests/LinearisedTest.h"
+#include "tests/LoopTest.h"
 
 tarch::tests::TestCase* peano4::getUnitTests() {
   tarch::tests::TreeTestCaseCollection* result = new tarch::tests::TreeTestCaseCollection();
@@ -47,7 +47,7 @@ tarch::tests::TestCase* peano4::getUnitTests() {
   result->addTestCase(new parallel::tests::PingPongTest());
 #endif
 
-  result->addTestCase(new utils::tests::LinearisedTest());
+  result->addTestCase(new tests::LoopTest());
 
   result->addTestCase(new stacks::tests::StackTest());
 

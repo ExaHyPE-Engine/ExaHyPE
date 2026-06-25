@@ -217,8 +217,7 @@ class SolverDeclarations:
     {% endif %}
 
     {% if INIT_POINT_SOURCES_IMPLEMENTATION!="<user-defined>" and INIT_POINT_SOURCES_IMPLEMENTATION!="<none>" %}
-    static inline GPU_CALLABLE_METHOD
-    void initPointSourceLocations([[maybe_unused]] double location[NumberOfPointSources][DIMENSIONS]) {
+    void initPointSourceLocations([[maybe_unused]] double location[NumberOfPointSources][DIMENSIONS]) override {
       {% if INIT_POINT_SOURCES_IMPLEMENTATION!="<empty>" %}
       {{INIT_POINT_SOURCES_IMPLEMENTATION}}
       {% endif %}

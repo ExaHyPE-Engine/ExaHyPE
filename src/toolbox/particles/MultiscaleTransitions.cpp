@@ -2,7 +2,7 @@
 
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/VertexMarker.h"
-#include "peano4/utils/Loop.h"
+#include "peano4/Loop.h"
 
 double toolbox::particles::relativeSpatialOwnershipTolerance(const ::peano4::datamanagement::CellMarker& marker) {
   return internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE;
