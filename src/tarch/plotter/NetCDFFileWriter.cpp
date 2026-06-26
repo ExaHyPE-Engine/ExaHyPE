@@ -5,6 +5,7 @@
 #ifdef PEANO_WITH_NETCDF
 
 #include "tarch/mpi/Rank.h"
+#include "tarch/mpi/mpi.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -32,14 +33,14 @@ namespace {
     if (vtkType != VTK_TRIANGLE and vtkType != VTK_QUAD) {
       throw std::runtime_error(
         "NetCDFFileWriter (UGRID 2D) only supports triangle (VTK=5) and quadrangle (VTK=9) cells. "
-        "Encountered VTK cell type "
-        + std::to_string(vtkType) + "."
+        "Encountered VTK cell type " +
+        std::to_string(vtkType) + "."
       );
     }
   }
 } // namespace
 
-tarch::plotter::NetCDFFileWriter::NetCDFFileWriter(const std::string& outputDirectory, int numberOfSubdomains):
+tarch::plotter::NetCDFFileWriter::NetCDFFileWriter(const std::string& outputDirectory, int numberOfSubdomains) :
   FileWriter(outputDirectory, numberOfSubdomains) {}
 
 void tarch::plotter::NetCDFFileWriter::check(int status, const std::string& where) {
@@ -109,12 +110,12 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
 
 #if defined(PEANO_WITH_MPI)
   if (useParallelIO) {
-    MPI_Scan(&localNumNodes, &offsetNodes, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
-    MPI_Scan(&localNumFaces, &offsetFaces, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
+    tarch::mpi::scan(&localNumNodes, &offsetNodes, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
+    tarch::mpi::scan(&localNumFaces, &offsetFaces, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
     offsetNodes -= localNumNodes;
     offsetFaces -= localNumFaces;
-    MPI_Allreduce(&localNumNodes, &totalNodes, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
-    MPI_Allreduce(&localNumFaces, &totalFaces, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
+    tarch::mpi::allreduce(&localNumNodes, &totalNodes, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
+    tarch::mpi::allreduce(&localNumFaces, &totalFaces, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
   }
 #endif
 
@@ -217,10 +218,8 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
 
     // Chunking + compression for storage efficiency (skip if empty)
     if (totalNodes > 0) {
-      const std::size_t chunk0 = std::max<std::size_t>(
-        1,
-        std::min<std::size_t>(static_cast<std::size_t>(totalNodes), 4096)
-      );
+      const std::size_t chunk0 =
+        std::max<std::size_t>(1, std::min<std::size_t>(static_cast<std::size_t>(totalNodes), 4096));
       std::size_t chunks[1] = {chunk0};
       check(nc_def_var_chunking(ncid, varX, NC_CHUNKED, chunks), "chunking x");
       check(nc_def_var_chunking(ncid, varY, NC_CHUNKED, chunks), "chunking y");
@@ -245,10 +244,8 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
     // Chunking + compression for storage efficiency.
     // Avoid chunk setup when the corresponding dimension is zero.
     if (totalFaces > 0) {
-      const std::size_t chunkFaces = std::max<std::size_t>(
-        1,
-        std::min<std::size_t>(static_cast<std::size_t>(totalFaces), 1024)
-      );
+      const std::size_t chunkFaces =
+        std::max<std::size_t>(1, std::min<std::size_t>(static_cast<std::size_t>(totalFaces), 1024));
       std::size_t chunks[2] = {chunkFaces, static_cast<std::size_t>(MAX_FACE_NODES)};
       check(nc_def_var_chunking(ncid, varFaceNodes, NC_CHUNKED, chunks), "chunking face_nodes");
       check(nc_def_var_deflate(ncid, varFaceNodes, 1, 1, 1), "deflate face_nodes");
@@ -382,27 +379,27 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
   // Write fields
   auto writeField =
     [&](const std::vector<int>& varIds, const DataField& f, unsigned long long offset, unsigned long long nTuples) {
-      if (nTuples == 0) {
-        return;
+    if (nTuples == 0) {
+      return;
+    }
+
+    // We need to split the interlaced data in f.values [nTuples * nComponents]
+    // into separate buffers for each component [nTuples].
+    int                numComponents = f.components;
+    std::vector<float> buffer(nTuples); // Temp buffer for one component
+
+    std::size_t start[1] = {static_cast<std::size_t>(offset)};
+    std::size_t count[1] = {static_cast<std::size_t>(nTuples)};
+
+    for (int c = 0; c < numComponents; ++c) {
+      // Extract component 'c' from the interlaced array
+      for (std::size_t i = 0; i < nTuples; ++i) {
+        buffer[i] = static_cast<float>(f.values[i * numComponents + c]);
       }
 
-      // We need to split the interlaced data in f.values [nTuples * nComponents]
-      // into separate buffers for each component [nTuples].
-      int                numComponents = f.components;
-      std::vector<float> buffer(nTuples); // Temp buffer for one component
-
-      std::size_t start[1] = {static_cast<std::size_t>(offset)};
-      std::size_t count[1] = {static_cast<std::size_t>(nTuples)};
-
-      for (int c = 0; c < numComponents; ++c) {
-        // Extract component 'c' from the interlaced array
-        for (std::size_t i = 0; i < nTuples; ++i) {
-          buffer[i] = static_cast<float>(f.values[i * numComponents + c]);
-        }
-
-        check(nc_put_vara_float(ncid, varIds[c], start, count, buffer.data()), "write field " + f.name);
-      }
-    };
+      check(nc_put_vara_float(ncid, varIds[c], start, count, buffer.data()), "write field " + f.name);
+    }
+  };
 
   for (std::size_t i = 0; i < localData.pointFields.size(); ++i) {
     writeField(pointVarIds[i], localData.pointFields[i], offsetNodes, localNumNodes);

@@ -111,9 +111,6 @@ class HandleBoundary(AbstractFVActionSet):
             os.path.dirname(os.path.realpath(__file__)) + "/kernels"
         )
 
-        if not os.path.exists(kernels_output_path):
-            os.makedirs(kernels_output_path)
-
         d = output.makefile.dictionary()
         self._solver._init_dictionary_with_default_parameters(d)
         self._solver.add_entries_to_text_replacement_dictionary(d)
@@ -143,9 +140,6 @@ class HandleBoundary(AbstractFVActionSet):
         kernels_templates_prefix = (
             os.path.dirname(os.path.realpath(__file__)) + "/kernels"
         )
-
-        if not os.path.exists(kernels_output_path):
-            os.makedirs(kernels_output_path)
 
         d = output.makefile.dictionary()
         self._solver._init_dictionary_with_default_parameters(d)

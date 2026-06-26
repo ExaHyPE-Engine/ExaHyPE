@@ -4,14 +4,15 @@
 
 #include "peano4/stacks/StackWithCustomSerialisation.h"
 #include "tarch/Assertions.h"
+#include "tarch/mpi/mpi.h"
 
 #include <numeric> // std::accumulate
 #include <utility> // std::move
 
-peano4::stacks::tests::TestDataOnHeapWithContainer::TestDataOnHeapWithContainer():
+peano4::stacks::tests::TestDataOnHeapWithContainer::TestDataOnHeapWithContainer() :
   _container() {}
 
-peano4::stacks::tests::TestDataOnHeapWithContainer::TestDataOnHeapWithContainer(std::size_t size, DoFType v):
+peano4::stacks::tests::TestDataOnHeapWithContainer::TestDataOnHeapWithContainer(std::size_t size, DoFType v) :
   TestDataOnHeapWithContainer() {
 
   _container.reserve(size);
@@ -24,21 +25,20 @@ peano4::stacks::tests::TestDataOnHeapWithContainer::~TestDataOnHeapWithContainer
 
 peano4::stacks::tests::TestDataOnHeapWithContainer::TestDataOnHeapWithContainer(
   const TestDataOnHeapWithContainer& other
-):
+) :
   _container() {
   clone(other);
 }
 
 peano4::stacks::tests::TestDataOnHeapWithContainer::TestDataOnHeapWithContainer(
   TestDataOnHeapWithContainer&& other
-) noexcept:
+) noexcept :
   _container(std::move(other._container)) {
   other._container.clear();
 }
 
-peano4::stacks::tests::TestDataOnHeapWithContainer& peano4::stacks::tests::TestDataOnHeapWithContainer::operator=(
-  TestDataOnHeapWithContainer&& other
-) noexcept {
+peano4::stacks::tests::TestDataOnHeapWithContainer&
+peano4::stacks::tests::TestDataOnHeapWithContainer::operator=(TestDataOnHeapWithContainer&& other) noexcept {
   if (this != &other) {
     clear();
     _container = std::move(other._container);
@@ -47,9 +47,8 @@ peano4::stacks::tests::TestDataOnHeapWithContainer& peano4::stacks::tests::TestD
   return *this;
 }
 
-peano4::stacks::tests::TestDataOnHeapWithContainer::DoFType peano4::stacks::tests::TestDataOnHeapWithContainer::at(
-  int index
-) {
+peano4::stacks::tests::TestDataOnHeapWithContainer::DoFType
+peano4::stacks::tests::TestDataOnHeapWithContainer::at(int index) {
   assertion(index >= 0);
   assertion(index < size());
   return *(_container[static_cast<std::size_t>(index)]);
@@ -85,8 +84,11 @@ MPI_Datatype peano4::stacks::tests::TestDataOnHeapWithContainer::getForkDatatype
 MPI_Datatype peano4::stacks::tests::TestDataOnHeapWithContainer::getJoinDatatype() { return MPI_INT; }
 MPI_Datatype peano4::stacks::tests::TestDataOnHeapWithContainer::getGlobalCommunicationDatatype() { return MPI_INT; }
 
-void peano4::stacks::tests::TestDataOnHeapWithContainer::
-  startSend(Stack<TestDataOnHeapWithContainer>& stack, const SendReceiveContext context, MPI_Comm comm) {
+void peano4::stacks::tests::TestDataOnHeapWithContainer::startSend(
+  Stack<TestDataOnHeapWithContainer>& stack,
+  const SendReceiveContext            context,
+  MPI_Comm                            comm
+) {
   auto& customStack = static_cast<StackWithCustomSerialisation<TestDataOnHeapWithContainer>&>(stack);
 
   const int numberOfElements = static_cast<int>(customStack.size());
@@ -107,7 +109,7 @@ void peano4::stacks::tests::TestDataOnHeapWithContainer::
   const int totalValues = static_cast<int>(customStack.dataBuffer.size());
 
   if (numberOfElements > 0) {
-    [[maybe_unused]] const int result = MPI_Isend(
+    [[maybe_unused]] const int result = tarch::mpi::isend(
       customStack.countBuffer.data(),
       numberOfElements,
       MPI_INT,
@@ -120,7 +122,7 @@ void peano4::stacks::tests::TestDataOnHeapWithContainer::
   }
 
   if (totalValues > 0) {
-    [[maybe_unused]] const int result = MPI_Isend(
+    [[maybe_unused]] const int result = tarch::mpi::isend(
       customStack.dataBuffer.data(),
       totalValues,
       translateContextIntoDatatype<TestDataOnHeapWithContainer>(context),
@@ -151,7 +153,7 @@ void peano4::stacks::tests::TestDataOnHeapWithContainer::startReceive(
   customStack.dataBuffer.clear();
 
   if (numberOfElements > 0) {
-    [[maybe_unused]] const int result = MPI_Irecv(
+    [[maybe_unused]] const int result = tarch::mpi::irecv(
       customStack.countBuffer.data(),
       numberOfElements,
       MPI_INT,
@@ -173,7 +175,7 @@ bool peano4::stacks::tests::TestDataOnHeapWithContainer::tryToFinishSendOrReceiv
   if (customStack.getIOMode() == IOMode::MPIReceive) {
     if (customStack.mpiCountRequest != MPI_REQUEST_NULL) {
       int flag = 0;
-      MPI_Test(&customStack.mpiCountRequest, &flag, MPI_STATUS_IGNORE);
+      tarch::mpi::test(&customStack.mpiCountRequest, &flag, MPI_STATUS_IGNORE);
       if (flag) {
         customStack.mpiCountRequest = MPI_REQUEST_NULL;
 
@@ -182,7 +184,7 @@ bool peano4::stacks::tests::TestDataOnHeapWithContainer::tryToFinishSendOrReceiv
         customStack.dataBuffer.resize(totalValues);
 
         if (totalValues > 0) {
-          [[maybe_unused]] const int result = MPI_Irecv(
+          [[maybe_unused]] const int result = tarch::mpi::irecv(
             customStack.dataBuffer.data(),
             totalValues,
             translateContextIntoDatatype<TestDataOnHeapWithContainer>(customStack.mpiContext),
@@ -201,7 +203,7 @@ bool peano4::stacks::tests::TestDataOnHeapWithContainer::tryToFinishSendOrReceiv
 
     if (customStack.mpiDataRequest != MPI_REQUEST_NULL) {
       int flag = 0;
-      MPI_Test(&customStack.mpiDataRequest, &flag, MPI_STATUS_IGNORE);
+      tarch::mpi::test(&customStack.mpiDataRequest, &flag, MPI_STATUS_IGNORE);
       if (flag) {
         customStack.mpiDataRequest = MPI_REQUEST_NULL;
 
@@ -220,7 +222,8 @@ bool peano4::stacks::tests::TestDataOnHeapWithContainer::tryToFinishSendOrReceiv
           TestDataOnHeapWithContainer& element = stack[i];
 
           // Wipe old heap data
-          // We want to clean the container's data as the number of data per element can change between messages
+          // We want to clean the container's data as the number of data per element can change
+          // between messages
           element.clear();
 
           element._container.reserve(static_cast<std::size_t>(localCount));
@@ -238,7 +241,7 @@ bool peano4::stacks::tests::TestDataOnHeapWithContainer::tryToFinishSendOrReceiv
   } else if (customStack.getIOMode() == IOMode::MPISend) {
     if (customStack.mpiCountRequest != MPI_REQUEST_NULL) {
       int flag = 0;
-      MPI_Test(&customStack.mpiCountRequest, &flag, MPI_STATUS_IGNORE);
+      tarch::mpi::test(&customStack.mpiCountRequest, &flag, MPI_STATUS_IGNORE);
       if (flag) {
         customStack.mpiCountRequest = MPI_REQUEST_NULL;
       } else {
@@ -248,7 +251,7 @@ bool peano4::stacks::tests::TestDataOnHeapWithContainer::tryToFinishSendOrReceiv
 
     if (customStack.mpiDataRequest != MPI_REQUEST_NULL) {
       int flag = 0;
-      MPI_Test(&customStack.mpiDataRequest, &flag, MPI_STATUS_IGNORE);
+      tarch::mpi::test(&customStack.mpiDataRequest, &flag, MPI_STATUS_IGNORE);
       if (flag) {
         customStack.mpiDataRequest = MPI_REQUEST_NULL;
       } else {

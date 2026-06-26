@@ -38,7 +38,7 @@ exahype2_project = exahype2.Project(
     dimensions=2,
     size=domain_size + [domain_size[-1]],
     offset=domain_offset + [0.0],
-    periodic_BC=[False, False, False],
+    periodic_bc=[False, False, False],
     executable="Airfoil",
     min_end_time=args.end_time,
     max_end_time=args.end_time,
@@ -69,6 +69,5 @@ my_solver.set_implementation(
 
 exahype2_project.add_solver(my_solver)
 
-peano4_project = exahype2_project.generate_Peano4_project()
-peano4_project.output.makefile.add_cpp_file("EulerSolver.cpp")
-peano4_project.generate_and_build()
+exahype2_project.output.makefile.add_cpp_file("EulerSolver.cpp")
+exahype2_project.generate_and_build()

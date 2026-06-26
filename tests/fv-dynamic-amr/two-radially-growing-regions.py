@@ -36,8 +36,7 @@ project = exahype2.Project(
     dimensions=2,
     size=[10.0, 10.0, 10.0],
     offset=[0.0, 0.0, 0.0],
-    periodic_BC=[False, False, False],
-    executable="ExaHyPE",
+    periodic_bc=[False, False, False],
     min_end_time=args.end_time,
     max_end_time=args.end_time,
     min_grid_levels=args.min_grid_levels,
@@ -69,7 +68,7 @@ refinement_criterion = """
   constexpr double maxRadius = 5.0;
 #endif
 
-  const double startRadius = ::exahype2::RuntimeParameters::getInstance().getMaxAdmissiblePatchSize(DomainSize);
+  const double startRadius = ::runner::RuntimeParameters::getInstance().getMaxAdmissiblePatchSize(DomainSize);
   constexpr double growthRate  = 0.25; // radius = startRadius + growthRate*t
   constexpr double bandWidth   = 0.10;
 
@@ -132,5 +131,4 @@ fv_solver.set_implementation(
 
 project.add_solver(fv_solver)
 
-project = project.generate_Peano4_project()
 project.generate_and_build()

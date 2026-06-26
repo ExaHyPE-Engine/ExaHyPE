@@ -575,7 +575,6 @@ namespace toolbox {
 
 
     namespace internal {
-
       /**
        * Clear half of a halo layer
        *

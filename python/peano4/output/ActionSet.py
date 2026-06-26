@@ -196,6 +196,6 @@ class ActionSet(object):
 
   def generate(self,directory,protected_files):
     if not os.path.exists( directory + "/" + self.subdirectory ):
-      os.mkdir(directory + "/" + self.subdirectory)
+      os.makedirs(directory + "/" + self.subdirectory, exist_ok=True)
     self.__generate_header(directory,protected_files)
     self.__generate_implementation(directory,protected_files)

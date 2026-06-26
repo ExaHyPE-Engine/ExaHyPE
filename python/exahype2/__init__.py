@@ -3,8 +3,6 @@
 
 import importlib
 
-print("ExaHyPE 2 (C) www.peano-framework.org")
-
 _LAZY_MODULES = {
     "tracer": "exahype2.tracer",
     "grid": "exahype2.grid",
@@ -13,7 +11,6 @@ _LAZY_MODULES = {
 
 _LAZY_ATTRIBUTES = {
     "Project": (".Project", "Project"),
-    "ExaHyPEMain": (".ExaHyPEMain", "ExaHyPEMain"),
     "VariableShortcuts": (".VariableShortcuts", "VariableShortcuts"),
 }
 

@@ -42,8 +42,7 @@ project = exahype2.Project(
     dimensions=dimensions,
     size=[2.0, 2.0, 2.0],
     offset=[-1.0, -1.0, -1.0],
-    periodic_BC=[False, False, False],
-    executable="ExaHyPE",
+    periodic_bc=[False, False, False],
     min_end_time=args.end_time,
     max_end_time=args.end_time,
     min_grid_levels=args.grid_levels,
@@ -207,5 +206,4 @@ if use_limiting:
     )
     project.add_solver(limiter)
 
-project = project.generate_Peano4_project()
 project.generate_and_build()

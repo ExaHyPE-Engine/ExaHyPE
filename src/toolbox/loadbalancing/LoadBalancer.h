@@ -25,6 +25,8 @@ public:
   LoadBalancer(Configuration* configuration = new DefaultConfiguration);
   ~LoadBalancer();
 
+  void shutdown();
+
   void enable(bool value);
   void update();
 

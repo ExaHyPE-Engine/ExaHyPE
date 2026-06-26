@@ -85,13 +85,16 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() 
   if (isLastGridSweepOfTimeStep()) {
 #ifdef PEANO_WITH_MPI
     double newMaxEigenvalue = _maxEigenvalueThisTimeStep;
-    tarch::mpi::Rank::getInstance().allReduce(
+    MPI_Comm communicator = tarch::mpi::Rank::getInstance().getCommunicator();
+    auto progress = [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); };
+    tarch::mpi::allreduce(
       &newMaxEigenvalue,
       &_maxEigenvalueThisTimeStep,
       1,
       MPI_DOUBLE,
       MPI_MAX,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+      communicator,
+      progress
     );
 #endif
 

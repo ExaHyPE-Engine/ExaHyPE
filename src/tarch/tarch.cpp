@@ -112,11 +112,15 @@ double tarch::getMemoryUsage(MemoryUsageFormat format) {
   fclose(f);
   strtok(work, " ");
 
-  for (int i = 1; i < 23; i++) {
+  // Field 24 of /proc/<pid>/stat is the resident set size in pages (field 23 is the virtual
+  // size). We want the actually consumed (resident) memory, so read field 24 and scale by the
+  // page size to obtain bytes.
+  for (int i = 1; i < 24; i++) {
     pCh = strtok(NULL, " ");
   }
 
-  std::size_t rawInput = atol(pCh);
+  std::size_t residentPages = atol(pCh);
+  std::size_t rawInput      = residentPages * static_cast<std::size_t>(sysconf(_SC_PAGESIZE));
 #else
   std::size_t rawInput = 0;
 #endif

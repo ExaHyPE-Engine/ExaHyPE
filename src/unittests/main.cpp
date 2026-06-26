@@ -1,15 +1,17 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
+#include "exahype2/UnitTests.h"
+#include "peano4/Init.h"
 #include "peano4/UnitTests.h"
-#include "peano4/peano4.h"
 #include "tarch/FloatingPointExceptions.h"
+#include "tarch/Init.h"
 #include "tarch/NonCriticalAssertions.h"
 #include "tarch/UnitTests.h"
 #include "tarch/instrumentation/Log.h"
+#include "tarch/la/Vector.h"
 #include "toolbox/blockstructured/UnitTests.h"
 #include "toolbox/loadbalancing/UnitTests.h"
 #include "toolbox/particles/UnitTests.h"
-#include "exahype2/UnitTests.h"
 
 int runTests() {
   int                     unitTestsErrors = 0;
@@ -55,14 +57,16 @@ int runTests() {
 
 int main(int argc, char** argv) {
 #if DIMENSIONS == 2
-  const auto DomainOffset = {0.0, 0.0};
-  const auto DomainSize   = {1.0, 1.0};
+  const tarch::la::Vector<DIMENSIONS, double> DomainOffset = {0.0, 0.0};
+  const tarch::la::Vector<DIMENSIONS, double> DomainSize   = {1.0, 1.0};
 #else
-  const auto DomainOffset = {0.0, 0.0, 0.0};
-  const auto DomainSize   = {1.0, 1.0, 1.0};
+  const tarch::la::Vector<DIMENSIONS, double> DomainOffset = {0.0, 0.0, 0.0};
+  const tarch::la::Vector<DIMENSIONS, double> DomainSize   = {1.0, 1.0, 1.0};
 #endif
 
-  peano4::init(&argc, &argv, DomainOffset, DomainSize, 0);
+  // No MPI timeout warning or abort here.
+  tarch::init(&argc, &argv, {0.0, 0.0, true});
+  peano4::init(DomainOffset, DomainSize);
 
   int returnCode = EXIT_SUCCESS;
 
@@ -87,6 +91,6 @@ int main(int argc, char** argv) {
 #endif
 
   peano4::shutdown();
-
+  tarch::shutdown();
   return returnCode;
 }

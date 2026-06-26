@@ -102,8 +102,7 @@ project = exahype2.Project(
     dimensions=dimensions,
     offset=(offset + [0.0, 0.0, 0.0])[:3],
     size=(size + [size[-1]])[:3],
-    periodic_BC=[periodic_bc, periodic_bc, periodic_bc],
-    executable="ExaHyPE",
+    periodic_bc=[periodic_bc, periodic_bc, periodic_bc],
     min_end_time=end_time,
     max_end_time=end_time,
     min_grid_levels=args.grid_levels,
@@ -167,5 +166,4 @@ exahype2.solvers.aderdg.ErrorMeasurement(
 
 project.add_solver(solver)
 
-project = project.generate_Peano4_project()
 project.generate_and_build()

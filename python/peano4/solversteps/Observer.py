@@ -95,7 +95,7 @@ class Observer(object):
 
     def generate(self, directory, protected_files):
         if not os.path.exists(directory + "/" + self.subdirectory):
-            os.mkdir(directory + "/" + self.subdirectory)
+            os.makedirs(directory + "/" + self.subdirectory, exist_ok=True)
 
         headerfile_template = (
             os.path.dirname(os.path.realpath(__file__)) + "/Observer.template.h"

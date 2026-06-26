@@ -5,6 +5,7 @@
 #ifdef PEANO_WITH_HDF5
 
 #include "tarch/mpi/Rank.h"
+#include "tarch/mpi/mpi.h"
 
 #include <algorithm>
 #include <cstring>
@@ -17,7 +18,7 @@
 
 namespace fs = std::filesystem;
 
-tarch::plotter::HDF5FileWriter::HDF5FileWriter(const std::string& outputDirectory, int numberOfSubdomains):
+tarch::plotter::HDF5FileWriter::HDF5FileWriter(const std::string& outputDirectory, int numberOfSubdomains) :
   FileWriter(outputDirectory, numberOfSubdomains) {}
 
 int tarch::plotter::HDF5FileWriter::toXdmfType(int vtkType) {
@@ -99,14 +100,14 @@ bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, do
     unsigned long long totals[3] = {0ull, 0ull, 0ull};
 
     // Inclusive prefix sums; subtract local to get exclusive offsets.
-    MPI_Scan(local, prefix, 3, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
+    tarch::mpi::scan(local, prefix, 3, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
     offsetPoints = prefix[0] - local[0];
     offsetCells  = prefix[1] - local[1];
     offsetTopo   = prefix[2] - local[2];
 
-    // TODO: Use tarch MPI routines
-    // Use Allreduce to get global file sizes (Rank 0 needs this for XMF, everyone for HDF5 dataspace)
-    MPI_Allreduce(local, totals, 3, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
+    // Use Allreduce to get global file sizes (Rank 0 needs this for XMF, everyone for HDF5
+    // dataspace)
+    tarch::mpi::allreduce(local, totals, 3, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
     totalPoints = totals[0];
     totalCells  = totals[1];
     totalTopo   = totals[2];
@@ -174,35 +175,34 @@ bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, do
   H5Pset_create_intermediate_group(lcpl, 1);
 
   // Helper lambda to write a dataset
-  auto writeDataset =
-    [&](
-      const std::string& name,
-      int                dims,
-      hsize_t*           globalDims,
-      hsize_t*           localDims,
-      hsize_t*           offsets,
-      const void*        data,
-      hid_t              type
-    ) {
-      if (globalDims[0] == 0) {
-        return; // Empty dataset globally
-      }
+  auto writeDataset = [&](
+                        const std::string& name,
+                        int                dims,
+                        hsize_t*           globalDims,
+                        hsize_t*           localDims,
+                        hsize_t*           offsets,
+                        const void*        data,
+                        hid_t              type
+                      ) {
+    if (globalDims[0] == 0) {
+      return; // Empty dataset globally
+    }
 
-      hid_t filespace = H5Screate_simple(dims, globalDims, NULL);
-      hid_t dataset   = H5Dcreate(fileId, name.c_str(), type, filespace, lcpl, H5P_DEFAULT, H5P_DEFAULT);
+    hid_t filespace = H5Screate_simple(dims, globalDims, NULL);
+    hid_t dataset   = H5Dcreate(fileId, name.c_str(), type, filespace, lcpl, H5P_DEFAULT, H5P_DEFAULT);
 
-      if (localDims[0] > 0) {
-        hid_t memspace = H5Screate_simple(dims, localDims, NULL);
-        H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offsets, NULL, localDims, NULL);
-        H5Dwrite(dataset, type, memspace, filespace, dxpl, data);
-        H5Sclose(memspace);
-      } else if (dxpl != H5P_DEFAULT) {
-        H5Sselect_none(filespace);
-        H5Dwrite(dataset, type, H5S_ALL, filespace, dxpl, NULL);
-      }
-      H5Dclose(dataset);
-      H5Sclose(filespace);
-    };
+    if (localDims[0] > 0) {
+      hid_t memspace = H5Screate_simple(dims, localDims, NULL);
+      H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offsets, NULL, localDims, NULL);
+      H5Dwrite(dataset, type, memspace, filespace, dxpl, data);
+      H5Sclose(memspace);
+    } else if (dxpl != H5P_DEFAULT) {
+      H5Sselect_none(filespace);
+      H5Dwrite(dataset, type, H5S_ALL, filespace, dxpl, NULL);
+    }
+    H5Dclose(dataset);
+    H5Sclose(filespace);
+  };
 
   // Write Geometry
   hsize_t gDims[2] = {totalPoints, 3};
@@ -243,22 +243,21 @@ bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, do
     if (not out.is_open()) {
       throw std::runtime_error("Could not write XDMF file " + xmfFilePath.string());
     } else {
-      out
-        << "<?xml version=\"1.0\" ?>\n"
-        << "<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" []>\n"
-        << "<Xdmf Version=\"2.0\">\n"
-        << " <Domain>\n"
-        << "  <Grid Name=\"PeanoGrid\" GridType=\"Uniform\">\n"
-        << "   <Topology TopologyType=\"Mixed\" NumberOfElements=\"" << totalCells << "\">\n"
-        << "    <DataItem Format=\"HDF\" DataType=\"Int\" Dimensions=\"" << totalTopo << "\">\n"
-        << "      " << h5FilePath.filename().string() << ":/topology\n"
-        << "    </DataItem>\n"
-        << "   </Topology>\n"
-        << "   <Geometry GeometryType=\"XYZ\">\n"
-        << "    <DataItem Format=\"HDF\" DataType=\"Float\" Precision=\"4\" Dimensions=\"" << totalPoints << " 3\">\n"
-        << "      " << h5FilePath.filename().string() << ":/geometry\n"
-        << "    </DataItem>\n"
-        << "   </Geometry>\n";
+      out << "<?xml version=\"1.0\" ?>\n"
+          << "<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" []>\n"
+          << "<Xdmf Version=\"2.0\">\n"
+          << " <Domain>\n"
+          << "  <Grid Name=\"PeanoGrid\" GridType=\"Uniform\">\n"
+          << "   <Topology TopologyType=\"Mixed\" NumberOfElements=\"" << totalCells << "\">\n"
+          << "    <DataItem Format=\"HDF\" DataType=\"Int\" Dimensions=\"" << totalTopo << "\">\n"
+          << "      " << h5FilePath.filename().string() << ":/topology\n"
+          << "    </DataItem>\n"
+          << "   </Topology>\n"
+          << "   <Geometry GeometryType=\"XYZ\">\n"
+          << "    <DataItem Format=\"HDF\" DataType=\"Float\" Precision=\"4\" Dimensions=\"" << totalPoints << " 3\">\n"
+          << "      " << h5FilePath.filename().string() << ":/geometry\n"
+          << "    </DataItem>\n"
+          << "   </Geometry>\n";
 
       // Helper to write attributes
       auto writeAttrs = [&](const std::vector<DataField>& fields, const std::string& center, const std::string& path) {
@@ -270,24 +269,22 @@ bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, do
             type = "Matrix";
           }
 
-          out
-            << "   <Attribute Name=\"" << field.name << "\" AttributeType=\"" << type << "\" Center=\"" << center
-            << "\">\n"
-            << "    <DataItem Format=\"HDF\" DataType=\"Float\" Precision=\"4\" Dimensions=\""
-            << (center == "Node" ? totalPoints : totalCells) << " " << field.components << "\">\n"
-            << "      " << h5FilePath.filename().string() << ":" << path << field.name << "\n"
-            << "    </DataItem>\n"
-            << "   </Attribute>\n";
+          out << "   <Attribute Name=\"" << field.name << "\" AttributeType=\"" << type << "\" Center=\"" << center
+              << "\">\n"
+              << "    <DataItem Format=\"HDF\" DataType=\"Float\" Precision=\"4\" Dimensions=\""
+              << (center == "Node" ? totalPoints : totalCells) << " " << field.components << "\">\n"
+              << "      " << h5FilePath.filename().string() << ":" << path << field.name << "\n"
+              << "    </DataItem>\n"
+              << "   </Attribute>\n";
         }
       };
 
       writeAttrs(localData.pointFields, "Node", "/data/");
       writeAttrs(localData.cellFields, "Cell", "/cell_data/");
 
-      out
-        << "  </Grid>\n"
-        << " </Domain>\n"
-        << "</Xdmf>\n";
+      out << "  </Grid>\n"
+          << " </Domain>\n"
+          << "</Xdmf>\n";
     }
   }
 

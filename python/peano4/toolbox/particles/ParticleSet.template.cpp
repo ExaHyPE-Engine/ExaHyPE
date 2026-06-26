@@ -4,6 +4,7 @@
 
 #include "Constants.h"
 
+#include "tarch/mpi/mpi.h"
 #include "tarch/multicore/Lock.h"
 
 #include "peano4/stacks/StackWithCustomSerialisation.h"
@@ -463,7 +464,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSend(::peano4::stacks::Stac
   const int totalValues = static_cast<int>(customStack.dataBuffer.size());
 
   if (numberOfElements > 0) {
-    [[maybe_unused]] const int result = MPI_Isend(
+    [[maybe_unused]] const int result = tarch::mpi::isend(
       customStack.countBuffer.data(),
       numberOfElements,
       MPI_INT,
@@ -476,7 +477,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSend(::peano4::stacks::Stac
   }
 
   if (totalValues > 0) {
-    [[maybe_unused]] const int result = MPI_Isend(
+    [[maybe_unused]] const int result = tarch::mpi::isend(
       customStack.dataBuffer.data(),
       totalValues,
       ::peano4::stacks::translateContextIntoDatatype<{{CLASSNAME}}>(context),
@@ -502,7 +503,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startReceive(::peano4::stacks::S
   customStack.dataBuffer.clear();
 
   if (numberOfElements > 0) {
-    [[maybe_unused]] const int result = MPI_Irecv(
+    [[maybe_unused]] const int result = tarch::mpi::irecv(
       customStack.countBuffer.data(),
       numberOfElements,
       MPI_INT,
@@ -523,7 +524,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::tryToFinishSendOrReceive(::peano
     // Wait for counts to arrive
     if (customStack.mpiCountRequest != MPI_REQUEST_NULL) {
       int flag = 0;
-      MPI_Test(&customStack.mpiCountRequest, &flag, MPI_STATUS_IGNORE);
+      tarch::mpi::test(&customStack.mpiCountRequest, &flag, MPI_STATUS_IGNORE);
       if (flag) {
         customStack.mpiCountRequest = MPI_REQUEST_NULL;
 
@@ -532,7 +533,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::tryToFinishSendOrReceive(::peano
         customStack.dataBuffer.resize(totalValues);
 
         if (totalValues > 0) {
-          [[maybe_unused]] const int result = MPI_Irecv(
+          [[maybe_unused]] const int result = tarch::mpi::irecv(
             customStack.dataBuffer.data(),
             totalValues,
             ::peano4::stacks::translateContextIntoDatatype<{{CLASSNAME}}>(customStack.mpiContext),
@@ -552,7 +553,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::tryToFinishSendOrReceive(::peano
     // Wait for data to arrive and unpack
     if (customStack.mpiDataRequest != MPI_REQUEST_NULL) {
       int flag = 0;
-      MPI_Test(&customStack.mpiDataRequest, &flag, MPI_STATUS_IGNORE);
+      tarch::mpi::test(&customStack.mpiDataRequest, &flag, MPI_STATUS_IGNORE);
       if (flag) {
         customStack.mpiDataRequest = MPI_REQUEST_NULL;
 
@@ -586,7 +587,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::tryToFinishSendOrReceive(::peano
   } else if (customStack.getIOMode() == ::peano4::stacks::IOMode::MPISend) {
     if (customStack.mpiCountRequest != MPI_REQUEST_NULL) {
       int flag = 0;
-      MPI_Test(&customStack.mpiCountRequest, &flag, MPI_STATUS_IGNORE);
+      tarch::mpi::test(&customStack.mpiCountRequest, &flag, MPI_STATUS_IGNORE);
       if (flag) {
         customStack.mpiCountRequest = MPI_REQUEST_NULL;
       } else {
@@ -596,7 +597,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::tryToFinishSendOrReceive(::peano
 
     if (customStack.mpiDataRequest != MPI_REQUEST_NULL) {
       int flag = 0;
-      MPI_Test(&customStack.mpiDataRequest, &flag, MPI_STATUS_IGNORE);
+      tarch::mpi::test(&customStack.mpiDataRequest, &flag, MPI_STATUS_IGNORE);
       if (flag) {
         customStack.mpiDataRequest = MPI_REQUEST_NULL;
       } else {

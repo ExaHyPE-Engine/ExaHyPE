@@ -3,13 +3,13 @@
 #pragma once
 
 #include "ParticleHelper.h"
+
 #include "tarch/la/Vector.h"
 
 namespace exahype2 {
   namespace fv {
     namespace particles {
       namespace boundary {
-
         /**
          * Reflects a particle off domain boundaries if it leaves the domain.
          *

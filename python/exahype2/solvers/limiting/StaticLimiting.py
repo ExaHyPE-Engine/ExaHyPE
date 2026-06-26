@@ -425,7 +425,7 @@ class StaticLimiting(object):
         step.add_action_set(self._action_set_check_troubledness)
         pass
 
-    def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
+    def add_actions_to_create_grid(self, step):
         pass
 
     def add_actions_to_plot_solution(self, step, output_path):
@@ -452,9 +452,6 @@ class StaticLimiting(object):
         kernels_templates_prefix = (
             os.path.dirname(os.path.realpath(__file__)) + "/kernels/"
         )
-
-        if not os.path.exists(kernels_output_path):
-            os.makedirs(kernels_output_path)
 
         exahype2.solvers.limiting.kernels.Quadrature(d).generate_kernels(
             kernels_namespace,

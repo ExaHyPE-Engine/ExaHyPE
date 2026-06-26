@@ -5,7 +5,8 @@
 #include "Constants.h"
 #include "RuntimeParameters.h"
 
-#include "exahype2/RuntimeParameters.h"
+#include "runner/RuntimeParameters.h"
+
 #include "exahype2/Solver.h"
 #include "exahype2/RefinementControl.h"
 

@@ -2,11 +2,12 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "IOMode.h"
-#include "SendReceiveContext.h"
+#include "peano4/stacks/IOMode.h"
+#include "peano4/stacks/SendReceiveContext.h"
 #include "tarch/Assertions.h"
 #include "tarch/instrumentation/Log.h"
 #include "tarch/mpi/Rank.h"
+#include "tarch/mpi/mpi.h"
 
 #include <memory>
 #include <sstream>
@@ -45,7 +46,7 @@ protected:
     const std::size_t _baseElement;
     Stack<T>*         _stack;
 
-    INLINE_METHOD View(std::size_t size, std::size_t base, Stack<T>* stack):
+    INLINE_METHOD View(std::size_t size, std::size_t base, Stack<T>* stack) :
       _size(size),
       _baseElement(base),
       _stack(stack) {}
@@ -104,7 +105,7 @@ public:
   Stack(const Stack&)            = delete;
   Stack& operator=(const Stack&) = delete;
 
-  INLINE_METHOD Stack(Stack&& other) noexcept:
+  INLINE_METHOD Stack(Stack&& other) noexcept :
     _data(std::move(other._data)),
     _logicalSize(other._logicalSize),
     _ioMode(other._ioMode),
@@ -326,11 +327,12 @@ public:
     logDebug(toString());
 
     const MPI_Datatype dtype = translateContextIntoDatatype<T>(context);
-    const int result = MPI_Isend(_data.data(), static_cast<int>(size()), dtype, _ioRank, _ioTag, comm, &_ioMPIRequest);
+    const int          result =
+      tarch::mpi::isend(_data.data(), static_cast<int>(size()), dtype, _ioRank, _ioTag, comm, &_ioMPIRequest);
     if (result != MPI_SUCCESS) {
       logError(
-        "Was not able to send to rank "
-        << _ioRank << " on tag " << _ioTag << ": " << tarch::mpi::MPIReturnValueToString(result)
+        "Was not able to send to rank " << _ioRank << " on tag " << _ioTag << ": "
+                                        << tarch::mpi::MPIReturnValueToString(result)
       );
       assertion(false);
     }
@@ -367,13 +369,12 @@ public:
 
     resize(numberOfElements);
 
-    const MPI_Datatype dtype  = translateContextIntoDatatype<T>(context);
-    const int          result = MPI_Irecv(_data.data(), numberOfElements, dtype, _ioRank, _ioTag, comm, &_ioMPIRequest);
+    const MPI_Datatype dtype = translateContextIntoDatatype<T>(context);
+    const int result = tarch::mpi::irecv(_data.data(), numberOfElements, dtype, _ioRank, _ioTag, comm, &_ioMPIRequest);
     if (result != MPI_SUCCESS) {
       logError(
-        "Was not able to receive "
-        << numberOfElements << " values from rank " << _ioRank << " on tag " << _ioTag << ": "
-        << tarch::mpi::MPIReturnValueToString(result)
+        "Was not able to receive " << numberOfElements << " values from rank " << _ioRank << " on tag " << _ioTag
+                                   << ": " << tarch::mpi::MPIReturnValueToString(result)
       );
       assertion(false);
     }
@@ -399,7 +400,7 @@ public:
     }
 
     int flag = 0;
-    MPI_Test(&_ioMPIRequest, &flag, MPI_STATUS_IGNORE);
+    tarch::mpi::test(&_ioMPIRequest, &flag, MPI_STATUS_IGNORE);
     if (flag) {
       if (_ioMode == IOMode::MPISend) {
         shallowClear();

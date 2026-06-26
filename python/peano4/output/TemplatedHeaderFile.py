@@ -46,7 +46,7 @@ class TemplatedHeaderFile(object):
 
   def generate(self,directory,protected_files):
     if not os.path.exists( directory + "/" + self.subdirectory ):
-      os.mkdir(directory + "/" + self.subdirectory)
+      os.makedirs(directory + "/" + self.subdirectory, exist_ok=True)
 
     header_filename = directory + "/" + self.subdirectory + "/" + self.classname + Path(self.headerfile_template).suffix
 

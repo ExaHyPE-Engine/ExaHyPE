@@ -1,7 +1,6 @@
 #pragma once
 
 namespace Numerics {
-
   template <class Shortcuts, typename T>
   inline void computeTractions(const T* Q, const T* n, T& Tx, T& Ty, T& Tz) {
     T    sigma_xx = Q[Shortcuts::sigma + 0];

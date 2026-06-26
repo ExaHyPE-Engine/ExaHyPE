@@ -1,17 +1,17 @@
 #pragma once
 
-#include "ParticleHelper.h"
-#include "ParticleForces.h"
 #include "ParticleDomainBoundary.h"
+#include "ParticleForces.h"
+#include "ParticleHelper.h"
 #include "ParticleIntegration.h"
 #include "ParticleInterpolation.h"
+
 #include "peano4/datamanagement/CellMarker.h"
 #include "tarch/la/Vector.h"
 
 namespace exahype2 {
   namespace fv {
     namespace particles {
-
       /**
        * Updates the state of a particle:
        * - Resets acceleration

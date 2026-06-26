@@ -2,10 +2,12 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "RefinementControl.h"
+#include "exahype2/RefinementControl.h"
 #include "peano4/grid/GridControlEvent.h"
 #include "tarch/multicore/RecursiveSemaphore.h"
 #include "tarch/services/Service.h"
+
+#include <list>
 
 namespace exahype2 {
   class RefinementControl;
@@ -45,7 +47,7 @@ namespace exahype2 {
  *
  *
  */
-class exahype2::RefinementControlService: public tarch::services::Service {
+class exahype2::RefinementControlService : public tarch::services::Service {
 public:
   static RefinementControlService& getInstance();
 
@@ -84,10 +86,10 @@ public:
    *   and _remoteNewEvents.
    *
    * We note that most of these complex multithreading operations are rarely
-   * necessary, as receiveDanglingMessages() within the tarch::services::ServiceRepository::receiveDanglingMessages()
-   * is a prior thread-safe. Nevertheless, I decided to try to be on the safe
-   * side in case someone wants to call this receiveDanglingMessages()
-   * version explicitly.
+   * necessary, as receiveDanglingMessages() within the
+   * tarch::services::ServiceRepository::receiveDanglingMessages() is a prior thread-safe.
+   * Nevertheless, I decided to try to be on the safe side in case someone wants to call this
+   * receiveDanglingMessages() version explicitly.
    */
   virtual void receiveDanglingMessages() override;
 
@@ -194,6 +196,27 @@ private:
 #ifdef PEANO_WITH_MPI
   std::vector<MPI_Request*>                   _sendRequests;
   std::vector<peano4::grid::GridControlEvent> _copyOfCommittedEvents;
+
+  /**
+   * One in-flight body receive per source. Bodies are received concurrently and source-specifically.
+   */
+  struct IncomingBody {
+    MPI_Request                                 request;
+    std::vector<peano4::grid::GridControlEvent> buffer;
+  };
+
+  MPI_Request             _recvSizeRequest;
+  int                     _recvSizeBuffer;
+  std::list<IncomingBody> _incomingBodies;
+  bool                    _isShuttingDown;
+
+  // Buffer to keep send sizes valid during non-blocking sends
+  std::vector<int> _sendSizeBuffers;
+
+  void postReceiveSize();
+  void tryToReceiveDanglingMessage();
+  void drainDanglingMessages();
+  void cancelReceiveSizeRequest();
 
   /**
    * Complete pending sends from previous mesh traversal

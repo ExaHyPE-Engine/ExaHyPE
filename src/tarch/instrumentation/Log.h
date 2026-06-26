@@ -32,8 +32,8 @@ namespace tarch::instrumentation {
 
 #define TARCH_LOGGING_FUNCTION_NAME std::string_view(__func__)
 
-#if defined(__GNUC__) or defined(__clang__) or defined(__NVCOMPILER) or defined(__PGI) or defined(__CUDACC__) \
-  or defined(__NVCC__)
+#if defined(__GNUC__) or defined(__clang__) or defined(__NVCOMPILER) or defined(__PGI) or defined(__CUDACC__) or \
+  defined(__NVCC__)
 #define TARCH_LOGGING_FUNCTION_SIGNATURE std::string_view(__PRETTY_FUNCTION__)
 #elif defined(_MSC_VER)
 #define TARCH_LOGGING_FUNCTION_SIGNATURE std::string_view(__FUNCSIG__)
@@ -98,12 +98,8 @@ private:
 
   static std::string extractQualifiedFunctionName(std::string_view functionSignature);
 
-  static void appendColumn(
-    std::string&           result,
-    const std::string&     separator,
-    std::string::size_type width,
-    std::string_view       value
-  );
+  static void
+  appendColumn(std::string& result, const std::string& separator, std::string::size_type width, std::string_view value);
 
   static void appendMessageColumn(
     std::string&           result,
@@ -173,11 +169,8 @@ public:
    * Derive a scope label such as namespace::Class::method() from the compiler
    * function signature available at the macro call site.
    */
-  static std::string makeScopeName(
-    std::string_view functionSignature,
-    std::string_view functionName,
-    std::string_view fileName
-  );
+  static std::string
+  makeScopeName(std::string_view functionSignature, std::string_view functionName, std::string_view fileName);
 
   static bool debugMessagesAreEnabled(std::string_view scopeName);
 
@@ -198,15 +191,13 @@ public:
 
   static void debugWithScopeName(std::string_view scopeName, std::string_view message);
   static void infoWithScopeName(std::string_view scopeName, std::string_view message);
+  static bool isInfoOutputEnabled();
   static void warningWithScopeName(std::string_view scopeName, std::string_view message);
   static void errorWithScopeName(std::string_view scopeName, std::string_view message);
 
 #if PEANO_TRACE
-  static std::string makeTraceScopeName(
-    std::string_view functionSignature,
-    std::string_view functionName,
-    std::string_view fileName
-  );
+  static std::string
+  makeTraceScopeName(std::string_view functionSignature, std::string_view functionName, std::string_view fileName);
   static std::string makeTraceScopeName(
     std::string_view functionSignature,
     std::string_view functionName,

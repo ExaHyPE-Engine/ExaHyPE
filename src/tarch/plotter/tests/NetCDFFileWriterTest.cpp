@@ -4,6 +4,7 @@
 
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
+#include "tarch/mpi/mpi.h"
 #include "tarch/plotter/NetCDFFileWriter.h"
 
 #include <filesystem>
@@ -15,6 +16,12 @@ namespace fs = std::filesystem;
 #ifdef PEANO_WITH_NETCDF
 
 namespace {
+  void barrier() {
+#ifdef PEANO_WITH_MPI
+    tarch::mpi::barrier(tarch::mpi::Rank::getInstance().getCommunicator());
+#endif
+  }
+
   void validateFileExists(const std::string& filepath) {
     if (not fs::exists(filepath)) {
       throw std::runtime_error("Test failed: Output NetCDF file was not created: " + filepath);
@@ -29,7 +36,7 @@ namespace {
   }
 } // namespace
 
-tarch::plotter::tests::NetCDFFileWriterTest::NetCDFFileWriterTest():
+tarch::plotter::tests::NetCDFFileWriterTest::NetCDFFileWriterTest() :
   TestCase("tarch::plotter::tests::NetCDFFileWriterTest") {}
 
 void tarch::plotter::tests::NetCDFFileWriterTest::run() {
@@ -59,12 +66,12 @@ void tarch::plotter::tests::NetCDFFileWriterTest::test2DSimpleTriangle() {
     plotter.writeToFile(filename, 0);
   }
 
-  tarch::mpi::Rank::getInstance().barrier();
+  barrier();
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     validateFileExists(fullPath);
     cleanup(fullPath);
   }
-  tarch::mpi::Rank::getInstance().barrier();
+  barrier();
 }
 
 void tarch::plotter::tests::NetCDFFileWriterTest::test2DQuadWithData() {
@@ -97,12 +104,12 @@ void tarch::plotter::tests::NetCDFFileWriterTest::test2DQuadWithData() {
     plotter.writeToFile(filename, 0);
   }
 
-  tarch::mpi::Rank::getInstance().barrier();
+  barrier();
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     validateFileExists(fullPath);
     cleanup(fullPath);
   }
-  tarch::mpi::Rank::getInstance().barrier();
+  barrier();
 }
 
 void tarch::plotter::tests::NetCDFFileWriterTest::testEmptyPlotter() {
@@ -115,13 +122,13 @@ void tarch::plotter::tests::NetCDFFileWriterTest::testEmptyPlotter() {
     plotter.writeToFile(filename, 0);
   }
 
-  tarch::mpi::Rank::getInstance().barrier();
+  barrier();
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     if (fs::exists(fullPath)) {
       cleanup(fullPath);
     }
   }
-  tarch::mpi::Rank::getInstance().barrier();
+  barrier();
 }
 
 void tarch::plotter::tests::NetCDFFileWriterTest::testInconsistentDataSizeThrows() {
@@ -149,7 +156,7 @@ void tarch::plotter::tests::NetCDFFileWriterTest::testInconsistentDataSizeThrows
     exceptionThrown = true;
   }
 
-  tarch::mpi::Rank::getInstance().barrier();
+  barrier();
   if (not exceptionThrown) {
     if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
       cleanup(fullPath);
@@ -160,7 +167,7 @@ void tarch::plotter::tests::NetCDFFileWriterTest::testInconsistentDataSizeThrows
       cleanup(fullPath);
     }
   }
-  tarch::mpi::Rank::getInstance().barrier();
+  barrier();
 }
 
 void tarch::plotter::tests::NetCDFFileWriterTest::testUnsupportedCellType() {
@@ -193,20 +200,20 @@ void tarch::plotter::tests::NetCDFFileWriterTest::testUnsupportedCellType() {
     exceptionThrown = true;
   }
 
-  tarch::mpi::Rank::getInstance().barrier();
+  barrier();
   if (not exceptionThrown) {
     if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
       cleanup((tarch::tests::getWritableTestDirectory() / (filename + ".nc")).string());
     }
     throw std::runtime_error("NetCDFFileWriter did not throw on unsupported cell type!");
   }
-  tarch::mpi::Rank::getInstance().barrier();
+  barrier();
 }
 
 #else // PEANO_WITH_NETCDF
 
 // Dummy implementation for compilation when NetCDF is disabled
-tarch::plotter::tests::NetCDFFileWriterTest::NetCDFFileWriterTest():
+tarch::plotter::tests::NetCDFFileWriterTest::NetCDFFileWriterTest() :
   TestCase("tarch::plotter::tests::NetCDFFileWriterTest") {}
 
 void tarch::plotter::tests::NetCDFFileWriterTest::run() {

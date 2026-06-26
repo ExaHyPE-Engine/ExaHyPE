@@ -118,25 +118,21 @@ class ActionSet(object):
         self.descend_invocation_order = descend_invocation_order
         pass
 
-    @abstractmethod
     def get_constructor_body(self):
         return "// @todo Should be overwritten\n"
 
     def get_static_initialisations(self, full_qualified_classname):
         return ""
 
-    @abstractmethod
     def get_destructor_body(self):
         return "// @todo Should be overwritten\n"
 
     def get_body_of_getGridControlEvents(self):
         return "return std::vector< ::peano4::grid::GridControlEvent >();\n"
 
-    @abstractmethod
     def get_body_of_prepareTraversal(self):
         return "\n"
 
-    @abstractmethod
     def get_body_of_unprepareTraversal(self):
         return "\n"
 
@@ -161,7 +157,6 @@ class ActionSet(object):
     OPERATION_TOUCH_CELL_FIRST_TIME = "touchCellFirstTime"
     OPERATION_TOUCH_CELL_LAST_TIME = "touchCellLastTime"
 
-    @abstractmethod
     def get_body_of_operation(self, operation_name):
         """!
 
@@ -173,7 +168,6 @@ class ActionSet(object):
         """
         return "// @todo Should be overwritten by mapping\n"
 
-    @abstractmethod
     def get_action_set_name(self):
         """!
 
@@ -190,7 +184,6 @@ class ActionSet(object):
         """
         return "Dummy"
 
-    @abstractmethod
     def user_should_modify_template(self):
         """!
 
@@ -199,12 +192,12 @@ class ActionSet(object):
         Return whether you expect the user to modify the generated code. If this
         is the case, then the API places the generated output in the directory
         actions. Otherwise, it goes into the observer directory and will be
-        overwritten in each and every Python run.
+        overwritten in each and every Python run. The default is False: a plain
+        action set is regenerated and not hand-edited.
 
         """
-        return True
+        return False
 
-    @abstractmethod
     def get_attributes(self):
         """!
 
@@ -216,7 +209,6 @@ class ActionSet(object):
         """
         return ""
 
-    @abstractmethod
     def get_includes(self):
         """!
 

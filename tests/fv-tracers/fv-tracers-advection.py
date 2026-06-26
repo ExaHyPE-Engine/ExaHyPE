@@ -40,8 +40,7 @@ project = exahype2.Project(
     dimensions=2,
     size=[1.0, 1.0, 1.0],
     offset=[0.0, 0.0, 0.0],
-    periodic_BC=[False, False, False],
-    executable="ExaHyPE",
+    periodic_bc=[False, False, False],
     min_end_time=args.end_time,
     max_end_time=args.end_time,
     min_grid_levels=args.min_grid_levels,
@@ -106,30 +105,32 @@ project.add_solver(fv_solver)
 tracers = project.add_tracer(
     name="Tracers",
     particle_attributes={
-        "unknowns": {
-            "rho": 1,
-            "fluid_u": 1,
-            "fluid_v": 1,
-            "fluid_w": 1,  # Interpolated fluid velocity
-            "u": 1,
-            "v": 1,
-            "w": 1,  # Particle's own velocity
-            "a_x": 1,
-            "a_y": 1,
-            "a_z": 1,
-            "d": 1,
-        }
-        if project.dimensions == 3
-        else {
-            "rho": 1,
-            "fluid_u": 1,
-            "fluid_v": 1,  # Interpolated fluid velocity
-            "u": 1,
-            "v": 1,  # Particle's own velocity
-            "a_x": 1,
-            "a_y": 1,
-            "d": 1,
-        }
+        "unknowns": (
+            {
+                "rho": 1,
+                "fluid_u": 1,
+                "fluid_v": 1,
+                "fluid_w": 1,  # Interpolated fluid velocity
+                "u": 1,
+                "v": 1,
+                "w": 1,  # Particle's own velocity
+                "a_x": 1,
+                "a_y": 1,
+                "a_z": 1,
+                "d": 1,
+            }
+            if project.dimensions == 3
+            else {
+                "rho": 1,
+                "fluid_u": 1,
+                "fluid_v": 1,  # Interpolated fluid velocity
+                "u": 1,
+                "v": 1,  # Particle's own velocity
+                "a_x": 1,
+                "a_y": 1,
+                "d": 1,
+            }
+        )
     },
 )
 
@@ -169,5 +170,4 @@ tracing_action_set.descend_invocation_order = (
 project.add_action_set_to_initialisation(tracing_action_set)
 # project.add_action_set_to_timestepping(tracing_action_set)
 
-project = project.generate_Peano4_project()
 project.generate_and_build()

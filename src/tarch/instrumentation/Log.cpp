@@ -4,6 +4,7 @@
 
 #include "CommandLineSink.h"
 #include "FileSink.h"
+
 #include "tarch/Assertions.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/BooleanSemaphore.h"
@@ -42,10 +43,8 @@ namespace {
 
   std::string_view trimRightView(std::string_view value) noexcept {
     std::size_t last = value.size();
-    while (
-      last > 0
-      and (value[last - 1] == ' ' or value[last - 1] == '\t' or value[last - 1] == '\n' or value[last - 1] == '\r')
-    ) {
+    while (last > 0 and
+           (value[last - 1] == ' ' or value[last - 1] == '\t' or value[last - 1] == '\n' or value[last - 1] == '\r')) {
       last--;
     }
     return value.substr(0, last);
@@ -65,6 +64,8 @@ tarch::multicore::BooleanSemaphore& tarch::instrumentation::Log::getConfiguratio
 const tarch::instrumentation::Log::Configuration& tarch::instrumentation::Log::getConfiguration() {
   return *_configuration.load(std::memory_order_acquire);
 }
+
+bool tarch::instrumentation::Log::isInfoOutputEnabled() { return isGlobalMasterRankOrMpiUninitialised(); }
 
 void tarch::instrumentation::Log::updateConfiguration(const std::function<void(Configuration&)>& update) {
   tarch::multicore::Lock lock(getConfigurationSemaphore());
@@ -179,8 +180,11 @@ std::string tarch::instrumentation::Log::extractQualifiedFunctionName(std::strin
   return std::string(beforeArguments);
 }
 
-std::string tarch::instrumentation::Log::
-  makeScopeName(std::string_view functionSignature, std::string_view functionName, std::string_view fileName) {
+std::string tarch::instrumentation::Log::makeScopeName(
+  std::string_view functionSignature,
+  std::string_view functionName,
+  std::string_view fileName
+) {
   std::string qualifiedFunctionName = extractQualifiedFunctionName(functionSignature);
 
   if (qualifiedFunctionName.empty()) {
@@ -263,10 +267,8 @@ std::string tarch::instrumentation::Log::getTimeStampHumanReadable(long int time
   return result;
 }
 
-std::string tarch::instrumentation::Log::alignMessage(
-  std::string_view       message,
-  std::string::size_type messageStartColumn
-) {
+std::string
+tarch::instrumentation::Log::alignMessage(std::string_view message, std::string::size_type messageStartColumn) {
   const std::size_t marker = message.find(AlignmentMarker);
   if (marker == std::string_view::npos) {
     return std::string(message);
@@ -277,11 +279,9 @@ std::string tarch::instrumentation::Log::alignMessage(
   const auto requestedPrefixColumn = messageStartColumn + std::max(MinimumAlignedMessagePrefixWidth, prefix.size());
 
   auto prefixColumn = _alignedMessagePrefixColumn.load(std::memory_order_relaxed);
-  while (
-    prefixColumn < requestedPrefixColumn
-    and not _alignedMessagePrefixColumn
-              .compare_exchange_weak(prefixColumn, requestedPrefixColumn, std::memory_order_relaxed)
-  ) {
+  while (prefixColumn < requestedPrefixColumn and
+         not _alignedMessagePrefixColumn
+               .compare_exchange_weak(prefixColumn, requestedPrefixColumn, std::memory_order_relaxed)) {
   }
   prefixColumn = std::max(prefixColumn, requestedPrefixColumn);
 
@@ -307,8 +307,8 @@ std::string tarch::instrumentation::Log::constructMessageString(
 ) {
   std::string result;
   result.reserve(
-    message.size() + MinimumAlignedMessagePrefixWidth + scopeName.size() + messageType.size()
-    + configuration.logColumnSeparator.size() * 7 + NumberOfScopeColumnSpaces + NumberOfStandardColumnSpaces * 5 + 1
+    message.size() + MinimumAlignedMessagePrefixWidth + scopeName.size() + messageType.size() +
+    configuration.logColumnSeparator.size() * 7 + NumberOfScopeColumnSpaces + NumberOfStandardColumnSpaces * 5 + 1
   );
 
   if (configuration.logTimeStamp) {
@@ -339,9 +339,14 @@ std::string tarch::instrumentation::Log::constructMessageString(
     appendColumn(result, configuration.logColumnSeparator, NumberOfScopeColumnSpaces, scopeName);
   }
 
-  const std::string alignedMessage = alignMessage(message, result.size() + configuration.logColumnSeparator.size());
-  const std::string_view trimmedMessage = trimRightView(alignedMessage);
-  appendMessageColumn(result, configuration.logColumnSeparator, 0, 0, trimmedMessage);
+  // Only the alignment-marker path needs a rewritten (copied) message; the common
+  // case appends the trimmed view directly to avoid an allocation per line.
+  if (message.find(AlignmentMarker) == std::string_view::npos) {
+    appendMessageColumn(result, configuration.logColumnSeparator, 0, 0, trimRightView(message));
+  } else {
+    const std::string alignedMessage = alignMessage(message, result.size() + configuration.logColumnSeparator.size());
+    appendMessageColumn(result, configuration.logColumnSeparator, 0, 0, trimRightView(alignedMessage));
+  }
   result += '\n';
 
   return result;
@@ -357,9 +362,8 @@ void tarch::instrumentation::Log::configureDebugFilter() {
       std::string_view remaining(rawFilter);
       while (not remaining.empty()) {
         const std::size_t delimiter = remaining.find(',');
-        const std::string token     = trim(
-          delimiter == std::string_view::npos ? remaining : remaining.substr(0, delimiter)
-        );
+        const std::string token =
+          trim(delimiter == std::string_view::npos ? remaining : remaining.substr(0, delimiter));
 
         if (token == "1" or token == "true" or token == "on" or token == "yes" or token == "all" or token == "*") {
           debugEnabledByDefault = true;
@@ -460,15 +464,8 @@ void tarch::instrumentation::Log::writeMessage(
   }
 
   const Configuration& configuration = getConfiguration();
-  const std::string    outputMessage = constructMessageString(
-    messageType,
-    timestampNanoseconds,
-    rank,
-    threadId,
-    scopeName,
-    message,
-    configuration
-  );
+  const std::string    outputMessage =
+    constructMessageString(messageType, timestampNanoseconds, rank, threadId, scopeName, message, configuration);
   writeFormattedLine(outputMessage, consoleStream, flushConsole, messageType, configuration);
 }
 

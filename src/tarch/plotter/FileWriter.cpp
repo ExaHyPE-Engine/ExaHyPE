@@ -3,6 +3,7 @@
 #include "FileWriter.h"
 
 #include "tarch/mpi/Rank.h"
+#include "tarch/mpi/mpi.h"
 
 #include <algorithm> // for std::transform, std::max
 #include <filesystem>
@@ -11,7 +12,7 @@
 
 namespace fs = std::filesystem;
 
-tarch::plotter::FileWriter::FileWriter(const std::string& outputDirectory, int numberOfSubdomains):
+tarch::plotter::FileWriter::FileWriter(const std::string& outputDirectory, int numberOfSubdomains) :
   _outputDirectory(outputDirectory),
   _subdomains(static_cast<std::size_t>(numberOfSubdomains)) {}
 
@@ -37,7 +38,9 @@ void tarch::plotter::FileWriter::createOutputDirectory() {
     }
   }
 
-  tarch::mpi::Rank::getInstance().barrier();
+#ifdef PEANO_WITH_MPI
+  tarch::mpi::barrier(tarch::mpi::Rank::getInstance().getCommunicator());
+#endif
 }
 
 void tarch::plotter::FileWriter::validateIdentifier(const std::string& id) {
@@ -62,32 +65,33 @@ void tarch::plotter::FileWriter::checkCanOpenPlotter(int subdomainId) const {
 
   if (subdomainId < 0 or subdomainId >= static_cast<int>(_subdomains.size())) {
     throw std::runtime_error(
-      "Invalid subdomainId " + std::to_string(subdomainId) + " (have " + std::to_string(_subdomains.size())
-      + " subdomains)"
+      "Invalid subdomainId " + std::to_string(subdomainId) + " (have " + std::to_string(_subdomains.size()) +
+      " subdomains)"
     );
   }
 }
 
-std::unique_ptr<tarch::plotter::FileWriter::VertexPlotter> tarch::plotter::FileWriter::createVertexPlotter(
-  int subdomainId
-) {
+std::unique_ptr<tarch::plotter::FileWriter::VertexPlotter>
+tarch::plotter::FileWriter::createVertexPlotter(int subdomainId) {
   return std::make_unique<VertexPlotter>(*this, subdomainId);
 }
 
-std::unique_ptr<tarch::plotter::FileWriter::CellPlotter> tarch::plotter::FileWriter::createCellPlotter(
-  int subdomainId
-) {
+std::unique_ptr<tarch::plotter::FileWriter::CellPlotter>
+tarch::plotter::FileWriter::createCellPlotter(int subdomainId) {
   return std::make_unique<CellPlotter>(*this, subdomainId);
 }
 
-std::unique_ptr<tarch::plotter::FileWriter::VertexDataPlotter> tarch::plotter::FileWriter::
-  createVertexDataPlotter(int subdomainId, const std::string& identifier, int recordsPerVertex) {
+std::unique_ptr<tarch::plotter::FileWriter::VertexDataPlotter> tarch::plotter::FileWriter::createVertexDataPlotter(
+  int                subdomainId,
+  const std::string& identifier,
+  int                recordsPerVertex
+) {
   validateIdentifier(identifier);
   return std::make_unique<VertexDataPlotter>(*this, subdomainId, identifier, recordsPerVertex);
 }
 
-std::unique_ptr<tarch::plotter::FileWriter::CellDataPlotter> tarch::plotter::FileWriter::
-  createCellDataPlotter(int subdomainId, const std::string& identifier, int recordsPerCell) {
+std::unique_ptr<tarch::plotter::FileWriter::CellDataPlotter>
+tarch::plotter::FileWriter::createCellDataPlotter(int subdomainId, const std::string& identifier, int recordsPerCell) {
   validateIdentifier(identifier);
   return std::make_unique<CellDataPlotter>(*this, subdomainId, identifier, recordsPerCell);
 }
@@ -98,7 +102,7 @@ tarch::plotter::FileWriter::DataPlotter::DataPlotter(
   std::vector<DataField>& targetFields,
   const std::string&      identifier,
   int                     components
-):
+) :
   _plotter(plotter),
   _targetFields(targetFields),
   _components(components) {
@@ -154,20 +158,21 @@ tarch::plotter::FileWriter::SubdomainBuffers tarch::plotter::FileWriter::mergeSu
     }
 
     if (s.pointFields.size() != ref->pointFields.size() or s.cellFields.size() != ref->cellFields.size()) {
-      // If a subdomain has geometry but no fields (or vice versa) compared to ref, this is a mismatch
+      // If a subdomain has geometry but no fields (or vice versa) compared to ref, this is a
+      // mismatch
       throw std::runtime_error("Inconsistent data field counts across subdomains.");
     }
 
     for (std::size_t i = 0; i < ref->pointFields.size(); ++i) {
-      if (s.pointFields[i].name != ref->pointFields[i].name
-          or s.pointFields[i].components != ref->pointFields[i].components) {
+      if (s.pointFields[i].name != ref->pointFields[i].name or
+          s.pointFields[i].components != ref->pointFields[i].components) {
         throw std::runtime_error("Mismatch in point data field '" + ref->pointFields[i].name + "'.");
       }
     }
 
     for (std::size_t i = 0; i < ref->cellFields.size(); ++i) {
-      if (s.cellFields[i].name != ref->cellFields[i].name
-          or s.cellFields[i].components != ref->cellFields[i].components) {
+      if (s.cellFields[i].name != ref->cellFields[i].name or
+          s.cellFields[i].components != ref->cellFields[i].components) {
         throw std::runtime_error("Mismatch in cell data field '" + ref->cellFields[i].name + "'.");
       }
     }
@@ -218,8 +223,8 @@ tarch::plotter::FileWriter::SubdomainBuffers tarch::plotter::FileWriter::mergeSu
     for (const auto& f : s.pointFields) {
       if (f.values.size() != nPoints * f.components) {
         throw std::runtime_error(
-          "Mismatch in point data field '" + f.name + "'. Expected " + std::to_string(nPoints) + " tuples but got "
-          + std::to_string(f.values.size() / f.components) + "."
+          "Mismatch in point data field '" + f.name + "'. Expected " + std::to_string(nPoints) + " tuples but got " +
+          std::to_string(f.values.size() / f.components) + "."
         );
       }
     }
@@ -228,8 +233,8 @@ tarch::plotter::FileWriter::SubdomainBuffers tarch::plotter::FileWriter::mergeSu
     for (const auto& f : s.cellFields) {
       if (f.values.size() != nCells * f.components) {
         throw std::runtime_error(
-          "Mismatch in cell data field '" + f.name + "'. Expected " + std::to_string(nCells) + " tuples but got "
-          + std::to_string(f.values.size() / f.components) + "."
+          "Mismatch in cell data field '" + f.name + "'. Expected " + std::to_string(nCells) + " tuples but got " +
+          std::to_string(f.values.size() / f.components) + "."
         );
       }
     }
@@ -266,9 +271,9 @@ tarch::plotter::FileWriter::SubdomainBuffers tarch::plotter::FileWriter::mergeSu
       std::size_t expectedSize = nPoints * s.pointFields[i].components;
       if (s.pointFields[i].values.size() != expectedSize) {
         throw std::runtime_error(
-          "Point field '" + s.pointFields[i].name + "' has invalid size "
-          + std::to_string(s.pointFields[i].values.size()) + ". Expected " + std::to_string(expectedSize) + " ("
-          + std::to_string(nPoints) + " points x " + std::to_string(s.pointFields[i].components) + " components)."
+          "Point field '" + s.pointFields[i].name + "' has invalid size " +
+          std::to_string(s.pointFields[i].values.size()) + ". Expected " + std::to_string(expectedSize) + " (" +
+          std::to_string(nPoints) + " points x " + std::to_string(s.pointFields[i].components) + " components)."
         );
       }
 
@@ -283,9 +288,9 @@ tarch::plotter::FileWriter::SubdomainBuffers tarch::plotter::FileWriter::mergeSu
       std::size_t expectedSize = nCells * s.cellFields[i].components;
       if (s.cellFields[i].values.size() != expectedSize) {
         throw std::runtime_error(
-          "Cell field '" + s.cellFields[i].name + "' has invalid size " + std::to_string(s.cellFields[i].values.size())
-          + ". Expected " + std::to_string(expectedSize) + " (" + std::to_string(nCells) + " cells x "
-          + std::to_string(s.cellFields[i].components) + " components)."
+          "Cell field '" + s.cellFields[i].name + "' has invalid size " +
+          std::to_string(s.cellFields[i].values.size()) + ". Expected " + std::to_string(expectedSize) + " (" +
+          std::to_string(nCells) + " cells x " + std::to_string(s.cellFields[i].components) + " components)."
         );
       }
 

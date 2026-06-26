@@ -97,7 +97,7 @@ fineGridCell{{CURRENT_UNKNOWN_IDENTIFIER}}.data()
             + "}",
             "PERIODIC_BC": "{"
             + ",".join(
-                ["1" if b else "0" for b in project._periodic_BC[: project._dimensions]]
+                ["1" if b else "0" for b in project._periodic_bc[: project._dimensions]]
             )
             + "}",
             "FIELDS_TO_INTERPOLATE": fields_to_interpolate,

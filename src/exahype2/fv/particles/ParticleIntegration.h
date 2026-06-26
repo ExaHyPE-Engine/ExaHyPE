@@ -3,10 +3,11 @@
 
 #pragma once
 
-#include "ParticleHelper.h"
 #include "ParticleForces.h"
+#include "ParticleHelper.h"
 #include "ParticleIntegrationHelper.h"
 #include "ParticleInterpolation.h"
+
 #include "tarch/la/Vector.h"
 #include "toolbox/particles/potentials/Springs.h"
 
@@ -16,7 +17,6 @@ namespace exahype2 {
   namespace fv {
     namespace particles {
       namespace integration {
-
         //=============================================================================
         // Global Configuration
         //=============================================================================

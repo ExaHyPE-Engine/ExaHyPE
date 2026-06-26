@@ -9,80 +9,87 @@
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/IntegerMessage.h"
 #include "tarch/mpi/Rank.h"
+#include "tarch/mpi/mpi.h"
 #include "tarch/multicore/Core.h"
 #include "tarch/multicore/Task.h"
 
-peano4::parallel::tests::PingPongTest::PingPongTest():
+peano4::parallel::tests::PingPongTest::PingPongTest() :
   TestCase("peano4::parallel::tests::PingPongTest") {}
 
 void peano4::parallel::tests::PingPongTest::testBuiltInType() {
-  int out = 23;
+  const int tag = tarch::mpi::Rank::reserveFreeTag("peano4::parallel::tests::PingPongTest::testBuiltInType");
+  int       out = 23;
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() >= 2 and tarch::mpi::Rank::getInstance().getRank() == 0) {
-    MPI_Send(&out, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
+    tarch::mpi::send(&out, 1, MPI_INT, 1, tag, MPI_COMM_WORLD);
   }
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() >= 2 and tarch::mpi::Rank::getInstance().getRank() == 1) {
     int in = 25;
-    MPI_Recv(&in, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    tarch::mpi::receive(&in, 1, MPI_INT, 0, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     validateEquals(in, out);
   }
-  MPI_Barrier(MPI_COMM_WORLD);
+  tarch::mpi::barrier(MPI_COMM_WORLD);
 }
 
 namespace {
   int testErrors = 0;
 
-  class PingPongSendTask: public tarch::multicore::Task {
+  class PingPongSendTask : public tarch::multicore::Task {
   private:
-    const int  _data;
+    const int  _payloadOffset;
+    const int  _tag;
     const bool _blockingMPI;
 
   public:
-    PingPongSendTask(int data, bool blockingMPI):
+    PingPongSendTask(int payloadOffset, int tag, bool blockingMPI) :
       Task(Task::NoTaskType, Task::DefaultPriority),
-      _data(data),
+      _payloadOffset(payloadOffset),
+      _tag(tag),
       _blockingMPI(blockingMPI) {}
 
     bool run() {
-      const int                  out = 23 + _data;
+      const int out = 23 + _payloadOffset;
       if (_blockingMPI) {
-        MPI_Send(&out, 1, MPI_INT, 1, _data, MPI_COMM_WORLD);
-        logDebug("sent blocking message " << out << " to rank 1 with tag " << _data);
+        tarch::mpi::send(&out, 1, MPI_INT, 1, _tag, MPI_COMM_WORLD);
+        logDebug("sent blocking message " << out << " to rank 1 with tag " << _tag);
       } else {
         MPI_Request request;
-        MPI_Isend(&out, 1, MPI_INT, 1, _data, MPI_COMM_WORLD, &request);
-        logDebug("sent non-blocking message " << out << " to rank 1 with tag " << _data);
-        MPI_Wait(&request, MPI_STATUS_IGNORE);
+        tarch::mpi::isend(&out, 1, MPI_INT, 1, _tag, MPI_COMM_WORLD, &request);
+        logDebug("sent non-blocking message " << out << " to rank 1 with tag " << _tag);
+        tarch::mpi::wait(&request, MPI_STATUS_IGNORE);
       }
       return false;
     }
   };
 
-
-  class PingPongReceiveTask: public tarch::multicore::Task {
+  class PingPongReceiveTask : public tarch::multicore::Task {
   private:
-    const int  _data;
+    const int  _expectedPayloadOffset;
+    const int  _tag;
     const bool _blockingMPI;
 
   public:
-    PingPongReceiveTask(int expectedData, bool blockingMPI):
+    PingPongReceiveTask(int expectedPayloadOffset, int tag, bool blockingMPI) :
       Task(Task::NoTaskType, Task::DefaultPriority),
-      _data(expectedData),
+      _expectedPayloadOffset(expectedPayloadOffset),
+      _tag(tag),
       _blockingMPI(blockingMPI) {}
 
     bool run() {
-      int                        in = -12;
-      logDebug("receive message from rank 1 with tag " << _data);
+      int in = -12;
+      logDebug("receive message from rank 1 with tag " << _tag);
       if (_blockingMPI) {
-        MPI_Recv(&in, 1, MPI_INT, 0, _data, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        tarch::mpi::receive(&in, 1, MPI_INT, 0, _tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
       } else {
         MPI_Request request;
-        MPI_Irecv(&in, 1, MPI_INT, 0, _data, MPI_COMM_WORLD, &request);
-        MPI_Wait(&request, MPI_STATUS_IGNORE);
+        tarch::mpi::irecv(&in, 1, MPI_INT, 0, _tag, MPI_COMM_WORLD, &request);
+        tarch::mpi::wait(&request, MPI_STATUS_IGNORE);
       }
       logDebug("got content " << in);
-      if (in != 23 + _data) {
-        logError("received "
-            << in << " instead of " << (23 + _data) << " (blocking mode=" << _blockingMPI << ", tag=" << _data << ")");
+      if (in != 23 + _expectedPayloadOffset) {
+        logError(
+          "received " << in << " instead of " << (23 + _expectedPayloadOffset) << " (blocking mode=" << _blockingMPI
+                      << ", tag=" << _tag << ")"
+        );
         testErrors++;
       }
       return false;
@@ -91,159 +98,189 @@ namespace {
 } // namespace
 
 void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithBlockingReceives() {
+  const int baseTag = tarch::mpi::Rank::reserveFreeTag(
+    "peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithBlockingReceives",
+    tarch::multicore::Core::getInstance().getNumberOfThreads()
+  );
   int out;
   testErrors = 0;
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() >= 2 and tarch::mpi::Rank::getInstance().getRank() == 0) {
     for (int i = 0; i < tarch::multicore::Core::getInstance().getNumberOfThreads(); i++) {
       out = 23 + i;
-      MPI_Send(&out, 1, MPI_INT, 1, i, MPI_COMM_WORLD);
+      tarch::mpi::send(&out, 1, MPI_INT, 1, baseTag + i, MPI_COMM_WORLD);
     }
   }
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() >= 2 and tarch::mpi::Rank::getInstance().getRank() == 1) {
     std::vector<tarch::multicore::Task*> tasks;
     for (int i = 0; i < tarch::multicore::Core::getInstance().getNumberOfThreads(); i++) {
-      tasks.push_back(new PingPongReceiveTask(i, true));
+      tasks.push_back(new PingPongReceiveTask(i, baseTag + i, true));
     }
     tarch::multicore::spawnTasks(tasks);
   }
-  MPI_Barrier(MPI_COMM_WORLD);
+  tarch::mpi::barrier(MPI_COMM_WORLD);
   validate(testErrors == 0);
 }
 
 void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithNonblockingReceives() {
+  const int baseTag = tarch::mpi::Rank::reserveFreeTag(
+    "peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithNonblockingReceives",
+    tarch::multicore::Core::getInstance().getNumberOfThreads()
+  );
   int out;
   testErrors = 0;
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() >= 2 and tarch::mpi::Rank::getInstance().getRank() == 0) {
     for (int i = 0; i < tarch::multicore::Core::getInstance().getNumberOfThreads(); i++) {
       out = 23 + i;
-      MPI_Send(&out, 1, MPI_INT, 1, i, MPI_COMM_WORLD);
+      tarch::mpi::send(&out, 1, MPI_INT, 1, baseTag + i, MPI_COMM_WORLD);
     }
   }
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() >= 2 and tarch::mpi::Rank::getInstance().getRank() == 1) {
     std::vector<tarch::multicore::Task*> tasks;
     for (int i = 0; i < tarch::multicore::Core::getInstance().getNumberOfThreads(); i++) {
-      tasks.push_back(new PingPongReceiveTask(i, false));
+      tasks.push_back(new PingPongReceiveTask(i, baseTag + i, false));
     }
     tarch::multicore::spawnTasks(tasks);
   }
-  MPI_Barrier(MPI_COMM_WORLD);
+  tarch::mpi::barrier(MPI_COMM_WORLD);
   validate(testErrors == 0);
 }
 
 void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithBlockingSends() {
+  const int baseTag = tarch::mpi::Rank::reserveFreeTag(
+    "peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithBlockingSends",
+    tarch::multicore::Core::getInstance().getNumberOfThreads()
+  );
   int out    = 23;
   testErrors = 0;
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() >= 2 and tarch::mpi::Rank::getInstance().getRank() == 0) {
     std::vector<tarch::multicore::Task*> tasks;
     for (int i = 0; i < tarch::multicore::Core::getInstance().getNumberOfThreads(); i++) {
-      tasks.push_back(new PingPongSendTask(i, true));
+      tasks.push_back(new PingPongSendTask(i, baseTag + i, true));
     }
     tarch::multicore::spawnTasks(tasks);
   }
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() >= 2 and tarch::mpi::Rank::getInstance().getRank() == 1) {
     int in = -12;
     for (int i = 0; i < tarch::multicore::Core::getInstance().getNumberOfThreads(); i++) {
-      MPI_Recv(&in, 1, MPI_INT, 0, i, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      tarch::mpi::receive(&in, 1, MPI_INT, 0, baseTag + i, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
       validateEquals(in, out + i);
     }
   }
-  MPI_Barrier(MPI_COMM_WORLD);
+  tarch::mpi::barrier(MPI_COMM_WORLD);
   validate(testErrors == 0);
 }
 
 void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithNonblockingSends() {
+  const int baseTag = tarch::mpi::Rank::reserveFreeTag(
+    "peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithNonblockingSends",
+    tarch::multicore::Core::getInstance().getNumberOfThreads()
+  );
   int out    = 23;
   testErrors = 0;
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() >= 2 and tarch::mpi::Rank::getInstance().getRank() == 0) {
     std::vector<tarch::multicore::Task*> tasks;
     for (int i = 0; i < tarch::multicore::Core::getInstance().getNumberOfThreads(); i++) {
-      tasks.push_back(new PingPongSendTask(i, false));
+      tasks.push_back(new PingPongSendTask(i, baseTag + i, false));
     }
     tarch::multicore::spawnTasks(tasks);
   }
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() >= 2 and tarch::mpi::Rank::getInstance().getRank() == 1) {
     int in = -12;
     for (int i = 0; i < tarch::multicore::Core::getInstance().getNumberOfThreads(); i++) {
-      MPI_Recv(&in, 1, MPI_INT, 0, i, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      tarch::mpi::receive(&in, 1, MPI_INT, 0, baseTag + i, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
       validateEquals(in, out + i);
     }
   }
-  MPI_Barrier(MPI_COMM_WORLD);
+  tarch::mpi::barrier(MPI_COMM_WORLD);
   validate(testErrors == 0);
 }
 
 void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithBlockingSendsAndReceives() {
-  //int out    = 23;
+  const int baseTag = tarch::mpi::Rank::reserveFreeTag(
+    "peano4::parallel::tests::PingPongTest::"
+    "testMultithreadedPingPongWithBlockingSendsAndReceives",
+    tarch::multicore::Core::getInstance().getNumberOfThreads()
+  );
+  // int out    = 23;
   testErrors = 0;
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() >= 2 and tarch::mpi::Rank::getInstance().getRank() == 0) {
     std::vector<tarch::multicore::Task*> tasks;
     for (int i = 0; i < tarch::multicore::Core::getInstance().getNumberOfThreads(); i++) {
-      tasks.push_back(new PingPongSendTask(i, true));
+      tasks.push_back(new PingPongSendTask(i, baseTag + i, true));
     }
     tarch::multicore::spawnTasks(tasks);
   }
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() >= 2 and tarch::mpi::Rank::getInstance().getRank() == 1) {
     std::vector<tarch::multicore::Task*> tasks;
     for (int i = 0; i < tarch::multicore::Core::getInstance().getNumberOfThreads(); i++) {
-      tasks.push_back(new PingPongReceiveTask(i, true));
+      tasks.push_back(new PingPongReceiveTask(i, baseTag + i, true));
     }
     tarch::multicore::spawnTasks(tasks);
   }
-  MPI_Barrier(MPI_COMM_WORLD);
+  tarch::mpi::barrier(MPI_COMM_WORLD);
   validate(testErrors == 0);
 }
 
 void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithNonblockingSendsAndReceives() {
-  //int out    = 23;
+  const int baseTag = tarch::mpi::Rank::reserveFreeTag(
+    "peano4::parallel::tests::PingPongTest::"
+    "testMultithreadedPingPongWithNonblockingSendsAndReceives",
+    tarch::multicore::Core::getInstance().getNumberOfThreads()
+  );
+  // int out    = 23;
   testErrors = 0;
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() >= 2 and tarch::mpi::Rank::getInstance().getRank() == 0) {
     std::vector<tarch::multicore::Task*> tasks;
     for (int i = 0; i < tarch::multicore::Core::getInstance().getNumberOfThreads(); i++) {
-      tasks.push_back(new PingPongSendTask(i, false));
+      tasks.push_back(new PingPongSendTask(i, baseTag + i, false));
     }
     tarch::multicore::spawnTasks(tasks);
   }
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() >= 2 and tarch::mpi::Rank::getInstance().getRank() == 1) {
     std::vector<tarch::multicore::Task*> tasks;
     for (int i = 0; i < tarch::multicore::Core::getInstance().getNumberOfThreads(); i++) {
-      tasks.push_back(new PingPongReceiveTask(i, false));
+      tasks.push_back(new PingPongReceiveTask(i, baseTag + i, false));
     }
     tarch::multicore::spawnTasks(tasks);
   }
-  MPI_Barrier(MPI_COMM_WORLD);
+  tarch::mpi::barrier(MPI_COMM_WORLD);
   validate(testErrors == 0);
 }
 
 void peano4::parallel::tests::PingPongTest::testDaStGenTypeStartTraversalMessage() {
+  const int tag =
+    tarch::mpi::Rank::reserveFreeTag("peano4::parallel::tests::PingPongTest::testDaStGenTypeStartTraversalMessage");
   StartTraversalMessage out;
   out.setStepIdentifier(23);
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() >= 2 and tarch::mpi::Rank::getInstance().getRank() == 0) {
-    StartTraversalMessage::send(out, 1, 0, MPI_COMM_WORLD);
+    StartTraversalMessage::send(out, 1, tag, MPI_COMM_WORLD);
   }
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() >= 2 and tarch::mpi::Rank::getInstance().getRank() == 1) {
     StartTraversalMessage in;
-    StartTraversalMessage::receive(in, 0, 0, MPI_COMM_WORLD);
+    StartTraversalMessage::receive(in, 0, tag, MPI_COMM_WORLD);
     validateEqualsWithParams2(in.getStepIdentifier(), out.getStepIdentifier(), in.toString(), out.toString());
   }
-  MPI_Barrier(MPI_COMM_WORLD);
+  tarch::mpi::barrier(MPI_COMM_WORLD);
 }
 
 void peano4::parallel::tests::PingPongTest::testDaStGenTypeIntegerMessage() {
+  const int tag =
+    tarch::mpi::Rank::reserveFreeTag("peano4::parallel::tests::PingPongTest::testDaStGenTypeIntegerMessage");
   tarch::mpi::IntegerMessage out;
   out.setValue(23);
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() >= 2 and tarch::mpi::Rank::getInstance().getRank() == 0) {
-    MPI_Send(&out, 1, tarch::mpi::IntegerMessage::getGlobalCommunicationDatatype(), 1, 0, MPI_COMM_WORLD);
-    tarch::mpi::IntegerMessage::send(out, 1, 0, tarch::mpi::Rank::getInstance().getCommunicator());
+    tarch::mpi::send(&out, 1, tarch::mpi::IntegerMessage::getGlobalCommunicationDatatype(), 1, tag, MPI_COMM_WORLD);
+    tarch::mpi::IntegerMessage::send(out, 1, tag, tarch::mpi::Rank::getInstance().getCommunicator());
   }
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() >= 2 and tarch::mpi::Rank::getInstance().getRank() == 1) {
     tarch::mpi::IntegerMessage inThroughMPI;
     inThroughMPI.setValue(72);
-    MPI_Recv(
+    tarch::mpi::receive(
       &inThroughMPI,
       1,
       tarch::mpi::IntegerMessage::getGlobalCommunicationDatatype(),
       0,
-      0,
+      tag,
       MPI_COMM_WORLD,
       MPI_STATUS_IGNORE
     );
@@ -251,24 +288,33 @@ void peano4::parallel::tests::PingPongTest::testDaStGenTypeIntegerMessage() {
 
     tarch::mpi::IntegerMessage inThroughDaStGen;
     inThroughDaStGen.setValue(73);
-    tarch::mpi::IntegerMessage::receive(inThroughDaStGen, 0, 0, tarch::mpi::Rank::getInstance().getCommunicator());
+    tarch::mpi::IntegerMessage::receive(inThroughDaStGen, 0, tag, tarch::mpi::Rank::getInstance().getCommunicator());
     validateEqualsWithParams2(inThroughDaStGen.getValue(), out.getValue(), inThroughDaStGen.toString(), out.toString());
   }
-  MPI_Barrier(MPI_COMM_WORLD);
+  tarch::mpi::barrier(MPI_COMM_WORLD);
 }
 
 void peano4::parallel::tests::PingPongTest::testDaStGenArray() {
+  const int tag = tarch::mpi::Rank::reserveFreeTag("peano4::parallel::tests::PingPongTest::testDaStGenArray");
   StartTraversalMessage out[10];
   out[0].setStepIdentifier(23);
   out[1].setStepIdentifier(24);
   out[2].setStepIdentifier(25);
   out[3].setStepIdentifier(26);
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() >= 2 and tarch::mpi::Rank::getInstance().getRank() == 0) {
-    MPI_Send(out, 4, StartTraversalMessage::getGlobalCommunicationDatatype(), 1, 0, MPI_COMM_WORLD);
+    tarch::mpi::send(out, 4, StartTraversalMessage::getGlobalCommunicationDatatype(), 1, tag, MPI_COMM_WORLD);
   }
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() >= 2 and tarch::mpi::Rank::getInstance().getRank() == 1) {
     StartTraversalMessage in[10];
-    MPI_Recv(in, 4, StartTraversalMessage::getGlobalCommunicationDatatype(), 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    tarch::mpi::receive(
+      in,
+      4,
+      StartTraversalMessage::getGlobalCommunicationDatatype(),
+      0,
+      tag,
+      MPI_COMM_WORLD,
+      MPI_STATUS_IGNORE
+    );
     validateEqualsWithParams8(
       in[0].getStepIdentifier(),
       out[0].getStepIdentifier(),
@@ -318,21 +364,22 @@ void peano4::parallel::tests::PingPongTest::testDaStGenArray() {
       out[3].toString()
     );
   }
-  MPI_Barrier(MPI_COMM_WORLD);
+  tarch::mpi::barrier(MPI_COMM_WORLD);
 }
 
 void peano4::parallel::tests::PingPongTest::testDaStGenArrayTreeManagementMessage() {
   peano4::parallel::TreeManagementMessage message;
-  const int                               Tag = 14;
+  const int                               Tag =
+    tarch::mpi::Rank::reserveFreeTag("peano4::parallel::tests::PingPongTest::testDaStGenArrayTreeManagementMessage");
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() >= 2 and tarch::mpi::Rank::getInstance().getRank() == 0) {
     message.setAction(TreeManagementMessage::Action::Acknowledgement);
     peano4::parallel::TreeManagementMessage::send(message, 1, Tag, MPI_COMM_WORLD);
-  } else if (tarch::mpi::Rank::getInstance().getNumberOfRanks() >= 2
-             and tarch::mpi::Rank::getInstance().getRank() == 1) {
+  } else if (tarch::mpi::Rank::getInstance().getNumberOfRanks() >= 2 and
+             tarch::mpi::Rank::getInstance().getRank() == 1) {
     peano4::parallel::TreeManagementMessage::receive(message, 0, Tag, MPI_COMM_WORLD);
     validateWithParams1(message.getAction() == TreeManagementMessage::Action::Acknowledgement, message.toString());
   }
-  MPI_Barrier(MPI_COMM_WORLD);
+  tarch::mpi::barrier(MPI_COMM_WORLD);
 }
 
 void peano4::parallel::tests::PingPongTest::run() {
@@ -344,14 +391,14 @@ void peano4::parallel::tests::PingPongTest::run() {
 
   testMethod(testDaStGenArrayTreeManagementMessage);
 
-  if (tarch::mpi::Rank::getInstance().getProvidedThreadLevelSupport()==MPI_THREAD_MULTIPLE) {
-    testMethod(  testMultithreadedPingPongWithBlockingReceives );
-    testMethod(  testMultithreadedPingPongWithBlockingSends );
-    testMethod(  testMultithreadedPingPongWithBlockingSendsAndReceives );
+  if (tarch::mpi::Rank::getInstance().getProvidedThreadLevelSupport() == MPI_THREAD_MULTIPLE) {
+    testMethod(testMultithreadedPingPongWithBlockingReceives);
+    testMethod(testMultithreadedPingPongWithBlockingSends);
+    testMethod(testMultithreadedPingPongWithBlockingSendsAndReceives);
 
-    testMethod(  testMultithreadedPingPongWithNonblockingReceives );
-    testMethod(  testMultithreadedPingPongWithNonblockingSends );
-    testMethod(  testMultithreadedPingPongWithNonblockingSendsAndReceives );
+    testMethod(testMultithreadedPingPongWithNonblockingReceives);
+    testMethod(testMultithreadedPingPongWithNonblockingSends);
+    testMethod(testMultithreadedPingPongWithNonblockingSendsAndReceives);
   }
 }
 

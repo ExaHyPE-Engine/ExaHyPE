@@ -2,11 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "peano4/grid/GridStatistics.h"
-
 #include "exahype2/RefinementControl.h"
-
-#include "toolbox/loadbalancing/LoadBalancer.h"
 
 #include <string>
 #include <utility>
@@ -25,8 +21,6 @@ namespace {{ item }} {
   {% endfor %}
 
   extern ::exahype2::RefinementControl refinementControl;
-
-  extern toolbox::loadbalancing::LoadBalancer loadBalancer;
 
   /**
    * Return the global min time stamp over all solvers.
@@ -51,9 +45,6 @@ namespace {{ item }} {
   double getMaxTimeStamp();
   double getMinTimeStepSize();
   double getMaxTimeStepSize();
-
-  std::size_t getMaxNumberOfPatches();
-  std::size_t getMaxNumberOfFaces();
 
   void startGridConstructionStep();
   void startGridInitialisationStep();
@@ -129,6 +120,8 @@ namespace {{ item }} {
 
   std::vector<std::pair<std::string, std::string>> getSolverStatistics();
   std::vector<std::pair<std::string, std::string>> getParticleStatistics();
+
+  std::vector<std::pair<std::string, std::vector<std::pair<std::string, std::string>>>> getConfigurationSummary();
 
 {% for item in NAMESPACE -%}
 }

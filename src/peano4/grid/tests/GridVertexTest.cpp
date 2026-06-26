@@ -3,8 +3,9 @@
 #include "GridVertexTest.h"
 
 #include "peano4/grid/GridVertex.h"
+#include "tarch/mpi/mpi.h"
 
-peano4::grid::tests::GridVertexTest::GridVertexTest():
+peano4::grid::tests::GridVertexTest::GridVertexTest() :
   TestCase("peano4::grid::tests::GridVertexTest") {}
 
 void peano4::grid::tests::GridVertexTest::run() {
@@ -127,11 +128,19 @@ void peano4::grid::tests::GridVertexTest::testMPIDatatype() {
   GridVertex recvV;
 
   if (numberOfRanks == 1) {
-    MPI_Sendrecv( // TODO: Capture result for error checking
-      &sendV, 1, GridVertex::Datatype, me, tag,
-      &recvV, 1, GridVertex::Datatype, me, tag,
-      comm, MPI_STATUS_IGNORE
-    );
+    tarch::mpi::sendrecv( // TODO: Capture result for error checking
+        &sendV,
+        1,
+        GridVertex::Datatype,
+        me,
+        tag,
+        &recvV,
+        1,
+        GridVertex::Datatype,
+        me,
+        tag,
+        comm,
+        MPI_STATUS_IGNORE);
     // GridVertex::send(sendV, me, tag, comm);
     // GridVertex::receive(recvV, me, tag, comm);
   } else {

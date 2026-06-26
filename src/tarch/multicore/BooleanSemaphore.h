@@ -7,12 +7,12 @@ namespace tarch {
     class BooleanSemaphore;
     class MultiReadSingleWriteSemaphore;
     class Lock;
-  }
+  } // namespace multicore
 
   namespace mpi {
     class BooleanSemaphore;
   }
-}
+} // namespace tarch
 
 #if defined(PEANO_WITH_OPENMP)
 #include "omp/BooleanSemaphore.h"
@@ -20,7 +20,6 @@ namespace tarch {
 #define _TARCH_MULTICORE_BOOLEAN_SEMAPHORE_H_
 
 #include <string>
-
 
 /**
  * Boolean Semaphore
@@ -111,48 +110,46 @@ namespace tarch {
  * @author Tobias Weinzierl
  */
 class tarch::multicore::BooleanSemaphore {
-  private:
-    friend class tarch::multicore::Lock;
-    friend class RecursiveSemaphore;
-    friend class MultiReadSingleWriteSemaphore;
-    friend class tarch::mpi::BooleanSemaphore;
+private:
+  friend class tarch::multicore::Lock;
+  friend class RecursiveSemaphore;
+  friend class MultiReadSingleWriteSemaphore;
+  /**
+   * Waits until I can enter the critical section.
+   */
+  void enterCriticalSection();
 
-    /**
-     * Waits until I can enter the critical section.
-     */
-    void enterCriticalSection();
+  /**
+   * Tells the semaphore that it is about to leave.
+   */
+  void leaveCriticalSection();
 
-    /**
-     * Tells the semaphore that it is about to leave.
-     */
-    void leaveCriticalSection();
+  /**
+   * Try to lock
+   *
+   * Run into critical section and try to lock. If we are successful,
+   * the routine returns true and the stuff is locked (so please call
+   * leave later on). Otherwise, I return false.
+   *
+   * You have invoke leaveCriticalSection() if the result is true.
+   */
+  bool tryEnterCriticalSection();
 
-    /**
-     * Try to lock
-     *
-     * Run into critical section and try to lock. If we are successful,
-     * the routine returns true and the stuff is locked (so please call
-     * leave later on). Otherwise, I return false.
-     *
-     * You have invoke leaveCriticalSection() if the result is true.
-     */
-    bool tryEnterCriticalSection();
+  /**
+   * You may not copy a semaphore
+   */
+  BooleanSemaphore(const BooleanSemaphore&) {}
 
-    /**
-     * You may not copy a semaphore
-     */
-    BooleanSemaphore( const BooleanSemaphore& ) {}
+  /**
+   * You may not copy a semaphore
+   */
+  BooleanSemaphore& operator=(const BooleanSemaphore&) { return *this; }
 
-    /**
-     * You may not copy a semaphore
-     */
-    BooleanSemaphore& operator = ( const BooleanSemaphore& ) { return *this; }
+public:
+  BooleanSemaphore();
+  ~BooleanSemaphore();
 
-  public:
-    BooleanSemaphore();
-    ~BooleanSemaphore();
-
-    using Lock = tarch::multicore::Lock;
+  using Lock = tarch::multicore::Lock;
 };
 
 #endif

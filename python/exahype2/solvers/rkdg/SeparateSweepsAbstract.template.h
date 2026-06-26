@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "exahype2/RuntimeParameters.h"
+#include "runner/RuntimeParameters.h"
 #include "exahype2/RefinementControl.h"
 #include "exahype2/Solver.h"
 #include "tarch/Assertions.h"

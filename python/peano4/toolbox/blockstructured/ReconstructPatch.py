@@ -128,9 +128,6 @@ class ReconstructPatch(ActionSet):
             os.path.dirname(os.path.realpath(__file__)) + "/kernels"
         )
 
-        if not os.path.exists(kernels_output_path):
-            os.makedirs(kernels_output_path)
-
         d = output.makefile.dictionary()
         self._add_action_set_entries_to_dictionary(d)
         d["DIMENSIONS"] = dimensions
@@ -163,9 +160,6 @@ class ReconstructPatch(ActionSet):
         kernels_templates_prefix = (
             os.path.dirname(os.path.realpath(__file__)) + "/kernels"
         )
-
-        if not os.path.exists(kernels_output_path):
-            os.makedirs(kernels_output_path)
 
         d = output.makefile.dictionary()
         self._add_action_set_entries_to_dictionary(d)

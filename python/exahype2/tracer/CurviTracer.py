@@ -305,7 +305,7 @@ class CurviTracer(ActionSet):
 
     def get_constructor_body(self):
         result = """
-_database.setOutputFileName( ::exahype2::RuntimeParameters::getInstance().getPlotOutputPath() + "{{FILENAME}}" );
+_database.setOutputFileName( ::runner::RuntimeParameters::getInstance().getPlotOutputPath() + "{{FILENAME}}" );
 _database.setOutputPrecision( {{OUTPUT_PRECISION}} );
 _database.setDataDeltaBetweenTwoSnapshots( {{DATA_DELTA}}, {{USE_RELATIVE_DELTAS}} );
 _database.setPositionDeltaBetweenTwoSnapshots( {{POSITION_DELTA}}, {{USE_RELATIVE_DELTAS}} );
@@ -411,7 +411,7 @@ if(_fault_coordinates.empty()){
 #include "tarch/multicore/Lock.h"
 #include "peano4/Loop.h"
 #include "repositories/SolverRepository.h"
-#include "exahype2/RuntimeParameters.h"
+#include "runner/RuntimeParameters.h"
 #include "exahype2/dg/Tracer.h"
 #include "toolbox/particles/TrajectoryDatabase.h"
 #include "peano4/parallel/Node.h"

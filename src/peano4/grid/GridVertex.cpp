@@ -3,6 +3,7 @@
 #include "GridVertex.h"
 
 #include "peano4/Loop.h"
+#include "tarch/mpi/mpi.h"
 #include "tarch/services/ServiceRepository.h"
 
 #include <algorithm>
@@ -79,13 +80,13 @@ bool peano4::grid::GridVertex::areAllVerticesUnrefined(GridVertex vertices[TWO_P
 }
 
 bool peano4::grid::GridVertex::willVertexBeRefined(const GridVertex& vertex) {
-  return vertex.getState() == GridVertex::State::Refining or vertex.getState() == GridVertex::State::Refined
-         or vertex.getState() == GridVertex::State::EraseTriggered;
+  return vertex.getState() == GridVertex::State::Refining or vertex.getState() == GridVertex::State::Refined or
+         vertex.getState() == GridVertex::State::EraseTriggered;
 }
 
 bool peano4::grid::GridVertex::hasVertexBeenRefined(const GridVertex& vertex) {
-  return vertex.getState() == GridVertex::State::Refined or vertex.getState() == GridVertex::State::EraseTriggered
-         or vertex.getState() == GridVertex::State::Erasing;
+  return vertex.getState() == GridVertex::State::Refined or vertex.getState() == GridVertex::State::EraseTriggered or
+         vertex.getState() == GridVertex::State::Erasing;
 }
 
 std::bitset<TWO_POWER_D> peano4::grid::GridVertex::willVerticesBeRefined(GridVertex vertices[TWO_POWER_D]) {
@@ -314,12 +315,12 @@ void peano4::grid::GridVertex::shutdownDatatype() {
 }
 
 void peano4::grid::GridVertex::send(const GridVertex& buffer, int destination, int tag, MPI_Comm communicator) {
-  MPI_Send(&buffer, 1, Datatype, destination, tag, communicator);
+  tarch::mpi::send(&buffer, 1, Datatype, destination, tag, communicator);
 }
 
 void peano4::grid::GridVertex::receive(GridVertex& buffer, int source, int tag, MPI_Comm communicator) {
   MPI_Status status;
-  MPI_Recv(&buffer, 1, Datatype, source, tag, communicator, &status);
+  tarch::mpi::receive(&buffer, 1, Datatype, source, tag, communicator, &status);
 }
 
 void peano4::grid::GridVertex::send(
@@ -330,15 +331,10 @@ void peano4::grid::GridVertex::send(
   std::function<void()> waitFunctor,
   MPI_Comm              communicator
 ) {
-  MPI_Request sendRequestHandle;
-  int         flag = 0;
-  MPI_Isend(&buffer, 1, Datatype, destination, tag, communicator, &sendRequestHandle);
-  MPI_Test(&sendRequestHandle, &flag, MPI_STATUS_IGNORE);
+  MPI_Request sendRequestHandle = MPI_REQUEST_NULL;
+  tarch::mpi::isend(&buffer, 1, Datatype, destination, tag, communicator, &sendRequestHandle);
   startCommunicationFunctor();
-  while (!flag) {
-    waitFunctor();
-    MPI_Test(&sendRequestHandle, &flag, MPI_STATUS_IGNORE);
-  }
+  tarch::mpi::wait(&sendRequestHandle, waitFunctor, MPI_STATUS_IGNORE);
 }
 
 void peano4::grid::GridVertex::receive(
@@ -350,56 +346,31 @@ void peano4::grid::GridVertex::receive(
   MPI_Comm              communicator
 ) {
   MPI_Status  status;
-  MPI_Request receiveRequestHandle;
-  int         flag = 0;
-  MPI_Irecv(&buffer, 1, Datatype, source, tag, communicator, &receiveRequestHandle);
-  MPI_Test(&receiveRequestHandle, &flag, &status);
+  MPI_Request receiveRequestHandle = MPI_REQUEST_NULL;
+  tarch::mpi::irecv(&buffer, 1, Datatype, source, tag, communicator, &receiveRequestHandle);
   startCommunicationFunctor();
-  while (!flag) {
-    waitFunctor();
-    MPI_Test(&receiveRequestHandle, &flag, &status);
-  }
+  tarch::mpi::wait(&receiveRequestHandle, waitFunctor, &status);
 }
 
-void peano4::grid::GridVertex::
-  sendAndPollDanglingMessages(const GridVertex& message, int destination, int tag, MPI_Comm communicator) {
-  GridVertex::send(
-    message,
-    destination,
-    tag,
-    [&]() {
-      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
-      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
-    },
-    [&]() {
-      tarch::mpi::Rank::getInstance()
-        .writeTimeOutWarning("peano4::grid::GridVertex", "sendAndPollDanglingMessages()", destination, tag);
-      tarch::mpi::Rank::getInstance()
-        .triggerDeadlockTimeOut("peano4::grid::GridVertex", "sendAndPollDanglingMessages()", destination, tag);
-      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-    },
-    communicator
-  );
+void peano4::grid::GridVertex::sendAndPollDanglingMessages(
+  const GridVertex& message,
+  int               destination,
+  int               tag,
+  MPI_Comm          communicator
+) {
+  GridVertex::send(message, destination, tag, []() {}, [&]() {
+    tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+  }, communicator);
 }
 
-void peano4::grid::GridVertex::
-  receiveAndPollDanglingMessages(GridVertex& message, int source, int tag, MPI_Comm communicator) {
-  GridVertex::receive(
-    message,
-    source,
-    tag,
-    [&]() {
-      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
-      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
-    },
-    [&]() {
-      tarch::mpi::Rank::getInstance()
-        .writeTimeOutWarning("peano4::grid::GridVertex", "receiveAndPollDanglingMessages()", source, tag);
-      tarch::mpi::Rank::getInstance()
-        .triggerDeadlockTimeOut("peano4::grid::GridVertex", "receiveAndPollDanglingMessages()", source, tag);
-      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-    },
-    communicator
-  );
+void peano4::grid::GridVertex::receiveAndPollDanglingMessages(
+  GridVertex& message,
+  int         source,
+  int         tag,
+  MPI_Comm    communicator
+) {
+  GridVertex::receive(message, source, tag, []() {}, [&]() {
+    tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+  }, communicator);
 }
 #endif

@@ -3,9 +3,10 @@
 #include "DataRepository.h"
 
 #include "FVSolver.h"
-#include "exahype2/RuntimeParameters.h"
+
 #include "exahype2/fv/BoundaryConditions.h"
 #include "peano4/Loop.h"
+#include "runner/RuntimeParameters.h"
 
 #include <algorithm>
 #include <cmath>
@@ -15,7 +16,7 @@ namespace benchmarks::exahype2::kernelbenchmarks {
   namespace {
     int getGridLength() {
       int result = 1;
-      for (int level = 0; level < ::exahype2::RuntimeParameters::getInstance().getGridLevels(); ++level) {
+      for (int level = 0; level < ::runner::RuntimeParameters::getInstance().getGridLevels(); ++level) {
         result *= 3;
       }
       return result;
@@ -46,9 +47,8 @@ namespace benchmarks::exahype2::kernelbenchmarks {
   ) {
     tarch::la::Vector<DIMENSIONS, int>    faceIndices;
     tarch::la::Vector<DIMENSIONS, double> cellCentreOffset = cellCentre - DomainOffset; // remove Offset
-    tarch::la::Vector<DIMENSIONS, int>    cellIndex        = tarch::la::convertScalar<int>(
-      tarch::la::floor(tarch::la::divideComponents(cellCentreOffset, cellSize))
-    );
+    tarch::la::Vector<DIMENSIONS, int>    cellIndex =
+      tarch::la::convertScalar<int>(tarch::la::floor(tarch::la::divideComponents(cellCentreOffset, cellSize)));
     // vector: x_1, x_2, x_3
     faceIndices[0] = linearise(cellIndex, cellSize);
     // vector: x_2, x_1, x_3
@@ -68,9 +68,8 @@ namespace benchmarks::exahype2::kernelbenchmarks {
     int                                          axis
   ) {
     tarch::la::Vector<DIMENSIONS, double> cellCentreOffset = cellCentre - DomainOffset; // remove Offset
-    tarch::la::Vector<DIMENSIONS, int>    cellIndex        = tarch::la::convertScalar<int>(
-      tarch::la::floor(tarch::la::divideComponents(cellCentreOffset, cellSize))
-    );
+    tarch::la::Vector<DIMENSIONS, int>    cellIndex =
+      tarch::la::convertScalar<int>(tarch::la::floor(tarch::la::divideComponents(cellCentreOffset, cellSize)));
     // Permute as described in getFaceIndices()
     for (int i = 1; i <= axis % DIMENSIONS; ++i) {
       std::swap(cellIndex[0], cellIndex[i]);
@@ -83,7 +82,7 @@ namespace benchmarks::exahype2::kernelbenchmarks {
     const int  gridLength = getGridLength();
     const auto cellCount  = std::pow(gridLength, DIMENSIONS);
     const auto faceCount  = std::pow(gridLength, DIMENSIONS - 1) * (gridLength + 1);
-    const int  depth      = ::exahype2::RuntimeParameters::getInstance().getGridLevels();
+    const int  depth      = ::runner::RuntimeParameters::getInstance().getGridLevels();
     _depthLevels.resize(depth + 1); // For 1 AMR level
     _depthLevels[depth - 1].QNew.resize(cellCount);
     _depthLevels[depth - 1].QOld.resize(cellCount);
@@ -113,7 +112,6 @@ namespace benchmarks::exahype2::kernelbenchmarks {
 
   int DataRepository::getCellCardinality() const { return celldata::FVSolverQNew::Cardinality; }
 
-
   std::size_t DataRepository::getMemoryUsageInBytes() const {
     std::size_t totalStorageSize = 0;
     for (const auto& level : _depthLevels) {
@@ -134,9 +132,8 @@ namespace benchmarks::exahype2::kernelbenchmarks {
     const double                          ratio = DomainSize[0] / cellSize[0];
     const int                             depth = static_cast<int>(std::round(std::log(ratio) / std::log(3.0)));
     tarch::la::Vector<DIMENSIONS, double> cellCentreOffset = cellCentre - DomainOffset; // remove Offset
-    tarch::la::Vector<DIMENSIONS, int>    cellIndex        = tarch::la::convertScalar<int>(
-      tarch::la::floor(tarch::la::divideComponents(cellCentreOffset, cellSize))
-    );
+    tarch::la::Vector<DIMENSIONS, int>    cellIndex =
+      tarch::la::convertScalar<int>(tarch::la::floor(tarch::la::divideComponents(cellCentreOffset, cellSize)));
     int index = peano4::dLinearised(cellIndex, std::pow(3, depth));
     return _depthLevels[depth - 1].QNew[index].data();
   }
@@ -148,9 +145,8 @@ namespace benchmarks::exahype2::kernelbenchmarks {
     const double                          ratio = DomainSize[0] / cellSize[0];
     const int                             depth = static_cast<int>(std::round(std::log(ratio) / std::log(3.0)));
     tarch::la::Vector<DIMENSIONS, double> cellCentreOffset = cellCentre - DomainOffset; // remove Offset
-    tarch::la::Vector<DIMENSIONS, int>    cellIndex        = tarch::la::convertScalar<int>(
-      tarch::la::floor(tarch::la::divideComponents(cellCentreOffset, cellSize))
-    );
+    tarch::la::Vector<DIMENSIONS, int>    cellIndex =
+      tarch::la::convertScalar<int>(tarch::la::floor(tarch::la::divideComponents(cellCentreOffset, cellSize)));
     int index = peano4::dLinearised(cellIndex, std::pow(3, depth));
     return _depthLevels[depth - 1].QOld[index].data();
   }

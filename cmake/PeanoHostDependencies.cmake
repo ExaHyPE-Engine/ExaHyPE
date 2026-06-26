@@ -9,7 +9,10 @@ macro(peano_find_host_dependencies)
       find_package(MPI)
       if(MPI_FOUND)
         target_link_libraries(PeanoOptions INTERFACE MPI::MPI_CXX)
-        target_compile_definitions(PeanoOptions INTERFACE PEANO_WITH_MPI)
+        # Skip MPI's deprecated C++ bindings (mpicxx.h). We only use the C API,
+        # and on some OpenMPI/MPICH installs <mpi.h> auto-includes them, which
+        # triggers -Wcast-function-type warnings from inside the MPI headers.
+        target_compile_definitions(PeanoOptions INTERFACE PEANO_WITH_MPI OMPI_SKIP_MPICXX MPICH_SKIP_MPICXX)
       else()
         message(WARNING "PEANO_WITH_MPI=ON but no MPI installation was found; continuing without MPI support.")
         set(PEANO_WITH_MPI OFF CACHE BOOL "Build with Message Passing Interface (MPI) support" FORCE)

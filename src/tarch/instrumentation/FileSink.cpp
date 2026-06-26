@@ -7,7 +7,9 @@
 tarch::instrumentation::FileSink::~FileSink() { close(); }
 
 tarch::instrumentation::FileSink& tarch::instrumentation::FileSink::getInstance() {
-  static FileSink singleton;
+  // Deliberately leaked: the log sink must outlive every other static object,
+  // since some (e.g. solver globals dumping a database) log from their destructor.
+  static FileSink& singleton = *new FileSink();
   return singleton;
 }
 

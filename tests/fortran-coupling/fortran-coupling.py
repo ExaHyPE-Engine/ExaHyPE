@@ -100,8 +100,7 @@ project = exahype2.Project(
   dimensions=dimensions,
   offset=offset + [0.0],
   size=size + [size[-1]],
-  periodic_BC=[False, False, False],
-  executable="ExaHyPE",
+  periodic_bc=[False, False, False],
   min_end_time=e_t,
   max_end_time=e_t,
   min_grid_levels=args.grid_levels,
@@ -176,9 +175,8 @@ limiter = exahype2.solvers.limiting.PosterioriLimiting(
 )
 project.add_solver(limiter)
 
-# project._project.output.makefile.add_Fortran_file("rpn2_testing.f90")
-project._project.output.makefile.add_cpp_file("fvSWE.cpp")
-project._project.output.makefile.add_cpp_file("aderSWE.cpp")
+# project.output.makefile.add_Fortran_file("rpn2_testing.f90")
+project.output.makefile.add_cpp_file("fvSWE.cpp")
+project.output.makefile.add_cpp_file("aderSWE.cpp")
 
-peano4_project = project.generate_Peano4_project()
-peano4_project.generate_and_build()
+project.generate_and_build()

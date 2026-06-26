@@ -209,7 +209,6 @@ class FV(object):
         self._action_set_initial_conditions = None
         self._action_set_AMR = None
         self._action_set_AMR_throughout_grid_construction = None
-        self._action_set_AMR_commit_without_further_analysis = None
         self._action_set_handle_boundary = None
         self._action_set_project_patch_onto_faces = None
         self._action_set_roll_over_updates = None
@@ -242,7 +241,7 @@ class FV(object):
 
         self._use_stateless_initial_conditions = False
         self._use_stateless_boundary_conditions = False
-        self._use_stateless_refinement_criterion = False  # TODO: Should not be stateless, as we might want to call helper functions such as getMinCellSize()
+        self._use_stateless_refinement_criterion = False  # TODO: Should not be stateless, as we might want to call helper functions such as getMinMeshSize()
         self._use_stateless_flux = False
         self._use_stateless_ncp = False
         self._use_stateless_max_eigenvalue = False
@@ -503,15 +502,6 @@ and additional AMR levels is configured by the executable at runtime.
             implement_previous_refinement_instructions=True,
             called_by_grid_construction=True,
         )
-        self._action_set_AMR_commit_without_further_analysis = (
-            exahype2.solvers.fv.actionsets.AdaptivityCriterion(
-                solver=self,
-                guard=self._store_cell_data_default_guard(),
-                build_up_new_refinement_instructions=False,
-                implement_previous_refinement_instructions=True,
-                called_by_grid_construction=True,
-            )
-        )
         self._action_set_AMR = exahype2.solvers.fv.actionsets.AdaptivityCriterion(
             solver=self,
             guard=self._store_cell_data_default_guard(),
@@ -561,9 +551,6 @@ and additional AMR levels is configured by the executable at runtime.
         )
         self._action_set_AMR.descend_invocation_order = self._baseline_action_set_descend_invocation_order + 2
         self._action_set_AMR_throughout_grid_construction.descend_invocation_order = self._baseline_action_set_descend_invocation_order + 2
-        self._action_set_AMR_commit_without_further_analysis.descend_invocation_order = (
-            self._baseline_action_set_descend_invocation_order + 2
-        )
         self._action_set_handle_boundary.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order + 1
         )
@@ -729,6 +716,8 @@ and additional AMR levels is configured by the executable at runtime.
         step.use_face(self._patch_overlap_old)
         step.use_face(self._patch_overlap_new)
         step.use_face(self._face_label)
+        for tracer_set in self._tracer_particle_sets:
+            step.use_vertex(tracer_set)
 
     def _get_default_includes(self):
         return """
@@ -785,28 +774,19 @@ and additional AMR levels is configured by the executable at runtime.
         step.add_action_set(self._action_set_postprocess_solution)
 
         if self._tracer_names:
-            for tracer_set in self._tracer_particle_sets:
-                step.use_vertex(tracer_set)
             for action_set in self._update_particle_association_action_sets:
                 step.add_action_set(action_set)
             for action_set in self._update_particle_parallel_state_action_sets:
                 step.add_action_set(action_set)
 
-    def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
+    def add_actions_to_create_grid(self, step):
         """
         The boundary information is set only once. It is therefore important that
         we use the face label and initialise it properly.
         """
         step.add_action_set(self._action_set_update_face_label)
         step.add_action_set(self._action_set_update_cell_label)
-        if evaluate_refinement_criterion:
-            step.add_action_set(self._action_set_AMR_throughout_grid_construction)
-        else:
-            step.add_action_set(self._action_set_AMR_commit_without_further_analysis)
-
-        if self._tracer_particle_sets:
-            for tracer_set in self._tracer_particle_sets:
-                step.use_vertex(tracer_set)
+        step.add_action_set(self._action_set_AMR_throughout_grid_construction)
 
     def add_actions_to_plot_solution(self, step, output_path):
         d = {}
@@ -840,7 +820,6 @@ and additional AMR levels is configured by the executable at runtime.
             self._particle_number,
             self._particle_unknowns
         ):
-            step.use_vertex(tracer_set)
             assoc_idx = self._tracer_particle_sets.index(tracer_set)
             plotter = peano4.plotter.HDF5ParticlePlotter(
                  output_path=output_path,
@@ -886,8 +865,6 @@ and additional AMR levels is configured by the executable at runtime.
         step.add_action_set(self._action_set_postprocess_solution)
 
         if self._tracer_names:
-            for tracer_set in self._tracer_particle_sets:
-                step.use_vertex(tracer_set)
             for action_set in self._update_particle_association_action_sets:
                 step.add_action_set(action_set)
             for action_set in self._update_particle_parallel_state_action_sets:
@@ -1148,6 +1125,8 @@ and additional AMR levels is configured by the executable at runtime.
 
     def get_solver_statistics_metadata(self):
         return [
+            ("Unknowns", self._variable_shortcuts.unknowns),
+            ("Auxiliary Variables", self._variable_shortcuts.auxiliary_variables),
             ("Volumes/axis", self._patch_size),
         ]
 

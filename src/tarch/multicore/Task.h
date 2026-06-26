@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "multicore.h"
+#include "tarch/multicore/multicore.h"
 
 #include <functional>
 #include <limits>
@@ -36,9 +36,9 @@ namespace tarch {
        * marker.
        *
        * It is totally up to the user to manage the task type numbers. Peano
-       * for example offers a factory mechanism peano4::parallel::getTaskType()
-       * to create task types, which Peano applications should use. However,
-       * the generation of the task types is not baked into the tarch.
+       * applications usually obtain task types from their application-specific
+       * repositories. However, the generation of the task types is not baked
+       * into the tarch.
        *
        * Some codes also have task numbers. They need this, if they have to
        * identify tasks uniquely. Applications for that are task dependencies
@@ -148,7 +148,7 @@ namespace tarch {
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      *
      */
-    class TaskWithCopyOfFunctor: public Task {
+    class TaskWithCopyOfFunctor : public Task {
     private:
       /**
        * See the outer class description for an explanation why this is an
@@ -191,7 +191,7 @@ namespace tarch {
      * Empty tasks are useful in many cases to create synchronisation points in
      * task graphs.
      */
-    class EmptyTask: public Task {
+    class EmptyTask : public Task {
     public:
       EmptyTask() = delete;
 
@@ -222,7 +222,7 @@ namespace tarch {
      * Please consult TaskWithCopyOfFunctor for further information on the
      * used attributes.
      */
-    class TaskWithoutCopyOfFunctor: public Task {
+    class TaskWithoutCopyOfFunctor : public Task {
     private:
       /**
        * See the outer class description for an explanation why this is an

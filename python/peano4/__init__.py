@@ -3,8 +3,6 @@
 
 import importlib
 
-print("Peano 4 (C) www.peano-framework.org")
-
 from .Logger import log
 from .Project import Project
 from .PeanoMain import PeanoMain

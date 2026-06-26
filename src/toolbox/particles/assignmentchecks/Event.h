@@ -8,7 +8,6 @@ namespace toolbox {
   namespace particles {
     namespace assignmentchecks {
       namespace internal {
-
         /**
          * Event
          *
@@ -51,7 +50,6 @@ namespace toolbox {
             int                                          meshSweepIndex_
           );
 
-
           /**
            * Construct an event which identifies a vertex assignment or the
            * removal from a vertex.
@@ -85,12 +83,7 @@ namespace toolbox {
            * Construct an event that identifies the association to the sieve set
            * or an erase.
            */
-          Event(
-            Type               type_,
-            bool               isLocal_,
-            int                treeId_,
-            const std::string& trace_
-          );
+          Event(Type type_, bool isLocal_, int treeId_, const std::string& trace_);
 
           /**
            * Construct an invalid event. Is used as return value if no data is
@@ -101,6 +94,6 @@ namespace toolbox {
           std::string toString() const;
         };
       } // namespace internal
-    }   // namespace assignmentchecks
-  }     // namespace particles
+    } // namespace assignmentchecks
+  } // namespace particles
 } // namespace toolbox

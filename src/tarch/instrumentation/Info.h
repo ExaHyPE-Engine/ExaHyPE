@@ -8,7 +8,9 @@
 
 #define logInfo(logMacroMessageStream) \
   do { \
-    std::ostringstream conv; \
-    conv << logMacroMessageStream; \
-    tarch::instrumentation::Log::infoWithScopeName(TARCH_INSTRUMENTATION_SCOPE_NAME, conv.str()); \
+    if (tarch::instrumentation::Log::isInfoOutputEnabled()) { \
+      std::ostringstream conv; \
+      conv << logMacroMessageStream; \
+      tarch::instrumentation::Log::infoWithScopeName(TARCH_INSTRUMENTATION_SCOPE_NAME, conv.str()); \
+    } \
   } while (false)

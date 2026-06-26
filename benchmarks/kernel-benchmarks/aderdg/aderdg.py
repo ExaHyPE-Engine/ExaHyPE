@@ -160,7 +160,7 @@ project = exahype2.Project(
     dimensions=scenario._dimensions,
     size=[scenario._domain_size, scenario._domain_size, scenario._domain_size],
     offset=[scenario._offset, scenario._offset, scenario._offset],
-    periodic_BC=[False, False, False],
+    periodic_bc=[False, False, False],
     executable="KernelBenchmarks",
     min_end_time=end_time,
     max_end_time=end_time,
@@ -175,8 +175,6 @@ if project.dimensions != scenario._dimensions:
     )
 
 project.add_solver(ader_solver)
-
-project = project.generate_Peano4_project()
 
 project.constants.export_constexpr_with_type(
     "BenchmarkMinTerminalTime", str(end_time), "double"

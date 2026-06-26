@@ -115,8 +115,7 @@ project = exahype2.Project(
     dimensions=2,
     size=[1.0, 1.0, 1.0],
     offset=[0.0, 0.0, 0.0],
-    periodic_BC=[False, False, False],
-    executable="ExaHyPE",
+    periodic_bc=[False, False, False],
     min_end_time=args.end_time,
     max_end_time=args.end_time,
     min_grid_levels=args.grid_levels,
@@ -309,7 +308,6 @@ tracing_action_set.descend_invocation_order = (
 project.add_action_set_to_timestepping(tracing_action_set)
 project.add_action_set_to_initialisation(tracing_action_set)
 
-project = project.generate_Peano4_project()
 project.output.makefile.add_compile_definition("GAMMA=1.4")
 project.output.makefile.add_compile_definition("GRAVITY=2.0")
 project.output.makefile.add_compile_definition("P0=1.0")

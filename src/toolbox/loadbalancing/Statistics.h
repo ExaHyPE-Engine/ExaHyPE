@@ -2,15 +2,13 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "State.h"
-#include "tarch/instrumentation/Log.h"
-#include "tarch/mpi/Rank.h"
 #include "tarch/mpi/mpi.h"
 
 #include <array>
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <vector>
 
 namespace toolbox::loadbalancing {
   class Statistics;
@@ -18,10 +16,18 @@ namespace toolbox::loadbalancing {
 
 class toolbox::loadbalancing::Statistics {
 public:
-  static constexpr int NumberOfWords = 15;
+  static constexpr int NumberOfWords = 16;
 
   Statistics();
   ~Statistics();
+
+  static void shutdownMPI();
+
+  /**
+   * Complete a still-in-flight non-blocking reduction (per instance), so no MPI request outlives
+   * MPI_Finalize. Call this on every rank while MPI is still up, e.g. from LoadBalancer::shutdown().
+   */
+  void completePendingReduction();
 
   void updateGlobalView();
   bool hasConsistentViewOfWorld() const;
@@ -53,6 +59,8 @@ public:
 
   std::size_t getLocalMemoryUsageInBytes() const;
   std::size_t getGlobalMemoryUsageInBytes() const;
+  std::size_t getLocalProcessMemoryUsageInBytes() const;
+  std::size_t getGlobalProcessMemoryUsageInBytes() const;
 
   int getLocalMinDepth() const;
   int getGlobalMinDepth() const;
@@ -67,6 +75,9 @@ public:
   int getGlobalNumberOfStationarySweeps() const;
 
 private:
+  // Complete the in-flight non-blocking reduction launched last sweep and publish its (one-sweep
+  // lagged) result. The request was launched a full sweep ago and overlaps the traversal, so this
+  // does not block the hot path.
   void waitForGlobalDataExchange();
 
   bool _isViewConsistent;
@@ -101,6 +112,8 @@ private:
 
   std::uint64_t _localMemoryUsageInBytes;
   std::uint64_t _globalMemoryUsageInBytes;
+  std::uint64_t _localProcessMemoryUsageInBytes;
+  std::uint64_t _globalProcessMemoryUsageInBytes;
 
   int _localMinDepth;
   int _localMaxDepth;

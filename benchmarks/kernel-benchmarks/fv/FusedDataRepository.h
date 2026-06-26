@@ -3,6 +3,7 @@
 #pragma once
 
 #include "Constants.h"
+
 #include "tarch/la/Vector.h"
 
 #include <algorithm>
@@ -13,7 +14,6 @@
 #include <vector>
 
 namespace benchmarks::exahype2::kernelbenchmarks {
-
   /**
    * @brief Manages GPU data for a sparse subset of active leaf cells.
    *

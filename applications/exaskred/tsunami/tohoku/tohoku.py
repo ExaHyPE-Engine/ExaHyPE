@@ -156,8 +156,7 @@ project = exahype2.Project(
     dimensions=2,
     offset=DOMAIN_OFFSET,
     size=DOMAIN_SIZE,
-    periodic_BC=PERIODIC_BOUNDARY_CONDITIONS,
-    directory=".",
+    periodic_bc=PERIODIC_BOUNDARY_CONDITIONS,
     executable="ExaSkred-Tsunami",
     min_end_time=args.end_time,
     max_end_time=args.end_time,
@@ -292,11 +291,7 @@ if args.use_probes and PROBE_COORDINATES:
       QuadraturePoints1d
     );"""
 
-peano_project = project.generate_Peano4_project()
-
 for const_name, (const_val, const_type) in constants.items():
-    peano_project.constants.export_constexpr_with_type(
-        const_name, str(const_val), const_type
-    )
+    project.constants.export_constexpr_with_type(const_name, str(const_val), const_type)
 
-peano_project.generate_and_build()
+project.generate_and_build()

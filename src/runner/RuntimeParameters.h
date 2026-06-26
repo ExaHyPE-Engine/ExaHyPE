@@ -1,4 +1,4 @@
-// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
@@ -6,15 +6,25 @@
 
 #include <string>
 
-namespace exahype2 {
+namespace runner {
   class RuntimeParameters;
-} // namespace exahype2
+} // namespace runner
 
-class exahype2::RuntimeParameters {
+class runner::RuntimeParameters {
 private:
+  double _mpiTimeOutWarning;
+  double _mpiDeadlockTimeOut;
+  bool   _mpiDeadlockDetectionEnabled;
+  double _loadBalancingQuality;
+  int    _minSizeOfTree;
+  int    _maxNumberOfTreesPerRank;
+  int    _targetDevice;
+  bool   _verbose;
+
   std::string _configFilePath;
   double      _minTerminalTime;
   double      _maxTerminalTime;
+  int         _numberOfTimeSteps;
   double      _firstPlotTimeStamp;
   int         _numberOfSnapshots;
   std::string _plotOutputPath;
@@ -24,10 +34,6 @@ private:
   int         _maxGridLevels;
   bool        _gridLevelsConfigured;
   bool        _maxGridLevelsConfigured;
-  double      _loadBalancingQuality;
-  int         _minSizeOfTree;
-  int         _maxNumberOfTreesPerRank;
-  int         _targetDevice;
 
   RuntimeParameters();
 
@@ -37,7 +43,9 @@ private:
   static std::string formatTerminalTime(double value);
   static double      divideByThreePower(double value, int exponent);
   static int         parseInteger(const std::string& value, const std::string& key);
+  static int         parseNonNegativeInteger(const std::string& value, const std::string& key);
   static double      parseDouble(const std::string& value, const std::string& key);
+  static double      parseNonNegativeDouble(const std::string& value, const std::string& key);
   static std::string normaliseOutputPath(const std::string& path);
   static std::string consumeValue(int& index, int argc, char** argv, const std::string& argument);
   void               normaliseGridLevels();
@@ -54,25 +62,35 @@ public:
   static RuntimeParameters& getInstance();
 
   void setGeneratedDefaults(double minTerminalTime, double maxTerminalTime, int gridLevels, int maxGridLevels);
-  void printUsage(const std::string& executableName = "ExaHyPE") const;
+  void printUsage(const std::string& executableName) const;
   void configure(int& argc, char** argv);
 
   const std::string& getConfigFilePath() const;
+
+  double getMPITimeOutWarning() const;
+  double getMPIDeadlockTimeOut() const;
+  bool   isMPIDeadlockDetectionEnabled() const;
+  double getLoadBalancingQuality() const;
+  int    getMinSizeOfTree() const;
+  int    getMaxNumberOfTreesPerRank() const;
+  int    getTargetDevice() const;
+  bool   isVerbose() const;
+
   double             getMinTerminalTime() const;
   double             getMaxTerminalTime() const;
+  int                getNumberOfTimeSteps() const;
   double             getFirstPlotTimeStamp() const;
   int                getNumberOfSnapshots() const;
   const std::string& getPlotOutputPath() const;
   double             getLogIntervalInSeconds() const;
   int                getGridLevels() const;
-  double             getMaxAdmissiblePatchSize(const tarch::la::Vector<DIMENSIONS, double>& domainSize) const;
-  double             getMinAdmissiblePatchSize(const tarch::la::Vector<DIMENSIONS, double>& domainSize) const;
-  double             getMaxAdmissibleCellSize(const tarch::la::Vector<DIMENSIONS, double>& domainSize,
-                                              int                                          cellsPerPatchPerAxis) const;
-  double             getMinAdmissibleCellSize(const tarch::la::Vector<DIMENSIONS, double>& domainSize,
-                                              int                                          cellsPerPatchPerAxis) const;
-  double             getLoadBalancingQuality() const;
-  int                getMinSizeOfTree() const;
-  int                getMaxNumberOfTreesPerRank() const;
-  int                getTargetDevice() const;
+  int                getMaxGridLevels() const;
+
+  double getMaxAdmissiblePatchSize(const tarch::la::Vector<DIMENSIONS, double>& domainSize) const;
+  double getMinAdmissiblePatchSize(const tarch::la::Vector<DIMENSIONS, double>& domainSize) const;
+
+  double
+  getMaxAdmissibleCellSize(const tarch::la::Vector<DIMENSIONS, double>& domainSize, int cellsPerPatchPerAxis) const;
+  double
+  getMinAdmissibleCellSize(const tarch::la::Vector<DIMENSIONS, double>& domainSize, int cellsPerPatchPerAxis) const;
 };

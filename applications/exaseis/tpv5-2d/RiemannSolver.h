@@ -1,5 +1,4 @@
 namespace riemannSolver{
-
 void extract_tractions_and_particle_velocity(double* n,const double* Q, double& Tx,double& Ty,double& vx,double& vy){
 
   double sigma_xx = Q[2];

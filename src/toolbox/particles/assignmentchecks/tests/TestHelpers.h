@@ -2,20 +2,19 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "tarch/la/Vector.h"
-#include "tarch/instrumentation/Log.h"
-#include "tarch/tests/TestCase.h"
 #include "TestParticle.h"
+
+#include "tarch/instrumentation/Log.h"
+#include "tarch/la/Vector.h"
+#include "tarch/tests/TestCase.h"
 
 namespace toolbox {
   namespace particles {
     namespace assignmentchecks {
       namespace tests {
-
         class TestHelpers;
 
         namespace internal {
-
           /**
            * Does this particle need to be lifted? Yes if particleX
            * is not located in the square with size 2 vertexH around
@@ -77,16 +76,13 @@ namespace toolbox {
             tarch::la::Vector<DIMENSIONS, double> boundary
           );
 
-
         } // namespace internal
-      }   // namespace tests
-    }     // namespace assignmentchecks
-  }       // namespace particles
+      } // namespace tests
+    } // namespace assignmentchecks
+  } // namespace particles
 } // namespace toolbox
 
-
-class toolbox::particles::assignmentchecks::tests::TestHelpers:
-  public tarch::tests::TestCase {
+class toolbox::particles::assignmentchecks::tests::TestHelpers : public tarch::tests::TestCase {
 
 private:
   /**
@@ -94,7 +90,6 @@ private:
    * work as intended in a map for a fuzzy search.
    */
   void testTruthTableSearchAndIDKeys();
-
 
   /**
    * Make sure that adding mesh sweeps to the database works.
@@ -148,10 +143,7 @@ private:
    * @param nEventsToKeep How many events per particle the database should keep.
    *  If < `nsweeps`, then events from the database will be purged.
    */
-  void testAddingParticleMovingEvents(
-    int nsweeps       = 100,
-    int nEventsToKeep = 1000
-  );
+  void testAddingParticleMovingEvents(int nsweeps = 100, int nEventsToKeep = 1000);
 
   /**
    * Test a particle walking from vertex to vertex on the same depth of
