@@ -5,6 +5,7 @@ file(GLOB_RECURSE HEADERS ${HEADER_EXTENSIONS_TO_GLOB})
 
 set(SOURCES
   tarch.cpp
+  Init.cpp
   StackSizeLimitDetection.cpp
   Assertions.cpp
   CPUFeatureDetection.cpp
@@ -77,10 +78,8 @@ set(SOURCES
   instrumentation/Warning.cpp
 
   mpi/mpi.cpp
-  mpi/BooleanSemaphore.cpp
   mpi/DoubleMessage.cpp
   mpi/IntegerMessage.cpp
-  mpi/Lock.cpp
   mpi/Rank.cpp
   mpi/StringMessage.cpp
   mpi/tests/StringTest.cpp

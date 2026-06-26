@@ -10,6 +10,8 @@
 
 #include "Constants.h"
 
+#include "tarch/mpi/Rank.h"
+#include "tarch/mpi/mpi.h"
 #include "tarch/multicore/Lock.h"
 #include "tarch/services/ServiceRepository.h"
 
@@ -135,23 +137,29 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
   #ifdef PEANO_WITH_MPI
 
   int newCellUpdates = _cellUpdates;
+  const MPI_Comm communicator = tarch::mpi::Rank::getInstance().getCommunicator();
+  auto           progress     = [&]() -> void {
+    tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+  };
 
-  tarch::mpi::Rank::getInstance().allReduce(
+  tarch::mpi::allreduce(
       &newCellUpdates,
       &_cellUpdates,
       1, MPI_INT,
       MPI_SUM,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+      communicator,
+      progress
       );
 
   if(_solverState==SolverState::LimiterStatusSpreadingToNeighbours){
     int newNumberOfTroubleCells = _totalNumberOfTroubledCells;
-    tarch::mpi::Rank::getInstance().allReduce(
+    tarch::mpi::allreduce(
         &newNumberOfTroubleCells,
         &_totalNumberOfTroubledCells,
         1, MPI_INT,
         MPI_SUM,
-        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+        communicator,
+        progress
         );
   }
 

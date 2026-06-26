@@ -437,8 +437,8 @@ def init_grid_step_implementation(scenario_string):
   }
   
   int depth = 0;
-  const double maxAdmissiblePatchSize = ::exahype2::RuntimeParameters::getInstance().getMaxAdmissiblePatchSize(DomainSize);
-  const double minAdmissiblePatchSize = ::exahype2::RuntimeParameters::getInstance().getMinAdmissiblePatchSize(DomainSize);
+  const double maxAdmissiblePatchSize = ::runner::RuntimeParameters::getInstance().getMaxAdmissiblePatchSize(DomainSize);
+  const double minAdmissiblePatchSize = ::runner::RuntimeParameters::getInstance().getMinAdmissiblePatchSize(DomainSize);
   
   //finding coarsest possible Mesh level
   while(maxDSize>maxAdmissiblePatchSize){

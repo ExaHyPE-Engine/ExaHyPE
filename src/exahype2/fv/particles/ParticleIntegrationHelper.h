@@ -4,6 +4,7 @@
 #pragma once
 
 #include "ParticleHelper.h"
+
 #include "tarch/la/Vector.h"
 
 using namespace exahype2::fv::particles::utils;
@@ -12,7 +13,6 @@ namespace exahype2 {
   namespace fv {
     namespace particles {
       namespace integration {
-
         /**
          * Compute a forward step using the current state:
          *
@@ -41,7 +41,6 @@ namespace exahype2 {
          * xₙ₊₁ = xₙ + stepFraction · Δt · vₙ₊₁
          */
         ParticleState updateMidpointStep(const ParticleState& current, double timeStepSize, double stepFraction);
-
 
       } // namespace integration
     } // namespace particles

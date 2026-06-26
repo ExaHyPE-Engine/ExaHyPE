@@ -146,13 +146,12 @@ auxiliary_variables = {}
 
 exahype2_project = exahype2.Project(
     namespace=["tutorials", "exahype2", "euler"],
-    directory=".",
     project_name="Airfoil",
     executable="Airfoil",
     dimensions=2,
     size=domain_size,
     offset=domain_offset,
-    periodic_BC=[False, False],
+    periodic_bc=[False, False],
     min_end_time=end_time,
     max_end_time=end_time,
     min_grid_levels=min_level,

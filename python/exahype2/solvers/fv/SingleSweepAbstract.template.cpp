@@ -4,6 +4,8 @@
 
 #include "repositories/SolverRepository.h"
 
+#include "tarch/mpi/Rank.h"
+#include "tarch/mpi/mpi.h"
 #include "tarch/multicore/Lock.h"
 #include "tarch/services/ServiceRepository.h"
 
@@ -140,75 +142,49 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
 #ifdef PEANO_WITH_MPI
   if (isLastGridSweepOfTimeStep()) {
-    double newMinTimeStamp = _minTimeStampThisTimeStep;
-    double newMaxTimeStamp = _maxTimeStampThisTimeStep;
-    double newMinVolumeH   = _minVolumeHThisTimeStep;
-    double newMaxVolumeH   = _maxVolumeHThisTimeStep;
-    double newMinTimeStepSize = _minTimeStepSizeThisTimeStep;
-    double newMaxTimeStepSize = _maxTimeStepSizeThisTimeStep;
+    double localMinValues[4] = {
+      _minTimeStampThisTimeStep,
+      _minVolumeHThisTimeStep,
+      _minTimeStepSizeThisTimeStep,
+      _localMinTimeStampThisTimeStep
+    };
+    double globalMinValues[4] = {0.0, 0.0, 0.0, 0.0};
+    double localMaxValues[4] = {
+      _maxTimeStampThisTimeStep,
+      _maxVolumeHThisTimeStep,
+      _maxTimeStepSizeThisTimeStep,
+      _localMaxTimeStampThisTimeStep
+    };
+    double globalMaxValues[4] = {0.0, 0.0, 0.0, 0.0};
+    MPI_Comm communicator = tarch::mpi::Rank::getInstance().getCommunicator();
+    auto progress = [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); };
 
-    double newLocalMinTimeStamp = _localMinTimeStampThisTimeStep;
-    double newLocalMaxTimeStamp = _localMaxTimeStampThisTimeStep;
-
-    tarch::mpi::Rank::getInstance().allReduce(
-      &newMinTimeStamp,
-      &_minTimeStampThisTimeStep,
-      1, MPI_DOUBLE,
+    tarch::mpi::allreduce(
+      localMinValues,
+      globalMinValues,
+      4, MPI_DOUBLE,
       MPI_MIN,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+      communicator,
+      progress
     );
-    tarch::mpi::Rank::getInstance().allReduce(
-      &newMaxTimeStamp,
-      &_maxTimeStampThisTimeStep,
-      1, MPI_DOUBLE,
+    tarch::mpi::allreduce(
+      localMaxValues,
+      globalMaxValues,
+      4, MPI_DOUBLE,
       MPI_MAX,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+      communicator,
+      progress
     );
 
-    tarch::mpi::Rank::getInstance().allReduce(
-      &newMinVolumeH,
-      &_minVolumeHThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MIN,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-    );
-    tarch::mpi::Rank::getInstance().allReduce(
-      &newMaxVolumeH,
-      &_maxVolumeHThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MAX,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-    );
+    _minTimeStampThisTimeStep   = globalMinValues[0];
+    _minVolumeHThisTimeStep     = globalMinValues[1];
+    _minTimeStepSizeThisTimeStep = globalMinValues[2];
+    _localMinTimeStampThisTimeStep = globalMinValues[3];
 
-    tarch::mpi::Rank::getInstance().allReduce(
-      &newMinTimeStepSize,
-      &_minTimeStepSizeThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MIN,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-    );
-    tarch::mpi::Rank::getInstance().allReduce(
-      &newMaxTimeStepSize,
-      &_maxTimeStepSizeThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MAX,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-    );
-
-    tarch::mpi::Rank::getInstance().allReduce(
-      &newLocalMinTimeStamp,
-      &_localMinTimeStampThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MIN,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-    );
-    tarch::mpi::Rank::getInstance().allReduce(
-      &newLocalMaxTimeStamp,
-      &_localMaxTimeStampThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MAX,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-    );
+    _maxTimeStampThisTimeStep   = globalMaxValues[0];
+    _maxVolumeHThisTimeStep     = globalMaxValues[1];
+    _maxTimeStepSizeThisTimeStep = globalMaxValues[2];
+    _localMaxTimeStampThisTimeStep = globalMaxValues[3];
   }
  #endif
 

@@ -2,21 +2,13 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "SolverRepository.h"
 
-#include "Constants.h"
-#include "DataRepository.h"
-
-#include "tarch/multicore/Core.h"
-#include "tarch/accelerator/Device.h"
-
-#include "peano4/parallel/SpacetreeSet.h"
-
-#include "exahype2/RuntimeParameters.h"
-#include "exahype2/LoadBalancingConfiguration.h"
 #include "exahype2/RefinementControlService.h"
+
+#include "tarch/instrumentation/Debug.h"
+#include "tarch/mpi/Rank.h"
 
 {% for item in TRACERS -%}
 #include "vertexdata/{{ item }}Set.h"
-#include "globaldata/{{ item }}.h"
 {% endfor %}
 
 {% for INCLUDE in ADDITIONAL_INCLUDES -%}
@@ -24,8 +16,7 @@
 {% endfor %}
 
 #include <algorithm>
-#include <cmath>
-#include <iomanip>
+#include <limits>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -36,9 +27,6 @@ namespace {{ item }} {
 {% endfor %}
 
 int statisticsExchangeTag = tarch::mpi::Rank::reserveFreeTag("SolverRepository - statistics exchange tag");
-
-
-toolbox::loadbalancing::LoadBalancer loadBalancer(new ::exahype2::LoadBalancingConfiguration(PeriodicBC.count()>0));
 
 {% for item in SOLVERS -%}
 {{ item[0] }} {{ item[1] }};
@@ -84,7 +72,7 @@ void appendSolverStatistic(std::ostringstream& result, const char* label, const 
 
 template <typename Solver>
 auto appendMaxEigenvalue(std::ostringstream& result, const Solver& solver, int) -> decltype(solver.getMaxEigenvalue(), void()) {
-  appendSolverStatistic(result, "Lambda_{max}", solver.getMaxEigenvalue());
+  appendSolverStatistic(result, "λ_{max}", solver.getMaxEigenvalue());
 }
 
 template <typename Solver>
@@ -109,7 +97,6 @@ std::pair<std::string, std::string> makeSolverStatistics(const char* solverName,
   std::ostringstream statistics;
   appendSolverStatistic(statistics, "dt", solver.getMinTimeStepSize());
   appendSolverStatistic(statistics, "h", formatSolverStatisticRange(solver.getMinCellSize(), solver.getMaxCellSize()));
-  appendSolverStatistic(statistics, "DoFs", solver.getNumberOfDoFs());
   appendAdditionalStatistics(statistics);
   appendMaxEigenvalue(statistics, solver, 0);
   appendTroubledCells(statistics, solver, 0);
@@ -125,12 +112,8 @@ std::pair<std::string, std::string> makeParticleStatistics(const char* particleN
 std::vector<std::pair<std::string, std::string>> getSolverStatistics() {
   std::vector<std::pair<std::string, std::string>> result;
   {% for item in SOLVERS -%}
-  {% if item[2] | length > 0 or item[3] | length > 0 -%}
+  {% if item[2] | length > 0 -%}
   result.push_back(makeSolverStatistics("{{ item[0] }}", {{ item[1] }}, [](std::ostringstream& result) {
-    {% for statistic in item[3] -%}
-    appendSolverStatistic(result, "{{ statistic[0] }}", "{{ statistic[1] }}");
-    {# Comment to ensure that jinja2 adds a new line#}
-    {%- endfor %}
     {% for tracer in item[2] -%}
     appendParticleCount(result, "{{ tracer }}", vertexdata::{{ tracer }}Set::getTotalNumberOfParticles());
     {# Comment to ensure that jinja2 adds a new line#}
@@ -143,6 +126,23 @@ std::vector<std::pair<std::string, std::string>> getSolverStatistics() {
   {%- endfor %}
   const auto particleStatistics = getParticleStatistics();
   result.insert(result.end(), particleStatistics.begin(), particleStatistics.end());
+  return result;
+}
+
+std::vector<std::pair<std::string, std::vector<std::pair<std::string, std::string>>>> getConfigurationSummary() {
+  std::vector<std::pair<std::string, std::vector<std::pair<std::string, std::string>>>> result;
+  {% for item in SOLVERS -%}
+  {
+    std::vector<std::pair<std::string, std::string>> entries;
+    {% for statistic in item[3] -%}
+    entries.emplace_back("{{ statistic[0] }}", "{{ statistic[1] }}");
+    {# Comment to ensure that jinja2 adds a new line#}
+    {%- endfor %}
+    entries.emplace_back("Degrees of Freedom", std::to_string({{ item[1] }}.getNumberOfDoFs()));
+    result.emplace_back("Solver \"{{ item[0] }}\"", entries);
+  }
+  {# Comment to ensure that jinja2 adds a new line#}
+  {%- endfor %}
   return result;
 }
 
@@ -189,22 +189,6 @@ double getMaxTimeStamp() {
   {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
   return result;
-}
-
-std::size_t getMaxNumberOfPatches() {
-  const auto admissiblePatchSize = ::exahype2::RuntimeParameters::getInstance().getMinAdmissiblePatchSize(DomainSize);
-  const auto ratio = DomainSize[0] / std::min(admissiblePatchSize, DomainSize[0]);
-  const std::size_t depth = static_cast<std::size_t>(std::round(std::log(ratio) / std::log(3.0))) + 1;
-  const std::size_t patches = std::max(std::size_t{9}, static_cast<size_t>(std::pow(3, depth * DIMENSIONS)));
-  return patches;
-}
-
-std::size_t getMaxNumberOfFaces() {
-  const auto admissiblePatchSize = ::exahype2::RuntimeParameters::getInstance().getMinAdmissiblePatchSize(DomainSize);
-  const auto ratio = DomainSize[0] / std::min(admissiblePatchSize, DomainSize[0]);
-  const std::size_t depth = static_cast<std::size_t>(std::round(std::log(ratio) / std::log(3.0))) + 1;
-  const std::size_t facesPerDimension = std::max(std::size_t{12}, static_cast<size_t>(std::pow(3, depth * DIMENSIONS) + std::pow(3, depth)));
-  return facesPerDimension * DIMENSIONS;
 }
 
 double getMinTimeStepSize() {
@@ -277,9 +261,6 @@ void finishTimeStep() {
 
   ::exahype2::RefinementControlService::getInstance().finishStep();
 
-  loadBalancer.update();
-  DataRepository::updateMemoryUsage();
-
   {% for item in TRACERS -%}
   vertexdata::{{ item }}Set::reduceNumberOfParticles();
   logDebug(vertexdata::{{ item }}Set::printParticleStateStatistics());
@@ -293,7 +274,6 @@ void finishGridConstructionStep() {
   {%- endfor %}
 
   ::exahype2::RefinementControlService::getInstance().finishStep();
-  loadBalancer.update();
 }
 
 void finishGridInitialisationStep() {
@@ -301,8 +281,6 @@ void finishGridInitialisationStep() {
   {{ item[1] }}.finishGridInitialisationStep();
   {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
-
-  loadBalancer.update();
 }
 
 void finishPlottingStep() {
@@ -325,7 +303,6 @@ void finishSimulation() {
   {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
 
-  loadBalancer.update();
   ::exahype2::RefinementControlService::getInstance().finishStep();
 }
 

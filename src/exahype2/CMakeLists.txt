@@ -4,10 +4,8 @@
 file(GLOB_RECURSE HEADERS ${HEADER_EXTENSIONS_TO_GLOB})
 
 set(SOURCES
-  RuntimeParameters.cpp
   CellAccess.cpp
   CellData.cpp
-  LoadBalancingConfiguration.cpp
   PrecisionControl.cpp
   RefinementControl.cpp
   RefinementControlService.cpp

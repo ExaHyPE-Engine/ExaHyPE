@@ -54,6 +54,7 @@ dictionary entries besides the ones manually handed over by the user.
   def __generate_file(self,directory,protected_files,full_qualified_filename,template_file):
     if template_file!=None and write_file(directory,protected_files,full_qualified_filename):
       log.debug("Write {}".format(full_qualified_filename))
+      os.makedirs(os.path.dirname(full_qualified_filename), exist_ok=True)
 
       template = get_jinja2_template(template_file, jinja2.DebugUndefined)
       rendered_text = template.render(self.d)
@@ -73,7 +74,7 @@ dictionary entries besides the ones manually handed over by the user.
 
   def generate(self,directory,protected_files):
     if not os.path.exists( directory + "/" + self.subdirectory ):
-      os.mkdir(directory + "/" + self.subdirectory)
+      os.makedirs(directory + "/" + self.subdirectory, exist_ok=True)
 
     header_filename = directory + "/" + self.subdirectory + "/" + self.classname + Path(self.headerfile_template).suffix
     cpp_filename    = directory + "/" + self.subdirectory + "/" + self.classname + Path(self.cppfile_template).suffix

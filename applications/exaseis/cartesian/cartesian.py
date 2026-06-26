@@ -48,7 +48,7 @@ project = exahype2.Project(
   dimensions=3,
   offset=offset,
   size=size,
-  periodic_BC=[False, False, False],
+  periodic_bc=[False, False, False],
   executable="LOH_level_"+str(args.min_grid_levels)+"_order_"+str(order)+"_"+polynomials+"_precision_"+str(precision),
   min_end_time=args.end_time,
   max_end_time=args.end_time,
@@ -140,5 +140,4 @@ if use_tracers:
       QuadraturePoints1d
     );"""
 
-peano4_project = project.generate_Peano4_project()
-peano4_project.generate_and_build()
+project.generate_and_build()

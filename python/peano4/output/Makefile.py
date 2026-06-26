@@ -322,7 +322,7 @@ class Makefile(object):
         if filename in self.fortranfiles:
             self.fortranfiles.remove(filename)
 
-    def generate(self, directory):
+    def generate(self, directory, generated_subdir=None):
         """
         Generates build files and other project-related files based on templates.
         These are always (re)generated build artefacts (.gitignore, CMakeLists.txt,
@@ -330,13 +330,18 @@ class Makefile(object):
 
         :param directory: The directory where the generated files will be placed.
         :type directory: str
+        :param generated_subdir: Subfolder (relative to directory) the generated
+            C++ sources live in. Their paths are prefixed accordingly and the
+            subfolder is added as an include directory. None keeps everything flat.
         """
+        prefix = generated_subdir + "/" if generated_subdir else ""
+        self.d["GENERATED_SUBDIR"] = generated_subdir or ""
         self.d["H_HEADERS"] = self.hfiles
         self.d["CXX_SOURCES"] = self.cppfiles
         self.d["FORTRAN_SOURCES"] = self.fortranfiles
-        self.d["GENERATED_H_HEADERS"] = self.generated_hfiles
-        self.d["GENERATED_CXX_SOURCES"] = self.generated_cppfiles
-        self.d["GENERATED_FORTRAN_SOURCES"] = self.generated_fortranfiles
+        self.d["GENERATED_H_HEADERS"] = [prefix + f for f in self.generated_hfiles]
+        self.d["GENERATED_CXX_SOURCES"] = [prefix + f for f in self.generated_cppfiles]
+        self.d["GENERATED_FORTRAN_SOURCES"] = [prefix + f for f in self.generated_fortranfiles]
         self.d["GENERATED_COMPILE_DEFINITIONS"] = self._unique(
             self.d["COMPILE_DEFINITIONS"]
         )
@@ -344,7 +349,7 @@ class Makefile(object):
             self.d["COMPILE_OPTIONS"]
         )
         self.d["GENERATED_INCLUDE_DIRECTORIES"] = self._unique(
-            self.d["INCLUDE_DIRECTORIES"]
+            ([generated_subdir] if generated_subdir else []) + self.d["INCLUDE_DIRECTORIES"]
         )
         self.d["GENERATED_LINK_LIBRARIES"] = self._unique(
             self.d["LINK_LIBRARIES"]
@@ -363,10 +368,9 @@ class Makefile(object):
 
         file_dir = os.path.dirname(os.path.realpath(__file__))
 
-        generate_output_file(
-            os.path.join(file_dir, "Gitignore.jinja2"),
-            os.path.join(directory, ".gitignore"),
-        )
+        with open(os.path.join(directory, ".gitignore"), "w") as gitignore:
+            gitignore.write(self.executable_name() + "\n.gitignore\nREADME-*\n")
+
         generate_output_file(
             os.path.join(file_dir, "CMakeLists.jinja2"),
             os.path.join(directory, "CMakeLists.txt"),

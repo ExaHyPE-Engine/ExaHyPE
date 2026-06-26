@@ -5,6 +5,8 @@
 #include "Constants.h"
 #include "repositories/SolverRepository.h"
 
+#include "tarch/mpi/Rank.h"
+#include "tarch/mpi/mpi.h"
 #include "tarch/multicore/Lock.h"
 #include "tarch/services/ServiceRepository.h"
 
@@ -103,9 +105,12 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
   if (_solverState == SolverState::LimiterStatusSpreadingToNeighbours) {
     int local = _numberOfTroubledCells;
     int global = 0;
-    tarch::mpi::Rank::getInstance().allReduce(
+    MPI_Comm communicator = tarch::mpi::Rank::getInstance().getCommunicator();
+    auto progress = [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); };
+    tarch::mpi::allreduce(
       &local, &global, 1, MPI_INT, MPI_SUM,
-      [&]{ tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+      communicator,
+      progress
     );
     _numberOfTroubledCells = global;
   }

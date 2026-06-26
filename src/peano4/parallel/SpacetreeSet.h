@@ -2,11 +2,11 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "TreeManagementMessage.h"
 #include "peano4/Globals.h"
 #include "peano4/grid/GridVertex.h"
 #include "peano4/grid/SplitInstruction.h"
 #include "peano4/grid/StackTopology.h"
+#include "peano4/parallel/TreeManagementMessage.h"
 #include "peano4/stacks/Stack.h"
 #include "tarch/instrumentation/Log.h"
 #include "tarch/multicore/BooleanSemaphore.h"
@@ -32,7 +32,7 @@ namespace peano4 {
   } // namespace parallel
 } // namespace peano4
 
-class peano4::parallel::SpacetreeSet: public tarch::services::Service {
+class peano4::parallel::SpacetreeSet : public tarch::services::Service {
 private:
   friend class peano4::grid::Spacetree;
 
@@ -40,12 +40,17 @@ private:
 
   std::vector<peano4::parallel::TreeManagementMessage> _unansweredMessages;
 
+#ifdef PEANO_WITH_MPI
+  MPI_Request           _treeManagementReceiveRequest;
+  TreeManagementMessage _treeManagementReceiveBuffer;
+  bool                  _treeManagementReceiveIsPosted;
+
+  void postTreeManagementReceive();
+#endif
+
   stacks::Stack<grid::GridVertex>& getLocalExchangeStack(int treeId, int localStackId);
-  stacks::Stack<grid::GridVertex>& getParallelExchangeStack(
-    int                                                treeId,
-    int                                                slot,
-    peano4::grid::StackTopology::ParallelExchangeStack which
-  );
+  stacks::Stack<grid::GridVertex>&
+       getParallelExchangeStack(int treeId, int slot, peano4::grid::StackTopology::ParallelExchangeStack which);
   void registerLocalSpacetree(peano4::grid::Spacetree& tree);
   void unregisterLocalSpacetree(int id);
 
@@ -55,7 +60,7 @@ private:
    * good idea as other tasks might linger in the background not have sent
    * the data out yet. So we don't to anything here.
    */
-  class TraverseTask: public tarch::multicore::Task {
+  class TraverseTask : public tarch::multicore::Task {
   private:
     grid::Spacetree&             _spacetree;
     grid::GridTraversalObserver* _observer;
@@ -213,6 +218,14 @@ private:
    * getAnswerTag().
    */
   int _answerMessageTag;
+
+  /**
+   * Dedicated tag for the AutomatonState handshake payload. It must not share _requestMessageTag,
+   * which carries a persistent MPI_ANY_SOURCE TreeManagementMessage irecv: a pumped receive could
+   * otherwise steal/truncate the (larger) AutomatonState message into the small TreeManagementMessage
+   * buffer.
+   */
+  int _stateMessageTag;
 
   /**
    * These are the local spacetrees.

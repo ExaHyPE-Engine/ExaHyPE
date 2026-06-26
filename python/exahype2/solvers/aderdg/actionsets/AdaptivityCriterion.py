@@ -28,8 +28,8 @@ class AdaptivityCriterion(AbstractADERDGActionSet):
 
     _Template_AMR = """
   ::exahype2::RefinementCommand refinementCriterion = ::exahype2::getDefaultRefinementCommand();
-  const double maxAdmissiblePatchSize = ::exahype2::RuntimeParameters::getInstance().getMaxAdmissiblePatchSize(DomainSize);
-  const double minAdmissiblePatchSize = ::exahype2::RuntimeParameters::getInstance().getMinAdmissiblePatchSize(DomainSize);
+  const double maxAdmissiblePatchSize = ::runner::RuntimeParameters::getInstance().getMaxAdmissiblePatchSize(DomainSize);
+  const double minAdmissiblePatchSize = ::runner::RuntimeParameters::getInstance().getMinAdmissiblePatchSize(DomainSize);
 
   {% if GRID_CONSTRUCTION %}
   if (
@@ -229,7 +229,7 @@ class AdaptivityCriterion(AbstractADERDGActionSet):
             super(AdaptivityCriterion, self).get_includes()
             + """
 #include "exahype2/RefinementControlService.h"
-#include "exahype2/RuntimeParameters.h"
+#include "runner/RuntimeParameters.h"
 #include "Constants.h"
       """
         )

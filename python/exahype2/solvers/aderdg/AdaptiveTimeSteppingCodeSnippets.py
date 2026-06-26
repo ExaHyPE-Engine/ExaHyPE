@@ -60,7 +60,7 @@ class AdaptiveTimeSteppingCodeSnippets(
           logWarning("Degenerated time step size of " << std::to_string(dtCFL) << ". Problem might be extremely stiff (and can't be solved) or there could be a bug (h=" << _minCellHThisTimeStep << ")");
         }
 
-        const auto dtToEnd                  = std::max(0.0, ::exahype2::RuntimeParameters::getInstance().getMinTerminalTime() - _minTimeStampThisTimeStep);
+        const auto dtToEnd                  = std::max(0.0, ::runner::RuntimeParameters::getInstance().getMinTerminalTime() - _minTimeStampThisTimeStep);
         _admissibleTimeStepSizeThisTimeStep = std::min(dtToEnd, dtCFL);
         if (tarch::la::greater(_admissibleTimeStepSizeThisTimeStep, 0.0)) {
           if (_minTimeStepSizeThisTimeStep >= std::numeric_limits<double>::max() / 10.0) {

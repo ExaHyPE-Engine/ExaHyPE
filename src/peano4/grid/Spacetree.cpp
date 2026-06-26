@@ -235,6 +235,20 @@ void peano4::grid::Spacetree::traverse(GridTraversalObserver& observer) {
   _joinTriggered.clear();
 
   observer.endTraversal(_root.x, _root.h);
+
+  {
+    std::size_t residentVertices = 0;
+    for (const auto& stack : _localExchangeVertexStacks) {
+      residentVertices += stack.size();
+    }
+    for (const auto& slot : _parallelExchangeVertexStacks) {
+      for (const auto& stack : slot) {
+        residentVertices += stack.size();
+      }
+    }
+    _statistics.numberOfVertices = static_cast<int>(residentVertices);
+  }
+
   _root.setInverted(not _root.getInverted());
 
   [[maybe_unused]] const auto oldState = _spacetreeState;
@@ -719,7 +733,6 @@ void peano4::grid::Spacetree::storeVertices(
     }
     auto* pushStack = cachedStack;
     pushStack->push(std::move(vSlot));
-    _statistics.numberOfVertices++;
   }
 
   _vertexLookupTables.pop_back();

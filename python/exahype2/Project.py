@@ -2,34 +2,22 @@
 # use, please see the copyright notice at www.peano-framework.org
 import os
 import sys
-import logging
-import re
 import json
-import argparse
 
 import peano4
 import exahype2
 import peano4.datamodel
 
-from peano4.Logger import setup_logging, log
+from peano4.Logger import log
 
-class Project(object):
+class Project(peano4.Project):
     """!
     ExaHyPE 2 project
 
-    Represents an ExaHyPE 2 project. An ExaHyPE 2 project is a Peano 4
-    project with a particular set of actions (algorithmic phases)
-    that you can choose from and with particular solver types. It
-    realises a builder mechanism, i.e. you build up your ExaHyPE 2
-    project and then you finally tell the project "give me the Peano 4
-    project". From hereon, you can use this Peano 4 project to actually
-    set up the Peano 4 application.
-
-    The project will have a marker per cell that encodes stuff alike
-    a boundary marker. But it is also used to coordinate different
-    solver types.
-
-    @see generate_Peano4_project()
+    An ExaHyPE 2 project is a Peano 4 project (it extends peano4.Project). It adds
+    the ExaHyPE solver types and the time-stepping/plotting algorithmic steps on top
+    of Peano's grid machinery; everything else (domain, grid, output, build) is
+    inherited.
     """
 
     def __init__(
@@ -39,36 +27,35 @@ class Project(object):
         dimensions,
         offset,
         size,
-        periodic_BC,
+        periodic_bc,
         executable="ExaHyPE",
-        directory=".",
         min_end_time=None,
         max_end_time=None,
         min_grid_levels=None,
         max_grid_levels=None,
     ):
-        self._project = peano4.Project(namespace, project_name, directory)
+        # The base peano4.Project applies the standard command-line arguments (-d/-m/-v)
+        # and slices the domain to the resulting dimensions; we just hand over the full
+        # configuration and the default build mode.
+        super().__init__(
+            namespace,
+            project_name,
+            executable,
+            dimensions=dimensions,
+            offset=offset,
+            size=size,
+            periodic_bc=periodic_bc,
+            build_mode=peano4.output.CompileMode.Release,
+        )
 
-        project_arguments = Project._parse_project_arguments()
-        if project_arguments.dimensions is not None:
-            dimensions = project_arguments.dimensions
-
-        project_arguments = Project._parse_project_arguments()
-        if project_arguments.dimensions is not None:
-            dimensions = project_arguments.dimensions
-
+        # ExaHyPE-specific state on top of the inherited Peano project.
         self._solvers = []
-        self._domain_offset = offset
-        self._domain_size = size
-        self._dimensions = dimensions
         self._min_terminal_time = min_end_time
         self._max_terminal_time = max_end_time
         self._min_grid_levels = min_grid_levels
         self._max_grid_levels = max_grid_levels
         self._additional_includes = []
-        self._build_mode = Project._select_build_mode(peano4.output.CompileMode.Release)
         self._executable_name = executable
-        self._periodic_BC = periodic_BC
         self._tracer_particles = []
         self._tracer_particle_sets = []
 
@@ -76,116 +63,28 @@ class Project(object):
         self._particle_variable_names = []
         self._particle_variable_pos = [0]
         self._use_particle_var_shortcut = False
-        self._runtime_parameters = []
 
-        self.create_grid_with_refinement = peano4.solversteps.Step("CreateGridWithRefinement", False)
-        self.create_grid_without_refinement = peano4.solversteps.Step("CreateGridWithoutRefinement", False)
+    def _create_steps(self):
+        """Register ExaHyPE's steps on top of Peano's via the single uniform path.
+
+        super() registers the generic Peano steps (CreateGrid, LoadBalancing); we add
+        the ExaHyPE-specific ones the same way, in the same place. Called from the base
+        constructor and from cleanup(), so a regenerate keeps the full step set.
+        """
+        super()._create_steps()
         self.init_grid = peano4.solversteps.Step("InitGrid", False)
+        self.solversteps.add_step(self.init_grid)
         self.plot_solution = peano4.solversteps.Step("PlotSolution", False)
+        self.solversteps.add_step(self.plot_solution)
         self.perform_time_step = peano4.solversteps.Step("TimeStep", False)
+        self.solversteps.add_step(self.perform_time_step)
 
     def add_solver(self, solver):
         self._solvers.append(solver)
 
-    def add_runtime_parameter(self, name, parameter_type, default_value):
-        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name):
-            raise ValueError(f"Invalid runtime parameter name '{name}'. Use a valid C++ identifier.")
-
-        is_array = isinstance(parameter_type, (tuple, list))
-        if is_array:
-            if len(parameter_type) != 2:
-                raise ValueError(
-                    f"Array runtime parameter '{name}' must use a type specification of the form ('double', N)."
-                )
-            base_type = parameter_type[0]
-            array_size = parameter_type[1]
-            if base_type not in ("double", "int", "bool"):
-                raise ValueError(
-                    f"Unsupported array runtime parameter base type '{base_type}'. Supported types are: double, int, bool."
-                )
-            if not isinstance(array_size, int) or array_size <= 0:
-                raise ValueError(f"Array runtime parameter '{name}' expects a positive integer size.")
-            if not isinstance(default_value, (list, tuple)) or len(default_value) != array_size:
-                raise ValueError(
-                    f"Array runtime parameter '{name}' expects exactly {array_size} default values."
-                )
-        else:
-            base_type = parameter_type
-            array_size = None
-            if base_type not in ("double", "int", "bool", "string"):
-                raise ValueError(
-                    f"Unsupported runtime parameter type '{base_type}'. Supported types are: double, int, bool, string."
-                )
-
-        accessor_name = "get" + name[0].upper() + name[1:]
-        scalar_cpp_type = {
-            "double": "double",
-            "int": "int",
-            "bool": "bool",
-            "string": "std::string",
-        }[base_type]
-        if is_array:
-            cpp_type = f"tarch::la::Vector<{array_size}, {scalar_cpp_type}>"
-            literal = "{" + ", ".join(
-                (
-                    repr(float(value))
-                    if base_type == "double"
-                    else str(value)
-                    if base_type == "int"
-                    else "true" if value else "false"
-                )
-                for value in default_value
-            ) + "}"
-            getter = {
-                "double": "getDoubleArray",
-                "int": "getIntegerArray",
-                "bool": "getBooleanArray",
-            }[base_type]
-            return_type = f"tarch::la::Vector<{array_size}, {scalar_cpp_type}>"
-        else:
-            if base_type == "double" and not isinstance(default_value, (int, float)):
-                raise ValueError(f"Runtime parameter '{name}' expects a numeric default value.")
-            if base_type == "int" and not isinstance(default_value, int):
-                raise ValueError(f"Runtime parameter '{name}' expects an integer default value.")
-            if base_type == "bool" and not isinstance(default_value, bool):
-                raise ValueError(f"Runtime parameter '{name}' expects a boolean default value.")
-            if base_type == "string" and not isinstance(default_value, str):
-                raise ValueError(f"Runtime parameter '{name}' expects a string default value.")
-
-            cpp_type = scalar_cpp_type
-            if base_type == "double":
-                literal = repr(float(default_value))
-                getter = "getDouble"
-            elif base_type == "int":
-                literal = str(default_value)
-                getter = "getInteger"
-            elif base_type == "bool":
-                literal = "true" if default_value else "false"
-                getter = "getBoolean"
-            else:
-                literal = json.dumps(default_value)
-                getter = "getString"
-            return_type = cpp_type
-
-        self._runtime_parameters.append(
-            {
-                "name": name,
-                "cli_name": re.sub(r"(?<!^)([A-Z])", r"-\1", name).replace("_", "-").lower(),
-                "accessor_name": accessor_name,
-                "cpp_type": cpp_type,
-                "return_type": return_type,
-                "is_array": is_array,
-                "array_size": array_size,
-                "base_type": base_type,
-                "scalar_cpp_type": scalar_cpp_type,
-                "default_value": literal,
-                "getter": getter,
-            }
-        )
-
     def remove_all_solvers(self):
         self._solvers = []
-        self._project.cleanup()
+        self.cleanup()
 
     def __export_constants(self):
         """
@@ -194,28 +93,8 @@ class Project(object):
         file. Therefore, it is important that you parse the configure output
         before we export the constants.
         """
-        self._project.constants.clear()
 
-        def render_vector(values):
-            return "{" + ",".join(str(value) for value in values[: self._dimensions]) + "}"
-
-        offset_string = render_vector(self._domain_offset)
-        size_string = render_vector(self._domain_size)
-        self._project.constants.add_include("""#include <bitset>""")
-        self._project.constants.add_include("""#include "tarch/la/Vector.h" """)
-        self._project.constants.add_include("""#include "peano4/Globals.h" """)
-        self._project.constants.export_const_with_type(
-            "DomainOffset", offset_string, "tarch::la::Vector<DIMENSIONS,double>"
-        )
-        self._project.constants.export_const_with_type(
-            "DomainSize", size_string, "tarch::la::Vector<DIMENSIONS,double>"
-        )
-        self._project.constants.export_boolean_sequence("PeriodicBC", self._periodic_BC[: self._dimensions])
-
-        build_string = " ".join(["python3", *sys.argv])
-        self._project.constants.export_string("BuildInformation", build_string)
-
-        self._project.output.readme.add_package_description(
+        self.output.readme.add_package_description(
             """
 
 ### ExaHyPE 2
@@ -247,17 +126,9 @@ thus appreciate any citation of the original release paper
         )
 
         for i in self._solvers:
-            self._project.output.readme.add_entry(
+            self.output.readme.add_entry(
                 i.create_readme_descriptor(self._domain_offset[0], self._domain_size[0])
             )
-    def __configure_makefile(self):
-        self._project.output.makefile.set_dimension(self._dimensions)
-        self._project.output.makefile.set_executable_name(self._executable_name)
-
-    @property
-    def dimensions(self):
-        return self._dimensions
-
     @property
     def domain_size(self):
         return self._domain_size[0 : self._dimensions]
@@ -322,52 +193,15 @@ thus appreciate any citation of the original release paper
                 templatefile_prefix + "SolverRepository.template.h",
                 templatefile_prefix + "SolverRepository.template.cpp",
                 "SolverRepository",
-                self._project.namespace + ["repositories"],
+                self.namespace + ["repositories"],
                 "repositories",
                 self.solverRepositoryDictionary,
             )
         )
 
-        self._project.output.add(generated_solver_files)
-        self._project.output.makefile.add_cpp_file(
+        self.output.add(generated_solver_files)
+        self.output.makefile.add_cpp_file(
             "repositories/SolverRepository.cpp", generated=True
-        )
-
-    def __generate_runtime_parameters(self):
-        template_directory = os.path.dirname(os.path.realpath(__file__))
-        dictionary = {
-            "RUNTIME_PARAMETERS": self._runtime_parameters,
-            "HAS_RUNTIME_PARAMETERS": len(self._runtime_parameters) > 0,
-            "HAS_ARRAY_RUNTIME_PARAMETERS": any(
-                parameter["is_array"] for parameter in self._runtime_parameters
-            ),
-            "HAS_DOUBLE_RUNTIME_PARAMETERS": any(
-                parameter["base_type"] == "double" for parameter in self._runtime_parameters
-            ),
-            "HAS_INTEGER_RUNTIME_PARAMETERS": any(
-                parameter["base_type"] == "int" for parameter in self._runtime_parameters
-            ),
-            "HAS_BOOLEAN_RUNTIME_PARAMETERS": any(
-                parameter["base_type"] == "bool" for parameter in self._runtime_parameters
-            ),
-            "HAS_STRING_RUNTIME_PARAMETERS": any(
-                parameter["base_type"] == "string" for parameter in self._runtime_parameters
-            ),
-        }
-        generated_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-            os.path.join(template_directory, "RuntimeParameters.template.h"),
-            os.path.join(template_directory, "RuntimeParameters.template.cpp"),
-            "RuntimeParameters",
-            self._project.namespace,
-            "",
-            dictionary,
-        )
-        self._project.output.add(generated_files)
-        self._project.output.makefile.add_h_file(
-            "RuntimeParameters.h", generated=True
-        )
-        self._project.output.makefile.add_cpp_file(
-            "RuntimeParameters.cpp", generated=True
         )
 
     @staticmethod
@@ -377,6 +211,43 @@ thus appreciate any citation of the original release paper
     @staticmethod
     def _render_optional_integer_runtime_default(value):
         return "-1" if value is None else str(value)
+
+    def _configure_runner(self, main):
+        """ExaHyPE contributes its specifics into the otherwise generic Peano main:
+        the per-step solver hooks (baked into the Step bodies so they run on every
+        rank), the solver-repository callbacks and the extra includes. The schedule
+        itself is the C++ runner::Orchestrator, which finds these steps by name."""
+        construction_start = "repositories::startGridConstructionStep();"
+        construction_finish = "repositories::finishGridConstructionStep();"
+        self.create_grid.runner_start_hook = construction_start
+        self.create_grid.runner_finish_hook = construction_finish
+
+        # Freeze load balancing once the grid has been initialised (static AMR).
+        self.init_grid.runner_start_hook = (
+            "::runner::loadBalancer().enable(false); repositories::startGridInitialisationStep();"
+        )
+        self.init_grid.runner_finish_hook = "repositories::finishGridInitialisationStep();"
+        self.plot_solution.runner_start_hook = "repositories::startPlottingStep();"
+        self.plot_solution.runner_finish_hook = "repositories::finishPlottingStep();"
+        self.perform_time_step.runner_start_hook = "repositories::startTimeStep();"
+        self.perform_time_step.runner_finish_hook = "repositories::finishTimeStep();"
+
+        main.extra_includes = (
+            '#include "repositories/SolverRepository.h"\n'
+            '#include "runner/LoadBalancer.h"'
+        )
+
+        main.extra_repository_callbacks = (
+            "    result.startSimulation     = []() { repositories::startSimulation(); };\n"
+            "    result.finishSimulation    = []() { repositories::finishSimulation(); };\n"
+            "    result.mayPlot             = []() { return repositories::mayPlot(); };\n"
+            "    result.getMinTimeStamp     = []() { return repositories::getMinTimeStamp(); };\n"
+            "    result.getMaxTimeStamp     = []() { return repositories::getMaxTimeStamp(); };\n"
+            "    result.getNumberOfDoFs     = []() { return repositories::getNumberOfDoFs(); };\n"
+            "    result.getSolverStatistics = []() { return repositories::getSolverStatistics(); };\n"
+            "    result.getConfigurationSummary = []() { return repositories::getConfigurationSummary(); };\n"
+            '    result.getCopyrightBanner = []() { return std::string("ExaHyPE 2 (C) www.exahype.org"); };'
+        )
 
     def _init_main_template_dictionary(self, main):
         main.d.update(
@@ -397,18 +268,11 @@ thus appreciate any citation of the original release paper
             }
         )
 
-    def _configure_build_from_project_arguments(self):
-        project_arguments = Project._parse_project_arguments()
-        self._project._build_make_override = (
-            False if project_arguments.generate_only else None
-        )
-        self._project._build_jobs_override = project_arguments.jobs
-        self._project._build_clean_first_override = project_arguments.clean_first
 
     def __add_solver_implementation_files(self, solver):
         solver.add_implementation_files_to_project(
-            self._project.namespace,
-            self._project.output,
+            self.namespace,
+            self.output,
             self._dimensions,
         )
 
@@ -449,15 +313,15 @@ thus appreciate any citation of the original release paper
         particle_number = peano4.datamodel.IntegerArray("number", "2")
         particle.add_attribute(particle_number)
 
-        self._project.datamodel.add_global_object(particle)
+        self.datamodel.add_global_object(particle)
         particles = peano4.toolbox.particles.ParticleSet(particle)
-        self._project.datamodel.add_vertex(particles)
+        self.datamodel.add_vertex(particles)
 
         self.plot_solution.use_vertex(particles)
         self.init_grid.use_vertex(particles)
         self.perform_time_step.use_vertex(particles)
-        self.create_grid_with_refinement.use_vertex(particles)
-        self.create_grid_without_refinement.use_vertex(particles)
+        self.create_grid.use_vertex(particles)
+        self.load_balancing.use_vertex(particles)
 
         #
         # Initialisation
@@ -493,7 +357,7 @@ thus appreciate any citation of the original release paper
         generated_shortcut_file = peano4.output.Jinja2TemplatedHeaderFile(
             os.path.join(os.path.dirname(os.path.realpath(__file__)), "VariableShortcuts.template.h"),
             "VariableShortcuts" + name,
-            self._project.namespace,
+            self.namespace,
             ".",
             {
                 "NUMBER_OF_VARIABLES": len(self._particle_variable_names),  # Standardised naming
@@ -503,8 +367,8 @@ thus appreciate any citation of the original release paper
             },
             True,
         )
-        self._project.output.add(generated_shortcut_file)
-        self._project.output.makefile.add_h_file("VariableShortcuts"+ name + ".h", generated=True)
+        self.output.add(generated_shortcut_file)
+        self.output.makefile.add_h_file("VariableShortcuts"+ name + ".h", generated=True)
 
     def add_action_set_to_timestepping(self, action_set):
         """!
@@ -542,61 +406,50 @@ thus appreciate any citation of the original release paper
         - without refinement as we've just refined or split up domain and to let load balancing converge.
 
         """
-        self.create_grid_with_refinement.add_action_set(action_set)
-        self.create_grid_without_refinement.add_action_set(action_set)
+        self.create_grid.add_action_set(action_set)
 
-    def generate_Peano4_project(self):
-        """!
-        Construct a Peano 4 project and return it
+    def __add_solver_label_action_sets_to_load_balancing(self, solver):
+        """Load balancing still traverses the mesh and can create labels on new entities."""
+         # TODO: Remove
+        if hasattr(solver, "_action_set_update_face_label"):
+            self.load_balancing.add_action_set(solver._action_set_update_face_label)
+        if hasattr(solver, "_action_set_update_cell_label"):
+            self.load_balancing.add_action_set(solver._action_set_update_cell_label)
 
-        Build the Peano 4 project, i.e., all the action sets et al that you require
-        to run this ExaHyPE 2 application. The project is built within self._project
-        and eventually returned.
+    def generate_and_build(self):
+        """! Generate the ExaHyPE-specific code, then generate and build the Peano project.
 
-        This routine generates a Peano project, i.e. the domain-specific ExaHyPE
-        view is translated into a Peano model. Once you have called this routine,
-        any changes to the ExaHyPE 2 configuration do not propagate into the Peano
-        setup anymore. If you alter the ExaHyPE setup, you have to call
-        generate_Peano4_project() again to get a new snapshot/version of the
-        Peano setup.
+        ExaHyPE extends Peano, so this adds the solver data model, the solver
+        action sets and the time-stepping/plotting steps, the solver repository and
+        the runtime parameters, configures the runner and the main, and then defers
+        to peano4.Project.generate_and_build() for the actual file generation + build.
         """
-        verbose = Project._parse_project_arguments().verbose
-        setup_logging(level=logging.DEBUG if verbose else logging.INFO)
-
-        # self._project.cleanup()
-
-        self.__configure_makefile()
-        self._project.output.makefile.parse_configuration_outcome()
-        self._project.output.makefile.set_mode(self._build_mode)
+        # Solver code generation reads the build configuration (e.g. SIMD width),
+        # so parse it now. The base generate_and_build() will not parse it again.
+        self.output.makefile.parse_configuration_outcome()
+        self._makefile_configured = True
         self.__export_constants()
 
+        # Every step is already registered uniformly in _create_steps(); here we only
+        # inject each solver's data model and action sets into the relevant steps.
         solver_steps = (
-            self.create_grid_with_refinement,
-            self.create_grid_without_refinement,
+            self.create_grid,
+            self.load_balancing,
             self.plot_solution,
             self.perform_time_step,
             self.init_grid,
         )
-        for step in (
-            self.create_grid_with_refinement,
-            self.create_grid_without_refinement,
-            self.init_grid,
-            self.plot_solution,
-            self.perform_time_step,
-        ):
-            self._project.solversteps.add_step(step)
-
         for solver in self._solvers:
             log.debug("Prepare solver %s", solver._name)
             log.debug("%s", solver)
 
-            solver.add_to_Peano4_datamodel(self._project.datamodel)
+            solver.add_to_Peano4_datamodel(self.datamodel)
 
             for step in solver_steps:
                 solver.add_use_data_statements_to_Peano4_solver_step(step)
 
-            solver.add_actions_to_create_grid(self.create_grid_with_refinement, evaluate_refinement_criterion=True)
-            solver.add_actions_to_create_grid(self.create_grid_without_refinement, evaluate_refinement_criterion=False)
+            solver.add_actions_to_create_grid(self.create_grid)
+            self.__add_solver_label_action_sets_to_load_balancing(solver)
 
             solver.add_actions_to_init_grid(self.init_grid)
             solver.add_actions_to_plot_solution(self.plot_solution, "./")
@@ -606,12 +459,11 @@ thus appreciate any citation of the original release paper
             self.__add_solver_implementation_files(solver)
 
         self.__generate_solver_repository()
-        self.__generate_runtime_parameters()
 
-        self._project.main = exahype2.ExaHyPEMain(self._project)
-        self._init_main_template_dictionary(self._project.main)
-        self._configure_build_from_project_arguments()
-        return self._project
+        self._configure_runner(self.main)
+        self._init_main_template_dictionary(self.main)
+
+        super().generate_and_build()
 
 
     def init_new_user_defined_algorithmic_step(self,
@@ -627,12 +479,9 @@ thus appreciate any citation of the original release paper
         point already.
 
         The routine has no side-effects, i.e. does not alter the underlying
-        project. It only manipulates the step. Therefore, you can even call it
-        after you have distilled the Peano project from the ExaHyPE project,
-        i.e. after you have called exahype2.Project.generate_Peano4_project().
-        In return, you however still have to add the new step manually to the
-        Peano project. That is, this routine merely initialises the new step,
-        but it does not yet add it to the sweeps known by Peano.
+        project. It only manipulates the step. You still have to add the new step
+        manually to the project: this routine merely initialises the new step, but
+        it does not yet add it to the sweeps known by Peano.
 
         @param step: peano4.solversteps.Step
 
@@ -646,67 +495,3 @@ thus appreciate any citation of the original release paper
     @property
     def additional_includes(self):
         return self._additional_includes
-
-    _project_arguments = None
-
-    @staticmethod
-    def _parse_project_arguments():
-        if Project._project_arguments is None:
-            parser = argparse.ArgumentParser(
-                allow_abbrev=False,
-                description="ExaHyPE project code generation options.",
-                formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-            )
-            parser.add_argument(
-                "-d",
-                "--dimensions",
-                type=int,
-                choices=(2, 3),
-                default=None,
-                help="Code generation dimensions.",
-            )
-            parser.add_argument(
-                "-m",
-                "--build-mode",
-                choices=peano4.output.CompileModes,
-                default=None,
-                help="Code generation build mode.",
-            )
-            parser.add_argument(
-                "--generate-only",
-                "--no-build",
-                action="store_true",
-                default=False,
-                help="Generate source files but skip compilation.",
-            )
-            parser.add_argument(
-                "-j",
-                "--jobs",
-                type=int,
-                default=None,
-                help="Parallel build jobs. Values <= 0 use the detected CPU count.",
-            )
-            parser.add_argument(
-                "--clean-first",
-                action=argparse.BooleanOptionalAction,
-                default=None,
-                help="Wipe CMake's incremental build state before compiling.",
-            )
-            parser.add_argument(
-                "-v",
-                "--verbose",
-                action="store_true",
-                default=False,
-                help="Enable verbose (debug) logging during code generation.",
-            )
-            Project._project_arguments, _ = parser.parse_known_args()
-        return Project._project_arguments
-
-    @staticmethod
-    def _select_build_mode(default):
-        parsed_build_mode = Project._parse_project_arguments().build_mode
-        if parsed_build_mode is not None:
-            return peano4.output.string_to_mode(parsed_build_mode)
-        if isinstance(default, str):
-            return peano4.output.string_to_mode(default)
-        return default

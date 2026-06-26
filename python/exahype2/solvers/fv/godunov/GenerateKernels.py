@@ -13,9 +13,6 @@ def generate_kernels(
     kernels_output_path = "kernels/" + solver._name
     kernels_templates_prefix = os.path.dirname(os.path.realpath(__file__)) + "/kernels/"
 
-    if not os.path.exists(kernels_output_path):
-        os.makedirs(kernels_output_path)
-
     d = output.makefile.dictionary()
     solver._init_dictionary_with_default_parameters(d)
     solver.add_entries_to_text_replacement_dictionary(d)
@@ -68,9 +65,6 @@ def generate_fused_kernels(
     kernels_namespace = solver._namespace + ["kernels", solver._name]
     kernels_output_path = "kernels/" + solver._name
     kernels_templates_prefix = os.path.dirname(os.path.realpath(__file__)) + "/kernels/"
-
-    if not os.path.exists(kernels_output_path):
-        os.makedirs(kernels_output_path)
 
     d = output.makefile.dictionary()
     solver._init_dictionary_with_default_parameters(d)

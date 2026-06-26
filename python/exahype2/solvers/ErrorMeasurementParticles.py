@@ -35,7 +35,9 @@ class ErrorMeasurementParticles:
         solver.add_user_solver_includes(
             """
 #include "toolbox/blockstructured/GlobalDatabase.h"
-#include "exahype2/RuntimeParameters.h"
+#include "runner/RuntimeParameters.h"
+#include "tarch/mpi/Rank.h"
+#include "tarch/mpi/mpi.h"
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
 """
@@ -82,7 +84,7 @@ def create_start_simulation_implementation_for_error_measurement(
         """
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     _errorDatabase.setDeltaBetweenTwoDatabaseFlushes({{FLUSH_DELTA}});
-    _errorDatabase.setOutputFileName(::exahype2::RuntimeParameters::getInstance().getPlotOutputPath() + "{{FILENAME}}");
+    _errorDatabase.setOutputFileName(::runner::RuntimeParameters::getInstance().getPlotOutputPath() + "{{FILENAME}}");
     _errorDatabase.setDataName("l0-error, l2-error, l_inf-error");
     // _errorDatabase.setOutputPrecision({{OUTPUT_PRECISION}});
     _errorDatabase.setDataDeltaBetweenTwoSnapshots({{DATA_DELTA}}, {{USE_RELATIVE_DELTAS}});
@@ -111,34 +113,35 @@ def create_finish_time_step_implementation_for_error_measurement(guard):
         + guard
         + """) {
       #ifdef PEANO_WITH_MPI
-      double errorsThisTimeStamp[3] = {_errors[0], _errors[1], _errors[2]};
+      double localSummedErrors[2] = {_errors[0], _errors[1]};
+      double globalSummedErrors[2] = {0.0, 0.0};
+      double localMaxError[1] = {_errors[2]};
+      double globalMaxError[1] = {0.0};
+      MPI_Comm communicator = tarch::mpi::Rank::getInstance().getCommunicator();
+      auto progress = [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); };
 
-      tarch::mpi::Rank::getInstance().allReduce(
-          &errorsThisTimeStamp[0],
-          &_errors[0],
-          1,
+      tarch::mpi::allreduce(
+          localSummedErrors,
+          globalSummedErrors,
+          2,
           MPI_DOUBLE,
           MPI_SUM,
-          [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+          communicator,
+          progress
       );
 
-      tarch::mpi::Rank::getInstance().allReduce(
-          &errorsThisTimeStamp[1],
-          &_errors[1],
-          1,
-          MPI_DOUBLE,
-          MPI_SUM,
-          [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
-
-      tarch::mpi::Rank::getInstance().allReduce(
-          &errorsThisTimeStamp[2],
-          &_errors[2],
+      tarch::mpi::allreduce(
+          localMaxError,
+          globalMaxError,
           1,
           MPI_DOUBLE,
           MPI_MAX,
-          [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+          communicator,
+          progress
       );
+      _errors[0] = globalSummedErrors[0];
+      _errors[1] = globalSummedErrors[1];
+      _errors[2] = globalMaxError[0];
       #endif
 
       if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {

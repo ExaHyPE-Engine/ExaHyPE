@@ -1,28 +1,72 @@
 ---
-Checks:             '*,-fuchsia-*,-google-*,-zircon-*,-abseil-*,-modernize-use-trailing-return-type,-llvm-*'
-WarningsAsErrors:   ''
-HeaderFilterRegex:  ''
-FormatStyle:        none
+Checks: >
+  -*,
+  clang-diagnostic-*,
+  clang-analyzer-*,
+  bugprone-*,
+  concurrency-*,
+  misc-*,
+  modernize-*,
+  mpi-*,
+  openmp-*,
+  performance-*,
+  portability-*,
+  readability-*,
+  -bugprone-branch-clone,
+  -bugprone-crtp-constructor-accessibility,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-macro-parentheses,
+  -bugprone-narrowing-conversions,
+  -bugprone-reserved-identifier,
+  -bugprone-unchecked-optional-access,
+  -bugprone-unsafe-functions,
+  -misc-header-include-cycle,
+  -misc-include-cleaner,
+  -misc-no-recursion,
+  -misc-non-private-member-variables-in-classes,
+  -modernize-avoid-c-arrays,
+  -modernize-loop-convert,
+  -modernize-pass-by-value,
+  -modernize-return-braced-init-list,
+  -modernize-use-auto,
+  -modernize-use-designated-initializers,
+  -modernize-use-ranges,
+  -modernize-use-std-format,
+  -modernize-use-std-numbers,
+  -modernize-use-std-print,
+  -modernize-use-trailing-return-type,
+  -performance-avoid-endl,
+  -performance-enum-size,
+  -portability-restrict-system-includes,
+  -readability-convert-member-functions-to-static,
+  -readability-else-after-return,
+  -readability-function-cognitive-complexity,
+  -readability-function-size,
+  -readability-identifier-length,
+  -readability-identifier-naming,
+  -readability-magic-numbers,
+  -readability-make-member-function-const,
+  -readability-math-missing-parentheses,
+  -readability-suspicious-call-argument
+WarningsAsErrors: ''
+HeaderFileExtensions:
+  - h
+  - hh
+  - hpp
+  - hxx
+  - cpph
+ImplementationFileExtensions:
+  - c
+  - cc
+  - cpp
+  - cxx
+HeaderFilterRegex: '(^|.*/)src/.*'
+ExcludeHeaderFilterRegex: '(^|.*/)(build|external|third[-_]party)/.*'
+FormatStyle: file
 CheckOptions:
-  - key: readability-identifier-naming.TypedefCase
-    value: CamelCase
-  - key: readability-identifier-naming.StructCase
-    value: CamelCase
-  - key: readability-identifier-naming.ClassCase
-    value: CamelCase
-  - key: readability-identifier-naming.VariableCase
-    value: camelBack
-  - key: readability-identifier-naming.ParameterCase
-    value: camelBack
-  - key: readability-identifier-naming.FunctionCase
-    value: camelBack
-  - key: readability-identifier-naming.NamespaceCase
-    value: lower_case
-  - key: readability-identifier-naming.GlobalConstantCase
-    value: UPPER_CASE
-  - key: readability-identifier-naming.PrivateMemberSuffix
-    value: _
-  - key: misc-assert-side-effect.CheckFunctionCalls
-    value: 1
-  - key: misc-assert-side-effect.AssertMacros
-    value: 'assert'
+  - key: bugprone-assert-side-effect.AssertMacros
+    value: 'assert,assertion'
+  - key: bugprone-assert-side-effect.CheckFunctionCalls
+    value: 'true'
+  - key: cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor
+    value: 'true'

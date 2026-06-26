@@ -4,6 +4,7 @@
 
 #include "MeshSweepData.h"
 #include "ParticleIdentifier.h"
+
 #include "tarch/la/Vector.h"
 #include "tarch/multicore/MultiReadSingleWriteSemaphore.h"
 
@@ -11,18 +12,14 @@
 #include <map>
 #include <vector>
 
-
-#if !defined(ASSIGNMENT_CHECKS) and !defined(NO_ASSIGNMENT_CHECKS) \
-  and PEANO_ASSERTIONS
+#if !defined(ASSIGNMENT_CHECKS) and !defined(NO_ASSIGNMENT_CHECKS) and PEANO_ASSERTIONS
 #define ASSIGNMENT_CHECKS
 #endif
-
 
 namespace toolbox {
   namespace particles {
     namespace assignmentchecks {
       namespace internal {
-
         using ParticleEvents = std::vector<Event>;
 
         /**
@@ -124,8 +121,7 @@ namespace toolbox {
            *
            * @return The history of the particle.
            */
-          ParticleEvents getParticleHistory(const ParticleIdentifier& identifier
-          );
+          ParticleEvents getParticleHistory(const ParticleIdentifier& identifier);
 
           /**
            * Print history of one particle
@@ -185,11 +181,7 @@ namespace toolbox {
            * Just like addEvent(), it adds the current mesh sweep index to
            * the newEvent.
            */
-          void replaceEvent(
-            ParticleIdentifier identifier,
-            Event&             oldEvent,
-            Event&             newEvent
-          );
+          void replaceEvent(ParticleIdentifier identifier, Event& oldEvent, Event& newEvent);
 
           /**
            * Change the particle's vertexIndex in the map identifier.
@@ -249,14 +241,10 @@ namespace toolbox {
            * added something to the database using addEvent and are trying to
            * re-use the history it returns.
            */
-          Event getPreviousEvent(
-            ParticleEvents& particleHistory,
-            int             spacetreeId,
-            size_t          nFirstEventsToSkip = 0
-          );
+          Event getPreviousEvent(ParticleEvents& particleHistory, int spacetreeId, size_t nFirstEventsToSkip = 0);
 
         }; // class Database
-      }    // namespace internal
-    }      // namespace assignmentchecks
-  }        // namespace particles
+      } // namespace internal
+    } // namespace assignmentchecks
+  } // namespace particles
 } // namespace toolbox

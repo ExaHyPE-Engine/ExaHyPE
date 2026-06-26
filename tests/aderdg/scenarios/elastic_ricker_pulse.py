@@ -75,7 +75,7 @@ class ElasticRickerPulse(Scenario):
   constexpr auto cs   = 1;
 
   // Computing the cell size as it is not available in the analytical sol
-  const double minAdmissiblePatchSize = ::exahype2::RuntimeParameters::getInstance().getMinAdmissiblePatchSize(DomainSize);
+  const double minAdmissiblePatchSize = ::runner::RuntimeParameters::getInstance().getMinAdmissiblePatchSize(DomainSize);
   const double depth = (std::log(30.0 / minAdmissiblePatchSize) + std::log(3.0) - 1.0) / std::log(3.0);
   const double h = 30./std::pow(3,depth);
 

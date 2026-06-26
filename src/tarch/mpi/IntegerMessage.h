@@ -10,109 +10,123 @@
 
 #include <string>
 
-
 #ifdef PEANO_WITH_MPI
-  #include <mpi.h>
-  #include <functional>
+#include <functional>
+#include <mpi.h>
 #endif
 
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/services/ServiceRepository.h"
 
-
-namespace tarch{
-namespace mpi{
-
-  struct IntegerMessage;
-}
-}
-
-
+namespace tarch {
+  namespace mpi {
+    struct IntegerMessage;
+  } // namespace mpi
+} // namespace tarch
 
 struct tarch::mpi::IntegerMessage {
-  public:
+public:
+  IntegerMessage() {}
+  IntegerMessage(int __value);
 
+  int  getValue() const;
+  void setValue(int value);
+  IntegerMessage(const IntegerMessage& copy) = default;
 
-    IntegerMessage() {}
-    IntegerMessage(int  __value);
-
-
-    int   getValue() const;
-    void   setValue(int value);
-    IntegerMessage(const IntegerMessage& copy) = default;
-
-
-    #ifdef PEANO_WITH_MPI
-    /**
-     * Hands out MPI datatype if we work without the LLVM MPI extension.
-     * If we work with this additional feature, this is the routine where
-     * the lazy initialisation is done and the datatype is also cached.
-     */
-    static MPI_Datatype  getForkDatatype();
-    static MPI_Datatype  getJoinDatatype();
-    static MPI_Datatype  getBoundaryExchangeDatatype();
-    static MPI_Datatype  getMultiscaleDataExchangeDatatype();
-    static MPI_Datatype  getGlobalCommunicationDatatype();
-
-    static void  freeForkDatatype();
-    static void  freeJoinDatatype();
-    static void  freeBoundaryExchangeDatatype();
-    static void  freeMultiscaleDataExchangeDatatype();
-    static void  freeGlobalCommunicationDatatype();
-
-    /**
-     * @return The rank of the sender of an object. It only make ssense to call
-     *         this routine after you've invoked receive with MPI_ANY_SOURCE.
-     */
-    int getSenderRank() const;
-
-    /**
-     * Wrapper around getDatatype() to trigger lazy evaluation if we
-     * use the lazy initialisation.
-     */
-    static void initDatatype();
-
-    /**
-     * Free the underlying MPI datatype.
-     */
-    static void shutdownDatatype();
-
-    /**
-     * In DaStGen (the first version), I had a non-static version of the send
-     * as well as the receive. However, this did not work with newer C++11
-     * versions, as a member function using this as pointer usually doesn't
-     * see the vtable while the init sees the object from outside, i.e.
-     * including a vtable. So this routine now is basically an alias for a
-     * blocking MPI_Send.
-     */
-    static void send(const tarch::mpi::IntegerMessage& buffer, int destination, int tag, MPI_Comm communicator );
-    static void receive(tarch::mpi::IntegerMessage& buffer, int source, int tag, MPI_Comm communicator );
-
-    /**
-     * Alternative to the other send() where I trigger a non-blocking send an
-     * then invoke the functor until the corresponding MPI_Test tells me that
-     * the message went through. In systems with heavy MPI usage, this can
-     * help to avoid deadlocks.
-     */
-    static void send(const tarch::mpi::IntegerMessage& buffer, int destination, int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
-    static void receive(   tarch::mpi::IntegerMessage& buffer, int source,      int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
-    #endif
-    
 #ifdef PEANO_WITH_MPI
-    static void sendAndPollDanglingMessages(const tarch::mpi::IntegerMessage& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
-    static void receiveAndPollDanglingMessages(tarch::mpi::IntegerMessage& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
+  /**
+   * Hands out MPI datatype if we work without the LLVM MPI extension.
+   * If we work with this additional feature, this is the routine where
+   * the lazy initialisation is done and the datatype is also cached.
+   */
+  static MPI_Datatype getForkDatatype();
+  static MPI_Datatype getJoinDatatype();
+  static MPI_Datatype getBoundaryExchangeDatatype();
+  static MPI_Datatype getMultiscaleDataExchangeDatatype();
+  static MPI_Datatype getGlobalCommunicationDatatype();
+
+  static void freeForkDatatype();
+  static void freeJoinDatatype();
+  static void freeBoundaryExchangeDatatype();
+  static void freeMultiscaleDataExchangeDatatype();
+  static void freeGlobalCommunicationDatatype();
+
+  /**
+   * @return The rank of the sender of an object. It only make ssense to call
+   *         this routine after you've invoked receive with MPI_ANY_SOURCE.
+   */
+  int getSenderRank() const;
+
+  /**
+   * Wrapper around getDatatype() to trigger lazy evaluation if we
+   * use the lazy initialisation.
+   */
+  static void initDatatype();
+
+  /**
+   * Free the underlying MPI datatype.
+   */
+  static void shutdownDatatype();
+
+  /**
+   * In DaStGen (the first version), I had a non-static version of the send
+   * as well as the receive. However, this did not work with newer C++11
+   * versions, as a member function using this as pointer usually doesn't
+   * see the vtable while the init sees the object from outside, i.e.
+   * including a vtable. So this routine now delegates to the blocking
+   * tarch::mpi::send/receive wrappers.
+   */
+  static void send(const tarch::mpi::IntegerMessage& buffer, int destination, int tag, MPI_Comm communicator);
+  static void receive(tarch::mpi::IntegerMessage& buffer, int source, int tag, MPI_Comm communicator);
+
+  /**
+   * Alternative to the other send()/receive() where I issue non-blocking
+   * MPI through tarch::mpi and let tarch::mpi::wait invoke the functor while
+   * the message is pending. In systems with heavy MPI usage, this can help
+   * to avoid deadlocks.
+   */
+  static void send(
+    const tarch::mpi::IntegerMessage& buffer,
+    int                               destination,
+    int                               tag,
+    std::function<void()>             startCommunicationFunctor,
+    std::function<void()>             waitFunctor,
+    MPI_Comm                          communicator
+  );
+  static void receive(
+    tarch::mpi::IntegerMessage& buffer,
+    int                         source,
+    int                         tag,
+    std::function<void()>       startCommunicationFunctor,
+    std::function<void()>       waitFunctor,
+    MPI_Comm                    communicator
+  );
 #endif
 
+#ifdef PEANO_WITH_MPI
+  static void sendAndPollDanglingMessages(
+    const tarch::mpi::IntegerMessage& message,
+    int                               destination,
+    int                               tag,
+    MPI_Comm                          communicator = tarch::mpi::Rank::getInstance().getCommunicator()
+  );
+  static void receiveAndPollDanglingMessages(
+    tarch::mpi::IntegerMessage& message,
+    int                         source,
+    int                         tag,
+    MPI_Comm                    communicator = tarch::mpi::Rank::getInstance().getCommunicator()
+  );
+#endif
 
-    std::string toString() const;
+  std::string toString() const;
 
-  private:
-      int   _value;
+private:
+  int _value;
 
-    #ifdef PEANO_WITH_MPI
-    private:
-      int                  _senderDestinationRank;
-      static MPI_Datatype  Datatype;
-    #endif
+#ifdef PEANO_WITH_MPI
+private:
+  int                 _senderDestinationRank;
+  static MPI_Datatype Datatype;
+#endif
 };

@@ -1,4 +1,5 @@
 #include "tarch/mpi/IntegerMessage.h"
+#include "tarch/mpi/mpi.h"
 #include "tarch/multicore/Lock.h"
 
 #include <array>
@@ -59,32 +60,27 @@ int toolbox::particles::ParticleSet<T>::_numberOfAddedLocalParticlesAlongBoundar
 template <typename T>
 int toolbox::particles::ParticleSet<T>::_numberOfAddedVirtualParticlesAlongBoundary;
 
-
 #if PEANO_DEBUG
 template <typename T>
 void toolbox::particles::ParticleSet<T>::setDebugX(const tarch::la::Vector<DIMENSIONS, double>& data) {
   _debugX = data;
 }
 
-
 template <typename T>
 void toolbox::particles::ParticleSet<T>::setDebugH(const tarch::la::Vector<DIMENSIONS, double>& data) {
   _debugH = data;
 }
-
 
 template <typename T>
 tarch::la::Vector<DIMENSIONS, double> toolbox::particles::ParticleSet<T>::getDebugX() const {
   return _debugX;
 }
 
-
 template <typename T>
 tarch::la::Vector<DIMENSIONS, double> toolbox::particles::ParticleSet<T>::getDebugH() const {
   return _debugH;
 }
 #endif
-
 
 template <typename T>
 void toolbox::particles::ParticleSet<T>::clearReassignmentStatistics() {
@@ -95,10 +91,9 @@ void toolbox::particles::ParticleSet<T>::clearReassignmentStatistics() {
   _numberOfReassignments     = 0;
 }
 
-
 template <typename T>
 void toolbox::particles::ParticleSet<T>::clearParticleStateStatistics() {
-  _numberOfRemainingLocalParticles          = 0;
+  _numberOfRemainingLocalParticles = 0;
   _remainingLocalParticleNumbers.clear();
   _numberOfRemainingGlobalParticles         = 0;
   _numberOfExpiredHaloParticles             = 0;
@@ -113,18 +108,19 @@ void toolbox::particles::ParticleSet<T>::clearParticleStateStatistics() {
   _numberOfAddedVirtualParticlesAlongBoundary = 0;
 }
 
-
 template <typename T>
 std::string toolbox::particles::ParticleSet<T>::printParticleStateStatistics() {
   std::ostringstream msg;
-  msg
-    << "#remaining=" << _numberOfRemainingLocalParticles << ", #expired halo=" << _numberOfExpiredHaloParticles
-    << ", #unique-remaining=" << _remainingLocalParticleNumbers.size()
-    << ", #left=" << _numberOfParticlesThatHaveLeftTheirDomain << ", #dropped virtual copy from neighbour="
-    << _numberOfDroppedIncomingVirtualParticles << ", #redundantly owned=" << _numberOfRedundantlySharedLocalParticles
-    << ", #replaced virtual=" << _numberOfReplacedVirtualParticlesAlongBoundary << ", #added local (inflying)="
-    << _numberOfAddedLocalParticlesAlongBoundary << ", #added virtual=" << _numberOfAddedVirtualParticlesAlongBoundary
-    << " (subdomain-local state updates due to UpdateParallelState (3x) vs boundary merges prior to each mesh sweep (5x))";
+  msg << "#remaining=" << _numberOfRemainingLocalParticles << ", #expired halo=" << _numberOfExpiredHaloParticles
+      << ", #unique-remaining=" << _remainingLocalParticleNumbers.size()
+      << ", #left=" << _numberOfParticlesThatHaveLeftTheirDomain
+      << ", #dropped virtual copy from neighbour=" << _numberOfDroppedIncomingVirtualParticles
+      << ", #redundantly owned=" << _numberOfRedundantlySharedLocalParticles
+      << ", #replaced virtual=" << _numberOfReplacedVirtualParticlesAlongBoundary
+      << ", #added local (inflying)=" << _numberOfAddedLocalParticlesAlongBoundary
+      << ", #added virtual=" << _numberOfAddedVirtualParticlesAlongBoundary
+      << " (subdomain-local state updates due to UpdateParallelState (3x) vs boundary merges prior "
+         "to each mesh sweep (5x))";
   return msg.str();
 }
 
@@ -133,24 +129,18 @@ void toolbox::particles::ParticleSet<T>::reduceNumberOfParticles() {
 #ifdef PEANO_WITH_MPI
   std::vector<int> localParticleNumbers;
   localParticleNumbers.reserve(2 * _remainingLocalParticleNumbers.size());
-  for (const auto& particleNumber: _remainingLocalParticleNumbers) {
+  for (const auto& particleNumber : _remainingLocalParticleNumbers) {
     localParticleNumbers.push_back(particleNumber[0]);
     localParticleNumbers.push_back(particleNumber[1]);
   }
 
   const int        numberOfLocalEntries = static_cast<int>(localParticleNumbers.size());
   const int        numberOfRanks        = tarch::mpi::Rank::getInstance().getNumberOfRanks();
+  const MPI_Comm   communicator         = tarch::mpi::Rank::getInstance().getCommunicator();
   std::vector<int> entriesPerRank(numberOfRanks, 0);
+  auto             progress = []() { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); };
 
-  MPI_Allgather(
-    &numberOfLocalEntries,
-    1,
-    MPI_INT,
-    entriesPerRank.data(),
-    1,
-    MPI_INT,
-    tarch::mpi::Rank::getInstance().getCommunicator()
-  );
+  tarch::mpi::allgather(&numberOfLocalEntries, 1, MPI_INT, entriesPerRank.data(), 1, MPI_INT, communicator, progress);
 
   std::vector<int> displacements(numberOfRanks, 0);
   int              totalNumberOfEntries = 0;
@@ -160,7 +150,7 @@ void toolbox::particles::ParticleSet<T>::reduceNumberOfParticles() {
   }
 
   std::vector<int> globalParticleNumbers(totalNumberOfEntries);
-  MPI_Allgatherv(
+  tarch::mpi::allgatherv(
     localParticleNumbers.empty() ? nullptr : localParticleNumbers.data(),
     numberOfLocalEntries,
     MPI_INT,
@@ -168,7 +158,8 @@ void toolbox::particles::ParticleSet<T>::reduceNumberOfParticles() {
     entriesPerRank.data(),
     displacements.data(),
     MPI_INT,
-    tarch::mpi::Rank::getInstance().getCommunicator()
+    communicator,
+    progress
   );
 
   std::set<std::array<int, 2>> globalUniqueParticleNumbers;
@@ -190,36 +181,41 @@ int toolbox::particles::ParticleSet<T>::getTotalNumberOfParticles() {
 template <typename T>
 void toolbox::particles::ParticleSet<T>::reduceParticleStateStatistics() {
 #ifdef PEANO_WITH_MPI
+  const MPI_Comm communicator = tarch::mpi::Rank::getInstance().getCommunicator();
+  auto      progress = [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); };
   const int localNumberOfRemainingLocalParticles          = _numberOfRemainingLocalParticles;
   const int localNumberOfExpiredHaloParticles             = _numberOfExpiredHaloParticles;
   const int localNumberOfParticlesThatHaveLeftTheirDomain = _numberOfParticlesThatHaveLeftTheirDomain;
 
-  tarch::mpi::Rank::getInstance().reduce(
+  tarch::mpi::reduce(
     &localNumberOfRemainingLocalParticles,
     &_numberOfRemainingLocalParticles,
     1,
     MPI_INT,
     MPI_SUM,
     tarch::mpi::Rank::getGlobalMasterRank(),
-    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    communicator,
+    progress
   );
-  tarch::mpi::Rank::getInstance().reduce(
+  tarch::mpi::reduce(
     &localNumberOfExpiredHaloParticles,
     &_numberOfExpiredHaloParticles,
     1,
     MPI_INT,
     MPI_SUM,
     tarch::mpi::Rank::getGlobalMasterRank(),
-    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    communicator,
+    progress
   );
-  tarch::mpi::Rank::getInstance().reduce(
+  tarch::mpi::reduce(
     &localNumberOfParticlesThatHaveLeftTheirDomain,
     &_numberOfParticlesThatHaveLeftTheirDomain,
     1,
     MPI_INT,
     MPI_SUM,
     tarch::mpi::Rank::getGlobalMasterRank(),
-    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    communicator,
+    progress
   );
 
   const int localNumberOfDroppedIncomingVirtualParticles       = _numberOfDroppedIncomingVirtualParticles;
@@ -228,134 +224,145 @@ void toolbox::particles::ParticleSet<T>::reduceParticleStateStatistics() {
   const int localNumberOfAddedLocalParticlesAlongBoundary      = _numberOfAddedLocalParticlesAlongBoundary;
   const int localNumberOfAddedVirtualParticlesAlongBoundary    = _numberOfAddedVirtualParticlesAlongBoundary;
 
-  tarch::mpi::Rank::getInstance().reduce(
+  tarch::mpi::reduce(
     &localNumberOfDroppedIncomingVirtualParticles,
     &_numberOfDroppedIncomingVirtualParticles,
     1,
     MPI_INT,
     MPI_SUM,
     tarch::mpi::Rank::getGlobalMasterRank(),
-    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    communicator,
+    progress
   );
-  tarch::mpi::Rank::getInstance().reduce(
+  tarch::mpi::reduce(
     &localNumberOfRedundantlySharedLocalParticles,
     &_numberOfRedundantlySharedLocalParticles,
     1,
     MPI_INT,
     MPI_SUM,
     tarch::mpi::Rank::getGlobalMasterRank(),
-    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    communicator,
+    progress
   );
-  tarch::mpi::Rank::getInstance().reduce(
+  tarch::mpi::reduce(
     &localNumberOfReplacedVirtualParticlesAlongBoundary,
     &_numberOfReplacedVirtualParticlesAlongBoundary,
     1,
     MPI_INT,
     MPI_SUM,
     tarch::mpi::Rank::getGlobalMasterRank(),
-    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    communicator,
+    progress
   );
-  tarch::mpi::Rank::getInstance().reduce(
+  tarch::mpi::reduce(
     &localNumberOfAddedLocalParticlesAlongBoundary,
     &_numberOfAddedLocalParticlesAlongBoundary,
     1,
     MPI_INT,
     MPI_SUM,
     tarch::mpi::Rank::getGlobalMasterRank(),
-    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    communicator,
+    progress
   );
-  tarch::mpi::Rank::getInstance().reduce(
+  tarch::mpi::reduce(
     &localNumberOfAddedVirtualParticlesAlongBoundary,
     &_numberOfAddedVirtualParticlesAlongBoundary,
     1,
     MPI_INT,
     MPI_SUM,
     tarch::mpi::Rank::getGlobalMasterRank(),
-    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    communicator,
+    progress
   );
 #endif
 }
 
-
 template <typename T>
 std::string toolbox::particles::ParticleSet<T>::printReassignmentStatistics() {
   std::ostringstream msg;
-  msg
-    << "sort statistics"
-    << ": #lifts=" << _numberOfLifts << ", #drops=" << _numberOfDrops << ", #lifts-into-sieve-set="
-    << _numberOfLiftsIntoSieveSet << ", #drops-from-sieve-set=" << _numberOfDropsFromSieveSet
-    << ", #drops-into-horizontal-tree-decomposition=" << _numberOfDropsIntoHorizontalTreeDecomposition
-    << ", #reassignments=" << _numberOfReassignments;
+  msg << "sort statistics"
+      << ": #lifts=" << _numberOfLifts << ", #drops=" << _numberOfDrops
+      << ", #lifts-into-sieve-set=" << _numberOfLiftsIntoSieveSet
+      << ", #drops-from-sieve-set=" << _numberOfDropsFromSieveSet
+      << ", #drops-into-horizontal-tree-decomposition=" << _numberOfDropsIntoHorizontalTreeDecomposition
+      << ", #reassignments=" << _numberOfReassignments;
   return msg.str();
 }
 
 template <typename T>
 void toolbox::particles::ParticleSet<T>::reduceReassignmentStatistics() {
 #ifdef PEANO_WITH_MPI
-  int localNumberOfLifts                                = _numberOfLifts;
-  int localNumberOfDrops                                = _numberOfDrops;
-  int localNumberOfLiftsIntoSieveSet                    = _numberOfLiftsIntoSieveSet;
-  int localNumberOfDropsFromSieveSet                    = _numberOfDropsFromSieveSet;
-  int localNumberOfDropsIntoHorizontalTreeDecomposition = _numberOfDropsIntoHorizontalTreeDecomposition;
-  int localNumberOfReassignments                        = _numberOfReassignments;
+  const MPI_Comm communicator = tarch::mpi::Rank::getInstance().getCommunicator();
+  auto progress = [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); };
+  int  localNumberOfLifts                                = _numberOfLifts;
+  int  localNumberOfDrops                                = _numberOfDrops;
+  int  localNumberOfLiftsIntoSieveSet                    = _numberOfLiftsIntoSieveSet;
+  int  localNumberOfDropsFromSieveSet                    = _numberOfDropsFromSieveSet;
+  int  localNumberOfDropsIntoHorizontalTreeDecomposition = _numberOfDropsIntoHorizontalTreeDecomposition;
+  int  localNumberOfReassignments                        = _numberOfReassignments;
 
-  tarch::mpi::Rank::getInstance().reduce(
+  tarch::mpi::reduce(
     &localNumberOfLifts,
     &_numberOfLifts,
     1,
     MPI_INT,
     MPI_SUM,
     tarch::mpi::Rank::getGlobalMasterRank(),
-    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    communicator,
+    progress
   );
-  tarch::mpi::Rank::getInstance().reduce(
+  tarch::mpi::reduce(
     &localNumberOfDrops,
     &_numberOfDrops,
     1,
     MPI_INT,
     MPI_SUM,
     tarch::mpi::Rank::getGlobalMasterRank(),
-    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    communicator,
+    progress
   );
-  tarch::mpi::Rank::getInstance().reduce(
+  tarch::mpi::reduce(
     &localNumberOfLiftsIntoSieveSet,
     &_numberOfLiftsIntoSieveSet,
     1,
     MPI_INT,
     MPI_SUM,
     tarch::mpi::Rank::getGlobalMasterRank(),
-    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    communicator,
+    progress
   );
-  tarch::mpi::Rank::getInstance().reduce(
+  tarch::mpi::reduce(
     &localNumberOfDropsFromSieveSet,
     &_numberOfDropsFromSieveSet,
     1,
     MPI_INT,
     MPI_SUM,
     tarch::mpi::Rank::getGlobalMasterRank(),
-    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    communicator,
+    progress
   );
-  tarch::mpi::Rank::getInstance().reduce(
+  tarch::mpi::reduce(
     &localNumberOfDropsIntoHorizontalTreeDecomposition,
     &_numberOfDropsIntoHorizontalTreeDecomposition,
     1,
     MPI_INT,
     MPI_SUM,
     tarch::mpi::Rank::getGlobalMasterRank(),
-    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    communicator,
+    progress
   );
-  tarch::mpi::Rank::getInstance().reduce(
+  tarch::mpi::reduce(
     &localNumberOfReassignments,
     &_numberOfReassignments,
     1,
     MPI_INT,
     MPI_SUM,
     tarch::mpi::Rank::getGlobalMasterRank(),
-    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    communicator,
+    progress
   );
 #endif
 }
-
 
 template <typename T>
 void toolbox::particles::ParticleSet<T>::updateLiftDropStatistics(
@@ -375,12 +382,11 @@ void toolbox::particles::ParticleSet<T>::updateLiftDropStatistics(
   _numberOfDropsIntoHorizontalTreeDecomposition += numberOfDropsIntoHorizontalTreeDecomposition;
 }
 
-
 template <typename T>
 void toolbox::particles::ParticleSet<T>::updateNumberOfLocalAndExpiredParticles(
-  int numberOfRemainingLocalParticles,
-  int numberOfExpiredHaloParticles,
-  int numberOfParticlesThatHaveLeftTheirDomain,
+  int                                 numberOfRemainingLocalParticles,
+  int                                 numberOfExpiredHaloParticles,
+  int                                 numberOfParticlesThatHaveLeftTheirDomain,
   const std::set<std::array<int, 2>>& remainingLocalParticleNumbers
 ) {
   tarch::multicore::Lock lock(_statisticsSemaphore);
@@ -390,20 +396,17 @@ void toolbox::particles::ParticleSet<T>::updateNumberOfLocalAndExpiredParticles(
   _numberOfParticlesThatHaveLeftTheirDomain += numberOfParticlesThatHaveLeftTheirDomain;
 }
 
-
 template <typename T>
 int toolbox::particles::ParticleSet<T>::getNumberOfDropsIntoHorizontalTreeDecomposition() {
   return _numberOfDropsIntoHorizontalTreeDecomposition;
 }
 
-
 template <typename T>
 bool toolbox::particles::ParticleSet<T>::registeredAnyResorting() {
-  return _numberOfLifts + _numberOfDrops + _numberOfReassignments + _numberOfLiftsIntoSieveSet
-           + _numberOfDropsFromSieveSet + _numberOfDropsIntoHorizontalTreeDecomposition
-         > 0;
+  return _numberOfLifts + _numberOfDrops + _numberOfReassignments + _numberOfLiftsIntoSieveSet +
+           _numberOfDropsFromSieveSet + _numberOfDropsIntoHorizontalTreeDecomposition >
+         0;
 }
-
 
 #ifdef PEANO_WITH_MPI
 template <typename T>
@@ -411,13 +414,11 @@ void toolbox::particles::ParticleSet<T>::initDatatype() {
   T::initDatatype();
 }
 
-
 template <typename T>
 void toolbox::particles::ParticleSet<T>::shutdownDatatype() {
   T::shutdownDatatype();
 }
 #endif
-
 
 template <typename T>
 void toolbox::particles::ParticleSet<T>::finishedTraversal(
@@ -428,16 +429,16 @@ void toolbox::particles::ParticleSet<T>::finishedTraversal(
   _sieveParticles.exchangeSieveListsGlobally(domainOffset, domainSize, periodicBC);
 }
 
-
 template <typename T>
 typename toolbox::particles::SieveParticles<T> toolbox::particles::ParticleSet<T>::cloneParticlesToBeSieved() {
   return _sieveParticles.cloneParticlesToBeSieved();
 }
 
-
 template <typename T>
-typename toolbox::particles::ParticleSet<T>::ParticleList toolbox::particles::ParticleSet<
-  T>::getParticlesToBeSievedIntoVertex(const peano4::datamanagement::VertexMarker& marker) {
+typename toolbox::particles::ParticleSet<T>::ParticleList
+toolbox::particles::ParticleSet<T>::getParticlesToBeSievedIntoVertex(
+  const peano4::datamanagement::VertexMarker& marker
+) {
   return _sieveParticles.getParticlesToBeSievedIntoVertex(
     marker,
     true, // removeReturnedParticlesFromSet
@@ -447,18 +448,15 @@ typename toolbox::particles::ParticleSet<T>::ParticleList toolbox::particles::Pa
   );
 }
 
-
 template <typename T>
 bool toolbox::particles::ParticleSet<T>::hasParticlesToBeSievedIntoVertices() {
   return _sieveParticles.hasParticlesToBeSievedIntoVertices();
 }
 
-
 template <typename T>
 int toolbox::particles::ParticleSet<T>::getNumberOfParticlesThatHaveBeSievedIntoVertices() {
   return _sieveParticles.getNumberOfParticlesThatHaveBeSievedIntoVertices();
 }
-
 
 template <typename T>
 std::string toolbox::particles::ParticleSet<T>::toString(bool addBrackets) const {
@@ -466,10 +464,10 @@ std::string toolbox::particles::ParticleSet<T>::toString(bool addBrackets) const
   if (addBrackets)
     msg << "(";
 
-  msg
-    << "#lifts=" << _numberOfLifts << ", #drops=" << _numberOfDrops << ", #assignments=" << _numberOfReassignments
-    << ", #lifts-into-sieve-set=" << _numberOfLiftsIntoSieveSet << ", #drops-from-sieve-set="
-    << _numberOfDropsFromSieveSet << ", #remaining-particles=" << _numberOfRemainingLocalParticles;
+  msg << "#lifts=" << _numberOfLifts << ", #drops=" << _numberOfDrops << ", #assignments=" << _numberOfReassignments
+      << ", #lifts-into-sieve-set=" << _numberOfLiftsIntoSieveSet
+      << ", #drops-from-sieve-set=" << _numberOfDropsFromSieveSet
+      << ", #remaining-particles=" << _numberOfRemainingLocalParticles;
 
 #if PEANO_DEBUG
   msg << ",x=" << _debugX << ",h=" << _debugH;
@@ -479,7 +477,6 @@ std::string toolbox::particles::ParticleSet<T>::toString(bool addBrackets) const
     msg << ")";
   return msg.str();
 }
-
 
 template <typename T>
 int toolbox::particles::ParticleSet<T>::getNumberOfRemainingLocalParticles() {

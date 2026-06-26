@@ -1,4 +1,4 @@
-// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #include "RuntimeParameters.h"
 
@@ -14,8 +14,8 @@
 #include <string>
 #include <vector>
 
-namespace {
 {% if HAS_RUNTIME_PARAMETERS %}
+namespace {
   std::string consumeValue(
     int&               index,
     int                argc,
@@ -59,7 +59,6 @@ namespace {
     }
     return result.str();
   }
-{% endif %}
 
 {% if HAS_DOUBLE_RUNTIME_PARAMETERS %}
   double parseDouble(const std::string& value, const std::string& key) {
@@ -150,6 +149,7 @@ namespace {
   }
 {% endif %}
 } // namespace
+{% endif %}
 
 {% for parameter in RUNTIME_PARAMETERS if parameter.is_array %}
 {{ parameter.cpp_type }} {{NAMESPACE | join("::")}}::RuntimeParameters::to{{ parameter.name[0].upper() }}{{ parameter.name[1:] }}(
@@ -175,8 +175,8 @@ TARGET_DECLARE
 TARGET_DECLARE_END
 
 void {{NAMESPACE | join("::")}}::RuntimeParameters::printUsage() {
+  std::cout << "\nApplication-specific runtime configuration:\n";
 {% if HAS_RUNTIME_PARAMETERS %}
-  std::cout << "\nApplication runtime configuration:\n";
 {% for parameter in RUNTIME_PARAMETERS %}
   std::cout
     << "  --{{ parameter.cli_name }} <{% if parameter.is_array %}{{ parameter.base_type }}[{{ parameter.array_size }}]{% else %}{{ parameter.base_type }}{% endif %}>"
@@ -185,6 +185,8 @@ void {{NAMESPACE | join("::")}}::RuntimeParameters::printUsage() {
 {% if HAS_ARRAY_RUNTIME_PARAMETERS %}
   std::cout << "  Array values are comma-separated.\n";
 {% endif %}
+{% else %}
+  std::cout << "  <none>\n";
 {% endif %}
 }
 

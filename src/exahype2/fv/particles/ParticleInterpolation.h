@@ -5,8 +5,8 @@
 
 #include "../../CellAccess.h"
 #include "../PatchUtils.h"
-#include "peano4/datamanagement/CellMarker.h"
 #include "peano4/Globals.h"
+#include "peano4/datamanagement/CellMarker.h"
 #include "peano4/Loop.h"
 #include "tarch/instrumentation/Log.h"
 
@@ -17,7 +17,6 @@ namespace exahype2 {
   namespace fv {
     namespace particles {
       namespace interpolation {
-
         // ==========================================================================================
         // Global variables (set via setGlobalInterpolationParameters)
         // ==========================================================================================
@@ -42,7 +41,8 @@ namespace exahype2 {
         // ==========================================================================================
 
         /**
-         * Project multiple quantities from a cell to a particle using piecewise constant interpolation.
+         * Project multiple quantities from a cell to a particle using piecewise constant
+         * interpolation.
          */
         template <int... Indices, typename Particle>
         void projectValues_piecewiseConstant(
@@ -55,7 +55,8 @@ namespace exahype2 {
         );
 
         /**
-         * Project multiple quantities from a cell to a particle using piecewise linear interpolation.
+         * Project multiple quantities from a cell to a particle using piecewise linear
+         * interpolation.
          */
         template <int... Indices, typename Particle>
         void projectValues_piecewiseLinear(
@@ -68,7 +69,8 @@ namespace exahype2 {
         );
 
         /**
-         * Interpolate values at a particle's midpoint position. Automatically selects neighbor patch if needed.
+         * Interpolate values at a particle's midpoint position. Automatically selects neighbor
+         * patch if needed.
          */
         template <int... Indices, typename Particle>
         void handleMidpoints(
@@ -103,7 +105,6 @@ namespace exahype2 {
         // ==========================================================================================
 
         namespace internal {
-
           /**
            * Map particle to a voxel using nearest-neighbor assignment.
            */

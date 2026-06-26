@@ -53,7 +53,7 @@ project = exahype2.Project(
     dimensions=3,
     size=size[0:3],
     offset=offset[0:3],
-    periodic_BC=[False, False, False],
+    periodic_bc=[False, False, False],
     min_end_time=args.end_time,
     max_end_time=args.end_time,
     min_grid_levels=args.min_grid_levels,
@@ -180,5 +180,4 @@ for theSolver in [hpSolver, lpSolver]:
 # """
 # )
 # project.add_solver(limiter)
-peano4_project = project.generate_Peano4_project()
-peano4_project.generate_and_build()
+project.generate_and_build()

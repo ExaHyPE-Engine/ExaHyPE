@@ -197,7 +197,6 @@
  */
 namespace toolbox {
   namespace blockstructured {
-
     extern tarch::multicore::BooleanSemaphore interpolationMapSemaphore;
 
     /**

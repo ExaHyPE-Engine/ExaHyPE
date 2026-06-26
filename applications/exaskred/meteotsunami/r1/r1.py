@@ -226,8 +226,7 @@ project = exahype2.Project(
     dimensions=2,
     offset=DOMAIN_OFFSET,
     size=DOMAIN_SIZE,
-    periodic_BC=[False, False],
-    directory=".",
+    periodic_bc=[False, False],
     executable="ExaSkred-Meteotsunami",
     min_end_time=args.end_time,
     max_end_time=args.end_time,
@@ -305,13 +304,10 @@ project.add_solver(aderdg_solver)
 project.add_solver(fv_solver)
 project.add_solver(limiter_solver)
 project.add_runtime_parameter("bathymetryFile", "string", BATHYMETRY_FILE)
-peano_project = project.generate_Peano4_project()
 for const_name, (const_val, const_type) in constants.items():
-    peano_project.constants.export_constexpr_with_type(
-        const_name, str(const_val), const_type
-    )
+    project.constants.export_constexpr_with_type(const_name, str(const_val), const_type)
 
-peano_project.output.makefile.add_cpp_file("../MathDerivatives.cpp")
-peano_project.output.makefile.add_cpp_file("../MeteotsunamiLaws.cpp")
-peano_project.output.makefile.add_cpp_file("AtmosphericPressure.cpp")
-peano_project.generate_and_build()
+project.output.makefile.add_cpp_file("../MathDerivatives.cpp")
+project.output.makefile.add_cpp_file("../MeteotsunamiLaws.cpp")
+project.output.makefile.add_cpp_file("AtmosphericPressure.cpp")
+project.generate_and_build()

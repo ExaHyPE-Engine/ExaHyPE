@@ -81,7 +81,7 @@ project = exahype2.Project(
     dimensions=3,
     offset=offset,
     size=size,
-    periodic_BC=[False, False, False],
+    periodic_bc=[False, False, False],
     executable=filename,
     min_end_time=end_time,
     max_end_time=end_time,
@@ -143,5 +143,4 @@ theSolver.set_face_plotter(peano4.plotter.HDF5FaceNodalPlotter, """
         + theSolver.get_name_of_global_instance() + """.context->fault_normal]
       """)
 
-peano4_project = project.generate_Peano4_project()
-peano4_project.generate_and_build()
+project.generate_and_build()

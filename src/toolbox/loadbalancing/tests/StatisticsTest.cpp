@@ -4,6 +4,7 @@
 
 #include "peano4/parallel/SpacetreeSet.h"
 #include "tarch/mpi/Rank.h"
+#include "tarch/mpi/mpi.h"
 #include "toolbox/loadbalancing/Statistics.h"
 
 #include <algorithm>
@@ -11,7 +12,7 @@
 #include <limits>
 #include <vector>
 
-toolbox::loadbalancing::tests::StatisticsTest::StatisticsTest():
+toolbox::loadbalancing::tests::StatisticsTest::StatisticsTest() :
   tarch::tests::TestCase("toolbox::loadbalancing::tests::StatisticsTest") {}
 
 void toolbox::loadbalancing::tests::StatisticsTest::run() {
@@ -22,7 +23,9 @@ void toolbox::loadbalancing::tests::StatisticsTest::run() {
 void toolbox::loadbalancing::tests::StatisticsTest::testPackedReductionMatchesSimpleMPI() {
   toolbox::loadbalancing::Statistics stats;
 
-  // First call: updates local fields and (with MPI>1 rank) starts the non-blocking global exchange.
+  // First call: updates local fields and (with MPI>1 rank) launches the non-blocking global
+  // exchange. The reduced global view lags one sweep, so it is only published by the second call
+  // (issued below for >1 rank).
   stats.updateGlobalView();
 
   // Sanity: local view should match the SpacetreeSet's local snapshot
@@ -38,8 +41,7 @@ void toolbox::loadbalancing::tests::StatisticsTest::testPackedReductionMatchesSi
   validateEquals(stats.getLocalMaxDepth(), gridStats.maxDepth);
   validateEquals(stats.getLocalNumberOfStationarySweeps(), gridStats.numberOfStationarySweeps);
 
-  // Capture the local values from this first snapshot. If MPI is enabled with >1 rank,
-  // the global fields will correspond to this snapshot after the next updateGlobalView() call.
+  // Capture the local values from this first snapshot.
   const int           locInner  = stats.getLocalNumberOfInnerUnrefinedCells();
   const int           locOuter  = stats.getLocalNumberOfOuterUnrefinedCells();
   const int           locVerts  = stats.getLocalNumberOfVertices();
@@ -50,10 +52,12 @@ void toolbox::loadbalancing::tests::StatisticsTest::testPackedReductionMatchesSi
   const int           locSweeps = stats.getLocalNumberOfStationarySweeps();
   const double        locMinH   = stats.getLocalMinH();
   const std::uint64_t locMem    = static_cast<std::uint64_t>(stats.getLocalMemoryUsageInBytes());
+  const std::uint64_t locRss    = static_cast<std::uint64_t>(stats.getLocalProcessMemoryUsageInBytes());
 
   const int locHasTree = (locTrees > 0) ? 1 : 0;
 
-  // Recompute the local min/max tree load with the same semantics as Statistics::updateGlobalView().
+  // Recompute the local min/max tree load with the same semantics as
+  // Statistics::updateGlobalView().
   int locMinLoadPacked  = std::numeric_limits<int>::max();
   int locMaxLoad        = 0;
   int locMinDepthPacked = std::numeric_limits<int>::max();
@@ -83,6 +87,7 @@ void toolbox::loadbalancing::tests::StatisticsTest::testPackedReductionMatchesSi
     validateEquals(stats.getGlobalNumberOfRanksWithAtLeastOneTree(), locHasTree);
 
     validateEquals(static_cast<std::uint64_t>(stats.getGlobalMemoryUsageInBytes()), locMem);
+    validateEquals(static_cast<std::uint64_t>(stats.getGlobalProcessMemoryUsageInBytes()), locRss);
 
     if (locHasTree) {
       validateEquals(stats.getGlobalMinTreeLoad(), locMinLoadPacked);
@@ -95,7 +100,9 @@ void toolbox::loadbalancing::tests::StatisticsTest::testPackedReductionMatchesSi
   };
 
 #ifdef PEANO_WITH_MPI
-  // Second call: waits for completion of the first non-blocking global exchange and unpacks it.
+  // Second call: completes the non-blocking exchange launched above and publishes the reduced
+  // global view (the first call only published the local view because the reduction lags one
+  // sweep).
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1) {
     stats.updateGlobalView();
   }
@@ -109,11 +116,11 @@ void toolbox::loadbalancing::tests::StatisticsTest::testPackedReductionMatchesSi
 
     // SUM fields
     int expInner = 0, expOuter = 0, expVerts = 0, expHang = 0, expTrees = 0;
-    MPI_Allreduce(&locInner, &expInner, 1, MPI_INT, MPI_SUM, comm);
-    MPI_Allreduce(&locOuter, &expOuter, 1, MPI_INT, MPI_SUM, comm);
-    MPI_Allreduce(&locVerts, &expVerts, 1, MPI_INT, MPI_SUM, comm);
-    MPI_Allreduce(&locHang, &expHang, 1, MPI_INT, MPI_SUM, comm);
-    MPI_Allreduce(&locTrees, &expTrees, 1, MPI_INT, MPI_SUM, comm);
+    tarch::mpi::allreduce(&locInner, &expInner, 1, MPI_INT, MPI_SUM, comm);
+    tarch::mpi::allreduce(&locOuter, &expOuter, 1, MPI_INT, MPI_SUM, comm);
+    tarch::mpi::allreduce(&locVerts, &expVerts, 1, MPI_INT, MPI_SUM, comm);
+    tarch::mpi::allreduce(&locHang, &expHang, 1, MPI_INT, MPI_SUM, comm);
+    tarch::mpi::allreduce(&locTrees, &expTrees, 1, MPI_INT, MPI_SUM, comm);
 
     validateEquals(stats.getGlobalNumberOfInnerUnrefinedCells(), expInner);
     validateEquals(stats.getGlobalNumberOfOuterUnrefinedCells(), expOuter);
@@ -123,18 +130,22 @@ void toolbox::loadbalancing::tests::StatisticsTest::testPackedReductionMatchesSi
 
     // Ranks with at least one tree (SUM over 0/1)
     int expRanksWithTrees = 0;
-    MPI_Allreduce(&locHasTree, &expRanksWithTrees, 1, MPI_INT, MPI_SUM, comm);
+    tarch::mpi::allreduce(&locHasTree, &expRanksWithTrees, 1, MPI_INT, MPI_SUM, comm);
     validateEquals(stats.getGlobalNumberOfRanksWithAtLeastOneTree(), expRanksWithTrees);
 
     // Memory (SUM)
     std::uint64_t expMem = 0;
-    MPI_Allreduce(&locMem, &expMem, 1, MPI_UINT64_T, MPI_SUM, comm);
+    tarch::mpi::allreduce(&locMem, &expMem, 1, MPI_UINT64_T, MPI_SUM, comm);
     validateEquals(static_cast<std::uint64_t>(stats.getGlobalMemoryUsageInBytes()), expMem);
+
+    std::uint64_t expRss = 0;
+    tarch::mpi::allreduce(&locRss, &expRss, 1, MPI_UINT64_T, MPI_SUM, comm);
+    validateEquals(static_cast<std::uint64_t>(stats.getGlobalProcessMemoryUsageInBytes()), expRss);
 
     // Depth (MIN/MAX). For MIN, empty ranks contribute +inf.
     int expMinDepth = 0, expMaxDepth = 0;
-    MPI_Allreduce(&locMinDepthPacked, &expMinDepth, 1, MPI_INT, MPI_MIN, comm);
-    MPI_Allreduce(&locMaxD, &expMaxDepth, 1, MPI_INT, MPI_MAX, comm);
+    tarch::mpi::allreduce(&locMinDepthPacked, &expMinDepth, 1, MPI_INT, MPI_MIN, comm);
+    tarch::mpi::allreduce(&locMaxD, &expMaxDepth, 1, MPI_INT, MPI_MAX, comm);
 
     if (expRanksWithTrees > 0) {
       validateEquals(stats.getGlobalMinDepth(), expMinDepth);
@@ -143,32 +154,33 @@ void toolbox::loadbalancing::tests::StatisticsTest::testPackedReductionMatchesSi
 
     // MinH (MIN)
     double expMinH = 0.0;
-    MPI_Allreduce(&locMinH, &expMinH, 1, MPI_DOUBLE, MPI_MIN, comm);
+    tarch::mpi::allreduce(&locMinH, &expMinH, 1, MPI_DOUBLE, MPI_MIN, comm);
     validateNumericalEquals(stats.getGlobalMinH(), expMinH);
 
     // Stationary sweeps (MIN)
     int expSweeps = 0;
-    MPI_Allreduce(&locSweeps, &expSweeps, 1, MPI_INT, MPI_MIN, comm);
+    tarch::mpi::allreduce(&locSweeps, &expSweeps, 1, MPI_INT, MPI_MIN, comm);
     validateEquals(stats.getGlobalNumberOfStationarySweeps(), expSweeps);
 
     // Tree load (MIN/MAX). Empty ranks contribute +inf to MIN.
     int expMinLoad = 0, expMaxLoad = 0;
-    MPI_Allreduce(&locMinLoadPacked, &expMinLoad, 1, MPI_INT, MPI_MIN, comm);
-    MPI_Allreduce(&locMaxLoad, &expMaxLoad, 1, MPI_INT, MPI_MAX, comm);
+    tarch::mpi::allreduce(&locMinLoadPacked, &expMinLoad, 1, MPI_INT, MPI_MIN, comm);
+    tarch::mpi::allreduce(&locMaxLoad, &expMaxLoad, 1, MPI_INT, MPI_MAX, comm);
 
     if (expRanksWithTrees > 0) {
       validateEquals(stats.getGlobalMinTreeLoad(), expMinLoad);
     }
     validateEquals(stats.getGlobalMaxTreeLoad(), expMaxLoad);
 
-    // The owner rank for the max load is not deterministic under ties; validate only basic properties.
+    // The owner rank for the max load is not deterministic under ties; validate only basic
+    // properties.
     const int ranks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
     const int owner = stats.getGlobalRankWithMaxTreeLoad();
     validate(owner >= 0);
     validate(owner < ranks);
 
     std::vector<int> gatheredMaxLoads(ranks, 0);
-    MPI_Allgather(&locMaxLoad, 1, MPI_INT, gatheredMaxLoads.data(), 1, MPI_INT, comm);
+    tarch::mpi::allgather(&locMaxLoad, 1, MPI_INT, gatheredMaxLoads.data(), 1, MPI_INT, comm);
     validateEquals(gatheredMaxLoads[owner], expMaxLoad);
 
     // Basic invariant (independent of view-consistency heuristics)
@@ -204,7 +216,8 @@ void toolbox::loadbalancing::tests::StatisticsTest::testStateUpdatesWithoutSplit
   stats.updateGlobalView();
 #ifdef PEANO_WITH_MPI
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1 and stats.getNumberOfStateUpdatesWithoutAnySplit() == 0) {
-    // With non-blocking exchange, the split can still appear in the global snapshot for one extra iteration.
+    // With the non-blocking exchange the lagged split still shows up in the global snapshot for one
+    // extra iteration, resetting the counter once more; one more update lets it climb again.
     stats.updateGlobalView();
   }
 #endif

@@ -5,7 +5,6 @@
 #include "AderSolver.h"
 
 namespace benchmarks::exahype2::kernelbenchmarks {
-
   void handleBoundaryFused(
     benchmarks::exahype2::kernelbenchmarks::AderSolver& solver,
     SolverCorrectorPrecision*                           faceEstimatesFlattened,

@@ -2,7 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include "tarch/la/Vector.h"
 
 namespace toolbox {
@@ -39,7 +38,6 @@ namespace toolbox {
      */
 
     namespace assignmentchecks {
-
       /**
        * Get the history of stored sweeps.
        */
@@ -169,7 +167,8 @@ namespace toolbox {
        * partition (on the right rank). They have kind of a halo layer of
        * width one, which is a logical construct, i.e. not maintained manually.
        *
-       * @image html src/toolbox/particles/assignmentchecks/scenario00_particle-through-domain-wall.png
+       * @image html
+       * src/toolbox/particles/assignmentchecks/scenario00_particle-through-domain-wall.png
        *
        * Study the central setup: In step N, yellow moves, while red will be
        * deleted after the traversal, as each step moving particles has to
@@ -232,10 +231,9 @@ namespace toolbox {
         const std::string&                           trace,
         const tarch::la::Vector<DIMENSIONS, double>& prevVertexX,
         const tarch::la::Vector<DIMENSIONS, double>& prevVertexH,
-        bool                                         particleIsNew = false,
-        bool reassignmentOnSameTreeDepthAllowed                    = false
+        bool                                         particleIsNew                      = false,
+        bool                                         reassignmentOnSameTreeDepthAllowed = false
       );
-
 
       /**
        * Remove particle from vertex
@@ -290,7 +288,8 @@ namespace toolbox {
        * which is really not what you want. This routine tries to reconstruct a
        * meaningful result.
        */
-      template <typename Particle> std::string pruneTypeName() {
+      template <typename Particle>
+      std::string pruneTypeName() {
         std::string result    = typeid(Particle).name();
         std::size_t lastDigit = result.find_last_of("0123456789");
         if (lastDigit != std::string::npos) {
@@ -339,9 +338,7 @@ namespace toolbox {
        * Record the current particle positions in a vector.
        */
       template <typename ParticleContainer>
-      std::vector<ParticlePosition> recordParticlePositions(
-        const ParticleContainer& container
-      );
+      std::vector<ParticlePosition> recordParticlePositions(const ParticleContainer& container);
 
       /**
        * Trace the particle movements.
@@ -378,8 +375,7 @@ namespace toolbox {
       );
 
     } // namespace assignmentchecks
-  }   // namespace particles
+  } // namespace particles
 } // namespace toolbox
-
 
 #include "TracingAPI.cpph"

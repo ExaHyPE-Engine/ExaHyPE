@@ -4,8 +4,9 @@
 
 #include "peano4/grid/GridControlEvent.h"
 #include "tarch/mpi/Rank.h"
+#include "tarch/mpi/mpi.h"
 
-peano4::grid::tests::GridControlEventTest::GridControlEventTest():
+peano4::grid::tests::GridControlEventTest::GridControlEventTest() :
   TestCase("peano4::grid::tests::GridControlEventTest") {}
 
 void peano4::grid::tests::GridControlEventTest::run() {
@@ -698,7 +699,7 @@ void peano4::grid::tests::GridControlEventTest::testMPI() {
   MPI_Status       status;
 
   if (numberOfRanks == 1) {
-    MPI_Sendrecv(
+    tarch::mpi::sendrecv(
       &sendE,
       sizeof(GridControlEvent),
       MPI_BYTE,
@@ -718,19 +719,18 @@ void peano4::grid::tests::GridControlEventTest::testMPI() {
 
     if ((me % 2) == 0) {
       // Even ranks send then receive
-      MPI_Send(&sendE, sizeof(GridControlEvent), MPI_BYTE, dest, tag, comm);
-      MPI_Recv(&recvE, sizeof(GridControlEvent), MPI_BYTE, src, tag, comm, &status);
+      tarch::mpi::send(&sendE, sizeof(GridControlEvent), MPI_BYTE, dest, tag, comm);
+      tarch::mpi::receive(&recvE, sizeof(GridControlEvent), MPI_BYTE, src, tag, comm, &status);
     } else {
       // Odd ranks receive then send
-      MPI_Recv(&recvE, sizeof(GridControlEvent), MPI_BYTE, src, tag, comm, &status);
-      MPI_Send(&sendE, sizeof(GridControlEvent), MPI_BYTE, dest, tag, comm);
+      tarch::mpi::receive(&recvE, sizeof(GridControlEvent), MPI_BYTE, src, tag, comm, &status);
+      tarch::mpi::send(&sendE, sizeof(GridControlEvent), MPI_BYTE, dest, tag, comm);
     }
   }
 
   const int  expectedSenderRank = (numberOfRanks == 1) ? me : ((me - 1 + numberOfRanks) % numberOfRanks);
-  const auto expectedRC         = (expectedSenderRank % 2 == 0)
-                                    ? GridControlEvent::RefinementControl::Refine
-                                    : GridControlEvent::RefinementControl::Erase;
+  const auto expectedRC         = (expectedSenderRank % 2 == 0) ? GridControlEvent::RefinementControl::Refine
+                                                                : GridControlEvent::RefinementControl::Erase;
   validateEquals(static_cast<std::uint8_t>(recvE.getRefinementControl()), static_cast<std::uint8_t>(expectedRC));
 
   for (int d = 0; d < DIMENSIONS; ++d) {

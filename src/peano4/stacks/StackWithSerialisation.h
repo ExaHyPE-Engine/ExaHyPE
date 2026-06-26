@@ -2,7 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "Stack.h"
+#include "peano4/stacks/Stack.h"
+#include "tarch/mpi/mpi.h"
 
 namespace peano4::stacks {
   template <class T>
@@ -10,7 +11,7 @@ namespace peano4::stacks {
 } // namespace peano4::stacks
 
 template <class T>
-class peano4::stacks::StackWithSerialisation: public Stack<T> {
+class peano4::stacks::StackWithSerialisation : public Stack<T> {
 private:
   static_assert(T::Cardinality > 0);
   static_assert(std::is_trivial_v<typename T::DoFType>);
@@ -44,7 +45,7 @@ public:
     serialise();
 
     const MPI_Datatype dtype  = translateContextIntoDatatype<T>(context);
-    const int          result = MPI_Isend(
+    const int          result = tarch::mpi::isend(
       _sendBuffer.data(),
       static_cast<int>(_sendBuffer.size()),
       dtype,
@@ -55,8 +56,8 @@ public:
     );
     if (result != MPI_SUCCESS) {
       logError(
-        "Was not able to send to rank "
-        << this->_ioRank << " on tag " << this->_ioTag << ": " << tarch::mpi::MPIReturnValueToString(result)
+        "Was not able to send to rank " << this->_ioRank << " on tag " << this->_ioTag << ": "
+                                        << tarch::mpi::MPIReturnValueToString(result)
       );
       assertion(false);
     }
@@ -86,7 +87,7 @@ public:
     _receiveBuffer.resize(numberOfElements * T::Cardinality);
 
     const MPI_Datatype dtype  = translateContextIntoDatatype<T>(context);
-    const int          result = MPI_Irecv(
+    const int          result = tarch::mpi::irecv(
       _receiveBuffer.data(),
       static_cast<int>(_receiveBuffer.size()),
       dtype,
@@ -97,9 +98,8 @@ public:
     );
     if (result != MPI_SUCCESS) {
       logError(
-        "Was not able to receive "
-        << numberOfElements << " values from rank " << this->_ioRank << " on tag " << this->_ioTag << ": "
-        << tarch::mpi::MPIReturnValueToString(result)
+        "Was not able to receive " << numberOfElements << " values from rank " << this->_ioRank << " on tag "
+                                   << this->_ioTag << ": " << tarch::mpi::MPIReturnValueToString(result)
       );
       assertion(false);
     }
@@ -113,7 +113,7 @@ public:
     }
 
     int flag = 0;
-    MPI_Test(&this->_ioMPIRequest, &flag, MPI_STATUS_IGNORE);
+    tarch::mpi::test(&this->_ioMPIRequest, &flag, MPI_STATUS_IGNORE);
     if (flag) {
       if (this->_ioMode == IOMode::MPISend) {
         this->shallowClear();

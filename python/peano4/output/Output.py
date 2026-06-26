@@ -1,5 +1,7 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
+import os
+
 from .Makefile  import Makefile
 from .Readme    import Readme
 
@@ -74,19 +76,27 @@ class Output(object):
       self.artefacts = [artefact] + self.artefacts
 
 
-  def generate(self,directory):
+  def generate(self,directory,generated_subdir=None):
     """
     Iterates over all stored artefacts and, hence, finally generates all the
     C files, makefiles, and so forth.
 
-    Files the user registered as non-generated source files (via the makefile's
-    add_h_file/add_cpp_file/add_Fortran_file) are protected: the code generator
-    never overwrites them. Everything else is always (re)generated.
+    If generated_subdir is set, the generated C++ artefacts land in that
+    subfolder of directory (the build files CMakeLists.txt/Makefile and the
+    readme stay in directory). Files the user registered as non-generated source
+    files are protected and never overwritten; everything else is (re)generated.
     """
     protected_files = self.makefile.protected_files()
-    self.makefile.generate(directory)
+    self.makefile.generate(directory, generated_subdir)
+
+    artefact_directory = directory
+    if generated_subdir:
+      artefact_directory = os.path.join(directory, generated_subdir)
+      os.makedirs(artefact_directory, exist_ok=True)
+      with open(os.path.join(artefact_directory, ".gitignore"), "w") as gitignore:
+        gitignore.write("*\n")
     for artefact in self.artefacts:
-      artefact.generate(directory, protected_files)
+      artefact.generate(artefact_directory, protected_files)
 
     self.readme.set_executable_name( self.makefile.executable_name() )
     self.readme.add_package_description( _PARALLELISATION_README_DESCRIPTION )

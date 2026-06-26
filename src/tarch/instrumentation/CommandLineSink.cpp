@@ -28,7 +28,9 @@ tarch::instrumentation::CommandLineSink::CommandLineSink():
 tarch::instrumentation::CommandLineSink::~CommandLineSink() { close(); }
 
 tarch::instrumentation::CommandLineSink& tarch::instrumentation::CommandLineSink::getInstance() {
-  static CommandLineSink singleton;
+  // Deliberately leaked: the log sink must outlive every other static object,
+  // since some (e.g. solver globals dumping a database) log from their destructor.
+  static CommandLineSink& singleton = *new CommandLineSink();
   return singleton;
 }
 

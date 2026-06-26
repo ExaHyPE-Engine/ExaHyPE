@@ -332,7 +332,7 @@ Type:                   """ + self.__class__.__name__
         step.add_action_set(self._action_set_check_troubledness)
         pass
 
-    def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
+    def add_actions_to_create_grid(self, step):
         pass
 
     def add_actions_to_plot_solution(self, step, output_path):

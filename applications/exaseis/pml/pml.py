@@ -74,7 +74,7 @@ project = exahype2.Project(
     dimensions=3,
     offset=offset,
     size=size,
-    periodic_BC=[False, False, False],
+    periodic_bc=[False, False, False],
     executable=scenario+"_l_"+str(args.min_grid_levels)+"_o_"+str(order)+"_pr_"+precision,
     min_end_time=end_time,
     max_end_time=end_time,
@@ -132,5 +132,4 @@ if use_tracers:
         output_precision=10, clear_database_after_flush=False
     ))
 
-peano4_project = project.generate_Peano4_project()
-peano4_project.generate_and_build()
+project.generate_and_build()

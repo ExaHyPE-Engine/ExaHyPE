@@ -13,7 +13,6 @@
 namespace exahype2 {
   namespace dg {
     namespace tests{
-
       constexpr double QuadratureNodes1dP1[] = { 0.21132486540518713,0.7886751345948129 };
       constexpr double QuadratureNodes1dP2[] = { 0.1127016653792583,0.5,0.8872983346207417};
 

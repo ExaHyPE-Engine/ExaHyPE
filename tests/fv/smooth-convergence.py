@@ -54,7 +54,7 @@ project = exahype2.Project(
     dimensions=2,
     size=[0.2, 0.2, 0.2],
     offset=[-0.1, -0.1, -0.1],
-    periodic_BC=[False, False, False],
+    periodic_bc=[False, False, False],
     min_end_time=args.end_time,
     max_end_time=args.end_time,
     min_grid_levels=args.grid_levels,
@@ -79,7 +79,6 @@ fv_solver.set_implementation(
 
 project.add_solver(fv_solver)
 
-project = project.generate_Peano4_project()
 project.output.makefile.add_compile_definition("GAMMA=1.4")
 project.output.makefile.add_compile_definition("PRESSURE=1.0")
 project.generate_and_build()

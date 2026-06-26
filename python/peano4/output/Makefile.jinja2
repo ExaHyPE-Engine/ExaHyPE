@@ -3,7 +3,7 @@
 
 .PHONY: all solver clean help distclean maintainer-clean
 
-CMAKE_APPLICATION_BUILD_DIR := build.{{EXECUTABLENAME}}
+CMAKE_APPLICATION_BUILD_DIR := {{BUILD_SUBDIR}}
 CMAKE_APPLICATION_CONFIGURE_STAMP := $(CMAKE_APPLICATION_BUILD_DIR)/.configured
 CMAKE_CONFIGURE_ARGS :=
 CMAKE_BUILD_JOBS = $(firstword $(patsubst -j%,%,$(filter -j%,$(MAKEFLAGS))))
@@ -19,7 +19,12 @@ CMAKE_CONFIGURE_ARGS += -T "{{CMAKE_GENERATOR_TOOLSET}}"
 {% endif -%}
 
 CMAKE_BUILD_PARALLEL_LEVEL ?= $(CMAKE_BUILD_JOBS)
+# Only export when non-empty: cmake --build treats a defined-but-empty
+# CMAKE_BUILD_PARALLEL_LEVEL as unlimited -j, which would make a bare `make`
+# compile on all cores instead of serially.
+ifneq ($(strip $(CMAKE_BUILD_PARALLEL_LEVEL)),)
 export CMAKE_BUILD_PARALLEL_LEVEL
+endif
 
 CMAKE_BUILD_PARALLEL_ARGS = $(if $(strip $(CMAKE_BUILD_PARALLEL_LEVEL)),--parallel $(strip $(CMAKE_BUILD_PARALLEL_LEVEL)),)
 
@@ -38,21 +43,8 @@ clean:
 help: $(CMAKE_APPLICATION_CONFIGURE_STAMP)
 	cmake --build $(CMAKE_APPLICATION_BUILD_DIR) --target help
 
-GENERATED_H_HEADERS={% for item in GENERATED_H_HEADERS -%} {{item+" "}} {%- endfor %}
-GENERATED_CXX_SOURCES={% for item in GENERATED_CXX_SOURCES -%} {{item+" "}} {%- endfor %}
-GENERATED_FORTRAN_SOURCES={% for item in GENERATED_FORTRAN_SOURCES -%} {{item+" "}} {%- endfor %}
-
 distclean:
-	cmake -E rm -f -- __peano_nonexistent__ {{EXECUTABLENAME}}
-	cmake -E rm -rf -- $(CMAKE_APPLICATION_BUILD_DIR)
-	cmake -E rm -f -- __peano_nonexistent__ ${GENERATED_H_HEADERS}
-	cmake -E rm -f -- __peano_nonexistent__ ${GENERATED_CXX_SOURCES}
-	cmake -E rm -f -- __peano_nonexistent__ ${GENERATED_FORTRAN_SOURCES}
-	cmake -E rm -rf -- globaldata celldata facedata vertexdata observers repositories tasks kernels
-	cmake -E rm -f -- __peano_nonexistent__ Constants.h
-	cmake -E rm -f -- __peano_nonexistent__ README-*
-	cmake -E rm -f -- __peano_nonexistent__ .gitignore
-	cmake -E rm -f -- __peano_nonexistent__ Makefile
-	cmake -E rm -f -- __peano_nonexistent__ CMakeLists.txt
+	cmake -E rm -rf -- {{GENERATED_SUBDIR}} $(CMAKE_APPLICATION_BUILD_DIR)
+	cmake -E rm -f -- __peano_nonexistent__ {{EXECUTABLENAME}} README-* .gitignore Makefile CMakeLists.txt
 
 maintainer-clean: distclean

@@ -3,6 +3,7 @@
 #include "DataRepository.h"
 
 #include "tarch/mpi/Rank.h"
+#include "tarch/mpi/mpi.h"
 #include "tarch/services/ServiceRepository.h"
 
 {% for container in VERTEX_DATA_CONTAINERS -%}
@@ -25,7 +26,16 @@ std::uint64_t {{FULL_QUALIFIED_CLASSNAME}}::_localFaceDataMemoryUsageInBytes = 0
 std::uint64_t {{FULL_QUALIFIED_CLASSNAME}}::_globalFaceDataMemoryUsageInBytes = 0;
 std::uint64_t {{FULL_QUALIFIED_CLASSNAME}}::_localVertexDataMemoryUsageInBytes = 0;
 std::uint64_t {{FULL_QUALIFIED_CLASSNAME}}::_globalVertexDataMemoryUsageInBytes = 0;
-std::size_t   {{FULL_QUALIFIED_CLASSNAME}}::_numberOfMaxGlobalSpacetrees = 0;
+
+#ifdef PEANO_WITH_MPI
+namespace {
+  // State for the non-blocking, one-sweep-lagged data-memory reduction (see updateMemoryUsage).
+  MPI_Request   dataMemoryReductionRequest  = MPI_REQUEST_NULL;
+  bool          dataMemoryReductionInFlight = false;
+  std::uint64_t dataMemoryReductionSend[3]  = {0, 0, 0};
+  std::uint64_t dataMemoryReductionRecv[3]  = {0, 0, 0};
+} // namespace
+#endif
 
 void {{FULL_QUALIFIED_CLASSNAME}}::init() {
 #ifdef PEANO_WITH_MPI
@@ -42,6 +52,20 @@ void {{FULL_QUALIFIED_CLASSNAME}}::init() {
 }
 
 void {{FULL_QUALIFIED_CLASSNAME}}::shutdown() {
+#ifdef PEANO_WITH_MPI
+  // Drain a still-in-flight lagged reduction so no request outlives MPI_Finalize.
+  int mpiIsInitialised = 0;
+  MPI_Initialized(&mpiIsInitialised);
+  if (mpiIsInitialised) {
+    int mpiIsFinalised = 0;
+    MPI_Finalized(&mpiIsFinalised);
+    if (not mpiIsFinalised and dataMemoryReductionInFlight and dataMemoryReductionRequest != MPI_REQUEST_NULL) {
+      tarch::mpi::wait(&dataMemoryReductionRequest);
+      dataMemoryReductionRequest  = MPI_REQUEST_NULL;
+      dataMemoryReductionInFlight = false;
+    }
+  }
+#endif
 {%- for container in VERTEX_DATA_CONTAINERS %}
   {{ container.name }}StackContainer.clear();
   {{ container.name }}HangingStackContainer.clear();
@@ -85,27 +109,44 @@ void {{FULL_QUALIFIED_CLASSNAME}}::updateMemoryUsage() {
 {%- endfor %}
 
 #ifdef PEANO_WITH_MPI
-  tarch::mpi::Rank::getInstance().allReduce(
-    &_localCellDataMemoryUsageInBytes,
-    &_globalCellDataMemoryUsageInBytes,
-    1, MPI_UINT64_T,
-    MPI_SUM,
-    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-  );
-  tarch::mpi::Rank::getInstance().allReduce(
-    &_localFaceDataMemoryUsageInBytes,
-    &_globalFaceDataMemoryUsageInBytes,
-    1, MPI_UINT64_T,
-    MPI_SUM,
-    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-  );
-  tarch::mpi::Rank::getInstance().allReduce(
-    &_localVertexDataMemoryUsageInBytes,
-    &_globalVertexDataMemoryUsageInBytes,
-    1, MPI_UINT64_T,
-    MPI_SUM,
-    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-  );
+  if (tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1) {
+    auto progress = []() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); };
+
+    // Publish the reduction launched on the previous sweep (its result is one sweep stale). On the
+    // first sweep nothing is in flight yet, so fall back to the local view.
+    if (dataMemoryReductionInFlight) {
+      tarch::mpi::wait(&dataMemoryReductionRequest, progress);
+      dataMemoryReductionRequest  = MPI_REQUEST_NULL;
+      dataMemoryReductionInFlight = false;
+      _globalCellDataMemoryUsageInBytes   = dataMemoryReductionRecv[0];
+      _globalFaceDataMemoryUsageInBytes   = dataMemoryReductionRecv[1];
+      _globalVertexDataMemoryUsageInBytes = dataMemoryReductionRecv[2];
+    } else {
+      _globalCellDataMemoryUsageInBytes   = _localCellDataMemoryUsageInBytes;
+      _globalFaceDataMemoryUsageInBytes   = _localFaceDataMemoryUsageInBytes;
+      _globalVertexDataMemoryUsageInBytes = _localVertexDataMemoryUsageInBytes;
+    }
+
+    // Launch this sweep's reduction without blocking; the next sweep completes it. A blocking
+    // collective here is a per-sweep barrier that deadlocks against the inter-rank tree
+    // redistribution during grid construction at scale, so overlap it with the next traversal.
+    dataMemoryReductionSend[0] = _localCellDataMemoryUsageInBytes;
+    dataMemoryReductionSend[1] = _localFaceDataMemoryUsageInBytes;
+    dataMemoryReductionSend[2] = _localVertexDataMemoryUsageInBytes;
+    tarch::mpi::iallreduce(
+      dataMemoryReductionSend,
+      dataMemoryReductionRecv,
+      3, MPI_UINT64_T,
+      MPI_SUM,
+      tarch::mpi::Rank::getInstance().getCommunicator(),
+      &dataMemoryReductionRequest
+    );
+    dataMemoryReductionInFlight = true;
+  } else {
+    _globalCellDataMemoryUsageInBytes   = _localCellDataMemoryUsageInBytes;
+    _globalFaceDataMemoryUsageInBytes   = _localFaceDataMemoryUsageInBytes;
+    _globalVertexDataMemoryUsageInBytes = _localVertexDataMemoryUsageInBytes;
+  }
 #else
   _globalCellDataMemoryUsageInBytes   = _localCellDataMemoryUsageInBytes;
   _globalFaceDataMemoryUsageInBytes   = _localFaceDataMemoryUsageInBytes;
@@ -135,8 +176,4 @@ std::size_t {{FULL_QUALIFIED_CLASSNAME}}::getLocalVertexDataMemoryUsageInBytes()
 
 std::size_t {{FULL_QUALIFIED_CLASSNAME}}::getGlobalVertexDataMemoryUsageInBytes() {
   return _globalVertexDataMemoryUsageInBytes;
-}
-
-void {{FULL_QUALIFIED_CLASSNAME}}::setNumberOfMaxGlobalSpacetrees(std::size_t numberOfMaxGlobalSpacetrees) {
-  _numberOfMaxGlobalSpacetrees = numberOfMaxGlobalSpacetrees;
 }

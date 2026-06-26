@@ -1,6 +1,7 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #include "LoadBalancer.h"
+
 #include "peano4/parallel/SpacetreeSet.h"
 #include "tarch/Assertions.h"
 #include "tarch/mpi/Rank.h"
@@ -9,7 +10,7 @@
 #include <algorithm>
 #include <cmath>
 
-class toolbox::loadbalancing::LoadBalancer::IntraRankDistributionStrategy final: public Strategy {
+class toolbox::loadbalancing::LoadBalancer::IntraRankDistributionStrategy final : public Strategy {
 public:
   ~IntraRankDistributionStrategy() override = default;
 
@@ -22,7 +23,6 @@ public:
     }
 
     if (lb._statistics.getNumberOfStateUpdatesWithoutAnySplit() > 5) {
-      logWarning("Current local mesh is too small or poorly balanced to split further into trees");
       return State::Stagnation;
     }
 
@@ -35,9 +35,8 @@ public:
       return State::IntraRankDistribution;
     }
 
-    const auto localHeaviestTreeLoad = peano4::parallel::SpacetreeSet::getInstance()
-                                         .getGridStatistics(localHeaviestTreeId)
-                                         .numberOfLocalUnrefinedCells;
+    const auto localHeaviestTreeLoad =
+      peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(localHeaviestTreeId).numberOfLocalUnrefinedCells;
 
     const auto minTreeSize                           = lb._configuration->getMinTreeSize(lb._state);
     const auto numberOfTreesToAccommodateMinTreeSize = std::max(localHeaviestTreeLoad / minTreeSize, 1);
@@ -50,10 +49,8 @@ public:
     auto       numberOfSplits       = numberOfAllowedTrees - 1;
 
     if (numberOfSplits > 0) {
-      const auto numberOfCellsPerTree = std::max(
-        static_cast<int>(std::round(localHeaviestTreeLoad / numberOfAllowedTrees)),
-        1
-      );
+      const auto numberOfCellsPerTree =
+        std::max(static_cast<int>(std::round(localHeaviestTreeLoad / numberOfAllowedTrees)), 1);
 
       auto remainder = localHeaviestTreeLoad - (numberOfCellsPerTree * numberOfAllowedTrees);
       while (numberOfSplits) {
@@ -71,7 +68,7 @@ public:
   }
 };
 
-std::unique_ptr<toolbox::loadbalancing::LoadBalancer::Strategy> toolbox::loadbalancing::LoadBalancer::
-  makeIntraRankDistributionStrategy() {
+std::unique_ptr<toolbox::loadbalancing::LoadBalancer::Strategy>
+toolbox::loadbalancing::LoadBalancer::makeIntraRankDistributionStrategy() {
   return std::make_unique<IntraRankDistributionStrategy>();
 }

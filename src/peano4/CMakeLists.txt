@@ -10,7 +10,7 @@ configure_file(
 )
 
 set(SOURCES
-  peano4.cpp
+  Init.cpp
   UnitTests.cpp
 
   datamanagement/CellMarker.cpp
@@ -50,7 +50,6 @@ set(SOURCES
   grid/tests/VertexLookupTableTest.cpp
   grid/tests/VertexTypeTest.cpp
 
-  parallel/parallel.cpp
   parallel/Node.cpp
   parallel/SpacetreeSet.cpp
   parallel/StartTraversalMessage.cpp

@@ -4,10 +4,12 @@
 
 #include "peano4/parallel/SpacetreeSet.h"
 #include "tarch/Assertions.h"
+#include "tarch/mpi/Rank.h"
 
+#include <algorithm>
 #include <sstream>
 
-toolbox::loadbalancing::LoadBalancer::LoadBalancer(Configuration* configuration):
+toolbox::loadbalancing::LoadBalancer::LoadBalancer(Configuration* configuration) :
   _configuration(configuration),
   _blacklist{},
   _statistics{},
@@ -17,8 +19,15 @@ toolbox::loadbalancing::LoadBalancer::LoadBalancer(Configuration* configuration)
 }
 
 toolbox::loadbalancing::LoadBalancer::~LoadBalancer() {
+  shutdown();
+
   delete _configuration;
   _configuration = nullptr;
+}
+
+void toolbox::loadbalancing::LoadBalancer::shutdown() {
+  _statistics.completePendingReduction();
+  Statistics::shutdownMPI();
 }
 
 void toolbox::loadbalancing::LoadBalancer::setState(State state) {
@@ -48,13 +57,11 @@ void toolbox::loadbalancing::LoadBalancer::update() {
   _statistics.updateGlobalView();
   _blacklist.update();
 
-  if (not _strategy) {
-    return;
-  }
-
-  const State next = _strategy->update(*this);
-  if (next != _state) {
-    setState(next);
+  if (_strategy) {
+    const State next = _strategy->update(*this);
+    if (next != _state) {
+      setState(next);
+    }
   }
 }
 
@@ -100,10 +107,9 @@ std::string toolbox::loadbalancing::LoadBalancer::getLocalLoadBalancing() {
   msg << idsOfLocalSpacetrees.size() << " tree(s): ";
 
   for (auto p : idsOfLocalSpacetrees) {
-    msg
-      << "(#" << p << ":"
-      << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).numberOfLocalUnrefinedCells << "/"
-      << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).numberOfRemoteUnrefinedCells << ")";
+    msg << "(#" << p << ":"
+        << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).numberOfLocalUnrefinedCells << "/"
+        << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).numberOfRemoteUnrefinedCells << ")";
     sumLocal += peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).numberOfLocalUnrefinedCells;
     sumRemote += peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).numberOfRemoteUnrefinedCells;
   }
@@ -127,9 +133,8 @@ int toolbox::loadbalancing::LoadBalancer::getHeaviestNonBlacklistedLocalSpacetre
       continue;
     }
 
-    const int currentCells = peano4::parallel::SpacetreeSet::getInstance()
-                               .getGridStatistics(treeId)
-                               .numberOfLocalUnrefinedCells;
+    const int currentCells =
+      peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(treeId).numberOfLocalUnrefinedCells;
     if (currentCells > maxCells) {
       maxCells       = currentCells;
       heaviestTreeId = treeId;

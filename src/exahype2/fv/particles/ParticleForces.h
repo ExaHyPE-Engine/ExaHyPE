@@ -11,7 +11,6 @@ namespace exahype2 {
   namespace fv {
     namespace particles {
       namespace forces {
-
         /**
          * Force types as enum flags - can be combined using bitwise operations.
          * Using enum class for type safety and clarity.

@@ -378,15 +378,6 @@ class ADERDG(object):
         )
         self._action_set_AMR.descend_invocation_order = 4
 
-        self._action_set_AMR_commit_without_further_analysis = exahype2.solvers.aderdg.actionsets.AdaptivityCriterion(
-            solver=self,
-            guard=self._store_cell_data_default_guard(),
-            build_up_new_refinement_instructions=False,
-            implement_previous_refinement_instructions=True,
-            called_by_grid_construction=False,
-        )
-        self._action_set_AMR_commit_without_further_analysis.descend_invocation_order = 4
-
         self._action_set_AMR_throughout_grid_construction = exahype2.solvers.aderdg.actionsets.AdaptivityCriterion(
             solver=self,
             guard=self._store_cell_data_default_guard(),
@@ -573,13 +564,10 @@ class ADERDG(object):
         step.add_action_set(self._action_set_AMR)
         step.add_action_set(self._action_set_postprocess_solution)
 
-    def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
+    def add_actions_to_create_grid(self, step):
         step.add_action_set(self._action_set_update_face_label)
         step.add_action_set(self._action_set_update_cell_label)
-        if evaluate_refinement_criterion:
-            step.add_action_set(self._action_set_AMR_throughout_grid_construction)
-        else:
-            step.add_action_set(self._action_set_AMR_commit_without_further_analysis)
+        step.add_action_set(self._action_set_AMR_throughout_grid_construction)
 
     def add_actions_to_plot_solution(self, step, output_path):
         d = {}
@@ -683,6 +671,8 @@ class ADERDG(object):
 
     def get_solver_statistics_metadata(self):
         return [
+            ("Unknowns", self._variable_shortcuts.unknowns),
+            ("Auxiliary Variables", self._variable_shortcuts.auxiliary_variables),
             ("Order", self._order),
         ]
 

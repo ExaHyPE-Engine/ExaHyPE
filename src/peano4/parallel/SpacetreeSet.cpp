@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "SpacetreeSet.h"
 
-#include "Node.h"
+#include "peano4/parallel/Node.h"
 #include "peano4/grid/GridStatistics.h"
 #include "peano4/grid/GridTraversalObserver.h"
 #include "peano4/grid/PeanoCurve.h"
@@ -12,6 +12,7 @@
 #include "tarch/instrumentation/Watch.h"
 #include "tarch/mpi/IntegerMessage.h"
 #include "tarch/mpi/Rank.h"
+#include "tarch/mpi/mpi.h"
 #include "tarch/multicore/Lock.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/services/ServiceRepository.h"
@@ -81,6 +82,7 @@ void peano4::parallel::SpacetreeSet::init(
     "peano4::parallel::SpacetreeSet - answer message",
     MAX_SPACETREES_PER_RANK
   );
+  _stateMessageTag = tarch::mpi::Rank::reserveFreeTag("peano4::parallel::SpacetreeSet - automaton state message");
   tarch::services::ServiceRepository::getInstance().addService(this, "peano4::parallel::SpacetreeSet");
 
 #ifdef PEANO_WITH_MPI
@@ -93,6 +95,9 @@ void peano4::parallel::SpacetreeSet::init(
     width,
     tarch::mpi::Rank::getInstance().getRank()
   );
+
+  _treeManagementReceiveIsPosted = false;
+  postTreeManagementReceive();
 #endif
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
@@ -103,7 +108,36 @@ void peano4::parallel::SpacetreeSet::init(
 
 void peano4::parallel::SpacetreeSet::shutdown() {
   tarch::services::ServiceRepository::getInstance().removeService(this);
+
+#ifdef PEANO_WITH_MPI
+  if (_treeManagementReceiveIsPosted) {
+    tarch::mpi::cancel(&_treeManagementReceiveRequest);
+    tarch::mpi::wait(&_treeManagementReceiveRequest, []() {}, MPI_STATUS_IGNORE);
+    _treeManagementReceiveRequest  = MPI_REQUEST_NULL;
+    _treeManagementReceiveIsPosted = false;
+  }
+#endif
 }
+
+#ifdef PEANO_WITH_MPI
+void peano4::parallel::SpacetreeSet::postTreeManagementReceive() {
+  if (_treeManagementReceiveIsPosted) {
+    return;
+  }
+
+  tarch::mpi::irecv(
+    &_treeManagementReceiveBuffer,
+    1,
+    TreeManagementMessage::getJoinDatatype(),
+    MPI_ANY_SOURCE,
+    _requestMessageTag,
+    tarch::mpi::Rank::getInstance().getCommunicator(),
+    &_treeManagementReceiveRequest
+  );
+
+  _treeManagementReceiveIsPosted = true;
+}
+#endif
 
 int peano4::parallel::SpacetreeSet::getAnswerTag(int targetSpacetreeId) const {
   return _answerMessageTag + Node::getInstance().getLocalTreeId(targetSpacetreeId);
@@ -114,6 +148,22 @@ void peano4::parallel::SpacetreeSet::answerQuestions() {
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() == 1) {
     return;
   }
+
+  // The handshake below issues blocking MPI that pumps the service repository, re-entering this
+  // routine on the same thread. A nested answerQuestions would slip between _spacetrees.emplace_back
+  // and _spacetrees.back(), registering the wrong tree (the intermittent rebalance segfault). Skip
+  // re-entrant calls so tree creation stays atomic and lock-free.
+  // Concurrent entry from another thread is already excluded by the service repository's
+  // recursive try-lock, so a thread-local flag suffices.
+  static thread_local bool inAnswerQuestions = false;
+  if (inAnswerQuestions) {
+    return;
+  }
+  inAnswerQuestions = true;
+  struct ReentryGuard {
+    bool& flag;
+    ~ReentryGuard() { flag = false; }
+  } reentryGuard{inAnswerQuestions};
 
   std::vector<peano4::parallel::TreeManagementMessage> unansweredMessagesThatIanAnswerNow;
 
@@ -167,7 +217,7 @@ void peano4::parallel::SpacetreeSet::answerQuestions() {
 
       peano4::grid::AutomatonState state;
       peano4::grid::AutomatonState::
-        receive(state, p.getSenderRank(), _requestMessageTag, tarch::mpi::Rank::getInstance().getCommunicator());
+        receive(state, p.getSenderRank(), _stateMessageTag, tarch::mpi::Rank::getInstance().getCommunicator());
 
       _spacetrees
         .emplace_back(p.getWorkerSpacetreeId(), p.getMasterSpacetreeId(), state.x, state.h, state.getInverted());
@@ -210,16 +260,28 @@ void peano4::parallel::SpacetreeSet::answerQuestions() {
 
 void peano4::parallel::SpacetreeSet::receiveDanglingMessages() {
 #ifdef PEANO_WITH_MPI
-  if (tarch::mpi::Rank::getInstance().isMessageInQueue(_requestMessageTag)) {
-    peano4::parallel::TreeManagementMessage message;
-    peano4::parallel::TreeManagementMessage::
-      receive(message, MPI_ANY_SOURCE, _requestMessageTag, tarch::mpi::Rank::getInstance().getCommunicator());
-
-    _unansweredMessages.push_back(message);
-    logDebug("Received new message " << message.toString());
+  if (not _treeManagementReceiveIsPosted) {
+    postTreeManagementReceive();
   }
 
+  int        completed = 0;
+  MPI_Status status;
+
+  tarch::mpi::test(&_treeManagementReceiveRequest, &completed, &status);
+
+  if (completed) {
+    _treeManagementReceiveBuffer.setSenderRank(status.MPI_SOURCE);
+    _unansweredMessages.push_back(_treeManagementReceiveBuffer);
+    _treeManagementReceiveIsPosted = false;
+  }
+#endif
+
   answerQuestions();
+
+#ifdef PEANO_WITH_MPI
+  if (not _treeManagementReceiveIsPosted) {
+    postTreeManagementReceive();
+  }
 #endif
 }
 
@@ -242,7 +304,7 @@ void peano4::parallel::SpacetreeSet::addSpacetree(int masterId, int newTreeId) {
     const peano4::grid::AutomatonState& state = _spacetrees.begin()->_root;
     logDebug("Send state " << state.toString() << " to rank " << targetRank);
     peano4::grid::AutomatonState::
-      send(state, targetRank, _requestMessageTag, tarch::mpi::Rank::getInstance().getCommunicator());
+      send(state, targetRank, _stateMessageTag, tarch::mpi::Rank::getInstance().getCommunicator());
 
     TreeManagementMessage::
       receive(message, targetRank, getAnswerTag(masterId), tarch::mpi::Rank::getInstance().getCommunicator());
@@ -319,6 +381,10 @@ void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreesToNewTrees(
       targetStack.clone(parent.getLocalExchangeVertexStack(sourceStackNumber));
 
       streamDataFromSplittingTreeToNewTree(*this, parent._id, worker);
+      // A remote tree can be created mid-exchange (answerQuestions runs from receiveDanglingMessages
+      // during MPI progress), after the pre-traversal clone pass. Clone its observer just in time -
+      // the call is idempotent for already-cloned trees - so it is never a null dereference.
+      createObserverCloneIfRequired(observer, parent._id);
       _clonedObserver[parent._id]->streamDataFromSplittingTreeToNewTree(worker);
     }
   }
@@ -326,12 +392,14 @@ void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreesToNewTrees(
   for (auto& p : _spacetrees) {
     if (p._spacetreeState == peano4::grid::SpacetreeState::EmptyRun) {
       streamDataFromSplittingTreeToNewTree(*this, p._masterId, p._id);
+      createObserverCloneIfRequired(observer, p._masterId);
       _clonedObserver[p._masterId]->streamDataFromSplittingTreeToNewTree(p._id);
     }
   }
 
   for (auto& p : _spacetrees) {
     finishAllOutstandingSendsAndReceives(*this, p._id);
+    createObserverCloneIfRequired(observer, p._id);
     _clonedObserver[p._id]->finishAllOutstandingSendsAndReceives();
   }
 }
@@ -340,12 +408,14 @@ void peano4::parallel::SpacetreeSet::exchangeHorizontalDataBetweenTrees(peano4::
   for (auto& p : _spacetrees) {
     exchangeAllHorizontalDataExchangeStacks(*this, p._id);
     exchangeAllPeriodicBoundaryDataStacks(*this, p._id);
+    createObserverCloneIfRequired(observer, p._id);
     _clonedObserver[p._id]->exchangeAllHorizontalDataExchangeStacks();
     _clonedObserver[p._id]->exchangeAllPeriodicBoundaryDataStacks();
   }
 
   for (auto& p : _spacetrees) {
     finishAllOutstandingSendsAndReceives(*this, p._id);
+    createObserverCloneIfRequired(observer, p._id);
     _clonedObserver[p._id]->finishAllOutstandingSendsAndReceives();
   }
 }
@@ -379,10 +449,12 @@ void peano4::parallel::SpacetreeSet::deleteClonedObservers() {
 
 void peano4::parallel::SpacetreeSet::traverse(peano4::grid::GridTraversalObserver& observer) {
 
-  tarch::mpi::Rank::getInstance().barrier([&]() -> void {
+#ifdef PEANO_WITH_MPI
+  tarch::mpi::barrier(tarch::mpi::Rank::getInstance().getCommunicator(), [&]() -> void {
     tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     answerQuestions();
   });
+#endif
 
   Node::getInstance().createPendingCommunicators();
 

@@ -15,7 +15,7 @@ class FixedTimeSteppingCodeSnippets(exahype2.solvers.FixedTimeSteppingCodeSnippe
         return (
             """
     if (isLastGridSweepOfTimeStep()) {
-      const double maxAdmissibleCellSize = ::exahype2::RuntimeParameters::getInstance().getMaxAdmissibleCellSize(
+      const double maxAdmissibleCellSize = ::runner::RuntimeParameters::getInstance().getMaxAdmissibleCellSize(
         DomainSize,
         NumberOfFiniteVolumesPerAxisPerPatch
       );

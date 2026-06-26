@@ -20,7 +20,7 @@ class FixedTimeSteppingCodeSnippets( exahype2.solvers.FixedTimeSteppingCodeSnipp
   def create_finish_time_step_implementation(self):
     return """
   if ( isLastGridSweepOfTimeStep() ) {
-    const double maxAdmissiblePatchSize = ::exahype2::RuntimeParameters::getInstance().getMaxAdmissiblePatchSize(DomainSize);
+    const double maxAdmissiblePatchSize = ::runner::RuntimeParameters::getInstance().getMaxAdmissiblePatchSize(DomainSize);
     assertion( _minCellH >= 0.0 );
     assertion( maxAdmissiblePatchSize > 0.0 );
     if (_minCellHThisTimeStep <= maxAdmissiblePatchSize) {

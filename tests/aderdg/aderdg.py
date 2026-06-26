@@ -43,7 +43,9 @@ def parse_arguments():
     parser.add_argument("-et", "--end-time", type=float, default=None)
     parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=4)
     parser.add_argument("-l", "--grid-levels", type=int, default=3)
-    parser.add_argument("-pr", "--precision", choices=available_precisions, default="fp64")
+    parser.add_argument(
+        "-pr", "--precision", choices=available_precisions, default="fp64"
+    )
     parser.add_argument(
         "-s", "--scenario", choices=scenario_factories.keys(), default=None
     )
@@ -89,8 +91,7 @@ project = exahype2.Project(
     dimensions=scenario._dimensions,
     size=[scenario._domain_size for _ in range(3)],
     offset=[scenario._offset for _ in range(3)],
-    periodic_BC=[scenario._periodic_bc for _ in range(3)],
-    executable="ExaHyPE",
+    periodic_bc=[scenario._periodic_bc for _ in range(3)],
     min_end_time=end_time,
     max_end_time=end_time,
     min_grid_levels=args.grid_levels,
@@ -137,5 +138,4 @@ if scenario.analytical_solution() != exahype2.solvers.PDETerms.None_Implementati
 
 project.add_solver(solver)
 
-project = project.generate_Peano4_project()
 project.generate_and_build()

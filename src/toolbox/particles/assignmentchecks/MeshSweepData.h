@@ -9,8 +9,6 @@ namespace toolbox {
   namespace particles {
     namespace assignmentchecks {
       namespace internal {
-
-
         /**
          * Mesh sweep data.
          *
@@ -33,6 +31,6 @@ namespace toolbox {
         };
 
       } // namespace internal
-    }   // namespace assignmentchecks
-  }     // namespace particles
+    } // namespace assignmentchecks
+  } // namespace particles
 } // namespace toolbox

@@ -3,7 +3,6 @@
 // This contains loop options for iterating over higher dimensional objects
 // they were shamelessly stolen from ExaHyPE1
 namespace kernels{
-
     struct idx2 {
       idx2(int I, int J, int line = -1) : I_(I), J_(J), size(I*J), line_(line) {}
 

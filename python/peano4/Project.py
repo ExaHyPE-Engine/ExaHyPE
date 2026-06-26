@@ -1,6 +1,10 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
+import argparse
+import json
+import logging
 import os
+import re
 import sys
 import subprocess
 import multiprocessing
@@ -28,8 +32,27 @@ class Project (object):
   file Constants.h. See peano4.output.Constants for further info.
   """
 
-  def __init__(self, namespace, project_name, directory = ".", executable = ""):
-    setup_logging()
+  def __init__(self, namespace, project_name, executable = "",
+               dimensions = None, offset = None, size = None, periodic_bc = None,
+               grid_levels = None, build_mode = None, directory = "."):
+    # Standard project command-line arguments (shared by every project, including the
+    # ExaHyPE subclass via inheritance): -d/--dimensions and -m/--build-mode override the
+    # constructor defaults, -v enables verbose logging, -h prints the help. Dimensions and
+    # build mode stay part of the project configuration; the CLI only overrides them.
+    arguments = Project._parse_project_arguments()
+    setup_logging(level=logging.DEBUG if arguments.verbose else logging.INFO)
+
+    if arguments.dimensions is not None:
+        dimensions = arguments.dimensions
+    if arguments.build_mode is not None:
+        build_mode = peano4.output.string_to_mode(arguments.build_mode)
+    if dimensions is not None:
+        if offset is not None:
+            offset = list(offset)[0:dimensions]
+        if size is not None:
+            size = list(size)[0:dimensions]
+        if periodic_bc is not None:
+            periodic_bc = list(periodic_bc)[0:dimensions]
 
     if sys.version_info < (3, 11):
         log.warning("Python 3.11 or higher is recommended to support all features. Current version: %s", sys.version)
@@ -55,10 +78,23 @@ class Project (object):
     self.datamodel    = peano4.datamodel.Model(self.namespace)
 
     self.solversteps  = peano4.solversteps.Steps(self)
+    self._create_steps()
 
     self.main         = PeanoMain(self)
+    self._domain_offset = list(offset) if offset is not None else None
+    self._domain_size = list(size) if size is not None else None
+    if periodic_bc is not None:
+      self._periodic_bc = list(periodic_bc)
+    elif offset is not None:
+      self._periodic_bc = [False for _ in offset]
+    else:
+      self._periodic_bc = None
+    self._default_grid_levels = grid_levels
+    self._dimensions = dimensions
+    self._build_mode = build_mode
+    self._makefile_configured = False
+    self._runtime_parameters = []
 
-    self.is_generated         = False
     self.is_built             = False
     self.build_was_successful = False
     self._build_make_override = None
@@ -73,49 +109,221 @@ class Project (object):
     self.is_extended = False
 
 
+  _project_arguments = None
+
+  @staticmethod
+  def _parse_project_arguments():
+    """Parse (once) the standard project code-generation command-line arguments.
+
+    Shared by every project - the ExaHyPE subclass inherits this. Uses
+    parse_known_args() so a script may still read its own extra arguments, and -h
+    prints this help and exits.
+    """
+    if Project._project_arguments is None:
+      parser = argparse.ArgumentParser(
+        allow_abbrev=False,
+        description="Peano project code generation options.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+      )
+      parser.add_argument("-d", "--dimensions", type=int, choices=(2, 3), default=None, help="Code generation dimensions.")
+      parser.add_argument("-m", "--build-mode", choices=peano4.output.CompileModes, default=None, help="Code generation build mode.")
+      parser.add_argument("--generate-only", "--no-build", action="store_true", default=False, help="Generate source files but skip compilation.")
+      parser.add_argument("-j", "--jobs", type=int, default=None, help="Parallel build jobs. Values <= 0 use the detected CPU count.")
+      parser.add_argument("--clean-first", action=argparse.BooleanOptionalAction, default=None, help="Wipe CMake's incremental build state before compiling.")
+      parser.add_argument("-v", "--verbose", action="store_true", default=False, help="Enable verbose (debug) logging during code generation.")
+      Project._project_arguments, _ = parser.parse_known_args()
+    return Project._project_arguments
+
+  def _configure_build_from_project_arguments(self):
+    project_arguments = Project._parse_project_arguments()
+    self._build_make_override = False if project_arguments.generate_only else None
+    self._build_jobs_override = project_arguments.jobs
+    self._build_clean_first_override = project_arguments.clean_first
+
+  @property
+  def dimensions(self):
+    return self._dimensions
+
+
   def __str__(self):
     return "(#steps=" + str(self.solversteps) + ",model=" + str(self.datamodel) + ")"
 
   def cleanup(self):
-    """!
-      This routine has to be called after you've generated your code.
-    """
     self.output.clear()
     self.datamodel.clear()
     self.solversteps.clear()
+    self._create_steps()
 
     self.main         = PeanoMain(self)
+    self._domain_offset = None
+    self._domain_size = None
+    self._periodic_bc = None
+    self._default_grid_levels = None
+    self._runtime_parameters = []
 
-    self.is_generated = False
     self.is_built     = False
 
     self.constants  = peano4.output.Constants(self)
 
+  def _create_steps(self):
+    self.create_grid = peano4.solversteps.Step("CreateGrid", False)
+    self.solversteps.add_step(self.create_grid)
+
+    self.load_balancing = peano4.solversteps.Step("LoadBalancing", False)
+    self.solversteps.add_step(self.load_balancing)
+
+  def add_runtime_parameter(self, name, parameter_type, default_value):
+    """Register a runtime parameter, read at start-up from config.json and the command line."""
+    if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name):
+      raise ValueError(f"Invalid runtime parameter name '{name}'. Use a valid C++ identifier.")
+
+    is_array = isinstance(parameter_type, (tuple, list))
+    if is_array:
+      if len(parameter_type) != 2:
+        raise ValueError(
+          f"Array runtime parameter '{name}' must use a type specification of the form ('double', N)."
+        )
+      base_type = parameter_type[0]
+      array_size = parameter_type[1]
+      if base_type not in ("double", "int", "bool"):
+        raise ValueError(
+          f"Unsupported array runtime parameter base type '{base_type}'. Supported types are: double, int, bool."
+        )
+      if not isinstance(array_size, int) or array_size <= 0:
+        raise ValueError(f"Array runtime parameter '{name}' expects a positive integer size.")
+      if not isinstance(default_value, (list, tuple)) or len(default_value) != array_size:
+        raise ValueError(
+          f"Array runtime parameter '{name}' expects exactly {array_size} default values."
+        )
+    else:
+      base_type = parameter_type
+      array_size = None
+      if base_type not in ("double", "int", "bool", "string"):
+        raise ValueError(
+          f"Unsupported runtime parameter type '{base_type}'. Supported types are: double, int, bool, string."
+        )
+
+    accessor_name = "get" + name[0].upper() + name[1:]
+    scalar_cpp_type = {
+      "double": "double",
+      "int": "int",
+      "bool": "bool",
+      "string": "std::string",
+    }[base_type]
+    if is_array:
+      cpp_type = f"tarch::la::Vector<{array_size}, {scalar_cpp_type}>"
+      literal = "{" + ", ".join(
+        (
+          repr(float(value))
+          if base_type == "double"
+          else str(value)
+          if base_type == "int"
+          else "true" if value else "false"
+        )
+        for value in default_value
+      ) + "}"
+      getter = {
+        "double": "getDoubleArray",
+        "int": "getIntegerArray",
+        "bool": "getBooleanArray",
+      }[base_type]
+      return_type = f"tarch::la::Vector<{array_size}, {scalar_cpp_type}>"
+    else:
+      if base_type == "double" and not isinstance(default_value, (int, float)):
+        raise ValueError(f"Runtime parameter '{name}' expects a numeric default value.")
+      if base_type == "int" and not isinstance(default_value, int):
+        raise ValueError(f"Runtime parameter '{name}' expects an integer default value.")
+      if base_type == "bool" and not isinstance(default_value, bool):
+        raise ValueError(f"Runtime parameter '{name}' expects a boolean default value.")
+      if base_type == "string" and not isinstance(default_value, str):
+        raise ValueError(f"Runtime parameter '{name}' expects a string default value.")
+
+      cpp_type = scalar_cpp_type
+      if base_type == "double":
+        literal = repr(float(default_value))
+        getter = "getDouble"
+      elif base_type == "int":
+        literal = str(default_value)
+        getter = "getInteger"
+      elif base_type == "bool":
+        literal = "true" if default_value else "false"
+        getter = "getBoolean"
+      else:
+        literal = json.dumps(default_value)
+        getter = "getString"
+      return_type = cpp_type
+
+    self._runtime_parameters.append(
+      {
+        "name": name,
+        "cli_name": re.sub(r"(?<!^)([A-Z])", r"-\1", name).replace("_", "-").lower(),
+        "accessor_name": accessor_name,
+        "cpp_type": cpp_type,
+        "return_type": return_type,
+        "is_array": is_array,
+        "array_size": array_size,
+        "base_type": base_type,
+        "scalar_cpp_type": scalar_cpp_type,
+        "default_value": literal,
+        "getter": getter,
+      }
+    )
+
+  def _generate_runtime_parameters(self):
+    template_directory = os.path.dirname(os.path.realpath(__file__))
+    dictionary = {
+      "RUNTIME_PARAMETERS": self._runtime_parameters,
+      "HAS_RUNTIME_PARAMETERS": len(self._runtime_parameters) > 0,
+      "HAS_ARRAY_RUNTIME_PARAMETERS": any(
+        parameter["is_array"] for parameter in self._runtime_parameters
+      ),
+      "HAS_DOUBLE_RUNTIME_PARAMETERS": any(
+        parameter["base_type"] == "double" for parameter in self._runtime_parameters
+      ),
+      "HAS_INTEGER_RUNTIME_PARAMETERS": any(
+        parameter["base_type"] == "int" for parameter in self._runtime_parameters
+      ),
+      "HAS_BOOLEAN_RUNTIME_PARAMETERS": any(
+        parameter["base_type"] == "bool" for parameter in self._runtime_parameters
+      ),
+      "HAS_STRING_RUNTIME_PARAMETERS": any(
+        parameter["base_type"] == "string" for parameter in self._runtime_parameters
+      ),
+    }
+    generated_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
+      os.path.join(template_directory, "RuntimeParameters.template.h"),
+      os.path.join(template_directory, "RuntimeParameters.template.cpp"),
+      "RuntimeParameters",
+      self.namespace,
+      "",
+      dictionary,
+    )
+    self.output.add(generated_files)
+    self.output.makefile.add_h_file("RuntimeParameters.h", generated=True)
+    self.output.makefile.add_cpp_file("RuntimeParameters.cpp", generated=True)
+
   def generate_and_build(self):
-    """!
-    Generate the application's source files and, unless code generation only is
-    requested, configure and (incrementally) compile it via CMake.
-
-    All behaviour is controlled through the project-internal command-line
-    arguments (see exahype2.Project):
-
-    - --generate-only / --no-build : generate the sources but skip compilation
-    - -j / --jobs N                : build parallelism (default: all cores)
-    - --clean-first                : wipe CMake's incremental state first
-    - -v / --verbose               : enable debug logging
-
-    The CMake/compiler output is streamed to stdout as the build progresses.
-
-    Reset the output (via cleanup()) before changing parameters and calling this
-    again; otherwise two subsequent calls enrich the output twice.
-    """
     log.info(
       "Generate project %s in %s",
       self.project_name,
       os.path.abspath(self.directory),
     )
-    self.is_generated = True
     self.is_built = False
+
+    # Honour --generate-only / -j / --clean-first from the command line.
+    self._configure_build_from_project_arguments()
+
+    # Apply the build configuration from the constructor to the makefile so the
+    # user does not have to. A subclass may already have parsed the configuration
+    # earlier (it is needed during code generation); the flag avoids doing it twice.
+    if self._dimensions is not None:
+      if not self._makefile_configured:
+        self.output.makefile.parse_configuration_outcome()
+      self.output.makefile.set_dimension(self._dimensions)
+      if self._build_mode is not None:
+        self.output.makefile.set_mode(self._build_mode)
+      self._makefile_configured = True
+
     if len(self.output.artefacts)>0:
       log.debug(
         "Project already holds %d pre-registered artefacts before generation",
@@ -126,10 +334,17 @@ class Project (object):
 
     self.datamodel.construct_output(self.output)
     self.solversteps.construct_output(self.output)
+    self._generate_runtime_parameters()
 
     self.main.construct_output(self.output,self.project_name + "-main")
-    self.output.generate(self.directory)
-    self.constants.generate(self.directory, self.output.makefile.protected_files())
+
+    generated_subdir = self.project_name + ".generated"
+    self.output.makefile.d["BUILD_SUBDIR"] = self.project_name + ".build"
+
+    self.output.generate(self.directory, generated_subdir)
+    self.constants.generate(
+      os.path.join(self.directory, generated_subdir), self.output.makefile.protected_files()
+    )
 
     log.info("Generation complete (%d artefacts)", len(self.output.artefacts))
 
@@ -161,7 +376,7 @@ class Project (object):
     if make:
       build_environment = os.environ.copy()
       build_environment["CMAKE_BUILD_PARALLEL_LEVEL"] = str(number_of_parallel_builds)
-      cmake_build_dir = "build." + self.output.makefile.executable_name()
+      cmake_build_dir = self.output.makefile.d["BUILD_SUBDIR"]
       cmake_build_cache = os.path.join(self.directory, cmake_build_dir, "CMakeCache.txt")
       cmake_configure_stamp = os.path.join(self.directory, cmake_build_dir, ".configured")
 

@@ -5,6 +5,8 @@
 
 #include <algorithm>
 
+#include "tarch/mpi/Rank.h"
+#include "tarch/mpi/mpi.h"
 #include "tarch/multicore/Lock.h"
 #include "tarch/NonCriticalAssertions.h"
 #include "tarch/services/ServiceRepository.h"
@@ -236,85 +238,63 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
   if ( isLastGridSweepOfTimeStep() ) {
 
   #ifdef PEANO_WITH_MPI
-  double newMinTimeStamp    = _minTimeStampThisTimeStep;
-  double newMaxTimeStamp    = _maxTimeStampThisTimeStep;
-  double newMinCellH        = _minCellHThisTimeStep;
-  double newMaxCellH        = _maxCellHThisTimeStep;
-  double newMinTimeStepSize = _minTimeStepSizeThisTimeStep;
-  double newMaxTimeStepSize = _maxTimeStepSizeThisTimeStep;
+  double localMinValues[4] = {
+      _minTimeStampThisTimeStep,
+      _minCellHThisTimeStep,
+      _minTimeStepSizeThisTimeStep,
+      _localMinTimeStampThisTimeStep
+      };
+  double globalMinValues[4] = {0.0, 0.0, 0.0, 0.0};
+  double localMaxValues[4] = {
+      _maxTimeStampThisTimeStep,
+      _maxCellHThisTimeStep,
+      _maxTimeStepSizeThisTimeStep,
+      _localMaxTimeStampThisTimeStep
+      };
+  double globalMaxValues[4] = {0.0, 0.0, 0.0, 0.0};
 
-  double newLocalMinTimeStamp = _localMinTimeStampThisTimeStep;
-  double newLocalMaxTimeStamp = _localMaxTimeStampThisTimeStep;
+  int localCellUpdates = _cellUpdates;
+  int globalCellUpdates = 0;
+  MPI_Comm communicator = tarch::mpi::Rank::getInstance().getCommunicator();
+  auto progress = [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); };
 
-  int newCellUpdates = _cellUpdates;
-
-  tarch::mpi::Rank::getInstance().allReduce(
-      &newMinTimeStamp,
-      &_minTimeStampThisTimeStep,
-      1, MPI_DOUBLE,
+  tarch::mpi::allreduce(
+      localMinValues,
+      globalMinValues,
+      4, MPI_DOUBLE,
       MPI_MIN,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+      communicator,
+      progress
       );
-  tarch::mpi::Rank::getInstance().allReduce(
-      &newMaxTimeStamp,
-      &_maxTimeStampThisTimeStep,
-      1, MPI_DOUBLE,
+  tarch::mpi::allreduce(
+      localMaxValues,
+      globalMaxValues,
+      4, MPI_DOUBLE,
       MPI_MAX,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+      communicator,
+      progress
       );
 
-  tarch::mpi::Rank::getInstance().allReduce(
-      &newMinCellH,
-      &_minCellHThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MIN,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
-  tarch::mpi::Rank::getInstance().allReduce(
-      &newMaxCellH,
-      &_maxCellHThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MAX,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
-
-  tarch::mpi::Rank::getInstance().allReduce(
-      &newMinTimeStepSize,
-      &_minTimeStepSizeThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MIN,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
-  tarch::mpi::Rank::getInstance().allReduce(
-      &newMaxTimeStepSize,
-      &_maxTimeStepSizeThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MAX,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
-
-  tarch::mpi::Rank::getInstance().allReduce(
-      &newLocalMinTimeStamp,
-      &_localMinTimeStampThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MIN,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
-  tarch::mpi::Rank::getInstance().allReduce(
-      &newLocalMaxTimeStamp,
-      &_localMaxTimeStampThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MAX,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
-
-  tarch::mpi::Rank::getInstance().allReduce(
-      &newCellUpdates,
-      &_cellUpdates,
+  tarch::mpi::allreduce(
+      &localCellUpdates,
+      &globalCellUpdates,
       1, MPI_INT,
       MPI_SUM,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+      communicator,
+      progress
       );
+
+  _minTimeStampThisTimeStep = globalMinValues[0];
+  _minCellHThisTimeStep     = globalMinValues[1];
+  _minTimeStepSizeThisTimeStep = globalMinValues[2];
+  _localMinTimeStampThisTimeStep = globalMinValues[3];
+
+  _maxTimeStampThisTimeStep = globalMaxValues[0];
+  _maxCellHThisTimeStep     = globalMaxValues[1];
+  _maxTimeStepSizeThisTimeStep = globalMaxValues[2];
+  _localMaxTimeStampThisTimeStep = globalMaxValues[3];
+
+  _cellUpdates = globalCellUpdates;
   #endif
 
     if ( _minTimeStampThisTimeStep>=std::numeric_limits<double>::max()/10.0) {

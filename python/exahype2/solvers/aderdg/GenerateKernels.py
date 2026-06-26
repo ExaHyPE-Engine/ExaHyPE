@@ -14,9 +14,6 @@ def generate_kernels(solver, d, output):
     kernels_output_path = "kernels/" + solver._name
     kernels_templates_prefix = os.path.dirname(os.path.realpath(__file__)) + "/kernels/"
 
-    if not os.path.exists(kernels_output_path):
-        os.makedirs(kernels_output_path)
-
     generated_kernels = (
         peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
             headfile_template=kernels_templates_prefix + "CellErrorIntegral.template.h",

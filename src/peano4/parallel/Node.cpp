@@ -2,13 +2,14 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "Node.h"
 
-#include "StartTraversalMessage.h"
-#include "TreeManagementMessage.h"
 #include "peano4/grid/AutomatonState.h"
 #include "peano4/grid/SpacetreeHelper.h"
 #include "peano4/grid/StackTopology.h"
+#include "peano4/parallel/StartTraversalMessage.h"
+#include "peano4/parallel/TreeManagementMessage.h"
 #include "tarch/Assertions.h"
 #include "tarch/mpi/Rank.h"
+#include "tarch/mpi/mpi.h"
 #include "tarch/multicore/Lock.h"
 #include "tarch/multicore/Task.h"
 
@@ -89,8 +90,8 @@ int peano4::parallel::Node::reserveId(int rank, int forTreeId) {
       result = getId(rank, localTreeId);
     } else {
       logDebug(
-        "Local tree "
-        << localTreeId << " (global id=" << getId(rank, localTreeId) << ") on rank " << rank << " is already in use"
+        "Local tree " << localTreeId << " (global id=" << getId(rank, localTreeId) << ") on rank " << rank
+                      << " is already in use"
       );
       localTreeId++;
     }
@@ -139,13 +140,24 @@ void peano4::parallel::Node::createPendingCommunicators() {
     local[i] = (_needCommunicator[i] and _dataExchangeCommunicators[i] == MPI_COMM_NULL) ? 1 : 0;
   }
 
-  MPI_Allreduce(local.data(), global.data(), n, MPI_INT, MPI_LOR, tarch::mpi::Rank::getInstance().getCommunicator());
+  tarch::mpi::allreduce(
+    local.data(),
+    global.data(),
+    n,
+    MPI_INT,
+    MPI_MAX,
+    tarch::mpi::Rank::getInstance().getCommunicator()
+  );
 
   for (int i = 0; i < n; ++i) {
     if (global[i] and _dataExchangeCommunicators[i] == MPI_COMM_NULL) {
       MPI_Comm_dup(tarch::mpi::Rank::getInstance().getCommunicator(), &_dataExchangeCommunicators[i]);
     }
-    _needCommunicator[i] = false;
+    // Only clear the request for slots in this round's snapshot. A slot freshly set by a pumped tree
+    // registration during the allreduce (local[i]==0 here) keeps its flag and is honoured next round.
+    if (local[i]) {
+      _needCommunicator[i] = false;
+    }
   }
 #endif
 }
@@ -172,8 +184,11 @@ bool peano4::parallel::Node::continueToRun() {
     }
   } else {
     StartTraversalMessage message;
-    StartTraversalMessage::
-      receiveAndPollDanglingMessages(message, tarch::mpi::Rank::getGlobalMasterRank(), _rankOrchestrationTag);
+    StartTraversalMessage::receiveAndPollDanglingMessages(
+      message,
+      tarch::mpi::Rank::getGlobalMasterRank(),
+      _rankOrchestrationTag
+    );
     logDebug("Received message " << message.toString());
     _currentProgramStep = message.getStepIdentifier();
   }
@@ -190,10 +205,11 @@ void peano4::parallel::Node::setNextProgramStep(int number) {
 int peano4::parallel::Node::getCurrentProgramStep() const { return _currentProgramStep; }
 
 void peano4::parallel::Node::shutdown() {
-
-  tarch::mpi::Rank::getInstance().barrier([&]() -> void {
+#ifdef PEANO_WITH_MPI
+  tarch::mpi::barrier(tarch::mpi::Rank::getInstance().getCommunicator(), [&]() -> void {
     tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
   });
+#endif
 
 #ifdef PEANO_WITH_MPI
   for (int i = 0; i < MAX_SPACETREES_PER_RANK; i++) {
@@ -206,12 +222,15 @@ void peano4::parallel::Node::shutdown() {
 #endif
 
 #ifdef PEANO_WITH_MPI
-  MPI_Barrier(tarch::mpi::Rank::getInstance().getCommunicator());
+  tarch::mpi::barrier(tarch::mpi::Rank::getInstance().getCommunicator());
 #endif
 }
 
-peano4::parallel::Node::GridDataExchangeMetaInformation peano4::parallel::Node::
-  getGridDataExchangeMetaInformation(int sendingTreeId, int receivingTreeId, ExchangeMode exchange) const {
+peano4::parallel::Node::GridDataExchangeMetaInformation peano4::parallel::Node::getGridDataExchangeMetaInformation(
+  int          sendingTreeId,
+  int          receivingTreeId,
+  ExchangeMode exchange
+) const {
 
   const int localSendingTreeId   = getLocalTreeId(sendingTreeId);
   const int localReceivingTreeId = getLocalTreeId(receivingTreeId);
@@ -225,7 +244,8 @@ peano4::parallel::Node::GridDataExchangeMetaInformation peano4::parallel::Node::
     localSendingTreeId,
     getNumberOfRegisteredTrees()
   );
-  // assertion(localSendingTreeId <= getNumberOfRegisteredTrees(), localSendingTreeId, getNumberOfRegisteredTrees());
+  // assertion(localSendingTreeId <= getNumberOfRegisteredTrees(), localSendingTreeId,
+  // getNumberOfRegisteredTrees());
 
   int tag = TagsPerReceivingTree * localReceivingTreeId + getExchangeModeTagOffset(exchange);
 

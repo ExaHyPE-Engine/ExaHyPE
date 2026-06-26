@@ -45,7 +45,7 @@ With this out of the way, we need to create an environment for the solver to run
         dimensions    = 2,
         size          = [2., 2.],
         offset        = [0., 0.],
-        periodic_BC   = [True, True],
+        periodic_bc   = [True, True],
         min_end_time  = 1.414,  # sqrt(2)
         max_end_time  = 1.414,  # sqrt(2)
         min_grid_levels = 5,

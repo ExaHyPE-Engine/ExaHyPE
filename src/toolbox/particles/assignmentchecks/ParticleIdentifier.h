@@ -9,9 +9,9 @@ namespace toolbox {
   namespace particles {
     namespace assignmentchecks {
       namespace internal {
-
         /**
-         * ParticleIdentifier is used as a key to the 'database' map to keep the particles' history as the map's values.
+         * ParticleIdentifier is used as a key to the 'database' map to keep the particles' history
+         * as the map's values.
          *
          * By default, particles' are ID'd by their unique integer ID and
          * type name. However, in certain situations, that may not be enough.
@@ -87,10 +87,9 @@ namespace toolbox {
         };
 
       } // namespace internal
-    }   // namespace assignmentchecks
-  }     // namespace particles
+    } // namespace assignmentchecks
+  } // namespace particles
 } // namespace toolbox
-
 
 /**
  * Comparison operator

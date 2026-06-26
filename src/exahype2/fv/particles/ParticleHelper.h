@@ -10,7 +10,6 @@ namespace exahype2 {
   namespace fv {
     namespace particles {
       namespace utils {
-
         /**
          * Lightweight container for a particle's state variables.
          * Stores position, velocity, and acceleration as fixed-size vectors.

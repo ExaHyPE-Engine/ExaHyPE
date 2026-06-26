@@ -4,10 +4,10 @@
 
 #include "tarch/la/Vector.h"
 
+#include <bitset>
+
 namespace peano4 {
   void init(
-    int*                                         argc,
-    char***                                      argv,
     const tarch::la::Vector<DIMENSIONS, double>& offset,
     const tarch::la::Vector<DIMENSIONS, double>& width,
     const std::bitset<DIMENSIONS>&               periodicBC = 0

@@ -2,8 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "StackSizeLimitDetection.h"
 
-#include "tarch.h"
 #include "tarch/instrumentation/Log.h"
+#include "tarch/tarch.h"
 
 #if !defined(_WIN32)
 #include <sys/resource.h>
@@ -12,7 +12,6 @@
 #include <sstream>
 
 namespace {
-
   std::string formatMemorySize(unsigned long long bytes) {
     const auto         format = tarch::chooseMemoryUsageFormat(bytes);
     std::ostringstream result;
@@ -67,11 +66,10 @@ std::string tarch::detectStackSizeLimit() {
   const auto currentLimitInKiB = stackSizeLimit.bytes / KiB;
   if (stackSizeLimit.bytes < RecommendedMinimumStackLimit) {
     logDebug(
-      "Stack size of "
-      << currentLimitInKiB << " KiB (=" << formatMemorySize(stackSizeLimit.bytes)
-      << ") is lower than recommended minimum of " << RecommendedMinimumStackLimitInKiB
-      << " KiB (=" << formatMemorySize(RecommendedMinimumStackLimit)
-      << "). You can increase the stack size by running: ulimit -Ss unlimited"
+      "Stack size of " << currentLimitInKiB << " KiB (=" << formatMemorySize(stackSizeLimit.bytes)
+                       << ") is lower than recommended minimum of " << RecommendedMinimumStackLimitInKiB
+                       << " KiB (=" << formatMemorySize(RecommendedMinimumStackLimit)
+                       << "). You can increase the stack size by running: ulimit -Ss unlimited"
     );
   }
   return std::to_string(currentLimitInKiB) + " KiB (=" + formatMemorySize(stackSizeLimit.bytes) + ")";

@@ -50,7 +50,7 @@ project = exahype2.Project(
     dimensions=2,
     offset=offset,
     size=size,
-    periodic_BC=[False, False],
+    periodic_bc=[False, False],
     executable="TPV5_2D",
     min_end_time=end_time,
     max_end_time=end_time,
@@ -123,5 +123,4 @@ project.add_action_set_to_timestepping(
     )
 )
 
-peano4_project = project.generate_Peano4_project()
-peano4_project.generate_and_build()
+project.generate_and_build()

@@ -162,7 +162,7 @@ if (
     def get_constructor_body(self):
         template = jinja2.Template(
             """
-  _database.setOutputFileName( ::exahype2::RuntimeParameters::getInstance().getPlotOutputPath() + "{{FILENAME}}" );
+  _database.setOutputFileName( ::runner::RuntimeParameters::getInstance().getPlotOutputPath() + "{{FILENAME}}" );
   _database.setOutputPrecision( {{OUTPUT_PRECISION}} );
   _database.setDataDeltaBetweenTwoSnapshots( {{DATA_DELTA}}, {{USE_RELATIVE_DELTAS}} );
   _database.setPositionDeltaBetweenTwoSnapshots( {{POSITION_DELTA}}, {{USE_RELATIVE_DELTAS}} );
@@ -176,7 +176,7 @@ if (
         result = jinja2.Template(
             """
 #include "toolbox/particles/TrajectoryDatabase.h"
-#include "exahype2/RuntimeParameters.h"
+#include "runner/RuntimeParameters.h"
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
 #include "peano4/parallel/Node.h"

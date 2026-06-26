@@ -15,6 +15,7 @@ set(HEADER_EXTENSIONS_TO_GLOB
 add_subdirectory(tarch)
 add_subdirectory(peano4)
 add_subdirectory(toolbox)
+add_subdirectory(runner)
 add_subdirectory(exahype2)
 add_subdirectory(unittests)
 
@@ -23,6 +24,7 @@ foreach(mode IN LISTS SUPPORTED_BUILD_TYPES)
     add_library(PeanoRuntime${mode}${dim}d INTERFACE)
     target_link_libraries(PeanoRuntime${mode}${dim}d INTERFACE
       ExaHyPE2${mode}${dim}d
+      Runner${mode}${dim}d
     )
     if(PEANO_WITH_CURVI)
       target_link_libraries(PeanoRuntime${mode}${dim}d INTERFACE

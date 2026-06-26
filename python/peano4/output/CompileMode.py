@@ -24,8 +24,6 @@ CompileModes = ["Release", "Trace", "Asserts", "Debug"]
 """!
 Convert a string into a compile mode
 """
-
-
 def string_to_mode(mode: CompileMode):
     if mode == CompileModes[0]:
         return CompileMode.Release

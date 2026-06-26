@@ -4,7 +4,6 @@
 #include "riemannsolverRoutines.h"
 
 namespace Numerics {
-
   // Getter routines
   template <class Shortcuts, typename T>
   inline void computeParameters(const T* Q, T& rho, T& cp, T& cs, T& mu, T& lam) {

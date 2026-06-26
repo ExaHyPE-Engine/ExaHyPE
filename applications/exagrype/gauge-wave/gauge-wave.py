@@ -88,8 +88,7 @@ project = exahype2.Project(
     dimensions=3,
     offset=offset,
     size=size,
-    periodic_BC=[True, True, True],
-    directory=".",
+    periodic_bc=[True, True, True],
     executable="ExaGRyPE",
     min_end_time=args.end_time,
     max_end_time=args.end_time,
@@ -186,8 +185,6 @@ solver.add_user_solver_includes(
 )
 
 project.add_solver(solver)
-
-project = project.generate_Peano4_project()
 
 for const_name, const_info in constants.items():
     const_val, const_type = const_info

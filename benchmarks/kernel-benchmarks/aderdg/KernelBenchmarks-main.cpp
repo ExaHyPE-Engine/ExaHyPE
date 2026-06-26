@@ -8,14 +8,15 @@
 #include "DataRepository.h"
 #include "FusedDataRepository.h"
 #include "FusedTasks.h"
-#include "exahype2/RuntimeParameters.h"
+
 #include "exahype2/dg/DGUtils.h"
 #include "kernels/AderSolver/AMRRoutines.h"
 #include "peano4/Globals.h"
+#include "peano4/Init.h"
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/FaceEnumerator.h"
-#include "peano4/peano4.h"
 #include "peano4/Loop.h"
+#include "tarch/Init.h"
 #include "tarch/instrumentation/Log.h"
 #include "tarch/instrumentation/Measurement.h"
 #include "tarch/instrumentation/Watch.h"
@@ -45,15 +46,13 @@ namespace {
 
   int getGridLength() {
     int result = 1;
-    for (int level = 0; level < ::exahype2::RuntimeParameters::getInstance().getGridLevels(); ++level) {
+    for (int level = 0; level < ::runner::RuntimeParameters::getInstance().getGridLevels(); ++level) {
       result *= 3;
     }
     return result;
   }
 
-  tarch::la::Vector<DIMENSIONS, double> getCellSize() {
-    return DomainSize / static_cast<double>(getGridLength());
-  }
+  tarch::la::Vector<DIMENSIONS, double> getCellSize() { return DomainSize / static_cast<double>(getGridLength()); }
 
   bool helpRequested(int argc, char** argv) {
     for (int index = 1; index < argc; ++index) {
@@ -66,7 +65,8 @@ namespace {
   }
 
   template <typename T>
-  std::string toScientificNotationString(T value, int precision = 4, bool considerSign = false, double threshold = 1e6) {
+  std::string
+  toScientificNotationString(T value, int precision = 4, bool considerSign = false, double threshold = 1e6) {
     std::ostringstream out;
     double             v = static_cast<double>(value);
 
@@ -95,7 +95,8 @@ namespace {
 
   std::string formatSimulationTime() {
     std::ostringstream result;
-    result << repositories::getMinTimeStamp() << " / " << ::exahype2::RuntimeParameters::getInstance().getMinTerminalTime();
+    result << repositories::getMinTimeStamp() << " / "
+           << ::runner::RuntimeParameters::getInstance().getMinTerminalTime();
     return formatStatistic("Time", result.str());
   }
 
@@ -116,9 +117,8 @@ namespace {
 
   std::string formatMeasurementTotal(const tarch::instrumentation::Measurement& measurement, const char* unit) {
     std::ostringstream result;
-    result
-      << "Total=" << measurement.getAccumulatedValue() << unit
-      << ", Measurements=" << measurement.getNumberOfMeasurements();
+    result << "Total=" << measurement.getAccumulatedValue() << unit
+           << ", Measurements=" << measurement.getNumberOfMeasurements();
     return result.str();
   }
 
@@ -141,16 +141,15 @@ namespace {
     std::vector<std::string> result;
 
     std::ostringstream gridMessage;
-    gridMessage
-      << "Patches=" << toScientificNotationString(globalNumberOfPatches)
-      << ", DoFs=" << toScientificNotationString(totalNumberOfDoFs);
+    gridMessage << "Patches=" << toScientificNotationString(globalNumberOfPatches)
+                << ", DoFs=" << toScientificNotationString(totalNumberOfDoFs);
     result.push_back(formatStatistic("Grid", gridMessage.str()));
 
     const auto         memoryFormat = tarch::chooseMemoryUsageFormat(totalPersistentMemory);
     std::ostringstream memoryMessage;
-    memoryMessage
-      << "Total=" << std::fixed << std::setprecision(2) << tarch::convertMemorySize(totalPersistentMemory, memoryFormat)
-      << " " << tarch::toString(memoryFormat);
+    memoryMessage << "Total=" << std::fixed << std::setprecision(2)
+                  << tarch::convertMemorySize(totalPersistentMemory, memoryFormat) << " "
+                  << tarch::toString(memoryFormat);
     result.push_back(formatStatistic("Memory", memoryMessage.str()));
 
     if (measurement.getNumberOfMeasurements() > 0) {
@@ -191,15 +190,14 @@ void logFinalStatistics(
     logInfo(formatStatistic("Time Stepping", formatMeasurementTotal(measurement, "s")));
 
     const auto globalNumberOfPatches = _cells.size();
-    const auto totalNumberOfDoFs
-      = globalNumberOfPatches * std::pow(AbstractAderSolver::Order + 1, DIMENSIONS)
-        * (AbstractAderSolver::NumberOfUnknowns + AbstractAderSolver::NumberOfAuxiliaryVariables);
+    const auto totalNumberOfDoFs =
+      globalNumberOfPatches * std::pow(AbstractAderSolver::Order + 1, DIMENSIONS) *
+      (AbstractAderSolver::NumberOfUnknowns + AbstractAderSolver::NumberOfAuxiliaryVariables);
     const auto averageStepTime = measurement.getAverageValue();
 
     std::ostringstream performanceMessage;
-    performanceMessage
-      << "Average=" << globalNumberOfPatches / averageStepTime << " Patch/s, " << totalNumberOfDoFs / averageStepTime
-      << " DoF/s";
+    performanceMessage << "Average=" << globalNumberOfPatches / averageStepTime << " Patch/s, "
+                       << totalNumberOfDoFs / averageStepTime << " DoF/s";
     logInfo(formatStatistic("Performance", performanceMessage.str()));
   }
 }
@@ -224,8 +222,8 @@ void plotGrid() {
       const auto* data = DataRepository::getInstance().getCellQ(marker.getX(), marker.getH());
 
       constexpr int PointsPerAxis = AbstractAderSolver::Order + 1;
-      constexpr int TotalPoints   = (DIMENSIONS == 2) ? PointsPerAxis * PointsPerAxis
-                                                      : PointsPerAxis * PointsPerAxis * PointsPerAxis;
+      constexpr int TotalPoints =
+        (DIMENSIONS == 2) ? PointsPerAxis * PointsPerAxis : PointsPerAxis * PointsPerAxis * PointsPerAxis;
 
       int vertexIndices[TotalPoints];
 
@@ -315,8 +313,8 @@ void interpolateBetweenAMRBorder() {
 
       for (int f = 0; f < TWO_TIMES_D; f++) {
         int normal = f % DIMENSIONS;
-        if ((f >= DIMENSIONS and marker.getRelativePositionWithinFatherCell()[normal] == 2)
-            or (f < DIMENSIONS and marker.getRelativePositionWithinFatherCell()[normal] == 0)) {
+        if ((f >= DIMENSIONS and marker.getRelativePositionWithinFatherCell()[normal] == 2) or
+            (f < DIMENSIONS and marker.getRelativePositionWithinFatherCell()[normal] == 0)) {
           peano4::datamanagement::FaceMarker faceMarker{};
           faceMarker.relativePositionWithinFatherCell = marker.getRelativePositionWithinFatherCell();
           faceMarker.selectedFace                     = f;
@@ -330,13 +328,10 @@ void interpolateBetweenAMRBorder() {
               0.0
             );
           }
-          if (repositories::instanceOfAderSolver.getSolverState()
-              == AderSolver::SolverState::PredictionOnHangingCells) {
-            auto fineGridFaceQFlux = DataRepository::getInstance().getFaceQFluxEstimates(
-              marker.getX(),
-              marker.getH(),
-              f
-            );
+          if (repositories::instanceOfAderSolver.getSolverState() ==
+              AderSolver::SolverState::PredictionOnHangingCells) {
+            auto fineGridFaceQFlux =
+              DataRepository::getInstance().getFaceQFluxEstimates(marker.getX(), marker.getH(), f);
             auto coarseGridFaceQFlux = DataRepository::getInstance().getFaceQFluxEstimates(parentCenter, parentSize, f);
             // Fluxes
             kernels::AderSolver::faceFluxRestriction(
@@ -356,8 +351,8 @@ void interpolateBetweenAMRBorder() {
 
       for (int f = 0; f < TWO_TIMES_D; f++) {
         int normal = f % DIMENSIONS;
-        if ((f >= DIMENSIONS and marker.getRelativePositionWithinFatherCell()[normal] == 2)
-            or (f < DIMENSIONS and marker.getRelativePositionWithinFatherCell()[normal] == 0)) {
+        if ((f >= DIMENSIONS and marker.getRelativePositionWithinFatherCell()[normal] == 2) or
+            (f < DIMENSIONS and marker.getRelativePositionWithinFatherCell()[normal] == 0)) {
           peano4::datamanagement::FaceMarker faceMarker{};
           faceMarker.relativePositionWithinFatherCell = marker.getRelativePositionWithinFatherCell();
           faceMarker.selectedFace                     = f;
@@ -368,16 +363,14 @@ void interpolateBetweenAMRBorder() {
 
           int facePosition = faceMarker.getSelectedFaceNumber() < DIMENSIONS ? 0 : SpaceFaceSize;
 
-          if (repositories::instanceOfAderSolver.getSolverState()
-              == AderSolver::SolverState::PredictionOnHangingCells) {
+          if (repositories::instanceOfAderSolver.getSolverState() ==
+              AderSolver::SolverState::PredictionOnHangingCells) {
             kernels::AderSolver::faceUnknownsProlongation(
-              fineGridFaceQ
-                + facePosition
-                    * (AbstractAderSolver::NumberOfUnknowns + AbstractAderSolver::NumberOfAuxiliaryVariables),
+              fineGridFaceQ +
+                facePosition * (AbstractAderSolver::NumberOfUnknowns + AbstractAderSolver::NumberOfAuxiliaryVariables),
               fineGridFaceQFlux + facePosition * AbstractAderSolver::NumberOfUnknowns,
-              coarseGridFaceQ
-                + facePosition
-                    * (AbstractAderSolver::NumberOfUnknowns + AbstractAderSolver::NumberOfAuxiliaryVariables),
+              coarseGridFaceQ +
+                facePosition * (AbstractAderSolver::NumberOfUnknowns + AbstractAderSolver::NumberOfAuxiliaryVariables),
               coarseGridFaceQFlux + facePosition * AbstractAderSolver::NumberOfUnknowns,
               faceMarker.getRelativePositionWithinFatherFace()
             );
@@ -413,21 +406,20 @@ void applyInitialConditions() {
 }
 
 peano4::datamanagement::CellMarker createMarkerFromIndex(const tarch ::la ::Vector<DIMENSIONS, int>& index) {
-  const auto cellSize = getCellSize();
+  const auto                            cellSize         = getCellSize();
   tarch::la::Vector<DIMENSIONS, double> cellIndex        = tarch::la::convertScalar<double>(index);
   tarch::la::Vector<DIMENSIONS, double> cellPositionBase = DomainOffset + cellSize / 2.0;
-  tarch::la::Vector<DIMENSIONS, double>
-    cellPosition = cellPositionBase + tarch::la::multiplyComponents(cellIndex, cellSize);
+  tarch::la::Vector<DIMENSIONS, double> cellPosition =
+    cellPositionBase + tarch::la::multiplyComponents(cellIndex, cellSize);
   peano4::datamanagement::CellMarker marker;
   marker.h      = cellSize;
   marker.centre = cellPosition;
   return marker;
 }
 
-std::vector<peano4::datamanagement::CellMarker> createRefinedMarkersFromIndex(
-  const tarch ::la ::Vector<DIMENSIONS, int>& index
-) {
-  const auto cellSize = getCellSize();
+std::vector<peano4::datamanagement::CellMarker>
+createRefinedMarkersFromIndex(const tarch ::la ::Vector<DIMENSIONS, int>& index) {
+  const auto                            cellSize               = getCellSize();
   tarch::la::Vector<DIMENSIONS, double> cellIndex              = tarch::la::convertScalar<double>(index);
   tarch::la::Vector<DIMENSIONS, double> deeperCellIndex        = cellIndex * 3.0;
   tarch::la::Vector<DIMENSIONS, double> deeperCellSize         = cellSize / 3.0;
@@ -436,8 +428,8 @@ std::vector<peano4::datamanagement::CellMarker> createRefinedMarkersFromIndex(
 
   std::vector<peano4::datamanagement::CellMarker> result;
 
-  tarch::la::Vector<DIMENSIONS, double>
-    cellPosition = cellPositionBase + tarch::la::multiplyComponents(cellIndex, cellSize);
+  tarch::la::Vector<DIMENSIONS, double> cellPosition =
+    cellPositionBase + tarch::la::multiplyComponents(cellIndex, cellSize);
   peano4::datamanagement::CellMarker marker;
   marker.centre = cellPosition;
   marker.h      = cellSize;
@@ -447,8 +439,8 @@ std::vector<peano4::datamanagement::CellMarker> createRefinedMarkersFromIndex(
   dfor(offset, 3) {
     tarch::la::Vector<DIMENSIONS, double> deepCellOffset = tarch::la::convertScalar<double>(offset);
     tarch::la::Vector<DIMENSIONS, double> localCellIndex = deepCellOffset + deeperCellIndex;
-    tarch::la::Vector<DIMENSIONS, double>
-      deeperCellPosition = deepercellPositionBase + tarch::la::multiplyComponents(localCellIndex, deeperCellSize);
+    tarch::la::Vector<DIMENSIONS, double> deeperCellPosition =
+      deepercellPositionBase + tarch::la::multiplyComponents(localCellIndex, deeperCellSize);
     peano4::datamanagement::CellMarker marker;
     marker.centre                           = deeperCellPosition;
     marker.h                                = deeperCellSize;
@@ -484,7 +476,7 @@ void initGrid() {
 int main(int argc, char** argv) {
   int returnCode = EXIT_SUCCESS;
 
-  auto& runtimeParameters = ::exahype2::RuntimeParameters::getInstance();
+  auto& runtimeParameters = ::runner::RuntimeParameters::getInstance();
   runtimeParameters.setGeneratedDefaults(
     BenchmarkMinTerminalTime,
     BenchmarkMaxTerminalTime,
@@ -495,11 +487,17 @@ int main(int argc, char** argv) {
     runtimeParameters.printUsage("KernelBenchmarks");
     return EXIT_SUCCESS;
   }
+  tarch::init(
+    &argc,
+    &argv,
+    {runtimeParameters.getMPITimeOutWarning(),
+     runtimeParameters.getMPIDeadlockTimeOut(),
+     runtimeParameters.isMPIDeadlockDetectionEnabled()}
+  );
   runtimeParameters.configure(argc, argv);
 
-  peano4::init(&argc, &argv, DomainOffset, DomainSize, PeriodicBC);
+  peano4::init(DomainOffset, DomainSize, PeriodicBC);
 
-  repositories::loadBalancer.enable(false);
   repositories::startSimulation();
 
   createGrid();
@@ -529,17 +527,16 @@ int main(int argc, char** argv) {
   int                                 lastLoggedNumberOfCompletedTimeSteps = 0;
   const double                        minTerminalTime                      = runtimeParameters.getMinTerminalTime();
   const double                        maxTerminalTime                      = runtimeParameters.getMaxTerminalTime();
-  const double                        plottingEndTime                      = maxTerminalTime < std::numeric_limits<double>::max() / 10.0 ? maxTerminalTime : minTerminalTime;
-  const int                           numberOfSnapshots                    = runtimeParameters.getNumberOfSnapshots();
-  const double                        timeInBetweenPlots                   = numberOfSnapshots <= 0 ? 0.0 : plottingEndTime / numberOfSnapshots;
+  const double                        plottingEndTime =
+    maxTerminalTime < std::numeric_limits<double>::max() / 10.0 ? maxTerminalTime : minTerminalTime;
+  const int    numberOfSnapshots  = runtimeParameters.getNumberOfSnapshots();
+  const double timeInBetweenPlots = numberOfSnapshots <= 0 ? 0.0 : plottingEndTime / numberOfSnapshots;
 
   while (continueToSolve) {
-    if (
-      timeInBetweenPlots > 0.0
-      and (repositories::getMinTimeStamp() >= nextMinPlotTimeStamp
-           or repositories::getMaxTimeStamp() >= nextMaxPlotTimeStamp)
-      and repositories::mayPlot()
-    ) {
+    if (timeInBetweenPlots > 0.0 and
+        (repositories::getMinTimeStamp() >= nextMinPlotTimeStamp or
+         repositories::getMaxTimeStamp() >= nextMaxPlotTimeStamp) and
+        repositories::mayPlot()) {
       if (repositories::getMinTimeStamp() >= nextMinPlotTimeStamp) {
         nextMinPlotTimeStamp += timeInBetweenPlots;
       }
@@ -561,23 +558,6 @@ int main(int argc, char** argv) {
       fusedGrid.syncFacesDeviceToHost();
       interpolateBetweenAMRBorder();
       fusedGrid.syncFacesHostToDevice();
-      // Hack to make static AMR work in the mini-app. The full-app uses face updates that get interpolated between
-      // coarse and fine faces. In the mini-app we do interpolation a bit different because we only use one face type to
-      // keep things simple. We therefore first restrict the fine grid faces into the coarse grid faces, we do this for
-      // all faces that have been refined. We then interpolate these coarse grid faces onto the fine grid faces. This is
-      // needed at the AMR boundary, but not at the internal faces of the refined region. I have currently implemented
-      // no way to distinguish between internal faces in the AMR region and those at the boundary. The interpolation
-      // step therefore introduces a loss of precision at the internal faces of the AMR region. We can circumvent this
-      // by reprojecting the cell data onto the faces for all cells. This is less than ideal and should be improved.
-
-      // TODO
-      //  benchmarks::exahype2::kernelbenchmarks::kernels::FVSolver::projectPatchFused(
-      //    fusedGrid.getQ(),
-      //    fusedGrid.getFacePool(),
-      //    fusedGrid.getFaceIndices(),
-      //    fusedGrid.getNumberFusedCells(),
-      //    0
-      //  );
     }
 
     timeStepWatch.start();
@@ -682,9 +662,9 @@ int main(int argc, char** argv) {
         const auto totalPersistentMemory = DataRepository::getInstance().getMemoryUsageInBytes();
 
         const auto globalNumberOfPatches = _cells.size();
-        const auto totalNumberOfDoFs
-          = globalNumberOfPatches * std::pow(AbstractAderSolver::Order + 1, DIMENSIONS)
-            * (AbstractAderSolver::NumberOfUnknowns + AbstractAderSolver::NumberOfAuxiliaryVariables);
+        const auto totalNumberOfDoFs =
+          globalNumberOfPatches * std::pow(AbstractAderSolver::Order + 1, DIMENSIONS) *
+          (AbstractAderSolver::NumberOfUnknowns + AbstractAderSolver::NumberOfAuxiliaryVariables);
 
         logInfo(formatTimeStep(numberOfCompletedTimeSteps, timeStepMeasurement));
         for (const auto& statistic : formatSolverStatistics()) {
@@ -743,9 +723,9 @@ int main(int argc, char** argv) {
       }
       const auto totalPersistentMemory = DataRepository::getInstance().getMemoryUsageInBytes();
       const auto globalNumberOfPatches = _cells.size();
-      const auto totalNumberOfDoFs
-        = globalNumberOfPatches * std::pow(AbstractAderSolver::Order + 1, DIMENSIONS)
-          * (AbstractAderSolver::NumberOfUnknowns + AbstractAderSolver::NumberOfAuxiliaryVariables);
+      const auto totalNumberOfDoFs =
+        globalNumberOfPatches * std::pow(AbstractAderSolver::Order + 1, DIMENSIONS) *
+        (AbstractAderSolver::NumberOfUnknowns + AbstractAderSolver::NumberOfAuxiliaryVariables);
       for (const auto& statistic : formatKernelBenchmarkStatistics(
              globalNumberOfPatches,
              totalNumberOfDoFs,
@@ -763,5 +743,6 @@ int main(int argc, char** argv) {
 
   fusedGrid.clear();
   peano4::shutdown();
+  tarch::shutdown();
   return returnCode;
 }

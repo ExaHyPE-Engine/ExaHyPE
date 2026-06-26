@@ -1,7 +1,8 @@
 #include "particles.h"
 
 #include "MultiscaleTransitions.h"
-#include "peano4/peano4.h"
+
+#include "peano4/Init.h"
 
 bool toolbox::particles::particleAssignedToVertexWillBeLocal(
   const tarch::la::Vector<DIMENSIONS, double>& x,

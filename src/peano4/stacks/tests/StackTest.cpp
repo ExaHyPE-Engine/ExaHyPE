@@ -2,12 +2,12 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "StackTest.h"
 
-#include "TestDataOnHeap.h"
-#include "TestDataOnHeapWithContainer.h"
-#include "TestDataOnStack.h"
 #include "peano4/stacks/Stack.h"
 #include "peano4/stacks/StackWithCustomSerialisation.h"
 #include "peano4/stacks/StackWithSerialisation.h"
+#include "peano4/stacks/tests/TestDataOnHeap.h"
+#include "peano4/stacks/tests/TestDataOnHeapWithContainer.h"
+#include "peano4/stacks/tests/TestDataOnStack.h"
 #include "tarch/tests/TestMacros.h"
 
 #include <utility>
@@ -18,18 +18,18 @@ namespace {
     int* _value;
 
   public:
-    NullableSlotData():
+    NullableSlotData() :
       _value(nullptr) {}
 
-    explicit NullableSlotData(int value):
+    explicit NullableSlotData(int value) :
       _value(new int(value)) {}
 
     ~NullableSlotData() { delete _value; }
 
-    NullableSlotData(const NullableSlotData& other):
+    NullableSlotData(const NullableSlotData& other) :
       _value(other._value == nullptr ? nullptr : new int(*other._value)) {}
 
-    NullableSlotData(NullableSlotData&& other) noexcept:
+    NullableSlotData(NullableSlotData&& other) noexcept :
       _value(std::exchange(other._value, nullptr)) {}
 
     NullableSlotData& operator=(const NullableSlotData& other) {
@@ -67,7 +67,7 @@ namespace {
   };
 } // namespace
 
-peano4::stacks::tests::StackTest::StackTest():
+peano4::stacks::tests::StackTest::StackTest() :
   TestCase("peano4::stacks::tests::StackTest") {
 
 #ifdef PEANO_WITH_MPI
@@ -759,8 +759,9 @@ void peano4::stacks::tests::StackTest::testMPIDatatype() {
     while (not sender.tryToFinishSendOrReceive() or not receiver.tryToFinishSendOrReceive()) {
     };
 
-    validateEquals(sender.size(), static_cast<std::size_t>(0));       // Sender stack should be cleared
-    validateEquals(receiver.size(), static_cast<std::size_t>(count)); // Receiver stack should now have the data
+    validateEquals(sender.size(), static_cast<std::size_t>(0)); // Sender stack should be cleared
+    validateEquals(receiver.size(),
+                   static_cast<std::size_t>(count)); // Receiver stack should now have the data
     for (int n = 0; n < static_cast<int>(receiver.size()); n++) {
       for (int i = 0; i < TestDataOnStack::Cardinality; i++) {
         validateEquals(receiver[n].data[i], n * i);
@@ -792,8 +793,9 @@ void peano4::stacks::tests::StackTest::testMPIDatatype() {
     while (not sender.tryToFinishSendOrReceive() or not receiver.tryToFinishSendOrReceive()) {
     };
 
-    validateEquals(sender.size(), static_cast<std::size_t>(0));       // Sender stack should be cleared
-    validateEquals(receiver.size(), static_cast<std::size_t>(count)); // Receiver stack should now have the data
+    validateEquals(sender.size(), static_cast<std::size_t>(0)); // Sender stack should be cleared
+    validateEquals(receiver.size(),
+                   static_cast<std::size_t>(count)); // Receiver stack should now have the data
     for (int n = 0; n < static_cast<int>(receiver.size()); n++) {
       for (int i = 0; i < TestDataOnHeap::Cardinality; i++) {
         validateEquals(receiver[n].data()[i], n * i);
@@ -823,8 +825,9 @@ void peano4::stacks::tests::StackTest::testMPIDatatype() {
     while (not sender.tryToFinishSendOrReceive() or not receiver.tryToFinishSendOrReceive()) {
     };
 
-    validateEquals(sender.size(), static_cast<std::size_t>(0));       // Sender stack should be cleared
-    validateEquals(receiver.size(), static_cast<std::size_t>(count)); // Receiver stack should now have the data
+    validateEquals(sender.size(), static_cast<std::size_t>(0)); // Sender stack should be cleared
+    validateEquals(receiver.size(),
+                   static_cast<std::size_t>(count)); // Receiver stack should now have the data
     for (int n = 0; n < count; n++) {
       for (int i = 0; i < 32; i++) {
         validateEquals(receiver[n].at(i), n * 10);
@@ -879,8 +882,9 @@ void peano4::stacks::tests::StackTest::testMPIDatatype2() {
     while (not sender.tryToFinishSendOrReceive() or not receiver.tryToFinishSendOrReceive()) {
     };
 
-    validateEquals(sender.size(), static_cast<std::size_t>(0));       // Sender stack should be cleared
-    validateEquals(receiver.size(), static_cast<std::size_t>(count)); // Receiver stack should now have the data
+    validateEquals(sender.size(), static_cast<std::size_t>(0)); // Sender stack should be cleared
+    validateEquals(receiver.size(),
+                   static_cast<std::size_t>(count)); // Receiver stack should now have the data
 
     const int expectedSenderRank = (numberOfRanks == 1) ? me : ((me - 1 + numberOfRanks) % numberOfRanks);
     for (int n = 0; n < count; ++n) {
@@ -922,8 +926,9 @@ void peano4::stacks::tests::StackTest::testMPIDatatype2() {
     while (not sender.tryToFinishSendOrReceive() or not receiver.tryToFinishSendOrReceive()) {
     };
 
-    validateEquals(sender.size(), static_cast<std::size_t>(0));       // Sender stack should be cleared
-    validateEquals(receiver.size(), static_cast<std::size_t>(count)); // Receiver stack should now have the data
+    validateEquals(sender.size(), static_cast<std::size_t>(0)); // Sender stack should be cleared
+    validateEquals(receiver.size(),
+                   static_cast<std::size_t>(count)); // Receiver stack should now have the data
 
     const int expectedSenderRank = (numberOfRanks == 1) ? me : ((me - 1 + numberOfRanks) % numberOfRanks);
     for (int n = 0; n < count; ++n) {

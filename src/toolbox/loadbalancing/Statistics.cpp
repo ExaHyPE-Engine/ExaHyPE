@@ -4,6 +4,11 @@
 
 #include "peano4/parallel/SpacetreeSet.h"
 #include "tarch/Assertions.h"
+#include "tarch/instrumentation/Log.h"
+#include "tarch/mpi/Rank.h"
+#include "tarch/mpi/mpi.h"
+#include "tarch/services/ServiceRepository.h"
+#include "tarch/tarch.h"
 
 #include <cstring>
 #include <limits>
@@ -22,6 +27,7 @@ namespace {
     MaxTreeLoad,
     MaxTreeLoadOwnerRank,
     SumMemBytes,
+    SumProcessMemBytes,
     MinDepth,
     MaxDepth,
     MinHBits,
@@ -64,6 +70,7 @@ namespace {
     inout[SumTrees] += in[SumTrees];
     inout[SumRanksWithTrees] += in[SumRanksWithTrees];
     inout[SumMemBytes] += in[SumMemBytes];
+    inout[SumProcessMemBytes] += in[SumProcessMemBytes];
 
     // MIN/MAX fields
     inout[MinTreeLoad] = std::min(inout[MinTreeLoad], in[MinTreeLoad]);
@@ -102,10 +109,32 @@ namespace {
 
     gReady = true;
   }
+
+  void shutdownReduction() {
+    if (not gReady or gReduceOp == MPI_OP_NULL) {
+      return;
+    }
+
+    int mpiInitialised = 0;
+    MPI_Initialized(&mpiInitialised);
+    if (not mpiInitialised) {
+      return;
+    }
+
+    int mpiFinalised = 0;
+    MPI_Finalized(&mpiFinalised);
+    if (mpiFinalised) {
+      return;
+    }
+
+    MPI_Op_free(&gReduceOp);
+    gReduceOp = MPI_OP_NULL;
+    gReady    = false;
+  }
 } // namespace
 #endif
 
-toolbox::loadbalancing::Statistics::Statistics():
+toolbox::loadbalancing::Statistics::Statistics() :
   _isViewConsistent(false),
   _localNumberOfInnerUnrefinedCells(0),
   _globalNumberOfInnerUnrefinedCells(0),
@@ -128,6 +157,8 @@ toolbox::loadbalancing::Statistics::Statistics():
   _globalRankWithMaxTreeLoad(0),
   _localMemoryUsageInBytes(0),
   _globalMemoryUsageInBytes(0),
+  _localProcessMemoryUsageInBytes(0),
+  _globalProcessMemoryUsageInBytes(0),
   _localMinDepth(std::numeric_limits<int>::max()),
   _localMaxDepth(0),
   _globalMinDepth(std::numeric_limits<int>::max()),
@@ -145,21 +176,33 @@ toolbox::loadbalancing::Statistics::Statistics():
 }
 
 toolbox::loadbalancing::Statistics::~Statistics() {
+  completePendingReduction();
+  shutdownMPI();
+}
+
+void toolbox::loadbalancing::Statistics::completePendingReduction() {
 #ifdef PEANO_WITH_MPI
-  // updateGlobalView() may leave a non-blocking Iallreduce in flight. If the
-  // program/unit tests terminate right after the last update, MPI_Finalize()
-  // can be called with outstanding requests, which may crash/hang.
+  // Complete a still-in-flight non-blocking reduction so no request keeps a reference to the
+  // communicator at MPI_Finalize. LoadBalancer::shutdown() calls this on every rank while MPI is still
+  // up; relying on the destructor alone is too late (it runs after MPI_Finalize for the global LB).
+  // Skipped once MPI is finalised. Per instance, so it must not be static.
   int mpiInitialised = 0;
   MPI_Initialized(&mpiInitialised);
   if (mpiInitialised) {
     int mpiFinalised = 0;
     MPI_Finalized(&mpiFinalised);
     if (not mpiFinalised and _globalExchangeInFlight and _globalExchangeRequest != MPI_REQUEST_NULL) {
-      MPI_Wait(&_globalExchangeRequest, MPI_STATUS_IGNORE);
+      tarch::mpi::wait(&_globalExchangeRequest);
       _globalExchangeRequest  = MPI_REQUEST_NULL;
       _globalExchangeInFlight = false;
     }
   }
+#endif
+}
+
+void toolbox::loadbalancing::Statistics::shutdownMPI() {
+#ifdef PEANO_WITH_MPI
+  shutdownReduction();
 #endif
 }
 
@@ -169,7 +212,9 @@ void toolbox::loadbalancing::Statistics::waitForGlobalDataExchange() {
     return;
   }
 
-  tarch::mpi::wait(_globalExchangeRequest, "toolbox::loadbalancing::Statistics", "waitForGlobalDataExchange");
+  tarch::mpi::wait(&_globalExchangeRequest, []() -> void {
+    tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+  });
 
   _globalExchangeRequest  = MPI_REQUEST_NULL;
   _globalExchangeInFlight = false;
@@ -187,19 +232,20 @@ void toolbox::loadbalancing::Statistics::waitForGlobalDataExchange() {
   _globalMaxTreeLoad                     = static_cast<int>(g[MaxTreeLoad]);
   _globalRankWithMaxTreeLoad             = static_cast<int>(g[MaxTreeLoadOwnerRank]);
   _globalMemoryUsageInBytes              = static_cast<std::uint64_t>(g[SumMemBytes]);
+  _globalProcessMemoryUsageInBytes       = static_cast<std::uint64_t>(g[SumProcessMemBytes]);
   _globalMinDepth                        = static_cast<int>(g[MinDepth]);
   _globalMaxDepth                        = static_cast<int>(g[MaxDepth]);
   _globalMinH                            = fromBits(g[MinHBits]);
   _globalNumberOfStationarySweeps        = static_cast<int>(g[MinStationarySweeps]);
 
-  // If the global representation (which lags behind by one non-blocking MPI step)
-  // thinks there are fewer cells than we have locally, the global view is definitely
-  // inconsistent/outdated.
+  // If the global representation (which lags behind by one non-blocking MPI step) thinks there are
+  // fewer cells than we have locally, the global view is inconsistent/outdated.
   if (_globalNumberOfInnerUnrefinedCells < _localNumberOfInnerUnrefinedCells) {
     logDebug(
-      "Local cell count "
-      << _localNumberOfInnerUnrefinedCells << " exceeds global cell count " << _globalNumberOfInnerUnrefinedCells
-      << ". Statistics view is inconsistent or outdated; this usually happens while a forking tree still has pending refinement events after spawning cells."
+      "Local cell count " << _localNumberOfInnerUnrefinedCells << " exceeds global cell count "
+                          << _globalNumberOfInnerUnrefinedCells
+                          << ". Statistics view is inconsistent or outdated; this usually happens while a "
+                             "forking tree still has pending refinement events after spawning cells."
     );
     _isViewConsistent                  = false;
     _globalNumberOfInnerUnrefinedCells = _localNumberOfInnerUnrefinedCells;
@@ -222,6 +268,8 @@ void toolbox::loadbalancing::Statistics::updateGlobalView() {
   _localNumberOfHangingVertices = statistics.numberOfHangingVertices;
 
   _localMemoryUsageInBytes = statistics.getMemoryUsageInBytes();
+  _localProcessMemoryUsageInBytes =
+    static_cast<std::uint64_t>(tarch::getMemoryUsage(tarch::MemoryUsageFormat::KiB) * 1024.0);
 
   _localMinDepth = statistics.minDepth;
   _localMaxDepth = statistics.maxDepth;
@@ -250,6 +298,8 @@ void toolbox::loadbalancing::Statistics::updateGlobalView() {
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1) {
     init();
     if (gReady) {
+      // Complete the reduction launched last sweep and publish its (one-sweep-stale) result before
+      // we overwrite the receive buffer with this sweep's reduction.
       if (_globalExchangeInFlight) {
         waitForGlobalDataExchange();
         publishLocalAsGlobal = false;
@@ -266,18 +316,21 @@ void toolbox::loadbalancing::Statistics::updateGlobalView() {
 
       const bool emptyRank = spacetrees.empty();
 
-      local[MinTreeLoad]          = emptyRank ? std::numeric_limits<std::uint64_t>::max()
-                                              : static_cast<std::uint64_t>(_localMinTreeLoad);
+      local[MinTreeLoad] =
+        emptyRank ? std::numeric_limits<std::uint64_t>::max() : static_cast<std::uint64_t>(_localMinTreeLoad);
       local[MaxTreeLoad]          = static_cast<std::uint64_t>(_localMaxTreeLoad);
       local[MaxTreeLoadOwnerRank] = static_cast<std::uint64_t>(tarch::mpi::Rank::getInstance().getRank());
       local[SumMemBytes]          = static_cast<std::uint64_t>(_localMemoryUsageInBytes);
-      local[MinDepth]             = emptyRank ? std::numeric_limits<std::uint64_t>::max()
-                                              : static_cast<std::uint64_t>(_localMinDepth);
-      local[MaxDepth]             = static_cast<std::uint64_t>(_localMaxDepth);
-      local[MinHBits]             = toBits(_localMinH);
-      local[MinStationarySweeps]  = static_cast<std::uint64_t>(_localNumberOfStationarySweeps);
+      local[SumProcessMemBytes]   = static_cast<std::uint64_t>(_localProcessMemoryUsageInBytes);
+      local[MinDepth] =
+        emptyRank ? std::numeric_limits<std::uint64_t>::max() : static_cast<std::uint64_t>(_localMinDepth);
+      local[MaxDepth]            = static_cast<std::uint64_t>(_localMaxDepth);
+      local[MinHBits]            = toBits(_localMinH);
+      local[MinStationarySweeps] = static_cast<std::uint64_t>(_localNumberOfStationarySweeps);
 
-      MPI_Iallreduce(
+      // Launch this sweep's reduction without blocking; the next sweep completes it. The first
+      // sweep has nothing to publish yet, so it falls through to publishing the local view.
+      tarch::mpi::iallreduce(
         _globalExchangeSend.data(),
         _globalExchangeRecv.data(),
         /*count=*/NumberOfWords,
@@ -306,6 +359,7 @@ void toolbox::loadbalancing::Statistics::updateGlobalView() {
     _globalMaxTreeLoad                     = _localMaxTreeLoad;
     _globalRankWithMaxTreeLoad             = tarch::mpi::Rank::getInstance().getRank();
     _globalMemoryUsageInBytes              = _localMemoryUsageInBytes;
+    _globalProcessMemoryUsageInBytes       = _localProcessMemoryUsageInBytes;
     _globalMinDepth                        = _localMinDepth;
     _globalMaxDepth                        = _localMaxDepth;
     _globalMinH                            = _localMinH;
@@ -381,6 +435,14 @@ std::size_t toolbox::loadbalancing::Statistics::getLocalMemoryUsageInBytes() con
 
 std::size_t toolbox::loadbalancing::Statistics::getGlobalMemoryUsageInBytes() const {
   return static_cast<std::size_t>(_globalMemoryUsageInBytes);
+}
+
+std::size_t toolbox::loadbalancing::Statistics::getLocalProcessMemoryUsageInBytes() const {
+  return static_cast<std::size_t>(_localProcessMemoryUsageInBytes);
+}
+
+std::size_t toolbox::loadbalancing::Statistics::getGlobalProcessMemoryUsageInBytes() const {
+  return static_cast<std::size_t>(_globalProcessMemoryUsageInBytes);
 }
 
 int toolbox::loadbalancing::Statistics::getLocalMinDepth() const { return _localMinDepth; }

@@ -627,15 +627,6 @@ We use RK("""
             implement_previous_refinement_instructions=True,
             called_by_grid_construction=False,
         )
-        self._action_set_AMR_commit_without_further_analysis = (
-            exahype2.solvers.rkdg.actionsets.AdaptivityCriterion(
-                solver=self,
-                guard=self._store_cell_data_default_guard(),
-                build_up_new_refinement_instructions=False,
-                implement_previous_refinement_instructions=True,
-                called_by_grid_construction=False,
-            )
-        )
         self._action_set_AMR_throughout_grid_construction = (
             exahype2.solvers.rkdg.actionsets.AdaptivityCriterion(
                 solver=self,
@@ -719,9 +710,6 @@ We use RK("""
         )  # depends on other guys
         self._action_set_AMR.descend_invocation_order = self._baseline_action_set_descend_invocation_order + 5
         self._action_set_AMR_throughout_grid_construction.descend_invocation_order = self._baseline_action_set_descend_invocation_order + 5
-        self._action_set_AMR_commit_without_further_analysis.descend_invocation_order = (
-            self._baseline_action_set_descend_invocation_order + 5
-        )
 
         self._action_set_initial_conditions.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order + 1
@@ -912,7 +900,7 @@ We use RK("""
         step.add_action_set(self._action_set_postprocess_solution)
 
 
-    def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
+    def add_actions_to_create_grid(self, step):
         """
         @todo:
          The boundary information is set only once. It is therefore important that
@@ -920,10 +908,7 @@ We use RK("""
         """
         step.add_action_set(self._action_set_update_face_label)
         step.add_action_set(self._action_set_update_cell_label)
-        if evaluate_refinement_criterion:
-            step.add_action_set(self._action_set_AMR_throughout_grid_construction)
-        else:
-            step.add_action_set(self._action_set_AMR_commit_without_further_analysis)
+        step.add_action_set(self._action_set_AMR_throughout_grid_construction)
 
     def add_actions_to_plot_solution(self, step, output_path):
         """!
@@ -1211,6 +1196,8 @@ We use RK("""
 
     def get_solver_statistics_metadata(self):
         return [
+            ("Unknowns", self._variable_shortcuts.unknowns),
+            ("Auxiliary Variables", self._variable_shortcuts.auxiliary_variables),
             ("DG-Order", self._basis.order),
             ("RK-Order", self._rk_order),
         ]

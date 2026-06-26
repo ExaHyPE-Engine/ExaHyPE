@@ -68,7 +68,7 @@ project = exahype2.Project(
     dimensions=scenario._dimensions,
     size=[scenario._domain_size for _ in range(3)],
     offset=[scenario._offset for _ in range(3)],
-    periodic_BC=[scenario._periodic_bc for _ in range(3)],
+    periodic_bc=[scenario._periodic_bc for _ in range(3)],
     executable=scenario.__class__.__name__,
     min_end_time=end_time,
     max_end_time=end_time,
@@ -159,5 +159,4 @@ limiter = StaticCoupling(
 )
 project.add_solver(limiter)
 
-project = project.generate_Peano4_project()
 project.generate_and_build()

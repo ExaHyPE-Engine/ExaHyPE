@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ParticleInterpolation.h"
+
 #include "peano4/datamanagement/CellMarker.h"
 #include "tarch/la/Vector.h"
 
@@ -8,7 +9,6 @@ namespace exahype2 {
   namespace fv {
     namespace particles {
       namespace projection {
-
         void depositMass_PiecewiseConstant(
           const peano4::datamanagement::CellMarker& marker,
           int                                       voxelsPerAxis,
