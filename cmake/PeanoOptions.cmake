@@ -150,14 +150,12 @@ macro(peano_resolve_gpu_backend)
     message(FATAL_ERROR "Invalid PEANO_WITH_GPU_BACKEND='${PEANO_WITH_GPU_BACKEND}'. Expected none, native, kokkos, acpp or ompt.")
   endif()
 
-  if(NOT _peano_gpu_backend STREQUAL "no")
-    if(NOT PEANO_WITH_GPU_ARCH OR PEANO_WITH_GPU_ARCH STREQUAL "none")
-      message(FATAL_ERROR "PEANO_WITH_GPU_BACKEND='${PEANO_WITH_GPU_BACKEND}' requires PEANO_WITH_GPU_ARCH to be set (sm_*, gfx* or spir64).")
-    endif()
-  elseif(PEANO_WITH_GPU_ARCH AND NOT PEANO_WITH_GPU_ARCH STREQUAL "none")
+  if(_peano_gpu_backend STREQUAL "no" AND PEANO_WITH_GPU_ARCH AND NOT PEANO_WITH_GPU_ARCH STREQUAL "none")
     message(WARNING "PEANO_WITH_GPU_ARCH='${PEANO_WITH_GPU_ARCH}' is set but PEANO_WITH_GPU_BACKEND is 'none'; the GPU architecture is ignored.")
   endif()
 
+  # ccache via the launch-* wrappers does not compose with acpp's syclcc driver or the kokkos
+  # build, so disable it for both and use the plain compiler.
   if(PEANO_WITH_GPU_BACKEND STREQUAL "acpp" OR PEANO_WITH_GPU_BACKEND STREQUAL "kokkos")
     unset(CMAKE_C_COMPILER_LAUNCHER)
     unset(CMAKE_CXX_COMPILER_LAUNCHER)

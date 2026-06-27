@@ -1,0 +1,321 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#pragma once
+
+#include "tarch/accelerator/Range.h"
+#include "tarch/accelerator/Reducer.h"
+#include "tarch/accelerator/accelerator.h"
+#include "tarch/accelerator/ompt/ParallelFor.cpph"
+
+#if defined(PEANO_WITH_GPU_BACKEND_OMPT)
+
+namespace tarch::accelerator {
+  // OMPT cannot express a generic reducer through the `reduction(...)` clause, so it
+  // only supports Max/Min/Sum (one explicit overload set per reducer). Any new reducer
+  // added to Reducer.h needs a matching overload + clause here, or OMPT will not build.
+  //
+  // combine_op and the inner OmptTeam overloads run inside the outer `target` region,
+  // so they are wrapped in declare-target to be device-compilable. The inner overloads
+  // also `parallel for` over the team's threads, restoring the intra-patch parallelism
+  // the old per-backend `collapse(DIMENSIONS+1)` kernels had.
+  // NB: this nested `teams distribute` + `parallel for reduction` offload should be
+  // compile/perf-validated on the target OMPT toolchain.
+  TARGET_DECLARE
+  template <typename T>
+  inline T combine_op(Max<T>, T a, T b) {
+    return a > b ? a : b;
+  }
+  template <typename T>
+  inline T combine_op(Min<T>, T a, T b) {
+    return a < b ? a : b;
+  }
+  template <typename T>
+  inline T combine_op(Sum<T>, T a, T b) {
+    return a + b;
+  }
+
+  template <typename T, typename F>
+  inline void parallelReduce(const OmptTeam&, const Range& r, F f, Max<T> red) {
+    T local = Max<T>::identity();
+#pragma omp parallel for reduction(max : local)
+    for (int i = 0; i < r.n; ++i) {
+      f(i, local);
+    }
+    red.target = combine_op(red, red.target, local);
+  }
+  template <typename T, typename F>
+  inline void parallelReduce(const OmptTeam&, const Range& r, F f, Min<T> red) {
+    T local = Min<T>::identity();
+#pragma omp parallel for reduction(min : local)
+    for (int i = 0; i < r.n; ++i) {
+      f(i, local);
+    }
+    red.target = combine_op(red, red.target, local);
+  }
+  template <typename T, typename F>
+  inline void parallelReduce(const OmptTeam&, const Range& r, F f, Sum<T> red) {
+    T local = Sum<T>::identity();
+#pragma omp parallel for reduction(+ : local)
+    for (int i = 0; i < r.n; ++i) {
+      f(i, local);
+    }
+    red.target = combine_op(red, red.target, local);
+  }
+
+  template <typename T, typename F>
+  inline void parallelReduce(const OmptTeam&, const RangeMD<2>& r, F f, Max<T> red) {
+    T local = Max<T>::identity();
+#pragma omp parallel for collapse(2) reduction(max : local)
+    for (int x = 0; x < r.n[0]; ++x) {
+      for (int y = 0; y < r.n[1]; ++y) {
+        f(x, y, local);
+      }
+    }
+    red.target = combine_op(red, red.target, local);
+  }
+  template <typename T, typename F>
+  inline void parallelReduce(const OmptTeam&, const RangeMD<2>& r, F f, Min<T> red) {
+    T local = Min<T>::identity();
+#pragma omp parallel for collapse(2) reduction(min : local)
+    for (int x = 0; x < r.n[0]; ++x) {
+      for (int y = 0; y < r.n[1]; ++y) {
+        f(x, y, local);
+      }
+    }
+    red.target = combine_op(red, red.target, local);
+  }
+  template <typename T, typename F>
+  inline void parallelReduce(const OmptTeam&, const RangeMD<2>& r, F f, Sum<T> red) {
+    T local = Sum<T>::identity();
+#pragma omp parallel for collapse(2) reduction(+ : local)
+    for (int x = 0; x < r.n[0]; ++x) {
+      for (int y = 0; y < r.n[1]; ++y) {
+        f(x, y, local);
+      }
+    }
+    red.target = combine_op(red, red.target, local);
+  }
+
+  template <typename T, typename F>
+  inline void parallelReduce(const OmptTeam&, const RangeMD<3>& r, F f, Max<T> red) {
+    T local = Max<T>::identity();
+#pragma omp parallel for collapse(3) reduction(max : local)
+    for (int x = 0; x < r.n[0]; ++x) {
+      for (int y = 0; y < r.n[1]; ++y) {
+        for (int z = 0; z < r.n[2]; ++z) {
+          f(x, y, z, local);
+        }
+      }
+    }
+    red.target = combine_op(red, red.target, local);
+  }
+  template <typename T, typename F>
+  inline void parallelReduce(const OmptTeam&, const RangeMD<3>& r, F f, Min<T> red) {
+    T local = Min<T>::identity();
+#pragma omp parallel for collapse(3) reduction(min : local)
+    for (int x = 0; x < r.n[0]; ++x) {
+      for (int y = 0; y < r.n[1]; ++y) {
+        for (int z = 0; z < r.n[2]; ++z) {
+          f(x, y, z, local);
+        }
+      }
+    }
+    red.target = combine_op(red, red.target, local);
+  }
+  template <typename T, typename F>
+  inline void parallelReduce(const OmptTeam&, const RangeMD<3>& r, F f, Sum<T> red) {
+    T local = Sum<T>::identity();
+#pragma omp parallel for collapse(3) reduction(+ : local)
+    for (int x = 0; x < r.n[0]; ++x) {
+      for (int y = 0; y < r.n[1]; ++y) {
+        for (int z = 0; z < r.n[2]; ++z) {
+          f(x, y, z, local);
+        }
+      }
+    }
+    red.target = combine_op(red, red.target, local);
+  }
+  TARGET_DECLARE_END
+} // namespace tarch::accelerator
+
+namespace tarch {
+  template <typename T, typename F>
+  inline void parallelReduce(const Range& r, F f, Max<T> red) {
+    if (r.n <= 0) {
+      return;
+    }
+    T         acc    = Max<T>::identity();
+    const int device = accelerator::getCurrentDevice();
+#pragma omp target teams distribute parallel for reduction(max : acc) device(device)
+    for (int i = 0; i < r.n; ++i) {
+      f(i, acc);
+    }
+    red.target = accelerator::combine_op(red, red.target, acc);
+  }
+  template <typename T, typename F>
+  inline void parallelReduce(const Range& r, F f, Min<T> red) {
+    if (r.n <= 0) {
+      return;
+    }
+    T         acc    = Min<T>::identity();
+    const int device = accelerator::getCurrentDevice();
+#pragma omp target teams distribute parallel for reduction(min : acc) device(device)
+    for (int i = 0; i < r.n; ++i) {
+      f(i, acc);
+    }
+    red.target = accelerator::combine_op(red, red.target, acc);
+  }
+  template <typename T, typename F>
+  inline void parallelReduce(const Range& r, F f, Sum<T> red) {
+    if (r.n <= 0) {
+      return;
+    }
+    T         acc    = Sum<T>::identity();
+    const int device = accelerator::getCurrentDevice();
+#pragma omp target teams distribute parallel for reduction(+ : acc) device(device)
+    for (int i = 0; i < r.n; ++i) {
+      f(i, acc);
+    }
+    red.target = accelerator::combine_op(red, red.target, acc);
+  }
+
+  template <typename T, typename F>
+  inline void parallelReduce(const RangeMD<2>& r, F f, Max<T> red) {
+    if (r.n[0] <= 0 || r.n[1] <= 0) {
+      return;
+    }
+    T         acc    = Max<T>::identity();
+    const int device = accelerator::getCurrentDevice();
+#pragma omp target teams distribute parallel for collapse(2) reduction(max : acc) device(device)
+    for (int x = 0; x < r.n[0]; ++x) {
+      for (int y = 0; y < r.n[1]; ++y) {
+        f(x, y, acc);
+      }
+    }
+    red.target = accelerator::combine_op(red, red.target, acc);
+  }
+  template <typename T, typename F>
+  inline void parallelReduce(const RangeMD<2>& r, F f, Min<T> red) {
+    if (r.n[0] <= 0 || r.n[1] <= 0) {
+      return;
+    }
+    T         acc    = Min<T>::identity();
+    const int device = accelerator::getCurrentDevice();
+#pragma omp target teams distribute parallel for collapse(2) reduction(min : acc) device(device)
+    for (int x = 0; x < r.n[0]; ++x) {
+      for (int y = 0; y < r.n[1]; ++y) {
+        f(x, y, acc);
+      }
+    }
+    red.target = accelerator::combine_op(red, red.target, acc);
+  }
+  template <typename T, typename F>
+  inline void parallelReduce(const RangeMD<2>& r, F f, Sum<T> red) {
+    if (r.n[0] <= 0 || r.n[1] <= 0) {
+      return;
+    }
+    T         acc    = Sum<T>::identity();
+    const int device = accelerator::getCurrentDevice();
+#pragma omp target teams distribute parallel for collapse(2) reduction(+ : acc) device(device)
+    for (int x = 0; x < r.n[0]; ++x) {
+      for (int y = 0; y < r.n[1]; ++y) {
+        f(x, y, acc);
+      }
+    }
+    red.target = accelerator::combine_op(red, red.target, acc);
+  }
+
+  template <typename T, typename F>
+  inline void parallelReduce(const RangeMD<3>& r, F f, Max<T> red) {
+    if (r.n[0] <= 0 || r.n[1] <= 0 || r.n[2] <= 0) {
+      return;
+    }
+    T         acc    = Max<T>::identity();
+    const int device = accelerator::getCurrentDevice();
+#pragma omp target teams distribute parallel for collapse(3) reduction(max : acc) device(device)
+    for (int x = 0; x < r.n[0]; ++x) {
+      for (int y = 0; y < r.n[1]; ++y) {
+        for (int z = 0; z < r.n[2]; ++z) {
+          f(x, y, z, acc);
+        }
+      }
+    }
+    red.target = accelerator::combine_op(red, red.target, acc);
+  }
+  template <typename T, typename F>
+  inline void parallelReduce(const RangeMD<3>& r, F f, Min<T> red) {
+    if (r.n[0] <= 0 || r.n[1] <= 0 || r.n[2] <= 0) {
+      return;
+    }
+    T         acc    = Min<T>::identity();
+    const int device = accelerator::getCurrentDevice();
+#pragma omp target teams distribute parallel for collapse(3) reduction(min : acc) device(device)
+    for (int x = 0; x < r.n[0]; ++x) {
+      for (int y = 0; y < r.n[1]; ++y) {
+        for (int z = 0; z < r.n[2]; ++z) {
+          f(x, y, z, acc);
+        }
+      }
+    }
+    red.target = accelerator::combine_op(red, red.target, acc);
+  }
+  template <typename T, typename F>
+  inline void parallelReduce(const RangeMD<3>& r, F f, Sum<T> red) {
+    if (r.n[0] <= 0 || r.n[1] <= 0 || r.n[2] <= 0) {
+      return;
+    }
+    T         acc    = Sum<T>::identity();
+    const int device = accelerator::getCurrentDevice();
+#pragma omp target teams distribute parallel for collapse(3) reduction(+ : acc) device(device)
+    for (int x = 0; x < r.n[0]; ++x) {
+      for (int y = 0; y < r.n[1]; ++y) {
+        for (int z = 0; z < r.n[2]; ++z) {
+          f(x, y, z, acc);
+        }
+      }
+    }
+    red.target = accelerator::combine_op(red, red.target, acc);
+  }
+
+  template <typename T, typename F>
+  inline void parallelReduce(const TeamRange& r, F f, Max<T> red) {
+    if (r.n <= 0) {
+      return;
+    }
+    T         acc    = Max<T>::identity();
+    const int device = accelerator::getCurrentDevice();
+#pragma omp target teams distribute reduction(max : acc) device(device)
+    for (int i = 0; i < r.n; ++i) {
+      f(i, accelerator::OmptTeam{}, acc);
+    }
+    red.target = accelerator::combine_op(red, red.target, acc);
+  }
+  template <typename T, typename F>
+  inline void parallelReduce(const TeamRange& r, F f, Min<T> red) {
+    if (r.n <= 0) {
+      return;
+    }
+    T         acc    = Min<T>::identity();
+    const int device = accelerator::getCurrentDevice();
+#pragma omp target teams distribute reduction(min : acc) device(device)
+    for (int i = 0; i < r.n; ++i) {
+      f(i, accelerator::OmptTeam{}, acc);
+    }
+    red.target = accelerator::combine_op(red, red.target, acc);
+  }
+  template <typename T, typename F>
+  inline void parallelReduce(const TeamRange& r, F f, Sum<T> red) {
+    if (r.n <= 0) {
+      return;
+    }
+    T         acc    = Sum<T>::identity();
+    const int device = accelerator::getCurrentDevice();
+#pragma omp target teams distribute reduction(+ : acc) device(device)
+    for (int i = 0; i < r.n; ++i) {
+      f(i, accelerator::OmptTeam{}, acc);
+    }
+    red.target = accelerator::combine_op(red, red.target, acc);
+  }
+} // namespace tarch
+
+#endif // defined(PEANO_WITH_GPU_BACKEND_OMPT)

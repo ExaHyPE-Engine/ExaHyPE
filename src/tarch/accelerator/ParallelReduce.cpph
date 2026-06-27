@@ -1,0 +1,127 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#pragma once
+
+#include "tarch/accelerator/ParallelRegion.h"
+#include "tarch/accelerator/Reducer.h"
+
+namespace tarch::accelerator {
+  template <typename T>
+  inline void combine(Max<T>, T& acc, T val) {
+    acc = (val > acc) ? val : acc;
+  }
+  template <typename T>
+  inline void combine(Min<T>, T& acc, T val) {
+    acc = (val < acc) ? val : acc;
+  }
+  template <typename T>
+  inline void combine(Sum<T>, T& acc, T val) {
+    acc = acc + val;
+  }
+
+  template <typename Reducer, typename F>
+  inline void parallelReduce(const CpuTeam&, const Range& r, F f, Reducer red) {
+    using T = typename Reducer::value_type;
+    T local = Reducer::identity();
+    for (int i = 0; i < r.n; ++i) {
+      f(i, local);
+    }
+    combine(red, red.target, local);
+  }
+  template <typename Reducer, typename F>
+  inline void parallelReduce(const CpuTeam&, const RangeMD<2>& r, F f, Reducer red) {
+    using T = typename Reducer::value_type;
+    T local = Reducer::identity();
+    for (int x = 0; x < r.n[0]; ++x) {
+      for (int y = 0; y < r.n[1]; ++y) {
+        f(x, y, local);
+      }
+    }
+    combine(red, red.target, local);
+  }
+  template <typename Reducer, typename F>
+  inline void parallelReduce(const CpuTeam&, const RangeMD<3>& r, F f, Reducer red) {
+    using T = typename Reducer::value_type;
+    T local = Reducer::identity();
+    for (int x = 0; x < r.n[0]; ++x) {
+      for (int y = 0; y < r.n[1]; ++y) {
+        for (int z = 0; z < r.n[2]; ++z) {
+          f(x, y, z, local);
+        }
+      }
+    }
+    combine(red, red.target, local);
+  }
+} // namespace tarch::accelerator
+
+namespace tarch {
+  template <typename Reducer, typename F>
+  inline void parallelReduce(const Range& r, F f, Reducer red) {
+    using T = typename Reducer::value_type;
+    accelerator::run_in_parallel_region([&]() {
+      T local = Reducer::identity();
+#pragma omp for schedule(static) nowait
+      for (int i = 0; i < r.n; ++i) {
+        f(i, local);
+      }
+#pragma omp critical(tarch_parallelReduce_merge)
+      {
+        accelerator::combine(red, red.target, local);
+      }
+    });
+  }
+
+  template <typename Reducer, typename F>
+  inline void parallelReduce(const RangeMD<2>& r, F f, Reducer red) {
+    using T = typename Reducer::value_type;
+    accelerator::run_in_parallel_region([&]() {
+      T local = Reducer::identity();
+#pragma omp for collapse(2) schedule(static) nowait
+      for (int x = 0; x < r.n[0]; ++x) {
+        for (int y = 0; y < r.n[1]; ++y) {
+          f(x, y, local);
+        }
+      }
+#pragma omp critical(tarch_parallelReduce_merge)
+      {
+        accelerator::combine(red, red.target, local);
+      }
+    });
+  }
+
+  template <typename Reducer, typename F>
+  inline void parallelReduce(const RangeMD<3>& r, F f, Reducer red) {
+    using T = typename Reducer::value_type;
+    accelerator::run_in_parallel_region([&]() {
+      T local = Reducer::identity();
+#pragma omp for collapse(3) schedule(static) nowait
+      for (int x = 0; x < r.n[0]; ++x) {
+        for (int y = 0; y < r.n[1]; ++y) {
+          for (int z = 0; z < r.n[2]; ++z) {
+            f(x, y, z, local);
+          }
+        }
+      }
+#pragma omp critical(tarch_parallelReduce_merge)
+      {
+        accelerator::combine(red, red.target, local);
+      }
+    });
+  }
+
+  template <typename Reducer, typename F>
+  inline void parallelReduce(const TeamRange& r, F f, Reducer red) {
+    using T = typename Reducer::value_type;
+    accelerator::run_in_parallel_region([&]() {
+      T local = Reducer::identity();
+#pragma omp for schedule(static) nowait
+      for (int i = 0; i < r.n; ++i) {
+        f(i, accelerator::CpuTeam{}, local);
+      }
+#pragma omp critical(tarch_parallelReduce_merge)
+      {
+        accelerator::combine(red, red.target, local);
+      }
+    });
+  }
+} // namespace tarch

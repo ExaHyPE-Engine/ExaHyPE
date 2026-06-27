@@ -15,6 +15,11 @@ namespace tarch::accelerator {
 
   void        deviceStreamSet(hipStream_t);
   hipStream_t deviceStreamGet();
+
+  struct HipTeam {};
+  using TeamHandle = HipTeam;
+
+  inline constexpr int kHipBlockSize = 256;
 } // namespace tarch::accelerator
 
 #endif

@@ -23,7 +23,7 @@
 #include "tarch/plotter/AMRPlotter.h"
 #include "tarch/plotter/HDF5FileWriter.h"
 #include "tarch/plotter/XDMFTimeSeriesWriter.h"
-#include "tarch/tarch.h"
+#include "tarch/MemoryUsage.h"
 #include "toolbox/blockstructured/Interpolation.h"
 #include "toolbox/blockstructured/Projection.h"
 #include "toolbox/blockstructured/Restriction.h"

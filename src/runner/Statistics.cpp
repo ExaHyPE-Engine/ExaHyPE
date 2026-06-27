@@ -11,7 +11,7 @@
 #include "tarch/instrumentation/Info.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/Core.h"
-#include "tarch/tarch.h"
+#include "tarch/MemoryUsage.h"
 
 #include <algorithm>
 #include <cmath>

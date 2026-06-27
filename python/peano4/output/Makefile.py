@@ -79,6 +79,9 @@ class Makefile(object):
         self.generated_hfiles = []
         self.generated_cppfiles = []
         self.generated_fortranfiles = []
+        # Generated sources holding GPU kernels, compiled with the GPU language (CUDA/HIP). The
+        # kernel generators flag these via add_cpp_file(..., is_gpu_kernel=True).
+        self.generated_gpu_cppfiles = []
 
     def set_dimension(self, dimension):
         self.d["DIMENSIONS"] = str(dimension)
@@ -244,7 +247,7 @@ class Makefile(object):
         if filename in self.hfiles:
             self.hfiles.remove(filename)
 
-    def add_cpp_file(self, filename, generated=False):
+    def add_cpp_file(self, filename, generated=False, is_gpu_kernel=False):
         """
         Add a new cpp filename. This is basically a set implementation, i.e., you can
         add files multiple times, but they are not inserted multiple times. This
@@ -278,6 +281,10 @@ class Makefile(object):
                 # But we never delete a non-generated file.
                 if self.generated_cppfiles.count(filename) > 0:
                     self.generated_cppfiles.remove(filename)
+
+        # Record GPU kernels so the generated CMakeLists can pass the list to peano_enable_gpu_language().
+        if is_gpu_kernel and self.generated_gpu_cppfiles.count(filename) == 0:
+            self.generated_gpu_cppfiles.append(filename)
 
     def remove_cpp_file(self, filename):
         if filename in self.generated_cppfiles:
@@ -342,6 +349,7 @@ class Makefile(object):
         self.d["GENERATED_H_HEADERS"] = [prefix + f for f in self.generated_hfiles]
         self.d["GENERATED_CXX_SOURCES"] = [prefix + f for f in self.generated_cppfiles]
         self.d["GENERATED_FORTRAN_SOURCES"] = [prefix + f for f in self.generated_fortranfiles]
+        self.d["GENERATED_GPU_SOURCES"] = [prefix + f for f in self.generated_gpu_cppfiles]
         self.d["GENERATED_COMPILE_DEFINITIONS"] = self._unique(
             self.d["COMPILE_DEFINITIONS"]
         )

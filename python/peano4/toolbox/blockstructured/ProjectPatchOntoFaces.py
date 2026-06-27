@@ -9,6 +9,7 @@ from peano4.solversteps.ActionSet import ActionSet
 
 class ProjectPatchOntoFaces(ActionSet):
     """!
+
     This class assumes that you have NxNxN patch within your block. It also
     assumes that you have an 2MxNxN patch on your faces. M<N. The code interprets
     these face-associated data as overlap with the patch, hooks into
@@ -29,15 +30,14 @@ class ProjectPatchOntoFaces(ActionSet):
         add_assertions=True,
     ):
         """!
+
         patch: peano4.datamodel.Patch
             This is the input data structure, i.e. the patch from which we extract the boundary data
 
         patch_overlap: peano4.datamodel.Patch
             Consult remark above about how the dimensions of this overlap patch have to match
         """
-        super(ProjectPatchOntoFaces, self).__init__(
-            descend_invocation_order=1
-        )
+        super(ProjectPatchOntoFaces, self).__init__(descend_invocation_order=1)
 
         assert patch_overlap.dim[0] % 2 == 0
         assert patch.dim[0] == patch.dim[1]
@@ -159,9 +159,7 @@ class ProjectPatchOntoFaces(ActionSet):
             headfile_template=kernels_templates_prefix
             + "/ProjectPatchFused.template.h",
             cppfile_template=kernels_templates_prefix
-            + "/ProjectPatchFused"
-            + (f".{d['GPU']}" if d["GPU"] != "no" else "")
-            + ".template.cpp",
+            + "/ProjectPatchFused.template.cpp",
             classname=kernels_output_path + "/ProjectPatchFused",
             namespace=kernels_namespace,
             subdirectory=".",
@@ -173,5 +171,5 @@ class ProjectPatchOntoFaces(ActionSet):
             kernels_output_path + "/ProjectPatchFused.h", generated=True
         )
         output.makefile.add_cpp_file(
-            kernels_output_path + "/ProjectPatchFused.cpp", generated=True
+            kernels_output_path + "/ProjectPatchFused.cpp", generated=True, is_gpu_kernel=True
         )

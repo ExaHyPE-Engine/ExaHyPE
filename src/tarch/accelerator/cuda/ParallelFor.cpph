@@ -1,0 +1,103 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#pragma once
+
+#include "tarch/accelerator/Range.h"
+#include "tarch/accelerator/cuda/Device.h"
+#include "tarch/accelerator/cuda/ErrorCheck.h"
+
+#include <algorithm>
+#include <cuda_runtime.h>
+
+namespace tarch::accelerator {
+  template <typename F>
+  __global__ void flat_kernel_1d(F f, int n) {
+    const int idx    = blockIdx.x * blockDim.x + threadIdx.x;
+    const int stride = gridDim.x * blockDim.x;
+    for (int i = idx; i < n; i += stride) {
+      f(i);
+    }
+  }
+
+  template <typename F>
+  __global__ void team_kernel(F f) {
+    f(static_cast<int>(blockIdx.x), CudaTeam{});
+  }
+
+  template <typename F>
+  __device__ inline void parallelFor(const CudaTeam&, const Range& r, F f) {
+    for (int i = threadIdx.x; i < r.n; i += blockDim.x) {
+      f(i);
+    }
+  }
+  template <typename F>
+  __device__ inline void parallelFor(const CudaTeam&, const RangeMD<2>& r, F f) {
+    const int total = r.n[0] * r.n[1];
+    const int n1    = r.n[1];
+    for (int idx = threadIdx.x; idx < total; idx += blockDim.x) {
+      const int x = idx / n1;
+      const int y = idx % n1;
+      f(x, y);
+    }
+  }
+  template <typename F>
+  __device__ inline void parallelFor(const CudaTeam&, const RangeMD<3>& r, F f) {
+    const int total = r.n[0] * r.n[1] * r.n[2];
+    const int n1    = r.n[1];
+    const int n2    = r.n[2];
+    for (int idx = threadIdx.x; idx < total; idx += blockDim.x) {
+      const int x = idx / (n1 * n2);
+      const int y = (idx / n2) % n1;
+      const int z = idx % n2;
+      f(x, y, z);
+    }
+  }
+} // namespace tarch::accelerator
+
+namespace tarch {
+  template <typename F>
+  inline void parallelFor(const Range& r, F f) {
+    if (r.n <= 0) {
+      return;
+    }
+    CHECK_CUDA_ERROR(cudaSetDevice(accelerator::getCurrentDevice()));
+    int blocks = (r.n + accelerator::kCudaBlockSize - 1) / accelerator::kCudaBlockSize;
+    blocks     = std::min(blocks, 65535);
+    accelerator::flat_kernel_1d<<<blocks, accelerator::kCudaBlockSize, 0, accelerator::deviceStreamGet()>>>(f, r.n);
+    CHECK_CUDA_ERROR(cudaStreamSynchronize(accelerator::deviceStreamGet()));
+  }
+
+  template <typename F>
+  inline void parallelFor(const RangeMD<2>& r, F f) {
+    const int total = r.n[0] * r.n[1];
+    const int n1    = r.n[1];
+    parallelFor(Range(total), [=] __device__(int idx) {
+      const int x = idx / n1;
+      const int y = idx % n1;
+      f(x, y);
+    });
+  }
+
+  template <typename F>
+  inline void parallelFor(const RangeMD<3>& r, F f) {
+    const int total = r.n[0] * r.n[1] * r.n[2];
+    const int n1    = r.n[1];
+    const int n2    = r.n[2];
+    parallelFor(Range(total), [=] __device__(int idx) {
+      const int x = idx / (n1 * n2);
+      const int y = (idx / n2) % n1;
+      const int z = idx % n2;
+      f(x, y, z);
+    });
+  }
+
+  template <typename F>
+  inline void parallelFor(const TeamRange& r, F f) {
+    if (r.n <= 0) {
+      return;
+    }
+    CHECK_CUDA_ERROR(cudaSetDevice(accelerator::getCurrentDevice()));
+    accelerator::team_kernel<<<r.n, accelerator::kCudaBlockSize, 0, accelerator::deviceStreamGet()>>>(f);
+    CHECK_CUDA_ERROR(cudaStreamSynchronize(accelerator::deviceStreamGet()));
+  }
+} // namespace tarch

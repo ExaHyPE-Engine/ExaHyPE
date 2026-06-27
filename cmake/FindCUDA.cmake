@@ -15,6 +15,8 @@ if(TARGET PeanoOptions)
     $<$<COMPILE_LANGUAGE:CUDA>:-gencode arch=compute_${CMAKE_CUDA_ARCHITECTURES},code=sm_${CMAKE_CUDA_ARCHITECTURES}>
     $<$<COMPILE_LANGUAGE:CUDA>:-Wno-gnu-line-marker>
     $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-Wno-gnu-line-marker>
+    $<$<COMPILE_LANGUAGE:CUDA>:--extended-lambda>
+    $<$<COMPILE_LANGUAGE:CUDA>:--expt-relaxed-constexpr>
   )
   target_compile_features(PeanoOptions INTERFACE cuda_std_17)
   target_compile_definitions(PeanoOptions INTERFACE PEANO_WITH_GPU_BACKEND_CUDA PEANO_WITH_GPU_BACKEND)

@@ -1,0 +1,94 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#pragma once
+
+#include "tarch/accelerator/Range.h"
+#include "tarch/accelerator/Reducer.h"
+#include "tarch/accelerator/kokkos/Device.h"
+
+namespace tarch::accelerator {
+  namespace internal {
+    // Named functors instead of in-place [=] __device__ lambdas: nvcc/hipcc reject an
+    // extended lambda inside the __host__ __device__ team overloads below when F is a
+    // type local to a function (the caller's functor always is). A functor with a
+    // KOKKOS_INLINE_FUNCTION operator() carries no such restriction.
+    template <typename F>
+    struct TeamFor1D {
+      F                           f;
+      KOKKOS_INLINE_FUNCTION void operator()(const int i) const { f(i); }
+    };
+
+    template <typename F>
+    struct TeamFor2D {
+      F                           f;
+      int                         n1;
+      KOKKOS_INLINE_FUNCTION void operator()(const int idx) const { f(idx / n1, idx % n1); }
+    };
+
+    template <typename F>
+    struct TeamFor3D {
+      F                           f;
+      int                         n1;
+      int                         n2;
+      KOKKOS_INLINE_FUNCTION void operator()(const int idx) const { f(idx / (n1 * n2), (idx / n2) % n1, idx % n2); }
+    };
+  } // namespace internal
+
+  template <typename F>
+  KOKKOS_INLINE_FUNCTION void parallelFor(const KokkosTeam& team, const Range& r, F f) {
+    Kokkos::parallel_for(Kokkos::TeamVectorRange(team.m, r.n), internal::TeamFor1D<F>{f});
+  }
+
+  template <typename F>
+  KOKKOS_INLINE_FUNCTION void parallelFor(const KokkosTeam& team, const RangeMD<2>& r, F f) {
+    const int total = r.n[0] * r.n[1];
+    Kokkos::parallel_for(Kokkos::TeamVectorRange(team.m, total), internal::TeamFor2D<F>{f, r.n[1]});
+  }
+
+  template <typename F>
+  KOKKOS_INLINE_FUNCTION void parallelFor(const KokkosTeam& team, const RangeMD<3>& r, F f) {
+    const int total = r.n[0] * r.n[1] * r.n[2];
+    Kokkos::parallel_for(Kokkos::TeamVectorRange(team.m, total), internal::TeamFor3D<F>{f, r.n[1], r.n[2]});
+  }
+} // namespace tarch::accelerator
+
+namespace tarch {
+  // Kokkos::parallel_for is asynchronous for device execution spaces, so every host
+  // overload fences before returning. This matches the completion guarantee callers
+  // rely on (e.g. reading the output patch/face pool right after the kernel). The
+  // parallelReduce overloads need no fence: reducing into a host scalar is blocking.
+  template <typename F>
+  inline void parallelFor(const Range& r, F f) {
+    Kokkos::parallel_for(Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(0, r.n), KOKKOS_LAMBDA(const int i) {
+      f(i);
+    });
+    Kokkos::fence();
+  }
+
+  template <typename F>
+  inline void parallelFor(const RangeMD<2>& r, F f) {
+    Kokkos::parallel_for(
+      Kokkos::MDRangePolicy<Kokkos::DefaultExecutionSpace, Kokkos::Rank<2>>({0, 0}, {r.n[0], r.n[1]}),
+      KOKKOS_LAMBDA(const int x, const int y) { f(x, y); }
+    );
+    Kokkos::fence();
+  }
+
+  template <typename F>
+  inline void parallelFor(const RangeMD<3>& r, F f) {
+    Kokkos::parallel_for(
+      Kokkos::MDRangePolicy<Kokkos::DefaultExecutionSpace, Kokkos::Rank<3>>({0, 0, 0}, {r.n[0], r.n[1], r.n[2]}),
+      KOKKOS_LAMBDA(const int x, const int y, const int z) { f(x, y, z); }
+    );
+    Kokkos::fence();
+  }
+
+  template <typename F>
+  inline void parallelFor(const TeamRange& r, F f) {
+    Kokkos::TeamPolicy<Kokkos::DefaultExecutionSpace> policy(r.n, Kokkos::AUTO);
+    Kokkos::parallel_for(policy, KOKKOS_LAMBDA(const accelerator::KokkosTeam::member_type& team) {
+      f(team.league_rank(), accelerator::KokkosTeam{team});
+    });
+    Kokkos::fence();
+  }
+} // namespace tarch

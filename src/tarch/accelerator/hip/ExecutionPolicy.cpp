@@ -4,7 +4,7 @@
 
 #if defined(PEANO_WITH_GPU_BACKEND_HIP)
 
-tarch::accelerator::hip::ExecutionPolicy::ExecutionPolicy():
+tarch::accelerator::hip::ExecutionPolicy::ExecutionPolicy() :
   _state(Automatic),
   _gridSize(0),
   _blockSize(0),
@@ -12,28 +12,30 @@ tarch::accelerator::hip::ExecutionPolicy::ExecutionPolicy():
   _sharedMemBytes(0),
   _stream(nullptr) {}
 
-tarch::accelerator::hip::ExecutionPolicy::ExecutionPolicy(int gridSize, int blockSize, std::size_t sharedMemBytes):
+tarch::accelerator::hip::ExecutionPolicy::ExecutionPolicy(int gridSize, int blockSize, std::size_t sharedMemBytes) :
   _state(0),
   _gridSize(0),
   _blockSize(0),
   _maxBlockSize(0),
   _sharedMemBytes(0),
   _stream(nullptr) {
-
   setGridSize(gridSize);
   setBlockSize(blockSize);
   setSharedMemBytes(sharedMemBytes);
 }
 
-tarch::accelerator::hip::ExecutionPolicy::
-  ExecutionPolicy(int gridSize, int blockSize, std::size_t sharedMemBytes, hipStream_t stream):
+tarch::accelerator::hip::ExecutionPolicy::ExecutionPolicy(
+  int         gridSize,
+  int         blockSize,
+  std::size_t sharedMemBytes,
+  hipStream_t stream
+) :
   _state(0),
   _gridSize(0),
   _blockSize(0),
   _maxBlockSize(0),
   _sharedMemBytes(0),
   _stream(nullptr) {
-
   setGridSize(gridSize);
   setBlockSize(blockSize);
   setSharedMemBytes(sharedMemBytes);

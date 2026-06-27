@@ -8,7 +8,7 @@
 #include "tarch/mpi/Rank.h"
 #include "tarch/mpi/mpi.h"
 #include "tarch/services/ServiceRepository.h"
-#include "tarch/tarch.h"
+#include "tarch/MemoryUsage.h"
 
 #include <cstring>
 #include <limits>

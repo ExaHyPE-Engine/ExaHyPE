@@ -10,7 +10,7 @@ struct tarch::la::Vector<3, Scalar> {
 
   INLINE_METHOD GPU_CALLABLE_METHOD Vector(const Scalar* values);
 
-  INLINE_METHOD
+  INLINE_METHOD GPU_CALLABLE_METHOD
   Vector(std::initializer_list<Scalar> values);
 
   INLINE_METHOD

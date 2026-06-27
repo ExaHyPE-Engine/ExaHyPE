@@ -77,6 +77,12 @@ list(APPEND GENERATED_FORTRAN_SOURCES
 {% endfor %}
 )
 
+list(APPEND GENERATED_GPU_SOURCES
+{% for item in GENERATED_GPU_SOURCES %}
+  "{{item}}"
+{% endfor %}
+)
+
 list(APPEND GENERATED_COMPILE_DEFINITIONS
 {% for item in GENERATED_COMPILE_DEFINITIONS %}
   "{{ item }}"
@@ -115,13 +121,10 @@ if(NOT TARGET ${PEANO_RUNTIME_TARGET})
   message(FATAL_ERROR "Peano package does not provide ${PEANO_RUNTIME_TARGET}. Check that the core build includes mode {{MODE}} and dimension {{DIMENSIONS}}.")
 endif()
 
-# Enable the GPU compile language (if any) at directory scope before the target
-# is created. This must happen outside peano_add_target() so that the detected
-# GPU compiler identification survives until generate time.
+# Set the GPU language on the generated kernels (GENERATED_GPU_SOURCES) at directory scope before
+# the target is created, so the detected GPU compiler survives until generate time.
 peano_enable_gpu_language(
-  ${GENERATED_H_HEADERS}
-  ${GENERATED_CXX_SOURCES}
-  ${GENERATED_FORTRAN_SOURCES}
+  ${GENERATED_GPU_SOURCES}
 )
 
 peano_add_target(

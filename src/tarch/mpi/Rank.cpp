@@ -7,7 +7,7 @@
 #include "tarch/mpi/mpi.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/services/ServiceRepository.h"
-#include "tarch/tarch.h"
+#include "tarch/MemoryUsage.h"
 
 #include <chrono>
 #include <cstdlib>
