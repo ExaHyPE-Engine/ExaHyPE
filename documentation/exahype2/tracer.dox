@@ -7,11 +7,14 @@ ExaHyPE's tracers rely on Peano's particle and particle-in-dual-tree
 mechanism.
 They connect ExaHyPE with a completely
 different toolbox of Peano.
-To add tracer support for , you first have to reconfigure our run and
-add the
+The particles toolbox is always part of a Peano/ExaHyPE build, so no
+additional configuration step is required to enable tracer support: a
+standard CMake build already ships everything you need.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-./configure ... --enable-particles
+mkdir build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+make -j
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -63,7 +66,7 @@ project.add_action_set_to_initialisation( my_tracing )
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-Let `thesolver` be your  solver instance in the Python
+Let `thesolver` be your ExaHyPE solver instance in the Python
 script. Not all solvers currently support tracers (efficiently), but we
 are continuously improving the tracer support. With the solver instance
 and the tracers, we can couple the two ingredients. You have to pick
@@ -96,12 +99,9 @@ about this step.
 
 ## Dump tracer data into CSV database
 
-ExaHyPE's particle handling comes along with a set of standard postprocessing
-scripts.
-As we rely on this toolbox, you can use those scripts straightaway.
-They can be found in the directory
-peano4/toolbox/particles/postprocessing.
-To use it, you have to track data.
+ExaHyPE builds upon Peano's particle handling, so any tracer can store
+its tracked data in a database on the fly. To make use of this, you
+first have to track data.
 
 The likely most important tool for many developers using only few
 particles is the fact that particles can dump their solution into a
@@ -115,8 +115,8 @@ database:
       filename="Tracer-" + name,
       number_of_entries_between_two_db_flushes=5000,
       output_precision=10,
-      data_delta_between_two_snapsots=1e16,
-      time_delta_between_two_snapsots=0.01
+      data_delta_between_two_snapshots=1e16,
+      time_delta_between_two_snapshots=0.01
       ))
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -124,7 +124,7 @@ database:
 Dumping tracers into a (CSV) database is attractive, as these files are
 easier to parse/postprocess than mesh data files. At the same time, you
 only pass the relative file name here; the dump is written beneath the
-project/runtime output path.
+project/runtime output path. You
 can dump particles more often than you plot data snapshots, and these
 dumps can even be adaptive, i.e. you dump if and only if a particle
 actually moves. The exahype2.tracer.DumpTracerIntoDatabase documentation provides
@@ -151,16 +151,14 @@ The data format within the csv file is rather self-explaining.
 -   Each particle entry then enlists all the particle's data values at
     the time when we dump.
 
-As we rely on Peano's infrastructure, you can use the script
-python/peano4/toolbox/particles/postprocessing/convert.py to convert the output
-files or to produce seismograms, e.g.
 Please note that each rank potentially writes sequences of databases,
 i.e. whenever we dump a csv file, we clear the internal database. So
 when you visualise the data, you have to concatenate databases first.
-This is also explained in the underlying C++ class
-toolbox::particles::TrajectoryDatabase. As the convert.py script
-above does support multiple input files, the merge itself is already
-supported by premanufactured tools.
+This behaviour, and the column layout described above, is documented in
+detail in the underlying C++ class toolbox::particles::TrajectoryDatabase.
+As all snapshots share the same plain CSV layout, you can concatenate the
+per-rank/per-snapshot files with any standard CSV tooling before you plot
+or otherwise interpret the trajectories.
 
 
 ## Make tracers move
@@ -220,10 +218,7 @@ their Particle-in-Cell code.
 
 ### Encourage particles to spread out evenly
 
-
-@todo Requires update/revision
-
-You can make particles interact with eac other. This allows you, for
+You can make particles interact with each other. This allows you, for
 example, to realise some SPH on top of the code. One of the most
 convenient features is to encourage tracers to align in a quasi-uniform
 way, i.e. they do follow the solution characteristics but at the same
@@ -238,4 +233,3 @@ they are sorted into the mesh properly, and that they are exchanged
 between subpartitions via MPI and shared memory.
 
  */
- 

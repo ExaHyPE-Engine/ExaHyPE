@@ -37,7 +37,7 @@ As the toolbox is quite generic, it really only provides a very basic particle
 model where the particle hosts only the very essential parameters. The particle
 itself is modelled as a generated data class in Python within peano4.toolbox.particles.Particle.
 
-Extensions and user codes typically take this baselien data model and augment
+Extensions and user codes typically take this baseline data model and augment
 it with further attributes which carry the actual physics.
 
 

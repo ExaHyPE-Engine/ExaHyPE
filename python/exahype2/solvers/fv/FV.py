@@ -890,11 +890,15 @@ and additional AMR levels is configured by the executable at runtime.
         self._action_set_handle_boundary.generate_kernels(namespace, output, dimensions)
         self._action_set_project_patch_onto_faces.generate_kernels(namespace, output, dimensions)
 
+        # Assemble the template prefix in a local: mutating the attribute would
+        # double the class name when the generator runs a second time on the
+        # same solver object.
         if self._solver_template_file_class_name is None:
-            self._templatefile_prefix += self.__class__.__name__
+            templatefile_prefix = self._templatefile_prefix + self.__class__.__name__
         else:
-            self._templatefile_prefix += self._solver_template_file_class_name
-
+            templatefile_prefix = (
+                self._templatefile_prefix + self._solver_template_file_class_name
+            )
 
         d = {}
         self._init_dictionary_with_default_parameters(d)
@@ -902,10 +906,10 @@ and additional AMR levels is configured by the executable at runtime.
 
         self._variable_shortcuts.generate_shortcut_file(d, namespace, output)
 
-        header_file_abstr_template = self._templatefile_prefix + "Abstract.template.h"
-        cpp_file_abstr_template = self._templatefile_prefix + "Abstract.template.cpp"
-        header_file_template = self._templatefile_prefix + ".template.h"
-        cpp_file_template = self._templatefile_prefix + ".template.cpp"
+        header_file_abstr_template = templatefile_prefix + "Abstract.template.h"
+        cpp_file_abstr_template = templatefile_prefix + "Abstract.template.cpp"
+        header_file_template = templatefile_prefix + ".template.h"
+        cpp_file_template = templatefile_prefix + ".template.cpp"
 
         generated_abstract_header_file = (
             peano4.output.Jinja2TemplatedHeaderImplementationFilePair(

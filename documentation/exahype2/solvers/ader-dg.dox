@@ -12,7 +12,7 @@ consider dynamic AMR or local time stepping. This section discusses different
 ADER-DG implementation flavours. The flavours differ in the way they map the
 three core steps onto mesh traversals.
 
-@image html ADER-DG.png
+@image html documentation/exahype2/solvers/ADER-DG.png
 
 It is important to reiterate the data dependencies and to introduce some
 intermediate steps which are required to couple the core algorithmic steps:
@@ -41,7 +41,7 @@ adjacent cells of a cell or a face, and we have no control over the order of
 the traversal. We only know that it follows these top-down/bottom-up
 constraints.
 
-@image html spacetree.png
+@image html documentation/exahype2/solvers/spacetree.png
 
 ## Algorithmic blueprint of a two-sweep realisation
 
@@ -92,20 +92,22 @@ sets prior to the next grid sweep.
 
 In the context of adaptive meshes, it is important to take into account that
 
-- hanging faces are not persistent in-between two mesh traversals;
+- the hanging face *entity* is not persistent: the traversal automaton
+  recreates a hanging face on every mesh traversal, so we observe a
+  touchHangingFaceFirstTime/touchHangingFaceLastTime pair for it in each sweep;
+- the *data* attached to a hanging face is, however, retained across mesh
+  traversals, so a value projected onto a hanging face in one sweep is still
+  available in the next sweep;
 - we run through the spacetree in a top-down order.
 
 This is reflected by the @ref peano_action_sets "order of the events".
-Therefore, whenever we project a solution onto a hanging face in step (1), this
-information will be lost after this mesh traversal. We have to save it
-by moving the information from the face to the next coarser level.
 
-
-A straightforward implementation of ADER-DG for adaptive meshes hence commits
-to a ***solve Riemann problem only on persistent faces and project outcome onto
-hanging faces*** policy:
-
-TODO: This documentation is now outdated with the introduction of persistent hanging grid data
+Historically, before hanging grid data was made persistent, any solution
+projected onto a hanging face in step (1) was lost after the mesh traversal and
+had to be saved by moving the information from the face to the next coarser
+level. The original implementation therefore committed to a ***solve Riemann
+problem only on persistent faces and project outcome onto hanging faces***
+policy:
 
 1. Primary sweep
    - When a hanging face is destroyed, we project the valid half of the
@@ -117,7 +119,7 @@ TODO: This documentation is now outdated with the introduction of persistent han
    - Solve the Riemann problem on the persistent faces, i.e. over the
      restricted projected solutions.
    - Project the outcome of the Riemann solve into hanging faces within
-     createHangingFace. There's no need to solve the Riemann problem here
+     touchHangingFaceFirstTime. There's no need to solve the Riemann problem here
      once more, as we now have already the valid outcome and can make that
      one feed into the correction step.
 
@@ -128,15 +130,15 @@ two things: either the concatenation of the fine faces or solving the
 problem on the coarse face causes information to move too quickly,
 therefore forming important gradients that lead to instabilities.
 
-@image html ader-instability-00.png
-@image html ader-instability-01.png
+@image html documentation/exahype2/solvers/ader-instability-00.png
+@image html documentation/exahype2/solvers/ader-instability-01.png
 
 If we want to solve the Riemann problem on the fine (hanging) faces, we have to
 be very careful:
 
-- We do not know the order of the mesh travesal events. Notably, we cannot
+- We do not know the order of the mesh traversal events. Notably, we cannot
   assume that all adjacent cells of a hanging face have already been traversed
-  when we enounter destroyHangingFace, as one adjacent cell is coarser than
+  when we encounter touchHangingFaceLastTime, as one adjacent cell is coarser than
   the other face's cell. The solution is therefore in general not available.
   Hence, we cannot solve the Riemann problem in the primary sweep. It would
   also violate the validity of the realisation in a parallel environment.
@@ -145,7 +147,7 @@ be very careful:
   correction of the adjacent coarser cell. The correction can be moved into
   touchCellLastTime but we cannot guarantee whether the coarser adjacent cell
   has been traversed before (aka its touchCellLastTime has been called before)
-  or not becaue we do not know in which order the traversal automaton descends
+  or not because we do not know in which order the traversal automaton descends
   into the different branches of the spacetree. If it has been the cell could
   not make use of the solution in that grid traversal anymore.
 
@@ -160,7 +162,7 @@ blueprint:
 2. In the ***secondary*** sweep, we
    - solve the Riemann problem on all persistent faces in touchFaceFirstTime.
    - interpolate the solution of coarser levels onto the hanging
-     faces in createHangingFace;
+     faces in touchHangingFaceFirstTime;
    - rerun the prediction for cells which are adjacent to a hanging face.
      Due to this step, every hanging face now has a valid solution
      representation from the left and the right side before we destroy the
@@ -175,7 +177,7 @@ blueprint:
      boundary, as this would result in incorrect data, since the fine grid
      solutions haven't been restricted yet.
    - restrict the outcome of the Riemann solve within
-     destroyHangingFace. This restriction overwrites or corrects the fluxes
+     touchHangingFaceLastTime. This restriction overwrites or corrects the fluxes
      onto the coarser face and ensures that all fluxes are consistent.
 3. In the ***tertiary*** sweep, we
    - apply the corrector to all cells which are not adjacent to hanging
@@ -193,6 +195,4 @@ both ADER-DG realisation variants: One working with two sweeps and one
 working with three sweeps.
 
  */
-
-
 

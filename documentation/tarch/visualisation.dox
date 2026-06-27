@@ -21,11 +21,6 @@ This data format is also used to display "only" meshes or domain decomposition.
 
 
 
-# Writing outputs through the tarch
-
-@todo Yet to be written
-
-
 # Tweaking your pictures (for developers)
 
 Peano's default VTK plotters project Peano's tree-based grid onto an
@@ -45,7 +40,7 @@ mechanism is straightforward:
     a cell of the unstructured output mesh.
 
 The block format/the conversion tools in contrast generate all the
-points multiple times. If you have to cells sharing a vertex, the vertex
+points multiple times. If you have two cells sharing a vertex, the vertex
 is dumped twice. For patch-based problems, this is okish, as the number
 of vertices that are shared is way smaller than the total number of
 vertices in the domain (vertices within a patch are not dumped multiple

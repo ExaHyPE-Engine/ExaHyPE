@@ -57,7 +57,7 @@ class UpdateFaceLabel(ActionSet):
    ## IsHanging and AboveHanging
    TODO: Outdated documentation
    IsHanging is a redundant information. If a face is hanging, it is not held
-   persistently. Consequently, we get a createHangingFace() in each and every
+   persistently. Consequently, we get a touchHangingFaceFirstTime() in each and every
    mesh traversal and hence know implicitly that the face is hanging. The flag
    therefore replicates information which is implicitly available anyway.
 
@@ -120,6 +120,26 @@ class UpdateFaceLabel(ActionSet):
   fineGridFace{{FACE_LABEL_NAME}}.setNewTimeStamp( 0.0 );
   fineGridFace{{FACE_LABEL_NAME}}.setOldTimeStamp( 0.0 );
   fineGridFace{{FACE_LABEL_NAME}}.setIsHanging(true);
+  // A hanging face is non-persistent: it never passes through createFace, so its
+  // boundary flag is otherwise never set. If such a face coincides with the
+  // domain wall, getBoundary() stays false and HandleBoundary (which is guarded
+  // on getBoundary()) skips it - leaving its outer/boundary-side halo at its
+  // zero-initialised value. For a system with a non-zero flux at rest (e.g. the
+  // Euler pressure) that zero ghost breaks free-stream preservation (p=0 on the
+  // boundary face vs p=1 opposite -> the pressure flux no longer cancels -> a
+  // spurious momentum source that drains the cell). We therefore re-evaluate the
+  // same geometric boundary test that createFace uses (marker.getX() is the face
+  // centre for a hanging FaceMarker) and set the flag here too.
+  {
+    tarch::la::Vector<DIMENSIONS, double> offset(DomainOffset);
+    tarch::la::Vector<DIMENSIONS, double> size(DomainSize);
+    bool isBoundary = false;
+    for (int d=0; d<DIMENSIONS; d++) {
+      isBoundary |= tarch::la::equals( marker.getX()(d), offset(d) );
+      isBoundary |= tarch::la::equals( marker.getX()(d), offset(d) + size(d) );
+    }
+    fineGridFace{{FACE_LABEL_NAME}}.setBoundary( isBoundary );
+  }
   coarseGridFaces{{FACE_LABEL_NAME}}(marker.getSelectedFaceNumber()).setNewAboveHanging( marker.getSelectedFaceNumber() < DIMENSIONS ? 1 : 0, true );
 """
 

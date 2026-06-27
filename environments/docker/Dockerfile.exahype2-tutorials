@@ -1,0 +1,7 @@
+FROM peanoframework/exahype2:latest
+
+WORKDIR /exahype2/tutorials
+
+EXPOSE 8888
+
+CMD ["bash", "-lc", ". /etc/profile.d/exahype2.sh && jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root --ServerApp.root_dir=/exahype2/tutorials --ServerApp.token='' --ServerApp.password=''"]

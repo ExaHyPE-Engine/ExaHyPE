@@ -10,41 +10,39 @@ We can consider it to be some kind of pattern/best practice.
 
 
 
-## Preparation
+## Startup and shutdown
 
-At startup, any Peano application will want to configure its MPI and shared
-memory environment.
-For this, Peano provides some routines:
-
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-peano4::initParallelEnvironment(&argc,&argv);
-peano4::fillLookupTables();
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-peano4::initParallelEnvironment() calls in return all MPI initialisation and hence
-ensures that the singleton tarch::Rank is properly configured.
-There are corresponding shutdown routines as well.
-
-
-## Set up the spacetree
-
-The set of spacetrees in Peano is, atm, unique, i.e. there is only one set.
-However, the set can host multiple trees, which basically means you apply
-domain decomposition.
-To create the spacetree set, you can use
+At startup, any Peano application has to configure its MPI and shared memory
+environment and to create the initial spacetree.
+All of this is split across two calls:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  peano4::initSingletons(
+  tarch::init(&argc, &argv, {0.0, 0.0, true});
+  peano4::init(
     {0.0, 0.0, 0.0},
     {1.0, 1.0, 1.0}
   );
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-where the first argument is the offset of the computational domain and the second
-argument is the bounding box.
-The line creates a trivial spacetree, i.e. a degenerated tree spanning a 3x3 (2d)
-or 3x3x3 (3d) mesh.
+tarch::init() takes the command line arguments and performs all MPI initialisation
+(hence ensuring that the singleton tarch::mpi::Rank is properly configured); it
+also brings up the shared memory and accelerator environment. Its third argument is
+a tarch::InitConfiguration controlling the MPI timeout/deadlock detection.
+peano4::init() then takes the offset and the bounding box (width) of the
+computational domain and creates the spacetree set.
+An optional third argument to peano4::init() (a std::bitset<DIMENSIONS>) lets you
+switch on periodic boundary conditions per coordinate axis.
+There are corresponding tarch::shutdown() and peano4::shutdown() calls that tear
+everything down again at the end of the program.
+
+
+## The spacetree set
+
+The set of spacetrees in Peano is, atm, unique, i.e. there is only one set.
+However, the set can host multiple trees, which basically means you apply
+domain decomposition.
+The offset and bounding box handed into peano4::init() create a trivial
+spacetree, i.e. a degenerated tree spanning a 3x3 (2d) or 3x3x3 (3d) mesh.
 You can later on refine it, but this is where we start.
 If you have many ranks, only the first rank will hold a tree initially.
 All other ranks host an empty spacetree set.

@@ -10,7 +10,7 @@ For a full overview of how continuous integration works in gitlab, please consul
 We detail here some useful info about how we use it within Peano. A few basic things to note:
 
 \li When a developer pushes to any remote branch, the gitlab website "runs a pipeline". This consists of running any steps in the `.gitlab-ci.yml` file.
-\li Our ```.gitlab-ci.yml``` doesn't contain much actual stuff, but rather it redirects to further `.yml` files in the `.continuous_integration` directory.
+\li Our ```.gitlab-ci.yml``` doesn't contain much actual stuff. It includes `.continuous_integration/gitlab-toolchains.yml`, which defines one job per compiler toolchain. Each of those jobs triggers a child pipeline described by `.continuous_integration/gitlab-pipeline.yml`, which in turn pulls in the reusable templates in `.continuous_integration/templates` and the per-stage job definitions in `.continuous_integration/pipelines`.
 \li We use containers to make sure we have a dependable software environment.
 
 ## How do I run the pipeline?
@@ -35,7 +35,7 @@ continuous-integration channel of the Slack.
 
 ### Anatomy of a test
 
-It's best to copy examples, such as the ones in `.continuous_integration/templates/exahype2.yml`. But here are some general tips:
+It's best to copy examples, such as the ones in `.continuous_integration/pipelines/test.yml`. But here are some general tips:
 
 ```
 .Test_Name:

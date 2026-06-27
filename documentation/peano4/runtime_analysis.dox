@@ -1,0 +1,20 @@
+/**
+
+@page page_peano_runtime_analysis Runtime analysis
+
+\tableofcontents
+
+Peano applications can emit runtime and load-balancing statistics through their
+standard logging output. These records are the basis for postprocessing scripts
+that inspect tree sizes, remote-cell counts, rank balance, and time spent in
+different phases of a run.
+
+For load-balancing analysis, dump the program output into a file and inspect the
+`toolbox::loadbalancing::LoadBalancer::getLocalLoadBalancing()` records. They
+report local and remote cell counts per tree, which is usually enough to identify
+overdecomposition or badly balanced subpartitions.
+
+For ExaHyPE-specific timing and scaling scripts, see
+@ref page_exahype_runtime_analysis.
+
+*/

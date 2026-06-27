@@ -12,41 +12,73 @@ file per action set approach.
 
 ## Action set pattern
 
-You never know how much meta data plotter object holds and when this data is
-dumped into the file. Therefore, most action sets which dump data allocate the
-plotter object on the heap within beginTraversal(). They delete this object in
+You never know how much meta data a plotter object holds and when this data is
+dumped into the file. Therefore, most action sets which dump data create the
+plotter object within beginTraversal(). They release this object again in
 endTraversal(), which is the latest point when the plotter will actually stream
-its data into a file.
+its data into a file. In modern code the action set holds the writer in a
+std::unique_ptr, creates it through std::make_unique() and releases it via
+reset(), so there are no raw new/delete calls and the writer is destroyed (and
+hence flushed) deterministically.
+
+
+## File writers and time series
+
+The plotting is split into two responsibilities. The actual data of one
+traversal is written through a concrete subclass of the abstract
+tarch::plotter::FileWriter. Peano ships VTU (tarch::plotter::VTUFileWriter),
+HDF5 (tarch::plotter::HDF5FileWriter) and NetCDF
+(tarch::plotter::NetCDFFileWriter) implementations. A file writer is told an
+output directory and the number of local subdomains (trees) and then hands out
+vertex, cell and data plotters via its create...() factory methods.
+
+The bookkeeping over all snapshots, i.e. the index/meta file that ties the
+individual snapshots into one time series, is handled separately by a subclass
+of tarch::plotter::TimeSeriesWriter. The VTU writer pairs with
+tarch::plotter::PVDTimeSeriesWriter (a ParaView .pvd index), HDF5/NetCDF pair
+with tarch::plotter::XDMFTimeSeriesWriter, and
+tarch::plotter::JSONTimeSeriesWriter is available too.
+
+A plotting action set typically owns both writers as std::unique_ptr. The time
+series writer is created once and kept alive for the whole simulation, while
+the file writer is recreated per snapshot so that it picks up the current
+number of subdomains (which may change under dynamic load balancing):
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  if (_timeSeriesWriter == nullptr) {
+    _timeSeriesWriter = std::make_unique<tarch::plotter::PVDTimeSeriesWriter>();
+  }
+
+  _fileWriter.reset();
+  _fileWriter = std::make_unique<tarch::plotter::VTUFileWriter>(
+    runner::RuntimeParameters::getInstance().getPlotOutputPath(),
+    numberOfLocalSubdomains
+  );
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Once a traversal has filled the file writer, the snapshot is committed and
+registered with the time series in one go:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  _timeSeriesWriter->writeSnapshotFile(filename, time, *_fileWriter);
+  _timeSeriesWriter->writeTimeSeriesMetaFile(
+    runner::RuntimeParameters::getInstance().getPlotOutputPath(), filename
+  );
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+writeSnapshotFile() delegates to the file writer to dump the actual snapshot
+and remembers the (time, filename) pair, and writeTimeSeriesMetaFile() rewrites
+the index/meta file so that the new snapshot becomes visible to the
+post-processing tools.
 
 
 ## Parallel plotting
 
-Most plotters either are shipped with a dedicated index file class which you
-can wrap around the actual plotter, or they provide a constructor which can
-coordinate an action set's plotting with all the other plotting that's going
-on in parallel. For the Peano mesh format plotter, the constructor looks
-similar to
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
-    DIMENSIONS, snapshotFileName.str(), "grid",
-    tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewData,
-    repositories::getMinTimeStamp()
-  );
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-and the AppendNewData flag indicates that the code should look up the index
-file "grid.file-format-specific-extension" and add a new snapshot called
-snapshotFileName.str() to it.
-
-Before we discuss how we implement this constructor, let's clarify that this
-constructor is neither thread-safe nor MPI-safe. That is, you should not call
-it concurrently from two threads or two ranks. To ensure that this does not
-happen, you typically wrap the construction into a tarch::multicore::Lock region
-around a global instance of tarch::multicore::BooleanSemaphore.
-
-
-A comprehensive (and documented) version of such a plotter is tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter.
+Writing the shared time series meta file is neither thread-safe nor MPI-safe.
+That is, you should not update it concurrently from two threads or two ranks.
+To ensure that this does not happen, you typically wrap the critical region
+into a tarch::multicore::Lock around a global instance of
+tarch::multicore::BooleanSemaphore.
 
 
 */

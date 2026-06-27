@@ -23,10 +23,9 @@ either use Peano's Python API or they use an extension built on top of Peano
 - Peano's C++ core
   - \subpage peano_main
   - \subpage peano_action_sets
-- Tutorials
-  - \subpage tutorials_peano4_tutorials
 - HPC aspects
   - \subpage page_peano_domain_decomposition
+  - \subpage page_peano_runtime_analysis
 \li \subpage page_peano_localisation
 \li \subpage page_peano_performance_optimisation
 \li \subpage page_peano_amr

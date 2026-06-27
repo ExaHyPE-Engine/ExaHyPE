@@ -107,7 +107,13 @@ class Step:
 
         I used to have a flag append_at_end with the default True, but this one is
         now replaced, as each action set knows its priority.
+
+        Registering the same action set object twice is a no-op: the generator
+        may run several times on one project, and solvers re-register their
+        cached action sets each time.
         """
+        if any(existing is action_set for existing in self.action_sets):
+            return
         self.action_sets.append(action_set)
         self.__sort()
 
@@ -122,13 +128,22 @@ class Step:
         self.project = project
         self.namespace = project.namespace
 
+    # The use routines tolerate repeated registration of the same data object
+    # (see add_action_set): re-running the generator must not duplicate data
+    # in the traversal signatures.
     def use_cell(self, submodel):
+        if any(existing is submodel for existing in self.cell_data):
+            return
         self.cell_data.append(submodel)
 
     def use_face(self, submodel):
+        if any(existing is submodel for existing in self.face_data):
+            return
         self.face_data.append(submodel)
 
     def use_vertex(self, submodel):
+        if any(existing is submodel for existing in self.vertex_data):
+            return
         self.vertex_data.append(submodel)
 
     def highest_descend_invocation_order(self):

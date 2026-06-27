@@ -7,17 +7,15 @@
 
 ExaHyPE 2 offers a range of Finite Volume solvers. They are designed to be
 stand-alone solvers, but nothing stops you from using them as a posteriori
-limiters by @ref tutorials_exahype2_coupling "coupling them to higher order schemes".
-Some hands-on descriptions of the numerics can be found in @ref page_tutorials_exahype2_numerics_finite_volumes "the tutorial section".
+limiters by coupling them to higher order schemes.
+Some hands-on descriptions of the numerics can be found in @ref page_tutorials_exahype2_numerics_higher_order_finite_volumes "the tutorial section".
 
-
-@todo Das sollte viel mehr Projektionen enthalten, also wie die Realisiert sind
 
 ExaHyPE's Finite Volume scheme is based upon block-structured Cartesian meshes.
 All Finite Volume solvers work with blockstructured AMR: They embed @f$ p \times p@f$ patches
 into the octants (cells of the spacetree). To avoid confusion, I prefer to
 use the term volume for the cells within the patch, as cell would be
-ambigous given that we construct the host mesh from spacetree cells.
+ambiguous given that we construct the host mesh from spacetree cells.
 
 
 @image html documentation/exahype2/solvers/block-structured.png
@@ -26,7 +24,7 @@ With the Finite Volume methods, we only have single-shot methods at the moment.
 That is, Peano runs over the octants of the mesh, i.e. the patches.
 Per patch, it calls and ExaHyPE update kernel, which takes the patch and moves it forwards in time by a given @f$ \Delta t @f$.
 ExaHyPE is shipped with several update schemes. You can obviously also write your own
-numerical scheme manually, or you employ ExaHyPE's kernel domain-specific language (DSL).
+numerical scheme manually.
 
 ## Storage scheme
 
@@ -34,14 +32,14 @@ Every patch has to depends upon its neighbouring, i.e. face-connected patches.
 To be able to do this, ExaHyPE passes a @f$ (p+2N)^d @f$ patch into a kernel, where @f$ p @f$ is the number of volumes per patch, @f$ d @f$ is the dimension,
 and @f$ N \geq 1 @f$ is halo size.
 Different Finite Volume schemes have different halo sizes.
-You may assume that ExaHyPE befills these halo values with valid data from the neighbours, i.e. their synchronisation is none of the kernel's business.
+You may assume that ExaHyPE fills these halo values with valid data from the neighbours, i.e. their synchronisation is none of the kernel's business.
 The input is called @f$ Q_{in} @f$ from hereon.
 The kernel returns a @f$ (p+2 N)^d @f$ with the new time step's data, called @f$ Q_{out} @f$.
 
 
 Here are some details about the data used within the kernels:
 
-- The halo data, i.e. the @f$ N @f$ layer around the patch is automatically befilled.
+- The halo data, i.e. the @f$ N @f$ layer around the patch is automatically filled.
   However, we only maintain the face-connected data. Consequently, the diagonal (corners)
   do not exist. To make the whole logic easier, the @f$ Q_{in} @f$ nevertheless hold these data.
   They contain garbage. Example: In a @f$ 7 \times 7 @f$ patch world with @f$ N=2 @f$, we have
@@ -61,8 +59,8 @@ Here are some details about the data used within the kernels:
 
 Each Finite Volume solver embeds @f$N \times N@f$ patches
 into the octants (cells of the spacetree).
-ExaHyPE is built on top of Peano, and Peano realises a strict element-wise
-traversal, i.e. there's no way to access the neighbour cell of a cell
+ExaHyPE is built on top of Peano, and Peano realises a strict element-wise
+traversal, i.e. there's no way to access the neighbour cell of a cell
 directly. However, we can hijack the faces.
 
 The idea here is that we embed a @f$ 2N@f$ @f$ (d = 2) @f$ or
@@ -71,7 +69,7 @@ this auxiliary patch overlap the adjacent cells. Then, we effectively
 have a halo of one cell available within each cell: We know the cell
 data. We also have access to the @f$ 2d @f$ faces where each hosts a
 degenerated patch. One layer of this patch is a copy of our own data,
-i.e. does not give us additional information. The other layer of the
+i.e. does not give us additional information. The other layer of the
 auxiliary patch however holds data from the neighbour. It gives us
 information from the neighbour patch.
 
@@ -79,12 +77,12 @@ information from the neighbour patch.
 ### Keeping face and patch data consistent
 
 Projecting the patches onto the face data structures and back is a
-mechanical task. Therefore,  we offer a toolbox to relieve you from the
+mechanical task. Therefore, we offer a toolbox to relieve you from the
 pain to recode it over and over again. Using this toolbox, you add the
 projections to your algorithmic steps, and the API then automatically
 injects these features (aspects) into your code:
 
-@image html ProjectPatchOntoFaces.png
+@image html documentation/exahype2/solvers/ProjectPatchOntoFaces.png
 
 The image above illustrates what `ProjectPatchOntoFaces` does: It knows
 the dimensions of both the patches and the face auxiliary data
@@ -95,15 +93,16 @@ traversal.
 
 ### Augment patch with halo
 
-The action set `ReconstructPatchAndApplyFunctor` works slighlty
+The action set `ReconstructPatch` works slightly
 different yet can be read, from a patch projection point of view, as
-transpose of `ProjectPatchOntoFaces`: It creates a auxiliary variable
-`reconstructedX` with X being the name you gave the Unknowns of the
-patch. This auxiliary variable has the dimensions
-@f$N+2 \times N+2 \times N+2@f$. It then copies over the patch data into
-this auxiliary patch and uses the faces to supplement it with halo data
-around it. So that it, you get the original patch data plus the cells
-around it in one big patch.
+transpose of `ProjectPatchOntoFaces`: It reconstructs the data into a
+separate patch, the `reconstructedPatch`, which is accessed through
+`fineGridCell` plus the name you gave this reconstructed patch. This
+auxiliary patch has the dimensions
+@f$N+2 \times N+2 \times N+2@f$. The action set copies over the cell's
+patch data into this auxiliary patch and uses the faces to supplement it
+with halo data around it. So that, in the end, you get the original patch
+data plus the cells around it in one big patch.
 
 
 ## Code organisation
@@ -182,10 +181,10 @@ down as a tensor-vector product which is added to @f$ Q_{out} @f$:
 The extension to Rusanov for example is straightforward, as long as we take into account that our "stencil" here has to incorporate the max function.
 Below is schematic illustration of the data flow:
 
-@image html data-flow-finite-volumes.png
+@image html documentation/exahype2/numerics/data-flow-finite-volumes.png
 
 Note that the scheme as well as the description lack an important detail:
 Every single step is to be done over a set of patches, as we update multiple patches in one go.
-In the kernels, we can write down this logic as a sequence of operators, but once you employ our xDSL kernel language, the underlying kernel generator will permute and fuse all the loops and operations.
+In the kernels, we write down this logic as a sequence of operators applied to the whole set of patches in one sweep.
 
 */

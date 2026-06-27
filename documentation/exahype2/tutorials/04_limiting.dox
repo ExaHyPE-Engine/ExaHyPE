@@ -1,0 +1,127 @@
+/**
+
+@page page_exahype2_tutorials_limiting Part 4 - A 2D Euler Shock with a-posteriori Limiting
+
+\tableofcontents
+
+This tutorial adds the last big ingredient: a *limiter*. We solve a 2D
+Riemann (shock-tube) problem for the compressible Euler equations: a corner of
+low-density, low-pressure gas sits in a box of dense, high-pressure gas. When the
+simulation starts, the dense gas rushes into the corner, launching **shock waves**
+and a **contact discontinuity**. The notebook is
+`tutorials/04_limiting/EulerShock.ipynb`, with its implementation in
+`ADERDGSolver.cpp`, `FVSolver.cpp` and `LimitingSolver.cpp`.
+
+# Why a Limiter
+
+A high-order ADER-DG scheme is accurate where the flow is smooth, but it
+overshoots and undershoots near discontinuities (Gibbs oscillations). Those
+oscillations can drive the density or pressure negative and crash the run. The
+**a-posteriori limiter** keeps the scheme both accurate and robust:
+
+- after each time step every cell is checked against a discrete maximum
+  principle (DMP) and a user-supplied *physical admissibility criterion*;
+- a cell that fails - a *troubled* cell - is rolled back and recomputed with a
+  robust Finite Volume scheme on a subgrid of `2 * order + 1` volumes;
+- everywhere else the high-order ADER-DG solution is kept.
+
+# The Equations
+
+We solve the 2D compressible Euler equations for density \f$\rho\f$, momentum
+\f$\rho \mathbf{u}\f$ and energy \f$E\f$. There is no source term. The conserved
+variables are addressed through the generated `Shortcuts` enum (`Shortcuts::rho`,
+`Shortcuts::j + 0/1`, `Shortcuts::E`), so the same indices work in all three
+implementation files.
+
+# The Configuration
+
+The domain is the box \f$[-1, 1]^2\f$. The bottom-left quadrant starts with
+\f$\rho = 0.125,\ p = 0.1\f$ and the rest of the box with \f$\rho = 1,\ p = 1\f$,
+both at rest. The outer state never changes during the run, so the boundaries are
+Dirichlet conditions that simply hold that initial outer state.
+
+Both solvers solve the *same* equations, so we create a high-order `ADERDGSolver`
+and a robust `FVSolver` with the same terms and wrap them in a `PosterioriLimiting`
+solver. The limiter recomputes a cell with Finite Volumes whenever the discrete
+maximum principle or the physical admissibility criterion flags it as troubled:
+
+    aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
+        name = "ADERDGSolver", order = 5, ...
+    )
+    fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
+        name = "FVSolver", patch_size = 2 * 5 + 1, ...
+    )
+    limiter = exahype2.solvers.limiting.PosterioriLimiting(
+        name                             = "LimitingSolver",
+        regular_solver                   = aderdg_solver,
+        limiting_solver                  = fv_solver,
+        number_of_dmp_observables        = 4,
+        dmp_relaxation_parameter         = 0.01,
+        dmp_differences_scaling          = 0.03,
+        physical_admissibility_criterion = exahype2.solvers.PDETerms.User_Defined_Implementation,
+    )
+
+# The Implementation Files
+
+`ADERDGSolver.cpp` holds the Euler equations as a 2D Riemann problem. The vacuum
+guard (`if (p > pZero)`) keeps the flux and eigenvalue well defined even when an
+oscillation briefly pushes a cell to a non-physical state; the limiter then
+recomputes that cell. `FVSolver.cpp` carries the identical physics, so it is not
+repeated here.
+
+@include tutorials/04_limiting/ADERDGSolver.cpp
+
+`LimitingSolver.cpp` holds the troubled-cell test - the limiter calls it for every
+cell and recomputes the ones it rejects with Finite Volumes. It reuses the
+regular solver's `Shortcuts` and `NumberOfUnknowns`, so nothing is hardcoded:
+
+@include tutorials/04_limiting/LimitingSolver.cpp
+
+# Running and Visualising
+
+    export OMP_NUM_THREADS=4
+    ./EulerShock -et 2.0 -ns 20 -l 3
+
+We plot the energy from the `ADERDGSolver` (use the field dropdown to switch to
+density, momentum or pressure):
+
+    from postprocessing import render_solution_interactively
+    render_solution_interactively.show_solution("ADERDGSolver", field="E")
+
+Drag the time slider to partway through the run, where the structure is clearest:
+
+@image html documentation/exahype2/tutorials/Euler_shock_energy.png
+
+The energy at \f$t \approx 0.8\f$: the curved shock front, the contact
+discontinuities and the central jet of the 2D Riemann problem all stand out. The
+limiter keeps the solution physical (positive density and pressure) right through
+these discontinuities, quietly swapping troubled ADER-DG cells for Finite Volume
+ones.
+
+# Why We Need the Limiter
+
+The limiter is not a cosmetic detail here - the scheme is unusable without it. In
+the notebook, go back to the solver cell, set
+
+    use_limiting = False
+
+and re-run from there. Now only the high-order ADER-DG scheme runs, with no Finite
+Volume fallback, and it oscillates uncontrollably at the shock fronts: within a
+fraction of the run the density goes negative, the solution blows up (densities of
+tens of thousands), the reported maximum eigenvalue explodes - past 900, versus
+around 50 with the limiter - and the timestep collapses, so the run diverges and
+grinds to a halt. That is the whole point of a-posteriori limiting: for problems
+with shocks, a high-order scheme on its own is not robust, and the limiter is what
+makes it usable.
+
+# Experiment
+
+- Refine the mesh with `-l 4` for sharper shocks (slower).
+- Loosen or tighten the limiter via `dmp_relaxation_parameter` and
+  `dmp_differences_scaling`, and watch how many cells get limited.
+- Move the initial discontinuity (`ShockPosition` in `ADERDGSolver.cpp`).
+
+In @ref page_exahype2_tutorials_elastic you take ExaHyPE 2 to three dimensions -
+3D elastic waves - and measure how the solver scales across parallel hardware.
+
+*/

@@ -143,7 +143,7 @@ class AbstractSolverDeclarations:
     ) = 0;
     {% endif %}
 
-    {% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" and POINT_SOURCE_IMPLEMENTATION!="<none>" %}
+    {% if POINT_SOURCES_IMPLEMENTATION=="<user-defined>" and POINT_SOURCES_IMPLEMENTATION!="<none>" %}
     virtual void pointSource(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q,
       const double* const                                             x,

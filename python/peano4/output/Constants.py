@@ -28,6 +28,12 @@ class Constants(object):
 
   def __init__(self,project):
     self.defines = []
+    # Constants are keyed by name: re-exporting a name replaces the previous
+    # entry instead of appending a duplicate, so the generator may run several
+    # times on the same project without producing redefinition errors in
+    # Constants.h.
+    self._constant_entries = {}
+    self._includes = []
     self.d = {}
     self.d[ "ADD_CONSTANTS" ]            = ""
     self.d[ "INCLUDES" ]                 = ""
@@ -43,9 +49,21 @@ class Constants(object):
 
   def add_include(self, include_statement ):
     """
-     Add a whole include statement.
+     Add a whole include statement. Identical statements are only added once.
     """
-    self.d[ "INCLUDES" ] += include_statement + "\n"
+    if include_statement not in self._includes:
+      self._includes.append( include_statement )
+    self.d[ "INCLUDES" ] = "".join( i + "\n" for i in self._includes )
+
+  def _set_entry(self, name, entry):
+    """
+     Insert or replace the constant entry registered under name and rebuild
+     the rendered constants block.
+    """
+    self._constant_entries[ str(name) ] = entry
+    self.d[ "ADD_CONSTANTS" ] = "".join(
+      "  " + e + "\n" for e in self._constant_entries.values()
+    )
 
   def export( self, name, value ):
     """
@@ -56,8 +74,7 @@ class Constants(object):
       or just define variants, you have to use the other routines.
     """
     new_entry = "constexpr auto " + str(name) + " = " + str(value) + ";"
-    self.d[ "ADD_CONSTANTS" ] += "  " + new_entry + "\n"
-    pass
+    self._set_entry( name, new_entry )
 
   def export_boolean_sequence( self, name, value ):
     """
@@ -74,8 +91,7 @@ class Constants(object):
         new_entry += "+" + str(base)
       base *= 2
     new_entry += ";"
-    self.d[ "ADD_CONSTANTS" ] += "  " + new_entry + "\n"
-    pass
+    self._set_entry( name, new_entry )
 
   def export_string( self, name, value ):
     """
@@ -97,8 +113,7 @@ class Constants(object):
       or just define variants, you have to use the other routines.
     """
     new_entry = "const " + type + " " + str(name) + " = " + value + ";"
-    self.d[ "ADD_CONSTANTS" ] += "  " + new_entry + "\n"
-    pass
+    self._set_entry( name, new_entry )
 
   def export_constexpr_with_type( self, name, value, type ):
     """
@@ -109,12 +124,11 @@ class Constants(object):
       or just define variants, you have to use the other routines.
     """
     new_entry = "constexpr " + type + " " + str(name) + " = " + value + ";"
-    self.d[ "ADD_CONSTANTS" ] += "  " + new_entry + "\n"
-    pass
+    self._set_entry( name, new_entry )
 
   def clear(self):
+    self._constant_entries = {}
     self.d[ "ADD_CONSTANTS" ] = ""
-    pass
 
   def export_boolean( self, name, value ):
     new_entry = "constexpr bool " + name + " = "
@@ -122,8 +136,7 @@ class Constants(object):
       new_entry += "true"
     else:
       new_entry += "false"
-    self.d[ "ADD_CONSTANTS" ] += "  " + new_entry + ";\n"
-    pass
+    self._set_entry( name, new_entry + ";" )
 
   def define( self, name ):
     """!
@@ -140,8 +153,7 @@ class Constants(object):
 
     """
     new_entry = "#define " + name
-    self.d[ "ADD_CONSTANTS" ] += "  " + new_entry + "\n"
-    pass
+    self._set_entry( "#define " + name, new_entry )
 
   def define_value(self, name, value):
     """!
@@ -158,8 +170,7 @@ class Constants(object):
 
     """
     new_entry = "#define " + name + " " + value
-    self.d[ "ADD_CONSTANTS" ] += "  " + new_entry + "\n"
-    pass
+    self._set_entry( "#define " + name, new_entry )
 
   def readme_entry(self):
     """!

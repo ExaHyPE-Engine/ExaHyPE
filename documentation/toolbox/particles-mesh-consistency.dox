@@ -140,7 +140,7 @@ if (
 
 
 Keeping track of parallel states is not totally straightforward, as there are
-numerous pitfalls. Study the documentation of peano4.toolbox.particles.UpdateParallelState
+numerous pitfalls. Study the documentation of peano4.toolbox.particles.api.UpdateParallelState
 for details on these pitfalls. Once again however, I maintain two different particle
 states, i.e. a parallel state and a new parallel state. You may assume that the
 parallel state as used above is always consistent throughout one mesh sweep, but
@@ -167,7 +167,7 @@ than the maximum signal velocity otherwise.
 Peano does support tunneling in principle, but you can tell the update script
 if you want to get a warning if particles tunnel - in some applications, this is
 unphysical.
-Tunneling is not handled separatedly.
+Tunneling is not handled separately.
 Instead, we simply lift a particle to a coarser level on which we can
 accommodate the movement by just pushing the particle one cell.
 After it is pushed, we drop the particle again.
@@ -213,7 +213,7 @@ toolbox::particles::ParticleSet::_sieveParticles which holds and instance
 of toolbox::particles::SieveParticles.
 
 Various sieving strategies exist. They are realised by the different subclasses
-of peano4.toolboxes.particles.api.AbstractUpdateParticleGridAssociation.
+of peano4.toolbox.particles.api.AbstractUpdateParticleGridAssociation.
 However, this superclass holds all the relevant docu and an overview of the
 usage of the sieve set.
 

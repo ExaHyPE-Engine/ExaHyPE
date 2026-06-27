@@ -1,0 +1,20 @@
+/**
+
+@page tarch_accelerator_SYCL SYCL support
+
+\tableofcontents
+
+Peano's technical architecture can be configured with SYCL support for GPU
+offloading and, on some systems, for task execution. The concrete compiler flags
+are vendor-specific, so the main setup instructions live on
+@ref page_compiler_specific_settings_home "the compiler-specific settings page".
+
+In practice, a SYCL build has to be configured with the corresponding GPU or
+multithreading backend and compiled with a SYCL-capable C++ compiler. Intel
+oneAPI, Codeplay-enabled Intel LLVM builds, and AdaptiveCpp-style toolchains all
+need slightly different `CXXFLAGS` and `LDFLAGS`.
+
+Use this page as the tarch-level entry point and the vendor page for exact
+commands.
+
+*/

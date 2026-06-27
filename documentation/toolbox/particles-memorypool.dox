@@ -1,0 +1,20 @@
+/**
+
+@page toolbox_particles_memorypool Particle memory pools
+
+\tableofcontents
+
+The particle toolbox normally stores particles as heap objects and moves
+pointers through mesh-associated particle sets. This is flexible, but can lead
+to memory fragmentation and scattered memory access.
+
+Particle memory pools consolidate particles into larger contiguous chunks. This
+reduces allocation overhead and makes particle traversal friendlier to cache and
+vectorised kernels. The particle set generator controls which storage flavour is
+used for a concrete particle species.
+
+Memory-pool based storage has to preserve the ownership and communication
+semantics of vertex-centred particle data. Traversals therefore need gather and
+scatter operations when particles are moved into or out of pooled storage.
+
+*/

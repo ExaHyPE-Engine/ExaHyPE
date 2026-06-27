@@ -1,0 +1,313 @@
+/**
+
+@page page_exahype2_tutorials_shallow_water Part 2 - The Shallow Water Equations
+
+\tableofcontents
+
+In @ref page_exahype2_tutorials_acoustic everything was handed to you. This time
+**you** implement the physics. The notebook
+`tutorials/02_shallow-water/ShallowWater.ipynb` is ready to run, but the C++ file
+`ADERDGSolver.cpp` next to it contains only stubs marked `TODO`. Your task is to
+fill them in, rebuild and watch a dam break.
+
+This tutorial adds two ingredients on top of Part 1: a **non-conservative
+product** (NCP) for the bathymetry term, and **adaptive mesh refinement** (AMR).
+
+# The Shallow Water Equations
+
+The unknowns are the water height \b h, the momenta \b hu_1 and \b hu_2, and the
+bathymetry (sea-bed height) \b b. Without bathymetry:
+
+@f$
+\begin{equation*}
+    \frac{\partial}{\partial t}\left(
+    \begin{array}{l} h \\ h u_1 \\ h u_2 \\ b \end{array} \right) +
+    \nabla \cdot \underbrace{\begin{pmatrix}
+        h u_1                       & h u_2     \\
+        h u_1^2 + \frac{g h^2}{2}   & h u_1 u_2 \\
+        h u_2 u_1                   & h u_2^2  + \frac{g h^2}{2} \\
+        0                           & 0
+    \end{pmatrix}}_{ flux } = \vec{0}
+\end{equation*}
+@f$
+
+with gravity \f$g = 9.81\f$. The eigenvalues in normal direction \f$n\f$ are
+\f$u_n + \sqrt{g h}\f$, \f$u_n\f$ and \f$u_n - \sqrt{g h}\f$, so the maximum by
+magnitude is \f$\max(|u_n + \sqrt{g h}|, |u_n - \sqrt{g h}|)\f$. Recall the base
+unknowns store the momentum \b hu, not the velocity, so \f$u_n = hu_n / h\f$.
+
+# The Configuration
+
+The notebook sets up a \f$2 \times 2\f$ box with non-periodic boundaries (the
+flow runs into walls), an ADER-DG solver of order 3 named `ADERDGSolver`, and
+declares the PDE terms it will use:
+
+    aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
+        name                 = "ADERDGSolver",
+        order                = 3,
+        time_step_relaxation = 0.9,
+        unknowns             = {"h": 1, "hu": 2, "b": 1},
+        auxiliary_variables  = {},
+    )
+    aderdg_solver.set_implementation(
+        flux                 = exahype2.solvers.PDETerms.User_Defined_Implementation,
+        ncp                  = exahype2.solvers.PDETerms.User_Defined_Implementation,
+        refinement_criterion = exahype2.solvers.PDETerms.User_Defined_Implementation,
+        max_eigenvalue       = exahype2.solvers.PDETerms.User_Defined_Implementation,
+    )
+
+The project builds even with the stubs in place, so run the build cell once, then
+work through the exercises and rebuild after each change.
+
+# Exercise 1 - A Dam Break
+
+Complete the TODOs in `ADERDGSolver.cpp`. The variables are addressed through the
+generated `Shortcuts` enum (`Shortcuts::h`, `Shortcuts::hu + 0/1`,
+`Shortcuts::b`).
+
+- `initialCondition` - water at rest (\f$hu = 0\f$), flat bed
+  (\f$b = 0\f$) and a height step: \f$h = 1\f$ on the left half (\f$x_0 < 0\f$),
+  \f$h = 2\f$ on the right. The position is in `cellCentre`.
+- `boundaryConditions` - a calm outside state: \f$h = 1\f$,
+  \f$hu = 0\f$, \f$b = 0\f$ in `Qoutside`.
+- `maxEigenvalue` - return
+  \f$\max(|u_n + \sqrt{g h}|, |u_n - \sqrt{g h}|)\f$.
+- `flux` - the flux above, keeping the \f$\frac12 g h^2\f$ pressure
+  term in the momentum component for now. Leave `nonconservativeProduct` zero.
+
+Rebuild and run. Exercise 1 has no refinement criterion yet, so this is a
+**uniform grid**: set `-lmin` and `-lmax` to the *same* level. We use level 4 -
+the dam break is a sharp step and this scheme has no limiter (that comes in
+Part 4), so it needs enough resolution to resolve the front; a coarser uniform
+level lets the timestep collapse there. The run takes a few minutes; for a
+quick (but visibly coarser) first look, drop both levels to 3.
+
+    export OMP_NUM_THREADS=4
+    ./DamBreak -et 0.5 -ns 20 -lmin 4 -lmax 4
+
+then visualise the water height:
+
+    from postprocessing import render_solution_interactively
+    render_solution_interactively.show_solution("ADERDGSolver", field="h")
+
+The initial conditions should look like this:
+
+@image html documentation/exahype2/tutorials/SWE_dam_break_start.png
+
+A worked solution is given at
+\subpage page_exahype2_tutorials_shallow_water_solution.
+
+# Exercise 2 - Bathymetry and Static Refinement
+
+With bathymetry the gravity term moves out of the flux and into the
+non-conservative product:
+
+@f$
+\begin{equation*}
+    \frac{\partial}{\partial t}\left(
+    \begin{array}{l} h \\ h u_1 \\ h u_2 \\ b \end{array} \right) +
+    \nabla \cdot \underbrace{\begin{pmatrix}
+        h u_1     & h u_2     \\
+        h u_1^2   & h u_1 u_2 \\
+        h u_2 u_1 & h u_2^2   \\
+        0         & 0
+    \end{pmatrix}}_{ flux } +
+    \underbrace{\begin{pmatrix}
+        0                       & 0\\
+        g h\,\partial_x(h + b)  & 0\\
+        0                       & g h\,\partial_y(h + b) \\
+        0                       & 0
+    \end{pmatrix}}_{ ncp } = \vec{0}
+\end{equation*}
+@f$
+
+- `flux` - remove the \f$\frac12 g h^2\f$ term you added in Exercise 1.
+- `nonconservativeProduct` - implement \f$B(Q)\,\nabla Q\f$. The
+  gradient in the `normal` direction is supplied in `deltaQ`, so the momentum
+  component is `g * Q[Shortcuts::h] * (deltaQ[Shortcuts::h] + deltaQ[Shortcuts::b])`.
+- `initialCondition` - a radial dam break: \f$h = 1\f$ everywhere and a
+  circular bump in the bed, \f$b = 0.1\f$ within distance \f$0.5\f$ of the origin
+  (`tarch::la::norm2(cellCentre)`), else \f$0\f$.
+- `refinementCriterion` - return `::exahype2::RefinementCommand::Refine`
+  in a fixed disc over the bump (e.g. \f$\|x\|_2 < 0.3\f$), otherwise `Keep`. The
+  criterion looks only at position, so the refined region is **static** - a fine
+  patch over the bump, the coarse base everywhere else.
+
+Now that a refinement criterion is in place, `-lmin` and `-lmax` may differ. Run
+with a coarse level-2 base mesh that ExaHyPE refines to level 3 only inside the
+disc:
+
+    ./DamBreak -et 0.5 -ns 20 -lmin 2 -lmax 3
+
+The initial conditions should look like this:
+
+@image html documentation/exahype2/tutorials/SWE_radial_start.png
+
+A worked solution is given at
+\subpage page_exahype2_tutorials_shallow_water_solution_2. Once you are happy,
+continue with @ref page_exahype2_tutorials_euler.
+
+*/
+
+/**
+
+@page page_exahype2_tutorials_shallow_water_solution Part 2 - Solution to Exercise 1
+
+\tableofcontents
+
+Initial conditions:
+
+    void tutorials::exahype2::swe::ADERDGSolver::initialCondition(
+      double* const NOALIAS                        Q,
+      const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+      const tarch::la::Vector<DIMENSIONS, double>& cellSize
+    ) {
+      Q[Shortcuts::hu + 0] = 0.0;
+      Q[Shortcuts::hu + 1] = 0.0;
+      Q[Shortcuts::h]      = cellCentre[0] < 0.0 ? 1.0 : 2.0;
+      Q[Shortcuts::b]      = 0.0;
+    }
+
+Boundary conditions:
+
+    void tutorials::exahype2::swe::ADERDGSolver::boundaryConditions(
+      const double* const NOALIAS                  Qinside,
+      double* const NOALIAS                        Qoutside,
+      const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
+      const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+      const double                                 time,
+      const int                                    normal
+    ) {
+      Qoutside[Shortcuts::h]      = 1.0;
+      Qoutside[Shortcuts::hu + 0] = 0.0;
+      Qoutside[Shortcuts::hu + 1] = 0.0;
+      Qoutside[Shortcuts::b]      = 0.0;
+    }
+
+Max eigenvalue:
+
+    double tutorials::exahype2::swe::ADERDGSolver::maxEigenvalue(
+      const double* const NOALIAS                  Q,
+      const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+      const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+      const double                                 time,
+      const double                                 timeStepSize,
+      const int                                    normal
+    ) {
+      constexpr double g = 9.81;
+      const double u = Q[Shortcuts::hu + normal] / Q[Shortcuts::h];
+      const double c = std::sqrt(g * Q[Shortcuts::h]);
+      return std::max(std::abs(u + c), std::abs(u - c));
+    }
+
+Flux (with the pressure term still in the flux):
+
+    void tutorials::exahype2::swe::ADERDGSolver::flux(
+      const double* const NOALIAS                  Q,
+      const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+      const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+      const double                                 time,
+      const double                                 timeStepSize,
+      const int                                    normal,
+      double* const NOALIAS                        F
+    ) {
+      const double     ih = 1.0 / Q[Shortcuts::h];
+      constexpr double g  = 9.81;
+      F[Shortcuts::h]      = Q[Shortcuts::hu + normal];
+      F[Shortcuts::hu + 0] = Q[Shortcuts::hu + normal] * Q[Shortcuts::hu + 0] * ih;
+      F[Shortcuts::hu + 1] = Q[Shortcuts::hu + normal] * Q[Shortcuts::hu + 1] * ih;
+      F[Shortcuts::b]      = 0.0;
+      F[Shortcuts::hu + normal] += 0.5 * g * Q[Shortcuts::h] * Q[Shortcuts::h];
+    }
+
+The non-conservative product and refinement criterion stay at their stub values
+(all zero / `Keep`) for Exercise 1. The result should look like this:
+
+@image html documentation/exahype2/tutorials/SWE_dam_break_end.png
+
+*/
+
+/**
+
+@page page_exahype2_tutorials_shallow_water_solution_2 Part 2 - Solution to Exercise 2
+
+\tableofcontents
+
+Initial conditions (radial bump in the bed):
+
+    void tutorials::exahype2::swe::ADERDGSolver::initialCondition(
+      double* const NOALIAS                        Q,
+      const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+      const tarch::la::Vector<DIMENSIONS, double>& cellSize
+    ) {
+      Q[Shortcuts::hu + 0] = 0.0;
+      Q[Shortcuts::hu + 1] = 0.0;
+      Q[Shortcuts::h]      = 1.0;
+      Q[Shortcuts::b]      = (::tarch::la::norm2(cellCentre) < 0.5 ? 0.1 : 0.0);
+    }
+
+Flux (pressure term removed - it now lives in the NCP):
+
+    void tutorials::exahype2::swe::ADERDGSolver::flux(
+      const double* const NOALIAS                  Q,
+      const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+      const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+      const double                                 time,
+      const double                                 timeStepSize,
+      const int                                    normal,
+      double* const NOALIAS                        F
+    ) {
+      const double ih = 1.0 / Q[Shortcuts::h];
+      F[Shortcuts::h]      = Q[Shortcuts::hu + normal];
+      F[Shortcuts::hu + 0] = Q[Shortcuts::hu + normal] * Q[Shortcuts::hu + 0] * ih;
+      F[Shortcuts::hu + 1] = Q[Shortcuts::hu + normal] * Q[Shortcuts::hu + 1] * ih;
+      F[Shortcuts::b]      = 0.0;
+    }
+
+Non-conservative product:
+
+    void tutorials::exahype2::swe::ADERDGSolver::nonconservativeProduct(
+      const double* const NOALIAS                  Q,
+      const double* const NOALIAS                  deltaQ,
+      const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+      const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+      const double                                 time,
+      const double                                 timeStepSize,
+      const int                                    normal,
+      double* const NOALIAS                        BTimesDeltaQ
+    ) {
+      constexpr double g         = 9.81;
+      BTimesDeltaQ[Shortcuts::h] = 0.0;
+      switch (normal) {
+      case 0:
+        BTimesDeltaQ[Shortcuts::hu + 0] = g * Q[Shortcuts::h] * (deltaQ[Shortcuts::h] + deltaQ[Shortcuts::b]);
+        BTimesDeltaQ[Shortcuts::hu + 1] = 0.0;
+        break;
+      case 1:
+        BTimesDeltaQ[Shortcuts::hu + 0] = 0.0;
+        BTimesDeltaQ[Shortcuts::hu + 1] = g * Q[Shortcuts::h] * (deltaQ[Shortcuts::h] + deltaQ[Shortcuts::b]);
+        break;
+      }
+      BTimesDeltaQ[Shortcuts::b] = 0.0;
+    }
+
+Refinement criterion (a fixed, finely resolved disc over the bump):
+
+    ::exahype2::RefinementCommand tutorials::exahype2::swe::ADERDGSolver::refinementCriterion(
+      const double* const NOALIAS                  Q,
+      const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+      const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+      const double                                 time
+    ) {
+      return (::tarch::la::norm2(cellCentre) < 0.3
+        ? ::exahype2::RefinementCommand::Refine
+        : ::exahype2::RefinementCommand::Keep);
+    }
+
+The boundary conditions and the maximum eigenvalue are unchanged from
+@ref page_exahype2_tutorials_shallow_water_solution. The result should look like
+this:
+
+@image html documentation/exahype2/tutorials/SWE_radial_end.png
+
+*/

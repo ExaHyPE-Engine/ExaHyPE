@@ -18,18 +18,18 @@ A Peano test is a class that implements and extends
 tarch::tests::TestCase. By convention, I place my tests always into
 subdirectories/subnamespaces of the respective component, but this is
 not a must. A test class must implement a `void run()` method. This is
-the only convention. The Peano toolkit by default generates one (empty)
-test per project that can act as a blueprint if you don't want to write
-your test manually. Feel free to delete the class if you don't want to
-write unit tests on your own (though the test itself is empty and thus
-does not harm the test runs).
+the only convention.
 
 A proper test class should realise a couple of `void` operations without
 arguments that run the individual tests. A minimalistic test thus looks
 as follows:
 
 ~~~~~~~~~~~~~~~~~
-namespace myproject namespace tests class TestCase;
+namespace myproject {
+  namespace tests {
+    class TestCase;
+  }
+}
 
 class myproject::tests::TestCase : public tarch::tests::TestCase {
   private:
@@ -60,8 +60,10 @@ void exahype::tests::TestCase::run() {
 Running the tests
 -----------------
 
-Once these steps are handled, you can run the tests within your `main`.
-For the core and tarch routines, I provide factory methods
+Once these steps are handled, you can run the tests from a dedicated
+executable. Peano ships such a runner in `src/unittests/main.cpp`, whose
+`runTests()` function collects and executes all unit tests. For the core
+and tarch routines, the relevant factory methods are
 
 ~~~~~~~~~~~~~~~~~
 tarch::getUnitTests();
@@ -69,7 +71,7 @@ peano4::getUnitTests();
 ~~~~~~~~~~~~~~~~~
 
 
-which deliver a test suite. To run them, I typically insert snippets
+which deliver a test suite. To run a suite, `runTests()` uses snippets
 alike
 
 ~~~~~~~~~~~~~~~~~
@@ -82,17 +84,20 @@ unitTestsErrors += tests->getNumberOfErrors();
 delete tests;
 ~~~~~~~~~~~~~~~~~
 
-into my main. It returns an output similar to
+one per component (tarch, peano4, the toolboxes and exahype2). It returns
+an output similar to
 
 ~~~~~~~~~~~~~~~~~
-running test case collection "exahype2.tests.c" ...... ok
-running test case collection \"exahype2.tests.solvers\" .. ok running test case
-collection \"exahype2.tests\" \.... ok running test case collection
-\"peano4.grid.tests\" \...\...\...\...\...\..... ok running test case
-collection \"peano4.grid\" ok running test case collection
-\"peano4.heap.tests\" .. ok running test case collection \"peano4.heap\"
-ok running test case collection \"peano4\" ok running test case
-collection \"tarch\" ok running global test case collection ok
+Running test case collection "exahype2.tests.c" ...... ok
+Running test case collection "exahype2.tests.solvers" .. ok
+Running test case collection "exahype2.tests" .... ok
+Running test case collection "peano4.grid.tests" ............... ok
+Running test case collection "peano4.grid" ok
+Running test case collection "peano4.heap.tests" .. ok
+Running test case collection "peano4.heap" ok
+Running test case collection "peano4" ok
+Running test case collection "tarch" ok
+Running global test case collection ok
 ~~~~~~~~~~~~~~~~~
 
 The output returns a hierarchical overview over all tests ran. The
@@ -111,7 +116,7 @@ code.
 Test routines
 -------------
 
-A typical unit tests builds up some classes, befills them with data,
+A typical unit test builds up some classes, fills them with data,
 invokes some operations and finally checks the class state via some
 getters or routines returning results. Peano's way to do the actual
 tests are `validate` macros. You find all these macros in the file
@@ -128,7 +133,7 @@ tarch/tests/TestMacros.h. There are three classes of macros:
 
 All of these macros come along with variants that allow you to plot
 additional information if a test has failed, i.e. to plot the values of
-further variables, e.g. All validation macros automatically set a test
+further variables. All validation macros automatically set a test
 to failed if they fail, and they write a verbose message on the reason
 why some tests failed to the terminal.
 

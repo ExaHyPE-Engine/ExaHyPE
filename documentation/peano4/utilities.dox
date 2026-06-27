@@ -1,8 +1,6 @@
 /**
 \page peano_utilities Utilities
 
-\li \subpage peano4_utils_Loop_parallel
-
 ## Loop macros
 
 ### d-dimensional loops
@@ -10,8 +8,10 @@
 I wrote Peano to support arbitrary spatial dimensions. By default, I
 build only 2d and 3d versions of the code/core, but in principle you can
 write also simulations over 4d or 5d domains, e.g. The choice of a
-particular dimension d is done at compile time via the flag
-`-DDimension=d`. As everything is generic w.r.t. dimensions, I have many
+particular dimension d is done at compile time via the preprocessor
+macro `DIMENSIONS`, which the build system sets per target from the
+CMake `DIMENSION` keyword (the supported values are listed in the
+`SUPPORTED_DIMENSIONS` cache variable). As everything is generic w.r.t. dimensions, I have many
 places in the code where I need d-dimensional loops.
 
 Peano's `peano4` namespace offers a header
@@ -31,7 +31,7 @@ dfor(k, 20) { // d-dimensional loop over 20x20x20x... patch
 
 There are also macros for loops skipping one dimension, or macros for
 particular iteration ranges (2,3,4) which are highly optimised through
-lookup tables. Finally, `Loop` hosts z-loops, i.e. loops which meander
+lookup tables. Finally, `Loop` hosts z-loops, i.e. loops which meander
 forth and back through an array similar to the Peano curve.
 
 To use the d-dimensional loops, you have to include

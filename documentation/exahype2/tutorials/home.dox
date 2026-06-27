@@ -1,26 +1,121 @@
 /**
-\page page_tutorials Tutorials
 
-<div style="background-color: #ccf ; padding: 10px; border: 1px solid green;">
-The following are tutorials intended to introduce the usage of ExaHyPE 2 to new users.
-There will be a some brief touches of theory intended to explain what ExaHyPE 2 is and
-what design choices went into it, but for the most part these are intended to be a practical introduction into application development in ExaHyPE 2.
-</div>
+@page page_exahype2_tutorials Tutorials
 
-<div style="background-color: #ccf ; padding: 10px; border: 1px solid green;">
-Structurally, these tutorials are composed of text-based explanations, what you are currently reading, accompanied by jupyter notebooks which you can find in
-        cd tutorials/exahype2
-</div>
+@image html documentation/exahype2/ExaHyPE-logo.jpg
+
+ExaHyPE 2 is a hyperbolic PDE engine. You write down a system of conservation
+laws - sound waves, water waves, compressible flow - in a handful of lines of
+Python, and ExaHyPE generates, compiles and runs an optimised C++ solver for
+you. Cartesian meshes, adaptive mesh refinement, and shared- and
+distributed-memory parallelism all come for free, so you get to concentrate on
+the physics.
+
+These five tutorials take you from a blank notebook to five working solvers.
+Each one is a self-contained Jupyter notebook with a small C++ implementation,
+and each builds on the one before, so work through them in order.
 
 
-<div style="background-color: #ccf ; padding: 10px; border: 1px solid green;">
-Please browse the links below and study the webpages, and where appropriate go find the accompanying jupyter notebook to see the realization in code. Best of luck and best of fun!
-</div>
+# Quick Start
 
-- Exercises (interactive step-by-step examples of core ExaHyPE components)
-    - \subpage page_exahype2_tutorials_start
-    - \subpage page_exahype2_tutorials_config
-    - \subpage page_exahype2_tutorials_implementation
-    - \subpage page_exahype2_tutorials_shallow_water
-    - \subpage page_exahype2_tutorials_euler
+You need a JupyterLab with ExaHyPE 2 and its Python API on the path. The fastest
+route is the prebuilt tutorials container; if Docker is not an option, build
+ExaHyPE 2 from source and start JupyterLab yourself.
+
+## Option A: The Tutorials Docker Image (Recommended)
+
+Everything is baked into the `peanoframework/exahype2-tutorials` image on
+[Dockerhub](https://hub.docker.com/u/peanoframework): the compiled code, the
+notebooks and the JupyterLab server. Pull it and run:
+
+\verbatim
+docker pull peanoframework/exahype2-tutorials
+docker run -p 8888:8888 peanoframework/exahype2-tutorials
+\endverbatim
+
+then open http://localhost:8888 in your browser and start with the first
+notebook in `01_acoustic/`.
+
+@note **🍎 Apple Silicon (ARM) Macs.** The image is built for `linux/amd64`, but it
+runs on M-series Macs through Docker Desktop's emulation. Just add
+`--platform linux/amd64`:
+`docker run --platform linux/amd64 -p 8888:8888 peanoframework/exahype2-tutorials`.
+
+## Option B: Build from Source (No Docker)
+
+If Docker does not work for you, build ExaHyPE 2 yourself and launch JupyterLab
+locally. You need a C++20 compiler, CMake 3.27+, Python 3.11+ and HDF5 (the
+tutorials write their snapshots as HDF5); MPI and OpenMP are recommended. The
+full dependency list is on @ref page_installation_home.
+
+On most systems the compiler, CMake, MPI, HDF5 and NetCDF come straight from
+the package manager. ExaHyPE writes its output in parallel, so pick the
+MPI-enabled (parallel) flavours of HDF5 and NetCDF:
+
+\verbatim
+# Ubuntu / Debian
+sudo apt-get install build-essential cmake python3-venv libopenmpi-dev \
+                     libhdf5-openmpi-dev libnetcdf-mpi-dev libnetcdf-c++4-dev
+
+# Fedora / RHEL
+sudo dnf install gcc-c++ cmake openmpi-devel \
+                 hdf5-openmpi-devel netcdf-openmpi-devel netcdf-cxx4-openmpi-devel
+
+# macOS (Homebrew)
+brew install cmake open-mpi hdf5-mpi netcdf netcdf-cxx
+\endverbatim
+
+Then clone, build and launch:
+
+\verbatim
+# GIT_LFS_SKIP_SMUDGE=1 lets the clone succeed even without git-lfs installed
+GIT_LFS_SKIP_SMUDGE=1 git clone -b muc/exahype https://gitlab.lrz.de/hpcsoftware/Peano.git exahype2 --depth 1
+cd exahype2
+
+# 1. Build the ExaHyPE 2 libraries (multithreading, MPI and HDF5 are on by default)
+mkdir build
+cd build
+cmake ..
+make -j$(nproc)   # $(nproc) builds with one job per core; replace with a number to cap it
+cd ..
+
+# 2. Create a Python virtual environment and install the Python API (editable)
+#    plus the notebook dependencies into it - this keeps your system Python
+#    untouched (and many distributions refuse system-wide pip installs anyway)
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+pip install -e .
+
+# 3. Launch JupyterLab on the tutorials
+cd tutorials
+jupyter lab
+\endverbatim
+
+JupyterLab opens in your browser; start with `01_acoustic/AcousticWaves.ipynb`. The
+notebooks add the freshly built Python API to their own path, so they pick up
+the sources you just compiled.
+
+@note The virtual environment only lives in your shell session. When you come
+back later, re-activate it before launching JupyterLab again:
+`cd exahype2 && source venv/bin/activate && cd tutorials && jupyter lab`.
+
+- \subpage page_exahype2_tutorials_acoustic - **Part 1** (`01_acoustic/`): a fully
+  worked, linear ADER-DG solver. Learn the whole build / run / visualise loop.
+- \subpage page_exahype2_tutorials_shallow_water - **Part 2** (`02_shallow-water/`):
+  implement a non-linear ADER-DG solver yourself, with a non-conservative product
+  and static mesh refinement.
+- \subpage page_exahype2_tutorials_euler - **Part 3** (`03_euler/`): a worked Finite
+  Volumes solver for compressible flow over an airfoil, with a bow shock and
+  static mesh refinement.
+- \subpage page_exahype2_tutorials_limiting - **Part 4** (`04_limiting/`): a 2D
+  Euler shock with an a-posteriori limiter, where troubled high-order cells fall
+  back to Finite Volumes. See what happens to the high-order scheme when you
+  switch the limiter off.
+- \subpage page_exahype2_tutorials_elastic - **Part 5** (`05_elastic/`): 3D elastic
+  waves with an interactive cube slicer, and a first taste of HPC - measure how the
+  solver scales across OpenMP threads.
+
+Each tutorial closes with suggestions for your own experiments.
+
 */

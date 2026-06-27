@@ -30,19 +30,31 @@ class Model(object):
             + ")"
         )
 
+    # The add routines tolerate repeated registration of the same object: the
+    # generator may run several times on one project, and solvers re-register
+    # their (cached) data objects each time. Without the identity check every re-run would duplicate the data
+    # in the model and hence in all generated observer signatures.
     def add_cell(self, submodel):
+        if any(existing is submodel for existing in self.cell_data):
+            return
         submodel.configure(self.namespace, DoFAssociation.Cell)
         self.cell_data.append(submodel)
 
     def add_face(self, submodel):
+        if any(existing is submodel for existing in self.face_data):
+            return
         submodel.configure(self.namespace, DoFAssociation.Face)
         self.face_data.append(submodel)
 
     def add_vertex(self, submodel):
+        if any(existing is submodel for existing in self.vertex_data):
+            return
         submodel.configure(self.namespace, DoFAssociation.Vertex)
         self.vertex_data.append(submodel)
 
     def add_global_object(self, submodel):
+        if any(existing is submodel for existing in self.global_data):
+            return
         submodel.configure(self.namespace, DoFAssociation.Global)
         self.global_data.append(submodel)
 

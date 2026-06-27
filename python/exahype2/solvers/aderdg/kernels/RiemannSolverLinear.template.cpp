@@ -102,12 +102,14 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   cCompType smax = std::fmax(smaxL, smaxR);
   traceLeave("Max eigenvalue evaluation");
 
+{% if USE_NCP or USE_MATERIAL_PARAMETERS or NUMBER_OF_AUXILIARY_VARIABLES > 0 %}
   cCompType Qavg[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
 
   SIMD(aligned(Qavg,QavR,QavL:PEANO_WITH_ALIGNMENT))
   for (int n = 0; n < {{NUMBER_OF_DATA_PADDED}}; n++) {
     Qavg[n] = 0.5 * (QavR[n] + QavL[n]);
   }
+{% endif %}
 
   cCompType Qdiff[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
 

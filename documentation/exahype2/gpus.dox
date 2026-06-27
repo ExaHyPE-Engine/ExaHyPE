@@ -5,73 +5,68 @@
 @tableofcontents
 
 
-@image html gpus.png
+@image html documentation/exahype2/gpus.png
 
-ExaHyPE uses GPUs in a classic ***offloading*** mode:
+ExaHyPE uses GPUs in a classic ***offloading*** mode:
 It takes particular tasks, ships them to the GPU and then ships them
 back. This happens under the hood, and neither does data reside on the
 accelerator permanently nor is the accelerator used all the time.
 Not all solvers support GPU offloading, but solver variants with tasking or
 fused-kernel support can either have accelerator support built in or can be
-tweaked relatively easy to gain something from GPU devices.
+tweaked relatively easily to gain something from GPU devices.
 
- If you have a solver with GPU support and want to activate this tasking, you have
- to do the following steps:
+If you have a solver with GPU support and want to activate this offloading, you
+have to do the following steps:
 
- 1. @ref page_installation_home "Configure" Peano with GPU plus multithreading support.
- 2. Follow the instructions around @ref page_exahype_multicore "tasking".
- 3. Pick a solver with GPU support.
- 4. Tweak the task orchestration as discussed below.
- 5. Run some @ref page_exahype_runtime_analysis "performance analysis".
- 6. Study the @ref page_exahype_performance_optimisation "optimisation recommendations".
+1. @ref page_installation_home "Configure" Peano with GPU plus multithreading support.
+2. Follow the instructions around @ref page_exahype_multicore "tasking".
+3. Pick a solver with GPU support.
+4. Enable stateless compute kernels and provide the additional PDE terms.
+5. Run some @ref page_exahype_runtime_analysis "performance analysis".
+6. Study the @ref page_exahype_performance_optimisation "optimisation recommendations".
 
 
 ## Using ExaHyPE with GPU support
 
-All instructions how to enable GPU support is collected in a @ref tutorials_exahype2_hpc_gpus "GPU tutorial".
-This tutorial only demonstrates how you enable GPU support (which is relatively
-easy). For proper GPU engineering, you have to study the steps below which
-discuss how the GPU offloading works and how you can introduce it
-systematically, such that you gain performance (sometimes, just throwing
-stuff onto the accelerator without any further thought slows the code down).
-
-
+The setup instructions for the GPU backends are collected on
+@ref page_compiler_specific_settings_home "the compiler-specific settings page".
+This page focuses on how GPU offloading works in ExaHyPE and how you can
+introduce it systematically, such that you gain performance (sometimes, just
+throwing stuff onto the accelerator without any further thought slows the code
+down).
 
 
 ## How the GPU offloading works
 
-
 ExaHyPE's GPU offloading approach assumes that there are computations (cell/patch
 updates) which can be done without any effect on global variables. It
-works if and only if we can ship a task to the GPU, and then get the
-solution data for this task back and no other global variabled changes.
+works if and only if we can ship a task to the GPU, then get the
+solution data for this task back, and no other global variable changes.
 We furthermore assume that the computations that fit onto the GPU have
 no state. They can use some global, static variables, but they cannot
 access the solver's state which can change over time. We rely on code
 parts which *have no side effects and do not depend on the solver state*
 (minus global variables).
 
-Working without side-effects might not work for all patches (Finite Volumes
-and Finite Differences) or octants (RKDG and ADER-DG)
-in your mesh: There are pieces of the mesh which
-evaluate and analyse some global data, or build up global data
-structures. In this case, ExaHyPE only offloads the remaining, simple patches/cotants
-to the GPU.
-That is, having a solver that supports patches/cells without side
-effects does not mean that all cells have to be side effect-free.
+The same argument holds for aggressive vectorisation: vectorisation
+works best if the computations on a patch do not have any side effects.
+ExaHyPE assumes that the GPU's SIMT and the CPU's SIMD are two
+realisations of the same pattern, so the stateless routines you write for
+the GPU also help the CPU vectoriser.
 
-The second things to keep in mind is that ExaHyPE tries not to offload a single
-patch to the GPU. It can do, but this is then a degenerated variant of something
-way more generic: The code takes a set of octants from the mesh and moves
+Working without side-effects might not work for all patches (Finite Volumes
+and Finite Differences) or octants (RKDG and ADER-DG) in your mesh: there are
+pieces of the mesh which evaluate and analyse some global data, or build up
+global data structures. In this case, ExaHyPE only offloads the remaining,
+simple patches/octants to the GPU. That is, having a solver that supports
+patches/cells without side effects does not mean that all cells have to be
+side effect-free.
+
+The second thing to keep in mind is that ExaHyPE tries not to offload a single
+patch to the GPU. It can do, but this is then a degenerate variant of something
+way more generic: the code takes a set of octants from the mesh and moves
 them en bloc to the accelerator. There, one compute kernel updates all
 of these guys in one rush. We refer to this as ***fused*** updates.
-A description of the fusion approach is summarised in the
-@ref page_tarch_multicore "description of the technical architecture".
-
-
-The description above gives us a clear roadmap how to offload code in
-ExaHyPE to the accelerator:
-
 
 
 ## GPU support (programmer's view)
@@ -83,8 +78,8 @@ on your chosen solver configuration. Solver variants that generate accelerator
 kernels expose this through their Python configuration, for example the FV
 Godunov solvers' `fuse_compute_kernels` option.
 
-Once you have chosen such a solver and compile the code, inspect the generated
-kernel subdirectories from time to time to check if the
+Once you have chosen such a solver and compiled the code, inspect the generated
+`kernels/` subdirectories from time to time to check if the
 generated code does make sense.
 
 
@@ -96,7 +91,7 @@ accelerator.
 
 <div style="background-color: #fcc ; padding: 10px; border: 1px solid green;">
 Many developers jump straight into accelerator programming and then are
-frustrated if ExaHyPE does not use the GPU and blame the code. Most of their
+frustrated if ExaHyPE does not use the GPU and blame the code. Most of the
 time, they haven't done their homework: Peano always tries to maximise the
 CPU usage first before it offloads to the GPU. For tiny problems or unfortunate
 load balancing, the code hence might not use the GPU even though the code is,
@@ -105,26 +100,23 @@ in principle, GPU-ready. This is a natural consequence of our aim to
 don't do it!
 </div>
 
+
 ### Enable stateless compute kernels
-
-
-@todo Some of the content below should go into the Jupyter notebook
 
 You next have to instruct your solver that you plan to have patch or cell
 updates without (write) access to the solver's internal state. They also don't
 alter the global state. Obviously, you can weaken these assumptions later on,
 but this then requires further manual work.
 
-The exact switch depends on the solver family. Some DG solvers expose this as
+The exact switch depends on the solver family. The DG solvers expose this as
 a `pde_terms_without_state=True` constructor argument. FV Godunov solvers use
-the fused-kernel generation path instead, and the PDE callbacks used by the
-fused kernel have to be available as stateless/static snippets, for example via
-`set_implementation()`:
-
+the fused-kernel generation path instead, i.e. you set
+`fuse_compute_kernels=True`, and the PDE callbacks used by the fused kernel
+have to be available as stateless/static snippets (see below):
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 my_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
-            name= "GPUFVSolver",
+            name="GPUFVSolver",
             patch_size=18,
             unknowns=5,
             auxiliary_variables=0,
@@ -134,366 +126,166 @@ my_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-# Provide the additional PDE terms without state
+### Provide the additional PDE terms without state
 
-To faciliate the offloading, we have to create alternative versions of
-our PDE term functions that can work independent of the solver object
-(and in return cannot modify it). Depending on which terms we have,
-we'll need stateless versions of the flux, the non-conservative product
-and the source term. We'll always needs the eigenvalue function. Per
-function, keep the original one and add a second one which is
+To facilitate the offloading, we have to provide versions of our PDE term
+functions that can work independently of the solver object (and in return
+cannot modify it). Depending on which terms we have, we'll need stateless
+versions of the flux, the non-conservative product and the source term. We'll
+always need the eigenvalue function.
 
--   static;
+The simplest path is to let the Python API generate these terms for you.
+Most ExaHyPE solvers allow you to insert the realisation of a routine directly
+from the Python code via `set_implementation()`. The generated abstract base
+class then emits the term as a `static` method that is annotated with
+`GPU_CALLABLE_METHOD`, so the very same snippet can be called from the host and
+from the device. The relevant macros live in
+`src/tarch/accelerator/accelerator.h`:
 
--   accepts an additional flag of type `Offloadable`. This is the last
-    argument, i.e. a static version of a function has exactly the same
-    arguments as the non-static, default variant but then has one more
-    argument. The last argument is solely there to be able to
-    distinguish the static version from the normal one, as C++ cannot
-    overload w.r.t. static vs. not static. `Offloadable` is
-    automatically defined in the abstract base class which 's Python API
-    generates.
+- `GPU_CALLABLE_METHOD` expands to the appropriate per-backend annotation
+  (`__host__ __device__` for CUDA/HIP, `KOKKOS_FUNCTION` for Kokkos, nothing
+  for SYCL).
+- `TARGET_DECLARE` / `TARGET_DECLARE_END` wrap a block of free functions in an
+  `omp declare target` region when the OpenMP target (OMPT) backend is used,
+  and expand to nothing otherwise.
 
--   is embedded into
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp declare target
-    #endif
-    my new static function variants
-    #if defined(OpenMPGPUOffloading) #pragma omp end declare target
-    #endif
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    Though you can leave the declare annotations away if you use SYCL only.
-
-Very often, the standard flux and eigenvalue routines can invoke the
-static variants and you can thus eliminate code redundancies. For
-example, you might have the normal flux function and a static flux
-function with the additional `Offloadable` parameter, but the normal
-function just invokes the static cousin.
-
-In many of our codes, we take a function like
+If you write the PDE terms by hand instead, keep the original (virtual)
+function and add a second `static` overload which accepts an additional flag of
+type `Offloadable` as its last argument. This last argument is solely there to
+let C++ distinguish the static version from the normal one, as C++ cannot
+overload with respect to `static` vs. non-`static`. `Offloadable` is an
+`enum class { Yes }` defined in `exahype2::Solver`, the abstract base class
+which Peano's Python API generates. A typical hand-written split looks like
+this:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-void examples::exahype2::SSInfall::SSInfall::flux( ... ) {
-
-  compute something;
-
-}
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-and simply split it into two variants:
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-void examples::exahype2::SSInfall::SSInfall::flux( ... ) {
-
-  flux(Q,faceCentre,volumeH,t,normal,F,Offloadable::Yes);
-
+GPU_CALLABLE_METHOD
+static void flux( ..., Offloadable ) {
+  // compute something (no logging, no assertions)
 }
 
-
-void examples::exahype2::SSInfall::SSInfall::flux( ..., Offloadable ) {
-  compute something;
+void flux( ... ) {
+  flux(Q, faceCentre, volumeH, t, normal, F, Offloadable::Yes);
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The static version is used on the GPU. The normal one is used on the CPU
 yet defers immediately to the static version. Please note that GPUs are
-quite restrictive w.r.t. terminal outputs and assertions. You will have
-to remove both from your static routine versions. In the example above,
-the non-static version wraps the core functionality into assertions.
-Therefore, we have the assertions on the CPU, but the core part that
-goes to the GPU is free of assertions. The same holds for the logging.
-
+quite restrictive with respect to terminal output and assertions. You will have
+to remove both from your static routine versions. In the example above, the
+non-static version can wrap the core functionality into assertions and logging,
+while the static part that goes to the GPU is free of both. ExaHyPE calls the
+static variant from its compute kernels through, for example,
+`Solver::flux( ..., Solver::Offloadable::Yes )`.
 
 <div style="background-color: #cfc ; padding: 10px; border: 1px solid green;">
-Most ExaHyPE solvers allow you to insert the realisation of a routine directly
-from the Python code. In this case, both calls end up the AbstractMySolver
-class: the default variant and the stateless variant, too.
+When you use `set_implementation()`, the realisation ends up in the
+`AbstractMySolver` class. As the static, GPU-callable variant typically lands
+in the abstract super class' cpp file, the compiler may not be able to inline
+it. If your compiler struggles with the inlining, you might be forced either
+to enable link-time/interprocedural optimisation (ipo), or to switch to a
+manual implementation and move the GPU routines into the headers.
 </div>
 
 
-# Compile, run and check
+## Compile, run and check
 
-In principle, the code is now GPU ready. Compile and run.
+The build system is CMake. Configure Peano (and hence the ExaHyPE libraries)
+with a GPU backend plus multithreading. The relevant flags are
+`PEANO_WITH_GPU_BACKEND` (one of `none`, `native`, `kokkos`, `acpp`, `ompt`)
+and `PEANO_WITH_GPU_ARCH` (e.g. an NVIDIA `sm_*`, an AMD `gfx*`, or `spir64`
+for Intel). A typical configuration reads:
 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+mkdir build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release \
+         -DPEANO_WITH_MULTITHREADING=ON \
+         -DPEANO_WITH_GPU_BACKEND=native \
+         -DPEANO_WITH_GPU_ARCH=sm_80
+make -j
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# Tailor kernel choice
-
-Most ExaHyPE solvers employ at least two different kernel variations: a normal
-one and a fused one that can target accelerator-oriented execution paths. If you
-use the default configuration, both should be set to some reasonable defaults.
-If this is not the case, you can manually alter
-
-        self._fused_compute_kernel_call
-
-This value holds a C++ string, which is typically a method invocation to the
-corresponding computing kernel. If you play around with this value, you
-might want to study @ref page_exahype_gpu "further GPU realisation details"
-and dive into the code.
-
-
-# Fuse tasks
-
-Finally, we might want to tailor the fusion of tasks. For example, you might
-want to offload to the GPU if and only if there are enough tasks that you can
-bundle (fuse) into one meta task. Of you might want to use different GPUs
-depending on the task context. These decisions are made by the multithreading
-orchestration (among other things).
-
-You can switch the orchestration
-manually in your C++ file. By default, the initialisation of ExaHyPE does this:
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-tarch::multicore::setOrchestration( tarch::multicore::orchestration::createDefaultStrategy() );
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-You can alter this one.
-A more elegant variant is likely that you use
-exahype2.Project.set_multicore_orchestration() to let the lowering into Peano
-automatically insert an appropriate setOrchestration() call. The namespace
-tarch::multicore::orchestration holds a bundle of different orchestration strategies
-that you can use to tweak your code. A good starting point is
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-my_project.set_multicore_orchestration( "new otherOrchestration(...)" )
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Pick the backend that matches your toolchain as described on the
+@ref page_compiler_specific_settings_home "compiler-specific settings page".
+Once Peano is rebuilt, the generated solver is GPU ready: rerun the Python
+script to lower your project, then compile and run.
 
 
+## Tailor the compute kernels
+
+ExaHyPE solvers which support GPUs/stateless operators typically host multiple
+compute kernels. On the Python level these kernels are plain C++ function calls
+stored as strings:
+
+- `self._compute_kernel_call` is a C++ function call for the normal task. It is
+  called whenever you hit a single octant, i.e. a Finite Volume patch or a DG
+  cell. It calls the virtual flux, eigenvalue, ... functions on the solver
+  object.
+- `self._fused_compute_kernel_call` is a C++ function call that ExaHyPE uses
+  whenever it encounters a set of octants in the tree which can be processed
+  embarrassingly parallel, as they all invoke the same PDE and none of them
+  alters the state of the underlying solver object. The compute kernels
+  identified by this string call the static flux and eigenvalue variants
+  instead of the virtual functions.
+
+For the FV Godunov solvers, `fuse_compute_kernels=True` makes the code
+generator populate these strings for you. The normal call resolves to
+something like
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+kernels::{SOLVER}::riemannSolver( repositories::{SOLVER_INSTANCE}, ... );
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+and the fused call resolves to
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+kernels::{SOLVER}::riemannSolverFused( repositories::{SOLVER_INSTANCE}, ..., targetDevice );
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+where `{SOLVER}` and `{SOLVER_INSTANCE}` are the solver name and singleton.
+The corresponding `kernels/{SOLVER}/RiemannSolverFused.cpp` is generated from a
+backend-specific template
+(`RiemannSolverFused.{sycl,ompt,cuda,hip,kokkos}.template.cpp`), so the same
+call site dispatches to the right backend depending on
+`PEANO_WITH_GPU_BACKEND`. The fused variant additionally receives a
+`targetDevice` argument; SYCL can run on both the host and the device, whereas
+the OpenMP target version only runs if a valid device has been selected.
+
+If you use the default configuration, both kernel calls are set to reasonable
+defaults. Advanced users can override `self._fused_compute_kernel_call` with a
+tailored variant before lowering, but the replacement string has to match the
+generated fused-kernel signature and the fused patch data layout.
 
 
-# Advanced techniques
+## Advanced techniques
 
-## Select which octants (cells or patches) to ship to the GPU and back
+### Mask out cells which are not a fit
 
 If only some patches/cells can be offloaded to the GPU, then you can
 redefine the routine
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-virtual bool patchCanUseStatelessPDETerms(
-  const tarch::la::Vector<DIMENSIONS,double>&  x,
-  const tarch::la::Vector<DIMENSIONS,double>&  h,
+virtual bool cellCanUseStatelessPDETerms(
+  const tarch::la::Vector<DIMENSIONS,double>&  cellCentre,
+  const tarch::la::Vector<DIMENSIONS,double>&  cellH,
   double t,
   double dt
 ) const;
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-in your solver. By default, this routine returns `true`. This default
-is written in the AbstractXXX solver. But nothing stops you from redefining
-the function in your particular solver subclass.
-
-
-## Write your own orchestration
-
-Very advanced codes write their own orchestration which ships particular tasks
-specifically to the GPU.
-Through this, you can tailor the task execution pattern towards your specific needs.
-Notably, the orchestration is asked per task type whether and where to ship the
-task.
-
-
-# Further reading
-
-- Switch to a toolchain for your particular GPU backend. Information on this can be found at \ref tarch_logging.
-- Consult the @ref  page_exahype_performance_optimisation "The code does not use all cores" discussion.
-- @ref tarch::multicore "The multicore layer in the technical architecture"
-- @ref page_exahype_gpu provides a more technical discussion of the GPU offloading
-
-
-
-## Adding GPU support to your ExaHyPE source code (programmer view)
-
-This page discusses how ExaHyPE supports SIMT and SIMD compute kernels.
-ExaHyPE uses GPUs in a classic ***offloading***, i.e. GPUs as accelerators. This means that
-it takes particular tasks, ships them to the GPU and then ships them
-back. This happens under the hood, and neither does data reside on the
-accelerator permanently nor is the accelerator used all the time.
-
-The whole approach assumes that there are computations (cell/patch
-updates) which can be done without any effect on global variables. It
-works if and only if we can ship a task to the GPU, and then get the
-solution data for this task back and no other global variabled changes.
-We furthermore assume that the computations that fit onto the GPU have
-no state. They can use some global, static variables, but they cannot
-access the solver's state which can change over time. We rely on code
-parts which *have no side effects and do not depend on the solver state*
-(minus global variables).
-
-The same argument holds for aggressive vectorisation: Vectorisation
-works best if the computations on a patch do not have any side effects.
-Basically, ExaHyPE assumes that GPU's SIMT and CPU's SIMD are two
-realisations of the same pattern.
-
-Working without side-effects might not work for all patches: There are always patches which
-evaluate and analyse some global data, or build up global data
-structures. In this case, ExaHyPE only offloads the remaining, simple patches
-to the GPU.
-That is, having a solver that supports patches/cells without side
-effects does not mean that all cells have to be side effect-free.
-
-Before you dive into this technical description of how GPU offloading (and
-very aggressive vectorisation) work, it makes sense to read through the
-@ref tutorials_exahype_gpu "tutorial on GPU offloading".
-
-
-# Compile with GPU support
-
-Configure ExaHyPE with the argument `--with-gpu=xxx` and select an
-appropriate GPU programming model. Rebuild the whole Peano core.
-This includes the ExaHyPE libraries.
-
-@todo More details on teh maturity and working of coce
-@todo Discussion how to introduce your own GPU-specific kernels
-
-# Enable stateless compute kernels
-
-
-The solver documentation should clarify which variants provide generated
-accelerator kernels. Some solver families expose stateless PDE terms through a
-`pde_terms_without_state=True` constructor argument. FV Godunov solvers use
-`fuse_compute_kernels=True` and stateless/static PDE snippets instead. Consult
-the documentation of the respective solvers. Examples are
-
-- exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep with `fuse_compute_kernels=True`
-- yet to be added
-
-
-## Provide the additional PDE terms without state
-
-To faciliate the offloading, we have to create alternative versions of
-our PDE term functions that can work independent of the solver object
-(and in return cannot modify it). Depending on which terms we have,
-we'll need stateless versions of the flux, the non-conservative product
-and the source term. We'll always needs the eigenvalue function. Per
-function, keep the original one and add a second one which is
-
--   static;
--   accepts an additional flag of type `Offloadable`. This is the last
-    argument, i.e. a static version of a function has exactly the same
-    arguments as the non-static, default variant but then has one more
-    argument. The last argument is solely there to be able to
-    distinguish the static version from the normal one, as C++ cannot
-    overload w.r.t. static vs. not static. `Offloadable` is
-    automatically defined in the abstract base class which 's Python API
-    generates.
-
-Most ExaHyPE solvers allow you to insert the realisation of a routine directly
-from the Python code. In this case, the call ends up the AbstractMySolver
-class.
-Most classes call the corresponding routine set_implementation(). If you use
-this one, the code generator usually does not distinguish the two callback
-flavours and uses the same code snippet for the normal as well as the
-vectorised version.
-However, it is likely that the files end up in the cpp file of the abstract
-super class. That is, the compiler will not be able to inline anything. If
-your compiler struggles with the inlining, you might be forced either
-
-- to dive into linker-time optimisation - Intel, for example, did allow you to
-  run interprocedural optimisation (ipo) on bundles of object files; or
-- to switch to a manual implementation and to move the GPU routines into the
-  headers.
-
-
-## Alter compute kernel
-
-ExaHyPE solvers which support GPUs/stateless operators typically host multiple
-compute kernels. These kernels are plain C++ function calls, i.e. strings, on
-the Python level.
-
-- `self._compute_kernel_call` is a C++ function call for the normal task.
-  This guy is called whenever you hit an octant, i.e. Finite Volume patch or
-  a DG cell. It calls the virtual flux, eigenvalue, ... functions on the
-  solver object.
-- `self._fused_compute_kernel_call` is a C++ function call that ExaHyPE
-  uses whenever it encounters a set of octants in the tree which can be
-  processed embarrassingly parallel as they all invoke the same PDE and
-  none of them alters the state of the underlying solver object. So the
-  compute kernels identified by this string can call the static flux and
-  eigenvalue instead of the virtual function.
-
-The generated fused call picks the backend-specific kernel variant depending on
-your configuration.
-
-
-While this gives you a working version quickly, you might want to switch to a
-tailored variant for your particular solver. This can be done by changing the
-actual solver kernel:
-
-~~~~~~~~~~~~~~~~~~~~~~
-mysolver._fused_compute_kernel_call = exahype2.kerneldsl.api.compile( .... )
-~~~~~~~~~~~~~~~~~~~~~~
-
-
-# Mask out cells which are not a fit
-
-If only some patches/cells can be offloaded to the GPU, then you can
-redefine the routine
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-virtual bool patchCanUseStatelessPDETerms(
-  const tarch::la::Vector<DIMENSIONS,double>&  patchCentre,
-  const tarch::la::Vector<DIMENSIONS,double>& patchH, double t, double dt
-) const;
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-in your solver. By default, this routine returns `true` always. Here's
-the clue: This is a normal function, i.e. you can use the solver's state
-and make the result depend on this one.
-
-
-
-patchCanUseStatelessPDETerms() yields, by default, true. So all compute kernels
-can end up on the GPU if they are selected for offloading. You migth want to
-alter this, and keep some kernels on the host.
-
-
-# Sanity checks
-
-The sections below discuss what you should see in the code.
-
-
-## Introduce aggressively vectorised kernel
-
-@todo This will change completely as we switch to xDSL. Notably, we will not support
-multiple target GPUs in one source code anymore.
-
-Once you have a GPU-ready solver, it makes sense to doublecheck quickly if the
-solver really dispatches the correct compute kernels.
-For this, we first study the generated fused-kernel call.
-Stateless routines are also very useful on the CPU, as we can aggressively
-vectorise over them.
-Therefore, the generated code should expose a call similar to
-
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-_fused_compute_kernel_call = exahype2.solvers.fv.godunov.kernels.create_fused_compute_kernel_call(...)
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The kernels might look completely different, but the principle is clear:
-Whenever we prepare a fused batch, the generated call has to dispatch the
-stateless variant that can run on the selected target.
-
-
-## Fused compute kernels
-
-@todo This will change completely as we switch to xDSL. Notably, we will not support
-multiple target GPUs in one source code anymore.
-
-Inspect the generated fused solver. The offloading branch is again simple to
-digest:
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-::exahype2::fv::rusanov::sycl::RiemannSolverFused(..., targetDevice);
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-We see here, that SYCL can run on both the host and the device, whereas we pick
-the OpenMP version if and only if we have picked a valid device.
-
-
-If this call logic makes no sense, FV solvers expose
-`self._fused_compute_kernel_call` as the generated call site. Advanced users
-can replace this string before lowering, but the replacement has to match the
-generated fused-kernel signature and the fused patch data layout.
-
-
+in your solver. By default, this routine returns `true`, so all compute kernels
+can end up on the GPU if they are selected for offloading. The default is
+written in the `AbstractXXX` solver. This is a normal (non-static) function,
+i.e. you can use the solver's state and make the result depend on it; nothing
+stops you from redefining it in your particular solver subclass to keep some
+kernels on the host.
+
+
+## Further reading
+
+- Switch to a toolchain for your particular GPU backend. Information on this can
+  be found on the @ref page_compiler_specific_settings_home "compiler-specific settings page".
+- Consult the @ref page_exahype_performance_optimisation "performance optimisation" discussion.
+- @ref page_tarch_multicore "The multicore layer in the technical architecture".
 
   */

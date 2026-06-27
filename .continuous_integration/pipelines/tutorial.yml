@@ -1,7 +1,7 @@
 Acoustic:
   stage: Tutorial
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tutorials/acoustic && ipython Acoustic.ipynb"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tutorials/01_acoustic && PYTHONPATH=$CI_PROJECT_DIR/python ipython AcousticWaves.ipynb"
   allow_failure: false
   extends:
     - .Tags
@@ -14,7 +14,7 @@ Acoustic:
 SWE:
   stage: Tutorial
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd documentation/exahype2/tutorials && ipython SWE.ipynb"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tutorials/02_shallow-water && PYTHONPATH=$CI_PROJECT_DIR/python ipython ShallowWater.ipynb"
   allow_failure: false
   extends:
     - .Tags
@@ -27,7 +27,35 @@ SWE:
 Euler:
   stage: Tutorial
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd documentation/exahype2/tutorials && PYTHONPATH=$CI_PROJECT_DIR/python python3 euler.py"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tutorials/03_euler && PYTHONPATH=$CI_PROJECT_DIR/python ipython Euler.ipynb"
+  allow_failure: false
+  extends:
+    - .Tags
+    - .Variables
+    - .RunOnlyOnMain
+    - .BeforeScriptSanitiser
+  needs:
+    - job: Build
+  retry: 0
+
+Limiting:
+  stage: Tutorial
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tutorials/04_limiting && PYTHONPATH=$CI_PROJECT_DIR/python ipython EulerShock.ipynb"
+  allow_failure: false
+  extends:
+    - .Tags
+    - .Variables
+    - .RunOnlyOnMain
+    - .BeforeScriptSanitiser
+  needs:
+    - job: Build
+  retry: 0
+
+Elastic:
+  stage: Tutorial
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tutorials/05_elastic && PYTHONPATH=$CI_PROJECT_DIR/python ipython ElasticWaves.ipynb"
   allow_failure: false
   extends:
     - .Tags
