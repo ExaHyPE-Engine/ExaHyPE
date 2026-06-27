@@ -26,17 +26,35 @@
 #define TARGET_DECLARE
 #define TARGET_DECLARE_END
 #define GPU_CALLABLE_METHOD
+#define GPU_CALLABLE_LAMBDA
 
 // https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/#nvcc-identification-macro
 // defined(_NVHPC_CUDA) || defined(__NVCOMPILER_CUDA__) || defined(__CUDACC__) || defined(NVCC) || defined(__NVCC__)
 #if defined(PEANO_WITH_GPU_BACKEND_CUDA) || defined(PEANO_WITH_GPU_BACKEND_HIP)
 #undef GPU_CALLABLE_METHOD
 #define GPU_CALLABLE_METHOD __host__ __device__
+#undef GPU_CALLABLE_LAMBDA
+#define GPU_CALLABLE_LAMBDA __device__
 #endif
 
 #if defined(PEANO_WITH_GPU_BACKEND_KOKKOS)
 #undef GPU_CALLABLE_METHOD
 #define GPU_CALLABLE_METHOD KOKKOS_FUNCTION
+#undef GPU_CALLABLE_LAMBDA
+#if defined(KOKKOS_ENABLE_CUDA) || defined(KOKKOS_ENABLE_HIP)
+#define GPU_CALLABLE_LAMBDA __host__ __device__
+#else
+#define GPU_CALLABLE_LAMBDA
+#endif
+#endif
+
+// nvcc warns (#20013) when a host+device function calls a constexpr but host-only stdlib helper
+// (std::min/max/abs, std::numeric_limits). The calls are compile-time and safe; the native cuda
+// backend allows them via FindCUDA's --expt-relaxed-constexpr, but that flag cannot be placed in the
+// Kokkos launcher model without hitting host-only g++ units, so we relax the diagnostic here. No-op
+// off nvcc.
+#if defined(__CUDACC__)
+#pragma nv_diag_suppress 20013
 #endif
 
 #if defined(PEANO_WITH_GPU_BACKEND_OMPT)
@@ -50,8 +68,8 @@
 #define COMPILE_IF_ON_DEVICE(CODE) KOKKOS_IF_ON_DEVICE(CODE)
 #define COMPILE_IF_ON_HOST(CODE) KOKKOS_IF_ON_HOST(CODE)
 #else
-#if defined(__CUDA_ARCH__) or defined(__HIP_DEVICE_COMPILE__) or defined(__SPIR__) or defined(__SPIRV__) \
-  or defined(__SYCL_DEVICE_ONLY__) or defined(__NVPTX__) or defined(__AMDGCN__)
+#if defined(__CUDA_ARCH__) or defined(__HIP_DEVICE_COMPILE__) or defined(__SPIR__) or defined(__SPIRV__) or \
+  defined(__SYCL_DEVICE_ONLY__) or defined(__NVPTX__) or defined(__AMDGCN__)
 #define COMPILE_IF_ON_DEVICE(CODE) {CODE}
 #define COMPILE_IF_ON_HOST(CODE)
 #else
@@ -74,8 +92,9 @@
 
 namespace tarch {
   namespace accelerator {
-#if !defined(PEANO_WITH_GPU_BACKEND_KOKKOS) && !defined(PEANO_WITH_GPU_BACKEND_CUDA) && !defined(PEANO_WITH_GPU_BACKEND_HIP) && !defined(PEANO_WITH_GPU_BACKEND_SYCL) \
-  && !defined(PEANO_WITH_GPU_BACKEND_OMPT)
+#if !defined(PEANO_WITH_GPU_BACKEND_KOKKOS) && !defined(PEANO_WITH_GPU_BACKEND_CUDA) && \
+  !defined(PEANO_WITH_GPU_BACKEND_HIP) && !defined(PEANO_WITH_GPU_BACKEND_SYCL) && \
+  !defined(PEANO_WITH_GPU_BACKEND_OMPT)
     TARGET_DECLARE
     inline GPU_CALLABLE_METHOD void abort(const char* message) {
       std::fputs(message, stderr);
@@ -101,6 +120,18 @@ namespace tarch {
     void  copyFromDeviceMemory(const void* source, void* target, std::size_t sizeInBytes, int device);
     void  copyFromPinnedMemory(const void* source, void* target, std::size_t sizeInBytes, int device);
     void  copyFrom(const void* source, void* target, std::size_t sizeInBytes, MemoryLocation location, int device);
+
+    /**
+     * Set / get the implicit current device used by tarch::parallelFor and
+     * tarch::parallelReduce on backends that target an accelerator.
+     *
+     * Storage is thread-local: each host thread carries its own selection so
+     * concurrent host threads can dispatch to different GPUs without locking.
+     * The default value is Device::DefaultDevice (0). The CPU OpenMP backend
+     * ignores this state.
+     */
+    void setCurrentDevice(int device);
+    int  getCurrentDevice();
   } // namespace accelerator
 
   /**

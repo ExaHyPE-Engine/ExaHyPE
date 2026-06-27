@@ -4,6 +4,7 @@
 
 #include "MemoryAllocationCache.h"
 #include "MemoryBlocks.h"
+
 #include "tarch/Assertions.h"
 
 #include <cstring>
@@ -12,9 +13,7 @@ void* tarch::accelerator::allocateHeapMemory(std::size_t sizeInBytes) {
   return ::operator new(sizeInBytes, std::align_val_t(PEANO_WITH_ALIGNMENT));
 }
 
-void tarch::accelerator::freeHeapMemory(void* data) {
-  ::operator delete(data, std::align_val_t(PEANO_WITH_ALIGNMENT));
-}
+void tarch::accelerator::freeHeapMemory(void* data) { ::operator delete(data, std::align_val_t(PEANO_WITH_ALIGNMENT)); }
 
 void tarch::accelerator::copyToHeapMemory(void* target, const void* source, std::size_t sizeInBytes) {
   std::memcpy(target, source, sizeInBytes);
@@ -69,8 +68,13 @@ void tarch::accelerator::freeRawData(void* data, MemoryLocation location, int de
   }
 }
 
-void tarch::accelerator::
-  copyTo(void* target, const void* source, std::size_t sizeInBytes, MemoryLocation location, int device) {
+void tarch::accelerator::copyTo(
+  void*          target,
+  const void*    source,
+  std::size_t    sizeInBytes,
+  MemoryLocation location,
+  int            device
+) {
   assertion(target, sizeInBytes, toString(location));
   assertion(source, sizeInBytes, toString(location));
   assertion(sizeInBytes > 0, sizeInBytes, toString(location));
@@ -91,8 +95,13 @@ void tarch::accelerator::
   }
 }
 
-void tarch::accelerator::
-  copyFrom(const void* source, void* target, std::size_t sizeInBytes, MemoryLocation location, int device) {
+void tarch::accelerator::copyFrom(
+  const void*    source,
+  void*          target,
+  std::size_t    sizeInBytes,
+  MemoryLocation location,
+  int            device
+) {
   assertion(target, sizeInBytes, toString(location));
   assertion(source, sizeInBytes, toString(location));
   assertion(sizeInBytes > 0, sizeInBytes, toString(location));
@@ -113,6 +122,14 @@ void tarch::accelerator::
   }
 }
 
+namespace {
+  thread_local int _currentDevice = tarch::accelerator::Device::DefaultDevice;
+}
+
+void tarch::accelerator::setCurrentDevice(int device) { _currentDevice = device; }
+
+int tarch::accelerator::getCurrentDevice() { return _currentDevice; }
+
 #if !defined(PEANO_WITH_GPU_BACKEND)
 void* tarch::accelerator::allocateDeviceMemory(std::size_t sizeInBytes, [[maybe_unused]] int device) {
   return allocateHeapMemory(sizeInBytes);
@@ -126,23 +143,39 @@ void tarch::accelerator::freeDeviceMemory(void* data, [[maybe_unused]] int devic
 
 void tarch::accelerator::freePinnedMemory(void* data, [[maybe_unused]] int device) { freeHeapMemory(data); }
 
-void tarch::accelerator::
-  copyToDeviceMemory(void* target, const void* source, std::size_t sizeInBytes, [[maybe_unused]] int device) {
+void tarch::accelerator::copyToDeviceMemory(
+  void*                target,
+  const void*          source,
+  std::size_t          sizeInBytes,
+  [[maybe_unused]] int device
+) {
   copyToHeapMemory(target, source, sizeInBytes);
 }
 
-void tarch::accelerator::
-  copyToPinnedMemory(void* target, const void* source, std::size_t sizeInBytes, [[maybe_unused]] int device) {
+void tarch::accelerator::copyToPinnedMemory(
+  void*                target,
+  const void*          source,
+  std::size_t          sizeInBytes,
+  [[maybe_unused]] int device
+) {
   copyToHeapMemory(target, source, sizeInBytes);
 }
 
-void tarch::accelerator::
-  copyFromDeviceMemory(const void* source, void* target, std::size_t sizeInBytes, [[maybe_unused]] int device) {
+void tarch::accelerator::copyFromDeviceMemory(
+  const void*          source,
+  void*                target,
+  std::size_t          sizeInBytes,
+  [[maybe_unused]] int device
+) {
   copyFromHeapMemory(source, target, sizeInBytes);
 }
 
-void tarch::accelerator::
-  copyFromPinnedMemory(const void* source, void* target, std::size_t sizeInBytes, [[maybe_unused]] int device) {
+void tarch::accelerator::copyFromPinnedMemory(
+  const void*          source,
+  void*                target,
+  std::size_t          sizeInBytes,
+  [[maybe_unused]] int device
+) {
   copyFromHeapMemory(source, target, sizeInBytes);
 }
 #endif // PEANO_WITH_GPU_BACKEND

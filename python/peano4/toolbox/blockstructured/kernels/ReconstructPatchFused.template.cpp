@@ -6,6 +6,9 @@
 
 #include "toolbox/blockstructured/Enumeration.h"
 
+#include "tarch/accelerator/accelerator.h"
+#include "tarch/accelerator/ParallelFor.h"
+
 {% from 'CopyPatchAndFillHalo.macro.h' import CopyPatchAndFillHalo with context %}
 
 void {{FULL_QUALIFIED_NAMESPACE}}::reconstructPatchFused(
@@ -28,21 +31,25 @@ void {{FULL_QUALIFIED_NAMESPACE}}::reconstructPatchFused(
   const std::uint64_t*                faceIndices,
   {{PRECISION}}* NOALIAS const        QOutFlattened,
   const int                           numberOfPatches,
-  const int                           targetDevice
+  [[maybe_unused]] const int          targetDevice
 ) {
-{% if MULTITHREADING == "ON" %}
-  #pragma omp parallel for schedule(static)
-{% endif %}
-  for (int patchIndex = 0; patchIndex < numberOfPatches; ++patchIndex) {
-    const auto* const QIn = &QInFlattened[patchIndex * {{DOFS*UNKNOWNS}}];
-    auto* const QOut      = &QOutFlattened[patchIndex * {{DOFS_WITH_OVERLAP*UNKNOWNS}}];
+  ::tarch::accelerator::setCurrentDevice(targetDevice);
 
-{% if DIMENSIONS==3 %}
-    for (int z = 0; z < {{DOFS_PER_AXIS}}; ++z)
-{% endif %}
-    for (int y = 0; y < {{DOFS_PER_AXIS}}; ++y)
-    for (int x = 0; x < {{DOFS_PER_AXIS}}; ++x) {
-      {{ CopyPatchAndFillHalo() | indent(2) }}
+  ::tarch::parallelFor(
+    ::tarch::TeamRange(numberOfPatches),
+    [=] GPU_CALLABLE_LAMBDA (int patchIndex, ::tarch::accelerator::TeamHandle team) {
+      const auto* const QIn = &QInFlattened[patchIndex * {{DOFS*UNKNOWNS}}];
+      auto* const QOut      = &QOutFlattened[patchIndex * {{DOFS_WITH_OVERLAP*UNKNOWNS}}];
+
+      ::tarch::parallelFor(
+        team,
+        ::tarch::RangeMD<{{DIMENSIONS}}>(
+          {{DOFS_PER_AXIS}}, {{DOFS_PER_AXIS}}{% if DIMENSIONS==3 %}, {{DOFS_PER_AXIS}}{% endif %}
+        ),
+        [=](int x, int y{% if DIMENSIONS==3 %}, int z{% endif %}) {
+          {{ CopyPatchAndFillHalo() | indent(10) }}
+        }
+      );
     }
-  }
+  );
 }

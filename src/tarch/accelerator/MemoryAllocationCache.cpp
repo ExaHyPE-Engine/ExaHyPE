@@ -119,6 +119,11 @@ static DeviceAllocationMetadata getDeviceAllocationMetadata(void* pointer) {
   std::shared_lock<std::shared_mutex> guard(DeviceAllocationMetadataSemaphore);
   auto                                entry = DeviceAllocationMetadataTable.find(pointer);
   assertion(entry != DeviceAllocationMetadataTable.end(), pointer);
+  if (entry == DeviceAllocationMetadataTable.end()) {
+    // Unreachable by the bookmarking invariant (asserted above). Telling the optimiser the
+    // iterator is valid stops -Wnull-dereference firing once assertions are compiled out.
+    __builtin_unreachable();
+  }
   return entry->second;
 }
 

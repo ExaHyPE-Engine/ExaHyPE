@@ -1,0 +1,151 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#pragma once
+
+#include "tarch/accelerator/Range.h"
+#include "tarch/accelerator/Reducer.h"
+#include "tarch/accelerator/kokkos/Device.h"
+
+namespace tarch::accelerator {
+  template <typename T>
+  KOKKOS_INLINE_FUNCTION auto kokkos_reducer(Max<T> r) {
+    return Kokkos::Max<T>(r.target);
+  }
+  template <typename T>
+  KOKKOS_INLINE_FUNCTION auto kokkos_reducer(Min<T> r) {
+    return Kokkos::Min<T>(r.target);
+  }
+  template <typename T>
+  KOKKOS_INLINE_FUNCTION auto kokkos_reducer(Sum<T> r) {
+    return Kokkos::Sum<T>(r.target);
+  }
+
+  // Host-side fold of a freshly computed device result into the caller's pre-existing
+  // target. Kokkos reducers seed from their own identity and overwrite the bound
+  // scalar, so the top-level overloads reduce into a local scratch and then combine
+  // here, matching the combine-into-target contract of all other backends (Reducer.h).
+  template <typename T>
+  inline T combine_host(Max<T>, T a, T b) {
+    return a > b ? a : b;
+  }
+  template <typename T>
+  inline T combine_host(Min<T>, T a, T b) {
+    return a < b ? a : b;
+  }
+  template <typename T>
+  inline T combine_host(Sum<T>, T a, T b) {
+    return a + b;
+  }
+
+  namespace internal {
+    // Named functors instead of in-place [=] __device__ lambdas: see ParallelFor.cpph.
+    template <typename F, typename T>
+    struct TeamReduce1D {
+      F                           f;
+      KOKKOS_INLINE_FUNCTION void operator()(const int i, T& acc) const { f(i, acc); }
+    };
+
+    template <typename F, typename T>
+    struct TeamReduce2D {
+      F                           f;
+      int                         n1;
+      KOKKOS_INLINE_FUNCTION void operator()(const int idx, T& acc) const { f(idx / n1, idx % n1, acc); }
+    };
+
+    template <typename F, typename T>
+    struct TeamReduce3D {
+      F                           f;
+      int                         n1;
+      int                         n2;
+      KOKKOS_INLINE_FUNCTION void operator()(const int idx, T& acc) const {
+        f(idx / (n1 * n2), (idx / n2) % n1, idx % n2, acc);
+      }
+    };
+  } // namespace internal
+
+  template <typename Reducer, typename F>
+  KOKKOS_INLINE_FUNCTION void parallelReduce(const KokkosTeam& team, const Range& r, F f, Reducer red) {
+    Kokkos::parallel_reduce(
+      Kokkos::TeamVectorRange(team.m, r.n),
+      internal::TeamReduce1D<F, typename Reducer::value_type>{f},
+      kokkos_reducer(red)
+    );
+  }
+
+  template <typename Reducer, typename F>
+  KOKKOS_INLINE_FUNCTION void parallelReduce(const KokkosTeam& team, const RangeMD<2>& r, F f, Reducer red) {
+    const int total = r.n[0] * r.n[1];
+    Kokkos::parallel_reduce(
+      Kokkos::TeamVectorRange(team.m, total),
+      internal::TeamReduce2D<F, typename Reducer::value_type>{f, r.n[1]},
+      kokkos_reducer(red)
+    );
+  }
+
+  template <typename Reducer, typename F>
+  KOKKOS_INLINE_FUNCTION void parallelReduce(const KokkosTeam& team, const RangeMD<3>& r, F f, Reducer red) {
+    const int total = r.n[0] * r.n[1] * r.n[2];
+    Kokkos::parallel_reduce(
+      Kokkos::TeamVectorRange(team.m, total),
+      internal::TeamReduce3D<F, typename Reducer::value_type>{f, r.n[1], r.n[2]},
+      kokkos_reducer(red)
+    );
+  }
+} // namespace tarch::accelerator
+
+namespace tarch {
+  template <typename Reducer, typename F>
+  inline void parallelReduce(const Range& r, F f, Reducer red) {
+    using T         = typename Reducer::value_type;
+    T       scratch = Reducer::identity();
+    Reducer scratchRed{scratch};
+    Kokkos::parallel_reduce(
+      Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(0, r.n),
+      KOKKOS_LAMBDA(const int i, T& acc) { f(i, acc); },
+      accelerator::kokkos_reducer(scratchRed)
+    );
+    red.target = accelerator::combine_host(red, red.target, scratch);
+  }
+
+  template <typename Reducer, typename F>
+  inline void parallelReduce(const RangeMD<2>& r, F f, Reducer red) {
+    using T         = typename Reducer::value_type;
+    T       scratch = Reducer::identity();
+    Reducer scratchRed{scratch};
+    Kokkos::parallel_reduce(
+      Kokkos::MDRangePolicy<Kokkos::DefaultExecutionSpace, Kokkos::Rank<2>>({0, 0}, {r.n[0], r.n[1]}),
+      KOKKOS_LAMBDA(const int x, const int y, T& acc) { f(x, y, acc); },
+      accelerator::kokkos_reducer(scratchRed)
+    );
+    red.target = accelerator::combine_host(red, red.target, scratch);
+  }
+
+  template <typename Reducer, typename F>
+  inline void parallelReduce(const RangeMD<3>& r, F f, Reducer red) {
+    using T         = typename Reducer::value_type;
+    T       scratch = Reducer::identity();
+    Reducer scratchRed{scratch};
+    Kokkos::parallel_reduce(
+      Kokkos::MDRangePolicy<Kokkos::DefaultExecutionSpace, Kokkos::Rank<3>>({0, 0, 0}, {r.n[0], r.n[1], r.n[2]}),
+      KOKKOS_LAMBDA(const int x, const int y, const int z, T& acc) { f(x, y, z, acc); },
+      accelerator::kokkos_reducer(scratchRed)
+    );
+    red.target = accelerator::combine_host(red, red.target, scratch);
+  }
+
+  template <typename Reducer, typename F>
+  inline void parallelReduce(const TeamRange& r, F f, Reducer red) {
+    using T                                                   = typename Reducer::value_type;
+    T                                                 scratch = Reducer::identity();
+    Reducer                                           scratchRed{scratch};
+    Kokkos::TeamPolicy<Kokkos::DefaultExecutionSpace> policy(r.n, Kokkos::AUTO);
+    Kokkos::parallel_reduce(
+      policy,
+      KOKKOS_LAMBDA(const accelerator::KokkosTeam::member_type& team, T& acc) {
+        f(team.league_rank(), accelerator::KokkosTeam{team}, acc);
+      },
+      accelerator::kokkos_reducer(scratchRed)
+    );
+    red.target = accelerator::combine_host(red, red.target, scratch);
+  }
+} // namespace tarch

@@ -1,13 +1,12 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "tarch.h"
+#include "MemoryUsage.h"
 
 #include "tarch/instrumentation/Log.h"
 
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
-#include <limits.h>
 #if defined(COMPILER_HAS_PROC_STAT)
 #include <unistd.h>
 #endif
@@ -17,16 +16,6 @@
 #include <sys/resource.h>
 #include <sys/sysctl.h>
 #endif
-
-static_assert(sizeof(void*) == 8, "Assuming 64-bit build; i.e., 8-byte pointers");
-static_assert(std::numeric_limits<float>::is_iec559, "std::numeric_limits<float>::is_iec559");
-static_assert(std::numeric_limits<double>::is_iec559, "std::numeric_limits<double>::is_iec55");
-static_assert(CHAR_BIT == 8, "CHAR_BIT != 8");
-static_assert(sizeof(char) == 1, "sizeof(short) != 1");
-static_assert(sizeof(short) == 2, "sizeof(short) != 2");
-static_assert(sizeof(int) == 4, "sizeof(int) != 4");
-static_assert(sizeof(long long) == 8, "sizeof(long long) != 8");
-static_assert('A' == 65, "A != 65");
 
 std::string tarch::toString(MemoryUsageFormat format) {
   switch (format) {
@@ -80,10 +69,17 @@ double tarch::getTotalMemory(MemoryUsageFormat format) {
 }
 
 double tarch::getFreeMemory(MemoryUsageFormat format) {
+  // Total physical memory in bytes, as in getTotalMemory() above.
+  int     mib[] = {CTL_HW, HW_MEMSIZE};
+  int64_t physical_memory = 0;
+  size_t  length          = sizeof(int64_t);
+  sysctl(mib, 2, &physical_memory, &length, NULL, 0);
+
   struct rusage usage{};
   if (0 == getrusage(RUSAGE_SELF, &usage)) {
-    auto freeMem = tarch::getTotalMemory(tarch::MemoryUsageFormat::MByte) - usage.ru_maxrss;
-    return convertMemorySize(freeMem, format);
+    // convertMemorySize() expects bytes; ru_maxrss is reported in bytes on
+    // macOS (unlike Linux, where it is in kilobytes).
+    return convertMemorySize(physical_memory - usage.ru_maxrss, format);
   } else {
     return 0;
   }

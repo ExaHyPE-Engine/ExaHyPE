@@ -3,7 +3,7 @@
 #include "StackSizeLimitDetection.h"
 
 #include "tarch/instrumentation/Log.h"
-#include "tarch/tarch.h"
+#include "tarch/MemoryUsage.h"
 
 #if !defined(_WIN32)
 #include <sys/resource.h>

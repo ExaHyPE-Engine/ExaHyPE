@@ -9,6 +9,7 @@ from peano4.solversteps.ActionSet import ActionSet
 
 class ReconstructPatch(ActionSet):
     """!
+
     This class assumes that you have an NxNxN patch within your block. It also assumes that
     you have an 2MxNxN patch on your faces. M<N. The code interprets these face-associated
     data as overlap with the patch, hooks into touchCellLastTime, and projects the cell's
@@ -32,6 +33,7 @@ class ReconstructPatch(ActionSet):
         add_assertions_to_halo_exchange=True,
     ):
         """!
+
         patch: peano4.datamodel.Patch
             Patch which is to be reconstructed
 
@@ -41,9 +43,7 @@ class ReconstructPatch(ActionSet):
         patch_reconstructed: peano4.datamodel.Patch
             Patch which is used to reconstruct
         """
-        super(ReconstructPatch, self).__init__(
-            descend_invocation_order=1
-        )
+        super(ReconstructPatch, self).__init__(descend_invocation_order=1)
 
         assert patch_overlap.dim[0] % 2 == 0
         assert patch.dim[0] == patch.dim[1]
@@ -173,9 +173,7 @@ class ReconstructPatch(ActionSet):
             headfile_template=kernels_templates_prefix
             + "/ReconstructPatchFused.template.h",
             cppfile_template=kernels_templates_prefix
-            + "/ReconstructPatchFused"
-            + (f".{d['GPU']}" if d["GPU"] != "no" else "")
-            + ".template.cpp",
+            + "/ReconstructPatchFused.template.cpp",
             classname=kernels_output_path + "/ReconstructPatchFused",
             namespace=kernels_namespace,
             subdirectory=".",
@@ -187,5 +185,5 @@ class ReconstructPatch(ActionSet):
             kernels_output_path + "/ReconstructPatchFused.h", generated=True
         )
         output.makefile.add_cpp_file(
-            kernels_output_path + "/ReconstructPatchFused.cpp", generated=True
+            kernels_output_path + "/ReconstructPatchFused.cpp", generated=True, is_gpu_kernel=True
         )

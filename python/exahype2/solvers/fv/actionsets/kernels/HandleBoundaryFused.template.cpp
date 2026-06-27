@@ -2,23 +2,10 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "HandleBoundaryFused.h"
 
-{% from "ApplyBoundaryCondition.macro.h" import ApplyBoundaryCondition with context %}
+#include "tarch/accelerator/accelerator.h"
+#include "tarch/accelerator/ParallelFor.h"
 
-namespace {
-  const auto serialisePatchIndex = [](const tarch::la::Vector<DIMENSIONS, int>& overlapCell, int normal) {
-    int base   = 1;
-    int result = 0;
-    for (int d = 0; d < DIMENSIONS; d++) {
-      result += overlapCell(d) * base;
-      if (d==normal) {
-        base *= {{HALO_SIZE}} * 2;
-      } else {
-        base *= {{NUMBER_OF_VOLUMES_PER_AXIS}};
-      }
-    }
-    return result;
-  };
-}
+{% from "ApplyBoundaryCondition.macro.h" import ApplyBoundaryCondition with context %}
 
 void {{FULL_QUALIFIED_NAMESPACE}}::handleBoundaryFused(
   {{FULL_QUALIFIED_SOLVER_NAME}}&                                        solver,
@@ -42,7 +29,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::handleBoundaryFused(
 }
 
 void {{FULL_QUALIFIED_NAMESPACE}}::handleBoundaryFused(
-  {{FULL_QUALIFIED_SOLVER_NAME}}&             solver,
+  [[maybe_unused]] {{FULL_QUALIFIED_SOLVER_NAME}}& solver,
   {{STORAGE_PRECISION}}*                      facesFlattened,
   const std::uint64_t*                        faceIndices,
   const std::uint8_t*                         faceNumbers,
@@ -50,23 +37,45 @@ void {{FULL_QUALIFIED_NAMESPACE}}::handleBoundaryFused(
   const tarch::la::Vector<DIMENSIONS,double>* cellCentres,
   const tarch::la::Vector<DIMENSIONS,double>* cellSizes,
   const double                                t,
-  const double                                dt,
+  [[maybe_unused]] const double               dt,
   const int                                   numberOfFaces,
-  const int                                   numberOfCells,
-  const int                                   targetDevice
+  [[maybe_unused]] const int                  numberOfCells,
+  [[maybe_unused]] const int                  targetDevice
 ) {
-  {% if MULTITHREADING == "ON" %}
-  #pragma omp parallel for schedule(static)
-  {% endif %}
-  for (int boundaryFaceIndex = 0; boundaryFaceIndex < numberOfFaces; ++boundaryFaceIndex) {
-    const auto faceIndex  = faceIndices[boundaryFaceIndex];
-    const auto faceNumber = static_cast<int>(faceNumbers[boundaryFaceIndex]);
-    const auto cellIndex  = cellIndices[boundaryFaceIndex];
+  traceEnter();
+  traceEnter("Boundary handling");
+  ::tarch::accelerator::setCurrentDevice(targetDevice);
 
-    auto patchSize   = cellSizes[cellIndex];
-    auto patchCentre = cellCentres[cellIndex];
-    auto* Q = &facesFlattened[faceIndex * {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %}];
+  constexpr int FaceCardinality = {% if DIMENSIONS==3 %} {{FACE_CARDINALITY_3D}} {% else %} {{FACE_CARDINALITY_2D}} {% endif %};
 
-    {{ ApplyBoundaryCondition() | indent(2) }}
-  }
+  ::tarch::parallelFor(
+    ::tarch::Range(numberOfFaces),
+    [=] GPU_CALLABLE_LAMBDA (int boundaryFaceIndex) {
+      const auto faceIndex  = faceIndices[boundaryFaceIndex];
+      const auto faceNumber = static_cast<int>(faceNumbers[boundaryFaceIndex]);
+      const auto cellIndex  = cellIndices[boundaryFaceIndex];
+
+      auto patchSize   = cellSizes[cellIndex];
+      auto patchCentre = cellCentres[cellIndex];
+      auto* Q = &facesFlattened[faceIndex * FaceCardinality];
+
+      const auto serialisePatchIndex = [](const tarch::la::Vector<DIMENSIONS, int>& overlapCell, int normal) {
+        int base   = 1;
+        int result = 0;
+        for (int d = 0; d < DIMENSIONS; d++) {
+          result += overlapCell(d) * base;
+          if (d==normal) {
+            base *= {{HALO_SIZE}} * 2;
+          } else {
+            base *= {{NUMBER_OF_VOLUMES_PER_AXIS}};
+          }
+        }
+        return result;
+      };
+
+      {{ ApplyBoundaryCondition() | indent(6) }}
+    }
+  );
+  traceLeave("Boundary handling");
+  traceLeave();
 }

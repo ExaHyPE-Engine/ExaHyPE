@@ -4,8 +4,9 @@
 file(GLOB_RECURSE HEADERS ${HEADER_EXTENSIONS_TO_GLOB})
 
 set(SOURCES
-  tarch.cpp
   Init.cpp
+  MemoryUsage.cpp
+  CompilerSpecificSettings.cpp
   StackSizeLimitDetection.cpp
   Assertions.cpp
   CPUFeatureDetection.cpp
@@ -22,6 +23,7 @@ set(SOURCES
   accelerator/MemoryLocation.cpp
   accelerator/tests/MemoryAllocationCacheTest.cpp
   accelerator/tests/MemoryAllocationTest.cpp
+  accelerator/tests/ParallelConstructsTest.cpp
   accelerator/cuda/accelerator.cpp
   accelerator/cuda/Device.cpp
   accelerator/cuda/DevicePropertiesCache.cpp
@@ -134,9 +136,11 @@ set(SOURCES
 if(_peano_gpu_backend STREQUAL "cuda")
   list(APPEND SOURCES accelerator/cuda/tests/ReductionTest.cpp)
   set_source_files_properties(accelerator/cuda/tests/ReductionTest.cpp PROPERTIES LANGUAGE CUDA)
+  set_source_files_properties(accelerator/tests/ParallelConstructsTest.cpp PROPERTIES LANGUAGE CUDA)
 elseif(_peano_gpu_backend STREQUAL "hip")
   list(APPEND SOURCES accelerator/hip/tests/ReductionTest.cpp)
   set_source_files_properties(accelerator/hip/tests/ReductionTest.cpp PROPERTIES LANGUAGE HIP)
+  set_source_files_properties(accelerator/tests/ParallelConstructsTest.cpp PROPERTIES LANGUAGE HIP)
 elseif(_peano_gpu_backend STREQUAL "sycl")
   list(APPEND SOURCES accelerator/sycl/tests/ReductionTest.cpp)
 elseif(_peano_gpu_backend STREQUAL "kokkos")

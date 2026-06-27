@@ -3,7 +3,7 @@
 #include "tarch/Assertions.h"
 #include "tarch/multicore/RecursiveLock.h"
 #include "tarch/multicore/Task.h"
-#include "tarch/tarch.h"
+#include "tarch/MemoryUsage.h"
 
 #include <sstream>
 

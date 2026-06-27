@@ -7,6 +7,7 @@ import peano4.solversteps
 import os
 import jinja2
 
+
 class HandleBoundary(AbstractFVActionSet):
     """
     The global periodic boundary conditions are set in the Constants.h.
@@ -149,9 +150,7 @@ class HandleBoundary(AbstractFVActionSet):
             headfile_template=kernels_templates_prefix
             + "/HandleBoundaryFused.template.h",
             cppfile_template=kernels_templates_prefix
-            + "/HandleBoundaryFused"
-            + (f".{d['GPU']}" if d["GPU"] != "no" else "")
-            + ".template.cpp",
+            + "/HandleBoundaryFused.template.cpp",
             classname=kernels_output_path + "/HandleBoundaryFused",
             namespace=kernels_namespace,
             subdirectory=".",
@@ -163,5 +162,5 @@ class HandleBoundary(AbstractFVActionSet):
             kernels_output_path + "/HandleBoundaryFused.h", generated=True
         )
         output.makefile.add_cpp_file(
-            kernels_output_path + "/HandleBoundaryFused.cpp", generated=True
+            kernels_output_path + "/HandleBoundaryFused.cpp", generated=True, is_gpu_kernel=True
         )

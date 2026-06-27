@@ -150,8 +150,19 @@ function(peano_add_target)
     ${PEANO_${mode_upper}_DEFINITIONS}
   )
 
+  # Build-mode flags must reach every language so GPU kernels are optimised/debugged like host code.
+  # HIP takes the host flags verbatim; nvcc needs each forwarded via -Xcompiler, plus -G in Debug.
+  set(_peano_cuda_mode_flags "")
+  foreach(_peano_flag ${PEANO_CXX_FLAGS_${mode_upper}})
+    list(APPEND _peano_cuda_mode_flags "$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=${_peano_flag}>")
+  endforeach()
+  if(mode_upper STREQUAL "DEBUG")
+    list(APPEND _peano_cuda_mode_flags "$<$<COMPILE_LANGUAGE:CUDA>:-G>")
+  endif()
   target_compile_options(${target} ${variant_scope}
     $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>
+    $<$<COMPILE_LANGUAGE:HIP>:${PEANO_CXX_FLAGS_${mode_upper}}>
+    ${_peano_cuda_mode_flags}
   )
 
   source_group(

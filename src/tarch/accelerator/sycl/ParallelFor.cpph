@@ -1,0 +1,102 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#pragma once
+
+#include "tarch/accelerator/Range.h"
+#include "tarch/accelerator/Reducer.h"
+#include "tarch/accelerator/sycl/Device.h"
+
+#include <sycl/sycl.hpp>
+
+namespace tarch::accelerator {
+  template <typename F>
+  inline void parallelFor(const SyclTeam& team, const Range& r, F f) {
+    const int local  = static_cast<int>(team.item.get_local_id(0));
+    const int stride = static_cast<int>(team.item.get_local_range(0));
+    for (int i = local; i < r.n; i += stride) {
+      f(i);
+    }
+  }
+  template <typename F>
+  inline void parallelFor(const SyclTeam& team, const RangeMD<2>& r, F f) {
+    const int total  = r.n[0] * r.n[1];
+    const int n1     = r.n[1];
+    const int local  = static_cast<int>(team.item.get_local_id(0));
+    const int stride = static_cast<int>(team.item.get_local_range(0));
+    for (int idx = local; idx < total; idx += stride) {
+      const int x = idx / n1;
+      const int y = idx % n1;
+      f(x, y);
+    }
+  }
+  template <typename F>
+  inline void parallelFor(const SyclTeam& team, const RangeMD<3>& r, F f) {
+    const int total  = r.n[0] * r.n[1] * r.n[2];
+    const int n1     = r.n[1];
+    const int n2     = r.n[2];
+    const int local  = static_cast<int>(team.item.get_local_id(0));
+    const int stride = static_cast<int>(team.item.get_local_range(0));
+    for (int idx = local; idx < total; idx += stride) {
+      const int x = idx / (n1 * n2);
+      const int y = (idx / n2) % n1;
+      const int z = idx % n2;
+      f(x, y, z);
+    }
+  }
+} // namespace tarch::accelerator
+
+namespace tarch {
+  template <typename F>
+  inline void parallelFor(const Range& r, F f) {
+    if (r.n <= 0) {
+      return;
+    }
+    auto& q = *static_cast<::sycl::queue*>(accelerator::getSYCLQueue(accelerator::getCurrentDevice()));
+    q.submit([&](::sycl::handler& h) {
+      h.parallel_for(::sycl::range<1>(r.n), [=](::sycl::id<1> id) { f(static_cast<int>(id[0])); });
+    }).wait();
+  }
+
+  template <typename F>
+  inline void parallelFor(const RangeMD<2>& r, F f) {
+    if (r.n[0] <= 0 || r.n[1] <= 0) {
+      return;
+    }
+    auto& q = *static_cast<::sycl::queue*>(accelerator::getSYCLQueue(accelerator::getCurrentDevice()));
+    q.submit([&](::sycl::handler& h) {
+      h.parallel_for(::sycl::range<2>(r.n[0], r.n[1]), [=](::sycl::id<2> id) {
+        f(static_cast<int>(id[0]), static_cast<int>(id[1]));
+      });
+    }).wait();
+  }
+
+  template <typename F>
+  inline void parallelFor(const RangeMD<3>& r, F f) {
+    if (r.n[0] <= 0 || r.n[1] <= 0 || r.n[2] <= 0) {
+      return;
+    }
+    auto& q = *static_cast<::sycl::queue*>(accelerator::getSYCLQueue(accelerator::getCurrentDevice()));
+    q.submit([&](::sycl::handler& h) {
+      h.parallel_for(::sycl::range<3>(r.n[0], r.n[1], r.n[2]), [=](::sycl::id<3> id) {
+        f(static_cast<int>(id[0]), static_cast<int>(id[1]), static_cast<int>(id[2]));
+      });
+    }).wait();
+  }
+
+  template <typename F>
+  inline void parallelFor(const TeamRange& r, F f) {
+    if (r.n <= 0) {
+      return;
+    }
+    auto&               q = *static_cast<::sycl::queue*>(accelerator::getSYCLQueue(accelerator::getCurrentDevice()));
+    ::sycl::nd_range<1> nd(
+      ::sycl::range<1>(r.n * accelerator::kSyclLocalSize),
+      ::sycl::range<1>(accelerator::kSyclLocalSize)
+    );
+    q.submit([&](::sycl::handler& h) {
+      h.parallel_for(nd, [=](::sycl::nd_item<1> item) {
+        f(static_cast<int>(item.get_group(0)), accelerator::SyclTeam{item});
+      });
+    }).wait();
+  }
+} // namespace tarch

@@ -1,0 +1,245 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#pragma once
+
+#include "tarch/accelerator/MemoryLocation.h"
+#include "tarch/accelerator/Range.h"
+#include "tarch/accelerator/Reducer.h"
+#include "tarch/accelerator/accelerator.h"
+#include "tarch/accelerator/cuda/Device.h"
+#include "tarch/accelerator/cuda/ErrorCheck.h"
+
+#include <algorithm>
+#include <cub/cub.cuh>
+#include <cuda_runtime.h>
+
+namespace tarch::accelerator {
+  template <typename T>
+  __device__ __host__ inline T combine_op(Max<T>, T a, T b) {
+    return a > b ? a : b;
+  }
+  template <typename T>
+  __device__ __host__ inline T combine_op(Min<T>, T a, T b) {
+    return a < b ? a : b;
+  }
+  template <typename T>
+  __device__ __host__ inline T combine_op(Sum<T>, T a, T b) {
+    return a + b;
+  }
+
+  template <typename Reducer, typename T>
+  __device__ inline T blockReduce(Reducer red, T localAcc) {
+    __shared__ T sdata[kCudaBlockSize];
+    const int    tid = threadIdx.x;
+    sdata[tid]       = localAcc;
+    __syncthreads();
+    for (int s = kCudaBlockSize / 2; s > 0; s >>= 1) {
+      if (tid < s) {
+        sdata[tid] = combine_op(red, sdata[tid], sdata[tid + s]);
+      }
+      __syncthreads();
+    }
+    return sdata[0];
+  }
+
+  // `red` is unused in the body but must stay in the parameter list: it is the only
+  // deduced occurrence of Reducer (perBlockOut's type is a non-deduced context). It
+  // carries a host reference (red.target) that must never be dereferenced on device.
+  template <typename Reducer, typename F>
+  __global__ void team_reduce_kernel(F f, [[maybe_unused]] Reducer red, typename Reducer::value_type* perBlockOut) {
+    using T = typename Reducer::value_type;
+    __shared__ T sharedAcc;
+    if (threadIdx.x == 0) {
+      sharedAcc = Reducer::identity();
+    }
+    __syncthreads();
+
+    f(static_cast<int>(blockIdx.x), CudaTeam{}, sharedAcc);
+
+    __syncthreads();
+    if (threadIdx.x == 0) {
+      perBlockOut[blockIdx.x] = sharedAcc;
+    }
+  }
+
+  template <typename Reducer, typename F>
+  __global__ void flat_reduce_kernel_1d(F f, Reducer red, int n, typename Reducer::value_type* perBlockOut) {
+    using T            = typename Reducer::value_type;
+    T         localAcc = Reducer::identity();
+    const int idx      = blockIdx.x * blockDim.x + threadIdx.x;
+    const int stride   = gridDim.x * blockDim.x;
+    for (int i = idx; i < n; i += stride) {
+      f(i, localAcc);
+    }
+    T blockResult = blockReduce(red, localAcc);
+    if (threadIdx.x == 0) {
+      perBlockOut[blockIdx.x] = blockResult;
+    }
+  }
+
+  // cudaMallocAsync/cudaFreeAsync require CUDA Toolkit >= 11.2 and a device with
+  // stream-ordered memory-pool support (cudaDevAttrMemoryPoolsSupported).
+  // TODO: FindCUDA.cmake does not enforce a minimum toolkit version.
+  template <typename T>
+  inline void cubReduce(Max<T>, const T* in, T* out, int n, cudaStream_t stream) {
+    void*       tmp      = nullptr;
+    std::size_t tmpBytes = 0;
+    CHECK_CUDA_ERROR(cub::DeviceReduce::Max(tmp, tmpBytes, in, out, n, stream));
+    CHECK_CUDA_ERROR(cudaMallocAsync(&tmp, tmpBytes, stream));
+    CHECK_CUDA_ERROR(cub::DeviceReduce::Max(tmp, tmpBytes, in, out, n, stream));
+    CHECK_CUDA_ERROR(cudaFreeAsync(tmp, stream));
+  }
+  template <typename T>
+  inline void cubReduce(Min<T>, const T* in, T* out, int n, cudaStream_t stream) {
+    void*       tmp      = nullptr;
+    std::size_t tmpBytes = 0;
+    CHECK_CUDA_ERROR(cub::DeviceReduce::Min(tmp, tmpBytes, in, out, n, stream));
+    CHECK_CUDA_ERROR(cudaMallocAsync(&tmp, tmpBytes, stream));
+    CHECK_CUDA_ERROR(cub::DeviceReduce::Min(tmp, tmpBytes, in, out, n, stream));
+    CHECK_CUDA_ERROR(cudaFreeAsync(tmp, stream));
+  }
+  template <typename T>
+  inline void cubReduce(Sum<T>, const T* in, T* out, int n, cudaStream_t stream) {
+    void*       tmp      = nullptr;
+    std::size_t tmpBytes = 0;
+    CHECK_CUDA_ERROR(cub::DeviceReduce::Sum(tmp, tmpBytes, in, out, n, stream));
+    CHECK_CUDA_ERROR(cudaMallocAsync(&tmp, tmpBytes, stream));
+    CHECK_CUDA_ERROR(cub::DeviceReduce::Sum(tmp, tmpBytes, in, out, n, stream));
+    CHECK_CUDA_ERROR(cudaFreeAsync(tmp, stream));
+  }
+
+  template <typename Reducer>
+  inline void finaliseReduction(Reducer red, typename Reducer::value_type* finalDev, cudaStream_t stream) {
+    using T     = typename Reducer::value_type;
+    T finalHost = Reducer::identity();
+    CHECK_CUDA_ERROR(cudaMemcpyAsync(&finalHost, finalDev, sizeof(T), cudaMemcpyDeviceToHost, stream));
+    CHECK_CUDA_ERROR(cudaStreamSynchronize(stream));
+    red.target = combine_op(red, red.target, finalHost);
+  }
+
+  template <typename Reducer, typename F>
+  __device__ inline void parallelReduce(const CudaTeam&, const Range& r, F f, Reducer red) {
+    using T    = typename Reducer::value_type;
+    T localAcc = Reducer::identity();
+    for (int i = threadIdx.x; i < r.n; i += blockDim.x) {
+      f(i, localAcc);
+    }
+    T blockResult = blockReduce(red, localAcc);
+    if (threadIdx.x == 0) {
+      red.target = combine_op(red, red.target, blockResult);
+    }
+  }
+  template <typename Reducer, typename F>
+  __device__ inline void parallelReduce(const CudaTeam&, const RangeMD<2>& r, F f, Reducer red) {
+    using T            = typename Reducer::value_type;
+    T         localAcc = Reducer::identity();
+    const int total    = r.n[0] * r.n[1];
+    const int n1       = r.n[1];
+    for (int idx = threadIdx.x; idx < total; idx += blockDim.x) {
+      const int x = idx / n1;
+      const int y = idx % n1;
+      f(x, y, localAcc);
+    }
+    T blockResult = blockReduce(red, localAcc);
+    if (threadIdx.x == 0) {
+      red.target = combine_op(red, red.target, blockResult);
+    }
+  }
+  template <typename Reducer, typename F>
+  __device__ inline void parallelReduce(const CudaTeam&, const RangeMD<3>& r, F f, Reducer red) {
+    using T            = typename Reducer::value_type;
+    T         localAcc = Reducer::identity();
+    const int total    = r.n[0] * r.n[1] * r.n[2];
+    const int n1       = r.n[1];
+    const int n2       = r.n[2];
+    for (int idx = threadIdx.x; idx < total; idx += blockDim.x) {
+      const int x = idx / (n1 * n2);
+      const int y = (idx / n2) % n1;
+      const int z = idx % n2;
+      f(x, y, z, localAcc);
+    }
+    T blockResult = blockReduce(red, localAcc);
+    if (threadIdx.x == 0) {
+      red.target = combine_op(red, red.target, blockResult);
+    }
+  }
+} // namespace tarch::accelerator
+
+namespace tarch {
+  template <typename Reducer, typename F>
+  inline void parallelReduce(const Range& r, F f, Reducer red) {
+    using T = typename Reducer::value_type;
+    if (r.n <= 0) {
+      return;
+    }
+    const int device = accelerator::getCurrentDevice();
+    CHECK_CUDA_ERROR(cudaSetDevice(device));
+    int blocks = (r.n + accelerator::kCudaBlockSize - 1) / accelerator::kCudaBlockSize;
+    blocks     = std::min(blocks, 65535);
+
+    T* perBlock = allocateMemory<T>(blocks, MemoryLocation::Device, device);
+    T* finalDev = allocateMemory<T>(1, MemoryLocation::Device, device);
+
+    accelerator::flat_reduce_kernel_1d<<<blocks, accelerator::kCudaBlockSize, 0, accelerator::deviceStreamGet()>>>(
+      f,
+      red,
+      r.n,
+      perBlock
+    );
+    accelerator::cubReduce(red, perBlock, finalDev, blocks, accelerator::deviceStreamGet());
+    accelerator::finaliseReduction(red, finalDev, accelerator::deviceStreamGet());
+
+    // finaliseReduction has synchronised the stream, so the scratch buffers are
+    // safe to release. They are allocated on every call, so failing to free them
+    // leaks device memory each time step.
+    freeMemory(perBlock, MemoryLocation::Device, device);
+    freeMemory(finalDev, MemoryLocation::Device, device);
+  }
+
+  template <typename Reducer, typename F>
+  inline void parallelReduce(const TeamRange& r, F f, Reducer red) {
+    using T = typename Reducer::value_type;
+    if (r.n <= 0) {
+      return;
+    }
+    const int device = accelerator::getCurrentDevice();
+    CHECK_CUDA_ERROR(cudaSetDevice(device));
+
+    T* perBlock = allocateMemory<T>(r.n, MemoryLocation::Device, device);
+    T* finalDev = allocateMemory<T>(1, MemoryLocation::Device, device);
+
+    accelerator::team_reduce_kernel<<<r.n, accelerator::kCudaBlockSize, 0, accelerator::deviceStreamGet()>>>(
+      f,
+      red,
+      perBlock
+    );
+    accelerator::cubReduce(red, perBlock, finalDev, r.n, accelerator::deviceStreamGet());
+    accelerator::finaliseReduction(red, finalDev, accelerator::deviceStreamGet());
+
+    freeMemory(perBlock, MemoryLocation::Device, device);
+    freeMemory(finalDev, MemoryLocation::Device, device);
+  }
+
+  template <typename Reducer, typename F>
+  inline void parallelReduce(const RangeMD<2>& r, F f, Reducer red) {
+    const int total = r.n[0] * r.n[1];
+    const int n1    = r.n[1];
+    parallelReduce(Range(total), [=] __device__(int idx, typename Reducer::value_type& acc) {
+      const int x = idx / n1;
+      const int y = idx % n1;
+      f(x, y, acc);
+    }, red);
+  }
+  template <typename Reducer, typename F>
+  inline void parallelReduce(const RangeMD<3>& r, F f, Reducer red) {
+    const int total = r.n[0] * r.n[1] * r.n[2];
+    const int n1    = r.n[1];
+    const int n2    = r.n[2];
+    parallelReduce(Range(total), [=] __device__(int idx, typename Reducer::value_type& acc) {
+      const int x = idx / (n1 * n2);
+      const int y = (idx / n2) % n1;
+      const int z = idx % n2;
+      f(x, y, z, acc);
+    }, red);
+  }
+} // namespace tarch

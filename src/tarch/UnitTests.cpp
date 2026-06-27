@@ -15,6 +15,7 @@
 #elif defined(PEANO_WITH_GPU_BACKEND_OMPT)
 #include "accelerator/ompt/tests/ReductionTest.h"
 #endif
+#include "accelerator/tests/ParallelConstructsTest.h"
 #include "la/tests/DynamicMatrixTest.h"
 #include "la/tests/GramSchmidtTest.h"
 #include "la/tests/LUDecompositionTest.h"
@@ -47,6 +48,7 @@ tarch::tests::TestCase* tarch::getUnitTests() {
 
   result->addTestCase(new accelerator::tests::MemoryAllocationCacheTest());
   result->addTestCase(new accelerator::tests::MemoryAllocationTest());
+  result->addTestCase(new accelerator::tests::ParallelConstructsTest());
 #if defined(PEANO_WITH_GPU_BACKEND_CUDA)
   result->addTestCase(new accelerator::cuda::tests::ReductionTest());
 #elif defined(PEANO_WITH_GPU_BACKEND_HIP)

@@ -9,7 +9,6 @@ if(TARGET PeanoOptions)
   target_compile_options(PeanoOptions INTERFACE
     -fPIC
     $<$<COMPILE_LANGUAGE:HIP>:--offload-arch=${CMAKE_HIP_ARCHITECTURES}>
-    $<$<COMPILE_LANGUAGE:HIP>:-O3>
   )
   target_compile_features(PeanoOptions INTERFACE hip_std_17)
   target_compile_definitions(PeanoOptions INTERFACE PEANO_WITH_GPU_BACKEND_HIP PEANO_WITH_GPU_BACKEND)

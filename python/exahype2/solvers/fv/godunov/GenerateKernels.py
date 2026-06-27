@@ -5,6 +5,7 @@ import jinja2
 
 import peano4.output
 
+
 def generate_kernels(
     solver,
     output,
@@ -56,7 +57,8 @@ def generate_kernels(
     );
 """,
         undefined=jinja2.DebugUndefined,
-        ).render(**d)
+    ).render(**d)
+
 
 def generate_fused_kernels(
     solver,
@@ -76,9 +78,7 @@ def generate_fused_kernels(
         headfile_template=kernels_templates_prefix
         + f"{riemann_solver_file}.template.h",
         cppfile_template=kernels_templates_prefix
-        + f"{riemann_solver_file}"
-        + (f".{d['GPU']}" if d["GPU"] != "no" else "")
-        + ".template.cpp",
+        + f"{riemann_solver_file}.template.cpp",
         classname=kernels_output_path + f"/{riemann_solver_file}",
         namespace=kernels_namespace,
         subdirectory=".",
@@ -90,7 +90,7 @@ def generate_fused_kernels(
         kernels_output_path + f"/{riemann_solver_file}.h", generated=True
     )
     output.makefile.add_cpp_file(
-        kernels_output_path + f"/{riemann_solver_file}.cpp", generated=True
+        kernels_output_path + f"/{riemann_solver_file}.cpp", generated=True, is_gpu_kernel=True
     )
     solver._user_action_set_includes += (
         f'#include "{kernels_output_path}/{riemann_solver_file}.h"\n'

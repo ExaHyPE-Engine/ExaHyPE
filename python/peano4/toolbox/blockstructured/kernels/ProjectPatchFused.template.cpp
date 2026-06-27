@@ -7,6 +7,9 @@
 #include "toolbox/blockstructured/Enumeration.h"
 #include "toolbox/blockstructured/Projection.h"
 
+#include "tarch/accelerator/accelerator.h"
+#include "tarch/accelerator/ParallelFor.h"
+
 {% from 'CopyPatchOntoFaces.macro.h' import CopyPatchOntoFaces with context %}
 
 void {{FULL_QUALIFIED_NAMESPACE}}::projectPatchFused(
@@ -27,20 +30,28 @@ void {{FULL_QUALIFIED_NAMESPACE}}::projectPatchFused(
   {{PRECISION}}*       const NOALIAS facePool,
   const std::uint64_t*               faceIndices,
   const int                          numberOfPatches,
-  const int                          targetDevice
+  [[maybe_unused]] const int         targetDevice
 ) {
-{% if MULTITHREADING == "ON" %}
-  #pragma omp parallel for schedule(static)
-{% endif %}
-  for (int patchIndex = 0; patchIndex < numberOfPatches; ++patchIndex) {
-    const auto* const QIn = &QInFlattened[patchIndex * {{DOFS*UNKNOWNS}}];
+  traceEnter();
+  traceEnter("Patch projection");
+  ::tarch::accelerator::setCurrentDevice(targetDevice);
 
-{% if DIMENSIONS==3 %}
-    for (int z = 0; z < {{DOFS_PER_AXIS}}; ++z)
-{% endif %}
-    for (int y = 0; y < {{DOFS_PER_AXIS}}; ++y)
-    for (int x = 0; x < {{DOFS_PER_AXIS}}; ++x) {
-      {{ CopyPatchOntoFaces() | indent(2) }}
+  ::tarch::parallelFor(
+    ::tarch::TeamRange(numberOfPatches),
+    [=] GPU_CALLABLE_LAMBDA (int patchIndex, ::tarch::accelerator::TeamHandle team) {
+      const auto* const QIn = &QInFlattened[patchIndex * {{DOFS*UNKNOWNS}}];
+
+      ::tarch::parallelFor(
+        team,
+        ::tarch::RangeMD<{{DIMENSIONS}}>(
+          {{DOFS_PER_AXIS}}, {{DOFS_PER_AXIS}}{% if DIMENSIONS==3 %}, {{DOFS_PER_AXIS}}{% endif %}
+        ),
+        [=](int x, int y{% if DIMENSIONS==3 %}, int z{% endif %}) {
+          {{ CopyPatchOntoFaces() | indent(10) }}
+        }
+      );
     }
-  }
+  );
+  traceLeave("Patch projection");
+  traceLeave();
 }

@@ -6,6 +6,13 @@
 
 namespace tarch::accelerator {
   class Device;
+
+#if !defined(PEANO_WITH_GPU_BACKEND)
+  // Opaque per-backend team handle. CPU does not need any state on the team:
+  // the team rank is passed to the outer lambda as a plain int.
+  struct CpuTeam {};
+  using TeamHandle = CpuTeam;
+#endif
 } // namespace tarch::accelerator
 
 /**

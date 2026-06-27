@@ -43,12 +43,8 @@ endmacro()
 macro(peano_enable_gpu_language)
   _peano_resolve_gpu(_peano_gpu_backend _peano_gpu_arch)
 
-  set(_peano_gpu_sources)
-  foreach(_peano_src ${ARGN})
-    if(_peano_src MATCHES "kernels/.*Fused\\.[^.]+$" AND NOT _peano_src MATCHES "\\.(h|hh|hpp|hxx|cuh|inc)$")
-      list(APPEND _peano_gpu_sources ${_peano_src})
-    endif()
-  endforeach()
+  # ${ARGN} is the explicit list of GPU kernel sources emitted by the code generator (GENERATED_GPU_SOURCES).
+  set(_peano_gpu_sources ${ARGN})
 
   if(_peano_gpu_sources AND _peano_gpu_backend STREQUAL "cuda")
     peano_enable_cuda_language()

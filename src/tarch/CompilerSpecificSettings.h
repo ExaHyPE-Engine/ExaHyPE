@@ -74,9 +74,14 @@
 
 #endif
 
-#if defined(__clang__) || defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER) || defined(__NVCOMPILER) \
-  || defined(__PGI) || defined(__CUDACC__)
+// Loop-unroll hint. Under nvcc the host pass rejects "#pragma unroll" (-Wunknown-pragmas) and the
+// nvcc front-end rejects "#pragma GCC unroll" (#1675), so emit the device form only where a single
+// compiler handles it (device pass, or clang/nvhpc/intel) and nothing in nvcc's host pass.
+#if defined(__CUDA_ARCH__) || defined(__clang__) || defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER) \
+  || defined(__NVCOMPILER) || defined(__PGI)
 #define UNROLL(n) _PRAGMA(unroll n)
+#elif defined(__CUDACC__)
+#define UNROLL(n) /* no-op: nvcc host pass; neither unroll spelling satisfies front-end and host */
 #elif defined(__GNUC__) && (__GNUC__ >= 8)
 #define UNROLL(n) _PRAGMA(GCC unroll n)
 #elif defined(_MSC_VER)

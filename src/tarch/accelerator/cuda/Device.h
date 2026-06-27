@@ -10,11 +10,18 @@
 
 namespace tarch::accelerator {
   cudaStream_t deviceStreamCreate();
-  void deviceStreamDestroy(cudaStream_t*);
-  void deviceStreamSync(cudaStream_t);
+  void         deviceStreamDestroy(cudaStream_t*);
+  void         deviceStreamSync(cudaStream_t);
 
-  void deviceStreamSet(cudaStream_t);
+  void         deviceStreamSet(cudaStream_t);
   cudaStream_t deviceStreamGet();
+
+  // Opaque team handle. CUDA carries no state on the team; intra-block context
+  // (threadIdx, blockDim) is read directly inside the inner overloads.
+  struct CudaTeam {};
+  using TeamHandle = CudaTeam;
+
+  inline constexpr int kCudaBlockSize = 256;
 } // namespace tarch::accelerator
 
 #endif

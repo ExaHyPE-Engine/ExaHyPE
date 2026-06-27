@@ -4,7 +4,22 @@
 
 #if defined(PEANO_WITH_GPU_BACKEND_SYCL)
 
+#include <sycl/sycl.hpp>
+
 namespace tarch::accelerator {
+  // Opaque team handle wrapping a SYCL nd_item. The reference points to the
+  // item parameter of the enclosing kernel; lifetime is the entire outer-lambda
+  // body, so any nested call that captures SyclTeam by value remains valid.
+  struct SyclTeam {
+    // Global-qualify ::sycl: the directory-derived test namespace
+    // tarch::accelerator::sycl::tests makes an (unqualified) `sycl` resolve to
+    // tarch::accelerator::sycl inside this namespace, shadowing the SYCL library.
+    const ::sycl::nd_item<1>& item;
+  };
+  using TeamHandle = SyclTeam;
+
+  inline constexpr int kSyclLocalSize = 256;
+
   /**
    * Get a SYCL queue
    *
