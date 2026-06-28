@@ -619,11 +619,15 @@ class ADERDG(object):
                 f"or when global adaptive time stepping is enabled."
             )
 
+        # Assemble the template prefix in a local: mutating the attribute would
+        # double the class name when the generator runs a second time on the
+        # same solver object.
         if self._solver_template_file_class_name is None:
-            self._templatefile_prefix += self.__class__.__name__
+            templatefile_prefix = self._templatefile_prefix + self.__class__.__name__
         else:
-            self._templatefile_prefix += self._solver_template_file_class_name
-
+            templatefile_prefix = (
+                self._templatefile_prefix + self._solver_template_file_class_name
+            )
 
         d = {}
         self._init_dictionary_with_default_parameters(d)
@@ -633,8 +637,8 @@ class ADERDG(object):
 
         generated_abstract_header_file = (
             peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-                self._templatefile_prefix + "Abstract.template.h",
-                self._templatefile_prefix + "Abstract.template.cpp",
+                templatefile_prefix + "Abstract.template.h",
+                templatefile_prefix + "Abstract.template.cpp",
                 "Abstract" + self._name,
                 namespace,
                 ".",
@@ -644,8 +648,8 @@ class ADERDG(object):
         )
         generated_solver_files = (
             peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-                self._templatefile_prefix + ".template.h",
-                self._templatefile_prefix + ".template.cpp",
+                templatefile_prefix + ".template.h",
+                templatefile_prefix + ".template.cpp",
                 self._name,
                 namespace,
                 ".",

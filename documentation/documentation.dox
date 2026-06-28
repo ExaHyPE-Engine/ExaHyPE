@@ -10,7 +10,7 @@ Peano and its toolboxes and extensions follow some very simplistic documentation
 - All documentation is created via \c doxygen;
 - What does not fit into the code is documented in separated files which also are processed by \c doxygen;
 - Code documentation should be in the header files for C/C++ code;
-- Further documentation files have the extension ```.dox```.
+- Further documentation files have the extension `.dox`.
 
 To generate the documentation, \c cd to your Peano directory, and type:
 
@@ -35,8 +35,8 @@ Rationale
 
 We aim for documentation which is always up-to-date.
 The documentation shall be searchable.
-We want to have one medium which integrates top-level and high-level overview information (normally stored in ```*.dox``` files)
-with low-level source code documentation (normally stored in ```*.h``` and ```*.py``` files).
+We want to have one medium which integrates top-level and high-level overview information (normally stored in `*.dox` files)
+with low-level source code documentation (normally stored in `*.h` and `*.py` files).
 
 
 Peano's documentation can be quite complex with all the toolboxes and
@@ -49,9 +49,14 @@ structure of the menus.
 How to add new files
 ======================
 
-Header files and Python scripts are automatically picked up by the script as
-long as they are stored within directories which are subject to search.
-Low-level subpages are automatically generated for them.
+Header files and Python scripts are picked up automatically as long as they
+are stored within a directory listed in the `INPUT` tag of
+`documentation/Doxyfile`. At the moment these are `documentation`,
+`tutorials`, `benchmarks`, `tests`, `applications` and
+`environments`. Low-level subpages are generated automatically for the
+files found there. If you add code in a new top-level directory that should be
+documented, remember to extend the `INPUT` tag accordingly.
+
 If you want to write stand-alone docu (such as top-level or high-level overview
 descriptions), the corresponding dox files should go into
 
@@ -84,9 +89,9 @@ Please consult with  the team if you want to add a new top-level entry.
 If the team agrees that there should be a new top-level entry, please follow
 the following conventions:
 
-- Add a new directory within ```documentation/Doxygen```.
+- Add a new directory within `documentation`.
 - Create a new main page within this new directory. Most packages call this
-  file ```home.dox```.
+  file `home.dox`.
 
 The new mainpage typically reads as follows
 
@@ -115,7 +120,7 @@ Subpages are the Doxygen term for something that we would call a section
 in LaTeX. To create such a section, please follow the following steps:
 
 - Create a new file within the documentation subdirectory of your choice;
-- Begin the new main page as above (with a ```\page```, ```page_ref``` and a page title),
+- Begin the new main page as above (with a `\page`, `page_ref` and a page title),
   i.e. any page to be included should start with
 
 \verbatim
@@ -124,10 +129,10 @@ in LaTeX. To create such a section, please follow the following steps:
        \page page_ref Page Title
 \endverbatim
 
-  Here, ```page_ref``` will serve as a global unique identifier throughout Doxygen.
+  Here, `page_ref` will serve as a global unique identifier throughout Doxygen.
   Therefore, we usually use identifiers such as \c peano_mysection where (in this example) \c peano is a generic
   prefix identifying the top-level rubric (page), and \c mysection is the subpage within the rubric.
-- Any page marked with ``` \page``` will appear on the top level menu by
+- Any page marked with ` \page` will appear on the top level menu by
   default. New documentation sections should therefore be added to their
   corresponding chapter or top-level page (see above) via
 
@@ -138,7 +143,7 @@ in LaTeX. To create such a section, please follow the following steps:
   where \c page_ref typically has a structure similar to \c peano_mysection.
 
 The last item illustrates a fundamental paradigm of Doxygen:
-All the pages are, in the first lace, one large blob.
+All the pages are, in the first place, one large blob.
 To introduce parent-child relations, you have to add the child to the parent page.
 The child page itself does not specify its parent.
 Through this, you can duplicate entries in the navigation menu:
@@ -156,7 +161,7 @@ Adding (low-level) documentation inside the code
 
 Doxygen recognises comments written following certain rules in C++ and Python source codes.
 As comments are written differently in these languages, these rules are also different.
-In C++, a comment section must be wrapped by the first line \htmlonly /** \endhtmlonly and the last line \htmlonly */ \endhtmlonly
+In C++, a comment section must be wrapped by the opening Doxygen comment marker and a closing marker
 and will contain a (multiline) text between them (describing, for example, a function and its arguments before the function body):
 
 \verbatim
@@ -200,12 +205,12 @@ Don't forget the exclamation mark as this allows Doxygen to render a Python comm
 otherwise the comment text will appear as a code snippet.
 For Python, the comment has to be put directly ***after*** the function or class definition.
 
-Furthermore, if you want to ensure that a full qualfilied name, such as petsc.Project.add_solver()
+Furthermore, if you want to ensure that a full qualfilied name, such as exahype2.Project.add_solver()
 appears in the finished html page, ensure that the .py file that contains the class being referenced
-sits in the same directory as a ```__init__.py``` file, which can be empty. Then all you need to do is reference it like:
+sits in the same directory as a `__init__.py` file, which can be empty. Then all you need to do is reference it like:
 
 \verbatim
-petsc.Project.add_solver()
+exahype2.Project.add_solver()
 \endverbatim
 
 in the .dox file.
@@ -236,30 +241,30 @@ pages. The feature is documented at https://www.doxygen.nl/manual/commands.html#
 The idea is that the code that is relevant/discussed has to be annotated with 
 
 \verbatim
-//! [tutorials swift2 planet-orbit create project]
+//! [my code snippet]
 
-Code that you want to display in tutorials, too 
+Code that you want to display in tutorials, too
 
-//! [tutorials swift2 planet-orbit create project]
+//! [my code snippet]
 \endverbatim
 
 (in C/C++ code) or
 
 \verbatim
-#! [tutorials swift2 planet-orbit create project]
+#! [my code snippet]
 
-Code that you want to display in tutorials, too 
+Code that you want to display in tutorials, too
 
-#! [tutorials swift2 planet-orbit create project]
+#! [my code snippet]
 \endverbatim
 
 respectively. We can then integrate this code part through
 
 
 \verbatim
-@snippet{lineno} tests/swift2/planet-orbit/planet-orbit.py tutorials swift2 planet-orbit create project
+@snippet{lineno} path/to/source.cpp my code snippet
 
-This snippet stems from tests/swift2/planet-orbit/planet-orbit.py.
+This snippet stems from path/to/source.cpp.
 \endverbatim
 
 
@@ -337,7 +342,7 @@ Anything in here is rendered exactly as written. Keywords and all.
 Inline "code snippets" can be done like so:
 
 \verbatim
-```import peano4```
+`import peano4`
 \endverbatim
 
 ## TeX

@@ -163,8 +163,10 @@ with each other. If they don't each MPI rank will refine and erase their
 area independently. The mesh will still be consistent, as a vertex along
 a boundary which is refined will also trigger a refinement in the remote
 neighobur (or-based refinement policy), but there is no global data exchange.
-There is a routine peano4::grid::reduceGridControlEvents() that allows you
-to reduce information.
+If you need the events to be reduced and broadcast across all ranks, route
+them through exahype2::RefinementControlService, which collects the committed
+events and exchanges them via MPI; otherwise you have to implement the
+exchange yourself.
 
 
 
@@ -177,8 +179,9 @@ time, it makes sense to ensure that two cells which trigger a refinement also
 trigger two refinement events which are adjacent, as this allows peano4::grid::GridControlEvent::merge()
 to merge them into one larger refinement instructions. So, as a rule of thumb,
 I usually recommend to make refinement events span a mesh size which is around
-95% of a cell. The peano4::grid::GridControlEvent::merge() operation, by default, works with 10%
-inaccuracy and then is still able to merge refinement events triggered by
+95% of a cell. The peano4::grid::GridControlEvent::merge() operation accepts a
+tolerance argument (defaulting to 0.0, i.e. exact matching). Passing a small
+positive tolerance makes it still able to merge refinement events triggered by
 adjacent mesh cells.
 
 

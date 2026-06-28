@@ -7,7 +7,7 @@ By default, it stores these
 data everywhere within the domain on each and every resolution level.
 However, you can alter this behaviour.
 This page discusses how this altering is implemented.
-There's a @ref tutorials_peano4_mask_out_data_usage "dedicated tutorial on this topic" which you might want to study first.
+The same mechanism is used by generated tutorials and examples that mask out temporary data.
 
 
 
@@ -43,10 +43,10 @@ resemble temporary/local variables.
 ## Parallelisation
 
 Peano automatically masks out the data outside of the local subdomain of a
-thread or rank.
-However, that only works properly with smart pointers.
-
-
-## Further spatial multiresolution localisation in storage classes using smart pointers
+thread or rank. When Peano traverses the grid, the markers handed to the action
+sets carry locality information (see, e.g., the `isLocal()` queries on
+peano4::datamanagement::VertexMarker and peano4::datamanagement::FaceMarker).
+The grid traversal skips grid entities whose `isLocal()` flag is not set, so
+remote and halo data are not processed by the local thread or rank.
 
 */

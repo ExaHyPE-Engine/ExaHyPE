@@ -58,7 +58,15 @@ class MyClassForStoringData:
   # code goes here
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-More info can be found in the FAQs below.
+More specifically:
+
+- Modules should have short, all-lowercase names. Underscores can be used in the module name if it
+  improves readability. Python packages should also have short, all-lowercase names, although the
+  use of underscores is discouraged.
+- Class names should normally use the CapWords (CamelCase) convention.
+- Function names should be lowercase, with words separated by underscores as necessary to improve
+  readability.
+- Variable names follow the same convention as function names.
 
 # C++ conventions / Style Guide
 
@@ -78,46 +86,6 @@ that you only format files which you had modified already, i.e. no formatting ra
 in the repo.
 
 
-
-FAQs
---------------
-
-- Modules should have short, all-lowercase names. Underscores can be used in the module name if it
-  improves readability. Python packages should also have short, all-lowercase names, although the
-  use of underscores is discouraged.
-- Class names should normally use the CapWords (CamelCase) convention.
-- Function names should be lowercase, with words separated by underscores as necessary to improve
-  readability.
-- Variable names follow the same convention as function names.
-
-
-
-
-
-
-
-Python
-===============
-
-Please try and follow the <a href="https://peps.python.org/pep-0008/">PEP 8 Style guide</a>.
-
-
-FAQs
---------------
-
-- Modules should have short, all-lowercase names. Underscores can be used in the module name if it
-  improves readability. Python packages should also have short, all-lowercase names, although the
-  use of underscores is discouraged.
-- Class names should normally use the CapWords (CamelCase) convention.
-- Function names should be lowercase, with words separated by underscores as necessary to improve
-  readability.
-- Variable names follow the same convention as function names.
-
-
-
-
-
-
 Code Formatting
 ===============
 
@@ -130,7 +98,7 @@ is set up to only format files that have been modified on your local branch to t
 branch, ``p4``. Ideally, the formatting script should be run on your local branch before
 you submit a merge request.
 
-The usage is straightforward. The script can be found in ``Peano/format.py``.
+The usage is straightforward. The script can be found in ``python/postprocessing/format.py``.
 To format all files that differ from files on the main ``p4`` branch, simply run
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -165,7 +133,7 @@ Our formatting scripts works only within a virtual environment. To create such
 an environment, follow the following steps:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-sudo apt install python-venv
+sudo apt install python3-venv
 rm -rf .formatting_python_env
 python3 -m venv .formatting_python_env
 source .formatting_python_env/bin/activate

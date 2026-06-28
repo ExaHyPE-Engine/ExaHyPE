@@ -85,7 +85,7 @@ OUTPUT_DIRECTORY       = doxygen-html
 # control the number of sub-directories.
 # The default value is: NO.
 
-CREATE_SUBDIRS         = YES
+CREATE_SUBDIRS         = NO
 
 # Controls the number of sub-directories that will be created when
 # CREATE_SUBDIRS tag is set to YES. Level 0 represents 16 directories, and every
@@ -985,26 +985,7 @@ INPUT_FILE_ENCODING    =
 # be provided as doxygen C comment), *.py, *.pyw, *.f90, *.f95, *.f03, *.f08,
 # *.f18, *.f, *.for, *.vhd, *.vhdl, *.ucf, *.qsf and *.ice.
 
-FILE_PATTERNS          = *.h \
-                         *.c \
-                         *.hh \
-                         *.cc \
-                         *.hxx \
-                         *.cxx \
-                         *.hpp \
-                         *.cpp \
-                         *.h++ \
-                         *.c++ \
-                         *.cuh \
-                         *.cu \
-                         *.cpph \
-                         *.def \
-                         *.inc \
-                         *.inl \
-                         *.py \
-                         *.dox \
-                         *.html \
-                         *.rst
+FILE_PATTERNS          = *.dox
 
 # The RECURSIVE tag can be used to specify whether or not subdirectories should
 # be searched for input files as well.
@@ -1035,34 +1016,7 @@ EXCLUDE_SYMLINKS       = NO
 # Note that the wildcards are matched against the file with absolute path, so to
 # exclude all test directories for example use the pattern */test/*
 
-EXCLUDE_PATTERNS       = */benchmarks/*/celldata \
-                         */benchmarks/*/globaldata \
-                         */benchmarks/*/observers \
-                         */benchmarks/*/repositories \
-                         */benchmarks/*/kernels \
-                         */benchmarks/*/vertexdata \
-                         */benchmarks/*/Constants.h \
-                         */applications/*/celldata \
-                         */applications/*/globaldata \
-                         */applications/*/observers \
-                         */applications/*/repositories \
-                         */applications/*/kernels \
-                         */applications/*/vertexdata \
-                         */applications/*/Constants.h \
-                         */tutorials/*/celldata \
-                         */tutorials/*/globaldata \
-                         */tutorials/*/observers \
-                         */tutorials/*/repositories \
-                         */tutorials/*/kernels \
-                         */tutorials/*/vertexdata \
-                         */tutorials/*/Constants.h \
-                         */tests/*/celldata \
-                         */tests/*/globaldata \
-                         */tests/*/observers \
-                         */tests/*/repositories \
-                         */tests/*/kernels \
-                         */tests/*/vertexdata \
-                         */tests/*/Constants.h
+EXCLUDE_PATTERNS       =
 
 # The EXCLUDE_SYMBOLS tag can be used to specify one or more symbol names
 # (namespaces, classes, functions, etc.) that should be excluded from the

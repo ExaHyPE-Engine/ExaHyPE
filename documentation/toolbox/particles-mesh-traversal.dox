@@ -95,7 +95,7 @@ If you want to update particles of a cell due to particle-particle interactions,
 should only update particles which hold the right value of the corresponding flag
 plus whose centre is within the cell: Particles belong to the
 local sets of up to @f$ 2^d @f$ surrounding vertices. If you want to update the
-red particle vs.~the green one left above it in the sketch above, it becomes
+red particle vs. the green one left above it in the sketch above, it becomes
 immediately clear that the green particle will be in the local set of this cell, but
 also in the local set of the cell left of it and also the one left above it.
 
@@ -169,10 +169,10 @@ automatically adopt the cell h.
 
 
 We can exploit this property to implement valid multiscale interactions:
-If two particles L (local) and A (active) are on the same grid level, we evaluate A-B and B-A
-separately, i.e. once draw A from the local set and B from the active set and
+If two particles L (local) and A (active) are on the same grid level, we evaluate L-A and A-L
+separately, i.e. once draw L from the local set and A from the active set and
 then the other way round. That is, we evaluate a function @f$ f(L,A) @f$, knowing
-that @f$ f(A,L) @f$ will be done later in the neighbour cell, e.g. Notably, we
+that @f$ f(A,L) @f$ will be done later in the neighbour cell. Notably, we
 do not exploit
 
 @f$
@@ -284,7 +284,7 @@ particleWillBeDroppedFurther( *p, marker )
 can be very problematic along AMR boundaries, and peano4.toolbox.particles.api.AbstractUpdateParticleGridAssociation
 discusses these effects in detail using the arrangement below:
 
-@image html SievingAlongAMRBoundaries.png
+@image html python/peano4/toolbox/particles/api/SievingAlongAMRBoundaries.png
 
 The problems arise for particles associated to the coarser level
 which you might want to sort into a hanging vertex on the next finer
@@ -311,21 +311,22 @@ Yet, the realisation can make certain assumptions about their memory layout.
 These assumptions are discussed on a subpage of the @ref page_toolbox_particles_realisation.
 
 
-# For Swift 2 users:
+# Update markers in practice
 
-- See swift2.particle.Particle for the introduction of the marker
-  CellHasUpdatedParticle which we use to ensure that each particle is
-  only updated once.
-- Consult swift2.actionsets.UpdateParticleMarker for documentation of the
-  action set which actually sets the marker.
-- Read through swift2.graphcompiler.Sequential for an example how and when the
-  different active set construction schemes are used.
-- Read through swift2.graphcompiler.Sequential for an example how and when to
-  invoke UpdateParticleMarker to ensure that the update markers are always set
-  to the correct value.
-- Read through the recommendations on @ref page_swift_performance_optimisation.
+To realise the "update each particle only once" pattern discussed above, codes
+typically add a boolean marker to their particle. The toolbox itself uses the
+attribute CellHasUpdatedParticle for exactly this purpose: the multiscale
+update action set
+peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles
+queries it via getCellHasUpdatedParticle() before touching a local particle, so a
+particle sitting on a face between two cells is not accidentally updated twice.
+The marker itself is set by the application layer that drives the actual particle
+update.
+
+Consult the application layer that builds on top of the particle toolbox for its
+own performance optimisation recommendations and for examples of how and when the
+different active set construction schemes are combined.
 
 
 
 */
-

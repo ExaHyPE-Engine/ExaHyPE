@@ -2,3 +2,7 @@
 *.nc filter=lfs diff=lfs merge=lfs -text
 *.mp4 filter=lfs diff=lfs merge=lfs -text
 *.grd filter=lfs diff=lfs merge=lfs -text
+
+# Strip Jupyter notebook outputs on `git add`/commit (working-tree copy keeps
+# its outputs). Enable per clone: see documentation/strip-notebook-output.py.
+*.ipynb filter=nbstripout

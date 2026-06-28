@@ -50,6 +50,7 @@ class Project(peano4.Project):
 
         # ExaHyPE-specific state on top of the inherited Peano project.
         self._solvers = []
+        self._solver_set_generated = False
         self._min_terminal_time = min_end_time
         self._max_terminal_time = max_end_time
         self._min_grid_levels = min_grid_levels
@@ -80,11 +81,39 @@ class Project(peano4.Project):
         self.solversteps.add_step(self.perform_time_step)
 
     def add_solver(self, solver):
+        """Register a solver; consecutive calls build up the solver set.
+
+        Re-executing the configuration re-declares the solver set rather than
+        extending it. Two signals identify such a re-declaration round, and
+        either restarts the set from a clean slate: a solver name that is
+        already registered (a set under construction never declares the same
+        name twice), and the first add_solver after the project has been
+        generated (new solvers cannot join a generated project incrementally).
+        This keeps configurations that declare a varying number of solvers -
+        e.g. a limiter toggle with three solvers when on and one when off -
+        correct on every re-run without any explicit cleanup. The
+        implementation files belong to the solvers, so re-registering them
+        (add_cpp_file) goes along with re-declaring the set.
+        """
+        redeclaration = self._solver_set_generated or any(
+            existing._name == solver._name for existing in self._solvers
+        )
+        if redeclaration:
+            self._solvers = []
+            self.output.makefile.clear_user_files()
+            self._solver_set_generated = False
         self._solvers.append(solver)
 
     def remove_all_solvers(self):
+        """Forget all registered solvers and their user implementation files.
+
+        Rarely needed: add_solver detects a re-declared solver set on its own
+        (see there). This is the explicit form for the remaining cases, e.g.
+        emptying the set without declaring a new solver.
+        """
         self._solvers = []
-        self.cleanup()
+        self.output.makefile.clear_user_files()
+        self._solver_set_generated = False
 
     def __export_constants(self):
         """
@@ -424,46 +453,105 @@ thus appreciate any citation of the original release paper
         the runtime parameters, configures the runner and the main, and then defers
         to peano4.Project.generate_and_build() for the actual file generation + build.
         """
+        # Generating freezes the declared solver set: the next add_solver call
+        # (a re-executed configuration) starts a fresh declaration round.
+        self._solver_set_generated = True
+
         # Solver code generation reads the build configuration (e.g. SIMD width),
         # so parse it now. The base generate_and_build() will not parse it again.
         self.output.makefile.parse_configuration_outcome()
         self._makefile_configured = True
-        self.__export_constants()
 
-        # Every step is already registered uniformly in _create_steps(); here we only
-        # inject each solver's data model and action sets into the relevant steps.
-        solver_steps = (
-            self.create_grid,
-            self.load_balancing,
-            self.plot_solution,
-            self.perform_time_step,
-            self.init_grid,
+        # The generation below injects per-solver state into the project on
+        # every call: data model entries, use-data statements and action sets in
+        # the steps, readme entries, and the solver implementation/repository
+        # artefacts. Some of these are created afresh per call (e.g. the plotter
+        # action sets), so repeated calls on the same project would otherwise
+        # accumulate duplicates and shift the generated observer class names. Snapshot everything the generation touches and restore it
+        # afterwards, so each generation starts from the pristine user
+        # configuration; the base class guards its own artefact additions the
+        # same way.
+        pre_generation_artefacts = list(self.output.artefacts)
+        pre_generation_readme_entries = list(self.output.readme._entries)
+        pre_generation_generated_files = (
+            list(self.output.makefile.generated_hfiles),
+            list(self.output.makefile.generated_cppfiles),
+            list(self.output.makefile.generated_fortranfiles),
+            list(self.output.makefile.generated_gpu_cppfiles),
         )
-        for solver in self._solvers:
-            log.debug("Prepare solver %s", solver._name)
-            log.debug("%s", solver)
+        pre_generation_datamodel = (
+            list(self.datamodel.cell_data),
+            list(self.datamodel.face_data),
+            list(self.datamodel.vertex_data),
+            list(self.datamodel.global_data),
+        )
+        pre_generation_steps = {
+            step: (
+                list(step.cell_data),
+                list(step.face_data),
+                list(step.vertex_data),
+                list(step.action_sets),
+            )
+            for step in self.solversteps._steps
+        }
 
-            solver.add_to_Peano4_datamodel(self.datamodel)
+        try:
+            self.__export_constants()
 
-            for step in solver_steps:
-                solver.add_use_data_statements_to_Peano4_solver_step(step)
+            # Every step is already registered uniformly in _create_steps(); here we only
+            # inject each solver's data model and action sets into the relevant steps.
+            solver_steps = (
+                self.create_grid,
+                self.load_balancing,
+                self.plot_solution,
+                self.perform_time_step,
+                self.init_grid,
+            )
+            for solver in self._solvers:
+                log.debug("Prepare solver %s", solver._name)
+                log.debug("%s", solver)
 
-            solver.add_actions_to_create_grid(self.create_grid)
-            self.__add_solver_label_action_sets_to_load_balancing(solver)
+                solver.add_to_Peano4_datamodel(self.datamodel)
 
-            solver.add_actions_to_init_grid(self.init_grid)
-            solver.add_actions_to_plot_solution(self.plot_solution, "./")
+                for step in solver_steps:
+                    solver.add_use_data_statements_to_Peano4_solver_step(step)
 
-            solver.add_actions_to_perform_time_step(self.perform_time_step)
+                solver.add_actions_to_create_grid(self.create_grid)
+                self.__add_solver_label_action_sets_to_load_balancing(solver)
 
-            self.__add_solver_implementation_files(solver)
+                solver.add_actions_to_init_grid(self.init_grid)
+                solver.add_actions_to_plot_solution(self.plot_solution, "./")
 
-        self.__generate_solver_repository()
+                solver.add_actions_to_perform_time_step(self.perform_time_step)
 
-        self._configure_runner(self.main)
-        self._init_main_template_dictionary(self.main)
+                self.__add_solver_implementation_files(solver)
 
-        super().generate_and_build()
+            self.__generate_solver_repository()
+
+            self._configure_runner(self.main)
+            self._init_main_template_dictionary(self.main)
+
+            super().generate_and_build()
+        finally:
+            self.output.artefacts = pre_generation_artefacts
+            self.output.readme._entries = pre_generation_readme_entries
+            (
+                self.output.makefile.generated_hfiles,
+                self.output.makefile.generated_cppfiles,
+                self.output.makefile.generated_fortranfiles,
+                self.output.makefile.generated_gpu_cppfiles,
+            ) = pre_generation_generated_files
+            (
+                self.datamodel.cell_data,
+                self.datamodel.face_data,
+                self.datamodel.vertex_data,
+                self.datamodel.global_data,
+            ) = pre_generation_datamodel
+            for step, (cell, face, vertex, action_sets) in pre_generation_steps.items():
+                step.cell_data = cell
+                step.face_data = face
+                step.vertex_data = vertex
+                step.action_sets = action_sets
 
 
     def init_new_user_defined_algorithmic_step(self,

@@ -6,7 +6,7 @@
 
 ExaHyPE 2 itself is a hyperbolic PDE engine, its goal is to provide a generic engine in which users can
 implement the specifics of their hyperbolic PDEs and have these be solved by the engine.
-It is built on top of ExaHyPE 2 as an extension.
+It is built on top of Peano 4 as an extension.
 ExaHyPE 2 solves partial differential equations of the form
 
 @f$
@@ -25,7 +25,6 @@ and innovation programme under grant agreement No 671698 (ExaHyPE).
   - \subpage page_exahype_benchmarks
   - \subpage page_numerics
   - \subpage page_solvers
-  - \subpage page_tutorials
   - Core functionality, numerics and ingredients
     - \subpage page_exahype_tracer
     - \subpage page_exahype_boundary_conditions
@@ -68,18 +67,17 @@ ExaHyPE 2 is the follow-up development of the ExaHyPE project which has
 been funded by the EU from 2015--2019.
 The present version is the second generation of the code (ExaHyPE 2) and has
 seen substantial rewrites of core routines.
-However, many paradigms and even code blocks remain the same.
-Migrating from the original ExaHyPE to ExaHyPE 2 thus should be straightforward.
+However, many paradigms remain the same.
 
 The original ExaHyPE had been built on top of Peano (third generation) and tried
 to hide as much of Peano away as possible.
-In ExaHyPE 2, I go the opposite way: ExaHyPE 2 is a full-blown Peano add-in and I
-try not to hide anything away.
-Where we designed our own data management on top of Peano in ExaHyPE, all the
+ExaHyPE 2 goes the opposite way: it is a full-blown Peano 4 add-in and tries
+not to hide anything away.
+Where ExaHyPE designed its own data management on top of Peano, all the
 data management (as well as parallelisation, e.g.) is native Peano 4.
 
-With the migration from a sole-C++ philosophy to C++ supplemented by a Python
-API in Peano, I also dumped ExaHyPE's former configuration/specification file paradigm.
+The sole-C++ philosophy has also been superseded by C++ supplemented by a Python
+API in Peano, dropping ExaHyPE's former configuration/specification file paradigm.
 An ExaHyPE 2 application now is championed by a sole Python script.
 This Python script yields a native Peano application (builder mechanism) which then assembles the application.
 

@@ -10,8 +10,6 @@
   - \subpage applications_exahype2_ExaGRyPE
 - Free-Surface Geophysical Flows
   - \subpage applications_exahype2_exaskred
-- Plasma Physics
-  - \subpage applications_exahype2_mhd
 
 This directory holds links to some showcase applications of ExaHyPE. Many of these
 applications are the base for some cooked-down @ref page_exahype_benchmarks "benchmarks".

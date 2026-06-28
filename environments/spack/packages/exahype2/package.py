@@ -102,3 +102,14 @@ class Exahype2(CMakePackage, CudaPackage):
         env.set("PEANO_CMAKE_BUILD_DIR", self.spec.prefix)
         env.prepend_path("PYTHONPATH", self.spec.prefix + "/python")
         env.prepend_path("PYTHONPATH", join_path(self.spec.prefix, "lib", "python" + str(self.spec["python"].version.up_to(2)), "site-packages"))
+        # The notebook dependencies (jupyterlab, ipywidgets, matplotlib, ...)
+        # are pip-installed into the package prefix by install(). Setting only
+        # PYTHONPATH lets `import ipywidgets` succeed, but the JupyterLab server
+        # also needs to discover the pip-installed frontend extensions and kernels
+        # under <prefix>/share/jupyter - otherwise the interactive renderers import
+        # without error yet never draw anything in the browser. Put the prefix's
+        # bin on PATH (so the matching jupyter is used) and its jupyter data/config
+        # dirs on the jupyter search paths.
+        env.prepend_path("PATH", join_path(self.spec.prefix, "bin"))
+        env.prepend_path("JUPYTER_PATH", join_path(self.spec.prefix, "share", "jupyter"))
+        env.prepend_path("JUPYTER_CONFIG_PATH", join_path(self.spec.prefix, "etc", "jupyter"))

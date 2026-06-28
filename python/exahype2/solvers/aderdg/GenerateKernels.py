@@ -179,8 +179,7 @@ def generate_kernels(solver, d, output):
 {% endif %}
 {% else %}
     // Nonlinear, without point sources
-    // TODO: Unused?
-    int numPicardIteration = kernels::{{SOLVER_NAME}}::fusedSpaceTimePredictorVolumeIntegral<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[0]}}, {{PICARD_COMPUTATION_PRECISION}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
+    [[maybe_unused]] int numPicardIteration = kernels::{{SOLVER_NAME}}::fusedSpaceTimePredictorVolumeIntegral<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[0]}}, {{PICARD_COMPUTATION_PRECISION}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
       repositories::{{SOLVER_INSTANCE}},
       lQhbnd,
       lFhbnd,

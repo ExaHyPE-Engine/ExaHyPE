@@ -39,29 +39,32 @@ materialises in profiles similar to
 Top Hotspots
 Function                                                           Module           CPU Time  % of CPU Time(%)
 -----------------------------------------------------------------  --------------  ---------  ----------------
-applications::exahype2::ccz4::ncp                                  peano4_bbhtest   559.299s             13.3%
+applications::exahype2::exagrype::ncp                              peano4_bbhtest   559.299s             13.3%
 __memmove_avx_unaligned_erms                                       libc.so.6        529.383s             12.6%
 toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product  peano4_bbhtest   505.116s             12.0%
-applications::exahype2::ccz4::source                               peano4_bbhtest   347.667s              8.3%
+applications::exahype2::exagrype::source                           peano4_bbhtest   347.667s              8.3%
 __kmpc_set_lock                                                    libiomp5.so      340.473s              8.1%
 [Others]                                                           N/A             1916.907s             45.7%
 ~~~~~~~~~~~~~~~~~~~
 
 where memory movements (__memmove_avx_unaligned_erms) end up high on the list.
-You can alter
-this behaviour by switching to a heap-based memory administration. Consult the
-documentation of the solver of interest, but the ``fix'' always looks similar to
+The patch data are mapped onto C++ data structures through a generator object
+that each solver attaches to its patch:
 
-         self._patch.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch,"double")
+         self._patch.generator = peano4.datamodel.PatchToData(self._patch, "double")
 
-i.e. you have to swap how a patch is mapped onto a C++ implementation. Most solvers provide a routine
+The default mapping streams the patches through Peano's serialised stacks, which
+is what causes the data to be copied forth and back. The main lever to reduce
+these copies is to fuse the compute kernels, so a patch is read, updated and
+written within a single stateless sweep instead of being reloaded for every
+sub-step. You enable this when you create the solver:
 
-         my_solver.switch_to_heap_storage(True, True)
+         my_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
+             name="MySolver", patch_size=..., unknowns=..., auxiliary_variables=...,
+             time_step_relaxation=..., fuse_compute_kernels=True
+         )
 
-
-which does the switch for you. Please around with different True, False
-combinations.
-Once you have switched, you should also consult @ref page_peano_performance_optimisation "Peano's generic remarks on alignment",
+Once the kernels are fused, you should also consult @ref page_peano_performance_optimisation "Peano's generic remarks on alignment",
 and you might want to change your kernel into a variant which optimises aggressively for vector registers (and can
 potentially even use GPUs). This topic is discussed below.
 
@@ -103,7 +106,7 @@ To assess the multithreading efficiency, follow the steps below:
 
 This effect is discussed in the @ref page_peano_performance_optimisation "generic performance optimisation".
 The discussion therein mentions to test various load balancing strategies.
-For ExaHypE2, there are specific knobs to tune once you are reasonably
+For ExaHyPE 2, there are specific knobs to tune once you are reasonably
 happy with the domain decomposition. Therefore, the generic Peano page
 is to be consulted first.
 
@@ -140,11 +143,11 @@ within its fork-join section.
 ### Very high spin time and not enough trees for the all cores
 
 This topic is covered by
-@ref page_peano_performance_optimisation "Peano's section calls The code shows very high spin time".
+@ref page_peano_performance_optimisation "Peano's section The code shows very high spin time".
 In ExaHyPE 2's context it means that you do not have enough trees to keep
 all cores busy, i.e. your mesh is too small or your subpartitions are too
 big.
-However, you migth find out that decreasing the subpartitions actually
+However, you might find out that decreasing the subpartitions actually
 increases the runtime.
 This is reasonable, as each subdomain requires a significant administrative
 overhead to keep all halo data consistent.

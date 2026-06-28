@@ -73,15 +73,25 @@ class Makefile(object):
         self.d["EXECUTABLENAME"] = fname
 
     def clear_files(self):
-        self.hfiles = []
-        self.cppfiles = []
-        self.fortranfiles = []
+        self.clear_user_files()
         self.generated_hfiles = []
         self.generated_cppfiles = []
         self.generated_fortranfiles = []
         # Generated sources holding GPU kernels, compiled with the GPU language (CUDA/HIP). The
         # kernel generators flag these via add_cpp_file(..., is_gpu_kernel=True).
         self.generated_gpu_cppfiles = []
+
+    def clear_user_files(self):
+        """Forget the non-generated source files the user registered.
+
+        Used when the user re-declares the solver set (e.g. a configuration
+        that toggles a limiter on/off is re-executed): the implementation
+        files belong to the solvers, so they are re-registered along with
+        them.
+        """
+        self.hfiles = []
+        self.cppfiles = []
+        self.fortranfiles = []
 
     def set_dimension(self, dimension):
         self.d["DIMENSIONS"] = str(dimension)

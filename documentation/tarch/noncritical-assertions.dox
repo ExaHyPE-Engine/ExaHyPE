@@ -1,0 +1,22 @@
+/**
+
+@page tarch_NoncriticalAssertions Noncritical assertions
+
+\tableofcontents
+
+Noncritical assertions report programming errors while still giving the
+application a chance to dump diagnostic output before it terminates. They are
+useful for numerical failures where an immediate abort would destroy the state
+needed for post-mortem analysis.
+
+Unlike ordinary assertions, explicit noncritical assertion triggers are not
+compiled out in release builds. The runtime records that a rank observed a
+noncritical assertion, propagates this information to the global driver, and
+lets the driver switch into a diagnostic finalisation path.
+
+Typical applications check the noncritical assertion flag between solver steps.
+If it is set, they schedule a final plot or dump, then terminate deterministically.
+This keeps error handling separate from the local callback where the problem was
+detected.
+
+*/

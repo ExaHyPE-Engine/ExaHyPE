@@ -1,35 +1,38 @@
 /**
 
-\page page_third-party_OpenBLAS OpenBLAS / libxsmmJIT / Lapack
+\page page_third-party_OpenBLAS LIBXSMM
 
 \tableofcontents
 
 
 
-OpenBLAS is an implementation of BLAS, which provide some basic linear algebra subroutines.
-libxsmmJIT (available as submodule) and lapack (more complicated linear algebra routines,
-used for matrix inversion etc) depend on this.
+[LIBXSMM](https://github.com/libxsmm/libxsmm) is a library for small, dense and
+sparse matrix-matrix multiplications. Peano can use it to generate specialised,
+just-in-time-compiled kernels for the small linear algebra operations that arise
+in its compute kernels.
 
-We provide a few configure options to make sure all the headers and libraries are available.
-When running configure script (see \ref page_installation_home) you should include
-```with-openblas``` to enable OpenBLAS. Further, you should use ```with-lapack``` to enable
-lapack and similarly ```with-libxsmmjit```. Configuration for these two options will fail
-without OpenBLAS enabled.
+LIBXSMM is an optional dependency: it is disabled by default and Peano builds and
+runs without it.
 
-When configuring, be sure to add:
-  - A link to the include directory for the version of openblas for your compiler to CXXFLAGS
-  - A link to the lib directory for the version of openblas for your compiler to LDFLAGS
-  - A link to the lib directory for the version of openblas for your compiler to LD_LIBRARY_PATH
-  - ```-lopenblas``` to LDFLAGS
 
-The call to configure should look something like this (for example, on COSMA):
+# Enable LIBXSMM
+
+LIBXSMM is controlled through the CMake option `PEANO_WITH_LIBXSMM` (see also
+\ref page_installation_home). Pass it as a `-D` flag when you configure your build
+directory:
 
 ~~~~~~~~~~~~~~~~~~~~~~~
-./configure --with-openblas --with-lapack [other configure options] CXXFLAGS="... -I/cosma/local/openblas/intel_2020-update2/0.3.12cosma7/include/"
-  LDFLAGS="-L/cosma/local/openblas/intel_2020-update2/0.3.12cosma7/lib/ -lopenblas" ...
+mkdir build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release -DPEANO_WITH_LIBXSMM=ON
+make -j
 ~~~~~~~~~~~~~~~~~~~~~~~
 
+Alternatively, toggle `PEANO_WITH_LIBXSMM` interactively through `ccmake ..`.
 
-Make sure to export your LD_LIBRARY_PATH first.
+When the option is enabled, CMake locates LIBXSMM via `cmake/FindLIBXSMM.cmake`.
+The module first searches your environment (honouring the `LIBXSMM_DIR`
+environment variable and `pkg-config`); if no suitable installation is found it
+fetches and builds LIBXSMM from source automatically using CMake's `FetchContent`,
+so no manual installation is required.
 
 */

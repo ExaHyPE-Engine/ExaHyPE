@@ -8,32 +8,42 @@
 
 DINE (Durham Intelligent NIC Environment) is a small supercomputer attached to
 Cosma, which we use to prototype some of our algorithms. Access is through the
-Cosma loging nodes (login8.cosma.dur.ac.uk). As Cosma and DINE feature the same
-generation of AMD chips, you can compile on Cosma8 and ship the executable to 
+Cosma login nodes (login8.cosma.dur.ac.uk). As Cosma and DINE feature the same
+generation of AMD chips, you can compile on Cosma8 and ship the executable to
 DINE.
 
 ~~~~~~~~~~~~~~~~~~~~~~~
 module load git
-module load autoconf 
+module load cmake
 module load python
 module load intel_comp
 module load compiler-rt tbb compiler
 module load intel_mpi
 module load gnu_comp/13.1.0
 export I_MPI_CXX=icpx
-./configure --enable-exahype --enable-blockstructured --enable-loadbalancing --enable-particles CC=icx CXX=icpx --with-multithreading=omp --with-mpi=mpiicpc CXXFLAGS="-std=c++20 -qopenmp -funroll-loops -Ofast"
+
+mkdir build
+cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release \
+         -DCMAKE_C_COMPILER=icx -DCMAKE_CXX_COMPILER=icpx \
+         -DPEANO_WITH_MULTITHREADING=ON -DPEANO_WITH_MPI=ON \
+         -DPEANO_EXTRA_CXX_FLAGS="-funroll-loops;-Ofast"
+make -j
 ~~~~~~~~~~~~~~~~~~~~~~~
+
+The toolboxes (blockstructured, loadbalancing, particles) and the ExaHyPE 2
+extension are always built, so there is nothing to switch on for them.
 
 There are a few things to consider whenever you use DINE:
 
-- The default Python version usually is a little bit too old, so 
-  switching to a more recent Python package is reasonable. 
-- Don't use the -xHost flag in configure. The resulting code will crash on 
-  DINE. You can use 
+- The default Python version usually is a little bit too old, so
+  switching to a more recent Python package is reasonable.
+- Don't pass the -xHost flag through PEANO_EXTRA_CXX_FLAGS. The resulting code
+  will crash on DINE. You can use
   ~~~~~~~~~~~~~~~~~~~~~~~
-  -march=native
+  -DPEANO_EXTRA_CXX_FLAGS="-march=native"
   ~~~~~~~~~~~~~~~~~~~~~~~
-- Try not to dump data into the home directory, as this one is backe up and has
+- Try not to dump data into the home directory, as this one is backed up and has
   a quota. DINE mounts the Cosma 5 data directory (/cosma5/data/do009/myaccount)
   which you should use to store data files.
 

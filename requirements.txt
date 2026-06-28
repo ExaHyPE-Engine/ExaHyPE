@@ -3,10 +3,17 @@ mpmath
 numpy
 sympy
 jupyter
+jupyterlab
+ipywidgets
 matplotlib
 scipy
 h5py
 pyvista
+trame
+trame-vtk
+trame-vuetify
+jupyter-server-proxy
+nest-asyncio
 meshio
 netCDF4
 imageio

@@ -76,7 +76,6 @@ namespace tarch {
      which accepts a sequence of tasks. They are all run in parallel but then
      wait for each other, i.e. we define a tree (sub)task graph. With fork-join
      calls, we mirror the principles behind bulk-synchronous programming (BSP).
-   - ***Fusable tasks***. A subtype of the normal tasks.
 
 
    ### Tasks with dependencies

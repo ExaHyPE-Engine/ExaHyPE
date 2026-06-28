@@ -7,10 +7,14 @@ They reuse the Spack environments stored under `environments/spack`.
 
 ## Usage
 
-<div style="color:Black ; background-color: #fcc ; padding: 10px; border: 1px solid green;">
-We have encountered compatibility issues with Apple chips (M2) and Docker.
-At this point, we would not encourage people to use Docker containers with these chips.
-You may try out to add following flag to the `docker run` command: `--platform Linux/amd64`.
+<div style="color:Black ; background-color: #ccf ; padding: 10px; border: 1px solid green;">
+\par 🍎 Running on Apple Silicon (ARM) Macs
+Our images are built for `linux/amd64`, but they run on M-series Macs through Docker
+Desktop's built-in emulation. Just add `--platform linux/amd64` to your `docker run`
+command, for example:
+```shell
+docker run --platform linux/amd64 -it -v ${PWD}:/work --rm --privileged peanoframework/<compiler>
+```
 </div>
 
 For users, it is recommended to pull the available Docker images from [Dockerhub](https://hub.docker.com/u/peanoframework).
@@ -38,13 +42,13 @@ docker run -it -v ${PWD}:/work --rm --gpus=all --privileged peanoframework/<comp
 ### With Port Forwarding (JupyterLab)
 
 ```shell
-docker run -it -v ${PWD}:/work -p 53155:53155 --rm --privileged peanoframework/<compiler>
+docker run -it -v ${PWD}:/work -p 8888:8888 --rm --privileged peanoframework/<compiler>
 ```
 
 and then you can run
 
 ```shell
-jupyter lab --allow-root --port=53155 --no-browser --ip=0.0.0.0
+jupyter lab --allow-root --port=8888 --no-browser --ip=0.0.0.0
 ```
 
 ## Build (for Developers)
@@ -75,6 +79,7 @@ docker build -t peanoframework/llvm -f environments/docker/Dockerfile.llvm .
 
 ```shell
 docker build -t peanoframework/exahype2 -f environments/docker/Dockerfile.exahype2 .
+docker build -t peanoframework/exahype2-tutorials -f environments/docker/Dockerfile.exahype2-tutorials .
 ```
 
 */

@@ -49,7 +49,7 @@ Unless you work exclusively with the Peano core in C++, you will have to ensure 
 We test and maintain Peano for Linux only.
 If you prefer Windows or MacOS, it should work as long as you provide the
 mandatory tools from above, but we won't be able to help.
-Peano is well-integrated with a number of @ref page_third_party_home "third party tools",
+Peano is well-integrated with a number of @ref page_third_party_home "third-party tools",
 but these are all optional.
 
 
@@ -82,8 +82,8 @@ cmake Peano-src
 
 where Peano-src points to the checkout.
 
-Next, you might want to type in `cmake help` but this might be a little bit
-overwhelmning. Try
+Next, you might want to type in `cmake --help` but this might be a little bit
+overwhelming. Try
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ccmake Peano-dir
@@ -94,8 +94,10 @@ Handing in .. does the job for most of the setups.
 
 <div style="color:Black ; background-color: #cfc ; padding: 10px; border: 1px solid black;">
 This might be the right time to look ahead and study the tutorials of the codes you wanna use.
-All of them need different toolboxes and extensions. ExaHyPE, for example, requires
-you to activate BLOCKSTRUCTURED, LOADBALANCING and EXAHYPE at least (PARTICLES is recommended).
+The toolboxes (blockstructured, loadbalancing, particles, ...) and the ExaHyPE 2 extension are
+always built, so there is nothing to switch on for them. What you do toggle here are the
+feature options, all named `PEANO_WITH_*` (e.g. `PEANO_WITH_MULTITHREADING`, `PEANO_WITH_MPI`,
+`PEANO_WITH_HDF5`); see the comments next to each entry in ccmake for details.
 </div>
 
 Configure by pressing c and then q to finish the configuration. Next, continue
@@ -107,13 +109,15 @@ Once the configuration has been successful, a simple
 
     make
 
-should build the core. It also builds some examples and all the
-extensions and toolboxes you have manually enabled. All of these go into
-static libraries. The code is not small and you thus might prefer
+should build the core together with all the extensions and toolboxes,
+which are always part of the build. All of these go into
+static libraries. The code is not small and you thus might prefer a parallel
+build
 
-    make -jx
+    make -j$(nproc)
 
-with x being the number of parallel builds to use.
+which uses one build job per available core. Replace `$(nproc)` with an explicit
+number if you want to cap the number of parallel jobs.
 
 
 # Test
@@ -125,7 +129,7 @@ Once you have compiled, we recommend that you run all tests using
 for CMake.
 
 The call launches Peano's unit test, i.e. all the unit tests for the
-core plus the extensions that you have enabled.
+core plus the extensions and toolboxes.
 
 <div style="color:Black ; background-color: #ccf ; padding: 10px; border: 1px solid black;">
 Good time to stop. Jump straight into one of the tutorials if you want to.
@@ -209,7 +213,7 @@ dependencies, as noted below.
 
 Peano currently relies on the following Python packages/projects:
 
-@include ../requirements.txt
+@verbinclude requirements.txt
 
 
 # Prebuilt Environments and Packages

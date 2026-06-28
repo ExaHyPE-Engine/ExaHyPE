@@ -8,9 +8,6 @@ Before you start, ensure that you have configured and built Peano as specified f
 
 - Kernel benchmarks (assessing kernel core performance)
 - ExaGRyPE/Astrophysics
-  - \subpage benchmarks_exahype2_ccz4_gauge_wave
-  - \subpage benchmarks_exahype2_ccz4_single_black_hole
-  - \subpage benchmarks_exahype2_ccz4_single_black_hole_performance
-  - \subpage benchmarks_exahype2_euler_spherical_accretion_upscaling
+  - CCZ4 gauge wave
 
 */

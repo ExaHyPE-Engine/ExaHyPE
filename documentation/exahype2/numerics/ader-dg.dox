@@ -6,7 +6,7 @@
 
 The ADER-DG (Discontinuous Galerkin with Arbitrary high-order derivative time stepping) method is the main numerical
 approach used in ExaHyPE. It is a high-order method both in space and time, and requires lower communication compared to the DG method. Here, we provide an
-overview of the method; for more details, see  @ref https://www.mdpi.com/2075-1680/7/3/63.
+overview of the method; for more details, see <a href="https://www.mdpi.com/2075-1680/7/3/63">the ADER-DG overview paper</a>.
 
 Each timestep of the ADER-DG algorithm consists of two key steps:
 1. a <em> predictor step </em>, which solves a space-time DG problem locally within each cell

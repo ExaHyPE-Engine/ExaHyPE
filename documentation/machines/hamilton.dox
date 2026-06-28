@@ -13,7 +13,7 @@ I nevertheless prefer the Intel toolchain on the machine.
 
 Hamilton's default oneapi module is built against a GCC version which is too old and lacks
 important features within its standard library.
-Therefore, you have to manuall load the latest gcc.
+Therefore, you have to manually load the latest gcc.
 This is usually prevented by the system and leads to a conflict (so that you
 can't have multiple GCC versions loaded).
 We therefore have to disable conflict checks a priori.
@@ -43,30 +43,57 @@ The other options to do this (via additional script arguments, e.g.) all failed
 on this machine.
 
 
-- TBB runs
-~~~~~~~~~~~~~~~~~~~~~~
-./configure CXX=icpx CC=icx 'CXXFLAGS=-O3 -ffast-math -mtune=native -march=native -fma -fomit-frame-pointer -std=c++20 -fno-exceptions -Wno-unknown-attributes -Wno-gcc-compat' LIBS="-ltbb" LDFLAGS="-L${TBBROOT}/lib" --enable-mghype --enable-exahype --enable-blockstructured --enable-finiteelements --with-multithreading=tbb_extension --enable-loadbalancing
-~~~~~~~~~~~~~~~~~~~~~~
+All builds use CMake. Create a build directory and configure with the Intel
+compilers and the machine-specific flags. The toolboxes (blockstructured,
+loadbalancing, particles) and the ExaHyPE 2 extension are always built, so
+there is no need to enable them individually.
 
-
-## Older settings (not tested atm)
+- Shared-memory (OpenMP) runs
+~~~~~~~~~~~~~~~~~~~~~~
+mkdir build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_CXX_COMPILER=icpx -DCMAKE_C_COMPILER=icx \
+  -DPEANO_WITH_MULTITHREADING=ON -DPEANO_WITH_MPI=OFF \
+  -DPEANO_EXTRA_CXX_FLAGS="-O3;-ffast-math;-mtune=native;-march=native;-fma;-fomit-frame-pointer;-Wno-unknown-attributes;-Wno-gcc-compat"
+make -j
+~~~~~~~~~~~~~~~~~~~~~~
 
 - MPI production runs
 ~~~~~~~~~~~~~~~~~~~~~~
-./configure CC=icpx CXX=icpx CXXFLAGS="-Ofast -g -std=c++20 -mtune=native -march=native -fma -fomit-frame-pointer -qopenmp -Wno-unknown-attributes" LDFLAGS="-fiopenmp -g" --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-particles --with-mpi=mpiicpc FC=gfortran
-~~~~~~~~~~~~~~~~~~~~~~
-- Performance analysis runs with single node tracing
-~~~~~~~~~~~~~~~~~~~~~~
-module load vtune
-./configure CC=icpx CXX=icpx CXXFLAGS="-Ofast -g -std=c++20 -mtune=native -march=native -fma -fomit-frame-pointer -qopenmp -Wno-unknown-attributes -I${VTUNE_HOME}/vtune/latest/include" LDFLAGS="-qopenmp -g -L${VTUNE_HOME}/vtune/latest/lib64" LIBS="-littnotify" --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-particles --with-mpi=mpiicpc FC=gfortran --with-toolchain=itt
-~~~~~~~~~~~~~~~~~~~~~~
-- MPI performance analysis runs
-~~~~~~~~~~~~~~~~~~~~~~
-module load vtune
-./configure CC=icpx CXX=icpx CXXFLAGS="-I${VTUNE_HOME}/vtune/latest/include -I${VT_ROOT}/include -Ofast -g -std=c++20 -mtune=native -march=native -fma -fomit-frame-pointer -qopenmp -Wno-unknown-attributes" LDFLAGS="-qopenmp -g -L${VT_LIB_DIR} -L${VTUNE_HOME}/vtune/latest/lib64" LIBS="-lVT ${VT_ADD_LIBS} -littnotify" --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-particles --with-mpi=mpiicpc FC=gfortran --with-toolchain=itac
+mkdir build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_CXX_COMPILER=icpx -DCMAKE_C_COMPILER=icx \
+  -DPEANO_WITH_MULTITHREADING=ON -DPEANO_WITH_MPI=ON \
+  -DPEANO_EXTRA_CXX_FLAGS="-Ofast;-g;-mtune=native;-march=native;-fma;-fomit-frame-pointer;-Wno-unknown-attributes" \
+  -DPEANO_EXTRA_LINK_FLAGS="-g"
+make -j
 ~~~~~~~~~~~~~~~~~~~~~~
 
-Further to these flags, I @ref faq "pause and resume the data collection" manually in
+- Performance analysis runs with single-node tracing (VTune / ITT)
+~~~~~~~~~~~~~~~~~~~~~~
+module load vtune
+mkdir build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Trace \
+  -DCMAKE_CXX_COMPILER=icpx -DCMAKE_C_COMPILER=icx \
+  -DPEANO_WITH_MULTITHREADING=ON -DPEANO_WITH_MPI=ON \
+  -DPEANO_EXTRA_CXX_FLAGS="-Ofast;-g;-mtune=native;-march=native;-fma;-fomit-frame-pointer;-Wno-unknown-attributes;-I${VTUNE_HOME}/vtune/latest/include" \
+  -DPEANO_EXTRA_LINK_FLAGS="-g;-L${VTUNE_HOME}/vtune/latest/lib64;-littnotify"
+make -j
+~~~~~~~~~~~~~~~~~~~~~~
+
+- MPI performance analysis runs (VTune + ITAC)
+~~~~~~~~~~~~~~~~~~~~~~
+module load vtune
+mkdir build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Trace \
+  -DCMAKE_CXX_COMPILER=icpx -DCMAKE_C_COMPILER=icx \
+  -DPEANO_WITH_MULTITHREADING=ON -DPEANO_WITH_MPI=ON \
+  -DPEANO_EXTRA_CXX_FLAGS="-Ofast;-g;-mtune=native;-march=native;-fma;-fomit-frame-pointer;-Wno-unknown-attributes;-I${VTUNE_HOME}/vtune/latest/include;-I${VT_ROOT}/include" \
+  -DPEANO_EXTRA_LINK_FLAGS="-g;-L${VT_LIB_DIR};-L${VTUNE_HOME}/vtune/latest/lib64;-lVT;-littnotify"
+make -j
+~~~~~~~~~~~~~~~~~~~~~~
+
+Further to these flags, I @ref page_faq_home "pause and resume the data collection" manually in
 ExaHyPE and Swift. This is however something I do in the main() routine of
 the respective applications.
 

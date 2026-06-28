@@ -6,7 +6,6 @@
 
 #include <functional>
 #include <limits>
-#include <list>
 #include <set>
 #include <string>
 #include <tuple>
@@ -76,17 +75,6 @@ namespace tarch {
        *   return false, to indicate that this task has finished.
        */
       virtual bool run() = 0;
-
-      /**
-       * Fuse multiple tasks
-       *
-       * Fuse the task with a list of further tasks. The routine is guaranteed to
-       * be called only for tasks with the same taskType. So if you carefully
-       * distinguish your tasks, you can downcast all the arguments, as you might
-       * know the real type.
-       *
-       */
-      virtual void fuse(const std::list<Task*>& otherTasks);
 
       virtual std::string toString() const;
     };

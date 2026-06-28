@@ -81,7 +81,7 @@ The logging macros forward information to tarch::instrumentation::Log. Log
 formats each line once and then dispatches it to the configured sinks. The
 tarch::instrumentation::CommandLineSink remains the default terminal sink.
 The same formatted line is also forwarded to tarch::instrumentation::FileSink,
-which writes `peano.log` in the process working directory by default. Info,
+which writes `Peano.log` in the process working directory by default. Info,
 Warning, Error and Debug messages are forwarded to the file sink. Trace events
 are not handled by either the command line sink or the file sink. The file sink
 flushes every write.

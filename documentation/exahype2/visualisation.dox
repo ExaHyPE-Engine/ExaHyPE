@@ -42,9 +42,9 @@ If you dump Finite Volume data, it becomes difficult to spot how the resulting
 Finite Volumes are organised in patches:
 The organisation in patches is not visible unless you study AMR resolution
 boundaries.
-If you are interested in seeing the patch boundaries, use the
-```--shrink-cells``` option and pass in a value that is smaller than one.
-You then will see gaps (voids) between the individual patches.
+If you are interested in seeing the patch and cell boundaries, pass the
+`--show-edges` flag to `python/postprocessing/render_solution_interactively.py`.
+The renderer then draws the outline of every cell on top of the field.
 
 
 ## Discontinuous Galerkin
@@ -58,15 +58,12 @@ difficult, but we found it important to display the actual spatial arrangement
 of the unknowns.
 
 
-The standard postprocessing scripts allow you to rescale individual cells.
-Use ```--shrink-cells``` with a value slightly bigger than one to spread out
-the quadrature points.
-It is important to note that the shrinking distorts the actual physical layout
-of the quadrature points, i.e.~the output will not really reflect the solution
-anymore.
-Alternatively,
-you can averaging over cells and display only the average.
-Consult the script's help.
+As with the Finite Volume output, you can pass `--show-edges` to
+`python/postprocessing/render_solution_interactively.py` to draw the cell outlines and make the
+arrangement of the cells explicit.
+Run `python python/postprocessing/render_solution_interactively.py --help` to see all available options,
+including the field to plot (`--field`), the colour map (`--cmap`) and
+the output image width (`--width`).
 
 
 # Logging
@@ -75,12 +72,10 @@ Often, users are only interested in a particular phase of the simulation or want
 to specify different log entries per program phase. The program phases offered
 by default are
 
-- create-grid-but-postpone-refinement
-- create-grid
-- create-grid-and-converge-load-balancing
-- init-grid
-- plot-solution
-- time-step
+- CreateGrid
+- InitGrid
+- PlotSolution
+- TimeStep
 
 
 

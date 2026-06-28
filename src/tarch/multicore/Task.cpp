@@ -35,16 +35,6 @@ void tarch::multicore::Task::setPriority(int priority) {
 
 int tarch::multicore::Task::getTaskType() const { return _taskType; }
 
-void tarch::multicore::Task::fuse(const std::list<Task*>& otherTasks) {
-  for (auto& otherTask : otherTasks) {
-    while (otherTask->run()) {
-    };
-    delete otherTask;
-  }
-  while (this->run()) {
-  };
-}
-
 std::string tarch::multicore::Task::toString() const { return "<no-description-available>"; }
 
 tarch::multicore::TaskWithCopyOfFunctor::TaskWithCopyOfFunctor(

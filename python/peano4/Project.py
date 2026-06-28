@@ -253,6 +253,12 @@ class Project (object):
         getter = "getString"
       return_type = cpp_type
 
+    # Replace-by-name so that the generator can run several times on one
+    # project without duplicating the parameter in the generated
+    # RuntimeParameters class.
+    self._runtime_parameters = [
+      parameter for parameter in self._runtime_parameters if parameter["name"] != name
+    ]
     self._runtime_parameters.append(
       {
         "name": name,
@@ -330,23 +336,35 @@ class Project (object):
         len(self.output.artefacts),
       )
 
-    self.output.readme.add_package_description( self.constants.readme_entry() )
+    # Generation must be idempotent: a user can call generate_and_build()
+    # repeatedly on the same project, and the construct_output() calls below
+    # append their artefacts anew on every call. Snapshot the pre-registered
+    # artefacts now and restore them afterwards, so repeated calls do not pile
+    # up duplicates.
+    pre_generation_artefacts = list(self.output.artefacts)
+    pre_generation_readme_entries = list(self.output.readme._entries)
 
-    self.datamodel.construct_output(self.output)
-    self.solversteps.construct_output(self.output)
-    self._generate_runtime_parameters()
+    try:
+      self.output.readme.add_package_description( self.constants.readme_entry() )
 
-    self.main.construct_output(self.output,self.project_name + "-main")
+      self.datamodel.construct_output(self.output)
+      self.solversteps.construct_output(self.output)
+      self._generate_runtime_parameters()
 
-    generated_subdir = self.project_name + ".generated"
-    self.output.makefile.d["BUILD_SUBDIR"] = self.project_name + ".build"
+      self.main.construct_output(self.output,self.project_name + "-main")
 
-    self.output.generate(self.directory, generated_subdir)
-    self.constants.generate(
-      os.path.join(self.directory, generated_subdir), self.output.makefile.protected_files()
-    )
+      generated_subdir = self.project_name + ".generated"
+      self.output.makefile.d["BUILD_SUBDIR"] = self.project_name + ".build"
 
-    log.info("Generation complete (%d artefacts)", len(self.output.artefacts))
+      self.output.generate(self.directory, generated_subdir)
+      self.constants.generate(
+        os.path.join(self.directory, generated_subdir), self.output.makefile.protected_files()
+      )
+
+      log.info("Generation complete (%d artefacts)", len(self.output.artefacts))
+    finally:
+      self.output.artefacts = pre_generation_artefacts
+      self.output.readme._entries = pre_generation_readme_entries
 
     make = True if self._build_make_override is None else self._build_make_override
     make_clean_first = bool(self._build_clean_first_override)

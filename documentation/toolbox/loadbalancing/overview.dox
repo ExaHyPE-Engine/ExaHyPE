@@ -19,55 +19,80 @@ Many extensions, such as ExaHyPE 2, not only use the load balancing
 toolbox, they also offer a tailored ExaHyPE 2 load balancing configuration,
 i.e. they provide means for users to employ the toolbox without interfering
 with the main functions or calling the load balancing manually.
-Indeed,the toolbox follows the philosophy that the chosen load balancing
+Indeed, the toolbox follows the philosophy that the chosen load balancing
 determines the load balancing strategy, while the configuration object
 tailors this strategy to your experimental setup and machine.
 
 - See more on how to @ref page_exahype_multicore "configure load balancing within ExaHyPE 2".
-- There's a dedicated page on @ref swift_parallelisation "the parallelisation aspects within Swift 2".
+- Swift 2 has its own parallelisation documentation in repositories that ship Swift.
 
 
-## Overview over some pre-manufactured load balancing strategies
+## Overview over the load balancing
 
-- toolbox::loadbalancing::strategies::Hardcoded Don't do any analysis but hand out the
-  partitioning instructions following a rulebook. This version allows you
-  to create a reproducible load balancing scheme or to manually determine
-  the splitting.
-- toolbox::loadbalancing::strategies::SpreadOut Ensure that, if the problem is large
-  enough, each thread on each rank gets one partition.
-- toolbox::loadbalancing::strategies::RecursiveBipartition As the name suggests, the
-  load balancing tries to identify oversized partitions and then splits
-  these guys into two.
+The toolbox exposes a single load balancer, toolbox::loadbalancing::LoadBalancer.
+You create one instance, call its enable(true) once, and then invoke update()
+after each mesh traversal. The load balancer inspects the current mesh and,
+whenever appropriate, triggers further splits (and, where possible, joins).
+
+Rather than offering a fixed catalogue of named strategies, the load balancer
+walks through a sequence of states (toolbox::loadbalancing::State) that describe
+what it currently tries to achieve:
+
+- toolbox::loadbalancing::State::InterRankDistribution Spread the work out over
+  all MPI ranks, i.e. ensure that, if the problem is large enough, every rank
+  receives at least one partition.
+- toolbox::loadbalancing::State::IntraRankDistribution Once each rank holds
+  roughly one tree, fork off further partitions so that every core on a rank
+  receives work.
+- toolbox::loadbalancing::State::InterRankBalancing and
+  toolbox::loadbalancing::State::IntraRankBalancing Fine-tune the decomposition
+  by identifying oversized partitions and splitting them, until the requested
+  balancing quality is met.
+
+How aggressively the load balancer acts in each of these states, and whether
+it splits bottom-up along the space-filling curve or top-down within the
+spacetree, is governed by the toolbox::loadbalancing::Configuration object you
+hand to the load balancer (see below).
 
 
 # Implementation remarks
 
-The toolbox's strategies typically have a
+toolbox::loadbalancing::LoadBalancer combines a small number of collaborators,
+each modelling one aspect of the decomposition:
 
-- blacklist (toolbox::loadbalancing::Blacklist)
-- configuration (toolbox::loadbalancing::Configuration)
-- cost metrics (toolbox::loadbalancing::CostMetrics)
-- state (toolbox::loadbalancing::State)
-- statistics (toolbox::loadbalancing::Statistics)
+- a configuration (toolbox::loadbalancing::Configuration), which tailors the
+  load balancing to your setup and machine. A toolbox::loadbalancing::DefaultConfiguration
+  ships with the toolbox, but you can subclass Configuration to override, e.g.,
+  the maximum number of trees per rank, the targeted balancing ratio, the
+  minimum tree size, or the split mode for any given state.
+- a blacklist (toolbox::loadbalancing::Blacklist), which prevents the load
+  balancer from repeatedly picking the same tree right after a split.
+- statistics (toolbox::loadbalancing::Statistics), which gather the local and
+  global mesh metrics on which all decisions are based.
+- a state, which is an enum (toolbox::loadbalancing::State) describing the
+  current phase of the balancing.
 
-These are generic properties modelled as attributes of toolbox::loadbalancing::AbstractLoadBalancing.
-Each attribute is in turn a class of its own. They have all different jobs.
-Please consult the individual class documentations for further details.
+Please consult the individual class documentations for further details. A
+human-readable summary of what the local rank decided can be obtained through
+the static toolbox::loadbalancing::LoadBalancer::getLocalLoadBalancing().
 
 
 ## Load balancing variations
 
-Besides "primitive" generic load balancing strategies realising
-one particular approach, you can also design cascades of load
-balancing strategies. Cascades are chains of different strategies.
-Whenever the Nth strategy comes to the conclusion that its load
-balancing has either terminated or stagnated, a cascade switches
-to the N+1th strategy to continue.
+The load balancer transitions automatically from one state to the next:
+whenever it concludes that the current phase has either terminated or
+stagnated, it advances to the following one (spread over the ranks, then
+spread over the cores, then fine-tune the balance). This effectively chains
+several balancing behaviours into one run without you having to wire them
+together by hand.
 
-A lot of strategies have default settings. All the load balancing strategies
-work against some cost metrics metrics and the default here for example is
-loadbalancing::metrics::CellCount. But you can create your own cost metric and
-use this one instead, which might give you better balanced subdomains.
+All decisions are taken against the number of inner unrefined cells per tree,
+which the toolbox::loadbalancing::Statistics gather and reduce globally. If you
+want a different notion of "load", provide your own
+toolbox::loadbalancing::Configuration: it controls the minimum tree size, the
+maximum number of trees per rank, and the worst-case balancing ratio that the
+load balancer aims to undercut, which together may give you better balanced
+subdomains.
 
 @image html domain-decomposition/tree-topology.png
 
@@ -83,8 +108,10 @@ to construct good SFC subpartitions.
 Recursive top-down decomposition lends itself to domain decomposition which
 kicks in directly while we create the tree.
 
-Not all strategies support both domain splitting schemes. You have to
-consult their documentation. Before you do so, I strongly recommend to
+Which splitting scheme is applied is decided by the load balancer's
+configuration (toolbox::loadbalancing::Configuration) for the state it is
+currently in, rather than by a fixed catalogue of strategies. Before you dig
+into this, I strongly recommend to
 read through @ref page_peano_domain_decomposition "Peano's domain decomposition remarks",
 and maybe even to read the paper
 
@@ -148,7 +175,7 @@ characteristics, which in turn again might relate to domain decomposition
 decisions:
 
 - Peano's @ref page_exahype_runtime_analysis "runtime analysis discussion" and its @ref page_exahype_performance_optimisation "performance optimisation recipes".
-- Swift's @ref page_swift_performance_optimisation "performance optimisation discussion".
+- Swift's own performance optimisation discussion in repositories that ship Swift.
 
 
 # Tuning and Tailoring the domain decomposition
@@ -225,8 +252,11 @@ to-down approach basically does recursive kd-partitioning and hence is
 way more robust w.r.t. AMR.
 
 Peano favours - due to its name - the bottom-up SFC-based decomposition, but
-most load balancing flavours also have a variant which uses top-down
-splitting. Please consult all classes within toolbox::loadbalancing::strategies.
+the load balancer also supports top-down splitting. Which of the two variants
+is used in a given phase is decided by toolbox::loadbalancing::Configuration::getMode(),
+which returns either peano4::grid::SplitInstruction::Mode::BottomUp or
+peano4::grid::SplitInstruction::Mode::AggressiveTopDown. Override this method in
+your own configuration if you want to switch between the flavours per state.
 
 
 # Formalisation of load balancing

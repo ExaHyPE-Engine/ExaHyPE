@@ -160,7 +160,7 @@ def generate_gemms(output_path, output_file_name, namespace, dict, gemm_config_l
                 + " "
                 + str(gemm.alignment_C)
                 + " "
-                + "hsw",  # TODO: Retrieve from CMake
+                + "hsw"  # TODO: Retrieve from CMake
                 + " "
                 + gemm.prefetchStrategy
                 + " "

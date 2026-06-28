@@ -2,79 +2,106 @@
 
 @page page_machines_ncc NCC
 
-I recommend atm to use `gpu10`, `gpu11` or `gpu12`, i.e. the A100
-machines. By default, I usually work with NVC++ on this cluster, but the
-OneAPI software stack should work, too.
+We recommend using `gpu10`, `gpu11` or `gpu12`, i.e. the A100 machines.
+These cards have compute capability 8.0, so the GPU architecture is
+`sm_80` throughout. Peano builds with CMake; the toolboxes
+(blockstructured, loadbalancing, particles) and the ExaHyPE 2 extension
+are always built, so you only toggle the `PEANO_WITH_*` feature options.
+NVC++ and the oneAPI software stack both work on this cluster.
+
+# OpenMP offloading with Clang
 
 ~~~~~~~~~~~~~~~~~~~~~~~
 module load nsight-systems cuda llvm
 module load mvapich2/2.3.5-2
 
-./configure --enable-exahype --enable-loadbalancing-toolbox --with-multithreading=omp --with-mpi=mpicxx --with-gpu=omp CXX=clang++ CXXFLAGS="-fopenmp -fopenmp-targets=nvptx64-nvidia-cuda"
+mkdir build
+cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_CXX_COMPILER=clang++ \
+  -DPEANO_WITH_MULTITHREADING=ON \
+  -DPEANO_WITH_MPI=ON \
+  -DPEANO_WITH_GPU_BACKEND=ompt \
+  -DPEANO_WITH_GPU_ARCH=sm_80
+make -j
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-## OpenMP with NVC++
+The `ompt` backend drives OpenMP target offloading. CMake adds the
+matching `-fopenmp-targets=nvptx64-nvidia-cuda --offload-arch=sm_80`
+flags for you, so you no longer have to pass them by hand.
 
-I use the setup
+# OpenMP offloading with NVC++
+
+On the A100 nodes you can also use the NVIDIA HPC compiler:
 
 ~~~~~~~~~~~~~~~~~~~~~~~
-./configure CXX=nvc++ CC=nvc++ CXXFLAGS="-O4 --std=c++17 -mp=gpu -gpu=cc80" LDFLAGS="-mp=gpu -gpu=cc80" --with-multithreading=omp --with-gpu=omp --enable-exahype --enable-blockstructured --enable-loadbalancing CPP=cpp FC=/apps/nvidia-hpc-sdk/Linux_x86_64/22.3/compilers/bin/nvfortran
+mkdir build
+cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_CXX_COMPILER=nvc++ \
+  -DCMAKE_C_COMPILER=nvc \
+  -DPEANO_WITH_MULTITHREADING=ON \
+  -DPEANO_WITH_GPU_BACKEND=ompt \
+  -DPEANO_WITH_GPU_ARCH=sm_80
+make -j
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-on the A100 nodes.
-
-We had some issues (compiler crashes) with NVC++ 2022.5. Those are filed
-with NVIDIA. For the time being, please revert to another compiler
-generation. Version 2022.3 works for example.
+CMake translates `sm_80` into the NVHPC `-mp=gpu -gpu=cc80` flags
+automatically.
 
 Some nodes (e.g. gpu3) have Titan XP which doesn't support OpenMP
 offloading; only GPUs with compute capability >=70 can offload with
 OpenMP. You can check the GPU model with `nvidia-smi -L`.
 
-Note that there is a bug in the NVIDIA software stack at the moment.
-Many runs will crash with a complaint about a lack of visible devices.
-Ensure hence that you set the following environment before you start
-your experiments:
-
+If runs crash with a complaint about a lack of visible devices, set the
+following environment before you start your experiments:
 
 ~~~~~~~~~~~~~~~~~~~~~~~
 export CUDA_VISIBLE_DEVICES=0
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-## SYCL offloading with oneAPI
+# SYCL offloading with oneAPI
 
-I used this to configure Peano with Intel's TBB enabled
+For Intel GPUs the oneAPI/`icpx` stack maps onto the `native` backend
+with the `spir64` architecture:
 
 ~~~~~~~~~~~~~~~~~~~~~~~
 source /opt/intel/oneapi/setvars.sh
-module load cuda
 
-./configure CC=icx CXX=icpx LIBS="-ltbb" LDFLAGS="-fsycl -fsycl-targets=nvptx64-nvidia-cuda,spir64 -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=sm_80" CXXFLAGS="-O3 -std=c++20 -fsycl -fsycl-targets=nvptx64-nvidia-cuda,spir64 -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=sm_80" --with-multithreading=tbb --enable-exahype --enable-blockstructured --enable-loadbalancing --with-gpu=sycl
+mkdir build
+cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_CXX_COMPILER=icpx \
+  -DCMAKE_C_COMPILER=icx \
+  -DPEANO_WITH_GPU_BACKEND=native \
+  -DPEANO_WITH_GPU_ARCH=spir64
+make -j
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Codeplay's website has some useful information on compiler flags. Here's
-a short explaination of the above SYCL related flags:
+CMake emits the required `-fsycl -fsycl-targets=spir64` flags for you.
+Note that `icpx` uses a lower floating-point precision by default in
+favour of performance; pass `-DPEANO_EXTRA_CXX_FLAGS=-fp-model=precise`
+if you need stricter semantics.
 
-- `-fsycl` tells the compiler to link SYCL libraries and makes it aware of
-  SYCL code. It seems that Clang behaves slightly different to icpx, where you
-  need `-lsycl` in the linker flags.
-- `-fsycl-targets=` allows the compiler to generate code for different devices,
-  e.g., different vendors, host or device.
-- `-Xsycl-target-backend=` is required if you want to select a specific device 
-  architecture. For example, I put `--cuda-gpu-arch=sm_80` after it to compile for
-  A100 with compute capability 8.0.
+To target the A100 cards through SYCL instead, use the AdaptiveCpp
+backend, which compiles SYCL down to CUDA:
 
-It also needs at least 2023.0.0 version of oneAPI with Codeplay's nvidia
-GPU plugin which is not installed on NCC. Intel encourages the use of their own
-compiler, `icpx`. However, they use a lower precision by default in favour of 
-performance, use `-fp-model` to change this behaviour.
+~~~~~~~~~~~~~~~~~~~~~~~
+module load cuda
 
-I had linker errors about undefined referennces when building Peano with
-TBB. Just add the path to any relevant library if you experienced this.
+mkdir build
+cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release \
+  -DPEANO_WITH_GPU_BACKEND=acpp \
+  -DPEANO_WITH_GPU_ARCH=sm_80
+make -j
+~~~~~~~~~~~~~~~~~~~~~~~
+
+CMake sets the AdaptiveCpp target `cuda:sm_80` from `PEANO_WITH_GPU_ARCH`.
 
 When running the executable on the GPU, include `SYCL_DEVICE_FILTER=gpu`
-before the terminal command to explicitly tell SYCL to run the code on GPU.
-In the case of a runtime error, it is also useful to add `SYCL_PI_TRACE=2`
-to check where the error was raised.
+before the terminal command to explicitly tell SYCL to run the code on
+the GPU. In the case of a runtime error, it is also useful to add
+`SYCL_PI_TRACE=2` to check where the error was raised.
 
 */
