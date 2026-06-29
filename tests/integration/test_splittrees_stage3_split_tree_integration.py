@@ -37,7 +37,7 @@ def test_split_tree_flags_enable_stage3_promotion(monkeypatch):
         enable_extract_split_instructions=False,
     )
 
-    assert result_stage2_only == ([], [], [], [])
+    assert result_stage2_only == ("", "")
     assert tree_stage2_only._tree_arrays[0][parent_coords] == (1, 0)
 
     # Target: Stage II + Stage III -> parent promoted to dominant subtree 2.
@@ -51,5 +51,5 @@ def test_split_tree_flags_enable_stage3_promotion(monkeypatch):
         enable_extract_split_instructions=False,
     )
 
-    assert result_stage2_plus_3 == ([], [], [], [])
+    assert result_stage2_plus_3 == ("", "")
     assert tree_stage2_plus_3._tree_arrays[0][parent_coords] == (1, 2)

@@ -17,7 +17,9 @@ def split_tree(
     enable_optimize_hierarchy: bool = False,
     require_all_children_for_hierarchy_optimization: bool = True,
     enable_extract_split_instructions: bool = False,
-) -> tuple[list[int], list[int], list[int], list[int]]:
+    destination_ranks: list[int] | None = None,
+    output: bool = False,
+) -> tuple[str, str]:
     """
     Split a tree using a staged load-balancing workflow.
 
@@ -26,8 +28,8 @@ def split_tree(
     2. _propagate_bottom_up(): Propagate subtree ownership to internal nodes.
     3. _optimize_hierarchy() (optional): Further reduce split complexity by
        promoting complete child sets up the hierarchy.
-    4. extract_split_instructions() (optional): Derive hardcoded split
-       instructions from the transformed tree.
+     4. create_constructor_initialisation_string() (optional): Derive full
+         hardcoded constructor configuration from the transformed tree.
 
     Args:
         peano_tree: Tree to split (modified in place).
@@ -46,11 +48,14 @@ def split_tree(
             all 3^d children exist. If False, Stage III may also promote mixed
             parents with partial child sets.
         enable_extract_split_instructions: If True, run Stage IV and return the
-            derived `(gridSweeps, splittingTrees, numberOfCells, subTrees)`.
+            derived `(hardcoded_config, hardcoded_mode)`.
+        destination_ranks: Optional destination rank list for Stage IV. If not
+            provided, it defaults to target subtree IDs.
+        output: If True, Stage IV prints extracted hardcoded parameters.
 
     Returns:
-        A tuple `(gridSweeps, splittingTrees, numberOfCells, subTrees)`.
-        If Stage IV is disabled, returns `([], [], [], [])`.
+        If Stage IV is enabled: `(hardcoded_config, hardcoded_mode)`.
+        If Stage IV is disabled: `("", "")`.
 
     Notes:
         - All stages after Stage I are optional.
@@ -61,8 +66,12 @@ def split_tree(
     if number_of_subtrees <= 1:
         print(f"No splitting requested (number_of_subtrees = {number_of_subtrees}).")
         if enable_extract_split_instructions:
-            return extract_split_instructions(peano_tree)
-        return ([], [], [], [])
+            from toolbox.loadbalancing.api.output.Hardcoded import create_constructor_initialisation_string
+
+            if destination_ranks is None:
+                destination_ranks = []
+            return create_constructor_initialisation_string(peano_tree, destination_ranks, output=output)
+        return ("", "")
 
     print(
         f"Splitting tree '{peano_tree._name}' into "
@@ -87,8 +96,13 @@ def split_tree(
 
     if not has_leaves_to_split:
         if enable_extract_split_instructions:
-            return extract_split_instructions(peano_tree)
-        return ([], [], [], [])
+            from toolbox.loadbalancing.api.output.Hardcoded import create_constructor_initialisation_string
+
+            if destination_ranks is None:
+                _, _, _, subtrees = extract_split_instructions(peano_tree)
+                destination_ranks = [int(subtree) for subtree in subtrees]
+            return create_constructor_initialisation_string(peano_tree, destination_ranks, output=output)
+        return ("", "")
 
     if enable_propagate_bottom_up:
         _propagate_bottom_up(peano_tree)
@@ -109,9 +123,14 @@ def split_tree(
     print(f"Split pattern: {peano_tree._split_pattern}")
 
     if enable_extract_split_instructions:
-        return extract_split_instructions(peano_tree)
+        from toolbox.loadbalancing.api.output.Hardcoded import create_constructor_initialisation_string
 
-    return ([], [], [], [])
+        if destination_ranks is None:
+            _, _, _, subtrees = extract_split_instructions(peano_tree)
+            destination_ranks = [int(subtree) for subtree in subtrees]
+        return create_constructor_initialisation_string(peano_tree, destination_ranks, output=output)
+
+    return ("", "")
 
 
 def distribute_leaves_bottom_up(

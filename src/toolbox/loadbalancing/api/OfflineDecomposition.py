@@ -110,7 +110,7 @@ def display_hardcoded_split_parameters(peano_tree: Tree, title: str) -> None:
         return
     
     # Get the split parameters
-    grid_sweeps, splitting_trees, cell_counts, subtrees = split_strategy._extract_split_instructions(peano_tree)
+    grid_sweeps, splitting_trees, cell_counts, subtrees = split_strategy.extract_split_instructions(peano_tree)
     
     print("\n" + title)
     print("-" * len(title))

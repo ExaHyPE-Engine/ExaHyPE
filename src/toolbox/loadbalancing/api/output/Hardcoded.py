@@ -1,6 +1,10 @@
 # This file is part of the Peano load balancing toolbox. For conditions of 
 # distribution and use, please see the copyright notice at www.peano-framework.org
 import collections.abc
+from typing import TYPE_CHECKING, overload
+
+if TYPE_CHECKING:
+    from toolbox.loadbalancing.api.Tree import Tree
 
 
 def assign_round_Robin_rank_assignment(number_of_subtrees,
@@ -110,9 +114,30 @@ def _infer_hardcoded_mode(peano_tree, subtrees, destination_ranks):
     return "peano4::SplitInstruction::Mode::AggressiveTopDown"
     
     
+@overload
+def create_constructor_initialisation_string(
+    peano_tree: "Tree",
+    destination_ranks: list[int],
+    output: bool = False,
+) -> tuple[str, str]:
+    ...
+
+
+@overload
+def create_constructor_initialisation_string(
+    peano_tree,
+    destination_ranks,
+    output,
+    *legacy_args,
+) -> str:
+    ...
+
+
 def create_constructor_initialisation_string(peano_tree,
-                                             destination_ranks
-                                            ):
+                                             destination_ranks,
+                                             output=False,
+                                             *legacy_args,
+                                            ) -> str | tuple[str, str]:
     """!
     Construct constructor arguments that can be used to feed into an instance of Hardcoded.
     
@@ -136,9 +161,43 @@ def create_constructor_initialisation_string(peano_tree,
           as all red trees start on level 2. For the right example, red trees start both on level 2 and on 
           level 3. Therefore, it is bottom-up and level 3, as all red trees are active on level 3.
     """
+    # Backward compatibility path:
+    # create_constructor_initialisation_string(sweep_numbers, parent_trees, subpartition_sizes, destination_ranks)
+    if not hasattr(peano_tree, "_tree_arrays"):
+        if isinstance(output, bool):
+            raise ValueError(
+                "Legacy call requires four positional arguments: "
+                "(sweep_numbers, parent_trees, subpartition_sizes, destination_ranks)"
+            )
+        if len(legacy_args) != 1:
+            raise ValueError(
+                "Legacy call requires exactly four positional arguments"
+            )
+
+        sweep_numbers = peano_tree
+        parent_trees = destination_ranks
+        subpartition_sizes = output
+        destination_ranks = legacy_args[0]
+        return _format_initialisation_lists(
+            sweep_numbers,
+            parent_trees,
+            subpartition_sizes,
+            destination_ranks,
+        )
+
+    if legacy_args:
+        raise ValueError("Tree-based call does not accept additional positional arguments")
+
     from toolbox.loadbalancing.api.strategies.SplitTrees import extract_split_instructions
 
     sweep_numbers, parent_trees, subpartition_sizes, subtrees = extract_split_instructions(peano_tree)
+
+    if output:
+        print("Extracted hardcoded parameters:")
+        print("  grid_sweeps     =", sweep_numbers)
+        print("  splitting_trees =", parent_trees)
+        print("  number_of_cells =", subpartition_sizes)
+        print("  subtrees       =", subtrees)
 
     if len(destination_ranks) != len(subtrees):
         raise ValueError(
@@ -147,10 +206,10 @@ def create_constructor_initialisation_string(peano_tree,
 
     hardcoded_mode = _infer_hardcoded_mode(peano_tree, subtrees, destination_ranks)
     hardcoded_config = "{" + _format_initialisation_lists(
-    sweep_numbers,
-    parent_trees,
-    subpartition_sizes,
-    destination_ranks,
+        sweep_numbers,
+        parent_trees,
+        subpartition_sizes,
+        destination_ranks,
     ) + ", " + hardcoded_mode + "}"
     return hardcoded_config, hardcoded_mode
 
