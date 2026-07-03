@@ -7,7 +7,7 @@ import pytest
 sys.path.insert(0, os.path.abspath("src/toolbox/loadbalancing/api"))
 
 from input.RegularGridGenerator import RegularGridGenerator
-import Strategies.SplitTrees as split_strategy
+import strategies.SplitTrees as split_strategy
 
 
 @pytest.mark.parametrize(
@@ -35,7 +35,7 @@ def test_leaf_distribution_balanced_across_subtrees(dimensions, number_of_subtre
     leaf_count_before = tree._leaf_count
 
     # Act: run Stage I only (BFS traversal, default)
-    has_leaves, moved_nodes = split_strategy._distribute_leaves_bfs(tree, number_of_subtrees)
+    has_leaves, moved_nodes = split_strategy.distribute_leaves_bottom_up(tree, number_of_subtrees)
 
     # Assert: leaves were found and redistribution occurred
     assert has_leaves
@@ -102,7 +102,7 @@ def test_leaf_distribution_does_not_modify_non_leaf_nodes(dimensions):
                                 non_leaf_assignments_before[(level, a, b, c)] = node[1]
 
     # Act: run Stage I
-    split_strategy._distribute_leaves_bfs(tree, number_of_subtrees=2)
+    split_strategy.distribute_leaves_bottom_up(tree, number_of_subtrees=2)
 
     # Assert: all non-leaf nodes remain unchanged
     for level_coords, subtree_before in non_leaf_assignments_before.items():
@@ -153,7 +153,7 @@ def test_leaf_distribution_only_redistributes_subtree_0(dimensions):
                     corner_leaves_subtree_1.append((a, b, c))
 
     # Act: run Stage I
-    split_strategy._distribute_leaves_bfs(tree, number_of_subtrees=1)
+    split_strategy.distribute_leaves_bottom_up(tree, number_of_subtrees=1)
 
     # Assert: leaves in subtree 1 remain in subtree 1
     if dimensions == 2:
@@ -203,7 +203,7 @@ def test_leaf_distribution_preserves_node_existence_weights(dimensions):
                         weights_before[(level, a, b, c)] = weight
 
     # Act: run Stage I
-    split_strategy._distribute_leaves_bfs(tree, number_of_subtrees=2)
+    split_strategy.distribute_leaves_bottom_up(tree, number_of_subtrees=2)
 
     # Assert: all weights remain unchanged
     for level_coords, weight_before in weights_before.items():
@@ -237,7 +237,7 @@ def test_leaf_distribution_returns_correct_moved_nodes_count(dimensions):
     finest_level = tree._max_level - 1
 
     # Act: run Stage I
-    has_leaves, moved_nodes = split_strategy._distribute_leaves_bfs(tree, number_of_subtrees)
+    has_leaves, moved_nodes = split_strategy.distribute_leaves_bottom_up(tree, number_of_subtrees)
 
     # Assert: moved_nodes list length is correct
     assert len(moved_nodes) == number_of_subtrees

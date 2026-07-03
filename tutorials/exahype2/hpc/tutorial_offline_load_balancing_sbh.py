@@ -11,7 +11,7 @@ from SBH import FD4SolverWithoutLimiter
 
 #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_inputs]
 from toolbox.loadbalancing.api.input.RegularGridGenerator import RegularGridGenerator
-import toolbox.loadbalancing.api.Strategies.SplitTrees as SplitTrees
+import toolbox.loadbalancing.api.strategies.SplitTrees as SplitTrees
 #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_inputs]
 
 
@@ -21,8 +21,10 @@ Domain_size = [18, 18, 18]
 
 LoadBalancingMetrics_None                      = "none"
 LoadBalancingMetrics_Offline_Regular_Fine_Grid = "offline-regular-fine-grid"
+LoadBalancingMetrics_Offline_Regular_Bottom_Up = "offline-regular-bottom-up"
 LoadBalancingMetrics = [LoadBalancingMetrics_None, 
-                        LoadBalancingMetrics_Offline_Regular_Fine_Grid
+                        LoadBalancingMetrics_Offline_Regular_Fine_Grid,
+                        LoadBalancingMetrics_Offline_Regular_Bottom_Up
                         ]
 
 
@@ -179,48 +181,62 @@ if __name__ == "__main__":
         #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_regular_fine_grid_split]
         number_of_subtrees = args.ranks * args.trees
 
-        grid_sweeps, splitting_trees, number_of_cells, subtrees = SplitTrees.split_tree(
+        destination_ranks = [
+            tree_number % args.ranks for tree_number in range(1, number_of_subtrees)
+        ]
+
+        hardcoded_config, hardcoded_mode = SplitTrees.split_tree(
             tree,
             number_of_subtrees=number_of_subtrees,
-            enable_propagate_bottom_up=False,
             enable_extract_split_instructions=True,
-        ) 
-        
-        print(tree)
+            destination_ranks=destination_ranks,
+            output=True,
+        )
 
-        print("Extracted hardcoded parameters:")
-        print("  grid_sweeps     =", grid_sweeps)
-        print("  splitting_trees =", splitting_trees)
-        print("  number_of_cells =", number_of_cells)
-        print("  subtrees       =", subtrees)        
+        print(tree)
         #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_regular_fine_grid_split]
         
         
         #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_regular_fine_grid_map]
-        destination_ranks = [
-            tree_number % args.ranks for tree_number in subtrees
-        ]
         print("  destination_ranks  =", destination_ranks)
-        
-        hardcoded_mode = "peano4::SplitInstruction::Mode::AggressiveTopDown"
-        hardcoded_config = (
-            "{"
-            f"{{{', '.join(map(str, grid_sweeps))}}}, "
-            f"{{{', '.join(map(str, splitting_trees))}}}, "
-            f"{{{', '.join(map(str, number_of_cells))}}}, "
-            f"{{{', '.join(map(str, destination_ranks))}}}, "
-            f"{hardcoded_mode}"
-            "}"
-        )
         
         print( "Arguments to hardcoded strategy: ")
         print( hardcoded_config )
+        print( "  hardcoded_mode  =", hardcoded_mode )
         
         project.set_load_balancing(
             "toolbox::loadbalancing::strategies::Hardcoded",
             hardcoded_config
         )
         #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_regular_fine_grid_map]
+        pass
+    elif args.load_balancing_metric==LoadBalancingMetrics_Offline_Regular_Bottom_Up:
+        #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_regular_bottom_up]
+        tree_height_required_to_match_cell_size = math.ceil( math.log( Domain_size[0] / args.cell_size, 3.0 ) )
+        tree = RegularGridGenerator(max_level=tree_height_required_to_match_cell_size, dimensions=3)
+        number_of_subtrees = args.ranks * args.trees
+
+        destination_ranks = [
+            tree_number % args.ranks for tree_number in range(1, number_of_subtrees)
+        ]
+
+        hardcoded_config, hardcoded_mode = SplitTrees.split_tree(
+            tree,
+            number_of_subtrees=number_of_subtrees,
+            enable_extract_split_instructions=True,
+            destination_ranks=destination_ranks,
+            output=True,
+        )
+
+        print(tree)
+        print("  destination_ranks  =", destination_ranks)
+        
+        project.set_load_balancing(
+            "toolbox::loadbalancing::strategies::Hardcoded",
+            hardcoded_config
+        )
+        print("  hardcoded_mode  =", hardcoded_mode)
+        #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_regular_bottom_up]
         pass
     else:
         assert False, "should not be entered"

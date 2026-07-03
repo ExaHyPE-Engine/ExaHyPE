@@ -54,7 +54,7 @@ balancing results.
 
 ### Basic Visualisation
 ```python
-from Visualize.TreeVisualizer import TreeVisualizer
+from visualize.TreeVisualizer import TreeVisualizer
 
 # Generate all formats with automatic naming
 TreeVisualizer(tree, dimensions=3, filename="analysis_results")
@@ -67,7 +67,7 @@ TreeVisualizer(tree, dimensions=3, filename="analysis_results")
 TreeVisualizer(tree, dimensions=2, filename="static_only")
 
 # Interactive-only (custom implementation)
-from Visualize.TreeVisualizer import save_interactive_html
+from visualize.TreeVisualizer import save_interactive_html
 save_interactive_html(tree, dimensions=3, filename="interactive_analysis")
 ```
 

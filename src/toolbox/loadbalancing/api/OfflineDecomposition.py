@@ -8,8 +8,8 @@ from Tree import Tree
 from input.GridPatchFileReader import *
 from input.RegularGridGenerator import *
 from input.CustomGridGenerator import *
-from Visualize.TreeVisualizer import TreeVisualizer
-import Strategies.SplitTrees as split_strategy
+from visualize.TreeVisualizer import TreeVisualizer
+import strategies.SplitTrees as split_strategy
 
 
 """
@@ -110,7 +110,7 @@ def display_hardcoded_split_parameters(peano_tree: Tree, title: str) -> None:
         return
     
     # Get the split parameters
-    grid_sweeps, splitting_trees, cell_counts, subtrees = split_strategy._extract_split_instructions(peano_tree)
+    grid_sweeps, splitting_trees, cell_counts, subtrees = split_strategy.extract_split_instructions(peano_tree)
     
     print("\n" + title)
     print("-" * len(title))

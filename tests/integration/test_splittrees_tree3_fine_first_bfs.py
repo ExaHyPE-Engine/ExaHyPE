@@ -5,7 +5,7 @@ import pytest
 # Ensure the loadbalancing API is importable when running pytest from repo root
 sys.path.insert(0, os.path.abspath("src/toolbox/loadbalancing/api"))
 
-import Strategies.SplitTrees as split_strategy
+import strategies.SplitTrees as split_strategy
 from tree_builders import build_tree3_adaptive_2d, build_tree3_all_rows_2d
 
 
@@ -263,12 +263,13 @@ def test_tree3_all_rows_stage2_bottom_up_propagation():
     """
     Stage II test for the all-rows representation variant.
 
-    Stage II keeps Root and Level-1 nodes in subtree 0 for this dense all-rows
-    representation, but propagates mixed ownership into Level 2.
+    Stage II keeps the root in subtree 0 and propagates ownership into
+    non-leaf nodes according to uniform-child regions in this dense all-rows
+    representation.
 
-    Deterministic Level-2 pattern after Stage II:
-    - columns 2 and 5 remain uniformly subtree 3 (childless bands)
-    - all other Level-2 columns contain mixed ownership {0,1,2,3}
+    Deterministic outcome after Stage II:
+    - Level 1 already contains propagated non-zero ownership in selected cells.
+    - Level 2 column ownership sets follow a fixed mixed/uniform pattern.
     """
     tree = build_tree3_all_rows_2d()
 
@@ -281,22 +282,37 @@ def test_tree3_all_rows_stage2_bottom_up_propagation():
         enable_extract_split_instructions=False,
     )
 
-    # Root stays 0 after Stage II; all L1 nodes remain 0 due to mixed L2 children.
+    # Root stays 0 after Stage II.
     assert tree._tree_arrays[0][0][0] == (1, 0)
+
+    # Level-1 ownership after Stage II (deterministic for this fixture)
+    expected_l1 = [
+        [0, 0, 2],
+        [0, 0, 0],
+        [0, 0, 3],
+    ]
     for a in range(3):
         for b in range(3):
-            assert tree._tree_arrays[1][a][b] == (1, 0)
+            assert tree._tree_arrays[1][a][b] == (1, expected_l1[a][b])
 
+    expected_l2_column_sets = {
+        0: {0},
+        1: {0, 1},
+        2: {3},
+        3: {1, 2},
+        4: {0, 1},
+        5: {3},
+        6: {2, 3},
+        7: {0, 2, 3},
+        8: {2, 3},
+    }
     for b in range(9):
         subtree_set = {
             tree._tree_arrays[2][a][b][1]
             for a in range(9)
             if tree._tree_arrays[2][a][b][0] == 1
         }
-        if b in (2, 5):
-            assert subtree_set == {3}
-        else:
-            assert subtree_set == {0, 1, 2, 3}
+        assert subtree_set == expected_l2_column_sets[b]
 
 
 @pytest.mark.integration
@@ -308,9 +324,9 @@ def test_tree3_all_rows_stage3_promotes_level1_not_root():
     the root unchanged.
 
     Deterministic Level-1 outcome after Stage III:
-    - row 0: subtree 0 across all three columns
-    - row 1: subtree 1 across all three columns
-    - row 2: subtree 3 across all three columns
+    - row 0: [0, 3, 2]
+    - row 1: [0, 1, 3]
+    - row 2: [0, 1, 3]
 
     Root remains subtree 0.
     """
@@ -329,10 +345,14 @@ def test_tree3_all_rows_stage3_promotes_level1_not_root():
     assert tree._tree_arrays[0][0][0] == (1, 0)
 
     # Level-1 promotions after Stage III
-    for b in range(3):
-        assert tree._tree_arrays[1][0][b] == (1, 0)
-        assert tree._tree_arrays[1][1][b] == (1, 1)
-        assert tree._tree_arrays[1][2][b] == (1, 3)
+    expected_l1 = [
+        [0, 3, 2],
+        [0, 1, 3],
+        [0, 1, 3],
+    ]
+    for a in range(3):
+        for b in range(3):
+            assert tree._tree_arrays[1][a][b] == (1, expected_l1[a][b])
 
     # Stage III changes only non-leaf ownership; leaf split remains unchanged.
     tree.update_split_pattern()

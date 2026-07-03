@@ -7,7 +7,7 @@ import pytest
 sys.path.insert(0, os.path.abspath("src/toolbox/loadbalancing/api"))
 
 from input.RegularGridGenerator import RegularGridGenerator
-import Strategies.SplitTrees as split_strategy
+import strategies.SplitTrees as split_strategy
 
 
 def _child_coords(parent_coords):
