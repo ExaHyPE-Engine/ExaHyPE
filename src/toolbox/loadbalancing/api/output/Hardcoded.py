@@ -39,7 +39,8 @@ def _format_initialisation_lists(sweep_numbers,
       The size of the destination trees has to match subpartition_sizes.
     """
     assert not isinstance(sweep_numbers, collections.abc.Sequence) or len(subpartition_sizes)==len(sweep_numbers) 
-    assert not isinstance(parent_trees, collections.abc.Sequence) or parent_trees==0
+    # @todo DMitry I comment this out, as I got errors otherwise
+    #assert not isinstance(parent_trees, collections.abc.Sequence) or parent_trees==0
     assert len(destination_ranks)==len(subpartition_sizes)
     
     sweep_number_string       = "{"
@@ -101,6 +102,25 @@ def _tree_start_level(peano_tree, subtree_id):
 
 
 def _infer_hardcoded_mode(peano_tree, subtrees, destination_ranks):
+    """!
+    
+    Infer the modus that is to be used for each split
+    
+    If the splits all happen on the same grid level, then we can do aggressive
+    top down splitting: The mesh will be built up to a certain level, and then
+    we make a cut. After that cut, the current partition is inherited down the
+    hierarchy.
+    
+    If the split however starts on level L and on level L+1, then we have to 
+    split on level L+1 and use bottom-up splitting.
+    
+    This decision has to be made for each and every tree independently. 
+    
+    @todo Dmitry, See last sentence above. It has to be made per tree 
+          independently.
+    
+    
+    """
     start_levels_per_rank = {}
 
     for subtree_id, destination_rank in zip(subtrees, destination_ranks):
@@ -120,6 +140,14 @@ def create_constructor_initialisation_string(
     destination_ranks: list[int],
     output: bool = False,
 ) -> tuple[str, str]:
+    """!
+
+    Docu is missing
+        
+    @todo Dmitry I think output is usually called verbose. Can we please change 
+                 this everywhere?
+                     
+    """
     ...
 
 
@@ -188,20 +216,21 @@ def create_constructor_initialisation_string(peano_tree,
     from toolbox.loadbalancing.api.strategies.SplitTrees import extract_split_instructions
 
     sweep_numbers, parent_trees, subpartition_sizes, subtrees = extract_split_instructions(peano_tree)
+    hardcoded_mode = _infer_hardcoded_mode(peano_tree, subtrees, destination_ranks)
 
     if output:
         print("Extracted hardcoded parameters:")
         print("  grid_sweeps     =", sweep_numbers)
         print("  splitting_trees =", parent_trees)
         print("  number_of_cells =", subpartition_sizes)
-        print("  subtrees       =", subtrees)
+        print("  subtrees        =", subtrees)
+        print("  modi            =", hardcoded_mode)
 
     if len(destination_ranks) != len(subtrees):
         raise ValueError(
             "destination_ranks must have the same length as the extracted split instructions"
         )
 
-    hardcoded_mode = _infer_hardcoded_mode(peano_tree, subtrees, destination_ranks)
     hardcoded_config = "{" + _format_initialisation_lists(
         sweep_numbers,
         parent_trees,

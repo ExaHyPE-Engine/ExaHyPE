@@ -256,7 +256,16 @@ algorithms and the pipe into the load balancer:
 
 @snippet tutorial_offline_load_balancing_sbh.py tutorials_exahype2_hpc_tutorial_offline_load_balancing_regular_bottom_up
 
-With the new 
+We observe that this example distinguishes the splitting of the tree in 
+split_tree() from the generation of the instructions for Peano in 
+create_constructor_initialisation_string(). Indeed, what we have done before
+is a shortcut. Now that we separate these two steps from each other, we can 
+squeeze in an additional step in-between: We can add the step which actually
+tries to lift the splitting up in the tree. 
+
+@todo Which routine do I have in this code (there's a todo in the source code)
+to get the bottom-up analysis?
+
 
 # Offload load balancing for an adaptive grid taken from a real run
 

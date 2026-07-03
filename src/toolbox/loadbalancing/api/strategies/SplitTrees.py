@@ -52,10 +52,17 @@ def split_tree(
         destination_ranks: Optional destination rank list for Stage IV. If not
             provided, it defaults to target subtree IDs.
         output: If True, Stage IV prints extracted hardcoded parameters.
+        
+    @todo Dmitry, can we please remove this Stage IV thing/remark? Not required
 
     Returns:
-        If Stage IV is enabled: `(hardcoded_config, hardcoded_mode)`.
+        `(hardcoded_config, hardcoded_mode)`.
         If Stage IV is disabled: `("", "")`.
+        
+        You can use the result tuple directly. Alternatively, just ignore the
+        result and extract the information later by calling
+        create_constructor_initialisation_string() explicitly. This is notably
+        required if we concatenate several tree manipulations.
 
     Notes:
         - All stages after Stage I are optional.
@@ -128,7 +135,9 @@ def split_tree(
         if destination_ranks is None:
             _, _, _, subtrees = extract_split_instructions(peano_tree)
             destination_ranks = [int(subtree) for subtree in subtrees]
-        return create_constructor_initialisation_string(peano_tree, destination_ranks, output=output)
+            # @todo Reinsert this one, just out for debugging reasons. 
+        #return create_constructor_initialisation_string(peano_tree, destination_ranks, output=output)
+        return ("", "")
 
     return ("", "")
 
@@ -244,7 +253,7 @@ def distribute_leaves_bottom_up(
     leaves_per_subtree = total_leaves // (number_of_subtrees)
     remaining_leaves = total_leaves % (number_of_subtrees)
 
-    print(f"Target distribution: {leaves_per_subtree} leaves per subtree, {remaining_leaves} extra leaves")
+    print(f"Target distribution: {leaves_per_subtree} leaves per subtree, {remaining_leaves} extra leaves that have to be distributed among other trees")
 
     # Create distribution plan
     distribution = []

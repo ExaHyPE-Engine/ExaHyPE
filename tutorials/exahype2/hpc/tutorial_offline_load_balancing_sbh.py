@@ -12,6 +12,7 @@ from SBH import FD4SolverWithoutLimiter
 #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_inputs]
 from toolbox.loadbalancing.api.input.RegularGridGenerator import RegularGridGenerator
 import toolbox.loadbalancing.api.strategies.SplitTrees as SplitTrees
+from toolbox.loadbalancing.api.output.Hardcoded import create_constructor_initialisation_string
 #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_inputs]
 
 
@@ -220,14 +221,19 @@ if __name__ == "__main__":
             tree_number % args.ranks for tree_number in range(1, number_of_subtrees)
         ]
 
-        hardcoded_config, hardcoded_mode = SplitTrees.split_tree(
+        SplitTrees.split_tree(
             tree,
             number_of_subtrees=number_of_subtrees,
             enable_extract_split_instructions=True,
             destination_ranks=destination_ranks,
             output=True,
         )
-
+        
+        # @todo Dmitry What do I have to call here to trigger the bottom-up analysis?
+        #              I know you've implemented that stuff already
+        
+        hardcoded_config, hardcoded_mode = create_constructor_initialisation_string(tree,destination_ranks)
+        
         print(tree)
         print("  destination_ranks  =", destination_ranks)
         
