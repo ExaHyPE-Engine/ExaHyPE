@@ -283,7 +283,6 @@ Function                                                           Module       
 -----------------------------------------------------------------  --------------  ----------  ----------------
 __kmp_fork_barrier                                                 libiomp5.so     12318.722s             70.4%
 TP::TwoPunctures::PunctEvalAtArbitPositionFaster                   peano4_bbhtest   1003.965s              5.7%
-toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product  peano4_bbhtest    409.957s              2.3%
 applications::exahype2::ccz4::ncp                                  peano4_bbhtest    237.477s              1.4%
 __kmpc_taskloop                                                    libiomp5.so       200.711s              1.1%
 [Others]                                                           N/A              3333.068s             19.0%
@@ -458,7 +457,6 @@ Function                                                           Module       
 __kmp_fork_barrier                                                 libiomp5.so     73692.591s             94.2%
 __kmpc_taskloop                                                    libiomp5.so      1105.792s              1.4%
 TP::TwoPunctures::PunctEvalAtArbitPositionFaster                   peano4_bbhtest    722.662s              0.9%
-toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product  peano4_bbhtest    286.592s              0.4%
 applications::exahype2::ccz4::ncp                                  peano4_bbhtest    178.042s              0.2%
 [Others]                                                           N/A              2223.510s              2.8%
 Collection and Platform Info

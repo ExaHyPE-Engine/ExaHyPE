@@ -39,7 +39,7 @@ class InitialCondition(AbstractFVActionSet):
 
     TemplateInitialCondition = """
   if ({{PREDICATE}}) {
-    dfor(volume, {{NUMBER_OF_VOLUMES_PER_AXIS}}) {
+    peano4::dForEach({{NUMBER_OF_VOLUMES_PER_AXIS}}, [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
       int index = peano4::dLinearised(volume,{{NUMBER_OF_VOLUMES_PER_AXIS}}) * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}});
       {% if STATELESS_INITIAL_CONDITIONS==True %}
       {{FULL_QUALIFIED_SOLVER_NAME}}::initialCondition(
@@ -54,7 +54,7 @@ class InitialCondition(AbstractFVActionSet):
         ::exahype2::fv::getVolumeSize(marker.getH(), {{NUMBER_OF_VOLUMES_PER_AXIS}})
       );
       {% endif %}
-    }
+    });
 
     // Relevant for tracing et al which kicks in if and only if cell has been updated
     fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);

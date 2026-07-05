@@ -63,7 +63,7 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
     #endif
     constexpr int valuesPerDoF = {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     
-    dfor( dof, {{ORDER}}+1 ) {
+    peano4::dForEach({{ORDER}} + 1, [&](const tarch::la::Vector<DIMENSIONS, int>& dof) {
       const int dofSerialised = peano4::dLinearised(dof, {{ORDER}}+1);
       const int solutionOffset = dofSerialised * valuesPerDoF;
       for (int unknown=0; unknown<{{NUMBER_OF_UNKNOWNS}}; unknown++) {
@@ -72,8 +72,8 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
           timeStepSize * {{WEIGHTS[WEIGHT_NO]}} * fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.data()[ ({{WEIGHT_NO}} * numberOfDoFsPerCell + dofSerialised) * {{NUMBER_OF_UNKNOWNS}} + unknown ];
         {% endfor %}
       }
-    }
-    
+    });
+
 
     const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 

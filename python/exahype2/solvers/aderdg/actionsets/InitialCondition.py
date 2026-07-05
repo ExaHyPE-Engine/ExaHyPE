@@ -18,7 +18,7 @@ class InitialCondition(AbstractADERDGActionSet):
       marker.getH()
     );
 {% else %}
-    dfor(index, {{ORDER}} + 1) {
+    peano4::dForEach({{ORDER}} + 1, [&](const tarch::la::Vector<DIMENSIONS, int>& index) {
       repositories::{{SOLVER_INSTANCE}}.initialCondition(
         fineGridCell{{UNKNOWN_IDENTIFIER}}.data() + linearisedIndex,
         ::exahype2::dg::getQuadraturePoint(
@@ -31,7 +31,7 @@ class InitialCondition(AbstractADERDGActionSet):
         marker.getH()
       );
       linearisedIndex += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    }
+    });
 {% endif %}
 
 #if DIMENSIONS==2

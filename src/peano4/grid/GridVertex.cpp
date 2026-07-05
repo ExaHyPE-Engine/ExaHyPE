@@ -69,24 +69,28 @@ peano4::grid::GridVertex peano4::grid::GridVertex::create(
 
 bool peano4::grid::GridVertex::areAllVerticesRefined(GridVertex vertices[TWO_POWER_D]) {
   bool result = true;
-  dfor2(k) result &= (vertices[kScalar].getState() == GridVertex::State::Refined);
-  enddforx return result;
+  peano4::dForEachCorner([&](const tarch::la::Vector<DIMENSIONS, int>& k, int kScalar) {
+    result &= (vertices[kScalar].getState() == GridVertex::State::Refined);
+  });
+  return result;
 }
 
 bool peano4::grid::GridVertex::areAllVerticesUnrefined(GridVertex vertices[TWO_POWER_D]) {
   bool result = true;
-  dfor2(k) result &= (vertices[kScalar].getState() == GridVertex::State::Unrefined);
-  enddforx return result;
+  peano4::dForEachCorner([&](const tarch::la::Vector<DIMENSIONS, int>& k, int kScalar) {
+    result &= (vertices[kScalar].getState() == GridVertex::State::Unrefined);
+  });
+  return result;
 }
 
 bool peano4::grid::GridVertex::willVertexBeRefined(const GridVertex& vertex) {
-  return vertex.getState() == GridVertex::State::Refining or vertex.getState() == GridVertex::State::Refined or
-         vertex.getState() == GridVertex::State::EraseTriggered;
+  return vertex.getState() == GridVertex::State::Refining or vertex.getState() == GridVertex::State::Refined
+    or vertex.getState() == GridVertex::State::EraseTriggered;
 }
 
 bool peano4::grid::GridVertex::hasVertexBeenRefined(const GridVertex& vertex) {
-  return vertex.getState() == GridVertex::State::Refined or vertex.getState() == GridVertex::State::EraseTriggered or
-         vertex.getState() == GridVertex::State::Erasing;
+  return vertex.getState() == GridVertex::State::Refined or vertex.getState() == GridVertex::State::EraseTriggered
+    or vertex.getState() == GridVertex::State::Erasing;
 }
 
 std::bitset<TWO_POWER_D> peano4::grid::GridVertex::willVerticesBeRefined(GridVertex vertices[TWO_POWER_D]) {
@@ -358,9 +362,14 @@ void peano4::grid::GridVertex::sendAndPollDanglingMessages(
   int               tag,
   MPI_Comm          communicator
 ) {
-  GridVertex::send(message, destination, tag, []() {}, [&]() {
-    tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-  }, communicator);
+  GridVertex::send(
+    message,
+    destination,
+    tag,
+    []() {},
+    [&]() { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); },
+    communicator
+  );
 }
 
 void peano4::grid::GridVertex::receiveAndPollDanglingMessages(
@@ -369,8 +378,13 @@ void peano4::grid::GridVertex::receiveAndPollDanglingMessages(
   int         tag,
   MPI_Comm    communicator
 ) {
-  GridVertex::receive(message, source, tag, []() {}, [&]() {
-    tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-  }, communicator);
+  GridVertex::receive(
+    message,
+    source,
+    tag,
+    []() {},
+    [&]() { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); },
+    communicator
+  );
 }
 #endif

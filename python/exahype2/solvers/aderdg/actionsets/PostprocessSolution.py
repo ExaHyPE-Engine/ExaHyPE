@@ -8,7 +8,9 @@ import peano4.solversteps
 
 class EmptyPostprocessSolution(AbstractADERDGActionSet):
     """
-    PostprocessSolution differs from other action sets, as we only create it once. See
+    PostprocessSolution differs from other action sets, as we only create it once.
+
+    See
     ADERDG.create_action_sets(). Once the instance does exist, you can tailor it. But you
     can also completely overwrite it.
     """
@@ -57,7 +59,9 @@ class EmptyPostprocessSolution(AbstractADERDGActionSet):
 
 class DoFWisePostprocessSolution(EmptyPostprocessSolution):
     """
-    PostprocessSolution differs from other action sets, as I only create it once. See
+    PostprocessSolution differs from other action sets, as I only create it once.
+
+    See
     ADERDG.create_action_sets(). Once the instance does exist, you can tailor it. But you
     can also completely overwrite it.
 
@@ -77,7 +81,9 @@ class DoFWisePostprocessSolution(EmptyPostprocessSolution):
 
     def add_postprocessing_kernel(self, operation_per_point):
         """
-        Add a code snippet which is applied to each and every point. You have the following
+        Add a code snippet which is applied to each and every point.
+
+        You have the following
         variables which are well-defined:
 
         - value: Is a pointer to the current finite volume's data
@@ -101,7 +107,7 @@ class DoFWisePostprocessSolution(EmptyPostprocessSolution):
 
     constexpr int valuesPerDoF = {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
 
-    dfor(index, {{ORDER}} + 1) {
+    peano4::dForEach({{ORDER}} + 1, [&](const tarch::la::Vector<DIMENSIONS, int>& index) {
       double* values   = fineGridCell{{UNKNOWN_IDENTIFIER}}.data()
         + peano4::dLinearised(index, {{ORDER}} + 1) * valuesPerDoF;
       auto    x        =         ::exahype2::aderdg::getQuadraturePoint(
@@ -114,7 +120,7 @@ class DoFWisePostprocessSolution(EmptyPostprocessSolution):
       """
             + operation_per_point
             + """
-    }
+    });
   }
 }
 """
@@ -136,7 +142,9 @@ class CellWisePostprocessSolution(EmptyPostprocessSolution):
 
     def add_postprocessing_kernel(self, operation_per_cell):
         """
-        Add a code snippet which is applied to each and every point. You have the following
+        Add a code snippet which is applied to each and every point.
+
+        You have the following
         variables which are well-defined:
 
         - value: Is a pointer to the current finite volume's data

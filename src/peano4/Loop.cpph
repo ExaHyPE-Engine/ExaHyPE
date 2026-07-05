@@ -28,7 +28,7 @@ INLINE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::dStartVector(int max, c
   return result;
 }
 
-INLINE_METHOD GPU_CALLABLE_METHOD void peano4::dInc(tarch::la::Vector<DIMENSIONS, int>& counter, int max) {
+INLINE_METHOD GPU_CALLABLE_METHOD void peano4::dIncrement(tarch::la::Vector<DIMENSIONS, int>& counter, int max) {
   counter(0)++;
   for (int i = 0; i < DIMENSIONS - 1; i++) {
     if (counter(i) >= max) {
@@ -40,10 +40,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD void peano4::dInc(tarch::la::Vector<DIMENSIONS
   }
 }
 
-INLINE_METHOD GPU_CALLABLE_METHOD void peano4::dInc(
-  tarch::la::Vector<DIMENSIONS, int>&       counter,
-  const tarch::la::Vector<DIMENSIONS, int>& max
-) {
+INLINE_METHOD GPU_CALLABLE_METHOD void
+peano4::dIncrement(tarch::la::Vector<DIMENSIONS, int>& counter, const tarch::la::Vector<DIMENSIONS, int>& max) {
   counter(0)++;
   for (int i = 0; i < DIMENSIONS - 1; i++) {
     if (counter(i) >= max(i)) {
@@ -55,7 +53,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD void peano4::dInc(
   }
 }
 
-INLINE_METHOD GPU_CALLABLE_METHOD void peano4::dInc(tarch::la::Vector<DIMENSIONS, int>& counter, int max, int doNotExamine) {
+INLINE_METHOD GPU_CALLABLE_METHOD void
+peano4::dIncrement(tarch::la::Vector<DIMENSIONS, int>& counter, int max, int doNotExamine) {
   assertion(doNotExamine < DIMENSIONS);
   assertion(doNotExamine >= -1);
 
@@ -65,57 +64,59 @@ INLINE_METHOD GPU_CALLABLE_METHOD void peano4::dInc(tarch::la::Vector<DIMENSIONS
     counter(1)++;
   }
   for (int i = 0; i < DIMENSIONS - 1; i++) {
+    // The pinned dimension counter(doNotExamine) stays at its start value (< max)
+    // throughout, so it never triggers this carry.
     if (counter(i) >= max) {
       counter(i) = 0;
       if (doNotExamine != i + 1) {
         counter(i + 1)++;
       } else {
+        // If doNotExamine is the last element, we cannot update the one beyond it
+        // as it is out of scope, this means the current element is the last
+        // outside of doNotExamine, and we thus keep it as max.
         if (doNotExamine != DIMENSIONS - 1) {
           counter(i + 2)++;
         } else {
-          counter(DIMENSIONS - 1) = max;
+          counter(i) = max;
         }
       }
     }
   }
 }
 
-INLINE_METHOD GPU_CALLABLE_METHOD void peano4::dInc(
-  tarch::la::Vector<DIMENSIONS, int>& counter,
-  int                                 max,
-  LoopDirection&                      direction
-) {
+INLINE_METHOD GPU_CALLABLE_METHOD void
+peano4::dIncrement(tarch::la::Vector<DIMENSIONS, int>& counter, int max, LoopDirection& direction) {
   for (int i = 0; i < DIMENSIONS; i++) {
     if (direction[i]) {
       counter(i)++;
-      bool greater = counter(i) >= max;
-      if (greater && (i == DIMENSIONS - 1)) {
+      const auto greater = counter(i) >= max;
+      if (greater and (i == DIMENSIONS - 1)) {
         counter(i) = max;
         return;
       } else if (greater) {
         counter(i)--;
-        direction[i] = !direction[i];
-      } else
+        direction[i] = not direction[i];
+      } else {
         return;
+      }
     } else {
       counter(i)--;
-      bool smaller = counter(i) < 0;
-      if (smaller && (i == DIMENSIONS - 1)) {
+      const auto smaller = counter(i) < 0;
+      if (smaller and (i == DIMENSIONS - 1)) {
         counter(i) = max;
         return;
       } else if (smaller) {
         counter(i)++;
-        direction[i] = !direction[i];
-      } else
+        direction[i] = not direction[i];
+      } else {
         return;
+      }
     }
   }
 }
 
-INLINE_METHOD GPU_CALLABLE_METHOD int peano4::dCmp(
-  const tarch::la::Vector<DIMENSIONS, int>& counter,
-  const tarch::la::Vector<DIMENSIONS, int>& max
-) {
+INLINE_METHOD GPU_CALLABLE_METHOD int
+peano4::dCompare(const tarch::la::Vector<DIMENSIONS, int>& counter, const tarch::la::Vector<DIMENSIONS, int>& max) {
   int result = true;
   for (int i = 0; i < DIMENSIONS; i++) {
     assertion(counter(i) <= max(i), counter, max);
@@ -125,7 +126,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD int peano4::dCmp(
   return result;
 }
 
-INLINE_METHOD GPU_CALLABLE_METHOD int peano4::dCmp(const tarch::la::Vector<DIMENSIONS, int>& counter, int max) {
+INLINE_METHOD GPU_CALLABLE_METHOD int peano4::dCompare(const tarch::la::Vector<DIMENSIONS, int>& counter, int max) {
   int result = true;
   for (int i = 0; i < DIMENSIONS; i++) {
     assertion(counter(i) <= max, counter, max);
@@ -135,10 +136,21 @@ INLINE_METHOD GPU_CALLABLE_METHOD int peano4::dCmp(const tarch::la::Vector<DIMEN
   return result;
 }
 
-INLINE_METHOD GPU_CALLABLE_METHOD int peano4::dLinearised(
-  const tarch::la::Vector<DIMENSIONS, int>& counter,
-  int                                       max
-) {
+INLINE_METHOD GPU_CALLABLE_METHOD int
+peano4::dCompareExclusive(const tarch::la::Vector<DIMENSIONS, int>& counter, int max, int dim) {
+  int result = true;
+  for (int i = 0; i < DIMENSIONS; i++) {
+    if (i == dim) {
+      continue;
+    }
+    assertion(counter(i) <= max, counter, max);
+    assertion(counter(i) >= 0, counter, max);
+    result &= (counter(i) < max);
+  }
+  return result;
+}
+
+INLINE_METHOD GPU_CALLABLE_METHOD int peano4::dLinearised(const tarch::la::Vector<DIMENSIONS, int>& counter, int max) {
   int result = counter(DIMENSIONS - 1);
   assertion(counter(DIMENSIONS - 1) >= 0, counter, max);
   assertion(counter(DIMENSIONS - 1) < max, counter, max);
@@ -148,4 +160,131 @@ INLINE_METHOD GPU_CALLABLE_METHOD int peano4::dLinearised(
     result = result * max + counter(d);
   }
   return result;
+}
+
+template <typename Functor>
+INLINE_METHOD GPU_CALLABLE_METHOD void peano4::dForEach(int max, const Functor& body) {
+  for (tarch::la::Vector<DIMENSIONS, int> counter = dStartVector(); dCompare(counter, max); dIncrement(counter, max)) {
+    body(counter);
+  }
+}
+
+template <typename Functor>
+INLINE_METHOD GPU_CALLABLE_METHOD void
+peano4::dForEach(const tarch::la::Vector<DIMENSIONS, int>& max, const Functor& body) {
+  for (tarch::la::Vector<DIMENSIONS, int> counter = dStartVector(); dCompare(counter, max); dIncrement(counter, max)) {
+    body(counter);
+  }
+}
+
+template <typename Functor>
+INLINE_METHOD GPU_CALLABLE_METHOD void peano4::dForEachExclusive(int max, int dim, int value, const Functor& body) {
+  for (tarch::la::Vector<DIMENSIONS, int> counter = dStartVector(dim, value); dCompareExclusive(counter, max, dim);
+       dIncrement(counter, max, dim)) {
+    body(counter);
+  }
+}
+
+template <typename Functor>
+INLINE_METHOD GPU_CALLABLE_METHOD void peano4::dForEachCorner(const Functor& body) {
+  int bit0 = 0;
+  int bit1 = 0;
+#if DIMENSIONS == 3
+  int bit2 = 0;
+#endif
+  for (int scalar = 0; scalar < TWO_POWER_D; scalar++) {
+    tarch::la::Vector<DIMENSIONS, int> counter;
+    counter(0) = bit0;
+    counter(1) = bit1;
+#if DIMENSIONS == 3
+    counter(2) = bit2;
+#endif
+    bit0 = not bit0;
+    bit1 = not(bit0 xor bit1);
+#if DIMENSIONS == 3
+    bit2 = bit2 or (not bit0 and not bit1 and not bit2);
+#endif
+    body(counter, scalar);
+  }
+}
+
+template <typename Functor>
+INLINE_METHOD GPU_CALLABLE_METHOD void peano4::dForEachStencil(const Functor& body) {
+  for (int scalar = 0; scalar < THREE_POWER_D; scalar++) {
+    tarch::la::Vector<DIMENSIONS, int> counter;
+    int                                remainder = scalar;
+    for (int d = DIMENSIONS - 1; d >= 0; d--) {
+      int stride = 1;
+      for (int factor = 0; factor < d; factor++) {
+        stride *= 3;
+      }
+      counter(d) = remainder / stride;
+      remainder -= counter(d) * stride;
+    }
+    body(counter, scalar);
+  }
+}
+
+template <typename Functor>
+INLINE_METHOD void peano4::zForEach(int max, LoopDirection direction, const Functor& body) {
+  for (tarch::la::Vector<DIMENSIONS, int> counter = dStartVector(max, direction); dCompare(counter, max);
+       dIncrement(counter, max, direction)) {
+    body(counter);
+  }
+}
+
+template <typename Functor>
+INLINE_METHOD void peano4::zForEach3(LoopDirection direction, const Functor& body) {
+#if DIMENSIONS == 2
+  static constexpr int CurveOrdering[4][9][2] = {
+    {{2, 2}, {1, 2}, {0, 2}, {0, 1}, {1, 1}, {2, 1}, {2, 0}, {1, 0}, {0, 0}},
+    {{0, 2}, {1, 2}, {2, 2}, {2, 1}, {1, 1}, {0, 1}, {0, 0}, {1, 0}, {2, 0}},
+    {{2, 0}, {1, 0}, {0, 0}, {0, 1}, {1, 1}, {2, 1}, {2, 2}, {1, 2}, {0, 2}},
+    {{0, 0}, {1, 0}, {2, 0}, {2, 1}, {1, 1}, {0, 1}, {0, 2}, {1, 2}, {2, 2}}
+  };
+  const int initialDirection = static_cast<int>(direction.to_ulong());
+  for (int step = 0; step < 9; step++) {
+    tarch::la::Vector<DIMENSIONS, int> counter;
+    counter(0) = CurveOrdering[initialDirection][step][0];
+    counter(1) = CurveOrdering[initialDirection][step][1];
+    body(counter);
+  }
+#elif DIMENSIONS == 3
+  static constexpr int CurveOrdering[8][27][3] = {
+    {{2, 2, 2}, {1, 2, 2}, {0, 2, 2}, {0, 1, 2}, {1, 1, 2}, {2, 1, 2}, {2, 0, 2}, {1, 0, 2}, {0, 0, 2},
+     {0, 0, 1}, {1, 0, 1}, {2, 0, 1}, {2, 1, 1}, {1, 1, 1}, {0, 1, 1}, {0, 2, 1}, {1, 2, 1}, {2, 2, 1},
+     {2, 2, 0}, {1, 2, 0}, {0, 2, 0}, {0, 1, 0}, {1, 1, 0}, {2, 1, 0}, {2, 0, 0}, {1, 0, 0}, {0, 0, 0}},
+    {{0, 2, 2}, {1, 2, 2}, {2, 2, 2}, {2, 1, 2}, {1, 1, 2}, {0, 1, 2}, {0, 0, 2}, {1, 0, 2}, {2, 0, 2},
+     {2, 0, 1}, {1, 0, 1}, {0, 0, 1}, {0, 1, 1}, {1, 1, 1}, {2, 1, 1}, {2, 2, 1}, {1, 2, 1}, {0, 2, 1},
+     {0, 2, 0}, {1, 2, 0}, {2, 2, 0}, {2, 1, 0}, {1, 1, 0}, {0, 1, 0}, {0, 0, 0}, {1, 0, 0}, {2, 0, 0}},
+    {{2, 0, 2}, {1, 0, 2}, {0, 0, 2}, {0, 1, 2}, {1, 1, 2}, {2, 1, 2}, {2, 2, 2}, {1, 2, 2}, {0, 2, 2},
+     {0, 2, 1}, {1, 2, 1}, {2, 2, 1}, {2, 1, 1}, {1, 1, 1}, {0, 1, 1}, {0, 0, 1}, {1, 0, 1}, {2, 0, 1},
+     {2, 0, 0}, {1, 0, 0}, {0, 0, 0}, {0, 1, 0}, {1, 1, 0}, {2, 1, 0}, {2, 2, 0}, {1, 2, 0}, {0, 2, 0}},
+    {{0, 0, 2}, {1, 0, 2}, {2, 0, 2}, {2, 1, 2}, {1, 1, 2}, {0, 1, 2}, {0, 2, 2}, {1, 2, 2}, {2, 2, 2},
+     {2, 2, 1}, {1, 2, 1}, {0, 2, 1}, {0, 1, 1}, {1, 1, 1}, {2, 1, 1}, {2, 0, 1}, {1, 0, 1}, {0, 0, 1},
+     {0, 0, 0}, {1, 0, 0}, {2, 0, 0}, {2, 1, 0}, {1, 1, 0}, {0, 1, 0}, {0, 2, 0}, {1, 2, 0}, {2, 2, 0}},
+    {{2, 2, 0}, {1, 2, 0}, {0, 2, 0}, {0, 1, 0}, {1, 1, 0}, {2, 1, 0}, {2, 0, 0}, {1, 0, 0}, {0, 0, 0},
+     {0, 0, 1}, {1, 0, 1}, {2, 0, 1}, {2, 1, 1}, {1, 1, 1}, {0, 1, 1}, {0, 2, 1}, {1, 2, 1}, {2, 2, 1},
+     {2, 2, 2}, {1, 2, 2}, {0, 2, 2}, {0, 1, 2}, {1, 1, 2}, {2, 1, 2}, {2, 0, 2}, {1, 0, 2}, {0, 0, 2}},
+    {{0, 2, 0}, {1, 2, 0}, {2, 2, 0}, {2, 1, 0}, {1, 1, 0}, {0, 1, 0}, {0, 0, 0}, {1, 0, 0}, {2, 0, 0},
+     {2, 0, 1}, {1, 0, 1}, {0, 0, 1}, {0, 1, 1}, {1, 1, 1}, {2, 1, 1}, {2, 2, 1}, {1, 2, 1}, {0, 2, 1},
+     {0, 2, 2}, {1, 2, 2}, {2, 2, 2}, {2, 1, 2}, {1, 1, 2}, {0, 1, 2}, {0, 0, 2}, {1, 0, 2}, {2, 0, 2}},
+    {{2, 0, 0}, {1, 0, 0}, {0, 0, 0}, {0, 1, 0}, {1, 1, 0}, {2, 1, 0}, {2, 2, 0}, {1, 2, 0}, {0, 2, 0},
+     {0, 2, 1}, {1, 2, 1}, {2, 2, 1}, {2, 1, 1}, {1, 1, 1}, {0, 1, 1}, {0, 0, 1}, {1, 0, 1}, {2, 0, 1},
+     {2, 0, 2}, {1, 0, 2}, {0, 0, 2}, {0, 1, 2}, {1, 1, 2}, {2, 1, 2}, {2, 2, 2}, {1, 2, 2}, {0, 2, 2}},
+    {{0, 0, 0}, {1, 0, 0}, {2, 0, 0}, {2, 1, 0}, {1, 1, 0}, {0, 1, 0}, {0, 2, 0}, {1, 2, 0}, {2, 2, 0},
+     {2, 2, 1}, {1, 2, 1}, {0, 2, 1}, {0, 1, 1}, {1, 1, 1}, {2, 1, 1}, {2, 0, 1}, {1, 0, 1}, {0, 0, 1},
+     {0, 0, 2}, {1, 0, 2}, {2, 0, 2}, {2, 1, 2}, {1, 1, 2}, {0, 1, 2}, {0, 2, 2}, {1, 2, 2}, {2, 2, 2}}
+  };
+  const int initialDirection = static_cast<int>(direction.to_ulong());
+  for (int step = 0; step < 27; step++) {
+    tarch::la::Vector<DIMENSIONS, int> counter;
+    counter(0) = CurveOrdering[initialDirection][step][0];
+    counter(1) = CurveOrdering[initialDirection][step][1];
+    counter(2) = CurveOrdering[initialDirection][step][2];
+    body(counter);
+  }
+#else
+  zForEach(3, direction, body);
+#endif
 }

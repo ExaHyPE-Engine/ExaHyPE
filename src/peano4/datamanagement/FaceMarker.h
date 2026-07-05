@@ -71,7 +71,7 @@ struct peano4::datamanagement::FaceMarker {
    */
   INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> getX(int i) const {
     tarch::la::Vector<DIMENSIONS, double> result(cellCentre);
-    int                                   normal = i % DIMENSIONS;
+    const auto                            normal = i % DIMENSIONS;
     result(normal) += i >= DIMENSIONS ? h(normal) / 2.0 : -h(normal) / 2.0;
     return result;
   }
@@ -106,7 +106,7 @@ struct peano4::datamanagement::FaceMarker {
    */
   INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> normal(int i) const {
     tarch::la::Vector<DIMENSIONS, double> result(0.0);
-    int                                   index = i % DIMENSIONS;
+    const auto                            index = i % DIMENSIONS;
     result(index) += i < DIMENSIONS ? -h(index) : h(index);
     return result;
   }
@@ -119,7 +119,7 @@ struct peano4::datamanagement::FaceMarker {
    */
   INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> outerNormal(int i) const {
     tarch::la::Vector<DIMENSIONS, double> result(0.0);
-    int                                   index        = i % DIMENSIONS;
+    const auto                            index        = i % DIMENSIONS;
     bool                                  negativeSign = i < DIMENSIONS;
     if (not cellIsLocal) {
       negativeSign = not negativeSign;
@@ -138,7 +138,7 @@ struct peano4::datamanagement::FaceMarker {
    * Has a face been refined
    *
    * We do not really refine faces. We refine cells. Cells in turn are
-   * refined if and only if one of their adjacent vertices holds a refine
+   * refined if one of their adjacent vertices holds a refine
    * flag. Consequently, if one vertex adjacent to a face carries the
    * refine flag, the face will be refined as well. In this case, it is
    * not hanging.
@@ -167,7 +167,7 @@ struct peano4::datamanagement::FaceMarker {
   INLINE_METHOD tarch::la::Vector<DIMENSIONS, int> getRelativePositionWithinFatherCell(int i) const {
     assertion(i >= 0, i, toString());
     tarch::la::Vector<DIMENSIONS, int> result = relativePositionWithinFatherCell;
-    const int                          normal = i % DIMENSIONS;
+    const auto                         normal = i % DIMENSIONS;
     result(normal) += i >= DIMENSIONS ? 1 : 0;
     return result;
   }
@@ -186,7 +186,7 @@ struct peano4::datamanagement::FaceMarker {
    * should return (pos[0], pos[1]).
    */
   INLINE_METHOD tarch::la::Vector<DIMENSIONS - 1, int> getRelativePositionWithinFatherFace() const {
-    const int                              normal = getSelectedFaceNumber() % DIMENSIONS;
+    const auto                             normal = getSelectedFaceNumber() % DIMENSIONS;
     tarch::la::Vector<DIMENSIONS - 1, int> result = {
       normal == 0 ? relativePositionWithinFatherCell[1] : relativePositionWithinFatherCell[0]
 #if DIMENSIONS == 3
@@ -201,10 +201,16 @@ struct peano4::datamanagement::FaceMarker {
   /**
    * The term patch here refers to a 3x3 or 3x3x3 refinement. The routine
    * determines whether the face is on the boundary of this patch of not.
+   * A face is interior if it is on subcell 1 (inside in the patch) or
+   * on the right of subcell 0, or on the left of subcell 2.
    */
   INLINE_METHOD bool isInteriorFaceWithinPatch() const {
-    int normal = getSelectedFaceNumber() % DIMENSIONS;
-    return getRelativePositionWithinFatherCell()(normal) == 1 or getRelativePositionWithinFatherCell()(normal) == 2;
+    assertion(getSelectedFaceNumber() >= 0, toString());
+    const auto normal = getSelectedFaceNumber() % DIMENSIONS;
+    const auto faceLR = getSelectedFaceNumber() < DIMENSIONS; // 1 if left, 0 if right
+    return (
+      (relativePositionWithinFatherCell[normal] == 1) or (relativePositionWithinFatherCell[normal] == 2 * faceLR)
+    );
   }
 
   std::string toString() const;

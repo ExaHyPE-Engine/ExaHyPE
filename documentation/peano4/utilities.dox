@@ -15,24 +15,25 @@ CMake `DIMENSION` keyword (the supported values are listed in the
 places in the code where I need d-dimensional loops.
 
 Peano's `peano4` namespace offers a header
-`Loop` which comprises a set of macros that support d-dimensional loops.
-Details can be found in the source code documentatation within the file
-or online, but the collection of macros allows you to write code alike
+`Loop` which comprises a set of functions that support d-dimensional loops.
+Details can be found in the source code documentation within the file
+or online, but the collection of functions allows you to write code alike
 
 ~~~~~~~~~~~~~~~~~~~~~~~
-dfor(k, 20) { // d-dimensional loop over 20x20x20x... patch
+peano4::dForEach(20, [&](const tarch::la::Vector<DIMENSIONS, int>& k) { // d-dimensional loop over 20x20x20x... patch
   // There is now a d-dimensional vector k over integers which holds the
   // loop index. So we can write for example
-  const tarch::la::Vector<DIMENSIONS,double> somePosition =
+  const tarch::la::Vector<DIMENSIONS, double> somePosition =
     offset + tarch::la::convertScalar<double>(k) * h;
   [...]
-}
+});
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-There are also macros for loops skipping one dimension, or macros for
-particular iteration ranges (2,3,4) which are highly optimised through
-lookup tables. Finally, `Loop` hosts z-loops, i.e. loops which meander
-forth and back through an array similar to the Peano curve.
+There are also functions for loops skipping one dimension
+(peano4::dForEachExclusive), for the cube corners and the 3^d stencil
+(peano4::dForEachCorner and peano4::dForEachStencil), and z-loops
+(peano4::zForEach and peano4::zForEach3), i.e. loops which meander forth
+and back through an array similar to the Peano curve.
 
 To use the d-dimensional loops, you have to include
 
@@ -47,7 +48,7 @@ which are optimised to particular choices of d or array ranges.
 ### d-dimensional exclusive loops
 
 There's a variation of the d-dimensional loops which loops over all
-dimensions except one. I name this loop type `dfore`. Its usage is
+dimensions except one. This loop is peano4::dForEachExclusive. Its usage is
 straightforward: You again specify a counter name and you pass in the
 loop range. Let `k` be the counter name and `N` the range. You
 furthermore specify a dimension and you fix the value for this

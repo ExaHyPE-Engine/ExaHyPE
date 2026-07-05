@@ -1,207 +1,250 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "InterpolationTest.h"
 
-#include "../Interpolation.h"
-#include "../Restriction.h"
-
+#include "peano4/Loop.h"
 #include "peano4/grid/GridTraversalEvent.h"
+#include "toolbox/blockstructured/AMRRoutines.h"
 
-toolbox::blockstructured::tests::InterpolationTest::InterpolationTest():
-  TestCase("toolbox::blockstructured::tests::InterpolationTest") {
-}
+#include <algorithm>
+#include <vector>
 
+toolbox::blockstructured::tests::InterpolationTest::InterpolationTest() :
+  TestCase("toolbox::blockstructured::tests::InterpolationTest") {}
 
 void toolbox::blockstructured::tests::InterpolationTest::run() {
-  testMethod(testInterpolateHaloLayer_AoS_piecewise_constant_withSingleVolumePatch);
-  testMethod(testRestrictHaloLayer_AoS_averaging);
-  testMethod(testRestrictCellForBreakingDam);
-  testMethod(testInterpolateCellDataAssociatedToVolumesIntoOverlappingCell_linear);
-
-  toolbox::blockstructured::clearInterpolationOperatorCaches();
+  testMethod(testInterpolateHaloLayer);
+  testMethod(testInterpolateHaloLayerFromCoarseCell);
+  testMethod(testInterpolateCell);
 }
 
+void toolbox::blockstructured::tests::InterpolationTest::testInterpolateHaloLayer() {
+  // Unknowns == DIMENSIONS lets each axis carry a distinct linear ramp.
+  constexpr int NumberOfUnknowns    = DIMENSIONS;
+  constexpr int NumberOfDofsPerAxis = 7;
 
-void toolbox::blockstructured::tests::InterpolationTest::testInterpolateHaloLayer_AoS_piecewise_constant_withSingleVolumePatch() {
-  peano4::grid::GridTraversalEvent event;
-#if DIMENSIONS==2
-  event.setRelativePositionToFather( {0,0} );
+#if DIMENSIONS == 2
+  constexpr int FaceSize = 2 * NumberOfUnknowns * NumberOfDofsPerAxis;
 #else
-  event.setRelativePositionToFather( {0,0,0} );
+  constexpr int FaceSize = 2 * NumberOfUnknowns * NumberOfDofsPerAxis * NumberOfDofsPerAxis;
 #endif
-  peano4::datamanagement::FaceMarker faceMarker = event.getFaceMarker();
-  faceMarker.select(0);
+  double coarseGridFaceValues[FaceSize];
+  double fineGridFaceValues[FaceSize];
 
-  double coarseGridValues[] = {3.0, 7.0};
-  double fineGridValues[]   = {0.0, 0.0};
+  for (int normal = 0; normal < DIMENSIONS; normal++) {
+    auto serialiseIndex = [normal](tarch::la::Vector<DIMENSIONS, int> volume) {
+      int base  = NumberOfUnknowns;
+      int index = 0;
+      for (int d = 0; d < DIMENSIONS; d++) {
+        index += volume(d) * base;
+        if (d == normal) {
+          base *= 2;
+        } else {
+          base *= NumberOfDofsPerAxis;
+        }
+      }
+      return index;
+    };
 
-  toolbox::blockstructured::interpolateHaloLayer_AoS_piecewise_constant(
-    faceMarker,
-    1,
-    1,
-    1,
-    coarseGridValues,
-    fineGridValues
-  );
+    for (int side = 0; side < 2; side++) {
+      std::fill_n(coarseGridFaceValues, FaceSize, 0.);
+      peano4::dForEachExclusive(
+        NumberOfDofsPerAxis,
+        normal,
+        side,
+        [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
+          const auto index = serialiseIndex(volume);
+          for (int u = 0; u < NumberOfUnknowns; u++) {
+            coarseGridFaceValues[index + u] = volume[u];
+          }
+        }
+      );
 
-  validateNumericalEquals( fineGridValues[0], 3.0 );
-  validateNumericalEquals( fineGridValues[1], 7.0 );
-}
+      peano4::grid::GridTraversalEvent event;
+      peano4::dForEach(3, [&](const tarch::la::Vector<DIMENSIONS, int>& subCellIndex) {
+        event.setRelativePositionToFather(subCellIndex);
+        auto faceMarker = event.getFaceMarker();
+        faceMarker.select(normal + side * DIMENSIONS);
 
+        if (not faceMarker.isInteriorFaceWithinPatch()) {
+          std::fill_n(fineGridFaceValues, FaceSize, 0.);
+          toolbox::blockstructured::interpolateHaloLayer(
+            faceMarker,
+            coarseGridFaceValues,
+            fineGridFaceValues,
+            side,
+            NumberOfDofsPerAxis,
+            NumberOfUnknowns
+          );
 
-void toolbox::blockstructured::tests::InterpolationTest::testInterpolateCellDataAssociatedToVolumesIntoOverlappingCell_linear() {
-  #if DIMENSIONS==3
-  const int NumberOfUnknowns = 3;
-  const int SourcePatchSize = 4;
-  const int SourceHaloSize = 3;
-  const int DestinationPatchSize = 16;
-  const int DestinationHaloSize = 1;
-
-  int SourceSize = (SourcePatchSize+2*SourceHaloSize) * (SourcePatchSize+2*SourceHaloSize) * (SourcePatchSize+2*SourceHaloSize) * NumberOfUnknowns;
-  double* sourceData = new double[ SourceSize ];
-  for (int i=0; i<SourceSize; i++) sourceData[i] = 1.0;
-
-  int DestinationSize = (DestinationPatchSize+2*DestinationHaloSize) * (DestinationPatchSize+2*DestinationHaloSize) * (DestinationPatchSize+2*DestinationHaloSize) * NumberOfUnknowns;
-  double* destinationData = new double[ DestinationSize ];
-
-  interpolateCellDataAssociatedToVolumesIntoOverlappingCell_linear(
-    SourcePatchSize,
-    DestinationPatchSize,
-    SourceHaloSize,
-    DestinationHaloSize,
-    NumberOfUnknowns,
-    sourceData,
-    destinationData
-  );
-
-  for (int i=0; i<DestinationSize; i++) {
-    validateNumericalEqualsWithParams1( destinationData[i], 1.0, i );
+          peano4::dForEachExclusive(
+            NumberOfDofsPerAxis,
+            normal,
+            (1 - side),
+            [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
+              const auto index = serialiseIndex(volume);
+              for (int u = 0; u < NumberOfUnknowns; u++) {
+                validateNumericalEquals(fineGridFaceValues[index + u], 0.);
+              }
+            }
+          );
+          peano4::dForEachExclusive(
+            NumberOfDofsPerAxis,
+            normal,
+            side,
+            [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
+              const auto index = serialiseIndex(volume);
+              for (int u = 0; u < NumberOfUnknowns; u++) {
+                const auto expectedValue =
+                  (u == normal ? side : (NumberOfDofsPerAxis * subCellIndex[u] + volume[u]) / 3);
+                validateNumericalEquals(fineGridFaceValues[index + u], expectedValue);
+              }
+            }
+          );
+        }
+      });
+    }
   }
-
-  delete[] sourceData;
-  delete[] destinationData;
-  #endif
 }
 
+void toolbox::blockstructured::tests::InterpolationTest::testInterpolateHaloLayerFromCoarseCell() {
+  // Unknowns == DIMENSIONS lets each axis carry a distinct linear ramp.
+  constexpr int NumberOfUnknowns = DIMENSIONS;
 
-void toolbox::blockstructured::tests::InterpolationTest::testRestrictCellForBreakingDam() {
-#if DIMENSIONS==2
-  peano4::datamanagement::CellMarker cellMarker;
+  // A size divisible by 3 (6, not 7) is needed: the coarse source layer along the
+  // normal depends on side only when 3 divides the patch size, so a non-divisible
+  // size would leave that side dependence untested.
+  for (const auto numberOfDofsPerAxis : {6, 7}) {
+#if DIMENSIONS == 2
+    const int faceSize = 2 * NumberOfUnknowns * numberOfDofsPerAxis;
+    const int cellSize = NumberOfUnknowns * numberOfDofsPerAxis * numberOfDofsPerAxis;
+#else
+    const int faceSize = 2 * NumberOfUnknowns * numberOfDofsPerAxis * numberOfDofsPerAxis;
+    const int cellSize = NumberOfUnknowns * numberOfDofsPerAxis * numberOfDofsPerAxis * numberOfDofsPerAxis;
+#endif
+    std::vector<double> coarseGridCellValues(cellSize);
+    std::vector<double> fineGridFaceValues(faceSize);
 
-  double fineGridValues[] =
-      {
-        0.1, 0.2, 0.3, 0.4, 0.5,
-        0.1, 0.2, 0.3, 0.4, 0.5,
-        0.1, 0.2, 0.3, 0.4, 0.5,
-        0.0, 0.0, 0.0, 0.0, 0.0,
+    peano4::dForEach(numberOfDofsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
+      const auto index = NumberOfUnknowns * peano4::dLinearised(volume, numberOfDofsPerAxis);
+      for (int u = 0; u < NumberOfUnknowns; u++) {
+        coarseGridCellValues[index + u] = volume[u];
+      }
+    });
 
-        0.1, 0.2, 0.3, 0.4, 0.5,
-        0.1, 0.2, 0.3, 0.4, 0.5,
-        0.1, 0.2, 0.3, 0.4, 0.5,
-        0.0, 0.0, 0.0, 0.0, 0.0,
-
-        0.1, 0.2, 0.3, 0.4, 0.5,
-        0.1, 0.2, 0.3, 0.4, 0.5,
-        0.1, 0.2, 0.3, 0.4, 0.5,
-        0.0, 0.0, 0.0, 0.0, 0.0,
-
-        0.1, 0.2, 0.3, 0.4, 0.5,
-        0.1, 0.2, 0.3, 0.4, 0.5,
-        0.1, 0.2, 0.3, 0.4, 0.5,
-        0.0, 0.0, 0.0, 0.0, 0.0
+    for (int normal = 0; normal < DIMENSIONS; normal++) {
+      auto serialiseFaceIndex = [normal, numberOfDofsPerAxis](tarch::la::Vector<DIMENSIONS, int> volume) {
+        int base  = NumberOfUnknowns;
+        int index = 0;
+        for (int d = 0; d < DIMENSIONS; d++) {
+          index += volume(d) * base;
+          if (d == normal) {
+            base *= 2;
+          } else {
+            base *= numberOfDofsPerAxis;
+          }
+        }
+        return index;
       };
 
-  double coarseGridValues[4*4*5];
+      for (int side = 0; side < 2; side++) {
+        peano4::grid::GridTraversalEvent event;
+        peano4::dForEach(3, [&](const tarch::la::Vector<DIMENSIONS, int>& subCellIndex) {
+          event.setRelativePositionToFather(subCellIndex);
+          auto faceMarker = event.getFaceMarker();
+          faceMarker.select(normal + side * DIMENSIONS);
 
-  std::fill_n(coarseGridValues,4*4*5,0.0);
+          if (faceMarker.isInteriorFaceWithinPatch()) {
+            std::fill_n(fineGridFaceValues.data(), faceSize, 0.);
+            toolbox::blockstructured::interpolateHaloLayerFromCoarseCell(
+              faceMarker,
+              coarseGridCellValues.data(),
+              fineGridFaceValues.data(),
+              side,
+              numberOfDofsPerAxis,
+              NumberOfUnknowns
+            );
 
-  ::toolbox::blockstructured::restrictCell_AoS_averaging(
+            peano4::dForEachExclusive(
+              numberOfDofsPerAxis,
+              normal,
+              (1 - side),
+              [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
+                const auto index = serialiseFaceIndex(volume);
+                for (int u = 0; u < NumberOfUnknowns; u++) {
+                  validateNumericalEquals(fineGridFaceValues[index + u], 0.);
+                }
+              }
+            );
+            // With value==position the expected value equals the coarse source
+            // index (side dependent along the normal, see the routine).
+            const auto subCellPositionAlongNormal = faceMarker.getRelativePositionWithinFatherCell()[normal];
+            peano4::dForEachExclusive(
+              numberOfDofsPerAxis,
+              normal,
+              side,
+              [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
+                const auto index = serialiseFaceIndex(volume);
+                for (int u = 0; u < NumberOfUnknowns; u++) {
+                  const auto expectedValue = (u == normal)
+                    ? (numberOfDofsPerAxis * subCellPositionAlongNormal - (1 - side)) / 3
+                    : (numberOfDofsPerAxis * faceMarker.getRelativePositionWithinFatherCell()[u] + volume[u]) / 3;
+                  validateNumericalEquals(fineGridFaceValues[index + u], expectedValue);
+                }
+              }
+            );
+          }
+        });
+      }
+    }
+  }
+}
+
+void toolbox::blockstructured::tests::InterpolationTest::testInterpolateCell() {
+  // Unknowns == DIMENSIONS lets each axis carry a distinct linear ramp.
+  constexpr int NumberOfUnknowns    = DIMENSIONS;
+  constexpr int NumberOfDofsPerAxis = 7;
+
+#if DIMENSIONS == 2
+  constexpr int CellSize = NumberOfDofsPerAxis * NumberOfDofsPerAxis * NumberOfUnknowns;
+#else
+  constexpr int CellSize = NumberOfDofsPerAxis * NumberOfDofsPerAxis * NumberOfDofsPerAxis * NumberOfUnknowns;
+#endif
+  double coarseGridCellValues[CellSize];
+  double fineGridCellValues[CellSize];
+
+  peano4::dForEach(NumberOfDofsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
+    const auto index = NumberOfUnknowns * peano4::dLinearised(volume, NumberOfDofsPerAxis);
+    for (int u = 0; u < NumberOfUnknowns; u++) {
+      coarseGridCellValues[index + u] = volume[u];
+    }
+  });
+
+  peano4::grid::GridTraversalEvent event;
+  peano4::dForEach(3, [&](const tarch::la::Vector<DIMENSIONS, int>& subCellIndex) {
+    event.setRelativePositionToFather(subCellIndex);
+    const auto cellMarker = event.getCellMarker();
+
+    toolbox::blockstructured::interpolateCell(
       cellMarker,
-      4,
-      5,
-      fineGridValues,
-      coarseGridValues
-  );
+      coarseGridCellValues,
+      fineGridCellValues,
+      NumberOfDofsPerAxis,
+      NumberOfUnknowns
+    );
 
-  validateNumericalEquals( coarseGridValues[0*5+0], 0.1 );
-  validateNumericalEquals( coarseGridValues[0*5+1], 0.2 );
-  validateNumericalEquals( coarseGridValues[0*5+2], 0.3 );
-  validateNumericalEquals( coarseGridValues[0*5+3], 0.4 );
-  validateNumericalEquals( coarseGridValues[0*5+4], 0.5 );
-
-  validateNumericalEquals( coarseGridValues[1*5+0], 0.0 );
-  validateNumericalEquals( coarseGridValues[1*5+1], 0.0 );
-  validateNumericalEquals( coarseGridValues[1*5+2], 0.0 );
-  validateNumericalEquals( coarseGridValues[1*5+3], 0.0 );
-  validateNumericalEquals( coarseGridValues[1*5+4], 0.0 );
-
-  validateNumericalEquals( coarseGridValues[2*5+0], 0.0 );
-  validateNumericalEquals( coarseGridValues[2*5+1], 0.0 );
-  validateNumericalEquals( coarseGridValues[2*5+2], 0.0 );
-  validateNumericalEquals( coarseGridValues[2*5+3], 0.0 );
-  validateNumericalEquals( coarseGridValues[2*5+4], 0.0 );
-
-  validateNumericalEquals( coarseGridValues[4*5+0], 0.1/3.0 );
-  validateNumericalEquals( coarseGridValues[4*5+1], 0.2/3.0 );
-  validateNumericalEquals( coarseGridValues[4*5+2], 0.3/3.0 );
-  validateNumericalEquals( coarseGridValues[4*5+3], 0.4/3.0 );
-  validateNumericalEquals( coarseGridValues[4*5+4], 0.5/3.0 );
-  #endif
-}
-
-
-void toolbox::blockstructured::tests::InterpolationTest::testRestrictHaloLayer_AoS_averaging() {
-  #if DIMENSIONS==2
-  peano4::grid::GridTraversalEvent    event;
-  event.setRelativePositionToFather(0,0);
-  event.setRelativePositionToFather(1,0);
-  peano4::datamanagement::FaceMarker  faceMarker = event.getFaceMarker();
-
-  double fineGridValues[] =
-      {
-       0.100047, 0.000933957, 0,0,0.00493399,
-       0.100045, 0.000870917, 0,0,0.0045799,
-       0.100039, 0.000801622, 0,0,0.00422816,
-       0.100045, 0.00081321,  0,0,0.0042177,
-       0.100047, 0.000933957, 0,0,0.00493399,
-       0.100045, 0.000870917, 2.71051e-20,0,0.0045799,
-       0.100039, 0.000801622, 0,0,0.00422816,
-       0.100045,0.00081321,0,0,0.0042177
-      };
-  double coarseGridValues[] =
-      {
-        0,0,0,0,0,
-        0,0,0,0,0,
-        0,0,0,0,0,
-        0,0,0,0,0,
-        0,0,0,0,0,
-        0,0,0,0,0,
-        0,0,0,0,0,
-        0,0,0,0,0
-      };
-
-  toolbox::blockstructured::restrictHaloLayer_AoS_averaging(
-    faceMarker,
-    4, // int                                       numberOfDoFsPerAxisInPatch,
-    1, // int                                       overlap,
-    5, // int                                       unknowns,
-    fineGridValues, coarseGridValues
-  );
-
-  validateNumericalEquals( coarseGridValues[0*5+2], 0.0 );
-  validateNumericalEquals( coarseGridValues[0*5+3], 0.0 );
-  validateNumericalEquals( coarseGridValues[1*5+2], 0.0 );
-  validateNumericalEquals( coarseGridValues[1*5+3], 0.0 );
-  validateNumericalEquals( coarseGridValues[2*5+2], 0.0 );
-  validateNumericalEquals( coarseGridValues[2*5+3], 0.0 );
-  validateNumericalEquals( coarseGridValues[3*5+2], 0.0 );
-  validateNumericalEquals( coarseGridValues[3*5+3], 0.0 );
-  validateNumericalEquals( coarseGridValues[4*5+2], 0.0 );
-  validateNumericalEquals( coarseGridValues[4*5+3], 0.0 );
-  validateNumericalEquals( coarseGridValues[5*5+2], 0.0 );
-  validateNumericalEquals( coarseGridValues[5*5+3], 0.0 );
-  validateNumericalEquals( coarseGridValues[6*5+2], 0.0 );
-  validateNumericalEquals( coarseGridValues[6*5+3], 0.0 );
-  validateNumericalEquals( coarseGridValues[7*5+2], 0.0 );
-  validateNumericalEquals( coarseGridValues[7*5+3], 0.0 );
-
-  #endif
+    peano4::dForEach(NumberOfDofsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
+      const auto index = NumberOfUnknowns * peano4::dLinearised(volume, NumberOfDofsPerAxis);
+      for (int u = 0; u < NumberOfUnknowns; u++) {
+        validateNumericalEqualsWithParams4(
+          fineGridCellValues[index + u],
+          (NumberOfDofsPerAxis * subCellIndex[u] + volume[u]) / 3,
+          subCellIndex,
+          index,
+          volume,
+          u
+        );
+      }
+    });
+  });
 }

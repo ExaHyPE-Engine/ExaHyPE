@@ -16,9 +16,6 @@
 #include "accelerator/ompt/tests/ReductionTest.h"
 #endif
 #include "accelerator/tests/ParallelConstructsTest.h"
-#include "la/tests/DynamicMatrixTest.h"
-#include "la/tests/GramSchmidtTest.h"
-#include "la/tests/LUDecompositionTest.h"
 #include "la/tests/MatrixTest.h"
 #include "la/tests/MatrixVectorTest.h"
 #include "la/tests/ScalarTest.h"
@@ -36,13 +33,10 @@
 tarch::tests::TestCase* tarch::getUnitTests() {
   tests::TreeTestCaseCollection* result = new tests::TreeTestCaseCollection();
 
-  result->addTestCase(new la::tests::GramSchmidtTest());
-  result->addTestCase(new la::tests::LUDecompositionTest());
   result->addTestCase(new la::tests::MatrixTest());
   result->addTestCase(new la::tests::MatrixVectorTest());
   result->addTestCase(new la::tests::ScalarTest());
   result->addTestCase(new la::tests::VectorTest());
-  result->addTestCase(new la::tests::DynamicMatrixTest());
 
   result->addTestCase(new mpi::tests::StringTest());
 

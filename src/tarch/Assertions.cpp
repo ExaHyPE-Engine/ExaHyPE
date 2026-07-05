@@ -3,7 +3,6 @@
 #include "tarch/Assertions.h"
 
 #if PEANO_ASSERTIONS
-
 #include "tarch/instrumentation/Error.h"
 
 #include <atomic>
@@ -31,16 +30,11 @@ namespace tarch {
     tarch::mpi::abort(-1);
   }
 } // namespace tarch
-
 #endif
 
 namespace {
-  [[maybe_unused]] void compileAssertionMacro(
-    const int         value,
-    const int         expected,
-    const double      otherValue,
-    const char* const message
-  ) {
+  [[maybe_unused]] void
+  compileAssertionMacro(const int value, const int expected, const double otherValue, const char* const message) {
     assertion(value == expected);
     assertion(value == expected, value, expected, otherValue, message);
   }

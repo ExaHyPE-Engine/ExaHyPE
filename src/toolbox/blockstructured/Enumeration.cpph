@@ -1,61 +1,27 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-inline GPU_CALLABLE_METHOD int toolbox::blockstructured::serialiseVoxelIndexInOverlap(
+INLINE_METHOD GPU_CALLABLE_METHOD int toolbox::blockstructured::serialiseVoxelIndexInOverlap(
   const tarch::la::Vector<DIMENSIONS, int>& overlapCell,
-  int                                       numberOfDoFsPerAxisInPatch,
+  int                                       numberOfDofsPerAxis,
   int                                       overlap,
   int                                       normal
 ) {
-  assertion(normal >= 0, overlapCell, numberOfDoFsPerAxisInPatch, overlap, normal);
-  assertion(normal < DIMENSIONS, overlapCell, numberOfDoFsPerAxisInPatch, overlap, normal);
-
+  assertion(normal >= 0, overlapCell, numberOfDofsPerAxis, overlap, normal);
+  assertion(normal < DIMENSIONS, overlapCell, numberOfDofsPerAxis, overlap, normal);
   int base   = 1;
   int result = 0;
   for (int d = 0; d < DIMENSIONS; d++) {
     result += overlapCell(d) * base;
     if (d == normal) {
-      assertion(overlapCell(d) >= 0, overlapCell, numberOfDoFsPerAxisInPatch, overlap, normal);
-      assertion(overlapCell(d) < 2 * overlap, overlapCell, numberOfDoFsPerAxisInPatch, overlap, normal);
+      assertion(overlapCell(d) >= 0, overlapCell, numberOfDofsPerAxis, overlap, normal);
+      assertion(overlapCell(d) < 2 * overlap, overlapCell, numberOfDofsPerAxis, overlap, normal);
       base *= overlap * 2;
     } else {
-      assertion(overlapCell(d) >= 0, overlapCell, numberOfDoFsPerAxisInPatch, overlap, normal);
-      assertion(overlapCell(d) < numberOfDoFsPerAxisInPatch, overlapCell, numberOfDoFsPerAxisInPatch, overlap, normal);
-      base *= numberOfDoFsPerAxisInPatch;
+      assertion(overlapCell(d) >= 0, overlapCell, numberOfDofsPerAxis, overlap, normal);
+      assertion(overlapCell(d) < numberOfDofsPerAxis, overlapCell, numberOfDofsPerAxis, overlap, normal);
+      base *= numberOfDofsPerAxis;
     }
   }
   return result;
-}
-
-inline GPU_CALLABLE_METHOD int toolbox::blockstructured::serialisePatchIndexInOverlap(
-  const tarch::la::Vector<DIMENSIONS, int>& patchIndex,
-  int                                       normal
-) {
-  assertion(normal >= 0, patchIndex, normal);
-  assertion(normal < DIMENSIONS, patchIndex, normal);
-
-  int base   = 1;
-  int result = 0;
-  for (int d = 0; d < DIMENSIONS; d++) {
-    if (d != normal) {
-      result += patchIndex(d) * base;
-      assertion(patchIndex(d) >= 0, patchIndex, normal);
-      assertion(patchIndex(d) < 3, patchIndex, normal);
-      base *= 3;
-    }
-  }
-  return result;
-}
-
-inline GPU_CALLABLE_METHOD int toolbox::blockstructured::serialiseMarkerIn3x3PatchAssembly(
-  const tarch::la::Vector<DIMENSIONS, int>& markerIndex,
-  int                                       numberOfDoFsPerAxisInPatch
-) {
-#if DIMENSIONS == 2
-  const int patchSize = numberOfDoFsPerAxisInPatch * numberOfDoFsPerAxisInPatch;
-  return (markerIndex(0) + markerIndex(1) * 3) * patchSize;
-#else
-  const int patchSize = numberOfDoFsPerAxisInPatch * numberOfDoFsPerAxisInPatch * numberOfDoFsPerAxisInPatch;
-  return (markerIndex(0) + markerIndex(1) * 3 + markerIndex(2) * 3 * 3) * patchSize;
-#endif
 }

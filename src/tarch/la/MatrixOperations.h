@@ -81,8 +81,8 @@ namespace tarch::la {
    *
    * @f$ A_{ij} \gets A_{ij}^{-1} @f$
    *
-   * which is not @f$ A^{-1} @f$. If you want to have the inverse, you have
-   * to look, for example, into LUDecomposition.
+   * which is not @f$ A^{-1} @f$. If you want the actual inverse, use
+   * tarch::la::invert() instead.
    *
    * @see tarch::la::invert()
    */

@@ -14,8 +14,11 @@ int exahype2::fv::particles::interpolation::_interpolationMethod = 0;
 // Initialization Function
 // ================================================================================================
 
-void exahype2::fv::particles::interpolation::
-  setGlobalInterpolationParameters(int voxelsPerAxis, int unknownsPerVoxel, int interpolationMethod) {
+void exahype2::fv::particles::interpolation::setGlobalInterpolationParameters(
+  int voxelsPerAxis,
+  int unknownsPerVoxel,
+  int interpolationMethod
+) {
   _voxelsPerAxis       = voxelsPerAxis;
   _unknownsPerVoxel    = unknownsPerVoxel;
   _interpolationMethod = interpolationMethod;
@@ -99,40 +102,42 @@ double exahype2::fv::particles::interpolation::internal::projectValueOntoParticl
   double result     = 0.0;
   double sumWeights = 0.0;
 
-  dfor2(k) tarch::la::Vector<DIMENSIONS, int> currentVoxel = ijk + k;
-  // Bounds check
-  bool inside = true;
-  for (int d = 0; d < DIMENSIONS; d++) {
-    if (currentVoxel(d) < 0 || currentVoxel(d) >= voxelsPerAxis) {
-      inside = false;
-      break;
+  peano4::dForEachCorner([&](const tarch::la::Vector<DIMENSIONS, int>& k, int kScalar) {
+    tarch::la::Vector<DIMENSIONS, int> currentVoxel = ijk + k;
+    // Bounds check
+    bool inside = true;
+    for (int d = 0; d < DIMENSIONS; d++) {
+      if (currentVoxel(d) < 0 or currentVoxel(d) >= voxelsPerAxis) {
+        inside = false;
+        break;
+      }
     }
-  }
-  if (!inside)
-    continue;
+    if (not inside) {
+      return;
+    }
 
-  // Compute voxel center
-  tarch::la::Vector<DIMENSIONS, double> xVoxel;
-  for (int d = 0; d < DIMENSIONS; d++) {
-    xVoxel(d) = offset(d) + h * (currentVoxel(d) + 0.5);
-  }
+    // Compute voxel center
+    tarch::la::Vector<DIMENSIONS, double> xVoxel;
+    for (int d = 0; d < DIMENSIONS; d++) {
+      xVoxel(d) = offset(d) + h * (currentVoxel(d) + 0.5);
+    }
 
-  // Compute 1D linear weights
-  double weight = 1.0;
-  for (int d = 0; d < DIMENSIONS; d++) {
-    double w = 1.0 - std::abs(particleX(d) - xVoxel(d)) / h;
-    weight *= std::max(0.0, w);
-  }
+    // Compute 1D linear weights
+    double weight = 1.0;
+    for (int d = 0; d < DIMENSIONS; d++) {
+      double w = 1.0 - std::abs(particleX(d) - xVoxel(d)) / h;
+      weight *= std::max(0.0, w);
+    }
 
-  if (weight > 1e-10) {
-    int idx = peano4::dLinearised(currentVoxel, voxelsPerAxis);
-    result += weight * Q[idx * unknownsPerVoxel + unknown];
-    sumWeights += weight;
-  }
-  enddforx
+    if (weight > 1e-10) {
+      int idx = peano4::dLinearised(currentVoxel, voxelsPerAxis);
+      result += weight * Q[idx * unknownsPerVoxel + unknown];
+      sumWeights += weight;
+    }
+  });
 
-    // Normalize
-    if (sumWeights > 1e-10) {
+  // Normalize
+  if (sumWeights > 1e-10) {
     result /= sumWeights;
   }
 

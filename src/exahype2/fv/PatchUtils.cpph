@@ -11,17 +11,26 @@ void exahype2::fv::copyHalfOfHalo(
   const T* NOALIAS srcQ,
   T* NOALIAS       destQ
 ) {
-  dfore(k, numberOfGridCellsPerPatchPerAxis, normal, 0) {
-    for (int i = (isRightLayer ? haloSize : 0); i < (isRightLayer ? 2 * haloSize : haloSize); i++) {
-      tarch::la::Vector<DIMENSIONS, int> overlapCell = k;
-      overlapCell(normal)                            = i;
-      const int index                                = toolbox::blockstructured::
-        serialiseVoxelIndexInOverlap(overlapCell, numberOfGridCellsPerPatchPerAxis, haloSize, normal);
-      for (int j = 0; j < unknownsPlusAuxiliaryVariables; j++) {
-        destQ[index * unknownsPlusAuxiliaryVariables + j] = srcQ[index * unknownsPlusAuxiliaryVariables + j];
+  peano4::dForEachExclusive(
+    numberOfGridCellsPerPatchPerAxis,
+    normal,
+    0,
+    [&](const tarch::la::Vector<DIMENSIONS, int>& k) {
+      for (int i = (isRightLayer ? haloSize : 0); i < (isRightLayer ? 2 * haloSize : haloSize); i++) {
+        tarch::la::Vector<DIMENSIONS, int> overlapCell = k;
+        overlapCell(normal)                            = i;
+        const int index                                = toolbox::blockstructured::serialiseVoxelIndexInOverlap(
+          overlapCell,
+          numberOfGridCellsPerPatchPerAxis,
+          haloSize,
+          normal
+        );
+        for (int j = 0; j < unknownsPlusAuxiliaryVariables; j++) {
+          destQ[index * unknownsPlusAuxiliaryVariables + j] = srcQ[index * unknownsPlusAuxiliaryVariables + j];
+        }
       }
     }
-  }
+  );
 }
 
 template <typename T>
@@ -37,7 +46,7 @@ void exahype2::fv::validatePatch(
   double*                             maxValues
 ) {
   const int PatchSize = numberOfVolumesPerAxisInPatch + 2 * haloSize;
-  dfor(k, PatchSize) {
+  peano4::dForEach(PatchSize, [&](const tarch::la::Vector<DIMENSIONS, int>& k) {
     int index = peano4::dLinearised(k, PatchSize) * (unknowns + auxiliaryVariables);
 
     int outsidePatchAlongCoordinateAxis = 0;
@@ -63,16 +72,11 @@ void exahype2::fv::validatePatch(
         if (triggerNonCriticalAssertion) {
           if (not isValid) {
             std::ostringstream details;
-            details << "Q[entry]=" << Q[entry]
-                    << ", unknowns=" << unknowns
-                    << ", auxiliaryVariables=" << auxiliaryVariables
-                    << ", isDiagonal=" << isDiagonal
-                    << ", haloSize=" << haloSize
-                    << ", entry=" << entry
-                    << ", numberOfVolumesPerAxisInPatch=" << numberOfVolumesPerAxisInPatch
-                    << ", k=" << k
-                    << ", unknown=" << i
-                    << ", location=" << location;
+            details << "Q[entry]=" << Q[entry] << ", unknowns=" << unknowns
+                    << ", auxiliaryVariables=" << auxiliaryVariables << ", isDiagonal=" << isDiagonal
+                    << ", haloSize=" << haloSize << ", entry=" << entry
+                    << ", numberOfVolumesPerAxisInPatch=" << numberOfVolumesPerAxisInPatch << ", k=" << k
+                    << ", unknown=" << i << ", location=" << location;
             ::tarch::triggerNonCriticalAssertion(
               __FILE__,
               __LINE__,
@@ -99,5 +103,5 @@ void exahype2::fv::validatePatch(
         }
       }
     }
-  }
+  });
 }

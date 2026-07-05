@@ -67,15 +67,14 @@ class BackupPatchOverlap(ActionSet):
   __Template = """
     if ({GUARD_PREDICATE}) {{
       int counter = 0;
-      dfore(k,{DOFS_PER_AXIS},0,0) {{
-        for (int i=0; i<{OVERLAP}*2; i++) {{
-          for (int j=0; j<{UNKNOWNS}; j++) {{
-            // assertion( {FACES_ACCESSOR_IN}.data()[counter]=={FACES_ACCESSOR_IN}.data()[counter], k,i,j, marker.toString() );
+      peano4::dForEachExclusive({DOFS_PER_AXIS}, 0, 0, [&](const tarch::la::Vector<DIMENSIONS, int>& k) {{
+        for (int i = 0; i < {OVERLAP} * 2; i++) {{
+          for (int j = 0; j < {UNKNOWNS}; j++) {{
             {FACES_ACCESSOR_OUT}.data()[counter] = {FACES_ACCESSOR_IN}.data()[counter];
             counter++;
           }}
         }}
-      }}
+      }});
     }}
 """
 

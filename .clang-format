@@ -16,7 +16,6 @@ DerivePointerAlignment: false
 PointerAlignment: Left
 ReferenceAlignment: Pointer
 QualifierAlignment: Left
-# Prefer readable vertical layouts for long calls/signatures over column-shaped alignment.
 AlignAfterOpenBracket: BlockIndent
 AlignConsecutiveAssignments:
   Enabled: true
@@ -32,8 +31,10 @@ AlignConsecutiveDeclarations:
   AlignFunctionPointers: false
 AlignConsecutiveMacros: None
 AlignEscapedNewlines: DontAlign
-AlignOperands: Align
-AlignTrailingComments: true
+AlignOperands: DontAlign
+AlignTrailingComments:
+  Kind: Always
+  OverEmptyLines: 0
 BinPackArguments: false
 BinPackParameters: false
 AllowAllArgumentsOnNextLine: false
@@ -45,18 +46,16 @@ AllowShortFunctionsOnASingleLine: All
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortLambdasOnASingleLine: All
 AllowShortLoopsOnASingleLine: false
-AlwaysBreakAfterDefinitionReturnType: None
-AlwaysBreakAfterReturnType: None
 AlwaysBreakBeforeMultilineStrings: false
-AlwaysBreakTemplateDeclarations: Yes
-BreakBeforeBinaryOperators: None
+BreakAfterReturnType: None
+BreakBeforeBinaryOperators: NonAssignment
 BreakBeforeBraces: Attach
-BreakBeforeConceptDeclarations: true
+BreakBeforeConceptDeclarations: Always
 BreakBeforeTernaryOperators: true
 BreakConstructorInitializers: AfterColon
 BreakStringLiterals: false
+BreakTemplateDeclarations: Yes
 PackConstructorInitializers: Never
-# Prefer breaking before the qualified function name over splitting a long return type.
 PenaltyReturnTypeOnItsOwnLine: 60
 PenaltyBreakBeforeFirstCallParameter: 0
 PenaltyBreakAssignment: 2
@@ -75,10 +74,15 @@ ForEachMacros:
   - BOOST_FOREACH
 IfMacros:
   - KJ_IF_MAYBE
-LambdaBodyIndentation: OuterScope
+LambdaBodyIndentation: Signature
 MacroBlockBegin: ''
 MacroBlockEnd: ''
 MaxEmptyLinesToKeep: 1
+KeepEmptyLines:
+  AtEndOfFile: false
+  AtStartOfBlock: false
+  AtStartOfFile: false
+InsertNewlineAtEOF: true
 ReflowComments: true
 RemoveBracesLLVM: false
 SeparateDefinitionBlocks: Leave
@@ -103,7 +107,7 @@ IncludeCategories:
 IncludeIsMainRegex: '(_test|Test)?$'
 IncludeIsMainSourceRegex: ''
 SortIncludes: true
-SortUsingDeclarations: true
+SortUsingDeclarations: LexicographicNumeric
 SpaceAfterCStyleCast: false
 SpaceAfterLogicalNot: false
 SpaceAfterTemplateKeyword: true
@@ -115,16 +119,13 @@ SpaceBeforeParens: ControlStatements
 SpaceBeforeRangeBasedForLoopColon: true
 SpaceBeforeSquareBrackets: false
 SpaceInEmptyBlock: false
-SpaceInEmptyParentheses: false
 SpacesBeforeTrailingComments: 1
 SpacesInAngles: Never
-SpacesInConditionalStatement: false
 SpacesInContainerLiterals: false
-SpacesInCStyleCastParentheses: false
 SpacesInLineCommentPrefix:
   Minimum: 1
   Maximum: -1
-SpacesInParentheses: false
+SpacesInParens: Never
 SpacesInSquareBrackets: false
 StatementAttributeLikeMacros:
   - Q_EMIT

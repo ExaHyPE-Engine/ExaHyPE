@@ -16,7 +16,6 @@ void toolbox::particles::initWithData(
   double                                       searchRadius,
   const std::vector<double>&                   initialData
 ) {
-
 #if PEANO_DEBUG
   particle.setDebugX(x);
   particle.setDebugH(0.0);
@@ -43,7 +42,6 @@ void toolbox::particles::initWithData(
 // Original init function remains unchanged
 template <class T>
 void toolbox::particles::init(T& particle, const tarch::la::Vector<DIMENSIONS, double>& x, double searchRadius) {
-
 #if PEANO_DEBUG
   particle.setDebugX(x);
   particle.setDebugH(0.0);
@@ -78,10 +76,10 @@ std::vector<T*> toolbox::particles::createEquallySpacedParticles(
   if (particlesPerAxis > 0) {
     const double particleSpacing = voxelH(0) / particlesPerAxis;
 
-    const tarch::la::Vector<DIMENSIONS, double>
-      offset = voxelX - 0.5 * areaOfGridSpannedByCellLocalCartesianGridAlongOneAxis;
+    const tarch::la::Vector<DIMENSIONS, double> offset =
+      voxelX - 0.5 * areaOfGridSpannedByCellLocalCartesianGridAlongOneAxis;
 
-    dfor(k, particlesPerAxis) {
+    peano4::dForEach(particlesPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& k) {
       tarch::la::Vector<DIMENSIONS, double> x = offset + particleSpacing * tarch::la::convertScalar<double>(k);
       T*                                    newParticle = new T();
 
@@ -93,12 +91,11 @@ std::vector<T*> toolbox::particles::createEquallySpacedParticles(
 
       init(*newParticle, x, 0.9 * tarch::la::min(voxelH));
       result.push_back(newParticle);
-    }
+    });
   }
 
   return result;
 }
-
 
 template <class T>
 std::vector<T*> toolbox::particles::createParticlesAlignedWithGlobalCartesianMesh(
@@ -116,12 +113,10 @@ std::vector<T*> toolbox::particles::createParticlesAlignedWithGlobalCartesianMes
   tarch::la::Vector<DIMENSIONS, int>    particlesPerAxis;
   tarch::la::Vector<DIMENSIONS, double> firstParticleX;
   for (int d = 0; d < DIMENSIONS; d++) {
-    int leftParticleNumberAlongAxis = static_cast<int>(
-      std::round((voxelX(d) - 0.5 * voxelH(d) - biasedOffset(d)) / spacing)
-    );
-    int rightParticleNumberAlongAxis = static_cast<int>(
-      std::round((voxelX(d) + 0.5 * voxelH(d) - biasedOffset(d)) / spacing)
-    );
+    int leftParticleNumberAlongAxis =
+      static_cast<int>(std::round((voxelX(d) - 0.5 * voxelH(d) - biasedOffset(d)) / spacing));
+    int rightParticleNumberAlongAxis =
+      static_cast<int>(std::round((voxelX(d) + 0.5 * voxelH(d) - biasedOffset(d)) / spacing));
 
     double leftX  = biasedOffset(d) + spacing * leftParticleNumberAlongAxis;
     double rightX = biasedOffset(d) + spacing * rightParticleNumberAlongAxis;
@@ -139,7 +134,7 @@ std::vector<T*> toolbox::particles::createParticlesAlignedWithGlobalCartesianMes
 
   const double RelativeAccuracyForGeometricChecks = 0.01 * voxelH(0);
 
-  dfor(k, particlesPerAxis) {
+  peano4::dForEach(particlesPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& k) {
     tarch::la::Vector<DIMENSIONS, double> x = firstParticleX + spacing * tarch::la::convertScalar<double>(k);
 
     T* newParticle = new T();
@@ -152,7 +147,7 @@ std::vector<T*> toolbox::particles::createParticlesAlignedWithGlobalCartesianMes
 
     init(*newParticle, x, 0.9 * tarch::la::min(voxelH));
     result.push_back(newParticle);
-  }
+  });
 
   return result;
 }

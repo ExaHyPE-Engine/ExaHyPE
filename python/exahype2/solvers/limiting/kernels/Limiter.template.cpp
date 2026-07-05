@@ -273,7 +273,7 @@ bool {{FULL_QUALIFIED_NAMESPACE}}::isPhysicallyAdmissible(
   bool result = true;
 
   int linearisedIndex = 0;
-  dfor(index, {{NUMBER_OF_DOF}}) {
+  for (auto index = peano4::dStartVector(); peano4::dCompare(index, {{NUMBER_OF_DOF}}); peano4::dIncrement(index, {{NUMBER_OF_DOF}})) {
     tarch::la::Vector<DIMENSIONS, double> relativeNodePosition;
     relativeNodePosition(0) = Quadrature<{{COMPUTE_PRECISION}}>::nodes[index(0)];
     relativeNodePosition(1) = Quadrature<{{COMPUTE_PRECISION}}>::nodes[index(1)];
@@ -288,7 +288,7 @@ bool {{FULL_QUALIFIED_NAMESPACE}}::isPhysicallyAdmissible(
       timeStamp
     );
 
-    if (!result) {
+    if (not result) {
       return false;
     }
 

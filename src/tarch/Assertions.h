@@ -5,7 +5,6 @@
 #include "tarch/CompilerSpecificSettings.h"
 
 #if PEANO_ASSERTIONS
-
 #include "tarch/accelerator/accelerator.h"
 
 #include <iomanip>
@@ -46,35 +45,38 @@ namespace tarch {
 #define TARCH_ASSERTION_STRINGIFY_IMPLEMENTATION(x) #x
 #define TARCH_ASSERTION_STRINGIFY(x) TARCH_ASSERTION_STRINGIFY_IMPLEMENTATION(x)
 
+// clang-format off
 #define assertion(expr, ...) \
   if (!(expr)) { \
     COMPILE_IF_ON_HOST( \
       std::ostringstream assertionMessage; \
-      assertionMessage \
-        << std::scientific << std::setprecision(20) << "Assertion in file " << __FILE__ << ", line " << __LINE__ \
-        << " failed: " << #expr; \
-      auto assertionAppendParameters = [&](const auto&... parameters) { \
-        if constexpr (sizeof...(parameters) > 0) { \
-          assertionMessage << "\nParameter values:"; \
-          assertionMessage << "\n  " << std::left << std::setw(8) << "Index" << " | Value"; \
-          assertionMessage << "\n  " << std::left << std::setw(8) << "-----" << " | -----"; \
-          int  parameterNumber          = 0; \
-          auto assertionAppendParameter = [&](const auto& parameter) { \
-            assertionMessage << "\n  " << std::left << std::setw(8) << parameterNumber++ << " | " << parameter; \
-          }; \
-          (assertionAppendParameter(parameters), ...); \
-        } \
-      }; \
+      assertionMessage << std::scientific << std::setprecision(20) << "Assertion in file " << __FILE__ << ", line " \
+                       << __LINE__ << " failed: " << #expr; \
+      auto assertionAppendParameters = \
+        [&](const auto&... parameters) { \
+          if constexpr (sizeof...(parameters) > 0) { \
+            assertionMessage << "\nParameter values:"; \
+            assertionMessage << "\n  " << std::left << std::setw(8) << "Index" << " | Value"; \
+            assertionMessage << "\n  " << std::left << std::setw(8) << "-----" << " | -----"; \
+            int  parameterNumber          = 0; \
+            auto assertionAppendParameter = [&](const auto& parameter) { \
+              assertionMessage << "\n  " << std::left << std::setw(8) << parameterNumber++ << " | " << parameter; \
+            }; \
+            (assertionAppendParameter(parameters), ...); \
+          } \
+        }; \
       assertionAppendParameters(__VA_ARGS__); \
       tarch::triggerAssertion(assertionMessage.str()); \
     ) \
     COMPILE_IF_ON_DEVICE( \
       tarch::accelerator::abort( \
-        "Assertion in file " __FILE__ ", line " TARCH_ASSERTION_STRINGIFY(__LINE__) " failed: " #expr "\n" \
-        __VA_OPT__("  Parameters: " #__VA_ARGS__ "\n") \
+        "Assertion in file " __FILE__ \
+        ", line " TARCH_ASSERTION_STRINGIFY(__LINE__) " failed: " #expr \
+        "\n" __VA_OPT__("  Parameters: " #__VA_ARGS__ "\n") \
       ); \
     ) \
   }
+// clang-format on
 #else
 #define assertion(...)
 #endif

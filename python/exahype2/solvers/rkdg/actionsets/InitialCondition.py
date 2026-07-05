@@ -11,7 +11,7 @@ class InitialCondition(AbstractRungeKuttaDGActionSet):
     TemplateInitialCondition = """
   if ({{PREDICATE}}) { 
     int linearisedIndex = 0;
-    dfor( index, {{DG_ORDER}}+1 ) {
+    peano4::dForEach({{DG_ORDER}} + 1, [&](const tarch::la::Vector<DIMENSIONS, int>& index) {
       repositories::{{SOLVER_INSTANCE}}.initialCondition(
         fineGridCell{{UNKNOWN_IDENTIFIER}}.data() + linearisedIndex,
         ::exahype2::dg::getQuadraturePoint(
@@ -20,8 +20,8 @@ class InitialCondition(AbstractRungeKuttaDGActionSet):
         marker.getH()
       );
       linearisedIndex += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    }
-    
+    });
+
     // relevant for tracing et al which kicks in if and only if cell has been
     // updated
     fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);

@@ -177,7 +177,7 @@ void peano4::grid::Spacetree::traverse(GridTraversalObserver& observer) {
   const bool isFirstTraversal = _spacetreeState == SpacetreeState::NewRoot;
 
   GridVertex vertices[TWO_POWER_D];
-  dfor2(k)
+  peano4::dForEachCorner([&](const tarch::la::Vector<DIMENSIONS, int>& k, int kScalar) {
     std::array<int, TWO_POWER_D> adjacentRanks;
     adjacentRanks.fill(-1);
     adjacentRanks[TWO_POWER_D - 1 - kScalar] = 0;
@@ -192,11 +192,11 @@ void peano4::grid::Spacetree::traverse(GridTraversalObserver& observer) {
     );
     vertices[kScalar].setFlag(GridVertex::HasBeenParentOfSubtreeVertexInPreviousTreeSweep, true);
     logDebug("Create " << vertices[kScalar].toString() << " for tree " << _id);
-  enddforx
+  });
 
   for (int d = 0; d < DIMENSIONS; d++) {
     if (_periodicBC[d]) {
-      dfor2(vertex) dfor2(entries) tarch::la::Vector<DIMENSIONS, int> entry = entries;
+      peano4::dForEachCorner([&](const tarch::la::Vector<DIMENSIONS, int>& vertex, int vertexScalar) { peano4::dForEachCorner([&](const tarch::la::Vector<DIMENSIONS, int>& entries, int entriesScalar) { tarch::la::Vector<DIMENSIONS, int> entry = entries;
       if (vertex(d) == 0) {
         entry(d) = 0;
       } else {
@@ -204,8 +204,8 @@ void peano4::grid::Spacetree::traverse(GridTraversalObserver& observer) {
       }
       vertices[vertexScalar].adjacentRanks[peano4::dLinearised(entry, 2)] = RankOfPeriodicBoundaryCondition;
       vertices[vertexScalar].backupOfAdjacentRanks[peano4::dLinearised(entry, 2)] = RankOfPeriodicBoundaryCondition;
-      enddforx logDebug("Set periodic boundary conditions: " << vertices[vertexScalar].toString());
-      enddforx
+      }); logDebug("Set periodic boundary conditions: " << vertices[vertexScalar].toString());
+      });
     }
   }
 
@@ -501,7 +501,7 @@ void peano4::grid::Spacetree::updateVertexBeforeStore(
     sendGridVertex(vertex);
 
     if (restrictIsAntecessorOfRefinedVertex) {
-      dfor2(k) if (restrictToCoarseGrid(k, fineVertexPositionWithinPatch)) {
+      peano4::dForEachCorner([&](const tarch::la::Vector<DIMENSIONS, int>& k, int kScalar) { if (restrictToCoarseGrid(k, fineVertexPositionWithinPatch)) {
         logDebug("Set antecessor flag (veto coarsening) on vertex " << coarseGridVertices[kScalar].toString(
           ) << " due to vertex " << vertex.toString());
         coarseGridVertices[kScalar].setFlag(GridVertex::IsAntecessorOfRefinedVertexInCurrentTreeSweep, true);
@@ -510,7 +510,7 @@ void peano4::grid::Spacetree::updateVertexBeforeStore(
           or vertex.getFlag(GridVertex::IsParentOfSubtreeVertexInCurrentTreeSweep)
         );
       }
-      enddforx
+      });
     }
 
     if (shouldEraseAdjacencyInformation(vertex, coarseGridVertices, fineVertexPositionWithinPatch)) {
@@ -567,7 +567,7 @@ std::array<int, TWO_POWER_D> peano4::grid::Spacetree::getAdjacentRanksForNewVert
   std::array<int, TWO_POWER_D> adjacentRanks;
   adjacentRanks.fill(-1);
 
-  dfor2(k) std::bitset<DIMENSIONS> vertexToInherit;
+  peano4::dForEachCorner([&](const tarch::la::Vector<DIMENSIONS, int>& k, int kScalar) { std::bitset<DIMENSIONS> vertexToInherit;
   std::bitset<DIMENSIONS>          indexToInherit;
   for (int d = 0; d < DIMENSIONS; d++) {
     if (vertexPositionWithin3x3Patch(d) <= 1) {
@@ -582,7 +582,7 @@ std::array<int, TWO_POWER_D> peano4::grid::Spacetree::getAdjacentRanksForNewVert
       << indexToInherit.to_ulong() << "th index from coarse vertex " << vertexToInherit << " into local index "
       << kScalar);
   adjacentRanks[kScalar] = coarseGridVertices[vertexToInherit.to_ulong()].adjacentRanks[indexToInherit.to_ulong()];
-  enddforx
+  });
 
     return adjacentRanks;
 }
@@ -914,7 +914,7 @@ void peano4::grid::Spacetree::receiveAndMergeGridVertexAtHorizontalBoundary(Grid
       logDebug("Normals of involved symmetry axes: " << p.second);
       mergeGridVertexRefinementStateAtHorizontalDomainBoundary(vertex, inVertex, _id);
 
-      dfor2(k)
+      peano4::dForEachCorner([&](const tarch::la::Vector<DIMENSIONS, int>& k, int kScalar) {
         assertion(vertex.adjacentRanks[kScalar] == RankOfPeriodicBoundaryCondition
           or vertex.adjacentRanks[kScalar] == _id
           or vertex.adjacentRanks[kScalar] == -1,
@@ -922,7 +922,7 @@ void peano4::grid::Spacetree::receiveAndMergeGridVertexAtHorizontalBoundary(Grid
           inVertex.toString(),
           _id
         );
-      enddforx
+      });
    }
   }
 }
@@ -971,15 +971,15 @@ void peano4::grid::Spacetree::sendGridVertex(const GridVertex& vertex) {
 }
 
 void peano4::grid::Spacetree::incrementNumberOfAdjacentRefinedLocalCells(GridVertex vertices[TWO_POWER_D]) {
-  dfor2(k)
+  peano4::dForEachCorner([&](const tarch::la::Vector<DIMENSIONS, int>& k, int kScalar) {
     vertices[kScalar].numberOfAdjacentRefinedLocalCells += 1;
-  enddforx
+  });
 }
 
 void peano4::grid::Spacetree::updateVertexRanksWithinCell(GridVertex fineGridVertices[TWO_POWER_D], int newId) {
-  dfor2(k)
+  peano4::dForEachCorner([&](const tarch::la::Vector<DIMENSIONS, int>& k, int kScalar) {
     fineGridVertices[kScalar].adjacentRanks[TWO_POWER_D - kScalar - 1] = newId;
-  enddforx
+  });
 }
 
 void peano4::grid::Spacetree::evaluateGridControlEvents(const AutomatonState& fineGridState, GridVertex coarseGridVertices[TWO_POWER_D], GridVertex fineGridVertices[TWO_POWER_D]) {
@@ -1165,7 +1165,7 @@ void peano4::grid::Spacetree::descend(const AutomatonState& state, GridVertex ve
   AutomatonState::refineState(state, fineGridStates);
 
   peano4::LoopDirection loopDirection = PeanoCurve::getLoopDirection(state);
-  zfor3(k, loopDirection)
+  peano4::zForEach3(loopDirection, [&](const tarch::la::Vector<DIMENSIONS, int>& k) {
     traceEnter("Grid bookkeeping before enter");
     const auto kLinearised = peano4::dLinearised(k, 3);
 
@@ -1319,7 +1319,7 @@ void peano4::grid::Spacetree::descend(const AutomatonState& state, GridVertex ve
 
     storeVertices(fineGridStates[kLinearised], vertices, fineGridVertices, vertexTypes, k, observer);
     traceLeave("Grid bookkeeping after leave");
-  endzfor
+  });
 }
 
 void peano4::grid::Spacetree::receiveAndMergeUserData(
@@ -1741,12 +1741,12 @@ int peano4::grid::Spacetree::getSplittingTree() const {
 const peano4::grid::GridStatistics& peano4::grid::Spacetree::getGridStatistics() const { return _statistics; }
 
 void peano4::grid::Spacetree::markVerticesAroundForkedCell(GridVertex coarseGridVertices[TWO_POWER_D], GridVertex fineGridVertices[TWO_POWER_D]) const {
-  dfor2(k)
+  peano4::dForEachCorner([&](const tarch::la::Vector<DIMENSIONS, int>& k, int kScalar) {
     assertion(coarseGridVertices[kScalar].getState() != GridVertex::State::HangingVertex, coarseGridVertices[kScalar].toString());
     coarseGridVertices[kScalar].setFlag(GridVertex::IsAntecessorOfRefinedVertexInCurrentTreeSweep, true);
     coarseGridVertices[kScalar].setFlag(GridVertex::IsParentOfSubtreeVertexInCurrentTreeSweep, true);
     fineGridVertices[kScalar].setFlag(GridVertex::IsParentOfSubtreeVertexInCurrentTreeSweep, true);
-  enddforx
+  });
 }
 
 void peano4::grid::Spacetree::split(int newSpacetreeId, const SplitInstruction& instruction) {

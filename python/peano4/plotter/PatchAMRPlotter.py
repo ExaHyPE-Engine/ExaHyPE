@@ -16,7 +16,6 @@ class PatchAMRPlotter(BasePlotter):
     This plotter visualises Peano patches as collections of "AMR blocks"
     (2.5D extruded blocks in 2D, or shrunk blocks in 3D)
     to highlight the grid structure and refinement levels.
-
     """
 
     def __init__(
@@ -99,7 +98,7 @@ class PatchAMRPlotter(BasePlotter):
 
     // Loop over all cells in the patch
     int cellIndex = -1;
-    dfor(k, {{DOFS_PER_AXIS}}) {
+    peano4::dForEach({{DOFS_PER_AXIS}}, [&](const tarch::la::Vector<DIMENSIONS, int>& k) {
       tarch::la::Vector<DIMENSIONS, double> kDouble;
       for (int d = 0; d < DIMENSIONS; d++) {
         kDouble(d) = static_cast<double>(k(d));
@@ -136,7 +135,7 @@ class PatchAMRPlotter(BasePlotter):
 
       _subdomainPlotter->plotCellData(cellIndex, _treeNumber);
       _refinementLevelPlotter->plotCellData(cellIndex, refinementLevel);
-    }
+    });
   }
 """
             ).render(**self.d)

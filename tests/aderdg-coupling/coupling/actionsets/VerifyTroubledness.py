@@ -26,7 +26,7 @@ class VerifyTroubledness(AbstractLimiterActionSet):
         {% if USE_PAC %}
 
         int linearisedIndex = 0;
-        dfor( index, {{ORDER}}+1 ) {
+        peano4::dForEach({{ORDER}}+1, [&](const tarch::la::Vector<DIMENSIONS, int>& index) {
           
           isUnTroubled &= repositories::{{SOLVER_INSTANCE}}.isPhysicallyAdmissible(
             luh + linearisedIndex,
@@ -39,7 +39,7 @@ class VerifyTroubledness(AbstractLimiterActionSet):
           );
 
           linearisedIndex += repositories::{{REGULAR_SOLVER_INSTANCE}}.NumberOfUnknowns + repositories::{{REGULAR_SOLVER_INSTANCE}}.NumberOfAuxiliaryVariables;
-        }
+        });
        
         {% endif %}
 

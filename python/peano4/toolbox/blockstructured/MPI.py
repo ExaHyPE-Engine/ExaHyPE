@@ -45,7 +45,7 @@ def get_face_merge_implementation(patch_overlap):
         assertion(src);
 
         const int faceNormal = marker.getSelectedFaceNumber() % DIMENSIONS;
-        dfore(i, {DOFS_PER_AXIS}, faceNormal, 0) {{
+        peano4::dForEachExclusive({DOFS_PER_AXIS}, faceNormal, 0, [&](const tarch::la::Vector<DIMENSIONS, int>& i) {{
           for (int j = 0; j < {OVERLAP}; j++) {{
             tarch::la::Vector<DIMENSIONS, int> volume = i;
             volume(faceNormal) += marker.outerNormal()(faceNormal) > 0 ? j + {OVERLAP} : j;
@@ -55,7 +55,7 @@ def get_face_merge_implementation(patch_overlap):
               dst[volumeSerialised * {UNKNOWNS} + k] = src[volumeSerialised * {UNKNOWNS} + k];
             }}
           }}
-        }}
+        }});
       }}
       break;
     case ::peano4::stacks::SendReceiveContext::MultiscaleExchange:

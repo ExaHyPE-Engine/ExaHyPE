@@ -3,6 +3,7 @@
 #include "StackTopology.h"
 
 #include "SpacetreeHelper.h"
+
 #include "peano4/Loop.h"
 
 #include <unordered_set>
@@ -27,18 +28,21 @@ int peano4::grid::StackTopology::mapPeriodicBoundaryExchangeOutputStackOntoInput
 }
 
 // TODO: Move to SpacetreeHelper or create new class to handle periodic boundaries
-std::bitset<2 * DIMENSIONS> peano4::grid::StackTopology::getPeriodicBoundaryNumber(
-  const std::array<int, TWO_POWER_D>& flags
-) {
+std::bitset<2 * DIMENSIONS>
+peano4::grid::StackTopology::getPeriodicBoundaryNumber(const std::array<int, TWO_POWER_D>& flags) {
   std::bitset<2 * DIMENSIONS> result;
 
   for (int d = 0; d < 2 * DIMENSIONS; d++) {
-    bool                                        allFlagsSet = true;
-    dfor2(k) tarch::la::Vector<DIMENSIONS, int> entry;
-    entry                 = k;
-    entry(d % DIMENSIONS) = d / DIMENSIONS;
-    allFlagsSet &= flags[peano4::dLinearised(entry, 2)] == SpacetreeHelper::RankOfPeriodicBoundaryCondition;
-    enddforx if (allFlagsSet) { result.set(d); }
+    bool allFlagsSet = true;
+    peano4::dForEachCorner([&](const tarch::la::Vector<DIMENSIONS, int>& k, int kScalar) {
+      tarch::la::Vector<DIMENSIONS, int> entry;
+      entry                 = k;
+      entry(d % DIMENSIONS) = d / DIMENSIONS;
+      allFlagsSet &= flags[peano4::dLinearised(entry, 2)] == SpacetreeHelper::RankOfPeriodicBoundaryCondition;
+    });
+    if (allFlagsSet) {
+      result.set(d);
+    }
   }
   return result;
 }
@@ -56,8 +60,8 @@ int peano4::grid::StackTopology::getOutputStackForPeriodicBoundaryExchange(int f
   return baseIndex + linearisedIndex;
 }
 
-std::set<peano4::grid::StackTopology::PeriodicBoundaryStackIdentifier> peano4::grid::StackTopology::
-  getOutputStacksForPeriodicBoundaryExchange(const std::array<int, TWO_POWER_D>& flags) {
+std::set<peano4::grid::StackTopology::PeriodicBoundaryStackIdentifier>
+peano4::grid::StackTopology::getOutputStacksForPeriodicBoundaryExchange(const std::array<int, TWO_POWER_D>& flags) {
   std::bitset<2 * DIMENSIONS> boundaryNumbers = getPeriodicBoundaryNumber(flags);
 
   std::unordered_set<std::bitset<2 * DIMENSIONS>> powerSet;
@@ -77,36 +81,39 @@ std::set<peano4::grid::StackTopology::PeriodicBoundaryStackIdentifier> peano4::g
 
   std::set<PeriodicBoundaryStackIdentifier> result;
   int                                       currentStackNumber = 0;
-  dfor3(neighbour) if (neighbour != tarch::la::Vector<DIMENSIONS, int>(1)) {
-    std::bitset<2 * DIMENSIONS> requiredEntryForThisDirection(0);
-    std::bitset<DIMENSIONS>     direction(0);
-    for (int d = 0; d < DIMENSIONS; d++) {
-      if (neighbour(d) > 1) {
-        requiredEntryForThisDirection[d] = true;
-        direction[d]                     = true;
+  peano4::dForEachStencil([&](const tarch::la::Vector<DIMENSIONS, int>& neighbour, int neighbourScalar) {
+    if (neighbour != tarch::la::Vector<DIMENSIONS, int>(1)) {
+      std::bitset<2 * DIMENSIONS> requiredEntryForThisDirection(0);
+      std::bitset<DIMENSIONS>     direction(0);
+      for (int d = 0; d < DIMENSIONS; d++) {
+        if (neighbour(d) > 1) {
+          requiredEntryForThisDirection[d] = true;
+          direction[d]                     = true;
+        }
+        if (neighbour(d) < 1) {
+          requiredEntryForThisDirection[d + DIMENSIONS] = true;
+          direction[d]                                  = true;
+        }
       }
-      if (neighbour(d) < 1) {
-        requiredEntryForThisDirection[d + DIMENSIONS] = true;
-        direction[d]                                  = true;
+      if (powerSet.count(requiredEntryForThisDirection) > 0) {
+        PeriodicBoundaryStackIdentifier newEntry(
+          PeriodicBoundaryExchangeStackOffset + currentStackNumber,
+          direction.to_ulong()
+        );
+        assertion(
+          isPeriodicBoundaryExchangeOutputStackNumber(newEntry.first),
+          newEntry.first,
+          newEntry.second,
+          PeriodicBoundaryExchangeStackOffset,
+          TotalNumberOfPeriodicBoundaryExchangeStacks
+        );
+        result.insert(newEntry);
       }
+      currentStackNumber++;
     }
-    if (powerSet.count(requiredEntryForThisDirection) > 0) {
-      PeriodicBoundaryStackIdentifier
-        newEntry(PeriodicBoundaryExchangeStackOffset + currentStackNumber, direction.to_ulong());
-      assertion(
-        isPeriodicBoundaryExchangeOutputStackNumber(newEntry.first),
-        newEntry.first,
-        newEntry.second,
-        PeriodicBoundaryExchangeStackOffset,
-        TotalNumberOfPeriodicBoundaryExchangeStacks
-      );
-      result.insert(newEntry);
-    }
-    currentStackNumber++;
-  }
-  enddforx
+  });
 
-    return result;
+  return result;
 }
 
 int peano4::grid::StackTopology::getPeriodicBoundaryExchangeInputStackNumberForOutputStack(int outputStackNumber) {
@@ -115,8 +122,10 @@ int peano4::grid::StackTopology::getPeriodicBoundaryExchangeInputStackNumberForO
   return result;
 }
 
-peano4::grid::StackTopology::PeriodicBoundaryStackIdentifier peano4::grid::StackTopology::
-  getPeriodicBoundaryExchangeInputStackNumberForOutputStack(PeriodicBoundaryStackIdentifier outputStackIdentifier) {
+peano4::grid::StackTopology::PeriodicBoundaryStackIdentifier
+peano4::grid::StackTopology::getPeriodicBoundaryExchangeInputStackNumberForOutputStack(
+  PeriodicBoundaryStackIdentifier outputStackIdentifier
+) {
   assertion(isPeriodicBoundaryExchangeOutputStackNumber(outputStackIdentifier.first));
   PeriodicBoundaryStackIdentifier result;
   result.first  = outputStackIdentifier.first + TotalNumberOfPeriodicBoundaryExchangeStacks / 2;
@@ -127,7 +136,6 @@ peano4::grid::StackTopology::PeriodicBoundaryStackIdentifier peano4::grid::Stack
 bool peano4::grid::StackTopology::isPeriodicBoundaryExchangeOutputStackNumber(int id) {
   // We assume the first half of the periodic stacks are outputs, and the second half are inputs.
   const bool periodicBoundary = id >= PeriodicBoundaryExchangeStackOffset
-                                and id < PeriodicBoundaryExchangeStackOffset
-                                           + TotalNumberOfPeriodicBoundaryExchangeStacks / 2;
+    and id < PeriodicBoundaryExchangeStackOffset + TotalNumberOfPeriodicBoundaryExchangeStacks / 2;
   return periodicBoundary;
 }

@@ -27,7 +27,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::regularToLimiterFace(
   std::fill_n(Qto, toSize, 0.0);
 
   //For each point we project to
-  dfore(dofTo, toPoints, DIMENSIONS-1, 0) {
+  peano4::dForEachExclusive(toPoints, DIMENSIONS-1, 0, [&](const tarch::la::Vector<DIMENSIONS, int>& dofTo) {
     const int dofToSerialised = dofTo[0]
   #if DIMENSIONS==3
     + dofTo[1] * toPoints
@@ -35,7 +35,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::regularToLimiterFace(
     ;
 
     //Compute the contribution from each contributing point
-    dfore(dofFrom, fromPoints, DIMENSIONS-1, 0) {
+    peano4::dForEachExclusive(fromPoints, DIMENSIONS-1, 0, [&](const tarch::la::Vector<DIMENSIONS, int>& dofFrom) {
       const int dofFromSerialised = dofFrom[0]
   #if DIMENSIONS==3
         + dofFrom[1] * fromPoints
@@ -49,9 +49,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::regularToLimiterFace(
   #endif
         ;
       }
-    }
+    });
 
-  }
+  });
 
 {% else %}{# Both solvers have the same order #}
   std::copy_n(Qfrom, toSize, Qto);
@@ -82,7 +82,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::limiterToRegularFace(
   std::fill_n(Qto, toSize, 0.0);
 
   //For each point we project to
-  dfore(dofTo, toPoints, DIMENSIONS-1, 0) {
+  peano4::dForEachExclusive(toPoints, DIMENSIONS-1, 0, [&](const tarch::la::Vector<DIMENSIONS, int>& dofTo) {
     const int dofToSerialised = dofTo[0]
   #if DIMENSIONS==3
     + dofTo[1] * toPoints
@@ -90,7 +90,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::limiterToRegularFace(
     ;
 
     //Compute the contribution from each contributing point
-    dfore(dofFrom, fromPoints, DIMENSIONS-1, 0) {
+    peano4::dForEachExclusive(fromPoints, DIMENSIONS-1, 0, [&](const tarch::la::Vector<DIMENSIONS, int>& dofFrom) {
       const int dofFromSerialised = dofFrom[0]
   #if DIMENSIONS==3
         + dofFrom[1] * fromPoints
@@ -104,9 +104,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::limiterToRegularFace(
   #endif
         ;
       }
-    }
+    });
 
-  }
+  });
 
 {% else %}{# Both solvers have the same order #}
   std::copy_n(Qfrom, toSize, Qto);

@@ -38,7 +38,7 @@ GCC Serial:
 #     CC: "gcc"
 #     CXX: "g++"
 #     IMAGE_TAG: "${IMAGE_GCC}"
-#     PARALLEL_LAUNCH: "OMP_NUM_THREADS=${OMP_THREADS} mpirun -np ${MPI_RANKS}"
+#     PARALLEL_LAUNCH: "OMP_NUM_THREADS=${OMP_THREADS} mpirun --bind-to none -np ${MPI_RANKS}"
 #     EXTRA_CONFIGURATION_OPTIONS: "-DPEANO_WITH_MULTITHREADING=ON \
 #                                   -DPEANO_WITH_MPI=ON"
 #   trigger:
@@ -56,7 +56,7 @@ Intel Parallel:
     CC: "icx"
     CXX: "icpx"
     IMAGE_TAG: "${IMAGE_INTEL}"
-    PARALLEL_LAUNCH: "OMP_NUM_THREADS=${OMP_THREADS} mpirun -np ${MPI_RANKS}"
+    PARALLEL_LAUNCH: "OMP_NUM_THREADS=${OMP_THREADS} mpirun --bind-to none -np ${MPI_RANKS}"
     EXTRA_CONFIGURATION_OPTIONS: "-DPEANO_WITH_MULTITHREADING=ON \
                                   -DPEANO_WITH_MPI=ON"
   trigger:
@@ -74,7 +74,7 @@ LLVM Parallel:
     CC: "clang"
     CXX: "clang++"
     IMAGE_TAG: "${IMAGE_LLVM}"
-    PARALLEL_LAUNCH: "OMP_NUM_THREADS=${OMP_THREADS} mpirun -np ${MPI_RANKS}"
+    PARALLEL_LAUNCH: "OMP_NUM_THREADS=${OMP_THREADS} mpirun --bind-to none -np ${MPI_RANKS}"
     EXTRA_CONFIGURATION_OPTIONS: "-DPEANO_WITH_MULTITHREADING=ON \
                                   -DPEANO_WITH_MPI=ON"
   trigger:
@@ -92,7 +92,7 @@ NVIDIA Parallel:
     CC: "nvc"
     CXX: "nvc++"
     IMAGE_TAG: "${IMAGE_NVIDIA}"
-    PARALLEL_LAUNCH: "OMP_NUM_THREADS=${OMP_THREADS} mpirun -np ${MPI_RANKS}"
+    PARALLEL_LAUNCH: "OMP_NUM_THREADS=${OMP_THREADS} mpirun --bind-to none -np ${MPI_RANKS}"
     EXTRA_CONFIGURATION_OPTIONS: "-DPEANO_WITH_MULTITHREADING=ON \
                                   -DPEANO_WITH_MPI=ON"
   trigger:
@@ -110,7 +110,7 @@ AMD Parallel:
     CC: "amdclang"
     CXX: "amdclang++"
     IMAGE_TAG: "${IMAGE_AMD}"
-    PARALLEL_LAUNCH: "OMP_NUM_THREADS=${OMP_THREADS} mpirun -np ${MPI_RANKS}"
+    PARALLEL_LAUNCH: "OMP_NUM_THREADS=${OMP_THREADS} mpirun --bind-to none -np ${MPI_RANKS}"
     EXTRA_CONFIGURATION_OPTIONS: "-DPEANO_WITH_MULTITHREADING=ON \
                                   -DPEANO_WITH_MPI=ON"
   trigger:

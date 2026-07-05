@@ -52,7 +52,7 @@ struct peano4::grid::AutomatonState {
    * along the spatial dimensions.
    *
    * The array fineGrid is filled along the Peano SFC. So you don't have to
-   * traverse the array with a zfor - a simple for is sufficient.
+   * traverse the array with a space-filling loop - a simple for is sufficient.
    */
   static void refineState(
     const AutomatonState&              coarseGrid,

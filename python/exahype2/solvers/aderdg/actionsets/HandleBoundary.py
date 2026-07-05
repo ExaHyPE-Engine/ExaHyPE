@@ -46,7 +46,7 @@ class HandleBoundary(AbstractADERDGActionSet):
 {% endif %}
 
 
-    dfore(dof, {{ORDER}} + 1, normal, 0) {
+    peano4::dForEachExclusive({{ORDER}} + 1, normal, 0, [&](const tarch::la::Vector<DIMENSIONS, int>& dof) {
         tarch::la::Vector<DIMENSIONS, double> nodePosition;
         int dofSerialised = 0;
         int basis         = 1;
@@ -92,13 +92,14 @@ class HandleBoundary(AbstractADERDGActionSet):
         // These must now be handled through the boundary conditions.
         std::fill_n(FOut + dofSerialised * {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_UNKNOWNS}}, 0.0);
         {% endif %}
-    }
+    });
   }
 """
 
     def __init__(self, solver, guard):
         """
-        guard_project: String (C++ code)
+        Guard_project: String (C++ code).
+
           Predicate which controls if the solution is actually projected
 
         guard_safe_old_time_step: String (C++ code)
