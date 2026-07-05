@@ -20,24 +20,12 @@ particular) assemble into a solver.
 The toolbox is a collection of free functions grouped into a handful of
 headers:
 
-\li `Enumeration.h` Lexicographic serialisation of voxel and patch indices,
-  both within a patch and within the @f$ 3^{d} @f$ / @f$ 3^{d-1} @f$ patch
-  neighbourhoods that arise around faces. These routines define the canonical
-  ordering of all patch data.
-\li `Copy.h` Copy individual unknowns from one patch into another patch of the
-  same resolution. Used to shuffle data between fields that share a layout but
-  hold different quantities.
-\li `Projection.h` Project patch data onto the adjacent faces
-  (`projectPatchSolutionOntoFaces`). The more elaborate time-stepping schemes
-  generate their own projection code via the Python API; the C++ routines here
-  serve the simpler cases and user pre-processing.
-\li `Interpolation.h` Interpolation from a coarse patch onto an embedded fine
-  patch at resolution transitions (halo handling for AMR). Several schemes are
-  available, including piecewise-constant, linear and tensor-product variants.
-\li `Restriction.h` The dual operation: restriction of fine-grid data back
-  onto the coarse patch. Injection, averaging and the various tensor-product /
-  higher-order schemes are implemented here.
-\li `Derivative.h` Computation of derivatives across a patch.
+\li `Enumeration.h` Lexicographic serialisation of the voxel indices within a
+  patch overlap (halo layer). This defines the canonical ordering of halo data.
+\li `AMRRoutines.h` Piece-wise constant interpolation of coarse patch data onto
+  embedded fine patches at resolution transitions, together with the matching
+  averaging restriction of fine data back onto the coarse patch. These are the
+  inter-resolution transfer operators for adaptive mesh refinement.
 \li `GlobalDatabase.h` A global database that aggregates per-patch scalar
   quantities (e.g. for reductions or global diagnostics) and dumps them to
   file.

@@ -3,6 +3,7 @@
 #include "SpacetreeHelper.h"
 
 #include "GridTraversalObserver.h"
+
 #include "peano4/Loop.h"
 
 #include <tuple>
@@ -26,10 +27,8 @@ namespace {
     const peano4::grid::GridVertex& v       = fineGridVertices[vertexIndex];
     const auto                      state   = v.getState();
     const bool                      invalid = calledByReceivingProcess
-                                                ? (state == peano4::grid::GridVertex::State::HangingVertex
-                              or state == peano4::grid::GridVertex::State::New)
-                                                : (state == peano4::grid::GridVertex::State::HangingVertex
-                              or state == peano4::grid::GridVertex::State::Delete);
+                           ? (state == peano4::grid::GridVertex::State::HangingVertex or state == peano4::grid::GridVertex::State::New)
+                           : (state == peano4::grid::GridVertex::State::HangingVertex or state == peano4::grid::GridVertex::State::Delete);
     const auto&                     adj     = calledByReceivingProcess ? v.backupOfAdjacentRanks : v.adjacentRanks;
     const int                       i0      = T.adjIdx0[normal][vertexIndex];
     const int                       i1      = T.adjIdx1[normal][vertexIndex];
@@ -143,11 +142,11 @@ bool peano4::grid::SpacetreeHelper::doesRankIdentifyHorizontalDataExchange(
   SpacetreeState            treeState
 ) {
   const bool receiverCriteria = (joining.count(rank) == 0) and (splitting.count(rank) == 0);
-  const bool senderCriteria   = (joining.count(rank) == 0) and (splitTriggered.count(rank) == 0)
-                              and treeState != SpacetreeState::Joining;
+  const bool senderCriteria =
+    (joining.count(rank) == 0) and (splitTriggered.count(rank) == 0) and treeState != SpacetreeState::Joining;
 
   const bool mandatoryCriteria = rank != treeNumber and rank != -1 and rank != RankOfPeriodicBoundaryCondition
-                                 and treeState != SpacetreeState::EmptyRun;
+    and treeState != SpacetreeState::EmptyRun;
 
   return calledByReceivingProcess ? (mandatoryCriteria and receiverCriteria) : (mandatoryCriteria and senderCriteria);
 }
@@ -169,11 +168,12 @@ int peano4::grid::SpacetreeHelper::getNeighbourTreeAlongFace(
   if (noParallelTopologyChanges) {
     bool       isAdjacentToLocalRank = false;
     int        neighbour             = GridTraversalObserver::NoData;
-    const bool mayExchange           = calledByReceivingProcess ? (treeState != SpacetreeState::NewFromSplit)
-                                                                : (treeState != SpacetreeState::Joining);
+    const bool mayExchange =
+      calledByReceivingProcess ? (treeState != SpacetreeState::NewFromSplit) : (treeState != SpacetreeState::Joining);
 
     for (int k = 0; k < TWO_POWER_D / 2; ++k) {
-      const auto adjacentRanks = readFaceAdjacentRanks(fineGridVertices, faceNumber, verts[k], calledByReceivingProcess);
+      const auto adjacentRanks =
+        readFaceAdjacentRanks(fineGridVertices, faceNumber, verts[k], calledByReceivingProcess);
       const int r0 = adjacentRanks.first;
       const int r1 = adjacentRanks.second;
 
@@ -223,14 +223,13 @@ int peano4::grid::SpacetreeHelper::getNeighbourTreeAlongFace(
   auto processAdjacentRank = [&](int adjacentRank) {
     const auto [adjacentIsSplit, adjacentIsSplitting] = getCachedFlags(adjacentRank);
     const bool mandatoryCriteria                      = adjacentRank != treeNumber and adjacentRank != -1
-                                   and adjacentRank != RankOfPeriodicBoundaryCondition
-                                   and treeState != SpacetreeState::EmptyRun;
+      and adjacentRank != RankOfPeriodicBoundaryCondition and treeState != SpacetreeState::EmptyRun;
 
     if (calledByReceivingProcess) {
       isAdjacentToLocalRank |= adjacentRank == treeNumber or adjacentIsSplit or adjacentIsSplitting;
 
-      const bool receiverCriteria = not adjacentIsSplit and not adjacentIsSplitting
-                                    and treeState != SpacetreeState::NewFromSplit;
+      const bool receiverCriteria =
+        not adjacentIsSplit and not adjacentIsSplitting and treeState != SpacetreeState::NewFromSplit;
       if (mandatoryCriteria and receiverCriteria) {
         neighbour = adjacentRank;
       }
@@ -274,8 +273,8 @@ peano4::grid::SpacetreeHelper::NeighbourTrees peano4::grid::SpacetreeHelper::get
   if (noParallelTopologyChanges) {
     bool        isLocalVertex         = false;
     const auto& exchangeAdjacentRanks = calledByReceivingProcess ? vertex.backupOfAdjacentRanks : vertex.adjacentRanks;
-    const bool  mayExchange           = calledByReceivingProcess ? (treeState != SpacetreeState::NewFromSplit)
-                                                                 : (treeState != SpacetreeState::Joining);
+    const bool  mayExchange =
+      calledByReceivingProcess ? (treeState != SpacetreeState::NewFromSplit) : (treeState != SpacetreeState::Joining);
 
     for (int i = 0; i < TWO_POWER_D; i++) {
       const int localRank = vertex.adjacentRanks[i];
@@ -401,8 +400,8 @@ std::bitset<TWO_POWER_D> peano4::grid::SpacetreeHelper::areVerticesAdjacentToPar
       }
     }
 
-    const bool local = r == treeNumber or (checkSplit and splitTriggered.count(r) > 0)
-                       or (checkSplitting and splitting.count(r) > 0);
+    const bool local =
+      r == treeNumber or (checkSplit and splitTriggered.count(r) > 0) or (checkSplitting and splitting.count(r) > 0);
 
     if (cachedCount < 2 * TWO_POWER_D) {
       cachedRanks[cachedCount]   = r;
@@ -490,8 +489,8 @@ std::bitset<TWO_TIMES_D> peano4::grid::SpacetreeHelper::areFacesAdjacentToParall
       }
     }
 
-    const bool local = r == treeNumber or (checkSplit and splitTriggered.count(r) > 0)
-                       or (checkSplitting and splitting.count(r) > 0);
+    const bool local =
+      r == treeNumber or (checkSplit and splitTriggered.count(r) > 0) or (checkSplitting and splitting.count(r) > 0);
 
     if (cachedCount < 4 * TWO_POWER_D) {
       cachedRanks[cachedCount]   = r;
@@ -535,15 +534,19 @@ std::bitset<TWO_TIMES_D> peano4::grid::SpacetreeHelper::areFacesAdjacentToParall
 
 bool peano4::grid::SpacetreeHelper::areAllVerticesNonHanging(GridVertex vertices[TWO_POWER_D]) {
   bool result = true;
-  dfor2(k) result &= (vertices[kScalar].getState() != GridVertex::State::HangingVertex);
-  enddforx return result;
+  peano4::dForEachCorner([&](const tarch::la::Vector<DIMENSIONS, int>& k, int kScalar) {
+    result &= (vertices[kScalar].getState() != GridVertex::State::HangingVertex);
+  });
+  return result;
 }
 
 bool peano4::grid::SpacetreeHelper::isSpacetreeNodeRefined(GridVertex vertices[TWO_POWER_D]) {
   bool result = false;
-  dfor2(k) result |= GridVertex::willVertexBeRefined(vertices[kScalar]);
-  result |= GridVertex::hasVertexBeenRefined(vertices[kScalar]);
-  enddforx return result;
+  peano4::dForEachCorner([&](const tarch::la::Vector<DIMENSIONS, int>& k, int kScalar) {
+    result |= GridVertex::willVertexBeRefined(vertices[kScalar]);
+    result |= GridVertex::hasVertexBeenRefined(vertices[kScalar]);
+  });
+  return result;
 }
 
 int peano4::grid::SpacetreeHelper::getTreeOwningSpacetreeNode(
@@ -558,38 +561,38 @@ int peano4::grid::SpacetreeHelper::getTreeOwningSpacetreeNode(
   int           id        = NotSetYet;
 
   int weakId = NotSetYet;
-  dfor2(
-    k
-  ) if (vertices[kScalar].getState() != GridVertex::State::HangingVertex
+  peano4::dForEachCorner([&](const tarch::la::Vector<DIMENSIONS, int>& k, int kScalar) {
+    if (vertices[kScalar].getState() != GridVertex::State::HangingVertex
         and vertices[kScalar].adjacentRanks[TWO_POWER_D - kScalar - 1] != -1) {
-    weakId = vertices[kScalar].adjacentRanks[TWO_POWER_D - kScalar - 1];
-  }
-  if (vertices[kScalar].getState() != GridVertex::State::HangingVertex
-      and isVertexAdjacentToLocalSpacetree(
-        vertices[kScalar],
-        treeNumber,
-        splitTriggered,
-        splitting,
-        joinTriggered,
-        joining,
-        true,
-        false,
-        true
-      )) {
-    assertion(
-      id == NotSetYet or vertices[kScalar].adjacentRanks[TWO_POWER_D - kScalar - 1] == id,
-      id,
-      kScalar,
-      vertices[kScalar].toString(),
-      vertices[0].toString(),
-      vertices[1].toString(),
-      vertices[2].toString(),
-      vertices[3].toString(),
-      treeNumber
-    );
-    id = vertices[kScalar].adjacentRanks[TWO_POWER_D - kScalar - 1];
-  }
-  enddforx assertion(
+      weakId = vertices[kScalar].adjacentRanks[TWO_POWER_D - kScalar - 1];
+    }
+    if (vertices[kScalar].getState() != GridVertex::State::HangingVertex
+        and isVertexAdjacentToLocalSpacetree(
+          vertices[kScalar],
+          treeNumber,
+          splitTriggered,
+          splitting,
+          joinTriggered,
+          joining,
+          true,
+          false,
+          true
+        )) {
+      assertion(
+        id == NotSetYet or vertices[kScalar].adjacentRanks[TWO_POWER_D - kScalar - 1] == id,
+        id,
+        kScalar,
+        vertices[kScalar].toString(),
+        vertices[0].toString(),
+        vertices[1].toString(),
+        vertices[2].toString(),
+        vertices[3].toString(),
+        treeNumber
+      );
+      id = vertices[kScalar].adjacentRanks[TWO_POWER_D - kScalar - 1];
+    }
+  });
+  assertion(
     id != NotSetYet
       or not isSpacetreeNodeLocal(
         vertices,
@@ -624,40 +627,39 @@ bool peano4::grid::SpacetreeHelper::isSpacetreeNodeSplitCandidate(
   bool isOneVertexAdjacentToPeriodicBC = false;
   bool isOneVertexParentOfForkedTree   = false;
 
-  dfor2(k) const auto& adjacentRanks = fineGridVertices[kScalar].adjacentRanks;
-  isOneVertexAdjacentToPeriodicBC
-    |= std::find(std::begin(adjacentRanks), std::end(adjacentRanks), RankOfPeriodicBoundaryCondition)
-       != std::end(adjacentRanks);
-  isOneVertexParentOfForkedTree |= fineGridVertices[kScalar].getFlag(
-    GridVertex::HasBeenParentOfSubtreeVertexInPreviousTreeSweep
-  );
-  enddforx
+  peano4::dForEachCorner([&](const tarch::la::Vector<DIMENSIONS, int>& k, int kScalar) {
+    const auto& adjacentRanks = fineGridVertices[kScalar].adjacentRanks;
+    isOneVertexAdjacentToPeriodicBC |=
+      std::find(std::begin(adjacentRanks), std::end(adjacentRanks), RankOfPeriodicBoundaryCondition)
+      != std::end(adjacentRanks);
+    isOneVertexParentOfForkedTree |=
+      fineGridVertices[kScalar].getFlag(GridVertex::HasBeenParentOfSubtreeVertexInPreviousTreeSweep);
+  });
 
-    bool result
-    = isSpacetreeNodeLocal(
-        fineGridVertices,
-        treeNumber,
-        splitTriggered,
-        splitting,
-        joinTriggered,
-        joining,
-        false,
-        false,
-        false
-      )
-      and isSpacetreeNodeLocal(
-        coarseGridVertices,
-        treeNumber,
-        splitTriggered,
-        splitting,
-        joinTriggered,
-        joining,
-        false,
-        false,
-        false
-      )
-      and areAllVerticesNonHanging(fineGridVertices) and not isOneVertexAdjacentToPeriodicBC
-      and (not isOneVertexParentOfForkedTree);
+  bool result = isSpacetreeNodeLocal(
+                  fineGridVertices,
+                  treeNumber,
+                  splitTriggered,
+                  splitting,
+                  joinTriggered,
+                  joining,
+                  false,
+                  false,
+                  false
+                )
+    and isSpacetreeNodeLocal(
+                  coarseGridVertices,
+                  treeNumber,
+                  splitTriggered,
+                  splitting,
+                  joinTriggered,
+                  joining,
+                  false,
+                  false,
+                  false
+    )
+    and areAllVerticesNonHanging(fineGridVertices) and not isOneVertexAdjacentToPeriodicBC
+    and (not isOneVertexParentOfForkedTree);
 
   return result;
 }

@@ -82,7 +82,7 @@ class DoFWisePostprocessSolution(AbstractRungeKuttaDGActionSet):
   ) { 
     
     constexpr int valuesPerDoF = {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    dfor( index, {{DG_ORDER}}+1 ) {
+    peano4::dForEach({{DG_ORDER}} + 1, [&](const tarch::la::Vector<DIMENSIONS, int>& index) {
       double* values   = fineGridCell{{UNKNOWN_IDENTIFIER}}.data()
         + peano4::dLinearised(index, {{DG_ORDER}}+1) * valuesPerDoF;
       auto    x        = ::exahype2::dg::getQuadraturePoint(
@@ -91,8 +91,8 @@ class DoFWisePostprocessSolution(AbstractRungeKuttaDGActionSet):
       """
             + operation_per_point
             + """
-    }
-  } 
+    });
+  }
 }
 """
         )

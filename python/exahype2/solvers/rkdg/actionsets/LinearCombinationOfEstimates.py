@@ -40,7 +40,7 @@ class LinearCombinationOfEstimates(AbstractRungeKuttaDGActionSet):
     #endif
     constexpr int valuesPerDoF = {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     
-    dfor( dof, {{ORDER}}+1 ) {
+    peano4::dForEach({{ORDER}} + 1, [&](const tarch::la::Vector<DIMENSIONS, int>& dof) {
       const int dofSerialised = peano4::dLinearised(dof, {{ORDER}}+1);
       const int solutionOffset = dofSerialised * valuesPerDoF;
       for (int unknown=0; unknown<{{NUMBER_OF_UNKNOWNS}}; unknown++) {
@@ -59,7 +59,7 @@ class LinearCombinationOfEstimates(AbstractRungeKuttaDGActionSet):
         fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.data()[ solutionOffset + unknown ] =
           fineGridCell{{UNKNOWN_IDENTIFIER}}.data()[ solutionOffset + unknown ];
       }
-    }
+    });
       
     {% if PREDICATE_NO==0 %}
     {{PREPROCESS_UPDATED_CELL}}

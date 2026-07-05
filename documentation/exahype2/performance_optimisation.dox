@@ -41,7 +41,6 @@ Function                                                           Module       
 -----------------------------------------------------------------  --------------  ---------  ----------------
 applications::exahype2::exagrype::ncp                              peano4_bbhtest   559.299s             13.3%
 __memmove_avx_unaligned_erms                                       libc.so.6        529.383s             12.6%
-toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product  peano4_bbhtest   505.116s             12.0%
 applications::exahype2::exagrype::source                           peano4_bbhtest   347.667s              8.3%
 __kmpc_set_lock                                                    libiomp5.so      340.473s              8.1%
 [Others]                                                           N/A             1916.907s             45.7%

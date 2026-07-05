@@ -11,6 +11,7 @@ configure_file(
 
 set(SOURCES
   Init.cpp
+  Loop.cpp
   UnitTests.cpp
 
   datamanagement/CellMarker.cpp

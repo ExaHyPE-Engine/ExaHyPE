@@ -80,7 +80,7 @@ class VolumeWisePostprocessSolution(AbstractFVActionSet):
   ) {
 
     int index = 0;
-    dfor(volume, {{NUMBER_OF_VOLUMES_PER_AXIS}}) {
+    peano4::dForEach({{NUMBER_OF_VOLUMES_PER_AXIS}}, [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
       {{STORAGE_PRECISION}}* value = {{NEW_ACCESSOR}}.data() + index;
       auto x = ::exahype2::fv::getVolumeCentre(marker.getX(), marker.getH(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume);
       auto h = ::exahype2::fv::getVolumeSize(marker.getH(), {{NUMBER_OF_VOLUMES_PER_AXIS}});
@@ -88,7 +88,7 @@ class VolumeWisePostprocessSolution(AbstractFVActionSet):
             + operation_per_point
             + """
       index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    }
+    });
   }
 }
 """

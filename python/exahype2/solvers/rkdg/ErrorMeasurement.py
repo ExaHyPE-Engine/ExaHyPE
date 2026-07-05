@@ -114,7 +114,7 @@ def create_postprocessing_kernel_for_error_measurement_for_adaptive_timestepping
       int linearisedIndex = 0;
 
       // Iterate over all quadrature points in the cell
-      dfor(index, {{DG_ORDER}}+1) {
+      peano4::dForEach({{DG_ORDER}} + 1, [&](const tarch::la::Vector<DIMENSIONS, int>& index) {
 #if DIMENSIONS==2
         double weight = cellVolume * repositories::{{SOLVER_INSTANCE}}.QuadratureWeights1d[index[0]] * repositories::{{SOLVER_INSTANCE}}.QuadratureWeights1d[index[1]];
 #else
@@ -145,7 +145,7 @@ def create_postprocessing_kernel_for_error_measurement_for_adaptive_timestepping
         }
 
         linearisedIndex += {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}};
-      }
+      });
       repositories::{{SOLVER_INSTANCE}}.setError(errors);
     }
 """

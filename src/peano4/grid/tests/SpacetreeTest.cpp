@@ -3,17 +3,17 @@
 #include "SpacetreeTest.h"
 
 #include "peano4/Globals.h"
+#include "peano4/Loop.h"
 #include "peano4/grid/GridTraversalObserver.h"
 #include "peano4/grid/Spacetree.h"
 #include "peano4/grid/SpacetreeHelper.h"
-#include "peano4/Loop.h"
 #include "tarch/la/Vector.h"
 
 #include <bitset>
 #include <sstream>
 
 namespace {
-  struct CountingTraversalObserver final: public peano4::grid::GridTraversalObserver {
+  struct CountingTraversalObserver final : public peano4::grid::GridTraversalObserver {
     int               loadNodeDataCalls  = 0;
     int               enterNodeCalls     = 0;
     int               leaveNodeCalls     = 0;
@@ -46,10 +46,8 @@ namespace {
       const tarch::la::Vector<DIMENSIONS, double>&
     ) override {}
 
-    void endTraversal(
-      const tarch::la::Vector<DIMENSIONS, double>&,
-      const tarch::la::Vector<DIMENSIONS, double>&
-    ) override {}
+    void
+    endTraversal(const tarch::la::Vector<DIMENSIONS, double>&, const tarch::la::Vector<DIMENSIONS, double>&) override {}
   };
 
   std::string vectorToString(const std::vector<int>& v) {
@@ -78,16 +76,17 @@ namespace {
     peano4::grid::GridVertex::State state,
     peano4::grid::GridVertex        vertices[TWO_POWER_D]
   ) {
-    dfor2(k) std::array<int, TWO_POWER_D> adjacentRanks;
-    tarch::la::Vector<DIMENSIONS, double> x(0.0);
-    for (int d = 0; d < DIMENSIONS; ++d) {
-      x(d) = static_cast<double>(k(d));
-    }
-    adjacentRanks.fill(-1);
-    adjacentRanks[TWO_POWER_D - 1 - kScalar] = treeId;
-    vertices[kScalar]                        = peano4::grid::GridVertex::create(0, state, x, adjacentRanks, false);
-    vertices[kScalar].setFlag(peano4::grid::GridVertex::HasBeenParentOfSubtreeVertexInPreviousTreeSweep, true);
-    enddforx
+    peano4::dForEachCorner([&](const tarch::la::Vector<DIMENSIONS, int>& k, int kScalar) {
+      std::array<int, TWO_POWER_D>          adjacentRanks;
+      tarch::la::Vector<DIMENSIONS, double> x(0.0);
+      for (int d = 0; d < DIMENSIONS; ++d) {
+        x(d) = static_cast<double>(k(d));
+      }
+      adjacentRanks.fill(-1);
+      adjacentRanks[TWO_POWER_D - 1 - kScalar] = treeId;
+      vertices[kScalar]                        = peano4::grid::GridVertex::create(0, state, x, adjacentRanks, false);
+      vertices[kScalar].setFlag(peano4::grid::GridVertex::HasBeenParentOfSubtreeVertexInPreviousTreeSweep, true);
+    });
   }
 
   peano4::grid::GridControlEvent createFarAwayRefineEvent() {
@@ -102,7 +101,7 @@ namespace {
   }
 } // namespace
 
-peano4::grid::tests::SpacetreeTest::SpacetreeTest():
+peano4::grid::tests::SpacetreeTest::SpacetreeTest() :
   TestCase("peano4::grid::tests::SpacetreeTest") {}
 
 void peano4::grid::tests::SpacetreeTest::run() {

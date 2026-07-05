@@ -2,21 +2,17 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
-#include <vector>
-#include <algorithm>
-
 #include "DGUtils.h"
 #include "Functors.h"
 
+#include "exahype2/CellData.h"
+#include "peano4/Globals.h"
+#include "peano4/grid/GridControlEvent.h"
 #include "tarch/la/Vector.h"
 #include "tarch/multicore/multicore.h"
 
-#include "peano4/grid/GridControlEvent.h"
-#include "peano4/Globals.h"
-
-#include "exahype2/CellData.h"
-
+#include <algorithm>
+#include <vector>
 
 namespace exahype2 {
   namespace dg {
@@ -163,39 +159,32 @@ namespace exahype2 {
      *
      */
     void cellIntegral_patchwise_in_situ_GaussLegendre_functors(
-      ::exahype2::CellData<double, double>&          cellData,
-      const int                                      order,
-      const int                                      unknowns,
-      const int                                      auxiliaryVariables,
-      Flux                                           flux,
-      NonConservativeProduct                         nonconservativeProduct,
-      Source                                         source,
-      PointSources                                   pointSources,
-      const double* NOALIAS                     QuadratureNodes1d,
-      const double* NOALIAS                     MassMatrixDiagonal1d,
-      const double* NOALIAS                     StiffnessMatrix1d,
-      const double* NOALIAS                     DerivativeOperator1d,
-      bool                                           evaluateFlux,
-      bool                                           evaluateNonconservativeProduct,
-      bool                                           evaluateSource,
-      bool                                           evaluatePointSources
+      ::exahype2::CellData<double, double>& cellData,
+      const int                             order,
+      const int                             unknowns,
+      const int                             auxiliaryVariables,
+      Flux                                  flux,
+      NonConservativeProduct                nonconservativeProduct,
+      Source                                source,
+      PointSources                          pointSources,
+      const double* NOALIAS                 QuadratureNodes1d,
+      const double* NOALIAS                 MassMatrixDiagonal1d,
+      const double* NOALIAS                 StiffnessMatrix1d,
+      const double* NOALIAS                 DerivativeOperator1d,
+      bool                                  evaluateFlux,
+      bool                                  evaluateNonconservativeProduct,
+      bool                                  evaluateSource,
+      bool                                  evaluatePointSources
     );
 
-
-    template <
-      typename Solver,
-      int      order,
-      int      unknowns,
-      int      auxiliaryVariables
-    >
+    template <typename Solver, int order, int unknowns, int auxiliaryVariables>
     void cellIntegral_patchwise_in_situ_GaussLegendre(
-      ::exahype2::CellData<double, double>&          cellData,
-      bool                                           evaluateFlux,
-      bool                                           evaluateNonconservativeProduct,
-      bool                                           evaluateSource,
-      bool                                           evaluatePointSources
+      ::exahype2::CellData<double, double>& cellData,
+      bool                                  evaluateFlux,
+      bool                                  evaluateNonconservativeProduct,
+      bool                                  evaluateSource,
+      bool                                  evaluatePointSources
     );
-
 
     /**
      * Final step of DG algorithm
@@ -220,17 +209,16 @@ namespace exahype2 {
      *
      * This particular routine assumes that the mass matrix is a diagonal. Therefore,
      * the inversion is trivial: We iterate over all degrees of freedom. This is a
-     * d-dimensional for loop (dfor). Per dof, we compute the diagonal, and every
+     * d-dimensional for loop (peano4::dForEach). Per dof, we compute the diagonal, and every
      * unknown then is scaled by the inverse of this diagonal.
      */
     void multiplyWithInvertedMassMatrix_GaussLegendre(
-      ::exahype2::CellData<double, double>&          cellData,
-      const int                                      order,
-      const int                                      unknowns,
-      const int                                      auxiliaryVariables,
-      const double* NOALIAS                     MassMatrixDiagonal1d
+      ::exahype2::CellData<double, double>& cellData,
+      const int                             order,
+      const int                             unknowns,
+      const int                             auxiliaryVariables,
+      const double* NOALIAS                 MassMatrixDiagonal1d
     );
-
 
     /**
      * Compute the maximum eigenvalues over a sequence of cells and store the
@@ -242,7 +230,7 @@ namespace exahype2 {
       const int                             unknowns,
       const int                             auxiliaryVariables,
       MaxEigenvalue                         maxEigenvalue,
-      const double* NOALIAS            QuadratureNodes1d
+      const double* NOALIAS                 QuadratureNodes1d
     );
 
     namespace internal {
@@ -257,18 +245,15 @@ namespace exahype2 {
        *  Das aber erst machen, nachdem wir die Enumeratoren da haben
        */
       void copySolution(
-        const double* NOALIAS                    cellQin,
-        const int                                     order,
-        const int                                     unknowns,
-        const int                                     auxiliaryVariables,
-        const tarch::la::Vector<DIMENSIONS,int>&      node,
-        double* NOALIAS                          cellQout
+        const double* NOALIAS                     cellQin,
+        const int                                 order,
+        const int                                 unknowns,
+        const int                                 auxiliaryVariables,
+        const tarch::la::Vector<DIMENSIONS, int>& node,
+        double* NOALIAS                           cellQout
       );
-    }
-  }
-}
-
+    } // namespace internal
+  } // namespace dg
+} // namespace exahype2
 
 #include "CellIntegral.cpph"
-
-

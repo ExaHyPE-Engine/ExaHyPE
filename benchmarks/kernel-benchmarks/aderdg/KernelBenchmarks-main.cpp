@@ -13,20 +13,17 @@
 #include "kernels/AderSolver/AMRRoutines.h"
 #include "peano4/Globals.h"
 #include "peano4/Init.h"
+#include "peano4/Loop.h"
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/FaceEnumerator.h"
-#include "peano4/Loop.h"
 #include "tarch/Init.h"
+#include "tarch/MemoryUsage.h"
 #include "tarch/instrumentation/Log.h"
 #include "tarch/instrumentation/Measurement.h"
 #include "tarch/instrumentation/Watch.h"
 #include "tarch/plotter/AMRPlotter.h"
 #include "tarch/plotter/HDF5FileWriter.h"
 #include "tarch/plotter/XDMFTimeSeriesWriter.h"
-#include "tarch/MemoryUsage.h"
-#include "toolbox/blockstructured/Interpolation.h"
-#include "toolbox/blockstructured/Projection.h"
-#include "toolbox/blockstructured/Restriction.h"
 
 #include <limits>
 #include <string>
@@ -190,9 +187,8 @@ void logFinalStatistics(
     logInfo(formatStatistic("Time Stepping", formatMeasurementTotal(measurement, "s")));
 
     const auto globalNumberOfPatches = _cells.size();
-    const auto totalNumberOfDoFs =
-      globalNumberOfPatches * std::pow(AbstractAderSolver::Order + 1, DIMENSIONS) *
-      (AbstractAderSolver::NumberOfUnknowns + AbstractAderSolver::NumberOfAuxiliaryVariables);
+    const auto totalNumberOfDoFs     = globalNumberOfPatches * std::pow(AbstractAderSolver::Order + 1, DIMENSIONS)
+      * (AbstractAderSolver::NumberOfUnknowns + AbstractAderSolver::NumberOfAuxiliaryVariables);
     const auto averageStepTime = measurement.getAverageValue();
 
     std::ostringstream performanceMessage;
@@ -229,7 +225,7 @@ void plotGrid() {
 
       int counter         = 0;
       int linearisedIndex = 0;
-      dfor(index, AbstractAderSolver::Order + 1) {
+      peano4::dForEach(AbstractAderSolver::Order + 1, [&](const tarch::la::Vector<DIMENSIONS, int>& index) {
         vertexIndices[counter] = _vertexPlotter->plotVertex(
           ::exahype2::dg::getQuadraturePoint(
             marker.getX(),
@@ -248,7 +244,7 @@ void plotGrid() {
 
         counter++;
         linearisedIndex += AbstractAderSolver::NumberOfUnknowns + AbstractAderSolver::NumberOfAuxiliaryVariables;
-      }
+      });
 
 #if DIMENSIONS == 3
       for (int k = 0; k < PointsPerAxis - 1; k++) {
@@ -257,7 +253,7 @@ void plotGrid() {
           for (int i = 0; i < PointsPerAxis - 1; i++) {
             int idx = i + j * PointsPerAxis
 #if DIMENSIONS == 3
-                      + k * PointsPerAxis * PointsPerAxis
+              + k * PointsPerAxis * PointsPerAxis
 #endif
               ;
 
@@ -313,8 +309,8 @@ void interpolateBetweenAMRBorder() {
 
       for (int f = 0; f < TWO_TIMES_D; f++) {
         int normal = f % DIMENSIONS;
-        if ((f >= DIMENSIONS and marker.getRelativePositionWithinFatherCell()[normal] == 2) or
-            (f < DIMENSIONS and marker.getRelativePositionWithinFatherCell()[normal] == 0)) {
+        if ((f >= DIMENSIONS and marker.getRelativePositionWithinFatherCell()[normal] == 2)
+            or (f < DIMENSIONS and marker.getRelativePositionWithinFatherCell()[normal] == 0)) {
           peano4::datamanagement::FaceMarker faceMarker{};
           faceMarker.relativePositionWithinFatherCell = marker.getRelativePositionWithinFatherCell();
           faceMarker.selectedFace                     = f;
@@ -328,8 +324,8 @@ void interpolateBetweenAMRBorder() {
               0.0
             );
           }
-          if (repositories::instanceOfAderSolver.getSolverState() ==
-              AderSolver::SolverState::PredictionOnHangingCells) {
+          if (repositories::instanceOfAderSolver.getSolverState()
+              == AderSolver::SolverState::PredictionOnHangingCells) {
             auto fineGridFaceQFlux =
               DataRepository::getInstance().getFaceQFluxEstimates(marker.getX(), marker.getH(), f);
             auto coarseGridFaceQFlux = DataRepository::getInstance().getFaceQFluxEstimates(parentCenter, parentSize, f);
@@ -351,8 +347,8 @@ void interpolateBetweenAMRBorder() {
 
       for (int f = 0; f < TWO_TIMES_D; f++) {
         int normal = f % DIMENSIONS;
-        if ((f >= DIMENSIONS and marker.getRelativePositionWithinFatherCell()[normal] == 2) or
-            (f < DIMENSIONS and marker.getRelativePositionWithinFatherCell()[normal] == 0)) {
+        if ((f >= DIMENSIONS and marker.getRelativePositionWithinFatherCell()[normal] == 2)
+            or (f < DIMENSIONS and marker.getRelativePositionWithinFatherCell()[normal] == 0)) {
           peano4::datamanagement::FaceMarker faceMarker{};
           faceMarker.relativePositionWithinFatherCell = marker.getRelativePositionWithinFatherCell();
           faceMarker.selectedFace                     = f;
@@ -363,14 +359,16 @@ void interpolateBetweenAMRBorder() {
 
           int facePosition = faceMarker.getSelectedFaceNumber() < DIMENSIONS ? 0 : SpaceFaceSize;
 
-          if (repositories::instanceOfAderSolver.getSolverState() ==
-              AderSolver::SolverState::PredictionOnHangingCells) {
+          if (repositories::instanceOfAderSolver.getSolverState()
+              == AderSolver::SolverState::PredictionOnHangingCells) {
             kernels::AderSolver::faceUnknownsProlongation(
-              fineGridFaceQ +
-                facePosition * (AbstractAderSolver::NumberOfUnknowns + AbstractAderSolver::NumberOfAuxiliaryVariables),
+              fineGridFaceQ
+                + facePosition
+                  * (AbstractAderSolver::NumberOfUnknowns + AbstractAderSolver::NumberOfAuxiliaryVariables),
               fineGridFaceQFlux + facePosition * AbstractAderSolver::NumberOfUnknowns,
-              coarseGridFaceQ +
-                facePosition * (AbstractAderSolver::NumberOfUnknowns + AbstractAderSolver::NumberOfAuxiliaryVariables),
+              coarseGridFaceQ
+                + facePosition
+                  * (AbstractAderSolver::NumberOfUnknowns + AbstractAderSolver::NumberOfAuxiliaryVariables),
               coarseGridFaceQFlux + facePosition * AbstractAderSolver::NumberOfUnknowns,
               faceMarker.getRelativePositionWithinFatherFace()
             );
@@ -387,7 +385,7 @@ void applyInitialConditions() {
       auto* QOut = DataRepository::getInstance().getCellQ(marker.getX(), marker.getH());
       // Initialise cell data with initial conditions.
       int linearisedIndex = 0;
-      dfor(index, AbstractAderSolver::Order + 1) {
+      peano4::dForEach(AbstractAderSolver::Order + 1, [&](const tarch::la::Vector<DIMENSIONS, int>& index) {
         repositories::instanceOfAderSolver.initialCondition(
           QOut + linearisedIndex,
           ::exahype2::dg::getQuadraturePoint(
@@ -400,7 +398,7 @@ void applyInitialConditions() {
           marker.getH()
         );
         linearisedIndex += (AbstractAderSolver::NumberOfUnknowns + AbstractAderSolver::NumberOfAuxiliaryVariables);
-      }
+      });
     }
   }
 }
@@ -436,7 +434,7 @@ createRefinedMarkersFromIndex(const tarch ::la ::Vector<DIMENSIONS, int>& index)
   marker.flags |= peano4::datamanagement::CellMarker::HasBeenRefined;
   result.push_back(marker);
 
-  dfor(offset, 3) {
+  peano4::dForEach(3, [&](const tarch::la::Vector<DIMENSIONS, int>& offset) {
     tarch::la::Vector<DIMENSIONS, double> deepCellOffset = tarch::la::convertScalar<double>(offset);
     tarch::la::Vector<DIMENSIONS, double> localCellIndex = deepCellOffset + deeperCellIndex;
     tarch::la::Vector<DIMENSIONS, double> deeperCellPosition =
@@ -446,7 +444,7 @@ createRefinedMarkersFromIndex(const tarch ::la ::Vector<DIMENSIONS, int>& index)
     marker.h                                = deeperCellSize;
     marker.relativePositionWithinFatherCell = offset;
     result.push_back(marker);
-  }
+  });
   return result;
 }
 
@@ -455,7 +453,7 @@ void createGrid() {
   const int gridLength = getGridLength();
   _cells.reserve(std::pow(gridLength, DIMENSIONS));
   tarch::la::Vector<DIMENSIONS, double> DomainCenter = DomainOffset + DomainSize / 2.0;
-  dfor(volume, gridLength) {
+  peano4::dForEach(gridLength, [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
     peano4::datamanagement::CellMarker marker = createMarkerFromIndex(volume);
     if (UseAMR and tarch::la::norm2(marker.getX() - DomainCenter) < 0.1) {
       auto markers = createRefinedMarkersFromIndex(volume);
@@ -463,7 +461,7 @@ void createGrid() {
     } else {
       _cells.push_back(marker);
     }
-  }
+  });
   repositories::finishGridConstructionStep();
 }
 
@@ -533,10 +531,9 @@ int main(int argc, char** argv) {
   const double timeInBetweenPlots = numberOfSnapshots <= 0 ? 0.0 : plottingEndTime / numberOfSnapshots;
 
   while (continueToSolve) {
-    if (timeInBetweenPlots > 0.0 and
-        (repositories::getMinTimeStamp() >= nextMinPlotTimeStamp or
-         repositories::getMaxTimeStamp() >= nextMaxPlotTimeStamp) and
-        repositories::mayPlot()) {
+    if (timeInBetweenPlots > 0.0
+        and (repositories::getMinTimeStamp() >= nextMinPlotTimeStamp or repositories::getMaxTimeStamp() >= nextMaxPlotTimeStamp)
+        and repositories::mayPlot()) {
       if (repositories::getMinTimeStamp() >= nextMinPlotTimeStamp) {
         nextMinPlotTimeStamp += timeInBetweenPlots;
       }
@@ -662,9 +659,8 @@ int main(int argc, char** argv) {
         const auto totalPersistentMemory = DataRepository::getInstance().getMemoryUsageInBytes();
 
         const auto globalNumberOfPatches = _cells.size();
-        const auto totalNumberOfDoFs =
-          globalNumberOfPatches * std::pow(AbstractAderSolver::Order + 1, DIMENSIONS) *
-          (AbstractAderSolver::NumberOfUnknowns + AbstractAderSolver::NumberOfAuxiliaryVariables);
+        const auto totalNumberOfDoFs     = globalNumberOfPatches * std::pow(AbstractAderSolver::Order + 1, DIMENSIONS)
+          * (AbstractAderSolver::NumberOfUnknowns + AbstractAderSolver::NumberOfAuxiliaryVariables);
 
         logInfo(formatTimeStep(numberOfCompletedTimeSteps, timeStepMeasurement));
         for (const auto& statistic : formatSolverStatistics()) {
@@ -723,9 +719,8 @@ int main(int argc, char** argv) {
       }
       const auto totalPersistentMemory = DataRepository::getInstance().getMemoryUsageInBytes();
       const auto globalNumberOfPatches = _cells.size();
-      const auto totalNumberOfDoFs =
-        globalNumberOfPatches * std::pow(AbstractAderSolver::Order + 1, DIMENSIONS) *
-        (AbstractAderSolver::NumberOfUnknowns + AbstractAderSolver::NumberOfAuxiliaryVariables);
+      const auto totalNumberOfDoFs     = globalNumberOfPatches * std::pow(AbstractAderSolver::Order + 1, DIMENSIONS)
+        * (AbstractAderSolver::NumberOfUnknowns + AbstractAderSolver::NumberOfAuxiliaryVariables);
       for (const auto& statistic : formatKernelBenchmarkStatistics(
              globalNumberOfPatches,
              totalNumberOfDoFs,

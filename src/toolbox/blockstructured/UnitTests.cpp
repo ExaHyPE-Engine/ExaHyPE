@@ -1,18 +1,18 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "UnitTests.h"
 
 #include "tarch/tests/TreeTestCaseCollection.h"
-#include "tests/IandRInMatricesTest.h"
-#include "tests/IandRSecondOrderTest.h"
-#include "tests/IandRThirdOrderTest.h"
-#include "tests/InterpolationTest.h"
+#include "toolbox/blockstructured/tests/EnumerationTest.h"
+#include "toolbox/blockstructured/tests/InterpolationTest.h"
+#include "toolbox/blockstructured/tests/RestrictionTest.h"
 
 tarch::tests::TestCase* toolbox::blockstructured::getUnitTests() {
-  tarch::tests::TreeTestCaseCollection* result = new tarch::tests::TreeTestCaseCollection();
+  auto* result = new tarch::tests::TreeTestCaseCollection();
 
+  result->addTestCase(new toolbox::blockstructured::tests::EnumerationTest());
   result->addTestCase(new toolbox::blockstructured::tests::InterpolationTest());
-  result->addTestCase(new toolbox::blockstructured::tests::IandRInMatricesTest());
-  result->addTestCase(new toolbox::blockstructured::tests::IandRSecondOrderTest());
-  result->addTestCase(new toolbox::blockstructured::tests::IandRThirdOrderTest());
+  result->addTestCase(new toolbox::blockstructured::tests::RestrictionTest());
 
   return result;
 }

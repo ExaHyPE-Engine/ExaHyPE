@@ -10,6 +10,7 @@
 #include <Availability.h>
 #endif
 
+// clang-format off
 // --- C++ language level ------------------------------------------------------
 // _MSVC_LANG mirrors __cplusplus for MSVC, whose __cplusplus stays at 199711L
 // unless /Zc:__cplusplus is passed; everywhere else __cplusplus is authoritative.
@@ -45,14 +46,15 @@
 #if defined(__APPLE__) && defined(__MAC_OS_X_VERSION_MIN_REQUIRED) && __MAC_OS_X_VERSION_MIN_REQUIRED < 101500
 #error "Peano needs a macOS 10.15+ deployment target for std::filesystem (set CMAKE_OSX_DEPLOYMENT_TARGET)."
 #endif
+// clang-format on
 
 // --- Build-platform invariants -----------------------------------------------
-static_assert(sizeof(void*) == 8, "Assuming 64-bit build; i.e., 8-byte pointers");
-static_assert(std::numeric_limits<float>::is_iec559, "std::numeric_limits<float>::is_iec559");
-static_assert(std::numeric_limits<double>::is_iec559, "std::numeric_limits<double>::is_iec55");
-static_assert(CHAR_BIT == 8, "CHAR_BIT != 8");
-static_assert(sizeof(char) == 1, "sizeof(short) != 1");
-static_assert(sizeof(short) == 2, "sizeof(short) != 2");
-static_assert(sizeof(int) == 4, "sizeof(int) != 4");
-static_assert(sizeof(long long) == 8, "sizeof(long long) != 8");
-static_assert('A' == 65, "A != 65");
+static_assert(sizeof(void*) == 8, "Assuming a 64-bit build with 8-byte pointers");
+static_assert(std::numeric_limits<float>::is_iec559, "Float must be an IEEE 754 type");
+static_assert(std::numeric_limits<double>::is_iec559, "Double must be an IEEE 754 type");
+static_assert(CHAR_BIT == 8, "A byte must have 8 bits");
+static_assert(sizeof(char) == 1, "Char must be one byte");
+static_assert(sizeof(short) == 2, "Short must be two bytes");
+static_assert(sizeof(int) == 4, "Int must be four bytes");
+static_assert(sizeof(long long) == 8, "Long long must be eight bytes");
+static_assert('A' == 65, "The execution character set must be ASCII");

@@ -41,9 +41,6 @@ set(SOURCES
   accelerator/sycl/accelerator.cpp
   accelerator/sycl/Device.cpp
 
-  la/DynamicMatrix.cpp
-  la/GramSchmidt.cpp
-  la/LUDecomposition.cpp
   la/Matrix.cpp
   la/Matrix2x2.cpp
   la/Matrix3x3.cpp
@@ -62,9 +59,6 @@ set(SOURCES
   la/VectorOperations.cpp
   la/VectorScalarOperations.cpp
   la/VectorVectorOperations.cpp
-  la/tests/DynamicMatrixTest.cpp
-  la/tests/GramSchmidtTest.cpp
-  la/tests/LUDecompositionTest.cpp
   la/tests/MatrixTest.cpp
   la/tests/MatrixVectorTest.cpp
   la/tests/ScalarTest.cpp

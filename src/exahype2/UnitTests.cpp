@@ -8,7 +8,6 @@
 #include "dg/tests/RiemannTest.h"
 #include "fv/tests/ApplySplit1DRiemannToPatchTest.h"
 #include "fv/tests/CopyPatchTest.h"
-#include "fv/tests/InterpolationRestrictionTest.h"
 #include "tarch/tests/TreeTestCaseCollection.h"
 
 tarch::tests::TestCase* exahype2::getUnitTests() {
@@ -20,7 +19,6 @@ tarch::tests::TestCase* exahype2::getUnitTests() {
   result->addTestCase(new dg::rusanov::tests::RiemannTest());
 
   result->addTestCase(new fv::tests::CopyPatchTest());
-  result->addTestCase(new fv::tests::InterpolationRestrictionTest());
   result->addTestCase(new fv::tests::ApplySplit1DRiemannToPatchTest());
 
   return result;

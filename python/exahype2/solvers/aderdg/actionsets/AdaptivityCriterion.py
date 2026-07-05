@@ -70,7 +70,7 @@ class AdaptivityCriterion(AbstractADERDGActionSet):
     fineGridCell{{CELL_LABEL_NAME}}.getHasUpdated()
   ) {
     int linearisedIndex = 0;
-    dfor(index, {{ORDER}} + 1) {
+    peano4::dForEach({{ORDER}} + 1, [&](const tarch::la::Vector<DIMENSIONS, int>& index) {
       refinementCriterion = refinementCriterion and repositories::{{SOLVER_INSTANCE}}.refinementCriterion(
         fineGridCell{{UNKNOWN_IDENTIFIER}}.data() + linearisedIndex,
         ::exahype2::dg::getQuadraturePoint(
@@ -84,7 +84,7 @@ class AdaptivityCriterion(AbstractADERDGActionSet):
         fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp()
       );
       linearisedIndex += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    }
+    });
     if (
       refinementCriterion == ::exahype2::RefinementCommand::Refine
       and

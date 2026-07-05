@@ -27,16 +27,13 @@ void benchmarks::exahype2::kernelbenchmarks::handleBoundaryFused(
   const int                                           numberOfCells,
   const int                                           targetDevice
 ) {
-
   // Check whether boundary condition should even run
   if (not solver.isLastGridSweepOfTimeStep()) {
     return;
   }
 
 #pragma omp parallel for schedule(static)
-
   for (int boundaryFaceIndex = 0; boundaryFaceIndex < numberOfFaces; ++boundaryFaceIndex) {
-
     const uint64_t faceIndex  = faceIndices[boundaryFaceIndex];
     const int      faceNumber = faceNumbers[boundaryFaceIndex];
     const uint64_t cellIndex  = cellIndices[boundaryFaceIndex];
@@ -58,38 +55,44 @@ void benchmarks::exahype2::kernelbenchmarks::handleBoundaryFused(
     auto* QOut = &faceEstimatesFlattened[faceIndex * faceEstimatesSize + (!isLeftFace ? faceEstimatesSize / 2 : 0)];
     auto* FOut = &faceFluxesFlattened[faceIndex * faceFluxesSize + (!isLeftFace ? faceFluxesSize / 2 : 0)];
 
-    dfore(dof, AbstractAderSolver::Order + 1, normal, 0) {
-      tarch::la::Vector<DIMENSIONS, double> nodePosition;
-      int                                   dofSerialised = 0;
-      int                                   basis         = 1;
-      for (int d = 0; d < DIMENSIONS; d++) {
-        nodePosition(d) = faceOffset(d);
-        nodePosition(
-          d
-        ) += (d == normal) ? 0.0 : kernels::AderSolver::Quadrature<SolverStoragePrecision>::nodes[dof(d)] * patchSize(d);
-        dofSerialised += (d == normal) ? 0 : dof(d) * basis;
-        basis *= (d == normal) ? 1 : (AbstractAderSolver::Order + 1);
+    peano4::dForEachExclusive(
+      AbstractAderSolver::Order + 1,
+      normal,
+      0,
+      [&](const tarch::la::Vector<DIMENSIONS, int>& dof) {
+        tarch::la::Vector<DIMENSIONS, double> nodePosition;
+        int                                   dofSerialised = 0;
+        int                                   basis         = 1;
+        for (int d = 0; d < DIMENSIONS; d++) {
+          nodePosition(d) = faceOffset(d);
+          nodePosition(d) +=
+            (d == normal) ? 0.0 : kernels::AderSolver::Quadrature<SolverStoragePrecision>::nodes[dof(d)] * patchSize(d);
+          dofSerialised += (d == normal) ? 0 : dof(d) * basis;
+          basis *= (d == normal) ? 1 : (AbstractAderSolver::Order + 1);
+        }
+
+        repositories::instanceOfAderSolver.boundaryConditions(
+          QIn + dofSerialised * (AbstractAderSolver::NumberOfUnknowns + AbstractAderSolver::NumberOfAuxiliaryVariables),
+          QOut
+            + dofSerialised * (AbstractAderSolver::NumberOfUnknowns + AbstractAderSolver::NumberOfAuxiliaryVariables),
+          nodePosition,
+          patchSize,
+          t,
+          normal
+        );
+
+        repositories::instanceOfAderSolver.flux(
+          QOut
+            + dofSerialised * (AbstractAderSolver::NumberOfUnknowns + AbstractAderSolver::NumberOfAuxiliaryVariables),
+          nodePosition,
+          patchSize,
+          t,
+          dt,
+          normal,
+          FOut + dofSerialised * AbstractAderSolver::NumberOfUnknowns
+        );
       }
-
-      repositories::instanceOfAderSolver.boundaryConditions(
-        QIn + dofSerialised * (AbstractAderSolver::NumberOfUnknowns + AbstractAderSolver::NumberOfAuxiliaryVariables),
-        QOut + dofSerialised * (AbstractAderSolver::NumberOfUnknowns + AbstractAderSolver::NumberOfAuxiliaryVariables),
-        nodePosition,
-        patchSize,
-        t,
-        normal
-      );
-
-      repositories::instanceOfAderSolver.flux(
-        QOut + dofSerialised * (AbstractAderSolver::NumberOfUnknowns + AbstractAderSolver::NumberOfAuxiliaryVariables),
-        nodePosition,
-        patchSize,
-        t,
-        dt,
-        normal,
-        FOut + dofSerialised * AbstractAderSolver::NumberOfUnknowns
-      );
-    }
+    );
   }
 }
 
@@ -107,7 +110,6 @@ void benchmarks::exahype2::kernelbenchmarks::predictorFused(
   const int                                           numberOfCells,
   const int                                           targetDevice
 ) {
-
   // Check whether the predictor should even run
   if (not solver.isFirstGridSweepOfTimeStep()) {
     return;
@@ -115,7 +117,6 @@ void benchmarks::exahype2::kernelbenchmarks::predictorFused(
 
 #pragma omp parallel for schedule(static)
   for (int cellIndex = 0; cellIndex < numberOfCells; ++cellIndex) {
-
     constexpr int cellCardinality = celldata::AderSolverQ::Cardinality;
     auto* const   QNew            = &QInFlattened[cellIndex * cellCardinality];
     auto* const   QOld            = &QOutFlattened[cellIndex * cellCardinality];
@@ -199,7 +200,6 @@ void benchmarks::exahype2::kernelbenchmarks::riemannFused(
 
 #pragma omp parallel for schedule(static)
   for (int f = 0; f < numberOfFaces; ++f) {
-
     const uint64_t faceIndex  = faceIndices[f];
     const int      faceNumber = faceNumbers[f];
     const uint64_t cellIndex  = cellIndices[f];
@@ -257,7 +257,6 @@ void benchmarks::exahype2::kernelbenchmarks::correctorFused(
   const int                                           numberOfCells,
   const int                                           targetDevice
 ) {
-
   // Check whether the predictor should even run
   if (not solver.isLastGridSweepOfTimeStep()) {
     return;
@@ -268,7 +267,6 @@ void benchmarks::exahype2::kernelbenchmarks::correctorFused(
 
 #pragma omp parallel for schedule(static) OMP_REDUCTION_CLAUSE
   for (int cellIndex = 0; cellIndex < numberOfCells; ++cellIndex) {
-
     constexpr int cellCardinality = celldata::AderSolverQ::Cardinality;
     auto* const   QNew            = &QInFlattened[cellIndex * cellCardinality];
 
@@ -316,8 +314,14 @@ void benchmarks::exahype2::kernelbenchmarks::correctorFused(
       );
     }
 
-    maxEigenvalue = kernels::AderSolver::
-      maxScaledEigenvalue(repositories::instanceOfAderSolver, QNew, patchCentre, patchSize, timeStamp, timeStepSize);
+    maxEigenvalue = kernels::AderSolver::maxScaledEigenvalue(
+      repositories::instanceOfAderSolver,
+      QNew,
+      patchCentre,
+      patchSize,
+      timeStamp,
+      timeStepSize
+    );
   }
 
   solver.setMaxEigenvalue(maxEigenvalue);

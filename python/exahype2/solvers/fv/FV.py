@@ -91,41 +91,10 @@ class FV(object):
 
     ## Adaptive mesh refinement (AMR)
 
-    We use by default a linear interpolation and averaging. For the linear interpolation,
-    I do not compute the operators on demand. Instead, I use the optimised scheme which
-    computes the operators once and then reuses them as static operation.
-
-    If you wanna alter the inter-resolution transfer operators, please use
-
-            self._interpolation = "tensor_product< " + self._name + ">"
-            self.add_solver_constants( "" "static constexpr double  NormalInterpolationMatrix1d[]     = {
-              1.0, 0.0
-            };
-            "" " )
-            self.add_solver_constants( "" "static constexpr double  TangentialInterpolationMatrix1d[] = {
-            1.0,0.0,0.0,0.0,
-            1.0,0.0,0.0,0.0,
-            1.0,0.0,0.0,0.0,
-            0.0,1.0,0.0,0.0,
-
-            0.0,1.0,0.0,0.0,
-            0.0,1.0,0.0,0.0,
-            0.0,0.0,1.0,0.0,
-            0.0,0.0,1.0,0.0,
-
-            0.0,0.0,1.0,0.0,
-            0.0,0.0,0.0,1.0,
-            0.0,0.0,0.0,1.0,
-            0.0,0.0,0.0,1.0
-            };"" " )
-
-    The above snippet refers to a overlap of one and five unknowns. So the interpolation
-    along a 1d tangential direction is three 5x5 matrices. Along the normal, we have to
-    project onto one target element, so our projection matrix has one row. We have two
-    values (inside and outside) along this normal, so two columns. In the standard
-    enumeration scheme (refers to the face with normal 0), we have one real coarse
-    grid value in this case. The other one would be the restricted value. We don't
-    often use it (and therefore have a 0 here).
+    Finite Volume solvers use a fixed piecewise-constant interpolation to
+    project coarse grid data onto finer resolutions, and the matching
+    averaging restriction to couple fine grid solutions back onto
+    coarser regions of the mesh.
 
     ## Data postprocessing or coupling to other codes
 
@@ -263,10 +232,6 @@ class FV(object):
         self._constructor_implementation = ""
         self._start_simulation_implementation = ""
         self._finish_simulation_implementation = ""
-
-        self._interpolation = "piecewise_constant"
-        # must use inject, as we currently do not clear the half of the coarse face we restrict into
-        self._restriction = "inject" # TODO: address this
 
         self._compute_precision = "double"
         self._storage_precision = "double"
@@ -481,14 +446,9 @@ and additional AMR levels is configured by the executable at runtime.
         here: the postprocessing step is never overwritten by the standard
         classes.
 
-        There are further action sets which have a state, which users might
-        want to alter. The most prominent one is the AMR routines, where users
-        often alter the interpolation and restriction scheme. Here, things are
-        tricky: If we keep the default one, the action set would not pick up
-        if you changed the number of unknowns, e.g. However, if we recreated
-        the action set, we'd miss out on any changed interpolation/restriction
-        scheme. Therefore, I have to hold the interpolation and restriction
-        scheme separate.
+        There are further action sets which have a state that users might want
+        to alter, such as the number of unknowns. Recreating the action set
+        picks up such changes; keeping a default one would not.
         """
         self._action_set_initial_conditions = (
             exahype2.solvers.fv.actionsets.InitialCondition(
@@ -526,8 +486,6 @@ and additional AMR levels is configured by the executable at runtime.
         )
         self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.fv.actionsets.DynamicAMR(
             solver=self,
-            interpolation=self._interpolation,
-            restriction=self._restriction,
         )
 
         # This one is different: it is the hook-in point for other solvers, so we create it
@@ -1216,10 +1174,10 @@ and additional AMR levels is configured by the executable at runtime.
 
              {
                int index = 0;
-               dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
+               peano4::dForEach({{NUMBER_OF_VOLUMES_PER_AXIS}}, [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
                  enforceCCZ4constraints( newQ+index );
                  index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-               }
+               });
              }
 
          but often, it is nicer ot user one of the pre-defined kernels in ExaHyPE
@@ -1276,26 +1234,6 @@ and additional AMR levels is configured by the executable at runtime.
                 )
             )
         self._overlap = value
-        self.create_data_structures()
-        self.create_action_sets()
-
-    @property
-    def interpolation(self):
-        return self._interpolation
-
-    @interpolation.setter
-    def interpolation(self, value):
-        self._interpolation = value
-        self.create_data_structures()
-        self.create_action_sets()
-
-    @property
-    def restriction(self):
-        return self._restriction
-
-    @restriction.setter
-    def restriction(self, value):
-        self._restriction = value
         self.create_data_structures()
         self.create_action_sets()
 

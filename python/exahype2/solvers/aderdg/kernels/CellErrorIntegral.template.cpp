@@ -37,7 +37,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::cellErrorIntegral(
   int linearisedIndex = 0;
 
   // Iterate over all quadrature points in the cell
-  dfor(index, {{NUMBER_OF_DOF}}) {
+  peano4::dForEach({{NUMBER_OF_DOF}}, [&](const tarch::la::Vector<DIMENSIONS, int>& index) {
 {% if DIMENSIONS==2 %}
     const double weight = cellVolume * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[0]] * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[1]];
 {% else %}
@@ -68,5 +68,5 @@ void {{FULL_QUALIFIED_NAMESPACE}}::cellErrorIntegral(
     }
 
     linearisedIndex += {{NUMBER_OF_DATA}};
-  }
+  });
 }

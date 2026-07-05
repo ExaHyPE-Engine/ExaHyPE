@@ -5,7 +5,6 @@
 #include "peano4/Loop.h"
 
 #include "toolbox/blockstructured/Enumeration.h"
-#include "toolbox/blockstructured/Projection.h"
 
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/accelerator/ParallelFor.h"

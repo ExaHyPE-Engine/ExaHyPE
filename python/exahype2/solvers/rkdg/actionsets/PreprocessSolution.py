@@ -86,15 +86,15 @@ class DoFWisePreprocessSolution(AbstractRungeKuttaDGActionSet):
   ) { 
     
     constexpr int valuesPerDoF = {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    dfor( index, {{DG_ORDER}}+1 ) {
+    peano4::dForEach({{DG_ORDER}} + 1, [&](const tarch::la::Vector<DIMENSIONS, int>& index) {
       double* values   = fineGridCell{{UNKNOWN_IDENTIFIER}}.data()
         + peano4::dLinearised(index, {{DG_ORDER}}+1) * valuesPerDoF;
       auto    x        = ::exahype2::dg::getQuadraturePoint(
         marker.getX(), marker.getH(), index, repositories::{{SOLVER_INSTANCE}}.DGOrder, repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d
       );
       """ + operation_per_point + """
-    }
-  } 
+    });
+  }
 }
 """
 

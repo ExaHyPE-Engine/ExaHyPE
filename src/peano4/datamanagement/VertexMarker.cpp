@@ -2,8 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "VertexMarker.h"
 
-#include "peano4/grid/GridTraversalObserver.h"
 #include "peano4/Loop.h"
+#include "peano4/grid/GridTraversalObserver.h"
 
 std::ostream& operator<<(std::ostream& out, const peano4::datamanagement::VertexMarker& marker) {
   out << marker.toString();
@@ -15,17 +15,17 @@ tarch::la::Vector<DIMENSIONS, double> peano4::datamanagement::reconstructXOfPare
   const std::bitset<DIMENSIONS>& parentVertexPositionWithinParentCell
 ) {
   return marker.getX()
-         - tarch::la::multiplyComponents(
+    - tarch::la::multiplyComponents(
            tarch::la::convertScalar<double>(marker.getRelativePositionWithinFatherCell()),
            marker.getH()
-         )
-         + tarch::la::multiplyComponents(
+    )
+    + tarch::la::multiplyComponents(
            tarch::la::Vector<DIMENSIONS, double>(parentVertexPositionWithinParentCell),
            3.0 * marker.getH()
-         );
+    );
 }
 
-peano4::datamanagement::VertexMarker::VertexMarker(const peano4::grid::GridTraversalEvent& event, int select):
+peano4::datamanagement::VertexMarker::VertexMarker(const peano4::grid::GridTraversalEvent& event, int select) :
   _cellCentre(event.getX()),
   _h(event.getH()),
   _select(select) {
@@ -45,9 +45,8 @@ tarch::la::Vector<DIMENSIONS, int> peano4::datamanagement::VertexMarker::getRela
   return getRelativePositionWithinFatherCell(_select);
 }
 
-tarch::la::Vector<DIMENSIONS, int> peano4::datamanagement::VertexMarker::getRelativePositionWithinFatherCell(
-  int i
-) const {
+tarch::la::Vector<DIMENSIONS, int>
+peano4::datamanagement::VertexMarker::getRelativePositionWithinFatherCell(int i) const {
   tarch::la::Vector<DIMENSIONS, int> result = relativePositionWithinFatherCell;
   std::bitset<DIMENSIONS>            index  = i;
   for (int d = 0; d < DIMENSIONS; d++) {
@@ -86,12 +85,11 @@ tarch::la::Vector<DIMENSIONS, double> peano4::datamanagement::VertexMarker::getX
 
 std::string peano4::datamanagement::VertexMarker::toString() const {
   std::ostringstream msg;
-  msg
-    << "(cell-centre=" << _cellCentre << ",cell-h=" << _h << ",local=" << _isLocal << ",hanging=" << _isHanging
-    << ",select=" << _select << ",has-been-refined=" << _hasBeenRefined << ",will-be-refined=" << _willBeRefined
-    << ",is-parent-vertex-local=" << _isParentVertexLocal << ",is-parent-cell-local=" << _isParentCellLocal
-    << ",rel-pos-within-father=" << relativePositionWithinFatherCell
-    << ",is-adjacent-cell-local=" << _isAdjacentCellLocal << ",x(selected)=" << getX() << ")";
+  msg << "(cell-centre=" << _cellCentre << ",cell-h=" << _h << ",local=" << _isLocal << ",hanging=" << _isHanging
+      << ",select=" << _select << ",has-been-refined=" << _hasBeenRefined << ",will-be-refined=" << _willBeRefined
+      << ",is-parent-vertex-local=" << _isParentVertexLocal << ",is-parent-cell-local=" << _isParentCellLocal
+      << ",rel-pos-within-father=" << relativePositionWithinFatherCell
+      << ",is-adjacent-cell-local=" << _isAdjacentCellLocal << ",x(selected)=" << getX() << ")";
   return msg.str();
 }
 
@@ -129,9 +127,8 @@ bool peano4::datamanagement::VertexMarker::isContainedInAdjacentCellsByDimension
   return distance <= reach + tolerance;
 }
 
-tarch::la::Vector<DIMENSIONS, int> peano4::datamanagement::VertexMarker::getRelativeAdjacentCell(
-  const tarch::la::Vector<DIMENSIONS, double>& x
-) const {
+tarch::la::Vector<DIMENSIONS, int>
+peano4::datamanagement::VertexMarker::getRelativeAdjacentCell(const tarch::la::Vector<DIMENSIONS, double>& x) const {
   tarch::la::Vector<DIMENSIONS, int> result;
   for (int d = 0; d < DIMENSIONS; d++) {
     result(d) = x(d) <= (this->getX())(d) ? 0 : 1;
@@ -172,11 +169,10 @@ std::bitset<TWO_POWER_D> peano4::datamanagement::VertexMarker::areAdjacentCellsL
 
   std::bitset<DIMENSIONS>            selectedVertexAsBitset = _select;
   tarch::la::Vector<DIMENSIONS, int> selectedVertex(selectedVertexAsBitset);
-  dfor2(j) {
+  peano4::dForEachCorner([&](const tarch::la::Vector<DIMENSIONS, int>& j, int jScalar) {
     tarch::la::Vector<DIMENSIONS, int> entryIn3x3Patch = selectedVertex + j;
-    result[jScalar] = _isAdjacentCellLocal[peano4::dLinearised(entryIn3x3Patch, 3)];
-  }
-  enddforx
+    result[jScalar]                                    = _isAdjacentCellLocal[peano4::dLinearised(entryIn3x3Patch, 3)];
+  });
 
-    return result;
+  return result;
 }

@@ -1,4 +1,3 @@
-
 template <typename QStoreType>
 QStoreType exahype2::dg::evaluatePolynomial(
   const peano4::datamanagement::CellMarker&    marker,
@@ -6,26 +5,26 @@ QStoreType exahype2::dg::evaluatePolynomial(
   const double* NOALIAS                        QuadratureNodes1d,
   int                                          unknownsPerDoF,
   const QStoreType* NOALIAS                    Q,
-  const tarch::la::Vector<DIMENSIONS,double>&  x,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
   int                                          unknown
 ) {
   QStoreType result = 0.0;
-  dfor(currentDoF,order+1) {
+  peano4::dForEach(order + 1, [&](const tarch::la::Vector<DIMENSIONS, int>& currentDoF) {
     double denominator = 1.0;
     double enumerator  = 1.0;
-    for (int d=0; d<DIMENSIONS; d++) {
-      for (int i=0; i<order+1; i++) {
-        if ( i!=currentDoF(d) ) {
-          double normalisedQuadratePointDistance = QuadratureNodes1d[currentDoF(d)]-QuadratureNodes1d[i];
-          double distanceToQuadraturePoint1d     = x(d)-( QuadratureNodes1d[i]*marker.getH()(d)+marker.getOffset()(d) );
+    for (int d = 0; d < DIMENSIONS; d++) {
+      for (int i = 0; i < order + 1; i++) {
+        if (i != currentDoF(d)) {
+          double normalisedQuadratePointDistance = QuadratureNodes1d[currentDoF(d)] - QuadratureNodes1d[i];
+          double distanceToQuadraturePoint1d = x(d) - (QuadratureNodes1d[i] * marker.getH()(d) + marker.getOffset()(d));
           denominator *= normalisedQuadratePointDistance * marker.getH()(d);
-          enumerator  *= distanceToQuadraturePoint1d;
+          enumerator *= distanceToQuadraturePoint1d;
         }
       }
     }
-    int dofLinearised = peano4::dLinearised(currentDoF,order+1);
-    result += enumerator/denominator * Q[ dofLinearised * unknownsPerDoF + unknown ];
-  }
+    int dofLinearised = peano4::dLinearised(currentDoF, order + 1);
+    result += enumerator / denominator * Q[dofLinearised * unknownsPerDoF + unknown];
+  });
   return result;
 }
 
@@ -36,17 +35,16 @@ QStoreType exahype2::dg::evaluatePolynomial(
   const double* NOALIAS                        QuadratureNodes1d,
   int                                          unknownsPerDoF,
   const QStoreType* NOALIAS                    Q,
-  const tarch::la::Vector<DIMENSIONS,double>&  x,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
   int                                          unknown
 ) {
-
   const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
 
   // Compute the projection of the point x onto the interval [0 - 1] in each direction
-  const tarch::la::Vector<DIMENSIONS,double>&  x_fixed = {
+  const tarch::la::Vector<DIMENSIONS, double>& x_fixed = {
     (x[0] - marker.getX()[0]) / (marker.getH()[0]) + 0.5,
     (x[1] - marker.getX()[1]) / (marker.getH()[1]) + 0.5,
-#if DIMENSIONS==3
+#if DIMENSIONS == 3
     (x[2] - marker.getX()[2]) / (marker.getH()[2]) + 0.5,
 #endif
   };
@@ -55,45 +53,45 @@ QStoreType exahype2::dg::evaluatePolynomial(
   int dofLinearised = 0;
 
   QStoreType result = 0.0;
-  dfore(currentDoF, order+1, normal, 0) {
+  peano4::dForEachExclusive(order + 1, normal, 0, [&](const tarch::la::Vector<DIMENSIONS, int>& currentDoF) {
     double denominator = 1.0;
     double enumerator  = 1.0;
-    for (int d=0; d<DIMENSIONS; d++) {
-
+    for (int d = 0; d < DIMENSIONS; d++) {
       // Skip the normal dimension
-      if (d==normal) continue;
+      if (d == normal)
+        continue;
 
-      for (int i=0; i<order+1; i++) {
-        if ( i!=currentDoF(d) ) {
-          double normalisedQuadratePointDistance = QuadratureNodes1d[currentDoF(d)]-QuadratureNodes1d[i];
-          double distanceToQuadraturePoint1d     = ( x_fixed(d)- QuadratureNodes1d[i] );
+      for (int i = 0; i < order + 1; i++) {
+        if (i != currentDoF(d)) {
+          double normalisedQuadratePointDistance = QuadratureNodes1d[currentDoF(d)] - QuadratureNodes1d[i];
+          double distanceToQuadraturePoint1d     = (x_fixed(d) - QuadratureNodes1d[i]);
           denominator *= normalisedQuadratePointDistance;
-          enumerator  *= distanceToQuadraturePoint1d;
+          enumerator *= distanceToQuadraturePoint1d;
         }
       }
     }
- 
-    result += enumerator/denominator * Q[ dofLinearised + unknown ];
+
+    result += enumerator / denominator * Q[dofLinearised + unknown];
     dofLinearised += unknownsPerDoF;
-  }
+  });
   return result;
 }
 
-template<typename T>
-tarch::la::Vector<DIMENSIONS,double>  exahype2::dg::getQuadraturePoint(
-  const tarch::la::Vector<DIMENSIONS,double>&  cellCentre,
-  const tarch::la::Vector<DIMENSIONS,double>&  cellSize,
-  const tarch::la::Vector<DIMENSIONS,int>&     index,
-  int                                 /*polynomialOrder*/,
-  const T* NOALIAS          quadraturePoints
+template <typename T>
+tarch::la::Vector<DIMENSIONS, double> exahype2::dg::getQuadraturePoint(
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const tarch::la::Vector<DIMENSIONS, int>&    index,
+  int /*polynomialOrder*/,
+  const T* NOALIAS quadraturePoints
 ) {
-  tarch::la::Vector<DIMENSIONS,double> result;
+  tarch::la::Vector<DIMENSIONS, double> result;
 
   result(0) = quadraturePoints[index(0)];
   result(1) = quadraturePoints[index(1)];
-#if DIMENSIONS==3
+#if DIMENSIONS == 3
   result(2) = quadraturePoints[index(2)];
 #endif
 
-  return tarch::la::multiplyComponents(result,cellSize) + cellCentre - 0.5*cellSize;
+  return tarch::la::multiplyComponents(result, cellSize) + cellCentre - 0.5 * cellSize;
 }

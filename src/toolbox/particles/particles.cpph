@@ -1,15 +1,19 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #include "internal.h"
+
+#include "peano4/Loop.h"
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/VertexMarker.h"
-#include "peano4/Loop.h"
 #include "tarch/la/VectorVectorOperations.h"
 #include "toolbox/particles/assignmentchecks/TracingAPI.h"
 
 template <typename Iterator>
-Iterator toolbox::particles::
-  particleIsDuplicate(const typename Iterator::value_type& particle, Iterator begin, const Iterator& end) {
+Iterator toolbox::particles::particleIsDuplicate(
+  const typename Iterator::value_type& particle,
+  Iterator                             begin,
+  const Iterator&                      end
+) {
   while (begin != end) {
     // Two particles are the same if they carry the same global identity
     // getNumber() = (inserting tree, running index on that tree). This pair is
@@ -28,15 +32,16 @@ Iterator toolbox::particles::
     // always carry distinct numbers, so dropping the position test cannot merge
     // two genuinely different particles that happen to coincide spatially.
     if ((*begin)->getNumber() == particle->getNumber()) {
-      logDebug("Particles "
-          << particle->toString() << " and " << (*begin)->toString() << " are duplicates (same (tree,number) identity)");
+      logDebug(
+        "Particles " << particle->toString() << " and " << (*begin)->toString()
+                     << " are duplicates (same (tree,number) identity)"
+      );
       return begin;
     }
     ++begin;
   }
   return begin;
 }
-
 
 template <typename Particle>
 bool toolbox::particles::particleWillStayWithinComputationalDomain(
@@ -45,8 +50,8 @@ bool toolbox::particles::particleWillStayWithinComputationalDomain(
   const tarch::la::Vector<DIMENSIONS, double>& domainWidth
 ) {
   return particle.getParallelState() == Particle::ParallelState::Local
-         and tarch::la::allGreaterEquals(particle.getX(), domainOffset)
-         and tarch::la::allSmallerEquals(particle.getX(), domainOffset + domainWidth);
+    and tarch::la::allGreaterEquals(particle.getX(), domainOffset)
+    and tarch::la::allSmallerEquals(particle.getX(), domainOffset + domainWidth);
 }
 
 template <typename Particle, typename ParticleSet>
@@ -67,9 +72,8 @@ void toolbox::particles::updateContainedInAdjacentCellProperty(
   const std::bitset<DIMENSIONS>&            assignedVertex,
   Particle&                                 particle
 ) {
-  const tarch::la::Vector<DIMENSIONS, double> vertexPositionOfAssignedVertex
-    = marker.getOffset()
-      + tarch::la::multiplyComponents(tarch::la::Vector<DIMENSIONS, double>(assignedVertex), marker.getH());
+  const tarch::la::Vector<DIMENSIONS, double> vertexPositionOfAssignedVertex = marker.getOffset()
+    + tarch::la::multiplyComponents(tarch::la::Vector<DIMENSIONS, double>(assignedVertex), marker.getH());
   updateContainedInAdjacentCellProperty(vertexPositionOfAssignedVertex, marker.getH(), particle);
 }
 
@@ -89,18 +93,19 @@ void toolbox::particles::updateContainedInAdjacentCellProperty(
 ) {
   std::bitset<TWO_POWER_D> result = 0;
 
-  dfor2(k) tarch::la::Vector<DIMENSIONS, double>
-    adjacentCellCentre = x - 0.5 * h + tarch::la::multiplyComponents(tarch::la::convertScalar<double>(k), h);
+  peano4::dForEachCorner([&](const tarch::la::Vector<DIMENSIONS, int>& k, int kScalar) {
+    const tarch::la::Vector<DIMENSIONS, double> adjacentCellCentre =
+      x - 0.5 * h + tarch::la::multiplyComponents(tarch::la::convertScalar<double>(k), h);
+    result[kScalar] = peano4::datamanagement::CellMarker::isContained(
+      particle.getX(),
+      adjacentCellCentre,
+      h,
+      toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance(h)
+        * tarch::la::NUMERICAL_ZERO_DIFFERENCE
+    );
+  });
 
-  result[kScalar] = peano4::datamanagement::CellMarker::isContained(
-    particle.getX(),
-    adjacentCellCentre,
-    h,
-    toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance(h) * tarch::la::NUMERICAL_ZERO_DIFFERENCE
-  );
-  enddforx
-
-    particle.setContainedInAdjacentCell(result);
+  particle.setContainedInAdjacentCell(result);
 }
 
 template <typename Particle, typename ParticleSet>
@@ -110,7 +115,7 @@ void toolbox::particles::insertParticleIntoCell(
   peano4::datamanagement::VertexEnumerator<ParticleSet>& fineGridVertices,
   int                                                    spacetreeId
 ) {
-  std::bitset<DIMENSIONS>    targetVertex;
+  std::bitset<DIMENSIONS> targetVertex;
   for (int d = 0; d < DIMENSIONS; d++) {
     assertion(
       tarch::la::greaterEquals(newParticle->getX()(d), marker.getX()(d) - marker.getH()(d) / 2.0),
@@ -142,9 +147,11 @@ void toolbox::particles::insertParticleIntoCell(
 
   const int linearisedTargetVertex = targetVertex.to_ulong();
 
-  logDebug("assign particle "
-      << newParticle->toString() << " to vertex " << linearisedTargetVertex << " in cell " << marker.toString()
-      << " (vertex=" << fineGridVertices(targetVertex.to_ulong()).toString() << ")");
+  logDebug(
+    "assign particle " << newParticle->toString() << " to vertex " << linearisedTargetVertex << " in cell "
+                       << marker.toString() << " (vertex=" << fineGridVertices(targetVertex.to_ulong()).toString()
+                       << ")"
+  );
   fineGridVertices(linearisedTargetVertex).addParticle(newParticle);
 
 #if PEANO_DEBUG
@@ -162,13 +169,12 @@ void toolbox::particles::insertParticleIntoCell(
   // Widen it (or switch to the globally unique (tree,number) pair) if a
   // run ever exceeds that.
   static std::atomic<int> particleCounter{0};
-  const int rank = tarch::mpi::Rank::getInstance().getRank();
+  const int               rank = tarch::mpi::Rank::getInstance().getRank();
   newParticle->setPartid((rank << 20) | (particleCounter.fetch_add(1) & 0xFFFFF));
 #endif
 
-  tarch::la::Vector<DIMENSIONS, double>
-    vertexX = marker.getX() - 0.5 * marker.getH()
-              + tarch::la::multiplyComponents(tarch::la::Vector<DIMENSIONS, double>(targetVertex), marker.getH());
+  tarch::la::Vector<DIMENSIONS, double> vertexX = marker.getX() - 0.5 * marker.getH()
+    + tarch::la::multiplyComponents(tarch::la::Vector<DIMENSIONS, double>(targetVertex), marker.getH());
 
   toolbox::particles::assignmentchecks::assignParticleToVertex(
     toolbox::particles::assignmentchecks::pruneTypeName<Particle>(),

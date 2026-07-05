@@ -46,7 +46,7 @@ class AdaptivityCriterion(AbstractFVActionSet):
     and
     not fineGridCell{{CELL_LABEL_NAME}}.getAMRCriterionEvaluatedThroughoutGridConstruction()
   ) {
-    dfor(volume, {{NUMBER_OF_VOLUMES_PER_AXIS}}) {
+    peano4::dForEach({{NUMBER_OF_VOLUMES_PER_AXIS}}, [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
       auto [volumeSize, volumeCentre] = ::exahype2::fv::getVolumeSizeAndCentre<DIMENSIONS, {{NUMBER_OF_VOLUMES_PER_AXIS}}>(
         marker.getX(), marker.getH(), volume
       );
@@ -65,7 +65,7 @@ class AdaptivityCriterion(AbstractFVActionSet):
         0.0
       );
       {% endif %}
-    }
+    });
     fineGridCell{{CELL_LABEL_NAME}}.setAMRCriterionEvaluatedThroughoutGridConstruction(true);
   } else {
     refinementCriterion = ::exahype2::RefinementCommand::Keep;
@@ -85,7 +85,7 @@ class AdaptivityCriterion(AbstractFVActionSet):
     fineGridCell{{CELL_LABEL_NAME}}.getHasUpdated()
   ) {
     int index = 0;
-    dfor(volume, {{NUMBER_OF_VOLUMES_PER_AXIS}}) {
+    peano4::dForEach({{NUMBER_OF_VOLUMES_PER_AXIS}}, [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
       auto [volumeSize, volumeCentre] = ::exahype2::fv::getVolumeSizeAndCentre<DIMENSIONS, {{NUMBER_OF_VOLUMES_PER_AXIS}}>(
         marker.getX(), marker.getH(), volume
       );
@@ -105,7 +105,7 @@ class AdaptivityCriterion(AbstractFVActionSet):
       );
       {% endif %}
       index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    }
+    });
 
     if (
       refinementCriterion==::exahype2::RefinementCommand::Refine

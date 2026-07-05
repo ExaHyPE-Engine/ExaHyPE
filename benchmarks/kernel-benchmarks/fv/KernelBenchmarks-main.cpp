@@ -15,21 +15,19 @@
 #include "kernels/FVSolver/RiemannSolverFused.h"
 #include "peano4/Globals.h"
 #include "peano4/Init.h"
+#include "peano4/Loop.h"
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/FaceEnumerator.h"
-#include "peano4/Loop.h"
 #include "runner/RuntimeParameters.h"
 #include "tarch/Init.h"
+#include "tarch/MemoryUsage.h"
 #include "tarch/instrumentation/Log.h"
 #include "tarch/instrumentation/Measurement.h"
 #include "tarch/instrumentation/Watch.h"
 #include "tarch/plotter/AMRPlotter.h"
 #include "tarch/plotter/PVDTimeSeriesWriter.h"
 #include "tarch/plotter/VTUFileWriter.h"
-#include "tarch/MemoryUsage.h"
-#include "toolbox/blockstructured/Interpolation.h"
-#include "toolbox/blockstructured/Projection.h"
-#include "toolbox/blockstructured/Restriction.h"
+#include "toolbox/blockstructured/AMRRoutines.h"
 
 #include <limits>
 #include <string>
@@ -181,9 +179,9 @@ void logFinalStatistics(
     logInfo(formatStatistic("Time Stepping", formatMeasurementTotal(measurement, "s")));
 
     const auto globalNumberOfPatches = _cells.size();
-    const auto totalNumberOfDoFs     = globalNumberOfPatches *
-                                   std::pow(AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch, DIMENSIONS) *
-                                   (AbstractFVSolver::NumberOfUnknowns + AbstractFVSolver::NumberOfAuxiliaryVariables);
+    const auto totalNumberOfDoFs     = globalNumberOfPatches
+      * std::pow(AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch, DIMENSIONS)
+      * (AbstractFVSolver::NumberOfUnknowns + AbstractFVSolver::NumberOfAuxiliaryVariables);
     const auto averageStepTime = measurement.getAverageValue();
 
     std::ostringstream performanceMessage;
@@ -216,25 +214,28 @@ void plotGrid() {
       const auto* QOut     = DataRepository::getInstance().getCellQNew(marker.getX(), marker.getH());
 
       int currentDoF = 0;
-      dfor(k, AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch) {
+      peano4::dForEach(
+        AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+        [&](const tarch::la::Vector<DIMENSIONS, int>& k) {
 #if DIMENSIONS == 2
-        tarch::la::Vector<2, double> cellOffset;
-        cellOffset(0)       = patchOffset(0) + static_cast<double>(k(0)) * cellSize(0);
-        cellOffset(1)       = patchOffset(1) + static_cast<double>(k(1)) * cellSize(1);
-        const int cellIndex = amrPlotter.plotCell2D(cellOffset, cellSize, 0);
+          tarch::la::Vector<2, double> cellOffset;
+          cellOffset(0)       = patchOffset(0) + static_cast<double>(k(0)) * cellSize(0);
+          cellOffset(1)       = patchOffset(1) + static_cast<double>(k(1)) * cellSize(1);
+          const int cellIndex = amrPlotter.plotCell2D(cellOffset, cellSize, 0);
 #else
-        tarch::la::Vector<3, double> cellOffset;
-        cellOffset(0)       = patchOffset(0) + static_cast<double>(k(0)) * cellSize(0);
-        cellOffset(1)       = patchOffset(1) + static_cast<double>(k(1)) * cellSize(1);
-        cellOffset(2)       = patchOffset(2) + static_cast<double>(k(2)) * cellSize(2);
-        const int cellIndex = amrPlotter.plotCell3D(cellOffset, cellSize, 0);
+          tarch::la::Vector<3, double> cellOffset;
+          cellOffset(0)       = patchOffset(0) + static_cast<double>(k(0)) * cellSize(0);
+          cellOffset(1)       = patchOffset(1) + static_cast<double>(k(1)) * cellSize(1);
+          cellOffset(2)       = patchOffset(2) + static_cast<double>(k(2)) * cellSize(2);
+          const int cellIndex = amrPlotter.plotCell3D(cellOffset, cellSize, 0);
 #endif
 
-        const auto* values = QOut + currentDoF;
-        cellDataPlotter->plotCellData(cellIndex, values, AbstractFVSolver::NumberOfUnknowns);
+          const auto* values = QOut + currentDoF;
+          cellDataPlotter->plotCellData(cellIndex, values, AbstractFVSolver::NumberOfUnknowns);
 
-        currentDoF += AbstractFVSolver::NumberOfUnknowns;
-      }
+          currentDoF += AbstractFVSolver::NumberOfUnknowns;
+        }
+      );
     }
   }
 
@@ -253,21 +254,21 @@ void interpolateBetweenAMRBorder() {
 
       for (int f = 0; f < TWO_TIMES_D; f++) {
         int normal = f % DIMENSIONS;
-        if ((f >= DIMENSIONS and marker.getRelativePositionWithinFatherCell()[normal] == 2) or
-            (f < DIMENSIONS and marker.getRelativePositionWithinFatherCell()[normal] == 0)) {
+        if ((f >= DIMENSIONS and marker.getRelativePositionWithinFatherCell()[normal] == 2)
+            or (f < DIMENSIONS and marker.getRelativePositionWithinFatherCell()[normal] == 0)) {
           peano4::datamanagement::FaceMarker faceMarker{};
           faceMarker.relativePositionWithinFatherCell = marker.getRelativePositionWithinFatherCell();
           faceMarker.selectedFace                     = f;
-          double* fineGridFace   = DataRepository::getInstance().getFaceQNew(marker.getX(), marker.getH(), f);
-          double* coarseGridFace = DataRepository::getInstance().getFaceQNew(parentCenter, parentSize, f);
-          toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_inject(
+          double*   fineGridFace   = DataRepository::getInstance().getFaceQNew(marker.getX(), marker.getH(), f);
+          double*   coarseGridFace = DataRepository::getInstance().getFaceQNew(parentCenter, parentSize, f);
+          const int facePosition   = faceMarker.getSelectedFaceNumber() < DIMENSIONS ? 1 : 0;
+          toolbox::blockstructured::restrictHaloLayer(
             faceMarker,
-            AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-            1, // Halo size
-            AbstractFVSolver::NumberOfUnknowns,
-            fineGridFace,
             coarseGridFace,
-            false
+            fineGridFace,
+            facePosition,
+            AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+            AbstractFVSolver::NumberOfUnknowns
           );
         }
       }
@@ -280,21 +281,23 @@ void interpolateBetweenAMRBorder() {
 
       for (int f = 0; f < TWO_TIMES_D; f++) {
         int normal = f % DIMENSIONS;
-        if ((f >= DIMENSIONS and marker.getRelativePositionWithinFatherCell()[normal] == 2) or
-            (f < DIMENSIONS and marker.getRelativePositionWithinFatherCell()[normal] == 0)) {
+        if ((f >= DIMENSIONS and marker.getRelativePositionWithinFatherCell()[normal] == 2)
+            or (f < DIMENSIONS and marker.getRelativePositionWithinFatherCell()[normal] == 0)) {
           peano4::datamanagement::FaceMarker faceMarker{};
           faceMarker.relativePositionWithinFatherCell = marker.getRelativePositionWithinFatherCell();
           faceMarker.selectedFace                     = f;
           double* fineGridFace   = DataRepository::getInstance().getFaceQNew(marker.getX(), marker.getH(), f);
           double* coarseGridFace = DataRepository::getInstance().getFaceQNew(parentCenter, parentSize, f);
-          toolbox::blockstructured::interpolateHaloLayer_AoS_piecewise_constant(
-            faceMarker,
-            AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-            1, // Halo size
-            AbstractFVSolver::NumberOfUnknowns,
-            coarseGridFace,
-            fineGridFace
-          );
+          for (int facePos = 0; facePos < 2; facePos++) {
+            toolbox::blockstructured::interpolateHaloLayer(
+              faceMarker,
+              coarseGridFace,
+              fineGridFace,
+              facePos,
+              AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+              AbstractFVSolver::NumberOfUnknowns
+            );
+          }
         }
       }
     }
@@ -306,20 +309,23 @@ void applyInitialConditions() {
     if (not marker.hasBeenRefined()) {
       double* QOut = DataRepository::getInstance().getCellQNew(marker.getX(), marker.getH());
       // Initialise cell data with initial conditions.
-      dfor(volume, AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch) {
-        int linearIndex = peano4::dLinearised(volume, AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch) *
-                          (AbstractFVSolver::NumberOfUnknowns + AbstractFVSolver::NumberOfAuxiliaryVariables);
-        FVSolver::initialCondition(
-          QOut + linearIndex,
-          ::exahype2::fv::getVolumeCentre(
-            marker.getX(),
-            marker.getH(),
-            AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-            volume
-          ),
-          ::exahype2::fv::getVolumeSize(marker.getH(), AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch)
-        );
-      }
+      peano4::dForEach(
+        AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+        [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
+          int linearIndex = peano4::dLinearised(volume, AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch)
+            * (AbstractFVSolver::NumberOfUnknowns + AbstractFVSolver::NumberOfAuxiliaryVariables);
+          FVSolver::initialCondition(
+            QOut + linearIndex,
+            ::exahype2::fv::getVolumeCentre(
+              marker.getX(),
+              marker.getH(),
+              AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+              volume
+            ),
+            ::exahype2::fv::getVolumeSize(marker.getH(), AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch)
+          );
+        }
+      );
     }
   }
 }
@@ -355,7 +361,7 @@ createRefinedMarkersFromIndex(const tarch ::la ::Vector<DIMENSIONS, int>& index)
   marker.flags |= peano4::datamanagement::CellMarker::HasBeenRefined;
   result.push_back(marker);
 
-  dfor(offset, 3) {
+  peano4::dForEach(3, [&](const tarch::la::Vector<DIMENSIONS, int>& offset) {
     tarch::la::Vector<DIMENSIONS, double> deepCellOffset = tarch::la::convertScalar<double>(offset);
     tarch::la::Vector<DIMENSIONS, double> localCellIndex = deepCellOffset + deeperCellIndex;
     tarch::la::Vector<DIMENSIONS, double> deeperCellPosition =
@@ -365,7 +371,7 @@ createRefinedMarkersFromIndex(const tarch ::la ::Vector<DIMENSIONS, int>& index)
     marker.h                                = deeperCellSize;
     marker.relativePositionWithinFatherCell = offset;
     result.push_back(marker);
-  }
+  });
   return result;
 }
 
@@ -374,7 +380,7 @@ void createGrid() {
   const int gridLength = getGridLength();
   _cells.reserve(std::pow(gridLength, DIMENSIONS));
   tarch::la::Vector<DIMENSIONS, double> DomainCenter = DomainOffset + DomainSize / 2.0;
-  dfor(volume, gridLength) {
+  peano4::dForEach(gridLength, [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
     peano4::datamanagement::CellMarker marker = createMarkerFromIndex(volume);
     if (UseAMR and tarch::la::norm2(marker.getX() - DomainCenter) < 0.1) {
       auto markers = createRefinedMarkersFromIndex(volume);
@@ -382,7 +388,7 @@ void createGrid() {
     } else {
       _cells.push_back(marker);
     }
-  }
+  });
   repositories::finishGridConstructionStep();
 }
 
@@ -460,8 +466,8 @@ int main(int argc, char** argv) {
   const double timeInBetweenPlots = numberOfSnapshots <= 0 ? 0.0 : plottingEndTime / numberOfSnapshots;
 
   while (continueToSolve) {
-    if (timeInBetweenPlots > 0.0 and (repositories::getMinTimeStamp() >= nextMinPlotTimeStamp or
-                                      repositories::getMaxTimeStamp() >= nextMaxPlotTimeStamp)) {
+    if (timeInBetweenPlots > 0.0
+        and (repositories::getMinTimeStamp() >= nextMinPlotTimeStamp or repositories::getMaxTimeStamp() >= nextMaxPlotTimeStamp)) {
       if (repositories::getMinTimeStamp() >= nextMinPlotTimeStamp) {
         nextMinPlotTimeStamp += timeInBetweenPlots;
       }
@@ -559,9 +565,9 @@ int main(int argc, char** argv) {
         const auto totalPersistentMemory = DataRepository::getInstance().getMemoryUsageInBytes();
 
         const auto globalNumberOfPatches = _cells.size();
-        const auto totalNumberOfDoFs =
-          globalNumberOfPatches * std::pow(AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch, DIMENSIONS) *
-          (AbstractFVSolver::NumberOfUnknowns + AbstractFVSolver::NumberOfAuxiliaryVariables);
+        const auto totalNumberOfDoFs     = globalNumberOfPatches
+          * std::pow(AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch, DIMENSIONS)
+          * (AbstractFVSolver::NumberOfUnknowns + AbstractFVSolver::NumberOfAuxiliaryVariables);
 
         logInfo(formatTimeStep(numberOfCompletedTimeSteps, timeStepMeasurement));
         for (const auto& statistic : formatSolverStatistics()) {
@@ -621,9 +627,9 @@ int main(int argc, char** argv) {
       }
       const auto totalPersistentMemory = DataRepository::getInstance().getMemoryUsageInBytes();
       const auto globalNumberOfPatches = _cells.size();
-      const auto totalNumberOfDoFs =
-        globalNumberOfPatches * std::pow(AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch, DIMENSIONS) *
-        (AbstractFVSolver::NumberOfUnknowns + AbstractFVSolver::NumberOfAuxiliaryVariables);
+      const auto totalNumberOfDoFs     = globalNumberOfPatches
+        * std::pow(AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch, DIMENSIONS)
+        * (AbstractFVSolver::NumberOfUnknowns + AbstractFVSolver::NumberOfAuxiliaryVariables);
       for (const auto& statistic : formatKernelBenchmarkStatistics(
              globalNumberOfPatches,
              totalNumberOfDoFs,

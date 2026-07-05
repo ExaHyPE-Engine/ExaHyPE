@@ -25,13 +25,11 @@ set(SOURCES
   dg/rusanov/tests/RiemannTest.cpp
 
   fv/BoundaryConditions.cpp
-  fv/InterpolationRestriction.cpp
   fv/PatchUtils.cpp
   fv/PostprocessingKernels.cpp
   fv/Tracer.cpp
   fv/tests/ApplySplit1DRiemannToPatchTest.cpp
   fv/tests/CopyPatchTest.cpp
-  fv/tests/InterpolationRestrictionTest.cpp
   fv/particles/MultiParticleIntegration.cpp
   fv/particles/ParticleDomainBoundary.cpp
   fv/particles/ParticleForces.cpp

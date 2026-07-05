@@ -82,10 +82,10 @@ std::string exahype2::fv::plotPatch(
       // It is a diagonal entry if this counter is bigger than 1. If it equals
       // 0, it is interior. If it equals 1, then this is a face-connected halo
       // entry.
-      bool isDiagonal
-        = (x < haloSize and y < haloSize) or (x >= numberOfVolumesPerAxisInPatch + haloSize and y < haloSize)
-          or (x < haloSize and y >= numberOfVolumesPerAxisInPatch + haloSize)
-          or (x >= numberOfVolumesPerAxisInPatch + haloSize and y >= numberOfVolumesPerAxisInPatch + haloSize);
+      bool isDiagonal = (x < haloSize and y < haloSize)
+        or (x >= numberOfVolumesPerAxisInPatch + haloSize and y < haloSize)
+        or (x < haloSize and y >= numberOfVolumesPerAxisInPatch + haloSize)
+        or (x >= numberOfVolumesPerAxisInPatch + haloSize and y >= numberOfVolumesPerAxisInPatch + haloSize);
 
       result << "(";
       for (int i = 0; i < unknowns + auxiliaryVariables; i++) {
@@ -101,7 +101,7 @@ std::string exahype2::fv::plotPatch(
     result << std::endl;
   }
 #else
-  dfor(k, PatchSize) {
+  peano4::dForEach(PatchSize, [&](const tarch::la::Vector<DIMENSIONS, int>& k) {
     int index = peano4::dLinearised(k, PatchSize) * (unknowns + auxiliaryVariables);
 
     // It is a diagonal entry if this counter is bigger than 1. If it equals
@@ -122,7 +122,7 @@ std::string exahype2::fv::plotPatch(
         result << "x";
     }
     result << ")";
-  }
+  });
 #endif
 
   if (prettyPrint)

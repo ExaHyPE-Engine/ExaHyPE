@@ -24,24 +24,18 @@ class DynamicAMR(ActionSet):
         patch,
         patch_overlap_interpolation,
         patch_overlap_restriction,
-        interpolation_scheme,
-        restriction_scheme,
         clear_guard="true",
         restrict_guard="true",
         interpolate_guard="true",
         additional_includes="",
     ):
         """
-        restrict_guard: String
-          Predicate as C++ expression. It determines which faces are cleared.
+        Restrict_guard: String.
 
-        interpolation_scheme: String
-          This is a string that is used to assemble the interpolation scheme that
-          is actually used. At the moment, I mainly offer three variants here:
-          - piecewise_constant.
-          - linear.
-          - linear_precomputed_operators<3>. The 3 has to be replaced by the
-            number of unknowns that you use per coordinate axis.
+          Predicate as C++ expression. It determines which faces are restricted.
+
+        The transfer operators are hard-wired to piecewise-constant
+        interpolation and averaging restriction (see toolbox AMRRoutines).
         """
         super(DynamicAMR, self).__init__(descend_invocation_order=1)
         self.d = {}
@@ -54,9 +48,11 @@ class DynamicAMR(ActionSet):
                 "Error: Patches associated to face have to have same dimensions for restriction and interpolation."
             )
 
+        overlap = int(patch_overlap_interpolation.dim[0] / 2)
+
         self.d["UNKNOWNS"] = str(patch_overlap_interpolation.no_of_unknowns)
         self.d["DOFS_PER_AXIS"] = str(patch_overlap_interpolation.dim[1])
-        self.d["OVERLAP"] = str(int(patch_overlap_interpolation.dim[0] / 2))
+        self.d["OVERLAP"] = str(overlap)
         self.d["FINE_GRID_CELL"] = "fineGridCell" + patch.name
         self.d["COARSE_GRID_CELL"] = "coarseGridCell" + patch.name
         self.d["FINE_GRID_FACE_ACCESSOR_INTERPOLATION"] = (
@@ -71,8 +67,6 @@ class DynamicAMR(ActionSet):
         self.d["COARSE_GRID_FACE_ACCESSOR_RESTRICTION"] = (
             "coarseGridFaces" + patch_overlap_restriction.name
         )
-        self.d["INTERPOLATION_SCHEME"] = interpolation_scheme
-        self.d["RESTRICTION_SCHEME"] = restriction_scheme
         self.d["CLEAR_GUARD"] = clear_guard
         self.d["RESTRICT_GUARD"] = restrict_guard
         self.d["INTERPOLATE_GUARD"] = interpolate_guard
@@ -95,96 +89,121 @@ class DynamicAMR(ActionSet):
         return False
 
     _Template_TouchFaceFirstTime = """
-  if ( {{CLEAR_GUARD}} ) {
-    ::toolbox::blockstructured::clearHaloLayerAoS(
-      marker,
-      {{DOFS_PER_AXIS}},
-      {{OVERLAP}},
-      {{UNKNOWNS}},
-      {{FINE_GRID_FACE_ACCESSOR_RESTRICTION}}.data()
+  if ({{CLEAR_GUARD}}) {
+    // Only the exterior side of the face is needed, but the interior half is
+    // unused, so we clear the entire face rather than just one side.
+    std::fill_n(
+      {{FINE_GRID_FACE_ACCESSOR_RESTRICTION}}.data(),
+#if DIMENSIONS == 2
+      2 * {{UNKNOWNS}} * {{DOFS_PER_AXIS}} * {{OVERLAP}},
+#else
+      2 * {{UNKNOWNS}} * {{DOFS_PER_AXIS}} * {{DOFS_PER_AXIS}} * {{OVERLAP}},
+#endif
+      0
     );
   }
 """
 
     _Template_TouchCellFirstTime = """
   if (marker.hasBeenRefined() and not marker.willBeRefined()) {
-    ::toolbox::blockstructured::clearCell(
-      marker,
-      {{DOFS_PER_AXIS}},
-      {{UNKNOWNS}},
-      {{FINE_GRID_CELL}}.data()
+    std::fill_n(
+      {{FINE_GRID_CELL}}.data(),
+#if DIMENSIONS == 2
+      {{UNKNOWNS}} * {{DOFS_PER_AXIS}} * {{DOFS_PER_AXIS}},
+#else
+      {{UNKNOWNS}} * {{DOFS_PER_AXIS}} * {{DOFS_PER_AXIS}} * {{DOFS_PER_AXIS}},
+#endif
+      0
     );
   }
 """
 
     _Template_TouchHangingFaceFirstTime = """
   if ({{INTERPOLATE_GUARD}}) {
-    ::toolbox::blockstructured::interpolateHaloLayer_AoS_{{INTERPOLATION_SCHEME}}(
+    const auto leftRightEntry = marker.getSelectedFaceNumber() < DIMENSIONS ? 0 : 1;
+    ::toolbox::blockstructured::interpolateHaloLayer(
       marker,
-      {{DOFS_PER_AXIS}},
-      {{OVERLAP}},
-      {{UNKNOWNS}},
       {{COARSE_GRID_FACE_ACCESSOR_INTERPOLATION}}(marker.getSelectedFaceNumber()).data(),
-      {{FINE_GRID_FACE_ACCESSOR_INTERPOLATION}}.data()
+      {{FINE_GRID_FACE_ACCESSOR_INTERPOLATION}}.data(),
+      leftRightEntry,
+      {{DOFS_PER_AXIS}},
+      {{UNKNOWNS}}
     );
   }
 """
 
     _Template_TouchHangingFaceLastTime = """
   if ({{RESTRICT_GUARD}}) {
-    ::toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_{{RESTRICTION_SCHEME}}(
+    const auto facePosition = marker.getSelectedFaceNumber() < DIMENSIONS ? 1 : 0;
+    ::toolbox::blockstructured::restrictHaloLayer(
       marker,
-      {{DOFS_PER_AXIS}},
-      {{OVERLAP}},
-      {{UNKNOWNS}},
+      {{COARSE_GRID_FACE_ACCESSOR_RESTRICTION}}(marker.getSelectedFaceNumber()).data(),
       {{FINE_GRID_FACE_ACCESSOR_RESTRICTION}}.data(),
-      {{COARSE_GRID_FACE_ACCESSOR_RESTRICTION}}(marker.getSelectedFaceNumber()).data()
+      facePosition,
+      {{DOFS_PER_AXIS}},
+      {{UNKNOWNS}}
     );
   }
 """
 
     _Template_CreateFace = """
-  ::toolbox::blockstructured::interpolateHaloLayer_AoS_{{INTERPOLATION_SCHEME}}(
-      marker,
-      {{DOFS_PER_AXIS}},
-      {{OVERLAP}},
-      {{UNKNOWNS}},
-      {{COARSE_GRID_CELL}}.data(),
-      {{COARSE_GRID_FACE_ACCESSOR_INTERPOLATION}}(marker.getSelectedFaceNumber()).data(),
-      {{FINE_GRID_FACE_ACCESSOR_INTERPOLATION}}.data()
-  );
+  if (marker.isInteriorFaceWithinPatch()) {
+    for (int facePosition = 0; facePosition < 2; facePosition++) {
+      ::toolbox::blockstructured::interpolateHaloLayerFromCoarseCell(
+        marker,
+        {{COARSE_GRID_CELL}}.data(),
+        {{FINE_GRID_FACE_ACCESSOR_INTERPOLATION}}.data(),
+        facePosition,
+        {{DOFS_PER_AXIS}},
+        {{UNKNOWNS}}
+      );
+    }
+  } else {
+    for (int facePosition = 0; facePosition < 2; facePosition++) {
+      ::toolbox::blockstructured::interpolateHaloLayer(
+        marker,
+        {{COARSE_GRID_FACE_ACCESSOR_INTERPOLATION}}(marker.getSelectedFaceNumber()).data(),
+        {{FINE_GRID_FACE_ACCESSOR_INTERPOLATION}}.data(),
+        facePosition,
+        {{DOFS_PER_AXIS}},
+        {{UNKNOWNS}}
+      );
+    }
+  }
 """
 
     _Template_DestroyFace = """
   if (not marker.isInteriorFaceWithinPatch()) {
-    ::toolbox::blockstructured::restrictHaloLayer_AoS_{{RESTRICTION_SCHEME}}(
-      marker,
-      {{DOFS_PER_AXIS}},
-      {{OVERLAP}},
-      {{UNKNOWNS}},
-      {{FINE_GRID_FACE_ACCESSOR_RESTRICTION}}.data(),
-      {{COARSE_GRID_FACE_ACCESSOR_RESTRICTION}}(marker.getSelectedFaceNumber()).data()
-    );
+    for (int facePosition = 0; facePosition < 2; facePosition++) {
+      ::toolbox::blockstructured::restrictHaloLayer(
+        marker,
+        {{COARSE_GRID_FACE_ACCESSOR_RESTRICTION}}(marker.getSelectedFaceNumber()).data(),
+        {{FINE_GRID_FACE_ACCESSOR_RESTRICTION}}.data(),
+        facePosition,
+        {{DOFS_PER_AXIS}},
+        {{UNKNOWNS}}
+      );
+    }
   }
 """
 
     _Template_CreateCell = """
-  ::toolbox::blockstructured::interpolateCell_AoS_{{INTERPOLATION_SCHEME}}(
-      marker,
-      {{DOFS_PER_AXIS}},
-      {{UNKNOWNS}},
-      {{COARSE_GRID_CELL}}.data(),
-      {{FINE_GRID_CELL}}.data()
+  ::toolbox::blockstructured::interpolateCell(
+    marker,
+    {{COARSE_GRID_CELL}}.data(),
+    {{FINE_GRID_CELL}}.data(),
+    {{DOFS_PER_AXIS}},
+    {{UNKNOWNS}}
   );
 """
 
     _Template_DestroyCell = """
-  ::toolbox::blockstructured::restrictCell_AoS_{{RESTRICTION_SCHEME}}(
-      marker,
-      {{DOFS_PER_AXIS}},
-      {{UNKNOWNS}},
-      {{FINE_GRID_CELL}}.data(),
-      {{COARSE_GRID_CELL}}.data()
+  ::toolbox::blockstructured::restrictCell(
+    marker,
+    {{COARSE_GRID_CELL}}.data(),
+    {{FINE_GRID_CELL}}.data(),
+    {{DOFS_PER_AXIS}},
+    {{UNKNOWNS}}
   );
 """
 
@@ -227,9 +246,7 @@ class DynamicAMR(ActionSet):
         return (
             """
 #include "peano4/Loop.h"
-#include "toolbox/blockstructured/Enumeration.h"
-#include "toolbox/blockstructured/Interpolation.h"
-#include "toolbox/blockstructured/Restriction.h"
+#include "toolbox/blockstructured/AMRRoutines.h"
 """
             + self.additional_includes
         )
@@ -242,9 +259,3 @@ class DynamicAMR(ActionSet):
 
     def get_interpolate_guard(self):
         return self.d["INTERPOLATE_GUARD"]
-
-    def switch_interpolation_scheme(self, interpolation_scheme):
-        self.d["INTERPOLATION_SCHEME"] = interpolation_scheme
-
-    def switch_restriction_scheme(self, restriction_scheme):
-        self.d["RESTRICTION_SCHEME"] = restriction_scheme

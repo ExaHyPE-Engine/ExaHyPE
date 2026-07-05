@@ -4,18 +4,12 @@
 file(GLOB_RECURSE HEADERS ${HEADER_EXTENSIONS_TO_GLOB})
 
 set(SOURCES
-  Copy.cpp
-  Derivative.cpp
   Enumeration.cpp
   GlobalDatabase.cpp
-  Interpolation.cpp
-  Projection.cpp
-  Restriction.cpp
   UnitTests.cpp
-  tests/IandRInMatricesTest.cpp
-  tests/IandRSecondOrderTest.cpp
-  tests/IandRThirdOrderTest.cpp
+  tests/EnumerationTest.cpp
   tests/InterpolationTest.cpp
+  tests/RestrictionTest.cpp
 )
 
 install_peano_headers(
