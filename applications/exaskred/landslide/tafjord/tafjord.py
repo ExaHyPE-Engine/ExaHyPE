@@ -4,7 +4,6 @@ import argparse
 import math
 
 import exahype2
-import peano4
 
 DOMAIN_OFFSET = [414895.5, 6904495.5]
 DOMAIN_SIZE = [1900.0, 1900.0]
@@ -263,9 +262,6 @@ limiter_solver = exahype2.solvers.limiting.PosterioriLimiting(
     dmp_differences_scaling=0.0001,
     physical_admissibility_criterion=limiting_criterion,
 )
-
-fv_solver.set_plotter(peano4.plotter.NetCDFPatchAMRPlotter)
-aderdg_solver.set_plotter(peano4.plotter.NetCDFPatchNodalPlotter)
 
 project.add_solver(aderdg_solver)
 project.add_solver(fv_solver)

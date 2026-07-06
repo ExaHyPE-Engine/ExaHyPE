@@ -6,12 +6,13 @@
 #include "runner/LoadBalancer.h"
 #include "runner/RuntimeParameters.h"
 #include "tarch/CPUFeatureDetection.h"
+#include "tarch/MemoryUsage.h"
 #include "tarch/StackSizeLimitDetection.h"
 #include "tarch/accelerator/Device.h"
 #include "tarch/instrumentation/Info.h"
+#include "tarch/instrumentation/Log.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/Core.h"
-#include "tarch/MemoryUsage.h"
 
 #include <algorithm>
 #include <cmath>
@@ -20,8 +21,15 @@
 #include <sstream>
 
 namespace {
-  // Fixed inner width so every box lines up; wide enough for the longest simulation header.
-  constexpr std::size_t BoxWidth = 96;
+  // Fixed inner box width. Every box is printed at this width on every run.
+  constexpr std::size_t BoxWidth = 100;
+
+  // Columns the frame adds around the inner content: "| " on the left and " |" on the
+  // right. frameBoxLines draws exactly this, so a box line is BoxFrameColumns + width.
+  constexpr std::size_t BoxFrameColumns = 4;
+
+  // Minimum gap kept between the box title and the right-aligned progress indicator.
+  constexpr std::size_t HeaderProgressGap = 3;
 
   // Placeholder so a row keeps its slot until its value is available.
   constexpr auto NotYet = "—";
@@ -35,6 +43,50 @@ namespace {
       }
     }
     return columns;
+  }
+
+  // Truncate to at most maxColumns display columns, without splitting a UTF-8 codepoint.
+  std::string truncateToDisplayWidth(const std::string& text, std::size_t maxColumns) {
+    std::size_t columns = 0;
+    for (std::size_t i = 0; i < text.size(); ++i) {
+      if ((static_cast<unsigned char>(text[i]) & 0xC0) != 0x80) {
+        if (columns == maxColumns) {
+          return text.substr(0, i);
+        }
+        ++columns;
+      }
+    }
+    return text;
+  }
+
+  // Frame the header/body into the full set of box lines (rules included) at the fixed
+  // box width. A header-only box (no body) closes right after the header.
+  std::vector<std::string>
+  frameBoxLines(const std::vector<std::string>& headerLines, const std::vector<std::string>& bodyLines, char rule) {
+    // "+" corners plus a rule spanning the inner width (content + the two border spaces),
+    // so the rule line is the same BoxFrameColumns + BoxWidth total as a framed row.
+    const std::string ruleLine = "+" + std::string(BoxWidth + BoxFrameColumns - 2, rule) + "+";
+    const auto        frameRow = [](const std::string& content) {
+      // Clip content to the box width so an over-long line cannot overflow the frame.
+      const std::string fitted  = truncateToDisplayWidth(content, BoxWidth);
+      const std::size_t columns = displayWidth(fitted);
+      const std::string padding = columns < BoxWidth ? std::string(BoxWidth - columns, ' ') : std::string();
+      return "| " + fitted + padding + " |";
+    };
+
+    std::vector<std::string> lines;
+    lines.push_back(ruleLine);
+    for (const auto& line : headerLines) {
+      lines.push_back(frameRow(line));
+    }
+    lines.push_back(ruleLine);
+    if (not bodyLines.empty()) {
+      for (const auto& line : bodyLines) {
+        lines.push_back(frameRow(line));
+      }
+      lines.push_back(ruleLine);
+    }
+    return lines;
   }
 
   std::string memory(unsigned long long bytes) {
@@ -263,31 +315,13 @@ void runner::StatisticsLog::registerDefaultProviders() {
   });
 }
 
-void runner::StatisticsLog::emitBox(
+void runner::StatisticsLog::drawBox(
   const std::vector<std::string>& headerLines,
   const std::vector<std::string>& bodyLines,
   char                            rule
 ) {
-  const std::string ruleLine = "+" + std::string(BoxWidth + 2, rule) + "+";
-
-  const auto framed = [](const std::string& content) {
-    const std::size_t columns = displayWidth(content);
-    const std::string padding = columns < BoxWidth ? std::string(BoxWidth - columns, ' ') : std::string();
-    return "| " + content + padding + " |";
-  };
-
-  logInfo(ruleLine);
-  for (const auto& line : headerLines) {
-    logInfo(framed(line));
-  }
-  logInfo(ruleLine);
-  // A header-only box (no body) closes right after the header rule - no empty framed body and
-  // no second rule.
-  if (not bodyLines.empty()) {
-    for (const auto& line : bodyLines) {
-      logInfo(framed(line));
-    }
-    logInfo(ruleLine);
+  for (const auto& line : frameBoxLines(headerLines, bodyLines, rule)) {
+    logInfo(line);
   }
 }
 
@@ -295,6 +329,14 @@ void runner::StatisticsLog::logConfiguration() {
   const auto& parameters = RuntimeParameters::getInstance();
 
   StatisticsReport report;
+
+  // --- Application ---
+  if (not parameters.getProjectName().empty()) {
+    report.add("Application", "Project", parameters.getProjectName());
+  }
+  if (not parameters.getExecutableName().empty()) {
+    report.add("Application", "Executable", parameters.getExecutableName());
+  }
 
   // --- Build & system ---
   report.add("Build", "Dimensions", number(DIMENSIONS));
@@ -377,7 +419,7 @@ void runner::StatisticsLog::logConfiguration() {
   report.add("Time Stepping", "Max Terminal Time", formatTime(parameters.getMaxTerminalTime()));
   report.add("Time Stepping", "First Plot Time Stamp", number(parameters.getFirstPlotTimeStamp()));
   report.add("Time Stepping", "Plot Snapshots", number(parameters.getNumberOfSnapshots()));
-  report.add("Time Stepping", "Output Path", parameters.getPlotOutputPath());
+  report.add("Time Stepping", "Output Path", parameters.getOutputPath());
   report.add("Time Stepping", "Log Interval", number(parameters.getLogIntervalInSeconds()) + " s");
 
   // --- Load balancing ---
@@ -407,7 +449,7 @@ void runner::StatisticsLog::logConfiguration() {
   if (_repositories.getCopyrightBanner) {
     banners.push_back(_repositories.getCopyrightBanner());
   }
-  emitBox(banners, report.renderContent(), '=');
+  drawBox(banners, report.renderContent(), '=');
 }
 
 std::string runner::StatisticsLog::formatETA() const {
@@ -444,21 +486,23 @@ runner::StatisticsReport runner::StatisticsLog::buildSimulationReport(bool inclu
   return report;
 }
 
-void runner::StatisticsLog::emitSimulationBox(
+void runner::StatisticsLog::refreshSimulationBox(
   const std::string& phase,
   double             wallClockSeconds,
   const std::string& progress,
   bool               includeSolverSections
 ) {
   const std::string left = phase + "   (" + formatWallClock(wallClockSeconds) + ")";
+  const auto        body = buildSimulationReport(includeSolverSections).renderContent();
 
+  // Right-align the progress string to the fixed box width; the left label stays put.
   std::string header = left;
   if (not progress.empty()) {
     const std::size_t used = displayWidth(left) + displayWidth(progress);
-    const std::size_t gap  = (used + 3 <= BoxWidth) ? (BoxWidth - used) : 3;
+    const std::size_t gap  = (used + HeaderProgressGap <= BoxWidth) ? (BoxWidth - used) : HeaderProgressGap;
     header                 = left + std::string(gap, ' ') + progress;
   }
-  emitBox({header}, buildSimulationReport(includeSolverSections).renderContent(), '-');
+  drawBox({header}, body, '-');
 }
 
 void runner::StatisticsLog::recordStepTime(const std::string& observerName, double elapsedSeconds) {
@@ -522,7 +566,7 @@ void runner::StatisticsLog::emitFinalSummary() {
     content.push_back(line.str());
   }
 
-  emitBox({"Final Statistics"}, content, '=');
+  drawBox({"Final Statistics"}, content, '=');
 }
 
-void runner::StatisticsLog::emitClosingBox(const std::string& message) { emitBox({message, "Goodbye"}, {}, '='); }
+void runner::StatisticsLog::emitClosingBox(const std::string& message) { drawBox({message, "Goodbye"}, {}, '='); }

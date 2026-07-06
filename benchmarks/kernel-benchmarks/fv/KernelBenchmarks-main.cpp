@@ -24,7 +24,6 @@
 #include "tarch/instrumentation/Log.h"
 #include "tarch/instrumentation/Measurement.h"
 #include "tarch/instrumentation/Watch.h"
-#include "tarch/plotter/AMRPlotter.h"
 #include "tarch/plotter/PVDTimeSeriesWriter.h"
 #include "tarch/plotter/VTUFileWriter.h"
 #include "toolbox/blockstructured/AMRRoutines.h"
@@ -194,15 +193,16 @@ void logFinalStatistics(
 void plotGrid() {
   repositories::startPlottingStep();
 
-  const std::string outputDirectory  = "solutions";
+  const std::string outputDirectory  = "output";
   const std::string solutionFileName = "FVSolver";
 
   const double t = 0.5 * (repositories::getMinTimeStamp() + repositories::getMaxTimeStamp());
 
   static tarch::plotter::PVDTimeSeriesWriter timeSeriesWriter;
   tarch::plotter::VTUFileWriter              fileWriter(outputDirectory, 1);
-  tarch::plotter::AMRPlotter                 amrPlotter(fileWriter, 0, 0.5, 0.0);
 
+  auto vertexPlotter   = fileWriter.createVertexPlotter(0);
+  auto cellPlotter     = fileWriter.createCellPlotter(0);
   auto cellDataPlotter = fileWriter.createCellDataPlotter(0, "FVSolverQ", AbstractFVSolver::NumberOfUnknowns);
 
   for (auto& marker : _cells) {
@@ -218,16 +218,50 @@ void plotGrid() {
         AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch,
         [&](const tarch::la::Vector<DIMENSIONS, int>& k) {
 #if DIMENSIONS == 2
-          tarch::la::Vector<2, double> cellOffset;
-          cellOffset(0)       = patchOffset(0) + static_cast<double>(k(0)) * cellSize(0);
-          cellOffset(1)       = patchOffset(1) + static_cast<double>(k(1)) * cellSize(1);
-          const int cellIndex = amrPlotter.plotCell2D(cellOffset, cellSize, 0);
+        tarch::la::Vector<2, double> cellOffset;
+        cellOffset(0) = patchOffset(0) + static_cast<double>(k(0)) * cellSize(0);
+        cellOffset(1) = patchOffset(1) + static_cast<double>(k(1)) * cellSize(1);
+        int v[4];
+        v[0] = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{cellOffset(0), cellOffset(1)});
+        v[1] = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{cellOffset(0) + cellSize(0), cellOffset(1)});
+        v[2] = vertexPlotter->plotVertex(
+          tarch::la::Vector<2, double>{cellOffset(0) + cellSize(0), cellOffset(1) + cellSize(1)}
+        );
+        v[3] = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{cellOffset(0), cellOffset(1) + cellSize(1)});
+        const int cellIndex = cellPlotter->plotQuadrangle(v);
 #else
-          tarch::la::Vector<3, double> cellOffset;
-          cellOffset(0)       = patchOffset(0) + static_cast<double>(k(0)) * cellSize(0);
-          cellOffset(1)       = patchOffset(1) + static_cast<double>(k(1)) * cellSize(1);
-          cellOffset(2)       = patchOffset(2) + static_cast<double>(k(2)) * cellSize(2);
-          const int cellIndex = amrPlotter.plotCell3D(cellOffset, cellSize, 0);
+        tarch::la::Vector<3, double> cellOffset;
+        cellOffset(0) = patchOffset(0) + static_cast<double>(k(0)) * cellSize(0);
+        cellOffset(1) = patchOffset(1) + static_cast<double>(k(1)) * cellSize(1);
+        cellOffset(2) = patchOffset(2) + static_cast<double>(k(2)) * cellSize(2);
+        int v[8];
+        v[0] = vertexPlotter->plotVertex(tarch::la::Vector<3, double>{cellOffset(0), cellOffset(1), cellOffset(2)});
+        v[1] = vertexPlotter->plotVertex(
+          tarch::la::Vector<3, double>{cellOffset(0) + cellSize(0), cellOffset(1), cellOffset(2)}
+        );
+        v[2] = vertexPlotter->plotVertex(
+          tarch::la::Vector<3, double>{cellOffset(0) + cellSize(0), cellOffset(1) + cellSize(1), cellOffset(2)}
+        );
+        v[3] = vertexPlotter->plotVertex(
+          tarch::la::Vector<3, double>{cellOffset(0), cellOffset(1) + cellSize(1), cellOffset(2)}
+        );
+        v[4] = vertexPlotter->plotVertex(
+          tarch::la::Vector<3, double>{cellOffset(0), cellOffset(1), cellOffset(2) + cellSize(2)}
+        );
+        v[5] = vertexPlotter->plotVertex(
+          tarch::la::Vector<3, double>{cellOffset(0) + cellSize(0), cellOffset(1), cellOffset(2) + cellSize(2)}
+        );
+        v[6] = vertexPlotter->plotVertex(
+          tarch::la::Vector<3, double>{
+            cellOffset(0) + cellSize(0),
+            cellOffset(1) + cellSize(1),
+            cellOffset(2) + cellSize(2)
+          }
+        );
+        v[7] = vertexPlotter->plotVertex(
+          tarch::la::Vector<3, double>{cellOffset(0), cellOffset(1) + cellSize(1), cellOffset(2) + cellSize(2)}
+        );
+        const int cellIndex = cellPlotter->plotHexahedron(v);
 #endif
 
           const auto* values = QOut + currentDoF;
@@ -406,7 +440,8 @@ int main(int argc, char** argv) {
     BenchmarkMinTerminalTime,
     BenchmarkMaxTerminalTime,
     BenchmarkGridLevels,
-    BenchmarkMaxGridLevels
+    BenchmarkMaxGridLevels,
+    "KernelBenchmarks"
   );
   if (helpRequested(argc, argv)) {
     runtimeParameters.printUsage("KernelBenchmarks");

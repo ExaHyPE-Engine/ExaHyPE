@@ -1,15 +1,15 @@
 {
-  "end-time": 40.0,
-  "min-grid-levels": 3,
-  "max-grid-levels": 3,
-  "first-plot-time-stamp": 0.0,
-  "number-of-snapshots": 10,
-  "output-path": "solutions",
-  "log-interval": 10.0,
-  "load-balancing-quality": 0.9,
-  "min-size-of-tree": 1,
-  "max-number-of-trees-per-rank": -1,
-  "target-device": 0,
-  "bathymetry-file": "bathymetry/Tafjord_5m_EPSG25832.nc",
-  "displacement-file": "bathymetry/ini_3.0Mm3_5m_EPSG25832.nc"
+  "endTime": 40.0,
+  "minGridLevels": 3,
+  "maxGridLevels": 3,
+  "firstPlotTimeStamp": 0.0,
+  "numberOfSnapshots": 10,
+  "outputPath": "solutions",
+  "logInterval": 10.0,
+  "loadBalancingQuality": 0.9,
+  "minSizeOfTree": 1,
+  "maxNumberOfTreesPerRank": -1,
+  "targetDevice": 0,
+  "bathymetryFile": "bathymetry/Tafjord_5m_EPSG25832.nc",
+  "displacementFile": "bathymetry/ini_3.0Mm3_5m_EPSG25832.nc"
 }

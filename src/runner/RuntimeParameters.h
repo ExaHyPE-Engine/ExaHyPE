@@ -4,7 +4,13 @@
 
 #include "tarch/la/Vector.h"
 
+#include <memory>
 #include <string>
+#include <vector>
+
+namespace tarch::reader {
+  class JSONReader;
+} // namespace tarch::reader
 
 namespace runner {
   class RuntimeParameters;
@@ -27,13 +33,18 @@ private:
   int         _numberOfTimeSteps;
   double      _firstPlotTimeStamp;
   int         _numberOfSnapshots;
-  std::string _plotOutputPath;
-  bool        _plotOutputPathConfigured;
+  std::string _outputPath;
+  bool        _outputPathConfigured;
+  std::string _projectName;
+  std::string _executableName;
   double      _logIntervalInSeconds;
   int         _gridLevels;
   int         _maxGridLevels;
   bool        _gridLevelsConfigured;
   bool        _maxGridLevelsConfigured;
+
+  // Parsed config file (null if none); shared with the application parser.
+  std::unique_ptr<tarch::reader::JSONReader> _configReader;
 
   RuntimeParameters();
 
@@ -43,29 +54,38 @@ private:
   static std::string formatTerminalTime(double value);
   static double      divideByThreePower(double value, int exponent);
   static int         parseInteger(const std::string& value, const std::string& key);
-  static int         parseNonNegativeInteger(const std::string& value, const std::string& key);
   static double      parseDouble(const std::string& value, const std::string& key);
-  static double      parseNonNegativeDouble(const std::string& value, const std::string& key);
   static std::string normaliseOutputPath(const std::string& path);
   static std::string consumeValue(int& index, int argc, char** argv, const std::string& argument);
   void               normaliseGridLevels();
-  void               normalisePlotOutputPath();
+  void               validateParameterRanges() const;
 
   void extractConfigFileFromCommandLine(int argc, char** argv);
   void readJsonConfiguration();
   void applyCommandLineConfiguration(int& argc, char** argv);
 
 public:
+  // Defaulted in the .cpp so this header can forward-declare JSONReader.
+  ~RuntimeParameters();
   RuntimeParameters(const RuntimeParameters&)            = delete;
+  RuntimeParameters(RuntimeParameters&&)                 = delete;
   RuntimeParameters& operator=(const RuntimeParameters&) = delete;
+  RuntimeParameters& operator=(RuntimeParameters&&)      = delete;
 
   static RuntimeParameters& getInstance();
 
-  void setGeneratedDefaults(double minTerminalTime, double maxTerminalTime, int gridLevels, int maxGridLevels);
-  void printUsage(const std::string& executableName) const;
+  void setGeneratedDefaults(
+    double             minTerminalTime,
+    double             maxTerminalTime,
+    int                gridLevels,
+    int                maxGridLevels,
+    const std::string& projectName
+  );
   void configure(int& argc, char** argv);
+  void printUsage(const std::string& executableName) const;
 
-  const std::string& getConfigFilePath() const;
+  // Shared config reader (null if no config file).
+  tarch::reader::JSONReader* getConfigReader();
 
   double getMPITimeOutWarning() const;
   double getMPIDeadlockTimeOut() const;
@@ -74,21 +94,25 @@ public:
   int    getMinSizeOfTree() const;
   int    getMaxNumberOfTreesPerRank() const;
   int    getTargetDevice() const;
-  bool   isVerbose() const;
 
-  double             getMinTerminalTime() const;
-  double             getMaxTerminalTime() const;
-  int                getNumberOfTimeSteps() const;
-  double             getFirstPlotTimeStamp() const;
-  int                getNumberOfSnapshots() const;
-  const std::string& getPlotOutputPath() const;
-  double             getLogIntervalInSeconds() const;
-  int                getGridLevels() const;
-  int                getMaxGridLevels() const;
+  bool   isVerbose() const;
+  double getLogIntervalInSeconds() const;
+
+  double getMinTerminalTime() const;
+  double getMaxTerminalTime() const;
+  int    getNumberOfTimeSteps() const;
+  double getFirstPlotTimeStamp() const;
+  int    getNumberOfSnapshots() const;
+  int    getGridLevels() const;
+  int    getMaxGridLevels() const;
+
+  const std::string& getConfigFilePath() const;
+  const std::string& getOutputPath() const;
+  const std::string& getProjectName() const;
+  const std::string& getExecutableName() const;
 
   double getMaxAdmissiblePatchSize(const tarch::la::Vector<DIMENSIONS, double>& domainSize) const;
   double getMinAdmissiblePatchSize(const tarch::la::Vector<DIMENSIONS, double>& domainSize) const;
-
   double
   getMaxAdmissibleCellSize(const tarch::la::Vector<DIMENSIONS, double>& domainSize, int cellsPerPatchPerAxis) const;
   double

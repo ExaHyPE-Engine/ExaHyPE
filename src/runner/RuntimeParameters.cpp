@@ -5,11 +5,14 @@
 #include "tarch/accelerator/Device.h"
 #include "tarch/reader/JSONReader.h"
 
+#include <algorithm>
 #include <filesystem>
 #include <iostream>
 #include <limits>
 #include <sstream>
 #include <stdexcept>
+#include <utility>
+#include <vector>
 
 runner::RuntimeParameters::RuntimeParameters() :
   _mpiTimeOutWarning(0.0),
@@ -26,13 +29,17 @@ runner::RuntimeParameters::RuntimeParameters() :
   _numberOfTimeSteps(-1),
   _firstPlotTimeStamp(0.0),
   _numberOfSnapshots(10),
-  _plotOutputPath(normaliseOutputPath("solutions")),
-  _plotOutputPathConfigured(false),
-  _logIntervalInSeconds(5.0),
+  _outputPath(normaliseOutputPath("output")),
+  _outputPathConfigured(false),
+  _projectName(),
+  _executableName(),
+  _logIntervalInSeconds(10.0),
   _gridLevels(3),
   _maxGridLevels(3),
   _gridLevelsConfigured(false),
   _maxGridLevelsConfigured(false) {}
+
+runner::RuntimeParameters::~RuntimeParameters() = default;
 
 runner::RuntimeParameters& runner::RuntimeParameters::getInstance() {
   static RuntimeParameters result;
@@ -78,14 +85,6 @@ int runner::RuntimeParameters::parseInteger(const std::string& value, const std:
   }
 }
 
-int runner::RuntimeParameters::parseNonNegativeInteger(const std::string& value, const std::string& key) {
-  const int result = parseInteger(value, key);
-  if (result < 0) {
-    throw std::runtime_error("Invalid non-negative integer value for " + key + ": " + value);
-  }
-  return result;
-}
-
 double runner::RuntimeParameters::parseDouble(const std::string& value, const std::string& key) {
   try {
     std::size_t  processed = 0;
@@ -97,14 +96,6 @@ double runner::RuntimeParameters::parseDouble(const std::string& value, const st
   } catch (const std::exception&) {
     throw std::runtime_error("Invalid numeric value for " + key + ": " + value);
   }
-}
-
-double runner::RuntimeParameters::parseNonNegativeDouble(const std::string& value, const std::string& key) {
-  const double result = parseDouble(value, key);
-  if (result < 0.0) {
-    throw std::runtime_error("Invalid non-negative numeric value for " + key + ": " + value);
-  }
-  return result;
 }
 
 std::string runner::RuntimeParameters::normaliseOutputPath(const std::string& path) {
@@ -123,88 +114,83 @@ std::string runner::RuntimeParameters::consumeValue(int& index, int argc, char**
 }
 
 void runner::RuntimeParameters::printUsage(const std::string& executableName) const {
-  const auto printOption = [](const std::string& argument, const std::string& description) {
-    constexpr std::size_t OptionColumnWidth = 43;
-
-    std::cout << "  " << argument;
-    if (argument.size() < OptionColumnWidth) {
-      std::cout << std::string(OptionColumnWidth - argument.size(), ' ');
-    } else {
-      std::cout << ' ';
-    }
-    std::cout << description << "\n";
+  std::vector<std::pair<std::string, std::string>> options;
+  const auto addOption = [&options](const std::string& argument, const std::string& description) {
+    options.emplace_back(argument, description);
   };
 
-  std::cout << "Usage: " << executableName << " [options]\n"
-            << "\n"
-            << "Runtime configuration:\n";
-
-  printOption("-cf, --config-file <path>", "Read runtime settings from JSON (default: auto-detect ./config.json).");
-  printOption("-et, --end-time <t>", "Set min and max terminal time to t (default: not set).");
-  printOption(
-    "-tmin, --min-terminal-time <t>",
+  addOption("-cf, --configFile <path>", "Read runtime settings from JSON (default: auto-detect ./config.json).");
+  addOption("-et, --endTime <t>", "Set min and max terminal time to t (default: not set).");
+  addOption(
+    "-tmin, --minTerminalTime <t>",
     "Minimum terminal time (default: " + formatDefault(_minTerminalTime) + ")."
   );
-  printOption(
-    "-tmax, --max-terminal-time <t>",
+  addOption(
+    "-tmax, --maxTerminalTime <t>",
     "Maximum terminal time (default: " + formatTerminalTime(_maxTerminalTime) + ")."
   );
-  printOption(
-    "-nt, --number-of-timesteps <n>",
-    "Run exactly n time steps then stop, superseding the terminal time (for profiling); use <=0 to "
-    "disable (default: " +
-      (_numberOfTimeSteps > 0 ? formatDefault(_numberOfTimeSteps) : std::string("disabled")) + ")."
-  );
-  printOption(
-    "-fpt, --first-plot-time-stamp <t>",
+  addOption(
+    "-fpt, --firstPlotTimeStamp <t>",
     "First plot time stamp (default: " + formatDefault(_firstPlotTimeStamp) + ")."
   );
-  printOption(
-    "-ns, --number-of-snapshots <n>",
+  addOption(
+    "-nt, --numberOfTimesteps <n>",
+    "Maximum number of time steps; use <=0 for unbounded (default: " +
+      (_numberOfTimeSteps > 0 ? formatDefault(_numberOfTimeSteps) : std::string("unbounded")) + ")."
+  );
+  addOption(
+    "-ns, --numberOfSnapshots <n>",
     "Number of plot snapshots; use <=0 to disable plotting (default: " + formatDefault(_numberOfSnapshots) + ")."
   );
-  printOption("-o, --output-path <path>", "Plot output path (default: " + formatDefault(_plotOutputPath) + ").");
-  printOption(
-    "-li, --log-interval <seconds>",
+  addOption("-o, --outputPath <path>", "Output path (default: " + formatDefault(_outputPath) + ").");
+  addOption(
+    "-li, --logInterval <seconds>",
     "Terminal log interval in seconds (default: " + formatDefault(_logIntervalInSeconds) + ")."
   );
-  printOption(
-    "-l, --grid-levels <n>",
+  addOption(
+    "-l, --gridLevels <n>",
     "Set coarsest and finest grid level to n (default: " + formatDefault(_gridLevels) + ")."
   );
-  printOption("-lmin, --min-grid-levels <n>", "Coarsest grid level (default: " + formatDefault(_gridLevels) + ").");
-  printOption("-lmax, --max-grid-levels <n>", "Finest grid level (default: " + formatDefault(_maxGridLevels) + ").");
-  printOption(
-    "-lbq, --load-balancing-quality <q>",
+  addOption("-lmin, --minGridLevels <n>", "Coarsest grid level (default: " + formatDefault(_gridLevels) + ").");
+  addOption("-lmax, --maxGridLevels <n>", "Finest grid level (default: " + formatDefault(_maxGridLevels) + ").");
+  addOption(
+    "-lbq, --loadBalancingQuality <q>",
     "Worst-case load-balancing ratio (default: " + formatDefault(_loadBalancingQuality) + ")."
   );
-  printOption("-tsmin, --min-size-of-tree <n>", "Minimum tree size (default: " + formatDefault(_minSizeOfTree) + ").");
-  printOption(
-    "-trees, --max-number-of-trees-per-rank <n>",
+  addOption("-tsmin, --minSizeOfTree <n>", "Minimum tree size (default: " + formatDefault(_minSizeOfTree) + ").");
+  addOption(
+    "-trees, --maxNumberOfTreesPerRank <n>",
     "Maximum trees per rank. Use <=0 for thread count (default: " + formatDefault(_maxNumberOfTreesPerRank) + ")."
   );
-  printOption(
-    "-td, --target-device <n>",
+  addOption(
+    "-td, --targetDevice <n>",
     "Logical accelerator device id (default: " + formatDefault(_targetDevice) + ")."
   );
-  printOption(
-    "--mpi-timeout-warning <seconds>",
+  addOption(
+    "--timeoutWarning <seconds>",
     "Warn after this many seconds waiting for MPI progress; fractional values such as 0.1 are "
     "allowed, 0 disables (default: " +
       formatDefault(_mpiTimeOutWarning) + ")."
   );
-  printOption(
-    "--mpi-deadlock-timeout <seconds>",
+  addOption(
+    "--deadlockTimeout <seconds>",
     "Terminate after this many seconds waiting for MPI progress; fractional values such as 0.1 are "
     "allowed, 0 disables (default: " +
       formatDefault(_mpiDeadlockTimeOut) + ")."
   );
-  printOption(
-    "--mpi-deadlock-detection",
-    "Enable detailed MPI request tracking for deadlock diagnostics (default: off)."
-  );
-  printOption("-v, --verbose", "Show the full log line prefix (timestamp, core, scope) (default: off).");
-  printOption("-h, --help", "Print this help and exit.");
+  addOption("--deadlockDetection", "Enable detailed MPI request tracking for deadlock diagnostics (default: off).");
+  addOption("-v, --verbose", "Show the full log line prefix (timestamp, core, scope) (default: off).");
+  addOption("-h, --help", "Print this help and exit.");
+
+  std::size_t argumentColumnWidth = 0;
+  for (const auto& option : options) {
+    argumentColumnWidth = std::max(argumentColumnWidth, option.first.size());
+  }
+
+  std::cout << "Usage: " << executableName << " [options]\n\nRuntime configuration:\n";
+  for (const auto& [argument, description] : options) {
+    std::cout << "  " << argument << std::string(argumentColumnWidth - argument.size() + 2, ' ') << description << "\n";
+  }
 }
 
 void runner::RuntimeParameters::normaliseGridLevels() {
@@ -225,18 +211,48 @@ void runner::RuntimeParameters::normaliseGridLevels() {
   }
 }
 
-void runner::RuntimeParameters::normalisePlotOutputPath() {
-  if (_plotOutputPathConfigured) {
-    return;
+void runner::RuntimeParameters::validateParameterRanges() const {
+  if (_minTerminalTime < 0.0) {
+    throw std::runtime_error("Terminal time must not be negative (got " + formatDefault(_minTerminalTime) + ").");
   }
-
-  _plotOutputPath = _numberOfSnapshots <= 0 ? "./" : normaliseOutputPath("solutions");
+  if (_maxTerminalTime < _minTerminalTime) {
+    throw std::runtime_error("Maximum terminal time must be greater than or equal to the minimum terminal time.");
+  }
+  if (_firstPlotTimeStamp < 0.0) {
+    throw std::runtime_error(
+      "First plot time stamp must not be negative (got " + formatDefault(_firstPlotTimeStamp) + ")."
+    );
+  }
+  if (_logIntervalInSeconds <= 0.0) {
+    throw std::runtime_error("Log interval must be positive (got " + formatDefault(_logIntervalInSeconds) + " s).");
+  }
+  if (_loadBalancingQuality <= 0.0 or _loadBalancingQuality > 1.0) {
+    throw std::runtime_error(
+      "Load-balancing quality must lie in (0, 1] (got " + formatDefault(_loadBalancingQuality) + ")."
+    );
+  }
+  if (_minSizeOfTree < 1) {
+    throw std::runtime_error("Minimum tree size must be at least 1 (got " + formatDefault(_minSizeOfTree) + ").");
+  }
+  if (_targetDevice < 0) {
+    throw std::runtime_error("Target device id must not be negative (got " + formatDefault(_targetDevice) + ").");
+  }
+  if (_mpiTimeOutWarning < 0.0) {
+    throw std::runtime_error(
+      "MPI timeout warning must not be negative (got " + formatDefault(_mpiTimeOutWarning) + " s)."
+    );
+  }
+  if (_mpiDeadlockTimeOut < 0.0) {
+    throw std::runtime_error(
+      "MPI deadlock timeout must not be negative (got " + formatDefault(_mpiDeadlockTimeOut) + " s)."
+    );
+  }
 }
 
 void runner::RuntimeParameters::extractConfigFileFromCommandLine(int argc, char** argv) {
   for (int index = 1; index < argc; ++index) {
     const std::string argument = argv[index];
-    if (argument == "--config-file" or argument == "-cf") {
+    if (argument == "--configFile" or argument == "-cf") {
       _configFilePath = consumeValue(index, argc, argv, argument);
     }
   }
@@ -247,81 +263,46 @@ void runner::RuntimeParameters::readJsonConfiguration() {
     return;
   }
 
-  tarch::reader::JSONReader reader(_configFilePath);
+  _configReader                     = std::make_unique<tarch::reader::JSONReader>(_configFilePath);
+  tarch::reader::JSONReader& reader = *_configReader;
 
-  const auto readNonNegativeDouble = [&reader](const std::string& key) {
-    const double result = reader.getDouble(key);
-    if (result < 0.0) {
-      throw std::runtime_error("Invalid non-negative numeric value for " + key + ": " + std::to_string(result));
-    }
-    return result;
-  };
+  _mpiTimeOutWarning           = reader.getDouble("timeoutWarning", _mpiTimeOutWarning);
+  _mpiDeadlockTimeOut          = reader.getDouble("deadlockTimeout", _mpiDeadlockTimeOut);
+  _mpiDeadlockDetectionEnabled = reader.getBoolean("deadlockDetection", _mpiDeadlockDetectionEnabled);
+  _loadBalancingQuality        = reader.getDouble("loadBalancingQuality", _loadBalancingQuality);
+  _minSizeOfTree               = reader.getInteger("minSizeOfTree", _minSizeOfTree);
+  _maxNumberOfTreesPerRank     = reader.getInteger("maxNumberOfTreesPerRank", _maxNumberOfTreesPerRank);
+  _targetDevice                = reader.getInteger("targetDevice", _targetDevice);
+  _verbose                     = reader.getBoolean("verbose", _verbose);
+  _numberOfTimeSteps           = reader.getInteger("numberOfTimesteps", _numberOfTimeSteps);
+  _firstPlotTimeStamp          = reader.getDouble("firstPlotTimeStamp", _firstPlotTimeStamp);
+  _numberOfSnapshots           = reader.getInteger("numberOfSnapshots", _numberOfSnapshots);
+  _logIntervalInSeconds        = reader.getDouble("logInterval", _logIntervalInSeconds);
 
-  // Framework parameters
-  if (reader.hasKey("mpi-timeout-warning")) {
-    _mpiTimeOutWarning = readNonNegativeDouble("mpi-timeout-warning");
-  }
-  if (reader.hasKey("mpi-deadlock-timeout")) {
-    _mpiDeadlockTimeOut = readNonNegativeDouble("mpi-deadlock-timeout");
-  }
-  if (reader.hasKey("mpi-deadlock-detection")) {
-    _mpiDeadlockDetectionEnabled = reader.getBoolean("mpi-deadlock-detection");
-  }
-  if (reader.hasKey("load-balancing-quality")) {
-    _loadBalancingQuality = reader.getDouble("load-balancing-quality");
-  }
-  if (reader.hasKey("min-size-of-tree")) {
-    _minSizeOfTree = reader.getInteger("min-size-of-tree");
-  }
-  if (reader.hasKey("max-number-of-trees-per-rank")) {
-    _maxNumberOfTreesPerRank = reader.getInteger("max-number-of-trees-per-rank");
-  }
-  if (reader.hasKey("target-device")) {
-    _targetDevice = reader.getInteger("target-device");
-  }
-  if (reader.hasKey("verbose")) {
-    _verbose = reader.getBoolean("verbose");
-  }
-
-  // Solver/algorithm parameters
-  if (reader.hasKey("end-time")) {
-    _minTerminalTime = reader.getDouble("end-time");
+  // endTime sets both; an explicit min/max overrides afterwards.
+  if (reader.hasKey("endTime")) {
+    _minTerminalTime = reader.getDouble("endTime");
     _maxTerminalTime = _minTerminalTime;
   }
-  if (reader.hasKey("min-terminal-time")) {
-    _minTerminalTime = reader.getDouble("min-terminal-time");
+  _minTerminalTime = reader.getDouble("minTerminalTime", _minTerminalTime);
+  _maxTerminalTime = reader.getDouble("maxTerminalTime", _maxTerminalTime);
+
+  if (reader.hasKey("outputPath")) {
+    _outputPath           = normaliseOutputPath(reader.getString("outputPath"));
+    _outputPathConfigured = true;
   }
-  if (reader.hasKey("max-terminal-time")) {
-    _maxTerminalTime = reader.getDouble("max-terminal-time");
-  }
-  if (reader.hasKey("number-of-timesteps")) {
-    _numberOfTimeSteps = reader.getInteger("number-of-timesteps");
-  }
-  if (reader.hasKey("first-plot-time-stamp")) {
-    _firstPlotTimeStamp = reader.getDouble("first-plot-time-stamp");
-  }
-  if (reader.hasKey("number-of-snapshots")) {
-    _numberOfSnapshots = reader.getInteger("number-of-snapshots");
-  }
-  if (reader.hasKey("output-path")) {
-    _plotOutputPath           = normaliseOutputPath(reader.getString("output-path"));
-    _plotOutputPathConfigured = true;
-  }
-  if (reader.hasKey("log-interval")) {
-    _logIntervalInSeconds = reader.getDouble("log-interval");
-  }
-  if (reader.hasKey("grid-levels")) {
-    _gridLevels              = reader.getInteger("grid-levels");
+  if (reader.hasKey("gridLevels")) {
+    _gridLevels              = reader.getInteger("gridLevels");
     _maxGridLevels           = _gridLevels;
     _gridLevelsConfigured    = true;
     _maxGridLevelsConfigured = true;
   }
-  if (reader.hasKey("min-grid-levels")) {
-    _gridLevels           = reader.getInteger("min-grid-levels");
+  if (reader.hasKey("minGridLevels")) {
+    _gridLevels           = reader.getInteger("minGridLevels");
     _gridLevelsConfigured = true;
   }
-  if (reader.hasKey("max-grid-levels")) {
-    _maxGridLevels           = reader.getInteger("max-grid-levels");
+  if (reader.hasKey("maxGridLevels")) {
+    _maxGridLevels           = reader.getInteger("maxGridLevels");
     _maxGridLevelsConfigured = true;
   }
 }
@@ -331,54 +312,54 @@ void runner::RuntimeParameters::applyCommandLineConfiguration(int& argc, char** 
 
   for (int readIndex = 1; readIndex < argc; ++readIndex) {
     const std::string argument = argv[readIndex];
-    if (argument == "--config-file" or argument == "-cf") {
+    if (argument == "--configFile" or argument == "-cf") {
       _configFilePath = consumeValue(readIndex, argc, argv, argument);
-    } else if (argument == "--end-time" or argument == "-et") {
+    } else if (argument == "--endTime" or argument == "-et") {
       _minTerminalTime = parseDouble(consumeValue(readIndex, argc, argv, argument), argument);
       _maxTerminalTime = _minTerminalTime;
-    } else if (argument == "--min-terminal-time" or argument == "-tmin") {
+    } else if (argument == "--minTerminalTime" or argument == "-tmin") {
       _minTerminalTime = parseDouble(consumeValue(readIndex, argc, argv, argument), argument);
-    } else if (argument == "--max-terminal-time" or argument == "-tmax") {
+    } else if (argument == "--maxTerminalTime" or argument == "-tmax") {
       _maxTerminalTime = parseDouble(consumeValue(readIndex, argc, argv, argument), argument);
-    } else if (argument == "--number-of-timesteps" or argument == "-nt") {
+    } else if (argument == "--numberOfTimesteps" or argument == "-nt") {
       _numberOfTimeSteps = parseInteger(consumeValue(readIndex, argc, argv, argument), argument);
-    } else if (argument == "--first-plot-time-stamp" or argument == "-fpt") {
+    } else if (argument == "--firstPlotTimeStamp" or argument == "-fpt") {
       _firstPlotTimeStamp = parseDouble(consumeValue(readIndex, argc, argv, argument), argument);
-    } else if (argument == "--number-of-snapshots" or argument == "-ns") {
+    } else if (argument == "--numberOfSnapshots" or argument == "-ns") {
       _numberOfSnapshots = parseInteger(consumeValue(readIndex, argc, argv, argument), argument);
-    } else if (argument == "--output-path" or argument == "-o") {
-      _plotOutputPath           = normaliseOutputPath(consumeValue(readIndex, argc, argv, argument));
-      _plotOutputPathConfigured = true;
-    } else if (argument == "--log-interval" or argument == "-li") {
+    } else if (argument == "--outputPath" or argument == "-o") {
+      _outputPath           = normaliseOutputPath(consumeValue(readIndex, argc, argv, argument));
+      _outputPathConfigured = true;
+    } else if (argument == "--logInterval" or argument == "-li") {
       _logIntervalInSeconds = parseDouble(consumeValue(readIndex, argc, argv, argument), argument);
-    } else if (argument == "--grid-levels" or argument == "-l") {
+    } else if (argument == "--gridLevels" or argument == "-l") {
       _gridLevels              = parseInteger(consumeValue(readIndex, argc, argv, argument), argument);
       _maxGridLevels           = _gridLevels;
       _gridLevelsConfigured    = true;
       _maxGridLevelsConfigured = true;
-    } else if (argument == "--min-grid-levels" or argument == "-lmin") {
+    } else if (argument == "--minGridLevels" or argument == "-lmin") {
       _gridLevels           = parseInteger(consumeValue(readIndex, argc, argv, argument), argument);
       _gridLevelsConfigured = true;
-    } else if (argument == "--max-grid-levels" or argument == "-lmax") {
+    } else if (argument == "--maxGridLevels" or argument == "-lmax") {
       _maxGridLevels           = parseInteger(consumeValue(readIndex, argc, argv, argument), argument);
       _maxGridLevelsConfigured = true;
-    } else if (argument == "--load-balancing-quality" or argument == "-lbq") {
+    } else if (argument == "--loadBalancingQuality" or argument == "-lbq") {
       _loadBalancingQuality = parseDouble(consumeValue(readIndex, argc, argv, argument), argument);
-    } else if (argument == "--min-size-of-tree" or argument == "-tsmin") {
+    } else if (argument == "--minSizeOfTree" or argument == "-tsmin") {
       _minSizeOfTree = parseInteger(consumeValue(readIndex, argc, argv, argument), argument);
-    } else if (argument == "--max-number-of-trees-per-rank" or argument == "-trees") {
+    } else if (argument == "--maxNumberOfTreesPerRank" or argument == "-trees") {
       _maxNumberOfTreesPerRank = parseInteger(consumeValue(readIndex, argc, argv, argument), argument);
-    } else if (argument == "--target-device" or argument == "-td") {
+    } else if (argument == "--targetDevice" or argument == "-td") {
       _targetDevice = parseInteger(consumeValue(readIndex, argc, argv, argument), argument);
     } else if (argument == "--verbose" or argument == "-v") {
       _verbose = true;
-    } else if (argument == "--mpi-timeout-warning") {
-      _mpiTimeOutWarning = parseNonNegativeDouble(consumeValue(readIndex, argc, argv, argument), argument);
-    } else if (argument == "--mpi-deadlock-timeout") {
-      _mpiDeadlockTimeOut = parseNonNegativeDouble(consumeValue(readIndex, argc, argv, argument), argument);
-    } else if (argument == "--mpi-deadlock-detection") {
+    } else if (argument == "--timeoutWarning") {
+      _mpiTimeOutWarning = parseDouble(consumeValue(readIndex, argc, argv, argument), argument);
+    } else if (argument == "--deadlockTimeout") {
+      _mpiDeadlockTimeOut = parseDouble(consumeValue(readIndex, argc, argv, argument), argument);
+    } else if (argument == "--deadlockDetection") {
       _mpiDeadlockDetectionEnabled = true;
-    } else if (argument == "--no-mpi-deadlock-detection") {
+    } else if (argument == "--noDeadlockDetection") {
       _mpiDeadlockDetectionEnabled = false;
     } else {
       argv[writeIndex] = argv[readIndex];
@@ -391,15 +372,23 @@ void runner::RuntimeParameters::applyCommandLineConfiguration(int& argc, char** 
 }
 
 void runner::RuntimeParameters::setGeneratedDefaults(
-  double minTerminalTime,
-  double maxTerminalTime,
-  int    gridLevels,
-  int    maxGridLevels
+  double             minTerminalTime,
+  double             maxTerminalTime,
+  int                gridLevels,
+  int                maxGridLevels,
+  const std::string& projectName
 ) {
+  _projectName = projectName;
+
+  if (not projectName.empty() and not _outputPathConfigured) {
+    _outputPath = normaliseOutputPath(projectName + ".output");
+  }
+
   if (minTerminalTime >= 0.0) {
     _minTerminalTime = minTerminalTime;
     _maxTerminalTime = maxTerminalTime >= minTerminalTime ? maxTerminalTime : std::numeric_limits<double>::max();
   }
+
   if (gridLevels >= 0) {
     _gridLevels           = gridLevels;
     _gridLevelsConfigured = true;
@@ -408,6 +397,7 @@ void runner::RuntimeParameters::setGeneratedDefaults(
       _maxGridLevelsConfigured = true;
     }
   }
+
   if (maxGridLevels >= 0) {
     _maxGridLevels           = maxGridLevels;
     _maxGridLevelsConfigured = true;
@@ -419,6 +409,10 @@ void runner::RuntimeParameters::setGeneratedDefaults(
 }
 
 void runner::RuntimeParameters::configure(int& argc, char** argv) {
+  if (argc > 0) {
+    _executableName = std::filesystem::path(argv[0]).filename().string();
+  }
+
   extractConfigFileFromCommandLine(argc, argv);
 
   if (_configFilePath.empty() and std::filesystem::exists("./config.json")) {
@@ -427,11 +421,11 @@ void runner::RuntimeParameters::configure(int& argc, char** argv) {
 
   readJsonConfiguration();
   applyCommandLineConfiguration(argc, argv);
-  normalisePlotOutputPath();
   normaliseGridLevels();
+  validateParameterRanges();
 }
 
-const std::string& runner::RuntimeParameters::getConfigFilePath() const { return _configFilePath; }
+tarch::reader::JSONReader* runner::RuntimeParameters::getConfigReader() { return _configReader.get(); }
 
 double runner::RuntimeParameters::getMPITimeOutWarning() const { return _mpiTimeOutWarning; }
 double runner::RuntimeParameters::getMPIDeadlockTimeOut() const { return _mpiDeadlockTimeOut; }
@@ -440,17 +434,22 @@ double runner::RuntimeParameters::getLoadBalancingQuality() const { return _load
 int    runner::RuntimeParameters::getMinSizeOfTree() const { return _minSizeOfTree; }
 int    runner::RuntimeParameters::getMaxNumberOfTreesPerRank() const { return _maxNumberOfTreesPerRank; }
 int    runner::RuntimeParameters::getTargetDevice() const { return _targetDevice; }
-bool   runner::RuntimeParameters::isVerbose() const { return _verbose; }
 
-double             runner::RuntimeParameters::getMinTerminalTime() const { return _minTerminalTime; }
-double             runner::RuntimeParameters::getMaxTerminalTime() const { return _maxTerminalTime; }
-int                runner::RuntimeParameters::getNumberOfTimeSteps() const { return _numberOfTimeSteps; }
-double             runner::RuntimeParameters::getFirstPlotTimeStamp() const { return _firstPlotTimeStamp; }
-int                runner::RuntimeParameters::getNumberOfSnapshots() const { return _numberOfSnapshots; }
-const std::string& runner::RuntimeParameters::getPlotOutputPath() const { return _plotOutputPath; }
-double             runner::RuntimeParameters::getLogIntervalInSeconds() const { return _logIntervalInSeconds; }
-int                runner::RuntimeParameters::getGridLevels() const { return _gridLevels; }
-int                runner::RuntimeParameters::getMaxGridLevels() const { return _maxGridLevels; }
+bool   runner::RuntimeParameters::isVerbose() const { return _verbose; }
+double runner::RuntimeParameters::getLogIntervalInSeconds() const { return _logIntervalInSeconds; }
+
+double runner::RuntimeParameters::getMinTerminalTime() const { return _minTerminalTime; }
+double runner::RuntimeParameters::getMaxTerminalTime() const { return _maxTerminalTime; }
+int    runner::RuntimeParameters::getNumberOfTimeSteps() const { return _numberOfTimeSteps; }
+double runner::RuntimeParameters::getFirstPlotTimeStamp() const { return _firstPlotTimeStamp; }
+int    runner::RuntimeParameters::getNumberOfSnapshots() const { return _numberOfSnapshots; }
+int    runner::RuntimeParameters::getGridLevels() const { return _gridLevels; }
+int    runner::RuntimeParameters::getMaxGridLevels() const { return _maxGridLevels; }
+
+const std::string& runner::RuntimeParameters::getConfigFilePath() const { return _configFilePath; }
+const std::string& runner::RuntimeParameters::getOutputPath() const { return _outputPath; }
+const std::string& runner::RuntimeParameters::getProjectName() const { return _projectName; }
+const std::string& runner::RuntimeParameters::getExecutableName() const { return _executableName; }
 
 double
 runner::RuntimeParameters::getMaxAdmissiblePatchSize(const tarch::la::Vector<DIMENSIONS, double>& domainSize) const {

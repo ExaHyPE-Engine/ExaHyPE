@@ -305,7 +305,7 @@ class CurviTracer(ActionSet):
 
     def get_constructor_body(self):
         result = """
-_database.setOutputFileName( ::runner::RuntimeParameters::getInstance().getPlotOutputPath() + "{{FILENAME}}" );
+_database.setOutputFileName( ::runner::RuntimeParameters::getInstance().getOutputPath() + "{{FILENAME}}" );
 _database.setOutputPrecision( {{OUTPUT_PRECISION}} );
 _database.setDataDeltaBetweenTwoSnapshots( {{DATA_DELTA}}, {{USE_RELATIVE_DELTAS}} );
 _database.setPositionDeltaBetweenTwoSnapshots( {{POSITION_DELTA}}, {{USE_RELATIVE_DELTAS}} );

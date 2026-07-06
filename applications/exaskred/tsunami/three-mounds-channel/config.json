@@ -1,13 +1,13 @@
 {
-  "end-time": 20.0,
-  "min-grid-levels": 5,
-  "max-grid-levels": 5,
-  "first-plot-time-stamp": 0.0,
-  "number-of-snapshots": 10,
-  "output-path": "solutions",
-  "log-interval": 10.0,
-  "load-balancing-quality": 0.9,
-  "min-size-of-tree": 1,
-  "max-number-of-trees-per-rank": -1,
-  "target-device": 0
+  "endTime": 20.0,
+  "minGridLevels": 5,
+  "maxGridLevels": 5,
+  "firstPlotTimeStamp": 0.0,
+  "numberOfSnapshots": 10,
+  "outputPath": "solutions",
+  "logInterval": 10.0,
+  "loadBalancingQuality": 0.9,
+  "minSizeOfTree": 1,
+  "maxNumberOfTreesPerRank": -1,
+  "targetDevice": 0
 }

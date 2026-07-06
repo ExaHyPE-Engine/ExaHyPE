@@ -84,7 +84,7 @@ def create_start_simulation_implementation_for_error_measurement(
         """
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     _errorDatabase.setDeltaBetweenTwoDatabaseFlushes({{FLUSH_DELTA}});
-    _errorDatabase.setOutputFileName(::runner::RuntimeParameters::getInstance().getPlotOutputPath() + "{{FILENAME}}");
+    _errorDatabase.setOutputFileName(::runner::RuntimeParameters::getInstance().getOutputPath() + "{{FILENAME}}");
     _errorDatabase.setDataName("l0-error, l2-error, l_inf-error");
     // _errorDatabase.setOutputPrecision({{OUTPUT_PRECISION}});
     _errorDatabase.setDataDeltaBetweenTwoSnapshots({{DATA_DELTA}}, {{USE_RELATIVE_DELTAS}});

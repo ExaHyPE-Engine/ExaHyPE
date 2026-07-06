@@ -215,6 +215,24 @@ class Makefile(object):
                             self.d["CMAKE_CXX_COMPILER"] = value
                         elif key == "PEANO_CMAKE_FORTRAN_COMPILER":
                             self.d["CMAKE_FORTRAN_COMPILER"] = value
+                        elif key == "PEANO_WITH_HDF5":
+                            self.d["WITH_HDF5"] = value
+                        elif key == "PEANO_WITH_NETCDF":
+                            self.d["WITH_NETCDF"] = value
+
+            # Inform the plotter which output formats this build actually provides.
+            # VTU has no external dependency and is always available; HDF5/NetCDF
+            # are only available when CMake found and enabled the libraries. A
+            # plotter asking for a missing format then falls back to VTU rather
+            # than failing to link.
+            available_formats = {"vtu"}
+            for plot_format, config_key in (("hdf5", "WITH_HDF5"), ("netcdf", "WITH_NETCDF"), ("vtkhdf", "WITH_HDF5")):
+                value = self.d.get(config_key)
+                if value is None or value.upper() != "OFF":
+                    available_formats.add(plot_format)
+            import peano4.plotter
+
+            peano4.plotter.set_available_formats(available_formats)
 
         else:
             raise Exception(
@@ -263,10 +281,9 @@ class Makefile(object):
 
     def add_cpp_file(self, filename, generated=False, is_gpu_kernel=False):
         """
-        Add a new cpp filename. This is basically a set implementation, i.e., you can
-        add files multiple times, but they are not inserted multiple times. This
-        is important, as the steps add the cpp files. Multiple steps can hold the
-        same action, so this action would be created multiple times.
+        Add a new cpp filename. This behaves like a set: adding the same file
+        multiple times inserts it only once. This matters because multiple steps
+        can hold the same action, which would otherwise add the file repeatedly.
 
         All the standard Peano 4 routines rely on this function to add their
         generated files to the build environment. Nothing stops you however to
@@ -391,7 +408,7 @@ class Makefile(object):
         file_dir = os.path.dirname(os.path.realpath(__file__))
 
         with open(os.path.join(directory, ".gitignore"), "w") as gitignore:
-            gitignore.write(self.executable_name() + "\n.gitignore\nREADME-*\n")
+            gitignore.write(self.executable_name() + "\n.gitignore\nCMakeLists.txt\nMakefile\n")
 
         generate_output_file(
             os.path.join(file_dir, "CMakeLists.jinja2"),

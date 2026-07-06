@@ -51,7 +51,7 @@ number of subdomains (which may change under dynamic load balancing):
 
   _fileWriter.reset();
   _fileWriter = std::make_unique<tarch::plotter::VTUFileWriter>(
-    runner::RuntimeParameters::getInstance().getPlotOutputPath(),
+    runner::RuntimeParameters::getInstance().getOutputPath(),
     numberOfLocalSubdomains
   );
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -62,7 +62,7 @@ registered with the time series in one go:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   _timeSeriesWriter->writeSnapshotFile(filename, time, *_fileWriter);
   _timeSeriesWriter->writeTimeSeriesMetaFile(
-    runner::RuntimeParameters::getInstance().getPlotOutputPath(), filename
+    runner::RuntimeParameters::getInstance().getOutputPath(), filename
   );
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

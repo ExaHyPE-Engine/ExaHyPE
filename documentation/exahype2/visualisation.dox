@@ -42,9 +42,8 @@ If you dump Finite Volume data, it becomes difficult to spot how the resulting
 Finite Volumes are organised in patches:
 The organisation in patches is not visible unless you study AMR resolution
 boundaries.
-If you are interested in seeing the patch and cell boundaries, pass the
-`--show-edges` flag to `python/postprocessing/render_solution_interactively.py`.
-The renderer then draws the outline of every cell on top of the field.
+Cell outlines are drawn by default; pass `--no-edges` to
+`postprocessing/render_solution.py` to turn them off when you only want the field.
 
 
 ## Discontinuous Galerkin
@@ -58,12 +57,11 @@ difficult, but we found it important to display the actual spatial arrangement
 of the unknowns.
 
 
-As with the Finite Volume output, you can pass `--show-edges` to
-`python/postprocessing/render_solution_interactively.py` to draw the cell outlines and make the
-arrangement of the cells explicit.
-Run `python python/postprocessing/render_solution_interactively.py --help` to see all available options,
-including the field to plot (`--field`), the colour map (`--cmap`) and
-the output image width (`--width`).
+As with the Finite Volume output, cell outlines are drawn by default; pass
+`--no-edges` to `postprocessing/render_solution.py` to turn them off.
+Run `python postprocessing/render_solution.py --help` to see all available options,
+including the field to plot (`--field`), the component of a vector field
+(`--component`) and the colour map (`--colormap`).
 
 
 # Logging

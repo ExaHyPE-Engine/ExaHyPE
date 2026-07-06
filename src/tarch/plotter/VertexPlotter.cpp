@@ -2,13 +2,21 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "FileWriter.h"
 
-std::size_t tarch::plotter::FileWriter::VertexHash::operator()(const std::tuple<long long, long long, long long>& k
-) const {
-  return std::hash<long long>()(std::get<0>(k)) ^ (std::hash<long long>()(std::get<1>(k)) << 1)
-         ^ (std::hash<long long>()(std::get<2>(k)) << 2);
+std::size_t
+tarch::plotter::FileWriter::VertexHash::operator()(const std::tuple<long long, long long, long long>& k) const {
+  // Mix each coordinate (boost hash_combine); a plain XOR of shifts collides badly for
+  // the structured integer coordinates and lengthens the dedup probe chains.
+  std::size_t seed = 0;
+  auto        mix  = [&seed](long long value) {
+    seed ^= std::hash<long long>()(value) + 0x9e3779b97f4a7c15ULL + (seed << 6) + (seed >> 2);
+  };
+  mix(std::get<0>(k));
+  mix(std::get<1>(k));
+  mix(std::get<2>(k));
+  return seed;
 }
 
-tarch::plotter::FileWriter::VertexPlotter::VertexPlotter(FileWriter& plotter, int subdomainId):
+tarch::plotter::FileWriter::VertexPlotter::VertexPlotter(FileWriter& plotter, int subdomainId) :
   _plotter(plotter),
   _buffers(plotter._subdomains.at(static_cast<std::size_t>(subdomainId))) {
   _plotter.checkCanOpenPlotter(subdomainId);
@@ -33,9 +41,8 @@ int tarch::plotter::FileWriter::VertexPlotter::plotVertex(const tarch::la::Vecto
 
   auto& map = _buffers.vertexMap;
 
-  // O(1) Lookup
-  // If we have hanging vertices, we might still have duplicates in the global mesh.
-  // We could move the filter to the actual output writing function to get rid of all duplicate vertices.
+  // Hanging vertices can still leave duplicates in the global mesh; moving the
+  // filter to the output-writing stage would remove all duplicate vertices.
   auto iter = map.find(key);
   if (iter != map.end()) {
     return iter->second;

@@ -45,7 +45,7 @@ runs on M-series Macs through Docker Desktop's emulation. Just add
 
 If Docker does not work for you, build ExaHyPE 2 yourself and launch JupyterLab
 locally. You need a C++20 compiler, CMake 3.27+, Python 3.11+ and HDF5 (the
-tutorials write their snapshots as HDF5); MPI and OpenMP are recommended. The
+tutorials' plotter output is HDF5-based); MPI and OpenMP are recommended. The
 full dependency list is on @ref page_installation_home.
 
 On most systems the compiler, CMake, MPI, HDF5 and NetCDF come straight from
@@ -114,7 +114,7 @@ back later, re-activate it before launching JupyterLab again:
   switch the limiter off.
 - \subpage page_exahype2_tutorials_elastic - **Part 5** (`05_elastic/`): 3D elastic
   waves with an interactive cube slicer, and a first taste of HPC - measure how the
-  solver scales across OpenMP threads.
+  solver scales across MPI ranks.
 
 Each tutorial closes with suggestions for your own experiments.
 

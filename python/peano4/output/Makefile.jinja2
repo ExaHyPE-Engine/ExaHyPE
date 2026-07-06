@@ -45,6 +45,6 @@ help: $(CMAKE_APPLICATION_CONFIGURE_STAMP)
 
 distclean:
 	cmake -E rm -rf -- {{GENERATED_SUBDIR}} $(CMAKE_APPLICATION_BUILD_DIR)
-	cmake -E rm -f -- __peano_nonexistent__ {{EXECUTABLENAME}} README-* .gitignore Makefile CMakeLists.txt
+	cmake -E rm -f -- __peano_nonexistent__ {{EXECUTABLENAME}} .gitignore Makefile CMakeLists.txt
 
 maintainer-clean: distclean

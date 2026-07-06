@@ -14,11 +14,16 @@
 #include "tarch/instrumentation/Watch.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/mpi/mpi.h"
+#include "tarch/reader/JSONReader.h"
 
 #include <cstdlib>
+#include <filesystem>
+#include <fstream>
 #include <stdexcept>
 #include <string>
+#include <system_error>
 #include <utility>
+#include <vector>
 
 // ===========================================================================
 // Runner - the SPMD engine
@@ -188,14 +193,70 @@ int runner::run(
   auto& parameters = RuntimeParameters::getInstance();
 
   if (helpRequested(argc, argv)) {
-    const std::string executable = argc > 0 ? argv[0] : "";
-    const auto        slash      = executable.find_last_of('/');
-    parameters.printUsage(slash == std::string::npos ? executable : executable.substr(slash + 1));
+    parameters.printUsage(std::filesystem::path(argc > 0 ? argv[0] : "").filename().string());
     if (callbacks.printApplicationHelp) {
       callbacks.printApplicationHelp();
     }
     return EXIT_SUCCESS;
   }
+
+  // Validate all config before tarch::init, so a typo aborts before MPI starts.
+  parameters.configure(argc, argv);
+
+  // Framework and application share one reader; a key neither parser reads is a typo.
+  tarch::reader::JSONReader* const configReader         = parameters.getConfigReader();
+  const bool                       applicationParserRan = static_cast<bool>(callbacks.loadApplicationParameters);
+  if (applicationParserRan) {
+    callbacks.loadApplicationParameters(configReader, argc, argv);
+  }
+
+  // Skip the check without the app parser, else its keys look like typos.
+  if (configReader != nullptr and applicationParserRan) {
+    const std::vector<std::string> unrecognisedKeys = configReader->getUnusedKeys();
+    if (not unrecognisedKeys.empty()) {
+      std::string joined;
+      for (const std::string& key : unrecognisedKeys) {
+        joined += joined.empty() ? "" : ", ";
+        joined += key;
+      }
+      throw std::runtime_error(
+        "Unrecognised key(s) in configuration file \"" + parameters.getConfigFilePath() + "\": " + joined +
+        ". Run with --help to list the available runtime options."
+      );
+    }
+  }
+
+  // Each parser leaves args it does not know in argv; what remains is unknown.
+  if (argc > 1) {
+    std::string unrecognised;
+    for (int index = 1; index < argc; ++index) {
+      if (not unrecognised.empty()) {
+        unrecognised += ' ';
+      }
+      unrecognised += argv[index];
+    }
+    throw std::runtime_error(
+      "Unrecognised command-line argument(s): " + unrecognised +
+      ". Run with --help to list the available runtime options."
+    );
+  }
+
+  const std::string outputDirectory = parameters.getOutputPath();
+  std::error_code   outputDirectoryError;
+  std::filesystem::create_directories(outputDirectory, outputDirectoryError);
+  const std::filesystem::path outputGitignore = std::filesystem::path(outputDirectory) / ".gitignore";
+  if (not std::filesystem::exists(outputGitignore)) {
+    std::ofstream(outputGitignore) << "*\n";
+  }
+  tarch::instrumentation::Log::setOutputFile(outputDirectory + parameters.getExecutableName() + ".log");
+
+  // Configure the log-line prefix from the verbose flag before anything can log.
+  const bool verbose = parameters.isVerbose();
+  tarch::instrumentation::Log::setLogTimeStamp(verbose);
+  tarch::instrumentation::Log::setLogTimeStampHumanReadable(true);
+  tarch::instrumentation::Log::setLogThreadName(verbose);
+  tarch::instrumentation::Log::setLogScopeName(verbose);
+  tarch::instrumentation::Log::setLogMessageType(true);
 
   tarch::init(
     &argc,
@@ -203,26 +264,7 @@ int runner::run(
     {parameters.getMPITimeOutWarning(), parameters.getMPIDeadlockTimeOut(), parameters.isMPIDeadlockDetectionEnabled()}
   );
 
-  parameters.configure(argc, argv);
-
-  // Load the application's runtime parameters from the resolved config file and remaining
-  // arguments.
-  if (callbacks.loadApplicationParameters) {
-    callbacks.loadApplicationParameters(parameters.getConfigFilePath(), argc, argv);
-  }
-
-  auto& rank = tarch::mpi::Rank::getInstance();
-  rank.setTimeOutWarning(parameters.getMPITimeOutWarning());
-  rank.setDeadlockTimeOut(parameters.getMPIDeadlockTimeOut());
-  rank.setDeadlockDetection(parameters.isMPIDeadlockDetectionEnabled());
-
-  const bool verbose = parameters.isVerbose();
-  tarch::instrumentation::Log::setLogTimeStamp(verbose);
-  tarch::instrumentation::Log::setLogTimeStampHumanReadable(true);
-  tarch::instrumentation::Log::setLogThreadName(verbose);
-  tarch::instrumentation::Log::setLogScopeName(verbose);
-  tarch::instrumentation::Log::setLogMessageType(true);
-  tarch::instrumentation::Log::setLogMachineName(rank.getNumberOfRanks() > 1);
+  tarch::instrumentation::Log::setLogMachineName(tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1);
 
   peano4::init(domainOffset, domainSize, periodicBC);
 

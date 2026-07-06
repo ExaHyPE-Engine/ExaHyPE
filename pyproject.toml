@@ -55,7 +55,7 @@ dynamic = ["readme", "dependencies"]
 format = "postprocessing.format:main"
 plot-probe-data = "postprocessing.plot_probe_data:main"
 plot-error-norms = "postprocessing.plot_error_norms:main"
-compare-solutions = "postprocessing.compare_solution:main"
+compare-solution = "postprocessing.compare_solution:main"
 render-solution = "postprocessing.render_solution:main"
 
 [build-system]
@@ -65,8 +65,3 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.dynamic]
 readme = { file = ["README.md"], content-type = "text/markdown" }
 dependencies = { file = ["requirements.txt"] }
-
-[tool.setuptools.packages.find]
-where = ["python"]
-[tool.setuptools.package-data]
-"*" = ["*.*"]

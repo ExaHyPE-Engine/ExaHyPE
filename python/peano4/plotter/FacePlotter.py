@@ -8,11 +8,10 @@ from peano4.solversteps.ActionSet import ActionSet
 import jinja2
 
 
-# Analogous to PatchNodalPlotter but for faces instead of cells
-class FaceNodalPlotter(BasePlotter):
+# Analogous to PatchPlotter (nodal representation) but for faces instead of cells.
+class FacePlotter(BasePlotter):
     def __init__(
         self,
-        output_path,
         filename,
         patch,
         dataset_name,
@@ -20,15 +19,18 @@ class FaceNodalPlotter(BasePlotter):
         time_stamp_evaluation,
         mapping,
         guard,
+        file_format=None,
     ):
         super().__init__(
-            output_path,
             filename,
             dataset_name,
             description,
             time_stamp_evaluation,
             guard,
+            file_format=file_format,
         )
+
+        self.d["OUTPUT_SUBFOLDER"] = "face/"
 
         # for i in patch.dim:
         #     assert i == patch.dim[1]
@@ -39,9 +41,7 @@ class FaceNodalPlotter(BasePlotter):
         assert len(mapping) > 0
 
         counter = 0
-        self.d["MAPPING_2D"] = (
-            "constexpr double mapping[" + str(patch.dim[1]) + "] = {"
-        )
+        self.d["MAPPING_2D"] = "constexpr double mapping[" + str(patch.dim[1]) + "] = {"
         self.d["MAPPING_3D"] = (
             "constexpr double mapping[" + str(2 * patch.dim[1] * patch.dim[1]) + "] = {"
         )
@@ -98,7 +98,7 @@ class FaceNodalPlotter(BasePlotter):
         if operation_name == ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
             result = jinja2.Template(
                 """
-  if (not marker.hasBeenRefined() and 
+  if (not marker.hasBeenRefined() and
     {{GUARD_PREDICATE}}) {
 
     assertion(_vertexPlotter);
@@ -128,7 +128,7 @@ class FaceNodalPlotter(BasePlotter):
     const auto& faceOffset     = marker.getX() - faceSize * 0.5;
     faceSize[normal] = 0.;
 
-    // face directions, a face with normal 0 for example is a y-z (1,2)
+    // Face directions: a face with normal 0 is a y-z (1,2) face
     const int fD_1 = (normal==0);
 #if DIMENSIONS == 3
     const int fD_2 = 2 - (normal==2);
@@ -156,14 +156,14 @@ class FaceNodalPlotter(BasePlotter):
     for (int j=0; j<PointsPerAxis; j++) {
     #endif
       for (int i=0; i<PointsPerAxis; i++) {
-        // Apply Mapping
+        // Apply mapping
         int baseIndex = counter * (DIMENSIONS-1);
         p(fD_1) = faceOffset(fD_1) + faceSize(fD_1) * mapping[baseIndex + 0];
         #if DIMENSIONS == 3
         p(fD_2) = faceOffset(fD_2) + faceSize(fD_2) * mapping[baseIndex + 1];
         #endif
 
-        // Plot Vertex
+        // Plot vertex
         vertexIndices[counter] = _vertexPlotter->plotVertex(p);
 
         const int dofIndex = counter * {{UNKNOWNS}};
@@ -204,7 +204,7 @@ class FaceNodalPlotter(BasePlotter):
     for (int j=0; j<PointsPerAxis - 1; j++) {
     #endif
       for (int i=0; i<PointsPerAxis - 1; i++) {
-          int idx = i 
+          int idx = i
           #if DIMENSIONS == 3
             + j * PointsPerAxis
           #endif

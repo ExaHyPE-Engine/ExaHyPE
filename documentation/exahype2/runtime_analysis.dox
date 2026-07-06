@@ -3,7 +3,7 @@
  @page page_exahype_runtime_analysis Runtime analysis
 
  ExaHyPE 2 ships a small set of Python postprocessing utilities to analyse a
- run's output. They live in the top-level @c python/postprocessing package and
+ run's output. They live in the top-level @c postprocessing package and
  are plain command line scripts. Every script accepts @c --help for a full list
  of options.
 
@@ -14,8 +14,8 @@
  them into matplotlib figures:
 
  <code>
- python3 python/postprocessing/plot_error_norms.py errors.csv --output errors.png
- python3 python/postprocessing/plot_probe_data.py probe.csv --output probe.png
+ python3 postprocessing/plot_error_norms.py errors.csv --output errors.png
+ python3 postprocessing/plot_probe_data.py probe.csv --output probe.png
  </code>
 
  Both scripts write a PNG (the @c --output path defaults to the input file name
@@ -26,12 +26,12 @@
 
  ## Rendering and comparing solutions
 
- To render solution snapshots (HDF5/XMF, VTU or NetCDF) into images, or to
+ To render solution snapshots (VTKHDF, HDF5/XMF, NetCDF or VTU) into images, or to
  compare two solution files and report the first mismatch, use:
 
  <code>
- python3 python/postprocessing/render_solution.py solution.hdf5 --output-dir frames
- python3 python/postprocessing/compare_solution.py reference.vtu candidate.vtu
+ python3 postprocessing/render_solution.py MyProject.output --output-dir frames
+ python3 postprocessing/compare_solution.py reference.vtu candidate.vtu
  </code>
 
 

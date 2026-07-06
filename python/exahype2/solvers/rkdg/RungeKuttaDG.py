@@ -3,6 +3,7 @@
 import os
 
 import peano4
+import peano4.plotter
 import peano4.datamodel
 import peano4.toolbox.blockstructured
 import peano4.output.TemplatedHeaderFile
@@ -254,7 +255,7 @@ class RungeKuttaDG(object):
         self._user_action_set_includes = ""
         self._user_solver_includes = ""
 
-        self._plotter = peano4.plotter.HDF5PatchNodalPlotter
+        self._plotter = peano4.plotter.PatchPlotter
         self._variable_shortcuts = VariableShortcuts(name, unknowns, auxiliary_variables)
 
         self._solver_template_file_class_name = None
@@ -910,7 +911,7 @@ We use RK("""
         step.add_action_set(self._action_set_update_cell_label)
         step.add_action_set(self._action_set_AMR_throughout_grid_construction)
 
-    def add_actions_to_plot_solution(self, step, output_path):
+    def add_actions_to_plot_solution(self, step):
         """!
         Dump snapshot of solution
 
@@ -945,11 +946,11 @@ We use RK("""
                     mapping.append((x, y, z))
 
         plotter = self._plotter(
-            output_path=output_path,
             filename=self._name,
             patch=self._current_time_step,
             dataset_name=self._unknown_identifier(),
             description=self._variable_shortcuts.plot_description,
+            representation="nodal",
             mapping=mapping,
             time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
             guard=self._load_cell_data_default_guard(),
@@ -1369,6 +1370,3 @@ We use RK("""
         self._postprocess_updated_cell_after_final_linear_combination = kernel
         self.create_data_structures()
         self.create_action_sets()
-
-    def set_plotter(self, plotter):
-        self._plotter = plotter

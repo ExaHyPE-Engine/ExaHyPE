@@ -98,18 +98,18 @@ is set up to only format files that have been modified on your local branch to t
 branch, ``p4``. Ideally, the formatting script should be run on your local branch before
 you submit a merge request.
 
-The usage is straightforward. The script can be found in ``python/postprocessing/format.py``.
+The usage is straightforward. The script can be found in ``postprocessing/format.py``.
 To format all files that differ from files on the main ``p4`` branch, simply run
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-python3 python/postprocessing/format.py
+python3 postprocessing/format.py
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If you want to compare your local branch to a different branch than ``p4``, you can
 specify that using the ``-b`` or ``--branch`` flag, e.g.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-python3 python/postprocessing/format.py --branch branch-I-want-to-merge-into
+python3 postprocessing/format.py --branch branch-I-want-to-merge-into
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Note that the format script detects potential files which might need formatting using
@@ -119,7 +119,7 @@ If you prefer to run the formatting script on individual files only, you can spe
 them using the ``--files`` flag:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-python3 python/postprocessing/format.py --files myfile1.py myCppFile.cpp myCppHeaderFile.h
+python3 postprocessing/format.py --files myfile1.py myCppFile.cpp myCppHeaderFile.h
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The ``--files`` flag doesn't check whether the files you provide are traced by git, and

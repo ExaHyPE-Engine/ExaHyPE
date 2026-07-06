@@ -12,6 +12,7 @@ import multiprocessing
 import peano4.output
 import peano4.datamodel
 import peano4.solversteps
+import peano4.plotter
 
 from .PeanoMain import PeanoMain
 from .Logger import log, setup_logging
@@ -35,10 +36,9 @@ class Project (object):
   def __init__(self, namespace, project_name, executable = "",
                dimensions = None, offset = None, size = None, periodic_bc = None,
                grid_levels = None, build_mode = None, directory = "."):
-    # Standard project command-line arguments (shared by every project, including the
-    # ExaHyPE subclass via inheritance): -d/--dimensions and -m/--build-mode override the
-    # constructor defaults, -v enables verbose logging, -h prints the help. Dimensions and
-    # build mode stay part of the project configuration; the CLI only overrides them.
+    # Standard project command-line arguments (shared by every project): -d/--dimensions
+    # and -m/--build-mode override the constructor defaults, -v enables verbose logging,
+    # -h prints the help.
     arguments = Project._parse_project_arguments()
     setup_logging(level=logging.DEBUG if arguments.verbose else logging.INFO)
 
@@ -66,15 +66,10 @@ class Project (object):
       if not self.namespace in self.namespaces:
         self.namespaces.append(self.namespace)
 
-    #
-    # Create default output model, i.e. those parts that have to be there
-    # always
-    #
+    # Default output model
     self.output       = peano4.output.Output()
 
-    #
     # Empty model by default
-    #
     self.datamodel    = peano4.datamodel.Model(self.namespace)
 
     self.solversteps  = peano4.solversteps.Steps(self)
@@ -123,14 +118,14 @@ class Project (object):
       parser = argparse.ArgumentParser(
         allow_abbrev=False,
         description="Peano project code generation options.",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
       )
-      parser.add_argument("-d", "--dimensions", type=int, choices=(2, 3), default=None, help="Code generation dimensions.")
-      parser.add_argument("-m", "--build-mode", choices=peano4.output.CompileModes, default=None, help="Code generation build mode.")
+      parser.add_argument("-d", "--dimensions", type=int, choices=(2, 3), default=None, help="Code generation dimensions; overrides the value set by the application.")
+      parser.add_argument("-m", "--build-mode", choices=peano4.output.CompileModes, default=None, help="Build mode; overrides the application default (usually Release).")
       parser.add_argument("--generate-only", "--no-build", action="store_true", default=False, help="Generate source files but skip compilation.")
       parser.add_argument("-j", "--jobs", type=int, default=None, help="Parallel build jobs. Values <= 0 use the detected CPU count.")
       parser.add_argument("--clean-first", action=argparse.BooleanOptionalAction, default=None, help="Wipe CMake's incremental build state before compiling.")
       parser.add_argument("-v", "--verbose", action="store_true", default=False, help="Enable verbose (debug) logging during code generation.")
+      parser.add_argument("--plot-format", choices=peano4.plotter.SUPPORTED_FORMATS, default=None, help="Output file format for all solver plotters; defaults to vtkhdf unless the application selects another.")
       Project._project_arguments, _ = parser.parse_known_args()
     return Project._project_arguments
 
@@ -139,6 +134,17 @@ class Project (object):
     self._build_make_override = False if project_arguments.generate_only else None
     self._build_jobs_override = project_arguments.jobs
     self._build_clean_first_override = project_arguments.clean_first
+
+  def _configure_plotting_from_project_arguments(self):
+    """Apply the standard --plot-format command-line option to the plotter default.
+
+    An unset option (None) leaves the project/plotter default in place; an
+    explicit one overrides it. Applied before generation so the lazily-resolved
+    plotters pick up the chosen format.
+    """
+    project_arguments = Project._parse_project_arguments()
+    if project_arguments.plot_format is not None:
+      peano4.plotter.set_default_format(project_arguments.plot_format)
 
   @property
   def dimensions(self):
@@ -262,7 +268,6 @@ class Project (object):
     self._runtime_parameters.append(
       {
         "name": name,
-        "cli_name": re.sub(r"(?<!^)([A-Z])", r"-\1", name).replace("_", "-").lower(),
         "accessor_name": accessor_name,
         "cpp_type": cpp_type,
         "return_type": return_type,
@@ -319,9 +324,12 @@ class Project (object):
     # Honour --generate-only / -j / --clean-first from the command line.
     self._configure_build_from_project_arguments()
 
-    # Apply the build configuration from the constructor to the makefile so the
-    # user does not have to. A subclass may already have parsed the configuration
-    # earlier (it is needed during code generation); the flag avoids doing it twice.
+    # Honour --plot-format from the command line.
+    self._configure_plotting_from_project_arguments()
+
+    # Apply the constructor's build configuration to the makefile. A subclass may
+    # already have parsed it earlier (needed during code generation); the flag
+    # avoids parsing twice.
     if self._dimensions is not None:
       if not self._makefile_configured:
         self.output.makefile.parse_configuration_outcome()
@@ -336,11 +344,9 @@ class Project (object):
         len(self.output.artefacts),
       )
 
-    # Generation must be idempotent: a user can call generate_and_build()
-    # repeatedly on the same project, and the construct_output() calls below
-    # append their artefacts anew on every call. Snapshot the pre-registered
-    # artefacts now and restore them afterwards, so repeated calls do not pile
-    # up duplicates.
+    # Generation must be idempotent: the construct_output() calls below append
+    # artefacts anew on every call. Snapshot the pre-registered artefacts and
+    # restore them afterwards so repeated calls do not pile up duplicates.
     pre_generation_artefacts = list(self.output.artefacts)
     pre_generation_readme_entries = list(self.output.readme._entries)
 

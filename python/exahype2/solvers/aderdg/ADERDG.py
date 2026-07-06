@@ -391,8 +391,15 @@ class ADERDG(object):
             self._action_set_postprocess_solution = exahype2.solvers.aderdg.actionsets.EmptyPostprocessSolution(solver=self)
         self._action_set_postprocess_solution.descend_invocation_order = 4
 
-        self._plotter = None
-        self.set_plotter(peano4.plotter.HDF5PatchNodalPlotter)
+        # The cell/nodal plotter is always present; the face plotter is optional
+        # and only wired in when the user calls add_face_plotter(). Both are
+        # instantiated lazily in add_actions_to_plot_solution(), matching the
+        # finite-volume / finite-difference / Runge-Kutta solvers. The output
+        # format is a project-wide setting (--plot-format / project.set_plot_format),
+        # so it is not configured per solver here.
+        self._plotter = peano4.plotter.PatchPlotter
+        self._face_plotter = None
+        self._face_plotter_guard = None
 
     def create_readme_descriptor(self, domain_offset, domain_size):
         return (
@@ -569,7 +576,7 @@ class ADERDG(object):
         step.add_action_set(self._action_set_update_cell_label)
         step.add_action_set(self._action_set_AMR_throughout_grid_construction)
 
-    def add_actions_to_plot_solution(self, step, output_path):
+    def add_actions_to_plot_solution(self, step):
         d = {}
         self._init_dictionary_with_default_parameters(d)
         self.add_entries_to_text_replacement_dictionary(d)
@@ -577,8 +584,37 @@ class ADERDG(object):
         step.add_action_set(self._action_set_update_face_label)
         step.add_action_set(self._action_set_update_cell_label)
 
-        self._plotter.set_output_path(output_path)
-        step.add_action_set(self._plotter)
+        mapping = []
+        for z in self._basis.quadrature_points():
+            for y in self._basis.quadrature_points():
+                for x in self._basis.quadrature_points():
+                    mapping.append((x, y, z))
+
+        # The cell/nodal plotter is always present.
+        plotter = self._plotter(
+            filename=self._name,
+            patch=self._previous_time_step,
+            dataset_name=self._unknown_identifier() + "_old",
+            description=self._variable_shortcuts.plot_description,
+            representation="nodal",
+            mapping=mapping,
+            time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
+            guard=self._load_cell_data_default_guard(),
+        )
+        step.add_action_set(plotter)
+
+        # The face plotter is optional - only added when the user asked for it.
+        if self._face_plotter is not None:
+            face_plotter = self._face_plotter(
+                filename=self._name + "-face",
+                patch=self._rhs_estimates_projection,
+                dataset_name=self._unknown_identifier() + "Estimates",
+                description=self._variable_shortcuts.plot_description,
+                mapping=mapping,
+                time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
+                guard=self._load_face_data_default_guard() + " and " + self._face_plotter_guard,
+            )
+            step.add_action_set(face_plotter)
 
         step.add_action_set(self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement)
 
@@ -1051,41 +1087,15 @@ class ADERDG(object):
         self.create_data_structures()
         self.create_action_sets()
 
-    def set_plotter(self, plotter):
-        mapping = []
-        for z in self._basis.quadrature_points():
-            for y in self._basis.quadrature_points():
-                for x in self._basis.quadrature_points():
-                    mapping.append((x, y, z))
+    def add_face_plotter(self, guard="true"):
+        """Also plot the faces (the projected face estimates).
 
-        self._plotter = plotter(
-            output_path=self._name,
-            filename=self._name,
-            patch=self._previous_time_step,
-            dataset_name=self._unknown_identifier() + "_old",
-            description=self._variable_shortcuts.plot_description,
-            mapping=mapping,
-            time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
-            guard=self._load_cell_data_default_guard(),
-        )
-
-    def set_face_plotter(self, plotter, guard):
-        mapping = []
-        for z in self._basis.quadrature_points():
-            for y in self._basis.quadrature_points():
-                for x in self._basis.quadrature_points():
-                    mapping.append((x, y, z))
-
-        self._plotter = plotter(
-            output_path=self._name,
-            filename=self._name,
-            patch=self._rhs_estimates_projection,
-            dataset_name=self._unknown_identifier() + "Estimates",
-            description=self._variable_shortcuts.plot_description,
-            mapping=mapping,
-            time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
-            guard=self._load_face_data_default_guard() + " and " + guard,
-        )
+        Optional. The cell/nodal volume plotter is always present; calling this
+        adds a face plot in a separate '<name>-face' output alongside it. The
+        output format is the project-wide one (--plot-format / set_plot_format).
+        """
+        self._face_plotter = peano4.plotter.FacePlotter
+        self._face_plotter_guard = guard
 
 def get_face_overlap_merge_implementation(patch_overlap):
     Template = """

@@ -8,6 +8,10 @@
 #include <string>
 #include <vector>
 
+namespace tarch::reader {
+  class JSONReader;
+} // namespace tarch::reader
+
 {% for item in NAMESPACE -%}
 namespace {{ item }} {
 {%- endfor %}
@@ -23,8 +27,9 @@ struct {{NAMESPACE | join("::")}}::RuntimeParameters {
 {%- endfor %}
   };
 
-  static void load(const std::string& configFilePath);
-  static void load(const std::string& configFilePath, int& argc, char** argv);
+  // Reads parameters from the shared reader (null if none) and the CLI.
+  static void load(tarch::reader::JSONReader* reader);
+  static void load(tarch::reader::JSONReader* reader, int& argc, char** argv);
   static void printUsage();
 
 {%- for parameter in RUNTIME_PARAMETERS %}

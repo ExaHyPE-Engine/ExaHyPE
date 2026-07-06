@@ -162,7 +162,7 @@ if (
     def get_constructor_body(self):
         template = jinja2.Template(
             """
-  _database.setOutputFileName( ::runner::RuntimeParameters::getInstance().getPlotOutputPath() + "{{FILENAME}}" );
+  _database.setOutputFileName( ::runner::RuntimeParameters::getInstance().getOutputPath() + "{{FILENAME}}" );
   _database.setOutputPrecision( {{OUTPUT_PRECISION}} );
   _database.setDataDeltaBetweenTwoSnapshots( {{DATA_DELTA}}, {{USE_RELATIVE_DELTAS}} );
   _database.setPositionDeltaBetweenTwoSnapshots( {{POSITION_DELTA}}, {{USE_RELATIVE_DELTAS}} );

@@ -11,23 +11,27 @@ import jinja2
 class ParticlePlotter(BasePlotter):
     def __init__(
         self,
-        output_path,
         filename,
         particle_set,
         description,
         time_stamp_evaluation,
+        file_format=None,
     ):
         super().__init__(
-            output_path,
             filename,
             particle_set.name,
             description,
             time_stamp_evaluation,
             "true",
+            file_format=file_format,
         )
 
+        self.d["OUTPUT_SUBFOLDER"] = "particle/"
         self.d["PARTICLE"] = particle_set.particle_model.name
         self.d["PARTICLES_CONTAINER"] = particle_set.name
+
+    def get_action_set_name(self):
+        return __name__.replace(".py", "").replace(".", "_")
 
     def get_body_of_operation(self, operation_name):
         result = "\n"
@@ -75,7 +79,7 @@ class ParticlePlotter(BasePlotter):
     def get_attributes(self):
         return (
             super(ParticlePlotter, self).get_attributes()
-            + """
+            + f"""
   std::unique_ptr<tarch::plotter::FileWriter::CellPlotter> _cellPlotter;
   std::unique_ptr<tarch::plotter::FileWriter::VertexPlotter> _vertexPlotter;
 """

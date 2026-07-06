@@ -92,7 +92,6 @@ paper for previous Peano code generations (generation 2).
 
   def __init__(self):
     self.bibtex_entry = []
-    self._executable_name = ""
     self._package_descriptions = set()
     self._entries = []
     self._constants = None
@@ -104,15 +103,12 @@ paper for previous Peano code generations (generation 2).
   def set_constants(self,description):
     self._constants = description
 
-  def set_executable_name( self, executable_name ):
-    self._executable_name = executable_name
-
   def add_entry( self, readme_entry ):
     self._entries.append(readme_entry)
     pass
 
   def generate(self,directory):
-    filename = directory + "/README-" + self._executable_name + ".md";
+    filename = directory + "/README.md"
     file = open(filename, "w")
     file.write( self.__Header )
     file.write("""

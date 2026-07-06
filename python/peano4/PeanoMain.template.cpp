@@ -18,8 +18,6 @@
 
 #include "peano4/parallel/SpacetreeSet.h"
 
-#include "tarch/instrumentation/Log.h"
-
 #include <string>
 #include <vector>
 
@@ -59,8 +57,8 @@ namespace {
     result.getConfigurationInformation           = []() { return std::string(ConfigurationInformation); };
 
     result.printApplicationHelp = []() { RuntimeParameters::printUsage(); };
-    result.loadApplicationParameters = [](const std::string& configFilePath, int& argc, char** argv) {
-      RuntimeParameters::load(configFilePath, argc, argv);
+    result.loadApplicationParameters = [](tarch::reader::JSONReader* reader, int& argc, char** argv) {
+      RuntimeParameters::load(reader, argc, argv);
     };
 {{EXTRA_REPOSITORY_CALLBACKS}}
     return result;
@@ -72,10 +70,9 @@ int main(int argc, char** argv) {
     {{DEFAULT_MIN_TERMINAL_TIME}},
     {{DEFAULT_MAX_TERMINAL_TIME}},
     {{DEFAULT_GRID_LEVELS}},
-    {{DEFAULT_MAX_GRID_LEVELS}}
+    {{DEFAULT_MAX_GRID_LEVELS}},
+    "{{PROJECT_NAME}}"
   );
-
-  tarch::instrumentation::Log::setOutputFile(std::string({{EXECUTABLE_NAME}}) + ".log");
 
   return ::runner::run(
     DomainOffset,

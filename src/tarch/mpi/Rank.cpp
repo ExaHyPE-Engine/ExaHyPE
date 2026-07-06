@@ -1,13 +1,13 @@
 #include "Rank.h"
 
 #include "tarch/CompilerSpecificSettings.h"
+#include "tarch/MemoryUsage.h"
 #include "tarch/mpi/DoubleMessage.h"
 #include "tarch/mpi/IntegerMessage.h"
 #include "tarch/mpi/StringMessage.h"
 #include "tarch/mpi/mpi.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/services/ServiceRepository.h"
-#include "tarch/MemoryUsage.h"
 
 #include <chrono>
 #include <cstdlib>
@@ -357,9 +357,6 @@ void tarch::mpi::Rank::setTimeOutWarning(double value) {
 void tarch::mpi::Rank::setDeadlockTimeOut(double value) {
   assertion(value >= 0.0);
   _deadlockTimeOut = std::chrono::duration<double>(value);
-  if (value == 0.0) {
-    logInfo("set deadlock timeout to " << _deadlockTimeOut.count() << " and hence disabled timeout checks");
-  }
 }
 
 void tarch::mpi::Rank::setDeadlockDetection(bool enabled) { _deadlockDetectionEnabled = enabled; }

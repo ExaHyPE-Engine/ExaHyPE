@@ -1,34 +1,34 @@
 {
-  "end-time": 5600.0,
-  "grid-levels": 4,
-  "first-plot-time-stamp": 0.0,
-  "number-of-snapshots": 10,
-  "output-path": "solutions",
-  "log-interval": 10.0,
-  "load-balancing-quality": 0.9,
-  "min-size-of-tree": 1,
-  "max-number-of-trees-per-rank": -1,
-  "target-device": 0,
-  "displacement-position": [
+  "endTime": 5600.0,
+  "gridLevels": 4,
+  "firstPlotTimeStamp": 0.0,
+  "numberOfSnapshots": 10,
+  "outputPath": "solutions",
+  "logInterval": 10.0,
+  "loadBalancingQuality": 0.9,
+  "minSizeOfTree": 1,
+  "maxNumberOfTreesPerRank": -1,
+  "targetDevice": 0,
+  "displacementPosition": [
     0.0,
     0.0
   ],
-  "bathymetry-size": [
+  "bathymetrySize": [
     6998000.0,
     3998000.0
   ],
-  "bathymetry-offset": [
+  "bathymetryOffset": [
     -499000.0,
     -2490000.0
   ],
-  "displacement-size": [
+  "displacementSize": [
     498000.0,
     798000.0
   ],
-  "displacement-offset": [
+  "displacementOffset": [
     -249000.0,
     -399000.0
   ],
-  "bathymetry-file": "bathymetry/tohoku_gebco_ucsb3_2000m_hawaii_bath.nc",
-  "displacement-file": "bathymetry/tohoku_gebco_ucsb3_2000m_hawaii_displ.nc"
+  "bathymetryFile": "bathymetry/tohoku_gebco_ucsb3_2000m_hawaii_bath.nc",
+  "displacementFile": "bathymetry/tohoku_gebco_ucsb3_2000m_hawaii_displ.nc"
 }

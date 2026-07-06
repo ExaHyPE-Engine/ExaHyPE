@@ -1,13 +1,13 @@
 {
-  "end-time": 100.0,
-  "grid-levels": 4,
-  "first-plot-time-stamp": 0.0,
-  "number-of-snapshots": 0,
-  "output-path": "solutions",
-  "log-interval": 10.0,
-  "load-balancing-quality": 0.9,
-  "min-size-of-tree": 1,
-  "max-number-of-trees-per-rank": -1,
-  "target-device": 0,
-  "bathymetry-file": "bathymetry/gebco_projection.nc"
+  "endTime": 100.0,
+  "gridLevels": 4,
+  "firstPlotTimeStamp": 0.0,
+  "numberOfSnapshots": 0,
+  "outputPath": "solutions",
+  "logInterval": 10.0,
+  "loadBalancingQuality": 0.9,
+  "minSizeOfTree": 1,
+  "maxNumberOfTreesPerRank": -1,
+  "targetDevice": 0,
+  "bathymetryFile": "bathymetry/gebco_projection.nc"
 }

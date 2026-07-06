@@ -136,7 +136,7 @@ project.add_action_set_to_timestepping(
     number_of_entries_between_two_db_flushes=100
 ))
 
-theSolver.set_face_plotter(peano4.plotter.HDF5FaceNodalPlotter, """
+theSolver.add_face_plotter(guard="""
       ((marker.getSelectedFaceNumber() % DIMENSIONS) == 2-repositories::""" + theSolver.get_name_of_global_instance() + """.context->fault_normal) and
       std::abs(marker.getX()[2-repositories::""" + theSolver.get_name_of_global_instance() + """.context->fault_normal]-repositories::""" \
         + theSolver.get_name_of_global_instance() + """.context->fault_position)< 0.5*marker.getH()[2-repositories::""" \
