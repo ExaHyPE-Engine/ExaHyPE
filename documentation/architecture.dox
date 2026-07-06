@@ -188,9 +188,9 @@ libraries.  This glue code is generated through the Python API.
   in your hands.
 - **src** Holds the C++ Peano sources of the Peano core and all the
   toolboxes.
-- **python** Holds the Python API scripts. Within this directory, you
-  find the Peano core API and the toolboxes (`python/peano4`), the
-  extensions such as ExaHyPE 2 (`python/exahype2`), and the
+- **api** Holds the Python API scripts. Within this directory, you
+  find the Peano core API and the toolboxes (`api/peano4`), the
+  extensions such as ExaHyPE 2 (`api/exahype2`), and the
   postprocessing helpers (`postprocessing`).
 - **tests** Collection of small test cases that can be automised.
 - **benchmarks** Collection of benchmark scripts.

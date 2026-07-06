@@ -26,7 +26,7 @@ The signature design of the set flavours is guided by a few simple principles.
 They are the same for each flavour.
 
 Internally, every particle set is generated from a single jinja template,
-python/peano4/toolbox/particles/ParticleSet.template.h (and its companion
+api/peano4/toolbox/particles/ParticleSet.template.h (and its companion
 ParticleSet.template.cpp). The generated class always inherits from
 toolbox::particles::ParticleSet and holds its particle pointers in a standard
 container (std::vector, std::list, ...) chosen via the generator.

@@ -124,7 +124,7 @@ class UpdateParallelState(ActionSet):
 
     __Template_BeginTraversal = jinja2.Template(
         """
-  // template in python/peano4/toolbox/particles/api/UpdateParallelState.py
+  // template in api/peano4/toolbox/particles/api/UpdateParallelState.py
 
   _numberOfRemainingLocalParticles = 0;
   _remainingLocalParticleNumbers.clear();
@@ -137,7 +137,7 @@ class UpdateParallelState(ActionSet):
 
     __Template_EndTraversal = jinja2.Template(
         """
-  // template in python/peano4/toolbox/particles/api/UpdateParallelState.py
+  // template in api/peano4/toolbox/particles/api/UpdateParallelState.py
 
   vertexdata::{{PARTICLES_CONTAINER}}::updateNumberOfLocalAndExpiredParticles(
     _numberOfRemainingLocalParticles,
@@ -152,7 +152,7 @@ class UpdateParallelState(ActionSet):
 
     __Template_TouchVertexFirstTime = jinja2.Template(
         """
-// template in python/peano4/toolbox/particles/api/UpdateParallelState.py
+// template in api/peano4/toolbox/particles/api/UpdateParallelState.py
 
 for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
   const bool particleWillBeLocal = toolbox::particles::particleAssignedToVertexWillBeLocal( p->getX(), marker );
@@ -205,7 +205,7 @@ for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
 
     __Template_TouchVertexLastTime = jinja2.Template(
         """
-// template in python/peano4/toolbox/particles/api/UpdateParallelState.py
+// template in api/peano4/toolbox/particles/api/UpdateParallelState.py
 
 // run over all adjacent vertices
 auto p = fineGridVertex{{PARTICLES_CONTAINER}}.begin();

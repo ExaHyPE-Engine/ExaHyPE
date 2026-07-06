@@ -230,19 +230,9 @@ echo "=========================================="
 VISUALISATION_COMMANDS="
 if [ \"$EXAHYPE_SOLUTION_NUM_SNAPSHOTS\" -gt 0 ]; then
     echo \"==========================================\"
-    echo \">>> [RUN JOB] Converting to VTU...\"
-    python3 \"$PEANO_ROOT/python/visualisation/convert-to-vtu.py\" \"$EXAHYPE_SOLUTION_FOLDER/$EXAHYPE_SOLUTION_PATCH_FILE\" -j 32
-    echo \">>> [RUN JOB] Conversion finished.\"
-
-    echo \"==========================================\"
-    echo \">>> [RUN JOB] Creating animation...\"
-    python3 \"$PEANO_ROOT/python/visualisation/convert-to-png.py\" \"$EXAHYPE_SOLUTION_FOLDER/$EXAHYPE_SOLUTION_PATCH_FILE\" -j 32 --dpi 600
-
-    ANIMATION_OUT=\"$HOME/${EXAHYPE_EXECUTABLE_NAME}.mp4\"
-
-    echo \">>> [RUN JOB] Saving animation to: \$ANIMATION_OUT\"
-    python3 \"$PEANO_ROOT/python/visualisation/create-animation-from-png.py\" --input-dir \"$EXAHYPE_SOLUTION_FOLDER\" --output \"\$ANIMATION_OUT\" --fps 24
-    echo \">>> [RUN JOB] Creation finished.\"
+    echo \">>> [RUN JOB] Rendering solution and assembling animation...\"
+    python3 \"$PEANO_ROOT/postprocessing/render_solution.py\" \"$EXAHYPE_SOLUTION_FOLDER/$EXAHYPE_SOLUTION_PATCH_FILE\" --output-dir \"$EXAHYPE_SOLUTION_FOLDER\" --dpi 600 -j 32 --animation mp4
+    echo \">>> [RUN JOB] Rendering finished. Frames and animation written to: $EXAHYPE_SOLUTION_FOLDER\"
 fi
 "
 

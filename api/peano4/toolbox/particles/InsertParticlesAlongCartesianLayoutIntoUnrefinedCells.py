@@ -93,7 +93,7 @@ class InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(ActionSet):
     __Template_TouchCellFirstTime = jinja2.Template(
         """
 
-  // Start of template in python/peano4/toolbox/particles/InsertParticlesAlongCartesianLayoutIntoUnrefinedCells.py
+  // Start of template in api/peano4/toolbox/particles/InsertParticlesAlongCartesianLayoutIntoUnrefinedCells.py
 
   if ( not marker.hasBeenRefined() and not marker.willBeRefined() ) {
     #if DIMENSIONS==2
@@ -129,7 +129,7 @@ class InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(ActionSet):
     }
   }
 
-  // End of template in python/peano4/toolbox/particles/InsertParticlesAlongCartesianLayoutIntoUnrefinedCells.py
+  // End of template in api/peano4/toolbox/particles/InsertParticlesAlongCartesianLayoutIntoUnrefinedCells.py
 """
     )
 

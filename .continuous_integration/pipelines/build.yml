@@ -13,7 +13,7 @@ Build:
     exclude:
       - ./install/bin/*
       - ./install/bin/**/*
-      - ./install/python/**/*
+      - ./install/api/**/*
       - ./install/**/__pycache__/**/*
       - ./install/**/*.pyc
       - ./install/**/*.pyo

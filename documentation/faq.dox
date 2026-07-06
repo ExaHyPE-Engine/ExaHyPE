@@ -225,10 +225,10 @@ undefined reference to for_write_seq_list
 # Python API
 
 -   ***`import peano4` yields not found error***. You haven't set your
-    `PYTHONPATH` properly. Ensure that it points to Peano's python
+    `PYTHONPATH` properly. Ensure that it points to Peano's api
     subdirectory. So use something similar to
 
-             export PYTHONPATH=~/git/Peano/python
+             export PYTHONPATH=~/git/Peano/api
 
 -   My installation or paraview complains about ***ModuleNotFoundError: No module named 'numpy'***.
     For some parts of Peano and its extensions, you need the package

@@ -5,7 +5,7 @@
 
 The particles are stored following the dual tree storage paradigm.
 
-@image html python/peano4/toolbox/particles/api/dual-tree.png
+@image html api/peano4/toolbox/particles/api/dual-tree.png
 
 We hold the whole spacetree with all of its levels. This is similar to holding
 a cascade of finer and finer, ragged Cartesian meshes. First, each particle is
