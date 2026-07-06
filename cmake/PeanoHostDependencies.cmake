@@ -8,7 +8,12 @@ macro(peano_find_host_dependencies)
     if(TARGET PeanoOptions)
       find_package(MPI)
       if(MPI_FOUND)
-        target_link_libraries(PeanoOptions INTERFACE MPI::MPI_CXX)
+        # Link the MPI imported target for every enabled core language (C and C++). The C
+        # variant is inert until a .c source is added, but keeps the two languages consistent.
+        target_link_libraries(PeanoOptions INTERFACE
+          MPI::MPI_CXX
+          $<TARGET_NAME_IF_EXISTS:MPI::MPI_C>
+        )
         # Skip MPI's deprecated C++ bindings (mpicxx.h). We only use the C API,
         # and on some OpenMPI/MPICH installs <mpi.h> auto-includes them, which
         # triggers -Wcast-function-type warnings from inside the MPI headers.
@@ -26,7 +31,12 @@ macro(peano_find_host_dependencies)
     if(TARGET PeanoOptions)
       find_package(OpenMP)
       if(OpenMP_FOUND)
-        target_link_libraries(PeanoOptions INTERFACE OpenMP::OpenMP_CXX)
+        # Link the OpenMP imported target for every enabled core language (C and C++). The C
+        # variant is inert until a .c source is added, but keeps the two languages consistent.
+        target_link_libraries(PeanoOptions INTERFACE
+          OpenMP::OpenMP_CXX
+          $<TARGET_NAME_IF_EXISTS:OpenMP::OpenMP_C>
+        )
         target_compile_definitions(PeanoOptions INTERFACE PEANO_WITH_OPENMP PEANO_WITH_MULTITHREADING)
       else()
         message(WARNING "PEANO_WITH_MULTITHREADING=ON but OpenMP was not found; continuing without multithreading support.")

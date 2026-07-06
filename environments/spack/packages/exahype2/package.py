@@ -99,7 +99,8 @@ class Exahype2(CMakePackage, CudaPackage):
 
     def setup_run_environment(self, env):
         env.set("PEANO_SRC_ROOT_DIR", self.spec.prefix)
-        env.set("PEANO_CMAKE_BUILD_DIR", self.spec.prefix)
+        env.set("PEANO_BUILD_DIR", self.spec.prefix)
+        env.set("PEANO_CMAKE_BUILD_DIR", self.spec.prefix)  # alias for PEANO_BUILD_DIR
         env.prepend_path("PYTHONPATH", self.spec.prefix + "/python")
         env.prepend_path("PYTHONPATH", join_path(self.spec.prefix, "lib", "python" + str(self.spec["python"].version.up_to(2)), "site-packages"))
         # The notebook dependencies (jupyterlab, ipywidgets, matplotlib, ...)

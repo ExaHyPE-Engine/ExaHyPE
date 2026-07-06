@@ -141,27 +141,38 @@ function(peano_add_target)
     )
   endif()
 
-  # PEANO_<MODE>_DEFINITIONS and PEANO_CXX_FLAGS_<MODE> are core-build cache
-  # variables. In a generated application they are undefined and expand to
-  # nothing here; the application instead inherits the mode definitions and
-  # flags transitively from the linked Peano::PeanoRuntime<MODE><DIM>d target.
-  # These two calls are therefore only effective in the core build.
+  # PEANO_<MODE>_DEFINITIONS, PEANO_C_FLAGS_<MODE>, PEANO_CXX_FLAGS_<MODE> and
+  # PEANO_Fortran_FLAGS_<MODE> are core-build cache variables. In a generated application
+  # they are undefined and expand to nothing here; the application instead inherits the mode
+  # definitions and flags transitively from the linked Peano::PeanoRuntime<MODE><DIM>d
+  # target (a STATIC library, hence PUBLIC scope). These calls are therefore only
+  # effective in the core build.
   target_compile_definitions(${target} ${variant_scope}
     ${PEANO_${mode_upper}_DEFINITIONS}
   )
 
-  # Build-mode flags must reach every language so GPU kernels are optimised/debugged like host code.
-  # HIP takes the host flags verbatim; nvcc needs each forwarded via -Xcompiler, plus -G in Debug.
+  # Build-mode flags must reach every language so Fortran kernels and GPU kernels are
+  # optimised/debugged like host code. Fortran uses its own -O/-g-only flag set (the C++
+  # flags contain switches not all Fortran front-ends accept). HIP takes the host flags
+  # verbatim (clang optimises host and device from a single -O). nvcc is split: the host
+  # flags are forwarded via -Xcompiler, and the optimisation level is additionally forwarded
+  # to the device compiler via -Xptxas so kernels are optimised explicitly rather than relying
+  # on ptxas's implicit default. Debug instead uses -G, which forces device -O0 plus debug info.
   set(_peano_cuda_mode_flags "")
   foreach(_peano_flag ${PEANO_CXX_FLAGS_${mode_upper}})
     list(APPEND _peano_cuda_mode_flags "$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=${_peano_flag}>")
+    if(_peano_flag MATCHES "^-O[0-9]" AND NOT mode_upper STREQUAL "DEBUG")
+      list(APPEND _peano_cuda_mode_flags "$<$<COMPILE_LANGUAGE:CUDA>:-Xptxas=${_peano_flag}>")
+    endif()
   endforeach()
   if(mode_upper STREQUAL "DEBUG")
     list(APPEND _peano_cuda_mode_flags "$<$<COMPILE_LANGUAGE:CUDA>:-G>")
   endif()
   target_compile_options(${target} ${variant_scope}
+    $<$<COMPILE_LANGUAGE:C>:${PEANO_C_FLAGS_${mode_upper}}>
     $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>
     $<$<COMPILE_LANGUAGE:HIP>:${PEANO_CXX_FLAGS_${mode_upper}}>
+    $<$<COMPILE_LANGUAGE:Fortran>:${PEANO_Fortran_FLAGS_${mode_upper}}>
     ${_peano_cuda_mode_flags}
   )
 

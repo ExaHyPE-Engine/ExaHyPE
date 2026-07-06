@@ -25,9 +25,6 @@ project({{EXECUTABLENAME}}
   LANGUAGES
     C
     CXX
-{% if FORTRAN_SOURCES or GENERATED_FORTRAN_SOURCES -%}
-    Fortran
-{% endif -%}
 )
 
 {% if CMAKE_BUILD_DIR is defined and CMAKE_BUILD_DIR != "" -%}
@@ -37,6 +34,16 @@ list(APPEND CMAKE_PREFIX_PATH "{{CMAKE_BUILD_DIR}}")
 file(WRITE "${PROJECT_BINARY_DIR}/.gitignore" "*")
 
 find_package(Peano CONFIG REQUIRED)
+
+{% if FORTRAN_SOURCES or GENERATED_FORTRAN_SOURCES -%}
+# Enable Fortran only after find_package(Peano) has resolved the Peano package and its transitive
+# dependencies. Parallel HDF5 (and potentially others) internally call find_package(MPI), which
+# requires MPI bindings for every enabled language; enabling Fortran before that would demand MPI
+# Fortran bindings that some MPI installations do not ship, even though no
+# Peano code needs them. Deferring keeps the dependency probes to C/C++; the Fortran OpenMP/MPI
+# bindings are resolved separately below.
+enable_language(Fortran)
+{% endif -%}
 
 set(CMAKE_BUILD_TYPE "" CACHE INTERNAL "")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -123,9 +130,7 @@ endif()
 
 # Set the GPU language on the generated kernels (GENERATED_GPU_SOURCES) at directory scope before
 # the target is created, so the detected GPU compiler survives until generate time.
-peano_enable_gpu_language(
-  ${GENERATED_GPU_SOURCES}
-)
+peano_enable_gpu_language(${GENERATED_GPU_SOURCES})
 
 peano_add_target(
   TYPE EXECUTABLE
@@ -154,3 +159,33 @@ peano_add_target(
     ${GENERATED_LINK_OPTIONS}
   OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
 )
+
+{% if FORTRAN_SOURCES or GENERATED_FORTRAN_SOURCES -%}
+# The executable is linked with the C++ driver, which does not add the Fortran runtime libraries,
+# so forward them explicitly. Classic Flang and nvfortran inject a no-op OpenMP stub (libompstub)
+# into their implicit link libraries; forwarded, it is pulled in ahead of the real OpenMP runtime
+# (linked for C++ by the Peano core) and silently turns every parallel region into a no-op, so it
+# is stripped here. gfortran and ifx have no such stub, so this is a no-op for them.
+set(PEANO_FORTRAN_IMPLICIT_LINK_LIBRARIES ${CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES})
+list(REMOVE_ITEM PEANO_FORTRAN_IMPLICIT_LINK_LIBRARIES ompstub libompstub)
+target_link_libraries({{EXECUTABLENAME}} PRIVATE ${PEANO_FORTRAN_IMPLICIT_LINK_LIBRARIES})
+
+if(PEANO_WITH_MULTITHREADING)
+  find_package(OpenMP REQUIRED COMPONENTS Fortran)
+  target_link_libraries({{EXECUTABLENAME}} PRIVATE OpenMP::OpenMP_Fortran)
+endif()
+
+# MPI Fortran bindings are optional - not every MPI install ships them and no core code needs them,
+# so the Peano package requests only C/CXX MPI. Probe here with a non-REQUIRED find and link the
+# Fortran bindings only when they are actually available.
+if(PEANO_WITH_MPI)
+  find_package(MPI QUIET COMPONENTS Fortran)
+  if(TARGET MPI::MPI_Fortran)
+    target_link_libraries({{EXECUTABLENAME}} PRIVATE MPI::MPI_Fortran)
+  endif()
+endif()
+
+target_compile_options({{EXECUTABLENAME}} PRIVATE
+  $<$<AND:$<COMPILE_LANGUAGE:Fortran>,$<Fortran_COMPILER_ID:GNU>>:-ffat-lto-objects>
+)
+{% endif -%}

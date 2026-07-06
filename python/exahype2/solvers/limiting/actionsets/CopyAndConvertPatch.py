@@ -48,7 +48,7 @@ class CopyAndConvertPatch(AbstractLimiterActionSet):
           marker.getH(),
           fineGridCell{{REGULAR_SOLVER_NAME}}CellLabel.getTimeStamp(),
           fineGridCell{{REGULAR_SOLVER_NAME}}CellLabel.getTimeStepSize(),
-          fineGridCell{{LIMITER_SOLVER_CURRENT_UNKNOWN_IDENTIFIER}}.data() + i * {{NUMBER_OF_DATA_PADDED}}
+          fineGridCell{{LIMITER_SOLVER_CURRENT_UNKNOWN_IDENTIFIER}}.data() + i * {{NUMBER_OF_DATA}}
         );
       }
       {% endif %}
@@ -81,9 +81,9 @@ class CopyAndConvertPatch(AbstractLimiterActionSet):
             d = {}
             self._solver._init_dictionary_with_default_parameters(d)
             self._solver.add_entries_to_text_replacement_dictionary(d)
-            d[
-                "CONVERT_FROM_REGULAR_TO_LIMITER_AND_SEND_PREDICATE"
-            ] = self.regularToLimiterGuard
+            d["CONVERT_FROM_REGULAR_TO_LIMITER_AND_SEND_PREDICATE"] = (
+                self.regularToLimiterGuard
+            )
             result = jinja2.Template(
                 self.TemplateCopyAndConvertDataFromRegularToLimiterAndProjectToFaces
             ).render(**d)

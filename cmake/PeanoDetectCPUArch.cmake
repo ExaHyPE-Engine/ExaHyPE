@@ -99,7 +99,16 @@ function(peano_detect_cpu_architecture)
     PEANO_WITH_SIMDLEN=${PEANO_WITH_SIMDLEN}
     PEANO_WITH_ALIGNMENT=${PEANO_WITH_ALIGNMENT}
   )
+  # CPU_ARCH_FLAGS (e.g. -march=native -mtune=native, or -tp=native for NVHPC) are host-compiler
+  # flags, and they are only validated against the C++ compiler (check_cxx_compiler_flag above).
+  # Apply them to C, C++ and HIP directly, and forward them to nvcc via -Xcompiler. Fortran is
+  # excluded.
+  set(_peano_cuda_arch_flags "")
+  foreach(_peano_flag ${CPU_ARCH_FLAGS})
+    list(APPEND _peano_cuda_arch_flags "$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=${_peano_flag}>")
+  endforeach()
   target_compile_options(PeanoOptions INTERFACE
-    ${CPU_ARCH_FLAGS}
+    $<$<AND:$<NOT:$<COMPILE_LANGUAGE:CUDA>>,$<NOT:$<COMPILE_LANGUAGE:Fortran>>>:${CPU_ARCH_FLAGS}>
+    ${_peano_cuda_arch_flags}
   )
 endfunction()

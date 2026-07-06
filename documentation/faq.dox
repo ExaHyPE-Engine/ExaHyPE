@@ -29,8 +29,9 @@ The build system is CMake only. By default, the Python code generator searches
 upwards from the current working directory for a `PeanoConfig.cmake` file and
 uses the build folder containing it. If there are multiple CMake build folders
 present (e.g. a GPU build and a non-GPU build), set the environment variable
-`PEANO_CMAKE_BUILD_DIR` to the build folder you want the code generator to use.
-Unsetting the environment variable reverts to the automatic search.
+`PEANO_BUILD_DIR` (or its alias `PEANO_CMAKE_BUILD_DIR`) to the build folder you
+want the code generator to use; `PEANO_BUILD_DIR` takes precedence if both are
+set. Unsetting the environment variable reverts to the automatic search.
 
 # Compilation
 
