@@ -50,7 +50,6 @@ project(Peano
   LANGUAGES
     C
     CXX
-    #Fortran
 )
 
 include(Ccache)
@@ -98,10 +97,12 @@ include(PeanoEnableGPULanguage)
 include(PeanoTarget)
 include(PeanoHostDependencies)
 include(PeanoOptions)
+include(PeanoFlags)
 include(PeanoDetectCPUArch)
 include(PeanoClangTidy)
 
 peano_create_options_target()
+peano_apply_flags()
 peano_find_host_dependencies()
 peano_resolve_gpu_backend()
 peano_configure_curvi()

@@ -215,8 +215,12 @@ RKDG:
 
 Fortran Coupling:
   stage: Test
+  parallel:
+    matrix:
+    - build_type: [Release, Debug]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fortran-coupling && PYTHONPATH=$CI_PROJECT_DIR/python python3 fortran-coupling.py"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fortran-coupling && FC=${FC} PYTHONPATH=$CI_PROJECT_DIR/python python3 fortran-coupling.py --build-mode $build_type"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fortran-coupling && $PARALLEL_LAUNCH ./ExaHyPE -ns 0 -lmin ${MIN_GRID_LEVELS} -lmax ${MIN_GRID_LEVELS}"
   allow_failure: false
   extends:
     - .Tags

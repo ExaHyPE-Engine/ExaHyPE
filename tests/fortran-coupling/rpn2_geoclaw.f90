@@ -1,7 +1,23 @@
+! GeoClaw augmented shallow-water Riemann solver, taken from the Clawpack
+! "riemann" package (https://github.com/clawpack/riemann).
+!
+!   subroutine rpn2               <- src/rpn2_geoclaw.f
+!       https://github.com/clawpack/riemann/blob/master/src/rpn2_geoclaw.f
+!   subroutines riemann_aug_JCP,  <- src/geoclaw_riemann_utils.f
+!     riemanntype
+!       https://github.com/clawpack/riemann/blob/master/src/geoclaw_riemann_utils.f
+!
+! Algorithm: D. L. George, "Augmented Riemann solvers for the shallow water
+! equations with steady states and inundation", J. Comput. Phys. 227(6),
+! 3089-3113 (2008).
+!
+! Local changes vs. upstream: converted to free-form Fortran, the three routines
+! combined into this single file, a C-callable bind(C) entry point
+! (rpn2_augmented_wrapper, at the bottom).
 subroutine rpn2(ixy, maxm, num_eqn, num_waves, num_aux, num_ghost, &
-  num_cells, ql, qr, auxl, auxr, fwave, s, amdq, apdq)! bind(C, name="rpn2_geoclaw")
+  ql, qr, auxl, auxr, fwave, s, amdq, apdq)! bind(C, name="rpn2_geoclaw")
 use iso_c_binding, only: c_int, c_double
-  ! Normal Riemann solver for the 2D SHALLOW WATER equations
+  ! Normal Riemann solver for the 2D Shallow Water equations
   !     with topography:
   !     #        h_t + (hu)_x + (hv)_y = 0                           #
   !     #        (hu)_t + (hu^2 + 0.5gh^2)_x + (huv)_y = -ghb_x      #
@@ -32,7 +48,7 @@ use iso_c_binding, only: c_int, c_double
   real(kind=c_double), parameter :: drytol = 1.e-14
   !      common /cparam/ grav
 
-  integer(kind=c_int), intent(in) :: maxm,num_eqn,num_aux,num_waves,num_ghost,num_cells,ixy
+  integer(kind=c_int), intent(in) :: maxm,num_eqn,num_aux,num_waves,num_ghost,ixy
 
   real(kind=c_double), intent(inout) ::  ql(num_eqn, 1-num_ghost:maxm+num_ghost)
   real(kind=c_double), intent(inout) ::  qr(num_eqn, 1-num_ghost:maxm+num_ghost)
@@ -45,7 +61,7 @@ use iso_c_binding, only: c_int, c_double
   real(kind=c_double), intent(out) ::  amdq(num_eqn,1-num_ghost:maxm+num_ghost)
 
   !local only
-  integer(kind=c_int) m,i,mw,maxiter,mu,nv
+  integer(kind=c_int) mw,maxiter,mu,nv
   real(kind=8) wall(3)
   real(kind=8) fw(3,3)
   real(kind=8) sw(3)
@@ -53,7 +69,7 @@ use iso_c_binding, only: c_int, c_double
   real(kind=8) hR,hL,huR,huL,uR,uL,hvR,hvL,vR,vL,phiR,phiL
   real(kind=8) bR,bL,sL,sR,sRoe1,sRoe2,sE1,sE2,uhat,chat
   real(kind=8) s1m,s2m
-  real(kind=8) hstar,hstartest,hstarHLL,sLtest,sRtest
+  real(kind=8) hstar,hstartest
   ! real(kind=8) tw,dxdc
 
   logical rare1,rare2
@@ -192,7 +208,7 @@ use iso_c_binding, only: c_int, c_double
     maxiter = 1
 
     call riemann_aug_JCP(maxiter,3,3,hL,hR,huL, &
-    huR,hvL,hvR,bL,bR,uL,uR,vL,vR,phiL,phiR,sE1,sE2, &
+    huR,bL,bR,uL,uR,vL,vR,phiL,phiR,sE1,sE2, &
                                 drytol,g,sw,fw)
 
     !        !eliminate ghost fluxes for wall
@@ -222,11 +238,11 @@ use iso_c_binding, only: c_int, c_double
   ! do i=2-num_ghost,num_cells+num_ghost
     do  mw=1,num_waves
       if (s(mw,1) < 0.d0) then
-        amdq(1:3,1) = amdq(1:3,1) - fwave(1:3,mw,1)
+        amdq(1:3,1) = amdq(1:3,1) + fwave(1:3,mw,1)
       else if (s(mw,1) > 0.d0) then
         apdq(1:3,1)  = apdq(1:3,1) + fwave(1:3,mw,1)
       else
-        amdq(1:3,1) = amdq(1:3,1) - 0.5d0 * fwave(1:3,mw,1)
+        amdq(1:3,1) = amdq(1:3,1) + 0.5d0 * fwave(1:3,mw,1)
         apdq(1:3,1) = apdq(1:3,1) + 0.5d0 * fwave(1:3,mw,1)
       endif
     enddo
@@ -238,7 +254,7 @@ end subroutine
 
 !-----------------------------------------------------------------------
 subroutine riemann_aug_JCP(maxiter,num_eqn,num_waves,hL,hR,huL,huR, &
-  hvL,hvR,bL,bR,uL,uR,vL,vR,phiL,phiR,sE1,sE2,drytol,g,sw,fw)
+  bL,bR,uL,uR,vL,vR,phiL,phiR,sE1,sE2,drytol,g,sw,fw)
 
   ! solve shallow water equations given single left and right states
   ! This solver is described in J. Comput. Phys. (6): 3089-3113, March 2008
@@ -259,11 +275,11 @@ subroutine riemann_aug_JCP(maxiter,num_eqn,num_waves,hL,hR,huL,huR, &
   real(kind=8) fw(num_eqn,num_waves)
   real(kind=8) sw(num_waves)
   real(kind=8) hL,hR,huL,huR,bL,bR,uL,uR,phiL,phiR,sE1,sE2
-  real(kind=8) hvL,hvR,vL,vR
+  real(kind=8) vL,vR
   real(kind=8) drytol,g
 
   !local
-  integer m,mw,k,iter
+  integer mw,k,iter
   real(kind=8) A(3,3)
   real(kind=8) r(3,3)
   real(kind=8) lambda(3)
@@ -272,8 +288,8 @@ subroutine riemann_aug_JCP(maxiter,num_eqn,num_waves,hL,hR,huL,huR, &
 
   real(kind=8) delh,delhu,delphi,delb,delnorm
   real(kind=8) rare1st,rare2st,sdelta,raremin,raremax
-  real(kind=8) criticaltol,convergencetol,raretol
-  real(kind=8) s1s2bar,s1s2tilde,hbar,hLstar,hRstar,hustar
+  real(kind=8) criticaltol,convergencetol
+  real(kind=8) s1s2bar,s1s2tilde,hbar,hLstar,hRstar
   real(kind=8) huRstar,huLstar,uRstar,uLstar,hstarHLL
   real(kind=8) deldelh,deldelphi
   real(kind=8) s1m,s2m,hm
@@ -629,7 +645,7 @@ use iso_c_binding, only: c_int, c_double
   real(kind=c_double), intent(in) ::  ql(4), qr(4)
   real(kind=c_double), intent(out) ::  apdq(3), amdq(3)
   real(kind=c_double) :: s_max
-  integer(kind=c_int), intent(out) ::  normal
+  integer(kind=c_int), intent(in) ::  normal
   ! real(kind=c_double), intent(out) ::  s
 
   !local only
@@ -646,18 +662,22 @@ use iso_c_binding, only: c_int, c_double
 
   !  integer(kind=c_int) :: maxm,num_eqn,num_aux,num_waves,num_ghost,num_cells,ixy
 
-  !Initializing internal arrays with data from input
-  ql_rpn(1:3,1) = ql(1:3)
-  qr_rpn(1:3,1) = qr(1:3)
+  !Map the caller's left/right interface states onto the GeoClaw rpn2 edge
+  !convention: rpn2 reads its left state hL from the qr argument and its right
+  !state hR from the ql argument, so the caller's left state QL must go into
+  !qr_rpn (and its bathymetry into auxr) and the caller's right state QR into
+  !ql_rpn (bathymetry into auxl).
+  qr_rpn(1:3,1) = ql(1:3)
+  ql_rpn(1:3,1) = qr(1:3)
 
-  auxl(1,1) = ql(4)
-  auxr(1,1) = qr(4)
+  auxr(1,1) = ql(4)
+  auxl(1,1) = qr(4)
 
-  call rpn2(normal+1, 1, 3, 3, 1, 0, 1, ql_rpn, qr_rpn, auxl, auxr, fwave, s, amdq_rpn, apdq_rpn)
+  call rpn2(normal+1, 1, 3, 3, 1, 0, ql_rpn, qr_rpn, auxl, auxr, fwave, s, amdq_rpn, apdq_rpn)
 
   amdq(1:3) = amdq_rpn(1:3,1)
   apdq(1:3) = apdq_rpn(1:3,1)
 
-  s_max = maxval(s)
+  s_max = maxval(abs(s))
 
 end function

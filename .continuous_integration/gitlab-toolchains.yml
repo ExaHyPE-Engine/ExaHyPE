@@ -19,6 +19,7 @@ GCC Serial:
   variables:
     CC: "gcc"
     CXX: "g++"
+    FC: "gfortran"
     IMAGE_TAG: "${IMAGE_GCC}"
     PARALLEL_LAUNCH: ""
     EXTRA_CONFIGURATION_OPTIONS: "-DPEANO_WITH_MULTITHREADING=OFF \
@@ -31,23 +32,24 @@ GCC Serial:
       pipeline_variables: true
       yaml_variables: true
 
-# GCC Parallel:
-#   extends: .Variables
-#   stage: Compiler
-#   variables:
-#     CC: "gcc"
-#     CXX: "g++"
-#     IMAGE_TAG: "${IMAGE_GCC}"
-#     PARALLEL_LAUNCH: "OMP_NUM_THREADS=${OMP_THREADS} mpirun --bind-to none -np ${MPI_RANKS}"
-#     EXTRA_CONFIGURATION_OPTIONS: "-DPEANO_WITH_MULTITHREADING=ON \
-#                                   -DPEANO_WITH_MPI=ON"
-#   trigger:
-#     include:
-#       - .continuous_integration/gitlab-pipeline.yml
-#     strategy: depend
-#     forward:
-#       pipeline_variables: true
-#       yaml_variables: true
+GCC Parallel:
+  extends: .Variables
+  stage: Compiler
+  variables:
+    CC: "gcc"
+    CXX: "g++"
+    FC: "gfortran"
+    IMAGE_TAG: "${IMAGE_GCC}"
+    PARALLEL_LAUNCH: "OMP_NUM_THREADS=${OMP_THREADS} mpirun --bind-to none -np ${MPI_RANKS}"
+    EXTRA_CONFIGURATION_OPTIONS: "-DPEANO_WITH_MULTITHREADING=ON \
+                                  -DPEANO_WITH_MPI=ON"
+  trigger:
+    include:
+      - .continuous_integration/gitlab-pipeline.yml
+    strategy: depend
+    forward:
+      pipeline_variables: true
+      yaml_variables: true
 
 Intel Parallel:
   extends: .Variables
@@ -55,6 +57,7 @@ Intel Parallel:
   variables:
     CC: "icx"
     CXX: "icpx"
+    FC: "ifx"
     IMAGE_TAG: "${IMAGE_INTEL}"
     PARALLEL_LAUNCH: "OMP_NUM_THREADS=${OMP_THREADS} mpirun --bind-to none -np ${MPI_RANKS}"
     EXTRA_CONFIGURATION_OPTIONS: "-DPEANO_WITH_MULTITHREADING=ON \
@@ -73,6 +76,7 @@ LLVM Parallel:
   variables:
     CC: "clang"
     CXX: "clang++"
+    FC: "gfortran" # TODO: flang
     IMAGE_TAG: "${IMAGE_LLVM}"
     PARALLEL_LAUNCH: "OMP_NUM_THREADS=${OMP_THREADS} mpirun --bind-to none -np ${MPI_RANKS}"
     EXTRA_CONFIGURATION_OPTIONS: "-DPEANO_WITH_MULTITHREADING=ON \
@@ -91,6 +95,7 @@ NVIDIA Parallel:
   variables:
     CC: "nvc"
     CXX: "nvc++"
+    FC: "nvfortran"
     IMAGE_TAG: "${IMAGE_NVIDIA}"
     PARALLEL_LAUNCH: "OMP_NUM_THREADS=${OMP_THREADS} mpirun --bind-to none -np ${MPI_RANKS}"
     EXTRA_CONFIGURATION_OPTIONS: "-DPEANO_WITH_MULTITHREADING=ON \
@@ -109,6 +114,7 @@ AMD Parallel:
   variables:
     CC: "amdclang"
     CXX: "amdclang++"
+    FC: "flang"
     IMAGE_TAG: "${IMAGE_AMD}"
     PARALLEL_LAUNCH: "OMP_NUM_THREADS=${OMP_THREADS} mpirun --bind-to none -np ${MPI_RANKS}"
     EXTRA_CONFIGURATION_OPTIONS: "-DPEANO_WITH_MULTITHREADING=ON \

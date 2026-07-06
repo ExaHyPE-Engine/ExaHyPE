@@ -36,6 +36,7 @@ Stage: final
   TZ=UTC
   DEBIAN_FRONTEND=noninteractive
   export PEANO_SRC_ROOT_DIR=/opt/Peano
+  export PEANO_BUILD_DIR=/opt/Peano
   export PEANO_CMAKE_BUILD_DIR=/opt/Peano
 
 %files from build

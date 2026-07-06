@@ -41,22 +41,6 @@ set(SUPPORTED_BUILD_TYPES
 )
 mark_as_advanced(SUPPORTED_BUILD_TYPES)
 
-set(PEANO_CXX_FLAGS_RELEASE -O3 -fomit-frame-pointer CACHE INTERNAL "")
-set(PEANO_RELEASE_DEFINITIONS -DPEANO_TRACE=0 -DPEANO_ASSERTIONS=0 -DPEANO_DEBUG=0 -DNDEBUG CACHE INTERNAL "" FORCE)
-
-set(PEANO_CXX_FLAGS_ASSERTS -g -O3 CACHE INTERNAL "")
-set(PEANO_ASSERTS_DEFINITIONS -DPEANO_TRACE=0 -DPEANO_ASSERTIONS=1 -DPEANO_DEBUG=0 CACHE INTERNAL "" FORCE)
-
-set(PEANO_CXX_FLAGS_TRACE -g -O3 -fomit-frame-pointer CACHE INTERNAL "")
-set(PEANO_TRACE_DEFINITIONS -DPEANO_TRACE=1 -DPEANO_ASSERTIONS=0 -DPEANO_DEBUG=0 -DNDEBUG CACHE INTERNAL "" FORCE)
-
-set(PEANO_CXX_FLAGS_DEBUG -g -O0 CACHE INTERNAL "")
-set(PEANO_DEBUG_DEFINITIONS -DPEANO_TRACE=0 -DPEANO_ASSERTIONS=1 -DPEANO_DEBUG=1 CACHE INTERNAL "" FORCE)
-
-set(PEANO_EXTRA_CXX_FLAGS   "" CACHE STRING "Extra C++ flags (semicolon-separated)")
-set(PEANO_EXTRA_DEFINITIONS "" CACHE STRING "Extra preprocessor definitions (semicolon-separated)")
-set(PEANO_EXTRA_LINK_FLAGS  "" CACHE STRING "Extra linker flags (semicolon-separated)")
-
 set(MAX_SPACETREES_PER_RANK "1024" CACHE STRING "Maximum number of spacetrees per MPI rank")
 mark_as_advanced(MAX_SPACETREES_PER_RANK)
 
@@ -68,49 +52,9 @@ function(peano_create_options_target)
   )
   install(TARGETS PeanoOptions EXPORT ${PROJECT_NAME}Targets)
 
-  if(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
-    target_compile_options(PeanoOptions INTERFACE
-      -W
-      -Wall
-      -Wextra
-      -Kieee
-    )
-  else()
-    target_compile_options(PeanoOptions INTERFACE
-      -Wall
-      -Wextra
-      -Wpedantic
-      -Wformat=2
-      -Wcast-align
-      -Wcast-qual
-      -Wreturn-type
-      -Wdouble-promotion
-      -Wnull-dereference
-      -Woverloaded-virtual
-      -Wnon-virtual-dtor
-      -Wno-unused-parameter
-      -Wunused-but-set-variable
-    )
-  endif()
-
-  target_compile_options(PeanoOptions INTERFACE
-    $<$<COMPILE_LANGUAGE:CXX>:${PEANO_EXTRA_CXX_FLAGS}>
-  )
   target_compile_definitions(PeanoOptions INTERFACE
-    ${PEANO_EXTRA_DEFINITIONS}
     MAX_SPACETREES_PER_RANK=${MAX_SPACETREES_PER_RANK}
   )
-  target_link_options(PeanoOptions INTERFACE
-    ${PEANO_EXTRA_LINK_FLAGS}
-  )
-
-  if(PEANO_WITH_FPE)
-    target_compile_definitions(PeanoOptions INTERFACE PEANO_WITH_FPE)
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
-      # Intel's LLVM front-end rejects FENV_ACCESS without precise FP semantics.
-      target_compile_options(PeanoOptions INTERFACE -ffp-model=precise)
-    endif()
-  endif()
 
   target_include_directories(PeanoOptions INTERFACE
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src>

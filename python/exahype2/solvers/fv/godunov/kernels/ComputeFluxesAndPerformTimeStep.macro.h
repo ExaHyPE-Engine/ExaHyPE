@@ -119,11 +119,11 @@
     volumeIndexLeft (normal) -= {{HALO_SIZE}};
     volumeIndexRight(normal) += {{HALO_SIZE}};
 
-    auto [volumeSizeLeft, volumeCentreLeft] = ::exahype2::fv::getVolumeSizeAndCentre<DIMENSIONS, {{NUMBER_OF_VOLUMES_PER_AXIS}}>(
+    [[maybe_unused]] auto [volumeSizeLeft, volumeCentreLeft] = ::exahype2::fv::getVolumeSizeAndCentre<DIMENSIONS, {{NUMBER_OF_VOLUMES_PER_AXIS}}>(
       patchCentre, patchSize, volumeIndexLeft
     );
 
-    auto [volumeSizeRight, volumeCentreRight] = ::exahype2::fv::getVolumeSizeAndCentre<DIMENSIONS, {{NUMBER_OF_VOLUMES_PER_AXIS}}>(
+    [[maybe_unused]] auto [volumeSizeRight, volumeCentreRight] = ::exahype2::fv::getVolumeSizeAndCentre<DIMENSIONS, {{NUMBER_OF_VOLUMES_PER_AXIS}}>(
       patchCentre, patchSize, volumeIndexRight
     );
 

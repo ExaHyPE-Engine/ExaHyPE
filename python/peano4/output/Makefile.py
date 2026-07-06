@@ -135,8 +135,8 @@ class Makefile(object):
 
     def parse_configuration_outcome(self):
         """
-        Locate the Peano CMake package and read the small amount of core
-        configuration still needed by Python code generation.
+        Locate the Peano CMake package and read the
+        configuration needed by Python code generation.
         """
         if "PEANO_SRC_ROOT_DIR" in os.environ:
             search_start = os.environ["PEANO_SRC_ROOT_DIR"]
@@ -145,7 +145,11 @@ class Makefile(object):
 
         self.d["CMAKE_BUILD_DIR"] = ""
 
-        if "PEANO_CMAKE_BUILD_DIR" in os.environ:
+        # PEANO_CMAKE_BUILD_DIR is an alias for PEANO_BUILD_DIR;
+        # the latter takes precedence when both are set.
+        if "PEANO_BUILD_DIR" in os.environ:
+            self.d["CMAKE_BUILD_DIR"] = os.environ["PEANO_BUILD_DIR"]
+        elif "PEANO_CMAKE_BUILD_DIR" in os.environ:
             self.d["CMAKE_BUILD_DIR"] = os.environ["PEANO_CMAKE_BUILD_DIR"]
 
         if self.d["CMAKE_BUILD_DIR"] == "":
@@ -222,7 +226,7 @@ class Makefile(object):
                 + """
   and searching upwards through its parents.
 
-  Please ensure CMake has run, or set PEANO_CMAKE_BUILD_DIR explicitly.
+  Please ensure CMake has run, or set PEANO_BUILD_DIR (or its alias PEANO_CMAKE_BUILD_DIR) explicitly.
   """
             )
 
