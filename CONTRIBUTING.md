@@ -124,5 +124,5 @@ Make sure to contribute your changes to the documentation.
 Format your changes by using
 
 ```
-python3 python/postprocessing/format.py
+python3 postprocessing/format.py
 ```

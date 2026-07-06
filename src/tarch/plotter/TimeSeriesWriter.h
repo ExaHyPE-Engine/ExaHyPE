@@ -28,6 +28,12 @@ public:
   virtual void writeTimeSeriesMetaFile(const std::string& outputDirectory, const std::string& filename) const = 0;
 
 protected:
+  // Per-snapshot file name passed to the file writer. The default stamps the
+  // time into the name (<filename>-<time>) so each snapshot is a distinct file.
+  // A writer that keeps all time steps in one file (VTKHDF) overrides this to
+  // return the stable base name unchanged.
+  virtual std::string snapshotName(const std::string& filename, double time) const;
+
   struct Snapshot {
     double      time;
     std::string filename;

@@ -60,12 +60,8 @@ private:
     bool                     logMachineName            = true;
     bool                     logThreadName             = true;
     bool                     logMessageType            = true;
-#if PEANO_DEBUG
     bool                     logScopeName              = true;
-#else
-    bool                     logScopeName              = false;
-#endif
-    std::string              outputFileName            = "Peano.log";
+    std::string              outputFileName            = "";
     bool                     debugFilterConfigured     = false;
     bool                     debugEnabledByDefault     = false;
     std::vector<std::string> debugScopePrefixes;

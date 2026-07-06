@@ -24,6 +24,7 @@
 #include "multicore/tests/SpawnTaskTest.h"
 #include "plotter/tests/HDF5FileWriterTest.h"
 #include "plotter/tests/NetCDFFileWriterTest.h"
+#include "plotter/tests/VTKHDFFileWriterTest.h"
 #include "plotter/tests/VTUFileWriterTest.h"
 #include "reader/tests/JSONReaderTest.h"
 #include "reader/tests/NetCDFFieldSamplerTest.h"
@@ -43,6 +44,7 @@ tarch::tests::TestCase* tarch::getUnitTests() {
   result->addTestCase(new accelerator::tests::MemoryAllocationCacheTest());
   result->addTestCase(new accelerator::tests::MemoryAllocationTest());
   result->addTestCase(new accelerator::tests::ParallelConstructsTest());
+
 #if defined(PEANO_WITH_GPU_BACKEND_CUDA)
   result->addTestCase(new accelerator::cuda::tests::ReductionTest());
 #elif defined(PEANO_WITH_GPU_BACKEND_HIP)
@@ -59,7 +61,9 @@ tarch::tests::TestCase* tarch::getUnitTests() {
 
   result->addTestCase(new plotter::tests::HDF5FileWriterTest());
   result->addTestCase(new plotter::tests::NetCDFFileWriterTest());
+  result->addTestCase(new plotter::tests::VTKHDFFileWriterTest());
   result->addTestCase(new plotter::tests::VTUFileWriterTest());
+
   result->addTestCase(new reader::tests::JSONReaderTest());
   result->addTestCase(new reader::tests::NetCDFFileReaderTest());
   result->addTestCase(new reader::tests::NetCDFFieldSamplerTest());

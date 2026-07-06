@@ -116,8 +116,8 @@ solver refines to level 4 around the airfoil:
 and plot the density. The dense blob inside the contour saturates the colour
 scale, so pass `clim=(1, 2)` to bring out the surrounding flow:
 
-    from postprocessing import render_solution_interactively
-    render_solution_interactively.show_solution("FVSolver", field="rho", clim=(1, 2))
+    from postprocessing import render_solution
+    render_solution.show_solution("FVSolver", field="rho", clim=(1, 2))
 
 The initial conditions should look like this:
 

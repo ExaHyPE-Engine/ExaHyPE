@@ -12,6 +12,10 @@
 #include <utility>
 #include <vector>
 
+namespace tarch::reader {
+  class JSONReader;
+} // namespace tarch::reader
+
 namespace runner {
   struct RepositoryCallbacks {
     std::function<void()> initDataRepository;
@@ -26,8 +30,9 @@ namespace runner {
     std::function<std::string()> getConfigurationInformation;
     std::function<std::string()> getCopyrightBanner;
 
-    std::function<void()>                                 printApplicationHelp;
-    std::function<void(const std::string&, int&, char**)> loadApplicationParameters;
+    std::function<void()> printApplicationHelp;
+    // Reads application parameters from the shared reader (null if none) and the CLI.
+    std::function<void(tarch::reader::JSONReader*, int&, char**)> loadApplicationParameters;
 
     std::function<void()> startSimulation;
     std::function<void()> finishSimulation;
@@ -104,7 +109,7 @@ namespace runner {
      * when
      * @p includeSolverSections is true (i.e. once the solvers are initialised and time stepping).
      */
-    void emitSimulationBox(
+    void refreshSimulationBox(
       const std::string& phase,
       double             wallClockSeconds,
       const std::string& progress,
@@ -140,6 +145,7 @@ namespace runner {
     std::vector<std::pair<std::string, tarch::instrumentation::Measurement>> _stepTimes;
 
     StatisticsReport buildSimulationReport(bool includeSolverSections);
-    void emitBox(const std::vector<std::string>& headerLines, const std::vector<std::string>& bodyLines, char rule);
+
+    void drawBox(const std::vector<std::string>& headerLines, const std::vector<std::string>& bodyLines, char rule);
   };
 } // namespace runner

@@ -150,7 +150,7 @@ class FV(object):
         self._dimensions = 2
         self._namespace = ""
 
-        self._plotter = peano4.plotter.HDF5PatchAMRPlotter
+        self._plotter = peano4.plotter.PatchPlotter
         self._variable_shortcuts = VariableShortcuts(name, unknowns, auxiliary_variables)
 
         self._particle_unknowns = []
@@ -746,7 +746,7 @@ and additional AMR levels is configured by the executable at runtime.
         step.add_action_set(self._action_set_update_cell_label)
         step.add_action_set(self._action_set_AMR_throughout_grid_construction)
 
-    def add_actions_to_plot_solution(self, step, output_path):
+    def add_actions_to_plot_solution(self, step):
         d = {}
         self._init_dictionary_with_default_parameters(d)
         self.add_entries_to_text_replacement_dictionary(d)
@@ -760,11 +760,11 @@ and additional AMR levels is configured by the executable at runtime.
         step.add_action_set(self._action_set_project_patch_onto_faces)
 
         plotter = self._plotter(
-            output_path=output_path,
             filename=self._name,
             patch=self._patch,
             dataset_name=self.current_unknown_identifier(),
             description=self._variable_shortcuts.plot_description,
+            representation="cell",
             time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
             guard=self._load_cell_data_default_guard(),
         )
@@ -779,12 +779,18 @@ and additional AMR levels is configured by the executable at runtime.
             self._particle_unknowns
         ):
             assoc_idx = self._tracer_particle_sets.index(tracer_set)
-            plotter = peano4.plotter.HDF5ParticlePlotter(
-                 output_path=output_path,
+            # Particles are a point cloud. NetCDF (UGRID) has no point-cloud
+            # representation, so fall back to HDF5 there; otherwise follow the
+            # solver's chosen output format.
+            particle_file_format = peano4.plotter.get_default_format()
+            if particle_file_format == "netcdf":
+                particle_file_format = "hdf5"
+            plotter = peano4.plotter.ParticlePlotter(
                  filename=particle.name,
                  particle_set=tracer_set,
                  description="description",
                  time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
+                 file_format=particle_file_format,
              )
             # if particle_attr:
             #     plotter.add_attribute_to_plot(particle_attr, particle_unknown)
@@ -1236,9 +1242,6 @@ and additional AMR levels is configured by the executable at runtime.
         self._overlap = value
         self.create_data_structures()
         self.create_action_sets()
-
-    def set_plotter(self, plotter):
-        self._plotter = plotter
 
     @abstractmethod
     def _generate_kernels(self, namespace, output, dimensions):

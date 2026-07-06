@@ -2,11 +2,13 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "JSONReader.h"
 
+#include <algorithm>
 #include <cctype>
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <variant>
 
@@ -21,7 +23,7 @@ namespace {
 
   class Parser {
   public:
-    explicit Parser(std::string input):
+    explicit Parser(std::string input) :
       _input(std::move(input)) {}
 
     JSONValue parse() {
@@ -377,9 +379,11 @@ namespace {
 
 struct tarch::reader::JSONReader::Impl {
   JSONObject root;
+  // Top-level keys whose value was read.
+  std::unordered_set<std::string> used;
 };
 
-tarch::reader::JSONReader::JSONReader(const std::string& filepath):
+tarch::reader::JSONReader::JSONReader(const std::string& filepath) :
   _impl(std::make_unique<Impl>()) {
   std::ifstream input(filepath.c_str());
   if (!input.is_open()) {
@@ -410,15 +414,35 @@ tarch::reader::JSONReader::~JSONReader() {}
 
 bool tarch::reader::JSONReader::hasKey(const std::string& key) const { return hasValue(_impl->root, key); }
 
+void tarch::reader::JSONReader::markRead(const std::string& key) const {
+  // Top-level component only, to match getUnusedKeys().
+  _impl->used.insert(key.substr(0, key.find('.')));
+}
+
+std::vector<std::string> tarch::reader::JSONReader::getUnusedKeys() const {
+  std::vector<std::string> result;
+  for (const auto& entry : _impl->root) {
+    if (_impl->used.count(entry.first) == 0) {
+      result.push_back(entry.first);
+    }
+  }
+  // sort for a stable diagnostic order
+  std::sort(result.begin(), result.end());
+  return result;
+}
+
 std::string tarch::reader::JSONReader::getString(const std::string& key) const {
+  markRead(key);
   return requireType<std::string>(getValue(_impl->root, key), key, "string");
 }
 
 int tarch::reader::JSONReader::getInteger(const std::string& key) const {
+  markRead(key);
   return requireType<int>(getValue(_impl->root, key), key, "integer");
 }
 
 double tarch::reader::JSONReader::getDouble(const std::string& key) const {
+  markRead(key);
   const JSONValue& value = getValue(_impl->root, key);
   if (std::holds_alternative<int>(value.data)) {
     return static_cast<double>(std::get<int>(value.data));
@@ -427,10 +451,28 @@ double tarch::reader::JSONReader::getDouble(const std::string& key) const {
 }
 
 bool tarch::reader::JSONReader::getBoolean(const std::string& key) const {
+  markRead(key);
   return requireType<bool>(getValue(_impl->root, key), key, "boolean");
 }
 
+std::string tarch::reader::JSONReader::getString(const std::string& key, const std::string& fallback) const {
+  return hasKey(key) ? getString(key) : fallback;
+}
+
+int tarch::reader::JSONReader::getInteger(const std::string& key, int fallback) const {
+  return hasKey(key) ? getInteger(key) : fallback;
+}
+
+double tarch::reader::JSONReader::getDouble(const std::string& key, double fallback) const {
+  return hasKey(key) ? getDouble(key) : fallback;
+}
+
+bool tarch::reader::JSONReader::getBoolean(const std::string& key, bool fallback) const {
+  return hasKey(key) ? getBoolean(key) : fallback;
+}
+
 std::vector<std::string> tarch::reader::JSONReader::getStringArray(const std::string& key) const {
+  markRead(key);
   const JSONArray&         source = requireType<JSONArray>(getValue(_impl->root, key), key, "array");
   std::vector<std::string> result;
   result.reserve(source.size());
@@ -441,6 +483,7 @@ std::vector<std::string> tarch::reader::JSONReader::getStringArray(const std::st
 }
 
 std::vector<int> tarch::reader::JSONReader::getIntegerArray(const std::string& key) const {
+  markRead(key);
   const JSONArray& source = requireType<JSONArray>(getValue(_impl->root, key), key, "array");
   std::vector<int> result;
   result.reserve(source.size());
@@ -451,6 +494,7 @@ std::vector<int> tarch::reader::JSONReader::getIntegerArray(const std::string& k
 }
 
 std::vector<double> tarch::reader::JSONReader::getDoubleArray(const std::string& key) const {
+  markRead(key);
   const JSONArray&    source = requireType<JSONArray>(getValue(_impl->root, key), key, "array");
   std::vector<double> result;
   result.reserve(source.size());
@@ -469,6 +513,7 @@ std::vector<double> tarch::reader::JSONReader::getDoubleArray(const std::string&
 }
 
 std::vector<bool> tarch::reader::JSONReader::getBooleanArray(const std::string& key) const {
+  markRead(key);
   const JSONArray&  source = requireType<JSONArray>(getValue(_impl->root, key), key, "array");
   std::vector<bool> result;
   result.reserve(source.size());

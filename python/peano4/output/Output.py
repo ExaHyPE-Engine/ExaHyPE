@@ -81,10 +81,10 @@ class Output(object):
     Iterates over all stored artefacts and, hence, finally generates all the
     C files, makefiles, and so forth.
 
-    If generated_subdir is set, the generated C++ artefacts land in that
-    subfolder of directory (the build files CMakeLists.txt/Makefile and the
-    readme stay in directory). Files the user registered as non-generated source
-    files are protected and never overwritten; everything else is (re)generated.
+    If generated_subdir is set, the generated C++ artefacts and the README land
+    in that subfolder of directory (only the build files CMakeLists.txt/Makefile
+    stay in directory). Files the user registered as non-generated source files
+    are protected and never overwritten; everything else is (re)generated.
     """
     protected_files = self.makefile.protected_files()
     self.makefile.generate(directory, generated_subdir)
@@ -98,7 +98,6 @@ class Output(object):
     for artefact in self.artefacts:
       artefact.generate(artefact_directory, protected_files)
 
-    self.readme.set_executable_name( self.makefile.executable_name() )
     self.readme.add_package_description( _PARALLELISATION_README_DESCRIPTION )
 
-    self.readme.generate(directory)
+    self.readme.generate(artefact_directory)

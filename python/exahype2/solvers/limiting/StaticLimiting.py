@@ -428,7 +428,7 @@ class StaticLimiting(object):
     def add_actions_to_create_grid(self, step):
         pass
 
-    def add_actions_to_plot_solution(self, step, output_path):
+    def add_actions_to_plot_solution(self, step):
         pass
 
     # These actions are executed during each time step

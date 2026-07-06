@@ -8,10 +8,11 @@ namespace tarch::reader::tests {
   class JSONReaderTest;
 } // namespace tarch::reader::tests
 
-class tarch::reader::tests::JSONReaderTest: public tarch::tests::TestCase {
+class tarch::reader::tests::JSONReaderTest : public tarch::tests::TestCase {
 private:
   void testReadPrimitivesAndArrays();
   void testFailureModes();
+  void testUnusedKeys();
 
 public:
   JSONReaderTest();

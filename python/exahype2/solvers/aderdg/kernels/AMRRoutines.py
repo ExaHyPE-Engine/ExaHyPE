@@ -12,9 +12,7 @@ class AMRRoutines(object):
     def __init__(self, dictionary):
         self.d = deepcopy(dictionary)
 
-    def generate_kernels(
-        self, solver, namespace, output, template_prefix, output_path
-    ):
+    def generate_kernels(self, solver, namespace, output, template_prefix, output_path):
         self._build_gemms(namespace, output, template_prefix, output_path)
 
         generated_kernels = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
@@ -31,9 +29,7 @@ class AMRRoutines(object):
         output.makefile.add_cpp_file(output_path + "/AMRRoutines.cpp", generated=True)
         solver._user_action_set_includes += f'#include "{output_path}/AMRRoutines.h"\n'
 
-    def _build_gemms(
-        self, namespace, output, template_prefix, output_path
-    ):
+    def _build_gemms(self, namespace, output, template_prefix, output_path):
         # Define a sequence of GEMMS
         self.d["GEMMS"] = {}
         nDim = self.d["DIMENSIONS"]
@@ -57,8 +53,8 @@ class AMRRoutines(object):
             nData,
             1,
             0,
-            1,
-            1,
+            0,
+            0,
             "face_Q_x",
             "nopf",
             "gemm",
@@ -73,8 +69,8 @@ class AMRRoutines(object):
             nUnknowns,
             1,
             0,
-            1,
-            1,
+            0,
+            0,
             "face_F_x",
             "nopf",
             "gemm",
@@ -89,8 +85,8 @@ class AMRRoutines(object):
             nData,
             1,
             1,
-            1,
-            1,
+            0,
+            0,
             "face_Q_x_add",
             "nopf",
             "gemm",
@@ -105,8 +101,8 @@ class AMRRoutines(object):
             nUnknowns,
             1,
             1,
-            1,
-            1,
+            0,
+            0,
             "face_F_x_add",
             "nopf",
             "gemm",
@@ -122,8 +118,8 @@ class AMRRoutines(object):
                 nData * nDof,
                 1,
                 0,
-                1,
-                1,
+                0,
+                0,
                 "face_Q_y",
                 "nopf",
                 "gemm",
@@ -138,8 +134,8 @@ class AMRRoutines(object):
                 nUnknowns * nDof,
                 1,
                 0,
-                1,
-                1,
+                0,
+                0,
                 "face_F_y",
                 "nopf",
                 "gemm",
@@ -154,8 +150,8 @@ class AMRRoutines(object):
                 nData * nDof,
                 1,
                 1,
-                1,
-                1,
+                0,
+                0,
                 "face_Q_y_add",
                 "nopf",
                 "gemm",
@@ -170,8 +166,8 @@ class AMRRoutines(object):
                 nUnknowns * nDof,
                 1,
                 1,
-                1,
-                1,
+                0,
+                0,
                 "face_F_y_add",
                 "nopf",
                 "gemm",
@@ -188,8 +184,7 @@ class AMRRoutines(object):
             1,
             0,
             0,
-            # 1,
-            1,
+            0,
             "volume_x",
             "nopf",
             "gemm",
@@ -206,9 +201,8 @@ class AMRRoutines(object):
                 nData * nDof,
                 1,
                 0,
-                1,
-                # 1,
-                1,
+                0,
+                0,
                 "volume_y",
                 "nopf",
                 "gemm",
@@ -223,8 +217,7 @@ class AMRRoutines(object):
                 nData * nDof2,
                 1,
                 0,
-                1,
-                # 1,
+                0,
                 0,
                 "volume_z",
                 "nopf",
@@ -240,8 +233,7 @@ class AMRRoutines(object):
                 nData * nDof2,
                 1,
                 1,
-                1,
-                # 1,
+                0,
                 0,
                 "volume_z_add",
                 "nopf",
@@ -258,8 +250,7 @@ class AMRRoutines(object):
                 nData * nDof,
                 1,
                 0,
-                1,
-                # 1,
+                0,
                 0,
                 "volume_y",
                 "nopf",
@@ -275,8 +266,7 @@ class AMRRoutines(object):
                 nData * nDof,
                 1,
                 1,
-                1,
-                # 1,
+                0,
                 0,
                 "volume_y_add",
                 "nopf",

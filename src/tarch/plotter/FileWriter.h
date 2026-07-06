@@ -9,6 +9,7 @@
 #include <string>
 #include <tuple>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace tarch::plotter {
@@ -23,7 +24,6 @@ public:
   virtual bool isOpen() const;
   virtual bool writeToFile(const std::string& filename, double time) = 0;
 
-  std::string         getOutputDirectory() const;
   virtual std::string getFileExtension() const = 0;
 
 protected:
@@ -49,6 +49,40 @@ protected:
     std::vector<DataField> cellFields{};
 
     std::unordered_map<std::tuple<long long, long long, long long>, int, VertexHash> vertexMap;
+  };
+
+  struct SubdomainBuffersSequence {
+    const SubdomainBuffers*              reference = nullptr;
+    std::vector<const SubdomainBuffers*> payloads{};
+  };
+
+  /**
+   * Globally-agreed data-field schema for a collective parallel write. Holds
+   * the field names and component counts (the `values` of the DataFields stay
+   * empty); it exists so that every rank - including ranks that hold no local
+   * data - creates and collectively writes the identical set of datasets /
+   * variables. Without it, an empty rank derives an empty field list from its
+   * (null) local reference and skips the per-field collective calls that the
+   * non-empty ranks make, which deadlocks collective HDF5/NetCDF IO.
+   */
+  struct FieldSchema {
+    std::vector<DataField> pointFields{};
+    std::vector<DataField> cellFields{};
+  };
+
+  // Semantic role of a data field, inferred from its component count. The plotter
+  // API only carries a count, so the role follows the usual visualisation
+  // convention: 1 = scalar, 2 or 3 = vector, 9 = tensor. Any other count stays a
+  // generic multi-component array.
+  enum class FieldKind { Scalar, Vector, Tensor, Generic };
+
+  struct FieldLayout {
+    FieldKind kind;
+    // Number of components actually written. A vector is always written with 3
+    // components (a 2D vector is padded with a zero z) and a tensor with 9, so
+    // the field is a real vector/tensor in ParaView and the other readers
+    // regardless of the source count. Generic fields keep their source count.
+    int writtenComponents;
   };
 
   class DataPlotter {
@@ -111,11 +145,8 @@ public:
     DataPlotter _impl;
   };
 
-  std::unique_ptr<VertexDataPlotter> createVertexDataPlotter(
-    int                subdomainId,
-    const std::string& identifier,
-    int                recordsPerVertex
-  );
+  std::unique_ptr<VertexDataPlotter>
+  createVertexDataPlotter(int subdomainId, const std::string& identifier, int recordsPerVertex);
 
   class CellPlotter {
   public:
@@ -164,18 +195,39 @@ public:
     DataPlotter _impl;
   };
 
-  std::unique_ptr<CellDataPlotter> createCellDataPlotter(
-    int                subdomainId,
-    const std::string& identifier,
-    int                recordsPerCell
-  );
+  std::unique_ptr<CellDataPlotter>
+  createCellDataPlotter(int subdomainId, const std::string& identifier, int recordsPerCell);
 
 protected:
-  static void      validateIdentifier(const std::string& id);
-  static int       findField(std::vector<DataField>& fields, const std::string& name);
-  void             createOutputDirectory();
-  void             checkCanOpenPlotter(int subdomainId) const;
-  SubdomainBuffers mergeSubdomains();
+  static void validateIdentifier(const std::string& id);
+  void        createOutputDirectory();
+  void        checkCanOpenPlotter(int subdomainId) const;
+
+  // MPI-IO hints for the parallel writers (collective buffering for the large
+  // collective writes).
+  static std::vector<std::pair<std::string, std::string>> mpiIoHints();
+  SubdomainBuffersSequence                                getSubdomainBuffersSequenceForWriting() const;
+
+  // Field schema from the local reference, no MPI exchange. The parallel writers run
+  // their collective I/O on a sub-communicator of the data-holding ranks, so every
+  // participant has a non-null reference with the identical field list.
+  static FieldSchema fieldSchemaFromReference(const SubdomainBuffers* localReference);
+
+  // Classify a field by its source component count into the written width and
+  // role every writer uses (see FieldLayout).
+  static FieldLayout classifyField(int sourceComponents);
+
+  // Re-lay a component-major field buffer (values stored as
+  // [tuple0 comp0..compN, tuple1 ...]) from sourceComponents to writtenComponents
+  // per tuple, padding the extra trailing components with zero. Returns the input
+  // unchanged when the widths already match.
+  static std::vector<float>
+  expandFieldComponents(const std::vector<float>& values, int sourceComponents, int writtenComponents);
+
+  static bool             hasSchemaOrGeometry(const SubdomainBuffers& buffers);
+  static bool             hasPayload(const SubdomainBuffers& buffers);
+  const SubdomainBuffers* findReferenceSubdomain() const;
+  void                    validateSubdomainsForWriting(const SubdomainBuffers& reference) const;
 
   std::string _outputDirectory;
   bool        _written = false;

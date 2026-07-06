@@ -451,7 +451,7 @@ class PosterioriLimiting(object):
     def add_actions_to_create_grid(self, step):
         pass
 
-    def add_actions_to_plot_solution(self, step, output_path):
+    def add_actions_to_plot_solution(self, step):
         pass
 
     def add_actions_to_perform_time_step(self, step):

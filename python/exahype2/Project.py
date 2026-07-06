@@ -2,7 +2,6 @@
 # use, please see the copyright notice at www.peano-framework.org
 import os
 import sys
-import json
 
 import peano4
 import exahype2
@@ -65,8 +64,24 @@ class Project(peano4.Project):
         self._particle_variable_pos = [0]
         self._use_particle_var_shortcut = False
 
+    def set_plot_format(self, file_format):
+        """Set the output format (hdf5/vtu/netcdf) for all solver plotters.
+
+        Solvers that have not been given an explicit format bind their plotter
+        to this value at code-generation time, so a single call switches the
+        whole project's output format without naming a format-specific plotter
+        anywhere. This is the programmatic equivalent of the standard
+        --plot-format command-line option (which every project accepts and which
+        overrides this when given). Passing None leaves the current default
+        untouched.
+        """
+        if file_format is not None:
+            import peano4.plotter
+
+            peano4.plotter.set_default_format(file_format)
+
     def _create_steps(self):
-        """Register ExaHyPE's steps on top of Peano's via the single uniform path.
+        """Register ExaHyPE's steps on top of Peano's.
 
         super() registers the generic Peano steps (CreateGrid, LoadBalancing); we add
         the ExaHyPE-specific ones the same way, in the same place. Called from the base
@@ -293,7 +308,6 @@ thus appreciate any citation of the original release paper
                 "DEFAULT_MAX_GRID_LEVELS": self._render_optional_integer_runtime_default(
                     self._max_grid_levels
                 ),
-                "EXECUTABLE_NAME": json.dumps(self._executable_name),
             }
         )
 
@@ -520,7 +534,7 @@ thus appreciate any citation of the original release paper
                 self.__add_solver_label_action_sets_to_load_balancing(solver)
 
                 solver.add_actions_to_init_grid(self.init_grid)
-                solver.add_actions_to_plot_solution(self.plot_solution, "./")
+                solver.add_actions_to_plot_solution(self.plot_solution)
 
                 solver.add_actions_to_perform_time_step(self.perform_time_step)
 

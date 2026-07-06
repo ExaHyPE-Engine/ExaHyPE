@@ -21,7 +21,6 @@
 #include "tarch/instrumentation/Log.h"
 #include "tarch/instrumentation/Measurement.h"
 #include "tarch/instrumentation/Watch.h"
-#include "tarch/plotter/AMRPlotter.h"
 #include "tarch/plotter/HDF5FileWriter.h"
 #include "tarch/plotter/XDMFTimeSeriesWriter.h"
 
@@ -201,7 +200,7 @@ void logFinalStatistics(
 void plotGrid() {
   repositories::startPlottingStep();
 
-  const std::string outputDirectory  = "solutions";
+  const std::string outputDirectory  = "output";
   const std::string solutionFileName = "AderSolver";
 
   const double t = 0.5 * (repositories::getMinTimeStamp() + repositories::getMaxTimeStamp());
@@ -479,7 +478,8 @@ int main(int argc, char** argv) {
     BenchmarkMinTerminalTime,
     BenchmarkMaxTerminalTime,
     BenchmarkGridLevels,
-    BenchmarkMaxGridLevels
+    BenchmarkMaxGridLevels,
+    "KernelBenchmarks"
   );
   if (helpRequested(argc, argv)) {
     runtimeParameters.printUsage("KernelBenchmarks");

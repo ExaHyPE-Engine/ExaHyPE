@@ -95,7 +95,6 @@ set(SOURCES
   multicore/omp/Core.cpp
   multicore/omp/RecursiveSemaphore.cpp
 
-  plotter/AMRPlotter.cpp
   plotter/CellDataPlotter.cpp
   plotter/CellPlotter.cpp
   plotter/FileWriter.cpp
@@ -106,10 +105,13 @@ set(SOURCES
   plotter/TimeSeriesWriter.cpp
   plotter/VertexDataPlotter.cpp
   plotter/VertexPlotter.cpp
+  plotter/VTKHDFFileWriter.cpp
+  plotter/VTKHDFTimeSeriesWriter.cpp
   plotter/VTUFileWriter.cpp
   plotter/XDMFTimeSeriesWriter.cpp
   plotter/tests/HDF5FileWriterTest.cpp
   plotter/tests/NetCDFFileWriterTest.cpp
+  plotter/tests/VTKHDFFileWriterTest.cpp
   plotter/tests/VTUFileWriterTest.cpp
 
   reader/CSVReader.cpp

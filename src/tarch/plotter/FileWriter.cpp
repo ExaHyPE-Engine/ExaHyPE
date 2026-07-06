@@ -5,10 +5,13 @@
 #include "tarch/mpi/Rank.h"
 #include "tarch/mpi/mpi.h"
 
-#include <algorithm> // for std::transform, std::max
+#include <algorithm>
+#include <cstdlib>
+#include <cstring>
 #include <filesystem>
-#include <iterator>  // for std::back_inserter
-#include <stdexcept> // for std::runtime_error
+#include <limits>
+#include <stdexcept>
+#include <vector>
 
 namespace fs = std::filesystem;
 
@@ -18,44 +21,79 @@ tarch::plotter::FileWriter::FileWriter(const std::string& outputDirectory, int n
 
 bool tarch::plotter::FileWriter::isOpen() const { return not _written; }
 
-std::string tarch::plotter::FileWriter::getOutputDirectory() const { return _outputDirectory; }
+std::vector<std::pair<std::string, std::string>> tarch::plotter::FileWriter::mpiIoHints() {
+  // Collective buffering for these large collective writes. ROMIO keys (MPICH); other
+  // MPI-IO stacks ignore unknown keys.
+  return {
+    {"romio_cb_write", "enable"},
+    {"romio_ds_write", "disable"},
+  };
+}
 
 void tarch::plotter::FileWriter::createOutputDirectory() {
+  int         success = 1;
+  std::string failureReason;
+
+  // Only the global master touches the filesystem, but it records the outcome in
+  // a flag rather than throwing straight away: throwing here would let the master
+  // leave the collective barrier below while the other ranks block on it forever.
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     fs::path p(_outputDirectory);
 
     if (not _outputDirectory.empty()) {
       std::error_code ec;
       if (not fs::exists(p)) {
-        if (not fs::create_directories(p, ec)) {
-          if (not fs::exists(p)) {
-            throw std::runtime_error("Failed to create output directory '" + p.string() + "': " + ec.message());
-          }
+        if (not fs::create_directories(p, ec) and not fs::exists(p)) {
+          success       = 0;
+          failureReason = "Failed to create output directory '" + p.string() + "': " + ec.message();
         }
       } else if (not fs::is_directory(p)) {
-        throw std::runtime_error("Output path exists but is not a directory: '" + p.string() + "'");
+        success       = 0;
+        failureReason = "Output path exists but is not a directory: '" + p.string() + "'";
       }
     }
   }
 
 #ifdef PEANO_WITH_MPI
-  tarch::mpi::barrier(tarch::mpi::Rank::getInstance().getCommunicator());
+  // Agree on the outcome so every rank proceeds or throws together. This allreduce
+  // also synchronises the ranks, so no separate barrier is needed before they write.
+  int globalSuccess = success;
+  tarch::mpi::allreduce(
+    &success,
+    &globalSuccess,
+    1,
+    MPI_INT,
+    MPI_MIN,
+    tarch::mpi::Rank::getInstance().getCommunicator()
+  );
+  success = globalSuccess;
 #endif
+
+  if (success == 0) {
+    if (failureReason.empty()) {
+      failureReason = "Failed to create output directory '" + _outputDirectory + "' (reported by the global master)";
+    }
+    throw std::runtime_error(failureReason);
+  }
 }
 
 void tarch::plotter::FileWriter::validateIdentifier(const std::string& id) {
-  if (id.find(' ') != std::string::npos) {
-    throw std::runtime_error("VTU data identifier contains spaces: '" + id + "'");
+  if (id.empty()) {
+    throw std::runtime_error("Plotter data identifier is empty.");
   }
-}
 
-int tarch::plotter::FileWriter::findField(std::vector<DataField>& fields, const std::string& name) {
-  for (int i = 0; i < static_cast<int>(fields.size()); ++i) {
-    if (fields[i].name == name) {
-      return i;
-    }
+  // The identifier is written into VTU/XDMF XML, as an HDF5 dataset path
+  // component and as a NetCDF variable name. Reject the characters that would
+  // produce malformed XML, an invalid HDF5 path component, or a rejected NetCDF
+  // variable name.
+  const std::string illegal = " \t\n\r\"'<>&/\\";
+  const std::size_t pos     = id.find_first_of(illegal);
+  if (pos != std::string::npos) {
+    throw std::runtime_error(
+      std::string("Invalid plotter data identifier '") + id + "': the character '" + id[pos] +
+      "' is not allowed. Avoid whitespace, quotes, '<', '>', '&', '/' and '\\'."
+    );
   }
-  return -1;
 }
 
 void tarch::plotter::FileWriter::checkCanOpenPlotter(int subdomainId) const {
@@ -109,7 +147,7 @@ tarch::plotter::FileWriter::DataPlotter::DataPlotter(
 
   _plotter.checkCanOpenPlotter(subdomainId);
 
-  // Find or create the field
+  // Reuse the field if it already exists, otherwise append it.
   _fieldIndex = -1;
   for (size_t i = 0; i < _targetFields.size(); ++i) {
     if (_targetFields[i].name == identifier) {
@@ -130,96 +168,90 @@ tarch::plotter::FileWriter::DataPlotter::DataPlotter(
   }
 }
 
-tarch::plotter::FileWriter::SubdomainBuffers tarch::plotter::FileWriter::mergeSubdomains() {
-  auto mergedSubdomains = SubdomainBuffers();
+bool tarch::plotter::FileWriter::hasSchemaOrGeometry(const SubdomainBuffers& buffers) {
+  return not buffers.pointsXYZ.empty() or not buffers.connectivity.empty() or not buffers.offsets.empty() or
+         not buffers.types.empty() or not buffers.pointFields.empty() or not buffers.cellFields.empty();
+}
 
-  // We need a reference subdomain to determine which data fields exist.
-  // We accept a subdomain as a reference if it has geometry or if it has
-  // defined data fields. This ensures we capture the schema even on empty ranks
-  // (e.g. particles that are not hosted on a particular rank).
-  const SubdomainBuffers* ref = nullptr;
-  for (const auto& s : _subdomains) {
-    if (not s.pointsXYZ.empty() or not s.types.empty() or not s.pointFields.empty() or not s.cellFields.empty()) {
-      ref = &s;
-      break;
+bool tarch::plotter::FileWriter::hasPayload(const SubdomainBuffers& buffers) {
+  if (not buffers.pointsXYZ.empty() or not buffers.connectivity.empty() or not buffers.offsets.empty() or
+      not buffers.types.empty()) {
+    return true;
+  }
+
+  for (const auto& field : buffers.pointFields) {
+    if (not field.values.empty()) {
+      return true;
     }
   }
-
-  // Leave merged subdomain empty and return.
-  if (ref == nullptr) {
-    return mergedSubdomains;
+  for (const auto& field : buffers.cellFields) {
+    if (not field.values.empty()) {
+      return true;
+    }
   }
+  return false;
+}
 
-  // Check that all other non-empty subdomains match the reference schema
+const tarch::plotter::FileWriter::SubdomainBuffers* tarch::plotter::FileWriter::findReferenceSubdomain() const {
   for (const auto& s : _subdomains) {
-    // Skip checking completely empty subdomains (no geometry, no fields)
-    if (s.pointsXYZ.empty() and s.types.empty() and s.pointFields.empty() and s.cellFields.empty()) {
+    if (hasSchemaOrGeometry(s)) {
+      return &s;
+    }
+  }
+  return nullptr;
+}
+
+void tarch::plotter::FileWriter::validateSubdomainsForWriting(const SubdomainBuffers& reference) const {
+  for (const auto& s : _subdomains) {
+    if (not hasSchemaOrGeometry(s)) {
       continue;
     }
 
-    if (s.pointFields.size() != ref->pointFields.size() or s.cellFields.size() != ref->cellFields.size()) {
-      // If a subdomain has geometry but no fields (or vice versa) compared to ref, this is a
-      // mismatch
+    if (s.pointsXYZ.size() % 3 != 0) {
+      throw std::runtime_error("Point coordinate buffer size is not a multiple of 3.");
+    }
+
+    if (s.offsets.size() != s.types.size()) {
+      throw std::runtime_error("Cell offset count does not match cell type count.");
+    }
+
+    if (s.offsets.empty() and not s.connectivity.empty()) {
+      throw std::runtime_error("Connectivity buffer is non-empty but no cell offsets are defined.");
+    }
+
+    std::int32_t previousOffset = 0;
+    for (std::int32_t offset : s.offsets) {
+      if (offset < previousOffset) {
+        throw std::runtime_error("Cell offsets are not monotonically increasing.");
+      }
+      previousOffset = offset;
+    }
+
+    if (not s.offsets.empty() and static_cast<std::size_t>(s.offsets.back()) != s.connectivity.size()) {
+      throw std::runtime_error("Last cell offset does not match connectivity buffer size.");
+    }
+
+    if (s.pointFields.size() != reference.pointFields.size() or s.cellFields.size() != reference.cellFields.size()) {
       throw std::runtime_error("Inconsistent data field counts across subdomains.");
     }
 
-    for (std::size_t i = 0; i < ref->pointFields.size(); ++i) {
-      if (s.pointFields[i].name != ref->pointFields[i].name or
-          s.pointFields[i].components != ref->pointFields[i].components) {
-        throw std::runtime_error("Mismatch in point data field '" + ref->pointFields[i].name + "'.");
+    for (std::size_t i = 0; i < reference.pointFields.size(); ++i) {
+      if (s.pointFields[i].name != reference.pointFields[i].name or
+          s.pointFields[i].components != reference.pointFields[i].components) {
+        throw std::runtime_error("Mismatch in point data field '" + reference.pointFields[i].name + "'.");
       }
     }
 
-    for (std::size_t i = 0; i < ref->cellFields.size(); ++i) {
-      if (s.cellFields[i].name != ref->cellFields[i].name or
-          s.cellFields[i].components != ref->cellFields[i].components) {
-        throw std::runtime_error("Mismatch in cell data field '" + ref->cellFields[i].name + "'.");
+    for (std::size_t i = 0; i < reference.cellFields.size(); ++i) {
+      if (s.cellFields[i].name != reference.cellFields[i].name or
+          s.cellFields[i].components != reference.cellFields[i].components) {
+        throw std::runtime_error("Mismatch in cell data field '" + reference.cellFields[i].name + "'.");
       }
-    }
-  }
-
-  // Pre-calculate totals for memory reservation
-  std::size_t totalPoints = 0;
-  std::size_t totalCells  = 0;
-  std::size_t totalConn   = 0;
-
-  for (const auto& s : _subdomains) {
-    totalPoints += s.pointsXYZ.size(); // size in doubles/floats
-    totalCells += s.types.size();
-    totalConn += s.connectivity.size();
-  }
-
-  // Allocate merged buffers
-  mergedSubdomains.pointsXYZ.reserve(totalPoints);
-  mergedSubdomains.connectivity.reserve(totalConn);
-  mergedSubdomains.offsets.reserve(totalCells);
-  mergedSubdomains.types.reserve(totalCells);
-
-  // Initialise merged fields (based on reference)
-  mergedSubdomains.pointFields = ref->pointFields;
-  mergedSubdomains.cellFields  = ref->cellFields;
-
-  for (auto& f : mergedSubdomains.pointFields) {
-    f.values.clear();
-    f.values.reserve(totalPoints / 3 * f.components);
-  }
-  for (auto& f : mergedSubdomains.cellFields) {
-    f.values.clear();
-    f.values.reserve(totalCells * f.components);
-  }
-
-  std::int32_t pointIndexOffset = 0;
-  std::int32_t cellOffsetBase   = 0;
-
-  for (const auto& s : _subdomains) {
-    if (s.pointsXYZ.empty() and s.types.empty()) {
-      continue;
     }
 
     const std::size_t nPoints = s.pointsXYZ.size() / 3;
     const std::size_t nCells  = s.types.size();
 
-    // Check point data consistency
     for (const auto& f : s.pointFields) {
       if (f.values.size() != nPoints * f.components) {
         throw std::runtime_error(
@@ -229,7 +261,6 @@ tarch::plotter::FileWriter::SubdomainBuffers tarch::plotter::FileWriter::mergeSu
       }
     }
 
-    // Check cell data consistency
     for (const auto& f : s.cellFields) {
       if (f.values.size() != nCells * f.components) {
         throw std::runtime_error(
@@ -238,69 +269,78 @@ tarch::plotter::FileWriter::SubdomainBuffers tarch::plotter::FileWriter::mergeSu
         );
       }
     }
+  }
+}
 
-    // Geometry
-    mergedSubdomains.pointsXYZ.insert(mergedSubdomains.pointsXYZ.end(), s.pointsXYZ.begin(), s.pointsXYZ.end());
-    mergedSubdomains.types.insert(mergedSubdomains.types.end(), s.types.begin(), s.types.end());
+tarch::plotter::FileWriter::SubdomainBuffersSequence
+tarch::plotter::FileWriter::getSubdomainBuffersSequenceForWriting() const {
+  SubdomainBuffersSequence result;
 
-    // Connectivity (indices must be shifted by previous point count)
-    std::transform(
-      s.connectivity.begin(),
-      s.connectivity.end(),
-      std::back_inserter(mergedSubdomains.connectivity),
-      [&](std::int32_t idx) { return idx + pointIndexOffset; }
-    );
+  result.reference = findReferenceSubdomain();
+  if (result.reference == nullptr) {
+    return result;
+  }
 
-    // Offsets (must be cumulative across the whole file)
-    // The subdomain offsets start at 0 relative to that subdomain.
-    // We add the `cellOffsetBase` (the end of the previous subdomain) to them.
-    for (auto o : s.offsets) {
-      mergedSubdomains.offsets.push_back(o + cellOffsetBase);
-    }
+  validateSubdomainsForWriting(*result.reference);
 
-    // Update bases for next iteration
-    if (not s.offsets.empty()) {
-      // The last offset of this block becomes the base for the next block
-      cellOffsetBase = mergedSubdomains.offsets.back();
-    }
-
-    pointIndexOffset += static_cast<std::int32_t>(nPoints);
-
-    // Data fields
-    for (std::size_t i = 0; i < s.pointFields.size(); ++i) {
-      std::size_t expectedSize = nPoints * s.pointFields[i].components;
-      if (s.pointFields[i].values.size() != expectedSize) {
-        throw std::runtime_error(
-          "Point field '" + s.pointFields[i].name + "' has invalid size " +
-          std::to_string(s.pointFields[i].values.size()) + ". Expected " + std::to_string(expectedSize) + " (" +
-          std::to_string(nPoints) + " points x " + std::to_string(s.pointFields[i].components) + " components)."
-        );
-      }
-
-      mergedSubdomains.pointFields[i].values.insert(
-        mergedSubdomains.pointFields[i].values.end(),
-        s.pointFields[i].values.begin(),
-        s.pointFields[i].values.end()
-      );
-    }
-
-    for (std::size_t i = 0; i < s.cellFields.size(); ++i) {
-      std::size_t expectedSize = nCells * s.cellFields[i].components;
-      if (s.cellFields[i].values.size() != expectedSize) {
-        throw std::runtime_error(
-          "Cell field '" + s.cellFields[i].name + "' has invalid size " +
-          std::to_string(s.cellFields[i].values.size()) + ". Expected " + std::to_string(expectedSize) + " (" +
-          std::to_string(nCells) + " cells x " + std::to_string(s.cellFields[i].components) + " components)."
-        );
-      }
-
-      mergedSubdomains.cellFields[i].values.insert(
-        mergedSubdomains.cellFields[i].values.end(),
-        s.cellFields[i].values.begin(),
-        s.cellFields[i].values.end()
-      );
+  result.payloads.reserve(_subdomains.size());
+  for (const auto& s : _subdomains) {
+    if (hasPayload(s)) {
+      result.payloads.push_back(&s);
     }
   }
 
-  return mergedSubdomains;
+  return result;
+}
+
+tarch::plotter::FileWriter::FieldLayout tarch::plotter::FileWriter::classifyField(int sourceComponents) {
+  if (sourceComponents == 1) {
+    return {FieldKind::Scalar, 1};
+  }
+  if (sourceComponents == 2 or sourceComponents == 3) {
+    return {FieldKind::Vector, 3};
+  }
+  if (sourceComponents == 9) {
+    return {FieldKind::Tensor, 9};
+  }
+  return {FieldKind::Generic, sourceComponents};
+}
+
+std::vector<float> tarch::plotter::FileWriter::expandFieldComponents(
+  const std::vector<float>& values,
+  int                       sourceComponents,
+  int                       writtenComponents
+) {
+  if (writtenComponents == sourceComponents or sourceComponents <= 0) {
+    return values;
+  }
+  const std::size_t  tuples = values.size() / static_cast<std::size_t>(sourceComponents);
+  std::vector<float> result(tuples * static_cast<std::size_t>(writtenComponents), 0.0f);
+  for (std::size_t t = 0; t < tuples; ++t) {
+    for (int c = 0; c < sourceComponents; ++c) {
+      result[t * writtenComponents + c] = values[t * sourceComponents + c];
+    }
+  }
+  return result;
+}
+
+tarch::plotter::FileWriter::FieldSchema
+tarch::plotter::FileWriter::fieldSchemaFromReference(const SubdomainBuffers* localReference) {
+  // Names and component counts only; the field values are streamed from the actual
+  // subdomain buffers at write time.
+  FieldSchema schema;
+  if (localReference != nullptr) {
+    auto seed = [](std::vector<DataField>& target, const std::vector<DataField>& source) {
+      target.reserve(source.size());
+      for (const auto& f : source) {
+        DataField entry;
+        entry.name       = f.name;
+        entry.components = f.components;
+        target.push_back(std::move(entry));
+      }
+    };
+    seed(schema.pointFields, localReference->pointFields);
+    seed(schema.cellFields, localReference->cellFields);
+  }
+  return schema;
 }

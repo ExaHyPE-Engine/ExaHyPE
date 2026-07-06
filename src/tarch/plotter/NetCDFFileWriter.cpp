@@ -4,13 +4,17 @@
 
 #ifdef PEANO_WITH_NETCDF
 
+#include "CellTypes.h"
+
 #include "tarch/mpi/Rank.h"
 #include "tarch/mpi/mpi.h"
 
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <filesystem>
+#include <limits>
 #include <netcdf.h>
 #include <stdexcept>
 #include <string>
@@ -23,20 +27,33 @@
 namespace fs = std::filesystem;
 
 namespace {
-  constexpr int VTK_TRIANGLE = 5;
-  constexpr int VTK_QUAD     = 9;
+  // Largest 2D face / 3D volume corner counts, taken from the CellTypes table
+  // (CellTypes.h) so the fixed-width connectivity padding cannot drift.
+  constexpr int MAX_FACE_NODES   = tarch::plotter::nodesOf(tarch::plotter::CellType::Quadrangle); // 4: triangles/quads
+  constexpr int MAX_VOLUME_NODES = tarch::plotter::nodesOf(tarch::plotter::CellType::Hexahedron); // 8: hexahedra
+  constexpr std::int32_t FILL_VALUE           = -1; // for unused nodes in padded connectivities
+  constexpr int          UGRID_HEXAHEDRON_TAG = 2;  // UGRID flag_values: 0=tetrahedron, 1=wedge, 2=hexahedron
 
-  constexpr int          MAX_FACE_NODES = 4;  // triangles/quads
-  constexpr std::int32_t FILL_VALUE     = -1; // for unused nodes in a face
+  enum class MeshTopologyDimension { TwoD = 2, ThreeD = 3 };
 
-  inline void require2DCell(int vtkType) {
-    if (vtkType != VTK_TRIANGLE and vtkType != VTK_QUAD) {
-      throw std::runtime_error(
-        "NetCDFFileWriter (UGRID 2D) only supports triangle (VTK=5) and quadrangle (VTK=9) cells. "
-        "Encountered VTK cell type " +
-        std::to_string(vtkType) + "."
-      );
+  // UGRID meshes carry 2D faces (triangle/quadrangle) or 3D volumes (hexahedron).
+  inline bool is2DCell(int vtkType) {
+    const tarch::plotter::CellTypeInfo* info = tarch::plotter::lookupCellType(vtkType);
+    return info != nullptr and info->dimension == 2;
+  }
+
+  inline bool is3DCell(int vtkType) {
+    const tarch::plotter::CellTypeInfo* info = tarch::plotter::lookupCellType(vtkType);
+    return info != nullptr and info->dimension == 3;
+  }
+
+  inline bool hasNonZeroZCoordinate(const std::vector<float>& pointsXYZ) {
+    for (std::size_t i = 2; i < pointsXYZ.size(); i += 3) {
+      if (pointsXYZ[i] != 0.0f) {
+        return true;
+      }
     }
+    return false;
   }
 } // namespace
 
@@ -61,87 +78,213 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
   fs::path outDir(_outputDirectory);
   fs::path filePath = outDir / (filename + ".nc");
 
-  SubdomainBuffers localData = mergeSubdomains();
+  const auto localData = getSubdomainBuffersSequenceForWriting();
 
-  const unsigned long long localNumNodes = localData.pointsXYZ.size() / 3;
-  const unsigned long long localNumFaces = localData.types.size();
-
-  // Validate cell types and build the (nFace x 4) UGRID face-node connectivity.
-  // We store a padded connectivity with _FillValue for triangles.
-  std::vector<std::int32_t> localFaceNodes;
-  localFaceNodes.resize(static_cast<std::size_t>(localNumFaces) * MAX_FACE_NODES, FILL_VALUE);
-
-  std::int32_t connBegin = 0;
-  for (std::size_t c = 0; c < localData.types.size(); ++c) {
-    const int vtkType = static_cast<int>(localData.types[c]);
-    require2DCell(vtkType);
-
-    const std::int32_t connEnd = localData.offsets[c];
-    const std::int32_t nNodes  = connEnd - connBegin;
-
-    if (vtkType == VTK_TRIANGLE and nNodes != 3) {
-      throw std::runtime_error("Triangle cell has " + std::to_string(nNodes) + " nodes (expected 3).");
-    }
-    if (vtkType == VTK_QUAD and nNodes != 4) {
-      throw std::runtime_error("Quadrangle cell has " + std::to_string(nNodes) + " nodes (expected 4).");
-    }
-
-    for (int k = 0; k < nNodes; ++k) {
-      localFaceNodes[c * MAX_FACE_NODES + k] = localData.connectivity[connBegin + k];
-    }
-
-    connBegin = connEnd;
+  unsigned long long localNumNodes    = 0;
+  unsigned long long localNumElements = 0;
+  for (const SubdomainBuffers* subdomain : localData.payloads) {
+    localNumNodes += subdomain->pointsXYZ.size() / 3;
+    localNumElements += subdomain->types.size();
   }
 
-  unsigned long long offsetNodes = 0;
-  unsigned long long offsetFaces = 0;
-  unsigned long long totalNodes  = localNumNodes;
-  unsigned long long totalFaces  = localNumFaces;
+  bool localHasFaces   = false;
+  bool localHasVolumes = false;
+  for (const SubdomainBuffers* subdomain : localData.payloads) {
+    for (std::uint8_t t : subdomain->types) {
+      const int vtkType = static_cast<int>(t);
+      if (is2DCell(vtkType)) {
+        localHasFaces = true;
+      } else if (is3DCell(vtkType)) {
+        localHasVolumes = true;
+      } else {
+        throw std::runtime_error(
+          "NetCDFFileWriter (UGRID) supports triangle/quadrangle faces and hexahedron volumes. Encountered VTK cell type " +
+          std::to_string(vtkType) + "."
+        );
+      }
+    }
+  }
+  bool localHas3DCoordinates = false;
+  for (const SubdomainBuffers* subdomain : localData.payloads) {
+    localHas3DCoordinates = localHas3DCoordinates or hasNonZeroZCoordinate(subdomain->pointsXYZ);
+  }
 
 #if defined(PEANO_WITH_MPI)
   auto&    rank          = tarch::mpi::Rank::getInstance();
   MPI_Comm comm          = rank.getCommunicator();
   bool     useParallelIO = rank.getNumberOfRanks() > 1;
   bool     isMasterRank  = rank.isGlobalMaster();
+
+  // Do the I/O on a sub-communicator of the ranks that hold data. An empty rank's
+  // count-0 collective write to a compressed variable deadlocks parallel netCDF (the
+  // MPI implementations disagree on whether it engages), so we exclude such ranks.
+  MPI_Comm ioComm = MPI_COMM_NULL;
+  if (useParallelIO) {
+    const bool hasData    = localData.reference != nullptr;
+    int        localHas   = hasData ? 1 : 0;
+    int        anyHasData = 0;
+    tarch::mpi::allreduce(&localHas, &anyHasData, 1, MPI_INT, MPI_MAX, comm);
+
+    if (anyHasData == 0) {
+      // Every rank is empty: the master alone writes a (serial) valid empty file.
+      if (not isMasterRank) {
+        _written = true;
+        return true;
+      }
+      useParallelIO = false;
+    } else {
+      MPI_Comm_split(comm, hasData ? 0 : MPI_UNDEFINED, rank.getRank(), &ioComm);
+      if (not hasData) {
+        _written = true;
+        return true; // nothing to contribute; the ranks with data write the file
+      }
+      comm       = ioComm;
+      int ioRank = 0;
+      MPI_Comm_rank(ioComm, &ioRank);
+      isMasterRank = (ioRank == 0);
+    }
+  }
 #else
   bool useParallelIO = false;
-  bool isMasterRank  = true;
 #endif
+
+  bool globalHasFaces         = localHasFaces;
+  bool globalHasVolumes       = localHasVolumes;
+  bool globalHas3DCoordinates = localHas3DCoordinates;
 
 #if defined(PEANO_WITH_MPI)
   if (useParallelIO) {
-    tarch::mpi::scan(&localNumNodes, &offsetNodes, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
-    tarch::mpi::scan(&localNumFaces, &offsetFaces, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
-    offsetNodes -= localNumNodes;
-    offsetFaces -= localNumFaces;
-    tarch::mpi::allreduce(&localNumNodes, &totalNodes, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
-    tarch::mpi::allreduce(&localNumFaces, &totalFaces, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
+    // One max-allreduce so every participating rank agrees on the global mesh
+    // character: [0] any rank has 2D faces, [1] any rank has 3D volumes, [2] any rank
+    // has a non-zero z coordinate.
+    int localReduce[3]  = {localHasFaces ? 1 : 0, localHasVolumes ? 1 : 0, localHas3DCoordinates ? 1 : 0};
+    int globalReduce[3] = {0, 0, 0};
+    tarch::mpi::allreduce(localReduce, globalReduce, 3, MPI_INT, MPI_MAX, comm);
+
+    globalHasFaces         = globalReduce[0] != 0;
+    globalHasVolumes       = globalReduce[1] != 0;
+    globalHas3DCoordinates = globalReduce[2] != 0;
   }
 #endif
 
-  // Shift connectivity to global node indices
-  if (offsetNodes != 0 and not localFaceNodes.empty()) {
-    for (auto& idx : localFaceNodes) {
-      if (idx != FILL_VALUE) {
-        idx += static_cast<std::int32_t>(offsetNodes);
-      }
-    }
+  if (globalHasFaces and globalHasVolumes) {
+    throw std::runtime_error(
+      "NetCDFFileWriter does not support mixed 2D face cells and 3D volume cells in one UGRID mesh."
+    );
   }
+
+  const MeshTopologyDimension topologyDimension =
+    globalHasVolumes ? MeshTopologyDimension::ThreeD : MeshTopologyDimension::TwoD;
+  const bool is3DTopology     = topologyDimension == MeshTopologyDimension::ThreeD;
+  const bool writeZCoordinate = is3DTopology or globalHas3DCoordinates;
+  const int  maxElementNodes  = is3DTopology ? MAX_VOLUME_NODES : MAX_FACE_NODES;
+
+  // Append the subdomain's element-node table to the merged buffer (padded to
+  // maxElementNodes per cell with FILL_VALUE), rebasing node indices to global.
+  auto appendElementNodes =
+    [&](std::vector<int>& elementNodes, const SubdomainBuffers& subdomain, unsigned long long pointBase) {
+    const std::size_t base = elementNodes.size();
+    elementNodes.resize(base + subdomain.types.size() * static_cast<std::size_t>(maxElementNodes), FILL_VALUE);
+
+    const std::size_t nPoints   = subdomain.pointsXYZ.size() / 3;
+    std::int32_t      connBegin = 0;
+    for (std::size_t c = 0; c < subdomain.types.size(); ++c) {
+      const int           vtkType = static_cast<int>(subdomain.types[c]);
+      const CellTypeInfo* info    = lookupCellType(vtkType);
+
+      if ((is3DTopology and not is3DCell(vtkType)) or (not is3DTopology and not is2DCell(vtkType))) {
+        throw std::runtime_error(
+          "NetCDFFileWriter encountered a cell type that is inconsistent with the mesh topology."
+        );
+      }
+      // The consistency check above guarantees a known 2D/3D cell, so info is non-null here.
+
+      const std::int32_t connEnd       = subdomain.offsets[c];
+      const std::int32_t nNodes        = connEnd - connBegin;
+      const int          expectedNodes = info->nodes;
+
+      if (nNodes != expectedNodes) {
+        throw std::runtime_error(
+          std::string(info->name) + " cell has " + std::to_string(nNodes) + " nodes (expected " +
+          std::to_string(expectedNodes) + ")."
+        );
+      }
+
+      for (int k = 0; k < nNodes; ++k) {
+        const std::int32_t localIndex = subdomain.connectivity[connBegin + k];
+        if (localIndex < 0 or static_cast<std::size_t>(localIndex) >= nPoints) {
+          throw std::runtime_error("NetCDFFileWriter encountered a cell connectivity index outside its subdomain.");
+        }
+
+        const unsigned long long globalIndex = pointBase + static_cast<unsigned long long>(localIndex);
+        if (globalIndex > static_cast<unsigned long long>(std::numeric_limits<int>::max())) {
+          throw std::runtime_error("NetCDFFileWriter cannot write node indices that exceed 32-bit integer range.");
+        }
+
+        elementNodes[base + c * static_cast<std::size_t>(maxElementNodes) + k] = static_cast<int>(globalIndex);
+      }
+
+      connBegin = connEnd;
+    }
+  };
+
+  unsigned long long offsetNodes    = 0;
+  unsigned long long offsetElements = 0;
+  unsigned long long totalNodes     = localNumNodes;
+  unsigned long long totalElements  = localNumElements;
+
+#if defined(PEANO_WITH_MPI)
+  if (useParallelIO) {
+    // One scan and one allreduce over a 2-element array, rather than two of each.
+    unsigned long long localCounts[2] = {localNumNodes, localNumElements};
+
+    unsigned long long prefix[2] = {0, 0};
+    tarch::mpi::scan(localCounts, prefix, 2, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
+    offsetNodes    = prefix[0] - localNumNodes;
+    offsetElements = prefix[1] - localNumElements;
+
+    unsigned long long totals[2] = {0, 0};
+    tarch::mpi::allreduce(localCounts, totals, 2, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
+    totalNodes    = totals[0];
+    totalElements = totals[1];
+  }
+#endif
 
   int ncid = -1;
 
 #if defined(PEANO_WITH_MPI)
   if (useParallelIO) {
-    check(
-      nc_create_par(filePath.string().c_str(), NC_NETCDF4 | NC_CLOBBER, comm, MPI_INFO_NULL, &ncid),
-      "nc_create_par(" + filePath.string() + ")"
-    );
+    MPI_Info   info  = MPI_INFO_NULL;
+    const auto hints = mpiIoHints();
+    if (not hints.empty()) {
+      MPI_Info_create(&info);
+      for (const auto& hint : hints) {
+        MPI_Info_set(info, hint.first.c_str(), hint.second.c_str());
+      }
+    }
+    const int status = nc_create_par(filePath.string().c_str(), NC_NETCDF4 | NC_CLOBBER, comm, info, &ncid);
+    if (info != MPI_INFO_NULL) {
+      MPI_Info_free(&info);
+    }
+    check(status, "nc_create_par(" + filePath.string() + ")");
   } else {
     check(nc_create(filePath.string().c_str(), NC_NETCDF4 | NC_CLOBBER, &ncid), "nc_create(" + filePath.string() + ")");
   }
 #else
   check(nc_create(filePath.string().c_str(), NC_NETCDF4 | NC_CLOBBER, &ncid), "nc_create(" + filePath.string() + ")");
 #endif
+
+  // Close the open file if a check() throws before the explicit nc_close below.
+  // Disarmed on the success path.
+  struct NcFileCloser {
+    int  id;
+    bool armed = true;
+    ~NcFileCloser() {
+      if (armed and id >= 0) {
+        nc_close(id);
+      }
+    }
+  } ncFileCloser{ncid};
 
   // Disable pre-filling for performance (we always write all values we expose)
   int oldFill = 0;
@@ -153,42 +296,126 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
     check(nc_put_att_text(ncid, NC_GLOBAL, "Conventions", std::strlen(conv), conv), "put Conventions");
   }
 
+  const char* meshName            = is3DTopology ? "mesh3d" : "mesh2d";
+  const char* nodeDimName         = is3DTopology ? "nMesh3d_node" : "nMesh2d_node";
+  const char* elementDimName      = is3DTopology ? "nMesh3d_volume" : "nMesh2d_face";
+  const char* maxElementDimName   = is3DTopology ? "nMaxMesh3d_volume_nodes" : "nMax_face_nodes";
+  const char* elementNodesName    = is3DTopology ? "volume_nodes" : "face_nodes";
+  const char* elementNodesRole    = is3DTopology ? "volume_node_connectivity" : "face_node_connectivity";
+  const char* elementDimensionAtt = is3DTopology ? "volume_dimension" : "face_dimension";
+  const char* elementLocation     = is3DTopology ? "volume" : "face";
+
+  // Size deflated chunks to a ~1 MiB byte target. The bulk variables are all 4-byte, so
+  // the element targets derive from this. Tiny chunks multiply the per-chunk filter cost;
+  // larger ones straddle more rank boundaries.
+  constexpr std::size_t ChunkByteTarget    = 1u << 20;
+  constexpr std::size_t BytesPerBulkScalar = 4;
+
+  auto configure1DVariable = [&](int varId, unsigned long long globalLen, const std::string& name) {
+    if (globalLen == 0) {
+      return;
+    }
+
+    const std::size_t targetElems = ChunkByteTarget / BytesPerBulkScalar;
+    const std::size_t chunk0 =
+      std::max<std::size_t>(1, std::min<std::size_t>(static_cast<std::size_t>(globalLen), targetElems));
+    std::size_t chunks[1] = {chunk0};
+    check(nc_def_var_chunking(ncid, varId, NC_CHUNKED, chunks), "chunking " + name);
+    check(nc_def_var_deflate(ncid, varId, 1, 1, 1), "deflate " + name);
+    // Size the cache to hold the chunk, so each slab is deflated once.
+    nc_set_var_chunk_cache(
+      ncid,
+      varId,
+      std::max<std::size_t>(chunk0 * BytesPerBulkScalar, ChunkByteTarget),
+      1009,
+      0.75f
+    );
+  };
+
+  auto configure2DVariable =
+    [&](int varId, unsigned long long globalRows, std::size_t columns, const std::string& name) {
+    if (globalRows == 0) {
+      return;
+    }
+
+    const std::size_t bytesPerRow = std::max<std::size_t>(1, columns * BytesPerBulkScalar);
+    const std::size_t targetRows  = std::max<std::size_t>(1, ChunkByteTarget / bytesPerRow);
+    const std::size_t chunkRows =
+      std::max<std::size_t>(1, std::min<std::size_t>(static_cast<std::size_t>(globalRows), targetRows));
+    std::size_t chunks[2] = {chunkRows, columns};
+    check(nc_def_var_chunking(ncid, varId, NC_CHUNKED, chunks), "chunking " + name);
+    check(nc_def_var_deflate(ncid, varId, 1, 1, 1), "deflate " + name);
+    nc_set_var_chunk_cache(ncid, varId, std::max<std::size_t>(chunkRows * bytesPerRow, ChunkByteTarget), 1009, 0.75f);
+  };
+
   // Dimensions
   int dimOne = -1;
   check(nc_def_dim(ncid, "one", 1, &dimOne), "def dim one");
   int dimTime = -1;
   check(nc_def_dim(ncid, "time", NC_UNLIMITED, &dimTime), "def dim time");
   int dimNode = -1;
-  check(nc_def_dim(ncid, "nMesh2d_node", static_cast<std::size_t>(totalNodes), &dimNode), "def dim nMesh2d_node");
-  int dimFace = -1;
-  check(nc_def_dim(ncid, "nMesh2d_face", static_cast<std::size_t>(totalFaces), &dimFace), "def dim nMesh2d_face");
-  int dimMaxFaceNodes = -1;
-  check(nc_def_dim(ncid, "nMax_face_nodes", MAX_FACE_NODES, &dimMaxFaceNodes), "def dim nMax_face_nodes");
+  check(
+    nc_def_dim(ncid, nodeDimName, static_cast<std::size_t>(totalNodes), &dimNode),
+    std::string("def dim ") + nodeDimName
+  );
+  int dimElement = -1;
+  check(
+    nc_def_dim(ncid, elementDimName, static_cast<std::size_t>(totalElements), &dimElement),
+    std::string("def dim ") + elementDimName
+  );
+  int dimMaxElementNodes = -1;
+  check(
+    nc_def_dim(ncid, maxElementDimName, maxElementNodes, &dimMaxElementNodes),
+    std::string("def dim ") + maxElementDimName
+  );
+
+  // A dimension with no same-named coordinate variable gets a phony dimension scale that
+  // parallel netCDF-4 stores uncompressed and fully pre-allocated (megabytes per large
+  // mesh dimension). A chunked, deflated coordinate variable named after the dimension
+  // replaces it; left unwritten it costs no I/O, and readers treat a variable named after
+  // its dimension as a coordinate, not a field.
+  int varNodeIndex = -1;
+  check(
+    nc_def_var(ncid, nodeDimName, NC_INT, 1, &dimNode, &varNodeIndex),
+    std::string("def dimension-scale ") + nodeDimName
+  );
+  configure1DVariable(varNodeIndex, totalNodes, nodeDimName);
+  int varElementIndex = -1;
+  check(
+    nc_def_var(ncid, elementDimName, NC_INT, 1, &dimElement, &varElementIndex),
+    std::string("def dimension-scale ") + elementDimName
+  );
+  configure1DVariable(varElementIndex, totalElements, elementDimName);
 
   // Mesh topology dummy variable
   int varMesh = -1;
   {
     int meshDims[1] = {dimOne};
-    check(nc_def_var(ncid, "mesh2d", NC_INT, 1, meshDims, &varMesh), "def var mesh2d");
+    check(nc_def_var(ncid, meshName, NC_INT, 1, meshDims, &varMesh), std::string("def var ") + meshName);
     const char* role = "mesh_topology";
     check(nc_put_att_text(ncid, varMesh, "cf_role", std::strlen(role), role), "mesh cf_role");
-    const int topoDim = 2;
+    const int topoDim = static_cast<int>(topologyDimension);
     check(nc_put_att_int(ncid, varMesh, "topology_dimension", NC_INT, 1, &topoDim), "mesh topology_dimension");
-    const char* nodeCoords = "x y";
+    const char* nodeCoords = writeZCoordinate ? "x y z" : "x y";
     check(
       nc_put_att_text(ncid, varMesh, "node_coordinates", std::strlen(nodeCoords), nodeCoords),
       "mesh node_coordinates"
     );
-    const char* faceConn = "face_nodes";
     check(
-      nc_put_att_text(ncid, varMesh, "face_node_connectivity", std::strlen(faceConn), faceConn),
-      "mesh face_node_connectivity"
+      nc_put_att_text(ncid, varMesh, elementNodesRole, std::strlen(elementNodesName), elementNodesName),
+      std::string("mesh ") + elementNodesRole
     );
-    const char* faceDimName = "nMesh2d_face";
     check(
-      nc_put_att_text(ncid, varMesh, "face_dimension", std::strlen(faceDimName), faceDimName),
-      "mesh face_dimension"
+      nc_put_att_text(ncid, varMesh, elementDimensionAtt, std::strlen(elementDimName), elementDimName),
+      std::string("mesh ") + elementDimensionAtt
     );
+    if (is3DTopology) {
+      const char* volumeShapeType = "volume_shape_type";
+      check(
+        nc_put_att_text(ncid, varMesh, "volume_shape_type", std::strlen(volumeShapeType), volumeShapeType),
+        "mesh volume_shape_type"
+      );
+    }
   }
 
   // Time
@@ -205,60 +432,115 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
   // Coordinates
   int varX = -1;
   int varY = -1;
+  int varZ = -1;
   {
     int dims1[1] = {dimNode};
     check(nc_def_var(ncid, "x", NC_FLOAT, 1, dims1, &varX), "def var x");
     check(nc_def_var(ncid, "y", NC_FLOAT, 1, dims1, &varY), "def var y");
+    if (writeZCoordinate) {
+      check(nc_def_var(ncid, "z", NC_FLOAT, 1, dims1, &varZ), "def var z");
+    }
 
     // Minimal CF metadata
     const char* sx = "projection_x_coordinate";
     const char* sy = "projection_y_coordinate";
     check(nc_put_att_text(ncid, varX, "standard_name", std::strlen(sx), sx), "x standard_name");
     check(nc_put_att_text(ncid, varY, "standard_name", std::strlen(sy), sy), "y standard_name");
+    if (writeZCoordinate) {
+      const char* sz = "height";
+      check(nc_put_att_text(ncid, varZ, "standard_name", std::strlen(sz), sz), "z standard_name");
+    }
 
-    // Chunking + compression for storage efficiency (skip if empty)
-    if (totalNodes > 0) {
-      const std::size_t chunk0 =
-        std::max<std::size_t>(1, std::min<std::size_t>(static_cast<std::size_t>(totalNodes), 4096));
-      std::size_t chunks[1] = {chunk0};
-      check(nc_def_var_chunking(ncid, varX, NC_CHUNKED, chunks), "chunking x");
-      check(nc_def_var_chunking(ncid, varY, NC_CHUNKED, chunks), "chunking y");
-      check(nc_def_var_deflate(ncid, varX, 1, 1, 1), "deflate x");
-      check(nc_def_var_deflate(ncid, varY, 1, 1, 1), "deflate y");
+    configure1DVariable(varX, totalNodes, "x");
+    configure1DVariable(varY, totalNodes, "y");
+    if (writeZCoordinate) {
+      configure1DVariable(varZ, totalNodes, "z");
     }
   }
 
-  // Face-node connectivity
-  int varFaceNodes = -1;
+  // Face-node or volume-node connectivity
+  int varElementNodes = -1;
   {
-    int dims2[2] = {dimFace, dimMaxFaceNodes};
-    check(nc_def_var(ncid, "face_nodes", NC_INT, 2, dims2, &varFaceNodes), "def var face_nodes");
-    const char* role = "face_node_connectivity";
-    check(nc_put_att_text(ncid, varFaceNodes, "cf_role", std::strlen(role), role), "face_nodes cf_role");
+    int dims2[2] = {dimElement, dimMaxElementNodes};
+    check(
+      nc_def_var(ncid, elementNodesName, NC_INT, 2, dims2, &varElementNodes),
+      std::string("def var ") + elementNodesName
+    );
+    check(
+      nc_put_att_text(ncid, varElementNodes, "cf_role", std::strlen(elementNodesRole), elementNodesRole),
+      std::string(elementNodesName) + " cf_role"
+    );
+    const char* longName =
+      is3DTopology ? "Maps every volume to its corner nodes." : "Maps every face to its corner nodes.";
+    check(
+      nc_put_att_text(ncid, varElementNodes, "long_name", std::strlen(longName), longName),
+      std::string(elementNodesName) + " long_name"
+    );
     const int startIndex = 0;
-    check(nc_put_att_int(ncid, varFaceNodes, "start_index", NC_INT, 1, &startIndex), "face_nodes start_index");
-    // Fill value for padding (triangles)
+    check(
+      nc_put_att_int(ncid, varElementNodes, "start_index", NC_INT, 1, &startIndex),
+      std::string(elementNodesName) + " start_index"
+    );
     const int fv = static_cast<int>(FILL_VALUE);
-    check(nc_put_att_int(ncid, varFaceNodes, "_FillValue", NC_INT, 1, &fv), "face_nodes _FillValue");
+    check(
+      nc_put_att_int(ncid, varElementNodes, "_FillValue", NC_INT, 1, &fv),
+      std::string(elementNodesName) + " _FillValue"
+    );
 
-    // Chunking + compression for storage efficiency.
-    // Avoid chunk setup when the corresponding dimension is zero.
-    if (totalFaces > 0) {
-      const std::size_t chunkFaces =
-        std::max<std::size_t>(1, std::min<std::size_t>(static_cast<std::size_t>(totalFaces), 1024));
-      std::size_t chunks[2] = {chunkFaces, static_cast<std::size_t>(MAX_FACE_NODES)};
-      check(nc_def_var_chunking(ncid, varFaceNodes, NC_CHUNKED, chunks), "chunking face_nodes");
-      check(nc_def_var_deflate(ncid, varFaceNodes, 1, 1, 1), "deflate face_nodes");
-    }
+    // UGRID-1.0 does not standardise the corner ordering of 3D volume
+    // connectivity, so document the convention we write. 2D faces follow the
+    // UGRID counter-clockwise face convention.
+    const char* nodeOrdering =
+      is3DTopology ? "Corner order follows VTK_HEXAHEDRON (cell type 12): nodes 0-3 form one quadrilateral face "
+                     "listed counter-clockwise, nodes 4-7 the opposite face in the same orientation, with node 4 "
+                     "adjacent to node 0, 5 to 1, 6 to 2 and 7 to 3."
+                   : "Face corner nodes are listed counter-clockwise.";
+    check(
+      nc_put_att_text(ncid, varElementNodes, "node_ordering", std::strlen(nodeOrdering), nodeOrdering),
+      std::string(elementNodesName) + " node_ordering"
+    );
+
+    configure2DVariable(varElementNodes, totalElements, static_cast<std::size_t>(maxElementNodes), elementNodesName);
   }
 
-  // Data fields
-  std::vector<std::vector<int>> pointVarIds(localData.pointFields.size());
-  std::vector<std::vector<int>> faceVarIds(localData.cellFields.size());
+  int varVolumeShapeType = -1;
+  if (is3DTopology) {
+    int d[1] = {dimElement};
+    check(nc_def_var(ncid, "volume_shape_type", NC_INT, 1, d, &varVolumeShapeType), "def var volume_shape_type");
+    const char* role = "volume_shape_type";
+    check(nc_put_att_text(ncid, varVolumeShapeType, "cf_role", std::strlen(role), role), "volume_shape_type cf_role");
+    const char* longName = "Specifies the shape of the individual volumes.";
+    check(
+      nc_put_att_text(ncid, varVolumeShapeType, "long_name", std::strlen(longName), longName),
+      "volume_shape_type long_name"
+    );
+    int flagRange[2]  = {0, UGRID_HEXAHEDRON_TAG};
+    int flagValues[3] = {0, 1, UGRID_HEXAHEDRON_TAG};
+    check(nc_put_att_int(ncid, varVolumeShapeType, "flag_range", NC_INT, 2, flagRange), "volume_shape_type flag_range");
+    check(
+      nc_put_att_int(ncid, varVolumeShapeType, "flag_values", NC_INT, 3, flagValues),
+      "volume_shape_type flag_values"
+    );
+    const char* meanings = "tetrahedron wedge hexahedron";
+    check(
+      nc_put_att_text(ncid, varVolumeShapeType, "flag_meanings", std::strlen(meanings), meanings),
+      "volume_shape_type flag_meanings"
+    );
+    configure1DVariable(varVolumeShapeType, totalElements, "volume_shape_type");
+  }
+
+  // Empty ranks were dropped from the writing communicator, so the schema comes from the
+  // local reference without any exchange.
+  const FieldSchema             schema      = fieldSchemaFromReference(localData.reference);
+  const std::vector<DataField>& pointFields = schema.pointFields;
+  const std::vector<DataField>& cellFields  = schema.cellFields;
+
+  std::vector<std::vector<int>> pointVarIds(pointFields.size());
+  std::vector<std::vector<int>> faceVarIds(cellFields.size());
 
   auto defDataVar = [&](const DataField& f, bool onNodes, std::vector<int>& outVarIds) {
-    int         dimId     = onNodes ? dimNode : dimFace;
-    std::size_t globalLen = onNodes ? totalNodes : totalFaces;
+    int                dimId     = onNodes ? dimNode : dimElement;
+    unsigned long long globalLen = onNodes ? totalNodes : totalElements;
 
     for (int c = 0; c < f.components; ++c) {
       std::string name = f.name;
@@ -281,44 +563,45 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
         "attr long_name for " + name
       );
 
-      // Standard UGRID Attributes
-      const char* meshName = "mesh2d";
       check(nc_put_att_text(ncid, varId, "mesh", std::strlen(meshName), meshName), "attr mesh for " + name);
 
-      const char* location = onNodes ? "node" : "face";
+      const char* location = onNodes ? "node" : elementLocation;
       check(nc_put_att_text(ncid, varId, "location", std::strlen(location), location), "attr location for " + name);
 
-      // Chunking & Compression
-      if (globalLen > 0) {
-        const std::size_t chunkLen  = std::max<std::size_t>(1, std::min<std::size_t>(globalLen, 4096));
-        std::size_t       chunks[1] = {chunkLen};
-        check(nc_def_var_chunking(ncid, varId, NC_CHUNKED, chunks), "chunking " + name);
-        check(nc_def_var_deflate(ncid, varId, 1, 1, 1), "deflate " + name);
-      }
+      configure1DVariable(varId, globalLen, name);
 
       outVarIds.push_back(varId);
     }
   };
 
-  for (std::size_t i = 0; i < localData.pointFields.size(); ++i) {
-    defDataVar(localData.pointFields[i], true, pointVarIds[i]);
+  for (std::size_t i = 0; i < pointFields.size(); ++i) {
+    defDataVar(pointFields[i], true, pointVarIds[i]);
   }
-  for (std::size_t i = 0; i < localData.cellFields.size(); ++i) {
-    defDataVar(localData.cellFields[i], false, faceVarIds[i]);
+  for (std::size_t i = 0; i < cellFields.size(); ++i) {
+    defDataVar(cellFields[i], false, faceVarIds[i]);
   }
 
   check(nc_enddef(ncid), "nc_enddef");
 
 #if defined(PEANO_WITH_MPI)
   if (useParallelIO) {
-    // Scalar metadata variables are written collectively below. Non-master ranks
-    // contribute an empty selection, which keeps parallel NetCDF/HDF5 backends in
-    // collective data mode.
-    check(nc_var_par_access(ncid, varMesh, NC_COLLECTIVE), "par_access mesh2d");
+    // Collective access (independent deadlocks because the file has an unlimited time
+    // dimension). Every participating rank holds data, so each write is non-empty.
+    // The mesh-topology scalar is collective too: if a single rank wrote it independently
+    // the ranks' HDF5 metadata caches would diverge, which deadlocks the collective
+    // metadata flush in nc_close (one rank waits in H5AC__run_sync_point's barrier while
+    // others wait in H5C_protect's broadcast).
+    check(nc_var_par_access(ncid, varMesh, NC_COLLECTIVE), "par_access mesh topology");
     check(nc_var_par_access(ncid, varTime, NC_COLLECTIVE), "par_access time");
     check(nc_var_par_access(ncid, varX, NC_COLLECTIVE), "par_access x");
     check(nc_var_par_access(ncid, varY, NC_COLLECTIVE), "par_access y");
-    check(nc_var_par_access(ncid, varFaceNodes, NC_COLLECTIVE), "par_access face_nodes");
+    if (writeZCoordinate) {
+      check(nc_var_par_access(ncid, varZ, NC_COLLECTIVE), "par_access z");
+    }
+    check(nc_var_par_access(ncid, varElementNodes, NC_COLLECTIVE), std::string("par_access ") + elementNodesName);
+    if (is3DTopology) {
+      check(nc_var_par_access(ncid, varVolumeShapeType, NC_COLLECTIVE), "par_access volume_shape_type");
+    }
     for (const auto& ids : pointVarIds) {
       for (int id : ids) {
         check(nc_var_par_access(ncid, id, NC_COLLECTIVE), "par_access point field");
@@ -332,83 +615,132 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
   }
 #endif
 
-  // Write coordinates (extract x/y from interlaced XYZ buffer)
-  std::vector<float> x;
-  std::vector<float> y;
-  x.reserve(static_cast<std::size_t>(localNumNodes));
-  y.reserve(static_cast<std::size_t>(localNumNodes));
-  for (std::size_t i = 0; i < localData.pointsXYZ.size(); i += 3) {
-    x.push_back(localData.pointsXYZ[i + 0]);
-    y.push_back(localData.pointsXYZ[i + 1]);
-  }
-
   // Write time scalar
   {
+    // Every rank writes the same single time value, so this collective write has no
+    // count-0 participant (a count-0 write to a record variable deadlocks parallel
+    // netCDF on some MPI implementations).
     std::size_t startT[1] = {0};
-    std::size_t countT[1] = {useParallelIO ? static_cast<std::size_t>(isMasterRank ? 1 : 0) : 1};
+    std::size_t countT[1] = {1};
     check(nc_put_vara_double(ncid, varTime, startT, countT, &time), "write time value");
   }
 
-  const float dummyF = 0.0f;
-  const int   dummyI = 0;
+  const int dummyI = 0;
 
-  // Write a defined value for the mesh topology dummy variable
-  {
-    std::size_t startMesh[1] = {0};
-    std::size_t countMesh[1] = {useParallelIO ? static_cast<std::size_t>(isMasterRank ? 1 : 0) : 1};
-    check(nc_put_vara_int(ncid, varMesh, startMesh, countMesh, &dummyI), "write mesh2d");
+  // Write a defined value for the mesh topology dummy variable. All participating ranks
+  // write the same scalar collectively: a master-only write would diverge the ranks'
+  // metadata caches and deadlock the collective nc_close (see par_access note above).
+  check(nc_put_var_int(ncid, varMesh, &dummyI), "write mesh topology");
+
+  auto writeVara1DFloat =
+    [&](int varId, const float* data, unsigned long long offset, unsigned long long count, const std::string& where) {
+    const float dummyF    = 0.0f;
+    std::size_t start[1]  = {static_cast<std::size_t>(offset)};
+    std::size_t countA[1] = {static_cast<std::size_t>(count)};
+    check(nc_put_vara_float(ncid, varId, start, countA, count > 0 ? data : &dummyF), where);
+  };
+
+  // Coordinates: de-interleave each subdomain's XYZ into contiguous per-axis
+  // buffers, then one collective write per axis (an empty rank writes count 0).
+  std::vector<float> mergedX, mergedY, mergedZ;
+  mergedX.reserve(localNumNodes);
+  mergedY.reserve(localNumNodes);
+  if (writeZCoordinate) {
+    mergedZ.reserve(localNumNodes);
+  }
+  for (const SubdomainBuffers* subdomain : localData.payloads) {
+    const unsigned long long nPoints = subdomain->pointsXYZ.size() / 3;
+    for (unsigned long long p = 0; p < nPoints; ++p) {
+      mergedX.push_back(subdomain->pointsXYZ[3 * p + 0]);
+      mergedY.push_back(subdomain->pointsXYZ[3 * p + 1]);
+      if (writeZCoordinate) {
+        mergedZ.push_back(subdomain->pointsXYZ[3 * p + 2]);
+      }
+    }
+  }
+  writeVara1DFloat(varX, mergedX.data(), offsetNodes, localNumNodes, "write x");
+  writeVara1DFloat(varY, mergedY.data(), offsetNodes, localNumNodes, "write y");
+  if (writeZCoordinate) {
+    writeVara1DFloat(varZ, mergedZ.data(), offsetNodes, localNumNodes, "write z");
   }
 
+  // Connectivity: merge every subdomain's element-node table into one buffer (node
+  // indices rebased to global) and write it once.
   {
-    std::size_t start[1] = {static_cast<std::size_t>(offsetNodes)};
-    std::size_t count[1] = {static_cast<std::size_t>(localNumNodes)};
-    check(nc_put_vara_float(ncid, varX, start, count, localNumNodes ? x.data() : &dummyF), "write x");
-    check(nc_put_vara_float(ncid, varY, start, count, localNumNodes ? y.data() : &dummyF), "write y");
-  }
-
-  // Write connectivity
-  {
-    std::size_t start[2] = {static_cast<std::size_t>(offsetFaces), 0};
-    std::size_t count[2] = {static_cast<std::size_t>(localNumFaces), static_cast<std::size_t>(MAX_FACE_NODES)};
+    std::vector<int> mergedElementNodes;
+    mergedElementNodes.reserve(localNumElements * static_cast<std::size_t>(maxElementNodes));
+    unsigned long long pointCursor = 0;
+    for (const SubdomainBuffers* subdomain : localData.payloads) {
+      appendElementNodes(mergedElementNodes, *subdomain, offsetNodes + pointCursor);
+      pointCursor += subdomain->pointsXYZ.size() / 3;
+    }
+    const int   dummyConnectivity = FILL_VALUE;
+    std::size_t start[2]          = {static_cast<std::size_t>(offsetElements), 0};
+    std::size_t count[2] = {static_cast<std::size_t>(localNumElements), static_cast<std::size_t>(maxElementNodes)};
     check(
-      nc_put_vara_int(ncid, varFaceNodes, start, count, localNumFaces ? localFaceNodes.data() : &dummyI),
-      "write face_nodes"
+      nc_put_vara_int(
+        ncid,
+        varElementNodes,
+        start,
+        count,
+        localNumElements > 0 ? mergedElementNodes.data() : &dummyConnectivity
+      ),
+      std::string("write ") + elementNodesName
     );
   }
 
-  // Write fields
-  auto writeField =
-    [&](const std::vector<int>& varIds, const DataField& f, unsigned long long offset, unsigned long long nTuples) {
-    if (nTuples == 0) {
-      return;
-    }
+  if (is3DTopology) {
+    std::vector<int> mergedShapeTypes(localNumElements, UGRID_HEXAHEDRON_TAG);
+    const int        dummyShapeType = UGRID_HEXAHEDRON_TAG;
+    std::size_t      start[1]       = {static_cast<std::size_t>(offsetElements)};
+    std::size_t      count[1]       = {static_cast<std::size_t>(localNumElements)};
+    check(
+      nc_put_vara_int(
+        ncid,
+        varVolumeShapeType,
+        start,
+        count,
+        localNumElements > 0 ? mergedShapeTypes.data() : &dummyShapeType
+      ),
+      "write volume_shape_type"
+    );
+  }
 
-    // We need to split the interlaced data in f.values [nTuples * nComponents]
-    // into separate buffers for each component [nTuples].
-    int                numComponents = f.components;
-    std::vector<float> buffer(nTuples); // Temp buffer for one component
-
-    std::size_t start[1] = {static_cast<std::size_t>(offset)};
-    std::size_t count[1] = {static_cast<std::size_t>(nTuples)};
-
-    for (int c = 0; c < numComponents; ++c) {
-      // Extract component 'c' from the interlaced array
-      for (std::size_t i = 0; i < nTuples; ++i) {
-        buffer[i] = static_cast<float>(f.values[i * numComponents + c]);
+  // Field data: gather each component into one contiguous per-rank buffer (the
+  // subdomain values are component-major) and write it.
+  auto writeMergedField = [&](const std::vector<int>& varIds, bool onNodes, std::size_t fieldIndex) {
+    const unsigned long long count  = onNodes ? localNumNodes : localNumElements;
+    const unsigned long long offset = onNodes ? offsetNodes : offsetElements;
+    const int components            = onNodes ? pointFields[fieldIndex].components : cellFields[fieldIndex].components;
+    for (int c = 0; c < components; ++c) {
+      std::vector<float> buffer;
+      buffer.reserve(count);
+      for (const SubdomainBuffers* subdomain : localData.payloads) {
+        const DataField&  field   = onNodes ? subdomain->pointFields[fieldIndex] : subdomain->cellFields[fieldIndex];
+        const std::size_t nTuples = field.values.size() / static_cast<std::size_t>(components);
+        for (std::size_t t = 0; t < nTuples; ++t) {
+          buffer.push_back(field.values[t * components + c]);
+        }
       }
-
-      check(nc_put_vara_float(ncid, varIds[c], start, count, buffer.data()), "write field " + f.name);
+      writeVara1DFloat(varIds[c], buffer.data(), offset, count, "write field");
     }
   };
 
-  for (std::size_t i = 0; i < localData.pointFields.size(); ++i) {
-    writeField(pointVarIds[i], localData.pointFields[i], offsetNodes, localNumNodes);
+  for (std::size_t i = 0; i < pointFields.size(); ++i) {
+    writeMergedField(pointVarIds[i], true, i);
   }
-  for (std::size_t i = 0; i < localData.cellFields.size(); ++i) {
-    writeField(faceVarIds[i], localData.cellFields[i], offsetFaces, localNumFaces);
+  for (std::size_t i = 0; i < cellFields.size(); ++i) {
+    writeMergedField(faceVarIds[i], false, i);
   }
 
+  ncFileCloser.armed = false;
   check(nc_close(ncid), "nc_close");
+
+#if defined(PEANO_WITH_MPI)
+  if (ioComm != MPI_COMM_NULL) {
+    MPI_Comm_free(&ioComm);
+  }
+#endif
 
   _written = true;
   return true;

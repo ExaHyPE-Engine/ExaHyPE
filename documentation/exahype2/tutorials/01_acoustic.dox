@@ -118,12 +118,11 @@ flags - no recompilation is needed to change the run:
 
 Here `-et` is the end time, `-ns` the number of snapshots, and `-l` the uniform
 mesh level: level \f$\ell\f$ covers the domain with \f$3^\ell\f$ cells per
-direction. `OMP_NUM_THREADS` runs the solver on four OpenMP threads. Snapshots
-are written as HDF5 into `solutions/`. The notebook then renders them with an
-interactive time slider:
+direction. `OMP_NUM_THREADS` runs the solver on four OpenMP threads. The notebook
+then renders the snapshots with an interactive time slider:
 
-    from postprocessing import render_solution_interactively
-    render_solution_interactively.show_solution("ADERDGSolver", field="p")
+    from postprocessing import render_solution
+    render_solution.show_solution("ADERDGSolver", field="p")
 
 By the end of the run the wave has expanded from the source in the bottom-left
 and swept across to the **upper-right** of the domain:
@@ -143,6 +142,6 @@ Drag the slider to watch the wave expand from the source and reflect off the wal
 
 When you are comfortable with the workflow, continue with
 @ref page_exahype2_tutorials_shallow_water, where you implement a non-linear
-solver yourself - and meet adaptive mesh refinement.
+solver yourself - and meet static mesh refinement.
 
 */

@@ -8,37 +8,52 @@ namespace tarch::plotter::tests {
   class VTUFileWriterTest;
 } // namespace tarch::plotter::tests
 
-class tarch::plotter::tests::VTUFileWriterTest final: public tarch::tests::TestCase {
+class tarch::plotter::tests::VTUFileWriterTest final : public tarch::tests::TestCase {
 private:
   void test2DSimpleTriangle();
   void test3DSimpleHexahedron();
   void test2DParticlesWithData();
   void test3DCellData();
-  void test2DAMRGrid();
-  void test3DAMRGrid();
 
   /**
-   * Checks if an untouched plotter produces a valid empty VTU file.
+   * An untouched plotter produces a valid empty VTU file.
    */
   void testEmptyPlotter();
 
   /**
-   * Checks if we can handle one rank having data and another (simulated subdomain) being empty.
+   * One subdomain holds data, another is empty.
    */
   void testMixedEmptySubdomains();
 
   /**
-   * Verifies that the plotter throws an exception if we try to write
-   * more data tuples than there are geometry elements.
+   * Multiple non-empty local subdomains are written as separate pieces.
+   */
+  void testMultipleNonEmptySubdomains();
+
+  /**
+   * Writing more data tuples than geometry elements must throw.
    */
   void testOversizedDataThrows();
 
   /**
-   * Verifies consistency check: if we define a field on one subdomain,
-   * others must match the schema (even if empty, though empty usually skips validation).
-   * We test a case where two non-empty subdomains have conflicting fields.
+   * Two non-empty subdomains with conflicting field schemas (same name, different
+   * component count) must be rejected.
    */
   void testInconsistentSchemaThrows();
+
+  /**
+   * Ranks hold different non-zero subdomain counts (master 3, the rest 2). VTU
+   * writes one .vtu per rank with one <Piece> per subdomain, so each rank's file
+   * must carry exactly its own subdomain count - the per-rank analogue of the
+   * collective writers' uneven-distribution test.
+   */
+  void testUnevenSubdomainCounts();
+
+  /**
+   * A data identifier with a character that would corrupt the XML is rejected up
+   * front (shared FileWriter::validateIdentifier).
+   */
+  void testInvalidIdentifierThrows();
 
 public:
   VTUFileWriterTest();

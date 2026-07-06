@@ -7,15 +7,20 @@
 #include <iomanip>
 #include <sstream>
 
-void tarch::plotter::TimeSeriesWriter::
-  writeSnapshotFile(const std::string& filename, double time, FileWriter& fileWriter) {
+std::string tarch::plotter::TimeSeriesWriter::snapshotName(const std::string& filename, double time) const {
   std::ostringstream oss;
   oss << filename << "-" << std::fixed << std::setprecision(6) << time;
+  std::string name = oss.str();
+  std::replace(name.begin(), name.end(), '.', '_');
+  return name;
+}
 
-  std::string snapshotName = oss.str();
-  std::replace(snapshotName.begin(), snapshotName.end(), '.', '_');
-
-  _snapshots.push_back({time, snapshotName + fileWriter.getFileExtension()});
-
-  fileWriter.writeToFile(snapshotName, time);
+void tarch::plotter::TimeSeriesWriter::writeSnapshotFile(
+  const std::string& filename,
+  double             time,
+  FileWriter&        fileWriter
+) {
+  const std::string name = snapshotName(filename, time);
+  _snapshots.push_back({time, name + fileWriter.getFileExtension()});
+  fileWriter.writeToFile(name, time);
 }

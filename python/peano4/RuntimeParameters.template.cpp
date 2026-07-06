@@ -179,7 +179,7 @@ void {{NAMESPACE | join("::")}}::RuntimeParameters::printUsage() {
 {% if HAS_RUNTIME_PARAMETERS %}
 {% for parameter in RUNTIME_PARAMETERS %}
   std::cout
-    << "  --{{ parameter.cli_name }} <{% if parameter.is_array %}{{ parameter.base_type }}[{{ parameter.array_size }}]{% else %}{{ parameter.base_type }}{% endif %}>"
+    << "  --{{ parameter.name }} <{% if parameter.is_array %}{{ parameter.base_type }}[{{ parameter.array_size }}]{% else %}{{ parameter.base_type }}{% endif %}>"
     << " (default: " << formatDefault(Storage{}.{{ parameter.name }}) << ").\n";
 {% endfor %}
 {% if HAS_ARRAY_RUNTIME_PARAMETERS %}
@@ -190,37 +190,36 @@ void {{NAMESPACE | join("::")}}::RuntimeParameters::printUsage() {
 {% endif %}
 }
 
-void {{NAMESPACE | join("::")}}::RuntimeParameters::load(const std::string& configFilePath) {
+void {{NAMESPACE | join("::")}}::RuntimeParameters::load(tarch::reader::JSONReader* reader) {
   _storage = Storage{};
 
-  if (configFilePath.empty()) {
+  if (reader == nullptr) {
     return;
   }
 
-  tarch::reader::JSONReader reader(configFilePath);
 {% for parameter in RUNTIME_PARAMETERS %}
-  if (reader.hasKey("{{ parameter.cli_name }}")) {
+  if (reader->hasKey("{{ parameter.name }}")) {
 {% if parameter.is_array %}
     _storage.{{ parameter.name }} = to{{ parameter.name[0].upper() }}{{ parameter.name[1:] }}(
-      reader.{{ parameter.getter }}("{{ parameter.cli_name }}"),
+      reader->{{ parameter.getter }}("{{ parameter.name }}"),
       _storage.{{ parameter.name }}
     );
 {% else %}
-    _storage.{{ parameter.name }} = reader.{{ parameter.getter }}("{{ parameter.cli_name }}");
+    _storage.{{ parameter.name }} = reader->{{ parameter.getter }}("{{ parameter.name }}");
 {% endif %}
   }
 {% endfor %}
 }
 
-void {{NAMESPACE | join("::")}}::RuntimeParameters::load(const std::string& configFilePath, int& argc, char** argv) {
-  load(configFilePath);
+void {{NAMESPACE | join("::")}}::RuntimeParameters::load(tarch::reader::JSONReader* reader, int& argc, char** argv) {
+  load(reader);
 
 {% if RUNTIME_PARAMETERS %}
   int writeIndex = 1;
   for (int readIndex = 1; readIndex < argc; ++readIndex) {
     const std::string argument = argv[readIndex];
 {% for parameter in RUNTIME_PARAMETERS %}
-    {% if loop.first %}if{% else %}else if{% endif %} (argument == "--{{ parameter.cli_name }}") {
+    {% if loop.first %}if{% else %}else if{% endif %} (argument == "--{{ parameter.name }}") {
       const std::string value = consumeValue(readIndex, argc, argv, argument);
 {% if parameter.is_array %}
 {% if parameter.base_type == "double" %}

@@ -2,21 +2,11 @@
 # use, please see the copyright notice at www.peano-framework.org
 
 from .BasePlotter import BasePlotter
+from .BasePlotter import SUPPORTED_FORMATS
+from .BasePlotter import set_default_format
+from .BasePlotter import get_default_format
+from .BasePlotter import set_available_formats
 
-from .PatchAMRPlotter import PatchAMRPlotter
-from .PatchNodalPlotter import PatchNodalPlotter
+from .PatchPlotter import PatchPlotter
+from .FacePlotter import FacePlotter
 from .ParticlePlotter import ParticlePlotter
-
-from .HDF5PatchAMRPlotter import HDF5PatchAMRPlotter
-from .HDF5PatchNodalPlotter import HDF5PatchNodalPlotter
-from .HDF5ParticlePlotter import HDF5ParticlePlotter
-
-from .NetCDFPatchAMRPlotter import NetCDFPatchAMRPlotter
-from .NetCDFPatchNodalPlotter import NetCDFPatchNodalPlotter
-
-from .VTUPatchAMRPlotter import VTUPatchAMRPlotter
-from .VTUPatchNodalPlotter import VTUPatchNodalPlotter
-from .VTUParticlePlotter import VTUParticlePlotter
-
-from .FaceNodalPlotter import FaceNodalPlotter
-from .HDF5FaceNodalPlotter import HDF5FaceNodalPlotter

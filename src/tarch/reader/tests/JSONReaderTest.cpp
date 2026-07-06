@@ -15,12 +15,12 @@ namespace {
   std::string writeTempFile(const std::string& stem, const std::string& content) {
     static std::atomic<int> counter = 0;
 
-    const std::filesystem::path path
-      = tarch::tests::getWritableTestDirectory()
-        / std::filesystem::path(
-          stem + "-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) + "-"
-          + std::to_string(counter++) + ".json"
-        );
+    const std::filesystem::path path =
+      tarch::tests::getWritableTestDirectory() /
+      std::filesystem::path(
+        stem + "-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) + "-" +
+        std::to_string(counter++) + ".json"
+      );
 
     std::ofstream output(path);
     if (!output.is_open()) {
@@ -33,12 +33,13 @@ namespace {
   }
 } // namespace
 
-tarch::reader::tests::JSONReaderTest::JSONReaderTest():
+tarch::reader::tests::JSONReaderTest::JSONReaderTest() :
   TestCase("tarch::reader::tests::JSONReaderTest") {}
 
 void tarch::reader::tests::JSONReaderTest::run() {
   testMethod(testReadPrimitivesAndArrays);
   testMethod(testFailureModes);
+  testMethod(testUnusedKeys);
 }
 
 void tarch::reader::tests::JSONReaderTest::testReadPrimitivesAndArrays() {
@@ -102,6 +103,46 @@ void tarch::reader::tests::JSONReaderTest::testReadPrimitivesAndArrays() {
   }
 
   std::filesystem::remove(path);
+}
+
+void tarch::reader::tests::JSONReaderTest::testUnusedKeys() {
+  const std::string path = writeTempFile("peano-json-reader-unused", R"({ "alpha": 1, "beta": 2, "gamma": 3 })");
+
+  try {
+    tarch::reader::JSONReader reader(path);
+    validateEquals(reader.getUnusedKeys().size(), static_cast<std::size_t>(3));
+
+    reader.getInteger("alpha");
+    reader.getInteger("beta");
+    reader.hasKey("gamma"); // existence check does not read the value
+
+    const auto unused = reader.getUnusedKeys();
+    validateEquals(unused.size(), static_cast<std::size_t>(1));
+    validateEquals(unused[0], std::string("gamma"));
+  } catch (...) {
+    std::filesystem::remove(path);
+    throw;
+  }
+
+  std::filesystem::remove(path);
+
+  // Reading any member marks the whole top-level object used.
+  const std::string nestedPath =
+    writeTempFile("peano-json-reader-unused-nested", R"({ "section": { "entry": 1 }, "stray": 2 })");
+
+  try {
+    tarch::reader::JSONReader reader(nestedPath);
+    reader.getInteger("section.entry");
+
+    const auto unused = reader.getUnusedKeys();
+    validateEquals(unused.size(), static_cast<std::size_t>(1));
+    validateEquals(unused[0], std::string("stray"));
+  } catch (...) {
+    std::filesystem::remove(nestedPath);
+    throw;
+  }
+
+  std::filesystem::remove(nestedPath);
 }
 
 void tarch::reader::tests::JSONReaderTest::testFailureModes() {

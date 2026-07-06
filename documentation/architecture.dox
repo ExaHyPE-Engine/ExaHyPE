@@ -191,7 +191,7 @@ libraries.  This glue code is generated through the Python API.
 - **python** Holds the Python API scripts. Within this directory, you
   find the Peano core API and the toolboxes (`python/peano4`), the
   extensions such as ExaHyPE 2 (`python/exahype2`), and the
-  postprocessing helpers (`python/postprocessing`).
+  postprocessing helpers (`postprocessing`).
 - **tests** Collection of small test cases that can be automised.
 - **benchmarks** Collection of benchmark scripts.
 - **applications** Proper, real-world applications.

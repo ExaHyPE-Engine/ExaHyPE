@@ -4,7 +4,6 @@
 
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
-#include "tarch/plotter/AMRPlotter.h"
 #include "tarch/plotter/VTUFileWriter.h"
 
 #include <filesystem>
@@ -35,7 +34,7 @@ namespace {
   }
 } // namespace
 
-tarch::plotter::tests::VTUFileWriterTest::VTUFileWriterTest():
+tarch::plotter::tests::VTUFileWriterTest::VTUFileWriterTest() :
   TestCase("tarch::plotter::tests::VTUFileWriterTest") {}
 
 void tarch::plotter::tests::VTUFileWriterTest::run() {
@@ -43,13 +42,14 @@ void tarch::plotter::tests::VTUFileWriterTest::run() {
   testMethod(test3DSimpleHexahedron);
   testMethod(test2DParticlesWithData);
   testMethod(test3DCellData);
-  testMethod(test2DAMRGrid);
-  testMethod(test3DAMRGrid);
 
   testMethod(testEmptyPlotter);
   testMethod(testMixedEmptySubdomains);
+  testMethod(testMultipleNonEmptySubdomains);
   testMethod(testOversizedDataThrows);
   testMethod(testInconsistentSchemaThrows);
+  testMethod(testUnevenSubdomainCounts);
+  testMethod(testInvalidIdentifierThrows);
 }
 
 void tarch::plotter::tests::VTUFileWriterTest::test2DSimpleTriangle() {
@@ -73,12 +73,13 @@ void tarch::plotter::tests::VTUFileWriterTest::test2DSimpleTriangle() {
 
   plotter.writeToFile(filename, 0);
 
-  const int   rank    = tarch::mpi::Rank::getInstance().getRank();
-  std::string vtuPath = (tarch::tests::getWritableTestDirectory() / (filename + "-rank-" + std::to_string(rank) + ".vtu")).string();
+  const int   rank = tarch::mpi::Rank::getInstance().getRank();
+  std::string vtuPath =
+    (tarch::tests::getWritableTestDirectory() / (filename + "-rank-" + std::to_string(rank) + ".vtu")).string();
 
-  // Check for the VTK XML tag and correct piece info
+  // Piece header and the types array must be present.
   validateFileContent(vtuPath, "<Piece NumberOfPoints=\"3\" NumberOfCells=\"1\">");
-  validateFileContent(vtuPath, "Name=\"types\""); // Check types array exists
+  validateFileContent(vtuPath, "Name=\"types\"");
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     std::string pvtuPath = (tarch::tests::getWritableTestDirectory() / (filename + ".pvtu")).string();
@@ -112,8 +113,9 @@ void tarch::plotter::tests::VTUFileWriterTest::test3DSimpleHexahedron() {
 
   plotter.writeToFile(filename, 0);
 
-  const int   rank    = tarch::mpi::Rank::getInstance().getRank();
-  std::string vtuPath = (tarch::tests::getWritableTestDirectory() / (filename + "-rank-" + std::to_string(rank) + ".vtu")).string();
+  const int   rank = tarch::mpi::Rank::getInstance().getRank();
+  std::string vtuPath =
+    (tarch::tests::getWritableTestDirectory() / (filename + "-rank-" + std::to_string(rank) + ".vtu")).string();
 
   validateFileContent(vtuPath, "<Piece NumberOfPoints=\"8\" NumberOfCells=\"1\">");
 
@@ -130,26 +132,31 @@ void tarch::plotter::tests::VTUFileWriterTest::test2DParticlesWithData() {
   const std::string filename = "VTUTest2DParticles";
 
   VTUFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
-  auto          v  = plotter.createVertexPlotter(0);
-  auto          vd = plotter.createVertexDataPlotter(0, "Mass", 1);
-  auto          vv = plotter.createVertexDataPlotter(0, "Velocity", 3); // 3D vector on 2D point
+  auto          v   = plotter.createVertexPlotter(0);
+  auto          vd  = plotter.createVertexDataPlotter(0, "Mass", 1);
+  auto          vv  = plotter.createVertexDataPlotter(0, "Velocity", 3);   // 3D vector on 2D point
+  auto          vv2 = plotter.createVertexDataPlotter(0, "Velocity2D", 2); // 2D vector, padded to 3
 
   for (int i = 0; i < 5; i++) {
     tarch::la::Vector<2, double> p   = {static_cast<double>(i), static_cast<double>(i)};
     int                          idx = v->plotVertex(p);
     vd->plotVertexData(idx, 10.0 * i); // Scalar mass
     tarch::la::Vector<3, double> vel = {1.0, 0.0, -1.0};
-    vv->plotVertexData(idx, vel); // Vector velocity
+    vv->plotVertexData(idx, vel);                                     // Vector velocity
+    vv2->plotVertexData(idx, tarch::la::Vector<2, double>{2.0, 3.0}); // 2D vector velocity
   }
 
   plotter.writeToFile(filename, 0);
 
-  const int   rank    = tarch::mpi::Rank::getInstance().getRank();
-  std::string vtuPath = (tarch::tests::getWritableTestDirectory() / (filename + "-rank-" + std::to_string(rank) + ".vtu")).string();
+  const int   rank = tarch::mpi::Rank::getInstance().getRank();
+  std::string vtuPath =
+    (tarch::tests::getWritableTestDirectory() / (filename + "-rank-" + std::to_string(rank) + ".vtu")).string();
 
   validateFileContent(vtuPath, "<PointData>");
   validateFileContent(vtuPath, "Name=\"Mass\"");
   validateFileContent(vtuPath, "Name=\"Velocity\" NumberOfComponents=\"3\"");
+  // The 2-component field is padded to a 3-component vector.
+  validateFileContent(vtuPath, "Name=\"Velocity2D\" NumberOfComponents=\"3\"");
   validateFileContent(vtuPath, "<Piece NumberOfPoints=\"5\" NumberOfCells=\"0\">");
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
@@ -169,8 +176,7 @@ void tarch::plotter::tests::VTUFileWriterTest::test3DCellData() {
   auto          c  = plotter.createCellPlotter(0);
   auto          cd = plotter.createCellDataPlotter(0, "Pressure", 1);
 
-  // Create two tetrahedrons sharing a face (5 points total)
-  // Points
+  // Two triangles sharing an edge (5 points total).
   int p[5];
   p[0] = v->plotVertex(tarch::la::Vector<3, double>{0, 0, 0});
   p[1] = v->plotVertex(tarch::la::Vector<3, double>{1, 0, 0});
@@ -188,88 +194,13 @@ void tarch::plotter::tests::VTUFileWriterTest::test3DCellData() {
 
   plotter.writeToFile(filename, 0);
 
-  const int   rank    = tarch::mpi::Rank::getInstance().getRank();
-  std::string vtuPath = (tarch::tests::getWritableTestDirectory() / (filename + "-rank-" + std::to_string(rank) + ".vtu")).string();
+  const int   rank = tarch::mpi::Rank::getInstance().getRank();
+  std::string vtuPath =
+    (tarch::tests::getWritableTestDirectory() / (filename + "-rank-" + std::to_string(rank) + ".vtu")).string();
 
   validateFileContent(vtuPath, "<CellData>");
   validateFileContent(vtuPath, "Name=\"Pressure\"");
   validateFileContent(vtuPath, "NumberOfCells=\"2\"");
-
-  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    std::string pvtuPath = (tarch::tests::getWritableTestDirectory() / (filename + ".pvtu")).string();
-    validateFileContent(pvtuPath, "<VTKFile type=\"PUnstructuredGrid\"");
-    fs::remove(pvtuPath);
-  }
-
-  fs::remove(vtuPath);
-}
-
-void tarch::plotter::tests::VTUFileWriterTest::test2DAMRGrid() {
-  const std::string filename = "VTUTest2DAMR";
-
-  VTUFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
-  auto          dataPlotter = plotter.createCellDataPlotter(0, "RefinementLevel", 1);
-
-  AMRPlotter amrPlotter(plotter, 0, 0.5, 0.1);
-
-  int idx = amrPlotter.plotCell2D({0.0, 0.0}, {1.0, 1.0}, 0);
-  dataPlotter->plotCellData(idx, 0.0);
-
-  // Fine Cells (Level 1)
-  idx = amrPlotter.plotCell2D({1.0, 0.0}, {0.5, 0.5}, 1);
-  dataPlotter->plotCellData(idx, 1.0);
-  idx = amrPlotter.plotCell2D({1.5, 0.0}, {0.5, 0.5}, 1);
-  dataPlotter->plotCellData(idx, 1.0);
-  idx = amrPlotter.plotCell2D({1.0, 0.5}, {0.5, 0.5}, 1);
-  dataPlotter->plotCellData(idx, 1.0);
-  idx = amrPlotter.plotCell2D({1.5, 0.5}, {0.5, 0.5}, 1);
-  dataPlotter->plotCellData(idx, 1.0);
-
-  plotter.writeToFile(filename, 0);
-
-  const int   rank    = tarch::mpi::Rank::getInstance().getRank();
-  std::string vtuPath = (tarch::tests::getWritableTestDirectory() / (filename + "-rank-" + std::to_string(rank) + ".vtu")).string();
-
-  validateFileContent(vtuPath, "NumberOfCells=\"5\""); // 1 + 4
-  validateFileContent(vtuPath, "Name=\"RefinementLevel\"");
-
-  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    std::string pvtuPath = (tarch::tests::getWritableTestDirectory() / (filename + ".pvtu")).string();
-    validateFileContent(pvtuPath, "<VTKFile type=\"PUnstructuredGrid\"");
-    fs::remove(pvtuPath);
-  }
-
-  fs::remove(vtuPath);
-}
-
-void tarch::plotter::tests::VTUFileWriterTest::test3DAMRGrid() {
-  const std::string filename = "VTUTest3DAMR";
-
-  VTUFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
-  auto          dataPlotter = plotter.createCellDataPlotter(0, "RefinementLevel", 1);
-
-  AMRPlotter amrPlotter(plotter, 0, 0.5, 0.1);
-
-  // One large block at origin (Level 0)
-  int idx = amrPlotter.plotCell3D({0.0, 0.0, 0.0}, {1.0, 1.0, 1.0}, 0);
-  dataPlotter->plotCellData(idx, 0.0);
-
-  // A refined block next to it (Level 1)
-  // Logical position: x=1.0 to 1.5
-  idx = amrPlotter.plotCell3D({1.0, 0.0, 0.0}, {0.5, 0.5, 0.5}, 1);
-  dataPlotter->plotCellData(idx, 1.0);
-
-  // Even more refined block (Level 2)
-  // Logical position: x=1.0, y=0.5
-  idx = amrPlotter.plotCell3D({1.0, 0.5, 0.0}, {0.25, 0.25, 0.25}, 2);
-  dataPlotter->plotCellData(idx, 2.0);
-
-  plotter.writeToFile(filename, 0);
-
-  const int   rank    = tarch::mpi::Rank::getInstance().getRank();
-  std::string vtuPath = (tarch::tests::getWritableTestDirectory() / (filename + "-rank-" + std::to_string(rank) + ".vtu")).string();
-
-  validateFileContent(vtuPath, "NumberOfCells=\"3\"");
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     std::string pvtuPath = (tarch::tests::getWritableTestDirectory() / (filename + ".pvtu")).string();
@@ -285,14 +216,15 @@ void tarch::plotter::tests::VTUFileWriterTest::testEmptyPlotter() {
 
   {
     VTUFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
-    // Do nothing, just close/write
+    // Nothing plotted; just write.
     plotter.writeToFile(filename, 0);
   }
 
-  const int   rank    = tarch::mpi::Rank::getInstance().getRank();
-  std::string vtuPath = (tarch::tests::getWritableTestDirectory() / (filename + "-rank-" + std::to_string(rank) + ".vtu")).string();
+  const int   rank = tarch::mpi::Rank::getInstance().getRank();
+  std::string vtuPath =
+    (tarch::tests::getWritableTestDirectory() / (filename + "-rank-" + std::to_string(rank) + ".vtu")).string();
 
-  // Validate it created a file with 0 points/cells
+  // File exists with 0 points/cells.
   validateFileContent(vtuPath, "NumberOfPoints=\"0\"");
   validateFileContent(vtuPath, "NumberOfCells=\"0\"");
 
@@ -308,10 +240,10 @@ void tarch::plotter::tests::VTUFileWriterTest::testEmptyPlotter() {
 void tarch::plotter::tests::VTUFileWriterTest::testMixedEmptySubdomains() {
   const std::string filename = "VTUTestMixedEmpty";
 
-  // Simulate 2 subdomains (e.g. threads or local partitions)
+  // Two subdomains (e.g. threads or local partitions).
   VTUFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 2);
 
-  // Subdomain 0: HAS DATA
+  // Subdomain 0: has data
   auto v0      = plotter.createVertexPlotter(0);
   int  i0      = v0->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
   int  i1      = v0->plotVertex(tarch::la::Vector<2, double>{1.0, 1.0});
@@ -319,16 +251,63 @@ void tarch::plotter::tests::VTUFileWriterTest::testMixedEmptySubdomains() {
   int  line[2] = {i0, i1};
   c0->plotLine(line);
 
-  // Subdomain 1: EMPTY (we never create plotters for it)
+  // Subdomain 1: empty (we never create plotters for it)
 
   plotter.writeToFile(filename, 0);
 
-  const int   rank    = tarch::mpi::Rank::getInstance().getRank();
-  std::string vtuPath = (tarch::tests::getWritableTestDirectory() / (filename + "-rank-" + std::to_string(rank) + ".vtu")).string();
+  const int   rank = tarch::mpi::Rank::getInstance().getRank();
+  std::string vtuPath =
+    (tarch::tests::getWritableTestDirectory() / (filename + "-rank-" + std::to_string(rank) + ".vtu")).string();
 
-  // Validate: Should contain the data from SD 0 and ignore SD 1
+  // Must contain subdomain 0's data and ignore the empty subdomain 1.
   validateFileContent(vtuPath, "NumberOfPoints=\"2\"");
   validateFileContent(vtuPath, "NumberOfCells=\"1\"");
+
+  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+    std::string pvtuPath = (tarch::tests::getWritableTestDirectory() / (filename + ".pvtu")).string();
+    validateFileContent(pvtuPath, "<VTKFile type=\"PUnstructuredGrid\"");
+    fs::remove(pvtuPath);
+  }
+
+  fs::remove(vtuPath);
+}
+
+void tarch::plotter::tests::VTUFileWriterTest::testMultipleNonEmptySubdomains() {
+  const std::string filename = "VTUTestMultipleSubdomains";
+
+  VTUFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 2);
+
+  {
+    auto v = plotter.createVertexPlotter(0);
+    auto c = plotter.createCellPlotter(0);
+
+    int p0          = v->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
+    int p1          = v->plotVertex(tarch::la::Vector<2, double>{1.0, 0.0});
+    int p2          = v->plotVertex(tarch::la::Vector<2, double>{0.0, 1.0});
+    int triangle[3] = {p0, p1, p2};
+    c->plotTriangle(triangle);
+  }
+
+  {
+    auto v = plotter.createVertexPlotter(1);
+    auto c = plotter.createCellPlotter(1);
+
+    int p0      = v->plotVertex(tarch::la::Vector<2, double>{2.0, 0.0});
+    int p1      = v->plotVertex(tarch::la::Vector<2, double>{3.0, 0.0});
+    int p2      = v->plotVertex(tarch::la::Vector<2, double>{3.0, 1.0});
+    int p3      = v->plotVertex(tarch::la::Vector<2, double>{2.0, 1.0});
+    int quad[4] = {p0, p1, p2, p3};
+    c->plotQuadrangle(quad);
+  }
+
+  plotter.writeToFile(filename, 0);
+
+  const int   rank = tarch::mpi::Rank::getInstance().getRank();
+  std::string vtuPath =
+    (tarch::tests::getWritableTestDirectory() / (filename + "-rank-" + std::to_string(rank) + ".vtu")).string();
+
+  validateFileContent(vtuPath, "<Piece NumberOfPoints=\"3\" NumberOfCells=\"1\">");
+  validateFileContent(vtuPath, "<Piece NumberOfPoints=\"4\" NumberOfCells=\"1\">");
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     std::string pvtuPath = (tarch::tests::getWritableTestDirectory() / (filename + ".pvtu")).string();
@@ -349,10 +328,10 @@ void tarch::plotter::tests::VTUFileWriterTest::testOversizedDataThrows() {
 
     int i0 = v->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
 
-    // We have 1 vertex, but we try to plot data for 2 vertices
+    // One vertex, but data is plotted for two.
     auto vd = plotter.createVertexDataPlotter(0, "ErrorField", 1);
     vd->plotVertexData(i0, 1.0);
-    vd->plotVertexData(i0 + 1, 2.0); // Extra data
+    vd->plotVertexData(i0 + 1, 2.0); // extra data
 
     plotter.writeToFile(filename, 0);
 
@@ -360,10 +339,11 @@ void tarch::plotter::tests::VTUFileWriterTest::testOversizedDataThrows() {
     exceptionThrown = true;
   }
 
-  const int   rank    = tarch::mpi::Rank::getInstance().getRank();
-  std::string vtuPath = (tarch::tests::getWritableTestDirectory() / (filename + "-rank-" + std::to_string(rank) + ".vtu")).string();
+  const int   rank = tarch::mpi::Rank::getInstance().getRank();
+  std::string vtuPath =
+    (tarch::tests::getWritableTestDirectory() / (filename + "-rank-" + std::to_string(rank) + ".vtu")).string();
 
-  // If the file was somehow created (test failed), clean it up
+  // Clean up if the file was created despite the expected throw.
   if (fs::exists(vtuPath)) {
     fs::remove(vtuPath);
   }
@@ -378,13 +358,13 @@ void tarch::plotter::tests::VTUFileWriterTest::testInconsistentSchemaThrows() {
   try {
     VTUFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 2);
 
-    // Subdomain 0: Defines "Pressure" (Scalar)
+    // Subdomain 0: "Pressure" as scalar.
     auto v0 = plotter.createVertexPlotter(0);
     v0->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
     auto vd0 = plotter.createVertexDataPlotter(0, "Pressure", 1);
     vd0->plotVertexData(0, 10.0);
 
-    // Subdomain 1: Defines "Pressure" (Vector 3D) -> Mismatch!
+    // Subdomain 1: "Pressure" as 3D vector -> mismatch.
     auto v1 = plotter.createVertexPlotter(1);
     v1->plotVertex(tarch::la::Vector<2, double>{1.0, 1.0});
     auto vd1 = plotter.createVertexDataPlotter(1, "Pressure", 3);
@@ -396,12 +376,74 @@ void tarch::plotter::tests::VTUFileWriterTest::testInconsistentSchemaThrows() {
     exceptionThrown = true;
   }
 
-  const int   rank    = tarch::mpi::Rank::getInstance().getRank();
-  std::string vtuPath = (tarch::tests::getWritableTestDirectory() / (filename + "-rank-" + std::to_string(rank) + ".vtu")).string();
+  const int   rank = tarch::mpi::Rank::getInstance().getRank();
+  std::string vtuPath =
+    (tarch::tests::getWritableTestDirectory() / (filename + "-rank-" + std::to_string(rank) + ".vtu")).string();
 
   if (fs::exists(vtuPath)) {
     fs::remove(vtuPath);
   }
 
   validate(exceptionThrown);
+}
+
+void tarch::plotter::tests::VTUFileWriterTest::testUnevenSubdomainCounts() {
+  const std::string filename = "VTUTestUneven";
+
+  // Master holds 3 subdomains, every other rank 2. VTU writes one <Piece> per
+  // subdomain into this rank's own .vtu, so the file must hold exactly nSub pieces.
+  const int     nSub = tarch::mpi::Rank::getInstance().isGlobalMaster() ? 3 : 2;
+  VTUFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), nSub);
+  for (int sd = 0; sd < nSub; ++sd) {
+    auto         v       = plotter.createVertexPlotter(sd);
+    auto         c       = plotter.createCellPlotter(sd);
+    const double s       = 100.0 * tarch::mpi::Rank::getInstance().getRank() + 2.0 * sd;
+    int          p0      = v->plotVertex(tarch::la::Vector<2, double>{s + 0.0, 0.0});
+    int          p1      = v->plotVertex(tarch::la::Vector<2, double>{s + 1.0, 0.0});
+    int          p2      = v->plotVertex(tarch::la::Vector<2, double>{s + 1.0, 1.0});
+    int          p3      = v->plotVertex(tarch::la::Vector<2, double>{s + 0.0, 1.0});
+    int          quad[4] = {p0, p1, p2, p3};
+    c->plotQuadrangle(quad);
+  }
+
+  plotter.writeToFile(filename, 0);
+
+  const int   rank = tarch::mpi::Rank::getInstance().getRank();
+  std::string vtuPath =
+    (tarch::tests::getWritableTestDirectory() / (filename + "-rank-" + std::to_string(rank) + ".vtu")).string();
+
+  std::ifstream     f(vtuPath);
+  std::stringstream buffer;
+  buffer << f.rdbuf();
+  const std::string content = buffer.str();
+  int               pieces  = 0;
+  for (std::size_t pos = content.find("<Piece "); pos != std::string::npos; pos = content.find("<Piece ", pos + 1)) {
+    ++pieces;
+  }
+  if (pieces != nSub) {
+    throw std::runtime_error(
+      "VTU uneven test: expected " + std::to_string(nSub) + " pieces in " + vtuPath + " but found " +
+      std::to_string(pieces) + "."
+    );
+  }
+
+  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+    std::string pvtuPath = (tarch::tests::getWritableTestDirectory() / (filename + ".pvtu")).string();
+    validateFileContent(pvtuPath, "<VTKFile type=\"PUnstructuredGrid\"");
+    fs::remove(pvtuPath);
+  }
+  fs::remove(vtuPath);
+}
+
+void tarch::plotter::tests::VTUFileWriterTest::testInvalidIdentifierThrows() {
+  VTUFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
+  bool          thrown = false;
+  try {
+    plotter.createCellDataPlotter(0, "bad/name", 1);
+  } catch (const std::runtime_error&) {
+    thrown = true;
+  }
+  if (not thrown) {
+    throw std::runtime_error("Expected the illegal data identifier 'bad/name' to be rejected.");
+  }
 }

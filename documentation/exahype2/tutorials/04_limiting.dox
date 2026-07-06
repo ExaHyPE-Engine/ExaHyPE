@@ -8,7 +8,7 @@ This tutorial adds the last big ingredient: a *limiter*. We solve a 2D
 Riemann (shock-tube) problem for the compressible Euler equations: a corner of
 low-density, low-pressure gas sits in a box of dense, high-pressure gas. When the
 simulation starts, the dense gas rushes into the corner, launching **shock waves**
-and a **contact discontinuity**. The notebook is
+and **contact discontinuities**. The notebook is
 `tutorials/04_limiting/EulerShock.ipynb`, with its implementation in
 `ADERDGSolver.cpp`, `FVSolver.cpp` and `LimitingSolver.cpp`.
 
@@ -22,7 +22,7 @@ oscillations can drive the density or pressure negative and crash the run. The
 - after each time step every cell is checked against a discrete maximum
   principle (DMP) and a user-supplied *physical admissibility criterion*;
 - a cell that fails - a *troubled* cell - is rolled back and recomputed with a
-  robust Finite Volume scheme on a subgrid of `2 * order + 1` volumes;
+  robust Finite Volumes scheme on a subgrid of `2 * order + 1` volumes;
 - everywhere else the high-order ADER-DG solution is kept.
 
 # The Equations
@@ -85,8 +85,8 @@ regular solver's `Shortcuts` and `NumberOfUnknowns`, so nothing is hardcoded:
 We plot the energy from the `ADERDGSolver` (use the field dropdown to switch to
 density, momentum or pressure):
 
-    from postprocessing import render_solution_interactively
-    render_solution_interactively.show_solution("ADERDGSolver", field="E")
+    from postprocessing import render_solution
+    render_solution.show_solution("ADERDGSolver", field="E")
 
 Drag the time slider to partway through the run, where the structure is clearest:
 
@@ -109,7 +109,7 @@ and re-run from there. Now only the high-order ADER-DG scheme runs, with no Fini
 Volume fallback, and it oscillates uncontrollably at the shock fronts: within a
 fraction of the run the density goes negative, the solution blows up (densities of
 tens of thousands), the reported maximum eigenvalue explodes - past 900, versus
-around 50 with the limiter - and the timestep collapses, so the run diverges and
+around 50 with the limiter - and the time step collapses, so the run diverges and
 grinds to a halt. That is the whole point of a-posteriori limiting: for problems
 with shocks, a high-order scheme on its own is not robust, and the limiter is what
 makes it usable.

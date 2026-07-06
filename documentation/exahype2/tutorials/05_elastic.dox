@@ -10,7 +10,7 @@ seismology. An isotropic *explosion* at the centre of a cube radiates an outgoin
 spherical wave, which we visualise by **slicing the 3D cube** interactively. A 3D
 high-order ADER-DG solver is also a genuinely **HPC-scale** workload, so this part
 doubles as a tour of how ExaHyPE uses parallel hardware - and we measure its
-shared-memory scaling directly. The notebook is
+MPI strong scaling directly. The notebook is
 `tutorials/05_elastic/ElasticWaves.ipynb` with its implementation in
 `ADERDGSolver.cpp`.
 
@@ -91,13 +91,12 @@ A 3D high-order run is heavier than the 2D tutorials - at order 4 each cell carr
 A 3D field is best explored slice by slice. `show_solution_3d` cuts axis-aligned
 2D slices through the cube: pick the slice axis with the **slice ⊥** dropdown
 (x/y/z), move the **slice** slider through the volume, pick a field, and animate
-over time with the **time** slider / Play. The first frame appears immediately;
-the viewer then briefly prefetches the remaining time frames of the current
-slice in parallel (a short *Prefetching N/M* wait), after which scrubbing and
-playback are smooth:
+over time with the **time** slider / Play. Picking a slice (or the field or axis)
+warms all of that slice's time frames in parallel across cores - a brief
+*Prefetching N/M* - so the time slider and playback are then smooth:
 
-    from postprocessing import render_solution_interactively
-    render_solution_interactively.show_solution_3d("ADERDGSolver", field="sigma")
+    from postprocessing import render_solution
+    render_solution.show_solution_3d("ADERDGSolver", field="sigma")
 
 The expanding spherical P-wave appears in the mid-plane slice as concentric
 rings - the cross-section of the spherical shell. Moving the slice slider
@@ -166,7 +165,7 @@ you will see the four lobes of the S-wave:
 - Raise the `order` (e.g. 5) for more accuracy and far more arithmetic per cell.
 
 That concludes the tutorial series - you have driven ADER-DG and Finite Volumes,
-adaptive and static mesh refinement, a-posteriori limiting, and a parallel 3D
+static mesh refinement, a-posteriori limiting, and a parallel 3D
 solver. Congratulations!
 
 */

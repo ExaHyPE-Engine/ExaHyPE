@@ -116,7 +116,7 @@ void runner::Orchestrator::runGridConstruction(Runner& runner, RunContext& conte
     if (cleanSweep and tarch::la::greater(s.getGlobalMinH(), minAdmissibleH) and
         s.getGlobalNumberOfInnerUnrefinedCells() != lastShownCells) {
       lastShownCells = s.getGlobalNumberOfInnerUnrefinedCells();
-      statistics.emitSimulationBox(
+      statistics.refreshSimulationBox(
         runner::displayLabel(_createGrid.name),
         lastDt,
         levelProgress(s.getGlobalMaxDepth(), maxLevel),
@@ -141,7 +141,7 @@ void runner::Orchestrator::runGridConstruction(Runner& runner, RunContext& conte
         tarch::la::smallerEquals(currentMinH, minAdmissibleH) and loadBalancer().isStagnating() and didRefineThisSweep;
       if (converged and finishConditionSeenLastSweep) {
         if (s.getGlobalNumberOfInnerUnrefinedCells() != lastShownCells) {
-          statistics.emitSimulationBox(
+          statistics.refreshSimulationBox(
             runner::displayLabel(_createGrid.name),
             lastDt,
             levelProgress(s.getGlobalMaxDepth(), maxLevel),
@@ -160,7 +160,7 @@ void runner::Orchestrator::runGridInitialisation(Runner& runner, RunContext& con
   SCOREP_USER_REGION("InitGrid", SCOREP_USER_REGION_TYPE_PHASE)
 
   const double dt = runner.runStep(_initGrid.programStep);
-  context.statisticsLog.emitSimulationBox(runner::displayLabel(_initGrid.name), dt, "", false);
+  context.statisticsLog.refreshSimulationBox(runner::displayLabel(_initGrid.name), dt, "", false);
 }
 
 bool runner::Orchestrator::runTimeLoop(Runner& runner, RunContext& context) {
@@ -207,8 +207,8 @@ bool runner::Orchestrator::runTimeLoop(Runner& runner, RunContext& context) {
       } else {
         action = Action::Stop;
       }
-    } else if (snapInterval > 0.0 and keepTimeStepping and
-               (minStamp >= nextMinPlot or maxStamp >= nextMaxPlot) and repositories.mayPlot()) {
+    } else if (snapInterval > 0.0 and keepTimeStepping and (minStamp >= nextMinPlot or maxStamp >= nextMaxPlot) and
+               repositories.mayPlot()) {
       nextMinPlot += snapInterval;
       nextMaxPlot += snapInterval;
       if (nextMinPlot < minStamp) {
@@ -239,7 +239,7 @@ bool runner::Orchestrator::runTimeLoop(Runner& runner, RunContext& context) {
     if (action == Action::Stop) {
       // One last box so the final block before the summary carries the settled solver state.
       if (completedTimeSteps > 0) {
-        statistics.emitSimulationBox(
+        statistics.refreshSimulationBox(
           runner::displayLabel(_timeStep.name) + " " + std::to_string(completedTimeSteps),
           lastCompletedElapsed,
           timeProgress(repositories.getMinTimeStamp(), minTerminal, statistics.formatETA()),
@@ -256,7 +256,7 @@ bool runner::Orchestrator::runTimeLoop(Runner& runner, RunContext& context) {
       // The first plot dumps the initial state before any time step, so the solver has not
       // computed a valid dt / mesh size / eigenvalue yet; show the solver sections only once
       // time stepping has produced them.
-      statistics.emitSimulationBox(
+      statistics.refreshSimulationBox(
         runner::displayLabel(_plot.name) + " " + std::to_string(plots),
         dt,
         timeProgress(repositories.getMinTimeStamp(), minTerminal, statistics.formatETA()),
@@ -281,7 +281,7 @@ bool runner::Orchestrator::runTimeLoop(Runner& runner, RunContext& context) {
       ++completedTimeSteps;
 
       if (measurements.timeStep.getAccumulatedValue() >= logNextTimeStep) {
-        statistics.emitSimulationBox(
+        statistics.refreshSimulationBox(
           runner::displayLabel(_timeStep.name) + " " + std::to_string(completedTimeSteps),
           lastCompletedElapsed,
           timeProgress(repositories.getMinTimeStamp(), minTerminal, statistics.formatETA()),

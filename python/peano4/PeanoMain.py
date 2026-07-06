@@ -43,24 +43,31 @@ class PeanoMain(object):
         return result
 
     def _export_constants(self):
-        """Export the run-invariant facts to Constants.h ONCE, so the generated
-        main (and observers/action sets) reference them instead of re-emitting
-        literals. ConfigurationInformation records the exact generation command."""
         constants = self.project.constants
         constants.add_include("#include <bitset>")
         constants.add_include('#include "tarch/la/Vector.h"')
         constants.add_include('#include "peano4/Globals.h"')
 
-        offset = "{" + ", ".join(str(value) for value in self.project._domain_offset) + "}"
+        offset = (
+            "{" + ", ".join(str(value) for value in self.project._domain_offset) + "}"
+        )
         size = "{" + ", ".join(str(value) for value in self.project._domain_size) + "}"
-        constants.export_const_with_type("DomainOffset", offset, "tarch::la::Vector<DIMENSIONS, double>")
-        constants.export_const_with_type("DomainSize", size, "tarch::la::Vector<DIMENSIONS, double>")
+        constants.export_const_with_type(
+            "DomainOffset", offset, "tarch::la::Vector<DIMENSIONS, double>"
+        )
+        constants.export_const_with_type(
+            "DomainSize", size, "tarch::la::Vector<DIMENSIONS, double>"
+        )
         constants.export_boolean_sequence("PeriodicBC", self.project._periodic_bc)
-        constants.export_string("ConfigurationInformation", " ".join(["python3", *sys.argv]))
+        constants.export_string(
+            "ConfigurationInformation", " ".join(["python3", *sys.argv])
+        )
 
     def _configure_template_dictionary(self):
         if self.project._domain_offset is None or self.project._domain_size is None:
-            raise Exception("Peano project requires a domain. Pass offset=... and size=... to peano4.Project(...).")
+            raise Exception(
+                "Peano project requires a domain. Pass offset=... and size=... to peano4.Project(...)."
+            )
 
         self.d["MAIN_STEPS"] = self._step_dictionaries()
 
@@ -73,15 +80,12 @@ class PeanoMain(object):
         self.d.setdefault("DEFAULT_MIN_TERMINAL_TIME", "-1.0")
         self.d.setdefault("DEFAULT_MAX_TERMINAL_TIME", "-1.0")
 
-        if "EXECUTABLE_NAME" not in self.d:
-            self.d["EXECUTABLE_NAME"] = '"{}"'.format(self.project.output.makefile.executable_name())
-
         self.d["EXTRA_INCLUDES"] = self.extra_includes
         self.d["EXTRA_REPOSITORY_CALLBACKS"] = self.extra_repository_callbacks
 
     def construct_output(self, output, main_name):
         """
-        Pass in a version of output
+        Pass in a version of output.
 
         main_name Is the name of you main file. By default, this might be
            Main.cpp, but you might want to have different main files for
