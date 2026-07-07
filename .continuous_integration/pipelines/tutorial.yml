@@ -1,7 +1,7 @@
 Acoustic:
   stage: Tutorial
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tutorials/01_acoustic && PYTHONPATH=$CI_PROJECT_DIR/python ipython AcousticWaves.ipynb"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tutorials/01_acoustic && PYTHONPATH=$CI_PROJECT_DIR/api ipython AcousticWaves.ipynb"
   allow_failure: false
   extends:
     - .Tags
@@ -14,7 +14,7 @@ Acoustic:
 SWE:
   stage: Tutorial
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tutorials/02_shallow-water && PYTHONPATH=$CI_PROJECT_DIR/python ipython ShallowWater.ipynb"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tutorials/02_shallow-water && PYTHONPATH=$CI_PROJECT_DIR/api ipython ShallowWater.ipynb"
   allow_failure: false
   extends:
     - .Tags
@@ -27,7 +27,7 @@ SWE:
 Euler:
   stage: Tutorial
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tutorials/03_euler && PYTHONPATH=$CI_PROJECT_DIR/python ipython Euler.ipynb"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tutorials/03_euler && PYTHONPATH=$CI_PROJECT_DIR/api ipython Euler.ipynb"
   allow_failure: false
   extends:
     - .Tags
@@ -41,7 +41,7 @@ Euler:
 Limiting:
   stage: Tutorial
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tutorials/04_limiting && PYTHONPATH=$CI_PROJECT_DIR/python ipython EulerShock.ipynb"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tutorials/04_limiting && PYTHONPATH=$CI_PROJECT_DIR/api ipython EulerShock.ipynb"
   allow_failure: false
   extends:
     - .Tags
@@ -55,7 +55,7 @@ Limiting:
 Elastic:
   stage: Tutorial
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tutorials/05_elastic && PYTHONPATH=$CI_PROJECT_DIR/python ipython ElasticWaves.ipynb"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tutorials/05_elastic && PYTHONPATH=$CI_PROJECT_DIR/api ipython ElasticWaves.ipynb"
   allow_failure: false
   extends:
     - .Tags

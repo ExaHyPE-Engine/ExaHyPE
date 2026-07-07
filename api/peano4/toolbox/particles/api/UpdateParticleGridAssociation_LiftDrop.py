@@ -123,7 +123,7 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
 
     _Template_Sieve = jinja2.Template(
         """
-  // template in python/peano4/toolbox/particles/api/UpdateParticleGridAssociation_LiftDrop.py
+  // template in api/peano4/toolbox/particles/api/UpdateParticleGridAssociation_LiftDrop.py
 
   if ( vertexdata::{{PARTICLES_CONTAINER}}::hasParticlesToBeSievedIntoVertices() ) {
     auto sievedParticles = vertexdata::{{PARTICLES_CONTAINER}}::getParticlesToBeSievedIntoVertex(
@@ -154,7 +154,7 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
   """
     __Template_LiftOrReassignParticles = jinja2.Template(
         """
-  // template in python/peano4/toolbox/particles/api/UpdateParticleGridAssociation_LiftDrop.py
+  // template in api/peano4/toolbox/particles/api/UpdateParticleGridAssociation_LiftDrop.py
 
   auto p = fineGridVertex{{PARTICLES_CONTAINER}}.begin();
   while (p!=fineGridVertex{{PARTICLES_CONTAINER}}.end()) {

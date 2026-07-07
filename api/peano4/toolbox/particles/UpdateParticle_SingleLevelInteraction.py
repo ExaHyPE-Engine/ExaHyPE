@@ -174,7 +174,7 @@ class UpdateParticle_SingleLevelInteraction(ActionSet):
     """
     __Template_TouchVertexFirstTime = jinja2.Template(
         """
-  // Start of TouchVertexFirstTime template in python/peano4/toolbox/particles/UpdateParticle_SingleLevelInteraction.py
+  // Start of TouchVertexFirstTime template in api/peano4/toolbox/particles/UpdateParticle_SingleLevelInteraction.py
 
   {% if TOUCH_VERTEX_FIRST_COMPUTE_KERNEL!=None %}
   auto& assignedParticles  = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
@@ -198,7 +198,7 @@ class UpdateParticle_SingleLevelInteraction(ActionSet):
     """
     __Template_TouchVertexLastTime = jinja2.Template(
         """
-  // Start of TouchVertexLastTime template in python/peano4/toolbox/particles/UpdateParticle_SingleLevelInteraction.py
+  // Start of TouchVertexLastTime template in api/peano4/toolbox/particles/UpdateParticle_SingleLevelInteraction.py
 
   {% if TOUCH_VERTEX_LAST_COMPUTE_KERNEL!=None %}
   auto& assignedParticles  = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
@@ -212,7 +212,7 @@ class UpdateParticle_SingleLevelInteraction(ActionSet):
 
     __Template_TouchCellFirstTime = jinja2.Template(
         """
-  // Start of TouchCellFirstTime template in python/peano4/toolbox/particles/UpdateParticle_SingleLevelInteraction.py
+  // Start of TouchCellFirstTime template in api/peano4/toolbox/particles/UpdateParticle_SingleLevelInteraction.py
 
   {% if PARTICLE_CELL_UPDATE_KERNEL!=None %}
   std::list< globaldata::{{LOCAL_PARTICLE}}* >   localParticles;

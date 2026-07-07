@@ -62,7 +62,7 @@ Stage: final
 
   # Add Spack environment vars to the container runtime
   cat /opt/spack-environment/environment_modifications.sh >> $SINGULARITY_ENVIRONMENT
-  echo 'export PYTHONPATH=/opt/Peano/python:$PYTHONPATH' >> $SINGULARITY_ENVIRONMENT
+  echo 'export PYTHONPATH=/opt/Peano/api:$PYTHONPATH' >> $SINGULARITY_ENVIRONMENT
 
 %labels
   peano-framework.org http://www.peano-framework.org/

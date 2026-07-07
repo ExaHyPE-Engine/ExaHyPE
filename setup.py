@@ -5,14 +5,14 @@
 All project metadata lives in pyproject.toml; this file only declares which
 packages ship, because they come from two source roots:
 
-  * the Python API under python/ (kept dynamic via find_packages), and
+  * the Python API under api/ (kept dynamic via find_packages), and
   * the postprocessing helpers at the repository root.
 """
 import os
 
 from setuptools import find_packages, setup
 
-API_ROOT = "python"
+API_ROOT = "api"
 
 api_packages = find_packages(where=API_ROOT)
 packages = api_packages + ["postprocessing"]

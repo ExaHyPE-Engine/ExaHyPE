@@ -507,7 +507,7 @@
  * Even though we try to separate the spatial from the temporal discretisation, it is the
  * Runge-Kutta DG scheme which is currently the most mature version within ExaHyPE 2.
  * The main data format discussion, i.e. what do we store where and when, can thus be found
- * in the python subdirectory
+ * in the api subdirectory
  *
  *         exahype2.rkdg
  *

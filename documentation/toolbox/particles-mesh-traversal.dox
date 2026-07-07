@@ -37,7 +37,7 @@ The illustration below shows two levels of a spacetree with bipartitioning
 this example. The tree automaton is currently in the finer, dark blue cell
 and triggers touchCellFirstTime().
 
-@image html python/peano4/toolbox/particles/dependency_sets.png
+@image html api/peano4/toolbox/particles/dependency_sets.png
 
 1. The set of local particles of this cell consists of four particles. It
    is the red particle - which is kind of trivial. However, also contains
@@ -284,7 +284,7 @@ particleWillBeDroppedFurther( *p, marker )
 can be very problematic along AMR boundaries, and peano4.toolbox.particles.api.AbstractUpdateParticleGridAssociation
 discusses these effects in detail using the arrangement below:
 
-@image html python/peano4/toolbox/particles/api/SievingAlongAMRBoundaries.png
+@image html api/peano4/toolbox/particles/api/SievingAlongAMRBoundaries.png
 
 The problems arise for particles associated to the coarser level
 which you might want to sort into a hanging vertex on the next finer
