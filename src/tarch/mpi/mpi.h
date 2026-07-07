@@ -204,6 +204,56 @@ namespace tarch {
       std::source_location location = std::source_location::current()
     );
 
+    int ialltoall(
+      const void*          sendBuffer,
+      int                  sendCount,
+      MPI_Datatype         sendDatatype,
+      void*                receiveBuffer,
+      int                  receiveCount,
+      MPI_Datatype         receiveDatatype,
+      MPI_Comm             communicator,
+      MPI_Request*         request,
+      std::source_location location = std::source_location::current()
+    );
+
+    int alltoall(
+      const void*          sendBuffer,
+      int                  sendCount,
+      MPI_Datatype         sendDatatype,
+      void*                receiveBuffer,
+      int                  receiveCount,
+      MPI_Datatype         receiveDatatype,
+      MPI_Comm             communicator,
+      std::source_location location = std::source_location::current()
+    );
+
+    int ialltoallv(
+      const void*          sendBuffer,
+      const int*           sendCounts,
+      const int*           sendDisplacements,
+      MPI_Datatype         sendDatatype,
+      void*                receiveBuffer,
+      const int*           receiveCounts,
+      const int*           receiveDisplacements,
+      MPI_Datatype         receiveDatatype,
+      MPI_Comm             communicator,
+      MPI_Request*         request,
+      std::source_location location = std::source_location::current()
+    );
+
+    int alltoallv(
+      const void*          sendBuffer,
+      const int*           sendCounts,
+      const int*           sendDisplacements,
+      MPI_Datatype         sendDatatype,
+      void*                receiveBuffer,
+      const int*           receiveCounts,
+      const int*           receiveDisplacements,
+      MPI_Datatype         receiveDatatype,
+      MPI_Comm             communicator,
+      std::source_location location = std::source_location::current()
+    );
+
     int iallreduce(
       const void*          sendBuffer,
       void*                receiveBuffer,

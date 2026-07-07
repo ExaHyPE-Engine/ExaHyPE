@@ -34,7 +34,7 @@ namespace {
   }
 } // namespace
 
-peano4::grid::tests::SpacetreeHelperTest::SpacetreeHelperTest():
+peano4::grid::tests::SpacetreeHelperTest::SpacetreeHelperTest() :
   TestCase("peano4::grid::tests::SpacetreeHelperTest") {}
 
 void peano4::grid::tests::SpacetreeHelperTest::run() {
@@ -479,10 +479,17 @@ void peano4::grid::tests::SpacetreeHelperTest::testStableTopologyLocalityHelpers
   );
 
   vertices[0].adjacentRanks[TWO_POWER_D - 0 - 1] = 2;
-  validate(
-    not SpacetreeHelper::
-      isSpacetreeNodeLocal(vertices, treeId, splitTriggered, splitting, joinTriggered, joining, false, false, true)
-  );
+  validate(not SpacetreeHelper::isSpacetreeNodeLocal(
+    vertices,
+    treeId,
+    splitTriggered,
+    splitting,
+    joinTriggered,
+    joining,
+    false,
+    false,
+    true
+  ));
 
   vertices[0].setState(GridVertex::State::HangingVertex);
   validate(
@@ -494,8 +501,8 @@ void peano4::grid::tests::SpacetreeHelperTest::testStableTopologyLocalityHelpers
   vertices[0].adjacentRanks[1] = treeId;
   vertices[1].setState(GridVertex::State::HangingVertex);
   vertices[1].adjacentRanks[2] = treeId;
-  const auto vertexLocal       = SpacetreeHelper::
-    areVerticesLocal(vertices, treeId, splitTriggered, splitting, joinTriggered, joining, true);
+  const auto vertexLocal =
+    SpacetreeHelper::areVerticesLocal(vertices, treeId, splitTriggered, splitting, joinTriggered, joining, true);
   validate(vertexLocal.test(0));
   validate(vertexLocal.test(1));
   validate(not vertexLocal.test(2));
@@ -509,8 +516,8 @@ void peano4::grid::tests::SpacetreeHelperTest::testStableTopologyLocalityHelpers
   const int   i1_v0      = T.adjIdx1[normal][v0];
   vertices[v0].setState(GridVertex::State::HangingVertex);
   vertices[v0].adjacentRanks[i1_v0] = treeId;
-  const auto facesLocal             = SpacetreeHelper::
-    areFacesLocal(vertices, treeId, splitTriggered, splitting, joinTriggered, joining, true);
+  const auto facesLocal =
+    SpacetreeHelper::areFacesLocal(vertices, treeId, splitTriggered, splitting, joinTriggered, joining, true);
   validate(facesLocal.test(faceNumber));
 #elif DIMENSIONS == 3
   const int                     treeId = 1;
@@ -528,10 +535,17 @@ void peano4::grid::tests::SpacetreeHelperTest::testStableTopologyLocalityHelpers
 
   const int v                                    = 3;
   vertices[v].adjacentRanks[TWO_POWER_D - v - 1] = 9;
-  validate(
-    not SpacetreeHelper::
-      isSpacetreeNodeLocal(vertices, treeId, splitTriggered, splitting, joinTriggered, joining, false, false, true)
-  );
+  validate(not SpacetreeHelper::isSpacetreeNodeLocal(
+    vertices,
+    treeId,
+    splitTriggered,
+    splitting,
+    joinTriggered,
+    joining,
+    false,
+    false,
+    true
+  ));
   vertices[v].setState(GridVertex::State::HangingVertex);
   validate(
     SpacetreeHelper::
@@ -541,8 +555,8 @@ void peano4::grid::tests::SpacetreeHelperTest::testStableTopologyLocalityHelpers
   initVertices(vertices, /*defaultRank*/ 8);
   vertices[0].adjacentRanks[0] = treeId;
   vertices[5].adjacentRanks[4] = treeId;
-  const auto vertexLocal       = SpacetreeHelper::
-    areVerticesLocal(vertices, treeId, splitTriggered, splitting, joinTriggered, joining, true);
+  const auto vertexLocal =
+    SpacetreeHelper::areVerticesLocal(vertices, treeId, splitTriggered, splitting, joinTriggered, joining, true);
   validate(vertexLocal.test(0));
   validate(vertexLocal.test(5));
   validate(not vertexLocal.test(1));
@@ -554,8 +568,8 @@ void peano4::grid::tests::SpacetreeHelperTest::testStableTopologyLocalityHelpers
   const int   vf                 = T.faceVerts[faceNumber][0];
   const int   i0                 = T.adjIdx0[normal][vf];
   vertices[vf].adjacentRanks[i0] = treeId;
-  const auto facesLocal          = SpacetreeHelper::
-    areFacesLocal(vertices, treeId, splitTriggered, splitting, joinTriggered, joining, true);
+  const auto facesLocal =
+    SpacetreeHelper::areFacesLocal(vertices, treeId, splitTriggered, splitting, joinTriggered, joining, true);
   validate(facesLocal.test(faceNumber));
 #endif
 }
@@ -595,14 +609,14 @@ void peano4::grid::tests::SpacetreeHelperTest::testAreFacesLocal_HangingVertexRu
     vertices[v0].adjacentRanks[i1_v0] = 7;
     vertices[v1].adjacentRanks[i1_v1] = 7;
 
-    const auto facesLocal = SpacetreeHelper::
-      areFacesLocal(vertices, treeId, splitTriggered, splitting, joinTriggered, joining, false);
+    const auto facesLocal =
+      SpacetreeHelper::areFacesLocal(vertices, treeId, splitTriggered, splitting, joinTriggered, joining, false);
     validate(not facesLocal.test(faceNumber));
 
     // Now put local into i1 as well; face becomes local.
     vertices[v0].adjacentRanks[i1_v0] = treeId;
-    const auto facesLocal2            = SpacetreeHelper::
-      areFacesLocal(vertices, treeId, splitTriggered, splitting, joinTriggered, joining, false);
+    const auto facesLocal2 =
+      SpacetreeHelper::areFacesLocal(vertices, treeId, splitTriggered, splitting, joinTriggered, joining, false);
     validate(facesLocal2.test(faceNumber));
   }
 
@@ -625,13 +639,13 @@ void peano4::grid::tests::SpacetreeHelperTest::testAreFacesLocal_HangingVertexRu
     vertices[v0].adjacentRanks[i0_v0] = 7;
     vertices[v0].adjacentRanks[i1_v0] = treeId;
 
-    const auto facesLocal = SpacetreeHelper::
-      areFacesLocal(vertices, treeId, splitTriggered, splitting, joinTriggered, joining, false);
+    const auto facesLocal =
+      SpacetreeHelper::areFacesLocal(vertices, treeId, splitTriggered, splitting, joinTriggered, joining, false);
     validate(not facesLocal.test(faceNumber));
 
     vertices[v0].adjacentRanks[i0_v0] = treeId;
-    const auto facesLocal2            = SpacetreeHelper::
-      areFacesLocal(vertices, treeId, splitTriggered, splitting, joinTriggered, joining, false);
+    const auto facesLocal2 =
+      SpacetreeHelper::areFacesLocal(vertices, treeId, splitTriggered, splitting, joinTriggered, joining, false);
     validate(facesLocal2.test(faceNumber));
   }
 #endif
@@ -849,10 +863,17 @@ void peano4::grid::tests::SpacetreeHelperTest::testIsSpacetreeNodeLocal() {
 
   // Make one vertex owned by a remote rank -> non-local.
   vertices[0].adjacentRanks[TWO_POWER_D - 0 - 1] = 2;
-  validate(
-    not SpacetreeHelper::
-      isSpacetreeNodeLocal(vertices, treeId, splitTriggered, splitting, joinTriggered, joining, false, false, false)
-  );
+  validate(not SpacetreeHelper::isSpacetreeNodeLocal(
+    vertices,
+    treeId,
+    splitTriggered,
+    splitting,
+    joinTriggered,
+    joining,
+    false,
+    false,
+    false
+  ));
 
   // If that vertex is hanging, it is ignored for locality.
   vertices[0].setState(GridVertex::State::HangingVertex);
@@ -874,10 +895,17 @@ void peano4::grid::tests::SpacetreeHelperTest::testIsSpacetreeNodeLocal() {
   splitTriggered.clear();
   splitting.insert(5);
   vertices[0].adjacentRanks[TWO_POWER_D - 0 - 1] = 5;
-  validate(
-    not SpacetreeHelper::
-      isSpacetreeNodeLocal(vertices, treeId, splitTriggered, splitting, joinTriggered, joining, false, false, false)
-  );
+  validate(not SpacetreeHelper::isSpacetreeNodeLocal(
+    vertices,
+    treeId,
+    splitTriggered,
+    splitting,
+    joinTriggered,
+    joining,
+    false,
+    false,
+    false
+  ));
   validate(
     SpacetreeHelper::
       isSpacetreeNodeLocal(vertices, treeId, splitTriggered, splitting, joinTriggered, joining, true, false, false)
@@ -908,10 +936,17 @@ void peano4::grid::tests::SpacetreeHelperTest::testIsSpacetreeNodeLocal() {
   splitting.clear();
   joining.clear();
   vertices[v].adjacentRanks[owningSlot] = 2;
-  validate(
-    not SpacetreeHelper::
-      isSpacetreeNodeLocal(vertices, treeId, splitTriggered, splitting, joinTriggered, joining, false, false, false)
-  );
+  validate(not SpacetreeHelper::isSpacetreeNodeLocal(
+    vertices,
+    treeId,
+    splitTriggered,
+    splitting,
+    joinTriggered,
+    joining,
+    false,
+    false,
+    false
+  ));
 
   // Hanging vertices are ignored for locality checks
   vertices[v].setState(GridVertex::State::HangingVertex);
@@ -939,10 +974,17 @@ void peano4::grid::tests::SpacetreeHelperTest::testIsSpacetreeNodeLocal() {
   joining.clear();
   vertices[v].adjacentRanks[owningSlot] = 5;
   splitting.insert(5);
-  validate(
-    not SpacetreeHelper::
-      isSpacetreeNodeLocal(vertices, treeId, splitTriggered, splitting, joinTriggered, joining, false, false, false)
-  );
+  validate(not SpacetreeHelper::isSpacetreeNodeLocal(
+    vertices,
+    treeId,
+    splitTriggered,
+    splitting,
+    joinTriggered,
+    joining,
+    false,
+    false,
+    false
+  ));
   validate(
     SpacetreeHelper::
       isSpacetreeNodeLocal(vertices, treeId, splitTriggered, splitting, joinTriggered, joining, true, false, false)
@@ -955,10 +997,17 @@ void peano4::grid::tests::SpacetreeHelperTest::testIsSpacetreeNodeLocal() {
   joining.clear();
   vertices[v].adjacentRanks[owningSlot] = 6;
   joining.insert(6);
-  validate(
-    !SpacetreeHelper::
-      isSpacetreeNodeLocal(vertices, treeId, splitTriggered, splitting, joinTriggered, joining, false, false, false)
-  );
+  validate(not SpacetreeHelper::isSpacetreeNodeLocal(
+    vertices,
+    treeId,
+    splitTriggered,
+    splitting,
+    joinTriggered,
+    joining,
+    false,
+    false,
+    false
+  ));
   validate(
     SpacetreeHelper::
       isSpacetreeNodeLocal(vertices, treeId, splitTriggered, splitting, joinTriggered, joining, false, true, false)
@@ -1031,17 +1080,21 @@ void peano4::grid::tests::SpacetreeHelperTest::testIsSpacetreeNodeSplitCandidate
     )
   );
 
-  // Periodic BC rank in any adjacency entry disqualifies the candidate.
+  // A periodic BC marker is classification metadata, not ownership: it must not
+  // disqualify an otherwise-local cell from splitting (periodic data is exchanged
+  // across trees like any neighbour data). The cell stays a candidate.
   fineGridVertices[0].adjacentRanks[0] = SpacetreeHelper::RankOfPeriodicBoundaryCondition;
-  validate(not SpacetreeHelper::isSpacetreeNodeSplitCandidate(
-    coarseGridVertices,
-    fineGridVertices,
-    treeId,
-    splitTriggered,
-    splitting,
-    joinTriggered,
-    joining
-  ));
+  validate(
+    SpacetreeHelper::isSpacetreeNodeSplitCandidate(
+      coarseGridVertices,
+      fineGridVertices,
+      treeId,
+      splitTriggered,
+      splitting,
+      joinTriggered,
+      joining
+    )
+  );
 
   // Parent-of-subtree flag disqualifies the candidate.
   initVertices(fineGridVertices, treeId);

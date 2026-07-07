@@ -34,13 +34,14 @@ private:
 
 public:
   /**
-   * Periodic boundary conditions are technically realised as domain
-   * decomposition, i.e. the vertices along the periodic boundaries carry
-   * rank numbers which host RankOfPeriodicBoundaryCondition. So this is
-   * the rank number dedicated to periodic BCs. As we treat the BCs as
-   * particular neighbour ranks, all data along the periodic BCs is
-   * automatically piped onto specialised streams. This holds for both
-   * user and grid data.
+   * Rank marker for periodic boundary conditions. Vertices along a periodic
+   * domain boundary carry this marker in the adjacentRanks entries that point
+   * out of the domain. The marker classifies the boundary and never denotes
+   * ownership: cells alongside it split like any other cell, and the
+   * neighbour-resolution helpers exclude it. The wrapped partner entities are
+   * matched by their integer identity instead, and their data travels through
+   * the dedicated periodic streams; see peano4/grid/PeriodicTopology.h and
+   * peano4::parallel::SpacetreeSet::exchangeAllPeriodicBoundaryDataStacks().
    */
   static constexpr int RankOfPeriodicBoundaryCondition               = -2;
   static constexpr int NumberOfStationarySweepsToWaitAtLeastTillJoin = 2;

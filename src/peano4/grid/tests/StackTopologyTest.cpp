@@ -4,12 +4,13 @@
 
 #include "peano4/grid/StackTopology.h"
 
-peano4::grid::tests::StackTopologyTest::StackTopologyTest():
+peano4::grid::tests::StackTopologyTest::StackTopologyTest() :
   TestCase("peano4::grid::tests::StackTopologyTest") {}
 
 void peano4::grid::tests::StackTopologyTest::run() {
   testMethod(testStackIdentification);
   testMethod(testPeriodicBoundaryMapping);
+  testMethod(testPeriodicPartnerRoundTrip);
 }
 
 void peano4::grid::tests::StackTopologyTest::testStackIdentification() {
@@ -17,12 +18,12 @@ void peano4::grid::tests::StackTopologyTest::testStackIdentification() {
   validate(StackTopology::isInOutStack(static_cast<int>(StackTopology::BaseStack::Input)));
   validate(StackTopology::isInOutStack(static_cast<int>(StackTopology::BaseStack::Output)));
 
-  int firstFaceStack = StackTopology::FaceExchangeStackOffset;
+  const int firstFaceStack = StackTopology::FaceExchangeStackOffset;
   validate(StackTopology::isFaceExchangeStack(firstFaceStack));
   validate(StackTopology::isFaceExchangeStack(firstFaceStack + 1));
   validate(not StackTopology::isFaceExchangeStack(firstFaceStack - 1));
 
-  int lastLocalStack = StackTopology::TotalNumberOfLocalExchangeStacks - 1;
+  const int lastLocalStack = StackTopology::TotalNumberOfLocalExchangeStacks - 1;
   validate(StackTopology::isLocalExchangeStack(0));
   validate(StackTopology::isLocalExchangeStack(lastLocalStack));
   validate(not StackTopology::isLocalExchangeStack(lastLocalStack + 1));
@@ -41,20 +42,74 @@ void peano4::grid::tests::StackTopologyTest::testPeriodicBoundaryMapping() {
 
   // Verify Output -> Input mapping (Standard Exchange)
   // Input stack is offset by half the total periodic stacks
-  int outStack        = start;
-  int expectedInStack = start + half;
+  const int outStack        = start;
+  const int expectedInStack = start + half;
   validateEquals(StackTopology::getPeriodicBoundaryExchangeInputStackNumberForOutputStack(outStack), expectedInStack);
 
-  // Verify Mirror Mapping (Face Exchange Logic)
-  // mapPeriodicBoundaryExchangeOutputStackOntoInputStack maps the first output to the last input (mirrored)
-  // mirroredStack = Total - (output - first) - 1 + first
-  int mirroredInput    = StackTopology::mapPeriodicBoundaryExchangeOutputStackOntoInputStack(outStack);
-  int expectedMirrored = start + totalPeriodic - 1;
+  // Verify the mirror mapping: it maps the first output to the last input.
+  const int mirroredInput    = StackTopology::mapPeriodicBoundaryExchangeOutputStackOntoInputStack(outStack);
+  const int expectedMirrored = start + totalPeriodic - 1;
   validateEquals(mirroredInput, expectedMirrored);
 
   // Test the last output stack
-  int lastOutStack = start + half - 1;
-  int mirroredLast = StackTopology::mapPeriodicBoundaryExchangeOutputStackOntoInputStack(lastOutStack);
+  const int lastOutStack = start + half - 1;
+  const int mirroredLast = StackTopology::mapPeriodicBoundaryExchangeOutputStackOntoInputStack(lastOutStack);
   // Should map to the start of the input range (which is 'half' away from start)
   validateEquals(mirroredLast, start + half);
+}
+
+/**
+ * The periodic exchange deposits an entry pushed to output stack s onto the
+ * partner tree's getPeriodicBoundaryExchangeInputStackNumberForOutputStack(s),
+ * while the partner reads its own mirrored direction via
+ * mapPeriodicBoundaryExchangeOutputStackOntoInputStack. These two maps are
+ * deliberately non-equivalent and only compose across mirrored directions,
+ * so unifying them would silently break the exchange. Pinned for every
+ * stencil direction, faces and corners alike.
+ */
+void peano4::grid::tests::StackTopologyTest::testPeriodicPartnerRoundTrip() {
+  // The deposit stack for output stack s is
+  // getPeriodicBoundaryExchangeInputStackNumberForOutputStack(s); the wrapped
+  // partner reads from mapPeriodicBoundaryExchangeOutputStackOntoInputStack of
+  // its own, mirrored direction. These must address the same stack for every
+  // stencil direction (mirroring means inverting the direction, i.e. the
+  // reversed linearised stencil position).
+  constexpr int Centre = (THREE_POWER_D - 1) / 2;
+  for (int linearised = 0; linearised < THREE_POWER_D; linearised++) {
+    if (linearised == Centre) {
+      continue;
+    }
+    const int mirroredLinearised = THREE_POWER_D - 1 - linearised;
+
+    const int outputIndex         = linearised < Centre ? linearised : linearised - 1;
+    const int mirroredOutputIndex = mirroredLinearised < Centre ? mirroredLinearised : mirroredLinearised - 1;
+
+    const int outputStack         = StackTopology::PeriodicBoundaryExchangeStackOffset + outputIndex;
+    const int mirroredOutputStack = StackTopology::PeriodicBoundaryExchangeStackOffset + mirroredOutputIndex;
+
+    validate(StackTopology::isPeriodicBoundaryExchangeOutputStackNumber(outputStack));
+    validate(StackTopology::isPeriodicBoundaryExchangeOutputStackNumber(mirroredOutputStack));
+
+    const int depositStack = StackTopology::getPeriodicBoundaryExchangeInputStackNumberForOutputStack(outputStack);
+    const int readStack    = StackTopology::mapPeriodicBoundaryExchangeOutputStackOntoInputStack(mirroredOutputStack);
+    validateEqualsWithParams2(depositStack, readStack, linearised, mirroredLinearised);
+  }
+
+  // Cross-check via the face-number API: face f and its geometric opposite
+  // f + DIMENSIONS use exactly these mirrored directions.
+  for (int f = 0; f < DIMENSIONS; f++) {
+    const int outF         = StackTopology::getOutputStackForPeriodicBoundaryExchange(f);
+    const int outFOpposite = StackTopology::getOutputStackForPeriodicBoundaryExchange(f + DIMENSIONS);
+
+    validateEqualsWithParams1(
+      StackTopology::getPeriodicBoundaryExchangeInputStackNumberForOutputStack(outF),
+      StackTopology::mapPeriodicBoundaryExchangeOutputStackOntoInputStack(outFOpposite),
+      f
+    );
+    validateEqualsWithParams1(
+      StackTopology::getPeriodicBoundaryExchangeInputStackNumberForOutputStack(outFOpposite),
+      StackTopology::mapPeriodicBoundaryExchangeOutputStackOntoInputStack(outF),
+      f
+    );
+  }
 }

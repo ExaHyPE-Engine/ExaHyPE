@@ -118,8 +118,21 @@ void runner::GridConstruction::run() {
 
   double currentMinH         = std::numeric_limits<double>::max();
   int    currentTrees        = 0;   // tree count we have already reacted to
-  int    lastShownCells      = -1;  // cells in the last row, so a row appears only when the grid changed
   double constructionSeconds = 0.0; // wall time summed over all construction sweeps
+
+  // Each level gets exactly one row, showing its converged state. Rows are
+  // therefore buffered: every settled sweep overwrites the snapshot of the
+  // current level, and the snapshot is emitted once the construction has
+  // refined past the level (or converged on the final one).
+  struct LevelSnapshot {
+    int           level = -1;
+    unsigned long leaves{};
+    unsigned long outer{};
+    unsigned long trees{};
+    unsigned long minLoad{};
+    unsigned long maxLoad{};
+  };
+  LevelSnapshot pendingRow;
 
   // The grid is built by alternating refining sweeps (CreateGrid) with refinement-paused settle
   // sweeps (LoadBalancing): after any sweep that changed the grid - a refinement (minH dropped) or a
@@ -142,22 +155,30 @@ void runner::GridConstruction::run() {
     const auto& s     = loadBalancer().getStatistics();
     const auto  trees = static_cast<int>(s.getGlobalNumberOfTrees());
 
-    // Show each settled intermediate level once. A sweep's cell count is trustworthy only when no
-    // fork started this sweep (tree count stable) and none is still settling; the final level is left
-    // to the converged branch below.
+    // A sweep's statistics are trustworthy only when no fork started this
+    // sweep (tree count stable) and none is still settling.
     const bool cleanSweep = (trees == currentTrees) and s.getGlobalNumberOfStationarySweeps() >= 0;
-    if (cleanSweep and tarch::la::greater(s.getGlobalMinH(), minAdmissibleH) and
-        s.getGlobalNumberOfInnerUnrefinedCells() != lastShownCells) {
-      lastShownCells = s.getGlobalNumberOfInnerUnrefinedCells();
-      logRow(
-        s.getGlobalMaxDepth(),
-        maxLevel,
-        static_cast<unsigned long>(s.getGlobalNumberOfInnerUnrefinedCells()),
-        static_cast<unsigned long>(s.getGlobalNumberOfOuterUnrefinedCells()),
-        static_cast<unsigned long>(trees),
-        static_cast<unsigned long>(s.getGlobalMinTreeLoad()),
-        static_cast<unsigned long>(s.getGlobalMaxTreeLoad())
-      );
+    if (cleanSweep) {
+      const int level = s.getGlobalMaxDepth();
+      if (pendingRow.level >= 0 and level > pendingRow.level) {
+        logRow(
+          pendingRow.level,
+          maxLevel,
+          pendingRow.leaves,
+          pendingRow.outer,
+          pendingRow.trees,
+          pendingRow.minLoad,
+          pendingRow.maxLoad
+        );
+      }
+      if (level >= pendingRow.level) {
+        pendingRow.level   = level;
+        pendingRow.leaves  = static_cast<unsigned long>(s.getGlobalNumberOfInnerUnrefinedCells());
+        pendingRow.outer   = static_cast<unsigned long>(s.getGlobalNumberOfOuterUnrefinedCells());
+        pendingRow.trees   = static_cast<unsigned long>(trees);
+        pendingRow.minLoad = static_cast<unsigned long>(s.getGlobalMinTreeLoad());
+        pendingRow.maxLoad = static_cast<unsigned long>(s.getGlobalMaxTreeLoad());
+      }
     }
 
     if (tarch::la::smaller(s.getGlobalMinH(), currentMinH)) {
@@ -174,15 +195,15 @@ void runner::GridConstruction::run() {
       const bool converged =
         tarch::la::smallerEquals(currentMinH, minAdmissibleH) and loadBalancer().isStagnating() and didRefineThisSweep;
       if (converged and finishConditionSeenLastSweep) {
-        if (s.getGlobalNumberOfInnerUnrefinedCells() != lastShownCells) {
+        if (pendingRow.level >= 0) {
           logRow(
-            s.getGlobalMaxDepth(),
+            pendingRow.level,
             maxLevel,
-            static_cast<unsigned long>(s.getGlobalNumberOfInnerUnrefinedCells()),
-            static_cast<unsigned long>(s.getGlobalNumberOfOuterUnrefinedCells()),
-            static_cast<unsigned long>(trees),
-            static_cast<unsigned long>(s.getGlobalMinTreeLoad()),
-            static_cast<unsigned long>(s.getGlobalMaxTreeLoad())
+            pendingRow.leaves,
+            pendingRow.outer,
+            pendingRow.trees,
+            pendingRow.minLoad,
+            pendingRow.maxLoad
           );
         }
         break;

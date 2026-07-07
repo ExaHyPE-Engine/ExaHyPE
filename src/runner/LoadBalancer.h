@@ -5,7 +5,7 @@
 #include "toolbox/loadbalancing/LoadBalancer.h"
 
 namespace runner {
-  void initLoadBalancer(bool hasPeriodicBoundaryConditions);
+  void initLoadBalancer();
 
   toolbox::loadbalancing::LoadBalancer& loadBalancer();
 } // namespace runner

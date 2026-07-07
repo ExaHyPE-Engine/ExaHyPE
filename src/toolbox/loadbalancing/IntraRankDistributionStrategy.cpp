@@ -11,6 +11,18 @@
 #include <cmath>
 
 class toolbox::loadbalancing::LoadBalancer::IntraRankDistributionStrategy final : public Strategy {
+private:
+  /**
+   * Stagnation detection. Counting updates without a split alone would give
+   * up while the strategy still waits for grid construction to refine the
+   * mesh far enough to feed the requested tree count (a large max-trees
+   * setting needs several construction levels before the first split can
+   * fire). Stagnation therefore requires that the mesh has stopped growing
+   * as well.
+   */
+  int _updatesWithoutSplitOrMeshGrowth = 0;
+  int _lastObservedGlobalCellCount     = -1;
+
 public:
   ~IntraRankDistributionStrategy() override = default;
 
@@ -22,7 +34,14 @@ public:
       return State::Stagnation;
     }
 
-    if (lb._statistics.getNumberOfStateUpdatesWithoutAnySplit() > 5) {
+    const auto globalCellCount = lb._statistics.getGlobalNumberOfInnerUnrefinedCells();
+    if (globalCellCount != _lastObservedGlobalCellCount or lb._statistics.getNumberOfStateUpdatesWithoutAnySplit() == 0) {
+      _lastObservedGlobalCellCount     = globalCellCount;
+      _updatesWithoutSplitOrMeshGrowth = 0;
+    } else {
+      _updatesWithoutSplitOrMeshGrowth++;
+    }
+    if (_updatesWithoutSplitOrMeshGrowth > 5) {
       return State::Stagnation;
     }
 

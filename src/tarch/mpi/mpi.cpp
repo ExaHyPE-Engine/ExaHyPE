@@ -653,6 +653,106 @@ int tarch::mpi::iallgatherv(
   return result;
 }
 
+int tarch::mpi::ialltoall(
+  const void*          sendBuffer,
+  int                  sendCount,
+  MPI_Datatype         sendDatatype,
+  void*                receiveBuffer,
+  int                  receiveCount,
+  MPI_Datatype         receiveDatatype,
+  MPI_Comm             communicator,
+  MPI_Request*         request,
+  std::source_location location
+) {
+  int result = PMPI_Ialltoall(
+    sendBuffer,
+    sendCount,
+    sendDatatype,
+    receiveBuffer,
+    receiveCount,
+    receiveDatatype,
+    communicator,
+    request
+  );
+  checkReturnValue(result, "MPI_Ialltoall", location);
+  registerPendingRequest(request, "MPI_Ialltoall", -1, -1, location);
+  return result;
+}
+
+int tarch::mpi::alltoall(
+  const void*          sendBuffer,
+  int                  sendCount,
+  MPI_Datatype         sendDatatype,
+  void*                receiveBuffer,
+  int                  receiveCount,
+  MPI_Datatype         receiveDatatype,
+  MPI_Comm             communicator,
+  std::source_location location
+) {
+  MPI_Request request = MPI_REQUEST_NULL;
+  ialltoall(sendBuffer, sendCount, sendDatatype, receiveBuffer, receiveCount, receiveDatatype, communicator, &request, location);
+  return wait(&request, MPI_STATUS_IGNORE, location);
+}
+
+int tarch::mpi::ialltoallv(
+  const void*          sendBuffer,
+  const int*           sendCounts,
+  const int*           sendDisplacements,
+  MPI_Datatype         sendDatatype,
+  void*                receiveBuffer,
+  const int*           receiveCounts,
+  const int*           receiveDisplacements,
+  MPI_Datatype         receiveDatatype,
+  MPI_Comm             communicator,
+  MPI_Request*         request,
+  std::source_location location
+) {
+  int result = PMPI_Ialltoallv(
+    sendBuffer,
+    sendCounts,
+    sendDisplacements,
+    sendDatatype,
+    receiveBuffer,
+    receiveCounts,
+    receiveDisplacements,
+    receiveDatatype,
+    communicator,
+    request
+  );
+  checkReturnValue(result, "MPI_Ialltoallv", location);
+  registerPendingRequest(request, "MPI_Ialltoallv", -1, -1, location);
+  return result;
+}
+
+int tarch::mpi::alltoallv(
+  const void*          sendBuffer,
+  const int*           sendCounts,
+  const int*           sendDisplacements,
+  MPI_Datatype         sendDatatype,
+  void*                receiveBuffer,
+  const int*           receiveCounts,
+  const int*           receiveDisplacements,
+  MPI_Datatype         receiveDatatype,
+  MPI_Comm             communicator,
+  std::source_location location
+) {
+  MPI_Request request = MPI_REQUEST_NULL;
+  ialltoallv(
+    sendBuffer,
+    sendCounts,
+    sendDisplacements,
+    sendDatatype,
+    receiveBuffer,
+    receiveCounts,
+    receiveDisplacements,
+    receiveDatatype,
+    communicator,
+    &request,
+    location
+  );
+  return wait(&request, MPI_STATUS_IGNORE, location);
+}
+
 int tarch::mpi::allgatherv(
   const void*          sendBuffer,
   int                  sendCount,

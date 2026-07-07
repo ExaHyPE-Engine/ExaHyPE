@@ -65,9 +65,9 @@ namespace {
 
   peano4::grid::Spacetree createUnitTree(const std::bitset<DIMENSIONS>& periodicBC = std::bitset<DIMENSIONS>{}) {
 #if DIMENSIONS == 2
-    return peano4::grid::Spacetree({0.0, 0.0}, {1.0, 1.0}, periodicBC);
+    return peano4::grid::Spacetree(0, {0.0, 0.0}, {1.0, 1.0}, periodicBC);
 #else
-    return peano4::grid::Spacetree({0.0, 0.0, 0.0}, {1.0, 1.0, 1.0}, periodicBC);
+    return peano4::grid::Spacetree(0, {0.0, 0.0, 0.0}, {1.0, 1.0, 1.0}, periodicBC);
 #endif
   }
 
@@ -217,7 +217,7 @@ void peano4::grid::tests::SpacetreeTest::testUpdateVertexRanksWithinCell() {
 // Verifies vertex neighbour discovery for send/receive, including filtering of splitting ranks and hanging vertices.
 void peano4::grid::tests::SpacetreeTest::testGetNeighbourTreesVertexSendReceive() {
 #if DIMENSIONS == 2
-  Spacetree tree({0.0, 0.0}, {1.0, 1.0});
+  Spacetree tree(0, {0.0, 0.0}, {1.0, 1.0}, std::bitset<DIMENSIONS>{});
   tree._id = 1;
 
   GridVertex v;
@@ -281,7 +281,7 @@ void peano4::grid::tests::SpacetreeTest::testGetNeighbourTreesVertexSendReceive(
   validateEquals(recvHanging.size(), 0);
 #endif
 #if DIMENSIONS == 3
-  Spacetree tree({0.0, 0.0, 0.0}, {1.0, 1.0, 1.0});
+  Spacetree tree(0, {0.0, 0.0, 0.0}, {1.0, 1.0, 1.0}, std::bitset<DIMENSIONS>{});
   tree._id = 1;
 
   GridVertex v;
@@ -356,7 +356,7 @@ void peano4::grid::tests::SpacetreeTest::testGetNeighbourTreesVertexSendReceive(
 // Verifies face neighbour discovery for send/receive, including suppression of invalid vertices and non-local faces.
 void peano4::grid::tests::SpacetreeTest::testGetNeighbourTreesFaceSendReceive() {
 #if DIMENSIONS == 2
-  Spacetree tree({0.0, 0.0}, {1.0, 1.0});
+  Spacetree tree(0, {0.0, 0.0}, {1.0, 1.0}, std::bitset<DIMENSIONS>{});
   tree._id = 1;
 
   GridVertex fineGridVertices[TWO_POWER_D];
@@ -457,7 +457,7 @@ void peano4::grid::tests::SpacetreeTest::testGetNeighbourTreesFaceSendReceive() 
 // tree.
 void peano4::grid::tests::SpacetreeTest::testIsFaceAlongPeriodicBoundaryCondition() {
 #if DIMENSIONS == 2
-  Spacetree tree({0.0, 0.0}, {1.0, 1.0});
+  Spacetree tree(0, {0.0, 0.0}, {1.0, 1.0}, std::bitset<DIMENSIONS>{});
   tree._id = 1;
 
   GridVertex fineGridVertices[TWO_POWER_D];
@@ -543,7 +543,7 @@ void peano4::grid::tests::SpacetreeTest::testIncrementNumberOfAdjacentRefinedLoc
 // Verifies the primitive horizontal-exchange predicate across mandatory exclusions, transition states, and tree states.
 void peano4::grid::tests::SpacetreeTest::testDoesRankIndexIdentifyHorizontalDataExchange() {
 #if DIMENSIONS == 2
-  Spacetree tree({0.0, 0.0}, {1.0, 1.0});
+  Spacetree tree(0, {0.0, 0.0}, {1.0, 1.0}, std::bitset<DIMENSIONS>{});
   tree._id             = 1;
   tree._spacetreeState = SpacetreeState::Running;
   tree._splitting.clear();
@@ -1081,7 +1081,7 @@ void peano4::grid::tests::SpacetreeTest::testDescend() {
   tree._noParallelTopologyChanges = true;
 
   CountingTraversalObserver observer;
-  tree.descend(tree._root, vertices, observer);
+  tree.descend(tree._root, tarch::la::Vector<DIMENSIONS, int>(0), vertices, observer);
 
   validateEquals(observer.loadNodeDataCalls, THREE_POWER_D);
   validateEquals(observer.enterNodeCalls, THREE_POWER_D);

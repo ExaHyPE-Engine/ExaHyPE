@@ -72,18 +72,22 @@ public:
     int                                             position,
     int                                             toStack,
     ::peano4::stacks::SendReceiveContext            context,
-    const ::peano4::grid::GridTraversalEvent&       event
+    const ::peano4::grid::GridTraversalEvent&       event,
+    const ::peano4::grid::PeriodicStamp*            periodicStamp = nullptr
   ) override;
   void receiveNodeData(
     ::peano4::grid::GridTraversalObserver::NodeData nodeData,
     int                                             position,
     int                                             fromStack,
     ::peano4::stacks::SendReceiveContext            context,
-    const ::peano4::grid::GridTraversalEvent&       event
+    const ::peano4::grid::GridTraversalEvent&       event,
+    const ::peano4::grid::PeriodicStamp*            periodicStamp = nullptr
   ) override;
 
   void exchangeAllHorizontalDataExchangeStacks() override;
+  void purgePeriodicBoundaryDataStacks() override;
   void exchangeAllPeriodicBoundaryDataStacks() override;
+  void exchangeCrossRankPeriodicData() override;
 
   void streamDataFromSplittingTreeToNewTree(int newWorker) override;
   void streamDataFromJoiningTreeToMasterTree(int masterId) override;

@@ -8,14 +8,16 @@ namespace peano4::grid::tests {
   class StackTopologyTest;
 } // namespace peano4::grid::tests
 
-class peano4::grid::tests::StackTopologyTest final: public tarch::tests::TestCase {
+class peano4::grid::tests::StackTopologyTest final : public tarch::tests::TestCase {
 private:
   void testStackIdentification();
   void testPeriodicBoundaryMapping();
 
+  void testPeriodicPartnerRoundTrip();
+
 public:
   StackTopologyTest();
-  ~StackTopologyTest() override final = default;
+  ~StackTopologyTest() override = default;
 
-  void run() override final;
+  void run() override;
 };

@@ -20,7 +20,7 @@
 peano4::parallel::Node peano4::parallel::Node::_singleton;
 
 namespace {
-  constexpr int TagsPerReceivingTree = 2;
+  constexpr int TagsPerReceivingTree = 3;
 
   int getExchangeModeTagOffset(peano4::parallel::Node::ExchangeMode exchange) {
     switch (exchange) {
@@ -28,6 +28,8 @@ namespace {
       return 0;
     case peano4::parallel::Node::ExchangeMode::VerticalData:
       return 1;
+    case peano4::parallel::Node::ExchangeMode::PeriodicData:
+      return 2;
     }
     assertion(false);
     return -1;
@@ -72,6 +74,8 @@ std::string peano4::parallel::Node::toString(ExchangeMode mode) {
     return "horizontal-data";
   case ExchangeMode::VerticalData:
     return "vertical-data";
+  case ExchangeMode::PeriodicData:
+    return "periodic-data";
   }
   return "undef";
 }
@@ -231,7 +235,6 @@ peano4::parallel::Node::GridDataExchangeMetaInformation peano4::parallel::Node::
   int          receivingTreeId,
   ExchangeMode exchange
 ) const {
-
   const int localSendingTreeId   = getLocalTreeId(sendingTreeId);
   const int localReceivingTreeId = getLocalTreeId(receivingTreeId);
 
@@ -244,10 +247,8 @@ peano4::parallel::Node::GridDataExchangeMetaInformation peano4::parallel::Node::
     localSendingTreeId,
     getNumberOfRegisteredTrees()
   );
-  // assertion(localSendingTreeId <= getNumberOfRegisteredTrees(), localSendingTreeId,
-  // getNumberOfRegisteredTrees());
 
-  int tag = TagsPerReceivingTree * localReceivingTreeId + getExchangeModeTagOffset(exchange);
+  const int tag = TagsPerReceivingTree * localReceivingTreeId + getExchangeModeTagOffset(exchange);
 
   return peano4::parallel::Node::GridDataExchangeMetaInformation(tag, _dataExchangeCommunicators[localSendingTreeId]);
 }
@@ -267,6 +268,9 @@ std::string peano4::parallel::Node::getSemanticsForTag(int tag) {
     break;
   case 1:
     result += "vertical data";
+    break;
+  case 2:
+    result += "periodic data";
     break;
   }
 

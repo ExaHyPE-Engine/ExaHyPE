@@ -277,6 +277,8 @@ void toolbox::loadbalancing::Statistics::waitForGlobalDataExchange() {
     );
     _isViewConsistent                  = false;
     _globalNumberOfInnerUnrefinedCells = _localNumberOfInnerUnrefinedCells;
+    _globalMinDepth                    = _localMinDepth;
+    _globalMaxDepth                    = _localMaxDepth;
   } else {
     _isViewConsistent = true;
   }

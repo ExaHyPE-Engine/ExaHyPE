@@ -54,10 +54,11 @@ FV Static AMR:
   stage: Test
   parallel:
     matrix:
-    - dimensions: [2]
+    - periodic: ["on", "off"]
+      dimensions: [2]
       build_type: [Release, Debug]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fv-static-amr && PYTHONPATH=$CI_PROJECT_DIR/api python3 fv-static-amr.py --dimensions $dimensions --build-mode $build_type"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fv-static-amr && PYTHONPATH=$CI_PROJECT_DIR/api python3 fv-static-amr.py --periodic-bc $periodic --dimensions $dimensions --build-mode $build_type"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/fv-static-amr && $PARALLEL_LAUNCH ./ExaHyPE -ns 0 -lmin ${MIN_GRID_LEVELS} -lmax ${MAX_GRID_LEVELS}"
   allow_failure: false
   extends:

@@ -14,7 +14,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendNodeData(
   int                                             position,
   int                                             toStack,
   ::peano4::stacks::SendReceiveContext            context,
-  const ::peano4::grid::GridTraversalEvent&       event
+  const ::peano4::grid::GridTraversalEvent&       event,
+  const ::peano4::grid::PeriodicStamp*            periodicStamp
 ) {
   using NodeData = ::peano4::grid::GridTraversalObserver::NodeData;
   const auto callStack = static_cast<int>(::peano4::grid::StackTopology::BaseStack::Call);
@@ -47,6 +48,11 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendNodeData(
         auto& data = repositories::DataRepository::{{vertex.logical_type_name}}StackContainer.getLocalExchangeStack(_spacetreeId, callStack).top(TWO_POWER_D - 1 - position);
         if (data.send(marker, context)) {
           pushDataForExchange(outgoingStack(repositories::DataRepository::{{vertex.logical_type_name}}StackContainer), data);
+          // Record the periodic identity in lockstep with the payload so the
+          // partner tree can pair this vertex image by identity on receive.
+          if (context == ::peano4::stacks::SendReceiveContext::PeriodicBoundaryDataSwap and periodicStamp != nullptr) {
+            repositories::DataRepository::{{vertex.logical_type_name}}StackContainer.pushLocalExchangeStamp(_spacetreeId, toStack, *periodicStamp);
+          }
         }
       }
 {%- endfor %}
@@ -63,6 +69,11 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendNodeData(
         auto& data = repositories::DataRepository::{{face.logical_type_name}}StackContainer.getLocalExchangeStack(_spacetreeId, callStack).top(TWO_TIMES_D - 1 - position);
         if (data.send(marker, context)) {
           pushDataForExchange(outgoingStack(repositories::DataRepository::{{face.logical_type_name}}StackContainer), data);
+          // Record the periodic identity in lockstep with the payload so the
+          // partner tree can pair this face by identity on receive.
+          if (context == ::peano4::stacks::SendReceiveContext::PeriodicBoundaryDataSwap and periodicStamp != nullptr) {
+            repositories::DataRepository::{{face.logical_type_name}}StackContainer.pushLocalExchangeStamp(_spacetreeId, toStack, *periodicStamp);
+          }
         }
       }
 {%- endfor %}
