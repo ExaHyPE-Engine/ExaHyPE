@@ -2,34 +2,26 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "runner/Runner.h" // Step, RunContext, Runner
+#include "runner/Engine.h" // Step
 
-#include <string>
 #include <vector>
 
 namespace runner {
-  class Orchestrator {
+  struct PhaseContext;
+
+  /** Runs the ordered list of phases into the shared box. Add a phase by registering it in run(). */
+  class Orchestrator final {
   public:
     explicit Orchestrator(const std::vector<Step>& steps);
 
-    /** Drives the whole schedule. Returns true if the run ended early because a noncritical
-     *  assertion was triggered (one final plot was written), false on a normal completion. */
-    bool run(Runner& runner, RunContext& context);
+    /** True if a noncritical assertion ended the run early. */
+    bool run(PhaseContext& context);
 
   private:
-    struct Role {
-      int         programStep = -1;
-      std::string name;
-      bool        exists() const { return programStep >= 0; }
-    };
-    Role _createGrid;
-    Role _loadBalancing;
-    Role _initGrid;
-    Role _plot;
-    Role _timeStep;
-
-    void runGridConstruction(Runner& runner, RunContext& context);
-    void runGridInitialisation(Runner& runner, RunContext& context);
-    bool runTimeLoop(Runner& runner, RunContext& context);
+    int _createGridStep    = -1;
+    int _loadBalancingStep = -1;
+    int _initGridStep      = -1;
+    int _plotStep          = -1;
+    int _timeStepStep      = -1;
   };
 } // namespace runner

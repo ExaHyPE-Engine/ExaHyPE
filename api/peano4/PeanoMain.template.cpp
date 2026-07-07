@@ -11,7 +11,7 @@
 #include "observers/{{step.name}}.h"
 {% endfor %}
 
-#include "runner/Runner.h"
+#include "runner/Launch.h"
 #include "runner/RuntimeParameters.h"
 
 {{EXTRA_INCLUDES}}
@@ -74,7 +74,7 @@ int main(int argc, char** argv) {
     "{{PROJECT_NAME}}"
   );
 
-  return ::runner::run(
+  return ::runner::launch(
     DomainOffset,
     DomainSize,
     PeriodicBC,

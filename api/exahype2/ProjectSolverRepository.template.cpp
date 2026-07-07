@@ -52,75 +52,63 @@ std::string getSolverStateDescriptions() {
   return result.str();
 }
 
-std::string formatSolverStatisticRange(double minValue, double maxValue) {
-  std::ostringstream result;
-  if (minValue == maxValue) {
-    result << minValue;
-  } else {
-    result << "[" << minValue << ", " << maxValue << "]";
-  }
-  return result.str();
+::runner::SolverStatistic makeValue(const char* label, double value) {
+  return {label, ::runner::SolverStatistic::Kind::Value, value, value, 0};
 }
 
-template <typename Value>
-void appendSolverStatistic(std::ostringstream& result, const char* label, const Value& value) {
-  if (not result.str().empty()) {
-    result << ", ";
-  }
-  result << label << "=" << value;
+::runner::SolverStatistic makeRange(const char* label, double minValue, double maxValue) {
+  return {label, ::runner::SolverStatistic::Kind::Value, minValue, maxValue, 0};
+}
+
+::runner::SolverStatistic makeCount(const char* label, long value) {
+  return {label, ::runner::SolverStatistic::Kind::Count, 0.0, 0.0, value};
 }
 
 template <typename Solver>
-auto appendMaxEigenvalue(std::ostringstream& result, const Solver& solver, int) -> decltype(solver.getMaxEigenvalue(), void()) {
-  appendSolverStatistic(result, "λ_{max}", solver.getMaxEigenvalue());
+auto appendMaxEigenvalue(std::vector<::runner::SolverStatistic>& result, const Solver& solver, int) -> decltype(solver.getMaxEigenvalue(), void()) {
+  result.push_back(makeValue("λ_max", solver.getMaxEigenvalue()));
 }
 
 template <typename Solver>
-void appendMaxEigenvalue(std::ostringstream&, const Solver&, long) {}
+void appendMaxEigenvalue(std::vector<::runner::SolverStatistic>&, const Solver&, long) {}
 
 template <typename Solver>
-auto appendTroubledCells(std::ostringstream& result, const Solver& solver, int) -> decltype(solver.getNumberOfTroubledCells(), void()) {
+auto appendTroubledCells(std::vector<::runner::SolverStatistic>& result, const Solver& solver, int) -> decltype(solver.getNumberOfTroubledCells(), void()) {
   if (solver.getNumberOfTroubledCells() > 0) {
-    appendSolverStatistic(result, "Troubled", solver.getNumberOfTroubledCells());
+    result.push_back(makeCount("Troubled", solver.getNumberOfTroubledCells()));
   }
 }
 
 template <typename Solver>
-void appendTroubledCells(std::ostringstream&, const Solver&, long) {}
-
-void appendParticleCount(std::ostringstream& result, const char* particleName, int numberOfParticles) {
-  appendSolverStatistic(result, particleName, numberOfParticles);
-}
+void appendTroubledCells(std::vector<::runner::SolverStatistic>&, const Solver&, long) {}
 
 template <typename Solver, typename AppendAdditionalStatistics>
-std::pair<std::string, std::string> makeSolverStatistics(const char* solverName, const Solver& solver, AppendAdditionalStatistics appendAdditionalStatistics) {
-  std::ostringstream statistics;
-  appendSolverStatistic(statistics, "dt", solver.getMinTimeStepSize());
-  appendSolverStatistic(statistics, "h", formatSolverStatisticRange(solver.getMinCellSize(), solver.getMaxCellSize()));
+std::pair<std::string, std::vector<::runner::SolverStatistic>> makeSolverStatistics(const char* solverName, const Solver& solver, AppendAdditionalStatistics appendAdditionalStatistics) {
+  std::vector<::runner::SolverStatistic> statistics;
+  statistics.push_back(makeValue("dt", solver.getMinTimeStepSize()));
+  statistics.push_back(makeRange("h", solver.getMinCellSize(), solver.getMaxCellSize()));
   appendAdditionalStatistics(statistics);
   appendMaxEigenvalue(statistics, solver, 0);
   appendTroubledCells(statistics, solver, 0);
-  return {solverName, statistics.str()};
+  return {solverName, statistics};
 }
 
-std::pair<std::string, std::string> makeParticleStatistics(const char* particleName, int numberOfParticles) {
-  std::ostringstream statistics;
-  appendSolverStatistic(statistics, "Particles", numberOfParticles);
-  return {particleName, statistics.str()};
+std::pair<std::string, std::vector<::runner::SolverStatistic>> makeParticleStatistics(const char* particleName, int numberOfParticles) {
+  return {particleName, {makeCount("Particles", numberOfParticles)}};
 }
 
-std::vector<std::pair<std::string, std::string>> getSolverStatistics() {
-  std::vector<std::pair<std::string, std::string>> result;
+std::vector<std::pair<std::string, std::vector<::runner::SolverStatistic>>> getSolverStatistics() {
+  std::vector<std::pair<std::string, std::vector<::runner::SolverStatistic>>> result;
   {% for item in SOLVERS -%}
   {% if item[2] | length > 0 -%}
-  result.push_back(makeSolverStatistics("{{ item[0] }}", {{ item[1] }}, [](std::ostringstream& result) {
+  result.push_back(makeSolverStatistics("{{ item[0] }}", {{ item[1] }}, [](std::vector<::runner::SolverStatistic>& result) {
     {% for tracer in item[2] -%}
-    appendParticleCount(result, "{{ tracer }}", vertexdata::{{ tracer }}Set::getTotalNumberOfParticles());
+    result.push_back(makeCount("{{ tracer }}", vertexdata::{{ tracer }}Set::getTotalNumberOfParticles()));
     {# Comment to ensure that jinja2 adds a new line#}
     {%- endfor %}
   }));
   {% else -%}
-  result.push_back(makeSolverStatistics("{{ item[0] }}", {{ item[1] }}, [](std::ostringstream&) {}));
+  result.push_back(makeSolverStatistics("{{ item[0] }}", {{ item[1] }}, [](std::vector<::runner::SolverStatistic>&) {}));
   {%- endif %}
   {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
@@ -146,8 +134,8 @@ std::vector<std::pair<std::string, std::vector<std::pair<std::string, std::strin
   return result;
 }
 
-std::vector<std::pair<std::string, std::string>> getParticleStatistics() {
-  std::vector<std::pair<std::string, std::string>> result;
+std::vector<std::pair<std::string, std::vector<::runner::SolverStatistic>>> getParticleStatistics() {
+  std::vector<std::pair<std::string, std::vector<::runner::SolverStatistic>>> result;
   {% for item in PROJECT_TRACERS -%}
   result.push_back(makeParticleStatistics("{{ item }}", vertexdata::{{ item }}Set::getTotalNumberOfParticles()));
   {# Comment to ensure that jinja2 adds a new line#}

@@ -6,9 +6,22 @@ file(GLOB_RECURSE HEADERS ${HEADER_EXTENSIONS_TO_GLOB})
 set(SOURCES
   RuntimeParameters.cpp
   LoadBalancer.cpp
-  Statistics.cpp
+  Format.cpp
+  TextLayout.cpp
+  ReportBox.cpp
+  GridSnapshot.cpp
+  phases/Configuration.cpp
+  phases/GridConstruction.cpp
+  phases/GridInitialisation.cpp
+  phases/TimeLoop.cpp
+  phases/FinalSummary.cpp
   Orchestrator.cpp
-  Runner.cpp
+  Engine.cpp
+  Launch.cpp
+  UnitTests.cpp
+  tests/FormatTest.cpp
+  tests/TableTest.cpp
+  tests/TextLayoutTest.cpp
 )
 
 install_peano_headers(

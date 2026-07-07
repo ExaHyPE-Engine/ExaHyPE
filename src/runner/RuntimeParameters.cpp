@@ -33,7 +33,7 @@ runner::RuntimeParameters::RuntimeParameters() :
   _outputPathConfigured(false),
   _projectName(),
   _executableName(),
-  _logIntervalInSeconds(10.0),
+  _timeStepLogInterval(5.0),
   _gridLevels(3),
   _maxGridLevels(3),
   _gridLevelsConfigured(false),
@@ -120,7 +120,7 @@ void runner::RuntimeParameters::printUsage(const std::string& executableName) co
   };
 
   addOption("-cf, --configFile <path>", "Read runtime settings from JSON (default: auto-detect ./config.json).");
-  addOption("-et, --endTime <t>", "Set min and max terminal time to t (default: not set).");
+  addOption("-et, --endTime <t>", "Advance the whole domain to time t; no upper cap (default: not set).");
   addOption(
     "-tmin, --minTerminalTime <t>",
     "Minimum terminal time (default: " + formatDefault(_minTerminalTime) + ")."
@@ -134,7 +134,7 @@ void runner::RuntimeParameters::printUsage(const std::string& executableName) co
     "First plot time stamp (default: " + formatDefault(_firstPlotTimeStamp) + ")."
   );
   addOption(
-    "-nt, --numberOfTimesteps <n>",
+    "-nt, --numberOfTimeSteps <n>",
     "Maximum number of time steps; use <=0 for unbounded (default: " +
       (_numberOfTimeSteps > 0 ? formatDefault(_numberOfTimeSteps) : std::string("unbounded")) + ")."
   );
@@ -144,8 +144,8 @@ void runner::RuntimeParameters::printUsage(const std::string& executableName) co
   );
   addOption("-o, --outputPath <path>", "Output path (default: " + formatDefault(_outputPath) + ").");
   addOption(
-    "-li, --logInterval <seconds>",
-    "Terminal log interval in seconds (default: " + formatDefault(_logIntervalInSeconds) + ")."
+    "-li, --timeStepLogInterval <seconds>",
+    "Minimum wall-clock seconds between time-step reports (default: " + formatDefault(_timeStepLogInterval) + ")."
   );
   addOption(
     "-l, --gridLevels <n>",
@@ -223,8 +223,10 @@ void runner::RuntimeParameters::validateParameterRanges() const {
       "First plot time stamp must not be negative (got " + formatDefault(_firstPlotTimeStamp) + ")."
     );
   }
-  if (_logIntervalInSeconds <= 0.0) {
-    throw std::runtime_error("Log interval must be positive (got " + formatDefault(_logIntervalInSeconds) + " s).");
+  if (_timeStepLogInterval <= 0.0) {
+    throw std::runtime_error(
+      "Time-step log interval must be positive (got " + formatDefault(_timeStepLogInterval) + " s)."
+    );
   }
   if (_loadBalancingQuality <= 0.0 or _loadBalancingQuality > 1.0) {
     throw std::runtime_error(
@@ -263,8 +265,8 @@ void runner::RuntimeParameters::readJsonConfiguration() {
     return;
   }
 
-  _configReader                     = std::make_unique<tarch::reader::JSONReader>(_configFilePath);
-  tarch::reader::JSONReader& reader = *_configReader;
+  _configReader = std::make_unique<tarch::reader::JSONReader>(_configFilePath);
+  auto& reader  = *_configReader;
 
   _mpiTimeOutWarning           = reader.getDouble("timeoutWarning", _mpiTimeOutWarning);
   _mpiDeadlockTimeOut          = reader.getDouble("deadlockTimeout", _mpiDeadlockTimeOut);
@@ -274,15 +276,16 @@ void runner::RuntimeParameters::readJsonConfiguration() {
   _maxNumberOfTreesPerRank     = reader.getInteger("maxNumberOfTreesPerRank", _maxNumberOfTreesPerRank);
   _targetDevice                = reader.getInteger("targetDevice", _targetDevice);
   _verbose                     = reader.getBoolean("verbose", _verbose);
-  _numberOfTimeSteps           = reader.getInteger("numberOfTimesteps", _numberOfTimeSteps);
+  _numberOfTimeSteps           = reader.getInteger("numberOfTimeSteps", _numberOfTimeSteps);
   _firstPlotTimeStamp          = reader.getDouble("firstPlotTimeStamp", _firstPlotTimeStamp);
   _numberOfSnapshots           = reader.getInteger("numberOfSnapshots", _numberOfSnapshots);
-  _logIntervalInSeconds        = reader.getDouble("logInterval", _logIntervalInSeconds);
+  _timeStepLogInterval         = reader.getDouble("timeStepLogInterval", _timeStepLogInterval);
 
-  // endTime sets both; an explicit min/max overrides afterwards.
+  // endTime advances the whole domain to that time (min stamp drives completion, no upper cap); an
+  // explicit min/max window overrides afterwards.
   if (reader.hasKey("endTime")) {
     _minTerminalTime = reader.getDouble("endTime");
-    _maxTerminalTime = _minTerminalTime;
+    _maxTerminalTime = std::numeric_limits<double>::max();
   }
   _minTerminalTime = reader.getDouble("minTerminalTime", _minTerminalTime);
   _maxTerminalTime = reader.getDouble("maxTerminalTime", _maxTerminalTime);
@@ -315,13 +318,14 @@ void runner::RuntimeParameters::applyCommandLineConfiguration(int& argc, char** 
     if (argument == "--configFile" or argument == "-cf") {
       _configFilePath = consumeValue(readIndex, argc, argv, argument);
     } else if (argument == "--endTime" or argument == "-et") {
+      // Advance the whole domain to this time: the minimum stamp drives completion, no upper cap.
       _minTerminalTime = parseDouble(consumeValue(readIndex, argc, argv, argument), argument);
-      _maxTerminalTime = _minTerminalTime;
+      _maxTerminalTime = std::numeric_limits<double>::max();
     } else if (argument == "--minTerminalTime" or argument == "-tmin") {
       _minTerminalTime = parseDouble(consumeValue(readIndex, argc, argv, argument), argument);
     } else if (argument == "--maxTerminalTime" or argument == "-tmax") {
       _maxTerminalTime = parseDouble(consumeValue(readIndex, argc, argv, argument), argument);
-    } else if (argument == "--numberOfTimesteps" or argument == "-nt") {
+    } else if (argument == "--numberOfTimeSteps" or argument == "-nt") {
       _numberOfTimeSteps = parseInteger(consumeValue(readIndex, argc, argv, argument), argument);
     } else if (argument == "--firstPlotTimeStamp" or argument == "-fpt") {
       _firstPlotTimeStamp = parseDouble(consumeValue(readIndex, argc, argv, argument), argument);
@@ -330,8 +334,8 @@ void runner::RuntimeParameters::applyCommandLineConfiguration(int& argc, char** 
     } else if (argument == "--outputPath" or argument == "-o") {
       _outputPath           = normaliseOutputPath(consumeValue(readIndex, argc, argv, argument));
       _outputPathConfigured = true;
-    } else if (argument == "--logInterval" or argument == "-li") {
-      _logIntervalInSeconds = parseDouble(consumeValue(readIndex, argc, argv, argument), argument);
+    } else if (argument == "--timeStepLogInterval" or argument == "-li") {
+      _timeStepLogInterval = parseDouble(consumeValue(readIndex, argc, argv, argument), argument);
     } else if (argument == "--gridLevels" or argument == "-l") {
       _gridLevels              = parseInteger(consumeValue(readIndex, argc, argv, argument), argument);
       _maxGridLevels           = _gridLevels;
@@ -436,7 +440,7 @@ int    runner::RuntimeParameters::getMaxNumberOfTreesPerRank() const { return _m
 int    runner::RuntimeParameters::getTargetDevice() const { return _targetDevice; }
 
 bool   runner::RuntimeParameters::isVerbose() const { return _verbose; }
-double runner::RuntimeParameters::getLogIntervalInSeconds() const { return _logIntervalInSeconds; }
+double runner::RuntimeParameters::getTimeStepLogInterval() const { return _timeStepLogInterval; }
 
 double runner::RuntimeParameters::getMinTerminalTime() const { return _minTerminalTime; }
 double runner::RuntimeParameters::getMaxTerminalTime() const { return _maxTerminalTime; }

@@ -4,11 +4,11 @@
 
 #include "peano4/parallel/SpacetreeSet.h"
 #include "tarch/Assertions.h"
+#include "tarch/MemoryUsage.h"
 #include "tarch/instrumentation/Log.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/mpi/mpi.h"
 #include "tarch/services/ServiceRepository.h"
-#include "tarch/MemoryUsage.h"
 
 #include <cstring>
 #include <limits>
@@ -31,7 +31,13 @@ namespace {
     MinDepth,
     MaxDepth,
     MinHBits,
-    MinStationarySweeps
+    MinStationarySweeps,
+    MinTreeOuterLoad,
+    MaxTreeOuterLoad,
+    MinRankLoad,
+    MaxRankLoad,
+    SumNodeTotalMemBytes,
+    SumNodeFreeMemBytes
   };
 
   inline std::uint64_t toBits(double x) {
@@ -71,6 +77,8 @@ namespace {
     inout[SumRanksWithTrees] += in[SumRanksWithTrees];
     inout[SumMemBytes] += in[SumMemBytes];
     inout[SumProcessMemBytes] += in[SumProcessMemBytes];
+    inout[SumNodeTotalMemBytes] += in[SumNodeTotalMemBytes];
+    inout[SumNodeFreeMemBytes] += in[SumNodeFreeMemBytes];
 
     // MIN/MAX fields
     inout[MinTreeLoad] = std::min(inout[MinTreeLoad], in[MinTreeLoad]);
@@ -80,8 +88,12 @@ namespace {
     } else if (in[MaxTreeLoad] == inout[MaxTreeLoad]) {
       inout[MaxTreeLoadOwnerRank] = std::min(inout[MaxTreeLoadOwnerRank], in[MaxTreeLoadOwnerRank]);
     }
-    inout[MinDepth] = std::min(inout[MinDepth], in[MinDepth]);
-    inout[MaxDepth] = std::max(inout[MaxDepth], in[MaxDepth]);
+    inout[MinTreeOuterLoad] = std::min(inout[MinTreeOuterLoad], in[MinTreeOuterLoad]);
+    inout[MaxTreeOuterLoad] = std::max(inout[MaxTreeOuterLoad], in[MaxTreeOuterLoad]);
+    inout[MinRankLoad]      = std::min(inout[MinRankLoad], in[MinRankLoad]);
+    inout[MaxRankLoad]      = std::max(inout[MaxRankLoad], in[MaxRankLoad]);
+    inout[MinDepth]         = std::min(inout[MinDepth], in[MinDepth]);
+    inout[MaxDepth]         = std::max(inout[MaxDepth], in[MaxDepth]);
 
     // MIN for stationary sweeps
     inout[MinStationarySweeps] = std::min(inout[MinStationarySweeps], in[MinStationarySweeps]);
@@ -155,10 +167,20 @@ toolbox::loadbalancing::Statistics::Statistics() :
   _globalMinTreeLoad(0),
   _globalMaxTreeLoad(0),
   _globalRankWithMaxTreeLoad(0),
+  _localMinTreeOuterLoad(0),
+  _localMaxTreeOuterLoad(0),
+  _globalMinTreeOuterLoad(0),
+  _globalMaxTreeOuterLoad(0),
+  _globalMinRankLoad(0),
+  _globalMaxRankLoad(0),
   _localMemoryUsageInBytes(0),
   _globalMemoryUsageInBytes(0),
   _localProcessMemoryUsageInBytes(0),
   _globalProcessMemoryUsageInBytes(0),
+  _localTotalMemoryInBytes(0),
+  _localFreeMemoryInBytes(0),
+  _globalTotalMemoryInBytes(0),
+  _globalFreeMemoryInBytes(0),
   _localMinDepth(std::numeric_limits<int>::max()),
   _localMaxDepth(0),
   _globalMinDepth(std::numeric_limits<int>::max()),
@@ -231,8 +253,14 @@ void toolbox::loadbalancing::Statistics::waitForGlobalDataExchange() {
   _globalMinTreeLoad                     = static_cast<int>(g[MinTreeLoad]);
   _globalMaxTreeLoad                     = static_cast<int>(g[MaxTreeLoad]);
   _globalRankWithMaxTreeLoad             = static_cast<int>(g[MaxTreeLoadOwnerRank]);
+  _globalMinTreeOuterLoad                = static_cast<int>(g[MinTreeOuterLoad]);
+  _globalMaxTreeOuterLoad                = static_cast<int>(g[MaxTreeOuterLoad]);
+  _globalMinRankLoad                     = static_cast<int>(g[MinRankLoad]);
+  _globalMaxRankLoad                     = static_cast<int>(g[MaxRankLoad]);
   _globalMemoryUsageInBytes              = static_cast<std::uint64_t>(g[SumMemBytes]);
   _globalProcessMemoryUsageInBytes       = static_cast<std::uint64_t>(g[SumProcessMemBytes]);
+  _globalTotalMemoryInBytes              = static_cast<std::uint64_t>(g[SumNodeTotalMemBytes]);
+  _globalFreeMemoryInBytes               = static_cast<std::uint64_t>(g[SumNodeFreeMemBytes]);
   _globalMinDepth                        = static_cast<int>(g[MinDepth]);
   _globalMaxDepth                        = static_cast<int>(g[MaxDepth]);
   _globalMinH                            = fromBits(g[MinHBits]);
@@ -270,6 +298,8 @@ void toolbox::loadbalancing::Statistics::updateGlobalView() {
   _localMemoryUsageInBytes = statistics.getMemoryUsageInBytes();
   _localProcessMemoryUsageInBytes =
     static_cast<std::uint64_t>(tarch::getMemoryUsage(tarch::MemoryUsageFormat::KiB) * 1024.0);
+  _localTotalMemoryInBytes = static_cast<std::uint64_t>(tarch::getTotalMemory(tarch::MemoryUsageFormat::KiB) * 1024.0);
+  _localFreeMemoryInBytes  = static_cast<std::uint64_t>(tarch::getFreeMemory(tarch::MemoryUsageFormat::KiB) * 1024.0);
 
   _localMinDepth = statistics.minDepth;
   _localMaxDepth = statistics.maxDepth;
@@ -279,19 +309,28 @@ void toolbox::loadbalancing::Statistics::updateGlobalView() {
 
   // Compute local min/max tree load based on hosted trees
   if (spacetrees.empty()) {
-    _localMinTreeLoad = std::numeric_limits<int>::max();
-    _localMaxTreeLoad = 0;
+    _localMinTreeLoad      = std::numeric_limits<int>::max();
+    _localMaxTreeLoad      = 0;
+    _localMinTreeOuterLoad = std::numeric_limits<int>::max();
+    _localMaxTreeOuterLoad = 0;
   } else {
-    int localMin = std::numeric_limits<int>::max();
-    int localMax = 0;
+    int localMin      = std::numeric_limits<int>::max();
+    int localMax      = 0;
+    int localMinOuter = std::numeric_limits<int>::max();
+    int localMaxOuter = 0;
     for (auto tree : spacetrees) {
-      const auto& s    = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(tree);
-      const int   load = s.numberOfLocalUnrefinedCells;
-      localMin         = std::min(localMin, load);
-      localMax         = std::max(localMax, load);
+      const auto& s     = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(tree);
+      const int   load  = s.numberOfLocalUnrefinedCells;
+      const int   outer = s.numberOfRemoteUnrefinedCells;
+      localMin          = std::min(localMin, load);
+      localMax          = std::max(localMax, load);
+      localMinOuter     = std::min(localMinOuter, outer);
+      localMaxOuter     = std::max(localMaxOuter, outer);
     }
-    _localMinTreeLoad = localMin;
-    _localMaxTreeLoad = localMax;
+    _localMinTreeLoad      = localMin;
+    _localMaxTreeLoad      = localMax;
+    _localMinTreeOuterLoad = localMinOuter;
+    _localMaxTreeOuterLoad = localMaxOuter;
   }
   bool publishLocalAsGlobal = true;
 #ifdef PEANO_WITH_MPI
@@ -320,8 +359,18 @@ void toolbox::loadbalancing::Statistics::updateGlobalView() {
         emptyRank ? std::numeric_limits<std::uint64_t>::max() : static_cast<std::uint64_t>(_localMinTreeLoad);
       local[MaxTreeLoad]          = static_cast<std::uint64_t>(_localMaxTreeLoad);
       local[MaxTreeLoadOwnerRank] = static_cast<std::uint64_t>(tarch::mpi::Rank::getInstance().getRank());
-      local[SumMemBytes]          = static_cast<std::uint64_t>(_localMemoryUsageInBytes);
-      local[SumProcessMemBytes]   = static_cast<std::uint64_t>(_localProcessMemoryUsageInBytes);
+      local[MinTreeOuterLoad] =
+        emptyRank ? std::numeric_limits<std::uint64_t>::max() : static_cast<std::uint64_t>(_localMinTreeOuterLoad);
+      local[MaxTreeOuterLoad]   = static_cast<std::uint64_t>(_localMaxTreeOuterLoad);
+      local[MinRankLoad]        = emptyRank ? std::numeric_limits<std::uint64_t>::max()
+                                            : static_cast<std::uint64_t>(_localNumberOfInnerUnrefinedCells);
+      local[MaxRankLoad]        = static_cast<std::uint64_t>(_localNumberOfInnerUnrefinedCells);
+      local[SumMemBytes]        = static_cast<std::uint64_t>(_localMemoryUsageInBytes);
+      local[SumProcessMemBytes] = static_cast<std::uint64_t>(_localProcessMemoryUsageInBytes);
+      // Only the node master contributes host RAM, so a node with several ranks is counted once.
+      const bool nodeMaster       = tarch::mpi::Rank::getInstance().isNodeMaster();
+      local[SumNodeTotalMemBytes] = nodeMaster ? _localTotalMemoryInBytes : 0;
+      local[SumNodeFreeMemBytes]  = nodeMaster ? _localFreeMemoryInBytes : 0;
       local[MinDepth] =
         emptyRank ? std::numeric_limits<std::uint64_t>::max() : static_cast<std::uint64_t>(_localMinDepth);
       local[MaxDepth]            = static_cast<std::uint64_t>(_localMaxDepth);
@@ -358,8 +407,14 @@ void toolbox::loadbalancing::Statistics::updateGlobalView() {
     _globalMinTreeLoad                     = _localMinTreeLoad;
     _globalMaxTreeLoad                     = _localMaxTreeLoad;
     _globalRankWithMaxTreeLoad             = tarch::mpi::Rank::getInstance().getRank();
+    _globalMinTreeOuterLoad                = _localMinTreeOuterLoad;
+    _globalMaxTreeOuterLoad                = _localMaxTreeOuterLoad;
+    _globalMinRankLoad                     = _localNumberOfInnerUnrefinedCells;
+    _globalMaxRankLoad                     = _localNumberOfInnerUnrefinedCells;
     _globalMemoryUsageInBytes              = _localMemoryUsageInBytes;
     _globalProcessMemoryUsageInBytes       = _localProcessMemoryUsageInBytes;
+    _globalTotalMemoryInBytes              = _localTotalMemoryInBytes;
+    _globalFreeMemoryInBytes               = _localFreeMemoryInBytes;
     _globalMinDepth                        = _localMinDepth;
     _globalMaxDepth                        = _localMaxDepth;
     _globalMinH                            = _localMinH;
@@ -427,6 +482,14 @@ int toolbox::loadbalancing::Statistics::getGlobalMinTreeLoad() const { return _g
 
 int toolbox::loadbalancing::Statistics::getGlobalMaxTreeLoad() const { return _globalMaxTreeLoad; }
 
+int toolbox::loadbalancing::Statistics::getGlobalMinTreeOuterLoad() const { return _globalMinTreeOuterLoad; }
+
+int toolbox::loadbalancing::Statistics::getGlobalMaxTreeOuterLoad() const { return _globalMaxTreeOuterLoad; }
+
+int toolbox::loadbalancing::Statistics::getGlobalMinRankLoad() const { return _globalMinRankLoad; }
+
+int toolbox::loadbalancing::Statistics::getGlobalMaxRankLoad() const { return _globalMaxRankLoad; }
+
 int toolbox::loadbalancing::Statistics::getGlobalRankWithMaxTreeLoad() const { return _globalRankWithMaxTreeLoad; }
 
 std::size_t toolbox::loadbalancing::Statistics::getLocalMemoryUsageInBytes() const {
@@ -443,6 +506,14 @@ std::size_t toolbox::loadbalancing::Statistics::getLocalProcessMemoryUsageInByte
 
 std::size_t toolbox::loadbalancing::Statistics::getGlobalProcessMemoryUsageInBytes() const {
   return static_cast<std::size_t>(_globalProcessMemoryUsageInBytes);
+}
+
+std::size_t toolbox::loadbalancing::Statistics::getGlobalTotalMemoryInBytes() const {
+  return static_cast<std::size_t>(_globalTotalMemoryInBytes);
+}
+
+std::size_t toolbox::loadbalancing::Statistics::getGlobalFreeMemoryInBytes() const {
+  return static_cast<std::size_t>(_globalFreeMemoryInBytes);
 }
 
 int toolbox::loadbalancing::Statistics::getLocalMinDepth() const { return _localMinDepth; }

@@ -185,6 +185,8 @@ tarch::mpi::Rank::Rank() :
   _rank(-1),
   _numberOfProcessors(-1),
   _providedThreadLevelSupport(-1),
+  _numberOfNodes(1),
+  _isNodeMaster(true),
   _communicator(MPI_COMM_WORLD),
   _timeOutWarning(0),
   _deadlockTimeOut(0),
@@ -195,6 +197,8 @@ tarch::mpi::Rank::Rank() :
   _initIsCalled(false),
   _rank(0),
   _numberOfProcessors(1),
+  _numberOfNodes(1),
+  _isNodeMaster(true),
   _timeOutWarning(0),
   _deadlockTimeOut(0),
   _areTimeoutsEnabled(true),
@@ -330,6 +334,17 @@ bool tarch::mpi::Rank::init([[maybe_unused]] int* argc, [[maybe_unused]] char***
 
   MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN);
 
+  // Node layout: split by shared memory; the lowest rank per node is its master, and the number of
+  // masters is the number of nodes.
+  MPI_Comm nodeComm = MPI_COMM_NULL;
+  MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, _rank, MPI_INFO_NULL, &nodeComm);
+  int nodeRank = 0;
+  MPI_Comm_rank(nodeComm, &nodeRank);
+  MPI_Comm_free(&nodeComm);
+  _isNodeMaster            = (nodeRank == 0);
+  const int nodeMasterFlag = _isNodeMaster ? 1 : 0;
+  MPI_Allreduce(&nodeMasterFlag, &_numberOfNodes, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+
   DoubleMessage::initDatatype();
   IntegerMessage::initDatatype();
 #endif
@@ -337,6 +352,10 @@ bool tarch::mpi::Rank::init([[maybe_unused]] int* argc, [[maybe_unused]] char***
   _initIsCalled = true;
   return _initIsCalled;
 }
+
+int tarch::mpi::Rank::getNumberOfNodes() const { return _numberOfNodes; }
+
+bool tarch::mpi::Rank::isNodeMaster() const { return _isNodeMaster; }
 
 int tarch::mpi::Rank::getRank() const { return _rank; }
 

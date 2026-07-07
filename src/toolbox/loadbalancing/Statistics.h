@@ -16,7 +16,7 @@ namespace toolbox::loadbalancing {
 
 class toolbox::loadbalancing::Statistics {
 public:
-  static constexpr int NumberOfWords = 16;
+  static constexpr int NumberOfWords = 22;
 
   Statistics();
   ~Statistics();
@@ -55,12 +55,22 @@ public:
   int getGlobalMinTreeLoad() const;
   int getGlobalMaxTreeLoad() const;
 
+  int getGlobalMinTreeOuterLoad() const;
+  int getGlobalMaxTreeOuterLoad() const;
+
+  int getGlobalMinRankLoad() const;
+  int getGlobalMaxRankLoad() const;
+
   int getGlobalRankWithMaxTreeLoad() const;
 
   std::size_t getLocalMemoryUsageInBytes() const;
   std::size_t getGlobalMemoryUsageInBytes() const;
   std::size_t getLocalProcessMemoryUsageInBytes() const;
   std::size_t getGlobalProcessMemoryUsageInBytes() const;
+
+  // Host RAM summed once per node (not per rank), comparable to the all-ranks resident set above.
+  std::size_t getGlobalTotalMemoryInBytes() const;
+  std::size_t getGlobalFreeMemoryInBytes() const;
 
   int getLocalMinDepth() const;
   int getGlobalMinDepth() const;
@@ -110,10 +120,23 @@ private:
   int _globalMaxTreeLoad;
   int _globalRankWithMaxTreeLoad;
 
+  int _localMinTreeOuterLoad;
+  int _localMaxTreeOuterLoad;
+  int _globalMinTreeOuterLoad;
+  int _globalMaxTreeOuterLoad;
+
+  int _globalMinRankLoad;
+  int _globalMaxRankLoad;
+
   std::uint64_t _localMemoryUsageInBytes;
   std::uint64_t _globalMemoryUsageInBytes;
   std::uint64_t _localProcessMemoryUsageInBytes;
   std::uint64_t _globalProcessMemoryUsageInBytes;
+
+  std::uint64_t _localTotalMemoryInBytes;
+  std::uint64_t _localFreeMemoryInBytes;
+  std::uint64_t _globalTotalMemoryInBytes;
+  std::uint64_t _globalFreeMemoryInBytes;
 
   int _localMinDepth;
   int _localMaxDepth;
