@@ -36,7 +36,6 @@ Euler:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  retry: 0
 
 Limiting:
   stage: Tutorial
@@ -50,7 +49,6 @@ Limiting:
     - .BeforeScriptSanitiser
   needs:
     - job: Build
-  retry: 0
 
 Elastic:
   stage: Tutorial

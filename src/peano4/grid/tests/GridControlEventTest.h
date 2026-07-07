@@ -8,15 +8,21 @@ namespace peano4::grid::tests {
   class GridControlEventTest;
 } // namespace peano4::grid::tests
 
-class peano4::grid::tests::GridControlEventTest final: public tarch::tests::TestCase {
+class peano4::grid::tests::GridControlEventTest final : public tarch::tests::TestCase {
 private:
   void testOperatorLess();
   void testSort();
   void testSortDeterministicGrid();
-  void testMergeTolerance();
+  void testMergeExactTouchVersusGap();
   void testMergeAdjacency();
   void testMergeEraseAdjacency();
   void testMergeEraseDoesNotOverMergeLShape();
+  void testMergeEraseEnablesStraddlingErase();
+  void testMergeEraseChainCollapsesToOne();
+  void testMergeKeepsRefineAndEraseSeparate();
+  void testMergeRowAndBlockCollapseToOne();
+  void testMergeDoesNotMergeDiagonalOrDifferentTargetH();
+  void testMergeUnionIsPreserved();
   void testMerge1();
   void testMerge2();
   void testMerge3();

@@ -9,11 +9,7 @@ variables:
   UPSTREAM_MR_SOURCE_BRANCH: "$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME"
   UPSTREAM_COMMIT_BRANCH: "$CI_COMMIT_BRANCH"
 
-########################################################
-# Define one sub-pipeline per toolchain:
-########################################################
-
-GCC Serial:
+GCC:
   extends: .Variables
   stage: Compiler
   variables:
@@ -23,7 +19,7 @@ GCC Serial:
     IMAGE_TAG: "${IMAGE_GCC}"
     PARALLEL_LAUNCH: ""
     EXTRA_CONFIGURATION_OPTIONS: "-DPEANO_WITH_MULTITHREADING=OFF \
-                                  -DPEANO_WITH_MPI=OFF"
+                                  -DPEANO_WITH_MPI=OFF" # Off to test serial mode
   trigger:
     include:
       - .continuous_integration/gitlab-pipeline.yml
@@ -32,26 +28,7 @@ GCC Serial:
       pipeline_variables: true
       yaml_variables: true
 
-GCC Parallel:
-  extends: .Variables
-  stage: Compiler
-  variables:
-    CC: "gcc"
-    CXX: "g++"
-    FC: "gfortran"
-    IMAGE_TAG: "${IMAGE_GCC}"
-    PARALLEL_LAUNCH: "OMP_NUM_THREADS=${OMP_THREADS} mpirun --bind-to none -np ${MPI_RANKS}"
-    EXTRA_CONFIGURATION_OPTIONS: "-DPEANO_WITH_MULTITHREADING=ON \
-                                  -DPEANO_WITH_MPI=ON"
-  trigger:
-    include:
-      - .continuous_integration/gitlab-pipeline.yml
-    strategy: depend
-    forward:
-      pipeline_variables: true
-      yaml_variables: true
-
-Intel Parallel:
+Intel:
   extends: .Variables
   stage: Compiler
   variables:
@@ -70,7 +47,7 @@ Intel Parallel:
       pipeline_variables: true
       yaml_variables: true
 
-LLVM Parallel:
+LLVM:
   extends: .Variables
   stage: Compiler
   variables:
@@ -89,7 +66,7 @@ LLVM Parallel:
       pipeline_variables: true
       yaml_variables: true
 
-NVIDIA Parallel:
+NVIDIA:
   extends: .Variables
   stage: Compiler
   variables:
@@ -108,7 +85,7 @@ NVIDIA Parallel:
       pipeline_variables: true
       yaml_variables: true
 
-AMD Parallel:
+AMD:
   extends: .Variables
   stage: Compiler
   variables:
