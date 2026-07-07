@@ -21,7 +21,7 @@ std::bitset<DIMENSIONS> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::PeriodicBC = 
   _maxTimeStamp(0.0),
   _minTimeStampThisTimeStep(0.0),
   _maxTimeStampThisTimeStep(0.0),
-  _minCellH(0.0),
+  _minCellH(std::numeric_limits<double>::max()),
   _maxCellH(0.0),
   _minCellHThisTimeStep(0.0),
   _maxCellHThisTimeStep(0.0),

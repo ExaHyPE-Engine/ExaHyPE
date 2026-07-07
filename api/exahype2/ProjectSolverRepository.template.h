@@ -3,6 +3,7 @@
 #pragma once
 
 #include "exahype2/RefinementControl.h"
+#include "runner/RepositoryCallbacks.h"
 
 #include <string>
 #include <utility>
@@ -118,8 +119,8 @@ namespace {{ item }} {
    */
   std::string getSolverStateDescriptions();
 
-  std::vector<std::pair<std::string, std::string>> getSolverStatistics();
-  std::vector<std::pair<std::string, std::string>> getParticleStatistics();
+  std::vector<std::pair<std::string, std::vector<::runner::SolverStatistic>>> getSolverStatistics();
+  std::vector<std::pair<std::string, std::vector<::runner::SolverStatistic>>> getParticleStatistics();
 
   std::vector<std::pair<std::string, std::vector<std::pair<std::string, std::string>>>> getConfigurationSummary();
 

@@ -9,8 +9,10 @@ import peano4.datamodel
 
 from peano4.Logger import log
 
+
 class Project(peano4.Project):
     """!
+
     ExaHyPE 2 project
 
     An ExaHyPE 2 project is a Peano 4 project (it extends peano4.Project). It adds
@@ -132,7 +134,9 @@ class Project(peano4.Project):
 
     def __export_constants(self):
         """
-        We export ExaHyPE's constants. Besides the constants from ExaHyPE,
+        We export ExaHyPE's constants.
+
+        Besides the constants from ExaHyPE,
         we also export some parameters from Peano onto the ExaHyPE constants
         file. Therefore, it is important that you parse the configure output
         before we export the constants.
@@ -173,6 +177,7 @@ thus appreciate any citation of the original release paper
             self.output.readme.add_entry(
                 i.create_readme_descriptor(self._domain_offset[0], self._domain_size[0])
             )
+
     @property
     def domain_size(self):
         return self._domain_size[0 : self._dimensions]
@@ -193,10 +198,10 @@ thus appreciate any citation of the original release paper
                     tracers.append(particle.name)
 
         self.solverRepositoryDictionary = {
-            "SOLVERS":                  [],
-            "TRACERS":                  tracers,
-            "PROJECT_TRACERS":          project_tracers,
-            "ADDITIONAL_INCLUDES":      self._additional_includes,
+            "SOLVERS": [],
+            "TRACERS": tracers,
+            "PROJECT_TRACERS": project_tracers,
+            "ADDITIONAL_INCLUDES": self._additional_includes,
         }
 
     @staticmethod
@@ -211,7 +216,9 @@ thus appreciate any citation of the original release paper
 
     def __generate_solver_repository(self):
         """
-        I have to call finishedTraversal() for each tracer set. As tracers
+        I have to call finishedTraversal() for each tracer set.
+
+        As tracers
         are a subclass of DoF, they have a name property.
         """
 
@@ -258,19 +265,21 @@ thus appreciate any citation of the original release paper
 
     def _configure_runner(self, main):
         """ExaHyPE contributes its specifics into the otherwise generic Peano main:
+
         the per-step solver hooks (baked into the Step bodies so they run on every
         rank), the solver-repository callbacks and the extra includes. The schedule
-        itself is the C++ runner::Orchestrator, which finds these steps by name."""
+        itself is the C++ runner::Orchestrator, which finds these steps by name.
+        """
         construction_start = "repositories::startGridConstructionStep();"
         construction_finish = "repositories::finishGridConstructionStep();"
         self.create_grid.runner_start_hook = construction_start
         self.create_grid.runner_finish_hook = construction_finish
 
         # Freeze load balancing once the grid has been initialised (static AMR).
-        self.init_grid.runner_start_hook = (
-            "::runner::loadBalancer().enable(false); repositories::startGridInitialisationStep();"
+        self.init_grid.runner_start_hook = "::runner::loadBalancer().enable(false); repositories::startGridInitialisationStep();"
+        self.init_grid.runner_finish_hook = (
+            "repositories::finishGridInitialisationStep();"
         )
-        self.init_grid.runner_finish_hook = "repositories::finishGridInitialisationStep();"
         self.plot_solution.runner_start_hook = "repositories::startPlottingStep();"
         self.plot_solution.runner_finish_hook = "repositories::finishPlottingStep();"
         self.perform_time_step.runner_start_hook = "repositories::startTimeStep();"
@@ -294,13 +303,24 @@ thus appreciate any citation of the original release paper
         )
 
     def _init_main_template_dictionary(self, main):
+        # A single end time (min == max) means "advance the whole domain to that time": the minimum
+        # time stamp drives completion, so leave the maximum unbounded (no upper cap). Only a genuine
+        # window (max > min) keeps an explicit ceiling.
+        max_terminal_time = self._max_terminal_time
+        if (
+            max_terminal_time is not None
+            and self._min_terminal_time is not None
+            and max_terminal_time <= self._min_terminal_time
+        ):
+            max_terminal_time = None
+
         main.d.update(
             {
                 "DEFAULT_MIN_TERMINAL_TIME": self._render_optional_runtime_default(
                     self._min_terminal_time
                 ),
                 "DEFAULT_MAX_TERMINAL_TIME": self._render_optional_runtime_default(
-                    self._max_terminal_time
+                    max_terminal_time
                 ),
                 "DEFAULT_GRID_LEVELS": self._render_optional_integer_runtime_default(
                     self._min_grid_levels
@@ -310,7 +330,6 @@ thus appreciate any citation of the original release paper
                 ),
             }
         )
-
 
     def __add_solver_implementation_files(self, solver):
         solver.add_implementation_files_to_project(
@@ -330,10 +349,14 @@ thus appreciate any citation of the original release paper
         particle = peano4.toolbox.particles.Particle(name)
         if isinstance(particle_attributes, dict):
             self._particle_unknowns = sum(particle_attributes["unknowns"].values())
-            self._particle_variable_names += list(particle_attributes["unknowns"].keys())
+            self._particle_variable_names += list(
+                particle_attributes["unknowns"].keys()
+            )
 
             for var in particle_attributes["unknowns"].values():
-                self._particle_variable_pos.append(var + self._particle_variable_pos[-1])
+                self._particle_variable_pos.append(
+                    var + self._particle_variable_pos[-1]
+                )
 
             self._use_particle_var_shortcut = True
             self._generate_particle_shortcuts(name)
@@ -346,7 +369,9 @@ thus appreciate any citation of the original release paper
                 "Invalid format for 'unknowns'. Must be an integer or a dictionary."
             )
 
-        particle_attr = peano4.datamodel.DoubleArray("data", str(self._particle_unknowns))
+        particle_attr = peano4.datamodel.DoubleArray(
+            "data", str(self._particle_unknowns)
+        )
         particle.add_attribute(particle_attr)
 
         particle.add_attribute(
@@ -370,13 +395,19 @@ thus appreciate any citation of the original release paper
         # Initialisation
         #
         self.init_grid.add_action_set(
-            peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop(particles)
+            peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop(
+                particles
+            )
         )
 
         update_particle_association_action_set = (
-            peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop(particles)
+            peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop(
+                particles
+            )
         )
-        update_particle_association_action_set.descend_invocation_order = sort_descend_invocation_order_within_action_sets
+        update_particle_association_action_set.descend_invocation_order = (
+            sort_descend_invocation_order_within_action_sets
+        )
 
         update_particle_parallel_state_action_set = (
             peano4.toolbox.particles.api.UpdateParallelState(particles)
@@ -398,12 +429,17 @@ thus appreciate any citation of the original release paper
 
     def _generate_particle_shortcuts(self, name):
         generated_shortcut_file = peano4.output.Jinja2TemplatedHeaderFile(
-            os.path.join(os.path.dirname(os.path.realpath(__file__)), "VariableShortcuts.template.h"),
+            os.path.join(
+                os.path.dirname(os.path.realpath(__file__)),
+                "VariableShortcuts.template.h",
+            ),
             "VariableShortcuts" + name,
             self.namespace,
             ".",
             {
-                "NUMBER_OF_VARIABLES": len(self._particle_variable_names),  # Standardised naming
+                "NUMBER_OF_VARIABLES": len(
+                    self._particle_variable_names
+                ),  # Standardised naming
                 "VARIABLE_NAMES": self._particle_variable_names,
                 "VARIABLE_POSITIONS": self._particle_variable_pos,
                 "SOLVER_NAME": name,
@@ -411,7 +447,9 @@ thus appreciate any citation of the original release paper
             True,
         )
         self.output.add(generated_shortcut_file)
-        self.output.makefile.add_h_file("VariableShortcuts"+ name + ".h", generated=True)
+        self.output.makefile.add_h_file(
+            "VariableShortcuts" + name + ".h", generated=True
+        )
 
     def add_action_set_to_timestepping(self, action_set):
         """!
@@ -422,7 +460,6 @@ thus appreciate any citation of the original release paper
         use myproject.perform_time_step.max_priority() or myproject.perform_time_step.min_priority()
         to find out which
         priority you should assign to action_set.
-
         """
         self.perform_time_step.add_action_set(action_set)
 
@@ -430,7 +467,6 @@ thus appreciate any citation of the original release paper
         """!
 
         Add a new action set to the plotting
-
         """
         self.plot_solution.add_action_set(action_set)
 
@@ -447,13 +483,12 @@ thus appreciate any citation of the original release paper
 
         - with refinement;
         - without refinement as we've just refined or split up domain and to let load balancing converge.
-
         """
         self.create_grid.add_action_set(action_set)
 
     def __add_solver_label_action_sets_to_load_balancing(self, solver):
         """Load balancing still traverses the mesh and can create labels on new entities."""
-         # TODO: Remove
+        # TODO: Remove
         if hasattr(solver, "_action_set_update_face_label"):
             self.load_balancing.add_action_set(solver._action_set_update_face_label)
         if hasattr(solver, "_action_set_update_cell_label"):
@@ -567,11 +602,11 @@ thus appreciate any citation of the original release paper
                 step.vertex_data = vertex
                 step.action_sets = action_sets
 
-
-    def init_new_user_defined_algorithmic_step(self,
-                                               step,
-                                               ):
-        """! Inform ExaHyPE 2 that there is an additional solver step not resulting from vanilla solver versions
+    def init_new_user_defined_algorithmic_step(
+        self,
+        step,
+    ):
+        """! Inform ExaHyPE 2 that there is an additional solver step not resulting from vanilla solver versions.
 
         Use this routine whenever you have created your own
         @ref page_architecture "algorithmic step". Please note that the routine
@@ -586,7 +621,6 @@ thus appreciate any citation of the original release paper
         it does not yet add it to the sweeps known by Peano.
 
         @param step: peano4.solversteps.Step
-
         """
         for solver in self._solvers:
             solver.add_use_data_statements_to_Peano4_solver_step(step)

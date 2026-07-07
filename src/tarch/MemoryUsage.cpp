@@ -13,7 +13,7 @@
 #if defined(COMPILER_HAS_SYSINFO) // for Linux OS
 #include <sys/sysinfo.h>
 #else // for Mac OS support
-#include <sys/resource.h>
+#include <mach/mach.h>
 #include <sys/sysctl.h>
 #endif
 
@@ -46,13 +46,15 @@ double tarch::convertMemorySize(unsigned long long bytes, MemoryUsageFormat form
 double tarch::getTotalMemory(MemoryUsageFormat format) {
   struct sysinfo info;
   sysinfo(&info);
-  return convertMemorySize(info.totalram, format);
+  // sysinfo reports memory in multiples of mem_unit bytes, not bytes.
+  return convertMemorySize(static_cast<unsigned long long>(info.totalram) * info.mem_unit, format);
 }
 
 double tarch::getFreeMemory(MemoryUsageFormat format) {
   struct sysinfo info;
   sysinfo(&info);
-  return convertMemorySize(info.freeram, format);
+  // sysinfo reports memory in multiples of mem_unit bytes, not bytes.
+  return convertMemorySize(static_cast<unsigned long long>(info.freeram) * info.mem_unit, format);
 }
 
 #else // defined(COMPILER_HAS_SYSINFO)
@@ -69,20 +71,21 @@ double tarch::getTotalMemory(MemoryUsageFormat format) {
 }
 
 double tarch::getFreeMemory(MemoryUsageFormat format) {
-  // Total physical memory in bytes, as in getTotalMemory() above.
-  int     mib[] = {CTL_HW, HW_MEMSIZE};
-  int64_t physical_memory = 0;
-  size_t  length          = sizeof(int64_t);
-  sysctl(mib, 2, &physical_memory, &length, NULL, 0);
+  // System-wide free physical memory is the count of free pages from the Mach VM statistics (strictly
+  // free, mirroring the Linux freeram above).
+  const mach_port_t      host     = mach_host_self();
+  vm_size_t              pageSize = 0;
+  vm_statistics64_data_t stats;
+  mach_msg_type_number_t count = HOST_VM_INFO64_COUNT;
 
-  struct rusage usage{};
-  if (0 == getrusage(RUSAGE_SELF, &usage)) {
-    // convertMemorySize() expects bytes; ru_maxrss is reported in bytes on
-    // macOS (unlike Linux, where it is in kilobytes).
-    return convertMemorySize(physical_memory - usage.ru_maxrss, format);
-  } else {
+  const bool ok =
+    host_page_size(host, &pageSize) == KERN_SUCCESS and
+    host_statistics64(host, HOST_VM_INFO64, reinterpret_cast<host_info64_t>(&stats), &count) == KERN_SUCCESS;
+  mach_port_deallocate(mach_task_self(), host);
+  if (not ok) {
     return 0;
   }
+  return convertMemorySize(static_cast<unsigned long long>(stats.free_count) * pageSize, format);
 }
 
 #endif // defined(COMPILER_HAS_SYSINFO)
@@ -106,17 +109,33 @@ double tarch::getMemoryUsage(MemoryUsageFormat format) {
     logError("Error while reading from file");
   }
   fclose(f);
-  strtok(work, " ");
 
-  // Field 24 of /proc/<pid>/stat is the resident set size in pages (field 23 is the virtual
-  // size). We want the actually consumed (resident) memory, so read field 24 and scale by the
-  // page size to obtain bytes.
-  for (int i = 1; i < 24; i++) {
+  // Field 24 of /proc/<pid>/stat is the resident set size in pages (field 23 is the virtual size).
+  // Field 2 (comm) is parenthesised and may itself contain spaces, so start parsing after its closing ')'.
+  char* afterComm = strrchr(work, ')');
+  if (afterComm == NULL) {
+    logError("Unexpected format in " << work);
+    return 0;
+  }
+  pCh = strtok(afterComm + 1, " "); // field 3 (state)
+  for (int i = 3; i < 24 and pCh != NULL; i++) {
     pCh = strtok(NULL, " ");
+  }
+  if (pCh == NULL) {
+    logError("Could not read resident set size from /proc stat");
+    return 0;
   }
 
   std::size_t residentPages = atol(pCh);
   std::size_t rawInput      = residentPages * static_cast<std::size_t>(sysconf(_SC_PAGESIZE));
+#elif defined(__APPLE__)
+  mach_task_basic_info_data_t taskInfo;
+  mach_msg_type_number_t      count    = MACH_TASK_BASIC_INFO_COUNT;
+  std::size_t                 rawInput = 0;
+  if (task_info(mach_task_self(), MACH_TASK_BASIC_INFO, reinterpret_cast<task_info_t>(&taskInfo), &count) ==
+      KERN_SUCCESS) {
+    rawInput = taskInfo.resident_size;
+  }
 #else
   std::size_t rawInput = 0;
 #endif

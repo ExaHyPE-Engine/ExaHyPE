@@ -69,6 +69,10 @@ private:
 
   int _providedThreadLevelSupport;
 
+  // Node layout, computed once in init() so later queries need no collective.
+  int  _numberOfNodes;
+  bool _isNodeMaster;
+
 #ifdef PEANO_WITH_MPI
   /**
    * MPI Communicator this process belongs to.
@@ -311,6 +315,12 @@ public:
 #endif
     return _numberOfProcessors;
   }
+
+  /** Number of distinct shared-memory nodes the ranks run on (1 without MPI). */
+  int getNumberOfNodes() const;
+
+  /** Whether this rank is the lowest-ranked process on its node; use it to count per-node data once. */
+  bool isNodeMaster() const;
 
   /**
    * Is this node the global master process, i.e. does its rank equal get

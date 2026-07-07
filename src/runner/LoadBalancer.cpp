@@ -48,7 +48,7 @@ void runner::initLoadBalancer(bool hasPeriodicBoundaryConditions) {
 }
 
 toolbox::loadbalancing::LoadBalancer& runner::loadBalancer() {
-  // initLoadBalancer() runs in runner::run() before any step or statistics touches the
+  // initLoadBalancer() runs in runner::launch() before any step or statistics touches the
   // balancer, so the instance must exist by the time this is called.
   assertion(theLoadBalancer);
   return *theLoadBalancer;

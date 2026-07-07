@@ -16,7 +16,7 @@ namespace runner {
   class RuntimeParameters;
 } // namespace runner
 
-class runner::RuntimeParameters {
+class runner::RuntimeParameters final {
 private:
   double _mpiTimeOutWarning;
   double _mpiDeadlockTimeOut;
@@ -37,7 +37,7 @@ private:
   bool        _outputPathConfigured;
   std::string _projectName;
   std::string _executableName;
-  double      _logIntervalInSeconds;
+  double      _timeStepLogInterval;
   int         _gridLevels;
   int         _maxGridLevels;
   bool        _gridLevelsConfigured;
@@ -96,7 +96,7 @@ public:
   int    getTargetDevice() const;
 
   bool   isVerbose() const;
-  double getLogIntervalInSeconds() const;
+  double getTimeStepLogInterval() const;
 
   double getMinTerminalTime() const;
   double getMaxTerminalTime() const;

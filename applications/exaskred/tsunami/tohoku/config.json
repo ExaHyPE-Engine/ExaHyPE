@@ -4,7 +4,7 @@
   "firstPlotTimeStamp": 0.0,
   "numberOfSnapshots": 10,
   "outputPath": "solutions",
-  "logInterval": 10.0,
+  "timeStepLogInterval": 10.0,
   "loadBalancingQuality": 0.9,
   "minSizeOfTree": 1,
   "maxNumberOfTreesPerRank": -1,

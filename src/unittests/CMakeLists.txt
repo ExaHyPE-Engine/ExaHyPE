@@ -13,6 +13,7 @@ foreach(mode IN LISTS SUPPORTED_BUILD_TYPES)
       ToolboxBlockStructured${mode}${dimensions}d
       ToolboxLoadBalancing${mode}${dimensions}d
       ExaHyPE2${mode}${dimensions}d
+      Runner${mode}${dimensions}d
     )
 
     peano_add_target(

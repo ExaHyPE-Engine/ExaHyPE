@@ -3,6 +3,7 @@
 #include "exahype2/UnitTests.h"
 #include "peano4/Init.h"
 #include "peano4/UnitTests.h"
+#include "runner/UnitTests.h"
 #include "tarch/FloatingPointExceptions.h"
 #include "tarch/Init.h"
 #include "tarch/NonCriticalAssertions.h"
@@ -43,6 +44,11 @@ int runTests() {
   delete tests;
 
   tests = exahype2::getUnitTests();
+  tests->run();
+  unitTestsErrors += tests->getNumberOfErrors();
+  delete tests;
+
+  tests = runner::getUnitTests();
   tests->run();
   unitTestsErrors += tests->getNumberOfErrors();
   delete tests;

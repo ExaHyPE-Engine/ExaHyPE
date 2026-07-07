@@ -18,6 +18,7 @@
 #include "peano4/Loop.h"
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/FaceEnumerator.h"
+#include "runner/RepositoryCallbacks.h"
 #include "runner/RuntimeParameters.h"
 #include "tarch/Init.h"
 #include "tarch/MemoryUsage.h"
@@ -89,6 +90,25 @@ namespace {
     return result.str();
   }
 
+  std::string renderSolverStatistics(const std::vector<::runner::SolverStatistic>& statistics) {
+    std::ostringstream result;
+    for (const auto& statistic : statistics) {
+      if (not result.str().empty()) {
+        result << "   ";
+      }
+      result << statistic.label << " = ";
+      if (statistic.kind == ::runner::SolverStatistic::Kind::Count) {
+        result << statistic.count;
+      } else if (statistic.minimum == statistic.maximum) {
+        result << toScientificNotationString(statistic.minimum);
+      } else {
+        result << "[" << toScientificNotationString(statistic.minimum) << ", "
+               << toScientificNotationString(statistic.maximum) << "]";
+      }
+    }
+    return result.str();
+  }
+
   std::string formatSimulationTime() {
     std::ostringstream result;
     result << repositories::getMinTimeStamp() << " / "
@@ -122,7 +142,7 @@ namespace {
     std::vector<std::string> result;
     result.push_back(formatSimulationTime());
     for (const auto& statistic : repositories::getSolverStatistics()) {
-      result.push_back(formatStatistic(statistic.first, statistic.second));
+      result.push_back(formatStatistic(statistic.first, renderSolverStatistics(statistic.second)));
     }
     return result;
   }
@@ -617,7 +637,7 @@ int main(int argc, char** argv) {
           logInfo(statistic);
         }
         lastLoggedNumberOfCompletedTimeSteps = numberOfCompletedTimeSteps;
-        logNextTimeStep += runtimeParameters.getLogIntervalInSeconds();
+        logNextTimeStep += runtimeParameters.getTimeStepLogInterval();
       }
 
       if (Samples > 0 and ++count >= Samples) {
