@@ -1,13 +1,5 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "Node.h"
-#include "peano4/grid/PeanoCurve.h"
-#include "peano4/grid/Spacetree.h"
-#include "peano4/grid/StackTopology.h"
-#include "tarch/instrumentation/Log.h"
-#include "tarch/instrumentation/Watch.h"
-#include "tarch/mpi/IntegerMessage.h"
-
 template <class Container>
 void peano4::parallel::SpacetreeSet::resizeParallelExchangeStacks(Container& stackContainer) {
   for (auto& tree : getInstance()._spacetrees) {
@@ -25,9 +17,107 @@ template <class Container>
 void peano4::parallel::SpacetreeSet::
   streamDataFromJoiningTreeToMasterTree(Container& /*stackContainer*/, int /*master*/, int /*worker*/) {}
 
+/**
+ * Copies (streams) data from the master to the worker.
+ *
+ * These are complete copies of the data set as we know that both trees afterwards
+ * will coarsen their mesh and thus free resources.
+ *
+ * Invoked by user code from streamDataFromSplittingTreeToNewTree() and by
+ * spacetree set through SpacetreeSet::streamDataFromSplittingTreesToNewTrees().
+ * SpacetreeSet runs over the set of trees with the label EmptyRun, i.e. those
+ * that haven't done any iteration yet. It then invokes this routine (indirectly)
+ * on the master. That is, even if you are on a rank where the master does not exist,
+ * the code will temporarily create an observer for the master and then ask this
+ * observer to trigger the data exchange.
+ *
+ * We have to trigger the routine multiple times, to ensure we catch both the
+ * on-rank and the between-rank case. As a consequence, we may only stream if the
+ * destination stack is still empty.
+ *
+ * All data that are streamed are clones of the original data. These clones
+ * are created by peano4::parallel::SpacetreeSet::streamDataFromSplittingTreesToNewTrees()
+ * before we trigger this routine.
+ *
+ * ## On-rank realisation
+ *
+ * If source and destination rank are the same, a tree splits up into two trees
+ * both residing on the same MPI rank. We therefore simply copy the stream. As
+ * this routine is invoked on the master, it is the master that creates the
+ * stream on the worker and befills it.
+ *
+ * In this particular case, the routine is called twice: We call
+ * it per rank for the splitting trees and then for the empty ones. The second
+ * call however degenerates to nop.
+ *
+ * Where to the clones happen?
+ *
+ * ## Data exchange between different ranks
+ *
+ * If the master rank is the local guy, then we have to trigger a send. Otherwise,
+ * we trigger a receive. The message exchange consists of two phases. An integer
+ * message first is exchanged. It carries the number of messages. After that, I
+ * send out the actual data.
+ *
+ * We don't have to finish any sends, i.e. wait for Isends or Irecvs. SpacetreeSet
+ * will call finishAllOutstandingSendsAndReceives() later on.
+ *
+ * The routine is idempotent on a single rank, i.e. you can call it multiple times.
+ * Only the first one will copy, all the others will become nop. It is not idempotent
+ * in a parallel sense. It has to be idempotent, as I indeed have to call it twice
+ * in a distributed memory environment: I have to call it on the receiver side and
+ * on the sender side.
+ *
+ * <h2> Data ownership </h2>
+ *
+ * The routine solely accesses vertical/stream stacks, i.e. checks
+ * getOutputStackNumberForVerticalDataExchange(). That is, we assume that all data
+ * are ready to be streamed out. For user data, the spacetree's
+ * peano4::grid::Spacetree::sendUserData() will deposit all outgoing user data in
+ * the respective output buffers. That is, by the time we hit
+ * streamDataFromSplittingTreeToNewTree(), all user data is already in a (temporary)
+ * output stream. For the actual tree data, we have to deposit it there manually.
+ * This happens in
+ * peano4::parallel::SpacetreeSet::streamDataFromSplittingTreesToNewTrees().
+ *
+ *
+ * If we send out data via MPI, I assume that the data resides within a bespoke
+ * buffer. tryToFinishSendOrReceive() after all clears the buffer once it has gone
+ * out. So it is kind of safe to deposit data in a temporary buffer once. The send
+ * implicitly will clear it. After that, the garbage collection will eventually
+ * really free the underlying memory.
+ *
+ * If the target tree and the destination tree reside on the same rank, this routine
+ * does a plain copy-over. In this case, we have to delete the (temporary) stack that
+ * is used to stream out stuff after the copy. Otherwise, it will be dead memory in
+ * the code. Even worse, should the source tree later on stream once again to the
+ * same tree - as the tree meanwhile has degenerated or fused back into the master
+ * code - then we get a memory corruption as you can't clone into an existing stack.
+ *
+ * In peano4::parallel::SpacetreeSet::streamDataFromSplittingTreesToNewTrees() we
+ * might copy data multiple times if we immediately erase it after the clone.
+ * Therefore, I check per call (the function is called twice) whether the target
+ * buffer is empty. If so, I copy over. In any case, teh source buffer is deleted
+ * if it is not empty - even though I have not cloned it in the second step. This
+ * is kind of a hack, but no better one comes to my mind. The whole discussion is
+ * not relevant for inter-rank communication as we know that the buffer won't
+ * be deleted before the data has not been sent out - which is only once for the
+ * whole cycle.
+ *
+ * @param master: Integer >=0
+ *   This is the master tree involved in this split, i.e. the tree that wants to
+ *   deploy a subgrid to a worker. The number is a tree number and not a rank
+ *   number.
+ *
+ * @param worker: Integer >=0
+ *   This is the target tree number.
+ */
 template <class Container>
-void peano4::parallel::SpacetreeSet::
-  streamDataFromSplittingTreeToNewTree(Container& stackContainer, int master, int worker) {
+void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(
+  Container& stackContainer,
+  int        master,
+  int        worker
+) {
   const int thisRank   = tarch::mpi::Rank::getInstance().getRank();
   const int sourceRank = Node::getInstance().getRank(master);
   const int targetRank = Node::getInstance().getRank(worker);
@@ -55,17 +145,12 @@ void peano4::parallel::SpacetreeSet::
       const int targetStackNumber = grid::PeanoCurve::getOutputStackNumber(getInstance().getSpacetree(worker)._root);
       auto&     targetStack       = stackContainer.getLocalExchangeStack(worker, targetStackNumber);
       assertion(targetStack.empty());
-      // targetStack.clone(sourceStack);
-      // sourceStack.shallowClear();
       targetStack = std::move(sourceStack);
       return;
     }
 #ifdef PEANO_WITH_MPI
-    const auto metaInfo = Node::getInstance().getGridDataExchangeMetaInformation(
-      master,
-      worker,
-      Node::ExchangeMode::VerticalData
-    );
+    const auto metaInfo =
+      Node::getInstance().getGridDataExchangeMetaInformation(master, worker, Node::ExchangeMode::VerticalData);
 
     assertion(metaInfo.first >= 0);
     assertion(metaInfo.second != MPI_COMM_NULL);
@@ -82,11 +167,8 @@ void peano4::parallel::SpacetreeSet::
   // We are the receiver
   else if (thisRank == targetRank) {
 #ifdef PEANO_WITH_MPI
-    const auto metaInfo = Node::getInstance().getGridDataExchangeMetaInformation(
-      master,
-      worker,
-      Node::ExchangeMode::VerticalData
-    );
+    const auto metaInfo =
+      Node::getInstance().getGridDataExchangeMetaInformation(master, worker, Node::ExchangeMode::VerticalData);
 
     assertion(metaInfo.first >= 0);
     assertion(metaInfo.second != MPI_COMM_NULL);
@@ -167,8 +249,6 @@ void peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks(
         grid::StackTopology::ParallelExchangeStack::HorizontalInput
       );
       assertion(targetStack.empty());
-      // targetStack.clear(); // TODO: Unclear if needed
-
       targetStack.startReceive(
         stacks::SendReceiveContext::BoundaryExchange,
         targetRank,
@@ -205,9 +285,6 @@ void peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks(
       grid::StackTopology::ParallelExchangeStack::HorizontalInput
     );
     assertion(targetStack.empty());
-
-    // targetStack.clone(sourceStack);
-    // sourceStack.shallowClear();
     targetStack = std::move(sourceStack);
   }
 }
@@ -235,8 +312,8 @@ void peano4::parallel::SpacetreeSet::finishAllOutstandingSendsAndReceives(Contai
     for (int slot = 0; slot < tree.getNumberOfNeighbourTrees(); slot++) {
       for (int k = 0; k < static_cast<int>(grid::StackTopology::ParallelExchangeStack::NumberOfStacks); k++) {
         const auto which = static_cast<grid::StackTopology::ParallelExchangeStack>(k);
-        allSendReceivesFinished &= stackContainer.getParallelExchangeStack(spacetreeId, slot, which)
-                                     .tryToFinishSendOrReceive();
+        allSendReceivesFinished &=
+          stackContainer.getParallelExchangeStack(spacetreeId, slot, which).tryToFinishSendOrReceive();
       }
     }
 
@@ -259,30 +336,300 @@ void peano4::parallel::SpacetreeSet::finishAllOutstandingSendsAndReceives(Contai
 #endif
 }
 
+/**
+ * Purge the periodic input stacks of one tree. An entry that still sits there
+ * arrived last sweep but found no reader, which only happens while the grid
+ * or the domain decomposition changes. Such a leftover has to go before the
+ * next deposits arrive, as a later read could otherwise match the stale entry
+ * instead of the fresh one.
+ *
+ * The routine touches only this tree's periodic input stacks. It has to run
+ * after this tree's traversal and before any
+ * exchangeAllPeriodicBoundaryDataStacks() call that routes data towards this
+ * tree.
+ */
 template <class Container>
-void peano4::parallel::SpacetreeSet::exchangeAllPeriodicBoundaryDataStacks(Container& stackContainer, int spacetreeId) {
+void peano4::parallel::SpacetreeSet::purgePeriodicBoundaryDataStacks(Container& stackContainer, int spacetreeId) {
+  if (not getInstance().hasPeriodicBoundaryConditions()) {
+    return;
+  }
+
   for (int stackNumber = 0; stackNumber < grid::StackTopology::TotalNumberOfLocalExchangeStacks; stackNumber++) {
     if (not grid::StackTopology::isPeriodicBoundaryExchangeOutputStackNumber(stackNumber)) {
       continue;
     }
+    const int inputStackNumber =
+      grid::StackTopology::getPeriodicBoundaryExchangeInputStackNumberForOutputStack(stackNumber);
+    auto& staleStack  = stackContainer.getLocalExchangeStack(spacetreeId, inputStackNumber);
+    auto& staleStamps = stackContainer.getLocalExchangeStamps(spacetreeId, inputStackNumber);
+    assertion(staleStack.size() == staleStamps.size(), staleStack.size(), staleStamps.size(), spacetreeId);
+    if (not staleStack.empty()) {
+      logDebug(
+        "Purge " << staleStack.size() << " unconsumed periodic entries on tree " << spacetreeId << ", stack "
+                 << inputStackNumber
+      );
+    }
+    staleStack.shallowClear();
+    staleStamps.clear();
+  }
+}
 
-    auto& sourceStack = stackContainer.getLocalExchangeStack(spacetreeId, stackNumber);
-    if (sourceStack.empty()) {
+/**
+ * Route one tree's periodic boundary data to the trees that hold the wrapped
+ * partner entities. Every entry on the tree's periodic output stacks carries
+ * a stamp, i.e. the integer identity of its face or vertex plus the side of
+ * the domain it sits on. The routing table lists, per identity, which trees
+ * touch the low and the high side of the wrap, so each entry is sent to all
+ * trees on the opposite side: targets on the same rank get their copy pushed
+ * straight onto their input stack, targets on other ranks are staged for
+ * exchangeCrossRankPeriodicData(). An entry whose identity has no
+ * opposite-side target yet is dropped; this only happens while the grid
+ * settles after a change, and the entity resends its data next sweep.
+ *
+ * The routine reads this tree's periodic output stacks and deposits into the
+ * target trees' periodic input stacks, exactly like the horizontal
+ * shared-memory exchange moves data into the peer's input stacks. It
+ * requires rebuildPeriodicAssociations() to have completed and the targets'
+ * purges to have run; it does not require other trees' traversals or
+ * routings to have finished. The receive matches entries by stamp, so the
+ * deposit order within a stack does not matter.
+ */
+template <class Container>
+void peano4::parallel::SpacetreeSet::exchangeAllPeriodicBoundaryDataStacks(Container& stackContainer, int spacetreeId) {
+  if (not getInstance().hasPeriodicBoundaryConditions()) {
+    return;
+  }
+
+  const int   thisRank = tarch::mpi::Rank::getInstance().getRank();
+  const auto& routing  = getInstance()._periodicRouting;
+
+  // The deposit stack is the input stack paired with the producer's output
+  // stack, which by the reflection symmetry of the periodic stack maps is
+  // exactly the stack the partner's receive reads (see
+  // StackTopologyTest::testPeriodicPartnerRoundTrip).
+  for (int stackNumber = 0; stackNumber < grid::StackTopology::TotalNumberOfLocalExchangeStacks; stackNumber++) {
+    if (not grid::StackTopology::isPeriodicBoundaryExchangeOutputStackNumber(stackNumber)) {
       continue;
     }
+    auto& sourceStack  = stackContainer.getLocalExchangeStack(spacetreeId, stackNumber);
+    auto& sourceStamps = stackContainer.getLocalExchangeStamps(spacetreeId, stackNumber);
+    assertion(sourceStack.size() == sourceStamps.size(), sourceStack.size(), sourceStamps.size(), spacetreeId);
 
-    // const int targetStackNumber = grid::StackTopology::mapPeriodicBoundaryExchangeOutputStackOntoInputStack(
-    //   stackNumber
-    // );
-    const int targetStackNumber = grid::StackTopology::getPeriodicBoundaryExchangeInputStackNumberForOutputStack(
-      stackNumber
-    );
-    assertion(not grid::StackTopology::isPeriodicBoundaryExchangeOutputStackNumber(targetStackNumber));
-    auto& targetStack = stackContainer.getLocalExchangeStack(spacetreeId, targetStackNumber);
+    const int depositStackNumber =
+      grid::StackTopology::getPeriodicBoundaryExchangeInputStackNumberForOutputStack(stackNumber);
 
-    assertion(targetStack.empty());
-    // targetStack.clone(sourceStack);
-    // sourceStack.shallowClear();
-    targetStack = std::move(sourceStack);
+    while (not sourceStack.empty()) {
+      const grid::PeriodicStamp stamp = sourceStamps.back();
+      sourceStamps.pop_back();
+      auto data = sourceStack.pop();
+
+      const auto entry = routing.find(stamp.key);
+      // No routing entry means no tree touches the wrapped partner (yet);
+      // this only happens while a regrid settles, and the entity is
+      // reproduced next sweep, so the payload is dropped.
+      if (entry == routing.end()) {
+        continue;
+      }
+      const auto& targets = entry->second[grid::toIndex(grid::opposite(stamp.side))];
+
+      for (std::size_t i = 0; i < targets.size(); i++) {
+        const int  targetTree = targets[i];
+        const bool lastTarget = i + 1 == targets.size();
+        if (Node::getInstance().getRank(targetTree) == thisRank) {
+          auto& depositStack = stackContainer.getLocalExchangeStack(targetTree, depositStackNumber);
+          if (lastTarget) {
+            depositStack.push(std::move(data));
+          } else {
+            depositStack.push(data);
+          }
+          stackContainer.pushLocalExchangeStamp(targetTree, depositStackNumber, stamp);
+        } else if (lastTarget) {
+          stackContainer
+            .stageCrossRankPeriodicEntry(spacetreeId, targetTree, stamp, depositStackNumber, std::move(data));
+        } else {
+          stackContainer.stageCrossRankPeriodicEntry(spacetreeId, targetTree, stamp, depositStackNumber, data);
+        }
+      }
+    }
   }
+}
+
+/**
+ * Non-blocking, point-to-point exchange of the periodic boundary data whose
+ * partner tree lives on another rank. Runs once per container and sweep,
+ * after the same-rank periodic pass has staged the cross-rank entries. It
+ * first exchanges a per-channel payload count, then the per-entry stamps and
+ * payloads on the dedicated periodic tag, and finally deposits the received
+ * payloads onto the partner tree's periodic input stacks so the ordinary
+ * stamp-matched receive consumes them. The channels come from the globally
+ * identical routing table, so both ranks of every channel post in lockstep
+ * (count 0 for a channel idle this sweep), which keeps the non-blocking
+ * exchange deadlock-free.
+ */
+template <class Container>
+void peano4::parallel::SpacetreeSet::exchangeCrossRankPeriodicData([[maybe_unused]] Container& stackContainer) {
+#ifdef PEANO_WITH_MPI
+  if (not getInstance().hasPeriodicBoundaryConditions()) {
+    return;
+  }
+
+  const int   thisRank = tarch::mpi::Rank::getInstance().getRank();
+  const auto& channels = getInstance()._crossRankPeriodicChannels;
+
+  // A channel is the ordered pair of producer tree and consumer tree.
+  using Channel = std::pair<int, int>;
+
+  // Each payload travels with its stamp and the consumer-side deposit stack.
+  // Transmitting these (rather than re-deriving counts from the routing
+  // geometry) keeps the exchange correct no matter how many entities actually
+  // emitted data this sweep: an idle channel simply ships count 0.
+  constexpr int StampWords = grid::PackedPeriodicStampSize + 1;
+  auto          packEntry  = [](const grid::PeriodicStamp& stamp, int depositStack, int* out) {
+    grid::packPeriodicStamp(stamp, out);
+    out[grid::PackedPeriodicStampSize] = depositStack;
+  };
+  auto unpackEntry = [](const int* in, grid::PeriodicStamp& stamp, int& depositStack) {
+    stamp        = grid::unpackPeriodicStamp(in);
+    depositStack = in[grid::PackedPeriodicStampSize];
+  };
+
+  // Group staged outgoing payloads by channel (the producer is a local tree).
+  struct Payload {
+    grid::PeriodicStamp             stamp;
+    int                             depositStack;
+    typename Container::ElementType data;
+  };
+  std::map<Channel, std::vector<Payload>> outByChannel;
+  for (auto& e : stackContainer.getCrossRankPeriodicStaging()) {
+    outByChannel[Channel(e.sendTree, e.recvTree)].push_back(Payload{e.stamp, e.depositStack, std::move(e.data)});
+  }
+
+  // One record per channel this rank participates in. Channels are taken from
+  // the global set, so producer and consumer ranks post in lockstep (count 0
+  // for a channel that is idle this sweep); no count exchange is left unmatched,
+  // hence no deadlock. std::list keeps the in-flight buffers' addresses stable.
+  struct ChannelIO {
+    Channel                   channel;
+    bool                      outgoing;
+    int                       remoteRank;
+    int                       count;
+    std::vector<int>          meta;
+    typename Container::Stack data;
+    int                       tag          = 0;
+    MPI_Comm                  comm         = MPI_COMM_NULL;
+    MPI_Request               countRequest = MPI_REQUEST_NULL;
+    MPI_Request               metaRequest  = MPI_REQUEST_NULL;
+  };
+  std::list<ChannelIO> io;
+
+  for (const auto& ch : channels) {
+    const int  producerTree = ch.first;
+    const int  consumerTree = ch.second;
+    const auto metaInfo     = Node::getInstance().getGridDataExchangeMetaInformation(
+      producerTree,
+      consumerTree,
+      Node::ExchangeMode::PeriodicData
+    );
+    if (Node::getInstance().getRank(producerTree) == thisRank) {
+      io.emplace_back();
+      ChannelIO& c  = io.back();
+      c.channel     = ch;
+      c.outgoing    = true;
+      c.remoteRank  = Node::getInstance().getRank(consumerTree);
+      c.tag         = metaInfo.first;
+      c.comm        = metaInfo.second;
+      const auto it = outByChannel.find(ch);
+      c.count       = (it != outByChannel.end()) ? static_cast<int>(it->second.size()) : 0;
+    }
+    if (Node::getInstance().getRank(consumerTree) == thisRank) {
+      io.emplace_back();
+      ChannelIO& c = io.back();
+      c.channel    = ch;
+      c.outgoing   = false;
+      c.remoteRank = Node::getInstance().getRank(producerTree);
+      c.tag        = metaInfo.first;
+      c.comm       = metaInfo.second;
+      c.count      = 0;
+    }
+  }
+
+  // Phase 1: exchange the per-channel payload counts, then drain while pumping
+  // service messages so unrelated dangling traffic cannot stall us.
+  for (auto& c : io) {
+    if (c.outgoing) {
+      MPI_Isend(&c.count, 1, MPI_INT, c.remoteRank, c.tag, c.comm, &c.countRequest);
+    } else {
+      MPI_Irecv(&c.count, 1, MPI_INT, c.remoteRank, c.tag, c.comm, &c.countRequest);
+    }
+  }
+  {
+    bool done = io.empty();
+    while (not done) {
+      done = true;
+      for (auto& c : io) {
+        int flag = 0;
+        MPI_Test(&c.countRequest, &flag, MPI_STATUS_IGNORE);
+        done &= (flag != 0);
+      }
+      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+    }
+  }
+
+  // Phase 2: for active channels (count > 0) exchange metadata then payload on
+  // the same tag. MPI in-order delivery keeps the sequence count, meta, data
+  // matched, so no extra synchronisation is needed.
+  for (auto& c : io) {
+    if (c.count == 0) {
+      continue;
+    }
+    c.meta.resize(static_cast<std::size_t>(c.count) * StampWords);
+    if (c.outgoing) {
+      auto& payloads = outByChannel[c.channel];
+      for (int k = 0; k < c.count; k++) {
+        packEntry(payloads[k].stamp, payloads[k].depositStack, c.meta.data() + k * StampWords);
+        c.data.push(std::move(payloads[k].data));
+      }
+      MPI_Isend(c.meta.data(), c.count * StampWords, MPI_INT, c.remoteRank, c.tag, c.comm, &c.metaRequest);
+      c.data.startSend(stacks::SendReceiveContext::PeriodicBoundaryDataSwap, c.remoteRank, c.tag, c.comm);
+    } else {
+      MPI_Irecv(c.meta.data(), c.count * StampWords, MPI_INT, c.remoteRank, c.tag, c.comm, &c.metaRequest);
+      c.data.startReceive(stacks::SendReceiveContext::PeriodicBoundaryDataSwap, c.remoteRank, c.tag, c.comm, c.count);
+    }
+  }
+  {
+    bool done = io.empty();
+    while (not done) {
+      done = true;
+      for (auto& c : io) {
+        if (c.count == 0) {
+          continue;
+        }
+        int flag = 0;
+        MPI_Test(&c.metaRequest, &flag, MPI_STATUS_IGNORE);
+        done &= (flag != 0);
+        done &= c.data.tryToFinishSendOrReceive();
+      }
+      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+    }
+  }
+
+  // Deposit received payloads onto the consumer tree's periodic input stacks,
+  // stamped, so the ordinary stamp-matched receive consumes them next sweep.
+  // meta[k] and data[k] line up by transmission position.
+  for (auto& c : io) {
+    if (c.outgoing or c.count == 0) {
+      continue;
+    }
+    const int consumerTree = c.channel.second;
+    for (int k = 0; k < c.count; k++) {
+      grid::PeriodicStamp stamp;
+      int                 depositStack = 0;
+      unpackEntry(c.meta.data() + k * StampWords, stamp, depositStack);
+      stackContainer.getLocalExchangeStack(consumerTree, depositStack).push(c.data[k]);
+      stackContainer.pushLocalExchangeStamp(consumerTree, depositStack, stamp);
+    }
+  }
+
+  stackContainer.clearCrossRankPeriodicStaging();
+#endif
 }

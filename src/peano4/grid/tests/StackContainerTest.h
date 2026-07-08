@@ -8,17 +8,20 @@ namespace peano4::grid::tests {
   class StackContainerTest;
 } // namespace peano4::grid::tests
 
-class peano4::grid::tests::StackContainerTest final: public tarch::tests::TestCase {
+class peano4::grid::tests::StackContainerTest final : public tarch::tests::TestCase {
 private:
   void testEmptyContainerHasZeroSize();
   void testSizeCountsElementInLocalAndParallelStacks();
   void testSetLocalTreesPreservesExistingTreeDataWhenAddingNewTrees();
   void testSetLocalTreesDropsRemovedTrees();
   void testMultipleParallelSlotsIndependentAndCounted();
+  void testStampMatchedPop();
+  void testCrossRankPeriodicStaging();
+  void testLazyTreeRegistration();
 
 public:
   StackContainerTest();
-  ~StackContainerTest() override final = default;
+  ~StackContainerTest() override = default;
 
-  void run() override final;
+  void run() override;
 };

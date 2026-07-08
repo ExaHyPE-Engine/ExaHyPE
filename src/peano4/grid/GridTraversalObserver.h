@@ -3,6 +3,7 @@
 #pragma once
 
 #include "GridControlEvent.h"
+
 #include "peano4/Globals.h"
 #include "peano4/stacks/SendReceiveContext.h"
 #include "tarch/la/Vector.h"
@@ -10,19 +11,18 @@
 #include <set>
 #include <vector>
 
-namespace peano4 {
-  namespace grid {
-    class GridTraversalObserver;
-    // Forward declarations as structs
-    struct GridControlEvent;
-    struct GridTraversalEvent;
-  } // namespace grid
-  namespace datamanagement {
-    struct CellMarker;
-    struct FaceMarker;
-    struct VertexMarker;
-  } // namespace datamanagement
-} // namespace peano4
+namespace peano4::grid {
+  class GridTraversalObserver;
+  struct GridControlEvent;
+  struct GridTraversalEvent;
+  struct PeriodicStamp;
+} // namespace peano4::grid
+
+namespace peano4::datamanagement {
+  struct CellMarker;
+  struct FaceMarker;
+  struct VertexMarker;
+} // namespace peano4::datamanagement
 
 /**
  *
@@ -36,7 +36,12 @@ namespace peano4 {
  */
 class peano4::grid::GridTraversalObserver {
 public:
-  virtual ~GridTraversalObserver() = default;
+  GridTraversalObserver()                                        = default;
+  virtual ~GridTraversalObserver()                               = default;
+  GridTraversalObserver(const GridTraversalObserver&)            = default;
+  GridTraversalObserver& operator=(const GridTraversalObserver&) = default;
+  GridTraversalObserver(GridTraversalObserver&&)                 = default;
+  GridTraversalObserver& operator=(GridTraversalObserver&&)      = default;
 
   /**
    * Can this grid entity hold data
@@ -127,18 +132,14 @@ if (peano4::parallel::Node::isGlobalMaster(spacetreeId)) {
    * @param x Root cell coordinates
    * @param h Root cell size
    */
-  virtual void beginTraversal(
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    const tarch::la::Vector<DIMENSIONS, double>& h
-  ) = 0;
+  virtual void
+  beginTraversal(const tarch::la::Vector<DIMENSIONS, double>& x, const tarch::la::Vector<DIMENSIONS, double>& h) = 0;
 
   /**
    * @see beginTraversal()
    */
-  virtual void endTraversal(
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    const tarch::la::Vector<DIMENSIONS, double>& h
-  ) = 0;
+  virtual void
+  endTraversal(const tarch::la::Vector<DIMENSIONS, double>& x, const tarch::la::Vector<DIMENSIONS, double>& h) = 0;
 
   virtual void setLocalTrees() {};
 
@@ -157,11 +158,29 @@ if (peano4::parallel::Node::isGlobalMaster(spacetreeId)) {
   virtual void exchangeAllHorizontalDataExchangeStacks() {};
 
   /**
-   * Exchange all periodic boundary data. Periodic boundary values are always
-   * handled by tree 0, i.e. there's no need to distinguish ranks here. On
-   * all trees that are not rank 0, this operation should immediately return.
+   * Purge this tree's periodic input stacks of entries no reader consumed
+   * last sweep. Runs per tree, after the tree's traversal and before any
+   * tree's periodic routing. See
+   * SpacetreeSet::purgePeriodicBoundaryDataStacks.
+   */
+  virtual void purgePeriodicBoundaryDataStacks() {};
+
+  /**
+   * Route this tree's periodic boundary data to the trees holding the
+   * wrapped partner entities: same-rank targets receive their copy directly
+   * (shared memory), cross-rank targets are staged for
+   * exchangeCrossRankPeriodicData(). Runs per tree, after every tree's
+   * purge. See SpacetreeSet::exchangeAllPeriodicBoundaryDataStacks.
    */
   virtual void exchangeAllPeriodicBoundaryDataStacks() {};
+
+  /**
+   * Non-blocking, point-to-point exchange of the periodic boundary data whose
+   * partner tree is on another rank. Called once per rank and sweep after the
+   * same-rank periodic pass has staged the cross-rank entries. See
+   * SpacetreeSet::exchangeCrossRankPeriodicData.
+   */
+  virtual void exchangeCrossRankPeriodicData() {};
 
   /**
    * Stream data from current tree on which this routine is called to
@@ -190,20 +209,24 @@ if (peano4::parallel::Node::isGlobalMaster(spacetreeId)) {
    * sendNodeData() reads live call-stack data before storeNodeData() and must
    * enqueue exchange data without consuming the source object. receiveNodeData()
    * receives the payload and immediately merges it into the live call-stack
-   * data.
+   * data. For periodic boundary exchange, periodicStamp carries the entity's
+   * integer identity: the send pushes it in lockstep with the payload, and the
+   * receive pops the entry matching the wrapped partner of the stamp.
    */
   virtual void sendNodeData(
     NodeData                   nodeData,
     int                        position,
     int                        toStack,
     stacks::SendReceiveContext context,
-    const GridTraversalEvent&  event
+    const GridTraversalEvent&  event,
+    const PeriodicStamp*       periodicStamp = nullptr
   ) {};
   virtual void receiveNodeData(
     NodeData                   nodeData,
     int                        position,
     int                        fromStack,
     stacks::SendReceiveContext context,
-    const GridTraversalEvent&  event
+    const GridTraversalEvent&  event,
+    const PeriodicStamp*       periodicStamp = nullptr
   ) {};
 };

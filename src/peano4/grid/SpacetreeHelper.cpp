@@ -16,12 +16,12 @@ namespace {
   };
 
   INLINE_METHOD FaceAdjacentRanks readFaceAdjacentRanks(
-    peano4::grid::GridVertex fineGridVertices[TWO_POWER_D],
-    int                      faceNumber,
-    int                      vertexIndex,
-    bool                     calledByReceivingProcess
+    const peano4::grid::GridVertex fineGridVertices[TWO_POWER_D],
+    int                            faceNumber,
+    int                            vertexIndex,
+    bool                           calledByReceivingProcess
   ) {
-    const auto& T      = peano4::grid::SpacetreeHelper::getFaceAdjTables();
+    const auto& tables = peano4::grid::SpacetreeHelper::getFaceAdjTables();
     const int   normal = faceNumber % DIMENSIONS;
 
     const peano4::grid::GridVertex& v       = fineGridVertices[vertexIndex];
@@ -30,8 +30,8 @@ namespace {
                            ? (state == peano4::grid::GridVertex::State::HangingVertex or state == peano4::grid::GridVertex::State::New)
                            : (state == peano4::grid::GridVertex::State::HangingVertex or state == peano4::grid::GridVertex::State::Delete);
     const auto&                     adj     = calledByReceivingProcess ? v.backupOfAdjacentRanks : v.adjacentRanks;
-    const int                       i0      = T.adjIdx0[normal][vertexIndex];
-    const int                       i1      = T.adjIdx1[normal][vertexIndex];
+    const int                       i0      = tables.adjIdx0[normal][vertexIndex];
+    const int                       i1      = tables.adjIdx1[normal][vertexIndex];
 
     return {invalid ? -1 : adj[i0], invalid ? -1 : adj[i1]};
   }
@@ -110,8 +110,8 @@ void peano4::grid::SpacetreeHelper::getAdjacentRanksOfFace(
   int        out[TWO_POWER_D]
 ) {
   assertion(faceNumber >= 0 and faceNumber < TWO_TIMES_D);
-  const auto& T     = getFaceAdjTables();
-  const int*  verts = T.faceVerts[faceNumber];
+  const auto& tables = getFaceAdjTables();
+  const int*  verts  = tables.faceVerts[faceNumber];
 
   int counter = 0;
 
@@ -162,8 +162,8 @@ int peano4::grid::SpacetreeHelper::getNeighbourTreeAlongFace(
   SpacetreeState            treeState,
   bool                      noParallelTopologyChanges
 ) {
-  const auto& T     = getFaceAdjTables();
-  const int*  verts = T.faceVerts[faceNumber];
+  const auto& tables = getFaceAdjTables();
+  const int*  verts  = tables.faceVerts[faceNumber];
 
   if (noParallelTopologyChanges) {
     bool       isAdjacentToLocalRank = false;
@@ -447,11 +447,11 @@ std::bitset<TWO_TIMES_D> peano4::grid::SpacetreeHelper::areFacesAdjacentToParall
   bool                      noParallelTopologyChanges
 ) {
   std::bitset<TWO_TIMES_D> result;
-  const auto&              T = getFaceAdjTables();
+  const auto&              tables = getFaceAdjTables();
 
   if (noParallelTopologyChanges) {
     for (int j = 0; j < TWO_TIMES_D; j++) {
-      const int* verts     = T.faceVerts[j];
+      const int* verts     = tables.faceVerts[j];
       bool       oneLocal  = false;
       bool       oneRemote = false;
 
@@ -501,7 +501,7 @@ std::bitset<TWO_TIMES_D> peano4::grid::SpacetreeHelper::areFacesAdjacentToParall
   };
 
   for (int j = 0; j < TWO_TIMES_D; j++) {
-    const int* verts     = T.faceVerts[j];
+    const int* verts     = tables.faceVerts[j];
     bool       oneLocal  = false;
     bool       oneRemote = false;
 
@@ -624,14 +624,14 @@ bool peano4::grid::SpacetreeHelper::isSpacetreeNodeSplitCandidate(
   const TreeIdSet&          joinTriggered,
   const TreeIdSet&          joining
 ) {
-  bool isOneVertexAdjacentToPeriodicBC = false;
-  bool isOneVertexParentOfForkedTree   = false;
+  bool isOneVertexParentOfForkedTree = false;
 
+  // A periodic-boundary marker (RankOfPeriodicBoundaryCondition) is classification
+  // metadata, not ownership: it must not make an otherwise local cell unsplittable.
+  // Periodic boundary data is exchanged across trees like any neighbour data
+  // (see PeriodicTopology.h / SpacetreeSet::exchangeAllPeriodicBoundaryDataStacks),
+  // so periodic cells may distribute.
   peano4::dForEachCorner([&](const tarch::la::Vector<DIMENSIONS, int>& k, int kScalar) {
-    const auto& adjacentRanks = fineGridVertices[kScalar].adjacentRanks;
-    isOneVertexAdjacentToPeriodicBC |=
-      std::find(std::begin(adjacentRanks), std::end(adjacentRanks), RankOfPeriodicBoundaryCondition)
-      != std::end(adjacentRanks);
     isOneVertexParentOfForkedTree |=
       fineGridVertices[kScalar].getFlag(GridVertex::HasBeenParentOfSubtreeVertexInPreviousTreeSweep);
   });
@@ -658,8 +658,7 @@ bool peano4::grid::SpacetreeHelper::isSpacetreeNodeSplitCandidate(
                   false,
                   false
     )
-    and areAllVerticesNonHanging(fineGridVertices) and not isOneVertexAdjacentToPeriodicBC
-    and (not isOneVertexParentOfForkedTree);
+    and areAllVerticesNonHanging(fineGridVertices) and (not isOneVertexParentOfForkedTree);
 
   return result;
 }

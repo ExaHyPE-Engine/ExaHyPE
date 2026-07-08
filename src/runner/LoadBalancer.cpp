@@ -14,9 +14,6 @@
 namespace {
   class RuntimeConfiguration final : public toolbox::loadbalancing::Configuration {
   public:
-    explicit RuntimeConfiguration(bool hasPeriodicBC) :
-      _hasPeriodicBC(hasPeriodicBC) {}
-
     int getMaxLocalTreesPerRank(toolbox::loadbalancing::State) const override {
       const int configured = runner::RuntimeParameters::getInstance().getMaxNumberOfTreesPerRank();
       return configured > 0 ? configured : tarch::multicore::Core::getInstance().getNumberOfThreads();
@@ -27,24 +24,19 @@ namespace {
     }
 
     int getMinTreeSize(toolbox::loadbalancing::State) const override {
-      const int minSizeOfTree = runner::RuntimeParameters::getInstance().getMinSizeOfTree();
-      return _hasPeriodicBC ? std::max(minSizeOfTree, static_cast<int>(THREE_POWER_D)) : minSizeOfTree;
+      return runner::RuntimeParameters::getInstance().getMinSizeOfTree();
     }
 
     peano4::grid::SplitInstruction::Mode getMode(toolbox::loadbalancing::State) const override {
       return peano4::grid::SplitInstruction::Mode::BottomUp;
     }
-
-  private:
-    bool _hasPeriodicBC;
   };
 
   std::unique_ptr<toolbox::loadbalancing::LoadBalancer> theLoadBalancer;
 } // namespace
 
-void runner::initLoadBalancer(bool hasPeriodicBoundaryConditions) {
-  theLoadBalancer =
-    std::make_unique<toolbox::loadbalancing::LoadBalancer>(new RuntimeConfiguration(hasPeriodicBoundaryConditions));
+void runner::initLoadBalancer() {
+  theLoadBalancer = std::make_unique<toolbox::loadbalancing::LoadBalancer>(new RuntimeConfiguration());
 }
 
 toolbox::loadbalancing::LoadBalancer& runner::loadBalancer() {

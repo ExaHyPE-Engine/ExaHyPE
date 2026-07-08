@@ -28,6 +28,7 @@ set(SOURCES
   grid/GridTraversalObserver.cpp
   grid/GridVertex.cpp
   grid/PeanoCurve.cpp
+  grid/PeriodicTopology.cpp
   grid/Spacetree.cpp
   grid/SpacetreeHelper.cpp
   grid/SpacetreeState.cpp
@@ -44,6 +45,7 @@ set(SOURCES
   grid/tests/TreeIdSetTest.cpp
   grid/tests/GridTraversalEventGeneratorTest.cpp
   grid/tests/GridVertexTest.cpp
+  grid/tests/PeriodicTopologyTest.cpp
   grid/tests/SpacetreeHelperTest.cpp
   grid/tests/SpacetreeTest.cpp
   grid/tests/StackContainerTest.cpp
@@ -58,6 +60,7 @@ set(SOURCES
   parallel/TreeManagementMessage.cpp
   parallel/tests/NodeTest.cpp
   parallel/tests/PingPongTest.cpp
+  parallel/tests/SpacetreeSetTest.cpp
 
   stacks/IOMode.cpp
   stacks/SendReceiveContext.cpp

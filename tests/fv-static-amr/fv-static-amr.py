@@ -1,5 +1,6 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
+
 import argparse
 
 import exahype2
@@ -17,10 +18,11 @@ def parse_arguments():
     parser.add_argument(
         "-pr", "--precision", choices=available_precisions, default="double"
     )
+    parser.add_argument("-pbc", "--periodic-bc", choices=["on", "off"], default="on")
     parser.add_argument("-et", "--end-time", type=float, default=0.1)
-    parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=16)
+    parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=4)
     parser.add_argument("-l", "--grid-levels", type=int, default=None)
-    parser.add_argument("-lmin", "--min-grid-levels", type=int, default=4)
+    parser.add_argument("-lmin", "--min-grid-levels", type=int, default=3)
     parser.add_argument("-lmax", "--max-grid-levels", type=int, default=6)
     args, _ = parser.parse_known_args()
     if args.grid_levels is not None:
@@ -34,13 +36,15 @@ def parse_arguments():
 
 args = parse_arguments()
 
+periodic = args.periodic_bc == "on"
+
 project = exahype2.Project(
     namespace=["tests", "exahype2", "fv"],
     project_name=".",
     dimensions=2,
     size=[1.0, 1.0, 1.0],
     offset=[0.0, 0.0, 0.0],
-    periodic_bc=[False, False, False],
+    periodic_bc=[periodic, periodic, periodic],
     min_end_time=args.end_time,
     max_end_time=args.end_time,
     min_grid_levels=args.min_grid_levels,
@@ -52,15 +56,15 @@ initial_conditions = """
   Q[Shortcuts::rhoU + 0]  = 0.0;
   Q[Shortcuts::rhoU + 1]  = 0.0;
 #if DIMENSIONS == 2
-  Q[Shortcuts::rhoE]      = ((std::sqrt(std::pow(0.5 - x(0), 2) + std::pow(0.5 - x(1), 2)) < 0.2) ? (1.0) : (1.01));
+  Q[Shortcuts::rhoE]      = ((std::sqrt(std::pow(x(0), 2) + std::pow(x(1), 2)) < 0.2) ? (1.0) : (1.01));
 #else
   Q[Shortcuts::rhoU + 2]  = 0.0;
-  Q[Shortcuts::rhoE]      = ((std::sqrt(std::pow(0.5 - x(0), 2) + std::pow(0.5 - x(1), 2) + std::pow(0.5 - x(2), 2)) < 0.2) ? (1.0) : (1.01));
+  Q[Shortcuts::rhoE]      = ((std::sqrt(std::pow(x(0), 2) + std::pow(x(1), 2) + std::pow(x(2), 2)) < 0.2) ? (1.0) : (1.01));
 #endif
 """
 
 boundary_conditions = """
-  // Reflective boundary conditions
+  // Reflective boundary conditions; only invoked with --periodic-bc off.
   Qoutside[Shortcuts::rho]      = Qinside[Shortcuts::rho];
   Qoutside[Shortcuts::rhoU + 0] = -Qinside[Shortcuts::rhoU + 0];
   Qoutside[Shortcuts::rhoU + 1] = -Qinside[Shortcuts::rhoU + 1];
@@ -73,11 +77,11 @@ boundary_conditions = """
 refinement_criterion = """
   auto result = ::exahype2::RefinementCommand::Keep;
 
-#if DIMENSIONS == 3
-  tarch::la::Vector<DIMENSIONS, double> circleCentre = {0.5, 0.5, 0.5};
-#else
-  tarch::la::Vector<DIMENSIONS, double> circleCentre = {0.5, 0.5};
-#endif
+  // The refined disc is centred on the domain corner: with periodic boundary
+  // conditions it overlaps every wrap, so the refinement has to mirror onto
+  // the far sides of each axis; with reflective boundaries the same disc
+  // stays confined to the corner and serves as the control.
+  tarch::la::Vector<DIMENSIONS, double> circleCentre(0.0);
 
   if (tarch::la::equals(t, 0.0)) {
     if (tarch::la::norm2(x - circleCentre) < 0.1) {

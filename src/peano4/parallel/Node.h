@@ -3,6 +3,7 @@
 #pragma once
 
 #include "TreeEntry.h"
+
 #include "peano4/grid/GridVertex.h"
 #include "tarch/instrumentation/Log.h"
 #include "tarch/multicore/BooleanSemaphore.h"
@@ -21,13 +22,13 @@ namespace peano4::parallel {
 
 /**
  * Node is Peano's abstraction for the hybrid of MPI/threads. It represents
- * one spacetree instance basically.
+ * one spacetree instance.
  *
  * @author Tobias Weinzierl
  */
 class peano4::parallel::Node {
 public:
-#if !defined(PEANO_WITH_MPI)
+#ifndef PEANO_WITH_MPI
   typedef int MPI_Comm;
 #ifndef MPI_COMM_NULL
 #define MPI_COMM_NULL 0
@@ -143,7 +144,14 @@ public:
      * way round. Consequently, some tree management data are vertical data, too.
      * See for example peano4::parallel::SpacetreeSet::addSpacetree().
      */
-    VerticalData
+    VerticalData,
+    /**
+     * Periodic boundary data exchanged between a tree and the tree owning the
+     * wrapped (periodic) image of one of its boundary faces, when the two live
+     * on different ranks. Carries its own tag so it never collides with the
+     * horizontal/vertical streams between the same tree pair.
+     */
+    PeriodicData
   };
 
   static std::string toString(ExchangeMode mode);
@@ -161,11 +169,8 @@ public:
    * So we effectively do not need that many tags even though we need
    * different tags per tree pair.
    */
-  GridDataExchangeMetaInformation getGridDataExchangeMetaInformation(
-    int          sendingTreeId,
-    int          receivingTreeId,
-    ExchangeMode exchange
-  ) const;
+  GridDataExchangeMetaInformation
+  getGridDataExchangeMetaInformation(int sendingTreeId, int receivingTreeId, ExchangeMode exchange) const;
 
   /**
    * I use this for debugging. When I have a tag, I can ask the node whether

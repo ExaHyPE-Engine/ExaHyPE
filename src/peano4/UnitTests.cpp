@@ -9,6 +9,7 @@
 #include "grid/tests/GridStatisticsTest.h"
 #include "grid/tests/GridTraversalEventGeneratorTest.h"
 #include "grid/tests/GridVertexTest.h"
+#include "grid/tests/PeriodicTopologyTest.h"
 #include "grid/tests/SpacetreeHelperTest.h"
 #include "grid/tests/SpacetreeTest.h"
 #include "grid/tests/StackContainerTest.h"
@@ -17,6 +18,7 @@
 #include "grid/tests/VertexLookupTableTest.h"
 #include "grid/tests/VertexTypeTest.h"
 #include "parallel/tests/NodeTest.h"
+#include "parallel/tests/SpacetreeSetTest.h"
 #ifdef PEANO_WITH_MPI
 #include "parallel/tests/PingPongTest.h"
 #endif
@@ -35,6 +37,7 @@ tarch::tests::TestCase* peano4::getUnitTests() {
   result->addTestCase(new grid::tests::GridStatisticsTest());
   result->addTestCase(new grid::tests::TreeIdSetTest());
   result->addTestCase(new grid::tests::GridVertexTest());
+  result->addTestCase(new grid::tests::PeriodicTopologyTest());
   result->addTestCase(new grid::tests::SpacetreeHelperTest());
   result->addTestCase(new grid::tests::SpacetreeTest());
   result->addTestCase(new grid::tests::StackContainerTest());
@@ -43,6 +46,7 @@ tarch::tests::TestCase* peano4::getUnitTests() {
   result->addTestCase(new grid::tests::VertexTypeTest());
 
   result->addTestCase(new parallel::tests::NodeTest());
+  result->addTestCase(new parallel::tests::SpacetreeSetTest());
 #ifdef PEANO_WITH_MPI
   result->addTestCase(new parallel::tests::PingPongTest());
 #endif

@@ -119,7 +119,7 @@ int runner::launch(
 
   peano4::init(domainOffset, domainSize, periodicBC);
 
-  initLoadBalancer(periodicBC.count() > 0);
+  initLoadBalancer();
 
   callbacks.initDataRepository();
   if (callbacks.startSimulation) {

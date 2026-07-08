@@ -3,7 +3,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveNodeData(
   int                                             position,
   int                                             fromStack,
   ::peano4::stacks::SendReceiveContext            context,
-  const ::peano4::grid::GridTraversalEvent&       event
+  const ::peano4::grid::GridTraversalEvent&       event,
+  const ::peano4::grid::PeriodicStamp*            periodicStamp
 ) {
   using NodeData = ::peano4::grid::GridTraversalObserver::NodeData;
   const auto callStack = static_cast<int>(::peano4::grid::StackTopology::BaseStack::Call);
@@ -35,10 +36,20 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveNodeData(
       {
         auto& data = repositories::DataRepository::{{vertex.logical_type_name}}StackContainer.getLocalExchangeStack(_spacetreeId, callStack).top(TWO_POWER_D - 1 - position);
         if (data.receiveAndMerge(marker, context)) {
-          auto& stack = incomingStack(repositories::DataRepository::{{vertex.logical_type_name}}StackContainer);
-          assertion(not stack.empty());
-          auto incomingData = stack.pop();
-          data.merge(context, std::move(incomingData), marker, _spacetreeId);
+          if (context == ::peano4::stacks::SendReceiveContext::PeriodicBoundaryDataSwap and periodicStamp != nullptr) {
+            // Match by identity, not by arrival order, and merge one copy per
+            // tree holding the wrapped image. Finding nothing is legitimate on
+            // the first sweep after a regrid, when the partner side had not
+            // produced data yet.
+            while (auto incomingData = repositories::DataRepository::{{vertex.logical_type_name}}StackContainer.popLocalExchangeStackEntryMatching(_spacetreeId, fromStack, *periodicStamp)) {
+              data.merge(context, std::move(incomingData.value()), marker, _spacetreeId);
+            }
+          } else {
+            auto& stack = incomingStack(repositories::DataRepository::{{vertex.logical_type_name}}StackContainer);
+            assertion(not stack.empty());
+            auto incomingData = stack.pop();
+            data.merge(context, std::move(incomingData), marker, _spacetreeId);
+          }
         }
       }
 {%- endfor %}
@@ -54,10 +65,20 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveNodeData(
       {
         auto& data = repositories::DataRepository::{{face.logical_type_name}}StackContainer.getLocalExchangeStack(_spacetreeId, callStack).top(TWO_TIMES_D - 1 - position);
         if (data.receiveAndMerge(marker, context)) {
-          auto& stack = incomingStack(repositories::DataRepository::{{face.logical_type_name}}StackContainer);
-          assertion(not stack.empty());
-          auto incomingData = stack.pop();
-          data.merge(context, std::move(incomingData), marker, _spacetreeId);
+          if (context == ::peano4::stacks::SendReceiveContext::PeriodicBoundaryDataSwap and periodicStamp != nullptr) {
+            // Match by identity, not by arrival order. Finding nothing is
+            // legitimate on the first sweep after a regrid, when the partner
+            // side had not produced data yet; the merge is skipped then.
+            auto incomingData = repositories::DataRepository::{{face.logical_type_name}}StackContainer.popLocalExchangeStackEntryMatching(_spacetreeId, fromStack, *periodicStamp);
+            if (incomingData.has_value()) {
+              data.merge(context, std::move(incomingData.value()), marker, _spacetreeId);
+            }
+          } else {
+            auto& stack = incomingStack(repositories::DataRepository::{{face.logical_type_name}}StackContainer);
+            assertion(not stack.empty());
+            auto incomingData = stack.pop();
+            data.merge(context, std::move(incomingData), marker, _spacetreeId);
+          }
         }
       }
 {%- endfor %}

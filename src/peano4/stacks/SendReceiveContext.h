@@ -24,8 +24,8 @@ namespace peano4::stacks {
    *   parent cell is hosted on another tree than the child. In this case,
    *   we also exchange cell data.
    *
-   * There are two more modes: join and fork. It is important to note that
-   * these differ from the aforementioned modi, as forks and joins are
+   * There are two more modes: join and fork. These
+   * differ from the aforementioned modi, as forks and joins are
    * realised as copies. We do not merge existing data structures, but we
    * copy them. As such, the context fork and the context join do arise when
    * we discuss data exchange. They do never arise when we speak about data
@@ -54,8 +54,10 @@ namespace peano4::stacks {
     case SendReceiveContext::JoinDomain:
       return T::getJoinDatatype();
     case SendReceiveContext::PeriodicBoundaryDataSwap:
-      assertion(false, "Periodic boundary data is never exchanged via MPI");
-      return T::getGlobalCommunicationDatatype();
+      // Cross-rank periodic exchange ships the same per-element payload as an
+      // ordinary boundary exchange, just on its own tag, so it reuses the
+      // boundary-exchange datatype.
+      return T::getBoundaryExchangeDatatype();
     }
     assertion(false, "No valid case statement found. This may not happen");
     return T::getGlobalCommunicationDatatype();
