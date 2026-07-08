@@ -24,7 +24,6 @@ Build:
       - ./install/CITATION.cff
     expire_in: 24 hours
   allow_failure: false
-  timeout: 60m
   extends:
     - .Tags
     - .Variables

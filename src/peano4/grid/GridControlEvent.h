@@ -32,7 +32,12 @@ public:
 
   bool operator<(const GridControlEvent& other) const noexcept;
 
-  static void merge(std::vector<GridControlEvent>& events, double tolerance = 0.0);
+  /**
+   * Coalesce refinement/erase instructions into as few axis-aligned boxes as possible without
+   * changing which cells they cover. The merge is exact and
+   * tolerance-free; refine and erase events are coalesced independently.
+   */
+  static void merge(std::vector<GridControlEvent>& events);
 };
 
 std::ostream& operator<<(std::ostream& os, const peano4::grid::GridControlEvent& event);

@@ -19,10 +19,6 @@ stages:
 
 default:
   interruptible: true
-  # A hung job (e.g. an MPI deadlock) frees the shared runner after this instead
-  # of burning the project-wide default. The long compile-and-test Build job
-  # raises it (see build.yml).
-  timeout: 30m
   retry:
     max: 2
     # Retry only on infrastructure failures so genuine build/test failures are
