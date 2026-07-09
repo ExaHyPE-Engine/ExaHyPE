@@ -2,11 +2,13 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "GridControlEvent.h"
 
-#include "tarch/services/ServiceRepository.h"
+#include "tarch/Assertions.h"
 
 #include <algorithm>
 #include <iomanip>
 #include <sstream>
+#include <string>
+#include <vector>
 
 static_assert(std::is_standard_layout_v<peano4::grid::GridControlEvent>);
 static_assert(std::is_trivially_copyable_v<peano4::grid::GridControlEvent>);
@@ -46,9 +48,6 @@ namespace {
     const peano4::grid::GridControlEvent& b,
     peano4::grid::GridControlEvent&       merged
   ) {
-    if (a.refinementControl != b.refinementControl) {
-      return false;
-    }
     // Events on the same level share an exact targetH; a different targetH must not be fused.
     if (a.targetH != b.targetH) {
       return false;
@@ -143,11 +142,9 @@ bool peano4::grid::GridControlEvent::operator<(const GridControlEvent& other) co
 /**
  * Merge a set of refinement/erase instructions into as few boxes as possible.
  *
- * For erase events the merge is also needed for correctness: an erase only fires when a cell lies fully
- * inside an event, so two adjacent erases have to be fused into their covering box, else a
- * cell straddling their shared face would never be erased. Refine and erase events are
- * coalesced separately - their unions are unrelated and the evaluation treats them differently
- * (overlap for refine, containment for erase). The merge is exact and idempotent.
+ * Coalesce refinement/erase instructions into as few axis-aligned boxes as possible without
+ * changing which cells they cover. The merge is exact and independent of floating point
+ * inaccuracies; refine and erase events are coalesced independently.
  */
 void peano4::grid::GridControlEvent::merge(std::vector<GridControlEvent>& events) {
   if (events.empty()) {

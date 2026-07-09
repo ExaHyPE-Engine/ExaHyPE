@@ -776,7 +776,6 @@ void peano4::grid::tests::GridControlEventTest::testSort() {
 
 void peano4::grid::tests::GridControlEventTest::testMerge1() {
 #if DIMENSIONS == 2
-
   std::vector<GridControlEvent> events;
   {
     GridControlEvent e;
@@ -888,7 +887,6 @@ void peano4::grid::tests::GridControlEventTest::testMerge1() {
 
 void peano4::grid::tests::GridControlEventTest::testMerge2() {
 #if DIMENSIONS == 2
-
   GridControlEvent event0;
   event0.setRefinementControl(GridControlEvent::RefinementControl::Refine);
   event0.offset[0]  = 0.316667;

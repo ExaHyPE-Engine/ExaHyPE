@@ -8,7 +8,7 @@
 
 #include "peano4/Loop.h"
 
-double {{FULL_QUALIFIED_NAMESPACE}}::maxScaledEigenvalue(
+{{FULL_QUALIFIED_NAMESPACE}}::MaxEigenvalueStatistics {{FULL_QUALIFIED_NAMESPACE}}::reduceMaxEigenvalues(
   [[maybe_unused]] {{FULL_QUALIFIED_SOLVER_NAME}}&  solver,
   const {{SOLUTION_STORAGE_PRECISION}}* const       luh,
   const tarch::la::Vector<DIMENSIONS, double>&      cellCentre,
@@ -19,7 +19,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::maxScaledEigenvalue(
   // Inverse of the smallest cell size
   const double invDx = 1.0 / tarch::la::min(cellSize);
 
-  double maxEigenvalue = 0.0;
+  MaxEigenvalueStatistics result{0.0, 0.0};
   for (int i = 0; i < {{NUMBER_OF_DOF}}; i++) {
     for (int j = 0; j < {{NUMBER_OF_DOF}}; j++) {
 {% if DIMENSIONS == 3 %}
@@ -31,12 +31,12 @@ double {{FULL_QUALIFIED_NAMESPACE}}::maxScaledEigenvalue(
         const tarch::la::Vector<DIMENSIONS, int> index           = {i, j};
 {% endif %}
 
-        double denominator = 0.0;
+        double scaledEigenvalue = 0.0;
         for (int d = 0; d < DIMENSIONS; d++) {
 {% if STATELESS_MAX_EIGENVALUE %}
-          denominator += {{FULL_QUALIFIED_SOLVER_NAME}}::maxEigenvalue(
+          const double physicalEigenvalue = {{FULL_QUALIFIED_SOLVER_NAME}}::maxEigenvalue(
 {% else %}
-          denominator += solver.maxEigenvalue(
+          const double physicalEigenvalue = solver.maxEigenvalue(
 {% endif %}
             &luh[linearisedIndex * {{NUMBER_OF_DATA}}],
             ::exahype2::dg::getQuadraturePoint(
@@ -50,15 +50,18 @@ double {{FULL_QUALIFIED_NAMESPACE}}::maxScaledEigenvalue(
             timeStamp,
             timeStepSize,
             d
-          ) * invDx;
+          );
+
+          result.maxPhysicalEigenvalue = std::fmax(result.maxPhysicalEigenvalue, physicalEigenvalue);
+          scaledEigenvalue += physicalEigenvalue * invDx;
         }
 
-        maxEigenvalue = std::fmax(maxEigenvalue, denominator);
+        result.maxScaledEigenvalue = std::fmax(result.maxScaledEigenvalue, scaledEigenvalue);
 {% if DIMENSIONS == 3 %}
       }
 {% endif %}
     }
   }
 
-  return maxEigenvalue;
+  return result;
 }
