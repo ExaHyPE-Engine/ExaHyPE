@@ -262,8 +262,9 @@ void benchmarks::exahype2::kernelbenchmarks::correctorFused(
     return;
   }
 
-  double maxEigenvalue = 0.;
-#define OMP_REDUCTION_CLAUSE reduction(max : maxEigenvalue)
+  double maxEigenvalue       = 0.;
+  double maxScaledEigenvalue = 0.;
+#define OMP_REDUCTION_CLAUSE reduction(max : maxEigenvalue, maxScaledEigenvalue)
 
 #pragma omp parallel for schedule(static) OMP_REDUCTION_CLAUSE
   for (int cellIndex = 0; cellIndex < numberOfCells; ++cellIndex) {
@@ -314,7 +315,7 @@ void benchmarks::exahype2::kernelbenchmarks::correctorFused(
       );
     }
 
-    maxEigenvalue = kernels::AderSolver::maxScaledEigenvalue(
+    const auto eigenvalues = kernels::AderSolver::reduceMaxEigenvalues(
       repositories::instanceOfAderSolver,
       QNew,
       patchCentre,
@@ -322,7 +323,10 @@ void benchmarks::exahype2::kernelbenchmarks::correctorFused(
       timeStamp,
       timeStepSize
     );
+    maxEigenvalue       = std::max(maxEigenvalue, eigenvalues.maxPhysicalEigenvalue);
+    maxScaledEigenvalue = std::max(maxScaledEigenvalue, eigenvalues.maxScaledEigenvalue);
   }
 
   solver.setMaxEigenvalue(maxEigenvalue);
+  solver.setMaxScaledEigenvalue(maxScaledEigenvalue);
 }

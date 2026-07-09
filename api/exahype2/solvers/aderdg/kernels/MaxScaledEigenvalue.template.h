@@ -10,7 +10,12 @@
 namespace {{ item }} {
 {%- endfor %}
 
-double maxScaledEigenvalue(
+struct MaxEigenvalueStatistics {
+  double maxScaledEigenvalue;
+  double maxPhysicalEigenvalue;
+};
+
+MaxEigenvalueStatistics reduceMaxEigenvalues(
   {{FULL_QUALIFIED_SOLVER_NAME}}&               solver,
   const {{SOLUTION_STORAGE_PRECISION}}* const   luh,
   const tarch::la::Vector<DIMENSIONS, double>&  cellCentre,

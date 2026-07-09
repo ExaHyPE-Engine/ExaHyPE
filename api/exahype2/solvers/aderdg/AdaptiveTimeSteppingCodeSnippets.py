@@ -9,9 +9,48 @@ class AdaptiveTimeSteppingCodeSnippets(
     def __init__(self):
         pass
 
+    def create_abstract_solver_user_declarations(self):
+        return (
+            super(
+                AdaptiveTimeSteppingCodeSnippets, self
+            ).create_abstract_solver_user_declarations()
+            + """
+protected:
+  double _maxScaledEigenvalueThisTimeStep;
+
+public:
+  void setMaxScaledEigenvalue(double eigenvalue);
+"""
+        )
+
+    def create_abstract_solver_user_definitions(self):
+        return (
+            super(
+                AdaptiveTimeSteppingCodeSnippets, self
+            ).create_abstract_solver_user_definitions()
+            + """
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::setMaxScaledEigenvalue(double eigenvalue) {
+  if (tarch::la::greater(eigenvalue, 0.0)) {
+    tarch::multicore::Lock lock(_semaphore);
+    _maxScaledEigenvalueThisTimeStep = std::max(_maxScaledEigenvalueThisTimeStep, eigenvalue);
+  }
+}
+"""
+        )
+
+    def create_abstract_solver_constructor_statements(self):
+        return (
+            super(
+                AdaptiveTimeSteppingCodeSnippets, self
+            ).create_abstract_solver_constructor_statements()
+            + """
+    _maxScaledEigenvalueThisTimeStep = 0.0;
+"""
+        )
+
     def create_compute_new_time_step_size(self):
         return """
-    const double maxEigenvalue = kernels::{{SOLVER_NAME}}::maxScaledEigenvalue(
+    const auto eigenvalues = kernels::{{SOLVER_NAME}}::reduceMaxEigenvalues(
       repositories::{{SOLVER_INSTANCE}},
       QNew,
       marker.getX(),
@@ -20,7 +59,8 @@ class AdaptiveTimeSteppingCodeSnippets(
       timeStepSize
     );
 
-    repositories::{{SOLVER_INSTANCE}}.setMaxEigenvalue(maxEigenvalue);
+    repositories::{{SOLVER_INSTANCE}}.setMaxEigenvalue(eigenvalues.maxPhysicalEigenvalue);
+    repositories::{{SOLVER_INSTANCE}}.setMaxScaledEigenvalue(eigenvalues.maxScaledEigenvalue);
     const double newTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMinCellSize() > 0.0 ?
       repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize() * tarch::la::min(marker.getH()) / repositories::{{SOLVER_INSTANCE}}.getMinCellSize() :
       0.0;
@@ -30,6 +70,7 @@ class AdaptiveTimeSteppingCodeSnippets(
         return """
   if (isFirstGridSweepOfTimeStep()) {
     _maxEigenvalueThisTimeStep = 0.0;
+    _maxScaledEigenvalueThisTimeStep = 0.0;
   }
 """
 
@@ -39,35 +80,47 @@ class AdaptiveTimeSteppingCodeSnippets(
                 AdaptiveTimeSteppingCodeSnippets, self
             ).create_finish_time_step_implementation()
             + """
-      if (
-        isLastGridSweepOfTimeStep()
-        and
-        tarch::la::greater(_maxEigenvalueThisTimeStep, 0.0)
-      ) {
-        _admissibleTimeStepSize = _admissibleTimeStepSizeThisTimeStep;
+      if (isLastGridSweepOfTimeStep()) {
+#ifdef PEANO_WITH_MPI
+        double reducedMaxScaledEigenvalue = _maxScaledEigenvalueThisTimeStep;
+        MPI_Comm communicator = tarch::mpi::Rank::getInstance().getCommunicator();
+        auto progress = [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); };
+        tarch::mpi::allreduce(
+          &reducedMaxScaledEigenvalue,
+          &_maxScaledEigenvalueThisTimeStep,
+          1,
+          MPI_DOUBLE,
+          MPI_MAX,
+          communicator,
+          progress
+        );
+#endif
 
-        // The max eigenvalue here is already the sum of the eigenvalues in each direction scaled with the volume size in that direction.
-        const auto dtCFL = CFL * PNPM / _maxEigenvalueThisTimeStep;
+        if (tarch::la::greater(_maxScaledEigenvalueThisTimeStep, 0.0)) {
+          _admissibleTimeStepSize = _admissibleTimeStepSizeThisTimeStep;
 
-        if (not std::isfinite(dtCFL)) {
-          tarch::triggerNonCriticalAssertion(__FILE__, __LINE__,
-            "std::isfinite(dtCFL)",
-            "Invalid (NaN or inf) time step size: " + std::to_string(dtCFL)
-          );
-        }
+          const auto dtCFL = CFL * PNPM / _maxScaledEigenvalueThisTimeStep;
 
-        if (tarch::la::smallerEquals(dtCFL, 0.0, 1e-10)) {
-          logWarning("Degenerated time step size of " << std::to_string(dtCFL) << ". Problem might be extremely stiff (and can't be solved) or there could be a bug (h=" << _minCellHThisTimeStep << ")");
-        }
-
-        const auto dtToEnd                  = std::max(0.0, ::runner::RuntimeParameters::getInstance().getMinTerminalTime() - _minTimeStampThisTimeStep);
-        _admissibleTimeStepSizeThisTimeStep = std::min(dtToEnd, dtCFL);
-        if (tarch::la::greater(_admissibleTimeStepSizeThisTimeStep, 0.0)) {
-          if (_minTimeStepSizeThisTimeStep >= std::numeric_limits<double>::max() / 10.0) {
-            _minTimeStepSizeThisTimeStep = _admissibleTimeStepSizeThisTimeStep;
+          if (not std::isfinite(dtCFL)) {
+            tarch::triggerNonCriticalAssertion(__FILE__, __LINE__,
+              "std::isfinite(dtCFL)",
+              "Invalid (NaN or inf) time step size: " + std::to_string(dtCFL)
+            );
           }
-          if (_maxTimeStepSizeThisTimeStep <= std::numeric_limits<double>::min() * 10.0) {
-            _maxTimeStepSizeThisTimeStep = _admissibleTimeStepSizeThisTimeStep;
+
+          if (tarch::la::smallerEquals(dtCFL, 0.0, 1e-10)) {
+            logWarning("Degenerated time step size of " << std::to_string(dtCFL) << ". Problem might be extremely stiff (and can't be solved) or there could be a bug (h=" << _minCellHThisTimeStep << ")");
+          }
+
+          const auto dtToEnd                  = std::max(0.0, ::runner::RuntimeParameters::getInstance().getMinTerminalTime() - _minTimeStampThisTimeStep);
+          _admissibleTimeStepSizeThisTimeStep = std::min(dtToEnd, dtCFL);
+          if (tarch::la::greater(_admissibleTimeStepSizeThisTimeStep, 0.0)) {
+            if (_minTimeStepSizeThisTimeStep >= std::numeric_limits<double>::max() / 10.0) {
+              _minTimeStepSizeThisTimeStep = _admissibleTimeStepSizeThisTimeStep;
+            }
+            if (_maxTimeStepSizeThisTimeStep <= std::numeric_limits<double>::min() * 10.0) {
+              _maxTimeStepSizeThisTimeStep = _admissibleTimeStepSizeThisTimeStep;
+            }
           }
         }
       }
