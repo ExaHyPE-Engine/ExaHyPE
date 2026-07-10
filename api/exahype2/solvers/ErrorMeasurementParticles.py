@@ -1,11 +1,14 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-import jinja2
-
 from .PDETerms import PDETerms
 
+from exahype2.solvers.ErrorMeasurement import (
+    add_error_database_to_solver,
+    create_finish_time_step_implementation_for_error_measurement,
+    create_start_simulation_implementation_for_error_measurement,
+)
 
-# TODO: Derive from ErrorMeasurement
+
 class ErrorMeasurementParticles:
     """!
 
@@ -16,48 +19,24 @@ class ErrorMeasurementParticles:
         self,
         solver,
         error_measurement_implementation,
-        delta_between_database_flushes,
-        output_file_name,
-        data_delta_between_snapshots,
-        time_delta_between_snapshots,
-        clear_database_after_flush,
+        output_file_name="Error",
+        time_delta_between_snapshots=0.0,
     ):
         solver._start_simulation_implementation += (
             create_start_simulation_implementation_for_error_measurement(
-                delta_between_database_flushes=delta_between_database_flushes,
                 output_file_name=output_file_name,
-                data_delta_between_snapshots=data_delta_between_snapshots,
                 time_delta_between_snapshots=time_delta_between_snapshots,
-                clear_database_after_flush=clear_database_after_flush,
             )
         )
 
+        add_error_database_to_solver(solver)
+
         solver.add_user_solver_includes(
             """
-#include "toolbox/blockstructured/GlobalDatabase.h"
-#include "runner/RuntimeParameters.h"
-#include "tarch/mpi/Rank.h"
-#include "tarch/mpi/mpi.h"
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
 """
         )
-
-        solver._abstract_solver_user_declarations += """
-public:
-  toolbox::blockstructured::GlobalDatabase _errorDatabase;
-  double _errors[3] = {0.0, 0.0, 0.0};
-  void setError(double* error);
-"""
-
-        solver._abstract_solver_user_definitions += """
-void {{"{{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}"}}::setError(double* error) {
-  tarch::multicore::Lock lock(_semaphore);
-  _errors[0] += error[0];
-  _errors[1] += error[1];
-  _errors[2] = std::max(_errors[2], error[2]);
-}
-"""
 
         solver._abstract_solver_user_declarations += (
             create_solver_user_abstract_declarations()
@@ -71,88 +50,6 @@ void {{"{{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}"}}::setError(double* error) 
             solver._solver_user_definitions += create_solver_user_definitions(
                 False, error_measurement_implementation
             )
-
-
-def create_start_simulation_implementation_for_error_measurement(
-    delta_between_database_flushes,
-    output_file_name,
-    data_delta_between_snapshots,
-    time_delta_between_snapshots,
-    clear_database_after_flush,
-):
-    Template = jinja2.Template(
-        """
-  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    _errorDatabase.setDeltaBetweenTwoDatabaseFlushes({{FLUSH_DELTA}});
-    _errorDatabase.setOutputFileName(::runner::RuntimeParameters::getInstance().getOutputPath() + "{{FILENAME}}");
-    _errorDatabase.setDataName("l0-error, l2-error, l_inf-error");
-    // _errorDatabase.setOutputPrecision({{OUTPUT_PRECISION}});
-    _errorDatabase.setDataDeltaBetweenTwoSnapshots({{DATA_DELTA}}, {{USE_RELATIVE_DELTAS}});
-    _errorDatabase.setTimeDeltaBetweenTwoSnapshots({{TIME_DELTA}});
-    _errorDatabase.clearDatabaseAfterFlush( {{CLEAR_DATABASE_AFTER_FLUSH}});
-    std::fill_n(_errors, 3, 0.0);
-  }
-""",
-        undefined=jinja2.DebugUndefined,
-    )
-
-    d = {}
-    d["FLUSH_DELTA"] = delta_between_database_flushes
-    d["FILENAME"] = output_file_name
-    d["DATA_DELTA"] = data_delta_between_snapshots
-    d["USE_RELATIVE_DELTAS"] = "false"
-    d["TIME_DELTA"] = time_delta_between_snapshots
-    d["CLEAR_DATABASE_AFTER_FLUSH"] = "true" if clear_database_after_flush else "false"
-    return Template.render(**d)
-
-
-def create_finish_time_step_implementation_for_error_measurement(guard):
-    return (
-        """
-    if ("""
-        + guard
-        + """) {
-      #ifdef PEANO_WITH_MPI
-      double localSummedErrors[2] = {_errors[0], _errors[1]};
-      double globalSummedErrors[2] = {0.0, 0.0};
-      double localMaxError[1] = {_errors[2]};
-      double globalMaxError[1] = {0.0};
-      MPI_Comm communicator = tarch::mpi::Rank::getInstance().getCommunicator();
-      auto progress = [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); };
-
-      tarch::mpi::allreduce(
-          localSummedErrors,
-          globalSummedErrors,
-          2,
-          MPI_DOUBLE,
-          MPI_SUM,
-          communicator,
-          progress
-      );
-
-      tarch::mpi::allreduce(
-          localMaxError,
-          globalMaxError,
-          1,
-          MPI_DOUBLE,
-          MPI_MAX,
-          communicator,
-          progress
-      );
-      _errors[0] = globalSummedErrors[0];
-      _errors[1] = globalSummedErrors[1];
-      _errors[2] = globalMaxError[0];
-      #endif
-
-      if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-        _errors[1] = std::sqrt(_errors[1]);
-        _errorDatabase.addGlobalSnapshot(_minTimeStampThisTimeStep, 3, _errors);
-      }
-
-      std::fill_n(_errors, 3, 0.0);
-    }
-"""
-    )
 
 
 def create_solver_user_abstract_declarations():

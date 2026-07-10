@@ -126,8 +126,8 @@ if use_tracers:
         coordinates=my_scenario.tracer_coordinates,
         solver=theSolver,
         filename=filename,
-        data_delta_between_two_snapshots=1e16, time_delta_between_two_snapshots=0.01,
-        output_precision=10, clear_database_after_flush=False
+        time_delta_between_two_snapshots=0.01,
+        output_precision=10
     ))
 
 project.generate_and_build()

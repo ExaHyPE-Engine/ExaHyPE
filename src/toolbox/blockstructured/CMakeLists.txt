@@ -5,7 +5,6 @@ file(GLOB_RECURSE HEADERS ${HEADER_EXTENSIONS_TO_GLOB})
 
 set(SOURCES
   Enumeration.cpp
-  GlobalDatabase.cpp
   UnitTests.cpp
   tests/EnumerationTest.cpp
   tests/InterpolationTest.cpp

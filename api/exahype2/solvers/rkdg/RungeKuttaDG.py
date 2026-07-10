@@ -1095,6 +1095,9 @@ We use RK("""
         d["UNKNOWN_IDENTIFIER"] = self._unknown_identifier()
         d["NUMBER_OF_UNKNOWNS"] = self._variable_shortcuts.unknowns
         d["NUMBER_OF_AUXILIARY_VARIABLES"] = self._variable_shortcuts.auxiliary_variables
+        d["MEASURED_UNKNOWNS"] = getattr(self, "_error_norm_measured_unknowns", None) or (
+            "{" + ", ".join(str(i) for i in range(self._variable_shortcuts.unknowns)) + "}"
+        )
 
         d["NUMBER_OF_DOFS_PER_CELL_2D"] = (self._basis.dofs_per_axis) * (
             self._basis.dofs_per_axis

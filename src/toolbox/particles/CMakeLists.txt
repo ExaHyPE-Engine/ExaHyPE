@@ -14,6 +14,7 @@ set(SOURCES
   tests/MultiscaleTransitionsTest.cpp
   tests/TestHelpers.cpp
   tests/TestParticle.cpp
+  tests/TrajectoryDatabaseTest.cpp
 
   assignmentchecks/Database.cpp
   assignmentchecks/Event.cpp

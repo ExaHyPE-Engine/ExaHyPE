@@ -102,6 +102,7 @@ exahype2.solvers.fv.ErrorMeasurement(
     fv_solver,
     error_measurement_implementation=analytical_solution,
     output_file_name="Error",
+    time_delta_between_snapshots=args.end_time / 100.0,
 )
 
 project.add_solver(fv_solver)

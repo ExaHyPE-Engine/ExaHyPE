@@ -772,6 +772,9 @@ class ADERDG(object):
         d["NUMBER_OF_DOF_3D"] = 1 if self._dimensions == 2 else d["NUMBER_OF_DOF"]
         d["NUMBER_OF_UNKNOWNS"]             = self._variable_shortcuts.unknowns
         d["NUMBER_OF_AUXILIARY_VARIABLES"]  = self._variable_shortcuts.auxiliary_variables
+        d["MEASURED_UNKNOWNS"] = getattr(self, "_error_norm_measured_unknowns", None) or (
+            "{" + ", ".join(str(i) for i in range(self._variable_shortcuts.unknowns)) + "}"
+        )
         d["NUMBER_OF_DATA"]                 = self._variable_shortcuts.unknowns + self._variable_shortcuts.auxiliary_variables
 
         alignment_helper                          = AlignmentHelper(self._simd_width)

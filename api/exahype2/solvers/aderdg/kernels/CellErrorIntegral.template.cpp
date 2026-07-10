@@ -60,11 +60,12 @@ void {{FULL_QUALIFIED_NAMESPACE}}::cellErrorIntegral(
     );
 
     // Increment the respective errors
-    for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}}; unknown++) {
-      double error = std::abs(Q[linearisedIndex + unknown] - solution[unknown]);
+    constexpr int MeasuredUnknowns[] = {{MEASURED_UNKNOWNS}};
+    for (const int unknown : MeasuredUnknowns) {
+      const double error = std::abs(Q[linearisedIndex + unknown] - solution[unknown]);
       errors[0] += weight * error; // L1 norm
       errors[1] += weight * error * error; // L2 norm
-      errors[2] = std::max(errors[2], error); // L_{inf} norm
+      errors[2] = std::max(errors[2], error); // Linf norm
     }
 
     linearisedIndex += {{NUMBER_OF_DATA}};

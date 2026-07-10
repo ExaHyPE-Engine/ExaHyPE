@@ -452,11 +452,11 @@ class Project (object):
           self.is_built = True
           self.build_was_successful = True
         except Exception as e:
-          self.is_built = True
+          self.is_built = False
           self.build_was_successful = False
           log.error("%s", e)
           log.error("Compile was not successful")
-          sys.exit(1)
+          raise
       else:
         log.info("Skip build because project is already marked as built")
 
