@@ -16,6 +16,7 @@
 #include "accelerator/ompt/tests/ReductionTest.h"
 #endif
 #include "accelerator/tests/ParallelConstructsTest.h"
+#include "database/tests/GlobalTimeSeriesDatabaseTest.h"
 #include "la/tests/MatrixTest.h"
 #include "la/tests/MatrixVectorTest.h"
 #include "la/tests/ScalarTest.h"
@@ -38,6 +39,8 @@ tarch::tests::TestCase* tarch::getUnitTests() {
   result->addTestCase(new la::tests::MatrixVectorTest());
   result->addTestCase(new la::tests::ScalarTest());
   result->addTestCase(new la::tests::VectorTest());
+
+  result->addTestCase(new database::tests::GlobalTimeSeriesDatabaseTest());
 
   result->addTestCase(new mpi::tests::StringTest());
 

@@ -15,20 +15,16 @@ class ErrorMeasurement(exahype2.solvers.ErrorMeasurement):
         self,
         solver,
         error_measurement_implementation=PDETerms.User_Defined_Implementation,
-        delta_between_database_flushes=0,
-        output_file_name="FVErrorMeasurement",
-        data_delta_between_snapshots="1e+16",
+        output_file_name="Error",
         time_delta_between_snapshots=0.0,
-        clear_database_after_flush=True,
+        measured_unknowns=None,
     ):
         super(ErrorMeasurement, self).__init__(
             solver=solver,
             error_measurement_implementation=error_measurement_implementation,
-            delta_between_database_flushes=delta_between_database_flushes,
             output_file_name=output_file_name,
-            data_delta_between_snapshots=data_delta_between_snapshots,
             time_delta_between_snapshots=time_delta_between_snapshots,
-            clear_database_after_flush=clear_database_after_flush,
+            measured_unknowns=measured_unknowns,
         )
 
         solver._finish_time_step_implementation += create_finish_time_step_implementation_for_error_measurement(
@@ -63,11 +59,12 @@ def create_postprocessing_kernel_for_error_measurement():
       solution
     );
 
-    for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}}; unknown++) {
-      double error = std::abs(value[unknown] - solution[unknown]);
+    constexpr int MeasuredUnknowns[] = {{MEASURED_UNKNOWNS}};
+    for (const int unknown : MeasuredUnknowns) {
+      const double error = std::abs(value[unknown] - solution[unknown]);
       errors[0] += cellVolume * error; // L1 norm
       errors[1] += cellVolume * error * error; // L2 norm
-      errors[2] = std::max(errors[2], error); // L_inf norm
+      errors[2] = std::max(errors[2], error); // Linf norm
     }
 
     repositories::{{SOLVER_INSTANCE}}.setError(errors);

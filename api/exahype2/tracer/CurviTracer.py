@@ -26,12 +26,9 @@ class CurviTracer(ActionSet):
         solver,
         filename,
         fault_coordinates=[],
-        number_of_entries_between_two_db_flushes=65536,
-        data_delta_between_two_snapshots=1e-8,
         position_delta_between_two_snapshots=1e-8,
         time_delta_between_two_snapshots=0,
         output_precision=8,
-        clear_database_after_flush=True,
         use_relative_deltas=False,
         initial_record_time=-1,
         last_record_time=1e8,
@@ -44,7 +41,7 @@ class CurviTracer(ActionSet):
         self._coordinates = coordinates
 
         self.d = {}
-        # Don't overwrite hte dictionary of hte superclass. We'll need it
+        # Don't overwrite the dictionary of the superclass. We'll need it.
         self.d["SOLVER_NAME"] = solver._name
         self.d["SOLVER_INSTANCE"] = solver.get_name_of_global_instance()
         self.d["ORDER"] = solver._basis.order
@@ -55,7 +52,6 @@ class CurviTracer(ActionSet):
             unknowns_to_store if unknowns_to_store > 0 else solver.unknowns
         )
 
-        self.d["DATA_DELTA"] = data_delta_between_two_snapshots
         self.d["POSITION_DELTA"] = position_delta_between_two_snapshots
         self.d["TIME_DELTA"] = time_delta_between_two_snapshots
         self.d["OUTPUT_PRECISION"] = output_precision
@@ -66,19 +62,11 @@ class CurviTracer(ActionSet):
             self.d["USE_RELATIVE_DELTAS"] = "true"
         else:
             self.d["USE_RELATIVE_DELTAS"] = "false"
-        if clear_database_after_flush:
-            self.d["CLEAR_DATABASE_AFTER_FLUSH"] = "true"
-        else:
-            self.d["CLEAR_DATABASE_AFTER_FLUSH"] = "false"
 
         self.d["INI_RECORD"] = initial_record_time
         self.d["LAST_RECORD"] = last_record_time
 
         self.d["N"] = len(coordinates)
-
-        self.number_of_entries_between_two_db_flushes = (
-            number_of_entries_between_two_db_flushes
-        )
 
     __Template_TouchCellLastTime = jinja2.Template(
         """
@@ -307,10 +295,8 @@ class CurviTracer(ActionSet):
         result = """
 _database.setOutputFileName( ::runner::RuntimeParameters::getInstance().getOutputPath() + "{{FILENAME}}" );
 _database.setOutputPrecision( {{OUTPUT_PRECISION}} );
-_database.setDataDeltaBetweenTwoSnapshots( {{DATA_DELTA}}, {{USE_RELATIVE_DELTAS}} );
 _database.setPositionDeltaBetweenTwoSnapshots( {{POSITION_DELTA}}, {{USE_RELATIVE_DELTAS}} );
 _database.setTimeDeltaBetweenTwoSnapshots( {{TIME_DELTA}} );
-_database.clearDatabaseAfterFlush( {{CLEAR_DATABASE_AFTER_FLUSH}} );
 
 _spacetreeId = treeNumber;
 
@@ -433,9 +419,7 @@ tarch::multicore::BooleanSemaphore     """
             + """::_coordinatesSemaphore;
 toolbox::particles::TrajectoryDatabase  """
             + full_qualified_classname
-            + """::_database( """
-            + str(self.number_of_entries_between_two_db_flushes)
-            + """);
+            + """::_database;
 """
         )
 

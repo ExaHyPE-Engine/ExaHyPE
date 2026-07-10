@@ -12,17 +12,14 @@ class DumpTracerIntoDatabase(peano4.solversteps.ActionSet):
 
     Dump the tracer data into a csv database
 
-    This action set is to be added to you code if you want to dump tracer data
-    into a database. By default, Peano supports csv files. Please consult the
-    constructor for information on the configuration of these dumps: The dumps
-    are not synchronised with normal IO, but we keep track of the particles/tracers and
-    allow codes to dump updated particle data whenver some attributes or the
-    tracer position changes significantly. The term significantly can be controlled
-    via relative deltas through the constructor.
+    This action set is to be added to your code if you want to dump tracer data
+    into a database. By default, Peano supports csv files. The dumps are not
+    synchronised with normal IO: we keep track of the particles/tracers and dump
+    a new snapshot whenever a tracer has moved far enough or enough time has
+    passed. Both thresholds are set via the deltas in the constructor.
 
     This class uses the C++ class toolbox::particles::TrajectoryDatabase from the
     particles toolbox to realise the actual storage.
-
     """
 
     def __init__(
@@ -30,12 +27,9 @@ class DumpTracerIntoDatabase(peano4.solversteps.ActionSet):
         particle_set,
         solver,
         filename,
-        number_of_entries_between_two_db_flushes=65536,
-        data_delta_between_two_snapshots=1e-8,
         position_delta_between_two_snapshots=1e-8,
         time_delta_between_two_snapshots=0,
         output_precision=8,
-        clear_database_after_flush=True,
         use_relative_deltas=False,
         initial_record_time=-1,
         last_record_time=1e8,
@@ -44,50 +38,32 @@ class DumpTracerIntoDatabase(peano4.solversteps.ActionSet):
 
         Constructor
 
-        data_delta_between_two_snapshots: Float
-         See toolbox::particles::TrajectoryDatabase::TrajectoryDatabase(). The 
-         argument maps 1:1 to the constructor's argument dataDelta.
-                  
-         This flag has no impact whatsoever how often the data is dumped into a 
-         file. The frequency of datafile writes is solely controlled via 
-         number_of_entries_between_two_db_flushes.
+        The database appends every recorded snapshot to its file straight away.
+        The deltas below decide which snapshots are recorded: a new one is kept
+        only once the position or time moved by more than the respective delta
+        since the last recorded snapshot for that particle.
 
         position_delta_between_two_snapshots: Float
-         See toolbox::particles::TrajectoryDatabase::TrajectoryDatabase(). The 
-         argument maps 1:1 to the constructor's argument positionDelta.
-         
-         This flag has no impact whatsoever how often the data is dumped into a 
-         file. The frequency of datafile writes is solely controlled via 
-         number_of_entries_between_two_db_flushes.
+          Maps to the positionDelta argument of
+          toolbox::particles::TrajectoryDatabase::TrajectoryDatabase().
 
         time_delta_between_two_snapshots: Float
-         See toolbox::particles::TrajectoryDatabase::TrajectoryDatabase(). The 
-         argument maps 1:1 to the constructor's argument timeDelta.
-         
-         This flag has no impact whatsoever how often the data is dumped into a 
-         file. The frequency of datafile writes is solely controlled via 
-         number_of_entries_between_two_db_flushes.
+          Maps to the timeDelta argument of
+          toolbox::particles::TrajectoryDatabase::TrajectoryDatabase().
 
-        number_of_entries_between_two_db_flushes: Int
-          See toolbox::particles::TrajectoryDatabase::TrajectoryDatabase(). The 
-          argument maps 1:1 to the constructor's argument growthBetweenTwoDatabaseFlushes.
-        
         use_relative_deltas: Boolean
-          See description of C++ class in toolbox::particles::TrajectoryDatabase
+          See description of C++ class in toolbox::particles::TrajectoryDatabase.
 
         initial_record_time: Float
-          you can specify from when does the tracer start to dump data to files.
+          Time from which on the tracer starts to dump data to files.
 
         last_record_time: Float
-          you can specify at when does the tracer stop dumping data to files.
-          
-        clear_database_after_flush: Boolean
+          Time at which the tracer stops dumping data to files.
         """
         super(DumpTracerIntoDatabase, self).__init__(descend_invocation_order=1)
         self.d = {}
         self.d["PARTICLE"] = particle_set.particle_model.name
         self.d["PARTICLES_CONTAINER"] = particle_set.name
-        self.d["DATA_DELTA"] = data_delta_between_two_snapshots
         self.d["POSITION_DELTA"] = position_delta_between_two_snapshots
         self.d["TIME_DELTA"] = time_delta_between_two_snapshots
         self.d["OUTPUT_PRECISION"] = output_precision
@@ -98,17 +74,9 @@ class DumpTracerIntoDatabase(peano4.solversteps.ActionSet):
             self.d["USE_RELATIVE_DELTAS"] = "true"
         else:
             self.d["USE_RELATIVE_DELTAS"] = "false"
-        if clear_database_after_flush:
-            self.d["CLEAR_DATABASE_AFTER_FLUSH"] = "true"
-        else:
-            self.d["CLEAR_DATABASE_AFTER_FLUSH"] = "false"
 
         self.d["INI_RECORD"] = initial_record_time
         self.d["LAST_RECORD"] = last_record_time
-
-        self.number_of_entries_between_two_db_flushes = (
-            number_of_entries_between_two_db_flushes
-        )
 
     __Template_TouchCellLastTime = jinja2.Template(
         """
@@ -164,10 +132,8 @@ if (
             """
   _database.setOutputFileName( ::runner::RuntimeParameters::getInstance().getOutputPath() + "{{FILENAME}}" );
   _database.setOutputPrecision( {{OUTPUT_PRECISION}} );
-  _database.setDataDeltaBetweenTwoSnapshots( {{DATA_DELTA}}, {{USE_RELATIVE_DELTAS}} );
   _database.setPositionDeltaBetweenTwoSnapshots( {{POSITION_DELTA}}, {{USE_RELATIVE_DELTAS}} );
   _database.setTimeDeltaBetweenTwoSnapshots( {{TIME_DELTA}} );
-  _database.clearDatabaseAfterFlush( {{CLEAR_DATABASE_AFTER_FLUSH}} );
 """
         )
         return template.render(**self.d)
@@ -195,8 +161,6 @@ if (
             """
 toolbox::particles::TrajectoryDatabase  """
             + full_qualified_classname
-            + """::_database( """
-            + str(self.number_of_entries_between_two_db_flushes)
-            + """);
+            + """::_database;
 """
         )

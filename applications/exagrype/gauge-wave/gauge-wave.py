@@ -166,12 +166,14 @@ if args.solver == "fv":
         solver,
         error_measurement_implementation=exahype2.solvers.PDETerms.User_Defined_Implementation,
         output_file_name="Error_GaugeWave_FV",
+        time_delta_between_snapshots=args.end_time / 100.0,
     )
 elif args.solver == "aderdg":
     exahype2.solvers.aderdg.ErrorMeasurement(
         solver,
         error_measurement_implementation=exahype2.solvers.PDETerms.User_Defined_Implementation,
         output_file_name="Error_GaugeWave_ADERDG",
+        time_delta_between_snapshots=args.end_time / 100.0,
     )
 
 solver.add_user_solver_includes(

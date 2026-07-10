@@ -128,8 +128,8 @@ project.add_action_set_to_timestepping(
     fault_coordinates=my_scenario.fault_coordinates,
     solver=theSolver,
     filename=filename,
-    data_delta_between_two_snapshots=1e16, time_delta_between_two_snapshots=0.01,
-    output_precision=10, clear_database_after_flush=False,
+    time_delta_between_two_snapshots=0.01,
+    output_precision=10,
     unknowns_to_store=12
 ))
 

@@ -190,6 +190,7 @@ fv_solver.add_user_solver_includes(
 exahype2.solvers.fv.ErrorMeasurement(
     fv_solver,
     error_measurement_implementation=analytical_solution,
+    time_delta_between_snapshots=args.end_time / 100.0,
 )
 
 project.add_solver(fv_solver)

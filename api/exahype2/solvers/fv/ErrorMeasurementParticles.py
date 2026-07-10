@@ -17,22 +17,16 @@ class ErrorMeasurementParticles(BaseErrorMeasurementParticles):
         self,
         solver,
         error_measurement_implementation=PDETerms.User_Defined_Implementation,
-        delta_between_database_flushes=0,
-        output_file_name="FVErrorMeasurement",
-        data_delta_between_snapshots="1e+16",
+        output_file_name="Error",
         time_delta_between_snapshots=0.0,
-        clear_database_after_flush=True,
         particle_set=None,
         descend_invocation_order=12,
     ):
         super(ErrorMeasurementParticles, self).__init__(
             solver=solver,
             error_measurement_implementation=error_measurement_implementation,
-            delta_between_database_flushes=delta_between_database_flushes,
             output_file_name=output_file_name,
-            data_delta_between_snapshots=data_delta_between_snapshots,
             time_delta_between_snapshots=time_delta_between_snapshots,
-            clear_database_after_flush=clear_database_after_flush,
         )
         solver._finish_time_step_implementation += create_finish_time_step_implementation_for_error_measurement(
             guard="_solverState == SolverState::GridInitialisation or isLastGridSweepOfTimeStep()"

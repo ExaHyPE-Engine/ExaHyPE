@@ -162,6 +162,7 @@ exahype2.solvers.aderdg.ErrorMeasurement(
     + str(args.grid_levels)
     + "_o_"
     + str(order),
+    time_delta_between_snapshots=end_time / 100.0,
 )
 
 project.add_solver(solver)

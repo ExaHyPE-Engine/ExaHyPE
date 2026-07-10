@@ -16,6 +16,10 @@ set(SOURCES
   tests/TestCase.cpp
   tests/TreeTestCaseCollection.cpp
 
+  database/SnapshotDatabase.cpp
+  database/GlobalTimeSeriesDatabase.cpp
+  database/tests/GlobalTimeSeriesDatabaseTest.cpp
+
   accelerator/accelerator.cpp
   accelerator/Device.cpp
   accelerator/MemoryAllocationCache.cpp

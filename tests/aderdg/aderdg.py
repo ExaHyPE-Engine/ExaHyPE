@@ -134,6 +134,7 @@ if scenario.analytical_solution() != exahype2.solvers.PDETerms.None_Implementati
         solver,
         error_measurement_implementation=scenario.analytical_solution(),
         output_file_name="Error_" + scenario.__class__.__name__,
+        time_delta_between_snapshots=scenario._end_time / 100.0,
     )
 
 project.add_solver(solver)
