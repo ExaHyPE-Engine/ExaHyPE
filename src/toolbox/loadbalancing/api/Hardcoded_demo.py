@@ -33,7 +33,7 @@ def demo(file_path: str, dimensions: int):
         enable_propagate_bottom_up=True,
         enable_extract_split_instructions=True,
         destination_ranks=destination_ranks,
-        output=True,
+        verbose=True,
     )  # creates subtrees {0,1,2}
     print("After split_tree():")
     print(tree)

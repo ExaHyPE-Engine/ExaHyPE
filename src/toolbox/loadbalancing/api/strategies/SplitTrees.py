@@ -9,6 +9,11 @@ from .SFC import Peano_to_Cartesian_2d
 from .SFC import Peano_to_Cartesian_3d
 
 
+def _no_split_result(message: str) -> tuple[str, str]:
+    print(message)
+    return ("", "")
+
+
 def split_tree(
     peano_tree: Tree,
     number_of_subtrees: int,
@@ -18,7 +23,7 @@ def split_tree(
     require_all_children_for_hierarchy_optimization: bool = True,
     enable_extract_split_instructions: bool = False,
     destination_ranks: list[int] | None = None,
-    output: bool = False,
+    verbose: bool = False,
 ) -> tuple[str, str]:
     """
     Split a tree using a staged load-balancing workflow.
@@ -51,19 +56,8 @@ def split_tree(
             derived `(hardcoded_config, hardcoded_mode)`.
         destination_ranks: Optional destination rank list for Stage IV. If not
             provided, it defaults to target subtree IDs.
-        output: If True, Stage IV prints extracted hardcoded parameters.
+        verbose: If True, Stage IV prints extracted hardcoded parameters.
         
-    @todo Dmitry, can we please remove this Stage IV thing/remark? Not required
-
-    Returns:
-        `(hardcoded_config, hardcoded_mode)`.
-        If Stage IV is disabled: `("", "")`.
-        
-        You can use the result tuple directly. Alternatively, just ignore the
-        result and extract the information later by calling
-        create_constructor_initialisation_string() explicitly. This is notably
-        required if we concatenate several tree manipulations.
-
     Notes:
         - All stages after Stage I are optional.
         - The tree is modified in place by the enabled transformation stages.
@@ -71,14 +65,9 @@ def split_tree(
         - Stage III requires Stage II to have been applied first for correctness.
     """
     if number_of_subtrees <= 1:
-        print(f"No splitting requested (number_of_subtrees = {number_of_subtrees}).")
-        if enable_extract_split_instructions:
-            from toolbox.loadbalancing.api.output.Hardcoded import create_constructor_initialisation_string
-
-            if destination_ranks is None:
-                destination_ranks = []
-            return create_constructor_initialisation_string(peano_tree, destination_ranks, output=output)
-        return ("", "")
+        return _no_split_result(
+            f"No splitting requested (number_of_subtrees = {number_of_subtrees})."
+        )
 
     print(
         f"Splitting tree '{peano_tree._name}' into "
@@ -102,14 +91,7 @@ def split_tree(
         )
 
     if not has_leaves_to_split:
-        if enable_extract_split_instructions:
-            from toolbox.loadbalancing.api.output.Hardcoded import create_constructor_initialisation_string
-
-            if destination_ranks is None:
-                _, _, _, subtrees = extract_split_instructions(peano_tree)
-                destination_ranks = [int(subtree) for subtree in subtrees]
-            return create_constructor_initialisation_string(peano_tree, destination_ranks, output=output)
-        return ("", "")
+        return _no_split_result("No leaf nodes found in subtree 0 to split.")
 
     if enable_propagate_bottom_up:
         _propagate_bottom_up(peano_tree)
@@ -135,9 +117,12 @@ def split_tree(
         if destination_ranks is None:
             _, _, _, subtrees = extract_split_instructions(peano_tree)
             destination_ranks = [int(subtree) for subtree in subtrees]
-            # @todo Reinsert this one, just out for debugging reasons. 
-        #return create_constructor_initialisation_string(peano_tree, destination_ranks, output=output)
-        return ("", "")
+
+        return create_constructor_initialisation_string(
+            peano_tree,
+            destination_ranks,
+            verbose=verbose,
+        )
 
     return ("", "")
 

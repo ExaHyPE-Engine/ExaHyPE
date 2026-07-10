@@ -191,7 +191,7 @@ if __name__ == "__main__":
             number_of_subtrees=number_of_subtrees,
             enable_extract_split_instructions=True,
             destination_ranks=destination_ranks,
-            output=True,
+            verbose=True,
         )
 
         print(tree)
@@ -226,7 +226,7 @@ if __name__ == "__main__":
             number_of_subtrees=number_of_subtrees,
             enable_extract_split_instructions=True,
             destination_ranks=destination_ranks,
-            output=True,
+            verbose=True,
         )
         
         # @todo Dmitry What do I have to call here to trigger the bottom-up analysis?
