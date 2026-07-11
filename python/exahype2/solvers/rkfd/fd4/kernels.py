@@ -71,6 +71,17 @@ def create_FD4InExaGRyPE_kernel_definitions_3d():
   FD4InExaGRyPE_sycl_accelerator_kernel_declaration = FD4InExaGRyPE_sycl_accelerator_tree.print_declaration()
   FD4InExaGRyPE_sycl_accelerator_call_with_measurement_declaration = FD4InExaGRyPE_sycl_accelerator_tree.print_declaration_with_timer()
 
+  template_parameters = [DSL.SyntaxTree.Argument("NC", DSL.SyntaxTree.TInteger()),
+                         DSL.SyntaxTree.Argument("NumberOfUnknowns", DSL.SyntaxTree.TInteger()),
+                         DSL.SyntaxTree.Argument("RKOrder", DSL.SyntaxTree.TInteger())]
+  functor_arguments = [DSL.SyntaxTree.Argument("RKWeights", DSL.SyntaxTree.TCustom("const double*"))]
+
+  ComputeLinearCombination_omp_accelerator_tree = DSL.Parser().parse(exahype2.solvers.rkfd.fd4.ComputeLinearCombination, template_parameters, functor_arguments, ["exahype2", "fd", "fd4", "omp"], stateless=True, use_accelerator=True)
+  ComputeLinearCombination_omp_accelerator_kernel = ComputeLinearCombination_omp_accelerator_tree.print_omp()
+  ComputeLinearCombination_omp_accelerator_call_with_measurement = ComputeLinearCombination_omp_accelerator_tree.print_definition_with_timer()
+  ComputeLinearCombination_omp_accelerator_kernel_declaration = ComputeLinearCombination_omp_accelerator_tree.print_declaration()
+  ComputeLinearCombination_omp_accelerator_call_with_measurement_declaration = ComputeLinearCombination_omp_accelerator_tree.print_declaration_with_timer()
+
   if not os.path.exists("kernels"):
       os.makedirs("kernels")
   
@@ -99,6 +110,8 @@ def create_FD4InExaGRyPE_kernel_definitions_3d():
 #if defined(GPUOffloadingOMP)
 {FD4InExaGRyPE_omp_accelerator_kernel_declaration}
 {FD4InExaGRyPE_omp_accelerator_call_with_measurement_declaration}
+{ComputeLinearCombination_omp_accelerator_kernel_declaration}
+{ComputeLinearCombination_omp_accelerator_call_with_measurement_declaration}
 #endif
 
 #if defined(GPUOffloadingSYCL)
@@ -126,6 +139,8 @@ def create_FD4InExaGRyPE_kernel_definitions_3d():
   file.write("#if defined(GPUOffloadingOMP)\n")
   file.write(FD4InExaGRyPE_omp_accelerator_kernel)
   file.write(FD4InExaGRyPE_omp_accelerator_call_with_measurement)
+  file.write(ComputeLinearCombination_omp_accelerator_kernel)
+  file.write(ComputeLinearCombination_omp_accelerator_call_with_measurement)
   file.write("#endif\n")
 
   file.write("#if defined(GPUOffloadingSYCL)\n")
@@ -185,6 +200,17 @@ def create_DeriCalInExaGRyPE_kernel_definitions_3d():
   DeriCallInExaGRyPE_sycl_accelerator_kernel_declaration = DeriCallInExaGRyPE_sycl_accelerator_tree.print_declaration()
   DeriCallInExaGRyPE_sycl_accelerator_call_with_measurement_declaration = DeriCallInExaGRyPE_sycl_accelerator_tree.print_declaration_with_timer()
 
+  template_parameters = [DSL.SyntaxTree.Argument("NC", DSL.SyntaxTree.TInteger()),
+                         DSL.SyntaxTree.Argument("NumberOfUnknowns", DSL.SyntaxTree.TInteger()),
+                         DSL.SyntaxTree.Argument("RKOrder", DSL.SyntaxTree.TInteger())]
+  functor_arguments = [DSL.SyntaxTree.Argument("RKWeights", DSL.SyntaxTree.TCustom("const double*"))]
+
+  ComputeLinearCombination_omp_accelerator_tree = DSL.Parser().parse(exahype2.solvers.rkfd.fd4.ComputeLinearCombination, template_parameters, functor_arguments, ["exahype2", "fd", "fd4", "omp"], stateless=True, use_accelerator=True)
+  ComputeLinearCombination_omp_accelerator_kernel = ComputeLinearCombination_omp_accelerator_tree.print_omp()
+  ComputeLinearCombination_omp_accelerator_call_with_measurement = ComputeLinearCombination_omp_accelerator_tree.print_definition_with_timer()
+  ComputeLinearCombination_omp_accelerator_kernel_declaration = ComputeLinearCombination_omp_accelerator_tree.print_declaration()
+  ComputeLinearCombination_omp_accelerator_call_with_measurement_declaration = ComputeLinearCombination_omp_accelerator_tree.print_declaration_with_timer()
+
   if not os.path.exists("kernels"):
       os.makedirs("kernels")
   
@@ -213,6 +239,8 @@ def create_DeriCalInExaGRyPE_kernel_definitions_3d():
 #if defined(GPUOffloadingOMP)
 {DeriCallInExaGRyPE_omp_accelerator_kernel_declaration}
 {DeriCallInExaGRyPE_omp_accelerator_call_with_measurement_declaration}
+{ComputeLinearCombination_omp_accelerator_kernel_declaration}
+{ComputeLinearCombination_omp_accelerator_call_with_measurement_declaration}
 #endif
 
 #if defined(GPUOffloadingSYCL)
@@ -240,6 +268,8 @@ def create_DeriCalInExaGRyPE_kernel_definitions_3d():
   file.write("#if defined(GPUOffloadingOMP)\n")
   file.write(DeriCallInExaGRyPE_omp_accelerator_kernel)
   file.write(DeriCallInExaGRyPE_omp_accelerator_call_with_measurement)
+  file.write(ComputeLinearCombination_omp_accelerator_kernel)
+  file.write(ComputeLinearCombination_omp_accelerator_call_with_measurement)
   file.write("#endif\n")
 
   file.write("#if defined(GPUOffloadingSYCL)\n")
@@ -305,6 +335,32 @@ def create_FD4_kernel_definitions_3d():
   FD4_sycl_accelerator_kernel_declaration = FD4_sycl_accelerator_tree.print_declaration()
   FD4_sycl_accelerator_call_with_measurement_declaration = FD4_sycl_accelerator_tree.print_declaration_with_timer()
 
+  template_parameters = [DSL.SyntaxTree.Argument("NC", DSL.SyntaxTree.TInteger()),
+                         DSL.SyntaxTree.Argument("NumberOfUnknowns", DSL.SyntaxTree.TInteger()),
+                         DSL.SyntaxTree.Argument("NumberOfAuxiliaryVariables", DSL.SyntaxTree.TInteger()),
+                         DSL.SyntaxTree.Argument("RKOrder", DSL.SyntaxTree.TInteger())]
+  functor_arguments = [DSL.SyntaxTree.Argument("RKWeights", DSL.SyntaxTree.TCustom("const double*"))]
+
+  ComputeFinalLinearCombination_omp_accelerator_tree = DSL.Parser().parse(exahype2.solvers.rkfd.fd4.computeFinalLinearCombination, template_parameters, functor_arguments, ["exahype2", "fd", "fd4", "omp"], stateless=True, use_accelerator=True)
+  ComputeFinalLinearCombination_omp_accelerator_kernel = ComputeFinalLinearCombination_omp_accelerator_tree.print_omp()
+  ComputeFinalLinearCombination_omp_accelerator_call_with_measurement = ComputeFinalLinearCombination_omp_accelerator_tree.print_definition_with_timer()
+  ComputeFinalLinearCombination_omp_accelerator_kernel_declaration = ComputeFinalLinearCombination_omp_accelerator_tree.print_declaration()
+  ComputeFinalLinearCombination_omp_accelerator_call_with_measurement_declaration = ComputeFinalLinearCombination_omp_accelerator_tree.print_declaration_with_timer()
+
+  template_parameters = [DSL.SyntaxTree.Argument("NC", DSL.SyntaxTree.TInteger()),
+                         DSL.SyntaxTree.Argument("H", DSL.SyntaxTree.TInteger()),
+                         DSL.SyntaxTree.Argument("NumberOfUnknowns", DSL.SyntaxTree.TInteger()),
+                         DSL.SyntaxTree.Argument("NumberOfAuxiliaryVariables", DSL.SyntaxTree.TInteger()),
+                         DSL.SyntaxTree.Argument("RKOrder", DSL.SyntaxTree.TInteger()),
+                         DSL.SyntaxTree.Argument("RKStep", DSL.SyntaxTree.TInteger())]
+  functor_arguments = [DSL.SyntaxTree.Argument("RKWeightMatrix", DSL.SyntaxTree.TCustom("const double*"))]
+
+  ComputeLinearCombination_omp_accelerator_tree = DSL.Parser().parse(exahype2.solvers.rkfd.fd4.computeLinearCombination, template_parameters, functor_arguments, ["exahype2", "fd", "fd4", "omp"], stateless=True, use_accelerator=True)
+  ComputeLinearCombination_omp_accelerator_kernel = ComputeLinearCombination_omp_accelerator_tree.print_omp()
+  ComputeLinearCombination_omp_accelerator_call_with_measurement = ComputeLinearCombination_omp_accelerator_tree.print_definition_with_timer()
+  ComputeLinearCombination_omp_accelerator_kernel_declaration = ComputeLinearCombination_omp_accelerator_tree.print_declaration()
+  ComputeLinearCombination_omp_accelerator_call_with_measurement_declaration = ComputeLinearCombination_omp_accelerator_tree.print_declaration_with_timer()
+
   if not os.path.exists("kernels"):
       os.makedirs("kernels")
   
@@ -333,6 +389,10 @@ def create_FD4_kernel_definitions_3d():
 #if defined(GPUOffloadingOMP)
 {FD4_omp_accelerator_kernel_declaration}
 {FD4_omp_accelerator_call_with_measurement_declaration}
+{ComputeLinearCombination_omp_accelerator_kernel_declaration}
+{ComputeLinearCombination_omp_accelerator_call_with_measurement_declaration}
+{ComputeFinalLinearCombination_omp_accelerator_kernel_declaration}
+{ComputeFinalLinearCombination_omp_accelerator_call_with_measurement_declaration}
 #endif
 
 #if defined(GPUOffloadingSYCL)
@@ -360,6 +420,10 @@ def create_FD4_kernel_definitions_3d():
   file.write("#if defined(GPUOffloadingOMP)\n")
   file.write(FD4_omp_accelerator_kernel)
   file.write(FD4_omp_accelerator_call_with_measurement)
+  file.write(ComputeLinearCombination_omp_accelerator_kernel)
+  file.write(ComputeLinearCombination_omp_accelerator_call_with_measurement)
+  file.write(ComputeFinalLinearCombination_omp_accelerator_kernel)
+  file.write(ComputeFinalLinearCombination_omp_accelerator_call_with_measurement)
   file.write("#endif\n")
 
   file.write("#if defined(GPUOffloadingSYCL)\n")

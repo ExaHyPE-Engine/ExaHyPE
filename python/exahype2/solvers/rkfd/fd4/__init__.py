@@ -12,6 +12,8 @@ from .GlobalAdaptiveTimeStepWithEnclaveTasking import (
 
 from .FD4Kernel3D import timeStepWithFD4
 from .FD4DSLKernelExaGRyPE import timeStepWithFD4InExaGRyPE
+from .ComputeLinearCombination import computeLinearCombination
+from .ComputeLinearCombination import computeFinalLinearCombination
 from .DerivativesCalDSLKernelExaGRyPE import DerivativesCalInExaGRyPE
 
 

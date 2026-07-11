@@ -370,7 +370,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::vector<Task*>& 
   patchData.id[currentTask]           = _taskNumber;
   patchData.QOut[currentTask]         = tarch::allocateMemory(_numberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
 
-
   //
   // ==============
   // Invoke kernels
@@ -379,8 +378,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::vector<Task*>& 
   bool foundOffloadingBranch = false;
 
   #if not defined(GPUOffloadingOff)
-  if (!gpuIsBusy){
-    gpuIsBusy = true;
+  //if (!gpuIsBusy){
+    //gpuIsBusy = true;
     auto gpuPatchData = ::exahype2::CopyCellDataGPU(patchData, _numberOfInputValues, _numberOfResultValues, targetDevice, _reconstructedPatchDeviceNumber);
   #endif
 
@@ -407,9 +406,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::vector<Task*>& 
     #endif
 
   #if not defined(GPUOffloadingOff)
-    gpuPatchData.copyBackAndDestroy();
-    gpuIsBusy = false;
-  }
+    if (_reconstructedPatchDeviceNumber == tarch::accelerator::Device::HostDevice){
+      gpuPatchData.copyBackAndDestroy();
+    }
+    //gpuIsBusy = false;
+  //}
   #endif
 
   if (not foundOffloadingBranch) {
@@ -425,28 +426,54 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::vector<Task*>& 
   // Bring back results
   // ==================
   //
-  for (int i=0; i<patchData.numberOfCells; i++) {
-    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(
-      patchData.id[i],
-      _numberOfResultValues,
-      patchData.QOut[i],
-      patchData.maxEigenvalue[i],
-      patchData.cellCentre[i],
-      patchData.cellSize[i]
-    );
-  }
-
+  
   // If _reconstructedPatchDeviceNumber is not HostDevice, then the reconstructed patch has been copied to a GPU prior to fusing.
   // In this case we know that the fused task is not responsible for memory management of the reconstructed patch so we do not free it.
-  currentTask = 0;
-  for (auto& p: otherTasks) {
-    if (static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_reconstructedPatchDeviceNumber == tarch::accelerator::Device::HostDevice) {
-      tarch::freeMemory(patchData.QIn[currentTask], tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
+  
+  if (_reconstructedPatchDeviceNumber == tarch::accelerator::Device::HostDevice){
+    for (int i=0; i<patchData.numberOfCells; i++) {
+      tarch::freeMemory(patchData.QIn[i], tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
+      ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(
+        patchData.id[i],
+        _numberOfResultValues,
+        patchData.QOut[i],
+        patchData.maxEigenvalue[i],
+        patchData.cellCentre[i],
+        patchData.cellSize[i]
+      );
     }
-    currentTask++;
-  }
-  if (_reconstructedPatchDeviceNumber == tarch::accelerator::Device::HostDevice) {
-    tarch::freeMemory(patchData.QIn[currentTask], tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory, targetDevice);
+  } else{
+  
+    currentTask = 0;
+    for (auto& p: otherTasks) {
+      double maxEigenvalue;
+      omp_target_memcpy(static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_outputValues, gpuPatchData.QOut, _numberOfResultValues * sizeof(double), 0, _numberOfResultValues * sizeof(double) * currentTask, 0, targetDevice);
+      omp_target_memcpy(&maxEigenvalue, gpuPatchData.maxEigenvalue, sizeof(double), 0, sizeof(double) * currentTask, omp_get_initial_device(), targetDevice);
+      ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(
+        patchData.id[currentTask],
+        _numberOfResultValues,
+        static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_outputValues,
+        maxEigenvalue,
+        patchData.cellCentre[currentTask],
+        patchData.cellSize[currentTask]
+      );
+      currentTask++;
+    }
+
+    double maxEigenvalue;
+    
+    omp_target_memcpy(_outputValues, gpuPatchData.QOut, _numberOfResultValues * sizeof(double), 0, _numberOfResultValues * sizeof(double) * currentTask, 0, targetDevice);
+    omp_target_memcpy(&maxEigenvalue, gpuPatchData.maxEigenvalue, sizeof(double), 0, sizeof(double) * currentTask, omp_get_initial_device(), targetDevice);
+
+    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(
+      patchData.id[currentTask],
+      _numberOfResultValues,
+      _outputValues,
+      maxEigenvalue,
+      patchData.cellCentre[currentTask],
+      patchData.cellSize[currentTask]
+    );
+    gpuPatchData.destroyWithoutCopy();
   }
 }
 {% endif %}

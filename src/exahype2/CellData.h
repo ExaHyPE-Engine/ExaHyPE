@@ -219,6 +219,7 @@ namespace exahype2 {
       int                                device = tarch::accelerator::Device::HostDevice,
       int                                currentPatchDevice = tarch::accelerator::Device::HostDevice
     );
+    void destroyWithoutCopy();
     void copyBackAndDestroy();
     
     std::string toString() const;

@@ -33,7 +33,8 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking
     source_term=PDETerms.None_Implementation,
     eigenvalues=PDETerms.User_Defined_Implementation, 
     pde_terms_without_state: bool = False,
-    plot_grid_properties=False, KOSigma=8.0
+    plot_grid_properties=False, KOSigma=8.0,
+    device_resident_rk=False
   ):
     """!
     
@@ -66,6 +67,7 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking
                                              plot_grid_properties, 
                                              kernel_namespace="fd4",
                                              pde_terms_without_state=pde_terms_without_state,
+                                             device_resident_rk=device_resident_rk,
                                              ) 
 
     self._time_step_relaxation = time_step_relaxation

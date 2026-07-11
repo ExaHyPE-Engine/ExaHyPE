@@ -50,14 +50,26 @@ class ComputeFinalLinearCombination(AbstractRKFDActionSet):
     ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariables   ( 1,            {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, 0, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}});
     ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithoutAuxiliaryVariables( {{RK_STEPS}}, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, 0, {{NUMBER_OF_UNKNOWNS}}, 0 );
     
-    dfor( dof, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ) {
-      for (int unknown=0; unknown<{{NUMBER_OF_UNKNOWNS}}; unknown++) {
-        {% for WEIGHT_NO in range(0,WEIGHTS|length) %}
-        fineGridCell{{UNKNOWN_IDENTIFIER}}.value[ enumeratorWithAuxiliaryVariables(0,dof,unknown) ] += 
-          timeStepSize * {{WEIGHTS[WEIGHT_NO]}} * fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{WEIGHT_NO}},dof,unknown) ];
-        {% endfor %}
-       }
-    }
+    
+
+      if (marker.willBeEnclaveCell() and {{DEVICE_RESIDENT_RK}}) {
+
+        double* fineGridCellDevice = tarch::accelerator::GPUMemoryManager::getInstance().allocate<double>(enumeratorWithAuxiliaryVariables.size(), fineGridCell{{SOLVER_NAME}}CellLabel.getDeviceNumber());
+        omp_target_memcpy(fineGridCellDevice, fineGridCell{{UNKNOWN_IDENTIFIER}}.value, enumeratorWithAuxiliaryVariables.size() * sizeof(double), 0, 0, fineGridCell{{SOLVER_NAME}}CellLabel.getDeviceNumber(), omp_get_initial_device());
+        ::exahype2::fd::fd4::omp::computeFinalLinearCombinationStateless<{{SOLVER_NAME}}, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}, {{RK_ORDER}}>(fineGridCell{{SOLVER_NAME}}CellLabel.getDeviceNumber(), fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value, fineGridCellDevice, timeStepSize);
+        omp_target_memcpy(fineGridCell{{UNKNOWN_IDENTIFIER}}.value, fineGridCellDevice, enumeratorWithAuxiliaryVariables.size() * sizeof(double), 0, 0, omp_get_initial_device(), fineGridCell{{SOLVER_NAME}}CellLabel.getDeviceNumber());
+        tarch::accelerator::GPUMemoryManager::getInstance().free(fineGridCellDevice, fineGridCell{{SOLVER_NAME}}CellLabel.getDeviceNumber());
+
+      } else{
+        dfor( dof, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ) {
+          for (int unknown=0; unknown<{{NUMBER_OF_UNKNOWNS}}; unknown++) {
+            {% for WEIGHT_NO in range(0,WEIGHTS|length) %}
+            fineGridCell{{UNKNOWN_IDENTIFIER}}.value[ enumeratorWithAuxiliaryVariables(0,dof,unknown) ] += 
+              timeStepSize * {{WEIGHTS[WEIGHT_NO]}} * fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{WEIGHT_NO}},dof,unknown) ];
+            {% endfor %}
+          }
+        }
+      }
 
     const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
@@ -115,7 +127,7 @@ class ComputeFinalLinearCombination(AbstractRKFDActionSet):
     fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
     repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp+timeStepSize, marker.h()(0) );
     
-    if (marker.willBeEnclaveCell()) {
+    if (marker.willBeEnclaveCell() and {{DEVICE_RESIDENT_RK}}) {
       #if not defined(GPUOffloadingOff)
       tarch::accelerator::GPUMemoryManager::getInstance().free(fineGridCell{{SOLVER_NAME}}CellLabel.getDeviceMemoryAddress(), fineGridCell{{SOLVER_NAME}}CellLabel.getDeviceNumber());
       fineGridCell{{SOLVER_NAME}}CellLabel.setDeviceMemoryStatus(celldata::{{SOLVER_NAME}}CellLabel::DeviceMemoryStatus::Unallocated);
@@ -138,6 +150,7 @@ class ComputeFinalLinearCombination(AbstractRKFDActionSet):
     super(ComputeFinalLinearCombination,self).__init__(solver)
     self.guard            = guard
     self._butcher_tableau = ButcherTableau(self._solver._rk_order)
+    self._device_resident_rk = solver._device_resident_rk
     
 
   def get_body_of_operation(self,operation_name):
@@ -148,6 +161,7 @@ class ComputeFinalLinearCombination(AbstractRKFDActionSet):
       self._solver.add_entries_to_text_replacement_dictionary(d)
       d[ "PREDICATE" ]         = self.guard
       d[ "WEIGHTS" ]           = self._butcher_tableau.final_estimate_weights()
+      d["DEVICE_RESIDENT_RK"]  = str(self._device_resident_rk).lower()
       result = jinja2.Template(self.TemplateProject).render(**d)
       pass 
     # @todo Projektion auf die Raender und umschalten der Zeiten fehlt noch. Aus das Flag und das Berechnen der Folgezeitschrittweite (falls gewollt)
