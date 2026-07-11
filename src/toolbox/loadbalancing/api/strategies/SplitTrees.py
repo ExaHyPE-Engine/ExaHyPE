@@ -21,8 +21,8 @@ def split_tree(
     enable_propagate_bottom_up: bool = False,
     enable_optimize_hierarchy: bool = False,
     require_all_children_for_hierarchy_optimization: bool = True,
-    enable_extract_split_instructions: bool = False,
-    destination_ranks: list[int] | None = None,
+#    enable_extract_split_instructions: bool = False,
+#    destination_ranks: list[int] | None = None,
     verbose: bool = False,
 ) -> tuple[str, str]:
     """
@@ -93,8 +93,8 @@ def split_tree(
     if not has_leaves_to_split:
         return _no_split_result("No leaf nodes found in subtree 0 to split.")
 
-    if enable_propagate_bottom_up:
-        _propagate_bottom_up(peano_tree)
+#    if enable_propagate_bottom_up:
+#        _propagate_bottom_up(peano_tree)
 
     if enable_optimize_hierarchy:
         _optimize_hierarchy(
@@ -111,20 +111,20 @@ def split_tree(
     print(f"Leaf distribution: {moved_nodes}")
     print(f"Split pattern: {peano_tree._split_pattern}")
 
-    if enable_extract_split_instructions:
-        from toolbox.loadbalancing.api.output.Hardcoded import create_constructor_initialisation_string
+    #if enable_extract_split_instructions:
+    #    from toolbox.loadbalancing.api.output.Hardcoded import create_constructor_initialisation_string##
 
-        if destination_ranks is None:
-            _, _, _, subtrees = extract_split_instructions(peano_tree)
-            destination_ranks = [int(subtree) for subtree in subtrees]
+    #    if destination_ranks is None:
+    #        _, _, _, subtrees = extract_split_instructions(peano_tree)
+    #        destination_ranks = [int(subtree) for subtree in subtrees]
 
-        return create_constructor_initialisation_string(
-            peano_tree,
-            destination_ranks,
-            verbose=verbose,
-        )
+    #    return create_constructor_initialisation_string(
+    #        peano_tree,
+    #        destination_ranks,
+    #        verbose=verbose,
+    #    )
 
-    return ("", "")
+    #return ("", "")
 
 
 def distribute_leaves_bottom_up(
@@ -462,9 +462,12 @@ def distribute_leaves_top_down(peano_tree: Tree, number_of_subtrees: int) -> tup
     return (True, moved_nodes)
 
 
-def _propagate_bottom_up(peano_tree: Tree) -> None:
+def propagate_bottom_up(peano_tree: Tree) -> None:
     """
-    Stage II of the staged load-balancing workflow.
+    
+    Propagate information bottom-up
+    
+    This correponds to the second stage of the staged load-balancing workflow.
 
     Propagate subtree assignments from leaves to internal nodes in a bottom-up pass.
     For each existing non-leaf node, if all existing children belong to the same

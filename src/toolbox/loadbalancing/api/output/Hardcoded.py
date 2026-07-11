@@ -7,11 +7,23 @@ if TYPE_CHECKING:
     from toolbox.loadbalancing.api.Tree import Tree
 
 
-def assign_round_Robin_rank_assignment(number_of_subtrees,
-                                       max_ranks,
-                                       ):
+def assign_trees_to_ranks_round_Robin(number_of_subtrees: int,
+                                      max_ranks: int,
+                                      ):
+    """!
+    
+    Take the trees and assign them to the ranks in a round-robin fashion
+    
+    This is likely not the best option in many cases. In many cases, it 
+    might be better to assign the trees in chunks to preserve some 
+    locality.
+    
+    Note that we implicitly assume that the first tree remains on rank 0,
+    so we really only assign number_of_subtrees-1 entries.    
+    
+    """
     result = []
-    for i in range(0,len(number_of_subtrees)):
+    for i in range(1,number_of_subtrees):
         result.append( i%max_ranks )
     return result
     
@@ -198,15 +210,16 @@ def create_constructor_initialisation_string(peano_tree,
 
     if verbose:
         print("Extracted hardcoded parameters:")
-        print("  grid_sweeps     =", sweep_numbers)
-        print("  splitting_trees =", parent_trees)
-        print("  number_of_cells =", subpartition_sizes)
-        print("  subtrees        =", subtrees)
-        print("  modi            =", hardcoded_mode)
+        print("  grid_sweeps       =", sweep_numbers)
+        print("  splitting_trees   =", parent_trees)
+        print("  number_of_cells   =", subpartition_sizes)
+        print("  subtrees          =", subtrees)
+        print("  destination ranks =", destination_ranks)
+        print("  modi              =", hardcoded_mode)
 
     if len(destination_ranks) != len(subtrees):
         raise ValueError(
-            "destination_ranks must have the same length as the extracted split instructions"
+            "destination_ranks ({}) must have the same length as the extracted split instructions ({})".format(len(destination_ranks),len(subtrees))
         )
 
     hardcoded_config = "{" + _format_initialisation_lists(

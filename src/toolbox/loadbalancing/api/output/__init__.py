@@ -3,6 +3,6 @@
 """
 
 from .Hardcoded import create_constructor_initialisation_string
-from .Hardcoded import assign_round_Robin_rank_assignment
+from .Hardcoded import assign_trees_to_ranks_round_Robin
 
 
