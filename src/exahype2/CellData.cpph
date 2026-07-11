@@ -106,6 +106,21 @@ exahype2::CopyCellDataGPU<inType, outType>::CopyCellDataGPU(
   ::sycl::event::wait(copyEvent);
 }
 
+
+template<typename inType, typename outType>
+void exahype2::CopyCellDataGPU<inType, outType>::destroyWithoutCopy() {
+  auto queue = tarch::accelerator::getSYCLQueue(targetDevice);
+
+  tarch::accelerator::GPUMemoryManager::getInstance().free(QIn, queue);
+  tarch::accelerator::GPUMemoryManager::getInstance().free(QOut, queue);
+  tarch::accelerator::GPUMemoryManager::getInstance().free(cellCentre, queue);
+  tarch::accelerator::GPUMemoryManager::getInstance().free(cellSize, queue);
+  tarch::accelerator::GPUMemoryManager::getInstance().free(t, queue);
+  tarch::accelerator::GPUMemoryManager::getInstance().free(dt, queue);
+  tarch::accelerator::GPUMemoryManager::getInstance().free(id, queue);
+  tarch::accelerator::GPUMemoryManager::getInstance().free(maxEigenvalue, queue);
+}
+
 template<typename inType, typename outType>
 void exahype2::CopyCellDataGPU<inType, outType>::copyBackAndDestroy() {
   auto queue = tarch::accelerator::getSYCLQueue(targetDevice);
@@ -227,6 +242,19 @@ void exahype2::CopyCellDataGPU<inType, outType>::copyBackAndDestroy() {
   tarch::accelerator::GPUMemoryManager::getInstance().free(id, targetDevice);
   tarch::accelerator::GPUMemoryManager::getInstance().free(maxEigenvalue, targetDevice);
 }
+
+template<typename inType, typename outType>
+void exahype2::CopyCellDataGPU<inType, outType>::destroyWithoutCopy() {
+  tarch::accelerator::GPUMemoryManager::getInstance().free(QIn, targetDevice);
+  tarch::accelerator::GPUMemoryManager::getInstance().free(QOut, targetDevice);
+  tarch::accelerator::GPUMemoryManager::getInstance().free(cellCentre, targetDevice);
+  tarch::accelerator::GPUMemoryManager::getInstance().free(cellSize, targetDevice);
+  tarch::accelerator::GPUMemoryManager::getInstance().free(t, targetDevice);
+  tarch::accelerator::GPUMemoryManager::getInstance().free(dt, targetDevice);
+  tarch::accelerator::GPUMemoryManager::getInstance().free(id, targetDevice);
+  tarch::accelerator::GPUMemoryManager::getInstance().free(maxEigenvalue, targetDevice);
+}
+
 #else
 template<typename inType, typename outType>
 exahype2::CopyCellDataGPU<inType, outType>::CopyCellDataGPU(
@@ -263,6 +291,18 @@ exahype2::CopyCellDataGPU<inType, outType>::CopyCellDataGPU(
   std::memcpy(dt, cellData.dt, numberOfCells * sizeof(double));
   std::memcpy(id, cellData.id, numberOfCells * sizeof(int));
   std::memcpy(maxEigenvalue, cellData.maxEigenvalue, numberOfCells * sizeof(double));
+}
+
+template<typename inType, typename outType>
+void exahype2::CopyCellDataGPU<inType, outType>::destroyWithoutCopy() {
+  tarch::freeMemory(QIn, memoryLocation, targetDevice);
+  tarch::freeMemory(cellCentre, memoryLocation, targetDevice);
+  tarch::freeMemory(cellSize, memoryLocation, targetDevice);
+  tarch::freeMemory(t, memoryLocation, targetDevice);
+  tarch::freeMemory(dt, memoryLocation, targetDevice);
+  tarch::freeMemory(QOut, memoryLocation, targetDevice);
+  tarch::freeMemory(id, memoryLocation, targetDevice);
+  tarch::freeMemory(maxEigenvalue, memoryLocation, targetDevice);
 }
 
 template<typename inType, typename outType>

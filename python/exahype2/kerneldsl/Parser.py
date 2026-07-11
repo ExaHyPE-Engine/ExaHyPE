@@ -40,6 +40,8 @@ class Parser:
                 return SyntaxTree.LogDataBlock(self._parse_expression(call.args[0]), self._parse_constant(call.args[1]))
             elif function.id == "matrixVectorProduct":
                 return self._parse_matrix_vector_product(call)
+            elif function.id == "dot":
+                return self._parse_diagonal_matrix_vector_product(call)
             elif function.id == "max":
                 if len(call.args) > 1:
                     return SyntaxTree.DataBlockMax(self._parse_expression(call.args[0]), self._parse_expression(call.args[1]))
@@ -47,6 +49,11 @@ class Parser:
                     return SyntaxTree.DataBlockUnaryMax(self._parse_expression(call.args[0]))
             else:
                 return SyntaxTree.DataBlockIndex(SyntaxTree.Name(function.id), self._parse_expression(call.args[0]))
+
+    def _parse_diagonal_matrix_vector_product(self, call: ast.Call):
+        matrix = self._parse_expression(call.args[0])
+        vector = self._parse_expression(call.args[1])
+        return SyntaxTree.DataBlockConstructionFromDotProduct(SyntaxTree.Name(call.args[2].id, vector.get_type()), matrix, vector)
 
     def _parse_matrix_vector_product(self, call: ast.Call):
         matrix = self._parse_expression(call.args[0])

@@ -92,6 +92,17 @@ void exahype2::EnclaveBookkeeping::waitForTaskAndDiscardResult(
   logTraceOut("waitForTaskAndDiscardResult(int)");
 }
 
+void exahype2::EnclaveBookkeeping::waitForTaskToTerminateAndWriteResultDirectly(
+  int number,
+  const tarch::la::Vector<Dimensions, double>& x,
+  const tarch::la::Vector<Dimensions, double>& h
+){
+  logTraceInWith1Argument("waitForTaskAndWriteResultDirectly(int)", number);
+
+  Entry storedData = waitForTaskToTerminateAndReturnResult(number,x,h);
+
+  logTraceOut("waitForTaskAndWriteResultDirectly(int)");
+}
 
 void exahype2::EnclaveBookkeeping::waitForTaskToTerminateAndCopyResultOver(
   int number,

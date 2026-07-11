@@ -4507,6 +4507,70 @@ class DataBlockConstructionFromMatrixVectorProduct:
 {self._dataBlock.print_tree(indent_level + 1)}"""
 
 
+class DataBlockConstructionFromDotProduct:
+    def __init__(self, name: Name, matrix, vector):
+        self._name = name
+        if type(vector) is Name:
+            self._vector = Name.variables[vector.id]
+        else:
+            self._vector = vector
+
+        if type(matrix) is Name:
+            self._matrix = Name.variables[matrix.id]
+        else:
+            self._matrix = matrix
+
+        iteration_range = self._vector._iteration_range
+        iteration_range[-1][1] = Integer(1)
+        self._dataBlock = DataBlock(self._vector._iteration_range, None, False, self._name.id, underlying_type=vector.get_type().get_single())
+        Name.variables.update({self._name.id: self._dataBlock})
+
+        self.memoryAllocation = MemoryAllocation(self._name, self._dataBlock.get_type().get_single(), self._dataBlock._memory_range)
+
+        loops = []
+        index = []
+        for [a, b] in self._dataBlock._iteration_range[-1::-1]:
+            loops.append(For([Integer(0), b - a]))
+
+        for loop in loops[::-1]:
+            index.append(loop.get_iteration_variable())
+
+        loops[-1].add_statement(Assignment(self._dataBlock.multidimensional_index(index), Float(0.0)))
+        for i in range(len(loops) - 1):
+            loops[i].add_statement(loops[i + 1])
+
+        loops.append(For([Integer(0), self._matrix._width]))
+        rhs_index = index.copy()
+        rhs_index[-1] = loops[-1].get_iteration_variable()
+        loops[-1].add_statement(Assignment(self._dataBlock.multidimensional_index(index), BinaryOperation("+", self._dataBlock.multidimensional_index(index), BinaryOperation("*", Subscript(self._matrix, rhs_index[-1]), self._vector.multidimensional_index(rhs_index)))))
+        loops[-2].add_statement(loops[-1])
+
+        for loop in loops:
+            loop.close_scope()
+        self.assignment = loops[0]
+        
+    def print_cpp(self, indent_level = 0):
+        return f"""{self.memoryAllocation.print_cpp(indent_level)}
+{self.assignment.print_cpp(indent_level)}"""
+    
+    def print_omp(self, indent_level = 0):
+        return f"""{self.memoryAllocation.print_omp(indent_level)}
+{self.assignment.print_omp(indent_level)}"""
+
+    def print_sycl(self, indent_level = 0):
+        return f"""{self.memoryAllocation.print_sycl(indent_level)}
+{self.assignment.print_sycl(indent_level)}"""
+    
+    def print_mlir(self, indent_level = 0):
+        return f"""{self.memoryAllocation.print_mlir(indent_level)}
+{self.assignment.print_mlir(indent_level)}"""
+    
+    def print_tree(self, indent_level = 0):
+        return ' ' * indent_level * Node.spaces_per_tab + f"""DataBlockConstructionFromOperation:
+{self._name.print_tree(indent_level + 1)}
+{self._dataBlock.print_tree(indent_level + 1)}"""
+
+
 class DataBlockConstructionFromFunction(Statement):
     def __init__(self, name: Name, dataBlock: DataBlock):
         super().__init__()

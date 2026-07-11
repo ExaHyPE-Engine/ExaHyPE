@@ -36,6 +36,15 @@
   value = other.value==nullptr ? nullptr : _dataSmartPointer.get();
 }
 
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::reallocateOnDevice(int deviceNumber) {
+  _dataSmartPointer = std::shared_ptr<double[]>(
+    tarch::accelerator::GPUMemoryManager::getInstance().allocate<double>(Cardinality, deviceNumber), 
+    [deviceNumber] (auto p) { 
+      tarch::accelerator::GPUMemoryManager::getInstance().free(p, deviceNumber); 
+    }
+  );
+  value = _dataSmartPointer.get();
+}
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone(const {{CLASSNAME}}& other) {
   #if PeanoDebug>=1
