@@ -63,6 +63,19 @@ def split_tree(
         - The tree is modified in place by the enabled transformation stages.
         - If number_of_subtrees <= 1, no transformation stage runs.
         - Stage III requires Stage II to have been applied first for correctness.
+        
+        
+    @todo Dmitry We have to update the docu once we have converged the codes. 
+                 So this can wait, but it remains a todo. Also, there has to
+                 be a different way to split up the leaves:
+                 
+    @todo Dmitry At the moment, I do not see how you determine how many cells
+                 you assign to each tree? I assume there's a helper somewhere.
+                 I'm not sure if we also want to have splittings, where we can
+                 configure the min number of cells per tree. Not sure how to 
+                 best inject that, i.e. will need your advise.
+                 
+                 
     """
     if number_of_subtrees <= 1:
         return _no_split_result(
