@@ -1,9 +1,9 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and
+# This file is part of the ExaHyPE2 project. For conditions of decomposition and
 # use, please see the copyright notice at www.peano-framework.org
 
 import yaml
 from Tree import Tree
-
+from .Decomposition import equidistant_splitting
 
 from .SFC import Peano_to_Cartesian_2d
 from .SFC import Peano_to_Cartesian_3d
@@ -16,7 +16,7 @@ def _no_split_result(message: str) -> tuple[str, str]:
 
 def split_tree(
     peano_tree: Tree,
-    number_of_subtrees: int,
+    decomposition,
     traversal: str = "bfs_finest_first",
     enable_propagate_bottom_up: bool = False,
     enable_optimize_hierarchy: bool = False,
@@ -45,7 +45,7 @@ def split_tree(
               but levels processed from finest to coarsest
             - "dfs": depth-first leaf collection
         enable_propagate_bottom_up: If True, enable Stage II bottom-up subtree
-            propagation after leaf redistribution.
+            propagation after leaf redecomposition.
         enable_optimize_hierarchy: If True, enable Stage III hierarchical
             optimisation to minimise split operations through hierarchy lifting.
         require_all_children_for_hierarchy_optimization: Stage III guard for
@@ -77,27 +77,17 @@ def split_tree(
                  
                  
     """
-    if number_of_subtrees <= 1:
-        return _no_split_result(
-            f"No splitting requested (number_of_subtrees = {number_of_subtrees})."
-        )
-
-    print(
-        f"Splitting tree '{peano_tree._name}' into "
-        f"{number_of_subtrees} subtrees (staged workflow)"
-    )
-
     traversal_mode = traversal.lower()
     if traversal_mode == "bfs":
         has_leaves_to_split, moved_nodes = distribute_leaves_bottom_up(
-            peano_tree, number_of_subtrees, finest_level_first=False
+            peano_tree, decomposition=decomposition, finest_level_first=False
         )
     elif traversal_mode == "bfs_finest_first":
         has_leaves_to_split, moved_nodes = distribute_leaves_bottom_up(
-            peano_tree, number_of_subtrees, finest_level_first=True
+            peano_tree, decomposition=decomposition, finest_level_first=True
         )
     elif traversal_mode == "dfs":
-        has_leaves_to_split, moved_nodes = distribute_leaves_top_down(peano_tree, number_of_subtrees)
+        has_leaves_to_split, moved_nodes = distribute_leaves_top_down(peano_tree, decomposition=decomposition)
     else:
         raise ValueError(
             f"Unsupported traversal '{traversal}'. Use 'bfs', 'bfs_finest_first' or 'dfs'."
@@ -117,11 +107,11 @@ def split_tree(
 
 
     # Update tree metadata after all stages
-    peano_tree._subtree_count = number_of_subtrees
+    peano_tree._subtree_count = len(decomposition)
     peano_tree.update_split_pattern()
 
     print(f"Splitting complete. Subtree count: {peano_tree._subtree_count}")
-    print(f"Leaf distribution: {moved_nodes}")
+    print(f"Leaf decomposition: {moved_nodes}")
     print(f"Split pattern: {peano_tree._split_pattern}")
 
     #if enable_extract_split_instructions:
@@ -137,100 +127,21 @@ def split_tree(
     #        verbose=verbose,
     #    )
 
-    #return ("", "")
-    
-    
-# @todo Move into separate file    
-def equidistant_splitting(peano_tree: Tree,
-                          number_of_subtrees: int,
-                          verbose=False,
-                          ):
-    leaf_nodes = []
-
-    level_range = range(peano_tree._max_level)
-    for level in level_range:
-        size = 3**(level + 1)
-
-        if peano_tree._dimension == 2:
-            for peano_index in range(size * size):
-                a, b = Peano_to_Cartesian_2d(peano_index, size)
-                current_node = peano_tree._tree_arrays[level][a][b]
-                if current_node[0] == 1 and current_node[1] == 0:  # Node exists and belongs to subtree 0
-                    # Check if this is a leaf node
-                    is_leaf = False
-
-                    if level == peano_tree._max_level - 1:
-                        # Nodes at finest level are always leaves
-                        is_leaf = True
-                    else:
-                        # Check if node has no children (not refined further)
-                        child_a, child_b = 3*a, 3*b
-                        if (child_a < 3**(level+2) and child_b < 3**(level+2) and 
-                            peano_tree._tree_arrays[level+1][child_a][child_b][0] == 0):
-                            is_leaf = True
-
-                    if is_leaf:
-                        leaf_nodes.append((level, a, b))
-
-        elif peano_tree._dimension == 3:
-            for peano_index in range(size * size * size):
-                a, b, c = Peano_to_Cartesian_3d(peano_index, size)
-                current_node = peano_tree._tree_arrays[level][a][b][c]
-                if current_node[0] == 1 and current_node[1] == 0:  # Node exists and belongs to subtree 0
-                    # Check if this is a leaf node
-                    is_leaf = False
-
-                    if level == peano_tree._max_level - 1:
-                        # Nodes at finest level are always leaves
-                        is_leaf = True
-                    else:
-                        # Check if node has no children (not refined further)
-                        child_a, child_b, child_c = 3*a, 3*b, 3*c
-                        if (child_a < 3**(level+2) and child_b < 3**(level+2) and child_c < 3**(level+2) and
-                            peano_tree._tree_arrays[level+1][child_a][child_b][child_c][0] == 0):
-                            is_leaf = True
-
-                    if is_leaf:
-                        leaf_nodes.append((level, a, b, c))
-
-    total_leaves = len(leaf_nodes)
-    
-    if total_leaves == 0:
-        print("No leaf nodes found in subtree 0 to split.")
-        return (False, [])
-
-    print(f"Found {total_leaves} leaf nodes across all levels to distribute")
-
-    # Calculate how many leaves each subtree should get for balanced distribution
-    leaves_per_subtree = total_leaves // (number_of_subtrees)
-    remaining_leaves = total_leaves % (number_of_subtrees)
-
-    print(f"Target distribution: {leaves_per_subtree} leaves per subtree, {remaining_leaves} extra leaves that have to be distributed among other trees")
-
-    # Create distribution plan
-    distribution = []
-    for i in range(number_of_subtrees):
-        target_count = leaves_per_subtree + (1 if i < remaining_leaves else 0)
-        distribution.append(target_count)
-
-    print(f"Distribution plan: {distribution}")
-    
-    return distribution
-    
+    #return ("", "")    
 
 
 def distribute_leaves_bottom_up(
     peano_tree: Tree,
-    number_of_subtrees: int,
+    decomposition,
     finest_level_first: bool = False,
 ) -> tuple[bool, list[int]]:
     """
-    Stage I: BFS-style leaf redistribution over Peano SFC order.
+    Stage I: BFS-style leaf redecomposition over Peano SFC order.
 
     This strategy runs through the mesh level by level. It first assigns all
     leaves on the finest level to partitions, then the leaves on the next
     coarser level, and so forth. Within each level, cells are visited in
-    Peano space-filling-curve order, so the redistribution follows the same
+    Peano space-filling-curve order, so the redecomposition follows the same
     ordering as the SFC traversal used elsewhere in the load-balancing API.
 
     @image html PeanoSFC.png
@@ -267,10 +178,6 @@ def distribute_leaves_bottom_up(
     """
     # Collect all leaf nodes (at all levels) that belong to subtree 0.
     # The level sweep can be either coarse->fine (legacy) or fine->coarse.
-    distribution = equidistant_splitting(peano_tree,
-                                         number_of_subtrees,
-                                         verbose = False,
-                                         )
 
     leaf_nodes = []
 
@@ -320,10 +227,10 @@ def distribute_leaves_bottom_up(
                     if is_leaf:
                         leaf_nodes.append((level, a, b, c))
 
-    # Apply the redistribution to leaf nodes
+    # Apply the redecomposition to leaf nodes
     current_subtree = 0
     current_count = 0
-    moved_nodes = [0] * (number_of_subtrees)  # Track actual moves
+    moved_nodes = [0] * len(decomposition)  # Track actual moves
     
     
 
@@ -347,20 +254,22 @@ def distribute_leaves_bottom_up(
             current_count += 1
 
         # Check if current subtree is full, move to next
-        if current_count >= distribution[current_subtree] and current_subtree < number_of_subtrees - 1:
+        if current_count >= decomposition[current_subtree] and current_subtree < len(decomposition) - 1:
             current_subtree += 1
             current_count = 0
 
     return (True, moved_nodes)
 
 
-def distribute_leaves_top_down(peano_tree: Tree, number_of_subtrees: int) -> tuple[bool, list[int]]:
+def distribute_leaves_top_down(peano_tree: Tree, 
+                               decomposition,
+                               ) -> tuple[bool, list[int]]:
     """
-    Stage I: DFS-style leaf redistribution over the Peano SFC.
+    Stage I: DFS-style leaf redecomposition over the Peano SFC.
 
     Collect leaf cells currently assigned to subtree 0 and redistribute them
     across `number_of_subtrees` subtrees as evenly as possible.
-    The redistribution logic is identical to `distribute_leaves_bottom_up()`, but leaf
+    The redecomposition logic is identical to `distribute_leaves_bottom_up()`, but leaf
     discovery order follows DFS instead of level-order scanning. Both component-root
     discovery and per-parent child traversal use Peano SFC order.
 
@@ -507,14 +416,14 @@ def distribute_leaves_top_down(peano_tree: Tree, number_of_subtrees: int) -> tup
     leaves_per_subtree = total_leaves // (number_of_subtrees)
     remaining_leaves = total_leaves % (number_of_subtrees)
 
-    print(f"Target distribution: {leaves_per_subtree} leaves per subtree, {remaining_leaves} extra leaves")
+    print(f"Target decomposition: {leaves_per_subtree} leaves per subtree, {remaining_leaves} extra leaves")
 
-    distribution = []
+    decomposition = []
     for i in range(number_of_subtrees):
         target_count = leaves_per_subtree + (1 if i < remaining_leaves else 0)
-        distribution.append(target_count)
+        decomposition.append(target_count)
 
-    print(f"Distribution plan: {distribution}")
+    print(f"Distribution plan: {decomposition}")
 
     current_subtree = 0
     current_count = 0
@@ -533,7 +442,7 @@ def distribute_leaves_top_down(peano_tree: Tree, number_of_subtrees: int) -> tup
             moved_nodes[current_subtree] += 1
             current_count += 1
 
-        if current_count >= distribution[current_subtree] and current_subtree < number_of_subtrees - 1:
+        if current_count >= decomposition[current_subtree] and current_subtree < number_of_subtrees - 1:
             current_subtree += 1
             current_count = 0
 
@@ -897,7 +806,7 @@ def generate_tree_yaml(peano_tree: Tree, output_yaml_file: str) -> None:
             'subtree_count': peano_tree._subtree_count
         },
         'split_summary': {
-            'subtree_distribution': [int(count) for count in peano_tree._split_pattern]
+            'subtree_decomposition': [int(count) for count in peano_tree._split_pattern]
         },
         'tree_structure': tree_levels
     }
