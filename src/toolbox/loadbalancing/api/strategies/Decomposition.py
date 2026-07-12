@@ -4,6 +4,7 @@
 from Tree import Tree
 from .SFC import Peano_to_Cartesian_2d
 from .SFC import Peano_to_Cartesian_3d
+from mpmath import residual
 
 
 
@@ -77,11 +78,6 @@ def equidistant_splitting(peano_tree: Tree,
             f"No splitting requested (number_of_subtrees = {number_of_subtrees})."
         )
 
-    print(
-        f"Splitting tree '{peano_tree._name}' into "
-        f"{number_of_subtrees} subtrees (staged workflow)"
-    )
-
     total_leaves = get_number_of_leaves(peano_tree)
     
     if total_leaves == 0:
@@ -99,8 +95,58 @@ def equidistant_splitting(peano_tree: Tree,
         distribution.append(target_count)
 
     if verbose:
+        print(
+          f"Splitting tree '{peano_tree._name}' into "
+          f"{number_of_subtrees} subtrees (staged workflow)"
+        )
         print(f"Found {total_leaves} leaf nodes across all levels to distribute")
         print(f"Target distribution: {leaves_per_subtree} leaves per subtree, {remaining_leaves} extra leaves that have to be distributed among other trees")
+        print(f"Distribution plan: {distribution}")
+    
+    return distribution
+
+
+def quantised_splitting(peano_tree: Tree,
+                        number_of_subtrees: int,
+                        dimension: int,
+                        verbose=False,
+                       ):
+    
+    if number_of_subtrees <= 1:
+        return _no_split_result(
+            f"No splitting requested (number_of_subtrees = {number_of_subtrees})."
+        )
+
+    total_leaves = get_number_of_leaves(peano_tree)
+    
+    if total_leaves == 0:
+        print("No leaf nodes found in subtree 0 to split.")
+        return (False, [])
+
+    # Calculate how many leaves each subtree should get for balanced distribution
+    optimal_leaves_per_subtree = total_leaves // (number_of_subtrees)
+    residual_leaves    = 0
+    
+    # Create distribution plan
+    distribution = []
+    for i in range(number_of_subtrees):
+        current_chunk = 1
+        while (current_chunk<optimal_leaves_per_subtree+residual_leaves):
+            current_chunk = current_chunk * (3**dimension)
+        if current_chunk>3**dimension and current_chunk>optimal_leaves_per_subtree+residual_leaves:
+            current_chunk = current_chunk / (3**dimension)
+        residual_leaves = residual_leaves + optimal_leaves_per_subtree - current_chunk
+        assert residual_leaves>=0
+        distribution.append(current_chunk)
+        #print(f"append {current_chunk} and maintain residual {residual_leaves} with optimum {optimal_leaves_per_subtree}. New target {optimal_leaves_per_subtree+residual_leaves}")
+
+    distribution[-1] = distribution[-1] + (total_leaves-sum(distribution))
+    
+    assert sum(distribution)==total_leaves, "{} vs {}".format(sum(distribution),total_leaves)
+
+    if verbose:
+        print(f"Found {total_leaves} leaf nodes across all levels to distribute")
+        print(f"Target distribution: {optimal_leaves_per_subtree} leaves per subtree")
         print(f"Distribution plan: {distribution}")
     
     return distribution

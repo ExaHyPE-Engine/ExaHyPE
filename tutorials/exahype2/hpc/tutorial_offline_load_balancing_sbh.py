@@ -218,19 +218,20 @@ if __name__ == "__main__":
         tree = RegularGridGenerator.RegularGridGenerator(max_level=tree_height_required_to_match_cell_size, dimensions=3)
         number_of_subtrees = args.ranks * args.trees
 
+        SplitTrees.split_tree(
+            peano_tree=tree,
+            verbose = True,
+            decomposition = Decomposition.quantised_splitting(peano_tree=tree,
+                                                              number_of_subtrees=number_of_subtrees,
+                                                              dimension=3,
+                                                              verbose=True)
+        )
+        SplitTrees.propagate_bottom_up(tree)
+        
         destination_ranks = Hardcoded.assign_trees_to_ranks_round_Robin(number_of_subtrees = tree.number_of_subtrees,
                                                                         max_ranks          = args.ranks
                                                                         )        
 
-        SplitTrees.split_tree(
-            peano_tree=tree,
-            verbose = True,
-            decomposition = Decomposition.equidistant_splitting(peano_tree=tree,
-                                                                number_of_subtrees=number_of_subtrees,
-                                                                verbose=True)
-        )
-        SplitTrees.propagate_bottom_up(tree)
-        
         hardcoded_config, hardcoded_mode = Hardcoded.create_constructor_initialisation_string(tree,destination_ranks,verbose=True)        
         print(tree)
         
