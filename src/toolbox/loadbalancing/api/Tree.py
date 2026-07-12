@@ -2,6 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 import numpy as np
 
+
 class Tree(object):
 	"""
 	Data structure for adaptive mesh trees in Peano load balancing.
@@ -122,7 +123,11 @@ class Tree(object):
 		self._dimension		=	dimension
 		self._domain_offset =	domain_offset
 		self._domain_size 	=	domain_size
-		
+
+        # @todo Dmitry: I realise that there's this field and then there is a routine that computes the number of leaves in Decomposition
+        #               In my opinion, there should be a query on the tree object which holds that algorithm, i.e. neither should there
+        #               be a routine in Decomposition nor a field in this type.
+        		
 		self._tree_arrays 	= [] # contains the series of arrays
 		self._leaf_count 	= 0  # not yet calculated
 		self._subtree_count = 0  # not yet calculated
@@ -130,6 +135,11 @@ class Tree(object):
 
 		self._max_level		= -1
 		self._weighted		= False
+
+
+	@property
+	def number_of_subtrees(self):
+		return self._subtree_count
 
 
 	def __str__(self):
@@ -253,4 +263,3 @@ Split pattern:	"""
 	def update_weight(self):
 		#todo
 		return 0
-
