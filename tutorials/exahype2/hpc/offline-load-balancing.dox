@@ -213,11 +213,10 @@ With the offline domain decomposition, we can also visualise the envisaged
 partitioning beforehand:
 
 
-@todo Dmitry can you add content here?
-
-
-
-
+@todo Dmitry can you add content here? People need to know how to visualise the
+             arising domain decomposition before they continue building Peano 
+             or doing some further tweaking. We also need this for debugging
+             reasons.
 
 
 ## Multiscale mesh association

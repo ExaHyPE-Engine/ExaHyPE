@@ -485,6 +485,19 @@ def propagate_bottom_up(peano_tree: Tree) -> None:
     Propagate subtree assignments from leaves to internal nodes in a bottom-up pass.
     For each existing non-leaf node, if all existing children belong to the same
     subtree, assign the parent to that subtree.
+    
+    ## Implementation
+
+    WOrk from finest to coarsest level
+    for level in range(peano_tree._max_level - 2, -1, -1):  # Skip finest level (only leaves)
+    
+    ### Check if all kids of one cell belong to the same tree
+    
+    For a cell on level level, we run over all 3^d children (counter child_a
+    and child_b). There is a set, and we add all the child tree numbers to this
+    set. Once we have visited all children, we can check the set cardinality:
+    If the set cardinality equals 1, all children are assigned to the same 
+    tree. We therefore can assign the parent to this tree number, too.
 
     Args:
         peano_tree: Tree to update (modified in place).
@@ -500,8 +513,13 @@ def propagate_bottom_up(peano_tree: Tree) -> None:
     """
     print("Updating non-leaf node assignments to maintain tree topology...")
     
-    # Work from finest to coarsest level (bottom-up)
-    for level in range(peano_tree._max_level - 2, -1, -1):  # Skip finest level (only leaves)
+    #for level in range(peano_tree._max_level - 2, -1, -1):  # Skip finest level (only leaves)
+    
+    # @todo Dmitry We have to get the line above back into the game later on, 
+    #              but first we have to understand what exactly is happening 
+    #              here. And for this, we have to look at two levels only for 
+    #              the time being.
+    for level in range(peano_tree._max_level - 2, peano_tree._max_level - 3, -1):  # Skip finest level (only leaves)
         size = 3**(level + 1)
         
         if peano_tree._dimension == 2:
