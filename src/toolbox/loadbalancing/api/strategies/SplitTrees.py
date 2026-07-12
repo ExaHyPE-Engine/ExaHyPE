@@ -138,6 +138,85 @@ def split_tree(
     #    )
 
     #return ("", "")
+    
+    
+# @todo Move into separate file    
+def equidistant_splitting(peano_tree: Tree,
+                          number_of_subtrees: int,
+                          verbose=False,
+                          ):
+    leaf_nodes = []
+
+    level_range = range(peano_tree._max_level)
+    for level in level_range:
+        size = 3**(level + 1)
+
+        if peano_tree._dimension == 2:
+            for peano_index in range(size * size):
+                a, b = Peano_to_Cartesian_2d(peano_index, size)
+                current_node = peano_tree._tree_arrays[level][a][b]
+                if current_node[0] == 1 and current_node[1] == 0:  # Node exists and belongs to subtree 0
+                    # Check if this is a leaf node
+                    is_leaf = False
+
+                    if level == peano_tree._max_level - 1:
+                        # Nodes at finest level are always leaves
+                        is_leaf = True
+                    else:
+                        # Check if node has no children (not refined further)
+                        child_a, child_b = 3*a, 3*b
+                        if (child_a < 3**(level+2) and child_b < 3**(level+2) and 
+                            peano_tree._tree_arrays[level+1][child_a][child_b][0] == 0):
+                            is_leaf = True
+
+                    if is_leaf:
+                        leaf_nodes.append((level, a, b))
+
+        elif peano_tree._dimension == 3:
+            for peano_index in range(size * size * size):
+                a, b, c = Peano_to_Cartesian_3d(peano_index, size)
+                current_node = peano_tree._tree_arrays[level][a][b][c]
+                if current_node[0] == 1 and current_node[1] == 0:  # Node exists and belongs to subtree 0
+                    # Check if this is a leaf node
+                    is_leaf = False
+
+                    if level == peano_tree._max_level - 1:
+                        # Nodes at finest level are always leaves
+                        is_leaf = True
+                    else:
+                        # Check if node has no children (not refined further)
+                        child_a, child_b, child_c = 3*a, 3*b, 3*c
+                        if (child_a < 3**(level+2) and child_b < 3**(level+2) and child_c < 3**(level+2) and
+                            peano_tree._tree_arrays[level+1][child_a][child_b][child_c][0] == 0):
+                            is_leaf = True
+
+                    if is_leaf:
+                        leaf_nodes.append((level, a, b, c))
+
+    total_leaves = len(leaf_nodes)
+    
+    if total_leaves == 0:
+        print("No leaf nodes found in subtree 0 to split.")
+        return (False, [])
+
+    print(f"Found {total_leaves} leaf nodes across all levels to distribute")
+
+    # Calculate how many leaves each subtree should get for balanced distribution
+    leaves_per_subtree = total_leaves // (number_of_subtrees)
+    remaining_leaves = total_leaves % (number_of_subtrees)
+
+    print(f"Target distribution: {leaves_per_subtree} leaves per subtree, {remaining_leaves} extra leaves that have to be distributed among other trees")
+
+    # Create distribution plan
+    distribution = []
+    for i in range(number_of_subtrees):
+        target_count = leaves_per_subtree + (1 if i < remaining_leaves else 0)
+        distribution.append(target_count)
+
+    print(f"Distribution plan: {distribution}")
+    
+    return distribution
+    
 
 
 def distribute_leaves_bottom_up(
@@ -188,12 +267,14 @@ def distribute_leaves_bottom_up(
     """
     # Collect all leaf nodes (at all levels) that belong to subtree 0.
     # The level sweep can be either coarse->fine (legacy) or fine->coarse.
+    distribution = equidistant_splitting(peano_tree,
+                                         number_of_subtrees,
+                                         verbose = False,
+                                         )
+
     leaf_nodes = []
 
     level_range = range(peano_tree._max_level)
-    if finest_level_first:
-        level_range = range(peano_tree._max_level - 1, -1, -1)
-
     for level in level_range:
         size = 3**(level + 1)
 
@@ -239,33 +320,17 @@ def distribute_leaves_bottom_up(
                     if is_leaf:
                         leaf_nodes.append((level, a, b, c))
 
-    total_leaves = len(leaf_nodes)
-
-    if total_leaves == 0:
-        print("No leaf nodes found in subtree 0 to split.")
-        return (False, [])
-
-    print(f"Found {total_leaves} leaf nodes across all levels to distribute")
-
-    # Calculate how many leaves each subtree should get for balanced distribution
-    leaves_per_subtree = total_leaves // (number_of_subtrees)
-    remaining_leaves = total_leaves % (number_of_subtrees)
-
-    print(f"Target distribution: {leaves_per_subtree} leaves per subtree, {remaining_leaves} extra leaves that have to be distributed among other trees")
-
-    # Create distribution plan
-    distribution = []
-    for i in range(number_of_subtrees):
-        target_count = leaves_per_subtree + (1 if i < remaining_leaves else 0)
-        distribution.append(target_count)
-
-    print(f"Distribution plan: {distribution}")
-
     # Apply the redistribution to leaf nodes
     current_subtree = 0
     current_count = 0
     moved_nodes = [0] * (number_of_subtrees)  # Track actual moves
+    
+    
 
+    level_range = range(peano_tree._max_level)
+    if finest_level_first:
+        level_range = range(peano_tree._max_level - 1, -1, -1)
+        
     for leaf_coords in leaf_nodes:
         if peano_tree._dimension == 2:
             level, a, b = leaf_coords
