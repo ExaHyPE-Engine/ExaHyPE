@@ -175,6 +175,25 @@ def create_constructor_initialisation_string(peano_tree,
 
         @return `(hardcoded_config, hardcoded_mode)` when called with a Tree instance;
             a plain format string when called with the legacy 4-argument signature.
+            
+        @todo Dmitry: There's a bug here. If you run
+        
+        python3 tutorial_offline_load_balancing_sbh.py --trees 8 --cell-size 1.8 --load-balancing-metric offline-regular-bottom-up
+        
+        then you get 
+
+Extracted hardcoded parameters:
+  grid_sweeps       = [4, 4, 4, 4, 4, 4, 4, 6, 6, 6, 6, 6, 6, 6]
+  splitting_trees   = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  number_of_cells   = [90, 90, 90, 90, 90, 90, 91, 31, 31, 30, 30, 30, 30, 3]
+  subtrees          = [1, 2, 3, 4, 5, 6, 7, 1, 2, 3, 4, 5, 6, 7]
+  destination ranks = [0, 0, 0, 0, 0, 0, 0]
+  modi              = peano4::SplitInstruction::Mode::BottomUp
+
+        The bottom-up is correct. However it all has to be on Level 6, as the rot of node 1 
+        for example is not all on the same level.
+
+
     """
     # Backward compatibility path:
     # create_constructor_initialisation_string(sweep_numbers, parent_trees, subpartition_sizes, destination_ranks)
