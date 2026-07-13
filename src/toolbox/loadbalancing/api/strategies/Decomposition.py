@@ -1,4 +1,4 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and
+# This file is part of the ExaHyPE2 project. For conditions of decomposition and
 # use, please see the copyright notice at www.peano-framework.org
 
 from Tree import Tree
@@ -88,19 +88,19 @@ def equidistant_splitting(peano_tree: Tree,
         print("No leaf nodes found in subtree 0 to split.")
         return (False, [])
 
-    # Calculate how many leaves each subtree should get for balanced distribution
+    # Calculate how many leaves each subtree should get for balanced decomposition
     leaves_per_subtree = total_leaves // (number_of_subtrees)
     remaining_leaves = total_leaves % (number_of_subtrees)
 
-    # Create distribution plan
-    distribution = []
+    # Create decomposition plan
+    decomposition = []
     for i in range(number_of_subtrees):
         target_count = leaves_per_subtree + (1 if i < remaining_leaves else 0)
-        distribution.append(target_count)
+        decomposition.append(target_count)
 
     if verbose:
-        print(f"Found {total_leaves} leaf nodes across all levels to distribute")
-        print(f"Target distribution: {leaves_per_subtree} leaves per subtree, {remaining_leaves} extra leaves that have to be distributed among other trees")
-        print(f"Distribution plan: {distribution}")
+        print(f"Found {total_leaves} leaf nodes across all levels for decomposition")
+        print(f"Target decomposition: {leaves_per_subtree} leaves per subtree, {remaining_leaves} extra leaves that have to be distributed among other trees")
+        print(f"Decomposition plan: {decomposition}")
     
-    return distribution
+    return decomposition
