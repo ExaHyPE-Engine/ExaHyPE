@@ -1,8 +1,8 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 import numpy as np
-from .SFC import Peano_to_Cartesian_2d
-from .SFC import Peano_to_Cartesian_3d
+from .strategies.SFC import Peano_to_Cartesian_2d
+from .strategies.SFC import Peano_to_Cartesian_3d
 
 
 class Tree(object):

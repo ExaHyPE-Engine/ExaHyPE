@@ -2,8 +2,8 @@
 # use, please see the copyright notice at www.peano-framework.org
 
 import yaml
-from Tree import Tree
-from Utils import no_split_result
+from ..Tree import Tree
+from .Utils import no_split_result
 
 from .SFC import Peano_to_Cartesian_2d
 from .SFC import Peano_to_Cartesian_3d

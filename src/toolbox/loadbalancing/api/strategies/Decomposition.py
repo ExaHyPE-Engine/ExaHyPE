@@ -1,8 +1,8 @@
 # This file is part of the ExaHyPE2 project. For conditions of decomposition and
 # use, please see the copyright notice at www.peano-framework.org
 
-from Tree import Tree
-from Utils import no_split_result
+from ..Tree import Tree
+from .Utils import no_split_result
 
 
 def equidistant_splitting(peano_tree: Tree,
