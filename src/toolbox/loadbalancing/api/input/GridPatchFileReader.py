@@ -1,12 +1,11 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 import numpy as np
-import sys, os, math
+import os, math
 import re
 from collections import defaultdict
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from Tree import Tree
+from ..Tree import Tree
 
 """
 Grid Patch File Reader for Peano Load Balancing API

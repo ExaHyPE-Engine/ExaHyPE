@@ -1,11 +1,6 @@
-import os
-import sys
 import pytest
 
-# Ensure the loadbalancing API is importable when running pytest from repo root
-sys.path.insert(0, os.path.abspath("src/toolbox/loadbalancing/api"))
-
-from strategies.SFC import (
+from toolbox.loadbalancing.api.strategies.SFC import (
     Cartesian_to_Peano_2d,
     Peano_to_Cartesian_2d,
     Cartesian_to_Peano_3d,

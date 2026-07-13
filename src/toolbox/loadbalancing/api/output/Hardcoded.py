@@ -127,6 +127,31 @@ def _infer_hardcoded_mode(subtrees):
         return per_split_modes[0]
 
     return "{" + ", ".join(per_split_modes) + "}"
+
+
+def _normalise_destination_ranks(destination_ranks, subtrees):
+    """!
+    Normalise destination rank input to one rank per split instruction.
+
+    Accepted input formats:
+    1. Per-instruction ranks: len(destination_ranks) == len(subtrees)
+    2. Per-subtree ranks (excluding subtree 0): len(destination_ranks) == max(subtrees)
+       The rank for subtree s>0 is taken from destination_ranks[s-1] and repeated
+       for every occurrence of s in subtrees.
+    """
+    if len(destination_ranks) == len(subtrees):
+        return destination_ranks
+
+    max_subtree_id = max(subtrees, default=0)
+    if len(destination_ranks) == max_subtree_id:
+        return [destination_ranks[subtree_id - 1] for subtree_id in subtrees]
+
+    raise ValueError(
+        "destination_ranks ({}) must either match the number of split instructions ({}) "
+        "or provide one rank per subtree excluding subtree 0 ({})".format(
+            len(destination_ranks), len(subtrees), max_subtree_id
+        )
+    )
     
     
 @overload
@@ -227,6 +252,8 @@ Extracted hardcoded parameters:
     sweep_numbers, parent_trees, subpartition_sizes, subtrees = extract_split_instructions(peano_tree)
     hardcoded_mode = _infer_hardcoded_mode(subtrees)
 
+    destination_ranks = _normalise_destination_ranks(destination_ranks, subtrees)
+
     if verbose:
         print("Extracted hardcoded parameters:")
         print("  grid_sweeps       =", sweep_numbers)
@@ -235,11 +262,6 @@ Extracted hardcoded parameters:
         print("  subtrees          =", subtrees)
         print("  destination ranks =", destination_ranks)
         print("  modi              =", hardcoded_mode)
-
-    if len(destination_ranks) != len(subtrees):
-        raise ValueError(
-            "destination_ranks ({}) must have the same length as the extracted split instructions ({})".format(len(destination_ranks),len(subtrees))
-        )
 
     hardcoded_config = "{" + _format_initialisation_lists(
         sweep_numbers,
