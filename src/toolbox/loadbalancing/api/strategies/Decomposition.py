@@ -2,69 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 
 from Tree import Tree
-from .SFC import Peano_to_Cartesian_2d
-from .SFC import Peano_to_Cartesian_3d
-
-
-
-def get_number_of_leaves(peano_tree: Tree):
-    """!
-    
-    Find out how many leaves there are in the tree
-    
-    @todo Dmitry I think we can slim down this routine quite a lot
-    
-    """
-    leaf_nodes = []
-
-    level_range = range(peano_tree._max_level)
-    for level in level_range:
-        size = 3**(level + 1)
-
-        if peano_tree._dimension == 2:
-            for peano_index in range(size * size):
-                a, b = Peano_to_Cartesian_2d(peano_index, size)
-                current_node = peano_tree._tree_arrays[level][a][b]
-                if current_node[0] == 1 and current_node[1] == 0:  # Node exists and belongs to subtree 0
-                    # Check if this is a leaf node
-                    is_leaf = False
-
-                    if level == peano_tree._max_level - 1:
-                        # Nodes at finest level are always leaves
-                        is_leaf = True
-                    else:
-                        # Check if node has no children (not refined further)
-                        child_a, child_b = 3*a, 3*b
-                        if (child_a < 3**(level+2) and child_b < 3**(level+2) and 
-                            peano_tree._tree_arrays[level+1][child_a][child_b][0] == 0):
-                            is_leaf = True
-
-                    if is_leaf:
-                        leaf_nodes.append((level, a, b))
-
-        elif peano_tree._dimension == 3:
-            for peano_index in range(size * size * size):
-                a, b, c = Peano_to_Cartesian_3d(peano_index, size)
-                current_node = peano_tree._tree_arrays[level][a][b][c]
-                if current_node[0] == 1 and current_node[1] == 0:  # Node exists and belongs to subtree 0
-                    # Check if this is a leaf node
-                    is_leaf = False
-
-                    if level == peano_tree._max_level - 1:
-                        # Nodes at finest level are always leaves
-                        is_leaf = True
-                    else:
-                        # Check if node has no children (not refined further)
-                        child_a, child_b, child_c = 3*a, 3*b, 3*c
-                        if (child_a < 3**(level+2) and child_b < 3**(level+2) and child_c < 3**(level+2) and
-                            peano_tree._tree_arrays[level+1][child_a][child_b][child_c][0] == 0):
-                            is_leaf = True
-
-                    if is_leaf:
-                        leaf_nodes.append((level, a, b, c))
-
-    total_leaves = len(leaf_nodes)
-    return total_leaves
+from Utils import no_split_result
 
 
 def equidistant_splitting(peano_tree: Tree,
@@ -73,7 +11,7 @@ def equidistant_splitting(peano_tree: Tree,
                           ):
     
     if number_of_subtrees <= 1:
-        return _no_split_result(
+        return no_split_result(
             f"No splitting requested (number_of_subtrees = {number_of_subtrees})."
         )
 
@@ -82,7 +20,7 @@ def equidistant_splitting(peano_tree: Tree,
         f"{number_of_subtrees} subtrees (staged workflow)"
     )
 
-    total_leaves = get_number_of_leaves(peano_tree)
+    total_leaves = peano_tree.number_of_leaves
     
     if total_leaves == 0:
         print("No leaf nodes found in subtree 0 to split.")

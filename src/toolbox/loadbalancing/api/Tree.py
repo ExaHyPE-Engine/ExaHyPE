@@ -1,6 +1,8 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 import numpy as np
+from .SFC import Peano_to_Cartesian_2d
+from .SFC import Peano_to_Cartesian_3d
 
 
 class Tree(object):
@@ -141,6 +143,9 @@ class Tree(object):
 	def number_of_subtrees(self):
 		return self._subtree_count
 
+	@property
+	def number_of_leaves(self):
+		return self._leaf_count
 
 	def __str__(self):
 		result = (
