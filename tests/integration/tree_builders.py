@@ -7,16 +7,10 @@ and correspond to the reference diagrams under
 ``documentation/toolbox/loadbalancing/``.
 """
 
-import os
-import sys
-
 import numpy as np
 
-# Ensure the loadbalancing API is importable when running pytest from repo root
-sys.path.insert(0, os.path.abspath("src/toolbox/loadbalancing/api"))
-
-from Tree import Tree
-from input.RegularGridGenerator import RegularGridGenerator
+from toolbox.loadbalancing.api.Tree import Tree
+from toolbox.loadbalancing.api.input.RegularGridGenerator import RegularGridGenerator
 
 
 def build_tree3_adaptive_2d() -> Tree:

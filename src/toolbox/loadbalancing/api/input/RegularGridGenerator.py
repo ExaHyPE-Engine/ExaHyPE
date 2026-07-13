@@ -1,10 +1,7 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 import numpy as np
-import sys, os
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from Tree import Tree
+from ..Tree import Tree
 
 """
 Regular Grid Generator for Peano Load Balancing API

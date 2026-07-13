@@ -2,16 +2,11 @@
 # use, please see the copyright notice at www.peano-framework.org
 
 import yaml
-from Tree import Tree
-from .Decomposition import equidistant_splitting
+from ..Tree import Tree
+from .Utils import no_split_result
 
 from .SFC import Peano_to_Cartesian_2d
 from .SFC import Peano_to_Cartesian_3d
-
-
-def _no_split_result(message: str) -> tuple[str, str]:
-    print(message)
-    return ("", "")
 
 
 def split_tree(
@@ -94,7 +89,7 @@ def split_tree(
         )
 
     if not has_leaves_to_split:
-        return _no_split_result("No leaf nodes found in subtree 0 to split.")
+        return no_split_result("No leaf nodes found in subtree 0 to split.")
 
 #    if enable_propagate_bottom_up:
 #        _propagate_bottom_up(peano_tree)
@@ -405,29 +400,9 @@ def distribute_leaves_top_down(peano_tree: Tree,
                 if is_component_root:
                     _dfs_3d(level, a, b, c)
 
-    total_leaves = len(leaf_nodes)
-
-    if total_leaves == 0:
-        print("No leaf nodes found in subtree 0 to split.")
-        return (False, [])
-
-    print(f"Found {total_leaves} leaf nodes across all levels to distribute (DFS order)")
-
-    leaves_per_subtree = total_leaves // (number_of_subtrees)
-    remaining_leaves = total_leaves % (number_of_subtrees)
-
-    print(f"Target decomposition: {leaves_per_subtree} leaves per subtree, {remaining_leaves} extra leaves")
-
-    decomposition = []
-    for i in range(number_of_subtrees):
-        target_count = leaves_per_subtree + (1 if i < remaining_leaves else 0)
-        decomposition.append(target_count)
-
-    print(f"Distribution plan: {decomposition}")
-
     current_subtree = 0
     current_count = 0
-    moved_nodes = [0] * (number_of_subtrees)
+    moved_nodes = [0] * len(decomposition)
 
     for leaf_coords in leaf_nodes:
         if peano_tree._dimension == 2:
@@ -442,7 +417,7 @@ def distribute_leaves_top_down(peano_tree: Tree,
             moved_nodes[current_subtree] += 1
             current_count += 1
 
-        if current_count >= decomposition[current_subtree] and current_subtree < number_of_subtrees - 1:
+        if current_count >= decomposition[current_subtree] and current_subtree < len(decomposition) - 1:
             current_subtree += 1
             current_count = 0
 

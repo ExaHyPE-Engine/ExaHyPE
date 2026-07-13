@@ -1,13 +1,8 @@
-import os
-import sys
 import itertools
 import pytest
 
-# Ensure the loadbalancing API is importable when running pytest from repo root
-sys.path.insert(0, os.path.abspath("src/toolbox/loadbalancing/api"))
-
-from input.RegularGridGenerator import RegularGridGenerator
-import strategies.SplitTrees as split_strategy
+from toolbox.loadbalancing.api.input.RegularGridGenerator import RegularGridGenerator
+import toolbox.loadbalancing.api.strategies.SplitTrees as split_strategy
 
 
 @pytest.mark.parametrize(
@@ -55,7 +50,7 @@ def test_bottom_up_propagation_promotes_parent_if_all_children_same_subtree(
     tree._tree_arrays[child_level][third_child] = (1, 0)
 
     # Act: run Stage II only
-    split_strategy._propagate_bottom_up(tree)
+    split_strategy.propagate_bottom_up(tree)
 
     # Assert: uniform-children parent is promoted
     assert tree._tree_arrays[parent_level][parent_coords] == (1, target_subtree)

@@ -1,12 +1,7 @@
-import os
-import sys
-
 import pytest
 
-# Ensure the loadbalancing API is importable when running pytest from repo root
-sys.path.insert(0, os.path.abspath("src/toolbox/loadbalancing/api"))
-
-import strategies.SplitTrees as split_strategy
+import toolbox.loadbalancing.api.strategies.SplitTrees as split_strategy
+import toolbox.loadbalancing.api.strategies.Decomposition as decomposition_strategy
 from tree_builders import build_visualise_tree_split_example3_2d
 
 
@@ -29,14 +24,17 @@ def test_example3_stage1_bfs_finest_first_leaf_distribution():
     the leaves as [4, 3, 3].
     """
     tree = build_visualise_tree_split_example3_2d()
+    decomposition = decomposition_strategy.equidistant_splitting(
+        peano_tree=tree,
+        number_of_subtrees=3,
+    )
 
     split_strategy.split_tree(
         peano_tree=tree,
-        number_of_subtrees=3,
+        decomposition=decomposition,
         traversal="bfs_finest_first",
         enable_propagate_bottom_up=False,
         enable_optimize_hierarchy=False,
-        enable_extract_split_instructions=False,
     )
 
     # Root and internal nodes remain in subtree 0 during Stage I.
@@ -84,23 +82,29 @@ def test_example3_stage3_promotes_root_and_level1_node():
     (their child set is incomplete), while preserving the same leaf split.
     """
     tree_stage2 = build_visualise_tree_split_example3_2d()
-    split_strategy.split_tree(
+    decomposition_stage2 = decomposition_strategy.equidistant_splitting(
         peano_tree=tree_stage2,
         number_of_subtrees=3,
+    )
+    split_strategy.split_tree(
+        peano_tree=tree_stage2,
+        decomposition=decomposition_stage2,
         traversal="bfs_finest_first",
         enable_propagate_bottom_up=True,
         enable_optimize_hierarchy=False,
-        enable_extract_split_instructions=False,
     )
 
     tree_stage3 = build_visualise_tree_split_example3_2d()
-    split_strategy.split_tree(
+    decomposition_stage3 = decomposition_strategy.equidistant_splitting(
         peano_tree=tree_stage3,
         number_of_subtrees=3,
+    )
+    split_strategy.split_tree(
+        peano_tree=tree_stage3,
+        decomposition=decomposition_stage3,
         traversal="bfs_finest_first",
         enable_propagate_bottom_up=True,
         enable_optimize_hierarchy=True,
-        enable_extract_split_instructions=False,
     )
 
     # Stage II only: the deepest refined node is compacted, but the upper
@@ -133,14 +137,17 @@ def test_example3_stage3_can_promote_sparse_mixed_parents_when_enabled():
     promoted without requiring a complete child set.
     """
     tree_stage3_relaxed = build_visualise_tree_split_example3_2d()
-    split_strategy.split_tree(
+    decomposition_relaxed = decomposition_strategy.equidistant_splitting(
         peano_tree=tree_stage3_relaxed,
         number_of_subtrees=3,
+    )
+    split_strategy.split_tree(
+        peano_tree=tree_stage3_relaxed,
+        decomposition=decomposition_relaxed,
         traversal="bfs_finest_first",
         enable_propagate_bottom_up=True,
         enable_optimize_hierarchy=True,
         require_all_children_for_hierarchy_optimization=False,
-        enable_extract_split_instructions=False,
     )
 
     # Relaxed Stage III promotes sparse mixed parents along the branch.
