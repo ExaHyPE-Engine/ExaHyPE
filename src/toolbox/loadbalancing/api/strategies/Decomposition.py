@@ -111,6 +111,27 @@ def quantised_splitting(peano_tree: Tree,
                         dimension: int,
                         verbose=False,
                        ):
+    """!
+    
+    Quantised splitting
+    
+    This splitting starts from a perfect splitting as we find it in
+    equidistant_splitting(), but then it picks partitions of the type
+    @f$ 1 \\cdot 3^{kd},  2 \\cdot 3^{kd}, ...,  (3^d-1) \\cdot 3^{kd}, 1 \\cdot 3^{(k+1)d}, 2 \\cdot 3^{(k+1)d}, ... @f$
+    
+    ## Implementation
+    
+    - Determine optimal number of splittings
+    - Introduce a residual counter. As the number of leaves typically does not 
+      exactly fit to number_of_subtrees, this is the remainder of the modulo
+      division.
+    - Identify smallest chunk from sequence above that literally just fits.
+    - Add the cells that should have been added to this chunk (due to the 
+      optimal distribution) but cannot be added (due to the quantisation from
+      the sequence above) to the residual.
+    - Next step, increase the optimum threshold by the residual.
+      
+    """
     
     if number_of_subtrees <= 1:
         return _no_split_result(
@@ -125,22 +146,24 @@ def quantised_splitting(peano_tree: Tree,
 
     # Calculate how many leaves each subtree should get for balanced distribution
     optimal_leaves_per_subtree = total_leaves // (number_of_subtrees)
-    residual_leaves    = 0
+    residual_leaves            = total_leaves % optimal_leaves_per_subtree
     
     # Create distribution plan
     distribution = []
     for i in range(number_of_subtrees):
-        current_chunk = 1
+        current_chunk     = 0
+        current_step_size = 3**dimension
         while (current_chunk<optimal_leaves_per_subtree+residual_leaves):
-            current_chunk = current_chunk * (3**dimension)
-        if current_chunk>3**dimension and current_chunk>optimal_leaves_per_subtree+residual_leaves:
-            current_chunk = current_chunk / (3**dimension)
+            if current_chunk == current_step_size * 3**dimension:
+                current_step_size = current_step_size * 3**dimension
+            current_chunk = current_chunk + current_step_size
+        current_chunk = current_chunk - current_step_size
         residual_leaves = residual_leaves + optimal_leaves_per_subtree - current_chunk
-        assert residual_leaves>=0
+        assert residual_leaves>=0, "residual leaves = {}".format(residual_leaves)
         distribution.append(current_chunk)
-        #print(f"append {current_chunk} and maintain residual {residual_leaves} with optimum {optimal_leaves_per_subtree}. New target {optimal_leaves_per_subtree+residual_leaves}")
+        print(f"append {current_chunk} and maintain residual {residual_leaves} with optimum {optimal_leaves_per_subtree}. New target {optimal_leaves_per_subtree+residual_leaves}")
 
-    distribution[-1] = distribution[-1] + (total_leaves-sum(distribution))
+    distribution[-1] = distribution[-1] + residual_leaves
     
     assert sum(distribution)==total_leaves, "{} vs {}".format(sum(distribution),total_leaves)
 
