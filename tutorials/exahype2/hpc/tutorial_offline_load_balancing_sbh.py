@@ -221,14 +221,13 @@ if __name__ == "__main__":
         SplitTrees.split_tree(
             peano_tree=tree,
             verbose = True,
-            decomposition = Decomposition.equidistant_splitting(peano_tree=tree,
-                                                                number_of_subtrees=number_of_subtrees,
-                                                                verbose=True)
+            decomposition = Decomposition.quantised_splitting(peano_tree=tree,
+                                                              number_of_subtrees=number_of_subtrees,
+                                                              dimension=3,
+                                                              verbose=True)
         )
         SplitTrees.propagate_bottom_up(tree)
         
-        # One rank per subtree (excluding subtree 0). Hardcoded expands this
-        # to one rank per extracted split instruction automatically.
         destination_ranks = Hardcoded.assign_trees_to_ranks_round_Robin(number_of_subtrees = tree.number_of_subtrees,
                                                                         max_ranks          = args.ranks
                                                                         )        
