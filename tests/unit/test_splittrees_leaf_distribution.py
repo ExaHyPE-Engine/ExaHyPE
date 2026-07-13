@@ -5,6 +5,16 @@ from toolbox.loadbalancing.api.input.RegularGridGenerator import RegularGridGene
 import toolbox.loadbalancing.api.strategies.SplitTrees as split_strategy
 
 
+def _balanced_decomposition(total_leaves, number_of_subtrees):
+    """Build an even decomposition list expected by Stage I helpers."""
+    leaves_per_subtree = total_leaves // number_of_subtrees
+    remaining_leaves = total_leaves % number_of_subtrees
+    decomposition = []
+    for i in range(number_of_subtrees):
+        decomposition.append(leaves_per_subtree + (1 if i < remaining_leaves else 0))
+    return decomposition
+
+
 @pytest.mark.parametrize(
     "dimensions,number_of_subtrees",
     [
@@ -30,7 +40,8 @@ def test_leaf_distribution_balanced_across_subtrees(dimensions, number_of_subtre
     leaf_count_before = tree._leaf_count
 
     # Act: run Stage I only (BFS traversal, default)
-    has_leaves, moved_nodes = split_strategy.distribute_leaves_bottom_up(tree, number_of_subtrees)
+    decomposition = _balanced_decomposition(leaf_count_before, number_of_subtrees)
+    has_leaves, moved_nodes = split_strategy.distribute_leaves_bottom_up(tree, decomposition)
 
     # Assert: leaves were found and redistribution occurred
     assert has_leaves
@@ -97,7 +108,8 @@ def test_leaf_distribution_does_not_modify_non_leaf_nodes(dimensions):
                                 non_leaf_assignments_before[(level, a, b, c)] = node[1]
 
     # Act: run Stage I
-    split_strategy.distribute_leaves_bottom_up(tree, number_of_subtrees=2)
+    decomposition = _balanced_decomposition(tree._leaf_count, 2)
+    split_strategy.distribute_leaves_bottom_up(tree, decomposition)
 
     # Assert: all non-leaf nodes remain unchanged
     for level_coords, subtree_before in non_leaf_assignments_before.items():
@@ -148,7 +160,8 @@ def test_leaf_distribution_only_redistributes_subtree_0(dimensions):
                     corner_leaves_subtree_1.append((a, b, c))
 
     # Act: run Stage I
-    split_strategy.distribute_leaves_bottom_up(tree, number_of_subtrees=1)
+    decomposition = _balanced_decomposition(tree._leaf_count, 1)
+    split_strategy.distribute_leaves_bottom_up(tree, decomposition)
 
     # Assert: leaves in subtree 1 remain in subtree 1
     if dimensions == 2:
@@ -198,7 +211,8 @@ def test_leaf_distribution_preserves_node_existence_weights(dimensions):
                         weights_before[(level, a, b, c)] = weight
 
     # Act: run Stage I
-    split_strategy.distribute_leaves_bottom_up(tree, number_of_subtrees=2)
+    decomposition = _balanced_decomposition(tree._leaf_count, 2)
+    split_strategy.distribute_leaves_bottom_up(tree, decomposition)
 
     # Assert: all weights remain unchanged
     for level_coords, weight_before in weights_before.items():
@@ -232,7 +246,8 @@ def test_leaf_distribution_returns_correct_moved_nodes_count(dimensions):
     finest_level = tree._max_level - 1
 
     # Act: run Stage I
-    has_leaves, moved_nodes = split_strategy.distribute_leaves_bottom_up(tree, number_of_subtrees)
+    decomposition = _balanced_decomposition(tree._leaf_count, number_of_subtrees)
+    has_leaves, moved_nodes = split_strategy.distribute_leaves_bottom_up(tree, decomposition)
 
     # Assert: moved_nodes list length is correct
     assert len(moved_nodes) == number_of_subtrees
