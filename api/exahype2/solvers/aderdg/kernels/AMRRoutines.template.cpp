@@ -96,11 +96,12 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceUnknownsRestriction(
 {% if DIMENSIONS==2 %}
   {{ m.gemm('face_Q_x_add', 'lQhbndFine', 'restrictor[subfaceIndex[0]]', 'lQhbndCoarse', '0', '0', '0') | indent(4) }}{##}
 {% else %}
+  // lQhbnd stores NUMBER_OF_DATA values per face node, matching the projection buffer tmpX.
   for (int y = 0; y < {{NUMBER_OF_DOF}}; y++) {
-    {{ m.gemm('face_Q_x', 'lQhbndFine', 'restrictor[subfaceIndex[0]]', 'tmpX', 'y*'~NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS, '0', 'y*'~NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS) | indent(6) }}{##}
+    {{ m.gemm('face_Q_x', 'lQhbndFine', 'restrictor[subfaceIndex[0]]', 'tmpX', 'y*'~NUMBER_OF_DOF*NUMBER_OF_DATA, '0', 'y*'~NUMBER_OF_DOF*NUMBER_OF_DATA) | indent(6) }}{##}
   }
   for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
-    {{ m.gemm('face_Q_y_add', 'tmpX', 'restrictor[subfaceIndex[1]]', 'lQhbndCoarse', 'x*'~NUMBER_OF_UNKNOWNS, '0', 'x*'~NUMBER_OF_UNKNOWNS) | indent(6) }}{##}
+    {{ m.gemm('face_Q_y_add', 'tmpX', 'restrictor[subfaceIndex[1]]', 'lQhbndCoarse', 'x*'~NUMBER_OF_DATA, '0', 'x*'~NUMBER_OF_DATA) | indent(6) }}{##}
   }
 {% endif %}
 

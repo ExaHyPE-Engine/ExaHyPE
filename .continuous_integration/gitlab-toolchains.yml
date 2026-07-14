@@ -18,8 +18,11 @@ GCC:
     FC: "gfortran"
     IMAGE_TAG: "${IMAGE_GCC}"
     PARALLEL_LAUNCH: ""
+    APPTAINERENV_ASAN_OPTIONS: "detect_leaks=1"
+    APPTAINERENV_UBSAN_OPTIONS: "print_stacktrace=1:halt_on_error=1"
     EXTRA_CONFIGURATION_OPTIONS: "-DPEANO_WITH_MULTITHREADING=OFF \
-                                  -DPEANO_WITH_MPI=OFF" # Off to test serial mode
+                                  -DPEANO_WITH_MPI=OFF \
+                                  -DPEANO_WITH_SANITIZER=address+undefined"
   trigger:
     include:
       - .continuous_integration/gitlab-pipeline.yml
@@ -56,8 +59,15 @@ LLVM:
     FC: "gfortran" # TODO: flang
     IMAGE_TAG: "${IMAGE_LLVM}"
     PARALLEL_LAUNCH: "OMP_NUM_THREADS=${OMP_THREADS} mpirun --bind-to none -np ${MPI_RANKS}"
+    APPTAINERENV_ASAN_OPTIONS: "detect_leaks=0"
+    APPTAINERENV_UBSAN_OPTIONS: "print_stacktrace=1:halt_on_error=1"
+    APPTAINERENV_OMPI_MCA_pml: "ob1"
+    APPTAINERENV_OMPI_MCA_osc: "^ucx"
+    APPTAINERENV_OMPI_MCA_btl: "self,sm,tcp"
+    APPTAINERENV_UCX_TLS: "tcp,sm"
     EXTRA_CONFIGURATION_OPTIONS: "-DPEANO_WITH_MULTITHREADING=ON \
-                                  -DPEANO_WITH_MPI=ON"
+                                  -DPEANO_WITH_MPI=ON \
+                                  -DPEANO_WITH_SANITIZER=address+undefined"
   trigger:
     include:
       - .continuous_integration/gitlab-pipeline.yml

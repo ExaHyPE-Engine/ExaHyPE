@@ -124,8 +124,6 @@ project = exahype2.Project(
 
 initial_conditions = """
   // Parameters for volcanic plume simulation using defined constants
-  Q[4] = 0.0; // Initialise plume indicator
-
   const double plume_center_x = DomainSize[0] * 0.5;
   const double plume_width = DomainSize[0] * 0.1;
   const double plume_base_y = DomainSize[1] * 0.1;
@@ -158,7 +156,6 @@ initial_conditions = """
       p_local = P0 +
               GRAVITY * (DomainSize[1] - plume_top_y) * RHO_AMBIENT + // Cold part above plume
               GRAVITY * (plume_top_y - x(1)) * RHO_HOT;               // Current plume slice
-      Q[4] = 1.0;
     }
   } else {
     // Outside plume column -> pure cold fluid

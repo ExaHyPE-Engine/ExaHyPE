@@ -29,3 +29,17 @@ Build:
     - .Variables
     - .RunOnDev
     - .BeforeScript
+
+# ClangTidy:
+#   stage: Test
+#   needs: [Build]
+#   rules:
+#     - if: '$CXX == "clang++"'
+#   script:
+#     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build && ninja ClangTidy"
+#   allow_failure: false
+#   extends:
+#     - .Tags
+#     - .Variables
+#     - .RunOnDev
+#     - .BeforeScript

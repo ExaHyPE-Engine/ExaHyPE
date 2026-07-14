@@ -52,12 +52,10 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   cCompType QavR[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {0.0};
 
   traceEnter("Average states");
-  // TODO: This loop still iterates over NUMBER_OF_DATA_PADDED while QL/QR are
-  // indexed with the unpadded NUMBER_OF_DATA stride below. A padded build can
-  // therefore read past one face slice unless storage and loop bounds match.
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xy++) {
-    SIMD(aligned(QavL,QavR,QL:PEANO_WITH_ALIGNMENT))
-    for (int n = 0; n < {{NUMBER_OF_DATA_PADDED}}; n++) {
+    // QL and QR use the unpadded NUMBER_OF_DATA stride, so n stays within one face node.
+    SIMD(aligned(QavL,QavR:PEANO_WITH_ALIGNMENT))
+    for (int n = 0; n < {{NUMBER_OF_DATA}}; n++) {
       QavL[n] += Quadrature<cCompType>::weights2[xy] * QL[xy * {{NUMBER_OF_DATA}} + n];
       QavR[n] += Quadrature<cCompType>::weights2[xy] * QR[xy * {{NUMBER_OF_DATA}} + n];
     }
@@ -95,13 +93,13 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
 
   traceEnter("Rusanov flux");
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xy++) {
-    SIMD(aligned(tmp_bnd,QL:PEANO_WITH_ALIGNMENT))
+    SIMD(aligned(tmp_bnd:PEANO_WITH_ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
       tmp_bnd[xy * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] = smax * (QL[xy * {{NUMBER_OF_DATA}} + n] - QR[xy * {{NUMBER_OF_DATA}} + n]);
     }
   }
 
-  SIMD(aligned(FL,tmp_bnd:PEANO_WITH_ALIGNMENT))
+  SIMD(aligned(tmp_bnd:PEANO_WITH_ALIGNMENT))
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xy++) {
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
       FL[xy*{{NUMBER_OF_UNKNOWNS}} + n] = 0.5 * (FL[xy*{{NUMBER_OF_UNKNOWNS}} + n] + FR[xy*{{NUMBER_OF_UNKNOWNS}} + n] + tmp_bnd[xy*{{NUMBER_OF_UNKNOWNS_PADDED}} + n]);
@@ -118,7 +116,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   cCompType ncp[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {0.0};
 
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xy++) {
-    SIMD(aligned(Qavg,QL,gradQ:PEANO_WITH_ALIGNMENT))
+    SIMD(aligned(Qavg,gradQ:PEANO_WITH_ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
        Qavg[n] = 0.5 * (QL[xy * {{NUMBER_OF_DATA}} + n] + QR[xy * {{NUMBER_OF_DATA}} + n]);
        gradQ[n] = QR[xy * {{NUMBER_OF_DATA}} + n] - QL[xy * {{NUMBER_OF_DATA}} + n];
@@ -143,7 +141,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
       ncp
     );
 
-    SIMD(aligned(FL,ncp:PEANO_WITH_ALIGNMENT))
+    SIMD(aligned(ncp:PEANO_WITH_ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
       FR[xy * {{NUMBER_OF_UNKNOWNS}} + n] -= 0.5 * ncp[n];
       FL[xy * {{NUMBER_OF_UNKNOWNS}} + n] += 0.5 * ncp[n];

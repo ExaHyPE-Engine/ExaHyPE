@@ -46,8 +46,9 @@ namespace {{ item }} {
 {% endif %}
 
 {% if not IS_LINEAR %}
-  constexpr int getRhsShift()   {return {{shift}};} // Same size as lQi
-{% set shift = shift+lQiSize %}
+  constexpr int getRhsSize()    {return {{rhsSize}};}
+  constexpr int getRhsShift()   {return {{shift}};}
+{% set shift = shift+rhsSize %}
 {% endif %}
 
 {% if gradQSize > 0 %}
@@ -84,7 +85,7 @@ namespace {{ item }} {
 
 {% if not IS_LINEAR %}
   // lQi + rhs + lFi + lSi + gradQ
-  constexpr int getPicardSize() {return {{lQiSize+lQiSize+lFiSize+lSiSize+gradQSize}}; }
+  constexpr int getPicardSize() {return {{lQiSize+rhsSize+lFiSize+lSiSize+gradQSize}}; }
 {% endif %}
 
   // Shifts for boundary conditions

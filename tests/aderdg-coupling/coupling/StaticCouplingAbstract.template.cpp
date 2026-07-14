@@ -6,8 +6,6 @@
 // **********************************************************************************************
 #include "{{CLASSNAME}}.h"
 
-#include <algorithm>
-
 #include "Constants.h"
 
 #include "tarch/mpi/Rank.h"

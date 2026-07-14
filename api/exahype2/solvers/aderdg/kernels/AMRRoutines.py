@@ -40,10 +40,9 @@ class AMRRoutines(object):
         nData = self.d["NUMBER_OF_DATA"]
 
         # Always overwrite input (no need to set to 0), except if add.
-        # nDim-1 face projection, inputs are padded.
-        # TODO: These GEMMs now use unpadded NUMBER_OF_DATA/NUMBER_OF_UNKNOWNS
-        # row strides but still mark A/C as aligned. Recheck the alignment flags
-        # for face and cell tensor slices in padded SIMD builds.
+        # The face projection GEMMs use unpadded NUMBER_OF_DATA/NUMBER_OF_UNKNOWNS
+        # row strides for A and C, so both are marked Unaligned (alignment_A/C = 0).
+        # These flags only matter in LIBXSMM builds; the generic fallback ignores them.
         self.d["GEMMS"]["face_Q_x"] = Gemms(
             nData,
             nDof,

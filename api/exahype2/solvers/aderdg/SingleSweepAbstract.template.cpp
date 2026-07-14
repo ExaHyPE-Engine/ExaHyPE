@@ -126,14 +126,15 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridConstructionStep() {}
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridInitialisationStep() {
   _solverState = SolverState::GridInitialisation;
+
   {{START_GRID_INITIALISATION_IMPLEMENTATION}}
+
+{% if USE_POINT_SOURCE %}
+  initPointSourceLocations(pointSourceLocation);
+{% endif %}
 }
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridInitialisationStep() {
-  if (_solverState == SolverState::GridInitialisation) {
-    {{FINISH_TIME_STEP_IMPLEMENTATION}}
-  }
-}
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridInitialisationStep() {}
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspendSolversForOneGridSweep() {
   _solverState = SolverState::Suspended;
@@ -327,11 +328,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {
   kernels::{{SOLVER_NAME}}::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initQuadratureNodesAndWeights();
   kernels::{{SOLVER_NAME}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initDGMatrices();
 {% endfor %}
-
-{% if USE_POINT_SOURCE %}
-  // Point source locations are global constants. We set them up exactly once here.
-  initPointSourceLocations(pointSourceLocation);
-{% endif %}
 
   {{START_SIMULATION_IMPLEMENTATION}}
 }

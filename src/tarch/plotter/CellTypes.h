@@ -65,8 +65,12 @@ namespace tarch::plotter {
    * expressions. Returns -1 for an unknown type.
    */
   constexpr int nodesOf(CellType type) {
-    const CellTypeInfo* info = lookupCellType(type);
-    return info != nullptr ? info->nodes : -1;
+    for (const CellTypeInfo& info : CellTypes) {
+      if (info.type == type) {
+        return info.nodes;
+      }
+    }
+    return -1;
   }
 
   /**

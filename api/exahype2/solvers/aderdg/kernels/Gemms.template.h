@@ -82,17 +82,19 @@ void {{gemm}}(const long double* A, const long double* B, long double* C);
   {% set precision_type = "float" %}
 {% endif %}
 
-{% if GEMMS[gemm_key].alignment_A == 1 %}
-  {% set alignment_A = "Aligned" %}
-{% else %}
-  {% set alignment_A = "Unaligned" %}
-{% endif %}
-
+{# A and C carry unpadded row strides for the face and cell projections, so a
+   per-slice base is aligned only when the alignment flag says so. B is loop
+   invariant in the vectorised it_3 loop, so its alignment never helps and it
+   stays out of the clause. #}
+{% set aligned_list = [] %}
 {% if GEMMS[gemm_key].alignment_C == 1 %}
-  {% set alignment_C = "Aligned" %}
-{% else %}
-  {% set alignment_C = "Unaligned" %}
+  {% set aligned_list = aligned_list + [Cp] %}
 {% endif %}
+{% if GEMMS[gemm_key].alignment_A == 1 %}
+  {% set aligned_list = aligned_list + [Ap] %}
+{% endif %}
+{% set main_aligned = ("aligned(" ~ aligned_list | join(",") ~ ":PEANO_WITH_ALIGNMENT)") if aligned_list else "" %}
+{% set reset_aligned = ("aligned(" ~ Cp ~ ":PEANO_WITH_ALIGNMENT)") if GEMMS[gemm_key].alignment_C == 1 else "" %}
 
 {% if USE_LIBXSMM %}
   {{gemms.baseroutinename}}({{A}}{% if A_shift != '0' %}+{{A_shift}}{% endif %}, {{B}}{% if B_shift != '0' %}+{{B_shift}}{% endif %}, {{C}}{% if C_shift != '0' %}+{{C_shift}}{% endif %});
@@ -109,7 +111,7 @@ void {{gemm}}(const long double* A, const long double* B, long double* C);
 {% if gemms.beta == 0 %}
   // Reset {{C}}
   for (int it_1 = 0; it_1 < {{gemms.N}}; it_1++) {
-    SIMD(aligned({{Cp}}:PEANO_WITH_ALIGNMENT))
+    SIMD({{reset_aligned}})
     for (int it_3 = 0; it_3 < {{gemms.M}}; it_3++) {
       {{C}}[{{C_shift}} + it_1 * {{gemms.LDC}} + it_3] = 0.0;
     }
@@ -118,7 +120,7 @@ void {{gemm}}(const long double* A, const long double* B, long double* C);
 
 for (int it_1 = 0; it_1 < {{gemms.N}}; it_1++) {
   for (int it_2 = 0; it_2 < {{gemms.K}}; it_2++) {
-    SIMD(aligned({{Cp}},{{Ap}},{{true_Bp}}:PEANO_WITH_ALIGNMENT))
+    SIMD({{main_aligned}})
     for (int it_3 = 0; it_3 < {{gemms.M}}; it_3++) {
       {{C}}[{{C_shift}} + it_1 * {{gemms.LDC}} + it_3] {{ '+' if gemms.alpha == 1 else '-' }}= {{A}}[{{A_shift}} + it_2 * {{gemms.LDA}} + it_3]
         * {% if (use_true_B and not force_coeff_matrix) %}{{true_alpha}} * {% endif %}{{true_B}}[{% if B_shift != '0' %}{{B_shift}}+{% endif %}it_1 * {{gemms.LDB}} + it_2];

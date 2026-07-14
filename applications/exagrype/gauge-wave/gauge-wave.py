@@ -59,7 +59,7 @@ def parse_arguments():
         action="store_true",
         help="show this help message and continue with project help",
     )
-    parser.add_argument("-et", "--end-time", type=float, default=1.0)
+    parser.add_argument("-et", "--end-time", type=float, default=0.5)
     parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=9)
     parser.add_argument("-l", "--grid-levels", type=int, default=None)
     parser.add_argument("-lmin", "--min-grid-levels", type=int, default=1)

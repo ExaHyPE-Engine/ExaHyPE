@@ -139,9 +139,9 @@ private:
 #endif
 
   static std::chrono::steady_clock::time_point             _startupTime;
-  static const Configuration                               _defaultConfiguration;
-  static std::vector<std::unique_ptr<const Configuration>> _configurationSnapshots;
-  static std::atomic<const Configuration*>                 _configuration;
+  static const Configuration* const                               _defaultConfiguration;
+  static std::vector<std::unique_ptr<const Configuration>>* const _configurationSnapshots;
+  static std::atomic<const Configuration*>                        _configuration;
   static std::once_flag                                    _debugFilterEnvironmentOnce;
   static std::atomic<std::string::size_type>               _alignedMessagePrefixColumn;
 

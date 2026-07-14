@@ -40,7 +40,7 @@ class ParticleSetGenerator(AbstractParticleSetGenerator):
         super(ParticleSetGenerator, self).__init__(data)
 
     def construct_output(self, output):
-        d = {"PARTICLE_TYPE": self._data.particle_model.name, "STD_CONTAINER": "vector"}
+        d = {"PARTICLE_TYPE": self._data.particle_model.name}
 
         templatefile_prefix = (
             os.path.realpath(__file__).replace(".pyc", "").replace(".py", "")

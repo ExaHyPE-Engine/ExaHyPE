@@ -178,7 +178,9 @@ void exahype2::fv::tests::ApplySplit1DRiemannToPatchTest::testIterateGrid() {
   }
 
   delete[] Qout;
+  delete[] Qcmp;
   delete[] Qouttest;
+  delete[] Qouttest2;
   ::tarch::freeMemory(numericalFluxL, ::tarch::MemoryLocation::Heap);
   ::tarch::freeMemory(numericalFluxR, ::tarch::MemoryLocation::Heap);
 }

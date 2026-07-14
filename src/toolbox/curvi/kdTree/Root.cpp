@@ -34,7 +34,7 @@ toolbox::curvi::Root::Root(const YAML::Node& node, double a_offset[3], double a_
     model = parser.parse(node["perturbation"], in);
 
     topo = std::function<double(double, double)>([&](double y, double x) {
-      static double               result[1];
+      double                      result[1];
       easi::ArraysAdapter<double> adapter;
       easi::Query                 query(1, 2);
 
@@ -45,7 +45,7 @@ toolbox::curvi::Root::Root(const YAML::Node& node, double a_offset[3], double a_
       query.x(0, 0) = x;
       query.x(0, 1) = y;
 
-      model->evaluate(query, adapter);
+      model->evaluate(query,adapter);
       return result[0];
     });
 

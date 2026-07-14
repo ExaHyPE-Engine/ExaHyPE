@@ -147,7 +147,6 @@ fv_solver.set_implementation(
 )
 fv_solver.add_user_solver_includes(
     """
-#include <algorithm>
 #include "../Flux.h"
 #include "../NonconservativeProduct.h"
 #include "../Riemann.h"

@@ -65,8 +65,19 @@ static_assert(
   "Memory allocation cache metadata has to preserve the public pointer alignment"
 );
 
-static std::mutex                                          MemoryAllocationCacheRegistrySemaphore;
-static std::vector<MemoryAllocationCacheState*>            MemoryAllocationCacheRegistry;
+// The registry and its lock must outlive every thread: OpenMP workers destroy
+// their thread_local cache state during library teardown, after the main thread
+// has run static destructors, so a registry with static storage duration would
+// already be freed. Each accessor holds a never-freed heap object behind a live
+// pointer, which stays reachable to the leak checker.
+static std::mutex& memoryAllocationCacheRegistrySemaphore() {
+  static std::mutex* const semaphore = new std::mutex();
+  return *semaphore;
+}
+static std::vector<MemoryAllocationCacheState*>& memoryAllocationCacheRegistry() {
+  static auto* const registry = new std::vector<MemoryAllocationCacheState*>();
+  return *registry;
+}
 static thread_local MemoryAllocationCacheState             ThreadLocalMemoryAllocationCache;
 static std::shared_mutex                                   DeviceAllocationMetadataSemaphore;
 static std::unordered_map<void*, DeviceAllocationMetadata> DeviceAllocationMetadataTable;
@@ -226,17 +237,18 @@ MemoryAllocationCacheState::MemoryAllocationCacheState() {
   deviceFreeLists.reserve(16);
   pinnedFreeLists.reserve(16);
 
-  std::lock_guard<std::mutex> guard(MemoryAllocationCacheRegistrySemaphore);
-  MemoryAllocationCacheRegistry.push_back(this);
+  std::lock_guard<std::mutex> guard(memoryAllocationCacheRegistrySemaphore());
+  memoryAllocationCacheRegistry().push_back(this);
 }
 
 MemoryAllocationCacheState::~MemoryAllocationCacheState() {
-  std::lock_guard<std::mutex> guard(MemoryAllocationCacheRegistrySemaphore);
+  std::lock_guard<std::mutex> guard(memoryAllocationCacheRegistrySemaphore());
   clearMemoryAllocationCacheState(*this);
 
-  auto it = std::find(MemoryAllocationCacheRegistry.begin(), MemoryAllocationCacheRegistry.end(), this);
-  if (it != MemoryAllocationCacheRegistry.end()) {
-    MemoryAllocationCacheRegistry.erase(it);
+  auto& registry = memoryAllocationCacheRegistry();
+  auto  it       = std::find(registry.begin(), registry.end(), this);
+  if (it != registry.end()) {
+    registry.erase(it);
   }
 }
 
@@ -367,8 +379,8 @@ void tarch::accelerator::MemoryAllocationCache::clear() {
   // the registry lock while walking it, as thread-local cache destructors also
   // unregister through this mutex. Otherwise a worker thread can destroy a TLS
   // cache after we copy the registry but before we clear the copied pointer.
-  std::lock_guard<std::mutex> guard(MemoryAllocationCacheRegistrySemaphore);
-  for (MemoryAllocationCacheState* state : MemoryAllocationCacheRegistry) {
+  std::lock_guard<std::mutex> guard(memoryAllocationCacheRegistrySemaphore());
+  for (MemoryAllocationCacheState* state : memoryAllocationCacheRegistry()) {
     if (state != nullptr) {
       clearMemoryAllocationCacheState(*state);
     }

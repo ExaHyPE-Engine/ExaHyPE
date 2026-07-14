@@ -23,6 +23,7 @@ class BufferSizes(object):
         # SPT buffer sizes
         # default values
         self.d["lQiSize"]     = 0
+        self.d["rhsSize"]     = 0
         self.d["lQiNextSize"] = 0
         self.d["lPiSize"]     = 0
         self.d["lFiSize"]     = 0
@@ -47,6 +48,8 @@ class BufferSizes(object):
                 self.d["PSiSize"] = (nDof + 1) * (nDof**nDim) * nUnknownsPad
         else:  # nonlinear
             self.d["lQiSize"] = nDataPad * (nDof ** (nDim + 1))
+            # rhs holds the evolved unknowns, so it uses nUnknownsPad.
+            self.d["rhsSize"] = nUnknownsPad * (nDof ** (nDim + 1))
             self.d["lQhiSize"] = nDataPad * (nDof**nDim)
             if self.d["USE_FLUX"]:
                 self.d["lFiSize"] = nUnknownsPad * (nDof ** (nDim + 1)) * nDim

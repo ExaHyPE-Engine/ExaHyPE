@@ -104,6 +104,31 @@ function(peano_apply_flags)
     ${PEANO_EXTRA_LINK_FLAGS}
   )
 
+  if(NOT PEANO_WITH_SANITIZER STREQUAL "none")
+    if(PEANO_WITH_SANITIZER STREQUAL "address")
+      set(_peano_sanitize_flag -fsanitize=address)
+    elseif(PEANO_WITH_SANITIZER STREQUAL "undefined")
+      set(_peano_sanitize_flag -fsanitize=undefined)
+    elseif(PEANO_WITH_SANITIZER STREQUAL "address+undefined")
+      set(_peano_sanitize_flag -fsanitize=address,undefined)
+    elseif(PEANO_WITH_SANITIZER STREQUAL "thread")
+      set(_peano_sanitize_flag -fsanitize=thread)
+    else()
+      message(FATAL_ERROR "Invalid PEANO_WITH_SANITIZER='${PEANO_WITH_SANITIZER}'. Expected none, address, undefined, address+undefined or thread.")
+    endif()
+    # Frame pointers and line tables keep the sanitizer stack traces readable in
+    # the optimised build types, which otherwise drop both.
+    set(PEANO_SANITIZER_FLAGS ${_peano_sanitize_flag} -g -fno-omit-frame-pointer)
+    target_compile_options(PeanoOptions INTERFACE
+      $<$<COMPILE_LANGUAGE:C>:${PEANO_SANITIZER_FLAGS}>
+      $<$<COMPILE_LANGUAGE:CXX>:${PEANO_SANITIZER_FLAGS}>
+    )
+    target_link_options(PeanoOptions INTERFACE ${_peano_sanitize_flag})
+    # libstdc++ bounds and precondition checks catch container misuse the
+    # sanitizer cannot see.
+    target_compile_definitions(PeanoOptions INTERFACE _GLIBCXX_ASSERTIONS)
+  endif()
+
   if(PEANO_WITH_FPE)
     target_compile_definitions(PeanoOptions INTERFACE PEANO_WITH_FPE)
     # Intel's LLVM front-end rejects FENV_ACCESS without precise FP semantics. FENV_ACCESS

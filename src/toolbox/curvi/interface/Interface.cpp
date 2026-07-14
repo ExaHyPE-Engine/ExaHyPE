@@ -67,6 +67,11 @@ double toolbox::curvi::Interface::invertProjection(Coordinate coord, double coor
   double index_xi  = (coords[xi] - offset_xi) / size_xi * (range_xi.back() - range_xi.front()) + range_xi.front();
   double index_eta = (coords[eta] - offset_eta) / size_eta * (range_eta.back() - range_eta.front()) + range_eta.front();
 
+  // A query on the boundary of the face lands exactly on the last node, where rounding can push
+  // the ceiled index one past it. Clamp so that the stencil below always stays within the face.
+  index_xi  = std::clamp(index_xi, static_cast<double>(range_xi.front()), static_cast<double>(range_xi.back()));
+  index_eta = std::clamp(index_eta, static_cast<double>(range_eta.front()), static_cast<double>(range_eta.back()));
+
   int index_xi_l  = std::floor(index_xi);
   int index_eta_l = std::floor(index_eta);
   int index_xi_c  = std::ceil(index_xi);
@@ -91,8 +96,14 @@ double toolbox::curvi::Interface::invertProjection(Coordinate coord, double coor
                 + l_xi_l * l_eta_l * lower(mu, xi, index_xi_l, eta, index_eta_l);
 
   double rel_pos_mu;
-  rel_pos_mu       = (coords[mu] - mu_l) / (mu_u - mu_l);
-  double rel_index = (rel_pos_mu * boundary.getIndexSize(mu) + boundary.getIndexOffset(mu)) / grid[mu];
+  rel_pos_mu = (coords[mu] - mu_l) / (mu_u - mu_l);
+
+  // rel_pos_mu runs from 0 on the lower face of the block to 1 on its upper face, i.e. across the
+  // (getIndexSize(mu) - 1) intervals spanned by the block's nodes. Likewise the grid[mu] nodes of
+  // the domain span grid[mu] - 1 intervals, so both counts have to be turned into interval counts
+  // to map an index onto its position in the reference space.
+  double index     = rel_pos_mu * (boundary.getIndexSize(mu) - 1) + boundary.getIndexOffset(mu);
+  double rel_index = index / (grid[mu] - 1);
   return rel_index * size[mu] + offset[mu];
 }
 

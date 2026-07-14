@@ -245,7 +245,6 @@ aderdg_solver.set_implementation(
 )
 aderdg_solver.add_user_solver_includes(
     """
-#include <algorithm>
 #include "../Flux.h"
 #include "../NonconservativeProduct.h"
 #include "../../tsunami/riemann/WellBalancedRusanov.h"

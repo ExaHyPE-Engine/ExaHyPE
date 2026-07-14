@@ -13,6 +13,9 @@ option(PEANO_WITH_ZLIB "Build with ZLIB compression support" ON)
 option(PEANO_WITH_LIBXSMM "Build with LIBXSMM support" OFF)
 option(PEANO_WITH_CURVI "Build with Curvi toolbox support" OFF)
 
+set(PEANO_WITH_SANITIZER "none" CACHE STRING "Runtime sanitizer: none, address, undefined, address+undefined or thread")
+set_property(CACHE PEANO_WITH_SANITIZER PROPERTY STRINGS none address undefined address+undefined thread)
+
 set(SUPPORTED_ACCELERATOR_ARCHITECTURES
   none
   sm_70 sm_72 sm_75 sm_80 sm_86 sm_87 sm_89 sm_90 sm_100 sm_103 sm_120 sm_121
@@ -107,6 +110,13 @@ macro(peano_resolve_gpu_backend)
   if(PEANO_WITH_GPU_BACKEND STREQUAL "kokkos")
     set(IPO_SUPPORTED FALSE)
     message(STATUS "Disabling IPO/LTO for Kokkos compatability")
+  endif()
+  # ThinLTO and a sanitizer do not compose: the linker rejects the combined
+  # bitcode with "Expected at most one ThinLTO module per bitcode file".
+  if(NOT PEANO_WITH_SANITIZER STREQUAL "none"
+     OR "${PEANO_EXTRA_CXX_FLAGS} ${PEANO_EXTRA_C_FLAGS} ${CMAKE_CXX_FLAGS} ${CMAKE_C_FLAGS}" MATCHES "-fsanitize")
+    set(IPO_SUPPORTED FALSE)
+    message(STATUS "Disabling IPO/LTO because a sanitizer is enabled")
   endif()
 endmacro()
 

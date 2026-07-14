@@ -46,6 +46,7 @@ Checks: >
   -readability-make-member-function-const,
   -readability-math-missing-parentheses,
   -readability-suspicious-call-argument
+# TODO: Promote bug-finding families to errors (clang-analyzer-*, bugprone-*, concurrency-*, mpi-*, openmp-*).
 WarningsAsErrors: ''
 HeaderFileExtensions:
   - h

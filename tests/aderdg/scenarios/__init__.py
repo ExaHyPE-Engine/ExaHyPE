@@ -5,6 +5,7 @@ from .advection_linear import AdvectionLinear
 from .elastic_planar_waves import ElasticPlanarWaves
 from .elastic_ricker_pulse import ElasticRickerPulse
 from .euler_gaussian_bell import EulerGaussianBell
+from .euler_gaussian_bell_3d import EulerGaussianBell3D
 from .euler_isentropic_vortex import EulerIsentropicVortex
 from .swe_radial_dam_break import SWERadialDamBreak
 from .swe_resting_lake import SWERestingLake
