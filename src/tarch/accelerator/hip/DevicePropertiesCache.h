@@ -5,8 +5,6 @@
 #if defined(PEANO_WITH_GPU_BACKEND_HIP)
 
 #include <hip/hip_runtime.h>
-#include <map>
-#include <mutex>
 
 namespace tarch::accelerator::hip {
   class DevicePropertiesCache;

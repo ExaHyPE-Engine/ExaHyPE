@@ -2,8 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "CSVReader.h"
 
-#include <fstream>
-
 tarch::reader::CSVReader::CSVReader(const std::string& filepath, const int skipFirstNLines) {
   std::ifstream csvFile(filepath.c_str());
   if (!csvFile.is_open()) {

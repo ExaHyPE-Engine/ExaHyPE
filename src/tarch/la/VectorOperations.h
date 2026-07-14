@@ -5,10 +5,6 @@
 #include "ScalarOperations.h"
 #include "Vector.h"
 
-#include <cmath>
-#include <iosfwd>
-#include <vector>
-
 template <int Size, typename Scalar>
 std::string toString(const tarch::la::Vector<Size, Scalar>& vector);
 

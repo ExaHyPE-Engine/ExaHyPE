@@ -16,7 +16,6 @@
 #include "tarch/Assertions.h"
 #include "tarch/NonCriticalAssertions.h"
 #include "tarch/la/Vector.h"
-#include "tarch/instrumentation/Log.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 
 #include "kernels/{{SOLVER_NAME}}/Quadrature.h"
@@ -31,8 +30,6 @@
 {% endif %}
 
 {{SOLVER_INCLUDES}}
-
-#include <algorithm>
 
 {% for item in NAMESPACE -%}
 namespace {{ item }} {
@@ -159,7 +156,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     {{ABSTRACT_SOLVER_USER_DECLARATIONS}}
 
   protected:
-
     SolverState _solverState;
 
     double     _minTimeStamp;

@@ -9,11 +9,6 @@
 #include "tarch/multicore/multicore.h"
 #include "tarch/services/ServiceRepository.h"
 
-#include <chrono>
-#include <cstdlib>
-#include <iostream>
-#include <sstream>
-
 /**
  * For the machine name. If it doesn't work, switch it off in the file
  * CompilerSpecificSettings.h.
@@ -218,7 +213,6 @@ bool tarch::mpi::Rank::isMessageInQueue([[maybe_unused]] int tag) const {
 }
 
 void tarch::mpi::Rank::shutdown() {
-
 #ifdef PEANO_WITH_MPI
   assertion(_rank != -1);
 

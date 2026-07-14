@@ -35,13 +35,11 @@ toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   particleID(particleID__),
   treeID(treeID__) {}
 
-
 tarch::la::Vector<DIMENSIONS, long long> toolbox::particles::assignmentchecks::
   internal::ParticleIdentifier::getVertexInd(
     const tarch::la::Vector<DIMENSIONS, double>& vertexX,
     const tarch::la::Vector<DIMENSIONS, double>& vertexH
   ) {
-
   tarch::la::Vector<DIMENSIONS, long long> ind;
 
   for (size_t i = 0; i < DIMENSIONS; i++) {
@@ -52,7 +50,6 @@ tarch::la::Vector<DIMENSIONS, long long> toolbox::particles::assignmentchecks::
 
   return ind;
 }
-
 
 int toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   getVertexDepth(
@@ -67,10 +64,8 @@ int toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   return result;
 }
 
-
 bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   numericalEquals(const ParticleIdentifier& rhs) const {
-
   for (size_t i = 0; i < DIMENSIONS; i++) {
     if (vertexInd(i) != rhs.vertexInd(i))
       return false;
@@ -80,10 +75,8 @@ bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
          and (treeID == rhs.treeID) and (vertexDepth == rhs.vertexDepth);
 }
 
-
 bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   numericalSmaller(const ParticleIdentifier& rhs) const {
-
   if (*this == rhs)
     return false;
 
@@ -121,10 +114,8 @@ bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   return false;
 }
 
-
 std::string toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   toString() const {
-
   std::stringstream sstr;
   sstr
     << "(" << particleName << ",ID=" << particleID
@@ -134,7 +125,6 @@ std::string toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   return sstr.str();
 }
 
-
 bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   operator<(
     const toolbox::particles::assignmentchecks::internal::ParticleIdentifier&
@@ -143,14 +133,12 @@ bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
   return numericalSmaller(rhs);
 }
 
-
 bool operator==(
   const toolbox::particles::assignmentchecks::internal::ParticleIdentifier& lhs,
   const toolbox::particles::assignmentchecks::internal::ParticleIdentifier& rhs
 ) {
   return lhs.numericalEquals(rhs);
 }
-
 
 bool operator!=(
   const toolbox::particles::assignmentchecks::internal::ParticleIdentifier& lhs,

@@ -7,8 +7,6 @@
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/la/Vector.h"
 
-#include <bitset>
-
 namespace peano4 {
   /**
    * Is used by the z-loop. See zForEach and zForEach3.

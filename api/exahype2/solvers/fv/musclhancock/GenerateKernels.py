@@ -5,6 +5,7 @@ import jinja2
 
 import peano4.output
 
+
 def generate_kernels(
     solver,
     output,
@@ -59,6 +60,7 @@ def generate_kernels(
 """,
         undefined=jinja2.DebugUndefined,
     ).render(**d)
+
 
 def generate_fused_kernels(
     solver,

@@ -4,8 +4,6 @@
 
 #include "tarch/accelerator/accelerator.h"
 
-#include <cmath>
-
 namespace applications::exahype2::exagrype {
   /**
    * A postprocessing routine which pushes the solution back into the

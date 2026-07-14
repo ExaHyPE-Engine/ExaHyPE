@@ -10,9 +10,6 @@
 #include "tarch/services/Service.h"
 #include "tarch/services/ServiceRepository.h"
 
-#include <atomic>
-#include <vector>
-
 namespace {
   std::atomic<int>                   rankWhichHasSetNonCriticalAssertion{-1};
   tarch::multicore::BooleanSemaphore assertionSemaphore;

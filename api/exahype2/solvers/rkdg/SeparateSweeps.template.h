@@ -3,18 +3,15 @@
 #pragma once
 
 #include "Abstract{{CLASSNAME}}.h"
-#include "tarch/instrumentation/Log.h"
 
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
-
 {%- endfor %}
   class {{CLASSNAME}};
 
 {% for item in NAMESPACE -%}
   }
 {%- endfor %}
-
 
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
   public:
@@ -45,7 +42,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
     ) override;
     {% endif %}
 
-
     {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
     virtual void initialCondition(
       double * NOALIAS Q,
@@ -54,7 +50,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
     ) override;
     {% endif %}
 
-    
     {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
     virtual void boundaryConditions(
       const double * NOALIAS Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]

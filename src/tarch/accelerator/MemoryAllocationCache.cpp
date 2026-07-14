@@ -5,13 +5,6 @@
 #include "accelerator.h"
 #include "tarch/Assertions.h"
 
-#include <algorithm>
-#include <mutex>
-#include <new>
-#include <shared_mutex>
-#include <unordered_map>
-#include <vector>
-
 struct DeviceMemoryAllocationCacheKey {
   std::size_t sizeInBytes;
   int         device;

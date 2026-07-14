@@ -5,8 +5,6 @@
 #include "tarch/multicore/Task.h"
 #include "tarch/MemoryUsage.h"
 
-#include <sstream>
-
 tarch::services::ServiceRepository tarch::services::ServiceRepository::_singleton;
 
 tarch::services::ServiceRepository::ServiceRepository() :

@@ -2,10 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "tarch/instrumentation/Log.h"
 #include "tarch/multicore/BooleanSemaphore.h"
-
-#include <map>
 
 namespace tarch::accelerator {
   class MemoryBlocks;

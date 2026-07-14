@@ -10,7 +10,6 @@ std::vector<toolbox::particles::assignmentchecks::ParticlePosition> toolbox::
   particles::assignmentchecks::recordParticlePositions(
     const ParticleContainer& container
   ) {
-
   std::vector<toolbox::particles::assignmentchecks::ParticlePosition> result(
     container.size()
   );
@@ -26,7 +25,6 @@ std::vector<toolbox::particles::assignmentchecks::ParticlePosition> toolbox::
   return result;
 }
 
-
 template <typename ParticleContainer>
 void toolbox::particles::assignmentchecks::traceParticleMovements(
   const ParticleContainer&                     container,
@@ -35,7 +33,6 @@ void toolbox::particles::assignmentchecks::traceParticleMovements(
   const tarch::la::Vector<DIMENSIONS, double>& vertexH,
   int                                          spacetreeId
 ) {
-
 #ifdef ASSIGNMENT_CHECKS
 
   assertion((container.size()) == (recordedPositions.size()), container.size(), recordedPositions.size());
@@ -48,7 +45,6 @@ void toolbox::particles::assignmentchecks::traceParticleMovements(
     typename ParticleContainer::value_type>::type;
 
   while (pParticle != container.end()) {
-
     if ((*pParticle)->getParallelState() == Particle::ParallelState::Local) {
       moveParticle(
         pruneTypeName<Particle>(),

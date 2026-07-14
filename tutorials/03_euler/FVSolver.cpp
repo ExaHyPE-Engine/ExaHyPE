@@ -8,9 +8,6 @@
 //   Shortcuts::E        total energy   (1 component)
 #include "FVSolver.h"
 
-#include <algorithm>
-#include <cmath>
-
 // Half-thickness of a symmetric NACA airfoil. c: chord length, t: maximum
 // relative thickness.
 double airfoilSymmetric(double x, double c = 100, double t = 0.12) {

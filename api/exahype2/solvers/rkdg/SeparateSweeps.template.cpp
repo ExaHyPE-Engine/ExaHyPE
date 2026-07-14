@@ -3,10 +3,6 @@
 #include "{{CLASSNAME}}.h"
 #include "exahype2/RefinementControl.h"
 
-
-
-
-
 {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %}
 ::exahype2::RefinementCommand {{NAMESPACE | join("::")}}::{{CLASSNAME}}::refinementCriterion(
   const double * NOALIAS Q,               // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -48,6 +44,5 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
   // @todo implement
 }
 {% endif %}
-
 
 {{SOLVER_USER_DEFINITIONS}}

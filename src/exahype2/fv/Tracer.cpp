@@ -2,8 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "Tracer.h"
 
-#include "tarch/instrumentation/Log.h"
-
 tarch::la::Vector<DIMENSIONS, int> exahype2::fv::internal::mapParticleOntoVoxel(
   const peano4::datamanagement::CellMarker&    marker,
   int                                          voxelsPerAxis,

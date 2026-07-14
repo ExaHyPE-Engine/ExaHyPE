@@ -6,8 +6,6 @@
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/VertexMarker.h"
 
-#include <vector>
-
 namespace toolbox {
   namespace particles {
     /**

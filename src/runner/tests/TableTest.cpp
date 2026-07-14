@@ -4,8 +4,6 @@
 
 #include "runner/ReportBox.h"
 
-#include <string>
-
 runner::tests::TableTest::TableTest() :
   TestCase("runner::tests::TableTest") {}
 

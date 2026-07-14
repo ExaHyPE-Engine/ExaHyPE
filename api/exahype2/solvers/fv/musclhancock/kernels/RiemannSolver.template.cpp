@@ -5,7 +5,7 @@
 #include "exahype2/fv/VolumeIndex.h"
 #include "exahype2/fv/PatchUtils.h"
 #include "toolbox/blockstructured/Enumeration.h"
-#include "tarch/instrumentation/Trace.h"
+#include "tarch/instrumentation/Log.h"
 
 {% import 'LoopOverVolumes.macro.h' as patch with context %}
 {% import 'LoopOverDimensions.macro.h' as dimensions with context %}

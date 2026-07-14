@@ -4,9 +4,6 @@
 
 #include "tarch/mpi/Rank.h"
 
-#include <filesystem>
-#include <fstream>
-
 namespace fs = std::filesystem;
 
 void tarch::plotter::JSONTimeSeriesWriter::writeTimeSeriesMetaFile(

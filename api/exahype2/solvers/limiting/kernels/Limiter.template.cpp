@@ -10,9 +10,6 @@
 
 #include "tarch/accelerator/accelerator.h"
 
-#include <cstring>
-#include <algorithm>
-
 {% import 'Gemms.template.h' as m with context %}{# get template macros #}
 
 void {{FULL_QUALIFIED_NAMESPACE}}::projectOnFVLimiterSpaceWithHalo(

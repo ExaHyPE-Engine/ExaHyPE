@@ -1,9 +1,7 @@
-
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "tarch/instrumentation/Log.h"
 #include "tarch/tests/TestCase.h"
 
 namespace toolbox {
@@ -15,7 +13,6 @@ namespace toolbox {
 } // namespace toolbox
 
 class toolbox::particles::tests::TestHelpers: public tarch::tests::TestCase {
-
   private:
     /**
      * Test particleAssignedToVertexWillBeLocal()
@@ -100,4 +97,3 @@ class toolbox::particles::tests::TestHelpers: public tarch::tests::TestCase {
     TestHelpers();
     virtual void run() override;
 };
-

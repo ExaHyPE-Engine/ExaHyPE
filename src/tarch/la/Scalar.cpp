@@ -2,9 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "tarch/la/Scalar.h"
 
-#include <algorithm>
-#include <cmath>
-
 static_assert(tarch::la::NUMERICAL_ZERO_DIFFERENCE > 0.0, "Scalar tolerances should be positive");
 
 double tarch::la::max(double a, double b, double c) { return std::max(a, std::max(b, c)); }

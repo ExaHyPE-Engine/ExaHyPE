@@ -6,9 +6,6 @@
 #include "tarch/mpi/mpi.h"
 #include "tarch/services/ServiceRepository.h"
 
-#include <algorithm>
-#include <sstream>
-
 static_assert(std::is_standard_layout_v<peano4::grid::GridVertex>);
 static_assert(std::is_trivially_copyable_v<peano4::grid::GridVertex>);
 

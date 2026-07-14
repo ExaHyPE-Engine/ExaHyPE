@@ -4,9 +4,6 @@
 
 #if defined(PEANO_WITH_GPU_BACKEND_SYCL)
 
-#include <cstdio>
-#include <cstdlib>
-
 namespace tarch::accelerator {
   inline void abort(const char* message) {
     COMPILE_IF_ON_DEVICE(

@@ -5,14 +5,12 @@
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 
-
 namespace tarch {
   namespace multicore {
     class MultiReadSingleWriteSemaphore;
     class MultiReadSingleWriteLock;
   }
 }
-
 
 #if defined(SharedTBB) or defined(SharedTBBExtension)
 #include "tarch/multicore/tbb/MultiReadSingleWriteSemaphore.h"

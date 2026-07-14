@@ -5,10 +5,6 @@
 #include "runner/RepositoryCallbacks.h"
 #include "tarch/la/Vector.h"
 
-#include <bitset>
-#include <string>
-#include <vector>
-
 namespace runner {
   class Engine;
   class ReportBox;

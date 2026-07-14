@@ -1,8 +1,5 @@
 #pragma once
 
-#include <iomanip>
-#include <iostream>
-
 namespace exahype2 {
   namespace fv {
     namespace particles {
@@ -150,7 +147,6 @@ namespace exahype2 {
           exahype2::fv::particles::utils::setVelocity(*p1, state1.velocity);
           exahype2::fv::particles::utils::setVelocity(*p2, state2.velocity);
         }
-
 
         template <typename Particle>
         void midpointIntegration(std::vector<Particle*>& particles) {
@@ -306,7 +302,6 @@ namespace exahype2 {
           // === k4 ===
           k4_1 = exahype2::fv::particles::integration::updatePartialStepWithBase(current1, k3_1, timeStepSize, 1.0);
           k4_2 = exahype2::fv::particles::integration::updatePartialStepWithBase(current2, k3_2, timeStepSize, 1.0);
-
 
           centralGravityInteraction(*p1, k4_1.position, *p2, k4_2.position);
           k4_1.acceleration = exahype2::fv::particles::utils::getAcceleration(*p1);

@@ -2,11 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "tarch/instrumentation/Log.h"
-
-#include <string>
-#include <unordered_map>
-
 namespace toolbox::loadbalancing {
   class Blacklist;
 } // namespace toolbox::loadbalancing

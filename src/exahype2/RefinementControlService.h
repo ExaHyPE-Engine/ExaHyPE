@@ -7,8 +7,6 @@
 #include "tarch/multicore/RecursiveSemaphore.h"
 #include "tarch/services/Service.h"
 
-#include <list>
-
 namespace exahype2 {
   class RefinementControl;
   class RefinementControlService;

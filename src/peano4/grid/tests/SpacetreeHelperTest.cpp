@@ -7,8 +7,6 @@
 #include "peano4/grid/SpacetreeHelper.h"
 #include "tarch/la/Vector.h"
 
-#include <sstream>
-
 namespace {
   void initVertices(peano4::grid::GridVertex vertices[TWO_POWER_D], int defaultRank) {
     for (int v = 0; v < TWO_POWER_D; ++v) {

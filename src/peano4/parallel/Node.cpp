@@ -13,10 +13,6 @@
 #include "tarch/multicore/Lock.h"
 #include "tarch/multicore/Task.h"
 
-#include <chrono> // std::chrono::seconds
-#include <thread> // std::this_thread::sleep_for
-#include <unordered_set>
-
 peano4::parallel::Node peano4::parallel::Node::_singleton;
 
 namespace {

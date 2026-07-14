@@ -6,8 +6,6 @@
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/FaceMarker.h"
 
-#include <type_traits>
-
 namespace toolbox::blockstructured {
   /*
    * Piecewise-constant interpolation and averaging restriction for block-structured

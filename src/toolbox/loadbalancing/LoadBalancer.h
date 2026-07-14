@@ -7,10 +7,6 @@
 #include "State.h"
 #include "Statistics.h"
 
-#include <memory>
-#include <set>
-#include <string>
-
 namespace toolbox::loadbalancing {
   class LoadBalancer;
   namespace tests {

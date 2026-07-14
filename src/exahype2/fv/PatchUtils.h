@@ -11,9 +11,6 @@
 #include "tarch/multicore/multicore.h"
 #include "toolbox/blockstructured/Enumeration.h"
 
-#include <sstream>
-#include <vector>
-
 namespace exahype2::fv {
   TARGET_DECLARE
 

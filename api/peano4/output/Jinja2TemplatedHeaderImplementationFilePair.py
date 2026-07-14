@@ -12,6 +12,7 @@ from .Helper import write_file
 
 from peano4.Logger import log
 
+
 class Jinja2TemplatedHeaderImplementationFilePair(object):
   """!
 Represents a pair of C++ header and implementation files

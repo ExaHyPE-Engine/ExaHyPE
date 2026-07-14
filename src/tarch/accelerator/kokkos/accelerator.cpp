@@ -7,7 +7,6 @@
 #include "tarch/Assertions.h"
 
 #include <Kokkos_Core.hpp>
-#include <cstring>
 
 void* tarch::accelerator::allocateDeviceMemory(std::size_t sizeInBytes, [[maybe_unused]] int device) {
   void* data = Kokkos::kokkos_malloc<Kokkos::DefaultExecutionSpace::memory_space>(sizeInBytes);

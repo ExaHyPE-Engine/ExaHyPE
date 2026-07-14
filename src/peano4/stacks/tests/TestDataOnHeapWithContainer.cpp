@@ -6,15 +6,11 @@
 #include "tarch/Assertions.h"
 #include "tarch/mpi/mpi.h"
 
-#include <numeric> // std::accumulate
-#include <utility> // std::move
-
 peano4::stacks::tests::TestDataOnHeapWithContainer::TestDataOnHeapWithContainer() :
   _container() {}
 
 peano4::stacks::tests::TestDataOnHeapWithContainer::TestDataOnHeapWithContainer(std::size_t size, DoFType v) :
   TestDataOnHeapWithContainer() {
-
   _container.reserve(size);
   for (std::size_t i = 0; i < size; ++i) {
     _container.push_back(new DoFType(v));

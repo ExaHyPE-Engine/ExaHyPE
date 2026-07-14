@@ -4,11 +4,6 @@
 
 #include "peano4/Globals.h"
 
-#include <array>
-#include <bitset>
-#include <set>
-#include <utility>
-
 namespace peano4::grid {
   struct StackTopology;
 } // namespace peano4::grid

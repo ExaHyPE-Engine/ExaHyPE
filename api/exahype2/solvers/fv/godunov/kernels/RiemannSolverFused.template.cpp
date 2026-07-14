@@ -4,8 +4,7 @@
 
 #include "exahype2/fv/VolumeIndex.h"
 #include "exahype2/fv/PatchUtils.h"
-#include "tarch/instrumentation/Trace.h"
-
+#include "tarch/instrumentation/Log.h"
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/accelerator/ParallelFor.h"
 #include "tarch/accelerator/ParallelReduce.h"

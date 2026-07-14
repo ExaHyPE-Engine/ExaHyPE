@@ -6,6 +6,7 @@
 
 #include "peano4/parallel/StartTraversalMessage.h"
 #include "peano4/parallel/TreeManagementMessage.h"
+#include "tarch/instrumentation/Log.h"
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/IntegerMessage.h"
 #include "tarch/mpi/Rank.h"

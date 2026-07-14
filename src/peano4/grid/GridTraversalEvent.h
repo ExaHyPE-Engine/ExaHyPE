@@ -8,10 +8,6 @@
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 
-#include <array>
-#include <cstdint>
-#include <type_traits>
-
 namespace peano4::grid {
   struct GridTraversalEvent;
 } // namespace peano4::grid

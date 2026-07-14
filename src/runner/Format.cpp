@@ -4,9 +4,6 @@
 
 #include "tarch/MemoryUsage.h"
 
-#include <algorithm>
-#include <iomanip>
-
 namespace {
   // Durations of at least this many days render as ">Nd" so the formatted width stays bounded.
   constexpr int MaxDurationDays = 999;

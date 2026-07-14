@@ -5,9 +5,6 @@
 #include "tarch/Assertions.h"
 #include "tarch/mpi/Rank.h"
 
-#include <algorithm>
-#include <cmath>
-
 class toolbox::loadbalancing::LoadBalancer::InterRankDistributionStrategy final: public Strategy {
 public:
   ~InterRankDistributionStrategy() override = default;

@@ -5,8 +5,6 @@
 #include "Scalar.h"
 #include "tarch/accelerator/accelerator.h"
 
-#include <cmath>
-
 TARGET_DECLARE
 
 namespace tarch::la {

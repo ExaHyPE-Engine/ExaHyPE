@@ -5,12 +5,6 @@
 #include "tarch/database/GlobalTimeSeriesDatabase.h"
 #include "tarch/mpi/Rank.h"
 
-#include <filesystem>
-#include <fstream>
-#include <sstream>
-#include <string>
-#include <vector>
-
 namespace {
   std::string testFileBaseName(const std::string& name) {
     return (tarch::tests::getWritableTestDirectory() / name).string();

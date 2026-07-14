@@ -6,8 +6,6 @@
 #include "peano4/grid/GridTraversalEvent.h"
 #include "toolbox/blockstructured/AMRRoutines.h"
 
-#include <algorithm>
-
 toolbox::blockstructured::tests::RestrictionTest::RestrictionTest() :
   TestCase("toolbox::blockstructured::tests::RestrictionTest") {}
 

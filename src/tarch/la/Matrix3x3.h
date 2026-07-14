@@ -2,9 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <iomanip>
-#include <sstream>
-
 template <typename Scalar>
 struct alignas(16) tarch::la::Matrix<3, 3, Scalar> {
 private:

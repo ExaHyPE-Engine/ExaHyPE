@@ -75,7 +75,6 @@ namespace toolbox {
             bool                                  bz,
             tarch::la::Vector<DIMENSIONS, double> boundary
           );
-
         } // namespace internal
       } // namespace tests
     } // namespace assignmentchecks
@@ -83,7 +82,6 @@ namespace toolbox {
 } // namespace toolbox
 
 class toolbox::particles::assignmentchecks::tests::TestHelpers : public tarch::tests::TestCase {
-
 private:
   /**
    * Test whether ParticleIdentifier and ParticleSearchIdentifier

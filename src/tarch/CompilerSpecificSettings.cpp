@@ -2,10 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "CompilerSpecificSettings.h"
 
-#include <climits>
-#include <limits>
-#include <version>
-
 #if defined(__APPLE__)
 #include <Availability.h>
 #endif

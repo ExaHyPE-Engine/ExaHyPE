@@ -16,7 +16,6 @@ class AbstractLimiterActionSet(ActionSet):
     def get_includes(self):
         return (
             """
-#include <functional>
 """
             + self._solver._get_default_includes()
             + self._solver.get_user_action_set_includes()

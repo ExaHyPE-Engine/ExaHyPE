@@ -12,7 +12,6 @@ toolbox::particles::assignmentchecks::tests::TestParticle::TestParticle(
   _partid(particleID),
   _isLocal(isLocal) {}
 
-
 int toolbox::particles::assignmentchecks::tests::TestParticle::getDepth(
 ) const {
   return _depth;
@@ -66,7 +65,6 @@ void toolbox::particles::assignmentchecks::tests::TestParticle::setIsLocal(
 ) {
   _isLocal = isLocal;
 }
-
 
 void toolbox::particles::assignmentchecks::tests::TestParticle::setVertexH(
   const tarch::la::Vector<DIMENSIONS, double>& vertexH

@@ -4,6 +4,7 @@
 
 #include "Constants.h"
 
+#include "tarch/instrumentation/Log.h"
 #include "tarch/mpi/mpi.h"
 #include "tarch/multicore/Lock.h"
 
@@ -11,8 +12,6 @@
 
 #include "toolbox/particles/MultiscaleTransitions.h"
 #include "toolbox/particles/assignmentchecks/TracingAPI.h"
-
-#include <numeric> // std::accumulate
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
   DoFType*                                     neighbourParticle,
@@ -148,7 +147,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
   }
 }
 
-
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
   ::peano4::stacks::SendReceiveContext  context,
   const {{CLASSNAME}}&                                         neighbour,
@@ -210,10 +208,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
     case ::peano4::stacks::SendReceiveContext::JoinDomain:
       assertion(false, "not implemented yet, but should be plain copy");
       break;
-
   }
 }
-
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::send(
   [[maybe_unused]] const ::peano4::datamanagement::VertexMarker& marker,
@@ -221,7 +217,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::send(
 ) {
   return true;
 }
-
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(
   [[maybe_unused]] const ::peano4::datamanagement::VertexMarker& marker,
@@ -294,7 +289,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone( const {{CLASSNAME}}& othe
   #endif
 }
 
-
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::deleteParticles() {
   for (auto *p: _container) {
     delete p;
@@ -302,11 +296,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::deleteParticles() {
   _container.clear();
 }
 
-
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clear() {
   _container.clear();
 }
-
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Container::iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particleCanNotBeLiftedLocally(
   const Container::iterator&   particle
@@ -317,14 +309,12 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clear() {
   return _container.erase(particle);
 }
 
-
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particlesCanNotBeLiftedLocally() {
   for (auto p: _container) {
     _sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(p);
   }
   _container.clear();
 }
-
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particlesCanNotBeDroppedLocallySoRollOverForNextMeshSweep(DoFType*  particle) {
   _sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(particle);
@@ -334,16 +324,13 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particlesCanNotBeDroppedLocallyS
   return _container.begin();
 }
 
-
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Container::const_iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::end() const {
   return _container.end();
 }
 
-
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Container::iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::begin() {
   return _container.begin();
 }
-
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Container::iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::end() {
   return _container.end();
@@ -352,7 +339,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particlesCanNotBeDroppedLocallyS
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::size() const {
   return _container.size();
 }
-
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::addParticle(DoFType*  particle) {
   // data consistency check

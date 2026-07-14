@@ -4,9 +4,6 @@
 
 #if defined(PEANO_WITH_GPU_BACKEND_OMPT)
 
-#include <cstdio>
-#include <cstdlib>
-
 namespace tarch::accelerator {
   TARGET_DECLARE
   inline GPU_CALLABLE_METHOD void abort(const char* message) {

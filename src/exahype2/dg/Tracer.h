@@ -2,10 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include "peano4/Globals.h"
 #include "peano4/datamanagement/CellMarker.h"
-
 
 namespace exahype2 {
   namespace dg {
@@ -32,7 +30,6 @@ namespace exahype2 {
       Particle&                                    particle
     );
 
-
     /**
      * Take all values of the unknown field Q and project them onto the
      * particle. In this context, we assume that the tracer's number of
@@ -51,6 +48,4 @@ namespace exahype2 {
   }
 }
 
-
 #include "Tracer.cpph"
-

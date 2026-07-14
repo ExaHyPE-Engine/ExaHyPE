@@ -2,14 +2,12 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 namespace tarch {
   namespace multicore {
     class BooleanSemaphore;
     class Lock;
   }
 }
-
 
 /**
  * Create a lock around a boolean semaphore region
@@ -56,4 +54,3 @@ class tarch::multicore::Lock {
     void free();
     bool tryLock();
 };
-

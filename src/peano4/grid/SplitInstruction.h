@@ -2,9 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <map>
-#include <string>
-
 namespace peano4::grid {
   /**
    * Instruction to split

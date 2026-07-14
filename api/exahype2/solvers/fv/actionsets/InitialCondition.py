@@ -6,6 +6,7 @@ import peano4.solversteps
 
 from .AbstractFVActionSet import AbstractFVActionSet
 
+
 class InitialCondition(AbstractFVActionSet):
     def __init__(self, solver, guard):
         AbstractFVActionSet.__init__(self, solver)

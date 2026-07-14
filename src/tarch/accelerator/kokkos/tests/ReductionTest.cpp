@@ -6,7 +6,6 @@
 #include "tarch/tests/TestMacros.h"
 
 #include <Kokkos_Core.hpp>
-#include <vector>
 
 namespace {
   constexpr int DeviceId     = tarch::accelerator::Device::DefaultDevice;

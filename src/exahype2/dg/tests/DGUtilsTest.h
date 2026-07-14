@@ -2,9 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include "tarch/tests/TestCase.h"
-
 
 namespace exahype2 {
   namespace dg {
@@ -13,7 +11,6 @@ namespace exahype2 {
     }
   }
 }
-
 
 class exahype2::dg::tests::DGUtilsTest : public tarch::tests::TestCase {
   private:
@@ -29,5 +26,3 @@ class exahype2::dg::tests::DGUtilsTest : public tarch::tests::TestCase {
 
     void run() override;
 };
-
-

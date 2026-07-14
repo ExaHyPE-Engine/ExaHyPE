@@ -4,10 +4,8 @@
 
 #include "MemoryAllocationCache.h"
 #include "MemoryBlocks.h"
-
 #include "tarch/Assertions.h"
-
-#include <cstring>
+#include "tarch/instrumentation/Log.h"
 
 void* tarch::accelerator::allocateHeapMemory(std::size_t sizeInBytes) {
   return ::operator new(sizeInBytes, std::align_val_t(PEANO_WITH_ALIGNMENT));

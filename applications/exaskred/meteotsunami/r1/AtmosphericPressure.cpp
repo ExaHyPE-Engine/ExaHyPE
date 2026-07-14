@@ -4,9 +4,6 @@
 
 #include "Constants.h"
 
-#include <cmath>
-#include <numbers>
-
 double applications::exahype2::exaskred::meteotsunami::r1::atmosphericPressure(double x, double y, double t) {
   (void)y;
 

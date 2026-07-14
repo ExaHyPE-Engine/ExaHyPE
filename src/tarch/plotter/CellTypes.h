@@ -2,8 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <cstdint>
-
 namespace tarch::plotter {
   /**
    * The cell types the plotter understands, gathered in one table.

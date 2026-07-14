@@ -8,13 +8,6 @@
 #include "runner/PhaseNames.h"
 #include "runner/ReportBox.h"
 
-#include <algorithm>
-#include <iomanip>
-#include <sstream>
-#include <string>
-#include <utility>
-#include <vector>
-
 namespace {
   std::string displayLabel(const std::string& observerName) {
     if (observerName == runner::StepName::CreateGrid) {

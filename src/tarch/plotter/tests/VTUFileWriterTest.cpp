@@ -6,10 +6,6 @@
 #include "tarch/mpi/Rank.h"
 #include "tarch/plotter/VTUFileWriter.h"
 
-#include <filesystem>
-#include <fstream>
-#include <string>
-
 namespace fs = std::filesystem;
 
 namespace {
@@ -334,7 +330,6 @@ void tarch::plotter::tests::VTUFileWriterTest::testOversizedDataThrows() {
     vd->plotVertexData(i0 + 1, 2.0); // extra data
 
     plotter.writeToFile(filename, 0);
-
   } catch (const std::runtime_error&) {
     exceptionThrown = true;
   }
@@ -371,7 +366,6 @@ void tarch::plotter::tests::VTUFileWriterTest::testInconsistentSchemaThrows() {
     vd1->plotVertexData(0, tarch::la::Vector<3, double>{0.0, 0.0, 0.0});
 
     plotter.writeToFile(filename, 0);
-
   } catch (const std::runtime_error&) {
     exceptionThrown = true;
   }

@@ -2,8 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "TestCase.h"
 
-#include <fstream>
-#include <string>
 #include <unistd.h>
 
 namespace {

@@ -1,3 +1,4 @@
+#include "tarch/instrumentation/Log.h"
 #include "tarch/mpi/IntegerMessage.h"
 #include "tarch/mpi/mpi.h"
 #include "tarch/multicore/Lock.h"

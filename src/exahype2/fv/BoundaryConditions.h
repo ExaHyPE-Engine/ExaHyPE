@@ -4,11 +4,10 @@
 
 #include "PatchUtils.h"
 
+#include "tarch/instrumentation/Log.h"
 #include "tarch/la/Vector.h"
 #include "peano4/Loop.h"
 #include "peano4/Globals.h"
-
-#include <functional>
 
 namespace exahype2 {
   namespace fv {

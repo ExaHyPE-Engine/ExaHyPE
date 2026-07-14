@@ -2,10 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "PeriodicTopology.h"
 
-#include <algorithm>
-#include <cmath>
-#include <sstream>
-
 /**
  * Derive the integer cell index from an AutomatonState and the global domain
  * offset. Uses AutomatonState::x/h, which are always present, in contrast to

@@ -1,6 +1,5 @@
 #include "DGUtils.h"
 
-
 template <typename Particle, int SourceIndex, int DestIndex>
 void exahype2::dg::projectValueOntoParticle(
   const peano4::datamanagement::CellMarker&    marker,
@@ -21,7 +20,6 @@ void exahype2::dg::projectValueOntoParticle(
       SourceIndex
     );
 }
-
 
 template <typename Particle, typename QStoreType>
 void exahype2::dg::projectAllValuesOntoParticle(

@@ -284,7 +284,6 @@ void toolbox::curvi::BlockBoundary::setFace(BlockFace face, const Face& other) {
   }
 }
 
-
 void toolbox::curvi::BlockBoundary::setFace(Coordinate coord, bool upper, Face other) {
   if (coord == coords[2]) {
     if (upper) {
@@ -426,7 +425,6 @@ void toolbox::curvi::BlockBoundary::getCoord(Coordinate a_coords[3]) { std::copy
 
 toolbox::curvi::Coordinate toolbox::curvi::BlockBoundary::getCoord(int i) { return coords[i]; }
 
-
 void toolbox::curvi::BlockBoundary::setIndexOffset(int a_index_offset[3]) {
   std::copy_n(a_index_offset, 3, index_offset);
 }
@@ -494,7 +492,6 @@ void toolbox::curvi::BlockBoundary::toNetCDF(std::string prefix) {
 
 toolbox::curvi::FaceBoundary toolbox::curvi::BlockBoundary::
   setupSplittingFace(Coordinate cycx[2], int fault_index, double fault_position, int indexOffset_fault[3]) {
-
   int        dmesh         = 8;
   Coordinate c_depth_fault = getNormal(cycx[0], cycx[1]);
 
@@ -517,7 +514,6 @@ toolbox::curvi::FaceBoundary toolbox::curvi::BlockBoundary::
   std::copy_n(size, 3, size_fault);
   size_fault[cycx[0]] += size[cycx[0]] / indexSize_fault[cycx[0]] * dmesh; // add buffer
   size_fault[cycx[1]] += size[cycx[1]] / indexSize_fault[cycx[1]] * dmesh; // add buffer
-
 
   indexOffset_fault[cycx[0]] -= dmesh / 2; // add buffer
   indexOffset_fault[cycx[1]] -= dmesh / 2; // add buffer
@@ -545,7 +541,6 @@ std::string toolbox::curvi::BlockBoundary::toString(int depth) {
   ss << indent << "Index Offset: " << index_offset[0] << " " << index_offset[1] << " " << index_offset[2] << " "
      << std::endl;
 
-
   ss << indent << "Index Size: " << index_size[0] << " " << index_size[1] << " " << index_size[2] << " " << std::endl;
 
   return ss.str();
@@ -568,12 +563,10 @@ std::string toolbox::curvi::BlockBoundary::printFaces() {
   return ss.str();
 }
 
-
 void toolbox::curvi::BlockBoundary::checkConformity() {
   for (int c_int = 0; c_int < 3; c_int++) {
     Coordinate c = static_cast<Coordinate>(c_int);
     for (bool top : {false, true}) {
-
       Coordinate face_coords[2];
       getFace(c, top).getCoord(face_coords);
       int size[3];

@@ -2,9 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <limits>
-#include <string>
-
 {INCLUDES}
 
 {OPEN_NAMESPACE}

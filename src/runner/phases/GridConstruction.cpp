@@ -13,11 +13,6 @@
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/Core.h"
 
-#include <algorithm>
-#include <iomanip>
-#include <limits>
-#include <sstream>
-
 namespace {
   std::size_t groupedWidth(unsigned long bound) {
     return runner::Format::grouped(std::min<unsigned long>(bound, std::numeric_limits<int>::max())).size();

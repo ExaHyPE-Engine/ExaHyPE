@@ -7,11 +7,6 @@
 #include "toolbox/curvi/geometry/Face.h"
 #include "toolbox/curvi/interpolation/LagrangeInterpolation.h"
 
-#include <algorithm>
-#include <cmath>
-#include <vector>
-
-
 // FaceBoundary::FaceBoundary(){};
 
 /*Copy constructor*/
@@ -20,7 +15,6 @@ toolbox::curvi::FaceBoundary::FaceBoundary(const FaceBoundary& other):
   right_edge(other.right_edge),
   top_edge(other.top_edge),
   bottom_edge(other.bottom_edge) {
-
   std::copy_n(other.coords, 2, coords);
   std::copy_n(other.index_size, 3, index_size);
   position = other.position;
@@ -48,7 +42,6 @@ toolbox::curvi::FaceBoundary::
   top_edge(a_top),
   bottom_edge(a_bottom),
   position(a_position) {
-
   std::copy_n(a_coords, 2, coords);
 
   Coordinate mu = getNormal(coords[0], coords[1]);
@@ -65,7 +58,6 @@ toolbox::curvi::FaceBoundary::FaceBoundary(const Face& face):
   right_edge(Edge(face.getCoord(0))),
   top_edge(Edge(face.getCoord(1))),
   bottom_edge(Edge(face.getCoord(1))) {
-
   /*Copy position, indices and coordinates from face*/
   face.getIndexSize(index_size);
   face.getCoord(coords);
@@ -113,7 +105,6 @@ toolbox::curvi::FaceBoundary::
   right_edge(Edge(a_coords[0])),
   top_edge(Edge(a_coords[1])),
   bottom_edge(Edge(a_coords[1])) {
-
   /*Set position, indices*/
   std::copy_n(a_coords, 2, coords);
   std::copy_n(a_index_size, 3, index_size);
@@ -252,11 +243,9 @@ std::ostream& toolbox::curvi::operator<<(std::ostream& ss, const FaceBoundary& f
   return ss;
 }
 
-
 /*Splitts a Face Boundary along an edge defined by intersection_path*/
 void toolbox::curvi::FaceBoundary::
   split(Coordinate c, int intersection_index, Edge cutting_edge, FaceBoundary& left, FaceBoundary& right) {
-
   // Check if coordinate c is part of Face Boundary
   if (c != coords[0] && c != coords[1]) {
     std::stringstream ss;
@@ -315,7 +304,6 @@ void toolbox::curvi::FaceBoundary::
   right_new_top    = right_new_top.remesh(top_edge.numNodes() - intersection_index);
   right_new_bottom = right_new_bottom.remesh(top_edge.numNodes() - intersection_index);
 
-
   // set resulting face boundaries
   if (eta == coords[1]) {
     left = FaceBoundary(coords, position, getEdge(eta, false), cutting_edge, left_new_bottom, left_new_top);
@@ -327,7 +315,6 @@ void toolbox::curvi::FaceBoundary::
     right = FaceBoundary(coords, position, right_new_bottom, right_new_top, cutting_edge, getEdge(eta, true));
   }
 };
-
 
 void toolbox::curvi::FaceBoundary::checkConformity() {
   bool conform = true;

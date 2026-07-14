@@ -7,16 +7,7 @@
 #include "tarch/mpi/Rank.h"
 #include "tarch/mpi/mpi.h"
 
-#include <cstdint>
-#include <cstring>
-#include <filesystem>
 #include <hdf5.h>
-#include <map>
-#include <mutex>
-#include <set>
-#include <stdexcept>
-#include <string>
-#include <vector>
 
 namespace fs = std::filesystem;
 

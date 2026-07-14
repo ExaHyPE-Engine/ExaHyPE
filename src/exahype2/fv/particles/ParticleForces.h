@@ -219,7 +219,6 @@ namespace exahype2 {
          */
         template <typename Particle>
         tarch::la::Vector<DIMENSIONS, double> computeGravityForce(const Particle& particle);
-
       } // namespace forces
     } // namespace particles
   } // namespace fv

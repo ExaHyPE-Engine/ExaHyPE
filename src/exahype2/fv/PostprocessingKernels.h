@@ -2,14 +2,9 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
-#include <vector>
-
-#include "tarch/la/Vector.h"
 #include "tarch/multicore/multicore.h"
 
 #include "peano4/Globals.h"
-
 
 namespace exahype2 {
   namespace fv {
@@ -54,4 +49,3 @@ namespace exahype2 {
     );
   }
 }
-

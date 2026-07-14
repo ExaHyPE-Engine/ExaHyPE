@@ -2,10 +2,6 @@
 
 #include "tarch/mpi/mpi.h"
 
-#include <algorithm>
-#include <iostream>
-#include <sstream>
-
 peano4::parallel::TreeManagementMessage::TreeManagementMessage(
   int    __masterSpacetreeId,
   int    __workerSpacetreeId,

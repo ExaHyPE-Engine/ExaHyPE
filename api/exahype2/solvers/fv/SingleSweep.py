@@ -9,6 +9,7 @@ from .SolverDefinitions import SolverDefinitions
 from exahype2.solvers.PDETerms import PDETerms
 from exahype2.solvers.fv.actionsets import UpdatePatch
 
+
 class SingleSweep(FV):
     """
     Probably the simplest solver you could think off.

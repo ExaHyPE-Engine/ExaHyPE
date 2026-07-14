@@ -10,9 +10,6 @@
 #include "tarch/mpi/mpi.h"
 #include "tarch/services/ServiceRepository.h"
 
-#include <cstring>
-#include <limits>
-
 #ifdef PEANO_WITH_MPI
 namespace {
   enum WordIndex : int {

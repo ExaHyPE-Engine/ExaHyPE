@@ -4,8 +4,6 @@
 
 #include "CompilerSpecificSettings.h"
 
-#include <string>
-
 namespace tarch {
   enum class MemoryUsageFormat {
     KiB,

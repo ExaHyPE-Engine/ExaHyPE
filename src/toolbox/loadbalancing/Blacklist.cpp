@@ -3,9 +3,7 @@
 #include "Blacklist.h"
 
 #include "peano4/parallel/SpacetreeSet.h"
-
-#include <algorithm>
-#include <sstream>
+#include "tarch/instrumentation/Log.h"
 
 namespace {
   inline decltype(auto) gridStats(int treeId) {

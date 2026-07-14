@@ -5,7 +5,6 @@
 #include "Quadrature.h"
 
 #include "exahype2/dg/DGUtils.h"
-
 #include "peano4/Loop.h"
 
 {{FULL_QUALIFIED_NAMESPACE}}::MaxEigenvalueStatistics {{FULL_QUALIFIED_NAMESPACE}}::reduceMaxEigenvalues(

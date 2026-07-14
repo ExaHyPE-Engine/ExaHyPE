@@ -9,7 +9,6 @@
 #if defined(__linux__) && !defined(_MSC_VER)
 #include <cfenv>
 #include <csignal>
-#include <cstdlib>
 #include <cxxabi.h>
 #include <dlfcn.h>
 #include <fenv.h>
@@ -17,17 +16,9 @@
 #include <unistd.h>
 #endif
 
-#include <cstdint>
-#include <cstdio>
 #if defined(_MSC_VER)
 #include <float.h>
 #endif
-
-#include <array>
-#include <fstream>
-#include <mutex>
-#include <sstream>
-#include <string>
 
 namespace {
   constexpr bool hasException(

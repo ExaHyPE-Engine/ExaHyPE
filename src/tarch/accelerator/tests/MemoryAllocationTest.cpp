@@ -7,9 +7,6 @@
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/tests/TestMacros.h"
 
-#include <array>
-#include <cstddef>
-
 namespace {
   constexpr int         DeviceId     = tarch::accelerator::Device::DefaultDevice;
   constexpr std::size_t ElementCount = 4;

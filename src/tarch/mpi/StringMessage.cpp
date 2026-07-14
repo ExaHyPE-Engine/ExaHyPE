@@ -4,9 +4,6 @@
 #include "tarch/mpi/mpi.h"
 #include "tarch/services/ServiceRepository.h"
 
-#include <algorithm>
-#include <sstream>
-
 std::string tarch::mpi::StringMessage::toString() const {
   std::ostringstream out;
   out << "(";

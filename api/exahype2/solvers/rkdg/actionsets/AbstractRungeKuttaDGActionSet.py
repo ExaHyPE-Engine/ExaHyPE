@@ -33,7 +33,6 @@ class AbstractRungeKuttaDGActionSet(ActionSet):
     def get_includes(self):
         return (
             """
-#include <functional>
 #include "exahype2/dg/DGUtils.h"
 #include "exahype2/dg/CellIntegral.h"
 #include "exahype2/dg/Riemann.h"

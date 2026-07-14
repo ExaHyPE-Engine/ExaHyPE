@@ -5,10 +5,6 @@
 #include "Matrix.h"
 #include "Vector.h"
 
-#include <algorithm>
-#include <cmath>
-#include <iosfwd>
-
 namespace tarch::la {
   /**
    * Computes the sum of all entries of the matrix.

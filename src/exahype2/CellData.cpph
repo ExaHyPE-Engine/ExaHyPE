@@ -54,7 +54,6 @@ namespace exahype2 {
     numberOfCells(numberOfCells_),
     memoryLocation(memoryLocation_),
     targetDevice(targetDevice_) {
-
     QIn           = tarch::allocateMemory<inType*>(numberOfCells_, memoryLocation_, targetDevice_);
     faces         = tarch::allocateMemory<inType* [NumFaceTypes][TWO_TIMES_D]>(numberOfCells_, memoryLocation_, targetDevice_);
     cellCentre    = tarch::allocateMemory<tarch::la::Vector<DIMENSIONS, double>>(numberOfCells_, memoryLocation_, targetDevice_);

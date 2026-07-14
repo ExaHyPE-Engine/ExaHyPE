@@ -9,11 +9,6 @@
 #include "tarch/MemoryUsage.h"
 #include "tarch/mpi/Rank.h"
 
-#include <functional>
-#include <iomanip>
-#include <limits>
-#include <sstream>
-
 void runner::writeGridSnapshot(ReportBox& box, const RepositoryCallbacks& repositories) {
   const auto& statistics = loadBalancer().getStatistics();
   Table       report;

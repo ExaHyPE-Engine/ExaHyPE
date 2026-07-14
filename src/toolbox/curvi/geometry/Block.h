@@ -4,9 +4,6 @@
 
 #include "BlockBoundary.h"
 
-#include <string>
-#include <vector>
-
 namespace toolbox {
   namespace curvi {
     class Block {

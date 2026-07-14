@@ -4,8 +4,6 @@
 
 #include "tarch/Assertions.h"
 
-#include <string>
-
 #ifdef PEANO_WITH_MPI
 #include <mpi.h>
 #endif

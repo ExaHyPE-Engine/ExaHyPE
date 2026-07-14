@@ -4,6 +4,7 @@ import peano4
 
 import peano4.toolbox.blockstructured.ProjectPatchOntoFaces
 
+
 class ProjectPatchOntoFaces(peano4.toolbox.blockstructured.ProjectPatchOntoFaces):
     """!
     Project patch data onto faces so we can reconstruct the halo layers later on

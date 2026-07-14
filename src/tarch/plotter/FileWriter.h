@@ -4,14 +4,6 @@
 
 #include "tarch/la/Vector.h"
 
-#include <cstdint>
-#include <memory>
-#include <string>
-#include <tuple>
-#include <unordered_map>
-#include <utility>
-#include <vector>
-
 namespace tarch::plotter {
   class FileWriter;
 } // namespace tarch::plotter

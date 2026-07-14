@@ -4,16 +4,7 @@
 
 #include "PeriodicTopology.h"
 #include "StackTopology.h"
-
 #include "tarch/Assertions.h"
-
-#include <algorithm>
-#include <array>
-#include <optional>
-#include <set>
-#include <type_traits>
-#include <utility>
-#include <vector>
 
 namespace peano4::grid {
   template <class StackType>

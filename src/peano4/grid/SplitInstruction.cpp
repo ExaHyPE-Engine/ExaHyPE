@@ -2,8 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "SplitInstruction.h"
 
-#include <sstream>
-
 std::string peano4::grid::SplitInstruction::toString(SplitInstruction::Mode mode) {
   switch (mode) {
   case SplitInstruction::Mode::AggressiveTopDown:

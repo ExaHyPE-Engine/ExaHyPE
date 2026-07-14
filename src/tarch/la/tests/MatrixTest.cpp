@@ -7,9 +7,6 @@
 #include "tarch/la/MatrixOperations.h"
 #include "tarch/la/MatrixScalarOperations.h"
 
-#include <sstream>
-#include <string>
-
 tarch::la::tests::MatrixTest::MatrixTest():
   TestCase("tarch::la::tests::MatrixTest") {}
 

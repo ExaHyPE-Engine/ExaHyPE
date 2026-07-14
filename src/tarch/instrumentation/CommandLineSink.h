@@ -4,8 +4,6 @@
 
 #include "tarch/multicore/BooleanSemaphore.h"
 
-#include <string_view>
-
 namespace tarch::instrumentation {
   class CommandLineSink;
 } // namespace tarch::instrumentation

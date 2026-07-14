@@ -4,14 +4,12 @@
 
 #include "toolbox/particles/particles.h"
 
-
 #ifdef UseTestSpecificCompilerSettings
 #pragma optimize("", off)
 #endif
 
 toolbox::particles::tests::TestHelpers::TestHelpers():
   TestCase("toolbox::particles::tests::TestHelpers") {}
-
 
 void toolbox::particles::tests::TestHelpers::testParticleAssignedToVertexWillBeLocal() {
   #if DIMENSIONS==2
@@ -92,7 +90,6 @@ void toolbox::particles::tests::TestHelpers::testParticleAssignedToVertexWillBeL
   validateWithParams3( not toolbox::particles::particleAssignedToVertexWillBeLocal( x1, markerDFromYellowRank ), x1, markerDFromYellowRank.toString(), markerDFromYellowRank.getX() );
   validateWithParams3( not toolbox::particles::particleAssignedToVertexWillBeLocal( x2, markerDFromYellowRank ), x2, markerDFromYellowRank.toString(), markerDFromYellowRank.getX() );
 
-
   validateWithParams3( toolbox::particles::particleAssignedToVertexWillBeLocal( x1, markerAFromGreyRank ), x1, markerAFromGreyRank.toString(), markerAFromGreyRank.getX() );
   validateWithParams3( toolbox::particles::particleAssignedToVertexWillBeLocal( x2, markerAFromGreyRank ), x2, markerAFromGreyRank.toString(), markerAFromGreyRank.getX() );
 
@@ -123,7 +120,6 @@ void toolbox::particles::tests::TestHelpers::testParticleAssignedToVertexWillBeL
   validateWithParams3( toolbox::particles::particleAssignedToVertexWillBeLocal( x2, markerDFromGreyRank ), x2, markerDFromGreyRank.toString(), markerDFromGreyRank.getX() );
   #endif
 }
-
 
 void toolbox::particles::tests::TestHelpers::run() {
   testMethod(testParticleAssignedToVertexWillBeLocal);

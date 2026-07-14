@@ -2,12 +2,10 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/VertexMarker.h"
 #include "peano4/datamanagement/VertexEnumerator.h"
 #include "tarch/la/Vector.h"
-
 
 namespace toolbox {
   namespace particles {
@@ -90,6 +88,3 @@ namespace toolbox {
     } // namespace internal
   }   // namespace particles
 } // namespace toolbox
-
-
-

@@ -2,9 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <list>
-#include <vector>
-
 #include "peano4/datamanagement/VertexEnumerator.h"
 
 namespace toolbox {
@@ -16,8 +13,6 @@ namespace toolbox {
     void ensureAllParticleListsAreGatheredOrEmpty(
       peano4::datamanagement::VertexEnumerator<T> vertices
     );
-
-
 
     /**
      * Validate encoding of particle lists
@@ -35,6 +30,5 @@ namespace toolbox {
     );
   }
 }
-
 
 #include "../../toolbox/particles/ParticleListValidation.cpph"

@@ -2,9 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
-#include <vector>
-
 #include "tarch/la/ScalarOperations.h"
 #include "tarch/la/Vector.h"
 #include "tarch/multicore/multicore.h"
@@ -19,7 +16,6 @@
 #include "Functors.h"
 
 #include "exahype2/fv/PatchUtils.h"
-
 
 namespace exahype2 {
   namespace dg {
@@ -71,7 +67,6 @@ namespace exahype2 {
       const double* NOALIAS          quadratureWeights
     );
 
-
     /**
      * The number of nodes in a cell is basically the input to the
      * power of d. The argument nodesPerAxis is typically the order
@@ -80,7 +75,6 @@ namespace exahype2 {
      * @return Number of nodes in a cell
      */
     int getNodesPerCell(int nodesPerAxis);
-
 
     /* returns a vector with the powers of nodesPerAxis up to the DIMENSIONS - 1
     ** e.g. for dims = 2, nodesPerAxis = 2 will return (1, 2)
@@ -94,7 +88,6 @@ namespace exahype2 {
     ** "upper" neighbour, and so on.
     */
     tarch::la::Vector<DIMENSIONS,int> getStrides(int nodesPerAxis);
-
 
     /*for a given linear node number, returns the index of that node
     **in cartesian coordinate system.
@@ -183,7 +176,6 @@ namespace exahype2 {
         const int                   unknowns,
         const int                   auxiliaryVariables
         );
-
 
     /*
      * Plot patch
@@ -312,6 +304,5 @@ namespace exahype2 {
     );
   }
 }
-
 
 #include "DGUtils.cpph"

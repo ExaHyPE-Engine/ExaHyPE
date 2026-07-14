@@ -3,6 +3,7 @@
 import os
 import subprocess
 
+
 class Gemms:
     """Specification of a dense matrix-matrix multiplication
 
@@ -126,6 +127,7 @@ class Gemms:
                 self.alignment_C,
             )
         )
+
 
 def generate_gemms(output_path, output_file_name, namespace, dict, gemm_config_list):
     for gemm in gemm_config_list:

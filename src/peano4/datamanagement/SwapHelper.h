@@ -2,9 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <type_traits>
-#include <utility>
-
 namespace peano4::datamanagement {
   /**
    * Helper for generated data records which can swap compatible backing storage.

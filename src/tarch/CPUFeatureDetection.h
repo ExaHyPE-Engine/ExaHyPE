@@ -2,9 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <cstdint>
-#include <string>
-
 namespace tarch {
   struct CPUFeatures {
     bool sse2   = false;

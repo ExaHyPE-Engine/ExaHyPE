@@ -33,7 +33,6 @@ namespace toolbox {
          * spacetree they're assigned to.
          */
         struct ParticleIdentifier {
-
           std::string                              particleName;
           tarch::la::Vector<DIMENSIONS, double>    particleX;
           tarch::la::Vector<DIMENSIONS, long long> vertexInd;
@@ -85,7 +84,6 @@ namespace toolbox {
             const tarch::la::Vector<DIMENSIONS, double>& vertexH
           );
         };
-
       } // namespace internal
     } // namespace assignmentchecks
   } // namespace particles

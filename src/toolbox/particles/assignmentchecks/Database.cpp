@@ -5,19 +5,14 @@
 
 #include "Event.h"
 #include "ParticleIdentifier.h"
+#include "tarch/instrumentation/Log.h"
 #include "tarch/la/Vector.h"
 #include "tarch/multicore/MultiReadSingleWriteLock.h"
-
-#include <iterator>
-#include <limits>
-#include <ranges>
-#include <vector>
 
 void toolbox::particles::assignmentchecks::internal::Database::
   setMaxParticleSnapshotsToKeepTrackOf(const size_t n) {
   _maxParticleEventsToKeepTrackOf = n;
 }
-
 
 void toolbox::particles::assignmentchecks::internal::Database::startMeshSweep(
   const std::string& meshSweepName
@@ -31,33 +26,27 @@ void toolbox::particles::assignmentchecks::internal::Database::startMeshSweep(
   _currentMeshSweepIndex++;
 };
 
-
 int toolbox::particles::assignmentchecks::internal::Database::
   getNumberOfSnapshots() const {
   return _meshSweepData.size();
 }
-
 
 std::vector<toolbox::particles::assignmentchecks::internal::MeshSweepData>& toolbox::
   particles::assignmentchecks::internal::Database::getMeshSweepData() {
   return _meshSweepData;
 }
 
-
 size_t toolbox::particles::assignmentchecks::internal::Database::
   getCurrentMeshSweepIndex() const {
   return _currentMeshSweepIndex;
 }
-
 
 int toolbox::particles::assignmentchecks::internal::Database::
   getNumberOfTracedParticles() const {
   return _data.size();
 }
 
-
 void toolbox::particles::assignmentchecks::internal::Database::reset() {
-
   logDebug("Resetting database");
 
   _data.clear();
@@ -68,12 +57,10 @@ void toolbox::particles::assignmentchecks::internal::Database::reset() {
   _currentMeshSweepIndex = 0;
 }
 
-
 toolbox::particles::assignmentchecks::internal::ParticleEvents toolbox::
   particles::assignmentchecks::internal::Database::getParticleHistory(
     const ParticleIdentifier& identifier
   ) {
-
   tarch::multicore::MultiReadSingleWriteLock
     lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Read);
 
@@ -84,7 +71,6 @@ toolbox::particles::assignmentchecks::internal::ParticleEvents toolbox::
     newEventHistory->push_back(Event(Event::Type::NotFound));
     return *newEventHistory;
   } else {
-
 #if PEANO_DEBUG
     assertion(
       search->first.particleID == identifier.particleID,
@@ -118,7 +104,6 @@ toolbox::particles::assignmentchecks::internal::ParticleEvents toolbox::
     return history;
   }
 }
-
 
 std::string toolbox::particles::assignmentchecks::internal::Database::toString(
 ) {
@@ -155,17 +140,14 @@ std::string toolbox::particles::assignmentchecks::internal::Database::toString(
   return msg.str();
 }
 
-
 int toolbox::particles::assignmentchecks::internal::Database::
   getTotalParticleEntries(const ParticleIdentifier& identifier) {
-
   tarch::multicore::MultiReadSingleWriteLock
     lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Read);
 
   auto search = _data.find(identifier);
 
   if (search != _data.end()) {
-
 #if PEANO_DEBUG
     assertion(
       search->first.particleID == identifier.particleID,
@@ -201,7 +183,6 @@ int toolbox::particles::assignmentchecks::internal::Database::
   return 0;
 }
 
-
 std::string toolbox::particles::assignmentchecks::internal::Database::
   lastMeshSweepSnapshot() {
   tarch::multicore::MultiReadSingleWriteLock
@@ -232,10 +213,8 @@ std::string toolbox::particles::assignmentchecks::internal::Database::
   return msg.str();
 }
 
-
 std::string toolbox::particles::assignmentchecks::internal::Database::
   sweepHistory() {
-
   tarch::multicore::MultiReadSingleWriteLock
     lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Read);
 
@@ -251,10 +230,8 @@ std::string toolbox::particles::assignmentchecks::internal::Database::
   return msg.str();
 }
 
-
 std::string toolbox::particles::assignmentchecks::internal::Database::
   particleHistory(const ParticleIdentifier& identifier) {
-
   tarch::multicore::MultiReadSingleWriteLock
     lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Read);
 
@@ -264,7 +241,6 @@ std::string toolbox::particles::assignmentchecks::internal::Database::
 
   auto search = _data.find(identifier);
   if (search != _data.end()) {
-
 #if PEANO_DEBUG
     assertion(
       search->first.particleID == identifier.particleID,
@@ -301,7 +277,6 @@ std::string toolbox::particles::assignmentchecks::internal::Database::
     int prevMeshSweepInd = -1;
 
     while (ev != history.crend()) {
-
       int meshSweepInd = ev->meshSweepIndex;
 
       if (meshSweepInd != prevMeshSweepInd) {
@@ -321,11 +296,9 @@ std::string toolbox::particles::assignmentchecks::internal::Database::
   return msg.str();
 }
 
-
 toolbox::particles::assignmentchecks::internal::Event toolbox::particles::
   assignmentchecks::internal::Database::
     addEvent(ParticleIdentifier identifier, Event& event) {
-
   logDebug("Adding event for " << identifier.toString());
 
   tarch::multicore::MultiReadSingleWriteLock
@@ -349,9 +322,7 @@ toolbox::particles::assignmentchecks::internal::Event toolbox::particles::
         + ",Event:" + event.toString());
     // there is no previous event.
     return Event(Event::Type::NotFound);
-
   } else {
-
 #if PEANO_DEBUG
     assertion(
       search->first.particleID == identifier.particleID,
@@ -381,12 +352,10 @@ toolbox::particles::assignmentchecks::internal::Event toolbox::particles::
     );
 #endif
 
-
     ParticleEvents& history = search->second;
 
     // First: Do we need to downsize the history?
     if (history.size() >= _maxParticleEventsToKeepTrackOf) {
-
       // make copy, not reference
       Event lastEvent = history.back();
 
@@ -420,13 +389,11 @@ toolbox::particles::assignmentchecks::internal::Event toolbox::particles::
   }
 }
 
-
 void toolbox::particles::assignmentchecks::internal::Database::replaceEvent(
   ParticleIdentifier identifier,
   Event&             oldEvent,
   Event&             newEvent
 ) {
-
   tarch::multicore::MultiReadSingleWriteLock
     lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Write);
 
@@ -479,7 +446,6 @@ void toolbox::particles::assignmentchecks::internal::Database::replaceEvent(
         (it->type == oldEvent.type) and
         (it->treeId == oldEvent.treeId) and
         (it->isLocal == oldEvent.isLocal) ){
-
       it->type           = newEvent.type;
       it->isLocal        = newEvent.isLocal;
       it->vertexX        = newEvent.vertexX;
@@ -493,14 +459,12 @@ void toolbox::particles::assignmentchecks::internal::Database::replaceEvent(
   }
 }
 
-
 void toolbox::particles::assignmentchecks::internal::Database::
   shiftIdentifierVertexInd(
     ParticleIdentifier&                       identifier,
     tarch::la::Vector<DIMENSIONS, long long>& newVertexInd,
     const int                                 newVertexDepth
   ) {
-
   tarch::multicore::MultiReadSingleWriteLock
     lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Write);
 
@@ -549,7 +513,7 @@ void toolbox::particles::assignmentchecks::internal::Database::
 
   // delete old entry in database and add the new one.
   logDebug("shifting particle identifier from "
-      << key.vertexInd << " to " << newVertexInd;);
+      << key.vertexInd << " to " << newVertexInd);
 
   ParticleEvents historyCopy = history;
   _data.erase(key);
@@ -568,10 +532,8 @@ void toolbox::particles::assignmentchecks::internal::Database::
   _data.insert_or_assign(newIdentifier, historyCopy);
 }
 
-
 void toolbox::particles::assignmentchecks::internal::Database::
   eliminateExistingParticles() {
-
   tarch::multicore::MultiReadSingleWriteLock
     lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Write);
 
@@ -589,14 +551,12 @@ void toolbox::particles::assignmentchecks::internal::Database::
   }
 }
 
-
 toolbox::particles::assignmentchecks::internal::Event toolbox::particles::
   assignmentchecks::internal::Database::getPreviousEvent(
     ParticleEvents& particleHistory,
     int             spacetreeId,
     size_t          nFirstEventsToSkip
   ) {
-
   tarch::multicore::MultiReadSingleWriteLock
     lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Read);
 

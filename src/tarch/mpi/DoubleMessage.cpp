@@ -2,10 +2,6 @@
 
 #include "tarch/mpi/mpi.h"
 
-#include <algorithm>
-#include <iostream>
-#include <sstream>
-
 tarch::mpi::DoubleMessage::DoubleMessage(double __value) { setValue(__value); }
 
 std::string tarch::mpi::DoubleMessage::toString() const {

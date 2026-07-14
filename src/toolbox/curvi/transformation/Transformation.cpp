@@ -94,7 +94,6 @@ void toolbox::curvi::Transformation::metricDerivativesAndJacobian3D(
   }
 }
 
-
 void toolbox::curvi::Transformation::
   computeDerivatives_x_3D(double** dudx, int k, int j, int i, double* values, int num_nodes, double& der_x, double dx) {
   idx3 id_xyz(num_nodes, num_nodes, num_nodes);

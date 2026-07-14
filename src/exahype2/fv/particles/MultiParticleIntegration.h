@@ -32,7 +32,6 @@ namespace exahype2 {
         [[maybe_unused]] inline static int           _ppInteractionMethod = 0; // default = no interaction
         // PP Collision parameters
 
-
         //=============================================================================
         // Particle State Definitions & Helper Functions
         //=============================================================================

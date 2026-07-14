@@ -7,15 +7,11 @@
 #include "toolbox/curvi/Coordinate.h"
 #include "toolbox/curvi/Index.h"
 
-#include <cmath>
-#include <sstream>
-
 /* Represents the face boundaries of a 3D block */
 
 namespace toolbox {
   namespace curvi {
     class BlockBoundary {
-
     public:
       enum BlockFace { LEFT = 0, RIGHT = 1, BOTTOM = 2, TOP = 3, FRONT = 4, BACK = 5 };
 

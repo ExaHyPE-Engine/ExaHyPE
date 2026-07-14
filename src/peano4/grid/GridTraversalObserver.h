@@ -8,9 +8,6 @@
 #include "peano4/stacks/SendReceiveContext.h"
 #include "tarch/la/Vector.h"
 
-#include <set>
-#include <vector>
-
 namespace peano4::grid {
   class GridTraversalObserver;
   struct GridControlEvent;

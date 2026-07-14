@@ -2,10 +2,6 @@
 
 #include "tarch/mpi/mpi.h"
 
-#include <algorithm>
-#include <iostream>
-#include <sstream>
-
 peano4::parallel::StartTraversalMessage::StartTraversalMessage(int __stepIdentifier) {
   setStepIdentifier(__stepIdentifier);
 }

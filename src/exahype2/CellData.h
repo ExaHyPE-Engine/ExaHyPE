@@ -6,9 +6,6 @@
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/la/Vector.h"
 
-#include <functional>
-#include <string>
-
 namespace exahype2 {
   /**
    * Representation of a number of cells which contains all information

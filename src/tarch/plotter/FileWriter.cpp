@@ -5,14 +5,6 @@
 #include "tarch/mpi/Rank.h"
 #include "tarch/mpi/mpi.h"
 
-#include <algorithm>
-#include <cstdlib>
-#include <cstring>
-#include <filesystem>
-#include <limits>
-#include <stdexcept>
-#include <vector>
-
 namespace fs = std::filesystem;
 
 tarch::plotter::FileWriter::FileWriter(const std::string& outputDirectory, int numberOfSubdomains) :
@@ -144,7 +136,6 @@ tarch::plotter::FileWriter::DataPlotter::DataPlotter(
   _plotter(plotter),
   _targetFields(targetFields),
   _components(components) {
-
   _plotter.checkCanOpenPlotter(subdomainId);
 
   // Reuse the field if it already exists, otherwise append it.

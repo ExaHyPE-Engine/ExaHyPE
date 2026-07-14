@@ -9,12 +9,6 @@
 #include "tarch/mpi/Rank.h"
 #include "tarch/mpi/mpi.h"
 
-#include <memory>
-#include <sstream>
-#include <type_traits>
-#include <utility>
-#include <vector>
-
 namespace peano4::stacks {
   template <class T>
   class Stack;

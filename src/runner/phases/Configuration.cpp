@@ -12,9 +12,6 @@
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/Core.h"
 
-#include <limits>
-#include <sstream>
-
 runner::Configuration::Configuration(PhaseContext& context) :
   _context(context) {
   const auto& parameters   = _context.parameters;

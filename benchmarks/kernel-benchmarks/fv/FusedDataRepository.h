@@ -6,13 +6,6 @@
 
 #include "tarch/la/Vector.h"
 
-#include <algorithm>
-#include <cstdint>
-#include <iostream>
-#include <map>
-#include <string>
-#include <vector>
-
 namespace benchmarks::exahype2::kernelbenchmarks {
   /**
    * @brief Manages GPU data for a sparse subset of active leaf cells.

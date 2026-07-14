@@ -4,8 +4,6 @@
 
 #include "Log.h"
 
-#include <string>
-
 tarch::instrumentation::Watch::Watch(
   [[maybe_unused]] const std::string& className,
   const std::string&                  operationName,
@@ -19,7 +17,6 @@ tarch::instrumentation::Watch::Watch(
   _elapsedClockTicks(0),
   _elapsedTime(),
   _isRunning(startToTickImmediately) {
-
   if (startToTickImmediately) {
     start();
   }

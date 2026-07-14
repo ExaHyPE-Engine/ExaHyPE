@@ -32,7 +32,6 @@ namespace exahype2 {
         const peano4::datamanagement::CellMarker& marker,
         const double* __restrict__ Q
       );
-
     } // namespace particles
   } // namespace fv
 } // namespace exahype2

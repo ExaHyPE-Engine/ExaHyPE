@@ -1,8 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-#include <cmath>
-
 template <class Shortcuts, int NumberOfUnknowns, bool IncludeTurbulentDrag, class T>
 static inline GPU_CALLABLE_METHOD void applications::exahype2::exaskred::landslide::nonconservativeProduct(
   const T* const NOALIAS                       Q,

@@ -5,8 +5,6 @@
 #if defined(PEANO_WITH_GPU_BACKEND_CUDA)
 
 #include <cuda_runtime.h>
-#include <map>
-#include <mutex>
 
 namespace tarch::accelerator::cuda {
   class DevicePropertiesCache;

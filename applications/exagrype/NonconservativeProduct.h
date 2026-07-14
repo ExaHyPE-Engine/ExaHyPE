@@ -4,8 +4,6 @@
 
 #include "tarch/accelerator/accelerator.h"
 
-#include <cmath>
-
 namespace applications::exahype2::exagrype {
   template <class Shortcuts, int NumberOfUnknowns>
   static inline GPU_CALLABLE_METHOD void ncp(

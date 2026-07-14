@@ -10,9 +10,6 @@
 #include "peano4/Loop.h"
 #include "tarch/instrumentation/Log.h"
 
-#include <map>
-#include <string>
-
 namespace exahype2 {
   namespace fv {
     namespace particles {
@@ -146,9 +143,7 @@ namespace exahype2 {
             const tarch::la::Vector<DIMENSIONS, double>& particleX,
             int                                          unknown
           );
-
         } // namespace internal
-
       } // namespace interpolation
     } // namespace particles
   } // namespace fv

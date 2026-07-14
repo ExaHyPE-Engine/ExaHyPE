@@ -4,8 +4,6 @@
 
 #include "Log.h"
 
-#include <sstream>
-
 #define logWarning(logMacroMessageStream) \
   do { \
     std::ostringstream conv; \

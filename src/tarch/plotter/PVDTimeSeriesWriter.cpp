@@ -4,10 +4,6 @@
 
 #include "tarch/mpi/Rank.h"
 
-#include <filesystem>
-#include <fstream>
-#include <iomanip>
-
 namespace fs = std::filesystem;
 
 void tarch::plotter::PVDTimeSeriesWriter::writeTimeSeriesMetaFile(

@@ -16,10 +16,6 @@
 #include "toolbox/curvi/geometry/Edge.h"
 #include "toolbox/curvi/netcdf/NetCDFWriter.h"
 
-#include <functional>
-#include <string>
-#include <vector>
-
 namespace toolbox {
   namespace curvi {
     class FaceBoundary;

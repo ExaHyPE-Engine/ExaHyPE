@@ -5,10 +5,6 @@
 #include "exahype2/RefinementControl.h"
 #include "runner/RepositoryCallbacks.h"
 
-#include <string>
-#include <utility>
-#include <vector>
-
 {% for item in SOLVERS -%}
 #include "{{ item[0] }}.h"
 {% endfor %}

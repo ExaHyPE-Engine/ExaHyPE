@@ -10,12 +10,9 @@
 #include "tarch/multicore/Lock.h"
 #include "tarch/services/ServiceRepository.h"
 
-#include <algorithm>
-
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   _solverState(SolverState::GridConstruction),
   _numberOfTroubledCells(0) {
-
   {{CONSTRUCTOR_IMPLEMENTATION}}
 }
 

@@ -6,9 +6,6 @@
 
 #include "peano4/Loop.h"
 
-#include <tuple>
-#include <utility>
-
 namespace {
   struct FaceAdjacentRanks {
     int first;

@@ -7,9 +7,6 @@
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/Core.h"
 
-#include <algorithm>
-#include <cmath>
-
 class toolbox::loadbalancing::LoadBalancer::IntraRankDistributionStrategy final : public Strategy {
 private:
   /**

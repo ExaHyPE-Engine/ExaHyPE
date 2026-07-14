@@ -9,7 +9,7 @@ import jinja2
 
 class InitialCondition(AbstractRungeKuttaDGActionSet):
     TemplateInitialCondition = """
-  if ({{PREDICATE}}) { 
+  if ({{PREDICATE}}) {
     int linearisedIndex = 0;
     peano4::dForEach({{DG_ORDER}} + 1, [&](const tarch::la::Vector<DIMENSIONS, int>& index) {
       repositories::{{SOLVER_INSTANCE}}.initialCondition(

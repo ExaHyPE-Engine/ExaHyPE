@@ -28,7 +28,6 @@ namespace toolbox {
     /*
 
      //(ParticleAccessor accessor, ) {
-
           accessor.x(Particle&)       -> tarch::la::Vector< DIMENSIONS, double>&;
           accessor.x(const Particle&) -> const tarch::la::Vector< DIMENSIONS, double>&;
 

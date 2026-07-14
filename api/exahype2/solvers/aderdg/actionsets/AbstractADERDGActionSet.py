@@ -24,8 +24,6 @@ class AbstractADERDGActionSet(peano4.solversteps.ActionSet):
     def get_includes(self):
         return (
             """
-#include <algorithm>
-#include <functional>
 #include "exahype2/dg/DGUtils.h"
 """
             + self._solver._get_default_includes()

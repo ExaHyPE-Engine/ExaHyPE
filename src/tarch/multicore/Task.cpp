@@ -9,9 +9,6 @@
 #include "tarch/Assertions.h"
 #include "tarch/services/ServiceRepository.h"
 
-#include <queue>
-#include <set>
-
 bool operator<(const tarch::multicore::Task& lhs, const tarch::multicore::Task& rhs) {
   return lhs.getPriority() < rhs.getPriority();
 }

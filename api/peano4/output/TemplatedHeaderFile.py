@@ -8,6 +8,7 @@ from .Helper import write_file
 
 from peano4.Logger import log
 
+
 class TemplatedHeaderFile(object):
   def __init__(self,headerfile_template,classname,namespace,subdirectory,dictionary):
     """

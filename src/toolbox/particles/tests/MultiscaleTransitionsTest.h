@@ -2,7 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "tarch/instrumentation/Log.h"
 #include "tarch/tests/TestCase.h"
 
 namespace toolbox {
@@ -84,7 +83,6 @@ private:
    */
   void testLiftDropOfParticleAssociatedWithVertex01();
 
-
   /*
    * Another test case
    *
@@ -115,7 +113,6 @@ orithmStepUpdates=1,...,dependencyChecksAlgorithmStepMaskOuts=0,...,dependencyCh
    *
    */
   void testLiftDropOfParticleAssociatedWithVertex02();
-
 
   /**
    * Another test from the Swift runs where seven particles disappeared
@@ -165,7 +162,6 @@ orithmStepUpdates=1,...,dependencyChecksAlgorithmStepMaskOuts=0,...,dependencyCh
    *
    */
   void testLiftDropOfParticleAssociatedWithVertex03();
-
 
   /**
    * Another lift/drop test

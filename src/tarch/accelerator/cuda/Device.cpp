@@ -10,8 +10,6 @@
 #include "tarch/accelerator/MemoryAllocationCache.h"
 #include "tarch/accelerator/accelerator.h"
 
-#include <unordered_map>
-
 namespace {
   int                                                numberOfDevices = 0;
   thread_local std::unordered_map<int, cudaStream_t> activeStreams;

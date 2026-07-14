@@ -5,6 +5,7 @@
 #if defined(PEANO_WITH_OPENMP)
 
 #include "tarch/Assertions.h"
+#include "tarch/instrumentation/Log.h"
 #include "tarch/multicore/Core.h"
 #include "tarch/multicore/Task.h"
 

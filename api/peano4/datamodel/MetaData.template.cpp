@@ -2,8 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "{{CLASSNAME}}.h"
 
-#include <sstream>
-
 #ifdef PEANO_WITH_MPI
 MPI_Datatype {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Datatype = MPI_DATATYPE_NULL;
 #endif

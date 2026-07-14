@@ -4,8 +4,6 @@
 
 #include "TimeSeriesWriter.h"
 
-#include <string>
-
 namespace tarch::plotter {
   class VTKHDFTimeSeriesWriter;
 } // namespace tarch::plotter

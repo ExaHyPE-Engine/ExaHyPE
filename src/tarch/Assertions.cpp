@@ -5,9 +5,6 @@
 #if PEANO_ASSERTIONS
 #include "tarch/instrumentation/Error.h"
 
-#include <atomic>
-#include <iostream>
-
 namespace tarch {
   namespace mpi {
     void abort(int errorCode);

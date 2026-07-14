@@ -1,10 +1,8 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #include "TreeTestCaseCollection.h"
-
+#include "tarch/instrumentation/Log.h"
 #include "tarch/Assertions.h"
-
-#include <iostream>
 
 tarch::tests::TreeTestCaseCollection::
   TreeTestCaseCollection(const std::string& treeTestCaseCollectionName, bool deleteTestCases, bool writeToLog):

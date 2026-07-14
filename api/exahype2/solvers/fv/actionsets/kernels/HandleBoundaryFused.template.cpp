@@ -5,6 +5,8 @@
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/accelerator/ParallelFor.h"
 
+#include "tarch/instrumentation/Log.h"
+
 {% from "ApplyBoundaryCondition.macro.h" import ApplyBoundaryCondition with context %}
 
 void {{FULL_QUALIFIED_NAMESPACE}}::handleBoundaryFused(

@@ -7,13 +7,6 @@
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/Lock.h"
 
-#include <algorithm>
-#include <iomanip>
-#include <sstream>
-#include <stdexcept>
-#include <string>
-#include <vector>
-
 toolbox::particles::TrajectoryDatabase::Entry::Entry(
   const tarch::la::Vector<DIMENSIONS, double>& x_,
   double                                       timestamp_,

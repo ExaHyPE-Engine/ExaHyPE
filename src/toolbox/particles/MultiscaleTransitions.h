@@ -2,13 +2,10 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <tuple>
-
 #include "particles.h"
 #include "internal.h"
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/VertexMarker.h"
-
 
 namespace toolbox {
   namespace particles {

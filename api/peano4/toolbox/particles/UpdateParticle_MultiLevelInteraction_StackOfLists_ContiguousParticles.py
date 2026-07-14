@@ -4,6 +4,7 @@ from peano4.solversteps.ActionSet import ActionSet
 
 import jinja2
 
+
 class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(ActionSet):
     """!
 
@@ -48,8 +49,6 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
 
     Both pieces of information are important if you work with memory pools
     as discussed below.
-
-
 
     ## Different particles species
 
@@ -100,8 +99,6 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
     In the case of a dynamic setup, i.e. in combinatino with the action
     set UpdateParticleGridAssociation, you might be better of with using
     the set-based implementation of the particle-particle interaction.
-
-
 
     ## Further plug-in points
 
@@ -260,8 +257,6 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
     data anymore. Even worse, we know that previously built-up active sets might be
     invalid. We have built them up top-down, but when we drop data out of the
     active set, they change on-the-fly.
-
-
 
     ## Optimising coalesced compute kernels
 
@@ -527,11 +522,7 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
 #include "globaldata/{{LOCAL_PARTICLE}}.h"
 #include "vertexdata/{{ACTIVE_PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{ACTIVE_PARTICLE}}.h"
-
 {{ADDITIONAL_INCLUDES}}
-
-#include <list>
-#include <vector>
 """
         )
         return result.render(**self.d)

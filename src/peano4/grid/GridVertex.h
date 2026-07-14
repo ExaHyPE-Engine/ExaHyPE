@@ -6,8 +6,6 @@
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 
-#include <bitset>
-
 namespace peano4::grid {
   struct GridVertex;
 } // namespace peano4::grid

@@ -9,8 +9,6 @@
 #include "toolbox/curvi/transformation/Transformation.h"
 
 #include <easi/YAMLParser.h>
-#include <string>
-#include <vector>
 
 toolbox::curvi::Block::Block():
   coords{Coordinate::X, Coordinate::X, Coordinate::X},
@@ -84,7 +82,6 @@ void toolbox::curvi::Block::getIndexOffset(int a_index_offset[3]) const {
 
 toolbox::curvi::Block toolbox::curvi::Block::
   apply(std::function<void(const Block&, int, int, int, Block&)> func, int mode_z, int mode_y, int mode_x) const {
-
   return resample(func, mode_z, mode_y, mode_x, mode_z, mode_y, mode_x);
 }
 
@@ -149,7 +146,6 @@ toolbox::curvi::Block toolbox::curvi::Block::resample(
 
 toolbox::curvi::Block toolbox::curvi::Block::
   getMetricDerivatives(double** dudx, int nodes_z, int nodes_y, int nodes_x, double dx[3]) const {
-
   std::function<void(const Block&, int, int, int, Block&)> compute_metric_derivatives =
     [&](const Block& in, int e_z, int e_y, int e_x, Block& out) {
       std::vector<int> range_z;

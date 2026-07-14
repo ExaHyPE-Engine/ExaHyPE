@@ -23,7 +23,6 @@ namespace {{ item }} {
 
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}} final: public ::peano4::grid::GridTraversalObserver {
 private:
-
   const int _spacetreeId;
 
   {{ATTRIBUTES}}

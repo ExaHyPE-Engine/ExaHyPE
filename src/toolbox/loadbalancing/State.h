@@ -2,8 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <string>
-
 namespace toolbox::loadbalancing {
   /**
    * State descriptor of load balancing

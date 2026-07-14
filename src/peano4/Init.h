@@ -4,8 +4,6 @@
 
 #include "tarch/la/Vector.h"
 
-#include <bitset>
-
 namespace peano4 {
   void init(
     const tarch::la::Vector<DIMENSIONS, double>& offset,

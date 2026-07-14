@@ -22,7 +22,6 @@
 
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
-
 {%- endfor %}
   class {{CLASSNAME}};
 
@@ -115,7 +114,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
       int                                          normal
     ) {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final{% endif %};
     {% endif %}
-
 
     virtual void suspendSolversForOneGridSweep() override;
 
@@ -231,7 +229,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     ) const;
 
   protected:
-
     SolverState  _solverState;
 
     double     _minTimeStamp;

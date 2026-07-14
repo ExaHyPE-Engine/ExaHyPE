@@ -10,12 +10,8 @@
 {% endif %}
 
 #include "exahype2/dg/DGUtils.h"
-
 #include "tarch/CompilerSpecificSettings.h"
-#include "tarch/instrumentation/Trace.h"
-
-#include <cstring>
-#include <algorithm>
+#include "tarch/instrumentation/Log.h"
 
 {% import 'Gemms.template.h' as m with context %}{# get template macros #}
 

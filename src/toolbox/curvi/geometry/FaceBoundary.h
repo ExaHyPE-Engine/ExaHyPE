@@ -6,9 +6,6 @@
 #include "toolbox/curvi/Index.h"
 #include "toolbox/curvi/geometry/Edge.h"
 
-#include <algorithm>
-#include <vector>
-
 /*     Represents the boundaries of a 2D face    */
 /*   ^                                           */
 /*   |                                           */
@@ -33,7 +30,6 @@ namespace toolbox {
 namespace toolbox {
   namespace curvi {
     class FaceBoundary {
-
     public:
       // enum Edge{ LEFT, RIGHT, BOTTOM, TOP };
 
@@ -48,7 +44,6 @@ namespace toolbox {
       FaceBoundary(double a_offset[3], double a_size[3], int a_range[3], Coordinate a_coords[2]);
 
       FaceBoundary(Coordinate a_coords[2], double a_position, Edge& a_left, Edge& a_right, Edge& a_bottom, Edge& a_top);
-
 
       Coordinate getCoord(int i) const;
       void       getCoord(Coordinate a_coord[2]) const;
@@ -70,7 +65,6 @@ namespace toolbox {
 
       friend std::ostream& operator<<(std::ostream& ss, const FaceBoundary& f);
       std::string          printNodes();
-
 
     private:
       Edge left_edge;

@@ -324,14 +324,14 @@
  * on this line).
  * We don't even have to use Gauss-Lobatto points.
  * It works with Gauss-Legendre just as well (with Lobatto, we could avoid the construction
- * of the polynomial and just read out the solution value right at the face; we do not yet 
+ * of the polynomial and just read out the solution value right at the face; we do not yet
  * exploit this fact).
  *
  * @image html src/exahype2/dg/solution-projection.png
  *
  * In the 2d example above, the four bottom sample points and their weight define the
  * blue polynomial along the horizontal line. The other 12 integration points in the
- * cell have no influence on the solution value along this line because the Lagrange polynomials are 0 there. 
+ * cell have no influence on the solution value along this line because the Lagrange polynomials are 0 there.
  * Consequently, we can compute the left and right solution solely by these four weights.
  *
  * On the left face, we have a polynomial with the same order (3rd order here), but it
@@ -360,14 +360,14 @@
  *
  * requires work (and care), as Q (and hence F) are not defined on the cell faces.
  * We therefore have to approximate the physical flux F by a numerical flux, there are several
- * definitions for numerical fluxes, but one generic way to tackle this is to exploit standard 
+ * definitions for numerical fluxes, but one generic way to tackle this is to exploit standard
  * Rusanov, e.g. In this case, we employ some averaging of the faces subject to additional
  * damping.
  *
  * @f$ \int _{\partial c} F(Q(t)) \ \phi \ n dS(x) \mapsto  \int _{\partial c} \Big( \frac{1}{2}(F(Q^-(t))+F(Q^+(t))) - \frac{1}{2} \lambda _{max}(Q^-(t),Q^+(t)) (Q^+(t)-Q^-(t))  \Big) \ \phi \ n dS(x) @f$
  *
  * This is what we do when we touch a face. We simply take the projected Q values
- * from left and right and compute what F looks like. In theory the solutions to the 
+ * from left and right and compute what F looks like. In theory the solutions to the
  * left and right of the face could be different. Therefore we hold both outputs.
  *
  * - (1) Set @f$ \hat Q \gets 0 @f$ per degree of freedom in each and every cell.

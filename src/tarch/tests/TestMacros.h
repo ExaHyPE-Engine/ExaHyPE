@@ -2,9 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <cmath>
-#include <iostream>
-
 /**
  * Run a test method and check for errors. It is necessary to
  * use assertion-macros which set member _error in a TestCase.
@@ -20,9 +17,7 @@
     } \
   };
 
-
 #define testNumericalEquals(lhs, rhs) (std::abs((rhs) - (lhs)) <= 1.0e-10)
-
 
 #define validate(booleanExpr) \
   if (!(booleanExpr)) { \
@@ -140,7 +135,6 @@
     return; \
   }
 
-
 #define validateWithParams7(booleanExpr, param0, param1, param2, param3, param4, param5, param6) \
   if (!(booleanExpr)) { \
     _errors++; \
@@ -158,7 +152,6 @@
       << "  parameter " << #param6 << "=" << param6 << std::endl; \
     return; \
   }
-
 
 #define validateWithParams8(booleanExpr, param0, param1, param2, param3, param4, param5, param6, param7) \
   if (!(booleanExpr)) { \
@@ -179,7 +172,6 @@
     return; \
   }
 
-
 #define validateWithParams9(booleanExpr, param0, param1, param2, param3, param4, param5, param6, param7, param8) \
   if (!(booleanExpr)) { \
     _errors++; \
@@ -199,7 +191,6 @@
       << "  parameter " << #param8 << "=" << param8 << std::endl; \
     return; \
   }
-
 
 #define validateWithParams10( \
   booleanExpr, \
@@ -233,7 +224,6 @@
       << "  parameter " << #param9 << "=" << param9 << std::endl; \
     return; \
   }
-
 
 #define validateWithParams11( \
   booleanExpr, \
@@ -269,7 +259,6 @@
       << "  parameter " << #param10 << "=" << param10 << std::endl; \
     return; \
   }
-
 
 #define validateWithParams12( \
   booleanExpr, \
@@ -307,7 +296,6 @@
       << "  parameter " << #param11 << "=" << param11 << std::endl; \
     return; \
   }
-
 
 #define validateWithParams13( \
   booleanExpr, \
@@ -347,7 +335,6 @@
       << "  parameter " << #param12 << "=" << param12 << std::endl; \
     return; \
   }
-
 
 #define validateWithParams14( \
   booleanExpr, \
@@ -389,7 +376,6 @@
       << "  parameter " << #param13 << "=" << param13 << std::endl; \
     return; \
   }
-
 
 #define validateEquals(actualValue, validValue) \
   if (!(actualValue == validValue)) { \
@@ -437,7 +423,6 @@
       << "  parameter " << #param0 << "=" << param0 << ", parameter " << #param1 << "=" << param1 << std::endl; \
     return; \
   }
-
 
 #define validateEqualsWithParams3(actualValue, validValue, param0, param1, param2) \
   if (!(actualValue == validValue)) { \
@@ -636,7 +621,6 @@
     return; \
   }
 
-
 #define validateNumericalEqualsWithParams1(actualValue, validValue, param0) \
   if (!testNumericalEquals(actualValue, validValue)) { \
     _errors++; \
@@ -706,7 +690,6 @@
     return; \
   }
 
-
 #define validateNumericalEqualsWithParams6(actualValue, validValue, param0, param1, param2, param3, param4, param5) \
   if (!testNumericalEquals(actualValue, validValue)) { \
     _errors++; \
@@ -742,7 +725,6 @@
     return; \
   }
 
-
 #define validateNumericalVectorEqualsWithParams1(actual, valid, param0) \
   if (!tarch::la::equals(actual, valid)) { \
     _errors++; \
@@ -755,7 +737,6 @@
     return; \
   }
 
-
 #define validateNumericalVectorEqualsWithParams2(actual, valid, param0, param1) \
   if (!tarch::la::equals(actual, valid)) { \
     _errors++; \
@@ -767,7 +748,6 @@
       << "  parameter " << #param0 << "=" << param0 << #param1 << "=" << param1 << std::endl; \
     return; \
   }
-
 
 #define validateNumericalVectorEqualsWithParams3(actual, valid, param0, param1, param2) \
   if (!tarch::la::equals(actual, valid)) { \

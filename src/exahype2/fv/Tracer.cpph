@@ -329,7 +329,6 @@ void exahype2::fv::handleBoundaryCollisions(
       // Reflect at lower boundary
       newPosition[d] = lowerBound + (lowerBound - newPosition[d]);
       particle.setData(3 + d, -velocity * 0.9); // Reverse & damp velocity
-
     } else if (newPosition[d] > upperBound) {
       // Reflect at upper boundary
       newPosition[d] = upperBound - (newPosition[d] - upperBound);

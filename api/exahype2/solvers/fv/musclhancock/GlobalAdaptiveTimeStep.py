@@ -7,6 +7,7 @@ from exahype2.solvers.fv.AdaptiveTimeSteppingCodeSnippets import (
     AdaptiveTimeSteppingCodeSnippets,
 )
 
+
 class GlobalAdaptiveTimeStep(SingleSweep):
     def __init__(
         self,

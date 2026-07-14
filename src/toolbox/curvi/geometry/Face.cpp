@@ -6,11 +6,6 @@
 #include "toolbox/curvi/Index.h"
 #include "toolbox/curvi/interpolation/TransfiniteInterpolation.h"
 
-#include <algorithm>
-#include <cmath>
-#include <sstream>
-
-
 /* Represents a 2D face    */
 /*     0               nx  */
 /*      --------------     */
@@ -36,7 +31,6 @@ toolbox::curvi::Face::Face(
 ):
   position(a_position),
   perturbation(a_perturbation) {
-
   std::copy_n(a_coords, 2, coords);
   std::copy_n(a_index_offset, 3, index_offset);
   std::copy_n(a_index_size, 3, index_size);
@@ -61,7 +55,6 @@ toolbox::curvi::Face::Face(
   bool                                  keepBoundary
 ):
   perturbation(a_perturbation) {
-
   std::copy_n(a_index_offset, 3, index_offset);
   boundary.getIndexSize(index_size);
   boundary.getCoord(coords);
@@ -128,14 +121,11 @@ toolbox::curvi::Coordinate toolbox::curvi::Face::getCoord(int i) const { return 
 
 void toolbox::curvi::Face::getCoord(Coordinate a_coord[2]) const { std::copy_n(coords, 2, a_coord); }
 
-
 double toolbox::curvi::Face::getPosition() const { return position; }
-
 
 void toolbox::curvi::Face::getIndexOffset(int a_index_offset[3]) const { std::copy_n(index_offset, 3, a_index_offset); }
 
 int toolbox::curvi::Face::getIndexOffset(Coordinate coord) const { return index_offset[coord]; }
-
 
 int toolbox::curvi::Face::getIndexSize(Coordinate i) const { return index_size[i]; }
 
@@ -171,7 +161,6 @@ void toolbox::curvi::Face::getIndexRange(Coordinate coord, std::vector<int>& a_r
 const std::vector<double>& toolbox::curvi::Face::getNodes() const { return nodes; }
 
 double& toolbox::curvi::Face::operator()(int coord, int j, int i) {
-
   idx3 idx(NCOORDS, index_size[coords[0]], index_size[coords[1]]);
   int  _j = j - index_offset[coords[0]];
   int  _i = i - index_offset[coords[1]];
@@ -179,7 +168,6 @@ double& toolbox::curvi::Face::operator()(int coord, int j, int i) {
 }
 
 const double& toolbox::curvi::Face::operator()(int coord, int j, int i) const {
-
   idx3 idx(NCOORDS, index_size[coords[0]], index_size[coords[1]]);
   int  _j = j - index_offset[coords[0]];
   int  _i = i - index_offset[coords[1]];
@@ -225,7 +213,6 @@ double& toolbox::curvi::Face::operator()(int coord, Coordinate coord_j, int j, C
 }
 
 void toolbox::curvi::Face::subface(int subface_index_offset[3], int subface_index_size[3], Face& subface) const {
-
   for (int c = 0; c < 3; c++) {
     if (subface_index_offset[c] < index_offset[c]
         || subface_index_offset[c] + subface_index_size[c] - 1 > index_offset[c] + index_size[c] - 1) {
@@ -255,7 +242,6 @@ void toolbox::curvi::Face::subface(int subface_index_offset[3], int subface_inde
     }
   }
 }
-
 
 std::function<double(double, double)> toolbox::curvi::Face::getPerturbation() const { return perturbation; }
 
@@ -298,7 +284,6 @@ toolbox::curvi::Edge toolbox::curvi::Face::split(Face& other, Face& left, Face& 
     throw std::domain_error(ss.str());
   }
   /******************/
-
 
   /** Cut faces **/
   // We have to find intersecting planes on each column in y
@@ -406,7 +391,6 @@ bool toolbox::curvi::Face::intersect(
   if (!std::isfinite(mu) || mu < 0 || mu > 1 || lambda < 0 || lambda > 1 || !std::isfinite(lambda)) {
     return false;
   } else {
-
     x = a_0 + lambda * c_0;
     y = a_1 + lambda * c_1;
 
@@ -435,7 +419,6 @@ std::ostream& toolbox::curvi::operator<<(std::ostream& ss, const Face& f) {
 
   ss << "Index Offset: " << f.index_offset[0] << " " << f.index_offset[1] << " " << f.index_offset[2] << " "
      << std::endl;
-
 
   ss << "Index Size: " << f.index_size[0] << " " << f.index_size[1] << " " << f.index_size[2] << " " << std::endl;
 

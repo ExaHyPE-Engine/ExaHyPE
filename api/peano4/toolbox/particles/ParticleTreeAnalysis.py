@@ -2,11 +2,9 @@
 # use, please see the copyright notice at www.peano-framework.org
 from peano4.solversteps.ActionSet import ActionSet
 
-
 import jinja2
 
 import peano4.datamodel
-
 
 
 def create_cell_marker(name):
@@ -59,7 +57,6 @@ def create_cell_marker(name):
   return cell_marker
 
 
-
 class ParticleTreeAnalysis(ActionSet):
   """
   
@@ -87,10 +84,8 @@ class ParticleTreeAnalysis(ActionSet):
     that we always remove at most one level from the tree in one 
     tree sweep, as I only erase refined tree nodes for which 
     ParentOfRefinedCell does not hold.
-    
-    
-    
-    :: Usage ::  
+
+    :: Usage ::
     
     I need a particle set to work properly. You also have to
     invoke add the tree cell properties to the tree and tell
@@ -102,14 +97,10 @@ class ParticleTreeAnalysis(ActionSet):
     
     my_tree_analysis = ParticleTreeAnalysis(...)
     my_Peano_project.add_cell(my_tree_analysis.cell_marker)
-    
-
 
     my_algorithmic_step = peano4.solversteps.Step( ... )
     my_algorithmic_step.use_cell(my_tree_analysis.cell_marker)
 
-
-    
     ## Attributes
     
     particle_set: ParticleSet

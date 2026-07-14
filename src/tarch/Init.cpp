@@ -10,8 +10,6 @@
 #include "tarch/multicore/Core.h"
 #include "tarch/services/ServiceRepository.h"
 
-#include <stdexcept>
-
 void tarch::init(int* argc, char*** argv, const InitConfiguration& configuration) {
   if (tarch::mpi::Rank::getInstance().init(argc, argv)) {
     tarch::mpi::Rank::getInstance().setTimeOutWarning(configuration.mpiTimeOutWarning);

@@ -6,6 +6,7 @@ from .AbstractFVActionSet import AbstractFVActionSet
 import peano4
 import jinja2
 
+
 class EmptyPreprocessSolution(AbstractFVActionSet):
   """
 
@@ -26,6 +27,7 @@ class EmptyPreprocessSolution(AbstractFVActionSet):
 
   def get_action_set_name(self):
     return __name__.replace(".py", "").replace(".", "_")
+
 
 class VolumeWisePreprocessSolution(AbstractFVActionSet):
   """!
@@ -77,7 +79,6 @@ class VolumeWisePreprocessSolution(AbstractFVActionSet):
     and
     {{PREDICATE}}
   ) {
-
     int index = 0;
     peano4::dForEach({{NUMBER_OF_VOLUMES_PER_AXIS}}, [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
       {{STORAGE_PRECISION}}* value = {{NEW_ACCESSOR}}.data() + index;

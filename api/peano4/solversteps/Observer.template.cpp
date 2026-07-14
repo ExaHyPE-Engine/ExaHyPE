@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "{{CLASSNAME}}.h"
 
-{{DATAREPOSITORY_INCLUDES}} // TODO: Remove
+#include "repositories/DataRepository.h"
 
 #include "peano4/grid/StackTopology.h"
 #include "peano4/datamanagement/CellMarker.h"
@@ -13,10 +13,6 @@
 #include "peano4/parallel/SpacetreeSet.h"
 
 #include "tarch/Assertions.h"
-
-#include <iterator>
-#include <type_traits>
-#include <utility>
 
 {{FULL_QUALIFIED_CLASSNAME}}::{{CLASSNAME}}(int spacetreeId):
   _spacetreeId(spacetreeId)

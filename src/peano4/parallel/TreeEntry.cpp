@@ -2,10 +2,6 @@
 
 #include "tarch/mpi/mpi.h"
 
-#include <algorithm>
-#include <iostream>
-#include <sstream>
-
 peano4::parallel::TreeEntry::TreeEntry(int __id, int __master) {
   setId(__id);
   setMaster(__master);

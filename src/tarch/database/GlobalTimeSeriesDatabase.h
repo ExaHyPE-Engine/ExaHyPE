@@ -4,10 +4,6 @@
 
 #include "tarch/database/SnapshotDatabase.h"
 
-#include <list>
-#include <ostream>
-#include <string>
-
 namespace tarch::database {
   class GlobalTimeSeriesDatabase;
 } // namespace tarch::database

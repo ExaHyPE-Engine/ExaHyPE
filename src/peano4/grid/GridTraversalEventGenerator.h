@@ -11,8 +11,6 @@
 #include "TreeIdSet.h"
 #include "VertexLookupTable.h"
 #include "VertexType.h"
-#include "tarch/instrumentation/Log.h"
-#include "tarch/tests/TestCase.h"
 
 namespace peano4::grid {
   class GridTraversalEventGenerator;

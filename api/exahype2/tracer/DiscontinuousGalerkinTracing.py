@@ -22,8 +22,6 @@ class DiscontinuousGalerkinTracing(
     type solvers, I assume that this flag is set by the computation of the final
     linear combination of estimates.
 
-
-
     """
 
     def __init__(

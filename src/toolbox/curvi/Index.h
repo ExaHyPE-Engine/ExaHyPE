@@ -2,10 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <iostream>
-#include <sstream>
-#include <vector>
-
 namespace toolbox {
   namespace curvi {
     class Index {
@@ -33,7 +29,6 @@ namespace toolbox {
       idx2(int a_J, int a_I):
         I_(a_I),
         J_(a_J) {
-
         if (a_J <= 0 || a_I <= 0) {
           std::stringstream ss;
           ss << "Can't initialze index with 0 offset: " << a_J << " " << a_I;
@@ -61,7 +56,6 @@ namespace toolbox {
         I_(a_I),
         J_(a_J),
         K_(a_K) {
-
         if (a_K <= 0 || a_J <= 0 || a_I <= 0) {
           std::stringstream ss;
           ss << "Can't initialze index with 0 offset: " << a_K << " " << a_J << " " << a_I;

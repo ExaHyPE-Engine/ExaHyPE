@@ -6,8 +6,6 @@
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 
-#include <type_traits>
-
 namespace peano4::grid {
   struct AutomatonState;
 } // namespace peano4::grid

@@ -4,8 +4,6 @@
 
 #include "Log.h"
 
-#include <sstream>
-
 #define logInfo(logMacroMessageStream) \
   do { \
     if (tarch::instrumentation::Log::isInfoOutputEnabled()) { \

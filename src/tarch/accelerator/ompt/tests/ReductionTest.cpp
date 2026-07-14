@@ -5,8 +5,6 @@
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/tests/TestMacros.h"
 
-#include <vector>
-
 namespace {
   constexpr int DeviceId     = tarch::accelerator::Device::DefaultDevice;
   constexpr int ElementCount = 1024;

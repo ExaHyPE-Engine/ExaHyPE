@@ -5,9 +5,6 @@
 #include "peano4/parallel/SpacetreeSet.h"
 #include "toolbox/loadbalancing/Blacklist.h"
 
-#include <cctype>
-#include <string>
-
 namespace {
   int extractIntField(const std::string& s, int treeId, const std::string& field) {
     const std::string entryStart = "(#" + std::to_string(treeId) + ":";

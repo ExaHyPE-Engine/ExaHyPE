@@ -3,8 +3,9 @@
 
 #include "TracingAPI.h"
 
-#include "Database.h" // needed for defined(ASSIGNMENT_CHECKS) macro and ::internal namespace
+#include "tarch/instrumentation/Log.h"
 
+#include "Database.h" // needed for defined(ASSIGNMENT_CHECKS) macro and ::internal namespace
 
 #if defined(ASSIGNMENT_CHECKS)
 
@@ -15,7 +16,6 @@ std::string toolbox::particles::assignmentchecks::sweepHistory() {
 void toolbox::particles::assignmentchecks::startMeshSweep(
   const std::string& meshSweepName
 ) {
-
   internal::Database& d = internal::Database::getInstance();
   d.startMeshSweep(meshSweepName);
 }
@@ -30,8 +30,6 @@ void toolbox::particles::assignmentchecks::eraseParticle(
   int                                          treeId,
   const std::string&                           trace
 ) {
-
-
   using namespace internal;
 
   Database& database = Database::getInstance();
@@ -48,7 +46,6 @@ void toolbox::particles::assignmentchecks::eraseParticle(
   Event event(Event::Type::Erase, isLocal, treeId, trace);
   Event previousEvent = database.addEvent(identifier, event);
 
-
   assertion(
     previousEvent.type == internal::Event::Type::DetachFromVertex,
     identifier.toString(),
@@ -57,9 +54,7 @@ void toolbox::particles::assignmentchecks::eraseParticle(
     treeId,
     database.particleHistory(identifier)
   );
-
 }
-
 
 void toolbox::particles::assignmentchecks::assignParticleToVertex(
   const std::string&                           particleName,
@@ -75,9 +70,6 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
   bool                                         particleIsNew,
   bool reassignmentOnSameTreeDepthAllowed
 ) {
-
-
-
   using namespace internal;
 
   constexpr bool checkNewParticles = false;
@@ -200,7 +192,6 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
   if (shift) {
     database.shiftIdentifierVertexInd(identifier, vertexIndNew, vertexDepthNew);
   }
-
 }
 
 void toolbox::particles::assignmentchecks::moveParticle(
@@ -213,8 +204,6 @@ void toolbox::particles::assignmentchecks::moveParticle(
   int                                          treeId,
   const std::string&                           trace
 ) {
-
-
   using namespace internal;
   Database& database = Database::getInstance();
 
@@ -280,7 +269,6 @@ void toolbox::particles::assignmentchecks::moveParticle(
 
   // Now actually write the move event down.
   if ((previousEvent.type == Event::Type::MoveWhileAssociatedToVertex) or (previousEvent.type == Event::Type::ConsecutiveMoveWhileAssociatedToVertex)){
-
     // Either way, the event we'll write down is a consecutive move
     Event newEvent = Event(
       Event::Type::ConsecutiveMoveWhileAssociatedToVertex,
@@ -306,7 +294,6 @@ void toolbox::particles::assignmentchecks::moveParticle(
 
     // And replace old event now.
     database.replaceEvent(identifier, previousEvent, newEvent);
-
   } else {
     // Add a new move event.
     Event newEvent = Event(
@@ -320,9 +307,7 @@ void toolbox::particles::assignmentchecks::moveParticle(
 
     database.addEvent(identifier, newEvent);
   }
-
 }
-
 
 void toolbox::particles::assignmentchecks::detachParticleFromVertex(
   const std::string&                           particleName,
@@ -334,9 +319,6 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
   int                                          treeId,
   const std::string&                           trace
 ) {
-
-
-
   using namespace internal;
   Database& database = Database::getInstance();
 
@@ -358,7 +340,6 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
     treeId,
     trace
   );
-
 
   Event previousEvent = database.addEvent(identifier, event);
 
@@ -404,7 +385,6 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
     trace,
     database.particleHistory(identifier)
   );
-
 }
 
 void toolbox::particles::assignmentchecks::assignParticleToSieveSet(
@@ -417,9 +397,6 @@ void toolbox::particles::assignmentchecks::assignParticleToSieveSet(
   int                                          treeId,
   const std::string&                           trace
 ) {
-
-
-
   using namespace internal;
   Database& database = Database::getInstance();
 
@@ -431,7 +408,6 @@ void toolbox::particles::assignmentchecks::assignParticleToSieveSet(
     particleID,
     treeId
   );
-
 
   Event event{internal::Event::Type::AssignToSieveSet, isLocal, treeId, trace};
 
@@ -445,17 +421,14 @@ void toolbox::particles::assignmentchecks::assignParticleToSieveSet(
     treeId,
     database.particleHistory(identifier)
   );
-
 }
 
 void toolbox::particles::assignmentchecks::eliminateExistingParticles() {
-
   internal::Database& database = internal::Database::getInstance();
   database.eliminateExistingParticles();
 }
 
 void toolbox::particles::assignmentchecks::ensureDatabaseIsEmpty() {
-
   internal::Database& database = internal::Database::getInstance();
 
   // During a reset or initialization, we always add the "initial"

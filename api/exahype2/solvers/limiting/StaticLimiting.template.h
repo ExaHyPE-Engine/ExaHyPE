@@ -3,7 +3,6 @@
 #pragma once
 
 #include "Abstract{{CLASSNAME}}.h"
-#include "tarch/instrumentation/Log.h"
 
 {% for item in NAMESPACE -%}
   namespace {{ item }} {

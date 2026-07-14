@@ -4,13 +4,6 @@
 
 #include "tarch/multicore/multicore.h"
 
-#include <functional>
-#include <limits>
-#include <set>
-#include <string>
-#include <tuple>
-#include <vector>
-
 namespace tarch {
   namespace multicore {
     /**

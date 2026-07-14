@@ -32,9 +32,6 @@ class EmptyPreprocessSolution(AbstractRungeKuttaDGActionSet):
     return __name__.replace(".py", "").replace(".", "_")
 
 
-
-
-
 class DoFWisePreprocessSolution(AbstractRungeKuttaDGActionSet):
   """
   
@@ -98,8 +95,6 @@ class DoFWisePreprocessSolution(AbstractRungeKuttaDGActionSet):
 }
 """
 
-    
-
   def get_body_of_operation(self,operation_name):
     result = ""
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
@@ -120,7 +115,6 @@ class DoFWisePreprocessSolution(AbstractRungeKuttaDGActionSet):
     return super(DoFWisePreprocessSolution,self).get_includes() + """
 #include "peano4/Loop.h"
 """
-
 
 
 class CellWisePreprocessSolution(AbstractRungeKuttaDGActionSet):
@@ -165,8 +159,6 @@ class CellWisePreprocessSolution(AbstractRungeKuttaDGActionSet):
   } 
 }
 """
-
-    
 
   def get_body_of_operation(self,operation_name):
     result = ""

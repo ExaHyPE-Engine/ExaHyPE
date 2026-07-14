@@ -8,9 +8,6 @@
 #include "tarch/multicore/Core.h"
 #include "toolbox/loadbalancing/Configuration.h"
 
-#include <algorithm>
-#include <memory>
-
 namespace {
   class RuntimeConfiguration final : public toolbox::loadbalancing::Configuration {
   public:

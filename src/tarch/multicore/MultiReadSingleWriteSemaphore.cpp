@@ -1,9 +1,7 @@
 #include "tarch/multicore/MultiReadSingleWriteSemaphore.h"
 #include "tarch/Assertions.h"
 
-
 #if !defined(SharedTBB) and !defined(SharedTBBExtension)
-
 
 tarch::multicore::MultiReadSingleWriteSemaphore::MultiReadSingleWriteSemaphore(bool highPriorityToWrites):
   _highPriorityToWrites(highPriorityToWrites),
@@ -11,12 +9,10 @@ tarch::multicore::MultiReadSingleWriteSemaphore::MultiReadSingleWriteSemaphore(b
   _numberOfPendingWriteRequests(0),
   _numberOfActiveReadAccesses(0) {}
 
-
 tarch::multicore::MultiReadSingleWriteSemaphore::~MultiReadSingleWriteSemaphore() {
   assertion(not _writeAccessAcquired );
   assertion((_numberOfActiveReadAccesses) == (0), _numberOfActiveReadAccesses, 0);
 }
-
 
 void tarch::multicore::MultiReadSingleWriteSemaphore::enterCriticalReadSection() {
   volatile bool letWriteAccessOvertake = _highPriorityToWrites;
@@ -40,7 +36,6 @@ void tarch::multicore::MultiReadSingleWriteSemaphore::enterCriticalReadSection()
     _semaphore.leaveCriticalSection();
   }
 }
-
 
 void tarch::multicore::MultiReadSingleWriteSemaphore::enterCriticalWriteSection() {
   if (_highPriorityToWrites) {
@@ -70,7 +65,6 @@ void tarch::multicore::MultiReadSingleWriteSemaphore::enterCriticalWriteSection(
   }
 }
 
-
 void tarch::multicore::MultiReadSingleWriteSemaphore::leaveCriticalReadSection() {
   _semaphore.enterCriticalSection();
   // point out to compiler that we update, as volatile ++ is deprecated
@@ -81,7 +75,6 @@ void tarch::multicore::MultiReadSingleWriteSemaphore::leaveCriticalReadSection()
   _semaphore.leaveCriticalSection();
 }
 
-
 void tarch::multicore::MultiReadSingleWriteSemaphore::leaveCriticalWriteSection() {
   _semaphore.enterCriticalSection();
   assertion(_writeAccessAcquired);
@@ -90,4 +83,3 @@ void tarch::multicore::MultiReadSingleWriteSemaphore::leaveCriticalWriteSection(
 }
 
 #endif
-

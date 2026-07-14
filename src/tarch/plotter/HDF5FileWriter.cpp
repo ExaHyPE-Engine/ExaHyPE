@@ -9,14 +9,7 @@
 #include "tarch/mpi/Rank.h"
 #include "tarch/mpi/mpi.h"
 
-#include <algorithm>
-#include <cstring>
-#include <filesystem>
-#include <fstream>
 #include <hdf5.h>
-#include <numeric>
-#include <stdexcept>
-#include <vector>
 
 namespace fs = std::filesystem;
 

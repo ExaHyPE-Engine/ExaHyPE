@@ -6,7 +6,6 @@
 #include "tarch/accelerator/hip/Device.h"
 #include "tarch/accelerator/hip/ErrorCheck.h"
 
-#include <algorithm>
 #include <hip/hip_runtime.h>
 
 namespace tarch::accelerator {

@@ -4,12 +4,8 @@
 
 #ifdef PEANO_WITH_NETCDF
 
+#include "tarch/instrumentation/Log.h"
 #include "tarch/la/ScalarOperations.h"
-
-#include <algorithm>
-#include <cmath>
-#include <sstream>
-#include <stdexcept>
 
 tarch::reader::NetCDFFieldSampler::NetCDFFieldSampler(
   std::initializer_list<FieldDescription> fields,

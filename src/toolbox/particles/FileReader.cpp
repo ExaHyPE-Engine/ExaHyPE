@@ -1,11 +1,6 @@
 #include "FileReader.h"
 
-#include <fstream>
-
-#include <stdio.h>
-#include <string.h>
-
-
+#include "tarch/instrumentation/Log.h"
 
 void toolbox::particles::FileReader::readDatFile( const std::string& filename, const double scale ) {
   std::fstream fin;
@@ -38,21 +33,17 @@ void toolbox::particles::FileReader::readDatFile( const std::string& filename, c
   logInfo("Read " << _data.size() << " particle positions from file " << filename);
 }
 
-
 void toolbox::particles::FileReader::clear() {
   _data.clear();
 }
-
 
 bool toolbox::particles::FileReader::empty() const {
   return _data.empty();
 }
 
-
 bool toolbox::particles::FileReader::getNumberOfCoordinates() const {
   return _data.size();
 }
-
 
 std::list< tarch::la::Vector<DIMENSIONS,double> > toolbox::particles::FileReader::getParticlesWithinVoxel(
   const tarch::la::Vector<DIMENSIONS,double>&  x,

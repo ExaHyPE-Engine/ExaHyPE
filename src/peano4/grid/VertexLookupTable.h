@@ -6,8 +6,6 @@
 #include "peano4/Globals.h"
 #include "tarch/la/Vector.h"
 
-#include <array>
-
 namespace peano4::grid {
   struct VertexLookupTable {
     std::array<int, TWO_POWER_D> vIdx; // Vertex index; also the linearised fine-grid index

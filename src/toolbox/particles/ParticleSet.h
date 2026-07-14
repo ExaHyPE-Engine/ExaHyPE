@@ -2,13 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include "SieveParticles.h"
 #include "tarch/multicore/BooleanSemaphore.h"
-
-#include <array>
-#include <list>
-#include <set>
 
 namespace toolbox {
   namespace particles {
@@ -16,7 +11,6 @@ namespace toolbox {
     class ParticleSet;
   } // namespace particles
 } // namespace toolbox
-
 
 /**
  * Abstract base class for all flavours of particle sets
@@ -395,6 +389,5 @@ protected:
   tarch::la::Vector<DIMENSIONS, double> _debugH;
 #endif
 };
-
 
 #include "ParticleSet.cpph"

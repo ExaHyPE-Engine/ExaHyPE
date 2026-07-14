@@ -4,10 +4,6 @@
 
 #if defined(PEANO_WITH_GPU_BACKEND_CUDA)
 
-#include "tarch/Assertions.h"
-
-#include <sstream>
-
 void tarch::accelerator::cuda::checkError(cudaError_t code, const char* expr, const char* file, int line) {
   if (code != cudaSuccess) {
     cudaDeviceSynchronize();

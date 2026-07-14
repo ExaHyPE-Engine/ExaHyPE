@@ -5,7 +5,6 @@
 #include "toolbox/curvi/geometry/Face.h"
 #include "toolbox/curvi/kdTree/Root.h"
 
-#include <string>
 #include <yaml-cpp/yaml.h>
 
 namespace toolbox {

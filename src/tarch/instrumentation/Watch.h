@@ -2,10 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <chrono>
-#include <ctime>
-#include <string>
-
 namespace tarch::instrumentation {
   class Watch;
 } // namespace tarch::instrumentation

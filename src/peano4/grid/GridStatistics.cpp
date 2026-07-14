@@ -5,10 +5,6 @@
 #include "GridVertex.h"
 #include "tarch/MemoryUsage.h"
 
-#include <algorithm>
-#include <iomanip>
-#include <sstream>
-
 static_assert(std::is_standard_layout_v<peano4::grid::GridStatistics>);
 static_assert(std::is_trivially_copyable_v<peano4::grid::GridStatistics>);
 

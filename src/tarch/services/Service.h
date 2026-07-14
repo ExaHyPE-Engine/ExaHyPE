@@ -2,9 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include "tarch/multicore/RecursiveSemaphore.h"
-
 
 namespace tarch {
   namespace services {
@@ -13,7 +11,6 @@ namespace tarch {
     class ServiceRepository;
   }
 }
-
 
 /**
  * Service Interface
@@ -129,4 +126,3 @@ class tarch::services::Service {
 
     virtual void shutdown() = 0;
 };
-

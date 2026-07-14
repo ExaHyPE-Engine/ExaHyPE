@@ -10,9 +10,6 @@
 #include "peano4/parallel/SpacetreeSet.h"
 #include "tarch/mpi/Rank.h"
 
-#include <algorithm>
-#include <set>
-
 namespace {
   constexpr double DomainOffset = 10.0;
   constexpr double DomainSize   = 1.0;

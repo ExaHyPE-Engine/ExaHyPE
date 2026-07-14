@@ -425,9 +425,6 @@ class PosterioriLimiting(object):
 
     def _get_default_includes(self):
         return """
-#include "tarch/la/Vector.h"
-
-#include "peano4/Globals.h"
 #include "peano4/Loop.h"
 
 #include "repositories/SolverRepository.h"

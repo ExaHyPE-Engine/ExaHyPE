@@ -4,17 +4,6 @@
 
 #include "tarch/CompilerSpecificSettings.h"
 
-#include <atomic>
-#include <chrono>
-#include <cstddef>
-#include <functional>
-#include <memory>
-#include <mutex>
-#include <ostream>
-#include <string>
-#include <string_view>
-#include <vector>
-
 namespace tarch {
   inline std::ostream& align(std::ostream& out) {
     out.put('\x1f');

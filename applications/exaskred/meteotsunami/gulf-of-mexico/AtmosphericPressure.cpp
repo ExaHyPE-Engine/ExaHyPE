@@ -5,8 +5,6 @@
 #include "Constants.h"
 #include "Projection.h"
 
-#include <cmath>
-
 double applications::exahype2::exaskred::meteotsunami::gulf_of_mexico::atmosphericPressure(double x,
                                                                                            double y,
                                                                                            double t) {

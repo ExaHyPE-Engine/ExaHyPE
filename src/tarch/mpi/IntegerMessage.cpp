@@ -2,10 +2,6 @@
 
 #include "tarch/mpi/mpi.h"
 
-#include <algorithm>
-#include <iostream>
-#include <sstream>
-
 tarch::mpi::IntegerMessage::IntegerMessage(int __value) { setValue(__value); }
 
 std::string tarch::mpi::IntegerMessage::toString() const {

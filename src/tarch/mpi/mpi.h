@@ -4,10 +4,6 @@
 
 #include "tarch/CompilerSpecificSettings.h"
 
-#include <functional>
-#include <source_location>
-#include <string>
-
 #ifdef PEANO_WITH_MPI
 #include <mpi.h>
 #endif

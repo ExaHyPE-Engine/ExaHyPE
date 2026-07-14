@@ -11,11 +11,6 @@
 #include "tarch/multicore/Core.h"
 #include "tarch/multicore/Lock.h"
 
-#include <algorithm>
-#include <cstdlib>
-#include <memory>
-#include <utility>
-
 std::chrono::steady_clock::time_point tarch::instrumentation::Log::_startupTime{std::chrono::steady_clock::now()};
 
 const tarch::instrumentation::Log::Configuration tarch::instrumentation::Log::_defaultConfiguration{};
