@@ -2,16 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "JSONReader.h"
 
-#include <algorithm>
-#include <cctype>
-#include <fstream>
-#include <sstream>
-#include <stdexcept>
-#include <unordered_map>
-#include <unordered_set>
-#include <utility>
-#include <variant>
-
 namespace {
   struct JSONValue;
   using JSONObject = std::unordered_map<std::string, JSONValue>;

@@ -2,9 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "MeteotsunamiLaws.h"
 
-#include <cmath>
-#include <numbers>
-
 namespace applications::exahype2::exaskred::meteotsunami {
   double coriolisForce::constant(double param) { return param; }
 

@@ -7,9 +7,6 @@
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/tests/TestMacros.h"
 
-#include <array>
-#include <limits>
-
 namespace {
   constexpr int N        = 64;
   constexpr int DeviceId = tarch::accelerator::Device::DefaultDevice;

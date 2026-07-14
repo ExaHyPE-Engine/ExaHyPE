@@ -142,7 +142,6 @@ _particleAlreadyInserted.clear();
 #include "globaldata/{{PARTICLE}}.h"
 #include "toolbox/particles/particles.h"
 #include "toolbox/particles/ParticleFactory.h"
-#include <vector>
 """
         ).render(**self.d)
 

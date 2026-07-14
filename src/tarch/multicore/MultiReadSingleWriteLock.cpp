@@ -2,7 +2,6 @@
 #include "tarch/multicore/MultiReadSingleWriteLock.h"
 #include "tarch/multicore/MultiReadSingleWriteSemaphore.h"
 
-
 tarch::multicore::MultiReadSingleWriteLock::MultiReadSingleWriteLock(
   tarch::multicore::MultiReadSingleWriteSemaphore& semaphore,
   bool isReadLock,
@@ -15,13 +14,11 @@ tarch::multicore::MultiReadSingleWriteLock::MultiReadSingleWriteLock(
   }
 }
 
-
 tarch::multicore::MultiReadSingleWriteLock::~MultiReadSingleWriteLock() {
   if (_lockIsAquired) {
     free();
   }
 }
-
 
 void tarch::multicore::MultiReadSingleWriteLock::lock() {
   assertion( !_lockIsAquired );
@@ -34,7 +31,6 @@ void tarch::multicore::MultiReadSingleWriteLock::lock() {
   _lockIsAquired = true;
 }
 
-
 void tarch::multicore::MultiReadSingleWriteLock::free() {
   assertion( _lockIsAquired );
   if (_isReadLock) {
@@ -45,4 +41,3 @@ void tarch::multicore::MultiReadSingleWriteLock::free() {
   }
   _lockIsAquired = false;
 }
-

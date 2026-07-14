@@ -10,10 +10,7 @@
 {% endif %}
 
 #include "tarch/CompilerSpecificSettings.h"
-#include "tarch/instrumentation/Trace.h"
-
-#include <cstring>
-#include <algorithm>
+#include "tarch/instrumentation/Log.h"
 
 {% if USE_POINT_SOURCE %}
 {% for item in NAMESPACE -%}

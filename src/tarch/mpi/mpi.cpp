@@ -8,12 +8,6 @@
 #include "tarch/mpi/Rank.h"
 #include "tarch/services/ServiceRepository.h"
 
-#include <atomic>
-#include <chrono>
-#include <mutex>
-#include <sstream>
-#include <unordered_map>
-
 #ifdef PEANO_WITH_MPI
 namespace {
   // A steady-clock time point that can hold a fractional-seconds deadline, so the

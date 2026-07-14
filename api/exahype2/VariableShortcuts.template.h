@@ -37,4 +37,3 @@ public:
   constexpr int operator () (const int index) const noexcept { return Q[index]; }
 };
 TARGET_DECLARE_END
-

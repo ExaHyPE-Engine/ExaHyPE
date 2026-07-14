@@ -5,12 +5,6 @@
 #ifdef PEANO_WITH_NETCDF
 
 #include "NetCDFFileReader.h"
-#include "tarch/instrumentation/Log.h"
-
-#include <initializer_list>
-#include <string>
-#include <unordered_map>
-#include <vector>
 
 namespace tarch::reader {
   class NetCDFFieldSampler;

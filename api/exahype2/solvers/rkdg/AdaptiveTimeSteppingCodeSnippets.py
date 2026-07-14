@@ -1,6 +1,7 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and 
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 import exahype2.solvers.AdaptiveTimeSteppingCodeSnippets
+
 
 class AdaptiveTimeSteppingCodeSnippets( exahype2.solvers.AdaptiveTimeSteppingCodeSnippets ):
   """
@@ -23,10 +24,10 @@ class AdaptiveTimeSteppingCodeSnippets( exahype2.solvers.AdaptiveTimeSteppingCod
     patches, i.e. we have to devide by the volume count per axis.
     """
     return super( AdaptiveTimeSteppingCodeSnippets, self ).create_finish_time_step_implementation() + """
-  if ( 
-    isLastGridSweepOfTimeStep() 
-    and 
-    tarch::la::greater(_maxEigenvalueThisTimeStep, 0.0 ) 
+  if (
+    isLastGridSweepOfTimeStep()
+    and
+    tarch::la::greater(_maxEigenvalueThisTimeStep, 0.0 )
   ) {
     const     double waveSpeedDamping   = 1.0 / _maxEigenvalueThisTimeStep;
     constexpr double CockburnShuDamping = 1.0 / (2.0*{{RK_ORDER}}-1.0);

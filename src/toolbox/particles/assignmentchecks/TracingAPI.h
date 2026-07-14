@@ -373,7 +373,6 @@ namespace toolbox {
         const tarch::la::Vector<DIMENSIONS, double>& vertexH,
         int                                          spacetreeId
       );
-
     } // namespace assignmentchecks
   } // namespace particles
 } // namespace toolbox

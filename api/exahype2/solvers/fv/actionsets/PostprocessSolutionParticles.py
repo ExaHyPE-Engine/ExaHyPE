@@ -61,7 +61,7 @@ class ParticleWisePostprocessSolution(AbstractFVActionSet):
   _timeStepSize = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize();
   _timeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
-  for (int i = 0; i < TWO_POWER_D; i++) 
+  for (int i = 0; i < TWO_POWER_D; i++)
   {
     for (auto* p : fineGridVertices{{PARTICLES_CONTAINER}}(i))
     {
@@ -129,7 +129,6 @@ class ParticleWisePostprocessSolution(AbstractFVActionSet):
 #include "vertexdata/{self.d['PARTICLES_CONTAINER']}.h"
 #include "globaldata/{self.d['PARTICLE']}.h"
 #include "repositories/SolverRepository.h"
-#include <list>
 """
         )
 

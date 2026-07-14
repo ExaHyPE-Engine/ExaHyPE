@@ -17,6 +17,7 @@ import peano4.plotter
 from .PeanoMain import PeanoMain
 from .Logger import log, setup_logging
 
+
 class Project (object):
   """!
   Represents a Peano 4 project.

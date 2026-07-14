@@ -112,9 +112,6 @@ if (not marker.willBeRefined()) {
 #include "toolbox/particles/particles.h"
 #include "toolbox/particles/ParticleFactory.h"
 #include "exahype2/fv/particles/ParticleHelper.h"
-#include <fstream>
-#include <string>
-#include <vector>
 """
         ).render(**self.d)
 

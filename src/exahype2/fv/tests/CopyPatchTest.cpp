@@ -5,8 +5,6 @@
 #include "peano4/Loop.h"
 #include "tarch/tests/TestMacros.h"
 
-#include <vector>
-
 exahype2::fv::tests::CopyPatchTest::CopyPatchTest() :
   TestCase("exahype2::fv::tests::CopyPatchTest") {}
 

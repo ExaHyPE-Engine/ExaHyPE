@@ -10,7 +10,6 @@ toolbox::curvi::Root::Root(const YAML::Node& node, double a_offset[3], double a_
   std::copy_n(a_grid, 3, grid);
   // check if required parameters exist
   if (bool(node) && bool(node["top"]) && bool(node["coordinates"]) && bool(node["perturbation"])) {
-
     /*set up coordinates and position of topography*/
     top = node["top"].as<bool>();
 
@@ -59,7 +58,6 @@ toolbox::curvi::Root::Root(const YAML::Node& node, double a_offset[3], double a_
       child = new Leaf();
     }
     /*--------------------------*/
-
   } else {
     std::stringstream ss;
     ss << "Missing tag in topography:" << std::endl;
@@ -103,7 +101,6 @@ toolbox::curvi::BlockBoundary toolbox::curvi::Root::traverse(int a_index[3]) {
 
   return child->traverse(a_index);
 }
-
 
 toolbox::curvi::BlockBoundary toolbox::curvi::Root::traverseProjection(double coords[3]) {
   checkInit();

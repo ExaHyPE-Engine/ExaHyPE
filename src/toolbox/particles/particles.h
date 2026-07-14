@@ -8,8 +8,6 @@
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 
-#include <atomic>
-
 namespace toolbox {
   namespace particles {
     /**

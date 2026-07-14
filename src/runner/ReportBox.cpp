@@ -5,10 +5,6 @@
 #include "runner/TextLayout.h"
 #include "tarch/instrumentation/Info.h"
 
-#include <algorithm>
-#include <iomanip>
-#include <sstream>
-
 // ---------------------------------------------------------------------------
 // Table
 // ---------------------------------------------------------------------------

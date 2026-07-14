@@ -6,11 +6,6 @@
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/accelerator.h"
 
-#include <bitset>
-#include <initializer_list>
-#include <sstream>
-#include <string>
-
 namespace tarch::la {
   template <int Size, typename Scalar>
   struct Vector;

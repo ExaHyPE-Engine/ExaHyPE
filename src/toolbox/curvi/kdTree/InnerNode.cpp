@@ -103,14 +103,14 @@ void toolbox::curvi::InnerNode::init(BlockBoundary& boundary, uint modes[3]) {
 
     /**
      * If we don't have a specified index for an inner node, we have to somehow figure out some approximation for a reasonable index.
-     * We want this index to lie at the interface between two cells, and considering that each cell has modes[n] points and shares one 
+     * We want this index to lie at the interface between two cells, and considering that each cell has modes[n] points and shares one
      * of these with their neighbour, that means the index has to be a multiple of (modes[n] - 1).
      * As such we look for the multiple of (modes[n] -1) which has the minimal distance to the position we want to place the interface
      * at in order to minimize how much we are distorting our domain.
      * The fraction of the domain that the position is at is computed via: (boundary.getIndexSize(n) * (position - box_offset[n]) / box_size[n])
      * So we want the indexe nearest to that (which we get by rounding), and then we look for the multiple of (modes[n] - 1) nearest to this,
      * which we get with integer arithmetic.
-     * 
+     *
      * !!!
      * This makes two assumptions, the first one is that the cell interfaces are multiples of (modes[n]-1). This is only given for Lobatto
      * nodes, but should be safe.
@@ -123,12 +123,12 @@ void toolbox::curvi::InnerNode::init(BlockBoundary& boundary, uint modes[3]) {
      * this would require knowing the exact position of all nodes which is not available.
      * As such if there is any sort of AMR, the index should be specified manually.
      * !!!
-     * 
+     *
      * Finally it should be noted that this is built without the expectation of Dynamic AMR. These indexes expect to last forever and in case of AMR
      * the entire grid would need to be rebuilt.
     */
 
-    index = int(std::round( ((position - box_offset[n]) / box_size[n] * boundary.getIndexSize(n)) / (modes[n] - 1)) 
+    index = int(std::round( ((position - box_offset[n]) / box_size[n] * boundary.getIndexSize(n)) / (modes[n] - 1))
       * (modes[n] - 1)
     );
   }

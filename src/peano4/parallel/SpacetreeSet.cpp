@@ -18,8 +18,6 @@
 #include "tarch/multicore/multicore.h"
 #include "tarch/services/ServiceRepository.h"
 
-#include <utility>
-
 peano4::parallel::SpacetreeSet peano4::parallel::SpacetreeSet::_singleton;
 
 tarch::multicore::BooleanSemaphore peano4::parallel::SpacetreeSet::_semaphore;

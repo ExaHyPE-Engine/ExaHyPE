@@ -7,12 +7,6 @@
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/la/ScalarOperations.h"
 
-#include <cstring>
-#include <initializer_list>
-#include <iomanip>
-#include <sstream>
-#include <string>
-
 namespace tarch::la {
   template <int Rows, int Cols, typename Scalar>
   class Matrix;

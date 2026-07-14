@@ -3,8 +3,6 @@
 #include "TestParticle.h"
 #include "toolbox/particles/MultiscaleTransitions.h"
 
-
-
 #ifdef UseTestSpecificCompilerSettings
 #pragma optimize("", off)
 #endif
@@ -221,7 +219,6 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticl
   #endif
 }
 
-
 void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticleAssociatedWithVertex03() {
   #if DIMENSIONS==2
   peano4::datamanagement::VertexMarker marker;
@@ -295,7 +292,6 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticl
   marker._select  = 3;
   validateWithParams1(dropParticle(searchRadius,x,marker), marker.toString());
 
-
   // Roll back and see if sieving works
   marker._cellCentre(0) -=   meshSize;
   searchRadius = 0.0555556;
@@ -334,8 +330,6 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticl
 
   #endif
 }
-
-
 
 void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticleAssociatedWithVertex04() {
   #if DIMENSIONS==2
@@ -421,7 +415,6 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticl
     internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE,
     marker.toString()
   );
-
 
   // Same overall test on other rank: start with left cell
   marker._cellCentre = {0.166667,0.5};

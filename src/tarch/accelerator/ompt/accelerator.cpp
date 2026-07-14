@@ -6,7 +6,6 @@
 
 #include "tarch/Assertions.h"
 
-#include <cstring>
 #include <omp.h>
 
 void* tarch::accelerator::allocateDeviceMemory(std::size_t sizeInBytes, int device) {

@@ -9,6 +9,7 @@ import exahype2.solvers.aderdg.kernels
 
 from exahype2.solvers.PDETerms import PDETerms
 
+
 def generate_kernels(solver, d, output):
     kernels_namespace = solver._namespace + ["kernels", solver._name]
     kernels_output_path = "kernels/" + solver._name

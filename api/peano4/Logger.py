@@ -12,11 +12,13 @@ _COLOR_CODES = {
 }
 _RESET_CODE = "\033[0m"
 
+
 class _SimpleColorFormatter(logging.Formatter):
     def format(self, record):
         color = _COLOR_CODES.get(record.levelno, "")
         message = super().format(record)
         return f"{color}{message}{_RESET_CODE}"
+
 
 def setup_logging(level=logging.INFO):
     formatter = _SimpleColorFormatter("[%(levelname)s]: %(message)s")

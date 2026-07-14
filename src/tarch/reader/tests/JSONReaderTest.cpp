@@ -4,13 +4,6 @@
 
 #include "tarch/reader/JSONReader.h"
 
-#include <atomic>
-#include <chrono>
-#include <filesystem>
-#include <fstream>
-#include <sstream>
-#include <stdexcept>
-
 namespace {
   std::string writeTempFile(const std::string& stem, const std::string& content) {
     static std::atomic<int> counter = 0;

@@ -6,7 +6,6 @@
 #include "tarch/accelerator/cuda/Device.h"
 #include "tarch/accelerator/cuda/ErrorCheck.h"
 
-#include <algorithm>
 #include <cuda_runtime.h>
 
 namespace tarch::accelerator {

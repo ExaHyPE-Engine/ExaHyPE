@@ -4,9 +4,6 @@
 
 #include "Log.h"
 
-#include <sstream>
-#include <string>
-
 #if PEANO_DEBUG
 #define logDebug(logMacroMessageStream) \
   do { \

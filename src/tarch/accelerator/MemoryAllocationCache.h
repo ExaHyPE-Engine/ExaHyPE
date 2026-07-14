@@ -4,8 +4,6 @@
 
 #include "MemoryLocation.h"
 
-#include <cstddef>
-
 namespace tarch::accelerator {
   struct MemoryAllocationCache {
     static MemoryAllocationCache& getInstance();

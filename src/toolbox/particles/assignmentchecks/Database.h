@@ -8,10 +8,6 @@
 #include "tarch/la/Vector.h"
 #include "tarch/multicore/MultiReadSingleWriteSemaphore.h"
 
-#include <functional> // needed for std::less
-#include <map>
-#include <vector>
-
 #if !defined(ASSIGNMENT_CHECKS) and !defined(NO_ASSIGNMENT_CHECKS) and PEANO_ASSERTIONS
 #define ASSIGNMENT_CHECKS
 #endif
@@ -48,11 +44,9 @@ namespace toolbox {
          */
 
         class Database {
-
           // Singleton-related stuff first, actual class content later.
         public:
           static Database& getInstance() {
-
             static Database _database;
             return _database;
           }
@@ -242,7 +236,6 @@ namespace toolbox {
            * re-use the history it returns.
            */
           Event getPreviousEvent(ParticleEvents& particleHistory, int spacetreeId, size_t nFirstEventsToSkip = 0);
-
         }; // class Database
       } // namespace internal
     } // namespace assignmentchecks

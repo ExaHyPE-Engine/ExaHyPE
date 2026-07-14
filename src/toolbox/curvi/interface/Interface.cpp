@@ -5,7 +5,6 @@
 toolbox::curvi::Interface::
   Interface(std::string file, double a_offset[3], double a_size[3], uint a_elements[3], int a_order):
   order(a_order) {
-
   YAMLInput input(file);
   std::copy_n(a_offset, 3, offset);
   std::copy_n(a_size, 3, size);

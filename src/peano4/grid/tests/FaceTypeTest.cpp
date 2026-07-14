@@ -5,8 +5,6 @@
 #include "peano4/grid/FaceType.h"
 #include "peano4/grid/VertexType.h"
 
-#include <vector>
-
 peano4::grid::tests::FaceTypeTest::FaceTypeTest():
   TestCase("peano4::grid::tests::FaceTypeTest") {}
 

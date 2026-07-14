@@ -7,8 +7,6 @@
 #include "Device.h"
 #include "tarch/Assertions.h"
 
-#include <cstring>
-
 namespace {
   void activateDevice(int device) {
     int currentDevice = -1;

@@ -34,7 +34,6 @@ class DynamicAMR(AbstractRungeKuttaDGActionSet):
         return (
             super(DynamicAMR, self).get_includes()
             + """
-#include <cstring>
 """
         )
 

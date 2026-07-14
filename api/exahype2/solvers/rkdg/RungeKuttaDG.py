@@ -34,6 +34,7 @@ from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFac
 from peano4.Logger import log
 from peano4.output.Helper import render_jinja2_template
 
+
 class RungeKuttaDG(object):
     r"""!
     An abstract class for any RKDG solver of any order

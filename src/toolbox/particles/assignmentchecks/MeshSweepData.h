@@ -20,7 +20,6 @@ namespace toolbox {
          */
 
         class MeshSweepData {
-
         public:
           MeshSweepData(const std::string& meshSweepName);
 
@@ -29,7 +28,6 @@ namespace toolbox {
         private:
           const std::string _meshSweepName;
         };
-
       } // namespace internal
     } // namespace assignmentchecks
   } // namespace particles

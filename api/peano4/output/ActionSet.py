@@ -8,6 +8,7 @@ import peano4.solversteps.ActionSet
 
 from peano4.Logger import log
 
+
 class ActionSet(object):
   def __init__(self,classname,namespace,subdirectory,implementation = None):
     """!
@@ -97,10 +98,6 @@ class ActionSet(object):
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/grid/GridControlEvent.h"
 #include "tarch/la/Vector.h"
-
-#include <vector>
-
-
 """ )
 
           outputfile.write( self.implementation.get_includes() )

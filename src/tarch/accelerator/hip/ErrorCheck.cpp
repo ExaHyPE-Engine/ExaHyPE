@@ -4,10 +4,6 @@
 
 #if defined(PEANO_WITH_GPU_BACKEND_HIP)
 
-#include "tarch/Assertions.h"
-
-#include <sstream>
-
 void tarch::accelerator::hip::checkError(hipError_t code, const char* expr, const char* file, int line) {
   if (code != hipSuccess) {
     (void)hipDeviceSynchronize();

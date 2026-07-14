@@ -174,7 +174,6 @@ namespace exahype2 {
           const peano4::datamanagement::CellMarker& marker,
           const double* __restrict__ Q
         );
-
       } // namespace integration
     } // namespace particles
   } // namespace fv

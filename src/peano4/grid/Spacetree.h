@@ -17,12 +17,6 @@
 #include "peano4/stacks/Stack.h"
 #include "tarch/instrumentation/Log.h"
 
-#include <array>
-#include <bitset>
-#include <deque>
-#include <unordered_set>
-#include <vector>
-
 namespace peano4::grid {
   class Spacetree;
   class GridTraversalObserver;

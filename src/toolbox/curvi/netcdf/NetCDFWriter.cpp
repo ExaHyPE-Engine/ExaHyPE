@@ -5,7 +5,6 @@ toolbox::curvi::NetCDFWriter::NetCDFWriter(std::string filename, int a_nz, int a
   nx(a_nx),
   ny(a_ny),
   nz(a_nz) {
-
   if (nz == 1) {
     dims = 2;
   } else {
@@ -33,7 +32,6 @@ void toolbox::curvi::NetCDFWriter::open(int o_nz, int o_ny, int o_nx, bool open,
     std::cout << "Couldn't read dimension y" << std::endl;
   }
   dim_ids.push_back(y_dim_id);
-
 
   int x_dim_id;
   if ((retval = nc_inq_dimid(ncid, "x", &x_dim_id))) {
@@ -73,7 +71,6 @@ void toolbox::curvi::NetCDFWriter::init(int o_nz, int o_ny, int o_nx) {
   int y_var_id;
   int x_var_id;
 
-
   if ((retval = nc_create(m_filename.c_str(), NC_CLOBBER, &ncid))) {
     std::cout << "Couldn't create netcdf file" << std::endl;
   }
@@ -91,7 +88,6 @@ void toolbox::curvi::NetCDFWriter::init(int o_nz, int o_ny, int o_nx) {
     std::cout << "Couldn't create dimension y" << std::endl;
   }
   dim_ids.push_back(y_dim_id);
-
 
   int x_dim_id;
   if ((retval = nc_def_dim(ncid, "x", nx, &x_dim_id))) {
@@ -126,7 +122,6 @@ void toolbox::curvi::NetCDFWriter::init(int o_nz, int o_ny, int o_nx) {
   if ((retval = nc_put_att_int(ncid, y_var_id, "actual_range", NC_INT, 2, y_range))) {
     std::cout << "error while trying to put attribute: " << std::endl;
   }
-
 
   int x_range[2] = {0, nx - 1};
   if ((retval = nc_put_att_int(ncid, x_var_id, "actual_range", NC_INT, 2, x_range))) {

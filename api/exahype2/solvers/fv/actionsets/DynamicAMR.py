@@ -5,6 +5,7 @@ import exahype2
 
 import peano4.toolbox.blockstructured.DynamicAMR
 
+
 class DynamicAMR(peano4.toolbox.blockstructured.DynamicAMR):
     """
     The ExaHyPE 2 Finite Volume handling of (dynamically) adaptive meshes
@@ -364,7 +365,6 @@ class DynamicAMR(peano4.toolbox.blockstructured.DynamicAMR):
 
     def get_includes(self):
         return f"""{super(DynamicAMR, self).get_includes()}
-#include <cstring>
 #include "exahype2/fv/PatchUtils.h"
 #include "toolbox/blockstructured/AMRRoutines.h"
 """

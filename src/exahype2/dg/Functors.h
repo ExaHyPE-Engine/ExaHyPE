@@ -2,16 +2,9 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
-
 #include "tarch/la/Vector.h"
 #include "peano4/Globals.h"
 #include "tarch/multicore/multicore.h"
-
-
-#include <functional>
-#include <vector>
-
 
 namespace exahype2 {
   namespace dg {
@@ -94,8 +87,6 @@ namespace exahype2 {
       int                                          normal
     ) >   MaxEigenvalue;
 
-
-
     /*
      * This is only used within DGUtils in order to apply the boundary conditions
      * to a given face.
@@ -107,8 +98,5 @@ namespace exahype2 {
       double                                       t,
       int                                          normal
     ) >   BoundaryConditions;
-
   }
 }
-
-

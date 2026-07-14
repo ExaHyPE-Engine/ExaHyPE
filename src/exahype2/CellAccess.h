@@ -2,13 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
-#include <functional>
-#include <string>
-
 #include "peano4/Globals.h"
 #include "tarch/la/Vector.h"
-
 
 namespace exahype2 {
   /**

@@ -9,10 +9,6 @@
 #include "../rusanov/Rusanov.h"
 #include "exahype2/CellData.h"
 
-#include <cmath>
-#include <fstream>
-#include <iostream>
-
 /*
  * We use precomputed values for lagrange polynomials as basis function
  * on Gauss-Legendre nodes
@@ -406,7 +402,6 @@ void exahype2::dg::tests::CellIntegralTest::runDGEuler(){
   //values of the rusanov fluxes on the faces
   double* QHullForRiemann = new double[2*DIMENSIONS*2*nodesPerFace*unknowns];
 
-
   ::exahype2::CellData cellData(
       QIn,
       x,
@@ -415,7 +410,6 @@ void exahype2::dg::tests::CellIntegralTest::runDGEuler(){
       dt,
       QOut
       );
-
 
   //setting initial conditions
 
@@ -460,7 +454,6 @@ void exahype2::dg::tests::CellIntegralTest::runDGEuler(){
       false,    //source
       false);   //pointSources
 
-
   file_stream << "\nComputed volume integral values are: \n";
   for(int i=0; i<nodesPerCell; i++){
     file_stream << "node " << i << ": [";
@@ -499,7 +492,6 @@ void exahype2::dg::tests::CellIntegralTest::runDGEuler(){
   F[5] = QBack;
 #endif
 
-
   // *  project data onto opposite face as well to trade with "identical" cell,
   // *  this essentially simulates the exchange of surface data with the
   // *  neighbouring cells which Peano would take care of for us normally
@@ -519,9 +511,7 @@ void exahype2::dg::tests::CellIntegralTest::runDGEuler(){
 #endif
   );
 
-
   for(int f=0; f<2*DIMENSIONS; f++){
-
     double* currentFace = F[f];
     file_stream << "\nFace " << f << ": \n";
 
@@ -532,9 +522,7 @@ void exahype2::dg::tests::CellIntegralTest::runDGEuler(){
       }
       file_stream << "]\n";
     }
-
   }
-
 
   // The faces are assembled into one pointer construct for ease of access in the
   // next steps. In addition information about whether the faces are at the boundary
@@ -555,14 +543,11 @@ void exahype2::dg::tests::CellIntegralTest::runDGEuler(){
   QHull[5] = QFront;
 #endif
 
-
   for(int i=0; i<2*DIMENSIONS*2*nodesPerFace*strideQ; i++){
     QHullForRiemann[i] = 0.0;
   }
 
-
   for(int face=0; face<2*DIMENSIONS; face++){
-
     rusanov::solveRiemannProblem_pointwise_in_situ(
       [&](
           const double * NOALIAS                  Q,
@@ -598,9 +583,7 @@ void exahype2::dg::tests::CellIntegralTest::runDGEuler(){
       QHull[face], //TODO
       &QHullForRiemann[face*2*nodesPerFace*unknowns]
       );
-
   }
-
 
   file_stream << "\nRusanov Fluxes per Face:\n";
   for(int f=0; f<2*DIMENSIONS; f++){
@@ -614,7 +597,6 @@ QHullForRiemann[(f*2*nodesPerFace+i)*unknowns+var]) << ", ";
       file_stream << "]\n";
     }
   }
-
 
   //  The contributions from the computed rusanov flux are then added to the nodes
   //  within the cell.
@@ -641,8 +623,6 @@ QHullForRiemann[(f*2*nodesPerFace+i)*unknowns+var]) << ", ";
     QOut
   );
 
-
-
   file_stream << "\nValues after Riemann Integral are: \n";
   for(int i=0; i<nodesPerCell; i++){
     file_stream << "node " << i << ": [";
@@ -651,7 +631,6 @@ QHullForRiemann[(f*2*nodesPerFace+i)*unknowns+var]) << ", ";
     }
     file_stream << "]\n";
   }
-
 
   multiplyWithInvertedMassMatrix_GaussLegendre(
     cellData,
@@ -674,7 +653,6 @@ contributions, is zero
     file_stream << "]\n";
   }
 
-
   delete[] QIn;
   delete[] QOut;
   delete[] QLeft;
@@ -686,14 +664,9 @@ contributions, is zero
   delete[] QBack;
 #endif
   delete[] QHullForRiemann;
-
 }//runDGEuler
 
-
-
 void exahype2::dg::tests::CellIntegralTest::runDGElastic(){
-
-
   file_stream << "\n\nStarting Elastic test in " << DIMENSIONS << " dimensions\n\n";
 
   // geometry
@@ -735,7 +708,6 @@ void exahype2::dg::tests::CellIntegralTest::runDGElastic(){
   //values of the rusanov fluxes on the faces
   double* QHullForRiemann = new double[2*DIMENSIONS*2*nodesPerFace*strideQ];
 
-
   ::exahype2::CellData cellData(
       QIn,
       x,
@@ -744,7 +716,6 @@ void exahype2::dg::tests::CellIntegralTest::runDGElastic(){
       dt,
       QOut
       );
-
 
   //setting initial conditions
 
@@ -837,7 +808,6 @@ void exahype2::dg::tests::CellIntegralTest::runDGElastic(){
   F[5] = QBack;
 #endif
 
-
   //   project data onto opposite face as well to trade with "identical" cell,
   //   this essentially simulates the exchange of surface data with the
   //   neighbouring cells which Peano would take care of for us normally
@@ -857,9 +827,7 @@ void exahype2::dg::tests::CellIntegralTest::runDGElastic(){
 #endif
   );
 
-
   for(int f=0; f<2*DIMENSIONS; f++){
-
     double* currentFace = F[f];
     file_stream << "\nFace " << f << ": \n";
 
@@ -870,9 +838,7 @@ void exahype2::dg::tests::CellIntegralTest::runDGElastic(){
       }
       file_stream << "]\n";
     }
-
   }
-
 
   // The faces are assembled into one pointer construct for ease of access in the
   // next steps. In addition information about whether the faces are at the boundary
@@ -893,14 +859,11 @@ void exahype2::dg::tests::CellIntegralTest::runDGElastic(){
   QHull[5] = QFront;
 #endif
 
-
   for(int i=0; i<2*DIMENSIONS*2*nodesPerFace*unknowns; i++){
     QHullForRiemann[i] = 0.0;
   }
 
-
   for(int face=0; face<2*DIMENSIONS; face++){
-
     rusanov::solveRiemannProblem_pointwise_in_situ(
       [&](
           const double * NOALIAS                  Q,
@@ -946,9 +909,7 @@ void exahype2::dg::tests::CellIntegralTest::runDGElastic(){
       QHull[face], //TODO
       &QHullForRiemann[face*2*nodesPerFace*unknowns]
       );
-
   }
-
 
   file_stream << "\nRusanov Fluxes per Face:\n";
   for(int f=0; f<2*DIMENSIONS; f++){
@@ -962,7 +923,6 @@ QHullForRiemann[(f*2*nodesPerFace+i)*unknowns+var]) << ", ";
       file_stream << "]\n";
     }
   }
-
 
   //  The contributions from the computed rusanov flux are then added to the nodes
   //  within the cell.
@@ -989,8 +949,6 @@ QHullForRiemann[(f*2*nodesPerFace+i)*unknowns+var]) << ", ";
     QOut
   );
 
-
-
   file_stream << "\nValues after Riemann Integral are: \n";
   for(int i=0; i<nodesPerCell; i++){
     file_stream << "node " << i << ": [";
@@ -999,7 +957,6 @@ QHullForRiemann[(f*2*nodesPerFace+i)*unknowns+var]) << ", ";
     }
     file_stream << "]\n";
   }
-
 
   multiplyWithInvertedMassMatrix_GaussLegendre(
     cellData,
@@ -1022,7 +979,6 @@ contributions, is zero
     file_stream << "]\n";
   }
 
-
   delete[] QIn;
   delete[] QOut;
   delete[] QLeft;
@@ -1035,7 +991,5 @@ contributions, is zero
 #endif
 
   delete[] QHullForRiemann;
-
-
 } //runDGElastic
 */

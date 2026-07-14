@@ -7,11 +7,6 @@
 #include "tarch/mpi/mpi.h"
 #include "toolbox/loadbalancing/Statistics.h"
 
-#include <algorithm>
-#include <cstdint>
-#include <limits>
-#include <vector>
-
 toolbox::loadbalancing::tests::StatisticsTest::StatisticsTest() :
   tarch::tests::TestCase("toolbox::loadbalancing::tests::StatisticsTest") {}
 

@@ -1,6 +1,5 @@
 #include "exahype2/dg/DGUtils.h"
 
-
 void exahype2::dg::copyOneSideOfFaceProjection(
   int    unknownsPlusAuxiliaryVariables,
   int    order,
@@ -21,7 +20,6 @@ void exahype2::dg::copyOneSideOfFaceProjection(
   );
 }
 
-
 double  exahype2::dg::getQuadratureWeight(
   const tarch::la::Vector<3,double>&  cellSize,
   const tarch::la::Vector<3,int>&     index,
@@ -33,8 +31,6 @@ double  exahype2::dg::getQuadratureWeight(
   }
   return result;
 }
-
-
 
 int exahype2::dg::getNodesPerCell(int nodesPerAxis){
   int nodesPerCell=nodesPerAxis;
@@ -56,7 +52,6 @@ tarch::la::Vector<DIMENSIONS,int> exahype2::dg::getIndex(
     int                                   node,
     tarch::la::Vector<DIMENSIONS,int>  strides
 ){
-
   tarch::la::Vector<DIMENSIONS,int> index(0);
   int tmp = 0;
   for(int d=DIMENSIONS-1; d>=0; d--){
@@ -64,9 +59,7 @@ tarch::la::Vector<DIMENSIONS,int> exahype2::dg::getIndex(
     tmp += strides[d]*index[d];
   }
   return index;
-
 }
-
 
 int exahype2::dg::cellIndexToHullIndex(
     const tarch::la::Vector<DIMENSIONS,int>&  indexCell,
@@ -74,7 +67,6 @@ int exahype2::dg::cellIndexToHullIndex(
     const int                                 orientation,
     const int                                 nodesPerAxis
     ){
-
   /*
    * Imagine a 3d cell of order 2, so there are 9 nodes
    * for a node [i,j,k], we want face element [j,k] if in
@@ -103,9 +95,7 @@ int exahype2::dg::cellIndexToHullIndex(
    * if right face, need to skip those plus the left face
    */
   return HullIndex + stride*(2*direction+orientation); //stride is nodesPerAxis^(d)
-
 }
-
 
 void exahype2::dg::computeGradient(
         const double* NOALIAS const QCell,
@@ -116,12 +106,10 @@ void exahype2::dg::computeGradient(
         const int                        scalarIndex,
         double* NOALIAS             gradQ
         ){
-
   tarch::la::Vector<DIMENSIONS,int> strides = getStrides(nodesPerAxis);
   tarch::la::Vector<DIMENSIONS,int> index   = getIndex(scalarIndex, strides);
 
   for(int dim=0; dim<DIMENSIONS; dim++){
-
     for(int var=0; var<strideQ; var++){
       gradQ[dim*strideQ+var] = 0.0;
     }//var
@@ -134,9 +122,7 @@ void exahype2::dg::computeGradient(
       }//var
     }//node
   }//dim
-
 }
-
 
 void exahype2::dg::subtractCell(
     double* NOALIAS        QOut,
@@ -156,7 +142,6 @@ void exahype2::dg::subtractCell(
   }
 }
 
-
 std::string exahype2::dg::plotCell(
   const double* NOALIAS Q,
   const int order,
@@ -171,7 +156,6 @@ std::string exahype2::dg::plotCell(
     DIMENSIONS==2
   );
 }
-
 
 std::string exahype2::dg::plotFace(
   const double* NOALIAS  Q,

@@ -14,11 +14,6 @@
 #include "tarch/instrumentation/Error.h"
 #include "tarch/instrumentation/Warning.h"
 
-#include <algorithm>
-#include <iomanip>
-#include <limits>
-#include <sstream>
-
 namespace {
   using SolverList = std::vector<std::pair<std::string, std::vector<runner::SolverStatistic>>>;
 

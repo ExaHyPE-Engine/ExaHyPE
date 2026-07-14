@@ -7,10 +7,6 @@
 #include "SplitInstruction.h"
 #include "TreeIdSet.h"
 
-#include <array>
-#include <bitset>
-#include <vector>
-
 namespace peano4::grid {
   class SpacetreeHelper;
 } // namespace peano4::grid

@@ -4,9 +4,6 @@
 
 #include "FileWriter.h"
 
-#include <iomanip>
-#include <sstream>
-
 std::string tarch::plotter::TimeSeriesWriter::snapshotName(const std::string& filename, double time) const {
   std::ostringstream oss;
   oss << filename << "-" << std::fixed << std::setprecision(6) << time;

@@ -4,8 +4,6 @@
 
 #include "peano4/stacks/Stack.h"
 
-#include <vector>
-
 #ifdef PEANO_WITH_MPI
 #include <mpi.h>
 #endif

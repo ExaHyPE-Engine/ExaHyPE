@@ -5,9 +5,6 @@
 #include "tarch/Assertions.h"
 #include "tarch/multicore/Lock.h"
 
-#include <filesystem>
-#include <fstream>
-
 tarch::database::SnapshotDatabase::SnapshotDatabase(double timeDelta, bool deltasAreRelative) :
   _fileName(""),
   _timeDelta(timeDelta),

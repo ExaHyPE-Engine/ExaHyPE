@@ -4,9 +4,6 @@
 
 #include "VariableShortcutsCCZ4Solver.h"
 
-#include <algorithm>
-#include <cmath>
-
 namespace {
   using Shortcuts = applications::exahype2::exagrype::VariableShortcutsCCZ4Solver;
 } // namespace

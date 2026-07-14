@@ -9,8 +9,6 @@
 //   Shortcuts::v        velocity       (2 components: +0 is x, +1 is y)
 #include "ADERDGSolver.h"
 
-#include <cmath>
-
 namespace {
   constexpr double Rho = 1.0;          // density
   constexpr double C   = 1.0;          // sound speed

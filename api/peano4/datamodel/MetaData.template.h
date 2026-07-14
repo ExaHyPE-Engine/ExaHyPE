@@ -10,10 +10,6 @@
 #include "peano4/datamanagement/VertexMarker.h"
 #include "peano4/stacks/SendReceiveContext.h"
 
-#include <bitset>
-#include <cstdint>
-#include <string>
-
 {{INCLUDES}}
 
 {% for item in NAMESPACE -%}

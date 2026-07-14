@@ -4,9 +4,6 @@
 
 #include "tarch/accelerator/accelerator.h"
 
-#include <algorithm>
-#include <cmath>
-
 namespace applications::exahype2::exagrype {
   template <class Shortcuts>
   static inline GPU_CALLABLE_METHOD double maxEigenvalue(const double* const Q, int normal);

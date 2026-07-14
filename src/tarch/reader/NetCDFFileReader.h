@@ -4,8 +4,6 @@
 
 #ifdef PEANO_WITH_NETCDF
 
-#include <string>
-
 namespace tarch::reader {
   class NetCDFFileReader;
 } // namespace tarch::reader

@@ -22,7 +22,6 @@ toolbox::particles::assignmentchecks::internal::Event::Event(
   trace(trace_),
   meshSweepIndex(meshSweepIndex_) {}
 
-
 toolbox::particles::assignmentchecks::internal::Event::Event(
   Type                                         type_,
   bool                                         isLocal_,
@@ -42,7 +41,6 @@ toolbox::particles::assignmentchecks::internal::Event::Event(
   assertion(type == Type::AssignToVertex or type == Type::DetachFromVertex);
 }
 
-
 toolbox::particles::assignmentchecks::internal::Event::
   Event(Type type_, bool isLocal_, int treeId_, const std::string& trace_):
   type(type_),
@@ -55,7 +53,6 @@ toolbox::particles::assignmentchecks::internal::Event::
   assertion(type == Type::AssignToSieveSet or type == Type::Erase);
 }
 
-
 toolbox::particles::assignmentchecks::internal::Event::Event(Type type_):
   type(type_),
   isLocal(false),
@@ -66,7 +63,6 @@ toolbox::particles::assignmentchecks::internal::Event::Event(Type type_):
   trace("no-trace") {
   assertion(type == Type::NotFound);
 }
-
 
 toolbox::particles::assignmentchecks::internal::Event::Event(
   Type                                         type_,
@@ -85,7 +81,6 @@ toolbox::particles::assignmentchecks::internal::Event::Event(
   trace(trace_) {
   assertion(type == Type::MoveWhileAssociatedToVertex);
 }
-
 
 std::string toolbox::particles::assignmentchecks::internal::Event::toString(
 ) const {

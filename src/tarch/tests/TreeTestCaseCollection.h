@@ -3,10 +3,6 @@
 #pragma once
 
 #include "TestCase.h"
-#include "tarch/instrumentation/Log.h"
-
-#include <list>
-#include <map>
 
 namespace tarch {
   namespace tests {
@@ -33,10 +29,6 @@ private:
    * Tells the collection whether to log a progression bar.
    */
   bool _writeToLog;
-
-  /**
-   * Log interface the class writes to.
-   */
 
   /**
    * Tells whether the testcases contained should be deleted upon destruction of this object.

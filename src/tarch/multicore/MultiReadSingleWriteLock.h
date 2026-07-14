@@ -2,14 +2,12 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 namespace tarch {
   namespace multicore {
     class MultiReadSingleWriteSemaphore;
     class MultiReadSingleWriteLock;
   }
 }
-
 
 /**
  * Create a lock around a boolean semaphore region
@@ -37,4 +35,3 @@ class tarch::multicore::MultiReadSingleWriteLock {
     void lock();
     void free();
 };
-

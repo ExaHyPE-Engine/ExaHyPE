@@ -6,8 +6,6 @@
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/tests/TestMacros.h"
 
-#include <type_traits>
-
 namespace {
   constexpr int         DeviceId  = tarch::accelerator::Device::DefaultDevice;
   constexpr std::size_t ByteCount = 4 * sizeof(double);

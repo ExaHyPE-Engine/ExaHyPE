@@ -4,8 +4,6 @@
 
 #include "toolbox/curvi/geometry/Block.h"
 
-#include <map>
-
 namespace toolbox {
   namespace curvi {
     namespace Interpolation {
@@ -88,7 +86,6 @@ namespace toolbox {
           return nominator / denominator;
         }
 
-
         static double uniformLagrangePolynomial(double position, int i, int range) {
           double              result       = 1;
           std::vector<double> uniform_mesh = getUniformMesh(range);
@@ -128,7 +125,6 @@ namespace toolbox {
         }
 
         static double getLagrangeDenominator(int i, int range) {
-
           /*used to hash results*/
           /*       typedef std::tuple<int,int> keytype; */
           /*       static std::map<keytype,double> denominator_map; */

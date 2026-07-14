@@ -9,8 +9,6 @@
 #include <sys/resource.h>
 #endif
 
-#include <sstream>
-
 namespace {
   std::string formatMemorySize(unsigned long long bytes) {
     const auto         format = tarch::chooseMemoryUsageFormat(bytes);

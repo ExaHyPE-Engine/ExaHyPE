@@ -7,7 +7,6 @@
 #include "exahype2/Solver.h"
 
 #include "tarch/la/Vector.h"
-#include "tarch/instrumentation/Log.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 
@@ -183,7 +182,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 {% endif %}
 
   protected:
-
     SolverState _solverState;
 
     int _numberOfTroubledCells;

@@ -7,6 +7,7 @@ from exahype2.solvers.fv.FixedTimeSteppingCodeSnippets import (
     FixedTimeSteppingCodeSnippets,
 )
 
+
 class GlobalFixedTimeStep(SingleSweep):
     def __init__(
         self,

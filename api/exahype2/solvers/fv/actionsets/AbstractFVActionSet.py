@@ -2,6 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 from peano4.solversteps.ActionSet import ActionSet
 
+
 class AbstractFVActionSet(ActionSet):
   def __init__(self, solver):
     """
@@ -25,5 +26,4 @@ class AbstractFVActionSet(ActionSet):
 
   def get_includes(self):
     return """
-#include <functional>
 """ + self._solver._get_default_includes() + self._solver.user_action_set_includes

@@ -6,8 +6,6 @@
 #include "peano4/grid/VertexType.h"
 #include "peano4/Loop.h"
 
-#include <bitset>
-
 peano4::grid::tests::VertexTypeTest::VertexTypeTest():
   TestCase("peano4::grid::tests::VertexTypeTest") {}
 

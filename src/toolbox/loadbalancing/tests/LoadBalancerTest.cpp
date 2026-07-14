@@ -6,8 +6,6 @@
 #include "toolbox/loadbalancing/LoadBalancer.h"
 #include "toolbox/loadbalancing/State.h"
 
-#include <string>
-
 namespace {
   /**
    * Deterministic configuration used by the unit tests.

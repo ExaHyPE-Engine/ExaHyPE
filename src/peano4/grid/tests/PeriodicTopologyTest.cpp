@@ -5,10 +5,6 @@
 #include "peano4/grid/AutomatonState.h"
 #include "peano4/grid/PeriodicTopology.h"
 
-#include <bitset>
-#include <set>
-#include <vector>
-
 namespace {
   tarch::la::Vector<DIMENSIONS, int> idx(int v0, int v1 = 0, int v2 = 0) {
     tarch::la::Vector<DIMENSIONS, int> result;

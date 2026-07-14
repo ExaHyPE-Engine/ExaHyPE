@@ -7,7 +7,6 @@
 #include "Device.h"
 #include "tarch/Assertions.h"
 
-#include <cstring>
 #include <sycl/sycl.hpp>
 
 void* tarch::accelerator::allocateDeviceMemory(std::size_t sizeInBytes, int device) {

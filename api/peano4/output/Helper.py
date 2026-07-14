@@ -7,6 +7,7 @@ import jinja2
 
 from peano4.Logger import log
 
+
 def write_file(directory, protected_files, full_qualified_filename):
   """
     Decide whether the code generator may (over)write full_qualified_filename.

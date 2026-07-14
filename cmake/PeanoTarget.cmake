@@ -99,6 +99,15 @@ function(peano_add_target)
 
   target_sources(${target} PRIVATE ${target_sources})
 
+  # nvc++ (NVHPC) has no precompiled-header support in CMake, so
+  # target_precompile_headers does nothing for it. Force-include the
+  # header textually so the standard headers it provides remain visible.
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "NVHPC")
+    target_compile_options(${target} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:SHELL:-include tarch/StdAfx.h>")
+  else()
+    target_precompile_headers(${target} PRIVATE "<tarch/StdAfx.h>")
+  endif()
+
   if(TARGET Peano::PeanoOptions)
     set(peano_options_target Peano::PeanoOptions)
   elseif(TARGET PeanoOptions)

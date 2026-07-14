@@ -2,7 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 namespace toolbox {
   namespace particles {
     namespace memorypool {
@@ -12,7 +11,6 @@ namespace toolbox {
   }   // namespace particles
 } // namespace toolbox
 
-
 /**
  * Memory pool offering continuous global memory for a particle species
  *
@@ -20,11 +18,11 @@ namespace toolbox {
  * you continue to read this documentation. This class is used by every "vertex" object, i.e.
  * each vertex holds one instance of the pool object. Basically, the field container is used
  * to point to all the particles scattered over the memory after we've created the particles.
- * However, whenever we call gather(), we take all of these particles from the heap, put them 
+ * However, whenever we call gather(), we take all of these particles from the heap, put them
  * into one continuous container and then make the pointers within container point to those
  * guys.
- * 
- * 
+ *
+ *
  */
 template <class T>
 struct toolbox::particles::memorypool::VertexWiseContinuousMemoryPool {
@@ -41,7 +39,6 @@ struct toolbox::particles::memorypool::VertexWiseContinuousMemoryPool {
      * the heap. After that, free the en bloc allocation.
      */
     void scatter();
-
 
     /**
      * Scatter the data if not scattered yet and return the updated iterator
@@ -111,13 +108,10 @@ struct toolbox::particles::memorypool::VertexWiseContinuousMemoryPool {
     static bool requestCompleteScatter();
 
   private:
-
     /**
      * Is nullptr as long as data is not gathered.
      */
     T* _gatheredDataPointer;
 };
 
-
 #include "VertexWiseContinuousMemoryPool.cpph"
-

@@ -9,16 +9,7 @@
 #include "tarch/mpi/Rank.h"
 #include "tarch/mpi/mpi.h"
 
-#include <algorithm>
-#include <cstddef>
-#include <cstdint>
-#include <cstring>
-#include <filesystem>
-#include <limits>
 #include <netcdf.h>
-#include <stdexcept>
-#include <string>
-#include <vector>
 
 #if defined(PEANO_WITH_MPI)
 #include <netcdf_par.h>

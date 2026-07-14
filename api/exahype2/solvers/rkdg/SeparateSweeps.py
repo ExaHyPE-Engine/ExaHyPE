@@ -3,8 +3,6 @@
 from .RungeKuttaDG  import RungeKuttaDG
 
 
-
-
 class SeparateSweeps(RungeKuttaDG):
   """
   Probably the simplest solver you could think off.

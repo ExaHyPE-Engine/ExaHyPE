@@ -45,7 +45,6 @@ class HandleBoundary(AbstractADERDGActionSet):
     gradQ[normal] = gradQN;
 {% endif %}
 
-
     peano4::dForEachExclusive({{ORDER}} + 1, normal, 0, [&](const tarch::la::Vector<DIMENSIONS, int>& dof) {
         tarch::la::Vector<DIMENSIONS, double> nodePosition;
         int dofSerialised = 0;

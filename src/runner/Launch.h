@@ -5,9 +5,6 @@
 #include "runner/Engine.h" // Step, RepositoryCallbacks
 #include "tarch/la/Vector.h"
 
-#include <bitset>
-#include <vector>
-
 namespace runner {
   /**
    * The whole run lifecycle in one call: parse the merged RuntimeParameters, bring up tarch and

@@ -4,9 +4,6 @@
 
 #include "peano4/Loop.h"
 
-#include <set>
-#include <vector>
-
 peano4::tests::LoopTest::LoopTest() :
   TestCase("peano4::tests::LoopTest") {}
 

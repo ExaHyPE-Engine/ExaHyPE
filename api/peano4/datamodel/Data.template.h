@@ -13,11 +13,6 @@
 #include "peano4/stacks/SendReceiveContext.h"
 #include "peano4/Globals.h"
 
-#include <memory>
-#include <string>
-#include <cstring> // std::memcpy, std::memset
-#include <utility> // std::exchange
-
 {% if FLOAT_TYPE=="std::float16_t" or FLOAT_TYPE=="std::bfloat16_t" %}
 #include <stdfloat>
 {% endif %}

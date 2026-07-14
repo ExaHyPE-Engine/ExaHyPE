@@ -6,8 +6,6 @@
 #include "tarch/la/Scalar.h"
 #include "tarch/la/Vector.h"
 
-#include <cmath>
-
 namespace applications::exahype2::exagrype {
   template <class Shortcuts>
   static inline GPU_CALLABLE_METHOD void source(

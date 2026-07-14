@@ -2,7 +2,6 @@
 #include "tarch/multicore/RecursiveLock.h"
 #include "tarch/multicore/RecursiveSemaphore.h"
 
-
 tarch::multicore::RecursiveLock::RecursiveLock( tarch::multicore::RecursiveSemaphore& semaphore, bool aquireLockImmediately ):
   _semaphore(semaphore),
   _lockIsAquired(false) {
@@ -11,13 +10,11 @@ tarch::multicore::RecursiveLock::RecursiveLock( tarch::multicore::RecursiveSemap
   }
 }
 
-
 tarch::multicore::RecursiveLock::~RecursiveLock() {
   if (_lockIsAquired) {
     free();
   }
 }
-
 
 bool tarch::multicore::RecursiveLock::tryLock() {
   assertion( !_lockIsAquired );
@@ -28,11 +25,9 @@ bool tarch::multicore::RecursiveLock::tryLock() {
   return result;
 }
 
-
 bool tarch::multicore::RecursiveLock::isLocked() const {
   return _lockIsAquired;
 }
-
 
 void tarch::multicore::RecursiveLock::lock() {
   assertion( !_lockIsAquired );
@@ -40,10 +35,8 @@ void tarch::multicore::RecursiveLock::lock() {
   _lockIsAquired = true;
 }
 
-
 void tarch::multicore::RecursiveLock::free() {
   assertion( _lockIsAquired );
   _semaphore.leaveCriticalSection();
   _lockIsAquired = false;
 }
-

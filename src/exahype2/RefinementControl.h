@@ -4,9 +4,6 @@
 
 #include "peano4/grid/GridControlEvent.h"
 
-#include <list>
-#include <vector>
-
 namespace exahype2 {
   enum class RefinementCommand { Keep, Refine, Erase };
 

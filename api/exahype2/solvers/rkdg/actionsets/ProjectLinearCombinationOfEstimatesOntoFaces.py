@@ -10,6 +10,7 @@ from exahype2.solvers.ButcherTableau                import ButcherTableau
 
 from enum import Enum
 
+
 class FaceProjections(Enum):
   """
   Different data can be projected onto the faces. In the simplest variant,
@@ -22,6 +23,7 @@ class FaceProjections(Enum):
   Solution = 1,
   SolutionAndGradient = 2,
   SolutionAndFluxExtrapolation = 3
+
 
 def compute_number_of_face_projection_quantities(face_projections: FaceProjections):
   """
@@ -37,6 +39,7 @@ def compute_number_of_face_projection_quantities(face_projections: FaceProjectio
   else: 
     assert False, "variant {} not handled".format( face_projections )
     return -1
+
 
 class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet):
   """

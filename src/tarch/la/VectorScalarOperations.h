@@ -373,7 +373,6 @@ namespace tarch::la {
    */
   template <int Size, typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Vector<Size, Scalar> remainder(const Vector<Size, Scalar>& vector, double h);
-
 } // namespace tarch::la
 
 #include "VectorScalarOperations.cpph"

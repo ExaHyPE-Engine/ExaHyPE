@@ -7,8 +7,6 @@
 
 #include "peano4/datamanagement/FaceEnumerator.h"
 
-#include <utility>
-
 namespace exahype2 {
   namespace internal {
     /**
@@ -199,7 +197,6 @@ namespace exahype2 {
     const peano4::datamanagement::FaceEnumerator< FaceLabel >&  faceLabelEnumerator,
     double  timeStepSize
   ) {
-
     const double Tolerance = 0.01;
     double relativeTolerance = tarch::la::equals(timeStepSize,0.0) ? tarch::la::NUMERICAL_ZERO_DIFFERENCE : Tolerance * timeStepSize;
 
@@ -303,4 +300,3 @@ namespace exahype2 {
     int    discretisationStepsSize
   );
 }
-

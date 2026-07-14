@@ -3,6 +3,7 @@
 #include "{{CLASSNAME}}.h"
 
 #include "Constants.h"
+
 #include "repositories/SolverRepository.h"
 
 #include "tarch/mpi/Rank.h"
@@ -10,13 +11,10 @@
 #include "tarch/multicore/Lock.h"
 #include "tarch/services/ServiceRepository.h"
 
-#include <algorithm>
-
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   _solverState(SolverState::GridConstruction),
   _numberOfTroubledCells(0),
   _numberOfTroubledCellsThisTimeStep(0) {
-
   {{CONSTRUCTOR_IMPLEMENTATION}}
 }
 

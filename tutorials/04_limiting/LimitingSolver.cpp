@@ -8,8 +8,6 @@
 
 #include "ADERDGSolver.h"
 
-#include <cmath>
-
 bool tutorials::exahype2::limiting::LimitingSolver::isPhysicallyAdmissible(
   const double* const                          Q,
   const tarch::la::Vector<DIMENSIONS, double>& x,

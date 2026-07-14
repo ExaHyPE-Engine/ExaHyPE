@@ -5,9 +5,6 @@
 #include "DataRepository.h"
 #include "tarch/accelerator/accelerator.h"
 
-#include <cmath>
-#include <limits>
-
 namespace benchmarks::exahype2::kernelbenchmarks {
   FusedDataRepository& FusedDataRepository::getInstance() {
     static FusedDataRepository instance;

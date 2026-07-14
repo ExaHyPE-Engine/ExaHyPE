@@ -3,8 +3,7 @@
 #include "SolverRepository.h"
 
 #include "exahype2/RefinementControlService.h"
-
-#include "tarch/instrumentation/Debug.h"
+#include "tarch/instrumentation/Log.h"
 #include "tarch/mpi/Rank.h"
 
 {% for item in TRACERS -%}
@@ -14,13 +13,6 @@
 {% for INCLUDE in ADDITIONAL_INCLUDES -%}
 #include "{{INCLUDE}}"
 {% endfor %}
-
-#include <algorithm>
-#include <limits>
-#include <sstream>
-#include <string>
-#include <utility>
-#include <vector>
 
 {% for item in NAMESPACE -%}
 namespace {{ item }} {

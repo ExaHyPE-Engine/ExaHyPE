@@ -61,6 +61,7 @@ PrecisionType = {
     "bf16":             "__bf16"
 }
 
+
 class ADERDG(object):
     def __init__(
         self,
@@ -352,7 +353,7 @@ class ADERDG(object):
         # Correction uses the extrapolated face solutions from the predictor and the neighboring
         # cells to compute a solution at the next time step.
         self._action_set_correction = exahype2.solvers.aderdg.actionsets.Correction(
-            solver=self, 
+            solver=self,
             cell_guard=self._store_cell_data_default_guard(),
             face_guard=self._store_face_data_default_guard()
         )
@@ -533,11 +534,7 @@ class ADERDG(object):
 
     def _get_default_includes(self):
         return """
-#include "tarch/la/Vector.h"
-
-#include "peano4/Globals.h"
 #include "peano4/Loop.h"
-
 #include "repositories/SolverRepository.h"
 """ + "#include <stdfloat>" if self._use_half_precision else ""
 
@@ -1099,6 +1096,7 @@ class ADERDG(object):
         """
         self._face_plotter = peano4.plotter.FacePlotter
         self._face_plotter_guard = guard
+
 
 def get_face_overlap_merge_implementation(patch_overlap):
     Template = """

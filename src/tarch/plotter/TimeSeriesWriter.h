@@ -2,9 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <string>
-#include <vector>
-
 namespace tarch::plotter {
   class FileWriter;
   class TimeSeriesWriter;

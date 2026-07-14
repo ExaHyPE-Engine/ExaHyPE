@@ -2,11 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <cstddef>
-#include <string>
-#include <utility>
-#include <vector>
-
 namespace runner {
   /** Indent (spaces) of a line inside the report box; nested entries use a multiple of it. */
   constexpr std::size_t BlockIndent = 2;

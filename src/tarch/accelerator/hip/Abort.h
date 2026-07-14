@@ -6,9 +6,6 @@
 
 #include "Device.h"
 
-#include <cstdio>
-#include <cstdlib>
-
 namespace tarch::accelerator {
   inline __host__ __device__ void abort(const char* message) {
     COMPILE_IF_ON_DEVICE(

@@ -15,7 +15,6 @@ toolbox::curvi::Edge::Edge(std::vector<double> a_data, Coordinate a_direction) {
   direction = a_direction;
 }
 
-
 toolbox::curvi::Edge::Edge(Coordinate a_direction, double start[3], double stop[3], int n) {
   direction = a_direction;
   data.resize(n * NCOORDS);
@@ -27,7 +26,6 @@ toolbox::curvi::Edge::Edge(Coordinate a_direction, double start[3], double stop[
     }
   }
 }
-
 
 toolbox::curvi::Edge::Edge(const Edge& other) {
   data      = other.data;
@@ -64,7 +62,6 @@ toolbox::curvi::Edge toolbox::curvi::Edge::subedge(int start, int stop) {
 /*splits an edge at an intersection into two edges */
 /*the intersection needs to lie on the edge*/
 void toolbox::curvi::Edge::split(double intersection_node[3], Edge& left_edge, Edge& right_edge) {
-
   idx2 idx(NCOORDS, numNodes());
 
   /*Find relative position of the intersection node in the direction of the edge*/
@@ -143,10 +140,8 @@ toolbox::curvi::Edge toolbox::curvi::Edge::remesh(int numNodesNew) {
   return interpolate(oldRange, newRange);
 }
 
-
 toolbox::curvi::Edge toolbox::curvi::Edge::
   interpolate(const std::vector<double>& range_in, const std::vector<double>& range_out, int window) {
-
   idx2                idx(NCOORDS, range_out.size());
   idx2                idx_in(NCOORDS, range_in.size());
   std::vector<double> out;
@@ -169,7 +164,6 @@ toolbox::curvi::Edge toolbox::curvi::Edge::
       }
       break;
     }
-
 
     int min_index   = int(std::max(j - std::floor(window / 2), 0.0));
     int max_index   = int(std::min(j + std::floor(window / 2), range_in.size() - 1.0));
@@ -215,7 +209,6 @@ const double& toolbox::curvi::Edge::operator()(int coord, int i) const {
   idx2 idx(NCOORDS, numNodes());
   return data[idx(coord, i)];
 }
-
 
 std::string toolbox::curvi::Edge::printEdge() const {
   std::stringstream ss;

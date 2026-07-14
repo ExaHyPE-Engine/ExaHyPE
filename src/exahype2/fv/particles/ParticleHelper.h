@@ -2,10 +2,6 @@
 
 #include "tarch/la/Vector.h"
 
-#include <iomanip>
-#include <sstream>
-#include <string>
-
 namespace exahype2 {
   namespace fv {
     namespace particles {
@@ -121,7 +117,6 @@ namespace exahype2 {
          */
         template <typename Particle>
         ParticleState getParticleState(const Particle& particle);
-
       } // namespace utils
     } // namespace particles
   } // namespace fv

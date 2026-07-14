@@ -2,9 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include "tarch/multicore/BooleanSemaphore.h"
-
 
 namespace toolbox {
   namespace particles {
@@ -14,7 +12,6 @@ namespace toolbox {
     } // namespace memorypool
   }   // namespace particles
 } // namespace toolbox
-
 
 /**
  * Memory pool offering continuous global memory for a particle species
@@ -159,7 +156,6 @@ public:
   static bool requestCompleteScatter();
 
 private:
-
   static constexpr int UndefinedMemoryPage = -1;
 
   /**
@@ -235,6 +231,5 @@ private:
    */
   int _globalMemoryPage;
 };
-
 
 #include "GlobalContinuousMemoryPool.cpph"

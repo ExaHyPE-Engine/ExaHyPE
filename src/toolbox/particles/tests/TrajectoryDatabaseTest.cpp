@@ -6,13 +6,6 @@
 #include "tarch/mpi/Rank.h"
 #include "toolbox/particles/TrajectoryDatabase.h"
 
-#include <filesystem>
-#include <fstream>
-#include <sstream>
-#include <string>
-#include <utility>
-#include <vector>
-
 namespace {
   std::string testFileBaseName(const std::string& name) {
     return (tarch::tests::getWritableTestDirectory() / name).string();

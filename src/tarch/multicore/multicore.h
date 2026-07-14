@@ -4,19 +4,12 @@
 
 #include "tarch/CompilerSpecificSettings.h"
 
-#include <limits>
-#include <list>
-#include <set>
-#include <string>
-#include <vector>
-
 namespace tarch {
   /**
    @namespace tarch::multicore
 
    This page describes Peano 4's multithreading namespace. A more high-level
    overview is provided through @ref page_tarch_multicore.
-
 
    ## Writing your own code with multithreading features
 
@@ -36,7 +29,6 @@ namespace tarch {
    With the symbol PEANO_WITH_MULTITHREADING, you make your code independent of
    OpenMP, TBB or C++ threading.
 
-
    ## Multicore architecture
 
    The multithreading environment is realised through a small set of classes. User
@@ -51,7 +43,6 @@ namespace tarch {
 
     @image html multicore_architecture.png
 
-
    ## Statistics
 
    If the Peano statistics are enabled, the tasking back-end will sample several
@@ -60,7 +51,6 @@ namespace tarch {
    Depending on the chosen back-end, you might get additional counters on top.
    Please start to look into tarch/multicore/Tasks.cpp for an overview of the
    most generic counters.
-
 
    ## Tasking model in Peano
 
@@ -76,7 +66,6 @@ namespace tarch {
      which accepts a sequence of tasks. They are all run in parallel but then
      wait for each other, i.e. we define a tree (sub)task graph. With fork-join
      calls, we mirror the principles behind bulk-synchronous programming (BSP).
-
 
    ### Tasks with dependencies
 

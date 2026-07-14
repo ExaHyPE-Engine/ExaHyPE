@@ -4,10 +4,6 @@
 
 #include "tarch/multicore/BooleanSemaphore.h"
 
-#include <fstream>
-#include <string>
-#include <string_view>
-
 namespace tarch::instrumentation {
   class FileSink;
 } // namespace tarch::instrumentation

@@ -6,13 +6,7 @@
 
 #include "tarch/reader/NetCDFFieldSampler.h"
 
-#include <atomic>
-#include <chrono>
-#include <filesystem>
 #include <netcdf.h>
-#include <stdexcept>
-#include <string>
-#include <vector>
 
 namespace {
   std::string writeTempNetCDFFile(

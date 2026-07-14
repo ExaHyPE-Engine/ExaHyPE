@@ -3,9 +3,6 @@
 #include "CellTypes.h"
 #include "FileWriter.h"
 
-#include <limits>
-#include <stdexcept>
-
 namespace {
   // The public plotXXX(int[N]) signatures promise a fixed corner count; lock
   // those promises to the CellTypes table so the two cannot drift.

@@ -4,8 +4,6 @@
 
 #include "InitialCondition.h"
 
-#include <cmath>
-
 void applications::exahype2::exagrype::CCZ4Solver::initialCondition(
   double* __restrict__ Q,
   const tarch::la::Vector<DIMENSIONS, double>& x,

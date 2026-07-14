@@ -10,8 +10,6 @@
 //   Shortcuts::E        total energy   (1 component)
 #include "FVSolver.h"
 
-#include <cmath>
-
 namespace {
   constexpr double Gamma         = 1.4;
   constexpr double ShockPosition = 0.111;

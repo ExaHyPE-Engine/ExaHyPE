@@ -5,15 +5,11 @@
 #include "tarch/Assertions.h"
 #include "tarch/accelerator/accelerator.h"
 
-#include <cstring> // std::memcpy
-#include <utility> // std::exchange
-
 peano4::stacks::tests::TestDataOnHeap::TestDataOnHeap():
   _data(tarch::allocateMemory<DoFType>(Cardinality, tarch::MemoryLocation::Heap)) {}
 
 peano4::stacks::tests::TestDataOnHeap::TestDataOnHeap(DoFType v):
   TestDataOnHeap() {
-
   for (int i = 0; i < Cardinality; ++i) {
     _data[i] = v;
   }

@@ -4,6 +4,7 @@ import exahype2
 
 from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import FaceProjections
 
+
 def create_Riemann_solver_call(polynomial_basis,
                                face_projections: FaceProjections):
   """

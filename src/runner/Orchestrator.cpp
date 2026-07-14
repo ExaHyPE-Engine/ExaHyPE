@@ -11,8 +11,6 @@
 #include "runner/phases/GridInitialisation.h"
 #include "runner/phases/TimeLoop.h"
 
-#include <algorithm>
-
 runner::Orchestrator::Orchestrator(const std::vector<Step>& steps) {
   for (const auto& step : steps) {
     if (step.name == StepName::CreateGrid) {

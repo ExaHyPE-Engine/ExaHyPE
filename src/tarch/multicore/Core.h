@@ -2,12 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "tarch/instrumentation/Log.h"
-
-#include <set>
-#include <string>
-#include <thread>
-
 namespace tarch {
   namespace multicore {
     class Core;

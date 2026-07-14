@@ -2,10 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <memory>
-#include <string>
-#include <vector>
-
 namespace tarch::reader {
   class JSONReader;
 } // namespace tarch::reader

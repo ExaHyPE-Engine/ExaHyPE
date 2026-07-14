@@ -11,9 +11,6 @@
 #include "tarch/la/Vector.h"
 #include "tarch/multicore/multicore.h"
 
-#include <algorithm>
-#include <vector>
-
 namespace exahype2 {
   namespace dg {
     /*

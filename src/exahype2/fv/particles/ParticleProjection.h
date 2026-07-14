@@ -18,7 +18,6 @@ namespace exahype2 {
           double                                       mass,
           int                                          unknownIndex
         );
-
       } // namespace projection
     } // namespace particles
   } // namespace fv

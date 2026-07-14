@@ -6,15 +6,11 @@
 #include "tarch/Assertions.h"
 #include "tarch/mpi/Rank.h"
 
-#include <algorithm>
-#include <sstream>
-
 toolbox::loadbalancing::LoadBalancer::LoadBalancer(Configuration* configuration) :
   _configuration(configuration),
   _blacklist{},
   _statistics{},
   _strategy(makeInterRankDistributionStrategy()) {
-
   setState(State::InterRankDistribution);
 }
 

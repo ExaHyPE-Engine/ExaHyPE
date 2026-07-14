@@ -3,7 +3,6 @@
 from peano4.solversteps.ActionSet import ActionSet
 
 
-
 class BackupPatchOverlap(ActionSet):
   """
   

@@ -9,9 +9,6 @@
 #include "peano4/grid/SpacetreeHelper.h"
 #include "tarch/la/Vector.h"
 
-#include <bitset>
-#include <sstream>
-
 namespace {
   struct CountingTraversalObserver final : public peano4::grid::GridTraversalObserver {
     int               loadNodeDataCalls  = 0;

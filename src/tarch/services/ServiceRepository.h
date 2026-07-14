@@ -2,19 +2,13 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
-#include <vector>
-#include <string>
-
 #include "tarch/services/Service.h"
-
 
 namespace tarch {
   namespace services {
     class ServiceRepository;
   }
 }
-
 
 /**
  * Service Repository
@@ -142,5 +136,3 @@ class tarch::services::ServiceRepository: public tarch::services::Service {
 
     virtual void shutdown() override;
 };
-
-

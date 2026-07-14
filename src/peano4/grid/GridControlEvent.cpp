@@ -1,14 +1,7 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #include "GridControlEvent.h"
-
 #include "tarch/Assertions.h"
-
-#include <algorithm>
-#include <iomanip>
-#include <sstream>
-#include <string>
-#include <vector>
 
 static_assert(std::is_standard_layout_v<peano4::grid::GridControlEvent>);
 static_assert(std::is_trivially_copyable_v<peano4::grid::GridControlEvent>);

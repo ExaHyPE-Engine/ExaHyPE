@@ -33,7 +33,6 @@ namespace toolbox {
          *             bottom_bnd
          **/
         static void interpolate2D(FaceBoundary& boundary, std::vector<double>& face) {
-
           Coordinate eta = boundary.getCoord(1);
           Coordinate xi  = boundary.getCoord(0);
 
@@ -75,7 +74,6 @@ namespace toolbox {
           }
         }
 
-
         static void interpolate3D(BlockBoundary& boundary, Block& block) {
           interpolate3D(
             boundary,
@@ -89,7 +87,6 @@ namespace toolbox {
           );
         }
 
-
         static void interpolate3D(
           BlockBoundary& boundary,
           int            o_mu,
@@ -100,7 +97,6 @@ namespace toolbox {
           int            s_eta,
           Block&         block
         ) {
-
           Coordinate coords[3];
           boundary.getCoord(coords);
           Coordinate eta = coords[2];
@@ -122,7 +118,6 @@ namespace toolbox {
           int bp_eta = bo_eta + bs_eta;
           int bp_xi  = bo_xi + bs_xi;
           int bp_mu  = bo_mu + bs_mu;
-
 
           int p_eta = o_eta + s_eta;
           int p_xi  = o_xi + s_xi;

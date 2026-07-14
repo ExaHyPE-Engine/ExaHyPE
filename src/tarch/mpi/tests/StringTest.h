@@ -2,10 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include "tarch/tests/TestCase.h"
-#include "tarch/instrumentation/Log.h"
-
 
 namespace tarch {
   namespace mpi {
@@ -15,13 +12,11 @@ namespace tarch {
   }
 }
 
-
 /**
  * Provides tests for types Vector, DynamicVector and all Vector functionality.
  */
 class tarch::mpi::tests::StringTest: public tarch::tests::TestCase {
   private:
-
     /**
      * Tests constructors.
      */
@@ -35,4 +30,3 @@ class tarch::mpi::tests::StringTest: public tarch::tests::TestCase {
      */
     virtual void run() override;
 };
-

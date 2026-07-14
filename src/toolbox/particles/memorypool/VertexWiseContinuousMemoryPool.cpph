@@ -6,12 +6,10 @@ toolbox::particles::memorypool::VertexWiseContinuousMemoryPool<T>::VertexWiseCon
   _gatheredDataPointer(nullptr) {
 }
 
-
 template <class T>
 bool toolbox::particles::memorypool::VertexWiseContinuousMemoryPool<T>::requestCompleteScatter() {
   return false;
 }
-
 
 template <class T>
 void toolbox::particles::memorypool::VertexWiseContinuousMemoryPool<T>::scatter() {
@@ -28,13 +26,11 @@ void toolbox::particles::memorypool::VertexWiseContinuousMemoryPool<T>::scatter(
   }
 }
 
-
 template <class T>
 void toolbox::particles::memorypool::VertexWiseContinuousMemoryPool<T>::clearAndReset() {
   container.clear();
   _gatheredDataPointer = nullptr;
 }
-
 
 template <class T>
 typename toolbox::particles::memorypool::VertexWiseContinuousMemoryPool<T>::Container::iterator
@@ -66,7 +62,6 @@ toolbox::particles::memorypool::VertexWiseContinuousMemoryPool<T>::scatterAndUpd
   }
 }
 
-
 template <class T>
 void toolbox::particles::memorypool::VertexWiseContinuousMemoryPool<T>::gather() {
   assertion( not container.empty() or _gatheredDataPointer==nullptr );
@@ -88,12 +83,10 @@ void toolbox::particles::memorypool::VertexWiseContinuousMemoryPool<T>::gather()
   }
 }
 
-
 template <class T>
 bool toolbox::particles::memorypool::VertexWiseContinuousMemoryPool<T>::isGathered() const {
   return _gatheredDataPointer!=nullptr;
 }
-
 
 template <class T>
 void toolbox::particles::memorypool::VertexWiseContinuousMemoryPool<T>::replace( typename Container::iterator p, T* newCopy ) {

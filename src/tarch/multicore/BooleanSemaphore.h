@@ -19,8 +19,6 @@ namespace tarch {
 #elif !defined(_TARCH_MULTICORE_BOOLEAN_SEMAPHORE_H_)
 #define _TARCH_MULTICORE_BOOLEAN_SEMAPHORE_H_
 
-#include <string>
-
 /**
  * Boolean Semaphore
  *

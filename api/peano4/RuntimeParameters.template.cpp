@@ -4,16 +4,6 @@
 
 #include "tarch/reader/JSONReader.h"
 
-{% if HAS_BOOLEAN_RUNTIME_PARAMETERS -%}
-#include <algorithm>
-#include <cctype>
-{% endif -%}
-#include <iostream>
-#include <sstream>
-#include <stdexcept>
-#include <string>
-#include <vector>
-
 {% if HAS_RUNTIME_PARAMETERS %}
 namespace {
   std::string consumeValue(

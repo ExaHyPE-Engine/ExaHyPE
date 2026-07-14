@@ -5,8 +5,6 @@
 #include "peano4/Loop.h"
 #include "toolbox/blockstructured/Enumeration.h"
 
-#include <set>
-
 toolbox::blockstructured::tests::EnumerationTest::EnumerationTest() :
   TestCase("toolbox::blockstructured::tests::EnumerationTest") {}
 

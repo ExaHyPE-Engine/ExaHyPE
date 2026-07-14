@@ -4,6 +4,7 @@ from peano4.solversteps.ActionSet import ActionSet
 
 import jinja2
 
+
 class UpdateParticle_MultiLevelInteraction_StackOfLists(ActionSet):
     """!
 
@@ -20,10 +21,8 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists(ActionSet):
     UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles in combination
     with @ref toolbox_particles_memorypool "the memory pool".
 
-
     The code is slightly more sophisticated compared to the set-based tree
     traversal approach, as it exposes more information:
-
 
     - ***marker*** The CellMarker is avaialable to a compute kernel and allows you
       to query spatial information.
@@ -46,9 +45,6 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists(ActionSet):
       tells you how many particles within particlesAssociatedWithLocalVertices are
       added by each adjacent vertex.
 
-
-
-
     ## Different particles species
 
     Both active and local set are of the same type if you stick
@@ -56,7 +52,6 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists(ActionSet):
     let particles of different type interact by selecting a local particle
     set that is different to the active one. Users can inject code to modify
     the local set per cell and hence to alter particle states.
-
 
     ## Realisation and data consistency
 
@@ -79,7 +74,6 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists(ActionSet):
     In the case of a dynamic setup, i.e. in combination with the action
     set UpdateParticleGridAssociation, you might be better of with using
     the set-based implementation of the particle-particle interaction.
-
 
     ## Further plug-in points
 
@@ -141,7 +135,6 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists(ActionSet):
 
           i.e. you will have a variable localParticle available in this kernel
           and it is a pointer.
-
 
         """
         super(UpdateParticle_MultiLevelInteraction_StackOfLists, self).__init__(
@@ -321,11 +314,7 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists(ActionSet):
 #include "globaldata/{{LOCAL_PARTICLE}}.h"
 #include "vertexdata/{{ACTIVE_PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{ACTIVE_PARTICLE}}.h"
-
 {{ADDITIONAL_INCLUDES}}
-
-#include <list>
-#include <vector>
 """
         )
         return result.render(**self.d)

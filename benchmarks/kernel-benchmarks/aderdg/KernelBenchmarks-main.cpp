@@ -25,9 +25,6 @@
 #include "tarch/plotter/HDF5FileWriter.h"
 #include "tarch/plotter/XDMFTimeSeriesWriter.h"
 
-#include <limits>
-#include <string>
-
 #ifdef UseAMR
 #error "At the moment the kernel benchmark does not support AMR"
 #endif

@@ -7,10 +7,6 @@
 #include "tarch/mpi/mpi.h"
 #include "tarch/plotter/VTKHDFFileWriter.h"
 
-#include <filesystem>
-#include <string>
-#include <vector>
-
 namespace fs = std::filesystem;
 
 #ifdef PEANO_WITH_HDF5

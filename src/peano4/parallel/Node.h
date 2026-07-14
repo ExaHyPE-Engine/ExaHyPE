@@ -5,12 +5,7 @@
 #include "TreeEntry.h"
 
 #include "peano4/grid/GridVertex.h"
-#include "tarch/instrumentation/Log.h"
 #include "tarch/multicore/BooleanSemaphore.h"
-
-#include <map>
-#include <queue>
-#include <set>
 
 namespace peano4::parallel {
   class Node;

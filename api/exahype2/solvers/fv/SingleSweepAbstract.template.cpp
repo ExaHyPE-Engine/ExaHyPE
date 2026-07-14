@@ -3,7 +3,7 @@
 #include "{{CLASSNAME}}.h"
 
 #include "repositories/SolverRepository.h"
-
+#include "tarch/instrumentation/Log.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/mpi/mpi.h"
 #include "tarch/multicore/Lock.h"
@@ -26,7 +26,6 @@ std::bitset<DIMENSIONS> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::PeriodicBC = 
   _maxTimeStepSize(0.0),
   _minTimeStepSizeThisTimeStep(std::numeric_limits<double>::max()),
   _maxTimeStepSizeThisTimeStep(0.0) {
-
   {{CONSTRUCTOR_IMPLEMENTATION}}
 }
 

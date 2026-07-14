@@ -29,9 +29,6 @@
 #include "tarch/plotter/VTUFileWriter.h"
 #include "toolbox/blockstructured/AMRRoutines.h"
 
-#include <limits>
-#include <string>
-
 using namespace benchmarks::exahype2::kernelbenchmarks;
 
 namespace {

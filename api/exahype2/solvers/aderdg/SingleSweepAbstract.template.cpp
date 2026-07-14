@@ -4,13 +4,12 @@
 
 #include "Constants.h"
 
+#include "tarch/instrumentation/Log.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/mpi/mpi.h"
 #include "tarch/multicore/Lock.h"
 #include "tarch/NonCriticalAssertions.h"
 #include "tarch/services/ServiceRepository.h"
-
-#include <algorithm>
 
 std::bitset<DIMENSIONS> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::PeriodicBC = {{NAMESPACE | join("::")}}::PeriodicBC;
 
@@ -32,7 +31,6 @@ double                  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::pointSourceLo
   _maxTimeStepSize(0.0),
   _minTimeStepSizeThisTimeStep(std::numeric_limits<double>::max()),
   _maxTimeStepSizeThisTimeStep(0.0) {
-
   {{CONSTRUCTOR_IMPLEMENTATION}}
 }
 

@@ -15,10 +15,7 @@
 #include "tarch/Assertions.h"
 #include "tarch/NonCriticalAssertions.h"
 #include "tarch/la/Vector.h"
-#include "tarch/instrumentation/Log.h"
 #include "tarch/multicore/BooleanSemaphore.h"
-
-#include <algorithm>
 
 {% if USE_VARIABLE_SHORTCUTS is sameas True %}
 #include "VariableShortcuts{{SOLVER_NAME}}.h"
@@ -117,7 +114,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     {{ABSTRACT_SOLVER_USER_DECLARATIONS}}
 
   protected:
-
     SolverState _solverState;
 
     double _minTimeStamp;

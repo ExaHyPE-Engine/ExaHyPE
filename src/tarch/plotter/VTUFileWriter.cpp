@@ -4,14 +4,6 @@
 
 #include "tarch/mpi/Rank.h"
 
-#include <cassert>
-#include <cstring>
-#include <filesystem>
-#include <fstream>
-#include <sstream>
-#include <stdexcept>
-#include <type_traits>
-
 #ifdef PEANO_WITH_ZLIB
 #include <zlib.h>
 #endif
@@ -97,7 +89,7 @@ void tarch::plotter::VTUFileWriter::writeVTU(const std::string& filename) {
     {
       static_assert(
         sizeof(uLong) >= 8,
-        "Critical Safety Error: ZLib's 'uLong' is only 32-bit on this platform (likely Windows). "
+        "ZLib's 'uLong' is only 32-bit on this platform (likely Windows). "
         "This makes it impossible to safely compress >4GB buffers without chunking. "
         "Refusing to compile to prevent heap corruption. Disable ZLib in the CMake configuration."
       );
@@ -135,8 +127,7 @@ void tarch::plotter::VTUFileWriter::writeVTU(const std::string& filename) {
       appendedBlocks.push_back(std::move(b));
       return xmlHeader;
     }
-#endif
-
+#else
     // The block copies the raw bytes because dataVec may be a temporary
     // (expandFieldComponents returns by value) destroyed before the appended-data
     // section is streamed; the length prefix is added at write time.
@@ -149,8 +140,8 @@ void tarch::plotter::VTUFileWriter::writeVTU(const std::string& filename) {
 
     currentFileOffset += sizeof(std::uint64_t) + dataBytes;
     appendedBlocks.push_back(std::move(b));
-
     return xmlHeader;
+#endif
   };
 
   // Raw memory is written, so VTK must be told the byte order.

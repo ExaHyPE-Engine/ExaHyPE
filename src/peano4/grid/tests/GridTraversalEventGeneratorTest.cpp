@@ -12,8 +12,6 @@
 #include "peano4/grid/VertexType.h"
 #include "tarch/la/Vector.h"
 
-#include <bitset>
-
 namespace {
   peano4::grid::AutomatonState makeBaseState(bool inverted) {
     peano4::grid::AutomatonState s;

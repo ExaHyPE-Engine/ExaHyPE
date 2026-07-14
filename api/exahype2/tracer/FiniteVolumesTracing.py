@@ -170,6 +170,6 @@ if (
         return (
             super(FiniteVolumesTracing, self).get_attributes()
              + """
-double _timeStepSize;    
+double _timeStepSize;
 """
         )

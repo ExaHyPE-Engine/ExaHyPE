@@ -6,6 +6,7 @@ from .Helper import write_file
 
 from peano4.Logger import log
 
+
 class Constants(object):
   """!
     Representative of generated Constants.h holding all user-defined constants

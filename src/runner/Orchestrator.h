@@ -4,8 +4,6 @@
 
 #include "runner/Engine.h" // Step
 
-#include <vector>
-
 namespace runner {
   struct PhaseContext;
 

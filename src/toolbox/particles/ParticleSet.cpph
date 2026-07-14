@@ -2,10 +2,6 @@
 #include "tarch/mpi/mpi.h"
 #include "tarch/multicore/Lock.h"
 
-#include <array>
-#include <sstream>
-#include <vector>
-
 template <typename T>
 toolbox::particles::SieveParticles<T> toolbox::particles::ParticleSet<T>::_sieveParticles;
 

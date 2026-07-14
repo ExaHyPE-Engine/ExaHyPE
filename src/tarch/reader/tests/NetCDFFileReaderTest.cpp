@@ -6,14 +6,7 @@
 
 #include "tarch/reader/NetCDFFileReader.h"
 
-#include <atomic>
-#include <chrono>
-#include <filesystem>
 #include <netcdf.h>
-#include <sstream>
-#include <stdexcept>
-#include <string>
-#include <vector>
 
 namespace {
   std::string writeTempNetCDFFile(

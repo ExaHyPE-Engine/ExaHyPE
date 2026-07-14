@@ -1,10 +1,10 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #include "{{CLASSNAME}}.h"
+
 #include "Constants.h"
 
-#include <algorithm>
-
+#include "tarch/instrumentation/Log.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/mpi/mpi.h"
 #include "tarch/multicore/Lock.h"
@@ -12,7 +12,6 @@
 #include "tarch/services/ServiceRepository.h"
 
 std::bitset<DIMENSIONS> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::PeriodicBC = {{NAMESPACE | join("::")}}::PeriodicBC;
-
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   {{BASIS_INITIALIZERS | indent(2,True) }}
@@ -33,56 +32,45 @@ std::bitset<DIMENSIONS> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::PeriodicBC = 
   {{CONSTRUCTOR_IMPLEMENTATION}}
 }
 
-
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxPatchSize() const {
   return getMaxCellSize();
 }
-
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinPatchSize() const {
   return getMinCellSize();
 }
 
-
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getNumberOfDoFs() const {
   return BasePowerExponent<DGOrder + 1, DIMENSIONS>::value * (NumberOfUnknowns + NumberOfAuxiliaryVariables);
 }
-
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspendSolversForOneGridSweep() {
   _solverState = SolverState::Suspended;
 }
 
-
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinCellSize() const {
   return _minCellH;
 }
-
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxCellSize() const {
   return _maxCellH;
 }
 
-
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStamp() const {
   return _minTimeStampThisTimeStep < std::numeric_limits<double>::max() / 10.0 ? _minTimeStampThisTimeStep : _minTimeStamp;
 }
-
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStamp() const {
   return _maxTimeStampThisTimeStep > std::numeric_limits<double>::min() * 10.0 ? _maxTimeStampThisTimeStep : _maxTimeStamp;
 }
 
-
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStepSize() const {
   return _minTimeStepSizeThisTimeStep < std::numeric_limits<double>::max() / 10.0 ? _minTimeStepSizeThisTimeStep : _minTimeStepSize;
 }
 
-
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStepSize() const {
   return _maxTimeStepSizeThisTimeStep > std::numeric_limits<double>::min() * 10.0 ? _maxTimeStepSizeThisTimeStep : _maxTimeStepSize;
 }
-
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, double timeStamp, double cellSize) {
   tarch::multicore::Lock lock(_semaphore);
@@ -114,11 +102,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
   logDebug("updated with dt=" << timeStepSize << ", t=" << timeStamp << ", h=" << cellSize << ": t(new)=" << _minTimeStampThisTimeStep);
 }
 
-
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::SolverState {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getSolverState() const {
   return _solverState;
 }
-
 
 {% if REFINEMENT_CRITERION_IMPLEMENTATION!="<user-defined>" %}
 ::exahype2::RefinementCommand {{NAMESPACE | join("::")}}::{{CLASSNAME}}::refinementCriterion(
@@ -130,14 +116,12 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
   {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<empty>" %}
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
 
-
   return result;
   {% else %}
   {{REFINEMENT_CRITERION_IMPLEMENTATION}}
   {% endif %}
 }
 {% endif %}
-
 
 {% if INITIAL_CONDITIONS_IMPLEMENTATION!="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
@@ -148,7 +132,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
   {{INITIAL_CONDITIONS_IMPLEMENTATION}}
 }
 {% endif %}
-
 
 {% if BOUNDARY_CONDITIONS_IMPLEMENTATION!="<user-defined>" and BOUNDARY_CONDITIONS_IMPLEMENTATION!="<none>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
@@ -164,24 +147,19 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
 }
 {% endif %}
 
-
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridConstructionStep() {
   assertion( _solverState == SolverState::GridConstruction );
 }
 
-
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridConstructionStep() {
 }
-
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridInitialisationStep() {
   _solverState = SolverState::GridInitialisation;
 }
 
-
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridInitialisationStep() {
 }
-
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
   switch (_solverState) {
@@ -230,13 +208,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
 
     _cellUpdates    = 0;
   }
-
 }
-
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
   if ( isLastGridSweepOfTimeStep() ) {
-
   #ifdef PEANO_WITH_MPI
   double localMinValues[4] = {
       _minTimeStampThisTimeStep,
@@ -320,10 +295,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep() {
   _solverState = SolverState::Plotting;
 }
 
-
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishPlottingStep() {
 }
-
 
 std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState state) {
   switch (state) {
@@ -344,33 +317,27 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
   return "<undef>";
 }
 
-
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
   return isLastGridSweepOfTimeStep()
       or _solverState==SolverState::GridInitialisation
       or _solverState==SolverState::Plotting;
 }
 
-
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() const {
   return _solverState==SolverState::ProjectOnFacesAndComputeVolumeIntegralOfStep0;
 }
-
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() const {
   return _solverState==SolverState::SolveRiemannProblemAndAddToVolumeIntegralOfStep{{RK_STEPS-1}};
 }
 
-
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {
   {{START_SIMULATION_IMPLEMENTATION}}
 }
 
-
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishSimulation() {
   {{FINISH_SIMULATION_IMPLEMENTATION}}
 }
-
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::cellCanUseStatelessPDETerms(
   const tarch::la::Vector<DIMENSIONS,double>&  cellCentre,
@@ -380,7 +347,5 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::cellCanUseStatelessPDETerms(
 ) const {
   return true;
 }
-
-
 
 {{ABSTRACT_SOLVER_USER_DEFINITIONS}}

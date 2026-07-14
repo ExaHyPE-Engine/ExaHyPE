@@ -8,10 +8,6 @@
 #include "peano4/Loop.h"
 #include "runner/RuntimeParameters.h"
 
-#include <algorithm>
-#include <cmath>
-#include <iterator>
-
 namespace benchmarks::exahype2::kernelbenchmarks {
   namespace {
     int getGridLength() {

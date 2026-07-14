@@ -4,7 +4,6 @@
 #include "tarch/la/ScalarOperations.h"
 
 std::pair<double,double> exahype2::getInterpolationWeights( double oldTimeStampOnFace, double newTimeStampOnFace, double cellTimeStamp ) {
-
   double timeSpan = newTimeStampOnFace - oldTimeStampOnFace;
   assertion( tarch::la::greaterEquals(timeSpan,0.0), timeSpan, oldTimeStampOnFace, newTimeStampOnFace, cellTimeStamp );
   if ( tarch::la::equals(timeSpan,0.0) ) {
@@ -28,7 +27,6 @@ double exahype2::discretiseAndTruncateTimeStepSizes(
   double maxGlobalTimeStepSize,
   int    discretisationStepsSize
 ) {
-
   if (tarch::la::greater(maxGlobalTimeStepSize,0.0) and cellTimeStepSize>maxGlobalTimeStepSize*3.0) {
     logDebug("truncate cell time step size from " << cellTimeStepSize << " due to max global dt=" << maxGlobalTimeStepSize);
     cellTimeStepSize = maxGlobalTimeStepSize*3.0;

@@ -18,6 +18,7 @@ from peano4.output.Helper import render_jinja2_template
 
 from peano4.Logger import log
 
+
 class FV(object):
     """!
     Abstract finite volume solver step sizes that works on patch-based AMR with a halo layer of one.
@@ -679,9 +680,6 @@ and additional AMR levels is configured by the executable at runtime.
 
     def _get_default_includes(self):
         return """
-#include "tarch/la/Vector.h"
-
-#include "peano4/Globals.h"
 #include "peano4/Loop.h"
 
 #include "repositories/SolverRepository.h"

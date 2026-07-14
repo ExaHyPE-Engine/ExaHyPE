@@ -5,6 +5,7 @@ from .AbstractRungeKuttaDGActionSet import AbstractRungeKuttaDGActionSet
 import peano4
 import jinja2
 
+
 class AdaptivityCriterion(AbstractRungeKuttaDGActionSet):
   """
   

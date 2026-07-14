@@ -106,7 +106,6 @@ namespace exahype2 {
          */
         template <typename Particle>
         double getInterpolatedRho(const Particle& p) {
-
           return p.getData(0);
         }
 
@@ -192,7 +191,6 @@ namespace exahype2 {
           setVelocity(particle, state.velocity);
           setAcceleration(particle, state.acceleration);
         }
-
       } // namespace utils
     } // namespace particles
   } // namespace fv

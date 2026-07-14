@@ -5,9 +5,6 @@
 #include "PeanoCurve.h"
 #include "StackTopology.h"
 
-#include <cstdint>
-#include <unordered_map>
-
 namespace {
   constexpr int AccessNumberEncodingBits = 5;
   constexpr int AccessNumberEncodingBias = 2 * DIMENSIONS - 1;

@@ -19,10 +19,6 @@
 
 #include "tarch/CompilerSpecificSettings.h"
 
-#include <cstddef>
-#include <cstdio>
-#include <cstdlib>
-
 #define TARGET_DECLARE
 #define TARGET_DECLARE_END
 #define GPU_CALLABLE_METHOD

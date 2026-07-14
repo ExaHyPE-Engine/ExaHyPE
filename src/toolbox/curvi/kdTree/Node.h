@@ -9,8 +9,6 @@
 #include "toolbox/curvi/geometry/Face.h"
 #include "toolbox/curvi/geometry/FaceBoundary.h"
 
-#include <sstream>
-
 namespace toolbox {
   namespace curvi {
     class Node {

@@ -6,12 +6,6 @@
 #include "tarch/database/SnapshotDatabase.h"
 #include "tarch/la/Vector.h"
 
-#include <list>
-#include <map>
-#include <ostream>
-#include <string>
-#include <utility>
-
 namespace toolbox::particles {
   class TrajectoryDatabase;
 } // namespace toolbox::particles

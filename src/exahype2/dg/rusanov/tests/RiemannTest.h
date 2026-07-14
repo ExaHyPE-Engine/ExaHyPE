@@ -2,12 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include "tarch/tests/TestCase.h"
-
-#include <cmath>
-#include <iostream>
-#include <fstream>
 
 namespace exahype2 {
   namespace dg {
@@ -19,7 +14,6 @@ namespace exahype2 {
   }
 }
 
-
 class exahype2::dg::rusanov::tests::RiemannTest : public tarch::tests::TestCase {
   private:
     void testIntegrateOverRiemannSolutionsAndAddToVolume_GaussLegendre();
@@ -30,5 +24,3 @@ class exahype2::dg::rusanov::tests::RiemannTest : public tarch::tests::TestCase 
 
     virtual void run() override;
 };
-
-

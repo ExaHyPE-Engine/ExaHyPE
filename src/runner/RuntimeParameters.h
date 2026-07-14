@@ -4,10 +4,6 @@
 
 #include "tarch/la/Vector.h"
 
-#include <memory>
-#include <string>
-#include <vector>
-
 namespace tarch::reader {
   class JSONReader;
 } // namespace tarch::reader

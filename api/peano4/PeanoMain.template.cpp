@@ -18,9 +18,6 @@
 
 #include "peano4/parallel/SpacetreeSet.h"
 
-#include <string>
-#include <vector>
-
 using namespace {{NAMESPACE | join("::")}};
 
 namespace {

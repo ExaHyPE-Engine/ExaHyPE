@@ -9,7 +9,6 @@
 #include "tarch/accelerator/MemoryAllocationCache.h"
 #include "tarch/accelerator/accelerator.h"
 
-#include <map>
 #include <sycl/sycl.hpp>
 
 namespace {

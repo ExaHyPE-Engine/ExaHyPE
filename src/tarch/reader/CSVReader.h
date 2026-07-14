@@ -2,11 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <sstream>
-#include <stdexcept>
-#include <string>
-#include <vector>
-
 namespace tarch::reader {
   class CSVReader;
 } // namespace tarch::reader

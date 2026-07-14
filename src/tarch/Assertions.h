@@ -7,10 +7,6 @@
 #if PEANO_ASSERTIONS
 #include "tarch/accelerator/accelerator.h"
 
-#include <iomanip>
-#include <sstream>
-#include <string>
-
 namespace tarch {
   void triggerAssertion(const std::string& assertionMessage);
 } // namespace tarch

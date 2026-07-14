@@ -19,13 +19,6 @@
 #include "tarch/multicore/Task.h"
 #include "tarch/services/Service.h"
 
-#include <algorithm>
-#include <array>
-#include <list>
-#include <map>
-#include <set>
-#include <vector>
-
 namespace peano4::grid {
   class GridTraversalObserver;
   struct GridStatistics;

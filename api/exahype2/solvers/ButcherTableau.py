@@ -2,7 +2,6 @@
 # use, please see the copyright notice at www.peano-framework.org
 
 
-
 def RungeKutta_steps(order):
     if order < 1:
         raise Exception("RK order has to be 1 at least")

@@ -4,8 +4,6 @@
 
 #include "FileWriter.h"
 
-#include <string>
-
 namespace tarch::plotter {
   class VTKHDFFileWriter;
 } // namespace tarch::plotter

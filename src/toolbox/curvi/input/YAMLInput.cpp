@@ -4,14 +4,8 @@
 
 #include "toolbox/curvi/kdTree/Root.h"
 
-#include <algorithm>
 #include <easi/YAMLParser.h>
-#include <fstream>
-#include <iostream>
-#include <sstream>
-#include <string>
 #include <yaml-cpp/yaml.h>
-
 
 toolbox::curvi::YAMLInput::YAMLInput(std::string input_file) {
   // check if file exists

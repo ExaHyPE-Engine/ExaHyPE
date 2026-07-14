@@ -6,7 +6,6 @@
 // **********************************************************************************************
 #include "{{CLASSNAME}}.h"
 
-
 {% if ADMISSIBILITY_IMPLEMENTATION=="<user-defined>" %}
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isPhysicallyAdmissible(
   const {{REGULAR_SOLVER_STORAGE_PRECISION}}* const                         Q,

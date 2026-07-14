@@ -3,7 +3,6 @@
 #pragma once
 
 #include "ParticleHelper.h"
-
 #include "tarch/la/Vector.h"
 
 namespace exahype2 {
@@ -27,7 +26,6 @@ namespace exahype2 {
           tarch::la::Vector<DIMENSIONS, double>& newPosition,
           double                                 dampingFactor
         );
-
       } // namespace boundary
     } // namespace particles
   } // namespace fv

@@ -4,8 +4,6 @@
 
 #include "tarch/accelerator/accelerator.h"
 
-#include <limits>
-
 namespace tarch::accelerator {
   /**
    * Reducer wrappers for tarch::parallelReduce.

@@ -7,16 +7,11 @@
 #include "tarch/mpi/mpi.h"
 #include "tarch/plotter/HDF5FileWriter.h"
 
-#include <filesystem>
-#include <fstream>
-#include <string>
-
 namespace fs = std::filesystem;
 
 #ifdef PEANO_WITH_HDF5
 
 #include <hdf5.h>
-#include <vector>
 
 namespace {
   void barrier() {
@@ -459,7 +454,6 @@ void tarch::plotter::tests::HDF5FileWriterTest::testInconsistentDataSizeThrows()
 
     // This should throw during write validation because field size (1) != geom size (2)
     plotter.writeToFile(filename, 0);
-
   } catch (const std::runtime_error&) {
     exceptionThrown = true;
   }

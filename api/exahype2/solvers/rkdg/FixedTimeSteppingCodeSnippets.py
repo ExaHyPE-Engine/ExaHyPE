@@ -1,17 +1,16 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and 
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 import exahype2.solvers.FixedTimeSteppingCodeSnippets
 
 
 class FixedTimeSteppingCodeSnippets( exahype2.solvers.FixedTimeSteppingCodeSnippets ):
   """
-  
+
   Code snippet generator for fixed time stepping in the Runge-Kutta schemes
-  
+
   """
   def __init__(self, normalised_time_step_size):
     self._normalised_time_step_size = normalised_time_step_size
-
 
   def create_start_time_step_implementation(self):
     return """

@@ -7,7 +7,6 @@
 #include "peano4/Globals.h"
 #include "peano4/datamanagement/CellMarker.h"
 
-
 namespace exahype2 {
   namespace fv {
     /**
@@ -226,7 +225,6 @@ namespace exahype2 {
       tarch::la::Vector<DIMENSIONS, double> PeriodicBC
     );
 
-
     /**
      * Perform an Explicit Euler integration step.
      *
@@ -260,7 +258,6 @@ namespace exahype2 {
       tarch::la::Vector<DIMENSIONS, double>  DomainSize,
       tarch::la::Vector<DIMENSIONS, double>  DomainOffset
     );
-
 
     namespace internal {
       /**
@@ -363,7 +360,6 @@ namespace exahype2 {
         Particle& particle,
         int       destinationIndex
       );
-
     } // namespace internal
   }   // namespace fv
 } // namespace exahype2

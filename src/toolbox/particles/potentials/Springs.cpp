@@ -1,6 +1,5 @@
 #include "Springs.h"
 
-
 tarch::la::Vector<DIMENSIONS,double> toolbox::particles::potentials::springPotential(
   const tarch::la::Vector<DIMENSIONS,double>& p1,
   const tarch::la::Vector<DIMENSIONS,double>& p2,

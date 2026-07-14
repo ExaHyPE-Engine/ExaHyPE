@@ -10,8 +10,6 @@
 #include "peano4/stacks/tests/TestDataOnStack.h"
 #include "tarch/tests/TestMacros.h"
 
-#include <utility>
-
 namespace {
   class NullableSlotData {
   private:
@@ -69,7 +67,6 @@ namespace {
 
 peano4::stacks::tests::StackTest::StackTest() :
   TestCase("peano4::stacks::tests::StackTest") {
-
 #ifdef PEANO_WITH_MPI
   TestDataOnStack::initDatatype();
 #endif

@@ -7,7 +7,6 @@ toolbox::curvi::Leaf::Leaf():
   isInit = false;
 };
 
-
 void toolbox::curvi::Leaf::init(BlockBoundary& a_boundary, uint modes[3]) {
   boundary = a_boundary;
   isInit   = true;

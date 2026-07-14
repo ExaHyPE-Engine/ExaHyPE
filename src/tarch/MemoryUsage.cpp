@@ -4,9 +4,6 @@
 
 #include "tarch/instrumentation/Log.h"
 
-#include <cstdlib>
-#include <cstring>
-#include <iostream>
 #if defined(COMPILER_HAS_PROC_STAT)
 #include <unistd.h>
 #endif

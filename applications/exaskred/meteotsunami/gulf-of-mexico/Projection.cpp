@@ -4,9 +4,6 @@
 
 #include "Constants.h"
 
-#include <cmath>
-#include <numbers>
-
 namespace applications::exahype2::exaskred::meteotsunami::projection::aea {
   std::pair<double, double> forwardEllipsoid(double lonDeg, double latDeg) {
     constexpr double toRad = std::numbers::pi_v<double> / 180.0;

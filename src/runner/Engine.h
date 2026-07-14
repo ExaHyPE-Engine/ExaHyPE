@@ -6,11 +6,6 @@
 #include "runner/RepositoryCallbacks.h"
 #include "tarch/la/Vector.h"
 
-#include <bitset>
-#include <functional>
-#include <string>
-#include <vector>
-
 namespace runner {
   /** A registerable unit of work: a named program step whose opaque body runs one traversal. */
   struct Step {

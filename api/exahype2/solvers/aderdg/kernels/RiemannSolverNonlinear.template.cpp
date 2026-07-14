@@ -7,11 +7,7 @@
 
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/accelerator.h"
-#include "tarch/instrumentation/Trace.h"
-
-#include <algorithm>
-#include <cstring>
-#include <cmath>
+#include "tarch/instrumentation/Log.h"
 
 template <typename cCompType>
 void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(

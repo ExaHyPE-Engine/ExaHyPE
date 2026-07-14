@@ -9,6 +9,8 @@
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/accelerator/ParallelFor.h"
 
+#include "tarch/instrumentation/Log.h"
+
 {% from 'CopyPatchOntoFaces.macro.h' import CopyPatchOntoFaces with context %}
 
 void {{FULL_QUALIFIED_NAMESPACE}}::projectPatchFused(

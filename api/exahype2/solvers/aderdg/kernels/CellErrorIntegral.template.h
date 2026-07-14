@@ -2,8 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <functional>
-
 #include "tarch/la/Vector.h"
 
 {% for item in NAMESPACE -%}

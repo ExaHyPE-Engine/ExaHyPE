@@ -3,8 +3,6 @@
 
 #pragma once
 
-#include <cmath>
-
 template <typename Particle>
 tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::forces::computeCentralGravitationalForce(
   const tarch::la::Vector<DIMENSIONS, double>& particlePosition,

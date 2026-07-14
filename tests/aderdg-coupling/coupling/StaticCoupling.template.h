@@ -7,7 +7,6 @@
 #pragma once
 
 #include "Abstract{{CLASSNAME}}.h"
-#include "tarch/instrumentation/Log.h"
 
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
@@ -20,10 +19,8 @@
   }
 {%- endfor %}
 
-
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
   public:
-
   {% if ADMISSIBILITY_IMPLEMENTATION=="<user-defined>" %}
     bool isPhysicallyAdmissible(
       const {{REGULAR_SOLVER_STORAGE_PRECISION}}* const                         Q,

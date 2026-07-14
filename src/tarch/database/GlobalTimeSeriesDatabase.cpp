@@ -6,9 +6,6 @@
 #include "tarch/la/ScalarOperations.h"
 #include "tarch/multicore/Lock.h"
 
-#include <algorithm>
-#include <vector>
-
 tarch::database::GlobalTimeSeriesDatabase::GlobalTimeSeriesDatabase(double timeDelta, bool deltasAreRelative) :
   SnapshotDatabase(timeDelta, deltasAreRelative),
   _dataName(" data "),

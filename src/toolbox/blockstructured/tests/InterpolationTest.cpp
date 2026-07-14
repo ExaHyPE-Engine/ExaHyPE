@@ -6,9 +6,6 @@
 #include "peano4/grid/GridTraversalEvent.h"
 #include "toolbox/blockstructured/AMRRoutines.h"
 
-#include <algorithm>
-#include <vector>
-
 toolbox::blockstructured::tests::InterpolationTest::InterpolationTest() :
   TestCase("toolbox::blockstructured::tests::InterpolationTest") {}
 

@@ -200,7 +200,7 @@ class SolverDeclarations:
     }
     {% endif %}
     {% endfor %}
-    
+
     {% if ADJUST_SOLUTION_IMPLEMENTATION!="<user-defined>" and ADJUST_SOLUTION_IMPLEMENTATION!="<none>" %}
     static inline GPU_CALLABLE_METHOD
     void adjustSolution(

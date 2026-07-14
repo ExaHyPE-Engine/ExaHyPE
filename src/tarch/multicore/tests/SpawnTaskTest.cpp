@@ -7,9 +7,6 @@
 #include "tarch/multicore/Task.h"
 #include "tarch/multicore/multicore.h"
 
-#include <chrono>
-#include <thread>
-
 constexpr int NumberOfTasksToExecute = 100;
 
 int numberOfProducerTasksThatHaveBeenExecuted = 0;

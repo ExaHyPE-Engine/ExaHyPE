@@ -10,15 +10,6 @@
 #include "tarch/mpi/Rank.h"
 #include "tarch/reader/JSONReader.h"
 
-#include <cstdlib>
-#include <filesystem>
-#include <fstream>
-#include <stdexcept>
-#include <string>
-#include <system_error>
-#include <utility>
-#include <vector>
-
 namespace {
   bool helpRequested(int argc, char** argv) {
     for (int index = 1; index < argc; ++index) {

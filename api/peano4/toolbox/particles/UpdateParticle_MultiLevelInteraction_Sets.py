@@ -207,12 +207,7 @@ class UpdateParticle_MultiLevelInteraction_Sets(ActionSet):
 #include "globaldata/{{LOCAL_PARTICLE}}.h"
 #include "vertexdata/{{ACTIVE_PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{ACTIVE_PARTICLE}}.h"
-
 {{ADDITIONAL_INCLUDES}}
-
-#include <unordered_set>
-#include <set>
-#include <vector>
 """
         )
         return result.render(**self.d)

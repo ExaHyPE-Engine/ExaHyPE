@@ -6,8 +6,6 @@
 #include "tarch/instrumentation/Log.h"
 #include "tarch/mpi/mpi.h"
 
-#include <ctime>
-
 namespace tarch {
   namespace mpi {
     void abort(int errorCode);

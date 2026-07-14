@@ -5,9 +5,6 @@
 #include "TestMacros.h"
 #include "tarch/CompilerSpecificSettings.h"
 
-#include <filesystem>
-#include <string>
-
 namespace tarch {
   namespace tests {
     class TestCase;

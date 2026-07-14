@@ -5,9 +5,6 @@
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/la/Vector.h"
 
-#include <string>
-#include <vector>
-
 namespace tarch::reader {
   class JSONReader;
 } // namespace tarch::reader

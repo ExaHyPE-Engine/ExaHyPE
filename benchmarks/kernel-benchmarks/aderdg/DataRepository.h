@@ -11,11 +11,6 @@
 #include "tarch/instrumentation/Log.h"
 #include "tarch/la/Vector.h"
 
-#include <array>
-#include <string>
-#include <utility>
-#include <vector>
-
 namespace benchmarks::exahype2::kernelbenchmarks {
   /**
    * A singleton repository to manage and provide access to grid cell and face data.

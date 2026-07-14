@@ -32,7 +32,6 @@ namespace {
     }
     return result;
   }
-
 } // namespace
 
 peano4::grid::tests::VertexLookupTableTest::VertexLookupTableTest():

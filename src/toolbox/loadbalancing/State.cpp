@@ -2,8 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "State.h"
 
-#include <iostream>
-
 std::string toString(const toolbox::loadbalancing::State state) {
   switch (state) {
   case toolbox::loadbalancing::State::InterRankDistribution:

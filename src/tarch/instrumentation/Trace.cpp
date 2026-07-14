@@ -7,18 +7,6 @@
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/Core.h"
 
-#include <algorithm>
-#include <fstream>
-#include <iomanip>
-#include <iostream>
-#include <map>
-#include <mutex>
-#include <sstream>
-#include <string>
-#include <string_view>
-#include <utility>
-#include <vector>
-
 namespace {
   struct TraceScope {
     std::string name;

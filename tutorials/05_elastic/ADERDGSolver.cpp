@@ -9,8 +9,6 @@
 //   Shortcuts::sigma    stress     (6 components, order xx, yy, zz, xy, xz, yz)
 #include "ADERDGSolver.h"
 
-#include <cmath>
-
 namespace {
   constexpr double Rho    = 1.0;                        // density
   constexpr double Cp     = 2.0;                        // P-wave (compressional) speed

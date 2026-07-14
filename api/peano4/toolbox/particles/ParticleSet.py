@@ -8,7 +8,6 @@ import peano4.output
 from peano4.datamodel.DoF import DoF
 
 
-
 class AbstractParticleSetGenerator(object):
     def __init__(
         self,

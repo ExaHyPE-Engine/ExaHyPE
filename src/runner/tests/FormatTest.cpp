@@ -4,8 +4,6 @@
 
 #include "runner/Format.h"
 
-#include <string>
-
 runner::tests::FormatTest::FormatTest() :
   TestCase("runner::tests::FormatTest") {}
 

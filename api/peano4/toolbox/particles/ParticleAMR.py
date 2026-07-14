@@ -43,8 +43,6 @@ class ParticleAMR(ActionSet):
 
         :: Arguments
 
-
-
         particle_set: peano4.toolbox.particles.ParticleSet
            Instance of the particle set that is to be used as trigger. Each particle in the
            set has a search radius and this one is used to guide the AMR.

@@ -3,18 +3,9 @@
 #pragma once
 
 #include "AutomatonState.h"
-
 #include "peano4/Globals.h"
 #include "tarch/Assertions.h"
 #include "tarch/la/Vector.h"
-
-#include <bitset>
-#include <cstdint>
-#include <map>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <vector>
 
 namespace peano4::grid {
   struct PeriodicKey;

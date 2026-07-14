@@ -2,6 +2,9 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "Flux.h"
+#include "NonconservativeProduct.h"
+
 #include "tarch/la/Vector.h"
 
 namespace applications::exahype2::exaskred::coupled {

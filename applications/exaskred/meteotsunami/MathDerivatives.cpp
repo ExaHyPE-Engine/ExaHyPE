@@ -2,10 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "MathDerivatives.h"
 
-#include <algorithm>
-#include <cmath>
-#include <limits>
-
 namespace applications::exahype2::exaskred::meteotsunami::numerics {
   double partialX(ScalarField3D f, double x, double y, double t) {
     const double delta = std::cbrt(std::numeric_limits<double>::epsilon()) * std::max(1.0, std::abs(x));

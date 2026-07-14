@@ -304,9 +304,6 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
 
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
-
-#include <array>
-#include <set>
 """
         )
         return result.render(**self.d)

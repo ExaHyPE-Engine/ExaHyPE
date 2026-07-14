@@ -4,7 +4,6 @@
 
 #include "peano4/datamanagement/CellMarker.h"
 
-
 /*
  * We use precomputed values for lagrange polynomials as basis function
  *  on Gauss-Legendre nodes
@@ -13,14 +12,12 @@ exahype2::dg::tests::DGUtilsTest::DGUtilsTest():
   TestCase ("exahype2::dg::tests::DGUtilsTest") {
 }
 
-
 void exahype2::dg::tests::DGUtilsTest::run(){
   testMethod( testGetIndex );
   testMethod( testComputeGradientOnConstantSolution );
   testMethod( testEvaluatePolynomialOrder1 );
   testMethod( testEvaluatePolynomialOrder2 );
 }
-
 
 void exahype2::dg::tests::DGUtilsTest::testEvaluatePolynomialOrder1() {
   const int order = 1;
@@ -64,7 +61,6 @@ void exahype2::dg::tests::DGUtilsTest::testEvaluatePolynomialOrder1() {
   );
   validateNumericalEqualsWithParams1( result, 1.2, cellMarker.toString() );
 }
-
 
 void exahype2::dg::tests::DGUtilsTest::testEvaluatePolynomialOrder2() {
   const int order = 2;
@@ -119,7 +115,6 @@ void exahype2::dg::tests::DGUtilsTest::testEvaluatePolynomialOrder2() {
   validateNumericalEqualsWithParams1( result, 1.2, cellMarker.toString() );
 }
 
-
 void exahype2::dg::tests::DGUtilsTest::testGetIndex() {
   const int order = 3;
   const int nodesPerAxis = order+1;
@@ -140,7 +135,6 @@ void exahype2::dg::tests::DGUtilsTest::testGetIndex() {
     validateEquals(lastIndex[i], nodesPerAxis-1);
   }
 }
-
 
 void exahype2::dg::tests::DGUtilsTest::testComputeGradientOnConstantSolution() {
   #if DIMENSIONS==2

@@ -7,8 +7,6 @@
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/la/Vector.h"
 
-#include <cstddef>
-
 {% for item in NAMESPACE -%}
 namespace {{ item }} {
 {%- endfor %}

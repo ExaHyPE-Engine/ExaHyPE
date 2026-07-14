@@ -5,10 +5,7 @@
 #include "toolbox/curvi/Coordinate.h"
 #include "toolbox/curvi/Index.h"
 
-#include <iostream>
 #include <netcdf.h>
-#include <string>
-#include <vector>
 
 namespace toolbox {
   namespace curvi {

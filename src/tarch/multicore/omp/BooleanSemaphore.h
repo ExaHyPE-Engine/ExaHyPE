@@ -7,7 +7,6 @@
 #include "tarch/multicore/BooleanSemaphore.h"
 
 #include <omp.h>
-#include <string>
 
 class tarch::multicore::BooleanSemaphore {
 private:

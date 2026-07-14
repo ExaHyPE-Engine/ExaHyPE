@@ -2,14 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
-
 #include "tarch/la/Vector.h"
 #include "peano4/Globals.h"
-
-
-#include <functional>
-
 
 namespace exahype2 {
   namespace dg {
@@ -58,5 +52,3 @@ namespace exahype2 {
     );
   }
 }
-
-

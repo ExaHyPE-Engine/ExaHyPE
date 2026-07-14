@@ -6,6 +6,7 @@ import peano4.solversteps
 
 import jinja2
 
+
 class UpdatePatch(AbstractFVActionSet):
     _Template_TouchCellFirstTime = jinja2.Template(
         """

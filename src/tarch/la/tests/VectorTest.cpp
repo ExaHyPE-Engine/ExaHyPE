@@ -8,11 +8,6 @@
 #include "tarch/la/VectorScalarOperations.h"
 #include "tarch/la/VectorVectorOperations.h"
 
-#include <map>
-#include <sstream>
-#include <string>
-#include <vector>
-
 tarch::la::tests::VectorTest::VectorTest():
   TestCase("tarch::la::tests::VectorTest") {}
 

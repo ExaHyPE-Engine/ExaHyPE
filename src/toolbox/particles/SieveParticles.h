@@ -2,15 +2,9 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
-#include <list>
-#include <map>
-
-#include "tarch/instrumentation/Log.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 
 #include "peano4/datamanagement/VertexMarker.h"
-
 
 namespace toolbox {
   namespace particles {
@@ -18,7 +12,6 @@ namespace toolbox {
     class SieveParticles;
   } // namespace particles
 } // namespace toolbox
-
 
 /**
  * Utility class for global sorting for all flavours of particle sets
@@ -278,7 +271,6 @@ public:
   std::string toString() const;
 
 private:
-
   static void deleteParticles(ParticleList& list);
 
   /**
@@ -326,6 +318,5 @@ private:
    */
   ParticleList  _particlesThatHaveToBeSieved;
 };
-
 
 #include "SieveParticles.cpph"

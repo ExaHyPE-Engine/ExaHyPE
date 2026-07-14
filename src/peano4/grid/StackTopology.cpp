@@ -6,8 +6,6 @@
 
 #include "peano4/Loop.h"
 
-#include <unordered_set>
-
 bool peano4::grid::StackTopology::isInOutStack(int stackNumber) {
   return stackNumber == static_cast<int>(BaseStack::Input) or stackNumber == static_cast<int>(BaseStack::Output);
 }

@@ -4,8 +4,6 @@
 
 #include "tarch/accelerator/accelerator.h"
 
-#include <limits>
-
 TARGET_DECLARE
 
 namespace tarch::la {

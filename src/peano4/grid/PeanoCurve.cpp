@@ -125,7 +125,6 @@ void peano4::grid::PeanoCurve::setFaceAccessNumber(AutomatonState& cell, int fac
   accessNumber[face] = static_cast<short int>(value);
 }
 
-
 int peano4::grid::PeanoCurve::getInputStackNumber(const AutomatonState& state) {
   if (state.getInverted()) {
     return static_cast<int>(StackTopology::BaseStack::Output);

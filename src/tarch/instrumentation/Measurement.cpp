@@ -6,10 +6,6 @@
 #include "tarch/la/Scalar.h"
 #include "tarch/la/ScalarOperations.h"
 
-#include <algorithm>
-#include <cmath>
-#include <limits>
-
 tarch::instrumentation::Measurement::Measurement(const double& accuracy):
   _accuracy(accuracy),
   _accumulatedValue(0.0),
@@ -21,7 +17,6 @@ tarch::instrumentation::Measurement::Measurement(const double& accuracy):
   _max(-std::numeric_limits<double>::max()),
   _minMeasurement(-1),
   _maxMeasurement(-1) {
-
   assertion(accuracy >= 0.0, accuracy);
 }
 

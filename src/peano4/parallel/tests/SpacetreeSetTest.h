@@ -4,9 +4,6 @@
 
 #include "tarch/tests/TestCase.h"
 
-#include <bitset>
-#include <vector>
-
 namespace peano4::parallel::tests {
   class SpacetreeSetTest;
 } // namespace peano4::parallel::tests

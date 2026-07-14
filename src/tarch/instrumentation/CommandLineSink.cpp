@@ -4,8 +4,6 @@
 
 #include "tarch/multicore/Lock.h"
 
-#include <iostream>
-
 #if defined(_WIN32)
 #include <io.h>
 #ifndef NOMINMAX

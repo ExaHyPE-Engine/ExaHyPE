@@ -191,10 +191,7 @@ class UpdateParticle_SingleLevelInteraction_ContiguousParticles(ActionSet):
 #include "globaldata/{{LOCAL_PARTICLE}}.h"
 #include "vertexdata/{{ACTIVE_PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{ACTIVE_PARTICLE}}.h"
-
 {{ADDITIONAL_INCLUDES}}
-
-#include <list>
 """
         )
         return result.render(**self.d)

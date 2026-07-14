@@ -23,7 +23,6 @@ namespace toolbox {
       Edge remesh(int numNodesNew);
       Edge interpolate(const std::vector<double>& range_in, const std::vector<double>& range_out, int window = 11);
 
-
       void resize(int i);
       void push_back(double d);
 

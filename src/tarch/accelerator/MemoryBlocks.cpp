@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "MemoryBlocks.h"
 
+#include "tarch/instrumentation/Log.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/Lock.h"
 

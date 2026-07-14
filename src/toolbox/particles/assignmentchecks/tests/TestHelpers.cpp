@@ -6,12 +6,10 @@
 #include "toolbox/particles/assignmentchecks/Database.h"
 #include "toolbox/particles/assignmentchecks/tests/TestParticle.h"
 #include "toolbox/particles/assignmentchecks/TracingAPI.h"
-
-#include <cassert>
+#include "tarch/instrumentation/Log.h"
 
 toolbox::particles::assignmentchecks::tests::TestHelpers::TestHelpers():
   TestCase("toolbox::particles::assignmentchecks::tests::TestHelpers") {}
-
 
 bool toolbox::particles::assignmentchecks::tests::internal::liftParticle(
   const tarch::la::Vector<DIMENSIONS, double> particleX,
@@ -19,7 +17,6 @@ bool toolbox::particles::assignmentchecks::tests::internal::liftParticle(
   const tarch::la::Vector<DIMENSIONS, double> vertexH,
   const int                                   depth
 ) {
-
   if (depth == 0) {
     return false;
   }
@@ -35,14 +32,12 @@ bool toolbox::particles::assignmentchecks::tests::internal::liftParticle(
   return false;
 }
 
-
 bool toolbox::particles::assignmentchecks::tests::internal::dropParticle(
   const tarch::la::Vector<DIMENSIONS, double> particleX,
   const tarch::la::Vector<DIMENSIONS, double> vertexH,
   const int                                   depth,
   const int                                   maxVertexDepth
 ) {
-
   if (depth == maxVertexDepth) {
     return false;
   }
@@ -58,18 +53,15 @@ bool toolbox::particles::assignmentchecks::tests::internal::dropParticle(
   return false;
 }
 
-
 int toolbox::particles::assignmentchecks::tests::internal::findVertexInd(
   double x,
   double vertexH
 ) {
-
   // vertexH is half vertex square size. So multiply by 2 here.
   int vertexInd = static_cast<int>(std::floor((x / (2. * vertexH)) + 0.5));
 
   return vertexInd;
 }
-
 
 tarch::la::Vector<DIMENSIONS, double> toolbox::particles::assignmentchecks::
   tests::internal::findVertexX(
@@ -86,7 +78,6 @@ tarch::la::Vector<DIMENSIONS, double> toolbox::particles::assignmentchecks::
   return vertexX;
 }
 
-
 toolbox::particles::assignmentchecks::tests::TestParticle* toolbox::particles::
   assignmentchecks::tests::internal::mirrorParticleAlongPeriodicBoundary(
     toolbox::particles::assignmentchecks::tests::TestParticle* original,
@@ -95,7 +86,6 @@ toolbox::particles::assignmentchecks::tests::TestParticle* toolbox::particles::
     bool                                                       bz,
     tarch::la::Vector<DIMENSIONS, double>                      boundary
   ) {
-
   tarch::la::Vector<DIMENSIONS, double> virtualPartX = original->getX();
 
   if (bx) {
@@ -123,10 +113,8 @@ toolbox::particles::assignmentchecks::tests::TestParticle* toolbox::particles::
   return mirrored;
 }
 
-
 void toolbox::particles::assignmentchecks::tests::TestHelpers::
   testTruthTableSearchAndIDKeys() {
-
   namespace ac = ::toolbox::particles::assignmentchecks;
 
   tarch::la::Vector<DIMENSIONS, double> particleAX;
@@ -195,7 +183,6 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   assertion(not(B == A));
   assertion(not(B < A));
 
-
   // cross-comparisons
   logDebug("a < A:"
       << (a < A) << "(0) A < a:" << (A < a) << "(0) a==A:" << (a == A)
@@ -229,30 +216,25 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   assertion(not(B < b));
   assertion(b == B);
   assertion(B == b);
-
 }
-
 
 void toolbox::particles::assignmentchecks::tests::TestHelpers::
   testAddingSweepsToDatabase() {
-
   namespace ac = ::toolbox::particles::assignmentchecks;
 
   ac::internal::Database& eventDatabase = ac::internal::Database::getInstance();
   eventDatabase.reset();
   ac::ensureDatabaseIsEmpty();
 
-
   std::vector<std::string>
     meshSweepNames = {"initial", "alpha", "beta", "gamma", "delta"};
-
 
   std::vector<std::string>::iterator sweep = meshSweepNames.begin();
   // Skip first, which gets automatically added to the database.
   sweep++;
 
   while (sweep != meshSweepNames.end()) {
-    ac::startMeshSweep(*sweep);
+    eventDatabase.startMeshSweep(*sweep);
     sweep++;
   }
 
@@ -274,14 +256,12 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
     eventDatabase.toString()
   );
 
-
   // Check that names have been stored correctly
 
   auto databaseSweep = eventDatabase.getMeshSweepData().begin();
   sweep              = meshSweepNames.begin();
 
   while (sweep != meshSweepNames.end()) {
-
     assertion(
       *sweep == databaseSweep->getName(),
       "Wrong Sweep Name",
@@ -295,13 +275,10 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   // Clean up after yourself.
   eventDatabase.reset();
   ac::ensureDatabaseIsEmpty();
-
 }
-
 
 void toolbox::particles::assignmentchecks::tests::TestHelpers::
   testAddingParticleEvents() {
-
   namespace ac = ::toolbox::particles::assignmentchecks;
 
   ac::internal::Database& eventDatabase = ac::internal::Database::getInstance();
@@ -322,14 +299,12 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 
   std::vector<std::string> meshSweepNames = {"alpha", "beta", "gamma", "delta"};
 
-
   int                                nparts = 10;
   std::vector<std::string>::iterator sweep  = meshSweepNames.begin();
   while (sweep != meshSweepNames.end()) {
     ac::startMeshSweep(*sweep);
 
     for (int p = 1; p < nparts + 1; p++) {
-
       int particleID = p;
 
       for (int i = 0; i < DIMENSIONS; i++) {
@@ -395,7 +370,6 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
     sweep++;
   }
 
-
   // is particle count correct?
   assertion(
     eventDatabase.getNumberOfTracedParticles() == static_cast<int>(nparts),
@@ -406,7 +380,6 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 
   // Is number of events per particle correct?
   for (int p = 1; p < nparts + 1; p++) {
-
     int particleID = p;
 
     for (int i = 0; i < DIMENSIONS; i++) {
@@ -441,13 +414,10 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   // Clean up after yourself.
   eventDatabase.reset();
   ac::ensureDatabaseIsEmpty();
-
 }
-
 
 void toolbox::particles::assignmentchecks::tests::TestHelpers::
   testRemovingParticleEvents() {
-
   namespace ac = ::toolbox::particles::assignmentchecks;
 
   ac::internal::Database& eventDatabase = ac::internal::Database::getInstance();
@@ -474,7 +444,6 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
     "baz",
     "boo"};
 
-
   int                                nparts = 4;
   std::vector<std::string>::iterator sweep  = meshSweepNames.begin();
 
@@ -484,9 +453,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
     // Make a tree for each particle. Each tree contains
     // all particles, but only 1 particle is local.
     for (int treeId = 0; treeId < nparts; treeId++) {
-
       for (int p = 1; p < nparts + 1; p++) {
-
         bool isLocal = (treeId == p - 1);
 
         int particleID = p;
@@ -548,7 +515,6 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
     sweep++;
   }
 
-
   // is particle count correct?
   // nparts particles times nparts trees
   assertion(
@@ -561,9 +527,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   // Clean up after yourself.
   eventDatabase.reset();
   ac::ensureDatabaseIsEmpty();
-
 }
-
 
 void toolbox::particles::assignmentchecks::tests::TestHelpers::
   testParticleMoveEvents() {
@@ -573,10 +537,8 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   testAddingParticleMovingEvents(100, 16);
 }
 
-
 void toolbox::particles::assignmentchecks::tests::TestHelpers::
   testAddingParticleMovingEvents(int nsweeps, int nEventsToKeep) {
-
   namespace ac = ::toolbox::particles::assignmentchecks;
 
   ac::internal::Database& eventDatabase = ac::internal::Database::getInstance();
@@ -605,10 +567,8 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
     dx(i)        = 0.05;
   }
 
-
   // run through sweeps and add move events.
   for (int sweep = 0; sweep < nsweeps; sweep++) {
-
     std::string sweepname = "Sweep" + std::to_string(sweep);
     ac::startMeshSweep(sweepname);
 
@@ -628,7 +588,6 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
         treeId
       );
 
-
     // move event
     std::string         trace     = "Move/sweep:" + std::to_string(sweep);
     ac::internal::Event moveEvent = ac::internal::Event(
@@ -642,14 +601,12 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
     eventDatabase.addEvent(identifier, moveEvent);
   }
 
-
   // is particle count correct?
   assertion(
     eventDatabase.getNumberOfTracedParticles() == 1,
     "Wrong particle count in database, should be 1",
     eventDatabase.getNumberOfTracedParticles()
   );
-
 
   // Did we record correct number of events?
   ac::internal::ParticleIdentifier identifier = ac::internal::ParticleIdentifier(
@@ -674,19 +631,15 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
     eventDatabase.particleHistory(identifier)
   );
 
-
   logDebug(eventDatabase.particleHistory(identifier));
 
   // Clean up after yourself.
   eventDatabase.reset();
   ac::ensureDatabaseIsEmpty();
-
 }
-
 
 void toolbox::particles::assignmentchecks::tests::TestHelpers::
   testParticleWalkSameTreeLevel() {
-
 #if PEANO_DEBUG
 
   namespace ac = toolbox::particles::assignmentchecks;
@@ -748,7 +701,6 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
     true   // particle walks from vertex to vertex on same level
   );
 
-
   // Do some mesh sweeps.
   // NOTE: The database only keeps up to 16 sweeps in memory by default.
   // After that, entries will be purged. One sweep is added by default ('init').
@@ -756,7 +708,6 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   // it'll start deleting stuff before the end.
   size_t max_sweeps = 14;
   for (size_t sweep = 0; sweep < max_sweeps; sweep++) {
-
     ac::startMeshSweep("MySweep" + std::to_string(sweep));
 
     // record old particle positions.
@@ -861,19 +812,15 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
     eventDatabase.particleHistory(identifier)
   );
 
-
   // Clean up after yourself
   eventDatabase.reset();
 
 #endif
 }
 
-
 void toolbox::particles::assignmentchecks::tests::TestHelpers::
   testParticleLiftDrop() {
-
 #if PEANO_DEBUG
-
 
   namespace ac = toolbox::particles::assignmentchecks;
 
@@ -963,7 +910,6 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
     );
   }
 
-
   ac::startMeshSweep("Drops");
 
   // Now drop it in the correct vertex.
@@ -1001,7 +947,6 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
     );
   }
 
-
   // is particle count correct?
   assertion(
     eventDatabase.getNumberOfTracedParticles() == 1,
@@ -1034,10 +979,8 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 #endif
 }
 
-
 void toolbox::particles::assignmentchecks::tests::TestHelpers::testParticleWalk(
 ) {
-
 #if PEANO_DEBUG
 
   namespace ac = toolbox::particles::assignmentchecks;
@@ -1094,14 +1037,12 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testParticleWalk(
     vertexH
   );
 
-
   // Do some mesh sweeps.
   // NOTE: The database only keeps up to 16 sweeps in memory by default.
   // After that, entries will be purged. One sweep is added by default ('init').
   // We've already added another sweep ('InitUnitTest'). So if you go beyond 14,
   // it'll start deleting stuff before the end.
   for (int sweep = 0; sweep < 1000; sweep++) {
-
     ac::startMeshSweep("MySweep" + std::to_string(sweep));
 
     // record old particle positions.
@@ -1117,7 +1058,6 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testParticleWalk(
     // Make sure we're not breaking our own rules.
     // assignmentchecks only work for small dx.
     assertion(dx_this_step <= vertexH(0));
-
 
     // update particle position.
     localPartX += dx_this_step;
@@ -1215,10 +1155,8 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testParticleWalk(
 #endif
 }
 
-
 void toolbox::particles::assignmentchecks::tests::TestHelpers::
   testPeriodicBoundaryConditions() {
-
 #if PEANO_DEBUG
 
   namespace ac = toolbox::particles::assignmentchecks;
@@ -1288,14 +1226,12 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
     localPart->getVertexH()
   );
 
-
   // Do some mesh sweeps.
   // NOTE: The database only keeps up to 16 sweeps in memory by default.
   // After that, entries will be purged. One sweep is added by default ('init').
   // We've already added another sweep ('InitUnitTest'). So if you go beyond 14,
   // it'll start deleting stuff before the end.
   for (int sweep = 0; sweep < 50; sweep++) {
-
     ac::startMeshSweep("MySweep" + std::to_string(sweep));
 
     // record old particle positions.
@@ -1303,7 +1239,6 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 
     // Now drift
     for (auto p : particleSet) {
-
       // Grab the vertex X before you move the particle! You need
       // to know what vertex it's currently assigned to, not what
       // it may be assigned to later.
@@ -1410,7 +1345,6 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
       }
     } // Drift loop
 
-
     // Do we need to create a virtual particle?
     for (auto p : particleSet) {
       // particle always travels diagonally. Only check 1 coordinate.
@@ -1455,14 +1389,12 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
     // the most.
     assertion(particleSet.size() <= 2);
 
-
     // Check ParallelState of particles:
     // Change local->virtual if crossed (0, 0, 0) boundary
     // change virtual->local if crossed boundary
     for (auto p : particleSet) {
       if (p->isLocal()) {
         if (tarch::la::oneSmaller(p->getX(), zero_corner)) {
-
           vertexX = internal::findVertexX(p->getX(), p->getVertexH());
 
           ac::detachParticleFromVertex(
@@ -1559,8 +1491,6 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
         p++;
       }
     }
-
-
   } // mesh sweep loops
 
   logDebug(eventDatabase.toString());
@@ -1573,7 +1503,6 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 
 void toolbox::particles::assignmentchecks::tests::TestHelpers::
   testPeriodicBoundaryConditionsCorner() {
-
 #if PEANO_DEBUG
 
   namespace ac = toolbox::particles::assignmentchecks;
@@ -1644,14 +1573,12 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
     true
   );
 
-
   // Do some mesh sweeps.
   // NOTE: The database only keeps up to 16 sweeps in memory by default.
   // After that, entries will be purged. One sweep is added by default ('init').
   // We've already added another sweep ('InitUnitTest'). So if you go beyond 14,
   // it'll start deleting stuff before the end.
   for (int sweep = 0; sweep < 50; sweep++) {
-
     ac::startMeshSweep("MySweep" + std::to_string(sweep));
 
     // record old particle positions.
@@ -1659,7 +1586,6 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 
     // Now drift
     for (auto p : particleSet) {
-
       // Grab the vertex X before you move the particle! You need
       // to know what vertex it's currently assigned to, not what
       // it may be assigned to later.
@@ -1765,7 +1691,6 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
         );
       }
     } // Drift loop
-
 
     // Do we need to create virtual particles?
     std::vector<ac::tests::TestParticle*> mirroredParticleSet;
@@ -1879,8 +1804,6 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
         p++;
       }
     }
-
-
   } // mesh sweep loops
 
   logDebug(eventDatabase.toString());
@@ -1891,9 +1814,7 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 #endif
 }
 
-
 void toolbox::particles::assignmentchecks::tests::TestHelpers::testSieveSet() {
-
 #if PEANO_DEBUG
 
   namespace ac = toolbox::particles::assignmentchecks;
@@ -1954,11 +1875,9 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testSieveSet() {
     true
   );
 
-
   // Do some mesh sweeps.
   size_t nsweeps = 10;
   for (size_t sweep = 0; sweep < nsweeps; sweep++) {
-
     ac::startMeshSweep("MySweep" + std::to_string(sweep));
 
     // record old particle positions.
@@ -1966,7 +1885,6 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testSieveSet() {
 
     // Now drift
     for (auto p : particleSet) {
-
       // Grab the vertex X before you move the particle! You need
       // to know what vertex it's currently assigned to, not what
       // it may be assigned to later.
@@ -2030,7 +1948,6 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testSieveSet() {
         prevVertexH
       );
     } // Drift loop
-
   } // mesh sweep loops
 
   // is particle count correct?
@@ -2039,7 +1956,6 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testSieveSet() {
     "Wrong particle count in database",
     eventDatabase.getNumberOfTracedParticles()
   );
-
 
   ac::internal::ParticleIdentifier identifier = ac::internal::ParticleIdentifier(
     "TestParticle",
@@ -2063,7 +1979,6 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testSieveSet() {
 
   logDebug(eventDatabase.particleHistory(identifier));
 
-
   logDebug(eventDatabase.toString());
 
   // Clean up after yourself
@@ -2072,10 +1987,8 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testSieveSet() {
 #endif
 }
 
-
 void toolbox::particles::assignmentchecks::tests::TestHelpers::
   testRepeatedVirtualParticleCleanup() {
-
 #if PEANO_DEBUG
 
   namespace ac = toolbox::particles::assignmentchecks;
@@ -2173,7 +2086,6 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
 
 #endif
 }
-
 
 void toolbox::particles::assignmentchecks::tests::TestHelpers::run() {
   testMethod(testTruthTableSearchAndIDKeys);

@@ -6,6 +6,7 @@ from .AbstractFVActionSet import AbstractFVActionSet
 import peano4
 import jinja2
 
+
 class AdaptivityCriterion(AbstractFVActionSet):
   """!
 

@@ -10,8 +10,6 @@ void toolbox::particles::ensureAllParticleListsAreGatheredOrEmpty(
   }
 }
 
-
-
 template <typename T>
 void toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
   const std::list<T*>       activeParticles,

@@ -4,10 +4,6 @@
 
 #include "runner/TextLayout.h"
 
-#include <cstddef>
-#include <string>
-#include <vector>
-
 runner::tests::TextLayoutTest::TextLayoutTest() :
   TestCase("runner::tests::TextLayoutTest") {}
 

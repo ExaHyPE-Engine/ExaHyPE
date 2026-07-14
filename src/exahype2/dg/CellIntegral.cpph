@@ -125,7 +125,6 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre(
               gradientValues[var] += coeffDerivative * cellQin[contributingNodeSerialised * inputStride + var];
               assertion(gradientValues[var] == gradientValues[var]);
             } // var
-
           } // node
 
           Solver::nonconservativeProduct(

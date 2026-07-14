@@ -36,7 +36,6 @@ namespace toolbox {
 
       bool isLeaf() const { return false; }
 
-
     private:
       bool isInit;
 
@@ -45,7 +44,6 @@ namespace toolbox {
       int                                   index;
       easi::Component*                      model;
       std::function<double(double, double)> perturbation;
-
 
       Node* left;
       Node* right;

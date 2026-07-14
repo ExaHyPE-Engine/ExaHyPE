@@ -2,9 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
-#include <vector>
-
 #include "../DGUtils.h"
 #include "../Functors.h"
 
@@ -108,7 +105,6 @@ namespace exahype2 {
         const double* NOALIAS                   projectedValues,
         double* NOALIAS                         solution
       );
-
 
       /**
        *

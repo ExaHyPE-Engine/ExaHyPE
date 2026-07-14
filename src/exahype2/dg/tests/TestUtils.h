@@ -2,8 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include <vector>
-
 #include "tarch/la/Vector.h"
 #include "tarch/multicore/multicore.h"
 
@@ -119,7 +117,6 @@ namespace exahype2 {
           double * NOALIAS                                         BgradQ
         );
 
-
       // test boundary condition function to check whether applying boundary conditions works
       void testBoundaryConditions(
               const double * NOALIAS                  Qinside,
@@ -130,7 +127,6 @@ namespace exahype2 {
               int                                          normal
             );
 
-
       void secondTestBoundaryConditions(
               const double * NOALIAS                  Qinside,
               double * NOALIAS                        Qoutside,
@@ -139,7 +135,6 @@ namespace exahype2 {
               double                                       dt,
               int                                          normal
             );
-
 
       double testEigenvalue(
           const double * NOALIAS                 Q,
