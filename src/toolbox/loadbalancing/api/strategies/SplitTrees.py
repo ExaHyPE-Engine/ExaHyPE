@@ -437,8 +437,9 @@ def propagate_bottom_up(peano_tree: Tree) -> None:
     
     ## Implementation
 
-    WOrk from finest to coarsest level
-    for level in range(peano_tree._max_level - 2, -1, -1):  # Skip finest level (only leaves)
+    We work from finest to the coarsest level. On each level, we trigger an 
+    iterative process (while loop) for each colour (tree number) k that we 
+    find:
     
     ### Check if all kids of one cell belong to the same tree
     
@@ -447,7 +448,42 @@ def propagate_bottom_up(peano_tree: Tree) -> None:
     set. Once we have visited all children, we can check the set cardinality:
     If the set cardinality equals 1, all children are assigned to the same 
     tree. We therefore can assign the parent to this tree number, too.
+    
+    ### Make decision if to assign the parent
+    
+    If all kids belong to the same tree, we can propagate this ownership one
+    level up. However, we do this for a tree k if and only if the following 
+    tests pass:
+    
+    There could be multiple nodes k within the tree that span all together a
+    forest of small trees. Let max_k be the maximum level of these root nodes
+    within the forest, and let min_k be the minimum level.
+    
+    We assign an arbitrary node from another tree colour
+    the colour k if and only if
 
+    - max_k - min_k becomes smaller through the assignment, or;
+    - max_k - min_k = 0 and we could group all root nodes of k into 
+      k / 3**d coarser nodes.
+    
+    ###  Rationale
+    
+    The reason is that we don't want to propagate too aggressively bottom-up.
+    Eventually, our goal is to introduce a hierarchy over the trees. For this,
+    it helps us if all the roo nodes of tree k are on the same level. In this
+    case, we can determine (likely) one parent k' and then tell k' to fork x 
+    times where x is the number of roots within the forest of k.
+    
+    Therefore, we try to ensure that max_k - min_k becomes smaller and smaller.
+    This implies that, in an adaptive mesh, we try to group all the fine mesh
+    parts together first.
+    
+    Eventually, all root nodes of the forest k will end up on the one and same
+    level. It cdould now be that we could move all of them one level up. This
+    is covered by the second case distinction.
+
+    @todo Dmitry the check above is not implemented yet an causes the algorithm
+                 to fail later on
     Args:
         peano_tree: Tree to update (modified in place).
 
@@ -462,13 +498,7 @@ def propagate_bottom_up(peano_tree: Tree) -> None:
     """
     print("Updating non-leaf node assignments to maintain tree topology...")
     
-    #for level in range(peano_tree._max_level - 2, -1, -1):  # Skip finest level (only leaves)
-    
-    # @todo Dmitry We have to get the line above back into the game later on, 
-    #              but first we have to understand what exactly is happening 
-    #              here. And for this, we have to look at two levels only for 
-    #              the time being.
-    for level in range(peano_tree._max_level - 2, peano_tree._max_level - 3, -1):  # Skip finest level (only leaves)
+    for level in range(peano_tree._max_level - 2, -1, -1):  # Skip finest level (only leaves)
         size = 3**(level + 1)
         
         if peano_tree._dimension == 2:
