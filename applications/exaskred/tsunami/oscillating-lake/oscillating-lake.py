@@ -180,7 +180,6 @@ fv_solver.set_implementation(
 )
 fv_solver.add_user_solver_includes(
     """
-#include <cmath>
 #include "../Flux.h"
 #include "../NonconservativeProduct.h"
 #include "../riemann/AugmentedState.h"

@@ -59,9 +59,14 @@ public:
 
   toolbox::curvi::Root* getRoot() { return interface->getRoot(); }
 
-  ~ContextCurvilinear() {
+  virtual ~ContextCurvilinear() {
     delete interface;
   }
+
+  ContextCurvilinear(const ContextCurvilinear&) = delete;
+  ContextCurvilinear& operator=(const ContextCurvilinear&) = delete;
+  ContextCurvilinear(ContextCurvilinear&&) = delete;
+  ContextCurvilinear& operator=(ContextCurvilinear&&) = delete;
 
   void initUnknownsPatch(
     T*                                           luh,

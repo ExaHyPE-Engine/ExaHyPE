@@ -13,13 +13,21 @@
 
 std::chrono::steady_clock::time_point tarch::instrumentation::Log::_startupTime{std::chrono::steady_clock::now()};
 
-const tarch::instrumentation::Log::Configuration tarch::instrumentation::Log::_defaultConfiguration{};
+// The default configuration and the snapshot store are heap objects that are
+// never freed. Destructors of other globals still emit log messages, so the
+// published configuration must stay valid throughout static destruction. Both
+// remain reachable through their pointers, so no leak is reported.
+const tarch::instrumentation::Log::Configuration* const tarch::instrumentation::Log::_defaultConfiguration{
+  new tarch::instrumentation::Log::Configuration{}
+};
 
-std::vector<std::unique_ptr<const tarch::instrumentation::Log::Configuration>>
-  tarch::instrumentation::Log::_configurationSnapshots;
+std::vector<std::unique_ptr<const tarch::instrumentation::Log::Configuration>>* const
+  tarch::instrumentation::Log::_configurationSnapshots{
+    new std::vector<std::unique_ptr<const tarch::instrumentation::Log::Configuration>>()
+  };
 
 std::atomic<const tarch::instrumentation::Log::Configuration*> tarch::instrumentation::Log::_configuration{
-  &tarch::instrumentation::Log::_defaultConfiguration
+  tarch::instrumentation::Log::_defaultConfiguration
 };
 
 std::once_flag tarch::instrumentation::Log::_debugFilterEnvironmentOnce;
@@ -68,7 +76,7 @@ void tarch::instrumentation::Log::updateConfiguration(const std::function<void(C
   update(*next);
 
   const Configuration* configuration = next.get();
-  _configurationSnapshots.push_back(std::move(next));
+  _configurationSnapshots->push_back(std::move(next));
   _configuration.store(configuration, std::memory_order_release);
 }
 

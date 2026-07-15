@@ -74,19 +74,19 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   picardCompType* rhs = picardMemory + getlQiSize();
 
 {% if USE_FLUX %}
-  picardCompType* lFi = picardMemory + 2 * getlQiSize();
+  picardCompType* lFi = picardMemory + getlQiSize() + getRhsSize();
 {% else %}
   picardCompType* lFi = nullptr;
 {% endif %}
 
 {% if USE_SOURCE or USE_NCP %}
-  picardCompType* lSi = picardMemory + 2 * getlQiSize() + getlFiSize();
+  picardCompType* lSi = picardMemory + getlQiSize() + getRhsSize() + getlFiSize();
 {% else %}
   picardCompType* lSi = nullptr;
 {% endif %}
 
 {% if USE_NCP or USE_DIFFUSIVE_FLUX %}
-  picardCompType* gradQ = picardMemory + 2 * getlQiSize() + getlFiSize() + getlSiSize();
+  picardCompType* gradQ = picardMemory + getlQiSize() + getRhsSize() + getlFiSize() + getlSiSize();
 {% else %}
   picardCompType* gradQ = nullptr;
 {% endif %}
@@ -110,10 +110,12 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   //********************
   //****** Picard ******
   //********************
+  traceEnter("Picard iteration");
   picardCompType* new_lQi_slice = newLQiSliceScratch.get({{NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}});
   // 2: Discrete Picard iterations
   int numberOfPicardIterations = 0;
-  traceEnter("Picard iteration");
+  // constexpr picardCompType PicardResidualTolerance = std::numeric_limits<picardCompType>::epsilon();
+  constexpr picardCompType PicardResidualTolerance = picardCompType(1e-7);
   for (; numberOfPicardIterations < {{2*NUMBER_OF_DOF+1}}; numberOfPicardIterations++) {
     picardCompType sqRes = picardIteration<cStoreType, picardCompType>(
       solver,
@@ -130,7 +132,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
       timeStepSize
     );
 
-    if (sqRes < (1e-7 * 1e-7)) {
+    if (sqRes < (PicardResidualTolerance * PicardResidualTolerance)) {
       break;
     }
   }
@@ -201,21 +203,18 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
     std::memset(lFhbnd[i], 0, {{NUMBER_OF_UNKNOWNS*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}} * sizeof(pStoreType));
   }
 
-  // TODO: lQhbnd/lFhbnd now use unpadded per-face strides. Verify the aligned
-  // SIMD assumptions below still hold for every yz/xz/xy face slice when
-  // NUMBER_OF_DATA or NUMBER_OF_UNKNOWNS are not multiples of PEANO_WITH_SIMDLEN.
   // x-direction: face 0 (left) and face 2(2D) / 3(3D) (right)
   for (int yz = 0; yz < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; yz++) {
     // Matrix-Vector Products
     for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
-      SIMD(aligned(lQhbnd,lQhi:PEANO_WITH_ALIGNMENT))
+      SIMD(aligned(lQhi:PEANO_WITH_ALIGNMENT))
       for (int n = 0; n < {{NUMBER_OF_DATA}}; n++) {
         lQhbnd[0][n + {{NUMBER_OF_DATA}} * yz] += lQhi[n + {{NUMBER_OF_DATA_PADDED}} * (x + {{NUMBER_OF_DOF}} * yz)] * DGMatrices<pCompType>::FLCoeff[x];
         lQhbnd[DIMENSIONS][n + {{NUMBER_OF_DATA}} * yz] += lQhi[n + {{NUMBER_OF_DATA_PADDED}} * (x + {{NUMBER_OF_DOF}} * yz)] * DGMatrices<pCompType>::FRCoeff[x];
 {% if USE_FLUX %}
 {% if NUMBER_OF_DATA != NUMBER_OF_UNKNOWNS %}
       }
-      SIMD(aligned(lFhbnd,lFhi:PEANO_WITH_ALIGNMENT))
+      SIMD(aligned(lFhi:PEANO_WITH_ALIGNMENT))
       for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
 {% endif %}
         lFhbnd[0][n + {{NUMBER_OF_UNKNOWNS}} * yz] += lFhi[n + {{NUMBER_OF_UNKNOWNS_PADDED}} * (x + {{NUMBER_OF_DOF}} * yz)] * DGMatrices<pCompType>::FLCoeff[x];
@@ -236,14 +235,14 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
       const int z = 0;
       const int x = xz;
 {% endif %}
-      SIMD(aligned(lQhbnd,lQhi:PEANO_WITH_ALIGNMENT))
+      SIMD(aligned(lQhi:PEANO_WITH_ALIGNMENT))
       for (int n = 0; n < {{NUMBER_OF_DATA}}; n++) {
         lQhbnd[1][n + {{NUMBER_OF_DATA}} * xz] += lQhi[n + {{NUMBER_OF_DATA_PADDED}} * (x + {{NUMBER_OF_DOF}} * (y + {{NUMBER_OF_DOF_3D}} * z))] * DGMatrices<pCompType>::FLCoeff[y];
         lQhbnd[1 + DIMENSIONS][n + {{NUMBER_OF_DATA}} * xz] += lQhi[n + {{NUMBER_OF_DATA_PADDED}} * (x + {{NUMBER_OF_DOF}} * (y + {{NUMBER_OF_DOF_3D}} * z))] * DGMatrices<pCompType>::FRCoeff[y];
 {% if USE_FLUX %}
 {% if NUMBER_OF_DATA != NUMBER_OF_UNKNOWNS %}
       }
-      SIMD(aligned(lFhbnd,lFhi:PEANO_WITH_ALIGNMENT))
+      SIMD(aligned(lFhi:PEANO_WITH_ALIGNMENT))
       for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
 {% endif %}
         lFhbnd[1][n + {{NUMBER_OF_UNKNOWNS}} * xz] += lFhi[n + {{NUMBER_OF_UNKNOWNS_PADDED}} * (y + {{NUMBER_OF_DOF}} * xz) + {{1*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)}}] * DGMatrices<pCompType>::FLCoeff[y];
@@ -258,14 +257,14 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF}}; xy++) {
     // Matrix-Vector Products
     for (int z = 0; z < {{NUMBER_OF_DOF}}; z++) {
-      SIMD(aligned(lQhbnd,lQhi:PEANO_WITH_ALIGNMENT))
+      SIMD(aligned(lQhi:PEANO_WITH_ALIGNMENT))
       for (int n = 0; n < {{NUMBER_OF_DATA}}; n++) {
         lQhbnd[2][n + {{NUMBER_OF_DATA}} * xy] += lQhi[n + {{NUMBER_OF_DATA_PADDED}} * (xy + {{NUMBER_OF_DOF*NUMBER_OF_DOF}} * z)] * DGMatrices<pCompType>::FLCoeff[z];
         lQhbnd[2 + DIMENSIONS][n + {{NUMBER_OF_DATA}} * xy] += lQhi[n + {{NUMBER_OF_DATA_PADDED}} * (xy + {{NUMBER_OF_DOF*NUMBER_OF_DOF}} * z)] * DGMatrices<pCompType>::FRCoeff[z];
 {% if USE_FLUX %}
 {% if NUMBER_OF_DATA != NUMBER_OF_UNKNOWNS %}
       }
-      SIMD(aligned(lFhbnd,lFhi:PEANO_WITH_ALIGNMENT))
+      SIMD(aligned(lFhi:PEANO_WITH_ALIGNMENT))
       for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
 {% endif %}
         lFhbnd[2][n + {{NUMBER_OF_UNKNOWNS}} * xy] += lFhi[n + {{NUMBER_OF_UNKNOWNS_PADDED}} * (z + {{NUMBER_OF_DOF}} * xy) + {{2*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)}}] * DGMatrices<pCompType>::FLCoeff[z];
@@ -325,7 +324,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
 
 {% if USE_NCP or USE_SOURCE %}
   for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
-    SIMD(aligned(luh,lShi:PEANO_WITH_ALIGNMENT))
+    SIMD(aligned(lShi:PEANO_WITH_ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
       luh[xyz * {{NUMBER_OF_DATA}} + n] += predictorTimeStepSize * lShi[xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
     }
@@ -502,7 +501,7 @@ pCompType {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
     // Following the upwinding principle, the "upstream" value of the corrector (luh) from the previous time step is used.
     for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
       const pCompType weight = Quadrature<pCompType>::weights3[xyz] * DGMatrices<pCompType>::FLCoeff[t];
-      SIMD(aligned(rhs,luh:PEANO_WITH_ALIGNMENT))
+      SIMD(aligned(rhs:PEANO_WITH_ALIGNMENT))
       for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
         rhs[n + {{NUMBER_OF_UNKNOWNS_PADDED}} * (xyz + {{NUMBER_OF_DOF**DIMENSIONS}} * t)] = weight * luh[n + {{NUMBER_OF_DATA}} * xyz];
       }

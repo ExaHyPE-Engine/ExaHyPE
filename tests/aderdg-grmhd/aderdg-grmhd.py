@@ -47,21 +47,19 @@ if args.scenario == "MichelSphericalAccretion":
     dimensions = 3
     offset = [2.2, 2.2, 2.2]
     size = [6.0, 6.0, 6.0]
-    end_time = 1.0
+    end_time = 0.02
     periodic_bc = False
     function_name = "initialAccretionDisc3D"
 elif args.scenario == "AlfvenWave":
     dimensions = 2
     offset = [0.0, 0.0]
     size = [2 * pi, 2 * pi]
-    end_time = 16.45
+    end_time = 0.1
     periodic_bc = True
     function_name = "AlfvenWaveTest"
 
 if args.end_time is not None:
     end_time = args.end_time
-elif exahype2.Project._parse_project_arguments().build_mode == "Debug":
-    end_time = 0.1
 
 initial = (
     """

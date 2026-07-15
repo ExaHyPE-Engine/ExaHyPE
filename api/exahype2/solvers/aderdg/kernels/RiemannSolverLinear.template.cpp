@@ -61,7 +61,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
 
   traceEnter("Average states");
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xy++) {
-    SIMD(aligned(QavL,QavR,QL:PEANO_WITH_ALIGNMENT))
+    SIMD(aligned(QavL,QavR:PEANO_WITH_ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_DATA}}; n++) {
       QavL[n] += Quadrature<cCompType>::weights2[xy] * QL[xy * {{NUMBER_OF_DATA}} + n];
       QavR[n] += Quadrature<cCompType>::weights2[xy] * QR[xy * {{NUMBER_OF_DATA}} + n];
@@ -124,7 +124,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
 
   traceEnter("Flux and nonconservative product evaluation");
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xy++) {
-    SIMD(aligned(Qdiff,QL:PEANO_WITH_ALIGNMENT))
+    SIMD(aligned(Qdiff:PEANO_WITH_ALIGNMENT))
     for (int n = 0 ; n < {{NUMBER_OF_UNKNOWNS}} ; n++) {
       Qdiff[n] = 0.5 * (QR[xy * {{NUMBER_OF_DATA}} + n] - QL[xy * {{NUMBER_OF_DATA}} + n]);
     }
@@ -161,7 +161,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
     );
 {% endif %}{# USE_MATERIAL_PARAMETERS #}
 
-    SIMD(aligned(FL,ncp:PEANO_WITH_ALIGNMENT))
+    SIMD(aligned(ncp:PEANO_WITH_ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
       FL[xy * {{NUMBER_OF_UNKNOWNS}} + n] += ncp[n];
     }
@@ -198,13 +198,13 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
     );
 {% endif %}{# USE_MATERIAL_PARAMETERS #}
 
-    SIMD(aligned(FL,fluxValues:PEANO_WITH_ALIGNMENT))
+    SIMD(aligned(fluxValues:PEANO_WITH_ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
       FL[xy * {{NUMBER_OF_UNKNOWNS}} + n] += fluxValues[n];
     }
 {% endif %}{# USE_FLUX #}
 
-    SIMD(aligned(FL,Qdiff:PEANO_WITH_ALIGNMENT))
+    SIMD(aligned(Qdiff:PEANO_WITH_ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
       FR[xy * {{NUMBER_OF_UNKNOWNS}} + n] = FL[xy * {{NUMBER_OF_UNKNOWNS}} + n] + smax * Qdiff[n];
       FL[xy * {{NUMBER_OF_UNKNOWNS}} + n] -= smax * Qdiff[n];

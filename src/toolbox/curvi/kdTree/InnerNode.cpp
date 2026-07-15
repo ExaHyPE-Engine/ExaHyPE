@@ -37,7 +37,7 @@ toolbox::curvi::InnerNode::InnerNode(const YAML::Node& node) {
 
     /*define perturbation*/
     perturbation = [&](double y, double x) {
-      static double result[1];
+      double result[1];
 
       easi::ArraysAdapter<double> adapter;
       easi::Query                 query(1, 2);
@@ -49,7 +49,7 @@ toolbox::curvi::InnerNode::InnerNode(const YAML::Node& node) {
       query.x(0, 0) = x;
       query.x(0, 1) = y;
 
-      model->evaluate(query, adapter);
+      model->evaluate(query,adapter);
       return result[0];
     };
     /*----------------------------------------------*/

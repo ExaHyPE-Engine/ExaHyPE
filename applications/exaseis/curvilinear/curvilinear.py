@@ -5,8 +5,6 @@ import sys
 import exahype2
 from exahype2.solvers.aderdg.ADERDG import Polynomials
 
-import subprocess
-
 import CurvilinearElastic
 
 sys.path.insert(0, os.path.abspath("../ExaSeis_core"))
@@ -75,7 +73,7 @@ project = exahype2.Project(
     offset=offset,
     size=size,
     periodic_bc=[False, False, False],
-    executable="LOH1",
+    executable="ExaSeis",
     min_end_time=end_time,
     max_end_time=end_time,
     min_grid_levels=args.min_grid_levels,
@@ -131,6 +129,3 @@ if use_tracers:
     ))
 
 project.generate_and_build()
-
-os.rename("LOH1", filename)
-subprocess.run("make distclean", shell = True, executable="/bin/bash")

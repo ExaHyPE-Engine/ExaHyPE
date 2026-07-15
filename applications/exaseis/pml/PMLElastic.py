@@ -91,9 +91,7 @@ def initial(pointwise_initial_conditions):
 
 def boundary():
   return """
-  for (int i = 0; i < NumberOfUnknowns; i++) {
-    Qoutside[i] = Qinside[i];
-  }
+  std::copy_n(Qinside, NumberOfUnknowns + NumberOfAuxiliaryVariables, Qoutside);
 """
 
 def eigenvalue():

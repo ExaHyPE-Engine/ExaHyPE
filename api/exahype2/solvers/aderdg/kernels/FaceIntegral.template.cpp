@@ -24,15 +24,13 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceIntegral(
   const cCompType scaling = (2.0 * orientation - 1.0) * inverseDxDirection;
 {% endif %}
 
-  // TODO: lduh/lFhbnd now use unpadded NUMBER_OF_DATA/NUMBER_OF_UNKNOWNS
-  // strides. Verify each per-face slice still satisfies PEANO_WITH_ALIGNMENT before
-  // keeping the aligned SIMD assumptions below.
+  // lduh and lFhbnd use unpadded row strides, so no slice here is SIMD aligned.
   switch (direction) {
   case 0: // x-faces, left-right flux.
     for (int zy = 0; zy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; zy++) {
       const cCompType scaledWeight = scaling * timeStepSize * Quadrature<cCompType>::weights2[zy];
       for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
-        SIMD(aligned(lduh,FCoeff,lFhbnd:PEANO_WITH_ALIGNMENT))
+        SIMD()
         for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
           lduh[(zy * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DATA}} + n] -= Quadrature<cCompType>::iweights3[zy * {{NUMBER_OF_DOF}} + x]
             * scaledWeight * FCoeff[x] * lFhbnd[zy * {{NUMBER_OF_UNKNOWNS}} + n];
@@ -45,7 +43,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceIntegral(
       for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
         const cCompType scaledWeight = scaling * timeStepSize * Quadrature<cCompType>::weights2[z * {{NUMBER_OF_DOF}} + x];
         for (int y = 0; y < {{NUMBER_OF_DOF}}; y++) {
-          SIMD(aligned(lduh,FCoeff,lFhbnd:PEANO_WITH_ALIGNMENT))
+          SIMD()
           for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
             lduh[((z * {{NUMBER_OF_DOF}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DATA}} + n] -= Quadrature<cCompType>::iweights3[(z * {{NUMBER_OF_DOF}} + y) * {{NUMBER_OF_DOF}} + x]
               * scaledWeight * FCoeff[y] * lFhbnd[(z * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS}} + n];
@@ -58,7 +56,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceIntegral(
     for (int yx = 0; yx < {{NUMBER_OF_DOF*NUMBER_OF_DOF}}; yx++) {
       const cCompType scaledWeight = scaling * timeStepSize * Quadrature<cCompType>::weights2[yx];
       for (int z = 0; z < {{NUMBER_OF_DOF}}; z++) {
-        SIMD(aligned(lduh,FCoeff,lFhbnd:PEANO_WITH_ALIGNMENT))
+        SIMD()
         for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
           lduh[(z * {{NUMBER_OF_DOF*NUMBER_OF_DOF}} + yx) * {{NUMBER_OF_DATA}} + n] -= Quadrature<cCompType>::iweights3[z * {{NUMBER_OF_DOF*NUMBER_OF_DOF}} + yx]
             * scaledWeight * FCoeff[z] * lFhbnd[yx * {{NUMBER_OF_UNKNOWNS}} + n];

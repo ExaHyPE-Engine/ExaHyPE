@@ -1496,6 +1496,9 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   logDebug(eventDatabase.toString());
 
   // Clean up after yourself
+  for (auto p : particleSet) {
+    delete p;
+  }
   eventDatabase.reset();
 
 #endif
@@ -1809,6 +1812,9 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::
   logDebug(eventDatabase.toString());
 
   // Clean up after yourself
+  for (auto p : particleSet) {
+    delete p;
+  }
   eventDatabase.reset();
 
 #endif
@@ -1982,6 +1988,9 @@ void toolbox::particles::assignmentchecks::tests::TestHelpers::testSieveSet() {
   logDebug(eventDatabase.toString());
 
   // Clean up after yourself
+  for (auto p : particleSet) {
+    delete p;
+  }
   eventDatabase.reset();
 
 #endif

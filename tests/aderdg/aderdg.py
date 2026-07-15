@@ -22,6 +22,7 @@ scenario_factories = {
     "ElasticPlanarWaves": lambda: scenarios.ElasticPlanarWaves(dimensions=2),
     "ElasticRickerPulse": scenarios.ElasticRickerPulse,
     "EulerGaussianBell": scenarios.EulerGaussianBell,
+    "EulerGaussianBell3D": scenarios.EulerGaussianBell3D,
     "EulerIsentropicVortex": scenarios.EulerIsentropicVortex,
     "SWERadialDamBreak": scenarios.SWERadialDamBreak,
     "SWERestingLake": scenarios.SWERestingLake,

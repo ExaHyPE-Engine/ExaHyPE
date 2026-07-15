@@ -75,8 +75,12 @@ ExaSeis:
   parallel:
     matrix:
     - scenario: [cartesian, curvilinear, dynamic-rupture, pml, pml-dynamic-rupture]
+      build_type: [Release, Debug]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exaseis/$scenario && PYTHONPATH=$CI_PROJECT_DIR/api python3 $scenario.py"
+      # TODO: The curvilinear EASI material models are not thread-safe at evaluation and on teardown, so the
+      # scenarios run with a single OpenMP thread.
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exaseis/$scenario && PYTHONPATH=$CI_PROJECT_DIR/api python3 $scenario.py --build-mode $build_type"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exaseis/$scenario && OMP_NUM_THREADS=1 ./ExaSeis -ns 0 -l ${MIN_GRID_LEVELS} -nt 10" # TODO: Remove -nt
   allow_failure: false
   extends:
     - .Tags

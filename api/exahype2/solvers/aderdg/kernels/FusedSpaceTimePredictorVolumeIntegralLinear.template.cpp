@@ -555,20 +555,17 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
     std::memset(lFhbnd[i], 0, {{NUMBER_OF_UNKNOWNS*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}} * sizeof(pStoreType));
   }
 
-  // TODO: lQhbnd/lFhbnd now use unpadded per-face strides. Verify the aligned
-  // SIMD assumptions below still hold for every yz/xz/xy face slice when
-  // NUMBER_OF_DATA or NUMBER_OF_UNKNOWNS are not multiples of PEANO_WITH_SIMDLEN.
   // x-direction: face 0 (left) and face 2(2D) / 3(3D) (right)
   for (int yz = 0; yz < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; yz++) {
     for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
-      SIMD(aligned(lQhbnd,lQhi:PEANO_WITH_ALIGNMENT))
+      SIMD(aligned(lQhi:PEANO_WITH_ALIGNMENT))
       for (int n = 0; n < {{NUMBER_OF_DATA}}; n++) {
         // Left
         lQhbnd[0][yz * {{NUMBER_OF_DATA}} + n] += lQhi[(yz * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DATA_PADDED}} + n] * DGMatrices<pCompType>::FLCoeff[x];
         // Right
         lQhbnd[DIMENSIONS][yz * {{NUMBER_OF_DATA}} + n] += lQhi[(yz * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DATA_PADDED}} + n] * DGMatrices<pCompType>::FRCoeff[x];
       }
-      SIMD(aligned(lFhbnd,lFhi:PEANO_WITH_ALIGNMENT))
+      SIMD(aligned(lFhi:PEANO_WITH_ALIGNMENT))
       for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
         // Left
         lFhbnd[0][yz * {{NUMBER_OF_UNKNOWNS}} + n] += lFhi[(yz * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] * DGMatrices<pCompType>::FLCoeff[x];
@@ -582,14 +579,14 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   for (int z = 0; z < {{NUMBER_OF_DOF_3D}}; z++) {
     for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
       for (int y = 0; y < {{NUMBER_OF_DOF}}; y++) {
-        SIMD(aligned(lQhbnd,lQhi:PEANO_WITH_ALIGNMENT))
+        SIMD(aligned(lQhi:PEANO_WITH_ALIGNMENT))
         for (int n = 0; n < {{NUMBER_OF_DATA}}; n++) {
           // Left
           lQhbnd[1][(z * {{NUMBER_OF_DOF_3D}} + x) * {{NUMBER_OF_DATA}} + n] += lQhi[((z * {{NUMBER_OF_DOF_3D}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DATA_PADDED}} + n] * DGMatrices<pCompType>::FLCoeff[y];
           // Right
           lQhbnd[1+DIMENSIONS][(z * {{NUMBER_OF_DOF_3D}} + x) * {{NUMBER_OF_DATA}} + n] += lQhi[((z * {{NUMBER_OF_DOF_3D}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DATA_PADDED}} + n] * DGMatrices<pCompType>::FRCoeff[y];
         }
-        SIMD(aligned(lFhbnd,lFhi:PEANO_WITH_ALIGNMENT))
+        SIMD(aligned(lFhi:PEANO_WITH_ALIGNMENT))
         for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
           // Left
           lFhbnd[1][(z * {{NUMBER_OF_DOF_3D}} + x) * {{NUMBER_OF_UNKNOWNS}} + n] += lFhi[((z * {{NUMBER_OF_DOF_3D}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{1*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}}] * DGMatrices<pCompType>::FLCoeff[y];
@@ -604,14 +601,14 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   // z-direction: face 2 (left) and face 5 (right)
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xy++) {
     for (int z = 0; z < {{NUMBER_OF_DOF}}; z++) {
-      SIMD(aligned(lQhbnd,lQhi:PEANO_WITH_ALIGNMENT))
+      SIMD(aligned(lQhi:PEANO_WITH_ALIGNMENT))
       for (int n = 0; n < {{NUMBER_OF_DATA}}; n++) {
         // Left
         lQhbnd[2][xy * {{NUMBER_OF_DATA}} + n] += lQhi[(z * {{NUMBER_OF_DOF*NUMBER_OF_DOF}} + xy) * {{NUMBER_OF_DATA_PADDED}} + n] * DGMatrices<pCompType>::FLCoeff[z];
         // Right
         lQhbnd[2+DIMENSIONS][xy * {{NUMBER_OF_DATA}} + n] += lQhi[(z * {{NUMBER_OF_DOF*NUMBER_OF_DOF}} + xy) * {{NUMBER_OF_DATA_PADDED}} + n] * DGMatrices<pCompType>::FRCoeff[z];
       }
-      SIMD(aligned(lFhbnd,lFhi:PEANO_WITH_ALIGNMENT))
+      SIMD(aligned(lFhi:PEANO_WITH_ALIGNMENT))
       for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
         // Left
         lFhbnd[2][xy * {{NUMBER_OF_UNKNOWNS}} + n] += lFhi[(z * {{NUMBER_OF_DOF*NUMBER_OF_DOF}} + xy) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{2*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}}] * DGMatrices<pCompType>::FLCoeff[z];
@@ -632,7 +629,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   // only involves the element mass matrix, which cancels out.
 
   for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
-    SIMD(aligned(luh,lFhi{{',lShi' if USE_SOURCE else ''}}:PEANO_WITH_ALIGNMENT))
+    SIMD(aligned(lFhi{{',lShi' if USE_SOURCE else ''}}:PEANO_WITH_ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
         luh[xyz*{{NUMBER_OF_DATA}} + n] -= timeStepSize * //Quadrature<pCompType>::weights3[xyz] *
             (

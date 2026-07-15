@@ -20,12 +20,7 @@ def parse_arguments():
     parser.add_argument("-et", "--end-time", type=float, default=0.5)
     parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=16)
     parser.add_argument("-l", "--grid-levels", type=int, default=3)
-    parser.add_argument("-lmin", "--min-grid-levels", type=int, default=1)
-    parser.add_argument("-lmax", "--max-grid-levels", type=int, default=1)
     args, _ = parser.parse_known_args()
-    if args.grid_levels is not None:
-        args.min_grid_levels = args.grid_levels
-        args.max_grid_levels = args.grid_levels
     if args.help:
         parser.print_help()
         print()
@@ -43,8 +38,8 @@ project = exahype2.Project(
     periodic_bc=[False, False, False],
     min_end_time=args.end_time,
     max_end_time=args.end_time,
-    min_grid_levels=args.min_grid_levels,
-    max_grid_levels=args.max_grid_levels,
+    min_grid_levels=args.grid_levels,
+    max_grid_levels=args.grid_levels,
 )
 
 initial_conditions = """
@@ -63,18 +58,6 @@ boundary_conditions = """
   }
 """
 
-refinement_criterion = """
-  auto result = ::exahype2::RefinementCommand::Keep;
-
-  if (x(0) > 0.5) {
-    result = ::exahype2::RefinementCommand::Refine;
-  } else {
-    result = ::exahype2::RefinementCommand::Erase;
-  }
-
-  return result;
-"""
-
 fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     name="FVSolver",
     patch_size=args.degrees_of_freedom,
@@ -86,7 +69,6 @@ fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
 fv_solver.set_implementation(
     initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
-    refinement_criterion=refinement_criterion,
     flux="""
   for (int i = 0; i < NumberOfUnknowns; i++) {
     F[i] = 0.0;

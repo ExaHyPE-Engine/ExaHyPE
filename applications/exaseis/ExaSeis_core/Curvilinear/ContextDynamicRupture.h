@@ -32,6 +32,13 @@ public:
 
   }
 
+  ~ContextDynamicRupture() override { delete model; }
+
+  ContextDynamicRupture(const ContextDynamicRupture&) = delete;
+  ContextDynamicRupture& operator=(const ContextDynamicRupture&) = delete;
+  ContextDynamicRupture(ContextDynamicRupture&&) = delete;
+  ContextDynamicRupture& operator=(ContextDynamicRupture&&) = delete;
+
   void initRuptureModel(
     std::string& filename_rupture_model
   ){
@@ -78,18 +85,22 @@ public:
     fault_normal = fault_node->getFaceNormal();
 
     // We look for a point on the fault and, for lack of better options, pick
-    // the point at the center of the fault
+    // the point at the center of the fault.
+    // This has to stay in the interior of the domain: querying the projection on the
+    // domain boundary makes the interpolation in invertProjection reach past the last node.
     double fault_center[3];
-    fault_center[toolbox::curvi::Coordinate::X] = this->domainOffset[0] + domainSize[0];
-    fault_center[toolbox::curvi::Coordinate::Y] = this->domainOffset[1] + domainSize[1];
-    fault_center[toolbox::curvi::Coordinate::Z] = this->domainOffset[2] + domainSize[2];
+    fault_center[toolbox::curvi::Coordinate::X] = this->domainOffset[0] + domainSize[0] / 2.0;
+    fault_center[toolbox::curvi::Coordinate::Y] = this->domainOffset[1] + domainSize[1] / 2.0;
+    fault_center[toolbox::curvi::Coordinate::Z] = this->domainOffset[2] + domainSize[2] / 2.0;
 
     // Get the position on the plane, i.e. if you are on a y-z plane you
-    // need y and z to query the perturbation at this point
+    // need y and z to query the perturbation at this point.
+    // fault_center is indexed in the curvi order, so we index it with the curvi
+    // coordinates of the fault directly.
     toolbox::curvi::Coordinate fault_coords[2];
     fault_node->getCoordinates(fault_coords);
-    T xi = fault_center[(2-fault_coords[0])];
-    T mu = fault_center[(2-fault_coords[1])];
+    T xi = fault_center[fault_coords[0]];
+    T mu = fault_center[fault_coords[1]];
 
     // this gives the base position of the fault in the physical space,
     // i.e. if the fault has been placed at x = 20.0 this returns 20.,
@@ -156,7 +167,7 @@ public:
 public:
   double domainSize[DIMENSIONS];
 
-  easi::Component* model;
+  easi::Component* model = nullptr;
 
   //rupture parameters
   T S_c;  //Slip-weakening critical distance (meters)

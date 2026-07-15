@@ -160,14 +160,16 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
 
         logDebug("merge " << neighbour.size() << " particles from neighbour " << neighbour.toString() << " into local vertex set of " << marker.toString());
         for (auto p: neighbour) {
-          p->setX( toolbox::particles::mirrorParticleAlongPeriodicDomains(
-            p->getX(),
+          // The neighbour owns and frees its particles.
+          DoFType* mirroredParticle = new DoFType(*p);
+          mirroredParticle->setX( toolbox::particles::mirrorParticleAlongPeriodicDomains(
+            mirroredParticle->getX(),
             marker,
             DomainOffset,
             DomainSize,
             PeriodicBC
           ));
-          mergeWithParticle(p, marker, spacetreeId);
+          mergeWithParticle(mirroredParticle, marker, spacetreeId);
         }
 
         logDebug("merged incoming set of " << neighbour.size() << " particle(s) into local set of vertex " << marker.toString() << " which now hosts " << this->size() << " particle(s)");
@@ -185,7 +187,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
 
         logDebug("merge " << neighbour.size() << " particles from neighbour " << neighbour.toString() << " into local vertex set of " << marker.toString());
         for (auto p: neighbour) {
-          mergeWithParticle(p, marker, spacetreeId);
+          // The neighbour owns and frees its particles.
+          mergeWithParticle(new DoFType(*p), marker, spacetreeId);
         }
 
         logDebug("merged incoming set of " << neighbour.size() << " particle(s) into local set of vertex " << marker.toString() << " which now hosts " << this->size() << " particle(s)");
@@ -236,6 +239,10 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString() const {
   msg << Base::toString(false);
   msg << ")";
   return msg.str();
+}
+
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::~{{CLASSNAME}}() noexcept {
+  deleteParticles();
 }
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}(const {{CLASSNAME}}& other):
@@ -289,7 +296,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone( const {{CLASSNAME}}& othe
   #endif
 }
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::deleteParticles() {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::deleteParticles() noexcept {
   for (auto *p: _container) {
     delete p;
   }

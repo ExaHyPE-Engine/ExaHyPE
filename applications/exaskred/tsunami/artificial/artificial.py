@@ -157,7 +157,6 @@ aderdg_solver.add_kernel_optimisations(
 )
 aderdg_solver.add_user_solver_includes(
     """
-#include <algorithm>
 #include "../Flux.h"
 #include "../NonconservativeProduct.h"
 #include "tarch/reader/NetCDFFieldSampler.h"

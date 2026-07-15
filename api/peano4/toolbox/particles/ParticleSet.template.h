@@ -13,8 +13,6 @@
 
 #include "toolbox/particles/ParticleSet.h"
 
-#include <{{STD_CONTAINER}}>
-
 {% for item in NAMESPACE -%}
 namespace {{ item }} {
 {%- endfor %}
@@ -26,7 +24,7 @@ namespace {{ item }} {
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public toolbox::particles::ParticleSet<{% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}> {
 public:
   using Base      = toolbox::particles::ParticleSet<{% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}>;
-  using Container = std::{{STD_CONTAINER}}<{% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}*>;
+  using Container = std::vector<{% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}*>;
   using DoFType   = Base::DoFType;
 
   static constexpr int Cardinality = 1; // TODO: Remove
@@ -40,7 +38,7 @@ private:
 
 public:
   explicit {{CLASSNAME}}() = default;
-  ~{{CLASSNAME}}() noexcept = default;
+  ~{{CLASSNAME}}() noexcept;
 
   {{CLASSNAME}}(const {{CLASSNAME}}& other);
   {{CLASSNAME}}& operator=(const {{CLASSNAME}}& other);
@@ -73,7 +71,7 @@ public:
   void addParticle(DoFType* particle);
 
   // TODO: Same as clear()
-  void deleteParticles();
+  void deleteParticles() noexcept;
   Container::iterator deleteParticle(const Container::iterator& particle);
 
   void grabParticles({{CLASSNAME}}& sourceParticleSet);
