@@ -1,16 +1,23 @@
 /**
 
-@page page_third-party_performance_analysis_tools
+@page page_third-party_performance_analysis_tools Third party performance analysis tools
 
 ## ScoreP
+
 When usng ScoreP the configure or cmake command should be prefixed with SCOREP_WRAPPER=off,
 and the compiler names should be prefixed with scorep-. For an Intel toolchain
 with autotools this looks like:
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
 SCOREP_WRAPPER=off ./configure CC=scorep-icx CXX=scorep-icpx ...
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+Please consult @ref tarch_logging on some information how to pick proper 
+logging outputs (devices) for a build with Score-P.
+ 
+
 ## MAQAO
+
 When using any performance analysis tool the compilation flag "-g" should be
 used, to generate debug information. For MAQAO this may not be sufficient, in 
 which case "-grecord-gcc-switches" should also be used.
