@@ -235,6 +235,8 @@ if __name__ == "__main__":
         hardcoded_config, hardcoded_mode = Hardcoded.create_constructor_initialisation_string(tree,destination_ranks,verbose=True)        
         print(tree)
         
+        # @ŧodo Dmitry Why do we have hardcoded_mode if it is not used?
+        
         project.set_load_balancing(
             "toolbox::loadbalancing::strategies::Hardcoded",
             hardcoded_config

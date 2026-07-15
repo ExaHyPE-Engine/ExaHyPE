@@ -4,10 +4,11 @@ import peano4
 import exahype2
 import dastgen2
 
-#import peano4.toolbox.particles
-#import numpy as np
 
-#import jinja2
+import toolbox.loadbalancing.api.input.RegularGridGenerator as RegularGridGenerator
+import toolbox.loadbalancing.api.strategies.SplitTrees as SplitTrees
+import toolbox.loadbalancing.api.output.Hardcoded as Hardcoded
+import toolbox.loadbalancing.api.strategies.Decomposition as Decomposition
 
 
 
@@ -208,7 +209,10 @@ def add_generic_load_balancing(project,
         )
          
 def add_hardcoded_load_balancing_over_regular_mesh(project, 
-                                                   trees):
+                                                   number_of_subtrees,
+                                                   domain_size,
+                                                   max_h,
+                                                   ):
     """!
     
      @todo This is not nice. The signature should accept the mesh 
@@ -216,11 +220,33 @@ def add_hardcoded_load_balancing_over_regular_mesh(project,
      over to the load balancing directly.
     
     """
-    project.set_load_balancing(
-      "toolbox::loadbalancing::strategies::Hardcoded",
-      "{ {6,6,6}, {0,0,0}, {4921,4921,4920}, {0,0,0}, peano4::SplitInstruction::Mode::AggressiveTopDown}"
+    tree_levels = 0
+    current_cell_size = domain_size[0]
+    while current_cell_size>max_h:
+        tree_levels = tree_levels+1
+        current_cell_size = current_cell_size / 3.0
+    
+    tree = RegularGridGenerator.RegularGridGenerator(max_level=tree_levels, dimensions=3)
+    SplitTrees.split_tree(
+        peano_tree=tree,
+        verbose = False,
+        decomposition = Decomposition.quantised_splitting(peano_tree=tree,
+                                                          number_of_subtrees=number_of_subtrees,
+                                                          dimension=3,
+                                                          verbose=False)
     )
+    SplitTrees.propagate_bottom_up(tree)
+        
+    destination_ranks = Hardcoded.assign_trees_to_ranks_round_Robin(number_of_subtrees = tree.number_of_subtrees,
+                                                                    max_ranks          = 1
+                                                                    )        
 
+    hardcoded_config, hardcoded_mode = Hardcoded.create_constructor_initialisation_string(tree,destination_ranks,verbose=True)        
+    project.set_load_balancing(
+        "toolbox::loadbalancing::strategies::Hardcoded",
+        hardcoded_config
+    )
+    
 
 def add_load_balancing_with_cost_metric(project,
                                         trees):
