@@ -137,7 +137,7 @@ bool selectNextAlgorithmicStep() {
       (
         peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()>5
         or
-        tarch::la::smallerEquals(minH,repositories::getMinAdmissibleMeshSize())
+        tarch::la::smallerEquals(minH(0),repositories::getMinAdmissibleMeshSize())
       )
       and
       // ensure that a proper creation has been ran before, so the mesh had the opportunity
