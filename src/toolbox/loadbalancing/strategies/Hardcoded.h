@@ -131,6 +131,30 @@ class toolbox::loadbalancing::strategies::Hardcoded: public toolbox::loadbalanci
       peano4::SplitInstruction::Mode  mode = peano4::SplitInstruction::Mode::BottomUp
     );
 
+    /**
+     * Finish the current sweep
+     *
+     *
+     * ## Issue the split instructions
+     *
+     * This routine triggers the actual splits that are now due.
+     *
+     * ## Disable strategy
+     *
+     * If all the splits have been issued, the strategy disables
+     * itself. Usually, it is up to the user to disable a load balancing
+     * scheme if they want this to happen. For the hard-coded variant, this
+     * makes no sense: If there are no split instructions left over, we can
+     * as well just disable the strategy straightaway. This helps to speed up
+     * other things potentially, where a decision depends on the load balancing
+     * being deactivated already.
+     *
+     * ## Update statistics
+     *
+     * Standard step of any load balancing: update the global view of the
+     * statistics, and then also the blacklist. Eventually, we dump the
+     * statistics to the terminal.
+     */
     virtual void finishStep() override;
 
     virtual void finishSimulation() override;
