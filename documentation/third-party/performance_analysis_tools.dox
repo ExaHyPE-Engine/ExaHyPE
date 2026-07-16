@@ -8,7 +8,7 @@
 Peano provides bespoke support for some external performance analysis tools.
 
 
-## ScoreP
+## Score-P
 
 When using ScoreP the configure or cmake command should be prefixed with SCOREP_WRAPPER=off,
 and the compiler names should be prefixed with scorep-. For an Intel toolchain
@@ -18,14 +18,25 @@ with autotools this looks like:
 SCOREP_WRAPPER=off ./configure CC=scorep-icx CXX=scorep-icpx ...
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-<br /><br />
-<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
-The instruction above assumes that Score-P's module files are built such that 
-they provide scripts alike scorep-icx. 
-</div>
+
+### Score-P variants
+
+If we use scripts alike scorep-icx, we implicitly assume that Score-P has been
+built against the Intel compiler. If you install it manually on your system, 
+this might not be the default, i.e. Score-P might be built again GNU. To toggle
+this behaviour, ensure you configure Score-P with 
+
+        ./configure --with-nocross-compiler-suite=oneapi
+        
+
+
+### Logging against Score-P         
 
 Please consult @ref tarch_logging on some information how to pick proper 
-logging outputs (devices) for a build with Score-P.
+logging outputs (devices) for a build with Score-P. Using this logger ensures 
+that the trace and profile builds of Peano dump their output into an API that 
+helps Score-P to augment its traces. Otherwise, these outputs just go to the 
+terminal.
  
 
 ## MAQAO
