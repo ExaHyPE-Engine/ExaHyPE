@@ -155,6 +155,10 @@ void toolbox::loadbalancing::strategies::Hardcoded::finishStep() {
     }
   }
 
+  if (_splits.empty()) {
+    enable(false);
+  }
+
   _statistics.updateGlobalView();
   _blacklist.update();
 
@@ -176,7 +180,3 @@ std::string toolbox::loadbalancing::strategies::Hardcoded::Split::toString() con
   return msg.str();
 }
 
-
-bool toolbox::loadbalancing::strategies::Hardcoded::hasSplitRecently() const {
-  return not _splits.empty();
-}
