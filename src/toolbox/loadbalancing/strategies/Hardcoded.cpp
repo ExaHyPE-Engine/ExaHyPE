@@ -156,6 +156,10 @@ void toolbox::loadbalancing::strategies::Hardcoded::finishStep() {
   }
 
   if (_splits.empty()) {
+    logInfo(
+      "finishStep()",
+      "all split instructions have been handed out, so shutdown hardcoded load balancing now"
+    );
     enable(false);
   }
 
