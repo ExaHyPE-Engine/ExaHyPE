@@ -2,13 +2,11 @@
 # use, please see the copyright notice at www.peano-framework.org
 
 import os
-import sys
 import yaml
 import numpy as np
 import re
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from Tree import Tree
+from ..Tree import Tree
 
 """
 Custom Grid Generator for Peano Load Balancing API

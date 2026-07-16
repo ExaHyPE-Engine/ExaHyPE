@@ -10,8 +10,10 @@ import math
 from SBH import FD4SolverWithoutLimiter
 
 #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_inputs]
-from toolbox.loadbalancing.api.input.RegularGridGenerator import RegularGridGenerator
+import toolbox.loadbalancing.api.input.RegularGridGenerator as RegularGridGenerator
 import toolbox.loadbalancing.api.strategies.SplitTrees as SplitTrees
+import toolbox.loadbalancing.api.output.Hardcoded as Hardcoded
+import toolbox.loadbalancing.api.strategies.Decomposition as Decomposition
 #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_inputs]
 
 
@@ -174,31 +176,31 @@ if __name__ == "__main__":
         #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_regular_fine_grid]
         tree_height_required_to_match_cell_size = math.ceil( math.log( Domain_size[0] / args.cell_size, 3.0 ) )
         
-        tree = RegularGridGenerator(max_level=tree_height_required_to_match_cell_size, dimensions=3)
+        tree = RegularGridGenerator.RegularGridGenerator(max_level=tree_height_required_to_match_cell_size, dimensions=3)
         print(tree)
         #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_regular_fine_grid]
         
         #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_regular_fine_grid_split]
         number_of_subtrees = args.ranks * args.trees
 
-        destination_ranks = [
-            tree_number % args.ranks for tree_number in range(1, number_of_subtrees)
-        ]
-
-        hardcoded_config, hardcoded_mode = SplitTrees.split_tree(
+        SplitTrees.split_tree(
             tree,
-            number_of_subtrees=number_of_subtrees,
-            enable_extract_split_instructions=True,
-            destination_ranks=destination_ranks,
-            output=True,
+            verbose=True,
+            decomposition = Decomposition.equidistant_splitting(peano_tree=tree,
+                                                                number_of_subtrees=number_of_subtrees,
+                                                                verbose=True)
         )
-
-        print(tree)
         #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_regular_fine_grid_split]
         
         
         #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_regular_fine_grid_map]
+        destination_ranks = Hardcoded.assign_trees_to_ranks_round_Robin(number_of_subtrees = tree.number_of_subtrees,
+                                                                        max_ranks          = args.ranks
+                                                                        )        
+       
         print("  destination_ranks  =", destination_ranks)
+
+        hardcoded_config, hardcoded_mode = Hardcoded.create_constructor_initialisation_string(tree,destination_ranks,verbose=True)
         
         print( "Arguments to hardcoded strategy: ")
         print( hardcoded_config )
@@ -213,23 +215,27 @@ if __name__ == "__main__":
     elif args.load_balancing_metric==LoadBalancingMetrics_Offline_Regular_Bottom_Up:
         #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_regular_bottom_up]
         tree_height_required_to_match_cell_size = math.ceil( math.log( Domain_size[0] / args.cell_size, 3.0 ) )
-        tree = RegularGridGenerator(max_level=tree_height_required_to_match_cell_size, dimensions=3)
+        tree = RegularGridGenerator.RegularGridGenerator(max_level=tree_height_required_to_match_cell_size, dimensions=3)
         number_of_subtrees = args.ranks * args.trees
 
-        destination_ranks = [
-            tree_number % args.ranks for tree_number in range(1, number_of_subtrees)
-        ]
-
-        hardcoded_config, hardcoded_mode = SplitTrees.split_tree(
-            tree,
-            number_of_subtrees=number_of_subtrees,
-            enable_extract_split_instructions=True,
-            destination_ranks=destination_ranks,
-            output=True,
+        SplitTrees.split_tree(
+            peano_tree=tree,
+            verbose = True,
+            decomposition = Decomposition.quantised_splitting(peano_tree=tree,
+                                                              number_of_subtrees=number_of_subtrees,
+                                                              dimension=3,
+                                                              verbose=True)
         )
+        SplitTrees.propagate_bottom_up(tree)
+        
+        destination_ranks = Hardcoded.assign_trees_to_ranks_round_Robin(number_of_subtrees = tree.number_of_subtrees,
+                                                                        max_ranks          = args.ranks
+                                                                        )        
 
+        hardcoded_config, hardcoded_mode = Hardcoded.create_constructor_initialisation_string(tree,destination_ranks,verbose=True)        
         print(tree)
-        print("  destination_ranks  =", destination_ranks)
+        
+        # @ŧodo Dmitry Why do we have hardcoded_mode if it is not used?
         
         project.set_load_balancing(
             "toolbox::loadbalancing::strategies::Hardcoded",

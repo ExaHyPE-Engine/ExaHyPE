@@ -5,6 +5,11 @@ sys.path.insert(0, os.path.abspath('../../../python'))
 import peano4
 import exahype2
 
+# @todo Dmitry: This file does not belong in here! This is either part of the
+#               tutorials or the documentation, but not directly in the api 
+#               dir.
+
+
 # Workspace API modules
 from input.GridPatchFileReader import GridPatchFileReader  # [src/toolbox/loadbalancing/api/input/GridPatchFileReader.py](src/toolbox/loadbalancing/api/input/GridPatchFileReader.py)
 import strategies.SplitTrees as split_strategy              # [src/toolbox/loadbalancing/api/strategies/SplitTrees.py](src/toolbox/loadbalancing/api/strategies/SplitTrees.py)
@@ -33,7 +38,7 @@ def demo(file_path: str, dimensions: int):
         enable_propagate_bottom_up=True,
         enable_extract_split_instructions=True,
         destination_ranks=destination_ranks,
-        output=True,
+        verbose=True,
     )  # creates subtrees {0,1,2}
     print("After split_tree():")
     print(tree)

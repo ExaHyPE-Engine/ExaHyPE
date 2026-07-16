@@ -213,17 +213,10 @@ With the offline domain decomposition, we can also visualise the envisaged
 partitioning beforehand:
 
 
-@todo Dmitry can you add content here?
-
-
-<br /><br />
-<div style="background-color: #ccf ; padding: 10px; border: 1px solid green;"> 
-So far, the tutorial sketches the infrastructure of the load balancing:
-We create a synthetic mesh, apply the offline load balancing, and then 
-we (re-)launch the application with this optimised decomposition.
-</div>
-
-
+@todo Dmitry can you add content here? People need to know how to visualise the
+             arising domain decomposition before they continue building Peano 
+             or doing some further tweaking. We also need this for debugging
+             reasons.
 
 
 ## Multiscale mesh association
@@ -256,7 +249,68 @@ algorithms and the pipe into the load balancer:
 
 @snippet tutorial_offline_load_balancing_sbh.py tutorials_exahype2_hpc_tutorial_offline_load_balancing_regular_bottom_up
 
-With the new 
+The big difference to the previous exercise is that we squeeze in an additional
+step in-between the mesh splitting and the dump into the hardcoded splitting 
+strategy: The splitting only assigns the finest level, but now we propagate the 
+splitting bottom-up within the tree. Instead of the previous
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Extracted hardcoded parameters:
+  grid_sweeps       = [6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]
+  splitting_trees   = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  number_of_cells   = [729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729, 729]
+  subtrees          = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26]
+  destination ranks = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  modi              = peano4::SplitInstruction::Mode::AggressiveTopDown
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+we get
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Extracted hardcoded parameters:
+  grid_sweeps       = [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
+  splitting_trees   = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  number_of_cells   = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+  subtrees          = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26]
+  destination ranks = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  modi              = peano4::SplitInstruction::Mode::AggressiveTopDown
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+which means the load balancing will kick in earlier throughout the mesh construction.
+
+
+## More complicated tree topologies
+
+So far, the arising tree topologies are really trivial: Tree 0 is the global 
+owner and then spreads out into many different trees once. That's it. In 
+practice, this is not appropriate and also does not work. If we rerun the 
+example from above with 26 trees, the regular mesh cannot be split up that 
+nicely anymore and we get something alike
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Updating non-leaf node assignments to maintain tree topology...
+Non-leaf node assignment update completed.
+Extracted hardcoded parameters:
+  grid_sweeps       = [2, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]
+  splitting_trees   = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  number_of_cells   = [1, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 1, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 1]
+  subtrees          = [25, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
+  destination ranks = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  modi              = peano4::SplitInstruction::Mode::BottomUp
+Traceback (most recent call last):
+  File "/home/tobias/git/Peano/tutorials/exahype2/hpc/tutorial_offline_load_balancing_sbh.py", line 233, in <module>
+    hardcoded_config, hardcoded_mode = Hardcoded.create_constructor_initialisation_string(tree,destination_ranks,verbose=True)        
+                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tobias/git/Peano/src/toolbox/loadbalancing/api/output/Hardcoded.py", line 221, in create_constructor_initialisation_string
+    raise ValueError(
+ValueError: destination_ranks (25) must have the same length as the extracted split instructions (51)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+@todo Dmitry: Something to discuss. But for this, we need the visualisation first.
+
 
 # Offload load balancing for an adaptive grid taken from a real run
 

@@ -1,11 +1,7 @@
-import os
-import sys
 import pytest
 
-# Ensure the loadbalancing API is importable when running pytest from repo root
-sys.path.insert(0, os.path.abspath("src/toolbox/loadbalancing/api"))
-
-import strategies.SplitTrees as split_strategy
+import toolbox.loadbalancing.api.strategies.SplitTrees as split_strategy
+import toolbox.loadbalancing.api.strategies.Decomposition as decomposition_strategy
 from tree_builders import build_tree3_adaptive_2d, build_tree3_all_rows_2d
 
 
@@ -34,14 +30,17 @@ def test_tree3_stage1_bfs_finest_first_leaf_distribution():
     Non-leaf nodes (all levels) remain subtree 0.
     """
     tree = build_tree3_adaptive_2d()
+    decomposition = decomposition_strategy.equidistant_splitting(
+        peano_tree=tree,
+        number_of_subtrees=4,
+    )
 
     split_strategy.split_tree(
         peano_tree=tree,
-        number_of_subtrees=4,
+        decomposition=decomposition,
         traversal="bfs_finest_first",
         enable_propagate_bottom_up=False,
         enable_optimize_hierarchy=False,
-        enable_extract_split_instructions=False,
     )
 
     # --- Level 0: single root unchanged (non-leaf, no redistribution) ---
@@ -122,15 +121,31 @@ def test_tree3_stage2_bottom_up_propagation():
                 Level 0:
                     Root=(0,0): children {0} (L1A=0, L1B=0, L1C=0) at this stage → stays 0
     """
+    tree_stage1 = build_tree3_adaptive_2d()
+    decomposition_stage1 = decomposition_strategy.equidistant_splitting(
+        peano_tree=tree_stage1,
+        number_of_subtrees=4,
+    )
+    split_strategy.split_tree(
+        peano_tree=tree_stage1,
+        decomposition=decomposition_stage1,
+        traversal="bfs_finest_first",
+        enable_propagate_bottom_up=False,
+        enable_optimize_hierarchy=False,
+    )
+
     tree = build_tree3_adaptive_2d()
+    decomposition = decomposition_strategy.equidistant_splitting(
+        peano_tree=tree,
+        number_of_subtrees=4,
+    )
 
     split_strategy.split_tree(
         peano_tree=tree,
-        number_of_subtrees=4,
+        decomposition=decomposition,
         traversal="bfs_finest_first",
         enable_propagate_bottom_up=True,
         enable_optimize_hierarchy=False,
-        enable_extract_split_instructions=False,
     )
 
     # --- Level 0: root stays subtree 0 (only one existing child-subtree) ---
@@ -184,24 +199,30 @@ def test_tree3_stage3_no_root_promotion_with_single_root_first_row_embedding():
     """
     # Baseline: Stage I + II (Stage III disabled)
     tree_no_stage3 = build_tree3_adaptive_2d()
-    split_strategy.split_tree(
+    decomposition_no_stage3 = decomposition_strategy.equidistant_splitting(
         peano_tree=tree_no_stage3,
         number_of_subtrees=4,
+    )
+    split_strategy.split_tree(
+        peano_tree=tree_no_stage3,
+        decomposition=decomposition_no_stage3,
         traversal="bfs_finest_first",
         enable_propagate_bottom_up=True,
         enable_optimize_hierarchy=False,
-        enable_extract_split_instructions=False,
     )
 
     # Full pipeline: Stage I + II + III
     tree_with_stage3 = build_tree3_adaptive_2d()
-    split_strategy.split_tree(
+    decomposition_with_stage3 = decomposition_strategy.equidistant_splitting(
         peano_tree=tree_with_stage3,
         number_of_subtrees=4,
+    )
+    split_strategy.split_tree(
+        peano_tree=tree_with_stage3,
+        decomposition=decomposition_with_stage3,
         traversal="bfs_finest_first",
         enable_propagate_bottom_up=True,
         enable_optimize_hierarchy=True,
-        enable_extract_split_instructions=False,
     )
 
     # Stage II baseline: root remains 0.
@@ -232,14 +253,17 @@ def test_tree3_all_rows_stage1_leaf_distribution():
     deterministically distributes 585 leaves as [147, 146, 146, 146].
     """
     tree = build_tree3_all_rows_2d()
+    decomposition = decomposition_strategy.equidistant_splitting(
+        peano_tree=tree,
+        number_of_subtrees=4,
+    )
 
     split_strategy.split_tree(
         peano_tree=tree,
-        number_of_subtrees=4,
+        decomposition=decomposition,
         traversal="bfs_finest_first",
         enable_propagate_bottom_up=False,
         enable_optimize_hierarchy=False,
-        enable_extract_split_instructions=False,
     )
 
     # Root and level-1 non-leaf nodes remain untouched in Stage I
@@ -271,15 +295,30 @@ def test_tree3_all_rows_stage2_bottom_up_propagation():
     - Level 1 already contains propagated non-zero ownership in selected cells.
     - Level 2 column ownership sets follow a fixed mixed/uniform pattern.
     """
-    tree = build_tree3_all_rows_2d()
-
+    tree_stage1 = build_tree3_all_rows_2d()
+    decomposition_stage1 = decomposition_strategy.equidistant_splitting(
+        peano_tree=tree_stage1,
+        number_of_subtrees=4,
+    )
     split_strategy.split_tree(
+        peano_tree=tree_stage1,
+        decomposition=decomposition_stage1,
+        traversal="bfs_finest_first",
+        enable_propagate_bottom_up=False,
+        enable_optimize_hierarchy=False,
+    )
+
+    tree = build_tree3_all_rows_2d()
+    decomposition = decomposition_strategy.equidistant_splitting(
         peano_tree=tree,
         number_of_subtrees=4,
+    )
+    split_strategy.split_tree(
+        peano_tree=tree,
+        decomposition=decomposition,
         traversal="bfs_finest_first",
         enable_propagate_bottom_up=True,
         enable_optimize_hierarchy=False,
-        enable_extract_split_instructions=False,
     )
 
     # Root stays 0 after Stage II.
@@ -331,14 +370,17 @@ def test_tree3_all_rows_stage3_promotes_level1_not_root():
     Root remains subtree 0.
     """
     tree = build_tree3_all_rows_2d()
+    decomposition = decomposition_strategy.equidistant_splitting(
+        peano_tree=tree,
+        number_of_subtrees=4,
+    )
 
     split_strategy.split_tree(
         peano_tree=tree,
-        number_of_subtrees=4,
+        decomposition=decomposition,
         traversal="bfs_finest_first",
         enable_propagate_bottom_up=True,
         enable_optimize_hierarchy=True,
-        enable_extract_split_instructions=False,
     )
 
     # Root stays 0

@@ -1,12 +1,7 @@
-import os
-import sys
 import pytest
 
-# Ensure the loadbalancing API is importable when running pytest from repo root
-sys.path.insert(0, os.path.abspath("src/toolbox/loadbalancing/api"))
-
-from input.RegularGridGenerator import RegularGridGenerator
-import strategies.SplitTrees as split_strategy
+from toolbox.loadbalancing.api.input.RegularGridGenerator import RegularGridGenerator
+import toolbox.loadbalancing.api.strategies.SplitTrees as split_strategy
 
 
 @pytest.mark.parametrize(

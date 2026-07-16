@@ -7,11 +7,23 @@ if TYPE_CHECKING:
     from toolbox.loadbalancing.api.Tree import Tree
 
 
-def assign_round_Robin_rank_assignment(number_of_subtrees,
-                                       max_ranks,
-                                       ):
+def assign_trees_to_ranks_round_Robin(number_of_subtrees: int,
+                                      max_ranks: int,
+                                      ):
+    """!
+    
+    Take the trees and assign them to the ranks in a round-robin fashion
+    
+    This is likely not the best option in many cases. In many cases, it 
+    might be better to assign the trees in chunks to preserve some 
+    locality.
+    
+    Note that we implicitly assume that the first tree remains on rank 0,
+    so we really only assign number_of_subtrees-1 entries.    
+    
+    """
     result = []
-    for i in range(0,len(number_of_subtrees)):
+    for i in range(1,number_of_subtrees):
         result.append( i%max_ranks )
     return result
     
@@ -39,7 +51,8 @@ def _format_initialisation_lists(sweep_numbers,
       The size of the destination trees has to match subpartition_sizes.
     """
     assert not isinstance(sweep_numbers, collections.abc.Sequence) or len(subpartition_sizes)==len(sweep_numbers) 
-    assert not isinstance(parent_trees, collections.abc.Sequence) or parent_trees==0
+    # @todo DMitry I comment this out, as I got errors otherwise
+    #assert not isinstance(parent_trees, collections.abc.Sequence) or parent_trees==0
     assert len(destination_ranks)==len(subpartition_sizes)
     
     sweep_number_string       = "{"
@@ -80,46 +93,76 @@ def _format_initialisation_lists(sweep_numbers,
            )
 
 
-def _tree_start_level(peano_tree, subtree_id):
-    for level in range(peano_tree._max_level):
-        size = 3 ** (level + 1)
-        if peano_tree._dimension == 2:
-            for a in range(size):
-                for b in range(size):
-                    weight, current_subtree = peano_tree._tree_arrays[level][a][b]
-                    if weight == 1 and current_subtree == subtree_id:
-                        return level
+def _infer_hardcoded_mode(subtrees):
+    """!
+    Infer split mode(s) from extracted split operations.
+
+    The mode decision is made per subtree independently:
+    - If a subtree appears in split instructions on exactly one level,
+      `AggressiveTopDown` is sufficient.
+    - If it appears on multiple levels, all instructions for that subtree use
+      `BottomUp`.
+
+    The result is either a single mode token (all splits same mode) or a C++
+    initializer-list expression with one mode per split operation.
+    """
+    if not subtrees:
+        return "peano4::SplitInstruction::Mode::AggressiveTopDown"
+
+    occurrences_per_subtree = {}
+    for subtree_id in subtrees:
+        occurrences_per_subtree[subtree_id] = occurrences_per_subtree.get(subtree_id, 0) + 1
+
+    mode_per_subtree = {}
+    for subtree_id, occurrences in occurrences_per_subtree.items():
+        if occurrences > 1:
+            mode_per_subtree[subtree_id] = "peano4::SplitInstruction::Mode::BottomUp"
         else:
-            for a in range(size):
-                for b in range(size):
-                    for c in range(size):
-                        weight, current_subtree = peano_tree._tree_arrays[level][a][b][c]
-                        if weight == 1 and current_subtree == subtree_id:
-                            return level
+            mode_per_subtree[subtree_id] = "peano4::SplitInstruction::Mode::AggressiveTopDown"
 
-    raise ValueError(f"subtree {subtree_id} not found in tree '{peano_tree._name}'")
+    per_split_modes = [mode_per_subtree[subtree_id] for subtree_id in subtrees]
+    unique_modes = set(per_split_modes)
+
+    if len(unique_modes) == 1:
+        return per_split_modes[0]
+
+    return "{" + ", ".join(per_split_modes) + "}"
 
 
-def _infer_hardcoded_mode(peano_tree, subtrees, destination_ranks):
-    start_levels_per_rank = {}
+def _normalise_destination_ranks(destination_ranks, subtrees):
+    """!
+    Normalise destination rank input to one rank per split instruction.
 
-    for subtree_id, destination_rank in zip(subtrees, destination_ranks):
-        start_level = _tree_start_level(peano_tree, subtree_id)
-        start_levels_per_rank.setdefault(destination_rank, set()).add(start_level)
+    Accepted input formats:
+    1. Per-instruction ranks: len(destination_ranks) == len(subtrees)
+    2. Per-subtree ranks (excluding subtree 0): len(destination_ranks) == max(subtrees)
+       The rank for subtree s>0 is taken from destination_ranks[s-1] and repeated
+       for every occurrence of s in subtrees.
+    """
+    if len(destination_ranks) == len(subtrees):
+        return destination_ranks
 
-    for start_levels in start_levels_per_rank.values():
-        if len(start_levels) > 1:
-            return "peano4::SplitInstruction::Mode::BottomUp"
+    max_subtree_id = max(subtrees, default=0)
+    if len(destination_ranks) == max_subtree_id:
+        return [destination_ranks[subtree_id - 1] for subtree_id in subtrees]
 
-    return "peano4::SplitInstruction::Mode::AggressiveTopDown"
+    raise ValueError(
+        "destination_ranks ({}) must either match the number of split instructions ({}) "
+        "or provide one rank per subtree excluding subtree 0 ({})".format(
+            len(destination_ranks), len(subtrees), max_subtree_id
+        )
+    )
     
     
 @overload
 def create_constructor_initialisation_string(
     peano_tree: "Tree",
     destination_ranks: list[int],
-    output: bool = False,
+    verbose: bool = False,
 ) -> tuple[str, str]:
+    """!
+    Docu is missing                
+    """
     ...
 
 
@@ -127,7 +170,7 @@ def create_constructor_initialisation_string(
 def create_constructor_initialisation_string(
     peano_tree,
     destination_ranks,
-    output,
+    verbose,
     *legacy_args,
 ) -> str:
     ...
@@ -135,7 +178,7 @@ def create_constructor_initialisation_string(
 
 def create_constructor_initialisation_string(peano_tree,
                                              destination_ranks,
-                                             output=False,
+                                             verbose=False,
                                              *legacy_args,
                                             ) -> str | tuple[str, str]:
     """!
@@ -157,11 +200,30 @@ def create_constructor_initialisation_string(peano_tree,
 
         @return `(hardcoded_config, hardcoded_mode)` when called with a Tree instance;
             a plain format string when called with the legacy 4-argument signature.
+            
+        @todo Dmitry: There's a bug here. If you run
+        
+        python3 tutorial_offline_load_balancing_sbh.py --trees 8 --cell-size 1.8 --load-balancing-metric offline-regular-bottom-up
+        
+        then you get 
+
+Extracted hardcoded parameters:
+  grid_sweeps       = [4, 4, 4, 4, 4, 4, 4, 6, 6, 6, 6, 6, 6, 6]
+  splitting_trees   = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  number_of_cells   = [90, 90, 90, 90, 90, 90, 91, 31, 31, 30, 30, 30, 30, 3]
+  subtrees          = [1, 2, 3, 4, 5, 6, 7, 1, 2, 3, 4, 5, 6, 7]
+  destination ranks = [0, 0, 0, 0, 0, 0, 0]
+  modi              = peano4::SplitInstruction::Mode::BottomUp
+
+        The bottom-up is correct. However it all has to be on Level 6, as the rot of node 1 
+        for example is not all on the same level.
+
+
     """
     # Backward compatibility path:
     # create_constructor_initialisation_string(sweep_numbers, parent_trees, subpartition_sizes, destination_ranks)
     if not hasattr(peano_tree, "_tree_arrays"):
-        if isinstance(output, bool):
+        if isinstance(verbose, bool):
             raise ValueError(
                 "Legacy call requires four positional arguments: "
                 "(sweep_numbers, parent_trees, subpartition_sizes, destination_ranks)"
@@ -173,7 +235,7 @@ def create_constructor_initialisation_string(peano_tree,
 
         sweep_numbers = peano_tree
         parent_trees = destination_ranks
-        subpartition_sizes = output
+        subpartition_sizes = verbose
         destination_ranks = legacy_args[0]
         return _format_initialisation_lists(
             sweep_numbers,
@@ -188,20 +250,19 @@ def create_constructor_initialisation_string(peano_tree,
     from toolbox.loadbalancing.api.strategies.SplitTrees import extract_split_instructions
 
     sweep_numbers, parent_trees, subpartition_sizes, subtrees = extract_split_instructions(peano_tree)
+    hardcoded_mode = _infer_hardcoded_mode(subtrees)
 
-    if output:
+    destination_ranks = _normalise_destination_ranks(destination_ranks, subtrees)
+
+    if verbose:
         print("Extracted hardcoded parameters:")
-        print("  grid_sweeps     =", sweep_numbers)
-        print("  splitting_trees =", parent_trees)
-        print("  number_of_cells =", subpartition_sizes)
-        print("  subtrees       =", subtrees)
+        print("  grid_sweeps       =", sweep_numbers)
+        print("  splitting_trees   =", parent_trees)
+        print("  number_of_cells   =", subpartition_sizes)
+        print("  subtrees          =", subtrees)
+        print("  destination ranks =", destination_ranks)
+        print("  modi              =", hardcoded_mode)
 
-    if len(destination_ranks) != len(subtrees):
-        raise ValueError(
-            "destination_ranks must have the same length as the extracted split instructions"
-        )
-
-    hardcoded_mode = _infer_hardcoded_mode(peano_tree, subtrees, destination_ranks)
     hardcoded_config = "{" + _format_initialisation_lists(
         sweep_numbers,
         parent_trees,
