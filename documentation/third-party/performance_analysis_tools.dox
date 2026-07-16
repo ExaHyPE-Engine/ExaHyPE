@@ -1,16 +1,28 @@
 /**
 
-@page page_third-party_performance_analysis_tools Third party performance analysis tools
+@page page_third-party_performance_analysis_tools Performance analysis tools
+
+<!-- Add this one for href links to subitems -->
+\tableofcontents
+
+Peano provides bespoke support for some external performance analysis tools.
+
 
 ## ScoreP
 
-When usng ScoreP the configure or cmake command should be prefixed with SCOREP_WRAPPER=off,
+When using ScoreP the configure or cmake command should be prefixed with SCOREP_WRAPPER=off,
 and the compiler names should be prefixed with scorep-. For an Intel toolchain
 with autotools this looks like:
 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 SCOREP_WRAPPER=off ./configure CC=scorep-icx CXX=scorep-icpx ...
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+<br /><br />
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+The instruction above assumes that Score-P's module files are built such that 
+they provide scripts alike scorep-icx. 
+</div>
 
 Please consult @ref tarch_logging on some information how to pick proper 
 logging outputs (devices) for a build with Score-P.

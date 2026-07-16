@@ -33,7 +33,8 @@ tarch::logging::ScorePLogger::~ScorePLogger() {
   close();
 }
 
-void tarch::logging::ScorePLogger::indent( bool, const std::string&, const std::string& ) {}
+// Moved into header. See comments there.
+// void tarch::logging::ScorePLogger::indent( bool, const std::string&, const std::string& ) {}
 
 std::string tarch::logging::ScorePLogger::getTimeStampHumanReadable( long int timestampNanoseconds ) const {
   long int timestampSeconds = timestampNanoseconds / 1000 / 1000 / 1000;
@@ -145,6 +146,9 @@ void tarch::logging::ScorePLogger::traceIn(
     lock.free();
     tarch::multicore::MultiReadSingleWriteSemaphore::Lock lock(_semaphore, tarch::multicore::MultiReadSingleWriteSemaphore::Lock::Write);
     _scorePHandles.insert( std::pair<std::string, SCOREP_User_RegionHandle>(trace,SCOREP_USER_INVALID_REGION) );
+    SCOREP_USER_REGION_INIT(
+      _scorePHandles[trace], trace, SCOREP_USER_REGION_TYPE_COMMON
+    );
   }
 
   SCOREP_USER_REGION_ENTER(_scorePHandles[trace]);

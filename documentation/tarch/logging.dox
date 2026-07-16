@@ -274,6 +274,12 @@ shown on the terminal.
 
 More information on Score-P support can be found at @ref page_third-party_performance_analysis_tools.
 
+### No logger
+
+For performance measurements, it might make sense to use no logger at
+all. In this case, only errors and warnings are written. This degenerated
+log device is selected through `-DUseLogService=NoLogger`.
+
 
 
 ## Log filter
