@@ -134,6 +134,12 @@ class toolbox::loadbalancing::strategies::Hardcoded: public toolbox::loadbalanci
     virtual void finishStep() override;
 
     virtual void finishSimulation() override;
+
+    /**
+     * Trial
+     *
+     */
+    virtual bool hasSplitRecently() const override;
   private:
     static tarch::logging::Log  _log;
 

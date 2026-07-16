@@ -176,3 +176,7 @@ std::string toolbox::loadbalancing::strategies::Hardcoded::Split::toString() con
   return msg.str();
 }
 
+
+bool toolbox::loadbalancing::strategies::Hardcoded::hasSplitRecently() const {
+  return not _splits.empty();
+}
