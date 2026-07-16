@@ -98,9 +98,11 @@ bool selectNextAlgorithmicStep() {
     logError(
       "selectNextAlgorithmicStep()", "non-critical assertion has been triggered in code. Dump final state and terminate"
     );
-  } else if (tarch::hasNonCriticalAssertionBeenViolated()) {
+  }
+  else if (tarch::hasNonCriticalAssertionBeenViolated()) {
     continueToSolve = false;
-  } else if (gridConstructed and not gridBalanced) {
+  }
+  else if (gridConstructed and not gridBalanced) {
     if (not {{SUBNAMESPACE}}repositories::loadBalancer.isEnabled(true) and not {{SUBNAMESPACE}}repositories::loadBalancer.hasSplitRecently()) {
       logInfo("selectNextAlgorithmicStep()", "all ranks have switched off their load balancing");
       gridBalanced = true;
@@ -113,7 +115,8 @@ bool selectNextAlgorithmicStep() {
     peano4::parallel::Node::getInstance().setNextProgramStep({{SUBNAMESPACE}}repositories::StepRepository::toProgramStep(
       {{SUBNAMESPACE}}repositories::StepRepository::Steps::CreateGridAndConvergeLoadBalancing
     ));
-  } else if (gridBalanced and not gridInitialised) {
+  }
+  else if (gridBalanced and not gridInitialised) {
     peano4::parallel::Node::getInstance().setNextProgramStep(
       {{SUBNAMESPACE}}repositories::StepRepository::toProgramStep({{SUBNAMESPACE}}repositories::StepRepository::Steps::InitGrid)
     );
@@ -124,24 +127,30 @@ bool selectNextAlgorithmicStep() {
       minH = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH();
       logInfo("selectNextAlgorithmicStep()", "mesh has refined, so reset minH to" << minH << " and postpone further refinement");
       addGridSweepWithoutGridRefinementNext = true;
-    } else if ({{SUBNAMESPACE}}repositories::loadBalancer.getGlobalNumberOfTrees() > globalNumberOfTrees) {
+    }
+    else if ({{SUBNAMESPACE}}repositories::loadBalancer.getGlobalNumberOfTrees() > globalNumberOfTrees) {
       logInfo("selectNextAlgorithmicStep()", "mesh has rebalanced recently, so postpone further refinement");
       addGridSweepWithoutGridRefinementNext = true;
       globalNumberOfTrees                   = {{SUBNAMESPACE}}repositories::loadBalancer.getGlobalNumberOfTrees();
     }
     else if (
-      peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()>5
+      (
+        peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()>5
+        or
+        tarch::la::smallerEquals(minH,repositories::getMinAdmissibleMeshSize())
+      )
       and
       // ensure that a proper creation has been ran before, so the mesh had the opportunity
       // to refine further if it has not done yet
       {{SUBNAMESPACE}}repositories::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() ) == {{SUBNAMESPACE}}repositories::StepRepository::Steps::CreateGrid
     ) {
       logInfo(
-        "selectNextAlgorithmicStep()", "grid has been stationary for quite some time. Terminate grid construction"
+        "selectNextAlgorithmicStep()", "grid has been stationary for quite some time or meets minimum mesh requirements. Terminate grid construction"
       );
       addGridSweepWithoutGridRefinementNext = false;
       gridConstructed                       = true;
-    } else {
+    }
+    else {
       logInfo(
         "selectNextAlgorithmicStep()",
         "mesh rebalancing seems to be stationary, so study whether to refine mesh further in next sweep: "
