@@ -23,6 +23,7 @@
     MAX_GRID_LEVELS: "3"
     EXTRA_CONFIGURATION_OPTIONS: ""
     CONFIGURATION_OPTIONS: "-DUSE_CCACHE=OFF \
+                            -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON \
                             -DPEANO_WITH_CURVI=ON \
                             -DPEANO_WITH_FPE=OFF \
                             -DPEANO_WITH_HDF5=ON \

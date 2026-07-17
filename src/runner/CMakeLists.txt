@@ -20,6 +20,8 @@ set(SOURCES
   Launch.cpp
   UnitTests.cpp
   tests/FormatTest.cpp
+  tests/GridSnapshotTest.cpp
+  tests/RuntimeParametersTest.cpp
   tests/TableTest.cpp
   tests/TextLayoutTest.cpp
 )

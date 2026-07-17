@@ -235,50 +235,50 @@ void plotGrid() {
         AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch,
         [&](const tarch::la::Vector<DIMENSIONS, int>& k) {
 #if DIMENSIONS == 2
-        tarch::la::Vector<2, double> cellOffset;
-        cellOffset(0) = patchOffset(0) + static_cast<double>(k(0)) * cellSize(0);
-        cellOffset(1) = patchOffset(1) + static_cast<double>(k(1)) * cellSize(1);
-        int v[4];
-        v[0] = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{cellOffset(0), cellOffset(1)});
-        v[1] = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{cellOffset(0) + cellSize(0), cellOffset(1)});
-        v[2] = vertexPlotter->plotVertex(
-          tarch::la::Vector<2, double>{cellOffset(0) + cellSize(0), cellOffset(1) + cellSize(1)}
-        );
-        v[3] = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{cellOffset(0), cellOffset(1) + cellSize(1)});
-        const int cellIndex = cellPlotter->plotQuadrangle(v);
+          tarch::la::Vector<2, double> cellOffset;
+          cellOffset(0) = patchOffset(0) + static_cast<double>(k(0)) * cellSize(0);
+          cellOffset(1) = patchOffset(1) + static_cast<double>(k(1)) * cellSize(1);
+          int v[4];
+          v[0] = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{cellOffset(0), cellOffset(1)});
+          v[1] = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{cellOffset(0) + cellSize(0), cellOffset(1)});
+          v[2] = vertexPlotter->plotVertex(
+            tarch::la::Vector<2, double>{cellOffset(0) + cellSize(0), cellOffset(1) + cellSize(1)}
+          );
+          v[3] = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{cellOffset(0), cellOffset(1) + cellSize(1)});
+          const int cellIndex = cellPlotter->plotQuadrangle(v);
 #else
-        tarch::la::Vector<3, double> cellOffset;
-        cellOffset(0) = patchOffset(0) + static_cast<double>(k(0)) * cellSize(0);
-        cellOffset(1) = patchOffset(1) + static_cast<double>(k(1)) * cellSize(1);
-        cellOffset(2) = patchOffset(2) + static_cast<double>(k(2)) * cellSize(2);
-        int v[8];
-        v[0] = vertexPlotter->plotVertex(tarch::la::Vector<3, double>{cellOffset(0), cellOffset(1), cellOffset(2)});
-        v[1] = vertexPlotter->plotVertex(
-          tarch::la::Vector<3, double>{cellOffset(0) + cellSize(0), cellOffset(1), cellOffset(2)}
-        );
-        v[2] = vertexPlotter->plotVertex(
-          tarch::la::Vector<3, double>{cellOffset(0) + cellSize(0), cellOffset(1) + cellSize(1), cellOffset(2)}
-        );
-        v[3] = vertexPlotter->plotVertex(
-          tarch::la::Vector<3, double>{cellOffset(0), cellOffset(1) + cellSize(1), cellOffset(2)}
-        );
-        v[4] = vertexPlotter->plotVertex(
-          tarch::la::Vector<3, double>{cellOffset(0), cellOffset(1), cellOffset(2) + cellSize(2)}
-        );
-        v[5] = vertexPlotter->plotVertex(
-          tarch::la::Vector<3, double>{cellOffset(0) + cellSize(0), cellOffset(1), cellOffset(2) + cellSize(2)}
-        );
-        v[6] = vertexPlotter->plotVertex(
-          tarch::la::Vector<3, double>{
-            cellOffset(0) + cellSize(0),
-            cellOffset(1) + cellSize(1),
-            cellOffset(2) + cellSize(2)
-          }
-        );
-        v[7] = vertexPlotter->plotVertex(
-          tarch::la::Vector<3, double>{cellOffset(0), cellOffset(1) + cellSize(1), cellOffset(2) + cellSize(2)}
-        );
-        const int cellIndex = cellPlotter->plotHexahedron(v);
+          tarch::la::Vector<3, double> cellOffset;
+          cellOffset(0) = patchOffset(0) + static_cast<double>(k(0)) * cellSize(0);
+          cellOffset(1) = patchOffset(1) + static_cast<double>(k(1)) * cellSize(1);
+          cellOffset(2) = patchOffset(2) + static_cast<double>(k(2)) * cellSize(2);
+          int v[8];
+          v[0] = vertexPlotter->plotVertex(tarch::la::Vector<3, double>{cellOffset(0), cellOffset(1), cellOffset(2)});
+          v[1] = vertexPlotter->plotVertex(
+            tarch::la::Vector<3, double>{cellOffset(0) + cellSize(0), cellOffset(1), cellOffset(2)}
+          );
+          v[2] = vertexPlotter->plotVertex(
+            tarch::la::Vector<3, double>{cellOffset(0) + cellSize(0), cellOffset(1) + cellSize(1), cellOffset(2)}
+          );
+          v[3] = vertexPlotter->plotVertex(
+            tarch::la::Vector<3, double>{cellOffset(0), cellOffset(1) + cellSize(1), cellOffset(2)}
+          );
+          v[4] = vertexPlotter->plotVertex(
+            tarch::la::Vector<3, double>{cellOffset(0), cellOffset(1), cellOffset(2) + cellSize(2)}
+          );
+          v[5] = vertexPlotter->plotVertex(
+            tarch::la::Vector<3, double>{cellOffset(0) + cellSize(0), cellOffset(1), cellOffset(2) + cellSize(2)}
+          );
+          v[6] = vertexPlotter->plotVertex(
+            tarch::la::Vector<3, double>{
+              cellOffset(0) + cellSize(0),
+              cellOffset(1) + cellSize(1),
+              cellOffset(2) + cellSize(2)
+            }
+          );
+          v[7] = vertexPlotter->plotVertex(
+            tarch::la::Vector<3, double>{cellOffset(0), cellOffset(1) + cellSize(1), cellOffset(2) + cellSize(2)}
+          );
+          const int cellIndex = cellPlotter->plotHexahedron(v);
 #endif
 
           const auto* values = QOut + currentDoF;
@@ -467,8 +467,8 @@ int main(int argc, char** argv) {
   tarch::init(
     &argc,
     &argv,
-    {runtimeParameters.getMPITimeOutWarning(),
-     runtimeParameters.getMPIDeadlockTimeOut(),
+    {runtimeParameters.getMPITimeoutWarning(),
+     runtimeParameters.getMPIDeadlockTimeout(),
      runtimeParameters.isMPIDeadlockDetectionEnabled()}
   );
   runtimeParameters.configure(argc, argv);

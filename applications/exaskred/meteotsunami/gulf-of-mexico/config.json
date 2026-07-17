@@ -6,7 +6,6 @@
   "outputPath": "solutions",
   "timeStepLogInterval": 10.0,
   "loadBalancingQuality": 0.9,
-  "minSizeOfTree": 1,
   "maxNumberOfTreesPerRank": -1,
   "targetDevice": 0,
   "bathymetryFile": "bathymetry/gebco_projection.nc"

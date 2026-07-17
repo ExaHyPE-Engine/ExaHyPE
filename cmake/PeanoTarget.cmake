@@ -4,7 +4,7 @@
 include_guard(GLOBAL)
 
 macro(peano_find_gpu_backend)
-  _peano_resolve_gpu(_peano_fgb_backend _peano_fgb_arch)
+  _peano_resolve_gpu_backend(_peano_fgb_backend)
 
   if(_peano_fgb_backend STREQUAL "cuda")
     find_package(CUDA REQUIRED)
@@ -78,7 +78,7 @@ function(peano_add_target)
     endif()
   endforeach()
 
-  _peano_resolve_gpu(gpu_backend _peano_add_target_unused_arch)
+  _peano_resolve_gpu_backend(gpu_backend)
 
   if(target_type STREQUAL "LIBRARY" OR target_type STREQUAL "STATIC_LIBRARY")
     add_library(${target} STATIC)
@@ -99,13 +99,13 @@ function(peano_add_target)
 
   target_sources(${target} PRIVATE ${target_sources})
 
-  # nvc++ (NVHPC) has no precompiled-header support in CMake, so
-  # target_precompile_headers does nothing for it. Force-include the
-  # header textually so the standard headers it provides remain visible.
-  if(CMAKE_CXX_COMPILER_ID STREQUAL "NVHPC")
-    target_compile_options(${target} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:SHELL:-include tarch/StdAfx.h>")
-  else()
+  if(NOT CMAKE_DISABLE_PRECOMPILE_HEADERS
+     AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "NVHPC")
     target_precompile_headers(${target} PRIVATE "<tarch/StdAfx.h>")
+  else()
+    # StdAfx.h owns the standard-library includes. Force-include it textually
+    # when PCH is disabled or unsupported so source-file semantics stay equal.
+    target_compile_options(${target} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:SHELL:-include tarch/StdAfx.h>")
   endif()
 
   if(TARGET Peano::PeanoOptions)

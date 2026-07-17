@@ -15,10 +15,24 @@
 #include "tarch/mpi/mpi.h"
 
 namespace {
+  /**
+   * Construction consumes the current global grid state. Master and workers
+   * therefore wait after posting the same reduction, which keeps collective
+   * ordering identical on every rank. Other phases leave the exchange in
+   * flight so the following traversal overlaps it.
+   */
+  void updateLoadBalancer(const runner::Step& step) {
+    auto& loadBalancerInstance = runner::loadBalancer();
+    loadBalancerInstance.update();
+    if (step.name == runner::StepName::CreateGrid or step.name == runner::StepName::LoadBalancing) {
+      loadBalancerInstance.synchroniseGlobalView();
+    }
+  }
+
   void recordStepTime(
     std::vector<std::pair<std::string, tarch::instrumentation::Measurement>>& stepTimes,
     const std::string&                                                        name,
-    double                                                                    elapsedSeconds
+    const double                                                              elapsedSeconds
   ) {
     for (auto& [stepName, measurement] : stepTimes) {
       if (stepName == name) {
@@ -46,7 +60,7 @@ runner::Engine::Engine(
   _measurements(),
   _box() {}
 
-const runner::Step& runner::Engine::findStep(int programStep) const {
+const runner::Step& runner::Engine::findStep(const int programStep) const {
   for (const auto& step : _steps) {
     if (step.programStep == programStep) {
       return step;
@@ -57,14 +71,16 @@ const runner::Step& runner::Engine::findStep(int programStep) const {
   );
 }
 
-void runner::Engine::executeStepBody(int programStep) const {
+void runner::Engine::executeStepBody(const int programStep) const {
   tarch::FloatingPointExceptions::ScopedTrap scopedTrap(__FILE__, __LINE__);
   findStep(programStep).body();
 }
 
-double runner::Engine::runStep(int programStep) {
-  // Measure the whole step (broadcast, traversal, load-balancer update) so the global collectives at
-  // both ends are counted.
+/**
+ * Measures the program-step broadcast, traversal, load-balancer update, and
+ * post-step callback, including the collectives at both ends of the traversal.
+ */
+double runner::Engine::runStep(const int programStep) {
   tarch::instrumentation::Watch watch("runner::Engine", "runStep", false, false);
   watch.start();
 
@@ -73,31 +89,28 @@ double runner::Engine::runStep(int programStep) {
 
   executeStepBody(programStep);
 
-  // Refresh the load balancer after the step so the next decision sees current statistics.
   {
-    // The load balancer's own post-sweep decision refresh, distinct from the LoadBalancing program
-    // step (which is a grid sweep). Hence a separate region name.
+    // This post-sweep update has its own region because LoadBalancing names a grid traversal.
     SCOREP_USER_REGION(PhaseName::LoadBalancerUpdate, SCOREP_USER_REGION_TYPE_COMMON)
-    loadBalancer().update();
+    updateLoadBalancer(findStep(programStep));
   }
   if (_callbacks.afterStep) {
     _callbacks.afterStep();
   }
 
   watch.stop();
-  const double elapsed = watch.getCalendarTime();
+  const auto elapsed = watch.getCalendarTime();
   recordStepTime(_measurements.stepTimes, findStep(programStep).name, elapsed);
   return elapsed;
 }
 
 void runner::Engine::runWorker() const {
   while (peano4::parallel::Node::getInstance().continueToRun()) {
-    executeStepBody(peano4::parallel::Node::getInstance().getCurrentProgramStep());
+    const auto programStep = peano4::parallel::Node::getInstance().getCurrentProgramStep();
+    executeStepBody(programStep);
     {
-      // The load balancer's own post-sweep decision refresh, distinct from the LoadBalancing program
-      // step.
       SCOREP_USER_REGION(PhaseName::LoadBalancerUpdate, SCOREP_USER_REGION_TYPE_COMMON)
-      loadBalancer().update();
+      updateLoadBalancer(findStep(programStep));
     }
     if (_callbacks.afterStep) {
       _callbacks.afterStep();
@@ -111,17 +124,21 @@ void runner::Engine::assertConsistentStepRegistryAcrossRanks() const {
     return;
   }
 
-  unsigned long long localHash = 1469598103934665603ULL; // FNV-1a offset basis
-  const auto         mix       = [&localHash](unsigned long long value) {
+  constexpr auto FnvOffsetBasis = 1469598103934665603ULL;
+  constexpr auto FnvPrime       = 1099511628211ULL;
+  constexpr auto StepSeparator  = 0xffffffffULL;
+
+  unsigned long long localHash = FnvOffsetBasis;
+  const auto         mix       = [&localHash](const unsigned long long value) {
     localHash ^= value;
-    localHash *= 1099511628211ULL; // FNV-1a prime
+    localHash *= FnvPrime;
   };
   for (const auto& step : _steps) {
     mix(static_cast<unsigned long long>(step.programStep));
     for (const char character : step.name) {
       mix(static_cast<unsigned long long>(static_cast<unsigned char>(character)));
     }
-    mix(0xffffffffULL);
+    mix(StepSeparator);
   }
 
   unsigned long long minHash      = 0;
@@ -160,8 +177,9 @@ int runner::Engine::run() {
 
   const bool terminatedGracefully = Orchestrator(_steps).run(context);
 
+  // Workers wait inside continueToRun(), so the master broadcasts a final termination step.
   peano4::parallel::Node::getInstance().setNextProgramStep(peano4::parallel::Node::Terminate);
-  peano4::parallel::Node::getInstance().continueToRun(); // Send terminate instruction to other ranks
+  peano4::parallel::Node::getInstance().continueToRun();
 
   return terminatedGracefully ? EXIT_FAILURE : EXIT_SUCCESS;
 }

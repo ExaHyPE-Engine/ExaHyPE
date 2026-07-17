@@ -4,19 +4,17 @@
 
 #include "tarch/tests/TestCase.h"
 
-namespace runner {
-  namespace tests {
-    class TableTest;
-  }
-} // namespace runner
+namespace runner::tests {
+  class TableTest;
+} // namespace runner::tests
 
 class runner::tests::TableTest final : public tarch::tests::TestCase {
+public:
+  TableTest();
+  void run() override;
+
 private:
   void testSectionAndEntryIndent();
   void testLabelsShareOneColumnAcrossSections();
   void testEmptyTableRendersNothing();
-
-public:
-  TableTest();
-  virtual void run() override;
 };

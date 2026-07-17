@@ -6,11 +6,10 @@
 #include "tarch/reader/JSONReader.h"
 
 runner::RuntimeParameters::RuntimeParameters() :
-  _mpiTimeOutWarning(0.0),
-  _mpiDeadlockTimeOut(0.0),
+  _mpiTimeoutWarning(0.0),
+  _mpiDeadlockTimeout(0.0),
   _mpiDeadlockDetectionEnabled(false),
   _loadBalancingQuality(0.75),
-  _minSizeOfTree(1),
   _maxNumberOfTreesPerRank(-1),
   _targetDevice(tarch::accelerator::Device::DefaultDevice),
   _verbose(false),
@@ -65,8 +64,8 @@ double runner::RuntimeParameters::divideByThreePower(double value, int exponent)
 
 int runner::RuntimeParameters::parseInteger(const std::string& value, const std::string& key) {
   try {
-    std::size_t processed = 0;
-    const int   result    = std::stoi(value, &processed);
+    auto       processed = std::size_t{0};
+    const auto result    = std::stoi(value, &processed);
     if (processed != value.size()) {
       throw std::invalid_argument("Trailing characters");
     }
@@ -78,8 +77,8 @@ int runner::RuntimeParameters::parseInteger(const std::string& value, const std:
 
 double runner::RuntimeParameters::parseDouble(const std::string& value, const std::string& key) {
   try {
-    std::size_t  processed = 0;
-    const double result    = std::stod(value, &processed);
+    auto       processed = std::size_t{0};
+    const auto result    = std::stod(value, &processed);
     if (processed != value.size()) {
       throw std::invalid_argument("Trailing characters");
     }
@@ -126,12 +125,13 @@ void runner::RuntimeParameters::printUsage(const std::string& executableName) co
   );
   addOption(
     "-nt, --numberOfTimeSteps <n>",
-    "Maximum number of time steps; use <=0 for unbounded (default: " +
-      (_numberOfTimeSteps > 0 ? formatDefault(_numberOfTimeSteps) : std::string("unbounded")) + ")."
+    "Maximum number of time steps; use a non-positive value for unbounded (default: "
+      + (_numberOfTimeSteps > 0 ? formatDefault(_numberOfTimeSteps) : std::string("unbounded")) + ")."
   );
   addOption(
     "-ns, --numberOfSnapshots <n>",
-    "Number of plot snapshots; use <=0 to disable plotting (default: " + formatDefault(_numberOfSnapshots) + ")."
+    "Number of plot snapshots; use a non-positive value to disable plotting (default: "
+      + formatDefault(_numberOfSnapshots) + ")."
   );
   addOption("-o, --outputPath <path>", "Output path (default: " + formatDefault(_outputPath) + ").");
   addOption(
@@ -148,10 +148,10 @@ void runner::RuntimeParameters::printUsage(const std::string& executableName) co
     "-lbq, --loadBalancingQuality <q>",
     "Worst-case load-balancing ratio (default: " + formatDefault(_loadBalancingQuality) + ")."
   );
-  addOption("-tsmin, --minSizeOfTree <n>", "Minimum tree size (default: " + formatDefault(_minSizeOfTree) + ").");
   addOption(
     "-trees, --maxNumberOfTreesPerRank <n>",
-    "Maximum trees per rank. Use <=0 for thread count (default: " + formatDefault(_maxNumberOfTreesPerRank) + ")."
+    "Maximum trees per rank; positive values must not exceed " + formatDefault(MAX_SPACETREES_PER_RANK)
+      + ", and a non-positive value uses the thread count (default: " + formatDefault(_maxNumberOfTreesPerRank) + ")."
   );
   addOption(
     "-td, --targetDevice <n>",
@@ -160,20 +160,20 @@ void runner::RuntimeParameters::printUsage(const std::string& executableName) co
   addOption(
     "--timeoutWarning <seconds>",
     "Warn after this many seconds waiting for MPI progress; fractional values such as 0.1 are "
-    "allowed, 0 disables (default: " +
-      formatDefault(_mpiTimeOutWarning) + ")."
+    "allowed, 0 disables (default: "
+      + formatDefault(_mpiTimeoutWarning) + ")."
   );
   addOption(
     "--deadlockTimeout <seconds>",
     "Terminate after this many seconds waiting for MPI progress; fractional values such as 0.1 are "
-    "allowed, 0 disables (default: " +
-      formatDefault(_mpiDeadlockTimeOut) + ")."
+    "allowed, 0 disables (default: "
+      + formatDefault(_mpiDeadlockTimeout) + ")."
   );
   addOption("--deadlockDetection", "Enable detailed MPI request tracking for deadlock diagnostics (default: off).");
   addOption("-v, --verbose", "Show the full log line prefix (timestamp, core, scope) (default: off).");
   addOption("-h, --help", "Print this help and exit.");
 
-  std::size_t argumentColumnWidth = 0;
+  auto argumentColumnWidth = std::size_t{0};
   for (const auto& option : options) {
     argumentColumnWidth = std::max(argumentColumnWidth, option.first.size());
   }
@@ -224,27 +224,30 @@ void runner::RuntimeParameters::validateParameterRanges() const {
       "Load-balancing quality must lie in (0, 1] (got " + formatDefault(_loadBalancingQuality) + ")."
     );
   }
-  if (_minSizeOfTree < 1) {
-    throw std::runtime_error("Minimum tree size must be at least 1 (got " + formatDefault(_minSizeOfTree) + ").");
-  }
   if (_targetDevice < 0) {
     throw std::runtime_error("Target device id must not be negative (got " + formatDefault(_targetDevice) + ").");
   }
-  if (_mpiTimeOutWarning < 0.0) {
+  if (_maxNumberOfTreesPerRank > MAX_SPACETREES_PER_RANK) {
     throw std::runtime_error(
-      "MPI timeout warning must not be negative (got " + formatDefault(_mpiTimeOutWarning) + " s)."
+      "Maximum trees per rank must not exceed " + formatDefault(MAX_SPACETREES_PER_RANK) + " (got "
+      + formatDefault(_maxNumberOfTreesPerRank) + ")."
     );
   }
-  if (_mpiDeadlockTimeOut < 0.0) {
+  if (_mpiTimeoutWarning < 0.0) {
     throw std::runtime_error(
-      "MPI deadlock timeout must not be negative (got " + formatDefault(_mpiDeadlockTimeOut) + " s)."
+      "MPI timeout warning must not be negative (got " + formatDefault(_mpiTimeoutWarning) + " s)."
+    );
+  }
+  if (_mpiDeadlockTimeout < 0.0) {
+    throw std::runtime_error(
+      "MPI deadlock timeout must not be negative (got " + formatDefault(_mpiDeadlockTimeout) + " s)."
     );
   }
 }
 
 void runner::RuntimeParameters::extractConfigFileFromCommandLine(int argc, char** argv) {
   for (int index = 1; index < argc; ++index) {
-    const std::string argument = argv[index];
+    const auto argument = std::string(argv[index]);
     if (argument == "--configFile" or argument == "-cf") {
       _configFilePath = consumeValue(index, argc, argv, argument);
     }
@@ -259,11 +262,10 @@ void runner::RuntimeParameters::readJsonConfiguration() {
   _configReader = std::make_unique<tarch::reader::JSONReader>(_configFilePath);
   auto& reader  = *_configReader;
 
-  _mpiTimeOutWarning           = reader.getDouble("timeoutWarning", _mpiTimeOutWarning);
-  _mpiDeadlockTimeOut          = reader.getDouble("deadlockTimeout", _mpiDeadlockTimeOut);
+  _mpiTimeoutWarning           = reader.getDouble("timeoutWarning", _mpiTimeoutWarning);
+  _mpiDeadlockTimeout          = reader.getDouble("deadlockTimeout", _mpiDeadlockTimeout);
   _mpiDeadlockDetectionEnabled = reader.getBoolean("deadlockDetection", _mpiDeadlockDetectionEnabled);
   _loadBalancingQuality        = reader.getDouble("loadBalancingQuality", _loadBalancingQuality);
-  _minSizeOfTree               = reader.getInteger("minSizeOfTree", _minSizeOfTree);
   _maxNumberOfTreesPerRank     = reader.getInteger("maxNumberOfTreesPerRank", _maxNumberOfTreesPerRank);
   _targetDevice                = reader.getInteger("targetDevice", _targetDevice);
   _verbose                     = reader.getBoolean("verbose", _verbose);
@@ -272,8 +274,6 @@ void runner::RuntimeParameters::readJsonConfiguration() {
   _numberOfSnapshots           = reader.getInteger("numberOfSnapshots", _numberOfSnapshots);
   _timeStepLogInterval         = reader.getDouble("timeStepLogInterval", _timeStepLogInterval);
 
-  // endTime advances the whole domain to that time (min stamp drives completion, no upper cap); an
-  // explicit min/max window overrides afterwards.
   if (reader.hasKey("endTime")) {
     _minTerminalTime = reader.getDouble("endTime");
     _maxTerminalTime = std::numeric_limits<double>::max();
@@ -305,11 +305,10 @@ void runner::RuntimeParameters::applyCommandLineConfiguration(int& argc, char** 
   int writeIndex = 1;
 
   for (int readIndex = 1; readIndex < argc; ++readIndex) {
-    const std::string argument = argv[readIndex];
+    const auto argument = std::string(argv[readIndex]);
     if (argument == "--configFile" or argument == "-cf") {
       _configFilePath = consumeValue(readIndex, argc, argv, argument);
     } else if (argument == "--endTime" or argument == "-et") {
-      // Advance the whole domain to this time: the minimum stamp drives completion, no upper cap.
       _minTerminalTime = parseDouble(consumeValue(readIndex, argc, argv, argument), argument);
       _maxTerminalTime = std::numeric_limits<double>::max();
     } else if (argument == "--minTerminalTime" or argument == "-tmin") {
@@ -340,8 +339,6 @@ void runner::RuntimeParameters::applyCommandLineConfiguration(int& argc, char** 
       _maxGridLevelsConfigured = true;
     } else if (argument == "--loadBalancingQuality" or argument == "-lbq") {
       _loadBalancingQuality = parseDouble(consumeValue(readIndex, argc, argv, argument), argument);
-    } else if (argument == "--minSizeOfTree" or argument == "-tsmin") {
-      _minSizeOfTree = parseInteger(consumeValue(readIndex, argc, argv, argument), argument);
     } else if (argument == "--maxNumberOfTreesPerRank" or argument == "-trees") {
       _maxNumberOfTreesPerRank = parseInteger(consumeValue(readIndex, argc, argv, argument), argument);
     } else if (argument == "--targetDevice" or argument == "-td") {
@@ -349,9 +346,9 @@ void runner::RuntimeParameters::applyCommandLineConfiguration(int& argc, char** 
     } else if (argument == "--verbose" or argument == "-v") {
       _verbose = true;
     } else if (argument == "--timeoutWarning") {
-      _mpiTimeOutWarning = parseDouble(consumeValue(readIndex, argc, argv, argument), argument);
+      _mpiTimeoutWarning = parseDouble(consumeValue(readIndex, argc, argv, argument), argument);
     } else if (argument == "--deadlockTimeout") {
-      _mpiDeadlockTimeOut = parseDouble(consumeValue(readIndex, argc, argv, argument), argument);
+      _mpiDeadlockTimeout = parseDouble(consumeValue(readIndex, argc, argv, argument), argument);
     } else if (argument == "--deadlockDetection") {
       _mpiDeadlockDetectionEnabled = true;
     } else if (argument == "--noDeadlockDetection") {
@@ -420,13 +417,13 @@ void runner::RuntimeParameters::configure(int& argc, char** argv) {
   validateParameterRanges();
 }
 
-tarch::reader::JSONReader* runner::RuntimeParameters::getConfigReader() { return _configReader.get(); }
+/** Returns the reader shared with the application parser, or nullptr when no configuration file is active. */
+tarch::reader::JSONReader* runner::RuntimeParameters::getConfigReader() const { return _configReader.get(); }
 
-double runner::RuntimeParameters::getMPITimeOutWarning() const { return _mpiTimeOutWarning; }
-double runner::RuntimeParameters::getMPIDeadlockTimeOut() const { return _mpiDeadlockTimeOut; }
+double runner::RuntimeParameters::getMPITimeoutWarning() const { return _mpiTimeoutWarning; }
+double runner::RuntimeParameters::getMPIDeadlockTimeout() const { return _mpiDeadlockTimeout; }
 bool   runner::RuntimeParameters::isMPIDeadlockDetectionEnabled() const { return _mpiDeadlockDetectionEnabled; }
 double runner::RuntimeParameters::getLoadBalancingQuality() const { return _loadBalancingQuality; }
-int    runner::RuntimeParameters::getMinSizeOfTree() const { return _minSizeOfTree; }
 int    runner::RuntimeParameters::getMaxNumberOfTreesPerRank() const { return _maxNumberOfTreesPerRank; }
 int    runner::RuntimeParameters::getTargetDevice() const { return _targetDevice; }
 
@@ -448,8 +445,7 @@ const std::string& runner::RuntimeParameters::getExecutableName() const { return
 
 double
 runner::RuntimeParameters::getMaxAdmissiblePatchSize(const tarch::la::Vector<DIMENSIONS, double>& domainSize) const {
-  // A grid level maps to a size via the longest domain edge; the shortest edge would over-refine
-  // rectangular domains by up to a level (min == max for cubic domains).
+  // The tolerance absorbs round-off, and the longest edge avoids over-refining rectangular domains.
   return divideByThreePower(1.1 * tarch::la::max(domainSize), _gridLevels);
 }
 
@@ -463,7 +459,7 @@ double runner::RuntimeParameters::getMaxAdmissibleCellSize(
   int                                          cellsPerPatchPerAxis
 ) const {
   if (cellsPerPatchPerAxis <= 0) {
-    throw std::runtime_error("cellsPerPatchPerAxis must be positive.");
+    throw std::runtime_error("The number of cells per patch per axis must be positive.");
   }
   return getMaxAdmissiblePatchSize(domainSize) / cellsPerPatchPerAxis;
 }
@@ -473,7 +469,7 @@ double runner::RuntimeParameters::getMinAdmissibleCellSize(
   int                                          cellsPerPatchPerAxis
 ) const {
   if (cellsPerPatchPerAxis <= 0) {
-    throw std::runtime_error("cellsPerPatchPerAxis must be positive.");
+    throw std::runtime_error("The number of cells per patch per axis must be positive.");
   }
   return getMinAdmissiblePatchSize(domainSize) / cellsPerPatchPerAxis;
 }

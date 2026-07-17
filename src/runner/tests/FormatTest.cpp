@@ -43,6 +43,9 @@ void runner::tests::FormatTest::testGroupedInsertsThousandSeparators() {
 void runner::tests::FormatTest::testPercentageAndScientificAndRate() {
   validateEquals(runner::Format::percentage(50.0), std::string("50.00 %"));
   validateEquals(runner::Format::percentage(100.0), std::string("100.00 %"));
+  validateEquals(runner::Format::overheadPercentage(51100.0), std::string("51100.00 %"));
+  validateEquals(runner::Format::overheadPercentage(100000.0), std::string("1.00e+05 %"));
+  validateEquals(runner::Format::overheadPercentageWidthSample(), std::string("1.80e+308 %"));
   validateEquals(runner::Format::scientific(1234.5), std::string("1.2345e+03"));
   validateEquals(runner::Format::rate(1000.0, "cell"), std::string("1.0000e+03 cell/s"));
 }

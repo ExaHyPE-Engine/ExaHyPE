@@ -59,21 +59,23 @@ public:
   int getNumberOfRegisteredTrees() const;
 
   /**
-   * This operation is not const as it does some internal bookkeeping. It
-   * internally invokes  registerId() on the result.
+   * Reserve one tree ID. This convenience operation delegates to reserveIds().
    *
-   * @param forTreeId If we run a split, this is the rank that wants to
-   *          split. In general, this always is the parent/master of the
-   *          new rank. So if you move a rank, you have to ensure that
-   *          the master is preserved.
+   * @param rank Rank that will own the new tree.
+   * @param forTreeId Parent/master tree ID that creates the new tree.
    *
-   * @return -1 If there are no ids left anymore. In principle, we do not
-   *            limit the number of threads at all. However, we have to
-   *            work with a limited number of tags in MPI, so we put a
-   *            cap on the number of trees per node.
+   * The program terminates if the rank has no free ID left. MPI tags impose a
+   * compile-time cap on the number of trees per rank.
    * @see getId(int,int)
    */
   int reserveId(int rank, int forTreeId);
+
+  /**
+   * Reserve several IDs through one linear scan and one critical section.
+   * Results are ordered by local tree ID, which makes batched splits
+   * deterministic even when earlier tree slots have been released.
+   */
+  std::vector<int> reserveIds(int rank, int forTreeId, int numberOfIds);
 
   /**
    * You hand in a tree number and the node tells you on which rank such a
@@ -137,7 +139,7 @@ public:
     /**
      * Vertical data is data running from the master to the worker and the other
      * way round. Consequently, some tree management data are vertical data, too.
-     * See for example peano4::parallel::SpacetreeSet::addSpacetree().
+     * See for example peano4::parallel::SpacetreeSet::addSpacetrees().
      */
     VerticalData,
     /**
@@ -182,12 +184,22 @@ private:
 
   MPI_Comm _dataExchangeCommunicators[MAX_SPACETREES_PER_RANK];
   bool     _needCommunicator[MAX_SPACETREES_PER_RANK];
+  int      _sendingTreesPerDataExchangeCommunicator;
 
   int _currentProgramStep;
 
   int _rankOrchestrationTag;
 
   std::map<int, TreeEntry> _treeEntries;
+
+  static int getNumberOfSendingTreesPerDataExchangeCommunicator(int tagUpperBound);
+  static int getDataExchangeCommunicatorIndex(int localSendingTreeId, int sendingTreesPerCommunicator);
+  static int getDataExchangeTag(
+    int          localSendingTreeId,
+    int          localReceivingTreeId,
+    ExchangeMode exchange,
+    int          sendingTreesPerCommunicator
+  );
 
   /**
    * The standard constructor assigns the attributes default values and
@@ -218,4 +230,7 @@ private:
    * @see getId(int,int)
    */
   void registerId(int id, int masterId);
+
+  /** Register an ID while the caller holds _semaphore. */
+  void registerIdWithoutLock(int id, int masterId);
 };

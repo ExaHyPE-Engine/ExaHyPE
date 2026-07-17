@@ -4,14 +4,15 @@
 
 #include "tarch/multicore/Core.h"
 
-int toolbox::loadbalancing::DefaultConfiguration::getMaxLocalTreesPerRank(State) const {
+int toolbox::loadbalancing::DefaultConfiguration::getMaxLocalTreesPerRank(toolbox::loadbalancing::State) const {
   return tarch::multicore::Core::getInstance().getNumberOfThreads();
 }
 
-double toolbox::loadbalancing::DefaultConfiguration::getWorstCaseBalancingRatio(State) const { return 0.9; }
+double toolbox::loadbalancing::DefaultConfiguration::getWorstCaseBalancingRatio(toolbox::loadbalancing::State) const {
+  return 0.9;
+}
 
-int toolbox::loadbalancing::DefaultConfiguration::getMinTreeSize(State) const { return 1; }
-
-peano4::grid::SplitInstruction::Mode toolbox::loadbalancing::DefaultConfiguration::getMode(State) const {
+peano4::grid::SplitInstruction::Mode
+toolbox::loadbalancing::DefaultConfiguration::getMode(toolbox::loadbalancing::State) const {
   return peano4::grid::SplitInstruction::Mode::BottomUp;
 }

@@ -40,23 +40,23 @@ double tarch::convertMemorySize(unsigned long long bytes, MemoryUsageFormat form
 
 #if defined(COMPILER_HAS_SYSINFO)
 
-double tarch::getTotalMemory(MemoryUsageFormat format) {
+std::uint64_t tarch::getTotalMemoryInBytes() {
   struct sysinfo info;
   sysinfo(&info);
   // sysinfo reports memory in multiples of mem_unit bytes, not bytes.
-  return convertMemorySize(static_cast<unsigned long long>(info.totalram) * info.mem_unit, format);
+  return static_cast<std::uint64_t>(info.totalram) * info.mem_unit;
 }
 
-double tarch::getFreeMemory(MemoryUsageFormat format) {
+std::uint64_t tarch::getFreeMemoryInBytes() {
   struct sysinfo info;
   sysinfo(&info);
   // sysinfo reports memory in multiples of mem_unit bytes, not bytes.
-  return convertMemorySize(static_cast<unsigned long long>(info.freeram) * info.mem_unit, format);
+  return static_cast<std::uint64_t>(info.freeram) * info.mem_unit;
 }
 
 #else // defined(COMPILER_HAS_SYSINFO)
 
-double tarch::getTotalMemory(MemoryUsageFormat format) {
+std::uint64_t tarch::getTotalMemoryInBytes() {
   int     mib[] = {CTL_HW, HW_MEMSIZE};
   int64_t physical_memory;
   size_t  length;
@@ -64,10 +64,10 @@ double tarch::getTotalMemory(MemoryUsageFormat format) {
   // Get the physical memory size
   length = sizeof(int64_t);
   sysctl(mib, 2, &physical_memory, &length, NULL, 0);
-  return convertMemorySize(physical_memory, format);
+  return static_cast<std::uint64_t>(physical_memory);
 }
 
-double tarch::getFreeMemory(MemoryUsageFormat format) {
+std::uint64_t tarch::getFreeMemoryInBytes() {
   // System-wide free physical memory is the count of free pages from the Mach VM statistics (strictly
   // free, mirroring the Linux freeram above).
   const mach_port_t      host     = mach_host_self();
@@ -75,19 +75,26 @@ double tarch::getFreeMemory(MemoryUsageFormat format) {
   vm_statistics64_data_t stats;
   mach_msg_type_number_t count = HOST_VM_INFO64_COUNT;
 
-  const bool ok =
-    host_page_size(host, &pageSize) == KERN_SUCCESS and
-    host_statistics64(host, HOST_VM_INFO64, reinterpret_cast<host_info64_t>(&stats), &count) == KERN_SUCCESS;
+  const bool ok = host_page_size(host, &pageSize) == KERN_SUCCESS
+    and host_statistics64(host, HOST_VM_INFO64, reinterpret_cast<host_info64_t>(&stats), &count) == KERN_SUCCESS;
   mach_port_deallocate(mach_task_self(), host);
   if (not ok) {
     return 0;
   }
-  return convertMemorySize(static_cast<unsigned long long>(stats.free_count) * pageSize, format);
+  return static_cast<std::uint64_t>(stats.free_count) * pageSize;
 }
 
 #endif // defined(COMPILER_HAS_SYSINFO)
 
-double tarch::getMemoryUsage(MemoryUsageFormat format) {
+double tarch::getTotalMemory(const MemoryUsageFormat format) {
+  return convertMemorySize(getTotalMemoryInBytes(), format);
+}
+
+double tarch::getFreeMemory(const MemoryUsageFormat format) {
+  return convertMemorySize(getFreeMemoryInBytes(), format);
+}
+
+std::uint64_t tarch::getMemoryUsageInBytes() {
 #if defined(COMPILER_HAS_PROC_STAT)
   char  work[4096];
   FILE* f   = NULL;
@@ -129,13 +136,17 @@ double tarch::getMemoryUsage(MemoryUsageFormat format) {
   mach_task_basic_info_data_t taskInfo;
   mach_msg_type_number_t      count    = MACH_TASK_BASIC_INFO_COUNT;
   std::size_t                 rawInput = 0;
-  if (task_info(mach_task_self(), MACH_TASK_BASIC_INFO, reinterpret_cast<task_info_t>(&taskInfo), &count) ==
-      KERN_SUCCESS) {
+  if (task_info(mach_task_self(), MACH_TASK_BASIC_INFO, reinterpret_cast<task_info_t>(&taskInfo), &count)
+      == KERN_SUCCESS) {
     rawInput = taskInfo.resident_size;
   }
 #else
   std::size_t rawInput = 0;
 #endif
 
-  return convertMemorySize(rawInput, format);
+  return static_cast<std::uint64_t>(rawInput);
+}
+
+double tarch::getMemoryUsage(const MemoryUsageFormat format) {
+  return convertMemorySize(getMemoryUsageInBytes(), format);
 }

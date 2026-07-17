@@ -183,8 +183,8 @@ void runner::TimeLoop::logPlot(int snapshot, int numberOfSnapshots, double timeS
   }
   // Plain line: keeps the rules' padding, but consecutive plots stack without a blank between them.
   _context.box.line(
-    std::string(BlockIndent, ' ') + label.str() + "  " + Format::wallClock(wallClockSeconds) +
-    " · t = " + Format::scientific(timeStamp)
+    std::string(BlockIndent, ' ') + label.str() + "  " + Format::wallClock(wallClockSeconds)
+    + " · t = " + Format::scientific(timeStamp)
   );
 }
 
@@ -196,8 +196,10 @@ void runner::TimeLoop::run() {
   auto&       measurements = _context.measurements;
   auto&       engine       = _context.engine;
 
-  double        nextMinPlot        = parameters.getFirstPlotTimeStamp();
-  double        nextMaxPlot        = parameters.getFirstPlotTimeStamp();
+  const auto    firstPlotTimeStamp = parameters.getFirstPlotTimeStamp();
+  double        nextMinPlot        = firstPlotTimeStamp;
+  double        nextMaxPlot        = firstPlotTimeStamp;
+  double        nextPlotAtStep     = 0.0;
   double        logNextTimeStep    = 0.0;
   unsigned long completedTimeSteps = 0;
   int           completedPlots     = 0;
@@ -205,6 +207,7 @@ void runner::TimeLoop::run() {
   double        currentStepElapsed = 0.0;
   double        lastStepElapsed    = 0.0; // wall time of the most recent completed step
   bool          justWroteSnapshot  = false;
+  bool          timeStepInFlight   = false;
 
   const int  maxTimeSteps = parameters.getNumberOfTimeSteps();
   const bool stepLimited  = maxTimeSteps > 0;
@@ -217,8 +220,16 @@ void runner::TimeLoop::run() {
     const double plotEnd      = maxTerminal < std::numeric_limits<double>::max() / 10.0 ? maxTerminal : minTerminal;
     const int    snapshots    = parameters.getNumberOfSnapshots();
     const double snapInterval = snapshots <= 0 ? 0.0 : plotEnd / snapshots;
-    const double minStamp     = repositories.getMinTimeStamp();
-    const double maxStamp     = repositories.getMaxTimeStamp();
+    // A run bounded by a fixed number of time steps ends at that step budget, not at the terminal
+    // time, so the snapshots spread over the steps instead of the time axis.
+    const double stepPlotInterval =
+      (stepLimited and snapshots > 0) ? static_cast<double>(maxTimeSteps) / snapshots : 0.0;
+    const double minStamp             = repositories.getMinTimeStamp();
+    const double maxStamp             = repositories.getMaxTimeStamp();
+    const bool   firstPlotTimeReached = minStamp >= firstPlotTimeStamp or maxStamp >= firstPlotTimeStamp;
+    if (stepLimited and not firstPlotTimeReached) {
+      nextPlotAtStep = static_cast<double>(completedTimeSteps) + 1.0;
+    }
 
     const bool keepTimeStepping = stepLimited ? completedTimeSteps < static_cast<unsigned long>(maxTimeSteps)
                                               : (minStamp < minTerminal and maxStamp < maxTerminal);
@@ -232,8 +243,17 @@ void runner::TimeLoop::run() {
       } else {
         action = Action::Stop;
       }
-    } else if (snapInterval > 0.0 and keepTimeStepping and (minStamp >= nextMinPlot or maxStamp >= nextMaxPlot) and
-               repositories.mayPlot()) {
+    } else if (stepLimited and stepPlotInterval > 0.0 and keepTimeStepping and firstPlotTimeReached
+               and static_cast<double>(completedTimeSteps) >= nextPlotAtStep and repositories.mayPlot()) {
+      nextPlotAtStep += stepPlotInterval;
+      if (nextPlotAtStep <= static_cast<double>(completedTimeSteps)) {
+        logWarning("Asked to plot more often than once per time step; postponing the next plot");
+        nextPlotAtStep = static_cast<double>(completedTimeSteps) + 1.0;
+      }
+      justWroteSnapshot = true;
+      action            = Action::Plot;
+    } else if (not stepLimited and snapInterval > 0.0 and keepTimeStepping
+               and (minStamp >= nextMinPlot or maxStamp >= nextMaxPlot) and repositories.mayPlot()) {
       nextMinPlot += snapInterval;
       nextMaxPlot += snapInterval;
       if (nextMinPlot < minStamp) {
@@ -249,14 +269,17 @@ void runner::TimeLoop::run() {
     } else if (keepTimeStepping) {
       justWroteSnapshot = false;
       action            = Action::TimeStep;
-    } else if (not repositories.mayPlot()) {
+    } else if (timeStepInFlight and not repositories.mayPlot()) {
       // Terminal reached mid logical step: finish it before stopping (a step spans several sweeps),
       // regardless of whether plotting is enabled - otherwise we would stop in an inconsistent state.
+      // A plot sweep also clears mayPlot(), so only an actually in-flight time step warrants
+      // another sweep; otherwise a run ending on its final plot would compute one surplus step.
       action = Action::TimeStep;
-    } else if (not justWroteSnapshot and snapInterval > 0.0) {
+    } else if (not justWroteSnapshot and (snapInterval > 0.0 or stepPlotInterval > 0.0)) {
       justWroteSnapshot = true;
       nextMinPlot       = std::numeric_limits<double>::max();
       nextMaxPlot       = std::numeric_limits<double>::max();
+      nextPlotAtStep    = std::numeric_limits<double>::max();
       action            = Action::Plot;
     } else {
       action = Action::Stop;
@@ -302,6 +325,7 @@ void runner::TimeLoop::run() {
       dt = engine.runStep(_timeStepStep);
     }
     currentStepElapsed += dt;
+    timeStepInFlight = not repositories.mayPlot();
     if (repositories.mayPlot()) {
       if (completedTimeSteps > 0) { // skip the first (warm-up) step for throughput
         measurements.timeStep.setValue(currentStepElapsed);
@@ -312,8 +336,8 @@ void runner::TimeLoop::run() {
 
       // A step that tripped a noncritical assertion carries invalid data (e.g. dt from a zero
       // eigenvalue); skip its report and let the next iteration dump the final state and terminate.
-      if (not tarch::hasNonCriticalAssertionBeenViolated() and
-          measurements.timeStep.getAccumulatedValue() >= logNextTimeStep) {
+      if (not tarch::hasNonCriticalAssertionBeenViolated()
+          and measurements.timeStep.getAccumulatedValue() >= logNextTimeStep) {
         logTimeStep(
           repositories.getMinTimeStamp(),
           repositories.getMaxTimeStamp(),

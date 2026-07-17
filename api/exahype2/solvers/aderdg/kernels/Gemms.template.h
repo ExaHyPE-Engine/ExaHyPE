@@ -130,4 +130,3 @@ for (int it_1 = 0; it_1 < {{gemms.N}}; it_1++) {
 {% endif %} {# USE_LIBXSMM #}
 {% endwith %}
 {% endmacro %}
-{#

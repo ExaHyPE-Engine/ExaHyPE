@@ -5,12 +5,10 @@
 <!-- Add this one for href links to subitems -->
 \tableofcontents
 
-
 Peano's domain decomposition is used for both MPI and multithreading.
 The fact that we use domain decomposition for both realisation variants implies that it only matters if you have configured your build with MPI and/or a multithreading back-end.
-As soon as these things are in place and you have picked a load balancing, both threads and ranks (if MPI is there) will be used.
-Without activating any load balancing, your code will run serial no matter how you compiled it.
-
+As soon as these things are in place and you have picked a load balancing, the code uses both threads and ranks if MPI is enabled.
+Without active load balancing, your code runs serially no matter how you compiled it.
 
 Peano's domain decomposition requires the user to follow these steps:
 
@@ -20,9 +18,7 @@ Peano's domain decomposition requires the user to follow these steps:
  4. Run some @ref page_exahype_runtime_analysis "performance analysis".
  5. Study the @ref page_exahype_performance_optimisation "optimisation recommendations".
 
-
 # Introduction
-
 
 @image html domain-decomposition/domain-decomposition.png
 
@@ -33,12 +29,11 @@ parallelisation. It only thinks in terms of trees. The trees and their
 traversal can either be deployed to ranks or threads or combinations of
 the two.
 
-This statement is only weakened once you work with Peano's task interface. If
+This statement is weakened once you work with Peano's task interface. If
 trees issue tasks, then these tasks team up with the tasks handling the
 individual spacetrees. Your task graph starts to contain a mixture of
-tree tasks and user-defined tasks. This section discusses solely the
-tree decomposition aspect within Peano, i.e. ignores that there might be tasks as well.
-
+tree tasks and user-defined tasks. This section covers only tree decomposition;
+task scheduling is outside its scope.
 
 <div style="background-color: #cfc ; padding: 10px; border: 1px solid green;">
 Each subtree is completely independent: If Peano cuts a tree into chunks,
@@ -47,33 +42,28 @@ deployed onto separate ranks or separate threads or a mixture of those.
 We work with a multiscale, non-overlapping domain decomposition.
 </div>
 
-
 ## Controlling the domain decomposition (C++ view)
 
 From a C++ view, the domain decomposition is triggered through the SpacetreeSet.
 The set is a singleton per MPI rank.
-You can instruct it on each rank at any time to try to split up a tree further by calling the split()
-routine.
-
+You can instruct it on each rank to split an eligible tree by calling split().
 
 Joins are automatically triggered by the spacetree set as soon as a tree degenerates.
 However, you can veto the join mechanisms.
-
-
+The load balancing toolbox uses splits for its initial decomposition. The joins
+described below belong to Peano's grid-coarsening machinery.
 
 ## Controlling the domain decomposition (Python view/higher level)
 
 Most codes do not issue the split calls themselves, but encapsulate all of the load balancing decisions in some classes.
 So all the decisions, when and where to trigger a split, are in one place.
-This is possible, as the splitting is realised through the SpacetreeSet which is a singleton,
-i.e. you can literally call split() from anywhere in the code at any point throughout the simulation.
+This is possible because SpacetreeSet is a singleton. Application control code
+can call split() whenever the selected tree is eligible.
 
-Obviously, you can design your own load balancing logic.
+You can design your own load balancing logic.
 However, there's also a toolbox which provides utility classes to do exactly this.
 Most extensions of Peano (e.g., ExaHyPE or MGHyPE) offer routines through their Python API to add strategies from this load balancing toolbox to the code.
 In this case, you don't have to care about the load balancing realisation itself at all.
-
-
 
 # Domain decomposition within a (typical) Peano application
 
@@ -87,20 +77,16 @@ A tree in Peano is split along the Peano space-filling curve. This
 implies that the decomposition on each mesh level is a non-overlapping
 decomposition where each cell is assigned to exactly one chunk.
 
-
 @image html domain-decomposition/replicated-boundary-data.png
-
 
 The illustration above makes this point: The blue and the red
 tree own a part of the overall domain.
 They do not share any cells, but they have a common boundary of four
 edges.
 
-
 Data on these edges is replicated, i.e. the four faces exist twice:
 once on the red and on the blue tree.
 Also the two marked vertices exist twice.
-
 
 Peano still works with proper trees and will actually let the red tree store parts of the blue partition as well and vice versa.
 How this is done is hidden from the user.
@@ -112,8 +98,6 @@ Some synchronisation and consistency rules remain in place:
 - After each mesh traversal, the two trees will exchange their data (although there are two other data exchange schemes as well).
 - Both trees will trigger the related additional merge actions as described below.
 
-
-
 ## Observers and action sets
 
 If you run Peano 4, you buy into a SPMD paradigm, i.e. every
@@ -124,28 +108,22 @@ traverse(), you expect that all the trees on each and every rank
 run through their mesh and use the same observer, i.e. deploy
 events to the same action sets.
 
-
 It is
 the user's responsibility to ensure that the ranks do coordinate with
 each other. That is, the user has to ensure that whenever you run a
 certain type of grid sweep on one rank, then the other ranks run this
-sweep as well. I provide remarks on this at the end of the page. Most users will never
-ever see this part - notably not if they use high-level toolkits built
+sweep as well. Remarks on this follow at the end of the page. Most users do
+not encounter this part, particularly when they use high-level toolkits built
 on top of Peano such as ExaHyPE or Swift 2. The main codes produced by
 these high-level extensions automatically guarantee that all ranks do
 exactly the same.
 
-
 ## Lifecycle of action sets
 
 Each action set (instance of the class) is created once per tree.
-In addition, a prototype action set does exist.
-
-In the baseline version, only one instance of an action set does exist
-per rank.
-For this action set, we call prepareTraversal().
-Once this routine has terminated,
-we create N clones of the action set object if we host N subtrees.
+Each rank also owns one prototype action set and calls prepareTraversal() on it.
+Once this routine terminates, the rank creates N clones of the prototype if it
+hosts N subtrees.
 As ranks can host different numbers of subtrees, the number of clones
 differs per rank.
 
@@ -157,11 +135,8 @@ touchVertexFirstTime() is called multiple times, i.e. once per
 instance of this vertex. touchVertexLastTime() and the face events
 follow analogously.
 
-After all trees on a rank have finished their traversal, i.e. all the
-endTraversal() calls have returned, the clones of the action sets are
-destroyed, and we call unprepareTraversal() one final time on the
-vanilla/baseline instance of the action set.
-
+After all endTraversal() calls return, the action-set clones are destroyed and
+the rank calls unprepareTraversal() once on the prototype.
 
 ## Data exchange
 
@@ -169,7 +144,6 @@ After the traversal has terminated, Peano is responsible to exchange
 all data. This is completely hidden. At one point prior to the next
 usage of any data, Peano will issue additional merge routines, so
 users can define domain-specific logic:
-
 
 Event  | Semantics | Dependencies
 ------------- | ------------- | -------------
@@ -180,8 +154,6 @@ touchFaceLastTime | After this routine has terminated, each tree takes (for all 
 prepareTraversal | Is called once per rank before we create the actual action sets. | Precedes the beginTraversal() calls which are called once per subtree.
 unprepareTraversal | Is called once per rank after the rank-local traversals have all terminated. | Follows the last endTraversal() call.
 
-
-
 # Decomposition constraints
 
 Before we discuss any algorithms that Peano employs, it is important to state
@@ -191,33 +163,28 @@ that Peano always commits to two fundamental constraints:
    the ranks, we have a tree topology again. That is, a splitting of a tree
    is always realised such that there's a unique master-worker topology.
 
-
 2. **Grid regularity constraint** Peano implements one further constraint
    which refers to the handling of AMR. A cell can be forked onto another
-   rank if and only if all of its vertices are persistent.
+   rank only if all of its vertices are persistent.
 
-Both constraints are evaluated by
-peano4::grid::SpacetreeHelper::isSpacetreeNodeSplitCandidate(), which decides
-whether a cell may be forked onto another rank.
+Both constraints are implemented via peano4::grid::SpacetreeHelper::isSpacetreeNodeSplitCandidate().
 Details on this as well as
 further rationale (the ones below refer to the constraints only) can also be
 found in peano4::grid::Spacetree::splitOrJoinCellBottomUp() and
 peano4::grid::Spacetree::splitCellTopDown().
-As we have to accommodate these two constraints,
-splits typically never are "exact", i.e. you might ask for 100 cells cells to
-be split off, but Peano will eventually only split off roughly 100 cells.
-It will try to stay close to 100, but the constraints have a higher priority
-than your request.
-
+These constraints determine whether a requested cut can be realised. An
+accepted bottom-up split has to deploy exactly the requested number of cells.
+If the topology or regularity constraint prevents the exact cut, Peano
+terminates instead of continuing with a different decomposition. Load
+balancers therefore have to issue splits while the mesh still satisfies the
+candidate constraints.
 
 <div style="background-color: #cfc ; padding: 10px; border: 1px solid green;">
-Load balancing schemes make ***recommendations*** to Peano how to split up
-the mesh. However, a split() call is never strict, i.e. Peano might decide
-to ignore it or to implement it only partially. This happens whenever the mesh
-changes on-the-fly or a constraint might be violated if we followed the split
-instruction strictly.
+A split request can be rejected before it is registered, in which case
+split() returns false. Once accepted, a bottom-up request is strict: Peano
+either assigns its exact cell count or terminates with an error. It never
+silently accepts a partial split.
 </div>
-
 
 ## Examples
 
@@ -232,7 +199,7 @@ very right green cell on the first child level a red one, too. This way,
 a whole tree would reside in red. However, if we made this single cell
 red, then red would become a child of yellow, i.e. we would change the
 rank topology. Peano never does so.
-In the right example conversely, I've asked the yellow tree to split
+In the right example conversely, the yellow tree has been asked to split
 into yellow, green and red in one rush. This time, the right level 1
 cell becomes red already.
 
@@ -251,12 +218,11 @@ cell is hanging and therefore not a split candidate.
 It is, in general, difficult to identify such critical situations: The
 green cell with all of its children can be identified in a top-down
 sweep, but then we run risk that the green cell plus its children sum
-up to more cells than we actually wanna split. Therefore, we provide
-two split variants (cmp peano4::grid::Spacetree::splitOrJoinCellBottomUp() and
+up to more cells than we actually want to split. Therefore, we provide
+two split variants (see peano4::grid::Spacetree::splitOrJoinCellBottomUp() and
 peano4::grid::Spacetree::splitCellTopDown()) and leave it to the user to decide whether they
 want to try to meet the number of cells split off or try to maximise the
 probability that whole trees are split off.
-
 
 ## Rationale
 
@@ -265,16 +231,15 @@ well defined relations where a tree has to send data to if data has to
 go to coarser levels. The topology also allows us to run reductions
 along trees, or to clarify who is allowed to split and who is not.
 The topology furthermore allows us to veto erase commands if they would erase
-whole subdomains. Most importantly, a clear master-worker topology
-makes joins more straightforward (they are always nasty), as we don't
-have to deal with 1:n data flows when we join a partition.
+whole subdomains. A clear master-worker topology also makes joins more
+straightforward because it avoids 1:n data flows when a partition joins.
 
 The regularity constraint is important as we have to update a vertex
 state if a mesh refines or erases dynamically. In this case, a rank
 might trigger an erase and a child who holds the neighbouring refined
 cell has to implement this erase as well. If the erase now suddenly
 creates a hanging node on the coarsest level, this hanging node does
-not carry any adjency information anymore. Adjacency now has to be
+not carry any adjacency information anymore. Adjacency now has to be
 propagated through from even coarser level, which is difficult in a
 distributed data environment. By defining that all the coarsest octants
 on a rank have to have exclusively persistent vertices, we avoid the
@@ -282,7 +247,6 @@ complications that adjacency information might be outdated. We also
 ensure that we handle all data consistency through (multilevel) exchange
 of vertex data with neighbours. No data has to be propagated between
 levels just to get the vertex data right.
-
 
 # Data flow patterns
 
@@ -305,10 +269,9 @@ trees, we distinguish three different types of parallel data flow:
     trees where the coarser parent sends data to its child, but the data is
     used there on the child's coarsest level in the subsequent grid traversal.
     Along the same lines, we speak of asynchronous vertical data exchange if
-    the coarest level on a child sends data one level up, but these data are
+    the coarsest level on a child sends data one level up, but these data are
     not used on the next coarser level which is owned by the parent before the
     next mesh traversal.
-
 
 ## Horizontal data flow
 
@@ -316,9 +279,8 @@ Peano uses a non-overlapping domain decomposition. Therefore, it
 shares/exchanges faces and vertices between different trees where these
 grid entities have adjacent octants on the same level which are owned
 by different trees. However, it never
-shares cells of one level. I explain the code's data exchange pattern
+shares cells of one level. We explain the code's data exchange pattern
 with vertices. Yet, the same pattern holds for faces, too.
-
 
 After a code
 has read/written a vertex for the very last time throughout a traversal,
@@ -353,8 +315,6 @@ traversal. Analogously, the coarsest level of a child may send data one level up
 where the parent only consumes it in the next mesh traversal rather than in the
 current one.
 
-
-
 # Splits
 
 Splits are triggered via peano4::parallel::SpacetreeSet::split().
@@ -364,13 +324,13 @@ whole copy of the original tree. This includes both the core tree data
 and the user data. Once the tree is replicated, the individual trees
 start to coarsen. If they are not responsible for tree parts, they
 successively remove this part. After one or two iterations, each rank
-thus really works only on local tree.
+thus really works only on its local tree.
 Due to this approach, splits require significant memory temporarily. It thus might be
 convenient not to split a tree too often in one rush.
 
 Peano uses information from the actively used data to decide which data to
 replicate. If you have cell and vertex and face data but you use some of
-these data only in some substeps of you algorithm, please ensure that
+these data only in some substeps of your algorithm, please ensure that
 those steps that trigger the domain decomposition and those that run
 immediately after this do use all data types. Otherwise, Peano can't know
 what data is to be replicated when it splits trees.
@@ -382,7 +342,7 @@ makes the new tree run through two states: split triggered and splitting.
 
 In a usual run, Peano's trees do exchange data in a way similar to the
 Jacobi smoothing: Each tree traverses its domain and sends out all
-boundary data. I call this horizontal communication as it is data exchange
+boundary data. We call this horizontal communication as it is data exchange
 between non-overlapping domains which can be arranged on one grid level.
 In the next iteration, the data from neighbours has arrived and can be
 merged in. We obtain a criss-cross communication pattern (blue steps)
@@ -392,7 +352,7 @@ While a new id is booked by one tree if a split is triggered, this new tree
 does not yet physically exist. The original (source) tree keeps the
 complete ownership of all data, i.e. it does all refines and coarses and
 also creates all events. However, it already enters the new, yet to be
-created, tree's indices into all adjacency lists with are consequently
+created, tree's indices into all adjacency lists which are consequently
 sent out to the other ranks. This is the yellow step above. After the grid
 sweep, we mark the new tree id as splitting. At this point, all neighbours
 continue to send to the original tree, as they are not yet aware of any
@@ -405,7 +365,7 @@ send out their stuff to the new tree. Which does not exist yet (grey).
 
 So the splitting rank (orange) traverses its domain and invokes all
 events. It has the semantic ownership. It merges in all boundary data from
-neighbours, but is does not send out the boundary data (anymore).
+neighbours, but it does not send out the boundary data (anymore).
 After the splitting tree traversal has terminated, we establish
 the new tree by duplicating all the local data. This includes the
 user data, too.
@@ -420,12 +380,13 @@ again. This time, we label it as new (dark green). While we still do not
 invoke any event, we now do send out data. This is the sole purpose of the
 new traversal.
 
-It is not guaranteed that the splits are all successful. See
-peano4::grid::SpacetreeHelper::isSpacetreeNodeSplitCandidate(), which identifies
-cells that can be split. Effectively, you might call split and not get any
-tree decomposition at all.
+A split can be rejected before registration if the tree cannot start another
+topology change or no tree id is available. In this case split() returns false
+and no decomposition is started. Once registered, the traversal has to satisfy
+the instruction; peano4::grid::SpacetreeHelper::isSpacetreeNodeSplitCandidate()
+defines which cells are eligible for that exact cut.
 
-With the information of the data flow above, any splits actually has to
+With the information of the data flow above, any split actually has to
 be realised over two grid sweeps which internally decompose into
 substeps:
 
@@ -470,7 +431,6 @@ substeps:
 
 @image html domain-decomposition/split-data-flow.png
 
-
 ## User data throughout splits
 
 There is no need for the user to implement something manually, as long
@@ -489,13 +449,10 @@ to invoke on the data.
 
 ## Observation and best practices
 
-As Peano preserves the logical topology between trees, it is reasonable to
-strive for as wide tree topologies as possible. Otherwise, your meshes
-(coarsening) are very constrained. That is, it is better to split a tree
-a into five parts a,b,c,d,e with b,c,d,e being children of a
-rather than splitting a into b,c and then b and c again.
-
-
+As Peano preserves the logical topology between trees, wide tree topologies
+leave more freedom for mesh coarsening. Splitting tree A into A, B, C, D, and E
+with four children constrains coarsening less than recursively splitting the
+children again.
 
 # Joins
 
@@ -503,7 +460,7 @@ Joins are completely hidden from the user, i.e. there's no way to
 actively join trees. To understand why Peano issues joins from time to
 time, it is important to define vetoed coarsening.
 
-Peano vetos any coarsening, if removing some parts of the grid would
+Peano vetoes any coarsening, if removing some parts of the grid would
 affect a child or alter the tree topology of the ranks. If a coarsening
 is vetoed, Peano remembers this veto. As soon as a rank whose master is
 affected by a veto hosts a tree cell which is unrefined, it joins/merges
@@ -516,12 +473,11 @@ coarsening, it joins those ranks that stop further coarsening into their
 master. Once this is complete, it continues to coarsen. This process can
 continue recursively.
 
-For this reason, the join of partitions in Peano follows a few mantraic
-principles:
+For this reason, partition joins follow these rules:
 
 1.  We only join partitions if they do not hold refined cells. We call
     such partitions deteriorated (in a tree sense). If a partition holds
-    a refined cell, it cannot be merged into its father.
+    a refined cell, it cannot be merged into its parent.
 
 2.  We hide joins from the user, i.e. a user can split up a partition
     and thus implement load balancing, but a user is never allowed to
@@ -531,7 +487,7 @@ principles:
     -   We join a deteriorated partition if the master resides on the
         same rank and if this master would like to coarsen its domain
         but can't do so as this coarsening would violate the tree
-        topology (see dicussion above).
+        topology (see discussion above).
 
     -   We join a deteriorated partition if the master resides on a
         different rank. The idea here is that such deteriorated
@@ -542,8 +498,8 @@ with their master as both master and worker work with their LET,
 i.e. try to coarsen their respective mesh as aggressively as possible
 after the split. Therefore, a master does not have all grid
 infrastructure of a worker available. It would require some complex
-zipping to bring the info of two trees together. If I realise a
-deteriorated-trees-only policy, I don't need such zipping as (almost)
+zipping to bring the info of two trees together. A
+deteriorated-trees-only policy does not need such zipping as (almost)
 all information is available on the master already.
 
 ## Temporal ordering throughout joins with SpacetreeSet
@@ -611,7 +567,7 @@ User data is streamed over the vertical exchange stacks, just like the grid data
 described above: there is no dedicated join channel, so we hijack the per-data
 vertical stacks and revert their order when we hand the data over to the master.
 
-The realisation of joins and splits in Peano is totally asymmetric: For a
+The realisation of joins and splits in Peano is asymmetric: For a
 split, all data of the splitting tree is replicated and then both the
 original tree and its new worker coarsen the partitions they are not
 responsible for. This process is realised through two additional
@@ -629,11 +585,9 @@ decompose one of the local spacetrees further through its split()
 routine.
 If you invoke its traverse() routine, it will automatically ensure that
 all spacetrees do the same, though the actual traversal of various trees
-(aka subdomains) will run in parallel on multiple threads.
-
+(the subdomains) will run in parallel on multiple threads.
 
 # Implementation
-
 
 ## Using replication information
 
@@ -647,38 +601,33 @@ For vertices, you can simply check whether a vertex sits on a parallel domain
 boundary. For this, peano4::datamanagement::VertexMarker provides you the routine
 peano4::datamanagement::VertexMarker::isAdjacentToParallelDomainBoundary().
 
-
 ## Distributed memory (MPI) realisation
 
 A typical Peano4 code distinguishes the global master (rank 0) from the
 workers (all other ranks). The global master hosts all the program
-logic, i.e. decides which steps to run in which order. There's no reason
-for you not to emancipate from this pattern, but it has proven of value.
-The main of a Peano 4 application therefore always looks similar to
+logic, i.e. decides which steps to run in which order. Applications may use
+another control pattern if required. A typical Peano 4 main routine follows
+this structure:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-if (tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
-  // All the program logic, i.e. all decisions here else
-}
-else {
-  // React to rank 0's decisions what to do next on all ranks
+if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+  runGlobalControlFlow();
+} else {
+  followGlobalControlFlow();
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Before we start, lets assume that each individual step (type of run
+Before we start, let us assume that each individual step (type of run
 through the mesh) has a unique positive number.
-
 
 Peano handles all (multiscale) boundary data transfer and data migration
 within the mesh.
 Everything not tied to the mesh is not handled by Peano.
-That means there's not even a reduction of the grid statistics over MPI.
-We do provide reduction and broadcast features however.
-If you need these global data, I recommend that you realise all reductions and
-broadcasts in your main rather than inside of the Peano mappers or other
-classes. See the discussion at @ref page_tarch_mpi.
-
-
+The core does not automatically reduce application or raw grid statistics over
+MPI. Components that require a global view perform an explicit reduction. The
+load balancing toolbox does this through toolbox::loadbalancing::Statistics.
+Applications can use the reduction and broadcast features described at
+@ref page_tarch_mpi, preferably from their main control flow.
 
 ## Shared memory between different trees (instances of action sets) and different action sets on one rank
 
@@ -690,23 +639,21 @@ namespace.
 Realising global variables shared between action sets is in principle
 impossible: Action sets are not persistent. They are created per
 traversal per tree. Furthermore, you have absolutely no knowledge how
-many trees any rank hosts. The only thing you know is that all trees
-will kind of start their traversal around the same time.
+many trees any rank hosts. The trees start their traversals around the same
+time, but no exact ordering is guaranteed.
 
 However, nothing stops you from having a singleton data or static
 data set somewhere and to let all action sets write into this one.
-You just have to ensure that you protected writes with semaphores.
+You have to protect writes with semaphores.
 
 <div style="background-color: #fcc ; padding: 10px; border: 1px solid green;">
   If a lot of action sets all hit the same static data concurrently,
-  you get a lot of lock overhead. In this case I recommend that
+  you get a lot of lock overhead. In this case we recommend that
   each data set creates its own local data and reduces all information
   from its tree there. In endTraversal(), you can then lock the static
   global data and commit your data there before the action set is
   destroyed.
 </div>
-
-
 
 ## Design patterns for (MPI) global variables between action sets
 
@@ -715,9 +662,8 @@ impossible:
 Action sets are not persistent.
 They are created per traversal per tree.
 Furthermore, you have absolutely no knowledge how many trees any rank hosts.
-The only thing you know is that all trees will kind of start their traversal
-around the same time.
-
+The trees start their traversals around the same time, but no exact ordering is
+guaranteed.
 
 However, there is a design pattern that you can use.
 It relies on the observations that (i) all the beginTraversal() events
@@ -737,13 +683,10 @@ are triggered after all the global trees have synchronised.
   prepareTraversal() or unprepareTraversal() for this.
 - Every action set copies the old data set into its local copy.
 
-
 <div style="background-color: #fcc ; padding: 10px; border: 1px solid green;">
   These MPI/thread-global barriers can be very expensive and have the potential
   to lead to deadlocks/timeouts. Use them with care and localise their
   behaviour.
 </div>
-
-
 
 */

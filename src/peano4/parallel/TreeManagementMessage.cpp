@@ -3,29 +3,40 @@
 #include "tarch/mpi/mpi.h"
 
 peano4::parallel::TreeManagementMessage::TreeManagementMessage(
-  int    __masterSpacetreeId,
-  int    __workerSpacetreeId,
-  Action __action
+  const int    masterSpacetreeId,
+  const int    workerSpacetreeId,
+  const Action action,
+  const int    numberOfSpacetrees
 ) {
-  setMasterSpacetreeId(__masterSpacetreeId);
-  setWorkerSpacetreeId(__workerSpacetreeId);
-  setAction(__action);
+  setMasterSpacetreeId(masterSpacetreeId);
+  setWorkerSpacetreeId(workerSpacetreeId);
+  setNumberOfSpacetrees(numberOfSpacetrees);
+  setAction(action);
 }
 
 std::string peano4::parallel::TreeManagementMessage::toString() const {
+  const char* actionName = "Unknown";
+  switch (_action) {
+  case Action::RequestNewRemoteTrees:
+    actionName = "RequestNewRemoteTrees";
+    break;
+  case Action::CreateNewRemoteTrees:
+    actionName = "CreateNewRemoteTrees";
+    break;
+  case Action::RemoveChildTreeFromBooksAsChildBecameEmpty:
+    actionName = "RemoveChildTreeFromBooksAsChildBecameEmpty";
+    break;
+  case Action::JoinWithWorker:
+    actionName = "JoinWithWorker";
+    break;
+  case Action::Acknowledgement:
+    actionName = "Acknowledgement";
+    break;
+  }
+
   std::ostringstream out;
-  out << "(";
-  out << "masterSpacetreeId=" << _masterSpacetreeId;
-  out << ",";
-  out << "workerSpacetreeId=" << _workerSpacetreeId;
-  out << ",";
-  out << "action=" << (_action == Action::RequestNewRemoteTree ? "RequestNewRemoteTree" : "")
-      << (_action == Action::CreateNewRemoteTree ? "CreateNewRemoteTree" : "")
-      << (_action == Action::RemoveChildTreeFromBooksAsChildBecameEmpty ? "RemoveChildTreeFromBooksAsChildBecameEmpty"
-                                                                        : "")
-      << (_action == Action::JoinWithWorker ? "JoinWithWorker" : "")
-      << (_action == Action::Acknowledgement ? "Acknowledgement" : "");
-  out << ")";
+  out << "(masterSpacetreeId=" << _masterSpacetreeId << ",workerSpacetreeId=" << _workerSpacetreeId
+      << ",numberOfSpacetrees=" << _numberOfSpacetrees << ",action=" << actionName << ")";
   return out.str();
 }
 
@@ -36,6 +47,10 @@ void peano4::parallel::TreeManagementMessage::setMasterSpacetreeId(int value) { 
 int peano4::parallel::TreeManagementMessage::getWorkerSpacetreeId() const { return _workerSpacetreeId; }
 
 void peano4::parallel::TreeManagementMessage::setWorkerSpacetreeId(int value) { _workerSpacetreeId = value; }
+
+int peano4::parallel::TreeManagementMessage::getNumberOfSpacetrees() const { return _numberOfSpacetrees; }
+
+void peano4::parallel::TreeManagementMessage::setNumberOfSpacetrees(int value) { _numberOfSpacetrees = value; }
 
 peano4::parallel::TreeManagementMessage::Action peano4::parallel::TreeManagementMessage::getAction() const {
   return _action;
@@ -101,12 +116,16 @@ void peano4::parallel::TreeManagementMessage::initDatatype() {
   NumberOfAttributes++;
   NumberOfAttributes++;
   NumberOfAttributes++;
+  NumberOfAttributes++;
 
   MPI_Datatype* subtypes = new MPI_Datatype[NumberOfAttributes];
   int*          blocklen = new int[NumberOfAttributes];
   MPI_Aint*     disp     = new MPI_Aint[NumberOfAttributes];
 
   int counter       = 0;
+  subtypes[counter] = MPI_INT;
+  blocklen[counter] = 1;
+  counter++;
   subtypes[counter] = MPI_INT;
   blocklen[counter] = 1;
   counter++;
@@ -126,6 +145,8 @@ void peano4::parallel::TreeManagementMessage::initDatatype() {
   MPI_Get_address(&(instances[0]._masterSpacetreeId), &disp[counter]);
   counter++;
   MPI_Get_address(&(instances[0]._workerSpacetreeId), &disp[counter]);
+  counter++;
+  MPI_Get_address(&(instances[0]._numberOfSpacetrees), &disp[counter]);
   counter++;
   MPI_Get_address(&(instances[0]._action), &disp[counter]);
   counter++;
@@ -218,9 +239,14 @@ void peano4::parallel::TreeManagementMessage::sendAndPollDanglingMessages(
   int                                            tag,
   MPI_Comm                                       communicator
 ) {
-  peano4::parallel::TreeManagementMessage::send(message, destination, tag, []() {}, [&]() {
-    tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-  }, communicator);
+  peano4::parallel::TreeManagementMessage::send(
+    message,
+    destination,
+    tag,
+    []() {},
+    [&]() { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); },
+    communicator
+  );
 }
 
 void peano4::parallel::TreeManagementMessage::receiveAndPollDanglingMessages(
@@ -229,8 +255,13 @@ void peano4::parallel::TreeManagementMessage::receiveAndPollDanglingMessages(
   int                                      tag,
   MPI_Comm                                 communicator
 ) {
-  peano4::parallel::TreeManagementMessage::receive(message, source, tag, []() {}, [&]() {
-    tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-  }, communicator);
+  peano4::parallel::TreeManagementMessage::receive(
+    message,
+    source,
+    tag,
+    []() {},
+    [&]() { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); },
+    communicator
+  );
 }
 #endif

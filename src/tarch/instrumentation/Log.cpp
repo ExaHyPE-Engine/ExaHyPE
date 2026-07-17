@@ -68,7 +68,11 @@ const tarch::instrumentation::Log::Configuration& tarch::instrumentation::Log::g
   return *_configuration.load(std::memory_order_acquire);
 }
 
-bool tarch::instrumentation::Log::isInfoOutputEnabled() { return isGlobalMasterRankOrMpiUninitialised(); }
+bool tarch::instrumentation::Log::isInfoOutputEnabled() {
+  return getConfiguration().infoOutputEnabled and isGlobalMasterRankOrMpiUninitialised();
+}
+
+bool tarch::instrumentation::Log::isWarningOutputEnabled() { return getConfiguration().warningOutputEnabled; }
 
 void tarch::instrumentation::Log::updateConfiguration(const std::function<void(Configuration&)>& update) {
   tarch::multicore::Lock lock(getConfigurationSemaphore());
@@ -531,6 +535,14 @@ void tarch::instrumentation::Log::setLogMessageType(bool value) {
 
 void tarch::instrumentation::Log::setLogScopeName(bool value) {
   updateConfiguration([&](Configuration& configuration) { configuration.logScopeName = value; });
+}
+
+void tarch::instrumentation::Log::setInfoOutputEnabled(bool value) {
+  updateConfiguration([&](Configuration& configuration) { configuration.infoOutputEnabled = value; });
+}
+
+void tarch::instrumentation::Log::setWarningOutputEnabled(bool value) {
+  updateConfiguration([&](Configuration& configuration) { configuration.warningOutputEnabled = value; });
 }
 
 void tarch::instrumentation::Log::setLogFormat(

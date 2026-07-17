@@ -2,25 +2,20 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "State.h"
 
-std::string toString(const toolbox::loadbalancing::State state) {
+std::ostream& operator<<(std::ostream& output, const toolbox::loadbalancing::State state) {
   switch (state) {
-  case toolbox::loadbalancing::State::InterRankDistribution:
-    return "InterRankDistribution";
-  case toolbox::loadbalancing::State::IntraRankDistribution:
-    return "IntraRankDistribution";
+  case toolbox::loadbalancing::State::InitialInterRankSplit:
+    return output << "InitialInterRankSplit";
+  case toolbox::loadbalancing::State::InitialIntraRankSplit:
+    return output << "InitialIntraRankSplit";
   case toolbox::loadbalancing::State::InterRankBalancing:
-    return "InterRankBalancing";
+    return output << "InterRankBalancing";
   case toolbox::loadbalancing::State::IntraRankBalancing:
-    return "IntraRankBalancing";
+    return output << "IntraRankBalancing";
   case toolbox::loadbalancing::State::Stagnation:
-    return "Stagnation";
+    return output << "Stagnation";
   case toolbox::loadbalancing::State::SwitchedOff:
-    return "SwitchedOff";
+    return output << "SwitchedOff";
   }
-  return "<undef>";
-}
-
-std::ostream& operator<<(std::ostream& out, const toolbox::loadbalancing::State state) {
-  out << toString(state);
-  return out;
+  return output << "Undefined";
 }

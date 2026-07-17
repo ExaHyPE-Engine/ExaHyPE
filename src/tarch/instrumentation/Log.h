@@ -21,8 +21,8 @@ namespace tarch::instrumentation {
 
 #define TARCH_LOGGING_FUNCTION_NAME std::string_view(__func__)
 
-#if defined(__GNUC__) or defined(__clang__) or defined(__NVCOMPILER) or defined(__PGI) or defined(__CUDACC__) or \
-  defined(__NVCC__)
+#if defined(__GNUC__) or defined(__clang__) or defined(__NVCOMPILER) or defined(__PGI) or defined(__CUDACC__) \
+  or defined(__NVCC__)
 #define TARCH_LOGGING_FUNCTION_SIGNATURE std::string_view(__PRETTY_FUNCTION__)
 #elif defined(_MSC_VER)
 #define TARCH_LOGGING_FUNCTION_SIGNATURE std::string_view(__FUNCSIG__)
@@ -50,6 +50,8 @@ private:
     bool                     logThreadName             = true;
     bool                     logMessageType            = true;
     bool                     logScopeName              = true;
+    bool                     infoOutputEnabled         = true;
+    bool                     warningOutputEnabled      = true;
     std::string              outputFileName            = "";
     bool                     debugFilterConfigured     = false;
     bool                     debugEnabledByDefault     = false;
@@ -138,12 +140,12 @@ private:
   static void closeTrace(bool useCollective);
 #endif
 
-  static std::chrono::steady_clock::time_point             _startupTime;
+  static std::chrono::steady_clock::time_point                    _startupTime;
   static const Configuration* const                               _defaultConfiguration;
   static std::vector<std::unique_ptr<const Configuration>>* const _configurationSnapshots;
   static std::atomic<const Configuration*>                        _configuration;
-  static std::once_flag                                    _debugFilterEnvironmentOnce;
-  static std::atomic<std::string::size_type>               _alignedMessagePrefixColumn;
+  static std::once_flag                                           _debugFilterEnvironmentOnce;
+  static std::atomic<std::string::size_type>                      _alignedMessagePrefixColumn;
 
 public:
   Log()                      = delete;
@@ -177,6 +179,7 @@ public:
   static void debugWithScopeName(std::string_view scopeName, std::string_view message);
   static void infoWithScopeName(std::string_view scopeName, std::string_view message);
   static bool isInfoOutputEnabled();
+  static bool isWarningOutputEnabled();
   static void warningWithScopeName(std::string_view scopeName, std::string_view message);
   static void errorWithScopeName(std::string_view scopeName, std::string_view message);
 
@@ -200,6 +203,8 @@ public:
   static void setLogThreadName(bool value = true);
   static void setLogMessageType(bool value = true);
   static void setLogScopeName(bool value = true);
+  static void setInfoOutputEnabled(bool value = true);
+  static void setWarningOutputEnabled(bool value = true);
 
   static void setLogFormat(
     const std::string& columnSeparator,
@@ -225,8 +230,8 @@ public:
   static void flushBeforeAssertion();
 };
 
-#include "Debug.h"
-#include "Error.h"
-#include "Info.h"
-#include "Trace.h"
-#include "Warning.h"
+#include "tarch/instrumentation/Debug.h"
+#include "tarch/instrumentation/Error.h"
+#include "tarch/instrumentation/Info.h"
+#include "tarch/instrumentation/Trace.h"
+#include "tarch/instrumentation/Warning.h"

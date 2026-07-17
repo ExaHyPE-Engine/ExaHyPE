@@ -6,8 +6,9 @@ namespace runner {
   struct RepositoryCallbacks;
   class ReportBox;
 
-  void writeGridSnapshot(ReportBox& box, const RepositoryCallbacks& repositories);
+  std::uint64_t boundedFullyRefinedLeaves(const int maximumLevel);
+  std::string   gridCellSummary(const std::uint64_t numberOfLeaves, const std::uint64_t numberOfRefinedCells);
 
-  /** Worst-case snapshot lines, so the box is sized to fit them (their values are only known later). */
+  void                     writeGridSnapshot(ReportBox& box, const RepositoryCallbacks& callbacks);
   std::vector<std::string> gridSnapshotWidthSamples();
 } // namespace runner

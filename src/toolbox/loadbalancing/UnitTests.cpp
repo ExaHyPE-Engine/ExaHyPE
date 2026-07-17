@@ -3,16 +3,18 @@
 #include "UnitTests.h"
 
 #include "tarch/tests/TreeTestCaseCollection.h"
-#include "tests/BlacklistTest.h"
-#include "tests/LoadBalancerTest.h"
-#include "tests/StatisticsTest.h"
+#include "toolbox/loadbalancing/tests/BlacklistTest.h"
+#include "toolbox/loadbalancing/tests/InitialSplitScenarioTest.h"
+#include "toolbox/loadbalancing/tests/LoadBalancerTest.h"
+#include "toolbox/loadbalancing/tests/StatisticsTest.h"
 
 tarch::tests::TestCase* toolbox::loadbalancing::getUnitTests() {
-  tarch::tests::TreeTestCaseCollection* result = new tarch::tests::TreeTestCaseCollection();
+  auto* const result = new tarch::tests::TreeTestCaseCollection();
 
-  result->addTestCase(new tests::BlacklistTest());
-  result->addTestCase(new tests::LoadBalancerTest());
-  result->addTestCase(new tests::StatisticsTest());
+  result->addTestCase(new toolbox::loadbalancing::tests::BlacklistTest());
+  result->addTestCase(new toolbox::loadbalancing::tests::InitialSplitScenarioTest());
+  result->addTestCase(new toolbox::loadbalancing::tests::LoadBalancerTest());
+  result->addTestCase(new toolbox::loadbalancing::tests::StatisticsTest());
 
   return result;
 }

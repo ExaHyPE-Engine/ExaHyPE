@@ -21,20 +21,23 @@ namespace peano4 {
 struct peano4::parallel::TreeManagementMessage {
 public:
   enum class Action : int {
-    RequestNewRemoteTree                       = 0,
-    CreateNewRemoteTree                        = 1,
+    RequestNewRemoteTrees                      = 0,
+    CreateNewRemoteTrees                       = 1,
     RemoveChildTreeFromBooksAsChildBecameEmpty = 2,
     JoinWithWorker                             = 3,
     Acknowledgement                            = 4
   };
 
-  TreeManagementMessage() {}
-  TreeManagementMessage(int __masterSpacetreeId, int __workerSpacetreeId, Action __action);
+  TreeManagementMessage() = default;
+  TreeManagementMessage(int masterSpacetreeId, int workerSpacetreeId, Action action, int numberOfSpacetrees = 1);
 
-  int                                             getMasterSpacetreeId() const;
-  void                                            setMasterSpacetreeId(int value);
-  int                                             getWorkerSpacetreeId() const;
-  void                                            setWorkerSpacetreeId(int value);
+  int  getMasterSpacetreeId() const;
+  void setMasterSpacetreeId(int value);
+  int  getWorkerSpacetreeId() const;
+  void setWorkerSpacetreeId(int value);
+  /** Number of workers covered by a batched reservation or creation message. */
+  int                                             getNumberOfSpacetrees() const;
+  void                                            setNumberOfSpacetrees(int value);
   peano4::parallel::TreeManagementMessage::Action getAction() const;
   void                                            setAction(Action value);
 
@@ -128,13 +131,14 @@ public:
   std::string toString() const;
 
 private:
-  int    _masterSpacetreeId;
-  int    _workerSpacetreeId;
-  Action _action;
+  int    _masterSpacetreeId  = -1;
+  int    _workerSpacetreeId  = -1;
+  int    _numberOfSpacetrees = 1;
+  Action _action             = Action::Acknowledgement;
 
 #ifdef PEANO_WITH_MPI
 private:
-  int                 _senderDestinationRank;
+  int                 _senderDestinationRank = -1;
   static MPI_Datatype Datatype;
 #endif
 };

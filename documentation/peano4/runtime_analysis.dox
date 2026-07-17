@@ -10,9 +10,10 @@ that inspect tree sizes, remote-cell counts, rank balance, and time spent in
 different phases of a run.
 
 For load-balancing analysis, dump the program output into a file and inspect the
-`toolbox::loadbalancing::LoadBalancer::getLocalLoadBalancing()` records. They
-report local and remote cell counts per tree, which is usually enough to identify
-overdecomposition or badly balanced subpartitions.
+Grid Snapshot table. Global Efficiency reports the global leaf-cell balance and
+the minimum and maximum leaf counts per tree. Global Overhead reports the global
+outer-cell ratio and the minimum and maximum outer-cell counts per tree. Together,
+these rows reveal underfilled and uneven trees.
 
 For ExaHyPE-specific timing and scaling scripts, see
 @ref page_exahype_runtime_analysis.

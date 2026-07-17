@@ -14,65 +14,49 @@
 #include "toolbox/loadbalancing/UnitTests.h"
 #include "toolbox/particles/UnitTests.h"
 
-int runTests() {
-  int                     unitTestsErrors = 0;
-  tarch::tests::TestCase* tests           = nullptr;
+namespace {
+  int runTests() {
+    int numberOfErrors = 0;
 
-  tests = tarch::getUnitTests();
-  tests->run();
-  unitTestsErrors += tests->getNumberOfErrors();
-  delete tests;
+    const auto runTestCollection = [&numberOfErrors](tarch::tests::TestCase* const testCollection) {
+      const std::unique_ptr<tarch::tests::TestCase> ownedTestCollection{testCollection};
+      ownedTestCollection->run();
+      numberOfErrors += ownedTestCollection->getNumberOfErrors();
+    };
 
-  tests = peano4::getUnitTests();
-  tests->run();
-  unitTestsErrors += tests->getNumberOfErrors();
-  delete tests;
+    runTestCollection(tarch::getUnitTests());
+    runTestCollection(peano4::getUnitTests());
+    runTestCollection(toolbox::blockstructured::getUnitTests());
+    runTestCollection(toolbox::loadbalancing::getUnitTests());
+    runTestCollection(toolbox::particles::getUnitTests());
+    runTestCollection(exahype2::getUnitTests());
+    runTestCollection(runner::getUnitTests());
 
-  tests = toolbox::blockstructured::getUnitTests();
-  tests->run();
-  unitTestsErrors += tests->getNumberOfErrors();
-  delete tests;
+    if (numberOfErrors != 0) {
+      logError("Unit tests failed: " << numberOfErrors << ".");
+      return EXIT_FAILURE;
+    }
 
-  tests = toolbox::loadbalancing::getUnitTests();
-  tests->run();
-  unitTestsErrors += tests->getNumberOfErrors();
-  delete tests;
-
-  tests = toolbox::particles::getUnitTests();
-  tests->run();
-  unitTestsErrors += tests->getNumberOfErrors();
-  delete tests;
-
-  tests = exahype2::getUnitTests();
-  tests->run();
-  unitTestsErrors += tests->getNumberOfErrors();
-  delete tests;
-
-  tests = runner::getUnitTests();
-  tests->run();
-  unitTestsErrors += tests->getNumberOfErrors();
-  delete tests;
-
-  if (unitTestsErrors != 0) {
-    logError(unitTestsErrors << " unit tests failed. Quit.");
-    return EXIT_FAILURE;
+    return EXIT_SUCCESS;
   }
-
-  return EXIT_SUCCESS;
-}
+} // namespace
 
 int main(int argc, char** argv) {
 #if DIMENSIONS == 2
-  const tarch::la::Vector<DIMENSIONS, double> DomainOffset = {0.0, 0.0};
-  const tarch::la::Vector<DIMENSIONS, double> DomainSize   = {1.0, 1.0};
+  const tarch::la::Vector<DIMENSIONS, double> domainOffset = {0.0, 0.0};
+  const tarch::la::Vector<DIMENSIONS, double> domainSize   = {1.0, 1.0};
 #else
-  const tarch::la::Vector<DIMENSIONS, double> DomainOffset = {0.0, 0.0, 0.0};
-  const tarch::la::Vector<DIMENSIONS, double> DomainSize   = {1.0, 1.0, 1.0};
+  const tarch::la::Vector<DIMENSIONS, double> domainOffset = {0.0, 0.0, 0.0};
+  const tarch::la::Vector<DIMENSIONS, double> domainSize   = {1.0, 1.0, 1.0};
 #endif
 
-  // No MPI timeout warning or abort here.
+  // Unit tests disable MPI timeout warnings and deadlock aborts.
   tarch::init(&argc, &argv, {0.0, 0.0, true});
-  peano4::init(DomainOffset, DomainSize);
+  // Several tests intentionally exercise warning paths. Keep the test runner
+  // silent on success while retaining errors and its non-zero failure status.
+  tarch::instrumentation::Log::setInfoOutputEnabled(false);
+  tarch::instrumentation::Log::setWarningOutputEnabled(false);
+  peano4::init(domainOffset, domainSize);
 
   int returnCode = EXIT_SUCCESS;
 
@@ -83,7 +67,7 @@ int main(int argc, char** argv) {
     {
 #endif
       {
-        tarch::FloatingPointExceptions::ScopedTrap scopedTrap(__FILE__, __LINE__);
+        const tarch::FloatingPointExceptions::ScopedTrap scopedTrap(__FILE__, __LINE__);
         returnCode = runTests();
       }
 

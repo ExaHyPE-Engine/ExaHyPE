@@ -16,20 +16,20 @@ class StaticRefinement(peano4.solversteps.ActionSet):
         return "StaticRefinement"
 
     def get_body_of_getGridControlEvents(self):
-        # targetH is the finest mesh size, derived from the full domain so it matches the
-        # requested grid level regardless of how large the refined region is.
+        # Deriving the target mesh size from the full domain keeps the requested
+        # grid level independent of the refined region.
         domain = "{" + ", ".join(str(value) for value in self.domain_size) + "}"
         offset = "{" + ", ".join(str(value) for value in self.refine_offset) + "}"
         width = "{" + ", ".join(str(value) for value in self.refine_width) + "}"
         target_h = "{" + ", ".join("targetH" for _ in self.refine_width) + "}"
         return f"""
-  const tarch::la::Vector<DIMENSIONS, double> domainSize = {domain};
-  const double targetH = ::runner::RuntimeParameters::getInstance().getMinAdmissiblePatchSize(domainSize);
+  const auto domainSize = tarch::la::Vector<DIMENSIONS, double>{domain};
+  const auto targetH = ::runner::RuntimeParameters::getInstance().getMinAdmissiblePatchSize(domainSize);
 
   ::peano4::grid::GridControlEvent newEvent;
   newEvent.setRefinementControl(::peano4::grid::GridControlEvent::RefinementControl::Refine);
-  newEvent.offset  = {offset};
-  newEvent.width   = {width};
+  newEvent.offset = {offset};
+  newEvent.width = {width};
   newEvent.targetH = {target_h};
   return {{newEvent}};
 """
@@ -39,7 +39,7 @@ class StaticRefinement(peano4.solversteps.ActionSet):
 
 
 project = peano4.Project(
-    ["tests", "peano4"],
+    ["benchmarks", "peano4"],
     "Spacetree",
     executable="Spacetree",
     dimensions=3,
@@ -49,10 +49,10 @@ project = peano4.Project(
     build_mode=peano4.output.CompileMode.Release,
 )
 
-d = project.dimensions
-domain_size = [1.0] * d
-refine_offset = [0.3] * d if STATIC_REFINEMENT else [0.0] * d
-refine_width = [0.4] * d if STATIC_REFINEMENT else [1.0] * d
+dimensions = project.dimensions
+domain_size = [1.0] * dimensions
+refine_offset = [0.3] * dimensions if STATIC_REFINEMENT else [0.0] * dimensions
+refine_width = [0.4] * dimensions if STATIC_REFINEMENT else [1.0] * dimensions
 
 project.create_grid.add_action_set(
     StaticRefinement(domain_size, refine_offset, refine_width)

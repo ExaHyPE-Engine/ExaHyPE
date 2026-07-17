@@ -41,11 +41,11 @@ private:
 
   void logRow(
     int           level,
-    int           maxLevel,
-    unsigned long leaves,
-    unsigned long outer,
-    unsigned long trees,
-    unsigned long minLoad,
-    unsigned long maxLoad
+    int           maximumLevel,
+    std::uint64_t numberOfLeaves,
+    std::uint64_t numberOfOuterCells,
+    unsigned long numberOfTrees,
+    unsigned long minimumTreeLoad,
+    unsigned long maximumTreeLoad
   );
 };

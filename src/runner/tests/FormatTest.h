@@ -4,21 +4,19 @@
 
 #include "tarch/tests/TestCase.h"
 
-namespace runner {
-  namespace tests {
-    class FormatTest;
-  }
-} // namespace runner
+namespace runner::tests {
+  class FormatTest;
+} // namespace runner::tests
 
 class runner::tests::FormatTest final : public tarch::tests::TestCase {
+public:
+  FormatTest();
+  void run() override;
+
 private:
   void testDurationPicksTwoMostSignificantUnits();
   void testDurationClampsAndStaysBounded();
   void testGroupedInsertsThousandSeparators();
   void testPercentageAndScientificAndRate();
   void testWallClockAndMemory();
-
-public:
-  FormatTest();
-  virtual void run() override;
 };

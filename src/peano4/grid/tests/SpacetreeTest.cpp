@@ -60,11 +60,12 @@ namespace {
     return out.str();
   }
 
-  peano4::grid::Spacetree createUnitTree(const std::bitset<DIMENSIONS>& periodicBC = std::bitset<DIMENSIONS>{}) {
+  peano4::grid::Spacetree
+  createUnitTree(const int treeId = 0, const std::bitset<DIMENSIONS>& periodicBC = std::bitset<DIMENSIONS>{}) {
 #if DIMENSIONS == 2
-    return peano4::grid::Spacetree(0, {0.0, 0.0}, {1.0, 1.0}, periodicBC);
+    return peano4::grid::Spacetree(treeId, {0.0, 0.0}, {1.0, 1.0}, periodicBC);
 #else
-    return peano4::grid::Spacetree(0, {0.0, 0.0, 0.0}, {1.0, 1.0, 1.0}, periodicBC);
+    return peano4::grid::Spacetree(treeId, {0.0, 0.0, 0.0}, {1.0, 1.0, 1.0}, periodicBC);
 #endif
   }
 
@@ -114,6 +115,93 @@ void peano4::grid::tests::SpacetreeTest::run() {
   testMethod(testGetNeighbourTreesFaceSendReceive);
   testMethod(testIsFaceAlongPeriodicBoundaryCondition);
   testMethod(testTraverseWithPeriodicBoundaryConditionsUsesStableVertexBoundaryFlags);
+  testMethod(testSplittingTreeCursorSkipsCompletedRequests);
+  testMethod(testSplittingTreeCursorResetsAcrossTraversal);
+  testMethod(testSplitModeNormalisationUsesLowestTreeIdMode);
+}
+
+void peano4::grid::tests::SpacetreeTest::testSplittingTreeCursorSkipsCompletedRequests() {
+  auto tree = createUnitTree();
+
+  constexpr int NumberOfCompletedRequests = 4096;
+  for (int requestIndex = 0; requestIndex < NumberOfCompletedRequests; requestIndex++) {
+    tree._splitTriggered.emplace(
+      requestIndex + 1,
+      peano4::grid::SplitInstruction{0, peano4::grid::SplitInstruction::Mode::BottomUp}
+    );
+  }
+  constexpr int PendingTreeId = NumberOfCompletedRequests + 1;
+  tree._splitTriggered.emplace(
+    PendingTreeId,
+    peano4::grid::SplitInstruction{2, peano4::grid::SplitInstruction::Mode::BottomUp}
+  );
+
+  tree.resetSplittingTreeCursor();
+  validateEquals(tree.getSplittingTree(), PendingTreeId);
+  validate(tree._nextSplitInstruction != tree._splitTriggered.end());
+  validateEquals(tree._nextSplitInstruction->first, PendingTreeId);
+
+  tree.updateSplittingCounter(PendingTreeId);
+  validateEquals(tree._splitTriggered.at(PendingTreeId).numberOfFineGridCells, 1);
+  validateEquals(tree.getSplittingTree(), PendingTreeId);
+
+  tree.updateSplittingCounter(PendingTreeId);
+  validateEquals(tree.getSplittingTree(), -1);
+  validate(tree._nextSplitInstruction == tree._splitTriggered.end());
+}
+
+void peano4::grid::tests::SpacetreeTest::testSplittingTreeCursorResetsAcrossTraversal() {
+  auto tree = createUnitTree();
+
+  CountingTraversalObserver initialTraversalObserver;
+  tree.traverse(initialTraversalObserver);
+
+  constexpr int WorkerTreeId = 7;
+  tree.split(WorkerTreeId, peano4::grid::SplitInstruction{1, peano4::grid::SplitInstruction::Mode::BottomUp});
+  tree._nextSplitInstruction = tree._splitTriggered.end();
+
+  CountingTraversalObserver splitTraversalObserver;
+  tree.traverse(splitTraversalObserver);
+
+  validate(tree._splitTriggered.empty());
+  validate(tree._nextSplitInstruction == tree._splitTriggered.end());
+  validate(tree._splitting.count(WorkerTreeId) == 1);
+}
+
+void peano4::grid::tests::SpacetreeTest::testSplitModeNormalisationUsesLowestTreeIdMode() {
+  auto higherIncomingIdTree                                    = createUnitTree();
+  higherIncomingIdTree._spacetreeState                         = peano4::grid::SpacetreeState::Running;
+  higherIncomingIdTree._statistics.numberOfLocalUnrefinedCells = 1;
+
+  constexpr int                        FirstExistingTreeId  = 20;
+  constexpr int                        SecondExistingTreeId = 30;
+  constexpr int                        HigherIncomingTreeId = 40;
+  constexpr int                        SameModeTreeId       = 50;
+  const peano4::grid::SplitInstruction bottomUpInstruction{1, peano4::grid::SplitInstruction::Mode::BottomUp};
+  const peano4::grid::SplitInstruction aggressiveInstruction{
+    1,
+    peano4::grid::SplitInstruction::Mode::AggressiveTopDown
+  };
+
+  higherIncomingIdTree.split(FirstExistingTreeId, bottomUpInstruction);
+  higherIncomingIdTree.split(SecondExistingTreeId, bottomUpInstruction);
+  higherIncomingIdTree.split(HigherIncomingTreeId, aggressiveInstruction);
+  higherIncomingIdTree.split(SameModeTreeId, bottomUpInstruction);
+  for (const auto& splitEntry : higherIncomingIdTree._splitTriggered) {
+    validate(splitEntry.second.mode == peano4::grid::SplitInstruction::Mode::BottomUp);
+  }
+
+  auto lowerIncomingIdTree                                    = createUnitTree();
+  lowerIncomingIdTree._spacetreeState                         = peano4::grid::SpacetreeState::Running;
+  lowerIncomingIdTree._statistics.numberOfLocalUnrefinedCells = 1;
+
+  constexpr int LowerIncomingTreeId = 10;
+  lowerIncomingIdTree.split(FirstExistingTreeId, bottomUpInstruction);
+  lowerIncomingIdTree.split(SecondExistingTreeId, bottomUpInstruction);
+  lowerIncomingIdTree.split(LowerIncomingTreeId, aggressiveInstruction);
+  for (const auto& splitEntry : lowerIncomingIdTree._splitTriggered) {
+    validate(splitEntry.second.mode == peano4::grid::SplitInstruction::Mode::AggressiveTopDown);
+  }
 }
 
 // Checks the coarse-grid restriction mapping from 3^D patch coordinates back to 2^D parent-cell coordinates.
@@ -214,8 +302,7 @@ void peano4::grid::tests::SpacetreeTest::testUpdateVertexRanksWithinCell() {
 // Verifies vertex neighbour discovery for send/receive, including filtering of splitting ranks and hanging vertices.
 void peano4::grid::tests::SpacetreeTest::testGetNeighbourTreesVertexSendReceive() {
 #if DIMENSIONS == 2
-  Spacetree tree(0, {0.0, 0.0}, {1.0, 1.0}, std::bitset<DIMENSIONS>{});
-  tree._id = 1;
+  Spacetree tree(1, {0.0, 0.0}, {1.0, 1.0}, std::bitset<DIMENSIONS>{});
 
   GridVertex v;
   v.setState(GridVertex::State::Unrefined);
@@ -278,8 +365,7 @@ void peano4::grid::tests::SpacetreeTest::testGetNeighbourTreesVertexSendReceive(
   validateEquals(recvHanging.size(), 0);
 #endif
 #if DIMENSIONS == 3
-  Spacetree tree(0, {0.0, 0.0, 0.0}, {1.0, 1.0, 1.0}, std::bitset<DIMENSIONS>{});
-  tree._id = 1;
+  Spacetree tree(1, {0.0, 0.0, 0.0}, {1.0, 1.0, 1.0}, std::bitset<DIMENSIONS>{});
 
   GridVertex v;
   v.setState(GridVertex::State::Unrefined);
@@ -353,8 +439,7 @@ void peano4::grid::tests::SpacetreeTest::testGetNeighbourTreesVertexSendReceive(
 // Verifies face neighbour discovery for send/receive, including suppression of invalid vertices and non-local faces.
 void peano4::grid::tests::SpacetreeTest::testGetNeighbourTreesFaceSendReceive() {
 #if DIMENSIONS == 2
-  Spacetree tree(0, {0.0, 0.0}, {1.0, 1.0}, std::bitset<DIMENSIONS>{});
-  tree._id = 1;
+  Spacetree tree(1, {0.0, 0.0}, {1.0, 1.0}, std::bitset<DIMENSIONS>{});
 
   GridVertex fineGridVertices[TWO_POWER_D];
   for (int v = 0; v < TWO_POWER_D; ++v) {
@@ -454,8 +539,7 @@ void peano4::grid::tests::SpacetreeTest::testGetNeighbourTreesFaceSendReceive() 
 // tree.
 void peano4::grid::tests::SpacetreeTest::testIsFaceAlongPeriodicBoundaryCondition() {
 #if DIMENSIONS == 2
-  Spacetree tree(0, {0.0, 0.0}, {1.0, 1.0}, std::bitset<DIMENSIONS>{});
-  tree._id = 1;
+  Spacetree tree(1, {0.0, 0.0}, {1.0, 1.0}, std::bitset<DIMENSIONS>{});
 
   GridVertex fineGridVertices[TWO_POWER_D];
   for (int v = 0; v < TWO_POWER_D; ++v) {
@@ -498,7 +582,7 @@ void peano4::grid::tests::SpacetreeTest::testTraverseWithPeriodicBoundaryConditi
   periodicBC.set(2); // z-direction
 #endif
 
-  Spacetree tree = createUnitTree(periodicBC);
+  Spacetree tree = createUnitTree(0, periodicBC);
 
   CountingTraversalObserver observer;
   tree.traverse(observer);
@@ -540,8 +624,7 @@ void peano4::grid::tests::SpacetreeTest::testIncrementNumberOfAdjacentRefinedLoc
 // Verifies the primitive horizontal-exchange predicate across mandatory exclusions, transition states, and tree states.
 void peano4::grid::tests::SpacetreeTest::testDoesRankIndexIdentifyHorizontalDataExchange() {
 #if DIMENSIONS == 2
-  Spacetree tree(0, {0.0, 0.0}, {1.0, 1.0}, std::bitset<DIMENSIONS>{});
-  tree._id             = 1;
+  Spacetree tree(1, {0.0, 0.0}, {1.0, 1.0}, std::bitset<DIMENSIONS>{});
   tree._spacetreeState = SpacetreeState::Running;
   tree._splitting.clear();
   tree._splitTriggered.clear();
@@ -698,10 +781,8 @@ void peano4::grid::tests::SpacetreeTest::testDoesRankIndexIdentifyHorizontalData
 // Verifies that matching synthetic topologies produce protocol-symmetric sender/receiver decisions for both vertices
 // and faces.
 void peano4::grid::tests::SpacetreeTest::testHorizontalExchangeSymmetry() {
-  Spacetree sender         = createUnitTree();
-  Spacetree receiver       = createUnitTree();
-  sender._id               = 1;
-  receiver._id             = 2;
+  Spacetree sender         = createUnitTree(1);
+  Spacetree receiver       = createUnitTree(2);
   sender._spacetreeState   = SpacetreeState::Running;
   receiver._spacetreeState = SpacetreeState::Running;
 
@@ -804,8 +885,7 @@ void peano4::grid::tests::SpacetreeTest::testHorizontalExchangeSymmetry() {
 
 // Verifies that the fast no-topology-change path matches the generic helper path when all transition sets are empty.
 void peano4::grid::tests::SpacetreeTest::testNoTopologyChangeParity() {
-  Spacetree tree       = createUnitTree();
-  tree._id             = 1;
+  Spacetree tree       = createUnitTree(1);
   tree._spacetreeState = SpacetreeState::Running;
   tree._splitTriggered.clear();
   tree._splitting.clear();
@@ -987,8 +1067,7 @@ void peano4::grid::tests::SpacetreeTest::testNoTopologyChangeParity() {
 // Verifies that permuting adjacency entries without changing the represented topology does not change vertex neighbour
 // results.
 void peano4::grid::tests::SpacetreeTest::testVertexNeighbourPermutationInvariance() {
-  Spacetree tree       = createUnitTree();
-  tree._id             = 1;
+  Spacetree tree       = createUnitTree(1);
   tree._spacetreeState = SpacetreeState::Running;
 
   GridVertex a;

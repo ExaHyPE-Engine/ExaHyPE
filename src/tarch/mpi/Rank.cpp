@@ -1,7 +1,10 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "Rank.h"
 
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/MemoryUsage.h"
+#include "tarch/Termination.h"
 #include "tarch/mpi/DoubleMessage.h"
 #include "tarch/mpi/IntegerMessage.h"
 #include "tarch/mpi/StringMessage.h"
@@ -92,13 +95,13 @@ void tarch::mpi::Rank::plotMessageQueues() {
 }
 
 bool tarch::mpi::Rank::exceededTimeOutWarningThreshold() const {
-  return _areTimeoutsEnabled and _timeOutWarning > std::chrono::seconds(0) and
-         std::chrono::system_clock::now() > _globalTimeOutWarning;
+  return _areTimeoutsEnabled and _timeOutWarning > std::chrono::seconds(0)
+    and std::chrono::system_clock::now() > _globalTimeOutWarning;
 }
 
 bool tarch::mpi::Rank::exceededDeadlockThreshold() const {
-  return _areTimeoutsEnabled and _deadlockTimeOut > std::chrono::seconds(0) and
-         std::chrono::system_clock::now() > _globalTimeOutDeadlock;
+  return _areTimeoutsEnabled and _deadlockTimeOut > std::chrono::seconds(0)
+    and std::chrono::system_clock::now() > _globalTimeOutDeadlock;
 }
 
 void tarch::mpi::Rank::triggerDeadlockTimeOut(
@@ -111,14 +114,11 @@ void tarch::mpi::Rank::triggerDeadlockTimeOut(
 ) {
   if (exceededDeadlockThreshold()) {
     std::ostringstream out;
-    out << "operation " << className << "::" << methodName << " on node " << getRank() << " had to wait more than "
+    out << "Operation " << className << "::" << methodName << " on node " << getRank() << " had to wait more than "
         << _deadlockTimeOut.count() << " seconds for " << numberOfExpectedMessages << " message(s) from node "
         << communicationPartnerRank << " with tag " << tag << ". Timeout. " << comment;
-    logError(out.str());
-
     plotMessageQueues();
-
-    abort(DEADLOCK_EXIT_CODE);
+    tarch::terminateWithError(out.str(), DEADLOCK_EXIT_CODE);
   }
 }
 
@@ -294,24 +294,24 @@ bool tarch::mpi::Rank::init([[maybe_unused]] int* argc, [[maybe_unused]] char***
 #endif
 
   if (result != MPI_SUCCESS) {
-    std::cerr << "init(int*,char***)\t Initialisation failed: " + MPIReturnValueToString(result) +
-                   " (no logging available yet)"
+    std::cerr << "init(int*,char***)\t Initialisation failed: " + MPIReturnValueToString(result)
+        + " (no logging available yet)"
               << std::endl;
     return false;
   }
 
   result = MPI_Comm_size(MPI_COMM_WORLD, &_numberOfProcessors);
   if (result != MPI_SUCCESS) {
-    std::cerr << "init(int*,char***)\t initialisation failed: " + MPIReturnValueToString(result) +
-                   " (no logging available yet)"
+    std::cerr << "init(int*,char***)\t initialisation failed: " + MPIReturnValueToString(result)
+        + " (no logging available yet)"
               << std::endl;
     return false;
   }
 
   result = MPI_Comm_rank(MPI_COMM_WORLD, &_rank);
   if (result != MPI_SUCCESS) {
-    std::cerr << "init(int*,char***)\t initialisation failed: " + MPIReturnValueToString(result) +
-                   " (no logging available yet)"
+    std::cerr << "init(int*,char***)\t initialisation failed: " + MPIReturnValueToString(result)
+        + " (no logging available yet)"
               << std::endl;
     return false;
   }

@@ -4,15 +4,15 @@
 
 #include "tarch/tests/TestCase.h"
 
-namespace peano4 {
-  namespace grid {
-    namespace tests {
-      class SpacetreeTest;
-    } // namespace tests
-  } // namespace grid
-} // namespace peano4
+namespace peano4::grid::tests {
+  class SpacetreeTest;
+} // namespace peano4::grid::tests
 
-class peano4::grid::tests::SpacetreeTest final: public tarch::tests::TestCase {
+class peano4::grid::tests::SpacetreeTest final : public tarch::tests::TestCase {
+public:
+  SpacetreeTest();
+  void run() override;
+
 private:
   void testRestrictToCoarseGrid();
   void testUpdateVertexRanksWithinCell();
@@ -26,10 +26,7 @@ private:
   void testNoTopologyChangeParity();
   void testVertexNeighbourPermutationInvariance();
   void testDescend();
-
-public:
-  SpacetreeTest();
-  ~SpacetreeTest() override final = default;
-
-  void run() override final;
+  void testSplittingTreeCursorSkipsCompletedRequests();
+  void testSplittingTreeCursorResetsAcrossTraversal();
+  void testSplitModeNormalisationUsesLowestTreeIdMode();
 };

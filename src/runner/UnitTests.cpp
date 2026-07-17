@@ -2,15 +2,19 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "UnitTests.h"
 
+#include "runner/tests/FormatTest.h"
+#include "runner/tests/GridSnapshotTest.h"
+#include "runner/tests/RuntimeParametersTest.h"
+#include "runner/tests/TableTest.h"
+#include "runner/tests/TextLayoutTest.h"
 #include "tarch/tests/TreeTestCaseCollection.h"
-#include "tests/FormatTest.h"
-#include "tests/TableTest.h"
-#include "tests/TextLayoutTest.h"
 
 tarch::tests::TestCase* runner::getUnitTests() {
-  tarch::tests::TreeTestCaseCollection* result = new tarch::tests::TreeTestCaseCollection();
-  result->addTestCase(new tests::FormatTest());
-  result->addTestCase(new tests::TableTest());
-  result->addTestCase(new tests::TextLayoutTest());
+  auto* const result = new tarch::tests::TreeTestCaseCollection();
+  result->addTestCase(new runner::tests::FormatTest());
+  result->addTestCase(new runner::tests::GridSnapshotTest());
+  result->addTestCase(new runner::tests::RuntimeParametersTest());
+  result->addTestCase(new runner::tests::TableTest());
+  result->addTestCase(new runner::tests::TextLayoutTest());
   return result;
 }

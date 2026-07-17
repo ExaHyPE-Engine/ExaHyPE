@@ -2,67 +2,88 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "Blacklist.h"
-#include "Configuration.h"
-#include "State.h"
-#include "Statistics.h"
+#include "toolbox/loadbalancing/Blacklist.h"
+#include "toolbox/loadbalancing/Configuration.h"
+#include "toolbox/loadbalancing/State.h"
+#include "toolbox/loadbalancing/Statistics.h"
 
 namespace toolbox::loadbalancing {
   class LoadBalancer;
-  namespace tests {
-    class LoadBalancerTest;
-  } // namespace tests
+  struct InitialSplitPlan;
 } // namespace toolbox::loadbalancing
+namespace toolbox::loadbalancing::tests {
+  class LoadBalancerTest;
+} // namespace toolbox::loadbalancing::tests
 
-class toolbox::loadbalancing::LoadBalancer {
-  friend class tests::LoadBalancerTest;
+class toolbox::loadbalancing::LoadBalancer final {
+  friend class toolbox::loadbalancing::tests::LoadBalancerTest;
 
 public:
-  LoadBalancer(Configuration* configuration = new DefaultConfiguration);
+  explicit LoadBalancer(
+    std::unique_ptr<toolbox::loadbalancing::Configuration> configuration =
+      std::make_unique<toolbox::loadbalancing::DefaultConfiguration>()
+  );
+  LoadBalancer(const LoadBalancer&)            = delete;
+  LoadBalancer(LoadBalancer&&)                 = delete;
+  LoadBalancer& operator=(const LoadBalancer&) = delete;
+  LoadBalancer& operator=(LoadBalancer&&)      = delete;
   ~LoadBalancer();
 
   void shutdown();
 
   void enable(bool value);
   void update();
+  void synchroniseGlobalView();
 
   bool isStagnating() const;
-  bool hasSplitRecently() const;
+  bool needsGridToStayStationary() const;
+
+  void notifyUniformGridComplete();
+  bool hasUniformGridCompleted() const;
 
   int getMaxPermittedTreesPerRank() const;
+  int getConfiguredNumberOfTrees() const;
 
-  const Statistics& getStatistics() const;
+  const toolbox::loadbalancing::Statistics& getStatistics() const;
 
-  static std::string getLocalLoadBalancing();
+  static std::string describeLocalDecomposition();
 
 private:
-  Configuration* _configuration;
-  Blacklist      _blacklist;
-  Statistics     _statistics;
-  State          _state;
+  const std::unique_ptr<toolbox::loadbalancing::Configuration> _configuration;
+  const int                                                    _initialTreesPerRank;
+  toolbox::loadbalancing::Blacklist                            _blacklist;
+  toolbox::loadbalancing::Statistics                           _statistics;
+  toolbox::loadbalancing::State                                _state;
 
   class Strategy {
   public:
-    virtual ~Strategy()                    = default;
-    virtual State update(LoadBalancer& lb) = 0;
+    Strategy()                           = default;
+    Strategy(const Strategy&)            = delete;
+    Strategy(Strategy&&)                 = delete;
+    Strategy& operator=(const Strategy&) = delete;
+    Strategy& operator=(Strategy&&)      = delete;
+    virtual ~Strategy()                  = default;
+
+    virtual toolbox::loadbalancing::State update(toolbox::loadbalancing::LoadBalancer& loadBalancer) = 0;
   };
 
-  class InterRankDistributionStrategy;
-  class IntraRankDistributionStrategy;
+  class InitialInterRankSplit;
+  class InitialIntraRankSplit;
 
   std::unique_ptr<Strategy> _strategy;
 
-  static std::unique_ptr<Strategy> makeInterRankDistributionStrategy();
-  static std::unique_ptr<Strategy> makeIntraRankDistributionStrategy();
+  static std::unique_ptr<Strategy> makeInitialInterRankSplit();
+  static std::unique_ptr<Strategy> makeInitialIntraRankSplit();
 
-  void setState(State state);
+  void setState(toolbox::loadbalancing::State state);
+  void updateBlacklist();
+  void updateStrategy();
 
-  /**
-   * Finds the local spacetree with the highest number of local unrefined cells
-   * that is currently not on the blacklist.
-   * @return Tree ID, or -1 if no suitable tree is found.
-   */
-  int getHeaviestNonBlacklistedLocalSpacetreeID() const;
+  int getHeaviestNonBlacklistedLocalSpacetreeId() const;
 
-  void triggerSplit(int numberOfCells, int targetRank, int sourceTree);
+  bool mayTriggerSplits() const;
+
+  int minPieceSizeForInitialSplits() const;
+
+  void triggerSplits(int sourceTreeId, const toolbox::loadbalancing::InitialSplitPlan& plan);
 };

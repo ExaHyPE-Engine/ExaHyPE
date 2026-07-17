@@ -4,6 +4,7 @@
 
 #include "runner/Engine.h"
 #include "runner/Format.h"
+#include "runner/GridSnapshot.h"
 #include "runner/LoadBalancer.h"
 #include "runner/PhaseNames.h"
 #include "runner/ReportBox.h"
@@ -28,9 +29,9 @@ namespace {
     return observerName;
   }
 
-  std::string seconds(double value) {
+  std::string seconds(const double value) {
     std::ostringstream result;
-    result << std::fixed << std::setprecision(4) << std::setw(12) << value << " s";
+    result << std::fixed << std::setprecision(2) << std::setw(12) << value << " s";
     return result.str();
   }
 } // namespace
@@ -39,6 +40,9 @@ runner::FinalSummary::FinalSummary(PhaseContext& context) :
   _context(context) {}
 
 void runner::FinalSummary::run() {
+  loadBalancer().synchroniseGlobalView();
+  writeGridSnapshot(_context.box, _context.repositories);
+
   const auto& measurements = _context.measurements;
 
   std::vector<std::pair<std::string, std::string>> entries;
@@ -64,10 +68,10 @@ void runner::FinalSummary::run() {
     }
   }
 
-  auto&       box        = _context.box;
-  std::size_t labelWidth = 0;
-  for (const auto& [label, value] : entries) {
-    labelWidth = std::max(labelWidth, label.size());
+  auto& box        = _context.box;
+  auto  labelWidth = std::size_t{0};
+  for (const auto& entry : entries) {
+    labelWidth = std::max(labelWidth, entry.first.size());
   }
 
   box.rule();

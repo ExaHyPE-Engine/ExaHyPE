@@ -6,7 +6,9 @@
 
 #define logWarning(logMacroMessageStream) \
   do { \
-    std::ostringstream conv; \
-    conv << logMacroMessageStream; \
-    tarch::instrumentation::Log::warningWithScopeName(TARCH_INSTRUMENTATION_SCOPE_NAME, conv.str()); \
+    if (tarch::instrumentation::Log::isWarningOutputEnabled()) { \
+      std::ostringstream conv; \
+      conv << logMacroMessageStream; \
+      tarch::instrumentation::Log::warningWithScopeName(TARCH_INSTRUMENTATION_SCOPE_NAME, conv.str()); \
+    } \
   } while (false)
