@@ -126,4 +126,3 @@ for (int it_1 = 0; it_1 < {{gemms.N}}; it_1++) {
 }
 {% endwith %}
 {% endmacro %}
-{#

@@ -13,7 +13,6 @@
 #include "peano4/parallel/TreeManagementMessage.h"
 #include "peano4/stacks/Stack.h"
 #include "tarch/instrumentation/Log.h"
-#include "tarch/instrumentation/Watch.h"
 #include "tarch/mpi/IntegerMessage.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/multicore/Task.h"
@@ -46,7 +45,31 @@ private:
   TreeManagementMessage _treeManagementReceiveBuffer;
   bool                  _treeManagementReceiveIsPosted;
 
+  struct PendingTreeIdResponse final {
+    std::vector<int> treeIds;
+    MPI_Request      sendRequest = MPI_REQUEST_NULL;
+  };
+
+  struct PendingTreeCreation final {
+    TreeManagementMessage        request;
+    std::vector<int>             treeIds;
+    peano4::grid::AutomatonState rootState;
+    MPI_Request                  treeIdsReceiveRequest   = MPI_REQUEST_NULL;
+    MPI_Request                  rootStateReceiveRequest = MPI_REQUEST_NULL;
+  };
+
+  struct PendingTreeManagementMessage final {
+    TreeManagementMessage message;
+    MPI_Request           sendRequest = MPI_REQUEST_NULL;
+  };
+
+  std::list<PendingTreeIdResponse>        _pendingTreeIdResponses;
+  std::list<PendingTreeCreation>          _pendingTreeCreations;
+  std::list<PendingTreeManagementMessage> _pendingTreeManagementMessages;
+
   void postTreeManagementReceive();
+  void progressPendingTreeManagement();
+  void sendTreeManagementAcknowledgement(const TreeManagementMessage& request);
 #endif
 
   stacks::Stack<grid::GridVertex>&  getLocalExchangeStack(int treeId, int localStackId);
@@ -155,6 +178,9 @@ private:
    */
   int _stateMessageTag;
 
+  /** Dedicated tag for variable-length batches of worker tree IDs. */
+  int _treeIdMessageTag;
+
   /**
    * These are the local spacetrees.
    */
@@ -225,7 +251,7 @@ private:
 
   void deleteClonedObservers();
 
-  void addSpacetree(int masterId, int newTreeId);
+  void addSpacetrees(int masterId, const std::vector<int>& newTreeIds);
 
   void cleanUpTrees(peano4::grid::GridTraversalObserver& observer);
 
@@ -240,6 +266,12 @@ private:
   SpacetreeSet& operator=(SpacetreeSet&&)      = delete;
 
 public:
+  /** One exact split instruction and the rank on which its worker will live. */
+  struct SplitRequest final {
+    peano4::grid::SplitInstruction instruction;
+    int                            targetRank;
+  };
+
   ~SpacetreeSet() override = default;
 
   static SpacetreeSet& getInstance();
@@ -263,8 +295,16 @@ public:
 
   peano4::grid::Spacetree&       getSpacetree(int id);
   const peano4::grid::Spacetree& getSpacetree(int id) const;
+  bool                           maySplit(int treeId) const;
 
+  /** Register one exact split. This convenience overload uses the batched implementation. */
   bool split(int treeId, const grid::SplitInstruction& instruction, int targetRank);
+
+  /**
+   * Register all exact splits together. Remote IDs are reserved once per target rank and requests are committed in
+   * input order. The method returns false without reserving an ID when the source tree cannot currently split.
+   */
+  bool split(int treeId, const std::vector<SplitRequest>& requests);
 
   bool isLocalSpacetree(int treeId) const;
 

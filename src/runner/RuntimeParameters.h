@@ -13,55 +13,8 @@ namespace runner {
 } // namespace runner
 
 class runner::RuntimeParameters final {
-private:
-  double _mpiTimeOutWarning;
-  double _mpiDeadlockTimeOut;
-  bool   _mpiDeadlockDetectionEnabled;
-  double _loadBalancingQuality;
-  int    _minSizeOfTree;
-  int    _maxNumberOfTreesPerRank;
-  int    _targetDevice;
-  bool   _verbose;
-
-  std::string _configFilePath;
-  double      _minTerminalTime;
-  double      _maxTerminalTime;
-  int         _numberOfTimeSteps;
-  double      _firstPlotTimeStamp;
-  int         _numberOfSnapshots;
-  std::string _outputPath;
-  bool        _outputPathConfigured;
-  std::string _projectName;
-  std::string _executableName;
-  double      _timeStepLogInterval;
-  int         _gridLevels;
-  int         _maxGridLevels;
-  bool        _gridLevelsConfigured;
-  bool        _maxGridLevelsConfigured;
-
-  // Parsed config file (null if none); shared with the application parser.
-  std::unique_ptr<tarch::reader::JSONReader> _configReader;
-
-  RuntimeParameters();
-
-  static std::string formatDefault(double value);
-  static std::string formatDefault(int value);
-  static std::string formatDefault(const std::string& value);
-  static std::string formatTerminalTime(double value);
-  static double      divideByThreePower(double value, int exponent);
-  static int         parseInteger(const std::string& value, const std::string& key);
-  static double      parseDouble(const std::string& value, const std::string& key);
-  static std::string normaliseOutputPath(const std::string& path);
-  static std::string consumeValue(int& index, int argc, char** argv, const std::string& argument);
-  void               normaliseGridLevels();
-  void               validateParameterRanges() const;
-
-  void extractConfigFileFromCommandLine(int argc, char** argv);
-  void readJsonConfiguration();
-  void applyCommandLineConfiguration(int& argc, char** argv);
-
 public:
-  // Defaulted in the .cpp so this header can forward-declare JSONReader.
+  // The out-of-line destructor permits JSONReader to remain forward-declared.
   ~RuntimeParameters();
   RuntimeParameters(const RuntimeParameters&)            = delete;
   RuntimeParameters(RuntimeParameters&&)                 = delete;
@@ -80,14 +33,12 @@ public:
   void configure(int& argc, char** argv);
   void printUsage(const std::string& executableName) const;
 
-  // Shared config reader (null if no config file).
-  tarch::reader::JSONReader* getConfigReader();
+  tarch::reader::JSONReader* getConfigReader() const;
 
-  double getMPITimeOutWarning() const;
-  double getMPIDeadlockTimeOut() const;
+  double getMPITimeoutWarning() const;
+  double getMPIDeadlockTimeout() const;
   bool   isMPIDeadlockDetectionEnabled() const;
   double getLoadBalancingQuality() const;
-  int    getMinSizeOfTree() const;
   int    getMaxNumberOfTreesPerRank() const;
   int    getTargetDevice() const;
 
@@ -113,4 +64,49 @@ public:
   getMaxAdmissibleCellSize(const tarch::la::Vector<DIMENSIONS, double>& domainSize, int cellsPerPatchPerAxis) const;
   double
   getMinAdmissibleCellSize(const tarch::la::Vector<DIMENSIONS, double>& domainSize, int cellsPerPatchPerAxis) const;
+
+private:
+  double _mpiTimeoutWarning;
+  double _mpiDeadlockTimeout;
+  bool   _mpiDeadlockDetectionEnabled;
+  double _loadBalancingQuality;
+  int    _maxNumberOfTreesPerRank;
+  int    _targetDevice;
+  bool   _verbose;
+
+  std::string _configFilePath;
+  double      _minTerminalTime;
+  double      _maxTerminalTime;
+  int         _numberOfTimeSteps;
+  double      _firstPlotTimeStamp;
+  int         _numberOfSnapshots;
+  std::string _outputPath;
+  bool        _outputPathConfigured;
+  std::string _projectName;
+  std::string _executableName;
+  double      _timeStepLogInterval;
+  int         _gridLevels;
+  int         _maxGridLevels;
+  bool        _gridLevelsConfigured;
+  bool        _maxGridLevelsConfigured;
+
+  std::unique_ptr<tarch::reader::JSONReader> _configReader;
+
+  RuntimeParameters();
+
+  static std::string formatDefault(double value);
+  static std::string formatDefault(int value);
+  static std::string formatDefault(const std::string& value);
+  static std::string formatTerminalTime(double value);
+  static double      divideByThreePower(double value, int exponent);
+  static int         parseInteger(const std::string& value, const std::string& key);
+  static double      parseDouble(const std::string& value, const std::string& key);
+  static std::string normaliseOutputPath(const std::string& path);
+  static std::string consumeValue(int& index, int argc, char** argv, const std::string& argument);
+  void               normaliseGridLevels();
+  void               validateParameterRanges() const;
+
+  void extractConfigFileFromCommandLine(int argc, char** argv);
+  void readJsonConfiguration();
+  void applyCommandLineConfiguration(int& argc, char** argv);
 };

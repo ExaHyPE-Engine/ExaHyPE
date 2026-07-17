@@ -6,13 +6,15 @@ file(GLOB_RECURSE HEADERS ${HEADER_EXTENSIONS_TO_GLOB})
 set(SOURCES
   Blacklist.cpp
   Configuration.cpp
-  InterRankDistributionStrategy.cpp
-  IntraRankDistributionStrategy.cpp
+  InitialInterRankSplit.cpp
+  InitialIntraRankSplit.cpp
+  InitialSplitPlan.cpp
   LoadBalancer.cpp
   State.cpp
   Statistics.cpp
   UnitTests.cpp
   tests/BlacklistTest.cpp
+  tests/InitialSplitScenarioTest.cpp
   tests/LoadBalancerTest.cpp
   tests/StatisticsTest.cpp
 )

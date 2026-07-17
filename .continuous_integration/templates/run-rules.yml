@@ -1,17 +1,13 @@
-.RunOnDev:
+.RunOnAnyBranch:
   rules:
-    # Push pipelines on any muc/* branch
+    # GitLab stores the source branch in a different variable for each pipeline entry point.
     - if: '$CI_COMMIT_BRANCH =~ /^muc\//'
-    # MR pipelines where the SOURCE branch is muc/*
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /^muc\//'
-    # Child pipeline triggered from an MR where the SOURCE is muc/*
     - if: '$CI_PIPELINE_SOURCE == "parent_pipeline" && $UPSTREAM_MR_SOURCE_BRANCH =~ /^muc\//'
 
-.RunOnlyOnMain:
+.RunOnlyOnMainBranch:
   rules:
-    # Push pipelines only on the exact main branch
+    # Full validation follows merge requests through child pipelines regardless of their target branch.
     - if: '$CI_COMMIT_BRANCH == "muc/exahype"'
-    # MR pipelines for any target branch
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-    # Child pipeline triggered from any MR
     - if: '$CI_PIPELINE_SOURCE == "parent_pipeline" && $UPSTREAM_PIPELINE_SOURCE == "merge_request_event"'

@@ -7,6 +7,13 @@ namespace runner {
     static std::string scientific(double value);
     static std::string memory(unsigned long long bytes);
     static std::string percentage(double value);
+
+    /** Keep ordinary overheads readable and switch large values to width-bounded scientific notation. */
+    static std::string overheadPercentage(double value);
+
+    /** Widest representation overheadPercentage() can produce for a non-negative double. */
+    static std::string overheadPercentageWidthSample();
+
     static std::string wallClock(double seconds);
     static std::string rate(double value, const char* unit);
     static std::string grouped(unsigned long value);

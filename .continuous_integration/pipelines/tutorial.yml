@@ -6,7 +6,7 @@ Acoustic:
   extends:
     - .Tags
     - .Variables
-    - .RunOnlyOnMain
+    - .RunOnlyOnMainBranch
     - .BeforeScriptSanitiser
   needs:
     - job: Build
@@ -19,7 +19,7 @@ SWE:
   extends:
     - .Tags
     - .Variables
-    - .RunOnlyOnMain
+    - .RunOnlyOnMainBranch
     - .BeforeScriptSanitiser
   needs:
     - job: Build
@@ -32,7 +32,7 @@ Euler:
   extends:
     - .Tags
     - .Variables
-    - .RunOnlyOnMain
+    - .RunOnlyOnMainBranch
     - .BeforeScriptSanitiser
   needs:
     - job: Build
@@ -45,7 +45,7 @@ Limiting:
   extends:
     - .Tags
     - .Variables
-    - .RunOnlyOnMain
+    - .RunOnlyOnMainBranch
     - .BeforeScriptSanitiser
   needs:
     - job: Build
@@ -58,7 +58,7 @@ Elastic:
   extends:
     - .Tags
     - .Variables
-    - .RunOnlyOnMain
+    - .RunOnlyOnMainBranch
     - .BeforeScriptSanitiser
   needs:
     - job: Build

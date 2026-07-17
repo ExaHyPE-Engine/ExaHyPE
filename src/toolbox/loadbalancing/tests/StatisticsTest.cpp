@@ -11,210 +11,221 @@ toolbox::loadbalancing::tests::StatisticsTest::StatisticsTest() :
   tarch::tests::TestCase("toolbox::loadbalancing::tests::StatisticsTest") {}
 
 void toolbox::loadbalancing::tests::StatisticsTest::run() {
-  testMethod(testPackedReductionMatchesSimpleMPI);
-  testMethod(testStateUpdatesWithoutSplitCounter);
+  testMethod(testLocalSnapshotMatchesSpacetreeSet);
+  testMethod(testHasAdaptiveMesh);
+  testMethod(testControlledPackedReduction);
+  testMethod(testWidePackedReduction);
+  testMethod(testDelayedCollectiveParticipant);
 }
 
-void toolbox::loadbalancing::tests::StatisticsTest::testPackedReductionMatchesSimpleMPI() {
-  toolbox::loadbalancing::Statistics stats;
+void toolbox::loadbalancing::tests::StatisticsTest::testLocalSnapshotMatchesSpacetreeSet() {
+  toolbox::loadbalancing::Statistics statistics;
+  statistics.updateGlobalView();
 
-  // First call: updates local fields and (with MPI>1 rank) launches the non-blocking global
-  // exchange. The reduced global view lags one sweep, so it is only published by the second call
-  // (issued below for >1 rank).
-  stats.updateGlobalView();
+  const auto& gridStatistics = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics();
+  const auto& localTreeIds   = peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees();
 
-  // Sanity: local view should match the SpacetreeSet's local snapshot
-  const auto& gridStats = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics();
-  const auto& trees     = peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees();
-
-  validateEquals(stats.getLocalNumberOfInnerUnrefinedCells(), gridStats.numberOfLocalUnrefinedCells);
-  validateEquals(stats.getLocalNumberOfOuterUnrefinedCells(), gridStats.numberOfRemoteUnrefinedCells);
-  validateEquals(stats.getLocalNumberOfVertices(), gridStats.numberOfVertices);
-  validateEquals(stats.getLocalNumberOfHangingVertices(), gridStats.numberOfHangingVertices);
-  validateEquals(stats.getLocalNumberOfTrees(), static_cast<int>(trees.size()));
-  validateEquals(stats.getLocalMinDepth(), gridStats.minDepth);
-  validateEquals(stats.getLocalMaxDepth(), gridStats.maxDepth);
-  validateEquals(stats.getLocalNumberOfStationarySweeps(), gridStats.numberOfStationarySweeps);
-
-  // Capture the local values from this first snapshot.
-  const int           locInner  = stats.getLocalNumberOfInnerUnrefinedCells();
-  const int           locOuter  = stats.getLocalNumberOfOuterUnrefinedCells();
-  const int           locVerts  = stats.getLocalNumberOfVertices();
-  const int           locHang   = stats.getLocalNumberOfHangingVertices();
-  const int           locTrees  = stats.getLocalNumberOfTrees();
-  const int           locMinD   = stats.getLocalMinDepth();
-  const int           locMaxD   = stats.getLocalMaxDepth();
-  const int           locSweeps = stats.getLocalNumberOfStationarySweeps();
-  const double        locMinH   = stats.getLocalMinH();
-  const std::uint64_t locMem    = static_cast<std::uint64_t>(stats.getLocalMemoryUsageInBytes());
-  const std::uint64_t locRss    = static_cast<std::uint64_t>(stats.getLocalProcessMemoryUsageInBytes());
-
-  const int locHasTree = (locTrees > 0) ? 1 : 0;
-
-  // Recompute the local min/max tree load with the same semantics as
-  // Statistics::updateGlobalView().
-  int locMinLoadPacked  = std::numeric_limits<int>::max();
-  int locMaxLoad        = 0;
-  int locMinDepthPacked = std::numeric_limits<int>::max();
-  if (trees.empty()) {
-    locMinLoadPacked  = std::numeric_limits<int>::max();
-    locMaxLoad        = 0;
-    locMinDepthPacked = std::numeric_limits<int>::max();
-  } else {
-    int localMin = std::numeric_limits<int>::max();
-    int localMax = 0;
-    for (int t : trees) {
-      const int load = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(t).numberOfLocalUnrefinedCells;
-      localMin       = std::min(localMin, load);
-      localMax       = std::max(localMax, load);
-    }
-    locMinLoadPacked  = localMin;
-    locMaxLoad        = localMax;
-    locMinDepthPacked = locMinD;
+  std::uint64_t expectedInnerUnrefinedCells = 0;
+  std::uint64_t expectedInnerRefinedCells   = 0;
+  std::uint64_t expectedOuterUnrefinedCells = 0;
+  std::uint64_t expectedVertices            = 0;
+  std::uint64_t expectedHangingVertices     = 0;
+  std::uint64_t expectedMemoryUsageInBytes  = 0;
+  for (const auto treeId : localTreeIds) {
+    const auto& treeStatistics = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(treeId);
+    expectedInnerUnrefinedCells += static_cast<std::uint64_t>(treeStatistics.numberOfLocalUnrefinedCells);
+    expectedInnerRefinedCells += static_cast<std::uint64_t>(treeStatistics.numberOfLocalRefinedCells);
+    expectedOuterUnrefinedCells += static_cast<std::uint64_t>(treeStatistics.numberOfRemoteUnrefinedCells);
+    expectedVertices += static_cast<std::uint64_t>(treeStatistics.numberOfVertices);
+    expectedHangingVertices += static_cast<std::uint64_t>(treeStatistics.numberOfHangingVertices);
+    expectedMemoryUsageInBytes += static_cast<std::uint64_t>(treeStatistics.getMemoryUsageInBytes());
   }
 
-  const auto validateLocalEqualsGlobal = [&]() {
-    validateEquals(stats.getGlobalNumberOfInnerUnrefinedCells(), locInner);
-    validateEquals(stats.getGlobalNumberOfOuterUnrefinedCells(), locOuter);
-    validateEquals(stats.getGlobalNumberOfVertices(), locVerts);
-    validateEquals(stats.getGlobalNumberOfHangingVertices(), locHang);
-    validateEquals(stats.getGlobalNumberOfTrees(), locTrees);
-    validateEquals(stats.getGlobalNumberOfRanksWithAtLeastOneTree(), locHasTree);
-
-    validateEquals(static_cast<std::uint64_t>(stats.getGlobalMemoryUsageInBytes()), locMem);
-    validateEquals(static_cast<std::uint64_t>(stats.getGlobalProcessMemoryUsageInBytes()), locRss);
-
-    if (locHasTree) {
-      validateEquals(stats.getGlobalMinTreeLoad(), locMinLoadPacked);
-      validateEquals(stats.getGlobalMinDepth(), locMinDepthPacked);
-    }
-    validateEquals(stats.getGlobalMaxTreeLoad(), locMaxLoad);
-    validateEquals(stats.getGlobalMaxDepth(), locMaxD);
-    validateNumericalEquals(stats.getGlobalMinH(), locMinH);
-    validateEquals(stats.getGlobalNumberOfStationarySweeps(), locSweeps);
-  };
-
-#ifdef PEANO_WITH_MPI
-  // Second call: completes the non-blocking exchange launched above and publishes the reduced
-  // global view (the first call only published the local view because the reduction lags one
-  // sweep).
-  if (tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1) {
-    stats.updateGlobalView();
-  }
-#endif
-
-#ifdef PEANO_WITH_MPI
-  int mpiInitialised = 0;
-  MPI_Initialized(&mpiInitialised);
-  if (mpiInitialised and tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1) {
-    MPI_Comm comm = tarch::mpi::Rank::getInstance().getCommunicator();
-
-    // SUM fields
-    int expInner = 0, expOuter = 0, expVerts = 0, expHang = 0, expTrees = 0;
-    tarch::mpi::allreduce(&locInner, &expInner, 1, MPI_INT, MPI_SUM, comm);
-    tarch::mpi::allreduce(&locOuter, &expOuter, 1, MPI_INT, MPI_SUM, comm);
-    tarch::mpi::allreduce(&locVerts, &expVerts, 1, MPI_INT, MPI_SUM, comm);
-    tarch::mpi::allreduce(&locHang, &expHang, 1, MPI_INT, MPI_SUM, comm);
-    tarch::mpi::allreduce(&locTrees, &expTrees, 1, MPI_INT, MPI_SUM, comm);
-
-    validateEquals(stats.getGlobalNumberOfInnerUnrefinedCells(), expInner);
-    validateEquals(stats.getGlobalNumberOfOuterUnrefinedCells(), expOuter);
-    validateEquals(stats.getGlobalNumberOfVertices(), expVerts);
-    validateEquals(stats.getGlobalNumberOfHangingVertices(), expHang);
-    validateEquals(stats.getGlobalNumberOfTrees(), expTrees);
-
-    // Ranks with at least one tree (SUM over 0/1)
-    int expRanksWithTrees = 0;
-    tarch::mpi::allreduce(&locHasTree, &expRanksWithTrees, 1, MPI_INT, MPI_SUM, comm);
-    validateEquals(stats.getGlobalNumberOfRanksWithAtLeastOneTree(), expRanksWithTrees);
-
-    // Memory (SUM)
-    std::uint64_t expMem = 0;
-    tarch::mpi::allreduce(&locMem, &expMem, 1, MPI_UINT64_T, MPI_SUM, comm);
-    validateEquals(static_cast<std::uint64_t>(stats.getGlobalMemoryUsageInBytes()), expMem);
-
-    std::uint64_t expRss = 0;
-    tarch::mpi::allreduce(&locRss, &expRss, 1, MPI_UINT64_T, MPI_SUM, comm);
-    validateEquals(static_cast<std::uint64_t>(stats.getGlobalProcessMemoryUsageInBytes()), expRss);
-
-    // Depth (MIN/MAX). For MIN, empty ranks contribute +inf.
-    int expMinDepth = 0, expMaxDepth = 0;
-    tarch::mpi::allreduce(&locMinDepthPacked, &expMinDepth, 1, MPI_INT, MPI_MIN, comm);
-    tarch::mpi::allreduce(&locMaxD, &expMaxDepth, 1, MPI_INT, MPI_MAX, comm);
-
-    if (expRanksWithTrees > 0) {
-      validateEquals(stats.getGlobalMinDepth(), expMinDepth);
-    }
-    validateEquals(stats.getGlobalMaxDepth(), expMaxDepth);
-
-    // MinH (MIN)
-    double expMinH = 0.0;
-    tarch::mpi::allreduce(&locMinH, &expMinH, 1, MPI_DOUBLE, MPI_MIN, comm);
-    validateNumericalEquals(stats.getGlobalMinH(), expMinH);
-
-    // Stationary sweeps (MIN)
-    int expSweeps = 0;
-    tarch::mpi::allreduce(&locSweeps, &expSweeps, 1, MPI_INT, MPI_MIN, comm);
-    validateEquals(stats.getGlobalNumberOfStationarySweeps(), expSweeps);
-
-    // Tree load (MIN/MAX). Empty ranks contribute +inf to MIN.
-    int expMinLoad = 0, expMaxLoad = 0;
-    tarch::mpi::allreduce(&locMinLoadPacked, &expMinLoad, 1, MPI_INT, MPI_MIN, comm);
-    tarch::mpi::allreduce(&locMaxLoad, &expMaxLoad, 1, MPI_INT, MPI_MAX, comm);
-
-    if (expRanksWithTrees > 0) {
-      validateEquals(stats.getGlobalMinTreeLoad(), expMinLoad);
-    }
-    validateEquals(stats.getGlobalMaxTreeLoad(), expMaxLoad);
-
-    // The owner rank for the max load is not deterministic under ties; validate only basic
-    // properties.
-    const int ranks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
-    const int owner = stats.getGlobalRankWithMaxTreeLoad();
-    validate(owner >= 0);
-    validate(owner < ranks);
-
-    std::vector<int> gatheredMaxLoads(ranks, 0);
-    tarch::mpi::allgather(&locMaxLoad, 1, MPI_INT, gatheredMaxLoads.data(), 1, MPI_INT, comm);
-    validateEquals(gatheredMaxLoads[owner], expMaxLoad);
-
-    // Basic invariant (independent of view-consistency heuristics)
-    validate(stats.getGlobalNumberOfInnerUnrefinedCells() >= stats.getLocalNumberOfInnerUnrefinedCells());
-  } else {
-    validateLocalEqualsGlobal();
-  }
-#else
-  validateLocalEqualsGlobal();
-#endif
+  validateEquals(statistics.getLocalNumberOfInnerUnrefinedCells(), expectedInnerUnrefinedCells);
+  validateEquals(statistics.getLocalNumberOfInnerRefinedCells(), expectedInnerRefinedCells);
+  validateEquals(statistics.getGlobalNumberOfInnerRefinedCells(), expectedInnerRefinedCells);
+  validateEquals(statistics.getLocalNumberOfOuterUnrefinedCells(), expectedOuterUnrefinedCells);
+  validateEquals(statistics.getLocalNumberOfVertices(), expectedVertices);
+  validateEquals(statistics.getLocalNumberOfHangingVertices(), expectedHangingVertices);
+  validateEquals(statistics.getLocalMemoryUsageInBytes(), expectedMemoryUsageInBytes);
+  validateEquals(statistics.getLocalNumberOfTrees(), static_cast<int>(localTreeIds.size()));
+  validateEquals(statistics.getLocalMinDepth(), gridStatistics.minDepth);
+  validateEquals(statistics.getLocalMaxDepth(), gridStatistics.maxDepth);
+  validateEquals(statistics.getLocalNumberOfStationarySweeps(), gridStatistics.numberOfStationarySweeps);
 }
 
-void toolbox::loadbalancing::tests::StatisticsTest::testStateUpdatesWithoutSplitCounter() {
-  toolbox::loadbalancing::Statistics stats;
+void toolbox::loadbalancing::tests::StatisticsTest::testHasAdaptiveMesh() {
+  toolbox::loadbalancing::Statistics statistics;
 
-  validateEquals(stats.getNumberOfStateUpdatesWithoutAnySplit(), 0);
+  validate(not statistics.hasAdaptiveMesh());
 
-  stats.updateGlobalView();
-  validateEquals(stats.getNumberOfStateUpdatesWithoutAnySplit(), 1);
+  statistics._globalNumberOfInnerUnrefinedCells = std::uint64_t{81};
+  statistics._globalMinDepth                    = 2;
+  statistics._globalMaxDepth                    = 2;
+  validate(not statistics.hasAdaptiveMesh());
 
-  stats.updateGlobalView();
-  validateEquals(stats.getNumberOfStateUpdatesWithoutAnySplit(), 2);
+  statistics._globalMaxDepth = 3;
+  validate(statistics.hasAdaptiveMesh());
 
-  // A (local) split should reset the counter immediately.
-  stats.incLocalNumberOfSplits(1);
-  validateEquals(stats.getNumberOfStateUpdatesWithoutAnySplit(), 0);
+  statistics._globalNumberOfInnerUnrefinedCells = 0;
+  validate(not statistics.hasAdaptiveMesh());
+}
 
-  // The update that carries the split must not increment the counter.
-  stats.updateGlobalView();
-  validateEquals(stats.getNumberOfStateUpdatesWithoutAnySplit(), 0);
+void toolbox::loadbalancing::tests::StatisticsTest::testControlledPackedReduction() {
+  toolbox::loadbalancing::Statistics statistics;
+  statistics.updateGlobalView();
 
-  // After enough updates without splits, the counter must start increasing again.
-  stats.updateGlobalView();
 #ifdef PEANO_WITH_MPI
-  if (tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1 and stats.getNumberOfStateUpdatesWithoutAnySplit() == 0) {
-    // With the non-blocking exchange the lagged split still shows up in the global snapshot for one
-    // extra iteration, resetting the counter once more; one more update lets it climb again.
-    stats.updateGlobalView();
+  int mpiIsInitialised = 0;
+  MPI_Initialized(&mpiIsInitialised);
+  const auto numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
+  if (mpiIsInitialised and numberOfRanks > 1) {
+    const auto rankNumber = tarch::mpi::Rank::getInstance().getRank();
+    const auto rankValue  = rankNumber + 1;
+
+    statistics._localNumberOfInnerUnrefinedCells = rankValue;
+    statistics._localNumberOfInnerRefinedCells   = 5 * rankValue;
+    statistics._localNumberOfOuterUnrefinedCells = 2 * rankValue;
+    statistics._localNumberOfVertices            = 3 * rankValue;
+    statistics._localNumberOfHangingVertices     = 4 * rankValue;
+    statistics._localNumberOfTrees               = 1;
+    statistics._localNumberOfSplits              = rankValue;
+    statistics._localMinTreeLoad                 = 10 + rankNumber;
+    statistics._localMaxTreeLoad                 = 42;
+    statistics._localMinTreeOuterLoad            = 20 + rankNumber;
+    statistics._localMaxTreeOuterLoad            = 30 + rankNumber;
+    statistics._localMinDepth                    = 2 + rankNumber;
+    statistics._localMaxDepth                    = 3 + rankNumber;
+    statistics._localMinH                        = 1.0 / rankValue;
+    statistics._localNumberOfStationarySweeps    = rankNumber == numberOfRanks - 1 ? -3 : rankNumber + 2;
+    statistics._localUniformGridComplete         = rankNumber == numberOfRanks - 1;
+    statistics._localMemoryUsageInBytes          = 100 + rankNumber;
+    statistics._localProcessMemoryUsageInBytes   = 200 + rankNumber;
+    statistics._localTotalMemoryInBytes          = 1000 + rankNumber;
+    statistics._localFreeMemoryInBytes           = 500 + rankNumber;
+
+    statistics.startGlobalViewExchange();
+    statistics.synchroniseGlobalView();
+
+    const auto rankValueSum       = numberOfRanks * (numberOfRanks + 1) / 2;
+    const auto globalRankValueSum = static_cast<std::uint64_t>(rankValueSum);
+    const auto rankOffsetSum =
+      static_cast<std::uint64_t>(numberOfRanks) * static_cast<std::uint64_t>(numberOfRanks - 1) / 2;
+    validateEquals(statistics.getGlobalNumberOfInnerUnrefinedCells(), globalRankValueSum);
+    validateEquals(statistics.getGlobalNumberOfInnerRefinedCells(), 5 * globalRankValueSum);
+    validateEquals(statistics.getGlobalNumberOfOuterUnrefinedCells(), 2 * globalRankValueSum);
+    validateEquals(statistics.getGlobalNumberOfVertices(), 3 * globalRankValueSum);
+    validateEquals(statistics.getGlobalNumberOfHangingVertices(), 4 * globalRankValueSum);
+    validateEquals(statistics.getGlobalNumberOfSplits(), rankValueSum);
+    validateEquals(statistics.getGlobalNumberOfTrees(), numberOfRanks);
+    validateEquals(statistics.getGlobalNumberOfRanksWithAtLeastOneTree(), numberOfRanks);
+    validateEquals(statistics.getGlobalMinTreeLoad(), 10);
+    validateEquals(statistics.getGlobalMaxTreeLoad(), 42);
+    validateEquals(statistics.getGlobalRankWithMaxTreeLoad(), 0);
+    validateEquals(statistics.getGlobalMinTreeOuterLoad(), 20);
+    validateEquals(statistics.getGlobalMaxTreeOuterLoad(), 30 + numberOfRanks - 1);
+    validateEquals(statistics.getGlobalMinRankLoad(), 1);
+    validateEquals(statistics.getGlobalMaxRankLoad(), static_cast<std::uint64_t>(numberOfRanks));
+    validateEquals(
+      statistics.getGlobalMemoryUsageInBytes(),
+      static_cast<std::uint64_t>(100 * numberOfRanks) + rankOffsetSum
+    );
+    validateEquals(
+      statistics.getGlobalProcessMemoryUsageInBytes(),
+      static_cast<std::uint64_t>(200 * numberOfRanks) + rankOffsetSum
+    );
+    validateEquals(statistics.getGlobalMinDepth(), 2);
+    validateEquals(statistics.getGlobalMaxDepth(), numberOfRanks + 2);
+    validateNumericalEquals(statistics.getGlobalMinH(), 1.0 / numberOfRanks);
+    validateEquals(statistics.getGlobalNumberOfStationarySweeps(), -3);
+    validate(statistics.hasGlobalUniformGridCompleted());
+
+    const auto    isNodeMaster        = tarch::mpi::Rank::getInstance().isNodeMaster();
+    const auto    localTotalMemory    = isNodeMaster ? static_cast<std::uint64_t>(1000 + rankNumber) : std::uint64_t{0};
+    const auto    localFreeMemory     = isNodeMaster ? static_cast<std::uint64_t>(500 + rankNumber) : std::uint64_t{0};
+    std::uint64_t expectedTotalMemory = 0;
+    std::uint64_t expectedFreeMemory  = 0;
+    const auto    communicator        = tarch::mpi::Rank::getInstance().getCommunicator();
+    tarch::mpi::allreduce(&localTotalMemory, &expectedTotalMemory, 1, MPI_UINT64_T, MPI_SUM, communicator);
+    tarch::mpi::allreduce(&localFreeMemory, &expectedFreeMemory, 1, MPI_UINT64_T, MPI_SUM, communicator);
+    validateEquals(statistics.getGlobalTotalMemoryInBytes(), expectedTotalMemory);
+    validateEquals(statistics.getGlobalFreeMemoryInBytes(), expectedFreeMemory);
+
+    return;
   }
 #endif
-  validate(stats.getNumberOfStateUpdatesWithoutAnySplit() >= 1);
+
+  statistics._localNumberOfSplits = 3;
+  statistics.startGlobalViewExchange();
+  statistics.synchroniseGlobalView();
+  validateEquals(statistics.getGlobalNumberOfSplits(), 3);
+}
+
+void toolbox::loadbalancing::tests::StatisticsTest::testWidePackedReduction() {
+  toolbox::loadbalancing::Statistics statistics;
+  statistics.updateGlobalView();
+
+  constexpr auto LargeLocalCount               = static_cast<std::uint64_t>(std::numeric_limits<int>::max()) + 128;
+  statistics._localNumberOfInnerUnrefinedCells = LargeLocalCount;
+  statistics._localNumberOfInnerRefinedCells   = LargeLocalCount;
+  statistics._localNumberOfOuterUnrefinedCells = LargeLocalCount;
+  statistics._localNumberOfVertices            = LargeLocalCount;
+  statistics._localNumberOfHangingVertices     = LargeLocalCount;
+
+  validateEquals(statistics.getLocalNumberOfInnerUnrefinedCells(), LargeLocalCount);
+  validateEquals(statistics.getLocalNumberOfInnerRefinedCells(), LargeLocalCount);
+  validateEquals(statistics.getLocalNumberOfOuterUnrefinedCells(), LargeLocalCount);
+  validateEquals(statistics.getLocalNumberOfVertices(), LargeLocalCount);
+  validateEquals(statistics.getLocalNumberOfHangingVertices(), LargeLocalCount);
+
+  const auto numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
+  if (numberOfRanks <= 1) {
+    return;
+  }
+
+  statistics.startGlobalViewExchange();
+  statistics.synchroniseGlobalView();
+
+  const auto expectedGlobalCount = LargeLocalCount * static_cast<std::uint64_t>(numberOfRanks);
+  validate(expectedGlobalCount > static_cast<std::uint64_t>(std::numeric_limits<int>::max()));
+  validateEquals(statistics.getGlobalNumberOfInnerUnrefinedCells(), expectedGlobalCount);
+  validateEquals(statistics.getGlobalNumberOfInnerRefinedCells(), expectedGlobalCount);
+  validateEquals(statistics.getGlobalNumberOfOuterUnrefinedCells(), expectedGlobalCount);
+  validateEquals(statistics.getGlobalNumberOfVertices(), expectedGlobalCount);
+  validateEquals(statistics.getGlobalNumberOfHangingVertices(), expectedGlobalCount);
+  validateEquals(statistics.getGlobalMinRankLoad(), LargeLocalCount);
+  validateEquals(statistics.getGlobalMaxRankLoad(), LargeLocalCount);
+}
+
+void toolbox::loadbalancing::tests::StatisticsTest::testDelayedCollectiveParticipant() {
+  toolbox::loadbalancing::Statistics statistics;
+  statistics.updateGlobalView();
+
+#ifdef PEANO_WITH_MPI
+  int mpiIsInitialised = 0;
+  MPI_Initialized(&mpiIsInitialised);
+  const auto numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
+  if (mpiIsInitialised and numberOfRanks > 1) {
+    constexpr auto ParticipantDelay = std::chrono::milliseconds(50);
+    const auto     rankNumber       = tarch::mpi::Rank::getInstance().getRank();
+    const auto     communicator     = tarch::mpi::Rank::getInstance().getCommunicator();
+
+    tarch::mpi::barrier(communicator);
+    if (rankNumber == numberOfRanks - 1) {
+      std::this_thread::sleep_for(ParticipantDelay);
+    }
+
+    statistics._localNumberOfSplits = rankNumber + 1;
+    statistics.startGlobalViewExchange();
+    statistics.synchroniseGlobalView();
+
+    validateEquals(statistics.getGlobalNumberOfSplits(), numberOfRanks * (numberOfRanks + 1) / 2);
+    return;
+  }
+#endif
+
+  statistics._localNumberOfSplits = 1;
+  statistics.startGlobalViewExchange();
+  statistics.synchroniseGlobalView();
+  validateEquals(statistics.getGlobalNumberOfSplits(), 1);
 }

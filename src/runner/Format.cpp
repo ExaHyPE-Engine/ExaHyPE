@@ -6,7 +6,8 @@
 
 namespace {
   // Durations of at least this many days render as ">Nd" so the formatted width stays bounded.
-  constexpr int MaxDurationDays = 999;
+  constexpr int    MaxDurationDays                = 999;
+  constexpr double MaximumFixedOverheadPercentage = 99999.99;
 } // namespace
 
 std::string runner::Format::scientific(double value) {
@@ -27,6 +28,21 @@ std::string runner::Format::percentage(double value) {
   std::ostringstream result;
   result << std::fixed << std::setprecision(2) << value << " %";
   return result.str();
+}
+
+std::string runner::Format::overheadPercentage(const double value) {
+  std::ostringstream result;
+  if (value > MaximumFixedOverheadPercentage) {
+    result << std::scientific;
+  } else {
+    result << std::fixed;
+  }
+  result << std::setprecision(2) << value << " %";
+  return result.str();
+}
+
+std::string runner::Format::overheadPercentageWidthSample() {
+  return overheadPercentage(std::numeric_limits<double>::max());
 }
 
 std::string runner::Format::wallClock(double seconds) {

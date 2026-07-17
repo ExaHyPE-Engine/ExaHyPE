@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "MemoryBlocks.h"
 
-#include "tarch/instrumentation/Log.h"
+#include "tarch/Termination.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/Lock.h"
 
@@ -22,8 +22,8 @@ void tarch::accelerator::MemoryBlocks::checkForMemoryLeaks() {
 
   if (not _memoryBlockTable.empty()) {
     logWarning(
-      "Detected "
-      << _memoryBlockTable.size() << " memory leaks on rank " << tarch::mpi::Rank::getInstance().getRank() << "!"
+      "Detected " << _memoryBlockTable.size() << " memory leaks on rank " << tarch::mpi::Rank::getInstance().getRank()
+                  << "!"
     );
   } else {
     logInfo("Did not detect any memory leaks on rank " << tarch::mpi::Rank::getInstance().getRank());
@@ -51,8 +51,7 @@ void tarch::accelerator::MemoryBlocks::removeMemoryBlock(void* memoryBlock) {
   multicore::Lock lock(_memoryBlockSemaphore);
   auto            itr = _memoryBlockTable.find(memoryBlock);
   if (itr == _memoryBlockTable.end()) {
-    logError("Attempt to remove invalid memory block. Perhaps it has been removed before? Abort");
-    std::abort();
+    tarch::terminateWithError("Attempt to remove an invalid memory block. It may have been removed already.");
   }
   logDebug("Remove memory block @" << memoryBlock);
   _memoryBlockTable.erase(itr);

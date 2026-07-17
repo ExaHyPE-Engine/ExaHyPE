@@ -2,8 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "mpi.h"
 
-#include "tarch/instrumentation/Error.h"
-#include "tarch/instrumentation/Log.h"
+#include "tarch/Termination.h"
 #include "tarch/instrumentation/Warning.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/services/ServiceRepository.h"
@@ -26,8 +25,8 @@ namespace {
 
   bool useTimeoutChecks() {
     auto& rank = tarch::mpi::Rank::getInstance();
-    return rank.isInitialised() and rank.areTimeoutsEnabled() and
-           (rank.getTimeOutWarning() > std::chrono::seconds(0) or rank.getDeadlockTimeOut() > std::chrono::seconds(0));
+    return rank.isInitialised() and rank.areTimeoutsEnabled()
+      and (rank.getTimeOutWarning() > std::chrono::seconds(0) or rank.getDeadlockTimeOut() > std::chrono::seconds(0));
   }
 
   bool useDetailedDeadlockDetection() {
@@ -49,8 +48,9 @@ namespace {
       return;
     }
 
-    logError(operation << " failed at " << toString(location) << ": " << tarch::mpi::MPIReturnValueToString(result));
-    tarch::mpi::Rank::abort(result);
+    std::ostringstream message;
+    message << operation << " failed at " << toString(location) << ": " << tarch::mpi::MPIReturnValueToString(result);
+    tarch::terminateWithError(message.str(), result, location);
   }
 
   void registerPendingRequest(
@@ -121,15 +121,15 @@ namespace {
       entry.nextWarningAt = now + rank.getTimeOutWarning();
     }
 
-    if (rank.getDeadlockTimeOut() > std::chrono::seconds(0) and
-        now - entry.waitStartedAt >= rank.getDeadlockTimeOut()) {
-      logError(
-        waitOperation << " at " << toString(waitLocation) << " deadlocked on request from " << entry.originOperation
-                      << " posted at " << toString(entry.originLocation) << " (partner=" << entry.communicationPartner
-                      << ", tag=" << entry.tag << ") after " << rank.getDeadlockTimeOut().count() << " second(s)"
-      );
+    if (rank.getDeadlockTimeOut() > std::chrono::seconds(0)
+        and now - entry.waitStartedAt >= rank.getDeadlockTimeOut()) {
+      std::ostringstream message;
+      message << waitOperation << " at " << toString(waitLocation) << " deadlocked on request from "
+              << entry.originOperation << " posted at " << toString(entry.originLocation)
+              << " (partner=" << entry.communicationPartner << ", tag=" << entry.tag << ") after "
+              << rank.getDeadlockTimeOut().count() << " second(s)";
       rank.plotMessageQueues();
-      tarch::mpi::Rank::abort(tarch::mpi::Rank::DEADLOCK_EXIT_CODE);
+      tarch::terminateWithError(message.str(), tarch::mpi::Rank::DEADLOCK_EXIT_CODE, waitLocation);
     }
 
     return true;
@@ -160,12 +160,11 @@ namespace {
     }
 
     if (rank.getDeadlockTimeOut() > std::chrono::seconds(0) and now - startedWaiting >= rank.getDeadlockTimeOut()) {
-      logError(
-        operation << " at " << toString(location) << " deadlocked while waiting for MPI request after "
-                  << rank.getDeadlockTimeOut().count() << " second(s)"
-      );
+      std::ostringstream message;
+      message << operation << " at " << toString(location) << " deadlocked while waiting for MPI request after "
+              << rank.getDeadlockTimeOut().count() << " second(s)";
       rank.plotMessageQueues();
-      tarch::mpi::Rank::abort(tarch::mpi::Rank::DEADLOCK_EXIT_CODE);
+      tarch::terminateWithError(message.str(), tarch::mpi::Rank::DEADLOCK_EXIT_CODE, location);
     }
   }
 
@@ -199,12 +198,12 @@ namespace {
     }
 
     if (rank.getDeadlockTimeOut() > std::chrono::seconds(0) and now - startedWaiting >= rank.getDeadlockTimeOut()) {
-      logError(
-        operation << " at " << toString(location) << " deadlocked while waiting for partner=" << communicationPartner
-                  << " and tag=" << tag << " after " << rank.getDeadlockTimeOut().count() << " second(s)"
-      );
+      std::ostringstream message;
+      message << operation << " at " << toString(location)
+              << " deadlocked while waiting for partner=" << communicationPartner << " and tag=" << tag << " after "
+              << rank.getDeadlockTimeOut().count() << " second(s)";
       rank.plotMessageQueues();
-      tarch::mpi::Rank::abort(tarch::mpi::Rank::DEADLOCK_EXIT_CODE);
+      tarch::terminateWithError(message.str(), tarch::mpi::Rank::DEADLOCK_EXIT_CODE, location);
     }
   }
 
@@ -684,7 +683,17 @@ int tarch::mpi::alltoall(
   std::source_location location
 ) {
   MPI_Request request = MPI_REQUEST_NULL;
-  ialltoall(sendBuffer, sendCount, sendDatatype, receiveBuffer, receiveCount, receiveDatatype, communicator, &request, location);
+  ialltoall(
+    sendBuffer,
+    sendCount,
+    sendDatatype,
+    receiveBuffer,
+    receiveCount,
+    receiveDatatype,
+    communicator,
+    &request,
+    location
+  );
   return wait(&request, MPI_STATUS_IGNORE, location);
 }
 

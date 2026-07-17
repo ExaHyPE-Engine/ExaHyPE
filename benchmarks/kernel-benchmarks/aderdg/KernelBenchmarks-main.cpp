@@ -505,8 +505,8 @@ int main(int argc, char** argv) {
   tarch::init(
     &argc,
     &argv,
-    {runtimeParameters.getMPITimeOutWarning(),
-     runtimeParameters.getMPIDeadlockTimeOut(),
+    {runtimeParameters.getMPITimeoutWarning(),
+     runtimeParameters.getMPIDeadlockTimeout(),
      runtimeParameters.isMPIDeadlockDetectionEnabled()}
   );
   runtimeParameters.configure(argc, argv);

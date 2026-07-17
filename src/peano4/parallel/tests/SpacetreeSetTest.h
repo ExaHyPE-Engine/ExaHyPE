@@ -9,12 +9,13 @@ namespace peano4::parallel::tests {
 } // namespace peano4::parallel::tests
 
 class peano4::parallel::tests::SpacetreeSetTest final : public tarch::tests::TestCase {
+public:
+  SpacetreeSetTest();
+  void run() override;
+
 private:
-  /**
-   * Aggregated outcome of one scenario over all trees of its family (the
-   * scenario's root tree plus every worker split off it).
-   */
-  struct ScenarioResult {
+  /** Aggregates one scenario over its root and every descendant tree. */
+  struct ScenarioResult final {
     int              trees          = 0;
     int              unrefinedCells = 0;
     int              refinedCells   = 0;
@@ -25,16 +26,15 @@ private:
     bool             splitsSucceeded   = true;
   };
 
-  ScenarioResult runScenario(bool periodic, int targetTrees, bool refineCorner, bool eraseCornerAgain);
+  ScenarioResult runScenario(bool periodic, int targetTrees, bool refineCorner, bool eraseCornerAgain) const;
 
   void testRegularGridLoadBalancingMatchesNonPeriodicRun();
   void testCornerRefinementMirrorsAcrossPeriodicBoundaries();
   void testMultiTreePeriodicGridMatchesSingleTree();
   void testEraseAtPeriodicBoundaryRestoresRegularGrid();
-
-public:
-  SpacetreeSetTest();
-  ~SpacetreeSetTest() override = default;
-
-  void run() override;
+  void testWorkerCopiesRequestedMasterState();
+  void testRemoteSplitReservesIdsAsOneBatch();
+  void testDistributedSplitLifecycle();
+  void testCleanupRemovesConsecutiveTrees();
+  void testAggregateStatisticsIncludesSettlingTrees();
 };

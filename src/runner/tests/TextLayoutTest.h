@@ -4,20 +4,18 @@
 
 #include "tarch/tests/TestCase.h"
 
-namespace runner {
-  namespace tests {
-    class TextLayoutTest;
-  }
-} // namespace runner
+namespace runner::tests {
+  class TextLayoutTest;
+} // namespace runner::tests
 
 class runner::tests::TextLayoutTest final : public tarch::tests::TestCase {
+public:
+  TextLayoutTest();
+  void run() override;
+
 private:
   void testDisplayWidthCountsCodePoints();
   void testTruncateKeepsGlyphsWhole();
   void testPadToWidthReachesTargetWidth();
   void testFitToWidthIsExact();
-
-public:
-  TextLayoutTest();
-  virtual void run() override;
 };

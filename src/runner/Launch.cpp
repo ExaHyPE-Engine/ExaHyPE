@@ -6,22 +6,26 @@
 #include "runner/LoadBalancer.h"
 #include "runner/RuntimeParameters.h"
 #include "tarch/Init.h"
+#include "tarch/Termination.h"
 #include "tarch/instrumentation/Log.h"
 #include "tarch/mpi/Rank.h"
+#include "tarch/mpi/mpi.h"
 #include "tarch/reader/JSONReader.h"
 
-namespace {
-  bool helpRequested(int argc, char** argv) {
-    for (int index = 1; index < argc; ++index) {
-      const std::string argument = argv[index];
-      if (argument == "--help" or argument == "-h") {
-        return true;
-      }
+static bool helpRequested(int argc, char* const* argv) {
+  for (int index = 1; index < argc; ++index) {
+    const auto argument = std::string(argv[index]);
+    if (argument == "--help" or argument == "-h") {
+      return true;
     }
-    return false;
   }
-} // namespace
+  return false;
+}
 
+/**
+ * Parses merged runtime configuration, initialises tarch, Peano, the load
+ * balancer, and the data repository, runs the engine, and shuts them down.
+ */
 int runner::launch(
   const tarch::la::Vector<DIMENSIONS, double>& domainOffset,
   const tarch::la::Vector<DIMENSIONS, double>& domainSize,
@@ -41,17 +45,17 @@ int runner::launch(
     return EXIT_SUCCESS;
   }
 
-  // Validate all config before tarch::init, so a typo aborts before MPI starts.
+  // Configuration errors must stop the process before MPI starts.
   parameters.configure(argc, argv);
 
-  // Framework and application share one reader; a key neither parser reads is a typo.
+  // Shared usage tracking identifies keys that neither parser consumes.
   const auto configReader         = parameters.getConfigReader();
   const auto applicationParserRan = static_cast<bool>(callbacks.loadApplicationParameters);
   if (applicationParserRan) {
     callbacks.loadApplicationParameters(configReader, argc, argv);
   }
 
-  // Skip the check without the app parser, else its keys look like typos.
+  // Application keys remain unused without an application parser and cannot be classified as errors.
   if (configReader != nullptr and applicationParserRan) {
     const auto unrecognisedKeys = configReader->getUnusedKeys();
     if (not unrecognisedKeys.empty()) {
@@ -61,13 +65,13 @@ int runner::launch(
         joined += key;
       }
       throw std::runtime_error(
-        "Unrecognised key(s) in configuration file \"" + parameters.getConfigFilePath() + "\": " + joined +
-        ". Run with --help to list the available runtime options."
+        "Unrecognised key(s) in configuration file \"" + parameters.getConfigFilePath() + "\": " + joined
+        + ". Run with --help to list the available runtime options."
       );
     }
   }
 
-  // Each parser leaves args it does not know in argv; what remains is unknown.
+  // Each parser retains arguments for the next parser, so remaining arguments are unknown.
   if (argc > 1) {
     std::string unrecognised;
     for (int index = 1; index < argc; ++index) {
@@ -77,23 +81,13 @@ int runner::launch(
       unrecognised += argv[index];
     }
     throw std::runtime_error(
-      "Unrecognised command-line argument(s): " + unrecognised +
-      ". Run with --help to list the available runtime "
-      "options."
+      "Unrecognised command-line argument(s): " + unrecognised
+      + ". Run with --help to list the available runtime options."
     );
   }
 
-  const auto      outputDirectory = parameters.getOutputPath();
-  std::error_code outputDirectoryError;
-  std::filesystem::create_directories(outputDirectory, outputDirectoryError);
-  const auto outputGitignore = std::filesystem::path(outputDirectory) / ".gitignore";
-  if (not std::filesystem::exists(outputGitignore)) {
-    std::ofstream(outputGitignore) << "*\n";
-  }
-  tarch::instrumentation::Log::setOutputFile(outputDirectory + parameters.getExecutableName() + ".log");
-
-  // Configure the log-line prefix from the verbose flag before anything can log.
-  const bool verbose = parameters.isVerbose();
+  // Configure the prefix before tarch initialisation can emit log messages.
+  const auto verbose = parameters.isVerbose();
   tarch::instrumentation::Log::setLogTimeStamp(verbose);
   tarch::instrumentation::Log::setLogTimeStampHumanReadable(true);
   tarch::instrumentation::Log::setLogThreadName(verbose);
@@ -103,10 +97,41 @@ int runner::launch(
   tarch::init(
     &argc,
     &argv,
-    {parameters.getMPITimeOutWarning(), parameters.getMPIDeadlockTimeOut(), parameters.isMPIDeadlockDetectionEnabled()}
+    {parameters.getMPITimeoutWarning(), parameters.getMPIDeadlockTimeout(), parameters.isMPIDeadlockDetectionEnabled()}
   );
 
   tarch::instrumentation::Log::setLogMachineName(tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1);
+
+  const auto& outputDirectory = parameters.getOutputPath();
+  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+    std::error_code outputDirectoryError;
+    std::filesystem::create_directories(outputDirectory, outputDirectoryError);
+    if (outputDirectoryError) {
+      tarch::terminateWithError(
+        "Cannot create output directory \"" + outputDirectory + "\": " + outputDirectoryError.message()
+      );
+    }
+
+    const auto      outputGitignore = std::filesystem::path(outputDirectory) / ".gitignore";
+    std::error_code outputGitignoreError;
+    const bool      outputGitignoreExists = std::filesystem::exists(outputGitignore, outputGitignoreError);
+    if (outputGitignoreError) {
+      tarch::terminateWithError(
+        "Cannot inspect output ignore file \"" + outputGitignore.string() + "\": " + outputGitignoreError.message()
+      );
+    }
+    if (not outputGitignoreExists) {
+      std::ofstream gitignore(outputGitignore);
+      if (not gitignore) {
+        tarch::terminateWithError("Cannot create output ignore file \"" + outputGitignore.string() + "\".");
+      }
+      gitignore << "*\n";
+    }
+  }
+#ifdef PEANO_WITH_MPI
+  tarch::mpi::barrier(tarch::mpi::Rank::getInstance().getCommunicator());
+#endif
+  tarch::instrumentation::Log::setOutputFile(outputDirectory + parameters.getExecutableName() + ".log");
 
   peano4::init(domainOffset, domainSize, periodicBC);
 

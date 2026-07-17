@@ -4,23 +4,20 @@
 
 #include "tarch/tests/TestCase.h"
 
-namespace toolbox {
-  namespace loadbalancing {
-    namespace tests {
-      class BlacklistTest;
-    } // namespace tests
-  } // namespace loadbalancing
-} // namespace toolbox
+namespace toolbox::loadbalancing::tests {
+  class BlacklistTest;
+} // namespace toolbox::loadbalancing::tests
 
-class toolbox::loadbalancing::tests::BlacklistTest final: public tarch::tests::TestCase {
-private:
-  void testEmptyBlacklist();
-  void testTriggeredSplitAddsEntryAndCountsSplits();
-  void testUpdateKeepsLifetimeIfCellCountUnchanged();
-
+class toolbox::loadbalancing::tests::BlacklistTest final : public tarch::tests::TestCase {
 public:
   BlacklistTest();
-  ~BlacklistTest() override final = default;
+  void run() override;
 
-  void run() override final;
+private:
+  void testEmptyBlacklist();
+  void testNotifiedTreeIsBlacklisted();
+  void testElapsedAgeRequiresObservedLoadChange();
+  void testElapsedAgeAndObservedLoadChangeReleaseTree();
+  void testDegenerationRestartsCoolingOff();
+  void testInactiveTreeSkipsCallback();
 };

@@ -1,3 +1,5 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "NodeTest.h"
 
 #include "peano4/Loop.h"
@@ -5,40 +7,128 @@
 #include "peano4/grid/StackTopology.h"
 #include "peano4/parallel/Node.h"
 #include "tarch/la/Vector.h"
+#include "tarch/mpi/Rank.h"
+#include "tarch/mpi/mpi.h"
 
 peano4::parallel::tests::NodeTest::NodeTest() :
   TestCase("peano4::parallel::tests::NodeTest") {}
 
 void peano4::parallel::tests::NodeTest::testTagCalculation() {
-  const int numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
-  const int senderTree    = 0;
-  const int receiverTree0 = 0;
-  const int receiverTree1 = numberOfRanks;
+  constexpr int          MinimumMpiTagUpperBound  = 32767;
+  constexpr std::int64_t TagsPerSendingTree       = static_cast<std::int64_t>(3) * MAX_SPACETREES_PER_RANK;
+  const int              expectedMinimumGroupSize = static_cast<int>(std::min<std::int64_t>(
+    MAX_SPACETREES_PER_RANK,
+    (static_cast<std::int64_t>(MinimumMpiTagUpperBound) + 1) / TagsPerSendingTree
+  ));
+  const int              minimumGroupSize =
+    peano4::parallel::Node::getNumberOfSendingTreesPerDataExchangeCommunicator(MinimumMpiTagUpperBound);
+  validateEquals(minimumGroupSize, expectedMinimumGroupSize);
+  validate(minimumGroupSize > 0);
 
-  Node::GridDataExchangeMetaInformation horizontal0 =
-    peano4::parallel::Node::getInstance().getGridDataExchangeMetaInformation(
-      senderTree,
-      receiverTree0,
-      peano4::parallel::Node::ExchangeMode::HorizontalData
+  const int tagUpperBoundBelowOneSender = static_cast<int>(TagsPerSendingTree - 2);
+  validateEquals(
+    peano4::parallel::Node::getNumberOfSendingTreesPerDataExchangeCommunicator(tagUpperBoundBelowOneSender),
+    0
+  );
+
+  constexpr int LargeTagUpperBound     = std::numeric_limits<int>::max();
+  const int     expectedLargeGroupSize = static_cast<int>(std::min<std::int64_t>(
+    MAX_SPACETREES_PER_RANK,
+    (static_cast<std::int64_t>(LargeTagUpperBound) + 1) / TagsPerSendingTree
+  ));
+  validateEquals(
+    peano4::parallel::Node::getNumberOfSendingTreesPerDataExchangeCommunicator(LargeTagUpperBound),
+    expectedLargeGroupSize
+  );
+
+  if (minimumGroupSize <= 0) {
+    return;
+  }
+
+  validateEquals(peano4::parallel::Node::getDataExchangeCommunicatorIndex(0, minimumGroupSize), 0);
+  validateEquals(peano4::parallel::Node::getDataExchangeCommunicatorIndex(minimumGroupSize - 1, minimumGroupSize), 0);
+
+  const int lastTagInFirstGroup = peano4::parallel::Node::getDataExchangeTag(
+    minimumGroupSize - 1,
+    MAX_SPACETREES_PER_RANK - 1,
+    peano4::parallel::Node::ExchangeMode::PeriodicData,
+    minimumGroupSize
+  );
+  validateEquals(lastTagInFirstGroup, 3 * minimumGroupSize * MAX_SPACETREES_PER_RANK - 1);
+  validate(lastTagInFirstGroup <= MinimumMpiTagUpperBound);
+  if (minimumGroupSize < MAX_SPACETREES_PER_RANK) {
+    validateEquals(peano4::parallel::Node::getDataExchangeCommunicatorIndex(minimumGroupSize, minimumGroupSize), 1);
+    validateEquals(
+      peano4::parallel::Node::getDataExchangeTag(
+        minimumGroupSize,
+        0,
+        peano4::parallel::Node::ExchangeMode::HorizontalData,
+        minimumGroupSize
+      ),
+      0
     );
-  Node::GridDataExchangeMetaInformation vertical0 =
-    peano4::parallel::Node::getInstance().getGridDataExchangeMetaInformation(
-      senderTree,
-      receiverTree0,
-      peano4::parallel::Node::ExchangeMode::VerticalData
-    );
-  Node::GridDataExchangeMetaInformation horizontal1 =
-    peano4::parallel::Node::getInstance().getGridDataExchangeMetaInformation(
-      senderTree,
-      receiverTree1,
-      peano4::parallel::Node::ExchangeMode::HorizontalData
-    );
-  Node::GridDataExchangeMetaInformation vertical1 =
-    peano4::parallel::Node::getInstance().getGridDataExchangeMetaInformation(
-      senderTree,
-      receiverTree1,
-      peano4::parallel::Node::ExchangeMode::VerticalData
-    );
+  }
+
+  constexpr std::array<peano4::parallel::Node::ExchangeMode, 3> ExchangeModes{
+    peano4::parallel::Node::ExchangeMode::HorizontalData,
+    peano4::parallel::Node::ExchangeMode::VerticalData,
+    peano4::parallel::Node::ExchangeMode::PeriodicData
+  };
+  std::set<int> tags;
+  bool          tagsAreUnique = true;
+  bool          tagsFit       = true;
+  for (int localSendingTreeId = 0; localSendingTreeId < minimumGroupSize; localSendingTreeId++) {
+    for (int localReceivingTreeId = 0; localReceivingTreeId < MAX_SPACETREES_PER_RANK; localReceivingTreeId++) {
+      for (const auto exchangeMode : ExchangeModes) {
+        const int tag = peano4::parallel::Node::getDataExchangeTag(
+          localSendingTreeId,
+          localReceivingTreeId,
+          exchangeMode,
+          minimumGroupSize
+        );
+        tagsAreUnique = tags.insert(tag).second and tagsAreUnique;
+        tagsFit       = tag <= MinimumMpiTagUpperBound and tagsFit;
+      }
+    }
+  }
+  validate(tagsAreUnique);
+  validate(tagsFit);
+  validateEquals(
+    tags.size(),
+    static_cast<std::size_t>(minimumGroupSize) * MAX_SPACETREES_PER_RANK * ExchangeModes.size()
+  );
+
+  const int numberOfRanks    = tarch::mpi::Rank::getInstance().getNumberOfRanks();
+  const int senderTree       = 0;
+  const int receiverTree0    = 0;
+  const int receiverTree1    = numberOfRanks;
+  const int receiverTreeLast = (MAX_SPACETREES_PER_RANK - 1) * numberOfRanks;
+
+  const auto horizontal0 = peano4::parallel::Node::getInstance().getGridDataExchangeMetaInformation(
+    senderTree,
+    receiverTree0,
+    peano4::parallel::Node::ExchangeMode::HorizontalData
+  );
+  const auto vertical0 = peano4::parallel::Node::getInstance().getGridDataExchangeMetaInformation(
+    senderTree,
+    receiverTree0,
+    peano4::parallel::Node::ExchangeMode::VerticalData
+  );
+  const auto horizontal1 = peano4::parallel::Node::getInstance().getGridDataExchangeMetaInformation(
+    senderTree,
+    receiverTree1,
+    peano4::parallel::Node::ExchangeMode::HorizontalData
+  );
+  const auto vertical1 = peano4::parallel::Node::getInstance().getGridDataExchangeMetaInformation(
+    senderTree,
+    receiverTree1,
+    peano4::parallel::Node::ExchangeMode::VerticalData
+  );
+  const auto periodicLast = peano4::parallel::Node::getInstance().getGridDataExchangeMetaInformation(
+    senderTree,
+    receiverTreeLast,
+    peano4::parallel::Node::ExchangeMode::PeriodicData
+  );
 
   validateWithParams4(
     horizontal0.first != vertical0.first,
@@ -61,13 +151,72 @@ void peano4::parallel::tests::NodeTest::testTagCalculation() {
     receiverTree1,
     numberOfRanks
   );
+  validate(periodicLast.first >= 0);
 }
 
+void peano4::parallel::tests::NodeTest::testDataExchangeCommunicatorCreation() {
+#ifdef PEANO_WITH_MPI
+  auto&         node                    = peano4::parallel::Node::getInstance();
+  constexpr int MinimumMpiTagUpperBound = 32767;
+  const int     minimumGroupSize =
+    peano4::parallel::Node::getNumberOfSendingTreesPerDataExchangeCommunicator(MinimumMpiTagUpperBound);
+  validate(minimumGroupSize > 0);
+  if (minimumGroupSize <= 0) {
+    return;
+  }
+
+  const int configuredGroupSize                 = node._sendingTreesPerDataExchangeCommunicator;
+  node._sendingTreesPerDataExchangeCommunicator = minimumGroupSize;
+
+  validateEquals(node._needCommunicator[0], tarch::mpi::Rank::getInstance().isGlobalMaster());
+  node.createPendingCommunicators();
+  const auto firstGroup = node.getGridDataExchangeMetaInformation(
+    node.getGlobalTreeId(0),
+    node.getGlobalTreeId(0),
+    peano4::parallel::Node::ExchangeMode::HorizontalData
+  );
+  validate(firstGroup.second != MPI_COMM_NULL);
+  validate(not node._needCommunicator[0]);
+
+  node._needCommunicator[minimumGroupSize - 1] = true;
+  node.createPendingCommunicators();
+  const auto reusedGroup = node.getGridDataExchangeMetaInformation(
+    node.getGlobalTreeId(minimumGroupSize - 1),
+    node.getGlobalTreeId(0),
+    peano4::parallel::Node::ExchangeMode::HorizontalData
+  );
+  int reuseComparison = MPI_UNEQUAL;
+  validateEquals(MPI_Comm_compare(firstGroup.second, reusedGroup.second, &reuseComparison), MPI_SUCCESS);
+  validateEquals(reuseComparison, MPI_IDENT);
+  validate(not node._needCommunicator[minimumGroupSize - 1]);
+
+  if (minimumGroupSize < MAX_SPACETREES_PER_RANK) {
+    node._needCommunicator[minimumGroupSize] = true;
+    node.createPendingCommunicators();
+    const auto secondGroup = node.getGridDataExchangeMetaInformation(
+      node.getGlobalTreeId(minimumGroupSize),
+      node.getGlobalTreeId(0),
+      peano4::parallel::Node::ExchangeMode::HorizontalData
+    );
+    validate(secondGroup.second != MPI_COMM_NULL);
+    int groupComparison = MPI_UNEQUAL;
+    validateEquals(MPI_Comm_compare(firstGroup.second, secondGroup.second, &groupComparison), MPI_SUCCESS);
+    validateEquals(groupComparison, MPI_CONGRUENT);
+    validate(not node._needCommunicator[minimumGroupSize]);
+  }
+
+  node._sendingTreesPerDataExchangeCommunicator = configuredGroupSize;
+#endif
+}
+
+/**
+ * Test axial and diagonal periodic exchanges at opposite two-dimensional
+ * corners. The top-right output/input pairs are (7,15), (8,16), and (10,18),
+ * while the bottom-left pairs are (11,19), (13,21), and (14,22). Mirroring
+ * then maps outputs 7, 8, 10, 11, 13, and 14 onto 22, 21, 19, 18, 16, and 15.
+ */
 void peano4::parallel::tests::NodeTest::testGetOutputStacksForPeriodicBoundaryExchange() {
 #if DIMENSIONS == 2
-  //
-  // Top right corner
-  //
   std::array<int, TWO_POWER_D> flagsTopRightVertex;
   flagsTopRightVertex.fill(grid::SpacetreeHelper::RankOfPeriodicBoundaryCondition);
   flagsTopRightVertex[0] = 0;
@@ -107,9 +256,6 @@ void peano4::parallel::tests::NodeTest::testGetOutputStacksForPeriodicBoundaryEx
   validate(grid::StackTopology::isPeriodicBoundaryExchangeOutputStackNumber(key1.first));
   validate(grid::StackTopology::isPeriodicBoundaryExchangeOutputStackNumber(key2.first));
 
-  //
-  // bottom left vertex
-  //
   std::array<int, TWO_POWER_D> flagsBottomLeftVertex;
   flagsBottomLeftVertex.fill(peano4::grid::SpacetreeHelper::RankOfPeriodicBoundaryCondition);
   flagsBottomLeftVertex[3] = 0;
@@ -162,9 +308,6 @@ void peano4::parallel::tests::NodeTest::testGetOutputStacksForPeriodicBoundaryEx
   validateEquals(grid::StackTopology::getPeriodicBoundaryExchangeInputStackNumberForOutputStack(key4.first), 21);
   validateEquals(grid::StackTopology::getPeriodicBoundaryExchangeInputStackNumberForOutputStack(key5.first), 22);
 
-  //
-  // Third step
-  //
   validateEquals(grid::StackTopology::mapPeriodicBoundaryExchangeOutputStackOntoInputStack(7), 22);
   validateEquals(grid::StackTopology::mapPeriodicBoundaryExchangeOutputStackOntoInputStack(8), 21);
   validateEquals(grid::StackTopology::mapPeriodicBoundaryExchangeOutputStackOntoInputStack(10), 19);
@@ -282,5 +425,6 @@ void peano4::parallel::tests::NodeTest::run() {
   testMethod(testGetPeriodicBoundaryNumber);
   testMethod(testBitsetBasedPeriodicBoundaryEnumeration);
   testMethod(testTagCalculation);
-  testMethod(testGetOutputStacksForPeriodicBoundaryExchange)
+  testMethod(testDataExchangeCommunicatorCreation);
+  testMethod(testGetOutputStacksForPeriodicBoundaryExchange);
 }

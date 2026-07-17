@@ -1,17 +1,3 @@
-Spacetree:
-  stage: Test
-  script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/spacetree && PYTHONPATH=$CI_PROJECT_DIR/api python3 spacetree.py"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tests/spacetree && $PARALLEL_LAUNCH ./Spacetree"
-  allow_failure: false
-  extends:
-    - .Tags
-    - .Variables
-    - .RunOnDev
-    - .BeforeScriptSanitiser
-  needs:
-    - job: Build
-
 FV:
   stage: Test
   parallel:
@@ -26,7 +12,7 @@ FV:
   extends:
     - .Tags
     - .Variables
-    - .RunOnDev
+    - .RunOnAnyBranch
     - .BeforeScriptSanitiser
   needs:
     - job: Build
@@ -45,7 +31,7 @@ FV Tracers:
   extends:
     - .Tags
     - .Variables
-    - .RunOnlyOnMain
+    - .RunOnlyOnMainBranch
     - .BeforeScriptSanitiser
   needs:
     - job: Build
@@ -64,7 +50,7 @@ FV Static AMR:
   extends:
     - .Tags
     - .Variables
-    - .RunOnlyOnMain
+    - .RunOnlyOnMainBranch
     - .BeforeScriptSanitiser
   needs:
     - job: Build
@@ -83,7 +69,7 @@ FV Dynamic AMR:
   extends:
     - .Tags
     - .Variables
-    - .RunOnlyOnMain
+    - .RunOnlyOnMainBranch
     - .BeforeScriptSanitiser
   needs:
     - job: Build
@@ -102,7 +88,7 @@ ADERDG:
   extends:
     - .Tags
     - .Variables
-    - .RunOnDev
+    - .RunOnAnyBranch
     - .BeforeScriptSanitiser
   needs:
     - job: Build
@@ -119,7 +105,7 @@ ADERDG Static AMR:
   extends:
     - .Tags
     - .Variables
-    - .RunOnlyOnMain
+    - .RunOnlyOnMainBranch
     - .BeforeScriptSanitiser
   needs:
     - job: Build
@@ -138,7 +124,7 @@ ADERDG Dynamic AMR:
   extends:
     - .Tags
     - .Variables
-    - .RunOnlyOnMain
+    - .RunOnlyOnMainBranch
     - .BeforeScriptSanitiser
   needs:
     - job: Build
@@ -156,7 +142,7 @@ ADERDG Limiting:
   extends:
     - .Tags
     - .Variables
-    - .RunOnlyOnMain
+    - .RunOnlyOnMainBranch
     - .BeforeScriptSanitiser
   needs:
     - job: Build
@@ -174,7 +160,7 @@ ADERDG GRMHD:
   extends:
     - .Tags
     - .Variables
-    - .RunOnlyOnMain
+    - .RunOnlyOnMainBranch
     - .BeforeScriptSanitiser
   needs:
     - job: Build
@@ -191,7 +177,7 @@ ADERDG Coupling:
   extends:
     - .Tags
     - .Variables
-    - .RunOnlyOnMain
+    - .RunOnlyOnMainBranch
     - .BeforeScriptSanitiser
   needs:
     - job: Build
@@ -209,7 +195,7 @@ RKDG:
   extends:
     - .Tags
     - .Variables
-    - .RunOnDev
+    - .RunOnAnyBranch
     - .BeforeScriptSanitiser
   needs:
     - job: Build
@@ -226,7 +212,7 @@ Fortran Coupling:
   extends:
     - .Tags
     - .Variables
-    - .RunOnlyOnMain
+    - .RunOnlyOnMainBranch
     - .BeforeScriptSanitiser
   needs:
     - job: Build

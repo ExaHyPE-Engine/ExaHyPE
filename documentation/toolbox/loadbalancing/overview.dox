@@ -4,19 +4,19 @@
 
 \tableofcontents
 
-Load balancing toolbox for Peano 4
+The load balancing toolbox distributes Peano 4 spacetrees across ranks and
+threads.
 
 - You tell Peano to run through the mesh.
 - Every now and then, you invoke the load balancing toolbox which might,
-  hidden away from you, trigger rebalancing.
-- You continue to invoke mesh traversals, and these will then somehow
-  realise additional splits (as well as joins).
-
+  hidden away from you, trigger splits.
+- You continue to invoke mesh traversals, and these then realise the
+  triggered splits.
 
 ## Usage through Python API
 
-Many extensions, such as ExaHyPE 2, not only use the load balancing
-toolbox, they also offer a tailored ExaHyPE 2 load balancing configuration,
+Many extensions, such as ExaHyPE 2, use the load balancing toolbox and offer a
+tailored load balancing configuration,
 i.e. they provide means for users to employ the toolbox without interfering
 with the main functions or calling the load balancing manually.
 Indeed, the toolbox follows the philosophy that the chosen load balancing
@@ -26,78 +26,66 @@ tailors this strategy to your experimental setup and machine.
 - See more on how to @ref page_exahype_multicore "configure load balancing within ExaHyPE 2".
 - Swift 2 has its own parallelisation documentation in repositories that ship Swift.
 
+## The load balancing state machine
 
-## Overview over the load balancing
+The toolbox ships a single load balancer, toolbox::loadbalancing::LoadBalancer,
+which is a small state machine (toolbox::loadbalancing::State). Its behaviour is
+implemented by two initial split strategies that run one after the other:
 
-The toolbox exposes a single load balancer, toolbox::loadbalancing::LoadBalancer.
-You create one instance, call its enable(true) once, and then invoke update()
-after each mesh traversal. The load balancer inspects the current mesh and,
-whenever appropriate, triggers further splits (and, where possible, joins).
+- **InitialInterRankSplit** spreads the domain across the MPI ranks: a populated
+  rank forks cells off its heaviest local tree onto ranks that still hold no
+  tree.
+- **InitialIntraRankSplit** spreads the work across the threads/cores of a rank:
+  it decomposes the heaviest local tree into several sibling trees so every core
+  can be kept busy.
 
-Rather than offering a fixed catalogue of named strategies, the load balancer
-walks through a sequence of states (toolbox::loadbalancing::State) that describe
-what it currently tries to achieve:
+The balancer enters **Stagnation** when the initial strategies have no valid
+action. On a completed uniform mesh, this follows a settled exact tree target.
+On an adaptive mesh, hanging vertices can make remaining slots unreachable,
+so stagnation can occur below the target. The remaining states
+(InterRankBalancing, IntraRankBalancing) are placeholders; dynamic rebalancing
+and tree joining are not implemented.
 
-- toolbox::loadbalancing::State::InterRankDistribution Spread the work out over
-  all MPI ranks, i.e. ensure that, if the problem is large enough, every rank
-  receives at least one partition.
-- toolbox::loadbalancing::State::IntraRankDistribution Once each rank holds
-  roughly one tree, fork off further partitions so that every core on a rank
-  receives work.
-- toolbox::loadbalancing::State::InterRankBalancing and
-  toolbox::loadbalancing::State::IntraRankBalancing Fine-tune the decomposition
-  by identifying oversized partitions and splitting them, until the requested
-  balancing quality is met.
-
-How aggressively the load balancer acts in each of these states, and whether
-it splits bottom-up along the space-filling curve or top-down within the
-spacetree, is governed by the toolbox::loadbalancing::Configuration object you
-hand to the load balancer (see below).
-
+Both strategies finalise on the last mesh that is guaranteed to be uniform:
+cells at adaptive refinement boundaries carry hanging vertices and can never
+fork, so once the runner reports that every leaf has reached the configured
+minimum level (toolbox::loadbalancing::LoadBalancer::notifyUniformGridComplete()),
+the strategies use the completed uniform mesh without waiting for a larger
+piece size. If the configured target exceeds the globally reduced leaf count,
+the run terminates before another split and reports the requested and available
+counts. The target is not silently capped. Imbalance that adaptive refinement
+introduces after the initial decomposition remains because the required tree
+joins are not implemented.
 
 # Implementation remarks
 
-toolbox::loadbalancing::LoadBalancer combines a small number of collaborators,
-each modelling one aspect of the decomposition:
+The load balancer is composed of a few collaborating classes:
 
-- a configuration (toolbox::loadbalancing::Configuration), which tailors the
-  load balancing to your setup and machine. A toolbox::loadbalancing::DefaultConfiguration
-  ships with the toolbox, but you can subclass Configuration to override, e.g.,
-  the maximum number of trees per rank, the targeted balancing ratio, the
-  minimum tree size, or the split mode for any given state.
-- a blacklist (toolbox::loadbalancing::Blacklist), which prevents the load
-  balancer from repeatedly picking the same tree right after a split.
-- statistics (toolbox::loadbalancing::Statistics), which gather the local and
-  global mesh metrics on which all decisions are based.
-- a state, which is an enum (toolbox::loadbalancing::State) describing the
-  current phase of the balancing.
+- A blacklist (toolbox::loadbalancing::Blacklist) which cools a tree down for a
+  few sweeps after it has been split,
+- A configuration (toolbox::loadbalancing::Configuration) which tailors the
+  strategy to the setup and machine (maximum number of trees per rank and split
+  mode),
+- The state (toolbox::loadbalancing::State),
+- Statistics (toolbox::loadbalancing::Statistics) which gather per-tree values
+  and explicitly reduce the global counts. The balancer completes the preceding
+  reduction before each decision and starts the next one afterwards.
 
-Please consult the individual class documentations for further details. A
-human-readable summary of what the local rank decided can be obtained through
-the static toolbox::loadbalancing::LoadBalancer::getLocalLoadBalancing().
+The cost metric is currently fixed: a tree's load is its number of local
+unrefined cells. Please consult the individual class documentations for further
+details.
 
+## Tailoring the load balancing
 
-## Load balancing variations
-
-The load balancer transitions automatically from one state to the next:
-whenever it concludes that the current phase has either terminated or
-stagnated, it advances to the following one (spread over the ranks, then
-spread over the cores, then fine-tune the balance). This effectively chains
-several balancing behaviours into one run without you having to wire them
-together by hand.
-
-All decisions are taken against the number of inner unrefined cells per tree,
-which the toolbox::loadbalancing::Statistics gather and reduce globally. If you
-want a different notion of "load", provide your own
-toolbox::loadbalancing::Configuration: it controls the minimum tree size, the
-maximum number of trees per rank, and the worst-case balancing ratio that the
-load balancer aims to undercut, which together may give you better balanced
-subdomains.
+You do not swap out whole strategies. Instead you tailor the built-in
+distribution phases through a toolbox::loadbalancing::Configuration object.
+ExaHyPE 2 for example provides exahype2::LoadBalancingConfiguration, which feeds
+the user's runtime parameters (maximum number of trees per rank and periodic
+boundary handling) into the strategies.
 
 @image html domain-decomposition/tree-topology.png
 
-Of particular relevance is not only the decision when to split and where,
-but also how to split up the domain further. Peano supports two different
+The timing, target, and mode of each split all matter. Peano supports two
 split modes: bottom-up along the space-filling curve, and top-down within
 the spacetree. The latter approach is similar to recursive kd-decomposition.
 Each approach comes along with pros and cons. SFC-based partitioning makes
@@ -108,10 +96,9 @@ to construct good SFC subpartitions.
 Recursive top-down decomposition lends itself to domain decomposition which
 kicks in directly while we create the tree.
 
-Which splitting scheme is applied is decided by the load balancer's
-configuration (toolbox::loadbalancing::Configuration) for the state it is
-currently in, rather than by a fixed catalogue of strategies. Before you dig
-into this, I strongly recommend to
+The load balancer's configuration (toolbox::loadbalancing::Configuration)
+selects the splitting scheme for the current state. Before you dig
+into this, we strongly recommend to
 read through @ref page_peano_domain_decomposition "Peano's domain decomposition remarks",
 and maybe even to read the paper
 
@@ -129,35 +116,31 @@ and maybe even to read the paper
 
 which is <a href="https://dl.acm.org/doi/10.1145/3319797">available through the gold access route</a>.
 
-
 ## Rebalancing, joins and AMR
 
-Peano does not support rebalancing with joins. That is, once a domain is
-split into two parts, the cuts in-between these parts will stay there
-forever. Almost. If a domain A splits into A and B, and if B degenerates,
-i.e. hosts exclusively unrefined cells, then B can be instructed to join
-A again.
+The initial strategies create trees through splits and never issue joins. The
+toolbox does not implement dynamic rebalancing with joins. The Peano core can
+join a degenerate child tree, which hosts exclusively unrefined cells, back
+into its parent to permit grid coarsening.
 
-This strict commitments to tree-like joins and forks makes the
-implementation easier - notably in a multiscale context. You can still
+This strict commitment to tree-like joins and forks makes the
+multiscale implementation manageable. You can still
 oversubscribe the threads, i.e. create more logical subpartitions than
 threads, and hence mimic diffusion-based load balancing for example.
 
-Dynamic AMR is no problem for the domain decomposition. That is, a refined
-region can ripple or propagate through a domain cut. However, Peano will
-never deploy a cell to another tree if that cell hosts a hanging vertex
+Dynamic AMR can propagate through a domain cut. However, Peano never
+deploys a cell to another tree if that cell hosts a hanging vertex
 and its parent cell is not deployed to the same tree, too. This constrains
 notably the SFC-based bottom-up splitting. You might encounter situations
 where the AMR effectively "stops" the SFC decomposition from adding further
 cells to a new domain. The reason for this policy is that the tracking of
 multiscale data consistency between hanging nodes on different trees
-otherwise becomes unmanageable hard.
-
+otherwise becomes unmanageably hard.
 
 ## Performance flaws
 
-Inappropriate or problematic domain decomposition decisions will always
-manifest in performance flaws. There are a few further resources that
+Inappropriate or problematic domain decomposition decisions manifest in
+performance flaws. There are a few further resources that
 discuss generic details which are not tied to this toolbox. However, they
 are very useful to get the most out of this toolbox:
 
@@ -165,8 +148,8 @@ are very useful to get the most out of this toolbox:
   can help to understand the runtime behaviour shaped by the domain
   decomposition.
 - Peano has a dedicated page on @ref page_peano_performance_optimisation "performance optimisation".
-  It discusses many flaws and how to fix them. The page below discussed more
-  the rationale and provides background information why things work the way
+  It discusses many flaws and how to fix them. The sections below discuss the
+  rationale and provide background information on why things work the way
   they do.
 
 Further to the generic Peano discussions, individual extensions have their
@@ -177,11 +160,10 @@ decisions:
 - Peano's @ref page_exahype_runtime_analysis "runtime analysis discussion" and its @ref page_exahype_performance_optimisation "performance optimisation recipes".
 - Swift's own performance optimisation discussion in repositories that ship Swift.
 
+# Tuning and tailoring the domain decomposition
 
-# Tuning and Tailoring the domain decomposition
-
-While the toolbox offers some generic load balancing schemes, it will not be
-able to accommodate all applications. It notably will always lack
+While the toolbox offers generic load balancing, it cannot accommodate all
+applications because it lacks
 domain-specific knowledge. However, there are generic tuning knobs and
 considerations. The page below summarises some generic rationale and
 lessons learned. Particular flaws and their fixes are discussed on the
@@ -190,15 +172,13 @@ So we get an explanation of things here, why things work the way they
 do. The recipes how to spot flaws and how to fix them are discussed on the
 generic page.
 
-
 ## Load balancing throughout mesh construction
 
-Every load balancing strategy in Peano 4 will have to balance two
-contradicting objectives:
+Every load balancing strategy in Peano 4 balances two competing objectives:
 
 - Load balancing has to happen as soon as possible throughout the grid
   construction process, as we want the grid construction to run in parallel.
-  Splits in itself are also extremely memory-demanding---at least temporarily
+  Splits themselves are also memory-demanding---at least temporarily
   as parts of a partition have to be replicated and moved around---so we
   prefer setups that perform these splits before we have a lot of mesh
   data in place that has to be moved around.
@@ -207,62 +187,54 @@ contradicting objectives:
   there are, we can balance these cells better, and we can subdivide cells
   more accurately: If we deploy a 3x3 grid to two cores, one core will get
   5 and one 4 cells. If all cells refine once more, this will induce a
-  45 vs 36 mesh. If we cut a 9x9 mesh in a balanced way, we get a 41 vs
+  45 vs 36 mesh. A balanced cut of a 9x9 mesh gives a 41 vs
   40 mesh. So the more we know, i.e. the closer the constructed mesh to
-  the real final mesh, the better our domain.
+  the intended final mesh, the better the domain.
 
 The first argument is a strict one. If we run out of memory, the
-simulation will crash. The second argument is a desirable one.
+simulation crashes. The second argument is a desirable one.
 
-We derive generic guidelines for any load balancing:
+The shipped initial splits resolve the trade-off as follows (see
+@ref page_toolbox_loadbalancing_strategies "the strategies page" for the
+details):
 
-- Split up aggressively initially such that a reasonable initial load
-  decomposition is achieved: There are no single partitions of extreme
-  size left over which will eventually be split up further. Such single large
-  partitions might make us run out of memory later on.
-- Split aggressively for small partitions, split only once or twice per
-  traversal later on when there are large partitions.
-- Fine tune a load decomposition as late as possible, when accurate SFC
-  cuts in the mesh can be made. Keep in mind that we cannot diffuse load
-  decompositions. We can only merge with a master and then resplit.
-- Throttle the grid construction or a grid refinement whenever we
-  rebalance. Rebalancing is already problematic from a memory constraint
-  point of view. Any further refinement makes this situation worse.
-- Maybe try not to use all cores immediately. Most Peano schemes (and the
-  default configurations) try to have a most two logical subdomains per
-  thread. If we go beyond this, they stop further decomposition. It
-  therefore makes sense to have a few subpartitions per rank early on,
-  so the mesh construction runs in parallel, but to spare some threads,
-  i.e. to have fewer subdomains than threads, until the mesh is reasonably
-  fine and accurate.
+- Spread over the ranks as early as the mesh supports it, so the grid
+  construction itself runs in parallel and forks move little data.
+- Before uniform-grid completion, delay each cut to the first level where every
+  target piece holds at least one coarse-cell-worth of fine cells, so the
+  floor/ceil imbalance of the cut stays bounded.
+- Hold the grid static while forks deploy: refining underneath an in-flight
+  fork makes the fork grab cells of the wrong resolution, and rebalancing is
+  memory-hungry enough without extra refinement.
+- Provision one tree per thread by default (`-trees`); oversubscribing a rank
+  with more trees than threads is the user's choice.
 
+## Split modes: bottom-up vs. top-down
 
-## Domain decomposition for existing partitions or late throughout the mesh construction
+A split is parameterised by a mode (peano4::grid::SplitInstruction::Mode),
+chosen by toolbox::loadbalancing::Configuration::getMode():
 
-It can makes sense to take into account that aggressive
-top-down splitting can handle AMR boundaries, while bottom-up SFC cuts
-struggle (see implementation). Consequently, you might want to switch
-between these flavours, too: SFC-based partitioning is good if a mesh
-is rather regular.
+- **BottomUp** picks cells along the space-filling curve from the fine grid
+  upwards. It produces accurate, SFC-compact cuts and is the mode used by all
+  shipped configurations. A cell carrying a hanging vertex whose
+  parent lives on another tree must not be deployed (see the constraint
+  discussion above). A rejected requested split terminates the run; partial
+  splits are not accepted. The initial strategies stop issuing requests when
+  adaptive hanging vertices make the remaining slots unreachable.
+- **AggressiveTopDown** descends the tree and moves whole refined subtrees at
+  once, so it can cross a refinement boundary at subtree granularity rather than
+  stalling on individual fine cells. It is, however, **experimental**: it is not
+  selected by any shipped configuration and has no test coverage, so treat it as
+  work in progress.
 
-As soon as you have a mesh with a lot of AMR in it, it can be advantageous
-to switch to top-down domain decomposition. SFC-based approaches struggle
-to create subdomains spanning AMR boundaries (for technical reasons). The
-to-down approach basically does recursive kd-partitioning and hence is
-way more robust w.r.t. AMR.
+For the regular and mildly graded meshes in the shipped configurations,
+BottomUp is the default. Robust handling of strongly graded AMR through a
+hardened top-down mode, tree joining, or dynamic rebalancing is not implemented.
 
-Peano favours - due to its name - the bottom-up SFC-based decomposition, but
-the load balancer also supports top-down splitting. Which of the two variants
-is used in a given phase is decided by toolbox::loadbalancing::Configuration::getMode(),
-which returns either peano4::grid::SplitInstruction::Mode::BottomUp or
-peano4::grid::SplitInstruction::Mode::AggressiveTopDown. Override this method in
-your own configuration if you want to switch between the flavours per state.
-
-
-# Formalisation of load balancing
+# Strategies
 
 There is a dedicated subpage
-\subpage page_toolbox_loadbalancing_strategies which describes load
-balancing with graph theoretic glasses on.
+\subpage page_toolbox_loadbalancing_strategies which describes the splitting
+problem and the shipped strategies in detail.
 
 */

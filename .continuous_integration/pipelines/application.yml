@@ -11,7 +11,7 @@ ExaSkred Tsunami:
   extends:
     - .Tags
     - .Variables
-    - .RunOnlyOnMain
+    - .RunOnlyOnMainBranch
     - .BeforeScriptSanitiser
   needs:
     - job: Build
@@ -29,7 +29,7 @@ ExaSkred Meteotsunami:
   extends:
     - .Tags
     - .Variables
-    - .RunOnlyOnMain
+    - .RunOnlyOnMainBranch
     - .BeforeScriptSanitiser
   needs:
     - job: Build
@@ -47,7 +47,7 @@ ExaSkred Landslide:
   extends:
     - .Tags
     - .Variables
-    - .RunOnlyOnMain
+    - .RunOnlyOnMainBranch
     - .BeforeScriptSanitiser
   needs:
     - job: Build
@@ -65,7 +65,7 @@ ExaSkred Coupled:
   extends:
     - .Tags
     - .Variables
-    - .RunOnlyOnMain
+    - .RunOnlyOnMainBranch
     - .BeforeScriptSanitiser
   needs:
     - job: Build
@@ -85,7 +85,7 @@ ExaSeis:
   extends:
     - .Tags
     - .Variables
-    - .RunOnlyOnMain
+    - .RunOnlyOnMainBranch
     - .BeforeScriptSanitiser
   needs:
     - job: Build
@@ -104,7 +104,7 @@ ExaGRyPE:
   extends:
     - .Tags
     - .Variables
-    - .RunOnlyOnMain
+    - .RunOnlyOnMainBranch
     - .BeforeScriptSanitiser
   needs:
     - job: Build

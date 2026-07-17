@@ -1,9 +1,22 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 
-foreach(mode IN LISTS SUPPORTED_BUILD_TYPES)
-  string(TOLOWER ${mode} mode_lower)
+if(PEANO_WITH_MPI)
+  cmake_host_system_information(RESULT logical_cores QUERY NUMBER_OF_LOGICAL_CORES)
 
+  set(mpi_ranks 4)
+  if(logical_cores LESS mpi_ranks)
+    set(mpi_ranks ${logical_cores})
+  endif()
+  if(MPIEXEC_MAX_NUMPROCS AND MPIEXEC_MAX_NUMPROCS LESS mpi_ranks)
+    set(mpi_ranks ${MPIEXEC_MAX_NUMPROCS})
+  endif()
+
+  math(EXPR threads_per_rank "${logical_cores} / ${mpi_ranks}")
+  math(EXPR parallel_test_processors "${mpi_ranks} * ${threads_per_rank}")
+endif()
+
+foreach(mode IN LISTS SUPPORTED_BUILD_TYPES)
   foreach(dimensions IN LISTS SUPPORTED_DIMENSIONS)
     set(target "UnitTests${mode}${dimensions}d")
 
@@ -32,26 +45,25 @@ foreach(mode IN LISTS SUPPORTED_BUILD_TYPES)
     set_tests_properties(${target} PROPERTIES WORKING_DIRECTORY "${test_working_directory}")
 
     if(PEANO_WITH_MPI)
-      cmake_host_system_information(RESULT logical_cores QUERY NUMBER_OF_LOGICAL_CORES)
-      set(mpi_ranks ${logical_cores} ${MPIEXEC_MAX_NUMPROCS} 16)
-      list(SORT mpi_ranks COMPARE NATURAL ORDER ASCENDING)
-      list(GET mpi_ranks 0 mpi_ranks)
-
       set(parallel_test_working_directory "${CMAKE_CURRENT_BINARY_DIR}/${target}Parallel")
       file(MAKE_DIRECTORY "${parallel_test_working_directory}")
 
-      # Each rank opens a full OpenMP team (~cores*cores threads total). The
-      # plotter tests do blocking collective HDF5/NetCDF writes on the master
-      # thread while idle workers wait at the team barrier. Under an active wait
-      # policy (the libomp default on clang/amdclang) those workers busy-spin and
-      # starve the MPI progress engine, so the collective write never completes.
-      # A passive policy parks the idle workers and lets MPI make progress.
+      # Keep the MPI variants hybrid without oversubscribing the test
+      # node with one full OpenMP team per rank. Passive waiting also leaves a
+      # core available to the MPI progress engine during blocking collectives.
       add_test(NAME ${target}Parallel
-        COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${mpi_ranks} ${CMAKE_BINARY_DIR}/${target}
+        COMMAND
+          ${MPIEXEC_EXECUTABLE}
+          ${MPIEXEC_NUMPROC_FLAG} ${mpi_ranks}
+          ${MPIEXEC_PREFLAGS}
+          ${CMAKE_BINARY_DIR}/${target}
+          ${MPIEXEC_POSTFLAGS}
       )
       set_tests_properties(${target}Parallel PROPERTIES
         WORKING_DIRECTORY "${parallel_test_working_directory}"
-        ENVIRONMENT "OMP_WAIT_POLICY=passive"
+        PROCESSORS ${parallel_test_processors}
+        ENVIRONMENT
+          "OMP_NUM_THREADS=${threads_per_rank};OMP_WAIT_POLICY=passive;OMPI_MCA_hwloc_base_binding_policy=none;OMPI_MCA_mca_base_component_show_load_errors=none"
       )
     endif()
   endforeach()

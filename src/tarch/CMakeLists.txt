@@ -9,6 +9,7 @@ set(SOURCES
   CompilerSpecificSettings.cpp
   StackSizeLimitDetection.cpp
   Assertions.cpp
+  Termination.cpp
   CPUFeatureDetection.cpp
   FloatingPointExceptions.cpp
   NonCriticalAssertions.cpp

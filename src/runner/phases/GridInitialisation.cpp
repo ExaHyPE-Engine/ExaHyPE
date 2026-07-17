@@ -6,6 +6,7 @@
 #include "runner/Format.h"
 #include "runner/GridSnapshot.h"
 #include "runner/Instrumentation.h"
+#include "runner/LoadBalancer.h"
 #include "runner/PhaseNames.h"
 #include "runner/ReportBox.h"
 
@@ -20,5 +21,6 @@ void runner::GridInitialisation::run() {
 
   const double elapsedSeconds = _context.engine.runStep(_initGridStep);
   _context.box.line(std::string(BlockIndent, ' ') + "Grid Initialised " + Format::wallClock(elapsedSeconds));
+  loadBalancer().synchroniseGlobalView();
   writeGridSnapshot(_context.box, _context.repositories);
 }

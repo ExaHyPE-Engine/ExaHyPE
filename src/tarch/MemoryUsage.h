@@ -30,12 +30,16 @@ namespace tarch {
   double convertMemorySize(unsigned long long bytes, MemoryUsageFormat format);
 
   /**
-   * Method for getting the application's memory footprint
+   * Return memory counters in bytes. The formatted overloads below are kept
+   * for callers that display one particular binary unit.
    *
-   * We use the exact version of KiloByte with 1024 bytes.
-   *
-   * The implementation is based on C-version of Michael Moltenbrey.
+   * The implementation of the process footprint is based on the C version by
+   * Michael Moltenbrey.
    */
+  std::uint64_t getMemoryUsageInBytes();
+  std::uint64_t getTotalMemoryInBytes();
+  std::uint64_t getFreeMemoryInBytes();
+
   double getMemoryUsage(MemoryUsageFormat format);
   double getTotalMemory(MemoryUsageFormat format);
   double getFreeMemory(MemoryUsageFormat format);

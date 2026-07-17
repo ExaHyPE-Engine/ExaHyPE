@@ -27,7 +27,7 @@ Build:
   extends:
     - .Tags
     - .Variables
-    - .RunOnDev
+    - .RunOnAnyBranch
     - .BeforeScript
 
 # ClangTidy:

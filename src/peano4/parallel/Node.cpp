@@ -8,6 +8,8 @@
 #include "peano4/parallel/StartTraversalMessage.h"
 #include "peano4/parallel/TreeManagementMessage.h"
 #include "tarch/Assertions.h"
+#include "tarch/Termination.h"
+#include "tarch/instrumentation/Log.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/mpi/mpi.h"
 #include "tarch/multicore/Lock.h"
@@ -18,7 +20,7 @@ peano4::parallel::Node peano4::parallel::Node::_singleton;
 namespace {
   constexpr int TagsPerReceivingTree = 3;
 
-  int getExchangeModeTagOffset(peano4::parallel::Node::ExchangeMode exchange) {
+  int getExchangeModeTagOffset(const peano4::parallel::Node::ExchangeMode exchange) {
     switch (exchange) {
     case peano4::parallel::Node::ExchangeMode::HorizontalData:
       return 0;
@@ -31,6 +33,45 @@ namespace {
     return -1;
   }
 } // namespace
+
+/**
+ * Compute how many sending-tree slots can share one communicator. The tag
+ * stores the sender offset within its group, the receiving-tree slot, and the
+ * exchange mode. A zero result means that one sender cannot be represented.
+ */
+int peano4::parallel::Node::getNumberOfSendingTreesPerDataExchangeCommunicator(int tagUpperBound) {
+  constexpr std::int64_t TagsPerSendingTree = static_cast<std::int64_t>(TagsPerReceivingTree) * MAX_SPACETREES_PER_RANK;
+  if (tagUpperBound < 0) {
+    return 0;
+  }
+
+  const std::int64_t supportedSendingTrees = (static_cast<std::int64_t>(tagUpperBound) + 1) / TagsPerSendingTree;
+  return static_cast<int>(std::min<std::int64_t>(MAX_SPACETREES_PER_RANK, supportedSendingTrees));
+}
+
+int peano4::parallel::Node::getDataExchangeCommunicatorIndex(int localSendingTreeId, int sendingTreesPerCommunicator) {
+  assertion(localSendingTreeId >= 0 and localSendingTreeId < MAX_SPACETREES_PER_RANK, localSendingTreeId);
+  assertion(sendingTreesPerCommunicator > 0, sendingTreesPerCommunicator);
+  return localSendingTreeId / sendingTreesPerCommunicator;
+}
+
+int peano4::parallel::Node::getDataExchangeTag(
+  int                                  localSendingTreeId,
+  int                                  localReceivingTreeId,
+  peano4::parallel::Node::ExchangeMode exchange,
+  int                                  sendingTreesPerCommunicator
+) {
+  assertion(localSendingTreeId >= 0 and localSendingTreeId < MAX_SPACETREES_PER_RANK, localSendingTreeId);
+  assertion(localReceivingTreeId >= 0 and localReceivingTreeId < MAX_SPACETREES_PER_RANK, localReceivingTreeId);
+  assertion(sendingTreesPerCommunicator > 0, sendingTreesPerCommunicator);
+
+  const int          localSendingTreeOffset = localSendingTreeId % sendingTreesPerCommunicator;
+  const std::int64_t tag                    = TagsPerReceivingTree
+      * (static_cast<std::int64_t>(localSendingTreeOffset) * MAX_SPACETREES_PER_RANK + localReceivingTreeId)
+    + getExchangeModeTagOffset(exchange);
+  assertion(tag <= std::numeric_limits<int>::max(), tag);
+  return static_cast<int>(tag);
+}
 
 void peano4::parallel::Node::initMPIDatatypes() {
 #ifdef PEANO_WITH_MPI
@@ -55,12 +96,41 @@ void peano4::parallel::Node::shutdownMPIDatatypes() {
 void peano4::parallel::Node::init() {
   _currentProgramStep   = UndefProgramStep;
   _rankOrchestrationTag = tarch::mpi::Rank::reserveFreeTag("peano4::parallel::Node - rank orchestration");
-  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    registerId(0, -1);
+  _sendingTreesPerDataExchangeCommunicator = MAX_SPACETREES_PER_RANK;
+#ifdef PEANO_WITH_MPI
+  int*      tagUpperBound  = nullptr;
+  int       attributeFound = 0;
+  const int attributeResult =
+    MPI_Comm_get_attr(tarch::mpi::Rank::getInstance().getCommunicator(), MPI_TAG_UB, &tagUpperBound, &attributeFound);
+  if (attributeResult != MPI_SUCCESS or not attributeFound or tagUpperBound == nullptr) {
+    tarch::terminateWithError("Could not determine MPI_TAG_UB for the runner communicator.");
   }
+
+  const int localTagUpperBound   = *tagUpperBound;
+  int       minimumTagUpperBound = localTagUpperBound;
+  tarch::mpi::allreduce(
+    &localTagUpperBound,
+    &minimumTagUpperBound,
+    1,
+    MPI_INT,
+    MPI_MIN,
+    tarch::mpi::Rank::getInstance().getCommunicator()
+  );
+  _sendingTreesPerDataExchangeCommunicator =
+    peano4::parallel::Node::getNumberOfSendingTreesPerDataExchangeCommunicator(minimumTagUpperBound);
+  if (_sendingTreesPerDataExchangeCommunicator <= 0) {
+    tarch::terminateWithError(
+      "MPI_TAG_UB " + std::to_string(minimumTagUpperBound) + " cannot encode one sending tree and "
+      + std::to_string(MAX_SPACETREES_PER_RANK) + " receiving trees."
+    );
+  }
+#endif
   for (int i = 0; i < MAX_SPACETREES_PER_RANK; ++i) {
     _dataExchangeCommunicators[i] = MPI_COMM_NULL;
     _needCommunicator[i]          = false;
+  }
+  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+    registerId(0, -1);
   }
 }
 
@@ -80,42 +150,55 @@ bool peano4::parallel::Node::isGlobalMaster(int treeId) { return treeId == 0; }
 
 peano4::parallel::Node& peano4::parallel::Node::getInstance() { return _singleton; }
 
-int peano4::parallel::Node::reserveId(int rank, int forTreeId) {
-  logDebug("Trying to find and reserve new global id for master id " << forTreeId << " on rank " << rank);
+int peano4::parallel::Node::reserveId(int rank, int forTreeId) { return reserveIds(rank, forTreeId, 1).front(); }
 
-  int localTreeId = 0;
-  int result      = -1;
-  while (result == -1) {
-    if (_treeEntries.count(getId(rank, localTreeId)) == 0) {
-      result = getId(rank, localTreeId);
-    } else {
-      logDebug(
-        "Local tree " << localTreeId << " (global id=" << getId(rank, localTreeId) << ") on rank " << rank
-                      << " is already in use"
-      );
-      localTreeId++;
-    }
+/**
+ * Reserve a deterministic batch of IDs in one pass over the local slots.
+ *
+ * Holding the node lock across discovery and insertion prevents another split
+ * from claiming a slot between both operations. The single scan changes batch
+ * allocation from quadratic to linear complexity in the number of local tree
+ * slots.
+ */
+std::vector<int> peano4::parallel::Node::reserveIds(const int rank, const int forTreeId, const int numberOfIds) {
+  if (numberOfIds < 1) {
+    tarch::terminateWithError("The number of tree IDs to reserve has to be positive.");
+  }
 
-    if (localTreeId >= MAX_SPACETREES_PER_RANK) {
-      logWarning("Exceeded limit for maximal available spacetrees per rank (" << MAX_SPACETREES_PER_RANK << ")");
-      result = -1;
-      break;
+  logDebug("Trying to reserve " << numberOfIds << " global IDs for master ID " << forTreeId << " on rank " << rank);
+
+  std::vector<int> result;
+  result.reserve(numberOfIds);
+  {
+    tarch::multicore::Lock lock(_semaphore);
+    for (int localTreeId = 0; localTreeId < MAX_SPACETREES_PER_RANK and static_cast<int>(result.size()) < numberOfIds;
+         ++localTreeId) {
+      const int treeId = getId(rank, localTreeId);
+      if (_treeEntries.count(treeId) == 0) {
+        registerIdWithoutLock(treeId, forTreeId);
+        result.push_back(treeId);
+      }
     }
   }
 
-  if (result != -1) {
-    registerId(result, forTreeId);
-  } else {
-    logError("Could not reserve a new tree id. No free slot found or limit reached. Abort.");
-    std::abort();
+  if (static_cast<int>(result.size()) != numberOfIds) {
+    tarch::terminateWithError(
+      "Could not reserve " + std::to_string(numberOfIds) + " tree IDs because rank " + std::to_string(rank)
+      + " has only " + std::to_string(result.size()) + " free local tree slots."
+    );
   }
 
   return result;
 }
 
 void peano4::parallel::Node::registerId(int id, int masterId) {
-  logDebug("Register new global id " << id << " for master id " << masterId);
   tarch::multicore::Lock lock(_semaphore);
+  registerIdWithoutLock(id, masterId);
+}
+
+/** Register one tree ID while the caller holds _semaphore. */
+void peano4::parallel::Node::registerIdWithoutLock(const int id, const int masterId) {
+  logDebug("Register new global id " << id << " for master id " << masterId);
   assertion(_treeEntries.count(id) == 0, id, masterId);
   assertion(id != masterId, id, masterId);
 #ifndef PEANO_WITH_MPI
@@ -132,31 +215,44 @@ void peano4::parallel::Node::registerId(int id, int masterId) {
   _needCommunicator[getLocalTreeId(id)] = true;
 }
 
+/**
+ * Create communicator groups in the same order on every rank. Registrations
+ * serviced while the allreduce progresses remain pending for the next call.
+ */
 void peano4::parallel::Node::createPendingCommunicators() {
 #ifdef PEANO_WITH_MPI
-  const int        n = MAX_SPACETREES_PER_RANK;
-  std::vector<int> local(n), global(n);
-  for (int i = 0; i < n; ++i) {
-    local[i] = (_needCommunicator[i] and _dataExchangeCommunicators[i] == MPI_COMM_NULL) ? 1 : 0;
+  constexpr int                      NumberOfTreeSlots = MAX_SPACETREES_PER_RANK;
+  std::array<int, NumberOfTreeSlots> localPendingTreeSlots{};
+  std::array<int, NumberOfTreeSlots> globalPendingTreeSlots{};
+  for (int localTreeId = 0; localTreeId < NumberOfTreeSlots; ++localTreeId) {
+    localPendingTreeSlots[localTreeId] = _needCommunicator[localTreeId] ? 1 : 0;
   }
 
   tarch::mpi::allreduce(
-    local.data(),
-    global.data(),
-    n,
+    localPendingTreeSlots.data(),
+    globalPendingTreeSlots.data(),
+    NumberOfTreeSlots,
     MPI_INT,
     MPI_MAX,
     tarch::mpi::Rank::getInstance().getCommunicator()
   );
 
-  for (int i = 0; i < n; ++i) {
-    if (global[i] and _dataExchangeCommunicators[i] == MPI_COMM_NULL) {
-      MPI_Comm_dup(tarch::mpi::Rank::getInstance().getCommunicator(), &_dataExchangeCommunicators[i]);
+  for (int localTreeId = 0; localTreeId < NumberOfTreeSlots; ++localTreeId) {
+    if (globalPendingTreeSlots[localTreeId]) {
+      const int communicatorIndex =
+        peano4::parallel::Node::getDataExchangeCommunicatorIndex(localTreeId, _sendingTreesPerDataExchangeCommunicator);
+      if (_dataExchangeCommunicators[communicatorIndex] == MPI_COMM_NULL) {
+        const int duplicateResult = MPI_Comm_dup(
+          tarch::mpi::Rank::getInstance().getCommunicator(),
+          &_dataExchangeCommunicators[communicatorIndex]
+        );
+        if (duplicateResult != MPI_SUCCESS) {
+          tarch::terminateWithError("Could not create an MPI communicator for tree data exchange.");
+        }
+      }
     }
-    // Only clear the request for slots in this round's snapshot. A slot freshly set by a pumped tree
-    // registration during the allreduce (local[i]==0 here) keeps its flag and is honoured next round.
-    if (local[i]) {
-      _needCommunicator[i] = false;
+    if (localPendingTreeSlots[localTreeId]) {
+      _needCommunicator[localTreeId] = false;
     }
   }
 #endif
@@ -234,19 +330,35 @@ peano4::parallel::Node::GridDataExchangeMetaInformation peano4::parallel::Node::
   const int localSendingTreeId   = getLocalTreeId(sendingTreeId);
   const int localReceivingTreeId = getLocalTreeId(receivingTreeId);
 
-  assertion(localSendingTreeId >= 0);
   assertion(
-    localSendingTreeId < MAX_SPACETREES_PER_RANK,
+    localSendingTreeId >= 0 and localSendingTreeId < MAX_SPACETREES_PER_RANK,
     sendingTreeId,
     MAX_SPACETREES_PER_RANK,
     getRank(sendingTreeId),
     localSendingTreeId,
     getNumberOfRegisteredTrees()
   );
+  assertion(
+    localReceivingTreeId >= 0 and localReceivingTreeId < MAX_SPACETREES_PER_RANK,
+    receivingTreeId,
+    MAX_SPACETREES_PER_RANK,
+    getRank(receivingTreeId),
+    localReceivingTreeId,
+    getNumberOfRegisteredTrees()
+  );
 
-  const int tag = TagsPerReceivingTree * localReceivingTreeId + getExchangeModeTagOffset(exchange);
+  const int communicatorIndex = peano4::parallel::Node::getDataExchangeCommunicatorIndex(
+    localSendingTreeId,
+    _sendingTreesPerDataExchangeCommunicator
+  );
+  const int tag = peano4::parallel::Node::getDataExchangeTag(
+    localSendingTreeId,
+    localReceivingTreeId,
+    exchange,
+    _sendingTreesPerDataExchangeCommunicator
+  );
 
-  return peano4::parallel::Node::GridDataExchangeMetaInformation(tag, _dataExchangeCommunicators[localSendingTreeId]);
+  return peano4::parallel::Node::GridDataExchangeMetaInformation(tag, _dataExchangeCommunicators[communicatorIndex]);
 }
 
 std::string peano4::parallel::Node::getSemanticsForTag(int tag) {

@@ -3,7 +3,7 @@
 
 include_guard(GLOBAL)
 
-macro(_peano_resolve_gpu out_backend out_arch)
+macro(_peano_resolve_gpu_backend out_backend)
   if(DEFINED _peano_gpu_backend)
     set(${out_backend} "${_peano_gpu_backend}")
   elseif(DEFINED PEANO_WITH_GPU_BACKEND)
@@ -11,7 +11,9 @@ macro(_peano_resolve_gpu out_backend out_arch)
   else()
     set(${out_backend} "no")
   endif()
+endmacro()
 
+macro(_peano_resolve_gpu_arch out_arch)
   if(DEFINED PEANO_WITH_GPU_ARCH)
     set(${out_arch} "${PEANO_WITH_GPU_ARCH}")
   else()
@@ -20,7 +22,7 @@ macro(_peano_resolve_gpu out_backend out_arch)
 endmacro()
 
 macro(peano_enable_cuda_language)
-  _peano_resolve_gpu(_peano_cuda_backend _peano_cuda_gpu_arch)
+  _peano_resolve_gpu_arch(_peano_cuda_gpu_arch)
   string(REGEX MATCH "[0-9]+$" _peano_cuda_arch "${_peano_cuda_gpu_arch}")
   message(STATUS "Using CUDA_ARCH=${_peano_cuda_arch}")
 
@@ -30,7 +32,7 @@ macro(peano_enable_cuda_language)
 endmacro()
 
 macro(peano_enable_hip_language)
-  _peano_resolve_gpu(_peano_hip_backend _peano_hip_arch)
+  _peano_resolve_gpu_arch(_peano_hip_arch)
   message(STATUS "Using HIP_ARCH=${_peano_hip_arch}")
 
   set(HIP_PLATFORM "amd" CACHE STRING "" FORCE)
@@ -41,7 +43,7 @@ macro(peano_enable_hip_language)
 endmacro()
 
 macro(peano_enable_gpu_language)
-  _peano_resolve_gpu(_peano_gpu_backend _peano_gpu_arch)
+  _peano_resolve_gpu_backend(_peano_gpu_backend)
 
   # ${ARGN} is the explicit list of GPU kernel sources emitted by the code generator (GENERATED_GPU_SOURCES).
   set(_peano_gpu_sources ${ARGN})

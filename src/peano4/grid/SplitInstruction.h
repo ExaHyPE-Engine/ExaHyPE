@@ -4,27 +4,20 @@
 
 namespace peano4::grid {
   /**
-   * Instruction to split
+   * Describes a split request whose requested cell count has to be satisfied.
    *
-   * An instruction to split always holds the number of splits that we should
-   * fork off, and it also contains an instruction how we want the tree to
-   * split the data off. We can either do the bottom up scheme, where we try
-   * to find exactly the right number of fine grid cells on the finest level
-   * and then assign refined cells to remote trees where it is a fit. The
-   * realisation of these splitting variants is discussed in peano4::grid::Spacetree::isCellBottomUpSplitCandidate(),
-   * ::grid::Spacetree::isCellTopDownSplitCandidate()
-   * and peano4::grid::Spacetree::splitOrJoinCell(). The underlying algorithmic
-   * considerations are documented in @ref peano_domain_decomposition "the domain decomposition overview".
+   * Bottom-up splitting assigns exactly the requested number of unrefined
+   * fine-grid cells to the new tree. If grid topology prevents completion,
+   * the traversal terminates instead of accepting a partial decomposition.
+   * Aggressive top-down splitting moves whole subtrees and can therefore
+   * exceed the requested count.
    *
-   * I have no constructor for this struct, but you can easily create one via
-   *
-   * ~~~~~~~~~~~~~~~~~~~~~~~~~
-   * SplitInstruction{24,SplitInstruction::Mode::AggressiveTopDown}
-   * ~~~~~~~~~~~~~~~~~~~~~~~~~
-   *
-   * using the brace initialisation of C++.
+   * Spacetree::splitOrJoinCellBottomUp() and Spacetree::splitCellTopDown()
+   * implement these modes. SpacetreeHelper::isSpacetreeNodeSplitCandidate()
+   * defines cell eligibility; @ref page_peano_domain_decomposition "the domain
+   * decomposition overview" explains how requests shape a partition.
    */
-  struct SplitInstruction {
+  struct SplitInstruction final {
     enum class Mode { AggressiveTopDown, BottomUp };
 
     int  numberOfFineGridCells{-1};
@@ -37,5 +30,5 @@ namespace peano4::grid {
   using SplitSpecification = std::map<int, SplitInstruction>;
 } // namespace peano4::grid
 
-std::ostream& operator<<(std::ostream& out, const peano4::grid::SplitInstruction& instruction);
-std::ostream& operator<<(std::ostream& out, const peano4::grid::SplitInstruction::Mode& mode);
+std::ostream& operator<<(std::ostream& outputStream, const peano4::grid::SplitInstruction& instruction);
+std::ostream& operator<<(std::ostream& outputStream, const peano4::grid::SplitInstruction::Mode& mode);

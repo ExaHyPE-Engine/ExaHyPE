@@ -4,22 +4,19 @@
 
 #include "tarch/tests/TestCase.h"
 
-namespace toolbox {
-  namespace loadbalancing {
-    namespace tests {
-      class StatisticsTest;
-    } // namespace tests
-  } // namespace loadbalancing
-} // namespace toolbox
+namespace toolbox::loadbalancing::tests {
+  class StatisticsTest;
+} // namespace toolbox::loadbalancing::tests
 
-class toolbox::loadbalancing::tests::StatisticsTest final: public tarch::tests::TestCase {
-private:
-  void testPackedReductionMatchesSimpleMPI();
-  void testStateUpdatesWithoutSplitCounter();
-
+class toolbox::loadbalancing::tests::StatisticsTest final : public tarch::tests::TestCase {
 public:
   StatisticsTest();
-  ~StatisticsTest() override final = default;
+  void run() override;
 
-  void run() override final;
+private:
+  void testLocalSnapshotMatchesSpacetreeSet();
+  void testHasAdaptiveMesh();
+  void testControlledPackedReduction();
+  void testWidePackedReduction();
+  void testDelayedCollectiveParticipant();
 };

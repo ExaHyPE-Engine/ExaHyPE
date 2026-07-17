@@ -4,23 +4,22 @@
 
 #include "tarch/tests/TestCase.h"
 
-namespace toolbox {
-  namespace loadbalancing {
-    namespace tests {
-      class LoadBalancerTest;
-    } // namespace tests
-  } // namespace loadbalancing
-} // namespace toolbox
+namespace toolbox::loadbalancing::tests {
+  class LoadBalancerTest;
+} // namespace toolbox::loadbalancing::tests
 
-class toolbox::loadbalancing::tests::LoadBalancerTest final: public tarch::tests::TestCase {
-private:
-  void testEnableDisableAndConfigurationHook();
-  void testHasSplitRecentlyThreshold();
-  void testLocalLoadBalancingString();
-
+class toolbox::loadbalancing::tests::LoadBalancerTest final : public tarch::tests::TestCase {
 public:
   LoadBalancerTest();
-  ~LoadBalancerTest() override final = default;
+  void run() override;
 
-  void run() override final;
+private:
+  void testEnableDisableAndConfigurationHook();
+  void testStationaryLevelWaitsOnlyWhenSplitCanStart();
+  void testDescribeLocalDecomposition();
+  void testInitialTargetIsStateIndependent();
+  void testSettledInitialSplitStops();
+  void testNullConfigurationIsRejected();
+  void testStateOutput();
+  void testUniformGridCompleteFlag();
 };

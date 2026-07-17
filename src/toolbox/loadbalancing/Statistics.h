@@ -5,44 +5,50 @@
 #include "tarch/mpi/mpi.h"
 
 namespace toolbox::loadbalancing {
+  class LoadBalancer;
   class Statistics;
 } // namespace toolbox::loadbalancing
+namespace toolbox::loadbalancing::tests {
+  class LoadBalancerTest;
+  class StatisticsTest;
+} // namespace toolbox::loadbalancing::tests
 
-class toolbox::loadbalancing::Statistics {
+class toolbox::loadbalancing::Statistics final {
+  friend class toolbox::loadbalancing::LoadBalancer;
+  friend class toolbox::loadbalancing::tests::LoadBalancerTest;
+  friend class toolbox::loadbalancing::tests::StatisticsTest;
+
 public:
-  static constexpr int NumberOfWords = 22;
+  static constexpr int NumberOfWords = 24;
 
   Statistics();
+  Statistics(const Statistics&)            = delete;
+  Statistics(Statistics&&)                 = delete;
+  Statistics& operator=(const Statistics&) = delete;
+  Statistics& operator=(Statistics&&)      = delete;
   ~Statistics();
 
-  static void shutdownMPI();
-
-  /**
-   * Complete a still-in-flight non-blocking reduction (per instance), so no MPI request outlives
-   * MPI_Finalize. Call this on every rank while MPI is still up, e.g. from LoadBalancer::shutdown().
-   */
-  void completePendingReduction();
-
-  void updateGlobalView();
   bool hasConsistentViewOfWorld() const;
 
-  int getLocalNumberOfInnerUnrefinedCells() const;
-  int getGlobalNumberOfInnerUnrefinedCells() const;
+  std::uint64_t getLocalNumberOfInnerUnrefinedCells() const;
+  std::uint64_t getGlobalNumberOfInnerUnrefinedCells() const;
 
-  int getLocalNumberOfOuterUnrefinedCells() const;
-  int getGlobalNumberOfOuterUnrefinedCells() const;
+  std::uint64_t getLocalNumberOfInnerRefinedCells() const;
+  std::uint64_t getGlobalNumberOfInnerRefinedCells() const;
 
-  int getLocalNumberOfVertices() const;
-  int getGlobalNumberOfVertices() const;
+  std::uint64_t getLocalNumberOfOuterUnrefinedCells() const;
+  std::uint64_t getGlobalNumberOfOuterUnrefinedCells() const;
 
-  int getLocalNumberOfHangingVertices() const;
-  int getGlobalNumberOfHangingVertices() const;
+  std::uint64_t getLocalNumberOfVertices() const;
+  std::uint64_t getGlobalNumberOfVertices() const;
+
+  std::uint64_t getLocalNumberOfHangingVertices() const;
+  std::uint64_t getGlobalNumberOfHangingVertices() const;
 
   int getLocalNumberOfTrees() const;
   int getGlobalNumberOfTrees() const;
 
-  void incLocalNumberOfSplits(int delta = 1);
-  int  getNumberOfStateUpdatesWithoutAnySplit() const;
+  int getGlobalNumberOfSplits() const;
 
   int getGlobalNumberOfRanksWithAtLeastOneTree() const;
 
@@ -52,19 +58,18 @@ public:
   int getGlobalMinTreeOuterLoad() const;
   int getGlobalMaxTreeOuterLoad() const;
 
-  int getGlobalMinRankLoad() const;
-  int getGlobalMaxRankLoad() const;
+  std::uint64_t getGlobalMinRankLoad() const;
+  std::uint64_t getGlobalMaxRankLoad() const;
 
   int getGlobalRankWithMaxTreeLoad() const;
 
-  std::size_t getLocalMemoryUsageInBytes() const;
-  std::size_t getGlobalMemoryUsageInBytes() const;
-  std::size_t getLocalProcessMemoryUsageInBytes() const;
-  std::size_t getGlobalProcessMemoryUsageInBytes() const;
+  std::uint64_t getLocalMemoryUsageInBytes() const;
+  std::uint64_t getGlobalMemoryUsageInBytes() const;
+  std::uint64_t getLocalProcessMemoryUsageInBytes() const;
+  std::uint64_t getGlobalProcessMemoryUsageInBytes() const;
 
-  // Host RAM summed once per node (not per rank), comparable to the all-ranks resident set above.
-  std::size_t getGlobalTotalMemoryInBytes() const;
-  std::size_t getGlobalFreeMemoryInBytes() const;
+  std::uint64_t getGlobalTotalMemoryInBytes() const;
+  std::uint64_t getGlobalFreeMemoryInBytes() const;
 
   int getLocalMinDepth() const;
   int getGlobalMinDepth() const;
@@ -72,31 +77,46 @@ public:
   int getLocalMaxDepth() const;
   int getGlobalMaxDepth() const;
 
+  bool hasAdaptiveMesh() const;
+
   double getLocalMinH() const;
   double getGlobalMinH() const;
 
   int getLocalNumberOfStationarySweeps() const;
   int getGlobalNumberOfStationarySweeps() const;
 
+  bool hasUniformGridCompleted() const;
+  bool hasGlobalUniformGridCompleted() const;
+
 private:
-  // Complete the in-flight non-blocking reduction launched last sweep and publish its (one-sweep
-  // lagged) result. The request was launched a full sweep ago and overlaps the traversal, so this
-  // does not block the hot path.
+  static void shutdownMPI();
+
+  void completePendingReduction();
+  void updateGlobalView();
+  void synchroniseGlobalView();
+  void startGlobalViewExchange();
   void waitForGlobalDataExchange();
+  void resetInitialDecompositionState();
+  void incLocalNumberOfSplits(int delta = 1);
+  void notifyUniformGridComplete();
 
   bool _isViewConsistent;
+  bool _hasPublishedGlobalView;
 
-  int _localNumberOfInnerUnrefinedCells;
-  int _globalNumberOfInnerUnrefinedCells;
+  std::uint64_t _localNumberOfInnerUnrefinedCells;
+  std::uint64_t _globalNumberOfInnerUnrefinedCells;
 
-  int _localNumberOfOuterUnrefinedCells;
-  int _globalNumberOfOuterUnrefinedCells;
+  std::uint64_t _localNumberOfInnerRefinedCells;
+  std::uint64_t _globalNumberOfInnerRefinedCells;
 
-  int _localNumberOfVertices;
-  int _globalNumberOfVertices;
+  std::uint64_t _localNumberOfOuterUnrefinedCells;
+  std::uint64_t _globalNumberOfOuterUnrefinedCells;
 
-  int _localNumberOfHangingVertices;
-  int _globalNumberOfHangingVertices;
+  std::uint64_t _localNumberOfVertices;
+  std::uint64_t _globalNumberOfVertices;
+
+  std::uint64_t _localNumberOfHangingVertices;
+  std::uint64_t _globalNumberOfHangingVertices;
 
   int _localNumberOfTrees;
   int _globalNumberOfTrees;
@@ -105,8 +125,6 @@ private:
 
   int _localNumberOfSplits;
   int _globalNumberOfSplits;
-
-  int _numberOfStateUpdatesWithoutAnySplit;
 
   int _localMinTreeLoad;
   int _localMaxTreeLoad;
@@ -119,8 +137,8 @@ private:
   int _globalMinTreeOuterLoad;
   int _globalMaxTreeOuterLoad;
 
-  int _globalMinRankLoad;
-  int _globalMaxRankLoad;
+  std::uint64_t _globalMinRankLoad;
+  std::uint64_t _globalMaxRankLoad;
 
   std::uint64_t _localMemoryUsageInBytes;
   std::uint64_t _globalMemoryUsageInBytes;
@@ -143,9 +161,10 @@ private:
   int _localNumberOfStationarySweeps;
   int _globalNumberOfStationarySweeps;
 
+  bool _localUniformGridComplete;
+  bool _globalUniformGridComplete;
+
 #ifdef PEANO_WITH_MPI
-  // Pack everything into one record (uint64_t words), reduced via a custom MPI_Op.
-  // Store the double as raw bits in a uint64_t.
   std::array<std::uint64_t, NumberOfWords> _globalExchangeSend{};
   std::array<std::uint64_t, NumberOfWords> _globalExchangeRecv{};
   MPI_Request                              _globalExchangeRequest;

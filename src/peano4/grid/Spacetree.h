@@ -15,7 +15,6 @@
 #include "VertexLookupTable.h"
 
 #include "peano4/stacks/Stack.h"
-#include "tarch/instrumentation/Log.h"
 
 namespace peano4::grid {
   class Spacetree;
@@ -31,12 +30,17 @@ namespace peano4::parallel {
   class SpacetreeSet;
 } // namespace peano4::parallel
 
+namespace peano4::parallel::tests {
+  class SpacetreeSetTest;
+} // namespace peano4::parallel::tests
+
 class peano4::grid::Spacetree final {
 private:
   friend class peano4::parallel::SpacetreeSet;
+  friend class peano4::parallel::tests::SpacetreeSetTest;
   friend class peano4::grid::tests::SpacetreeTest;
 
-  int _id;
+  const int _id;
 
   SpacetreeState _spacetreeState;
 
@@ -50,50 +54,34 @@ private:
   GridStatistics _statistics;
 
   /**
-   * This is not a static master. There's only a real master-worker relation
-   * built into this part of the code when we actually split or join.
-   *
-   * This field should be const (it never changes), but in the MPI case, I
-   * wanna be able to construct a tree first and then to set the master.
-   * Actually, I should introduce a special constructor for this.
+   * Identifies the parent tree during split and join operations. Root trees
+   * use -1.
    */
-  int                     _masterId;
+  const int               _masterId;
   std::unordered_set<int> _childrenIds;
 
-  /**
-   * Indicate per axis whether we have periodic boundary conditions.
-   */
+  /** Indicates which axes have periodic boundary conditions. */
   const std::bitset<DIMENSIONS> _periodicBC;
 
   /**
-   * A split is identified by a tuple of id and cell count which tells the
-   * code how many cells should go to a particular id. The actual split then
-   * is done in a second iteration, i.e. we first bookmark all split requests
-   * and then we roll over the requests in the subsequent iteration to be
-   * actually performed.
+   * Split requests remain registered until the following traversal applies
+   * them to the grid.
    */
-  SplitSpecification _splitTriggered;
+  peano4::grid::SplitSpecification           _splitTriggered;
+  peano4::grid::SplitSpecification::iterator _nextSplitInstruction;
 
   TreeIdSet _splitting;
 
   GridTraversalEventGenerator _gridTraversalEventGenerator;
 
-  /**
-   * I need this post-mortem list to identify which tree structures have to be
-   * copied/replicated where.
-   */
+  /** Records completed splits for replication routing. */
   TreeIdSet _hasSplit;
 
-  constexpr static int NoJoin = -1;
   /**
-   * This should be -1 if no join is triggered. Otherwise it holds the id of
-   * the joining rank.
+   * Join requests move to _joining after traversal so each traversal uses a
+   * stable transition set.
    */
   TreeIdSet _joinTriggered;
-
-  /**
-   * If master: Set of workers that should join
-   */
   TreeIdSet _joining;
 
   bool _noParallelTopologyChanges;
@@ -189,17 +177,19 @@ private:
   );
 
   /**
-   * @see splitOrJoinCellBottomUp() For both the usage and a description how we
-   *   hijack the routine.
+   * Stores child markers until bottom-up splitting has visited all siblings.
+   * Top-down splitting uses the same stack to carry the parent's target tree.
    */
   std::vector<int> _splittedCells;
 
-  void splitOrJoinCellBottomUp(GridVertex vertex[TWO_POWER_D], GridVertex fineGridVertices[TWO_POWER_D]);
+  void splitOrJoinCellBottomUp(GridVertex coarseGridVertices[TWO_POWER_D], GridVertex fineGridVertices[TWO_POWER_D]);
 
-  void splitCellTopDown(GridVertex vertex[TWO_POWER_D], GridVertex fineGridVertices[TWO_POWER_D]);
+  void splitCellTopDown(GridVertex coarseGridVertices[TWO_POWER_D], GridVertex fineGridVertices[TWO_POWER_D]);
 
-  void
-  mergeCellFromWorkerWithMasterThroughoutJoin(GridVertex vertex[TWO_POWER_D], GridVertex fineGridVertices[TWO_POWER_D]);
+  void mergeCellFromWorkerWithMasterThroughoutJoin(
+    GridVertex coarseGridVertices[TWO_POWER_D],
+    GridVertex fineGridVertices[TWO_POWER_D]
+  );
 
   bool shouldEraseAdjacencyInformation(
     const GridVertex&                  vertex,
@@ -219,14 +209,14 @@ private:
     const tarch::la::Vector<DIMENSIONS, int>& fineVertexPosition
   );
 
-  static void updateVertexRanksWithinCell(GridVertex fineGridVertices[TWO_POWER_D], int newId);
+  static void updateVertexRanksWithinCell(GridVertex fineGridVertices[TWO_POWER_D], int newTreeId);
 
   std::array<int, TWO_POWER_D> getAdjacentRanksForNewVertex(
     GridVertex                                coarseGridVertices[TWO_POWER_D],
     const tarch::la::Vector<DIMENSIONS, int>& vertexPositionWithin3x3Patch
   ) const;
 
-  void split(int treeId, const SplitInstruction& instruction);
+  void split(int newSpacetreeId, const SplitInstruction& instruction);
 
   bool isFaceAlongPeriodicBoundaryCondition(
     GridVertex vertex[TWO_POWER_D],
@@ -246,25 +236,26 @@ private:
 
   void mergeGridVertexRefinementStateAtHorizontalDomainBoundary(
     GridVertex&       vertex,
-    const GridVertex& inVertex,
-    int               neighbour
+    const GridVertex& incomingVertex,
+    int               neighbourTreeId
   );
   void mergeGridVertexAdjacencyListsAtHorizontalDomainBoundary(
     GridVertex&       vertex,
-    const GridVertex& inVertex,
-    int               neighbour
+    const GridVertex& incomingVertex,
+    int               neighbourTreeId
   );
 
   void joinWithMaster();
-  void joinWithWorker(int id);
+  void joinWithWorker(int workerId);
 
   bool mayJoinWithMaster() const;
   bool mayJoinWithWorker() const;
 
   bool maySplit() const;
-  int  getSplittingTree() const;
+  int  getSplittingTree();
 
-  void updateSplittingCounter(int treeId);
+  void updateSplittingCounter(int splittingTreeId);
+  void resetSplittingTreeCursor();
 
 public:
   Spacetree(
@@ -294,12 +285,13 @@ public:
 
   std::vector<PeriodicStamp>& getLocalExchangeVertexStamps(int localStackId);
 
-  stacks::Stack<GridVertex>& getParallelExchangeVertexStack(int slot, StackTopology::ParallelExchangeStack which);
+  stacks::Stack<GridVertex>&
+  getParallelExchangeVertexStack(int neighbourSlot, StackTopology::ParallelExchangeStack exchangeStack);
   const stacks::Stack<GridVertex>&
-  getParallelExchangeVertexStack(int slot, StackTopology::ParallelExchangeStack which) const;
+  getParallelExchangeVertexStack(int neighbourSlot, StackTopology::ParallelExchangeStack exchangeStack) const;
 
   int getNumberOfNeighbourTrees() const;
-  int getNeighbourTreeIdForSlot(int slot) const;
+  int getNeighbourTreeIdForSlot(int neighbourSlot) const;
 
   void traverse(GridTraversalObserver& observer);
 
