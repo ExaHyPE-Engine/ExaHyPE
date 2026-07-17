@@ -4,12 +4,13 @@ import numpy as np
 import sys, time, os
 import argparse
 
-from Tree import Tree
-from input.GridPatchFileReader import *
-from input.RegularGridGenerator import *
-from input.CustomGridGenerator import *
-from visualize.TreeVisualizer import TreeVisualizer
-import strategies.SplitTrees as split_strategy
+from toolbox.loadbalancing.api.Tree import Tree
+from toolbox.loadbalancing.api.input.GridPatchFileReader import *
+from toolbox.loadbalancing.api.input.RegularGridGenerator import *
+from toolbox.loadbalancing.api.input.CustomGridGenerator import *
+from toolbox.loadbalancing.api.visualize.TreeVisualizer import TreeVisualizer
+import toolbox.loadbalancing.api.strategies.SplitTrees as split_strategy
+from toolbox.loadbalancing.api.strategies.Decomposition import equidistant_splitting
 
 
 """
@@ -34,8 +35,8 @@ distribution across compute resources.
                         Range: 1-10 (higher values require significant memory)
 
 ### Processing Options  
--s, --splits COUNT      Number of additional subtrees to create
-                        Example: -s 4 creates 5 total subtrees (original + 4 new)
+-s, --splits COUNT      Total number of subtrees to create
+                        Example: -s 5 creates 5 total subtrees
                         Default: No splitting (analysis only)
 
 -p, --plot              Generate visualisation plots
@@ -138,9 +139,9 @@ def main():
     parser.add_argument("-f", 	"--file", 		dest="file_path", 	    type=str,                                                   help="Path to input grid patch file (e.g., Input/example2)" )
     parser.add_argument("-y", 	"--yaml", 		dest="yaml_path", 	    type=str,                                                   help="Path to input YAML file created by generate_tree_yaml()" )
     parser.add_argument("-p", 	"--plot", 		dest="plot_flag", 	                action="store_true",    default=False,          help="Generate and save visualization plots of the tree structure" )
-    parser.add_argument("-d",   "--dimensions", dest="grid_dimensions",  type=int,                                                   help="Spatial dimensions of the grid (2 for 2D, 3 for 3D) - auto-detected from YAML if not specified" )
+    parser.add_argument("-d",   "--dimensions", dest="grid_dimensions", type=int,                                                   help="Spatial dimensions of the grid (2 for 2D, 3 for 3D) - auto-detected from YAML if not specified" )
     parser.add_argument("-l",   "--max-level",  dest="max_level",  	    type=int,                           default=0,              help="Maximum refinement level for artificial regular grid generation" )
-    parser.add_argument("-s",   "--splits", 	dest="num_splits",      type=int,                                                   help="Number of additional subtrees to create via splitting")
+    parser.add_argument("-s",   "--splits", 	dest="num_splits",      type=int,                                                   help="Total number of subtrees to create via splitting")
     parser.add_argument("-o",   "--output",     dest="output_yaml",     type=str,                           default="output.yaml",  help="Output YAML file path for storing split results and tree structure")
     parser.add_argument("-t",   "--traversal",  dest="traversal_mode",  type=str,   choices=["bfs", "bfs_finest_first", "dfs"], default="bfs_finest_first",          help="Stage I traversal mode for split_tree(): 'bfs', 'bfs_finest_first' (default) or 'dfs'")
     parser.add_argument("--no-topology-update", dest="topology_update",             action="store_false",   default=True,           help="Disable topology preservation (skip non-leaf subtree propagation) during split_tree()")
@@ -253,9 +254,17 @@ def main():
         
         split_start_time = time.time()
 
+        # Build the decomposition plan (per-subtree leaf counts)
+        number_of_subtrees = args.num_splits
+        decomposition = equidistant_splitting(
+            tree,
+            number_of_subtrees,
+            verbose=True,
+        )
+
         split_strategy.split_tree(
             tree,
-            args.num_splits,
+            decomposition,
             traversal=args.traversal_mode,
             enable_propagate_bottom_up=args.topology_update,
         )
