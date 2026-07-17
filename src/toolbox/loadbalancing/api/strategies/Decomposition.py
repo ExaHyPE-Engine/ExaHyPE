@@ -22,14 +22,13 @@ def equidistant_splitting(peano_tree: Tree,
         return (False, [])
 
     # Calculate how many leaves each subtree should get for balanced decomposition
-    leaves_per_subtree = total_leaves // (number_of_subtrees)
-    remaining_leaves = total_leaves % (number_of_subtrees)
+    leaves_per_subtree, remaining_leaves = divmod(total_leaves, number_of_subtrees)
 
     # Create decomposition plan
-    decomposition = []
-    for i in range(number_of_subtrees):
-        target_count = leaves_per_subtree + (1 if i < remaining_leaves else 0)
-        decomposition.append(target_count)
+    decomposition = [
+        leaves_per_subtree + (1 if subtree_id < remaining_leaves else 0)
+        for subtree_id in range(number_of_subtrees)
+    ]
 
     if verbose:
         print(
@@ -82,8 +81,7 @@ def quantised_splitting(peano_tree: Tree,
         return (False, [])
 
     # Calculate how many leaves each subtree should get for balanced decomposition
-    optimal_leaves_per_subtree = total_leaves // (number_of_subtrees)
-    residual_leaves            = total_leaves % optimal_leaves_per_subtree
+    optimal_leaves_per_subtree, residual_leaves = divmod(total_leaves, number_of_subtrees)
     
     # Create decomposition plan
     decomposition = []
@@ -92,15 +90,15 @@ def quantised_splitting(peano_tree: Tree,
         current_step_size = 3**dimension
         while (current_chunk<optimal_leaves_per_subtree+residual_leaves):
             if current_chunk == current_step_size * 3**dimension:
-                current_step_size = current_step_size * 3**dimension
-            current_chunk = current_chunk + current_step_size
-        current_chunk = current_chunk - current_step_size
-        residual_leaves = residual_leaves + optimal_leaves_per_subtree - current_chunk
+                current_step_size *= 3**dimension
+            current_chunk += current_step_size
+        current_chunk -= current_step_size
+        residual_leaves += optimal_leaves_per_subtree - current_chunk
         assert residual_leaves>=0, "residual leaves = {}".format(residual_leaves)
         decomposition.append(current_chunk)
         print(f"append {current_chunk} and maintain residual {residual_leaves} with optimum {optimal_leaves_per_subtree}. New target {optimal_leaves_per_subtree+residual_leaves}")
 
-    decomposition[-1] = decomposition[-1] + residual_leaves
+    decomposition[-1] += residual_leaves
     
     assert sum(decomposition)==total_leaves, "{} vs {}".format(sum(decomposition),total_leaves)
 
