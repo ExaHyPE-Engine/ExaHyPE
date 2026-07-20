@@ -35,7 +35,7 @@ distribution across compute resources.
                         Range: 1-10 (higher values require significant memory)
 
 ### Processing Options  
--s, --splits COUNT      Total number of subtrees to create
+-s, --subtrees COUNT    Total number of subtrees to create
                         Example: -s 5 creates 5 total subtrees
                         Default: No splitting (analysis only)
 
@@ -141,7 +141,7 @@ def main():
     parser.add_argument("-p", 	"--plot", 		dest="plot_flag", 	                action="store_true",    default=False,          help="Generate and save visualization plots of the tree structure" )
     parser.add_argument("-d",   "--dimensions", dest="grid_dimensions", type=int,                                                   help="Spatial dimensions of the grid (2 for 2D, 3 for 3D) - auto-detected from YAML if not specified" )
     parser.add_argument("-l",   "--max-level",  dest="max_level",  	    type=int,                           default=0,              help="Maximum refinement level for artificial regular grid generation" )
-    parser.add_argument("-s",   "--splits", 	dest="num_splits",      type=int,                                                   help="Total number of subtrees to create via splitting")
+    parser.add_argument("-s",   "--subtrees", 	dest="subtrees",      type=int,                                                   help="Total number of subtrees to create via splitting")
     parser.add_argument("-o",   "--output",     dest="output_yaml",     type=str,                           default="output.yaml",  help="Output YAML file path for storing split results and tree structure")
     parser.add_argument("-t",   "--traversal",  dest="traversal_mode",  type=str,   choices=["bfs", "bfs_finest_first", "dfs"], default="bfs_finest_first",          help="Stage I traversal mode for split_tree(): 'bfs', 'bfs_finest_first' (default) or 'dfs'")
     parser.add_argument("--no-topology-update", dest="topology_update",             action="store_false",   default=True,           help="Disable topology preservation (skip non-leaf subtree propagation) during split_tree()")
@@ -239,8 +239,8 @@ def main():
     split_start_time = 0.0
     split_end_time = 0.0
 
-    # Apply splitting if number of splits is provided
-    if args.num_splits is not None:
+    # Apply splitting if number of subtrees is provided
+    if args.subtrees is not None:
         print("\n" + "="*50)
         print("INITIALLY RESETTING TREE TO SINGLE SUBTREE")
         print("="*50)
@@ -255,7 +255,7 @@ def main():
         split_start_time = time.time()
 
         # Build the decomposition plan (per-subtree leaf counts)
-        number_of_subtrees = args.num_splits
+        number_of_subtrees = args.subtrees
         decomposition = equidistant_splitting(
             tree,
             number_of_subtrees,
@@ -281,14 +281,14 @@ def main():
         print("GENERATING SPLIT RESULTS YAML")
         print("="*50)
 
-        # Create split tree output filename based on input type and number of splits
+        # Create split tree output filename based on input type and number of subtrees
         if args.file_path:
-            split_yaml_filename = f"Files-{os.path.basename(args.file_path)}_s{args.num_splits}_split.yaml"
+            split_yaml_filename = f"Files-{os.path.basename(args.file_path)}_s{args.subtrees}_split.yaml"
         elif args.yaml_path:
             base_name = os.path.splitext(os.path.basename(args.yaml_path))[0]
-            split_yaml_filename = f"YAML-{base_name}_s{args.num_splits}_split.yaml"
+            split_yaml_filename = f"YAML-{base_name}_s{args.subtrees}_split.yaml"
         else:
-            split_yaml_filename = f"TreeStructure_l{args.max_level}_s{args.num_splits}_split.yaml"
+            split_yaml_filename = f"TreeStructure_l{args.max_level}_s{args.subtrees}_split.yaml"
 
         # Replace path separators to create a safe filename
         split_yaml_filename = split_yaml_filename.replace('/', '_').replace('\\', '_')
@@ -308,13 +308,13 @@ def main():
         if args.plot_flag:
             if args.file_path:
                 base_name = f"Files-{os.path.basename(args.file_path)}"
-                split_plot_filename = f"{base_name}_s{args.num_splits}"
+                split_plot_filename = f"{base_name}_s{args.subtrees}"
             elif args.yaml_path:
                 base_name = f"YAML-{os.path.splitext(os.path.basename(args.yaml_path))[0]}"
-                split_plot_filename = f"{base_name}_s{args.num_splits}"
+                split_plot_filename = f"{base_name}_s{args.subtrees}"
             else:
                 base_name = "TreeStructure"
-                split_plot_filename = f"{base_name}_l{args.max_level}_s{args.num_splits}"
+                split_plot_filename = f"{base_name}_l{args.max_level}_s{args.subtrees}"
                 
             split_plot_filename = split_plot_filename.replace('/', '_').replace('\\', '_')
             
@@ -333,7 +333,7 @@ def main():
     print(f"Input Time Cost: {(time2-time1):.4f} seconds")
     if args.plot_flag:
         print(f"Visualization Time Cost: {(viz_end_time-viz_start_time):.4f} seconds")
-    if args.num_splits is not None:
+    if args.subtrees is not None:
         print(f"Splitting Time Cost: {(split_end_time-split_start_time):.4f} seconds")
     print(f"Total Time Cost: {(time3-time1):.4f} seconds")
 
