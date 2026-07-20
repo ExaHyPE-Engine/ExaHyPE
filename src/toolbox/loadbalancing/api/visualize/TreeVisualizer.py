@@ -2,7 +2,6 @@
 # use, please see the copyright notice at www.peano-framework.org
 import numpy as np
 import matplotlib.pyplot as plt
-import sys, os
 
 # Try to import plotly for HTML export
 try:
