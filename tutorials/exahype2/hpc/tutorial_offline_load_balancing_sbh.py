@@ -14,6 +14,7 @@ import toolbox.loadbalancing.api.input.RegularGridGenerator as RegularGridGenera
 import toolbox.loadbalancing.api.strategies.SplitTrees as SplitTrees
 import toolbox.loadbalancing.api.output.Hardcoded as Hardcoded
 import toolbox.loadbalancing.api.strategies.Decomposition as Decomposition
+from toolbox.loadbalancing.api.visualize.TreeVisualizer import TreeVisualizer
 #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_inputs]
 
 
@@ -183,6 +184,8 @@ if __name__ == "__main__":
         #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_regular_fine_grid_split]
         number_of_subtrees = args.ranks * args.trees
 
+        TreeVisualizer(tree, 3, "original-finegrid")
+
         SplitTrees.split_tree(
             tree,
             verbose=True,
@@ -192,6 +195,7 @@ if __name__ == "__main__":
         )
         #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_regular_fine_grid_split]
         
+        TreeVisualizer(tree, 3, "updated-finegrid")
         
         #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_regular_fine_grid_map]
         destination_ranks = Hardcoded.assign_trees_to_ranks_round_Robin(number_of_subtrees = tree.number_of_subtrees,
@@ -218,6 +222,8 @@ if __name__ == "__main__":
         tree = RegularGridGenerator.RegularGridGenerator(max_level=tree_height_required_to_match_cell_size, dimensions=3)
         number_of_subtrees = args.ranks * args.trees
 
+        TreeVisualizer(tree, 3, "original-bottomup")
+
         SplitTrees.split_tree(
             peano_tree=tree,
             verbose = True,
@@ -228,6 +234,8 @@ if __name__ == "__main__":
         )
         SplitTrees.propagate_bottom_up(tree)
         
+        TreeVisualizer(tree, 3, "updated-bottomup")
+
         destination_ranks = Hardcoded.assign_trees_to_ranks_round_Robin(number_of_subtrees = tree.number_of_subtrees,
                                                                         max_ranks          = args.ranks
                                                                         )        
@@ -289,7 +297,7 @@ if __name__ == "__main__":
 
     
     peano4_project.generate(throw_away_data_after_generation=False)
-#    peano4_project.build(
-#        make=True, make_clean_first=True, number_of_parallel_builds=args.j
-#    )
+    peano4_project.build(
+        make=True, make_clean_first=True, number_of_parallel_builds=args.j
+    )
  
