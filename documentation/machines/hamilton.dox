@@ -21,6 +21,8 @@ I nevertheless prefer the Intel toolchain on the machine.
 
 # Loading Intel's toolchain
 
+## Environment Setup
+
 Hamilton's default oneapi module is built against a GCC version which is too old and lacks
 important features within its standard library.
 Therefore, you have to manuall load the latest gcc.
@@ -43,6 +45,7 @@ export I_MPI_CXX=icpx
 module load python/3.13.9
 ~~~~~~~~~~~~~~~~~~~~~~
 
+## Configuration
 For the vectorisation, we recognise that we always need
 
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -52,25 +55,29 @@ For the vectorisation, we recognise that we always need
 The previously used ```-Ofast``` is deprecated now.
 Also ```-ffast-math``` seems not to work anymore.
 
-
-
-# OpenMP configurations
-
-~~~~~~~~~~~~~~~~~~~~~~
-./configure CXX=icpx CC=icx CXXFLAGS="-std=c++20 -O3 -mtune=native -march=native -fma -fomit-frame-pointer -fno-exceptions -Wno-unknown-attributes -Wno-gcc-compat -fiopenmp" LIBS=-fiopenmp  --enable-mghype --enable-exahype --enable-blockstructured --enable-finiteelements --with-multithreading=omp --enable-loadbalancing
-~~~~~~~~~~~~~~~~~~~~~~
-
-No surprises here. 
-We usually use the Intel OpenMP runtime, which is enabled through ```-fiopenmp``` as compared to the generic LLVM OpenMP runtime.
-
 <div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
   Peano's core code does not use exceptions and the ```-fno-exceptions``` flag hence works.
   However, some external libraries such as those used by ExaGRyPE do use 
   exceptions, and you therefore have to remove this flag from the configuration. 
 </div>
 
+A good starting point for configuration is
+~~~~~~~~~~~~~~~~~~~~~~
+./configure CXX=icpx CC=icx CXXFLAGS="-std=c++20 -O3 -mtune=native -march=native -fma -fomit-frame-pointer -fno-exceptions -Wno-unknown-attributes -Wno-gcc-compat" LDFLAGS="" --enable-mghype --enable-exahype --enable-blockstructured --enable-finiteelements --enable-loadbalancing
+~~~~~~~~~~~~~~~~~~~~~~
 
-# TBB configurations
+### Enable OpenMP
+
+To enable OpenMP add ```-fiopenmp``` to ```CXXFLAGS``` and ```LDFLAGS```.
+Using ```-fiopenmp``` instead of ```fopenmp``` enables Intel's OpenMP runtime instead
+of a more generic version.
+Also add ```--with-multithreading=omp``` to the configure statement, giving
+~~~~~~~~~~~~~~~~~~~~~~
+./configure CXX=icpx CC=icx --with-multithreading=omp CXXFLAGS="-fiopenmp -std=c++20 -O3 -mtune=native -march=native -fma -fomit-frame-pointer -fno-exceptions -Wno-unknown-attributes -Wno-gcc-compat" LDFLAGS="-fiopenmp" --enable-mghype --enable-exahype --enable-blockstructured --enable-finiteelements --enable-loadbalancing
+~~~~~~~~~~~~~~~~~~~~~~
+
+
+### Enable TBB
 
 We offer these two TBB backends: One with our own extensions, which kind of
 serve as preview of upcoming TBB variants, and then we have an implementation
@@ -86,7 +93,7 @@ module load tbb/2022.2
 ./configure CXX=icpx CC=icx CXXFLAGS="-std=c++20 -O3 -mtune=native -march=native -fma -fomit-frame-pointer -fno-exceptions -Wno-unknown-attributes -Wno-gcc-compat" LIBS="-ltbb" LDFLAGS="-L${TBBROOT}/lib" --enable-mghype --enable-exahype --enable-blockstructured --enable-finiteelements --with-multithreading=tbb_extension --enable-loadbalancing
 ~~~~~~~~~~~~~~~~~~~~~~
 
-There seems to be an issue with the libraries (at least was up to TBB 2024.2 on all systems that we tried).
+There seems to be an issue with the libraries (at least was up to TBB 2022.2 on all systems that we tried).
 So we better set the library path explicitly.
 
 <div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
@@ -95,7 +102,8 @@ So we better set the library path explicitly.
   exceptions, and you therefore have to remove this flag from the configuration. 
 </div>
 
-# Intel MPI
+
+### Enable Intel MPI
 
 If you use mpiicpc, the MPI wrapper still refers to icpc even though icpc is
 officially deprecated.
@@ -103,14 +111,12 @@ Therefore, I manually have to repoint it to icpx.
 The other options to do this (via additional script arguments, e.g.) all failed
 on this machine.
 
-
-
 ~~~~~~~~~~~~~~~~~~~~~~
 ./configure CXX=icpx CC=icx CXXFLAGS=-O3 -ffast-math -mtune=native -march=native -fma -fomit-frame-pointer -std=c++20 -fno-exceptions -Wno-unknown-attributes -Wno-gcc-compat LIBS=-ltbb LDFLAGS=-L/apps/developers/libraries/tbb/2022.0/1/default/tbb/latest/lib --enable-mghype --enable-exahype --enable-blockstructured --enable-finiteelements --with-multithreading=tbb_extension --enable-loadbalancing --with-mpi=mpiicpc
 ~~~~~~~~~~~~~~~~~~~~~~
 
 
-## Older settings (not tested atm)
+### Older settings (not tested atm)
 
 - MPI production runs
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -133,5 +139,66 @@ ExaHyPE and Swift. This is however something I do in the main() routine of
 the respective applications.
 
 
+# Loading LLVM's toolchain
+
+## Environment Setup
+
+The installed verison of clang defaults to using its own standard library,
+instead of gcc's version so gcc does not need to be loaded.
+~~~~~~~~~~~~~~~~~~~~~~
+module purge
+module load llvm/20.1.8
+
+module load openmpi/5.0.9
+export OMPI_CXX=icpx
+
+module load python/3.13.9
+~~~~~~~~~~~~~~~~~~~~~~
+
+## Configuration
+
+See \ref documentation_toolchains_llvm for information on compiler flags.
+A good starting point for configuration is
+~~~~~~~~~~~~~~~~~~~~~~
+./configure CXX=clang++ CC=clang CXXFLAGS="-std=c++20 -O3 -mtune=native -march=native -ffp-contract=on -fomit-frame-pointer -fno-exceptions -Wno-unknown-attributes -Wno-gcc-compat" LDFLAGS="" --enable-mghype --enable-exahype --enable-blockstructured --enable-finiteelements --enable-loadbalancing
+~~~~~~~~~~~~~~~~~~~~~~
+
+### Enable OpenMP
+
+To enable OpenMP add ```-fopenmp``` to ```CXXFLAGS``` and ```LDFLAGS```.
+Also add ```--with-multithreading=omp``` to the configure statement, giving
+~~~~~~~~~~~~~~~~~~~~~~
+./configure CXX=clang++ CC=clang --with-multithreading=omp CXXFLAGS="-fopenmp -std=c++20 -O3 -mtune=native -march=native -ffp-contract=on -fomit-frame-pointer -fno-exceptions -Wno-unknown-attributes -Wno-gcc-compat" LDFLAGS="-fopenmp" --enable-mghype --enable-exahype --enable-blockstructured --enable-finiteelements --enable-loadbalancing
+~~~~~~~~~~~~~~~~~~~~~~
+
+### Enable TBB
+
+TBB is not installed for LLVM on Hamilton, so if you're desperate to use it you have to install it yourself.
+~~~~~~~~~~~~~~~~~~~~~~
+# Choose an appropriate install directory
+export TBB_INSTALL_LOCATION=~/tbb_llvm
+git clone https://github.com/uxlfoundation/oneTBB.git --depth=1 -b v2022.2.0
+cd oneTBB && mkdir build && cd build
+cmake -G "Ninja" -DCMAKE_INSTALL_PREFIX=~/tbb_llvm -DTBB_TEST=OFF -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ ..
+ninja
+ninja install
+export LD_LIBARY_PATH=${TBB_INSTALL_LOCATION}/lib64:${LD_LIBRARY_PATH}
+~~~~~~~~~~~~~~~~~~~~~~
+
+To configure with TBB add ```-L${TBB_INSTALL_LOCATION}/lib64``` to CXXFLAGS and LDFLAGS, and ```-I${TBB_INSTALL_LOCATION}/include``` to CXXFLAGS 
+and ```--with-multithreading=tbb_extension``` and ```LIBS="-ltbb" to the configure statement, giving
+~~~~~~~~~~~~~~~~~~~~~~
+./configure CXX=clang++ CC=clang --with-multithreading=tbb_extension CXXFLAGS="-I${TBB_INSTALL_LOCATION}/include -L${TBB_INSTALL_LOCATION}/lib64 -std=c++20 -O3 -mtune=native -march=native -ffp-contract=on -fomit-frame-pointer -fno-exceptions -Wno-unknown-attributes -Wno-gcc-compat" LDFLAGS="-L${TBB_INSTALL_LOCATION}/lib64" LIBS="-ltbb" --enable-mghype --enable-exahype --enable-blockstructured --enable-finiteelements --enable-loadbalancing
+~~~~~~~~~~~~~~~~~~~~~~
+
+See the above TBB section in the Intel toolchain for further information on using tbb vs tbb_extension.
+
+### Using MLIR
+
+LLVM is build on Hamilton to include MLIR features so no extra steps are required to get access to it.
+See \ref documentation_toolchains_llvm for information on using it. When following the steps to build
+exahype-opt, use ```export LLVM_INSTALL_DIRECTORY=/apps/developers/compilers/llvm/20.1.8/1/default```.
+
+To use
 */
 
