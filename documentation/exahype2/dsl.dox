@@ -3,6 +3,10 @@
 @page documentation_exahype2_dsl DSL Syntax
 
 Exahype uses a domain specific language (DSL) to define its kernels.
+This allows us to generate versions for different architectures, and to also
+generate a version that uses MLIR to perform optimisation passes. For details
+on using MLIR see \ref documentation_toolchains_llvm.
+
 This page provides details its syntax. It is compiled by making modifications
 to a Python abstract syntax tree (AST), so the majority of its syntax matches
 that of Python. The timeStepWithRusanov function is a good reference to look
@@ -95,14 +99,4 @@ them has one variable. In this case the datablock with one variable will act as 
 contained duplicates of this variable to match the number of variables in the other 
 DataBlock.
 
-# Compiling with MLIR
-Building a benchmark that uses MLIR requires our exahype-opt executable, which must first
-be built. This assumes that the steps in \ref documentation_toolchains_llvm .
-Navigate to src/exahype2/mlir and enter the commands
-~~~~~~~~~~~~~
-mkdir build && cd build
-cmake -G Ninja .. -DMLIR_DIR=${LLVM_INSTALL_DIRECTORY}/lib/cmake/mlir
-cmake --build .
-~~~~~~~~~~~~~
-The output bin directory should then be added to your PATH.
 */

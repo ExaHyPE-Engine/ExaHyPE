@@ -3,6 +3,7 @@
 #include "tarch/multicore/Lock.h"
 #include "tarch/mpi/Rank.h"
 
+#include <iomanip>
 
 tarch::logging::Log mghype::matrixfree::solvers::SolverStatistics::_log( "mghype::matrixfree::solvers::SolverStatistics" );
 
