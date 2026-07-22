@@ -88,6 +88,15 @@ function(peano_apply_flags)
     $<$<COMPILE_LANG_AND_ID:C,NVHPC,PGI>:-Kieee>
     $<$<COMPILE_LANG_AND_ID:CXX,NVHPC,PGI>:-Kieee>
     $<$<COMPILE_LANG_AND_ID:Fortran,NVHPC,PGI>:-Kieee>
+    # Intel's LLVM front-end defaults to value-unsafe fast maths, which breaks the exact
+    # grid-event arithmetic and the bitwise symmetry of the interpolation and restriction
+    # kernels; precise restores value-safe IEEE semantics, and the explicit contraction
+    # flag pins fused multiply-adds to single statements whatever the model maps it to.
+    # FENV_ACCESS also requires precise semantics.
+    $<$<COMPILE_LANG_AND_ID:C,IntelLLVM>:-ffp-model=precise>
+    $<$<COMPILE_LANG_AND_ID:C,IntelLLVM>:-ffp-contract=on>
+    $<$<COMPILE_LANG_AND_ID:CXX,IntelLLVM>:-ffp-model=precise>
+    $<$<COMPILE_LANG_AND_ID:CXX,IntelLLVM>:-ffp-contract=on>
   )
 
   target_compile_options(PeanoOptions INTERFACE
@@ -131,12 +140,5 @@ function(peano_apply_flags)
 
   if(PEANO_WITH_FPE)
     target_compile_definitions(PeanoOptions INTERFACE PEANO_WITH_FPE)
-    # Intel's LLVM front-end rejects FENV_ACCESS without precise FP semantics. FENV_ACCESS
-    # is a C/C++ construct, so this is resolved per language (again not via the C++ compiler
-    # id alone) and only needs to reach the C and C++ front-ends.
-    target_compile_options(PeanoOptions INTERFACE
-      $<$<COMPILE_LANG_AND_ID:C,IntelLLVM>:-ffp-model=precise>
-      $<$<COMPILE_LANG_AND_ID:CXX,IntelLLVM>:-ffp-model=precise>
-    )
   endif()
 endfunction()

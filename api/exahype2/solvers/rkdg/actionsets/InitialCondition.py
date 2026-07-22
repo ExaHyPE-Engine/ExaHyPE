@@ -22,10 +22,9 @@ class InitialCondition(AbstractRungeKuttaDGActionSet):
       linearisedIndex += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     });
 
-    // relevant for tracing et al which kicks in if and only if cell has been
-    // updated
+    // Tracing and similar postprocessing run only for a cell that has been updated
     fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
-  } 
+  }
 """
 
     def __init__(self, solver, guard):
@@ -43,7 +42,6 @@ class InitialCondition(AbstractRungeKuttaDGActionSet):
             self._solver.add_entries_to_text_replacement_dictionary(d)
             d["PREDICATE"] = self.guard
             result = jinja2.Template(self.TemplateInitialCondition).render(**d)
-            pass
         return result
 
     def get_action_set_name(self):

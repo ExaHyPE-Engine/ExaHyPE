@@ -6,20 +6,18 @@
 #include "tarch/mpi/Rank.h"
 #include "tarch/plotter/VTUFileWriter.h"
 
-namespace fs = std::filesystem;
-
 namespace {
   /**
-   * Checks if a file exists and contains a specific substring (e.g., an XML tag).
+   * Checks that a file exists and contains a specific substring, such as an XML tag.
    */
   void validateFileContent(const std::string& filepath, const std::string& expectedSubstring) {
-    if (not fs::exists(filepath)) {
+    if (not std::filesystem::exists(filepath)) {
       throw std::runtime_error("Test failed: Output file was not created: " + filepath);
     }
 
-    std::ifstream     f(filepath, std::ios::binary);
+    std::ifstream     stream(filepath, std::ios::binary);
     std::stringstream buffer;
-    buffer << f.rdbuf();
+    buffer << stream.rdbuf();
     std::string content = buffer.str();
 
     if (content.find(expectedSubstring) == std::string::npos) {
@@ -34,18 +32,28 @@ tarch::plotter::tests::VTUFileWriterTest::VTUFileWriterTest() :
   TestCase("tarch::plotter::tests::VTUFileWriterTest") {}
 
 void tarch::plotter::tests::VTUFileWriterTest::run() {
-  testMethod(test2DSimpleTriangle);
-  testMethod(test3DSimpleHexahedron);
-  testMethod(test2DParticlesWithData);
-  testMethod(test3DCellData);
+  // The read-back helpers report a malformed file by throwing. Without this catch the
+  // exception leaves run(), which the test framework does not guard, and the whole unit-test
+  // binary aborts instead of recording a failed case. The remaining cases are then skipped,
+  // so the counter has to be raised here as well.
+  try {
+    testMethod(test2DSimpleTriangle);
+    testMethod(test3DSimpleHexahedron);
+    testMethod(test2DParticlesWithData);
+    testMethod(test3DCellData);
 
-  testMethod(testEmptyPlotter);
-  testMethod(testMixedEmptySubdomains);
-  testMethod(testMultipleNonEmptySubdomains);
-  testMethod(testOversizedDataThrows);
-  testMethod(testInconsistentSchemaThrows);
-  testMethod(testUnevenSubdomainCounts);
-  testMethod(testInvalidIdentifierThrows);
+    testMethod(testEmptyPlotter);
+    testMethod(testMixedEmptySubdomains);
+    testMethod(testMultipleNonEmptySubdomains);
+    testMethod(testOversizedDataThrows);
+    testMethod(testInconsistentSchemaThrows);
+    testMethod(testUnevenSubdomainCounts);
+    testMethod(testInvalidIdentifierThrows);
+  } catch (const std::runtime_error& exception) {
+    _errors++;
+    _error = true;
+    std::cerr << "  " << exception.what() << std::endl;
+  }
 }
 
 void tarch::plotter::tests::VTUFileWriterTest::test2DSimpleTriangle() {
@@ -80,10 +88,10 @@ void tarch::plotter::tests::VTUFileWriterTest::test2DSimpleTriangle() {
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     std::string pvtuPath = (tarch::tests::getWritableTestDirectory() / (filename + ".pvtu")).string();
     validateFileContent(pvtuPath, "<VTKFile type=\"PUnstructuredGrid\"");
-    fs::remove(pvtuPath);
+    std::filesystem::remove(pvtuPath);
   }
 
-  fs::remove(vtuPath);
+  std::filesystem::remove(vtuPath);
 }
 
 void tarch::plotter::tests::VTUFileWriterTest::test3DSimpleHexahedron() {
@@ -92,20 +100,20 @@ void tarch::plotter::tests::VTUFileWriterTest::test3DSimpleHexahedron() {
   VTUFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
   auto          v = plotter.createVertexPlotter(0);
 
-  // Unit Cube
-  int idx[8];
-  idx[0] = v->plotVertex(tarch::la::Vector<3, double>{0, 0, 0});
-  idx[1] = v->plotVertex(tarch::la::Vector<3, double>{1, 0, 0});
-  idx[2] = v->plotVertex(tarch::la::Vector<3, double>{1, 1, 0});
-  idx[3] = v->plotVertex(tarch::la::Vector<3, double>{0, 1, 0});
+  // Unit cube, bottom face first and then the top face in the same orientation.
+  int cornerIndices[8] = {};
+  cornerIndices[0]     = v->plotVertex(tarch::la::Vector<3, double>{0, 0, 0});
+  cornerIndices[1]     = v->plotVertex(tarch::la::Vector<3, double>{1, 0, 0});
+  cornerIndices[2]     = v->plotVertex(tarch::la::Vector<3, double>{1, 1, 0});
+  cornerIndices[3]     = v->plotVertex(tarch::la::Vector<3, double>{0, 1, 0});
 
-  idx[4] = v->plotVertex(tarch::la::Vector<3, double>{0, 0, 1});
-  idx[5] = v->plotVertex(tarch::la::Vector<3, double>{1, 0, 1});
-  idx[6] = v->plotVertex(tarch::la::Vector<3, double>{1, 1, 1});
-  idx[7] = v->plotVertex(tarch::la::Vector<3, double>{0, 1, 1});
+  cornerIndices[4] = v->plotVertex(tarch::la::Vector<3, double>{0, 0, 1});
+  cornerIndices[5] = v->plotVertex(tarch::la::Vector<3, double>{1, 0, 1});
+  cornerIndices[6] = v->plotVertex(tarch::la::Vector<3, double>{1, 1, 1});
+  cornerIndices[7] = v->plotVertex(tarch::la::Vector<3, double>{0, 1, 1});
 
   auto c = plotter.createCellPlotter(0);
-  c->plotHexahedron(idx);
+  c->plotHexahedron(cornerIndices);
 
   plotter.writeToFile(filename, 0);
 
@@ -118,10 +126,10 @@ void tarch::plotter::tests::VTUFileWriterTest::test3DSimpleHexahedron() {
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     std::string pvtuPath = (tarch::tests::getWritableTestDirectory() / (filename + ".pvtu")).string();
     validateFileContent(pvtuPath, "<VTKFile type=\"PUnstructuredGrid\"");
-    fs::remove(pvtuPath);
+    std::filesystem::remove(pvtuPath);
   }
 
-  fs::remove(vtuPath);
+  std::filesystem::remove(vtuPath);
 }
 
 void tarch::plotter::tests::VTUFileWriterTest::test2DParticlesWithData() {
@@ -130,16 +138,17 @@ void tarch::plotter::tests::VTUFileWriterTest::test2DParticlesWithData() {
   VTUFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
   auto          v   = plotter.createVertexPlotter(0);
   auto          vd  = plotter.createVertexDataPlotter(0, "Mass", 1);
-  auto          vv  = plotter.createVertexDataPlotter(0, "Velocity", 3);   // 3D vector on 2D point
-  auto          vv2 = plotter.createVertexDataPlotter(0, "Velocity2D", 2); // 2D vector, padded to 3
+  auto          vv  = plotter.createVertexDataPlotter(0, "Velocity", 3);
+  // A 2D vector, which the writer pads to three components.
+  auto vv2 = plotter.createVertexDataPlotter(0, "Velocity2D", 2);
 
   for (int i = 0; i < 5; i++) {
-    tarch::la::Vector<2, double> p   = {static_cast<double>(i), static_cast<double>(i)};
-    int                          idx = v->plotVertex(p);
-    vd->plotVertexData(idx, 10.0 * i); // Scalar mass
-    tarch::la::Vector<3, double> vel = {1.0, 0.0, -1.0};
-    vv->plotVertexData(idx, vel);                                     // Vector velocity
-    vv2->plotVertexData(idx, tarch::la::Vector<2, double>{2.0, 3.0}); // 2D vector velocity
+    tarch::la::Vector<2, double> p           = {static_cast<double>(i), static_cast<double>(i)};
+    int                          vertexIndex = v->plotVertex(p);
+    vd->plotVertexData(vertexIndex, 10.0 * i);
+    tarch::la::Vector<3, double> velocity = {1.0, 0.0, -1.0};
+    vv->plotVertexData(vertexIndex, velocity);
+    vv2->plotVertexData(vertexIndex, tarch::la::Vector<2, double>{2.0, 3.0});
   }
 
   plotter.writeToFile(filename, 0);
@@ -158,10 +167,10 @@ void tarch::plotter::tests::VTUFileWriterTest::test2DParticlesWithData() {
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     std::string pvtuPath = (tarch::tests::getWritableTestDirectory() / (filename + ".pvtu")).string();
     validateFileContent(pvtuPath, "<VTKFile type=\"PUnstructuredGrid\"");
-    fs::remove(pvtuPath);
+    std::filesystem::remove(pvtuPath);
   }
 
-  fs::remove(vtuPath);
+  std::filesystem::remove(vtuPath);
 }
 
 void tarch::plotter::tests::VTUFileWriterTest::test3DCellData() {
@@ -201,10 +210,10 @@ void tarch::plotter::tests::VTUFileWriterTest::test3DCellData() {
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     std::string pvtuPath = (tarch::tests::getWritableTestDirectory() / (filename + ".pvtu")).string();
     validateFileContent(pvtuPath, "<VTKFile type=\"PUnstructuredGrid\"");
-    fs::remove(pvtuPath);
+    std::filesystem::remove(pvtuPath);
   }
 
-  fs::remove(vtuPath);
+  std::filesystem::remove(vtuPath);
 }
 
 void tarch::plotter::tests::VTUFileWriterTest::testEmptyPlotter() {
@@ -227,10 +236,10 @@ void tarch::plotter::tests::VTUFileWriterTest::testEmptyPlotter() {
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     std::string pvtuPath = (tarch::tests::getWritableTestDirectory() / (filename + ".pvtu")).string();
     validateFileContent(pvtuPath, "<VTKFile type=\"PUnstructuredGrid\"");
-    fs::remove(pvtuPath);
+    std::filesystem::remove(pvtuPath);
   }
 
-  fs::remove(vtuPath);
+  std::filesystem::remove(vtuPath);
 }
 
 void tarch::plotter::tests::VTUFileWriterTest::testMixedEmptySubdomains() {
@@ -262,10 +271,10 @@ void tarch::plotter::tests::VTUFileWriterTest::testMixedEmptySubdomains() {
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     std::string pvtuPath = (tarch::tests::getWritableTestDirectory() / (filename + ".pvtu")).string();
     validateFileContent(pvtuPath, "<VTKFile type=\"PUnstructuredGrid\"");
-    fs::remove(pvtuPath);
+    std::filesystem::remove(pvtuPath);
   }
 
-  fs::remove(vtuPath);
+  std::filesystem::remove(vtuPath);
 }
 
 void tarch::plotter::tests::VTUFileWriterTest::testMultipleNonEmptySubdomains() {
@@ -308,10 +317,10 @@ void tarch::plotter::tests::VTUFileWriterTest::testMultipleNonEmptySubdomains() 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     std::string pvtuPath = (tarch::tests::getWritableTestDirectory() / (filename + ".pvtu")).string();
     validateFileContent(pvtuPath, "<VTKFile type=\"PUnstructuredGrid\"");
-    fs::remove(pvtuPath);
+    std::filesystem::remove(pvtuPath);
   }
 
-  fs::remove(vtuPath);
+  std::filesystem::remove(vtuPath);
 }
 
 void tarch::plotter::tests::VTUFileWriterTest::testOversizedDataThrows() {
@@ -327,7 +336,7 @@ void tarch::plotter::tests::VTUFileWriterTest::testOversizedDataThrows() {
     // One vertex, but data is plotted for two.
     auto vd = plotter.createVertexDataPlotter(0, "ErrorField", 1);
     vd->plotVertexData(i0, 1.0);
-    vd->plotVertexData(i0 + 1, 2.0); // extra data
+    vd->plotVertexData(i0 + 1, 2.0);
 
     plotter.writeToFile(filename, 0);
   } catch (const std::runtime_error&) {
@@ -339,8 +348,8 @@ void tarch::plotter::tests::VTUFileWriterTest::testOversizedDataThrows() {
     (tarch::tests::getWritableTestDirectory() / (filename + "-rank-" + std::to_string(rank) + ".vtu")).string();
 
   // Clean up if the file was created despite the expected throw.
-  if (fs::exists(vtuPath)) {
-    fs::remove(vtuPath);
+  if (std::filesystem::exists(vtuPath)) {
+    std::filesystem::remove(vtuPath);
   }
 
   validate(exceptionThrown);
@@ -374,8 +383,8 @@ void tarch::plotter::tests::VTUFileWriterTest::testInconsistentSchemaThrows() {
   std::string vtuPath =
     (tarch::tests::getWritableTestDirectory() / (filename + "-rank-" + std::to_string(rank) + ".vtu")).string();
 
-  if (fs::exists(vtuPath)) {
-    fs::remove(vtuPath);
+  if (std::filesystem::exists(vtuPath)) {
+    std::filesystem::remove(vtuPath);
   }
 
   validate(exceptionThrown);
@@ -385,10 +394,10 @@ void tarch::plotter::tests::VTUFileWriterTest::testUnevenSubdomainCounts() {
   const std::string filename = "VTUTestUneven";
 
   // Master holds 3 subdomains, every other rank 2. VTU writes one <Piece> per
-  // subdomain into this rank's own .vtu, so the file must hold exactly nSub pieces.
-  const int     nSub = tarch::mpi::Rank::getInstance().isGlobalMaster() ? 3 : 2;
-  VTUFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), nSub);
-  for (int sd = 0; sd < nSub; ++sd) {
+  // subdomain into this rank's own .vtu, so the file holds one piece per subdomain.
+  const int     numberOfSubdomains = tarch::mpi::Rank::getInstance().isGlobalMaster() ? 3 : 2;
+  VTUFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), numberOfSubdomains);
+  for (int sd = 0; sd < numberOfSubdomains; ++sd) {
     auto         v       = plotter.createVertexPlotter(sd);
     auto         c       = plotter.createCellPlotter(sd);
     const double s       = 100.0 * tarch::mpi::Rank::getInstance().getRank() + 2.0 * sd;
@@ -406,27 +415,27 @@ void tarch::plotter::tests::VTUFileWriterTest::testUnevenSubdomainCounts() {
   std::string vtuPath =
     (tarch::tests::getWritableTestDirectory() / (filename + "-rank-" + std::to_string(rank) + ".vtu")).string();
 
-  std::ifstream     f(vtuPath);
+  std::ifstream     stream(vtuPath);
   std::stringstream buffer;
-  buffer << f.rdbuf();
+  buffer << stream.rdbuf();
   const std::string content = buffer.str();
   int               pieces  = 0;
   for (std::size_t pos = content.find("<Piece "); pos != std::string::npos; pos = content.find("<Piece ", pos + 1)) {
     ++pieces;
   }
-  if (pieces != nSub) {
+  if (pieces != numberOfSubdomains) {
     throw std::runtime_error(
-      "VTU uneven test: expected " + std::to_string(nSub) + " pieces in " + vtuPath + " but found " +
-      std::to_string(pieces) + "."
+      "VTU uneven test: expected " + std::to_string(numberOfSubdomains) + " pieces in " + vtuPath + " but found "
+      + std::to_string(pieces) + "."
     );
   }
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     std::string pvtuPath = (tarch::tests::getWritableTestDirectory() / (filename + ".pvtu")).string();
     validateFileContent(pvtuPath, "<VTKFile type=\"PUnstructuredGrid\"");
-    fs::remove(pvtuPath);
+    std::filesystem::remove(pvtuPath);
   }
-  fs::remove(vtuPath);
+  std::filesystem::remove(vtuPath);
 }
 
 void tarch::plotter::tests::VTUFileWriterTest::testInvalidIdentifierThrows() {

@@ -21,6 +21,7 @@ runner::RuntimeParameters::RuntimeParameters() :
   _numberOfSnapshots(10),
   _outputPath(normaliseOutputPath("output")),
   _outputPathConfigured(false),
+  _plotDoublePrecision(false),
   _projectName(),
   _executableName(),
   _timeStepLogInterval(5.0),
@@ -135,6 +136,10 @@ void runner::RuntimeParameters::printUsage(const std::string& executableName) co
   );
   addOption("-o, --outputPath <path>", "Output path (default: " + formatDefault(_outputPath) + ").");
   addOption(
+    "-pdp, --plotDoublePrecision",
+    "Write plot files in double precision instead of single precision (default: off)."
+  );
+  addOption(
     "-li, --timeStepLogInterval <seconds>",
     "Minimum wall-clock seconds between time-step reports (default: " + formatDefault(_timeStepLogInterval) + ")."
   );
@@ -170,6 +175,7 @@ void runner::RuntimeParameters::printUsage(const std::string& executableName) co
       + formatDefault(_mpiDeadlockTimeout) + ")."
   );
   addOption("--deadlockDetection", "Enable detailed MPI request tracking for deadlock diagnostics (default: off).");
+  addOption("--noDeadlockDetection", "Disable detailed MPI request tracking for deadlock diagnostics.");
   addOption("-v, --verbose", "Show the full log line prefix (timestamp, core, scope) (default: off).");
   addOption("-h, --help", "Print this help and exit.");
 
@@ -285,6 +291,9 @@ void runner::RuntimeParameters::readJsonConfiguration() {
     _outputPath           = normaliseOutputPath(reader.getString("outputPath"));
     _outputPathConfigured = true;
   }
+  if (reader.hasKey("plotDoublePrecision")) {
+    _plotDoublePrecision = reader.getBoolean("plotDoublePrecision");
+  }
   if (reader.hasKey("gridLevels")) {
     _gridLevels              = reader.getInteger("gridLevels");
     _maxGridLevels           = _gridLevels;
@@ -324,6 +333,8 @@ void runner::RuntimeParameters::applyCommandLineConfiguration(int& argc, char** 
     } else if (argument == "--outputPath" or argument == "-o") {
       _outputPath           = normaliseOutputPath(consumeValue(readIndex, argc, argv, argument));
       _outputPathConfigured = true;
+    } else if (argument == "--plotDoublePrecision" or argument == "-pdp") {
+      _plotDoublePrecision = true;
     } else if (argument == "--timeStepLogInterval" or argument == "-li") {
       _timeStepLogInterval = parseDouble(consumeValue(readIndex, argc, argv, argument), argument);
     } else if (argument == "--gridLevels" or argument == "-l") {
@@ -417,7 +428,7 @@ void runner::RuntimeParameters::configure(int& argc, char** argv) {
   validateParameterRanges();
 }
 
-/** Returns the reader shared with the application parser, or nullptr when no configuration file is active. */
+/** Returns the reader used by both runtime and application parsers, or nullptr when no configuration file is active. */
 tarch::reader::JSONReader* runner::RuntimeParameters::getConfigReader() const { return _configReader.get(); }
 
 double runner::RuntimeParameters::getMPITimeoutWarning() const { return _mpiTimeoutWarning; }
@@ -435,6 +446,7 @@ double runner::RuntimeParameters::getMaxTerminalTime() const { return _maxTermin
 int    runner::RuntimeParameters::getNumberOfTimeSteps() const { return _numberOfTimeSteps; }
 double runner::RuntimeParameters::getFirstPlotTimeStamp() const { return _firstPlotTimeStamp; }
 int    runner::RuntimeParameters::getNumberOfSnapshots() const { return _numberOfSnapshots; }
+bool   runner::RuntimeParameters::getPlotDoublePrecision() const { return _plotDoublePrecision; }
 int    runner::RuntimeParameters::getGridLevels() const { return _gridLevels; }
 int    runner::RuntimeParameters::getMaxGridLevels() const { return _maxGridLevels; }
 
@@ -462,14 +474,4 @@ double runner::RuntimeParameters::getMaxAdmissibleCellSize(
     throw std::runtime_error("The number of cells per patch per axis must be positive.");
   }
   return getMaxAdmissiblePatchSize(domainSize) / cellsPerPatchPerAxis;
-}
-
-double runner::RuntimeParameters::getMinAdmissibleCellSize(
-  const tarch::la::Vector<DIMENSIONS, double>& domainSize,
-  int                                          cellsPerPatchPerAxis
-) const {
-  if (cellsPerPatchPerAxis <= 0) {
-    throw std::runtime_error("The number of cells per patch per axis must be positive.");
-  }
-  return getMinAdmissiblePatchSize(domainSize) / cellsPerPatchPerAxis;
 }

@@ -226,11 +226,17 @@ void peano4::grid::Spacetree::traverse(GridTraversalObserver& observer) {
     _gridControlEvents.clear();
   } else {
     _gridControlEvents = observer.getGridControlEvents();
+    // An observer may hand out any set of events, so we fuse it here and every cell then
+    // tests against as few boxes as possible. The fusion changes no cell's verdict.
     GridControlEvent::merge(_gridControlEvents);
     if (not _gridControlEvents.empty()) {
       logDebug("Spacetree " << _id << " got " << _gridControlEvents.size() << " grid control events");
     }
   }
+  _gridControlEventsContainErase =
+    std::any_of(_gridControlEvents.begin(), _gridControlEvents.end(), [](const GridControlEvent& event) {
+      return event.getRefinementControl() == GridControlEvent::RefinementControl::Erase;
+    });
 
   _splittedCells.clear();
   resetSplittingTreeCursor();
@@ -284,7 +290,6 @@ void peano4::grid::Spacetree::traverse(GridTraversalObserver& observer) {
 
   _hasSplit.clear();
   for (const auto splittingTreeId : _splitting) {
-    _childrenIds.insert(splittingTreeId);
     _hasSplit.insert(splittingTreeId);
   }
   _splitting.clear();
@@ -392,7 +397,7 @@ void peano4::grid::Spacetree::receiveAndMergeGridVertexAtVerticalBoundary(GridVe
  * Merge replicas before advancing refinement states. This order lets remote
  * vetoes prevent a local erase in the same traversal.
  * This routine handles vertices loaded from the input stream; newly created
- * vertices bypass it. updateVertexBeforeStore() gathers their statistics.
+ * vertices bypass it and reach updateVertexBeforeStore() directly.
  */
 void peano4::grid::Spacetree::updateVertexAfterLoad(
   GridVertex&                               vertex,
@@ -411,11 +416,16 @@ void peano4::grid::Spacetree::updateVertexAfterLoad(
   );
 
   if (_spacetreeState != SpacetreeState::NewFromSplit and _spacetreeState != SpacetreeState::EmptyRun) {
+    // The horizontal merges below accumulate the neighbour trees' refined-cell counts of
+    // the finished sweep into this field, so it starts from zero on every load.
+    vertex.numberOfAdjacentRefinedRemoteCells = 0;
     receiveAndMergeGridVertexAtHorizontalBoundary(vertex, vertexIndex, vertexIsAdjacentToLocalTree);
     receiveAndMergeGridVertexAtVerticalBoundary(vertex);
 
     // Transitional AMR states require conservative reconstruction as hanging
     // because fine-grid data at their refinement boundary may be unstable.
+    // EraseTriggered/Erasing are excluded on purpose: a vertex mid-erase still carries
+    // refined structure until it reaches Unrefined, so it is not hanging-like.
     const auto vertexState                        = vertex.getState();
     const bool previousCoarseVertexTypeWasHanging = vertexState == GridVertex::State::RefinementTriggered
       or vertexState == GridVertex::State::Delete or vertexState == GridVertex::State::New
@@ -450,7 +460,7 @@ void peano4::grid::Spacetree::updateVertexAfterLoad(
       if (vertex.getFlag(GridVertex::HasBeenAntecessorOfRefinedVertexInPreviousTreeSweep)) {
         logDebug(
           "Vertex " << vertex.toString() << " may not be erased on tree " << _id
-                    << " because it is the parent of refined vertices. Keep the refined state."
+                    << " as refined structure above or beside it still needs it. Keep the refined state."
         );
         vertex.setState(GridVertex::State::Refined);
         _statistics.setCoarseningHasBeenVetoed(true);
@@ -511,9 +521,8 @@ bool peano4::grid::Spacetree::restrictToCoarseGrid(
  * boundary from making conflicting erase decisions.
  *
  * Remote adjacency is cleared only after every descendant is remote because
- * joins still need the intermediate tree IDs. A vertex surrounded by
- * @f$ 2^d @f$ refined local cells is refined to avoid an interior hanging
- * vertex.
+ * joins still need the intermediate tree IDs. A vertex whose existing
+ * adjacent cells are all refined is refined to avoid a hanging vertex.
  *
  * @param fineVertexPositionWithinPatch Position of the vertex within its patch.
  *
@@ -531,15 +540,43 @@ void peano4::grid::Spacetree::updateVertexBeforeStore(
       vertex.setState(GridVertex::State::Unrefined);
     }
 
-    if (_spacetreeState == SpacetreeState::Running and vertex.numberOfAdjacentRefinedLocalCells == TWO_POWER_D
-        and vertex.getState() == GridVertex::State::Unrefined) {
+    // A vertex surrounded by refined cells refines, so no hanging cluster survives within
+    // the domain. The threshold is the number of existing adjacent cells: along the domain
+    // boundary the outside slots hold no cell and can never refine, so a wall vertex is
+    // already surrounded when every existing cell is refined. A cell dragged into
+    // refinement through a vertex it shares with a refining neighbour relies on this rule
+    // to refine its remaining wall vertices; without it the wall faces below the cell stay
+    // hanging forever and never receive boundary data. The local count is exact and
+    // triggers at once. The remote count merged in from neighbouring trees is one sweep
+    // old, so it may overcount while cells beyond the tree boundary coarsen; requiring the
+    // surrounded state to persist over two sweeps filters every such one-sweep transient
+    // without touching single-tree timing.
+    int numberOfExistingAdjacentCells = 0;
+    for (int i = 0; i < TWO_POWER_D; i++) {
+      if (vertex.adjacentRanks[i] != -1) {
+        numberOfExistingAdjacentCells++;
+      }
+    }
+    const bool isSurroundedByRefinedCells = _spacetreeState == SpacetreeState::Running
+      and vertex.getState() == GridVertex::State::Unrefined and numberOfExistingAdjacentCells > 0
+      and vertex.numberOfAdjacentRefinedLocalCells + vertex.numberOfAdjacentRefinedRemoteCells
+        == numberOfExistingAdjacentCells;
+    if (isSurroundedByRefinedCells
+        and (vertex.numberOfAdjacentRefinedLocalCells == numberOfExistingAdjacentCells or vertex.getFlag(GridVertex::HasBeenSurroundedByRefinedCellsInPreviousTreeSweep))) {
       vertex.setState(GridVertex::State::RefinementTriggered);
       _statistics.numberOfStationarySweeps = 0;
       logDebug(
         "Refine vertex " << vertex.toString() << " because all adjacent cells are refined on tree " << _id
                          << " in state " << peano4::grid::toString(_spacetreeState) << "."
       );
+    } else if (isSurroundedByRefinedCells) {
+      // The two-sweep confirmation is still pending, so the grid must not report
+      // itself stationary: otherwise the mesh-refinement drain ends between the
+      // two sweeps and the post-refinement fires one time step later than on a
+      // single tree.
+      _statistics.numberOfStationarySweeps = 0;
     }
+    vertex.setFlag(GridVertex::HasBeenSurroundedByRefinedCellsInPreviousTreeSweep, isSurroundedByRefinedCells);
 
     bool shouldRestrictRefinementVeto = vertex.getFlag(GridVertex::IsAntecessorOfRefinedVertexInCurrentTreeSweep);
 
@@ -554,6 +591,11 @@ void peano4::grid::Spacetree::updateVertexBeforeStore(
       shouldRestrictRefinementVeto = true;
     } else if (vertex.getState() == GridVertex::State::Erasing) {
       vertex.setState(GridVertex::State::Unrefined);
+      // A vertex mid-erase still carries refined structure this sweep, so it restricts the
+      // antecessor flag like the refined branches above. Without this restriction the
+      // coarse level loses the coarsening veto during the multi-sweep erase transition and
+      // multi-tree runs coarsen differently from a single tree.
+      shouldRestrictRefinementVeto = true;
     }
 
     sendGridVertex(vertex, vertexIndex);
@@ -941,6 +983,33 @@ void peano4::grid::Spacetree::mergeGridVertexRefinementStateAtHorizontalDomainBo
       or incomingVertex.getFlag(GridVertex::IsAntecessorOfRefinedVertexInCurrentTreeSweep)
   );
 
+  // Every adjacent refined cell is local to exactly one tree, so summing the neighbour
+  // copies' local counts yields the global count of refined cells around this vertex.
+  // The surrounded-vertex refinement in updateVertexBeforeStore() reads this sum; with
+  // the local count alone a vertex on a tree boundary could never see all existing adjacent cells.
+  // Splits and joins move cells between trees mid-sweep, which would double-count, so
+  // the accumulation pauses while any of them is in flight.
+  if (_splitTriggered.empty() and _splitting.empty() and _joinTriggered.empty() and _joining.empty()) {
+    vertex.numberOfAdjacentRefinedRemoteCells += incomingVertex.numberOfAdjacentRefinedLocalCells;
+  }
+
+  // The subtree-parent flag has to be merged like the antecessor flag: a copy of this
+  // vertex on a neighbouring tree may sit above a forked subtree the local tree cannot
+  // see, and dropping that veto would let the local tree coarsen over the worker's domain.
+  vertex.setFlag(
+    GridVertex::IsParentOfSubtreeVertexInCurrentTreeSweep,
+    vertex.getFlag(GridVertex::IsParentOfSubtreeVertexInCurrentTreeSweep)
+      or incomingVertex.getFlag(GridVertex::IsParentOfSubtreeVertexInCurrentTreeSweep)
+  );
+
+  // The copies compute the surrounded state with counts offset by one sweep, so one side
+  // may see it a sweep earlier; merging keeps the two-sweep confirmation in step.
+  vertex.setFlag(
+    GridVertex::HasBeenSurroundedByRefinedCellsInPreviousTreeSweep,
+    vertex.getFlag(GridVertex::HasBeenSurroundedByRefinedCellsInPreviousTreeSweep)
+      or incomingVertex.getFlag(GridVertex::HasBeenSurroundedByRefinedCellsInPreviousTreeSweep)
+  );
+
   assertion(vertex.getState() != GridVertex::State::Erasing, vertex.toString(), incomingVertex.toString(), _id);
   assertion(vertex.getState() != GridVertex::State::Refining, vertex.toString(), incomingVertex.toString(), _id);
 
@@ -1130,6 +1199,14 @@ void peano4::grid::Spacetree::sendGridVertex(
   }
 }
 
+/**
+ * Count this refined cell on each of its vertices.
+ *
+ * updateVertexBeforeStore() compares the total against the number of adjacent cells that
+ * exist, so a vertex refines once all of them are refined and no hanging cluster survives,
+ * inside the domain and along its walls alike. The counter holds the local tree's share;
+ * neighbouring trees contribute theirs through the horizontal vertex merge.
+ */
 void peano4::grid::Spacetree::incrementNumberOfAdjacentRefinedLocalCells(GridVertex vertices[TWO_POWER_D]) {
   peano4::dForEachCorner([&](const tarch::la::Vector<DIMENSIONS, int>&, int cornerIndex) {
     vertices[cornerIndex].numberOfAdjacentRefinedLocalCells += 1;
@@ -1172,9 +1249,22 @@ void peano4::grid::Spacetree::evaluateGridControlEvents(
     const auto eventMax = event.offset + event.width;
 
     if (event.getRefinementControl() == GridControlEvent::RefinementControl::Refine) {
-      // Inclusive overlap keeps cells touching the event boundary consistent.
-      const bool overlaps =
-        tarch::la::allGreaterEquals(stateMax, eventMin) and tarch::la::allSmallerEquals(stateMin, eventMax);
+      // Determine if the event overlaps the state with positive volume
+      //
+      // event:  [eventMin --------------------- eventMax]
+      // state:       [stateMin ---- stateMax]
+      //               ^ overlap because the interiors intersect
+      //
+      // The overlap is strict (open): a cell that only touches a refine event's boundary
+      // (stateMax == eventMin, say) lies outside the event and is not refined. A closed
+      // test would refine one extra cell layer around every refine region. The erase
+      // containment test below deliberately stays closed.
+      //
+      // These comparisons inherit tarch::la's default NUMERICAL_ZERO_DIFFERENCE, an
+      // absolute 1e-8 dead band. Event boxes and cell bounds are exact multiples of the
+      // mesh size, so the two sides either coincide or differ by a whole cell width, and
+      // the band decides nothing until h itself approaches 1e-8.
+      const bool overlaps = tarch::la::allGreater(stateMax, eventMin) and tarch::la::allSmaller(stateMin, eventMax);
 
       const bool refineToTargetResolution = tarch::la::allSmaller(event.targetH, fineGridState.h);
 
@@ -1200,7 +1290,14 @@ void peano4::grid::Spacetree::evaluateGridControlEvents(
     }
   }
 
-  if (not wantsRefine and not wantsErase) {
+  // A refined cell that no event covers keeps its vertices. Its marking below is what makes
+  // an erase a consensus decision: a vertex only coarsens once every refined cell around it
+  // asks for it, so an erase region never takes cells it does not cover through shared
+  // vertices, whichever order the trees traverse them in.
+  const bool wantsKeep = _gridControlEventsContainErase and not wantsRefine and not wantsErase
+    and SpacetreeHelper::isSpacetreeNodeRefined(fineGridVertices);
+
+  if (not wantsRefine and not wantsErase and not wantsKeep) {
     return;
   }
 
@@ -1256,13 +1353,20 @@ void peano4::grid::Spacetree::evaluateGridControlEvents(
 
       const auto vertexState = vertex.getState();
       if (vertexState == GridVertex::State::EraseTriggered) {
+        // Cancel pending erase if an adjacent cell wants to keep/refine.
         vertex.setState(GridVertex::State::Refined);
-      } else if (mayChangeGrid and vertexState == GridVertex::State::Unrefined) {
-        vertex.setState(GridVertex::State::RefinementTriggered);
+      } else if (vertexState == GridVertex::State::Unrefined) {
+        if (mayChangeGrid) {
+          vertex.setState(GridVertex::State::RefinementTriggered);
+        } else {
+          // The requested refinement is deferred while neighbouring transitions are in
+          // flight; the count tells the event source to deliver the request again.
+          _statistics.numberOfDeferredGridControlChanges++;
+        }
         _statistics.numberOfStationarySweeps = 0;
       }
     }
-  } else {
+  } else if (wantsErase) {
     UNROLL(DIMENSIONS)
     for (int vertexIndex = 0; vertexIndex < TWO_POWER_D; ++vertexIndex) {
       auto& vertex = fineGridVertices[vertexIndex];
@@ -1270,11 +1374,29 @@ void peano4::grid::Spacetree::evaluateGridControlEvents(
         continue;
       }
 
-      if (mayChangeGrid and vertex.getState() == GridVertex::State::Refined
+      if (vertex.getState() == GridVertex::State::Refined
           and not vertex.getFlag(GridVertex::HasBeenAntecessorOfRefinedVertexInPreviousTreeSweep)) {
-        vertex.setState(GridVertex::State::EraseTriggered);
+        if (mayChangeGrid) {
+          vertex.setState(GridVertex::State::EraseTriggered);
+        } else {
+          // The requested erase is deferred while neighbouring transitions are in flight;
+          // the count tells the event source to deliver the request again.
+          _statistics.numberOfDeferredGridControlChanges++;
+        }
         _statistics.numberOfStationarySweeps = 0;
       }
+    }
+  } else {
+    UNROLL(DIMENSIONS)
+    for (int i = 0; i < TWO_POWER_D; ++i) {
+      auto& v = fineGridVertices[i];
+      if (not isLocalFineVertex[i] or v.getState() == GridVertex::State::HangingVertex) {
+        continue;
+      }
+
+      // The flag rolls over at the next load, where it unrolls an erase a neighbouring cell
+      // triggered on a shared vertex.
+      v.setFlag(GridVertex::IsAntecessorOfRefinedVertexInCurrentTreeSweep, true);
     }
   }
 }
@@ -1852,11 +1974,13 @@ void peano4::grid::Spacetree::sendUserData(
 }
 
 /**
- * Apply split and join decisions to vertex adjacency. Bottom-up splitting
- * pushes one marker per leaf and reduces @f$ 3^d @f$ child markers into their
- * parent when all children move to the same tree. This reduction continues
- * after the requested leaf count reaches zero because the final child group
- * can still complete a movable subtree.
+ * Apply split decisions to vertex adjacency. A join in flight only enters as
+ * context here; mergeCellFromWorkerWithMasterThroughoutJoin() applies it.
+ *
+ * Bottom-up splitting pushes one marker per leaf and reduces @f$ 3^d @f$ child
+ * markers into their parent when all children move to the same tree. This
+ * reduction continues after the requested leaf count reaches zero because the
+ * final child group can still complete a movable subtree.
  *
  * Aggressive top-down decisions are recorded by splitCellTopDown() and applied
  * here during the bottom-up traversal. The separation prevents an adjacency
@@ -1915,10 +2039,8 @@ void peano4::grid::Spacetree::splitOrJoinCellBottomUp(
         updateSplittingCounter(targetTreeId);
       }
       _splittedCells.push_back(targetTreeId);
-    } else if (not isSplitCandidate and not isRefined) {
-      _splittedCells.push_back(NoSplit);
     } else {
-      assertion(false, "This branch is unreachable because all combinations are covered.");
+      _splittedCells.push_back(NoSplit);
     }
   } else if (not _splitTriggered.empty()
              and _splitTriggered.begin()->second.mode == SplitInstruction::Mode::AggressiveTopDown
@@ -2213,23 +2335,11 @@ void peano4::grid::Spacetree::markVerticesAroundForkedCell(
 }
 
 /**
- * Register a split instruction. All splits in one sweep share the first
- * instruction's mode because both modes reuse the same marker stack and
- * counters.
+ * Register a split instruction. All splits in one sweep share the mode of the
+ * lowest tree id, because both modes reuse the same marker stack and counters.
  */
 void peano4::grid::Spacetree::split(int newSpacetreeId, const SplitInstruction& instruction) {
-  assertion(
-    instruction.numberOfFineGridCells == std::numeric_limits<int>::max() or maySplit(),
-    newSpacetreeId,
-    instruction,
-    toString()
-  );
-  assertion(
-    instruction.numberOfFineGridCells != std::numeric_limits<int>::max(),
-    newSpacetreeId,
-    instruction,
-    toString()
-  );
+  assertion(maySplit(), newSpacetreeId, instruction, toString());
   assertion(instruction.numberOfFineGridCells >= 1, newSpacetreeId, instruction, toString());
 
   const bool modeNeedsNormalisation =
@@ -2296,9 +2406,7 @@ std::string peano4::grid::Spacetree::toString() const {
  */
 bool peano4::grid::Spacetree::maySplit() const {
   return _spacetreeState == SpacetreeState::Running and _joinTriggered.empty() and _joining.empty()
-    and _splitting.empty() and _statistics.numberOfLocalUnrefinedCells > 0
-    and (_splitTriggered.empty()
-         or _splitTriggered.begin()->second.numberOfFineGridCells < std::numeric_limits<int>::max());
+    and _splitting.empty() and _statistics.numberOfLocalUnrefinedCells > 0;
 }
 
 bool peano4::grid::Spacetree::mayJoinWithWorker() const {

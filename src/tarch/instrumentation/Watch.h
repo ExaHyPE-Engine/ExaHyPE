@@ -21,14 +21,12 @@ namespace tarch::instrumentation {
  * also stop the watch explicitly and retrieve the elapsed CPU and wall clock
  * time through the getters.
  *
- * @version $Revision: 1.9 $
  * @author  Tobias Weinzierl, Tobias Neckel
  */
 class tarch::instrumentation::Watch {
 private:
   /**
-   * Flag to distinguish the (original) standard watch. Is used in the
-   * destructor.
+   * Whether the destructor logs the measured times.
    */
   bool _plotResultInDestructor;
 
@@ -66,9 +64,11 @@ public:
   /**
    * Construct a watch
    *
-   * @param className     Retained for source compatibility; ignored.
+   * @param className     Unused.
    * @param operationName Name of the operation the watch is used within.
    * @param plotResultInDestructor Whether the destructor should log the result.
+   * @param startToTickImmediately Whether the constructor already starts the
+   *        measurement.
    */
   Watch(
     [[maybe_unused]] const std::string& className,
@@ -83,41 +83,20 @@ public:
   virtual ~Watch();
 
   /**
-   * (Re)Start the Timer
+   * (Re)start the timer
    *
-   * This method starts the timer. Actually, it restarts the time as the
-   * constructor also invokes this operation. You don't have to call start()
-   * after stop(). If you omit another call to start(), you just won't reset
-   * the baseline, i.e., all getXXXTime() calls will still refer to the same
-   * time zero when the Watch has been constructed.
-   *
-   * @see stopTimer()
+   * @see stop()
    */
   void start();
 
   /**
-   * Stop timer
+   * Stop the timer
    *
-   * This method stops the timer. You may stop a timer multiple time because
-   * the stop does not reset the start time. Please note that all the getters
-   * return meaningful results if and only if you call stopTimer().
+   * @see start()
    */
   void stop();
 
   /**
-   * Return CPU Time in Seconds
-   *
-   * This method returns the elapsed CPU time between the start and stop
-   * command of the timer, i.e., the clock ticks actually spent by the process.
-   * Take care: This counter might overflow, especially on a 32 bit
-   * architecture.
-   *
-   * !!! Multithreading
-   *
-   * If you use multithreading, CPU time sums up the clock ticks invested by
-   * the individual cores, i.e., if you switch from a one core to a dual core
-   * machine, the CPU time should roughly double.
-   *
    * @return CPU time in seconds
    */
   double getCPUTime() const;
@@ -129,17 +108,12 @@ public:
   std::clock_t getCPUTicks() const;
 
   /**
-   * This method returns the elapsed calendar time between the start and stop
-   * command of the timer, i.e., the real world time. The result is given in
-   * seconds.
+   * @return Elapsed calendar time in seconds
    */
   double getCalendarTime() const;
 
   /**
-   * This operation returns whether the watch is currently on. If the routine
-   * returns false, it is currently stopped. The concept of on/off is a
-   * logical concept. Internally, a watch simply administers system time
-   * snapshots, while the get routines return differences of these snapshots.
+   * @return Whether the watch is currently running
    */
   bool isOn() const;
 };

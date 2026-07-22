@@ -248,9 +248,9 @@ void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithNonbloc
   validate(testErrors == 0);
 }
 
-void peano4::parallel::tests::PingPongTest::testDaStGenTypeStartTraversalMessage() {
+void peano4::parallel::tests::PingPongTest::testStartTraversalMessageExchange() {
   const int tag =
-    tarch::mpi::Rank::reserveFreeTag("peano4::parallel::tests::PingPongTest::testDaStGenTypeStartTraversalMessage");
+    tarch::mpi::Rank::reserveFreeTag("peano4::parallel::tests::PingPongTest::testStartTraversalMessageExchange");
   StartTraversalMessage out;
   out.setStepIdentifier(23);
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() >= 2 and tarch::mpi::Rank::getInstance().getRank() == 0) {
@@ -264,9 +264,17 @@ void peano4::parallel::tests::PingPongTest::testDaStGenTypeStartTraversalMessage
   tarch::mpi::barrier(MPI_COMM_WORLD);
 }
 
-void peano4::parallel::tests::PingPongTest::testDaStGenTypeIntegerMessage() {
+/**
+ * Exchange a message type through its own send() and through MPI_Send
+ *
+ * A message type with a vtable carries an additional four bytes at the front of
+ * the object, and those bytes are not necessarily reflected in the this pointer.
+ * Types with vtables are therefore not meant to be exchanged, and mixing a raw
+ * MPI_Send with a send() call on the same object surfaces the resulting bugs.
+ */
+void peano4::parallel::tests::PingPongTest::testIntegerMessageExchange() {
   const int tag =
-    tarch::mpi::Rank::reserveFreeTag("peano4::parallel::tests::PingPongTest::testDaStGenTypeIntegerMessage");
+    tarch::mpi::Rank::reserveFreeTag("peano4::parallel::tests::PingPongTest::testIntegerMessageExchange");
   tarch::mpi::IntegerMessage out;
   out.setValue(23);
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() >= 2 and tarch::mpi::Rank::getInstance().getRank() == 0) {
@@ -287,16 +295,16 @@ void peano4::parallel::tests::PingPongTest::testDaStGenTypeIntegerMessage() {
     );
     validateEqualsWithParams2(inThroughMPI.getValue(), out.getValue(), inThroughMPI.toString(), out.toString());
 
-    tarch::mpi::IntegerMessage inThroughDaStGen;
-    inThroughDaStGen.setValue(73);
-    tarch::mpi::IntegerMessage::receive(inThroughDaStGen, 0, tag, tarch::mpi::Rank::getInstance().getCommunicator());
-    validateEqualsWithParams2(inThroughDaStGen.getValue(), out.getValue(), inThroughDaStGen.toString(), out.toString());
+    tarch::mpi::IntegerMessage inThroughOwnReceive;
+    inThroughOwnReceive.setValue(73);
+    tarch::mpi::IntegerMessage::receive(inThroughOwnReceive, 0, tag, tarch::mpi::Rank::getInstance().getCommunicator());
+    validateEqualsWithParams2(inThroughOwnReceive.getValue(), out.getValue(), inThroughOwnReceive.toString(), out.toString());
   }
   tarch::mpi::barrier(MPI_COMM_WORLD);
 }
 
-void peano4::parallel::tests::PingPongTest::testDaStGenArray() {
-  const int tag = tarch::mpi::Rank::reserveFreeTag("peano4::parallel::tests::PingPongTest::testDaStGenArray");
+void peano4::parallel::tests::PingPongTest::testMessageArrayExchange() {
+  const int tag = tarch::mpi::Rank::reserveFreeTag("peano4::parallel::tests::PingPongTest::testMessageArrayExchange");
   StartTraversalMessage out[10];
   out[0].setStepIdentifier(23);
   out[1].setStepIdentifier(24);
@@ -368,10 +376,10 @@ void peano4::parallel::tests::PingPongTest::testDaStGenArray() {
   tarch::mpi::barrier(MPI_COMM_WORLD);
 }
 
-void peano4::parallel::tests::PingPongTest::testDaStGenArrayTreeManagementMessage() {
+void peano4::parallel::tests::PingPongTest::testTreeManagementMessageArrayExchange() {
   peano4::parallel::TreeManagementMessage message;
   const int                               Tag =
-    tarch::mpi::Rank::reserveFreeTag("peano4::parallel::tests::PingPongTest::testDaStGenArrayTreeManagementMessage");
+    tarch::mpi::Rank::reserveFreeTag("peano4::parallel::tests::PingPongTest::testTreeManagementMessageArrayExchange");
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() >= 2 and tarch::mpi::Rank::getInstance().getRank() == 0) {
     message.setAction(TreeManagementMessage::Action::Acknowledgement);
     peano4::parallel::TreeManagementMessage::send(message, 1, Tag, MPI_COMM_WORLD);
@@ -383,14 +391,26 @@ void peano4::parallel::tests::PingPongTest::testDaStGenArrayTreeManagementMessag
   tarch::mpi::barrier(MPI_COMM_WORLD);
 }
 
+/**
+ * Build up suite of test routines
+ *
+ * The multithreaded calls are guarded by a comparison of
+ * tarch::mpi::Rank::getInstance().getProvidedThreadLevelSupport() to
+ * MPI_THREAD_MULTIPLE. Peano cannot work properly without MPI's
+ * multithreaded support, but tools such as MUST
+ * (http://www.itc.rwth-aachen.de/MUST) artificially lower the reported
+ * thread level for their correctness checks and would then report a
+ * deadlock here. Skipping the affected tests keeps the thread checkers
+ * usable on this test suite.
+ */
 void peano4::parallel::tests::PingPongTest::run() {
   testMethod(testBuiltInType);
 
-  testMethod(testDaStGenTypeIntegerMessage);
-  testMethod(testDaStGenTypeStartTraversalMessage);
-  testMethod(testDaStGenArray);
+  testMethod(testIntegerMessageExchange);
+  testMethod(testStartTraversalMessageExchange);
+  testMethod(testMessageArrayExchange);
 
-  testMethod(testDaStGenArrayTreeManagementMessage);
+  testMethod(testTreeManagementMessageArrayExchange);
 
   if (tarch::mpi::Rank::getInstance().getProvidedThreadLevelSupport() == MPI_THREAD_MULTIPLE) {
     testMethod(testMultithreadedPingPongWithBlockingReceives);

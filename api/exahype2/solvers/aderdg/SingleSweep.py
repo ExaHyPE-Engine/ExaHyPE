@@ -16,9 +16,9 @@ class SingleSweep(ADERDG):
         auxiliary_variables,
         split_sweeps=False,
     ):
-        # If turned on it turns the solver from a single sweep to a separate sweeps solver,
-        #   i.e. the predictor and corrector steps occur on separate traversals of the domain.
-        #   this can be useful for debugging, or for some additional features such as limiting.
+        # If enabled, the predictor and the corrector run on separate traversals of
+        # the domain. That helps when debugging and it enables additional features
+        # such as limiting.
         self._split_sweeps = split_sweeps
 
         super(SingleSweep, self).__init__(
@@ -106,6 +106,16 @@ class SingleSweep(ADERDG):
             + "FaceLabel.getAboveHanging()[0] or fineGridFace"
             + self._name
             + "FaceLabel.getAboveHanging()[1])"
+        )
+
+        # The hanging-face Riemann solve needs the coarse halves that the
+        # hanging-face interpolation provides, and both run in the dedicated
+        # prediction-on-hanging-cells sweep.
+        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement._solve_guard = (
+            self._store_cell_data_default_guard()
+            + " and repositories::{}.getSolverState()=={}::SolverState::PredictionOnHangingCells".format(
+                self.get_name_of_global_instance(), self._name
+            )
         )
 
     def get_user_action_set_includes(self):

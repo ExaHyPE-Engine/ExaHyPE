@@ -58,7 +58,7 @@ namespace tarch::la {
   INLINE_METHOD GPU_CALLABLE_METHOD Vector<4, Scalar> row(const Matrix<4, 4, Scalar>& matrix, int whichRow);
 
   /**
-   * Extract row from matrix
+   * Extract column from matrix
    */
   template <int Rows, int Cols, typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Vector<Rows, Scalar> col(const Matrix<Rows, Cols, Scalar>& matrix, int whichColumn);
@@ -71,14 +71,6 @@ namespace tarch::la {
 
   /**
    * Inverts each individual entry
-   *
-   * Works if and only if the matrix does not contain any zeroes, as this
-   * routine yields
-   *
-   * @f$ A_{ij} \gets A_{ij}^{-1} @f$
-   *
-   * which is not @f$ A^{-1} @f$. If you want the actual inverse, use
-   * tarch::la::invert() instead.
    *
    * @see tarch::la::invert()
    */

@@ -1,9 +1,20 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "MultiscaleTransitions.h"
 
 #include "peano4/Loop.h"
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/VertexMarker.h"
 
+/**
+ * Ownership tolerance
+ *
+ * A particle is "owned" by a cell (or vertex, respectively), if it resides
+ * within its area. We slightly augment this area, and this tolerance
+ * reflects the augmentation. The result is
+ * internal::relativeReleaseOwnershipSpatialSortingTolerance() multiplied
+ * with the numerical zero tarch::la::NUMERICAL_ZERO_DIFFERENCE.
+ */
 double toolbox::particles::relativeSpatialOwnershipTolerance(const ::peano4::datamanagement::CellMarker& marker) {
   return internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE;
 }
@@ -87,6 +98,12 @@ toolbox::particles::getParticleReassociationInstructionWithinCellWithIntraCellRe
   }
 }
 
+/**
+ * Alternative version of dropParticle() without templates
+ *
+ * This is the actual implementation, i.e. the template delegates to this
+ * one. Through the method, we can unittest the drop logic.
+ */
 bool toolbox::particles::dropParticle(
   double                                       searchRadius,
   const tarch::la::Vector<DIMENSIONS, double>& x,
@@ -144,6 +161,24 @@ bool toolbox::particles::particleWillBeDroppedFurther(
   return (marker.hasBeenRefined() or marker.willBeRefined()) and internal::fitsIntoLevel(searchRadius * 3.0, marker);
 }
 
+/**
+ * Find out which adjacent cell will hold a particle.
+ *
+ * Let the routine find out which of the neighbouring cells will try to
+ * claim ownership of a particle. In exact arithmetics, this routine would
+ * be the same as internal::getParticleAssociationWithinCell(). However, we
+ * work with floating point precision and cells with a slight overlap.
+ * Therefore, multiple adjacent cells might try to claim ownership of the
+ * particle potentially, and this is important to find out a priori whether
+ * a particle will be labelled as inside or not.
+ *
+ * For the floating point reason, i.e. the fact that the particle ownership
+ * is not unique, VertexMarker::getRelativeAdjacentCell() is a more strict
+ * version of this routine and cannot be used in some cases.
+ *
+ * @param x      Position of the particle of interest.
+ * @param marker Marker of the vertex whose adjacent cells are studied.
+ */
 std::bitset<TWO_POWER_D> toolbox::particles::getAdjacentCellsOwningParticle(
   const tarch::la::Vector<DIMENSIONS, double>& x,
   const peano4::datamanagement::VertexMarker&  marker

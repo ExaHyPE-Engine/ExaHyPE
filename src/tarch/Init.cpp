@@ -12,8 +12,8 @@
 
 void tarch::init(int* argc, char*** argv, const InitConfiguration& configuration) {
   if (tarch::mpi::Rank::getInstance().init(argc, argv)) {
-    tarch::mpi::Rank::getInstance().setTimeOutWarning(configuration.mpiTimeOutWarning);
-    tarch::mpi::Rank::getInstance().setDeadlockTimeOut(configuration.mpiDeadlockTimeOut);
+    tarch::mpi::Rank::getInstance().setTimeoutWarning(configuration.mpiTimeoutWarning);
+    tarch::mpi::Rank::getInstance().setDeadlockTimeout(configuration.mpiDeadlockTimeout);
     tarch::mpi::Rank::getInstance().setDeadlockDetection(configuration.mpiDeadlockDetectionEnabled);
   } else {
     throw std::runtime_error("Cannot initialise parallel environment");

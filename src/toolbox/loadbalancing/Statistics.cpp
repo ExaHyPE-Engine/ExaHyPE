@@ -227,7 +227,7 @@ toolbox::loadbalancing::Statistics::~Statistics() {
   shutdownMPI();
 }
 
-/** A live request retains its communicator and buffers, so the runner completes it before MPI finalisation. */
+/** A live request retains its communicator and buffers, so it has to complete before MPI finalisation. */
 void toolbox::loadbalancing::Statistics::completePendingReduction() {
 #ifdef PEANO_WITH_MPI
   int mpiIsInitialised = 0;

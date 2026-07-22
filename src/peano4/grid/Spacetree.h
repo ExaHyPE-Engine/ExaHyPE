@@ -57,8 +57,7 @@ private:
    * Identifies the parent tree during split and join operations. Root trees
    * use -1.
    */
-  const int               _masterId;
-  std::unordered_set<int> _childrenIds;
+  const int _masterId;
 
   /** Indicates which axes have periodic boundary conditions. */
   const std::bitset<DIMENSIONS> _periodicBC;
@@ -120,6 +119,13 @@ private:
   int getNeighbourSlot(int neighbourTreeId) const;
 
   std::vector<GridControlEvent> _gridControlEvents;
+
+  /**
+   * True while the traversal's event set holds at least one erase. Only then do refined cells
+   * outside every event mark their vertices against the erase, so refine-only sweeps skip
+   * that work.
+   */
+  bool _gridControlEventsContainErase = false;
 
   void evaluateGridControlEvents(
     const AutomatonState& fineGridState,

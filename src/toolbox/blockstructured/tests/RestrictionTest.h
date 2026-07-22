@@ -12,6 +12,7 @@ class toolbox::blockstructured::tests::RestrictionTest final : public tarch::tes
 private:
   void testRestrictHaloLayer();
   void testRestrictCell();
+  void testRestrictCellWithMatrixReproducesPolynomials();
 
 public:
   RestrictionTest();

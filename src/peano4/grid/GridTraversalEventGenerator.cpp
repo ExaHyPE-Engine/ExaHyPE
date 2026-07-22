@@ -10,9 +10,24 @@
 #include "Spacetree.h"
 #include "SpacetreeHelper.h"
 #include "StackTopology.h"
+
 #include "peano4/Loop.h"
 
-peano4::grid::GridTraversalEventGenerator::GridTraversalEventGenerator(int id):
+namespace {
+  bool isFaceHangingInCurrentTreeSweep(const peano4::grid::GridVertex fineGridVertices[TWO_POWER_D], int faceIndex) {
+    const int normal = faceIndex % DIMENSIONS;
+    const int side   = (faceIndex >= DIMENSIONS) ? 1 : 0;
+    for (int v = 0; v < TWO_POWER_D; ++v) {
+      if (((v >> normal) & 1) == side
+          and fineGridVertices[v].getState() != peano4::grid::GridVertex::State::HangingVertex) {
+        return false;
+      }
+    }
+    return true;
+  }
+} // namespace
+
+peano4::grid::GridTraversalEventGenerator::GridTraversalEventGenerator(int id) :
   _treeNumber(id) {}
 
 peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::createEnterNodeTraversalEvent(
@@ -69,19 +84,40 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
       )
     );
     event.setIsFaceLocal(
-      SpacetreeHelper::
-        areFacesLocal(fineGridVertices, _treeNumber, splitTriggered, splitting, joinTriggered, joining, true)
-          .to_ulong()
+      SpacetreeHelper::areFacesLocal(
+        fineGridVertices,
+        _treeNumber,
+        splitTriggered,
+        splitting,
+        joinTriggered,
+        joining,
+        true
+      )
+        .to_ulong()
     );
     event.setIsVertexLocal(
-      SpacetreeHelper::
-        areVerticesLocal(fineGridVertices, _treeNumber, splitTriggered, splitting, joinTriggered, joining, true)
-          .to_ulong()
+      SpacetreeHelper::areVerticesLocal(
+        fineGridVertices,
+        _treeNumber,
+        splitTriggered,
+        splitting,
+        joinTriggered,
+        joining,
+        true
+      )
+        .to_ulong()
     );
     event.setIsParentVertexLocal(
-      SpacetreeHelper::
-        areVerticesLocal(coarseGridVertices, _treeNumber, splitTriggered, splitting, joinTriggered, joining, true)
-          .to_ulong()
+      SpacetreeHelper::areVerticesLocal(
+        coarseGridVertices,
+        _treeNumber,
+        splitTriggered,
+        splitting,
+        joinTriggered,
+        joining,
+        true
+      )
+        .to_ulong()
     );
   } else {
     event.setIsCellLocal(
@@ -112,19 +148,40 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
       )
     );
     event.setIsFaceLocal(
-      SpacetreeHelper::
-        areFacesLocal(fineGridVertices, _treeNumber, splitTriggered, splitting, joinTriggered, joining, false)
-          .to_ulong()
+      SpacetreeHelper::areFacesLocal(
+        fineGridVertices,
+        _treeNumber,
+        splitTriggered,
+        splitting,
+        joinTriggered,
+        joining,
+        false
+      )
+        .to_ulong()
     );
     event.setIsVertexLocal(
-      SpacetreeHelper::
-        areVerticesLocal(fineGridVertices, _treeNumber, splitTriggered, splitting, joinTriggered, joining, false)
-          .to_ulong()
+      SpacetreeHelper::areVerticesLocal(
+        fineGridVertices,
+        _treeNumber,
+        splitTriggered,
+        splitting,
+        joinTriggered,
+        joining,
+        false
+      )
+        .to_ulong()
     );
     event.setIsParentVertexLocal(
-      SpacetreeHelper::
-        areVerticesLocal(coarseGridVertices, _treeNumber, splitTriggered, splitting, joinTriggered, joining, false)
-          .to_ulong()
+      SpacetreeHelper::areVerticesLocal(
+        coarseGridVertices,
+        _treeNumber,
+        splitTriggered,
+        splitting,
+        joinTriggered,
+        joining,
+        false
+      )
+        .to_ulong()
     );
   }
 
@@ -154,8 +211,10 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
       .to_ulong()
   );
 
-  // 3^D adjacency flags
+  // Both masks are rebuilt from the current vertices, so bits left from an earlier cell
+  // must not survive into this event.
   event.setIsAdjacentCellLocal(0);
+  event.setIsVertexParentOfSubtree(0);
   const auto& idxTbl = SpacetreeHelper::getPatch3x3IndexTable().idx;
 
   for (int k = 0; k < TWO_POWER_D; ++k) {
@@ -163,7 +222,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
     const auto        s = v.getState();
 
     if (s != GridVertex::State::HangingVertex) {
-      event.setIsVertexParentOfSubtree(v.getFlag(GridVertex::HasBeenParentOfSubtreeVertexInPreviousTreeSweep));
+      event.setIsVertexParentOfSubtree(k, v.getFlag(GridVertex::HasBeenParentOfSubtreeVertexInPreviousTreeSweep));
 
       const auto& adj = v.adjacentRanks;
       for (int j = 0; j < TWO_POWER_D; ++j) {
@@ -175,9 +234,11 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
   }
 
   const CellType cellType = getCellType(vertexTypes);
-  // If the cell is going away, we do not push hanging data keyed by this cell’s in/out stack number
-  const bool cellExistedBefore = spacetreeStateIsRunning
-                                 and (cellType == CellType::Persistent or cellType == CellType::Delete);
+  // Only a cell that already existed in the previous sweep has previous vertex types to
+  // reconstruct. A cell being deleted still existed then, so it qualifies alongside a
+  // persistent one.
+  const bool cellExistedBefore =
+    spacetreeStateIsRunning and (cellType == CellType::Persistent or cellType == CellType::Delete);
   VertexType previousVertexTypes[TWO_POWER_D];
   for (int k = 0; k < TWO_POWER_D; ++k) {
     previousVertexTypes[k] = VertexType::Persistent;
@@ -257,8 +318,8 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
 
     if (type == FaceType::Hanging) {
       event.setIsFaceHanging(faceIndex, true);
-      const FaceType previousType = cellExistedBefore ? getFaceType(previousVertexTypes, faceIndex)
-                                                      : FaceType::Persistent;
+      const FaceType previousType =
+        cellExistedBefore ? getFaceType(previousVertexTypes, faceIndex) : FaceType::Persistent;
       if (cellExistedBefore and previousType == FaceType::Hanging) {
         event.setFaceDataFrom(i, lut.cellReadStack);
       } else {
@@ -271,9 +332,12 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
 
     if (willBeNoData and not hasSplit.empty()) {
       int adjacency[TWO_POWER_D];
-      // Enter-event uses current adjacency (calledByReceivingProcess = false)
-      SpacetreeHelper::
-        getAdjacentRanksOfFace(fineGridVertices, faceIndex, /*calledByReceivingProcess*/ false, adjacency);
+      SpacetreeHelper::getAdjacentRanksOfFace(
+        fineGridVertices,
+        faceIndex,
+        /*calledByReceivingProcess*/ false,
+        adjacency
+      );
       for (int k = 0; k < TWO_POWER_D; ++k) {
         const int r = adjacency[k];
         if (r >= 0 and hasSplit.count(r)) {
@@ -321,8 +385,14 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
 
   bool mayResetToNoData = StackTopology::isInOutStack(event.getCellData()) and not event.getIsCellLocal();
   if (mayResetToNoData and not hasSplit.empty()) {
-    const auto owner = SpacetreeHelper::
-      getTreeOwningSpacetreeNode(fineGridVertices, _treeNumber, splitTriggered, splitting, joinTriggered, joining);
+    const auto owner = SpacetreeHelper::getTreeOwningSpacetreeNode(
+      fineGridVertices,
+      _treeNumber,
+      splitTriggered,
+      splitting,
+      joinTriggered,
+      joining
+    );
     if (hasSplit.count(owner)) {
       mayResetToNoData = false;
     }
@@ -453,25 +523,11 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
     leaveNodeTraversalEvent.setFaceDataFrom(i, faceIndex);
     leaveNodeTraversalEvent.setIsFaceHanging(faceIndex, false);
 
+    // The precomputed face types stem from the vertex states before the descent. Recompute
+    // hanging-ness from the current states, so a face that stopped being hanging is still
+    // reported as hanging on the way up and its data is destroyed there.
     const FaceType type         = precomputedFaceTypes[i];
-    const bool     isHangingNow = (type == FaceType::Hanging);
-
-    // On leave, hanging-ness may have changed due to AMR effects in the DFS.
-    // The 'vertexTypes' array is computed before we descend and is not updated.
-    // Therefore, recompute the current face hanging-ness directly from the
-    // current fineGridVertices states.
-    // bool isHangingNow = true;
-    // {
-    //   const int normal = faceIndex % DIMENSIONS;
-    //   const int side   = (faceIndex >= DIMENSIONS) ? 1 : 0;
-    //   for (int v = 0; v < TWO_POWER_D; ++v) {
-    //     if (((v >> normal) & 1) != side) continue; // only vertices adjacent to this face
-    //     if (fineGridVertices[v].getState() != GridVertex::State::HangingVertex) {
-    //       isHangingNow = false;
-    //       break;
-    //     }
-    //   }
-    // }
+    const bool     isHangingNow = isFaceHangingInCurrentTreeSweep(fineGridVertices, faceIndex);
 
     if (wasHangingOnEnter and not isHangingNow) {
       leaveNodeTraversalEvent.setIsFaceHanging(faceIndex, true);

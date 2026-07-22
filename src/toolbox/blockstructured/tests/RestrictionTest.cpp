@@ -6,12 +6,132 @@
 #include "peano4/grid/GridTraversalEvent.h"
 #include "toolbox/blockstructured/AMRRoutines.h"
 
+namespace {
+  // A two-point Gauss-Legendre basis on the unit interval, the matrices a solver generates
+  // for polynomial order one.
+  constexpr int    NodesPerAxis = 2;
+  constexpr double Node0        = 0.5 - 0.5 / 1.7320508075688772;
+  constexpr double Node1        = 0.5 + 0.5 / 1.7320508075688772;
+
+  double shapeFunction(const int node, const double x) {
+    return node == 0 ? (Node1 - x) / (Node1 - Node0) : (x - Node0) / (Node1 - Node0);
+  }
+
+  std::array<double, 3 * NodesPerAxis * NodesPerAxis> interpolationMatrix() {
+    std::array<double, 3 * NodesPerAxis * NodesPerAxis> result{};
+    for (int block = 0; block < 3; block++) {
+      for (int fine = 0; fine < NodesPerAxis; fine++) {
+        const double fineNode = ((fine == 0 ? Node0 : Node1) + block) / 3.0;
+        for (int coarse = 0; coarse < NodesPerAxis; coarse++) {
+          result[block * NodesPerAxis * NodesPerAxis + fine * NodesPerAxis + coarse] = shapeFunction(coarse, fineNode);
+        }
+      }
+    }
+    return result;
+  }
+
+  std::array<double, 3 * NodesPerAxis * NodesPerAxis> restrictionMatrix() {
+    std::array<double, 3 * NodesPerAxis * NodesPerAxis> result{};
+    for (int block = 0; block < 3; block++) {
+      for (int coarse = 0; coarse < NodesPerAxis; coarse++) {
+        for (int fine = 0; fine < NodesPerAxis; fine++) {
+          const double fineNode = ((fine == 0 ? Node0 : Node1) + block) / 3.0;
+          result[block * NodesPerAxis * NodesPerAxis + coarse * NodesPerAxis + fine] =
+            shapeFunction(coarse, fineNode) / 3.0;
+        }
+      }
+    }
+    return result;
+  }
+
+  constexpr std::array<double, NodesPerAxis> QuadratureWeights = {0.5, 0.5};
+
+  double nodePosition(const int node) { return node == 0 ? Node0 : Node1; }
+
+  // An affine field is representable in the order-one basis, so the interpolate-then-restrict
+  // round trip has to reproduce it exactly up to roundoff.
+  double affineField(const tarch::la::Vector<DIMENSIONS, double>& x) {
+    double result = 1.0;
+    for (int d = 0; d < DIMENSIONS; d++) {
+      result += (2.0 + d) * x(d);
+    }
+    return result;
+  }
+} // namespace
+
 toolbox::blockstructured::tests::RestrictionTest::RestrictionTest() :
   TestCase("toolbox::blockstructured::tests::RestrictionTest") {}
 
 void toolbox::blockstructured::tests::RestrictionTest::run() {
   testMethod(testRestrictHaloLayer);
   testMethod(testRestrictCell);
+  testMethod(testRestrictCellWithMatrixReproducesPolynomials);
+}
+
+void toolbox::blockstructured::tests::RestrictionTest::testRestrictCellWithMatrixReproducesPolynomials() {
+  constexpr int Unknowns = 2;
+
+  int nodesPerCell = 1;
+  for (int d = 0; d < DIMENSIONS; d++) {
+    nodesPerCell *= NodesPerAxis;
+  }
+
+  const auto interpolation = interpolationMatrix();
+  const auto restriction   = restrictionMatrix();
+
+  std::vector<double> coarse(static_cast<std::size_t>(nodesPerCell) * Unknowns, 0.0);
+  peano4::dForEach(NodesPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& node) {
+    tarch::la::Vector<DIMENSIONS, double> x;
+    for (int d = 0; d < DIMENSIONS; d++) {
+      x(d) = nodePosition(node(d));
+    }
+    const int index   = peano4::dLinearised(node, NodesPerAxis) * Unknowns;
+    coarse[index]     = affineField(x);
+    coarse[index + 1] = 4.0;
+  });
+
+  // Interpolate onto every child, restrict every child back: the round trip is the identity
+  // for every field the coarse basis represents.
+  peano4::grid::GridTraversalEvent event;
+  std::vector<double>              restricted(static_cast<std::size_t>(nodesPerCell) * Unknowns, 0.0);
+  peano4::dForEach(3, [&](const tarch::la::Vector<DIMENSIONS, int>& child) {
+    event.setRelativePositionToFather(child);
+    const auto cellMarker = event.getCellMarker();
+
+    std::vector<double> fine(static_cast<std::size_t>(nodesPerCell) * Unknowns, 0.0);
+    toolbox::blockstructured::interpolateCell(
+      cellMarker,
+      coarse.data(),
+      fine.data(),
+      interpolation.data(),
+      NodesPerAxis,
+      Unknowns
+    );
+
+    peano4::dForEach(NodesPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& node) {
+      tarch::la::Vector<DIMENSIONS, double> x;
+      for (int d = 0; d < DIMENSIONS; d++) {
+        x(d) = (nodePosition(node(d)) + child(d)) / 3.0;
+      }
+      const int index = peano4::dLinearised(node, NodesPerAxis) * Unknowns;
+      validateNumericalEqualsWithEps(fine[index], affineField(x), 1e-12);
+      validateNumericalEqualsWithEps(fine[index + 1], 4.0, 1e-12);
+    });
+
+    toolbox::blockstructured::restrictCell(
+      cellMarker,
+      restricted.data(),
+      fine.data(),
+      restriction.data(),
+      QuadratureWeights.data(),
+      NodesPerAxis,
+      Unknowns
+    );
+  });
+
+  for (std::size_t i = 0; i < coarse.size(); i++) {
+    validateNumericalEqualsWithEps(restricted[i], coarse[i], 1e-12);
+  }
 }
 
 void toolbox::blockstructured::tests::RestrictionTest::testRestrictHaloLayer() {

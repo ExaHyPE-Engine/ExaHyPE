@@ -4,8 +4,6 @@
 
 #include "tarch/mpi/Rank.h"
 
-namespace fs = std::filesystem;
-
 void tarch::plotter::PVDTimeSeriesWriter::writeTimeSeriesMetaFile(
   const std::string& outputDirectory,
   const std::string& filename
@@ -14,7 +12,7 @@ void tarch::plotter::PVDTimeSeriesWriter::writeTimeSeriesMetaFile(
     return;
   }
 
-  fs::path p(outputDirectory);
+  std::filesystem::path p(outputDirectory);
   p /= (filename + ".pvd");
 
   std::ofstream out(p);

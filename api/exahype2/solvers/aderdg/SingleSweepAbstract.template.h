@@ -9,6 +9,7 @@
 
 #include "exahype2/Solver.h"
 #include "exahype2/RefinementControl.h"
+#include "exahype2/RefinementCriterionHelpers.h"
 #include "exahype2/PrecisionControl.h"
 
 #include "peano4/Globals.h"
@@ -20,10 +21,6 @@
 
 #include "kernels/{{SOLVER_NAME}}/Quadrature.h"
 #include "kernels/{{SOLVER_NAME}}/DGMatrices.h"
-
-{% if USE_HALF_PRECISION==True %}
-#include <stdfloat>
-{% endif %}
 
 {% if USE_VARIABLE_SHORTCUTS is sameas True %}
 #include "VariableShortcuts{{SOLVER_NAME}}.h"
@@ -42,8 +39,8 @@ namespace {{ item }} {
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
   public:
 {% if USE_VARIABLE_SHORTCUTS is sameas True %}
-    /*
-     * Enables the usage of shortcuts to access variables, e.g. use Q[Shortcuts::{{VARIABLE_NAMES[0]}}] instead of Q[0]
+    /**
+     * Enables shortcuts to access variables, e.g. Q[Shortcuts::{{VARIABLE_NAMES[0]}}] instead of Q[0].
      */
     using Shortcuts = {{NAMESPACE | join("::")}}::VariableShortcuts{{SOLVER_NAME}};
 {% endif %}
@@ -83,18 +80,18 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     ~{{CLASSNAME}}();
 
     /**
-     * Alias for periodic boundary conditions.
+     * Flags the coordinate axes along which the domain is periodic.
      */
     static std::bitset<DIMENSIONS> PeriodicBC;
 
-    double getMinTimeStamp() const final;
-    double getMaxTimeStamp() const final;
-    double getMinTimeStepSize() const final;
-    double getMaxTimeStepSize() const final;
+    double getMinTimeStamp() const override final;
+    double getMaxTimeStamp() const override final;
+    double getMinTimeStepSize() const override final;
+    double getMaxTimeStepSize() const override final;
 
     {% if ADAPTIVE_PRECISION_IMPLEMENTATION!="<none>" %}
     /**
-     * Evaluate precision criterion over cell
+     * Evaluate the precision criterion over a cell.
      *
      * @param Q             Vector of unknowns
      * @param x             Centre of underlying cell
@@ -111,47 +108,50 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     ) {% if ADAPTIVE_PRECISION_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final {% endif %};
     {% endif %}
 
-    virtual void startGridConstructionStep() override;
-    virtual void finishGridConstructionStep() override;
+    void startGridConstructionStep() override;
+    void finishGridConstructionStep() override;
 
-    virtual void startGridInitialisationStep() override;
-    virtual void finishGridInitialisationStep() override;
+    void startGridInitialisationStep() override;
+    void finishGridInitialisationStep() override;
 
-    virtual void suspendSolversForOneGridSweep() override;
+    void suspendSolversForOneGridSweep() override;
 
-    virtual void startTimeStep() override;
-    virtual void finishTimeStep() override;
+    void startTimeStep() override;
+    void finishTimeStep() override;
 
-    virtual void startPlottingStep() override;
-    virtual void finishPlottingStep() override;
+    void startPlottingStep() override;
+    void finishPlottingStep() override;
 
     /**
-     * @return Actually observed sizes, not the admissible quantities
+     * @return Observed sizes, not the admissible quantities
      */
     double getMaxPatchSize() const override final;
     double getMinPatchSize() const override final;
     double getMaxCellSize() const override final;
     double getMinCellSize() const override final;
 
-    virtual int getNumberOfDoFs() const override final;
+    int getNumberOfDoFs() const override final;
 
     /**
-     * Update the global solver state, i.e. inform the solver about some
-     * updated global quantities.
+     * Update the global solver state, i.e. feed updated global quantities into
+     * the solver.
      *
-     * @see setTimeStepSize(double)
+     * @param timeStepSize Time step size to fold into the global extrema
+     * @param timeStamp    Time stamp to fold into the global extrema
+     * @param minCellSize  Smallest observed cell size
+     * @param maxCellSize  Largest observed cell size
      */
     void update(double timeStepSize, double timeStamp, double minCellSize, double maxCellSize);
 
     SolverState getSolverState() const;
 
-    virtual bool mayPlot() const override;
+    bool mayPlot() const override;
 
     bool isFirstGridSweepOfTimeStep() const;
     bool isLastGridSweepOfTimeStep() const;
 
-    virtual void startSimulation() override;
-    virtual void finishSimulation() override;
+    void startSimulation() override;
+    void finishSimulation() override;
 
     {{ABSTRACT_SOLVER_USER_DECLARATIONS}}
 

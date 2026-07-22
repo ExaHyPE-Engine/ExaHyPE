@@ -3,6 +3,7 @@
 #pragma once
 
 #include "TestMacros.h"
+
 #include "tarch/CompilerSpecificSettings.h"
 
 namespace tarch {
@@ -11,28 +12,6 @@ namespace tarch {
 
     /**
      * Directory into which tests may write scratch/fixture files.
-     *
-     * Any test that needs to create a file on disk should obtain its target
-     * location through this function rather than hard-coding "./" or
-     * std::filesystem::temp_directory_path(). On the shared CI nodes the system
-     * temp directory ($TMPDIR // /tmp) is not reliably writable for a job (a
-     * per-job scratch dir that was already cleaned, restrictive permissions, or
-     * a stale fixture owned by another user), which intermittently made
-     * file-writing tests fail with "Permission denied" - and, because such a
-     * failure typically escapes the test as an exception, abort the whole unit
-     * test binary.
-     *
-     * This helper returns a directory that is verified to be writable. It is the
-     * same directory on every MPI rank, which is essential: the parallel
-     * plotters write collectively to a single shared file (nc_create_par,
-     * H5Pset_fapl_mpio), so a per-rank path would deadlock the collective open.
-     * It therefore prefers the current working directory (identical for all
-     * ranks of a run, owned by the job, hence writable, and isolated per job)
-     * and only falls back to the system temp directory if the working directory
-     * is not writable. The result is determined once and cached.
-     *
-     * Combine it with the desired file name via std::filesystem::path, e.g.
-     * `getWritableTestDirectory() / "my-fixture.nc"`.
      */
     std::filesystem::path getWritableTestDirectory();
   } // namespace tests
@@ -47,14 +26,12 @@ namespace tarch {
  * If you implement your own tests, inherit from this class, implement
  * run() and add the test to a test case collection of your choice.
  *
- *
- * <h2> Unit tests in libraries </h2>
+ * ## Unit tests in libraries
  *
  * If your unit test is part of a library, then simply registering the test is
- * not enough, as the linker will remove the test again - assuming it is not
- * invoked. I therefore decided not to rely on any automatic test case suites
- * or so, but instead let the individual libraries build up their unit test
- * suites manually. See the respective headers called UnitTests.
+ * not enough, as the linker removes the test again once it looks uninvoked.
+ * Every library hence builds up its unit test suite manually. See the
+ * respective headers called UnitTests.
  *
  * @author Tobias Weinzierl
  */
@@ -66,7 +43,7 @@ protected:
   const std::string _testCaseName;
 
   /**
-   * Error counter. This counter is increased on errors iff you use the
+   * Error counter. This counter is increased on errors only when you use the
    * validate macros within your test cases.
    */
   int _errors;

@@ -91,6 +91,19 @@ INLINE_METHOD GPU_CALLABLE_METHOD Scalar tarch::la::elementMax(const Matrix<4, 4
   return result;
 }
 
+/**
+ * Inverts each individual entry
+ *
+ * Works only when the matrix does not contain any zeroes, as this routine
+ * yields
+ *
+ * @f$ A_{ij} \gets A_{ij}^{-1} @f$
+ *
+ * which is not @f$ A^{-1} @f$. Use tarch::la::invert() to obtain the matrix
+ * inverse.
+ *
+ * @see tarch::la::invert()
+ */
 template <int Rows, int Cols, typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Cols, Scalar> tarch::la::invertEntries(
   const tarch::la::Matrix<Rows, Cols, Scalar>& matrix

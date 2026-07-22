@@ -113,9 +113,12 @@ void runner::GridConstruction::run() {
   tarch::instrumentation::Watch constructionWatch("runner::GridConstruction", "run", false, false);
   constructionWatch.start();
 
-  const auto minimumAdmissiblePatchSize = _context.parameters.getMinAdmissiblePatchSize(_context.domainSize);
-  const auto maximumLevel               = _context.parameters.getMaxGridLevels();
-  auto&      loadBalancerInstance       = loadBalancer();
+  // The coarsest admissible patch is the resolution the grid has to reach before it may stop. The
+  // finest level is a cap the refinement criterion may ask for, not a target the construction has
+  // to hit: a scenario that seeds nothing has to converge on the coarsest level alone.
+  const auto coarsestAdmissiblePatchSize = _context.parameters.getMaxAdmissiblePatchSize(_context.domainSize);
+  const auto maximumLevel                = _context.parameters.getMaxGridLevels();
+  auto&      loadBalancerInstance        = loadBalancer();
 
   auto currentMinimumPatchSize = std::numeric_limits<double>::max();
   int  currentNumberOfTrees    = 0;
@@ -148,10 +151,11 @@ void runner::GridConstruction::run() {
     const auto  numberOfTrees = static_cast<int>(statistics.getGlobalNumberOfTrees());
 
     // Hanging vertices prevent faithful forks after adaptive refinement starts, so the load
-    // balancer finalises the initial decomposition with the last uniform cells.
+    // balancer finalises the initial decomposition with the last uniform cells. Completion tests
+    // the coarsest leaf through the minimum depth: the minimum mesh width tracks the finest cell,
+    // which reaches the floor while coarser regions still refine towards it.
     if (statistics.getGlobalNumberOfInnerUnrefinedCells() > 0
-        and (statistics.getGlobalMinDepth() >= _context.parameters.getGridLevels()
-             or tarch::la::smallerEquals(statistics.getGlobalMinH(), minimumAdmissiblePatchSize))) {
+        and statistics.getGlobalMinDepth() >= _context.parameters.getGridLevels()) {
       loadBalancerInstance.notifyUniformGridComplete();
     }
 
@@ -195,8 +199,15 @@ void runner::GridConstruction::run() {
       finishConditionSeenLastSweep = false;
       refine                       = false;
     } else {
-      const bool converged = tarch::la::smallerEquals(currentMinimumPatchSize, minimumAdmissiblePatchSize)
-        and loadBalancerInstance.isStagnating() and didRefineThisSweep;
+      // Converged once the finest cell has reached the coarsest admissible resolution, the criterion
+      // has stopped asking for more, the load balancer has settled, and the sweep that just ran was
+      // a refining one. The first term alone only says some cell got there; the spacetree clears its
+      // stationary counter on every triggered refinement, so the counter is what separates "the
+      // criterion wants nothing further" from "the finest cell happens to have stopped shrinking
+      // while other cells still refine". The whole predicate has to hold on two consecutive sweeps.
+      const bool converged = tarch::la::smallerEquals(currentMinimumPatchSize, coarsestAdmissiblePatchSize)
+        and statistics.getGlobalNumberOfStationarySweeps() >= 1 and loadBalancerInstance.isStagnating()
+        and didRefineThisSweep;
       if (converged and finishConditionSeenLastSweep) {
         if (pendingRow.level >= 0) {
           logRow(

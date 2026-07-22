@@ -408,7 +408,6 @@ void peano4::parallel::SpacetreeSet::answerQuestions() {
         "Remote child tree " << message.getWorkerSpacetreeId() << " of local tree " << message.getMasterSpacetreeId()
                              << " became empty and was removed."
       );
-      getSpacetree(message.getMasterSpacetreeId())._childrenIds.erase(message.getWorkerSpacetreeId());
       sendTreeManagementAcknowledgement(message);
     } break;
     }
@@ -1155,8 +1154,7 @@ void peano4::parallel::SpacetreeSet::cleanUpTrees(peano4::grid::GridTraversalObs
         assertion(false, "This branch requires MPI support.");
 #endif
       } else {
-        logDebug("Parent tree " << treeIterator->_masterId << " is local on this rank. Remove child reference");
-        getSpacetree(treeIterator->_masterId)._childrenIds.erase(treeIterator->_id);
+        logDebug("Parent tree " << treeIterator->_masterId << " is local on this rank");
         getSpacetree(treeIterator->_masterId)._statistics.setRemovedEmptySubtree(true);
       }
       treeIterator = _spacetrees.erase(treeIterator);

@@ -18,11 +18,14 @@ public:
 
   virtual std::string getFileExtension() const = 0;
 
+  static void setDoublePrecisionOutput(bool value);
+  static bool getDoublePrecisionOutput();
+
 protected:
   struct DataField {
-    std::string        name{};
-    int                components = 1;
-    std::vector<float> values{};
+    std::string         name{};
+    int                 components = 1;
+    std::vector<double> values{};
   };
 
   struct VertexHash {
@@ -30,13 +33,11 @@ protected:
   };
 
   struct SubdomainBuffers {
-    // Geometry
-    std::vector<float>        pointsXYZ{};
+    std::vector<double>       pointsXYZ{};
     std::vector<std::int32_t> connectivity{};
     std::vector<std::int32_t> offsets{};
     std::vector<std::uint8_t> types{};
 
-    // Data
     std::vector<DataField> pointFields{};
     std::vector<DataField> cellFields{};
 
@@ -70,9 +71,9 @@ protected:
 
   struct FieldLayout {
     FieldKind kind;
-    // Number of components actually written. A vector is always written with 3
+    // Number of components written. A vector is always written with 3
     // components (a 2D vector is padded with a zero z) and a tensor with 9, so
-    // the field is a real vector/tensor in ParaView and the other readers
+    // ParaView and the other readers interpret the field as a vector or tensor
     // regardless of the source count. Generic fields keep their source count.
     int writtenComponents;
   };
@@ -213,8 +214,11 @@ protected:
   // [tuple0 comp0..compN, tuple1 ...]) from sourceComponents to writtenComponents
   // per tuple, padding the extra trailing components with zero. Returns the input
   // unchanged when the widths already match.
-  static std::vector<float>
-  expandFieldComponents(const std::vector<float>& values, int sourceComponents, int writtenComponents);
+  static std::vector<double>
+  expandFieldComponents(const std::vector<double>& values, int sourceComponents, int writtenComponents);
+
+  // Narrow a double buffer to float for single-precision output.
+  static std::vector<float> narrowToFloat(const std::vector<double>& values);
 
   static bool             hasSchemaOrGeometry(const SubdomainBuffers& buffers);
   static bool             hasPayload(const SubdomainBuffers& buffers);
@@ -225,6 +229,9 @@ protected:
   bool        _written = false;
 
   std::vector<SubdomainBuffers> _subdomains{};
+
+private:
+  static bool _doublePrecisionOutput;
 };
 
 #include "CellDataPlotter.cpph"

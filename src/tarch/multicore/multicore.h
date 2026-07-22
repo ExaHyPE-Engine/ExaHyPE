@@ -13,7 +13,7 @@ namespace tarch {
 
    ## Writing your own code with multithreading features
 
-   If you wanna distinguish in your code between multicore and no-multicore variants,
+   If you want to distinguish in your code between multicore and no-multicore variants,
    please use
 
   ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -60,8 +60,7 @@ namespace tarch {
    task types or task graph types, respectively:
 
    - ***Tasks***. The most generic type of tasks is submitted via spawnTask().
-     Each task can be assigned a unique number and incoming dependencies. The
-     number in return can be used to specify outgoing dependencies.
+     Each task can be given an incoming and an outgoing dependency.
    - ***Fork-join tasks***. These are created via tarch::multicore::spawnTasks()
      which accepts a sequence of tasks. They are all run in parallel but then
      wait for each other, i.e. we define a tree (sub)task graph. With fork-join
@@ -69,47 +68,25 @@ namespace tarch {
 
    ### Tasks with dependencies
 
-   In Peano, task DAGs are built up along the task workflow. That is, each task
-   that is not used within a fork-join region or is totally free is assigned a
-   unique number when we spawn it.
+   Task DAGs are built up along the task workflow. A task which is neither used
+   within a fork-join region nor totally free identifies its dependencies
+   through addresses: spawnTask() takes the address a task waits for and the
+   address it in turn produces.
 
-   Whenever we define a task, we can also define its dependencies. This is a sole
-   completion dependency: you tell the task system which task has to be completed
-   before the currently submitted one is allowed to start. A DAG thus can be built
-   up layer by layer. We start with the first task. This task might be
-   immediately executed - we do not care - and then we continue to work our way
+   Such a dependency is a sole completion dependency, i.e. it tells the task
+   system which task has to be completed before the currently submitted one is
+   allowed to start. A DAG is thereby built up layer by layer. We start with
+   the first task, which may be executed immediately, and then work our way
    down through the graph adding node by node.
 
-   In line with OpenMP and TBB - where we significantly influenced the development
-   of the dynamic task API - outgoing dependencies should be declared before we
+   In line with OpenMP and TBB, outgoing dependencies are declared before we
    use them.
    */
   namespace multicore {
-    /**
-     * Forward declaration
-     */
     class Task;
-
-    using TaskNumber                       = int;
-    constexpr TaskNumber NoOutDependencies = -1;
-    const auto           NoInDependencies  = std::set<TaskNumber>();
 
     /**
      * Spawns a single task in a non-blocking fashion
-     *
-     * Ownership goes over to Peano's multicore namespace, i.e. you don't have
-     * to delete the pointer.
-     *
-     * ## Handling tasks without outgoing dependencies
-     *
-     * If outDependency equals nullptr, we know that no one is (directly)
-     * waiting for this task, i.e. we won't add dependencies to the task
-     * graph afterwards.
-     *
-     * spawnTask() will ***never*** commit a task to the global task
-     * queue and therefore is inherently thread-safe.
-     *
-     * Spawn a task that may depend on other tasks' data.
      *
      * @see tarch::multicore and the section "Tasks with dependencies" therein
      *   for further documentation.
@@ -118,14 +95,10 @@ namespace tarch {
      *    handed over to the tasking system, i.e. you are not allowed to delete it.
      * @param inDependency Incoming data dependency that has to finish before
      *    the present task is allowed to run. You can pass nullptr to indicate no dependency.
-     * @param outDependency Outcoming data dependency of the task.
+     * @param outDependency Outgoing data dependency of the task.
      *    You can pass nullptr to indicate no dependency.
      */
-    void spawnTask(
-      Task*             task,
-      const void* const inDependency = nullptr,
-      const void* const outDependency = nullptr
-    );
+    void spawnTask(Task* task, const void* const inDependency = nullptr, const void* const outDependency = nullptr);
     void spawnTasks(const std::vector<Task*>& tasks);
 
     void waitForTask(const void* const inDependency);

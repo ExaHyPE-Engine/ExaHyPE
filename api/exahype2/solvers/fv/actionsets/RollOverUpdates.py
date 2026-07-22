@@ -8,13 +8,15 @@ import jinja2
 
 class RollOverUpdates(AbstractFVActionSet):
     """
-    This action set backs current QNew face and cell data up into QOld before
-    the next time step overwrites QNew.
+    Back the current QNew face and cell data up into QOld.
 
-    We may not roll over data if no data has been written onto the
-    face. So we check the updated flag. It is reset by the UpdateFaceLabel
-    action set in the grid subpackage and set again by either the face
-    projection or the dynamic amr handling.
+    The backup happens before the next time step overwrites QNew. A face half is
+    normally rolled over only once data has been written onto it, which the
+    updated flag records. That flag is reset by the UpdateFaceLabel action set in
+    the grid subpackage and set again by either the face projection or the
+    dynamic AMR handling. The first time step after a realised topology change is
+    the exception: there the mesh-update sweeps cleared the flag on halves whose
+    data is still valid, so those halves roll over too.
     """
 
     TemplateHandleFace = jinja2.Template(
@@ -22,14 +24,24 @@ class RollOverUpdates(AbstractFVActionSet):
     if ({{FACE_GUARD}}) {
       const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
 
+      // The mesh-update sweeps clear the Updated entries, which would silently
+      // cancel the pending roll-over of every face their projection did not
+      // reach; the two sides of such a face would then solve Riemann problems
+      // on halo data one step older than the cell interiors and mass would
+      // leak. The first time step after a realised topology change therefore
+      // rolls every half whose data no change invalidated.
+      const bool rollAfterTopologyChange =
+        ::exahype2::RefinementControlService::getInstance().hasRealisedTopologyChangesSinceLastTimeStep();
+
       // Left half
-      if ({{FACE_METADATA_ACCESSOR}}.getUpdated(0)) {
+      if ({{FACE_METADATA_ACCESSOR}}.getUpdated(0)
+          or (rollAfterTopologyChange and not {{FACE_METADATA_ACCESSOR}}.getRequiresDataTransfer(0))) {
         ::exahype2::fv::copyHalfOfHalo(
           {{UNKNOWNS}},
           {{DOFS_PER_AXIS}},
           {{OVERLAP}},
           normal,
-          false, // it is the left layer, i.e. not right
+          false, // Left layer
           {{FACE_NEW_ACCESSOR}}.data(),
           {{FACE_OLD_ACCESSOR}}.data()
         );
@@ -42,13 +54,14 @@ class RollOverUpdates(AbstractFVActionSet):
       }
 
       // Right half
-      if ({{FACE_METADATA_ACCESSOR}}.getUpdated(1)) {
+      if ({{FACE_METADATA_ACCESSOR}}.getUpdated(1)
+          or (rollAfterTopologyChange and not {{FACE_METADATA_ACCESSOR}}.getRequiresDataTransfer(1))) {
         ::exahype2::fv::copyHalfOfHalo(
           {{UNKNOWNS}},
           {{DOFS_PER_AXIS}},
           {{OVERLAP}},
           normal,
-          true, // it is the right layer
+          true, // Right layer
           {{FACE_NEW_ACCESSOR}}.data(),
           {{FACE_OLD_ACCESSOR}}.data()
         );
@@ -64,24 +77,29 @@ class RollOverUpdates(AbstractFVActionSet):
 """
     )
 
-    TemplateHandleCell = jinja2.Template("""
+    TemplateHandleCell = jinja2.Template(
+        """
     if ({{CELL_METADATA_ACCESSOR}}.getHasUpdated() and {{CELL_GUARD}}) {
       assertion({{CELL_OLD_ACCESSOR}}.Cardinality == {{CELL_NEW_ACCESSOR}}.Cardinality, {{CELL_OLD_ACCESSOR}}.Cardinality, {{CELL_NEW_ACCESSOR}}.Cardinality);
       {{CELL_METADATA_ACCESSOR}}.setHasUpdated(false);
       {{CELL_OLD_ACCESSOR}}.swap({{CELL_NEW_ACCESSOR}});
     }
-""")
+"""
+    )
 
     def __init__(self, solver, face_guard, cell_guard):
         """
-        ## Attributes.
+        Set up the action set with its two roll-over guards.
 
-        overwrite_old_and_new_solution_with_update: Boolean
-          This flag should be set if you use the action set throughout the
-          initialisation, where you determine an update on the face and
-          this update should then be used for old and new face data (as
-          they are the same). If it is set to false, then the new solution
-          is backed up in old, and the update overwrites the new data field.
+        ## Arguments
+
+        face_guard: String
+          C++ predicate deciding whether a face is rolled over in this sweep.
+
+        cell_guard: String
+          C++ predicate deciding whether a cell is rolled over. The action set
+          appends a check for the solver's TimeStep state, so a roll-over never
+          happens during grid construction, initialisation or a mesh update.
         """
         AbstractFVActionSet.__init__(self, solver)
         cell_guard += (
@@ -94,10 +112,18 @@ class RollOverUpdates(AbstractFVActionSet):
         self.d["UNKNOWNS"] = str(solver._patch_overlap_new.no_of_unknowns)
         self.d["DOFS_PER_AXIS"] = str(solver._patch.dim[0])
         self.d["OVERLAP"] = str(int(solver._patch_overlap_new.dim[0] / 2))
-        self.d["FACE_OLD_ACCESSOR"] = "fineGridFace" + solver.previous_unknown_identifier()
-        self.d["FACE_NEW_ACCESSOR"] = "fineGridFace" + solver.current_unknown_identifier()
-        self.d["CELL_OLD_ACCESSOR"] = "fineGridCell" + solver.previous_unknown_identifier()
-        self.d["CELL_NEW_ACCESSOR"] = "fineGridCell" + solver.current_unknown_identifier()
+        self.d["FACE_OLD_ACCESSOR"] = (
+            "fineGridFace" + solver.previous_unknown_identifier()
+        )
+        self.d["FACE_NEW_ACCESSOR"] = (
+            "fineGridFace" + solver.current_unknown_identifier()
+        )
+        self.d["CELL_OLD_ACCESSOR"] = (
+            "fineGridCell" + solver.previous_unknown_identifier()
+        )
+        self.d["CELL_NEW_ACCESSOR"] = (
+            "fineGridCell" + solver.current_unknown_identifier()
+        )
         self.d["FACE_METADATA_ACCESSOR"] = "fineGridFace" + solver._face_label.name
         self.d["CELL_METADATA_ACCESSOR"] = "fineGridCell" + solver._cell_label.name
 
@@ -126,6 +152,7 @@ class RollOverUpdates(AbstractFVActionSet):
 #include "peano4/Loop.h"
 #include "toolbox/blockstructured/Enumeration.h"
 #include "exahype2/fv/PatchUtils.h"
+#include "exahype2/RefinementControlService.h"
 """ + AbstractFVActionSet.get_includes(
             self
         )

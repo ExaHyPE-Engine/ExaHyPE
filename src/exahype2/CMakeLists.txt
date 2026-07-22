@@ -9,8 +9,12 @@ set(SOURCES
   PrecisionControl.cpp
   RefinementControl.cpp
   RefinementControlService.cpp
+  RefinementCriterionHelpers.cpp
   TimeStepping.cpp
   UnitTests.cpp
+  tests/RefinementControlServiceTest.cpp
+  tests/RefinementControlTest.cpp
+  tests/RefinementCriterionHelpersTest.cpp
 
   dg/BoundaryConditions.cpp
   dg/CellIntegral.cpp

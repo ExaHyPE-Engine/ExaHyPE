@@ -1,3 +1,5 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "Riemann.h"
 
 #include "exahype2/fv/VolumeIndex.h"
@@ -5,60 +7,88 @@
 #include "peano4/datamanagement/FaceMarker.h"
 #include "toolbox/blockstructured/Enumeration.h"
 
-void exahype2::dg::interpolateRiemannSolution(
+void exahype2::dg::interpolateProjectedFacePolynomial(
   const peano4::datamanagement::FaceMarker& marker,
   int                                       order,
+  int                                       numberOfProjectedQuantities,
   int                                       unknowns,
+  int                                       auxiliaryVariables,
   const double* NOALIAS                     InterpolationMatrix1d,
   const double* NOALIAS                     coarseGridFaceQ,
   double* NOALIAS                           fineGridFaceQ
 ) {
   const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
-  const int stride = unknowns;
+  const int stride = unknowns + auxiliaryVariables;
 
-#if DIMENSIONS == 2
-  const int totalNumberOfValues           = (order + 1) * 2 * unknowns;
-  const int InterpolationMatrixDimensions = (order + 1); // no of rows/cols
-#else
-  const int totalNumberOfValues           = (order + 1) * (order + 1) * 2 * unknowns;
-  const int InterpolationMatrixDimensions = (order + 1) * (order + 1);
-#endif
-  std::fill_n(fineGridFaceQ, totalNumberOfValues, 0.0);
+  const int numberOfDofsPerAxis = order + 1;
+
+  // The half of the hanging face the fine cells cannot supply: it belongs to the coarse
+  // neighbour, whose trace lives on the coarse face.
+  const int coarseSideFace = marker.getSelectedFaceNumber() < DIMENSIONS ? 0 : 1;
 
   peano4::dForEachExclusive(order + 1, normal, 0, [&](const tarch::la::Vector<DIMENSIONS, int>& fineGridDoF) {
+    tarch::la::Vector<DIMENSIONS, int> shiftedFineGridDoF = fineGridDoF;
+    for (int leftRight = coarseSideFace * numberOfProjectedQuantities;
+         leftRight < (coarseSideFace + 1) * numberOfProjectedQuantities;
+         leftRight++) {
+      shiftedFineGridDoF(normal) = leftRight;
+      const int fineOffset       = toolbox::blockstructured::serialiseVoxelIndexInOverlap(
+                               shiftedFineGridDoF,
+                               order + 1,
+                               numberOfProjectedQuantities,
+                               normal
+                             )
+        * stride;
+      std::fill_n(fineGridFaceQ + fineOffset, stride, 0.0);
+    }
+
     peano4::dForEachExclusive(order + 1, normal, 0, [&](const tarch::la::Vector<DIMENSIONS, int>& coarseGridDoF) {
       double tensorProductWeight = 1.0;
       for (int d = 0; d < DIMENSIONS; d++) {
         if (d != normal) {
-          int subMatrix = marker.getRelativePositionWithinFatherCell()(d);
+          const int subMatrix = marker.getRelativePositionWithinFatherCell()(d);
           assertion(subMatrix >= 0);
           assertion(subMatrix <= 2);
 
-          int col                   = fineGridDoF(d);
-          int row                   = coarseGridDoF(d);
-          int linearisedMatrixIndex = subMatrix * InterpolationMatrixDimensions * InterpolationMatrixDimensions
-            + row * InterpolationMatrixDimensions + col;
+          // InterpolationMatrix1d[b][fine][coarse] evaluates the coarse shape function at
+          // the fine node of child interval b.
+          const int linearisedMatrixIndex = subMatrix * numberOfDofsPerAxis * numberOfDofsPerAxis
+            + fineGridDoF(d) * numberOfDofsPerAxis + coarseGridDoF(d);
           assertion(linearisedMatrixIndex >= 0);
-          assertion(linearisedMatrixIndex < 3, linearisedMatrixIndex, InterpolationMatrixDimensions);
+          assertion(
+            linearisedMatrixIndex < 3 * numberOfDofsPerAxis * numberOfDofsPerAxis,
+            linearisedMatrixIndex,
+            numberOfDofsPerAxis
+          );
           tensorProductWeight *= InterpolationMatrix1d[linearisedMatrixIndex];
         }
       }
 
-      tarch::la::Vector<DIMENSIONS, int> shiftedFineGridDoF   = fineGridDoF;
       tarch::la::Vector<DIMENSIONS, int> shiftedCoarseGridDoF = coarseGridDoF;
-      for (int leftRight = 0; leftRight < 2; leftRight++)
-        for (int unknown = 0; unknown < unknowns; unknown++) {
-          shiftedFineGridDoF(normal)   = leftRight;
-          shiftedCoarseGridDoF(normal) = leftRight;
-          const int fineOffset =
-            toolbox::blockstructured::serialiseVoxelIndexInOverlap(shiftedFineGridDoF, order + 1, 1, normal) * stride
-            + unknown;
-          const int coarseOffset =
-            toolbox::blockstructured::serialiseVoxelIndexInOverlap(shiftedCoarseGridDoF, order + 1, 1, normal) * stride
-            + unknown;
+      for (int leftRight = coarseSideFace * numberOfProjectedQuantities;
+           leftRight < (coarseSideFace + 1) * numberOfProjectedQuantities;
+           leftRight++) {
+        shiftedFineGridDoF(normal)   = leftRight;
+        shiftedCoarseGridDoF(normal) = leftRight;
+        const int fineOffset         = toolbox::blockstructured::serialiseVoxelIndexInOverlap(
+                                 shiftedFineGridDoF,
+                                 order + 1,
+                                 numberOfProjectedQuantities,
+                                 normal
+                               )
+          * stride;
+        const int coarseOffset = toolbox::blockstructured::serialiseVoxelIndexInOverlap(
+                                   shiftedCoarseGridDoF,
+                                   order + 1,
+                                   numberOfProjectedQuantities,
+                                   normal
+                                 )
+          * stride;
 
-          fineGridFaceQ[fineOffset] += tensorProductWeight * coarseGridFaceQ[coarseOffset];
+        for (int unknown = 0; unknown < stride; unknown++) {
+          fineGridFaceQ[fineOffset + unknown] += tensorProductWeight * coarseGridFaceQ[coarseOffset + unknown];
         }
+      }
     });
   });
 }
@@ -70,24 +100,18 @@ void exahype2::dg::restrictAndAccumulateProjectedFacePolynomial(
   int                                       unknowns,
   int                                       auxiliaryVariables,
   const double* NOALIAS                     RestrictionMatrix1d,
+  const double* NOALIAS                     QuadratureWeights1d,
   const double* NOALIAS                     fineGridFaceQ,
   double* NOALIAS                           coarseGridFaceQ
 ) {
   assertion(numberOfProjectedQuantities >= 1);
-  // @todo Remove as it should work in principle for other values as well, but I haven't tested it
+  // @todo Remove this restriction. The routine should work for other values as
+  //  well, but that is untested.
   assertion((numberOfProjectedQuantities) == (1), numberOfProjectedQuantities, 1);
   const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
   const int stride = unknowns + auxiliaryVariables;
 
-#if DIMENSIONS == 2
-  [[maybe_unused]] const int totalNumberOfValues =
-    (order + 1) * (numberOfProjectedQuantities * 2) * (unknowns + auxiliaryVariables);
-  const int RestrictionMatrixDimensions = (order + 1); // no of rows/cols
-#else
-  [[maybe_unused]] const int totalNumberOfValues =
-    (order + 1) * (order + 1) * (numberOfProjectedQuantities * 2) * (unknowns + auxiliaryVariables);
-  const int RestrictionMatrixDimensions = (order + 1) * (order + 1);
-#endif
+  const int numberOfDofsPerAxis = order + 1;
 
   const int leftRightFace = marker.getSelectedFaceNumber() < DIMENSIONS ? 1 : 0;
   peano4::dForEachExclusive(order + 1, normal, 0, [&](const tarch::la::Vector<DIMENSIONS, int>& fineGridDoF) {
@@ -95,17 +119,24 @@ void exahype2::dg::restrictAndAccumulateProjectedFacePolynomial(
       double tensorProductWeight = 1.0;
       for (int d = 0; d < DIMENSIONS; d++) {
         if (d != normal) {
-          int subMatrix = marker.getRelativePositionWithinFatherCell()(d);
+          const int subMatrix = marker.getRelativePositionWithinFatherCell()(d);
           assertion(subMatrix >= 0);
           assertion(subMatrix <= 2);
 
-          int row                   = fineGridDoF(d);
-          int col                   = coarseGridDoF(d);
-          int linearisedMatrixIndex = subMatrix * RestrictionMatrixDimensions * RestrictionMatrixDimensions
-            + row * RestrictionMatrixDimensions + col;
+          // RestrictionMatrix1d[b][coarse][fine] evaluates the coarse shape function at the
+          // fine node of child interval b over the child width. The quadrature weight ratio
+          // turns the sum over the children into the mass-lumped L2 projection of the fine
+          // trace, so every polynomial the coarse face basis represents is reproduced.
+          const int linearisedMatrixIndex = subMatrix * numberOfDofsPerAxis * numberOfDofsPerAxis
+            + coarseGridDoF(d) * numberOfDofsPerAxis + fineGridDoF(d);
           assertion(linearisedMatrixIndex >= 0);
-          assertion(linearisedMatrixIndex < 3, linearisedMatrixIndex, RestrictionMatrixDimensions);
-          tensorProductWeight *= RestrictionMatrix1d[linearisedMatrixIndex];
+          assertion(
+            linearisedMatrixIndex < 3 * numberOfDofsPerAxis * numberOfDofsPerAxis,
+            linearisedMatrixIndex,
+            numberOfDofsPerAxis
+          );
+          tensorProductWeight *= RestrictionMatrix1d[linearisedMatrixIndex] * QuadratureWeights1d[fineGridDoF(d)]
+            / QuadratureWeights1d[coarseGridDoF(d)];
         }
       }
 
@@ -143,6 +174,98 @@ void exahype2::dg::restrictAndAccumulateProjectedFacePolynomial(
   });
 }
 
+void exahype2::dg::interpolateRiemannSolution(
+  int                                       faceNumber,
+  const tarch::la::Vector<DIMENSIONS, int>& positionWithinFatherCell,
+  int                                       order,
+  int                                       unknowns,
+  int                                       auxiliaryVariables,
+  double                                    maxEigenvalue,
+  const double* NOALIAS                     InterpolationMatrix1d,
+  const double* NOALIAS                     coarseGridFaceRiemannSolution,
+  const double* NOALIAS                     coarseGridFaceProjection,
+  const double* NOALIAS                     fineGridFaceProjection,
+  double* NOALIAS                           fineGridFaceRiemannSolution
+) {
+  const int normal              = faceNumber % DIMENSIONS;
+  const int numberOfDofsPerAxis = order + 1;
+  const int projectionStride    = unknowns + auxiliaryVariables;
+
+  // The coarse neighbour's face integral consumes the layer on its side of the
+  // coarse face; the fine cell's face integral consumes the opposite layer of
+  // the hanging face. Evaluating the one polynomial into the other layer makes
+  // both sides integrate the same flux.
+  const int coarseSideLayer = faceNumber < DIMENSIONS ? 0 : 1;
+  const int fineSideLayer   = 1 - coarseSideLayer;
+
+  // Sign of the jump penalty: an increase of the fine trace has to reduce the
+  // net inflow of the fine cell, and the face integral consumes the flux with
+  // opposite signs on the two sides of the cell.
+  const double penaltyOrientation = faceNumber < DIMENSIONS ? 1.0 : -1.0;
+
+  peano4::dForEachExclusive(order + 1, normal, 0, [&](const tarch::la::Vector<DIMENSIONS, int>& fineGridDoF) {
+    tarch::la::Vector<DIMENSIONS, int> shiftedFineGridDoF = fineGridDoF;
+    shiftedFineGridDoF(normal)                            = fineSideLayer;
+    const int fineOffset =
+      toolbox::blockstructured::serialiseVoxelIndexInOverlap(shiftedFineGridDoF, numberOfDofsPerAxis, 1, normal)
+      * unknowns;
+    const int fineProjectionOffset =
+      toolbox::blockstructured::serialiseVoxelIndexInOverlap(shiftedFineGridDoF, numberOfDofsPerAxis, 1, normal)
+      * projectionStride;
+
+    // The penalty damps the fine trace against the restriction's image on the
+    // coarse face: that difference is the part of the fine trace the coarse
+    // flux cannot see and would otherwise never dissipate, and it integrates
+    // to zero over the coarse face, so the transition stays conservative.
+    for (int unknown = 0; unknown < unknowns; unknown++) {
+      fineGridFaceRiemannSolution[fineOffset + unknown] =
+        -penaltyOrientation * 0.5 * maxEigenvalue * fineGridFaceProjection[fineProjectionOffset + unknown];
+    }
+
+    peano4::dForEachExclusive(order + 1, normal, 0, [&](const tarch::la::Vector<DIMENSIONS, int>& coarseGridDoF) {
+      double tensorProductWeight = 1.0;
+      for (int d = 0; d < DIMENSIONS; d++) {
+        if (d != normal) {
+          const int subMatrix = positionWithinFatherCell(d);
+          assertion(subMatrix >= 0);
+          assertion(subMatrix <= 2);
+
+          // InterpolationMatrix1d[b][fine][coarse] evaluates the coarse shape function at
+          // the fine node of child interval b.
+          const int linearisedMatrixIndex = subMatrix * numberOfDofsPerAxis * numberOfDofsPerAxis
+            + fineGridDoF(d) * numberOfDofsPerAxis + coarseGridDoF(d);
+          assertion(linearisedMatrixIndex >= 0);
+          assertion(
+            linearisedMatrixIndex < 3 * numberOfDofsPerAxis * numberOfDofsPerAxis,
+            linearisedMatrixIndex,
+            numberOfDofsPerAxis
+          );
+          tensorProductWeight *= InterpolationMatrix1d[linearisedMatrixIndex];
+        }
+      }
+
+      tarch::la::Vector<DIMENSIONS, int> shiftedCoarseGridDoF = coarseGridDoF;
+      shiftedCoarseGridDoF(normal)                            = coarseSideLayer;
+      const int coarseOffset =
+        toolbox::blockstructured::serialiseVoxelIndexInOverlap(shiftedCoarseGridDoF, numberOfDofsPerAxis, 1, normal)
+        * unknowns;
+
+      // The restricted fine trace lives in the coarse face's other layer.
+      tarch::la::Vector<DIMENSIONS, int> shiftedRestrictedDoF = coarseGridDoF;
+      shiftedRestrictedDoF(normal)                            = fineSideLayer;
+      const int restrictedOffset =
+        toolbox::blockstructured::serialiseVoxelIndexInOverlap(shiftedRestrictedDoF, numberOfDofsPerAxis, 1, normal)
+        * projectionStride;
+
+      for (int unknown = 0; unknown < unknowns; unknown++) {
+        fineGridFaceRiemannSolution[fineOffset + unknown] += tensorProductWeight
+          * (coarseGridFaceRiemannSolution[coarseOffset + unknown]
+             + penaltyOrientation * 0.5 * maxEigenvalue * coarseGridFaceProjection[restrictedOffset + unknown]);
+      }
+    });
+  });
+}
+
 void exahype2::dg::clearSolutionProjection(
   int             order,
   int             unknowns,
@@ -157,16 +280,6 @@ void exahype2::dg::clearSolutionProjection(
 #endif
   const int numberOfDoubles = numberOfDoFs * (unknowns + auxiliaryVariables) * 2 * numberOfProjectedQuantities;
   std::fill_n(faceQ, numberOfDoubles, 0.0);
-}
-
-void exahype2::dg::clearRiemannResult(int order, int unknowns, double* NOALIAS faceQ) {
-  clearSolutionProjection(
-    order,
-    unknowns,
-    0, //    auxiliaryVariables,
-    1, //    numberOfProjectedQuantities
-    faceQ
-  );
 }
 
 void exahype2::dg::projectVolumetricDataOntoFaces(
@@ -209,7 +322,7 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
     }
   }
 
-  // Project up/down
+  // Project bottom/up
   for (int x = 0; x < order + 1; x++) {
     const auto bottom = fv::toVolumeIndex(x, 1);
     const auto up     = fv::toVolumeIndex(x, 0);
@@ -287,7 +400,7 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
     }
   }
 
-  // Project down/up
+  // Project bottom/up
   for (int x = 0; x < order + 1; x++) {
     for (int z = 0; z < order + 1; z++) {
       const auto bottom = fv::toVolumeIndex(x, 1, z);
@@ -364,7 +477,7 @@ void exahype2::dg::projectVolumetricDataAndGradientOntoFaces(
   [[maybe_unused]] double* const NOALIAS       faceQBottom,
   [[maybe_unused]] double* const NOALIAS       faceQUp
 ) {
-  assertion(false, "not implemented yet");
+  assertion(false, "Not implemented yet");
 }
 
 void exahype2::dg::projectVolumetricDataAndGradientOntoFaces(
@@ -380,7 +493,7 @@ void exahype2::dg::projectVolumetricDataAndGradientOntoFaces(
   [[maybe_unused]] double* const NOALIAS       faceQFront,
   [[maybe_unused]] double* const NOALIAS       faceQBack
 ) {
-  assertion(false, "not implemented yet");
+  assertion(false, "Not implemented yet");
 }
 
 void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(

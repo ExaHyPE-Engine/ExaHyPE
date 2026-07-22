@@ -5,6 +5,7 @@ import os
 import peano4
 import peano4.datamodel
 
+from exahype2.solvers.PDETerms import PDETerms
 from peano4.Logger import log
 
 
@@ -69,7 +70,8 @@ class Project(peano4.Project):
         """Register the complete Peano and ExaHyPE step sequence.
 
         The base call installs ``CreateGrid`` and ``LoadBalancing`` before this
-        method adds ``InitGrid``, ``PlotSolution``, and ``TimeStep``.
+        method adds ``InitGrid``, ``PlotSolution``, ``TimeStep``, and
+        ``DynamicAMR``.
         """
         super()._create_steps()
         self.init_grid = peano4.solversteps.Step("InitGrid", False)
@@ -78,6 +80,8 @@ class Project(peano4.Project):
         self.solversteps.add_step(self.plot_solution)
         self.perform_time_step = peano4.solversteps.Step("TimeStep", False)
         self.solversteps.add_step(self.perform_time_step)
+        self.dynamic_amr = peano4.solversteps.Step("DynamicAMR", False)
+        self.solversteps.add_step(self.dynamic_amr)
 
     def add_solver(self, solver):
         """Register a solver and recognise repeated solver declarations.
@@ -94,6 +98,7 @@ class Project(peano4.Project):
             self._solvers = []
             self.output.makefile.clear_user_files()
             self._solver_set_generated = False
+        solver._solver_number = len(self._solvers)
         self._solvers.append(solver)
 
     def remove_all_solvers(self):
@@ -162,10 +167,27 @@ the ExaHyPE release paper:
                 if particle.name not in tracers:
                     tracers.append(particle.name)
 
+        # Coarsening is a consensus across the solvers that actually evaluate a refinement
+        # criterion. A solver that carries no criterion never submits an erase request, so
+        # counting it would veto every coarsening for good. That covers both auxiliary
+        # registrations such as limiting controllers and a solver left on the default
+        # empty criterion.
+        amr_participants = sum(
+            1
+            for solver in self._solvers
+            if getattr(
+                solver,
+                "_refinement_criterion_implementation",
+                PDETerms.Empty_Implementation,
+            )
+            not in (PDETerms.Empty_Implementation, PDETerms.None_Implementation)
+        )
+
         self._solver_repository_dictionary = {
             "SOLVERS": [],
             "TRACERS": tracers,
             "PROJECT_TRACERS": project_tracers,
+            "NUMBER_OF_AMR_PARTICIPANTS": max(amr_participants, 1),
             "ADDITIONAL_INCLUDES": self._additional_includes,
         }
 
@@ -180,7 +202,7 @@ the ExaHyPE release paper:
         return result
 
     def __generate_solver_repository(self):
-        """Generate repository code that finalises every tracer traversal."""
+        """Generate the solver repository for all registered solvers and tracers."""
 
         self.__set_solver_repository_dictionary()
 
@@ -226,8 +248,9 @@ the ExaHyPE release paper:
     def _configure_runner(self, peano_main):
         """Add ExaHyPE hooks and repository callbacks to the generated main.
 
-        Step hooks live in generated step bodies and therefore run on every
-        rank. The runner controls when these steps execute.
+        Every algorithmic step receives a start and a finish hook which open
+        and close the matching repository phase. The hooks become part of the
+        generated step bodies and therefore run on every rank.
         """
         project_namespace = "::" + "::".join(self.namespace)
         repository_namespace = project_namespace + "::repositories"
@@ -258,9 +281,16 @@ the ExaHyPE release paper:
         self.perform_time_step.runner_finish_hook = (
             f"{repository_namespace}::finishTimeStep();"
         )
+        self.dynamic_amr.runner_start_hook = (
+            f"{repository_namespace}::startDynamicMeshRefinementStep();"
+        )
+        self.dynamic_amr.runner_finish_hook = (
+            f"{repository_namespace}::finishDynamicMeshRefinementStep();"
+        )
 
         peano_main.additional_includes = (
             '#include "repositories/SolverRepository.h"\n'
+            '#include "exahype2/RefinementControlService.h"\n'
             '#include "runner/LoadBalancer.h"'
         )
 
@@ -271,6 +301,8 @@ the ExaHyPE release paper:
             f"{repository_namespace}::finishSimulation(); }};\n"
             f"  result.mayPlot                 = []() {{ return "
             f"{repository_namespace}::mayPlot(); }};\n"
+            "  result.hasPendingMeshUpdates   = []() { return "
+            "::exahype2::RefinementControlService::getInstance().hasGridControlEvents(); };\n"
             f"  result.getMinTimeStamp         = []() {{ return "
             f"{repository_namespace}::getMinTimeStamp(); }};\n"
             f"  result.getMaxTimeStamp         = []() {{ return "
@@ -450,10 +482,10 @@ the ExaHyPE release paper:
             self.load_balancing.add_action_set(solver._action_set_update_cell_label)
 
     def generate_and_build(self):
-        """Generate solver data, actions, repositories, and runner callbacks.
+        """Generate solver data, action sets, repositories, and the main file.
 
-        The configured Peano project is generated and built after these
-        ExaHyPE components have been installed.
+        The configured Peano project is generated and built once these ExaHyPE
+        components are in place.
         """
         # A generated solver set cannot accept incremental additions.
         self._solver_set_generated = True
@@ -497,6 +529,7 @@ the ExaHyPE release paper:
                 self.plot_solution,
                 self.perform_time_step,
                 self.init_grid,
+                self.dynamic_amr,
             )
             for solver in self._solvers:
                 log.debug("Prepare solver %s.", solver._name)
@@ -514,6 +547,8 @@ the ExaHyPE release paper:
                 solver.add_actions_to_plot_solution(self.plot_solution)
 
                 solver.add_actions_to_perform_time_step(self.perform_time_step)
+                if hasattr(solver, "add_actions_to_dynamic_mesh_refinement"):
+                    solver.add_actions_to_dynamic_mesh_refinement(self.dynamic_amr)
 
                 self.__add_solver_implementation_files(solver)
 

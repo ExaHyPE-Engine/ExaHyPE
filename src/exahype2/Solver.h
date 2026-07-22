@@ -15,10 +15,10 @@ public:
    *
    * In C++ you cannot overload w.r.t. static. We however need functions which
    * exist twice in ExaHyPE 2: Once as standard (virtual) member functions and
-   * once at static version which an be offloaded to a GPU as it does not
+   * once as a static version which can be offloaded to a GPU as it does not
    * have a state. Both function variants, in theory, have the same signature
-   * but if they had, a compiler could not distinguish them. So I use this
-   * enum for the GPU version.
+   * but if they had, a compiler could not distinguish them. This enum marks
+   * the GPU version.
    *
    * If you create a solver without GPU support, this enum will not be used.
    * It is however always created. Once you write a GPU version and then compile
@@ -29,6 +29,13 @@ public:
 
   Solver()          = default;
   virtual ~Solver() = default;
+
+  // Solvers live as one instance per repository and are always handled through this base,
+  // so copying one would slice it.
+  Solver(const Solver&)            = delete;
+  Solver(Solver&&)                 = delete;
+  Solver& operator=(const Solver&) = delete;
+  Solver& operator=(Solver&&)      = delete;
 
   virtual double getMinTimeStamp() const    = 0;
   virtual double getMaxTimeStamp() const    = 0;
@@ -45,6 +52,16 @@ public:
 
   virtual void startTimeStep()  = 0;
   virtual void finishTimeStep() = 0;
+
+  /**
+   * This pair brackets every sweep of a dynamic mesh refinement step. The base
+   * implementation records that mesh refinement ran, so a solver's next
+   * startTimeStep() can react to a changed grid and reset the flag. A solver
+   * that keeps further state per refinement step overrides these operations
+   * and calls the base version.
+   */
+  virtual void startDynamicMeshRefinementStep() { _meshRefinementRanSinceLastTimeStep = true; }
+  virtual void finishDynamicMeshRefinementStep() {}
 
   virtual void startPlottingStep()  = 0;
   virtual void finishPlottingStep() = 0;
@@ -65,4 +82,20 @@ public:
 
   virtual void startSimulation()  = 0;
   virtual void finishSimulation() = 0;
+
+  /**
+   * Has a completed sweep stored face data yet?
+   *
+   * The boundary exchange consumes each sweep's sent batch at the start of the
+   * following sweep, so a sweep may only receive once an earlier sweep has sent.
+   * A guard keyed on the solver state alone cannot express that, because the
+   * state stays at initialisation across the whole initialise-drain loop whose
+   * every sweep sends. Initialisation sets the flag once its first storing sweep
+   * has finished.
+   */
+  bool hasStoredFaceData() const { return _hasStoredFaceData; }
+
+protected:
+  bool _meshRefinementRanSinceLastTimeStep = false;
+  bool _hasStoredFaceData                  = false;
 };

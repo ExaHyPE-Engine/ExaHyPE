@@ -1,22 +1,26 @@
 #!/usr/bin/env python3
+# This file is part of the Peano project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
 """Compare two solution outputs field by field and report the first mismatch.
 
-Both inputs are read through the shared :mod:`solution_io` readers, so any plotter
-output format works - VTKHDF, HDF5/XDMF, NetCDF/UGRID or VTU - and the two inputs
-need not even be in the same format. The comparison is numeric (with tolerances)
-rather than byte-for-byte, so float32 storage, compression, attribute order or a
+Both inputs are read through the :mod:`solution_io` readers, so any plotter output
+format works (VTKHDF, HDF5/XDMF, NetCDF/UGRID or VTU) and the two inputs need not
+even be in the same format. The comparison is numeric (with tolerances) rather
+than byte-for-byte, so float32 storage, compression, attribute order or a
 reversed space-filling-curve ordering do not register as differences:
 
-  * structure - snapshot count, time stamps, spatial dimension, point and cell
-    counts, the set of field names and their component counts;
-  * geometry - point coordinates and cell connectivity;
-  * data - every field's values.
+  * Structure: snapshot count, time stamps, spatial dimension, point and cell
+    counts, the set of field names and their component counts.
+  * Geometry: point coordinates and cell connectivity.
+  * Data: every field's values.
 
 Pass ``--unordered`` when the two outputs enumerate the same mesh in a different
-order (common across formats or runs). Then each cell is reduced to a signature -
+order (common across formats or runs). Then each cell is reduced to a signature,
 its vertex coordinates plus its cell-field values and the node-field values at its
-vertices - and the sorted signatures are compared, which is invariant to cell and
-point ordering and to duplicated patch-boundary vertices.
+vertices with the vertices brought into a canonical order, and cells are paired
+by a nearest-neighbour query on (centre, size) before their signatures are
+compared. The comparison is invariant to cell and point ordering, to the local
+vertex order within each cell, and to duplicated patch-boundary vertices.
 
 Exit status: 0 if the solutions match, 1 on the first mismatch, 2 if an input
 cannot be read or compared.
@@ -29,8 +33,9 @@ import math
 import sys
 
 import numpy as np
+from scipy.spatial import cKDTree
 
-# Shared readers; the dual import works both as a package and when this script is
+# The dual import works both as a package and when this script is
 # run directly from the postprocessing/ directory (see render_solution.py).
 try:
     from postprocessing.solution_io import MeshSnapshot, SolutionSource
@@ -42,11 +47,27 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Compare two solution outputs (any plotter format) and report the first mismatch."
     )
-    parser.add_argument("left", help="First solution (solver name, index/snapshot file, or output directory)")
-    parser.add_argument("right", help="Second solution (solver name, index/snapshot file, or output directory)")
-    parser.add_argument("--rtol", type=float, default=1.0e-5, help="Relative tolerance (default: 1e-5)")
-    parser.add_argument("--atol", type=float, default=1.0e-8, help="Absolute tolerance (default: 1e-8)")
+    parser.add_argument(
+        "left",
+        help="First solution (solver name, index/snapshot file, or output directory)",
+    )
+    parser.add_argument(
+        "right",
+        help="Second solution (solver name, index/snapshot file, or output directory)",
+    )
+    parser.add_argument(
+        "--rtol", type=float, default=0.0, help="Relative tolerance (default: 0, exact)"
+    )
+    parser.add_argument(
+        "--atol", type=float, default=0.0, help="Absolute tolerance (default: 0, exact)"
+    )
     parser.add_argument("--field", help="Compare only this field (default: all fields)")
+    parser.add_argument(
+        "--skip-fields",
+        nargs="+",
+        default=["Subdomain"],
+        help="Fields to ignore (default: Subdomain, which depends on the domain decomposition)",
+    )
     parser.add_argument(
         "--unordered",
         action="store_true",
@@ -70,7 +91,13 @@ def main(argv: list[str] | None = None) -> None:
             file=sys.stderr,
         )
         mismatch = compare_sources(
-            left, right, rtol=args.rtol, atol=args.atol, field=args.field, unordered=args.unordered
+            left,
+            right,
+            rtol=args.rtol,
+            atol=args.atol,
+            field=args.field,
+            unordered=args.unordered,
+            skip_fields=args.skip_fields,
         )
     except (OSError, ValueError, KeyError) as error:
         print(f"Error: {error}", file=sys.stderr)
@@ -91,15 +118,25 @@ def compare_sources(
     atol: float,
     field: str | None = None,
     unordered: bool = False,
+    skip_fields: list[str] | None = None,
 ) -> str | None:
     if left.count != right.count:
-        return f"snapshot count differs: {left.count} != {right.count}."
+        return f"Snapshot count differs: {left.count} != {right.count}."
     for index in range(left.count):
-        message = _compare_times(left.times[index], right.times[index], index, rtol, atol)
+        message = _compare_times(
+            left.times[index], right.times[index], index, rtol, atol
+        )
         if message is not None:
             return message
         message = compare_snapshots(
-            left.snapshot(index), right.snapshot(index), index, rtol, atol, field, unordered
+            left.snapshot(index),
+            right.snapshot(index),
+            index,
+            rtol,
+            atol,
+            field,
+            unordered,
+            skip_fields,
         )
         if message is not None:
             return message
@@ -114,36 +151,48 @@ def compare_snapshots(
     atol: float,
     field: str | None,
     unordered: bool,
+    skip_fields: list[str] | None = None,
 ) -> str | None:
     if left.points.shape[1] != right.points.shape[1]:
-        return f"snapshot {index} spatial dimension differs: {left.points.shape[1]} != {right.points.shape[1]}."
-    if left.points.shape[0] != right.points.shape[0]:
-        return f"snapshot {index} point count differs: {left.points.shape[0]} != {right.points.shape[0]}."
+        return f"Snapshot {index} spatial dimension differs: {left.points.shape[1]} != {right.points.shape[1]}."
+    if not unordered and left.points.shape[0] != right.points.shape[0]:
+        # Unordered comparisons work on per-cell signatures, so runs may duplicate
+        # patch-boundary vertices differently and still match.
+        return f"Snapshot {index} point count differs: {left.points.shape[0]} != {right.points.shape[0]}."
     if left.num_cells != right.num_cells:
-        return f"snapshot {index} cell count differs: {left.num_cells} != {right.num_cells}."
+        return f"Snapshot {index} cell count differs: {left.num_cells} != {right.num_cells}."
 
+    # Select the comparison scope first: only the selected fields have to exist and agree on
+    # both sides. A skipped field present on one side only (e.g. a decomposition-dependent
+    # Subdomain marker) or an unselected extra field under --field is no mismatch.
     left_fields, right_fields = set(left.variables), set(right.variables)
-    if left_fields != right_fields:
-        return (
-            f"snapshot {index} fields differ: only in left {sorted(left_fields - right_fields)}, "
-            f"only in right {sorted(right_fields - left_fields)}."
-        )
-    if field is not None and field not in left_fields:
-        return f"field {field!r} is not present (available: {sorted(left_fields)})."
-    selected = [field] if field is not None else left.variables
+    if field is not None:
+        if field not in left_fields or field not in right_fields:
+            return (
+                f"Field {field!r} is not present in both inputs "
+                f"(left: {sorted(left_fields)}, right: {sorted(right_fields)})."
+            )
+        selected = [field]
+    else:
+        skipped = set(skip_fields or [])
+        left_selected, right_selected = left_fields - skipped, right_fields - skipped
+        if left_selected != right_selected:
+            return (
+                f"Snapshot {index} fields differ: only in left {sorted(left_selected - right_selected)}, "
+                f"only in right {sorted(right_selected - left_selected)}."
+            )
+        selected = [name for name in left.variables if name in left_selected]
 
     # Centering and component counts must agree before any value comparison.
     for name in selected:
         left_values, left_center = left.field(name)
         right_values, right_center = right.field(name)
         if left_center != right_center:
-            return f"snapshot {index} field {name!r} centering differs: {left_center} != {right_center}."
+            return f"Snapshot {index} field {name!r} centering differs: {left_center} != {right_center}."
         left_shape = np.atleast_1d(np.asarray(left_values)).shape[1:]
         right_shape = np.atleast_1d(np.asarray(right_values)).shape[1:]
         if left_shape != right_shape:
-            return (
-                f"snapshot {index} field {name!r} component count differs: {left_shape} != {right_shape}."
-            )
+            return f"Snapshot {index} field {name!r} component count differs: {left_shape} != {right_shape}."
 
     if unordered:
         return _compare_unordered(left, right, index, selected, rtol, atol)
@@ -151,9 +200,16 @@ def compare_snapshots(
 
 
 def _compare_ordered(
-    left: MeshSnapshot, right: MeshSnapshot, index: int, selected, rtol: float, atol: float
+    left: MeshSnapshot,
+    right: MeshSnapshot,
+    index: int,
+    selected: list[str],
+    rtol: float,
+    atol: float,
 ) -> str | None:
-    message = _compare_array(left.points, right.points, f"snapshot {index} point coordinates", rtol, atol)
+    message = _compare_array(
+        left.points, right.points, f"Snapshot {index} point coordinates", rtol, atol
+    )
     if message is not None:
         return message
     message = _compare_cells(left.cells, right.cells, index)
@@ -161,7 +217,11 @@ def _compare_ordered(
         return message
     for name in selected:
         message = _compare_array(
-            left.field(name)[0], right.field(name)[0], f"snapshot {index} field {name!r}", rtol, atol
+            left.field(name)[0],
+            right.field(name)[0],
+            f"Snapshot {index} field {name!r}",
+            rtol,
+            atol,
         )
         if message is not None:
             return message
@@ -169,48 +229,94 @@ def _compare_ordered(
 
 
 def _compare_unordered(
-    left: MeshSnapshot, right: MeshSnapshot, index: int, selected, rtol: float, atol: float
+    left: MeshSnapshot,
+    right: MeshSnapshot,
+    index: int,
+    selected: list[str],
+    rtol: float,
+    atol: float,
 ) -> str | None:
-    message = _compare_array(
-        _sorted_rows(left.points), _sorted_rows(right.points), f"snapshot {index} point coordinates", rtol, atol
-    )
-    if message is not None:
-        return message
-
     # One signature per cell (vertex coordinates + cell-field values + node-field values at the
-    # cell's vertices). Sorting the signatures is invariant to cell and point ordering, ties each
-    # node value to its cell so duplicated patch-boundary vertices stay aligned, and includes the
-    # vertex coordinates so a different connectivity is still detected.
-    left_signatures = _cell_signatures(left, selected)
-    right_signatures = _cell_signatures(right, selected)
+    # cell's vertices, with the vertices in canonical order). Cells are paired by a
+    # nearest-neighbour query on (centre, size): distinct cells are separated by at least one
+    # cell width, far above any storage rounding, so the pairing is robust at every mesh scale
+    # where a sorted-signature comparison would misalign rows on rounding noise.
+    left_signatures, left_keys = _cell_signatures(left, selected)
+    right_signatures, right_keys = _cell_signatures(right, selected)
     if left_signatures.shape != right_signatures.shape:
         return (
-            f"snapshot {index} cells differ in shape (topology mismatch): "
+            f"Snapshot {index} cells differ in shape (topology mismatch): "
             f"{left_signatures.shape} != {right_signatures.shape}."
         )
+
+    geometry_tolerance = 0.45 * min(left_keys[:, -1].min(), right_keys[:, -1].min())
+    distances, partners = cKDTree(left_keys).query(right_keys)
+    if float(distances.max()) > geometry_tolerance or len(np.unique(partners)) != len(
+        partners
+    ):
+        return (
+            f"Snapshot {index} cells cannot be matched by location (topology mismatch)."
+        )
+
     return _compare_array(
-        _sorted_rows(left_signatures),
-        _sorted_rows(right_signatures),
-        f"snapshot {index} cells (geometry and field values, matched by location)",
+        left_signatures[partners],
+        right_signatures,
+        f"Snapshot {index} cells (geometry and field values, matched by location)",
         rtol,
         atol,
     )
 
 
-def _cell_signatures(snapshot: MeshSnapshot, selected) -> np.ndarray:
+def _cell_signatures(
+    snapshot: MeshSnapshot, selected: list[str]
+) -> tuple[np.ndarray, np.ndarray]:
     cells = snapshot.cells
     if not isinstance(cells, np.ndarray):
-        raise ValueError("--unordered comparison requires uniform-topology meshes; use the ordered comparison.")
+        raise ValueError(
+            "The --unordered comparison requires uniform-topology meshes; use the ordered comparison."
+        )
     count = cells.shape[0]
-    parts = [snapshot.points[cells].reshape(count, -1)]  # vertex coordinates: geometry + connectivity
+    nodes_per_cell = cells.shape[1]
+
+    # Per-vertex features: coordinates plus the node-field values at the vertex. Cell-centred
+    # values join the signature after the vertex block.
+    corners = np.asarray(snapshot.points, dtype=float)[cells]
+    vertex_parts = [corners]
+    cell_parts = []
     for name in selected:
         values, center = snapshot.field(name)
         values = np.asarray(values, dtype=float)
         if center == "cell":
-            parts.append(values.reshape(count, -1))
+            cell_parts.append(values.reshape(count, -1))
         else:
-            parts.append(values[cells].reshape(count, -1))  # node values at the cell's vertices
-    return np.concatenate(parts, axis=1)
+            vertex_parts.append(values[cells].reshape(count, nodes_per_cell, -1))
+    vertex_features = np.concatenate(vertex_parts, axis=2)
+
+    # Canonicalise the local vertex order: sorting each cell's vertex rows makes the signature
+    # invariant under rotated or reflected connectivity of the same cell. Vertices of one cell
+    # that differ do so by a full cell extent in some axis, while the same coordinate can carry
+    # rounding noise from different writers, so the sort keys are the coordinates quantised to
+    # half the cell's own extent per axis, which is exact at every mesh scale and aspect ratio
+    # and immune to that noise.
+    dimensions = np.asarray(snapshot.points, dtype=float).shape[1]
+    extent_per_axis = corners.max(axis=1) - corners.min(axis=1)
+    quantum = 0.5 * np.where(extent_per_axis > 0.0, extent_per_axis, 1.0)[:, None, :]
+    quantised = np.round(
+        (corners - corners.min(axis=1, keepdims=True)) / quantum
+    ).astype(np.int64)
+    keys = tuple(
+        quantised[:, :, component] for component in range(dimensions - 1, -1, -1)
+    )
+    order = np.lexsort(keys, axis=1)
+    vertex_features = np.take_along_axis(vertex_features, order[:, :, None], axis=1)
+
+    signatures = np.concatenate(
+        [vertex_features.reshape(count, -1)] + cell_parts, axis=1
+    )
+    matching_keys = np.column_stack(
+        [corners.mean(axis=1), (corners.max(axis=1) - corners.min(axis=1)).max(axis=1)]
+    )
+    return signatures, matching_keys
 
 
 def _compare_times(
@@ -223,7 +329,7 @@ def _compare_times(
     if math.isnan(left) or math.isnan(right):
         return None
     if not math.isclose(left, right, rel_tol=rtol, abs_tol=atol):
-        return f"snapshot {index} time differs: {left} != {right}."
+        return f"Snapshot {index} time differs: {left} != {right}."
     return None
 
 
@@ -249,23 +355,17 @@ def _compare_cells(left_cells, right_cells, index: int) -> str | None:
     right_array = isinstance(right_cells, np.ndarray)
     if left_array and right_array:
         if left_cells.shape != right_cells.shape:
-            return f"snapshot {index} connectivity shape differs: {left_cells.shape} != {right_cells.shape}."
+            return f"Snapshot {index} connectivity shape differs: {left_cells.shape} != {right_cells.shape}."
         if not np.array_equal(left_cells, right_cells):
             cell = int(np.argwhere(np.any(left_cells != right_cells, axis=1))[0][0])
-            return f"snapshot {index} connectivity differs at cell {cell}."
+            return f"Snapshot {index} connectivity differs at cell {cell}."
         return None
-    for cell, (left_nodes, right_nodes) in enumerate(zip(left_cells, right_cells, strict=True)):
+    for cell, (left_nodes, right_nodes) in enumerate(
+        zip(left_cells, right_cells, strict=True)
+    ):
         if not np.array_equal(np.asarray(left_nodes), np.asarray(right_nodes)):
-            return f"snapshot {index} connectivity differs at cell {cell}."
+            return f"Snapshot {index} connectivity differs at cell {cell}."
     return None
-
-
-def _sorted_rows(matrix: np.ndarray) -> np.ndarray:
-    matrix = np.asarray(matrix, dtype=float)
-    if matrix.ndim == 1:
-        matrix = matrix[:, None]
-    keys = tuple(np.round(matrix[:, col], 9) for col in range(matrix.shape[1] - 1, -1, -1))
-    return matrix[np.lexsort(keys)]
 
 
 if __name__ == "__main__":

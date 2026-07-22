@@ -46,8 +46,8 @@ public:
   static void freeGlobalCommunicationDatatype();
 
   /**
-   * @return The rank of the sender of an object. It only make ssense to call
-   *         this routine after you've invoked receive with MPI_ANY_SOURCE.
+   * @return The rank that sent the object. Only meaningful after a receive
+   *         with MPI_ANY_SOURCE.
    */
   int getSenderRank() const;
 
@@ -63,22 +63,20 @@ public:
   static void shutdownDatatype();
 
   /**
-   * In DaStGen (the first version), I had a non-static version of the send
-   * as well as the receive. However, this did not work with newer C++11
-   * versions, as a member function using this as pointer usually doesn't
-   * see the vtable while the init sees the object from outside, i.e.
-   * including a vtable. So this routine now delegates to the blocking
-   * tarch::mpi::send/receive wrappers.
+   * Send and receive are static because a non-static member cannot expose the
+   * object's layout to MPI: the this pointer does not see the vtable that MPI
+   * has to skip. Both delegate to the blocking tarch::mpi::send() and
+   * tarch::mpi::receive() wrappers.
    */
   static void
   send(const peano4::parallel::StartTraversalMessage& buffer, int destination, int tag, MPI_Comm communicator);
   static void receive(peano4::parallel::StartTraversalMessage& buffer, int source, int tag, MPI_Comm communicator);
 
   /**
-   * Alternative to the other send()/receive() where I issue non-blocking
-   * MPI through tarch::mpi and let tarch::mpi::wait invoke the functor while
-   * the message is pending. In systems with heavy MPI usage, this can help
-   * to avoid deadlocks.
+   * Non-blocking alternative to the other send() and receive(). The message
+   * goes out through tarch::mpi, and tarch::mpi::wait() runs the wait functor
+   * while it is still pending. Under heavy MPI load this helps to avoid
+   * deadlocks.
    */
   static void send(
     const peano4::parallel::StartTraversalMessage& buffer,

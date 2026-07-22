@@ -4,14 +4,12 @@
 
 #ifdef PEANO_WITH_HDF5
 
-#include "CellTypes.h"
-
+#include "tarch/Termination.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/mpi/mpi.h"
+#include "tarch/plotter/CellTypes.h"
 
 #include <hdf5.h>
-
-namespace fs = std::filesystem;
 
 tarch::plotter::HDF5FileWriter::HDF5FileWriter(const std::string& outputDirectory, int numberOfSubdomains) :
   FileWriter(outputDirectory, numberOfSubdomains) {}
@@ -31,9 +29,9 @@ bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, do
 
   createOutputDirectory();
 
-  fs::path outDir(_outputDirectory);
-  fs::path h5FilePath  = outDir / (filename + ".h5");
-  fs::path xmfFilePath = outDir / (filename + ".xmf");
+  std::filesystem::path outDir(_outputDirectory);
+  std::filesystem::path h5FilePath  = outDir / (filename + ".h5");
+  std::filesystem::path xmfFilePath = outDir / (filename + ".xmf");
 
   const auto localData = getSubdomainBuffersSequenceForWriting();
 
@@ -159,8 +157,9 @@ bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, do
       MPI_Info_free(&info);
     }
 
-    // No H5Pset_alignment / H5Pset_meta_block_size: they barely help deflate-compressed
-    // chunks but reserve ~1 MiB of mostly-empty space per file. Defaults keep files small.
+    // The file keeps the default alignment and metadata block size. Raising either
+    // reserves roughly 1 MiB of mostly empty space per file for deflate-compressed
+    // chunks.
 #if H5_VERSION_GE(1, 10, 0)
     // Handle metadata collectively instead of per-rank small I/O.
     H5Pset_all_coll_metadata_ops(fapl, 1);
@@ -210,7 +209,7 @@ bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, do
       return static_cast<hid_t>(-1); // Empty dataset globally
     }
 
-    hid_t filespace = H5Screate_simple(dims, globalDims, NULL);
+    hid_t filespace = H5Screate_simple(dims, globalDims, nullptr);
 
     // Chunk + deflate the bulk datasets; readers decompress transparently. Parallel HDF5
     // needs collective writes to filtered datasets, which these already are.
@@ -240,31 +239,31 @@ bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, do
 
   auto writeDatasetChunk =
     [&](hid_t dataset, int dims, hsize_t* localDims, hsize_t* offsets, const void* data, hid_t type) {
-    if (dataset < 0) {
-      return;
-    }
+      if (dataset < 0) {
+        return;
+      }
 
-    hid_t filespace = H5Dget_space(dataset);
-    if (localDims[0] > 0) {
-      hid_t  memspace     = H5Screate_simple(dims, localDims, NULL);
-      herr_t selectStatus = H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offsets, NULL, localDims, NULL);
-      herr_t writeStatus  = selectStatus >= 0 ? H5Dwrite(dataset, type, memspace, filespace, dxpl, data) : -1;
-      H5Sclose(memspace);
-      if (selectStatus < 0 or writeStatus < 0) {
-        H5Sclose(filespace);
-        throw std::runtime_error("HDF5 hyperslab dataset write failed.");
+      hid_t filespace = H5Dget_space(dataset);
+      if (localDims[0] > 0) {
+        hid_t  memspace     = H5Screate_simple(dims, localDims, nullptr);
+        herr_t selectStatus = H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offsets, nullptr, localDims, nullptr);
+        herr_t writeStatus  = selectStatus >= 0 ? H5Dwrite(dataset, type, memspace, filespace, dxpl, data) : -1;
+        H5Sclose(memspace);
+        if (selectStatus < 0 or writeStatus < 0) {
+          H5Sclose(filespace);
+          throw std::runtime_error("HDF5 hyperslab dataset write failed.");
+        }
+      } else if (dxpl != H5P_DEFAULT) {
+        // Empty rank: join the collective write with an empty selection so all ranks
+        // issue the same number of collective writes.
+        H5Sselect_none(filespace);
+        if (H5Dwrite(dataset, type, H5S_ALL, filespace, dxpl, nullptr) < 0) {
+          H5Sclose(filespace);
+          throw std::runtime_error("HDF5 empty-selection collective dataset write failed.");
+        }
       }
-    } else if (dxpl != H5P_DEFAULT) {
-      // Empty rank: join the collective write with an empty selection so all ranks
-      // issue the same number of collective writes.
-      H5Sselect_none(filespace);
-      if (H5Dwrite(dataset, type, H5S_ALL, filespace, dxpl, NULL) < 0) {
-        H5Sclose(filespace);
-        throw std::runtime_error("HDF5 empty-selection collective dataset write failed.");
-      }
-    }
-    H5Sclose(filespace);
-  };
+      H5Sclose(filespace);
+    };
 
   auto closeDataset = [](hid_t dataset) {
     if (dataset >= 0) {
@@ -276,35 +275,55 @@ bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, do
   // connectivity to global point indices.
   auto appendXdmfTopology =
     [&](std::vector<std::int32_t>& topology, const SubdomainBuffers& subdomain, unsigned long long pointBase) {
-    std::int32_t connIdx = 0;
-    for (std::size_t i = 0; i < subdomain.types.size(); i++) {
-      const int vtkType  = subdomain.types[i];
-      const int xdmfType = toXdmfType(vtkType);
+      std::int32_t connIdx = 0;
+      for (std::size_t i = 0; i < subdomain.types.size(); i++) {
+        const int vtkType  = subdomain.types[i];
+        const int xdmfType = toXdmfType(vtkType);
 
-      const std::int32_t endIdx   = subdomain.offsets[i];
-      const std::int32_t numNodes = endIdx - connIdx;
+        const std::int32_t endIdx   = subdomain.offsets[i];
+        const std::int32_t numNodes = endIdx - connIdx;
 
-      topology.push_back(xdmfType);
+        topology.push_back(xdmfType);
 
-      if (xdmfTypeNeedsNodeCount(xdmfType)) {
-        topology.push_back(numNodes);
+        if (xdmfTypeNeedsNodeCount(xdmfType)) {
+          topology.push_back(numNodes);
+        }
+
+        for (int k = 0; k < numNodes; k++) {
+          const long long globalIndex = subdomain.connectivity[connIdx++] + pointBase;
+          // The /topology dataset is H5T_NATIVE_INT and XDMF readers expect that width, so a
+          // mesh beyond the 32-bit range would wrap into a silently wrong connectivity.
+          if (globalIndex > static_cast<long long>(std::numeric_limits<int>::max())) {
+            tarch::terminateWithError("HDF5FileWriter cannot write node indices that exceed 32-bit integer range.");
+          }
+          topology.push_back(static_cast<std::int32_t>(globalIndex));
+        }
       }
+    };
 
-      for (int k = 0; k < numNodes; k++) {
-        const long long globalIndex = subdomain.connectivity[connIdx++] + pointBase;
-        topology.push_back(static_cast<std::int32_t>(globalIndex));
+  // The buffers accumulate in double precision; single-precision output narrows
+  // them right before the write.
+  const bool  writeDouble     = getDoublePrecisionOutput();
+  const hid_t realStorageType = writeDouble ? H5T_NATIVE_DOUBLE : H5T_NATIVE_FLOAT;
+  auto        writeRealChunk =
+    [&](hid_t dataset, int rank, hsize_t* dims, hsize_t* offset, const std::vector<double>& buffer) {
+      if (writeDouble) {
+        writeDatasetChunk(dataset, rank, dims, offset, buffer.data(), H5T_NATIVE_DOUBLE);
+      } else {
+        const std::vector<float> narrowed = narrowToFloat(buffer);
+        writeDatasetChunk(dataset, rank, dims, offset, narrowed.data(), H5T_NATIVE_FLOAT);
       }
-    }
-  };
+    };
 
-  // Geometry as separate x/y/z arrays. Per-component layout compresses much better than
-  // an interleaved {N,3} array, whose three coordinate ranges defeat the deflate matching.
+  // Geometry as separate x/y/z arrays. An interleaved {N,3} array would mix three
+  // different coordinate ranges into one deflate stream, which the compressor cannot
+  // match well.
   {
-    hsize_t            cDims[1] = {totalPoints};
-    hid_t              dsX      = createDataset("/geometry/x", 1, cDims, H5T_NATIVE_FLOAT);
-    hid_t              dsY      = createDataset("/geometry/y", 1, cDims, H5T_NATIVE_FLOAT);
-    hid_t              dsZ      = createDataset("/geometry/z", 1, cDims, H5T_NATIVE_FLOAT);
-    std::vector<float> cx, cy, cz;
+    hsize_t             cDims[1] = {totalPoints};
+    hid_t               dsX      = createDataset("/geometry/x", 1, cDims, realStorageType);
+    hid_t               dsY      = createDataset("/geometry/y", 1, cDims, realStorageType);
+    hid_t               dsZ      = createDataset("/geometry/z", 1, cDims, realStorageType);
+    std::vector<double> cx, cy, cz;
     cx.reserve(localNumPoints);
     cy.reserve(localNumPoints);
     cz.reserve(localNumPoints);
@@ -318,9 +337,9 @@ bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, do
     }
     hsize_t lDims[1] = {localNumPoints};
     hsize_t off[1]   = {offsetPoints};
-    writeDatasetChunk(dsX, 1, lDims, off, cx.data(), H5T_NATIVE_FLOAT);
-    writeDatasetChunk(dsY, 1, lDims, off, cy.data(), H5T_NATIVE_FLOAT);
-    writeDatasetChunk(dsZ, 1, lDims, off, cz.data(), H5T_NATIVE_FLOAT);
+    writeRealChunk(dsX, 1, lDims, off, cx);
+    writeRealChunk(dsY, 1, lDims, off, cy);
+    writeRealChunk(dsZ, 1, lDims, off, cz);
     closeDataset(dsX);
     closeDataset(dsY);
     closeDataset(dsZ);
@@ -351,15 +370,15 @@ bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, do
   const std::vector<DataField>& cellFields  = schema.cellFields;
 
   // Write point data fields (one merged collective write per field). Vectors are
-  // padded to 3 components and tensors to 9 so they read back as real vectors /
-  // tensors; see FileWriter::classifyField.
+  // padded to 3 components and tensors to 9 so readers interpret them as vectors
+  // and tensors; see FileWriter::classifyField.
   for (std::size_t fieldIndex = 0; fieldIndex < pointFields.size(); ++fieldIndex) {
-    const auto&        field    = pointFields[fieldIndex];
-    const FieldLayout  layout   = classifyField(field.components);
-    const auto         written  = static_cast<hsize_t>(layout.writtenComponents);
-    hsize_t            fDims[2] = {totalPoints, written};
-    hid_t              dataset  = createDataset("/data/" + field.name, 2, fDims, H5T_NATIVE_FLOAT);
-    std::vector<float> mergedField;
+    const auto&         field    = pointFields[fieldIndex];
+    const FieldLayout   layout   = classifyField(field.components);
+    const auto          written  = static_cast<hsize_t>(layout.writtenComponents);
+    hsize_t             fDims[2] = {totalPoints, written};
+    hid_t               dataset  = createDataset("/data/" + field.name, 2, fDims, realStorageType);
+    std::vector<double> mergedField;
     mergedField.reserve(localNumPoints * static_cast<unsigned long long>(field.components));
     for (const SubdomainBuffers* subdomain : localData.payloads) {
       const auto& values = subdomain->pointFields[fieldIndex].values;
@@ -371,18 +390,18 @@ bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, do
     }
     hsize_t flDims[2] = {localNumPoints, written};
     hsize_t fOff[2]   = {offsetPoints, 0};
-    writeDatasetChunk(dataset, 2, flDims, fOff, mergedField.data(), H5T_NATIVE_FLOAT);
+    writeRealChunk(dataset, 2, flDims, fOff, mergedField);
     closeDataset(dataset);
   }
 
   // Write cell data fields (one merged collective write per field).
   for (std::size_t fieldIndex = 0; fieldIndex < cellFields.size(); ++fieldIndex) {
-    const auto&        field    = cellFields[fieldIndex];
-    const FieldLayout  layout   = classifyField(field.components);
-    const auto         written  = static_cast<hsize_t>(layout.writtenComponents);
-    hsize_t            fDims[2] = {totalCells, written};
-    hid_t              dataset  = createDataset("/cell_data/" + field.name, 2, fDims, H5T_NATIVE_FLOAT);
-    std::vector<float> mergedField;
+    const auto&         field    = cellFields[fieldIndex];
+    const FieldLayout   layout   = classifyField(field.components);
+    const auto          written  = static_cast<hsize_t>(layout.writtenComponents);
+    hsize_t             fDims[2] = {totalCells, written};
+    hid_t               dataset  = createDataset("/cell_data/" + field.name, 2, fDims, realStorageType);
+    std::vector<double> mergedField;
     mergedField.reserve(localNumCells * static_cast<unsigned long long>(field.components));
     for (const SubdomainBuffers* subdomain : localData.payloads) {
       const auto& values = subdomain->cellFields[fieldIndex].values;
@@ -393,7 +412,7 @@ bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, do
     }
     hsize_t flDims[2] = {localNumCells, written};
     hsize_t fOff[2]   = {offsetCells, 0};
-    writeDatasetChunk(dataset, 2, flDims, fOff, mergedField.data(), H5T_NATIVE_FLOAT);
+    writeRealChunk(dataset, 2, flDims, fOff, mergedField);
     closeDataset(dataset);
   }
 
@@ -426,8 +445,10 @@ bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, do
           << "    </DataItem>\n"
           << "   </Topology>\n"
           << "   <Geometry GeometryType=\"X_Y_Z\">\n";
+      const char* realPrecision = writeDouble ? "8" : "4";
       for (const char* axis : {"x", "y", "z"}) {
-        out << "    <DataItem Format=\"HDF\" DataType=\"Float\" Precision=\"4\" Dimensions=\"" << totalPoints << "\">\n"
+        out << "    <DataItem Format=\"HDF\" DataType=\"Float\" Precision=\"" << realPrecision << "\" Dimensions=\""
+            << totalPoints << "\">\n"
             << "      " << h5FilePath.filename().string() << ":/geometry/" << axis << "\n"
             << "    </DataItem>\n";
       }
@@ -455,7 +476,7 @@ bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, do
 
           out << "   <Attribute Name=\"" << field.name << "\" AttributeType=\"" << type << "\" Center=\"" << center
               << "\">\n"
-              << "    <DataItem Format=\"HDF\" DataType=\"Float\" Precision=\"4\" Dimensions=\""
+              << "    <DataItem Format=\"HDF\" DataType=\"Float\" Precision=\"" << realPrecision << "\" Dimensions=\""
               << (center == "Node" ? totalPoints : totalCells) << " " << layout.writtenComponents << "\">\n"
               << "      " << h5FilePath.filename().string() << ":" << path << field.name << "\n"
               << "    </DataItem>\n"

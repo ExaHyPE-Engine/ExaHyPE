@@ -11,20 +11,7 @@ namespace peano4 {
     struct VertexMarker;
 
     /**
-     * Reconstruct parent vertex position
-     *
-     * Whenever we run into a vertex event, this event is triggered from a
-     * cell's point of view. You can find out from the VertexMarker where
-     * within this cell the vertex is for which you got a vertex event.
-     * Likewise, you can also reconstruct the spatial arrangement of
-     * this cell's parent cell. It is not a core vertex marker routine,
-     * which is frequently used, so we outsource it into a separate function
-     * of its own. At the moment, we are only aware of some debugging, tracing
-     * facilities which need this function.
-     *
-     * @param parentVertexPositionWithinParentCell follows Peano's
-     *   dimension-generic lexicographic enumeration. You can also pass in an
-     *   integer, which will automatically be packed into a bitset then.
+     * Reconstruct the position of a vertex of the parent cell.
      */
     tarch::la::Vector<DIMENSIONS, double> reconstructXOfParentVertex(
       const VertexMarker&            marker,
@@ -74,11 +61,9 @@ std::ostream& operator<<(std::ostream& out, const peano4::datamanagement::Vertex
  * to derive it from the context. We know, for example, from the state of the
  * traversal automaton if a vertex is hanging or not or which position in
  * space it has. Therefore, such information is not stored within the vertex
- * (unless for debugging purposes). Not only would the information be redundant,
- * it would also be very inefficient: If you work with k data records per
- * vertex, each one would hold the same information about the underlying
- * vertex's position. So it makes more sense to encode such information with
- * a separate object.
+ * (unless for debugging purposes): with k data records per vertex, every
+ * single record would carry a copy of the same position. A separate marker
+ * object holds it once instead.
  *
  * @see FaceMarker for the analogous information for faces.
  */
@@ -112,8 +97,6 @@ private:
 
   bool _isParentCellLocal;
 
-  bool isParentLocal() const;
-
   std::bitset<TWO_POWER_D> _isAdjacentToParallelDomainBoundary;
 
   /**
@@ -122,9 +105,8 @@ private:
   tarch::la::Vector<DIMENSIONS, int> relativePositionWithinFatherCell;
 
   /**
-   * Some unit tests prefer to construct a marker manually, so I offer a
-   * dummy default constructor. The normal code should and does not use a
-   * default constructor.
+   * Unit tests assemble a marker manually and hence need a default
+   * constructor. Production code always constructs from a traversal event.
    */
   VertexMarker() = default;
 
@@ -132,40 +114,23 @@ public:
   VertexMarker(const peano4::grid::GridTraversalEvent& event, int select = 0);
 
   /**
-   * Picks a vertex within a cell. After that, the routine returns.
-   *
-   * This routine is only called by Peano's internal observer, i.e. the
-   * class constructing VertexMarker objects. Users never call this routine.
+   * Pick the vertex within the cell to which this marker refers.
    */
-  VertexMarker& select(int number);
+  VertexMarker& select(int vertexNumber);
 
   /**
-   * Information about selected vertex
+   * Logical number of the selected vertex within the underlying cell
    *
-   * Even though you are given a vertex marker for a vertex routine such as
-   * touchVertexFirstTime(), Peano behind the scenes invokes this routine
-   * from a cell. That is, it enters a cell, then runs over all @f$ 2^d @f$
-   * adjacent vertex and puzzles out for each vertex if it has to call
-   * touchVertexFirstTime() or not.
-   *
-   * getSelectedVertexNumber() tells you which logical number a vertex has
-   * within the underlying cell behind the scenes.
+   * A vertex event such as touchVertexFirstTime() is issued from a cell: the
+   * traversal enters a cell, runs over all @f$ 2^d @f$ adjacent vertices and
+   * decides per vertex whether the event is due. This routine yields the
+   * number the selected vertex carries within that cell.
    *
    * @image html VertexEnumerator.png
-   *
-   * The routine is barely used
-   * by user codes. Some technical helper routines use the selected number
-   * for some arithmetics, but the code indeed might be cleaner if we did
-   * hide this routine from the user altogether and make the routine
-   * explicitly available only to friends.
    */
   int getSelectedVertexNumber() const { return _select; }
 
   /**
-   * We do enumerate the vertices in a lexicographic way, i.e. we start with the
-   * bottom left vertex. Then we run along the first Cartesian axis, then the
-   * second, and so forth. This yields a z-pattern for the enumeration.
-   *
    * @return Position of ith vertex
    */
   tarch::la::Vector<DIMENSIONS, double> getX(int i) const;
@@ -183,8 +148,9 @@ public:
   std::string toString() const;
 
   /**
-   * A vertex is refined iff it is surrounded by @f$ 2^d @f$ cells which are
-   * refined.
+   * A vertex is refined once every adjacent cell that exists is refined. On the
+   * domain wall that is fewer than @f$ 2^d @f$ cells, because the slots outside
+   * the domain hold none.
    */
   inline bool hasBeenRefined() const { return hasBeenRefined(_select); }
   inline bool hasBeenRefined(int i) const { return _hasBeenRefined[i]; }
@@ -200,10 +166,7 @@ public:
   /**
    * Is a vertex local, i.e. not adjacent to any boundary or remote
    */
-  inline bool isLocal(int i) const {
-    // assertion(not _isLocal[i], toString()); // TODO: Is this needed?
-    return _isLocal[i];
-  }
+  inline bool isLocal(int i) const { return _isLocal[i]; }
 
   inline bool isHanging() const { return isHanging(_select); }
 
@@ -215,124 +178,38 @@ public:
   bool isAdjacentToParallelDomainBoundary() const;
 
   /**
-   * Is one vertex of cell adjacent to parallel domain boundary
-   *
-   * Peano runs through the mesh cell by cell. Within a cell, you can ask if
-   * the ith vertex actually is adjacent to a parallel domain boundary.
+   * Is the ith vertex of the cell adjacent to a parallel domain boundary
    */
   bool isAdjacentToParallelDomainBoundary(int i) const;
 
   /**
-   * Whenever we touch a vertex the first or the last time, we touch
-   * it from a cell: If we touch a vertex the first time, the traversal
-   * is just about to enter a cell and sees that one of its vertices is
-   * not loaded yet. When we issue a touchVertexLastTime() event, the
-   * traversal is just about to leave a cell.
+   * Is the parent of the cell that issued this vertex event local
    *
-   * So there's a cell state associated with any vertex event, and,
-   * therefore, we know if the corresponding cell is local and whether
-   * its parent cell is local.
+   * Every vertex event carries the state of the cell it is issued from, so
+   * the locality of that cell's parent is known as well.
    *
    * @see isParentVertexLocal()
    */
   inline bool isParentCellLocal() const { return _isParentCellLocal; }
 
   /**
-   * Is the parent vertex local
-   *
-   * Is a parent vertex local, i.e. not adjacent to any boundary or
-   * remote. Peano traverses the tree in a strict octant-wise
-   * (multiscale-wise) order. That is, whenever you receive a
-   * touchVertexFirstTime() or touchVertexLastTime() event, the Peano
-   * core has actually entered a cell and recognised "whoops, I haven't
-   * used that vertex yet" or "this will be the last time this vertex
-   * is available". See the @ref peano_action_sets "generic event description" on
-   * an overview of all of these events.
-   *
-   * @image html VertexMarker_isParentVertexLocal.png
-   *
-   * As a logical consequence, there are always @f$ 2^d @f$ parent
-   * vertices when you encounter a vertex for the first or last time.
-   * But you never know which parent cell it will be. The code could
-   * have stepped down from A into a or from B into b. So the parent
-   * vertices could be the green or the blue ones.
-   *
-   * This routine allows you to find out if these vertices are local.
-   * It will always return if isParentCellLocal() does not hold.
+   * Is the ith parent vertex local, i.e. neither remote nor outside.
    */
   bool isParentVertexLocal(int i) const;
 
   /**
-   * Relative position within parent cell
-   *
-   * Return relative position within father cell. The result is from
-   * (0,1,2,3)^d and denotes the vertex position within a 3x3 or 3x3x3
-   * respectively mesh.
-   *
-   * You can reconstruct the left bottom vertex of the coarser cell through
-   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   * marker.getX() - tarch::la::multiplyComponents(
-   *   tarch::la::convertScalar<double>(marker.getRelativePositionWithinFatherCell()),
-   *   marker.getH()
-   * )
-   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   *
-   * If you want to know a particular position of a coarse grid vertex
-   * identified through the bitset target, you can do through
-   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   * marker.getX()
-   * -
-   * tarch::la::multiplyComponents(
-   *   tarch::la::convertScalar<double>(marker.getRelativePositionWithinFatherCell()),
-   *   marker.getH()
-   * )
-   * +
-   * tarch::la::multiplyComponents(
-   *   tarch::la::Vector<DIMENSIONS,double>(target),
-   *   3.0*marker.getH()
-   * )
-   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   *
-   * @see coincidesWithCoarseGridVertex()
+   * Position of the vertex within the 3x3 or 3x3x3 pattern of the parent cell.
    */
   tarch::la::Vector<DIMENSIONS, int> getRelativePositionWithinFatherCell() const;
   tarch::la::Vector<DIMENSIONS, int> getRelativePositionWithinFatherCell(int i) const;
 
   /**
-   * Does vertex spatially coincide with coarser level's vertex
-   *
-   * The vertex (0,0,0) coincides with a coarse grid vertex, the (3,0,0) does
-   * so too, and so forth.
-   *
-   * ## Frequent use case
-   *
-   * If you want to program some simply injection, it helps to identify vertices
-   * which coincide spatially with vertices on the next coarser level. A classic
-   * are codes like
-   *
-   * ~~~~~~~~~~~~~~~~~~~~~~~~~~
-   *       if ( marker.coincidesWithCoarseGridVertex() ) {
-   *         tarch::la::Vector<DIMENSIONS,int> parent = marker.getRelativePositionWithinFatherCell() / 3;
-   *         coarseGridVerticesX( peano4::dLinearised(parent,2) ).set...
-   *       }
-   * ~~~~~~~~~~~~~~~~~~~~~~~~~~
-   *
-   * within touchVertexLastTime. This snippet looks if two vertices coincide
-   * spatially. If so, it computes the parent's relative position within the
-   * parent cell which is simply a division by 3. We then linearise this vector
-   * index and thus have access to the parent.
+   * Does the vertex spatially coincide with a vertex of the coarser level.
    */
   bool coincidesWithCoarseGridVertex() const;
 
   /**
-   * Will return true if x is contained within the adjacent cells. You can use
-   * shrink those cells via the additional parameter if you want.
-   *
-   * The geometric operation is defined over the closed interval, i.e. we
-   * look into the adjacent cubes to the vertex and their faces still count as
-   * "inside". If x is exactly on the face of a cube adjacent to the vertex,
-   * we will get back a true. Indeed, the cubes are even slightly bigger due
-   * to machine precision.
+   * Is x contained within the cells adjacent to the selected vertex.
    */
   bool isContainedInAdjacentCells(
     const tarch::la::Vector<DIMENSIONS, double>& x,
@@ -341,15 +218,7 @@ public:
   ) const;
 
   /**
-   * One-dimensional version of isContainedInAdjacentCells()
-   *
-   * Same as isContainedInAdjacentCells(), but only checks along
-   * a single dimension provided by `int dim`. This variant is
-   * sometimes way faster, as it only checks the direction of
-   * interest.
-   *
-   * @param dim Positive integer with 0 <= dim < DIMENSIONS which
-   *   indicates the search direction.
+   * One-dimensional version of isContainedInAdjacentCells().
    */
   bool isContainedInAdjacentCellsByDimension(
     const tarch::la::Vector<DIMENSIONS, double>& x,
@@ -359,56 +228,22 @@ public:
   ) const;
 
   /**
-   * Each vertex is surrounded by @f$ 2^d @f$ cells. In reality,
-   * it might be fewer of them, as we might have to deal with a hanging vertex,
-   * but logically we can always assume that there were @f$ 2^d @f$.
-   * Let's assume that they are grouped lexicographically around the vertex,
-   * i.e. we have
-   *
-   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   * 2 | 3
-   * --+--
-   * 0 | 1
-   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   *
-   * cells centred around a central vertex denoted by the plus in this fancy
-   * ASCII art. If x falls into the cell 1, this routine would return (1,0).
-   * If it falls into cell 3, it would return (1,1).
-   *
+   * Which of the cells around the selected vertex holds x.
    */
   tarch::la::Vector<DIMENSIONS, int> getRelativeAdjacentCell(const tarch::la::Vector<DIMENSIONS, double>& x) const;
 
   /**
-   * Return centre of cell from which this vertex marker is constructed
-   *
-   * Peano runs through the mesh element-wisely. That is, each
-   * touchVertexFirstTime() and touchVertexLastTime() is called from a cell.
-   * It looks at its @f$ 2^d @f$ adjacent vertices and then invokes the vertex
-   * events for these vertices if necessary. This routine yields the centre of
-   * this cell.
+   * Centre of the cell from which this vertex marker is constructed.
    */
   tarch::la::Vector<DIMENSIONS, double> getInvokingCellCentre() const;
 
   /**
-   * See getInvokingCellCentre(). This routine gives you the centre of its
-   * parent cell.
+   * Centre of the parent of the cell from which this marker is constructed.
    */
   tarch::la::Vector<DIMENSIONS, double> getInvokingParentCellsCentre() const;
 
   /**
-   * Are adjacent cells of selected vertex local
-   *
-   * ## Correctness
-   *
-   * I originally thought I could add the assertion
-   *
-   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   *   assertion( result.all() or isAdjacentToParallelDomainBoundary(), result, toString() );
-   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   *
-   * However, this assertion fails at the global domain boundary, where some
-   * adjacent cells are not local (they are outside) and the vertices
-   * nevertheless are not parallel boundary vertices either.
+   * Are the cells adjacent to the selected vertex local.
    */
   std::bitset<TWO_POWER_D> areAdjacentCellsLocal() const;
 };

@@ -1,3 +1,5 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "CellIntegralTest.h"
 
 #include "TestUtils.h"
@@ -9,9 +11,9 @@
 #include "../rusanov/Rusanov.h"
 #include "exahype2/CellData.h"
 
-/*
- * We use precomputed values for lagrange polynomials as basis function
- * on Gauss-Legendre nodes
+/**
+ * We use precomputed values for Lagrange polynomials as basis functions
+ * on Gauss-Legendre nodes.
  */
 exahype2::dg::tests::CellIntegralTest::CellIntegralTest() :
   TestCase("exahype2::dg::tests::CellIntegralTest"),
@@ -65,8 +67,6 @@ exahype2::dg::tests::CellIntegralTest::CellIntegralTest() :
     8.087087508775329780519314226694405078887939453125,       -15.4039041703444912201348415692336857318878173828125,
     10.13408119130908602301133214496076107025146484375
   },
-  //_Order4_BasisFunctionValuesLeft1d
-  //{ 1.5514080490943134,-0.8931583920000723,0.5333333333333335,-0.2679416522233877,0.07635866179581295},
   _Order2_QuadraturePoints1d{0.1127016653792583, 0.5, 0.8872983346207417},
   _Order2_MassMatrixDiagonal1d{0.2777777777777777, 0.44444444444444436, 0.27777777777777773},
   _Order2_StiffnessOperator1d{
@@ -95,10 +95,24 @@ exahype2::dg::tests::CellIntegralTest::CellIntegralTest() :
 void exahype2::dg::tests::CellIntegralTest::run() {
   testMethod(runEulerOrder2OnStationarySetup);
   testMethod(runEulerOrder4OnStationarySetup);
+  testMethod(runReduceMaxScaledEigenvalue);
 }
 
+/**
+ * We initialise all velocity data with zero and set the density to one.
+ * First, we set the inner energy to zero. After that, we set it to four.
+ *
+ * One might think that the result should always be 0 for all components,
+ * but the result is not zero if the inner energy is positive. You get
+ * a zero update for the density, and you get a zero update for the
+ * energy. The velocity however becomes star shaped, i.e. it looks like
+ * matter pressed out from the centre.
+ *
+ * This behaviour is due to the internal energy pushing matter out of the
+ * domain. If the inner energy equals zero, then nothing moves at all.
+ */
 void exahype2::dg::tests::CellIntegralTest::runEulerOrder2OnStationarySetup() {
-  // using euler equations as example
+  // We use the Euler equations as an example.
   constexpr int unknowns           = 5;
   constexpr int auxiliaryVariables = 0;
   constexpr int order              = 2;
@@ -112,7 +126,6 @@ void exahype2::dg::tests::CellIntegralTest::runEulerOrder2OnStationarySetup() {
   const tarch::la::Vector<3, double> cellSize({1.0, 1.0, 1.0});
   constexpr int                      numberOfDoFs = (order + 1) * (order + 1) * (order + 1);
 #endif
-  // const double dx = 0.01;
   const double t  = 0.0;
   const double dt = 0.01;
 
@@ -266,7 +279,7 @@ void exahype2::dg::tests::CellIntegralTest::runEulerOrder2OnStationarySetup() {
 }
 
 void exahype2::dg::tests::CellIntegralTest::runEulerOrder4OnStationarySetup() {
-  // using euler equations as example
+  // We use the Euler equations as an example.
   constexpr int unknowns           = 5;
   constexpr int auxiliaryVariables = 0;
   constexpr int order              = 4;
@@ -280,7 +293,6 @@ void exahype2::dg::tests::CellIntegralTest::runEulerOrder4OnStationarySetup() {
   const tarch::la::Vector<3, double> cellSize({1.0, 1.0, 1.0});
   constexpr int                      numberOfDoFs = (order + 1) * (order + 1) * (order + 1);
 #endif
-  // const double dx = 0.01;
   const double t  = 0.0;
   const double dt = 0.01;
 
@@ -357,639 +369,46 @@ void exahype2::dg::tests::CellIntegralTest::runEulerOrder4OnStationarySetup() {
   }
 }
 
-/*
-void exahype2::dg::tests::CellIntegralTest::runDGEuler(){
-  validate(false);
+void exahype2::dg::tests::CellIntegralTest::runReduceMaxScaledEigenvalue() {
+  constexpr int    Unknowns           = 1;
+  constexpr int    AuxiliaryVariables = 0;
+  constexpr int    Order              = 2;
+  constexpr double CellWidth          = 0.5;
 
-  file_stream << "Starting Euler test in " << DIMENSIONS << " dimensions\n\n";
-
-  // geometry
-#if DIMENSIONS==2
+#if DIMENSIONS == 2
   const tarch::la::Vector<2, double> x({0.0, 0.0});
-  const tarch::la::Vector<2, double> cellSize({1.0, 1.0});
+  const tarch::la::Vector<2, double> cellSize({CellWidth, CellWidth});
+  constexpr int                      NumberOfDoFs = (Order + 1) * (Order + 1);
 #else
   const tarch::la::Vector<3, double> x({0.0, 0.0, 0.0});
-  const tarch::la::Vector<3, double> cellSize({1.0, 1.0, 1.0});
-#endif
-  const double dx = 0.01;
-  const double t  = 0.0;
-  const double dt = 0.01;
-
-  //using euler equations as example
-  const int unknowns = 5;
-  const int auxiliaryVariables = 0;
-  const int order = 4;
-
-  //Parameter initialisation and memory allocation
-  const int nodesPerAxis  = order+1;
-  const int nodesPerCell  = getNodesPerCell(nodesPerAxis);
-  const int nodesPerFace  = nodesPerCell/nodesPerAxis;
-  const int strideQ       = unknowns+auxiliaryVariables;
-
-  //values in the cell at the beginning and end
-  double* QIn = new double[nodesPerCell*strideQ];
-  double* QOut = new double[nodesPerCell*strideQ];
-  //values on the faces
-  double* QLeft = new double[2*nodesPerFace*strideQ];
-  double* QRight = new double[2*nodesPerFace*strideQ];
-  double* QDown = new double[2*nodesPerFace*strideQ];
-  double* QUp = new double[2*nodesPerFace*strideQ];
-#if DIMENSIONS==3
-  double* QFront = new double[2*nodesPerFace*strideQ];
-  double* QBack = new double[2*nodesPerFace*strideQ];
+  const tarch::la::Vector<3, double> cellSize({CellWidth, CellWidth, CellWidth});
+  constexpr int                      NumberOfDoFs = (Order + 1) * (Order + 1) * (Order + 1);
 #endif
 
-  //values of the rusanov fluxes on the faces
-  double* QHullForRiemann = new double[2*DIMENSIONS*2*nodesPerFace*unknowns];
-
-  ::exahype2::CellData cellData(
-      QIn,
-      x,
-      cellSize,
-      t,
-      dt,
-      QOut
-      );
-
-  //setting initial conditions
-
-  file_stream << "Initial conditions: \n";
-  for(int i=0; i<nodesPerCell; i++){
-    eulerInitial(&QIn[i*strideQ]);
-    file_stream << "node " << i << " [";
-    for(int var=0; var<strideQ; var++){
-      file_stream << QIn[i*strideQ+var] << ", ";
-    }
-    file_stream << "]\n";
+  double QIn[NumberOfDoFs * Unknowns];
+  double QOut[NumberOfDoFs * Unknowns];
+  for (int dof = 0; dof < NumberOfDoFs; dof++) {
+    QIn[dof]  = 0.0;
+    QOut[dof] = 1.0;
   }
+  QOut[NumberOfDoFs / 2] = 2.0;
 
-  //for later comparisons
-  double QInit[strideQ];
-  eulerInitial(QInit);
+  ::exahype2::CellData cellData(QIn, x, cellSize, 0.0, 0.01, QOut);
 
-    cellIntegral_patchwise_in_situ_GaussLegendre_functors(
-      cellData,
-      order,
-      unknowns,
-      auxiliaryVariables,
-      [&](
-          const double * NOALIAS                  Q,
-          const tarch::la::Vector<DIMENSIONS,double>&  x,
-          double                                       t,
-          double                                       dt,
-          int                                          normal,
-          double * NOALIAS                        F
-          ) -> void {
-          eulerFlux(Q,x,t,dt,normal,F);
-        },
-      nullptr, //ncp
-      nullptr, //source
-      nullptr, //pointSources
-      QuadraturePoints1d,
-      MassMatrixDiagonal1d, //massMatrixDiagonal
-      StiffnessOperator1d,
-      DerivativeOperator1d,
-      true,     //flux
-      false,    //ncp
-      false,    //source
-      false);   //pointSources
-
-  file_stream << "\nComputed volume integral values are: \n";
-  for(int i=0; i<nodesPerCell; i++){
-    file_stream << "node " << i << ": [";
-    for(int var=0; var<unknowns;var++){
-      file_stream << QOut[i*unknowns+var] << ", ";
-    }
-    file_stream << "]\n";
-  }
-  file_stream << "\n";
-
-  // Step 2), the values computed in step 1) are extrapolated to the surface boundary
-  projectVolumetricDataOntoFaces(
-    QIn,
-    order,
-    unknowns,
-    auxiliaryVariables,
-    BasisFunctionValuesLeft1d,
-    QLeft,
-    QRight,
-    QDown,
-    QUp
-#if DIMENSIONS==3
-    ,QFront,
-    QBack
-#endif
-  );
-
-  double* F[2*DIMENSIONS];
-
-  F[0] = QLeft;
-  F[1] = QRight;
-  F[2] = QDown;
-  F[3] = QUp;
-#if DIMENSIONS==3
-  F[4] = QFront;
-  F[5] = QBack;
-#endif
-
-  // *  project data onto opposite face as well to trade with "identical" cell,
-  // *  this essentially simulates the exchange of surface data with the
-  // *  neighbouring cells which Peano would take care of for us normally
-  projectVolumetricDataOntoFaces(
-    QIn,
-    order,
-    unknowns,
-    auxiliaryVariables,
-    BasisFunctionValuesLeft1d,
-    QRight,
-    QLeft,
-    QUp,
-    QDown
-#if DIMENSIONS==3
-    ,QBack,
-    QFront
-#endif
-  );
-
-  for(int f=0; f<2*DIMENSIONS; f++){
-    double* currentFace = F[f];
-    file_stream << "\nFace " << f << ": \n";
-
-    for(int node=0; node<2*nodesPerFace; node++){
-      file_stream << "node " << node << ": [";
-      for(int var=0; var<strideQ; var++){
-        file_stream << (std::abs(currentFace[node*strideQ+var])<0.00001 ? 0.0 : currentFace[node*strideQ+var]) << ", ";
-      }
-      file_stream << "]\n";
-    }
-  }
-
-  // The faces are assembled into one pointer construct for ease of access in the
-  // next steps. In addition information about whether the faces are at the boundary
-  // is provided since at the boundary the flux must be computed with boundary values
-  // instead of using the extrapolated solution from the neighbour.
-  double* QHull[DIMENSIONS*2];
-#if DIMENSIONS==2
-  QHull[0] = QLeft;
-  QHull[2] = QRight;
-  QHull[1] = QDown;
-  QHull[3] = QUp;
-#elif DIMENSIONS==3
-  QHull[0] = QLeft;
-  QHull[3] = QRight;
-  QHull[1] = QDown;
-  QHull[4] = QUp;
-  QHull[2] = QBack;
-  QHull[5] = QFront;
-#endif
-
-  for(int i=0; i<2*DIMENSIONS*2*nodesPerFace*strideQ; i++){
-    QHullForRiemann[i] = 0.0;
-  }
-
-  for(int face=0; face<2*DIMENSIONS; face++){
-    rusanov::solveRiemannProblem_pointwise_in_situ(
-      [&](
-          const double * NOALIAS                  Q,
-          const tarch::la::Vector<DIMENSIONS,double>&  x,
-          double                                       t,
-          double                                       dt,
-          int                                          normal,
-          double * NOALIAS                        F
-          ) -> void {
-          eulerFlux(Q,x,t,dt,normal,F);
-      },
-      nullptr,
-      [&](
-        const double * NOALIAS                 Q,
-        const tarch::la::Vector<DIMENSIONS,double>& x,
-        double                                      t,
-        double                                      dt,
-        int                                         normal
-        ) -> double {
-          return eulerEigenvalue(Q,x,t,dt,normal);
-      },
-      x,
-      cellSize,
-      t,
-      dt,
-      order,
-      unknowns,
-      auxiliaryVariables,
-      face, //faceNumber
-      QuadraturePoints1d,
-      true, //useFlux
-      false, //useNCP
-      QHull[face], //TODO
-      &QHullForRiemann[face*2*nodesPerFace*unknowns]
-      );
-  }
-
-  file_stream << "\nRusanov Fluxes per Face:\n";
-  for(int f=0; f<2*DIMENSIONS; f++){
-    file_stream << "At face " << f << "\n";
-    for(int i=0; i<2*nodesPerFace; i++){
-      file_stream << "at node " << i << ": [";
-      for(int var=0; var<unknowns; var++){
-        file_stream << (std::abs(QHullForRiemann[(f*2*nodesPerFace+i)*unknowns+var])<0.000001 ? 0.0 :
-QHullForRiemann[(f*2*nodesPerFace+i)*unknowns+var]) << ", ";
-      }
-      file_stream << "]\n";
-    }
-  }
-
-  //  The contributions from the computed rusanov flux are then added to the nodes
-  //  within the cell.
-  integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
-#if DIMENSIONS==2
-    &QHullForRiemann[(0*2+0)*nodesPerFace*unknowns], //left
-    &QHullForRiemann[(2*2+0)*nodesPerFace*unknowns], //right
-    &QHullForRiemann[(1*2+0)*nodesPerFace*unknowns], //down
-    &QHullForRiemann[(3*2+0)*nodesPerFace*unknowns], //up
-#else
-    &QHullForRiemann[(0*2+0)*nodesPerFace*unknowns], //left
-    &QHullForRiemann[(3*2+0)*nodesPerFace*unknowns], //right
-    &QHullForRiemann[(1*2+0)*nodesPerFace*unknowns], //down
-    &QHullForRiemann[(4*2+0)*nodesPerFace*unknowns], //up
-    &QHullForRiemann[(2*2+0)*nodesPerFace*unknowns], //front
-    &QHullForRiemann[(5*2+0)*nodesPerFace*unknowns], //back
-#endif
-    order,
-    unknowns,
-    auxiliaryVariables,
-    cellSize,
-    BasisFunctionValuesLeft1d,
-    MassMatrixDiagonal1d,
-    QOut
-  );
-
-  file_stream << "\nValues after Riemann Integral are: \n";
-  for(int i=0; i<nodesPerCell; i++){
-    file_stream << "node " << i << ": [";
-    for(int var=0; var<unknowns;var++){
-      file_stream << (std::abs(QOut[i*unknowns+var]) <0.0000001 ? 0.0 : QOut[i*unknowns+var]) << ", ";
-    }
-    file_stream << "]\n";
-  }
-
-  multiplyWithInvertedMassMatrix_GaussLegendre(
+  const double maxPhysicalEigenvalue = reduceMaxScaledEigenvalue_patchwise_functors(
     cellData,
-    order,
-    unknowns,
-    auxiliaryVariables,
-    MassMatrixDiagonal1d
+    Order,
+    Unknowns,
+    AuxiliaryVariables,
+    [](const double* NOALIAS Q, const tarch::la::Vector<DIMENSIONS, double>& x, double t, double dt, int normal)
+      -> double { return Q[0] * (normal + 1.0); },
+    _Order2_QuadraturePoints1d
   );
 
-  //Finally we check that after all these steps have been taken QOut, which should be the sum of the volume and face
-contributions, is zero
-
-  file_stream << "\nFinal values are: \n";
-  for(int i=0; i<nodesPerCell; i++){
-    file_stream << "node " << i << ": [";
-    for(int var=0; var<unknowns;var++){
-      file_stream << (std::abs(QOut[i*unknowns+var]) <0.0000001 ? 0.0 : QOut[i*unknowns+var]) << ", ";
-//      validateNumericalEquals(QOut[i*strideQ+var], 0.0);
-    }
-    file_stream << "]\n";
-  }
-
-  delete[] QIn;
-  delete[] QOut;
-  delete[] QLeft;
-  delete[] QRight;
-  delete[] QDown;
-  delete[] QUp;
-#if DIMENSIONS==3
-  delete[] QFront;
-  delete[] QBack;
-#endif
-  delete[] QHullForRiemann;
-}//runDGEuler
-
-void exahype2::dg::tests::CellIntegralTest::runDGElastic(){
-  file_stream << "\n\nStarting Elastic test in " << DIMENSIONS << " dimensions\n\n";
-
-  // geometry
-#if DIMENSIONS==2
-  const tarch::la::Vector<2, double> x({0.0, 0.0});
-  const tarch::la::Vector<2, double> cellSize({1.0, 1.0});
-#else
-  const tarch::la::Vector<3, double> x({0.0, 0.0, 0.0});
-  const tarch::la::Vector<3, double> cellSize({1.0, 1.0, 1.0});
-#endif
-  const double dx = 0.01;
-  const double t  = 0.0;
-  const double dt = 0.01;
-
-  //using euler equations as example
-  const int unknowns = 9;
-  const int auxiliaryVariables = 3;
-  const int order = 4;
-
-  //Parameter initialisation and memory allocation
-  const int nodesPerAxis  = order+1;
-  const int nodesPerCell  = getNodesPerCell(nodesPerAxis);
-  const int nodesPerFace  = nodesPerCell/nodesPerAxis;
-  const int strideQ       = unknowns+auxiliaryVariables;
-
-  //values in the cell at the beginning and end
-  double* QIn = new double[nodesPerCell*strideQ];
-  double* QOut = new double[nodesPerCell*unknowns];
-  //values on the faces
-  double* QLeft = new double[2*nodesPerFace*strideQ];
-  double* QRight = new double[2*nodesPerFace*strideQ];
-  double* QDown = new double[2*nodesPerFace*strideQ];
-  double* QUp = new double[2*nodesPerFace*strideQ];
-#if DIMENSIONS==3
-  double* QFront = new double[2*nodesPerFace*strideQ];
-  double* QBack = new double[2*nodesPerFace*strideQ];
-#endif
-
-  //values of the rusanov fluxes on the faces
-  double* QHullForRiemann = new double[2*DIMENSIONS*2*nodesPerFace*strideQ];
-
-  ::exahype2::CellData cellData(
-      QIn,
-      x,
-      cellSize,
-      t,
-      dt,
-      QOut
-      );
-
-  //setting initial conditions
-
-  file_stream << "Initial conditions: \n";
-  for(int i=0; i<nodesPerCell; i++){
-    elasticInitial(&QIn[i*strideQ]);
-    file_stream << "node " << i << " [";
-    for(int var=0; var<strideQ; var++){
-      file_stream << QIn[i*strideQ+var] << ", ";
-    }
-    file_stream << "]\n";
-  }
-
-  //for later comparisons
-  double QInit[strideQ];
-  elasticInitial(QInit);
-
-  cellIntegral_patchwise_in_situ_GaussLegendre_functors(
-    cellData,
-    order,
-    unknowns,
-    auxiliaryVariables,
-    [&](
-        const double * NOALIAS                  Q,
-        const tarch::la::Vector<DIMENSIONS,double>&  x,
-        double                                       t,
-        double                                       dt,
-        int                                          normal,
-        double * NOALIAS                        F
-        ) -> void {
-        elasticFlux(Q,x,t,dt,normal,F);
-    },
-    [&](
-        const double * NOALIAS                  Q,
-        const double * NOALIAS                  dQdx,
-        const tarch::la::Vector<DIMENSIONS,double>&  x,
-        double                                       t,
-        double                                       dt,
-        int                                          normal,
-        double * NOALIAS                        BgradQ
-      ) -> void{
-      elasticNonConservativeProduct(Q, dQdx, x, t, dt, normal, BgradQ);
-    },
-    nullptr, //source
-    nullptr, //pointSources
-    QuadraturePoints1d,
-    MassMatrixDiagonal1d, //massMatrixDiagonal
-    StiffnessOperator1d,
-    DerivativeOperator1d,
-    true,     //flux
-    true,    //ncp
-    false,    //source
-    false);   //pointSources
-
-  file_stream << "\nComputed volume integral values are: \n";
-  for(int i=0; i<nodesPerCell; i++){
-    file_stream << "node " << i << ": [";
-    for(int var=0; var<unknowns;var++){
-      file_stream << (std::abs(QOut[i*unknowns+var]) <0.0000001 ? 0.0 : QOut[i*unknowns+var]) << ", ";
-    }
-    file_stream << "]\n";
-  }
-  file_stream << "\n";
-
-  // Step 2), the values computed in step 1) are extrapolated to the surface boundary
-  projectVolumetricDataOntoFaces(
-    QIn,
-    order,
-    unknowns,
-    auxiliaryVariables,
-    BasisFunctionValuesLeft1d,
-    QLeft,
-    QRight,
-    QDown,
-    QUp
-#if DIMENSIONS==3
-    ,QFront,
-    QBack
-#endif
-  );
-
-  double* F[2*DIMENSIONS];
-
-  F[0] = QLeft;
-  F[1] = QRight;
-  F[2] = QDown;
-  F[3] = QUp;
-#if DIMENSIONS==3
-  F[4] = QFront;
-  F[5] = QBack;
-#endif
-
-  //   project data onto opposite face as well to trade with "identical" cell,
-  //   this essentially simulates the exchange of surface data with the
-  //   neighbouring cells which Peano would take care of for us normally
-  projectVolumetricDataOntoFaces(
-    QIn,
-    order,
-    unknowns,
-    auxiliaryVariables,
-    BasisFunctionValuesLeft1d,
-    QRight,
-    QLeft,
-    QUp,
-    QDown
-#if DIMENSIONS==3
-    ,QBack,
-    QFront
-#endif
-  );
-
-  for(int f=0; f<2*DIMENSIONS; f++){
-    double* currentFace = F[f];
-    file_stream << "\nFace " << f << ": \n";
-
-    for(int node=0; node<2*nodesPerFace; node++){
-      file_stream << "node " << node << ": [";
-      for(int var=0; var<strideQ; var++){
-        file_stream << (std::abs(currentFace[node*strideQ+var])<0.00001 ? 0.0 : currentFace[node*strideQ+var]) << ", ";
-      }
-      file_stream << "]\n";
-    }
-  }
-
-  // The faces are assembled into one pointer construct for ease of access in the
-  // next steps. In addition information about whether the faces are at the boundary
-  // is provided since at the boundary the flux must be computed with boundary values
-  // instead of using the extrapolated solution from the neighbour.
-  double* QHull[DIMENSIONS*2];
-#if DIMENSIONS==2
-  QHull[0] = QLeft;
-  QHull[2] = QRight;
-  QHull[1] = QDown;
-  QHull[3] = QUp;
-#elif DIMENSIONS==3
-  QHull[0] = QLeft;
-  QHull[3] = QRight;
-  QHull[1] = QDown;
-  QHull[4] = QUp;
-  QHull[2] = QBack;
-  QHull[5] = QFront;
-#endif
-
-  for(int i=0; i<2*DIMENSIONS*2*nodesPerFace*unknowns; i++){
-    QHullForRiemann[i] = 0.0;
-  }
-
-  for(int face=0; face<2*DIMENSIONS; face++){
-    rusanov::solveRiemannProblem_pointwise_in_situ(
-      [&](
-          const double * NOALIAS                  Q,
-          const tarch::la::Vector<DIMENSIONS,double>&  x,
-          double                                       t,
-          double                                       dt,
-          int                                          normal,
-          double * NOALIAS                        F
-          ) -> void {
-          elasticFlux(Q,x,t,dt,normal,F);
-      },
-      [&](
-          const double * NOALIAS                  Q,
-          const double * NOALIAS                  dQdx,
-          const tarch::la::Vector<DIMENSIONS,double>&  x,
-          double                                       t,
-          double                                       dt,
-          int                                          normal,
-          double * NOALIAS                        BgradQ
-        ) -> void{
-        elasticNonConservativeProduct(Q, dQdx, x, t, dt, normal, BgradQ);
-      },
-      [&](
-        const double * NOALIAS                 Q,
-        const tarch::la::Vector<DIMENSIONS,double>& x,
-        double                                      t,
-        double                                      dt,
-        int                                         normal
-        ) -> double {
-          return elasticEigenvalue(Q,x,t,dt,normal);
-      },
-      x,
-      cellSize,
-      t,
-      dt,
-      order,
-      unknowns,
-      auxiliaryVariables,
-      face, //faceNumber
-      QuadraturePoints1d,
-      true, //useFlux
-      true, //useNCP
-      QHull[face], //TODO
-      &QHullForRiemann[face*2*nodesPerFace*unknowns]
-      );
-  }
-
-  file_stream << "\nRusanov Fluxes per Face:\n";
-  for(int f=0; f<2*DIMENSIONS; f++){
-    file_stream << "At face " << f << "\n";
-    for(int i=0; i<2*nodesPerFace; i++){
-      file_stream << "at node " << i << ": [";
-      for(int var=0; var<unknowns; var++){
-        file_stream << (std::abs(QHullForRiemann[(f*2*nodesPerFace+i)*unknowns+var])<0.000001 ? 0.0 :
-QHullForRiemann[(f*2*nodesPerFace+i)*unknowns+var]) << ", ";
-      }
-      file_stream << "]\n";
-    }
-  }
-
-  //  The contributions from the computed rusanov flux are then added to the nodes
-  //  within the cell.
-  integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
-#if DIMENSIONS==2
-    &QHullForRiemann[(0*2+0)*nodesPerFace*unknowns], //left
-    &QHullForRiemann[(2*2+0)*nodesPerFace*unknowns], //right
-    &QHullForRiemann[(1*2+0)*nodesPerFace*unknowns], //down
-    &QHullForRiemann[(3*2+0)*nodesPerFace*unknowns], //up
-#else
-    &QHullForRiemann[(0*2+0)*nodesPerFace*unknowns], //left
-    &QHullForRiemann[(3*2+0)*nodesPerFace*unknowns], //right
-    &QHullForRiemann[(1*2+0)*nodesPerFace*unknowns], //down
-    &QHullForRiemann[(4*2+0)*nodesPerFace*unknowns], //up
-    &QHullForRiemann[(2*2+0)*nodesPerFace*unknowns], //front
-    &QHullForRiemann[(5*2+0)*nodesPerFace*unknowns], //back
-#endif
-    order,
-    unknowns,
-    auxiliaryVariables,
-    cellSize,
-    BasisFunctionValuesLeft1d,
-    MassMatrixDiagonal1d,
-    QOut
-  );
-
-  file_stream << "\nValues after Riemann Integral are: \n";
-  for(int i=0; i<nodesPerCell; i++){
-    file_stream << "node " << i << ": [";
-    for(int var=0; var<unknowns;var++){
-      file_stream << (std::abs(QOut[i*unknowns+var]) <0.0000001 ? 0.0 : QOut[i*unknowns+var]) << ", ";
-    }
-    file_stream << "]\n";
-  }
-
-  multiplyWithInvertedMassMatrix_GaussLegendre(
-    cellData,
-    order,
-    unknowns,
-    auxiliaryVariables,
-    MassMatrixDiagonal1d
-  );
-
-  //Finally we check that after all these steps have been taken QOut, which should be the sum of the volume and face
-contributions, is zero
-
-  file_stream << "\nFinal values are: \n";
-  for(int i=0; i<nodesPerCell; i++){
-    file_stream << "node " << i << ": [";
-    for(int var=0; var<unknowns;var++){
-      file_stream << (std::abs(QOut[i*unknowns+var]) <0.0000001 ? 0.0 : QOut[i*unknowns+var]) << ", ";
-//      validateNumericalEquals(QOut[i*strideQ+var], 0.0);
-    }
-    file_stream << "]\n";
-  }
-
-  delete[] QIn;
-  delete[] QOut;
-  delete[] QLeft;
-  delete[] QRight;
-  delete[] QDown;
-  delete[] QUp;
-#if DIMENSIONS==3
-  delete[] QFront;
-  delete[] QBack;
-#endif
-
-  delete[] QHullForRiemann;
-} //runDGElastic
-*/
+  // The largest nodal value carries an eigenvalue of normal+1 per direction; the scaled
+  // eigenvalue sums these over the directions and divides by the cell width, while the
+  // physical maximum is the largest directional eigenvalue itself.
+  constexpr double DirectionSum = DIMENSIONS == 2 ? 3.0 : 6.0;
+  validateNumericalEquals(cellData.maxEigenvalue[0], 2.0 * DirectionSum / CellWidth);
+  validateNumericalEquals(maxPhysicalEigenvalue, 2.0 * DIMENSIONS);
+}

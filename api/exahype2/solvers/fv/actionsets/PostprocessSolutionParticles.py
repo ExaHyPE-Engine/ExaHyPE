@@ -8,34 +8,49 @@ import jinja2
 
 class ParticleWisePostprocessSolution(AbstractFVActionSet):
     """
-    Post-process solution by iterating through individual particles rather than control volumes.
+    Postprocess the solution particle by particle.
 
-    This action set collects all local (non-virtual) particles during the traversal phase and applies
-    a user-defined postprocessing step to each of them at the end of the traversal.
+    The action set collects the local particles while it runs through the cells
+    and evaluates them once the traversal has finished. Collecting first and
+    evaluating afterwards keeps the action set compatible with particle-particle
+    interaction schemes: a particle may interact across cell boundaries, so its
+    state is not settled while we still work cell by cell. An evaluation in
+    touchCellLastTime() would read particle states that a later cell still
+    changes, and any derived quantity such as an error metric would become
+    inconsistent.
 
-    The motivation for executing postprocessing in the `endTraversal` phase—rather than cell-by-cell
-    during the traversal—is compatibility with particle-particle (pp) interaction schemes. When pp
-    interaction is enabled, particles may interact across cell boundaries, and their final state can
-    depend on global or non-local operations that are not yet finalized during the per-cell loop.
+    Once the sweep has finished, all particle positions and attributes are
+    updated, the particle-particle interactions and boundary reflections have
+    been resolved, and we can walk over the particles without any per-cell
+    context. For every particle we compare its position with the analytical
+    solution and reduce the per-coordinate deviations into their sum, their sum
+    of squares and their maximum. These three figures are handed to the solver
+    through setError().
 
-    If we were to perform postprocessing on a per-cell basis during traversal (e.g., in touchCellLastTime),
-    we would risk reading incomplete or inconsistent particle states, especially for particles whose
-    behavior depends on neighbors or bin-based searches updated later in the sweep. This would break
-    consistency for any dependent operations, such as computing error metrics, diagnostics, or applying
-    boundary conditions that rely on finalized particle states.
+    Only particles with ParallelState::Local contribute, and a particle that is
+    adjacent to several vertices is recognised by its number pair, so each
+    particle enters the evaluation exactly once.
 
-    Instead, by deferring processing to the end of the sweep, we guarantee:
-    - All particle positions and attributes have been updated (including those affected by collisions).
-    - Interactions such as particle-particle forces or boundary reflections have been resolved.
-    - We can loop over particles globally or locally without needing per-cell context.
-
-    This action set avoids reliance on ExaHyPE2’s finite-volume postprocessing routines and is
-    suitable for hybrid methods where tracers or particles carry physical state in a Lagrangian fashion.
-
-    Only particles with ParallelState::Local are considered to avoid processing redundant or ghost particles.
+    The action set is suitable for hybrid methods where tracers carry physical
+    state in a Lagrangian fashion.
     """
 
     def __init__(self, solver, particle_set, descend_invocation_order=1):
+        """
+        Couple the tracer particles to the solver.
+
+        ## Arguments
+
+        solver: FV
+          The Finite Volumes solver whose analytical solution the particles are
+          compared against.
+
+        particle_set: ParticleSet
+          The tracer particles which are evaluated at the end of the traversal.
+
+        descend_invocation_order: Int
+          Position of this action set within the solver's action set sequence.
+        """
         AbstractFVActionSet.__init__(self, solver)
         self.descend_invocation_order = descend_invocation_order
         self._compute_kernel = ""

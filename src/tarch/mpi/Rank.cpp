@@ -94,17 +94,17 @@ void tarch::mpi::Rank::plotMessageQueues() {
 #endif
 }
 
-bool tarch::mpi::Rank::exceededTimeOutWarningThreshold() const {
-  return _areTimeoutsEnabled and _timeOutWarning > std::chrono::seconds(0)
-    and std::chrono::system_clock::now() > _globalTimeOutWarning;
+bool tarch::mpi::Rank::exceededTimeoutWarningThreshold() const {
+  return _areTimeoutsEnabled and _timeoutWarning > std::chrono::seconds(0)
+    and std::chrono::system_clock::now() > _globalTimeoutWarning;
 }
 
 bool tarch::mpi::Rank::exceededDeadlockThreshold() const {
-  return _areTimeoutsEnabled and _deadlockTimeOut > std::chrono::seconds(0)
-    and std::chrono::system_clock::now() > _globalTimeOutDeadlock;
+  return _areTimeoutsEnabled and _deadlockTimeout > std::chrono::seconds(0)
+    and std::chrono::system_clock::now() > _globalTimeoutDeadlock;
 }
 
-void tarch::mpi::Rank::triggerDeadlockTimeOut(
+void tarch::mpi::Rank::triggerDeadlockTimeout(
   const std::string& className,
   const std::string& methodName,
   int                communicationPartnerRank,
@@ -115,64 +115,64 @@ void tarch::mpi::Rank::triggerDeadlockTimeOut(
   if (exceededDeadlockThreshold()) {
     std::ostringstream out;
     out << "Operation " << className << "::" << methodName << " on node " << getRank() << " had to wait more than "
-        << _deadlockTimeOut.count() << " seconds for " << numberOfExpectedMessages << " message(s) from node "
+        << _deadlockTimeout.count() << " seconds for " << numberOfExpectedMessages << " message(s) from node "
         << communicationPartnerRank << " with tag " << tag << ". Timeout. " << comment;
     plotMessageQueues();
-    tarch::terminateWithError(out.str(), DEADLOCK_EXIT_CODE);
+    tarch::terminateWithError(out.str(), DeadlockExitCode);
   }
 }
 
-void tarch::mpi::Rank::writeTimeOutWarning(
+void tarch::mpi::Rank::writeTimeoutWarning(
   const std::string& className,
   const std::string& methodName,
   int                communicationPartnerRank,
   int                tag,
   int                numberOfExpectedMessages
 ) {
-  if (exceededTimeOutWarningThreshold()) {
+  if (exceededTimeoutWarningThreshold()) {
     logWarning(
       "operation " << className << "::" << methodName << " on node " << getRank() << " had to wait more than "
-                   << _timeOutWarning.count() << " seconds for " << numberOfExpectedMessages << " message(s) from node "
+                   << _timeoutWarning.count() << " seconds for " << numberOfExpectedMessages << " message(s) from node "
                    << communicationPartnerRank << " with tag " << tag
     );
 
-    if (_deadlockTimeOut.count() > 0.0) {
-      logWarning("application will terminate after " << _deadlockTimeOut.count() << " seconds because of a deadlock");
+    if (_deadlockTimeout.count() > 0.0) {
+      logWarning("application will terminate after " << _deadlockTimeout.count() << " seconds because of a deadlock");
     } else {
       logWarning(
         "deadlock detection switched off as deadlock time out is set to "
-        << _deadlockTimeOut.count() << ", i.e. you will continue to get warnings, but code will not shut down"
+        << _deadlockTimeout.count() << ", i.e. you will continue to get warnings, but code will not shut down"
       );
     }
 
-    if (_timeOutWarning < _deadlockTimeOut / 2 or _deadlockTimeOut.count() <= 0.0) {
-      const std::chrono::duration<double> newTimeOutWarning = _timeOutWarning * 2;
+    if (_timeoutWarning < _deadlockTimeout / 2 or _deadlockTimeout.count() <= 0.0) {
+      const std::chrono::duration<double> newTimeoutWarning = _timeoutWarning * 2;
       logWarning(
-        "increase time out warning threshold from " << _timeOutWarning.count() << " seconds to "
-                                                    << newTimeOutWarning.count()
+        "increase time out warning threshold from " << _timeoutWarning.count() << " seconds to "
+                                                    << newTimeoutWarning.count()
                                                     << " seconds to avoid flood of warning messages"
       );
-      _timeOutWarning       = newTimeOutWarning;
-      _globalTimeOutWarning = _globalTimeOutWarning + _timeOutWarning;
+      _timeoutWarning       = newTimeoutWarning;
+      _globalTimeoutWarning = _globalTimeoutWarning + _timeoutWarning;
     }
   }
 }
 
 void tarch::mpi::Rank::setDeadlockWarningTimeStamp() {
-  _globalTimeOutWarning = std::chrono::system_clock::now() + _timeOutWarning;
+  _globalTimeoutWarning = std::chrono::system_clock::now() + _timeoutWarning;
 }
 
-void tarch::mpi::Rank::setDeadlockTimeOutTimeStamp() {
-  _globalTimeOutDeadlock = std::chrono::system_clock::now() + _deadlockTimeOut;
+void tarch::mpi::Rank::setDeadlockTimeoutTimeStamp() {
+  _globalTimeoutDeadlock = std::chrono::system_clock::now() + _deadlockTimeout;
 }
 
 void tarch::mpi::Rank::suspendTimeouts(bool timeoutsDisabled) { _areTimeoutsEnabled = !timeoutsDisabled; }
 
 bool tarch::mpi::Rank::areTimeoutsEnabled() const { return _areTimeoutsEnabled; }
 
-std::chrono::duration<double> tarch::mpi::Rank::getTimeOutWarning() const { return _timeOutWarning; }
+std::chrono::duration<double> tarch::mpi::Rank::getTimeoutWarning() const { return _timeoutWarning; }
 
-std::chrono::duration<double> tarch::mpi::Rank::getDeadlockTimeOut() const { return _deadlockTimeOut; }
+std::chrono::duration<double> tarch::mpi::Rank::getDeadlockTimeout() const { return _deadlockTimeout; }
 
 #ifdef PEANO_WITH_MPI
 tarch::mpi::Rank::Rank() :
@@ -183,8 +183,8 @@ tarch::mpi::Rank::Rank() :
   _numberOfNodes(1),
   _isNodeMaster(true),
   _communicator(MPI_COMM_WORLD),
-  _timeOutWarning(0),
-  _deadlockTimeOut(0),
+  _timeoutWarning(0),
+  _deadlockTimeout(0),
   _areTimeoutsEnabled(true),
   _deadlockDetectionEnabled(false) {}
 #else
@@ -194,8 +194,8 @@ tarch::mpi::Rank::Rank() :
   _numberOfProcessors(1),
   _numberOfNodes(1),
   _isNodeMaster(true),
-  _timeOutWarning(0),
-  _deadlockTimeOut(0),
+  _timeoutWarning(0),
+  _deadlockTimeout(0),
   _areTimeoutsEnabled(true),
   _deadlockDetectionEnabled(false) {}
 #endif
@@ -245,7 +245,7 @@ void tarch::mpi::Rank::logStatus() const {
 
 #ifdef COMPILER_HAS_UTS_NAME
   utsname* utsdata = new utsname();
-  assertion(utsdata != NULL);
+  assertion(utsdata != nullptr);
   uname(utsdata);
   statusMessage << " nodename=" << utsdata->nodename;
   delete utsdata;
@@ -362,14 +362,14 @@ MPI_Comm tarch::mpi::Rank::getCommunicator() const {
 }
 #endif
 
-void tarch::mpi::Rank::setTimeOutWarning(double value) {
+void tarch::mpi::Rank::setTimeoutWarning(double value) {
   assertion(value >= 0.0);
-  _timeOutWarning = std::chrono::duration<double>(value);
+  _timeoutWarning = std::chrono::duration<double>(value);
 }
 
-void tarch::mpi::Rank::setDeadlockTimeOut(double value) {
+void tarch::mpi::Rank::setDeadlockTimeout(double value) {
   assertion(value >= 0.0);
-  _deadlockTimeOut = std::chrono::duration<double>(value);
+  _deadlockTimeout = std::chrono::duration<double>(value);
 }
 
 void tarch::mpi::Rank::setDeadlockDetection(bool enabled) { _deadlockDetectionEnabled = enabled; }

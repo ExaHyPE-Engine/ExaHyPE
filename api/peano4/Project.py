@@ -23,8 +23,8 @@ class Project (object):
   Represents a Peano 4 project.
 
   namespace Sequence of strings representing the (nested) namespace. Pass in
-    [ "tests", "exahype2" ] for example if you wanna write a solver that
-    is embedded into the namespace tests::exahype2.
+    [ "tests", "mysolver" ] for example if you want to write a solver that
+    is embedded into the namespace tests::mysolver.
 
 
   ## Global project properties
@@ -37,7 +37,7 @@ class Project (object):
   def __init__(self, namespace, project_name, executable = "",
                dimensions = None, offset = None, size = None, periodic_bc = None,
                grid_levels = None, build_mode = None, directory = "."):
-    # Standard project command-line arguments (shared by every project): -d/--dimensions
+    # Standard project command-line arguments for every project: -d/--dimensions
     # and -m/--build-mode override the constructor defaults, -v enables verbose logging,
     # -h prints the help.
     arguments = Project._parse_project_arguments()
@@ -67,10 +67,7 @@ class Project (object):
       if not self.namespace in self.namespaces:
         self.namespaces.append(self.namespace)
 
-    # Default output model
     self.output       = peano4.output.Output()
-
-    # Empty model by default
     self.datamodel    = peano4.datamodel.Model(self.namespace)
 
     self.solversteps  = peano4.solversteps.Steps(self)
@@ -111,7 +108,7 @@ class Project (object):
   def _parse_project_arguments():
     """Parse (once) the standard project code-generation command-line arguments.
 
-    Shared by every project - the ExaHyPE subclass inherits this. Uses
+    Every project uses these arguments, and subclasses inherit them. Uses
     parse_known_args() so a script may still read its own extra arguments, and -h
     prints this help and exits.
     """
@@ -463,49 +460,44 @@ class Project (object):
 
   def run(self, executable, args=[], prefix=None, pipefile=None, rebuild_if_required=True):
     """!
-    Runs the code. args should be a list of strings or the empty list.
-    prefix is an array, too. A typical invocation looks alike
-    project.run( ["16.0", "32.0"], ["/opt/mpi/mpirun", "-n", "1"] )
-    The operation returns True if the run had been successful
+    Run the built executable with live terminal output.
 
-    pipefile: string or None
+    args should be a list of strings or the empty list, prefix an optional
+    launcher such as ["mpirun", "-n", "2"]. Every output line is echoed to the
+    terminal as it appears, so long runs stay observable; if pipefile is set,
+    the output is written there as well. Returns True on a zero exit code.
     """
-    success = False
     if rebuild_if_required and not self.is_built and not self.build_was_successful:
       self.generate_and_build()
 
-    if not rebuild_if_required or (self.is_built and self.build_was_successful):
-      log.info("Run executable %s", executable)
-
-      invocation  = []
-      if prefix!=None:
-        invocation += prefix
-      invocation += ["./" + executable]
-      invocation += args
-
-      try:
-        result = None
-        if pipefile==None:
-          result = subprocess.run( invocation, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
-        else:
-          result = subprocess.run( invocation, stdout=open( pipefile, "w" ), stderr=subprocess.PIPE )
-        if result.returncode==0:
-          if pipefile==None:
-            stdout = result.stdout.decode("utf-8")
-            if stdout:
-              log.info("%s", stdout)
-          if result.stderr!=None:
-            stderr = result.stderr.decode("utf-8")
-            if stderr:
-              log.warning("%s", stderr)
-          log.info("Run completed without error code, but check for warnings and numerical assertions/errors")
-          success = True
-        else:
-          log.error("%s", result.stderr.decode("utf-8"))
-          log.error("Run failed")
-      except Exception as e:
-        log.error("Run of application was not successful: %s", e)
-        log.error("Invocation: %s", invocation)
-    else:
+    if rebuild_if_required and not (self.is_built and self.build_was_successful):
       log.error("Cannot run as code compilation has not been successful")
-    return success
+      return False
+
+    invocation = list(prefix) if prefix else []
+    invocation += ["./" + executable] + list(args)
+    log.info("Run %s", " ".join(invocation))
+
+    sink = None
+    try:
+      if pipefile:
+        sink = open(pipefile, "w")
+      with subprocess.Popen(
+        invocation, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+      ) as process:
+        for line in process.stdout:
+          sys.stdout.write(line)
+          if sink:
+            sink.write(line)
+      if process.returncode != 0:
+        log.error("Run failed with exit code %s", process.returncode)
+        return False
+      log.info("Run completed without error code, but check for warnings and numerical assertions/errors")
+      return True
+    except Exception as e:
+      log.error("Run of application was not successful: %s", e)
+      log.error("Invocation: %s", invocation)
+      return False
+    finally:
+      if sink:
+        sink.close()

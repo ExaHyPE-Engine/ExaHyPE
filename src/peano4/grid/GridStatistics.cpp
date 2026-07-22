@@ -3,6 +3,7 @@
 #include "GridStatistics.h"
 
 #include "GridVertex.h"
+
 #include "tarch/MemoryUsage.h"
 
 static_assert(std::is_standard_layout_v<peano4::grid::GridStatistics>);
@@ -12,10 +13,8 @@ std::ostream& operator<<(std::ostream& out, const peano4::grid::GridStatistics& 
   return (out << statistics.toString());
 }
 
-peano4::grid::GridStatistics operator+(
-  const peano4::grid::GridStatistics& lhs,
-  const peano4::grid::GridStatistics& rhs
-) {
+peano4::grid::GridStatistics
+operator+(const peano4::grid::GridStatistics& lhs, const peano4::grid::GridStatistics& rhs) {
   peano4::grid::GridStatistics result;
 
   result.minDepth                     = std::min(lhs.minDepth, rhs.minDepth);
@@ -27,8 +26,10 @@ peano4::grid::GridStatistics operator+(
   result.numberOfVertices             = lhs.numberOfVertices + rhs.numberOfVertices;
   result.numberOfHangingVertices      = lhs.numberOfHangingVertices + rhs.numberOfHangingVertices;
   result.numberOfStationarySweeps     = std::min(lhs.numberOfStationarySweeps, rhs.numberOfStationarySweeps);
-  result.minH                         = tarch::la::min(lhs.minH, rhs.minH);
-  result.flags                        = static_cast<std::uint8_t>(lhs.flags | rhs.flags);
+  result.numberOfDeferredGridControlChanges =
+    lhs.numberOfDeferredGridControlChanges + rhs.numberOfDeferredGridControlChanges;
+  result.minH  = tarch::la::min(lhs.minH, rhs.minH);
+  result.flags = static_cast<std::uint8_t>(lhs.flags | rhs.flags);
 
   return result;
 }
@@ -39,16 +40,17 @@ peano4::grid::GridStatistics operator+=(peano4::grid::GridStatistics& lhs, const
 }
 
 void peano4::grid::GridStatistics::clear(bool isGlobalMasterTree) {
-  minDepth                     = std::numeric_limits<int>::max();
-  maxDepth                     = 0;
-  numberOfLocalUnrefinedCells  = 0;
-  numberOfRemoteUnrefinedCells = 0;
-  numberOfLocalRefinedCells    = isGlobalMasterTree ? 1 : 0;
-  numberOfRemoteRefinedCells   = isGlobalMasterTree ? 0 : 1;
-  numberOfVertices             = 0;
-  numberOfHangingVertices      = 0;
-  numberOfStationarySweeps     = numberOfStationarySweeps + 1;
-  minH                         = tarch::la::Vector<DIMENSIONS, double>(std::numeric_limits<double>::max());
+  minDepth                           = std::numeric_limits<int>::max();
+  maxDepth                           = 0;
+  numberOfLocalUnrefinedCells        = 0;
+  numberOfRemoteUnrefinedCells       = 0;
+  numberOfLocalRefinedCells          = isGlobalMasterTree ? 1 : 0;
+  numberOfRemoteRefinedCells         = isGlobalMasterTree ? 0 : 1;
+  numberOfVertices                   = 0;
+  numberOfHangingVertices            = 0;
+  numberOfStationarySweeps           = numberOfStationarySweeps + 1;
+  numberOfDeferredGridControlChanges = 0;
+  minH                               = tarch::la::Vector<DIMENSIONS, double>(std::numeric_limits<double>::max());
   setRemovedEmptySubtree(false);
   setCoarseningHasBeenVetoed(false);
 }
@@ -66,6 +68,7 @@ std::string peano4::grid::GridStatistics::toString() const {
   out << ", Remote Leaves=" << numberOfRemoteUnrefinedCells;
   out << ", Vertices=" << numberOfVertices;
   out << ", Hanging Vertices=" << numberOfHangingVertices;
+  out << ", Deferred Grid Control Changes=" << numberOfDeferredGridControlChanges;
   out << ", MinH=[";
   for (int d = 0; d < DIMENSIONS; ++d) {
     if (d) {

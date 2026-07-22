@@ -13,6 +13,10 @@ private:
   void testInterpolateHaloLayer();
   void testInterpolateHaloLayerFromCoarseCell();
   void testInterpolateCell();
+  void testInterpolateHaloLayerWithTangentialSlopeIsBitExactUnderReflection();
+  void testInterpolateHaloLayerWithTangentialSlopeIsBitExactUnderTangentialSwap();
+  void testInterpolateHaloLayerWithTangentialSlopePreservesFreeStream();
+  void testInterpolateHaloLayerWithTangentialSlopeIsLinearExact();
 
 public:
   InterpolationTest();

@@ -5,13 +5,26 @@
 #include "tarch/mpi/Rank.h"
 #include "tarch/mpi/mpi.h"
 
-namespace fs = std::filesystem;
+bool tarch::plotter::FileWriter::_doublePrecisionOutput = false;
 
 tarch::plotter::FileWriter::FileWriter(const std::string& outputDirectory, int numberOfSubdomains) :
   _outputDirectory(outputDirectory),
   _subdomains(static_cast<std::size_t>(numberOfSubdomains)) {}
 
 bool tarch::plotter::FileWriter::isOpen() const { return not _written; }
+
+/**
+ * Select the width the writers store their fields in.
+ *
+ * The setting reaches the file only. Every plotter accumulates its points and fields in
+ * DataField, whose values are double, and narrows them as it writes, so single precision
+ * halves the file and leaves the memory a plot holds unchanged. Keeping the buffers in
+ * double is what lets a plotter serve both settings without a second code path, and what
+ * keeps the accumulated geometry exact while subdomains are merged.
+ */
+void tarch::plotter::FileWriter::setDoublePrecisionOutput(bool value) { _doublePrecisionOutput = value; }
+
+bool tarch::plotter::FileWriter::getDoublePrecisionOutput() { return _doublePrecisionOutput; }
 
 std::vector<std::pair<std::string, std::string>> tarch::plotter::FileWriter::mpiIoHints() {
   // Collective buffering for these large collective writes. ROMIO keys (MPICH); other
@@ -30,16 +43,16 @@ void tarch::plotter::FileWriter::createOutputDirectory() {
   // a flag rather than throwing straight away: throwing here would let the master
   // leave the collective barrier below while the other ranks block on it forever.
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    fs::path p(_outputDirectory);
+    std::filesystem::path p(_outputDirectory);
 
     if (not _outputDirectory.empty()) {
       std::error_code ec;
-      if (not fs::exists(p)) {
-        if (not fs::create_directories(p, ec) and not fs::exists(p)) {
+      if (not std::filesystem::exists(p)) {
+        if (not std::filesystem::create_directories(p, ec) and not std::filesystem::exists(p)) {
           success       = 0;
           failureReason = "Failed to create output directory '" + p.string() + "': " + ec.message();
         }
-      } else if (not fs::is_directory(p)) {
+      } else if (not std::filesystem::is_directory(p)) {
         success       = 0;
         failureReason = "Output path exists but is not a directory: '" + p.string() + "'";
       }
@@ -82,8 +95,8 @@ void tarch::plotter::FileWriter::validateIdentifier(const std::string& id) {
   const std::size_t pos     = id.find_first_of(illegal);
   if (pos != std::string::npos) {
     throw std::runtime_error(
-      std::string("Invalid plotter data identifier '") + id + "': the character '" + id[pos] +
-      "' is not allowed. Avoid whitespace, quotes, '<', '>', '&', '/' and '\\'."
+      std::string("Invalid plotter data identifier '") + id + "': the character '" + id[pos]
+      + "' is not allowed. Avoid whitespace, quotes, '<', '>', '&', '/' and '\\'."
     );
   }
 }
@@ -95,8 +108,8 @@ void tarch::plotter::FileWriter::checkCanOpenPlotter(int subdomainId) const {
 
   if (subdomainId < 0 or subdomainId >= static_cast<int>(_subdomains.size())) {
     throw std::runtime_error(
-      "Invalid subdomainId " + std::to_string(subdomainId) + " (have " + std::to_string(_subdomains.size()) +
-      " subdomains)"
+      "Invalid subdomainId " + std::to_string(subdomainId) + " (have " + std::to_string(_subdomains.size())
+      + " subdomains)"
     );
   }
 }
@@ -160,13 +173,13 @@ tarch::plotter::FileWriter::DataPlotter::DataPlotter(
 }
 
 bool tarch::plotter::FileWriter::hasSchemaOrGeometry(const SubdomainBuffers& buffers) {
-  return not buffers.pointsXYZ.empty() or not buffers.connectivity.empty() or not buffers.offsets.empty() or
-         not buffers.types.empty() or not buffers.pointFields.empty() or not buffers.cellFields.empty();
+  return not buffers.pointsXYZ.empty() or not buffers.connectivity.empty() or not buffers.offsets.empty()
+    or not buffers.types.empty() or not buffers.pointFields.empty() or not buffers.cellFields.empty();
 }
 
 bool tarch::plotter::FileWriter::hasPayload(const SubdomainBuffers& buffers) {
-  if (not buffers.pointsXYZ.empty() or not buffers.connectivity.empty() or not buffers.offsets.empty() or
-      not buffers.types.empty()) {
+  if (not buffers.pointsXYZ.empty() or not buffers.connectivity.empty() or not buffers.offsets.empty()
+      or not buffers.types.empty()) {
     return true;
   }
 
@@ -227,15 +240,15 @@ void tarch::plotter::FileWriter::validateSubdomainsForWriting(const SubdomainBuf
     }
 
     for (std::size_t i = 0; i < reference.pointFields.size(); ++i) {
-      if (s.pointFields[i].name != reference.pointFields[i].name or
-          s.pointFields[i].components != reference.pointFields[i].components) {
+      if (s.pointFields[i].name != reference.pointFields[i].name
+          or s.pointFields[i].components != reference.pointFields[i].components) {
         throw std::runtime_error("Mismatch in point data field '" + reference.pointFields[i].name + "'.");
       }
     }
 
     for (std::size_t i = 0; i < reference.cellFields.size(); ++i) {
-      if (s.cellFields[i].name != reference.cellFields[i].name or
-          s.cellFields[i].components != reference.cellFields[i].components) {
+      if (s.cellFields[i].name != reference.cellFields[i].name
+          or s.cellFields[i].components != reference.cellFields[i].components) {
         throw std::runtime_error("Mismatch in cell data field '" + reference.cellFields[i].name + "'.");
       }
     }
@@ -246,8 +259,8 @@ void tarch::plotter::FileWriter::validateSubdomainsForWriting(const SubdomainBuf
     for (const auto& f : s.pointFields) {
       if (f.values.size() != nPoints * f.components) {
         throw std::runtime_error(
-          "Mismatch in point data field '" + f.name + "'. Expected " + std::to_string(nPoints) + " tuples but got " +
-          std::to_string(f.values.size() / f.components) + "."
+          "Mismatch in point data field '" + f.name + "'. Expected " + std::to_string(nPoints) + " tuples but got "
+          + std::to_string(f.values.size() / f.components) + "."
         );
       }
     }
@@ -255,8 +268,8 @@ void tarch::plotter::FileWriter::validateSubdomainsForWriting(const SubdomainBuf
     for (const auto& f : s.cellFields) {
       if (f.values.size() != nCells * f.components) {
         throw std::runtime_error(
-          "Mismatch in cell data field '" + f.name + "'. Expected " + std::to_string(nCells) + " tuples but got " +
-          std::to_string(f.values.size() / f.components) + "."
+          "Mismatch in cell data field '" + f.name + "'. Expected " + std::to_string(nCells) + " tuples but got "
+          + std::to_string(f.values.size() / f.components) + "."
         );
       }
     }
@@ -297,16 +310,16 @@ tarch::plotter::FileWriter::FieldLayout tarch::plotter::FileWriter::classifyFiel
   return {FieldKind::Generic, sourceComponents};
 }
 
-std::vector<float> tarch::plotter::FileWriter::expandFieldComponents(
-  const std::vector<float>& values,
-  int                       sourceComponents,
-  int                       writtenComponents
+std::vector<double> tarch::plotter::FileWriter::expandFieldComponents(
+  const std::vector<double>& values,
+  int                        sourceComponents,
+  int                        writtenComponents
 ) {
   if (writtenComponents == sourceComponents or sourceComponents <= 0) {
     return values;
   }
-  const std::size_t  tuples = values.size() / static_cast<std::size_t>(sourceComponents);
-  std::vector<float> result(tuples * static_cast<std::size_t>(writtenComponents), 0.0f);
+  const std::size_t   tuples = values.size() / static_cast<std::size_t>(sourceComponents);
+  std::vector<double> result(tuples * static_cast<std::size_t>(writtenComponents), 0.0);
   for (std::size_t t = 0; t < tuples; ++t) {
     for (int c = 0; c < sourceComponents; ++c) {
       result[t * writtenComponents + c] = values[t * sourceComponents + c];
@@ -315,9 +328,15 @@ std::vector<float> tarch::plotter::FileWriter::expandFieldComponents(
   return result;
 }
 
+std::vector<float> tarch::plotter::FileWriter::narrowToFloat(const std::vector<double>& values) {
+  std::vector<float> result(values.size());
+  std::transform(values.begin(), values.end(), result.begin(), [](double value) { return static_cast<float>(value); });
+  return result;
+}
+
 tarch::plotter::FileWriter::FieldSchema
 tarch::plotter::FileWriter::fieldSchemaFromReference(const SubdomainBuffers* localReference) {
-  // Names and component counts only; the field values are streamed from the actual
+  // Names and component counts only; the field values are streamed from the
   // subdomain buffers at write time.
   FieldSchema schema;
   if (localReference != nullptr) {

@@ -30,8 +30,8 @@
  */
 namespace tarch {
   struct InitConfiguration {
-    double mpiTimeOutWarning;
-    double mpiDeadlockTimeOut;
+    double mpiTimeoutWarning;
+    double mpiDeadlockTimeout;
     bool   mpiDeadlockDetectionEnabled;
   };
 

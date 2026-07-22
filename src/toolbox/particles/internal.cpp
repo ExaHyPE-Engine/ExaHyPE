@@ -1,3 +1,5 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "internal.h"
 
 #include "peano4/datamanagement/VertexMarker.h"
@@ -35,6 +37,17 @@ bool toolbox::particles::internal::fitsIntoLevel(double searchRadius, const ::pe
   return tarch::la::greaterEquals(tarch::la::min(marker.getH()), 2.0 * searchRadius);
 }
 
+/**
+ * Find out which vertex should hold a particle.
+ *
+ * @param x          Position of the particle of interest.
+ * @param cellCentre Centre of the cell, as returned by CellMarker::getX().
+ * @return           Number of the vertex within that cell to which the
+ *                   particle should be assigned. The result identifies
+ *                   the vertex in z-order, i.e. 00 is the left bottom
+ *                   vertex, 10 the right bottom one, and so forth. Use
+ *                   to_ulong() to convert it.
+ */
 std::bitset<DIMENSIONS> toolbox::particles::internal::getParticleAssociationWithinCell(
   const tarch::la::Vector<DIMENSIONS, double>& x, const tarch::la::Vector<DIMENSIONS, double>& cellCentre
 ) {

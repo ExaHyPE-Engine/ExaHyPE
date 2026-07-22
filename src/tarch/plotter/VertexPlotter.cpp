@@ -41,8 +41,8 @@ int tarch::plotter::FileWriter::VertexPlotter::plotVertex(const tarch::la::Vecto
 
   auto& map = _buffers.vertexMap;
 
-  // Hanging vertices can still leave duplicates in the global mesh; moving the
-  // filter to the output-writing stage would remove all duplicate vertices.
+  // The deduplication covers one subdomain, so hanging vertices can still leave
+  // duplicates in the global mesh.
   auto iter = map.find(key);
   if (iter != map.end()) {
     return iter->second;
@@ -50,9 +50,9 @@ int tarch::plotter::FileWriter::VertexPlotter::plotVertex(const tarch::la::Vecto
 
   const int idx = static_cast<int>(_buffers.pointsXYZ.size() / 3);
 
-  _buffers.pointsXYZ.push_back(static_cast<float>(p(0)));
-  _buffers.pointsXYZ.push_back(static_cast<float>(p(1)));
-  _buffers.pointsXYZ.push_back(static_cast<float>(p(2)));
+  _buffers.pointsXYZ.push_back(p(0));
+  _buffers.pointsXYZ.push_back(p(1));
+  _buffers.pointsXYZ.push_back(p(2));
 
   map.emplace(key, idx);
   return idx;

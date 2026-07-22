@@ -26,6 +26,9 @@ namespace {
     if (observerName == runner::StepName::TimeStep) {
       return runner::PhaseName::TimeStep;
     }
+    if (observerName == runner::StepName::DynamicAMR) {
+      return runner::PhaseName::DynamicAMR;
+    }
     return observerName;
   }
 
@@ -45,8 +48,26 @@ void runner::FinalSummary::run() {
 
   const auto& measurements = _context.measurements;
 
+  // The rows follow the phase order of a run; steps outside this list keep their first-use order.
+  constexpr std::array<const char*, 6> StepOrder = {
+    StepName::CreateGrid,
+    StepName::LoadBalancing,
+    StepName::InitGrid,
+    StepName::PlotSolution,
+    StepName::DynamicAMR,
+    StepName::TimeStep
+  };
+  auto rank = [&StepOrder](const std::string& name) {
+    const auto* const position = std::find(StepOrder.begin(), StepOrder.end(), name);
+    return std::distance(StepOrder.begin(), position);
+  };
+  auto stepTimes = measurements.stepTimes;
+  std::stable_sort(stepTimes.begin(), stepTimes.end(), [&rank](const auto& lhs, const auto& rhs) {
+    return rank(lhs.first) < rank(rhs.first);
+  });
+
   std::vector<std::pair<std::string, std::string>> entries;
-  for (const auto& [name, measurement] : measurements.stepTimes) {
+  for (const auto& [name, measurement] : stepTimes) {
     const auto         count = measurement.getNumberOfMeasurements();
     std::ostringstream value;
     value << seconds(measurement.getAccumulatedValue()) << "  (" << count << (count == 1 ? " sweep)" : " sweeps)");

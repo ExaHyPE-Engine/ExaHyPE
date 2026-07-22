@@ -3,8 +3,8 @@
 #pragma once
 
 #include "peano4/datamanagement/CellMarker.h"
-#include "peano4/datamanagement/VertexMarker.h"
 #include "peano4/datamanagement/VertexEnumerator.h"
+#include "peano4/datamanagement/VertexMarker.h"
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 
@@ -18,26 +18,13 @@ namespace toolbox {
     constexpr double SpatialDuplicateTolerance = 1e-6;
 
     /**
-     * Check if there's already a particle at p's position in the set.
-     *
-     * As we return a non-const iterator, the operation may not be labelled
-     * as const. It is essential
-     *
-     *
-     * @param particle You want to search the container identified by begin
-     *   and end for this particle.
-     * @return container's end() if there is no duplicate. Otherwise, return
-     *   iterator pointing to existing particle.
+     * Check if there is already a particle at the position of particle.
      */
     template <typename Iterator>
     Iterator particleIsDuplicate(const typename Iterator::value_type& particle, Iterator begin, const Iterator& end);
 
     /**
-     * Return true if and only if
-     *
-     * - we deal with a local particle (virtual ones are copies, to we are not
-     *   really entitled to say something about them), and
-     * - the particle resides within the computational domain.
+     * Check if a particle is local and inside the computational domain
      */
     template <typename Particle>
     bool particleWillStayWithinComputationalDomain(
@@ -48,12 +35,6 @@ namespace toolbox {
 
     /**
      * Insert particle into a cell
-     *
-     * Shallow copy, i.e. you can remove the input container newParticles, but
-     * you may not delete the particles it is pointing to.
-     *
-     * This routine basically runs through the vector passed and calls the
-     * other insertParticleIntoCell() operation per particle.
      */
     template <typename Particle, typename ParticleSet>
     void insertParticlesIntoCell(
@@ -65,31 +46,6 @@ namespace toolbox {
 
     /**
      * Insert particle into cell
-     *
-     * This routine assumes that the particle indeed fits into a cell.
-     * Otherwise, I cannot assign in properly. If it falls into a cell,
-     * then I can in return rightfully assume that the particle is local.
-     * Setting the flag to local is important, as the locality analysis
-     * of Peano usually sets particles to local in touchCellFirstTime().
-     * You don't know if the particle insertion is called before or after
-     * this analysis step, so we might just have missed the local insertion
-     * and therefore miss out on particles.
-     *
-     * I recommend never to insert a particle directly, but always to run
-     * through this routine and to combine it with a particle sorting step.
-     * On the one hand, thisensures that
-     * particles are inserted in a consistent way, i.e. stored next to their
-     * closest neighbour. On the other hand, this ensures that a
-     * particle is never assigned to a hanging vertex and then lost. If you
-     * assign to a hanging vertex in a step where no grid re-sorting is active,
-     * you will effectively loose the particle, as it will disappear with the
-     * elimination of the hanging vertex.
-     *
-     * ## Realisation
-     *
-     * - Find which vertex in the cell is the closest vertex.
-     * - Set the particle state to local. As we know that we insert only into
-     *   local cells, we can do this without any fear.
      */
     template <typename Particle, typename ParticleSet>
     void insertParticleIntoCell(
@@ -101,14 +57,6 @@ namespace toolbox {
 
     /**
      * Update helper flag per particle for cell
-     *
-     * Each particle is associated with a vertex of a cell. This vertex is
-     * identified by assignedVertex. We now compute a bitset that tells us,
-     * from the vertex' point of view, which of the adjacent cells will
-     * host this particle. This might not be unique, as we work with a
-     * fuzzy geometric ownership.
-     *
-     * @see the explanation in Particle.py
      */
     template <typename Particle>
     void updateContainedInAdjacentCellProperty(
@@ -122,25 +70,6 @@ namespace toolbox {
 
     /**
      * Update internal marker of particle
-     *
-     * Each particle is associated to a vertex. The vertex is identified by
-     * its position x and the surrounding cells with size h. Each vertex has
-     * @f$ 2^d @f$ adjacent cells. The particle's
-     * ContainedInAdjacentCellProperty bitset flags which of these adjacent
-     * cells consider the particle to fall in their area.
-     *
-     * As we work with a weak ownership, there can be more than two bits (if
-     * the particle sits exactly on the face between two adjacent cells).
-     *
-     *
-     * ## Particle movement
-     *
-     * We have to call updateContainedInAdjacentCellProperty() after each
-     * particle movement. Even if we don't change the vertex association as a
-     * particle drifts, it might stay with the same vertex and still move from
-     * one cell into another one and hence require an update of the flags.
-     *
-     * @see the explanation in toolbox.particles.Particle
      */
     template <typename Particle>
     void updateContainedInAdjacentCellProperty(
@@ -156,21 +85,6 @@ namespace toolbox {
 
     /**
      * Mirror a particle along the periodic domain boundaries.
-     *
-     * We check for every boundary whether it is periodic. Furthermore, we check
-     * whether the particle would be already contained within a vertex along
-     * each dimension. This is necessary for vertices in corners of the domain:
-     * In these cases, we need to mirror the particle only along the boundary
-     * that isn't contained in the vertex. Otherwise, the particle is displaced
-     * too far away. E.g. For a vertex at (0, 0) a particle at (0.95, 0.) would
-     * be displaced to (-0.05, -1.) instead of (-0.5, 0.).
-     *
-     * @param x Position of the particle as received along a periodic boundary
-     *   exchange.
-     * @param marker Marker of vertex which triggers the receive, i.e. the one
-     *   to which the incoming particle at x will be attached to.
-     *
-     * @param Position of particle as "seen" from receiving side
      */
     tarch::la::Vector<DIMENSIONS, double> mirrorParticleAlongPeriodicDomains(
       const tarch::la::Vector<DIMENSIONS, double>& x,
@@ -182,13 +96,6 @@ namespace toolbox {
 
     /**
      * Applies the periodic boundary condition on particle coordinates `x`.
-     *
-     * In mirrorParticleAlongPeriodicDomains(), we check whether a vertex is
-     * located on the boundary, and if it is, apply the boundary conditions
-     * such that the vertex would "see" the particles.
-     * In contrast, here we blindly apply the periodic boundary conditions
-     * to a particle. This function is intended to be run on global particle
-     * lists, such as is used e.g. in exchangeSieveListsGlobally().
      */
     tarch::la::Vector<DIMENSIONS, double> applyPeriodicBoundaryConditions(
       const tarch::la::Vector<DIMENSIONS, double>& x,

@@ -51,6 +51,14 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceUnknownsProlongation(
 {% endif %}
 }
 
+/**
+ * Restricts one fine subface flux onto the coarse face and adds it to the
+ * fluxes already accumulated there. The calls arrive in the order the
+ * traversal visits the hanging faces, which depends on the MPI layout, so
+ * the accumulated flux can differ in the last bit between layouts. The sum
+ * only becomes independent of the layout with one slot per subface, added
+ * up in a fixed order.
+ */
 void {{FULL_QUALIFIED_NAMESPACE}}::faceFluxRestriction(
   {{CORRECTOR_COMPUTATION_PRECISION}}* NOALIAS             lFhbndCoarse,
   const {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS lFhbndFine,
@@ -72,36 +80,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceFluxRestriction(
   }
   for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
     {{ m.gemm('face_F_y_add', 'tmpX', 'restrictor[subfaceIndex[1]]', 'lFhbndCoarse', 'x*'~NUMBER_OF_UNKNOWNS, '0', 'x*'~NUMBER_OF_UNKNOWNS) | indent(6) }}{##}
-  }
-{% endif %}
-
-{% if DIMENSIONS==3 %}
-  tarch::freeMemory(tmpX, tarch::MemoryLocation::Heap);
-{% endif %}
-}
-
-void {{FULL_QUALIFIED_NAMESPACE}}::faceUnknownsRestriction(
-  {{CORRECTOR_COMPUTATION_PRECISION}}* NOALIAS             lQhbndCoarse,
-  const {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS lQhbndFine,
-  const tarch::la::Vector<DIMENSIONS - 1, int>&            subfaceIndex
-) {
-{% if DIMENSIONS==3 %}
-  double* tmpX = tarch::allocateMemory<double>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DATA}}, tarch::MemoryLocation::Heap);
-{% endif %}
-
-  {{CORRECTOR_COMPUTATION_PRECISION}}** restrictor = DGMatrices<{{CORRECTOR_COMPUTATION_PRECISION}}>::fineGridProjector1d_T_weighted;
-
-  // Apply the single level restriction operator.
-  // Use the fine level unknowns as input in the first iteration.
-{% if DIMENSIONS==2 %}
-  {{ m.gemm('face_Q_x_add', 'lQhbndFine', 'restrictor[subfaceIndex[0]]', 'lQhbndCoarse', '0', '0', '0') | indent(4) }}{##}
-{% else %}
-  // lQhbnd stores NUMBER_OF_DATA values per face node, matching the projection buffer tmpX.
-  for (int y = 0; y < {{NUMBER_OF_DOF}}; y++) {
-    {{ m.gemm('face_Q_x', 'lQhbndFine', 'restrictor[subfaceIndex[0]]', 'tmpX', 'y*'~NUMBER_OF_DOF*NUMBER_OF_DATA, '0', 'y*'~NUMBER_OF_DOF*NUMBER_OF_DATA) | indent(6) }}{##}
-  }
-  for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
-    {{ m.gemm('face_Q_y_add', 'tmpX', 'restrictor[subfaceIndex[1]]', 'lQhbndCoarse', 'x*'~NUMBER_OF_DATA, '0', 'x*'~NUMBER_OF_DATA) | indent(6) }}{##}
   }
 {% endif %}
 

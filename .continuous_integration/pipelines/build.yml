@@ -4,6 +4,13 @@ Build:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} python3 -m compileall -f ./
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "mkdir build && cd build && CC=${CC} CXX=${CXX} cmake .. -GNinja ${CONFIGURATION_OPTIONS} ${EXTRA_CONFIGURATION_OPTIONS} -DCMAKE_INSTALL_PREFIX=../install"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build && ninja && ctest --output-on-failure --timeout 600 && ninja install"
+    # The test jobs build applications in Release and Debug only, so the Trace and Asserts
+    # archives never get linked and stay out of the artifact. The exported-targets file
+    # verifies that every referenced archive exists, so the check on the removed variants
+    # is downgraded to a status message; targets that are actually linked still fail loudly
+    # at link time if their archive is missing.
+    - find ./install -name "lib*Trace*.a" -delete -o -name "lib*Asserts*.a" -delete
+    - sed -i 's/message(FATAL_ERROR "The imported target/message(STATUS "The imported target/' ./install/PeanoTargets.cmake
     - echo "Build artifact size overview before upload"
     - du -sh install
     - du -sh install/* 2>/dev/null | sort -h || true

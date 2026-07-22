@@ -78,7 +78,7 @@ void compareWithADERDGSolutionAtGaussLobattoNodes(
   {{COMPUTE_PRECISION}}*                            max
 );
 
-void compareWithADERDGSolutionAtFVSubcellCenters(
+void compareWithADERDGSolutionAtFVSubcellCentres(
   {{FULL_QUALIFIED_SOLVER_NAME}}&                   solver,
   const {{REGULAR_SOLVER_STORAGE_PRECISION}}* const luh,
   {{COMPUTE_PRECISION}}*                            min,

@@ -8,13 +8,12 @@ namespace exahype2::fv::tests {
   class CopyPatchTest;
 } // namespace exahype2::fv::tests
 
-class exahype2::fv::tests::CopyPatchTest: public tarch::tests::TestCase {
-private:
-  void testCopyPatch();
-
+class exahype2::fv::tests::CopyPatchTest : public tarch::tests::TestCase {
 public:
   CopyPatchTest();
-  virtual ~CopyPatchTest() override = default;
 
-  virtual void run() override;
+  void run() override;
+
+private:
+  void testCopyPatch();
 };

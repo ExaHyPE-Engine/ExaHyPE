@@ -63,15 +63,15 @@ public:
   /**
    * Destructor
    */
-  virtual ~TreeTestCaseCollection();
+  ~TreeTestCaseCollection() override;
 
   /**
    * Runs all test cases assigned.
    */
-  virtual void run();
+  void run() override;
 
   /**
-   * Runs all test cases assigned.
+   * Runs all test cases assigned, prefixing each name.
    */
   virtual void run(const std::string& prefix);
 

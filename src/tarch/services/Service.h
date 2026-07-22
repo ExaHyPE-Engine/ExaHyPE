@@ -9,120 +9,80 @@ namespace tarch {
     class Service;
     class ServiceFactory;
     class ServiceRepository;
-  }
-}
+  } // namespace services
+} // namespace tarch
 
 /**
- * Service Interface
+ * Service interface
  *
- * A service is a singleton running the background which is available always.
- * If it is shut down, all calls to the service becomes nop, i.e. it is a
- * robust thing. On a parallel machine, services are also do exist only once,
- * i.e. they are global singletons. Therefore, you shall never access a service
- * directly, but always via a proxy/accessor. This proxy either invokes the
- * service directly (if the services are on the local node) or it creates an
- * MPI call to the real service. Consequently, services have to poll the MPI
- * queue regularly. To enable them to do so, all services register at the
- * service repository, and this service repository has a poll operation.
- * Services also have to be protected by semaphores in a multicore environment.
+ * A service is a singleton which runs in the background and is available at
+ * all times. Once it is shut down, every call to it becomes a no-op, so a
+ * service is robust against a premature shutdown. On a parallel machine, a
+ * service exists exactly once, i.e. it is a global singleton. Never access a
+ * service directly therefore, but always through a proxy. The proxy either
+ * invokes the service locally or issues an MPI call to the rank which hosts
+ * it. A service consequently has to poll the MPI queue regularly: all
+ * services register at the service repository, and the repository offers a
+ * poll operation. In a multicore environment, a service also has to protect
+ * its state with semaphores.
  *
- * If you wanna write a service yourself, you have to do two things:
+ * To write a service, do two things:
  * - Implement this interface.
- * - Register your object through tarch::services::ServiceRepository::getInstance().addService().
+ * - Register the object through tarch::services::ServiceRepository::getInstance().addService().
  *
- * I usually make services singletons. I can then do the registration in the
- * constructor.
+ * ## How to implement a singleton
  *
- * <h2> How to implement a singleton </h2>
+ * A singleton which lives in one of Peano's static libraries can end up
+ * being constructed more than once if getInstance() creates it as a
+ * function-local static. A singleton is hence a private static class
+ * attribute, and getInstance() hands out this attribute.
  *
- * Historically, I preferred the make singletons classes with private
- * constructor that offer a getInstance() routine. The latter is implemented as
- * follows:
+ * The order in which the linker creates these static attributes is not
+ * defined. If a service registered itself within its constructor, it could
+ * add its pointer to the repository before the repository's own constructor
+ * runs, and that constructor would then wipe the entry. Services are
+ * therefore initialised explicitly, once the repository exists:
  *
- * <pre>
-MyClass MyClass::getInstance() {
-  static MyClass singleton;
-  return singleton;
-}
-   </pre>
+ * (1) A singleton has a private constructor.
+ * (2) A singleton is a class attribute.
+ * (3) A singleton's constructor does nothing.
+ * (4) A singleton offers an init() operation, plus a shutdown() if required.
  *
- * But this pattern breaks down with Peano's static libraries. At least one
- * some systems, I've observed that singletons still are created multiple
- * times, i.e. not only when we first call getInstance(). The canonical
- * solution to this dilemma is to make the singleton a static (class)
- * attribute which is private and to make getInstance() hand out this static
- * attribute.
- *
- * While this solves the problem of multiple instantiation, it does not solve
- * another problem: If the constructor of a singleton registers the singleton,
- * it could happen that the linker creates the singletons in the wrong order.
- * There's no way to ensure that the tarch's service is created first. So what
- * can happen is that the memory for the ServiceRepository (where all the
- * services register) is allocated. Then, an arbitrary service is created and
- * registers, i.e. it adds is pointer to the repository. Later, the
- * repository's constructor is invoked and effectively overwrites the registered
- * service. It is hence important that we create the repository first. The only
- * way to ensure this, is to init all services manually.
- *
- * So here's the takeaway:
- *
- * (1) Singletons are always realised via a private constructor.
- * (2) Singletons are always realised via a class attribute.
- * (3) Singletons don't do anything in their constructor. They are not allowed
- *     to.
- * (4) Any singleton has an init() operation, as well as a shutdown
- *     (if required).
- *
- * To enforce this behaviour with init() and shutdown(), I make shutdown an
- * abstract functions. You therefore have to implement it. I refrained from
- * doing the same with init(), as services might want init() to have
- * service-specific arguments.
- *
+ * shutdown() is abstract to enforce that every service provides it. init() is
+ * not, as a service may want service-specific arguments there.
  *
  * @author Tobias Weinzierl
  */
 class tarch::services::Service {
-  public:
-    friend class ServiceRepository;
+public:
+  friend class ServiceRepository;
 
-    virtual ~Service() {};
+  virtual ~Service() {};
 
-    /**
-     * Receive the dangling messages from the MPI subsystem
-     *
-     * This, sometimes, is an absolutely necessary operation to ensure that some
-     * MPI queues are freed again and MPI can continue to process. If you have too
-     * full buffers - in particular full of unexpected messages - you run into a
-     * situation where no eager or unexpected receiving can be done at all.
-     *
-     * If you invoke this routine, it is absolutely essential that you always do it
-     * via the services. The reasons are discussed in
-     * ServiceRepository::receiveDanglingMessages().
-     *
-     * @see ServiceRepository::receiveDanglingMessages()
-     */
-    virtual void receiveDanglingMessages() = 0;
+  /**
+   * Receive the dangling messages from the MPI subsystem
+   *
+   * Draining the MPI queues regularly keeps MPI progressing: once the buffers
+   * are full of unexpected messages, no eager or unexpected receive succeeds
+   * anymore. Always trigger the polling through the repository, never on a
+   * service directly.
+   *
+   * @see ServiceRepository::receiveDanglingMessages()
+   */
+  virtual void receiveDanglingMessages() = 0;
 
-  protected:
-    /**
-     * Recursive semaphores
-     *
-     * We have ensure that receiveDanglingMessages is not ran in parallel with
-     * other operations on one rank. This holds for example for MPI updates or
-     * updates of lists of MPIRequests. Yet, there can be cases where
-     * receiveDanglingMessages() in turn invokes receiveDanglingMessages()
-     * recursively. With a standard semaphore, we would now run into a deadlock
-     * as default semaphores are not recursion-safe. Therefore, I provide this
-     * recursive semaphore. The ServiceRepository does already lock
-     * it, so receiveDanglingMessages() invoked through the factory should be
-     * fine. You might however want to lock it yourself, too.
-     *
-     * I had severe issues when I outsourced the tarch into a library. The
-     * static initialisation of the recursive semaphores then led to seg faults
-     * from time to time. Therefore, I decided to make this semaphore a pointer.
-     * It is initialised lazily tarch::services::ServiceRepository::receiveDanglingMessages().
-     */
-    tarch::multicore::RecursiveSemaphore  _receiveDanglingMessagesSemaphore;
+protected:
+  /**
+   * Recursive semaphore
+   *
+   * receiveDanglingMessages() must not run in parallel with other operations
+   * on a rank, such as MPI updates or updates of lists of MPI requests. As
+   * receiveDanglingMessages() may in turn invoke receiveDanglingMessages()
+   * recursively, a plain semaphore would deadlock, so the lock is recursive.
+   * The ServiceRepository already holds this lock while it polls, but a
+   * service may lock it in addition.
+   */
+  tarch::multicore::RecursiveSemaphore _receiveDanglingMessagesSemaphore;
 
-    virtual void shutdown() = 0;
+  virtual void shutdown() = 0;
 };

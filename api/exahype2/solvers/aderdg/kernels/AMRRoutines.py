@@ -30,7 +30,7 @@ class AMRRoutines(object):
         solver._user_action_set_includes += f'#include "{output_path}/AMRRoutines.h"\n'
 
     def _build_gemms(self, namespace, output, template_prefix, output_path):
-        # Define a sequence of GEMMS
+        # Define a sequence of GEMMs
         self.d["GEMMS"] = {}
         nDim = self.d["DIMENSIONS"]
         nDof = self.d["NUMBER_OF_DOF"]
@@ -39,10 +39,11 @@ class AMRRoutines(object):
         nUnknowns = self.d["NUMBER_OF_UNKNOWNS"]
         nData = self.d["NUMBER_OF_DATA"]
 
-        # Always overwrite input (no need to set to 0), except if add.
-        # The face projection GEMMs use unpadded NUMBER_OF_DATA/NUMBER_OF_UNKNOWNS
-        # row strides for A and C, so both are marked Unaligned (alignment_A/C = 0).
-        # These flags only matter in LIBXSMM builds; the generic fallback ignores them.
+        # beta = 0 resets the output C before accumulating, so only the _add variants keep
+        # what is already there. The face projection GEMMs use unpadded
+        # NUMBER_OF_DATA/NUMBER_OF_UNKNOWNS row strides for A and C, so both are marked
+        # Unaligned (alignment_A/C = 0). The generic fallback reads those flags; a LIBXSMM
+        # build carries the alignment in its generated routine.
         self.d["GEMMS"]["face_Q_x"] = Gemms(
             nData,
             nDof,
@@ -71,22 +72,6 @@ class AMRRoutines(object):
             0,
             0,
             "face_F_x",
-            "nopf",
-            "gemm",
-            self.d["SOLUTION_STORAGE_PRECISION"],
-        )
-        self.d["GEMMS"]["face_Q_x_add"] = Gemms(
-            nData,
-            nDof,
-            nDof,
-            nData,
-            nDofPad,
-            nData,
-            1,
-            1,
-            0,
-            0,
-            "face_Q_x_add",
             "nopf",
             "gemm",
             self.d["SOLUTION_STORAGE_PRECISION"],
@@ -136,22 +121,6 @@ class AMRRoutines(object):
                 0,
                 0,
                 "face_F_y",
-                "nopf",
-                "gemm",
-                self.d["SOLUTION_STORAGE_PRECISION"],
-            )
-            self.d["GEMMS"]["face_Q_y_add"] = Gemms(
-                nData,
-                nDof,
-                nDof,
-                nData * nDof,
-                nDofPad,
-                nData * nDof,
-                1,
-                1,
-                0,
-                0,
-                "face_Q_y_add",
                 "nopf",
                 "gemm",
                 self.d["SOLUTION_STORAGE_PRECISION"],

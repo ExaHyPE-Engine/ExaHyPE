@@ -60,27 +60,27 @@ namespace {
     return v;
   }
 
-  void setAllAdj(peano4::grid::GridVertex& v, int r) {
+  void setAllAdjacentRanks(peano4::grid::GridVertex& vertex, int rank) {
     for (int i = 0; i < TWO_POWER_D; ++i) {
-      v.adjacentRanks[i]         = r;
-      v.backupOfAdjacentRanks[i] = r;
+      vertex.adjacentRanks[i]         = rank;
+      vertex.backupOfAdjacentRanks[i] = rank;
     }
   }
 
   void setAllVerticesLocal(peano4::grid::GridVertex vertices[TWO_POWER_D], int treeId) {
     for (int v = 0; v < TWO_POWER_D; ++v) {
       vertices[v].setState(peano4::grid::GridVertex::State::Unrefined);
-      setAllAdj(vertices[v], treeId);
+      setAllAdjacentRanks(vertices[v], treeId);
     }
   }
 
   void setFaceVerticesNonLocal(peano4::grid::GridVertex vertices[TWO_POWER_D], int faceIndex, int remoteRank) {
-    const auto& T      = peano4::grid::SpacetreeHelper::getFaceAdjTables();
-    const int   normal = faceIndex % DIMENSIONS;
+    const auto& faceTable = peano4::grid::SpacetreeHelper::getFaceAdjTables();
+    const int   normal    = faceIndex % DIMENSIONS;
     for (int k = 0; k < TWO_POWER_D / 2; ++k) {
-      const int vIdx                           = T.faceVerts[faceIndex][k];
-      const int i0                             = T.adjIdx0[normal][vIdx];
-      const int i1                             = T.adjIdx1[normal][vIdx];
+      const int vIdx                           = faceTable.faceVerts[faceIndex][k];
+      const int i0                             = faceTable.adjIdx0[normal][vIdx];
+      const int i1                             = faceTable.adjIdx1[normal][vIdx];
       vertices[vIdx].adjacentRanks[i0]         = remoteRank;
       vertices[vIdx].adjacentRanks[i1]         = remoteRank;
       vertices[vIdx].backupOfAdjacentRanks[i0] = remoteRank;
@@ -173,7 +173,7 @@ namespace {
   }
 } // namespace
 
-peano4::grid::tests::GridTraversalEventGeneratorTest::GridTraversalEventGeneratorTest():
+peano4::grid::tests::GridTraversalEventGeneratorTest::GridTraversalEventGeneratorTest() :
   TestCase("peano4::grid::tests::GridTraversalEventGeneratorTest") {}
 
 void peano4::grid::tests::GridTraversalEventGeneratorTest::run() {
@@ -184,6 +184,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::run() {
   testMethod(testCreateEnterNodeTraversalEvent_VertexStateSpecialCases);
   testMethod(testCreateEnterNodeTraversalEvent_CellNoDataAndHasSplitOverride);
   testMethod(testCreateLeaveNodeTraversalEvent_DeleteOnInOut);
+  testMethod(testCreateLeaveNodeTraversalEvent_RecomputesHangingFacesAfterDFS);
   testMethod(testCreateLeaveNodeTraversalEvent_TemporaryStacksDontYieldNoData);
 }
 
@@ -265,8 +266,9 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::
   setAllVerticesLocal(coarseGridVertices, treeId);
   setAllVerticesLocal(fineGridVertices, treeId);
 
-  // Craft a vertex where current adjacency says "non-local", while backup adjacency
-  // is mixed local/remote. This used to trigger the debug assertion in fast-path mode.
+  // Craft a vertex whose current adjacency is non-local while its backup adjacency
+  // mixes local and remote ranks. This exercises the fast-path invariant that every
+  // reported boundary vertex is local.
   fineGridVertices[0].setState(GridVertex::State::Unrefined);
   for (int j = 0; j < TWO_POWER_D; ++j) {
     fineGridVertices[0].adjacentRanks[j]         = 2;
@@ -357,7 +359,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::
   validate(StackTopology::isInOutStack(chosenVertexStack));
 
   // Make the chosen vertex non-local.
-  setAllAdj(fineGridVertices[chosenVertexPos], remoteRank);
+  setAllAdjacentRanks(fineGridVertices[chosenVertexPos], remoteRank);
 
   // Choose a face along the curve whose read stack is an in/out stack.
   int chosenFaceI     = -1;
@@ -493,7 +495,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::
   validate(chosenFaceI >= 0);
 
   // Make chosen vertex and face non-local.
-  setAllAdj(fineGridVertices[chosenVertexPos], remoteRank);
+  setAllAdjacentRanks(fineGridVertices[chosenVertexPos], remoteRank);
   setFaceVerticesNonLocal(fineGridVertices, chosenFaceIndex, remoteRank);
 
   const SplitSpecification      splitTriggered;
@@ -678,7 +680,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::
 
   // Make the whole cell non-local (for isSpacetreeNodeLocal with splitting/joining treated as local).
   for (int v = 0; v < TWO_POWER_D; ++v) {
-    setAllAdj(fineGridVertices[v], remoteRank);
+    setAllAdjacentRanks(fineGridVertices[v], remoteRank);
   }
 
   VertexType vertexTypes[TWO_POWER_D];
@@ -834,7 +836,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateLeaveNodeTr
     setAllVerticesLocal(coarseGridVertices, treeId);
     setAllVerticesLocal(fineGridVertices, treeId);
 
-    setAllAdj(fineGridVertices[chosenVertexPos], remoteRank);
+    setAllAdjacentRanks(fineGridVertices[chosenVertexPos], remoteRank);
     fineGridVertices[chosenVertexPos].setState(GridVertex::State::Unrefined);
 
     const GridTraversalEvent enter = callCreateEnterNodeTraversalEvent(
@@ -880,7 +882,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateLeaveNodeTr
     setAllVerticesLocal(coarseGridVertices, treeId);
     setAllVerticesLocal(fineGridVertices, treeId);
 
-    setAllAdj(fineGridVertices[chosenVertexPos], remoteRank);
+    setAllAdjacentRanks(fineGridVertices[chosenVertexPos], remoteRank);
     fineGridVertices[chosenVertexPos].setState(GridVertex::State::Delete);
 
     const GridTraversalEvent enter = callCreateEnterNodeTraversalEvent(
@@ -981,6 +983,95 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateLeaveNodeTr
 }
 
 void peano4::grid::tests::GridTraversalEventGeneratorTest::
+  testCreateLeaveNodeTraversalEvent_RecomputesHangingFacesAfterDFS() {
+  const int treeId = 1;
+
+  GridTraversalEventGenerator generator(treeId);
+
+  GridVertex coarseGridVertices[TWO_POWER_D];
+  GridVertex fineGridVertices[TWO_POWER_D];
+  setAllVerticesLocal(coarseGridVertices, treeId);
+  setAllVerticesLocal(fineGridVertices, treeId);
+
+  const AutomatonState state  = makeSimpleState();
+  const auto           relPos = makeZeroRelPos();
+  const auto&          lut    = createVertexLookupTable(state, relPos);
+
+  const int chosenFaceIndex = 0;
+  int       chosenFaceI     = -1;
+  for (int i = 0; i < TWO_TIMES_D; ++i) {
+    if (lut.faceIndex[i] == chosenFaceIndex) {
+      chosenFaceI = i;
+      break;
+    }
+  }
+  validate(chosenFaceI >= 0);
+
+  VertexType vertexTypes[TWO_POWER_D];
+  for (int i = 0; i < TWO_POWER_D; ++i) {
+    vertexTypes[i] = VertexType::Persistent;
+  }
+
+  const auto& faceTable = SpacetreeHelper::getFaceAdjTables();
+  for (int k = 0; k < TWO_POWER_D / 2; ++k) {
+    const int v    = faceTable.faceVerts[chosenFaceIndex][k];
+    vertexTypes[v] = VertexType::Hanging;
+    fineGridVertices[v].setState(GridVertex::State::HangingVertex);
+  }
+
+  const SplitSpecification      splitTriggered;
+  const peano4::grid::TreeIdSet splitting;
+  const peano4::grid::TreeIdSet joinTriggered;
+  const peano4::grid::TreeIdSet joining;
+  const peano4::grid::TreeIdSet hasSplit;
+
+  const GridTraversalEvent enter = callCreateEnterNodeTraversalEvent(
+    generator,
+    coarseGridVertices,
+    fineGridVertices,
+    vertexTypes,
+    state,
+    splitTriggered,
+    splitting,
+    joinTriggered,
+    joining,
+    hasSplit,
+    relPos,
+    true,
+    true
+  );
+  validate(enter.getIsFaceHanging(chosenFaceIndex));
+
+  // The vertex types are precomputed before the descent. Flipping the vertex states behind
+  // them mimics AMR effects within the depth-first sweep: on leave, the face is no longer
+  // hanging even though the precomputed types still say it is.
+  for (int k = 0; k < TWO_POWER_D / 2; ++k) {
+    const int v = faceTable.faceVerts[chosenFaceIndex][k];
+    fineGridVertices[v].setState(GridVertex::State::Unrefined);
+  }
+
+  const GridTraversalEvent leave = callCreateLeaveNodeTraversalEvent(
+    generator,
+    enter,
+    coarseGridVertices,
+    fineGridVertices,
+    vertexTypes,
+    state,
+    splitTriggered,
+    splitting,
+    joinTriggered,
+    joining,
+    hasSplit,
+    relPos,
+    true,
+    true
+  );
+
+  validate(leave.getIsFaceHanging(chosenFaceIndex));
+  validateEquals(leave.getFaceDataTo(chosenFaceI), GridTraversalObserver::CreateOrDestroyGridEntity);
+}
+
+void peano4::grid::tests::GridTraversalEventGeneratorTest::
   testCreateLeaveNodeTraversalEvent_TemporaryStacksDontYieldNoData() {
   const int treeId     = 1;
   const int remoteRank = 2;
@@ -1043,7 +1134,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::
   validate(chosenFaceI >= 0);
 
   // Make vertex and face non-local.
-  setAllAdj(fineGridVertices[chosenVertexPos], remoteRank);
+  setAllAdjacentRanks(fineGridVertices[chosenVertexPos], remoteRank);
   setFaceVerticesNonLocal(fineGridVertices, chosenFaceIndex, remoteRank);
 
   // Vertex state must be one of the ones that writes to stackNumber (not Delete/Hanging).

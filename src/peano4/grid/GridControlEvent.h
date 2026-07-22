@@ -24,15 +24,17 @@ public:
   INLINE_METHOD RefinementControl getRefinementControl() const noexcept {
     return static_cast<RefinementControl>(refinementControl);
   }
-  INLINE_METHOD void setRefinementControl(RefinementControl rc) noexcept {
-    refinementControl = static_cast<std::uint8_t>(rc);
+  INLINE_METHOD void setRefinementControl(RefinementControl value) noexcept {
+    refinementControl = static_cast<std::uint8_t>(value);
   }
 
   std::string toString() const;
 
   bool operator<(const GridControlEvent& other) const noexcept;
+  bool operator==(const GridControlEvent& other) const noexcept;
 
   static void merge(std::vector<GridControlEvent>& events);
+  static void mergeCellAlignedEvents(std::vector<GridControlEvent>& events);
 };
 
 std::ostream& operator<<(std::ostream& os, const peano4::grid::GridControlEvent& event);

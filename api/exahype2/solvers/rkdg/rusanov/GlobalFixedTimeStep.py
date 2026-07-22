@@ -24,13 +24,12 @@ from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFac
 
 class GlobalFixedTimeStep(SeparateSweeps):
     """!
-    
-    RKDG solver with Rusanov Riemann solver and global fixed time step
-    
-    Likely the simplest version of the RKDG solver with Rusanov. We "inherit"
-    basically all parameters from the superclass. The major difference is the 
-    
-    
+
+    RKDG solver with Rusanov Riemann solver and global fixed time step.
+
+    We take over all parameters from the superclass. The major difference is
+    that the time step size is prescribed rather than derived from an
+    eigenvalue, so the solver needs no admissible-step reduction.
     """
     def __init__(
         self,
@@ -51,12 +50,11 @@ class GlobalFixedTimeStep(SeparateSweeps):
         pde_terms_without_state=False,
     ):
         """!
-        
-        Construct RKDG solver with fixed time step 
-        
-        For Rusanov, we really only need the solution along the face, and so we
-        ar fine with one quantity per PDE to be projected.
-        
+
+        Construct RKDG solver with fixed time step.
+
+        For Rusanov, we only need the solution along the face, so one quantity
+        per PDE has to be projected.
         """
         super(GlobalFixedTimeStep, self).__init__(
             name,
@@ -71,11 +69,10 @@ class GlobalFixedTimeStep(SeparateSweeps):
         self._kernel_namespace                                = "rusanov"
         self._normalised_time_step_size                       = time_step_size
 
-        self._kernel_namespace = "rusanov"
         self._volumetric_compute_kernel_call                  = create_volumetric_solver_call(self._basis, SolverVariant.WithVirtualFunctions)
         self._volumetric_compute_kernel_call_stateless        = create_volumetric_solver_call(self._basis, SolverVariant.Stateless)
         self._Riemann_compute_kernel_call                     = create_Riemann_solver_call(self._basis, FaceProjections.Solution)
-        # TODO: self._Riemann_compute_kernel_call_stateless =
+        # TODO: A stateless variant of the Riemann compute kernel call is missing.
         self._add_solver_contributions_call                   = create_add_solver_contributions_call(self._basis)
         self._multiply_with_inverted_mass_matrix_call         = create_multiply_with_inverted_mass_matrix_call(self._basis)
 
@@ -91,7 +88,6 @@ class GlobalFixedTimeStep(SeparateSweeps):
             source_term=source_term,
             point_source=point_source,
         )
-
 
     def set_implementation(
         self,
@@ -110,17 +106,14 @@ class GlobalFixedTimeStep(SeparateSweeps):
             boundary_conditions=boundary_conditions,
             refinement_criterion=refinement_criterion,
             initial_conditions=initial_conditions,
-            additional_action_set_includes="",
-            additional_user_includes="",
+            additional_action_set_includes=additional_action_set_includes,
+            additional_user_includes=additional_user_includes,
             flux=flux,
             ncp=ncp,
             eigenvalues=eigenvalues,
             source_term=source_term,
             point_source=point_source,
         )
-
-        # self._source_term_call    = create_source_term_kernel(self._source_term_implementation)
-        # self._Riemann_solver_call = create_compute_Riemann_kernel_for_Rusanov(self._flux_implementation, self._ncp_implementation)
 
         solver_code_snippets = FixedTimeSteppingCodeSnippets(
             self._normalised_time_step_size
@@ -172,7 +165,6 @@ class GlobalFixedTimeStep(SeparateSweeps):
         self._start_time_step_implementation     = solver_code_snippets.create_start_time_step_implementation()
         self._finish_time_step_implementation    = solver_code_snippets.create_finish_time_step_implementation()
         self._constructor_implementation         = solver_code_snippets.create_abstract_solver_constructor_statements()
-
 
     @property
     def user_action_set_includes(self):

@@ -10,6 +10,7 @@
 #include "runner/ReportBox.h"
 #include "runner/RuntimeParameters.h"
 #include "runner/TextLayout.h"
+#include "runner/phases/DynamicAMR.h"
 #include "tarch/NonCriticalAssertions.h"
 #include "tarch/instrumentation/Error.h"
 #include "tarch/instrumentation/Warning.h"
@@ -26,7 +27,7 @@ namespace {
     return width;
   }
 
-  std::string labeledRow(const std::string& label, const std::string& value, std::size_t labelWidth) {
+  std::string labelledRow(const std::string& label, const std::string& value, std::size_t labelWidth) {
     std::ostringstream out;
     out << std::string(runner::BlockIndent, ' ') << std::left << std::setw(static_cast<int>(labelWidth)) << label
         << "  " << value;
@@ -53,10 +54,11 @@ namespace {
   }
 } // namespace
 
-runner::TimeLoop::TimeLoop(PhaseContext& context, int timeStepStep, int plotStep) :
+runner::TimeLoop::TimeLoop(PhaseContext& context, int timeStepStep, int plotStep, DynamicAMR& dynamicAMR) :
   _context(context),
   _timeStepStep(timeStepStep),
-  _plotStep(plotStep) {}
+  _plotStep(plotStep),
+  _dynamicAMR(dynamicAMR) {}
 
 std::vector<std::string> runner::TimeLoop::widthSamples() const {
   SolverList solvers;
@@ -66,31 +68,40 @@ std::vector<std::string> runner::TimeLoop::widthSamples() const {
   const auto labelWidth = labelColumnWidth(solvers);
 
   std::vector<std::string> samples;
+  if (_dynamicAMR.isEnabled()) {
+    samples = _dynamicAMR.widthSamples();
+  }
 
   // Widest Time Step form: the local-time-stepping range "min .. max" plus the terminal.
   const double       sentinel = std::numeric_limits<double>::max();
   std::ostringstream timeStep;
   timeStep << Format::wallClock(9999.99) << " · t = " << Format::scientific(sentinel) << " .. "
            << Format::scientific(sentinel) << " / " << Format::scientific(sentinel);
-  samples.push_back(labeledRow("Time Step", timeStep.str(), labelWidth));
+  samples.push_back(labelledRow("Time Step", timeStep.str(), labelWidth));
 
   for (const auto& [name, statistics] : solvers) {
-    samples.push_back(labeledRow(name, renderStatistics(statistics), labelWidth));
+    samples.push_back(labelledRow(name, renderStatistics(statistics), labelWidth));
   }
 
   samples.push_back(
-    labeledRow("Performance", Format::rate(999.9e9, "cell") + " · " + Format::rate(999.9e9, "dof"), labelWidth)
+    labelledRow("Performance", Format::rate(999.9e9, "cell") + " · " + Format::rate(999.9e9, "dof"), labelWidth)
   );
 
   // Progress row: full percent and the widest ETA the formatter emits.
-  samples.push_back(labeledRow("Progress", "100 %   ·   ETA " + Format::duration(100.0 * 24.0 * 3600.0), labelWidth));
+  samples.push_back(labelledRow("Progress", "100 %   ·   ETA " + Format::duration(100.0 * 24.0 * 3600.0), labelWidth));
 
   return samples;
 }
 
 std::string runner::TimeLoop::formatETA(double fraction) const {
-  const auto elapsed =
-    _context.measurements.timeStep.getAccumulatedValue() + _context.measurements.plot.getAccumulatedValue();
+  // The extrapolation covers the recurring work per unit of simulated time - time
+  // steps, plots and the dynamic AMR drains between them; grid construction and
+  // initialisation are one-off costs and stay outside. Both corrections serve that: the
+  // time-step share comes from _timeSteppingSeconds rather than the throughput measurement,
+  // which drops the warm-up step, and the drain share is measured from the loop's own start,
+  // because initialisation drains through the same phase into the same measurement.
+  const auto drainSeconds = _context.measurements.dynamicAMR.getAccumulatedValue() - _dynamicAMRSecondsBeforeLoop;
+  const auto elapsed      = _timeSteppingSeconds + _context.measurements.plot.getAccumulatedValue() + drainSeconds;
   if (elapsed <= 0.0 or fraction <= 0.0 or fraction >= 1.0) {
     return "";
   }
@@ -110,6 +121,7 @@ void runner::TimeLoop::logTimeStep(
   int           maxSteps
 ) {
   auto& box = _context.box;
+  _dynamicAMR.reportPendingSweeps();
   box.rule();
 
   const bool timeBounded = terminalTime > 0.0 and terminalTime < std::numeric_limits<double>::max() / 10.0;
@@ -137,10 +149,10 @@ void runner::TimeLoop::logTimeStep(
     timeStep << " .. " << Format::scientific(maxTimeStamp);
   }
   timeStep << " / " << Format::scientific(terminalTime);
-  box.line(labeledRow("Time Step", timeStep.str(), labelWidth));
+  box.line(labelledRow("Time Step", timeStep.str(), labelWidth));
 
   for (const auto& [name, statistics] : solvers) {
-    box.line(labeledRow(name, renderStatistics(statistics), labelWidth));
+    box.line(labelledRow(name, renderStatistics(statistics), labelWidth));
   }
 
   // Grid-wide throughput; skipped on the warm-up step, whose wall time is allocation-dominated.
@@ -155,7 +167,7 @@ void runner::TimeLoop::logTimeStep(
                        "dof"
                      );
     }
-    box.line(labeledRow("Performance", performance.str(), labelWidth));
+    box.line(labelledRow("Performance", performance.str(), labelWidth));
   }
 
   if (fraction >= 0.0) {
@@ -165,7 +177,7 @@ void runner::TimeLoop::logTimeStep(
     if (not eta.empty()) {
       progress << "   ·   ETA " << eta;
     }
-    box.line(labeledRow("Progress", progress.str(), labelWidth));
+    box.line(labelledRow("Progress", progress.str(), labelWidth));
   }
 
   box.rule();
@@ -196,6 +208,8 @@ void runner::TimeLoop::run() {
   auto&       measurements = _context.measurements;
   auto&       engine       = _context.engine;
 
+  _dynamicAMRSecondsBeforeLoop = measurements.dynamicAMR.getAccumulatedValue();
+
   const auto    firstPlotTimeStamp = parameters.getFirstPlotTimeStamp();
   double        nextMinPlot        = firstPlotTimeStamp;
   double        nextMaxPlot        = firstPlotTimeStamp;
@@ -215,13 +229,22 @@ void runner::TimeLoop::run() {
   enum class Action { TimeStep, Plot, Stop };
 
   while (true) {
+    // A completed time step may have committed refine/coarsen events. Realise them on the
+    // dedicated DynamicAMR observer before the next plot or time step, so both always run
+    // on a settled topology. A run that is terminating on a noncritical assertion skips
+    // the regrid and dumps its final state on the grid it has.
+    if (_dynamicAMR.isEnabled() and _dynamicAMR.hasPendingMeshUpdates()
+        and not tarch::hasNonCriticalAssertionBeenViolated()) {
+      _dynamicAMR.run();
+    }
+
     const double minTerminal  = parameters.getMinTerminalTime();
     const double maxTerminal  = parameters.getMaxTerminalTime();
     const double plotEnd      = maxTerminal < std::numeric_limits<double>::max() / 10.0 ? maxTerminal : minTerminal;
     const int    snapshots    = parameters.getNumberOfSnapshots();
     const double snapInterval = snapshots <= 0 ? 0.0 : plotEnd / snapshots;
-    // A run bounded by a fixed number of time steps ends at that step budget, not at the terminal
-    // time, so the snapshots spread over the steps instead of the time axis.
+    // A run bounded by a fixed number of time steps ends at that step budget, so its snapshots
+    // spread over the steps.
     const double stepPlotInterval =
       (stepLimited and snapshots > 0) ? static_cast<double>(maxTimeSteps) / snapshots : 0.0;
     const double minStamp             = repositories.getMinTimeStamp();
@@ -252,8 +275,16 @@ void runner::TimeLoop::run() {
       }
       justWroteSnapshot = true;
       action            = Action::Plot;
-    } else if (not stepLimited and snapInterval > 0.0 and keepTimeStepping
+    } else if (not stepLimited and snapInterval > 0.0 and keepTimeStepping and completedPlots < snapshots - 1
                and (minStamp >= nextMinPlot or maxStamp >= nextMaxPlot) and repositories.mayPlot()) {
+      // The final-state dump at termination completes the numbered snapshot count, so the
+      // interval trigger stops one short. Solvers advancing at different rates spread the
+      // stamps: minStamp belongs to the slowest solver, maxStamp to the fastest, and with
+      // subcycling or local time stepping a plot target can sit between the two for many
+      // sweeps. Without the bound the fastest stamp crosses surplus targets before the
+      // slowest one ends the run. The snapshot spacing follows the fastest solver; testing
+      // only the slowest stamp would space the snapshots evenly in terminal time, at the
+      // price of plotting nothing until the slowest solver reaches each target.
       nextMinPlot += snapInterval;
       nextMaxPlot += snapInterval;
       if (nextMinPlot < minStamp) {
@@ -296,6 +327,8 @@ void runner::TimeLoop::run() {
           completedTimeSteps,
           maxTimeSteps
         );
+      } else {
+        _dynamicAMR.reportPendingSweeps();
       }
       break;
     }
@@ -327,7 +360,8 @@ void runner::TimeLoop::run() {
     currentStepElapsed += dt;
     timeStepInFlight = not repositories.mayPlot();
     if (repositories.mayPlot()) {
-      if (completedTimeSteps > 0) { // skip the first (warm-up) step for throughput
+      _timeSteppingSeconds += currentStepElapsed;
+      if (completedTimeSteps > 0) { // Skip the first (warm-up) step for throughput.
         measurements.timeStep.setValue(currentStepElapsed);
       }
       lastStepElapsed    = currentStepElapsed;

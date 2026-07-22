@@ -33,7 +33,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterNode(const ::peano4::grid::GridTraversal
     const auto isHanging         = vertexMarker.isHanging();
     const auto isInOut           = ::peano4::grid::StackTopology::isInOutStack(inVertexStack);
 
-    if (isCreateOrDestroy) {
+    if (isCreateOrDestroy and not isHanging) {
 {%- for action_set in ACTIVE_ACTION_SETS %}
       {{action_set.name}}.createVertex(vertexMarker,
 {%- for vertex in VERTICES %} fineGrid{{ vertex.logical_type_name }}(pick), {%- endfor %}
@@ -79,7 +79,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterNode(const ::peano4::grid::GridTraversal
     const auto isHanging         = faceMarker.isHanging();
     const auto isInOut           = ::peano4::grid::StackTopology::isInOutStack(inFaceStack);
 
-    if (isCreateOrDestroy) {
+    if (isCreateOrDestroy and not isHanging) {
 {%- for action_set in ACTIVE_ACTION_SETS %}
       {{action_set.name}}.createFace(faceMarker,
 {%- for vertex in VERTICES %} fineGrid{{ vertex.logical_type_name }}, {%- endfor %}

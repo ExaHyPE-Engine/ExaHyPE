@@ -63,7 +63,7 @@ std::uint64_t tarch::getTotalMemoryInBytes() {
 
   // Get the physical memory size
   length = sizeof(int64_t);
-  sysctl(mib, 2, &physical_memory, &length, NULL, 0);
+  sysctl(mib, 2, &physical_memory, &length, nullptr, 0);
   return static_cast<std::uint64_t>(physical_memory);
 }
 
@@ -97,19 +97,19 @@ double tarch::getFreeMemory(const MemoryUsageFormat format) {
 std::uint64_t tarch::getMemoryUsageInBytes() {
 #if defined(COMPILER_HAS_PROC_STAT)
   char  work[4096];
-  FILE* f   = NULL;
-  char* pCh = NULL;
+  FILE* f   = nullptr;
+  char* pCh = nullptr;
 
   pid_t pid = getpid();
 
   sprintf(work, "/proc/%d/stat", (int)pid);
   f = fopen(work, "r");
 
-  if (f == NULL) {
+  if (f == nullptr) {
     logError("Can't open file " << work);
     return (0);
   }
-  if (fgets(work, sizeof(work), f) == NULL) {
+  if (fgets(work, sizeof(work), f) == nullptr) {
     logError("Error while reading from file");
   }
   fclose(f);
@@ -117,15 +117,15 @@ std::uint64_t tarch::getMemoryUsageInBytes() {
   // Field 24 of /proc/<pid>/stat is the resident set size in pages (field 23 is the virtual size).
   // Field 2 (comm) is parenthesised and may itself contain spaces, so start parsing after its closing ')'.
   char* afterComm = strrchr(work, ')');
-  if (afterComm == NULL) {
+  if (afterComm == nullptr) {
     logError("Unexpected format in " << work);
     return 0;
   }
   pCh = strtok(afterComm + 1, " "); // field 3 (state)
-  for (int i = 3; i < 24 and pCh != NULL; i++) {
-    pCh = strtok(NULL, " ");
+  for (int i = 3; i < 24 and pCh != nullptr; i++) {
+    pCh = strtok(nullptr, " ");
   }
-  if (pCh == NULL) {
+  if (pCh == nullptr) {
     logError("Could not read resident set size from /proc stat");
     return 0;
   }

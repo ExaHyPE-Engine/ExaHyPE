@@ -37,7 +37,7 @@ class SolverDeclarations:
     {% if REFINEMENT_CRITERION_IMPLEMENTATION!="<user-defined>" and REFINEMENT_CRITERION_IMPLEMENTATION!="<none>" %}
     static INLINE_METHOD GPU_CALLABLE_METHOD
     ::exahype2::RefinementCommand refinementCriterion(
-      [[maybe_unused]] const {{STORAGE_PRECISION}}* const NOALIAS   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      [[maybe_unused]] const {{STORAGE_PRECISION}}* const NOALIAS   Q, // Q[patch-size * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})]
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
       [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
       [[maybe_unused]] const double                                 t
@@ -211,7 +211,7 @@ class SolverDeclarations:
 
     {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" and REFINEMENT_CRITERION_IMPLEMENTATION!="<none>" %}
     ::exahype2::RefinementCommand refinementCriterion(
-      const {{COMPUTE_PRECISION}}* const NOALIAS                    Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{COMPUTE_PRECISION}}* const NOALIAS                    Q, // Q[patch-size * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})]
       const tarch::la::Vector<DIMENSIONS, double>&                  x,
       const tarch::la::Vector<DIMENSIONS, double>&                  h,
       const double                                                  t

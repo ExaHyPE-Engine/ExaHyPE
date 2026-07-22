@@ -34,6 +34,21 @@ void tarch::services::ServiceRepository::shutdown() {
 
 tarch::services::ServiceRepository& tarch::services::ServiceRepository::getInstance() { return _singleton; }
 
+/**
+ * Add a new service
+ *
+ * This routine is thread-safe, i.e. it blocks other addService() calls as
+ * well as receiveDanglingMessages().
+ *
+ * ## Implementation
+ *
+ * The recursive semaphore is skipped for TBB builds. addService() runs very
+ * early in the start-up, and taking the lock at that point yields
+ * segmentation faults with TBB.
+ *
+ * @param service Pointer to service
+ * @param name    Name of service (mandatory, not empty)
+ */
 void tarch::services::ServiceRepository::addService(Service* const service, const std::string& name) {
   assertion(service != 0, name, getListOfRegisteredServices());
   assertion(!name.empty(), name, getListOfRegisteredServices());
@@ -50,6 +65,12 @@ void tarch::services::ServiceRepository::addService(Service* const service, cons
   _services.push_back(entry);
 }
 
+/**
+ * Remove a service from the registry
+ *
+ * This routine is thread-safe, i.e. it blocks out receiveDanglingMessages()
+ * and every other routine which registers or de-registers services.
+ */
 void tarch::services::ServiceRepository::removeService(Service* const service) {
   tarch::multicore::RecursiveLock lock(_receiveDanglingMessagesSemaphore);
   for (std::vector<ServiceEntry>::iterator p = _services.begin(); p != _services.end();) {
@@ -69,10 +90,40 @@ bool tarch::services::ServiceRepository::hasService(Service* service) const {
   return false;
 }
 
+/**
+ * Answer to MPI messages
+ *
+ * Tell all registered services to answer to MPI messages that are still
+ * pending in the MPI queues.
+ *
+ * ## MPI tuning
+ *
+ * The registered services are polled without an Iprobe guard in front of
+ * them. A service therefore has to cope with being asked when it has nothing
+ * to receive.
+ *
+ * ## Starvation
+ *
+ * A call to this routine signals a lack of MPI progression or poor load
+ * balancing, so it is tempting to let the calling thread process a task
+ * meanwhile. That backfires once there are many tasks: up to p-1 threads then
+ * hit the task queue, block each other, and no MPI progress is made at all,
+ * as very few tasks issue MPI calls. The routine hence confines itself to
+ * polling the services.
+ *
+ * ## Receive dangling messages in a multithreaded environment
+ *
+ * Never call receiveDanglingMessages() of a service directly, always go
+ * through the repository. Most services do not protect their
+ * receiveDanglingMessages() with an additional semaphore, so two threads may
+ * both issue an Iprobe. With one message in the queue, both probes return
+ * true and both threads issue a receive, yet only one of them succeeds. The
+ * repository blocks all other threads with a semaphore before it invokes the
+ * services, and thus avoids the race.
+ *
+ * This routine is thread-safe compared to addService() and removeService().
+ */
 void tarch::services::ServiceRepository::receiveDanglingMessages() {
-  // Don't do such a thing. See docu
-  // tarch::multicore::processPendingTasks(1);
-
   tarch::multicore::RecursiveLock lock(_receiveDanglingMessagesSemaphore, false);
   if (lock.tryLock()) {
     for (ServiceContainer::iterator p = _services.begin(); p != _services.end(); p++) {

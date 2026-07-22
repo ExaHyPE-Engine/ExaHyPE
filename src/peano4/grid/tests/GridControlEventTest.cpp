@@ -3,6 +3,7 @@
 #include "GridControlEventTest.h"
 
 #include "peano4/grid/GridControlEvent.h"
+#include "tarch/la/VectorVectorOperations.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/mpi/mpi.h"
 
@@ -10,6 +11,7 @@ peano4::grid::tests::GridControlEventTest::GridControlEventTest() :
   TestCase("peano4::grid::tests::GridControlEventTest") {}
 
 void peano4::grid::tests::GridControlEventTest::run() {
+  testMethod(testOperatorEquals);
   testMethod(testOperatorLess);
   testMethod(testSort);
   testMethod(testSortDeterministicGrid);
@@ -17,8 +19,9 @@ void peano4::grid::tests::GridControlEventTest::run() {
   testMethod(testMergeAdjacency);
   testMethod(testMergeEraseAdjacency);
   testMethod(testMergeEraseDoesNotOverMergeLShape);
-  testMethod(testMergeEraseEnablesStraddlingErase);
+  testMethod(testMergeDoesNotChangeGridDecisions);
   testMethod(testMergeEraseChainCollapsesToOne);
+  testMethod(testMergeEraseSiblingGroup);
   testMethod(testMergeKeepsRefineAndEraseSeparate);
   testMethod(testMergeRowAndBlockCollapseToOne);
   testMethod(testMergeDoesNotMergeDiagonalOrDifferentTargetH);
@@ -27,6 +30,46 @@ void peano4::grid::tests::GridControlEventTest::run() {
   testMethod(testMerge2);
   testMethod(testMerge3);
   testMethod(testMPI);
+}
+
+void peano4::grid::tests::GridControlEventTest::testOperatorEquals() {
+  GridControlEvent reference;
+  reference.setRefinementControl(GridControlEvent::RefinementControl::Refine);
+  for (int d = 0; d < DIMENSIONS; ++d) {
+    reference.offset[d]  = 0.1 * (d + 1);
+    reference.width[d]   = 0.2 * (d + 1);
+    reference.targetH[d] = 0.05 * (d + 1);
+  }
+
+  GridControlEvent other = reference;
+  validateTrue(reference == other);
+
+  other = reference;
+  other.setRefinementControl(GridControlEvent::RefinementControl::Erase);
+  validateTrue(not(reference == other));
+
+  other = reference;
+  other.offset[0] += 1e-8;
+  validateTrue(not(reference == other));
+
+  other = reference;
+  other.width[0] += 1e-8;
+  validateTrue(not(reference == other));
+
+  other = reference;
+  other.targetH[0] += 1e-8;
+  validateTrue(not(reference == other));
+
+  // Equality is exact, so it agrees with the ordering: two events that compare equal are
+  // neither less than one another, and a difference of a single bit separates them.
+  other           = reference;
+  other.offset[0] = std::nextafter(reference.offset[0], 1.0);
+  validateTrue(not(reference == other));
+  validateTrue(reference < other or other < reference);
+
+  other = reference;
+  validateTrue(reference == other);
+  validateTrue(not(reference < other) and not(other < reference));
 }
 
 void peano4::grid::tests::GridControlEventTest::testOperatorLess() {
@@ -75,6 +118,49 @@ void peano4::grid::tests::GridControlEventTest::testOperatorLess() {
     y = x;
     validateTrue(not(x < y));
     validateTrue(not(y < x));
+  }
+
+  // The order is total: refinement control leads, and width breaks the remaining ties, so
+  // geometrically distinct events never compare equal and the sorted sequence cannot depend
+  // on the order in which trees or ranks contributed the events.
+  {
+    GridControlEvent reference;
+    reference.setRefinementControl(GridControlEvent::RefinementControl::Refine);
+    for (int d = 0; d < DIMENSIONS; ++d) {
+      reference.offset[d]  = 0.0;
+      reference.width[d]   = 0.25;
+      reference.targetH[d] = 0.125;
+    }
+
+    GridControlEvent erase = reference;
+    erase.setRefinementControl(GridControlEvent::RefinementControl::Erase);
+    validateTrue(reference < erase);
+    validateTrue(not(erase < reference));
+
+    GridControlEvent wider = reference;
+    wider.width[0]         = 0.5;
+    validateTrue(reference < wider);
+    validateTrue(not(wider < reference));
+
+    GridControlEvent anisotropicA = reference;
+    GridControlEvent anisotropicB = reference;
+    anisotropicA.targetH[0]       = 0.125;
+    anisotropicA.targetH[1]       = 0.25;
+    anisotropicB.targetH[0]       = 0.25;
+    anisotropicB.targetH[1]       = 0.125;
+#if DIMENSIONS == 3
+    anisotropicA.targetH[2] = 0.5;
+    anisotropicB.targetH[2] = 0.5;
+#endif
+    validateTrue(anisotropicA < anisotropicB);
+    validateTrue(not(anisotropicB < anisotropicA));
+
+    const std::vector<GridControlEvent> events{reference, erase, wider, anisotropicA, anisotropicB};
+    for (std::size_t i = 0; i < events.size(); ++i) {
+      for (std::size_t j = 0; j < events.size(); ++j) {
+        validateTrue(i == j or not(events[i] < events[j] and events[j] < events[i]));
+      }
+    }
   }
 }
 
@@ -190,11 +276,11 @@ void peano4::grid::tests::GridControlEventTest::testMergeRowAndBlockCollapseToOn
 
   // A full solid block of unit cells collapses to a single box regardless of input order.
   std::vector<GridControlEvent> block;
-  const int                     N = 3;
-  for (int i = 0; i < N; ++i) {
-    for (int j = 0; j < N; ++j) {
+  const int                     cellsPerAxis = 3;
+  for (int i = 0; i < cellsPerAxis; ++i) {
+    for (int j = 0; j < cellsPerAxis; ++j) {
 #if DIMENSIONS == 3
-      for (int k = 0; k < N; ++k)
+      for (int k = 0; k < cellsPerAxis; ++k)
 #endif
       {
         GridControlEvent e;
@@ -216,7 +302,7 @@ void peano4::grid::tests::GridControlEventTest::testMergeRowAndBlockCollapseToOn
   const std::string blockMsg = block.empty() ? std::string{} : block[0].toString();
   validateEqualsWithParams1(block.size(), 1u, blockMsg);
   for (int d = 0; d < DIMENSIONS; ++d) {
-    validateTrue(tarch::la::equals(block[0].width[d], static_cast<double>(N)));
+    validateTrue(tarch::la::equals(block[0].width[d], static_cast<double>(cellsPerAxis)));
   }
 }
 
@@ -334,31 +420,32 @@ void peano4::grid::tests::GridControlEventTest::testMergeAdjacency() {
   std::vector<GridControlEvent> events;
 
   // Left square
-  GridControlEvent L;
-  L.setRefinementControl(GridControlEvent::RefinementControl::Refine);
+  GridControlEvent leftBox;
+  leftBox.setRefinementControl(GridControlEvent::RefinementControl::Refine);
 #if DIMENSIONS == 2
-  L.offset  = {-0.1, 0.0};
-  L.width   = {0.2, 0.2};
-  L.targetH = {0.05, 0.05};
+  leftBox.offset  = {-0.1, 0.0};
+  leftBox.width   = {0.2, 0.2};
+  leftBox.targetH = {0.05, 0.05};
 #endif
 #if DIMENSIONS == 3
-  L.offset  = {-0.1, 0.0, 0.0};
-  L.width   = {0.2, 0.2, 0.2};
-  L.targetH = {0.05, 0.05, 0.05};
+  leftBox.offset  = {-0.1, 0.0, 0.0};
+  leftBox.width   = {0.2, 0.2, 0.2};
+  leftBox.targetH = {0.05, 0.05, 0.05};
 #endif
-  events.push_back(L);
+  events.push_back(leftBox);
 
   // Right square adjacent in x
-  GridControlEvent R = L;
-  R.offset[0]        = 0.1; // Face-touch at x = 0.0
-  events.push_back(R);
+  GridControlEvent rightBox = leftBox;
+  rightBox.offset[0]        = 0.1; // Face-touch at x = 0.0
+  events.push_back(rightBox);
 
-  // A square above in y that should not merge with the combined x pair
-  // Move this in x so it sorts after R (ensures L and R become neighbours in sort).
-  GridControlEvent U = L;
-  U.offset[0]        = 0.2;
-  U.offset[1]        = 0.2 + 0.01;
-  events.push_back(U);
+  // A square above in y that should not merge with the combined x pair.
+  // Move this in x so it sorts after the right box, which makes the left and
+  // right box neighbours in the sorted sequence.
+  GridControlEvent upperBox = leftBox;
+  upperBox.offset[0]        = 0.2;
+  upperBox.offset[1]        = 0.2 + 0.01;
+  events.push_back(upperBox);
 
   GridControlEvent::merge(events);
 
@@ -390,25 +477,25 @@ void peano4::grid::tests::GridControlEventTest::testMergeAdjacency() {
 void peano4::grid::tests::GridControlEventTest::testMergeEraseAdjacency() {
   std::vector<GridControlEvent> events;
 
-  GridControlEvent L;
-  L.setRefinementControl(GridControlEvent::RefinementControl::Erase);
+  GridControlEvent leftBox;
+  leftBox.setRefinementControl(GridControlEvent::RefinementControl::Erase);
 #if DIMENSIONS == 2
-  L.offset  = {-0.1, 0.0};
-  L.width   = {0.2, 0.2};
-  L.targetH = {0.05, 0.05};
+  leftBox.offset  = {-0.1, 0.0};
+  leftBox.width   = {0.2, 0.2};
+  leftBox.targetH = {0.2, 0.2};
 #endif
 #if DIMENSIONS == 3
-  L.offset  = {-0.1, 0.0, 0.0};
-  L.width   = {0.2, 0.2, 0.2};
-  L.targetH = {0.05, 0.05, 0.05};
+  leftBox.offset  = {-0.1, 0.0, 0.0};
+  leftBox.width   = {0.2, 0.2, 0.2};
+  leftBox.targetH = {0.2, 0.2, 0.2};
 #endif
-  events.push_back(L);
+  events.push_back(leftBox);
 
-  GridControlEvent R = L;
-  R.offset[0]        = 0.1; // Face-touch at x = 0.0
-  events.push_back(R);
+  GridControlEvent rightBox = leftBox;
+  rightBox.offset[0]        = 0.1; // Face-touch at x = 0.0
+  events.push_back(rightBox);
 
-  GridControlEvent::merge(events);
+  GridControlEvent::mergeCellAlignedEvents(events);
 
   validateEquals(events.size(), 1u);
   validateEquals(
@@ -434,11 +521,11 @@ void peano4::grid::tests::GridControlEventTest::testMergeEraseDoesNotOverMergeLS
   // a: [0,2]x[0,1]
   a.offset  = {0.0, 0.0};
   a.width   = {2.0, 1.0};
-  a.targetH = {0.1, 0.1};
+  a.targetH = {1.0, 1.0};
   // b: [1,2]x[0,2]
   b.offset  = {1.0, 0.0};
   b.width   = {1.0, 2.0};
-  b.targetH = {0.1, 0.1};
+  b.targetH = {1.0, 1.0};
 #endif
 
 #if DIMENSIONS == 3
@@ -446,85 +533,162 @@ void peano4::grid::tests::GridControlEventTest::testMergeEraseDoesNotOverMergeLS
   // a: [0,2]x[0,1]x[0,1]
   a.offset  = {0.0, 0.0, 0.0};
   a.width   = {2.0, 1.0, 1.0};
-  a.targetH = {0.1, 0.1, 0.1};
+  a.targetH = {1.0, 1.0, 1.0};
   // b: [1,2]x[0,2]x[0,1]
   b.offset  = {1.0, 0.0, 0.0};
   b.width   = {1.0, 2.0, 1.0};
-  b.targetH = {0.1, 0.1, 0.1};
+  b.targetH = {1.0, 1.0, 1.0};
 #endif
 
   events.push_back(a);
   events.push_back(b);
 
-  GridControlEvent::merge(events);
+  GridControlEvent::mergeCellAlignedEvents(events);
 
   // Must remain two events.
   validateEquals(events.size(), 2u);
 }
 
-void peano4::grid::tests::GridControlEventTest::testMergeEraseEnablesStraddlingErase() {
-  // An erase only fires for a cell that lies fully inside a single event (see
-  // Spacetree::evaluateGridControlEvents, which tests containment for erases). Two erase boxes
-  // that share a face therefore have to be fused into their covering box: a cell straddling that
-  // face is contained in neither original box, but in the merged one, and must be erased.
-  auto contains = [](
-                    const GridControlEvent&                      e,
-                    const tarch::la::Vector<DIMENSIONS, double>& cellMin,
-                    const tarch::la::Vector<DIMENSIONS, double>& cellMax
-                  ) {
-    for (int d = 0; d < DIMENSIONS; ++d) {
-      if (cellMin[d] < e.offset[d] or cellMax[d] > e.offset[d] + e.width[d]) {
-        return false;
-      }
-    }
-    return true;
-  };
-  auto containedInAny = [&](
-                          const std::vector<GridControlEvent>&         evts,
-                          const tarch::la::Vector<DIMENSIONS, double>& cellMin,
-                          const tarch::la::Vector<DIMENSIONS, double>& cellMax
-                        ) {
-    for (const auto& e : evts) {
-      if (contains(e, cellMin, cellMax)) {
+void peano4::grid::tests::GridControlEventTest::testMergeDoesNotChangeGridDecisions() {
+  // The merge only fuses events whose union already is a box, so no cell of the grid may change
+  // its mind about refining or coarsening. We replay the two rules that
+  // Spacetree::evaluateGridControlEvents applies and compare every cell's verdict before and
+  // after the merge. This is what lets the merge be switched off without altering the grid.
+  constexpr double LeafSize      = 1.0;
+  constexpr double ParentSize    = 3.0;
+  constexpr int    LeavesPerAxis = 6;
+
+  auto wantsRefine = [](
+                       const std::vector<GridControlEvent>&         events,
+                       const tarch::la::Vector<DIMENSIONS, double>& cellOffset,
+                       const tarch::la::Vector<DIMENSIONS, double>& cellSize
+                     ) {
+    for (const auto& event : events) {
+      const bool overlaps = tarch::la::allGreater(cellOffset + cellSize, event.offset)
+        and tarch::la::allSmaller(cellOffset, event.offset + event.width);
+      if (event.getRefinementControl() == GridControlEvent::RefinementControl::Refine
+          and tarch::la::allSmaller(event.targetH, cellSize) and overlaps) {
         return true;
       }
     }
     return false;
   };
 
-  // a:[0,1], b:[1,2] along x, identical in the other axes, touching at x = 1.
-  GridControlEvent a;
-  a.setRefinementControl(GridControlEvent::RefinementControl::Erase);
-  GridControlEvent b;
-  b.setRefinementControl(GridControlEvent::RefinementControl::Erase);
-  for (int d = 0; d < DIMENSIONS; ++d) {
-    a.offset[d]  = 0.0;
-    a.width[d]   = 1.0;
-    a.targetH[d] = 0.3;
-    b.offset[d]  = 0.0;
-    b.width[d]   = 1.0;
-    b.targetH[d] = 0.3;
-  }
-  b.offset[0] = 1.0; // touches a at x = 1
+  auto wantsErase = [](
+                      const std::vector<GridControlEvent>&         events,
+                      const tarch::la::Vector<DIMENSIONS, double>& cellOffset,
+                      const tarch::la::Vector<DIMENSIONS, double>& cellSize
+                    ) {
+    for (const auto& event : events) {
+      const bool contains = tarch::la::allGreaterEquals(cellOffset, event.offset)
+        and tarch::la::allSmallerEquals(cellOffset + cellSize, event.offset + event.width);
+      const bool coarsensToTargetResolution = tarch::la::allGreaterEquals(event.targetH, cellSize)
+        and not tarch::la::allSmallerEquals(3.0 * cellSize, event.targetH);
+      if (event.getRefinementControl() == GridControlEvent::RefinementControl::Erase and coarsensToTargetResolution
+          and contains) {
+        return true;
+      }
+    }
+    return false;
+  };
 
-  // A cell straddling the shared face x = 1, well inside the box in every other axis.
-  tarch::la::Vector<DIMENSIONS, double> cellMin;
-  tarch::la::Vector<DIMENSIONS, double> cellMax;
-  for (int d = 0; d < DIMENSIONS; ++d) {
-    cellMin[d] = 0.25;
-    cellMax[d] = 0.75;
-  }
-  cellMin[0] = 0.75;
-  cellMax[0] = 1.25;
+  auto makeEvent =
+    [](GridControlEvent::RefinementControl control, int i, int j, int k, double size, double targetSize) {
+      GridControlEvent event;
+      event.setRefinementControl(control);
+      for (int d = 0; d < DIMENSIONS; ++d) {
+        event.width[d]   = size;
+        event.targetH[d] = targetSize;
+      }
+      event.offset[0] = static_cast<double>(i) * size;
+      event.offset[1] = static_cast<double>(j) * size;
+#if DIMENSIONS == 3
+      event.offset[2] = static_cast<double>(k) * size;
+#else
+      static_cast<void>(k);
+#endif
+      return event;
+    };
 
-  std::vector<GridControlEvent> original{a, b};
-  validateFalse(containedInAny(original, cellMin, cellMax));
+  // An L-shaped run of leaves to refine, and a row of parents plus a detached parent to erase.
+  // Both shapes force the greedy sweep to fuse some events and to keep others apart.
+  std::vector<GridControlEvent> original;
+  for (int i = 0; i < 3; ++i) {
+    original.push_back(makeEvent(GridControlEvent::RefinementControl::Refine, i, 0, 0, LeafSize, LeafSize / 3.0));
+    original.push_back(makeEvent(GridControlEvent::RefinementControl::Refine, 0, i, 0, LeafSize, LeafSize / 3.0));
+  }
+  original.push_back(makeEvent(GridControlEvent::RefinementControl::Erase, 0, 0, 0, ParentSize, ParentSize));
+  original.push_back(makeEvent(GridControlEvent::RefinementControl::Erase, 1, 0, 0, ParentSize, ParentSize));
+  original.push_back(makeEvent(GridControlEvent::RefinementControl::Erase, 1, 1, 0, ParentSize, ParentSize));
 
   std::vector<GridControlEvent> merged = original;
-  GridControlEvent::merge(merged);
+  GridControlEvent::mergeCellAlignedEvents(merged);
+  validateTrue(merged.size() < original.size());
 
-  validateEquals(merged.size(), 1u);
-  validateTrue(containedInAny(merged, cellMin, cellMax));
+  // Peano only ever tests cells of the grid, so we walk the leaves and their parents.
+  for (const double cellSize : {LeafSize, ParentSize}) {
+    const int cellsPerAxis  = static_cast<int>(static_cast<double>(LeavesPerAxis) * LeafSize / cellSize);
+    int       numberOfCells = 1;
+    for (int d = 0; d < DIMENSIONS; ++d) {
+      numberOfCells *= cellsPerAxis;
+    }
+
+    for (int cell = 0; cell < numberOfCells; ++cell) {
+      tarch::la::Vector<DIMENSIONS, double> cellOffset;
+      tarch::la::Vector<DIMENSIONS, double> cellExtent;
+      int                                   remainder = cell;
+      for (int d = 0; d < DIMENSIONS; ++d) {
+        cellOffset(d) = static_cast<double>(remainder % cellsPerAxis) * cellSize;
+        cellExtent(d) = cellSize;
+        remainder /= cellsPerAxis;
+      }
+
+      validateWithParams2(
+        wantsRefine(merged, cellOffset, cellExtent) == wantsRefine(original, cellOffset, cellExtent),
+        cellOffset,
+        cellSize
+      );
+      validateWithParams2(
+        wantsErase(merged, cellOffset, cellExtent) == wantsErase(original, cellOffset, cellExtent),
+        cellOffset,
+        cellSize
+      );
+    }
+  }
+
+  // Merging is idempotent, so re-merging a merged set cannot drift either.
+  std::vector<GridControlEvent> mergedTwice = merged;
+  GridControlEvent::mergeCellAlignedEvents(mergedTwice);
+  validateEquals(mergedTwice.size(), merged.size());
+  for (std::size_t i = 0; i < merged.size(); ++i) {
+    validateTrue(mergedTwice[i] == merged[i]);
+  }
+
+  // Erase boxes that are not whole cells of the level they coarsen: two half-cell
+  // boxes tile the unit cell, which lies inside their union but inside neither box.
+  // The general merge() must keep them apart, so the cell's erase verdict stays
+  // false; fusing them would flip it to true.
+  GridControlEvent leftHalf;
+  leftHalf.setRefinementControl(GridControlEvent::RefinementControl::Erase);
+  leftHalf.offset   = tarch::la::Vector<DIMENSIONS, double>(0.0);
+  leftHalf.width    = tarch::la::Vector<DIMENSIONS, double>(1.0);
+  leftHalf.targetH  = tarch::la::Vector<DIMENSIONS, double>(1.0);
+  leftHalf.width[0] = 0.5;
+
+  GridControlEvent rightHalf = leftHalf;
+  rightHalf.offset[0]        = 0.5;
+
+  std::vector<GridControlEvent> halfCellEvents{leftHalf, rightHalf, leftHalf};
+
+  const tarch::la::Vector<DIMENSIONS, double> unitCellOffset(0.0);
+  const tarch::la::Vector<DIMENSIONS, double> unitCellExtent(1.0);
+  validateTrue(not wantsErase(halfCellEvents, unitCellOffset, unitCellExtent));
+
+  GridControlEvent::merge(halfCellEvents);
+
+  // The duplicate is removed, the two distinct boxes survive unfused.
+  validateEquals(halfCellEvents.size(), 2u);
+  validateTrue(not wantsErase(halfCellEvents, unitCellOffset, unitCellExtent));
 }
 
 void peano4::grid::tests::GridControlEventTest::testMergeEraseChainCollapsesToOne() {
@@ -537,13 +701,13 @@ void peano4::grid::tests::GridControlEventTest::testMergeEraseChainCollapsesToOn
     for (int d = 0; d < DIMENSIONS; ++d) {
       e.offset[d]  = 0.0;
       e.width[d]   = 1.0;
-      e.targetH[d] = 0.3;
+      e.targetH[d] = 1.0;
     }
     e.offset[0] = static_cast<double>(i);
     events.push_back(e);
   }
 
-  GridControlEvent::merge(events);
+  GridControlEvent::mergeCellAlignedEvents(events);
 
   validateEquals(events.size(), 1u);
   validateEquals(
@@ -552,6 +716,80 @@ void peano4::grid::tests::GridControlEventTest::testMergeEraseChainCollapsesToOn
   );
   validateTrue(tarch::la::equals(events[0].offset[0], 0.0, 1e-12));
   validateTrue(tarch::la::equals(events[0].width[0], 4.0, 1e-12));
+}
+
+void peano4::grid::tests::GridControlEventTest::testMergeEraseSiblingGroup() {
+  // Leaf-sized erase requests are not whole cells of the level they coarsen, so the general
+  // merge() may not fuse them: a complete 3^d sibling tiling must not collapse into a
+  // parent-covering box behind the back of the caller's consensus decision, and with one
+  // sibling missing a parent-covering box would coarsen a cell no event asked to coarsen.
+  auto makeEvent = [](const tarch::la::Vector<DIMENSIONS, double>& offset) {
+    GridControlEvent event;
+    event.setRefinementControl(GridControlEvent::RefinementControl::Erase);
+    event.offset  = offset;
+    event.width   = tarch::la::Vector<DIMENSIONS, double>(1.0);
+    event.targetH = tarch::la::Vector<DIMENSIONS, double>(3.0);
+    return event;
+  };
+
+  auto containsParent = [](const GridControlEvent& event) {
+    return tarch::la::allSmallerEquals(event.offset, tarch::la::Vector<DIMENSIONS, double>(0.0))
+      and tarch::la::allGreaterEquals(event.offset + event.width, tarch::la::Vector<DIMENSIONS, double>(3.0));
+  };
+
+  std::vector<GridControlEvent> complete;
+#if DIMENSIONS == 2
+  for (int j = 0; j < 3; j++) {
+    for (int i = 0; i < 3; i++) {
+      complete.push_back(makeEvent({static_cast<double>(i), static_cast<double>(j)}));
+    }
+  }
+#endif
+#if DIMENSIONS == 3
+  for (int k = 0; k < 3; k++) {
+    for (int j = 0; j < 3; j++) {
+      for (int i = 0; i < 3; i++) {
+        complete.push_back(makeEvent({static_cast<double>(i), static_cast<double>(j), static_cast<double>(k)}));
+      }
+    }
+  }
+#endif
+
+  GridControlEvent::merge(complete);
+  bool completeGroupCoversParent = false;
+  for (const auto& event : complete) {
+    completeGroupCoversParent |= containsParent(event);
+  }
+  validateTrue(not completeGroupCoversParent);
+
+  std::vector<GridControlEvent> incomplete;
+#if DIMENSIONS == 2
+  for (int j = 0; j < 3; j++) {
+    for (int i = 0; i < 3; i++) {
+      if (not(i == 1 and j == 1)) {
+        incomplete.push_back(makeEvent({static_cast<double>(i), static_cast<double>(j)}));
+      }
+    }
+  }
+#endif
+#if DIMENSIONS == 3
+  for (int k = 0; k < 3; k++) {
+    for (int j = 0; j < 3; j++) {
+      for (int i = 0; i < 3; i++) {
+        if (not(i == 1 and j == 1 and k == 1)) {
+          incomplete.push_back(makeEvent({static_cast<double>(i), static_cast<double>(j), static_cast<double>(k)}));
+        }
+      }
+    }
+  }
+#endif
+
+  GridControlEvent::merge(incomplete);
+  bool hasParentCoveringEvent = false;
+  for (const auto& event : incomplete) {
+    hasParentCoveringEvent |= containsParent(event);
+  }
+  validateTrue(not hasParentCoveringEvent);
 }
 
 void peano4::grid::tests::GridControlEventTest::testMergeKeepsRefineAndEraseSeparate() {
@@ -570,14 +808,14 @@ void peano4::grid::tests::GridControlEventTest::testMergeKeepsRefineAndEraseSepa
       for (int d = 0; d < DIMENSIONS; ++d) {
         e.offset[d]  = 0.0;
         e.width[d]   = 1.0;
-        e.targetH[d] = 0.3;
+        e.targetH[d] = 1.0;
       }
       e.offset[0] = static_cast<double>(i); // two boxes touching along x
       events.push_back(e);
     }
   }
 
-  GridControlEvent::merge(events);
+  GridControlEvent::mergeCellAlignedEvents(events);
 
   // Each row coalesces to one box: two events total, one refine and one erase, no cross-type fuse.
   validateEquals(events.size(), 2u);
@@ -984,67 +1222,70 @@ void peano4::grid::tests::GridControlEventTest::testMPI() {
 #ifdef PEANO_WITH_MPI
   auto&     rank          = tarch::mpi::Rank::getInstance();
   MPI_Comm  comm          = rank.getCommunicator();
-  const int me            = rank.getRank();
+  const int myRank        = rank.getRank();
   const int numberOfRanks = rank.getNumberOfRanks();
   const int tag           = 4242;
 
   // Build a rank-distinct control event
-  GridControlEvent sendE;
-  sendE.setRefinementControl(
-    (me % 2 == 0) ? GridControlEvent::RefinementControl::Refine : GridControlEvent::RefinementControl::Erase
+  GridControlEvent sentEvent;
+  sentEvent.setRefinementControl(
+    (myRank % 2 == 0) ? GridControlEvent::RefinementControl::Refine : GridControlEvent::RefinementControl::Erase
   );
   for (int d = 0; d < DIMENSIONS; ++d) {
-    sendE.offset[d]  = 0.1 * (d + 1) + 0.001 * me;
-    sendE.width[d]   = 0.2 + 0.01 * d + 0.0005 * me;
-    sendE.targetH[d] = 0.05 * (d + 1) + 0.0001 * me;
+    sentEvent.offset[d]  = 0.1 * (d + 1) + 0.001 * myRank;
+    sentEvent.width[d]   = 0.2 + 0.01 * d + 0.0005 * myRank;
+    sentEvent.targetH[d] = 0.05 * (d + 1) + 0.0001 * myRank;
   }
 
-  GridControlEvent recvE;
+  GridControlEvent receivedEvent;
   MPI_Status       status;
 
   if (numberOfRanks == 1) {
     tarch::mpi::sendrecv(
-      &sendE,
+      &sentEvent,
       sizeof(GridControlEvent),
       MPI_BYTE,
-      me,
+      myRank,
       tag,
-      &recvE,
+      &receivedEvent,
       sizeof(GridControlEvent),
       MPI_BYTE,
-      me,
+      myRank,
       tag,
       comm,
       &status
     );
   } else {
-    const int dest = (me + 1) % numberOfRanks;
-    const int src  = (me - 1 + numberOfRanks) % numberOfRanks;
+    const int destination = (myRank + 1) % numberOfRanks;
+    const int source      = (myRank - 1 + numberOfRanks) % numberOfRanks;
 
-    if ((me % 2) == 0) {
+    if ((myRank % 2) == 0) {
       // Even ranks send then receive
-      tarch::mpi::send(&sendE, sizeof(GridControlEvent), MPI_BYTE, dest, tag, comm);
-      tarch::mpi::receive(&recvE, sizeof(GridControlEvent), MPI_BYTE, src, tag, comm, &status);
+      tarch::mpi::send(&sentEvent, sizeof(GridControlEvent), MPI_BYTE, destination, tag, comm);
+      tarch::mpi::receive(&receivedEvent, sizeof(GridControlEvent), MPI_BYTE, source, tag, comm, &status);
     } else {
       // Odd ranks receive then send
-      tarch::mpi::receive(&recvE, sizeof(GridControlEvent), MPI_BYTE, src, tag, comm, &status);
-      tarch::mpi::send(&sendE, sizeof(GridControlEvent), MPI_BYTE, dest, tag, comm);
+      tarch::mpi::receive(&receivedEvent, sizeof(GridControlEvent), MPI_BYTE, source, tag, comm, &status);
+      tarch::mpi::send(&sentEvent, sizeof(GridControlEvent), MPI_BYTE, destination, tag, comm);
     }
   }
 
-  const int  expectedSenderRank = (numberOfRanks == 1) ? me : ((me - 1 + numberOfRanks) % numberOfRanks);
-  const auto expectedRC         = (expectedSenderRank % 2 == 0) ? GridControlEvent::RefinementControl::Refine
-                                                                : GridControlEvent::RefinementControl::Erase;
-  validateEquals(static_cast<std::uint8_t>(recvE.getRefinementControl()), static_cast<std::uint8_t>(expectedRC));
+  const int  expectedSenderRank = (numberOfRanks == 1) ? myRank : ((myRank - 1 + numberOfRanks) % numberOfRanks);
+  const auto expectedRefinementControl = (expectedSenderRank % 2 == 0) ? GridControlEvent::RefinementControl::Refine
+                                                                      : GridControlEvent::RefinementControl::Erase;
+  validateEquals(
+    static_cast<std::uint8_t>(receivedEvent.getRefinementControl()),
+    static_cast<std::uint8_t>(expectedRefinementControl)
+  );
 
   for (int d = 0; d < DIMENSIONS; ++d) {
-    const double expOffset = 0.1 * (d + 1) + 0.001 * expectedSenderRank;
-    const double expWidth  = 0.2 + 0.01 * d + 0.0005 * expectedSenderRank;
-    const double expH      = 0.05 * (d + 1) + 0.0001 * expectedSenderRank;
+    const double expectedOffset  = 0.1 * (d + 1) + 0.001 * expectedSenderRank;
+    const double expectedWidth   = 0.2 + 0.01 * d + 0.0005 * expectedSenderRank;
+    const double expectedTargetH = 0.05 * (d + 1) + 0.0001 * expectedSenderRank;
 
-    validateTrue(std::fabs(recvE.offset[d] - expOffset) < 1e-12);
-    validateTrue(std::fabs(recvE.width[d] - expWidth) < 1e-12);
-    validateTrue(std::fabs(recvE.targetH[d] - expH) < 1e-12);
+    validateTrue(std::fabs(receivedEvent.offset[d] - expectedOffset) < 1e-12);
+    validateTrue(std::fabs(receivedEvent.width[d] - expectedWidth) < 1e-12);
+    validateTrue(std::fabs(receivedEvent.targetH[d] - expectedTargetH) < 1e-12);
   }
 
   validateEquals(status.MPI_SOURCE, expectedSenderRank);

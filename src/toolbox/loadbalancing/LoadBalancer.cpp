@@ -134,7 +134,7 @@ bool toolbox::loadbalancing::LoadBalancer::isStagnating() const {
 }
 
 /**
- * The runner holds a uniform level while a fork settles or can be issued. Below the relevant piece-size threshold,
+ * The caller holds a uniform level while a fork settles or can be issued. Below the relevant piece-size threshold,
  * another refinement level is required before a split can make progress, so intermediate settling sweeps are skipped.
  */
 bool toolbox::loadbalancing::LoadBalancer::needsGridToStayStationary() const {

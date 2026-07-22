@@ -13,12 +13,14 @@ set(SOURCES
   phases/Configuration.cpp
   phases/GridConstruction.cpp
   phases/GridInitialisation.cpp
+  phases/DynamicAMR.cpp
   phases/TimeLoop.cpp
   phases/FinalSummary.cpp
   Orchestrator.cpp
   Engine.cpp
   Launch.cpp
   UnitTests.cpp
+  tests/DynamicAMRTest.cpp
   tests/FormatTest.cpp
   tests/GridSnapshotTest.cpp
   tests/RuntimeParametersTest.cpp

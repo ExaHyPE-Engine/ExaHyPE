@@ -8,8 +8,6 @@
 #include <zlib.h>
 #endif
 
-namespace fs = std::filesystem;
-
 tarch::plotter::VTUFileWriter::VTUFileWriter(const std::string& outputDirectory, int numberOfSubdomains) :
   FileWriter(outputDirectory, numberOfSubdomains) {}
 
@@ -34,8 +32,8 @@ bool tarch::plotter::VTUFileWriter::writeToFile(const std::string& filename, dou
 
 void tarch::plotter::VTUFileWriter::writeVTU(const std::string& filename) {
   const auto  rank    = tarch::mpi::Rank::getInstance().getRank();
-  std::string vtuFile = filename + "-rank-" + std::to_string(rank) + ".vtu";
-  fs::path    p(_outputDirectory);
+  std::string           vtuFile = filename + "-rank-" + std::to_string(rank) + ".vtu";
+  std::filesystem::path p(_outputDirectory);
   p /= vtuFile;
 
   std::ofstream out(p, std::ios::binary | std::ios::trunc);
@@ -154,6 +152,14 @@ void tarch::plotter::VTUFileWriter::writeVTU(const std::string& filename) {
   compressorAttr = " compressor=\"vtkZLibDataCompressor\"";
 #endif
 
+  // The buffers accumulate in double precision; single-precision output narrows
+  // them right before the write.
+  const bool writeDouble  = getDoublePrecisionOutput();
+  auto       addRealBlock = [&](const std::string& name, int components, const std::vector<double>& data) {
+    return writeDouble ? addBlock("DataArray", "Float64", name, components, data)
+                             : addBlock("DataArray", "Float32", name, components, narrowToFloat(data));
+  };
+
   auto writePiece = [&](const SubdomainBuffers& piece) {
     out << "    <Piece NumberOfPoints=\"" << (piece.pointsXYZ.size() / 3) << "\" NumberOfCells=\"" << piece.types.size()
         << "\">\n";
@@ -163,9 +169,7 @@ void tarch::plotter::VTUFileWriter::writeVTU(const std::string& filename) {
     out << "      <PointData>\n";
     for (const auto& f : piece.pointFields) {
       const FieldLayout layout = classifyField(f.components);
-      out << addBlock(
-        "DataArray",
-        "Float32",
+      out << addRealBlock(
         f.name,
         layout.writtenComponents,
         expandFieldComponents(f.values, f.components, layout.writtenComponents)
@@ -177,9 +181,7 @@ void tarch::plotter::VTUFileWriter::writeVTU(const std::string& filename) {
     out << "      <CellData>\n";
     for (const auto& f : piece.cellFields) {
       const FieldLayout layout = classifyField(f.components);
-      out << addBlock(
-        "DataArray",
-        "Float32",
+      out << addRealBlock(
         f.name,
         layout.writtenComponents,
         expandFieldComponents(f.values, f.components, layout.writtenComponents)
@@ -189,7 +191,7 @@ void tarch::plotter::VTUFileWriter::writeVTU(const std::string& filename) {
 
     // -- Points --
     out << "      <Points>\n";
-    out << addBlock("DataArray", "Float32", "Points", 3, piece.pointsXYZ);
+    out << addRealBlock("Points", 3, piece.pointsXYZ);
     out << "      </Points>\n";
 
     // -- Cells --
@@ -234,8 +236,8 @@ void tarch::plotter::VTUFileWriter::writeVTU(const std::string& filename) {
 }
 
 void tarch::plotter::VTUFileWriter::writePVTU(const std::string& filename) {
-  std::string pvtuFile = filename + ".pvtu";
-  fs::path    p(_outputDirectory);
+  std::string           pvtuFile = filename + ".pvtu";
+  std::filesystem::path p(_outputDirectory);
   p /= pvtuFile;
 
   std::ofstream out(p);
@@ -247,7 +249,8 @@ void tarch::plotter::VTUFileWriter::writePVTU(const std::string& filename) {
   const std::string   byteOrder =
     (*reinterpret_cast<const std::uint8_t*>(&endianCheck) == 1) ? "LittleEndian" : "BigEndian";
 
-  const SubdomainBuffers* ref = findReferenceSubdomain();
+  const SubdomainBuffers* ref          = findReferenceSubdomain();
+  const std::string       realTypeName = getDoublePrecisionOutput() ? "Float64" : "Float32";
 
   out << "<?xml version=\"1.0\"?>\n";
   out << "<VTKFile type=\"PUnstructuredGrid\" version=\"1.0\" byte_order=\"" << byteOrder
@@ -259,7 +262,7 @@ void tarch::plotter::VTUFileWriter::writePVTU(const std::string& filename) {
   if (ref) {
     for (const auto& f : ref->pointFields) {
       const int written = classifyField(f.components).writtenComponents;
-      out << "      <PDataArray type=\"Float32\" Name=\"" << f.name << "\"";
+      out << "      <PDataArray type=\"" << realTypeName << "\" Name=\"" << f.name << "\"";
       if (written > 1) {
         out << " NumberOfComponents=\"" << written << "\"";
       }
@@ -273,7 +276,7 @@ void tarch::plotter::VTUFileWriter::writePVTU(const std::string& filename) {
   if (ref) {
     for (const auto& f : ref->cellFields) {
       const int written = classifyField(f.components).writtenComponents;
-      out << "      <PDataArray type=\"Float32\" Name=\"" << f.name << "\"";
+      out << "      <PDataArray type=\"" << realTypeName << "\" Name=\"" << f.name << "\"";
       if (written > 1) {
         out << " NumberOfComponents=\"" << written << "\"";
       }
@@ -284,7 +287,7 @@ void tarch::plotter::VTUFileWriter::writePVTU(const std::string& filename) {
 
   // -- PPoints --
   out << "    <PPoints>\n";
-  out << "      <PDataArray type=\"Float32\" NumberOfComponents=\"3\"/>\n";
+  out << "      <PDataArray type=\"" << realTypeName << "\" NumberOfComponents=\"3\"/>\n";
   out << "    </PPoints>\n";
 
   // -- Pieces --

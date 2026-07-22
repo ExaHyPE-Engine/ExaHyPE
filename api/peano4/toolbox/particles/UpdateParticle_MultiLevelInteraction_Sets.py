@@ -10,11 +10,11 @@ class UpdateParticle_MultiLevelInteraction_Sets(ActionSet):
 
     Tree walker to realise particle-particle interactions which span multiple levels.
 
-    This code has the same semantics as peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists.
-    However, it uses a different container to maintain the active and local sets. Please consult the
-    documentation of UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles for a description
-    of the arguments, plug-in points and the semantics of the two sets. Before you
-    do so, read throuth @ref page_toolbox_particles_mesh_traversal "the generic set discussion"
+    This code has the same semantics as
+    peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles,
+    but uses a different container to maintain the active and local sets. Consult that class for a
+    description of the arguments, plug-in points and the semantics of the two sets. Before you
+    do so, read through @ref page_toolbox_particles_mesh_traversal "the generic set discussion"
     for the overall context.
 
     As this class uses a ***set*** to maintain the active set and local set, the

@@ -28,9 +28,12 @@ class AdaptiveTimeSteppingCodeSnippets(
       and
       tarch::la::greater(_maxEigenvalueThisTimeStep, 0.0)
     ) {
+      // One explicit Euler step accumulates the fluxes of all 2*DIMENSIONS faces of a
+      // volume, so the stability limit is the volume width over DIMENSIONS times the
+      // maximum eigenvalue; the relaxation is the fraction of that limit.
       _admissibleTimeStepSizeThisTimeStep = """
             + str(self._time_step_relaxation)
-            + """ * _minVolumeHThisTimeStep / _maxEigenvalueThisTimeStep;
+            + """ * _minVolumeHThisTimeStep / (DIMENSIONS * _maxEigenvalueThisTimeStep);
 
       if (tarch::la::greater(_admissibleTimeStepSizeThisTimeStep, 0.0)) {
         if (_minTimeStepSizeThisTimeStep >= std::numeric_limits<double>::max() / 10.0) {
@@ -42,10 +45,10 @@ class AdaptiveTimeSteppingCodeSnippets(
       }
 
       if (std::isnan(_admissibleTimeStepSizeThisTimeStep) or std::isinf(_admissibleTimeStepSizeThisTimeStep)) {
-        tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, "_admissibleTimeStepSizeThisTimeStep > 0", "Invalid (NaN of inf) time step size: " + std::to_string(_admissibleTimeStepSizeThisTimeStep) );
+        tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, "_admissibleTimeStepSizeThisTimeStep > 0", "Invalid (NaN or inf) time step size: " + std::to_string(_admissibleTimeStepSizeThisTimeStep) );
       }
       if (tarch::la::smallerEquals(_admissibleTimeStepSizeThisTimeStep, 0.0, 1e-10)) {
-        logWarning("Degenerated time step size of " << std::to_string(_admissibleTimeStepSizeThisTimeStep) << ". Problem might be extremely stiff (and can't be solved) or there could be a bug in the eigenvalue computation");
+        logWarning("Degenerated time step size of " << std::to_string(_admissibleTimeStepSizeThisTimeStep) << ". The problem might be extremely stiff (and cannot be solved) or there could be a bug in the eigenvalue computation.");
       }
     }
 """

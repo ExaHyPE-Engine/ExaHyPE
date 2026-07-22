@@ -7,7 +7,7 @@
 namespace runner {
   struct PhaseContext;
 
-  /** Runs the ordered list of phases into the shared box. Add a phase by registering it in run(). */
+  /** Runs the ordered phases and writes their output into the context's box. Add a phase by registering it in run(). */
   class Orchestrator final {
   public:
     explicit Orchestrator(const std::vector<Step>& steps);
@@ -21,5 +21,6 @@ namespace runner {
     int _initGridStep      = -1;
     int _plotStep          = -1;
     int _timeStepStep      = -1;
+    int _dynamicAMRStep    = -1;
   };
 } // namespace runner

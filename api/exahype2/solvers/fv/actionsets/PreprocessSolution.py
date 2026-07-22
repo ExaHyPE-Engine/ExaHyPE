@@ -9,15 +9,16 @@ import jinja2
 
 class EmptyPreprocessSolution(AbstractFVActionSet):
   """
+  Preprocessing variant which contributes no code to the solver.
 
-  PreprocessSolution differs from other action sets, as I only create it once. See
-  FV.create_action_sets(). Once the instance does exist, you can tailor it. But you
-  can also completely overwrite it.
-
+  PreprocessSolution differs from other action sets, as we create it only once.
+  See FV.create_action_sets(). Once the instance does exist, you can tailor it.
+  You can also completely overwrite it.
   """
   def __init__(self,solver):
     AbstractFVActionSet.__init__(self,solver)
-    # Is there for compatibility reasons
+    # The guard is unused here, but it keeps the interface of the preprocessing
+    # variants identical, so one can be swapped for another.
     self.guard               = "true"
     self.descend_invocation_order            = 2
 
@@ -31,24 +32,24 @@ class EmptyPreprocessSolution(AbstractFVActionSet):
 
 class VolumeWisePreprocessSolution(AbstractFVActionSet):
   """!
-  Run over solution volume by volume
 
-  PreprocessSolution differs from other action sets, as I only create it once. See
-  FV.create_action_sets(). Once the instance does exist, you can tailor it. But you
-  can also completely overwrite it.
+  Run over the solution volume by volume.
 
-  See also FV.postprocess_updated_patch(self, kernel) for a discussion what options
-  ExaHyPE offers for postprocessing. This volume-wise postprocessing might be too
-  heavy-weight for some applications.
+  PreprocessSolution differs from other action sets, as we create it only once.
+  See FV.create_action_sets(). Once the instance does exist, you can tailor it.
+  You can also completely overwrite it.
 
-  The postprocessing plugs into touch cell last time. It is the last action set added
-  by the default implementation. Therefore, it is the first action set of which
-  touchCellLastTime() is called. The reason why I plug into the leaving of the cell
-  is that some solvers may add further action sets to the solve. These action sets
-  typically plug into touchCellFirstTime() - and consequently their first time is
-  called after the postprocessing's first time. By making the postprocessing use
-  touchCellLastTime(), I ensure that any additional action set added by a subclass
-  can still precede the postprocessing.
+  See also FV.postprocess_updated_patch(self, kernel) for a discussion of the
+  options ExaHyPE offers. This volume-wise variant might be too heavy-weight for
+  some applications.
+
+  The kernel plugs into touch cell last time. It is the last action set added by
+  the default implementation, so it is the first action set of which
+  touchCellLastTime() is called. We plug into the leaving of the cell because
+  some solvers add further action sets to the solve. Those action sets typically
+  plug into touchCellFirstTime(), and their first time is therefore called after
+  this action set's first time. Using touchCellLastTime() lets any action set
+  added by a subclass still precede this one.
   """
   def __init__(self,solver):
     AbstractFVActionSet.__init__(self,solver)
@@ -59,15 +60,19 @@ class VolumeWisePreprocessSolution(AbstractFVActionSet):
 
   def add_postprocessing_kernel(self, operation_per_point):
     """
-    Add a code snippet which is applied to each and every point. You have the following
-    variables which are well-defined:
+    Add a code snippet which is applied to every finite volume.
 
-    - value: Is a pointer to the current finite volume's data
-    - x: A tarch::la::Vector over doubles
-    - h: A tarch::la::Vector over doubles
+    The snippet can use the following variables:
+
+    - value: Pointer to the current finite volume's data.
+    - x: Centre of the volume as tarch::la::Vector over doubles.
+    - h: Size of the volume as tarch::la::Vector over doubles.
+    - timeStamp: Time stamp of the enclosing cell.
+
+    ## Arguments
 
     operation_per_point: String
-      C/C++ code snippet
+      C/C++ code snippet.
     """
     self._compute_kernel += """
 {

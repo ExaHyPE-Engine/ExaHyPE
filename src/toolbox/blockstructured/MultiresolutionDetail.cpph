@@ -1,0 +1,195 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+/**
+ * Patch-local multiresolution detail indicator for dynamic AMR.
+ *
+ * Returns the dimensionless relative representation error of a least-squares
+ * affine (mean plus per-axis slope) fit of one scalar indicator over an
+ * N^DIMENSIONS patch in AoS layout:
+ *
+ *   s_hat(xi) = a0 + sum_d a_d * xi_d,    xi_d(i) = (i + 0.5)/N - 0.5 in [-0.5, 0.5]
+ *   detail    = max_v |s(v) - s_hat(xi_v)| / (|s(v)| + floor)
+ *
+ * Because the volume centres form a regular grid symmetric about the patch centre, the
+ * normal equations are diagonal (separable per axis), so the fit has a closed form with
+ * no matrix solve.
+ *
+ * Properties that make this a threshold-light AMR sensor:
+ *  - An affine field is fit exactly, so a constant region or a plain gradient has a
+ *    detail close to zero and does not refine. Curvature leaves an O(h^2) residual and a
+ *    discontinuity an O(1) detail. That gap is what lets a single tolerance track a shock
+ *    as a thin shell while the disturbed region around it stays coarse.
+ *  - Every node is normalised by its own magnitude plus an absolute floor, so the
+ *    magnitude dominates the relative error while the floor sets the scale near zero. A
+ *    strong jump retains an O(1) detail where its residual and local magnitude scale
+ *    together.
+ *  - The detail depends only on the patch, so the same patch yields the same detail on
+ *    any rank or thread. Every reduction is order-canonical: the mean and the slope
+ *    numerators sum their value multisets in sorted order (the numerators split by sign,
+ *    so a reflection negates them to the bit), the node coordinates derive their upper
+ *    half from the lower half by exact negation, and the per-axis prediction terms fold
+ *    in sorted order. A reflected or axis-swapped patch therefore yields the
+ *    bitwise-identical detail, and thus the identical refinement command, whenever the
+ *    indicator is invariant under that transformation: density, pressure, energy or the
+ *    momentum magnitude qualify, a raw Cartesian vector component does not.
+ *
+ * The routine is PDE-agnostic: the caller supplies the scalar `indicator` as an inlinable
+ * functor receiving a pointer to one volume's contiguous unknowns, and maps the returned
+ * detail onto whatever refinement decision it needs.
+ *
+ * The indicator is evaluated once per volume; the values, the sort scratch and the node
+ * coordinates live in fixed-capacity stack buffers, so there is no heap allocation. The
+ * capacities bound the patch to 64 nodes per axis and 4096 volumes, asserted below.
+ * N == 1 returns 0, a single volume being trivially affine.
+ *
+ * @tparam Value scalar type the patch is stored in, deduced from Q. A solver holding its
+ *   solution in reduced precision passes that type here and the fit still runs in double.
+ * @tparam Indicator callable `double operator()(const Value* volumeBasePtr) const`
+ *   returning an invariant scalar for the volume at volumeBasePtr. Write the parameter as
+ *   `const auto*` if the solver's storage type is not fixed to double.
+ * @param Q contiguous AoS patch, must not be nullptr.
+ * @param numberOfDofsPerAxis number of nodes per coordinate axis, N above.
+ * @param numberOfUnknownsPlusAuxiliaryVariables AoS stride, the number of doubles one volume holds.
+ * @param indicator invariant scalar functor.
+ * @param nodesInUnitInterval N one-dimensional node positions in [0,1], or nullptr for
+ *   equidistant finite-volume centres. Pass the solver's actual nodes (an ADER-DG
+ *   Gauss-Legendre point set, say) to make the affine fit correct for a non-equidistant
+ *   nodal layout, so the same sensor serves FV, FD and ADER-DG. The layout must be
+ *   symmetric about 1/2; only the lower half is read, the mirrored nodes derive from it
+ *   by exact reflection and an odd layout's middle node sits at 1/2 by construction.
+ * @param floor guard for a node whose indicator vanishes. Has to be positive.
+ * @return detail >= 0, or infinity if any indicator value is not finite, so a patch
+ *   carrying a NaN refines.
+ */
+template <typename Value, typename Indicator>
+INLINE_METHOD double toolbox::blockstructured::computeMultiresolutionDetail(
+  const Value* const NOALIAS Q,
+  const int                  numberOfDofsPerAxis,
+  const int                  numberOfUnknownsPlusAuxiliaryVariables,
+  const Indicator&           indicator,
+  const double* const        nodesInUnitInterval,
+  const double               floor
+) {
+  // A vanishing floor turns a node whose indicator is zero into 0/0, which lands in the same
+  // silent-coarsening trap the non-finite guard below closes.
+  assertion(floor > 0.0);
+
+  constexpr int MaxNumberOfNodesPerAxis = 64;
+  constexpr int MaxNumberOfVolumes      = 4096;
+
+  const int numberOfNodes = numberOfDofsPerAxis;
+  if (numberOfNodes < 2) {
+    return 0.0;
+  }
+  assertion(numberOfNodes <= MaxNumberOfNodesPerAxis, numberOfNodes);
+
+  int numberOfVolumes = 1;
+  for (int d = 0; d < DIMENSIONS; d++) {
+    numberOfVolumes *= numberOfNodes;
+  }
+  assertion(numberOfVolumes <= MaxNumberOfVolumes, numberOfVolumes);
+
+  // The mirrored node of i is N-1-i. Deriving the upper half from the lower half by
+  // negation makes the centred coordinates antisymmetric to the bit whatever rounding
+  // the node positions carry, so a reflected patch sees exactly negated coordinates.
+  const double inverseNumberOfNodes = 1.0 / static_cast<double>(numberOfNodes);
+  double       nodeCoordinate[MaxNumberOfNodesPerAxis];
+  for (int i = 0; i < numberOfNodes / 2; i++) {
+    const double position =
+      (nodesInUnitInterval != nullptr) ? nodesInUnitInterval[i] : (static_cast<double>(i) + 0.5) * inverseNumberOfNodes;
+    nodeCoordinate[i]                     = position - 0.5;
+    nodeCoordinate[numberOfNodes - 1 - i] = -(position - 0.5);
+  }
+  if (numberOfNodes % 2 == 1) {
+    nodeCoordinate[numberOfNodes / 2] = 0.0;
+  }
+
+  // The slope denominator sum_v xi_{v,d}^2 is identical for every axis d: for each of the
+  // N values of the d-index there are M/N volumes. Mirrored coordinates square to the
+  // same bits, so this palindromic sum needs no reordering.
+  double nodeCoordinateSquareSum = 0.0;
+  for (int i = 0; i < numberOfNodes; i++) {
+    nodeCoordinateSquareSum += nodeCoordinate[i] * nodeCoordinate[i];
+  }
+  const double slopeDenominator =
+    (static_cast<double>(numberOfVolumes) / static_cast<double>(numberOfNodes)) * nodeCoordinateSquareSum;
+
+  double values[MaxNumberOfVolumes];
+  bool   allValuesAreFinite = true;
+  peano4::dForEach(numberOfNodes, [&](const tarch::la::Vector<DIMENSIONS, int>& counter) {
+    const int    linearised = peano4::dLinearised(counter, numberOfNodes);
+    const double value      = indicator(Q + linearised * numberOfUnknownsPlusAuxiliaryVariables);
+    values[linearised]      = value;
+    allValuesAreFinite      = allValuesAreFinite and std::isfinite(value);
+  });
+
+  // A non-finite value propagates into the residual, where std::max() drops it and leaves the
+  // detail at zero, which the caller reads as "coarsen". The patch is reported as maximally
+  // unresolved instead, so a corrupted region stays at the finest resolution and stays visible.
+  if (not allValuesAreFinite) {
+    return std::numeric_limits<double>::infinity();
+  }
+
+  // Summing in sorted order fixes one addition order per value multiset. A reflection or
+  // an axis swap permutes the values but keeps the multiset, so the sum is bitwise
+  // invariant under both.
+  double scratch[MaxNumberOfVolumes];
+  std::copy(values, values + numberOfVolumes, scratch);
+  std::sort(scratch, scratch + numberOfVolumes);
+  double indicatorSum = 0.0;
+  for (int i = 0; i < numberOfVolumes; i++) {
+    indicatorSum += scratch[i];
+  }
+  const double mean = indicatorSum / static_cast<double>(numberOfVolumes);
+
+  double slope[DIMENSIONS];
+  for (int d = 0; d < DIMENSIONS; d++) {
+    peano4::dForEach(numberOfNodes, [&](const tarch::la::Vector<DIMENSIONS, int>& counter) {
+      const int linearised = peano4::dLinearised(counter, numberOfNodes);
+      scratch[linearised]  = values[linearised] * nodeCoordinate[counter(d)];
+    });
+    // A reflection along d negates every product to the bit, since the paired volume's
+    // value meets the exactly negated coordinate. Summing the positive and the negative
+    // part separately, each in sorted order, therefore negates the numerator to the bit,
+    // while any permutation of the products leaves it untouched. Zeros contribute nothing
+    // in either part.
+    std::sort(scratch, scratch + numberOfVolumes);
+    int firstNonNegative = 0;
+    while (firstNonNegative < numberOfVolumes and scratch[firstNonNegative] < 0.0) {
+      firstNonNegative++;
+    }
+    double positivePartSum = 0.0;
+    for (int i = firstNonNegative; i < numberOfVolumes; i++) {
+      positivePartSum += scratch[i];
+    }
+    double negativePartSum = 0.0;
+    for (int i = firstNonNegative - 1; i >= 0; i--) {
+      negativePartSum += -scratch[i];
+    }
+    const double slopeNumerator = positivePartSum - negativePartSum;
+    slope[d]                    = (slopeDenominator > 0.0) ? slopeNumerator / slopeDenominator : 0.0;
+  }
+
+  // Largest deviation from the affine fit, each node measured against its own value so
+  // that a strong jump keeps a strong detail. The maximum is order-independent.
+  double maxRelativeResidual = 0.0;
+  peano4::dForEach(numberOfNodes, [&](const tarch::la::Vector<DIMENSIONS, int>& counter) {
+    const int linearised = peano4::dLinearised(counter, numberOfNodes);
+    // A reflection negates a slope together with its coordinate, so each term is bitwise
+    // invariant; an axis swap permutes the terms, which the sorted fold absorbs.
+    double correction[DIMENSIONS];
+    for (int d = 0; d < DIMENSIONS; d++) {
+      correction[d] = slope[d] * nodeCoordinate[counter(d)];
+    }
+    std::sort(correction, correction + DIMENSIONS);
+    double prediction = mean;
+    for (int d = 0; d < DIMENSIONS; d++) {
+      prediction += correction[d];
+    }
+    const double residual = std::abs(values[linearised] - prediction);
+    maxRelativeResidual   = std::max(maxRelativeResidual, residual / (std::abs(values[linearised]) + floor));
+  });
+
+  return maxRelativeResidual;
+}

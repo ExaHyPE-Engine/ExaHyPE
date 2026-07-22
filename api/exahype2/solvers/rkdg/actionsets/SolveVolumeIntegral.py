@@ -1,4 +1,4 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and 
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 
 from .AbstractRungeKuttaDGActionSet import AbstractRungeKuttaDGActionSet
@@ -11,7 +11,7 @@ import jinja2
 
 class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
   """
-  Solve volume integral
+  Solve volume integral.
 
   Solve the volumetric part of the DG method. This includes the evaluation of the
   volume integral of the operator multiplied with a trial function, plus the
@@ -20,25 +20,24 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
   tableau. The input is already properly computed (see LinearCombinationOfEstimates()).
 
   The volume integral definition is an underdetermined action set, i.e., you still
-  have to ensure that a number of macros are actually defined when you use it:
+  have to ensure that a number of macros are defined when you use it:
 
-  - {{COMPUTE_TIME_STEP_SIZE}} has to specify a double timeStepSize. It may be const if
-    you want. I don't alter it.
+  - COMPUTE_TIME_STEP_SIZE has to specify a double timeStepSize. It may be const if
+    you want. The action set does not alter it.
 
   In return, the following variables will be set by the action set:
 
-  - timeStampOldSolution: double This is the time stamp of the original 
-    solution, i.e. not the one we are currently evaluating due to the 
+  - timeStampOldSolution: double This is the time stamp of the original
+    solution, i.e. not the one we are currently evaluating due to the
     Runge-Kutta scheme.
-  - timeStamp: double This is the time stamp of the current Runge Kutta
+  - timeStamp: double This is the time stamp of the current Runge-Kutta
     guess. It is timeStampOldSolution plus the weight of the Butcher scheme
     times the time step size.
-  - QIn: double* A pointer to the actual linear combination of previous 
+  - QIn: double* A pointer to the linear combination of previous
     guesses according to the Butcher tableau.
-  - QOut: For Runge-Kutta, we ahve to store all guesses of the future solution,
-    so we can eventually combine them into one final outcome. QOut points to 
-    that segment/guess that's to be computed in this step.
-
+  - QOut: For Runge-Kutta, we have to store all guesses of the future solution,
+    so we can eventually combine them into one final outcome. QOut points to
+    the segment that is to be computed in this step.
   """
 
   TemplateCellKernel = """
@@ -46,8 +45,7 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
   if ({{PREDICATES[PREDICATE_NO]}}) {
     const double timeStampOldSolution    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
-    // Set the variable
-    // double timeStepSize
+    // The snippet below declares and sets double timeStepSize.
     {{COMPUTE_TIME_STEP_SIZE}}
 
     const double timeStamp = timeStampOldSolution + {{BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES[PREDICATE_NO]}} * timeStepSize;
@@ -90,12 +88,12 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
 
   def __init__(self,solver):
     """
-    guard_project: String (C++ code)
-      Predicate which controls if the solution is actually projected.
+    Construct the action set for the volume integral.
 
-    guard_safe_old_time_step: String (C++ code)
-      Predicate which controls if the projection should be copied into
-      the old solution and the time step should also be moved over.
+    :: Arguments
+
+    solver: RungeKuttaDG
+      Reference to creating class.
     """
     super(SolveVolumeIntegral,self).__init__(solver)
     self.guards                      = []
@@ -112,7 +110,7 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
   @guards.setter
   def guards(self,new_guards):
     if new_guards!=[] and len(new_guards)!=self._solver.number_of_Runge_Kutta_steps():
-      raise Exception( "Expect one guard per Runge Kutta step. Have {} steps but got guards {}".format(self._solver.number_of_Runge_Kutta_steps(),new_guards) )
+      raise Exception( "Expect one guard per Runge-Kutta step. There are {} steps, but the guards are {}".format(self._solver.number_of_Runge_Kutta_steps(),new_guards) )
     self._guards = new_guards
 
 
@@ -125,7 +123,6 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
       d[ "PREDICATES" ]                               = self.guards
       d[ "BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES" ] = self._butcher_tableau.time_step_sizes()
       result = jinja2.Template(self.TemplateCellKernel).render(**d)
-      pass
     return result
 
 

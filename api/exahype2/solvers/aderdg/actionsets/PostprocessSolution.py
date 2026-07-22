@@ -8,11 +8,11 @@ import peano4.solversteps
 
 class EmptyPostprocessSolution(AbstractADERDGActionSet):
     """
-    PostprocessSolution differs from other action sets, as we only create it once.
+    Base variant which emits only those kernels that have been added to it.
 
-    See
-    ADERDG.create_action_sets(). Once the instance does exist, you can tailor it. But you
-    can also completely overwrite it.
+    PostprocessSolution differs from other action sets, as we create it only
+    once. See ADERDG.create_action_sets(). Once the instance does exist, you can
+    tailor it. You can also completely overwrite it.
     """
 
     def __init__(self, solver):
@@ -59,20 +59,19 @@ class EmptyPostprocessSolution(AbstractADERDGActionSet):
 
 class DoFWisePostprocessSolution(EmptyPostprocessSolution):
     """
-    PostprocessSolution differs from other action sets, as I only create it once.
+    Run over the solution degree of freedom by degree of freedom.
 
-    See
-    ADERDG.create_action_sets(). Once the instance does exist, you can tailor it. But you
-    can also completely overwrite it.
+    PostprocessSolution differs from other action sets, as we create it only
+    once. See ADERDG.create_action_sets(). Once the instance does exist, you can
+    tailor it. You can also completely overwrite it.
 
-    The postprocessing plugs into touch cell last time. It is the last action set added
-    by the default implementation. Therefore, it is the first action set of which
-    touchCellLastTime() is called. The reason why I plug into the leaving of the cell
-    is that some solvers may add further action sets to the solve. These action sets
-    typically plug into touchCellFirstTime() - and consequently their first time is
-    called after the postprocessing's first time. By making the postprocessing use
-    touchCellLastTime(), I ensure that any additional action set added by a subclass
-    can still precede the postprocessing.
+    The postprocessing plugs into touch cell last time. It is the last action set
+    added by the default implementation, so it is the first action set of which
+    touchCellLastTime() is called. We plug into the leaving of the cell because
+    some solvers add further action sets to the solve. Those action sets typically
+    plug into touchCellFirstTime(), and their first time is therefore called after
+    the postprocessing's first time. Using touchCellLastTime() lets any action set
+    added by a subclass still precede the postprocessing.
     """
 
     def __init__(self, solver):
@@ -81,17 +80,20 @@ class DoFWisePostprocessSolution(EmptyPostprocessSolution):
 
     def add_postprocessing_kernel(self, operation_per_point):
         """
-        Add a code snippet which is applied to each and every point.
+        Add a code snippet which is applied to every degree of freedom.
 
-        You have the following
-        variables which are well-defined:
+        The snippet can use the following variables:
 
-        - value: Is a pointer to the current finite volume's data
-        - x: A tarch::la::Vector over doubles
-        - marker.getH(): A tarch::la::Vector over doubles
+        - values: Pointer to the current degree of freedom's data.
+        - x: Position of the quadrature point as tarch::la::Vector over doubles.
+        - index: Position of the degree of freedom within the cell.
+        - marker.getH(): Cell size as tarch::la::Vector over doubles.
+        - timeStamp: Time stamp of the cell.
+
+        ## Arguments
 
         operation_per_point: String
-          C/C++ code snippet
+          C/C++ code snippet.
         """
         self._cell_compute_kernel += (
             """
@@ -136,23 +138,31 @@ class DoFWisePostprocessSolution(EmptyPostprocessSolution):
 
 
 class CellWisePostprocessSolution(EmptyPostprocessSolution):
+    """
+    Run over the solution cell by cell.
+
+    The snippet is inserted once per cell and therefore has to run over the
+    degrees of freedom itself. See DoFWisePostprocessSolution for the variant
+    that provides that loop.
+    """
+
     def __init__(self, solver):
         super(CellWisePostprocessSolution, self).__init__(solver)
         self._guard = "true"
 
     def add_postprocessing_kernel(self, operation_per_cell):
         """
-        Add a code snippet which is applied to each and every point.
+        Add a code snippet which is applied to every cell.
 
-        You have the following
-        variables which are well-defined:
+        The snippet can use the following variables:
 
-        - value: Is a pointer to the current finite volume's data
-        - x: A tarch::la::Vector over doubles
-        - marker.getH(): A tarch::la::Vector over doubles
+        - marker: Cell marker holding the cell's centre and size.
+        - timeStamp: Time stamp of the cell.
 
-        operation_per_point: String
-          C/C++ code snippet
+        ## Arguments
+
+        operation_per_cell: String
+          C/C++ code snippet.
         """
         self._cell_compute_kernel += (
             """

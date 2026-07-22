@@ -11,8 +11,8 @@ class UpdatePatch(AbstractFVActionSet):
     _Template_TouchCellFirstTime = jinja2.Template(
         """
   if ({{GUARD}}) {
-    auto* /*const*/ QIn = {{OLD_ACCESSOR}}.data();
-    auto* /*const*/ QOut = {{NEW_ACCESSOR}}.data();
+    auto* QIn = {{OLD_ACCESSOR}}.data();
+    auto* QOut = {{NEW_ACCESSOR}}.data();
 
     const double timeStamp = {{CELL_METADATA_ACCESSOR}}.getTimeStamp();
 
@@ -38,11 +38,13 @@ class UpdatePatch(AbstractFVActionSet):
       faceQIn[faceDir]  = {{OLD_FACE_ACCESSOR}}(faceDir).data();
       faceQOut[faceDir] = {{NEW_FACE_ACCESSOR}}(faceDir).data();
     }
+
     {% if COMPUTE_MAX_EIGENVALUE %}
     const auto maxEigenvalue = {{COMPUTE_KERNEL_CALL}}
     {% else %}
     const auto _ = {{COMPUTE_KERNEL_CALL}}
     {% endif %}
+
     {{POSTPROCESS_UPDATED_PATCH}}
 
 #if PEANO_DEBUG
@@ -61,7 +63,7 @@ class UpdatePatch(AbstractFVActionSet):
     {{CELL_METADATA_ACCESSOR}}.setTimeStepSize(newTimeStepSize);
     repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp + timeStepSize, tarch::la::min(marker.getH()), tarch::la::max(marker.getH()));
     {{CELL_METADATA_ACCESSOR}}.setTimeStamp(timeStamp + timeStepSize);
-    // set updated flag for all faces (needed for rollover)
+    // Set the updated flag for all faces, which the roll-over needs.
     for (int d = 0; d < DIMENSIONS; d++) {
       {{FACE_METADATA_ACCESSOR}}(d).setUpdated(1, true);
       {{FACE_METADATA_ACCESSOR}}(d).setUpdatedTimeStamp(1, {{CELL_METADATA_ACCESSOR}}.getTimeStamp());

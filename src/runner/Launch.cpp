@@ -10,6 +10,7 @@
 #include "tarch/instrumentation/Log.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/mpi/mpi.h"
+#include "tarch/plotter/FileWriter.h"
 #include "tarch/reader/JSONReader.h"
 
 static bool helpRequested(int argc, char* const* argv) {
@@ -48,7 +49,7 @@ int runner::launch(
   // Configuration errors must stop the process before MPI starts.
   parameters.configure(argc, argv);
 
-  // Shared usage tracking identifies keys that neither parser consumes.
+  // The runtime and application parsers use one reader, whose usage tracking identifies keys neither consumes.
   const auto configReader         = parameters.getConfigReader();
   const auto applicationParserRan = static_cast<bool>(callbacks.loadApplicationParameters);
   if (applicationParserRan) {
@@ -101,6 +102,8 @@ int runner::launch(
   );
 
   tarch::instrumentation::Log::setLogMachineName(tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1);
+
+  tarch::plotter::FileWriter::setDoublePrecisionOutput(parameters.getPlotDoublePrecision());
 
   const auto& outputDirectory = parameters.getOutputPath();
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {

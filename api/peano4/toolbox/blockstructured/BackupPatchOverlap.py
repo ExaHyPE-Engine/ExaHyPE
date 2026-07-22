@@ -5,26 +5,23 @@ from peano4.solversteps.ActionSet import ActionSet
 
 class BackupPatchOverlap(ActionSet):
   """
-  
-  This class plugs into the first access to a face and copies the data over
-  
+  Copy the overlap data of a face into a second face patch.
+
   patch_overlap_in: peano4.datamodel.Patch
-     Patch data associated with cell.
-        
+     Face overlap to read from.
+
   patch_overlap_out: peano4.datamodel.Patch
-     Patch data associated with faces.
-  
+     Face overlap to write to.
+
   invoke_in_touch_first: Boolean
-    If you set this one to True, then I do the copying in touchFaceFirstTime. 
-    Otherwise, I do it in touchFaceLastTime
-    
-  guard: Boolean 
-    Predicate to determine when to invoke this thing. Pass in
-    true if you wanna be it called always
-  
+    Set this one to True to copy in touchFaceFirstTime, and to False to copy
+    in touchFaceLastTime.
+
+  guard: Boolean
+    Predicate to determine when the copy is invoked. Pass in true to have it
+    called always.
   """
-  
-  
+
   def __init__(self,patch_overlap_in,patch_overlap_out,invoke_in_touch_first,guard="",additional_includes=""):
     super(BackupPatchOverlap,self).__init__(descend_invocation_order=1)
     self.d = {}
@@ -34,25 +31,25 @@ class BackupPatchOverlap(ActionSet):
     self.d[ "FACES_ACCESSOR_IN" ]  = "fineGridFace"  + patch_overlap_in.name
     self.d[ "FACES_ACCESSOR_OUT" ] = "fineGridFace"  + patch_overlap_out.name
     self.d[ "GUARD_PREDICATE" ]    = guard
-    
+
     self.invoke_in_touch_first = invoke_in_touch_first
     self._additional_includes  = additional_includes
 
 
   def set_guard_predicate(self,guard):
     self.d[ "GUARD_PREDICATE" ]    = guard
-    
+
 
   def get_constructor_body(self):
     return ""
 
-  
+
   def get_destructor_body(self):
     return ""
 
 
   def get_body_of_getGridControlEvents(self):
-    return "  return std::vector< ::peano4::grid::GridControlEvent >();\n" 
+    return "  return std::vector< ::peano4::grid::GridControlEvent >();\n"
 
 
   def get_action_set_name(self):
@@ -82,10 +79,8 @@ class BackupPatchOverlap(ActionSet):
     result = "\n"
     if self.invoke_in_touch_first and operation_name==ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
       result = self.__Template.format(**self.d)
-      pass 
     if not self.invoke_in_touch_first and operation_name==ActionSet.OPERATION_TOUCH_FACE_LAST_TIME:
       result = self.__Template.format(**self.d)
-      pass 
     return result
 
 

@@ -7,8 +7,6 @@
 #include "tarch/mpi/mpi.h"
 #include "tarch/plotter/NetCDFFileWriter.h"
 
-namespace fs = std::filesystem;
-
 #ifdef PEANO_WITH_NETCDF
 
 #include <netcdf.h>
@@ -27,7 +25,7 @@ namespace {
   }
 
   void validateFileExists(const std::string& filepath) {
-    if (not fs::exists(filepath)) {
+    if (not std::filesystem::exists(filepath)) {
       throw std::runtime_error("Test failed: Output NetCDF file was not created: " + filepath);
     }
   }
@@ -182,9 +180,9 @@ namespace {
   }
 
   void cleanup(const std::string& filename) {
-    fs::path p(filename);
-    if (fs::exists(p)) {
-      fs::remove(p);
+    std::filesystem::path p(filename);
+    if (std::filesystem::exists(p)) {
+      std::filesystem::remove(p);
     }
   }
 } // namespace
@@ -230,16 +228,26 @@ void tarch::plotter::tests::NetCDFFileWriterTest::testHeterogeneousRanks() {
 }
 
 void tarch::plotter::tests::NetCDFFileWriterTest::run() {
-  testMethod(test2DSimpleTriangle);
-  testMethod(test2DQuadWithData);
-  testMethod(test3DHexahedronWithData);
-  testMethod(testMultipleSubdomains2DWithData);
-  testMethod(testHeterogeneousRanks);
-  testMethod(testUnevenSubdomainCounts);
-  testMethod(testEmptyPlotter);
-  testMethod(testInconsistentDataSizeThrows);
-  testMethod(testUnsupportedCellType);
-  testMethod(testInvalidIdentifierThrows);
+  // The read-back helpers report a malformed file by throwing. Without this catch the
+  // exception leaves run(), which the test framework does not guard, and the whole unit-test
+  // binary aborts instead of recording a failed case. The remaining cases are then skipped,
+  // so the counter has to be raised here as well.
+  try {
+    testMethod(test2DSimpleTriangle);
+    testMethod(test2DQuadWithData);
+    testMethod(test3DHexahedronWithData);
+    testMethod(testMultipleSubdomains2DWithData);
+    testMethod(testHeterogeneousRanks);
+    testMethod(testUnevenSubdomainCounts);
+    testMethod(testEmptyPlotter);
+    testMethod(testInconsistentDataSizeThrows);
+    testMethod(testUnsupportedCellType);
+    testMethod(testInvalidIdentifierThrows);
+  } catch (const std::runtime_error& exception) {
+    _errors++;
+    _error = true;
+    std::cerr << "  " << exception.what() << std::endl;
+  }
 }
 
 void tarch::plotter::tests::NetCDFFileWriterTest::testInvalidIdentifierThrows() {
@@ -415,10 +423,10 @@ void tarch::plotter::tests::NetCDFFileWriterTest::testUnevenSubdomainCounts() {
   const std::string fullPath = (tarch::tests::getWritableTestDirectory() / (filename + ".nc")).string();
 
   // Master holds 3 subdomains, every other rank 2 - non-zero but unequal counts.
-  const int nSub = tarch::mpi::Rank::getInstance().isGlobalMaster() ? 3 : 2;
+  const int numberOfSubdomains = tarch::mpi::Rank::getInstance().isGlobalMaster() ? 3 : 2;
   {
-    NetCDFFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), nSub);
-    for (int sd = 0; sd < nSub; ++sd) {
+    NetCDFFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), numberOfSubdomains);
+    for (int sd = 0; sd < numberOfSubdomains; ++sd) {
       auto         v       = plotter.createVertexPlotter(sd);
       auto         c       = plotter.createCellPlotter(sd);
       auto         cd      = plotter.createCellDataPlotter(sd, "Material", 1);
@@ -464,13 +472,12 @@ void tarch::plotter::tests::NetCDFFileWriterTest::testEmptyPlotter() {
 
   {
     NetCDFFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
-    // Write without any data
     plotter.writeToFile(filename, 0);
   }
 
   barrier();
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    if (fs::exists(fullPath)) {
+    if (std::filesystem::exists(fullPath)) {
       cleanup(fullPath);
     }
   }
@@ -490,15 +497,13 @@ void tarch::plotter::tests::NetCDFFileWriterTest::testInconsistentDataSizeThrows
     v->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
     v->plotVertex(tarch::la::Vector<2, double>{1.0, 1.0});
 
-    // Plot data for only 1 vertex (Bug!)
+    // Data for only one of the two vertices, which the write validation rejects.
     vd->plotVertexData(0, 5.0);
 
-    // Must throw during write or merge
     plotter.writeToFile(filename, 0);
   } catch (const std::runtime_error&) {
     exceptionThrown = true;
   } catch (...) {
-    // Any other exception also counts
     exceptionThrown = true;
   }
 
@@ -507,7 +512,7 @@ void tarch::plotter::tests::NetCDFFileWriterTest::testInconsistentDataSizeThrows
     if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
       cleanup(fullPath);
     }
-    throw std::runtime_error("NetCDFFileWriter did not throw on inconsistent data size!");
+    throw std::runtime_error("NetCDFFileWriter did not throw on inconsistent data size.");
   } else {
     if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
       cleanup(fullPath);
@@ -541,19 +546,17 @@ void tarch::plotter::tests::NetCDFFileWriterTest::testUnsupportedCellType() {
     if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
       cleanup(filename + ".nc");
     }
-    throw std::runtime_error("NetCDFFileWriter did not throw on unsupported cell type (Line)!");
+    throw std::runtime_error("NetCDFFileWriter did not throw on the unsupported cell type Line.");
   }
   barrier();
 }
 
 #else // PEANO_WITH_NETCDF
 
-// Dummy implementation for the build when NetCDF is disabled
+// Dummy implementation for the build when NetCDF is disabled.
 tarch::plotter::tests::NetCDFFileWriterTest::NetCDFFileWriterTest() :
   TestCase("tarch::plotter::tests::NetCDFFileWriterTest") {}
 
-void tarch::plotter::tests::NetCDFFileWriterTest::run() {
-  // Do nothing
-}
+void tarch::plotter::tests::NetCDFFileWriterTest::run() {}
 
 #endif
