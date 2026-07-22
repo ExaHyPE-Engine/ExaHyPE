@@ -15,10 +15,10 @@ class AbstractSolverDeclarations:
 
     {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" and BOUNDARY_CONDITIONS_IMPLEMENTATION!="<none>" %}
     /**
-     * Apply boundary conditions. You can overwrite both the inside and
-     * outside values though most BCs only modify the outside ones. Please
-     * note that the boundary conditions you set here are after that subject
-     * to the Riemann solver, i.e. flux and eigenvalues.
+     * Apply boundary conditions. You can overwrite both the inside and the
+     * outside values, though most boundary conditions only modify the outside
+     * ones. The values set here are afterwards subject to the Riemann solver,
+     * i.e. to the flux and the eigenvalues.
      */
     virtual void boundaryConditions(
       const {{COMPUTE_PRECISION}}* const NOALIAS    Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -32,7 +32,7 @@ class AbstractSolverDeclarations:
 
     {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" and REFINEMENT_CRITERION_IMPLEMENTATION!="<none>" %}
     /**
-     * Refinement criterion
+     * Refinement criterion.
      *
      * ExaHyPE 2 is guided by a maximum and minimum mesh (patch) size.
      * All (dynamic) AMR is constrained by these values, i.e. if your
@@ -45,12 +45,17 @@ class AbstractSolverDeclarations:
      * to Peano 4/ExaHyPE 2. If you want to have an adaptive mesh,
      * use this routine to implement the refinement pattern.
      *
-     * @param Q This is the (current) solution. The data is not set
-     *  to a valid value throughout grid construction. In this case,
+     * @param Q This is the current patch solution with
+     *  NumberOfFiniteVolumesPerAxisPerPatch^DIMENSIONS volumes of
+     *  NumberOfUnknowns+NumberOfAuxiliaryVariables values each. The data is
+     *  not set to a valid value throughout grid construction. In this case,
      *  it is nullptr.
+     * @param x Patch centre.
+     * @param h Patch size.
+     * @param t Time stamp of the patch.
      */
     virtual ::exahype2::RefinementCommand refinementCriterion(
-      const {{COMPUTE_PRECISION}}* const NOALIAS    Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{COMPUTE_PRECISION}}* const NOALIAS    Q, // Q[patch-size * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})]
       const tarch::la::Vector<DIMENSIONS, double>&  x,
       const tarch::la::Vector<DIMENSIONS, double>&  h,
       const double                                  t

@@ -14,40 +14,26 @@ namespace tarch {
 } // namespace tarch
 
 /**
- * Represents a program instance within a cluster. Thus, this class is a
- * singleton.
+ * Represents one program instance within a cluster, i.e. one MPI rank. This
+ * class is a singleton.
  *
- * The parallel concept is a client - server model (process 0 is the server),
- * where all active nodes act as servers deploying calculations on demand. So
- * the basic activities of a parallel node are
+ * A rank owns the MPI environment: init() brings it up and determines the
+ * rank id, the number of ranks, the node layout and the supported thread
+ * level, while shutdown() tears it down again. The class furthermore hands
+ * out the message tags through reserveFreeTag() and supervises the message
+ * exchange, so a rank which waits too long for a message first writes a
+ * timeout warning and eventually terminates the whole application.
  *
- * - receive new root element to work on
- * - pass back space-tree
- * - perform additive cycle
- * - perform multiplicative cycle
- *
- * The two perform commands have to return several statistic records. Among them
- * are time needed, some residual characteristics and flags defining if the
- * domain has been refined. Furthermore the number of communication partners is
- * an interesting detail.
- *
- * In the near future, this class should become responsible for the error
- * handling. Right now, the error handle set is the fatal error handler. That
- * is the whole parallel application is shut down as soon as an mpi error
- * occurs.
+ * Every MPI error is fatal, i.e. the whole parallel application is shut down
+ * as soon as one occurs.
  *
  * @author Tobias Weinzierl
- * @version $Revision: 1.51 $
  */
 class tarch::mpi::Rank {
 public:
-  static const int DEADLOCK_EXIT_CODE = -2;
+  static const int DeadlockExitCode = -2;
 
 private:
-  /**
-   * Logging device.
-   */
-
   static Rank _singleton;
 
   /**
@@ -82,21 +68,20 @@ private:
    * Timeout warning
    *
    * How long shall the application wait until it writes a time-out warning.
-   * Different to _deadlockTimeOut, this value changes over time: If we write
-   * a warning message, we increase this value. So, by default, you can make
-   * is rather small. The code then will increase it once you have written a
-   * warning to avoid that the terminal is flooded with these warnings. It
-   * will never by bigger than _deadlockTimeOut though due to this growth.
+   * Different to _deadlockTimeout, this value changes over time: every
+   * warning message increases it. It can hence start off rather small, and
+   * the code widens it with each warning so the terminal is not flooded. The
+   * growth never pushes it beyond _deadlockTimeout though.
    *
    * Despite the growth discussion, you can use a timeout warning that is
-   * greater than zero and set _deadlockTimeOut to zero. In this case, you
+   * greater than zero and set _deadlockTimeout to zero. In this case, you
    * will get warnings that the code thinks it runs into a deadlock, but you
    * do not get a timeout ever.
    *
-   * @see writeTimeOutWarning()
-   * @see _deadlockTimeOut
+   * @see writeTimeoutWarning()
+   * @see _deadlockTimeout
    */
-  std::chrono::duration<double> _timeOutWarning;
+  std::chrono::duration<double> _timeoutWarning;
 
   /**
    * Time to timeout
@@ -104,17 +89,16 @@ private:
    * This counter specifies the seconds until a timeout is triggered. If the
    * field equals zero, no timeouts will ever happen.
    */
-  std::chrono::duration<double> _deadlockTimeOut;
+  std::chrono::duration<double> _deadlockTimeout;
 
-  std::chrono::time_point<std::chrono::system_clock, std::chrono::duration<double>> _globalTimeOutWarning;
-  std::chrono::time_point<std::chrono::system_clock, std::chrono::duration<double>> _globalTimeOutDeadlock;
+  std::chrono::time_point<std::chrono::system_clock, std::chrono::duration<double>> _globalTimeoutWarning;
+  std::chrono::time_point<std::chrono::system_clock, std::chrono::duration<double>> _globalTimeoutDeadlock;
 
   /**
    * Global toggle to enable/disable timeouts
    *
    * This flag helps user codes to enable/disable timeouts (temporarily).
-   * Note that the flag is not the only way how to disable the timeouts.
-   * Alternatively, you can set _deadlockTimeOut to zero.
+   * Setting _deadlockTimeout to zero disables them as well.
    */
   bool _areTimeoutsEnabled;
 
@@ -129,19 +113,19 @@ private:
   bool _deadlockDetectionEnabled;
 
   /**
-   * Set by init() and actually stores the number of valid tags.
+   * Set by init() and stores the number of valid tags.
    */
   static int _maxTags;
 
   /**
-   * Count  the tags that have already been handed out.
+   * Counts the tags that have already been handed out.
    */
   static int _tagCounter;
 
   /**
-   * The standard constructor assignes the attributes default values and
-   * checks whether the program is compiled using the -DParallel option.
-   * If this is not the case, a warning is logged.
+   * The standard constructor assigns the attributes their default values.
+   * Without PEANO_WITH_MPI, the rank is 0 and there is one processor. With
+   * MPI, both values stay invalid until init() has determined them.
    */
   Rank();
 
@@ -151,66 +135,56 @@ private:
   Rank(const Rank& node) = delete;
 
   /**
-   * Receive any Message Pending in the MPI/Receive Buffers
+   * Receive any message pending in the MPI receive buffers
    *
-   * We do poll MPI only every k iterations. Once we have found a message, we
-   * wait again k iterations. If the threshold is exceeded and no message is
-   * found we however do not reset k (I've tried this and it gives worse
-   * runtime): receiveDanglingMessages is typically called when we enter a
-   * critical phase of the simulation and we urgently wait for incoming MPI
-   * messages. So once we are in that critical regime and have already
-   * exceeded the k it would be harakiri to reset this one to 0 again - we
-   * only do so if data drops in and we thus may assume that we'll leave the
-   * critical phase anyway.
+   * We poll MPI only every k iterations. Once we have found a message, we
+   * wait k iterations again. If the threshold is exceeded and no message is
+   * found, we do not reset k: this routine is typically called when we enter
+   * a critical phase in which we urgently wait for incoming MPI messages, so
+   * throttling the polling down again right there would be
+   * counterproductive. We reset the counter only when data drops in, as we
+   * may then assume that we are about to leave the critical phase.
    */
   void receiveDanglingMessagesFromReceiveBuffers();
 
 public:
   /**
-   * Just try to find out if a tag is actually supported. This works after
-   * we've called the init() routine. if we call this routine before, it
-   * will always pass. If the tag is not supported, we write a warning and
-   * return false.
+   * Find out whether a tag is supported. This works after init() has been
+   * called; before that, the check always passes. If the tag is not
+   * supported, we write a warning and return false.
    */
   static bool validateMaxTagIsSupported();
 
   /**
-   * Return a Free Tag
+   * Return a free tag
    *
    * Returns a free tag to be used for a new datatype. Each result is
-   * delivered exactly once. The string argument is just for logging.
+   * delivered exactly once. The string argument serves logging purposes.
    *
+   * ## Implementation details
    *
-   * \section  Implementation details
+   * The routine reports through std::cout rather than through the log
+   * device. It is static, and so are the class' log devices, while C++ has
+   * no mechanism to define which static entity is instantiated first. On
+   * some systems the tag registration therefore runs before the logging
+   * device is up. The underlying issue is known as the static
+   * initialisation order problem:
    *
-   * This operation should write something to the log devices. However, it
-   * is static and the class' log devices are static, too. C++ has no
-   * mechanism to define which static entity has to be instantiated first.
-   * On some systems, it hence happened that this tag registration got
-   * called before the logging device had been up and running. The problem
-   * is known as static initialization order problem:
-   *
-   *     	https://isocpp.org/wiki/faq/ctors#static-init-order
-   *
-   * So what I do is that I log to std::cout only. This eliminated problems
-   * here.
+   *     https://isocpp.org/wiki/faq/ctors#static-init-order
    */
   static int  reserveFreeTag(const std::string& fullQualifiedMessageName, int numberOfTags = 1);
   static void releaseTag(int tag);
 
   /**
-   * In older DaStGen version, I tried to find out whether a particular
-   * message type is in the MPI queue. That is, I looked whether a message
-   * on this tag does exist, and then I looked whether the memory footprint
-   * matches via count. I think this is invalid. MPI really looks only into
-   * the number of bytes, so you have to know which type drops in once there
-   * is a message on a tag.
+   * Check whether a message is pending on a tag
+   *
+   * The check covers the tag alone. MPI matches on the number of bytes, so a
+   * caller has to know which type drops in once there is a message on a tag.
    */
   bool isMessageInQueue(int tag) const;
 
   /**
    * Logs the status of the process onto the log device.
-   *
    */
   void logStatus() const;
 
@@ -223,32 +197,29 @@ public:
   static Rank& getInstance();
 
   /**
-   * The standard destructor calls MPI_Finalize().
+   * The destructor leaves the MPI environment untouched. shutdown() is the
+   * operation which calls MPI_Finalize().
    */
   virtual ~Rank();
 
   /**
-   * This operation initializes the MPI environment and the program instance.
-   * Not that the argv and argc parameters are both in and out parameters.
-   * Before you pass them to the operation, they are set by the mpi
-   * environment. Afterwards the original parameters from the user are stored
-   * within them.
+   * This operation initialises the MPI environment and the program instance.
+   * The argv and argc parameters are both in and out parameters: the MPI
+   * environment sets them, and afterwards they hold the original parameters
+   * the user passed in.
    *
    * ## Implementation details
    *
-   * init never uses the log device to report any errors as the log device
-   * usually in turn uses Node's getters. Furthermore, the _initIsCalled flag
-   * has thus to be set before the log state operation is invoked.
-   *
+   * init never uses the log device to report any errors, as the log device
+   * in turn uses this class' getters. The _initIsCalled flag has to be set
+   * before the log state operation is invoked for the same reason.
    *
    * ## Upper tag bound
    *
-   * We try to find out how many tags the system does support. Here, the MPI
-   * standard is a little bit weird, as it requires a pointer to a void pointer
-   * and then we can read the data from there. So it seems we get a pointer to
-   * a system variable back rather than the system variable.
-   *
-   * Thanks to Andrew Mallinson (Intel) for pointing this out.
+   * We determine how many tags the system supports. The MPI standard hands
+   * this limit out through a pointer to a void pointer, from which we then
+   * read the value, i.e. we get a pointer to a system variable back rather
+   * than the system variable itself.
    *
    * @return true if initialisation has been successful
    *
@@ -260,22 +231,13 @@ public:
    * Shuts down the application. Should be the last operation called by the
    * overall application.
    *
-   * !!! Rationale
+   * ## Rationale
    *
-   * Originally, I put the shutdown operation into the destructor of Node.
-   * The MPI environment consequently was shut down as soon as the operating
-   * system terminates the application. However, Scalasca complained on the
-   * BlueGene/P that the
-   * destruction happened after the return statement of the main method. To
-   * make Peano work with Scalasca, I hence moved the MPI shutdown into a
-   * method called explicitely before the final return statement.
-   *
-   * This seems to be a CLX effect, i.e. the Intel and the GNU compilers
-   * worked fine with Scalasca. Hence, I assume that Intel and GNU
-   * executables destroy all static objects (singletons) before they return
-   * from the main functions. CLX destroys the static objects after the
-   * return statement and thus makes Scalasca's instrumentation report an
-   * error.
+   * The MPI shutdown is an explicit call before the final return statement
+   * of main, not part of the destructor. Compilers differ in when they
+   * destroy static objects: some do so before main returns, others after the
+   * return statement, and in the latter case a destructor-based shutdown
+   * makes Scalasca's instrumentation report an error.
    */
   void shutdown();
 
@@ -291,10 +253,9 @@ public:
    * Get the global master
    *
    * Peano sets up a logical tree topology on all the ranks. The root of this
-   * logical tree, i.e. the rank that is responsible for all other ranks, is
-   * the global master. In contrast, every rank also has a local master that
-   * tells him what to do. This is the master and the parent within the
-   * topology tree. Use the NodePool to identify the rank of a rank's master.
+   * logical tree, i.e. the rank which is responsible for all other ranks, is
+   * the global master. Every rank in addition has a local master which tells
+   * it what to do, namely its parent within the topology tree.
    *
    * @return 0
    */
@@ -321,9 +282,9 @@ public:
   bool isNodeMaster() const;
 
   /**
-   * Is this node the global master process, i.e. does its rank equal get
-   * MasterProcessRank()? This operation returns always true if the code
-   * is not compiled with -DParallel.
+   * Is this node the global master process, i.e. does its rank equal
+   * getGlobalMasterRank()? This operation always returns true if the code is
+   * not compiled with PEANO_WITH_MPI.
    *
    * @return Is this node the global master process?
    */
@@ -332,22 +293,18 @@ public:
   /**
    * Triggers a time out and shuts down the cluster if a timeout is violated
    *
-   * The implementation does not use MPI_Abort, since it seems that this
-   * operation requires all nodes running. Instead of,
-   * getDeadlockWarningTimeStamp() uses the system exit function passing it
-   * DEADLOCK_EXIT_CODE as exit code.
-   *
-   * The operation should be called only if the deadlock time-out is switched
-   * on ( isTimeOutDeadlockEnabled() ) and the deadlock time-out has expired.
-   * Use getDeadlockWarningTimeStamp() and the system operation clock() to
-   * check the second requirement.
+   * The routine evaluates exceededDeadlockThreshold() itself and returns
+   * without any effect as long as the threshold has not been passed. Once it
+   * has, the routine dumps the pending message queues and then terminates
+   * the application with DeadlockExitCode. The termination goes through
+   * abort(), so every rank goes down.
    *
    * @param className  Name of the class that triggers the deadlock shutdown.
    * @param methodName Name of the method that triggers the deadlock shutdown.
    * @param communicationPartnerRank Rank of the node the operation that
    *          should have sent a message but did not.
    */
-  void triggerDeadlockTimeOut(
+  void triggerDeadlockTimeout(
     const std::string& className,
     const std::string& methodName,
     int                communicationPartnerRank,
@@ -363,14 +320,14 @@ public:
    * into a timeout (or excessive wait). The routine assumes that timeouts
    * are enabled and that the user has called
    *
-   * setDeadlockTimeoutTimeStamp()
+   * setDeadlockWarningTimeStamp()
    *
    * before. To avoid an excessive list of timeout warnings, a warning is
-   * always followed by moving the next warning timestamp (so you don't get
-   * dozens of timeouts) and the code also creases the time span that it
-   * uses from hereon to report on timeouts.
+   * always followed by moving the next warning timestamp forward, and the
+   * code also increases the time span it uses from hereon to report on
+   * timeouts.
    */
-  void writeTimeOutWarning(
+  void writeTimeoutWarning(
     const std::string& className,
     const std::string& methodName,
     int                communicationPartnerRank,
@@ -378,7 +335,7 @@ public:
     int                numberOfExpectedMessages = 1
   );
 
-  bool exceededTimeOutWarningThreshold() const;
+  bool exceededTimeoutWarningThreshold() const;
 
   bool exceededDeadlockThreshold() const;
 
@@ -390,15 +347,16 @@ public:
   void ensureThatMessageQueuesAreEmpty(int fromRank, int tag);
 
   /**
-   * Memorise global timeout
+   * Memorise the time stamp from which on a timeout warning is written if no
+   * message has been received meanwhile.
    */
   void setDeadlockWarningTimeStamp();
 
   /**
-   * @return Time stamp when next application should terminate because of a
-   *         time out if no message has been received meanwhile.
+   * Memorise the time stamp from which on the application terminates because
+   * of a timeout if no message has been received meanwhile.
    */
-  void setDeadlockTimeOutTimeStamp();
+  void setDeadlockTimeoutTimeStamp();
 
   bool isInitialised() const;
 
@@ -409,7 +367,7 @@ public:
    * warning that it is likely that it ran into a deadlock. If you pass 0,
    * that switches off this feature.
    */
-  void setTimeOutWarning(double valueInSeconds);
+  void setTimeoutWarning(double valueInSeconds);
 
   /**
    * Set deadlock time out
@@ -418,14 +376,14 @@ public:
    * and shutdown the whole application with an error report. If you pass 0,
    * that switches off this feature.
    *
-   * By default, timeouts are disabled when we instantiate the Rank object,
-   * but if you set up your system through peano4::initParallelEnvironment(),
-   * then you'll have a default timeout.
+   * By default, timeouts are disabled when we instantiate the Rank object. A
+   * caller that sets the parallel environment up for us installs a default
+   * timeout in the process.
    *
    * @param valueInSeconds Timeout duration in seconds, i.e. how long we wait
    *   at most for an incoming message.
    */
-  void setDeadlockTimeOut(double valueInSeconds);
+  void setDeadlockTimeout(double valueInSeconds);
 
   void setDeadlockDetection(bool enabled);
 
@@ -435,9 +393,9 @@ public:
 
   bool isDeadlockDetectionEnabled() const;
 
-  std::chrono::duration<double> getTimeOutWarning() const;
+  std::chrono::duration<double> getTimeoutWarning() const;
 
-  std::chrono::duration<double> getDeadlockTimeOut() const;
+  std::chrono::duration<double> getDeadlockTimeout() const;
 
   /**
    * A proper abort in an active MPI context has to use MPI_Abort. Otherwise, only
@@ -449,13 +407,9 @@ public:
   /**
    * Information on supported thread-level support
    *
-   * Peano will complain bitterly if your MPI version doesn't support
-   * MPI_THREAD_MULTIPLE, but it will not stop executing. Instead, it
-   * will store the thread support-level and continue. You can always
-   * query it if you need to.
-   *
-   * @see peano4::parallel::tests::PingPongTest::run() for an example where
-   *   the thread level is queries explicitly.
+   * An MPI version without support for MPI_THREAD_MULTIPLE yields a
+   * prominent complaint, but execution continues: the code stores the
+   * thread support level, which can be queried here at any time.
    */
   int getProvidedThreadLevelSupport() const;
 };

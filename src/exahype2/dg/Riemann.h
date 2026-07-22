@@ -5,13 +5,12 @@
 #include "DGUtils.h"
 #include "Functors.h"
 
-#include "tarch/la/Vector.h"
-#include "tarch/multicore/multicore.h"
-
+#include "peano4/Globals.h"
+#include "peano4/Loop.h"
 #include "peano4/datamanagement/FaceMarker.h"
 #include "peano4/grid/GridControlEvent.h"
-#include "peano4/Loop.h"
-#include "peano4/Globals.h"
+#include "tarch/la/Vector.h"
+#include "tarch/multicore/multicore.h"
 
 /**
  * @page exahype2_dg_DG_AMR Discontinuous Galerkin adaptive mesh refinement
@@ -20,10 +19,10 @@
  * hosts a couple of routines which realise the steps required for AMR. We
  * write what and how things are done in C++. The routines pair up with the
  * Python file exahype2.solvers.rkdg.actionsets.DynamicAMR. This Python file
- * orchestrates the AMR operations, i.e. it decided when things are done. Most
- * of the docu for the whole AMR business is however collected here.
+ * orchestrates the AMR operations, i.e. it decides when things are done. Most
+ * of the documentation for the whole AMR business is however collected here.
  *
- * AMR for DG is basically a Riemann problem and can be illustrated in 1d.
+ * AMR for DG is a Riemann problem and can be illustrated in 1d.
  * Let there be two levels called coarse and fine as illustrated below:
  *
  * @image html src/exahype2/dg/adaptive-mesh-refinement.png
@@ -33,7 +32,6 @@
  * a face) holds the left solution after each initial step of the Runge Kutta
  * scheme. A face is unique through its position and its level. So there are
  * two faces at the same location: the green one and the red one.
- *
  *
  * ## Rationale and alternatives
  *
@@ -46,62 +44,50 @@
  *   same level. All other vertices are persistent.
  * - A hanging face is a face where no vertex is persistent, i.e. all
  *   adjacent vertices are hanging.
- * - Non-persistent data is not hold in-between two grid traversals.
+ * - Non-persistent data is not held between two grid traversals.
  *
- * To solve the Riemann problem, we have three options:
+ * Every side of the transition solves the Riemann problems it integrates at
+ * its own resolution:
  *
- * - We could project the coarse solution downwards, solve the Riemann
- *   problem there, and thus have a valid solution for F. In return, we
- *   could project the fine grid solutions also up into the green face,
- *   solve the Riemann problem there, and update C with the outcome.
- * - We could project the coarse solution down, solve the Riemann
- *   problem there, and restrict the solution up into the green face.
- *   No Riemann problem is solved there, but we use the restricted
- *   solutions of the fine grid Riemann problems.
- * - We restrict the solutions from the fine grid cell F into the right
- *   side of the green face and solve the Rieman problem in the green
- *   face. Then, we project the solution down to the hanging face. No
- *   Riemann problem is solved on the fine grid.
+ * - The fine cells solve the Riemann problems on their hanging faces. The
+ *   fine trace is their own projection; the coarse trace is the coarse
+ *   face's projection interpolated down. Each fine trace therefore receives
+ *   the full interface dissipation of the Riemann solver. A flux that is
+ *   computed on the coarse face and interpolated down instead cannot see
+ *   fine trace modes that restrict to zero, and those undamped modes make
+ *   the coupling unstable.
+ * - The coarse cell solves the Riemann problem on the coarse face, whose
+ *   far half holds the restriction of the fine traces.
  *
- * Once we benchmark these three options against our terminology, it
- * becomes clear that only the third variant is an option. We need the
- * left and right solution and this works only if face data are
- * persistent.
- *
- * We project every cell. So the projected polynomial arrives on every
- * face, also the hanging one.
- *
+ * Hanging faces hold no data between grid sweeps, so the fine-side Riemann
+ * problems have to be solved in the sweep in which the fine cells project
+ * their traces, and their face integral is accumulated into the persistent
+ * right-hand-side estimates right away.
  *
  * ## Algorithm
  *
- * - In the primary grid sweep where we project onto the face (and
- *   maybe solve the volume):
- *   - Clear the solution every non-refined face, so there are zeroes
- *     in there.
- *   - Project solution onto face (this is done via the action set
- *     ProjectLinearCombinationOfEstimates anyway).
- *   - If we encounter the destruction of a hanging face, restrict
- *     the projected solution. This can be done via an accummulation.
- *     We have cleared the solution before to zero.
- * - In the secondary grid sweep where we solve the Riemann problem
- *   and bring the solutions together:
- *   - Solve the Riemann problem on the coarser face (is done anyway
- *     by action set SolveRiemannProblem).
- *   - Project the solution down onto the hanging face when it is
- *     created.
- *   - Update the fine cell with the projected data.
- *
- * From the sketch above, we see that we don't need any sophisticated
- * case distinction.
- *
- * - Clear the face data in touchFaceFirstTime of the primary sweep.
- *   We can always do this, as the projection will overwrite it for
- *   those faces that point towards a fine grid cell.
- * - Always restrict/accummulate the solution if a hanging face is
- *   destroyed. We rely on a top-down tree traversal, so we know that
- *   any coarser face is already handled, even if we restrict and
- *   thus accummulate twice.
- * - Always interpolate the Riemann solution.
+ * - In the primary grid sweep where we project onto the face and solve the
+ *   volume integral:
+ *   - Clear the solution on every persistent face, so there are zeroes in
+ *     there.
+ *   - Project the linear combination onto the faces (action set
+ *     ProjectLinearCombinationOfEstimates). This includes hanging faces.
+ *   - On every hanging face, interpolate the coarse face's near half onto
+ *     the half the fine cells cannot supply
+ *     (interpolateProjectedFacePolynomial()).
+ *   - Every fine cell with hanging faces solves the Riemann problems on
+ *     these faces and accumulates their face integral into its
+ *     right-hand-side estimates (action set
+ *     SolveRiemannProblemOnHangingFaces).
+ *   - When a hanging face is destroyed, restrict the projected fine trace
+ *     onto the coarse face (restrictAndAccumulateProjectedFacePolynomial()).
+ * - In the secondary grid sweep where we solve the Riemann problems and
+ *   bring the solutions together:
+ *   - Solve the Riemann problem on the persistent faces (action set
+ *     SolveRiemannProblem).
+ *   - Clear the Riemann solution on every hanging face, so the fine cells'
+ *     face integrals add nothing for them: their contribution is already in
+ *     the right-hand-side estimates.
  */
 
 namespace exahype2 {
@@ -110,14 +96,14 @@ namespace exahype2 {
      * ## Interpolation matrix
      *
      * Core ingredient to this routine is the interpolation matrix.
-     * I describes how to interpolate a 1d polynomial over the unit
+     * It describes how to interpolate a 1d polynomial over the unit
      * interval into the three subcell polynomials. Consequently,
      * the matrix points to three matrices. One for the left, one
      * for the middle, one for the right subcell.
      *
      * Each matrix accepts the order+1 values at the quadrature points
      * as input, i.e. each matrix has order+1 columns. Each matrix
-     * returns the the output for one quadrature point at the chosen
+     * returns the output for one quadrature point at the chosen
      * subcell. So each matrix has order+1 rows.
      *
      * In the example above, we work with polynomials of order three.
@@ -136,25 +122,24 @@ namespace exahype2 {
      * from left to right, bottom-up, and always first along the x-axis,
      * then y, then z.
      *
-     *
      * ## Implementation
      *
-     * I first serialise the face-local degrees of freedom explicitly and then
+     * We first serialise the face-local degrees of freedom explicitly and then
      * multiply the result with the unknown stride.
      *
-     * Next, I compute the total number of unknowns (doubles) in the fine grid
-     * face and set them all to zero. From now on, I can accumulate the result.
-     * There is a factor of 2 in the calculation of the total number of unknowns.
-     * It results from the fact that I have a left and a right projection.
+     * Next, we compute the total number of unknowns (doubles) in the fine grid
+     * face and set them all to zero, so we can accumulate the result from there
+     * on. There is a factor of 2 in the calculation of the total number of
+     * unknowns. It results from the fact that we have a left and a right
+     * projection.
      *
-     * The main part of the routine is a nested loop, where I run over all
+     * The main part of the routine is a nested loop, where we run over all
      * combinations of input and output dofs. Again, these are three loops
-     * nested, as I always have left and right.
+     * nested, as we always have left and right.
      *
-     * Per combination, I have to compute the d-1-dimensional tensor product
+     * Per combination, we have to compute the d-1-dimensional tensor product
      * over the interpolation matrix. For 2d, this degenerates to a simple
      * lookup.
-     *
      *
      * ## Evaluation of interpolation/restriction matrix
      *
@@ -173,29 +158,34 @@ namespace exahype2 {
      * we have to map the dof counter for coarse and fine first to the
      * indices of a 1d projection operator.
      *
+     * The routine writes only the half of the hanging face that belongs to
+     * the coarse neighbour; the other half carries the fine cell's own
+     * projection and stays untouched.
      *
      * @param numberOfProjectedQuantities This is one if we only project the
      *   solution. It is two if we project the solution and the F-value or
-     *   the solution and itsgradient along the normal.
+     *   the solution and its gradient along the normal.
      */
-    void interpolateRiemannSolution(
-      const peano4::datamanagement::FaceMarker&  marker,
-      int                                        order,
-      int                                        unknowns,
-      const double* NOALIAS                 InterpolationMatrix1d,
-      const double* NOALIAS                 coarseGridFaceQ,
-      double* NOALIAS                       fineGridFaceQ
+    void interpolateProjectedFacePolynomial(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       order,
+      int                                       numberOfProjectedQuantities,
+      int                                       unknowns,
+      int                                       auxiliaryVariables,
+      const double* NOALIAS                     InterpolationMatrix1d,
+      const double* NOALIAS                     coarseGridFaceQ,
+      double* NOALIAS                           fineGridFaceQ
     );
 
     /**
-     * Counterpart of interpolateRiemannSolution().
+     * Counterpart of interpolateProjectedFacePolynomial().
      *
      * The restriction matrix has exactly the same form as the interpolation
      * matrix. However, this time we multiply the corresponding row of the
      * submatrix with a weight from the fine grid.
      *
      * The image below illustrates the same example as used in
-     * interpolateRiemannSolution():
+     * interpolateProjectedFacePolynomial():
      *
      * @image html src/exahype2/dg/interpolation.png
      *
@@ -203,18 +193,14 @@ namespace exahype2 {
      * of RestrictionMatrix1d, compute the c1, c2, c3 and c4 values and then
      * add them to the coarse representation. The interpolation can overwrite.
      *
-     * Different to the interpolation, we only restrict one half of the face
-     * and not both. The interpolation can set both sides, as it overwrites
-     * a hanging face (or a new one). When we restrict, we know that a
-     * persistent coarse grid face might already hold some projected solution.
-     * We are interested in the other half. If we accumulate both, we'd add
-     * the interpolated value (or any other rubbish) again to the one face
-     * part which had been valid before.
+     * Like the interpolation, we only touch one half of the face: the
+     * restriction fills the half of the persistent coarse face that the fine
+     * cells cover, while the coarse cell's own projection lives in the other
+     * half and must survive.
      *
+     * ## Differences to interpolateProjectedFacePolynomial()
      *
-     * ## Differences to interpolateRiemannSolution()
-     *
-     * - In the final accummulation, we write to the coarse grid while the
+     * - In the final accumulation, we write to the coarse grid while the
      *   interpolation writes to the fine grid. Consequently, coarse grid
      *   and fine grid data are permuted in the signature.
      * - The restriction works on the solution that is extrapolated to the
@@ -222,21 +208,79 @@ namespace exahype2 {
      *   Riemann solution instead does not hold any auxiliary variables.
      * - The restriction does not clear the target field, i.e. write zeros
      *   to it. That has to be done earlier by the mesh traversal, as
-     *   multiple restriction calls accummulate in one variable, i.e. if
-     *   we clear we loose all the data from previous restrictions.
+     *   multiple restriction calls accumulate in one variable, i.e. if
+     *   we clear we lose all the data from earlier restrictions.
      * - Row and column indices are permuted in the matrix access, i.e. the
      *   coarse grid dof determines the target (image) and hence defines the
      *   row.
+     * - Every matrix entry is scaled with the ratio of the fine node's to the
+     *   coarse node's quadrature weight. The sum over the three child faces
+     *   then is the mass-lumped L2 projection of the fine trace, which
+     *   reproduces every polynomial the coarse face basis represents, the
+     *   constant state included.
+     *
+     * The calls arrive in the order the traversal visits the hanging faces.
+     * Peano reverses its traversal direction in every grid sweep and the
+     * number of start-up sweeps depends on the MPI layout, so different
+     * layouts can sum the contributions in different order, and the result
+     * differs in the last bit. The sum only becomes independent of the
+     * layout with one slot per subface on the coarse face, added up in a
+     * fixed order.
      */
     void restrictAndAccumulateProjectedFacePolynomial(
-      const peano4::datamanagement::FaceMarker&  marker,
-      int                                        order,
-      int                                        numberOfProjectedQuantities,
-      int                                        unknowns,
-      int                                        auxiliaryVariables,
-      const double* NOALIAS                 RestrictionMatrix1d,
-      const double* NOALIAS                 fineGridFaceQ,
-      double* NOALIAS                       coarseGridFaceQ
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       order,
+      int                                       numberOfProjectedQuantities,
+      int                                       unknowns,
+      int                                       auxiliaryVariables,
+      const double* NOALIAS                     RestrictionMatrix1d,
+      const double* NOALIAS                     QuadratureWeights1d,
+      const double* NOALIAS                     fineGridFaceQ,
+      double* NOALIAS                           coarseGridFaceQ
+    );
+
+    /**
+     * Assembles the Riemann solution a fine cell consumes at a hanging face.
+     *
+     * A resolution transition conserves only if both sides integrate the same
+     * numerical flux. The coarse face solves its Riemann problem from its own
+     * trace and the restriction of the fine traces before any adjacent fine
+     * cell is touched in the same sweep, so the fine cells can consume that
+     * flux: this routine evaluates the coarse flux polynomial at the hanging
+     * face's nodes and writes the result into the fine side's layer of the
+     * hanging face's Riemann solution. The subface quadrature of the evaluated
+     * polynomial sums exactly to the coarse face integral, so the transition
+     * conserves per Runge-Kutta stage.
+     *
+     * The coarse flux dissipates only what the restriction retains of the fine
+     * trace, and the retained part alone cannot stabilise the transition. The
+     * routine therefore adds the jump penalty
+     * 0.5 maxEigenvalue (restriction image - fine trace) with the face's
+     * orientation: it damps exactly the part of the fine trace the coarse flux
+     * cannot see, and it integrates to zero over the coarse face because the
+     * restriction preserves the trace integral, so conservation survives. The
+     * eigenvalue has to be one value for the whole coarse face, or the subface
+     * contributions of the penalty stop cancelling.
+     *
+     * The caller runs in a cell event. The routine therefore identifies the
+     * hanging face through the face number and the cell's position within its
+     * father cell; the tangential components match the hanging face's position
+     * within its father face. The Riemann solution stores the plain flux
+     * without auxiliary variables. The coarse side's layer of the hanging face
+     * stays untouched.
+     */
+    void interpolateRiemannSolution(
+      int                                       faceNumber,
+      const tarch::la::Vector<DIMENSIONS, int>& positionWithinFatherCell,
+      int                                       order,
+      int                                       unknowns,
+      int                                       auxiliaryVariables,
+      double                                    maxEigenvalue,
+      const double* NOALIAS                     InterpolationMatrix1d,
+      const double* NOALIAS                     coarseGridFaceRiemannSolution,
+      const double* NOALIAS                     coarseGridFaceProjection,
+      const double* NOALIAS                     fineGridFaceProjection,
+      double* NOALIAS                           fineGridFaceRiemannSolution
     );
 
     /**
@@ -252,7 +296,7 @@ namespace exahype2 {
      *                           0 1
      *
      * Each individual face is ordered lexicographically. So we go from left to
-     * right, and we always start closest to the origin or the coordinate system
+     * right, and we always start closest to the origin of the coordinate system
      * if we interpret the cell as the unit square.
      *
      * The sketch above illustrates the ordering of the four faces for a p=1
@@ -262,12 +306,12 @@ namespace exahype2 {
      *   @f$ unknowns \times (order+1)^d@f$.
      *
      * @param order Integer greater or equal to 0. The number of nodes in each
-     *  dimension will be equal to order+1
+     *   dimension is equal to order+1.
      *
      * @param BasisFunctionValuesLeft Array of size order+1 which clarifies (in 1d)
      *   how to project the order+1 quadrature weights onto a value on the left
      *   face. For Gauss Lobatto, this is a trivial array (you can read out the
-     *   value directly from the leftmost quadrature point, but for any other
+     *   value directly from the leftmost quadrature point), but for any other
      *   basis, you need a linear combination of all the quadrature points in the
      *   cell.
      *
@@ -287,137 +331,127 @@ namespace exahype2 {
      *   from above.
      */
     void projectVolumetricDataOntoFaces(
-      const double* NOALIAS          cellQ,
-      int                                 order,
-      int                                 unknowns,
-      int                                 auxiliaryVariables,
-      const double* const NOALIAS    BasisFunctionValuesLeft,
-      double* const NOALIAS          faceQLeft,
-      double* const NOALIAS          faceQRight,
-      double* const NOALIAS          faceQBottom,
-      double* const NOALIAS          faceQUp
+      const double* NOALIAS       cellQ,
+      int                         order,
+      int                         unknowns,
+      int                         auxiliaryVariables,
+      const double* const NOALIAS BasisFunctionValuesLeft,
+      double* const NOALIAS       faceQLeft,
+      double* const NOALIAS       faceQRight,
+      double* const NOALIAS       faceQBottom,
+      double* const NOALIAS       faceQUp
     );
 
     /**
      * Set the whole solution projection on the face from left and right to zero
      *
-     * @param numberOfProjectedQUantities Equals one if we project only the
+     * @param numberOfProjectedQuantities Equals one if we project only the
      *   solution to the face, it equals two if we project both the solution
      *   and the gradient or the F-extrapolation, and so forth.
      */
     void clearSolutionProjection(
-      int                           order,
-      int                           unknowns,
-      int                           auxiliaryVariables,
-      int                           numberOfProjectedQuantities,
-      double* NOALIAS          faceQ
-    );
-
-    /**
-     * @see clearSolutionProjection()
-     */
-    void clearRiemannResult(
-      int                           order,
-      int                           unknowns,
-      double* NOALIAS          faceQ
+      int             order,
+      int             unknowns,
+      int             auxiliaryVariables,
+      int             numberOfProjectedQuantities,
+      double* NOALIAS faceQ
     );
 
     /**
      * 3d counterpart to other projectVolumetricDataOntoFaces() variant.
      */
     void projectVolumetricDataOntoFaces(
-      const double* NOALIAS          cellQ,
-      int                                 order,
-      int                                 unknowns,
-      int                                 auxiliaryVariables,
-      const double* const NOALIAS    BasisFunctionValuesLeft,
-      double* const NOALIAS          faceQLeft,
-      double* const NOALIAS          faceQRight,
-      double* const NOALIAS          faceQBottom,
-      double* const NOALIAS          faceQUp,
-      double* const NOALIAS          faceQFront,
-      double* const NOALIAS          faceQBack
+      const double* NOALIAS       cellQ,
+      int                         order,
+      int                         unknowns,
+      int                         auxiliaryVariables,
+      const double* const NOALIAS BasisFunctionValuesLeft,
+      double* const NOALIAS       faceQLeft,
+      double* const NOALIAS       faceQRight,
+      double* const NOALIAS       faceQBottom,
+      double* const NOALIAS       faceQUp,
+      double* const NOALIAS       faceQFront,
+      double* const NOALIAS       faceQBack
     );
 
     void projectVolumetricDataAndGradientOntoFaces(
-      const double* NOALIAS          cellQ,
-      int                                 order,
-      int                                 unknowns,
-      int                                 auxiliaryVariables,
-      const double* const NOALIAS    BasisFunctionValuesLeft,
-      double* const NOALIAS          faceQLeft,
-      double* const NOALIAS          faceQRight,
-      double* const NOALIAS          faceQBottom,
-      double* const NOALIAS          faceQUp
+      const double* NOALIAS       cellQ,
+      int                         order,
+      int                         unknowns,
+      int                         auxiliaryVariables,
+      const double* const NOALIAS BasisFunctionValuesLeft,
+      double* const NOALIAS       faceQLeft,
+      double* const NOALIAS       faceQRight,
+      double* const NOALIAS       faceQBottom,
+      double* const NOALIAS       faceQUp
     );
 
     /**
      * 3d counterpart to other projectVolumetricDataOntoFaces() variant.
      */
     void projectVolumetricDataAndGradientOntoFaces(
-      const double* NOALIAS          cellQ,
-      int                                 order,
-      int                                 unknowns,
-      int                                 auxiliaryVariables,
-      const double* const NOALIAS    BasisFunctionValuesLeft,
-      double* const NOALIAS          faceQLeft,
-      double* const NOALIAS          faceQRight,
-      double* const NOALIAS          faceQBottom,
-      double* const NOALIAS          faceQUp,
-      double* const NOALIAS          faceQFront,
-      double* const NOALIAS          faceQBack
+      const double* NOALIAS       cellQ,
+      int                         order,
+      int                         unknowns,
+      int                         auxiliaryVariables,
+      const double* const NOALIAS BasisFunctionValuesLeft,
+      double* const NOALIAS       faceQLeft,
+      double* const NOALIAS       faceQRight,
+      double* const NOALIAS       faceQBottom,
+      double* const NOALIAS       faceQUp,
+      double* const NOALIAS       faceQFront,
+      double* const NOALIAS       faceQBack
     );
 
     /**
      * Given a numerical flux at the various faces, this computes and adds the Riemann
-     * integral of this flux to the nodes of the cell.
-     *
+     * integral of this flux to the nodes of a 2-dimensional cell.
      *
      * ## Realisation
      *
      * The code is a nested for loop, i.e. a 2d Cartesian loop. Per loop body, we add
      * the results from left, right, bottom and top.
      *
+     * @param faceQLeft Numerical flux at each node along the left face. This is
+     *   typically computed by a Riemann solver such as a Rusanov solver. The same
+     *   holds for faceQRight, faceQBottom and faceQUp, which carry the fluxes of
+     *   the remaining three faces.
      *
-     * Computes this flux for a 2-dimensional cell
+     * @param cellSize Extent of the cell along each coordinate axis. It scales the
+     *   face integral against the cell volume.
      *
-     * @param cellQ the current solution, expected to be the solution already updated
-     *   with local contributions. (See Euler.h)
+     * @param BasisFunctionValuesLeft Numerical value of the basis functions evaluated
+     *   at the left node in one dimension. It determines how strongly the value at the
+     *   boundary influences the value at a given node. The basis function values on the
+     *   right side are symmetric to those on the left side, so this array serves both.
      *
-     * @param faceQX This should contain a value for the numerical flux at each node along
-     * the corresponding face. This is typically computed by a Riemann solver such as
-     * a Rusanov solver.
+     * @param MassMatrixDiagonal1d Quadrature weight of each quadrature node in one
+     *   dimension.
      *
-     * @param: BasisFunctionValuesLeft (respectively Right): as the name implies, this is
-     *  the numerical value of the basis function value evaluated at the left node in
-     *  1 dimension. This has a part in determining how much the value at the boundary
-     *  influences the value at a given node.
-     *  Note that the Basis function values on the right side are symmetric to those on the
-     *  left side, so the BasisFunctionValuesLeft are also used there.
-     *
-     * @param quadratureWeights: quadrature weight of the given quadrature node 1 dimension
+     * @param cellQ The current solution, expected to be the solution already updated
+     *   with local contributions (see Euler.h). The face integral is added to it.
      *
      * @see projectVolumetricDataOntoFaces()
      */
     void integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
-      const double* const NOALIAS    faceQLeft,
-      const double* const NOALIAS    faceQRight,
-      const double* const NOALIAS    faceQBottom,
-      const double* const NOALIAS    faceQUp,
+      const double* const NOALIAS         faceQLeft,
+      const double* const NOALIAS         faceQRight,
+      const double* const NOALIAS         faceQBottom,
+      const double* const NOALIAS         faceQUp,
       int                                 order,
       int                                 unknowns,
       const int                           auxiliaryVariables,
-      const tarch::la::Vector<2,double>&  cellSize,
-      const double* const NOALIAS    BasisFunctionValuesLeft,
-      const double* NOALIAS          MassMatrixDiagonal1d,
-      double* NOALIAS                cellQ
+      const tarch::la::Vector<2, double>& cellSize,
+      const double* const NOALIAS         BasisFunctionValuesLeft,
+      const double* NOALIAS               MassMatrixDiagonal1d,
+      double* NOALIAS                     cellQ
     );
 
     /**
-     * 3D counterpart of integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre()
+     * 3d counterpart of integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre()
      *
      * The routine relies on a left-handed coordinate system. So we have a cube
-     * with a left and a right face. Those are the faxes 0 and 3
+     * with a left and a right face. Those are the faces 0 and 3
      * (=0+DIMENSIONS). Their normal points along the x axis. Next, we have
      * bottom and top face, as they have a normal along the y axis and y is the
      * second coordinate axis. Finally, we handle the front and the back face.
@@ -426,19 +460,19 @@ namespace exahype2 {
      * into the screen.
      */
     void integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
-      const double* const NOALIAS    faceQLeft,
-      const double* const NOALIAS    faceQRight,
-      const double* const NOALIAS    faceQBottom,
-      const double* const NOALIAS    faceQUp,
-      const double* const NOALIAS    faceQFront,
-      const double* const NOALIAS    faceQBack,
+      const double* const NOALIAS         faceQLeft,
+      const double* const NOALIAS         faceQRight,
+      const double* const NOALIAS         faceQBottom,
+      const double* const NOALIAS         faceQUp,
+      const double* const NOALIAS         faceQFront,
+      const double* const NOALIAS         faceQBack,
       int                                 order,
       int                                 unknowns,
       const int                           auxiliaryVariables,
-      const tarch::la::Vector<3,double>&  cellSize,
-      const double* const NOALIAS    BasisFunctionValuesLeft,
-      const double* NOALIAS          MassMatrixDiagonal1d,
-      double* NOALIAS                cellQ
+      const tarch::la::Vector<3, double>& cellSize,
+      const double* const NOALIAS         BasisFunctionValuesLeft,
+      const double* NOALIAS               MassMatrixDiagonal1d,
+      double* NOALIAS                     cellQ
     );
-  }
-}
+  } // namespace dg
+} // namespace exahype2

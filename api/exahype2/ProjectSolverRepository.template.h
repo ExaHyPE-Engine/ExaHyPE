@@ -9,15 +9,10 @@
 #include "{{ item[0] }}.h"
 {% endfor %}
 
-{% for item in NAMESPACE -%}
-namespace {{ item }} {
-{% endfor %}
-
+namespace {{ NAMESPACE | join("::") }} {
   {% for item in SOLVERS -%}
   extern {{ item[0] }} {{ item[1] }};
   {% endfor %}
-
-  extern ::exahype2::RefinementControl refinementControl;
 
   /**
    * Return the global min time stamp over all solvers.
@@ -45,6 +40,7 @@ namespace {{ item }} {
 
   void startGridConstructionStep();
   void startGridInitialisationStep();
+  void startDynamicMeshRefinementStep();
 
   /**
    * Start a new time step
@@ -59,6 +55,7 @@ namespace {{ item }} {
 
   void finishGridConstructionStep();
   void finishGridInitialisationStep();
+  void finishDynamicMeshRefinementStep();
 
   /**
    * @see startTimeStep()
@@ -105,21 +102,8 @@ namespace {{ item }} {
 
   int getNumberOfDoFs();
 
-  /**
-   * Concatenates all the toString() results from the solvers.
-   *
-   * Gives you one long string of the states of the solvers. If you study the
-   * states within the main of the simulation (the application driver so to
-   * say), these states denote the states that the solvers will have in the
-   * upcoming mesh sweep.
-   */
-  std::string getSolverStateDescriptions();
-
   std::vector<std::pair<std::string, std::vector<::runner::SolverStatistic>>> getSolverStatistics();
   std::vector<std::pair<std::string, std::vector<::runner::SolverStatistic>>> getParticleStatistics();
 
   std::vector<std::pair<std::string, std::vector<std::pair<std::string, std::string>>>> getConfigurationSummary();
-
-{% for item in NAMESPACE -%}
-}
-{%- endfor %}
+} // namespace {{ NAMESPACE | join("::") }}

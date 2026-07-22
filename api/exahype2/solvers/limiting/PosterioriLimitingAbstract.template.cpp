@@ -85,9 +85,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
     case SolverState::Suspended:
     case SolverState::Plotting:
     case SolverState::RegularSolver:
-      // If the plotting happened, the regular solver should starts its routine even if _numberOfTroubledCellsThisTimeStep != 0.
-      // - It is done, because in that case the plotting state happened right after the limiter solver state, where the same check is not performed.
-      // - Otherwise we are stuck in the limiter solver, since _numberOfTroubledCellsThisTimeStep is set to zero in the regular solver state after the limiter.
+      // After a plot the regular solver resumes even if _numberOfTroubledCellsThisTimeStep != 0.
+      // - The plotting state follows the limiter solver state, which does not run this check itself.
+      // - Without the exception we stay in the limiter solver, as _numberOfTroubledCellsThisTimeStep
+      //   is reset to zero only in the regular solver state.
       _solverState = ((_numberOfTroubledCellsThisTimeStep == 0) or (_solverState == SolverState::Plotting) ?
         SolverState::RegularSolver : SolverState::LimiterStatusSpreadingToNeighbours);
       break;
@@ -98,9 +99,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
       _solverState = SolverState::LimiterSolver;
       break;
     case SolverState::LimiterSolver:
-      // TODO: Potential bug if the limiter solver has more than one grid sweeps.
-      // - It will change the state to the regular solver even if only the first sweep is finished.
-      // - Potentially to fix it we can store isFinished status in each solver, which returns true as soon as all sweeps are done.
+      // TODO: Potential bug if the limiter solver has more than one grid sweep.
+      // - It changes the state to the regular solver even if only the first sweep has finished.
+      // - A fix could store an isFinished status in each solver, which turns true as soon as all sweeps are done.
       _solverState = SolverState::RegularSolver;
       break;
   }
@@ -175,6 +176,11 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
   return "<undef>";
 }
 
+/**
+ * A limiting solver alternates between its regular and its limiter sweep. Plotting is allowed
+ * while the grid is initialised, after a limiter sweep, and after a regular sweep that left no
+ * troubled cell behind.
+ */
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
   return (
     (_solverState == SolverState::GridInitialisation)

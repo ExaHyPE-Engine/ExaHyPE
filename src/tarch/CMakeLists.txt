@@ -4,6 +4,7 @@
 file(GLOB_RECURSE HEADERS ${HEADER_EXTENSIONS_TO_GLOB})
 
 set(SOURCES
+  StdAfx.cpp
   Init.cpp
   MemoryUsage.cpp
   CompilerSpecificSettings.cpp

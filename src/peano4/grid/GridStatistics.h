@@ -24,25 +24,31 @@ struct peano4::grid::GridStatistics {
 
   int numberOfStationarySweeps = 0;
 
+  /**
+   * Requested vertex refinements/erases the traversal could not apply because the
+   * surrounding coarse vertices were still in transitional states. The requesting
+   * grid-control events have to be delivered again until this count drops to zero.
+   */
+  int numberOfDeferredGridControlChanges = 0;
+
   std::uint8_t flags = 0;
 
   static constexpr std::uint8_t CoarseningHasBeenVetoed = 1 << 0;
   static constexpr std::uint8_t RemovedEmptySubtree     = 1 << 1;
 
-  tarch::la::Vector<DIMENSIONS, double> minH = tarch::la::Vector<DIMENSIONS, double>(
-    std::numeric_limits<double>::max()
-  );
+  tarch::la::Vector<DIMENSIONS, double> minH =
+    tarch::la::Vector<DIMENSIONS, double>(std::numeric_limits<double>::max());
 
   GridStatistics() noexcept = default;
 
   inline bool getCoarseningHasBeenVetoed() const noexcept { return (flags & CoarseningHasBeenVetoed) != 0; }
-  inline void setCoarseningHasBeenVetoed(bool v) noexcept {
-    v ? (flags |= CoarseningHasBeenVetoed) : (flags &= ~CoarseningHasBeenVetoed);
+  inline void setCoarseningHasBeenVetoed(bool value) noexcept {
+    value ? (flags |= CoarseningHasBeenVetoed) : (flags &= ~CoarseningHasBeenVetoed);
   }
 
   inline bool getRemovedEmptySubtree() const noexcept { return (flags & RemovedEmptySubtree) != 0; }
-  inline void setRemovedEmptySubtree(bool v) noexcept {
-    v ? (flags |= RemovedEmptySubtree) : (flags &= ~RemovedEmptySubtree);
+  inline void setRemovedEmptySubtree(bool value) noexcept {
+    value ? (flags |= RemovedEmptySubtree) : (flags &= ~RemovedEmptySubtree);
   }
 
   void        clear(bool isGlobalMasterTree);
@@ -53,8 +59,6 @@ struct peano4::grid::GridStatistics {
 
 std::ostream& operator<<(std::ostream& out, const peano4::grid::GridStatistics& statistics);
 
-peano4::grid::GridStatistics operator+(
-  const peano4::grid::GridStatistics& lhs,
-  const peano4::grid::GridStatistics& rhs
-);
+peano4::grid::GridStatistics
+operator+(const peano4::grid::GridStatistics& lhs, const peano4::grid::GridStatistics& rhs);
 peano4::grid::GridStatistics operator+=(peano4::grid::GridStatistics& lhs, const peano4::grid::GridStatistics& rhs);

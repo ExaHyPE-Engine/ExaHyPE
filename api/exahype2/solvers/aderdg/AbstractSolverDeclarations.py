@@ -12,13 +12,11 @@ class AbstractSolverDeclarations:
             """
     {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
     /**
+     * Set the initial condition of one degree of freedom.
      *
-     * @param x     Position of point that is to be initialised within computational domain.
-     * @param h     Size of cell within which the point is placed.
-     * @param index Index of point within cell. This one can be used to look up which shape
-     *              function is tied to the point. You just have to scale it with h. By
-     *              translating the shape function's centre to x, you can reconstruct where
-     *              the shape function is placed within the computational domain.
+     * @param Q Unknowns and auxiliary variables of the degree of freedom.
+     * @param x Position of the quadrature point within the computational domain.
+     * @param h Size of the cell within which the quadrature point is placed.
      */
     virtual void initialCondition(
       {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -29,10 +27,10 @@ class AbstractSolverDeclarations:
 
     {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" and BOUNDARY_CONDITIONS_IMPLEMENTATION!="<none>" %}
     /**
-     * Apply boundary conditions. You can overwrite both the inside and
-     * outside values though most BCs only modify the outside ones. Please
-     * note that the boundary conditions you set here are after that subject
-     * to the Riemann solver, i.e. flux and eigenvalues.
+     * Apply boundary conditions. You can overwrite both the inside and the
+     * outside values, though most boundary conditions only modify the outside
+     * ones. The values set here are afterwards subject to the Riemann solver,
+     * i.e. to the flux and the eigenvalues.
      */
     virtual void boundaryConditions(
       const {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS    Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -46,7 +44,7 @@ class AbstractSolverDeclarations:
 
     {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" and REFINEMENT_CRITERION_IMPLEMENTATION!="<none>" %}
     /**
-     * Refinement criterion
+     * Refinement criterion.
      *
      * ExaHyPE 2 is guided by a maximum and minimum mesh (patch) size.
      * All (dynamic) AMR is constrained by these values, i.e. if your
@@ -59,12 +57,16 @@ class AbstractSolverDeclarations:
      * to Peano 4/ExaHyPE 2. If you want to have an adaptive mesh,
      * use this routine to implement the refinement pattern.
      *
-     * @param Q This is the (current) solution. The data is not set
-     *  to a valid value throughout grid construction. In this case,
-     *  it is nullptr.
+     * @param Q This is the current cell solution with (Order+1)^DIMENSIONS
+     *  degrees of freedom of NumberOfUnknowns+NumberOfAuxiliaryVariables values
+     *  each. The data is not set to a valid value throughout grid construction.
+     *  In this case, it is nullptr.
+     * @param x Cell centre.
+     * @param h Cell size.
+     * @param t Time stamp of the cell.
      */
     virtual ::exahype2::RefinementCommand refinementCriterion(
-      const {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS    Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS    Q, // Q[({{ORDER}}+1)^DIMENSIONS * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})]
       const tarch::la::Vector<DIMENSIONS, double>&  x,
       const tarch::la::Vector<DIMENSIONS, double>&  h,
       const double                                  t
@@ -156,8 +158,8 @@ class AbstractSolverDeclarations:
 
     {% if RIEMANN_SOLVER_IMPLEMENTATION=="<user-defined>" and RIEMANN_SOLVER_IMPLEMENTATION!="<none>" %}
     virtual void riemannSolver(
-      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS        FL, // FL[{{NUMBER_OF_UNKNOWNS}}
-      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS        FR, // FR[{{NUMBER_OF_UNKNOWNS}}
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS        FL, // FL[{{NUMBER_OF_UNKNOWNS}}]
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS        FR, // FR[{{NUMBER_OF_UNKNOWNS}}]
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  QR, // QR[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const double                                                    t,

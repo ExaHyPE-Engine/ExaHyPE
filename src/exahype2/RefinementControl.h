@@ -17,120 +17,70 @@ namespace exahype2 {
 } // namespace exahype2
 
 /**
- * If one of the flags says refine, then refine. If one of the two flags says keep and
- * noone says refine, return keep. Coarsen if and only if both say coarsen.
- */
-exahype2::RefinementCommand operator&&(exahype2::RefinementCommand lhs, exahype2::RefinementCommand rhs);
-
-std::string toString(exahype2::RefinementCommand value);
-
-/**
  * Manage refine/erase requests within ExaHyPE 2
  *
- * This class is a very simple container which collects a point set of
- * refinement and coarsening commands. It then constructs bounding boxes for
- * each command and returns the bounding boxes to Peano 4.
- *
- * Note: Peano will internally decide to merge many many bounding boxes into
- * fewer, larger ones.
- *
- * @see peano4::grid::GridControlEvent::merge()
- *
+ * One of these containers lives in each RefinementCriterion action set. It collects the
+ * commands a traversal raises, one grid-control event per command, and
+ * RefinementControlService::merge() reduces the per-tree containers into the rank's request
+ * set at the end of the traversal.
  *
  * ## Refinement process
  *
- * We have a two stage refinement process in ExaHyPE. These are
- * ExaHyPE-specific stages and they have nothing to do with the fact that we
- * always trigger the refinement and then refine in the subsequent grid sweep,
- * i.e. it has nothing do do with the fact that ExaHyPE needs two grid sweeps
- * to realise (commit) adaptive mesh refinement:
+ * A criterion traversal collects the requests. The service then commits them, and Peano
+ * spends two further traversals on them: the first triggers the topology change on the
+ * affected vertices, the second realises it. Re-delivering an event for that second
+ * traversal is the service's job, so a command carries no lifetime.
  *
- * ExaHyPE first collects all refinement requests within this class. These
- * events are called new events. After the sweep, we roll over the refinement
- * requests. We commit them. These committed events then are delivered to the
- * grid traversal automaton. finishStep() does the roll-over, the delivery
- * happens once you call getGridControlEvents() through the AMR observer.
- *
- * Hence, the overall refinement spawns three grid traversals:
- *
- * - The container collects the refinement requests in the first sweep. Towards
- *   the end of the sweep, the requests are rolled over (committed).
- * - The second sweep grabs the refinement requests from the container and runs
- *   through the mesh. It triggers the refinement for all affected vertices.
- *   Nothing is changed yet.
- * - In the third grid sweep, the mesh is refined actually.
- *
- * Due to the overall three-step mechanism, we make the bookkeeping of the
- * events persistent. Each event can potentially survive a couple of sets
- * within the new events. It is rolled over multiple times until it "expires"
- * within the new events.
- *
- * @see _committedEvents
- *
+ * @see RefinementControlService::finishStep()
  */
-class exahype2::RefinementControl {
+class exahype2::RefinementControl final {
 public:
-  typedef std::list<std::pair<peano4::grid::GridControlEvent, int>> NewEvents;
-
   friend class RefinementControlService;
 
   /**
-   * @param tolerance How much should the code add around each
-   *   grid control. By default we use one percent additional
-   *   tolerance.
+   * Create a container for the requests of one solver.
    */
-  RefinementControl(double tolerance = 0.01);
-  virtual ~RefinementControl() = default;
+  explicit RefinementControl(int solverNumber = 0);
 
   /**
-   * Clears the new events
-   *
-   * Has no affect for the committed events. This routine should only ever be
-   * called by the action sets on their local refinement control assembly.
-   * The global one is persistent and should not be cleared by the user, as
-   * you would loose all those events that should remain alive. Therefore,
-   * there's no clear for the service.
+   * Drop the events collected so far.
    */
   void clear();
 
   /**
-   * Add a new command.
-   *
-   * Depending on the context, we add a new refinement instruction
-   * interpreting x and h. If you refine, I divide h by three.
-   *
-   * ## Lifetime of a refinement event
-   *
-   * If a refinement event is triggered, we keep it alive for a while. This
-   * avoids oscillations (refinement events always overwrite coarsening) and
-   * it helps ranks to catch up - a code might not be able to refine
-   * immediately as it implements a Runge-Kutta scheme, e.g. In this case, we
-   * keep the event alive and then realise it once the code is ready to do
-   * so.
-   *
-   * @param x Centre of the cell for which this command is triggered. This is
-   *   typically marker.getX().
-   * @param h Size of this cell. Typically marker.getH().
-   * @param lifetime Has to be greater equal 1.
+   * Add a refine, keep or erase request for one cell.
    */
   void addCommand(
     const tarch::la::Vector<DIMENSIONS, double>& x,
     const tarch::la::Vector<DIMENSIONS, double>& h,
-    exahype2::RefinementCommand                  command,
-    int                                          lifetime
+    exahype2::RefinementCommand                  command
   );
 
   std::string toString() const;
 
 private:
-  /**
-   * We blow up the region around refinement criterion slightly.
-   */
-  const double _tolerance;
+  struct NewEvent {
+    enum class RealisationPhase { TriggerTopologyChange, RealiseTopologyChange };
+
+    peano4::grid::GridControlEvent event;
+    RealisationPhase               phase;
+    int                            solverNumber;
+  };
+
+  typedef std::list<NewEvent> NewEvents;
+
+  void addCommand(
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    const tarch::la::Vector<DIMENSIONS, double>& h,
+    exahype2::RefinementCommand                  command,
+    NewEvent::RealisationPhase                   phase
+  );
 
   /**
    * Container to accumulate new events. This is a list as we may assume
    * that a lot of inserts are done per iteration.
    */
   NewEvents _newEvents;
+
+  int _solverNumber;
 };

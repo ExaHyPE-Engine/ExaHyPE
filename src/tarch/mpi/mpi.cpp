@@ -26,7 +26,7 @@ namespace {
   bool useTimeoutChecks() {
     auto& rank = tarch::mpi::Rank::getInstance();
     return rank.isInitialised() and rank.areTimeoutsEnabled()
-      and (rank.getTimeOutWarning() > std::chrono::seconds(0) or rank.getDeadlockTimeOut() > std::chrono::seconds(0));
+      and (rank.getTimeoutWarning() > std::chrono::seconds(0) or rank.getDeadlockTimeout() > std::chrono::seconds(0));
   }
 
   bool useDetailedDeadlockDetection() {
@@ -109,27 +109,27 @@ namespace {
     if (not entry.waitingStarted) {
       entry.waitingStarted = true;
       entry.waitStartedAt  = now;
-      entry.nextWarningAt  = now + rank.getTimeOutWarning();
+      entry.nextWarningAt  = now + rank.getTimeoutWarning();
     }
 
-    if (rank.getTimeOutWarning() > std::chrono::seconds(0) and now >= entry.nextWarningAt) {
+    if (rank.getTimeoutWarning() > std::chrono::seconds(0) and now >= entry.nextWarningAt) {
       logWarning(
         waitOperation << " at " << toString(waitLocation) << " still waits for request from " << entry.originOperation
                       << " posted at " << toString(entry.originLocation) << " (partner=" << entry.communicationPartner
                       << ", tag=" << entry.tag << ")"
       );
-      entry.nextWarningAt = now + rank.getTimeOutWarning();
+      entry.nextWarningAt = now + rank.getTimeoutWarning();
     }
 
-    if (rank.getDeadlockTimeOut() > std::chrono::seconds(0)
-        and now - entry.waitStartedAt >= rank.getDeadlockTimeOut()) {
+    if (rank.getDeadlockTimeout() > std::chrono::seconds(0)
+        and now - entry.waitStartedAt >= rank.getDeadlockTimeout()) {
       std::ostringstream message;
       message << waitOperation << " at " << toString(waitLocation) << " deadlocked on request from "
               << entry.originOperation << " posted at " << toString(entry.originLocation)
               << " (partner=" << entry.communicationPartner << ", tag=" << entry.tag << ") after "
-              << rank.getDeadlockTimeOut().count() << " second(s)";
+              << rank.getDeadlockTimeout().count() << " second(s)";
       rank.plotMessageQueues();
-      tarch::terminateWithError(message.str(), tarch::mpi::Rank::DEADLOCK_EXIT_CODE, waitLocation);
+      tarch::terminateWithError(message.str(), tarch::mpi::Rank::DeadlockExitCode, waitLocation);
     }
 
     return true;
@@ -151,20 +151,20 @@ namespace {
     if (not waitingStarted) {
       waitingStarted = true;
       startedWaiting = now;
-      nextWarning    = now + rank.getTimeOutWarning();
+      nextWarning    = now + rank.getTimeoutWarning();
     }
 
-    if (rank.getTimeOutWarning() > std::chrono::seconds(0) and now >= nextWarning) {
+    if (rank.getTimeoutWarning() > std::chrono::seconds(0) and now >= nextWarning) {
       logWarning(operation << " at " << toString(location) << " still waits for MPI request");
-      nextWarning = now + rank.getTimeOutWarning();
+      nextWarning = now + rank.getTimeoutWarning();
     }
 
-    if (rank.getDeadlockTimeOut() > std::chrono::seconds(0) and now - startedWaiting >= rank.getDeadlockTimeOut()) {
+    if (rank.getDeadlockTimeout() > std::chrono::seconds(0) and now - startedWaiting >= rank.getDeadlockTimeout()) {
       std::ostringstream message;
       message << operation << " at " << toString(location) << " deadlocked while waiting for MPI request after "
-              << rank.getDeadlockTimeOut().count() << " second(s)";
+              << rank.getDeadlockTimeout().count() << " second(s)";
       rank.plotMessageQueues();
-      tarch::terminateWithError(message.str(), tarch::mpi::Rank::DEADLOCK_EXIT_CODE, location);
+      tarch::terminateWithError(message.str(), tarch::mpi::Rank::DeadlockExitCode, location);
     }
   }
 
@@ -186,24 +186,24 @@ namespace {
     if (not waitingStarted) {
       waitingStarted = true;
       startedWaiting = now;
-      nextWarning    = now + rank.getTimeOutWarning();
+      nextWarning    = now + rank.getTimeoutWarning();
     }
 
-    if (rank.getTimeOutWarning() > std::chrono::seconds(0) and now >= nextWarning) {
+    if (rank.getTimeoutWarning() > std::chrono::seconds(0) and now >= nextWarning) {
       logWarning(
         operation << " at " << toString(location) << " still waits for partner=" << communicationPartner
                   << " and tag=" << tag
       );
-      nextWarning = now + rank.getTimeOutWarning();
+      nextWarning = now + rank.getTimeoutWarning();
     }
 
-    if (rank.getDeadlockTimeOut() > std::chrono::seconds(0) and now - startedWaiting >= rank.getDeadlockTimeOut()) {
+    if (rank.getDeadlockTimeout() > std::chrono::seconds(0) and now - startedWaiting >= rank.getDeadlockTimeout()) {
       std::ostringstream message;
       message << operation << " at " << toString(location)
               << " deadlocked while waiting for partner=" << communicationPartner << " and tag=" << tag << " after "
-              << rank.getDeadlockTimeOut().count() << " second(s)";
+              << rank.getDeadlockTimeout().count() << " second(s)";
       rank.plotMessageQueues();
-      tarch::terminateWithError(message.str(), tarch::mpi::Rank::DEADLOCK_EXIT_CODE, location);
+      tarch::terminateWithError(message.str(), tarch::mpi::Rank::DeadlockExitCode, location);
     }
   }
 

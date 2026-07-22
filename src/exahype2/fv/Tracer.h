@@ -3,8 +3,9 @@
 #pragma once
 
 #include "PatchUtils.h"
-#include "peano4/Loop.h"
+
 #include "peano4/Globals.h"
+#include "peano4/Loop.h"
 #include "peano4/datamanagement/CellMarker.h"
 
 namespace exahype2 {
@@ -13,13 +14,11 @@ namespace exahype2 {
      * Project one quantity from the patch data onto the particle
      *
      * The quantities of interest are given as template parameters, i.e.
-     * through SourceIndex and DestIndex. This sounds weird (and likely is a
-     * strange choice), but some of ExaHyPE's projection routines want to
-     * have a plain function call to project the solution onto a particle,
-     * and adding the source and destination index as template argument
-     * allows us to have exactly this behaviour.
+     * through SourceIndex and DestIndex. ExaHyPE's tracing expects a plain
+     * function name to project the solution onto a particle, so the source
+     * and the destination index have to be baked into the type.
      *
-     * The usage of this routine within the exaype2.tracers.FiniteVolumesTracing
+     * The usage of this routine within exahype2.tracer.FiniteVolumesTracing
      * is trivial: Pass in
      *
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -27,40 +26,39 @@ namespace exahype2 {
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      *
      * if you want to map the fourth entry of the solution onto the third one of
-     * the tracer, e.g.
+     * the tracer.
      *
-     *
-     * @param marker        Cell marker describing the cell's geometric/spatial
-     *   properties.
-     * @param voxelsPerAxis Describe patch. We assume that the pathch has
-     *   not halo.
-     * @param unknownsPerVoxel
-     * @param Q             Voxel field, i.e. actual patch data. Has the
+     * @param marker           Cell marker describing the cell's geometric and
+     *   spatial properties.
+     * @param voxelsPerAxis    Number of finite volumes per coordinate axis. We
+     *   assume that the patch has no halo.
+     * @param unknownsPerVoxel Number of entries each finite volume holds.
+     * @param Q                Voxel field, i.e. actual patch data. Has the
      *   dimensions @f$ voxelsPerAxis^d \cdot unknownsPerVoxel @f$.
-     * @param particleX     Position of particle.
-     * @param unknown       Which unknown from data field to pick.
+     * @param particle         Particle which receives the value. The routine
+     *   reads its position and writes the entry DestIndex.
      */
     template <int SourceIndex, int DestIndex, typename Particle, typename DataType>
     void projectValueOntoParticle_piecewiseConstant(
       const peano4::datamanagement::CellMarker& marker,
       int                                       voxelsPerAxis,
       int                                       unknownsPerVoxel,
-      const DataType* NOALIAS Q,
-      Particle& particle
+      const DataType* NOALIAS                   Q,
+      Particle&                                 particle
     );
 
     /**
      * Project all values from solution onto particle
      *
      * This routine assumes that the particle hosts exactly the same number
-     * of unknown as you store within the solution, i.e. within each entry
+     * of unknowns as you store within the solution, i.e. within each entry
      * of Q. The count refers to the unknowns plus auxiliary variables within
      * ExaHyPE. If you host a PDE with 10 unknowns and 3 material parameters,
-     * then this routine works if and only if the particle carries 13 unknowns.
+     * then this routine works only when the particle carries 13 unknowns.
      *
-     * The solution assumes that the Q represents a piecewise constant solution
+     * The routine assumes that Q represents a piecewise constant solution
      * and consequently maps the data piecewise constant. This holds for
-     * Finite Volumes, e.g., where each unkonwn within Q stores data in the
+     * Finite Volumes, e.g., where each unknown within Q stores data in the
      * AoS format and represents all the values within that finite volume. As
      * the FV scheme is 0th order, the data within the finite volume can be
      * considered to be piecewise constant, and the piecewise constant
@@ -73,7 +71,7 @@ namespace exahype2 {
      * particle such as projectValueOntoParticle_piecewiseConstant() or
      * projectValuesOntoParticle_piecewiseConstant().
      *
-     * The usage of this routine within the exaype2.tracers.FiniteVolumesTracing
+     * The usage of this routine within exahype2.tracer.FiniteVolumesTracing
      * is trivial: Pass in
      *
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -89,8 +87,8 @@ namespace exahype2 {
       const peano4::datamanagement::CellMarker& marker,
       int                                       voxelsPerAxis,
       int                                       unknownsPerVoxel,
-      const DataType* NOALIAS Q,
-      Particle& particle
+      const DataType* NOALIAS                   Q,
+      Particle&                                 particle
     );
 
     template <int SourceIndex, int DestIndex, typename Particle, typename DataType>
@@ -98,8 +96,8 @@ namespace exahype2 {
       const peano4::datamanagement::CellMarker& marker,
       int                                       voxelsPerAxis,
       int                                       unknownsPerVoxel,
-      const DataType* NOALIAS Q,
-      Particle& particle
+      const DataType* NOALIAS                   Q,
+      Particle&                                 particle
     );
 
     /**
@@ -112,23 +110,23 @@ namespace exahype2 {
       const peano4::datamanagement::CellMarker& marker,
       int                                       voxelsPerAxis,
       int                                       unknownsPerVoxel,
-      const DataType* NOALIAS Q,
-      Particle& particle
+      const DataType* NOALIAS                   Q,
+      Particle&                                 particle
     );
 
     /**
-     * Project all values from solution onto particle and use a piecewise linear interpolation and advance particle
-     * along an explicit Euler
+     * Project all values from the solution onto the particle with a piecewise linear
+     * interpolation
      *
-     * This is a natural extension of projectAllValuesOntoParticle_piecewiseLinear()
-     * which accepts two additional arguments. The first one is the time step size,
-     * and the second one is a set of DIMENSIONS integers. The routine takes the
-     * input data and maps it onto the particle attributes. After that, it assumes
-     * that the indices indicies[0], indicies[1] and indicies[2] actually denote
-     * the particle's velocities and it updates the velocity according to an
-     * explicit Euler. We also provide a set of scale factor for velocity in case the
-     * user would like to tune the velocity accordingly. e.g. if the velocity is the
-     * inverse of the indiced quantities, enter {-1,-1,-1}.
+     * This is the explicit-Euler variant of projectAllValuesOntoParticle_piecewiseLinear().
+     * It additionally accepts the time step size, a set of DIMENSIONS indices naming the
+     * particle entries that hold the velocity, and a set of scale factors for these
+     * velocities. Enter {-1,-1,-1} as factors, e.g., if the velocity is the negative of
+     * the indexed quantities.
+     *
+     * The routine maps the patch data onto the particle attributes. The time step
+     * size, the indices and the factors are part of the signature, but the Euler
+     * update of the particle velocity is not evaluated.
      *
      * To use this extended mapping, you have to use the Python API similar to the
      * following snippet:
@@ -149,45 +147,41 @@ namespace exahype2 {
      *   """
      *   )
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     *
-     * Compared to other variants, we have replaced the function call with
-     * projectAllValuesOntoParticle_piecewiseLinear_explicit_Euler. This kernel
-     * now accepts a few additional parameters besides
      */
     template <typename Particle, typename DataType>
     void projectAllValuesOntoParticle_piecewiseLinear_explicit_Euler(
       const peano4::datamanagement::CellMarker& marker,
       int                                       voxelsPerAxis,
       int                                       unknownsPerVoxel,
-      const DataType* NOALIAS Q,
-      double                                timeStepSize,
-      tarch::la::Vector<DIMENSIONS, int>    indices,
-      tarch::la::Vector<DIMENSIONS, double> factors,
-      Particle&                             particle
+      const DataType* NOALIAS                   Q,
+      double                                    timeStepSize,
+      tarch::la::Vector<DIMENSIONS, int>        indices,
+      tarch::la::Vector<DIMENSIONS, double>     factors,
+      Particle&                                 particle
     );
 
     /**
-     * Map multiple variables from input field onto particle
+     * Map multiple variables from the input field onto the particle
      *
-     *
-     * The usage of this routine within the exaype2.tracers.FiniteVolumesTracing
+     * The usage of this routine within exahype2.tracer.FiniteVolumesTracing
      * is simplistic due to the variadic template:
      *
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     * project_on_tracer_properties_kernel="::exahype2::fv::projectValuesOntoParticle_piecewiseLinear<4, 5, 9>"
+     * project_on_tracer_properties_kernel="::exahype2::fv::projectValuesOntoParticle_piecewiseConstant<double, 4, 5, 9>"
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      *
-     * maps the arguments 4, 5 and 9 from the solution field onto the tracer.
-     * Hence, the function implicitly assumes that the particle has (at least)
-     * three unkowns.
+     * names the entries 4, 5 and 9 of the solution field, so the particle has
+     * to carry at least three unknowns. The helper in the internal namespace
+     * writes the first entry of the particle; the further indices of the pack
+     * are accepted but not evaluated.
      */
     template <typename DataType, int SourceIndex, int... SourceIndices, typename Particle>
     void projectValuesOntoParticle_piecewiseConstant(
       const peano4::datamanagement::CellMarker& marker,
       int                                       voxelsPerAxis,
       int                                       unknownsPerVoxel,
-      const DataType* NOALIAS Q,
-      Particle& particle
+      const DataType* NOALIAS                   Q,
+      Particle&                                 particle
     );
 
     template <typename DataType, int SourceIndex, int... SourceIndices, typename Particle>
@@ -195,61 +189,70 @@ namespace exahype2 {
       const peano4::datamanagement::CellMarker& marker,
       int                                       voxelsPerAxis,
       int                                       unknownsPerVoxel,
-      const DataType* NOALIAS Q,
-      Particle& particle
+      const DataType* NOALIAS                   Q,
+      Particle&                                 particle
     );
+
     /**
-     * Update the particle's state by applying interpolation, integration, and boundary handling.
+     * Advance one particle by a single time step
      *
-     * This function serves as a **central hub** for updating the particle's state based on
-     * the selected **integration method** (e.g., Explicit Euler, Midpoint, Runge-Kutta).
+     * The routine interpolates the patch data onto the particle through
+     * projectValuesOntoParticle_piecewiseLinear(), writes a constant gravitational
+     * acceleration into the particle's acceleration entries, derives the new position
+     * with explicitEulerIntegration(), reflects the particle at the domain boundary,
+     * and finally commits the position.
      *
-     * The function **calls interpolation**, updates the velocity and position based on the
-     * chosen numerical scheme, and then **applies boundary collision handling** if necessary.
-     *
-     * @param particle       The particle whose state is being updated.
-     * @param forces         External forces acting on the particle (e.g., gravity).
-     * @param timeStepSize   The time step size used in integration.
-     * @param method         The numerical integration method to use (Explicit Euler, Midpoint, etc.).
+     * @param particle         Particle whose data, velocity and position are updated.
+     * @param timeStepSize     Time step size used by the Euler update.
+     * @param marker           Cell marker describing the cell's geometric and spatial
+     *   properties.
+     * @param voxelsPerAxis    Number of finite volumes per coordinate axis.
+     * @param unknownsPerVoxel Number of entries each finite volume holds.
+     * @param Q                Voxel field, i.e. actual patch data.
+     * @param DomainSize       Extent of the computational domain.
+     * @param DomainOffset     Bottom left front corner of the computational domain.
+     * @param PeriodicBC       Per-axis periodicity flags. The reflection at the domain
+     *   boundary runs if at least one axis carries a one.
      */
-    template <int SourceIndex, int... SourceIndices, typename Particle, typename DataType=double>
+    template <int SourceIndex, int... SourceIndices, typename Particle, typename DataType = double>
     void updateParticleState(
       Particle&                                 particle,
       double                                    timeStepSize,
       const peano4::datamanagement::CellMarker& marker,
       int                                       voxelsPerAxis,
       int                                       unknownsPerVoxel,
-      const DataType* NOALIAS Q,
-      tarch::la::Vector<DIMENSIONS, double> DomainSize,
-      tarch::la::Vector<DIMENSIONS, double> DomainOffset,
-      tarch::la::Vector<DIMENSIONS, double> PeriodicBC
+      const DataType* NOALIAS                   Q,
+      tarch::la::Vector<DIMENSIONS, double>     DomainSize,
+      tarch::la::Vector<DIMENSIONS, double>     DomainOffset,
+      tarch::la::Vector<DIMENSIONS, double>     PeriodicBC
     );
 
     /**
-     * Perform an Explicit Euler integration step.
+     * Perform an explicit Euler integration step
      *
-     * This is the simplest integration method, where the **velocity is updated first**,
-     * and then the position is updated using the new velocity.
+     * The velocity is updated first and clamped to a fixed range; the new position
+     * then follows from the updated velocity and the acceleration. Velocity and
+     * acceleration live in the particle's data entries 3+d and 5+d.
      *
-     * @param particle       The particle whose position and velocity are updated.
-     * @param timeStepSize   The time step size used in integration.
-     * @return The updated particle position after one explicit Euler step.
+     * @param particle     Particle whose velocity entries are updated in place.
+     * @param timeStepSize Time step size used in the integration.
+     * @return The particle position after one explicit Euler step.
      */
     template <typename Particle>
     tarch::la::Vector<DIMENSIONS, double> explicitEulerIntegration(Particle& particle, double timeStepSize);
 
     /**
-     * Handle boundary collisions and apply reflection with a damping factor.
+     * Reflect a particle that has left the domain
      *
-     * This function **checks whether a particle crosses the domain boundary**
-     * and applies reflection to ensure it remains within the domain.
+     * A position outside the domain is mirrored back at the boundary it crossed, and
+     * the velocity component along that axis is reversed and damped, so the particle
+     * stays inside the domain and loses part of its energy on impact.
      *
-     * - **Reverses the velocity** upon hitting a boundary.
-     * - **Applies damping** to reduce velocity after reflection.
-     *
-     * @param particle       The particle being checked for boundary collisions.
-     * @param newPosition    The computed new position (can be adjusted if out of bounds).
-     * @param dampingFactor  The coefficient for velocity reduction upon collision (0.9 = 90% energy retained).
+     * @param particle     Particle whose velocity entries are updated in place.
+     * @param newPosition  Candidate position. Components outside the domain are
+     *   replaced by their mirrored counterparts.
+     * @param DomainSize   Extent of the computational domain.
+     * @param DomainOffset Bottom left front corner of the computational domain.
      */
     template <typename Particle>
     void handleBoundaryCollisions(
@@ -277,6 +280,7 @@ namespace exahype2 {
         int                                          voxelsPerAxis,
         const tarch::la::Vector<DIMENSIONS, double>& particleX
       );
+
       /**
        * Similar to mapParticleOntoVoxel() but this time, we always take the
        * biased voxel to the left. Let a 1d patch be divided into voxels of
@@ -300,22 +304,22 @@ namespace exahype2 {
       /**
        * Project one quantity from the patch data onto the particle
        *
-       * @param marker        Cell marker describing the cell's geometric/spatial
-       *   properties.
-       * @param voxelsPerAxis Describe patch. We assume that the pathch has
-       *   not halo.
-       * @param unknownsPerVoxel
-       * @param Q             Voxel field, i.e. actual patch data. Has the
+       * @param marker           Cell marker describing the cell's geometric and
+       *   spatial properties.
+       * @param voxelsPerAxis    Number of finite volumes per coordinate axis. We
+       *   assume that the patch has no halo.
+       * @param unknownsPerVoxel Number of entries each finite volume holds.
+       * @param Q                Voxel field, i.e. actual patch data. Has the
        *   dimensions @f$ voxelsPerAxis^d \cdot unknownsPerVoxel @f$.
-       * @param particleX     Position of particle.
-       * @param unknown       Which unknown from data field to pick.
+       * @param particleX        Position of the particle.
+       * @param unknown          Which unknown from the data field to pick.
        */
-      template<typename DataType>
+      template <typename DataType>
       DataType projectValueOntoParticle_piecewiseConstant(
-        const peano4::datamanagement::CellMarker& marker,
-        int                                       voxelsPerAxis,
-        int                                       unknownsPerVoxel,
-        const DataType* NOALIAS Q,
+        const peano4::datamanagement::CellMarker&    marker,
+        int                                          voxelsPerAxis,
+        int                                          unknownsPerVoxel,
+        const DataType* NOALIAS                      Q,
         const tarch::la::Vector<DIMENSIONS, double>& particleX,
         int                                          unknown
       );
@@ -325,12 +329,12 @@ namespace exahype2 {
        *   calculations, i.e. the code to identify the voxels which
        *   affect the particle of interest.
        */
-      template<typename DataType>
+      template <typename DataType>
       DataType projectValueOntoParticle_piecewiseLinear(
-        const peano4::datamanagement::CellMarker& marker,
-        int                                       voxelsPerAxis,
-        int                                       unknownsPerVoxel,
-        const DataType* NOALIAS Q,
+        const peano4::datamanagement::CellMarker&    marker,
+        int                                          voxelsPerAxis,
+        int                                          unknownsPerVoxel,
+        const DataType* NOALIAS                      Q,
         const tarch::la::Vector<DIMENSIONS, double>& particleX,
         int                                          unknown
       );
@@ -346,9 +350,9 @@ namespace exahype2 {
         const peano4::datamanagement::CellMarker& marker,
         int                                       voxelsPerAxis,
         int                                       unknownsPerVoxel,
-        const DataType* NOALIAS Q,
-        Particle& particle,
-        int       destinationIndex
+        const DataType* NOALIAS                   Q,
+        Particle&                                 particle,
+        int                                       destinationIndex
       );
 
       template <typename DataType, typename Particle, int SourceIndex, int... SourceIndices>
@@ -356,12 +360,12 @@ namespace exahype2 {
         const peano4::datamanagement::CellMarker& marker,
         int                                       voxelsPerAxis,
         int                                       unknownsPerVoxel,
-        const DataType* NOALIAS Q,
-        Particle& particle,
-        int       destinationIndex
+        const DataType* NOALIAS                   Q,
+        Particle&                                 particle,
+        int                                       destinationIndex
       );
     } // namespace internal
-  }   // namespace fv
+  } // namespace fv
 } // namespace exahype2
 
 #include "Tracer.cpph"

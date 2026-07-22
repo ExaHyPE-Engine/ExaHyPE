@@ -4,15 +4,11 @@
 
 #include "tarch/tests/TestCase.h"
 
-namespace peano4 {
-  namespace grid {
-    namespace tests {
-      class GridTraversalEventGeneratorTest;
-    } // namespace tests
-  } // namespace grid
-} // namespace peano4
+namespace peano4::grid::tests {
+  class GridTraversalEventGeneratorTest;
+} // namespace peano4::grid::tests
 
-class peano4::grid::tests::GridTraversalEventGeneratorTest final: public tarch::tests::TestCase {
+class peano4::grid::tests::GridTraversalEventGeneratorTest final : public tarch::tests::TestCase {
 private:
   void testCreateEnterNodeTraversalEvent_AllLocalPersistent();
   void testCreateEnterNodeTraversalEvent_VertexBoundaryImpliesLocalInFastPath();
@@ -21,11 +17,12 @@ private:
   void testCreateEnterNodeTraversalEvent_VertexStateSpecialCases();
   void testCreateEnterNodeTraversalEvent_CellNoDataAndHasSplitOverride();
   void testCreateLeaveNodeTraversalEvent_DeleteOnInOut();
+  void testCreateLeaveNodeTraversalEvent_RecomputesHangingFacesAfterDFS();
   void testCreateLeaveNodeTraversalEvent_TemporaryStacksDontYieldNoData();
 
 public:
   GridTraversalEventGeneratorTest();
-  ~GridTraversalEventGeneratorTest() override final = default;
+  ~GridTraversalEventGeneratorTest() override = default;
 
-  void run() override final;
+  void run() override;
 };

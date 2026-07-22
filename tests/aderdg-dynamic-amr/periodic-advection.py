@@ -1,0 +1,93 @@
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
+
+# A smooth bump and its refinement region cross the periodic boundaries.
+import argparse
+
+import exahype2
+
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
+    parser.add_argument(
+        "-h",
+        "--help",
+        action="store_true",
+        help="Show this help message and continue with project help.",
+    )
+    parser.add_argument("-et", "--end-time", type=float, default=1.0)
+    parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=4)
+    parser.add_argument("-l", "--grid-levels", type=int, default=None)
+    parser.add_argument("-lmin", "--min-grid-levels", type=int, default=2)
+    parser.add_argument("-lmax", "--max-grid-levels", type=int, default=4)
+    args, _ = parser.parse_known_args()
+    if args.grid_levels is not None:
+        args.min_grid_levels = args.grid_levels
+        args.max_grid_levels = args.grid_levels
+    if args.help:
+        parser.print_help()
+        print()
+    return args
+
+
+args = parse_arguments()
+
+project = exahype2.Project(
+    namespace=["tests", "exahype2", "aderdg"],
+    project_name="PeriodicAdvection",
+    dimensions=2,
+    size=[1.0, 1.0, 1.0],
+    offset=[0.0, 0.0, 0.0],
+    periodic_bc=[True, True, True],
+    min_end_time=args.end_time,
+    max_end_time=args.end_time,
+    min_grid_levels=args.min_grid_levels,
+    max_grid_levels=args.max_grid_levels,
+)
+
+initial_conditions = """
+  const tarch::la::Vector<DIMENSIONS, double> centre(0.5);
+  constexpr double BumpRadius = 0.3;
+  const double scaledRadiusSquared = tarch::la::norm2Squared(x - centre) / (BumpRadius * BumpRadius);
+  Q[Shortcuts::q] = scaledRadiusSquared < 1.0
+    ? std::exp(1.0 - 1.0 / (1.0 - scaledRadiusSquared))
+    : 0.0;
+"""
+
+# The detail indicator follows the bump across periodic boundaries and coarsens
+# its wake.
+refinement_criterion = """
+  return ::exahype2::refineOnDetail(
+    Q,
+    Order + 1,
+    NumberOfUnknowns + NumberOfAuxiliaryVariables,
+    1.0e-2,
+    9.0,
+    kernels::ADERDGSolver::Quadrature<double>::nodes,
+    [](const double* const values) { return 1.0 + values[Shortcuts::q]; }
+  );
+"""
+
+flux = """
+  F[Shortcuts::q] = Q[Shortcuts::q];
+"""
+
+solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
+    name="ADERDGSolver",
+    order=(args.degrees_of_freedom - 1),
+    time_step_relaxation=0.9,
+    unknowns={"q": 1},
+    auxiliary_variables=0,
+)
+
+solver.set_implementation(
+    initial_conditions=initial_conditions,
+    refinement_criterion=refinement_criterion,
+    max_eigenvalue="return 1.0;",
+    flux=flux,
+)
+
+solver.add_kernel_optimisations(is_linear=True)
+
+project.add_solver(solver)
+project.generate_and_build()

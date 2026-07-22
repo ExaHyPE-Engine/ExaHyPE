@@ -87,6 +87,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
       break;
     case SolverState::LimiterStatusSpreadingToNeighbours:
       repositories::{{LIMITER_SOLVER_INSTANCE}}.suspendSolversForOneGridSweep();
+      [[fallthrough]];
     case SolverState::TimeStep:
     case SolverState::Plotting:
     case SolverState::Suspended:
@@ -148,6 +149,10 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
   return "<undef>";
 }
 
+/**
+ * The limiter-status spreading sweep leaves the solution half-updated, so plotting is
+ * suppressed while the solver is in that state.
+ */
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
   return _solverState!=SolverState::LimiterStatusSpreadingToNeighbours;
 }

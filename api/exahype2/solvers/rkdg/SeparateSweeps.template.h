@@ -17,33 +17,25 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
   public:
     {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %}
     /**
-     * Refinement criterion
+     * Evaluate the refinement criterion for one cell patch.
      *
-     * ExaHyPE 2 is guided by a maximum and minimum mesh (patch) size.
-     * All (dynamic) AMR is constrained by these values, i.e. if your
-     * mesh is coarser than the maximum mesh size, ExaHyPE 2 will
-     * automatically refine. If you try to refine further than the
-     * minimum mesh size, ExaHyPE 2 will ignore any refinement.
+     * The configured minimum and maximum patch sizes bound the resulting mesh.
      *
-     * Consequently, you are fine if you work with a regular mesh:
-     * You set the maximum mesh size, and you leave everything else
-     * to Peano 4/ExaHyPE 2. If you want to have an adaptive mesh,
-     * use this routine to implement the refinement pattern.
-     *
-     * @param Q This is the (current) solution. The data is not set
-     *  to a valid value throughout grid construction. In this case,
-     *  it is nullptr.
+     * @param Q Whole nodal patch in AoS layout, or nullptr during grid construction.
+     * @param x Patch centre.
+     * @param h Patch size.
+     * @param t Time.
      */
-    virtual ::exahype2::RefinementCommand refinementCriterion(
-      const double * NOALIAS                  Q,    // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
-      const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
+    ::exahype2::RefinementCommand refinementCriterion(
+      const double * NOALIAS                  Q,
+      const tarch::la::Vector<DIMENSIONS,double>&  x,
+      const tarch::la::Vector<DIMENSIONS,double>&  h,
       double                                       t
     ) override;
     {% endif %}
 
     {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
-    virtual void initialCondition(
+    void initialCondition(
       double * NOALIAS Q,
       const tarch::la::Vector<DIMENSIONS,double>&  x,
       const tarch::la::Vector<DIMENSIONS,double>&  h
@@ -51,13 +43,13 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
     {% endif %}
 
     {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
-    virtual void boundaryConditions(
+    void boundaryConditions(
       const double * NOALIAS Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       double * NOALIAS Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<DIMENSIONS,double>&  x,
       double                                       t,
       int                                          normal
-    )  override;
+    ) override;
     {% endif %}
 
     {{SOLVER_USER_DECLARATIONS}}

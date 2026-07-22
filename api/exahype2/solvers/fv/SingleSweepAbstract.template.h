@@ -9,6 +9,7 @@
 
 #include "exahype2/Solver.h"
 #include "exahype2/RefinementControl.h"
+#include "exahype2/RefinementCriterionHelpers.h"
 
 #include "peano4/Globals.h"
 
@@ -34,8 +35,8 @@ namespace {{ item }} {
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
   public:
 {% if USE_VARIABLE_SHORTCUTS is sameas True %}
-    /*
-     * Enables the usage of shortcuts to access variables, e.g. use Q[Shortcuts::{{VARIABLE_NAMES[0]}}] instead of Q[0]
+    /**
+     * Enables shortcuts to access variables, e.g. Q[Shortcuts::{{VARIABLE_NAMES[0]}}] instead of Q[0].
      */
     using Shortcuts = {{NAMESPACE | join("::")}}::VariableShortcuts{{SOLVER_NAME}};
 {% endif %}
@@ -63,53 +64,58 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     ~{{CLASSNAME}}() = default;
 
     /**
-     * Alias for periodic boundary conditions.
+     * Flags the coordinate axes along which the domain is periodic.
      */
     static std::bitset<DIMENSIONS> PeriodicBC;
 
-    double getMinTimeStamp() const final;
-    double getMaxTimeStamp() const final;
-    double getMinTimeStepSize() const final;
-    double getMaxTimeStepSize() const final;
+    double getMinTimeStamp() const override final;
+    double getMaxTimeStamp() const override final;
+    double getMinTimeStepSize() const override final;
+    double getMaxTimeStepSize() const override final;
 
-    virtual void startGridConstructionStep() override;
-    virtual void finishGridConstructionStep() override;
+    void startGridConstructionStep() override;
+    void finishGridConstructionStep() override;
 
-    virtual void startGridInitialisationStep() override;
-    virtual void finishGridInitialisationStep() override;
+    void startGridInitialisationStep() override;
+    void finishGridInitialisationStep() override;
 
-    virtual void startTimeStep() override;
-    virtual void finishTimeStep() override;
+    void startTimeStep() override;
+    void finishTimeStep() override;
 
-    virtual void startPlottingStep() override;
-    virtual void finishPlottingStep() override;
+    void startPlottingStep() override;
+    void finishPlottingStep() override;
 
     double getMaxPatchSize() const override final;
     double getMinPatchSize() const override final;
     double getMaxCellSize() const override final;
     double getMinCellSize() const override final;
 
-    virtual int getNumberOfDoFs() const override final;
+    int getNumberOfDoFs() const override final;
 
     /**
-     * Update the global solver state, i.e. inform the solver about some
-     * updated global quantities.
+     * Update the global solver state, i.e. feed updated global quantities into
+     * the solver.
      *
-     * @see setTimeStepSize(double)
+     * @param timeStepSize  Time step size to fold into the global extrema
+     * @param timeStamp     Time stamp to fold into the global extrema
+     * @param minVolumeSize Smallest observed patch size, from which the routine
+     *                      derives the volume size
+     * @param maxVolumeSize Largest observed patch size, from which the routine
+     *                      derives the volume size
      */
     void update(double timeStepSize, double timeStamp, double minVolumeSize, double maxVolumeSize);
 
     SolverState getSolverState() const;
 
-    virtual bool mayPlot() const override;
+    bool mayPlot() const override;
 
     bool isFirstGridSweepOfTimeStep() const;
     bool isLastGridSweepOfTimeStep() const;
 
-    virtual void startSimulation() override;
-    virtual void finishSimulation() override;
+    void startSimulation() override;
+    void finishSimulation() override;
 
-    virtual void suspendSolversForOneGridSweep() override;
+    void suspendSolversForOneGridSweep() override;
 
     {{ABSTRACT_SOLVER_USER_DECLARATIONS}}
 

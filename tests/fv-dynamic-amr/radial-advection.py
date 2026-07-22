@@ -11,13 +11,13 @@ def parse_arguments():
         "-h",
         "--help",
         action="store_true",
-        help="show this help message and continue with project help",
+        help="Show this help message and continue with project help.",
     )
-    parser.add_argument("-et", "--end-time", type=float, default=1.5)
+    parser.add_argument("-et", "--end-time", type=float, default=0.4)
     parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=4)
     parser.add_argument("-l", "--grid-levels", type=int, default=None)
     parser.add_argument("-lmin", "--min-grid-levels", type=int, default=2)
-    parser.add_argument("-lmax", "--max-grid-levels", type=int, default=6)
+    parser.add_argument("-lmax", "--max-grid-levels", type=int, default=4)
     args, _ = parser.parse_known_args()
     if args.grid_levels is not None:
         args.min_grid_levels = args.grid_levels
@@ -32,11 +32,11 @@ args = parse_arguments()
 
 project = exahype2.Project(
     namespace=["tests", "exahype2", "fv"],
-    project_name=".",
+    project_name="RadialAdvection",
     dimensions=2,
     size=[2.0, 2.0, 2.0],
     offset=[0.0, 0.0, 0.0],
-    periodic_bc=[True, False, False],
+    periodic_bc=[False, False, False],
     min_end_time=args.end_time,
     max_end_time=args.end_time,
     min_grid_levels=args.min_grid_levels,
@@ -44,21 +44,9 @@ project = exahype2.Project(
 )
 
 initial_conditions = """
-  for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
-    Q[i] = 0.0;
-  }
-
-  constexpr double radius = 0.1;
-
-#if DIMENSIONS == 3
-  tarch::la::Vector<DIMENSIONS, double> centre = {0.75, 1.0, 1.0};
-#else
-  tarch::la::Vector<DIMENSIONS, double> centre = {0.75, 1.0};
-#endif
-
-  if (tarch::la::norm2(x - centre) < radius) {
-    Q[Shortcuts::rho] = 1.0;
-  }
+  const tarch::la::Vector<DIMENSIONS, double> centre(1.0);
+  constexpr double Radius = 0.15;
+  Q[Shortcuts::rho] = tarch::la::smallerEquals(tarch::la::norm2(x - centre), Radius) ? 1.0 : 0.0;
 """
 
 boundary_conditions = """
@@ -67,49 +55,42 @@ boundary_conditions = """
   }
 """
 
-refinement_criterion = """
-  constexpr double radius = 0.1;
-
-#if DIMENSIONS == 3
-  const tarch::la::Vector<DIMENSIONS, double> centre = {0.75, 1.0, 1.0};
-#else
-  const tarch::la::Vector<DIMENSIONS, double> centre = {0.75, 1.0};
-#endif
-
-  if (tarch::la::equals(t, 0.0)) {
-    return (tarch::la::smallerEquals(tarch::la::norm2(x - centre), radius))
-      ? ::exahype2::RefinementCommand::Refine
-      : ::exahype2::RefinementCommand::Keep;
-  }
-
-  const double rho = Q[Shortcuts::rho];
-
-  return (tarch::la::greaterEquals(rho, 0.5) and tarch::la::smallerEquals(rho, 1.0))
-    ? ::exahype2::RefinementCommand::Refine
-    : ::exahype2::RefinementCommand::Erase;
+flux = """
+  const tarch::la::Vector<DIMENSIONS, double> centre(1.0);
+  const tarch::la::Vector<DIMENSIONS, double> radialOffset = x - centre;
+  const double radius = tarch::la::norm2(radialOffset);
+  F[Shortcuts::rho] = (radius > 0.0 ? radialOffset(normal) / radius : 0.0) * Q[Shortcuts::rho];
 """
 
-fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
+# The unit offset keeps relative detail bounded where density is zero.
+refinement_criterion = """
+  return ::exahype2::refineOnDetail(
+    Q,
+    NumberOfFiniteVolumesPerAxisPerPatch,
+    NumberOfUnknowns + NumberOfAuxiliaryVariables,
+    1.0e-2,
+    9.0,
+    nullptr,
+    [](const double* const values) { return 1.0 + values[Shortcuts::rho]; }
+  );
+"""
+
+solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     name="FVSolver",
     patch_size=args.degrees_of_freedom,
-    unknowns={"rho": 1, "rhoU": project.dimensions},
+    unknowns={"rho": 1},
     auxiliary_variables=0,
-    time_step_relaxation=0.5,
+    time_step_relaxation=0.8,
 )
 
-fv_solver.set_implementation(
+solver.set_implementation(
     initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
     refinement_criterion=refinement_criterion,
-    flux="""
-  for (int i = 0; i < NumberOfUnknowns; i++) {
-    F[i] = 0.0;
-  }
-  F[normal] = Q[normal];
-""",
+    flux=flux,
     max_eigenvalue="return 1.0;",
 )
 
-project.add_solver(fv_solver)
+project.add_solver(solver)
 
 project.generate_and_build()

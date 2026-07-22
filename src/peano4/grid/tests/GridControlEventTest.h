@@ -10,6 +10,7 @@ namespace peano4::grid::tests {
 
 class peano4::grid::tests::GridControlEventTest final : public tarch::tests::TestCase {
 private:
+  void testOperatorEquals();
   void testOperatorLess();
   void testSort();
   void testSortDeterministicGrid();
@@ -17,8 +18,9 @@ private:
   void testMergeAdjacency();
   void testMergeEraseAdjacency();
   void testMergeEraseDoesNotOverMergeLShape();
-  void testMergeEraseEnablesStraddlingErase();
+  void testMergeDoesNotChangeGridDecisions();
   void testMergeEraseChainCollapsesToOne();
+  void testMergeEraseSiblingGroup();
   void testMergeKeepsRefineAndEraseSeparate();
   void testMergeRowAndBlockCollapseToOne();
   void testMergeDoesNotMergeDiagonalOrDifferentTargetH();
@@ -30,7 +32,7 @@ private:
 
 public:
   GridControlEventTest();
-  ~GridControlEventTest() override final = default;
+  ~GridControlEventTest() override = default;
 
-  void run() override final;
+  void run() override;
 };

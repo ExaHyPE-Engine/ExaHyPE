@@ -92,7 +92,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
   assertion(timeStamp >= 0.0, timeStamp);
   _maxTimeStampThisTimeStep = std::max(timeStamp, _maxTimeStampThisTimeStep);
   _minTimeStampThisTimeStep = std::min(timeStamp, _minTimeStampThisTimeStep);
-  assertion(tarch::la::smallerEquals(_minTimeStampThisTimeStep/*_minTimeStamp*/, _maxTimeStampThisTimeStep), _minTimeStamp, _maxTimeStamp, _minTimeStampThisTimeStep, _maxTimeStampThisTimeStep, timeStepSize, timeStamp, minCellSize, maxCellSize);
+  assertion(tarch::la::smallerEquals(_minTimeStampThisTimeStep, _maxTimeStampThisTimeStep), _minTimeStamp, _maxTimeStamp, _minTimeStampThisTimeStep, _maxTimeStampThisTimeStep, timeStepSize, timeStamp, minCellSize, maxCellSize);
 
   assertion(maxCellSize < std::numeric_limits<double>::max() / 10.0, maxCellSize);
   assertion(minCellSize > 0.0, minCellSize);
@@ -134,7 +134,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridInitialisationStep() {
 {% endif %}
 }
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridInitialisationStep() {}
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridInitialisationStep() {
+  // From here on every completed sweep has sent a face-data batch, which the
+  // following sweep's boundary exchange consumes.
+  _hasStoredFaceData = true;
+}
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspendSolversForOneGridSweep() {
   _solverState = SolverState::Suspended;
@@ -148,20 +152,32 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
   case SolverState::GridInitialisation:
     _solverState = SolverState::InitialPrediction;
     break;
-    // Checks if _solverState is in the suspended state and return.
-    // Prevents nullification of eigenvalues if the solver is suspended
+    // A suspended solver returns before the start-of-step implementation runs, so its
+    // eigenvalues survive the sweep it sits out.
   case SolverState::Suspended:
 {% if USE_SEPARATE_SWEEPS is sameas True %}
     _solverState = SolverState::InitialPrediction;
 {% else %}
-    _solverState = (_minTimeStamp == 0) ? SolverState::InitialPrediction : SolverState::TimeStep;
+    // Resuming on an adaptive mesh still owes the prediction-on-hanging-cells sweep, so
+    // this picks the same successor as a plot does.
+    _solverState = (_minTimeStamp == 0)
+      ? SolverState::InitialPrediction
+      : ((_minCellHThisTimeStep < _maxCellHThisTimeStep or _meshRefinementRanSinceLastTimeStep)
+        ? SolverState::PredictionOnHangingCells
+        : SolverState::TimeStep);
 {% endif %}
-    return; // Return if suspended
+    return;
   case SolverState::Plotting:
 {% if USE_SEPARATE_SWEEPS is sameas True %}
     _solverState = SolverState::InitialPrediction;
 {% else %}
-    _solverState = (_minTimeStamp == 0) ? SolverState::InitialPrediction : SolverState::TimeStep;
+    // Plots run between a time-step sweep and its prediction-on-hanging-cells
+    // sweep, so on an adaptive mesh that sweep still has to follow the plot.
+    _solverState = (_minTimeStamp == 0)
+      ? SolverState::InitialPrediction
+      : ((_minCellHThisTimeStep < _maxCellHThisTimeStep or _meshRefinementRanSinceLastTimeStep)
+        ? SolverState::PredictionOnHangingCells
+        : SolverState::TimeStep);
 {% endif %}
     break;
   case SolverState::InitialPrediction:
@@ -169,7 +185,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
     // this can still satisfy _minCellHThisTimeStep < _maxCellHThisTimeStep, which triggers
     // the PredictionOnHangingCells state and can lead to wrong coupled limiter/FV updates.
     // This may also be the case with limiting and (static) AMR.
-    _solverState = (_minCellHThisTimeStep < _maxCellHThisTimeStep) ? SolverState::PredictionOnHangingCells : SolverState::TimeStep;
+    _solverState = (_minCellHThisTimeStep < _maxCellHThisTimeStep or _meshRefinementRanSinceLastTimeStep)
+      ? SolverState::PredictionOnHangingCells
+      : SolverState::TimeStep;
     break;
   case SolverState::PredictionOnHangingCells:
     _solverState = SolverState::TimeStep;
@@ -179,10 +197,16 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
     _solverState = SolverState::InitialPrediction;
 {% else %}
     // TODO: Same as above.
-    _solverState = (_minCellHThisTimeStep < _maxCellHThisTimeStep) ? SolverState::PredictionOnHangingCells : SolverState::TimeStep;
+    // The cell statistics stem from the previous time step, so a mesh that only
+    // just became adaptive is caught through the mesh-refinement flag.
+    _solverState = (_minCellHThisTimeStep < _maxCellHThisTimeStep or _meshRefinementRanSinceLastTimeStep)
+      ? SolverState::PredictionOnHangingCells
+      : SolverState::TimeStep;
 {% endif %}
     break;
   }
+
+  _meshRefinementRanSinceLastTimeStep = false;
 
   {{START_TIME_STEP_IMPLEMENTATION}}
 
@@ -218,7 +242,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
       _localMaxTimeStampThisTimeStep
     };
     double globalMaxValues[4] = {0.0, 0.0, 0.0, 0.0};
-    MPI_Comm communicator = tarch::mpi::Rank::getInstance().getCommunicator();
+    const MPI_Comm communicator = tarch::mpi::Rank::getInstance().getCommunicator();
     auto progress = [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); };
 
     tarch::mpi::allreduce(

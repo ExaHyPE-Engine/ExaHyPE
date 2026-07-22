@@ -37,7 +37,7 @@ from peano4.output.Helper import render_jinja2_template
 
 class RungeKuttaDG(object):
     r"""!
-    An abstract class for any RKDG solver of any order
+    An abstract class for any RKDG solver of any order.
 
     This is the base class of all Runge-Kutta DG solvers. It defines what kind of action
     sets do exist, i.e., what in principle can be done while we run through the grid. It
@@ -50,25 +50,24 @@ class RungeKuttaDG(object):
 
     They do so by setting the guards: Each data structure has a guard which controls
     if it is to be stored. Each action set has a guard that says if it should be
-    called in this particular mesh traversal.
-    If you want to redefine/reset these guards,
-    you have to redefine create_data_structures() and reset the guards after
-    you have called the superclass' operation. I recommend that you refrain from
-    defining completely new guards. Use the predefined guards instead and
-    refine them by adding more and and or clauses.
+    called in this particular mesh traversal. If you want to redefine or reset these
+    guards, you have to redefine create_data_structures() and reset the guards after
+    you have called the superclass' operation. We recommend that you refrain from
+    defining completely new guards. Use the predefined guards instead and refine
+    them by adding further and/or clauses.
 
     If you want to study the mathematics routines used by all the Python-generated
-    code, read the Discontinous Galerkin page in dg.h.
+    code, read the Discontinuous Galerkin page in dg.h.
 
 
     ## Data structures
 
     Each cell hosts a DG polynomial of order _dg_order. Technically, we store this polynomial
     in a regular array (blockstructured data) with (_dg_order+1)^d entries. On top of this
-    current time step, we need the shots into the future. for RK(_rk_order), we need _rk_order
+    current time step, we need the shots into the future. For RK(_rk_order), we need _rk_order
     of these snapshots. They are called estimates.
 
-    On the boundary, I store both the left and right solution projections. Per RK step, we
+    On the boundary, we store both the left and right solution projections. Per RK step, we
     project the linear combination onto the face. This is in line with the action set
     ComputeFinalLinearCombination which simply copies over the old time step
     into the linear combination field in the very first Runge-Kutta step.
@@ -76,8 +75,8 @@ class RungeKuttaDG(object):
     Our DG implementation is not tied to one particular Riemann solver, even though most
     users will likely use Rusanov. Therefore, it is not clear which data is to be projected
     onto the faces. For plain Rusanov with only a flux function, the solutions are sufficient.
-    Other Riemann solvers or Rusanov's ncp terms however require the derivatives. So I give
-    the code the opportunity to work with different data cardinalities.
+    Other Riemann solvers or Rusanov's ncp terms however require the derivatives. The code
+    therefore works with different data cardinalities.
 
     More details are provided in create_data_structures().
 
@@ -91,15 +90,15 @@ class RungeKuttaDG(object):
     create_data_structures() establishes all the data structures tied to the
     grid entities. If you want to alter the configuration of data tied to grid
     entities, you should redefine create_data_structures(). However, any
-    subclass still should call Runge Kutta's create_data_structures() before that.
+    subclass should still call Runge-Kutta's create_data_structures() before that.
     This will ensure that the baseline configuration of all data is in place.
     After that, you can modify the properties.
 
     create_action_sets() establishes the action sets, i.e., activities that are to
     be triggered whenever you run a time step, you plot, you initialise the grid.
     Same here: If you want to alter the configuration of the code, call
-    create_action_sets() of the superclass first, before you do fancy stuff. This
-    way, all the important action sets are in place.
+    create_action_sets() of the superclass first, before you make your changes.
+    This way, all the important action sets are in place.
 
 
     ## General control flow and realisation of solver steps
@@ -111,8 +110,8 @@ class RungeKuttaDG(object):
     sweeps.
 
     - We combine the data of the current time step with all the shots into the future. These
-      shots are held in one large array. This is not super efficient, as we could build up
-      these arrays one by one, but I just use one large scratchpad even for the first line
+      shots are held in one large array. This is not the leanest layout, as we could build
+      up these arrays one by one, but we use one large scratchpad even for the first line
       in the Butcher tableau. See create_data_structures() for details. So all the estimates
       and the current solution are combined according to the Butcher tableau.
 
@@ -125,23 +124,23 @@ class RungeKuttaDG(object):
       both are volumetric, i.e. run per cell, but we can run them in parallel. The face
       projection has to complete immediately (we need the data on the faces), while the
       volumetric computation, in principle, doesn't have to finish prior to the next grid
-      sweep, as long as the linear combination remains persistent. It is only a temporary
-      thing, so will be destroyed immediately once we leave a cell.
+      sweep, as long as the linear combination remains persistent. It is held on the cell
+      for exactly that span, and never leaves the tree that computed it.
 
 
     ## Mandatory step of subclasses
 
     There are different nuances of subclasses/algorithmic realisations, i.e., few solvers inherit
-    directly from RungeKuttaDG. However, even those subclasses still require you do provide some
-    additional information.
+    directly from RungeKuttaDG. However, even those subclasses still require you to provide
+    some additional information.
 
     These are the fields you have to set:
 
     _compute_time_step_size A simple string which defines a double timeStepSize. This snippet will
       be used by both the Riemann solver and the volumetric integration. You don't have to care
       about the Runge-Kutta scaling of time step sizes (or shifts), as this is all done by the
-      source code, but you have to feed an instruction into the solver how to determine a time step
-      size for a cell.
+      source code, but you have to tell the solver how to determine a time step size for a
+      cell.
 
     self._compute_new_time_step_size = "const double newTimeStepSize = timeStepSize;"
 
@@ -157,8 +156,7 @@ class RungeKuttaDG(object):
     - The old time stamp is the one that corresponds to the (old)
       face projection.
 
-    - We set the updated flag if and only if we have finished the
-      last Runge-Kutta step.
+    - We set the updated flag if we have finished the last Runge-Kutta step.
     """
 
     def __init__(
@@ -173,7 +171,7 @@ class RungeKuttaDG(object):
         baseline_action_set_descend_invocation_order=0,
     ):
         """
-        Constructor of the Runge-Kutta Discontinuous Galerkin solver
+        Constructor of the Runge-Kutta Discontinuous Galerkin solver.
 
         :: Arguments
 
@@ -182,58 +180,43 @@ class RungeKuttaDG(object):
            classes. Also the C++ object instance later on will incorporate this
            name.
 
-        dg_order: int
-           Order of the Discontinuous Galerkin approximation.
-
         rk_order: int
            Runge-Kutta order, i.e., time stepping order.
 
-        polynomials: Polynomials
-           Picks which kind of polynomial to use.
+        polynomial_basis: Polynomials
+           Picks which kind of polynomial to use. It also fixes the order of the
+           Discontinuous Galerkin approximation.
 
-        face_projections: Integer
-           How many projections do we need per face. If you are only
-           interested in the left and right solution along a face, pass in 1. If you
-           want to have the fluxes or derivatives as well, pass in 2. The latter version
-           is the type of data structure you need for Rusanov, e.g.
+        face_projections: FaceProjections
+           Selects which quantities are projected onto a face. If you are only
+           interested in the left and right solution along a face, the solution
+           alone is sufficient. Other Riemann solvers additionally need the fluxes
+           or the derivatives.
 
-           There are a couple of pre-defined values for this guy.
+           There are a couple of pre-defined values for this argument.
 
         unknowns: int
-           Number of unknowns per Finite Volume voxel.
+           Number of unknowns per degree of freedom.
 
         auxiliary_variables: int
-           Number of auxiliary variables per Finite Volume voxel. Eventually, both
+           Number of auxiliary variables per degree of freedom. Eventually, both
            unknowns and auxiliary_variables are merged into one big vector if we
            work with AoS. But the solver has to be able to distinguish them, as
            only the unknowns are subject to a hyperbolic formulation.
 
         :: Attributes
 
-        All the constructor parameters are stored in object attributes. There's a few
+        All the constructor parameters are stored in object attributes. There are a few
         more which are of interest for subclasses:
 
         _solver_template_file_class_name: String
            This can be used by subclasses to pick which template is to be used to create
            the abstract solver and the actual solver blueprint.
-
-
-        _number_of_derivatives_projected_onto_face: Int
-
-        _solver_states: [String]
-            Returns a list of strings of the individual solver states. The code will
-            automatically supplement this list with the following states:
-
-              GridConstruction,
-              GridInitialisation,
-              Plotting,
-              PlottingAfterGridInitialisation
-
-            So you may implicitly assume that these guys do exist always.
         """
         assert rk_order >= 1, "Runge-Kutta order has to be greater or equal to one"
 
         self._name = name
+        self._solver_number = 0
 
         self._rk_order = rk_order
         self._basis = polynomial_basis
@@ -266,7 +249,6 @@ class RungeKuttaDG(object):
 
         self._compute_eigenvalue = False
 
-        self._compute_time_step_size = None
         self._compute_new_time_step_size = None
 
         self._preprocess_cell = ""
@@ -315,7 +297,7 @@ Real type of this solver: """
             + str(type(self))
             + """
 
-Grid resolution is selected at runtime through RuntimeParameters.
+Grid resolution is selected at runtime.
 
 We use RK("""
             + str(self._rk_order)
@@ -362,55 +344,55 @@ We use RK("""
     @abstractmethod
     def create_data_structures(self):
         r"""
-        Recall in subclasses if you wanna change the number of unknowns
-        or auxiliary variables. See class description's subsection on
-        data flow.
+        Set up all data structures tied to the grid entities.
+
+        Recall in subclasses if you want to change the number of unknowns
+        or auxiliary variables. See the class description's section on
+        data structures.
 
         :: Call order and ownership
 
         This operation can be called multiple times. However, only the very
         last call matters. All previous calls are wiped out.
 
-        If you have a hierarchy of solvers, every create_data_structure()
-        should first(!) call its parent version. This way, you always ensure
+        If you have a hierarchy of solvers, every create_data_structures()
+        should first call its parent version. This way, you always ensure
         that all data are in place before you continue to alter the more
         specialised versions. So it is (logically) a top-down (general to
-        specialised) run through all create_data_structure() variants
+        specialised) run through all create_data_structures() variants
         within the inheritance tree.
 
         :: Solver fields built up
 
-        _time_step: Patch ( (_dg_order+1)x(_dg_order+1)x(_dg_order+1) )
+        _current_time_step: Patch ( (_dg_order+1)x(_dg_order+1)x(_dg_order+1) )
           Actual polynomial data of the DG patch in the current time step.
 
         _rhs_estimates: Patch ( (_dg_order+1)x(_dg_order+1)x(_dg_order+1)xno of RK steps )
           These are the Runge-Kutta extrapolations. It is important that the
           rk_order is mixed into the first argument, as the triple is
           automatically truncated to a tuple if the code is translated with 2d.
-          Please note that the term rhs refers to the right-hand side of an ODE
+          The term rhs refers to the right-hand side of an ODE
 
           @f$ \partial Q = F(Q) @f$
 
           and thus does not include auxiliary variables.
 
         _linear_combination_of_estimates: Patch ( (_dg_order+1)x(_dg_order+1)x(_dg_order+1) )
-          Non-persistent helper data structure.
-
-        _current_time_step_projection: Patch ( 2xface_projectionsx(_dg_order+1)x(_dg_order+1) )
-          This is the projection of the polynomial data of the current guess onto
-          the faces. It is important that the first dimension is only a 2. This
-          way, we can (logically) handle the projected data again as an overlap
-          of two patches with the width 1.
+          Holds the Runge-Kutta linear combination the primary sweep computes. It stays on
+          the cell until the secondary sweep of the same step has consumed it, and is never
+          exchanged with another tree.
 
         _estimate_projection: Patch ( Nxface_projectionsx(_dg_order+1)x(_dg_order+1) )
-          The N is usually 2. Usually this estimate projection holds the data
-          from the latest Runge-Kutta step. This implies that it never ever holds
-          the projection of the solution unless after the very first Runge-Kutta
-          step. After that, it is always a linear combination of estimates.
+          The N is usually 2. It is important that this first dimension is only a
+          2, as it lets us (logically) handle the projected data as an overlap of
+          two patches with the width 1. Usually this estimate projection holds the
+          data from the latest Runge-Kutta step. This implies that it holds the
+          projection of the solution only after the very first Runge-Kutta step.
+          After that, it is always a linear combination of estimates.
 
-          To avoid this plain behaviour, I make the last and final linear
-          combination project the solution again onto the faces, i.e. after
-          the very last step of the Runge-Kutta scheme, there will be a valid
+          To work around this, the last and final linear combination projects
+          the solution again onto the faces, i.e. after the very last step of
+          the Runge-Kutta scheme, there will be a valid
           representation of the solution _estimate_projection. Consult the
           documentation of exahype2.solvers.rkdg.actionsets.ComputeFinalLinearCombination
           for some further information. Also consult the semantics of the FaceLabel
@@ -418,7 +400,7 @@ We use RK("""
 
         _old_solution_projection: Same as _estimate_projection
           This is a backup of the final solution stored in _estimate_projection.
-          It correlates to
+          It correlates to the old time stamp held in the face label.
 
         _face_label: FaceLabel
           See class description. General information such as "is boundary".
@@ -426,14 +408,14 @@ We use RK("""
         _cell_label: CellLabel
           See class description. General information about the cell.
 
-        Per default, I do always store the projections onto faces, and I
-        always keep the actual time step data and the cell projections. It is
-        up to the subclasses to alter this storage behaviour.
+        By default, we always store the projections onto faces, and we always
+        keep the actual time step data and the cell projections. It is up to
+        the subclasses to alter this storage behaviour.
 
-        By default, I do not exchange any face data in-between two grid sweeps.
-        You will have to overwrite the behaviour in subclasses. Please note that
-        a face is communicated between two tree/domain partitions if and only if
-        it is stored persistently and the exchange flag is set, too.
+        By default no face data is exchanged between two grid sweeps. Subclasses
+        overwrite that behaviour. A face travels between two tree or domain
+        partitions only when it is stored persistently and its exchange flag is
+        set as well.
         """
         self._current_time_step = peano4.datamodel.Patch(
             (
@@ -566,9 +548,6 @@ We use RK("""
 #include "repositories/SolverRepository.h"
 """
 
-        self._Riemann_solution.generator.send_condition = "false"
-        self._Riemann_solution.generator.receive_and_merge_condition = "false"
-
         self._current_time_step.generator.includes += """
 #include "../repositories/SolverRepository.h"
 """
@@ -593,8 +572,7 @@ We use RK("""
     @abstractmethod
     def create_action_sets(self):
         """
-        Overwrite in subclasses if you wanna create different
-        action sets.
+        Overwrite in subclasses if you want to create different action sets.
 
         :: Call order and ownership
 
@@ -602,11 +580,11 @@ We use RK("""
         a solver. However, only the very last call matters. All previous calls
         are wiped out.
 
-        If you have a hierarchy of solvers, every create_data_structure()
-        should first(!) call its parent version. This way, you always ensure
+        If you have a hierarchy of solvers, every create_action_sets()
+        should first call its parent version. This way, you always ensure
         that all data are in place before you continue to alter the more
         specialised versions. So it is (logically) a top-down (general to
-        specialised) run through all create_data_structure() variants
+        specialised) run through all create_action_sets() variants
         within the inheritance tree.
         """
         self._action_set_initial_conditions = (
@@ -615,7 +593,7 @@ We use RK("""
                 self._query_fine_grid_cell_in_action_set_if_it_holds_solution(),
             )
         )
-        self._action_set_AMR = exahype2.solvers.rkdg.actionsets.AdaptivityCriterion(
+        self._action_set_AMR = exahype2.solvers.rkdg.actionsets.RefinementCriterion(
             solver=self,
             guard=self._store_cell_data_default_guard()
             + " and (repositories::"
@@ -626,11 +604,14 @@ We use RK("""
             + self._name
             + "::SolverState::GridInitialisation)",
             build_up_new_refinement_instructions=True,
-            implement_previous_refinement_instructions=True,
+            # A time step never realises topology changes; it only commits the
+            # refine/coarsen requests. Realisation happens in the DynamicAMR
+            # observer, whose DynamicAMRTransfer delivers the committed events.
+            implement_previous_refinement_instructions=False,
             called_by_grid_construction=False,
         )
         self._action_set_AMR_throughout_grid_construction = (
-            exahype2.solvers.rkdg.actionsets.AdaptivityCriterion(
+            exahype2.solvers.rkdg.actionsets.RefinementCriterion(
                 solver=self,
                 guard=self._store_cell_data_default_guard(),
                 build_up_new_refinement_instructions=True,
@@ -638,10 +619,27 @@ We use RK("""
                 called_by_grid_construction=True,
             )
         )
+        # Re-evaluating the criterion within the realise sweeps lets one run of the
+        # mesh-refinement sweeps climb every level the data justifies. Only cells
+        # that these sweeps just created are evaluated; every other cell committed
+        # its request in the preceding time step, and re-issuing it each sweep would
+        # keep the sweeps running forever.
+        self._action_set_AMR_throughout_dynamic_amr = (
+            exahype2.solvers.rkdg.actionsets.RefinementCriterion(
+                solver=self,
+                guard=self._store_cell_data_default_guard()
+                + " and fineGridCell"
+                + self._cell_label.name
+                + ".getRequiresCriterionEvaluation()",
+                build_up_new_refinement_instructions=True,
+                implement_previous_refinement_instructions=False,
+                called_by_grid_construction=False,
+            )
+        )
         self._action_set_linear_combination_of_estimates = (
             exahype2.solvers.rkdg.actionsets.LinearCombinationOfEstimates(self)
         )
-        # @todo TW The following two action sets should run in parallel I guess
+        # @todo TW The following two action sets should run in parallel.
         self._action_set_project_linear_combination_onto_faces = exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces(
             solver=self, face_projections=self._face_projections
         )
@@ -656,6 +654,9 @@ We use RK("""
         self._action_set_solve_Riemann_problem = (
             exahype2.solvers.rkdg.actionsets.SolveRiemannProblem(self)
         )
+        self._action_set_interpolate_Riemann_solution_onto_hanging_faces = (
+            exahype2.solvers.rkdg.actionsets.InterpolateRiemannSolutionOntoHangingFaces(self)
+        )
         self._action_set_add_volume_and_face_solution = (
             exahype2.solvers.rkdg.actionsets.AddVolumeAndFaceSolution(self)
         )
@@ -664,7 +665,12 @@ We use RK("""
             guard=self._store_cell_data_default_guard(),
             face_projections=self._face_projections,
         )
-        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.rkdg.actionsets.DynamicAMR(
+        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = (
+            exahype2.solvers.rkdg.actionsets.AdaptiveMeshFaceCoupling(
+                solver=self, face_projections=self._face_projections
+            )
+        )
+        self._action_set_dynamic_amr_transfer = exahype2.solvers.rkdg.actionsets.DynamicAMRTransfer(
             solver=self, face_projections=self._face_projections
         )
 
@@ -692,26 +698,36 @@ We use RK("""
         self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order + 2
         )
+        # UpdateCellLabel resets requiresCriterionEvaluation and UpdateFaceLabel zeroes the
+        # face time stamps, so the transfer has to descend behind both to keep the
+        # criterion-evaluation flag and the stamps it inherits.
+        self._action_set_dynamic_amr_transfer.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 2
+        )
         self._action_set_project_linear_combination_onto_faces.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order + 3
-        )  # depends on linear combination of estimates
+        )  # Depends on the linear combination of estimates
         self._action_set_solve_volume_integral.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order + 3
-        )  # the two 3s could run in parallel
+        )  # The two 3s could run in parallel
         self._action_set_handle_boundary.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order + 2
         )
         self._action_set_solve_Riemann_problem.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order + 3
-        )  # boundary has to be known
+        )  # Boundary has to be known
+        self._action_set_interpolate_Riemann_solution_onto_hanging_faces.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 2
+        )  # Before the face integrals pick up the Riemann solutions
         self._action_set_add_volume_and_face_solution.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order + 3
-        )  # can also run in parallel, as it never occurs at same time
+        )  # Can also run in parallel, as it never occurs at the same time
         self._action_set_compute_final_linear_combination_and_project_solution_onto_faces.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order + 4
-        )  # depends on other guys
+        )  # Depends on the preceding action sets
         self._action_set_AMR.descend_invocation_order = self._baseline_action_set_descend_invocation_order + 5
         self._action_set_AMR_throughout_grid_construction.descend_invocation_order = self._baseline_action_set_descend_invocation_order + 5
+        self._action_set_AMR_throughout_dynamic_amr.descend_invocation_order = self._baseline_action_set_descend_invocation_order + 5
 
         self._action_set_initial_conditions.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order + 1
@@ -719,10 +735,10 @@ We use RK("""
 
         self._action_set_preprocess_solution.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order
-        )  # touch cell first time, i.e. enter cell
+        )  # Touch cell first time, i.e. enter cell
         self._action_set_postprocess_solution.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order
-        )  # touch cell last time, i.e. leave cell
+        )  # Touch cell last time, i.e. leave cell
 
 
     def _provide_cell_data_to_compute_kernels_default_guard(self):
@@ -749,8 +765,10 @@ We use RK("""
 
     def _store_cell_data_default_guard(self):
         """!
-        Extend the guard via ands only. Never use an or, as subclasses might
-        extend it as well, and they will append further ends.
+        Extend the guard via ands only.
+
+        Never use an or, as subclasses might extend the guard as well and will
+        append further ands.
         """
         return (
             "not marker.willBeRefined() "
@@ -764,8 +782,10 @@ We use RK("""
 
     def _load_cell_data_default_guard(self):
         """!
-        Extend the guard via ands only. Never use an or, as subclasses might
-        extend it as well, and they will append further ends.
+        Extend the guard via ands only.
+
+        Never use an or, as subclasses might extend the guard as well and will
+        append further ands.
         """
         return (
             "not marker.hasBeenRefined() "
@@ -784,8 +804,10 @@ We use RK("""
 
     def _store_face_data_default_guard(self):
         """!
-        Extend the guard via ands only. Never use an or, as subclasses might
-        extend it as well, and they will append further ends.
+        Extend the guard via ands only.
+
+        Never use an or, as subclasses might extend the guard as well and will
+        append further ands.
         """
         return (
             "not marker.willBeRefined() "
@@ -799,8 +821,16 @@ We use RK("""
 
     def _load_face_data_default_guard(self):
         """!
-        Extend the guard via ands only. Never use an or, as subclasses might
-        extend it as well, and they will append further ends.
+        Extend the guard via ands only.
+
+        Never use an or, as subclasses might extend the guard as well and will
+        append further ands.
+
+        Receiving consumes the batch the previous sweep sent, so it is enabled
+        from the first sweep that follows a face-data-storing sweep on. A guard
+        keyed on the solver state alone cannot express that: the state stays at
+        GridInitialisation across the initialise-drain loop, whose every sweep
+        sends.
         """
         return (
             "not marker.hasBeenRefined() "
@@ -811,9 +841,7 @@ We use RK("""
             + "::SolverState::GridConstruction "
             + "and repositories::"
             + self.get_name_of_global_instance()
-            + ".getSolverState()!="
-            + self._name
-            + "::SolverState::GridInitialisation"
+            + ".hasStoredFaceData()"
         )
 
 
@@ -827,8 +855,7 @@ We use RK("""
 
     def add_to_Peano4_datamodel(self, datamodel):
         """
-        Add all required data to the Peano4 project's datamodel
-        so it is properly built up
+        Add all required data to the Peano4 project's datamodel.
         """
         log.debug("Polynomial basis")
         log.debug("----------")
@@ -848,11 +875,11 @@ We use RK("""
 
     def add_use_data_statements_to_Peano4_solver_step(self, step):
         """
-        Tell Peano what data to move around
+        Tell Peano what data to move around.
 
         Inform Peano4 step which data are to be moved around via the
         use_cell and use_face commands. This operation is generic from
-        ExaHyPE's point of view, i.e. I use it for all grid sweep types.
+        ExaHyPE's point of view, i.e. we use it for all grid sweep types.
         """
         step.use_cell(self._cell_label)
         step.use_cell(self._current_time_step)
@@ -876,23 +903,17 @@ We use RK("""
 
     def add_actions_to_init_grid(self, step):
         """!
-        Add the action sets to the grid initialisation
+        Add the action sets to the grid initialisation.
 
-        The AMR stuff has to be the very first thing. Actually, the AMR routines'
-        interpolation doesn't play any role here. But the restriction indeed is
-        very important, as we have to get the face data for BCs et al. The action
-        set order is inverted while we ascend within the tree again. Therefore, we
-        add the AMR action set first which means it will be called last when we go
-        from fine to coarse levels within the tree.
+        The initial condition has to run before anything reads the solution, and
+        the labels have to be current before the refinement criterion judges a
+        cell. The criterion therefore comes after both, and postprocessing last.
 
         ## Ordering
 
-        The order of the action sets is preserved throughout the steps down within
-        the tree hierarchy. It is inverted throughout the backrolling.
-
-        This is what we want to achieve:
-
-        - Restrict the data to the coarser level if we are on a hanging face.
+        The order of the action sets is preserved while the traversal descends the
+        tree hierarchy and inverted while it ascends, so an action set that has to
+        act on the way up is added early.
         """
         step.add_action_set(self._action_set_preprocess_solution)
         step.add_action_set(self._action_set_initial_conditions)
@@ -904,42 +925,16 @@ We use RK("""
 
     def add_actions_to_create_grid(self, step):
         """
-        @todo:
-         The boundary information is set only once. It is therefore important that
-         we ues the face label and initialise it properly.
+        Add the action sets to the grid construction.
+
+        @todo The boundary information is set only once. It is therefore important
+        that we use the face label and initialise it properly.
         """
         step.add_action_set(self._action_set_update_face_label)
         step.add_action_set(self._action_set_update_cell_label)
         step.add_action_set(self._action_set_AMR_throughout_grid_construction)
 
     def add_actions_to_plot_solution(self, step):
-        """!
-        Dump snapshot of solution
-
-        Consult the discussion in add_actions_to_init_grid() around the order
-        of the individual action sets.
-
-        It is important that we have the coupling/dynamic AMR part in here, as
-        there might be pending AMR refinement requests that now are realised.
-        For the same reason, we need the update of the face label and the update
-        of the cell label in here: The AMR might just propagate over into the
-        plotting, i.e. we might create new grid entities throughout the plot.
-        These entities (faces and cells) have to be initialised properly.
-        Otherwise, their un-initialised data will propagate through to the next
-        time step.
-
-        To make the restriction work, we have to project the solutions onto the
-        faces.
-        """
-        d = {}
-        self._init_dictionary_with_default_parameters(d)
-        self.add_entries_to_text_replacement_dictionary(d)
-
-        # step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
-        # step.add_action_set( self._action_set_roll_over_update_of_faces )
-        step.add_action_set(self._action_set_update_face_label)
-        step.add_action_set(self._action_set_update_cell_label)
-
         mapping = []
         for z in self._basis.quadrature_points:
             for y in self._basis.quadrature_points:
@@ -972,22 +967,22 @@ We use RK("""
           we can couple different resolutions.
         - Project linear combination onto faces: This should be done as soon
           as possible but after we've determined the linear combination. After
-          all, we need the solution representation on the faces asap.
+          all, we need the solution representation on the faces early.
         - Solve volume integral: can run in parallel to the projection onto
           the faces.
-        - Handle boundary: doesn't really matter when we insert it, as it plugs
-          into the first face load, while all the other stuff so far are volumetric
-          operations.
+        - Handle boundary: the position does not matter, as it plugs into the
+          first face load, while all the other operations so far are volumetric
+          ones.
           It is important that we do the inter-grid transfer operators before we
           apply the boundary conditions.
         - Solve Riemann problem: the constraint here is that it has to come after
           the boundary handling.
-        - Add volume and face solution: last
+        - Interpolate the Riemann solution onto the hanging faces: needs the
+          Riemann solution on the coarse face, so it follows the solve.
+        - Add volume and face solution, compute the final linear combination,
+          evaluate the refinement criterion and postprocess: in that order, once
+          the face contributions are complete.
         """
-        d = {}
-        self._init_dictionary_with_default_parameters(d)
-        self.add_entries_to_text_replacement_dictionary(d)
-
         step.add_action_set(self._action_set_preprocess_solution)
         step.add_action_set(self._action_set_update_face_label)
         step.add_action_set(self._action_set_update_cell_label)
@@ -999,6 +994,7 @@ We use RK("""
         step.add_action_set(self._action_set_solve_volume_integral)
         step.add_action_set(self._action_set_handle_boundary)
         step.add_action_set(self._action_set_solve_Riemann_problem)
+        step.add_action_set(self._action_set_interpolate_Riemann_solution_onto_hanging_faces)
         step.add_action_set(self._action_set_add_volume_and_face_solution)
         step.add_action_set(
             self._action_set_compute_final_linear_combination_and_project_solution_onto_faces
@@ -1006,6 +1002,22 @@ We use RK("""
         step.add_action_set(self._action_set_AMR)
         step.add_action_set(self._action_set_postprocess_solution)
 
+    def add_actions_to_dynamic_mesh_refinement(self, step):
+        """!
+        Add action sets to the dedicated DynamicAMR observer.
+
+        This is the only observer that changes the topology. It triggers and
+        realises the committed refine/coarsen requests, transfers the nodal
+        solution across every resolution transition Peano creates or destroys,
+        and re-evaluates the refinement criterion on cells it created, so a
+        single run of the mesh-refinement sweeps realises the full depth the
+        data justifies. The Runge-Kutta estimates and the face projections are
+        rebuilt by the next time step on the settled grid.
+        """
+        step.add_action_set(self._action_set_update_face_label)
+        step.add_action_set(self._action_set_update_cell_label)
+        step.add_action_set(self._action_set_dynamic_amr_transfer)
+        step.add_action_set(self._action_set_AMR_throughout_dynamic_amr)
 
     @abstractmethod
     def add_entries_to_text_replacement_dictionary(self, d):
@@ -1014,8 +1026,7 @@ We use RK("""
 
     def add_implementation_files_to_project(self, namespace, output, dimensions):
         """
-        The ExaHyPE project will call this operation when it sets
-        up the overall environment.
+        The ExaHyPE project calls this operation when it sets up the environment.
 
         This routine is typically not invoked by a user.
 
@@ -1076,23 +1087,27 @@ We use RK("""
         self._solver_constants += datastring
 
     def _init_dictionary_with_default_parameters(self, d):
-        def render_template(template):
-            return render_jinja2_template(template, d, jinja2.DebugUndefined)
-
         """
-        This one is called by all algorithmic steps before I invoke
-        add_entries_to_text_replacement_dictionary().
+        Fill the text replacement dictionary with the default entries.
 
-        See the remarks on set_postprocess_updated_cell_kernel to understand why
+        This operation is called by all algorithmic steps before
+        add_entries_to_text_replacement_dictionary() is invoked.
+
+        See the remarks on the postprocessing kernel setters to understand why
         we have to apply the (partially befilled) dictionary to create a new entry
         for this very dictionary.
         """
+
+        def render_template(template):
+            return render_jinja2_template(template, d, jinja2.DebugUndefined)
+
         d["DG_ORDER"] = self._basis.order
         d["RK_ORDER"] = self._rk_order
         d["RK_STEPS"] = self.number_of_Runge_Kutta_steps()
 
         d["SOLVER_INSTANCE"] = self.get_name_of_global_instance()
         d["SOLVER_NAME"] = self._name
+        d["SOLVER_NUMBER"] = self._solver_number
         d["UNKNOWN_IDENTIFIER"] = self._unknown_identifier()
         d["NUMBER_OF_UNKNOWNS"] = self._variable_shortcuts.unknowns
         d["NUMBER_OF_AUXILIARY_VARIABLES"] = self._variable_shortcuts.auxiliary_variables
@@ -1118,8 +1133,6 @@ We use RK("""
 
         d["SOLVER_INCLUDES"] = self.user_solver_includes
 
-        # d[ "SOURCE_TERM_CALL"]                    = jinja2.Template(self._source_term_call, undefined=jinja2.DebugUndefined).render( **d )
-        # d[ "RIEMANN_SOLVER_CALL"]                 = jinja2.Template(self._Riemann_solver_call, undefined=jinja2.DebugUndefined).render( **d )
         d["PREPROCESS_RECONSTRUCTED_CELL"] = render_template(self._preprocess_cell)
         d["POSTPROCESS_UPDATED_CELL_AFTER_RUNGE_KUTTA_STEP"] = render_template(
             self._postprocess_updated_cell_after_Runge_Kutta_step
@@ -1232,6 +1245,8 @@ We use RK("""
         additional_user_includes="",
     ):
         """
+        Set the implementation of the PDE terms and the solver callbacks.
+
         If you pass in User_Defined, then the generator will create C++ stubs
         that you have to befill manually. If you pass in None_Implementation, it
         will create nop, i.e., no implementation or defaults. Any other string
@@ -1246,9 +1261,9 @@ We use RK("""
             self._initial_conditions_implementation = initial_conditions
 
         if refinement_criterion == exahype2.solvers.PDETerms.None_Implementation:
-            assert False, "refinement criterion cannot be none"
+            assert False, "Refinement criterion cannot be none."
         if initial_conditions == exahype2.solvers.PDETerms.None_Implementation:
-            assert False, "initial conditions cannot be none"
+            assert False, "Initial conditions cannot be none."
 
         if flux is not None:
             self._flux_implementation = flux
@@ -1281,11 +1296,11 @@ We use RK("""
     @postprocess_updated_cell_after_Runge_Kutta_step.setter
     def postprocess_updated_cell_after_Runge_Kutta_step(self, kernel):
         """
-        Define a postprocessing routine over the data
+        Define a postprocessing routine over the data.
 
         This routine allows you to update the patch data immediately after the
         patch update. The routine provides the whole patch, and therefore you
-        can write stuff similar to
+        can write code similar to
 
              my_solver.postprocess_updated_cell = " ""
              {
@@ -1300,16 +1315,16 @@ We use RK("""
 
         ## Difference to Finite Volume solvers
 
-        Different to the Finite Volume solvers, you don't have the auxiliary
-        variables in this routine. You also don't have the new solution, but the
+        Unlike the Finite Volume solvers, you do not have the auxiliary
+        variables in this routine. You also do not have the new solution, but the
         time derivative instead.
 
 
         ## Available constants
 
         This list is not complete. You might want to consult the generated code to
-        spot more variables that are on offer. Whenever I use the brackets below,
-        these are symbolic constants which will be befilled with the proper constants
+        spot more variables that are on offer. The brackets below denote
+        symbolic constants which will be befilled with the proper constants
         when the postprocessing code snippet is inserted into the generated code.
         The other variables are directly available, i.e., no text replacement is done
         here.
@@ -1331,11 +1346,11 @@ We use RK("""
     @postprocess_updated_cell_after_final_linear_combination.setter
     def postprocess_updated_cell_after_final_linear_combination(self, kernel):
         """
-        Define a postprocessing routine over the data
+        Define a postprocessing routine over the data.
 
         This routine allows you to update the patch data immediately after the
         patch update. The routine provides the whole patch, and therefore you
-        can write stuff similar to
+        can write code similar to
 
              my_solver.postprocess_updated_cell = " ""
              {
@@ -1350,16 +1365,16 @@ We use RK("""
 
         ## Difference to Finite Volume solvers
 
-        Different to the Finite Volume solvers, you don't have the auxiliary
-        variables in this routine. You also don't have the new solution, but the
+        Unlike the Finite Volume solvers, you do not have the auxiliary
+        variables in this routine. You also do not have the new solution, but the
         time derivative instead.
 
 
         ## Available constants
 
         This list is not complete. You might want to consult the generated code to
-        spot more variables that are on offer. Whenever I use the brackets below,
-        these are symbolic constants which will be befilled with the proper constants
+        spot more variables that are on offer. The brackets below denote
+        symbolic constants which will be befilled with the proper constants
         when the postprocessing code snippet is inserted into the generated code.
         The other variables are directly available, i.e., no text replacement is done
         here.

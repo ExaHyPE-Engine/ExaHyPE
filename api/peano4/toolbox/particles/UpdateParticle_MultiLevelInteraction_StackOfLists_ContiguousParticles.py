@@ -7,22 +7,21 @@ import jinja2
 
 class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(ActionSet):
     """!
-
-    Tree walker to realise particle-particle interactions with particles held by different adjacent cells or on different mesh levels
+    Tree walker for particle-particle interactions across adjacent cells and mesh levels.
 
     This code snippet creates a tree walker, i.e. an action set that runs
     through the underlying spacetree top down and builds up
     @ref page_toolbox_particles_mesh_traversal "the active set and the local set".
     These sets can then be used to trigger mesh events.
-    It works if and only if you use continuous storage per vertex as introduced
+    It works only when you use continuous storage per vertex as introduced
     with the @ref toolbox_particles_memorypool "memory pools".
 
     Within touchCellFirstTime(), the routine exposes the following data
     besides the generic information of any action set:
 
-    - ***marker*** The CellMarker is avaialable to a compute kernel and allows you
-      to query spatial information. This one is actually one of the generic objects
-      which every action set has available, but we highlight that it is there, as
+    - ***marker*** The CellMarker is available to a compute kernel and allows you
+      to query spatial information. It is one of the generic objects which every
+      action set has available, but we highlight that it is there, as
       the @ref page_toolbox_particles_mesh_traversal "discussion on uniqueness for particle-particle interactions"
       explicitly refers to the marker.
     - ***activeParticles*** The list of active particles is a list of pointers. It
@@ -34,12 +33,10 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
 
     The additional field _activeParticles is an alias for activeParticles.
 
-
-    The code is slightly more sophisticated compared than its cousin, the
+    The code is slightly more sophisticated than its cousin, the
     UpdateParticle_MultiLevelInteraction_Sets, as it exposes more information:
 
-
-    - ***numberOfActiveParticlesPerVertex*** This alias for
+    - ***numberOfCoalescedActiveParticlesPerVertex*** This alias for
       _numberOfActiveParticlesPerVertex is a sequence of integers
       which tells you how many particles within activeParticles are added by one
       particular vertex.
@@ -58,7 +55,6 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
     set that is different to the active one. Users can inject code to modify
     the local set per cell and hence to alter particle states.
 
-
     ## Realisation and data consistency
 
     This tree walker realises the two sets via two lists: Per cell, we
@@ -70,9 +66,8 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
     So the active set grows while we descend in the tree, and it is
     truncated when we ascend again.
 
-    This is a very efficient implementation yet fails if particles move
-    up and down within the tree while we walk. It should work perfectly
-    fine if particles do not move. If particles move up and down, the
+    The implementation requires that particles do not move up and down
+    within the tree while we walk. If particles move up and down, the
     present algorithms might have redundant pointers within the active set.
     It is therefore absolutely key that this action set is not used in
     combination with any other action set which lifts data, as a lift
@@ -84,7 +79,7 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
     build up our continuous index spaces. Then, later, we decide that we
     lift one particle. This lift means that particles associated with a
     coarser vertex are scattered. However, our active set assumes that
-    we had a valid, continous memory for them. So all of our active sets
+    we had a valid, continuous memory for them. So all of our active sets
     are now invalid. Sieves in contrast work, as long as their action
     set is used before the current one. They merely add data to the
     active set that's constructed next.
@@ -96,8 +91,8 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
     - Lifts into a global sieve list are fine, as long as they happen in
       touchVertexLastTime() called after this action set.
 
-    In the case of a dynamic setup, i.e. in combinatino with the action
-    set UpdateParticleGridAssociation, you might be better of with using
+    In the case of a dynamic setup, i.e. in combination with the action
+    set UpdateParticleGridAssociation, you might be better off using
     the set-based implementation of the particle-particle interaction.
 
     ## Further plug-in points
@@ -109,13 +104,10 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
     its cell kernel is triggered. The vertex kernel is also passed on the
     active set (from the coarser level). Its local set is all the particles
     whose centre lies within the square/cube around the vertex with mesh size
-    h. So this area goes h/2 along each each coordinate axis into the
+    h. So this area goes h/2 along each coordinate axis into the
     neighbouring cells.
 
-
     ## Flattening of particle arrays
-
-@todo Some of the syntax here might be outdated and recipes might be redundant. Compare general toolbox docu.
 
     The routine not only keeps track of how many particles we add per iteration.
     It also keeps track of the number of particles per vertex that have been
@@ -125,23 +117,25 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
     rather than sole link lists. You can exploit that you know something
     about individual chunks indexed by the pointers.
 
-    To exploit this additional information, you cannot use localParticles anymore,
-    i.e. you have to use localParticles. This means, you
-    might have to check if a particle is contained within a cell manually.
+    To exploit this additional information, you cannot run through localParticles
+    particle by particle anymore. You have to walk the list chunk by chunk, and
+    consequently you have to check yourself whether a particle is contained
+    within the cell.
     Once you rewrite your kernels that way, you can exploit the integers
-    _numberOfActiveParticlesPerVertex and numberOfCoalescedLocalParticlesPerVertex:
+    numberOfCoalescedActiveParticlesPerVertex and
+    numberOfCoalescedLocalParticlesPerVertex:
 
     @image html UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles_continuous-memory.png
 
     Assume you enter a cell and you get the localParticles
     list hosting 19 pointers. Further to that, you receive the array
-    numberOfLocalParticlesPerVertex with four integer entries. You know that the
+    numberOfCoalescedLocalParticlesPerVertex with four integer entries. You know that the
     first five entries point to one continuous chunk of particles in memory, the
-    next seven do so as well, and so forth. This holds if and only if you work
+    next seven do so as well, and so forth. This holds only when you work
     with a memory pool which maintains vertex-local or globally continuous
     particles.
 
-    I do recommend to call toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks()
+    Call toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks()
     for your data to ensure that the memory layout above is preserved. Simply
     add the calls
 
@@ -152,7 +146,7 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
     );
     ::toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
       localParticles,
-      numberOfLocalParticlesPerVertex
+      numberOfCoalescedLocalParticlesPerVertex
     );
     ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -168,11 +162,10 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
     The actual compute kernels then typically look similar to the following code
     snippet:
 
-
     ~~~~~~~~~~~~~~~~~~~~~~~~~~
     typename std::list<T*>::const_iterator localParticlesIterator  = localParticles.begin();
 
-    for (auto localParticlesChunkSize: numberOfLocalParticlesPerVertex) {
+    for (auto localParticlesChunkSize: numberOfCoalescedLocalParticlesPerVertex) {
       T*  localParticlesChunk = *localParticlesIterator;
       std::advance( localParticlesIterator, localParticlesChunkSize );
 
@@ -193,16 +186,15 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
     have to couple local and active sets and hence use a kernel structure
     similar to
 
-
     ~~~~~~~~~~~~~~~~~~~~~~~~~~
     typename std::list< typename ParticleContainer::value_type >::const_iterator localParticlesIterator  = localParticles.begin();
 
-    for (auto localParticlesChunkSize: numberOfLocalParticlesPerVertex) {
+    for (auto localParticlesChunkSize: numberOfCoalescedLocalParticlesPerVertex) {
       typename ParticleContainer::value_type  localParticlesChunk = *localParticlesIterator;
       std::advance( localParticlesIterator, localParticlesChunkSize );
 
       typename std::list< typename ParticleContainer::value_type >::const_iterator activeParticlesIterator = activeParticles.begin();
-      for (auto activeParticlesChunkSize: numberOfActiveParticlesPerVertex) {
+      for (auto activeParticlesChunkSize: numberOfCoalescedActiveParticlesPerVertex) {
         typename ParticleContainer::value_type  activeParticlesChunk = *activeParticlesIterator;
         std::advance( activeParticlesIterator, activeParticlesChunkSize );
 
@@ -217,28 +209,26 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
     }
     ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    This inner loop is where the magic happens, i.e. where we can exploit the
-    fact that localParticlesChunk and activeParticlesChunk both point to coninuous
-    memory regions. This means that computeInnerLoop is structurally simple:
-
+    The inner loop can exploit the fact that localParticlesChunk and
+    activeParticlesChunk both point to continuous memory regions. This means
+    that computeInnerLoop is structurally simple:
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~
-    void computeHydroForceInnerLoop(
-        const ::peano4::datamanagement::CellMarker&  marker,
-        Particle*                                  particlesAssociatedWithLocalVertex, // das ist falsch
+    void computeInnerLoop(
+        const ::peano4::datamanagement::CellMarker& marker,
+        Particle*                                  localParticlesChunk,
         int                                        numberOfLocalParticles,
-        Particle*                                  activeParticles,
+        Particle*                                  activeParticlesChunk,
         int                                        numberOfActiveParticles
     ) {
       for (int activeParticleNumberInThisChunk=0; activeParticleNumberInThisChunk<numberOfActiveParticles; activeParticleNumberInThisChunk++) {
         for (int localParticleNumberInThisChunk=0; localParticleNumberInThisChunk<numberOfLocalParticles; localParticleNumberInThisChunk++) {
-          // read from activeParticles[activeParticleNumberInThisChunk]
-          // write to particlesAssociatedWithLocalVertex[localParticleNumberInThisChunk]
+          // read from activeParticlesChunk[activeParticleNumberInThisChunk]
+          // write to localParticlesChunk[localParticleNumberInThisChunk]
         }
       }
     }
     ~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 
     ## Dynamic adaptive mesh refinement
 
@@ -248,59 +238,51 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
     _numberOfActiveParticlesPerVertex are all invalid.
     In such a case, we have to switch off any coalesced memory access.
 
-
     The @ref page_toolbox_particles_mesh_traversal "generic mesh traversal description" provides
     further context and details.
     The important detail here is:
     As soon as we might suspect that the memory layout is corrupted, we have to
-    assume that our pointers are all ov the place and do not point to continuous
-    data anymore. Even worse, we know that previously built-up active sets might be
-    invalid. We have built them up top-down, but when we drop data out of the
+    assume that our pointers are all over the place and do not point to continuous
+    data anymore. Even worse, the active sets built up further up in the tree
+    might be invalid. We build them up top-down, but when we drop data out of the
     active set, they change on-the-fly.
 
     ## Optimising coalesced compute kernels
 
-    Compute kernels can be optimised quite aggressively, but fiddling out how they
-    can be optimised is tedious. I recommend to use MAQAO and Intel's compiler
-    optimisation feedback. The page @ref toolbox_particles_memorypool holds
-    additional information. It is also worth studying @ref page_swift_performance_optimisation "Swift's performance optimisation"
-    remarks with respect to vecorisation as well as Swift's discussion of @ref swift_particle_lifecycle Particle Lifecycle "vectorised kernels".
-
-    Compute kernels can be optimised quite aggressively, but fiddling out how they
-    can be optimised is tedious. I recommend to use MAQAO and Intel's compiler
-    optimisation feedback. Here are some lessons learned:
+    Compute kernels can be optimised quite aggressively, but working out how they
+    can be optimised is tedious. MAQAO and Intel's compiler optimisation feedback
+    help here, and the page @ref toolbox_particles_memorypool holds additional
+    information. Some lessons learned:
 
     - You cannot collapse the two for loops. That would lead to a scattered
       iteration space in memory and hence make any vectorisation impossible.
-    - The active loop has to be the inner one. I do not understand why, but
-      Intel's icpx refuses to vectorise if the local loop is the inner one.
+    - The active loop has to be the inner one. Intel's icpx refuses to
+      vectorise if the local loop is the inner one.
     - The compiler has to be able to inline. According to https://clang.llvm.org/docs/AttributeReference.html#always-inline-force-inline
       this is something one should be able to control via the annotation
 
               [[clang::always_inline]]
 
-      but this led to multiple compiler crashes (again with Intel). To some
-      degree this makes sense: The function has to be in the header! I played
-      around with ipo, but that did not resolve the fundamental issues.
+      but this led to multiple compiler crashes (again with Intel). The
+      function has to reside in the header, and ipo does not resolve the
+      fundamental issue either.
     - You might have to recursively study all inlined methods and make the
-      stuff they use inline as well.
+      routines they use inline as well.
     - Typically, you have to embed the inner-most loop into a statement alike
       ~~~~~~~~~~~~~~~~~~~~~~~
         if (
-          marker.isContained(particlesAssociatedWithLocalVertex[localParticleNumberInThisChunk].getX())
+          marker.isContained(localParticlesChunk[localParticleNumberInThisChunk].getX())
           and
-          not particlesAssociatedWithLocalVertex[localParticleNumberInThisChunk].getCellHasUpdatedParticle()
+          not localParticlesChunk[localParticleNumberInThisChunk].getCellHasUpdatedParticle()
         ) {
-          // read from activeParticles[activeParticleNumberInThisChunk]
-          // write to particlesAssociatedWithLocalVertex[localParticleNumberInThisChunk]
+          // read from activeParticlesChunk[activeParticleNumberInThisChunk]
+          // write to localParticlesChunk[localParticleNumberInThisChunk]
         }
       ~~~~~~~~~~~~~~~~~~~~~~~
 
     The @ref page_peano_performance_optimisation "generic Peano optimisation" page
-    provides some useful hints how to guide these optimisation through the
-    compiler. It also makes sense to study swift2::kernels::computeHydroForce()
-    which was one of the first routines that we optimised along these ideas.
-
+    provides some useful hints how to guide these optimisations through the
+    compiler.
     """
 
     def __init__(
@@ -315,8 +297,7 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
         active_particle_set=None,
     ):
         """!
-
-        Initialise object
+        Initialise the action set.
 
         ## Arguments
 
@@ -331,7 +312,7 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
           the same type.
 
         touch_vertex_first_time_compute_particle_update_kernel: String or None
-          Can be empty, but if you wanna move particles, then a minimal example
+          Can be empty, but if you want to move particles, then a minimal example
           string passed equals
 
               for (auto* localParticle: localParticles ) {
@@ -340,8 +321,6 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
 
           i.e. you will have a variable localParticle available in this kernel
           and it is a pointer.
-
-
         """
         super(
             UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles, self
@@ -351,7 +330,7 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
         self.d = {}
         self.d["LOCAL_PARTICLE"] = particle_set.particle_model.name
         self.d["LOCAL_PARTICLES_CONTAINER"] = particle_set.name
-        if active_particle_set == None:
+        if active_particle_set is None:
             self.d["ACTIVE_PARTICLE"] = particle_set.particle_model.name
             self.d["ACTIVE_PARTICLES_CONTAINER"] = particle_set.name
         else:
@@ -397,20 +376,17 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
   std::list< globaldata::{{LOCAL_PARTICLE}}* >  localParticles;
   std::vector< int >                            numberOfCoalescedLocalParticlesPerVertex( TWO_POWER_D );
   std::vector< bool >                           localParticleIsContainedInCell;
-  
+
   _numberOfActiveParticlesAdded.push_back(0);
   for (int i=0; i<TWO_POWER_D; i++) {
-    // Keep track of number of particles
     _numberOfActiveParticlesPerVertex.push_back( fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i).size() );
     _numberOfActiveParticlesAdded.back()        += fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i).size();
     numberOfCoalescedLocalParticlesPerVertex[i]  = fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i).size();
-    
-    // Add particles to active particle set
+
     for (auto* p: fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i) ) {
       _activeParticles.push_back( p );
     }
-    
-    // Construct the two local particle sets
+
     for (auto* p: fineGridVertices{{LOCAL_PARTICLES_CONTAINER}}(i) ) {
       std::bitset<TWO_POWER_D> mask = 0;
       mask.set(TWO_POWER_D-i-1);
@@ -420,10 +396,10 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
       localParticles.push_back( p );
     }
   }
-  
+
   logDebug("size of local/active particles=" << localParticles.size() << "/" << _activeParticles.size() << " at " << marker.toString());
 
-  {% if PARTICLE_CELL_UPDATE_KERNEL!=None %}
+  {% if PARTICLE_PARTICLE_INTERACTION_KERNEL!=None %}
   std::list< globaldata::{{ACTIVE_PARTICLE}}* >&  activeParticles = _activeParticles;
   auto& numberOfCoalescedActiveParticlesPerVertex = _numberOfActiveParticlesPerVertex;
   assertion(
@@ -455,23 +431,17 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
   assertion( not _numberOfActiveParticlesAdded.empty() );
   assertion( _activeParticles.size()>=_numberOfActiveParticlesAdded.back() );
   assertion( _numberOfActiveParticlesPerVertex.size()>=TWO_POWER_D );
-  
 
-  // More elegant way to write
-  // -------------------------  
-  // for (int i=0; i<_numberOfActiveParticlesAdded.back(); i++) {
-  //  _activeParticles.pop_back();
-  //}
-  _activeParticles.erase( 
+  _activeParticles.erase(
     std::prev(_activeParticles.end(),_numberOfActiveParticlesAdded.back() ),
     _activeParticles.end()
   );
-    
-  _numberOfActiveParticlesPerVertex.erase( 
+
+  _numberOfActiveParticlesPerVertex.erase(
     std::prev(_numberOfActiveParticlesPerVertex.end(),TWO_POWER_D ),
     _numberOfActiveParticlesPerVertex.end()
   );
-  
+
   _numberOfActiveParticlesAdded.pop_back();
 """
     )
@@ -484,8 +454,6 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
 
     def get_body_of_operation(self, operation_name):
         result = "\n"
-        # if operation_name==ActionSet.OPERATION_BEGIN_TRAVERSAL:
-        #  result = self.__Template_BeginTraversal.render(**self.d)
         if operation_name == ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
             result = self.__Template_TouchCellFirstTime.render(**self.d)
         if operation_name == ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:

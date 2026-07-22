@@ -28,5 +28,5 @@ class tarch::mpi::tests::StringTest: public tarch::tests::TestCase {
     /**
      * This routine is triggered by the TestCaseCollection
      */
-    virtual void run() override;
+    void run() override;
 };

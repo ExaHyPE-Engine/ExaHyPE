@@ -20,6 +20,7 @@ namespace runner {
     static constexpr const char* InitGrid      = "InitGrid";
     static constexpr const char* PlotSolution  = "PlotSolution";
     static constexpr const char* TimeStep      = "TimeStep";
+    static constexpr const char* DynamicAMR    = "DynamicAMR";
   };
 
   /**

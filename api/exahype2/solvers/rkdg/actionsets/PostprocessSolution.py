@@ -10,16 +10,16 @@ import jinja2
 
 class EmptyPostprocessSolution(AbstractRungeKuttaDGActionSet):
     """
+    Postprocessing variant that emits no code.
 
-    PostprocessSolution differs from other action sets, as I only create it once. See
-    FV.create_action_sets(). Once the instance does exist, you can tailor it. But you
-    can also completely overwrite it.
-
+    PostprocessSolution differs from other action sets, as we create it only once.
+    See RungeKuttaDG.create_action_sets(). Once the instance does exist, you can
+    tailor it. But you can also completely overwrite it.
     """
 
     def __init__(self, solver):
         super(EmptyPostprocessSolution, self).__init__(solver)
-        # Is there for compatibility reasons
+        # Exists so that this variant offers the same interface as the other two.
         self.guard = "true"
 
     def get_body_of_operation(self, operation_name):
@@ -32,20 +32,19 @@ class EmptyPostprocessSolution(AbstractRungeKuttaDGActionSet):
 
 class DoFWisePostprocessSolution(AbstractRungeKuttaDGActionSet):
     """
+    Postprocessing variant that applies a snippet to every degree of freedom.
 
-    PostprocessSolution differs from other action sets, as I only create it once. See
-    FV.create_action_sets(). Once the instance does exist, you can tailor it. But you
-    can also completely overwrite it.
+    PostprocessSolution differs from other action sets, as we create it only once.
+    See RungeKuttaDG.create_action_sets(). Once the instance does exist, you can
+    tailor it. But you can also completely overwrite it.
 
     The postprocessing plugs into touch cell last time. It is the last action set added
     by the default implementation. Therefore, it is the first action set of which
-    touchCellLastTime() is called. The reason why I plug into the leaving of the cell
-    is that some solvers may add further action sets to the solve. These action sets
-    typically plug into touchCellFirstTime() - and consequently their first time is
-    called after the postprocessing's first time. By making the postprocessing use
-    touchCellLastTime(), I ensure that any additional action set added by a subclass
-    can still precede the postprocessing.
-
+    touchCellLastTime() is called. It plugs into the leaving of the cell because some
+    solvers may add further action sets to the solve. These action sets typically plug
+    into touchCellFirstTime() - and consequently their first time is called after the
+    postprocessing's first time. Using touchCellLastTime() ensures that any additional
+    action set added by a subclass can still precede the postprocessing.
     """
 
     def __init__(self, solver):
@@ -56,31 +55,31 @@ class DoFWisePostprocessSolution(AbstractRungeKuttaDGActionSet):
 
     def add_postprocessing_kernel(self, operation_per_point):
         """
+        Add a code snippet which is applied to each and every degree of freedom.
 
-        Add a code snippet which is applied to each and every point. You have the following
-        variables which are well-defined:
+        The snippet can rely on the following variables:
 
-        - value: Is a pointer to the current finite volume's data
-        - x: A tarch::la::Vector over doubles
+        - values: double* pointing to the data of the current degree of freedom
+        - x: The quadrature point position as tarch::la::Vector over doubles
         - marker.getH(): A tarch::la::Vector over doubles
+        - timeStamp, timeStepSize: double
 
+        :: Arguments
 
         operation_per_point: String
-          C/C++ code snippet
-
+          C/C++ code snippet.
         """
         self._compute_kernel += (
             """
-{    
+{
   {{COMPUTE_TIME_STEP_SIZE}}
   const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
-    
+
   if (
-    not marker.hasBeenRefined() 
-    and 
+    not marker.hasBeenRefined()
+    and
     {{PREDICATE}}
-  ) { 
-    
+  ) {
     constexpr int valuesPerDoF = {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     peano4::dForEach({{DG_ORDER}} + 1, [&](const tarch::la::Vector<DIMENSIONS, int>& index) {
       double* values   = fineGridCell{{UNKNOWN_IDENTIFIER}}.data()
@@ -112,7 +111,6 @@ class DoFWisePostprocessSolution(AbstractRungeKuttaDGActionSet):
             result = jinja2.Template(
                 self._compute_kernel, undefined=jinja2.DebugUndefined
             ).render(**d)
-            pass
         return result
 
     def get_action_set_name(self):
@@ -128,7 +126,13 @@ class DoFWisePostprocessSolution(AbstractRungeKuttaDGActionSet):
 
 
 class CellWisePostprocessSolution(AbstractRungeKuttaDGActionSet):
-    """ """
+    """
+    Postprocessing variant that applies a snippet once per cell.
+
+    PostprocessSolution differs from other action sets, as we create it only once.
+    See RungeKuttaDG.create_action_sets(). Once the instance does exist, you can
+    tailor it. But you can also completely overwrite it.
+    """
 
     def __init__(self, solver):
         super(CellWisePostprocessSolution, self).__init__(solver)
@@ -137,36 +141,37 @@ class CellWisePostprocessSolution(AbstractRungeKuttaDGActionSet):
 
     def add_postprocessing_kernel(self, operation_per_cell):
         """
+        Add a code snippet which is applied once per cell.
 
-        Add a code snippet which is applied to each and every point. You have the following
-        variables which are well-defined:
+        The snippet can rely on the following variables:
 
-        - value: Is a pointer to the current finite volume's data
-        - x: A tarch::la::Vector over doubles
         - marker.getH(): A tarch::la::Vector over doubles
+        - timeStamp, timeStepSize: double
 
+        The per-degree-of-freedom pointers are not set up here. Use
+        DoFWisePostprocessSolution if the snippet has to see individual nodes.
 
-        operation_per_point: String
-          C/C++ code snippet
+        :: Arguments
 
+        operation_per_cell: String
+          C/C++ code snippet.
         """
         self._compute_kernel += (
             """
-{    
+{
   {{COMPUTE_TIME_STEP_SIZE}}
   const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
-    
+
   if (
-    not marker.hasBeenRefined() 
-    and 
+    not marker.hasBeenRefined()
+    and
     {{PREDICATE}}
-  ) { 
-    
+  ) {
     """
             + operation_per_cell
             + """
 
-  } 
+  }
 }
 """
         )
@@ -186,7 +191,6 @@ class CellWisePostprocessSolution(AbstractRungeKuttaDGActionSet):
             result = jinja2.Template(
                 self._compute_kernel, undefined=jinja2.DebugUndefined
             ).render(**d)
-            pass
         return result
 
     def get_action_set_name(self):

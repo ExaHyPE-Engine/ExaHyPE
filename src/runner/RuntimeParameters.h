@@ -50,6 +50,7 @@ public:
   int    getNumberOfTimeSteps() const;
   double getFirstPlotTimeStamp() const;
   int    getNumberOfSnapshots() const;
+  bool   getPlotDoublePrecision() const;
   int    getGridLevels() const;
   int    getMaxGridLevels() const;
 
@@ -62,8 +63,6 @@ public:
   double getMinAdmissiblePatchSize(const tarch::la::Vector<DIMENSIONS, double>& domainSize) const;
   double
   getMaxAdmissibleCellSize(const tarch::la::Vector<DIMENSIONS, double>& domainSize, int cellsPerPatchPerAxis) const;
-  double
-  getMinAdmissibleCellSize(const tarch::la::Vector<DIMENSIONS, double>& domainSize, int cellsPerPatchPerAxis) const;
 
 private:
   double _mpiTimeoutWarning;
@@ -82,6 +81,7 @@ private:
   int         _numberOfSnapshots;
   std::string _outputPath;
   bool        _outputPathConfigured;
+  bool        _plotDoublePrecision;
   std::string _projectName;
   std::string _executableName;
   double      _timeStepLogInterval;

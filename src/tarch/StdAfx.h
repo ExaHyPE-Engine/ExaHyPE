@@ -45,6 +45,9 @@
 #include <source_location>
 #include <sstream>
 #include <stdexcept>
+#if __has_include(<stdfloat>)
+#include <stdfloat>
+#endif
 #include <string>
 #include <string_view>
 #include <system_error>

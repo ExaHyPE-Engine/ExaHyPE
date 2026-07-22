@@ -13,15 +13,17 @@ class DiscontinuousGalerkinTracing(
 
     Particle tracing over the DG solver.
 
-    Please consult the class FiniteVolumesTracing for details on the semantics
-    of this type. It is an exact analogon for DG.
+    The class mirrors FiniteVolumesTracing: it couples a tracer particle set to
+    the solver and projects the cell solution onto the tracer attributes. The
+    default argument list passes the polynomial order and the solver's quadrature
+    points, so the projection kernel can evaluate the DG polynomial right at the
+    particle position.
 
     ## Update plug-in points
 
     We only update cells which are marked with getHasUpdated(). For Runge-Kutta
-    type solvers, I assume that this flag is set by the computation of the final
+    type solvers, we assume that this flag is set by the computation of the final
     linear combination of estimates.
-
     """
 
     def __init__(
@@ -38,14 +40,39 @@ class DiscontinuousGalerkinTracing(
         *p
 """,
     ):
-        """
+        """!
 
-        @see FiniteVolumesTracing.__init()__.
+        Set up the tracing.
 
+        Setting up the tracing means that we couple the tracer particle set with
+        the solver and state which projection kernel writes solver data into the
+        tracer. The file exahype2/dg/Tracer.h provides a few pre-manufactured
+        routines. The kernel is a plain function call, so you have to ensure that
+        its argument list matches the data you want to dump.
+
+        ## Arguments
+
+        particle_set: ParticleSet
+         The tracer particles which are coupled to the solver.
+
+        solver: ADERDG
+         The DG solver whose cell data is projected onto the tracers.
+
+        project_on_tracer_properties_kernel: String
+         Name of the routine that projects the DG representation onto the
+         tracers' properties. Hand in None if you do not want any field
+         properties to be projected on the tracer. This makes sense if the
+         trajectory of a tracer already encodes all information.
+
+        projection_kernel_arguments: String
+         Argument list handed to the projection kernel. The default passes the
+         cell marker, the polynomial order, the solver's quadrature points, the
+         number of data entries per degree of freedom, the cell data and the
+         particle.
         """
 
         self.tracerDict = {}
-        # Don't overwrite hte dictionary of hte superclass. We'll need it
+        # Do not overwrite the dictionary of the superclass, as we need it.
         self.tracerDict["PARTICLE"] = particle_set.particle_model.name
         self.tracerDict["PARTICLES_CONTAINER"] = particle_set.name
         self.tracerDict["SOLVER_NAME"] = solver._name
@@ -70,13 +97,13 @@ if (
   )
 ) {
   for (auto* p: localParticles) {
-    if ( 
+    if (
       p->getMoveState()==globaldata::{{PARTICLE}}::MoveState::NotMovedYet and marker.isContained(p->getX())
     ) {
       {{PROJECTION_KERNEL}}(
         {{PROJECTION_KERNEL_ARGUMENTS}}
       );
-      
+
       p->setMoveState( globaldata::{{PARTICLE}}::MoveState::Moved );
     }
   }
@@ -88,7 +115,7 @@ if (
     p->setMoveState(globaldata::{{PARTICLE}}::MoveState::NotMovedYet);
   }
 """
- 
+
         super(DiscontinuousGalerkinTracing,self).__init__(
             particle_set,
             jinja2.Template(cell_compute_kernel).render(**self.tracerDict),
@@ -96,12 +123,6 @@ if (
                 **self.tracerDict
             ),
         )
-
-    # def get_body_of_operation(self,operation_name):
-    #  result = peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles.get_body_of_operation(self,operation_name)
-    #  if operation_name==ActionSet.OPERATION_BEGIN_TRAVERSAL:
-    #    result = self.__Template_BeginIteration.render(**self.tracerDict)
-    #  return result
 
     def get_action_set_name(self):
         return __name__.replace(".py", "").replace(".", "_")
@@ -129,6 +150,6 @@ if (
         return (
             super(DiscontinuousGalerkinTracing,self).get_attributes()
             + """
-double _timeStepSize;    
+double _timeStepSize;
 """
         )

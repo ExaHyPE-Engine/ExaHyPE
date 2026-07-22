@@ -11,25 +11,19 @@ import jinja2
 
 class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
   """
-  Solve the actual Riemann problem and add stuff back to the solution.
+  Solve the Riemann problem and add its contribution back to the solution.
 
-  See the discussion of RungeKuttaDG for a discussion regarding the individual
-  steps.
+  See RungeKuttaDG for a discussion of the individual steps.
   """
 
   TemplateProject = """
   {% for PREDICATE_NO in range(0,PREDICATES|length) %}
   if ({{PREDICATES[PREDICATE_NO]}}) {
-    // no support for local time stepping or subcycling
-    /*
-    assertion(tarch::la::equals(({{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(0)), ({{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(1))), {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(0), {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(1), {{FACE_METADATA_ACCESSOR}}.toString(), marker.toString());
-    */
-
-    // Doesn't make a difference if we pick left or right
+    // Local time stepping and subcycling are not supported, so both sides of the
+    // face carry the same time stamp and either one can be read.
     const double timeStampOldSolution = {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(0);
 
-    // Set the variable
-    // double timeStepSize
+    // The snippet below declares and sets double timeStepSize.
     {{COMPUTE_TIME_STEP_SIZE}}
 
     const double timeStamp = timeStampOldSolution + {{BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES[PREDICATE_NO]}} * timeStepSize;
@@ -48,12 +42,12 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
 
   def __init__(self,solver):
     """
-    guard_project: String (C++ code)
-      Predicate which controls if the solution is actually projected.
+    Construct the action set for the Riemann solve.
 
-    guard_safe_old_time_step: String (C++ code)
-      Predicate which controls if the projection should be copied into
-      the old solution and the time step should also be moved over.
+    :: Arguments
+
+    solver: RungeKuttaDG
+      Reference to creating class.
     """
     super(SolveRiemannProblem,self).__init__(solver)
     self.guards            = []
@@ -70,7 +64,7 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
   @guards.setter
   def guards(self,new_guards):
     if new_guards!=[] and len(new_guards)!=self._solver.number_of_Runge_Kutta_steps():
-      raise Exception( "Expect one guard per Runge Kutta step. Have {} steps but got guards {}".format(self._solver.number_of_Runge_Kutta_steps(),new_guards) )
+      raise Exception( "Expect one guard per Runge-Kutta step. There are {} steps, but the guards are {}".format(self._solver.number_of_Runge_Kutta_steps(),new_guards) )
     self._guards = new_guards
 
 
@@ -84,7 +78,6 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
       d[ "BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES" ] = self._butcher_tableau.time_step_sizes()
       d[ "FACE_METADATA_ACCESSOR" ] = "fineGridFace"  + self._solver._face_label.name
       result = jinja2.Template(self.TemplateProject).render(**d)
-      pass
     return result
 
 
@@ -95,4 +88,4 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
   def get_includes(self):
     return super(SolveRiemannProblem,self).get_includes() + """
 #include "exahype2/dg/rusanov/Rusanov.h"
-    """
+"""

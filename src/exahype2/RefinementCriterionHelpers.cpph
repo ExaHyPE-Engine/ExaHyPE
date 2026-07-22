@@ -1,0 +1,67 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+/**
+ * Map a relative multiresolution detail to a refinement command.
+ *
+ * @param detail relative representation error from
+ *   toolbox::blockstructured::computeMultiresolutionDetail.
+ * @param eps relative representation error tolerated before refinement.
+ * @param coarsenSafetyFactor hysteresis ratio. Erasure requires a detail below
+ *   eps/coarsenSafetyFactor. The default reflects the factor 3^(p+1) = 9 for an
+ *   affine fit on Peano's triadic grid.
+ *
+ * The RefinementCriterion action set applies the admissible patch-size limits.
+ */
+INLINE_METHOD exahype2::RefinementCommand
+exahype2::refinementCommandFromDetail(const double detail, const double eps, const double coarsenSafetyFactor) {
+  if (detail > eps) {
+    return exahype2::RefinementCommand::Refine;
+  }
+  if (detail < eps / coarsenSafetyFactor) {
+    return exahype2::RefinementCommand::Erase;
+  }
+  return exahype2::RefinementCommand::Keep;
+}
+
+/**
+ * Compute the maximum patch detail over the supplied scalar indicators and
+ * map it to a refinement command.
+ *
+ * Q stores the whole patch in AoS layout. nodesInUnitInterval contains the
+ * solver's one-dimensional node positions in [0,1]; equidistant finite-volume
+ * centres use nullptr. A null Q during grid construction returns Keep.
+ */
+template <typename Value, typename... Indicators>
+INLINE_METHOD exahype2::RefinementCommand exahype2::refineOnDetail(
+  const Value* const  Q,
+  const int           numberOfDofsPerAxis,
+  const int           numberOfUnknownsPlusAuxiliaryVariables,
+  const double        eps,
+  const double        coarsenSafetyFactor,
+  const double* const nodesInUnitInterval,
+  const Indicators&... indicators
+) {
+  static_assert(
+    sizeof...(Indicators) > 0,
+    "refineOnDetail() needs at least one indicator. Without one the detail stays zero, which "
+    "reads as a request to coarsen."
+  );
+
+  if (Q == nullptr) {
+    return exahype2::RefinementCommand::Keep;
+  }
+  double detail = 0.0;
+  ((detail = std::max(
+      detail,
+      toolbox::blockstructured::computeMultiresolutionDetail(
+        Q,
+        numberOfDofsPerAxis,
+        numberOfUnknownsPlusAuxiliaryVariables,
+        indicators,
+        nodesInUnitInterval
+      )
+    )),
+   ...);
+  return exahype2::refinementCommandFromDetail(detail, eps, coarsenSafetyFactor);
+}

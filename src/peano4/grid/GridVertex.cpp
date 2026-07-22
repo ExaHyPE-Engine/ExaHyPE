@@ -80,11 +80,19 @@ bool peano4::grid::GridVertex::areAllVerticesUnrefined(GridVertex vertices[TWO_P
   return result;
 }
 
+/**
+ * A vertex will be refined if it is already refined or currently refining. It
+ * also will be refined if the erase is only triggered.
+ */
 bool peano4::grid::GridVertex::willVertexBeRefined(const GridVertex& vertex) {
   return vertex.getState() == GridVertex::State::Refining or vertex.getState() == GridVertex::State::Refined
     or vertex.getState() == GridVertex::State::EraseTriggered;
 }
 
+/**
+ * A vertex has been refined if it is (already) refined or is erasing or the
+ * erase has been triggered.
+ */
 bool peano4::grid::GridVertex::hasVertexBeenRefined(const GridVertex& vertex) {
   return vertex.getState() == GridVertex::State::Refined or vertex.getState() == GridVertex::State::EraseTriggered
     or vertex.getState() == GridVertex::State::Erasing;
@@ -149,9 +157,9 @@ std::string peano4::grid::GridVertex::toString() const {
 
   out << ", Flags=0b" << std::bitset<8>(flags) << " [";
   bool first   = true;
-  auto addFlag = [&](const char* name, uint8_t mask) {
+  auto addFlag = [&](const char* name, std::uint8_t mask) {
     if (getFlag(mask)) {
-      if (!first) {
+      if (not first) {
         out << ", ";
       }
       out << name;
@@ -163,12 +171,14 @@ std::string peano4::grid::GridVertex::toString() const {
   addFlag("HasBeenParentOfSubtreeVertexInPreviousTreeSweep", HasBeenParentOfSubtreeVertexInPreviousTreeSweep);
   addFlag("IsParentOfSubtreeVertexInCurrentTreeSweep", IsParentOfSubtreeVertexInCurrentTreeSweep);
   addFlag("HasBeenVertexTypeHangingInPreviousTreeSweep", HasBeenVertexTypeHangingInPreviousTreeSweep);
+  addFlag("HasBeenSurroundedByRefinedCellsInPreviousTreeSweep", HasBeenSurroundedByRefinedCellsInPreviousTreeSweep);
   if (first) {
-    out << "None"; // No flags set
+    out << "None";
   }
   out << "]";
 
   out << ", NumberOfAdjacentRefinedLocalCells=" << numberOfAdjacentRefinedLocalCells;
+  out << ", NumberOfAdjacentRefinedRemoteCells=" << numberOfAdjacentRefinedRemoteCells;
   out << ", Level=" << level;
 #if PEANO_DEBUG
   out << ", X=" << x;
@@ -236,9 +246,9 @@ void peano4::grid::GridVertex::initDatatype() {
 
   constexpr int NumberOfAttributes =
 #if PEANO_DEBUG
-    7;
+    8;
 #else
-    6;
+    7;
 #endif
   MPI_Datatype subtypes[NumberOfAttributes];
   int          blocklen[NumberOfAttributes];
@@ -264,6 +274,11 @@ void peano4::grid::GridVertex::initDatatype() {
   subtypes[counter] = MPI_INT;
   blocklen[counter] = 1;
   MPI_Get_address(&instances[0].numberOfAdjacentRefinedLocalCells, &disp[counter]);
+  counter++;
+
+  subtypes[counter] = MPI_INT;
+  blocklen[counter] = 1;
+  MPI_Get_address(&instances[0].numberOfAdjacentRefinedRemoteCells, &disp[counter]);
   counter++;
 
 #if PEANO_DEBUG

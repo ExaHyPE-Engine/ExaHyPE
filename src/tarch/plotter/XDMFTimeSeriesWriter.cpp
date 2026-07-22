@@ -4,8 +4,6 @@
 
 #include "tarch/mpi/Rank.h"
 
-namespace fs = std::filesystem;
-
 namespace {
   /**
    * Extract the body of the single <Grid> element of a self-contained per-step
@@ -14,7 +12,7 @@ namespace {
    * with their DataItem references into the HDF5 file) is what gets inlined into
    * the temporal collection.
    */
-  std::string extractGridBody(const fs::path& perStepFile) {
+  std::string extractGridBody(const std::filesystem::path& perStepFile) {
     std::ifstream in(perStepFile);
     if (not in) {
       throw std::runtime_error("Failed to read per-step XDMF file '" + perStepFile.string() + "'");
@@ -42,8 +40,8 @@ void tarch::plotter::XDMFTimeSeriesWriter::writeTimeSeriesMetaFile(
     return;
   }
 
-  fs::path directory(outputDirectory);
-  fs::path p = directory / (filename + ".xmf");
+  std::filesystem::path directory(outputDirectory);
+  std::filesystem::path p = directory / (filename + ".xmf");
 
   std::ofstream out(p);
   if (not out) {

@@ -16,10 +16,13 @@ std::bitset<DIMENSIONS> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::PeriodicBC = 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   {{BASIS_INITIALIZERS | indent(2,True) }}
   _solverState(SolverState::GridConstruction),
+  _solverStateBeforeDynamicMeshRefinement(SolverState::GridConstruction),
   _minTimeStamp(0.0),
   _maxTimeStamp(0.0),
   _minTimeStampThisTimeStep(0.0),
   _maxTimeStampThisTimeStep(0.0),
+  _localMinTimeStampThisTimeStep(0.0),
+  _localMaxTimeStampThisTimeStep(0.0),
   _minCellH(std::numeric_limits<double>::max()),
   _maxCellH(0.0),
   _minCellHThisTimeStep(0.0),
@@ -99,7 +102,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
   _maxCellHThisTimeStep = std::max(_maxCellHThisTimeStep,cellSize);
   _minCellHThisTimeStep = std::min(_minCellHThisTimeStep,cellSize);
 
-  logDebug("updated with dt=" << timeStepSize << ", t=" << timeStamp << ", h=" << cellSize << ": t(new)=" << _minTimeStampThisTimeStep);
+  logDebug("Updated with dt=" << timeStepSize << ", t=" << timeStamp << ", h=" << cellSize << ": t(new)=" << _minTimeStampThisTimeStep);
 }
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::SolverState {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getSolverState() const {
@@ -109,8 +112,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
 {% if REFINEMENT_CRITERION_IMPLEMENTATION!="<user-defined>" %}
 ::exahype2::RefinementCommand {{NAMESPACE | join("::")}}::{{CLASSNAME}}::refinementCriterion(
   const double * NOALIAS Q,    // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
-  const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
+  const tarch::la::Vector<DIMENSIONS,double>&  x,
+  const tarch::la::Vector<DIMENSIONS,double>&  h,
   double                                       t
 ) {
   {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<empty>" %}
@@ -159,6 +162,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridInitialisationStep() {
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridInitialisationStep() {
+  // From here on every completed sweep has sent a face-data batch, which the
+  // following sweep's boundary exchange consumes.
+  _hasStoredFaceData = true;
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
@@ -168,6 +174,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
       break;
     case SolverState::GridInitialisation:
       _solverState = SolverState::ProjectOnFacesAndComputeVolumeIntegralOfStep0;
+      break;
+    case SolverState::DynamicMeshRefinement:
+      // finishDynamicMeshRefinementStep() restores the state that the mesh-refinement
+      // sweeps interrupted, so a time step can only start once that pairing has completed.
+      assertion(false, toString(_solverState));
       break;
     case SolverState::Suspended:
       _solverState = SolverState::ProjectOnFacesAndComputeVolumeIntegralOfStep0;
@@ -190,6 +201,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
       _solverState = SolverState::ProjectOnFacesAndComputeVolumeIntegralOfStep0;
       break;
   }
+
+  _meshRefinementRanSinceLastTimeStep = false;
 
   {{START_TIME_STEP_IMPLEMENTATION}}
 
@@ -230,7 +243,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
 
   int localCellUpdates = _cellUpdates;
   int globalCellUpdates = 0;
-  MPI_Comm communicator = tarch::mpi::Rank::getInstance().getCommunicator();
+  const MPI_Comm communicator = tarch::mpi::Rank::getInstance().getCommunicator();
   auto progress = [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); };
 
   tarch::mpi::allreduce(
@@ -298,6 +311,16 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep() {
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishPlottingStep() {
 }
 
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startDynamicMeshRefinementStep() {
+  ::exahype2::Solver::startDynamicMeshRefinementStep();
+  _solverStateBeforeDynamicMeshRefinement = _solverState;
+  _solverState                            = SolverState::DynamicMeshRefinement;
+}
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishDynamicMeshRefinementStep() {
+  _solverState = _solverStateBeforeDynamicMeshRefinement;
+}
+
 std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState state) {
   switch (state) {
     case SolverState::GridConstruction:
@@ -306,23 +329,34 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
       return "grid-initialisation";
     case SolverState::Plotting:
       return "plotting";
+    case SolverState::DynamicMeshRefinement:
+      return "dynamic-mesh-refinement";
+    case SolverState::Suspended:
+      return "suspended";
     {% for item in range(RK_STEPS) %}
     case SolverState::ProjectOnFacesAndComputeVolumeIntegralOfStep{{item}}:
       return "project-on-faces-and-compute-volume-integral-of-step-{{item}}";
-      break;
     case SolverState::SolveRiemannProblemAndAddToVolumeIntegralOfStep{{item}}:
-    return "solve-Riemann-problem-and-add-to-volume-integral-of-step-{{item}}";
+      return "solve-Riemann-problem-and-add-to-volume-integral-of-step-{{item}}";
     {%- endfor %}
   }
   return "<undef>";
 }
 
+/**
+ * A separate-sweeps solver spreads one time step over two sweeps per Runge-Kutta step, so
+ * a plot is only consistent once the last of them has run, or while the solver sits in a
+ * state that leaves the solution untouched.
+ */
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
   return isLastGridSweepOfTimeStep()
       or _solverState==SolverState::GridInitialisation
       or _solverState==SolverState::Plotting;
 }
 
+/**
+ * True in exactly one of the two sweeps per Runge-Kutta step, the one that opens step 0.
+ */
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() const {
   return _solverState==SolverState::ProjectOnFacesAndComputeVolumeIntegralOfStep0;
 }

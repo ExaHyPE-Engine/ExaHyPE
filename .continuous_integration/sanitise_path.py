@@ -1,65 +1,64 @@
-import os, re
+# This file is part of the Peano project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
+"""Replace checkout-dependent paths in installed configuration files."""
 
-"""!
-This file sanitises the library paths for
-files that we retrieve from Git, writes
-every line out to a temp file and then
-copies the temp file in place of file.
-"""
+import os
+import re
+import sys
 
-ci_path    = os.path.dirname(os.path.abspath(__file__))
+ci_path = os.path.dirname(os.path.abspath(__file__))
 peano_path = os.path.dirname(ci_path)
 
+
 def iterate_lines(filename):
-    with open(filename) as f:
-        line = f.readline()
-        lineNumber = 1
-        while line:
-            yield line, lineNumber
-            line = f.readline()
-            lineNumber += 1
+    with open(filename, encoding="utf-8") as input_file:
+        for line_number, line in enumerate(input_file, start=1):
+            yield line, line_number
 
 
 def found_path(line, start_string, end_string, replacement_path):
-    # Produces a match if we see something that looks like:
-    # /dine/do009/ *** /Peano/ ***
-    pattern = re.compile(rf"{re.escape(start_string)}/.*?{re.escape(end_string)}")
-    regex = pattern.search(line)
-    if regex:
-        # Here we do a little recursion since the regex only catches
-        # the FIRST instance of a match. So, we fix the first instance,
-        # then run this function again on the fixed version!
-
-        # Send the latter part of the line into this function again to be further
-        # sanitised. Will simply return if a directory path isn't found.
-        second_part_of_line = found_path(
-            line[regex.end() :], start_string, end_string, replacement_path
+    # The lookahead pins the end string to a path boundary, so a directory whose
+    # name merely starts with the end string cannot truncate the match early.
+    pattern = re.compile(rf"{re.escape(start_string)}/.*?{re.escape(end_string)}(?=[/;\"\s]|$)")
+    match = pattern.search(line)
+    if match:
+        # Searching only the suffix prevents replacement text from matching again.
+        sanitised_suffix = found_path(
+            line[match.end() :], start_string, end_string, replacement_path
         )
-
-        newline = line[: regex.start()] + replacement_path + second_part_of_line
-        return newline
-    else:
-        return line
+        return line[: match.start()] + replacement_path + sanitised_suffix
+    return line
 
 
 def sanitise_file(original_filename, start_string, end_string, replacement_path):
-    tempfile = f"{peano_path}/temp.txt"
+    temporary_filename = f"{peano_path}/temp.txt"
+    succeeded = False
 
     try:
-        with open(tempfile, "w") as tmp:
+        with open(temporary_filename, "w", encoding="utf-8") as output_file:
             for original_line, _ in iterate_lines(original_filename):
-                # Only sanitise if there is something to do
-                line = found_path(
-                    original_line, start_string, end_string, replacement_path
+                sanitised_line = found_path(
+                    original_line,
+                    start_string,
+                    end_string,
+                    replacement_path,
                 )
-                tmp.write(line)
-    except:
-        # Error occurred
-        os.remove(tempfile)
-        return
-    os.rename(tempfile, original_filename)
+                output_file.write(sanitised_line)
+        os.replace(temporary_filename, original_filename)
+        succeeded = True
+    except (OSError, UnicodeError):
+        pass
+    finally:
+        try:
+            os.remove(temporary_filename)
+        except FileNotFoundError:
+            pass
+        except OSError:
+            succeeded = False
 
-    print(f"Sanitised {original_filename}")
+    if succeeded:
+        print(f"Sanitised {original_filename}")
+    return succeeded
 
 
 if __name__ == "__main__":
@@ -67,9 +66,10 @@ if __name__ == "__main__":
     end_string = "/Peano"
     replacement_path = peano_path
 
-    import sys
+    failed = False
     for filename in sys.argv[1:]:
-        try:
-            sanitise_file(filename, start_string, end_string, replacement_path)
-        except:
+        if not sanitise_file(filename, start_string, end_string, replacement_path):
             print(f"Error sanitising {filename}")
+            failed = True
+    if failed:
+        sys.exit(1)

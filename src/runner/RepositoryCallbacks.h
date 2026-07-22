@@ -48,6 +48,7 @@ struct runner::RepositoryCallbacks {
   std::function<void()> finishSimulation;
 
   std::function<bool()>             mayPlot;
+  std::function<bool()>             hasPendingMeshUpdates;
   std::function<double()>           getMinTimeStamp;
   std::function<double()>           getMaxTimeStamp;
   std::function<int()>              getNumberOfDoFs;
@@ -59,5 +60,6 @@ struct runner::RepositoryCallbacks {
 struct runner::MainMeasurements {
   tarch::instrumentation::Measurement                                      timeStep;
   tarch::instrumentation::Measurement                                      plot;
+  tarch::instrumentation::Measurement                                      dynamicAMR;
   std::vector<std::pair<std::string, tarch::instrumentation::Measurement>> stepTimes;
 };

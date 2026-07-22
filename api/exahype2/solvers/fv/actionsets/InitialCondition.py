@@ -23,7 +23,9 @@ class InitialCondition(AbstractFVActionSet):
             self._solver._init_dictionary_with_default_parameters(d)
             self._solver.add_entries_to_text_replacement_dictionary(d)
             d["PREDICATE"] = self.guard
-            d["CELL_ACCESSOR"] = "fineGridCell" + self._solver.current_unknown_identifier()
+            d["CELL_ACCESSOR"] = (
+                "fineGridCell" + self._solver.current_unknown_identifier()
+            )
             result = jinja2.Template(self.TemplateInitialCondition).render(**d)
 
         return result
@@ -57,7 +59,7 @@ class InitialCondition(AbstractFVActionSet):
       {% endif %}
     });
 
-    // Relevant for tracing et al which kicks in if and only if cell has been updated
+    // Tracing and similar postprocessing only run on a cell that has been updated.
     fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
   }
 """

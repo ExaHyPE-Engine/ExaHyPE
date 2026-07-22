@@ -4,8 +4,6 @@
 
 #include "tarch/mpi/Rank.h"
 
-namespace fs = std::filesystem;
-
 void tarch::plotter::JSONTimeSeriesWriter::writeTimeSeriesMetaFile(
   const std::string& outputDirectory,
   const std::string& filename
@@ -26,7 +24,7 @@ void tarch::plotter::JSONTimeSeriesWriter::writeTimeSeriesMetaFile(
     }
   }
 
-  fs::path p(outputDirectory);
+  std::filesystem::path p(outputDirectory);
   p /= (filename + dataExtension + ".series");
 
   std::ofstream out(p);

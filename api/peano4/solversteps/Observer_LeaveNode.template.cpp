@@ -85,7 +85,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveNode(const ::peano4::grid::GridTraversal
       );
 {%- endfor %}
     }
-    if (isCreateOrDestroy) {
+    if (isCreateOrDestroy and not isHanging) {
 {%- for action_set in ACTIVE_ACTION_SETS | reverse %}
       {{action_set.name}}.destroyFace(faceMarker,
 {%- for vertex in VERTICES %} fineGrid{{ vertex.logical_type_name }}, {%- endfor %}
@@ -132,7 +132,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveNode(const ::peano4::grid::GridTraversal
       );
 {%- endfor %}
     }
-    if (isCreateOrDestroy) {
+    if (isCreateOrDestroy and not isHanging) {
 {%- for action_set in ACTIVE_ACTION_SETS | reverse %}
       {{action_set.name}}.destroyVertex(vertexMarker,
 {%- for vertex in VERTICES %} fineGrid{{ vertex.logical_type_name }}(pick), {%- endfor %}

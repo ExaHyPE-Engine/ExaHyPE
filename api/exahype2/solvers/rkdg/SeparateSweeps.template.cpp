@@ -4,15 +4,19 @@
 #include "exahype2/RefinementControl.h"
 
 {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %}
+/**
+ * @param Q Whole nodal patch in AoS layout, or nullptr during grid construction.
+ * @param x Patch centre.
+ * @param h Patch size.
+ * @param t Time.
+ */
 ::exahype2::RefinementCommand {{NAMESPACE | join("::")}}::{{CLASSNAME}}::refinementCriterion(
-  const double * NOALIAS Q,               // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<DIMENSIONS,double>&  volumeX,
-  const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
+  const double * NOALIAS Q,
+  const tarch::la::Vector<DIMENSIONS,double>&  x,
+  const tarch::la::Vector<DIMENSIONS,double>&  h,
   double                                       t
 ) {
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
-
-  // see comments in header file
 
   return result;
 }
@@ -24,9 +28,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
   const tarch::la::Vector<DIMENSIONS,double>&  x,
   const tarch::la::Vector<DIMENSIONS,double>&  h
 ) {
-  // @todo Implement your stuff here, but ensure all entries are
-  //   initialised incl all auxiliary variables. The snippet below
-  //   sets everything to zero
+  // @todo Implement the initial condition here, but ensure all entries including
+  //   the auxiliary variables are initialised. The snippet below sets everything
+  //   to zero.
   for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
     Q[i] = 0.0;
   }
@@ -41,7 +45,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
   double                                       t,
   int                                          normal
 ) {
-  // @todo implement
+  // @todo Implement the boundary conditions here.
 }
 {% endif %}
 

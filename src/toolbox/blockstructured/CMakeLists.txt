@@ -4,10 +4,13 @@
 file(GLOB_RECURSE HEADERS ${HEADER_EXTENSIONS_TO_GLOB})
 
 set(SOURCES
+  AMRRoutines.cpp
   Enumeration.cpp
+  MultiresolutionDetail.cpp
   UnitTests.cpp
   tests/EnumerationTest.cpp
   tests/InterpolationTest.cpp
+  tests/MultiresolutionDetailTest.cpp
   tests/RestrictionTest.cpp
 )
 

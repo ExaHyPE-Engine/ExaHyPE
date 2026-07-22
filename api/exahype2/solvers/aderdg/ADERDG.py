@@ -26,18 +26,18 @@ from peano4.Logger import log
 from peano4.output.Helper import render_jinja2_template
 
 """
-Used to have a central way for all of this class' descendants to differentiate between Gauss-Legendre
-and Gauss-Lobatto nodes, helps to avoid having to constantly pass a string and ensure that this string is
-the same everywhere.
+Central enumeration that lets every ADER-DG solver distinguish Gauss-Legendre from
+Gauss-Lobatto nodes. It avoids passing a string around and keeps the naming of the
+node type identical everywhere.
 """
 class Polynomials(IntEnum):
     Gauss_Legendre = 0,
     Gauss_Lobatto = 1
 
 """
-Denotes valid precisions for kernels and storage but also is supposed to allow a little more flexibility
-in the naming. If a user wants to name it float because they're more used to C-based languages that's
-fine but if they'd rather use single we allow it as well.
+Valid precisions for kernels and storage. Each C++ type accepts several spellings, so a
+user can write float, single or fp32 for the same type and pick whichever name is most
+familiar.
 """
 PrecisionType = {
     "SP":     "float",
@@ -71,10 +71,11 @@ class ADERDG(object):
         auxiliary_variables,
     ):
         self._name = name
+        self._solver_number = 0
 
         """
         Polynomial order of the representation of the underlying function in each spatial dimension.
-        The number of support points used to represent this polynomial is always the order + 1
+        The number of support points that represent this polynomial is always the order plus one.
         """
         self._order = order
 
@@ -101,14 +102,15 @@ class ADERDG(object):
 
         self._additional_precisions = None
 
-        # Used by children classes or setters in order to add constants or includes to the corresponding part
+        # Used by child classes or setters to add constants or includes to the corresponding part
         self._solver_constants = ""
         self._user_action_set_includes = ""
         self._user_solver_includes = ""
 
         """
-        These specify the time step, they must be set by child classes in order to advance the timestepping.
-        These are the main difference between child classes as they all use the same underlying routines.
+        These specify the time step and have to be set by a child class to advance the time stepping.
+        They are the main difference between the child classes, as all of them share the same
+        underlying routines.
         """
         self._compute_time_step_size = "#error Not yet defined"
         self._compute_new_time_step_size = "#error Not yet defined"
@@ -165,12 +167,13 @@ class ADERDG(object):
         self._finish_simulation_implementation = ""
 
         """
-        These are ADER-DG CFL factors, they help determine the maximal stable timestep size.
-        Up to order 4, computed via von Neumann analysis [1].
+        These are the ADER-DG CFL factors which determine the maximal stable time step size.
+        Up to order 4, they are computed via von Neumann analysis [1].
         [1] M. Dumbser, D. S. Balsara, E. F. Toro, and C.-D. Munz,
         ‘A unified framework for the construction of one-step finite volume and discontinuous Galerkin schemes on unstructured meshes’, Journal of Computational Physics, vol. 227, no. 18, pp. 8209–8253, Sep. 2008.
-        They are necessary to compute stable timestep sizes as dt <= c*dx / (lambda_max*(2N+1)
-        with c the CFL for given order, lambda_max the maximal eigenvalue, N the order and dx the minimal mesh distance.
+        A stable time step size follows as dt <= c*dx / (lambda_max*(2N+1)) with c the CFL factor
+        for the given order, lambda_max the maximal eigenvalue, N the order and dx the minimal
+        mesh distance.
         """
         self._cflAder = [
             1.0,
@@ -195,8 +198,8 @@ class ADERDG(object):
         self._cflSafetyFactor = 0.0
 
         """
-        Used if the user wants to add some function to postprocessing, meaning
-        it should be added after every other computation in ADER-DG is done.
+        Holds a user-supplied postprocessing action set. It runs once every other
+        ADER-DG computation of the sweep has completed.
         """
         self._action_set_postprocess_solution = None
 
@@ -207,7 +210,7 @@ class ADERDG(object):
         self.create_action_sets()
 
     """
-    Creates all the structures that are attached on the Peano grid either in a cell or on the faces.
+    Creates all the structures that are attached to the Peano grid, either in a cell or on the faces.
     These are defined as Peano patches which have given sizes to contain persistent data as well as
     conditions for when they should be merged, sent, received, stored, loaded, etc.
     """
@@ -215,8 +218,8 @@ class ADERDG(object):
     def create_data_structures(self):
         self._number_of_face_projections = 1
 
-        # Current time step contains the solution, projections are respectively the projection
-        # of the solution and of the fluxes on the faces as predicted by the space-time predictor.
+        # The current time step holds the solution. The two projections hold the solution and
+        # the fluxes on the faces as predicted by the space-time predictor.
         self._current_time_step = peano4.datamodel.Patch(
             (self._order + 1, self._order + 1, self._order + 1),
             self._variable_shortcuts.unknowns + self._variable_shortcuts.auxiliary_variables,
@@ -318,11 +321,11 @@ class ADERDG(object):
         self._face_label = exahype2.grid.create_face_label(self._name)
 
     """
-    Creates the action sets, these are actions tied to the grid that are executed at given points of
-    grid generation, construction or steps of the ADER-DG solver. Peano handles grid structures that
-    contain data as well as operations that are executed on that data. These are the latter.
-    The guard here are the conditions for the execution of the operation, as in they are only executed
-    if the guard evaluates to true.
+    Creates the action sets. These are actions tied to the grid which run at given points of
+    grid generation, construction or steps of the ADER-DG solver. Peano handles grid structures
+    that contain data as well as operations that run on that data, and these are the latter.
+    A guard is the condition for the execution of an operation: the operation runs only if its
+    guard evaluates to true.
     """
     @abstractmethod
     def create_action_sets(self):
@@ -332,25 +335,40 @@ class ADERDG(object):
         self._action_set_update_face_label.descend_invocation_order = 0
         self._action_set_update_cell_label.descend_invocation_order = 0
 
-        # Sets initial conditions for the solution
         self._action_set_initial_conditions = exahype2.solvers.aderdg.actionsets.InitialCondition(self, self._store_cell_data_default_guard())
         self._action_set_initial_conditions.descend_invocation_order = 1
 
         self._action_set_handle_boundary = exahype2.solvers.aderdg.actionsets.HandleBoundary(self, self._store_boundary_data_default_guard())
         self._action_set_handle_boundary.descend_invocation_order = 1
 
-        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.aderdg.actionsets.DynamicAMR(
+        # Per-time-step resolution-transition coupling on a stable grid. It does not
+        # change the topology (create/destroy off, no grid-control events); that is
+        # exclusively the dedicated DynamicAMR observer's job below.
+        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.aderdg.actionsets.AdaptiveMeshFaceCoupling(
+            solver=self,
+            delete_guard=self._delete_face_data_default_guard(),
+            interpolate_guard=self._interpolate_face_data_default_guard(),
+            restrict_guard=self._restrict_face_data_default_guard(),
+            solve_guard=self._store_cell_data_default_guard(),
+        )
+        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.descend_invocation_order = 1
+
+        # The one action set that realises topology changes. It lives in the dedicated
+        # DynamicAMR observer (see add_actions_to_dynamic_mesh_refinement), reports the
+        # committed grid-control events back to Peano, and transfers the solution across
+        # every created or destroyed resolution transition.
+        self._action_set_dynamic_amr_transfer = exahype2.solvers.aderdg.actionsets.DynamicAMRTransfer(
             solver=self,
             delete_guard=self._delete_face_data_default_guard(),
             interpolate_guard=self._interpolate_face_data_default_guard(),
             restrict_guard=self._restrict_face_data_default_guard(),
         )
-        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.descend_invocation_order = 1
+        self._action_set_dynamic_amr_transfer.descend_invocation_order = 1
 
-        # All the actual computation of the solution happens in the prediction and correction action sets.
-        # Predictor extrapolates the solution from time t onto time-nodes, then projects this
-        # extrapolated solution to the faces.
-        # Correction uses the extrapolated face solutions from the predictor and the neighboring
+        # The computation of the solution happens in the prediction and correction action sets.
+        # Prediction extrapolates the solution from time t onto the time nodes, then projects
+        # this extrapolated solution to the faces.
+        # Correction uses the extrapolated face solutions from the predictor and the neighbouring
         # cells to compute a solution at the next time step.
         self._action_set_correction = exahype2.solvers.aderdg.actionsets.Correction(
             solver=self,
@@ -362,8 +380,7 @@ class ADERDG(object):
         self._action_set_prediction = exahype2.solvers.aderdg.actionsets.Prediction(self, self._store_cell_data_default_guard())
         self._action_set_prediction.descend_invocation_order = 3
 
-        # Handles adaptive mesh refinement
-        self._action_set_AMR = exahype2.solvers.aderdg.actionsets.AdaptivityCriterion(
+        self._action_set_AMR = exahype2.solvers.aderdg.actionsets.RefinementCriterion(
             solver=self,
             guard=self._store_cell_data_default_guard()
             + " and (repositories::"
@@ -375,11 +392,14 @@ class ADERDG(object):
             + "::SolverState::GridInitialisation)",
             build_up_new_refinement_instructions=True,
             called_by_grid_construction=False,
-            implement_previous_refinement_instructions=True
+            # A time step never realises topology changes; it only commits the
+            # refine/coarsen requests. Realisation happens in the DynamicAMR
+            # observer, whose DynamicAMRTransfer delivers the committed events.
+            implement_previous_refinement_instructions=False
         )
         self._action_set_AMR.descend_invocation_order = 4
 
-        self._action_set_AMR_throughout_grid_construction = exahype2.solvers.aderdg.actionsets.AdaptivityCriterion(
+        self._action_set_AMR_throughout_grid_construction = exahype2.solvers.aderdg.actionsets.RefinementCriterion(
             solver=self,
             guard=self._store_cell_data_default_guard(),
             build_up_new_refinement_instructions=True,
@@ -387,6 +407,26 @@ class ADERDG(object):
             called_by_grid_construction=True,
         )
         self._action_set_AMR_throughout_grid_construction.descend_invocation_order = 4
+
+        # Re-evaluating the criterion within the realise sweeps lets one round of
+        # dedicated mesh-refinement sweeps climb every level the data justifies:
+        # freshly transferred cells commit further refinement, and the sweeps
+        # repeat until the mesh satisfies the criterion. A delayed source therefore
+        # reaches its full depth before the next time step. Only cells that these
+        # sweeps have just created evaluate the criterion; every other cell
+        # committed its request in the preceding time step, and re-issuing it each
+        # sweep would keep the sweeps running forever.
+        self._action_set_AMR_throughout_dynamic_amr = exahype2.solvers.aderdg.actionsets.RefinementCriterion(
+            solver=self,
+            guard=self._store_cell_data_default_guard()
+            + " and fineGridCell"
+            + self._cell_label.name
+            + ".getRequiresCriterionEvaluation()",
+            build_up_new_refinement_instructions=True,
+            implement_previous_refinement_instructions=False,
+            called_by_grid_construction=False,
+        )
+        self._action_set_AMR_throughout_dynamic_amr.descend_invocation_order = 4
 
         if self._action_set_postprocess_solution == None:
             self._action_set_postprocess_solution = exahype2.solvers.aderdg.actionsets.EmptyPostprocessSolution(solver=self)
@@ -460,6 +500,11 @@ class ADERDG(object):
                 )
 
     def _load_face_data_default_guard(self):
+        # Receiving consumes the batch the previous sweep sent, so it is enabled
+        # from the first sweep that follows a face-data-storing sweep on. A guard
+        # keyed on the solver state alone cannot express that: the state stays at
+        # GridInitialisation across the initialise-drain loop, whose every sweep
+        # sends.
         return (
             "not marker.hasBeenRefined() "
             + "and repositories::"
@@ -469,9 +514,7 @@ class ADERDG(object):
             + "::SolverState::GridConstruction "
             + "and repositories::"
             + self.get_name_of_global_instance()
-            + ".getSolverState()!="
-            + self._name
-            + "::SolverState::GridInitialisation"
+            + ".hasStoredFaceData()"
         )
 
     def _store_face_data_default_guard(self):
@@ -536,7 +579,7 @@ class ADERDG(object):
         return """
 #include "peano4/Loop.h"
 #include "repositories/SolverRepository.h"
-""" + "#include <stdfloat>" if self._use_half_precision else ""
+"""
 
     def add_to_Peano4_datamodel(self, datamodel):
         log.debug("Patch data")
@@ -578,9 +621,6 @@ class ADERDG(object):
         self._init_dictionary_with_default_parameters(d)
         self.add_entries_to_text_replacement_dictionary(d)
 
-        step.add_action_set(self._action_set_update_face_label)
-        step.add_action_set(self._action_set_update_cell_label)
-
         mapping = []
         for z in self._basis.quadrature_points():
             for y in self._basis.quadrature_points():
@@ -613,7 +653,21 @@ class ADERDG(object):
             )
             step.add_action_set(face_plotter)
 
-        step.add_action_set(self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement)
+    def add_actions_to_dynamic_mesh_refinement(self, step):
+        """!
+        Add action sets to the dedicated DynamicAMR observer.
+
+        This is the only observer that changes the topology. It triggers and
+        realises the committed refine/coarsen requests, prolongs/restricts the
+        ADER-DG solution across every resolution transition Peano creates or
+        destroys, and re-evaluates the refinement criterion on cells it created,
+        so one round of these sweeps realises the full depth the data justifies.
+        Mirrors exahype2.solvers.fv.FV.add_actions_to_dynamic_mesh_refinement.
+        """
+        step.add_action_set(self._action_set_update_face_label)
+        step.add_action_set(self._action_set_update_cell_label)
+        step.add_action_set(self._action_set_dynamic_amr_transfer)
+        step.add_action_set(self._action_set_AMR_throughout_dynamic_amr)
 
     def add_actions_to_perform_time_step(self, step):
         step.add_action_set(self._action_set_update_face_label)
@@ -760,6 +814,7 @@ class ADERDG(object):
         d["DIMENSIONS"]         = self._dimensions
         d["NAMESPACE"]          = self._namespace
         d["SOLVER_NAME"]        = self._name
+        d["SOLVER_NUMBER"]      = self._solver_number
         d["FULL_QUALIFIED_SOLVER_NAME"] = "::".join(self._namespace) + "::" + self._name
         d["SOLVER_INSTANCE"]    = self.get_name_of_global_instance()
         d["UNKNOWN_IDENTIFIER"] = self._unknown_identifier()
@@ -781,7 +836,7 @@ class ADERDG(object):
         d["NUMBER_OF_DATA_PADDED"]                = alignment_helper.get_size_with_padding(self._variable_shortcuts.unknowns + self._variable_shortcuts.auxiliary_variables)
 
         d["CFL_SAFETY_FACTOR"]  = self._cflSafetyFactor
-        d["CFL_ADER"]           = self._cflAder[self._order]  # /(2*(self._order+1)+1)
+        d["CFL_ADER"]           = self._cflAder[self._order]
 
         d["USE_HALF_PRECISION"] = self._use_half_precision
         d["IS_LINEAR"] = self._is_linear
@@ -908,8 +963,6 @@ class ADERDG(object):
 
         d["USE_LIBXSMM"] = self._use_libxsmm
 
-        # self._basis.init_dictionary_with_default_parameters(d)
-
     def set_implementation(
         self,
         initial_conditions=None,
@@ -1023,7 +1076,7 @@ class ADERDG(object):
             self._basis = GaussLobattoBasis(self._order + 1)
         else:
             raise Exception(
-                "No proper basis chosen: {}, valid options are Gauss_Legendre and Gauss_Lobatto nodes".format(
+                "No proper basis chosen: {}. Valid options are Gauss_Legendre and Gauss_Lobatto nodes.".format(
                     polynomials
                 )
             )
@@ -1036,7 +1089,7 @@ class ADERDG(object):
         if precision != False:
             if precision not in PrecisionType.keys():
                 raise AssertionError(
-                    "The chosen precision was not a valid choice. valid choices are: "
+                    "The chosen precision is not valid. Valid choices are: "
                     + ", ".join(PrecisionType.keys())
                 )
             else:
@@ -1048,7 +1101,7 @@ class ADERDG(object):
         if solution_persistent_storage_precision != False:
             if solution_persistent_storage_precision not in PrecisionType.keys():
                 raise AssertionError(
-                    "The chosen precision was not a valid choice. valid choices are: "
+                    "The chosen precision is not valid. Valid choices are: "
                     + ", ".join(PrecisionType.keys())
                 )
             self._solution_persistent_storage_precision = PrecisionType[solution_persistent_storage_precision]
@@ -1056,7 +1109,7 @@ class ADERDG(object):
         if corrector_computation_precision != False:
             if corrector_computation_precision not in PrecisionType.keys():
                 raise AssertionError(
-                    "The chosen precision was not a valid choice. valid choices are: "
+                    "The chosen precision is not valid. Valid choices are: "
                     + ", ".join(PrecisionType.keys())
                 )
             self._corrector_computation_precision = PrecisionType[corrector_computation_precision]
@@ -1064,7 +1117,7 @@ class ADERDG(object):
         if precompute_picard_precision != False:
             if precompute_picard_precision not in PrecisionType.keys():
                 raise AssertionError(
-                    "The chosen precision was not a valid choice. valid choices are: "
+                    "The chosen precision is not valid. Valid choices are: "
                     + ", ".join(PrecisionType.keys())
                 )
             self._precompute_picard_precision = PrecisionType[precompute_picard_precision]
@@ -1074,7 +1127,7 @@ class ADERDG(object):
             for prec in predictor_computation_precisions:
                 if prec not in PrecisionType.keys():
                     raise AssertionError(
-                        "The chosen precision was not a valid choice. valid choices are: "
+                        "The chosen precision is not valid. Valid choices are: "
                         + ", ".join(PrecisionType.keys())
                     )
                 self._predictor_computation_precisions.append(PrecisionType[prec])
@@ -1111,7 +1164,6 @@ def get_face_overlap_merge_implementation(patch_overlap):
   // If the outer normal is positive, the normal points to the right so the face is on the right.
   const int faceLR = (marker.outerNormal()[faceDimension] > 0.0 ? 0 : 1);
 
-  // std::copy_n(from, how_many, to);
   std::copy_n(
     &src[(1 - faceLR) * SpaceFaceSize],
     SpaceFaceSize,

@@ -4,7 +4,6 @@
 
 #include "exahype2/RefinementControl.h"
 #include "peano4/grid/GridControlEvent.h"
-#include "tarch/multicore/RecursiveSemaphore.h"
 #include "tarch/services/Service.h"
 
 namespace exahype2 {
@@ -13,194 +12,197 @@ namespace exahype2 {
 } // namespace exahype2
 
 /**
+ * Rank-wide assembly of all refine and erase requests
  *
  * ## MPI
  *
  * After each mesh traversal, we expect the code to invoke finishStep().
- * Here, we exchange all local events with the other ranks. This is an
- * important step for two reasons:
+ * Here, we exchange all local events with the other ranks. This exchange
+ * serves two purposes:
  *
  * - MPI ranks might fork trees which end up on other ranks. This other
  *   rank has to know if there had been refinement events.
  * - If domain boundaries between ranks are ragged, we might end up with
- *   many tiny refinement events which cannot be merged into one large
- *   one. By exchanging these tiny guys, we can merge the events on each
- *   and every rank and come up with one large region which has to be
- *   refined.
+ *   many small refinement events which cannot be merged into one large
+ *   one. By exchanging them, we can merge the events on each and every
+ *   rank and come up with one large region which has to be refined.
  *
- * While merging for refinement controls is only an optimisation, merging
- * coarsening commands is mandatory. Only refined regions completely
- * contained within one huge coarsening instruction are actually coarsened.
+ * Coarsening commands are finalised before they are handed to Peano. ExaHyPE
+ * users issue one erase request per fine patch; the service promotes these
+ * requests to parent-sized Peano events only if the complete 3^d sibling
+ * group has requested coarsening. Generic GridControlEvent merging is then
+ * only a reduction of the number of events to test during the traversal.
  *
+ * ## AMR realisation
  *
- * ## Lifecycle
+ * Ordinary ExaHyPE AMR events are independent of the selected solver and its
+ * time-stepping scheme. A command is re-delivered once to trigger the topology
+ * transition and once more to realise the created and destroyed cells and
+ * faces. This is Peano-internal grid-control bookkeeping and is not exposed as
+ * a solver option.
  *
- * Whenever a code inserts a new event, it has to specify the lifetime.
- * For Runge-Kutta 4, for example, you might want to pass in a four as
- * one step might trigger a refinement, but you want to realise the
- * refinement at the end of the time step, i.e. four steps later.
- *
- * Events received via MPI have no lifecycle. We therefore assign it the
- * maximum lifetime plus an offset.
- *
- *
+ * A commit that exchanges its raw requests collectively already holds every rank's
+ * requests, so it discards the point-to-point ones it happens to hold. Only a commit
+ * without that exchange folds them in, and a rank that hears about a remote request too
+ * late for the running traversal then acts on it one sweep later.
  */
-class exahype2::RefinementControlService : public tarch::services::Service {
+class exahype2::RefinementControlService final : public tarch::services::Service {
 public:
   static RefinementControlService& getInstance();
 
-  virtual ~RefinementControlService();
+  ~RefinementControlService() override;
+
+  RefinementControlService(const RefinementControlService&)            = delete;
+  RefinementControlService(RefinementControlService&&)                 = delete;
+  RefinementControlService& operator=(const RefinementControlService&) = delete;
+  RefinementControlService& operator=(RefinementControlService&&)      = delete;
 
   /**
-   * Receive refinement control messages as shared by other ranks
-   *
-   * Whenever we receive such messages, we know that these stem from partner
-   * services. Therefore, we know that incoming messages stem from committed
-   * messages that are active right now. Therefore, we add them to our
-   * committed set. We also add them to the new set, as they might have
-   * dropped in slightly too late, i.e. we might already have handed out our
-   * events to "our" trees, i.e. those hosted on this rank. As we also add
-   * the messages to the new events, they will be delivered in a subsequent
-   * sweep in this case.
-   *
-   * ## Realisation
-   *
-   * - We first do a general probe on MPI to see if there are any messages.
-   *   If there are no messages at all, it makes no sense to continue.
-   * - If the guard check says "yes, there is a message", we next have to
-   *   block the threads. From hereon, we work in a strict serial sense.
-   * - Now we check again (!) if there are messages. This is important as
-   *   receiveDanglingMessages() might be called by multiple threads at the
-   *   same time. So we might have entered the routine and see a message.
-   *   Now we want to receive it, but some other thread might have checked
-   *   as well and might have grabbed "our" message.
-   * - If the check is, once again, successful, we know the rank from which
-   *   the message comes from. So far, all checks use MPI_ANY_RANK, but the
-   *   returned status object now is befilled with the correct rank info.
-   *   We use this rank from hereon, as we will receive multiple messages
-   *   in a row from the rank.
-   * - Next, we work out how many messages we have been sent.
-   * - Finally, we receive the messages and add them to _committedEvents
-   *   and _remoteNewEvents.
-   *
-   * We note that most of these complex multithreading operations are rarely
-   * necessary, as receiveDanglingMessages() within the
-   * tarch::services::ServiceRepository::receiveDanglingMessages() is a prior thread-safe.
-   * Nevertheless, I decided to try to be on the safe side in case someone wants to call this
-   * receiveDanglingMessages() version explicitly.
+   * Receive refinement control messages from other ranks
    */
-  virtual void receiveDanglingMessages() override;
+  void receiveDanglingMessages() override;
 
   /**
-   * @see RefinementControl::clear()
+   * The events active for the next mesh traversal.
    */
   std::vector<peano4::grid::GridControlEvent> getGridControlEvents() const;
 
-  virtual void shutdown() override;
+  /**
+   * Is there at least one committed grid-control event for the next mesh traversal?
+   */
+  bool hasGridControlEvents() const;
 
   /**
-   * Should be called after each traversal per rank.
-   *
-   * This routine rolls over _newEvents into the _committedEvents if they are still
-   * alive. That is, _newEvents holds all the events including an "expiry date", while
-   * _committedEvents holds only those which are committed for this mesh traversal.
-   *
-   * We clear the committed events and then copy the new events over one by one unless
-   * they have expired. If they have expired, we delete them within _newEvents. In
-   * this context, we also reduce the maxLifetime, but this one is solely used for
-   * reporting purposes. It is not used. The global maximum lifetime is stored within
-   * _maxLifetime. This one is monotonously growing, while the locally reduced value
-   * here might decrease over time if no new events are added.
-   *
-   * Once we have committed all non-expiring events, we exchange them via MPI.
-   * For this, we first wait for all previous non-blocking communication to
-   * terminate (freeAllPendingSendRequests()), I create a copy of the
-   * committed events and then delegate the data exchange to
-   * triggerSendOfCopyOfCommittedEvents().
-   *
-   * Finally, we append the remote events to our set of committed events.
-   * This has to happen after the actual MPI exchange, so we can be sure
-   * that remote events are not immediately sent back again.
-   *
-   * I found it to be very important to merge the committed events immediately:
-   * Peano's spacetrees will merge, too, but if we work with 100 trees per node,
-   * each and every one will merge locally. This is time we better spend on
-   * something else.
+   * Has a topology change been realised since the last time step?
    */
-  void finishStep();
+  bool hasRealisedTopologyChangesSinceLastTimeStep() const;
+
+  /**
+   * Anchor used to identify Peano sibling groups when patch-local erase
+   * requests are promoted to parent erase events.
+   */
+  void setDomainOffset(const tarch::la::Vector<DIMENSIONS, double>& domainOffset);
+
+  /**
+   * Set the number of solvers whose consent a coarsening requires.
+   */
+  void setNumberOfSolvers(int numberOfSolvers);
+
+  void shutdown() override;
+
+  /**
+   * Reduce the requests of one completed traversal into the committed event set.
+   */
+  void finishStep(bool useCollectiveExchange = false, int numberOfDeferredTopologyChanges = 0);
+
+  /**
+   * Commit the events collected by a refinement criterion traversal.
+   */
+  void finishRefinementCriterionStep(bool useCollectiveExchange = false);
+
+  /**
+   * Finish a mesh refinement realisation traversal.
+   */
+  void finishDynamicMeshRefinementStep(bool useCollectiveExchange = false, int numberOfDeferredTopologyChanges = 0);
 
   std::string toString() const;
 
   void merge(const RefinementControl& control);
 
 private:
-  static tarch::multicore::RecursiveSemaphore _semaphore;
-
   RefinementControlService();
 
   /**
-   * I need a tag of my own to exchange control info after each step.
+   * A raw request as it travels between ranks: the geometric event, the number of the
+   * solver that issued it (so the per-solver coarsening consensus also works for sibling
+   * groups that are split across ranks), and whether this is the request's first
+   * delivery. The flag travels with the request so every rank derives the same
+   * suppression and redelivery decisions. Trivially copyable, exchanged as bytes.
+   */
+  struct RawRequest {
+    peano4::grid::GridControlEvent event;
+    std::int32_t                   solverNumber    = 0;
+    std::int32_t                   isFirstDelivery = 1;
+  };
+  static_assert(std::is_trivially_copyable_v<RawRequest>, "Raw requests travel between ranks as bytes");
+
+  /**
+   * The service exchanges its control info after each step on a tag of its own,
+   * so the traffic cannot be confused with any other reduction.
    */
   static int _reductionTag;
 
   /**
-   * Container to accumulate new events. This is a list as we may assume
-   * that a lot of inserts are done per iteration.
+   * Per-thread accumulation buffers for new events.
+   *
+   * merge() is called once per tree at end-of-traversal, and trees traverse as
+   * concurrent multicore tasks. The inserts need no semaphore, because each
+   * thread appends into its own buffer, so no two threads touch the same
+   * slot. finishStep() runs after the traversal has joined
+   * (single-threaded) and reduces all per-thread buffers into the committed set.
+   * The committed set is order-independent (GridControlEvent total order plus
+   * canonical merge), so the per-thread reduction order does not matter.
    */
-  RefinementControl::NewEvents _localNewEvents;
-
-  std::list<peano4::grid::GridControlEvent> _remoteNewEvents;
+  std::vector<RefinementControl::NewEvents> _localNewEventsPerThread;
 
   /**
-   * Container with all the valid events. Is an extract from _newEvents
-   * which is built up in finishStep() and then handed out to Peano once
-   * it asks.
-   *
-   * ## Event lifetime
-   *
-   * The individual events are not only copied over. Each event is annotated
-   * with its lifetime. That is, events might remain active over multiple
-   * iterations. This operation decrements the lifespan and, after that,
-   * copies those events that are still alive over into the result.
-   *
-   * ## Optimisation
-   *
-   * The raw events might become really large over time. However, I decided to
-   * keep this routine clear of any optimisation. It is the grid which has
-   * to clean up the refinement events appropriately.
-   *
-   * ## MPI data exchange
-   *
-   * I originally wanted to use an MPI reduction to have a consistent view of
-   * all refinement controls. However, this seems not to work, as some ranks
-   * can be out of sync. So what I do instead now is a delayed broadcast: Every
-   * rank sends out its committed events to all others and appends all incoming
-   * ones to its own set.
-   *
-   * This simple implementation also works for our dynamic event sets, where we
-   * do not know a priori how many events are triggered by a rank. Still, it can
-   * happen that event views are out-of-sync. This is not a problem here:
-   *
-   * The actual grid changes are all triggered via vertices, so we never obtain
-   * an invalid grid. The individual grid events have a lifetime and thus are
-   * active over multiple iterations. Hence, they will be merge at one point.
-   *
-   * We have to split up the send and receive loop such that we first send out
-   * all stuff and then receive.
-   *
+   * Raw requests other ranks sent us. The next finishStep() folds them into the committed
+   * set, so they pass through the sibling-group promotion just like the local ones.
+   */
+  std::list<RawRequest> _remoteNewEvents;
+
+  /**
+   * The events active for the next mesh traversal, in canonical form: coarsening promoted to
+   * parent-sized events, then merged. finishStep() is the only writer, and it runs between
+   * traversals, so the trees can read this set without a lock.
    */
   std::vector<peano4::grid::GridControlEvent> _committedEvents;
 
+  /**
+   * The event set the last completed mesh refinement cycle realised. A criterion commit
+   * that reproduces it exactly cannot change the mesh again and is dropped.
+   */
+  std::vector<peano4::grid::GridControlEvent> _lastRealisedEvents;
+
+  /**
+   * True from the first realise traversal that consumed events until the end of the next
+   * time step. Mesh-update sweeps clear the per-face Updated entries, which cancels the
+   * pending halo roll-over of every face their projection does not reach; the first time
+   * step after a topology change therefore rolls all face halves that no change
+   * invalidated. Every rank derives the flag from the collectively exchanged set, so the
+   * decision is rank-uniform.
+   */
+  bool _topologyChangedSinceLastTimeStep;
+
+  tarch::la::Vector<DIMENSIONS, double> _domainOffset;
+
+  int _numberOfSolvers;
+
+  void finishStep(
+    bool useCollectiveExchange,
+    bool suppressEventsIfUnchanged,
+    bool recordRealisedEvents,
+    int  numberOfDeferredTopologyChanges = 0
+  );
+
+  /**
+   * Promote patch-local erase requests to parent-sized erase events.
+   */
+  std::vector<peano4::grid::GridControlEvent> finaliseCoarseningEvents(
+    const std::vector<RawRequest>&               requests,
+    std::vector<peano4::grid::GridControlEvent>& parentEventsRequiringRealisationDelivery
+  ) const;
+
 #ifdef PEANO_WITH_MPI
-  std::vector<MPI_Request*>                   _sendRequests;
-  std::vector<peano4::grid::GridControlEvent> _copyOfCommittedEvents;
+  std::vector<MPI_Request*> _sendRequests;
+  std::vector<RawRequest>   _copyOfRawRequests;
 
   /**
    * One in-flight body receive per source. Bodies are received concurrently and source-specifically.
    */
   struct IncomingBody {
-    MPI_Request                                 request;
-    std::vector<peano4::grid::GridControlEvent> buffer;
+    MPI_Request             request;
+    std::vector<RawRequest> buffer;
   };
 
   MPI_Request             _recvSizeRequest;
@@ -217,37 +219,20 @@ private:
   void cancelReceiveSizeRequest();
 
   /**
-   * Complete pending sends from previous mesh traversal
+   * Synchronise the raw requests across all ranks in one blocking exchange.
+   */
+  void exchangeRawRequestsCollectively(std::vector<RawRequest>& requests);
+
+  /**
+   * Complete the pending sends of the preceding mesh traversal
    *
-   * @see triggerSendOfCopyOfCommittedEvents()
+   * @see triggerSendOfCopyOfRawRequests()
    */
   void freeAllPendingSendRequests();
 
   /**
-   *
-   * ## MPI handing
-   *
-   * The MPI data exchange here is non-trivial, as we do not know which rank has how
-   * many messages. So we run in three steps: First, we send the committed events out to
-   * all partners. These sends are done non-blocking. They logically are a broadcast.
-   * Second, we loop over all the arising MPI_Requests and poll until they are finished.
-   * So we know all data has gone out. This is a while loop with the predicate
-   *
-   *       not sendRequests.empty()
-   *
-   * Third, we hook into this while loop and probe for all the other ranks if they
-   * have sent us anything. So while we wait for our sends to go out, we poll the other
-   * ranks for their data, integrate this information into our data structures and
-   * therefore also free any MPI queues.
-   *
-   * As we build up the incoming data while we wait for our sends to go out, we have to
-   * send from a copy of the actual data (copyOfCommittedEvents): We cannot alter the
-   * outgoing data due to polls for incoming messages while we have still pending sends.
-   *
-   * It is important to work with non-blocking calls here, as the code otherwise tends
-   * to deadlock if we have a lot of events. This is due to MPI falling back to
-   * rendezvous message passing if the data that is on-the-fly becomes too large.
+   * Send a copy of the raw requests to every other rank.
    */
-  void triggerSendOfCopyOfCommittedEvents();
+  void triggerSendOfCopyOfRawRequests();
 #endif
 };

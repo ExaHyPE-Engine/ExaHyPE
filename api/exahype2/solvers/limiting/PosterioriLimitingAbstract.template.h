@@ -40,138 +40,135 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     static std::string toString(SolverState);
 
     {{CLASSNAME}}();
-    ~{{CLASSNAME}}();
+    ~{{CLASSNAME}}() override;
+
+    {{CLASSNAME}}(const {{CLASSNAME}}&)            = delete;
+    {{CLASSNAME}}({{CLASSNAME}}&&)                 = delete;
+    {{CLASSNAME}}& operator=(const {{CLASSNAME}}&) = delete;
+    {{CLASSNAME}}& operator=({{CLASSNAME}}&&)      = delete;
 
     SolverState getSolverState() const;
 
-    double getMinTimeStamp() const final;
-    double getMaxTimeStamp() const final;
-    double getMinTimeStepSize() const final;
-    double getMaxTimeStepSize() const final;
+    double getMinTimeStamp() const override final;
+    double getMaxTimeStamp() const override final;
+    double getMinTimeStepSize() const override final;
+    double getMaxTimeStepSize() const override final;
 
-    virtual double getMaxPatchSize() const override final;
-    virtual double getMinPatchSize() const override final;
-    virtual double getMaxCellSize() const override final;
-    virtual double getMinCellSize() const override final;
+    double getMaxPatchSize() const override final;
+    double getMinPatchSize() const override final;
+    double getMaxCellSize() const override final;
+    double getMinCellSize() const override final;
 
-    virtual int getNumberOfDoFs() const override final;
-
-    /**
-     * If you hook into this routine, ensure the abstract base class
-     * operation is still invoked.
-     */
-    virtual void startGridConstructionStep() override;
+    int getNumberOfDoFs() const override final;
 
     /**
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
      */
-    virtual void finishGridConstructionStep() override;
+    void startGridConstructionStep() override;
 
     /**
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
      */
-    virtual void startGridInitialisationStep() override;
+    void finishGridConstructionStep() override;
 
     /**
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
      */
-    virtual void finishGridInitialisationStep() override;
-
-    virtual void suspendSolversForOneGridSweep() override;
+    void startGridInitialisationStep() override;
 
     /**
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
      */
-    virtual void startTimeStep() override;
+    void finishGridInitialisationStep() override;
+
+    void suspendSolversForOneGridSweep() override;
 
     /**
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
      */
-    virtual void finishTimeStep() override;
+    void startTimeStep() override;
 
     /**
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
      */
-    virtual void startPlottingStep() override;
+    void finishTimeStep() override;
 
     /**
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
      */
-    virtual void finishPlottingStep() override;
+    void startPlottingStep() override;
 
     /**
-     * Always holds.
+     * If you hook into this routine, ensure the abstract base class
+     * operation is still invoked.
      */
-    virtual bool mayPlot() const override;
+    void finishPlottingStep() override;
 
-    /**
-     * This predicate is always true, as we work with a single-sweep
-     * implementation, i.e. each grid sweep realises one time step.
-     */
+    bool mayPlot() const override;
+
     bool isFirstGridSweepOfTimeStep() const;
     bool isLastGridSweepOfTimeStep() const;
 
     /**
-     * Feel free to overwrite in user code, but ensure the superclass
-     * implementation is still invoked, too.
+     * If you hook into this routine, ensure the abstract base class
+     * operation is still invoked.
      */
-    virtual void startSimulation() override;
+    void startSimulation() override;
 
     /**
-     * Feel free to overwrite in user code, but ensure the superclass
-     * implementation is still invoked, too.
+     * If you hook into this routine, ensure the abstract base class
+     * operation is still invoked.
      */
-    virtual void finishSimulation() override;
+    void finishSimulation() override;
 
-    public:
-        static constexpr int NumberOfDMPObservables                 = {{NUMBER_OF_DMP_OBSERVABLES}};
-        static constexpr {{COMPUTE_PRECISION}} RelaxationParameter  = {{DMP_RELAXATION_PARAMETER}};
-        static constexpr {{COMPUTE_PRECISION}} DifferencesScaling   = {{DMP_DIFFERENCES_SCALING}};
+    static constexpr int NumberOfDMPObservables                 = {{NUMBER_OF_DMP_OBSERVABLES}};
+    static constexpr {{COMPUTE_PRECISION}} RelaxationParameter  = {{DMP_RELAXATION_PARAMETER}};
+    static constexpr {{COMPUTE_PRECISION}} DifferencesScaling   = {{DMP_DIFFERENCES_SCALING}};
 
-        /**
-        * Inform the solver about a cell being troubled, meaning its value
-        * needs to be recomputed and the solver cannot move on to the next
-        * timestep until this is done.
-        */
-        void addTroubledCell();
+    /**
+     * Inform the solver about a cell being troubled, meaning its value
+     * needs to be recomputed and the solver cannot move on to the next
+     * time step until this is done.
+     */
+    void addTroubledCell();
 
-        int getNumberOfTroubledCells() const;
+    int getNumberOfTroubledCells() const;
 
-        /**
-        * Default implementation. Please overwrite.
-        *
-        * See superclass for function's semantics.
-        */
-        template<typename T>
-        void mapDiscreteMaximumPrincipleObservables({{COMPUTE_PRECISION}}* const observables, const T* const Q) const {
-          if (NumberOfDMPObservables>0) {
-            for(int i=0; i<NumberOfDMPObservables; i++){
-              observables[i] = Q[i];
-            }
-          }
+    /**
+     * Default implementation. Please overwrite.
+     *
+     * See the superclass for this function's semantics.
+     */
+    template<typename T>
+    void mapDiscreteMaximumPrincipleObservables({{COMPUTE_PRECISION}}* const observables, const T* const Q) const {
+      if (NumberOfDMPObservables>0) {
+        for(int i=0; i<NumberOfDMPObservables; i++){
+          observables[i] = Q[i];
         }
+      }
+    }
 
-        /**
-        * Default implementation. Please overwrite.
-        *
-        * See superclass for function's semantics.
-        */
-       {{COMPUTE_PRECISION}} getDiscreteMaximumPrincipleRelaxationParameter(
-            const {{COMPUTE_PRECISION}}&  specifiedRelaxationParameter,
-            const int&                    observable,
-            const {{COMPUTE_PRECISION}}&  localMin,
-            const {{COMPUTE_PRECISION}}&  localMax,
-            const {{COMPUTE_PRECISION}}&  boundaryMinPerObservable,
-            const {{COMPUTE_PRECISION}}&  previousMax) const {
-          return specifiedRelaxationParameter;
-        }
+    /**
+     * Default implementation. Please overwrite.
+     *
+     * See the superclass for this function's semantics.
+     */
+    {{COMPUTE_PRECISION}} getDiscreteMaximumPrincipleRelaxationParameter(
+      const {{COMPUTE_PRECISION}}&  specifiedRelaxationParameter,
+      const int&                    observable,
+      const {{COMPUTE_PRECISION}}&  localMin,
+      const {{COMPUTE_PRECISION}}&  localMax,
+      const {{COMPUTE_PRECISION}}&  boundaryMinPerObservable,
+      const {{COMPUTE_PRECISION}}&  previousMax) const {
+      return specifiedRelaxationParameter;
+    }
 
 {% if ADMISSIBILITY_IMPLEMENTATION!="<none>" %}
     virtual bool isPhysicallyAdmissible(

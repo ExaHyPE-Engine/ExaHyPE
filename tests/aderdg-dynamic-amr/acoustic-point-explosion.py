@@ -11,9 +11,9 @@ def parse_arguments():
         "-h",
         "--help",
         action="store_true",
-        help="show this help message and continue with project help",
+        help="Show this help message and continue with project help.",
     )
-    parser.add_argument("-et", "--end-time", type=float, default=0.1)
+    parser.add_argument("-et", "--end-time", type=float, default=2.0)
     parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=4)
     parser.add_argument("-l", "--grid-levels", type=int, default=None)
     parser.add_argument("-lmin", "--min-grid-levels", type=int, default=2)
@@ -30,14 +30,12 @@ def parse_arguments():
 
 args = parse_arguments()
 
-polynomials = exahype2.solvers.aderdg.Polynomials.Gauss_Legendre
-
 project = exahype2.Project(
     namespace=["tests", "exahype2", "aderdg"],
     project_name="AcousticPointExplosion",
     dimensions=2,
-    size=[10.0, 10.0, 10.0],
-    offset=[0.0, 0.0, 0.0],
+    size=[2.0, 2.0, 2.0],
+    offset=[-1.0, -1.0, -1.0],
     periodic_bc=[False, False, False],
     min_end_time=args.end_time,
     max_end_time=args.end_time,
@@ -48,93 +46,86 @@ project = exahype2.Project(
 solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     name="ADERDGSolver",
     order=(args.degrees_of_freedom - 1),
-    time_step_relaxation=0.5,
+    time_step_relaxation=0.9,
     unknowns={"p": 1, "u": project.dimensions},
     auxiliary_variables=0,
 )
 
+# The off-centre Gaussian source lies on the domain diagonal, so rigid-wall
+# reflections preserve permutation symmetry. The detail criterion tracks the
+# radiated ring.
 solver.set_implementation(
     initial_conditions="""
-  for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
-    Q[i] = 0.0;
+  Q[Shortcuts::p] = 0.0;
+  for (int d = 0; d < DIMENSIONS; d++) {
+    Q[Shortcuts::u + d] = 0.0;
   }
 """,
     boundary_conditions="""
-  for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
-    Qoutside[i] = 0.0;
+  Qoutside[Shortcuts::p] = Qinside[Shortcuts::p];
+  for (int d = 0; d < DIMENSIONS; d++) {
+    Qoutside[Shortcuts::u + d] = Qinside[Shortcuts::u + d];
   }
+  Qoutside[Shortcuts::u + normal] = -Qinside[Shortcuts::u + normal];
 """,
     refinement_criterion="""
-  auto result = ::exahype2::RefinementCommand::Keep;
-
-  static constexpr double sourceRadius = 2.2;
-  const tarch::la::Vector<DIMENSIONS, double> sourceCentre(1.0);
-
-  static constexpr double t0 = 0.8;
-  if (tarch::la::greaterEquals(t, 0.0) and tarch::la::smallerEquals(t, t0)) {
-    if (tarch::la::smallerEquals(tarch::la::norm2(x - sourceCentre), sourceRadius)) {
-      result = ::exahype2::RefinementCommand::Refine;
+  // The uniform state has no detail before the source fires, so its neighbourhood
+  // requires explicit refinement during injection.
+  constexpr double SourcePeakTime   = 0.1;
+  constexpr double SourcePulseWidth = 0.03;
+  const tarch::la::Vector<DIMENSIONS, double> sourceLocation(-0.7);
+  if (t < SourcePeakTime + 5.0 * SourcePulseWidth
+      and tarch::la::norm2(x - sourceLocation) < 0.2 + tarch::la::norm2(h)) {
+    return ::exahype2::RefinementCommand::Refine;
+  }
+  return ::exahype2::refineOnDetail(
+    Q,
+    Order + 1,
+    NumberOfUnknowns + NumberOfAuxiliaryVariables,
+    1.0e-2,
+    9.0,
+    kernels::ADERDGSolver::Quadrature<double>::nodes,
+    [](const double* const values) { return 1.0 + values[Shortcuts::p]; },
+    [](const double* const values) {
+      double velocitySquared = 0.0;
+      for (int d = 0; d < DIMENSIONS; d++) {
+        velocitySquared += values[Shortcuts::u + d] * values[Shortcuts::u + d];
+      }
+      return 1.0 + RHO * WAVE_SPEED * std::sqrt(velocitySquared);
     }
-    return result;
-  }
-
-  const double pAbs = std::abs(Q[Shortcuts::p]);
-
-  double u2 = 0.0;
-  for (int i = 0; i < DIMENSIONS; i++) {
-    const double ui = Q[Shortcuts::u + i];
-    u2 += ui * ui;
-  }
-  const double uMag = std::sqrt(u2);
-
-  const double indicator = std::max(pAbs, (RHO * WAVE_SPEED) * uMag);
-
-  static constexpr double refineThreshold = 0.10;
-  static constexpr double eraseThreshold  = 0.05;
-
-  if (tarch::la::greaterEquals(indicator, refineThreshold)) {
-    result = ::exahype2::RefinementCommand::Refine;
-  } else if (tarch::la::smallerEquals(indicator, eraseThreshold)) {
-    result = ::exahype2::RefinementCommand::Erase;
-  }
-
-  return result;
+  );
 """,
-    max_eigenvalue="""return WAVE_SPEED;
-""",
+    max_eigenvalue="return WAVE_SPEED;",
     flux="""
   static constexpr double K0 = RHO * WAVE_SPEED * WAVE_SPEED;
 
-  F[Shortcuts::p]     = K0 * Q[normal + 1];
-  F[Shortcuts::u + 0] = 0.0;
-  F[Shortcuts::u + 1] = 0.0;
-#if DIMENSIONS == 3
-  F[Shortcuts::u + 2] = 0.0;
-#endif
-  F[normal + 1]       = (1.0 / RHO) * Q[Shortcuts::p];
+  F[Shortcuts::p] = K0 * Q[Shortcuts::u + normal];
+  for (int d = 0; d < DIMENSIONS; d++) {
+    F[Shortcuts::u + d] = 0.0;
+  }
+  F[Shortcuts::u + normal] = (1.0 / RHO) * Q[Shortcuts::p];
 """,
-    source_term="""
-  S[Shortcuts::p]     = 0.0;
-  S[Shortcuts::u + 0] = 0.0;
-  S[Shortcuts::u + 1] = 0.0;
-#if DIMENSIONS == 3
-  S[Shortcuts::u + 2] = 0.0;
-#endif
-  constexpr double sourceRadius = 0.10;
-  const bool sourceLocation = tarch::la::norm2(x - tarch::la::Vector<DIMENSIONS, double>(1.0)) <= sourceRadius;
+    number_of_point_sources=1,
+    point_source="""
+  forceVector[Shortcuts::p] = 0.0;
+  for (int d = 0; d < DIMENSIONS; d++) {
+    forceVector[Shortcuts::u + d] = 0.0;
+  }
 
-  if (sourceLocation) {
-    static constexpr double t0 = 0.7;
-    static constexpr double M0 = 1000.0;
-    const double force = M0 * std::exp(-((t - t0) * (t - t0)) / (2.0 * SIGMA * SIGMA));
-    S[Shortcuts::p] = force;
+  constexpr double PeakTime   = 0.1;
+  constexpr double PulseWidth = 0.03;
+  forceVector[Shortcuts::p] = std::exp(-(t - PeakTime) * (t - PeakTime) / (2.0 * PulseWidth * PulseWidth));
+""",
+    init_point_source_location="""
+  for (int d = 0; d < DIMENSIONS; d++) {
+    location[0][d] = -0.7;
   }
 """,
 )
+solver.add_kernel_optimisations(is_linear=True)
 
 project.add_solver(solver)
 
-project.output.makefile.add_compile_definition("RHO=2.7")
-project.output.makefile.add_compile_definition("WAVE_SPEED=6.0")
-project.output.makefile.add_compile_definition("SIGMA=0.1149")
+project.output.makefile.add_compile_definition("RHO=1.0")
+project.output.makefile.add_compile_definition("WAVE_SPEED=1.0")
 project.generate_and_build()

@@ -9,6 +9,7 @@ namespace runner {
     static constexpr const char* GridInitialisation = "Grid Initialisation";
     static constexpr const char* TimeLoop           = "Time Loop";
     static constexpr const char* TimeStep           = "Time Step";
+    static constexpr const char* DynamicAMR         = "Dynamic AMR";
     static constexpr const char* Plot               = "Plot";
     static constexpr const char* LoadBalancerUpdate = "Load Balancer Update";
   };

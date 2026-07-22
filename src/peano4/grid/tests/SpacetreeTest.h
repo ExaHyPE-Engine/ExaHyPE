@@ -26,6 +26,18 @@ private:
   void testNoTopologyChangeParity();
   void testVertexNeighbourPermutationInvariance();
   void testDescend();
+  void testRefineEventTouchDoesNotTriggerNeighbourRefinement();
+  void testDeferredGridControlChangesAreCounted();
+  void testEraseRingKeepsUnnamedRefinedParent();
+  void testEraseOfRefinementSourceNeighbourhoodIsVetoed();
+  void testRefineCascadeIsMirrorSymmetric();
+  void testEvaluateGridControlEventsEraseRules();
+  void testMergeGridVertexRefinementStateAtHorizontalDomainBoundaryIsSymmetric();
+  void testMergeAccumulatesRemoteRefinedCellCounts();
+  void testPostRefinesVertexSurroundedAcrossTreeBoundaries();
+  void testPostRefinesVertexSurroundedAtDomainBoundary();
+  void testUpdateVertexBeforeStoreTreatsErasingVerticesAsAntecessors();
+  void testUpdateVertexAfterLoadPreviousHangingClassification();
   void testSplittingTreeCursorSkipsCompletedRequests();
   void testSplittingTreeCursorResetsAcrossTraversal();
   void testSplitModeNormalisationUsesLowestTreeIdMode();

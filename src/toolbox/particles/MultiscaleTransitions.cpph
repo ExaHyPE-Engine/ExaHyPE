@@ -1,7 +1,33 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/VertexMarker.h"
 #include "tarch/la/VectorOperations.h"
 
+/**
+ * Reassociate a particle within its cell or lift it
+ *
+ * If you use this operation, you can be sure that every particle is
+ * associated to the right vertex after we've finished the traversal, or
+ * it is dumped into the set of particles that have to be sieved.
+ * Therefore, you don't have to check any particle anymore in
+ * touchVertexLastTime(). All should be in place.
+ *
+ * We return
+ *
+ * - ParticleReassociationInstruction_Keep if the particle should
+ *   remain where it is.
+ * - A value between 0 and 2^d-1 if we should assign it to another
+ *   vertex of this cell (on the same level).
+ *
+ * ## Algorithm
+ *
+ * - If the particle is not local or actually not covered by the current
+ *   cell, we return keep, as we don't dare to make a decision.
+ * - When we identify the destination cell, we violate our halo discussion
+ *   above, i.e. we move the association within a cell along the exact
+ *   cell boundaries without any sorting tolerance.
+ */
 template <typename Particle>
 toolbox::particles::ParticleReassociationInstruction toolbox::particles::getParticleReassociationInstructionWithinCellWithIntraCellReassignment(
   const Particle& particle, const ::peano4::datamanagement::CellMarker& marker, int numberOfVertexWithinCell
@@ -11,6 +37,114 @@ toolbox::particles::ParticleReassociationInstruction toolbox::particles::getPart
   );
 }
 
+/**
+ * Take particle from current vertex and lift it or keep it local
+ *
+ * This routine is called by touchVertexLastTime(), i.e. outside of the cell
+ * context in which
+ * getParticleReassociationInstructionWithinCellWithIntraCellReassignment()
+ * operates. Usually, users do not invoke the routine directly. Instead the
+ * action set peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop
+ * injects calls to this routine into the generated source code.
+ *
+ * The function returns one of the following values:
+ *
+ * - ParticleReassociationInstruction_Keep. All is fine, just analyse the
+ *   next particles.
+ * - ParticleReassociationInstruction_SieveGlobally. The particle should not
+ *   be associated with this vertex, and it cannot be moved one level up
+ *   either. Remove it completely from the mesh and push it into a global
+ *   list of particles which shall be sieved in the next step.
+ * - A value between 0 and @f$ 2^d-1 @f$. In this case, the particle should not be associated to this vertex. Remove
+ *   the association and associate to the next coarsest level. The vertex
+ *   within this coarse cell is identified by the result number.
+ *
+ * ## Algorithm
+ *
+ * The algorithm starts from a simple observation:
+ *
+ * - If a particle is not local, we keep it: non-local particles are never
+ *   moved, so the local flag lets us skip the association analysis
+ *   altogether.
+ * - If a particle is local, it might have moved and it might have to be
+ *   assigned to another vertex.
+ *
+ * @image html MultiscaleTransitions_belongs-to-vertex.svg
+ *
+ * Particles are always associated to their closest vertex. If the blue
+ * particle moves, it remains within that area around the vertex where it
+ * belongs to, and we can return a ParticleReassociationInstruction_Keep
+ * command. peano4::datamanagement::VertexMarker::isContainedInAdjacentCells()
+ * allows us to make this decision quickly: We check if a particle is
+ * contained within the h/2 environment around a vertex.
+ * If a particle has left this
+ * (greenish) area around a vertex, we have to associate it to another
+ * vertex. We have to lift.
+ * Lifts however can only be realised within the local spacetree, where we
+ * have local and thread-safe access to the coarse level data structures of
+ * the tree.
+ *
+ * liftParticleAssociatedWithVertex() is called by
+ * touchVertexLastTime() which in turn is called from within a cell: We are
+ * about to leave a cell, find out that a vertex won't be needed anymore,
+ * and consequently trigger touchVertexLastTime().
+ * Each cell has a unique parent within the spacetree.
+ *
+ * If the parent cell is not local, we have
+ * to assume that we just did hit a vertical tree cut. In this case,
+ * we are on the safe side if we just add the particles to the global
+ * sieve particle list. We return ParticleReassociationInstruction_SieveGlobally.
+ *
+ * If the parent cell is local, we can determine which of the @f$ 2^d @f$
+ * coarse grid vertices would hold the particle.
+ * If this coarse grid is not adjacent to the local domain, we have to sieve.
+ * In the illustration below, we can see this behaviour on the right-hand
+ * side:
+ *
+ * @image html MultiscaleTransitions_liftParticleAssociatedWithVertex.png
+ *
+ * - The particle (red solid dot) moves from left to right.
+ * - Due to the move, the particle's current vertex association (blurry
+ *   blue) becomes invalid.
+ * - We would like to lift it to the red blurry vertex.
+ * - The parent cell belongs to another rank (yellow instead of blue).
+ * - Therefore, we have to add it to the global sieve list.
+ *
+ * There is a second, more delicate case which is illustrated on the
+ * left-hand side of the sketch:
+ *
+ * - Let the particle move from left to right on the fine grid owned by
+ *   the blue rank.
+ * - Therefore, the particle changes its vertex association from
+ *   blurry blue to blurry green.
+ * - We cannot realise this reassociation directly within
+ *   touchVertexLastTime(). Therefore, we lift the particle to the
+ *   red coarse grid vertex.
+ * - This vertex also is adjacent to the blue rank. Nevertheless, we
+ *   have to assign it to the global sieve list, as we move it through
+ *   the horizontal tree cut.
+ *
+ * If we reassigned it locally, it would be labelled as remote on the
+ * coarser level in the next iteration. The yellow rank in return would
+ * receive a copy from the blue-yellow coarse grid boundary and then
+ * label it as local there. That is correct, but it means sieving through
+ * a horizontal tree cut a second time, so we assign the particle to the
+ * global sieve list right from the start.
+ *
+ * The need for special care becomes apparent once we take into account
+ * which cell triggers the touchVertexLastTime(): Should it be a cell
+ * above the two fine grid vertices of interest, we would always associate
+ * the particle to the global sieve set, as we spot the multilevel transition.
+ * If it is called from one of the two adjacent cells below, the parent
+ * cell is local and we cannot spot the tree cut.
+ *
+ * The decision is therefore taken within the coarse cell, where the
+ * parent cell's owner is known: the markers of the coarse grid vertices
+ * are not available here, so particleAssignedToVertexWillBeLocal() cannot
+ * answer whether a lift crosses a tree cut.
+ *
+ * @see toolbox::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance()
+ */
 template <typename Particle>
 toolbox::particles::ParticleReassociationInstruction toolbox::particles::liftParticleAssociatedWithVertex(
   const Particle& particle, const peano4::datamanagement::VertexMarker marker
@@ -18,16 +152,137 @@ toolbox::particles::ParticleReassociationInstruction toolbox::particles::liftPar
   return liftParticleAssociatedWithVertex(particle.getParallelState() == Particle::ParallelState::Local, particle.getSearchRadius(), particle.getX(), marker);
 }
 
+/**
+ * Decide whether a particle is sieved into a vertex
+ *
+ * A particle is to be sieved into a vertex if
+ *
+ * - this vertex is closer to the particle than half the mesh size of
+ *   an adjacent mesh element, as we always store particles next to
+ *   their closest vertex; and
+ * - this vertex's search radius would not fit into the next finer
+ *   mesh level or
+ *   there is no next finer mesh level; and
+ * - the particle's search radius is not too big for the current mesh level.
+ *
+ * This routine does not check in any way if the particle will be local.
+ *
+ * ## Rationale and usage
+ *
+ * The tree which sieves particles has to remove a particle from the sieve
+ * set as soon as it is inserted into the domain. The association of
+ * particles to vertices is not unique, and consequently the sieving is not
+ * unique either.
+ *
+ * In theory, we could insert particles on the top level of a segment and
+ * then rely on the drops to move them down. This all works fine in a
+ * serial code. Once you parallelise, we however encounter an issue when
+ * particles drop through vertical tree cuts, i.e. if the fine grid child
+ * of a cell is remote. In this case, we might have inserted a particle
+ * into a rather coarse resolution level and rely on the drop. The remote
+ * child will insert the particle as well. The father will not be able to
+ * drop the particle all the way down into a remote tree.
+ *
+ * When we sieve a particle into the next level, we have to find out into
+ * which vertex we do so. We therefore run over the vertices as we
+ * encounter touchVertexFirstTime(). As particles are not uniquely assigned
+ * to cells or vertices, we have some flexibility here. There are two
+ * things to weigh up:
+ *
+ * - We have to ensure that the particles actually go down;
+ * - We have to ensure that we don't immediately lift the particle
+ *   again.
+ *
+ * The latter property is essential: Usually, drops, sieves and
+ * lifts are done within one action set. However, we always need
+ * a second sweep after each lift. If the user runs two sweeps with
+ * the action set, the user relies upon the fact that all is sorted
+ * completely. A lift straight after an invalid drop breaks this logic.
+ * Therefore, it is important that this sorting tolerance is always
+ * smaller than the lift tolerance.
+ *
+ * We always try to sieve a particle directly into the right level, and
+ * never into a cell or vertex from which it would have to be lifted
+ * again.
+ *
+ * Lifting will always be subject to a comparison similar to
+ *
+ *       marker.getH() < 2.0 * particle.getSearchRadius()
+ *
+ * This threshold is hard, so sieving into a coarser level is the way to
+ * ensure that we do not violate it.
+ */
 template <typename Particle>
 bool toolbox::particles::sieveParticle(const Particle& particle, const ::peano4::datamanagement::VertexMarker& marker) {
   return sieveParticle(particle.getSearchRadius(), particle.getX(), marker);
 }
 
+/**
+ * Will the particle be dropped further throughout the traversal
+ *
+ * The sorting in Peano usually realises pull semantics. That is, the fine
+ * grid vertex pulls particles down from coarser levels into its own
+ * domain. Particles recursively drop down the resolution cascade.
+ * Throughout the top-down tree traversal, it is often important to know if
+ * a particle will be pulled down further later on throughout the mesh
+ * traversal. This routine tells the user if this will happen. It is
+ * somehow the top-down counterpart of dropParticle() and sieveParticle().
+ *
+ * Consult @ref page_toolbox_particles_mesh_traversal "the generic mesh traversal discussion"
+ * for some further "use cases" where this operation becomes absolutely
+ * mandatory.
+ *
+ * ## Realisation
+ *
+ * There are two major checks which determine if a particle will be
+ * dropped further or not: The mesh size vs the cut-off radius of a
+ * particle, and the mesh cell state. If a mesh cell is not refined
+ * and will not be refined throughout this very traversal, then the
+ * particle will also not be dropped. It will however be dropped if
+ * it resides within a cell that's already refined or will be refined
+ * in this mesh sweep, and the cut-off radius will also fit into the
+ * next finer level.
+ *
+ * A cell is refined or will be refined
+ *
+ * - if peano4::datamanagement::CellMarker::hasBeenRefined() holds,
+ *   as this means that this cell actually already has children; or
+ * - if peano4::datamanagement::CellMarker::willBeRefined() holds,
+ *   as this means that this cell either has children already or will
+ *   be added children in this very mesh sweep.
+ *
+ * The two flags can disagree. If hasBeenRefined() is false while
+ * willBeRefined() holds, the new children in the tree are added in this
+ * very mesh traversal. If hasBeenRefined() holds and willBeRefined() is
+ * false, this very mesh traversal
+ * will eliminate the children, i.e. coarsen. Nevertheless, the
+ * particles still are to be dropped into their respective mesh level -
+ * even though we might then lift them straightaway again as we coarsen.
+ *
+ * ## Usage in combination with particle-particle interactions
+ *
+ * Deciding whether to update a particle within a mesh sweep
+ * that also introduces drops is delicate: Quickly, we run into situations
+ * where particles are updated multiple times. The documentation of
+ * peano4.toolbox.particles.api.AbstractUpdateParticleGridAssociation
+ * provides examples for this.
+ */
 template <typename Particle>
 bool toolbox::particles::particleWillBeDroppedFurther(const Particle& particle, const peano4::datamanagement::CellMarker& marker) {
   return particleWillBeDroppedFurther(particle.getSearchRadius(), marker);
 }
 
+/**
+ * Will a particle be dropped further
+ *
+ * At first glance, this routine seems to be a replica of dropParticle().
+ * However, this is not the case. dropParticle() is asked from a child for
+ * a parent vertex if it shall drop a particle from the parent into this
+ * particular child vertex. This routine is called for a plain vertex
+ * without any multiscale relation and tells the callee if a vertex
+ * holding this particular particle will later on be stripped of the
+ * particle.
+ */
 template <typename Particle>
 bool toolbox::particles::particleWillBeDroppedFurther(const Particle& particle, const peano4::datamanagement::VertexMarker& marker) {
   return particleWillBeDroppedFurther(particle.getSearchRadius(), marker);

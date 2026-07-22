@@ -42,7 +42,7 @@ class InitialCondition(AbstractADERDGActionSet):
 
     std::copy_n(fineGridCell{{UNKNOWN_IDENTIFIER}}.data(), SpaceBasisSize, fineGridCell{{UNKNOWN_IDENTIFIER}}_old.data());
 
-    // Relevant for tracing et al which kicks in if and only if cell has been updated
+    // Tracing and similar postprocessing only run on a cell that has been updated.
     fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
   }
 """

@@ -26,8 +26,9 @@ struct peano4::grid::GridVertex {
   std::uint8_t flags = 0;
   std::uint8_t state = static_cast<std::uint8_t>(State::New);
 
-  int level                             = 0;
-  int numberOfAdjacentRefinedLocalCells = 0;
+  int level                              = 0;
+  int numberOfAdjacentRefinedLocalCells  = 0;
+  int numberOfAdjacentRefinedRemoteCells = 0;
 #if PEANO_DEBUG
   tarch::la::Vector<DIMENSIONS, double> x{};
 #endif
@@ -35,16 +36,17 @@ struct peano4::grid::GridVertex {
   std::array<int, TWO_POWER_D> adjacentRanks{};
   std::array<int, TWO_POWER_D> backupOfAdjacentRanks{};
 
-  static constexpr std::uint8_t HasBeenAntecessorOfRefinedVertexInPreviousTreeSweep = 1 << 0; // = 0b00000001
-  static constexpr std::uint8_t IsAntecessorOfRefinedVertexInCurrentTreeSweep       = 1 << 1; // = 0b00000010
-  static constexpr std::uint8_t HasBeenParentOfSubtreeVertexInPreviousTreeSweep     = 1 << 2; // = 0b00000100
-  static constexpr std::uint8_t IsParentOfSubtreeVertexInCurrentTreeSweep           = 1 << 3; // = 0b00001000
-  static constexpr std::uint8_t HasBeenVertexTypeHangingInPreviousTreeSweep         = 1 << 4; // = 0b00010000
+  static constexpr std::uint8_t HasBeenAntecessorOfRefinedVertexInPreviousTreeSweep = 1 << 0;
+  static constexpr std::uint8_t IsAntecessorOfRefinedVertexInCurrentTreeSweep       = 1 << 1;
+  static constexpr std::uint8_t HasBeenParentOfSubtreeVertexInPreviousTreeSweep     = 1 << 2;
+  static constexpr std::uint8_t IsParentOfSubtreeVertexInCurrentTreeSweep           = 1 << 3;
+  static constexpr std::uint8_t HasBeenVertexTypeHangingInPreviousTreeSweep         = 1 << 4;
+  static constexpr std::uint8_t HasBeenSurroundedByRefinedCellsInPreviousTreeSweep  = 1 << 5;
 
   GridVertex() noexcept = default;
 
   INLINE_METHOD State getState() const noexcept { return static_cast<State>(state); }
-  INLINE_METHOD void  setState(State s) noexcept { state = static_cast<std::uint8_t>(s); }
+  INLINE_METHOD void  setState(State value) noexcept { state = static_cast<std::uint8_t>(value); }
 
 #if PEANO_DEBUG
   INLINE_METHOD const tarch::la::Vector<DIMENSIONS, double>& getX() const noexcept { return x; }
@@ -61,7 +63,7 @@ struct peano4::grid::GridVertex {
 
   INLINE_METHOD bool getFlag(std::uint8_t bit) const noexcept { return (flags & bit) != 0; }
   INLINE_METHOD void setFlag(std::uint8_t bit) noexcept { flags |= bit; }
-  INLINE_METHOD void setFlag(std::uint8_t bit, bool v) noexcept { v ? setFlag(bit) : clearFlag(bit); }
+  INLINE_METHOD void setFlag(std::uint8_t bit, bool value) noexcept { value ? setFlag(bit) : clearFlag(bit); }
   INLINE_METHOD void clearFlag(std::uint8_t bit) noexcept { flags &= ~bit; }
 
   std::string toString() const;
@@ -88,25 +90,25 @@ struct peano4::grid::GridVertex {
   static bool areAllVerticesUnrefined(GridVertex vertices[TWO_POWER_D]);
 
   /**
-   * A vertex will be refined if it is already refined or currently refining.
-   * It also will be refined if the erase is only triggered.
+   * Will the vertex be refined after this tree sweep.
    */
   static bool willVertexBeRefined(const GridVertex& vertex);
 
   /**
-   * A vertex has been refined if it is (already) refined or is erasing or
-   * the erase has been triggered.
+   * Has the vertex been refined before this tree sweep.
    */
   static bool hasVertexBeenRefined(const GridVertex& vertex);
 
   /**
-   * A vertex is unrefined if it is hanging.
-   *
-   * @return bitset of vertices for which isVertexRefined() holds. If you wanna
-   *   find out whether a cell is refined, you can compare the result to zero.
-   *   You can also use isSpacetreeNodeRefined() instead.
+   * @return One bit per vertex, set where willVertexBeRefined() holds. Compare
+   *   the result to zero to learn whether a cell is refined, or use
+   *   peano4::grid::SpacetreeHelper::isSpacetreeNodeRefined().
    */
   static std::bitset<TWO_POWER_D> willVerticesBeRefined(GridVertex vertices[TWO_POWER_D]);
+
+  /**
+   * @return One bit per vertex, set where hasVertexBeenRefined() holds.
+   */
   static std::bitset<TWO_POWER_D> haveVerticesBeenRefined(GridVertex vertices[TWO_POWER_D]);
 
 #ifdef PEANO_WITH_MPI

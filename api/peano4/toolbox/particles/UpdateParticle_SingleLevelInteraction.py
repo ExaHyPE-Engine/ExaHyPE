@@ -18,8 +18,7 @@ class UpdateParticle_SingleLevelInteraction(ActionSet):
         active_particle_set=None,
     ):
         """!
-
-        Update particles on a single level
+        Update particles on a single level.
 
         To be used if you want to update particles within their cell, while they
         either
@@ -34,25 +33,22 @@ class UpdateParticle_SingleLevelInteraction(ActionSet):
 
         ## Per cell updates
 
-        Per tree node (cell) there are two different sets.
-        The set of local particles of a cell are all of the particles whose
-        centre is contained within the cell.
-        The set of active particles are all particles which are associated
-        with an adjacent vertex of the cell.
+        Per tree node (cell) there are two different sets. Both hold the
+        particles associated with the @f$ 2^d @f$ adjacent vertices of the cell.
         In line with @ref page_toolbox_particles_mesh_storage "Peano's particle storage scheme",
-        this effectively means that the active particles are those from the
-        cell plus its h/2 environment.
+        this effectively means that they cover the cell plus its h/2 environment.
+        The two sets differ in the species they draw from: the local set comes
+        from particle_set, the active set from active_particle_set.
 
         If the active_particle_set attribute is None, then
-        the active set and the local set are of the same type. They are
-        however not the same sets, as one contains only the particles held
-        within the cell.
+        the active set and the local set are of the same type.
         You can set the active set to another species of particles
         and thus couple two types of particles.
 
-        The local set is a strict subset of the active set per cell. The code has
-        not checked beforehand if its particles overlap with the current cell.
-
+        Neither set is restricted to particles which geometrically fall into
+        the cell. The kernel additionally receives
+        localParticleIsContainedInCell, one boolean per entry of the local set,
+        which flags whether that particle lies within the cell.
 
         ## Per vertex updates
 
@@ -63,10 +59,9 @@ class UpdateParticle_SingleLevelInteraction(ActionSet):
         its cell kernel is triggered. The vertex kernel has access to a local
         set: These sets contain all the particles
         whose centre lies within the square/cube around the vertex with mesh size
-        2h. So this area goes h along each each coordinate axis into the
+        2h. So this area goes h along each coordinate axis into the
         neighbouring cells. The vertex's local particles also have to reside
         on the same resolution level.
-
 
         ## Type of updates
 
@@ -90,20 +85,18 @@ class UpdateParticle_SingleLevelInteraction(ActionSet):
         - If you change a particle position while the action set runs, you might
           end up with inconsistent data view.
 
-
-        ## Validity if particles change their position of cut-off radius
+        ## Validity if particles change their position or cut-off radius
 
         This particular action set constructs its active and local sets totally
         on-the-fly. It does not maintain any data while is marches through the
         mesh. Consequently, it is robust w.r.t. particle position updates or
         lift and drops and in general any resorting.
 
-
         ## Arguments
 
         @param particle_set: ParticleSet
 
-        @param particle_particle_interaction_kernel: String holding C++ code
+        @param particle_cell_update_kernel: String holding C++ code
           This C++ code can access three different types of variables: There's
           a list of particles called activeParticles, there's a list of particles
           called localParticles, and there's the cell marker. See the guidebook
@@ -123,7 +116,7 @@ class UpdateParticle_SingleLevelInteraction(ActionSet):
           the same type.
 
         @param touch_vertex_first_time_compute_particle_update_kernel: String or None
-          Can be empty, but if you wanna move particles, then a minimal example
+          Can be empty, but if you want to move particles, then a minimal example
           string passed equals
 
           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -135,8 +128,6 @@ class UpdateParticle_SingleLevelInteraction(ActionSet):
           i.e. you will have a variable localParticle available in this kernel
           and it is a pointer. There is no notion of an active variable for
           touch first or touch last.
-
-
         """
         super(UpdateParticle_SingleLevelInteraction, self).__init__(
             descend_invocation_order=1
@@ -146,31 +137,29 @@ class UpdateParticle_SingleLevelInteraction(ActionSet):
         self.d = {}
         self.d["LOCAL_PARTICLE"] = particle_set.particle_model.name
         self.d["LOCAL_PARTICLES_CONTAINER"] = particle_set.name
-        if active_particle_set == None:
+        if active_particle_set is None:
             self.d["ACTIVE_PARTICLE"] = particle_set.particle_model.name
             self.d["ACTIVE_PARTICLES_CONTAINER"] = particle_set.name
         else:
             self.d["ACTIVE_PARTICLE"] = active_particle_set.particle_model.name
             self.d["ACTIVE_PARTICLES_CONTAINER"] = active_particle_set.name
         self.d["PARTICLE_CELL_UPDATE_KERNEL"] = particle_cell_update_kernel
-        self.d[
-            "TOUCH_VERTEX_FIRST_COMPUTE_KERNEL"
-        ] = touch_vertex_first_time_compute_particle_update_kernel
-        self.d[
-            "TOUCH_VERTEX_LAST_COMPUTE_KERNEL"
-        ] = touch_vertex_last_time_compute_particle_update_kernel
+        self.d["TOUCH_VERTEX_FIRST_COMPUTE_KERNEL"] = (
+            touch_vertex_first_time_compute_particle_update_kernel
+        )
+        self.d["TOUCH_VERTEX_LAST_COMPUTE_KERNEL"] = (
+            touch_vertex_last_time_compute_particle_update_kernel
+        )
         self.d["ADDITIONAL_INCLUDES"] = additional_includes
         self.d["PREPARE_TRAVERSAL_KERNEL"] = prepare_traversal_kernel
         self.d["UNPREPARE_TRAVERSAL_KERNEL"] = unprepare_traversal_kernel
 
     """!
-
-    The field numberOfCoalescedAssignedParticles is set to -1 to indicate that the
-    particles are not held in a continuous order.
+    The field numberOfCoalescedAssignedParticles is set to -1 to indicate that
+    the particles are not held in a continuous order.
 
     Introducing this field makes all kernel signatures compatible with
     UpdateParticle_SingleLevelInteraction_ContiguousParticles.
-
     """
     __Template_TouchVertexFirstTime = jinja2.Template(
         """
@@ -188,13 +177,11 @@ class UpdateParticle_SingleLevelInteraction(ActionSet):
     )
 
     """!
-
-    The field numberOfCoalescedAssignedParticles is set to -1 to indicate that the
-    particles are not held in a continuous order.
+    The field numberOfCoalescedAssignedParticles is set to -1 to indicate that
+    the particles are not held in a continuous order.
 
     Introducing this field makes all kernel signatures compatible with
     UpdateParticle_SingleLevelInteraction_ContiguousParticles.
-
     """
     __Template_TouchVertexLastTime = jinja2.Template(
         """
@@ -218,7 +205,7 @@ class UpdateParticle_SingleLevelInteraction(ActionSet):
   std::list< globaldata::{{LOCAL_PARTICLE}}* >   localParticles;
   std::list< globaldata::{{ACTIVE_PARTICLE}}* >  _activeParticles;
   std::vector< int >                             numberOfCoalescedLocalParticlesPerVertex( TWO_POWER_D );
-  std::vector< int >                            _numberOfActiveParticlesPerVertex( TWO_POWER_D ); // stay compatible with coalesced version
+  std::vector< int >                            _numberOfActiveParticlesPerVertex( TWO_POWER_D ); // Stay compatible with the coalesced version
   std::vector< bool >                           localParticleIsContainedInCell;
   auto& numberOfCoalescedActiveParticlesPerVertex = _numberOfActiveParticlesPerVertex;
   auto& activeParticles                           = _activeParticles;

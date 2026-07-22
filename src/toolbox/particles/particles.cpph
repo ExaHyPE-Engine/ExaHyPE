@@ -8,6 +8,17 @@
 #include "tarch/la/VectorVectorOperations.h"
 #include "toolbox/particles/assignmentchecks/TracingAPI.h"
 
+/**
+ * Check if there is already a particle at the position of particle.
+ *
+ * The routine hands out a non-const iterator, so it cannot be const.
+ *
+ * @param particle Particle whose position is searched for.
+ * @param begin    First element of the container to search.
+ * @param end      One past the last element of the container to search.
+ * @return container's end() if there is no duplicate. Otherwise, return
+ *   iterator pointing to existing particle.
+ */
 template <typename Iterator>
 Iterator toolbox::particles::particleIsDuplicate(
   const typename Iterator::value_type& particle,
@@ -43,6 +54,15 @@ Iterator toolbox::particles::particleIsDuplicate(
   return begin;
 }
 
+/**
+ * Check if a particle is local and inside the computational domain
+ *
+ * Return true exactly when
+ *
+ * - we deal with a local particle (virtual ones are copies, so we are not
+ *   really entitled to say something about them), and
+ * - the particle resides within the computational domain.
+ */
 template <typename Particle>
 bool toolbox::particles::particleWillStayWithinComputationalDomain(
   const Particle&                              particle,
@@ -54,6 +74,15 @@ bool toolbox::particles::particleWillStayWithinComputationalDomain(
     and tarch::la::allSmallerEquals(particle.getX(), domainOffset + domainWidth);
 }
 
+/**
+ * Insert particle into a cell
+ *
+ * Shallow copy, i.e. you can remove the input container newParticles, but
+ * you may not delete the particles it is pointing to.
+ *
+ * This routine runs through the vector passed and calls the other
+ * insertParticleIntoCell() operation per particle.
+ */
 template <typename Particle, typename ParticleSet>
 void toolbox::particles::insertParticlesIntoCell(
   const peano4::datamanagement::CellMarker&              marker,
@@ -62,10 +91,21 @@ void toolbox::particles::insertParticlesIntoCell(
   int                                                    spacetreeId
 ) {
   for (auto& p : newParticles) {
-    insertParticleIntoCell(marker, p, fineGridVertices);
+    insertParticleIntoCell(marker, p, fineGridVertices, spacetreeId);
   }
 }
 
+/**
+ * Update helper flag per particle for cell
+ *
+ * Each particle is associated with a vertex of a cell. This vertex is
+ * identified by assignedVertex. We now compute a bitset that tells us,
+ * from the vertex' point of view, which of the adjacent cells will
+ * host this particle. This might not be unique, as we work with a
+ * fuzzy geometric ownership.
+ *
+ * @see the explanation in peano4.toolbox.particles.Particle
+ */
 template <typename Particle>
 void toolbox::particles::updateContainedInAdjacentCellProperty(
   const peano4::datamanagement::CellMarker& marker,
@@ -85,6 +125,28 @@ void toolbox::particles::updateContainedInAdjacentCellProperty(
   updateContainedInAdjacentCellProperty(marker.getX(), marker.getH(), particle);
 }
 
+/**
+ * Update internal marker of particle
+ *
+ * Each particle is associated to a vertex. The vertex is identified by
+ * its position x and the surrounding cells with size h. Each vertex has
+ * @f$ 2^d @f$ adjacent cells. The particle's
+ * ContainedInAdjacentCellProperty bitset flags which of these adjacent
+ * cells consider the particle to fall in their area.
+ *
+ * As we work with a weak ownership, more than one bit can be set, for
+ * example if the particle sits exactly on the face between two adjacent
+ * cells.
+ *
+ * ## Particle movement
+ *
+ * We have to call updateContainedInAdjacentCellProperty() after each
+ * particle movement. Even if we don't change the vertex association as a
+ * particle drifts, it might stay with the same vertex and still move from
+ * one cell into another one and hence require an update of the flags.
+ *
+ * @see the explanation in peano4.toolbox.particles.Particle
+ */
 template <typename Particle>
 void toolbox::particles::updateContainedInAdjacentCellProperty(
   const tarch::la::Vector<DIMENSIONS, double>& x,
@@ -108,6 +170,29 @@ void toolbox::particles::updateContainedInAdjacentCellProperty(
   particle.setContainedInAdjacentCell(result);
 }
 
+/**
+ * Insert particle into cell
+ *
+ * This routine assumes that the particle indeed fits into a cell, as it
+ * cannot be assigned properly otherwise. A particle which falls into a
+ * cell is local, and setting that flag matters: Peano's locality analysis
+ * usually sets particles to local in touchCellFirstTime(), and the
+ * insertion may well run after that analysis step, so the particle would
+ * be missed.
+ *
+ * Never insert a particle directly. Always run through this routine and
+ * combine it with a particle sorting step. This keeps the insertion
+ * consistent, i.e. particles end up next to their closest neighbour, and
+ * it keeps a particle from being assigned to a hanging vertex and then
+ * lost: in a step where no grid re-sorting is active, such a particle
+ * disappears with the elimination of the hanging vertex.
+ *
+ * ## Realisation
+ *
+ * - Find which vertex in the cell is the closest vertex.
+ * - Set the particle state to local. As we know that we insert only into
+ *   local cells, we can do this without any fear.
+ */
 template <typename Particle, typename ParticleSet>
 void toolbox::particles::insertParticleIntoCell(
   const peano4::datamanagement::CellMarker&              marker,

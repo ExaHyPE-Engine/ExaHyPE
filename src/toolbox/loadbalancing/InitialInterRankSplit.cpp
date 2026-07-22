@@ -15,7 +15,7 @@
  * pieces are too small, it first gives every rank one balanced piece so uniform refinement proceeds in parallel. A
  * settled partial rank distribution is fatal because independent continuation has no bound on the rank imbalance. A
  * newly forked rank refines once before splitting again because only cells whose coarse parent it owns are eligible
- * split candidates. Runner startup verifies a common trees-per-rank target, so every rank derives the same split
+ * split candidates. Startup verifies a common trees-per-rank target, so every rank derives the same split
  * thresholds.
  */
 class toolbox::loadbalancing::LoadBalancer::InitialInterRankSplit final

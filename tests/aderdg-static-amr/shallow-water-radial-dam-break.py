@@ -36,7 +36,7 @@ polynomials = exahype2.solvers.aderdg.Polynomials.Gauss_Legendre
 
 project = exahype2.Project(
     namespace=["tests", "exahype2", "aderdg"],
-    project_name="ADERDGStaticAMR",
+    project_name="ShallowWaterRadialDamBreak",
     dimensions=2,
     size=[1.0, 1.0, 1.0],
     offset=[0.0, 0.0, 0.0],

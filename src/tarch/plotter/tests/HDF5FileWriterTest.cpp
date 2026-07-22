@@ -7,8 +7,6 @@
 #include "tarch/mpi/mpi.h"
 #include "tarch/plotter/HDF5FileWriter.h"
 
-namespace fs = std::filesystem;
-
 #ifdef PEANO_WITH_HDF5
 
 #include <hdf5.h>
@@ -21,17 +19,17 @@ namespace {
   }
 
   /**
-   * Checks that the generated .xmf file contains a substring, used to validate
-   * metadata (AttributeType, TopologyType, etc.).
+   * Checks that the generated .xmf file contains a substring, which validates
+   * metadata such as AttributeType or TopologyType.
    */
   void validateXMFContent(const std::string& filepath, const std::string& expectedSubstring) {
-    if (not fs::exists(filepath)) {
+    if (not std::filesystem::exists(filepath)) {
       throw std::runtime_error("Test failed: Output XMF file was not created: " + filepath);
     }
 
-    std::ifstream     f(filepath);
+    std::ifstream     stream(filepath);
     std::stringstream buffer;
-    buffer << f.rdbuf();
+    buffer << stream.rdbuf();
     std::string content = buffer.str();
 
     if (content.find(expectedSubstring) == std::string::npos) {
@@ -42,17 +40,16 @@ namespace {
   }
 
   void cleanup(const std::string& filename) {
-    fs::path p(filename);
-    if (fs::exists(p)) {
-      fs::remove(p);
+    std::filesystem::path p(filename);
+    if (std::filesystem::exists(p)) {
+      std::filesystem::remove(p);
     }
 
-    // Also remove the associated .h5 file
     if (p.extension() == ".xmf") {
-      fs::path h5 = p;
+      std::filesystem::path h5 = p;
       h5.replace_extension(".h5");
-      if (fs::exists(h5)) {
-        fs::remove(h5);
+      if (std::filesystem::exists(h5)) {
+        std::filesystem::remove(h5);
       }
     }
   }
@@ -118,26 +115,36 @@ void tarch::plotter::tests::HDF5FileWriterTest::testInvalidIdentifierThrows() {
 }
 
 void tarch::plotter::tests::HDF5FileWriterTest::run() {
-  testMethod(test2DSimpleTriangle);
-  testMethod(test2DParticlesWithData);
-  testMethod(test3DCellData);
-  testMethod(testAttributeTypes);
-  testMethod(testVectorAndTensorPadding);
-  testMethod(testMultipleSubdomains);
-  testMethod(testHeterogeneousRanks);
-  testMethod(testUnevenSubdomainCounts);
-  testMethod(testEmptyPlotter);
-  testMethod(testInconsistentDataSizeThrows);
-  testMethod(testInvalidIdentifierThrows);
+  // The read-back helpers report a malformed file by throwing. Without this catch the
+  // exception leaves run(), which the test framework does not guard, and the whole unit-test
+  // binary aborts instead of recording a failed case. The remaining cases are then skipped,
+  // so the counter has to be raised here as well.
+  try {
+    testMethod(test2DSimpleTriangle);
+    testMethod(test2DParticlesWithData);
+    testMethod(test3DCellData);
+    testMethod(testAttributeTypes);
+    testMethod(testVectorAndTensorPadding);
+    testMethod(testMultipleSubdomains);
+    testMethod(testHeterogeneousRanks);
+    testMethod(testUnevenSubdomainCounts);
+    testMethod(testEmptyPlotter);
+    testMethod(testInconsistentDataSizeThrows);
+    testMethod(testInvalidIdentifierThrows);
+  } catch (const std::runtime_error& exception) {
+    _errors++;
+    _error = true;
+    std::cerr << "  " << exception.what() << std::endl;
+  }
 }
 
 void tarch::plotter::tests::HDF5FileWriterTest::testUnevenSubdomainCounts() {
   const std::string filename = "HDF5TestUneven";
 
   // Master contributes 3 quads, every other rank 2 - non-zero but unequal counts.
-  const int      nSub = tarch::mpi::Rank::getInstance().isGlobalMaster() ? 3 : 2;
-  HDF5FileWriter plotter(tarch::tests::getWritableTestDirectory().string(), nSub);
-  for (int sd = 0; sd < nSub; ++sd) {
+  const int      numberOfSubdomains = tarch::mpi::Rank::getInstance().isGlobalMaster() ? 3 : 2;
+  HDF5FileWriter plotter(tarch::tests::getWritableTestDirectory().string(), numberOfSubdomains);
+  for (int sd = 0; sd < numberOfSubdomains; ++sd) {
     auto         v       = plotter.createVertexPlotter(sd);
     auto         c       = plotter.createCellPlotter(sd);
     const double s       = 100.0 * tarch::mpi::Rank::getInstance().getRank() + 2.0 * sd;
@@ -170,8 +177,8 @@ void tarch::plotter::tests::HDF5FileWriterTest::testVectorAndTensorPadding() {
   HDF5FileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
   auto           v    = plotter.createVertexPlotter(0);
   auto           c    = plotter.createCellPlotter(0);
-  auto           vec2 = plotter.createCellDataPlotter(0, "V2", 2); // 2D vector
-  auto           ten9 = plotter.createCellDataPlotter(0, "T9", 9); // full tensor
+  auto           vec2 = plotter.createCellDataPlotter(0, "V2", 2);
+  auto           ten9 = plotter.createCellDataPlotter(0, "T9", 9);
 
   int p0      = v->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
   int p1      = v->plotVertex(tarch::la::Vector<2, double>{1.0, 0.0});
@@ -231,7 +238,6 @@ void tarch::plotter::tests::HDF5FileWriterTest::test2DSimpleTriangle() {
   auto           v = plotter.createVertexPlotter(0);
   auto           c = plotter.createCellPlotter(0);
 
-  // Define a triangle
   int p0 = v->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
   int p1 = v->plotVertex(tarch::la::Vector<2, double>{1.0, 0.0});
   int p2 = v->plotVertex(tarch::la::Vector<2, double>{0.0, 1.0});
@@ -242,7 +248,6 @@ void tarch::plotter::tests::HDF5FileWriterTest::test2DSimpleTriangle() {
   plotter.writeToFile(filename, 0);
 
   barrier();
-  // Validate XMF metadata.
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     validateXMFContent(
       (tarch::tests::getWritableTestDirectory() / (filename + ".xmf")).string(),
@@ -268,7 +273,6 @@ void tarch::plotter::tests::HDF5FileWriterTest::test2DParticlesWithData() {
   auto           v  = plotter.createVertexPlotter(0);
   auto           vd = plotter.createVertexDataPlotter(0, "Mass", 1);
 
-  // Plot 2 particles
   int p0 = v->plotVertex(tarch::la::Vector<2, double>{0.5, 0.5});
   vd->plotVertexData(p0, 10.0);
 
@@ -297,14 +301,13 @@ void tarch::plotter::tests::HDF5FileWriterTest::test3DCellData() {
   auto           c  = plotter.createCellPlotter(0);
   auto           cd = plotter.createCellDataPlotter(0, "Density", 1);
 
-  // Simple Tet or Hex
-  int idx[8];
+  int cornerIndices[8] = {};
   for (int i = 0; i < 8; i++) {
-    idx[i] = v->plotVertex(tarch::la::Vector<3, double>{0.0, 0.0, 0.0});
+    cornerIndices[i] = v->plotVertex(tarch::la::Vector<3, double>{0.0, 0.0, 0.0});
   }
 
-  int cellIdx = c->plotHexahedron(idx);
-  cd->plotCellData(cellIdx, 1.234);
+  int cellIndex = c->plotHexahedron(cornerIndices);
+  cd->plotCellData(cellIndex, 1.234);
 
   plotter.writeToFile(filename, 0);
 
@@ -327,15 +330,13 @@ void tarch::plotter::tests::HDF5FileWriterTest::testAttributeTypes() {
   auto           v  = plotter.createVertexPlotter(0);
   int            p0 = v->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
 
-  // Scalar (1 component)
   auto s = plotter.createVertexDataPlotter(0, "ScalarField", 1);
   s->plotVertexData(p0, 1.0);
 
-  // Vector (3 components)
   auto vec = plotter.createVertexDataPlotter(0, "VectorField", 3);
   vec->plotVertexData(p0, tarch::la::Vector<3, double>{1.0, 2.0, 3.0});
 
-  // Matrix/Tensor (4 components)
+  // A 4-component field is neither a vector nor a tensor, so it stays generic.
   double mat4[4] = {1, 0, 0, 1};
   auto   mat     = plotter.createVertexDataPlotter(0, "TensorField", 4);
   mat->plotVertexData(p0, mat4, 4);
@@ -426,7 +427,6 @@ void tarch::plotter::tests::HDF5FileWriterTest::testEmptyPlotter() {
 
   barrier();
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    // Must produce a valid empty file
     validateXMFContent(
       (tarch::tests::getWritableTestDirectory() / (filename + ".xmf")).string(),
       "NumberOfElements=\"0\""
@@ -445,25 +445,22 @@ void tarch::plotter::tests::HDF5FileWriterTest::testInconsistentDataSizeThrows()
     auto           v  = plotter.createVertexPlotter(0);
     auto           vd = plotter.createVertexDataPlotter(0, "BrokenField", 1);
 
-    // Plot 2 vertices
     v->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
     v->plotVertex(tarch::la::Vector<2, double>{1.0, 1.0});
 
-    // Plot data for only 1 vertex (Bug!)
+    // Data for only one of the two vertices, which the write validation rejects.
     vd->plotVertexData(0, 5.0);
 
-    // This should throw during write validation because field size (1) != geom size (2)
     plotter.writeToFile(filename, 0);
   } catch (const std::runtime_error&) {
     exceptionThrown = true;
   }
 
   if (not exceptionThrown) {
-    // Clean up if it failed to throw
     if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
       cleanup((tarch::tests::getWritableTestDirectory() / (filename + ".xmf")).string());
     }
-    throw std::runtime_error("HDF5FileWriter did not throw on inconsistent data size!");
+    throw std::runtime_error("HDF5FileWriter did not throw on inconsistent data size.");
   }
 
   barrier();
@@ -475,7 +472,7 @@ void tarch::plotter::tests::HDF5FileWriterTest::testInconsistentDataSizeThrows()
 
 #else // No HDF5
 
-// Dummy implementation to satisfy the linker when compiled without HDF5
+// Dummy implementation to satisfy the linker when compiled without HDF5.
 tarch::plotter::tests::HDF5FileWriterTest::HDF5FileWriterTest() :
   TestCase("tarch::plotter::tests::HDF5FileWriterTest") {}
 

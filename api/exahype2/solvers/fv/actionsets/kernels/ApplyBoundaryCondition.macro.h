@@ -51,13 +51,13 @@
         {{FULL_QUALIFIED_SOLVER_NAME}}::boundaryConditions(
           Q + insideVolumeSerialised  * stride,
           Q + outsideVolumeSerialised * stride,
-          xVector, volumeH, t, faceNumber
+          xVector, volumeH, t, dir
         );
         {% else %}
         solver.boundaryConditions(
           Q + insideVolumeSerialised  * stride,
           Q + outsideVolumeSerialised * stride,
-          xVector, volumeH, t, faceNumber
+          xVector, volumeH, t, dir
         );
         {% endif %}
       }

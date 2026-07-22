@@ -107,11 +107,17 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridConstructionStep() {
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridInitialisationStep() {
-  assertion(_solverState == SolverState::GridConstruction);
+  // Initialisation re-enters after every completed mesh update of its
+  // initialise-drain loop, so the state may already sit at GridInitialisation.
+  assertion(_solverState == SolverState::GridConstruction or _solverState == SolverState::GridInitialisation);
   _solverState = SolverState::GridInitialisation;
 }
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridInitialisationStep() {}
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridInitialisationStep() {
+  // From here on every completed sweep has sent a face-data batch, which the
+  // following sweep's boundary exchange consumes.
+  _hasStoredFaceData = true;
+}
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
   if (_solverState == SolverState::Suspended) {
@@ -122,6 +128,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
   }
 
   _solverState = SolverState::TimeStep;
+  _meshRefinementRanSinceLastTimeStep = false;
 
   {{START_TIME_STEP_IMPLEMENTATION}}
 
@@ -155,7 +162,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
       _localMaxTimeStampThisTimeStep
     };
     double globalMaxValues[4] = {0.0, 0.0, 0.0, 0.0};
-    MPI_Comm communicator = tarch::mpi::Rank::getInstance().getCommunicator();
+    const MPI_Comm communicator = tarch::mpi::Rank::getInstance().getCommunicator();
     auto progress = [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); };
 
     tarch::mpi::allreduce(

@@ -7,7 +7,7 @@
 namespace tarch {
   namespace multicore {
     /**
-     * Abstract super class for a job.
+     * Abstract superclass for a task.
      */
     class Task {
     protected:
@@ -21,33 +21,10 @@ namespace tarch {
       /**
        * Construct task
        *
-       * ## Task types and task numbers
-       *
-       * Each task in Peano has to have a task type. All tasks that do the same,
-       * i.e. are of the same type, should have the same task type integer
-       * marker.
-       *
-       * It is totally up to the user to manage the task type numbers. Peano
-       * applications usually obtain task types from their application-specific
-       * repositories. However, the generation of the task types is not baked
-       * into the tarch.
-       *
-       * Some codes also have task numbers. They need this, if they have to
-       * identify tasks uniquely. Applications for that are task dependencies
-       * or tasks that are offloaded to other ranks. For the latter tasks, we
-       * have to match data sent back by another rank to the task that would
-       * have produced these results locally. Anyway, task numbers are not
-       * baked into the generic interface, as we don't need them for all tasks
-       * all the time, and I want to avoid that the construction of unique
-       * task numbers becomes too expensive. If you should need unique task
-       * numbers, I recommend you use reserveTaskNumber().
-       *
-       *
        * @param taskType Unique task (type) number for this task.
-       *
-       * @param priority Integer value that indicates what priority you want to
-       *        assign a task. Value has to be non-negative. Use
-       *        DefaultPriority if there is no bespoke priority.
+       * @param priority Integer value that indicates which priority to assign
+       *        to a task. Value has to be non-negative. Use DefaultPriority
+       *        if there is no bespoke priority.
        */
       Task(int taskType, int priority);
 
@@ -73,10 +50,9 @@ namespace tarch {
     };
 
     /**
-     * Helper class if you wanna administer tasks with in a queue
+     * Helper class to administer tasks within a queue
      *
-     * It is a convenient class as it works both with real objects or
-     * with pointers.
+     * It works with task objects as well as with pointers to tasks.
      */
     class TaskComparison {
     public:
@@ -85,22 +61,21 @@ namespace tarch {
     };
 
     /**
-     * Frequently used implementation for job with a functor.
+     * Frequently used implementation for a task with a functor.
      *
      * Peano's tasking API is a plain class-based implementation of a task
      * system. Many modern APIs such as oneTBB favour a functor-based API.
-     * The latter approach add nothing new, as C++ internally breaks down
-     * functors into classes with an operator(). In Peano, we mirror this
-     * behaviour, i.e. start with a class design and then offer this class
-     * on top which allows you to pipe in a functor instead of implementing
-     * your run() within a subclass.
+     * The latter approach adds nothing new, as C++ internally breaks down
+     * functors into classes with an operator(). Peano mirrors this behaviour,
+     * i.e. starts with a class design and then offers this class on top,
+     * which allows you to pipe in a functor instead of implementing your
+     * run() within a subclass.
      *
-     * Most people using lambdas for this class will define a lambda within
-     * a function which catches all relevant data and then pass this lambda
-     * into a task. This implies that this lambda object will be destroyed
-     * once the spawning routine terminates, even though the task might not
-     * have been executed at this point. Therefore, this routine copies the
-     * lambda.
+     * A lambda for this class is typically defined inside a function, where
+     * it captures all relevant data, and is then passed into a task. The
+     * lambda object is thus destroyed once the spawning routine terminates,
+     * even though the task may not have run at that point. This class
+     * therefore copies the functor.
      *
      * The functor is a 1:1 translation of Task's run(). It takes no arguments,
      * and it returns a bool which indicates if this task has to rerun.
@@ -112,28 +87,23 @@ namespace tarch {
      * A typical usage looks similar to
      *
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     *   tarch::multicore::Task* newTask = new tarch::multicore::TaskWithCopyOfFunctor (
+     *   tarch::multicore::Task* newTask = new tarch::multicore::TaskWithCopyOfFunctor(
      *     tarch::multicore::Task::NoTaskType,
      *     tarch::multicore::Task::DefaultPriority,
-     *     [=,this]()->bool {
+     *     [=, this]() -> bool {
      *        ...
      *        return false;
      *     }
      *   );
      *
-     *   tarch::multicore::spawnTask(
-     *     newTask,
-     *     tarch::multicore::NoInDependencies,
-     *     myNumber
-     *   );
+     *   tarch::multicore::spawnTask(newTask);
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     *
      */
     class TaskWithCopyOfFunctor : public Task {
     private:
       /**
-       * See the outer class description for an explanation why this is an
-       * attribute, i.e. why we copy the functor here always.
+       * Held by value, as the functor handed in usually goes out of scope
+       * before the task runs. See the class description.
        */
       std::function<bool()> _taskFunctor;
 
@@ -148,8 +118,8 @@ namespace tarch {
       /**
        * @param taskType See superclass documentation
        * @param priority See superclass documentation
-       * @param taskFunctor Functor that's then internally copied. Functor
-       *   returns indicator if task has to rerun. See class documentation.
+       * @param taskFunctor Functor which is copied internally. It returns an
+       *   indicator whether the task has to rerun. See class documentation.
        */
       TaskWithCopyOfFunctor(
         int                          taskType,
@@ -161,9 +131,9 @@ namespace tarch {
 #endif
       );
 
-      virtual bool run() override;
+      bool run() override;
 
-      virtual std::string toString() const override;
+      std::string toString() const override;
     };
 
     /**
@@ -183,22 +153,21 @@ namespace tarch {
        */
       EmptyTask(int priority);
 
-      virtual bool run() override;
+      bool run() override;
 
-      virtual std::string toString() const override;
+      std::string toString() const override;
     };
 
     /**
-     * Frequently used implementation for job with a functor.
+     * Frequently used implementation for a task with a functor.
      *
      * Cousin implementation to TaskWithCopyOfFunctor which does not copy the
-     * underlying functor but holds a reference to it. This implies that you
-     * have to ensure that the functor remains valid after you have spawned
-     * the task.
+     * underlying functor but holds a reference to it. The caller therefore
+     * has to keep the functor valid after the task has been spawned.
      *
-     * It can pay off to use this variant for very expensive functors, i.e.
-     * functors that internally copy a lot of things. In most cases, you won't
-     * need this class. I recommend to start with the copy version always.
+     * This variant suits very expensive functors, i.e. functors which
+     * internally copy a lot of data. In most cases TaskWithCopyOfFunctor is
+     * the better starting point.
      *
      * Please consult TaskWithCopyOfFunctor for further information on the
      * used attributes.
@@ -206,8 +175,8 @@ namespace tarch {
     class TaskWithoutCopyOfFunctor : public Task {
     private:
       /**
-       * See the outer class description for an explanation why this is an
-       * attribute, i.e. why we copy the functor here always.
+       * Held by reference, so the functor has to outlive the task. See the
+       * class description.
        */
       std::function<bool()>& _taskFunctor;
 
@@ -217,7 +186,7 @@ namespace tarch {
 
       TaskWithoutCopyOfFunctor(int taskType, int priority, std::function<bool()>& taskFunctor);
 
-      virtual bool run() override;
+      bool run() override;
     };
   } // namespace multicore
 } // namespace tarch

@@ -11,8 +11,8 @@ class Prediction(AbstractADERDGActionSet):
     ADER-DG prediction action set.
 
     The extrapolated solution from the space-time predictor has to be projected onto
-    the faces, so we can then solve the Riemann problems. So the projection
-    happens in one grid sweep, the corresponding Riemann solve in the next one.
+    the faces before we can solve the Riemann problems. The projection therefore
+    happens in one grid sweep and the corresponding Riemann solve in the next one.
     """
 
     _Template_TouchCellFirstTime = """
@@ -64,13 +64,17 @@ class Prediction(AbstractADERDGActionSet):
     {{SPACE_TIME_PREDICTOR_CALL}}
 
     for (int d = 0; d < DIMENSIONS; d++) {
-      // Timestamp information for boundary handling
+      // Time stamp information for the boundary handling.
       fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setNewTimeStamp(1, timeStamp);
       fineGridFaces{{SOLVER_NAME}}FaceLabel(d + DIMENSIONS).setNewTimeStamp(0, timeStamp);
 
-      // Set Updated
       fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setUpdated(1, true);
       fineGridFaces{{SOLVER_NAME}}FaceLabel(d + DIMENSIONS).setUpdated(0, true);
+
+      // The prediction derives this cell's face estimates, so its halves need
+      // no mesh-transfer projection.
+      fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setRequiresDataTransfer(1, false);
+      fineGridFaces{{SOLVER_NAME}}FaceLabel(d + DIMENSIONS).setRequiresDataTransfer(0, false);
     }
 
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(timeStepSize);

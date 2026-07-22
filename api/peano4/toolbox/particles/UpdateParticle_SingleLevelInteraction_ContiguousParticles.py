@@ -18,8 +18,7 @@ class UpdateParticle_SingleLevelInteraction_ContiguousParticles(ActionSet):
         active_particle_set=None,
     ):
         """!
-
-        Update particles without non-local interaction
+        Update particles without non-local interaction.
 
         This action set is very similar to UpdateParticle_SingleLevelInteraction,
         but it assumes that data are stored @ref toolbox_particles_memorypool "continuously in memory".
@@ -27,44 +26,42 @@ class UpdateParticle_SingleLevelInteraction_ContiguousParticles(ActionSet):
         vertex stored en bloc.
 
         Per cell, there's a @f$ 2^d @f$ vector over integers called
-        numberOfActiveParticles. It encodes how many particles are contributed
-        towards the active set from each vertex. If you employ contiguous particle
-        storage schemes, you can loop over this integer range rather than the
-        particle set, and you can exploit the fact that data within the index set
-        is contigous.
+        numberOfCoalescedActiveParticlesPerVertex. It encodes how many particles
+        are contributed towards the active set from each vertex. If you employ
+        contiguous particle storage schemes, you can loop over this integer range
+        rather than the particle set, and you can exploit the fact that data
+        within the index set is contiguous.
 
         A cell update then resembles
 
         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        auto localParticlesIterator = activeParticles.begin();
-        // There is some parallelism here if you wanna exploit it
+        auto activeParticlesIterator = activeParticles.begin();
+        // There is some parallelism here if you want to exploit it
         for (int vertex=0; vertex<TWO_POWER_D; vertex++) {
-          auto* firstParticle = *localParticlesIterator;
-          std::advance( localParticlesIterator, numberOfActiveParticles[vertex] );
+          auto* firstParticle = *activeParticlesIterator;
+          std::advance( activeParticlesIterator, numberOfCoalescedActiveParticlesPerVertex[vertex] );
           // This loop encodes vector-level parallelism (SIMD)
-          for (int currentParticleNo = 0; currentParticleNo < numberOfActiveParticles[vertex]; currentParticleNo++) {
+          for (int currentParticleNo = 0; currentParticleNo < numberOfCoalescedActiveParticlesPerVertex[vertex]; currentParticleNo++) {
              doSomethingFancy( firstParticle+currentParticleNo );
           }
         }
         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-
         A vertex update resembles
+
         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        auto* firstParticle = *localParticles.begin();
+        auto* firstParticle = *assignedParticles.begin();
         // This loop encodes vector-level parallelism (SIMD)
-        for (int currentParticleNo = 0; currentParticleNo < numberOfActiveParticles; currentParticleNo++) {
+        for (int currentParticleNo = 0; currentParticleNo < numberOfCoalescedAssignedParticles; currentParticleNo++) {
            doSomethingFancy( firstParticle+currentParticleNo );
         }
         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-        ## Validity if particles change their position of cut-off radius
+        ## Validity if particles change their position or cut-off radius
 
         If particles change their position or cut-off radius, you have to resort
         them. See also UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles
         for a discussion of the data validity.
-
-
         """
         super(UpdateParticle_SingleLevelInteraction_ContiguousParticles, self).__init__(
             descend_invocation_order=1
@@ -74,19 +71,19 @@ class UpdateParticle_SingleLevelInteraction_ContiguousParticles(ActionSet):
         self.d = {}
         self.d["LOCAL_PARTICLE"] = particle_set.particle_model.name
         self.d["LOCAL_PARTICLES_CONTAINER"] = particle_set.name
-        if active_particle_set == None:
+        if active_particle_set is None:
             self.d["ACTIVE_PARTICLE"] = particle_set.particle_model.name
             self.d["ACTIVE_PARTICLES_CONTAINER"] = particle_set.name
         else:
             self.d["ACTIVE_PARTICLE"] = active_particle_set.particle_model.name
             self.d["ACTIVE_PARTICLES_CONTAINER"] = active_particle_set.name
         self.d["PARTICLE_CELL_UPDATE_KERNEL"] = particle_cell_update_kernel
-        self.d[
-            "TOUCH_VERTEX_FIRST_COMPUTE_KERNEL"
-        ] = touch_vertex_first_time_compute_particle_update_kernel
-        self.d[
-            "TOUCH_VERTEX_LAST_COMPUTE_KERNEL"
-        ] = touch_vertex_last_time_compute_particle_update_kernel
+        self.d["TOUCH_VERTEX_FIRST_COMPUTE_KERNEL"] = (
+            touch_vertex_first_time_compute_particle_update_kernel
+        )
+        self.d["TOUCH_VERTEX_LAST_COMPUTE_KERNEL"] = (
+            touch_vertex_last_time_compute_particle_update_kernel
+        )
         self.d["ADDITIONAL_INCLUDES"] = additional_includes
         self.d["PREPARE_TRAVERSAL_KERNEL"] = prepare_traversal_kernel
         self.d["UNPREPARE_TRAVERSAL_KERNEL"] = unprepare_traversal_kernel
@@ -119,11 +116,11 @@ class UpdateParticle_SingleLevelInteraction_ContiguousParticles(ActionSet):
   std::list< globaldata::{{LOCAL_PARTICLE}}* >   localParticles;
   std::list< globaldata::{{ACTIVE_PARTICLE}}* >  _activeParticles;
   std::vector< int >                             numberOfCoalescedLocalParticlesPerVertex( TWO_POWER_D );
-  std::vector< int >                            _numberOfActiveParticlesPerVertex( TWO_POWER_D ); // stay compatible with coalesced version
+  std::vector< int >                            _numberOfActiveParticlesPerVertex( TWO_POWER_D ); // Stay compatible with the coalesced version
   std::vector< bool >                           localParticleIsContainedInCell;
   auto& numberOfCoalescedActiveParticlesPerVertex = _numberOfActiveParticlesPerVertex;
   auto& activeParticles                           = _activeParticles;
-  
+
   for (int i=0; i<TWO_POWER_D; i++) {
     numberOfCoalescedActiveParticlesPerVertex[i] = fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i).size();
     for (auto* p: fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i) ) {

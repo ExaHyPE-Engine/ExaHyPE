@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# This file is part of the Peano project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
 """Unified renderer for ExaHyPE 2 / Peano 4 plotter output.
 
 Two front-ends share the readers and the renderer:
@@ -76,6 +78,7 @@ except ImportError:
         load_snapshot_ref,
     )
 
+
 # --------------------------------------------------------------------------- #
 # Field values
 # --------------------------------------------------------------------------- #
@@ -87,14 +90,20 @@ def _component_or_magnitude(values: np.ndarray, component: int | None) -> np.nda
         return values[:, 0]
     if component is not None:
         if component < 0 or component >= values.shape[1]:
-            raise ValueError(f"Component {component} is out of range (0..{values.shape[1] - 1})")
+            raise ValueError(
+                f"Component {component} is out of range (0..{values.shape[1] - 1})"
+            )
         return values[:, component]
     return np.linalg.norm(values, axis=1)
 
 
-def cell_scalar(snapshot: MeshSnapshot, field: str, component: int | None = None) -> np.ndarray:
-    """One colour value per cell: the field component (or its magnitude), node
-    values averaged onto their cell."""
+def cell_scalar(
+    snapshot: MeshSnapshot, field: str, component: int | None = None
+) -> np.ndarray:
+    """One colour value per cell: the field component, or its magnitude.
+
+    Node values are averaged onto their cell.
+    """
     raw, center = snapshot.field(field)
     values = _component_or_magnitude(raw, component)
     if center == "cell":
@@ -166,7 +175,9 @@ def regular_grid(snapshot: MeshSnapshot) -> dict | None:
     return {"xs": xs, "ys": ys, "nx": len(xs), "ny": len(ys), "extent": extent}
 
 
-def _grid_image(snapshot: MeshSnapshot, values: np.ndarray, grid: dict, target_px: int) -> np.ndarray:
+def _grid_image(
+    snapshot: MeshSnapshot, values: np.ndarray, grid: dict, target_px: int
+) -> np.ndarray:
     centres = snapshot.points[:, :2][snapshot.cells].mean(axis=1)
     ix = np.searchsorted(grid["xs"], np.round(centres[:, 0], 9))
     iy = np.searchsorted(grid["ys"], np.round(centres[:, 1], 9))
@@ -272,8 +283,11 @@ def choose_mesh_linewidth(cell_count: int) -> float:
 # Figure construction
 # --------------------------------------------------------------------------- #
 def _new_figure(figsize, dpi):
-    """A figure rendered by Agg regardless of the active backend, outside
-    pyplot's manager so nothing auto-displays at the end of a notebook cell."""
+    """A figure rendered by Agg regardless of the active backend.
+
+    The figure stays outside pyplot's manager so nothing auto-displays at the end
+    of a notebook cell.
+    """
     from matplotlib.backends.backend_agg import FigureCanvasAgg
     from matplotlib.figure import Figure
 
@@ -282,7 +296,9 @@ def _new_figure(figsize, dpi):
     return figure
 
 
-def _projection(points: np.ndarray, slice_axis: str | None) -> tuple[tuple[int, int], int | None]:
+def _projection(
+    points: np.ndarray, slice_axis: str | None
+) -> tuple[tuple[int, int], int | None]:
     dimension = points.shape[1]
     if dimension < 3:
         return (0, 1), None
@@ -359,13 +375,17 @@ def render_field_figure(
         axes.margins(0)
         axes.autoscale_view()
         axes.set_aspect("equal", adjustable="box")
-        figure.colorbar(collection, cax=cbar_axes).set_label(field_label(field, component))
+        figure.colorbar(collection, cax=cbar_axes).set_label(
+            field_label(field, component)
+        )
 
     if labelled:
         axes.set_xlabel(AXIS_NAMES[keep_axes[0]])
         axes.set_ylabel(AXIS_NAMES[keep_axes[1]])
         axes.set_title(
-            title if title is not None else _default_title(field, component, snapshot.time)
+            title
+            if title is not None
+            else _default_title(field, component, snapshot.time)
         )
     else:
         axes.set_axis_off()
@@ -436,8 +456,14 @@ def render_slice_figure(
     axes = figure.add_axes([0.10, 0.10, 0.74, 0.82])
     interpolation = "nearest" if np.isnan(image).any() else "bicubic"
     artist = axes.imshow(
-        image, origin="lower", extent=extent, cmap=cmap, vmin=vmin, vmax=vmax,
-        aspect="equal", interpolation=interpolation,
+        image,
+        origin="lower",
+        extent=extent,
+        cmap=cmap,
+        vmin=vmin,
+        vmax=vmax,
+        aspect="equal",
+        interpolation=interpolation,
     )
     axes.set_xlabel(AXIS_NAMES[b0])
     axes.set_ylabel(AXIS_NAMES[b1])
@@ -467,26 +493,47 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--format", choices=IMAGE_FORMATS, default="png", help="Image format"
     )
-    parser.add_argument("--field", help="Field to render (default: first non-housekeeping)")
+    parser.add_argument(
+        "--field", help="Field to render (default: first non-housekeeping)"
+    )
     parser.add_argument("--component", type=int, help="Component of a vector field")
     parser.add_argument("--colormap", default="viridis", help="Matplotlib colormap")
     parser.add_argument("--vmin", type=float, help="Lower colour limit")
     parser.add_argument("--vmax", type=float, help="Upper colour limit")
-    parser.add_argument("--robust", action="store_true", help="Clip colours to the 2-98th percentile")
+    parser.add_argument(
+        "--robust", action="store_true", help="Clip colours to the 2-98th percentile"
+    )
     parser.add_argument("--dpi", type=int, default=300, help="DPI for raster outputs")
-    parser.add_argument("--no-edges", dest="show_edges", action="store_false", help="Hide mesh edges")
-    parser.add_argument("--slice-axis", choices=tuple(AXIS_TO_INDEX), help="Slice a 3D mesh along an axis")
-    parser.add_argument("--slice-position", type=float, help="Slice position along the slice axis")
-    parser.add_argument("--slice-width", type=float, default=0.0, help="Slice band width")
+    parser.add_argument(
+        "--no-edges", dest="show_edges", action="store_false", help="Hide mesh edges"
+    )
+    parser.add_argument(
+        "--slice-axis",
+        choices=tuple(AXIS_TO_INDEX),
+        help="Slice a 3D mesh along an axis",
+    )
+    parser.add_argument(
+        "--slice-position", type=float, help="Slice position along the slice axis"
+    )
+    parser.add_argument(
+        "--slice-width", type=float, default=0.0, help="Slice band width"
+    )
     parser.add_argument(
         "--frame", type=int, help="Render only this frame index (default: all frames)"
     )
     parser.add_argument(
-        "-j", "--jobs", type=int, nargs="?", const=default_jobs, default=1,
+        "-j",
+        "--jobs",
+        type=int,
+        nargs="?",
+        const=default_jobs,
+        default=1,
         help="Worker processes for multi-frame inputs (bare -j uses all cores)",
     )
     parser.add_argument(
-        "--animation", choices=("gif", "mp4"), help="Assemble PNG frames into an animation"
+        "--animation",
+        choices=("gif", "mp4"),
+        help="Assemble PNG frames into an animation",
     )
     return parser
 
@@ -556,7 +603,9 @@ def main(argv: list[str] | None = None) -> None:
             _render_and_save(source.load(index), index, options) for index in indices
         ]
 
-    print(f"Wrote {len(frame_paths)} image{'' if len(frame_paths) == 1 else 's'} to {output_dir}/")
+    print(
+        f"Wrote {len(frame_paths)} image{'' if len(frame_paths) == 1 else 's'} to {output_dir}/"
+    )
     if args.animation:
         stem = f"{source.name}-{field_token(field, args.component)}"
         target = _save_animation(frame_paths, output_dir, stem, args.animation)
@@ -580,11 +629,16 @@ def _render_and_save(snapshot: MeshSnapshot, index: int, options: dict) -> Path:
     )
     token = field_token(options["field"], options["component"])
     output_path = (
-        Path(options["output_dir"]) / f"{options['stem']}-{index:04d}-{token}.{options['image_format']}"
+        Path(options["output_dir"])
+        / f"{options['stem']}-{index:04d}-{token}.{options['image_format']}"
     )
     figure.savefig(output_path, dpi=options["dpi"])
     time = snapshot.time
-    time_note = "" if time is None or (isinstance(time, float) and math.isnan(time)) else f", t = {time:g}"
+    time_note = (
+        ""
+        if time is None or (isinstance(time, float) and math.isnan(time))
+        else f", t = {time:g}"
+    )
     total = options.get("total")
     position = f"{index + 1}/{total}" if total else f"{index + 1}"
     print(
@@ -640,19 +694,32 @@ def _prefetch_worker(task: tuple[SnapshotRef, int, dict]) -> tuple[int, bytes]:
 def _prefetch_slice_worker(task: tuple[SnapshotRef, int, dict]) -> tuple[int, bytes]:
     ref, index, options = task
     figure = render_slice_figure(
-        load_snapshot_ref(ref), options["field"], options["axis"], options["layer"],
-        cmap=options["cmap"], clim=options["clim"], title=options.get("title"),
-        figsize=options["figsize"], dpi=options["dpi"],
+        load_snapshot_ref(ref),
+        options["field"],
+        options["axis"],
+        options["layer"],
+        cmap=options["cmap"],
+        clim=options["clim"],
+        title=options.get("title"),
+        figsize=options["figsize"],
+        dpi=options["dpi"],
     )
     return index, _figure_to_png(figure)
 
 
 def _prefetch_into_cache(source, name, options, cache, indices, progress=None):
     tasks = [(source.refs[i], i, options) for i in indices if (name, i) not in cache]
-    _run_prefetch(tasks, _prefetch_worker, lambda i, png: cache.__setitem__((name, i), png), progress)
+    _run_prefetch(
+        tasks,
+        _prefetch_worker,
+        lambda i, png: cache.__setitem__((name, i), png),
+        progress,
+    )
 
 
-def _save_animation(frame_paths: list[Path], output_dir: Path, stem: str, kind: str, fps: int = 8) -> Path:
+def _save_animation(
+    frame_paths: list[Path], output_dir: Path, stem: str, kind: str, fps: int = 8
+) -> Path:
     import imageio.v2 as imageio
 
     frames = [imageio.imread(path) for path in frame_paths]
@@ -688,9 +755,15 @@ def render_solution_image(
     snapshot = source.snapshot(index % source.count)
     chosen = field if field in source.variables else default_field(source.variables)
     figure = render_field_figure(
-        snapshot, chosen, component=component, cmap=cmap, clim=clim,
-        show_edges=show_edges, labelled=labelled,
-        figsize=(width / 100.0, width / 130.0), dpi=130,
+        snapshot,
+        chosen,
+        component=component,
+        cmap=cmap,
+        clim=clim,
+        show_edges=show_edges,
+        labelled=labelled,
+        figsize=(width / 100.0, width / 130.0),
+        dpi=130,
     )
     return _figure_to_png(figure)
 
@@ -705,7 +778,9 @@ def plot_solution(source, field=None, **kwargs):
     return Image(data=png)
 
 
-def _global_clim(source: SolutionSource, field: str, component: int | None) -> tuple[float, float]:
+def _global_clim(
+    source: SolutionSource, field: str, component: int | None
+) -> tuple[float, float]:
     low, high = math.inf, -math.inf
     for index in range(source.count):
         values = cell_scalar(source.snapshot(index), field, component)
@@ -734,10 +809,11 @@ def show_solution(
     clim: tuple[float, float] | None = None,
     robust: bool = False,
 ):
-    """Interactive viewer with a time slider, a frame selector, play/stop and a
-    field selector. ``normalise="global"`` holds the colour scale fixed across
-    time; ``robust=True`` or ``clim=(lo, hi)`` tames outliers. Outside a
-    notebook the last frame is rendered and returned as PNG bytes.
+    """Interactive viewer with time, frame and field selectors plus play/stop.
+
+    ``normalise="global"`` holds the colour scale fixed across time;
+    ``robust=True`` or ``clim=(lo, hi)`` tames outliers. Outside a notebook the
+    last frame is rendered and returned as PNG bytes.
     """
     import asyncio
 
@@ -798,19 +874,36 @@ def show_solution(
     do_prefetch = source.count <= 400
 
     slider = widgets.IntSlider(
-        value=0, min=0, max=last, step=1, description="step", readout=False,
+        value=0,
+        min=0,
+        max=last,
+        step=1,
+        description="step",
+        readout=False,
         continuous_update=do_prefetch,
         layout=widgets.Layout(width=f"{max(200, width - 120)}px"),
     )
     frame_dropdown = widgets.Dropdown(
-        options=[(f"frame {i}  (t = {_format_time(times[i])})", i) for i in range(source.count)],
-        value=0, description="frame",
+        options=[
+            (f"frame {i}  (t = {_format_time(times[i])})", i)
+            for i in range(source.count)
+        ],
+        value=0,
+        description="frame",
     )
-    field_dropdown = widgets.Dropdown(options=variables, value=chosen, description="field")
-    play_button = widgets.Button(description="▶ Play", layout=widgets.Layout(width="80px"))
-    stop_button = widgets.Button(description="■ Stop", disabled=True, layout=widgets.Layout(width="80px"))
+    field_dropdown = widgets.Dropdown(
+        options=variables, value=chosen, description="field"
+    )
+    play_button = widgets.Button(
+        description="▶ Play", layout=widgets.Layout(width="80px")
+    )
+    stop_button = widgets.Button(
+        description="■ Stop", disabled=True, layout=widgets.Layout(width="80px")
+    )
     status = widgets.HTML()
-    image = widgets.Image(format="png", layout=widgets.Layout(width=f"{width}px", height="auto"))
+    image = widgets.Image(
+        format="png", layout=widgets.Layout(width=f"{width}px", height="auto")
+    )
     state = {"syncing": False, "playing": False}
     prefetched: set[str] = set()
 
@@ -836,9 +929,14 @@ def show_solution(
         status.value = f"<i>Prefetching {len(pending)} frames of <b>{name}</b> …</i>"
         try:
             _prefetch_into_cache(
-                source, name, options_for(name), cache, pending,
+                source,
+                name,
+                options_for(name),
+                cache,
+                pending,
                 progress=lambda done, total: setattr(
-                    status, "value",
+                    status,
+                    "value",
                     f"<i>Prefetching <b>{name}</b>: {done}/{total} frames (parallel) …</i>",
                 ),
             )
@@ -896,7 +994,9 @@ def show_solution(
             asyncio.ensure_future(play_loop())
 
     def on_field(change):
-        prefetch(change["new"])  # warm the newly selected field, then jump to its first frame
+        prefetch(
+            change["new"]
+        )  # warm the newly selected field, then jump to its first frame
         goto(0)
 
     slider.observe(lambda change: goto(change["new"]), names="value")
@@ -905,13 +1005,17 @@ def show_solution(
     play_button.on_click(on_play)
     stop_button.on_click(lambda _: state.update(playing=False))
 
-    display(widgets.VBox([
-        field_dropdown,
-        widgets.HBox([play_button, stop_button, slider, frame_dropdown]),
-        status,
-        image,
-    ]))
-    show(0, chosen)      # first frame immediately, then warm the rest in the background
+    display(
+        widgets.VBox(
+            [
+                field_dropdown,
+                widgets.HBox([play_button, stop_button, slider, frame_dropdown]),
+                status,
+                image,
+            ]
+        )
+    )
+    show(0, chosen)  # first frame immediately, then warm the rest in the background
     prefetch(chosen)
     return None
 
@@ -930,10 +1034,12 @@ def show_solution_3d(
     play_interval: int = 200,
     normalise: str = "frame",
 ):
-    """Interactive slice viewer for a 3D solution: pick the slice axis (x/y/z),
-    move the slice slider through the cube, pick a field and animate over time.
-    Outside a notebook the mid-plane slice of the last frame is returned as PNG
-    bytes."""
+    """Interactive slice viewer for a 3D solution.
+
+    Pick the slice axis (x/y/z), move the slice slider through the cube, pick a
+    field and animate over time. Outside a notebook the mid-plane slice of the
+    last frame is returned as PNG bytes.
+    """
     import asyncio
 
     source = _as_source(solver_name, directory)
@@ -960,10 +1066,19 @@ def show_solution_3d(
             snapshot = source.snapshot(index)
             layers = slice_layers(snapshot, slice_axis)
             position = layers[int(np.clip(layer, 0, len(layers) - 1))]
-            title = f"{slice_axis} = {position:.3g}   (t = {_format_time(times[index])})"
+            title = (
+                f"{slice_axis} = {position:.3g}   (t = {_format_time(times[index])})"
+            )
             figure = render_slice_figure(
-                snapshot, name, slice_axis, layer, cmap=cmap, clim=clim_for(name),
-                title=title, figsize=(width / 110.0, width / 150.0), dpi=130,
+                snapshot,
+                name,
+                slice_axis,
+                layer,
+                cmap=cmap,
+                clim=clim_for(name),
+                title=title,
+                figsize=(width / 110.0, width / 150.0),
+                dpi=130,
             )
             cache[key] = _figure_to_png(figure)
         return cache[key]
@@ -976,32 +1091,59 @@ def show_solution_3d(
         return render(chosen, axis, len(layers) // 2, last)
 
     layers = slice_layers(base, axis)
-    field_dropdown = widgets.Dropdown(options=variables, value=chosen, description="field")
-    axis_dropdown = widgets.Dropdown(options=list(AXIS_TO_INDEX), value=axis, description="slice ⊥")
+    field_dropdown = widgets.Dropdown(
+        options=variables, value=chosen, description="field"
+    )
+    axis_dropdown = widgets.Dropdown(
+        options=list(AXIS_TO_INDEX), value=axis, description="slice ⊥"
+    )
     slice_slider = widgets.IntSlider(
-        value=len(layers) // 2, min=0, max=len(layers) - 1, step=1,
-        description="slice", continuous_update=False,
+        value=len(layers) // 2,
+        min=0,
+        max=len(layers) - 1,
+        step=1,
+        description="slice",
+        continuous_update=False,
     )
     time_slider = widgets.IntSlider(
-        value=0, min=0, max=last, step=1, description="time", readout=False,
+        value=0,
+        min=0,
+        max=last,
+        step=1,
+        description="time",
+        readout=False,
         layout=widgets.Layout(width=f"{max(200, width - 120)}px"),
     )
-    play_button = widgets.Button(description="▶ Play", layout=widgets.Layout(width="80px"))
-    stop_button = widgets.Button(description="■ Stop", disabled=True, layout=widgets.Layout(width="80px"))
+    play_button = widgets.Button(
+        description="▶ Play", layout=widgets.Layout(width="80px")
+    )
+    stop_button = widgets.Button(
+        description="■ Stop", disabled=True, layout=widgets.Layout(width="80px")
+    )
     status = widgets.HTML()
-    image = widgets.Image(format="png", layout=widgets.Layout(width=f"{width}px", height="auto"))
+    image = widgets.Image(
+        format="png", layout=widgets.Layout(width=f"{width}px", height="auto")
+    )
     state = {"playing": False}
     prefetched: set = set()  # (field, axis, layer) already warmed across time
 
     def set_busy(busy: bool):
-        for control in (field_dropdown, axis_dropdown, slice_slider, time_slider, play_button):
+        for control in (
+            field_dropdown,
+            axis_dropdown,
+            slice_slider,
+            time_slider,
+            play_button,
+        ):
             control.disabled = busy
         image.layout.opacity = "0.5" if busy else "1"
 
     def draw():
         layers_now = slice_layers(base, axis_dropdown.value)
         layer = int(np.clip(slice_slider.value, 0, len(layers_now) - 1))
-        image.value = render(field_dropdown.value, axis_dropdown.value, layer, time_slider.value)
+        image.value = render(
+            field_dropdown.value, axis_dropdown.value, layer, time_slider.value
+        )
         status.value = (
             f"frame <b>{time_slider.value}</b> / {last} &nbsp;&bull;&nbsp; "
             f"t = {_format_time(times[time_slider.value])} &nbsp;&bull;&nbsp; "
@@ -1017,27 +1159,42 @@ def show_solution_3d(
         layer = int(np.clip(slice_slider.value, 0, len(layers_now) - 1))
         if (name, slice_axis, layer) in prefetched:
             return
-        pending = [i for i in range(source.count) if (name, slice_axis, layer, i) not in cache]
+        pending = [
+            i for i in range(source.count) if (name, slice_axis, layer, i) not in cache
+        ]
         if not pending:
             prefetched.add((name, slice_axis, layer))
             return
         position = layers_now[layer]
         options = {
-            "field": name, "axis": slice_axis, "layer": layer, "cmap": cmap,
-            "clim": clim_for(name), "figsize": (width / 110.0, width / 150.0), "dpi": 130,
+            "field": name,
+            "axis": slice_axis,
+            "layer": layer,
+            "cmap": cmap,
+            "clim": clim_for(name),
+            "figsize": (width / 110.0, width / 150.0),
+            "dpi": 130,
         }
         tasks = [
-            (source.refs[i], i,
-             {**options, "title": f"{slice_axis} = {position:.3g}   (t = {_format_time(times[i])})"})
+            (
+                source.refs[i],
+                i,
+                {
+                    **options,
+                    "title": f"{slice_axis} = {position:.3g}   (t = {_format_time(times[i])})",
+                },
+            )
             for i in pending
         ]
         set_busy(True)
         try:
             _run_prefetch(
-                tasks, _prefetch_slice_worker,
+                tasks,
+                _prefetch_slice_worker,
                 lambda i, png: cache.__setitem__((name, slice_axis, layer, i), png),
                 progress=lambda done, total: setattr(
-                    status, "value",
+                    status,
+                    "value",
                     f"<i>Prefetching <b>{name}</b> ({slice_axis} = {position:.3g}): "
                     f"{done}/{total} frames (parallel) …</i>",
                 ),
@@ -1078,19 +1235,29 @@ def show_solution_3d(
         except RuntimeError:
             asyncio.ensure_future(play_loop())
 
-    time_slider.observe(lambda change: None if state["playing"] else draw(), names="value")
-    slice_slider.observe(lambda change: None if state["playing"] else refresh(), names="value")
-    field_dropdown.observe(lambda change: None if state["playing"] else refresh(), names="value")
+    time_slider.observe(
+        lambda change: None if state["playing"] else draw(), names="value"
+    )
+    slice_slider.observe(
+        lambda change: None if state["playing"] else refresh(), names="value"
+    )
+    field_dropdown.observe(
+        lambda change: None if state["playing"] else refresh(), names="value"
+    )
     axis_dropdown.observe(on_axis, names="value")
     play_button.on_click(on_play)
     stop_button.on_click(lambda _: state.update(playing=False))
 
-    display(widgets.VBox([
-        widgets.HBox([field_dropdown, axis_dropdown, slice_slider]),
-        widgets.HBox([play_button, stop_button, time_slider]),
-        status,
-        image,
-    ]))
+    display(
+        widgets.VBox(
+            [
+                widgets.HBox([field_dropdown, axis_dropdown, slice_slider]),
+                widgets.HBox([play_button, stop_button, time_slider]),
+                status,
+                image,
+            ]
+        )
+    )
     refresh()
     return None
 

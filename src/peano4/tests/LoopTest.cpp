@@ -24,6 +24,10 @@ void peano4::tests::LoopTest::run() {
   testMethod([this]() { testGenericZForEachMatchesZForEach3(); });
 }
 
+/**
+ * dForEach(max, body) has to visit every point of [0,max)^d exactly once, with
+ * the 0th component running fastest, i.e. in dLinearised order.
+ */
 void peano4::tests::LoopTest::testDForEachVisitsAllPointsInLinearOrder() {
   for (int max = 1; max <= 5; max++) {
     int expected = 0;
@@ -42,9 +46,13 @@ void peano4::tests::LoopTest::testDForEachVisitsAllPointsInLinearOrder() {
   }
 }
 
+/**
+ * dForEach(maxVector, body) with individual per-axis ranges, including a
+ * degenerate axis of extent one, has to enumerate the full box exactly once.
+ */
 void peano4::tests::LoopTest::testDForEachWithPerAxisRange() {
   // distinct per-axis extents, and one degenerate axis of extent 1 in every
-  // position (this is what the blockstructured face loops do).
+  // position, which is how a caller enumerates a face.
   for (int flatDimension = -1; flatDimension < DIMENSIONS; flatDimension++) {
     tarch::la::Vector<DIMENSIONS, int> range;
     long                               total = 1;
@@ -67,6 +75,11 @@ void peano4::tests::LoopTest::testDForEachWithPerAxisRange() {
   }
 }
 
+/**
+ * The scalar dIncrement(counter,int) and the vector dIncrement(counter,Vector)
+ * implement the same operation and must agree for every counter, canonical or
+ * not.
+ */
 void peano4::tests::LoopTest::testDIncrementOverloadConsistency() {
   // The scalar dIncrement(counter,int) and the per-axis dIncrement(counter,Vector) are the
   // same operation, so they must agree for every counter - also for
@@ -101,6 +114,12 @@ void peano4::tests::LoopTest::testDIncrementOverloadConsistency() {
   }
 }
 
+/**
+ * dStartVector seeds a d-dimensional loop: the plain overload is the zero
+ * vector, dStartVector(dim,value) is zero except for the given dimension, and
+ * dStartVector(max,direction) seeds the oscillating z-loop with 0 where the
+ * direction bit is set and max-1 where it is not.
+ */
 void peano4::tests::LoopTest::testDStartVector() {
   const auto zero = peano4::dStartVector();
   for (int d = 0; d < DIMENSIONS; d++) {
@@ -127,6 +146,11 @@ void peano4::tests::LoopTest::testDStartVector() {
   }
 }
 
+/**
+ * dIncrement(counter,max,doNotExamine) is the increment behind
+ * dForEachExclusive: it leaves the doNotExamine axis untouched and walks the
+ * remaining axes over [0,max), terminating by pushing one free axis to max.
+ */
 void peano4::tests::LoopTest::testDIncrementExclusive() {
   const int max = 3;
   for (int doNotExamine = 0; doNotExamine < DIMENSIONS; doNotExamine++) {
@@ -149,6 +173,9 @@ void peano4::tests::LoopTest::testDIncrementExclusive() {
   }
 }
 
+/**
+ * dLinearised(counter,max) maps a counter to sum_d counter(d)*max^d.
+ */
 void peano4::tests::LoopTest::testDLinearised() {
   const int max = 4;
   peano4::dForEach(max, [&](const tarch::la::Vector<DIMENSIONS, int>& k) {
@@ -162,11 +189,17 @@ void peano4::tests::LoopTest::testDLinearised() {
   });
 }
 
+/**
+ * dForEachExclusive(max, fixedDim, value, body) keeps the fixed dimension at
+ * its start value and visits every combination of the remaining dimensions
+ * exactly once.
+ */
 void peano4::tests::LoopTest::testDForEachExclusiveKeepsFixedDimensionAndIsComplete() {
   for (int fixedDimension = 0; fixedDimension < DIMENSIONS; fixedDimension++) {
     for (int max = 2; max <= 4; max++) {
       // The pinned dimension must keep its start value for every value in
-      // [0,max), not only 0: the blockstructured face loops pin it to the side.
+      // [0,max). A caller enumerating a face pins it to the side, so a
+      // non-zero value has to work.
       for (int value = 0; value < max; value++) {
         std::set<int> visited;
         peano4::dForEachExclusive(max, fixedDimension, value, [&](const tarch::la::Vector<DIMENSIONS, int>& k) {
@@ -187,6 +220,10 @@ void peano4::tests::LoopTest::testDForEachExclusiveKeepsFixedDimensionAndIsCompl
   }
 }
 
+/**
+ * dCompare returns true if every component is within range, for both the
+ * scalar and the per-axis overload.
+ */
 void peano4::tests::LoopTest::testDCompare() {
   const int                          max = 3;
   tarch::la::Vector<DIMENSIONS, int> inRange(0);
@@ -208,6 +245,11 @@ void peano4::tests::LoopTest::testDCompare() {
   validate(not peano4::dCompare(onBoxBoundary, range));
 }
 
+/**
+ * dCompareExclusive returns true if every component except the ignored
+ * dimension is within range; the ignored component must not be consulted. This
+ * is the comparison behind the exclusive dForEachExclusive loop.
+ */
 void peano4::tests::LoopTest::testDCompareExclusive() {
   const int max = 3;
   for (int ignoredDimension = 0; ignoredDimension < DIMENSIONS; ignoredDimension++) {
@@ -228,6 +270,10 @@ void peano4::tests::LoopTest::testDCompareExclusive() {
   }
 }
 
+/**
+ * dForEachCorner enumerates the 2^d cube corners exactly once and its scalar
+ * argument equals dLinearised(corner,2).
+ */
 void peano4::tests::LoopTest::testDForEachCornerEnumeratesCornersInLinearisedOrder() {
   std::set<int> visited;
   int           count = 0;
@@ -243,6 +289,9 @@ void peano4::tests::LoopTest::testDForEachCornerEnumeratesCornersInLinearisedOrd
   validateEquals(static_cast<int>(visited.size()), TWO_POWER_D);
 }
 
+/**
+ * dForEachStencil enumerates the 3^d stencil exactly once in dLinearised order.
+ */
 void peano4::tests::LoopTest::testDForEachStencilEnumeratesStencil() {
   int expected = 0;
   peano4::dForEachStencil([&](const tarch::la::Vector<DIMENSIONS, int>& k, int) {
@@ -255,6 +304,10 @@ void peano4::tests::LoopTest::testDForEachStencilEnumeratesStencil() {
   validateEquals(expected, THREE_POWER_D);
 }
 
+/**
+ * zForEach3 is a space-filling (Peano) loop and therefore has to visit every
+ * cell of [0,3)^d exactly once for every initial direction.
+ */
 void peano4::tests::LoopTest::testZForEach3IsAHamiltonianPath() {
   for (int initialDirection = 0; initialDirection < TWO_POWER_D; initialDirection++) {
     std::set<int>                      visited;
@@ -286,6 +339,11 @@ void peano4::tests::LoopTest::testZForEach3IsAHamiltonianPath() {
   }
 }
 
+/**
+ * The generic zForEach (and the dIncrement(...,LoopDirection&) behind it) has
+ * to be a Hamiltonian path over [0,max)^d for every initial direction and
+ * arbitrary max.
+ */
 void peano4::tests::LoopTest::testGenericZForEachIsAHamiltonianPath() {
   for (int max = 2; max <= 5; max++) {
     for (int initialDirection = 0; initialDirection < TWO_POWER_D; initialDirection++) {
@@ -323,6 +381,10 @@ void peano4::tests::LoopTest::testGenericZForEachIsAHamiltonianPath() {
   }
 }
 
+/**
+ * For max=3 the generic zForEach must reproduce the table-driven zForEach3
+ * cell for cell.
+ */
 void peano4::tests::LoopTest::testGenericZForEachMatchesZForEach3() {
   const int max = 3;
   for (int initialDirection = 0; initialDirection < TWO_POWER_D; initialDirection++) {

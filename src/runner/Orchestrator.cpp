@@ -6,6 +6,7 @@
 #include "runner/ReportBox.h"
 #include "runner/TextLayout.h"
 #include "runner/phases/Configuration.h"
+#include "runner/phases/DynamicAMR.h"
 #include "runner/phases/FinalSummary.h"
 #include "runner/phases/GridConstruction.h"
 #include "runner/phases/GridInitialisation.h"
@@ -23,6 +24,8 @@ runner::Orchestrator::Orchestrator(const std::vector<Step>& steps) {
       _plotStep = step.programStep;
     } else if (step.name == StepName::TimeStep) {
       _timeStepStep = step.programStep;
+    } else if (step.name == StepName::DynamicAMR) {
+      _dynamicAMRStep = step.programStep;
     }
   }
 }
@@ -30,8 +33,9 @@ runner::Orchestrator::Orchestrator(const std::vector<Step>& steps) {
 bool runner::Orchestrator::run(PhaseContext& context) {
   Configuration      configuration(context);
   GridConstruction   gridConstruction(context, _createGridStep, _loadBalancingStep);
-  GridInitialisation gridInitialisation(context, _initGridStep);
-  TimeLoop           timeLoop(context, _timeStepStep, _plotStep);
+  DynamicAMR         dynamicAMR(context, _dynamicAMRStep);
+  GridInitialisation gridInitialisation(context, _initGridStep, dynamicAMR);
+  TimeLoop           timeLoop(context, _timeStepStep, _plotStep, dynamicAMR);
 
   std::vector<Phase*> phases;
   phases.push_back(&configuration);

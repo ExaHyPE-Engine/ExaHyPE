@@ -10,7 +10,7 @@
 
 #include "tarch/accelerator/accelerator.h"
 
-{% import 'Gemms.template.h' as m with context %}{# get template macros #}
+{% import 'Gemms.template.h' as m with context %}{# Get template macros #}
 
 void {{FULL_QUALIFIED_NAMESPACE}}::projectOnFVLimiterSpaceWithHalo(
   const {{REGULAR_SOLVER_STORAGE_PRECISION}}* const luh,
@@ -61,13 +61,13 @@ void {{FULL_QUALIFIED_NAMESPACE}}::projectOnFVLimiterSpaceWithHalo(
   // Space out for ghost layer (in place)
   for (int z = {{NUMBER_OF_DOF_LIMITER_3D-1}}; z >= 0; z--) {
     for (int y = {{NUMBER_OF_DOF_LIMITER-1}}; y >= 0; y--) {
-       // No overlap since we have ghost layers at the beginning
+      // No overlap since we have ghost layers at the beginning
       std::copy_n(
         lim + (z * {{NUMBER_OF_DOF_LIMITER}} + y) * {{NUMBER_OF_DOF_LIMITER*NUMBER_OF_DATA}},
         {{NUMBER_OF_DATA*NUMBER_OF_DOF_LIMITER}},
         lim + (((z + {{GHOST_LAYER_WIDTH_3D}}) * {{NUMBER_OF_DOF_LIMITER+2*GHOST_LAYER_WIDTH}} + y + {{GHOST_LAYER_WIDTH}}) * {{NUMBER_OF_DOF_LIMITER + 2 * GHOST_LAYER_WIDTH}} + {{GHOST_LAYER_WIDTH}}) * {{NUMBER_OF_DATA}}
       );
-      // Delete the memory block that was moved to ensure ghost layers are set at 0.
+      // Zero the block that has just been copied, so the ghost layers hold zeros.
       std::memset(
         lim + (z * {{NUMBER_OF_DOF_LIMITER}} + y) * {{NUMBER_OF_DOF_LIMITER * NUMBER_OF_DATA}},
         0,
@@ -133,7 +133,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::projectOnDGSpaceFromFVWithHalo(
   {{COMPUTE_PRECISION}}* tmpX = tarch::allocateMemory<{{COMPUTE_PRECISION}}>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_LIMITER}} * {{NUMBER_OF_DOF_LIMITER_3D}} * {{NUMBER_OF_DATA_PADDED}}, tarch::MemoryLocation::Heap);
   for (int z = 0; z < {{NUMBER_OF_DOF_LIMITER_3D}}; z++) {
     for (int y = 0; y < {{NUMBER_OF_DOF_LIMITER}}; y++) {
-      // Version with ghost layers
       {{ m.gemm('fv2dg_x', 'lim', 'Quadrature<{{COMPUTE_PRECISION}}>::fv2dg', 'tmpX',
         '((z+'~GHOST_LAYER_WIDTH_3D~')*'~(NUMBER_OF_DOF_LIMITER+2*GHOST_LAYER_WIDTH)~'+y+'~GHOST_LAYER_WIDTH~')*'~(NUMBER_OF_DOF_LIMITER+2*GHOST_LAYER_WIDTH)*NUMBER_OF_DATA~'+'~GHOST_LAYER_WIDTH*NUMBER_OF_DATA,
         '0',
@@ -171,19 +170,17 @@ void {{FULL_QUALIFIED_NAMESPACE}}::projectOnDGSpaceFromFVWithHalo(
     'yx*'~NUMBER_OF_DATA) | indent(4) }}{##}
   }
   tarch::freeMemory(tmpY, tarch::MemoryLocation::Heap);
-{% endif %}{# DIMENSIONS ==2 #}
+{% endif %}{# DIMENSIONS==2 #}
 }
 
 void {{FULL_QUALIFIED_NAMESPACE}}::projectOnDGSpaceFromFVWithoutHalo(
   const {{LIMITER_SOLVER_STORAGE_PRECISION}}* const lim,
   {{REGULAR_SOLVER_STORAGE_PRECISION}}* const       luh
 ) {
-  // Ignore and remove ghost layers
   // x
   {{COMPUTE_PRECISION}}* tmpX = tarch::allocateMemory<{{COMPUTE_PRECISION}}>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_LIMITER}} * {{NUMBER_OF_DOF_LIMITER_3D}} * {{NUMBER_OF_DATA_PADDED}}, tarch::MemoryLocation::Heap);
   for (int z = 0; z < {{NUMBER_OF_DOF_LIMITER_3D}}; z++) {
     for (int y = 0; y < {{NUMBER_OF_DOF_LIMITER}}; y++) {
-      // Version without ghost layers
       {{ m.gemm('fv2dg_x', 'lim', 'Quadrature<{{COMPUTE_PRECISION}}>::fv2dg', 'tmpX',
         '(z*'~NUMBER_OF_DOF_LIMITER~'+y)*'~(NUMBER_OF_DOF_LIMITER)*NUMBER_OF_DATA,
         '0',
@@ -205,7 +202,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::projectOnDGSpaceFromFVWithoutHalo(
   {{COMPUTE_PRECISION}}* tmpY = tarch::allocateMemory<{{COMPUTE_PRECISION}}>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_LIMITER}} * {{NUMBER_OF_DATA_PADDED}}, tarch::MemoryLocation::Heap);
   for (int z = 0; z < {{NUMBER_OF_DOF_LIMITER}}; z++) {
     for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
-      // will overwrite tmpY, no need to set to 0
+      // The multiplication overwrites tmpY, so it needs no zero initialisation.
       {{ m.gemm('fv2dg_y', 'tmpX', 'Quadrature<{{COMPUTE_PRECISION}}>::fv2dg', 'tmpY',
         '(z*'~NUMBER_OF_DOF_LIMITER*NUMBER_OF_DOF~'+x)*'~NUMBER_OF_DATA_PADDED,
         '0',
@@ -216,7 +213,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::projectOnDGSpaceFromFVWithoutHalo(
 
   // z
   for (int yx = 0; yx < {{NUMBER_OF_DOF*NUMBER_OF_DOF}}; yx++) {
-    {{ m.matmul('fv2dg_z', 'tmpY', 'Quadrature<{{COMPUTE_PRECISION}}>::fv2dg', 'luh',
+    {{ m.gemm('fv2dg_z', 'tmpY', 'Quadrature<{{COMPUTE_PRECISION}}>::fv2dg', 'luh',
       'yx*'~NUMBER_OF_DATA_PADDED,
       '0',
       'yx*'~NUMBER_OF_DATA) | indent(4) }}{##}
@@ -257,8 +254,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::projectOnFVSpaceWithoutHaloFromFVWithHalo(
 
 #include "peano4/Loop.h"
 
-// For a given DG cell, this checks whether the solver function "isPhysicallyAdmissible"
-// returns false at any of the nodes of that DG cell.
+// Checks whether the solver classifies every node of the DG cell as physically admissible.
 bool {{FULL_QUALIFIED_NAMESPACE}}::isPhysicallyAdmissible(
   {{FULL_QUALIFIED_SOLVER_NAME}}&                   solver,
   const {{REGULAR_SOLVER_STORAGE_PRECISION}}* const luh,
@@ -278,7 +274,7 @@ bool {{FULL_QUALIFIED_NAMESPACE}}::isPhysicallyAdmissible(
     relativeNodePosition(2) = Quadrature<{{COMPUTE_PRECISION}}>::nodes[index(2)];
     #endif
 
-    result &= solver.isPhysicallyAdmissible(
+    result = result and solver.isPhysicallyAdmissible(
       luh + linearisedIndex,
       tarch::la::multiplyComponents(relativeNodePosition, cellSize) + bottomLeftPosition,
       cellSize,
@@ -338,16 +334,16 @@ bool {{FULL_QUALIFIED_NAMESPACE}}::discreteMaximumPrincipleAndMinAndMaxSearch(
       discreteMaximumPrincipleSatisfied = false;
     }
 
-    // Check for nans and infinity values
-    discreteMaximumPrincipleSatisfied &= std::isfinite(localMinPerObservable[v]) and
-                                         std::isfinite(localMaxPerObservable[v]);
+    // Check for NaN and infinity values
+    discreteMaximumPrincipleSatisfied = discreteMaximumPrincipleSatisfied and
+                                        std::isfinite(localMinPerObservable[v]) and
+                                        std::isfinite(localMaxPerObservable[v]);
 
-    // We have the new min and max directly available now and
-    // overwrite the block for face 0 with it.
+    // The block for face 0 carries the cell-local minimum and maximum.
     boundaryMinPerObservable[v] = localMinPerObservable[v];
     boundaryMaxPerObservable[v] = localMaxPerObservable[v];
 
-    // In the block for face 1, we write the boundary min and max.
+    // The block for face 1 carries the boundary minimum and maximum.
     boundaryMinPerObservable[v + {{NUMBER_OF_OBSERVABLES}}] = boundaryMin;
     boundaryMaxPerObservable[v + {{NUMBER_OF_OBSERVABLES}}] = boundaryMax;
   }
@@ -366,7 +362,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::findCellLocalLimiterMinAndMax(
 
   {{COMPUTE_PRECISION}} observables[{{NUMBER_OF_OBSERVABLES}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
 
-  for (int z = {{GHOST_LAYER_WIDTH_3D}}; z < {{NUMBER_OF_DOF_LIMITER_3D+GHOST_LAYER_WIDTH_3D}}; z++) { // Skip the last element
+  for (int z = {{GHOST_LAYER_WIDTH_3D}}; z < {{NUMBER_OF_DOF_LIMITER_3D+GHOST_LAYER_WIDTH_3D}}; z++) { // Skip the ghost layers
     for (int y = {{GHOST_LAYER_WIDTH}}; y < {{NUMBER_OF_DOF_LIMITER+GHOST_LAYER_WIDTH}}; y++) {
       for (int x = {{GHOST_LAYER_WIDTH}}; x < {{NUMBER_OF_DOF_LIMITER+GHOST_LAYER_WIDTH}}; x++) {
         solver.mapDiscreteMaximumPrincipleObservables(
@@ -407,10 +403,10 @@ void {{FULL_QUALIFIED_NAMESPACE}}::findCellLocalMinAndMax(
   }
 
   compareWithADERDGSolutionAtGaussLobattoNodes(solver, luh, localMinPerObservable, localMaxPerObservable);
-  compareWithADERDGSolutionAtFVSubcellCenters (solver, luh, localMinPerObservable, localMaxPerObservable);
+  compareWithADERDGSolutionAtFVSubcellCentres(solver, luh, localMinPerObservable, localMaxPerObservable);
 }
 
-// Project to GaussLobatto and modify the min/max if required
+// Project onto the Gauss-Lobatto nodes and update the minimum and maximum if required
 void {{FULL_QUALIFIED_NAMESPACE}}::compareWithADERDGSolutionAtGaussLobattoNodes(
   {{FULL_QUALIFIED_SOLVER_NAME}}&                   solver,
   const {{REGULAR_SOLVER_STORAGE_PRECISION}}* const luh,
@@ -449,7 +445,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::compareWithADERDGSolutionAtGaussLobattoNodes(
   tarch::freeMemory(lob, tarch::MemoryLocation::Heap);
 {% else %}
   // y
-  {COMPUTE_PRECISION}}* tmpY = tarch::allocateMemory<{{COMPUTE_PRECISION}}>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DATA_PADDED}}, tarch::MemoryLocation::Heap);
+  {{COMPUTE_PRECISION}}* tmpY = tarch::allocateMemory<{{COMPUTE_PRECISION}}>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DATA_PADDED}}, tarch::MemoryLocation::Heap);
   for (int z = 0; z < {{NUMBER_OF_DOF}}; z++) {
     for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
       {{ m.gemm('uh2lob_y', 'tmpX', '{{FULL_QUALIFIED_NAMESPACE}}::Quadrature<{{COMPUTE_PRECISION}}>::uh2lob', 'tmpY',
@@ -462,10 +458,10 @@ void {{FULL_QUALIFIED_NAMESPACE}}::compareWithADERDGSolutionAtGaussLobattoNodes(
 
   // z
   {{COMPUTE_PRECISION}} observables[{{NUMBER_OF_OBSERVABLES}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
-  // // Constant x,y slice of projected solution
+  // Constant x,y slice of projected solution
   {{COMPUTE_PRECISION}}* lob = tarch::allocateMemory<{{COMPUTE_PRECISION}}>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DATA_PADDED}}, tarch::MemoryLocation::Heap);
   for (int yx = 0; yx < {{NUMBER_OF_DOF}}; yx++) {
-    {{ m.matmul('uh2lob_z_slice', 'tmpY', '{{FULL_QUALIFIED_NAMESPACE}}::Quadrature<{{COMPUTE_PRECISION}}>::uh2lob', 'lob',
+    {{ m.gemm('uh2lob_z_slice', 'tmpY', '{{FULL_QUALIFIED_NAMESPACE}}::Quadrature<{{COMPUTE_PRECISION}}>::uh2lob', 'lob',
       'yx*'~NUMBER_OF_DATA_PADDED,
       '0',
       '0') | indent(4) }}{##}
@@ -482,8 +478,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::compareWithADERDGSolutionAtGaussLobattoNodes(
 {% endif %}{# DIMENSIONS==2 #}
 }
 
-// Project onto FV subcell nodes and modify the min/max if required
-void {{FULL_QUALIFIED_NAMESPACE}}::compareWithADERDGSolutionAtFVSubcellCenters(
+// Project onto the FV subcell nodes and update the minimum and maximum if required
+void {{FULL_QUALIFIED_NAMESPACE}}::compareWithADERDGSolutionAtFVSubcellCentres(
   {{FULL_QUALIFIED_SOLVER_NAME}}&                   solver,
   const {{REGULAR_SOLVER_STORAGE_PRECISION}}* const luh,
   {{COMPUTE_PRECISION}}*                            min,
