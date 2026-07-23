@@ -62,10 +62,10 @@ init = """
   double volumePercentage = 1.0;
 
   constexpr int nI = 50; // NumberOfIntegrationMeasurementPoints
-  const double hI = h[0] / nI;
+  const double hI = 1. / nI;
 
   for(int i=0; i<nI; i++){
-    double xI = x[0] + i * hI;
+    double xI = x[0] + h[0] * i * hI;
     double yI = 5.0 * t * c * (
       0.2969 * sqrt ( xI / c )
       + ((((
@@ -127,22 +127,22 @@ eigenvalues = """
 
   const double c = std::sqrt(Gamma * p * irho);
   const double u = Q[normal + 1] * irho;
+
+  return std::fmax(std::fabs(u - c), std::fabs(u + c));
 """
 
 aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     name="ADERDGSolver",
     order=order,
     time_step_relaxation=0.5,
-    unknowns=4,
-    auxiliary_variables=1,
+    unknowns={"rho": 1, "v": 2, "E": 1},
+    auxiliary_variables={"alpha": 1}
 )
 aderdg_solver.set_implementation(
     initial_conditions=init,
     boundary_conditions=boundaryCondition,
     flux=flux,
     max_eigenvalue=eigenvalues
-    + """
-    return std::fmax(std::fabs(u - c), std::fabs(u + c));""",
 )
 aderdg_solver.add_kernel_optimisations(
     polynomials=exahype2.solvers.aderdg.ADERDG.Polynomials.Gauss_Lobatto
@@ -153,40 +153,28 @@ fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     name="FVSolver",
     patch_size=2 * order + 1,
     time_step_relaxation=0.5,
-    unknowns=4,
-    auxiliary_variables=1,
+    unknowns={"rho": 1, "v": 2, "E": 1},
+    auxiliary_variables={"alpha": 1},
 )
 fv_solver.set_implementation(
     flux=flux,
     boundary_conditions=boundaryCondition,
     initial_conditions=init,
     riemann_solver="""
-    double LL[4];
-    double LR[4];
     auto eigenvalues = [](
       const double* const                           Q,
       const tarch::la::Vector<DIMENSIONS, double>&  x,
       const tarch::la::Vector<DIMENSIONS, double>&  h,
       double                                        t,
       double                                        dt,
-      int                                           normal,
-      double* const                                 L
-    ) -> void {
-      const double irho = 1.0 / Q[0];
-      constexpr double Gamma = 1.4;
-      const double p = (Gamma - 1) * (Q[3] - 0.5 * irho * (Q[1]*Q[1]+Q[2]*Q[2]));
-
-      const double c = std::sqrt(Gamma * p * irho);
-      const double u = Q[normal + 1] * irho;
-
-      L[0] =  u - c;
-      L[1] = -u + c;
-      L[2] =  u + c;
-      L[3] = -u + c;
+      int                                           normal
+    ) -> double {""" + eigenvalues +"""
     };
-    eigenvalues(QL, x, h, t, dt, normal, LL);
-    eigenvalues(QR, x, h, t, dt, normal, LR);
-    const double sMax = std::max(*std::max_element(LL, LL + 4), *std::max_element(LR, LR + 4));
+
+    const double sMax = std::max(
+      eigenvalues(QL, x, h, t, dt, normal),
+      eigenvalues(QR, x, h, t, dt, normal)
+    );
 
     double fluxLeft[4];
     double fluxRight[4];
@@ -196,21 +184,20 @@ fv_solver.set_implementation(
     const double vL = QL[4];
     const double vR = QR[4];
 
-    /*
-      Assuming anything that can't get into the other is reflected back to me.
-      own + what's reflected from what I send + what was sent to me and not reflected
-        Rl = vl*Fl + vl*Fl*(1-vr) + vr*Fr*vl
-        Rr = vr*Fr + vr*Fr*(1-vl) + vl*Fl*vr
-    */
+  /*
+    Assuming anything that can't get into the other is reflected back to me.
+    i.e. the other side has a percentage equal to (1-alphaX) which is a wall boundary condition
+    Wall boundary conditions cause a flux of 0 in all parameters except the normal velocity,
+    where they cause a flux equal to the flux inside of the boundary
+  */
     for(int i=0; i<4; i++){
-      const double FLe = 0.5*vL*(fluxLeft[i]+sMax*QL[i]);
-      const double FRe = 0.5*vR*(fluxRight[i]-sMax*QR[i]);
+      const double rusanovFlux = 0.5*(fluxLeft[i]+fluxRight[i]+sMax*(QL[i]-QR[i]));
 
-      //left going update
-      FL[i] = FLe*(2-vR) + vL*FRe;
-      //right going update
-      FR[i] = FRe*(2-vL) + vR*FLe;
+      FL[i] = vR*rusanovFlux;
+      FR[i] = vL*rusanovFlux;
     }
+    FL[normal+1] += (1-vR)*fluxLeft[normal+1];
+    FR[normal+1] += (1-vL)*fluxRight[normal+1];
 
     return sMax;""",
 )
