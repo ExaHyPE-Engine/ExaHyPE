@@ -3,8 +3,8 @@
 #include "StatisticsTest.h"
 
 #include "peano4/parallel/SpacetreeSet.h"
+#include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
-#include "tarch/mpi/mpi.h"
 #include "toolbox/loadbalancing/Statistics.h"
 
 toolbox::loadbalancing::tests::StatisticsTest::StatisticsTest() :
@@ -75,7 +75,6 @@ void toolbox::loadbalancing::tests::StatisticsTest::testControlledPackedReductio
   toolbox::loadbalancing::Statistics statistics;
   statistics.updateGlobalView();
 
-#ifdef PEANO_WITH_MPI
   int mpiIsInitialised = 0;
   MPI_Initialized(&mpiIsInitialised);
   const auto numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
@@ -153,7 +152,6 @@ void toolbox::loadbalancing::tests::StatisticsTest::testControlledPackedReductio
 
     return;
   }
-#endif
 
   statistics._localNumberOfSplits = 3;
   statistics.startGlobalViewExchange();
@@ -201,7 +199,6 @@ void toolbox::loadbalancing::tests::StatisticsTest::testDelayedCollectivePartici
   toolbox::loadbalancing::Statistics statistics;
   statistics.updateGlobalView();
 
-#ifdef PEANO_WITH_MPI
   int mpiIsInitialised = 0;
   MPI_Initialized(&mpiIsInitialised);
   const auto numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
@@ -222,7 +219,6 @@ void toolbox::loadbalancing::tests::StatisticsTest::testDelayedCollectivePartici
     validateEquals(statistics.getGlobalNumberOfSplits(), numberOfRanks * (numberOfRanks + 1) / 2);
     return;
   }
-#endif
 
   statistics._localNumberOfSplits = 1;
   statistics.startGlobalViewExchange();

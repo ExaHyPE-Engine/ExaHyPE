@@ -2,9 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "{{CLASSNAME}}.h"
 
-#ifdef PEANO_WITH_MPI
-MPI_Datatype {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Datatype = MPI_DATATYPE_NULL;
-#endif
 {{STATIC_ATTRIBUTE_DEFINITIONS}}
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}(){% if CONSTRUCTOR_INITIALISERS %}:
@@ -62,41 +59,3 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
   {{MERGE_METHOD_DEFINITION}}
 }
 {% endif %}
-
-#ifdef PEANO_WITH_MPI
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initDatatype() {
-  if (Datatype != MPI_DATATYPE_NULL) {
-    return;
-  }
-
-  MPI_Type_contiguous(sizeof({{NAMESPACE | join("::")}}::{{CLASSNAME}}), MPI_BYTE, &Datatype);
-  MPI_Type_commit(&Datatype);
-}
-
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::shutdownDatatype() {
-  if (Datatype != MPI_DATATYPE_NULL) {
-    MPI_Type_free(&Datatype);
-    Datatype = MPI_DATATYPE_NULL;
-  }
-}
-
-MPI_Datatype {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getForkDatatype() {
-  return Datatype;
-}
-
-MPI_Datatype {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getJoinDatatype() {
-  return Datatype;
-}
-
-MPI_Datatype {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getBoundaryExchangeDatatype() {
-  return Datatype;
-}
-
-MPI_Datatype {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMultiscaleDataExchangeDatatype() {
-  return Datatype;
-}
-
-MPI_Datatype {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getGlobalCommunicationDatatype() {
-  return Datatype;
-}
-#endif

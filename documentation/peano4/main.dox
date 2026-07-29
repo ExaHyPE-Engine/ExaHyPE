@@ -74,19 +74,19 @@ The code for this resembles
     }
   }
   else {
-    while (peano4::parallel::Node::getInstance().continueToRun()) {
+    while (peano4::parallel::RunControl::getInstance().continueToRun()) {
       step();
     }
   }
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 where the routine selectNextAlgorithmicStep()} issues one call of
-peano4::parallel::Node::getInstance().setNextProgramStep().
+peano4::parallel::RunControl::getInstance().setNextProgramStep().
 
 The ```step()``` routine then is usually a big switch statement:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~
-int stepIdentifier = peano4::parallel::Node::getInstance().getCurrentProgramStep();
+int stepIdentifier = peano4::parallel::RunControl::getInstance().getCurrentProgramStep();
 switch (stepIdentifier) {
   case 0:
     {
@@ -108,7 +108,7 @@ step, as long as all ranks do exactly the same.
 
 The numbers within the case statements are kind of magic constants and you can
 redefine them.
-However, I recommend to read the documentation of peano4::parallel::Node::setNextProgramStep().
+However, I recommend to read the documentation of peano4::parallel::RunControl::setNextProgramStep().
 There are some predefined constants that you should not use.
 
 

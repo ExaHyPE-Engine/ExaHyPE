@@ -2,8 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#ifdef PEANO_WITH_MPI
-
 #include "tarch/tests/TestCase.h"
 
 namespace peano4::parallel::tests {
@@ -16,15 +14,6 @@ namespace peano4::parallel::tests {
 class peano4::parallel::tests::PingPongTest final : public tarch::tests::TestCase {
 private:
   void testBuiltInType();
-
-  /**
-   * Exchange a message type through its own send() and through MPI_Send
-   */
-  void testIntegerMessageExchange();
-  void testStartTraversalMessageExchange();
-  void testMessageArrayExchange();
-
-  void testTreeManagementMessageArrayExchange();
 
   void testMultithreadedPingPongWithBlockingReceives();
   void testMultithreadedPingPongWithBlockingSends();
@@ -42,5 +31,3 @@ public:
    */
   void run() override;
 };
-
-#endif

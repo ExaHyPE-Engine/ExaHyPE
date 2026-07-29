@@ -8,15 +8,15 @@ namespace peano4::grid::tests {
   class GridVertexTest;
 } // namespace peano4::grid::tests
 
-class peano4::grid::tests::GridVertexTest final: public tarch::tests::TestCase {
-private:
-  void testFlagsAndState();
-  void testCreateGridVertex();
-  void testMPIDatatype();
-
+class peano4::grid::tests::GridVertexTest final : public tarch::tests::TestCase {
 public:
   GridVertexTest();
   ~GridVertexTest() override final = default;
 
   void run() override final;
+
+private:
+  void testFlagsAndState();
+  void testCreateGridVertex();
+  void testSendAndReceiveInARing();
 };

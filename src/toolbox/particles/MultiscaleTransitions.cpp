@@ -5,6 +5,8 @@
 #include "peano4/Loop.h"
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/VertexMarker.h"
+#include "tarch/Assertions.h"
+#include "tarch/instrumentation/Log.h"
 
 /**
  * Ownership tolerance

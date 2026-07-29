@@ -29,4 +29,6 @@ private:
   void testEraseOnlyBatchIsCommitted();
   void testComplementaryEraseSubsetsOfTwoSolversAreDiscarded();
   void testEraseNeedsUnanimousSolverConsent();
+  void testReportTracksEveryStageOfARequest();
+  void testDeliveryFiltersAgainstTreeExtents();
 };

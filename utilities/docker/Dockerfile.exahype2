@@ -1,0 +1,31 @@
+FROM peanoframework/spack:latest AS builder
+
+WORKDIR /opt/spack-environment
+
+COPY utilities/spack/repo.yaml .
+COPY utilities/spack/packages/exahype2 packages/exahype2
+COPY tests/ /exahype2/tests
+COPY tutorials/ /exahype2/tutorials
+COPY applications/ /exahype2/applications
+COPY benchmarks/ /exahype2/benchmarks
+
+RUN . /opt/spack/share/spack/setup-env.sh && \
+    spack config add config:install_tree:root:/opt/software && \
+    spack repo add . && \
+    spack install --fail-fast exahype2 && \
+    spack gc -y && \
+    spack clean -a
+
+RUN . /opt/spack/share/spack/setup-env.sh && \
+    spack load --sh exahype2 | \
+      sed 's/^spack load.*//' > /etc/profile.d/exahype2.sh
+
+FROM peanoframework/base:latest
+
+COPY --from=builder /exahype2 /exahype2
+COPY --from=builder /opt/software /opt/software
+COPY --from=builder /etc/profile.d/exahype2.sh /etc/profile.d/
+
+WORKDIR /exahype2
+
+CMD ["/bin/bash", "-l"]

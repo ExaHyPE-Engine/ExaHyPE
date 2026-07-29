@@ -70,9 +70,7 @@ and then add the additional data exchange.
 ~~~~~~~~~~~~~~~~~~~
 void mynamespace::MyFancySolver::finishTimeStep() {
   MyFancyAbstractSolver::finishTimeStep();
-  #ifdef PEANO_WITH_MPI
   // additional data exchange
-  #endif
 }
 ~~~~~~~~~~~~~~~~~~~
 

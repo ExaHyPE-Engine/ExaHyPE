@@ -125,9 +125,6 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
 
       {{FACE_METADATA_ACCESSOR}}(d).setUpdatedTimeStamp(           1, timeStamp );
       {{FACE_METADATA_ACCESSOR}}(d+DIMENSIONS).setUpdatedTimeStamp(0, timeStamp );
-
-      logDebug("update {{FACE_METADATA_ACCESSOR}}(" << d << ")(1)");
-      logDebug("update {{FACE_METADATA_ACCESSOR}}(" << (d+DIMENSIONS) << ")(0)");
     }
   }
   {% endfor %}

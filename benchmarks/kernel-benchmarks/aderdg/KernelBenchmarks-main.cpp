@@ -507,7 +507,7 @@ int main(int argc, char** argv) {
     &argv,
     {runtimeParameters.getMPITimeoutWarning(),
      runtimeParameters.getMPIDeadlockTimeout(),
-     runtimeParameters.isMPIDeadlockDetectionEnabled()}
+     runtimeParameters.isMPIRequestTrackingEnabled()}
   );
   runtimeParameters.configure(argc, argv);
 
@@ -707,7 +707,7 @@ int main(int argc, char** argv) {
     if (tarch::hasNonCriticalAssertionBeenViolated() and not haveReceivedNonCriticalAssertion) {
       continueToSolve                  = false;
       haveReceivedNonCriticalAssertion = true;
-      logError("Noncritical assertion has been triggered in code. Dump final state and terminate.");
+      logError("Non-critical assertion has been triggered in code. Dump final state and terminate.");
     }
 
   } // continueToSolve

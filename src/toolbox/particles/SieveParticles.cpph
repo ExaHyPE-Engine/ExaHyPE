@@ -1,17 +1,3 @@
-#include "tarch/instrumentation/Log.h"
-#include "tarch/mpi/IntegerMessage.h"
-#include "tarch/mpi/mpi.h"
-#include "tarch/multicore/Lock.h"
-#include "tarch/services/ServiceRepository.h"
-#include "toolbox/particles/MultiscaleTransitions.h"
-
-template <typename T>
-int toolbox::particles::SieveParticles<T>::_SieveReductionTag = tarch::mpi::Rank::reserveFreeTag(
-  "toolbox::particles::"
-  "SieveParticles<T>::_"
-  "SieveReductionTag"
-);
-
 template <typename T>
 tarch::multicore::BooleanSemaphore
   toolbox::particles::SieveParticles<T>::_particlesThatCanNotBeLiftedWithinTheirTreeSemaphore;
@@ -40,95 +26,63 @@ void toolbox::particles::SieveParticles<T>::exchangeSieveListsGlobally(
 
   deleteParticles(_particlesThatHaveToBeSieved);
 
-#ifdef PEANO_WITH_MPI
-  const int numberOfParticlesToSend = _particlesThatCanNotBeLiftedWithinTheirTree.size();
-  logDebug(
-    "inform all other ranks that I host " << numberOfParticlesToSend
-                                          << " particles that cannot be sorted locally. Use tag " << _SieveReductionTag
+  logDebug("pack the particles that cannot be sorted locally into a contiguous buffer");
+  std::vector<T> sendBuffer;
+  sendBuffer.reserve(_particlesThatCanNotBeLiftedWithinTheirTree.size());
+  for (const auto* p : _particlesThatCanNotBeLiftedWithinTheirTree) {
+    sendBuffer.push_back(*p);
+  }
+
+  const int        numberOfRanks          = tarch::mpi::Rank::getInstance().getNumberOfRanks();
+  const int        localRank              = tarch::mpi::Rank::getInstance().getRank();
+  const MPI_Comm   communicator           = tarch::mpi::Rank::getInstance().getCommunicator();
+  const int        numberOfLocalParticles = static_cast<int>(sendBuffer.size());
+  std::vector<int> particlesPerRank(numberOfRanks, 0);
+
+  tarch::mpi::allgather(&numberOfLocalParticles, 1, MPI_INT, particlesPerRank.data(), 1, MPI_INT, communicator);
+
+  // The particles travel as raw bytes, so both the per-rank counts and the offsets into the
+  // receive buffer are byte counts, and an int has to span the whole gathered block.
+  std::vector<int> bytesPerRank(numberOfRanks, 0);
+  std::vector<int> displacements(numberOfRanks, 0);
+  std::size_t      numberOfBytes           = 0;
+  int              numberOfGlobalParticles = 0;
+  for (int rank = 0; rank < numberOfRanks; rank++) {
+    displacements[rank] = static_cast<int>(numberOfBytes);
+    bytesPerRank[rank]  = particlesPerRank[rank] * static_cast<int>(sizeof(T));
+    numberOfBytes += static_cast<std::size_t>(particlesPerRank[rank]) * sizeof(T);
+    numberOfGlobalParticles += particlesPerRank[rank];
+  }
+  assertion(
+    numberOfBytes <= static_cast<std::size_t>(std::numeric_limits<int>::max()),
+    numberOfBytes,
+    numberOfGlobalParticles,
+    sizeof(T)
   );
-  for (int rank = 0; rank < tarch::mpi::Rank::getInstance().getNumberOfRanks(); rank++) {
-    if (rank != tarch::mpi::Rank::getInstance().getRank()) {
-      tarch::mpi::IntegerMessage message(numberOfParticlesToSend);
-      tarch::mpi::IntegerMessage::sendAndPollDanglingMessages(
-        message,
-        rank,
-        _SieveReductionTag,
-        tarch::mpi::Rank::getInstance().getCommunicator()
-      );
+
+  std::vector<T> receiveBuffer(numberOfGlobalParticles);
+  tarch::mpi::allgatherv(
+    sendBuffer.empty() ? nullptr : sendBuffer.data(),
+    numberOfLocalParticles * static_cast<int>(sizeof(T)),
+    MPI_BYTE,
+    receiveBuffer.empty() ? nullptr : receiveBuffer.data(),
+    bytesPerRank.data(),
+    displacements.data(),
+    MPI_BYTE,
+    communicator
+  );
+
+  // This rank's own segment comes back with the rest, but its particles are handed over
+  // below as pointers, so copying them out here would duplicate every one of them.
+  int index = 0;
+  for (int rank = 0; rank < numberOfRanks; rank++) {
+    if (rank != localRank) {
+      for (int particle = 0; particle < particlesPerRank[rank]; particle++) {
+        _particlesThatHaveToBeSieved.push_back(new T(receiveBuffer[index + particle]));
+      }
     }
+    index += particlesPerRank[rank];
   }
-
-  logDebug("pack send information (vector of pointers) into array");
-  std::vector<T> sendBuffer; // no pointers here
-  sendBuffer.resize(numberOfParticlesToSend);
-  int i = 0;
-  for (auto& p : _particlesThatCanNotBeLiftedWithinTheirTree) {
-    sendBuffer[i] = *p;
-    i++;
-  }
-
-  for (int rank = 0; rank < tarch::mpi::Rank::getInstance().getNumberOfRanks(); rank++) {
-    if (rank != tarch::mpi::Rank::getInstance().getRank()) {
-      logDebug("ask rank " << rank << " how many messages have to be received");
-      tarch::mpi::IntegerMessage numberOfReceivedMessages;
-      tarch::mpi::IntegerMessage::receiveAndPollDanglingMessages(
-        numberOfReceivedMessages,
-        rank,
-        _SieveReductionTag,
-        tarch::mpi::Rank::getInstance().getCommunicator()
-      );
-      logDebug("will receive " << numberOfReceivedMessages.getValue() << " particles from rank " << rank);
-
-      MPI_Request* sendRequest    = nullptr;
-      MPI_Request* receiveRequest = nullptr;
-
-      std::vector<T> receiveBuffer; // no pointers here
-      if (numberOfReceivedMessages.getValue() > 0) {
-        receiveRequest = new MPI_Request();
-        receiveBuffer.resize(numberOfReceivedMessages.getValue());
-        tarch::mpi::irecv(
-          receiveBuffer.data(),
-          numberOfReceivedMessages.getValue(),
-          T::getGlobalCommunicationDatatype(),
-          rank,
-          _SieveReductionTag,
-          tarch::mpi::Rank::getInstance().getCommunicator(),
-          receiveRequest
-        );
-      }
-
-      if (numberOfParticlesToSend > 0) {
-        sendRequest = new MPI_Request();
-        tarch::mpi::isend(
-          sendBuffer.data(),
-          numberOfParticlesToSend, // this is important
-          T::getGlobalCommunicationDatatype(),
-          rank,
-          _SieveReductionTag,
-          tarch::mpi::Rank::getInstance().getCommunicator(),
-          sendRequest
-        );
-      }
-
-      logDebug("issued my sends and receives");
-      auto progress = [&]() { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); };
-      if (receiveRequest != nullptr)
-        tarch::mpi::wait(receiveRequest, progress, MPI_STATUS_IGNORE);
-      if (sendRequest != nullptr)
-        tarch::mpi::wait(sendRequest, progress, MPI_STATUS_IGNORE);
-
-      logDebug("append " << receiveBuffer.size() << " messages to local sieve particle list");
-      for (int i = 0; i < numberOfReceivedMessages.getValue(); i++) {
-        _particlesThatHaveToBeSieved.push_back(new T(receiveBuffer[i]));
-      }
-
-      if (sendRequest != nullptr)
-        delete sendRequest;
-      if (receiveRequest != nullptr)
-        delete receiveRequest;
-    }
-  }
-#endif
 
   _particlesThatHaveToBeSieved.insert(
     _particlesThatHaveToBeSieved.end(),

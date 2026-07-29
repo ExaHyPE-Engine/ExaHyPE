@@ -6,10 +6,10 @@
 #include "peano4/grid/GridStatistics.h"
 #include "peano4/grid/GridTraversalObserver.h"
 #include "peano4/grid/Spacetree.h"
-#include "peano4/parallel/Node.h"
 #include "peano4/parallel/SpacetreeSet.h"
+#include "peano4/parallel/TreeIdMapping.h"
+#include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
-#include "tarch/mpi/mpi.h"
 
 namespace {
   constexpr double DomainOffset = 10.0;
@@ -97,9 +97,8 @@ void peano4::parallel::tests::SpacetreeSetTest::run() {
   testMethod(testEraseAtPeriodicBoundaryRestoresRegularGrid);
 }
 
-/** Exercise the variable-length remote reservation response without traversing a synthetic split. */
+/** Reserve a batch of worker IDs on another rank through the collective exchange. */
 void peano4::parallel::tests::SpacetreeSetTest::testRemoteSplitReservesIdsAsOneBatch() {
-#ifdef PEANO_WITH_MPI
   constexpr int WorkerRank       = 1;
   constexpr int NumberOfNewTrees = 3;
   auto&         rank             = tarch::mpi::Rank::getInstance();
@@ -108,14 +107,13 @@ void peano4::parallel::tests::SpacetreeSetTest::testRemoteSplitReservesIdsAsOneB
   }
 
   auto&     spacetreeSet                   = SpacetreeSet::getInstance();
-  auto&     parallelNode                   = Node::getInstance();
+  auto&     treeIdMapping                  = TreeIdMapping::getInstance();
   const int localRank                      = rank.getRank();
-  const int initialNumberOfRegisteredTrees = parallelNode.getNumberOfRegisteredTrees();
+  const int initialNumberOfRegisteredTrees = treeIdMapping.getNumberOfRegisteredTrees();
 
-  int                               sourceTreeId = -1;
-  std::array<int, NumberOfNewTrees> workerTreeIds{};
+  int sourceTreeId = -1;
   if (rank.isGlobalMaster()) {
-    sourceTreeId = parallelNode.reserveId(localRank, 0);
+    sourceTreeId = treeIdMapping.reserveId();
     spacetreeSet._spacetrees.emplace_back(
       sourceTreeId,
       tarch::la::Vector<DIMENSIONS, double>(DomainOffset + 8.0),
@@ -135,33 +133,37 @@ void peano4::parallel::tests::SpacetreeSetTest::testRemoteSplitReservesIdsAsOneB
       }
     );
     validate(spacetreeSet.split(sourceTreeId, requests));
+    validateEquals(static_cast<int>(spacetreeSet._pendingSplits.size()), NumberOfNewTrees);
+  }
+
+  spacetreeSet.exchangeTreeManagementRecords();
+  validate(spacetreeSet._pendingSplits.empty());
+
+  std::array<int, NumberOfNewTrees> workerTreeIds{};
+  if (rank.isGlobalMaster()) {
+    const auto& sourceTree = spacetreeSet.getSpacetree(sourceTreeId);
     validateEquals(static_cast<int>(sourceTree._splitTriggered.size()), NumberOfNewTrees);
 
     int worker = 0;
     for (const auto& [workerTreeId, instruction] : sourceTree._splitTriggered) {
-      validateEquals(parallelNode.getRank(workerTreeId), WorkerRank);
+      validateEquals(TreeIdMapping::getRank(workerTreeId), WorkerRank);
       validateEquals(instruction.numberOfFineGridCells, 1);
       workerTreeIds[worker++] = workerTreeId;
     }
   } else if (localRank == WorkerRank) {
-    while (parallelNode.getNumberOfRegisteredTrees() < initialNumberOfRegisteredTrees + NumberOfNewTrees) {
-      spacetreeSet.receiveDanglingMessages();
-    }
+    validateEquals(treeIdMapping.getNumberOfRegisteredTrees(), initialNumberOfRegisteredTrees + NumberOfNewTrees);
   }
 
   MPI_Bcast(workerTreeIds.data(), NumberOfNewTrees, MPI_INT, 0, rank.getCommunicator());
   if (localRank == WorkerRank) {
-    while (not spacetreeSet._pendingTreeIdResponses.empty()) {
-      spacetreeSet.receiveDanglingMessages();
-    }
     for (const int workerTreeId : workerTreeIds) {
-      parallelNode.deregisterId(workerTreeId);
+      treeIdMapping.deregisterId(workerTreeId);
     }
   }
 
   if (rank.isGlobalMaster()) {
     spacetreeSet.unregisterLocalSpacetree(sourceTreeId);
-    parallelNode.deregisterId(sourceTreeId);
+    treeIdMapping.deregisterId(sourceTreeId);
     for (auto tree = spacetreeSet._spacetrees.begin(); tree != spacetreeSet._spacetrees.end(); ++tree) {
       if (tree->getId() == sourceTreeId) {
         spacetreeSet._spacetrees.erase(tree);
@@ -170,12 +172,10 @@ void peano4::parallel::tests::SpacetreeSetTest::testRemoteSplitReservesIdsAsOneB
     }
   }
   tarch::mpi::barrier(rank.getCommunicator());
-#endif
 }
 
 /** Exercise one exact split through the complete cross-rank traversal protocol. */
 void peano4::parallel::tests::SpacetreeSetTest::testDistributedSplitLifecycle() {
-#ifdef PEANO_WITH_MPI
   constexpr int WorkerRank = 1;
   auto&         rank       = tarch::mpi::Rank::getInstance();
   if (rank.getNumberOfRanks() <= WorkerRank) {
@@ -183,17 +183,16 @@ void peano4::parallel::tests::SpacetreeSetTest::testDistributedSplitLifecycle() 
   }
 
   auto&      spacetreeSet           = SpacetreeSet::getInstance();
-  auto&      parallelNode           = Node::getInstance();
+  auto&      treeIdMapping          = TreeIdMapping::getInstance();
   const int  localRank              = rank.getRank();
   const int  initialLocalTreeCount  = static_cast<int>(spacetreeSet._spacetrees.size());
-  const int  initialRegisteredTrees = parallelNode.getNumberOfRegisteredTrees();
   const auto periodicBoundaryBackup = spacetreeSet._periodicBC;
   spacetreeSet._periodicBC.reset();
 
   constexpr double DistributedDomainOffset = DomainOffset + 12.0;
   int              rootTreeId              = -1;
   if (rank.isGlobalMaster()) {
-    rootTreeId = parallelNode.reserveId(localRank, 0);
+    rootTreeId = treeIdMapping.reserveId();
     spacetreeSet._spacetrees.emplace_back(
       rootTreeId,
       tarch::la::Vector<DIMENSIONS, double>(DistributedDomainOffset),
@@ -221,15 +220,15 @@ void peano4::parallel::tests::SpacetreeSetTest::testDistributedSplitLifecycle() 
       WorkerRank
     );
     validate(splitRegistered);
+  }
+
+  spacetreeSet.exchangeTreeManagementRecords();
+  if (rank.isGlobalMaster()) {
     validateEquals(static_cast<int>(spacetreeSet.getSpacetree(rootTreeId)._splitTriggered.size()), 1);
     workerTreeId = spacetreeSet.getSpacetree(rootTreeId)._splitTriggered.begin()->first;
-  } else if (localRank == WorkerRank) {
-    while (parallelNode.getNumberOfRegisteredTrees() == initialRegisteredTrees) {
-      spacetreeSet.receiveDanglingMessages();
-    }
   }
   MPI_Bcast(&workerTreeId, 1, MPI_INT, 0, rank.getCommunicator());
-  validateEquals(parallelNode.getRank(workerTreeId), WorkerRank);
+  validateEquals(TreeIdMapping::getRank(workerTreeId), WorkerRank);
 
   traverseSweeps(spacetreeSet, observer, 6);
 
@@ -271,7 +270,7 @@ void peano4::parallel::tests::SpacetreeSetTest::testDistributedSplitLifecycle() 
   for (auto tree = spacetreeSet._spacetrees.begin(); tree != spacetreeSet._spacetrees.end();) {
     if (tree->getId() == rootTreeId or tree->getId() == workerTreeId) {
       spacetreeSet.unregisterLocalSpacetree(tree->getId());
-      parallelNode.deregisterId(tree->getId());
+      treeIdMapping.deregisterId(tree->getId());
       tree = spacetreeSet._spacetrees.erase(tree);
     } else {
       ++tree;
@@ -280,12 +279,11 @@ void peano4::parallel::tests::SpacetreeSetTest::testDistributedSplitLifecycle() 
   spacetreeSet._periodicBC = periodicBoundaryBackup;
   tarch::mpi::barrier(rank.getCommunicator());
   validateEquals(static_cast<int>(spacetreeSet._spacetrees.size()), initialLocalTreeCount);
-#endif
 }
 
 void peano4::parallel::tests::SpacetreeSetTest::testWorkerCopiesRequestedMasterState() {
   auto&     spacetreeSet         = SpacetreeSet::getInstance();
-  auto&     parallelNode         = Node::getInstance();
+  auto&     treeIdMapping        = TreeIdMapping::getInstance();
   const int rank                 = tarch::mpi::Rank::getInstance().getRank();
   const int initialNumberOfTrees = static_cast<int>(spacetreeSet._spacetrees.size());
 
@@ -294,7 +292,7 @@ void peano4::parallel::tests::SpacetreeSetTest::testWorkerCopiesRequestedMasterS
 
   int requestedMasterId = -1;
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    requestedMasterId = parallelNode.reserveId(rank, 0);
+    requestedMasterId = treeIdMapping.reserveId();
     spacetreeSet._spacetrees.emplace_back(
       requestedMasterId,
       tarch::la::Vector<DIMENSIONS, double>(RequestedMasterOffset),
@@ -304,33 +302,35 @@ void peano4::parallel::tests::SpacetreeSetTest::testWorkerCopiesRequestedMasterS
     spacetreeSet.registerLocalSpacetree(spacetreeSet._spacetrees.back());
   }
 
-  int workerId = -1;
-#ifdef PEANO_WITH_MPI
-  constexpr int WorkerRank = 1;
-  if (tarch::mpi::Rank::getInstance().getNumberOfRanks() > WorkerRank) {
-    const auto communicator = tarch::mpi::Rank::getInstance().getCommunicator();
-    MPI_Bcast(&requestedMasterId, 1, MPI_INT, 0, communicator);
-    if (rank == WorkerRank) {
-      workerId = parallelNode.reserveId(WorkerRank, requestedMasterId);
-    }
-    MPI_Bcast(&workerId, 1, MPI_INT, WorkerRank, communicator);
+  // The worker lives on rank 1 whenever that rank exists, so the record has to
+  // cross a rank boundary; otherwise the master hosts it itself.
+  constexpr int WorkerRank     = 1;
+  const int     workerHostRank = tarch::mpi::Rank::getInstance().getNumberOfRanks() > WorkerRank ? WorkerRank : 0;
+  const auto    communicator   = tarch::mpi::Rank::getInstance().getCommunicator();
 
-    if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-      spacetreeSet.addSpacetrees(requestedMasterId, {workerId});
-    } else if (rank == WorkerRank) {
-      while (not spacetreeSet.isLocalSpacetree(workerId)) {
-        spacetreeSet.receiveDanglingMessages();
-      }
-    }
-    tarch::mpi::barrier(communicator);
-  } else
-#endif
-  {
-    if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-      workerId = parallelNode.reserveId(rank, requestedMasterId);
-      spacetreeSet.addSpacetrees(requestedMasterId, {workerId});
+  int workerId = -1;
+  MPI_Bcast(&requestedMasterId, 1, MPI_INT, 0, communicator);
+  if (rank == workerHostRank) {
+    workerId = treeIdMapping.reserveId();
+  }
+  MPI_Bcast(&workerId, 1, MPI_INT, workerHostRank, communicator);
+
+  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+    const auto&                        master = spacetreeSet.getSpacetree(requestedMasterId);
+    SpacetreeSet::TreeManagementRecord record;
+    record.kind                  = SpacetreeSet::TreeManagementRecord::Kind::CreateTree;
+    record.masterTreeId          = requestedMasterId;
+    record.workerTreeId          = workerId;
+    record.rootOffset            = master._root.x;
+    record.rootWidth             = master._root.h;
+    record.rootTraversalInverted = master._root.getInverted() ? 1 : 0;
+    if (workerHostRank == rank) {
+      spacetreeSet.createTree(record);
+    } else {
+      spacetreeSet._pendingRemoteRecords.push_back(record);
     }
   }
+  spacetreeSet.exchangeTreeManagementRecords();
 
   if (spacetreeSet.isLocalSpacetree(workerId)) {
     const auto& worker = spacetreeSet.getSpacetree(workerId);
@@ -345,17 +345,13 @@ void peano4::parallel::tests::SpacetreeSetTest::testWorkerCopiesRequestedMasterS
   for (auto treeIterator = spacetreeSet._spacetrees.begin(); treeIterator != spacetreeSet._spacetrees.end();) {
     if (testTreeIds.count(treeIterator->getId()) > 0) {
       spacetreeSet.unregisterLocalSpacetree(treeIterator->getId());
-      parallelNode.deregisterId(treeIterator->getId());
+      treeIdMapping.deregisterId(treeIterator->getId());
       treeIterator = spacetreeSet._spacetrees.erase(treeIterator);
     } else {
       ++treeIterator;
     }
   }
-#ifdef PEANO_WITH_MPI
-  if (tarch::mpi::Rank::getInstance().getNumberOfRanks() > WorkerRank) {
-    tarch::mpi::barrier(tarch::mpi::Rank::getInstance().getCommunicator());
-  }
-#endif
+  tarch::mpi::barrier(communicator);
   validateEquals(static_cast<int>(spacetreeSet._spacetrees.size()), initialNumberOfTrees);
 }
 
@@ -365,11 +361,10 @@ void peano4::parallel::tests::SpacetreeSetTest::testCleanupRemovesConsecutiveTre
   }
 
   auto&     spacetreeSet         = SpacetreeSet::getInstance();
-  auto&     parallelNode         = Node::getInstance();
-  const int rank                 = tarch::mpi::Rank::getInstance().getRank();
+  auto&     treeIdMapping        = TreeIdMapping::getInstance();
   const int initialNumberOfTrees = static_cast<int>(spacetreeSet._spacetrees.size());
 
-  const int firstJoinedTreeId = parallelNode.reserveId(rank, 0);
+  const int firstJoinedTreeId = treeIdMapping.reserveId();
   spacetreeSet._spacetrees.emplace_back(
     firstJoinedTreeId,
     0,
@@ -381,7 +376,7 @@ void peano4::parallel::tests::SpacetreeSetTest::testCleanupRemovesConsecutiveTre
   spacetreeSet.registerLocalSpacetree(spacetreeSet._spacetrees.back());
   spacetreeSet._spacetrees.back()._spacetreeState = peano4::grid::SpacetreeState::Joined;
 
-  const int secondJoinedTreeId = parallelNode.reserveId(rank, 0);
+  const int secondJoinedTreeId = treeIdMapping.reserveId();
   spacetreeSet._spacetrees.emplace_back(
     secondJoinedTreeId,
     0,
@@ -393,8 +388,7 @@ void peano4::parallel::tests::SpacetreeSetTest::testCleanupRemovesConsecutiveTre
   spacetreeSet.registerLocalSpacetree(spacetreeSet._spacetrees.back());
   spacetreeSet._spacetrees.back()._spacetreeState = peano4::grid::SpacetreeState::Joined;
 
-  ScenarioObserver observer;
-  spacetreeSet.cleanUpTrees(observer);
+  spacetreeSet.cleanUpTrees();
 
   validate(not spacetreeSet.isLocalSpacetree(firstJoinedTreeId));
   validate(not spacetreeSet.isLocalSpacetree(secondJoinedTreeId));
@@ -404,7 +398,7 @@ void peano4::parallel::tests::SpacetreeSetTest::testCleanupRemovesConsecutiveTre
   for (auto treeIterator = spacetreeSet._spacetrees.begin(); treeIterator != spacetreeSet._spacetrees.end();) {
     if (joinedTreeIds.count(treeIterator->getId()) > 0) {
       spacetreeSet.unregisterLocalSpacetree(treeIterator->getId());
-      parallelNode.deregisterId(treeIterator->getId());
+      treeIdMapping.deregisterId(treeIterator->getId());
       treeIterator = spacetreeSet._spacetrees.erase(treeIterator);
     } else {
       ++treeIterator;
@@ -419,10 +413,9 @@ void peano4::parallel::tests::SpacetreeSetTest::testAggregateStatisticsIncludesS
   }
 
   auto&         spacetreeSet          = SpacetreeSet::getInstance();
-  auto&         parallelNode          = Node::getInstance();
+  auto&         treeIdMapping         = TreeIdMapping::getInstance();
   const auto    statisticsBeforeSplit = spacetreeSet.getGridStatistics();
-  const int     rank                  = tarch::mpi::Rank::getInstance().getRank();
-  const int     settlingTreeId        = parallelNode.reserveId(rank, 0);
+  const int     settlingTreeId        = treeIdMapping.reserveId();
   constexpr int SettlingSweeps        = -17;
   constexpr int SettlingTreeLeaves    = 23;
 
@@ -454,7 +447,7 @@ void peano4::parallel::tests::SpacetreeSetTest::testAggregateStatisticsIncludesS
   );
 
   spacetreeSet.unregisterLocalSpacetree(settlingTreeId);
-  parallelNode.deregisterId(settlingTreeId);
+  treeIdMapping.deregisterId(settlingTreeId);
   spacetreeSet._spacetrees.pop_back();
 }
 
@@ -474,7 +467,7 @@ peano4::parallel::tests::SpacetreeSetTest::ScenarioResult peano4::parallel::test
   const bool eraseCornerAgain
 ) const {
   auto&      spacetreeSet   = SpacetreeSet::getInstance();
-  auto&      parallelNode   = Node::getInstance();
+  auto&      treeIdMapping  = TreeIdMapping::getInstance();
   const int  rank           = tarch::mpi::Rank::getInstance().getRank();
   const bool isGlobalMaster = tarch::mpi::Rank::getInstance().isGlobalMaster();
 
@@ -490,7 +483,7 @@ peano4::parallel::tests::SpacetreeSetTest::ScenarioResult peano4::parallel::test
 
   int rootId = -1;
   if (isGlobalMaster) {
-    rootId = parallelNode.reserveId(rank, 0);
+    rootId = treeIdMapping.reserveId();
     spacetreeSet._spacetrees.emplace_back(
       rootId,
       tarch::la::Vector<DIMENSIONS, double>(DomainOffset),
@@ -577,7 +570,7 @@ peano4::parallel::tests::SpacetreeSetTest::ScenarioResult peano4::parallel::test
     for (auto treeIterator = spacetreeSet._spacetrees.begin(); treeIterator != spacetreeSet._spacetrees.end();) {
       if (treeFamily.count(treeIterator->getId()) > 0) {
         spacetreeSet.unregisterLocalSpacetree(treeIterator->getId());
-        parallelNode.deregisterId(treeIterator->getId());
+        treeIdMapping.deregisterId(treeIterator->getId());
         treeIterator = spacetreeSet._spacetrees.erase(treeIterator);
       } else {
         ++treeIterator;

@@ -6,14 +6,11 @@
 
 #include "CellTypes.h"
 
+#include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
-#include "tarch/mpi/mpi.h"
 
 #include <netcdf.h>
-
-#if defined(PEANO_WITH_MPI)
 #include <netcdf_par.h>
-#endif
 
 namespace {
   // Largest 2D face / 3D volume corner counts, taken from the CellTypes table
@@ -98,7 +95,6 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
     localHas3DCoordinates = localHas3DCoordinates or hasNonZeroZCoordinate(subdomain->pointsXYZ);
   }
 
-#if defined(PEANO_WITH_MPI)
   auto&    rank          = tarch::mpi::Rank::getInstance();
   MPI_Comm comm          = rank.getCommunicator();
   bool     useParallelIO = rank.getNumberOfRanks() > 1;
@@ -133,15 +129,11 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
       isMasterRank = (ioRank == 0);
     }
   }
-#else
-  bool useParallelIO = false;
-#endif
 
   bool globalHasFaces         = localHasFaces;
   bool globalHasVolumes       = localHasVolumes;
   bool globalHas3DCoordinates = localHas3DCoordinates;
 
-#if defined(PEANO_WITH_MPI)
   if (useParallelIO) {
     // One max-allreduce so every participating rank agrees on the global mesh
     // character: [0] any rank has 2D faces, [1] any rank has 3D volumes, [2] any rank
@@ -154,7 +146,6 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
     globalHasVolumes       = globalReduce[1] != 0;
     globalHas3DCoordinates = globalReduce[2] != 0;
   }
-#endif
 
   if (globalHasFaces and globalHasVolumes) {
     throw std::runtime_error(
@@ -222,7 +213,6 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
   unsigned long long totalNodes     = localNumNodes;
   unsigned long long totalElements  = localNumElements;
 
-#if defined(PEANO_WITH_MPI)
   if (useParallelIO) {
     // One scan and one allreduce over a 2-element array, rather than two of each.
     unsigned long long localCounts[2] = {localNumNodes, localNumElements};
@@ -237,11 +227,9 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
     totalNodes    = totals[0];
     totalElements = totals[1];
   }
-#endif
 
   int ncid = -1;
 
-#if defined(PEANO_WITH_MPI)
   if (useParallelIO) {
     MPI_Info   info  = MPI_INFO_NULL;
     const auto hints = mpiIoHints();
@@ -259,9 +247,6 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
   } else {
     check(nc_create(filePath.string().c_str(), NC_NETCDF4 | NC_CLOBBER, &ncid), "nc_create(" + filePath.string() + ")");
   }
-#else
-  check(nc_create(filePath.string().c_str(), NC_NETCDF4 | NC_CLOBBER, &ncid), "nc_create(" + filePath.string() + ")");
-#endif
 
   // Close the open file if a check() throws before the explicit nc_close below.
   // Disarmed on the success path.
@@ -284,10 +269,7 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
   // Global attributes
   {
     const char* conventions = "CF-1.10 UGRID-1.0";
-    check(
-      nc_put_att_text(ncid, NC_GLOBAL, "Conventions", std::strlen(conventions), conventions),
-      "put Conventions"
-    );
+    check(nc_put_att_text(ncid, NC_GLOBAL, "Conventions", std::strlen(conventions), conventions), "put Conventions");
   }
 
   const char* meshName            = is3DTopology ? "mesh3d" : "mesh2d";
@@ -585,7 +567,6 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
 
   check(nc_enddef(ncid), "nc_enddef");
 
-#if defined(PEANO_WITH_MPI)
   if (useParallelIO) {
     // Collective access (independent deadlocks because the file has an unlimited time
     // dimension). A rank that registered field names but plotted nothing joins with a
@@ -616,7 +597,6 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
       }
     }
   }
-#endif
 
   // Write time scalar
   {
@@ -730,7 +710,7 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
       std::vector<double> buffer;
       buffer.reserve(count);
       for (const SubdomainBuffers* subdomain : localData.payloads) {
-        const DataField& field = onNodes ? subdomain->pointFields[fieldIndex] : subdomain->cellFields[fieldIndex];
+        const DataField&  field = onNodes ? subdomain->pointFields[fieldIndex] : subdomain->cellFields[fieldIndex];
         const std::size_t numberOfTuples = field.values.size() / static_cast<std::size_t>(components);
         for (std::size_t t = 0; t < numberOfTuples; ++t) {
           buffer.push_back(field.values[t * components + c]);
@@ -750,11 +730,9 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
   ncFileCloser.armed = false;
   check(nc_close(ncid), "nc_close");
 
-#if defined(PEANO_WITH_MPI)
   if (ioComm != MPI_COMM_NULL) {
     MPI_Comm_free(&ioComm);
   }
-#endif
 
   _written = true;
   return true;

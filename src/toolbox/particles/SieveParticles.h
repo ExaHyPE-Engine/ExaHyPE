@@ -2,9 +2,13 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "tarch/multicore/BooleanSemaphore.h"
-
 #include "peano4/datamanagement/VertexMarker.h"
+#include "tarch/instrumentation/Log.h"
+#include "tarch/mpi/Collectives.h"
+#include "tarch/mpi/Rank.h"
+#include "tarch/multicore/BooleanSemaphore.h"
+#include "tarch/multicore/Lock.h"
+#include "toolbox/particles/MultiscaleTransitions.h"
 
 namespace toolbox {
   namespace particles {
@@ -165,10 +169,10 @@ public:
    *   particles.
    */
   void exchangeSieveListsGlobally(
-        const tarch::la::Vector<DIMENSIONS,double>   domainOffset,
-        const tarch::la::Vector<DIMENSIONS,double>   domainSize,
-        const std::bitset<DIMENSIONS>                periodicBC
-      );
+    const tarch::la::Vector<DIMENSIONS, double> domainOffset,
+    const tarch::la::Vector<DIMENSIONS, double> domainSize,
+    const std::bitset<DIMENSIONS>               periodicBC
+  );
 
   /**
    * Add a particle to the list of particles which cannot be lifted
@@ -244,9 +248,9 @@ public:
    */
   ParticleList getParticlesToBeSievedIntoVertex(
     const peano4::datamanagement::VertexMarker& marker,
-    bool  removeReturnedParticlesFromSet,
-    bool  onlyReturnParticlesThatWillBeLocal,
-    bool  lockSemaphore
+    bool                                        removeReturnedParticlesFromSet,
+    bool                                        onlyReturnParticlesThatWillBeLocal,
+    bool                                        lockSemaphore
   );
 
   /**
@@ -274,13 +278,6 @@ private:
   static void deleteParticles(ParticleList& list);
 
   /**
-   * Reduction tag
-   *
-   * We one of these per subclass, i.e. I cannot move it to the superclass
-   */
-  static int _SieveReductionTag;
-
-  /**
    * Semaphores
    *
    * This is for the assembly of the set of particles which require global
@@ -303,7 +300,7 @@ private:
   static tarch::multicore::BooleanSemaphore _particlesThatCanNotBeLiftedWithinTheirTreeSemaphore;
   static tarch::multicore::BooleanSemaphore _particlesToBeSievedSemaphore;
 
-  ParticleList  _particlesThatCanNotBeLiftedWithinTheirTree;
+  ParticleList _particlesThatCanNotBeLiftedWithinTheirTree;
 
   /**
    * Particles that should be sieved
@@ -316,7 +313,7 @@ private:
    *
    * The list is populated by finishedTraversal().
    */
-  ParticleList  _particlesThatHaveToBeSieved;
+  ParticleList _particlesThatHaveToBeSieved;
 };
 
 #include "SieveParticles.cpph"

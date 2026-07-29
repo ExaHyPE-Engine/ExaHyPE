@@ -5,7 +5,8 @@
 #include "globaldata/{{PARTICLE_TYPE}}.h"
 
 #include "tarch/la/Vector.h"
-#include "tarch/mpi/mpi.h"
+
+#include <mpi.h>
 
 #include "peano4/datamanagement/VertexMarker.h"
 #include "peano4/stacks/Stack.h"
@@ -87,16 +88,7 @@ public:
 
   std::string toString() const;
 
-#ifdef PEANO_WITH_MPI
-public:
-  static MPI_Datatype getBoundaryExchangeDatatype();
-  static MPI_Datatype getMultiscaleDataExchangeDatatype();
-  static MPI_Datatype getForkDatatype();
-  static MPI_Datatype getJoinDatatype();
-  static MPI_Datatype getGlobalCommunicationDatatype();
-
   static void startSend(::peano4::stacks::Stack<{{CLASSNAME}}>& stack, const ::peano4::stacks::SendReceiveContext context, MPI_Comm comm);
   static void startReceive(::peano4::stacks::Stack<{{CLASSNAME}}>& stack, const ::peano4::stacks::SendReceiveContext context, MPI_Comm comm, int numberOfElements);
   static bool tryToFinishSendOrReceive(::peano4::stacks::Stack<{{CLASSNAME}}>& stack);
-#endif
 };

@@ -32,7 +32,12 @@ namespace tarch {
   struct InitConfiguration {
     double mpiTimeoutWarning;
     double mpiDeadlockTimeout;
-    bool   mpiDeadlockDetectionEnabled;
+
+    /**
+     * Records the origin, partner and tag of every non-blocking request, so a timeout
+     * warning names the request that hangs.
+     */
+    bool mpiRequestTrackingEnabled;
   };
 
   void init(int* argc, char*** argv, const InitConfiguration& configuration);

@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "StepRepository.h"
 
-#include "peano4/parallel/Node.h"
+#include "peano4/parallel/RunControl.h"
 
 std::string {FULL_QUALIFIED_CLASSNAME}::toString( Steps value ) {{
   switch (value) {{
@@ -14,10 +14,10 @@ std::string {FULL_QUALIFIED_CLASSNAME}::toString( Steps value ) {{
 
 int {FULL_QUALIFIED_CLASSNAME}::toProgramStep( Steps value ) {{
   switch (value) {{
-    case Steps::Undef: return ::peano4::parallel::Node::UndefProgramStep;
+    case Steps::Undef: return ::peano4::parallel::RunControl::UndefProgramStep;
 {INT_RETURN_CASE}
   }}
-  return ::peano4::parallel::Node::Terminate;
+  return ::peano4::parallel::RunControl::Terminate;
 }}
 
 {FULL_QUALIFIED_CLASSNAME}::Steps {FULL_QUALIFIED_CLASSNAME}::toStepEnum( int value ) {{

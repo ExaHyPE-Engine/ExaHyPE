@@ -1,10 +1,10 @@
 /**
 
-@page tarch_NoncriticalAssertions Noncritical assertions
+@page tarch_NoncriticalAssertions Non-critical assertions
 
 \tableofcontents
 
-Noncritical assertions report programming errors while still giving the
+Non-critical assertions report programming errors while still giving the
 application a chance to dump diagnostic output before it terminates. They are
 useful for numerical failures where an immediate abort would destroy the state
 needed for post-mortem analysis.

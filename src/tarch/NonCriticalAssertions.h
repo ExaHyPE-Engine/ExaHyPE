@@ -3,25 +3,14 @@
 #pragma once
 
 /**
- * @page tarch_NoncriticalAssertions Noncritical assertions
+ * @page tarch_NoncriticalAssertions Non-critical assertions
  *
- * @brief A noncritical assertion is an assertion which indicates that
- * something went horribly wrong due to a programming error, but the code
- * should still continue with this mesh traversal, then dump the data, and
- * eventually terminate.
+ * @brief A non-critical assertion indicates that something went horribly
+ * wrong due to a programming error, without stopping the run immediately.
+ * We record which rank first raised it and let every rank query and adopt
+ * that rank, so a caller can decide when and how to wind down.
  */
 namespace tarch {
-  /**
-   * Register the MPI service that propagates a non-critical assertion across
-   * ranks. Call once from tarch::init after the service repository is up. No-op
-   * without MPI. From then on a non-critical assertion raised on any rank
-   * reaches every other rank over the regular dangling-message channel, so no
-   * code on the hot path has to run a collective to discover it.
-   */
-  void initNonCriticalAssertionEnvironment();
-
-  void enableNonCriticalAssertions(bool value);
-
   void triggerNonCriticalAssertion(
     const std::string& file,
     int                line,
@@ -29,4 +18,8 @@ namespace tarch {
     const std::string& parameterValuePairs
   );
   bool hasNonCriticalAssertionBeenViolated();
+
+  int getNonCriticalAssertionRank();
+
+  void adoptNonCriticalAssertionRank(int rank);
 } // namespace tarch

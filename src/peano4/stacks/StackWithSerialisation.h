@@ -3,7 +3,7 @@
 #pragma once
 
 #include "peano4/stacks/Stack.h"
-#include "tarch/mpi/mpi.h"
+#include "tarch/mpi/Request.h"
 
 namespace peano4::stacks {
   template <class T>
@@ -28,10 +28,9 @@ public:
   StackWithSerialisation(StackWithSerialisation&&) noexcept            = default;
   StackWithSerialisation& operator=(StackWithSerialisation&&) noexcept = default;
 
-#ifdef PEANO_WITH_MPI
-  void startSend(const SendReceiveContext context, const int rank, const int tag, const MPI_Comm comm) {
+  void
+  startSend([[maybe_unused]] const SendReceiveContext context, const int rank, const int tag, const MPI_Comm comm) {
     assertion(this->_ioMode == IOMode::None);
-    assertion(this->_ioMPIRequest == MPI_REQUEST_NULL);
     assertion(this->size() > 0);
     assertion(not this->_ioMPIActive);
 
@@ -44,37 +43,29 @@ public:
     _sendBuffer.resize(this->size() * T::Cardinality);
     serialise();
 
-    const MPI_Datatype dtype  = translateContextIntoDatatype<T>(context);
-    const int          result = tarch::mpi::isend(
-      _sendBuffer.data(),
-      static_cast<int>(_sendBuffer.size()),
-      dtype,
-      this->_ioRank,
-      this->_ioTag,
-      comm,
-      &this->_ioMPIRequest
+    // MPI counts in an int, so counting bytes rather than unknowns lowers the
+    // number of unknowns one message can carry by sizeof(DoFType).
+    const std::size_t numberOfBytes = _sendBuffer.size() * sizeof(typename T::DoFType);
+    assertion(
+      numberOfBytes <= static_cast<std::size_t>(std::numeric_limits<int>::max()),
+      numberOfBytes,
+      _sendBuffer.size(),
+      sizeof(typename T::DoFType)
     );
-    if (result != MPI_SUCCESS) {
-      logError(
-        "Was not able to send to rank " << this->_ioRank << " on tag " << this->_ioTag << ": "
-                                        << tarch::mpi::MPIReturnValueToString(result)
-      );
-      assertion(false);
-    }
 
+    this->_ioChannel.startSend(_sendBuffer.data(), static_cast<int>(numberOfBytes), this->_ioRank, this->_ioTag, comm);
     this->_ioMPIActive = true;
   }
 
   void startReceive(
-    const SendReceiveContext context,
-    const int                rank,
-    const int                tag,
-    const MPI_Comm           comm,
-    const int                numberOfElements
+    [[maybe_unused]] const SendReceiveContext context,
+    const int                                 rank,
+    const int                                 tag,
+    const MPI_Comm                            comm,
+    const int                                 numberOfElements
   ) {
     assertion(this->_ioMode == IOMode::None, rank, tag, numberOfElements);
     assertion(numberOfElements > 0, rank, tag, numberOfElements);
-    assertion(this->_ioMPIRequest == MPI_REQUEST_NULL);
     assertion(not this->_ioMPIActive);
 
     this->_ioMode = IOMode::MPIReceive;
@@ -86,24 +77,18 @@ public:
     this->resize(numberOfElements);
     _receiveBuffer.resize(numberOfElements * T::Cardinality);
 
-    const MPI_Datatype dtype  = translateContextIntoDatatype<T>(context);
-    const int          result = tarch::mpi::irecv(
-      _receiveBuffer.data(),
-      static_cast<int>(_receiveBuffer.size()),
-      dtype,
-      this->_ioRank,
-      this->_ioTag,
-      comm,
-      &this->_ioMPIRequest
+    // MPI counts in an int, so counting bytes rather than unknowns lowers the
+    // number of unknowns one message can carry by sizeof(DoFType).
+    const std::size_t numberOfBytes = _receiveBuffer.size() * sizeof(typename T::DoFType);
+    assertion(
+      numberOfBytes <= static_cast<std::size_t>(std::numeric_limits<int>::max()),
+      numberOfBytes,
+      _receiveBuffer.size(),
+      sizeof(typename T::DoFType)
     );
-    if (result != MPI_SUCCESS) {
-      logError(
-        "Was not able to receive " << numberOfElements << " values from rank " << this->_ioRank << " on tag "
-                                   << this->_ioTag << ": " << tarch::mpi::MPIReturnValueToString(result)
-      );
-      assertion(false);
-    }
 
+    this->_ioChannel
+      .startReceive(_receiveBuffer.data(), static_cast<int>(numberOfBytes), this->_ioRank, this->_ioTag, comm);
     this->_ioMPIActive = true;
   }
 
@@ -113,7 +98,7 @@ public:
     }
 
     int flag = 0;
-    tarch::mpi::test(&this->_ioMPIRequest, &flag, MPI_STATUS_IGNORE);
+    tarch::mpi::test(this->_ioChannel.getRequest(), &flag, MPI_STATUS_IGNORE);
     if (flag) {
       if (this->_ioMode == IOMode::MPISend) {
         this->shallowClear();
@@ -122,9 +107,8 @@ public:
         deserialise();
         logDebug("Receive complete: " << this->toString());
       }
-      this->_ioMode       = IOMode::None;
-      this->_ioMPIActive  = false;
-      this->_ioMPIRequest = MPI_REQUEST_NULL;
+      this->_ioMode      = IOMode::None;
+      this->_ioMPIActive = false;
 
       return true;
     }
@@ -156,5 +140,4 @@ private:
       std::copy_n(_receiveBuffer.data() + i * T::Cardinality, T::Cardinality, target);
     }
   }
-#endif // PEANO_WITH_MPI
 };

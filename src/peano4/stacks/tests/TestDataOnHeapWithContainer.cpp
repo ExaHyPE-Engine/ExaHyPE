@@ -4,16 +4,12 @@
 
 #include "peano4/stacks/StackWithCustomSerialisation.h"
 #include "tarch/Assertions.h"
-#include "tarch/mpi/mpi.h"
+#include "tarch/mpi/Request.h"
 
-peano4::stacks::tests::TestDataOnHeapWithContainer::TestDataOnHeapWithContainer() :
-  _container() {}
-
-peano4::stacks::tests::TestDataOnHeapWithContainer::TestDataOnHeapWithContainer(std::size_t size, DoFType v) :
-  TestDataOnHeapWithContainer() {
+peano4::stacks::tests::TestDataOnHeapWithContainer::TestDataOnHeapWithContainer(std::size_t size, DoFType value) {
   _container.reserve(size);
-  for (std::size_t i = 0; i < size; ++i) {
-    _container.push_back(new DoFType(v));
+  for (std::size_t i = 0; i < size; i++) {
+    _container.push_back(new DoFType(value));
   }
 }
 
@@ -21,8 +17,7 @@ peano4::stacks::tests::TestDataOnHeapWithContainer::~TestDataOnHeapWithContainer
 
 peano4::stacks::tests::TestDataOnHeapWithContainer::TestDataOnHeapWithContainer(
   const TestDataOnHeapWithContainer& other
-) :
-  _container() {
+) {
   clone(other);
 }
 
@@ -44,7 +39,7 @@ peano4::stacks::tests::TestDataOnHeapWithContainer::operator=(TestDataOnHeapWith
 }
 
 peano4::stacks::tests::TestDataOnHeapWithContainer::DoFType
-peano4::stacks::tests::TestDataOnHeapWithContainer::at(int index) {
+peano4::stacks::tests::TestDataOnHeapWithContainer::at(int index) const {
   assertion(index >= 0);
   assertion(index < size());
   return *(_container[static_cast<std::size_t>(index)]);
@@ -73,17 +68,10 @@ void peano4::stacks::tests::TestDataOnHeapWithContainer::clone(const TestDataOnH
   }
 }
 
-#ifdef PEANO_WITH_MPI
-MPI_Datatype peano4::stacks::tests::TestDataOnHeapWithContainer::getBoundaryExchangeDatatype() { return MPI_INT; }
-MPI_Datatype peano4::stacks::tests::TestDataOnHeapWithContainer::getMultiscaleDataExchangeDatatype() { return MPI_INT; }
-MPI_Datatype peano4::stacks::tests::TestDataOnHeapWithContainer::getForkDatatype() { return MPI_INT; }
-MPI_Datatype peano4::stacks::tests::TestDataOnHeapWithContainer::getJoinDatatype() { return MPI_INT; }
-MPI_Datatype peano4::stacks::tests::TestDataOnHeapWithContainer::getGlobalCommunicationDatatype() { return MPI_INT; }
-
 void peano4::stacks::tests::TestDataOnHeapWithContainer::startSend(
-  Stack<TestDataOnHeapWithContainer>& stack,
-  const SendReceiveContext            context,
-  MPI_Comm                            comm
+  Stack<TestDataOnHeapWithContainer>&       stack,
+  [[maybe_unused]] const SendReceiveContext context,
+  MPI_Comm                                  comm
 ) {
   auto& customStack = static_cast<StackWithCustomSerialisation<TestDataOnHeapWithContainer>&>(stack);
 
@@ -120,8 +108,8 @@ void peano4::stacks::tests::TestDataOnHeapWithContainer::startSend(
   if (totalValues > 0) {
     [[maybe_unused]] const int result = tarch::mpi::isend(
       customStack.dataBuffer.data(),
-      totalValues,
-      translateContextIntoDatatype<TestDataOnHeapWithContainer>(context),
+      static_cast<int>(totalValues * sizeof(DoFType)),
+      MPI_BYTE,
       customStack.getActiveIORank(),
       customStack.getActiveIOTag(),
       comm,
@@ -182,8 +170,8 @@ bool peano4::stacks::tests::TestDataOnHeapWithContainer::tryToFinishSendOrReceiv
         if (totalValues > 0) {
           [[maybe_unused]] const int result = tarch::mpi::irecv(
             customStack.dataBuffer.data(),
-            totalValues,
-            translateContextIntoDatatype<TestDataOnHeapWithContainer>(customStack.mpiContext),
+            static_cast<int>(totalValues * sizeof(DoFType)),
+            MPI_BYTE,
             customStack.getActiveIORank(),
             customStack.getActiveIOTag(),
             customStack.mpiComm,
@@ -258,4 +246,3 @@ bool peano4::stacks::tests::TestDataOnHeapWithContainer::tryToFinishSendOrReceiv
 
   return allDone;
 }
-#endif

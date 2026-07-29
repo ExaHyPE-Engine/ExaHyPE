@@ -2,8 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "tarch/mpi/mpi.h"
-
 namespace toolbox::loadbalancing {
   class LoadBalancer;
   class Statistics;
@@ -13,6 +11,15 @@ namespace toolbox::loadbalancing::tests {
   class StatisticsTest;
 } // namespace toolbox::loadbalancing::tests
 
+/**
+ * Collects the local grid statistics and turns them into a global view.
+ *
+ * The global view lags one grid sweep. A sweep reduces its own numbers after the
+ * load-balancing decision, and the following sweep publishes that result before it decides,
+ * so a decision always rests on the numbers of the sweep before it. Every rank reduces at the
+ * same point of the sweep, and publishing is local, so a caller that only needs the current
+ * view runs no communication at all.
+ */
 class toolbox::loadbalancing::Statistics final {
   friend class toolbox::loadbalancing::LoadBalancer;
   friend class toolbox::loadbalancing::tests::LoadBalancerTest;
@@ -89,13 +96,13 @@ public:
   bool hasGlobalUniformGridCompleted() const;
 
 private:
-  static void shutdownMPI();
+  void initialiseExchange();
+  void shutdownMPI();
 
-  void completePendingReduction();
   void updateGlobalView();
   void synchroniseGlobalView();
   void startGlobalViewExchange();
-  void waitForGlobalDataExchange();
+  void publishGlobalView();
   void resetInitialDecompositionState();
   void incLocalNumberOfSplits(int delta = 1);
   void notifyUniformGridComplete();
@@ -164,10 +171,10 @@ private:
   bool _localUniformGridComplete;
   bool _globalUniformGridComplete;
 
-#ifdef PEANO_WITH_MPI
-  std::array<std::uint64_t, NumberOfWords> _globalExchangeSend{};
-  std::array<std::uint64_t, NumberOfWords> _globalExchangeRecv{};
-  MPI_Request                              _globalExchangeRequest;
-  bool                                     _globalExchangeInFlight;
-#endif
+  /**
+   * The reduced record of the preceding sweep, waiting to be published.
+   */
+  std::array<std::uint64_t, NumberOfWords> _reductionRecord{};
+
+  bool _hasPendingRecord{false};
 };

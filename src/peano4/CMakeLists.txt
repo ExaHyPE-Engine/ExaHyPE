@@ -19,6 +19,7 @@ set(SOURCES
   datamanagement/VertexMarker.cpp
 
   grid/AutomatonState.cpp
+  grid/BoundaryDataAggregation.cpp
   grid/CellType.cpp
   grid/FaceType.cpp
   grid/GridControlEvent.cpp
@@ -38,6 +39,7 @@ set(SOURCES
   grid/VertexLookupTable.cpp
   grid/VertexType.cpp
   grid/tests/AutomatonStateTest.cpp
+  grid/tests/BoundaryDataAggregationTest.cpp
   grid/tests/CellTypeTest.cpp
   grid/tests/FaceTypeTest.cpp
   grid/tests/GridControlEventTest.cpp
@@ -53,14 +55,15 @@ set(SOURCES
   grid/tests/VertexLookupTableTest.cpp
   grid/tests/VertexTypeTest.cpp
 
-  parallel/Node.cpp
+  parallel/ExchangeChannels.cpp
+  parallel/RunControl.cpp
   parallel/SpacetreeSet.cpp
-  parallel/StartTraversalMessage.cpp
-  parallel/TreeEntry.cpp
-  parallel/TreeManagementMessage.cpp
-  parallel/tests/NodeTest.cpp
+  parallel/TreeIdMapping.cpp
+  parallel/tests/ExchangeChannelsTest.cpp
   parallel/tests/PingPongTest.cpp
+  parallel/tests/RunControlTest.cpp
   parallel/tests/SpacetreeSetTest.cpp
+  parallel/tests/TreeIdMappingTest.cpp
 
   stacks/IOMode.cpp
   stacks/SendReceiveContext.cpp

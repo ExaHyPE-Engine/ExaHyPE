@@ -1,0 +1,51 @@
+Bootstrap: docker
+From: peanoframework/spack:latest
+Stage: build
+
+%files
+  utilities/spack/compilers/gcc/spack.yaml /spack.yaml
+
+%post
+  mkdir /opt/spack-environment && cd /opt/spack-environment
+  cp /spack.yaml .
+
+  . /opt/spack/share/spack/setup-env.sh
+  spack compiler find
+  spack -e . external find curl cmake ccache git ninja
+  spack -e . concretize
+  spack -e . install --fail-fast
+  spack gc -y
+  spack clean
+  spack env activate --sh -d . >> /opt/spack-environment/environment_modifications.sh
+
+Bootstrap: docker
+From: peanoframework/base:latest
+Stage: final
+
+%environment
+  TZ=UTC
+  DEBIAN_FRONTEND=noninteractive
+
+%files
+  requirements.txt /requirements.txt
+
+%files from build
+  /opt/spack-environment /opt
+  /opt/software /opt
+  /opt/views /opt
+  /opt/spack-environment/environment_modifications.sh /opt/spack-environment/environment_modifications.sh
+
+%post
+  export TZ=UTC
+  export DEBIAN_FRONTEND=noninteractive
+
+  . /opt/spack-environment/environment_modifications.sh && pip install -r /requirements.txt && rm /requirements.txt
+
+  # Symlink the old view location
+  ln -s /opt/views/view /opt/view
+
+  # Modify the environment without relying on sourcing shell specific files at startup
+  cat /opt/spack-environment/environment_modifications.sh >> $SINGULARITY_ENVIRONMENT
+
+%labels
+  peano-framework.org http://www.peano-framework.org/

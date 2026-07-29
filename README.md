@@ -38,7 +38,7 @@ Get started with Peano following our [Installation Guide](https://hpcsoftware.pa
 
 # Environments
 
-We maintain packaged [environments](environments)
+We maintain packaged [environments](utilities)
 for Docker, Apptainer, and [Spack](https://github.com/spack/spack/wiki) to simplify
 setup on workstations and HPC systems.
 

@@ -8,14 +8,15 @@ namespace peano4::grid::tests {
   class AutomatonStateTest;
 } // namespace peano4::grid::tests
 
-class peano4::grid::tests::AutomatonStateTest final: public tarch::tests::TestCase {
-private:
-  void testFlags();
-  void testMPIDatatype();
-
+class peano4::grid::tests::AutomatonStateTest final : public tarch::tests::TestCase {
 public:
   AutomatonStateTest();
   ~AutomatonStateTest() override final = default;
 
   void run() override final;
+
+private:
+  void testFlags();
+  void testRefineState();
+  void testSendAndReceiveInARing();
 };

@@ -5,7 +5,7 @@
 #include "peano4/grid/GridControlEvent.h"
 #include "tarch/la/VectorVectorOperations.h"
 #include "tarch/mpi/Rank.h"
-#include "tarch/mpi/mpi.h"
+#include "tarch/mpi/Request.h"
 
 peano4::grid::tests::GridControlEventTest::GridControlEventTest() :
   TestCase("peano4::grid::tests::GridControlEventTest") {}
@@ -1219,7 +1219,6 @@ void peano4::grid::tests::GridControlEventTest::testMerge3() {
 }
 
 void peano4::grid::tests::GridControlEventTest::testMPI() {
-#ifdef PEANO_WITH_MPI
   auto&     rank          = tarch::mpi::Rank::getInstance();
   MPI_Comm  comm          = rank.getCommunicator();
   const int myRank        = rank.getRank();
@@ -1270,9 +1269,9 @@ void peano4::grid::tests::GridControlEventTest::testMPI() {
     }
   }
 
-  const int  expectedSenderRank = (numberOfRanks == 1) ? myRank : ((myRank - 1 + numberOfRanks) % numberOfRanks);
+  const int  expectedSenderRank        = (numberOfRanks == 1) ? myRank : ((myRank - 1 + numberOfRanks) % numberOfRanks);
   const auto expectedRefinementControl = (expectedSenderRank % 2 == 0) ? GridControlEvent::RefinementControl::Refine
-                                                                      : GridControlEvent::RefinementControl::Erase;
+                                                                       : GridControlEvent::RefinementControl::Erase;
   validateEquals(
     static_cast<std::uint8_t>(receivedEvent.getRefinementControl()),
     static_cast<std::uint8_t>(expectedRefinementControl)
@@ -1289,5 +1288,4 @@ void peano4::grid::tests::GridControlEventTest::testMPI() {
   }
 
   validateEquals(status.MPI_SOURCE, expectedSenderRank);
-#endif
 }

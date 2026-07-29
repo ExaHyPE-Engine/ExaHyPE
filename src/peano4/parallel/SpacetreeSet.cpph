@@ -1,5 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
+
 template <class Container>
 void peano4::parallel::SpacetreeSet::resizeParallelExchangeStacks(Container& stackContainer) {
   for (auto& tree : getInstance()._spacetrees) {
@@ -74,8 +75,8 @@ void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(
   int        worker
 ) {
   const int thisRank   = tarch::mpi::Rank::getInstance().getRank();
-  const int sourceRank = Node::getInstance().getRank(master);
-  const int targetRank = Node::getInstance().getRank(worker);
+  const int sourceRank = peano4::parallel::TreeIdMapping::getRank(master);
+  const int targetRank = peano4::parallel::TreeIdMapping::getRank(worker);
 
   // If we're neither the sender nor receiver, we have nothing to do.
   if (thisRank != sourceRank and thisRank != targetRank) {
@@ -103,61 +104,80 @@ void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(
       targetStack = std::move(sourceStack);
       return;
     }
-#ifdef PEANO_WITH_MPI
-    const auto metaInfo =
-      Node::getInstance().getGridDataExchangeMetaInformation(master, worker, Node::ExchangeMode::VerticalData);
+    const auto metaInfo = peano4::parallel::ExchangeChannels::getInstance().getGridDataExchangeMetaInformation(
+      master,
+      worker,
+      peano4::parallel::ExchangeChannels::ExchangeMode::VerticalData
+    );
 
     assertion(metaInfo.first >= 0);
     assertion(metaInfo.second != MPI_COMM_NULL);
 
-    const int                  messageSize = sourceStack.size();
-    tarch::mpi::IntegerMessage message(messageSize);
-    tarch::mpi::IntegerMessage::sendAndPollDanglingMessages(message, targetRank, metaInfo.first, metaInfo.second);
+    const int messageSize = sourceStack.size();
+    tarch::mpi::send(&messageSize, 1, MPI_INT, targetRank, metaInfo.first, metaInfo.second);
 
     if (messageSize > 0) {
       sourceStack.startSend(stacks::SendReceiveContext::ForkDomain, targetRank, metaInfo.first, metaInfo.second);
     }
-#endif
   }
   // We are the receiver
   else if (thisRank == targetRank) {
-#ifdef PEANO_WITH_MPI
-    const auto metaInfo =
-      Node::getInstance().getGridDataExchangeMetaInformation(master, worker, Node::ExchangeMode::VerticalData);
+    const auto metaInfo = peano4::parallel::ExchangeChannels::getInstance().getGridDataExchangeMetaInformation(
+      master,
+      worker,
+      peano4::parallel::ExchangeChannels::ExchangeMode::VerticalData
+    );
 
     assertion(metaInfo.first >= 0);
     assertion(metaInfo.second != MPI_COMM_NULL);
 
-    tarch::mpi::IntegerMessage message;
-    tarch::mpi::IntegerMessage::receiveAndPollDanglingMessages(message, sourceRank, metaInfo.first, metaInfo.second);
+    int messageSize = 0;
+    tarch::mpi::receive(&messageSize, 1, MPI_INT, sourceRank, metaInfo.first, metaInfo.second);
 
-    if (message.getValue() > 0) {
+    if (messageSize > 0) {
       const int targetStackNumber = grid::PeanoCurve::getOutputStackNumber(getInstance().getSpacetree(worker)._root);
       auto&     targetStack       = stackContainer.getLocalExchangeStack(worker, targetStackNumber);
       assertion(targetStack.empty());
-      targetStack.startReceive(
-        stacks::SendReceiveContext::ForkDomain,
-        sourceRank,
-        metaInfo.first,
-        metaInfo.second,
-        message.getValue()
-      );
+      targetStack
+        .startReceive(stacks::SendReceiveContext::ForkDomain, sourceRank, metaInfo.first, metaInfo.second, messageSize);
     }
-#endif
   }
 }
 
+/**
+ * Move one tree's outgoing boundary data towards its neighbours.
+ *
+ * A neighbour on this rank takes the data by a stack move and needs no message.
+ * A neighbour on another rank has its data copied into that rank's aggregation
+ * buffer and described by one segment, so that a rank pair exchanges a single
+ * payload and a single segment table per container rather than one message per
+ * tree pair.
+ *
+ * A tree hands on to the contributor countdown of every remote rank it touches,
+ * whether or not it had anything to send. The countdown is what tells the last
+ * tree that the buffer is complete, and it is that tree which posts the
+ * messages. Posting therefore still happens before any wait, which a caller
+ * relies on: MPI's rendezvous protocol would deadlock if a rank blocked for one
+ * rank pair's data while a peer waited for it to post another one's.
+ */
 template <class Container>
 void peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks(
   Container& stackContainer,
   int        spacetreeId
 ) {
-  const int thisRank = tarch::mpi::Rank::getInstance().getRank();
-  auto&     tree     = getInstance().getSpacetree(spacetreeId);
+  const int thisRank    = tarch::mpi::Rank::getInstance().getRank();
+  auto&     tree        = getInstance().getSpacetree(spacetreeId);
+  auto&     aggregation = stackContainer.getBoundaryDataAggregation();
+
+  aggregation.prepare(
+    getInstance()._boundaryAggregationGeneration,
+    getInstance()._boundaryAggregationRemoteRanks,
+    getInstance()._boundaryAggregationContributors
+  );
 
   for (int neighborSlot = 0; neighborSlot < tree.getNumberOfNeighbourTrees(); neighborSlot++) {
     const int targetTreeId = tree.getNeighbourTreeIdForSlot(neighborSlot);
-    const int targetRank   = Node::getInstance().getRank(targetTreeId);
+    const int targetRank   = peano4::parallel::TreeIdMapping::getRank(targetTreeId);
 
     auto& sourceStack = stackContainer.getParallelExchangeStack(
       spacetreeId,
@@ -165,67 +185,18 @@ void peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks(
       grid::StackTopology::ParallelExchangeStack::HorizontalOutput
     );
     // Symmetric horizontal exchange: an empty outgoing stack means that the
-    // peer has no corresponding data for us either, so we post no receive.
-    // Asymmetric cardinalities require a separate count-exchange protocol.
+    // peer has no corresponding data for us either, so the pair contributes
+    // nothing. Asymmetric cardinalities require a separate count exchange.
     if (sourceStack.empty()) {
       continue;
     }
 
     if (thisRank != targetRank) {
-#ifdef PEANO_WITH_MPI
-      const int messageSize = sourceStack.size();
-      assertion(messageSize > 0, spacetreeId, targetTreeId, neighborSlot);
-
-      // The outgoing stack size is also the incoming stack size.
-      const auto sendMetaInfo = Node::getInstance().getGridDataExchangeMetaInformation(
-        spacetreeId,
-        targetTreeId,
-        Node::ExchangeMode::HorizontalData
-      );
-
-      assertion(sendMetaInfo.first >= 0);
-      assertion(sendMetaInfo.second != MPI_COMM_NULL);
-
-      sourceStack
-        .startSend(stacks::SendReceiveContext::BoundaryExchange, targetRank, sendMetaInfo.first, sendMetaInfo.second);
-
-      const auto receiveMetaInfo = Node::getInstance().getGridDataExchangeMetaInformation(
-        targetTreeId,
-        spacetreeId,
-        Node::ExchangeMode::HorizontalData
-      );
-
-      assertion(receiveMetaInfo.first >= 0);
-      assertion(receiveMetaInfo.second != MPI_COMM_NULL);
-
-      auto& targetStack = stackContainer.getParallelExchangeStack(
-        spacetreeId,
-        neighborSlot,
-        grid::StackTopology::ParallelExchangeStack::HorizontalInput
-      );
-      assertion(
-        targetStack.empty(),
-        spacetreeId,
-        targetTreeId,
-        neighborSlot,
-        targetStack.size(),
-        messageSize,
-        typeid(Container).name()
-      );
-      targetStack.startReceive(
-        stacks::SendReceiveContext::BoundaryExchange,
-        targetRank,
-        receiveMetaInfo.first,
-        receiveMetaInfo.second,
-        messageSize
-      );
-
+      aggregation.appendOutgoing(aggregation.getRankExchange(targetRank), spacetreeId, targetTreeId, sourceStack);
       continue;
-#endif
     }
 
     // Shared memory exchange
-    // We only reach here if !PEANO_WITH_MPI or (PEANO_WITH_MPI and thisRank == targetRank)
     assertion(thisRank == targetRank);
     const int targetSlot = getInstance().getSpacetree(targetTreeId).getNeighbourSlot(spacetreeId);
     assertion(targetSlot >= 0, spacetreeId, targetTreeId, neighborSlot);
@@ -258,21 +229,186 @@ void peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks(
     );
     targetStack = std::move(sourceStack);
   }
+
+  const int localTreeId = peano4::parallel::TreeIdMapping::getLocalTreeId(spacetreeId);
+  for (const int remoteRank : getInstance()._boundaryAggregationRanksPerTree[localTreeId]) {
+    auto& exchange = aggregation.getRankExchange(remoteRank);
+    if (exchange.outstandingContributors.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+      postAggregatedBoundaryExchange(stackContainer, remoteRank);
+    }
+  }
 }
 
+/**
+ * Send one rank pair's aggregated boundary data and receive the peer's.
+ *
+ * Both incoming lengths follow from the outgoing ones, as the exchange is
+ * symmetric: the number of elements a tree sends to a peer tree equals the
+ * number that tree sends back, so the total payload and the number of segments
+ * match on both sides. Only the identity of each segment travels, which is what
+ * frees the two ranks from agreeing on the order in which their trees packed.
+ */
+template <class Container>
+void peano4::parallel::SpacetreeSet::postAggregatedBoundaryExchange(Container& stackContainer, int remoteRank) {
+  using Aggregation = std::decay_t<decltype(stackContainer.getBoundaryDataAggregation())>;
+
+  auto& exchange = stackContainer.getBoundaryDataAggregation().getRankExchange(remoteRank);
+
+  const int numberOfSegments = static_cast<int>(exchange.outgoingSegments.size());
+  const int containerId      = stackContainer.getContainerId();
+
+  if (numberOfSegments == 0) {
+    return;
+  }
+
+#if PEANO_DEBUG
+  // Both ranks size their receives from their own data, so a peer that disagrees
+  // about how many segments it sends would show up only as a mis-sized receive,
+  // far from the cause. Trading the counts turns that into a failure that names
+  // the rank pair. The trade happens only for a non-empty exchange: the data
+  // symmetry guarantees the peer of a non-empty pair posts as well, whereas a
+  // rank pair that is empty here may not exist in the peer's topology at all
+  // while a split settles, and a count message on such a pair would dangle.
+  const auto countMetaInfo =
+    peano4::parallel::ExchangeChannels::getInstance().getAggregatedBoundaryExchangeMetaInformation(
+      containerId,
+      peano4::parallel::ExchangeChannels::AggregatedBoundaryMessage::SegmentCount
+    );
+  exchange.outgoingSegmentCount = numberOfSegments;
+  tarch::mpi::isend(
+    &exchange.outgoingSegmentCount,
+    1,
+    MPI_INT,
+    remoteRank,
+    countMetaInfo.first,
+    countMetaInfo.second,
+    &exchange.outgoingSegmentCountRequest
+  );
+  tarch::mpi::irecv(
+    &exchange.incomingSegmentCount,
+    1,
+    MPI_INT,
+    remoteRank,
+    countMetaInfo.first,
+    countMetaInfo.second,
+    &exchange.incomingSegmentCountRequest
+  );
+#endif
+
+  const int numberOfElements = static_cast<int>(exchange.outgoingPayload.size());
+
+  const auto payloadMetaInfo =
+    peano4::parallel::ExchangeChannels::getInstance().getAggregatedBoundaryExchangeMetaInformation(
+      containerId,
+      peano4::parallel::ExchangeChannels::AggregatedBoundaryMessage::Payload
+    );
+  const auto segmentMetaInfo =
+    peano4::parallel::ExchangeChannels::getInstance().getAggregatedBoundaryExchangeMetaInformation(
+      containerId,
+      peano4::parallel::ExchangeChannels::AggregatedBoundaryMessage::SegmentTable
+    );
+
+  exchange.incomingSegments.resize(numberOfSegments);
+  const int numberOfSegmentBytes = numberOfSegments * static_cast<int>(sizeof(typename Aggregation::Segment));
+
+  exchange.outgoingSegmentChannel.startSend(
+    exchange.outgoingSegments.data(),
+    numberOfSegmentBytes,
+    remoteRank,
+    segmentMetaInfo.first,
+    segmentMetaInfo.second
+  );
+  exchange.incomingSegmentChannel.startReceive(
+    exchange.incomingSegments.data(),
+    numberOfSegmentBytes,
+    remoteRank,
+    segmentMetaInfo.first,
+    segmentMetaInfo.second
+  );
+
+  exchange.outgoingPayload
+    .startSend(stacks::SendReceiveContext::BoundaryExchange, remoteRank, payloadMetaInfo.first, payloadMetaInfo.second);
+  exchange.incomingPayload.startReceive(
+    stacks::SendReceiveContext::BoundaryExchange,
+    remoteRank,
+    payloadMetaInfo.first,
+    payloadMetaInfo.second,
+    numberOfElements
+  );
+}
+
+/**
+ * Copy the segments addressed to one tree out of a rank pair's incoming buffer.
+ *
+ * The sender packed the payload and the table in the same order, so walking the
+ * table and accumulating the element counts gives every segment's offset. A
+ * tree picks out the segments naming it as the receiver and pushes each into
+ * the input stack of the slot that holds its sender, which is where a
+ * per-tree-pair receive would have put it.
+ */
+template <class Container>
+void peano4::parallel::SpacetreeSet::unpackAggregatedBoundaryExchange(
+  Container& stackContainer,
+  int        spacetreeId,
+  int        remoteRank
+) {
+  auto&       exchange = stackContainer.getBoundaryDataAggregation().getRankExchange(remoteRank);
+  auto&       tree     = getInstance().getSpacetree(spacetreeId);
+  std::size_t offset   = 0;
+
+  for (const auto& segment : exchange.incomingSegments) {
+    if (segment.receiverTreeId != spacetreeId) {
+      offset += static_cast<std::size_t>(segment.numberOfElements);
+      continue;
+    }
+
+    const int slot = tree.getNeighbourSlot(segment.senderTreeId);
+    assertion(slot >= 0, spacetreeId, segment.senderTreeId, remoteRank);
+
+    auto& targetStack = stackContainer.getParallelExchangeStack(
+      spacetreeId,
+      slot,
+      grid::StackTopology::ParallelExchangeStack::HorizontalInput
+    );
+    assertion(targetStack.empty(), spacetreeId, segment.senderTreeId, targetStack.size(), typeid(Container).name());
+
+    auto destination = targetStack.pushBlock(static_cast<std::size_t>(segment.numberOfElements));
+    for (std::size_t i = 0; i < destination.size(); i++) {
+      destination.set(i, std::move(exchange.incomingPayload[offset + i]));
+    }
+    offset += static_cast<std::size_t>(segment.numberOfElements);
+  }
+}
+
+/**
+ * Wait until one tree's messages have gone out and its data has arrived, then
+ * hand the aggregated boundary data to the tree.
+ *
+ * The aggregated requests of a rank pair belong to all the trees that share it,
+ * and testing a request that has already completed is a nop, so every tree may
+ * poll them. Only the segments naming a tree as their receiver are copied out,
+ * which leaves each element with exactly one reader.
+ */
 template <class Container>
 void peano4::parallel::SpacetreeSet::finishAllOutstandingSendsAndReceives(Container& stackContainer, int spacetreeId) {
-#ifdef PEANO_WITH_MPI
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() <= 1) {
     return;
   }
 
-  tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
-  tarch::mpi::Rank::getInstance().setDeadlockTimeoutTimeStamp();
+  tarch::mpi::Diagnostics::getInstance().setDeadlockWarningTimeStamp();
+  tarch::mpi::Diagnostics::getInstance().setDeadlockTimeoutTimeStamp();
 
-  auto& tree = getInstance().getSpacetree(spacetreeId);
+  auto& tree        = getInstance().getSpacetree(spacetreeId);
+  auto& aggregation = stackContainer.getBoundaryDataAggregation();
 
-  bool allSendReceivesFinished = false;
+  const std::vector<int> emptyRemoteRanks;
+  const bool             hasAggregatedData = aggregation.isPreparedFor(getInstance()._boundaryAggregationGeneration);
+  const int              localTreeId       = peano4::parallel::TreeIdMapping::getLocalTreeId(spacetreeId);
+  const auto&            remoteRanks =
+    hasAggregatedData ? getInstance()._boundaryAggregationRanksPerTree[localTreeId] : emptyRemoteRanks;
+
+  bool                   allSendReceivesFinished = false;
+  tarch::mpi::PollPacing pacing;
   while (not allSendReceivesFinished) {
     allSendReceivesFinished = true;
 
@@ -288,23 +424,65 @@ void peano4::parallel::SpacetreeSet::finishAllOutstandingSendsAndReceives(Contai
       }
     }
 
-    tarch::mpi::Rank::getInstance().writeTimeoutWarning(
-      "peano4::parallel::SpacetreeSet",
-      "finishAllOutstandingSendsAndReceives()",
-      spacetreeId,
-      -1,
-      -1
-    );
-    tarch::mpi::Rank::getInstance().triggerDeadlockTimeout(
-      "peano4::parallel::SpacetreeSet",
-      "finishAllOutstandingSendsAndReceives()",
-      spacetreeId,
-      -1,
-      -1
-    );
-    tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-  }
+    for (const int remoteRank : remoteRanks) {
+      auto& exchange = aggregation.getRankExchange(remoteRank);
+
+      int segmentsSent = 0;
+      tarch::mpi::test(exchange.outgoingSegmentChannel.getRequest(), &segmentsSent, MPI_STATUS_IGNORE);
+      allSendReceivesFinished &= (segmentsSent != 0);
+
+      int segmentsReceived = 0;
+      tarch::mpi::test(exchange.incomingSegmentChannel.getRequest(), &segmentsReceived, MPI_STATUS_IGNORE);
+      allSendReceivesFinished &= (segmentsReceived != 0);
+
+      allSendReceivesFinished &= exchange.outgoingPayload.tryToFinishSendOrReceive();
+      allSendReceivesFinished &= exchange.incomingPayload.tryToFinishSendOrReceive();
+
+#if PEANO_DEBUG
+      int segmentCountSent = 0;
+      tarch::mpi::test(&exchange.outgoingSegmentCountRequest, &segmentCountSent, MPI_STATUS_IGNORE);
+      allSendReceivesFinished &= (segmentCountSent != 0);
+
+      int segmentCountReceived = 0;
+      tarch::mpi::test(&exchange.incomingSegmentCountRequest, &segmentCountReceived, MPI_STATUS_IGNORE);
+      allSendReceivesFinished &= (segmentCountReceived != 0);
 #endif
+    }
+
+    if (not allSendReceivesFinished) {
+      if (pacing.reportProgressNow()) {
+        tarch::mpi::Diagnostics::getInstance().writeTimeoutWarning(
+          "peano4::parallel::SpacetreeSet",
+          "finishAllOutstandingSendsAndReceives()",
+          spacetreeId,
+          -1,
+          -1
+        );
+        tarch::mpi::Diagnostics::getInstance().triggerDeadlockTimeout(
+          "peano4::parallel::SpacetreeSet",
+          "finishAllOutstandingSendsAndReceives()",
+          spacetreeId,
+          -1,
+          -1
+        );
+      }
+    }
+  }
+
+  for (const int remoteRank : remoteRanks) {
+#if PEANO_DEBUG
+    [[maybe_unused]] const auto& exchange = aggregation.getRankExchange(remoteRank);
+    assertion(
+      exchange.incomingSegmentCount == exchange.outgoingSegmentCount,
+      "Horizontal boundary exchange assumes symmetric data cardinality",
+      remoteRank,
+      spacetreeId,
+      exchange.outgoingSegmentCount,
+      exchange.incomingSegmentCount
+    );
+#endif
+    unpackAggregatedBoundaryExchange(stackContainer, spacetreeId, remoteRank);
+  }
 }
 
 /**
@@ -406,7 +584,7 @@ void peano4::parallel::SpacetreeSet::exchangeAllPeriodicBoundaryDataStacks(Conta
       for (std::size_t i = 0; i < targets.size(); i++) {
         const int  targetTree = targets[i];
         const bool lastTarget = i + 1 == targets.size();
-        if (Node::getInstance().getRank(targetTree) == thisRank) {
+        if (peano4::parallel::TreeIdMapping::getRank(targetTree) == thisRank) {
           auto& depositStack = stackContainer.getLocalExchangeStack(targetTree, depositStackNumber);
           if (lastTarget) {
             depositStack.push(std::move(data));
@@ -430,7 +608,7 @@ void peano4::parallel::SpacetreeSet::exchangeAllPeriodicBoundaryDataStacks(Conta
  * partner tree lives on another rank. Runs once per container and sweep,
  * after the same-rank periodic pass has staged the cross-rank entries. It
  * first exchanges a per-channel payload count, then the per-entry stamps and
- * payloads on the dedicated periodic tag, and finally deposits the received
+ * payloads on dedicated periodic tags, and finally deposits the received
  * payloads onto the partner tree's periodic input stacks so the ordinary
  * stamp-matched receive consumes them. The channels come from the globally
  * identical routing table, so both ranks of every channel post in lockstep
@@ -439,7 +617,6 @@ void peano4::parallel::SpacetreeSet::exchangeAllPeriodicBoundaryDataStacks(Conta
  */
 template <class Container>
 void peano4::parallel::SpacetreeSet::exchangeCrossRankPeriodicData([[maybe_unused]] Container& stackContainer) {
-#ifdef PEANO_WITH_MPI
   if (not getInstance().hasPeriodicBoundaryConditions()) {
     return;
   }
@@ -447,160 +624,221 @@ void peano4::parallel::SpacetreeSet::exchangeCrossRankPeriodicData([[maybe_unuse
   const int   thisRank = tarch::mpi::Rank::getInstance().getRank();
   const auto& channels = getInstance()._crossRankPeriodicChannels;
 
-  // A channel is the ordered pair of producer tree and consumer tree.
   using Channel = std::pair<int, int>;
 
-  // Each payload travels with its stamp and the consumer-side deposit stack.
-  // Transmitting these (rather than re-deriving counts from the routing
-  // geometry) keeps the exchange correct no matter how many entities actually
-  // emitted data this sweep: an idle channel simply ships count 0.
-  constexpr int StampWords = grid::PackedPeriodicStampSize + 1;
-  auto          packEntry  = [](const grid::PeriodicStamp& stamp, int depositStack, int* out) {
-    grid::packPeriodicStamp(stamp, out);
-    out[grid::PackedPeriodicStampSize] = depositStack;
+  // Sending the stamp and consumer-side deposit stack with every payload keeps
+  // the exchange independent of how many entities emit data in a sweep.
+  constexpr int MetadataWordsPerEntry = grid::PackedPeriodicStampSize + 1;
+  const auto packEntry = [](const grid::PeriodicStamp& stamp, const int depositStack, int* const output) {
+    grid::packPeriodicStamp(stamp, output);
+    output[grid::PackedPeriodicStampSize] = depositStack;
   };
-  auto unpackEntry = [](const int* in, grid::PeriodicStamp& stamp, int& depositStack) {
-    stamp        = grid::unpackPeriodicStamp(in);
-    depositStack = in[grid::PackedPeriodicStampSize];
+  const auto unpackEntry = [](const int* const input, grid::PeriodicStamp& stamp, int& depositStack) {
+    stamp        = grid::unpackPeriodicStamp(input);
+    depositStack = input[grid::PackedPeriodicStampSize];
   };
 
-  // Group staged outgoing payloads by channel (the producer is a local tree).
-  struct Payload {
-    grid::PeriodicStamp             stamp;
-    int                             depositStack;
-    typename Container::ElementType data;
+  struct PeriodicPayload {
+    grid::PeriodicStamp             stamp{};
+    int                             depositStack{0};
+    typename Container::ElementType data{};
   };
-  std::map<Channel, std::vector<Payload>> outByChannel;
-  for (auto& e : stackContainer.getCrossRankPeriodicStaging()) {
-    outByChannel[Channel(e.sendTree, e.recvTree)].push_back(Payload{e.stamp, e.depositStack, std::move(e.data)});
+  std::map<Channel, std::vector<PeriodicPayload>> outgoingPayloadsByChannel;
+  for (auto& stagedEntry : stackContainer.getCrossRankPeriodicStaging()) {
+    const Channel channel{stagedEntry.sendTree, stagedEntry.recvTree};
+    outgoingPayloadsByChannel[channel].push_back(
+      PeriodicPayload{stagedEntry.stamp, stagedEntry.depositStack, std::move(stagedEntry.data)}
+    );
   }
 
-  // One record per channel this rank participates in. Channels are taken from
-  // the global set, so producer and consumer ranks post in lockstep (count 0
-  // for a channel that is idle this sweep); no count exchange is left unmatched,
-  // hence no deadlock. std::list keeps the in-flight buffers' addresses stable.
+  // Both ranks derive these records from the global channel set, so they post
+  // matching count exchanges even for idle channels. A list keeps the
+  // in-flight buffers' addresses stable.
   struct ChannelIO {
-    Channel                   channel;
-    bool                      outgoing;
-    int                       remoteRank;
-    int                       count;
-    std::vector<int>          meta;
-    typename Container::Stack data;
-    int                       tag          = 0;
-    MPI_Comm                  comm         = MPI_COMM_NULL;
-    MPI_Request               countRequest = MPI_REQUEST_NULL;
-    MPI_Request               metaRequest  = MPI_REQUEST_NULL;
+    Channel                   channel{};
+    bool                      outgoing{false};
+    int                       remoteRank{-1};
+    int                       count{0};
+    std::vector<int>          metadata{};
+    typename Container::Stack data{};
+    int                       metadataTag{0};
+    int                       dataTag{0};
+    MPI_Comm                  communicator{MPI_COMM_NULL};
+    MPI_Request               countRequest{MPI_REQUEST_NULL};
+    MPI_Request               metadataRequest{MPI_REQUEST_NULL};
   };
-  std::list<ChannelIO> io;
+  std::list<ChannelIO> channelRecords;
 
-  for (const auto& ch : channels) {
-    const int  producerTree = ch.first;
-    const int  consumerTree = ch.second;
-    const auto metaInfo     = Node::getInstance().getGridDataExchangeMetaInformation(
+  for (const auto& channel : channels) {
+    const int producerTree = channel.first;
+    const int consumerTree = channel.second;
+    const auto metadataChannel =
+      peano4::parallel::ExchangeChannels::getInstance().getGridDataExchangeMetaInformation(
+        producerTree,
+        consumerTree,
+        peano4::parallel::ExchangeChannels::ExchangeMode::PeriodicMetadata
+      );
+    const auto dataChannel = peano4::parallel::ExchangeChannels::getInstance().getGridDataExchangeMetaInformation(
       producerTree,
       consumerTree,
-      Node::ExchangeMode::PeriodicData
+      peano4::parallel::ExchangeChannels::ExchangeMode::PeriodicData
     );
-    if (Node::getInstance().getRank(producerTree) == thisRank) {
-      io.emplace_back();
-      ChannelIO& c  = io.back();
-      c.channel     = ch;
-      c.outgoing    = true;
-      c.remoteRank  = Node::getInstance().getRank(consumerTree);
-      c.tag         = metaInfo.first;
-      c.comm        = metaInfo.second;
-      const auto it = outByChannel.find(ch);
-      c.count       = (it != outByChannel.end()) ? static_cast<int>(it->second.size()) : 0;
+    assertion(metadataChannel.second == dataChannel.second);
+    if (peano4::parallel::TreeIdMapping::getRank(producerTree) == thisRank) {
+      channelRecords.emplace_back();
+      auto& channelRecord        = channelRecords.back();
+      channelRecord.channel      = channel;
+      channelRecord.outgoing     = true;
+      channelRecord.remoteRank   = peano4::parallel::TreeIdMapping::getRank(consumerTree);
+      channelRecord.metadataTag  = metadataChannel.first;
+      channelRecord.dataTag      = dataChannel.first;
+      channelRecord.communicator = metadataChannel.second;
+      const auto payloadsForChannel = outgoingPayloadsByChannel.find(channel);
+      channelRecord.count           = payloadsForChannel != outgoingPayloadsByChannel.end()
+        ? static_cast<int>(payloadsForChannel->second.size())
+        : 0;
     }
-    if (Node::getInstance().getRank(consumerTree) == thisRank) {
-      io.emplace_back();
-      ChannelIO& c = io.back();
-      c.channel    = ch;
-      c.outgoing   = false;
-      c.remoteRank = Node::getInstance().getRank(producerTree);
-      c.tag        = metaInfo.first;
-      c.comm       = metaInfo.second;
-      c.count      = 0;
+    if (peano4::parallel::TreeIdMapping::getRank(consumerTree) == thisRank) {
+      channelRecords.emplace_back();
+      auto& channelRecord        = channelRecords.back();
+      channelRecord.channel      = channel;
+      channelRecord.outgoing     = false;
+      channelRecord.remoteRank   = peano4::parallel::TreeIdMapping::getRank(producerTree);
+      channelRecord.metadataTag  = metadataChannel.first;
+      channelRecord.dataTag      = dataChannel.first;
+      channelRecord.communicator = metadataChannel.second;
     }
   }
 
-  // Phase 1: exchange the per-channel payload counts, then drain while pumping
-  // service messages so unrelated dangling traffic cannot stall us.
-  for (auto& c : io) {
-    if (c.outgoing) {
-      MPI_Isend(&c.count, 1, MPI_INT, c.remoteRank, c.tag, c.comm, &c.countRequest);
+  // Phase 1 drains every count before the metadata tag is reused.
+  for (auto& channelRecord : channelRecords) {
+    if (channelRecord.outgoing) {
+      tarch::mpi::isend(
+        &channelRecord.count,
+        1,
+        MPI_INT,
+        channelRecord.remoteRank,
+        channelRecord.metadataTag,
+        channelRecord.communicator,
+        &channelRecord.countRequest
+      );
     } else {
-      MPI_Irecv(&c.count, 1, MPI_INT, c.remoteRank, c.tag, c.comm, &c.countRequest);
+      tarch::mpi::irecv(
+        &channelRecord.count,
+        1,
+        MPI_INT,
+        channelRecord.remoteRank,
+        channelRecord.metadataTag,
+        channelRecord.communicator,
+        &channelRecord.countRequest
+      );
     }
   }
   {
-    bool done = io.empty();
-    while (not done) {
-      done = true;
-      for (auto& c : io) {
-        int flag = 0;
-        MPI_Test(&c.countRequest, &flag, MPI_STATUS_IGNORE);
-        done &= (flag != 0);
-      }
-      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+    tarch::mpi::RequestGroup countRequests;
+    for (auto& channelRecord : channelRecords) {
+      countRequests.add(&channelRecord.countRequest);
     }
+    countRequests.waitAll("peano4::parallel::SpacetreeSet", "exchangeCrossRankPeriodicData()");
   }
 
-  // Phase 2: for active channels (count > 0) exchange metadata then payload on
-  // the same tag. MPI in-order delivery keeps the sequence count, meta, data
-  // matched, so no extra synchronisation is needed.
-  for (auto& c : io) {
-    if (c.count == 0) {
+  // Phase 2 uses distinct tags so the variable-length metadata and payload
+  // cannot match the wrong receive. The completed count phase safely shares
+  // the metadata tag.
+  for (auto& channelRecord : channelRecords) {
+    if (channelRecord.count == 0) {
       continue;
     }
-    c.meta.resize(static_cast<std::size_t>(c.count) * StampWords);
-    if (c.outgoing) {
-      auto& payloads = outByChannel[c.channel];
-      for (int k = 0; k < c.count; k++) {
-        packEntry(payloads[k].stamp, payloads[k].depositStack, c.meta.data() + k * StampWords);
-        c.data.push(std::move(payloads[k].data));
+    channelRecord.metadata.resize(static_cast<std::size_t>(channelRecord.count) * MetadataWordsPerEntry);
+    if (channelRecord.outgoing) {
+      auto& payloads = outgoingPayloadsByChannel[channelRecord.channel];
+      for (int entryIndex = 0; entryIndex < channelRecord.count; entryIndex++) {
+        packEntry(
+          payloads[entryIndex].stamp,
+          payloads[entryIndex].depositStack,
+          channelRecord.metadata.data() + entryIndex * MetadataWordsPerEntry
+        );
+        channelRecord.data.push(std::move(payloads[entryIndex].data));
       }
-      MPI_Isend(c.meta.data(), c.count * StampWords, MPI_INT, c.remoteRank, c.tag, c.comm, &c.metaRequest);
-      c.data.startSend(stacks::SendReceiveContext::PeriodicBoundaryDataSwap, c.remoteRank, c.tag, c.comm);
+      tarch::mpi::isend(
+        channelRecord.metadata.data(),
+        channelRecord.count * MetadataWordsPerEntry,
+        MPI_INT,
+        channelRecord.remoteRank,
+        channelRecord.metadataTag,
+        channelRecord.communicator,
+        &channelRecord.metadataRequest
+      );
+      channelRecord.data.startSend(
+        stacks::SendReceiveContext::PeriodicBoundaryDataSwap,
+        channelRecord.remoteRank,
+        channelRecord.dataTag,
+        channelRecord.communicator
+      );
     } else {
-      MPI_Irecv(c.meta.data(), c.count * StampWords, MPI_INT, c.remoteRank, c.tag, c.comm, &c.metaRequest);
-      c.data.startReceive(stacks::SendReceiveContext::PeriodicBoundaryDataSwap, c.remoteRank, c.tag, c.comm, c.count);
+      tarch::mpi::irecv(
+        channelRecord.metadata.data(),
+        channelRecord.count * MetadataWordsPerEntry,
+        MPI_INT,
+        channelRecord.remoteRank,
+        channelRecord.metadataTag,
+        channelRecord.communicator,
+        &channelRecord.metadataRequest
+      );
+      channelRecord.data.startReceive(
+        stacks::SendReceiveContext::PeriodicBoundaryDataSwap,
+        channelRecord.remoteRank,
+        channelRecord.dataTag,
+        channelRecord.communicator,
+        channelRecord.count
+      );
     }
   }
   {
-    bool done = io.empty();
-    while (not done) {
-      done = true;
-      for (auto& c : io) {
-        if (c.count == 0) {
+    tarch::mpi::Diagnostics::getInstance().setDeadlockWarningTimeStamp();
+    tarch::mpi::Diagnostics::getInstance().setDeadlockTimeoutTimeStamp();
+
+    bool                   allRequestsCompleted = channelRecords.empty();
+    tarch::mpi::PollPacing pacing;
+    while (not allRequestsCompleted) {
+      allRequestsCompleted = true;
+      for (auto& channelRecord : channelRecords) {
+        if (channelRecord.count == 0) {
           continue;
         }
-        int flag = 0;
-        MPI_Test(&c.metaRequest, &flag, MPI_STATUS_IGNORE);
-        done &= (flag != 0);
-        done &= c.data.tryToFinishSendOrReceive();
+        int metadataCompleted{0};
+        tarch::mpi::test(&channelRecord.metadataRequest, &metadataCompleted, MPI_STATUS_IGNORE);
+        allRequestsCompleted &= metadataCompleted != 0;
+        allRequestsCompleted &= channelRecord.data.tryToFinishSendOrReceive();
       }
-      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+      if (not allRequestsCompleted and pacing.reportProgressNow()) {
+        tarch::mpi::Diagnostics::getInstance()
+          .writeTimeoutWarning("peano4::parallel::SpacetreeSet", "exchangeCrossRankPeriodicData()", -1, -1);
+        tarch::mpi::Diagnostics::getInstance()
+          .triggerDeadlockTimeout("peano4::parallel::SpacetreeSet", "exchangeCrossRankPeriodicData()", -1, -1);
+      }
     }
   }
 
   // Deposit received payloads onto the consumer tree's periodic input stacks,
   // stamped, so the ordinary stamp-matched receive consumes them next sweep.
-  // meta[k] and data[k] line up by transmission position.
-  for (auto& c : io) {
-    if (c.outgoing or c.count == 0) {
+  for (auto& channelRecord : channelRecords) {
+    if (channelRecord.outgoing or channelRecord.count == 0) {
       continue;
     }
-    const int consumerTree = c.channel.second;
-    for (int k = 0; k < c.count; k++) {
-      grid::PeriodicStamp stamp;
-      int                 depositStack = 0;
-      unpackEntry(c.meta.data() + k * StampWords, stamp, depositStack);
-      stackContainer.getLocalExchangeStack(consumerTree, depositStack).push(c.data[k]);
+    const int consumerTree = channelRecord.channel.second;
+    for (int entryIndex = 0; entryIndex < channelRecord.count; entryIndex++) {
+      grid::PeriodicStamp stamp{};
+      int                 depositStack{0};
+      unpackEntry(
+        channelRecord.metadata.data() + entryIndex * MetadataWordsPerEntry,
+        stamp,
+        depositStack
+      );
+      stackContainer.getLocalExchangeStack(consumerTree, depositStack).push(channelRecord.data[entryIndex]);
       stackContainer.pushLocalExchangeStamp(consumerTree, depositStack, stamp);
     }
   }
 
   stackContainer.clearCrossRankPeriodicStaging();
-#endif
 }

@@ -6,10 +6,9 @@
 
 #include "repositories/SolverRepository.h"
 
+#include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
-#include "tarch/mpi/mpi.h"
 #include "tarch/multicore/Lock.h"
-#include "tarch/services/ServiceRepository.h"
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   _solverState(SolverState::GridConstruction),
@@ -130,18 +129,14 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
   if (isLastGridSweepOfTimeStep()) {
-#ifdef PEANO_WITH_MPI
     int local = _numberOfTroubledCellsThisTimeStep;
     int global = 0;
     MPI_Comm communicator = tarch::mpi::Rank::getInstance().getCommunicator();
-    auto progress = [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); };
     tarch::mpi::allreduce(
       &local, &global, 1, MPI_INT, MPI_SUM,
-      communicator,
-      progress
+      communicator
     );
     _numberOfTroubledCellsThisTimeStep = global;
-#endif
 
     {{FINISH_TIME_STEP_IMPLEMENTATION}}
   }

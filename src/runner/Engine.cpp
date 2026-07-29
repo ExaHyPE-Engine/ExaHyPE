@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "Engine.h"
 
-#include "peano4/parallel/Node.h"
+#include "peano4/parallel/RunControl.h"
 #include "runner/Instrumentation.h"
 #include "runner/LoadBalancer.h"
 #include "runner/Orchestrator.h"
@@ -11,8 +11,10 @@
 #include "runner/RuntimeParameters.h"
 #include "tarch/FloatingPointExceptions.h"
 #include "tarch/instrumentation/Watch.h"
+#include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
-#include "tarch/mpi/mpi.h"
+
+#include <mpi.h>
 
 namespace {
   /**
@@ -84,8 +86,8 @@ double runner::Engine::runStep(const int programStep) {
   tarch::instrumentation::Watch watch("runner::Engine", "runStep", false, false);
   watch.start();
 
-  peano4::parallel::Node::getInstance().setNextProgramStep(programStep);
-  peano4::parallel::Node::getInstance().continueToRun();
+  peano4::parallel::RunControl::getInstance().setNextProgramStep(programStep);
+  peano4::parallel::RunControl::getInstance().continueToRun();
 
   executeStepBody(programStep);
 
@@ -105,8 +107,8 @@ double runner::Engine::runStep(const int programStep) {
 }
 
 void runner::Engine::runWorker() const {
-  while (peano4::parallel::Node::getInstance().continueToRun()) {
-    const auto programStep = peano4::parallel::Node::getInstance().getCurrentProgramStep();
+  while (peano4::parallel::RunControl::getInstance().continueToRun()) {
+    const auto programStep = peano4::parallel::RunControl::getInstance().getCurrentProgramStep();
     executeStepBody(programStep);
     {
       SCOREP_USER_REGION(PhaseName::LoadBalancerUpdate, SCOREP_USER_REGION_TYPE_COMMON)
@@ -119,7 +121,6 @@ void runner::Engine::runWorker() const {
 }
 
 void runner::Engine::assertConsistentStepRegistryAcrossRanks() const {
-#ifdef PEANO_WITH_MPI
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() <= 1) {
     return;
   }
@@ -144,8 +145,8 @@ void runner::Engine::assertConsistentStepRegistryAcrossRanks() const {
   unsigned long long minHash      = 0;
   unsigned long long maxHash      = 0;
   const auto         communicator = tarch::mpi::Rank::getInstance().getCommunicator();
-  MPI_Allreduce(&localHash, &minHash, 1, MPI_UNSIGNED_LONG_LONG, MPI_MIN, communicator);
-  MPI_Allreduce(&localHash, &maxHash, 1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, communicator);
+  tarch::mpi::allreduce(&localHash, &minHash, 1, MPI_UNSIGNED_LONG_LONG, MPI_MIN, communicator);
+  tarch::mpi::allreduce(&localHash, &maxHash, 1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, communicator);
 
   if (minHash != maxHash) {
     throw std::runtime_error(
@@ -153,7 +154,6 @@ void runner::Engine::assertConsistentStepRegistryAcrossRanks() const {
       "identical steps (same ids and names) so that a broadcast program step resolves everywhere."
     );
   }
-#endif
 }
 
 int runner::Engine::run() {
@@ -178,8 +178,8 @@ int runner::Engine::run() {
   const bool terminatedGracefully = Orchestrator(_steps).run(context);
 
   // Workers wait inside continueToRun(), so the master broadcasts a final termination step.
-  peano4::parallel::Node::getInstance().setNextProgramStep(peano4::parallel::Node::Terminate);
-  peano4::parallel::Node::getInstance().continueToRun();
+  peano4::parallel::RunControl::getInstance().setNextProgramStep(peano4::parallel::RunControl::Terminate);
+  peano4::parallel::RunControl::getInstance().continueToRun();
 
   return terminatedGracefully ? EXIT_FAILURE : EXIT_SUCCESS;
 }

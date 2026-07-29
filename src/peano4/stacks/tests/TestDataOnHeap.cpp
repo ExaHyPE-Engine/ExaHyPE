@@ -5,10 +5,10 @@
 #include "tarch/Assertions.h"
 #include "tarch/accelerator/accelerator.h"
 
-peano4::stacks::tests::TestDataOnHeap::TestDataOnHeap():
+peano4::stacks::tests::TestDataOnHeap::TestDataOnHeap() :
   _data(tarch::allocateMemory<DoFType>(Cardinality, tarch::MemoryLocation::Heap)) {}
 
-peano4::stacks::tests::TestDataOnHeap::TestDataOnHeap(DoFType v):
+peano4::stacks::tests::TestDataOnHeap::TestDataOnHeap(DoFType v) :
   TestDataOnHeap() {
   for (int i = 0; i < Cardinality; ++i) {
     _data[i] = v;
@@ -22,17 +22,16 @@ peano4::stacks::tests::TestDataOnHeap::~TestDataOnHeap() noexcept {
   }
 }
 
-peano4::stacks::tests::TestDataOnHeap::TestDataOnHeap(const TestDataOnHeap& other):
+peano4::stacks::tests::TestDataOnHeap::TestDataOnHeap(const TestDataOnHeap& other) :
   _data(nullptr) {
   clone(other);
 }
 
-peano4::stacks::tests::TestDataOnHeap::TestDataOnHeap(TestDataOnHeap&& other) noexcept:
+peano4::stacks::tests::TestDataOnHeap::TestDataOnHeap(TestDataOnHeap&& other) noexcept :
   _data(std::exchange(other._data, nullptr)) {}
 
-peano4::stacks::tests::TestDataOnHeap& peano4::stacks::tests::TestDataOnHeap::operator=(
-  TestDataOnHeap&& other
-) noexcept {
+peano4::stacks::tests::TestDataOnHeap&
+peano4::stacks::tests::TestDataOnHeap::operator=(TestDataOnHeap&& other) noexcept {
   if (this != &other) {
     if (_data) {
       tarch::freeMemory(_data, tarch::MemoryLocation::Heap);
@@ -71,11 +70,3 @@ void peano4::stacks::tests::TestDataOnHeap::clone(const TestDataOnHeap& other) {
   }
   _data = newbuf;
 }
-
-#ifdef PEANO_WITH_MPI
-MPI_Datatype peano4::stacks::tests::TestDataOnHeap::getBoundaryExchangeDatatype() { return MPI_INT; }
-MPI_Datatype peano4::stacks::tests::TestDataOnHeap::getMultiscaleDataExchangeDatatype() { return MPI_INT; }
-MPI_Datatype peano4::stacks::tests::TestDataOnHeap::getForkDatatype() { return MPI_INT; }
-MPI_Datatype peano4::stacks::tests::TestDataOnHeap::getJoinDatatype() { return MPI_INT; }
-MPI_Datatype peano4::stacks::tests::TestDataOnHeap::getGlobalCommunicationDatatype() { return MPI_INT; }
-#endif

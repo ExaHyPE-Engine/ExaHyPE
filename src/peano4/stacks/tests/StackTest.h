@@ -8,7 +8,13 @@ namespace peano4::stacks::tests {
   class StackTest;
 } // namespace peano4::stacks::tests
 
-class peano4::stacks::tests::StackTest: public tarch::tests::TestCase {
+class peano4::stacks::tests::StackTest final : public tarch::tests::TestCase {
+public:
+  StackTest();
+  ~StackTest() override final = default;
+
+  void run() override final;
+
 private:
   void testPushData();
   void testEraseData();
@@ -19,12 +25,6 @@ private:
   void testReusedSlotAssignmentClearsEmptyState();
   void testPushBlockView();
   void testPopBlockView();
-  void testMPIDatatype();
-  void testMPIDatatype2();
-
-public:
-  StackTest();
-  virtual ~StackTest() override;
-
-  virtual void run() override;
+  void testSendAndReceiveToSelf();
+  void testSendAndReceiveInARing();
 };

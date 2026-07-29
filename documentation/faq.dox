@@ -9,20 +9,6 @@ Some frequently asked questions and problems are discussed below.
 
 # CMake
 
-- ***Why am I seeing "Permission Denied" errors when using CCACHE in a Docker container on MacOS?***
-
-This error is common when using CCACHE in Docker containers on macOS due to how Docker handles file permissions in mounted volumes.
-CCACHE requires write access to its cache directory, but MacOS and Docker can have mismatched UID/GID (user and group IDs),
-especially when the cache directory is a mounted volume. This mismatch can prevent CCACHE from writing to the directory, causing "Permission Denied" errors.
-
-This can be easily resolve by setting
-
-  ~~~~~~~~~~~~~~~~~~~
--DUSE_CCACHE=OFF
-  ~~~~~~~~~~~~~~~~~~~
-
-in the CMake configuration.
-
 - ***How can I tell the code generator which build folder to use?***
 
 The build system is CMake only. By default, the Python code generator searches
@@ -211,7 +197,7 @@ undefined reference to for_write_seq_list
 
 # Runtime
 
-  - ***My unit tests fail in the NodeTest***. We have found that GCC's
+  - ***My unit tests fail in the StackTopologyTest***. We have found that GCC's
     STL is buggy (confirmed in version 9.3.0), although we do not know if this bug
     is found within the unordered_set, the bitset or the
     pair implementation. Anyway, a newer version of GCC (12 for example)

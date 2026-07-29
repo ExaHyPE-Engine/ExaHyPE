@@ -3,8 +3,6 @@
 #include "AutomatonState.h"
 
 #include "peano4/grid/PeanoCurve.h"
-#include "tarch/mpi/mpi.h"
-#include "tarch/services/ServiceRepository.h"
 
 static_assert(std::is_standard_layout_v<peano4::grid::AutomatonState>);
 static_assert(std::is_trivially_copyable_v<peano4::grid::AutomatonState>);
@@ -62,6 +60,16 @@ std::string peano4::grid::AutomatonState::toString() const {
   return out.str();
 }
 
+/**
+ * Takes a state describing a node in the tree and derives the @f$ 3^d @f$
+ * states on the next finer level. The routine is the grammar generation of
+ * Bader et al., and it recurses along the spatial dimensions.
+ *
+ * A child's slot in fineGridStates is its position within the parent, with the
+ * first axis running fastest, so a caller can index the result by position.
+ * The recursion visits the children along the Peano space-filling curve, which
+ * is what gives each of them its entry and exit face.
+ */
 void peano4::grid::AutomatonState::refineState(
   const AutomatonState&              coarseGrid,
   AutomatonState                     fineGridStates[THREE_POWER_D],
@@ -134,175 +142,3 @@ void peano4::grid::AutomatonState::refineState(
     }
   }
 }
-
-#ifdef PEANO_WITH_MPI
-MPI_Datatype peano4::grid::AutomatonState::Datatype = MPI_DATATYPE_NULL;
-
-MPI_Datatype peano4::grid::AutomatonState::getForkDatatype() { return Datatype; }
-MPI_Datatype peano4::grid::AutomatonState::getGlobalCommunicationDatatype() { return Datatype; }
-MPI_Datatype peano4::grid::AutomatonState::getJoinDatatype() { return Datatype; }
-MPI_Datatype peano4::grid::AutomatonState::getBoundaryExchangeDatatype() { return Datatype; }
-MPI_Datatype peano4::grid::AutomatonState::getMultiscaleDataExchangeDatatype() { return Datatype; }
-
-void peano4::grid::AutomatonState::freeForkDatatype() {
-  if (Datatype != MPI_DATATYPE_NULL) {
-    MPI_Type_free(&Datatype);
-    Datatype = MPI_DATATYPE_NULL;
-  }
-}
-
-void peano4::grid::AutomatonState::freeGlobalCommunicationDatatype() {
-  if (Datatype != MPI_DATATYPE_NULL) {
-    MPI_Type_free(&Datatype);
-    Datatype = MPI_DATATYPE_NULL;
-  }
-}
-
-void peano4::grid::AutomatonState::freeJoinDatatype() {
-  if (Datatype != MPI_DATATYPE_NULL) {
-    MPI_Type_free(&Datatype);
-    Datatype = MPI_DATATYPE_NULL;
-  }
-}
-
-void peano4::grid::AutomatonState::freeBoundaryExchangeDatatype() {
-  if (Datatype != MPI_DATATYPE_NULL) {
-    MPI_Type_free(&Datatype);
-    Datatype = MPI_DATATYPE_NULL;
-  }
-}
-
-void peano4::grid::AutomatonState::freeMultiscaleDataExchangeDatatype() {
-  if (Datatype != MPI_DATATYPE_NULL) {
-    MPI_Type_free(&Datatype);
-    Datatype = MPI_DATATYPE_NULL;
-  }
-}
-
-void peano4::grid::AutomatonState::initDatatype() {
-  AutomatonState instances[2];
-
-  constexpr int NumberOfAttributes = 5;
-  MPI_Datatype  subtypes[NumberOfAttributes];
-  int           blocklen[NumberOfAttributes];
-  MPI_Aint      disp[NumberOfAttributes];
-
-  int counter = 0;
-
-  subtypes[counter] = MPI_INT;
-  blocklen[counter] = 1;
-  MPI_Get_address(&instances[0].level, &disp[counter]);
-  counter++;
-
-  subtypes[counter] = MPI_DOUBLE;
-  blocklen[counter] = DIMENSIONS;
-  MPI_Get_address(&(instances[0].x.data()[0]), &disp[counter]);
-  counter++;
-
-  subtypes[counter] = MPI_DOUBLE;
-  blocklen[counter] = DIMENSIONS;
-  MPI_Get_address(&(instances[0].h.data()[0]), &disp[counter]);
-  counter++;
-
-  subtypes[counter] = MPI_UNSIGNED_LONG;
-  blocklen[counter] = 1;
-  MPI_Get_address(&instances[0].flags, &disp[counter]);
-  counter++;
-
-  subtypes[counter] = MPI_INT8_T;
-  blocklen[counter] = TWO_TIMES_D;
-  MPI_Get_address(&(instances[0].accessNumber[0]), &disp[counter]);
-  counter++;
-
-  MPI_Aint baseFirstInstance;
-  MPI_Aint baseSecondInstance;
-  MPI_Get_address(&instances[0], &baseFirstInstance);
-  MPI_Get_address(&instances[1], &baseSecondInstance);
-  MPI_Aint offset = disp[0] - baseFirstInstance;
-  MPI_Aint extent = baseSecondInstance - baseFirstInstance - offset;
-  for (int i = NumberOfAttributes - 1; i >= 0; i--) {
-    disp[i] = disp[i] - disp[0];
-  }
-
-  int          errorCode = 0;
-  MPI_Datatype tmpType;
-  errorCode += MPI_Type_create_struct(NumberOfAttributes, blocklen, disp, subtypes, &tmpType);
-  errorCode += MPI_Type_create_resized(tmpType, offset, extent, &Datatype);
-  errorCode += MPI_Type_commit(&Datatype);
-  errorCode += MPI_Type_free(&tmpType);
-
-  if (errorCode) {
-    std::stringstream ss;
-    ss << "Error constructing MPI datatype in " << __FILE__ << ":" << __LINE__ << std::endl;
-    throw std::runtime_error(ss.str());
-  }
-}
-
-void peano4::grid::AutomatonState::shutdownDatatype() {
-  freeForkDatatype();
-  freeJoinDatatype();
-  freeBoundaryExchangeDatatype();
-  freeMultiscaleDataExchangeDatatype();
-  freeGlobalCommunicationDatatype();
-}
-
-void peano4::grid::AutomatonState::send(const AutomatonState& buffer, int destination, int tag, MPI_Comm communicator) {
-  tarch::mpi::send(&buffer, 1, Datatype, destination, tag, communicator);
-}
-
-void peano4::grid::AutomatonState::receive(AutomatonState& buffer, int source, int tag, MPI_Comm communicator) {
-  MPI_Status status;
-  tarch::mpi::receive(&buffer, 1, Datatype, source, tag, communicator, &status);
-}
-
-void peano4::grid::AutomatonState::send(
-  const AutomatonState& buffer,
-  int                   destination,
-  int                   tag,
-  std::function<void()> startCommunicationFunctor,
-  std::function<void()> waitFunctor,
-  MPI_Comm              communicator
-) {
-  MPI_Request sendRequestHandle = MPI_REQUEST_NULL;
-  tarch::mpi::isend(&buffer, 1, Datatype, destination, tag, communicator, &sendRequestHandle);
-  startCommunicationFunctor();
-  tarch::mpi::wait(&sendRequestHandle, waitFunctor, MPI_STATUS_IGNORE);
-}
-
-void peano4::grid::AutomatonState::receive(
-  AutomatonState&       buffer,
-  int                   source,
-  int                   tag,
-  std::function<void()> startCommunicationFunctor,
-  std::function<void()> waitFunctor,
-  MPI_Comm              communicator
-) {
-  MPI_Status  status;
-  MPI_Request receiveRequestHandle = MPI_REQUEST_NULL;
-  tarch::mpi::irecv(&buffer, 1, Datatype, source, tag, communicator, &receiveRequestHandle);
-  startCommunicationFunctor();
-  tarch::mpi::wait(&receiveRequestHandle, waitFunctor, &status);
-}
-
-void peano4::grid::AutomatonState::sendAndPollDanglingMessages(
-  const AutomatonState& message,
-  int                   destination,
-  int                   tag,
-  MPI_Comm              communicator
-) {
-  AutomatonState::send(message, destination, tag, []() {}, [&]() {
-    tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-  }, communicator);
-}
-
-void peano4::grid::AutomatonState::receiveAndPollDanglingMessages(
-  AutomatonState& message,
-  int             source,
-  int             tag,
-  MPI_Comm        communicator
-) {
-  AutomatonState::receive(message, source, tag, []() {}, [&]() {
-    tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-  }, communicator);
-}
-#endif

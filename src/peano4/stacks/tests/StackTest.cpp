@@ -8,16 +8,16 @@
 #include "peano4/stacks/tests/TestDataOnHeap.h"
 #include "peano4/stacks/tests/TestDataOnHeapWithContainer.h"
 #include "peano4/stacks/tests/TestDataOnStack.h"
+#include "tarch/mpi/Rank.h"
 #include "tarch/tests/TestMacros.h"
 
 namespace {
   class NullableSlotData {
   private:
-    int* _value;
+    int* _value{nullptr};
 
   public:
-    NullableSlotData() :
-      _value(nullptr) {}
+    NullableSlotData() = default;
 
     explicit NullableSlotData(int value) :
       _value(new int(value)) {}
@@ -63,20 +63,20 @@ namespace {
       return *_value;
     }
   };
+
+  template <class StackType>
+  void completeTransfer(StackType& sender, StackType& receiver) {
+    bool senderFinished   = false;
+    bool receiverFinished = false;
+    while (not senderFinished or not receiverFinished) {
+      senderFinished   = sender.tryToFinishSendOrReceive();
+      receiverFinished = receiver.tryToFinishSendOrReceive();
+    }
+  }
 } // namespace
 
 peano4::stacks::tests::StackTest::StackTest() :
-  TestCase("peano4::stacks::tests::StackTest") {
-#ifdef PEANO_WITH_MPI
-  TestDataOnStack::initDatatype();
-#endif
-}
-
-peano4::stacks::tests::StackTest::~StackTest() {
-#ifdef PEANO_WITH_MPI
-  TestDataOnStack::shutdownDatatype();
-#endif
-}
+  TestCase("peano4::stacks::tests::StackTest") {}
 
 void peano4::stacks::tests::StackTest::run() {
   testMethod(testPushData);
@@ -88,8 +88,8 @@ void peano4::stacks::tests::StackTest::run() {
   testMethod(testReusedSlotAssignmentClearsEmptyState);
   testMethod(testPushBlockView);
   testMethod(testPopBlockView);
-  testMethod(testMPIDatatype);
-  testMethod(testMPIDatatype2);
+  testMethod(testSendAndReceiveToSelf);
+  testMethod(testSendAndReceiveInARing);
 }
 
 void peano4::stacks::tests::StackTest::testPushData() {
@@ -159,7 +159,6 @@ void peano4::stacks::tests::StackTest::testPushData() {
     for (int n = 5; n < 10; n++) {
       TestDataOnHeapWithContainer testData(32, n);
       stack.push(std::move(testData));
-      // stack.push(testData); // TODO: Is this allowed?
     }
     validateEquals(stack.size(), static_cast<std::size_t>(10));
     for (std::size_t n = 0; n < stack.size(); n++) {
@@ -295,11 +294,11 @@ void peano4::stacks::tests::StackTest::testPopData() {
     stack.push(TestDataOnStack(500));
     stack.push(TestDataOnStack(600));
 
-    TestDataOnStack popped = stack.pop();
+    const TestDataOnStack popped = stack.pop();
     validateEquals(popped.data[0], 600);
     validateEquals(stack.size(), static_cast<std::size_t>(1));
 
-    TestDataOnStack popped2 = stack.pop();
+    const TestDataOnStack popped2 = stack.pop();
     validateEquals(popped2.data[0], 500);
     validateEquals(stack.size(), static_cast<std::size_t>(0));
   }
@@ -310,11 +309,11 @@ void peano4::stacks::tests::StackTest::testPopData() {
     stack.push(TestDataOnHeap(500));
     stack.push(TestDataOnHeap(600));
 
-    TestDataOnHeap popped = stack.pop();
+    const TestDataOnHeap popped = stack.pop();
     validateEquals(popped.data()[0], 600);
     validateEquals(stack.size(), static_cast<std::size_t>(1));
 
-    TestDataOnHeap popped2 = stack.pop();
+    const TestDataOnHeap popped2 = stack.pop();
     validateEquals(popped2.data()[0], 500);
     validateEquals(stack.size(), static_cast<std::size_t>(0));
   }
@@ -325,11 +324,11 @@ void peano4::stacks::tests::StackTest::testPopData() {
     stack.push(TestDataOnHeapWithContainer(32, 500));
     stack.push(TestDataOnHeapWithContainer(32, 600));
 
-    TestDataOnHeapWithContainer popped = stack.pop();
+    const TestDataOnHeapWithContainer popped = stack.pop();
     validateEquals(popped.at(0), 600);
     validateEquals(stack.size(), static_cast<std::size_t>(1));
 
-    TestDataOnHeapWithContainer popped2 = stack.pop();
+    const TestDataOnHeapWithContainer popped2 = stack.pop();
     validateEquals(popped2.at(0), 500);
     validateEquals(stack.size(), static_cast<std::size_t>(0));
   }
@@ -448,8 +447,8 @@ void peano4::stacks::tests::StackTest::testReusedSlotAssignmentClearsEmptyState(
 
     stack.shallowClear();
 
-    TestDataOnHeap movedFrom(12);
-    TestDataOnHeap owner(std::move(movedFrom));
+    TestDataOnHeap       movedFrom(12);
+    const TestDataOnHeap owner(std::move(movedFrom));
     stack.push(movedFrom);
 
     validateEquals(stack.size(), static_cast<std::size_t>(1));
@@ -477,19 +476,19 @@ void peano4::stacks::tests::StackTest::testPushBlockView() {
     stack.reserve(16);
 
     // Reserve a block of 4 and fill via rvalues/moves.
-    auto v = stack.pushBlock(4);
-    validateEquals(v.size(), static_cast<std::size_t>(4));
+    auto blockView = stack.pushBlock(4);
+    validateEquals(blockView.size(), static_cast<std::size_t>(4));
 
     // Use temporaries (rvalues) => move-assignment
-    v.set(0, TestDataOnStack(101));
-    v.set(1, TestDataOnStack(102));
+    blockView.set(0, TestDataOnStack(101));
+    blockView.set(1, TestDataOnStack(102));
 
     // Use lvalue moved into place => move-assignment
     TestDataOnStack tmp(103);
-    v.set(2, std::move(tmp));
+    blockView.set(2, std::move(tmp));
 
     // Another rvalue
-    v.set(3, TestDataOnStack(104));
+    blockView.set(3, TestDataOnStack(104));
 
     // The block increased logical size of stack
     validateEquals(stack.size(), static_cast<std::size_t>(4));
@@ -501,10 +500,10 @@ void peano4::stacks::tests::StackTest::testPushBlockView() {
     validateEquals(stack[3].data[0], 104);
 
     // --- In-place construction (no temporaries) ---
-    v.emplace(0, 201);
-    v.emplace(1, 202);
-    v.emplace(2, 203);
-    v.emplace(3, 204);
+    blockView.emplace(0, 201);
+    blockView.emplace(1, 202);
+    blockView.emplace(2, 203);
+    blockView.emplace(3, 204);
 
     // Verify contents updated via in-place reconstruction
     validateEquals(stack[0].data[0], 201);
@@ -517,14 +516,14 @@ void peano4::stacks::tests::StackTest::testPushBlockView() {
     StackWithSerialisation<TestDataOnHeap> stack;
     stack.reserve(16);
 
-    auto v = stack.pushBlock(3);
-    validateEquals(v.size(), static_cast<std::size_t>(3));
+    auto blockView = stack.pushBlock(3);
+    validateEquals(blockView.size(), static_cast<std::size_t>(3));
 
     // Mix rvalues and moved lvalues
-    v.set(0, TestDataOnHeap(201)); // rvalue => move-assign
+    blockView.set(0, TestDataOnHeap(201)); // Rvalue => move-assign
     TestDataOnHeap a(202);
-    v.set(1, std::move(a));        // lvalue moved => move-assign
-    v.set(2, TestDataOnHeap(203)); // rvalue
+    blockView.set(1, std::move(a));        // Lvalue moved => move-assign
+    blockView.set(2, TestDataOnHeap(203)); // Rvalue
 
     validateEquals(stack.size(), static_cast<std::size_t>(3));
 
@@ -533,9 +532,9 @@ void peano4::stacks::tests::StackTest::testPushBlockView() {
     validateEquals(stack[2].data()[0], 203);
 
     // --- In-place construction (no temporaries) ---
-    v.emplace(0, 301);
-    v.emplace(1, 302);
-    v.emplace(2, 303);
+    blockView.emplace(0, 301);
+    blockView.emplace(1, 302);
+    blockView.emplace(2, 303);
 
     validateEquals(stack[0].data()[0], 301);
     validateEquals(stack[1].data()[0], 302);
@@ -546,14 +545,14 @@ void peano4::stacks::tests::StackTest::testPushBlockView() {
     StackWithCustomSerialisation<TestDataOnHeapWithContainer> stack;
     stack.reserve(16);
 
-    auto v = stack.pushBlock(3);
-    validateEquals(v.size(), static_cast<std::size_t>(3));
+    auto blockView = stack.pushBlock(3);
+    validateEquals(blockView.size(), static_cast<std::size_t>(3));
 
     // Mix rvalues and moved lvalues
-    v.set(0, TestDataOnHeapWithContainer(32, 201)); // rvalue => move-assign
+    blockView.set(0, TestDataOnHeapWithContainer(32, 201)); // Rvalue => move-assign
     TestDataOnHeapWithContainer a(32, 202);
-    v.set(1, std::move(a));                         // lvalue moved => move-assign
-    v.set(2, TestDataOnHeapWithContainer(32, 203)); // rvalue
+    blockView.set(1, std::move(a));                         // Lvalue moved => move-assign
+    blockView.set(2, TestDataOnHeapWithContainer(32, 203)); // Rvalue
 
     validateEquals(stack.size(), static_cast<std::size_t>(3));
 
@@ -561,10 +560,10 @@ void peano4::stacks::tests::StackTest::testPushBlockView() {
     validateEquals(stack[1].at(5), 202);
     validateEquals(stack[2].at(5), 203);
 
-    // In-place construction via emplace
-    v.emplace(0, 32, 301);
-    v.emplace(1, 32, 302);
-    v.emplace(2, 32, 303);
+    // --- In-place construction via emplace ---
+    blockView.emplace(0, 32, 301);
+    blockView.emplace(1, 32, 302);
+    blockView.emplace(2, 32, 303);
 
     validateEquals(stack[0].at(5), 301);
     validateEquals(stack[1].at(5), 302);
@@ -584,26 +583,26 @@ void peano4::stacks::tests::StackTest::testPopBlockView() {
     validateEquals(stack.size(), static_cast<std::size_t>(8));
 
     // Pop a block of 3 (should reference the last 3 elements: 5,6,7)
-    auto v = stack.popBlock(3);
-    validateEquals(v.size(), static_cast<std::size_t>(3));
+    auto blockView = stack.popBlock(3);
+    validateEquals(blockView.size(), static_cast<std::size_t>(3));
     validateEquals(stack.size(), static_cast<std::size_t>(5)); // Logical shrink only
 
-    validateEquals(v.get(0).data[0], 5);
-    validateEquals(v.get(1).data[0], 6);
-    validateEquals(v.get(2).data[0], 7);
+    validateEquals(blockView.get(0).data[0], 5);
+    validateEquals(blockView.get(1).data[0], 6);
+    validateEquals(blockView.get(2).data[0], 7);
 
     // Modify the popped view; it should not affect the (now smaller) stack.
-    v.set(0, TestDataOnStack(999));
+    blockView.set(0, TestDataOnStack(999));
     validateEquals(stack.size(), static_cast<std::size_t>(5));
-    // stack[4] was 4 before pop; still 4
+    // Stack[4] was 4 before pop; still 4
     validateEquals(stack[4].data[0], 4);
 
     // --- In-place construction on popped view ---
-    v.emplace(1, 1001);
-    v.emplace(2, 1002);
-    validateEquals(v.get(0).data[0], 999);
-    validateEquals(v.get(1).data[0], 1001);
-    validateEquals(v.get(2).data[0], 1002);
+    blockView.emplace(1, 1001);
+    blockView.emplace(2, 1002);
+    validateEquals(blockView.get(0).data[0], 999);
+    validateEquals(blockView.get(1).data[0], 1001);
+    validateEquals(blockView.get(2).data[0], 1002);
 
     // Stack head remains 0..4
     for (int n = 0; n < static_cast<int>(stack.size()); ++n) {
@@ -620,17 +619,17 @@ void peano4::stacks::tests::StackTest::testPopBlockView() {
     }
     validateEquals(stack.size(), static_cast<std::size_t>(6));
 
-    auto v = stack.popBlock(2); // Should reference 4,5
-    validateEquals(v.size(), static_cast<std::size_t>(2));
+    auto blockView = stack.popBlock(2); // Should reference 4,5
+    validateEquals(blockView.size(), static_cast<std::size_t>(2));
     validateEquals(stack.size(), static_cast<std::size_t>(4));
 
-    validateEquals(v.get(0).data()[0], 4);
-    validateEquals(v.get(1).data()[0], 5);
+    validateEquals(blockView.get(0).data()[0], 4);
+    validateEquals(blockView.get(1).data()[0], 5);
 
     // Mutate the popped view (move-assign).
     TestDataOnHeap moved(777);
-    v.set(1, std::move(moved));
-    validateEquals(v.get(1).data()[0], 777);
+    blockView.set(1, std::move(moved));
+    validateEquals(blockView.get(1).data()[0], 777);
 
     // Stack still holds the first four elements 0..3
     for (int n = 0; n < static_cast<int>(stack.size()); ++n) {
@@ -638,10 +637,10 @@ void peano4::stacks::tests::StackTest::testPopBlockView() {
     }
 
     // --- In-place construction on popped view ---
-    v.emplace(0, 888);
-    v.emplace(1, 889);
-    validateEquals(v.get(0).data()[0], 888);
-    validateEquals(v.get(1).data()[0], 889);
+    blockView.emplace(0, 888);
+    blockView.emplace(1, 889);
+    validateEquals(blockView.get(0).data()[0], 888);
+    validateEquals(blockView.get(1).data()[0], 889);
 
     // Stack still holds the first four elements 0..3
     for (int n = 0; n < static_cast<int>(stack.size()); ++n) {
@@ -658,28 +657,28 @@ void peano4::stacks::tests::StackTest::testPopBlockView() {
     }
     validateEquals(stack.size(), static_cast<std::size_t>(6));
 
-    auto v = stack.popBlock(2); // Should reference 4,5
-    validateEquals(v.size(), static_cast<std::size_t>(2));
+    auto blockView = stack.popBlock(2); // Should reference 4,5
+    validateEquals(blockView.size(), static_cast<std::size_t>(2));
     validateEquals(stack.size(), static_cast<std::size_t>(4));
 
-    validateEquals(v.get(0).at(5), 4);
-    validateEquals(v.get(1).at(5), 5);
+    validateEquals(blockView.get(0).at(5), 4);
+    validateEquals(blockView.get(1).at(5), 5);
 
     // Mutate the popped view (move-assign).
     TestDataOnHeapWithContainer moved(32, 777);
-    v.set(1, std::move(moved));
-    validateEquals(v.get(1).at(5), 777);
+    blockView.set(1, std::move(moved));
+    validateEquals(blockView.get(1).at(5), 777);
 
     // Stack still holds the first four elements 0..3
     for (int n = 0; n < static_cast<int>(stack.size()); ++n) {
       validateEquals(stack[n].at(5), n);
     }
 
-    // In-place construction on popped view
-    v.emplace(0, 32, 888);
-    v.emplace(1, 32, 889);
-    validateEquals(v.get(0).at(5), 888);
-    validateEquals(v.get(1).at(5), 889);
+    // --- In-place construction on popped view ---
+    blockView.emplace(0, 32, 888);
+    blockView.emplace(1, 32, 889);
+    validateEquals(blockView.get(0).at(5), 888);
+    validateEquals(blockView.get(1).at(5), 889);
 
     // Stack still holds the first four elements 0..3
     for (int n = 0; n < static_cast<int>(stack.size()); ++n) {
@@ -693,73 +692,52 @@ void peano4::stacks::tests::StackTest::testPopBlockView() {
     for (int n = 0; n < 3; ++n) {
       stack.push(TestDataOnStack(10 + n));
     }
-    auto v = stack.popBlock(3);
+    auto blockView = stack.popBlock(3);
     validateEquals(stack.size(), static_cast<std::size_t>(0));
-    validateEquals(v.size(), static_cast<std::size_t>(3));
-    validateEquals(v.get(0).data[0], 10);
-    validateEquals(v.get(1).data[0], 11);
-    validateEquals(v.get(2).data[0], 12);
+    validateEquals(blockView.size(), static_cast<std::size_t>(3));
+    validateEquals(blockView.get(0).data[0], 10);
+    validateEquals(blockView.get(1).data[0], 11);
+    validateEquals(blockView.get(2).data[0], 12);
 
     // --- In-place construction when stack is now empty (view still valid) ---
-    v.emplace(0, 1234);
-    v.emplace(2, 1236);
-    validateEquals(v.get(0).data[0], 1234);
-    validateEquals(v.get(1).data[0], 11);
-    validateEquals(v.get(2).data[0], 1236);
+    blockView.emplace(0, 1234);
+    blockView.emplace(2, 1236);
+    validateEquals(blockView.get(0).data[0], 1234);
+    validateEquals(blockView.get(1).data[0], 11);
+    validateEquals(blockView.get(2).data[0], 1236);
     validateEquals(stack.size(), static_cast<std::size_t>(0));
-    validateEquals(v.size(), static_cast<std::size_t>(3));
+    validateEquals(blockView.size(), static_cast<std::size_t>(3));
   }
 }
 
-void peano4::stacks::tests::StackTest::testMPIDatatype() {
-#ifdef PEANO_WITH_MPI
-  if (tarch::mpi::Rank::getInstance().getNumberOfRanks() == 1) {
-    return;
-  }
+void peano4::stacks::tests::StackTest::testSendAndReceiveToSelf() {
+  constexpr int NumberOfElements   = 5;
+  constexpr int NumberOfContainers = 32;
+  constexpr int Tag                = 123;
 
-  // TODO:
-  // if (tarch::mpi::Rank::getInstance().getNumberOfRanks() == 1) {
-  //   // Simulate communication by cloning directly
-  //   receiver.clone(sender);
-  //   sender.clear();
-  // } else {
-  //   // Actual MPI Logic for distributed runs
-  //   receiver.startReceive(...);
-  //   sender.startSend(...);
-  //   while (...) {};
-  // }
+  const auto&    rank         = tarch::mpi::Rank::getInstance();
+  const MPI_Comm communicator = rank.getCommunicator();
+  const int      localRank    = rank.getRank();
 
-  const int count = 5; // TODO: Remove
-
-  // Test non-blocking send and receive: after completion, the stack should be cleared.
   {
     Stack<TestDataOnStack> sender;
     Stack<TestDataOnStack> receiver;
 
-    sender.resize(count);
-    validateEquals(sender.size(), static_cast<std::size_t>(count));
-    for (int n = 0; n < static_cast<int>(sender.size()); n++) {
+    sender.resize(NumberOfElements);
+    validateEquals(sender.size(), static_cast<std::size_t>(NumberOfElements));
+    for (int n = 0; n < NumberOfElements; n++) {
       for (int i = 0; i < TestDataOnStack::Cardinality; i++) {
         sender[n].data[i] = n * i;
       }
     }
 
-    receiver.startReceive(
-      SendReceiveContext::BoundaryExchange,
-      tarch::mpi::Rank::getInstance().getRank(),
-      123,
-      MPI_COMM_WORLD,
-      count
-    );
-    sender
-      .startSend(SendReceiveContext::BoundaryExchange, tarch::mpi::Rank::getInstance().getRank(), 123, MPI_COMM_WORLD);
-    while (not sender.tryToFinishSendOrReceive() or not receiver.tryToFinishSendOrReceive()) {
-    };
+    receiver.startReceive(SendReceiveContext::BoundaryExchange, localRank, Tag, communicator, NumberOfElements);
+    sender.startSend(SendReceiveContext::BoundaryExchange, localRank, Tag, communicator);
+    completeTransfer(sender, receiver);
 
-    validateEquals(sender.size(), static_cast<std::size_t>(0)); // Sender stack should be cleared
-    validateEquals(receiver.size(),
-                   static_cast<std::size_t>(count)); // Receiver stack should now have the data
-    for (int n = 0; n < static_cast<int>(receiver.size()); n++) {
+    validateEquals(sender.size(), static_cast<std::size_t>(0));
+    validateEquals(receiver.size(), static_cast<std::size_t>(NumberOfElements));
+    for (int n = 0; n < NumberOfElements; n++) {
       for (int i = 0; i < TestDataOnStack::Cardinality; i++) {
         validateEquals(receiver[n].data[i], n * i);
       }
@@ -770,30 +748,21 @@ void peano4::stacks::tests::StackTest::testMPIDatatype() {
     StackWithSerialisation<TestDataOnHeap> sender;
     StackWithSerialisation<TestDataOnHeap> receiver;
 
-    sender.resize(count);
-    validateEquals(sender.size(), static_cast<std::size_t>(count));
-    for (int n = 0; n < static_cast<int>(sender.size()); n++) {
+    sender.resize(NumberOfElements);
+    validateEquals(sender.size(), static_cast<std::size_t>(NumberOfElements));
+    for (int n = 0; n < NumberOfElements; n++) {
       for (int i = 0; i < TestDataOnHeap::Cardinality; i++) {
         sender[n].data()[i] = n * i;
       }
     }
 
-    receiver.startReceive(
-      SendReceiveContext::BoundaryExchange,
-      tarch::mpi::Rank::getInstance().getRank(),
-      123,
-      MPI_COMM_WORLD,
-      count
-    );
-    sender
-      .startSend(SendReceiveContext::BoundaryExchange, tarch::mpi::Rank::getInstance().getRank(), 123, MPI_COMM_WORLD);
-    while (not sender.tryToFinishSendOrReceive() or not receiver.tryToFinishSendOrReceive()) {
-    };
+    receiver.startReceive(SendReceiveContext::BoundaryExchange, localRank, Tag, communicator, NumberOfElements);
+    sender.startSend(SendReceiveContext::BoundaryExchange, localRank, Tag, communicator);
+    completeTransfer(sender, receiver);
 
-    validateEquals(sender.size(), static_cast<std::size_t>(0)); // Sender stack should be cleared
-    validateEquals(receiver.size(),
-                   static_cast<std::size_t>(count)); // Receiver stack should now have the data
-    for (int n = 0; n < static_cast<int>(receiver.size()); n++) {
+    validateEquals(sender.size(), static_cast<std::size_t>(0));
+    validateEquals(receiver.size(), static_cast<std::size_t>(NumberOfElements));
+    for (int n = 0; n < NumberOfElements; n++) {
       for (int i = 0; i < TestDataOnHeap::Cardinality; i++) {
         validateEquals(receiver[n].data()[i], n * i);
       }
@@ -804,89 +773,58 @@ void peano4::stacks::tests::StackTest::testMPIDatatype() {
     StackWithCustomSerialisation<TestDataOnHeapWithContainer> sender;
     StackWithCustomSerialisation<TestDataOnHeapWithContainer> receiver;
 
-    sender.resize(count);
-    validateEquals(sender.size(), static_cast<std::size_t>(count));
-    for (int n = 0; n < count; ++n) {
-      sender[n] = TestDataOnHeapWithContainer(32, n * 10);
+    sender.resize(NumberOfElements);
+    validateEquals(sender.size(), static_cast<std::size_t>(NumberOfElements));
+    for (int n = 0; n < NumberOfElements; n++) {
+      sender[n] = TestDataOnHeapWithContainer(NumberOfContainers, n * 10);
     }
 
-    receiver.startReceive(
-      SendReceiveContext::BoundaryExchange,
-      tarch::mpi::Rank::getInstance().getRank(),
-      123,
-      MPI_COMM_WORLD,
-      count
-    );
-    sender
-      .startSend(SendReceiveContext::BoundaryExchange, tarch::mpi::Rank::getInstance().getRank(), 123, MPI_COMM_WORLD);
-    while (not sender.tryToFinishSendOrReceive() or not receiver.tryToFinishSendOrReceive()) {
-    };
+    receiver.startReceive(SendReceiveContext::BoundaryExchange, localRank, Tag, communicator, NumberOfElements);
+    sender.startSend(SendReceiveContext::BoundaryExchange, localRank, Tag, communicator);
+    completeTransfer(sender, receiver);
 
-    validateEquals(sender.size(), static_cast<std::size_t>(0)); // Sender stack should be cleared
-    validateEquals(receiver.size(),
-                   static_cast<std::size_t>(count)); // Receiver stack should now have the data
-    for (int n = 0; n < count; n++) {
-      for (int i = 0; i < 32; i++) {
+    validateEquals(sender.size(), static_cast<std::size_t>(0));
+    validateEquals(receiver.size(), static_cast<std::size_t>(NumberOfElements));
+    for (int n = 0; n < NumberOfElements; n++) {
+      for (int i = 0; i < NumberOfContainers; i++) {
         validateEquals(receiver[n].at(i), n * 10);
       }
     }
   }
-#endif
 }
 
-void peano4::stacks::tests::StackTest::testMPIDatatype2() {
-#ifdef PEANO_WITH_MPI
-  if (tarch::mpi::Rank::getInstance().getNumberOfRanks() == 1) {
-    return;
-  }
+void peano4::stacks::tests::StackTest::testSendAndReceiveInARing() {
+  constexpr int NumberOfElements   = 5;
+  constexpr int NumberOfContainers = 32;
+  constexpr int Tag                = 4321;
 
-  const int count         = 5; // TODO: Remove
-  auto&     rank          = tarch::mpi::Rank::getInstance();
-  MPI_Comm  comm          = rank.getCommunicator();
-  const int me            = rank.getRank();
-  const int numberOfRanks = rank.getNumberOfRanks();
-  const int tag           = 4321;
+  const auto&    rank          = tarch::mpi::Rank::getInstance();
+  const MPI_Comm communicator  = rank.getCommunicator();
+  const int      localRank     = rank.getRank();
+  const int      numberOfRanks = rank.getNumberOfRanks();
+  const int      successor     = (localRank + 1) % numberOfRanks;
+  const int      predecessor   = (localRank - 1 + numberOfRanks) % numberOfRanks;
 
   {
     Stack<TestDataOnStack> sender;
     Stack<TestDataOnStack> receiver;
 
-    sender.resize(count);
-    for (int n = 0; n < count; n++) {
+    sender.resize(NumberOfElements);
+    for (int n = 0; n < NumberOfElements; n++) {
       for (int i = 0; i < TestDataOnStack::Cardinality; i++) {
-        sender[n].data[i] = me * 1000 + n * 10 + i;
+        sender[n].data[i] = localRank * 1000 + n * 10 + i;
       }
     }
 
-    if (numberOfRanks == 1) {
-      receiver.startReceive(SendReceiveContext::BoundaryExchange, me, tag, comm, count);
-      sender.startSend(SendReceiveContext::BoundaryExchange, me, tag, comm);
-    } else {
-      const int dest = (me + 1) % numberOfRanks;
-      const int src  = (me - 1 + numberOfRanks) % numberOfRanks;
+    receiver.startReceive(SendReceiveContext::BoundaryExchange, predecessor, Tag, communicator, NumberOfElements);
+    sender.startSend(SendReceiveContext::BoundaryExchange, successor, Tag, communicator);
+    completeTransfer(sender, receiver);
 
-      if ((me % 2) == 0) {
-        // Even ranks: send then receive
-        sender.startSend(SendReceiveContext::BoundaryExchange, dest, tag, comm);
-        receiver.startReceive(SendReceiveContext::BoundaryExchange, src, tag, comm, count);
-      } else {
-        // Odd ranks: receive then send
-        receiver.startReceive(SendReceiveContext::BoundaryExchange, src, tag, comm, count);
-        sender.startSend(SendReceiveContext::BoundaryExchange, dest, tag, comm);
-      }
-    }
-
-    while (not sender.tryToFinishSendOrReceive() or not receiver.tryToFinishSendOrReceive()) {
-    };
-
-    validateEquals(sender.size(), static_cast<std::size_t>(0)); // Sender stack should be cleared
-    validateEquals(receiver.size(),
-                   static_cast<std::size_t>(count)); // Receiver stack should now have the data
-
-    const int expectedSenderRank = (numberOfRanks == 1) ? me : ((me - 1 + numberOfRanks) % numberOfRanks);
-    for (int n = 0; n < count; ++n) {
-      for (int i = 0; i < TestDataOnStack::Cardinality; ++i) {
-        validateEquals(receiver[n].data[i], expectedSenderRank * 1000 + n * 10 + i);
+    validateEquals(sender.size(), static_cast<std::size_t>(0));
+    validateEquals(receiver.size(), static_cast<std::size_t>(NumberOfElements));
+    for (int n = 0; n < NumberOfElements; n++) {
+      for (int i = 0; i < TestDataOnStack::Cardinality; i++) {
+        validateEquals(receiver[n].data[i], predecessor * 1000 + n * 10 + i);
       }
     }
   }
@@ -895,42 +833,22 @@ void peano4::stacks::tests::StackTest::testMPIDatatype2() {
     StackWithSerialisation<TestDataOnHeap> sender;
     StackWithSerialisation<TestDataOnHeap> receiver;
 
-    sender.resize(count);
-    for (int n = 0; n < count; n++) {
-      for (int i = 0; i < TestDataOnStack::Cardinality; i++) {
-        sender[n].data()[i] = me * 1000 + n * 10 + i;
+    sender.resize(NumberOfElements);
+    for (int n = 0; n < NumberOfElements; n++) {
+      for (int i = 0; i < TestDataOnHeap::Cardinality; i++) {
+        sender[n].data()[i] = localRank * 1000 + n * 10 + i;
       }
     }
 
-    if (numberOfRanks == 1) {
-      receiver.startReceive(SendReceiveContext::BoundaryExchange, me, tag, comm, count);
-      sender.startSend(SendReceiveContext::BoundaryExchange, me, tag, comm);
-    } else {
-      const int dest = (me + 1) % numberOfRanks;
-      const int src  = (me - 1 + numberOfRanks) % numberOfRanks;
+    receiver.startReceive(SendReceiveContext::BoundaryExchange, predecessor, Tag, communicator, NumberOfElements);
+    sender.startSend(SendReceiveContext::BoundaryExchange, successor, Tag, communicator);
+    completeTransfer(sender, receiver);
 
-      if ((me % 2) == 0) {
-        // Even ranks: send then receive
-        sender.startSend(SendReceiveContext::BoundaryExchange, dest, tag, comm);
-        receiver.startReceive(SendReceiveContext::BoundaryExchange, src, tag, comm, count);
-      } else {
-        // Odd ranks: receive then send
-        receiver.startReceive(SendReceiveContext::BoundaryExchange, src, tag, comm, count);
-        sender.startSend(SendReceiveContext::BoundaryExchange, dest, tag, comm);
-      }
-    }
-
-    while (not sender.tryToFinishSendOrReceive() or not receiver.tryToFinishSendOrReceive()) {
-    };
-
-    validateEquals(sender.size(), static_cast<std::size_t>(0)); // Sender stack should be cleared
-    validateEquals(receiver.size(),
-                   static_cast<std::size_t>(count)); // Receiver stack should now have the data
-
-    const int expectedSenderRank = (numberOfRanks == 1) ? me : ((me - 1 + numberOfRanks) % numberOfRanks);
-    for (int n = 0; n < count; ++n) {
-      for (int i = 0; i < TestDataOnStack::Cardinality; ++i) {
-        validateEquals(receiver[n].data()[i], expectedSenderRank * 1000 + n * 10 + i);
+    validateEquals(sender.size(), static_cast<std::size_t>(0));
+    validateEquals(receiver.size(), static_cast<std::size_t>(NumberOfElements));
+    for (int n = 0; n < NumberOfElements; n++) {
+      for (int i = 0; i < TestDataOnHeap::Cardinality; i++) {
+        validateEquals(receiver[n].data()[i], predecessor * 1000 + n * 10 + i);
       }
     }
   }
@@ -939,41 +857,21 @@ void peano4::stacks::tests::StackTest::testMPIDatatype2() {
     StackWithCustomSerialisation<TestDataOnHeapWithContainer> sender;
     StackWithCustomSerialisation<TestDataOnHeapWithContainer> receiver;
 
-    sender.resize(count);
-    for (int n = 0; n < count; n++) {
-      sender[n] = TestDataOnHeapWithContainer(32, me * 1000 + n * 10);
+    sender.resize(NumberOfElements);
+    for (int n = 0; n < NumberOfElements; n++) {
+      sender[n] = TestDataOnHeapWithContainer(NumberOfContainers, localRank * 1000 + n * 10);
     }
 
-    if (numberOfRanks == 1) {
-      receiver.startReceive(SendReceiveContext::BoundaryExchange, me, tag, comm, count);
-      sender.startSend(SendReceiveContext::BoundaryExchange, me, tag, comm);
-    } else {
-      const int dest = (me + 1) % numberOfRanks;
-      const int src  = (me - 1 + numberOfRanks) % numberOfRanks;
-
-      if ((me % 2) == 0) {
-        // Even ranks: send then receive
-        sender.startSend(SendReceiveContext::BoundaryExchange, dest, tag, comm);
-        receiver.startReceive(SendReceiveContext::BoundaryExchange, src, tag, comm, count);
-      } else {
-        // Odd ranks: receive then send
-        receiver.startReceive(SendReceiveContext::BoundaryExchange, src, tag, comm, count);
-        sender.startSend(SendReceiveContext::BoundaryExchange, dest, tag, comm);
-      }
-    }
-
-    while (not sender.tryToFinishSendOrReceive() or not receiver.tryToFinishSendOrReceive()) {
-    };
+    receiver.startReceive(SendReceiveContext::BoundaryExchange, predecessor, Tag, communicator, NumberOfElements);
+    sender.startSend(SendReceiveContext::BoundaryExchange, successor, Tag, communicator);
+    completeTransfer(sender, receiver);
 
     validateEquals(sender.size(), static_cast<std::size_t>(0));
-    validateEquals(receiver.size(), static_cast<std::size_t>(count));
-
-    const int expectedSenderRank = (numberOfRanks == 1) ? me : ((me - 1 + numberOfRanks) % numberOfRanks);
-    for (int n = 0; n < count; n++) {
-      for (int i = 0; i < 32; i++) {
-        validateEquals(receiver[n].at(i), expectedSenderRank * 1000 + n * 10);
+    validateEquals(receiver.size(), static_cast<std::size_t>(NumberOfElements));
+    for (int n = 0; n < NumberOfElements; n++) {
+      for (int i = 0; i < NumberOfContainers; i++) {
+        validateEquals(receiver[n].at(i), predecessor * 1000 + n * 10);
       }
     }
   }
-#endif
 }

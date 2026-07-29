@@ -31,7 +31,7 @@ namespace {
     return {label, ::runner::SolverStatistic::Kind::Value, minValue, maxValue, 0};
   }
 
-  ::runner::SolverStatistic makeCount(const char* label, long value) {
+  [[maybe_unused]] ::runner::SolverStatistic makeCount(const char* label, long value) {
     return {label, ::runner::SolverStatistic::Kind::Count, 0.0, 0.0, value};
   }
 
@@ -64,9 +64,11 @@ namespace {
     return {solverName, statistics};
   }
 
+  {%- if PROJECT_TRACERS %}
   std::pair<std::string, std::vector<::runner::SolverStatistic>> makeParticleStatistics(const char* particleName, int numberOfParticles) {
     return {particleName, {makeCount("Particles", numberOfParticles)}};
   }
+  {%- endif %}
 } // namespace
 
 bool {{ NAMESPACE | join("::") }}::mayPlot() {
@@ -214,12 +216,11 @@ void {{ NAMESPACE | join("::") }}::finishTimeStep() {
   {%- endfor %}
 
   if (commitDynamicMeshRefinementEvents) {
-    // The commit runs collectively: every rank must observe the identical merged event set
-    // before the DynamicAMR observer starts, or the trigger/realise cycle acts on
-    // rank-dependent sets and the topology change never completes. The asynchronous
-    // point-to-point exchange delivers remote events too late for that. The collective is
-    // one small allgather per completed time step, only on its last grid sweep.
-    ::exahype2::RefinementControlService::getInstance().finishRefinementCriterionStep(true);
+    // Every rank must observe the identical merged event set before the DynamicAMR observer
+    // starts, or the trigger/realise cycle acts on rank-dependent sets and the topology
+    // change never completes. The commit therefore gathers collectively, once per completed
+    // time step on its last grid sweep.
+    ::exahype2::RefinementControlService::getInstance().finishRefinementCriterionStep();
   }
 
   {% for item in TRACERS -%}
@@ -242,7 +243,6 @@ void {{ NAMESPACE | join("::") }}::finishDynamicMeshRefinementStep() {
   // A traversal may have to defer requested vertex changes while neighbouring transitions
   // are in flight; the service then keeps the events alive for another delivery.
   ::exahype2::RefinementControlService::getInstance().finishDynamicMeshRefinementStep(
-    true,
     peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().numberOfDeferredGridControlChanges
   );
 }
@@ -253,7 +253,6 @@ void {{ NAMESPACE | join("::") }}::finishGridConstructionStep() {
   {%- endfor %}
 
   ::exahype2::RefinementControlService::getInstance().finishStep(
-    false,
     peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().numberOfDeferredGridControlChanges
   );
 }
@@ -266,9 +265,8 @@ void {{ NAMESPACE | join("::") }}::finishGridInitialisationStep() {
   // The initialisation sweep evaluates the refinement criterion on the exact initial
   // condition. Committing the events here means the dedicated mesh-refinement sweeps
   // can realise them and re-apply the initial condition on the finer mesh before time
-  // stepping starts. The commit runs collectively so every rank observes the identical
-  // merged event set.
-  ::exahype2::RefinementControlService::getInstance().finishRefinementCriterionStep(true);
+  // stepping starts.
+  ::exahype2::RefinementControlService::getInstance().finishRefinementCriterionStep();
 }
 
 void {{ NAMESPACE | join("::") }}::finishPlottingStep() {

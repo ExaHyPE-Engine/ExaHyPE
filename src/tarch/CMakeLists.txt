@@ -17,6 +17,7 @@ set(SOURCES
   UnitTests.cpp
   tests/TestCase.cpp
   tests/TreeTestCaseCollection.cpp
+  tests/NonCriticalAssertionsTest.cpp
 
   database/SnapshotDatabase.cpp
   database/GlobalTimeSeriesDatabase.cpp
@@ -79,12 +80,16 @@ set(SOURCES
   instrumentation/Trace.cpp
   instrumentation/Warning.cpp
 
-  mpi/mpi.cpp
-  mpi/DoubleMessage.cpp
-  mpi/IntegerMessage.cpp
+  mpi/Collectives.cpp
+  mpi/Diagnostics.cpp
+  mpi/PersistentChannel.cpp
   mpi/Rank.cpp
-  mpi/StringMessage.cpp
-  mpi/tests/StringTest.cpp
+  mpi/Request.cpp
+  mpi/RequestGroup.cpp
+  mpi/tests/DiagnosticsTest.cpp
+  mpi/tests/PersistentChannelTest.cpp
+  mpi/tests/PollPacingTest.cpp
+  mpi/tests/RequestGroupTest.cpp
 
   multicore/multicore.cpp
   multicore/BooleanSemaphore.cpp
@@ -92,14 +97,11 @@ set(SOURCES
   multicore/Lock.cpp
   multicore/MultiReadSingleWriteLock.cpp
   multicore/MultiReadSingleWriteSemaphore.cpp
-  multicore/RecursiveLock.cpp
-  multicore/RecursiveSemaphore.cpp
   multicore/Task.cpp
   multicore/tests/SpawnTaskTest.cpp
   multicore/omp/multicore.cpp
   multicore/omp/BooleanSemaphore.cpp
   multicore/omp/Core.cpp
-  multicore/omp/RecursiveSemaphore.cpp
 
   plotter/CellDataPlotter.cpp
   plotter/CellPlotter.cpp
@@ -127,9 +129,6 @@ set(SOURCES
   reader/tests/NetCDFFieldSamplerTest.cpp
   reader/tests/NetCDFFileReaderTest.cpp
   reader/tests/JSONReaderTest.cpp
-
-  services/Service.cpp
-  services/ServiceRepository.cpp
 
   instrumentation/Measurement.cpp
   instrumentation/Watch.cpp

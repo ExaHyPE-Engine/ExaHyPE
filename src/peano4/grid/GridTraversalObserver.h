@@ -88,7 +88,7 @@ public:
    * you add a statement alike
    *
    * <pre>
-if (peano4::parallel::Node::isGlobalMaster(spacetreeId)) {
+if (peano4::parallel::TreeIdMapping::isGlobalMaster(spacetreeId)) {
 ...
 }
    </pre>

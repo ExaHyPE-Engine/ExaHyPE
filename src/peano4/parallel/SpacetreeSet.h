@@ -3,20 +3,23 @@
 #pragma once
 
 #include "peano4/Globals.h"
+#include "peano4/grid/BoundaryDataAggregation.h"
 #include "peano4/grid/GridVertex.h"
 #include "peano4/grid/PeanoCurve.h"
 #include "peano4/grid/PeriodicTopology.h"
 #include "peano4/grid/Spacetree.h"
 #include "peano4/grid/SplitInstruction.h"
 #include "peano4/grid/StackTopology.h"
-#include "peano4/parallel/Node.h"
-#include "peano4/parallel/TreeManagementMessage.h"
+#include "peano4/parallel/ExchangeChannels.h"
+#include "peano4/parallel/TreeIdMapping.h"
 #include "peano4/stacks/Stack.h"
 #include "tarch/instrumentation/Log.h"
-#include "tarch/mpi/IntegerMessage.h"
-#include "tarch/multicore/BooleanSemaphore.h"
+#include "tarch/mpi/Diagnostics.h"
+#include "tarch/mpi/PollPacing.h"
+#include "tarch/mpi/Rank.h"
+#include "tarch/mpi/Request.h"
+#include "tarch/mpi/RequestGroup.h"
 #include "tarch/multicore/Task.h"
-#include "tarch/services/Service.h"
 
 namespace peano4::grid {
   class GridTraversalObserver;
@@ -31,52 +34,53 @@ namespace peano4::parallel::tests {
   class SpacetreeSetTest;
 } // namespace peano4::parallel::tests
 
-class peano4::parallel::SpacetreeSet final : public tarch::services::Service {
+class peano4::parallel::SpacetreeSet final {
 private:
   friend class peano4::grid::Spacetree;
   friend class peano4::parallel::tests::SpacetreeSetTest;
 
   static SpacetreeSet _singleton;
 
-  std::vector<peano4::parallel::TreeManagementMessage> _unansweredMessages;
+  /**
+   * One entry of the collective tree-management exchange.
+   *
+   * All entries have the same width, so one integer per rank pair describes a
+   * whole outgoing batch and no entry needs a length negotiation of its own.
+   * The layout is free of padding because the entries travel as raw bytes.
+   */
+  struct TreeManagementRecord final {
+    enum class Kind : int { CreateTree, RemoveEmptyChild };
 
-#ifdef PEANO_WITH_MPI
-  MPI_Request           _treeManagementReceiveRequest;
-  TreeManagementMessage _treeManagementReceiveBuffer;
-  bool                  _treeManagementReceiveIsPosted;
-
-  struct PendingTreeIdResponse final {
-    std::vector<int> treeIds;
-    MPI_Request      sendRequest = MPI_REQUEST_NULL;
+    tarch::la::Vector<DIMENSIONS, double> rootOffset{};
+    tarch::la::Vector<DIMENSIONS, double> rootWidth{};
+    Kind                                  kind{Kind::CreateTree};
+    int                                   masterTreeId{-1};
+    int                                   workerTreeId{-1};
+    int                                   rootTraversalInverted{0};
   };
 
-  struct PendingTreeCreation final {
-    TreeManagementMessage        request;
-    std::vector<int>             treeIds;
-    peano4::grid::AutomatonState rootState;
-    MPI_Request                  treeIdsReceiveRequest   = MPI_REQUEST_NULL;
-    MPI_Request                  rootStateReceiveRequest = MPI_REQUEST_NULL;
+  /** One split registered on a local tree whose worker ID is not known yet. */
+  struct PendingSplit final {
+    peano4::grid::SplitInstruction instruction;
+    int                            sourceTreeId{-1};
+    int                            targetRank{-1};
   };
 
-  struct PendingTreeManagementMessage final {
-    TreeManagementMessage message;
-    MPI_Request           sendRequest = MPI_REQUEST_NULL;
-  };
+  std::vector<PendingSplit>         _pendingSplits;
+  std::vector<TreeManagementRecord> _pendingRemoteRecords;
 
-  std::list<PendingTreeIdResponse>        _pendingTreeIdResponses;
-  std::list<PendingTreeCreation>          _pendingTreeCreations;
-  std::list<PendingTreeManagementMessage> _pendingTreeManagementMessages;
+  static int getRecordDestinationRank(const TreeManagementRecord& record);
 
-  void postTreeManagementReceive();
-  void progressPendingTreeManagement();
-  void sendTreeManagementAcknowledgement(const TreeManagementMessage& request);
-#endif
+  void exchangeTreeManagementRecords();
+  void createTree(const TreeManagementRecord& record);
 
   stacks::Stack<grid::GridVertex>&  getLocalExchangeStack(int treeId, int localStackId);
   std::vector<grid::PeriodicStamp>& getLocalExchangeStamps(int treeId, int localStackId);
   void pushLocalExchangeStamp(int treeId, int localStackId, const grid::PeriodicStamp& stamp);
   stacks::Stack<grid::GridVertex>&
-       getParallelExchangeStack(int treeId, int slot, peano4::grid::StackTopology::ParallelExchangeStack which);
+  getParallelExchangeStack(int treeId, int slot, peano4::grid::StackTopology::ParallelExchangeStack which);
+  peano4::grid::BoundaryDataAggregation<stacks::Stack<grid::GridVertex>>& getBoundaryDataAggregation();
+  int                                                                     getContainerId() const;
   void registerLocalSpacetree(peano4::grid::Spacetree& tree);
   void unregisterLocalSpacetree(int id);
 
@@ -121,6 +125,12 @@ public:
   using Stack       = stacks::Stack<grid::GridVertex>;
   using ElementType = grid::GridVertex;
 
+  /**
+   * Container id of the grid vertices in the aggregated boundary exchange. The
+   * data repository numbers the user containers from the next value up.
+   */
+  static constexpr int GridVertexContainerId = 0;
+
   template <class Container>
   static void resizeParallelExchangeStacks(Container& stackContainer);
 
@@ -129,6 +139,12 @@ public:
 
   template <class Container>
   static void exchangeAllHorizontalDataExchangeStacks(Container& stackContainer, int spacetreeId);
+
+  template <class Container>
+  static void postAggregatedBoundaryExchange(Container& stackContainer, int remoteRank);
+
+  template <class Container>
+  static void unpackAggregatedBoundaryExchange(Container& stackContainer, int spacetreeId, int remoteRank);
 
   template <class Container>
   static void purgePeriodicBoundaryDataStacks(Container& stackContainer, int spacetreeId);
@@ -149,38 +165,6 @@ public:
   static void streamDataFromJoiningTreeToMasterTree(Container& stackContainer, int master, int worker);
 
 private:
-  /**
-   * Semaphore to protect container holding all the local trees.
-   */
-  static tarch::multicore::BooleanSemaphore _semaphore;
-
-  /**
-   * I use this tag to identify messages send from one tree to another rank.
-   * All answers go through an answer tag. To identify the right one, please
-   * use getAnswerTag(). The tag should be const, but I set it in init() and
-   * therefore I had to remove the const - even though its logically
-   * not possible to change it.
-   */
-  int _requestMessageTag;
-
-  /**
-   * Never use this tag directly. It is the first tag of a series fo answer
-   * tags. To find the right one for a particular application context, use
-   * getAnswerTag().
-   */
-  int _answerMessageTag;
-
-  /**
-   * Dedicated tag for the AutomatonState handshake payload. It must not share _requestMessageTag,
-   * which carries a persistent MPI_ANY_SOURCE TreeManagementMessage irecv: a pumped receive could
-   * otherwise steal/truncate the (larger) AutomatonState message into the small TreeManagementMessage
-   * buffer.
-   */
-  int _stateMessageTag;
-
-  /** Dedicated tag for variable-length batches of worker tree IDs. */
-  int _treeIdMessageTag;
-
   /**
    * These are the local spacetrees.
    */
@@ -226,6 +210,45 @@ private:
    */
   std::vector<peano4::grid::CrossRankPeriodicEntry<peano4::grid::GridVertex>> _crossRankPeriodicGridVertexStaging;
 
+  /**
+   * Aggregated boundary buffers of the grid vertices, again in the set's
+   * container role.
+   */
+  peano4::grid::BoundaryDataAggregation<stacks::Stack<grid::GridVertex>> _gridVertexBoundaryAggregation;
+
+  /**
+   * Remote ranks this rank exchanges boundary data with, sorted, and per entry
+   * the number of local trees that have at least one neighbour on that rank.
+   * Both follow from the tree topology alone, so every container aggregates
+   * along the same layout and the set derives it once per sweep.
+   */
+  std::vector<int> _boundaryAggregationRemoteRanks;
+  std::vector<int> _boundaryAggregationContributors;
+
+  /**
+   * Per local tree slot the sorted remote ranks that tree touches. A tree walks
+   * this list to hand on to the contributor countdown and, later, to look for
+   * the data addressed to it.
+   */
+  std::array<std::vector<int>, MAX_SPACETREES_PER_RANK> _boundaryAggregationRanksPerTree;
+
+  /**
+   * Names the sweep the topology above describes. A container compares it
+   * against the sweep its own buffers were prepared for, so the first tree to
+   * reach the exchange prepares them and the others find them ready.
+   */
+  int _boundaryAggregationGeneration{0};
+
+  /**
+   * Whether any rank creates a communicator this sweep. The tree-management
+   * headers carry every rank's demand, so all ranks take the same value and
+   * the collective communicator creation is skipped in lockstep on a settled
+   * partition. The first sweep always builds.
+   */
+  bool _communicatorRebuildRequired{true};
+
+  void rebuildBoundaryAggregationTopology();
+
   bool hasPeriodicBoundaryConditions() const { return _periodicBC.any(); }
 
   void rebuildPeriodicAssociations();
@@ -242,8 +265,6 @@ private:
    */
   std::map<int, peano4::grid::GridTraversalObserver*> _clonedObserver;
 
-  int getAnswerTag(int targetSpacetreeId) const;
-
   void exchangeHorizontalDataBetweenTrees(peano4::grid::GridTraversalObserver& observer);
   void streamDataFromSplittingTreesToNewTrees(peano4::grid::GridTraversalObserver& observer);
 
@@ -251,19 +272,13 @@ private:
 
   void deleteClonedObservers();
 
-  void addSpacetrees(int masterId, const std::vector<int>& newTreeIds);
-
-  void cleanUpTrees(peano4::grid::GridTraversalObserver& observer);
+  void cleanUpTrees();
 
   std::set<int> getLocalTreesMergingWithWorkers() const;
 
   void createObserverCloneIfRequired(peano4::grid::GridTraversalObserver& observer, int treeId);
 
-  SpacetreeSet()                               = default;
-  SpacetreeSet(const SpacetreeSet&)            = delete;
-  SpacetreeSet& operator=(const SpacetreeSet&) = delete;
-  SpacetreeSet(SpacetreeSet&&)                 = delete;
-  SpacetreeSet& operator=(SpacetreeSet&&)      = delete;
+  SpacetreeSet() = default;
 
 public:
   /** One exact split instruction and the rank on which its worker will live. */
@@ -272,13 +287,13 @@ public:
     int                            targetRank;
   };
 
-  ~SpacetreeSet() override = default;
+  SpacetreeSet(const SpacetreeSet&)            = delete;
+  SpacetreeSet(SpacetreeSet&&)                 = delete;
+  SpacetreeSet& operator=(const SpacetreeSet&) = delete;
+  SpacetreeSet& operator=(SpacetreeSet&&)      = delete;
+  ~SpacetreeSet()                              = default;
 
   static SpacetreeSet& getInstance();
-
-  void answerQuestions();
-
-  void receiveDanglingMessages() override;
 
   void init(
     const tarch::la::Vector<DIMENSIONS, double>& offset,
@@ -286,7 +301,7 @@ public:
     const std::bitset<DIMENSIONS>&               periodicBC = 0
   );
 
-  void shutdown() override;
+  void shutdown();
 
   void traverse(peano4::grid::GridTraversalObserver& observer);
 
@@ -296,6 +311,14 @@ public:
   peano4::grid::Spacetree&       getSpacetree(int id);
   const peano4::grid::Spacetree& getSpacetree(int id) const;
   bool                           maySplit(int treeId) const;
+
+  /** Offset and width of one local tree's root cell. */
+  struct TreeExtent {
+    tarch::la::Vector<DIMENSIONS, double> offset;
+    tarch::la::Vector<DIMENSIONS, double> width;
+  };
+
+  std::vector<TreeExtent> getLocalTreeExtents() const;
 
   /** Register one exact split. This convenience overload uses the batched implementation. */
   bool split(int treeId, const grid::SplitInstruction& instruction, int targetRank);

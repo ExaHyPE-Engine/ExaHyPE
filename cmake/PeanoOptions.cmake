@@ -4,7 +4,6 @@
 include_guard(GLOBAL)
 
 option(PEANO_WITH_MULTITHREADING "Build with multithreading (OpenMP) support" ON)
-option(PEANO_WITH_MPI "Build with Message Passing Interface (MPI) support" ON)
 option(PEANO_WITH_FPE "Build with floating-point exception traps" OFF)
 option(PEANO_WITH_HDF5 "Build with HDF5 support" ON)
 option(PEANO_WITH_NETCDF "Build with NetCDF support" ON)
@@ -101,22 +100,15 @@ macro(peano_resolve_gpu_backend)
     message(WARNING "PEANO_WITH_GPU_ARCH='${PEANO_WITH_GPU_ARCH}' is set but PEANO_WITH_GPU_BACKEND is 'none'; the GPU architecture is ignored.")
   endif()
 
-  # ccache via the launch-* wrappers does not compose with acpp's syclcc driver or the kokkos
-  # build, so disable it for both and use the plain compiler.
-  if(PEANO_WITH_GPU_BACKEND STREQUAL "acpp" OR PEANO_WITH_GPU_BACKEND STREQUAL "kokkos")
-    unset(CMAKE_C_COMPILER_LAUNCHER)
-    unset(CMAKE_CXX_COMPILER_LAUNCHER)
-  endif()
   if(PEANO_WITH_GPU_BACKEND STREQUAL "kokkos")
     set(IPO_SUPPORTED FALSE)
-    message(STATUS "Disabling IPO/LTO for Kokkos compatability")
+    message(STATUS "Disabling IPO/LTO for Kokkos compatibility.")
   endif()
-  # ThinLTO and a sanitizer do not compose: the linker rejects the combined
-  # bitcode with "Expected at most one ThinLTO module per bitcode file".
+  # Sanitiser instrumentation makes ThinLTO bitcode invalid for the linker.
   if(NOT PEANO_WITH_SANITIZER STREQUAL "none"
      OR "${PEANO_EXTRA_CXX_FLAGS} ${PEANO_EXTRA_C_FLAGS} ${CMAKE_CXX_FLAGS} ${CMAKE_C_FLAGS}" MATCHES "-fsanitize")
     set(IPO_SUPPORTED FALSE)
-    message(STATUS "Disabling IPO/LTO because a sanitizer is enabled")
+    message(STATUS "Disabling IPO/LTO because a sanitiser is enabled.")
   endif()
 endmacro()
 

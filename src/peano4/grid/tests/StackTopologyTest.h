@@ -15,6 +15,10 @@ private:
 
   void testPeriodicPartnerRoundTrip();
 
+  void testGetPeriodicBoundaryNumber();
+  void testBitsetBasedPeriodicBoundaryEnumeration();
+  void testGetOutputStacksForPeriodicBoundaryExchange();
+
 public:
   StackTopologyTest();
   ~StackTopologyTest() override = default;

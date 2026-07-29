@@ -259,8 +259,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     double     _minTimeStepSizeThisTimeStep;
     double     _maxTimeStepSizeThisTimeStep;
 
-    int        _cellUpdates;
-
     tarch::multicore::BooleanSemaphore  _semaphore;
 
   {{ABSTRACT_SOLVER_USER_DECLARATIONS}}

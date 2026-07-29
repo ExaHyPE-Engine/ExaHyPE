@@ -31,7 +31,6 @@ namespace runner {
 } // namespace runner
 
 struct runner::RepositoryCallbacks {
-  std::function<void()> initDataRepository;
   std::function<void()> shutdownDataRepository;
   std::function<void()> afterStep;
 

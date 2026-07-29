@@ -4,12 +4,12 @@
 
 #include "exahype2/RefinementControl.h"
 #include "peano4/Globals.h"
+#include "peano4/parallel/SpacetreeSet.h"
 #include "tarch/Termination.h"
 #include "tarch/la/VectorVectorOperations.h"
+#include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
-#include "tarch/mpi/mpi.h"
 #include "tarch/multicore/Core.h"
-#include "tarch/services/ServiceRepository.h"
 
 namespace {
   /**
@@ -86,9 +86,6 @@ namespace {
   }
 } // namespace
 
-int exahype2::RefinementControlService::_reductionTag =
-  tarch::mpi::Rank::reserveFreeTag("exahype2::RefinementControlService");
-
 exahype2::RefinementControlService& exahype2::RefinementControlService::getInstance() {
   static exahype2::RefinementControlService result;
   return result;
@@ -100,190 +97,33 @@ exahype2::RefinementControlService::RefinementControlService() :
   _numberOfSolvers(1) {
   // One accumulation buffer per thread so merge() needs no lock. The buffers are sized once
   // here. A singleton constructed before tarch::multicore::Core reports its thread count
-  // would see zero, which the lower bound turns into the one buffer a serial run needs.
+  // would see zero, which the lower bound turns into the one buffer a single-threaded run needs.
   _localNewEventsPerThread.resize(std::max(tarch::multicore::Core::getInstance().getNumberOfThreads(), 1));
-  tarch::services::ServiceRepository::getInstance().addService(this, "exahype2::RefinementControlService");
-
-#ifdef PEANO_WITH_MPI
-  _recvSizeRequest = MPI_REQUEST_NULL;
-  _isShuttingDown  = false;
-  postReceiveSize();
-#endif
 }
-
-exahype2::RefinementControlService::~RefinementControlService() {
-#ifdef PEANO_WITH_MPI
-  int mpiFinalised = 0;
-  MPI_Finalized(&mpiFinalised);
-  if (not mpiFinalised) {
-    shutdown();
-  }
-#endif
-  tarch::services::ServiceRepository::getInstance().removeService(this);
-}
-
-void exahype2::RefinementControlService::shutdown() {
-#ifdef PEANO_WITH_MPI
-  if (_isShuttingDown) {
-    return;
-  }
-
-  freeAllPendingSendRequests();
-
-  tarch::mpi::barrier(tarch::mpi::Rank::getInstance().getCommunicator(), [&]() -> void {
-    tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-  });
-
-  // Finish every outstanding receive so nothing is left in the queue at finalize, then stop re-posting
-  // and cancel the persistent size receive.
-  drainDanglingMessages();
-  _isShuttingDown = true;
-  cancelReceiveSizeRequest();
-#endif
-}
-
-#ifdef PEANO_WITH_MPI
-void exahype2::RefinementControlService::postReceiveSize() {
-  if (not _isShuttingDown and _recvSizeRequest == MPI_REQUEST_NULL) {
-    tarch::mpi::irecv(
-      &_recvSizeBuffer,
-      1,
-      MPI_INT,
-      MPI_ANY_SOURCE,
-      _reductionTag,
-      tarch::mpi::Rank::getInstance().getCommunicator(),
-      &_recvSizeRequest
-    );
-  }
-}
-
-void exahype2::RefinementControlService::tryToReceiveDanglingMessage() {
-  // Complete any finished body receives. Each in-flight body is an independent, source-specific irecv,
-  // so a slow/large body from one rank never blocks receiving from another - no head-of-line blocking.
-  for (auto body = _incomingBodies.begin(); body != _incomingBodies.end();) {
-    int flag = 0;
-    tarch::mpi::test(&body->request, &flag, MPI_STATUS_IGNORE);
-    if (flag) {
-      for (const auto& request : body->buffer) {
-        _remoteNewEvents.push_back(request);
-      }
-      body = _incomingBodies.erase(body);
-    } else {
-      ++body;
-    }
-  }
-
-  // Drain every pending size header on the persistent ANY_SOURCE receive.
-  // For each header post a source-specific body receive and then re-post
-  // the size receive immediately, so the size channel never blocks behind a
-  // body. The body irecv is posted before the size re-post, so MPI matches the incoming body to it
-  // rather than to the (later-posted) size receive.
-  postReceiveSize();
-  int        flag = 0;
-  MPI_Status status;
-  tarch::mpi::test(&_recvSizeRequest, &flag, &status);
-  while (flag) {
-    _recvSizeRequest     = MPI_REQUEST_NULL;
-    const int eventCount = _recvSizeBuffer;
-    if (eventCount > 0) {
-      _incomingBodies.emplace_back();
-      IncomingBody& body = _incomingBodies.back();
-      body.buffer.resize(eventCount);
-      tarch::mpi::irecv(
-        body.buffer.data(),
-        static_cast<int>(eventCount * sizeof(RawRequest)),
-        MPI_BYTE,
-        status.MPI_SOURCE,
-        _reductionTag,
-        tarch::mpi::Rank::getInstance().getCommunicator(),
-        &body.request
-      );
-    }
-    postReceiveSize();
-    flag = 0;
-    tarch::mpi::test(&_recvSizeRequest, &flag, &status);
-  }
-}
-
-void exahype2::RefinementControlService::drainDanglingMessages() {
-  // Shutdown helper: receive everything still pending, then block-complete all in-flight bodies so no
-  // request crosses MPI_Finalize.
-  tryToReceiveDanglingMessage();
-  for (auto& body : _incomingBodies) {
-    tarch::mpi::wait(&body.request, []() {}, MPI_STATUS_IGNORE);
-    for (const auto& request : body.buffer) {
-      _remoteNewEvents.push_back(request);
-    }
-  }
-  _incomingBodies.clear();
-}
-
-void exahype2::RefinementControlService::cancelReceiveSizeRequest() {
-  if (_recvSizeRequest != MPI_REQUEST_NULL) {
-    MPI_Status status;
-    tarch::mpi::cancel(&_recvSizeRequest);
-    tarch::mpi::wait(&_recvSizeRequest, []() {}, &status);
-
-    int wasCancelled = 0;
-    MPI_Test_cancelled(&status, &wasCancelled);
-    _recvSizeRequest = MPI_REQUEST_NULL;
-
-    if (not wasCancelled and _recvSizeBuffer > 0) {
-      // A header arrived just before the cancel; receive and process its body so the sender's matching
-      // body send completes and nothing is left in the queue.
-      std::vector<RawRequest> body(_recvSizeBuffer);
-      MPI_Request             bodyRequest = MPI_REQUEST_NULL;
-      tarch::mpi::irecv(
-        body.data(),
-        static_cast<int>(_recvSizeBuffer * sizeof(RawRequest)),
-        MPI_BYTE,
-        status.MPI_SOURCE,
-        _reductionTag,
-        tarch::mpi::Rank::getInstance().getCommunicator(),
-        &bodyRequest
-      );
-      tarch::mpi::wait(&bodyRequest, []() {}, MPI_STATUS_IGNORE);
-      for (const auto& request : body) {
-        _remoteNewEvents.push_back(request);
-      }
-    }
-  }
-}
-#endif
 
 /**
- * Receive refinement control messages from other ranks
+ * Report how many requests and events the service holds
  *
- * Incoming messages carry the raw requests a partner rank collected, so they join
- * _remoteNewEvents. A finishStep() that exchanges collectively drops them, one that does
- * not folds them into its raw request set. They must not shortcut into _committedEvents:
- * the sibling-group promotion has to see them as raw requests, and the running traversal
- * reads the committed set.
- *
- * The service needs no lock. tarch::services::ServiceRepository::receiveDanglingMessages()
- * serialises the polling, so only one thread probes and receives at a time; the trees only
- * read _committedEvents, which finishStep() alone writes and only in between traversals;
- * and merge() writes one buffer per thread. _remoteNewEvents is the one member both the
- * poller and finishStep() touch, and the repository lock does not cover finishStep(). It
- * is safe because finishStep() runs single-threaded between traversals, and the polling it
- * re-enters while waiting for its own collective happens on that same thread.
+ * The three counts follow one request through its stages: it accumulates in a per-thread
+ * buffer, becomes a committed event for the next traversal, and ends up in the set that
+ * the last refinement cycle realised. The solver count is the consent a coarsening needs,
+ * so a wrong count shows up here as coarsening that never happens.
  */
-void exahype2::RefinementControlService::receiveDanglingMessages() {
-#ifdef PEANO_WITH_MPI
-  tryToReceiveDanglingMessage();
-#endif
-}
-
 std::string exahype2::RefinementControlService::toString() const {
-  std::size_t numberOfLocalEvents = 0;
+  std::size_t numberOfNewLocalEvents = 0;
   for (const auto& threadBuffer : _localNewEventsPerThread) {
-    numberOfLocalEvents += threadBuffer.size();
+    numberOfNewLocalEvents += threadBuffer.size();
   }
-  std::ostringstream msg;
-  msg << "("
-      << "#new-local-events=" << numberOfLocalEvents << "#new-remote-events=" << _remoteNewEvents.size()
-      << ",#committed-events=" << _committedEvents.size() << ")";
-  return msg.str();
+
+  std::ostringstream out;
+  out << "RefinementControlService{";
+  out << "#NewLocalEvents=" << numberOfNewLocalEvents;
+  out << ", #CommittedEvents=" << _committedEvents.size();
+  out << ", #LastRealisedEvents=" << _lastRealisedEvents.size();
+  out << ", TopologyChangedSinceLastTimeStep=" << (_topologyChangedSinceLastTimeStep ? "true" : "false");
+  out << ", #Solvers=" << _numberOfSolvers;
+  out << "}";
+  return out.str();
 }
 
 void exahype2::RefinementControlService::merge(const RefinementControl& control) {
@@ -308,13 +148,9 @@ void exahype2::RefinementControlService::merge(const RefinementControl& control)
  * more, so Peano can realise the topology transition the next traversal triggers;
  * after that realisation delivery, the request is gone.
  *
- * The raw requests are exchanged via MPI before the coarsening consensus runs.
- * The default path first waits for all previous non-blocking communication to
- * terminate (freeAllPendingSendRequests()), creates a copy of the raw requests,
- * and then delegates the data exchange to triggerSendOfCopyOfRawRequests(); the
- * requests other ranks sent us join the set afterwards. If useCollectiveExchange
- * is set, all ranks synchronise their requests through one blocking collective
- * exchange, which is what lets a sibling group split across ranks be reassembled.
+ * The raw requests are exchanged via MPI before the coarsening consensus runs, so
+ * a sibling group whose children are spread over several ranks is reassembled on
+ * each of them.
  *
  * The request set is promoted and merged here and not per tree: Peano's spacetrees
  * would otherwise each redo the same work, and with a hundred trees per node that
@@ -324,8 +160,8 @@ void exahype2::RefinementControlService::merge(const RefinementControl& control)
  *   requested but could not apply; a positive count re-delivers the traversal's
  *   event set (see finishDynamicMeshRefinementStep()).
  */
-void exahype2::RefinementControlService::finishStep(bool useCollectiveExchange, int numberOfDeferredTopologyChanges) {
-  finishStep(useCollectiveExchange, false, false, numberOfDeferredTopologyChanges);
+void exahype2::RefinementControlService::finishStep(int numberOfDeferredTopologyChanges) {
+  finishStep(false, false, numberOfDeferredTopologyChanges);
 }
 
 /**
@@ -336,11 +172,11 @@ void exahype2::RefinementControlService::finishStep(bool useCollectiveExchange, 
  * geometric commands cannot change the mesh again, but would otherwise force two
  * expensive AMR realisation traversals after every time step.
  */
-void exahype2::RefinementControlService::finishRefinementCriterionStep(bool useCollectiveExchange) {
+void exahype2::RefinementControlService::finishRefinementCriterionStep() {
   // The completed traversal is a time step: its roll-over has compensated any
   // Updated entries the preceding mesh-update sweeps cleared.
   _topologyChangedSinceLastTimeStep = false;
-  finishStep(useCollectiveExchange, true, false);
+  finishStep(true, false);
 }
 
 /**
@@ -361,19 +197,15 @@ void exahype2::RefinementControlService::finishRefinementCriterionStep(bool useC
  * forever, and a caller that repeats mesh updates until the suppression reports
  * the mesh realised would never terminate.
  */
-void exahype2::RefinementControlService::finishDynamicMeshRefinementStep(
-  bool useCollectiveExchange,
-  int  numberOfDeferredTopologyChanges
-) {
+void exahype2::RefinementControlService::finishDynamicMeshRefinementStep(int numberOfDeferredTopologyChanges) {
   // The realise sweeps re-evaluate the refinement criterion on cells they
   // created, so a drain keeps committing until the mesh satisfies it.
   // Suppressing sets the mesh already realised is what ends the drain; batches
   // with pending realisation deliveries are exempt from the suppression.
-  finishStep(useCollectiveExchange, true, true, numberOfDeferredTopologyChanges);
+  finishStep(true, true, numberOfDeferredTopologyChanges);
 }
 
 void exahype2::RefinementControlService::finishStep(
-  bool useCollectiveExchange,
   bool suppressEventsIfUnchanged,
   bool recordRealisedEvents,
   int  numberOfDeferredTopologyChanges
@@ -410,51 +242,27 @@ void exahype2::RefinementControlService::finishStep(
   }
 
   if (not rawRequests.empty()) {
-    logDebug(
-      "Activate " << rawRequests.size() << " local refinement/erase instruction(s) for the next grid sweep, plus "
-                  << _remoteNewEvents.size() << " request(s) received from other ranks"
-    );
+    logDebug("Activate " << rawRequests.size() << " local refinement/erase instruction(s) for the next grid sweep");
   }
 
-#ifdef PEANO_WITH_MPI
-  freeAllPendingSendRequests();
-  if (useCollectiveExchange) {
-    // The collective exchange leaves every rank with the same set. Point-to-point requests
-    // that arrived in the meantime stem from an earlier sweep and would break that, so they go.
-    _remoteNewEvents.clear();
-    exchangeRawRequestsCollectively(rawRequests);
-    // A change deferred on any rank keeps the events alive on every rank, so the redelivery
-    // decision below is rank-uniform. The maximum expresses "deferred anywhere" and, other
-    // than a sum, cannot overflow at scale.
-    int globalDeferredTopologyChanges = 0;
-    MPI_Allreduce(
-      &numberOfDeferredTopologyChanges,
-      &globalDeferredTopologyChanges,
-      1,
-      MPI_INT,
-      MPI_MAX,
-      tarch::mpi::Rank::getInstance().getCommunicator()
-    );
-    numberOfDeferredTopologyChanges = globalDeferredTopologyChanges;
-  } else {
-    _copyOfRawRequests = rawRequests;
-    triggerSendOfCopyOfRawRequests();
-  }
-#endif
+  exchangeRawRequests(rawRequests);
 
-  if (not useCollectiveExchange) {
-    for (const auto& remoteRequest : _remoteNewEvents) {
-      rawRequests.push_back(remoteRequest);
-    }
-  }
-  // The collective above waits through the service poller, so further point-to-point requests
-  // can have landed since the clear before it. They belong to the same rank-uniform set the
-  // exchange already established and go the same way.
-  _remoteNewEvents.clear();
+  // A change deferred on any rank keeps the events alive on every rank, so the redelivery
+  // decision below is rank-uniform. The maximum expresses "deferred anywhere" and, other
+  // than a sum, cannot overflow at scale.
+  int globalDeferredTopologyChanges = 0;
+  tarch::mpi::allreduce(
+    &numberOfDeferredTopologyChanges,
+    &globalDeferredTopologyChanges,
+    1,
+    MPI_INT,
+    MPI_MAX,
+    tarch::mpi::Rank::getInstance().getCommunicator()
+  );
+  numberOfDeferredTopologyChanges = globalDeferredTopologyChanges;
 
-  // On the collective path every rank holds the same request set, so all ranks reach the same
-  // suppression and redelivery decisions; a commit without that exchange decides from its own
-  // requests.
+  // Every rank holds the same request set, so all ranks reach the same suppression and
+  // redelivery decisions.
   const bool hasRealiseRequests = std::any_of(rawRequests.begin(), rawRequests.end(), [](const RawRequest& request) {
     return request.isFirstDelivery == 0;
   });
@@ -488,8 +296,8 @@ void exahype2::RefinementControlService::finishStep(
     }
     // A parent that has just formed from a group with spent constituent deliveries still
     // needs its realisation traversal: stage it as a whole. It re-enters the next batch as
-    // a pass-through event, and after a collective exchange every rank stages the identical
-    // parent, so the merge deduplicates the copies.
+    // a pass-through event, and every rank stages the identical parent, so the merge
+    // deduplicates the copies.
     for (const auto& parentEvent : parentEventsRequiringRealisationDelivery) {
       _localNewEventsPerThread[0].push_back(
         RefinementControl::NewEvent{
@@ -580,17 +388,14 @@ std::vector<peano4::grid::GridControlEvent> exahype2::RefinementControlService::
   return finalisedEvents;
 }
 
-#ifdef PEANO_WITH_MPI
 /**
- * Synchronise the raw requests across all ranks in one blocking exchange
+ * Replace the local raw requests by the union over all ranks
  *
  * Every rank contributes its request set and receives the concatenation of all
- * ranks' sets, so after the call each rank holds an identical set. The mesh
- * refinement realisation traversals use this deterministic path; the asynchronous
- * point-to-point path serves the per-time-step commits, which tolerate a one-sweep
- * delay.
+ * ranks' sets, so after the call each rank holds an identical set and every
+ * decision derived from it is rank-uniform.
  */
-void exahype2::RefinementControlService::exchangeRawRequestsCollectively(std::vector<RawRequest>& requests) {
+void exahype2::RefinementControlService::exchangeRawRequests(std::vector<RawRequest>& requests) {
   const int numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
 
   // The classic collective interface carries int counts. Exchanging whole requests
@@ -648,89 +453,41 @@ void exahype2::RefinementControlService::exchangeRawRequestsCollectively(std::ve
   requests = std::move(gatheredRequests);
 }
 
-void exahype2::RefinementControlService::freeAllPendingSendRequests() {
-  for (MPI_Request* request : _sendRequests) {
-    if (request != nullptr) {
-      tarch::mpi::wait(
-        request,
-        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); },
-        MPI_STATUS_IGNORE
-      );
-      delete request;
-    }
-  }
-  _sendRequests.clear();
+std::vector<peano4::grid::GridControlEvent> exahype2::RefinementControlService::getGridControlEvents() const {
+  return getGridControlEvents(peano4::parallel::SpacetreeSet::getInstance().getLocalTreeExtents());
 }
 
 /**
- * Send a copy of the raw requests to every other rank
+ * Deliver the committed events a tree within the given extents can realise.
  *
- * The MPI data exchange here is non-trivial, as we do not know which rank has how
- * many messages. So we run in three steps: First, we send the raw requests out to
- * all partners. These sends are done non-blocking. They logically are a broadcast.
- * Second, we loop over all the arising MPI_Requests and poll until they are finished.
- * So we know all data has gone out. This is a while loop with the predicate
- *
- *       not sendRequests.empty()
- *
- * Third, we hook into this while loop and probe for all the other ranks if they
- * have sent us anything. So while we wait for our sends to go out, we poll the other
- * ranks for their data, integrate this information into our data structures and
- * therefore also free any MPI queues.
- *
- * As we build up the incoming data while we wait for our sends to go out, we have to
- * send from a copy of the actual data (_copyOfRawRequests): We cannot alter the
- * outgoing data due to polls for incoming messages while we have still pending sends.
- *
- * We have to work with non-blocking calls here, as the code otherwise tends to
- * deadlock if we have a lot of events. This is due to MPI falling back to rendezvous
- * message passing if the data that is on-the-fly becomes too large.
+ * The committed set itself is identical on every rank, and the suppression and
+ * redelivery decisions rely on that, so it stays global. A cell however only
+ * realises an event it overlaps, so the delivery keeps the events that touch a
+ * tree's root box, enlarged by one event width so an event on a partition seam
+ * reaches both of its sides. Per-tree copies and per-cell scans then scale
+ * with the local subdomain instead of the global grid.
  */
-void exahype2::RefinementControlService::triggerSendOfCopyOfRawRequests() {
-  assertion(_sendRequests.empty());
-
-  logDebug("Share the local " << _copyOfRawRequests.size() << " request(s) with the other ranks");
-  if (_copyOfRawRequests.size() > 0) {
-    // Per peer: a small size header (so the receiver can size its body irecv without an ANY_SOURCE
-    // probe) followed by the body. The receiver re-posts the size receive immediately and runs body
-    // receives concurrently, so this does not head-of-line-block at scale.
-    const int ranks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
-    _sendSizeBuffers.resize(ranks);
-
-    for (int rank = 0; rank < ranks; rank++) {
-      if (rank != tarch::mpi::Rank::getInstance().getRank()) {
-        _sendSizeBuffers[rank] = static_cast<int>(_copyOfRawRequests.size());
-        MPI_Request* sizeReq   = new MPI_Request();
-        tarch::mpi::isend(
-          &_sendSizeBuffers[rank],
-          1,
-          MPI_INT,
-          rank,
-          _reductionTag,
-          tarch::mpi::Rank::getInstance().getCommunicator(),
-          sizeReq
-        );
-        _sendRequests.push_back(sizeReq);
-
-        MPI_Request* bodyReq = new MPI_Request();
-        tarch::mpi::isend(
-          _copyOfRawRequests.data(),
-          static_cast<int>(_copyOfRawRequests.size() * sizeof(RawRequest)),
-          MPI_BYTE,
-          rank,
-          _reductionTag,
-          tarch::mpi::Rank::getInstance().getCommunicator(),
-          bodyReq
-        );
-        _sendRequests.push_back(bodyReq);
+std::vector<peano4::grid::GridControlEvent> exahype2::RefinementControlService::getGridControlEvents(
+  const std::vector<peano4::parallel::SpacetreeSet::TreeExtent>& localTreeExtents
+) const {
+  std::vector<peano4::grid::GridControlEvent> deliveredEvents;
+  deliveredEvents.reserve(_committedEvents.size());
+  for (const auto& event : _committedEvents) {
+    const tarch::la::Vector<DIMENSIONS, double> eventLow  = event.offset - event.width;
+    const tarch::la::Vector<DIMENSIONS, double> eventHigh = event.offset + 2.0 * event.width;
+    for (const auto& extent : localTreeExtents) {
+      bool overlaps = true;
+      for (int direction = 0; direction < DIMENSIONS; direction++) {
+        overlaps = overlaps and eventLow(direction) < extent.offset(direction) + extent.width(direction)
+          and extent.offset(direction) < eventHigh(direction);
+      }
+      if (overlaps) {
+        deliveredEvents.push_back(event);
+        break;
       }
     }
   }
-}
-#endif
-
-std::vector<peano4::grid::GridControlEvent> exahype2::RefinementControlService::getGridControlEvents() const {
-  return _committedEvents;
+  return deliveredEvents;
 }
 
 /**

@@ -17,7 +17,6 @@
 #include "tarch/Init.h"
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
-#include "tarch/mpi/mpi.h"
 #include "tarch/plotter/VTUFileWriter.h"
 #ifdef PEANO_WITH_HDF5
 #include "tarch/plotter/HDF5FileWriter.h"
@@ -150,9 +149,7 @@ namespace {
       for (int s = 0; s < snapshots; ++s) {
         Writer w(".", numSub);
 
-#if defined(PEANO_WITH_MPI)
         MPI_Barrier(rankObj.getCommunicator()); // align the start of this output
-#endif
         const auto outputStart = std::chrono::steady_clock::now();
 
         // Build the subdomains in parallel: each thread owns a distinct subdomain (and
@@ -175,11 +172,9 @@ namespace {
         double writeTime = seconds(writeStart, outputEnd);
         double totalTime = seconds(outputStart, outputEnd); // build + write = one plot
 
-#if defined(PEANO_WITH_MPI)
         MPI_Allreduce(MPI_IN_PLACE, &buildTime, 1, MPI_DOUBLE, MPI_MAX, rankObj.getCommunicator());
         MPI_Allreduce(MPI_IN_PLACE, &writeTime, 1, MPI_DOUBLE, MPI_MAX, rankObj.getCommunicator());
         MPI_Allreduce(MPI_IN_PLACE, &totalTime, 1, MPI_DOUBLE, MPI_MAX, rankObj.getCommunicator());
-#endif
         sumBuild += buildTime;
         sumWrite += writeTime;
         sumTotal += totalTime;
@@ -206,9 +201,7 @@ namespace {
     }
 
     if (cleanup) {
-#if defined(PEANO_WITH_MPI)
       MPI_Barrier(rankObj.getCommunicator()); // all ranks done writing before we delete
-#endif
       if (rankObj.isGlobalMaster()) {
         removeOutput("bench_" + tag);
       }

@@ -15,10 +15,9 @@ include(PeanoEnableGPULanguage)
 include(PeanoTarget)
 include(PeanoHostDependencies)
 
-# peano_add_target() reads IPO_SUPPORTED; determine it once here.
+# Determine IPO support once because peano_add_target() reads the result.
 check_ipo_supported(RESULT IPO_SUPPORTED)
 
-set(PEANO_WITH_MPI "@PEANO_WITH_MPI@")
 set(PEANO_WITH_MULTITHREADING "@PEANO_WITH_MULTITHREADING@")
 set(PEANO_WITH_HDF5 "@PEANO_WITH_HDF5@")
 set(PEANO_WITH_NETCDF "@PEANO_WITH_NETCDF@")

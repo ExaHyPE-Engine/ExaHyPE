@@ -5,11 +5,10 @@
 #include "Constants.h"
 
 #include "tarch/instrumentation/Log.h"
+#include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
-#include "tarch/mpi/mpi.h"
 #include "tarch/multicore/Lock.h"
 #include "tarch/NonCriticalAssertions.h"
-#include "tarch/services/ServiceRepository.h"
 
 std::bitset<DIMENSIONS> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::PeriodicBC = {{NAMESPACE | join("::")}}::PeriodicBC;
 
@@ -227,51 +226,38 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
   if (isLastGridSweepOfTimeStep() or _solverState == SolverState::InitialPrediction) {
-#ifdef PEANO_WITH_MPI
-    double localMinValues[4] = {
-      _minTimeStampThisTimeStep,
-      _minCellHThisTimeStep,
-      _minTimeStepSizeThisTimeStep,
-      _localMinTimeStampThisTimeStep
+    // The upper half holds the negated maxima, so one minimum reduction yields both
+    // extrema. Negating an IEEE double is exact, so this matches a maximum bit for bit.
+    const double localExtrema[8] = {
+       _minTimeStampThisTimeStep,
+       _minCellHThisTimeStep,
+       _minTimeStepSizeThisTimeStep,
+       _localMinTimeStampThisTimeStep,
+      -_maxTimeStampThisTimeStep,
+      -_maxCellHThisTimeStep,
+      -_maxTimeStepSizeThisTimeStep,
+      -_localMaxTimeStampThisTimeStep
     };
-    double globalMinValues[4] = {0.0, 0.0, 0.0, 0.0};
-    double localMaxValues[4] = {
-      _maxTimeStampThisTimeStep,
-      _maxCellHThisTimeStep,
-      _maxTimeStepSizeThisTimeStep,
-      _localMaxTimeStampThisTimeStep
-    };
-    double globalMaxValues[4] = {0.0, 0.0, 0.0, 0.0};
-    const MPI_Comm communicator = tarch::mpi::Rank::getInstance().getCommunicator();
-    auto progress = [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); };
+    double         globalExtrema[8] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    const MPI_Comm communicator     = tarch::mpi::Rank::getInstance().getCommunicator();
 
     tarch::mpi::allreduce(
-      localMinValues,
-      globalMinValues,
-      4, MPI_DOUBLE,
+      localExtrema,
+      globalExtrema,
+      8, MPI_DOUBLE,
       MPI_MIN,
-      communicator,
-      progress
-    );
-    tarch::mpi::allreduce(
-      localMaxValues,
-      globalMaxValues,
-      4, MPI_DOUBLE,
-      MPI_MAX,
-      communicator,
-      progress
+      communicator
     );
 
-    _minTimeStampThisTimeStep = globalMinValues[0];
-    _minCellHThisTimeStep     = globalMinValues[1];
-    _minTimeStepSizeThisTimeStep = globalMinValues[2];
-    _localMinTimeStampThisTimeStep = globalMinValues[3];
+    _minTimeStampThisTimeStep      = globalExtrema[0];
+    _minCellHThisTimeStep          = globalExtrema[1];
+    _minTimeStepSizeThisTimeStep   = globalExtrema[2];
+    _localMinTimeStampThisTimeStep = globalExtrema[3];
 
-    _maxTimeStampThisTimeStep = globalMaxValues[0];
-    _maxCellHThisTimeStep     = globalMaxValues[1];
-    _maxTimeStepSizeThisTimeStep = globalMaxValues[2];
-    _localMaxTimeStampThisTimeStep = globalMaxValues[3];
-#endif
+    _maxTimeStampThisTimeStep      = -globalExtrema[4];
+    _maxCellHThisTimeStep          = -globalExtrema[5];
+    _maxTimeStepSizeThisTimeStep   = -globalExtrema[6];
+    _localMaxTimeStampThisTimeStep = -globalExtrema[7];
 
     if (_minTimeStampThisTimeStep >= std::numeric_limits<double>::max() / 10.0) {
       _minTimeStampThisTimeStep = 0.0;

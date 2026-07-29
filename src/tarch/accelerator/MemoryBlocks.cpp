@@ -3,6 +3,7 @@
 #include "MemoryBlocks.h"
 
 #include "tarch/Termination.h"
+#include "tarch/instrumentation/Log.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/Lock.h"
 

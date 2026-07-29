@@ -8,8 +8,8 @@
 #include "tarch/Init.h"
 #include "tarch/Termination.h"
 #include "tarch/instrumentation/Log.h"
+#include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
-#include "tarch/mpi/mpi.h"
 #include "tarch/plotter/FileWriter.h"
 #include "tarch/reader/JSONReader.h"
 
@@ -98,7 +98,7 @@ int runner::launch(
   tarch::init(
     &argc,
     &argv,
-    {parameters.getMPITimeoutWarning(), parameters.getMPIDeadlockTimeout(), parameters.isMPIDeadlockDetectionEnabled()}
+    {parameters.getMPITimeoutWarning(), parameters.getMPIDeadlockTimeout(), parameters.isMPIRequestTrackingEnabled()}
   );
 
   tarch::instrumentation::Log::setLogMachineName(tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1);
@@ -131,16 +131,13 @@ int runner::launch(
       gitignore << "*\n";
     }
   }
-#ifdef PEANO_WITH_MPI
   tarch::mpi::barrier(tarch::mpi::Rank::getInstance().getCommunicator());
-#endif
   tarch::instrumentation::Log::setOutputFile(outputDirectory + parameters.getExecutableName() + ".log");
 
   peano4::init(domainOffset, domainSize, periodicBC);
 
   initLoadBalancer();
 
-  callbacks.initDataRepository();
   if (callbacks.startSimulation) {
     callbacks.startSimulation();
   }

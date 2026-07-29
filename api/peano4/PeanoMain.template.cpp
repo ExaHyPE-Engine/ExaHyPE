@@ -63,7 +63,6 @@ namespace {
     // The runner updates the load balancer before the application refreshes repository memory statistics.
     result.afterStep = ::{{ project_namespace }}::repositories::DataRepository::updateMemoryUsage;
 
-    result.initDataRepository     = ::{{ project_namespace }}::repositories::DataRepository::init;
     result.shutdownDataRepository = ::{{ project_namespace }}::repositories::DataRepository::shutdown;
 
     result.getGlobalCellDataMemoryUsageInBytes = []() {

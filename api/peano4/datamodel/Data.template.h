@@ -4,7 +4,6 @@
 
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/la/Vector.h"
-#include "tarch/mpi/mpi.h"
 
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/FaceMarker.h"
@@ -146,15 +145,4 @@ public:
     return not marker.willBeRefined();
   }
 {% endif -%}
-
-#ifdef PEANO_WITH_MPI
-  static void initDatatype();
-  static void shutdownDatatype();
-
-  static MPI_Datatype getForkDatatype();
-  static MPI_Datatype getJoinDatatype();
-  static MPI_Datatype getBoundaryExchangeDatatype();
-  static MPI_Datatype getMultiscaleDataExchangeDatatype();
-  static MPI_Datatype getGlobalCommunicationDatatype();
-#endif
 };

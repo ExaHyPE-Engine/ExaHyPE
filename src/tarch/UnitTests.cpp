@@ -21,7 +21,10 @@
 #include "la/tests/MatrixVectorTest.h"
 #include "la/tests/ScalarTest.h"
 #include "la/tests/VectorTest.h"
-#include "mpi/tests/StringTest.h"
+#include "mpi/tests/DiagnosticsTest.h"
+#include "mpi/tests/PersistentChannelTest.h"
+#include "mpi/tests/PollPacingTest.h"
+#include "mpi/tests/RequestGroupTest.h"
 #include "multicore/tests/SpawnTaskTest.h"
 #include "plotter/tests/HDF5FileWriterTest.h"
 #include "plotter/tests/NetCDFFileWriterTest.h"
@@ -30,6 +33,7 @@
 #include "reader/tests/JSONReaderTest.h"
 #include "reader/tests/NetCDFFieldSamplerTest.h"
 #include "reader/tests/NetCDFFileReaderTest.h"
+#include "tests/NonCriticalAssertionsTest.h"
 #include "tests/TreeTestCaseCollection.h"
 
 tarch::tests::TestCase* tarch::getUnitTests() {
@@ -40,9 +44,14 @@ tarch::tests::TestCase* tarch::getUnitTests() {
   result->addTestCase(new la::tests::ScalarTest());
   result->addTestCase(new la::tests::VectorTest());
 
+  result->addTestCase(new tests::NonCriticalAssertionsTest());
+
   result->addTestCase(new database::tests::GlobalTimeSeriesDatabaseTest());
 
-  result->addTestCase(new mpi::tests::StringTest());
+  result->addTestCase(new mpi::tests::DiagnosticsTest());
+  result->addTestCase(new mpi::tests::PersistentChannelTest());
+  result->addTestCase(new mpi::tests::PollPacingTest());
+  result->addTestCase(new mpi::tests::RequestGroupTest());
 
   result->addTestCase(new accelerator::tests::MemoryAllocationCacheTest());
   result->addTestCase(new accelerator::tests::MemoryAllocationTest());

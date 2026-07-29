@@ -4,8 +4,8 @@
 
 #ifdef PEANO_WITH_HDF5
 
+#include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
-#include "tarch/mpi/mpi.h"
 
 #include <hdf5.h>
 
@@ -59,7 +59,6 @@ bool tarch::plotter::VTKHDFFileWriter::writeToFile(const std::string& filename, 
   unsigned long long offsetPoints = 0, offsetCells = 0, offsetConnectivity = 0;
   unsigned long long totalPoints = localPoints, totalCells = localCells, totalConnectivity = localConnectivity;
 
-#if defined(PEANO_WITH_MPI)
   auto&    rank          = tarch::mpi::Rank::getInstance();
   MPI_Comm comm          = rank.getCommunicator();
   bool     useParallelIO = rank.getNumberOfRanks() > 1;
@@ -109,14 +108,9 @@ bool tarch::plotter::VTKHDFFileWriter::writeToFile(const std::string& filename, 
     totalCells        = totals[1];
     totalConnectivity = totals[2];
   }
-#else
-  bool useParallelIO = false;
-  bool isMaster      = true;
-#endif
 
   hid_t fapl = H5P_DEFAULT;
   hid_t dxpl = H5P_DEFAULT;
-#if defined(PEANO_WITH_MPI)
   if (useParallelIO) {
     fapl             = H5Pcreate(H5P_FILE_ACCESS);
     MPI_Info   info  = MPI_INFO_NULL;
@@ -140,20 +134,17 @@ bool tarch::plotter::VTKHDFFileWriter::writeToFile(const std::string& filename, 
     // collective transfer for filtered datasets.
     H5Pset_dxpl_mpio(dxpl, H5FD_MPIO_COLLECTIVE);
   }
-#endif
 
   hid_t fileId = firstWrite ? H5Fcreate(pathStr.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fapl)
                             : H5Fopen(pathStr.c_str(), H5F_ACC_RDWR, fapl);
   if (fapl != H5P_DEFAULT) {
     H5Pclose(fapl);
   }
-#if defined(PEANO_WITH_MPI)
   // H5Pset_fapl_mpio duplicated the communicator into the file, so the local handle is
   // no longer needed (the file keeps its own copy for the collective writes and close).
   if (ioComm != MPI_COMM_NULL) {
     MPI_Comm_free(&ioComm);
   }
-#endif
   if (fileId < 0) {
     if (dxpl != H5P_DEFAULT) {
       H5Pclose(dxpl);

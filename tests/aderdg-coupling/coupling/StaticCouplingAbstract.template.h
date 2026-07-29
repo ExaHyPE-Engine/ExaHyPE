@@ -203,8 +203,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
     SolverState  _solverState;
 
-    int        _cellUpdates;
-
     int        _totalNumberOfTroubledCells;
 
     tarch::multicore::BooleanSemaphore  _semaphore;

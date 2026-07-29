@@ -1,5 +1,7 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
+import jinja2
+
 from .SolverCodeSnippets import SolverCodeSnippets
 
 
@@ -76,28 +78,64 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() 
     const double newTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize();
 """
 
+    def create_reduced_eigenvalues(self):
+        """
+        Names of the eigenvalue members that the end-of-time-step reduction covers.
+
+        A solver that tracks further eigenvalues extends this list rather than adding a
+        reduction of its own.
+        """
+        return ["_maxEigenvalueThisTimeStep"]
+
+    def create_max_eigenvalue_reduction(self):
+        """
+        Turn the rank-local eigenvalue maxima into global maxima with one allreduce.
+
+        Every reduction synchronises all ranks, so all eigenvalues share one buffer.
+        """
+        eigenvalues = self.create_reduced_eigenvalues()
+        width = max(len(eigenvalue) for eigenvalue in eigenvalues)
+
+        Template = jinja2.Template(
+            """
+    const double   localMaxEigenvalues[]  = {{INITIALISER}};
+    double         globalMaxEigenvalues[] = {{ZEROS}};
+    const MPI_Comm communicator           = tarch::mpi::Rank::getInstance().getCommunicator();
+
+    tarch::mpi::allreduce(
+      localMaxEigenvalues,
+      globalMaxEigenvalues,
+      {{COUNT}},
+      MPI_DOUBLE,
+      MPI_MAX,
+      communicator
+    );
+
+{{ASSIGNMENTS}}
+""",
+            keep_trailing_newline=True,
+        )
+
+        d = {}
+        d["INITIALISER"] = "{" + ", ".join(eigenvalues) + "}"
+        d["ZEROS"] = "{" + ", ".join(["0.0"] * len(eigenvalues)) + "}"
+        d["COUNT"] = len(eigenvalues)
+        d["ASSIGNMENTS"] = "\n".join(
+            "    {:<{}} = globalMaxEigenvalues[{}];".format(eigenvalue, width, index)
+            for index, eigenvalue in enumerate(eigenvalues)
+        )
+        return Template.render(**d)
+
     def create_finish_time_step_implementation(self):
         """
         This routine is inserted after we have reduced all global quantities. These
         are the quantities with the postfix ThisTimeStep.
         """
-        return """
-  if (isLastGridSweepOfTimeStep()) {
-#ifdef PEANO_WITH_MPI
-    double newMaxEigenvalue = _maxEigenvalueThisTimeStep;
-    MPI_Comm communicator = tarch::mpi::Rank::getInstance().getCommunicator();
-    auto progress = [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); };
-    tarch::mpi::allreduce(
-      &newMaxEigenvalue,
-      &_maxEigenvalueThisTimeStep,
-      1,
-      MPI_DOUBLE,
-      MPI_MAX,
-      communicator,
-      progress
-    );
-#endif
-
+        return (
+            """
+  if (isLastGridSweepOfTimeStep()) {"""
+            + self.create_max_eigenvalue_reduction()
+            + """
     if (tarch::la::smaller(_maxEigenvalueThisTimeStep, 0.0)) {
       tarch::triggerNonCriticalAssertion(__FILE__, __LINE__, "_maxEigenvalueThisTimeStep >= 0", "Invalid max eigenvalue: " + std::to_string(_maxEigenvalueThisTimeStep));
     } else if (tarch::la::equals(_maxEigenvalueThisTimeStep, 0.0)) {
@@ -108,3 +146,4 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() 
     _maxEigenvalue = _maxEigenvalueThisTimeStep;
   }
 """
+        )

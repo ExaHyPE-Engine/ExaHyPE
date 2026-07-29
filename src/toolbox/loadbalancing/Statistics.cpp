@@ -6,13 +6,12 @@
 #include "peano4/parallel/SpacetreeSet.h"
 #include "tarch/Assertions.h"
 #include "tarch/MemoryUsage.h"
+#include "tarch/Termination.h"
 #include "tarch/instrumentation/Log.h"
 #include "tarch/la/VectorOperations.h"
+#include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
-#include "tarch/mpi/mpi.h"
-#include "tarch/services/ServiceRepository.h"
 
-#ifdef PEANO_WITH_MPI
 namespace {
   enum WordIndex : int {
     SumInnerUnrefinedCells = 0,
@@ -68,10 +67,6 @@ namespace {
     return result;
   }
 
-  MPI_Op       reductionOperation = MPI_OP_NULL;
-  MPI_Datatype recordDatatype     = MPI_DATATYPE_NULL;
-  bool         isReady            = false;
-
   void reduceRecord(const std::uint64_t* const input, std::uint64_t* const result) {
     result[SumInnerUnrefinedCells] += input[SumInnerUnrefinedCells];
     result[SumInnerRefinedCells] += input[SumInnerRefinedCells];
@@ -110,62 +105,23 @@ namespace {
     }
   }
 
-  void
-  reduceRecords(void* const inputBuffer, void* const resultBuffer, int* const numberOfRecords, MPI_Datatype* const) {
-    const auto* const input  = static_cast<const std::uint64_t*>(inputBuffer);
-    auto* const       result = static_cast<std::uint64_t*>(resultBuffer);
-    for (int recordIndex = 0; recordIndex < *numberOfRecords; ++recordIndex) {
-      const auto offset = recordIndex * toolbox::loadbalancing::Statistics::NumberOfWords;
+  /**
+   * The record mixes sums, minima, maxima and one argument maximum, so MPI reduces it through
+   * a routine of ours rather than a predefined operation. One record is one element of the
+   * reduction, so the loop over the length is what lets MPI hand over several of them at once.
+   */
+  void reduceRecords(void* incoming, void* accumulator, int* length, MPI_Datatype*) {
+    const auto* const input  = static_cast<const std::uint64_t*>(incoming);
+    auto* const       result = static_cast<std::uint64_t*>(accumulator);
+    for (int record = 0; record < *length; record++) {
+      const auto offset = static_cast<std::size_t>(record) * toolbox::loadbalancing::Statistics::NumberOfWords;
       reduceRecord(input + offset, result + offset);
     }
   }
 
-  /**
-   * Registers the packed words as one MPI datatype, so all statistics share one collective and one ordering point.
-   * MPI therefore passes a record count to reduceRecords(); treating it as a word count would overrun the buffers.
-   */
-  void initialiseReduction() {
-    if (isReady) {
-      return;
-    }
-
-    int mpiIsInitialised = 0;
-    MPI_Initialized(&mpiIsInitialised);
-    if (not mpiIsInitialised) {
-      return;
-    }
-
-    MPI_Type_contiguous(toolbox::loadbalancing::Statistics::NumberOfWords, MPI_UINT64_T, &recordDatatype);
-    MPI_Type_commit(&recordDatatype);
-    MPI_Op_create(&reduceRecords, 1, &reductionOperation);
-    isReady = true;
-  }
-
-  void shutdownReduction() {
-    if (not isReady) {
-      return;
-    }
-
-    int mpiIsInitialised = 0;
-    MPI_Initialized(&mpiIsInitialised);
-    if (not mpiIsInitialised) {
-      return;
-    }
-
-    int mpiIsFinalised = 0;
-    MPI_Finalized(&mpiIsFinalised);
-    if (mpiIsFinalised) {
-      return;
-    }
-
-    MPI_Op_free(&reductionOperation);
-    MPI_Type_free(&recordDatatype);
-    reductionOperation = MPI_OP_NULL;
-    recordDatatype     = MPI_DATATYPE_NULL;
-    isReady            = false;
-  }
+  MPI_Datatype recordType = MPI_DATATYPE_NULL;
+  MPI_Op       recordOp   = MPI_OP_NULL;
 } // namespace
-#endif
 
 toolbox::loadbalancing::Statistics::Statistics() :
   _isViewConsistent(false),
@@ -213,61 +169,52 @@ toolbox::loadbalancing::Statistics::Statistics() :
   _localNumberOfStationarySweeps(0),
   _globalNumberOfStationarySweeps(0),
   _localUniformGridComplete(false),
-  _globalUniformGridComplete(false)
-#ifdef PEANO_WITH_MPI
-  ,
-  _globalExchangeRequest(MPI_REQUEST_NULL),
-  _globalExchangeInFlight(false)
-#endif
-{
-}
+  _globalUniformGridComplete(false) {}
 
-toolbox::loadbalancing::Statistics::~Statistics() {
-  completePendingReduction();
-  shutdownMPI();
-}
+toolbox::loadbalancing::Statistics::~Statistics() { shutdownMPI(); }
 
-/** A live request retains its communicator and buffers, so it has to complete before MPI finalisation. */
-void toolbox::loadbalancing::Statistics::completePendingReduction() {
-#ifdef PEANO_WITH_MPI
-  int mpiIsInitialised = 0;
-  MPI_Initialized(&mpiIsInitialised);
-  if (mpiIsInitialised) {
-    int mpiIsFinalised = 0;
-    MPI_Finalized(&mpiIsFinalised);
-    if (not mpiIsFinalised and _globalExchangeInFlight and _globalExchangeRequest != MPI_REQUEST_NULL) {
-      tarch::mpi::wait(&_globalExchangeRequest);
-      _globalExchangeRequest  = MPI_REQUEST_NULL;
-      _globalExchangeInFlight = false;
-    }
+/**
+ * Builds the record type and the reduction routine
+ *
+ * Both are local to the rank, so a caller may build them whenever it first needs them.
+ * Repeated calls do nothing.
+ */
+void toolbox::loadbalancing::Statistics::initialiseExchange() {
+  if (recordType == MPI_DATATYPE_NULL) {
+    MPI_Type_contiguous(NumberOfWords, MPI_UINT64_T, &recordType);
+    MPI_Type_commit(&recordType);
   }
-#endif
+  if (recordOp == MPI_OP_NULL) {
+    // The record combines pairwise in any order, so MPI may reduce it along whichever tree
+    // it prefers.
+    MPI_Op_create(&reduceRecords, 1, &recordOp);
+  }
 }
 
 void toolbox::loadbalancing::Statistics::shutdownMPI() {
-#ifdef PEANO_WITH_MPI
-  shutdownReduction();
-#endif
+  if (recordOp != MPI_OP_NULL) {
+    MPI_Op_free(&recordOp);
+    recordOp = MPI_OP_NULL;
+  }
+  if (recordType != MPI_DATATYPE_NULL) {
+    MPI_Type_free(&recordType);
+    recordType = MPI_DATATYPE_NULL;
+  }
 }
 
 /**
- * Publishes the preceding asynchronous reduction. The progress callback services other messages while the
- * collective completes, which prevents this wait from starving communication needed by another rank.
+ * Unpacks the record the preceding sweep reduced
+ *
+ * The reduction has already run, so this is pure local work and a caller that only needs the
+ * current view never enters MPI.
  */
-void toolbox::loadbalancing::Statistics::waitForGlobalDataExchange() {
-#ifdef PEANO_WITH_MPI
-  if (not _globalExchangeInFlight) {
+void toolbox::loadbalancing::Statistics::publishGlobalView() {
+  if (not _hasPendingRecord) {
     return;
   }
+  _hasPendingRecord = false;
 
-  tarch::mpi::wait(&_globalExchangeRequest, []() -> void {
-    tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-  });
-
-  _globalExchangeRequest  = MPI_REQUEST_NULL;
-  _globalExchangeInFlight = false;
-
-  const auto& reducedStatistics          = _globalExchangeRecv;
+  const auto* const reducedStatistics    = _reductionRecord.data();
   _globalNumberOfInnerUnrefinedCells     = reducedStatistics[SumInnerUnrefinedCells];
   _globalNumberOfInnerRefinedCells       = reducedStatistics[SumInnerRefinedCells];
   _globalNumberOfOuterUnrefinedCells     = reducedStatistics[SumOuterUnrefinedCells];
@@ -310,15 +257,14 @@ void toolbox::loadbalancing::Statistics::waitForGlobalDataExchange() {
   } else {
     _isViewConsistent = true;
   }
-#endif
 }
 
 /** Controllers and summaries call this before they require the latest global snapshot. */
-void toolbox::loadbalancing::Statistics::synchroniseGlobalView() { waitForGlobalDataExchange(); }
+void toolbox::loadbalancing::Statistics::synchroniseGlobalView() { publishGlobalView(); }
 
 /** Starts a decomposition epoch from the completed cell and tree snapshot while clearing its split-specific state. */
 void toolbox::loadbalancing::Statistics::resetInitialDecompositionState() {
-  waitForGlobalDataExchange();
+  publishGlobalView();
   _localNumberOfSplits       = 0;
   _globalNumberOfSplits      = 0;
   _localUniformGridComplete  = false;
@@ -381,18 +327,13 @@ void toolbox::loadbalancing::Statistics::updateGlobalView() {
   _localNumberOfStationarySweeps = statistics.numberOfStationarySweeps;
 
   bool publishLocalAsGlobal = true;
-#ifdef PEANO_WITH_MPI
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1) {
-    initialiseReduction();
-    if (isReady) {
-      publishLocalAsGlobal = not _hasPublishedGlobalView;
-      if (_globalExchangeInFlight) {
-        waitForGlobalDataExchange();
-        publishLocalAsGlobal = false;
-      }
+    publishLocalAsGlobal = not _hasPublishedGlobalView;
+    if (_hasPendingRecord) {
+      publishGlobalView();
+      publishLocalAsGlobal = false;
     }
   }
-#endif
 
   if (publishLocalAsGlobal) {
     _isViewConsistent = true;
@@ -427,68 +368,67 @@ void toolbox::loadbalancing::Statistics::updateGlobalView() {
 }
 
 /**
- * Starts one packed non-blocking reduction for the current sweep. Empty ranks contribute neutral minima so they do
- * not pin load, depth, or stationary-sweep results.
+ * Reduces this sweep's numbers, which the next sweep publishes
+ *
+ * The load-balancing decision has already run, so the record carries the forks this sweep
+ * issued together with the statistics that led to them. Empty ranks contribute neutral minima
+ * so they do not pin load, depth, or stationary-sweep results.
  */
 void toolbox::loadbalancing::Statistics::startGlobalViewExchange() {
-#ifdef PEANO_WITH_MPI
-  if (tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1) {
-    initialiseReduction();
-    if (isReady) {
-      assertion(not _globalExchangeInFlight);
-      auto&      localStatistics = _globalExchangeSend;
-      const auto isEmptyRank     = _localNumberOfTrees == 0;
-
-      localStatistics[SumInnerUnrefinedCells] = _localNumberOfInnerUnrefinedCells;
-      localStatistics[SumInnerRefinedCells]   = _localNumberOfInnerRefinedCells;
-      localStatistics[SumOuterUnrefinedCells] = _localNumberOfOuterUnrefinedCells;
-      localStatistics[SumVertices]            = _localNumberOfVertices;
-      localStatistics[SumHangingVertices]     = _localNumberOfHangingVertices;
-      localStatistics[SumSplits]              = static_cast<std::uint64_t>(_localNumberOfSplits);
-      localStatistics[SumTrees]               = static_cast<std::uint64_t>(_localNumberOfTrees);
-      localStatistics[SumRanksWithTrees]      = isEmptyRank ? 0 : 1;
-      localStatistics[MinTreeLoad] =
-        isEmptyRank ? std::numeric_limits<std::uint64_t>::max() : static_cast<std::uint64_t>(_localMinTreeLoad);
-      localStatistics[MaxTreeLoad]          = static_cast<std::uint64_t>(_localMaxTreeLoad);
-      localStatistics[MaxTreeLoadOwnerRank] = static_cast<std::uint64_t>(tarch::mpi::Rank::getInstance().getRank());
-      localStatistics[MinTreeOuterLoad] =
-        isEmptyRank ? std::numeric_limits<std::uint64_t>::max() : static_cast<std::uint64_t>(_localMinTreeOuterLoad);
-      localStatistics[MaxTreeOuterLoad] = static_cast<std::uint64_t>(_localMaxTreeOuterLoad);
-      localStatistics[MinRankLoad] =
-        isEmptyRank ? std::numeric_limits<std::uint64_t>::max() : _localNumberOfInnerUnrefinedCells;
-      localStatistics[MaxRankLoad]                  = _localNumberOfInnerUnrefinedCells;
-      localStatistics[SumMemoryUsageInBytes]        = _localMemoryUsageInBytes;
-      localStatistics[SumProcessMemoryUsageInBytes] = _localProcessMemoryUsageInBytes;
-      // One contributor per node prevents shared host memory from being counted once per rank.
-      const auto isNodeMaster                    = tarch::mpi::Rank::getInstance().isNodeMaster();
-      localStatistics[SumNodeTotalMemoryInBytes] = isNodeMaster ? _localTotalMemoryInBytes : 0;
-      localStatistics[SumNodeFreeMemoryInBytes]  = isNodeMaster ? _localFreeMemoryInBytes : 0;
-      localStatistics[MinDepth] =
-        isEmptyRank ? std::numeric_limits<std::uint64_t>::max() : static_cast<std::uint64_t>(_localMinDepth);
-      localStatistics[MaxDepth]         = static_cast<std::uint64_t>(_localMaxDepth);
-      localStatistics[MinMeshWidthBits] = toBits(_localMinH);
-      // Negative values mark settling trees, so the unsigned record decodes them before the minimum comparison.
-      localStatistics[MinStationarySweeps] = encodeSigned(
-        isEmptyRank ? std::numeric_limits<std::int64_t>::max()
-                    : static_cast<std::int64_t>(_localNumberOfStationarySweeps)
-      );
-      localStatistics[OrUniformGridComplete] = _localUniformGridComplete ? 1 : 0;
-
-      tarch::mpi::iallreduce(
-        _globalExchangeSend.data(),
-        _globalExchangeRecv.data(),
-        1,
-        recordDatatype,
-        reductionOperation,
-        tarch::mpi::Rank::getInstance().getCommunicator(),
-        &_globalExchangeRequest
-      );
-      _globalExchangeInFlight = true;
-      return;
-    }
+  if (tarch::mpi::Rank::getInstance().getNumberOfRanks() <= 1) {
+    _globalNumberOfSplits = _localNumberOfSplits;
+    return;
   }
-#endif
-  _globalNumberOfSplits = _localNumberOfSplits;
+
+  initialiseExchange();
+  assertion(not _hasPendingRecord);
+
+  auto&      localStatistics = _reductionRecord;
+  const auto isEmptyRank     = _localNumberOfTrees == 0;
+
+  localStatistics[SumInnerUnrefinedCells] = _localNumberOfInnerUnrefinedCells;
+  localStatistics[SumInnerRefinedCells]   = _localNumberOfInnerRefinedCells;
+  localStatistics[SumOuterUnrefinedCells] = _localNumberOfOuterUnrefinedCells;
+  localStatistics[SumVertices]            = _localNumberOfVertices;
+  localStatistics[SumHangingVertices]     = _localNumberOfHangingVertices;
+  localStatistics[SumSplits]              = static_cast<std::uint64_t>(_localNumberOfSplits);
+  localStatistics[SumTrees]               = static_cast<std::uint64_t>(_localNumberOfTrees);
+  localStatistics[SumRanksWithTrees]      = isEmptyRank ? 0 : 1;
+  localStatistics[MinTreeLoad] =
+    isEmptyRank ? std::numeric_limits<std::uint64_t>::max() : static_cast<std::uint64_t>(_localMinTreeLoad);
+  localStatistics[MaxTreeLoad]          = static_cast<std::uint64_t>(_localMaxTreeLoad);
+  localStatistics[MaxTreeLoadOwnerRank] = static_cast<std::uint64_t>(tarch::mpi::Rank::getInstance().getRank());
+  localStatistics[MinTreeOuterLoad] =
+    isEmptyRank ? std::numeric_limits<std::uint64_t>::max() : static_cast<std::uint64_t>(_localMinTreeOuterLoad);
+  localStatistics[MaxTreeOuterLoad] = static_cast<std::uint64_t>(_localMaxTreeOuterLoad);
+  localStatistics[MinRankLoad] =
+    isEmptyRank ? std::numeric_limits<std::uint64_t>::max() : _localNumberOfInnerUnrefinedCells;
+  localStatistics[MaxRankLoad]                  = _localNumberOfInnerUnrefinedCells;
+  localStatistics[SumMemoryUsageInBytes]        = _localMemoryUsageInBytes;
+  localStatistics[SumProcessMemoryUsageInBytes] = _localProcessMemoryUsageInBytes;
+  // One contributor per node prevents shared host memory from being counted once per rank.
+  const auto isNodeMaster                    = tarch::mpi::Rank::getInstance().isNodeMaster();
+  localStatistics[SumNodeTotalMemoryInBytes] = isNodeMaster ? _localTotalMemoryInBytes : 0;
+  localStatistics[SumNodeFreeMemoryInBytes]  = isNodeMaster ? _localFreeMemoryInBytes : 0;
+  localStatistics[MinDepth] =
+    isEmptyRank ? std::numeric_limits<std::uint64_t>::max() : static_cast<std::uint64_t>(_localMinDepth);
+  localStatistics[MaxDepth]         = static_cast<std::uint64_t>(_localMaxDepth);
+  localStatistics[MinMeshWidthBits] = toBits(_localMinH);
+  // Negative values mark settling trees, so the unsigned record decodes them before the minimum comparison.
+  localStatistics[MinStationarySweeps] = encodeSigned(
+    isEmptyRank ? std::numeric_limits<std::int64_t>::max() : static_cast<std::int64_t>(_localNumberOfStationarySweeps)
+  );
+  localStatistics[OrUniformGridComplete] = _localUniformGridComplete ? 1 : 0;
+
+  tarch::mpi::allreduce(
+    MPI_IN_PLACE,
+    localStatistics.data(),
+    1,
+    recordType,
+    recordOp,
+    tarch::mpi::Rank::getInstance().getCommunicator()
+  );
+  _hasPendingRecord = true;
 }
 
 bool toolbox::loadbalancing::Statistics::hasConsistentViewOfWorld() const { return _isViewConsistent; }

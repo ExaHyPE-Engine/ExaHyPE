@@ -74,6 +74,11 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::setMaxScaledEigenvalue(double 
   }
 """
 
+    def create_reduced_eigenvalues(self):
+        return super(
+            AdaptiveTimeSteppingCodeSnippets, self
+        ).create_reduced_eigenvalues() + ["_maxScaledEigenvalueThisTimeStep"]
+
     def create_finish_time_step_implementation(self):
         return (
             super(
@@ -81,21 +86,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::setMaxScaledEigenvalue(double 
             ).create_finish_time_step_implementation()
             + """
       if (isLastGridSweepOfTimeStep()) {
-#ifdef PEANO_WITH_MPI
-        double reducedMaxScaledEigenvalue = _maxScaledEigenvalueThisTimeStep;
-        MPI_Comm communicator = tarch::mpi::Rank::getInstance().getCommunicator();
-        auto progress = [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); };
-        tarch::mpi::allreduce(
-          &reducedMaxScaledEigenvalue,
-          &_maxScaledEigenvalueThisTimeStep,
-          1,
-          MPI_DOUBLE,
-          MPI_MAX,
-          communicator,
-          progress
-        );
-#endif
-
         if (tarch::la::greater(_maxScaledEigenvalueThisTimeStep, 0.0)) {
           _admissibleTimeStepSize = _admissibleTimeStepSizeThisTimeStep;
 

@@ -24,8 +24,8 @@ HDF5_ROOT environment variable or CMake hint.
 
 Only the C component of HDF5 is required; Peano does not use the HDF5 C++ binding.
 If PEANO_WITH_HDF5 is on but no HDF5 installation can be found, the build emits a
-warning and continues with HDF5 support disabled. When MPI is enabled
-(PEANO_WITH_MPI=ON), the HDF5 installation must support parallel I/O.
+warning and continues with HDF5 support disabled. The HDF5 installation must
+support parallel I/O.
 
 
 ## NetCDF
@@ -52,8 +52,7 @@ export NETCDF_LIB_DIR=/path/to/netcdf/lib
 
 If PEANO_WITH_NETCDF is on but no NetCDF installation can be found, the build emits
 a warning and continues with NetCDF support disabled. The NetCDF installation must
-provide NetCDF-4 (HDF5 backend) support, and, when MPI is enabled, it must also
-support parallel I/O.
+provide NetCDF-4 (HDF5 backend) support and parallel I/O.
 
 
 */

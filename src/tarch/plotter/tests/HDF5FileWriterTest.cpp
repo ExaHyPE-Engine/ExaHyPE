@@ -3,8 +3,8 @@
 #include "HDF5FileWriterTest.h"
 
 #include "tarch/la/Vector.h"
+#include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
-#include "tarch/mpi/mpi.h"
 #include "tarch/plotter/HDF5FileWriter.h"
 
 #ifdef PEANO_WITH_HDF5
@@ -12,11 +12,7 @@
 #include <hdf5.h>
 
 namespace {
-  void barrier() {
-#ifdef PEANO_WITH_MPI
-    tarch::mpi::barrier(tarch::mpi::Rank::getInstance().getCommunicator());
-#endif
-  }
+  void barrier() { tarch::mpi::barrier(tarch::mpi::Rank::getInstance().getCommunicator()); }
 
   /**
    * Checks that the generated .xmf file contains a substring, which validates

@@ -246,16 +246,6 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
       _treeNumber,
       "UpdateParallelState::__Template_TouchVertexLastTime"
     );
-    // #if !defined(PEANO_WITH_MPI)
-    // This assertion breaks when running without MPI on 1 tree with periodic
-    // boundary conditions on. It doesn't account for periodic BCs being mapped
-    // onto a boundary exchange too.
-    // assertion(
-    //   ::peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()>1,
-    //   (*p)->toString(),
-    //   marker.toString()
-    // );
-    // #endif
     _numberOfExpiredHaloParticles++;
     p = fineGridVertex{{PARTICLES_CONTAINER}}.deleteParticle(p);
   }

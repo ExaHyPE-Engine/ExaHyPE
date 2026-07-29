@@ -3,7 +3,6 @@
 #pragma once
 
 #include "tarch/la/Vector.h"
-#include "tarch/mpi/mpi.h"
 
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/FaceMarker.h"
@@ -29,10 +28,6 @@ public:
 private:
 {{ATTRIBUTES}}
 {{STATIC_ATTRIBUTES}}
-
-#ifdef PEANO_WITH_MPI
-  static MPI_Datatype Datatype;
-#endif
 
 public:
   {{CLASSNAME}}();
@@ -134,15 +129,4 @@ public:
     return true;
   }
 {% endif -%}
-
-#ifdef PEANO_WITH_MPI
-  static void initDatatype();
-  static void shutdownDatatype();
-
-  static MPI_Datatype getForkDatatype();
-  static MPI_Datatype getJoinDatatype();
-  static MPI_Datatype getBoundaryExchangeDatatype();
-  static MPI_Datatype getMultiscaleDataExchangeDatatype();
-  static MPI_Datatype getGlobalCommunicationDatatype();
-#endif
 };
