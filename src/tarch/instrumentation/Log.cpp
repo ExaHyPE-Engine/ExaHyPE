@@ -36,18 +36,16 @@ std::atomic<std::string::size_type> tarch::instrumentation::Log::_alignedMessage
 
 namespace {
   bool isGlobalMasterRankOrMpiUninitialised() {
-#ifdef PEANO_WITH_MPI
     const tarch::mpi::Rank& rank = tarch::mpi::Rank::getInstance();
     return not rank.isInitialised() or rank.isGlobalMaster();
-#else
-    return true;
-#endif
   }
 
   std::string_view trimRightView(std::string_view value) noexcept {
     std::size_t last = value.size();
-    while (last > 0 and
-           (value[last - 1] == ' ' or value[last - 1] == '\t' or value[last - 1] == '\n' or value[last - 1] == '\r')) {
+    while (
+      last > 0
+      and (value[last - 1] == ' ' or value[last - 1] == '\t' or value[last - 1] == '\n' or value[last - 1] == '\r')
+    ) {
       last--;
     }
     return value.substr(0, last);
@@ -286,9 +284,9 @@ tarch::instrumentation::Log::alignMessage(std::string_view message, std::string:
   const auto requestedPrefixColumn = messageStartColumn + std::max(MinimumAlignedMessagePrefixWidth, prefix.size());
 
   auto prefixColumn = _alignedMessagePrefixColumn.load(std::memory_order_relaxed);
-  while (prefixColumn < requestedPrefixColumn and
-         not _alignedMessagePrefixColumn
-               .compare_exchange_weak(prefixColumn, requestedPrefixColumn, std::memory_order_relaxed)) {
+  while (prefixColumn < requestedPrefixColumn
+         and not _alignedMessagePrefixColumn
+                   .compare_exchange_weak(prefixColumn, requestedPrefixColumn, std::memory_order_relaxed)) {
   }
   prefixColumn = std::max(prefixColumn, requestedPrefixColumn);
 
@@ -314,8 +312,8 @@ std::string tarch::instrumentation::Log::constructMessageString(
 ) {
   std::string result;
   result.reserve(
-    message.size() + MinimumAlignedMessagePrefixWidth + scopeName.size() + messageType.size() +
-    configuration.logColumnSeparator.size() * 7 + NumberOfScopeColumnSpaces + NumberOfStandardColumnSpaces * 5 + 1
+    message.size() + MinimumAlignedMessagePrefixWidth + scopeName.size() + messageType.size()
+    + configuration.logColumnSeparator.size() * 7 + NumberOfScopeColumnSpaces + NumberOfStandardColumnSpaces * 5 + 1
   );
 
   if (configuration.logTimeStamp) {

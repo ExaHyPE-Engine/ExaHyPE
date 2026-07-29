@@ -145,7 +145,6 @@ if (
 #include "runner/RuntimeParameters.h"
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
-#include "peano4/parallel/Node.h"
 #include "repositories/SolverRepository.h"
 """
         )

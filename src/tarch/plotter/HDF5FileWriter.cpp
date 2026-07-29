@@ -5,8 +5,8 @@
 #ifdef PEANO_WITH_HDF5
 
 #include "tarch/Termination.h"
+#include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
-#include "tarch/mpi/mpi.h"
 #include "tarch/plotter/CellTypes.h"
 
 #include <hdf5.h>
@@ -74,7 +74,6 @@ bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, do
   unsigned long long totalCells  = localNumCells;
   unsigned long long totalTopo   = localTopoSize;
 
-#if defined(PEANO_WITH_MPI)
   auto&    rank           = tarch::mpi::Rank::getInstance();
   MPI_Comm comm           = rank.getCommunicator();
   bool     useParallelIO  = rank.getNumberOfRanks() > 1;
@@ -131,15 +130,10 @@ bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, do
     totalCells  = totals[1];
     totalTopo   = totals[2];
   }
-#else
-  bool useParallelIO  = false;
-  bool writesMetadata = true;
-#endif
 
   hid_t fapl = H5P_DEFAULT;
   hid_t dxpl = H5P_DEFAULT; // Data transfer property list
 
-#if defined(PEANO_WITH_MPI)
   if (useParallelIO) {
     // Property list for parallel file access
     fapl = H5Pcreate(H5P_FILE_ACCESS);
@@ -171,7 +165,6 @@ bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, do
     dxpl = H5Pcreate(H5P_DATASET_XFER);
     H5Pset_dxpl_mpio(dxpl, H5FD_MPIO_COLLECTIVE);
   }
-#endif
 
   hid_t fileId = H5Fcreate(h5FilePath.string().c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
 
@@ -423,11 +416,9 @@ bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, do
   }
   H5Fclose(fileId);
 
-#if defined(PEANO_WITH_MPI)
   if (ioComm != MPI_COMM_NULL) {
     MPI_Comm_free(&ioComm);
   }
-#endif
 
   if (writesMetadata) {
     std::ofstream out(xmfFilePath);

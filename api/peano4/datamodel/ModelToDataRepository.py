@@ -10,18 +10,40 @@ class ModelToDataRepository(object):
         self.model = model
         self.d = {}
 
+    def __reserve_container_id(self):
+        """
+        A container id identifies a container within the aggregated boundary.
+
+        exchange, where it takes the place the tree pair holds in a per-tree-pair
+        exchange. Every rank generates this repository from the same model, so a
+        container ends up with the same id everywhere. Zero belongs to the grid
+        vertices, which the spacetree set exchanges in its own container role.
+        """
+        result = self.__next_container_id
+        self.__next_container_id += 1
+        return result
+
     def __build_up_dictionary_for_one_data_set(self, i, prefix):
-        """
-        :param prefix: Should be "CELL", "FACE" or "VERTEX"
-        """
-        self.d[prefix + "_DATA_CONTAINER_INCLUDES"] += i.generator.get_header_file_include()
+        """:param prefix: Should be "CELL", "FACE" or "VERTEX"."""
+        self.d[
+            prefix + "_DATA_CONTAINER_INCLUDES"
+        ] += i.generator.get_header_file_include()
         self.d[prefix + "_DATA_CONTAINER_INCLUDES"] += "\n"
 
-        self.d[prefix + "_DATA_CONTAINERS"].append(
-            {"stack": i.generator.get_stack_container(), "name": i.get_logical_type_name(), "fq": i.get_full_qualified_type()}
-        )
+        container = {
+            "stack": i.generator.get_stack_container(),
+            "name": i.get_logical_type_name(),
+            "fq": i.get_full_qualified_type(),
+            "container_id": self.__reserve_container_id(),
+        }
+        if prefix != "CELL":
+            container["hanging_container_id"] = self.__reserve_container_id()
+
+        self.d[prefix + "_DATA_CONTAINERS"].append(container)
 
     def __parse_data_declarations_in_model(self, n):
+        self.__next_container_id = 1
+
         for prefix in ["CELL", "FACE", "VERTEX"]:
             self.d[prefix + "_DATA_CONTAINER_INCLUDES"] = ""
             self.d[prefix + "_DATA_CONTAINERS"] = []
@@ -54,10 +76,7 @@ class ModelToDataRepository(object):
             namespace = self.__get_full_namespace(i)
             class_name = self.__get_class_name()
             output.makefile.add_cpp_file(
-                namespace[-1]
-                + "/"
-                + class_name
-                + ".cpp",
+                namespace[-1] + "/" + class_name + ".cpp",
                 generated=True,
             )
             headerfile_template = (

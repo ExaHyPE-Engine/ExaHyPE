@@ -15,7 +15,7 @@ namespace tarch {
 } // namespace tarch
 
 #if defined(PEANO_WITH_OPENMP)
-#include "omp/BooleanSemaphore.h"
+#include "tarch/multicore/omp/BooleanSemaphore.h"
 #elif !defined(_TARCH_MULTICORE_BOOLEAN_SEMAPHORE_H_)
 #define _TARCH_MULTICORE_BOOLEAN_SEMAPHORE_H_
 
@@ -87,7 +87,6 @@ namespace tarch {
  * - The subdirectories of this directory hold the TBB- and OpenMP-specific
  *   implementations of the semaphore.
  *
- *
  * \section  Bugs due to the locks
  *
  * Inserting Locks and relying on the lock destructor turns out to be
@@ -108,10 +107,25 @@ namespace tarch {
  * @author Tobias Weinzierl
  */
 class tarch::multicore::BooleanSemaphore {
+public:
+  BooleanSemaphore();
+  ~BooleanSemaphore();
+
+  using Lock = tarch::multicore::Lock;
+
+  /**
+   * A semaphore owns its lock, so copying or moving one would leave two
+   * objects guarding the same critical section.
+   */
+  BooleanSemaphore(const BooleanSemaphore&)            = delete;
+  BooleanSemaphore(BooleanSemaphore&&)                 = delete;
+  BooleanSemaphore& operator=(const BooleanSemaphore&) = delete;
+  BooleanSemaphore& operator=(BooleanSemaphore&&)      = delete;
+
 private:
   friend class tarch::multicore::Lock;
-  friend class RecursiveSemaphore;
   friend class MultiReadSingleWriteSemaphore;
+
   /**
    * Waits until I can enter the critical section.
    */
@@ -132,22 +146,6 @@ private:
    * You have invoke leaveCriticalSection() if the result is true.
    */
   bool tryEnterCriticalSection();
-
-  /**
-   * You may not copy a semaphore
-   */
-  BooleanSemaphore(const BooleanSemaphore&) {}
-
-  /**
-   * You may not copy a semaphore
-   */
-  BooleanSemaphore& operator=(const BooleanSemaphore&) { return *this; }
-
-public:
-  BooleanSemaphore();
-  ~BooleanSemaphore();
-
-  using Lock = tarch::multicore::Lock;
 };
 
 #endif

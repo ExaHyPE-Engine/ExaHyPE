@@ -79,9 +79,8 @@ namespace {
   }
 
   void reportTraceWarning(std::string_view message, std::string_view scopeName, std::string_view currentScopeName) {
-    std::cerr
-      << "Peano trace warning: " << message << " [leave=" << scopeName << ", current=" << currentScopeName << "]"
-      << std::endl;
+    std::cerr << "Peano trace warning: " << message << " [leave=" << scopeName << ", current=" << currentScopeName
+              << "]" << std::endl;
   }
 
   std::string escapeJson(std::string_view value) {
@@ -153,11 +152,8 @@ namespace {
     out << ']';
   }
 
-  void appendTraceEntryPrefix(
-    std::ostringstream&             out,
-    const std::vector<std::string>& path,
-    const TraceSummary&             summary
-  ) {
+  void
+  appendTraceEntryPrefix(std::ostringstream& out, const std::vector<std::string>& path, const TraceSummary& summary) {
     out << "{\"depth\":" << path.size() - 1 << ",\"name\":";
     appendJsonString(out, path.back());
     out << ",\"path\":";
@@ -255,11 +251,10 @@ namespace {
           out << ',';
         }
         appendTraceEntryPrefix(out, path, summary);
-        out
-          << ",\"percent_of_top_level\":" << std::fixed << std::setprecision(2)
-          << computePercentage(summary.inclusiveDurationMicroseconds, topLevelInclusiveMicroseconds)
-          << ",\"self_percent_of_top_level\":" << std::fixed << std::setprecision(2)
-          << computePercentage(summary.exclusiveDurationMicroseconds, topLevelInclusiveMicroseconds) << "}";
+        out << ",\"percent_of_top_level\":" << std::fixed << std::setprecision(2)
+            << computePercentage(summary.inclusiveDurationMicroseconds, topLevelInclusiveMicroseconds)
+            << ",\"self_percent_of_top_level\":" << std::fixed << std::setprecision(2)
+            << computePercentage(summary.exclusiveDurationMicroseconds, topLevelInclusiveMicroseconds) << "}";
         hasAggregateEntry = true;
       }
 
@@ -286,8 +281,8 @@ namespace {
         if (hasThread) {
           out << ',';
         }
-        out
-          << "{\"thread\":" << threadId << ",\"inclusive_us\":" << threadInclusiveMicroseconds << ",\"inclusive_ms\":";
+        out << "{\"thread\":" << threadId << ",\"inclusive_us\":" << threadInclusiveMicroseconds
+            << ",\"inclusive_ms\":";
         appendMilliseconds(out, threadInclusiveMicroseconds);
         out << ",\"entries\":[";
 
@@ -298,13 +293,13 @@ namespace {
           }
 
           const double percentOfThread     = threadInclusiveMicroseconds == 0
-                                               ? 0.0
-                                               : 100.0 * static_cast<double>(summary.inclusiveDurationMicroseconds)
-                                               / static_cast<double>(threadInclusiveMicroseconds);
+                ? 0.0
+                : 100.0 * static_cast<double>(summary.inclusiveDurationMicroseconds)
+              / static_cast<double>(threadInclusiveMicroseconds);
           const double selfPercentOfThread = threadInclusiveMicroseconds == 0
-                                               ? 0.0
-                                               : 100.0 * static_cast<double>(summary.exclusiveDurationMicroseconds)
-                                                   / static_cast<double>(threadInclusiveMicroseconds);
+            ? 0.0
+            : 100.0 * static_cast<double>(summary.exclusiveDurationMicroseconds)
+              / static_cast<double>(threadInclusiveMicroseconds);
 
           if (hasEntry) {
             out << ',';
@@ -549,7 +544,6 @@ for(const rank of data.ranks||[]){
     }
 
     static std::string traceFileStem(bool useCollective) {
-#ifdef PEANO_WITH_MPI
       int mpiInitialised = 0;
       MPI_Initialized(&mpiInitialised);
 
@@ -557,9 +551,6 @@ for(const rank of data.ranks||[]){
           and tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1) {
         return "Trace-rank-" + std::to_string(tarch::mpi::Rank::getInstance().getRank());
       }
-#else
-      (void)useCollective;
-#endif
 
       return "Trace";
     }
@@ -580,11 +571,8 @@ for(const rank of data.ranks||[]){
       }
     }
 
-    static std::vector<std::string> gatherFragmentsToGlobalMaster(
-      const std::string& localFragment,
-      bool               useCollective
-    ) {
-#ifdef PEANO_WITH_MPI
+    static std::vector<std::string>
+    gatherFragmentsToGlobalMaster(const std::string& localFragment, bool useCollective) {
       int mpiInitialised = 0;
       int mpiFinalised   = 0;
       MPI_Initialized(&mpiInitialised);
@@ -647,7 +635,6 @@ for(const rank of data.ranks||[]){
 
         return {};
       }
-#endif
 
       return {localFragment};
     }
@@ -660,11 +647,10 @@ for(const rank of data.ranks||[]){
       if (useCollective or not _entries.empty()) {
         const std::string              localFragment = _entries.empty() ? std::string{} : toJsonFragment();
         const std::vector<std::string> rankFragments = gatherFragmentsToGlobalMaster(localFragment, useCollective);
-        const bool                     hasTraceData  = std::any_of(
-          rankFragments.begin(),
-          rankFragments.end(),
-          [](const std::string& fragment) { return not fragment.empty(); }
-        );
+        const bool                     hasTraceData =
+          std::any_of(rankFragments.begin(), rankFragments.end(), [](const std::string& fragment) {
+            return not fragment.empty();
+          });
         if (hasTraceData) {
           writeTraceFiles(assembleTraceJson(rankFragments), useCollective);
         }
@@ -680,8 +666,11 @@ for(const rank of data.ranks||[]){
   }
 } // namespace
 
-std::string tarch::instrumentation::Log::
-  makeTraceScopeName(std::string_view functionSignature, std::string_view functionName, std::string_view fileName) {
+std::string tarch::instrumentation::Log::makeTraceScopeName(
+  std::string_view functionSignature,
+  std::string_view functionName,
+  std::string_view fileName
+) {
   return makeScopeName(functionSignature, functionName, fileName);
 }
 
@@ -691,7 +680,8 @@ std::string tarch::instrumentation::Log::makeTraceScopeName(
   std::string_view fileName,
   std::string_view traceScopeName
 ) {
-  return traceScopeName.empty() ? makeScopeName(functionSignature, functionName, fileName) : std::string(traceScopeName);
+  return traceScopeName.empty() ? makeScopeName(functionSignature, functionName, fileName)
+                                : std::string(traceScopeName);
 }
 
 void tarch::instrumentation::Log::enterTimedScope(std::string scopeName) {

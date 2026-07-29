@@ -9,32 +9,30 @@
 #include <omp.h>
 
 class tarch::multicore::BooleanSemaphore {
-private:
-  friend class tarch::multicore::Lock;
-  friend class MultiReadSingleWriteSemaphore;
-  friend class RecursiveSemaphore;
-
-  omp_lock_t lock;
-
-  void enterCriticalSection();
-  void leaveCriticalSection();
-  bool tryEnterCriticalSection();
-
-  /**
-   * You may not copy a semaphore
-   */
-  inline BooleanSemaphore(const BooleanSemaphore&) {}
-
-  /**
-   * You may not copy a semaphore
-   */
-  inline BooleanSemaphore& operator=(const BooleanSemaphore&) { return *this; }
-
 public:
   BooleanSemaphore();
   ~BooleanSemaphore();
 
   using Lock = tarch::multicore::Lock;
+
+  /**
+   * A semaphore owns its lock, so copying or moving one would leave two
+   * objects guarding the same critical section.
+   */
+  BooleanSemaphore(const BooleanSemaphore&)            = delete;
+  BooleanSemaphore(BooleanSemaphore&&)                 = delete;
+  BooleanSemaphore& operator=(const BooleanSemaphore&) = delete;
+  BooleanSemaphore& operator=(BooleanSemaphore&&)      = delete;
+
+private:
+  friend class tarch::multicore::Lock;
+  friend class MultiReadSingleWriteSemaphore;
+
+  omp_lock_t _lock;
+
+  void enterCriticalSection();
+  void leaveCriticalSection();
+  bool tryEnterCriticalSection();
 };
 
 #endif

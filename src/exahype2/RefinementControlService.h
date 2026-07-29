@@ -4,7 +4,7 @@
 
 #include "exahype2/RefinementControl.h"
 #include "peano4/grid/GridControlEvent.h"
-#include "tarch/services/Service.h"
+#include "peano4/parallel/SpacetreeSet.h"
 
 namespace exahype2 {
   class RefinementControl;
@@ -27,6 +27,11 @@ namespace exahype2 {
  *   one. By exchanging them, we can merge the events on each and every
  *   rank and come up with one large region which has to be refined.
  *
+ * The exchange is one collective gather, so every rank leaves it holding the same
+ * request set and derives the same committed events from it. A sibling group whose
+ * children are spread over several ranks is therefore assembled on all of them, and
+ * the suppression and redelivery decisions are rank-uniform.
+ *
  * Coarsening commands are finalised before they are handed to Peano. ExaHyPE
  * users issue one erase request per fine patch; the service promotes these
  * requests to parent-sized Peano events only if the complete 3^d sibling
@@ -40,17 +45,12 @@ namespace exahype2 {
  * transition and once more to realise the created and destroyed cells and
  * faces. This is Peano-internal grid-control bookkeeping and is not exposed as
  * a solver option.
- *
- * A commit that exchanges its raw requests collectively already holds every rank's
- * requests, so it discards the point-to-point ones it happens to hold. Only a commit
- * without that exchange folds them in, and a rank that hears about a remote request too
- * late for the running traversal then acts on it one sweep later.
  */
-class exahype2::RefinementControlService final : public tarch::services::Service {
+class exahype2::RefinementControlService final {
 public:
   static RefinementControlService& getInstance();
 
-  ~RefinementControlService() override;
+  ~RefinementControlService() = default;
 
   RefinementControlService(const RefinementControlService&)            = delete;
   RefinementControlService(RefinementControlService&&)                 = delete;
@@ -58,14 +58,16 @@ public:
   RefinementControlService& operator=(RefinementControlService&&)      = delete;
 
   /**
-   * Receive refinement control messages from other ranks
-   */
-  void receiveDanglingMessages() override;
-
-  /**
-   * The events active for the next mesh traversal.
+   * The events active for the next mesh traversal, delivered against the trees
+   * this rank hosts.
    */
   std::vector<peano4::grid::GridControlEvent> getGridControlEvents() const;
+
+  /**
+   * The events active for the next mesh traversal within the given tree extents.
+   */
+  std::vector<peano4::grid::GridControlEvent>
+  getGridControlEvents(const std::vector<peano4::parallel::SpacetreeSet::TreeExtent>& localTreeExtents) const;
 
   /**
    * Is there at least one committed grid-control event for the next mesh traversal?
@@ -88,22 +90,20 @@ public:
    */
   void setNumberOfSolvers(int numberOfSolvers);
 
-  void shutdown() override;
-
   /**
    * Reduce the requests of one completed traversal into the committed event set.
    */
-  void finishStep(bool useCollectiveExchange = false, int numberOfDeferredTopologyChanges = 0);
+  void finishStep(int numberOfDeferredTopologyChanges = 0);
 
   /**
    * Commit the events collected by a refinement criterion traversal.
    */
-  void finishRefinementCriterionStep(bool useCollectiveExchange = false);
+  void finishRefinementCriterionStep();
 
   /**
    * Finish a mesh refinement realisation traversal.
    */
-  void finishDynamicMeshRefinementStep(bool useCollectiveExchange = false, int numberOfDeferredTopologyChanges = 0);
+  void finishDynamicMeshRefinementStep(int numberOfDeferredTopologyChanges = 0);
 
   std::string toString() const;
 
@@ -127,12 +127,6 @@ private:
   static_assert(std::is_trivially_copyable_v<RawRequest>, "Raw requests travel between ranks as bytes");
 
   /**
-   * The service exchanges its control info after each step on a tag of its own,
-   * so the traffic cannot be confused with any other reduction.
-   */
-  static int _reductionTag;
-
-  /**
    * Per-thread accumulation buffers for new events.
    *
    * merge() is called once per tree at end-of-traversal, and trees traverse as
@@ -144,12 +138,6 @@ private:
    * canonical merge), so the per-thread reduction order does not matter.
    */
   std::vector<RefinementControl::NewEvents> _localNewEventsPerThread;
-
-  /**
-   * Raw requests other ranks sent us. The next finishStep() folds them into the committed
-   * set, so they pass through the sibling-group promotion just like the local ones.
-   */
-  std::list<RawRequest> _remoteNewEvents;
 
   /**
    * The events active for the next mesh traversal, in canonical form: coarsening promoted to
@@ -178,12 +166,7 @@ private:
 
   int _numberOfSolvers;
 
-  void finishStep(
-    bool useCollectiveExchange,
-    bool suppressEventsIfUnchanged,
-    bool recordRealisedEvents,
-    int  numberOfDeferredTopologyChanges = 0
-  );
+  void finishStep(bool suppressEventsIfUnchanged, bool recordRealisedEvents, int numberOfDeferredTopologyChanges = 0);
 
   /**
    * Promote patch-local erase requests to parent-sized erase events.
@@ -193,46 +176,8 @@ private:
     std::vector<peano4::grid::GridControlEvent>& parentEventsRequiringRealisationDelivery
   ) const;
 
-#ifdef PEANO_WITH_MPI
-  std::vector<MPI_Request*> _sendRequests;
-  std::vector<RawRequest>   _copyOfRawRequests;
-
   /**
-   * One in-flight body receive per source. Bodies are received concurrently and source-specifically.
+   * Replace the local raw requests by the union over all ranks.
    */
-  struct IncomingBody {
-    MPI_Request             request;
-    std::vector<RawRequest> buffer;
-  };
-
-  MPI_Request             _recvSizeRequest;
-  int                     _recvSizeBuffer;
-  std::list<IncomingBody> _incomingBodies;
-  bool                    _isShuttingDown;
-
-  // Buffer to keep send sizes valid during non-blocking sends
-  std::vector<int> _sendSizeBuffers;
-
-  void postReceiveSize();
-  void tryToReceiveDanglingMessage();
-  void drainDanglingMessages();
-  void cancelReceiveSizeRequest();
-
-  /**
-   * Synchronise the raw requests across all ranks in one blocking exchange.
-   */
-  void exchangeRawRequestsCollectively(std::vector<RawRequest>& requests);
-
-  /**
-   * Complete the pending sends of the preceding mesh traversal
-   *
-   * @see triggerSendOfCopyOfRawRequests()
-   */
-  void freeAllPendingSendRequests();
-
-  /**
-   * Send a copy of the raw requests to every other rank.
-   */
-  void triggerSendOfCopyOfRawRequests();
-#endif
+  static void exchangeRawRequests(std::vector<RawRequest>& requests);
 };

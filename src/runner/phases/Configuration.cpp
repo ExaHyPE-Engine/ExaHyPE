@@ -27,7 +27,6 @@ runner::Configuration::Configuration(PhaseContext& context) :
   }
 
   report.add("Build", "Dimensions", Format::number(DIMENSIONS));
-#if defined(PEANO_WITH_MPI)
   const auto& rank          = tarch::mpi::Rank::getInstance();
   const auto  numberOfRanks = rank.getNumberOfRanks();
   const auto  numberOfNodes = rank.getNumberOfNodes();
@@ -37,9 +36,6 @@ runner::Configuration::Configuration(PhaseContext& context) :
     Format::number(numberOfRanks) + (numberOfRanks == 1 ? " Rank on " : " Ranks on ") + Format::number(numberOfNodes)
       + (numberOfNodes == 1 ? " Node" : " Nodes")
   );
-#else
-  report.add("Build", "MPI", "off");
-#endif
 #if defined(PEANO_WITH_OPENMP)
   const auto numberOfThreads = tarch::multicore::Core::getInstance().getNumberOfThreads();
   report.add("Build", "OpenMP", Format::number(numberOfThreads) + (numberOfThreads == 1 ? " Thread" : " Threads"));
@@ -128,7 +124,7 @@ runner::Configuration::Configuration(PhaseContext& context) :
 
   report.add("MPI", "Timeout Warning", Format::number(parameters.getMPITimeoutWarning()) + " s");
   report.add("MPI", "Deadlock Timeout", Format::number(parameters.getMPIDeadlockTimeout()) + " s");
-  report.add("MPI", "Deadlock Detection", parameters.isMPIDeadlockDetectionEnabled() ? "on" : "off");
+  report.add("MPI", "Request Tracking", parameters.isMPIRequestTrackingEnabled() ? "on" : "off");
 
   if (callbacks.getConfigurationSummary) {
     for (const auto& [section, entries] : callbacks.getConfigurationSummary()) {

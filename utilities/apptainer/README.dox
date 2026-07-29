@@ -1,0 +1,45 @@
+/**
+
+@page page_installation_with_apptainer Installation with Apptainer
+
+Here we maintain Apptainer Definition Files for different compilers.
+They reuse the Spack environments stored under `utilities/spack`.
+
+## Build
+
+At the moment, we do not host pre-built Apptainer containers on some cloud repository.
+Therefore, anyone who is interested in using Apptainer needs to first build the container.
+One alternative approach is to pull a Docker image from Dockerhub and then convert to Apptainer.
+See the Apptainer documentation for details.
+In our experience this only works for simple images.
+There is no guarantee that this will work with our Docker images.
+Therefore, we do not recommend it.
+
+To build the Apptainer containers, make sure to execute the following commands in the Peano root directory
+
+```shell
+apptainer build utilities/apptainer/gcc.sif utilities/apptainer/Apptainer.gcc
+apptainer build utilities/apptainer/intel.sif utilities/apptainer/Apptainer.intel
+apptainer build utilities/apptainer/nvidia.sif utilities/apptainer/Apptainer.nvidia
+apptainer build utilities/apptainer/amd.sif utilities/apptainer/Apptainer.amd
+apptainer build utilities/apptainer/llvm.sif utilities/apptainer/Apptainer.llvm
+apptainer build utilities/apptainer/exahype2.sif utilities/apptainer/Apptainer.exahype2
+```
+
+## Usage
+
+```shell
+apptainer shell -e --bind "$PWD" utilities/apptainer/<compiler>.sif
+```
+
+### With GPU Support
+
+```shell
+apptainer shell --nv -e --bind "$PWD" utilities/apptainer/<compiler>.sif
+apptainer shell --rocm -e --bind "$PWD" utilities/apptainer/<compiler>.sif
+```
+
+For more details, see
+https://apptainer.org/docs/user/1.0/gpu.html
+
+*/

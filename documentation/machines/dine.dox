@@ -26,7 +26,7 @@ mkdir build
 cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release \
          -DCMAKE_C_COMPILER=icx -DCMAKE_CXX_COMPILER=icpx \
-         -DPEANO_WITH_MULTITHREADING=ON -DPEANO_WITH_MPI=ON \
+         -DPEANO_WITH_MULTITHREADING=ON \
          -DPEANO_EXTRA_CXX_FLAGS="-funroll-loops;-Ofast"
 make -j
 ~~~~~~~~~~~~~~~~~~~~~~~

@@ -2,35 +2,33 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "Rank.h"
 
-#include "tarch/CompilerSpecificSettings.h"
-#include "tarch/MemoryUsage.h"
+#include "tarch/Assertions.h"
 #include "tarch/Termination.h"
-#include "tarch/mpi/DoubleMessage.h"
-#include "tarch/mpi/IntegerMessage.h"
-#include "tarch/mpi/StringMessage.h"
-#include "tarch/mpi/mpi.h"
+#include "tarch/instrumentation/Log.h"
+#include "tarch/mpi/Diagnostics.h"
 #include "tarch/multicore/multicore.h"
-#include "tarch/services/ServiceRepository.h"
-
-/**
- * For the machine name. If it doesn't work, switch it off in the file
- * CompilerSpecificSettings.h.
- */
-#ifdef COMPILER_HAS_UTS_NAME
-#include <sys/utsname.h>
-#endif
 
 int tarch::mpi::Rank::_maxTags    = -1;
 int tarch::mpi::Rank::_tagCounter = 0;
 
 tarch::mpi::Rank tarch::mpi::Rank::_singleton;
 
-void tarch::mpi::Rank::releaseTag(int tag) {
-  if (tag == _tagCounter - 1) {
-    _tagCounter--;
-  }
-}
-
+/**
+ * Return a free tag
+ *
+ * Returns a free tag to be used for a new message type. Each result is
+ * delivered exactly once, and the string argument serves logging purposes.
+ *
+ * ## Implementation details
+ *
+ * Many tags are booked before an application has set its log filters up, and
+ * the routine is static just like the class' log devices, while C++ has no
+ * mechanism to define which static entity is instantiated first. Reserving a
+ * tag therefore must not depend on the log device being up. The underlying
+ * issue is known as the static initialisation order problem:
+ *
+ *     https://isocpp.org/wiki/faq/ctors#static-init-order
+ */
 int tarch::mpi::Rank::reserveFreeTag(
   [[maybe_unused]] const std::string& fullQualifiedMessageName,
   [[maybe_unused]] int                numberOfTags
@@ -39,26 +37,6 @@ int tarch::mpi::Rank::reserveFreeTag(
   const int result = _tagCounter;
   _tagCounter += numberOfTags;
 
-  // I protect the tag manually (not via log filter), as many tags are actually
-  // grabbed before most applications initialise their log filters properly.
-  //
-  // We may not use isGlobalMaster() as this query checks whether the code is
-  // properly initialised. Please note rank is -1 as long as MPI is not properly
-  // initialised, i.e. any tag booking prior to the MPI initialisation is not
-  // logged properly.
-  //
-  // We also may not use the instance, as the instance might not be up yet. I
-  // also saw other stuff with cout, so better ignore it
-  /*
-  #if PEANO_DEBUG
-  if ( getInstance()._rank==getGlobalMasterRank() ) {
-    std::cout << "assigned message " << fullQualifiedMessageName
-              << " the free tag " << result << " (" << numberOfTags << " consecutive tags reserved)"
-  << std::endl;
-  }
-  #endif
-  */
-
   validateMaxTagIsSupported();
 
   return result;
@@ -66,223 +44,98 @@ int tarch::mpi::Rank::reserveFreeTag(
 
 bool tarch::mpi::Rank::isInitialised() const { return _initIsCalled; }
 
-void tarch::mpi::Rank::ensureThatMessageQueuesAreEmpty([[maybe_unused]] int fromRank, [[maybe_unused]] int tag) {
-#ifdef PEANO_WITH_MPI
-  int flag;
-  tarch::mpi::iprobe(fromRank, tag, _communicator, &flag, MPI_STATUS_IGNORE);
-  if (flag != 0) {
-    plotMessageQueues();
-  }
-  assertion(flag == 0, fromRank, tag, getRank());
-#endif
-}
-
-void tarch::mpi::Rank::plotMessageQueues() {
-#ifdef PEANO_WITH_MPI
-  int        flag;
-  MPI_Status status;
-  tarch::mpi::iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, _communicator, &flag, &status);
-  if (flag == 0) {
-    logError("there are no messages from any sender in MPI queue");
-  } else {
-    logError(
-      "there is still a message in queue "
-      " from rank "
-      << status.MPI_SOURCE << " with tag " << status.MPI_TAG
-    );
-  }
-#endif
-}
-
-bool tarch::mpi::Rank::exceededTimeoutWarningThreshold() const {
-  return _areTimeoutsEnabled and _timeoutWarning > std::chrono::seconds(0)
-    and std::chrono::system_clock::now() > _globalTimeoutWarning;
-}
-
-bool tarch::mpi::Rank::exceededDeadlockThreshold() const {
-  return _areTimeoutsEnabled and _deadlockTimeout > std::chrono::seconds(0)
-    and std::chrono::system_clock::now() > _globalTimeoutDeadlock;
-}
-
-void tarch::mpi::Rank::triggerDeadlockTimeout(
-  const std::string& className,
-  const std::string& methodName,
-  int                communicationPartnerRank,
-  int                tag,
-  int                numberOfExpectedMessages,
-  const std::string& comment
-) {
-  if (exceededDeadlockThreshold()) {
-    std::ostringstream out;
-    out << "Operation " << className << "::" << methodName << " on node " << getRank() << " had to wait more than "
-        << _deadlockTimeout.count() << " seconds for " << numberOfExpectedMessages << " message(s) from node "
-        << communicationPartnerRank << " with tag " << tag << ". Timeout. " << comment;
-    plotMessageQueues();
-    tarch::terminateWithError(out.str(), DeadlockExitCode);
-  }
-}
-
-void tarch::mpi::Rank::writeTimeoutWarning(
-  const std::string& className,
-  const std::string& methodName,
-  int                communicationPartnerRank,
-  int                tag,
-  int                numberOfExpectedMessages
-) {
-  if (exceededTimeoutWarningThreshold()) {
-    logWarning(
-      "operation " << className << "::" << methodName << " on node " << getRank() << " had to wait more than "
-                   << _timeoutWarning.count() << " seconds for " << numberOfExpectedMessages << " message(s) from node "
-                   << communicationPartnerRank << " with tag " << tag
-    );
-
-    if (_deadlockTimeout.count() > 0.0) {
-      logWarning("application will terminate after " << _deadlockTimeout.count() << " seconds because of a deadlock");
-    } else {
-      logWarning(
-        "deadlock detection switched off as deadlock time out is set to "
-        << _deadlockTimeout.count() << ", i.e. you will continue to get warnings, but code will not shut down"
-      );
-    }
-
-    if (_timeoutWarning < _deadlockTimeout / 2 or _deadlockTimeout.count() <= 0.0) {
-      const std::chrono::duration<double> newTimeoutWarning = _timeoutWarning * 2;
-      logWarning(
-        "increase time out warning threshold from " << _timeoutWarning.count() << " seconds to "
-                                                    << newTimeoutWarning.count()
-                                                    << " seconds to avoid flood of warning messages"
-      );
-      _timeoutWarning       = newTimeoutWarning;
-      _globalTimeoutWarning = _globalTimeoutWarning + _timeoutWarning;
-    }
-  }
-}
-
-void tarch::mpi::Rank::setDeadlockWarningTimeStamp() {
-  _globalTimeoutWarning = std::chrono::system_clock::now() + _timeoutWarning;
-}
-
-void tarch::mpi::Rank::setDeadlockTimeoutTimeStamp() {
-  _globalTimeoutDeadlock = std::chrono::system_clock::now() + _deadlockTimeout;
-}
-
-void tarch::mpi::Rank::suspendTimeouts(bool timeoutsDisabled) { _areTimeoutsEnabled = !timeoutsDisabled; }
-
-bool tarch::mpi::Rank::areTimeoutsEnabled() const { return _areTimeoutsEnabled; }
-
-std::chrono::duration<double> tarch::mpi::Rank::getTimeoutWarning() const { return _timeoutWarning; }
-
-std::chrono::duration<double> tarch::mpi::Rank::getDeadlockTimeout() const { return _deadlockTimeout; }
-
-#ifdef PEANO_WITH_MPI
-tarch::mpi::Rank::Rank() :
-  _initIsCalled(false),
-  _rank(-1),
-  _numberOfProcessors(-1),
-  _providedThreadLevelSupport(-1),
-  _numberOfNodes(1),
-  _isNodeMaster(true),
-  _communicator(MPI_COMM_WORLD),
-  _timeoutWarning(0),
-  _deadlockTimeout(0),
-  _areTimeoutsEnabled(true),
-  _deadlockDetectionEnabled(false) {}
-#else
-tarch::mpi::Rank::Rank() :
-  _initIsCalled(false),
-  _rank(0),
-  _numberOfProcessors(1),
-  _numberOfNodes(1),
-  _isNodeMaster(true),
-  _timeoutWarning(0),
-  _deadlockTimeout(0),
-  _areTimeoutsEnabled(true),
-  _deadlockDetectionEnabled(false) {}
-#endif
-
-tarch::mpi::Rank::~Rank() {}
-
-bool tarch::mpi::Rank::isMessageInQueue([[maybe_unused]] int tag) const {
-#ifdef PEANO_WITH_MPI
-  int flag = 0;
-  tarch::mpi::iprobe(MPI_ANY_SOURCE, tag, getCommunicator(), &flag, MPI_STATUS_IGNORE);
-  return flag;
-#else
-  return false;
-#endif
-}
-
+/**
+ * Shuts down the application. Should be the last operation called by the
+ * overall application.
+ *
+ * ## Rationale
+ *
+ * The MPI shutdown is an explicit call before the final return statement of
+ * main, not part of the destructor. Compilers differ in when they destroy
+ * static objects: some do so before main returns, others after the return
+ * statement, and in the latter case a destructor-based shutdown makes
+ * Scalasca's instrumentation report an error.
+ */
 void tarch::mpi::Rank::shutdown() {
-#ifdef PEANO_WITH_MPI
   assertion(_rank != -1);
-
-  DoubleMessage::shutdownDatatype();
-  IntegerMessage::shutdownDatatype();
 
   int errorCode = MPI_Finalize();
   if (errorCode) {
     logError(MPIReturnValueToString(errorCode));
   }
-#endif
 
-  _rank = -1;
+  _rank         = -1;
+  _initIsCalled = false;
 }
 
+/**
+ * Get the global master
+ *
+ * The ranks form a logical tree topology. Its root, i.e. the rank which is
+ * responsible for all other ranks, is the global master.
+ *
+ * @return 0
+ */
 int tarch::mpi::Rank::getGlobalMasterRank() { return 0; }
 
 bool tarch::mpi::Rank::isGlobalMaster() const {
-#ifdef PEANO_WITH_MPI
   assertion(_initIsCalled);
   return getRank() == getGlobalMasterRank();
-#else
-  return true;
-#endif
 }
 
-void tarch::mpi::Rank::logStatus() const {
-  std::ostringstream statusMessage;
-  statusMessage << "MPI status:";
-
-#ifdef COMPILER_HAS_UTS_NAME
-  utsname* utsdata = new utsname();
-  assertion(utsdata != nullptr);
-  uname(utsdata);
-  statusMessage << " nodename=" << utsdata->nodename;
-  delete utsdata;
-#else
-  statusMessage << " nodename=undef";
-#endif
-
-  statusMessage << ", rank=" << _rank;
-#ifdef PEANO_WITH_MPI
-  statusMessage << ", communicator=" << _communicator;
-#endif
-  statusMessage << ", #processors=" << _numberOfProcessors;
-
-  logInfo(statusMessage.str());
-}
-
+/**
+ * Find out whether a tag is supported. This works after init() has been called;
+ * before that, the check always passes. If the tag is not supported, we write a
+ * warning and return false.
+ */
 bool tarch::mpi::Rank::validateMaxTagIsSupported() {
   if (_maxTags <= 0 or _tagCounter < _maxTags) {
     return true;
   } else {
     logWarning(
-      "maximum tag value is " << _maxTags << " though we would need " << _tagCounter << " tags. Code will likely crash"
+      "The maximum tag value is " << _maxTags << " though " << _tagCounter
+                                  << " tags are needed, so the code is likely to crash."
     );
     return false;
   }
 }
 
+/**
+ * An MPI version without support for MPI_THREAD_MULTIPLE yields a prominent
+ * complaint, but execution continues: the code stores the thread support level,
+ * which can be queried here at any time.
+ */
 int tarch::mpi::Rank::getProvidedThreadLevelSupport() const { return _providedThreadLevelSupport; }
 
+/**
+ * Initialises the MPI environment and the program instance. The argv and argc
+ * parameters are both in and out parameters: the MPI environment sets them, and
+ * afterwards they hold the original parameters that were passed in.
+ *
+ * ## Implementation details
+ *
+ * init never uses the log device to report any errors, as the log device in turn
+ * uses this class' getters. The _initIsCalled flag has to be set before the log
+ * state operation is invoked for the same reason.
+ *
+ * ## Upper tag bound
+ *
+ * We determine how many tags the system supports. The MPI standard hands this
+ * limit out through a pointer to a void pointer, from which we then read the
+ * value, i.e. we get a pointer to a system variable back rather than the system
+ * variable itself.
+ *
+ * @return true if initialisation has been successful
+ *
+ * @see shutdown
+ */
 bool tarch::mpi::Rank::init([[maybe_unused]] int* argc, [[maybe_unused]] char*** argv) {
-#ifdef PEANO_WITH_MPI
   int result = MPI_SUCCESS;
 
 #if defined(PEANO_WITH_MULTITHREADING)
   result = MPI_Init_thread(argc, argv, MPI_THREAD_MULTIPLE, &_providedThreadLevelSupport);
   if (_providedThreadLevelSupport != MPI_THREAD_MULTIPLE) {
-    std::cerr << "warning: MPI implementation does not support MPI_THREAD_MULTIPLE. Support "
+    std::cerr << "Warning: the MPI implementation does not support MPI_THREAD_MULTIPLE. The supported "
                  "multithreading level is "
               << _providedThreadLevelSupport << " instead of " << MPI_THREAD_MULTIPLE
               << ". Disable MultipleThreadsMayTriggerMPICalls in the compiler-specific settings or "
@@ -302,7 +155,7 @@ bool tarch::mpi::Rank::init([[maybe_unused]] int* argc, [[maybe_unused]] char***
 
   result = MPI_Comm_size(MPI_COMM_WORLD, &_numberOfProcessors);
   if (result != MPI_SUCCESS) {
-    std::cerr << "init(int*,char***)\t initialisation failed: " + MPIReturnValueToString(result)
+    std::cerr << "init(int*,char***)\t Initialisation failed: " + MPIReturnValueToString(result)
         + " (no logging available yet)"
               << std::endl;
     return false;
@@ -310,7 +163,7 @@ bool tarch::mpi::Rank::init([[maybe_unused]] int* argc, [[maybe_unused]] char***
 
   result = MPI_Comm_rank(MPI_COMM_WORLD, &_rank);
   if (result != MPI_SUCCESS) {
-    std::cerr << "init(int*,char***)\t initialisation failed: " + MPIReturnValueToString(result)
+    std::cerr << "init(int*,char***)\t Initialisation failed: " + MPIReturnValueToString(result)
         + " (no logging available yet)"
               << std::endl;
     return false;
@@ -322,7 +175,7 @@ bool tarch::mpi::Rank::init([[maybe_unused]] int* argc, [[maybe_unused]] char***
   if (answerFlag) {
     _maxTags = *(int*)rawMaxTag;
   } else {
-    std::cerr << "init(int*,char***)\t was not able to query what the maximum tag value is" << std::endl;
+    std::cerr << "init(int*,char***)\t Could not query the maximum tag value" << std::endl;
     return false;
   }
 
@@ -339,47 +192,45 @@ bool tarch::mpi::Rank::init([[maybe_unused]] int* argc, [[maybe_unused]] char***
   const int nodeMasterFlag = _isNodeMaster ? 1 : 0;
   MPI_Allreduce(&nodeMasterFlag, &_numberOfNodes, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 
-  DoubleMessage::initDatatype();
-  IntegerMessage::initDatatype();
-#endif
-
   _initIsCalled = true;
   return _initIsCalled;
 }
 
+/**
+ * @return Number of distinct shared-memory nodes the ranks run on.
+ */
 int tarch::mpi::Rank::getNumberOfNodes() const { return _numberOfNodes; }
 
+/**
+ * @return Whether this rank is the lowest-ranked process on its node, which
+ *   lets a caller count per-node data exactly once.
+ */
 bool tarch::mpi::Rank::isNodeMaster() const { return _isNodeMaster; }
 
 int tarch::mpi::Rank::getRank() const { return _rank; }
 
+int tarch::mpi::Rank::getNumberOfRanks() const {
+  assertion(_initIsCalled);
+  return _numberOfProcessors;
+}
+
+/**
+ * @return The singleton instance. Before using it, one has to call init() on it.
+ */
 tarch::mpi::Rank& tarch::mpi::Rank::getInstance() { return _singleton; }
 
-#ifdef PEANO_WITH_MPI
 MPI_Comm tarch::mpi::Rank::getCommunicator() const {
   assertion(_initIsCalled);
   return _communicator;
 }
-#endif
 
-void tarch::mpi::Rank::setTimeoutWarning(double value) {
-  assertion(value >= 0.0);
-  _timeoutWarning = std::chrono::duration<double>(value);
-}
-
-void tarch::mpi::Rank::setDeadlockTimeout(double value) {
-  assertion(value >= 0.0);
-  _deadlockTimeout = std::chrono::duration<double>(value);
-}
-
-void tarch::mpi::Rank::setDeadlockDetection(bool enabled) { _deadlockDetectionEnabled = enabled; }
-
-bool tarch::mpi::Rank::isDeadlockDetectionEnabled() const { return _deadlockDetectionEnabled; }
-
+/**
+ * Tears the application down from any rank. MPI_Abort reaches every rank of the
+ * job, and the explicit exit covers the case where MPI is not up (yet).
+ */
 void tarch::mpi::abort([[maybe_unused]] int errorCode) {
   std::cout.flush();
   std::cerr.flush();
-#ifdef PEANO_WITH_MPI
   int mpiInitialised = 0;
   MPI_Initialized(&mpiInitialised);
   if (mpiInitialised) {
@@ -389,8 +240,5 @@ void tarch::mpi::abort([[maybe_unused]] int errorCode) {
       MPI_Abort(MPI_COMM_WORLD, errorCode);
     }
   }
-#endif
   std::_Exit(errorCode);
 }
-
-void tarch::mpi::Rank::abort(int errorCode) { tarch::mpi::abort(errorCode); }

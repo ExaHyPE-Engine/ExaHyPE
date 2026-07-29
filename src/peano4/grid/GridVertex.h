@@ -4,7 +4,6 @@
 
 #include "peano4/Globals.h"
 #include "tarch/la/Vector.h"
-#include "tarch/mpi/Rank.h"
 
 namespace peano4::grid {
   struct GridVertex;
@@ -23,12 +22,12 @@ struct peano4::grid::GridVertex {
     Delete              = 8
   };
 
-  std::uint8_t flags = 0;
-  std::uint8_t state = static_cast<std::uint8_t>(State::New);
+  std::uint8_t flags{0};
+  std::uint8_t state{static_cast<std::uint8_t>(State::New)};
 
-  int level                              = 0;
-  int numberOfAdjacentRefinedLocalCells  = 0;
-  int numberOfAdjacentRefinedRemoteCells = 0;
+  int level{0};
+  int numberOfAdjacentRefinedLocalCells{0};
+  int numberOfAdjacentRefinedRemoteCells{0};
 #if PEANO_DEBUG
   tarch::la::Vector<DIMENSIONS, double> x{};
 #endif
@@ -89,79 +88,13 @@ struct peano4::grid::GridVertex {
   static bool areAllVerticesRefined(GridVertex vertices[TWO_POWER_D]);
   static bool areAllVerticesUnrefined(GridVertex vertices[TWO_POWER_D]);
 
-  /**
-   * Will the vertex be refined after this tree sweep.
-   */
   static bool willVertexBeRefined(const GridVertex& vertex);
 
-  /**
-   * Has the vertex been refined before this tree sweep.
-   */
   static bool hasVertexBeenRefined(const GridVertex& vertex);
 
-  /**
-   * @return One bit per vertex, set where willVertexBeRefined() holds. Compare
-   *   the result to zero to learn whether a cell is refined, or use
-   *   peano4::grid::SpacetreeHelper::isSpacetreeNodeRefined().
-   */
   static std::bitset<TWO_POWER_D> willVerticesBeRefined(GridVertex vertices[TWO_POWER_D]);
 
-  /**
-   * @return One bit per vertex, set where hasVertexBeenRefined() holds.
-   */
   static std::bitset<TWO_POWER_D> haveVerticesBeenRefined(GridVertex vertices[TWO_POWER_D]);
-
-#ifdef PEANO_WITH_MPI
-  static MPI_Datatype Datatype;
-
-  static MPI_Datatype getForkDatatype();
-  static MPI_Datatype getJoinDatatype();
-  static MPI_Datatype getBoundaryExchangeDatatype();
-  static MPI_Datatype getMultiscaleDataExchangeDatatype();
-  static MPI_Datatype getGlobalCommunicationDatatype();
-
-  static void freeForkDatatype();
-  static void freeJoinDatatype();
-  static void freeBoundaryExchangeDatatype();
-  static void freeMultiscaleDataExchangeDatatype();
-  static void freeGlobalCommunicationDatatype();
-
-  static void initDatatype();
-  static void shutdownDatatype();
-
-  static void send(const GridVertex& buffer, int destination, int tag, MPI_Comm communicator);
-  static void receive(GridVertex& buffer, int source, int tag, MPI_Comm communicator);
-
-  static void send(
-    const GridVertex&     buffer,
-    int                   destination,
-    int                   tag,
-    std::function<void()> startCommunicationFunctor,
-    std::function<void()> waitFunctor,
-    MPI_Comm              communicator
-  );
-  static void receive(
-    GridVertex&           buffer,
-    int                   source,
-    int                   tag,
-    std::function<void()> startCommunicationFunctor,
-    std::function<void()> waitFunctor,
-    MPI_Comm              communicator
-  );
-
-  static void sendAndPollDanglingMessages(
-    const GridVertex& message,
-    int               destination,
-    int               tag,
-    MPI_Comm          communicator = tarch::mpi::Rank::getInstance().getCommunicator()
-  );
-  static void receiveAndPollDanglingMessages(
-    GridVertex& message,
-    int         source,
-    int         tag,
-    MPI_Comm    communicator = tarch::mpi::Rank::getInstance().getCommunicator()
-  );
-#endif
 };
 
 std::ostream& operator<<(std::ostream& out, const peano4::grid::GridVertex& vertex);

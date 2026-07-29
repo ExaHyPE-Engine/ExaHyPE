@@ -6,8 +6,8 @@
 #include "runner/RuntimeParameters.h"
 #include "tarch/Assertions.h"
 #include "tarch/Termination.h"
+#include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
-#include "tarch/mpi/mpi.h"
 #include "tarch/multicore/Core.h"
 #include "toolbox/loadbalancing/Configuration.h"
 
@@ -18,7 +18,6 @@ namespace {
     const auto maxNumberOfTreesPerRank        = configuredNumberOfTreesPerRank > 0
              ? configuredNumberOfTreesPerRank
              : tarch::multicore::Core::getInstance().getNumberOfThreads();
-#ifdef PEANO_WITH_MPI
     if (tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1) {
       auto minimumNumberOfTreesPerRank = maxNumberOfTreesPerRank;
       auto maximumNumberOfTreesPerRank = maxNumberOfTreesPerRank;
@@ -45,7 +44,6 @@ namespace {
         );
       }
     }
-#endif
     return maxNumberOfTreesPerRank;
   }
 } // namespace

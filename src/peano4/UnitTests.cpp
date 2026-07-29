@@ -3,6 +3,7 @@
 #include "UnitTests.h"
 
 #include "grid/tests/AutomatonStateTest.h"
+#include "grid/tests/BoundaryDataAggregationTest.h"
 #include "grid/tests/CellTypeTest.h"
 #include "grid/tests/FaceTypeTest.h"
 #include "grid/tests/GridControlEventTest.h"
@@ -17,11 +18,11 @@
 #include "grid/tests/TreeIdSetTest.h"
 #include "grid/tests/VertexLookupTableTest.h"
 #include "grid/tests/VertexTypeTest.h"
-#include "parallel/tests/NodeTest.h"
-#include "parallel/tests/SpacetreeSetTest.h"
-#ifdef PEANO_WITH_MPI
+#include "parallel/tests/ExchangeChannelsTest.h"
 #include "parallel/tests/PingPongTest.h"
-#endif
+#include "parallel/tests/RunControlTest.h"
+#include "parallel/tests/SpacetreeSetTest.h"
+#include "parallel/tests/TreeIdMappingTest.h"
 #include "stacks/tests/StackTest.h"
 #include "tarch/tests/TreeTestCaseCollection.h"
 #include "tests/LoopTest.h"
@@ -30,6 +31,7 @@ tarch::tests::TestCase* peano4::getUnitTests() {
   tarch::tests::TreeTestCaseCollection* result = new tarch::tests::TreeTestCaseCollection();
 
   result->addTestCase(new grid::tests::AutomatonStateTest());
+  result->addTestCase(new grid::tests::BoundaryDataAggregationTest());
   result->addTestCase(new grid::tests::CellTypeTest());
   result->addTestCase(new grid::tests::FaceTypeTest());
   result->addTestCase(new grid::tests::GridControlEventTest());
@@ -45,11 +47,11 @@ tarch::tests::TestCase* peano4::getUnitTests() {
   result->addTestCase(new grid::tests::VertexLookupTableTest());
   result->addTestCase(new grid::tests::VertexTypeTest());
 
-  result->addTestCase(new parallel::tests::NodeTest());
+  result->addTestCase(new parallel::tests::ExchangeChannelsTest());
+  result->addTestCase(new parallel::tests::TreeIdMappingTest());
+  result->addTestCase(new parallel::tests::RunControlTest());
   result->addTestCase(new parallel::tests::SpacetreeSetTest());
-#ifdef PEANO_WITH_MPI
   result->addTestCase(new parallel::tests::PingPongTest());
-#endif
 
   result->addTestCase(new tests::LoopTest());
 

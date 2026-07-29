@@ -84,8 +84,8 @@ def add_error_database_to_solver(solver):
         """
 #include "tarch/database/GlobalTimeSeriesDatabase.h"
 #include "runner/RuntimeParameters.h"
+#include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
-#include "tarch/mpi/mpi.h"
 """
     )
 
@@ -207,22 +207,20 @@ def create_finish_time_step_implementation_for_error_measurement(guard):
     if ("""
         + guard
         + """) {
-      #ifdef PEANO_WITH_MPI
       double localSummedErrors[2] = {_errors[0], _errors[1]};
       double globalSummedErrors[2] = {0.0, 0.0};
       double localMaxError[1] = {_errors[2]};
       double globalMaxError[1] = {0.0};
       MPI_Comm communicator = tarch::mpi::Rank::getInstance().getCommunicator();
-      auto progress = [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); };
-
+      // A sum and a maximum cannot share one built-in reduction operator, so the L1
+      // and L2 accumulators reduce separately from the Linf norm.
       tarch::mpi::allreduce(
           localSummedErrors,
           globalSummedErrors,
           2,
           MPI_DOUBLE,
           MPI_SUM,
-          communicator,
-          progress
+          communicator
       );
 
       tarch::mpi::allreduce(
@@ -231,13 +229,11 @@ def create_finish_time_step_implementation_for_error_measurement(guard):
           1,
           MPI_DOUBLE,
           MPI_MAX,
-          communicator,
-          progress
+          communicator
       );
       _errors[0] = globalSummedErrors[0];
       _errors[1] = globalSummedErrors[1];
       _errors[2] = globalMaxError[0];
-      #endif
 
       if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
         _errors[1] = std::sqrt(_errors[1]);

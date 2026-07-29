@@ -2,8 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "FileWriter.h"
 
+#include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
-#include "tarch/mpi/mpi.h"
 
 bool tarch::plotter::FileWriter::_doublePrecisionOutput = false;
 
@@ -59,7 +59,6 @@ void tarch::plotter::FileWriter::createOutputDirectory() {
     }
   }
 
-#ifdef PEANO_WITH_MPI
   // Agree on the outcome so every rank proceeds or throws together. This allreduce
   // also synchronises the ranks, so no separate barrier is needed before they write.
   int globalSuccess = success;
@@ -72,7 +71,6 @@ void tarch::plotter::FileWriter::createOutputDirectory() {
     tarch::mpi::Rank::getInstance().getCommunicator()
   );
   success = globalSuccess;
-#endif
 
   if (success == 0) {
     if (failureReason.empty()) {

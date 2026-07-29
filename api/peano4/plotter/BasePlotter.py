@@ -158,7 +158,7 @@ class BasePlotter(ActionSet):
     def get_constructor_body(self):
         return """
   _treeNumber = treeNumber;
-  _localTreeNumber = ::peano4::parallel::Node::getInstance().getLocalTreeId(treeNumber);
+  _localTreeNumber = ::peano4::parallel::TreeIdMapping::getLocalTreeId(treeNumber);
 """.format(
             **self.d
         )
@@ -188,7 +188,7 @@ class BasePlotter(ActionSet):
   const auto localSpacetrees = ::peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees();
   const int numberOfLocalSubdomains = localSpacetrees.empty()
     ? 0
-    : (::peano4::parallel::Node::getInstance().getLocalTreeId(*localSpacetrees.rbegin()) + 1);
+    : (::peano4::parallel::TreeIdMapping::getLocalTreeId(*localSpacetrees.rbegin()) + 1);
   _fileWriter.reset();
   _fileWriter = std::make_unique<tarch::plotter::{{FILE_WRITER}}>(::runner::RuntimeParameters::getInstance().getOutputPath() + "{{OUTPUT_SUBFOLDER}}", numberOfLocalSubdomains);
 
@@ -245,8 +245,8 @@ class BasePlotter(ActionSet):
 #include "tarch/plotter/FileWriter.h"
 #include "tarch/plotter/TimeSeriesWriter.h"
 #include "peano4/Loop.h"
-#include "peano4/parallel/Node.h"
 #include "peano4/parallel/SpacetreeSet.h"
+#include "peano4/parallel/TreeIdMapping.h"
 #include "runner/RuntimeParameters.h"
 """
             + self.d["OUTPUT_FORMAT_INCLUDES"]

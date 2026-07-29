@@ -5,7 +5,7 @@
 #include "Constants.h"
 
 #include "tarch/instrumentation/Log.h"
-#include "tarch/mpi/mpi.h"
+#include "tarch/mpi/Request.h"
 #include "tarch/multicore/Lock.h"
 
 #include "peano4/stacks/StackWithCustomSerialisation.h"
@@ -411,28 +411,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::grabParticles({{CLASSNAME}}&  pa
   return _container.erase(particle);
 }
 
-#ifdef PEANO_WITH_MPI
-MPI_Datatype {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getBoundaryExchangeDatatype() {
-  return {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}::getBoundaryExchangeDatatype();
-}
-
-MPI_Datatype {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMultiscaleDataExchangeDatatype() {
-  return {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}::getMultiscaleDataExchangeDatatype();
-}
-
-MPI_Datatype {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getForkDatatype() {
-  return {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}::getForkDatatype();
-}
-
-MPI_Datatype {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getJoinDatatype() {
-  return {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}::getJoinDatatype();
-}
-
-MPI_Datatype {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getGlobalCommunicationDatatype() {
-  return {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}::getGlobalCommunicationDatatype();
-}
-
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSend(::peano4::stacks::Stack<{{CLASSNAME}}>& stack, const ::peano4::stacks::SendReceiveContext context, MPI_Comm comm) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSend(::peano4::stacks::Stack<{{CLASSNAME}}>& stack, [[maybe_unused]] const ::peano4::stacks::SendReceiveContext context, MPI_Comm comm) {
   auto& customStack = static_cast<::peano4::stacks::StackWithCustomSerialisation<{{CLASSNAME}}>&>(stack);
 
   const int numberOfElements = static_cast<int>(customStack.size());
@@ -472,8 +451,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSend(::peano4::stacks::Stac
   if (totalValues > 0) {
     [[maybe_unused]] const int result = tarch::mpi::isend(
       customStack.dataBuffer.data(),
-      totalValues,
-      ::peano4::stacks::translateContextIntoDatatype<{{CLASSNAME}}>(context),
+      static_cast<int>(totalValues * sizeof(DoFType)),
+      MPI_BYTE,
       customStack.getActiveIORank(),
       customStack.getActiveIOTag(),
       comm,
@@ -528,8 +507,8 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::tryToFinishSendOrReceive(::peano
         if (totalValues > 0) {
           [[maybe_unused]] const int result = tarch::mpi::irecv(
             customStack.dataBuffer.data(),
-            totalValues,
-            ::peano4::stacks::translateContextIntoDatatype<{{CLASSNAME}}>(customStack.mpiContext),
+            static_cast<int>(totalValues * sizeof(DoFType)),
+            MPI_BYTE,
             customStack.getActiveIORank(),
             customStack.getActiveIOTag(),
             customStack.mpiComm,
@@ -601,4 +580,3 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::tryToFinishSendOrReceive(::peano
 
   return allDone;
 }
-#endif

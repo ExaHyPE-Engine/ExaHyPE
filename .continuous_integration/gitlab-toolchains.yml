@@ -17,9 +17,8 @@ GCC:
     CXX: "g++"
     FC: "gfortran"
     IMAGE_TAG: "${IMAGE_GCC}"
-    PARALLEL_LAUNCH: ""
-    EXTRA_CONFIGURATION_OPTIONS: "-DPEANO_WITH_MULTITHREADING=OFF \
-                                  -DPEANO_WITH_MPI=OFF"
+    PARALLEL_LAUNCH: "OMP_NUM_THREADS=${OMP_THREADS} mpirun --bind-to none -np ${MPI_RANKS}"
+    EXTRA_CONFIGURATION_OPTIONS: "-DPEANO_WITH_MULTITHREADING=ON"
   trigger:
     include:
       - .continuous_integration/gitlab-pipeline.yml
@@ -37,8 +36,7 @@ Intel:
     FC: "ifx"
     IMAGE_TAG: "${IMAGE_INTEL}"
     PARALLEL_LAUNCH: "OMP_NUM_THREADS=${OMP_THREADS} mpirun --bind-to none -np ${MPI_RANKS}"
-    EXTRA_CONFIGURATION_OPTIONS: "-DPEANO_WITH_MULTITHREADING=ON \
-                                  -DPEANO_WITH_MPI=ON"
+    EXTRA_CONFIGURATION_OPTIONS: "-DPEANO_WITH_MULTITHREADING=ON"
   trigger:
     include:
       - .continuous_integration/gitlab-pipeline.yml
@@ -66,7 +64,6 @@ LLVM:
     APPTAINERENV_OMPI_MCA_memory: "^patcher"
     APPTAINERENV_UCX_TLS: "tcp,sm"
     EXTRA_CONFIGURATION_OPTIONS: "-DPEANO_WITH_MULTITHREADING=ON \
-                                  -DPEANO_WITH_MPI=ON \
                                   -DPEANO_WITH_SANITIZER=address+undefined"
   trigger:
     include:
@@ -85,8 +82,7 @@ NVIDIA:
     FC: "nvfortran"
     IMAGE_TAG: "${IMAGE_NVIDIA}"
     PARALLEL_LAUNCH: "OMP_NUM_THREADS=${OMP_THREADS} mpirun --bind-to none -np ${MPI_RANKS}"
-    EXTRA_CONFIGURATION_OPTIONS: "-DPEANO_WITH_MULTITHREADING=ON \
-                                  -DPEANO_WITH_MPI=ON"
+    EXTRA_CONFIGURATION_OPTIONS: "-DPEANO_WITH_MULTITHREADING=ON"
   trigger:
     include:
       - .continuous_integration/gitlab-pipeline.yml
@@ -104,8 +100,7 @@ AMD:
     FC: "flang"
     IMAGE_TAG: "${IMAGE_AMD}"
     PARALLEL_LAUNCH: "OMP_NUM_THREADS=${OMP_THREADS} mpirun --bind-to none -np ${MPI_RANKS}"
-    EXTRA_CONFIGURATION_OPTIONS: "-DPEANO_WITH_MULTITHREADING=ON \
-                                  -DPEANO_WITH_MPI=ON"
+    EXTRA_CONFIGURATION_OPTIONS: "-DPEANO_WITH_MULTITHREADING=ON"
   trigger:
     include:
       - .continuous_integration/gitlab-pipeline.yml

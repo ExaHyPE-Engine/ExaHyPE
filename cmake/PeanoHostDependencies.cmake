@@ -4,27 +4,20 @@
 include_guard(GLOBAL)
 
 macro(peano_find_host_dependencies)
-  if(PEANO_WITH_MPI)
-    if(TARGET PeanoOptions)
-      find_package(MPI)
-      if(MPI_FOUND)
-        # Link the MPI imported target for every enabled core language (C and C++). The C
-        # variant is inert until a .c source is added, but keeps the two languages consistent.
-        target_link_libraries(PeanoOptions INTERFACE
-          MPI::MPI_CXX
-          $<TARGET_NAME_IF_EXISTS:MPI::MPI_C>
-        )
-        # Skip MPI's deprecated C++ bindings (mpicxx.h). We only use the C API,
-        # and on some OpenMPI/MPICH installs <mpi.h> auto-includes them, which
-        # triggers -Wcast-function-type warnings from inside the MPI headers.
-        target_compile_definitions(PeanoOptions INTERFACE PEANO_WITH_MPI OMPI_SKIP_MPICXX MPICH_SKIP_MPICXX)
-      else()
-        message(WARNING "PEANO_WITH_MPI=ON but no MPI installation was found; continuing without MPI support.")
-        set(PEANO_WITH_MPI OFF CACHE BOOL "Build with Message Passing Interface (MPI) support" FORCE)
-      endif()
-    else()
-      find_dependency(MPI)
-    endif()
+  if(TARGET PeanoOptions)
+    find_package(MPI REQUIRED)
+    # Link the MPI imported target for every enabled core language (C and C++). The C
+    # variant is inert until a .c source is added, but keeps the two languages consistent.
+    target_link_libraries(PeanoOptions INTERFACE
+      MPI::MPI_CXX
+      $<TARGET_NAME_IF_EXISTS:MPI::MPI_C>
+    )
+    # Skip MPI's deprecated C++ bindings (mpicxx.h). We only use the C API,
+    # and on some OpenMPI/MPICH installs <mpi.h> auto-includes them, which
+    # triggers -Wcast-function-type warnings from inside the MPI headers.
+    target_compile_definitions(PeanoOptions INTERFACE OMPI_SKIP_MPICXX MPICH_SKIP_MPICXX)
+  else()
+    find_dependency(MPI REQUIRED)
   endif()
 
   if(PEANO_WITH_MULTITHREADING)
@@ -64,13 +57,11 @@ macro(peano_find_host_dependencies)
 
   if(PEANO_WITH_HDF5)
     if(TARGET PeanoOptions)
-      if(PEANO_WITH_MPI)
-        set(HDF5_PREFER_PARALLEL True)
-      endif()
+      set(HDF5_PREFER_PARALLEL True)
       find_package(HDF5 COMPONENTS C)
       if(HDF5_FOUND)
-        if(PEANO_WITH_MPI AND NOT HDF5_IS_PARALLEL)
-          message(FATAL_ERROR "MPI is enabled but found HDF5 installation does not support parallel I/O.")
+        if(NOT HDF5_IS_PARALLEL)
+          message(FATAL_ERROR "The found HDF5 installation does not support parallel I/O, which Peano requires.")
         endif()
         target_link_libraries(PeanoOptions INTERFACE HDF5::HDF5)
         target_compile_definitions(PeanoOptions INTERFACE PEANO_WITH_HDF5)
@@ -90,8 +81,8 @@ macro(peano_find_host_dependencies)
         if(NOT NetCDF_HAS_HDF5)
           message(FATAL_ERROR "Found NetCDF installation was built without HDF5 support (required for NetCDF-4 support).")
         endif()
-        if(PEANO_WITH_MPI AND NOT NetCDF_IS_PARALLEL)
-          message(FATAL_ERROR "MPI is enabled, but the found NetCDF installation does not support parallel I/O.")
+        if(NOT NetCDF_IS_PARALLEL)
+          message(FATAL_ERROR "The found NetCDF installation does not support parallel I/O, which Peano requires.")
         endif()
         target_link_libraries(PeanoOptions INTERFACE ${NetCDF_LIBRARIES})
         target_include_directories(PeanoOptions INTERFACE ${NetCDF_INCLUDE_DIRS})

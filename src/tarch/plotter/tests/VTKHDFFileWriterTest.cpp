@@ -3,8 +3,8 @@
 #include "VTKHDFFileWriterTest.h"
 
 #include "tarch/la/Vector.h"
+#include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
-#include "tarch/mpi/mpi.h"
 #include "tarch/plotter/VTKHDFFileWriter.h"
 
 #ifdef PEANO_WITH_HDF5
@@ -12,11 +12,7 @@
 #include <hdf5.h>
 
 namespace {
-  void barrier() {
-#ifdef PEANO_WITH_MPI
-    tarch::mpi::barrier(tarch::mpi::Rank::getInstance().getCommunicator());
-#endif
-  }
+  void barrier() { tarch::mpi::barrier(tarch::mpi::Rank::getInstance().getCommunicator()); }
 
   int  ranks() { return tarch::mpi::Rank::getInstance().getNumberOfRanks(); }
   int  thisRank() { return tarch::mpi::Rank::getInstance().getRank(); }
@@ -188,10 +184,7 @@ void tarch::plotter::tests::VTKHDFFileWriterTest::testSingleQuad2D() {
       nCells.size() == 1 and nCells[0] == numberOfRanks,
       "NumberOfCells must be one per-step total of ranks (single part)"
     );
-    check(
-      nConn.size() == 1 and nConn[0] == 4 * numberOfRanks,
-      "NumberOfConnectivityIds total must be 4*ranks"
-    );
+    check(nConn.size() == 1 and nConn[0] == 4 * numberOfRanks, "NumberOfConnectivityIds total must be 4*ranks");
 
     const auto types = readU8AsInt(file, "/VTKHDF/Types");
     check(static_cast<int>(types.size()) == numberOfRanks, "Types holds one entry per cell");
@@ -200,10 +193,7 @@ void tarch::plotter::tests::VTKHDFFileWriterTest::testSingleQuad2D() {
     }
 
     const auto offsets = readI64(file, "/VTKHDF/Offsets");
-    check(
-      static_cast<int>(offsets.size()) == numberOfRanks + 1,
-      "Offsets must have cells+1 entries (single part)"
-    );
+    check(static_cast<int>(offsets.size()) == numberOfRanks + 1, "Offsets must have cells+1 entries (single part)");
     for (int i = 0; i <= numberOfRanks; i++) {
       check(offsets[i] == 4 * i, "Offsets must be the global cumulative 0,4,8,...");
     }

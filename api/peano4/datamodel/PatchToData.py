@@ -8,32 +8,18 @@ class FloatTypes:
     def __init__(self, float_type):
         if float_type == "float":
             self.cpp = "float"
-            self.mpi = "MPI_FLOAT"
-            self.number_of_mpi_types_per_element = 1
         elif float_type == "double":
             self.cpp = "double"
-            self.mpi = "MPI_DOUBLE"
-            self.number_of_mpi_types_per_element = 1
         elif float_type == "long double":
             self.cpp = "long double"
-            self.mpi = "MPI_LONG_DOUBLE"
-            self.number_of_mpi_types_per_element = 1
         elif float_type == "_Float16":
             self.cpp = "_Float16"
-            self.mpi = "MPI_BYTE"
-            self.number_of_mpi_types_per_element = 2
         elif float_type == "std::float16_t":
             self.cpp = "std::float16_t"
-            self.mpi = "MPI_BYTE"
-            self.number_of_mpi_types_per_element = 2
         elif float_type == "__bf16":
             self.cpp = "__bf16"
-            self.mpi = "MPI_BYTE"
-            self.number_of_mpi_types_per_element = 2
         elif float_type == "std::bfloat16_t":
             self.cpp = "std::bfloat16_t"
-            self.mpi = "MPI_BYTE"
-            self.number_of_mpi_types_per_element = 2
         else:
             raise Exception("Float type " + float_type + " not recognized")
 
@@ -77,10 +63,7 @@ class PatchToData:
         )
 
     def get_header_file_include(self):
-        """
-        This is the include statement for the data container. It is not something
-        directly generated but how to use the generated code.
-        """
+        """Return the include statement for the generated data container."""
         return (
             """
 #include \""""
@@ -112,8 +95,6 @@ class PatchToData:
             "DATA_ASSOCIATION": int(self.data.association),
             "MERGE_METHOD_DEFINITION": self.merge_method_definition,
             "FLOAT_TYPE": self.float_type.cpp,
-            "MPI_FLOAT_TYPE": self.float_type.mpi,
-            "MPI_ELEMENTS_PER_FLOAT": self.float_type.number_of_mpi_types_per_element,
             "USE_COPY_FOR_EXCHANGE": self.use_copy_for_exchange,
         }
         return d
@@ -121,10 +102,7 @@ class PatchToData:
     def construct_output(self, output):
         d = self._get_dictionary_for_output()
         output.makefile.add_cpp_file(
-            self.data.namespace[-1]
-            + "/"
-            + self.data.name
-            + ".cpp",
+            self.data.namespace[-1] + "/" + self.data.name + ".cpp",
             generated=True,
         )
         headerfile_template = (

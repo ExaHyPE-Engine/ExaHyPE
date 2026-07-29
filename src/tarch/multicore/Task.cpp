@@ -6,8 +6,8 @@
 #include "Core.h"
 #include "Lock.h"
 #include "multicore.h"
+
 #include "tarch/Assertions.h"
-#include "tarch/services/ServiceRepository.h"
 
 bool operator<(const tarch::multicore::Task& lhs, const tarch::multicore::Task& rhs) {
   return lhs.getPriority() < rhs.getPriority();
@@ -38,7 +38,7 @@ bool tarch::multicore::TaskComparison::operator()(Task* lhs, Task* rhs) const { 
  *        task. Value has to be non-negative. Use DefaultPriority if there is
  *        no bespoke priority.
  */
-tarch::multicore::Task::Task(int taskType, int priority):
+tarch::multicore::Task::Task(int taskType, int priority) :
   _taskType(taskType),
   _priority(priority) {
   assertion(priority >= 0, taskType, priority);
@@ -63,7 +63,7 @@ tarch::multicore::TaskWithCopyOfFunctor::TaskWithCopyOfFunctor(
   ,
   const std::string& taskDescription
 #endif
-):
+) :
   Task(taskType, priority),
   _taskFunctor(taskFunctor)
 #if PEANO_DEBUG
@@ -83,14 +83,17 @@ std::string tarch::multicore::TaskWithCopyOfFunctor::toString() const {
 #endif
 }
 
-tarch::multicore::TaskWithoutCopyOfFunctor::
-  TaskWithoutCopyOfFunctor(int taskType, int priority, std::function<bool()>& taskFunctor):
+tarch::multicore::TaskWithoutCopyOfFunctor::TaskWithoutCopyOfFunctor(
+  int                    taskType,
+  int                    priority,
+  std::function<bool()>& taskFunctor
+) :
   Task(taskType, priority),
   _taskFunctor(taskFunctor) {}
 
 bool tarch::multicore::TaskWithoutCopyOfFunctor::run() { return _taskFunctor(); }
 
-tarch::multicore::EmptyTask::EmptyTask(int priority):
+tarch::multicore::EmptyTask::EmptyTask(int priority) :
   Task(Task::NoTaskType, priority) {}
 
 bool tarch::multicore::EmptyTask::run() { return false; }

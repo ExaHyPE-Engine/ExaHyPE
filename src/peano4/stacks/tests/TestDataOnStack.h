@@ -2,10 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#ifdef PEANO_WITH_MPI
-#include <mpi.h>
-#endif
-
 namespace peano4::stacks::tests {
   class TestDataOnStack;
 } // namespace peano4::stacks::tests
@@ -26,16 +22,4 @@ public:
   TestDataOnStack& operator=(TestDataOnStack&& other) noexcept;
 
   void clone(const TestDataOnStack& other);
-
-#ifdef PEANO_WITH_MPI
-  static MPI_Datatype Datatype;
-  static void         initDatatype();
-  static void         shutdownDatatype();
-
-  static MPI_Datatype getBoundaryExchangeDatatype();
-  static MPI_Datatype getMultiscaleDataExchangeDatatype();
-  static MPI_Datatype getForkDatatype();
-  static MPI_Datatype getJoinDatatype();
-  static MPI_Datatype getGlobalCommunicationDatatype();
-#endif
 };

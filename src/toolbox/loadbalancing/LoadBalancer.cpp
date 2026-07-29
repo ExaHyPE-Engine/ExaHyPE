@@ -23,15 +23,13 @@ toolbox::loadbalancing::LoadBalancer::LoadBalancer(
   _statistics{},
   _state(toolbox::loadbalancing::State::SwitchedOff),
   _strategy{} {
+  _statistics.initialiseExchange();
   setState(toolbox::loadbalancing::State::InitialInterRankSplit);
 }
 
 toolbox::loadbalancing::LoadBalancer::~LoadBalancer() { shutdown(); }
 
-void toolbox::loadbalancing::LoadBalancer::shutdown() {
-  _statistics.completePendingReduction();
-  toolbox::loadbalancing::Statistics::shutdownMPI();
-}
+void toolbox::loadbalancing::LoadBalancer::shutdown() { _statistics.shutdownMPI(); }
 
 void toolbox::loadbalancing::LoadBalancer::setState(const toolbox::loadbalancing::State state) {
   _state = state;

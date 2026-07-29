@@ -3,14 +3,16 @@
 #include "AutomatonStateTest.h"
 
 #include "peano4/grid/AutomatonState.h"
-#include "tarch/mpi/mpi.h"
+#include "tarch/mpi/Rank.h"
+#include "tarch/mpi/Request.h"
 
 peano4::grid::tests::AutomatonStateTest::AutomatonStateTest() :
   TestCase("peano4::grid::tests::AutomatonStateTest") {}
 
 void peano4::grid::tests::AutomatonStateTest::run() {
   testMethod(testFlags);
-  testMethod(testMPIDatatype);
+  testMethod(testRefineState);
+  testMethod(testSendAndReceiveInARing);
 }
 
 void peano4::grid::tests::AutomatonStateTest::testFlags() {
@@ -23,151 +25,121 @@ void peano4::grid::tests::AutomatonStateTest::testFlags() {
   state.setInverted(false);
   validateFalse(state.getInverted());
 
-  for (int d = 0; d < DIMENSIONS; ++d) {
+  for (int d = 0; d < DIMENSIONS; d++) {
     state.setEvenFlag(d, false);
     validateFalse(state.getEvenFlag(d));
   }
 
-  // Set a pattern: for DIMENSIONS >= 2 set [0]=false, [1]=true; for others toggle every second bit
-  for (int d = 0; d < DIMENSIONS; ++d) {
-    bool v = (d % 2) == 1; // 0101...
-    state.setEvenFlag(d, v);
-    validateEquals(state.getEvenFlag(d), v);
+  // The even flag of one axis and the inverted flag share a word, so setting a pattern on all of
+  // them and reading it back catches a mask that reaches into a neighbouring bit.
+  for (int d = 0; d < DIMENSIONS; d++) {
+    const bool expectedEvenFlag = (d % 2) == 1;
+    state.setEvenFlag(d, expectedEvenFlag);
+    validateEquals(state.getEvenFlag(d), expectedEvenFlag);
   }
-
-  // Flip a couple of bits and check
-  if constexpr (DIMENSIONS >= 1) {
-    const bool before = state.getEvenFlag(0);
-    state.flipEvenFlag(0);
-    validateEquals(state.getEvenFlag(0), not before);
-  }
-  if constexpr (DIMENSIONS >= 2) {
-    const bool before = state.getEvenFlag(1);
-    state.flipEvenFlag(1);
-    validateEquals(state.getEvenFlag(1), not before);
-  }
-
-  // Parity check equivalent to:
-  // result = (count(other-axis even flags) % 2 == 0) XOR inverted
-  // Test a few axes for robustness
-  auto parityRef = [&](const AutomatonState& st, int axis) {
-    int cnt = 0;
-    for (int d = 0; d < DIMENSIONS; ++d) {
-      if (d == axis)
-        continue;
-      if (st.getEvenFlag(d))
-        ++cnt;
-    }
-    bool parityEven = (cnt % 2) == 0;
-    return parityEven ^ st.getInverted();
-  };
-  auto expectedParity = [&](int axis, bool inverted) {
-    int cnt = 0;
-    for (int d = 0; d < DIMENSIONS; ++d) {
-      if (d != axis and state.getEvenFlag(d))
-        ++cnt;
-    }
-    return ((cnt & 1) == 0) ^ inverted;
-  };
-
-  // Check for inverted=false and multiple axes
-  state.setInverted(false);
-  for (int axis = 0; axis < DIMENSIONS; ++axis) {
-    validateTrue(parityRef(state, axis) == expectedParity(axis, false));
-  }
-
-  // Check again for inverted=true
   state.setInverted(true);
-  for (int axis = 0; axis < DIMENSIONS; ++axis) {
-    validateTrue(parityRef(state, axis) == expectedParity(axis, true));
+  validateTrue(state.getInverted());
+  for (int d = 0; d < DIMENSIONS; d++) {
+    const bool expectedEvenFlag = (d % 2) == 1;
+    validateEquals(state.getEvenFlag(d), expectedEvenFlag);
   }
 
-  // std::cout << state << std::endl;
+  for (int d = 0; d < DIMENSIONS; d++) {
+    const bool flagBeforeFlip = state.getEvenFlag(d);
+    state.flipEvenFlag(d);
+    validateEquals(state.getEvenFlag(d), not flagBeforeFlip);
+  }
+  validateTrue(state.getInverted());
+
+  const std::string description = state.toString();
+  validateTrue(description.find("AutomatonState") != std::string::npos);
+  validateTrue(description.find("Inverted=true") != std::string::npos);
 }
 
-void peano4::grid::tests::AutomatonStateTest::testMPIDatatype() {
-#ifdef PEANO_WITH_MPI
-  auto&     rank          = tarch::mpi::Rank::getInstance();
-  MPI_Comm  comm          = rank.getCommunicator();
-  const int me            = rank.getRank();
-  const int numberOfRanks = rank.getNumberOfRanks();
-  const int tag           = 4321;
-
-  AutomatonState sendS;
-  sendS.level = 4 + me;
-
-  // Fill x/h with recognizable values (index-based)
-  for (int d = 0; d < DIMENSIONS; ++d) {
-    sendS.x(d) = 0.1 * (d + 1) + 0.001 * me;   // e.g. 0.101, 0.201, ... for rank 1
-    sendS.h(d) = 0.01 * (d + 2) + 0.0001 * me; // e.g. 0.0201, ...
+void peano4::grid::tests::AutomatonStateTest::testRefineState() {
+  AutomatonState coarseState;
+  coarseState.level = 3;
+  for (int d = 0; d < DIMENSIONS; d++) {
+    coarseState.x(d) = 1.0 * d;
+    coarseState.h(d) = 1.0;
   }
 
-  // Flags: choose inverted based on rank parity and set even flags pattern
-  sendS.setInverted((me % 2) == 1);
-  for (int d = 0; d < DIMENSIONS; ++d) {
-    // Pattern depends on rank so received flags can be predicted:
-    sendS.setEvenFlag(d, ((d + me) % 2) == 1);
-  }
+  AutomatonState fineStates[THREE_POWER_D];
+  AutomatonState::refineState(coarseState, fineStates);
 
-  // Access numbers: produce small values dependent on rank
-  for (int i = 0; i < TWO_TIMES_D; ++i) {
-    int v                 = (i % 5) - 2 + me; // Small values shifted by rank
-    sendS.accessNumber[i] = v;
-  }
-
-  AutomatonState recvS;
-
-  // TODO: Test non-blocking communication as well
-  if (numberOfRanks == 1) {
-    tarch::mpi::sendrecv( // TODO: Capture result for error checking
-        &sendS,
-        1,
-        AutomatonState::Datatype,
-        me,
-        tag,
-        &recvS,
-        1,
-        AutomatonState::Datatype,
-        me,
-        tag,
-        comm,
-        MPI_STATUS_IGNORE);
-    recvS.senderDestinationRank = me;
-    // AutomatonState::send(sendS, me, tag, comm);
-    // AutomatonState::receive(recvS, me, tag, comm);
-  } else {
-    const int dest = (me + 1) % numberOfRanks;
-    const int src  = (me - 1 + numberOfRanks) % numberOfRanks;
-
-    if ((me % 2) == 0) {
-      // Even ranks send then receive
-      AutomatonState::send(sendS, dest, tag, comm);
-      AutomatonState::receive(recvS, src, tag, comm);
-    } else {
-      // Odd ranks receive then send
-      AutomatonState::receive(recvS, src, tag, comm);
-      AutomatonState::send(sendS, dest, tag, comm);
+  for (int i = 0; i < THREE_POWER_D; i++) {
+    validateEquals(fineStates[i].level, coarseState.level + 1);
+    for (int d = 0; d < DIMENSIONS; d++) {
+      validateNumericalEquals(fineStates[i].h(d), coarseState.h(d) / 3.0);
     }
   }
 
-  const int expectedSenderRank = (numberOfRanks == 1) ? me : ((me - 1 + numberOfRanks) % numberOfRanks);
-  validateEquals(recvS.level, 4 + expectedSenderRank);
+  // A child's array slot is its position within the parent, with the first axis running fastest.
+  // The children hence tile the parent, and a caller can index them by position.
+  for (int i = 0; i < THREE_POWER_D; i++) {
+    int remainingIndex = i;
+    for (int d = 0; d < DIMENSIONS; d++) {
+      const double expectedPosition = coarseState.x(d) + (remainingIndex % 3) * coarseState.h(d) / 3.0;
+      remainingIndex /= 3;
+      validateNumericalEquals(fineStates[i].x(d), expectedPosition);
+    }
+  }
+}
 
-  for (int d = 0; d < DIMENSIONS; ++d) {
-    const double expectedX = 0.1 * (d + 1) + 0.001 * expectedSenderRank;
-    const double expectedH = 0.01 * (d + 2) + 0.0001 * expectedSenderRank;
-    validateTrue(std::fabs(recvS.x(d) - expectedX) < 1e-12);
-    validateTrue(std::fabs(recvS.h(d) - expectedH) < 1e-12);
-    const bool expectedEven = ((d + expectedSenderRank) % 2) == 1;
-    validateEquals(recvS.getEvenFlag(d), expectedEven);
+void peano4::grid::tests::AutomatonStateTest::testSendAndReceiveInARing() {
+  constexpr int Tag = 4321;
+
+  const auto&    rank          = tarch::mpi::Rank::getInstance();
+  const MPI_Comm communicator  = rank.getCommunicator();
+  const int      localRank     = rank.getRank();
+  const int      numberOfRanks = rank.getNumberOfRanks();
+
+  // Every field depends on the rank, so a receiver can predict what its predecessor sent.
+  AutomatonState sentState;
+  sentState.level = 4 + localRank;
+  for (int d = 0; d < DIMENSIONS; d++) {
+    sentState.x(d) = 0.1 * (d + 1) + 0.001 * localRank;
+    sentState.h(d) = 0.01 * (d + 2) + 0.0001 * localRank;
+    sentState.setEvenFlag(d, ((d + localRank) % 2) == 1);
+  }
+  sentState.setInverted((localRank % 2) == 1);
+  for (int i = 0; i < TWO_TIMES_D; i++) {
+    sentState.accessNumber[i] = static_cast<std::int8_t>((i % 5) - 2 + localRank);
   }
 
-  validateEquals(recvS.getInverted(), ((expectedSenderRank % 2) == 1));
+  const int successor   = (localRank + 1) % numberOfRanks;
+  const int predecessor = (localRank - 1 + numberOfRanks) % numberOfRanks;
 
-  for (int i = 0; i < TWO_TIMES_D; ++i) {
-    const auto got = recvS.accessNumber[i];
-    const auto exp = ((i % 5) - 2) + expectedSenderRank;
-    validateEquals(got, exp);
+  AutomatonState receivedState;
+  const int      result = tarch::mpi::sendrecv(
+    &sentState,
+    static_cast<int>(sizeof(AutomatonState)),
+    MPI_BYTE,
+    successor,
+    Tag,
+    &receivedState,
+    static_cast<int>(sizeof(AutomatonState)),
+    MPI_BYTE,
+    predecessor,
+    Tag,
+    communicator
+  );
+  validateEquals(result, MPI_SUCCESS);
+
+  validateEquals(receivedState.level, 4 + predecessor);
+  for (int d = 0; d < DIMENSIONS; d++) {
+    // The expected flag needs its own variable because validateEquals streams the expression, and the
+    // comparison would bind to the stream operator.
+    const bool expectedEvenFlag = ((d + predecessor) % 2) == 1;
+    validateNumericalEquals(receivedState.x(d), 0.1 * (d + 1) + 0.001 * predecessor);
+    validateNumericalEquals(receivedState.h(d), 0.01 * (d + 2) + 0.0001 * predecessor);
+    validateEquals(receivedState.getEvenFlag(d), expectedEvenFlag);
   }
-#endif
+
+  const bool expectedInverted = (predecessor % 2) == 1;
+  validateEquals(receivedState.getInverted(), expectedInverted);
+
+  for (int i = 0; i < TWO_TIMES_D; i++) {
+    validateEquals(receivedState.accessNumber[i], static_cast<std::int8_t>((i % 5) - 2 + predecessor));
+  }
 }

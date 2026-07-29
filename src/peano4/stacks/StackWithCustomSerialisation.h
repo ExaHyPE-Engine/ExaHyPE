@@ -2,7 +2,9 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "Stack.h"
+#include "peano4/stacks/Stack.h"
+
+#include <mpi.h>
 
 namespace peano4::stacks {
   template <class T>
@@ -10,39 +12,30 @@ namespace peano4::stacks {
 } // namespace peano4::stacks
 
 template <class T>
-class peano4::stacks::StackWithCustomSerialisation: public Stack<T> {
+class peano4::stacks::StackWithCustomSerialisation : public Stack<T> {
 public:
   StackWithCustomSerialisation()                                               = default;
-  virtual ~StackWithCustomSerialisation() override                             = default;
+  ~StackWithCustomSerialisation() override                                     = default;
   StackWithCustomSerialisation(const StackWithCustomSerialisation&)            = delete;
   StackWithCustomSerialisation& operator=(const StackWithCustomSerialisation&) = delete;
 
-  INLINE_METHOD StackWithCustomSerialisation(StackWithCustomSerialisation&& other) noexcept:
-    Stack<T>(std::move(other)) // Calls the base move logic
-#ifdef PEANO_WITH_MPI
-    ,
+  INLINE_METHOD StackWithCustomSerialisation(StackWithCustomSerialisation&& other) noexcept :
+    Stack<T>(std::move(other)),
     mpiCountRequest(other.mpiCountRequest),
     mpiDataRequest(other.mpiDataRequest),
     countBuffer(std::move(other.countBuffer)),
     dataBuffer(std::move(other.dataBuffer)),
     mpiComm(other.mpiComm),
-    mpiContext(other.mpiContext)
-#endif
-  {
-#ifdef PEANO_WITH_MPI
-    // Reset source handles so two objects don't think they own the same MPI request
+    mpiContext(other.mpiContext) {
     other.mpiCountRequest = MPI_REQUEST_NULL;
     other.mpiDataRequest  = MPI_REQUEST_NULL;
     other.mpiComm         = MPI_COMM_NULL;
-#endif
   }
 
   INLINE_METHOD StackWithCustomSerialisation& operator=(StackWithCustomSerialisation&& other) noexcept {
     if (this != &other) {
-      // Call base class move assignment
       Stack<T>::operator=(std::move(other));
 
-#ifdef PEANO_WITH_MPI
       countBuffer = std::move(other.countBuffer);
       dataBuffer  = std::move(other.dataBuffer);
 
@@ -54,24 +47,21 @@ public:
       other.mpiCountRequest = MPI_REQUEST_NULL;
       other.mpiDataRequest  = MPI_REQUEST_NULL;
       other.mpiComm         = MPI_COMM_NULL;
-#endif
     }
     return *this;
   }
 
-#ifdef PEANO_WITH_MPI
-  MPI_Request mpiCountRequest = MPI_REQUEST_NULL;
-  MPI_Request mpiDataRequest  = MPI_REQUEST_NULL;
+  MPI_Request mpiCountRequest{MPI_REQUEST_NULL};
+  MPI_Request mpiDataRequest{MPI_REQUEST_NULL};
 
   std::vector<int>                 countBuffer{};
   std::vector<typename T::DoFType> dataBuffer{};
 
-  MPI_Comm           mpiComm = MPI_COMM_NULL;
+  MPI_Comm           mpiComm{MPI_COMM_NULL};
   SendReceiveContext mpiContext{};
 
   void startSend(const SendReceiveContext context, const int rank, const int tag, const MPI_Comm comm) {
     assertion(this->_ioMode == IOMode::None);
-    assertion(this->_ioMPIRequest == MPI_REQUEST_NULL);
     assertion(this->size() > 0);
     assertion(not this->_ioMPIActive);
 
@@ -98,7 +88,6 @@ public:
   ) {
     assertion(this->_ioMode == IOMode::None, rank, tag, numberOfElements);
     assertion(numberOfElements > 0, rank, tag, numberOfElements);
-    assertion(this->_ioMPIRequest == MPI_REQUEST_NULL);
     assertion(not this->_ioMPIActive);
 
     assertion(this->mpiCountRequest == MPI_REQUEST_NULL);
@@ -133,12 +122,10 @@ public:
       }
       this->_ioMode         = IOMode::None;
       this->_ioMPIActive    = false;
-      this->_ioMPIRequest   = MPI_REQUEST_NULL;
       this->mpiCountRequest = MPI_REQUEST_NULL;
       this->mpiDataRequest  = MPI_REQUEST_NULL;
     }
 
     return finished;
   }
-#endif // PEANO_WITH_MPI
 };

@@ -2,12 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "tarch/Assertions.h"
-
-#ifdef PEANO_WITH_MPI
-#include <mpi.h>
-#endif
-
 namespace peano4::stacks {
   /**
    * There are three different scenarios when we merge data:
@@ -38,29 +32,6 @@ namespace peano4::stacks {
     JoinDomain,
     PeriodicBoundaryDataSwap
   };
-
-#if defined(PEANO_WITH_MPI)
-  template <class T>
-  static inline MPI_Datatype translateContextIntoDatatype(SendReceiveContext context) {
-    switch (context) {
-    case SendReceiveContext::BoundaryExchange:
-      return T::getBoundaryExchangeDatatype();
-    case SendReceiveContext::MultiscaleExchange:
-      return T::getMultiscaleDataExchangeDatatype();
-    case SendReceiveContext::ForkDomain:
-      return T::getForkDatatype();
-    case SendReceiveContext::JoinDomain:
-      return T::getJoinDatatype();
-    case SendReceiveContext::PeriodicBoundaryDataSwap:
-      // Cross-rank periodic exchange ships the same per-element payload as an
-      // ordinary boundary exchange, just on its own tag, so it reuses the
-      // boundary-exchange datatype.
-      return T::getBoundaryExchangeDatatype();
-    }
-    assertion(false, "No valid case statement found. This may not happen");
-    return T::getGlobalCommunicationDatatype();
-  }
-#endif
 } // namespace peano4::stacks
 
 std::string toString(peano4::stacks::SendReceiveContext context);

@@ -8,17 +8,15 @@
 
 #include "Constants.h"
 
+#include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
-#include "tarch/mpi/mpi.h"
 #include "tarch/multicore/Lock.h"
-#include "tarch/services/ServiceRepository.h"
 
 #include "repositories/SolverRepository.h"
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   _solverState(SolverState::GridConstruction),
-  _cellUpdates(0),
   _totalNumberOfTroubledCells(0) {
 
   {{CONSTRUCTOR_IMPLEMENTATION}}
@@ -132,23 +130,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
 	if ( isLastGridSweepOfTimeStep() ) {
 
-  #ifdef PEANO_WITH_MPI
-
-  int newCellUpdates = _cellUpdates;
-  const MPI_Comm communicator = tarch::mpi::Rank::getInstance().getCommunicator();
-  auto           progress     = [&]() -> void {
-    tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-  };
-
-  tarch::mpi::allreduce(
-      &newCellUpdates,
-      &_cellUpdates,
-      1, MPI_INT,
-      MPI_SUM,
-      communicator,
-      progress
-      );
-
   if(_solverState==SolverState::LimiterStatusSpreadingToNeighbours){
     int newNumberOfTroubleCells = _totalNumberOfTroubledCells;
     tarch::mpi::allreduce(
@@ -156,12 +137,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
         &_totalNumberOfTroubledCells,
         1, MPI_INT,
         MPI_SUM,
-        communicator,
-        progress
+        tarch::mpi::Rank::getInstance().getCommunicator()
         );
   }
-
-  #endif
 
   {{FINISH_TIME_STEP_IMPLEMENTATION}}
 

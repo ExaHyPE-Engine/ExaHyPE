@@ -44,7 +44,6 @@ public:
   static ::peano4::grid::StackContainer<{{container.stack}}> {{container.name}}StackContainer;
 {% endfor %}
 
-  static void init();
   static void shutdown();
 
   static void updateMemoryUsage();

@@ -60,8 +60,6 @@ project(Peano
     CXX
 )
 
-include(Ccache)
-
 include(ProcessorCount)
 ProcessorCount(AVAILABLE_PROCESSOR_COUNT)
 

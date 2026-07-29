@@ -1,0 +1,17 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+INLINE_METHOD bool tarch::mpi::PollPacing::reportProgressNow() {
+  if (_iterationsUntilNextTurn > 0) {
+    --_iterationsUntilNextTurn;
+    return false;
+  }
+
+  if (_stride < MaxStride) {
+    _stride *= 2;
+  } else {
+    std::this_thread::yield();
+  }
+  _iterationsUntilNextTurn = _stride;
+  return true;
+}

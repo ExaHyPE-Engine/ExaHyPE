@@ -449,7 +449,6 @@ if(_fault_coordinates.empty()){
 #include "runner/RuntimeParameters.h"
 #include "exahype2/dg/Tracer.h"
 #include "toolbox/particles/TrajectoryDatabase.h"
-#include "peano4/parallel/Node.h"
 #include "VariableShortcuts{{SOLVER_NAME}}.h"
         """
         ).render(**self.d)

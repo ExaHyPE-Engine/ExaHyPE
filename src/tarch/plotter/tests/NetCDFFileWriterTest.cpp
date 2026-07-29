@@ -3,8 +3,8 @@
 #include "NetCDFFileWriterTest.h"
 
 #include "tarch/la/Vector.h"
+#include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
-#include "tarch/mpi/mpi.h"
 #include "tarch/plotter/NetCDFFileWriter.h"
 
 #ifdef PEANO_WITH_NETCDF
@@ -18,11 +18,7 @@ namespace {
     }
   }
 
-  void barrier() {
-#ifdef PEANO_WITH_MPI
-    tarch::mpi::barrier(tarch::mpi::Rank::getInstance().getCommunicator());
-#endif
-  }
+  void barrier() { tarch::mpi::barrier(tarch::mpi::Rank::getInstance().getCommunicator()); }
 
   void validateFileExists(const std::string& filepath) {
     if (not std::filesystem::exists(filepath)) {

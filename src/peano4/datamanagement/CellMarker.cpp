@@ -2,8 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "CellMarker.h"
 
-#include "tarch/services/ServiceRepository.h"
-
 static_assert(std::is_standard_layout_v<peano4::datamanagement::CellMarker>);
 static_assert(std::is_trivially_copyable_v<peano4::datamanagement::CellMarker>);
 

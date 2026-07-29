@@ -2,8 +2,9 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "PeriodicTopology.h"
-#include "StackTopology.h"
+#include "peano4/grid/BoundaryDataAggregation.h"
+#include "peano4/grid/PeriodicTopology.h"
+#include "peano4/grid/StackTopology.h"
 #include "tarch/Assertions.h"
 
 namespace peano4::grid {
@@ -17,6 +18,25 @@ public:
   using Stack                 = StackType;
   using ParallelExchangeStack = StackTopology::ParallelExchangeStack;
   using ElementType           = std::decay_t<decltype(std::declval<StackType&>().pop())>;
+
+  StackContainer() = default;
+
+  /**
+   * The container id identifies this container within the aggregated boundary
+   * exchange. Every rank builds the same containers in the same order, so the
+   * same container carries the same id everywhere, and its aggregated messages
+   * cannot be taken for another container's.
+   */
+  explicit StackContainer(int containerId) :
+    _containerId(containerId) {
+    assertion(containerId >= 0, containerId);
+  }
+
+  ~StackContainer()                                = default;
+  StackContainer(const StackContainer&)            = delete;
+  StackContainer& operator=(const StackContainer&) = delete;
+  StackContainer(StackContainer&&)                 = delete;
+  StackContainer& operator=(StackContainer&&)      = delete;
 
   void stageCrossRankPeriodicEntry(
     int                  sendTree,
@@ -33,6 +53,10 @@ public:
   std::vector<CrossRankPeriodicEntry<ElementType>>& getCrossRankPeriodicStaging() { return _crossRankPeriodicStaging; }
 
   void clearCrossRankPeriodicStaging() { _crossRankPeriodicStaging.clear(); }
+
+  int getContainerId() const { return _containerId; }
+
+  BoundaryDataAggregation<StackType>& getBoundaryDataAggregation() { return _boundaryDataAggregation; }
 
   static constexpr auto LocalStackCount       = StackTopology::TotalNumberOfLocalExchangeStacks;
   static constexpr auto ParallelStacksPerSlot = static_cast<int>(ParallelExchangeStack::NumberOfStacks);
@@ -97,7 +121,6 @@ public:
     );
   }
 
-  // TODO: Should be resized when we set the local trees?
   void resizeParallelExchangeStacks(int treeId, int numberOfSlots) {
     assertion(numberOfSlots >= 0);
     const int localIndex = ensureLocalTreeIndex(treeId);
@@ -138,6 +161,8 @@ public:
   void clear() {
     _trees.clear();
     _treeIdToLocalIndex.clear();
+    _crossRankPeriodicStaging.clear();
+    _boundaryDataAggregation.clear();
   }
 
 private:
@@ -165,14 +190,11 @@ private:
    * Index of treeId's storage, registering it on demand if it is not present.
    *
    * setLocalTrees() registers the container's trees once, before the traversal.
-   * A worker tree can however be created later in the same sweep, mid-exchange,
-   * when peano4::parallel::SpacetreeSet answers a split request from inside
-   * receiveDanglingMessages() during MPI progress (see the comment at
-   * SpacetreeSet::streamDataFromSplittingTreesToNewTrees). Such a tree is in the
-   * spacetree set but not yet in this data container, so we lazily allocate empty
-   * storage for it here rather than requiring it to be pre-registered. Registered
-   * trees are unaffected, and the next setLocalTrees() re-establishes the
-   * canonical ordering, preserving this storage if the tree is now official.
+   * The tree management can create a worker tree later in the same sweep, and
+   * such a tree is in the spacetree set but not yet in this container, so empty
+   * storage is allocated for it on demand. Registered trees are unaffected, and
+   * the next setLocalTrees() re-establishes the canonical ordering and keeps
+   * this storage.
    */
   int ensureLocalTreeIndex(int treeId) {
     const int existing = tryGetLocalTreeIndex(treeId);
@@ -191,4 +213,8 @@ private:
   std::vector<std::pair<int, int>> _treeIdToLocalIndex;
 
   std::vector<CrossRankPeriodicEntry<ElementType>> _crossRankPeriodicStaging;
+
+  BoundaryDataAggregation<StackType> _boundaryDataAggregation;
+
+  int _containerId{-1};
 };

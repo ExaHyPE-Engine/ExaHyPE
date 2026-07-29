@@ -96,8 +96,8 @@ Handing in .. does the job for most of the setups.
 This might be the right time to look ahead and study the tutorials of the codes you wanna use.
 The toolboxes (blockstructured, loadbalancing, particles, ...) and the ExaHyPE 2 extension are
 always built, so there is nothing to switch on for them. What you do toggle here are the
-feature options, all named `PEANO_WITH_*` (e.g. `PEANO_WITH_MULTITHREADING`, `PEANO_WITH_MPI`,
-`PEANO_WITH_HDF5`); see the comments next to each entry in ccmake for details.
+feature options, all named `PEANO_WITH_*` (e.g. `PEANO_WITH_MULTITHREADING`, `PEANO_WITH_HDF5`);
+see the comments next to each entry in ccmake for details.
 </div>
 
 Configure by pressing c and then q to finish the configuration. Next, continue

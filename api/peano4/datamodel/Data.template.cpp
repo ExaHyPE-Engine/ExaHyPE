@@ -152,29 +152,3 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
   {{MERGE_METHOD_DEFINITION}}
 }
 {% endif %}
-
-#ifdef PEANO_WITH_MPI
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initDatatype() {}
-
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::shutdownDatatype() {}
-
-MPI_Datatype {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getForkDatatype() {
-  return {{MPI_FLOAT_TYPE}};
-}
-
-MPI_Datatype {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getJoinDatatype() {
-  return {{MPI_FLOAT_TYPE}};
-}
-
-MPI_Datatype {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getBoundaryExchangeDatatype() {
-  return {{MPI_FLOAT_TYPE}};
-}
-
-MPI_Datatype {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMultiscaleDataExchangeDatatype() {
-  return {{MPI_FLOAT_TYPE}};
-}
-
-MPI_Datatype {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getGlobalCommunicationDatatype() {
-  return {{MPI_FLOAT_TYPE}};
-}
-#endif

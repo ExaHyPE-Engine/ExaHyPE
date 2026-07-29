@@ -7,19 +7,16 @@
 #include "peano4/grid/PeanoCurve.h"
 #include "peano4/grid/Spacetree.h"
 #include "peano4/grid/StackTopology.h"
-#include "peano4/parallel/Node.h"
+#include "peano4/parallel/ExchangeChannels.h"
+#include "peano4/parallel/TreeIdMapping.h"
 #include "tarch/Termination.h"
 #include "tarch/instrumentation/Log.h"
+#include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
-#include "tarch/mpi/mpi.h"
 #include "tarch/multicore/Core.h"
-#include "tarch/multicore/Lock.h"
 #include "tarch/multicore/multicore.h"
-#include "tarch/services/ServiceRepository.h"
 
 peano4::parallel::SpacetreeSet peano4::parallel::SpacetreeSet::_singleton;
-
-tarch::multicore::BooleanSemaphore peano4::parallel::SpacetreeSet::_semaphore;
 
 peano4::parallel::SpacetreeSet& peano4::parallel::SpacetreeSet::getInstance() { return _singleton; }
 
@@ -74,8 +71,15 @@ peano4::stacks::Stack<peano4::grid::GridVertex>& peano4::parallel::SpacetreeSet:
   return getSpacetree(treeId).getParallelExchangeVertexStack(neighbourSlot, exchangeStack);
 }
 
+peano4::grid::BoundaryDataAggregation<peano4::stacks::Stack<peano4::grid::GridVertex>>&
+peano4::parallel::SpacetreeSet::getBoundaryDataAggregation() {
+  return _gridVertexBoundaryAggregation;
+}
+
+int peano4::parallel::SpacetreeSet::getContainerId() const { return GridVertexContainerId; }
+
 void peano4::parallel::SpacetreeSet::registerLocalSpacetree(peano4::grid::Spacetree& tree) {
-  const int localTreeId = Node::getInstance().getLocalTreeId(tree._id);
+  const int localTreeId = peano4::parallel::TreeIdMapping::getLocalTreeId(tree._id);
   assertion(
     localTreeId >= 0 and localTreeId < MAX_SPACETREES_PER_RANK,
     "Invalid local tree id.",
@@ -94,7 +98,7 @@ void peano4::parallel::SpacetreeSet::registerLocalSpacetree(peano4::grid::Spacet
 }
 
 void peano4::parallel::SpacetreeSet::unregisterLocalSpacetree(int treeId) {
-  const int localTreeId = Node::getInstance().getLocalTreeId(treeId);
+  const int localTreeId = peano4::parallel::TreeIdMapping::getLocalTreeId(treeId);
   if (localTreeId >= 0 and localTreeId < MAX_SPACETREES_PER_RANK) {
     [[maybe_unused]] auto* const tree = _spacetreeByLocalTreeId[localTreeId];
     assertion(
@@ -115,27 +119,16 @@ void peano4::parallel::SpacetreeSet::init(
 ) {
   _spacetreeByLocalTreeId.fill(nullptr);
 
-  _requestMessageTag = tarch::mpi::Rank::reserveFreeTag("peano4::parallel::SpacetreeSet - request message");
-  _answerMessageTag =
-    tarch::mpi::Rank::reserveFreeTag("peano4::parallel::SpacetreeSet - answer message", MAX_SPACETREES_PER_RANK);
-  _stateMessageTag  = tarch::mpi::Rank::reserveFreeTag("peano4::parallel::SpacetreeSet - automaton state message");
-  _treeIdMessageTag = tarch::mpi::Rank::reserveFreeTag("peano4::parallel::SpacetreeSet - tree id batch");
-  tarch::services::ServiceRepository::getInstance().addService(this, "peano4::parallel::SpacetreeSet");
-
-#ifdef PEANO_WITH_MPI
   assertion(
-    (peano4::parallel::Node::getInstance().getNumberOfRegisteredTrees() == 1
+    (peano4::parallel::TreeIdMapping::getInstance().getNumberOfRegisteredTrees() == 1
      and tarch::mpi::Rank::getInstance().getRank() == 0)
-      or (peano4::parallel::Node::getInstance().getNumberOfRegisteredTrees() == 0 and tarch::mpi::Rank::getInstance().getRank() != 0),
-    peano4::parallel::Node::getInstance().getNumberOfRegisteredTrees(),
+      or (peano4::parallel::TreeIdMapping::getInstance().getNumberOfRegisteredTrees() == 0
+          and tarch::mpi::Rank::getInstance().getRank() != 0),
+    peano4::parallel::TreeIdMapping::getInstance().getNumberOfRegisteredTrees(),
     offset,
     width,
     tarch::mpi::Rank::getInstance().getRank()
   );
-
-  _treeManagementReceiveIsPosted = false;
-  postTreeManagementReceive();
-#endif
 
   _periodicBC = periodicBC;
 
@@ -146,440 +139,200 @@ void peano4::parallel::SpacetreeSet::init(
 }
 
 void peano4::parallel::SpacetreeSet::shutdown() {
-#ifdef PEANO_WITH_MPI
-  progressPendingTreeManagement();
-
-  for (auto& response : _pendingTreeIdResponses) {
-    tarch::mpi::wait(&response.sendRequest, []() {}, MPI_STATUS_IGNORE);
-  }
-  _pendingTreeIdResponses.clear();
-
-  for (auto& message : _pendingTreeManagementMessages) {
-    tarch::mpi::wait(&message.sendRequest, []() {}, MPI_STATUS_IGNORE);
-  }
-  _pendingTreeManagementMessages.clear();
-
-  for (auto& creation : _pendingTreeCreations) {
-    if (creation.treeIdsReceiveRequest != MPI_REQUEST_NULL) {
-      tarch::mpi::cancel(&creation.treeIdsReceiveRequest);
-      tarch::mpi::wait(&creation.treeIdsReceiveRequest, []() {}, MPI_STATUS_IGNORE);
-    }
-    if (creation.rootStateReceiveRequest != MPI_REQUEST_NULL) {
-      tarch::mpi::cancel(&creation.rootStateReceiveRequest);
-      tarch::mpi::wait(&creation.rootStateReceiveRequest, []() {}, MPI_STATUS_IGNORE);
-    }
-  }
-  _pendingTreeCreations.clear();
-
-  if (_treeManagementReceiveIsPosted) {
-    tarch::mpi::cancel(&_treeManagementReceiveRequest);
-    tarch::mpi::wait(&_treeManagementReceiveRequest, []() {}, MPI_STATUS_IGNORE);
-    _treeManagementReceiveRequest  = MPI_REQUEST_NULL;
-    _treeManagementReceiveIsPosted = false;
-  }
-#endif
-
-  tarch::services::ServiceRepository::getInstance().removeService(this);
+  _pendingSplits.clear();
+  _pendingRemoteRecords.clear();
 }
 
-#ifdef PEANO_WITH_MPI
-void peano4::parallel::SpacetreeSet::postTreeManagementReceive() {
-  if (_treeManagementReceiveIsPosted) {
-    return;
+/** @return Rank that has to act on the record. */
+int peano4::parallel::SpacetreeSet::getRecordDestinationRank(const TreeManagementRecord& record) {
+  switch (record.kind) {
+  case TreeManagementRecord::Kind::CreateTree:
+    return peano4::parallel::TreeIdMapping::getRank(record.workerTreeId);
+  case TreeManagementRecord::Kind::RemoveEmptyChild:
+    return peano4::parallel::TreeIdMapping::getRank(record.masterTreeId);
   }
+  assertion(false, static_cast<int>(record.kind));
+  return -1;
+}
 
-  tarch::mpi::irecv(
-    &_treeManagementReceiveBuffer,
-    1,
-    TreeManagementMessage::getJoinDatatype(),
-    MPI_ANY_SOURCE,
-    _requestMessageTag,
-    tarch::mpi::Rank::getInstance().getCommunicator(),
-    &_treeManagementReceiveRequest
+/** Instantiate one worker tree from the record its master issued. */
+void peano4::parallel::SpacetreeSet::createTree(const TreeManagementRecord& record) {
+  // The worker inherits its master's bounding box and traversal inversion. The
+  // periodic configuration is global, so it comes from this rank's own copy.
+  _spacetrees.emplace_back(
+    record.workerTreeId,
+    record.masterTreeId,
+    record.rootOffset,
+    record.rootWidth,
+    record.rootTraversalInverted != 0,
+    _periodicBC
   );
-
-  _treeManagementReceiveIsPosted = true;
+  registerLocalSpacetree(_spacetrees.back());
 }
 
 /**
- * Complete asynchronous tree-management payloads without blocking the service callback.
+ * Settle all pending tree management in three collectives.
  *
- * Batch responses retain their vectors until MPI has consumed them. A creation becomes visible only after both its
- * worker-ID vector and its master's root state have arrived; one acknowledgement then releases the source rank.
+ * Every rank reaches all three unconditionally, so no rank ever waits for a
+ * decision that a peer is not yet in a position to make. The first exchange
+ * publishes, per pair of ranks, how many records travel and how many tree IDs
+ * the sender wants reserved. The second carries the records. The third returns
+ * the reserved IDs, whose counts both sides already know from the first
+ * exchange.
+ *
+ * A rank owns its tree slots, so it reserves IDs without asking anybody. The
+ * IDs come back in the order in which the requester registered its splits,
+ * which keeps a batched split deterministic. Registering those splits is part
+ * of this routine, so it has to run before a traversal reads a tree's split
+ * state.
  */
-void peano4::parallel::SpacetreeSet::progressPendingTreeManagement() {
-  for (auto response = _pendingTreeIdResponses.begin(); response != _pendingTreeIdResponses.end();) {
-    int sendCompleted = 0;
-    tarch::mpi::test(&response->sendRequest, &sendCompleted, MPI_STATUS_IGNORE);
-    response = sendCompleted ? _pendingTreeIdResponses.erase(response) : std::next(response);
+void peano4::parallel::SpacetreeSet::exchangeTreeManagementRecords() {
+  const int  numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
+  const auto communicator  = tarch::mpi::Rank::getInstance().getCommunicator();
+
+  std::vector<std::vector<TreeManagementRecord>> outgoingRecords(numberOfRanks);
+  for (const auto& record : _pendingRemoteRecords) {
+    outgoingRecords[getRecordDestinationRank(record)].push_back(record);
+  }
+  _pendingRemoteRecords.clear();
+
+  // Three headers per peer: the number of records, the number of tree IDs
+  // this rank wants that peer to reserve, and whether this rank knows of a
+  // communicator that has to be created this sweep. Every tree that registers
+  // this sweep is known before the exchange to the rank that initiates it, so
+  // the maximum over all flags is a globally uniform decision on whether the
+  // collective communicator creation has any work.
+  bool localCommunicatorDemand =
+    peano4::parallel::ExchangeChannels::getInstance().hasPendingCommunicatorRequests() or not _pendingSplits.empty();
+  for (const auto& records : outgoingRecords) {
+    localCommunicatorDemand = localCommunicatorDemand or not records.empty();
   }
 
-  for (auto creation = _pendingTreeCreations.begin(); creation != _pendingTreeCreations.end();) {
-    int treeIdsReceived   = 0;
-    int rootStateReceived = 0;
-    tarch::mpi::test(&creation->treeIdsReceiveRequest, &treeIdsReceived, MPI_STATUS_IGNORE);
-    tarch::mpi::test(&creation->rootStateReceiveRequest, &rootStateReceived, MPI_STATUS_IGNORE);
-
-    if (treeIdsReceived and rootStateReceived) {
-      for (const int treeId : creation->treeIds) {
-        if (Node::getInstance().getRank(treeId) != tarch::mpi::Rank::getInstance().getRank()) {
-          tarch::terminateWithError("Received a tree creation request for an ID owned by another rank.");
-        }
-        _spacetrees.emplace_back(
-          treeId,
-          creation->request.getMasterSpacetreeId(),
-          creation->rootState.x,
-          creation->rootState.h,
-          creation->rootState.getInverted(),
-          _periodicBC
-        );
-        registerLocalSpacetree(_spacetrees.back());
-      }
-
-      sendTreeManagementAcknowledgement(creation->request);
-      creation = _pendingTreeCreations.erase(creation);
-    } else {
-      ++creation;
-    }
+  constexpr int    HeadersPerRank = 3;
+  std::vector<int> sendHeaders(HeadersPerRank * numberOfRanks, 0);
+  std::vector<int> receiveHeaders(HeadersPerRank * numberOfRanks, 0);
+  for (int rank = 0; rank < numberOfRanks; rank++) {
+    sendHeaders[HeadersPerRank * rank]     = static_cast<int>(outgoingRecords[rank].size());
+    sendHeaders[HeadersPerRank * rank + 2] = localCommunicatorDemand ? 1 : 0;
   }
-
-  for (auto message = _pendingTreeManagementMessages.begin(); message != _pendingTreeManagementMessages.end();) {
-    int sendCompleted = 0;
-    tarch::mpi::test(&message->sendRequest, &sendCompleted, MPI_STATUS_IGNORE);
-    message = sendCompleted ? _pendingTreeManagementMessages.erase(message) : std::next(message);
+  for (const auto& pendingSplit : _pendingSplits) {
+    sendHeaders[HeadersPerRank * pendingSplit.targetRank + 1]++;
   }
-}
-
-/** Queue an acknowledgement so the service never relies on eager MPI buffering. */
-void peano4::parallel::SpacetreeSet::sendTreeManagementAcknowledgement(const TreeManagementMessage& request) {
-  auto& pendingMessage   = _pendingTreeManagementMessages.emplace_back();
-  pendingMessage.message = TreeManagementMessage(
-    request.getMasterSpacetreeId(),
-    request.getWorkerSpacetreeId(),
-    TreeManagementMessage::Action::Acknowledgement,
-    request.getNumberOfSpacetrees()
+  tarch::mpi::alltoall(
+    sendHeaders.data(),
+    HeadersPerRank,
+    MPI_INT,
+    receiveHeaders.data(),
+    HeadersPerRank,
+    MPI_INT,
+    communicator
   );
-  tarch::mpi::isend(
-    &pendingMessage.message,
-    1,
-    TreeManagementMessage::getJoinDatatype(),
-    request.getSenderRank(),
-    getAnswerTag(
-      request.getAction() == TreeManagementMessage::Action::CreateNewRemoteTrees ? request.getMasterSpacetreeId()
-                                                                                 : request.getWorkerSpacetreeId()
-    ),
-    tarch::mpi::Rank::getInstance().getCommunicator(),
-    &pendingMessage.sendRequest
+
+  _communicatorRebuildRequired = localCommunicatorDemand;
+  for (int rank = 0; rank < numberOfRanks; rank++) {
+    _communicatorRebuildRequired = _communicatorRebuildRequired or receiveHeaders[HeadersPerRank * rank + 2] != 0;
+  }
+
+  constexpr auto   RecordSize = static_cast<int>(sizeof(TreeManagementRecord));
+  std::vector<int> sendCounts(numberOfRanks, 0);
+  std::vector<int> sendDisplacements(numberOfRanks, 0);
+  std::vector<int> receiveCounts(numberOfRanks, 0);
+  std::vector<int> receiveDisplacements(numberOfRanks, 0);
+  std::size_t      numberOfSentRecords     = 0;
+  std::size_t      numberOfReceivedRecords = 0;
+  for (int rank = 0; rank < numberOfRanks; rank++) {
+    sendDisplacements[rank]    = static_cast<int>(numberOfSentRecords * RecordSize);
+    receiveDisplacements[rank] = static_cast<int>(numberOfReceivedRecords * RecordSize);
+    sendCounts[rank]           = sendHeaders[HeadersPerRank * rank] * RecordSize;
+    receiveCounts[rank]        = receiveHeaders[HeadersPerRank * rank] * RecordSize;
+    numberOfSentRecords += static_cast<std::size_t>(sendHeaders[HeadersPerRank * rank]);
+    numberOfReceivedRecords += static_cast<std::size_t>(receiveHeaders[HeadersPerRank * rank]);
+  }
+  assertion(
+    std::max(numberOfSentRecords, numberOfReceivedRecords) * RecordSize
+      <= static_cast<std::size_t>(std::numeric_limits<int>::max()),
+    numberOfSentRecords,
+    numberOfReceivedRecords,
+    RecordSize
   );
-}
-#endif
 
-/** @return Tag used for replies to the target tree. */
-int peano4::parallel::SpacetreeSet::getAnswerTag(int targetSpacetreeId) const {
-  return _answerMessageTag + Node::getInstance().getLocalTreeId(targetSpacetreeId);
-}
-
-/**
- * Process buffered tree-management requests.
- *
- * Requests are buffered because creating or removing a local tree while its
- * collection is being traversed would invalidate iterators. Each request uses
- * variable-length payloads use dedicated tags, which keeps deferred messages
- * from being interpreted as new requests.
- *
- * RequestNewRemoteTrees reserves a complete ID batch and returns it through a
- * non-blocking payload send. CreateNewRemoteTrees posts receives for the ID
- * batch and root state and returns immediately; progressPendingTreeManagement()
- * creates the workers and acknowledges the whole batch once both payloads have
- * arrived. Empty child removal updates the master's child set and queues its
- * acknowledgement.
- *
- * The routine first removes answerable entries from the queue. Message
- * handling can then append new entries without invalidating this pass; a later
- * service poll processes those entries.
- */
-void peano4::parallel::SpacetreeSet::answerQuestions() {
-#ifdef PEANO_WITH_MPI
-  if (tarch::mpi::Rank::getInstance().getNumberOfRanks() == 1) {
-    return;
+  std::vector<TreeManagementRecord> sendBuffer;
+  sendBuffer.reserve(numberOfSentRecords);
+  for (const auto& records : outgoingRecords) {
+    sendBuffer.insert(sendBuffer.end(), records.begin(), records.end());
   }
 
-  // Blocking MPI progress can re-enter this service on the same thread. The
-  // guard keeps tree insertion and registration atomic. The service repository
-  // excludes concurrent threads, so thread-local state is sufficient.
-  static thread_local bool inAnswerQuestions = false;
-  if (inAnswerQuestions) {
-    return;
-  }
-  inAnswerQuestions = true;
-  class ReentryGuard final {
-  public:
-    explicit ReentryGuard(bool& flag) :
-      _flag(flag) {}
-    ReentryGuard(const ReentryGuard&)            = delete;
-    ReentryGuard(ReentryGuard&&)                 = delete;
-    ReentryGuard& operator=(const ReentryGuard&) = delete;
-    ReentryGuard& operator=(ReentryGuard&&)      = delete;
-    ~ReentryGuard() { _flag = false; }
+  std::vector<TreeManagementRecord> receiveBuffer(numberOfReceivedRecords);
+  tarch::mpi::alltoallv(
+    sendBuffer.data(),
+    sendCounts.data(),
+    sendDisplacements.data(),
+    MPI_BYTE,
+    receiveBuffer.data(),
+    receiveCounts.data(),
+    receiveDisplacements.data(),
+    MPI_BYTE,
+    communicator
+  );
 
-  private:
-    bool& _flag;
-  };
-  const ReentryGuard reentryGuard(inAnswerQuestions);
-  progressPendingTreeManagement();
-
-  std::vector<peano4::parallel::TreeManagementMessage> answerableMessages;
-
-  auto messageIterator = _unansweredMessages.begin();
-  while (messageIterator != _unansweredMessages.end()) {
-    switch (messageIterator->getAction()) {
-    case peano4::parallel::TreeManagementMessage::Action::RequestNewRemoteTrees:
-      answerableMessages.push_back(*messageIterator);
-      messageIterator = _unansweredMessages.erase(messageIterator);
+  for (const auto& record : receiveBuffer) {
+    switch (record.kind) {
+    case TreeManagementRecord::Kind::CreateTree:
+      createTree(record);
       break;
-    case peano4::parallel::TreeManagementMessage::Action::RemoveChildTreeFromBooksAsChildBecameEmpty:
-    case peano4::parallel::TreeManagementMessage::Action::CreateNewRemoteTrees:
-      answerableMessages.push_back(*messageIterator);
-      messageIterator = _unansweredMessages.erase(messageIterator);
-      break;
-    case peano4::parallel::TreeManagementMessage::Action::Acknowledgement:
-    case peano4::parallel::TreeManagementMessage::Action::JoinWithWorker:
-      tarch::terminateWithError("Synchronous tree-management messages must not use the asynchronous request tag.");
-    }
-  }
-
-  for (const auto& message : answerableMessages) {
-    switch (message.getAction()) {
-    case peano4::parallel::TreeManagementMessage::Action::RequestNewRemoteTrees: {
-      if (message.getNumberOfSpacetrees() < 1 or message.getNumberOfSpacetrees() > MAX_SPACETREES_PER_RANK) {
-        tarch::terminateWithError("Received an invalid remote tree reservation batch size.");
-      }
-
-      auto& response   = _pendingTreeIdResponses.emplace_back();
-      response.treeIds = peano4::parallel::Node::getInstance().reserveIds(
-        tarch::mpi::Rank::getInstance().getRank(),
-        message.getMasterSpacetreeId(),
-        message.getNumberOfSpacetrees()
-      );
-
-      tarch::mpi::isend(
-        response.treeIds.data(),
-        static_cast<int>(response.treeIds.size()),
-        MPI_INT,
-        message.getSenderRank(),
-        _treeIdMessageTag,
-        tarch::mpi::Rank::getInstance().getCommunicator(),
-        &response.sendRequest
-      );
-      logDebug("Reserved " << response.treeIds.size() << " tree ids for tree " << message.getMasterSpacetreeId());
-    } break;
-    case peano4::parallel::TreeManagementMessage::Action::CreateNewRemoteTrees: {
-      if (message.getNumberOfSpacetrees() < 1 or message.getNumberOfSpacetrees() > MAX_SPACETREES_PER_RANK) {
-        tarch::terminateWithError("Received an invalid remote tree creation batch size.");
-      }
-
-      auto& creation   = _pendingTreeCreations.emplace_back();
-      creation.request = message;
-      creation.treeIds.resize(message.getNumberOfSpacetrees());
-      tarch::mpi::irecv(
-        creation.treeIds.data(),
-        static_cast<int>(creation.treeIds.size()),
-        MPI_INT,
-        message.getSenderRank(),
-        _treeIdMessageTag,
-        tarch::mpi::Rank::getInstance().getCommunicator(),
-        &creation.treeIdsReceiveRequest
-      );
-      tarch::mpi::irecv(
-        &creation.rootState,
-        1,
-        peano4::grid::AutomatonState::getForkDatatype(),
-        message.getSenderRank(),
-        _stateMessageTag,
-        tarch::mpi::Rank::getInstance().getCommunicator(),
-        &creation.rootStateReceiveRequest
-      );
-    } break;
-    case peano4::parallel::TreeManagementMessage::Action::Acknowledgement:
-    case peano4::parallel::TreeManagementMessage::Action::JoinWithWorker:
-      tarch::terminateWithError("Synchronous tree-management messages must not use the asynchronous request tag.");
-    case peano4::parallel::TreeManagementMessage::Action::RemoveChildTreeFromBooksAsChildBecameEmpty: {
+    case TreeManagementRecord::Kind::RemoveEmptyChild:
       logInfo(
-        "Remote child tree " << message.getWorkerSpacetreeId() << " of local tree " << message.getMasterSpacetreeId()
+        "Remote child tree " << record.workerTreeId << " of local tree " << record.masterTreeId
                              << " became empty and was removed."
       );
-      sendTreeManagementAcknowledgement(message);
-    } break;
+      break;
     }
   }
-  progressPendingTreeManagement();
-#else
-  assertion(_unansweredMessages.empty());
-#endif
-}
 
-/**
- * Poll the posted tree-management receive, buffer a completed request, process
- * the queue, and repost the receive. Buffering keeps receive progress separate
- * from modifications to the local tree collection.
- */
-void peano4::parallel::SpacetreeSet::receiveDanglingMessages() {
-#ifdef PEANO_WITH_MPI
-  if (not _treeManagementReceiveIsPosted) {
-    postTreeManagementReceive();
-  }
-
-  int        requestCompleted = 0;
-  MPI_Status status;
-
-  tarch::mpi::test(&_treeManagementReceiveRequest, &requestCompleted, &status);
-
-  if (requestCompleted) {
-    _treeManagementReceiveBuffer.setSenderRank(status.MPI_SOURCE);
-    _unansweredMessages.push_back(_treeManagementReceiveBuffer);
-    _treeManagementReceiveIsPosted = false;
-  }
-#endif
-
-  answerQuestions();
-
-#ifdef PEANO_WITH_MPI
-  if (not _treeManagementReceiveIsPosted) {
-    postTreeManagementReceive();
-  }
-#endif
-}
-
-/**
- * Create worker trees with their master's root state.
- *
- * Workers are grouped by target rank. All remote headers, worker-ID vectors,
- * root states, and acknowledgement receives are posted before the first wait,
- * so independent targets progress concurrently and opposing batches cannot
- * deadlock. One root-state message and one acknowledgement cover every worker
- * for the same master and target rank.
- */
-void peano4::parallel::SpacetreeSet::addSpacetrees(const int masterId, const std::vector<int>& newTreeIds) {
-  if (newTreeIds.empty()) {
-    return;
-  }
-
-  const auto& master        = getSpacetree(masterId);
-  const int   localRank     = tarch::mpi::Rank::getInstance().getRank();
-  const int   numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
-
-  std::vector<std::vector<int>> treeIdsByTargetRank(numberOfRanks);
-  for (const int treeId : newTreeIds) {
-    treeIdsByTargetRank[peano4::parallel::Node::getInstance().getRank(treeId)].push_back(treeId);
-  }
-
-  auto& localTreeIds = treeIdsByTargetRank[localRank];
-  if (not localTreeIds.empty()) {
-    // The workers inherit their master's bounding box, traversal inversion,
-    // and periodic configuration; a diverging periodic setup could not detect
-    // the same periodic boundaries.
-    tarch::multicore::Lock lock(_semaphore);
-    for (const int treeId : localTreeIds) {
-      _spacetrees
-        .emplace_back(treeId, masterId, master._root.x, master._root.h, master._root.getInverted(), master._periodicBC);
-      registerLocalSpacetree(_spacetrees.back());
+  std::vector<int> reservedIds;
+  std::vector<int> reservedIdCounts(numberOfRanks, 0);
+  std::vector<int> reservedIdDisplacements(numberOfRanks, 0);
+  std::vector<int> requestedIdCounts(numberOfRanks, 0);
+  std::vector<int> requestedIdDisplacements(numberOfRanks, 0);
+  int              numberOfRequestedIds = 0;
+  for (int rank = 0; rank < numberOfRanks; rank++) {
+    reservedIdDisplacements[rank]  = static_cast<int>(reservedIds.size());
+    reservedIdCounts[rank]         = receiveHeaders[HeadersPerRank * rank + 1];
+    requestedIdCounts[rank]        = sendHeaders[HeadersPerRank * rank + 1];
+    requestedIdDisplacements[rank] = numberOfRequestedIds;
+    numberOfRequestedIds += requestedIdCounts[rank];
+    if (reservedIdCounts[rank] > 0) {
+      const auto ids = peano4::parallel::TreeIdMapping::getInstance().reserveIds(reservedIdCounts[rank]);
+      reservedIds.insert(reservedIds.end(), ids.begin(), ids.end());
     }
-    localTreeIds.clear();
   }
 
-  const auto numberOfRemoteTargets = static_cast<std::size_t>(
-    std::count_if(treeIdsByTargetRank.begin(), treeIdsByTargetRank.end(), [](const std::vector<int>& treeIds) {
-      return not treeIds.empty();
-    })
+  std::vector<int> requestedIds(static_cast<std::size_t>(numberOfRequestedIds));
+  tarch::mpi::alltoallv(
+    reservedIds.data(),
+    reservedIdCounts.data(),
+    reservedIdDisplacements.data(),
+    MPI_INT,
+    requestedIds.data(),
+    requestedIdCounts.data(),
+    requestedIdDisplacements.data(),
+    MPI_INT,
+    communicator
   );
-  if (numberOfRemoteTargets == 0) {
-    return;
-  }
 
-#ifdef PEANO_WITH_MPI
-  struct RemoteCreationBatch final {
-    int                   targetRank = -1;
-    std::vector<int>      treeIds;
-    TreeManagementMessage request;
-    TreeManagementMessage acknowledgement;
-    MPI_Request           requestSendRequest            = MPI_REQUEST_NULL;
-    MPI_Request           treeIdsSendRequest            = MPI_REQUEST_NULL;
-    MPI_Request           rootStateSendRequest          = MPI_REQUEST_NULL;
-    MPI_Request           acknowledgementReceiveRequest = MPI_REQUEST_NULL;
-  };
-
-  const auto                       communicator = tarch::mpi::Rank::getInstance().getCommunicator();
-  std::vector<RemoteCreationBatch> batches;
-  batches.reserve(numberOfRemoteTargets);
-  for (int targetRank = 0; targetRank < numberOfRanks; ++targetRank) {
-    auto& treeIds = treeIdsByTargetRank[targetRank];
-    if (treeIds.empty()) {
-      continue;
+  std::vector<int> nextIdPerRank(requestedIdDisplacements);
+  for (const auto& pendingSplit : _pendingSplits) {
+    const int workerTreeId = requestedIds[nextIdPerRank[pendingSplit.targetRank]++];
+    if (peano4::parallel::TreeIdMapping::getRank(workerTreeId) != pendingSplit.targetRank) {
+      tarch::terminateWithError("Received a worker tree ID that is not owned by the requested target rank.");
     }
-    auto& batch      = batches.emplace_back();
-    batch.targetRank = targetRank;
-    batch.treeIds    = std::move(treeIds);
-    batch.request    = TreeManagementMessage(
-      masterId,
-      -1,
-      TreeManagementMessage::Action::CreateNewRemoteTrees,
-      static_cast<int>(batch.treeIds.size())
-    );
-
-    tarch::mpi::irecv(
-      &batch.acknowledgement,
-      1,
-      TreeManagementMessage::getJoinDatatype(),
-      targetRank,
-      getAnswerTag(masterId),
-      communicator,
-      &batch.acknowledgementReceiveRequest
-    );
-    tarch::mpi::isend(
-      &batch.request,
-      1,
-      TreeManagementMessage::getJoinDatatype(),
-      targetRank,
-      _requestMessageTag,
-      communicator,
-      &batch.requestSendRequest
-    );
-    tarch::mpi::isend(
-      batch.treeIds.data(),
-      static_cast<int>(batch.treeIds.size()),
-      MPI_INT,
-      targetRank,
-      _treeIdMessageTag,
-      communicator,
-      &batch.treeIdsSendRequest
-    );
-    tarch::mpi::isend(
-      &master._root,
-      1,
-      peano4::grid::AutomatonState::getForkDatatype(),
-      targetRank,
-      _stateMessageTag,
-      communicator,
-      &batch.rootStateSendRequest
+    getSpacetree(pendingSplit.sourceTreeId).split(workerTreeId, pendingSplit.instruction);
+    logDebug(
+      "Trigger split of tree " << pendingSplit.sourceTreeId << " into tree " << workerTreeId << " on rank "
+                               << pendingSplit.targetRank << " with instruction " << pendingSplit.instruction
     );
   }
-
-  const auto progress = []() { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); };
-  for (auto& batch : batches) {
-    tarch::mpi::wait(&batch.acknowledgementReceiveRequest, progress, MPI_STATUS_IGNORE);
-    assertion(
-      batch.acknowledgement.getAction() == TreeManagementMessage::Action::Acknowledgement,
-      batch.acknowledgement.toString()
-    );
-  }
-  for (auto& batch : batches) {
-    tarch::mpi::wait(&batch.requestSendRequest, progress, MPI_STATUS_IGNORE);
-    tarch::mpi::wait(&batch.treeIdsSendRequest, progress, MPI_STATUS_IGNORE);
-    tarch::mpi::wait(&batch.rootStateSendRequest, progress, MPI_STATUS_IGNORE);
-  }
-#else
-  assertion(false, "MPI support is disabled.");
-#endif
+  _pendingSplits.clear();
 }
 
 peano4::parallel::SpacetreeSet::TraverseTask::TraverseTask(
@@ -799,9 +552,8 @@ void peano4::parallel::SpacetreeSet::rebuildPeriodicAssociations() {
 
   // A change on one rank can move another rank's partner, so every rank uses
   // the same collective rebuild decision.
-  int globalTopologyChanged = localTopologyChanged;
-#ifdef PEANO_WITH_MPI
-  const int numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
+  int       globalTopologyChanged = localTopologyChanged;
+  const int numberOfRanks         = tarch::mpi::Rank::getInstance().getNumberOfRanks();
   if (numberOfRanks > 1) {
     tarch::mpi::allreduce(
       &localTopologyChanged,
@@ -812,7 +564,6 @@ void peano4::parallel::SpacetreeSet::rebuildPeriodicAssociations() {
       tarch::mpi::Rank::getInstance().getCommunicator()
     );
   }
-#endif
 
   if (not globalTopologyChanged) {
     return;
@@ -820,7 +571,6 @@ void peano4::parallel::SpacetreeSet::rebuildPeriodicAssociations() {
   _lastPeriodicProducerDescriptors = producers;
   _lastPeriodicConsumerDescriptors = consumers;
 
-#ifdef PEANO_WITH_MPI
   // Rendezvous discovery: every descriptor travels to a broker rank derived
   // from its key, the broker collects both sides of each key, and each
   // participating rank gets back exactly the records of the keys it produces
@@ -935,7 +685,6 @@ void peano4::parallel::SpacetreeSet::rebuildPeriodicAssociations() {
     std::sort(consumers.begin(), consumers.end(), descriptorLess);
     consumers.erase(std::unique(consumers.begin(), consumers.end(), descriptorEqual), consumers.end());
   }
-#endif
 
   _periodicRouting = peano4::grid::buildPeriodicRouting(producers, consumers);
 
@@ -943,10 +692,10 @@ void peano4::parallel::SpacetreeSet::rebuildPeriodicAssociations() {
   for (const auto& producer : producers) {
     const auto routingEntry = _periodicRouting.find(producer.stamp.key);
     assertion(routingEntry != _periodicRouting.end(), producer.toString());
-    const int producerRank = Node::getInstance().getRank(producer.treeId);
+    const int producerRank = peano4::parallel::TreeIdMapping::getRank(producer.treeId);
     for (const int targetTreeId :
          routingEntry->second[peano4::grid::toIndex(peano4::grid::opposite(producer.stamp.side))]) {
-      if (Node::getInstance().getRank(targetTreeId) != producerRank) {
+      if (peano4::parallel::TreeIdMapping::getRank(targetTreeId) != producerRank) {
         _crossRankPeriodicChannels.emplace(producer.treeId, targetTreeId);
       }
     }
@@ -983,8 +732,52 @@ void peano4::parallel::SpacetreeSet::rebuildPeriodicAssociations() {
  * create containers and move data around - so the phases must not run
  * concurrently.
  */
+/**
+ * Collect the remote ranks this rank exchanges boundary data with, and per rank
+ * the number of local trees that contribute to it.
+ *
+ * A tree counts once per remote rank however many of its neighbours live there,
+ * because it packs its data into that rank's buffer once. The result drives the
+ * contributor countdown, so a tree that turns out to have nothing to send this
+ * sweep still has to be counted: it contributes an empty segment and hands on.
+ */
+void peano4::parallel::SpacetreeSet::rebuildBoundaryAggregationTopology() {
+  const int localRank = tarch::mpi::Rank::getInstance().getRank();
+
+  _boundaryAggregationRemoteRanks.clear();
+  _boundaryAggregationContributors.clear();
+
+  for (auto& ranksOfOneTree : _boundaryAggregationRanksPerTree) {
+    ranksOfOneTree.clear();
+  }
+
+  std::vector<int> allContributions;
+  for (const auto& tree : _spacetrees) {
+    auto& ranksOfThisTree = _boundaryAggregationRanksPerTree[peano4::parallel::TreeIdMapping::getLocalTreeId(tree._id)];
+    for (int slot = 0; slot < tree.getNumberOfNeighbourTrees(); slot++) {
+      const int neighbourRank = peano4::parallel::TreeIdMapping::getRank(tree.getNeighbourTreeIdForSlot(slot));
+      if (neighbourRank != localRank) {
+        ranksOfThisTree.push_back(neighbourRank);
+      }
+    }
+    std::sort(ranksOfThisTree.begin(), ranksOfThisTree.end());
+    ranksOfThisTree.erase(std::unique(ranksOfThisTree.begin(), ranksOfThisTree.end()), ranksOfThisTree.end());
+    allContributions.insert(allContributions.end(), ranksOfThisTree.begin(), ranksOfThisTree.end());
+  }
+
+  std::sort(allContributions.begin(), allContributions.end());
+  for (const int remoteRank : allContributions) {
+    if (_boundaryAggregationRemoteRanks.empty() or _boundaryAggregationRemoteRanks.back() != remoteRank) {
+      _boundaryAggregationRemoteRanks.push_back(remoteRank);
+      _boundaryAggregationContributors.push_back(0);
+    }
+    _boundaryAggregationContributors.back()++;
+  }
+}
+
 void peano4::parallel::SpacetreeSet::exchangeHorizontalDataBetweenTrees(peano4::grid::GridTraversalObserver& observer) {
   rebuildPeriodicAssociations();
+  rebuildBoundaryAggregationTopology();
 
   for (auto& tree : _spacetrees) {
     exchangeAllHorizontalDataExchangeStacks(*this, tree._id);
@@ -1025,16 +818,35 @@ std::set<int> peano4::parallel::SpacetreeSet::getLocalTreesMergingWithWorkers() 
 }
 
 /**
- * Instantiate workers after local data exchange and tree cleanup. Remote
- * creation may wait for a peer, so starting it while that peer waits for
- * boundary data can deadlock.
+ * Instantiate workers after local data exchange and tree cleanup.
  *
- * @see exchangeHorizontalDataBetweenTrees()
+ * A worker inherits its master's bounding box and traversal inversion, and a
+ * remote worker gets them through the record its rank picks up at the start of
+ * the next sweep. Collecting the masters before the first instantiation keeps
+ * the loop off the tree list while that list grows.
+ *
+ * @see exchangeTreeManagementRecords()
  */
 void peano4::parallel::SpacetreeSet::createNewTrees() {
-  for (const auto& tree : _spacetrees) {
-    if (not tree._splitting.empty()) {
-      addSpacetrees(tree._id, std::vector<int>(tree._splitting.begin(), tree._splitting.end()));
+  std::vector<TreeManagementRecord> newTrees;
+  for (const auto& master : _spacetrees) {
+    for (const int workerTreeId : master._splitting) {
+      auto& record                 = newTrees.emplace_back();
+      record.kind                  = TreeManagementRecord::Kind::CreateTree;
+      record.masterTreeId          = master._id;
+      record.workerTreeId          = workerTreeId;
+      record.rootOffset            = master._root.x;
+      record.rootWidth             = master._root.h;
+      record.rootTraversalInverted = master._root.getInverted() ? 1 : 0;
+    }
+  }
+
+  const int localRank = tarch::mpi::Rank::getInstance().getRank();
+  for (const auto& record : newTrees) {
+    if (peano4::parallel::TreeIdMapping::getRank(record.workerTreeId) == localRank) {
+      createTree(record);
+    } else {
+      _pendingRemoteRecords.push_back(record);
     }
   }
 }
@@ -1051,21 +863,25 @@ void peano4::parallel::SpacetreeSet::deleteClonedObservers() {
 /**
  * Traverse local trees in dependency order.
  *
- * The polling barrier drains deferred tree-management requests on every rank
- * before task lists and communicators are created. Existing and joining trees
- * run first, new workers perform their empty traversal next, and dependent
- * joins finish last. Data exchange, cleanup, and worker creation run only after
- * all traversal tasks complete.
+ * The tree-management exchange settles every rank's pending splits, worker
+ * creations and removals before task lists and communicators are created, and
+ * it is collective, so it also keeps the ranks in step. Existing and joining
+ * trees run first, new workers perform their empty traversal next, and
+ * dependent joins finish last. Data exchange, cleanup, and worker creation run
+ * only after all traversal tasks complete.
  */
 void peano4::parallel::SpacetreeSet::traverse(peano4::grid::GridTraversalObserver& observer) {
-#ifdef PEANO_WITH_MPI
-  tarch::mpi::barrier(tarch::mpi::Rank::getInstance().getCommunicator(), [&]() -> void {
-    tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-    answerQuestions();
-  });
-#endif
+  // Names this sweep's aggregated boundary buffers. Bumping it here, before any
+  // data moves, marks every container's buffers as belonging to an earlier
+  // sweep, so the phases that run ahead of the boundary exchange do not mistake
+  // them for their own.
+  _boundaryAggregationGeneration++;
 
-  Node::getInstance().createPendingCommunicators();
+  exchangeTreeManagementRecords();
+
+  if (_communicatorRebuildRequired) {
+    peano4::parallel::ExchangeChannels::getInstance().createPendingCommunicators();
+  }
 
   std::vector<tarch::multicore::Task*> primaryTasks;
   std::vector<tarch::multicore::Task*> secondaryTasks;
@@ -1101,7 +917,7 @@ void peano4::parallel::SpacetreeSet::traverse(peano4::grid::GridTraversalObserve
   tarch::multicore::spawnTasks(tertiaryTasks);
   exchangeHorizontalDataBetweenTrees(observer);
 
-  cleanUpTrees(observer);
+  cleanUpTrees();
   createNewTrees();
   deleteClonedObservers();
 }
@@ -1112,13 +928,13 @@ void peano4::parallel::SpacetreeSet::traverse(peano4::grid::GridTraversalObserve
  * them; the traversal phases therefore keep a worker and its master out of the
  * same parallel task group.
  */
-void peano4::parallel::SpacetreeSet::cleanUpTrees(peano4::grid::GridTraversalObserver& observer) {
+void peano4::parallel::SpacetreeSet::cleanUpTrees() {
   for (auto treeIterator = _spacetrees.begin(); treeIterator != _spacetrees.end();) {
     if (treeIterator->_spacetreeState == peano4::grid::SpacetreeState::Joined) {
       logInfo("Tree " << treeIterator->_id << " has successfully joined");
       const int treeId = treeIterator->_id;
       unregisterLocalSpacetree(treeId);
-      Node::getInstance().deregisterId(treeIterator->_id);
+      peano4::parallel::TreeIdMapping::getInstance().deregisterId(treeIterator->_id);
       treeIterator = _spacetrees.erase(treeIterator);
       continue;
     } else if (treeIterator->mayJoinWithMaster()
@@ -1126,33 +942,15 @@ void peano4::parallel::SpacetreeSet::cleanUpTrees(peano4::grid::GridTraversalObs
       logInfo("Remove empty tree " << treeIterator->_id << " with master " << treeIterator->_masterId);
       const int treeId = treeIterator->_id;
       unregisterLocalSpacetree(treeId);
-      Node::getInstance().deregisterId(treeIterator->_id);
+      peano4::parallel::TreeIdMapping::getInstance().deregisterId(treeIterator->_id);
 
-      if (Node::getInstance().getRank(treeIterator->_masterId) != tarch::mpi::Rank::getInstance().getRank()) {
+      if (peano4::parallel::TreeIdMapping::getRank(treeIterator->_masterId)
+          != tarch::mpi::Rank::getInstance().getRank()) {
         logDebug("Parent tree " << treeIterator->_masterId << " is not local on this rank. Remove child reference");
-#ifdef PEANO_WITH_MPI
-        TreeManagementMessage message(
-          treeIterator->_masterId,
-          treeIterator->_id,
-          TreeManagementMessage::Action::RemoveChildTreeFromBooksAsChildBecameEmpty
-        );
-        TreeManagementMessage::send(
-          message,
-          Node::getInstance().getRank(treeIterator->_masterId),
-          _requestMessageTag,
-          tarch::mpi::Rank::getInstance().getCommunicator()
-        );
-
-        TreeManagementMessage::receive(
-          message,
-          Node::getInstance().getRank(treeIterator->_masterId),
-          getAnswerTag(treeIterator->_id),
-          tarch::mpi::Rank::getInstance().getCommunicator()
-        );
-        assertion(message.getAction() == TreeManagementMessage::Action::Acknowledgement, message.toString());
-#else
-        assertion(false, "This branch requires MPI support.");
-#endif
+        auto& record        = _pendingRemoteRecords.emplace_back();
+        record.kind         = TreeManagementRecord::Kind::RemoveEmptyChild;
+        record.masterTreeId = treeIterator->_masterId;
+        record.workerTreeId = treeIterator->_id;
       } else {
         logDebug("Parent tree " << treeIterator->_masterId << " is local on this rank");
         getSpacetree(treeIterator->_masterId)._statistics.setRemovedEmptySubtree(true);
@@ -1160,8 +958,8 @@ void peano4::parallel::SpacetreeSet::cleanUpTrees(peano4::grid::GridTraversalObs
       treeIterator = _spacetrees.erase(treeIterator);
       continue;
     } else if (treeIterator->mayJoinWithMaster()) {
-      const int localRank  = Node::getInstance().getRank(treeIterator->_id);
-      const int masterRank = Node::getInstance().getRank(treeIterator->_masterId);
+      const int localRank  = peano4::parallel::TreeIdMapping::getRank(treeIterator->_id);
+      const int masterRank = peano4::parallel::TreeIdMapping::getRank(treeIterator->_masterId);
       if (localRank == masterRank
           and getSpacetree(treeIterator->_masterId).getGridStatistics().getCoarseningHasBeenVetoed()) {
         logError(
@@ -1207,7 +1005,7 @@ peano4::grid::GridStatistics peano4::parallel::SpacetreeSet::getGridStatistics()
 }
 
 bool peano4::parallel::SpacetreeSet::isLocalSpacetree(int treeId) const {
-  const int localTreeId = Node::getInstance().getLocalTreeId(treeId);
+  const int localTreeId = peano4::parallel::TreeIdMapping::getLocalTreeId(treeId);
   if (localTreeId < 0 or localTreeId >= MAX_SPACETREES_PER_RANK) {
     return false;
   }
@@ -1233,9 +1031,7 @@ bool peano4::parallel::SpacetreeSet::maySplit(const int treeId) const { return g
  * Register an exact split on a local tree.
  *
  * Peano rejects the request and returns false if maySplit() on the underlying
- * tree returns false or no tree ID is available. A local target rank creates a
- * worker for shared-memory traversal; a remote target uses the tree-management
- * handshake.
+ * tree returns false.
  *
  * @param treeId Tree that gives cells to the worker.
  * @param instruction Split mode and exact number of current leaf cells to transfer.
@@ -1253,140 +1049,38 @@ bool peano4::parallel::SpacetreeSet::split(
 }
 
 /**
- * Reserve worker IDs and register a batch of exact splits.
+ * Register a batch of exact splits.
  *
- * Requests are grouped by target rank only for allocation. The resulting IDs
- * are mapped back to their original request positions before the source tree
- * sees any instruction, preserving deterministic split order. Every remote
- * receive and request send is posted before the first wait, so latency grows
- * with the slowest target rather than the sum of all per-tree round trips.
+ * The worker IDs are handed out by the ranks that will own them, so the
+ * requests wait here until the next tree-management exchange. They keep their
+ * order, which is the order in which the source tree receives its
+ * instructions, so a batched split stays deterministic. The next traversal
+ * starts with that exchange and therefore sees every request registered here.
+ *
+ * @see exchangeTreeManagementRecords()
  */
 bool peano4::parallel::SpacetreeSet::split(const int treeId, const std::vector<SplitRequest>& requests) {
   if (requests.empty()) {
     return true;
   }
 
-  auto& tree = getSpacetree(treeId);
-  if (not tree.maySplit()) {
+  if (not getSpacetree(treeId).maySplit()) {
     return false;
   }
 
-  const int localRank     = tarch::mpi::Rank::getInstance().getRank();
   const int numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
-
-  std::vector<std::vector<std::size_t>> requestIndicesByTargetRank(numberOfRanks);
-  for (std::size_t requestIndex = 0; requestIndex < requests.size(); ++requestIndex) {
-    const int targetRank = requests[requestIndex].targetRank;
-    if (targetRank < 0 or targetRank >= numberOfRanks) {
+  for (const auto& request : requests) {
+    if (request.targetRank < 0 or request.targetRank >= numberOfRanks) {
       tarch::terminateWithError("Cannot split a tree onto an invalid target rank.");
     }
-    requestIndicesByTargetRank[targetRank].push_back(requestIndex);
-  }
-
-  std::vector<int> workerTreeIds(requests.size(), -1);
-  auto&            localRequests = requestIndicesByTargetRank[localRank];
-  if (not localRequests.empty()) {
-    const auto localTreeIds =
-      peano4::parallel::Node::getInstance().reserveIds(localRank, treeId, static_cast<int>(localRequests.size()));
-    for (std::size_t tree = 0; tree < localTreeIds.size(); ++tree) {
-      workerTreeIds[localRequests[tree]] = localTreeIds[tree];
-    }
-    localRequests.clear();
-  }
-
-  const auto numberOfRemoteTargets = static_cast<std::size_t>(std::count_if(
-    requestIndicesByTargetRank.begin(),
-    requestIndicesByTargetRank.end(),
-    [](const std::vector<std::size_t>& requestIndices) { return not requestIndices.empty(); }
-  ));
-
-#ifdef PEANO_WITH_MPI
-  struct RemoteReservationBatch final {
-    int                      targetRank = -1;
-    std::vector<std::size_t> requestIndices;
-    std::vector<int>         treeIds;
-    TreeManagementMessage    request;
-    MPI_Request              requestSendRequest    = MPI_REQUEST_NULL;
-    MPI_Request              treeIdsReceiveRequest = MPI_REQUEST_NULL;
-  };
-
-  const auto                          communicator = tarch::mpi::Rank::getInstance().getCommunicator();
-  std::vector<RemoteReservationBatch> batches;
-  batches.reserve(numberOfRemoteTargets);
-  for (int targetRank = 0; targetRank < numberOfRanks; ++targetRank) {
-    auto& requestIndices = requestIndicesByTargetRank[targetRank];
-    if (requestIndices.empty()) {
-      continue;
-    }
-    auto& batch          = batches.emplace_back();
-    batch.targetRank     = targetRank;
-    batch.requestIndices = std::move(requestIndices);
-    batch.treeIds.resize(batch.requestIndices.size());
-    batch.request = TreeManagementMessage(
-      treeId,
-      -1,
-      TreeManagementMessage::Action::RequestNewRemoteTrees,
-      static_cast<int>(batch.treeIds.size())
-    );
-
-    tarch::mpi::irecv(
-      batch.treeIds.data(),
-      static_cast<int>(batch.treeIds.size()),
-      MPI_INT,
-      targetRank,
-      _treeIdMessageTag,
-      communicator,
-      &batch.treeIdsReceiveRequest
-    );
-    tarch::mpi::isend(
-      &batch.request,
-      1,
-      TreeManagementMessage::getJoinDatatype(),
-      targetRank,
-      _requestMessageTag,
-      communicator,
-      &batch.requestSendRequest
-    );
-  }
-
-  const auto progress = []() { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); };
-  for (auto& batch : batches) {
-    tarch::mpi::wait(&batch.treeIdsReceiveRequest, progress, MPI_STATUS_IGNORE);
-  }
-  for (auto& batch : batches) {
-    tarch::mpi::wait(&batch.requestSendRequest, progress, MPI_STATUS_IGNORE);
-    for (std::size_t tree = 0; tree < batch.treeIds.size(); ++tree) {
-      const int treeIdOnTarget = batch.treeIds[tree];
-      if (treeIdOnTarget < 0 or peano4::parallel::Node::getInstance().getRank(treeIdOnTarget) != batch.targetRank) {
-        tarch::terminateWithError("Received an invalid worker tree ID for a remote split.");
-      }
-      workerTreeIds[batch.requestIndices[tree]] = treeIdOnTarget;
-    }
-  }
-#else
-  if (numberOfRemoteTargets > 0) {
-    assertion(false, "A remote split requires MPI support.");
-  }
-#endif
-
-  for (std::size_t requestIndex = 0; requestIndex < requests.size(); ++requestIndex) {
-    const int workerTreeId = workerTreeIds[requestIndex];
-    if (workerTreeId < 0) {
-      tarch::terminateWithError("Could not reserve a worker tree ID for an exact split.");
-    }
-    tree.split(workerTreeId, requests[requestIndex].instruction);
-    logDebug(
-      "Trigger split of tree " << treeId << " into tree " << workerTreeId << " on rank "
-                               << requests[requestIndex].targetRank << " with instruction "
-                               << requests[requestIndex].instruction
-    );
+    _pendingSplits.push_back({request.instruction, treeId, request.targetRank});
   }
 
   return true;
 }
 
 peano4::grid::Spacetree& peano4::parallel::SpacetreeSet::getSpacetree(int treeId) {
-  const int localTreeId = Node::getInstance().getLocalTreeId(treeId);
+  const int localTreeId = peano4::parallel::TreeIdMapping::getLocalTreeId(treeId);
   assertion(
     localTreeId >= 0 and localTreeId < MAX_SPACETREES_PER_RANK,
     "Invalid local tree id.",
@@ -1401,7 +1095,7 @@ peano4::grid::Spacetree& peano4::parallel::SpacetreeSet::getSpacetree(int treeId
 }
 
 const peano4::grid::Spacetree& peano4::parallel::SpacetreeSet::getSpacetree(int treeId) const {
-  const int localTreeId = Node::getInstance().getLocalTreeId(treeId);
+  const int localTreeId = peano4::parallel::TreeIdMapping::getLocalTreeId(treeId);
   assertion(
     localTreeId >= 0 and localTreeId < MAX_SPACETREES_PER_RANK,
     "Invalid local tree id.",
@@ -1413,4 +1107,13 @@ const peano4::grid::Spacetree& peano4::parallel::SpacetreeSet::getSpacetree(int 
   assertion(tree != nullptr, "No spacetree found.", treeId, localTreeId, tarch::mpi::Rank::getInstance().getRank());
   assertion(tree->_id == treeId, "Spacetree lookup mismatch.", treeId, tree->_id, localTreeId);
   return *tree;
+}
+
+std::vector<peano4::parallel::SpacetreeSet::TreeExtent> peano4::parallel::SpacetreeSet::getLocalTreeExtents() const {
+  std::vector<TreeExtent> result;
+  result.reserve(_spacetrees.size());
+  for (const auto& tree : _spacetrees) {
+    result.push_back(TreeExtent{tree._root.x, tree._root.h});
+  }
+  return result;
 }

@@ -6,9 +6,15 @@
 #include "tarch/reader/JSONReader.h"
 
 runner::RuntimeParameters::RuntimeParameters() :
-  _mpiTimeoutWarning(0.0),
-  _mpiDeadlockTimeout(0.0),
-  _mpiDeadlockDetectionEnabled(false),
+  // No rank makes progress on another rank's behalf, so a mismatched send, receive or collective
+  // simply waits forever. The warning names the operation and the source location a wait hangs in;
+  // two minutes is far longer than any healthy wait inside one MPI call, so a scaling run does not
+  // warn about itself. The abort terminates the run after ten minutes inside one wait, which turns a
+  // wedged job that would burn its whole allocation into a named failure; a run whose single waits
+  // legitimately exceed that raises or disables the bound with --deadlockTimeout.
+  _mpiTimeoutWarning(120.0),
+  _mpiDeadlockTimeout(600.0),
+  _mpiTimeoutConfigured(false),
   _loadBalancingQuality(0.75),
   _maxNumberOfTreesPerRank(-1),
   _targetDevice(tarch::accelerator::Device::DefaultDevice),
@@ -165,17 +171,16 @@ void runner::RuntimeParameters::printUsage(const std::string& executableName) co
   addOption(
     "--timeoutWarning <seconds>",
     "Warn after this many seconds waiting for MPI progress; fractional values such as 0.1 are "
-    "allowed, 0 disables (default: "
+    "allowed, 0 disables. Setting it also records the origin, partner and tag of every request, so "
+    "the warning names the one that hangs (default: "
       + formatDefault(_mpiTimeoutWarning) + ")."
   );
   addOption(
     "--deadlockTimeout <seconds>",
     "Terminate after this many seconds waiting for MPI progress; fractional values such as 0.1 are "
-    "allowed, 0 disables (default: "
+    "allowed, 0 disables. Records requests in the same detail as --timeoutWarning (default: "
       + formatDefault(_mpiDeadlockTimeout) + ")."
   );
-  addOption("--deadlockDetection", "Enable detailed MPI request tracking for deadlock diagnostics (default: off).");
-  addOption("--noDeadlockDetection", "Disable detailed MPI request tracking for deadlock diagnostics.");
   addOption("-v, --verbose", "Show the full log line prefix (timestamp, core, scope) (default: off).");
   addOption("-h, --help", "Print this help and exit.");
 
@@ -268,17 +273,21 @@ void runner::RuntimeParameters::readJsonConfiguration() {
   _configReader = std::make_unique<tarch::reader::JSONReader>(_configFilePath);
   auto& reader  = *_configReader;
 
-  _mpiTimeoutWarning           = reader.getDouble("timeoutWarning", _mpiTimeoutWarning);
-  _mpiDeadlockTimeout          = reader.getDouble("deadlockTimeout", _mpiDeadlockTimeout);
-  _mpiDeadlockDetectionEnabled = reader.getBoolean("deadlockDetection", _mpiDeadlockDetectionEnabled);
-  _loadBalancingQuality        = reader.getDouble("loadBalancingQuality", _loadBalancingQuality);
-  _maxNumberOfTreesPerRank     = reader.getInteger("maxNumberOfTreesPerRank", _maxNumberOfTreesPerRank);
-  _targetDevice                = reader.getInteger("targetDevice", _targetDevice);
-  _verbose                     = reader.getBoolean("verbose", _verbose);
-  _numberOfTimeSteps           = reader.getInteger("numberOfTimeSteps", _numberOfTimeSteps);
-  _firstPlotTimeStamp          = reader.getDouble("firstPlotTimeStamp", _firstPlotTimeStamp);
-  _numberOfSnapshots           = reader.getInteger("numberOfSnapshots", _numberOfSnapshots);
-  _timeStepLogInterval         = reader.getDouble("timeStepLogInterval", _timeStepLogInterval);
+  const auto configuredTimeoutWarning  = reader.getDouble("timeoutWarning", _mpiTimeoutWarning);
+  const auto configuredDeadlockTimeout = reader.getDouble("deadlockTimeout", _mpiDeadlockTimeout);
+  if (configuredTimeoutWarning != _mpiTimeoutWarning or configuredDeadlockTimeout != _mpiDeadlockTimeout) {
+    _mpiTimeoutConfigured = true;
+  }
+  _mpiTimeoutWarning       = configuredTimeoutWarning;
+  _mpiDeadlockTimeout      = configuredDeadlockTimeout;
+  _loadBalancingQuality    = reader.getDouble("loadBalancingQuality", _loadBalancingQuality);
+  _maxNumberOfTreesPerRank = reader.getInteger("maxNumberOfTreesPerRank", _maxNumberOfTreesPerRank);
+  _targetDevice            = reader.getInteger("targetDevice", _targetDevice);
+  _verbose                 = reader.getBoolean("verbose", _verbose);
+  _numberOfTimeSteps       = reader.getInteger("numberOfTimeSteps", _numberOfTimeSteps);
+  _firstPlotTimeStamp      = reader.getDouble("firstPlotTimeStamp", _firstPlotTimeStamp);
+  _numberOfSnapshots       = reader.getInteger("numberOfSnapshots", _numberOfSnapshots);
+  _timeStepLogInterval     = reader.getDouble("timeStepLogInterval", _timeStepLogInterval);
 
   if (reader.hasKey("endTime")) {
     _minTerminalTime = reader.getDouble("endTime");
@@ -357,13 +366,11 @@ void runner::RuntimeParameters::applyCommandLineConfiguration(int& argc, char** 
     } else if (argument == "--verbose" or argument == "-v") {
       _verbose = true;
     } else if (argument == "--timeoutWarning") {
-      _mpiTimeoutWarning = parseDouble(consumeValue(readIndex, argc, argv, argument), argument);
+      _mpiTimeoutWarning    = parseDouble(consumeValue(readIndex, argc, argv, argument), argument);
+      _mpiTimeoutConfigured = true;
     } else if (argument == "--deadlockTimeout") {
-      _mpiDeadlockTimeout = parseDouble(consumeValue(readIndex, argc, argv, argument), argument);
-    } else if (argument == "--deadlockDetection") {
-      _mpiDeadlockDetectionEnabled = true;
-    } else if (argument == "--noDeadlockDetection") {
-      _mpiDeadlockDetectionEnabled = false;
+      _mpiDeadlockTimeout   = parseDouble(consumeValue(readIndex, argc, argv, argument), argument);
+      _mpiTimeoutConfigured = true;
     } else {
       argv[writeIndex] = argv[readIndex];
       ++writeIndex;
@@ -433,7 +440,15 @@ tarch::reader::JSONReader* runner::RuntimeParameters::getConfigReader() const { 
 
 double runner::RuntimeParameters::getMPITimeoutWarning() const { return _mpiTimeoutWarning; }
 double runner::RuntimeParameters::getMPIDeadlockTimeout() const { return _mpiDeadlockTimeout; }
-bool   runner::RuntimeParameters::isMPIDeadlockDetectionEnabled() const { return _mpiDeadlockDetectionEnabled; }
+
+/**
+ * Whether to record the origin, partner and tag of every non-blocking request
+ *
+ * A run that asks for a timeout of its own is hunting a hang, so it wants the warning to name the
+ * request that hangs. The bookkeeping writes a table entry for every request, which is more than a
+ * run needs that only carries the default timeout as a safety net.
+ */
+bool   runner::RuntimeParameters::isMPIRequestTrackingEnabled() const { return _mpiTimeoutConfigured; }
 double runner::RuntimeParameters::getLoadBalancingQuality() const { return _loadBalancingQuality; }
 int    runner::RuntimeParameters::getMaxNumberOfTreesPerRank() const { return _maxNumberOfTreesPerRank; }
 int    runner::RuntimeParameters::getTargetDevice() const { return _targetDevice; }

@@ -2,8 +2,10 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "SieveParticles.h"
+#include "tarch/mpi/Collectives.h"
 #include "tarch/multicore/BooleanSemaphore.h"
+#include "tarch/multicore/Lock.h"
+#include "toolbox/particles/SieveParticles.h"
 
 namespace toolbox {
   namespace particles {
@@ -123,9 +125,9 @@ public:
   );
 
   static void updateNumberOfLocalAndExpiredParticles(
-    int numberOfRemainingLocalParticles,
-    int numberOfExpiredHaloParticles,
-    int numberOfParticlesThatHaveLeftTheirDomain,
+    int                                 numberOfRemainingLocalParticles,
+    int                                 numberOfExpiredHaloParticles,
+    int                                 numberOfParticlesThatHaveLeftTheirDomain,
     const std::set<std::array<int, 2>>& remainingLocalParticleNumbers = {}
   );
 
@@ -143,12 +145,6 @@ public:
    * Returns true if there have been any lifts, drops, reassignments, ...
    */
   static bool registeredAnyResorting();
-
-#ifdef PEANO_WITH_MPI
-  static void initDatatype();
-
-  static void shutdownDatatype();
-#endif
 
   /**
    * Finish traversal.

@@ -53,7 +53,7 @@ Header files and Python scripts are picked up automatically as long as they
 are stored within a directory listed in the `INPUT` tag of
 `documentation/Doxyfile`. At the moment these are `documentation`,
 `tutorials`, `benchmarks`, `tests`, `applications` and
-`environments`. Low-level subpages are generated automatically for the
+`utilities`. Low-level subpages are generated automatically for the
 files found there. If you add code in a new top-level directory that should be
 documented, remember to extend the `INPUT` tag accordingly.
 

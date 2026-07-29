@@ -6,8 +6,8 @@
 #include "peano4/stacks/SendReceiveContext.h"
 #include "tarch/Assertions.h"
 #include "tarch/instrumentation/Log.h"
-#include "tarch/mpi/Rank.h"
-#include "tarch/mpi/mpi.h"
+#include "tarch/mpi/PersistentChannel.h"
+#include "tarch/mpi/Request.h"
 
 namespace peano4::stacks {
   template <class T>
@@ -28,10 +28,11 @@ protected:
   IOMode _ioMode = IOMode::None;
   int    _ioRank = -1;
   int    _ioTag  = -1;
-#ifdef PEANO_WITH_MPI
-  MPI_Request _ioMPIRequest = MPI_REQUEST_NULL;
-  bool        _ioMPIActive  = false;
-#endif
+
+  // Restarts an unchanged transfer instead of re-creating it, so a settled
+  // boundary exchange pays one MPI_Start per sweep.
+  tarch::mpi::PersistentChannel _ioChannel{};
+  bool                          _ioMPIActive = false;
 
   class View {
   private:
@@ -63,22 +64,9 @@ protected:
       _stack->_data[_baseElement + index] = std::move(value);
     }
 
-    // INLINE_METHOD void set(std::size_t index, const T& value) {
-    //   assertion(index < _size, index, _size);
-    //   _stack->_data[_baseElement + index] = T(value);
-    // }
-
-    // template <class... Args>
-    // INLINE_METHOD void emplace(std::size_t index, Args&&... args) {
-    //   assertion(index < _size, index, _size);
-    //   _stack->_data[_baseElement + index] = T(std::forward<Args>(args)...);
-    // }
-
-    // In-place reconstruct the element at index.
-    // Destroys the current object, then constructs a new one in the same slot.
     template <class... Args>
     INLINE_METHOD void emplace(std::size_t index, Args&&... args) noexcept(
-      std::is_nothrow_destructible_v<T> && std::is_nothrow_constructible_v<T, Args...>
+      std::is_nothrow_destructible_v<T> and std::is_nothrow_constructible_v<T, Args...>
     ) {
       assertion(index < _size, index, _size);
       T* slot = &_stack->_data[_baseElement + index];
@@ -88,7 +76,7 @@ protected:
 
     INLINE_METHOD void emplace_default(
       std::size_t index
-    ) noexcept(std::is_nothrow_destructible_v<T> && std::is_nothrow_default_constructible_v<T>) {
+    ) noexcept(std::is_nothrow_destructible_v<T> and std::is_nothrow_default_constructible_v<T>) {
       emplace(index);
     }
   };
@@ -104,20 +92,13 @@ public:
     _logicalSize(other._logicalSize),
     _ioMode(other._ioMode),
     _ioRank(other._ioRank),
-    _ioTag(other._ioTag)
-#ifdef PEANO_WITH_MPI
-    ,
-    _ioMPIRequest(other._ioMPIRequest),
-    _ioMPIActive(other._ioMPIActive)
-#endif
-  {
+    _ioTag(other._ioTag),
+    _ioChannel(std::move(other._ioChannel)),
+    _ioMPIActive(other._ioMPIActive) {
     // Reset the source to a safe empty state
     other._logicalSize = 0;
     other._ioMode      = IOMode::None;
-#ifdef PEANO_WITH_MPI
-    other._ioMPIRequest = MPI_REQUEST_NULL;
-    other._ioMPIActive  = false;
-#endif
+    other._ioMPIActive = false;
   }
 
   INLINE_METHOD Stack& operator=(Stack&& other) noexcept {
@@ -127,13 +108,10 @@ public:
       _ioMode      = other._ioMode;
       _ioRank      = other._ioRank;
       _ioTag       = other._ioTag;
-#ifdef PEANO_WITH_MPI
-      _ioMPIRequest = other._ioMPIRequest;
-      _ioMPIActive  = other._ioMPIActive;
+      _ioChannel   = std::move(other._ioChannel);
+      _ioMPIActive = other._ioMPIActive;
 
-      other._ioMPIRequest = MPI_REQUEST_NULL;
-      other._ioMPIActive  = false;
-#endif
+      other._ioMPIActive = false;
       other._logicalSize = 0;
       other._ioMode      = IOMode::None;
     }
@@ -145,33 +123,29 @@ public:
   {
     if (_logicalSize < _data.size()) {
       // Reuse preserves the physical object and replaces it by assignment.
-      // Prefer direct copy assignment; otherwise copy-construct a temporary
-      // and move it into place.
       if constexpr (std::is_copy_assignable_v<T>) {
         _data[_logicalSize] = element;
       } else {
         _data[_logicalSize] = T(element);
       }
     } else {
-      _data.push_back(element); // Copy element into std::vector
+      _data.push_back(element);
     }
     return _logicalSize++;
   }
 
-  INLINE_METHOD std::size_t push(T&& element) { // May not be const
-    // std::move is required here to make sure it is actually moved (as the argument has a name)
+  INLINE_METHOD std::size_t push(T&& element) {
     if (_logicalSize < _data.size()) {
       // Reuse preserves the physical object and replaces it by assignment.
       // T::operator= has to replace the full semantic state, including
       // empty/invalid handles.
       _data[_logicalSize] = std::move(element);
     } else {
-      _data.push_back(std::move(element)); // Move element into std::vector
+      _data.push_back(std::move(element));
     }
     return _logicalSize++;
   }
 
-  /// Emplaces a new element in-place.
   template <typename... Args>
   INLINE_METHOD std::size_t emplace(Args&&... args) {
     if (_logicalSize < _data.size()) {
@@ -182,11 +156,10 @@ public:
     return _logicalSize++;
   }
 
-  /// Erases the element at the given index.
-  /// The removed element is replaced with the last element (order is not preserved).
+  /// The removed element is replaced with the last element, so the order is
+  /// not preserved.
   INLINE_METHOD void erase(std::size_t index) {
     assertion(index < _logicalSize);
-    // Move last logical element into the hole, then shrink logical size
     _data[index] = std::move(_data[_logicalSize - 1]);
     --_logicalSize;
   }
@@ -195,19 +168,16 @@ public:
 
   INLINE_METHOD void resize(const std::size_t size) {
     if (size <= _data.size()) {
-      // We already have enough storage; just move the logical boundary
       _logicalSize = size;
     } else {
-      // Need more physical storage; construct new elements
       _data.reserve(size);
       while (_data.size() < size) {
-        _data.emplace_back(); // Construct in place, no assignment
+        _data.emplace_back();
       }
       _logicalSize = size;
     }
   }
 
-  /// Returns a reference to the element at the given index.
   INLINE_METHOD T& operator[](std::size_t index) {
     assertion(index < _logicalSize);
     return _data[index];
@@ -218,7 +188,6 @@ public:
     return _data[index];
   }
 
-  /// Removes and returns the last element.
   INLINE_METHOD T pop() {
     assertion(_logicalSize > 0);
     T element = std::move(_data[_logicalSize - 1]);
@@ -252,7 +221,7 @@ public:
     if (_data.size() < _logicalSize) {
       _data.reserve(_logicalSize);
       while (_data.size() < _logicalSize) {
-        _data.emplace_back(); // Default construct
+        _data.emplace_back();
       }
     }
     // Existing physical slots are reused as-is. Callers that fill the view
@@ -269,7 +238,7 @@ public:
     _data.clear();
     _data.reserve(n);
     for (std::size_t i = 0; i < n; ++i) {
-      _data.emplace_back(other._data[i]); // Copy-construct each live element
+      _data.emplace_back(other._data[i]);
     }
     _logicalSize = n;
   }
@@ -297,20 +266,21 @@ public:
     _logicalSize = 0;
   }
 
-#ifdef PEANO_WITH_MPI
   /**
-   * Always pairs up with a finish... call. When we trigger the send, the
-   * code still might insert additional elements, i.e. starting does not
-   * mean all the data that is to be sent out is already in the container.
+   * Posts a non-blocking send of the whole container. It pairs up with a later
+   * tryToFinishSendOrReceive(): the message reads from the container's buffer
+   * until that call reports completion, so the container must not be modified
+   * while the send is active.
    *
-   * @param context Determines which MPI datatype to use.
+   * @param context Exchange the data belongs to. All contexts ship the same
+   *   payload, so the context does not select how the data is described.
    * @param rank Destination rank.
    * @param tag MPI tag.
    * @param comm MPI communicator.
    */
-  void startSend(const SendReceiveContext context, const int rank, const int tag, const MPI_Comm comm) {
+  void
+  startSend([[maybe_unused]] const SendReceiveContext context, const int rank, const int tag, const MPI_Comm comm) {
     assertion(_ioMode == IOMode::None);
-    assertion(_ioMPIRequest == MPI_REQUEST_NULL);
     assertion(size() > 0);
     assertion(not _ioMPIActive);
 
@@ -320,39 +290,39 @@ public:
 
     logDebug(toString());
 
-    const MPI_Datatype dtype = translateContextIntoDatatype<T>(context);
-    const int          result =
-      tarch::mpi::isend(_data.data(), static_cast<int>(size()), dtype, _ioRank, _ioTag, comm, &_ioMPIRequest);
-    if (result != MPI_SUCCESS) {
-      logError(
-        "Was not able to send to rank " << _ioRank << " on tag " << _ioTag << ": "
-                                        << tarch::mpi::MPIReturnValueToString(result)
-      );
-      assertion(false);
-    }
+    // MPI counts in an int, so counting bytes rather than elements lowers the
+    // number of entries one message can carry by sizeof(T).
+    const std::size_t numberOfBytes = size() * sizeof(T);
+    assertion(
+      numberOfBytes <= static_cast<std::size_t>(std::numeric_limits<int>::max()),
+      numberOfBytes,
+      size(),
+      sizeof(T)
+    );
 
+    _ioChannel.startSend(_data.data(), static_cast<int>(numberOfBytes), _ioRank, _ioTag, comm);
     _ioMPIActive = true;
   }
 
   /**
    * Initiates a non-blocking receive into the container. @see startSend()
    *
-   * @param context Determines which MPI datatype to use.
+   * @param context Exchange the data belongs to. All contexts ship the same
+   *   payload, so the context does not select how the data is described.
    * @param rank Source rank.
    * @param tag MPI tag.
    * @param comm MPI communicator.
    * @param numberOfElements Number of elements expected.
    */
   void startReceive(
-    const SendReceiveContext context,
-    const int                rank,
-    const int                tag,
-    const MPI_Comm           comm,
-    const int                numberOfElements
+    [[maybe_unused]] const SendReceiveContext context,
+    const int                                 rank,
+    const int                                 tag,
+    const MPI_Comm                            comm,
+    const int                                 numberOfElements
   ) {
     assertion(_ioMode == IOMode::None, rank, tag, numberOfElements);
     assertion(numberOfElements > 0, rank, tag, numberOfElements);
-    assertion(_ioMPIRequest == MPI_REQUEST_NULL);
     assertion(not _ioMPIActive);
 
     _ioMode = IOMode::MPIReceive;
@@ -363,30 +333,27 @@ public:
 
     resize(numberOfElements);
 
-    const MPI_Datatype dtype = translateContextIntoDatatype<T>(context);
-    const int result = tarch::mpi::irecv(_data.data(), numberOfElements, dtype, _ioRank, _ioTag, comm, &_ioMPIRequest);
-    if (result != MPI_SUCCESS) {
-      logError(
-        "Was not able to receive " << numberOfElements << " values from rank " << _ioRank << " on tag " << _ioTag
-                                   << ": " << tarch::mpi::MPIReturnValueToString(result)
-      );
-      assertion(false);
-    }
+    // MPI counts in an int, so counting bytes rather than elements lowers the
+    // number of entries one message can carry by sizeof(T).
+    const std::size_t numberOfBytes = static_cast<std::size_t>(numberOfElements) * sizeof(T);
+    assertion(
+      numberOfBytes <= static_cast<std::size_t>(std::numeric_limits<int>::max()),
+      numberOfBytes,
+      numberOfElements,
+      sizeof(T)
+    );
 
+    _ioChannel.startReceive(_data.data(), static_cast<int>(numberOfBytes), _ioRank, _ioTag, comm);
     _ioMPIActive = true;
   }
 
   /**
-   * If this routine is invoked on a stack which is neither sending or
-   * receiving, then it degenerates to nop. If it is a receiving stack,
-   * then the routine waits until all of the data is literally in. If we
-   * invoke it on a sending stack, the code checks that the send is
-   * complete, i.e. the data is either received or at least somewhere in
-   * the network. After that, it releases the underlying stack, i.e.
-   * clears it. Once this operation has terminated, the stack's state will
-   * be IOMode::None.
+   * One completion test for the active transfer. A stack without an active
+   * transfer reports completion straight away. A completed send clears the
+   * stack, as the data now travels through MPI; a completed receive keeps the
+   * freshly arrived payload. Afterwards the state is IOMode::None.
    *
-   * @return finished send/receive already.
+   * @return Whether no transfer is active any more.
    */
   bool tryToFinishSendOrReceive() {
     if (_ioMode == IOMode::None or not _ioMPIActive) {
@@ -394,7 +361,7 @@ public:
     }
 
     int flag = 0;
-    tarch::mpi::test(&_ioMPIRequest, &flag, MPI_STATUS_IGNORE);
+    tarch::mpi::test(_ioChannel.getRequest(), &flag, MPI_STATUS_IGNORE);
     if (flag) {
       if (_ioMode == IOMode::MPISend) {
         shallowClear();
@@ -402,9 +369,8 @@ public:
       } else if (_ioMode == IOMode::MPIReceive) {
         logDebug("Receive complete: " << toString());
       }
-      _ioMode       = IOMode::None;
-      _ioMPIActive  = false;
-      _ioMPIRequest = MPI_REQUEST_NULL;
+      _ioMode      = IOMode::None;
+      _ioMPIActive = false;
 
       return true;
     }
@@ -412,12 +378,12 @@ public:
     return false;
   }
 
-  /**
-   * Returns the rank of the communication partner if a send/receive is active,
-   * or -1 otherwise.
-   */
   INLINE_METHOD IOMode getIOMode() const { return _ioMode; }
-  INLINE_METHOD int    getActiveIORank() const { return _ioMode == IOMode::None ? -1 : _ioRank; }
-  INLINE_METHOD int    getActiveIOTag() const { return _ioMode == IOMode::None ? -1 : _ioTag; }
-#endif // PEANO_WITH_MPI
+
+  /**
+   * Partner rank and tag of the active transfer; both are -1 while none is
+   * active.
+   */
+  INLINE_METHOD int getActiveIORank() const { return _ioMode == IOMode::None ? -1 : _ioRank; }
+  INLINE_METHOD int getActiveIOTag() const { return _ioMode == IOMode::None ? -1 : _ioTag; }
 };

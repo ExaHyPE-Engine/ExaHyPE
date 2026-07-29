@@ -261,7 +261,7 @@ void runner::TimeLoop::run() {
     if (tarch::hasNonCriticalAssertionBeenViolated()) {
       if (not _terminatedGracefully) {
         _terminatedGracefully = true;
-        logError("Noncritical assertion has been triggered in code. Dump final state and terminate.");
+        logError("Non-critical assertion has been triggered in code. Dump final state and terminate.");
         action = Action::Plot;
       } else {
         action = Action::Stop;

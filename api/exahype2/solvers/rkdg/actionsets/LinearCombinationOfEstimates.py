@@ -35,9 +35,9 @@ class LinearCombinationOfEstimates(AbstractRungeKuttaDGActionSet):
   {% for PREDICATE_NO in range(0,PREDICATES|length) %}
   if ({{PREDICATES[PREDICATE_NO]}}) {
     #if DIMENSIONS==2
-    constexpr int numberOfDoFsPerCell = ({{ORDER}}+1) * ({{ORDER}}+1);
+    [[maybe_unused]] constexpr int numberOfDoFsPerCell = ({{ORDER}}+1) * ({{ORDER}}+1);
     #else
-    constexpr int numberOfDoFsPerCell = ({{ORDER}}+1) * ({{ORDER}}+1) * ({{ORDER}}+1);
+    [[maybe_unused]] constexpr int numberOfDoFsPerCell = ({{ORDER}}+1) * ({{ORDER}}+1) * ({{ORDER}}+1);
     #endif
     constexpr int valuesPerDoF = {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     

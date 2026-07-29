@@ -37,7 +37,7 @@ public:
 
   double getMPITimeoutWarning() const;
   double getMPIDeadlockTimeout() const;
-  bool   isMPIDeadlockDetectionEnabled() const;
+  bool   isMPIRequestTrackingEnabled() const;
   double getLoadBalancingQuality() const;
   int    getMaxNumberOfTreesPerRank() const;
   int    getTargetDevice() const;
@@ -67,7 +67,12 @@ public:
 private:
   double _mpiTimeoutWarning;
   double _mpiDeadlockTimeout;
-  bool   _mpiDeadlockDetectionEnabled;
+
+  /**
+   * Whether a run asked for an MPI timeout of its own rather than taking the default.
+   */
+  bool _mpiTimeoutConfigured;
+
   double _loadBalancingQuality;
   int    _maxNumberOfTreesPerRank;
   int    _targetDevice;

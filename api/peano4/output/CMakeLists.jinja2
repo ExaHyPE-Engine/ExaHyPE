@@ -36,12 +36,8 @@ file(WRITE "${PROJECT_BINARY_DIR}/.gitignore" "*")
 find_package(Peano CONFIG REQUIRED)
 
 {% if FORTRAN_SOURCES or GENERATED_FORTRAN_SOURCES -%}
-# Enable Fortran only after find_package(Peano) has resolved the Peano package and its transitive
-# dependencies. Parallel HDF5 (and potentially others) internally call find_package(MPI), which
-# requires MPI bindings for every enabled language; enabling Fortran before that would demand MPI
-# Fortran bindings that some MPI installations do not ship, even though no
-# Peano code needs them. Deferring keeps the dependency probes to C/C++; the Fortran OpenMP/MPI
-# bindings are resolved separately below.
+# Parallel HDF5 requests MPI bindings for every enabled language, so resolve Peano's C and C++
+# dependencies before enabling Fortran.
 enable_language(Fortran)
 {% endif -%}
 
@@ -175,14 +171,10 @@ if(PEANO_WITH_MULTITHREADING)
   target_link_libraries({{EXECUTABLENAME}} PRIVATE OpenMP::OpenMP_Fortran)
 endif()
 
-# MPI Fortran bindings are optional - not every MPI install ships them and no core code needs them,
-# so the Peano package requests only C/CXX MPI. Probe here with a non-REQUIRED find and link the
-# Fortran bindings only when they are actually available.
-if(PEANO_WITH_MPI)
-  find_package(MPI QUIET COMPONENTS Fortran)
-  if(TARGET MPI::MPI_Fortran)
-    target_link_libraries({{EXECUTABLENAME}} PRIVATE MPI::MPI_Fortran)
-  endif()
+# Some MPI installations omit Fortran bindings, so link them only when the probe creates a target.
+find_package(MPI QUIET COMPONENTS Fortran)
+if(TARGET MPI::MPI_Fortran)
+  target_link_libraries({{EXECUTABLENAME}} PRIVATE MPI::MPI_Fortran)
 endif()
 
 target_compile_options({{EXECUTABLENAME}} PRIVATE

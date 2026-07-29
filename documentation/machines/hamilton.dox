@@ -48,12 +48,12 @@ compilers and the machine-specific flags. The toolboxes (blockstructured,
 loadbalancing, particles) and the ExaHyPE 2 extension are always built, so
 there is no need to enable them individually.
 
-- Shared-memory (OpenMP) runs
+- Single-node runs, i.e. one rank with all cores as OpenMP threads
 ~~~~~~~~~~~~~~~~~~~~~~
 mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_CXX_COMPILER=icpx -DCMAKE_C_COMPILER=icx \
-  -DPEANO_WITH_MULTITHREADING=ON -DPEANO_WITH_MPI=OFF \
+  -DPEANO_WITH_MULTITHREADING=ON \
   -DPEANO_EXTRA_CXX_FLAGS="-O3;-ffast-math;-mtune=native;-march=native;-fma;-fomit-frame-pointer;-Wno-unknown-attributes;-Wno-gcc-compat"
 make -j
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -63,7 +63,7 @@ make -j
 mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_CXX_COMPILER=icpx -DCMAKE_C_COMPILER=icx \
-  -DPEANO_WITH_MULTITHREADING=ON -DPEANO_WITH_MPI=ON \
+  -DPEANO_WITH_MULTITHREADING=ON \
   -DPEANO_EXTRA_CXX_FLAGS="-Ofast;-g;-mtune=native;-march=native;-fma;-fomit-frame-pointer;-Wno-unknown-attributes" \
   -DPEANO_EXTRA_LINK_FLAGS="-g"
 make -j
@@ -75,7 +75,7 @@ module load vtune
 mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Trace \
   -DCMAKE_CXX_COMPILER=icpx -DCMAKE_C_COMPILER=icx \
-  -DPEANO_WITH_MULTITHREADING=ON -DPEANO_WITH_MPI=ON \
+  -DPEANO_WITH_MULTITHREADING=ON \
   -DPEANO_EXTRA_CXX_FLAGS="-Ofast;-g;-mtune=native;-march=native;-fma;-fomit-frame-pointer;-Wno-unknown-attributes;-I${VTUNE_HOME}/vtune/latest/include" \
   -DPEANO_EXTRA_LINK_FLAGS="-g;-L${VTUNE_HOME}/vtune/latest/lib64;-littnotify"
 make -j
@@ -87,7 +87,7 @@ module load vtune
 mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Trace \
   -DCMAKE_CXX_COMPILER=icpx -DCMAKE_C_COMPILER=icx \
-  -DPEANO_WITH_MULTITHREADING=ON -DPEANO_WITH_MPI=ON \
+  -DPEANO_WITH_MULTITHREADING=ON \
   -DPEANO_EXTRA_CXX_FLAGS="-Ofast;-g;-mtune=native;-march=native;-fma;-fomit-frame-pointer;-Wno-unknown-attributes;-I${VTUNE_HOME}/vtune/latest/include;-I${VT_ROOT}/include" \
   -DPEANO_EXTRA_LINK_FLAGS="-g;-L${VT_LIB_DIR};-L${VTUNE_HOME}/vtune/latest/lib64;-lVT;-littnotify"
 make -j

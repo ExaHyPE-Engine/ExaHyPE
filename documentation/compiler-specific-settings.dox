@@ -10,7 +10,7 @@ Peano handles system- and compiler-specific settings in two complementary
 ways:
 
 - The build configuration is driven entirely by CMake. Which features are
-  enabled (multithreading, MPI, a GPU backend, ...) is selected through
+  enabled (multithreading, a GPU backend, ...) is selected through
   `PEANO_WITH_*` options, and the resulting preprocessor defines and compiler
   and linker flags are attached to the `PeanoOptions` interface target, so
   every library and application built on top of Peano inherits them. CMake
@@ -43,10 +43,10 @@ Most expressions within the compiler-specific settings header can manually
 be overwritten via defines.
 Consult the file itself for details.
 
-The build defines provided by CMake (for example `PEANO_WITH_MPI`,
-`PEANO_WITH_OPENMP`, `PEANO_WITH_ALIGNMENT` or `PEANO_WITH_SIMDLEN`) feed into
-this header. Whenever certain macro combinations have knock-on effects on other
-features, they are evaluated here and mapped onto further portability macros.
+The build defines provided by CMake (for example `PEANO_WITH_OPENMP`,
+`PEANO_WITH_ALIGNMENT` or `PEANO_WITH_SIMDLEN`) feed into this header. Whenever
+certain macro combinations have knock-on effects on other features, they are
+evaluated here and mapped onto further portability macros.
 
 There are exceptions to this rule: If you have a certain GPU backend, you
 might have to annotate functions in a certain way. Such information is not
@@ -176,7 +176,7 @@ corresponding environment variable and point the CMake compiler at the wrapper:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 export I_MPI_CXX=icpx
-cmake .. -DPEANO_WITH_MPI=ON -DCMAKE_CXX_COMPILER=mpiicpc
+cmake .. -DCMAKE_CXX_COMPILER=mpiicpc
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 

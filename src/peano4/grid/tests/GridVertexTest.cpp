@@ -3,7 +3,8 @@
 #include "GridVertexTest.h"
 
 #include "peano4/grid/GridVertex.h"
-#include "tarch/mpi/mpi.h"
+#include "tarch/mpi/Rank.h"
+#include "tarch/mpi/Request.h"
 
 peano4::grid::tests::GridVertexTest::GridVertexTest() :
   TestCase("peano4::grid::tests::GridVertexTest") {}
@@ -11,34 +12,28 @@ peano4::grid::tests::GridVertexTest::GridVertexTest() :
 void peano4::grid::tests::GridVertexTest::run() {
   testMethod(testFlagsAndState);
   testMethod(testCreateGridVertex);
-  testMethod(testMPIDatatype);
+  testMethod(testSendAndReceiveInARing);
 }
 
 void peano4::grid::tests::GridVertexTest::testFlagsAndState() {
   GridVertex vertex;
   validateEquals(static_cast<int>(vertex.getState()), static_cast<int>(GridVertex::State::New));
 
-  // Round-trip state set/get
   vertex.setState(GridVertex::State::Refined);
   validateEquals(static_cast<int>(vertex.getState()), static_cast<int>(GridVertex::State::Refined));
   vertex.setState(GridVertex::State::EraseTriggered);
   validateEquals(static_cast<int>(vertex.getState()), static_cast<int>(GridVertex::State::EraseTriggered));
 
-  // Flags: set, clear, toggle
-  // Start with all flags cleared
   vertex.flags = 0;
-  for (int b = 0; b < 8; ++b) {
-    // none set
-    validateFalse(vertex.getFlag(static_cast<std::uint8_t>(1u << b)));
+  for (int bit = 0; bit < 8; bit++) {
+    validateFalse(vertex.getFlag(static_cast<std::uint8_t>(1u << bit)));
   }
 
-  // Set some flags
   vertex.setFlag(GridVertex::HasBeenAntecessorOfRefinedVertexInPreviousTreeSweep);
   vertex.setFlag(GridVertex::IsParentOfSubtreeVertexInCurrentTreeSweep);
   validateTrue(vertex.getFlag(GridVertex::HasBeenAntecessorOfRefinedVertexInPreviousTreeSweep));
   validateTrue(vertex.getFlag(GridVertex::IsParentOfSubtreeVertexInCurrentTreeSweep));
 
-  // Clear one and check
   vertex.clearFlag(GridVertex::HasBeenAntecessorOfRefinedVertexInPreviousTreeSweep);
   validateFalse(vertex.getFlag(GridVertex::HasBeenAntecessorOfRefinedVertexInPreviousTreeSweep));
   validateTrue(vertex.getFlag(GridVertex::IsParentOfSubtreeVertexInCurrentTreeSweep));
@@ -48,17 +43,19 @@ void peano4::grid::tests::GridVertexTest::testFlagsAndState() {
   vertex.setFlag(GridVertex::HasBeenParentOfSubtreeVertexInPreviousTreeSweep, false);
   validateFalse(vertex.getFlag(GridVertex::HasBeenParentOfSubtreeVertexInPreviousTreeSweep));
 
-  // std::cout << vertex << std::endl;
+  const std::string description = vertex.toString();
+  validateTrue(description.find("GridVertex") != std::string::npos);
+  validateTrue(description.find("EraseTriggered") != std::string::npos);
 }
 
 void peano4::grid::tests::GridVertexTest::testCreateGridVertex() {
-  std::array<int, TWO_POWER_D> adj{};
-  adj.fill(7);
+  std::array<int, TWO_POWER_D> adjacentRanks{};
+  adjacentRanks.fill(7);
   tarch::la::Vector<DIMENSIONS, double> x(0.0);
-  for (int d = 0; d < DIMENSIONS; ++d) {
+  for (int d = 0; d < DIMENSIONS; d++) {
     x[d] = 0.25 * (d + 1);
   }
-  GridVertex vertex = GridVertex::create(3, GridVertex::State::Refined, x, adj, false);
+  GridVertex vertex = GridVertex::create(3, GridVertex::State::Refined, x, adjacentRanks, false);
 
   validateEquals(static_cast<int>(vertex.getState()), static_cast<int>(GridVertex::State::Refined));
   validateEquals(vertex.level, 3);
@@ -66,8 +63,7 @@ void peano4::grid::tests::GridVertexTest::testCreateGridVertex() {
   validateWithParams2(tarch::la::equals(vertex.getX(), x), vertex.getX(), x);
 #endif
 
-  // Adjacent ranks & backup equal to input
-  for (int i = 0; i < TWO_POWER_D; ++i) {
+  for (int i = 0; i < TWO_POWER_D; i++) {
     validateEquals(vertex.adjacentRanks[i], 7);
     validateEquals(vertex.backupOfAdjacentRanks[i], 7);
   }
@@ -98,80 +94,62 @@ void peano4::grid::tests::GridVertexTest::testCreateGridVertex() {
   validateFalse(vertex.getFlag(GridVertex::IsParentOfSubtreeVertexInCurrentTreeSweep));
 }
 
-void peano4::grid::tests::GridVertexTest::testMPIDatatype() {
-#ifdef PEANO_WITH_MPI
-  auto&     rank          = tarch::mpi::Rank::getInstance();
-  MPI_Comm  comm          = rank.getCommunicator();
-  const int me            = rank.getRank();
-  const int numberOfRanks = rank.getNumberOfRanks();
-  const int tag           = 4321;
+void peano4::grid::tests::GridVertexTest::testSendAndReceiveInARing() {
+  constexpr int Tag = 4321;
 
-  GridVertex sendV;
-  sendV.flags = 0;
-  sendV.setFlag(GridVertex::HasBeenAntecessorOfRefinedVertexInPreviousTreeSweep);
-  sendV.setFlag(GridVertex::IsAntecessorOfRefinedVertexInCurrentTreeSweep);
+  const auto&    rank          = tarch::mpi::Rank::getInstance();
+  const MPI_Comm communicator  = rank.getCommunicator();
+  const int      localRank     = rank.getRank();
+  const int      numberOfRanks = rank.getNumberOfRanks();
 
-  sendV.setState(GridVertex::State::Refining);
-  sendV.level                             = 7 + me; // Make it rank-distinct
-  sendV.numberOfAdjacentRefinedLocalCells = 3 + me;
+  // Every field depends on the rank, so a receiver can predict what its predecessor sent.
+  GridVertex sentVertex;
+  sentVertex.setFlag(GridVertex::HasBeenAntecessorOfRefinedVertexInPreviousTreeSweep);
+  sentVertex.setFlag(GridVertex::IsAntecessorOfRefinedVertexInCurrentTreeSweep);
+  sentVertex.setState(GridVertex::State::Refining);
+  sentVertex.level                             = 7 + localRank;
+  sentVertex.numberOfAdjacentRefinedLocalCells = 3 + localRank;
 #if PEANO_DEBUG
-  for (int d = 0; d < DIMENSIONS; ++d) {
-    sendV.setX(d, 0.125 * (d + 1) + 0.001 * me);
+  for (int d = 0; d < DIMENSIONS; d++) {
+    sentVertex.setX(d, 0.125 * (d + 1) + 0.001 * localRank);
   }
 #endif
-
-  for (std::size_t i = 0; i < sendV.adjacentRanks.size(); ++i) {
-    sendV.adjacentRanks[i]         = static_cast<int>(i + 10 + me);
-    sendV.backupOfAdjacentRanks[i] = static_cast<int>(i + 20 + me);
+  for (std::size_t i = 0; i < sentVertex.adjacentRanks.size(); i++) {
+    sentVertex.adjacentRanks[i]         = static_cast<int>(i) + 10 + localRank;
+    sentVertex.backupOfAdjacentRanks[i] = static_cast<int>(i) + 20 + localRank;
   }
 
-  GridVertex recvV;
+  const int successor   = (localRank + 1) % numberOfRanks;
+  const int predecessor = (localRank - 1 + numberOfRanks) % numberOfRanks;
 
-  if (numberOfRanks == 1) {
-    tarch::mpi::sendrecv( // TODO: Capture result for error checking
-        &sendV,
-        1,
-        GridVertex::Datatype,
-        me,
-        tag,
-        &recvV,
-        1,
-        GridVertex::Datatype,
-        me,
-        tag,
-        comm,
-        MPI_STATUS_IGNORE);
-    // GridVertex::send(sendV, me, tag, comm);
-    // GridVertex::receive(recvV, me, tag, comm);
-  } else {
-    const int dest = (me + 1) % numberOfRanks;
-    const int src  = (me - 1 + numberOfRanks) % numberOfRanks;
+  GridVertex receivedVertex;
+  const int  result = tarch::mpi::sendrecv(
+    &sentVertex,
+    static_cast<int>(sizeof(GridVertex)),
+    MPI_BYTE,
+    successor,
+    Tag,
+    &receivedVertex,
+    static_cast<int>(sizeof(GridVertex)),
+    MPI_BYTE,
+    predecessor,
+    Tag,
+    communicator
+  );
+  validateEquals(result, MPI_SUCCESS);
 
-    if ((me % 2) == 0) {
-      // Even ranks send then receive
-      GridVertex::send(sendV, dest, tag, comm);
-      GridVertex::receive(recvV, src, tag, comm);
-    } else {
-      // Odd ranks receive then send
-      GridVertex::receive(recvV, src, tag, comm);
-      GridVertex::send(sendV, dest, tag, comm);
-    }
-  }
-
-  const int expectedSenderRank = (numberOfRanks == 1) ? me : ((me - 1 + numberOfRanks) % numberOfRanks);
-  validateEquals(static_cast<int>(recvV.flags), static_cast<int>(sendV.flags));
-  validateEquals(static_cast<int>(recvV.state), static_cast<int>(GridVertex::State::Refining));
-  validateEquals(recvV.level, 7 + expectedSenderRank);
-  validateEquals(recvV.numberOfAdjacentRefinedLocalCells, 3 + expectedSenderRank);
+  validateEquals(static_cast<int>(receivedVertex.flags), static_cast<int>(sentVertex.flags));
+  validateEquals(static_cast<int>(receivedVertex.getState()), static_cast<int>(GridVertex::State::Refining));
+  validateEquals(receivedVertex.level, 7 + predecessor);
+  validateEquals(receivedVertex.numberOfAdjacentRefinedLocalCells, 3 + predecessor);
 #if PEANO_DEBUG
-  for (int d = 0; d < DIMENSIONS; ++d) {
-    validateNumericalEquals(recvV.getX(d), 0.125 * (d + 1) + 0.001 * expectedSenderRank);
+  for (int d = 0; d < DIMENSIONS; d++) {
+    validateNumericalEquals(receivedVertex.getX(d), 0.125 * (d + 1) + 0.001 * predecessor);
   }
 #endif
 
-  for (std::size_t i = 0; i < sendV.adjacentRanks.size(); ++i) {
-    validateEquals(recvV.adjacentRanks[i], static_cast<int>(i + 10 + expectedSenderRank));
-    validateEquals(recvV.backupOfAdjacentRanks[i], static_cast<int>(i + 20 + expectedSenderRank));
+  for (std::size_t i = 0; i < receivedVertex.adjacentRanks.size(); i++) {
+    validateEquals(receivedVertex.adjacentRanks[i], static_cast<int>(i) + 10 + predecessor);
+    validateEquals(receivedVertex.backupOfAdjacentRanks[i], static_cast<int>(i) + 20 + predecessor);
   }
-#endif
 }

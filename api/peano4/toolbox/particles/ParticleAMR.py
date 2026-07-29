@@ -226,6 +226,8 @@ std::vector< ::peano4::grid::GridControlEvent >  """
     def get_includes(self):
         result = jinja2.Template(
             """
+#include "tarch/Termination.h"
+#include "tarch/mpi/Rank.h"
 #include "tarch/multicore/Lock.h"
 #include "vertexdata/{{PARTICLE_SET}}.h"
 #include "globaldata/{{PARTICLE}}.h"
@@ -235,9 +237,14 @@ std::vector< ::peano4::grid::GridControlEvent >  """
 
     def get_body_of_unprepareTraversal(self):
         return """
-    #if defined(PEANO_WITH_MPI)
-    #error not implemented yet
-    #endif
+if (tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1) {
+  // The merged events never leave the rank that raised them, so a refinement region stops at the
+  // subdomain boundary and a neighbour never sees the veto that protects a particle-carrying region
+  // from its erase marker.
+  ::tarch::terminateWithError(
+    "Particle-driven mesh refinement exchanges no grid control events between ranks. Run it on one rank."
+  );
+}
 _oldGridControlEvents.clear();
 _oldGridControlEvents = _newGridControlEvents;
 _newGridControlEvents.clear();

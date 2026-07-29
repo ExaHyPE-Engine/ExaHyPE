@@ -52,7 +52,7 @@ class AddVolumeAndFaceSolution(AbstractRungeKuttaDGActionSet):
 
     ::exahype2::dg::{{MULTIPLY_WITH_INVERTED_MASS_MATRIX_CALL}}
     
-    const double* oldQ = fineGridCell{{UNKNOWN_IDENTIFIER}}.data();
+    [[maybe_unused]] const double* oldQ = fineGridCell{{UNKNOWN_IDENTIFIER}}.data();
     
     {{POSTPROCESS_UPDATED_CELL_AFTER_RUNGE_KUTTA_STEP}}
   }
