@@ -8,6 +8,7 @@
 #include "tarch/accelerator/Device.h"
 #include "tarch/accelerator/MemoryAllocationCache.h"
 #include "tarch/accelerator/accelerator.h"
+#include "tarch/instrumentation/Info.h"
 
 #include <sycl/sycl.hpp>
 

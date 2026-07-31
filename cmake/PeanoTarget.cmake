@@ -102,10 +102,16 @@ function(peano_add_target)
   if(NOT CMAKE_DISABLE_PRECOMPILE_HEADERS
      AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "NVHPC")
     target_precompile_headers(${target} PRIVATE "<tarch/StdAfx.h>")
+
+    target_compile_options(${target} PRIVATE
+      "$<$<COMPILE_LANG_AND_ID:CUDA,NVIDIA>:SHELL:-include tarch/StdAfx.h>"
+    )
   else()
     # StdAfx.h owns the standard-library includes. Force-include it textually
     # when PCH is disabled or unsupported so source-file semantics stay equal.
-    target_compile_options(${target} PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:SHELL:-include tarch/StdAfx.h>")
+    target_compile_options(${target} PRIVATE
+      "$<$<COMPILE_LANGUAGE:C,CXX,CUDA,HIP>:SHELL:-include tarch/StdAfx.h>"
+    )
   endif()
 
   if(TARGET Peano::PeanoOptions)
