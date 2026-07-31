@@ -9,6 +9,8 @@
 #include "tarch/accelerator/Device.h"
 #include "tarch/accelerator/MemoryAllocationCache.h"
 #include "tarch/accelerator/accelerator.h"
+#include "tarch/instrumentation/Debug.h"
+#include "tarch/instrumentation/Info.h"
 
 namespace {
   int                                               numberOfDevices = 0;

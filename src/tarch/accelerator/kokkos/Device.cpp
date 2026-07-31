@@ -5,6 +5,7 @@
 #if defined(PEANO_WITH_GPU_BACKEND_KOKKOS)
 
 #include "tarch/accelerator/MemoryAllocationCache.h"
+#include "tarch/instrumentation/Debug.h"
 
 #include <Kokkos_Core.hpp>
 
