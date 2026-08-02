@@ -23,10 +23,8 @@ initial_conditions = """
     {
       {"bathymetry", RuntimeParameters::getBathymetryFile()}
     },
-    bathymetrySize(0),
-    bathymetrySize(1),
-    bathymetryOffset(0),
-    bathymetryOffset(1)
+    {bathymetrySize(0), bathymetrySize(1)},
+    {bathymetryOffset(0), bathymetryOffset(1)}
   );
 
   const auto displacementSize   = RuntimeParameters::getDisplacementSize();
@@ -35,18 +33,16 @@ initial_conditions = """
     {
       {"displacement", RuntimeParameters::getDisplacementFile()}
     },
-    displacementSize(0),
-    displacementSize(1),
-    displacementOffset(0),
-    displacementOffset(1)
+    {displacementSize(0), displacementSize(1)},
+    {displacementOffset(0), displacementOffset(1)}
   );
 
   const auto displacementPosition         = RuntimeParameters::getDisplacementPosition();
-  const double bathymetryBeforeEarthquake = bathymetrySampler.sample("bathymetry", x(0), x(1));
+  const double bathymetryBeforeEarthquake = bathymetrySampler.sample("bathymetry", {x(0), x(1)});
   const double displacement               = displacementSampler.sample(
     "displacement",
-    x(0) - displacementPosition(0),
-    x(1) - displacementPosition(1)
+    {x(0) - displacementPosition(0),
+    x(1) - displacementPosition(1)}
   );
   const double bathymetryAfterEarthquake  = bathymetryBeforeEarthquake + displacement;
 

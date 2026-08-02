@@ -7,43 +7,63 @@
 #include "tarch/instrumentation/Log.h"
 #include "tarch/la/ScalarOperations.h"
 
-tarch::reader::NetCDFFieldSampler::NetCDFFieldSampler(
-  std::initializer_list<FieldDescription> fields,
-  double                                  lengthOfSimulationDomainInX,
-  double                                  lengthOfSimulationDomainInY,
-  double                                  offsetOfSimulationDomainInX,
-  double                                  offsetOfSimulationDomainInY
-):
-  _lengthOfSimulationDomainInX(lengthOfSimulationDomainInX),
-  _lengthOfSimulationDomainInY(lengthOfSimulationDomainInY),
-  _offsetOfSimulationDomainInX(offsetOfSimulationDomainInX),
-  _offsetOfSimulationDomainInY(offsetOfSimulationDomainInY) {
+namespace {
+  template <typename FieldDescription>
+  std::string coordinateKeysToString(const FieldDescription& fieldDescription) {
+    std::string result;
+    for (const auto& key : fieldDescription.key) {
+      if (not result.empty()) {
+        result += ", ";
+      }
+      result += key;
+    }
+    return result;
+  }
+} // namespace
+
+/**
+ * @return The conventional coordinate variable names for this number of field dimensions.
+ */
+template <int FieldDimensions>
+std::array<std::string, FieldDimensions> tarch::reader::NetCDFFieldSampler<FieldDimensions>::defaultCoordinateKeys() {
+  if constexpr (FieldDimensions == 3) {
+    return {"x", "y", "z"};
+  } else {
+    return {"x", "y"};
+  }
+}
+
+template <int FieldDimensions>
+tarch::reader::NetCDFFieldSampler<FieldDimensions>::NetCDFFieldSampler(
+  std::initializer_list<FieldDescription>    fields,
+  tarch::la::Vector<FieldDimensions, double> lengthOfSimulationDomain,
+  tarch::la::Vector<FieldDimensions, double> offsetOfSimulationDomain
+) :
+  _lengthOfSimulationDomain(lengthOfSimulationDomain),
+  _offsetOfSimulationDomain(offsetOfSimulationDomain) {
   for (const auto& field : fields) {
     parseFieldFile(field);
   }
 }
 
-tarch::reader::NetCDFFieldSampler::NetCDFFieldSampler(
-  const std::vector<FieldDescription>& fields,
-  double                               lengthOfSimulationDomainInX,
-  double                               lengthOfSimulationDomainInY,
-  double                               offsetOfSimulationDomainInX,
-  double                               offsetOfSimulationDomainInY
-):
-  _lengthOfSimulationDomainInX(lengthOfSimulationDomainInX),
-  _lengthOfSimulationDomainInY(lengthOfSimulationDomainInY),
-  _offsetOfSimulationDomainInX(offsetOfSimulationDomainInX),
-  _offsetOfSimulationDomainInY(offsetOfSimulationDomainInY) {
+template <int FieldDimensions>
+tarch::reader::NetCDFFieldSampler<FieldDimensions>::NetCDFFieldSampler(
+  const std::vector<FieldDescription>&       fields,
+  tarch::la::Vector<FieldDimensions, double> lengthOfSimulationDomain,
+  tarch::la::Vector<FieldDimensions, double> offsetOfSimulationDomain
+) :
+  _lengthOfSimulationDomain(lengthOfSimulationDomain),
+  _offsetOfSimulationDomain(offsetOfSimulationDomain) {
   for (const auto& field : fields) {
     parseFieldFile(field);
   }
 }
 
-void tarch::reader::NetCDFFieldSampler::parseFieldFile(const FieldDescription& fieldDescription) {
+template <int FieldDimensions>
+void tarch::reader::NetCDFFieldSampler<FieldDimensions>::parseFieldFile(const FieldDescription& fieldDescription) {
   logDebug(
-    "Parse field "
-    << fieldDescription.name << " from " << fieldDescription.filePath << " with keys (" << fieldDescription.valueKey
-    << ", " << fieldDescription.xKey << ", " << fieldDescription.yKey << ")"
+    "Parse field " << fieldDescription.name << " from " << fieldDescription.filePath << " with keys ("
+                   << fieldDescription.valueKey << ", " << coordinateKeysToString(fieldDescription) << ")"
   );
 
   if (fieldDescription.name.empty()) {
@@ -51,6 +71,22 @@ void tarch::reader::NetCDFFieldSampler::parseFieldFile(const FieldDescription& f
   }
   if (_fields.find(fieldDescription.name) != _fields.end()) {
     throw std::runtime_error("Field \"" + fieldDescription.name + "\" is configured multiple times.");
+  }
+  for (int i = 0; i < FieldDimensions; i++) {
+    if (fieldDescription.key[i].empty()) {
+      throw std::runtime_error(
+        "Coordinate key " + std::to_string(i) + " of field \"" + fieldDescription.name + "\" is empty."
+      );
+    }
+    // The default value key is "z", which is also the conventional name of the third coordinate. A
+    // three-dimensional field that leaves its variable unnamed would read the coordinate array as
+    // if it held the values.
+    if (fieldDescription.key[i] == fieldDescription.valueKey) {
+      throw std::runtime_error(
+        "Field \"" + fieldDescription.name + "\" uses \"" + fieldDescription.valueKey
+        + "\" both as its value key and as a coordinate key."
+      );
+    }
   }
 
   int ncid = -1;
@@ -63,34 +99,33 @@ void tarch::reader::NetCDFFieldSampler::parseFieldFile(const FieldDescription& f
 
   Field field;
 
-  if ((field.lengthInX = _netCDFFileReader.getDimension(ncid, fieldDescription.xKey.c_str())) == 0) {
-    throw std::runtime_error("Field x-dimension could not be read.");
-  }
-  if ((field.lengthInY = _netCDFFileReader.getDimension(ncid, fieldDescription.yKey.c_str())) == 0) {
-    throw std::runtime_error("Field y-dimension could not be read.");
-  }
-
-  {
-    std::vector<double> tmp(field.lengthInX, 0.0);
-    if (_netCDFFileReader.readVariable1D(ncid, fieldDescription.xKey.c_str(), tmp.data()) == -1) {
-      throw std::runtime_error("Field x coordinates could not be read.");
+  for (int i = 0; i < FieldDimensions; i++) {
+    if ((field.length[i] = _netCDFFileReader.getDimension(ncid, fieldDescription.key[i].c_str())) == 0) {
+      throw std::runtime_error("Field dimension \"" + fieldDescription.key[i] + "\" could not be read.");
     }
-    field.firstX = tmp.front();
-    field.lastX  = tmp.back();
-  }
 
-  {
-    std::vector<double> tmp(field.lengthInY, 0.0);
-    if (_netCDFFileReader.readVariable1D(ncid, fieldDescription.yKey.c_str(), tmp.data()) == -1) {
-      throw std::runtime_error("Field y coordinates could not be read.");
+    {
+      std::vector<double> tmp(field.length[i], 0.0);
+      if (_netCDFFileReader.readVariable1D(ncid, fieldDescription.key[i].c_str(), tmp.data()) == -1) {
+        throw std::runtime_error("Field coordinates \"" + fieldDescription.key[i] + "\" could not be read.");
+      }
+      field.firstElement[i] = tmp.front();
+      field.lastElement[i]  = tmp.back();
     }
-    field.firstY = tmp.front();
-    field.lastY  = tmp.back();
   }
 
-  field.values.resize(field.lengthInX * field.lengthInY, 0.0);
-  if (_netCDFFileReader.readVariable2D(ncid, fieldDescription.valueKey.c_str(), field.values.data()) == -1) {
-    throw std::runtime_error("Field values could not be read.");
+  // Compile-time branch, so that the two-dimensional instantiation never has to contain an
+  // expression indexing the third component of a two-component vector, even as dead code.
+  if constexpr (FieldDimensions == 3) {
+    field.values.resize(field.length[0] * field.length[1] * field.length[2], 0.0);
+    if (_netCDFFileReader.readVariable3D(ncid, fieldDescription.valueKey.c_str(), field.values.data()) == -1) {
+      throw std::runtime_error("Field values could not be read.");
+    }
+  } else {
+    field.values.resize(field.length[0] * field.length[1], 0.0);
+    if (_netCDFFileReader.readVariable2D(ncid, fieldDescription.valueKey.c_str(), field.values.data()) == -1) {
+      throw std::runtime_error("Field values could not be read.");
+    }
   }
 
   if (_netCDFFileReader.close(ncid) == -1) {
@@ -100,7 +135,14 @@ void tarch::reader::NetCDFFieldSampler::parseFieldFile(const FieldDescription& f
   _fields.emplace(fieldDescription.name, std::move(field));
 }
 
-double tarch::reader::NetCDFFieldSampler::sample(const std::string& fieldName, double x, double y) const {
+/**
+ * @return The field's value at position, or 0 if position falls outside the field's extent.
+ */
+template <int FieldDimensions>
+double tarch::reader::NetCDFFieldSampler<FieldDimensions>::sample(
+  const std::string&                         fieldName,
+  tarch::la::Vector<FieldDimensions, double> position
+) const {
   const auto fieldIterator = _fields.find(fieldName);
   if (fieldIterator == _fields.end()) {
     throw std::runtime_error("Unknown NetCDF field \"" + fieldName + "\".");
@@ -108,39 +150,30 @@ double tarch::reader::NetCDFFieldSampler::sample(const std::string& fieldName, d
 
   const Field& field = fieldIterator->second;
 
-  const auto xCDF = transformSimulationCoordinateToCDFRange(
-    x,
-    _lengthOfSimulationDomainInX,
-    field.firstX,
-    field.lastX,
-    _offsetOfSimulationDomainInX
-  );
-  const auto yCDF = transformSimulationCoordinateToCDFRange(
-    y,
-    _lengthOfSimulationDomainInY,
-    field.firstY,
-    field.lastY,
-    _offsetOfSimulationDomainInY
-  );
-
-  if (not isCoordinateInRange(xCDF, field.firstX, field.lastX)
-      or not isCoordinateInRange(yCDF, field.firstY, field.lastY)) {
-    return 0.0;
+  tarch::la::Vector<FieldDimensions, double> posCDF;
+  for (int i = 0; i < FieldDimensions; i++) {
+    posCDF[i] = transformSimulationCoordinateToCDFRange(
+      position[i],
+      _lengthOfSimulationDomain[i],
+      field.firstElement[i],
+      field.lastElement[i],
+      _offsetOfSimulationDomain[i]
+    );
+    if (not isCoordinateInRange(posCDF[i], field.firstElement[i], field.lastElement[i])) {
+      return 0.0;
+    }
   }
 
-  return field.values[transformIndexCDFRangeToArray(
-    xCDF,
-    yCDF,
-    field.firstX,
-    field.firstY,
-    field.lastX,
-    field.lastY,
-    field.lengthInX,
-    field.lengthInY
-  )];
+  return field.values[transformIndexCDFRangeToArray(posCDF, field.firstElement, field.lastElement, field.length)];
 }
 
-double tarch::reader::NetCDFFieldSampler::transformSimulationCoordinateToCDFRange(
+/**
+ * Transforms a coordinate from the simulation plane to the netCDF plane.
+ *
+ * @return Index in netCDF space, in [minIndexOfCDFspaceInZDirection, maxIndexOfCDFspaceInZDirection].
+ */
+template <int FieldDimensions>
+double tarch::reader::NetCDFFieldSampler<FieldDimensions>::transformSimulationCoordinateToCDFRange(
   double coordinateOfDimensionZInSimulationSpace,
   double sizeOfSimulationSpaceInZDirection,
   double minIndexOfCDFspaceInZDirection,
@@ -158,46 +191,60 @@ double tarch::reader::NetCDFFieldSampler::transformSimulationCoordinateToCDFRang
   return m * coordinateOfDimensionZInSimulationSpace + b;
 }
 
-int tarch::reader::NetCDFFieldSampler::transformIndexCDFRangeToArray(
-  double      xCoordinateInCDFMesh,
-  double      yCoordinateInCDFMesh,
-  double      firstXCoordinateInCDFMesh,
-  double      firstYCoordinateInCDFMesh,
-  double      lastXCoordinateInCDFMesh,
-  double      lastYCoordinateInCDFMesh,
-  std::size_t lengthOfXDimensionInCDFMesh,
-  std::size_t lengthOfYDimensionInCDFMesh
+/**
+ * Transforms a coordinate tuple from the netCDF plane to a flat array index.
+ *
+ * The first coordinate varies fastest, matching the storage order documented on the class.
+ *
+ * @return Index in [0, product of lengthOfDimensionsInCDFMesh).
+ */
+template <int FieldDimensions>
+std::size_t tarch::reader::NetCDFFieldSampler<FieldDimensions>::transformIndexCDFRangeToArray(
+  tarch::la::Vector<FieldDimensions, double>      coordinatesInCDFMesh,
+  tarch::la::Vector<FieldDimensions, double>      firstCoordinatesInCDFMesh,
+  tarch::la::Vector<FieldDimensions, double>      lastCoordinatesInCDFMesh,
+  tarch::la::Vector<FieldDimensions, std::size_t> lengthOfDimensionsInCDFMesh
 ) {
   const auto computeIndex =
-    [](double coordinate, double firstCoordinate, double lastCoordinate, std::size_t length) -> int {
+    [](double coordinate, double firstCoordinate, double lastCoordinate, std::size_t length) -> std::size_t {
     if (length <= 1 or tarch::la::equals(firstCoordinate, lastCoordinate)) {
       return 0;
     }
 
     const double index = ((coordinate - firstCoordinate) / (lastCoordinate - firstCoordinate)) * (length - 1);
-    return std::clamp(static_cast<int>(std::floor(index)), 0, static_cast<int>(length - 1));
+    return static_cast<std::size_t>(
+      std::clamp(static_cast<long long>(std::floor(index)), 0LL, static_cast<long long>(length - 1))
+    );
   };
 
-  const int xIndex = computeIndex(
-    xCoordinateInCDFMesh,
-    firstXCoordinateInCDFMesh,
-    lastXCoordinateInCDFMesh,
-    lengthOfXDimensionInCDFMesh
-  );
-  const int yIndex = computeIndex(
-    yCoordinateInCDFMesh,
-    firstYCoordinateInCDFMesh,
-    lastYCoordinateInCDFMesh,
-    lengthOfYDimensionInCDFMesh
-  );
+  // std::size_t rather than int: a three-dimensional field easily holds more than 2^31 entries.
+  std::size_t index  = 0;
+  std::size_t length = 1;
+  for (int i = 0; i < FieldDimensions; i++) {
+    index += length
+      * computeIndex(
+               coordinatesInCDFMesh[i],
+               firstCoordinatesInCDFMesh[i],
+               lastCoordinatesInCDFMesh[i],
+               lengthOfDimensionsInCDFMesh[i]
+      );
+    length *= lengthOfDimensionsInCDFMesh[i];
+  }
 
-  return yIndex * lengthOfXDimensionInCDFMesh + xIndex;
+  return index;
 }
 
-bool tarch::reader::NetCDFFieldSampler::
-  isCoordinateInRange(double coordinate, double firstCoordinate, double lastCoordinate) {
+template <int FieldDimensions>
+bool tarch::reader::NetCDFFieldSampler<FieldDimensions>::isCoordinateInRange(
+  double coordinate,
+  double firstCoordinate,
+  double lastCoordinate
+) {
   const auto [lower, upper] = std::minmax(firstCoordinate, lastCoordinate);
   return not tarch::la::smaller(coordinate, lower) and not tarch::la::greater(coordinate, upper);
 }
+
+template class tarch::reader::NetCDFFieldSampler<2>;
+template class tarch::reader::NetCDFFieldSampler<3>;
 
 #endif

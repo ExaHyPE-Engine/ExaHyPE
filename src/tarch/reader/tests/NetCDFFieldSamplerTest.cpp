@@ -20,12 +20,9 @@ namespace {
   ) {
     static std::atomic<int> counter = 0;
 
-    const std::filesystem::path path
-      = tarch::tests::getWritableTestDirectory()
-        / std::filesystem::path(
-          stem + "-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) + "-"
-          + std::to_string(counter++) + ".nc"
-        );
+    const std::filesystem::path path = tarch::tests::getWritableTestDirectory()
+      / std::filesystem::path(stem + "-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count())
+                              + "-" + std::to_string(counter++) + ".nc");
 
     auto check = [&](int status, const std::string& operation) {
       if (status != NC_NOERR) {
@@ -63,7 +60,7 @@ namespace {
   }
 } // namespace
 
-tarch::reader::tests::NetCDFFieldSamplerTest::NetCDFFieldSamplerTest():
+tarch::reader::tests::NetCDFFieldSamplerTest::NetCDFFieldSamplerTest() :
   TestCase("tarch::reader::tests::NetCDFFieldSamplerTest") {}
 
 void tarch::reader::tests::NetCDFFieldSamplerTest::run() {
@@ -83,11 +80,11 @@ void tarch::reader::tests::NetCDFFieldSamplerTest::testSampleSingleField() {
   );
 
   try {
-    tarch::reader::NetCDFFieldSampler sampler({{"bathymetry", path}}, 10.0, 10.0, 0.0, 0.0);
+    tarch::reader::NetCDFFieldSampler<2> sampler({{"bathymetry", path}}, {10.0, 10.0}, {0.0, 0.0});
 
-    validateNumericalEquals(sampler.sample("bathymetry", 0.0, 0.0), 10.0);
-    validateNumericalEquals(sampler.sample("bathymetry", 5.0, 0.0), 11.0);
-    validateNumericalEquals(sampler.sample("bathymetry", 10.0, 10.0), 22.0);
+    validateNumericalEquals(sampler.sample("bathymetry", {0.0, 0.0}), 10.0);
+    validateNumericalEquals(sampler.sample("bathymetry", {5.0, 0.0}), 11.0);
+    validateNumericalEquals(sampler.sample("bathymetry", {10.0, 10.0}), 22.0);
   } catch (...) {
     std::filesystem::remove(path);
     throw;
@@ -97,18 +94,14 @@ void tarch::reader::tests::NetCDFFieldSamplerTest::testSampleSingleField() {
 }
 
 void tarch::reader::tests::NetCDFFieldSamplerTest::testOutOfDomainReturnsZero() {
-  const std::string path = writeTempNetCDFFile(
-    "peano-netcdf-sampler-range",
-    {0.0, 10.0},
-    {0.0, 10.0},
-    {1.0, 2.0, 3.0, 4.0}
-  );
+  const std::string path =
+    writeTempNetCDFFile("peano-netcdf-sampler-range", {0.0, 10.0}, {0.0, 10.0}, {1.0, 2.0, 3.0, 4.0});
 
   try {
-    tarch::reader::NetCDFFieldSampler sampler({{"bathymetry", path}}, 10.0, 10.0, 0.0, 0.0);
+    tarch::reader::NetCDFFieldSampler<2> sampler({{"bathymetry", path}}, {10.0, 10.0}, {0.0, 0.0});
 
-    validateNumericalEquals(sampler.sample("bathymetry", -0.1, 5.0), 0.0);
-    validateNumericalEquals(sampler.sample("bathymetry", 5.0, 10.1), 0.0);
+    validateNumericalEquals(sampler.sample("bathymetry", {-0.1, 5.0}), 0.0);
+    validateNumericalEquals(sampler.sample("bathymetry", {5.0, 10.1}), 0.0);
   } catch (...) {
     std::filesystem::remove(path);
     throw;
@@ -118,25 +111,20 @@ void tarch::reader::tests::NetCDFFieldSamplerTest::testOutOfDomainReturnsZero() 
 }
 
 void tarch::reader::tests::NetCDFFieldSamplerTest::testMultipleNamedFields() {
-  const std::string bathymetryPath = writeTempNetCDFFile(
-    "peano-netcdf-sampler-bathymetry",
-    {0.0, 1.0},
-    {0.0, 1.0},
-    {1.0, 2.0, 3.0, 4.0}
-  );
-  const std::string displacementPath = writeTempNetCDFFile(
-    "peano-netcdf-sampler-displacement",
-    {0.0, 1.0},
-    {0.0, 1.0},
-    {5.0, 6.0, 7.0, 8.0}
-  );
+  const std::string bathymetryPath =
+    writeTempNetCDFFile("peano-netcdf-sampler-bathymetry", {0.0, 1.0}, {0.0, 1.0}, {1.0, 2.0, 3.0, 4.0});
+  const std::string displacementPath =
+    writeTempNetCDFFile("peano-netcdf-sampler-displacement", {0.0, 1.0}, {0.0, 1.0}, {5.0, 6.0, 7.0, 8.0});
 
   try {
-    tarch::reader::NetCDFFieldSampler
-      sampler({{"bathymetry", bathymetryPath}, {"displacement", displacementPath}}, 1.0, 1.0, 0.0, 0.0);
+    tarch::reader::NetCDFFieldSampler<2> sampler(
+      {{"bathymetry", bathymetryPath}, {"displacement", displacementPath}},
+      {1.0, 1.0},
+      {0.0, 0.0}
+    );
 
-    validateNumericalEquals(sampler.sample("bathymetry", 1.0, 1.0), 4.0);
-    validateNumericalEquals(sampler.sample("displacement", 1.0, 1.0), 8.0);
+    validateNumericalEquals(sampler.sample("bathymetry", {1.0, 1.0}), 4.0);
+    validateNumericalEquals(sampler.sample("displacement", {1.0, 1.0}), 8.0);
   } catch (...) {
     std::filesystem::remove(bathymetryPath);
     std::filesystem::remove(displacementPath);
@@ -162,10 +150,13 @@ void tarch::reader::tests::NetCDFFieldSamplerTest::testDisplacementUsesItsOwnCoo
   );
 
   try {
-    tarch::reader::NetCDFFieldSampler
-      sampler({{"bathymetry", bathymetryPath}, {"displacement", displacementPath}}, 2.0, 1.0, 0.0, 0.0);
+    tarch::reader::NetCDFFieldSampler<2> sampler(
+      {{"bathymetry", bathymetryPath}, {"displacement", displacementPath}},
+      {2.0, 1.0},
+      {0.0, 0.0}
+    );
 
-    validateNumericalEquals(sampler.sample("displacement", 1.0, 0.0), 51.0);
+    validateNumericalEquals(sampler.sample("displacement", {1.0, 0.0}), 51.0);
   } catch (...) {
     std::filesystem::remove(bathymetryPath);
     std::filesystem::remove(displacementPath);
@@ -185,9 +176,9 @@ void tarch::reader::tests::NetCDFFieldSamplerTest::testSamplingWithSimulationOff
   );
 
   try {
-    tarch::reader::NetCDFFieldSampler sampler({{"bathymetry", path}}, 10.0, 20.0, 50.0, 60.0);
+    tarch::reader::NetCDFFieldSampler<2> sampler({{"bathymetry", path}}, {10.0, 20.0}, {50.0, 60.0});
 
-    validateNumericalEquals(sampler.sample("bathymetry", 55.0, 70.0), 21.0);
+    validateNumericalEquals(sampler.sample("bathymetry", {55.0, 70.0}), 21.0);
   } catch (...) {
     std::filesystem::remove(path);
     throw;
@@ -198,7 +189,7 @@ void tarch::reader::tests::NetCDFFieldSamplerTest::testSamplingWithSimulationOff
 
 #else
 
-tarch::reader::tests::NetCDFFieldSamplerTest::NetCDFFieldSamplerTest():
+tarch::reader::tests::NetCDFFieldSamplerTest::NetCDFFieldSamplerTest() :
   TestCase("tarch::reader::tests::NetCDFFieldSamplerTest") {}
 
 void tarch::reader::tests::NetCDFFieldSamplerTest::run() {}

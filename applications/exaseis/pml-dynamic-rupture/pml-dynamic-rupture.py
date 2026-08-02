@@ -5,14 +5,16 @@ import sys
 import exahype2
 from exahype2.solvers.aderdg.ADERDG import Polynomials
 
+sys.path.insert(0, os.path.abspath("../curvilinear"))
 sys.path.insert(0, os.path.abspath("../pml"))
 sys.path.insert(0, os.path.abspath("../dynamic-rupture"))
 
+import CurvilinearElastic
 import PMLElastic
 import DynamicRuptureElastic
 import PMLDynamicRuptureElastic
 
-sys.path.insert(0, os.path.abspath("../ExaSeis_core"))
+sys.path.insert(0, os.path.abspath(".."))
 import Scenario
 
 available_scenarios = {
@@ -26,7 +28,7 @@ available_scenarios = {
     "Husavik":  Scenario.Husavik()
 }
 
-scenario = "TPV28"
+scenario = "TPV5"
 scenario_string = scenario.lower()
 my_scenario = available_scenarios[scenario]
 
@@ -68,7 +70,7 @@ args = parse_arguments()
 order = args.degrees_of_freedom
 end_time = args.end_time
 
-my_scenario.generate_required_files(order)
+my_scenario.generate_required_files()
 
 project = exahype2.Project(
     ["applications", "exahype2", "exaseis"],
@@ -102,9 +104,10 @@ theSolver.add_kernel_optimisations(
 )
 
 theSolver.set_implementation(
-    initial_conditions    = PMLElastic.initial(my_scenario.initial_conditions()),
-    boundary_conditions   = PMLElastic.boundary(),
-    max_eigenvalue        = PMLElastic.eigenvalue(),
+    initial_conditions    = CurvilinearElastic.initial(my_scenario.initial_conditions())+PMLElastic.initial(),
+    boundary_conditions   = CurvilinearElastic.boundary(),
+    max_eigenvalue        = CurvilinearElastic.eigenvalue(),
+    refinement_criterion  = CurvilinearElastic.refinement_criterion(),
     flux                  = PMLElastic.flux(),
     ncp                   = PMLElastic.ncp(),
     material_parameters   = PMLElastic.multiplyMaterialParameterMatrix(),
@@ -112,16 +115,15 @@ theSolver.set_implementation(
     source_term           = PMLElastic.algebraic_source()+PMLDynamicRuptureElastic.algebraic_source()
 )
 
-theSolver._abstract_solver_user_definitions  += DynamicRuptureElastic.abstractUserDefinitions()
-theSolver._abstract_solver_user_declarations += PMLDynamicRuptureElastic.abstractDeclarations()
-theSolver._start_grid_initialisation_implementation += DynamicRuptureElastic.init_grid_step_implementation(scenario_string)
-theSolver._destructor_implementation += PMLElastic.abstractDestructor()
+theSolver._abstract_solver_user_declarations += CurvilinearElastic.abstractDeclarations()+DynamicRuptureElastic.abstractDeclarations()+PMLElastic.abstractDeclarations()
+theSolver._abstract_solver_user_definitions  += CurvilinearElastic.abstractUserDefinitions()+DynamicRuptureElastic.abstractUserDefinitions()
+theSolver._start_grid_initialisation_implementation += CurvilinearElastic.init_grid_step_implementation(my_scenario.domain_perturbations())
 theSolver.add_user_solver_includes(PMLDynamicRuptureElastic.userIncludes())
 
 project.add_solver(theSolver)
+project.output.makefile.add_h_file("../DynamicRuptureParameters.h", generated=True)
 
-filename = scenario+"_l_"+str(args.grid_levels)+"_o_"+str(order)+"_pr_"+str(precision)
-
+filename=scenario+"-o"+str(order)+"-"+str(precision)
 project.add_action_set_to_timestepping(
     exahype2.tracer.CurviTracer(
     coordinates= my_scenario.tracer_coordinates,
@@ -132,5 +134,12 @@ project.add_action_set_to_timestepping(
     output_precision=10,
     unknowns_to_store=12
 ))
+
+theSolver.add_face_plotter(guard="""
+      ((marker.getSelectedFaceNumber() % DIMENSIONS) == repositories::""" + theSolver.get_name_of_global_instance() + """.getFaultNormal()) and
+      std::abs(marker.getX()[repositories::""" + theSolver.get_name_of_global_instance() + """.getFaultNormal()]-repositories::""" \
+        + theSolver.get_name_of_global_instance() + """.getFaultPosition())< 0.5*marker.getH()[repositories::""" \
+        + theSolver.get_name_of_global_instance() + """.getFaultNormal()]
+      """)
 
 project.generate_and_build()

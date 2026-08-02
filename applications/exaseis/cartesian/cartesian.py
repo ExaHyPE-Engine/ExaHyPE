@@ -82,8 +82,8 @@ theSolver.set_implementation(
 )
 
 theSolver.add_user_solver_includes("""
-#include "../ExaSeis_core/Numerics/cartesianRoutines.h"
-#include "../ExaSeis_core/Numerics/riemannsolverIsotropic.h"
+#include "../riemannSolvers/cartesianRoutines.h"
+#include "../riemannSolvers/riemannsolverIsotropic.h"
 """)
 
 project.add_solver(theSolver)
@@ -117,19 +117,6 @@ if use_tracers:
             output_precision=10
         )
     )
-
-    # project.add_action_set_to_timestepping(
-    #   exahype2.tracer.NewDGTracer(
-    #     coordinates=[
-    #       [0.000, 0., 0.693], [0.000, 0., 5.543], [0.000, 0., 10.392],
-    #       [0.490, 0., 0.490], [3.919, 0., 3.919], [7.348, 0., 7.3480],
-    #       [0.577, 0., 0.384], [4.612, 0., 3.075], [8.647, 0., 5.7640]
-    #     ],
-    #     solver=theSolver,
-    #     filename="tracers/Cartesian_level_"+str(args.min_grid_levels)+"_order_"+str(order)+"_"+polynomials+"_precision_"+str(precision),
-    #     data_delta_between_two_snapshots=1e16, time_delta_between_two_snapshots=0.01,
-    #     output_precision=10, clear_database_after_flush=False
-    # ))
 
     theSolver._abstract_solver_user_declarations += "double QuadraturePoints1d[Order+1];"
     # TODO: This is not good in many ways. A private variable member of the solver should not be hijacked like this!

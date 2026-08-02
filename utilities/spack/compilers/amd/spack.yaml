@@ -8,7 +8,6 @@ spack:
     - hwloc@2.12.2
     - ucx@1.19.0
     - libxsmm@1.17 +generator
-    - easi@1.6.1 jit=lua
     - memkind@1.14.0
     - papi@7.2.0
     - likwid@5.4.1

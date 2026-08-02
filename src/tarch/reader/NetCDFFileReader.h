@@ -138,6 +138,17 @@ public:
 
   /**
    * @brief Reads contents of a 3D double variable from netCDF file into 1D
+   * array.
+   *
+   * @param ncid Pointer to location where returned netCDF ID is to be stored.
+   * @param key variable name for which data is loaded.
+   * @param variable Array where data is stored.
+   * @return 0 if successful, -1 otherwise.
+   */
+  int readVariable3D(int ncid, const char* key, double* variable);
+
+  /**
+   * @brief Reads contents of a 3D double variable from netCDF file into 1D
    * array starting at a specified first-dimension value.
    *
    * @param ncid Pointer to location where returned netCDF ID is to be stored.

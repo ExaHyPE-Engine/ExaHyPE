@@ -33,10 +33,8 @@ initial_conditions = f"""
     {{
       {{"bathymetry", RuntimeParameters::getBathymetryFile(), "z", "x", "y"}}
     }},
-    PhysicalDomainSizeX,
-    PhysicalDomainSizeY,
-    PhysicalDomainOffsetX,
-    PhysicalDomainOffsetY
+    {{PhysicalDomainSizeX, PhysicalDomainSizeY}},
+    {{PhysicalDomainOffsetX, PhysicalDomainOffsetY}}
   );
 
   const double sampleX =
@@ -46,7 +44,7 @@ initial_conditions = f"""
     x(1) < PhysicalDomainOffsetY ? PhysicalDomainOffsetY :
     (x(1) > PhysicalDomainOffsetY + PhysicalDomainSizeY ? PhysicalDomainOffsetY + PhysicalDomainSizeY : x(1));
 
-  const double bathymetry = fieldSampler.sample("bathymetry", sampleX, sampleY);
+  const double bathymetry = fieldSampler.sample("bathymetry", {{sampleX, sampleY}});
   Q[Shortcuts::h]  = -std::min(bathymetry, 0.0);
   Q[Shortcuts::hu] = 0.0;
   Q[Shortcuts::hv] = 0.0;

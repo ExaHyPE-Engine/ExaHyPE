@@ -30,14 +30,12 @@ class Exahype2(CMakePackage, CudaPackage):
     variant("multithreading", default=True, description="Build with multithreading (OpenMP) support")
     variant("hdf5", default=True, description="Build with HDF5 support")
     variant("netcdf", default=True, description="Build with NetCDF support")
-    variant("curvi", default=True, description="Build with Curvi toolbox support")
 
     depends_on("python")
     depends_on("py-pip")
 
     depends_on('gsl@2.8')
     depends_on('libxsmm@1.17 +generator')
-    depends_on('easi@1.6.1 jit=lua')
 
     depends_on("mpi")
 
@@ -53,7 +51,6 @@ class Exahype2(CMakePackage, CudaPackage):
         when="+cuda",
         msg="A value for cuda_arch must be specified. Add cuda_arch=XX",
     )
-    conflicts("+curvi~netcdf", msg="Curvi requires NetCDF support")
 
     variant(
         "gpu_backend",
@@ -66,12 +63,10 @@ class Exahype2(CMakePackage, CudaPackage):
 
     def cmake_args(self):
         args = [
-            "-DPEANO_WITH_EASI=ON",
             "-DPEANO_WITH_LIBXSMM=OFF",
             self.define_from_variant("PEANO_WITH_MULTITHREADING", "multithreading"),
             self.define_from_variant("PEANO_WITH_HDF5", "hdf5"),
             self.define_from_variant("PEANO_WITH_NETCDF", "netcdf"),
-            self.define_from_variant("PEANO_WITH_CURVI", "curvi"),
         ]
 
         if self.spec.satisfies("+cuda"):
