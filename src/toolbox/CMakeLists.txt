@@ -3,7 +3,3 @@
 add_subdirectory(blockstructured)
 add_subdirectory(loadbalancing)
 add_subdirectory(particles)
-
-if(PEANO_WITH_CURVI)
-  add_subdirectory(curvi)
-endif()

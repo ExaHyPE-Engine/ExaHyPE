@@ -111,7 +111,6 @@ peano_create_options_target()
 peano_apply_flags()
 peano_find_host_dependencies()
 peano_resolve_gpu_backend()
-peano_configure_curvi()
 peano_detect_cpu_architecture()
 
 if(_peano_gpu_backend STREQUAL "cuda")

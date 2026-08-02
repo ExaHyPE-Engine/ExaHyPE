@@ -7,7 +7,7 @@ from exahype2.solvers.aderdg.ADERDG import Polynomials
 
 import CurvilinearElastic
 
-sys.path.insert(0, os.path.abspath("../ExaSeis_core"))
+sys.path.insert(0, os.path.abspath(".."))
 import Scenario
 
 available_scenarios = {
@@ -63,7 +63,7 @@ offset  = my_scenario.domain_offset
 size    = my_scenario.domain_size
 end_time = args.end_time
 
-my_scenario.generate_required_files(order)
+my_scenario.generate_required_files()
 
 filename = scenario+"_l"+str(args.min_grid_levels)+"_o"+str(order)+"_pr_"+precision
 project = exahype2.Project(
@@ -113,7 +113,7 @@ theSolver.set_implementation(
 
 theSolver._abstract_solver_user_declarations += CurvilinearElastic.abstractDeclarations()
 theSolver._abstract_solver_user_definitions  += CurvilinearElastic.abstractUserDefinitions()
-theSolver._start_grid_initialisation_implementation += CurvilinearElastic.init_grid_step_implementation(scenario_string)
+theSolver._start_grid_initialisation_implementation += CurvilinearElastic.init_grid_step_implementation(my_scenario.domain_perturbations())
 theSolver.add_user_solver_includes(CurvilinearElastic.userIncludes())
 
 project.add_solver(theSolver)

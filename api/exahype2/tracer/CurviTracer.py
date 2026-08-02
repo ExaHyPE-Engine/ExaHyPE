@@ -36,8 +36,6 @@ class CurviTracer(ActionSet):
         time_delta_between_two_snapshots=0,
         output_precision=8,
         use_relative_deltas=False,
-        initial_record_time=-1,
-        last_record_time=1e8,
         unknowns_to_store=0,
     ):
         """!
@@ -113,9 +111,6 @@ class CurviTracer(ActionSet):
         else:
             self.d["USE_RELATIVE_DELTAS"] = "false"
 
-        self.d["INI_RECORD"] = initial_record_time
-        self.d["LAST_RECORD"] = last_record_time
-
         self.d["N"] = len(coordinates)
 
     __Template_TouchCellLastTime = jinja2.Template(
@@ -132,10 +127,7 @@ class CurviTracer(ActionSet):
       )
   ) {
 
-    double IniRecord={{INI_RECORD}};
-    double LastRecord={{LAST_RECORD}};
-
-    for(int i=0; i<_coordinates.size(); i++){
+    for(int i=0; i<(int) _coordinates.size(); i++){
       // A coordinate has to be recorded by exactly one cell, as the database
       // would otherwise hold duplicate snapshots for the same time stamp.
       if (
@@ -186,13 +178,10 @@ class CurviTracer(ActionSet):
       or
         repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::GridInitialisation
       )
-    and ((marker.getSelectedFaceNumber() % DIMENSIONS) == 2-repositories::{{SOLVER_INSTANCE}}.context->fault_normal) and
-      std::abs(marker.getX()[2-repositories::{{SOLVER_INSTANCE}}.context->fault_normal]-repositories::{{SOLVER_INSTANCE}}.context->fault_position)
-        < 0.5*marker.getH()[2-repositories::{{SOLVER_INSTANCE}}.context->fault_normal]
+    and ((marker.getSelectedFaceNumber() % DIMENSIONS) == repositories::{{SOLVER_INSTANCE}}.getFaultNormal()) and
+      std::abs(marker.getX()[repositories::{{SOLVER_INSTANCE}}.getFaultNormal()]-repositories::{{SOLVER_INSTANCE}}.getFaultPosition())
+        < 0.5*marker.getH()[repositories::{{SOLVER_INSTANCE}}.getFaultNormal()]
   ) {
-
-    double IniRecord={{INI_RECORD}};
-    double LastRecord={{LAST_RECORD}};
 
     const double timeStamp = std::max(
       fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(0),
@@ -210,7 +199,7 @@ class CurviTracer(ActionSet):
       return is_contained;
     };
 
-    for(int i=0; i<_fault_coordinates.size(); i++){
+    for(int i=0; i<(int) _fault_coordinates.size(); i++){
       // A fault coordinate has to be recorded by exactly one face, as the
       // database would otherwise hold duplicate snapshots for the same time
       // stamp.
@@ -227,7 +216,7 @@ class CurviTracer(ActionSet):
 
         double data[unknownsPerDoF];
         for (int unknown=0; unknown<unknownsToStore; unknown++) {
-          data[unknown] = 0.5 * (
+          data[unknown] = 0.5 * (double) (
             ::exahype2::dg::evaluatePolynomial(
               marker,
               {{ORDER}},
@@ -251,7 +240,7 @@ class CurviTracer(ActionSet):
 
         using Shortcuts = VariableShortcuts{{SOLVER_NAME}};
         for(int unknown=Shortcuts::v; unknown<Shortcuts::v+3; unknown++) {
-          data[unknown] = ::exahype2::dg::evaluatePolynomial(
+          data[unknown] = (double) (::exahype2::dg::evaluatePolynomial(
               marker,
               {{ORDER}},
               repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
@@ -267,11 +256,11 @@ class CurviTracer(ActionSet):
               fineGridFace{{SOLVER_NAME}}QEstimates.data(),
               _fault_coordinates[i],
               unknown
-            );
+            ));
         }
 
         for(int unknown=Shortcuts::v; unknown<Shortcuts::v+3; unknown++) {
-          data[unknown] = ::exahype2::dg::evaluatePolynomial(
+          data[unknown] = (double) (::exahype2::dg::evaluatePolynomial(
               marker,
               {{ORDER}},
               repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
@@ -287,10 +276,10 @@ class CurviTracer(ActionSet):
               fineGridFace{{SOLVER_NAME}}QEstimates.data(),
               _fault_coordinates[i],
               unknown
-            );
+            ));
         }
         for(int unknown=Shortcuts::u; unknown<Shortcuts::u+3; unknown++) {
-          data[unknown] = ::exahype2::dg::evaluatePolynomial(
+          data[unknown] = (double) (::exahype2::dg::evaluatePolynomial(
               marker,
               {{ORDER}},
               repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
@@ -306,7 +295,7 @@ class CurviTracer(ActionSet):
               fineGridFace{{SOLVER_NAME}}QEstimates.data(),
               _fault_coordinates[i],
               unknown
-          );
+          ));
         }
 
         _database.addParticleSnapshot(
@@ -436,7 +425,6 @@ if(_fault_coordinates.empty()){
                 dimensions = 2
         result += """
 }
-#pragma clang optimize on\n
 """
         return jinja2.Template(result).render(**self.d)
 
@@ -478,7 +466,6 @@ toolbox::particles::TrajectoryDatabase  """
     static std::vector<tarch::la::Vector<DIMENSIONS,double>>  _fault_coordinates;
 
     int                                        _spacetreeId;
-    double _timeStepSize;
 
     static toolbox::particles::TrajectoryDatabase  _database;
 

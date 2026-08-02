@@ -1,20 +1,15 @@
 import argparse
-import os
-import sys
+import os, sys
 
-import peano4
 import exahype2
 from exahype2.solvers.aderdg.ADERDG import Polynomials
 
-sys.path.insert(0, os.path.abspath("../pml"))
+sys.path.insert(0, os.path.abspath("../curvilinear"))
 
-import PMLElastic
+import CurvilinearElastic
 import DynamicRuptureElastic
 
-#sys.path.insert(0, os.path.abspath("../ExaSeis_core/Scenario"))
-#import TPV5, TPV26, TPV28, TPV29
-
-sys.path.insert(0, os.path.abspath("../ExaSeis_core"))
+sys.path.insert(0, os.path.abspath(".."))
 import Scenario
 
 
@@ -36,7 +31,7 @@ my_scenario = available_scenarios[scenario]
 
 unknowns = {"v": 3, "sigma": 6, "u": 3}
 auxiliary_variables = {
-    "rho": 1, "cp": 1, "cs": 1, "jacobian": 1, 
+    "rho": 1, "cp": 1, "cs": 1, "jacobian": 1,
     "metric_derivative": 9,
     "curve_grid": 3,
 }
@@ -48,7 +43,7 @@ order = 5
 min_level = 3
 max_depth = 0
 
-precision = "fp32"
+precision = "fp64"
 
 def parse_arguments():
     parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
@@ -72,9 +67,8 @@ args = parse_arguments()
 order = args.degrees_of_freedom
 end_time = args.end_time
 
-my_scenario.generate_required_files(order)
+my_scenario.generate_required_files()
 
-filename=scenario+"_l_"+str(args.grid_levels)+"_o_"+str(order)+"_pr_"+str(precision)
 project = exahype2.Project(
     ["applications", "exahype2", "exaseis"],
     "dynamicRupture",
@@ -107,24 +101,25 @@ theSolver.add_kernel_optimisations(
 )
 
 theSolver.set_implementation(
-    initial_conditions    = DynamicRuptureElastic.initial(my_scenario.initial_conditions()), #same as curvi, which still need to be templated for initial conditions
-    boundary_conditions   = PMLElastic.boundary(),
-    max_eigenvalue        = PMLElastic.eigenvalue(),
-    flux                  = DynamicRuptureElastic.flux(), #same as curvi
-    ncp                   = DynamicRuptureElastic.ncp(), # same as curvi
-    material_parameters   = DynamicRuptureElastic.multiplyMaterialParameterMatrix(), #same as curvi +u term
+    initial_conditions    = CurvilinearElastic.initial(my_scenario.initial_conditions()),
+    boundary_conditions   = CurvilinearElastic.boundary(),
+    max_eigenvalue        = CurvilinearElastic.eigenvalue(),
+    flux                  = CurvilinearElastic.flux(),
+    ncp                   = CurvilinearElastic.ncp(),
+    material_parameters   = CurvilinearElastic.multiplyMaterialParameterMatrix(),
     source_term           = DynamicRuptureElastic.algebraic_source(),
     riemann_solver        = DynamicRuptureElastic.riemann_solver()
 )
 
-theSolver._abstract_solver_user_declarations += DynamicRuptureElastic.abstractDeclarations()
-theSolver._abstract_solver_user_definitions  += DynamicRuptureElastic.abstractUserDefinitions()
-theSolver._start_grid_initialisation_implementation += DynamicRuptureElastic.init_grid_step_implementation(scenario_string)
-theSolver._destructor_implementation +=  DynamicRuptureElastic.abstractDestructor()
+theSolver._abstract_solver_user_declarations += CurvilinearElastic.abstractDeclarations()+DynamicRuptureElastic.abstractDeclarations()
+theSolver._abstract_solver_user_definitions  += CurvilinearElastic.abstractUserDefinitions()+DynamicRuptureElastic.abstractUserDefinitions()
+theSolver._start_grid_initialisation_implementation += CurvilinearElastic.init_grid_step_implementation(my_scenario.domain_perturbations())
 theSolver.add_user_solver_includes(DynamicRuptureElastic.userIncludes())
 
 project.add_solver(theSolver)
+project.output.makefile.add_h_file("../DynamicRuptureParameters.h", generated=True)
 
+filename=scenario+"-o"+str(order)+"-"+str(precision)
 project.add_action_set_to_timestepping(
   exahype2.tracer.CurviTracer(
     coordinates= my_scenario.tracer_coordinates,
@@ -136,10 +131,10 @@ project.add_action_set_to_timestepping(
 ))
 
 theSolver.add_face_plotter(guard="""
-      ((marker.getSelectedFaceNumber() % DIMENSIONS) == 2-repositories::""" + theSolver.get_name_of_global_instance() + """.context->fault_normal) and
-      std::abs(marker.getX()[2-repositories::""" + theSolver.get_name_of_global_instance() + """.context->fault_normal]-repositories::""" \
-        + theSolver.get_name_of_global_instance() + """.context->fault_position)< 0.5*marker.getH()[2-repositories::""" \
-        + theSolver.get_name_of_global_instance() + """.context->fault_normal]
+      ((marker.getSelectedFaceNumber() % DIMENSIONS) == repositories::""" + theSolver.get_name_of_global_instance() + """.getFaultNormal()) and
+      std::abs(marker.getX()[repositories::""" + theSolver.get_name_of_global_instance() + """.getFaultNormal()]-repositories::""" \
+        + theSolver.get_name_of_global_instance() + """.getFaultPosition())< 0.5*marker.getH()[repositories::""" \
+        + theSolver.get_name_of_global_instance() + """.getFaultNormal()]
       """)
 
 project.generate_and_build()

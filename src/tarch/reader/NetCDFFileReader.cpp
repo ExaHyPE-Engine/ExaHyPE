@@ -113,8 +113,13 @@ int tarch::reader::NetCDFFileReader::readVariable1D(int ncid, const char* key, d
   return 0;
 }
 
-int tarch::reader::NetCDFFileReader::
-  readVariable2D(int ncid, const char* key, double** variable, std::size_t rows, std::size_t cols) {
+int tarch::reader::NetCDFFileReader::readVariable2D(
+  int         ncid,
+  const char* key,
+  double**    variable,
+  std::size_t rows,
+  std::size_t cols
+) {
   int varidkey = -1;
 
   if (nc_inq_varid(ncid, key, &varidkey) != NC_NOERR) {
@@ -184,6 +189,20 @@ int tarch::reader::NetCDFFileReader::readVariable2DHyperslab(
   }
 
   delete[] tmp;
+
+  return 0;
+}
+
+int tarch::reader::NetCDFFileReader::readVariable3D(int ncid, const char* key, double* variable) {
+  int varidkey = -1;
+
+  if (nc_inq_varid(ncid, key, &varidkey) != NC_NOERR) {
+    return -1;
+  }
+
+  if (nc_get_var_double(ncid, varidkey, variable) != NC_NOERR) {
+    return -1;
+  }
 
   return 0;
 }

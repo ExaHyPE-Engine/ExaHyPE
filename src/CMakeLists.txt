@@ -26,11 +26,6 @@ foreach(mode IN LISTS SUPPORTED_BUILD_TYPES)
       ExaHyPE2${mode}${dim}d
       Runner${mode}${dim}d
     )
-    if(PEANO_WITH_CURVI)
-      target_link_libraries(PeanoRuntime${mode}${dim}d INTERFACE
-        ToolboxCurvi${mode}
-      )
-    endif()
     install(TARGETS PeanoRuntime${mode}${dim}d
       EXPORT ${PROJECT_NAME}Targets
     )

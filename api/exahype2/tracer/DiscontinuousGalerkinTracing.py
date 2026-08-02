@@ -150,6 +150,5 @@ if (
         return (
             super(DiscontinuousGalerkinTracing,self).get_attributes()
             + """
-double _timeStepSize;
 """
         )

@@ -133,9 +133,9 @@ for theSolver in [hpSolver, lpSolver]:
   )
 
   theSolver.add_user_solver_includes("""
-  #include "../../applications/exaseis/ExaSeis_core/Numerics/cartesianRoutines.h"
-  #include "../../applications/exaseis/ExaSeis_core/Numerics/riemannsolverIsotropic.h"
-  """)
+#include "../../applications/exaseis/riemannSolvers/cartesianRoutines.h"
+#include "../../applications/exaseis/riemannSolvers/riemannsolverIsotropic.h"
+""")
 
   project.add_solver(theSolver)
 

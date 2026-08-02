@@ -9,8 +9,6 @@ import peano4.solversteps
 class InitialCondition(AbstractADERDGActionSet):
     _Template_InitialCondition = """
   if ({{PREDICATE}}) {
-    int linearisedIndex = 0;
-
 {% if INITIALISE_PATCHES is sameas True %}
     repositories::{{SOLVER_INSTANCE}}.initialCondition(
       fineGridCell{{UNKNOWN_IDENTIFIER}}.data(),
@@ -18,6 +16,7 @@ class InitialCondition(AbstractADERDGActionSet):
       marker.getH()
     );
 {% else %}
+    int linearisedIndex = 0;
     peano4::dForEach({{ORDER}} + 1, [&](const tarch::la::Vector<DIMENSIONS, int>& index) {
       repositories::{{SOLVER_INSTANCE}}.initialCondition(
         fineGridCell{{UNKNOWN_IDENTIFIER}}.data() + linearisedIndex,

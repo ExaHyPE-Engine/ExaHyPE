@@ -17,17 +17,15 @@ initial_conditions = """
 
   static tarch::reader::NetCDFFieldSampler fieldSampler(
     {
-      {"bathymetry", RuntimeParameters::getBathymetryFile(), "Band1", "x", "y"},
-      {"displacement", RuntimeParameters::getDisplacementFile(), "Band1", "x", "y"}
+      {"bathymetry", RuntimeParameters::getBathymetryFile(), "Band1", {"x", "y"}},
+      {"displacement", RuntimeParameters::getDisplacementFile(), "Band1", {"x", "y"}}
     },
-    DomainSize(0),
-    DomainSize(1),
-    DomainOffset(0),
-    DomainOffset(1)
+    {DomainSize(0), DomainSize(1)},
+    {DomainOffset(0), DomainOffset(1)}
   );
 
-  Q[Shortcuts::h] = fieldSampler.sample("displacement", x(0), x(1));
-  Q[Shortcuts::z] = fieldSampler.sample("bathymetry", x(0), x(1));
+  Q[Shortcuts::h] = fieldSampler.sample("displacement", {x(0), x(1)});
+  Q[Shortcuts::z] = fieldSampler.sample("bathymetry", {x(0), x(1)});
 """
 
 boundary_conditions = """

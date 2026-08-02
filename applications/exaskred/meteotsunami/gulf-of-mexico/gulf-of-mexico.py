@@ -18,12 +18,10 @@ BATHYMETRY_FILE = "bathymetry/gebco_projection.nc"
 initial_conditions = """
   static tarch::reader::NetCDFFieldSampler fieldSampler(
     {
-      {"bathymetry", RuntimeParameters::getBathymetryFile(), "Band1", "x", "y"}
+      {"bathymetry", RuntimeParameters::getBathymetryFile(), "Band1", {"x", "y"}}
     },
-    PhysicalDomainSizeX,
-    PhysicalDomainSizeY,
-    PhysicalDomainOffsetX,
-    PhysicalDomainOffsetY
+    {PhysicalDomainSizeX, PhysicalDomainSizeY},
+    {PhysicalDomainOffsetX, PhysicalDomainOffsetY}
   );
 
   const double sampleX =
@@ -33,7 +31,7 @@ initial_conditions = """
     x(1) < PhysicalDomainOffsetY ? PhysicalDomainOffsetY :
     (x(1) > PhysicalDomainOffsetY + PhysicalDomainSizeY ? PhysicalDomainOffsetY + PhysicalDomainSizeY : x(1));
 
-  const double bathymetry = fieldSampler.sample("bathymetry", sampleX, sampleY);
+  const double bathymetry = fieldSampler.sample("bathymetry", {sampleX, sampleY});
 
   if (not std::isfinite(bathymetry) or bathymetry < -15000.0) {
     Q[Shortcuts::h]  = 999.0;

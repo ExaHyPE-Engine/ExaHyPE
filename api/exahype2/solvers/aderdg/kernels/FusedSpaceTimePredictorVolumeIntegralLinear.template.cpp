@@ -509,7 +509,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
     }
 {% endif %}
 
-    dtavFac *= timeStepSize / (i + 2);
+    dtavFac *= static_cast<pCompType>(timeStepSize / (i + 2));
 
     for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
       SIMD(aligned(lQhi,lQi:PEANO_WITH_ALIGNMENT))
@@ -631,7 +631,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
     SIMD(aligned(lFhi{{',lShi' if USE_SOURCE else ''}}:PEANO_WITH_ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
-        luh[xyz*{{NUMBER_OF_DATA}} + n] -= timeStepSize * //Quadrature<pCompType>::weights3[xyz] *
+        luh[xyz*{{NUMBER_OF_DATA}} + n] -= static_cast<cStoreType>(timeStepSize * //Quadrature<pCompType>::weights3[xyz] *
             (
 {% if USE_FLUX or USE_NCP %}
                 lFhi[xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{0*NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF**DIMENSIONS}}] // x
@@ -643,7 +643,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
 {% if USE_SOURCE %}
               {{'+' if USE_FLUX or USE_NCP }} lShi[xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n]
 {% endif %}
-            );
+            ));
     }
   }
 

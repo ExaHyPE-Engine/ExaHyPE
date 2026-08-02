@@ -5,9 +5,11 @@ file(GLOB_RECURSE HEADERS ${HEADER_EXTENSIONS_TO_GLOB})
 
 set(SOURCES
   AMRRoutines.cpp
+  Curvi.cpp
   Enumeration.cpp
   MultiresolutionDetail.cpp
   UnitTests.cpp
+  tests/CurviTest.cpp
   tests/EnumerationTest.cpp
   tests/InterpolationTest.cpp
   tests/MultiresolutionDetailTest.cpp

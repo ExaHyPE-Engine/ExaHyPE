@@ -3,16 +3,126 @@
 def initial(pointwise_initial_conditions):
   return """
   std::fill_n(Q, (NumberOfAuxiliaryVariables + NumberOfUnknowns) * (Order + 1) * (Order + 1) * (Order + 1), 0);
-  context->initUnknownsPatch(Q, x, h, 0.0, 0.0,
-  [&](
-      const {{SOLUTION_STORAGE_PRECISION}}* const x,
-      const tarch::la::Vector<DIMENSIONS,double>& center,
-      const double t,
-      const double dt, 
-      {{SOLUTION_STORAGE_PRECISION}}* Q
-    ) -> void { """ + pointwise_initial_conditions + """
-    }
-  );
+
+  tarch::la::Vector<DIMENSIONS, double> center = (*_curvi)(x);
+
+  auto initUnknownsPointwise = [&](
+    const tarch::la::Vector<DIMENSIONS,double>& x,
+    const tarch::la::Vector<DIMENSIONS,double>& center,
+    {{SOLUTION_STORAGE_PRECISION}}* Q
+  ) -> void {""" + pointwise_initial_conditions + """
+  };
+
+  int linearisedIndex = 0;
+  peano4::dForEach(Order + 1, [&](const tarch::la::Vector<DIMENSIONS, int>& index) {
+    tarch::la::Vector<DIMENSIONS, double> curviPos = (*_curvi)(
+      ::exahype2::dg::getQuadraturePoint(
+        x,
+        h,
+        index,
+        Order + 1,
+        kernels::ElasticSolver::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes
+      )
+    );
+    Q[linearisedIndex+Shortcuts::curve_grid + 0] = curviPos[0];
+    Q[linearisedIndex+Shortcuts::curve_grid + 1] = curviPos[1];
+    Q[linearisedIndex+Shortcuts::curve_grid + 2] = curviPos[2];
+
+    initUnknownsPointwise(
+      curviPos, center, Q+linearisedIndex
+    );
+
+    linearisedIndex += NumberOfUnknowns + NumberOfAuxiliaryVariables;
+  });
+
+  const tarch::la::Vector<DIMENSIONS, {{SOLUTION_STORAGE_PRECISION}}> invDx = convertScalar<{{SOLUTION_STORAGE_PRECISION}}>(invertEntries(h));
+
+  constexpr int nDof    = Order+1;
+  constexpr int nDofPad = {{NUMBER_OF_DOF_PADDED}};
+  constexpr int strideQ = (NumberOfUnknowns+NumberOfAuxiliaryVariables);
+
+  // x-loop
+  for (int yz = 0; yz < nDof*nDof; yz++) {
+    UNROLL(nDof)
+    for (int it_2 = 0; it_2 < nDof; it_2++) {
+      UNROLL(nDof)
+      for (int it_1 = 0; it_1 < nDof; it_1++) {
+        // x derivatives
+        for (int it_3 = 0; it_3 < DIMENSIONS; it_3++) {
+          Q[yz*nDof*strideQ + it_1*strideQ + Shortcuts::metric_derivative + it_3] +=
+            Q[yz*nDof*strideQ + it_2*strideQ + Shortcuts::curve_grid + it_3]
+            * invDx[0] * kernels::ElasticSolver::DGMatrices<{{SOLUTION_STORAGE_PRECISION}}>::dudx_T[it_1*nDofPad + it_2];
+        }
+      }
+    } // it_2
+  } // yz
+
+  // y-loop
+  for (int z = 0; z < nDof; z++) {
+    for (int x = 0; x < nDof; x++) {
+      UNROLL(nDof)
+      for (int it_2 = 0; it_2 < nDof; it_2++) {
+        UNROLL(nDof)
+        for (int it_1 = 0; it_1 < nDof; it_1++) {
+          for (int it_3 = 0; it_3 < DIMENSIONS; it_3++) {
+            Q[z*nDof*nDof*strideQ + x*strideQ + it_1*nDof*strideQ + Shortcuts::metric_derivative + DIMENSIONS + it_3] +=
+              Q[z*nDof*nDof*strideQ + x*strideQ + it_2*nDof*strideQ + Shortcuts::curve_grid + it_3]
+              * invDx[1] * kernels::ElasticSolver::DGMatrices<{{SOLUTION_STORAGE_PRECISION}}>::dudx_T[it_1*nDofPad + it_2];
+          } // it_3
+        } // it_1
+      } // it_2
+    } // x
+  } // z
+
+  // z-loop
+  for (int xy = 0; xy < nDof*nDof; xy++) {
+    UNROLL(nDof)
+    for (int it_2 = 0; it_2 < nDof; it_2++) {
+      UNROLL(nDof)
+      for (int it_1 = 0; it_1 < nDof; it_1++) {
+        for (int it_3 = 0; it_3 < DIMENSIONS; it_3++) {
+          // gradQ[it_1 * 12 + it_3] +=
+          Q[xy*strideQ + it_1*nDof*nDof*strideQ + Shortcuts::metric_derivative + 2*DIMENSIONS + it_3] +=
+            Q[xy*strideQ + it_2*nDof*nDof*strideQ + Shortcuts::curve_grid + it_3]
+            * invDx[2] * kernels::ElasticSolver::DGMatrices<{{SOLUTION_STORAGE_PRECISION}}>::dudx_T[it_1*nDofPad + it_2];
+        } // it_3
+      } // it_2
+    } // it_2
+  } // xy
+
+  linearisedIndex = 0;
+  peano4::dForEach(Order + 1, [&](const tarch::la::Vector<DIMENSIONS, int>& index) {
+    auto x_der_x = Q[linearisedIndex+Shortcuts::metric_derivative+0];
+    auto y_der_x = Q[linearisedIndex+Shortcuts::metric_derivative+1];
+    auto z_der_x = Q[linearisedIndex+Shortcuts::metric_derivative+2];
+
+    auto x_der_y = Q[linearisedIndex+Shortcuts::metric_derivative+DIMENSIONS+0];
+    auto y_der_y = Q[linearisedIndex+Shortcuts::metric_derivative+DIMENSIONS+1];
+    auto z_der_y = Q[linearisedIndex+Shortcuts::metric_derivative+DIMENSIONS+2];
+
+    auto x_der_z = Q[linearisedIndex+Shortcuts::metric_derivative+2*DIMENSIONS+0];
+    auto y_der_z = Q[linearisedIndex+Shortcuts::metric_derivative+2*DIMENSIONS+1];
+    auto z_der_z = Q[linearisedIndex+Shortcuts::metric_derivative+2*DIMENSIONS+2];
+
+    auto jacobian =   x_der_x * (y_der_y * z_der_z - y_der_z * z_der_y)
+                    - x_der_y * (y_der_x * z_der_z - y_der_z * z_der_x)
+                    + x_der_z * (y_der_x * z_der_y - y_der_y * z_der_x);
+
+    Q[linearisedIndex+Shortcuts::jacobian] = jacobian;
+    Q[linearisedIndex+Shortcuts::metric_derivative+0] = (1 / jacobian) * (y_der_y * z_der_z - z_der_y * y_der_z);
+    Q[linearisedIndex+Shortcuts::metric_derivative+3] = (1 / jacobian) * (z_der_x * y_der_z - y_der_x * z_der_z);
+    Q[linearisedIndex+Shortcuts::metric_derivative+6] = (1 / jacobian) * (y_der_x * z_der_y - z_der_x * y_der_y);
+
+    Q[linearisedIndex+Shortcuts::metric_derivative+1] = (1 / jacobian) * (z_der_y * x_der_z - x_der_y * z_der_z);
+    Q[linearisedIndex+Shortcuts::metric_derivative+4] = (1 / jacobian) * (x_der_x * z_der_z - z_der_x * x_der_z);
+    Q[linearisedIndex+Shortcuts::metric_derivative+7] = (1 / jacobian) * (z_der_x * x_der_y - x_der_x * z_der_y);
+
+    Q[linearisedIndex+Shortcuts::metric_derivative+2] = (1 / jacobian) * (x_der_y * y_der_z - y_der_y * x_der_z);
+    Q[linearisedIndex+Shortcuts::metric_derivative+5] = (1 / jacobian) * (y_der_x * x_der_z - x_der_x * y_der_z);
+    Q[linearisedIndex+Shortcuts::metric_derivative+8] = (1 / jacobian) * (x_der_x * y_der_y - y_der_x * x_der_y);
+
+    linearisedIndex += strideQ;
+  });
 """
 
 
@@ -23,6 +133,9 @@ def boundary():
 
 def eigenvalue():
   return """
+  // Check for NaN in any of the velocities
+  assert(("Check for Nans in velocity", !(std::isnan(Q[Shortcuts::v + 0]) || std::isnan(Q[Shortcuts::v + 1]) || std::isnan(Q[Shortcuts::v + 2]))));
+
   auto cp  = Q[Shortcuts::cp];
   auto cs  = Q[Shortcuts::cs];
   auto q_x = Q[Shortcuts::metric_derivative + 0];
@@ -35,21 +148,23 @@ def eigenvalue():
   auto s_y = Q[Shortcuts::metric_derivative + 7];
   auto s_z = Q[Shortcuts::metric_derivative + 8];
 
-  double lambda[9] = {0.};
+  double lambda[10]{1.};
 
-  lambda[0] = std::sqrt(q_x * q_x + q_y * q_y + q_z * q_z) * cp;
-  lambda[1] = std::sqrt(q_x * q_x + q_y * q_y + q_z * q_z) * cs;
-  lambda[2] = std::sqrt(q_x * q_x + q_y * q_y + q_z * q_z) * cs;
+  lambda[0] = (double) (std::sqrt(q_x * q_x + q_y * q_y + q_z * q_z) * cp);
+  lambda[1] = (double) (std::sqrt(q_x * q_x + q_y * q_y + q_z * q_z) * cs);
+  lambda[2] = (double) (std::sqrt(q_x * q_x + q_y * q_y + q_z * q_z) * cs);
 
-  lambda[3] = std::sqrt(r_x * r_x + r_y * r_y + r_z * r_z) * cp;
-  lambda[4] = std::sqrt(r_x * r_x + r_y * r_y + r_z * r_z) * cs;
-  lambda[5] = std::sqrt(r_x * r_x + r_y * r_y + r_z * r_z) * cs;
+  lambda[3] = (double) (std::sqrt(r_x * r_x + r_y * r_y + r_z * r_z) * cp);
+  lambda[4] = (double) (std::sqrt(r_x * r_x + r_y * r_y + r_z * r_z) * cs);
+  lambda[5] = (double) (std::sqrt(r_x * r_x + r_y * r_y + r_z * r_z) * cs);
 
-  lambda[6] = std::sqrt(s_x * s_x + s_y * s_y + s_z * s_z) * cp;
-  lambda[7] = std::sqrt(s_x * s_x + s_y * s_y + s_z * s_z) * cs;
-  lambda[8] = std::sqrt(s_x * s_x + s_y * s_y + s_z * s_z) * cs;
+  lambda[6] = (double) (std::sqrt(s_x * s_x + s_y * s_y + s_z * s_z) * cp);
+  lambda[7] = (double) (std::sqrt(s_x * s_x + s_y * s_y + s_z * s_z) * cs);
+  lambda[8] = (double) (std::sqrt(s_x * s_x + s_y * s_y + s_z * s_z) * cs);
 
-  return *std::max_element(lambda, lambda + 9);
+  lambda[9] = 1.;
+
+  return *std::max_element(lambda, lambda + 10);
 """
 
 def flux():
@@ -63,216 +178,148 @@ def flux():
 
   auto jacobian = Q[Shortcuts::jacobian];
 
+  std::fill_n(F, NumberOfUnknowns, 0.);
+
   switch (normal) {
     case 0: {
       auto q_x = Q[Shortcuts::metric_derivative + 0];
       auto q_y = Q[Shortcuts::metric_derivative + 1];
       auto q_z = Q[Shortcuts::metric_derivative + 2];
-      F[0]       = -jacobian * (q_x * sigma_xx + q_y * sigma_xy + q_z * sigma_xz);
-      F[1]       = -jacobian * (q_x * sigma_xy + q_y * sigma_yy + q_z * sigma_yz);
-      F[2]       = -jacobian * (q_x * sigma_xz + q_y * sigma_yz + q_z * sigma_zz);
-      F[3]       = 0.0;
-      F[4]       = 0.0;
-      F[5]       = 0.0;
-      F[6]       = 0.0;
-      F[7]       = 0.0;
-      F[8]       = 0.0;
+      F[Shortcuts::v+0] = -jacobian * (q_x * sigma_xx + q_y * sigma_xy + q_z * sigma_xz);
+      F[Shortcuts::v+1] = -jacobian * (q_x * sigma_xy + q_y * sigma_yy + q_z * sigma_yz);
+      F[Shortcuts::v+2] = -jacobian * (q_x * sigma_xz + q_y * sigma_yz + q_z * sigma_zz);
     } break;
     case 1: {
       auto r_x = Q[Shortcuts::metric_derivative + 3];
       auto r_y = Q[Shortcuts::metric_derivative + 4];
       auto r_z = Q[Shortcuts::metric_derivative + 5];
-      F[0]       = -jacobian * (r_x * sigma_xx + r_y * sigma_xy + r_z * sigma_xz);
-      F[1]       = -jacobian * (r_x * sigma_xy + r_y * sigma_yy + r_z * sigma_yz);
-      F[2]       = -jacobian * (r_x * sigma_xz + r_y * sigma_yz + r_z * sigma_zz);
-      F[3]       = 0.0;
-      F[4]       = 0.0;
-      F[5]       = 0.0;
-      F[6]       = 0.0;
-      F[7]       = 0.0;
-      F[8]       = 0.0;
+      F[Shortcuts::v+0] = -jacobian * (r_x * sigma_xx + r_y * sigma_xy + r_z * sigma_xz);
+      F[Shortcuts::v+1] = -jacobian * (r_x * sigma_xy + r_y * sigma_yy + r_z * sigma_yz);
+      F[Shortcuts::v+2] = -jacobian * (r_x * sigma_xz + r_y * sigma_yz + r_z * sigma_zz);
     } break;
     case 2: {
       auto s_x = Q[Shortcuts::metric_derivative + 6];
       auto s_y = Q[Shortcuts::metric_derivative + 7];
       auto s_z = Q[Shortcuts::metric_derivative + 8];
-      F[0]       = -jacobian * (s_x * sigma_xx + s_y * sigma_xy + s_z * sigma_xz);
-      F[1]       = -jacobian * (s_x * sigma_xy + s_y * sigma_yy + s_z * sigma_yz);
-      F[2]       = -jacobian * (s_x * sigma_xz + s_y * sigma_yz + s_z * sigma_zz);
-      F[3]       = 0.0;
-      F[4]       = 0.0;
-      F[5]       = 0.0;
-      F[6]       = 0.0;
-      F[7]       = 0.0;
-      F[8]       = 0.0;
+      F[Shortcuts::v+0] = -jacobian * (s_x * sigma_xx + s_y * sigma_xy + s_z * sigma_xz);
+      F[Shortcuts::v+1] = -jacobian * (s_x * sigma_xy + s_y * sigma_yy + s_z * sigma_yz);
+      F[Shortcuts::v+2] = -jacobian * (s_x * sigma_xz + s_y * sigma_yz + s_z * sigma_zz);
     }
   }
 """
 
 def ncp():
   return """
+  std::fill_n(BTimesDeltaQ, NumberOfUnknowns, 0.0);
+
   switch (normal) {
     case 0: {
-      auto u_q = deltaQ[0];
-      auto v_q = deltaQ[1];
-      auto w_q = deltaQ[2];
+      auto u_q = deltaQ[Shortcuts::v + 0];
+      auto v_q = deltaQ[Shortcuts::v + 1];
+      auto w_q = deltaQ[Shortcuts::v + 2];
       auto q_x = Q[Shortcuts::metric_derivative + 0];
       auto q_y = Q[Shortcuts::metric_derivative + 1];
       auto q_z = Q[Shortcuts::metric_derivative + 2];
-      BTimesDeltaQ[0]  = 0;
-      BTimesDeltaQ[1]  = 0;
-      BTimesDeltaQ[2]  = 0;
-      BTimesDeltaQ[3]  = -q_x * u_q;
-      BTimesDeltaQ[4]  = -q_y * v_q;
-      BTimesDeltaQ[5]  = -q_z * w_q;
-      BTimesDeltaQ[6]  = -(q_y * u_q + q_x * v_q); // sigma_xy
-      BTimesDeltaQ[7]  = -(q_z * u_q + q_x * w_q); // sigma_xz
-      BTimesDeltaQ[8]  = -(q_z * v_q + q_y * w_q); // sigma_yz
+      BTimesDeltaQ[Shortcuts::sigma + 0] = -q_x*u_q;
+      BTimesDeltaQ[Shortcuts::sigma + 1] = -q_y*v_q;
+      BTimesDeltaQ[Shortcuts::sigma + 2] = -q_z*w_q;
+      BTimesDeltaQ[Shortcuts::sigma + 3] = -(q_y*u_q+q_x*v_q); //sigma_xy
+      BTimesDeltaQ[Shortcuts::sigma + 4] = -(q_z*u_q+q_x*w_q); //sigma_xz
+      BTimesDeltaQ[Shortcuts::sigma + 5] = -(q_z*v_q+q_y*w_q); //sigma_yz
     } break;
     case 1: {
-      auto u_r = deltaQ[0];
-      auto v_r = deltaQ[1];
-      auto w_r = deltaQ[2];
+      auto u_r = deltaQ[Shortcuts::v + 0];
+      auto v_r = deltaQ[Shortcuts::v + 1];
+      auto w_r = deltaQ[Shortcuts::v + 2];
       auto r_x = Q[Shortcuts::metric_derivative + 3];
       auto r_y = Q[Shortcuts::metric_derivative + 4];
       auto r_z = Q[Shortcuts::metric_derivative + 5];
-      BTimesDeltaQ[0]  = 0;
-      BTimesDeltaQ[1]  = 0;
-      BTimesDeltaQ[2]  = 0;
-      BTimesDeltaQ[3]  = -r_x * u_r;
-      BTimesDeltaQ[4]  = -r_y * v_r;
-      BTimesDeltaQ[5]  = -r_z * w_r;
-      BTimesDeltaQ[6]  = -(r_y * u_r + r_x * v_r); // sigma_xy
-      BTimesDeltaQ[7]  = -(r_z * u_r + r_x * w_r); // sigma_xz
-      BTimesDeltaQ[8]  = -(r_z * v_r + r_y * w_r); // sigma_yz
+      BTimesDeltaQ[Shortcuts::sigma + 0] = -r_x*u_r;
+      BTimesDeltaQ[Shortcuts::sigma + 1] = -r_y*v_r;
+      BTimesDeltaQ[Shortcuts::sigma + 2] = -r_z*w_r;
+      BTimesDeltaQ[Shortcuts::sigma + 3] = -(r_y*u_r+r_x*v_r); //sigma_xy
+      BTimesDeltaQ[Shortcuts::sigma + 4] = -(r_z*u_r+r_x*w_r); //sigma_xz
+      BTimesDeltaQ[Shortcuts::sigma + 5] = -(r_z*v_r+r_y*w_r); //sigma_yz
     } break;
     case 2: {
-      auto u_s = deltaQ[0];
-      auto v_s = deltaQ[1];
-      auto w_s = deltaQ[2];
+      auto u_s = deltaQ[Shortcuts::v + 0];
+      auto v_s = deltaQ[Shortcuts::v + 1];
+      auto w_s = deltaQ[Shortcuts::v + 2];
       auto s_x = Q[Shortcuts::metric_derivative + 6];
       auto s_y = Q[Shortcuts::metric_derivative + 7];
       auto s_z = Q[Shortcuts::metric_derivative + 8];
-      BTimesDeltaQ[0]  = 0;
-      BTimesDeltaQ[1]  = 0;
-      BTimesDeltaQ[2]  = 0;
-      BTimesDeltaQ[3]  = -s_x * u_s;
-      BTimesDeltaQ[4]  = -s_y * v_s;
-      BTimesDeltaQ[5]  = -s_z * w_s;
-      BTimesDeltaQ[6]  = -(s_y * u_s + s_x * v_s); // sigma_xy
-      BTimesDeltaQ[7]  = -(s_z * u_s + s_x * w_s); // sigma_xz
-      BTimesDeltaQ[8]  = -(s_z * v_s + s_y * w_s); // sigma_yz
+      BTimesDeltaQ[Shortcuts::sigma + 0] = -s_x*u_s;
+      BTimesDeltaQ[Shortcuts::sigma + 1] = -s_y*v_s;
+      BTimesDeltaQ[Shortcuts::sigma + 2] = -s_z*w_s;
+      BTimesDeltaQ[Shortcuts::sigma + 3] = -(s_y*u_s+s_x*v_s); //sigma_xy
+      BTimesDeltaQ[Shortcuts::sigma + 4] = -(s_z*u_s+s_x*w_s); //sigma_xz
+      BTimesDeltaQ[Shortcuts::sigma + 5] = -(s_z*v_s+s_y*w_s); //sigma_yz
     }
   }
 """
 
 def multiplyMaterialParameterMatrix():
   return """
-  auto rho      = Q[Shortcuts::rho];
-  auto c_p      = Q[Shortcuts::cp];
-  auto c_s      = Q[Shortcuts::cs];
-  auto mu       = rho * c_s * c_s;
-  auto lambda   = rho * c_p * c_p - 2 * mu;
+  auto rho = Q[Shortcuts::rho];
+  auto cp  = Q[Shortcuts::cp];
+  auto cs  = Q[Shortcuts::cs];
   auto jacobian = Q[Shortcuts::jacobian];
-  auto rho_inv  = 1.0 / (rho * jacobian);
 
-  // identical in all dimensions so no need for switch
-  rhs[0] = rho_inv * rhs[0];
-  rhs[1] = rho_inv * rhs[1];
-  rhs[2] = rho_inv * rhs[2];
+  auto mu      = rho * cs * cs;
+  auto lambda  = rho * cp * cp - 2 * mu;
+  auto rho_inv = 1/(rho*jacobian);
 
-  auto lam_temp = lambda * (rhs[3] + rhs[4] + rhs[5]);
-  rhs[3]          = (2 * mu) * rhs[3] + lam_temp;
-  rhs[4]          = (2 * mu) * rhs[4] + lam_temp;
-  rhs[5]          = (2 * mu) * rhs[5] + lam_temp;
+  // Rhs uses the same formula regardless of dimension, hence no switch necessary
 
-  rhs[6] = mu * rhs[6];
-  rhs[7] = mu * rhs[7];
-  rhs[8] = mu * rhs[8];
+  rhs[Shortcuts::v + 0] = rho_inv * rhs[Shortcuts::v + 0];
+  rhs[Shortcuts::v + 1] = rho_inv * rhs[Shortcuts::v + 1];
+  rhs[Shortcuts::v + 2] = rho_inv * rhs[Shortcuts::v + 2];
+
+  auto lam_temp = lambda * (rhs[Shortcuts::sigma+0] + rhs[Shortcuts::sigma+1] + rhs[Shortcuts::sigma+2]);
+
+  rhs[Shortcuts::sigma+0] = (2*mu) * rhs[Shortcuts::sigma+0] + lam_temp;
+  rhs[Shortcuts::sigma+1] = (2*mu) * rhs[Shortcuts::sigma+1] + lam_temp;
+  rhs[Shortcuts::sigma+2] = (2*mu) * rhs[Shortcuts::sigma+2] + lam_temp;
+
+  rhs[Shortcuts::sigma+3] = mu*rhs[Shortcuts::sigma+3];
+  rhs[Shortcuts::sigma+4] = mu*rhs[Shortcuts::sigma+4];
+  rhs[Shortcuts::sigma+5] = mu*rhs[Shortcuts::sigma+5];
 """
 
 def refinement_criterion():
   return """
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
-
   return result;
-"""
-
-def point_source():
-  return """
-  std::fill_n(forceVector, 9, 0.);
-
-  auto jacobian = Q[Shortcuts::jacobian];
-
-  assertion(n == 0, "Only a single pointSource for LOH1",n);
-
-  constexpr double t0 = 0.1;
-  constexpr double M0 = 1000.0;
-  
-  double f = M0*t/(t0*t0)*std::exp(-t/t0);
-  
-  forceVector[Shortcuts::sigma + 4] = f;
-
-  for (int i = 0; i < NumberOfUnknowns; i++) {
-    forceVector[i] = forceVector[i] / jacobian;
-  }
-"""
-def init_point_source():
-  return """
-  pointSourceLocation[0][0] = 0.0;
-  pointSourceLocation[0][1] = 2.0;
-  pointSourceLocation[0][2] = 0.0;
-
-  context->correctPointSourceLocation(pointSourceLocation);
 """
 
 def riemann_solver():
   return """
-  Numerics::riemannSolver<VariableShortcuts{{SOLVER_NAME}}, {{CORRECTOR_COMPUTATION_PRECISION}}, Order + 1, NumberOfUnknowns, (NumberOfUnknowns + NumberOfAuxiliaryVariables), 1>(
-    FL, FR, QL, QR, dt, direction, isBoundaryFace, faceIndex
+  applications::exahype2::exaseis::riemannSolverIsotropic<VariableShortcuts{{SOLVER_NAME}}, {{CORRECTOR_COMPUTATION_PRECISION}}, Order + 1, NumberOfUnknowns, (NumberOfUnknowns + NumberOfAuxiliaryVariables), 1>(
+    FL, FR, QL, QR, t, dt, direction, isBoundaryFace, faceIndex
   );
 """
 
 def userIncludes():
   return """
-#define _CUSTOM_COORDINATES
-#define ASAGI_NOMPI
-#define _TOP 1
+#include <memory>
 
-#include "../ExaSeis_core/Curvilinear/ContextCurvilinear.h"
+#include "../riemannSolvers/curvilinearRoutines.h"
+#include "../riemannSolvers/riemannsolverIsotropic.h"
 
-#include "../ExaSeis_core/Numerics/curvilinearRoutines.h"
-#include "../ExaSeis_core/Numerics/riemannsolverIsotropic.h"
+#include "exahype2/dg/DGUtils.h"
+#include "toolbox/blockstructured/Curvi.h"
 
-#include "peano4/datamanagement/CellMarker.h"
+#include "tarch/reader/NetCDFFieldSampler.h"
 """
 
 def abstractUserDefinitions():
   return """
-ContextCurvilinear<{{NAMESPACE | join("::")}}::VariableShortcuts{{SOLVER_NAME}},
-  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Order + 1,
-  ({{NAMESPACE | join("::")}}::{{CLASSNAME}}::NumberOfUnknowns + {{NAMESPACE | join("::")}}::{{CLASSNAME}}::NumberOfAuxiliaryVariables),
-  {{SOLUTION_STORAGE_PRECISION}}>* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::context;
+std::unique_ptr<toolbox::blockstructured::Curvi> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_curvi;
 
 tarch::la::Vector<DIMENSIONS,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::invertProjection(const tarch::la::Vector<DIMENSIONS,double> coordinates){
 
-  if(peano4::datamanagement::CellMarker::isContained(
-    coordinates, DomainOffset+0.5*DomainSize, DomainSize, 0.
-  )){
-    double fixedCoords[3];
-    fixedCoords[toolbox::curvi::Coordinate::X] = coordinates[0];
-    fixedCoords[toolbox::curvi::Coordinate::Y] = coordinates[1];
-    fixedCoords[toolbox::curvi::Coordinate::Z] = coordinates[2];
+  return _curvi->invertProjection(coordinates);
 
-    tarch::la::Vector<DIMENSIONS,double> result;
-    toolbox::curvi::Interface* curviInterface = context->getInterface();
-    result[0] = curviInterface->invertProjection(toolbox::curvi::Coordinate::X, fixedCoords);
-    result[1] = curviInterface->invertProjection(toolbox::curvi::Coordinate::Y, fixedCoords);
-    result[2] = curviInterface->invertProjection(toolbox::curvi::Coordinate::Z, fixedCoords);
-
-    return result;
-  }
-  return coordinates;
 }
 """
 
@@ -284,59 +331,33 @@ public:
   tarch::la::Vector<DIMENSIONS,double> invertProjection(const tarch::la::Vector<DIMENSIONS,double> coordinates);
 
 protected:
-  static ContextCurvilinear<VariableShortcuts{{SOLVER_NAME}}, Order + 1, (NumberOfAuxiliaryVariables + NumberOfUnknowns), {{SOLUTION_STORAGE_PRECISION}}>* context;//(NumberOfUnknowns+NumberOfAuxiliaryVariables)>* context;
+  static std::unique_ptr<toolbox::blockstructured::Curvi> _curvi;
 """
 
-def init_grid_step_implementation(scenario_string):
+def init_grid_step_implementation(scenario_perturbations):
   return """
   std::copy_n(
     kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes,
     (Order+1),
-    QuadraturePoints1d    
+    QuadraturePoints1d
   );
 
-  std::string topography_string = \"""" + scenario_string + """.yaml";
-
-  //setting coarsestMeshLevel and maxAdaptiveMeshLevel
-  double maxDSize = std::numeric_limits<double>::min();
-  double minDSize = std::numeric_limits<double>::max();
-  tarch::la::Vector<DIMENSIONS, double> sizes = DomainSize;
-  
-  for(int i=0; i<DIMENSIONS; i++){
-    if(sizes[i]>maxDSize){
-      maxDSize = sizes[i];
-    }
-    if(sizes[i]<minDSize){
-      minDSize = sizes[i];
-    }    
-  }
-  
-  int depth = 0;
-  const double maxAdmissiblePatchSize = ::runner::RuntimeParameters::getInstance().getMaxAdmissiblePatchSize(DomainSize);
+  //setting minCellSize
+  tarch::la::Vector<DIMENSIONS, double> minCellSize = DomainSize;
   const double minAdmissiblePatchSize = ::runner::RuntimeParameters::getInstance().getMinAdmissiblePatchSize(DomainSize);
-  
+
   //finding coarsest possible Mesh level
-  while(maxDSize>maxAdmissiblePatchSize){
-    depth += 1;
-    maxDSize /= 3.0;
-  }
-  
-  double realCoarsestMeshSize = maxDSize;
-  double coarsestMeshLevel = depth;  
-  
-  depth = 0;
-  while(minDSize>minAdmissiblePatchSize){
-    depth += 1;
-    minDSize /= 3.0;
+  while(min(minCellSize)>minAdmissiblePatchSize){
+    minCellSize /= 3.0;
   }
 
-  context = new ContextCurvilinear<VariableShortcuts{{SOLVER_NAME}}, Order + 1, (NumberOfAuxiliaryVariables + NumberOfUnknowns), {{SOLUTION_STORAGE_PRECISION}}>(
-    topography_string,
-    coarsestMeshLevel,
-    realCoarsestMeshSize,
-    depth,
-    DomainOffset, DomainSize,
-    kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes,
-    kernels::{{SOLVER_NAME}}::DGMatrices<{{SOLUTION_STORAGE_PRECISION}}>::dudx
+  // Grid initialisation is re-run once per round of static AMR, so this hook fires more than once.
+  // Assigning to the unique_ptr releases the Curvi the earlier round built, and the perturbations
+  // below then rebuild it from scratch.
+  _curvi = std::make_unique<toolbox::blockstructured::Curvi>(
+    DomainOffset,
+    DomainSize,
+    minCellSize
   );
-"""
+
+""" + scenario_perturbations
