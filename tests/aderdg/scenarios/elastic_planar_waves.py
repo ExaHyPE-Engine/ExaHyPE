@@ -26,13 +26,18 @@ class ElasticPlanarWaves(Scenario):
     def initial_conditions(self):
         return """
   // Lamé parameters
-  constexpr auto mu     =  4;
-  constexpr auto lambda = -4;
+  constexpr auto mu     = 1;
+  constexpr auto lambda = 2;
 
   // Constant auxiliary parameters
   constexpr auto rho  = 1;
   constexpr auto cp   = 2;
-  constexpr auto cs   = 2;
+  constexpr auto cs   = 1;
+
+  // Auxiliary variables
+  Q[Shortcuts::rho] = rho;  //rho
+  Q[Shortcuts::cp]  = cp;   //cp
+  Q[Shortcuts::cs]  = cs;   //cs
 
   const double val_x = cos( -std::numbers::pi*x[0]);
   const double val_y = cos( -std::numbers::pi*x[1]);
@@ -44,48 +49,36 @@ class ElasticPlanarWaves(Scenario):
   Q[Shortcuts::sigma+0] = val_x*(lambda+2*mu)  + val_y*lambda        + val_z*lambda;         //xx
   Q[Shortcuts::sigma+1] = val_x*lambda         + val_y*(lambda+2*mu) + val_z*lambda;         //yy
   Q[Shortcuts::sigma+2] = val_x*lambda         + val_y*lambda        + val_z*(lambda+2*mu);  //zz
-  Q[Shortcuts::sigma+3] = val_x*mu; //xy
-  Q[Shortcuts::sigma+4] = val_z*mu; //xz
-  Q[Shortcuts::sigma+5] = val_y*mu; //yz
+  Q[Shortcuts::sigma+3] = 0; //xy
+  Q[Shortcuts::sigma+4] = 0; //xz
+  Q[Shortcuts::sigma+5] = 0; //yz
 
   // Velocities
-  Q[Shortcuts::v+0] = val_x*cp + val_z*cs; //vx
-  Q[Shortcuts::v+1] = val_y*cp + val_x*cs; //vy
-  Q[Shortcuts::v+2] = val_z*cp + val_y*cs; //vz
-
-  // Auxiliary variables
-  Q[Shortcuts::rho] = rho;  //rho
-  Q[Shortcuts::cp]  = cp;   //cp
-  Q[Shortcuts::cs]  = cs;   //cs
+  Q[Shortcuts::v+0] = val_x*cp; //vx
+  Q[Shortcuts::v+1] = val_y*cp; //vy
+  Q[Shortcuts::v+2] = val_z*cp; //vz
 """
             if self._dimensions == 3
             else """
   // Stresses
   Q[Shortcuts::sigma+0] = val_x*(lambda+2*mu)  + val_y*lambda;         //xx
   Q[Shortcuts::sigma+1] = val_x*lambda         + val_y*(lambda+2*mu);  //yy
-  Q[Shortcuts::sigma+2] = val_x*mu + val_y*mu;                         //xy
+  Q[Shortcuts::sigma+2] = 0; //xy
 
   // Velocities
-  Q[Shortcuts::v+0] = val_x*cp + val_y*cs; //vx
-  Q[Shortcuts::v+1] = val_y*cp + val_x*cs; //vy
-
-  // Auxiliary variables
-  Q[Shortcuts::rho] = rho;  //rho
-  Q[Shortcuts::cp]  = cp;   //cp
-  Q[Shortcuts::cs]  = cs;   //cs
+  Q[Shortcuts::v+0] = val_x*cp; //vx
+  Q[Shortcuts::v+1] = val_y*cp; //vy
 """
         )
 
     def analytical_solution(self):
         return """
   // Lamé parameters
-  constexpr auto mu     =  4;
-  constexpr auto lambda = -4;
+  constexpr auto mu     = 1;
+  constexpr auto lambda = 2;
 
   // Constant auxiliary parameters
-  constexpr auto rho  = 1;
   constexpr auto cp   = 2;
-  constexpr auto cs   = 2;
 
   constexpr double w = -2*M_PI;
 
@@ -99,24 +92,24 @@ class ElasticPlanarWaves(Scenario):
   solution[Shortcuts::sigma+0] = val_x*(lambda+2*mu)  + val_y*lambda        + val_z*lambda;         //xx
   solution[Shortcuts::sigma+1] = val_x*lambda         + val_y*(lambda+2*mu) + val_z*lambda;         //yy
   solution[Shortcuts::sigma+2] = val_x*lambda         + val_y*lambda        + val_z*(lambda+2*mu);  //zz
-  solution[Shortcuts::sigma+3] = val_x*mu; //xy
-  solution[Shortcuts::sigma+4] = val_z*mu; //xz
-  solution[Shortcuts::sigma+5] = val_y*mu; //yz
+  solution[Shortcuts::sigma+3] = 0; //xy
+  solution[Shortcuts::sigma+4] = 0; //xz
+  solution[Shortcuts::sigma+5] = 0; //yz
 
   // Velocities
-  solution[Shortcuts::v+0] = val_x*cp + val_z*cs; //vx
-  solution[Shortcuts::v+1] = val_y*cp + val_x*cs; //vy
-  solution[Shortcuts::v+2] = val_z*cp + val_y*cs; //vz
+  solution[Shortcuts::v+0] = val_x*cp; //vx
+  solution[Shortcuts::v+1] = val_y*cp; //vy
+  solution[Shortcuts::v+2] = val_z*cp; //vz
 """
             if self._dimensions == 3
             else """
   // Stresses
   solution[Shortcuts::sigma+0] = val_x*(lambda+2*mu)  + val_y*lambda;         //xx
   solution[Shortcuts::sigma+1] = val_x*lambda         + val_y*(lambda+2*mu);  //yy
-  solution[Shortcuts::sigma+2] = val_x*mu + val_y*mu;                         //xy
+  solution[Shortcuts::sigma+2] = 0; //xy
 
   // Velocities
-  solution[Shortcuts::v+0] = val_x*cp + val_y*cs; //vx
-  solution[Shortcuts::v+1] = val_y*cp + val_x*cs; //vy
+  solution[Shortcuts::v+0] = val_x*cp; //vx
+  solution[Shortcuts::v+1] = val_y*cp; //vy
 """
         )

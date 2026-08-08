@@ -9,6 +9,7 @@ from .euler_gaussian_bell_3d import EulerGaussianBell3D
 from .euler_isentropic_vortex import EulerIsentropicVortex
 from .swe_radial_dam_break import SWERadialDamBreak
 from .swe_resting_lake import SWERestingLake
+from .swe_steady_vortex import SWESteadyVortex
 from .navier_stokes_bubbles import NavierStokesCosineBubble, NavierStokesTwoBubbles
 from .navier_stokes_taylor_green_vortex import NavierStokesTaylorGreenVortex
 from .navier_stokes_abc_flow import NavierStokesABCFlow

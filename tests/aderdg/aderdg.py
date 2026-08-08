@@ -26,6 +26,7 @@ scenario_factories = {
     "EulerIsentropicVortex": scenarios.EulerIsentropicVortex,
     "SWERadialDamBreak": scenarios.SWERadialDamBreak,
     "SWERestingLake": scenarios.SWERestingLake,
+    "SWESteadyVortex": scenarios.SWESteadyVortex,
     "NavierStokesCosineBubble": scenarios.NavierStokesCosineBubble,
     "NavierStokesTwoBubbles": scenarios.NavierStokesTwoBubbles,
     "NavierStokesTaylorGreen": scenarios.NavierStokesTaylorGreenVortex,
