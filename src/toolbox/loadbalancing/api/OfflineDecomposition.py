@@ -4,12 +4,13 @@ import numpy as np
 import sys, time, os
 import argparse
 
-from Tree import Tree
-from Input.GridPatchFileReader import *
-from Input.RegularGridGenerator import *
-from Input.CustomGridGenerator import *
-from Visualize.TreeVisualizer import TreeVisualizer
-import Strategies.SplitTrees as split_strategy
+from toolbox.loadbalancing.api.Tree import Tree
+from toolbox.loadbalancing.api.input.GridPatchFileReader import *
+from toolbox.loadbalancing.api.input.RegularGridGenerator import *
+from toolbox.loadbalancing.api.input.CustomGridGenerator import *
+from toolbox.loadbalancing.api.visualize.TreeVisualizer import TreeVisualizer
+import toolbox.loadbalancing.api.strategies.SplitTrees as split_strategy
+from toolbox.loadbalancing.api.strategies.Decomposition import equidistant_splitting
 
 
 """
@@ -26,7 +27,7 @@ distribution across compute resources.
                         Example: -f /path/to/checkpoint/grid/files
                         Requires: Grid files with 'grid-' prefix from Peano checkpoints
 
--d, --dimension DIM     Spatial dimension (REQUIRED)
+-d, --dimensions DIM    Spatial dimensions (REQUIRED)
                         Values: 2 (for 2D grids) or 3 (for 3D grids)
                         
 -l, --max-level LEVEL   Maximum refinement level for artificial grid generation
@@ -34,8 +35,8 @@ distribution across compute resources.
                         Range: 1-10 (higher values require significant memory)
 
 ### Processing Options  
--s, --splits COUNT      Number of additional subtrees to create
-                        Example: -s 4 creates 5 total subtrees (original + 4 new)
+-s, --subtrees COUNT    Total number of subtrees to create
+                        Example: -s 5 creates 5 total subtrees
                         Default: No splitting (analysis only)
 
 -p, --plot              Generate visualisation plots
@@ -81,14 +82,14 @@ python3 OfflineDecomposition.py -d 3 -l 3 -s 8 -p
 
 ## Performance Considerations
 
-- **Memory Usage**: Grows as 3^(dimension × max_level) for regular grids
+- **Memory Usage**: Grows as 3^(dimensions × max_level) for regular grids
 - **Processing Time**: Splitting algorithms scale with tree size
 - **File I/O**: Large checkpoint directories may require significant read time
 
 ## Error Handling
 
 The script validates:
-- Required dimension parameter
+- Required dimensions parameter
 - Valid input source (either -f or -l must be specified)
 - File accessibility and format
 - Memory constraints for large grids
@@ -110,7 +111,7 @@ def display_hardcoded_split_parameters(peano_tree: Tree, title: str) -> None:
         return
     
     # Get the split parameters
-    grid_sweeps, splitting_trees, cell_counts, subtrees = split_strategy.extract_hardcoded_split_parameters(peano_tree)
+    grid_sweeps, splitting_trees, cell_counts, subtrees = split_strategy.extract_split_instructions(peano_tree)
     
     print("\n" + title)
     print("-" * len(title))
@@ -138,11 +139,11 @@ def main():
     parser.add_argument("-f", 	"--file", 		dest="file_path", 	    type=str,                                                   help="Path to input grid patch file (e.g., Input/example2)" )
     parser.add_argument("-y", 	"--yaml", 		dest="yaml_path", 	    type=str,                                                   help="Path to input YAML file created by generate_tree_yaml()" )
     parser.add_argument("-p", 	"--plot", 		dest="plot_flag", 	                action="store_true",    default=False,          help="Generate and save visualization plots of the tree structure" )
-    parser.add_argument("-d",   "--dimension",  dest="grid_dimension",  type=int,                                                   help="Spatial dimension of the grid (2 for 2D, 3 for 3D) - auto-detected from YAML if not specified" )
+    parser.add_argument("-d",   "--dimensions", dest="grid_dimensions", type=int,                                                   help="Spatial dimensions of the grid (2 for 2D, 3 for 3D) - auto-detected from YAML if not specified" )
     parser.add_argument("-l",   "--max-level",  dest="max_level",  	    type=int,                           default=0,              help="Maximum refinement level for artificial regular grid generation" )
-    parser.add_argument("-s",   "--splits", 	dest="num_splits",      type=int,                                                   help="Number of additional subtrees to create via splitting")
+    parser.add_argument("-s",   "--subtrees", 	dest="subtrees",      type=int,                                                   help="Total number of subtrees to create via splitting")
     parser.add_argument("-o",   "--output",     dest="output_yaml",     type=str,                           default="output.yaml",  help="Output YAML file path for storing split results and tree structure")
-    parser.add_argument("-t",   "--traversal",  dest="traversal_mode",  type=str,   choices=["bfs", "dfs"], default="bfs",          help="Stage I traversal mode for split_tree(): 'bfs' (default) or 'dfs'")
+    parser.add_argument("-t",   "--traversal",  dest="traversal_mode",  type=str,   choices=["bfs", "bfs_finest_first", "dfs"], default="bfs_finest_first",          help="Stage I traversal mode for split_tree(): 'bfs', 'bfs_finest_first' (default) or 'dfs'")
     parser.add_argument("--no-topology-update", dest="topology_update",             action="store_false",   default=True,           help="Disable topology preservation (skip non-leaf subtree propagation) during split_tree()")
 
     args = parser.parse_args()
@@ -153,23 +154,23 @@ def main():
         name = "YAML-"+os.path.basename(args.yaml_path)
         filename = args.yaml_path
         tree = CustomGridGenerator(name=name, yaml_file_path=args.yaml_path)
-        # Auto-detect dimension from loaded tree if not specified
-        if args.grid_dimension is None:
-            args.grid_dimension = tree._dimension
+        # Auto-detect dimensions from loaded tree if not specified
+        if args.grid_dimensions is None:
+            args.grid_dimensions = tree._dimension
     elif args.file_path != None:
-        if args.grid_dimension is None:
-            print("Error: -d/--dimension is required when using grid patch files")
+        if args.grid_dimensions is None:
+            print("Error: -d/--dimensions is required when using grid patch files")
             sys.exit(1)
         name = "Files-"+args.file_path
         filename = args.file_path
-        tree = GridPatchFileReader(name=name, file_path=args.file_path, dimension=args.grid_dimension)
+        tree = GridPatchFileReader(name=name, file_path=args.file_path, dimensions=args.grid_dimensions)
     elif args.max_level > 0:
-        if args.grid_dimension is None:
-            print("Error: -d/--dimension is required when generating regular grids")
+        if args.grid_dimensions is None:
+            print("Error: -d/--dimensions is required when generating regular grids")
             sys.exit(1)
         name = "Regular-Grid-Generator"
         filename="TreeStructure"
-        tree = RegularGridGenerator(name=name, max_level=args.max_level, dimension=args.grid_dimension)
+        tree = RegularGridGenerator(name=name, max_level=args.max_level, dimensions=args.grid_dimensions)
     else:
         print("No input specified. Use one of: -f (grid files), -y (YAML file), or -l (regular grid generation)")
         sys.exit(1)
@@ -229,7 +230,7 @@ def main():
         print("GENERATING ORIGINAL TREE VISUALIZATION")
         print("="*50)
         
-        TreeVisualizer(tree, args.grid_dimension, original_plot_filename)
+        TreeVisualizer(tree, args.grid_dimensions, original_plot_filename)
         print(f"Original tree visualization saved as {original_plot_filename}.pdf and {original_plot_filename}.png")
 
     viz_end_time = time.time()
@@ -238,8 +239,8 @@ def main():
     split_start_time = 0.0
     split_end_time = 0.0
 
-    # Apply splitting if number of splits is provided
-    if args.num_splits is not None:
+    # Apply splitting if number of subtrees is provided
+    if args.subtrees is not None:
         print("\n" + "="*50)
         print("INITIALLY RESETTING TREE TO SINGLE SUBTREE")
         print("="*50)
@@ -253,17 +254,20 @@ def main():
         
         split_start_time = time.time()
 
-        # a runtime switch for whether split_tree() performs its Stage II bottom-up propagation
-        if args.topology_update:
-            tree = split_strategy.split_tree(tree, args.num_splits, traversal=args.traversal_mode)
-        else:
-            # Temporarily disable SplitTrees._propagate_bottom_up without editing SplitTrees.py
-            original_update = split_strategy._propagate_bottom_up
-            try:
-                split_strategy._propagate_bottom_up = lambda _tree: None
-                tree = split_strategy.split_tree(tree, args.num_splits, traversal=args.traversal_mode)
-            finally:
-                split_strategy._propagate_bottom_up = original_update
+        # Build the decomposition plan (per-subtree leaf counts)
+        number_of_subtrees = args.subtrees
+        decomposition = equidistant_splitting(
+            tree,
+            number_of_subtrees,
+            verbose=True,
+        )
+
+        split_strategy.split_tree(
+            tree,
+            decomposition,
+            traversal=args.traversal_mode,
+            enable_propagate_bottom_up=args.topology_update,
+        )
 
         split_end_time = time.time()
 
@@ -277,14 +281,14 @@ def main():
         print("GENERATING SPLIT RESULTS YAML")
         print("="*50)
 
-        # Create split tree output filename based on input type and number of splits
+        # Create split tree output filename based on input type and number of subtrees
         if args.file_path:
-            split_yaml_filename = f"Files-{os.path.basename(args.file_path)}_s{args.num_splits}_split.yaml"
+            split_yaml_filename = f"Files-{os.path.basename(args.file_path)}_s{args.subtrees}_split.yaml"
         elif args.yaml_path:
             base_name = os.path.splitext(os.path.basename(args.yaml_path))[0]
-            split_yaml_filename = f"YAML-{base_name}_s{args.num_splits}_split.yaml"
+            split_yaml_filename = f"YAML-{base_name}_s{args.subtrees}_split.yaml"
         else:
-            split_yaml_filename = f"TreeStructure_l{args.max_level}_s{args.num_splits}_split.yaml"
+            split_yaml_filename = f"TreeStructure_l{args.max_level}_s{args.subtrees}_split.yaml"
 
         # Replace path separators to create a safe filename
         split_yaml_filename = split_yaml_filename.replace('/', '_').replace('\\', '_')
@@ -304,13 +308,13 @@ def main():
         if args.plot_flag:
             if args.file_path:
                 base_name = f"Files-{os.path.basename(args.file_path)}"
-                split_plot_filename = f"{base_name}_s{args.num_splits}"
+                split_plot_filename = f"{base_name}_s{args.subtrees}"
             elif args.yaml_path:
                 base_name = f"YAML-{os.path.splitext(os.path.basename(args.yaml_path))[0]}"
-                split_plot_filename = f"{base_name}_s{args.num_splits}"
+                split_plot_filename = f"{base_name}_s{args.subtrees}"
             else:
                 base_name = "TreeStructure"
-                split_plot_filename = f"{base_name}_l{args.max_level}_s{args.num_splits}"
+                split_plot_filename = f"{base_name}_l{args.max_level}_s{args.subtrees}"
                 
             split_plot_filename = split_plot_filename.replace('/', '_').replace('\\', '_')
             
@@ -318,7 +322,7 @@ def main():
             print("GENERATING SPLIT TREE VISUALIZATION")
             print("="*50)
             
-            TreeVisualizer(tree, args.grid_dimension, split_plot_filename)
+            TreeVisualizer(tree, args.grid_dimensions, split_plot_filename)
             print(f"Split tree visualization saved as {split_plot_filename}.pdf and {split_plot_filename}.png")
         
         time3 = time.time()
@@ -329,7 +333,7 @@ def main():
     print(f"Input Time Cost: {(time2-time1):.4f} seconds")
     if args.plot_flag:
         print(f"Visualization Time Cost: {(viz_end_time-viz_start_time):.4f} seconds")
-    if args.num_splits is not None:
+    if args.subtrees is not None:
         print(f"Splitting Time Cost: {(split_end_time-split_start_time):.4f} seconds")
     print(f"Total Time Cost: {(time3-time1):.4f} seconds")
 

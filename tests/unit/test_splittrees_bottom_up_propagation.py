@@ -1,49 +1,59 @@
-import os
-import sys
+import itertools
+import pytest
 
-# Ensure the loadbalancing API is importable when running pytest from repo root
-sys.path.insert(0, os.path.abspath("src/toolbox/loadbalancing/api"))
-
-from Input.RegularGridGenerator import RegularGridGenerator
-import Strategies.SplitTrees as split_strategy
+from toolbox.loadbalancing.api.input.RegularGridGenerator import RegularGridGenerator
+import toolbox.loadbalancing.api.strategies.SplitTrees as split_strategy
 
 
-def test_bottom_up_propagation_promotes_parent_if_all_children_same_subtree_2d():
+@pytest.mark.parametrize(
+    "dimensions,target_subtree,parent_coords,mixed_parent_coords",
+    [
+        (2, 1, (1, 1), (0, 0)),
+        (3, 2, (1, 1, 1), (0, 0, 0)),
+    ],
+)
+def test_bottom_up_propagation_promotes_parent_if_all_children_same_subtree(
+    dimensions, target_subtree, parent_coords, mixed_parent_coords
+):
     """
-    Stage II ("Bottom-Up Propagation") invariant test for
-    [`Strategies.SplitTrees._propagate_bottom_up`](src/toolbox/loadbalancing/api/Strategies/SplitTrees.py).
+    Stage II ("Bottom-Up Propagation") invariant test in 2D and 3D.
 
     If all existing children of a parent belong to the same subtree, then after
     Stage II the parent has to be assigned to that subtree as well.
     """
-    # Arrange: 2D tree with 2 levels: L0 = 3x3, L1 = 9x9 (children)
-    tree = RegularGridGenerator(name="pytest-tree", max_level=2, dimension=2)
+    # Arrange: tree with 2 levels: L0 = 3^d, L1 = 9^d (children)
+    tree = RegularGridGenerator(name=f"pytest-tree-{dimensions}d", max_level=2, dimensions=dimensions)
 
     parent_level = 0
     child_level = 1
 
-    # Choose a parent at level 0
-    parent_a, parent_b = 1, 1
-    assert tree._tree_arrays[parent_level][parent_a][parent_b] == (1, 0)
+    # Parent that should be promoted
+    assert tree._tree_arrays[parent_level][parent_coords] == (1, 0)
 
-    # Make *all* of its 3x3 children belong to subtree 1
-    for ca in range(3 * parent_a, 3 * parent_a + 3):
-        for cb in range(3 * parent_b, 3 * parent_b + 3):
-            tree._tree_arrays[child_level][ca][cb] = (1, 1)
+    # Make all children of parent_coords belong to target_subtree
+    ranges = [range(3 * coord, 3 * coord + 3) for coord in parent_coords]
+    for child_coords in itertools.product(*ranges):
+        tree._tree_arrays[child_level][child_coords] = (1, target_subtree)
 
-    # Create a second parent whose children are mixed across subtrees -> should NOT promote
-    mixed_parent_a, mixed_parent_b = 0, 0
-    assert tree._tree_arrays[parent_level][mixed_parent_a][mixed_parent_b] == (1, 0)
+    # Parent that should remain unchanged due to mixed children
+    assert tree._tree_arrays[parent_level][mixed_parent_coords] == (1, 0)
 
-    tree._tree_arrays[child_level][0][0] = (1, 1)
-    tree._tree_arrays[child_level][0][1] = (1, 1)
-    tree._tree_arrays[child_level][0][2] = (1, 0)  # keep mixed
+    # Introduce mixed assignments under mixed_parent_coords:
+    # some children in target_subtree, at least one child still in subtree 0.
+    mixed_child_base = tuple(3 * coord for coord in mixed_parent_coords)
+    first_child = mixed_child_base
+    second_child = mixed_child_base[:-1] + (mixed_child_base[-1] + 1,)
+    third_child = mixed_child_base[:-1] + (mixed_child_base[-1] + 2,)
+
+    tree._tree_arrays[child_level][first_child] = (1, target_subtree)
+    tree._tree_arrays[child_level][second_child] = (1, target_subtree)
+    tree._tree_arrays[child_level][third_child] = (1, 0)
 
     # Act: run Stage II only
-    split_strategy._propagate_bottom_up(tree)
+    split_strategy.propagate_bottom_up(tree)
 
     # Assert: uniform-children parent is promoted
-    assert tree._tree_arrays[parent_level][parent_a][parent_b] == (1, 1)
+    assert tree._tree_arrays[parent_level][parent_coords] == (1, target_subtree)
 
     # Assert: mixed-children parent remains unchanged
-    assert tree._tree_arrays[parent_level][mixed_parent_a][mixed_parent_b] == (1, 0)
+    assert tree._tree_arrays[parent_level][mixed_parent_coords] == (1, 0)

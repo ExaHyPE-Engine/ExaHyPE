@@ -2,17 +2,13 @@
 
 @page page_third-party_performance_analysis_tools Performance analysis tools
 
-
 <!-- Add this one for href links to subitems -->
 \tableofcontents
 
 Peano provides bespoke support for some external performance analysis tools.
 
 
-# ScoreP
-
-
-## Compilation
+## Score-P
 
 When using ScoreP the configure or cmake command should be prefixed with SCOREP_WRAPPER=off,
 and the compiler names should be prefixed with scorep-. For an Intel toolchain
@@ -22,6 +18,18 @@ with autotools this looks like:
 SCOREP_WRAPPER=off ./configure CC=scorep-icx CXX=scorep-icpx ...
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+<<<<<<< HEAD
+
+### Score-P variants
+
+If we use scripts alike scorep-icx, we implicitly assume that Score-P has been
+built against the Intel compiler. If you install it manually on your system, 
+this might not be the default, i.e. Score-P might be built again GNU. To toggle
+this behaviour, ensure you configure Score-P with 
+
+        ./configure --with-nocross-compiler-suite=oneapi
+        
+=======
 The instruction above assumes that Score-P's module files are built such that 
 they provide scripts alike scorep-icx. If such a script does not exist, you 
 might have built Scalasca without the Intel compiler even though you want to 
@@ -31,32 +39,19 @@ use the Intel compiler (default it GNU). If so, add
            --with-nocross-compiler-suite=oneapi
            
 to your configure call.
+>>>>>>> refs/remotes/origin/infrastructure
 
 
-If you compile without switching the instrumentation off, Score-P will 
-instrument every single element of all Peano libraries which will be extremely
-excessive. 
+### Logging against Score-P         
 
-## Logging
+Please consult @ref tarch_logging on some information how to pick proper 
+logging outputs (devices) for a build with Score-P. Using this logger ensures 
+that the trace and profile builds of Peano dump their output into an API that 
+helps Score-P to augment its traces. Otherwise, these outputs just go to the 
+terminal.
+ 
 
-Peano provides bespoke logging for Score-P. Indeed, it it not a good idea to 
-use Peano with its default @ref tarch_logging "command line logger". This 
-logger does indentation and fancy string formatting, and all of these things
-draw compute resources which pollute your profile. You don't need them and it
-is way more efficient to use the @ref tarch_logging "Score-P logger" that is 
-shipped with the code. 
-
-In summary, I recommend to add
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-SCOREP_WRAPPER=off ./configure CC=scorep-icx CXX=scorep-icpx ... --with-toolchain=scorep
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-to the configuration.
-
-
-
-# MAQAO
+## MAQAO
 
 When using any performance analysis tool the compilation flag "-g" should be
 used, to generate debug information. For MAQAO this may not be sufficient, in 
