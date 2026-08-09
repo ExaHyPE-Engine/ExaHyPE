@@ -2,10 +2,6 @@
 # use, please see the copyright notice at www.peano-framework.org
 import numpy as np
 import matplotlib.pyplot as plt
-import sys, os
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from Tree import Tree
 
 # Try to import plotly for HTML export
 try:

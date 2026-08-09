@@ -209,20 +209,29 @@ Intrinsically, all of the visualisation discussion in the load balancing
 documentation is backward-looking. 
 That is, you derive a domain decomposition, you pipe it into ExaHyPE, and then
 you visualise what it did give you.
-With the offline domain decomposition, we can also visualise the envisaged 
+With the offline domain decomposition however, we can visualise the envisaged 
 partitioning beforehand:
 
 
-@todo Dmitry can you add content here? People need to know how to visualise the
-             arising domain decomposition before they continue building Peano 
-             or doing some further tweaking. We also need this for debugging
-             reasons.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+from toolbox.loadbalancing.api.visualize.TreeVisualizer import TreeVisualizer
+
+TreeVisualizer(tree, 3, "original-finegrid")
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+gives you a figure similar to
+
+@image html TreeVisualizer-single-level.png
+
+i.e. the offline load balancing toolbox gives us the opportunity to visualise 
+what we should get (more remarks on the "should" below) beforehand.
 
 
 ## Multiscale mesh association
 
 While this very simple example sets the overall tone, it also allows us to 
-study and understand a fundamental challenge in the administratino of 
+study and understand a fundamental challenge in the administration of 
 large-scale multiscale meshes. 
 When we pipe the hardcoded decomposition from above into an ExaHyPE run, we 
 realise that it builds up the whole mesh on one single rank and thread first
@@ -278,6 +287,11 @@ Extracted hardcoded parameters:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 which means the load balancing will kick in earlier throughout the mesh construction.
+Once again, we can visualise this behaviour:
+
+
+@image html TreeVisualizer-bottom-up.png
+
 
 
 ## More complicated tree topologies
@@ -309,14 +323,17 @@ ValueError: destination_ranks (25) must have the same length as the extracted sp
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-@todo Dmitry: Something to discuss. But for this, we need the visualisation first.
+@todo Dmitry: Something to discuss. Visualisation is great, but the code is buggy. Now we at least see it.
+
 
 
 # Offload load balancing for an adaptive grid taken from a real run
 
-@todo Continue
+# Alternative splittings
 
+## Quantised domain decomposition
 
+@snippet tutorial_offline_load_balancing_sbh.py tutorials_exahype2_hpc_tutorial_offline_load_balancing_regular_quantised
 
 
  

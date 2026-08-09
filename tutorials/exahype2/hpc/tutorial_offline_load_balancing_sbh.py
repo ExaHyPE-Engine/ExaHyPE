@@ -14,6 +14,7 @@ import toolbox.loadbalancing.api.input.RegularGridGenerator as RegularGridGenera
 import toolbox.loadbalancing.api.strategies.SplitTrees as SplitTrees
 import toolbox.loadbalancing.api.output.Hardcoded as Hardcoded
 import toolbox.loadbalancing.api.strategies.Decomposition as Decomposition
+from toolbox.loadbalancing.api.visualize.TreeVisualizer import TreeVisualizer
 #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_inputs]
 
 
@@ -24,9 +25,11 @@ Domain_size = [18, 18, 18]
 LoadBalancingMetrics_None                      = "none"
 LoadBalancingMetrics_Offline_Regular_Fine_Grid = "offline-regular-fine-grid"
 LoadBalancingMetrics_Offline_Regular_Bottom_Up = "offline-regular-bottom-up"
+LoadBalancingMetrics_Offline_Regular_Quantised = "offline-regular-quantised"
 LoadBalancingMetrics = [LoadBalancingMetrics_None, 
                         LoadBalancingMetrics_Offline_Regular_Fine_Grid,
-                        LoadBalancingMetrics_Offline_Regular_Bottom_Up
+                        LoadBalancingMetrics_Offline_Regular_Bottom_Up,
+                        LoadBalancingMetrics_Offline_Regular_Quantised
                         ]
 
 
@@ -192,7 +195,6 @@ if __name__ == "__main__":
         )
         #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_regular_fine_grid_split]
         
-        
         #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_regular_fine_grid_map]
         destination_ranks = Hardcoded.assign_trees_to_ranks_round_Robin(number_of_subtrees = tree.number_of_subtrees,
                                                                         max_ranks          = args.ranks
@@ -221,12 +223,14 @@ if __name__ == "__main__":
         SplitTrees.split_tree(
             peano_tree=tree,
             verbose = True,
-            decomposition = Decomposition.quantised_splitting(peano_tree=tree,
-                                                              number_of_subtrees=number_of_subtrees,
-                                                              dimension=3,
-                                                              verbose=True)
+            decomposition = Decomposition.equidistant_splitting(peano_tree=tree,
+                                                                number_of_subtrees=number_of_subtrees,
+                                                                verbose=True)
         )
         SplitTrees.propagate_bottom_up(tree)
+
+        # @todo This should be removed, as soon as we are happy with the outcomes.
+        TreeVisualizer(tree, 3, "updated-bottomup")
         
         destination_ranks = Hardcoded.assign_trees_to_ranks_round_Robin(number_of_subtrees = tree.number_of_subtrees,
                                                                         max_ranks          = args.ranks
@@ -243,6 +247,40 @@ if __name__ == "__main__":
         )
         print("  hardcoded_mode  =", hardcoded_mode)
         #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_regular_bottom_up]
+        pass
+    elif args.load_balancing_metric==LoadBalancingMetrics_Offline_Regular_Quantised:
+        tree_height_required_to_match_cell_size = math.ceil( math.log( Domain_size[0] / args.cell_size, 3.0 ) )
+        tree = RegularGridGenerator.RegularGridGenerator(max_level=tree_height_required_to_match_cell_size, dimensions=3)
+        number_of_subtrees = args.ranks * args.trees
+
+        #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_regular_quantised]
+        SplitTrees.split_tree(
+            peano_tree=tree,
+            verbose = True,
+            decomposition = Decomposition.quantised_splitting(peano_tree=tree,
+                                                              number_of_subtrees=number_of_subtrees,
+                                                              dimension=3,
+                                                              verbose=True)
+        )
+        #![tutorials_exahype2_hpc_tutorial_offline_load_balancing_regular_quantised]
+        SplitTrees.propagate_bottom_up(tree)
+        
+        TreeVisualizer(tree, 3, "updated-bottomup")
+
+        destination_ranks = Hardcoded.assign_trees_to_ranks_round_Robin(number_of_subtrees = tree.number_of_subtrees,
+                                                                        max_ranks          = args.ranks
+                                                                        )        
+
+        hardcoded_config, hardcoded_mode = Hardcoded.create_constructor_initialisation_string(tree,destination_ranks,verbose=True)        
+        print(tree)
+        
+        # @ŧodo Dmitry Why do we have hardcoded_mode if it is not used?
+        
+        project.set_load_balancing(
+            "toolbox::loadbalancing::strategies::Hardcoded",
+            hardcoded_config
+        )
+        print("  hardcoded_mode  =", hardcoded_mode)
         pass
     else:
         assert False, "should not be entered"
@@ -289,7 +327,7 @@ if __name__ == "__main__":
 
     
     peano4_project.generate(throw_away_data_after_generation=False)
-#    peano4_project.build(
-#        make=True, make_clean_first=True, number_of_parallel_builds=args.j
-#    )
+    peano4_project.build(
+        make=True, make_clean_first=True, number_of_parallel_builds=args.j
+    )
  
