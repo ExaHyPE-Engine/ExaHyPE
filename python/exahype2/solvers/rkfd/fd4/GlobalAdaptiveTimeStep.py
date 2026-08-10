@@ -103,7 +103,15 @@ class GlobalAdaptiveTimeStep( SeparateSweeps ):
 
     if not                  KOSigma==None:  self._KO_Sigma                                  = KOSigma
 
-    create_FD4_kernel_definitions_3d()
+    create_FD4_kernel_definitions_3d(self._patch_size,
+      self._unknowns,
+      self._auxiliary_variables,
+      self._KO_Sigma,
+      self._flux_implementation,
+      self._ncp_implementation,
+      self._source_term_implementation,
+      compute_max_eigenvalue_of_next_time_step = True
+    )
 
     self._compute_kernel_call = create_compute_kernel_for_FD4_DSL(
       self._flux_implementation, 
