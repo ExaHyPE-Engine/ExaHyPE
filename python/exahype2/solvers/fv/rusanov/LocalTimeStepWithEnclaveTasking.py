@@ -120,7 +120,14 @@ class LocalTimeStepWithEnclaveTasking(EnclaveTasking):
     if eigenvalues          is not None:  self._eigenvalues_implementation                = eigenvalues
     if source_term          is not None:  self._source_term_implementation                = source_term
 
-    create_rusanov_kernel_definitions()
+    create_rusanov_kernel_definitions(self._patch_size,
+      self._unknowns,
+      self._auxiliary_variables,
+      self._flux_implementation,
+      self._ncp_implementation,
+      self._source_term_implementation,
+      compute_max_eigenvalue_of_next_time_step = True
+    )
 
     self._compute_kernel_call = create_compute_Riemann_kernel_for_Rusanov_dsl(
       self._flux_implementation,

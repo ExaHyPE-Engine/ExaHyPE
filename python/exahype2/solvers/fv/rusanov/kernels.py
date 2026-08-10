@@ -139,7 +139,9 @@ def create_rusanov_kernel_definitions_2d(patch_size, unknowns, auxiliary_variabl
 {rusanov_sycl_accelerator_call_with_measurement_declaration}
 #endif
 
+#ifdef USE_MLIR
 #include "MLIRbridge.cpph"
+#endif
 #include "rusanov2d.cpph"
 
 """)
@@ -421,7 +423,6 @@ void copybackMLIRresults(exahype2::CellData<double, double>* patchData, MLIRCell
   filepath = os.path.realpath(__file__)
   filepath_root = filepath[0:filepath.find("solvers/")]
   with open(filepath_root + "dslhype/MLIRbridge.template.cpp", 'r') as template_file:
-    print(filepath_root + "dslhype/MLIRbridge.template.cpp")
     mlir_bridge_template = template_file.read()
   mlir_bridge_cpp = jinja2.Template(mlir_bridge_template).render(**d)
   with open("MLIRbridge.cpp", 'w') as file:
