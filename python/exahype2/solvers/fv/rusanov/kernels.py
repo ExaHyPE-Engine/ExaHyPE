@@ -5,7 +5,7 @@ import jinja2
 from enum import Enum
 import os
 import exahype2
-import exahype2.kerneldsl as DSL
+import exahype2.dslhype as DSL
 
 class SolverVariant(Enum):
   WithVirtualFunctions = 0
@@ -27,7 +27,7 @@ class KernelVariant(Enum):
   VolumeWiseAoSoA = 41
   VolumeWiseSoA   = 42
 
-def create_rusanov_kernel_definitions():
+def create_rusanov_kernel_definitions(patch_size, unknowns, auxiliary_variables, flux_implementation, ncp_implementation, source_term_implementation, compute_max_eigenvalue_of_next_time_step):
   if not os.path.exists("kernels"):
       os.makedirs("kernels")
   
@@ -39,23 +39,23 @@ def create_rusanov_kernel_definitions():
 #endif
 """)
   
-  create_rusanov_kernel_definitions_2d()
-  create_rusanov_kernel_definitions_3d()
+  create_rusanov_kernel_definitions_2d(patch_size, unknowns, auxiliary_variables, flux_implementation, ncp_implementation, source_term_implementation, compute_max_eigenvalue_of_next_time_step)
+  create_rusanov_kernel_definitions_3d(patch_size, unknowns, auxiliary_variables, flux_implementation, ncp_implementation, source_term_implementation, compute_max_eigenvalue_of_next_time_step)
 
-def create_rusanov_kernel_definitions_2d():
-  template_parameters = [DSL.SyntaxTree.Argument("NumberOfVolumesPerAxisInPatch", DSL.SyntaxTree.TInteger()),
-                         DSL.SyntaxTree.Argument("HaloSize", DSL.SyntaxTree.TInteger()),
-                         DSL.SyntaxTree.Argument("NumberOfUnknowns", DSL.SyntaxTree.TInteger()),
-                         DSL.SyntaxTree.Argument("NumberOfAuxiliaryVariables", DSL.SyntaxTree.TInteger()),
-                         DSL.SyntaxTree.Argument("EvaluateFlux", DSL.SyntaxTree.TBoolean()),
-                         DSL.SyntaxTree.Argument("EvaluateNonconservativeProduct", DSL.SyntaxTree.TBoolean()),
-                         DSL.SyntaxTree.Argument("EvaluateSource", DSL.SyntaxTree.TBoolean()),
-                         DSL.SyntaxTree.Argument("EvaluateMaximumEigenvalueAfterTimeStep", DSL.SyntaxTree.TBoolean())]
+def create_rusanov_kernel_definitions_2d(patch_size, unknowns, auxiliary_variables, flux_implementation, ncp_implementation, source_term_implementation, compute_max_eigenvalue_of_next_time_step):
+  template_parameters = [DSL.SyntaxTree.Argument("NumberOfVolumesPerAxisInPatch", DSL.SyntaxTree.TInteger(), "applications::exahype2::ccz4::AbstractCCZ4"),
+                         DSL.SyntaxTree.Argument("HaloSize", DSL.SyntaxTree.TInteger(), "applications::exahype2"),
+                         DSL.SyntaxTree.Argument("NumberOfUnknowns", DSL.SyntaxTree.TInteger(), "applications::exahype2::ccz4::AbstractCCZ4"),
+                         DSL.SyntaxTree.Argument("NumberOfAuxiliaryVariables", DSL.SyntaxTree.TInteger(), "applications::exahype2::ccz4::AbstractCCZ4"),
+                         DSL.SyntaxTree.Argument("EvaluateFlux", DSL.SyntaxTree.TBoolean(), "applications::exahype2::ccz4"),
+                         DSL.SyntaxTree.Argument("EvaluateNonconservativeProduct", DSL.SyntaxTree.TBoolean(), "applications::exahype2::ccz4"),
+                         DSL.SyntaxTree.Argument("EvaluateSource", DSL.SyntaxTree.TBoolean(), "applications::exahype2::ccz4"),
+                         DSL.SyntaxTree.Argument("EvaluateMaximumEigenvalueAfterTimeStep", DSL.SyntaxTree.TBoolean(), "applications::exahype2::ccz4")]
 
-  functor_arguments = [DSL.SyntaxTree.Argument("flux", DSL.SyntaxTree.TCustom("const FluxFunctor&")),
-                       DSL.SyntaxTree.Argument("nonconservativeProduct", DSL.SyntaxTree.TCustom("const NonconservativeProductFunctor&")),
-                       DSL.SyntaxTree.Argument("sourceTerm", DSL.SyntaxTree.TCustom("const SourceFunctor&")),
-                       DSL.SyntaxTree.Argument("maxEigenvalue", DSL.SyntaxTree.TCustom("const MaxEigenvalueFunctor&"))]
+  functor_arguments = [DSL.SyntaxTree.Argument("flux", DSL.SyntaxTree.TCustom("const FluxFunctor&"), "(!llvm.ptr, !llvm.ptr, !llvm.ptr, f64, f64, i32, !llvm.ptr) -> ()"),
+                       DSL.SyntaxTree.Argument("nonconservativeProduct", DSL.SyntaxTree.TCustom("const NonconservativeProductFunctor&"), "(!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, f64, f64, i32, !llvm.ptr) -> ()"),
+                       DSL.SyntaxTree.Argument("sourceTerm", DSL.SyntaxTree.TCustom("const SourceFunctor&"), "(!llvm.ptr, !llvm.ptr, !llvm.ptr, f64, f64, !llvm.ptr) -> ()"),
+                       DSL.SyntaxTree.Argument("maxEigenvalue", DSL.SyntaxTree.TCustom("const MaxEigenvalueFunctor&"), "(!llvm.ptr, !llvm.ptr, !llvm.ptr, f64, f64, i32, !llvm.ptr) -> ()")]
 
   rusanov_tree = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov"])
   rusanov_kernel = rusanov_tree.print_cpp()
@@ -99,6 +99,9 @@ def create_rusanov_kernel_definitions_2d():
   rusanov_sycl_accelerator_kernel_declaration = rusanov_sycl_accelerator_tree.print_declaration()
   rusanov_sycl_accelerator_call_with_measurement_declaration = rusanov_sycl_accelerator_tree.print_declaration_with_timer()
 
+  rusanov_mlir_kernel = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov"]).print_mlir()
+  rusanov_mlir_omp_kernel = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov2d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov"], mlir_omp=True).print_mlir()
+
   if not os.path.exists("kernels"):
       os.makedirs("kernels")
   
@@ -136,7 +139,9 @@ def create_rusanov_kernel_definitions_2d():
 {rusanov_sycl_accelerator_call_with_measurement_declaration}
 #endif
 
+#include "MLIRbridge.cpph"
 #include "rusanov2d.cpph"
+
 """)
   file.close()
 
@@ -164,20 +169,30 @@ def create_rusanov_kernel_definitions_2d():
   file.write("#endif\n")
   file.close()
 
-def create_rusanov_kernel_definitions_3d():
-  template_parameters = [DSL.SyntaxTree.Argument("NumberOfVolumesPerAxisInPatch", DSL.SyntaxTree.TInteger()),
-                         DSL.SyntaxTree.Argument("HaloSize", DSL.SyntaxTree.TInteger()),
-                         DSL.SyntaxTree.Argument("NumberOfUnknowns", DSL.SyntaxTree.TInteger()),
-                         DSL.SyntaxTree.Argument("NumberOfAuxiliaryVariables", DSL.SyntaxTree.TInteger()),
-                         DSL.SyntaxTree.Argument("EvaluateFlux", DSL.SyntaxTree.TBoolean()),
-                         DSL.SyntaxTree.Argument("EvaluateNonconservativeProduct", DSL.SyntaxTree.TBoolean()),
-                         DSL.SyntaxTree.Argument("EvaluateSource", DSL.SyntaxTree.TBoolean()),
-                         DSL.SyntaxTree.Argument("EvaluateMaximumEigenvalueAfterTimeStep", DSL.SyntaxTree.TBoolean())]
+  # NOTE: MLIR kernel now uses static MLIRbridge.cpp files
+  file = open("kernels/rusanov2d.mlir", "w")
+  file.write(rusanov_mlir_kernel)
+  file.close()
 
-  functor_arguments = [DSL.SyntaxTree.Argument("flux", DSL.SyntaxTree.TCustom("const FluxFunctor&")),
-                       DSL.SyntaxTree.Argument("nonconservativeProduct", DSL.SyntaxTree.TCustom("const NonconservativeProductFunctor&")),
-                       DSL.SyntaxTree.Argument("sourceTerm", DSL.SyntaxTree.TCustom("const SourceFunctor&")),
-                       DSL.SyntaxTree.Argument("maxEigenvalue", DSL.SyntaxTree.TCustom("const MaxEigenvalueFunctor&"))]
+  file = open("kernels/rusanov2d_omp.mlir", "w")
+  file.write(rusanov_mlir_omp_kernel)
+  file.close()  
+
+def create_rusanov_kernel_definitions_3d(patch_size, unknowns, auxiliary_variables, flux_implementation, ncp_implementation, source_term_implementation, compute_max_eigenvalue_of_next_time_step):
+  template_parameters = [DSL.SyntaxTree.Argument("NumberOfVolumesPerAxisInPatch", DSL.SyntaxTree.TInteger(), "applications::exahype2::ccz4::AbstractCCZ4"),
+                         DSL.SyntaxTree.Argument("HaloSize", DSL.SyntaxTree.TInteger(), "applications::exahype2"),
+                         DSL.SyntaxTree.Argument("NumberOfUnknowns", DSL.SyntaxTree.TInteger(), "applications::exahype2::ccz4::AbstractCCZ4"),
+                         DSL.SyntaxTree.Argument("NumberOfAuxiliaryVariables", DSL.SyntaxTree.TInteger(), "applications::exahype2::ccz4::AbstractCCZ4"),
+                         DSL.SyntaxTree.Argument("EvaluateFlux", DSL.SyntaxTree.TBoolean(), "applications::exahype2::ccz4"),
+                         DSL.SyntaxTree.Argument("EvaluateNonconservativeProduct", DSL.SyntaxTree.TBoolean(), "applications::exahype2::ccz4"),
+                         DSL.SyntaxTree.Argument("EvaluateSource", DSL.SyntaxTree.TBoolean(), "applications::exahype2::ccz4"),
+                         DSL.SyntaxTree.Argument("EvaluateMaximumEigenvalueAfterTimeStep", DSL.SyntaxTree.TBoolean(), "applications::exahype2::ccz4")]
+
+
+  functor_arguments = [DSL.SyntaxTree.Argument("flux", DSL.SyntaxTree.TCustom("const FluxFunctor&"), "(!llvm.ptr, !llvm.ptr, !llvm.ptr, f64, f64, i32, !llvm.ptr) -> ()", is_function=True),
+                       DSL.SyntaxTree.Argument("nonconservativeProduct", DSL.SyntaxTree.TCustom("const NonconservativeProductFunctor&"), "(!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, f64, f64, i32, !llvm.ptr) -> ()", is_function=True),
+                       DSL.SyntaxTree.Argument("sourceTerm", DSL.SyntaxTree.TCustom("const SourceFunctor&"), "(!llvm.ptr, !llvm.ptr, !llvm.ptr, f64, f64, !llvm.ptr) -> ()", is_function=True),
+                       DSL.SyntaxTree.Argument("maxEigenvalue", DSL.SyntaxTree.TCustom("const MaxEigenvalueFunctor&"), "(!llvm.ptr, !llvm.ptr, !llvm.ptr, f64, f64, i32, !llvm.ptr) -> ()", is_function=True)]
 
   rusanov_tree = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov3d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov"])
   rusanov_kernel = rusanov_tree.print_cpp()
@@ -220,11 +235,22 @@ def create_rusanov_kernel_definitions_3d():
   rusanov_sycl_accelerator_kernel_declaration = rusanov_sycl_accelerator_tree.print_declaration()
   rusanov_sycl_accelerator_call_with_measurement_declaration = rusanov_sycl_accelerator_tree.print_declaration_with_timer()
 
-  if not os.path.exists("kernels"):
-      os.makedirs("kernels")
+  # These function definitions are used to generate declarations in the MLIR bridge files
+  rusanov_mlir_function_definition = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov3d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "mlir"])
+  rusanov_mlir_stateless_function_definition = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov3d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "mlir"], stateless=True)
+  rusanov_mlir_stateless_omp_function_definition = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov3d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "mlir", "omp"], stateless=True)
+  rusanov_mlir_gpu_function_definition = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov3d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov", "mlir", "gpu"], stateless=True, use_accelerator=True)
   
-  file = open("kernels/rusanov3d.h", "w")
-  file.write(f"""#pragma once
+  rusanov_mlir_kernel = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov3d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov"]).print_mlir() 
+  rusanov_mlir_omp_kernel = DSL.Parser().parse(exahype2.solvers.fv.rusanov.timeStepWithRusanov3d, template_parameters, functor_arguments, ["exahype2", "fv", "rusanov"], mlir_omp=True).print_mlir() 
+
+  mlir_cpu_function_definitions = [
+    rusanov_mlir_function_definition,
+    rusanov_mlir_stateless_function_definition,
+    rusanov_mlir_stateless_omp_function_definition
+  ]
+
+  solver_includes = """
 #include "exahype2/CellData.h"
 #include "exahype2/VolumeIndex.h"
 #include "exahype2/fv/PatchUtils.h"
@@ -232,8 +258,15 @@ def create_rusanov_kernel_definitions_3d():
 #include "peano4/utils/Loop.h"
 #include "tarch/timing/Measurement.h"
 #include "tarch/timing/Watch.h"
-#include <fstream>
-             
+"""
+
+  if not os.path.exists("kernels"):
+      os.makedirs("kernels")
+  
+  file = open("kernels/rusanov3d.h", "w")
+  file.write(f"""#pragma once
+{solver_includes}
+           
 {rusanov_kernel_declaration}
 {rusanov_call_with_measurement_declaration}
 {rusanov_stateless_kernel_declaration}
@@ -258,7 +291,11 @@ def create_rusanov_kernel_definitions_3d():
 {rusanov_sycl_accelerator_call_with_measurement_declaration}
 #endif
 
+#ifdef USE_MLIR
+#include "MLIRbridge.cpph"
+#endif
 #include "rusanov3d.cpph"
+
 """)
   file.close()
 
@@ -288,6 +325,107 @@ def create_rusanov_kernel_definitions_3d():
   file.write("#endif\n")
 
   file.close()
+
+  file = open("kernels/rusanov3d.mlir", "w")
+  file.write(rusanov_mlir_kernel)
+  file.close()
+
+  file = open("kernels/rusanov3d_omp.mlir", "w")
+  file.write(rusanov_mlir_omp_kernel)
+  file.close()
+
+  # Generate MLIR bridge files
+  with open("MLIRbridge.cpph", 'w') as file:
+    file.write("""
+#include "MemRefDescriptor.cpph"
+// MLIR-compatible structure using memref descriptors
+struct MLIRCellData {
+    MemRefDescriptor2D QIn;             // Field 0
+    MemRefDescriptor2D QOut;            // Field 1  
+    MemRefDescriptorNested cellCentre;  // Field 2
+    MemRefDescriptorNested cellSize;    // Field 3
+    MemRefDescriptor1D t;               // Field 4
+    MemRefDescriptor1D dt;              // Field 5
+    MemRefDescriptor1D id;              // Field 6
+    int64_t numberOfCells;              // Field 7
+    int64_t memoryLocation;             // Field 8
+    int64_t targetDevice;               // Field 9
+    double** QOut_legacy;               // Field 10
+    double* maxEigenvalue;              // Field 11
+};
+void convertToMLIRStruct(exahype2::CellData<double, double>* patchData, MLIRCellData* mlir_data);
+void convertToMLIRStructGPU(exahype2::CellData<double, double>* copyCellData, MLIRCellData* mlir_data);
+void cleanupMLIRStruct(MLIRCellData* mlir_data);
+void cleanupMLIRStructGPU(MLIRCellData* mlir_data);
+void copybackMLIRresults(exahype2::CellData<double, double>* patchData, MLIRCellData* mlir_data);
+""")
+    file.write("""extern "C" void timeStepWithRusanov_MLIR_wrapper(exahype2::CellData<double, double>* patchData, bool use_omp);\n""")
+    for definition in mlir_cpu_function_definitions:
+      file.write(definition.print_declaration())
+      file.write(definition.print_declaration_with_timer())
+      definition._arguments[0]._type = DSL.SyntaxTree.TCustom("MLIRCellData*")
+      file.write(definition.print_declaration())
+      file.write(definition.print_declaration_with_timer())
+
+    file.write("#ifdef MLIR_GPU\n")
+    rusanov_mlir_gpu_function_definition._arguments[1]._type = DSL.SyntaxTree.TCustom("MLIRCellData*")
+    file.write(rusanov_mlir_gpu_function_definition.print_declaration())
+    file.write(rusanov_mlir_gpu_function_definition.print_declaration_with_timer())
+    file.write("#endif")
+  
+  d = {}
+  d["KERNEL_NAMESPACE"] = "exahype2::fv::rusanov"
+  d["SOLVER"] = "Rusanov"
+  d["SOLVER_CLASS"] = "FVRusanov"
+  d["KERNEL_NAME"] = "timeStepWithRusanov"
+  d["SOLVER_INCLUDES"] = solver_includes
+  d["SOLVER_CLASS_NAMESPACE"] = "benchmarks::exahype2::kernelbenchmarks"
+
+  d["PATCH_SIZE"] = patch_size
+  d["NUMBER_OF_UNKNOWNS"] = unknowns
+  d["NUMBER_OF_AUXILIARY_VARIABLES"] = auxiliary_variables
+  d["FLUX_IMPLEMENTATION"] = flux_implementation
+  d["NCP_IMPLEMENTATION"] = ncp_implementation
+  d["SOURCE_IMPLEMENTATION"] = source_term_implementation
+  d["COMPUTE_MAX_EIGENVALUE"] = compute_max_eigenvalue_of_next_time_step
+  d["HALO_SIZE"] = 1
+
+  template_strings = [argument.print_cpp() for argument in rusanov_mlir_function_definition._template]
+  d["TEMPLATE_DEFINITION"] = "template <" + ",".join(template_strings) + ">\n"
+
+  template_call_jinja = """
+      {{SOLVER_CLASS_NAMESPACE}}::{{SOLVER_CLASS}},
+      {{PATCH_SIZE}},
+      {{HALO_SIZE}},
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      {% if COMPUTE_MAX_EIGENVALUE==False %} false {% else %} true {% endif %}
+    """
+  d["TEMPLATE_CALL"] = jinja2.Template(template_call_jinja).render(**d)
+
+  template_value_definitions_jinja = """
+    int NumberOfVolumesPerAxisInPatch = {{PATCH_SIZE}};
+    int NumberOfUnknowns = {{NUMBER_OF_UNKNOWNS}};
+    int NumberOfAuxiliaryVariables = {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    int HaloSize = {{HALO_SIZE}};
+    bool EvaluateFlux = {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %};
+    bool EvaluateNonconservativeProduct = {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %};
+    bool EvaluateSource = {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %};
+    bool EvaluateMaximumEigenvalueAfterTimeStep = {% if COMPUTE_MAX_EIGENVALUE==False %} false {% else %} true {% endif %};
+  """
+  d["TEMPLATE_VALUE_DEFINITIONS"] = jinja2.Template(template_value_definitions_jinja).render(**d)
+
+  filepath = os.path.realpath(__file__)
+  filepath_root = filepath[0:filepath.find("solvers/")]
+  with open(filepath_root + "dslhype/MLIRbridge.template.cpp", 'r') as template_file:
+    print(filepath_root + "dslhype/MLIRbridge.template.cpp")
+    mlir_bridge_template = template_file.read()
+  mlir_bridge_cpp = jinja2.Template(mlir_bridge_template).render(**d)
+  with open("MLIRbridge.cpp", 'w') as file:
+    file.write(mlir_bridge_cpp)
 
 def create_compute_Riemann_kernel_for_Rusanov_dsl(flux_implementation,
                                               ncp_implementation,

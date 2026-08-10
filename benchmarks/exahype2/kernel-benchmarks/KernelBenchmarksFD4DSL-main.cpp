@@ -80,9 +80,30 @@ constexpr int NumberOfFiniteVolumesPerPatch
  * not make any sense anymore.
  */
 void initInputData(double* Q) {
-  for (int i = 0; i < NumberOfInputEntriesPerPatch; i++) {
-    Q[i] = std::sin(1.0 * i / (NumberOfInputEntriesPerPatch) * ::tarch::la::PI);
+  int dofs = FD4::NumberOfGridCellsPerPatchPerAxis + 2 * HaloSize;
+#if Dimensions == 3
+  for (int i = 0; i < dofs; i++){
+#endif
+    for (int j = 0; j < dofs; j++){
+      for (int k = 0; k < dofs; k++){
+        for (int l = 0; l < FD4::NumberOfUnknowns + FD4::NumberOfAuxiliaryVariables; l++){
+          int index = l + k * (FD4::NumberOfUnknowns + FD4::NumberOfAuxiliaryVariables)
+              + j * dofs * (FD4::NumberOfUnknowns + FD4::NumberOfAuxiliaryVariables)
+#if Dimensions == 3
+              + i * dofs * dofs * (FD4::NumberOfUnknowns + FD4::NumberOfAuxiliaryVariables)
+#endif
+          ;
+#if Dimensions == 3
+          Q[index] = std::sin(((double)(i + 1) / dofs) * ((double)(j + 3%dofs) / dofs) * ((double)(k + 5%dofs) / dofs) + ((double)(l + 1) / (FD4::NumberOfUnknowns + FD4::NumberOfAuxiliaryVariables)) * ::tarch::la::PI);
+#else
+          Q[index] = std::sin(0.1 * ((double)(j + 3%dofs) / dofs) * ((double)(k + 5%dofs) / dofs) + ((double)(l + 1) / (FD4::NumberOfUnknowns + FD4::NumberOfAuxiliaryVariables)) * ::tarch::la::PI);
+#endif
+        }
+      }
+    }
+#if Dimensions == 3
   }
+#endif
 }
 
 
@@ -207,6 +228,36 @@ void wrapDeviceKernel(int device, ::exahype2::CellData<double, double>& patchDat
   Kernel(device, gpuCellData, timingComputeKernel);
   gpuCellData.copyBackAndDestroy();
 }
+
+#if defined (USE_MLIR)
+template <void (*Kernel)(MLIRCellData*, tarch::timing::Measurement&)>
+void wrapMLIRHostKernel(int device, ::exahype2::CellData<double, double>& patchData) {
+  assertion(device == tarch::accelerator::Device::HostDevice);
+  MLIRCellData mlir_data;
+  convertToMLIRStruct(&patchData, &mlir_data); 
+
+  Kernel(&mlir_data, timingComputeKernel);
+
+  copybackMLIRresults(&patchData, &mlir_data);
+
+  cleanupMLIRStruct(&mlir_data);
+}
+#endif
+
+#if defined(MLIR_GPU)
+template <void (*Kernel)(int, MLIRCellData*, tarch::timing::Measurement&)>
+void wrapMLIRDeviceKernel(int device, ::exahype2::CellData<double, double>& patchData) {
+  assertion(device != tarch::accelerator::Device::HostDevice);
+  MLIRCellData mlir_data = {};
+  convertToMLIRStructGPU(&patchData, &mlir_data);
+
+  Kernel(device, &mlir_data, timingComputeKernel);
+
+  copybackMLIRresults(&patchData, &mlir_data);
+
+  cleanupMLIRStructGPU(&mlir_data);
+}
+#endif
 
 /**
  * Run the benchmark for one particular number of patches
@@ -367,6 +418,8 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
 #endif
 
   if constexpr (AssessHostKernels) {
+    #if defined (USE_CPP_KERNELS)
+    if constexpr (AssessSerialKernels){
     assessKernel(wrapHostKernel<
       exahype2::fd::fd4::timeStepWithFD4Stateless<
         FD4,
@@ -385,6 +438,8 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       ::tarch::accelerator::Device::HostDevice,
       localPatches
     );
+    }
+    if constexpr (AssessParallelKernels){
     #if defined (SharedOMP)
     assessKernel(wrapHostKernel<
       exahype2::fd::fd4::omp::timeStepWithFD4Stateless<
@@ -404,6 +459,53 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       ::tarch::accelerator::Device::HostDevice,
       localPatches
     );
+    #endif
+    }
+    #endif
+    #if defined (USE_MLIR)
+    if constexpr (AssessSerialKernels) {
+    // MLIR kernel is accurate to ~1e-12, suitable for now, but should be investigated
+    assessKernel(wrapHostKernel<
+      exahype2::fd::fd4::mlir::timeStepWithFD4Stateless<
+        FD4,
+        FD4::NumberOfGridCellsPerPatchPerAxis,
+        HaloSize,
+        FD4::NumberOfUnknowns,
+        FD4::NumberOfAuxiliaryVariables,
+        KOSigma,
+        EvaluateFlux,
+        EvaluateNonconservativeProduct,
+        EvaluateSource,
+        true>
+      >,
+      "host, AoS, mlir, serial",
+      launchingThreads,
+      ::tarch::accelerator::Device::HostDevice,
+      localPatches
+    );
+    }
+    if constexpr (AssessParallelKernels) {
+    #if defined (SharedOMP)
+    assessKernel(wrapHostKernel<
+      exahype2::fd::fd4::mlir::omp::timeStepWithFD4Stateless<
+        FD4,
+        FD4::NumberOfGridCellsPerPatchPerAxis,
+        HaloSize,
+        FD4::NumberOfUnknowns,
+        FD4::NumberOfAuxiliaryVariables,
+        KOSigma,
+        EvaluateFlux,
+        EvaluateNonconservativeProduct,
+        EvaluateSource,
+        true>
+      >,
+      "host, AoS, mlir, omp",
+      launchingThreads,
+      ::tarch::accelerator::Device::HostDevice,
+      localPatches
+    );
+    #endif
+    }
     #endif
   }
 
@@ -448,6 +550,31 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       0,
       localPatches
     );
+    #endif
+  }
+
+  if constexpr (AssessMLIRDeviceKernels) {
+    #if defined(USE_MLIR)
+    #if defined(MLIR_GPU)
+    assessKernel(wrapMLIRDeviceKernel<
+      exahype2::fd::fd4::mlir::gpu::timeStepWithFD4Stateless<
+        FD4,
+        FD4::NumberOfGridCellsPerPatchPerAxis,
+        HaloSize,
+        FD4::NumberOfUnknowns,
+        FD4::NumberOfAuxiliaryVariables,
+        KOSigma,
+        EvaluateFlux,
+        EvaluateNonconservativeProduct,
+        EvaluateSource,
+        true>
+      >,
+      "device, AoS, mlir, gpu",
+      launchingThreads,
+      0,
+      localPatches
+    );
+    #endif
     #endif
   }
 }

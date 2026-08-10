@@ -193,7 +193,9 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
   * When we want persistent data on the device for Runge-Kutta schemes we need all
   * of the estimates kept on the device.
   */
+  #if not defined(GPUOffloadingOff)
   void reallocateOnDevice(int deviceNumber);
+  #endif
 
   std::shared_ptr< {{FLOAT_TYPE}}[] > getSmartPointer() const;
 

@@ -1,5 +1,5 @@
 import ast_comments as ast, inspect
-from exahype2.kerneldsl import SyntaxTree
+from exahype2.dslhype import SyntaxTree
 import copy
 
 class Parser:
