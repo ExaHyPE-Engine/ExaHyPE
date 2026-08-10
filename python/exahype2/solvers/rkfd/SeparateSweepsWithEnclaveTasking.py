@@ -55,6 +55,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
           omp_target_memcpy(fineGridCell{{SOLVER_NAME}}CellLabel.getDeviceMemoryAddress(), oldQWithHalo, enumeratorWithAuxiliaryVariablesOnReconstructedPatch.size() * sizeof(double), 0, 0, device, omp_get_initial_device());
         }
       }
+      #endif
       
       {% for PREDICATE_NO in range(0,PREDICATES|length) %}
       if ({{PREDICATES[PREDICATE_NO]}}) {

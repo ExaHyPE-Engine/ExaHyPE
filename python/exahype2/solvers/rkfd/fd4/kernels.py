@@ -7,7 +7,7 @@ import jinja2
 from enum import Enum
 import os
 import exahype2
-import exahype2.kerneldsl as DSL
+import exahype2.dslhype as DSL
 
 from exahype2.solvers.rkfd.kernels import SolverVariant    
 from exahype2.solvers.rkfd.kernels import KernelVariant    
@@ -278,20 +278,20 @@ def create_DeriCalInExaGRyPE_kernel_definitions_3d():
   file.write("#endif\n")
   file.close()
 
-def create_FD4_kernel_definitions_3d():
-  template_parameters = [DSL.SyntaxTree.Argument("NC", DSL.SyntaxTree.TInteger()),
-                         DSL.SyntaxTree.Argument("H", DSL.SyntaxTree.TInteger()),
-                         DSL.SyntaxTree.Argument("NumberOfUnknowns", DSL.SyntaxTree.TInteger()),
-                         DSL.SyntaxTree.Argument("NumberOfAuxiliaryVariables", DSL.SyntaxTree.TInteger()),
-                         DSL.SyntaxTree.Argument("KOsigma", DSL.SyntaxTree.TInteger()),
-                         DSL.SyntaxTree.Argument("EvaluateFlux", DSL.SyntaxTree.TBoolean()),
-                         DSL.SyntaxTree.Argument("EvaluateNonconservativeProduct", DSL.SyntaxTree.TBoolean()),
-                         DSL.SyntaxTree.Argument("EvaluateSource", DSL.SyntaxTree.TBoolean()),
+def create_FD4_kernel_definitions_3d(patch_size, unknowns, auxiliary_variables, ko_sigma, flux_implementation, ncp_implementation, source_term_implementation, compute_max_eigenvalue_of_next_time_step):
+  template_parameters = [DSL.SyntaxTree.Argument("NC", DSL.SyntaxTree.TInteger(), "applications::exahype2::ccz4::AbstractCCZ4"),
+                         DSL.SyntaxTree.Argument("H", DSL.SyntaxTree.TInteger(), "applications::exahype2"),
+                         DSL.SyntaxTree.Argument("NumberOfUnknowns", DSL.SyntaxTree.TInteger(), "applications::exahype2::ccz4::AbstractCCZ4"),
+                         DSL.SyntaxTree.Argument("NumberOfAuxiliaryVariables", DSL.SyntaxTree.TInteger(), "applications::exahype2::ccz4::AbstractCCZ4"),
+                         DSL.SyntaxTree.Argument("KOsigma", DSL.SyntaxTree.TInteger(), "applications::exahype2::ccz4::AbstractCCZ4"),
+                         DSL.SyntaxTree.Argument("EvaluateFlux", DSL.SyntaxTree.TBoolean(), "applications::exahype2::ccz4"),
+                         DSL.SyntaxTree.Argument("EvaluateNonconservativeProduct", DSL.SyntaxTree.TBoolean(), "applications::exahype2::ccz4"),
+                         DSL.SyntaxTree.Argument("EvaluateSource", DSL.SyntaxTree.TBoolean(), "applications::exahype2::ccz4"),
                          DSL.SyntaxTree.Argument("copyOldTimeStepAndScaleWithTimeStepSize", DSL.SyntaxTree.TBoolean())] #not use actually
 
-  functor_arguments = [DSL.SyntaxTree.Argument("flux", DSL.SyntaxTree.TCustom("const Flux&")),
-                       DSL.SyntaxTree.Argument("nonconservativeProduct", DSL.SyntaxTree.TCustom("const NonconservativeProduct&")),
-                       DSL.SyntaxTree.Argument("sourceTerm", DSL.SyntaxTree.TCustom("const Source&"))]
+  functor_arguments = [DSL.SyntaxTree.Argument("flux", DSL.SyntaxTree.TCustom("const Flux&"), "(!llvm.ptr, !llvm.ptr, !llvm.ptr, f64, f64, i32, !llvm.ptr) -> ()", is_function=True),
+                       DSL.SyntaxTree.Argument("nonconservativeProduct", DSL.SyntaxTree.TCustom("const NonconservativeProduct&"), "(!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, f64, f64, i32, !llvm.ptr) -> ()", is_function=True),
+                       DSL.SyntaxTree.Argument("sourceTerm", DSL.SyntaxTree.TCustom("const Source&"), "(!llvm.ptr, !llvm.ptr, !llvm.ptr, f64, f64, !llvm.ptr) -> ()", is_function=True)]
 
   FD4_tree = DSL.Parser().parse(exahype2.solvers.rkfd.fd4.timeStepWithFD4, template_parameters, functor_arguments, ["exahype2", "fd", "fd4"])
   FD4_kernel = FD4_tree.print_cpp()
@@ -335,37 +335,25 @@ def create_FD4_kernel_definitions_3d():
   FD4_sycl_accelerator_kernel_declaration = FD4_sycl_accelerator_tree.print_declaration()
   FD4_sycl_accelerator_call_with_measurement_declaration = FD4_sycl_accelerator_tree.print_declaration_with_timer()
 
-  template_parameters = [DSL.SyntaxTree.Argument("NC", DSL.SyntaxTree.TInteger()),
-                         DSL.SyntaxTree.Argument("NumberOfUnknowns", DSL.SyntaxTree.TInteger()),
-                         DSL.SyntaxTree.Argument("NumberOfAuxiliaryVariables", DSL.SyntaxTree.TInteger()),
-                         DSL.SyntaxTree.Argument("RKOrder", DSL.SyntaxTree.TInteger())]
-  functor_arguments = [DSL.SyntaxTree.Argument("RKWeights", DSL.SyntaxTree.TCustom("const double*"))]
+  # These function definitions are used to generate declarations in the MLIR bridge files
+  FD4_mlir_function_definition = DSL.Parser().parse(exahype2.solvers.rkfd.fd4.timeStepWithFD4, template_parameters, functor_arguments, ["exahype2", "fd", "fd4", "mlir"])
+  FD4_mlir_stateless_function_definition = DSL.Parser().parse(exahype2.solvers.rkfd.fd4.timeStepWithFD4, template_parameters, functor_arguments, ["exahype2", "fd", "fd4", "mlir"], stateless=True)
+  FD4_mlir_stateless_omp_function_definition = DSL.Parser().parse(exahype2.solvers.rkfd.fd4.timeStepWithFD4, template_parameters, functor_arguments, ["exahype2", "fd", "fd4", "mlir", "omp"], stateless=True)
+  FD4_mlir_gpu_function_definition = DSL.Parser().parse(exahype2.solvers.rkfd.fd4.timeStepWithFD4, template_parameters, functor_arguments, ["exahype2", "fd", "fd4", "mlir", "gpu"], stateless=True, use_accelerator=True)
+  
+  FD4_mlir_kernel = DSL.Parser().parse(exahype2.solvers.rkfd.fd4.timeStepWithFD4, template_parameters, functor_arguments, ["exahype2", "fd", "fd4"]).print_mlir()
+  FD4_mlir_omp_kernel = DSL.Parser().parse(exahype2.solvers.rkfd.fd4.timeStepWithFD4, template_parameters, functor_arguments, ["exahype2", "fd", "fd4"], mlir_omp=True).print_mlir()
 
-  ComputeFinalLinearCombination_omp_accelerator_tree = DSL.Parser().parse(exahype2.solvers.rkfd.fd4.computeFinalLinearCombination, template_parameters, functor_arguments, ["exahype2", "fd", "fd4", "omp"], stateless=True, use_accelerator=True)
-  ComputeFinalLinearCombination_omp_accelerator_kernel = ComputeFinalLinearCombination_omp_accelerator_tree.print_omp()
-  ComputeFinalLinearCombination_omp_accelerator_call_with_measurement = ComputeFinalLinearCombination_omp_accelerator_tree.print_definition_with_timer()
-  ComputeFinalLinearCombination_omp_accelerator_kernel_declaration = ComputeFinalLinearCombination_omp_accelerator_tree.print_declaration()
-  ComputeFinalLinearCombination_omp_accelerator_call_with_measurement_declaration = ComputeFinalLinearCombination_omp_accelerator_tree.print_declaration_with_timer()
-
-  template_parameters = [DSL.SyntaxTree.Argument("NC", DSL.SyntaxTree.TInteger()),
-                         DSL.SyntaxTree.Argument("H", DSL.SyntaxTree.TInteger()),
-                         DSL.SyntaxTree.Argument("NumberOfUnknowns", DSL.SyntaxTree.TInteger()),
-                         DSL.SyntaxTree.Argument("NumberOfAuxiliaryVariables", DSL.SyntaxTree.TInteger()),
-                         DSL.SyntaxTree.Argument("RKOrder", DSL.SyntaxTree.TInteger()),
-                         DSL.SyntaxTree.Argument("RKStep", DSL.SyntaxTree.TInteger())]
-  functor_arguments = [DSL.SyntaxTree.Argument("RKWeightMatrix", DSL.SyntaxTree.TCustom("const double*"))]
-
-  ComputeLinearCombination_omp_accelerator_tree = DSL.Parser().parse(exahype2.solvers.rkfd.fd4.computeLinearCombination, template_parameters, functor_arguments, ["exahype2", "fd", "fd4", "omp"], stateless=True, use_accelerator=True)
-  ComputeLinearCombination_omp_accelerator_kernel = ComputeLinearCombination_omp_accelerator_tree.print_omp()
-  ComputeLinearCombination_omp_accelerator_call_with_measurement = ComputeLinearCombination_omp_accelerator_tree.print_definition_with_timer()
-  ComputeLinearCombination_omp_accelerator_kernel_declaration = ComputeLinearCombination_omp_accelerator_tree.print_declaration()
-  ComputeLinearCombination_omp_accelerator_call_with_measurement_declaration = ComputeLinearCombination_omp_accelerator_tree.print_declaration_with_timer()
-
+  mlir_cpu_function_definitions = [
+    FD4_mlir_function_definition,
+    FD4_mlir_stateless_function_definition,
+    FD4_mlir_stateless_omp_function_definition
+  ]
+  
   if not os.path.exists("kernels"):
       os.makedirs("kernels")
   
-  file = open("kernels/FD4.h", "w")
-  file.write(f"""#pragma once
+  solver_includes = """
 #include "exahype2/CellData.h"
 #include "exahype2/VolumeIndex.h"
 #include "exahype2/fd/PatchUtils.h"
@@ -373,6 +361,11 @@ def create_FD4_kernel_definitions_3d():
 #include "peano4/utils/Loop.h"
 #include "tarch/timing/Measurement.h"
 #include "tarch/timing/Watch.h"
+"""
+
+  file = open("kernels/FD4.h", "w")
+  file.write(f"""#pragma once
+{solver_includes}
              
 {FD4_kernel_declaration}
 {FD4_call_with_measurement_declaration}
@@ -400,6 +393,7 @@ def create_FD4_kernel_definitions_3d():
 {FD4_sycl_accelerator_call_with_measurement_declaration}
 #endif
 
+#include "MLIRbridge.cpph"
 #include "FD4.cpph"
 """)
   file.close()
@@ -431,6 +425,109 @@ def create_FD4_kernel_definitions_3d():
   file.write(FD4_sycl_accelerator_call_with_measurement)
   file.write("#endif\n")
   file.close()
+
+  file = open("kernels/fd4_3d.mlir", "w")
+  file.write(FD4_mlir_kernel)
+  file.close()
+
+  file = open("kernels/fd4_3d_omp.mlir", "w")
+  file.write(FD4_mlir_omp_kernel)
+  file.close()  
+
+  # Generate MLIR bridge files
+  with open("MLIRbridge.cpph", 'w') as file:
+    file.write("""
+#include "MemRefDescriptor.cpph"
+// MLIR-compatible structure using memref descriptors
+struct MLIRCellData {
+    MemRefDescriptor2D QIn;             // Field 0
+    MemRefDescriptor2D QOut;            // Field 1  
+    MemRefDescriptorNested cellCentre;  // Field 2
+    MemRefDescriptorNested cellSize;    // Field 3
+    MemRefDescriptor1D t;               // Field 4
+    MemRefDescriptor1D dt;              // Field 5
+    MemRefDescriptor1D id;              // Field 6
+    int64_t numberOfCells;              // Field 7
+    int64_t memoryLocation;             // Field 8
+    int64_t targetDevice;               // Field 9
+    double** QOut_legacy;               // Field 10
+    double* maxEigenvalue;              // Field 11
+};
+void convertToMLIRStruct(exahype2::CellData<double, double>* patchData, MLIRCellData* mlir_data);
+void convertToMLIRStructGPU(exahype2::CellData<double, double>* copyCellData, MLIRCellData* mlir_data);
+void cleanupMLIRStruct(MLIRCellData* mlir_data);
+void cleanupMLIRStructGPU(MLIRCellData* mlir_data);
+void copybackMLIRresults(exahype2::CellData<double, double>* patchData, MLIRCellData* mlir_data);
+""")
+    file.write("""extern "C" void timeStepWithFD4_MLIR_wrapper(exahype2::CellData<double, double>* patchData, bool use_omp);\n""")
+    for definition in mlir_cpu_function_definitions:
+      file.write(definition.print_declaration())
+      file.write(definition.print_declaration_with_timer())
+      definition._arguments[0]._type = DSL.SyntaxTree.TCustom("MLIRCellData*")
+      file.write(definition.print_declaration())
+      file.write(definition.print_declaration_with_timer())
+    file.write("#ifdef MLIR_GPU\n")
+    FD4_mlir_gpu_function_definition._arguments[1]._type = DSL.SyntaxTree.TCustom("MLIRCellData*")
+    file.write(FD4_mlir_gpu_function_definition.print_declaration())
+    file.write(FD4_mlir_gpu_function_definition.print_declaration_with_timer())
+    file.write("#endif")
+  
+  d = {}
+  d["KERNEL_NAMESPACE"] = "exahype2::fd::fd4"
+  d["SOLVER"] = "FD4"
+  d["SOLVER_CLASS"] = "FD4"
+  d["KERNEL_NAME"] = "timeStepWithFD4"
+  d["SOLVER_INCLUDES"] = solver_includes
+  d["SOLVER_CLASS_NAMESPACE"] = "benchmarks::exahype2::kernelbenchmarks"
+
+  d["PATCH_SIZE"] = patch_size
+  d["NUMBER_OF_UNKNOWNS"] = unknowns
+  d["NUMBER_OF_AUXILIARY_VARIABLES"] = auxiliary_variables
+  d["KOSIGMA"] = ko_sigma
+  d["FLUX_IMPLEMENTATION"] = flux_implementation
+  d["NCP_IMPLEMENTATION"] = ncp_implementation
+  d["SOURCE_IMPLEMENTATION"] = source_term_implementation
+  d["COMPUTE_MAX_EIGENVALUE"] = compute_max_eigenvalue_of_next_time_step
+  d["HALO_SIZE"] = 3
+
+  template_strings = [argument.print_cpp() for argument in FD4_mlir_function_definition._template]
+  d["TEMPLATE_DEFINITION"] = "template <" + ",".join(template_strings) + ">\n"
+
+  template_call_jinja = """
+      {{SOLVER_CLASS_NAMESPACE}}::{{SOLVER_CLASS}},
+      {{PATCH_SIZE}},
+      {{HALO_SIZE}},
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      static_cast<int>({{KOSIGMA}}),
+      {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      {% if COMPUTE_MAX_EIGENVALUE==False %} false {% else %} true {% endif %}
+    """
+  d["TEMPLATE_CALL"] = jinja2.Template(template_call_jinja).render(**d)
+
+  template_value_definitions_jinja = """
+    int NC = {{PATCH_SIZE}};
+    int NumberOfUnknowns = {{NUMBER_OF_UNKNOWNS}};
+    int NumberOfAuxiliaryVariables = {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    int H = {{HALO_SIZE}};
+    int KOsigma = static_cast<int>({{KOSIGMA}});
+    bool EvaluateFlux = {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %};
+    bool EvaluateNonconservativeProduct = {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %};
+    bool EvaluateSource = {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %};
+    bool EvaluateMaximumEigenvalueAfterTimeStep = {% if COMPUTE_MAX_EIGENVALUE==False %} false {% else %} true {% endif %};
+  """
+  d["TEMPLATE_VALUE_DEFINITIONS"] = jinja2.Template(template_value_definitions_jinja).render(**d)
+
+  filepath = os.path.realpath(__file__)
+  filepath_root = filepath[0:filepath.find("solvers/")]
+  with open(filepath_root + "dslhype/MLIRbridge.template.cpp", 'r') as template_file:
+    print(filepath_root + "dslhype/MLIRbridge.template.cpp")
+    mlir_bridge_template = template_file.read()
+  mlir_bridge_cpp = jinja2.Template(mlir_bridge_template).render(**d)
+  with open("MLIRbridge.cpp", 'w') as file:
+    file.write(mlir_bridge_cpp)
 
 def create_compute_kernel_for_FD4InExaGRyPE_DSL(flux_implementation, 
                                                 ncp_implementation, 

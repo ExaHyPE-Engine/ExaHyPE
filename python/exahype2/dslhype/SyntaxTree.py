@@ -56,17 +56,17 @@ class Context:
         def mlir_append(self, op):
             self.get_mlir().append(op)  
             
-        def add_id(self, id):
-            self._ids.update(id)
+        # def add_id(self, id):
+        #     self._ids.update(id)
 
-        def remove_id(self, id):
-            self._ids.remove(id)
+        # def remove_id(self, id):
+        #     self._ids.remove(id)
 
-        def get_id(self, id):
-            return self._ids.get(id)
+        # def get_id(self, id):
+        #     return self._ids.get(id)
                         
-        def find_id(self, id):
-            return id in self._ids
+        # def find_id(self, id):
+        #     return id in self._ids
 
 
         
@@ -77,16 +77,11 @@ class Node(ABC):
     use_memory_manager = False
     mlir_id_count = 0	# We need a variable to keep track of the MLIR ids %0, %1 etc.
     type_map = {}
-    function_map = {}
     struct_map = {}
     context = Context()
     target_variable_name = None  # For tracking when we're generating a specific variable name
     mlir_symbol_table = {}  # Maps DSL names (e.g., "patchData.QOut") to MLIR variable names (e.g., "%output")
     mlir_memref_types = {}  # Maps MLIR variable names (e.g., "%output") to their memref types (e.g., "memref<?x?xf64>")
-    use_affine_dialect = True  # Use affine.parallel loops for optimization
-    
-    # Storage for actual template parameter values
-    _actual_template_values = {}
    
     # Initialise the type, struct and function maps
     # NOTE: Populated lazily after Type classes are defined (see __init_type_map below)
@@ -112,6 +107,7 @@ class Node(ABC):
     type_map.update({'maxEigenvalue': '(memref<?xf64>, !llvm.ptr, !llvm.ptr, f64, f64, i32, memref<?xf64>) -> ()'})    
 
     # Local variable storage types (for runtime-allocated temporary variables)
+    type_map.update({'source': 'memref<?xmemref<?xf64>>'})
     type_map.update({'maxEigenvaluesX': 'memref<?xmemref<?xf64>>'})
     type_map.update({'maxEigenvaluesY': 'memref<?xmemref<?xf64>>'})
     type_map.update({'maxEigenvaluesZ': 'memref<?xmemref<?xf64>>'})
@@ -167,8 +163,6 @@ class Node(ABC):
     # Updated patchTypes: 7 descriptors + 3 i64 scalars + 2 ptrs = 12 fields
     patchTypes = [descriptor2DType, descriptor2DType, descriptor1DType, descriptor1DType, 
                   descriptor1DType, descriptor1DType, descriptor1DType, 'i64', 'i64', 'i64', 'ptr', 'ptr']
-    
-    patchDataMLIRtype = f"!llvm.ptr, !llvm.struct<({', '.join(patchTypes)})>"
     
     struct_map.update({'patchData': [ 
             ('QIn' , f"{descriptor2DType}|||!llvm.struct<({', '.join(patchTypes)})>"),                    # Field 0: 2D descriptor
@@ -240,21 +234,8 @@ class Node(ABC):
     def reset_mlir_ids(cls):
         cls.mlir_id_count = 0
  
-    
-    def generate_index_cast(self, expr, indent_level=0):
-        indent = ' ' * indent_level * Node.spaces_per_tab
-        index_id = f"%{Node.get_mlir_id()}"
-        
-        index_val = expr.print_mlir(indent_level)
-        expr_type = expr.get_type()
-        expr_mlir_type = expr_type.print_mlir(0).strip()
-        
-        mlir_code = indent + f"{index_id} = arith.index_cast {index_val} : {expr_mlir_type} to index\n"
-        
-        return index_id, mlir_code
-
-    @classmethod
-    def get_mlir_type(cls, type_string):
+    @staticmethod
+    def get_mlir_type(type_string):
         # Handle string representations by creating temporary type objects
         if isinstance(type_string, str):
             if type_string == "int":
@@ -273,11 +254,11 @@ class Node(ABC):
         if is_nested:
             # Load inner memref from outer array, then offset within it
             inner_memref_id = f"%{Node.get_mlir_id()}"
-            mlir_code += indent + f"{inner_memref_id} = memref.load {memref_mlir}[{row_index}] : memref<?xmemref<?xf64>>\n"
+            mlir_code += indent + f"{inner_memref_id} = memref.load {memref_mlir}[{row_index}] {{name = \"{memref_mlir.strip('%')}\"}} : memref<?xmemref<?xf64>>\n"
             
             # Extract pointer as index from inner memref
             ptr_idx_id = f"%{Node.get_mlir_id()}"
-            mlir_code += indent + f"{ptr_idx_id} = memref.extract_aligned_pointer_as_index {inner_memref_id} : memref<?xf64> -> index\n"
+            mlir_code += indent + f"{ptr_idx_id} = memref.extract_aligned_pointer_as_index {inner_memref_id} : memref<?xf64> -> index {{name = \"{memref_mlir.strip('%')}\"}}\n"
             
             # Byte offset calculation (col * 8 for f64 elements)
             element_size_bytes = f"%{Node.get_mlir_id()}"
@@ -320,7 +301,7 @@ class Node(ABC):
             
             # Extract base pointer from memref
             base_ptr_idx = f"%{Node.get_mlir_id()}"
-            mlir_code += indent + f"{base_ptr_idx} = memref.extract_aligned_pointer_as_index {memref_mlir} : memref<?x?xf64> -> index\n"
+            mlir_code += indent + f"{base_ptr_idx} = memref.extract_aligned_pointer_as_index {memref_mlir} : memref<?x?xf64> -> index {{name = \"{memref_mlir.strip('%')}\"}}\n"
             
             # Add byte offset to base
             ptr_with_offset = f"%{Node.get_mlir_id()}"
@@ -331,7 +312,7 @@ class Node(ABC):
             mlir_code += indent + f"{ptr_i64} = arith.index_cast {ptr_with_offset} : index to i64\n"
             
             result_ptr = f"%{Node.get_mlir_id()}"
-            mlir_code += indent + f"{result_ptr} = llvm.inttoptr {ptr_i64} : i64 to !llvm.ptr\n"
+            mlir_code += indent + f"{result_ptr} = llvm.inttoptr {ptr_i64} {{name = \"{memref_mlir.strip('%')}\"}} : i64 to !llvm.ptr\n"
         
         return mlir_code, result_ptr
 
@@ -411,12 +392,12 @@ class Node(ABC):
             # For 1D descriptor, just set [4, 0]
             mlir_str += indent + f"{desc_4_id} = llvm.insertvalue {c1_i64_id}, {desc_3_id}[4, 0] : {struct_type}\n"
             desc_final_id = desc_4_id
-        mlir_str += indent + f"{memref_id} = builtin.unrealized_conversion_cast {desc_final_id} : {struct_type} to {target_type}\n"
+        mlir_str += indent + f"{memref_id} = builtin.unrealized_conversion_cast {desc_final_id} : {struct_type} to {target_type} {{name = \"{memref_id.strip('%')}\"}}\n"
         
         return mlir_str, memref_id
 
     @classmethod
-    def create_memref_from_extracted_descriptor(cls, alloc_ptr_id, aligned_ptr_id, offset_id, sizes_id, strides_id, target_type, struct_type, indent_level=0, target_var_name=None):
+    def create_memref_from_extracted_descriptor(cls, alloc_ptr_id, aligned_ptr_id, offset_id, sizes_0_id, sizes_1_id, strides_0_id, strides_1_id, target_type, struct_type, indent_level=0, target_var_name=None, is_2d=False):
         indent = ' ' * indent_level * cls.spaces_per_tab
         
         # Use target variable name if provided
@@ -446,22 +427,22 @@ class Node(ABC):
         mlir_str += indent + f"{desc_0_id} = llvm.insertvalue {alloc_ptr_id}, {desc_id}[0] : {struct_type}\n"
         mlir_str += indent + f"{desc_1_id} = llvm.insertvalue {aligned_ptr_id}, {desc_0_id}[1] : {struct_type}\n"
         mlir_str += indent + f"{desc_2_id} = llvm.insertvalue {offset_id}, {desc_1_id}[2] : {struct_type}\n"
-        mlir_str += indent + f"{desc_3_id} = llvm.insertvalue {sizes_id}, {desc_2_id}[3, 0] : {struct_type}\n"
+        mlir_str += indent + f"{desc_3_id} = llvm.insertvalue {sizes_0_id}, {desc_2_id}[3, 0] : {struct_type}\n"
         
-        # Check if 2D or 1D based on struct type
-        if "array<2 x i64>" in struct_type:
-            # 2D descriptor
+        # Check if 2D or 1D 
+        if is_2d:
+            # 2D descriptor - use all extracted components
             desc_3_1_id = f"%{cls.get_mlir_id()}"
-            mlir_str += indent + f"{desc_3_1_id} = llvm.insertvalue {sizes_id}, {desc_3_id}[3, 1] : {struct_type}\n"
-            mlir_str += indent + f"{desc_4_id} = llvm.insertvalue {c1_i64_id}, {desc_3_1_id}[4, 0] : {struct_type}\n"
+            mlir_str += indent + f"{desc_3_1_id} = llvm.insertvalue {sizes_1_id}, {desc_3_id}[3, 1] : {struct_type}\n"
+            mlir_str += indent + f"{desc_4_id} = llvm.insertvalue {strides_0_id}, {desc_3_1_id}[4, 0] : {struct_type}\n"
             desc_final_id = f"%{cls.get_mlir_id()}"
-            mlir_str += indent + f"{desc_final_id} = llvm.insertvalue {c1_i64_id}, {desc_4_id}[4, 1] : {struct_type}\n"
+            mlir_str += indent + f"{desc_final_id} = llvm.insertvalue {strides_1_id}, {desc_4_id}[4, 1] : {struct_type}\n"
         else:
-            # 1D descriptor
-            mlir_str += indent + f"{desc_4_id} = llvm.insertvalue {c1_i64_id}, {desc_3_id}[4, 0] : {struct_type}\n"
+            # 1D descriptor - use strides_0_id
+            mlir_str += indent + f"{desc_4_id} = llvm.insertvalue {strides_0_id}, {desc_3_id}[4, 0] : {struct_type}\n"
             desc_final_id = desc_4_id
         
-        mlir_str += indent + f"{memref_id} = builtin.unrealized_conversion_cast {desc_final_id} : {struct_type} to {target_type}\n"
+        mlir_str += indent + f"{memref_id} = builtin.unrealized_conversion_cast {desc_final_id} : {struct_type} to {target_type} {{name = \"{memref_id.strip('%')}\"}}\n"
         
         return mlir_str, memref_id
  
@@ -510,34 +491,11 @@ class Expression(Node):
 
 class Type(Node):
 
-    def is_scalar(self):
-        return False
-
-    def is_memref(self):
-        return False
-
-    def is_nested_memref(self):
-        return False
-
-    def is_memref(self):
-        # TDataBlock represents memref-like types (arrays / pointers)
-        return True
-
-    def is_function(self):
-        return False
-
     def print_tree(self, indent_level=0):
         return ' ' 
 
     def get_element_type(self):
         return None
-    
-    def get_element_type_mlir(self):
-        element_type_class = self.get_element_type()
-        if element_type_class is None:
-            return None
-        element_type = element_type_class().print_mlir(0)
-        return element_type
 
 
 class TVoid(Type):
@@ -559,12 +517,13 @@ class TVoid(Type):
  
 
 class Argument(Node):
-    def __init__(self, id, argument_type: Type, namespace = None):
+    def __init__(self, id, argument_type: Type, namespace = None, is_function = False):
         super().__init__()
         self.id = id
         self._type = argument_type
         self._type.parent(self)
         self._namespace = namespace
+        self._is_function = is_function
         if Node.use_accelerator == True:
             if type(self._type) is TCustom and self._type._type.find("CellData") != -1:
                 index = self._type._type.find("CellData")
@@ -711,7 +670,6 @@ class FunctionDefinition(Node):
         if self._top_level:
             Node.reset_mlir_ids()  # Reset the MLIR id count for the top-level function
 
-            indent = ' ' * indent_level * Node.spaces_per_tab
             # NOTE: We used to generate MLIRbridge.cpp using the dedicated MLIRBridgeGenerator module
             globals_mlir = []
             
@@ -722,7 +680,7 @@ class FunctionDefinition(Node):
                     mlir_signature = argument._namespace #Node.type_map[cpp_type_str]
                     
                     # Only process functors, skip template constants like "NumberOfVolumesPerAxisInPatch"
-                    if "Functor" in argument._type.print_cpp().strip():
+                    if argument._is_function:
                         # Create the bridge function declaration in MLIR with _bridge suffix
                         # This matches the C++ wrapper function names (flux_bridge, etc.)
                         func_decl = f"func.func private @{argument.id}_bridge{mlir_signature}"
@@ -750,7 +708,7 @@ class FunctionDefinition(Node):
                     
                     # Skip global loading for variables with empty types (be more thorough)
                     if arg_mlir_type and arg_mlir_type.strip() != '' and len(arg_mlir_type.strip()) > 0:
-                        function_global_loads.append(' ' * (indent_level + 1) * Node.spaces_per_tab + f"%{argument.id} = llvm.load %{new_id}: !llvm.ptr -> {arg_mlir_type}")
+                        function_global_loads.append(' ' * (indent_level + 1) * Node.spaces_per_tab + f"%{argument.id} = llvm.load %{new_id} {{name = \"{argument.id.strip('%')}\"}} : !llvm.ptr -> {arg_mlir_type}")
                     else:
                         # For variables with empty types, just create a comment
                         function_global_loads.append(' ' * (indent_level + 1) * Node.spaces_per_tab + f"// Skipping load for {argument.id} (empty type: '{arg_mlir_type}')")
@@ -779,7 +737,6 @@ func.return
 }}
 """
         # Non-top-level case
-        indent = ' ' * indent_level * Node.spaces_per_tab
         Node.context.push_block()
         argument_prints = [argument.print_mlir(indent_level) for argument in self._arguments]
         Node.context.push_block()
@@ -1155,7 +1112,7 @@ class String(Expression):
                         field_id = f"%{Node.get_mlir_id()}"
                     
                     # Build the basic MLIR operations
-                    mlir_str = indent + f"{struct_val_id} = llvm.load %{struct} : !llvm.ptr -> {mlir_type_struct}\n"
+                    mlir_str = indent + f"{struct_val_id} = llvm.load %{struct} {{name = \"{struct.strip('%')}\"}}: !llvm.ptr -> {mlir_type_struct}\n"
                     
                     # If the extracted field is a raw pointer (not a descriptor struct),
                     # extract it directly with a _ptr suffix to distinguish from the final memref
@@ -1176,25 +1133,33 @@ class String(Expression):
                         ptr_getelementptr_id = f"%{Node.get_mlir_id()}"
                         ptr_load_id = f"%{Node.get_mlir_id()}"
                         mlir_str += indent + f"{ptr_getelementptr_id} = llvm.getelementptr %{struct}[0, {idx}] : (!llvm.ptr) -> !llvm.ptr, {mlir_type_struct}\n"
-                        mlir_str += indent + f"{ptr_load_id} = llvm.load {ptr_getelementptr_id} : !llvm.ptr -> {mlir_type_target}\n"
+                        mlir_str += indent + f"{ptr_load_id} = llvm.load {ptr_getelementptr_id} {{name = \"{struct.strip('%')}\"}}: !llvm.ptr -> {mlir_type_target}\n"
                         
                         # Extract all 5 descriptor fields
                         alloc_ptr_id = f"%{Node.get_mlir_id()}"
                         aligned_ptr_id = f"%{Node.get_mlir_id()}"
                         offset_id = f"%{Node.get_mlir_id()}"
-                        sizes_id = f"%{Node.get_mlir_id()}"
-                        strides_id = f"%{Node.get_mlir_id()}"
+                        sizes_0_id = f"%{Node.get_mlir_id()}"
+                        strides_0_id = f"%{Node.get_mlir_id()}"
                         
                         mlir_str += indent + f"{alloc_ptr_id} = llvm.extractvalue {ptr_load_id}[0] : {mlir_type_target}\n"
                         mlir_str += indent + f"{aligned_ptr_id} = llvm.extractvalue {ptr_load_id}[1] : {mlir_type_target}\n"
                         mlir_str += indent + f"{offset_id} = llvm.extractvalue {ptr_load_id}[2] : {mlir_type_target}\n"
-                        mlir_str += indent + f"{sizes_id} = llvm.extractvalue {ptr_load_id}[3, 0] : {mlir_type_target}\n"
-                        mlir_str += indent + f"{strides_id} = llvm.extractvalue {ptr_load_id}[4, 0] : {mlir_type_target}\n"
+                        mlir_str += indent + f"{sizes_0_id} = llvm.extractvalue {ptr_load_id}[3, 0] : {mlir_type_target}\n"
+                        mlir_str += indent + f"{strides_0_id} = llvm.extractvalue {ptr_load_id}[4, 0] : {mlir_type_target}\n"
                         
-                        # Determine target memref type based on descriptor dimensionality
-                        # descriptor2DType has array<2 x i64> -> convert to memref<?x?xf64>
-                        # descriptor1DType has array<1 x i64> -> convert to memref<?xf64>
+                        # Determine target memref type based on descriptor dimensions
                         is_2d = "array<2 x i64>" in mlir_type_target
+                        
+                        # For 2D descriptors, also extract sizes[1] and strides[1]
+                        sizes_1_id = None
+                        strides_1_id = None
+                        
+                        if is_2d:
+                            sizes_1_id = f"%{Node.get_mlir_id()}"
+                            strides_1_id = f"%{Node.get_mlir_id()}"
+                            mlir_str += indent + f"{sizes_1_id} = llvm.extractvalue {ptr_load_id}[3, 1] : {mlir_type_target}\n"
+                            mlir_str += indent + f"{strides_1_id} = llvm.extractvalue {ptr_load_id}[4, 1] : {mlir_type_target}\n"
                         
                         # Use type_map to get the correct memref type for this field
                         # For fields like cellCentre, cellSize, t, dt, we need to use their correct types from type_map
@@ -1220,12 +1185,15 @@ class String(Expression):
                             alloc_ptr_id,
                             aligned_ptr_id,
                             offset_id,
-                            sizes_id,
-                            strides_id,
+                            sizes_0_id,
+                            sizes_1_id,
+                            strides_0_id,
+                            strides_1_id,
                             target_memref_type,
                             mlir_type_target,
                             indent_level,
-                            target_var_name=Node.target_variable_name)
+                            target_var_name=Node.target_variable_name,
+                            is_2d=is_2d)
                         mlir_str += conversion_mlir
                         final_id = memref_id
                     elif 'memref' in mlir_type_target or mlir_type_target == '!llvm.ptr':
@@ -1501,14 +1469,6 @@ class Subscript(Expression):
 
     def is_nested_subscript(self):
         return isinstance(self._value, Subscript)
-    
-    def get_nested_indices(self):
-        if self.is_nested_subscript():
-            outer_index = self._value._new_index
-            inner_index = self._new_index
-            base_value = self._value._value.print_mlir(0)
-            return base_value, outer_index, inner_index
-        return None, None, None
 
     def get_type(self):
         return self._value.get_type()
@@ -1569,16 +1529,15 @@ class Subscript(Expression):
                 if "x?x" in memref_type:
                     # 2D flat memref - but we only have one index, which means we need a second one
                     # This shouldn't happen for single-level subscripts on 2D arrays
-                    print(f"WARNING: Single subscript on 2D flat memref {self._value._value}")
                     result_id = f"%{Node.get_mlir_id()}"
-                    mlir_str += indent + f"{result_id} = memref.load {base_mlir}[%0, {self._new_index}] : {memref_type}\n"
+                    mlir_str += indent + f"{result_id} = memref.load {base_mlir}[%0, {self._new_index}] {{name = \"{base_mlir.strip('%')}\"}} : {memref_type}\n"
                     Node.context.push_block()
                     Node.context.get_block().mlir_append(mlir_str)
                     return result_id
                 else:
                     # 1D memref - can be nested (memref<?xmemref<?xf64>>) or plain (memref<?xf64>)
                     result_id = f"%{Node.get_mlir_id()}"
-                    mlir_str += indent + f"{result_id} = memref.load {base_mlir}[{self._new_index}] : {memref_type}\n"
+                    mlir_str += indent + f"{result_id} = memref.load {base_mlir}[{self._new_index}] {{name = \"{base_mlir.strip('%')}\"}} : {memref_type}\n"
                     Node.context.push_block()
                     Node.context.get_block().mlir_append(mlir_str)
                     return result_id
@@ -1633,7 +1592,6 @@ class Subscript(Expression):
             mlir_str = "".join(Node.context.get_block().pop_mlir())
             
             # Check if it's a nested memref (memref<?xmemref<...>>) vs flat multi-D (memref<?x?x...>)
-            # Nested memrefs have "memref<" appearing AFTER the outer "memref<?x"
             # Handle both Type objects and strings
             if isinstance(actual_memref_type, str):
                 is_nested = actual_memref_type.count("memref<") > 1
@@ -1648,22 +1606,18 @@ class Subscript(Expression):
                 # Need to load in two steps: first get the inner memref, then load from it
                 inner_memref_id = f"%{Node.get_mlir_id()}"
                 # Extract the inner memref type from the outer type
-                # e.g., from "memref<?xmemref<?xf64>>" extract "memref<?xf64>"
                 if actual_memref_type_str.startswith("memref<?x") and actual_memref_type_str.endswith(">>"):
-                    # The inner type is between "memref<?x" and the final ">"
-                    # e.g., "memref<?xmemref<?xf64>>"
                     inner_type = actual_memref_type_str[9:-1]  # Remove "memref<?x" and final ">"
-                    # This should give us "memref<?xf64>"
                 else:
                     inner_type = "memref<?xf64>"  # Fallback
                 
-                mlir_str += indent + f"{inner_memref_id} = memref.load {outer_base}[{indices[0]}] : {actual_memref_type_str}\n"
+                mlir_str += indent + f"{inner_memref_id} = memref.load {outer_base}[{indices[0]}] {{name = \"{outer_base.strip('%')}\"}} : {actual_memref_type_str}\n"
                 # Now load from the inner memref with remaining indices
                 remaining_indices = ", ".join(indices[1:])
-                mlir_str += indent + f"{result_id} = memref.load {inner_memref_id}[{remaining_indices}] : {inner_type}\n"
+                mlir_str += indent + f"{result_id} = memref.load {inner_memref_id}[{remaining_indices}] {{name = \"{outer_base.strip('%')}\"}} : {inner_type}\n"
             else:
                 # This is a flat multi-D memref (memref<?x?xf64>, memref<?x?x?xf64>, etc.)
-                mlir_str += indent + f"{result_id} = memref.load {outer_base}[{indices_str}] : {actual_memref_type_str}\n"
+                mlir_str += indent + f"{result_id} = memref.load {outer_base}[{indices_str}] {{name = \"{outer_base.strip('%')}\"}} : {actual_memref_type_str}\n"
 
             Node.context.push_block()
             Node.context.get_block().mlir_append(mlir_str)
@@ -1696,6 +1650,7 @@ class Reference(Expression):
         return ' ' * indent_level * Node.spaces_per_tab + "&" + self._expression.print_sycl()
 
     def print_mlir(self, indent_level=0):
+        result_id = None
         indent = ' ' * indent_level * Node.spaces_per_tab
         mlir_str = "".join(Node.context.get_block().pop_mlir())
         
@@ -1728,76 +1683,41 @@ class Reference(Expression):
             # Determine dimensions and type of the memref
             base_type = base_expr.get_type()          
             if isinstance(base_type, TDataBlock):
-                # Create a subview for the reference
                 result_id = f"%{Node.get_mlir_id()}"
                 
                 # For nested memrefs (like double**), handle the inner memref properly
                 if isinstance(base_expr, Subscript):
                     # base_expr is Subscript[DataBlock, i] 
                     # We need to check if the base_expr itself is a nested subscript or just single-level
-                    
                     if isinstance(base_expr._value, Subscript):
-                        # This is Subscript[Subscript[DataBlock, inner_index], outer_index]
-                        # base_mlir is already a load result from the nested subscript
-                        # Just use it directly  
                         result_id = base_mlir
                     else:
-                        # This is Subscript[DataBlock, i] - a single subscript on a DataBlock
-                        # base_mlir is just %input (the 2D memref)
-                        # We need to load from it with the new_index as the second index
-                        datablock = base_expr._value
-                        
-                        # Try to get the memref type from mlir_memref_types using base_mlir variable name
-                        if base_mlir in Node.mlir_memref_types:
-                            memref_type_str = Node.mlir_memref_types[base_mlir]
-                        else:
-                            # Fallback to computing from type
-                            base_value_type = datablock.get_type()
-                            memref_type_str = base_value_type.print_mlir(0).strip()
-                        
-                        # Check if this variable has an explicit nested type in type_map
+                        # Check if this variable has an explicit nested type in `type_map`
                         base_mlir_name = base_mlir.lstrip('%')
                         is_nested_memref = False
                         if base_mlir_name in Node.type_map and _is_nested_memref(Node.type_map[base_mlir_name]):
                             is_nested_memref = True
                         
-                        # This is a 2D flat memref (or potentially other dims), so we need TWO indices
-                        # The first index comes from base_expr._new_index
                         outer_index = base_expr._new_index
-                        result_id = f"%{Node.get_mlir_id()}"
                         
                         # Use unified method from Node to generate pointer arithmetic
                         ptr_code, result_id = Node.generate_pointer_to_2d_element(
                             base_mlir, outer_index, new_index, is_nested_memref, indent_level
                         )
+
                         mlir_str += ptr_code
                 else:
-                    # Regular single-level memref - matching the expected type in function calls
                     element_type = "f64"  # Default to f64 - modify if needed for other types
                     mlir_str += indent + f"{result_id} = memref.subview {base_mlir}[{new_index}][1][1] : memref<?x{element_type}> to memref<?x{element_type}>\n"
-                
-                # Push all collected MLIR back to the context
-                Node.context.push_block()
-                Node.context.get_block().mlir_append(mlir_str)
-                
-                return result_id
-            
-            # If we couldn't handle it as a memref subview, push collected MLIR and fall back
-            Node.context.push_block()
-            Node.context.get_block().mlir_append(mlir_str)
-            
-            # Process the expression and return its ID
-            id = self._expression.print_mlir(indent_level)
-            return id
         
         # Default behavior for non-subscript references
         Node.context.push_block()
         Node.context.get_block().mlir_append(mlir_str)
         
         # Process the expression and return its ID
-        id = self._expression.print_mlir(indent_level)
-        return id
+        return result_id if result_id is not None else self._expression.print_mlir(indent_level)
     
+
     def print_tree(self, indent_level=0):
         return ' ' * indent_level * Node.spaces_per_tab + f"""Reference:
 {self._expression.print_tree(indent_level + 1)}"""
@@ -2126,10 +2046,10 @@ class VectorIndex(Expression):
                 array_index_cast = array_index_mlir
 
         raw_ptr = f"%{Node.get_mlir_id()}"
-        mlir_str += indent + f"{raw_ptr} = memref.load {array_base_mlir}[{array_index_cast}] : memref<?xi64>\n"
+        mlir_str += indent + f"{raw_ptr} = memref.load {array_base_mlir}[{array_index_cast}] {{name = \"{array_base_mlir.strip('%')}\"}} : memref<?xi64>\n"
 
         vec_ptr = f"%{Node.get_mlir_id()}"
-        mlir_str += indent + f"{vec_ptr} = llvm.inttoptr {raw_ptr} : i64 to !llvm.ptr\n"
+        mlir_str += indent + f"{vec_ptr} = llvm.inttoptr {raw_ptr} {{name = \"{array_base_mlir.strip('%')}\"}} : i64 to !llvm.ptr\n"
 
         func_param_mlir = self._index.print_mlir(indent_level)
         # Ensure func_param is i32 (emit arith.constant for Integer, cast otherwise)
@@ -2148,9 +2068,9 @@ class VectorIndex(Expression):
         mlir_str += indent + f"{func_param_i64} = arith.extsi {func_param_i32} : i32 to i64\n"
         # Compute pointer to array element
         velem_ptr = f"%{Node.get_mlir_id()}"
-        mlir_str += indent + f"{velem_ptr} = llvm.getelementptr {vec_ptr}[{func_param_i64}] : (!llvm.ptr, i64) -> !llvm.ptr, f64\n"
+        mlir_str += indent + f"{velem_ptr} = llvm.getelementptr {vec_ptr}[{func_param_i64}] {{name = \"{array_base_mlir.strip('%')}\"}} : (!llvm.ptr, i64) -> !llvm.ptr, f64\n"
         # Load the value from the computed pointer
-        mlir_str += indent + f"{result} = llvm.load {velem_ptr} : !llvm.ptr -> f64\n"
+        mlir_str += indent + f"{result} = llvm.load {velem_ptr} {{name = \"{array_base_mlir.strip('%')}\"}} : !llvm.ptr -> f64\n"
         Node.context.get_block().mlir_append(mlir_str)
 
         return result
@@ -2216,21 +2136,13 @@ class Comparison(Expression):
         
         lhs_mlir = self._lhs.print_mlir(indent_level)
         if TDataBlock.needs_memref_load(self._lhs):
-            if isinstance(self._lhs, VectorIndex):
-                # Skip memref.load for VectorIndex since it already returns an f64
-                pass
-            else:
-                const_zero_id = TDataBlock.ensure_const_zero(const_zero_id, indent_level)
-                lhs_mlir = TDataBlock.generate_memref_load(self._lhs, lhs_mlir, const_zero_id, indent_level)
+            const_zero_id = TDataBlock.ensure_const_zero(const_zero_id, indent_level)
+            lhs_mlir = TDataBlock.generate_memref_load(self._lhs, lhs_mlir, const_zero_id, indent_level)
             
         rhs_mlir = self._rhs.print_mlir(indent_level)
         if TDataBlock.needs_memref_load(self._rhs):
-            if isinstance(self._rhs, VectorIndex):
-                # Skip memref.load for VectorIndex since it already returns an f64
-                pass
-            else:
-                const_zero_id = TDataBlock.ensure_const_zero(const_zero_id, indent_level)
-                rhs_mlir = TDataBlock.generate_memref_load(self._rhs, rhs_mlir, const_zero_id, indent_level)
+            const_zero_id = TDataBlock.ensure_const_zero(const_zero_id, indent_level)
+            rhs_mlir = TDataBlock.generate_memref_load(self._rhs, rhs_mlir, const_zero_id, indent_level)
 
         return ' ' * indent_level * Node.spaces_per_tab + f"""{mlir_operation} {lhs_mlir}, {rhs_mlir} : {result_type}"""
 
@@ -2394,9 +2306,6 @@ class BinaryOperation(Expression):
         op_type_class = TDataBlock.get_mlir_type_for_operation(self._lhs, self._rhs)
         result_type = op_type_class.print_mlir(0)
         
-        # Get types and determine operation type
-        lhs_type = self._lhs.get_type()
-        rhs_type = self._rhs.get_type()
         op_type_class = TDataBlock.get_mlir_type_for_operation(self._lhs, self._rhs)
         result_type = op_type_class().print_mlir(0)
 
@@ -2406,12 +2315,8 @@ class BinaryOperation(Expression):
         lhs = self._lhs.print_mlir(indent_level).strip(' ')
         
         if TDataBlock.needs_memref_load(self._lhs):
-            if isinstance(self._lhs, VectorIndex):
-                # Skip memref.load for VectorIndex since it already returns an f64
-                pass
-            else:
-                const_zero_id = TDataBlock.ensure_const_zero(const_zero_id, indent_level)
-                lhs = TDataBlock.generate_memref_load(self._lhs, lhs, const_zero_id, indent_level)
+            const_zero_id = TDataBlock.ensure_const_zero(const_zero_id, indent_level)
+            lhs = TDataBlock.generate_memref_load(self._lhs, lhs, const_zero_id, indent_level)
             
         lhs = BinaryOperation.cast_operand(lhs, self._lhs, op_type_class, indent_level)
 
@@ -2419,12 +2324,8 @@ class BinaryOperation(Expression):
         rhs = self._rhs.print_mlir(indent_level).strip(' ')
         
         if TDataBlock.needs_memref_load(self._rhs):
-            if isinstance(self._rhs, VectorIndex):
-                # Skip memref.load for VectorIndex since it already returns an f64
-                pass
-            else:
-                const_zero_id = TDataBlock.ensure_const_zero(const_zero_id, indent_level)
-                rhs = TDataBlock.generate_memref_load(self._rhs, rhs, const_zero_id, indent_level)
+            const_zero_id = TDataBlock.ensure_const_zero(const_zero_id, indent_level)
+            rhs = TDataBlock.generate_memref_load(self._rhs, rhs, const_zero_id, indent_level)
 
         rhs = BinaryOperation.cast_operand(rhs, self._rhs, op_type_class, indent_level)
 
@@ -2872,13 +2773,6 @@ class TCustom(Type):
     def print_tree(self, indent_level=0):
         return ' ' * indent_level * Node.spaces_per_tab + "TCustom: " + self._type
     
-    def is_memref(self):
-        # Heuristic: custom type strings that contain 'memref<' or '!llvm.ptr' represent memref/pointer-like types
-        try:
-            return isinstance(self._type, str) and ("memref<" in self._type or self._type.startswith("!llvm.ptr"))
-        except Exception:
-            return False
-    
     def is_nested_memref(self):
         try:
             return isinstance(self._type, str) and ('xmemref<' in self._type or self._type.count('memref<') > 1)
@@ -2901,9 +2795,6 @@ class TInteger(Type):
     
     def print_tree(self, indent_level=0):
         return ' ' * indent_level * Node.spaces_per_tab + "TInteger"
-    
-    def is_scalar(self):
-        return True
 
 
 class TLong(Type):
@@ -2922,9 +2813,6 @@ class TLong(Type):
     
     def print_tree(self, indent_level=0):
         return ' ' * indent_level * Node.spaces_per_tab + "TLong"
-    
-    def is_scalar(self):
-        return True
 
 
 class TBoolean(Type):
@@ -2942,9 +2830,6 @@ class TBoolean(Type):
     
     def print_tree(self, indent_level=0):
         return ' ' * indent_level * Node.spaces_per_tab + "TBoolean"
-    
-    def is_scalar(self):
-        return True
 
 
 class TFloat(Type):
@@ -2964,9 +2849,6 @@ class TFloat(Type):
     
     def print_tree(self, indent_level=0):
         return ' ' * indent_level * Node.spaces_per_tab + "TFloat"
-    
-    def is_scalar(self):
-        return True
 
 
 class TString(Type):
@@ -2984,10 +2866,6 @@ class TString(Type):
 
     def print_tree(self, indent_level=0):
         return ' ' * indent_level * Node.spaces_per_tab + "TString"
-    
-    def is_scalar(self):
-        # Strings are not scalar numeric MLIR types
-        return False
 
    
 class TNestedMemref(Type):
@@ -3031,12 +2909,6 @@ class TFunctionType(Type):
     
     def print_sycl(self, indent_level=0):
         return ' ' * indent_level * Node.spaces_per_tab + 'void*'
-    
-    def is_function(self):
-        return True
-    
-    def get_signature(self):
-        return self._signature
 
 
 class TSimpleMemref(Type):
@@ -3059,14 +2931,8 @@ class TSimpleMemref(Type):
     def print_sycl(self, indent_level=0):
         return ' ' * indent_level * Node.spaces_per_tab + 'void*'
     
-    def is_memref(self):
-        return True
-    
     def get_element_type(self):
         return self._element_type
-    
-    def get_dimensions(self):
-        return self._dimensions
 
 
 class TDataBlock(Type):
@@ -3107,7 +2973,7 @@ class TDataBlock(Type):
             else:
                 element_type = "f64"  # Default fallback
             
-            load_str = indent + f"{load_id} = memref.load {operand_mlir}[{const_zero_id}] : memref<?x{element_type}>\n"
+            load_str = indent + f"{load_id} = memref.load {operand_mlir}[{const_zero_id}] {{name = \"{operand_mlir.strip('%')}\"}} : memref<?x{element_type}>\n"
             Node.context.get_block().mlir_append(load_str)
             return load_id
             
@@ -3120,37 +2986,6 @@ class TDataBlock(Type):
             indent = ' ' * indent_level * Node.spaces_per_tab
             Node.context.get_block().mlir_append(indent + f"{const_zero_id} = arith.constant 0 : index\n")
         return const_zero_id
-    
-    def is_nested_memref(self):
-        # Nested memref means memref<memref<...>>, not multi-dimensional memref!
-        # Multi-dimensional flat memrefs (like memref<?x?xf64>) are NOT nested.
-        # Only 1D memrefs containing pointers (stored as 1D nested memrefs) are truly nested.
-        if isinstance(self._dimensions, int) and self._dimensions == 1:
-            # Single dimension could be a nested memref (memref<?x...>)
-            # But we can't determine this from just dimensions. Return False by default
-            # since most 1D memrefs are flat, not nested.
-            return False
-        else:
-            # Multi-dimensional (2D+) are flat memrefs, not nested
-            # Single dimension is also flat by default
-            return False
-    
-    def generate_nested_load(self, base_value, outer_index, inner_index, indent_level=0):
-        indent = ' ' * indent_level * Node.spaces_per_tab
-        mlir_str = ''
-        
-        value_id = f"%{Node.get_mlir_id()}"
-        mlir_str += indent + f"{value_id} = memref.load {base_value}[{outer_index}, {inner_index}] : memref<?x?xf64>\n"
-        
-        return mlir_str, value_id
-    
-    def generate_nested_store(self, base_value, outer_index, inner_index, store_value, indent_level=0):
-        indent = ' ' * indent_level * Node.spaces_per_tab
-        mlir_str = ''
-        
-        mlir_str += indent + f"memref.store {store_value}, {base_value}[{outer_index}, {inner_index}] : memref<?x?xf64>\n"
-        
-        return mlir_str
 
     def get_single(self):
         return self._underlying_type
@@ -3552,7 +3387,6 @@ endParallelFor"""
         statement_prints = [statement.print_tree(indent_level + 1) for statement in self._statements]
         return ' ' * indent_level * Node.spaces_per_tab + f"""For: 
 {os.linesep.join(statement_prints)}"""
-
     
 
 class Comment(Statement):
@@ -3625,17 +3459,8 @@ class FunctionCall(Statement):
                 # Extract the nested structure
                 outer_subscript = argument._expression  # Subscript[Subscript[...], col_index]
                 inner_subscript = outer_subscript._value  # Subscript[2D_memref, row_index]
-                memref_2d = inner_subscript._value  # The 2D memref variable
-                row_index_expr = inner_subscript._index  # Row index
-                col_index_expr = outer_subscript._index  # Column index
-                
-                # Process the subscripts to ensure _new_index is set
-                # This calls Subscript.print_mlir which sets _new_index
-                inner_subscript.hoist(True)
-                inner_mlir = inner_subscript.print_mlir(indent_level)
-                mlir_str_from_inner = "".join(Node.context.get_block().pop_mlir())
-                Node.context.get_block().mlir_append(mlir_str_from_inner)
-                
+                memref_2d = inner_subscript._value  
+
                 outer_subscript.hoist(True)
                 outer_mlir = outer_subscript.print_mlir(indent_level)
                 mlir_str_from_outer = "".join(Node.context.get_block().pop_mlir())
@@ -3644,11 +3469,7 @@ class FunctionCall(Statement):
                 # Get MLIR representations
                 memref_2d.hoist(True)
                 memref_2d_mlir = memref_2d.print_mlir(indent_level).strip(' ')
-                
-                # Now get the index IDs - they should have _new_index set from above
-                row_index_id = inner_subscript._new_index
-                col_index_id = outer_subscript._new_index
-                
+
                 # Get the base memref variable name (strip % prefix)
                 base_mlir_name = memref_2d_mlir.lstrip('%')
                 is_nested_base = False
@@ -3657,7 +3478,7 @@ class FunctionCall(Statement):
                 
                 # Use unified method from Node to generate pointer arithmetic
                 ptr_code, final_ptr = Node.generate_pointer_to_2d_element(
-                    memref_2d_mlir, row_index_id, col_index_id, is_nested_base, indent_level
+                    memref_2d_mlir, inner_subscript._new_index, outer_subscript._new_index, is_nested_base, indent_level
                 )
                 Node.context.get_block().mlir_append(ptr_code)
                 arg_mlir = final_ptr
@@ -3677,7 +3498,6 @@ class FunctionCall(Statement):
                     if isinstance(base_type._dimensions, int) and base_type._dimensions >= 2:
                         # This is a flat multi-dimensional memref (like memref<?x?xf64>)
                         # When passed to a function expecting memref<?xf64>, just pass it as-is
-                        # The function will do the appropriate indexing
                         arg_mlir = f"{base_value}[{index}]"
                     else:
                         # Single-dimensional DataBlock
@@ -3686,7 +3506,7 @@ class FunctionCall(Statement):
                         if is_vector:
                             # This is an array of vectors - generate a load to get the vector pointer as i64, then cast to !llvm.ptr
                             result_id = f"%{Node.get_mlir_id()}"
-                            load_op = indent + f"{result_id} = memref.load {base_value}[{index}] : memref<?x{mlir_element_type}>\n"
+                            load_op = indent + f"{result_id} = memref.load {base_value}[{index}] {{name = \"{base_value.strip('%')}\"}} : memref<?x{mlir_element_type}>\n"
                             Node.context.get_block().mlir_append(load_op)
                             # Now cast the i64 to !llvm.ptr
                             ptr_id = f"%{Node.get_mlir_id()}"
@@ -3696,7 +3516,7 @@ class FunctionCall(Statement):
                         else:
                             # Regular array of scalars - generate a load to get the scalar value
                             result_id = f"%{Node.get_mlir_id()}"
-                            load_op = indent + f"{result_id} = memref.load {base_value}[{index}] : memref<?x{mlir_element_type}>\n"
+                            load_op = indent + f"{result_id} = memref.load {base_value}[{index}] {{name = \"{base_value.strip('%')}\"}} : memref<?x{mlir_element_type}>\n"
                             Node.context.get_block().mlir_append(load_op)
                             arg_mlir = result_id
                 else:
@@ -3704,7 +3524,7 @@ class FunctionCall(Statement):
                     if str(base_type).startswith("memref<?xmemref<?xf64>>"):
                         # This is an array of vectors (stored as memref of memrefs)
                         result_id = f"%{Node.get_mlir_id()}"
-                        load_op = indent + f"{result_id} = memref.load {base_value}[{index}] : memref<?xmemref<?xf64>>\n"
+                        load_op = indent + f"{result_id} = memref.load {base_value}[{index}] {{name = \"{base_value.strip('%')}\"}} : memref<?xmemref<?xf64>>\n"
                         Node.context.get_block().mlir_append(load_op)
                         arg_mlir = result_id
                     else:
@@ -3724,13 +3544,9 @@ class FunctionCall(Statement):
         if isinstance(type_entry, str):
             fn_type = type_entry
         else:
-            # Type object - call print_mlir()
             fn_type = type_entry.print_mlir(0).strip()
         
-        # Use direct calls to bridge functions instead of indirect calls
-        # This avoids the func.call_indirect mechanism that expects MLIR function values
         bridge_function_name = f"{self.id}_bridge"
-        
         call_statement = f"""func.call @{bridge_function_name}({", ".join(argument_prints)}) : {fn_type.strip(' ')}"""
         
         Node.context.get_block().mlir_append(indent + call_statement)
@@ -3800,9 +3616,9 @@ class Max(Statement):
             except:
                 outer_memref_type = "memref<?xmemref<?xf64>>"
 
-            mlir_str = indent + f"{inner_memref_id} = memref.load {outer_memref_var}[{outer_index}] : {outer_memref_type}\n"
+            mlir_str = indent + f"{inner_memref_id} = memref.load {outer_memref_var}[{outer_index}] {{name = \"{outer_memref_var.strip('%')}\"}} : {outer_memref_type}\n"
             value_id = f"%{Node.get_mlir_id()}"
-            mlir_str += indent + f"{value_id} = memref.load {inner_memref_id}[{inner_index}] : memref<?xf64>\n"
+            mlir_str += indent + f"{value_id} = memref.load {inner_memref_id}[{inner_index}] {{name = \"{outer_memref_var.strip('%')}\"}} : memref<?xf64>\n"
             Node.context.get_block().mlir_append(mlir_str)
   
             return value_id
@@ -3838,9 +3654,8 @@ class Max(Statement):
         # Use the unified type determination and operation mapping from TDataBlock
         op_type_class = TDataBlock.get_mlir_type_for_operation(self._lhs, self._rhs)
         result_type = op_type_class.print_mlir(0)  
-        if op_type_class is TFloat:
-            mlir_op = "arith.maximumf"
-        elif op_type_class is TInteger:
+
+        if op_type_class is TInteger:
             mlir_op = "arith.maxsi"
         else:
             mlir_op = "arith.maximumf"  # Default to float
@@ -3855,6 +3670,7 @@ class Max(Statement):
         return ' ' * indent_level * Node.spaces_per_tab + f"""Max:
 {self._lhs.print_tree(indent_level + 1)}
 {self._rhs.print_tree(indent_level + 1)}"""
+
 
 class MemoryAllocation(Statement):
     memoryAllocated = []
@@ -3923,7 +3739,7 @@ class MemoryAllocation(Statement):
         indent = ' ' * indent_level * Node.spaces_per_tab
         
         # Comprehensive tracing for MemoryAllocation
-        name_str = self._name.print_mlir(0)
+        name_mlir = self._name.print_mlir(0)
         name_type = self._name.get_type()
         is_datablock = isinstance(name_type, TDataBlock)
         var_name_for_map = self._name.print_cpp().strip()
@@ -3956,8 +3772,8 @@ class MemoryAllocation(Statement):
                 mlir_type = f"memref<?x{element_type}>"
             else:
                 mlir_type = name_type.print_mlir(0)
-            
-            decl += indent + f"{new_id} = memref.alloc({index_id}) : {mlir_type}\n"
+
+            decl += indent + f"{new_id} = memref.alloc({index_id}) {{name = \"{name_mlir.strip('%')}\"}} : {mlir_type}\n"
             # Track the allocated type for deallocation
             MemoryAllocation.allocated_types[new_id] = mlir_type
             
@@ -3967,7 +3783,7 @@ class MemoryAllocation(Statement):
                 # This is an inner allocation for nested memref, add the store operation
                 # Get the outer array name and index
                 outer_array = self._name._value  # This should be the outer array name
-                outer_index = self._name._index  # This should be the loop variable
+                outer_index = self._name._index  
                 
                 # Process the outer array and index expressions to collect any additional operations
                 Node.context.push_block()
@@ -3979,7 +3795,6 @@ class MemoryAllocation(Statement):
                 decl += ''.join(additional_ops)
                 
                 # When storing a memref into a nested memref array, we need to use memref<?xmemref<?xf64>>
-                # This is because the outer array holds inner memrefs, not scalar values
                 type_mlir = Node.get_mlir_type(self._type)
                 if type_mlir is None:
                     type_entry = Node.type_map[self._type.print_cpp()]
@@ -3992,11 +3807,11 @@ class MemoryAllocation(Statement):
                 outer_type = f"memref<?xmemref<?x{type_mlir}>>"
                 
                 # Add the store operation
-                decl += indent + f"memref.store {new_id}, {outer_array_mlir}[{outer_index_mlir}] : {outer_type}"
+                decl += indent + f"memref.store {new_id}, {outer_array_mlir}[{outer_index_mlir}] {{name = \"{outer_array_mlir.strip('%')}\"}} : {outer_type}"
             
             return decl
         else:
-            # For multi-dimensional arrays, check type_map FIRST
+            # For multi-dimensional arrays, check type_map first (ordering is important)
             # This allows overriding default DataBlock behavior for nested memref types
             var_name_for_type_check = self._name.print_cpp().strip()
             in_type_map = var_name_for_type_check in Node.type_map
@@ -4004,19 +3819,17 @@ class MemoryAllocation(Statement):
             # Use nested memref if in type_map, otherwise check if DataBlock flat
             if in_type_map:
                 # Variable has explicit type specification - use nested memref path
-                # Jump to nested path below
                 is_datablock = False  # Force nested path
                 actual_dims_calc = -1
             else:
                 # For multi-dimensional arrays, check if this is a DataBlock
                 # If so, use flat memref with the correct number of dimensions instead of nested memref
-                # DataBlocks can be 2D, 3D, etc. depending on iteration_range
                 is_datablock = isinstance(self._name.get_type(), TDataBlock)
                 
                 # Calculate actual_dims based on DataBlock iteration_range
                 if is_datablock:
                     datablock_obj = self._name.get_type()
-                    # DataBlock._iteration_range is a list of [min, max] pairs, one per dimension
+
                     if hasattr(datablock_obj, '_iteration_range'):
                         actual_dims_calc = len(datablock_obj._iteration_range)
                     elif isinstance(datablock_obj._dimensions, int):
@@ -4030,7 +3843,6 @@ class MemoryAllocation(Statement):
                 
             if is_datablock and actual_dims_calc >= 2:
                 # Multi-dimensional DataBlock case: allocate as flat N-D memref
-                # Get the element type
                 element_type_class = self._name.get_type().get_element_type()
                 element_type = element_type_class().print_mlir(0)
 
@@ -4072,9 +3884,9 @@ class MemoryAllocation(Statement):
                 alloc_args = ", ".join(dim_ids)
                 
                 # Allocate as flat N-D memref
-                alloc_line = indent + f"{name_mlir} = memref.alloc({alloc_args}) : memref<{memref_dims}x{element_type}>\n"
+                alloc_line = indent + f"{name_mlir} = memref.alloc({alloc_args}) {{name = \"{name_mlir.strip('%')}\"}} : memref<{memref_dims}x{element_type}>\n"
                 
-                # Store the allocated memref type so it can be used in load/store operations
+                # Track the allocated memref type so it can be used in load/store operations
                 memref_type_full = f"memref<{memref_dims}x{element_type}>"
                 Node.mlir_memref_types[name_mlir] = memref_type_full
                 MemoryAllocation.allocated_types[name_mlir] = memref_type_full
@@ -4086,6 +3898,7 @@ class MemoryAllocation(Statement):
                 size = self._dimensions[-2]
                 for i in range(len(self._dimensions) - 3, -1, -1):
                     size = size * self._dimensions[i]
+                    
                 # Process the outer dimension expression first and collect any intermediate operations
                 Node.context.push_block()
                 outer_size_val = self._dimensions[-1].print_mlir(indent_level)
@@ -4103,31 +3916,34 @@ class MemoryAllocation(Statement):
                 # Determine the correct type for the outer array
                 # Check if this variable name is in type_map (e.g., maxEigenvaluesX, maxEigenvaluesY)
                 var_name = self._name.print_cpp().strip()
+
+                # NOTE: We need to check if the variable name is in type_map first
                 if var_name in Node.type_map:
                     # Use the explicitly registered type from type_map
                     type_entry = Node.type_map[var_name]
+
                     # Handle both Type objects and strings
                     if isinstance(type_entry, str):
                         outer_type = type_entry
                     else:
-                        # Type object (e.g., TNestedMemref) - call print_mlir()
+                        # Type object (e.g., TNestedMemref) 
                         outer_type = type_entry.print_mlir(0).strip()
                 elif isinstance(self._name.get_type(), TDataBlock):
                     # Get the element type correctly for the inner memref
                     element_type_class = self._name.get_type().get_element_type()
                     element_type = element_type_class().print_mlir(0)
-                    # Inner memref should be 1D
                     outer_type = f"memref<?xmemref<?x{element_type}>>"
                 else:
                     # Fallback for non-DataBlock types
                     name_type_mlir = self._name.get_type().print_mlir(0) 
+
                     if name_type_mlir is None:
                         type_entry = Node.type_map[self._name.get_type().print_cpp()]
                         # Handle both Type objects and strings
                         if isinstance(type_entry, str):
                             name_type_mlir = type_entry.strip(' ')
                         else:
-                            # Type object - call print_mlir()
+                            # Type object 
                             name_type_mlir = type_entry.print_mlir(0).strip()
                     outer_type = f"memref<?x{name_type_mlir}>"
                 
@@ -4138,7 +3954,7 @@ class MemoryAllocation(Statement):
                 
                 # Add any name-related operations
                 decl += ''.join(name_ops)
-                decl += indent + f"{name_mlir} = memref.alloc({outer_size_id}) : {outer_type}\n"
+                decl += indent + f"{name_mlir} = memref.alloc({outer_size_id}) {{name = \"{name_mlir.strip('%')}\"}} : {outer_type}\n"
                 # Track the allocated type for deallocation
                 MemoryAllocation.allocated_types[name_mlir] = outer_type
                 
@@ -4157,7 +3973,6 @@ class MemoryDeallocation(Statement):
         super().__init__()
         self._dimensions = allocation._dimensions
         self._name = allocation._name
-        self._original_allocation = allocation  # Store reference to original allocation
         self._allocated_type = None  # Will store the MLIR type string when known
 
         if len(self._dimensions) > 1:
@@ -4168,10 +3983,6 @@ class MemoryDeallocation(Statement):
             self._loop = For([Integer(0), self._dimensions[-1]])
             self._loop.add_statement(MemoryDeallocation(MemoryAllocation(Subscript(self._name, self._loop.get_iteration_variable()), None, [size], False, False)))
             self._loop.close_scope()
-
-    def set_allocated_type(self, mlir_type_str):
-        """Store the actual MLIR memref type that was allocated"""
-        self._allocated_type = mlir_type_str
 
     def print_cpp(self, indent_level=0):
         if len(self._dimensions) == 1:
@@ -4212,7 +4023,7 @@ class MemoryDeallocation(Statement):
         # Use the stored allocated type if available
         if name_mlir in MemoryAllocation.allocated_types:
             name_type_mlir = MemoryAllocation.allocated_types[name_mlir]
-        elif self._allocated_type:
+        elif self._allocated_type is not None:
             # Use the allocated type if it was set explicitly
             name_type_mlir = self._allocated_type
         else:
@@ -4228,7 +4039,7 @@ class MemoryDeallocation(Statement):
                 # For multidimensional, assume nested memref
                 name_type_mlir = f"memref<?xmemref<?x{element_type}>>"
         
-        return indent + f"""memref.dealloc {name_mlir} : {name_type_mlir}\n"""
+        return "\n" + indent + f"""memref.dealloc {name_mlir} : {name_type_mlir}\n"""
 
     def print_tree(self, indent_level=0):
         return ' ' * indent_level * Node.spaces_per_tab + f"""MemoryDeallocation:
@@ -4253,44 +4064,24 @@ class Construction(Statement):
         return ' ' * indent_level * Node.spaces_per_tab + f"{self._name.get_type().print_sycl()} {self._name.print_sycl()} = {self._expression.print_sycl()};"
 
     def print_mlir(self, indent_level = 0):
-        # TODO: We aren't handling this correctly yet
-        #	In the one example we have, we need to add an additional load to get the actual value
-        if not self._expression._string is None:
+        indent = ' ' * indent_level * Node.spaces_per_tab
+
+        if self._expression._string is None:
+            expr_mlir = self._expression.print_mlir(indent_level)
+            
+            # Get any operations that were added to the context
+            mlir_str = ''.join(Node.context.get_block().pop_mlir())
+            mlir_str += indent + f"{self._name.print_mlir(indent_level)} = {expr_mlir} : {self._name.get_type().print_mlir(indent_level).strip(' ')}\n"
+        else:        
             # Get another variable id and load the pointer into that, then load the value into the actual variable (self)
-            indent = ' ' * indent_level * Node.spaces_per_tab
             new_id = Node.get_mlir_id()
             mlir_str =  indent + f"%{new_id} = {self._expression.print_mlir(indent_level)}\n"
+
             # Use the expression's type, not the name's type
             expr_type = self._expression.get_type().print_mlir(indent_level).strip(' ')
-            mlir_str += indent + f"{self._name.print_mlir(indent_level)} = llvm.load %{new_id} : !llvm.ptr -> {expr_type}\n"
-            Node.context.get_block().mlir_append(mlir_str)            
-        else:
-            # For struct field accesses, generate the operations and create proper variable assignment
-            if isinstance(self._expression, String) and '.' in self._expression._value:
-                # Generate MLIR operations for struct field extraction
-                expr_mlir = self._expression.print_mlir(indent_level)
-                
-                # Get any operations that were added to the context
-                mlir_str = ''.join(Node.context.get_block().pop_mlir())
-                
-                # Create an alias operation that assigns the result to our variable name
-                # This avoids the invalid "%t = %19" syntax by creating a proper alias
-                indent = ' ' * indent_level * Node.spaces_per_tab
-                mlir_str += indent + f"{self._name.print_mlir(indent_level)} = llvm.bitcast {expr_mlir} : {self._name.get_type().print_mlir(indent_level).strip(' ')} to {self._name.get_type().print_mlir(indent_level).strip(' ')}\n"
-                
-                Node.context.push_block()
-                Node.context.get_block().mlir_append(mlir_str)
-            else:
-                # Process the expression to generate its MLIR operations
-                expr_mlir = self._expression.print_mlir(indent_level)
-                
-                # Get any operations that were added to the context
-                mlir_str = ''.join(Node.context.get_block().pop_mlir())
-                
-                # For other expressions, create proper MLIR operation
-                mlir_str += ' ' * indent_level * Node.spaces_per_tab + f"{self._name.print_mlir(indent_level)} = {expr_mlir} : {self._name.get_type().print_mlir(indent_level).strip(' ')}\n"
-                Node.context.push_block()
-                Node.context.get_block().mlir_append(mlir_str)
+            mlir_str += indent + f"{self._name.print_mlir(indent_level)} = llvm.load %{new_id} {{name = \"{self._name.print_mlir(indent_level).strip('%')}\"}} : !llvm.ptr -> {expr_type}\n"
+            
+        Node.context.get_block().mlir_append(mlir_str)            
         return ''
 
     def print_tree(self, indent_level=0):
@@ -4357,34 +4148,24 @@ class DataBlockConstructionFromExisting(Statement):
             type_print = "!llvm.ptr " #+ f"{self._dataBlock._underlying_type} dims: {dims})"
     
         # NOTE: We encode structs as Strings, so check here if they are a struct and generate accordingly
-        if isinstance(self._dataBlock._internal, String):
-            # Set the target variable name so String.print_mlir() can use it
-            target_var_name = self._name.print_mlir(indent_level)
-            Node.target_variable_name = target_var_name
-            
-            # Store the mapping from DSL name to MLIR variable name for later use in assignments
-            dsl_name = self._dataBlock._internal._value
-            Node.mlir_symbol_table[dsl_name] = target_var_name
-            
-            # Also store the memref type for this variable
-            # Extract field name from dsl_name (e.g., "QOut" from "patchData.QOut")
-            if '.' in dsl_name:
-                field_name = dsl_name.split('.')[-1]
-            else:
-                field_name = dsl_name
-            
-            # Generate the struct field access operations with the target variable name
-            struct_mlir = self._dataBlock._internal.print_mlir(indent_level).strip(' ')
-            mlir_str = ''.join(Node.context.pop_block().get_mlir())
-            
-            # Clear the target variable name
-            Node.target_variable_name = None
-            
-            return mlir_str        
+        # Set the target variable name so String.print_mlir() can use it
+        target_var_name = self._name.print_mlir(indent_level)
+        Node.target_variable_name = target_var_name
         
+        # Store the mapping from DSL name to MLIR variable name for later use in assignments
+        # TODO: This is clumsy - it is assuming the exact flow here...
+        dsl_name = self._dataBlock._internal._value
+        Node.mlir_symbol_table[dsl_name] = target_var_name
+
+        # Generate the struct field access operations with the target variable name
+        struct_mlir = self._dataBlock._internal.print_mlir(indent_level).strip(' ')
+        mlir_str = ''.join(Node.context.pop_block().get_mlir())
         
-        # Handle as usual...
-        return ' ' * indent_level * Node.spaces_per_tab + f"{self._name.print_mlir(indent_level)} = {self._dataBlock._internal.print_mlir(indent_level)} : {type_print.strip(' ')}\n"
+        # Clear the target variable name - we've finished generating the MLIR for this Node
+        Node.target_variable_name = None
+        
+        return mlir_str        
+        
 
     def print_tree(self, indent_level=0):
         return f"""
@@ -4647,7 +4428,7 @@ class DataBlockConstructionFromFunction(Statement):
         if Node.use_accelerator == True:
             omp_pragma = "#pragma omp target teams loop collapse(Dimensions + 1) device(targetDevice)"
         else:
-            omp_pragma = "#pragma omp parallel for simd collapse(Dimensions + 1) schedule(static, 1)"
+            omp_pragma = "#pragma omp parallel for simd collapse(Dimensions + 1)"
         return f"""{self.memoryAllocation.print_omp(indent_level)}
 {' ' * indent_level * Node.spaces_per_tab + omp_pragma}
 {self.initialisation.print_omp(indent_level)}"""
@@ -4699,57 +4480,6 @@ class Assignment(Statement):
 
     def print_mlir(self, indent_level = 0):
         indent = ' ' * indent_level * Node.spaces_per_tab 
-        
-        # Helper function to check if LHS was recently allocated as nested memref
-        def lhs_needs_nested_store(lhs):
-            if isinstance(lhs, Subscript):
-                base_type = lhs._value.get_type() if hasattr(lhs._value, 'get_type') else None
-                if isinstance(base_type, TDataBlock) and base_type.is_nested_memref():
-                    return True
-            else:
-                lhs_type = lhs.get_type()
-                if isinstance(lhs_type, TDataBlock) and lhs_type.is_nested_memref():
-                    return True
-            return False
-
-        def is_nested_memref(expr):
-            if isinstance(expr, Subscript):
-                if isinstance(expr._value, Subscript):
-                    base_expr = expr._value._value
-                    if isinstance(base_expr, String):
-                        return False
-                    return True
-            return False
-
-        def handle_nested_memref_assignment(lhs, rhs_value, indent_level):
-            indent = ' ' * indent_level * Node.spaces_per_tab
-            mlir_str = ''
-            
-            outer_subscript = lhs._value
-            outer_index = outer_subscript._new_index
-            inner_index = lhs._new_index
-            
-            # Get the base variable and look up its type in type_map
-            base_var = outer_subscript._value
-            
-            if isinstance(base_var, Name):
-                var_name = base_var.id
-                type_entry = Node.type_map[var_name]
-                if isinstance(type_entry, TNestedMemref):
-                    # Get both the full type and the element type
-                    outer_memref_type = type_entry.print_mlir(0).strip()
-                    inner_element_type = type_entry.get_element_type()
-                elif isinstance(type_entry, str):
-                    outer_memref_type = type_entry
-            
-            inner_memref_id = f"%{Node.get_mlir_id()}"
-            mlir_str += indent + f"{inner_memref_id} = memref.load {base_var.print_mlir(indent_level)}[{outer_index}] : {outer_memref_type}\n"
-            
-            inner_memref_type = f"memref<?x{inner_element_type}>"
-            mlir_str += indent + f"memref.store {rhs_value}, {inner_memref_id}[{inner_index}] : {inner_memref_type}\n"
-            
-            return mlir_str
-
         mlir_str = ''
         Node.context.push_block()
         rhs = self._rhs.print_mlir(indent_level)
@@ -4822,16 +4552,13 @@ class Assignment(Statement):
             
             lhs_index_str = '[' + ','.join(all_lhs_indices) + ']'
             lhs_type = f"memref<?x?xf64>"
-            mlir_str += indent + f"memref.store {rhs_value}, {lhs_memref_name}{lhs_index_str} : {lhs_type}\n"
+            mlir_str += indent + f"memref.store {rhs_value}, {lhs_memref_name}{lhs_index_str} {{name = \"{lhs_memref_name.strip('%')}\"}} : {lhs_type}\n"
         elif isinstance(self._lhs, Subscript) and isinstance(self._lhs._value, Subscript):
-            # Check if this is a true nested memref assignment (not a flat 2D field)
-            # Nested subscript: Subscript(Subscript(...))
             base_base = self._lhs._value._value
             
-            # If base is not a String field, it's a true nested memref (like lambdaLeft[i][j])
+            # If base is not a String field, it's a true nested memref (e.g. lambdaLeft[i][j])
             if not (isinstance(base_base, DataBlock) and isinstance(base_base._internal, String)):
                 # This is a nested memref store (e.g., lambdaLeft[i][j] = value)
-                # Get RHS value
                 rhs_value = rhs
                 if isinstance(self._rhs, Float):
                     const_id = f"%{Node.get_mlir_id()}"
@@ -4845,12 +4572,12 @@ class Assignment(Statement):
                     rhs_id = f"%{Node.get_mlir_id()}"
                     rhs_index_str = '[' + ','.join(rhs_indices) + ']'
                     rhs_type = "memref<?xf64>" if not rhs_dims else f"memref<{ 'x'.join(rhs_dims) }xf64>"
-                    mlir_str += indent + f"{rhs_id} = memref.load {rhs}{rhs_index_str} : {rhs_type.strip(' ')}\n"
+                    mlir_str += indent + f"{rhs_id} = memref.load {rhs}{rhs_index_str} {{name = \"{rhs.strip('%')}\"}} : {rhs_type.strip(' ')}\n"
                     rhs_value = rhs_id
                 
                 # Extract indices from nested subscript chain
                 # lhs._value is the inner subscript, lhs is the outer subscript
-                outer_index = self._lhs._new_index           # Second dimension
+                outer_index = self._lhs._new_index           
                 inner_memref_var = self._lhs._value._value.print_mlir(indent_level)  # Base memref name
                 
                 # Load the inner memref from the outer nested structure
@@ -4862,16 +4589,15 @@ class Assignment(Statement):
                 if isinstance(type_entry, str):
                     outer_memref_type = type_entry
                 else:
-                    # Type object - call print_mlir()
                     outer_memref_type = type_entry.print_mlir(0).strip()
 
                 # Load inner memref with first index
                 inner_sub_index = self._lhs._value._new_index
-                mlir_str += indent + f"{inner_memref_id} = memref.load {inner_memref_var}[{inner_sub_index}] : {outer_memref_type}\n"
+                mlir_str += indent + f"{inner_memref_id} = memref.load {inner_memref_var}[{inner_sub_index}] {{name = \"{inner_memref_var.strip('%')}\"}} : {outer_memref_type}\n"
                 
                 # Store directly into the inner memref with the second index
-                inner_memref_type = "memref<?xf64>"  # Inner arrays are 1D
-                mlir_str += indent + f"memref.store {rhs_value}, {inner_memref_id}[{outer_index}] : {inner_memref_type}\n"
+                inner_memref_type = "memref<?xf64>"  # Default inner arrays are 1D
+                mlir_str += indent + f"memref.store {rhs_value}, {inner_memref_id}[{outer_index}] {{name = \"{inner_memref_var.strip('%')}\"}} : {inner_memref_type}\n"
         else:
             # Handle regular flat memref assignment (non-nested)
             rhs_id = f"%{Node.get_mlir_id()}"         
@@ -4889,7 +4615,7 @@ class Assignment(Statement):
                 rhs_type = "memref<?xf64>"
             
             if isinstance(self._rhs, Subscript):
-                mlir_str += indent + f"{rhs_id} = memref.load {rhs}{rhs_index_str} : {rhs_type.strip(' ')}\n"
+                mlir_str += indent + f"{rhs_id} = memref.load {rhs}{rhs_index_str} {{name = \"{rhs.strip('%')}\"}} : {rhs_type.strip(' ')}\n"
                 rhs_value = rhs_id
             else:
                 rhs_value = rhs
@@ -4904,11 +4630,11 @@ class Assignment(Statement):
                 rhs_value = const_id
 
             if isinstance(self._lhs, Subscript):
-                mlir_str += indent + f"memref.store {rhs_value}, {lhs}{lhs_index_str} : {lhs_type.strip(' ')}\n"
+                mlir_str += indent + f"memref.store {rhs_value}, {lhs}{lhs_index_str} {{name = \"{lhs.strip('%')}\"}} : {lhs_type.strip(' ')}\n"
             else:
                 lhs_type_obj = self._lhs.get_type()
                 lhs_mlir_type = lhs_type_obj.print_mlir(indent_level).strip(' ')
-                mlir_str += indent + f"memref.store {rhs_value}, {lhs} : {lhs_mlir_type}\n"
+                mlir_str += indent + f"memref.store {rhs_value}, {lhs} {{name = \"{lhs.strip('%')}\"}} : {lhs_mlir_type}\n"
                 
         return mlir_str
     
@@ -4974,7 +4700,7 @@ class DataBlockAssignment(Statement):
         if Node.use_accelerator == True:
             omp_pragma = "#pragma omp target teams loop collapse(Dimensions + 1) device(targetDevice)"
         else:
-            omp_pragma = "#pragma omp parallel for simd collapse(Dimensions + 1) schedule(static, 1)"
+            omp_pragma = "#pragma omp parallel for simd collapse(Dimensions + 1)"
         return ' ' * indent_level * Node.spaces_per_tab + omp_pragma + f"""
 {self._loop.print_omp(indent_level)}"""
     

@@ -1,5 +1,8 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
+#ifndef GPU_MEMORY_MANAGER_H
+#define GPU_MEMORY_MANAGER_H
+
 #include "tarch/multicore/multicore.h"
 
 #include "tarch/multicore/BooleanSemaphore.h"
@@ -135,3 +138,5 @@ class tarch::accelerator::GPUMemoryManager {
      */
     void clear();
 };
+
+#endif

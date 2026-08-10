@@ -137,7 +137,7 @@ the SISC paper
         self.d["FC"] = ""
         self.d["FCFLAGS"] = ""
         self.d["LDFLAGS"] = ""
-        self.d["LIBS"] = ""
+        self.d["LIBS"] = "-lomp"
         self.d["DIM"] = "2"
         self.d["CONFIGUREPATH"] = "."
         self.d["EXECUTABLENAME"] = ""

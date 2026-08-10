@@ -1,6 +1,9 @@
 #include "{{CLASSNAME}}.h"
 
 #include "tarch/accelerator/accelerator.h"
+#if not defined(GPUOffloadingOff)
+#include "tarch/accelerator/GPUMemoryManager.h"
+#endif
 
 #include <algorithm>
 
@@ -36,6 +39,7 @@
   value = other.value==nullptr ? nullptr : _dataSmartPointer.get();
 }
 
+#if not defined(GPUOffloadingOff)
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::reallocateOnDevice(int deviceNumber) {
   _dataSmartPointer = std::shared_ptr<double[]>(
     tarch::accelerator::GPUMemoryManager::getInstance().allocate<double>(Cardinality, deviceNumber), 
@@ -45,6 +49,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::reallocateOnDevice(int deviceNum
   );
   value = _dataSmartPointer.get();
 }
+#endif
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone(const {{CLASSNAME}}& other) {
   #if PeanoDebug>=1

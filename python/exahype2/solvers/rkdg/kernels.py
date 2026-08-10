@@ -7,7 +7,7 @@ from enum import Enum
 from exahype2.solvers.PDETerms import PDETerms
 import os
 import exahype2
-import exahype2.kerneldsl as DSL
+import exahype2.dslhype as DSL
 
 from exahype2.solvers.LagrangeBasisWithDiagonalMassMatrix import GaussLegendreBasis
 

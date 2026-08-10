@@ -19,6 +19,7 @@ kernels/
 solution-*
 
 Constants.h
+MLIRbridge.*
 README-*
 CMakeLists.txt
 .gitignore

@@ -6,7 +6,7 @@ import jinja2
 from enum import Enum
 import os
 import exahype2
-import exahype2.kerneldsl as DSL
+import exahype2.dslhype as DSL
 
 
 class SolverVariant(Enum):
