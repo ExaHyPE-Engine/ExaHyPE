@@ -116,6 +116,8 @@ protected:
   Functor _functor;
   double  _maxEigenvalue;
 
+  double* __restrict__ _deviceData;
+
 public:
   /**
    * Create plain enclave task.

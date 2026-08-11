@@ -49,6 +49,31 @@ This function returns the root of an ast, which can be used to generate the kern
 Functions can be organised in files by calling the print_declaration methods, and versions with
 a timer can also be generated. See kernels.py in the rusanov python code for example usage.
 
+## Compiling into MLIR
+Implementing a solver for MLIR usage is mostly the same as for the C++ pretty printer.
+There are however some additional steps.
+For CPU usage this requires certain Jinja2 variables to be set so that the MLIRBridge files can be generated.
+The variables that need to be set can be seen in python/fv/rusanov/kernels.py, which implements all required steps.
+
+Compiling to GPU is more involved, as we require an MLIR version of each physics function so that they can be inlined.
+We do this using Polygeist. To compile a function using Polygeist we need a file that contains the minimal number of includes.
+This requires Vector parameters to be replaced with double*, which is how we represent them in the MLIR code.
+With this change Polygeist should be able to compile each funcition with
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+cgeist physics_functions.cpp -function=function_name -S > function_name.mlir
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The resulting functions should all be added to one file, and the file should be added as the "MLIR_PHYSICS_FILE" makefile argument.
+
+Unfortunately this function may still not be included or inlined successfully, leading to an error when building the benchmark.
+The issues we have encountered so far are:
+- Large array allocations break inlining. These need to be replaced with individual variables.
+- fmax and fmin calls can lead to errors when including the file. In these cases replace them with explicit if statements.
+- The input and output array parameters should be !llvm.ptrs in the mlir file. If not, in physics_functions.cpp replace the
+types from double* to void*, then perform a static_cast at the start of the function. In the generated file the polygeist conversion
+operations should then be deleted, and variable names should also be replaced accordingly.
+
+An example of these changes can be seen by comparing CCZ4Kernels.cpph with CCZ4MLIR.cpp.
+
 # DataBlock
 A DataBlock is used to represent an array of patches in the DSL code. They are
 constructed using a 2D list specifying its dimensions, which for three dimensions

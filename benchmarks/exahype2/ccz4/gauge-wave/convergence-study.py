@@ -189,7 +189,8 @@ if "fd4-rk" in args.solver or "sofd4-rk" in args.solver:
             min_meshcell_h=args.cell_size / 3,
             max_meshcell_h=args.cell_size / 3,
             second_order = second_order_formulation,
-            pde_terms_without_state=True
+            pde_terms_without_state=True,
+            device_resident_rk = False
         )
     else:
         my_solver = CCZ4Solver_FD4_GlobalAdaptiveTimeStep(

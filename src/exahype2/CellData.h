@@ -5,6 +5,7 @@
 #include "tarch/la/Vector.h"
 #include "peano4/utils/Globals.h"
 #include "config.h"
+#include "peano4/datamanagement/CellMarker.h"
 
 #include <functional>
 #include <string>
@@ -120,6 +121,7 @@ namespace exahype2 {
      */
     double*    maxEigenvalue;
 
+
     /**
      * Construct patch data object for one single cell.
      *
@@ -214,8 +216,10 @@ namespace exahype2 {
       const CellData<inType, outType>&   cellData,
       int                                inputPatchSize,
       int                                outputPatchSize,
-      int                                device = tarch::accelerator::Device::HostDevice
+      int                                device = tarch::accelerator::Device::HostDevice,
+      int                                currentPatchDevice = tarch::accelerator::Device::HostDevice
     );
+    void destroyWithoutCopy();
     void copyBackAndDestroy();
     
     std::string toString() const;
