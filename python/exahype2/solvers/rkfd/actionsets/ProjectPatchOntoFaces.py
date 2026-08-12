@@ -174,7 +174,7 @@ class ProjectPatchOntoFaces(AbstractRKFDActionSet):
             "touchCellLastTime(....)",
             "project " << patchCell << "->" << overlapCell <<
             "(" << enumeratorWithAuxiliaryVariables(0,patchCell,0) << "->" << overlapCellSerialised*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}) << "): " <<
-            fineGridCellEulerRKFDQ.value[ enumeratorWithAuxiliaryVariables(0,patchCell,0) ]
+            fineGridCell{{UNKNOWN_IDENTIFIER}}.value[ enumeratorWithAuxiliaryVariables(0,patchCell,0) ]
           );
 
           {% if RECONSTRUCTION_STAGES==0 or PREDICATE_NO==PREDICATES|length-RECONSTRUCTION_STAGES-1 %}
@@ -226,7 +226,7 @@ class ProjectPatchOntoFaces(AbstractRKFDActionSet):
             "touchCellLastTime(....)",
             "project " << patchCell << "->" << overlapCell <<
             "(" << enumeratorWithAuxiliaryVariables(0,patchCell,0) << "->" << overlapCellSerialised*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}) << "): " <<
-            fineGridCellEulerRKFDQ.value[ enumeratorWithAuxiliaryVariables(0,patchCell,0) ]
+            fineGridCell{{UNKNOWN_IDENTIFIER}}.value[ enumeratorWithAuxiliaryVariables(0,patchCell,0) ]
           );
 
           {% if RECONSTRUCTION_STAGES==0 or PREDICATE_NO==PREDICATES|length-RECONSTRUCTION_STAGES-1 %}
@@ -311,7 +311,7 @@ class ProjectPatchOntoFaces(AbstractRKFDActionSet):
             "touchCellLastTime(....)",
             "project " << patchCell << "->" << overlapCell <<
             "(" << enumeratorWithAuxiliaryVariables(0,patchCell,0) << "->" << overlapCellSerialised*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}) << "): " <<
-            fineGridCellEulerRKFDQ.value[ enumeratorWithAuxiliaryVariables(0,patchCell,0) ]
+            fineGridCell{{UNKNOWN_IDENTIFIER}}.value[ enumeratorWithAuxiliaryVariables(0,patchCell,0) ]
           );
           for (int j : primaryVarsIndices) {
             {{FACES_ACCESSOR}}(d).value[overlapCellSerialised*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})+j] = 
@@ -345,7 +345,7 @@ class ProjectPatchOntoFaces(AbstractRKFDActionSet):
             "touchCellLastTime(....)",
             "project " << patchCell << "->" << overlapCell <<
             "(" << enumeratorWithAuxiliaryVariables(0,patchCell,0) << "->" << overlapCellSerialised*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}) << "): " <<
-            fineGridCellEulerRKFDQ.value[ enumeratorWithAuxiliaryVariables(0,patchCell,0) ]
+            fineGridCell{{UNKNOWN_IDENTIFIER}}.value[ enumeratorWithAuxiliaryVariables(0,patchCell,0) ]
           );
           for (int j : primaryVarsIndices) {
             {{FACES_ACCESSOR}}(d+Dimensions).value[overlapCellSerialised*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})+j] = 

@@ -6,6 +6,13 @@
 You will find examples how this toolchain is used on particular machines on the page @ref page_machines.
 </div>
 
+### General Compiler Flag Remarks
+
+Should you use ```-ffast-math``` this leads to inaccuracies in some applications,
+such as ccz4. If this flag is desired, also use ```-frounding-math``` to avoid rounding
+errors.
+Clang enables fused multiply add operations via ```-ffp-contract=on``` instead of ```-fma```.
+
 
 ### OpenMP
 
@@ -20,7 +27,18 @@ where XX has to be replaced by the actual compute capability of the device.
 
 Note: We set the C++ compiler standard to 17. This is due to an issue with LLVM Clang itself. See https://github.com/llvm/llvm-project/issues/61327.
 
-### MLIR
+### Using MLIR
+
+Building a benchmark that uses MLIR requires our exahype-opt executable, which must first be built.
+Navigate to src/exahype2/mlir and enter the commands
+~~~~~~~~~~~~~
+mkdir build && cd build
+cmake ..
+cmake --build .
+~~~~~~~~~~~~~
+The output bin directory should then be added to your PATH.
+
+### Building MLIR
 
 MLIR is not necessarily included in an LLVM install, so it may be necessary to build from source.
 First, clone llvm from GitHub.

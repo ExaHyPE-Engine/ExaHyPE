@@ -1,9 +1,9 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "tarch/multicore/multicore.h"
+#ifndef GPU_MEMORY_MANAGER_H
+#define GPU_MEMORY_MANAGER_H
 
-#if !defined( _TARCH_MULTICORE_OMP_GPU_MEMORY_MANAGER_H_) and defined(GPUOffloadingOMP) and defined(_OPENMP) and not defined(__HIP_DEVICE_COMPILE__)
-#define _TARCH_MULTICORE_OMP_GPU_MEMORY_MANAGER_H_
+#include "tarch/multicore/multicore.h"
 
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/logging/Log.h"
@@ -14,9 +14,12 @@
 
 namespace tarch {
   namespace accelerator {
-    namespace omp {
-      class GPUMemoryManager;
-    }
+    class GPUMemoryManager;
+    #if defined(GPUOffloadingSYCL)
+    typedef ::sycl::queue& DeviceType;
+    #else
+    typedef int DeviceType;
+    #endif
   }
 }
 
@@ -31,9 +34,16 @@ namespace tarch {
  * It seems that memory allocation on GPUs is very slow with most OMP runtimes.
  * Therefore, it is reasonable to manage the GPU memory in the user space.
  */
-class tarch::accelerator::omp::GPUMemoryManager {
+class tarch::accelerator::GPUMemoryManager {
   private:
     static tarch::logging::Log          _log;
+
+    /**
+    * _allocatedMemory and _maxMemory are used to track remaining space on the device.
+    * If _maxMemory is -1 then it is assumed that there is no memory limitation;
+    */
+    static int                          _allocatedMemory;
+    static constexpr int                _maxMemory = -1;
 
     tarch::multicore::BooleanSemaphore  _semaphore;
 
@@ -76,7 +86,7 @@ class tarch::accelerator::omp::GPUMemoryManager {
      * @return This pointer is a device pointer, i.e. do not use it on the host.
      */
     template <class T>
-    T* allocate( int size, int device ) {
+    T* allocate( int size, DeviceType device ) {
       return reinterpret_cast<T*>( allocateRawData(size * static_cast<int>(sizeof(T)), device ) );
     }
 
@@ -108,14 +118,14 @@ class tarch::accelerator::omp::GPUMemoryManager {
      * @param growth Number greater than zero which tells the code how many entries
      * (pages) to book whenever it runs out of memory.
      */
-    void* allocateRawData( int size, int device );
+    void* allocateRawData( int size, DeviceType device );
 
     /**
      * Free does not actually free data, but instead hands the memory block
      * back to the singleton, such that the next allocateRawData() call can
      * reuse the memory region.
      */
-    void free(void* devicePointer, int device);
+    void free(void* devicePointer, DeviceType device);
 
     /**
      * Idempotent function

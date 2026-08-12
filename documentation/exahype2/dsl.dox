@@ -3,6 +3,10 @@
 @page documentation_exahype2_dsl DSL Syntax
 
 Exahype uses a domain specific language (DSL) to define its kernels.
+This allows us to generate versions for different architectures, and to also
+generate a version that uses MLIR to perform optimisation passes. For details
+on using MLIR see \ref documentation_toolchains_llvm.
+
 This page provides details its syntax. It is compiled by making modifications
 to a Python abstract syntax tree (AST), so the majority of its syntax matches
 that of Python. The timeStepWithRusanov function is a good reference to look
@@ -44,6 +48,31 @@ then call its parse() function. It takes the following parameters:
 This function returns the root of an ast, which can be used to generate the kernel using root.print_cpp().
 Functions can be organised in files by calling the print_declaration methods, and versions with
 a timer can also be generated. See kernels.py in the rusanov python code for example usage.
+
+## Compiling into MLIR
+Implementing a solver for MLIR usage is mostly the same as for the C++ pretty printer.
+There are however some additional steps.
+For CPU usage this requires certain Jinja2 variables to be set so that the MLIRBridge files can be generated.
+The variables that need to be set can be seen in python/fv/rusanov/kernels.py, which implements all required steps.
+
+Compiling to GPU is more involved, as we require an MLIR version of each physics function so that they can be inlined.
+We do this using Polygeist. To compile a function using Polygeist we need a file that contains the minimal number of includes.
+This requires Vector parameters to be replaced with double*, which is how we represent them in the MLIR code.
+With this change Polygeist should be able to compile each funcition with
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+cgeist physics_functions.cpp -function=function_name -S > function_name.mlir
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The resulting functions should all be added to one file, and the file should be added as the "MLIR_PHYSICS_FILE" makefile argument.
+
+Unfortunately this function may still not be included or inlined successfully, leading to an error when building the benchmark.
+The issues we have encountered so far are:
+- Large array allocations break inlining. These need to be replaced with individual variables.
+- fmax and fmin calls can lead to errors when including the file. In these cases replace them with explicit if statements.
+- The input and output array parameters should be !llvm.ptrs in the mlir file. If not, in physics_functions.cpp replace the
+types from double* to void*, then perform a static_cast at the start of the function. In the generated file the polygeist conversion
+operations should then be deleted, and variable names should also be replaced accordingly.
+
+An example of these changes can be seen by comparing CCZ4Kernels.cpph with CCZ4MLIR.cpp.
 
 # DataBlock
 A DataBlock is used to represent an array of patches in the DSL code. They are
@@ -95,14 +124,4 @@ them has one variable. In this case the datablock with one variable will act as 
 contained duplicates of this variable to match the number of variables in the other 
 DataBlock.
 
-# Compiling with MLIR
-Building a benchmark that uses MLIR requires our exahype-opt executable, which must first
-be built. This assumes that the steps in \ref documentation_toolchains_llvm .
-Navigate to src/exahype2/mlir and enter the commands
-~~~~~~~~~~~~~
-mkdir build && cd build
-cmake -G Ninja .. -DMLIR_DIR=${LLVM_INSTALL_DIRECTORY}/lib/cmake/mlir
-cmake --build .
-~~~~~~~~~~~~~
-The output bin directory should then be added to your PATH.
 */

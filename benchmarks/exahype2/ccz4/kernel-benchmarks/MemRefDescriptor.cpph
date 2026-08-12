@@ -1,0 +1,82 @@
+#pragma once
+
+#include <cstdint>
+#include <iostream>
+#include <array>
+
+// MLIR memref descriptor struct definition
+// Matches the LLVM struct layout: {T* allocated, T* aligned, i64 offset, i64 sizes[N], i64 strides[N]}
+
+template<typename T, int Rank>
+struct MemRefDescriptor {
+    T* allocated;           // Pointer to allocated memory
+    T* aligned;             // Pointer to aligned data (usually same as allocated)
+    int64_t offset;         // Offset in elements from aligned pointer
+    int64_t sizes[Rank];    // Size of each dimension
+    int64_t strides[Rank];  // Stride of each dimension
+    
+    // Constructor for easy initialization
+    MemRefDescriptor() : allocated(nullptr), aligned(nullptr), offset(0) {
+        for (int i = 0; i < Rank; ++i) {
+            sizes[i] = 0;
+            strides[i] = 0;
+        }
+    }
+};
+
+// Convenience typedefs for common cases
+using MemRefDescriptor1D = MemRefDescriptor<double, 1>;
+using MemRefDescriptor2D = MemRefDescriptor<double, 2>;
+
+using MemRefDescriptorNested= MemRefDescriptor<double*, 1>; 
+
+// Helper functions to create memref descriptors from double** arrays
+inline MemRefDescriptor1D createMemRefDescriptor1D(double* data, int64_t size) {
+    MemRefDescriptor1D desc;
+    desc.allocated = data;
+    desc.aligned = data;
+    desc.offset = 0;
+    desc.sizes[0] = size;
+    desc.strides[0] = 1;
+    return desc;
+}
+
+inline MemRefDescriptor2D createMemRefDescriptor2D(double** data, int64_t rows, int64_t cols) {
+    MemRefDescriptor2D desc;
+    // For row-major layout with contiguous memory
+    desc.allocated = data[0];  // Assume first row points to contiguous block
+    desc.aligned = data[0];
+    desc.offset = 0;
+    desc.sizes[0] = rows;
+    desc.sizes[1] = cols;
+    desc.strides[0] = cols;  // Stride between rows
+    desc.strides[1] = 1;     // Stride between columns
+    return desc;
+}
+
+// Helper function for non-contiguous double** arrays
+inline MemRefDescriptor2D createMemRefDescriptorFromDoublePtr(double** data, int64_t rows, int64_t cols) {
+    MemRefDescriptor2D desc;
+    
+    // Debug output
+    std::cout << "DEBUG: createMemRefDescriptorFromDoublePtr - input data=" << data << std::endl;
+    if (data != nullptr) {
+        std::cout << "DEBUG: data[0]=" << data[0] << std::endl;
+        if (data[0] != nullptr) {
+            std::cout << "DEBUG: first element data[0][0]=" << data[0][0] << std::endl;
+        }
+    }
+    
+    // This is trickier - we need to handle the case where each row is separately allocated
+    // For now, we'll point to the array of pointers and handle layout in MLIR bridge
+    desc.allocated = reinterpret_cast<double*>(data);
+    desc.aligned = reinterpret_cast<double*>(data);
+    desc.offset = 0;
+    desc.sizes[0] = rows;
+    desc.sizes[1] = cols;
+    desc.strides[0] = sizeof(double*) / sizeof(double);  // Stride in terms of double elements
+    desc.strides[1] = 1;
+    
+    std::cout << "DEBUG: created descriptor - allocated=" << desc.allocated << ", sizes=[" << desc.sizes[0] << "," << desc.sizes[1] << "]" << std::endl;
+    return desc;
+}

@@ -78,11 +78,35 @@ constexpr int NumberOfFiniteVolumesPerPatch
  * smooth and ensure that all is positive, as there are density and energy
  * among the unknowns. If they become negative or zero, the compute kernels do
  * not make any sense anymore.
+ * Values consider each axis so that the values aren't unreasonably far apart in
+ * the Z axis, which can lead to accumulating inaccuracies on the GPU. Some 
+ * offset is added so that the input data isn't perfectly symmetrical across axes.
  */
 void initInputData(double* Q) {
-  for (int i = 0; i < NumberOfInputEntriesPerPatch; i++) {
-    Q[i] = std::sin(1.0 * i / (NumberOfInputEntriesPerPatch) * ::tarch::la::PI);
+  int dofs = FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch + 2 * HaloSize;
+#if Dimensions == 3
+  for (int i = 0; i < dofs; i++){
+#endif
+    for (int j = 0; j < dofs; j++){
+      for (int k = 0; k < dofs; k++){
+        for (int l = 0; l < FVRusanov::NumberOfUnknowns + FVRusanov::NumberOfAuxiliaryVariables; l++){
+          int index = l + k * (FVRusanov::NumberOfUnknowns + FVRusanov::NumberOfAuxiliaryVariables)
+              + j * dofs * (FVRusanov::NumberOfUnknowns + FVRusanov::NumberOfAuxiliaryVariables)
+#if Dimensions == 3
+              + i * dofs * dofs * (FVRusanov::NumberOfUnknowns + FVRusanov::NumberOfAuxiliaryVariables)
+#endif
+          ;
+#if Dimensions == 3
+          Q[index] = std::sin(((double)(i + 1) / dofs) * ((double)(j + 3%dofs) / dofs) * ((double)(k + 5%dofs) / dofs) + ((double)(l + 1) / (FVRusanov::NumberOfUnknowns + FVRusanov::NumberOfAuxiliaryVariables)) * ::tarch::la::PI);
+#else
+          Q[index] = std::sin(0.1 * ((double)(j + 3%dofs) / dofs) * ((double)(k + 5%dofs) / dofs) + ((double)(l + 1) / (FVRusanov::NumberOfUnknowns + FVRusanov::NumberOfAuxiliaryVariables)) * ::tarch::la::PI);
+#endif
+        }
+      }
+    }
+#if Dimensions == 3
   }
+#endif
 }
 
 
@@ -207,6 +231,45 @@ void wrapDeviceKernel(int device, ::exahype2::CellData<double, double>& patchDat
   Kernel(device, gpuCellData, timingComputeKernel);
   gpuCellData.copyBackAndDestroy();
 }
+
+//template <void (*Kernel)(exahype2::CellData<double, double>&, tarch::timing::Measurement&)>
+//void wrapMLIRHostKernel(int device, exahype2::CellData<double, double>& patchData) {
+//  assertionEquals(device, tarch::accelerator::Device::HostDevice);
+//  Kernel(patchData, timingComputeKernel);
+//}
+
+#if defined (USE_MLIR)
+template <void (*Kernel)(MLIRCellData*, tarch::timing::Measurement&)>
+void wrapMLIRHostKernel(int device, ::exahype2::CellData<double, double>& patchData) {
+  assertion(device == tarch::accelerator::Device::HostDevice);
+  //::exahype2::CopyCellDataGPU<double, double> gpuCellData(patchData, NumberOfInputEntriesPerPatch, NumberOfOutputEntriesPerPatch, device);
+  MLIRCellData mlir_data;
+  convertToMLIRStruct(&patchData, &mlir_data); 
+
+  Kernel(&mlir_data, timingComputeKernel);
+
+  copybackMLIRresults(&patchData, &mlir_data);
+
+  cleanupMLIRStruct(&mlir_data);
+}
+
+
+#if defined(MLIR_GPU)
+template <void (*Kernel)(int, MLIRCellData*, tarch::timing::Measurement&)>
+void wrapMLIRDeviceKernel(int device, ::exahype2::CellData<double, double>& patchData) {
+  assertion(device != tarch::accelerator::Device::HostDevice);
+  MLIRCellData mlir_data = {};
+  convertToMLIRStructGPU(&patchData, &mlir_data);
+
+  Kernel(device, &mlir_data, timingComputeKernel);
+
+  copybackMLIRresults(&patchData, &mlir_data);
+
+  cleanupMLIRStructGPU(&mlir_data);
+}
+#endif
+
+#endif
 
 /**
  * Run the benchmark for one particular number of patches
@@ -368,43 +431,94 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
 #endif
 
   if constexpr (AssessHostKernels) {
-    assessKernel(wrapHostKernel<
-      exahype2::fv::rusanov::timeStepWithRusanovStateless<
-        FVRusanov,
-        FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch,
-        HaloSize,
-        FVRusanov::NumberOfUnknowns,
-        FVRusanov::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep>
-      >,
-      "host, AoS, serial",
-      launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
-      localPatches
-    );
-    #if defined (SharedOMP)
-    assessKernel(wrapHostKernel<
-      exahype2::fv::rusanov::omp::timeStepWithRusanovStateless<
-        FVRusanov,
-        FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch,
-        HaloSize,
-        FVRusanov::NumberOfUnknowns,
-        FVRusanov::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep>
-      >,
-      "host, AoS, omp",
-      launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
-      localPatches
-    );
+    #if defined (USE_CPP_KERNELS)
+    if constexpr (AssessSerialKernels) {
+      assessKernel(wrapHostKernel<
+        exahype2::fv::rusanov::timeStepWithRusanovStateless<
+          FVRusanov,
+          FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch,
+          HaloSize,
+          FVRusanov::NumberOfUnknowns,
+          FVRusanov::NumberOfAuxiliaryVariables,
+          EvaluateFlux,
+          EvaluateNonconservativeProduct,
+          EvaluateSource,
+          EvaluateMaximumEigenvalueAfterTimeStep>
+        >,
+        "host, AoS, serial",
+        launchingThreads,
+        ::tarch::accelerator::Device::HostDevice,
+        localPatches
+      );
+    }
+    if constexpr (AssessParallelKernels) {
+      #if defined (SharedOMP)
+      assessKernel(wrapHostKernel<
+        exahype2::fv::rusanov::omp::timeStepWithRusanovStateless<
+          FVRusanov,
+          FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch,
+          HaloSize,
+          FVRusanov::NumberOfUnknowns,
+          FVRusanov::NumberOfAuxiliaryVariables,
+          EvaluateFlux,
+          EvaluateNonconservativeProduct,
+          EvaluateSource,
+          EvaluateMaximumEigenvalueAfterTimeStep>
+        >,
+        "host, AoS, omp",
+        launchingThreads,
+        ::tarch::accelerator::Device::HostDevice,
+        localPatches
+      );
+      #endif
+    }
     #endif
+    // MLIR kernel assessment
+    #if defined (USE_MLIR)
+    if constexpr (AssessSerialKernels) {
+      assessKernel(wrapMLIRHostKernel<
+        exahype2::fv::rusanov::mlir::timeStepWithRusanovStateless<
+          FVRusanov,
+          FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch,
+          HaloSize,
+          FVRusanov::NumberOfUnknowns,
+          FVRusanov::NumberOfAuxiliaryVariables,
+          EvaluateFlux,
+          EvaluateNonconservativeProduct,
+          EvaluateSource,
+          EvaluateMaximumEigenvalueAfterTimeStep>
+        >,
+        "host, AoS, mlir, serial",
+        launchingThreads,
+        ::tarch::accelerator::Device::HostDevice,
+        localPatches
+      );
+    }
+    if constexpr (AssessParallelKernels) {
+      #if defined (SharedOMP)
+      assessKernel(wrapMLIRHostKernel<
+        exahype2::fv::rusanov::mlir::omp::timeStepWithRusanovStateless<
+          FVRusanov,
+          FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch,
+          HaloSize,
+          FVRusanov::NumberOfUnknowns,
+          FVRusanov::NumberOfAuxiliaryVariables,
+          EvaluateFlux,
+          EvaluateNonconservativeProduct,
+          EvaluateSource,
+          EvaluateMaximumEigenvalueAfterTimeStep>
+        >,
+        "host, AoS, mlir, omp",
+        launchingThreads,
+        ::tarch::accelerator::Device::HostDevice,
+        localPatches
+      );
+      #endif
+    }
+    #endif
+  }
 
+  if constexpr (AssessDeviceKernels) {
     #if defined (GPUOffloadingOMP)
     assessKernel(wrapDeviceKernel<
       exahype2::fv::rusanov::omp::timeStepWithRusanovStateless<
@@ -444,7 +558,31 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       localPatches
     );
     #endif
-}
+  }
+
+  if constexpr (AssessMLIRDeviceKernels) {
+    #if defined(USE_MLIR)
+    #if defined(MLIR_GPU)
+    assessKernel(wrapMLIRDeviceKernel<
+      exahype2::fv::rusanov::mlir::gpu::timeStepWithRusanovStateless<
+        FVRusanov,
+        FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch,
+        HaloSize,
+        FVRusanov::NumberOfUnknowns,
+        FVRusanov::NumberOfAuxiliaryVariables,
+        EvaluateFlux,
+        EvaluateNonconservativeProduct,
+        EvaluateSource,
+        EvaluateMaximumEigenvalueAfterTimeStep>
+      >,
+      "device, AoS, mlir, gpu",
+      launchingThreads,
+      0,
+      localPatches
+    );
+    #endif
+    #endif
+  }
 }
 
 
@@ -522,19 +660,19 @@ int main(int argc, char** argv) {
 #endif
   }
 
-#if defined(SharedOMP)
-#pragma omp parallel
-  {
-#pragma omp master
-    {
-#endif
+//#if defined(SharedOMP)
+//#pragma omp parallel
+//  {
+//#pragma omp master
+//    {
+//#endif
       for (int n = 0; n < NumberOfPatchesToStudy.size(); n++) {
         runBenchmarks(NumberOfPatchesToStudy[n], NumberOfLaunchingThreads);
       }
-#if defined(SharedOMP)
-    }
-  }
-#endif
+//#if defined(SharedOMP)
+//    }
+//  }
+//#endif
 
   if constexpr (Accuracy > 0.0) {
     logInfo(

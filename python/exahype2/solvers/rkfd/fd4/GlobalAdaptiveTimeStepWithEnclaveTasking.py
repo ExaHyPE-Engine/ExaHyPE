@@ -33,7 +33,8 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking
     source_term=PDETerms.None_Implementation,
     eigenvalues=PDETerms.User_Defined_Implementation, 
     pde_terms_without_state: bool = False,
-    plot_grid_properties=False, KOSigma=8.0
+    plot_grid_properties=False, KOSigma=8.0,
+    device_resident_rk=False
   ):
     """!
     
@@ -66,6 +67,7 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking
                                              plot_grid_properties, 
                                              kernel_namespace="fd4",
                                              pde_terms_without_state=pde_terms_without_state,
+                                             device_resident_rk=device_resident_rk,
                                              ) 
 
     self._time_step_relaxation = time_step_relaxation
@@ -107,7 +109,15 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking
 
     if not                  KOSigma==None:  self._KO_Sigma                                  = KOSigma
 
-    create_FD4_kernel_definitions_3d()
+    create_FD4_kernel_definitions_3d(self._patch_size,
+      self._unknowns,
+      self._auxiliary_variables,
+      self._KO_Sigma,
+      self._flux_implementation,
+      self._ncp_implementation,
+      self._source_term_implementation,
+      compute_max_eigenvalue_of_next_time_step = True
+    )
 
     self._compute_kernel_call = create_compute_kernel_for_FD4_DSL(
       self._flux_implementation, 

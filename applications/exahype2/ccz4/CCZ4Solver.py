@@ -908,6 +908,7 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(
         max_meshcell_h,
         pde_terms_without_state,
         second_order=False,
+        device_resident_rk=False,
     ):
         """!
 
@@ -931,6 +932,7 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(
             max_meshcell_h=max_meshcell_h,
             time_step_relaxation=self.Default_Time_Step_Size_Relaxation,
             pde_terms_without_state=pde_terms_without_state,
+            device_resident_rk=device_resident_rk,
             plot_grid_properties=True
         )
 

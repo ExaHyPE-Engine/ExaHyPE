@@ -74,7 +74,11 @@ class tarch::multicore::TaskEnumerator {
     std::string toString() const;
 
   private:
-    static tarch::multicore::MultiReadSingleWriteSemaphore  _enumeratorSequenceSemaphore;
+    /**
+     * We use a method instead of a member variable so that thhe static semaphore is is guaranteed
+     * to be initialised before we use it. Without this we fall victim to the static initialisation order fiasco.
+     */
+    static tarch::multicore::MultiReadSingleWriteSemaphore&  _enumeratorSequenceSemaphore();
     static std::vector< tarch::Enumerator* >  _enumerator;
     static tarch::logging::Log                _log;
 

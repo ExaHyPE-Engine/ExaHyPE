@@ -172,6 +172,23 @@ class exahype2::EnclaveBookkeeping {
     );
 
     /**
+     * Wait for a task to terminate and write its result directly to the output pointer provided
+     * to the enclave task constructor. It differs from the discard result variant because it does
+     * not free the output pointer as we assume here that the task has written its result directly 
+     * into the mesh. This is ideal for GPU tasks as it avoids unnecessary copying and memory allocations.
+     *
+     * @param x This marker is only there for debug reasons. In release
+     *   mode, we ignore it.
+     * @param h This marker is only there for debug reasons. In release
+     *   mode, we ignore it.
+     */
+    void waitForTaskToTerminateAndWriteResultDirectly(
+      int number,
+      const tarch::la::Vector<Dimensions, double>& x,
+      const tarch::la::Vector<Dimensions, double>& h
+    );
+
+    /**
      * Usually called directly by EnclaveTask.
      *
      * Once this routine is called, the ownership of data passes over into the

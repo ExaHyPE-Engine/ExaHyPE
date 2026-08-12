@@ -3,6 +3,8 @@
 from .SeparateSweeps import SeparateSweeps
 from exahype2.solvers.PDETerms import PDETerms
 from exahype2.solvers.rkfd.actionsets.AbstractRKFDActionSet import AbstractRKFDActionSet
+from exahype2.solvers.LagrangeBasis import render_tensor_1
+from exahype2.solvers.LagrangeBasis import render_tensor_2
 
 import peano4
 import exahype2
@@ -39,21 +41,41 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       // double timeStepSize
       {{COMPUTE_TIME_STEP_SIZE}}
 
+      if ({{PREDICATES[0]}}) {
+        if (marker.willBeEnclaveCell() and {{DEVICE_RESIDENT_RK}}) {
+          // The device memory for each cell is maintained across Runge-Kutta substeps to reduce the number of allocations and deallocations.
+          // The deallocation takes place in ComputeFinalLinearCombination, which is the last step of a Runge-Kutta time step
+          ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariablesOnReconstructedPatch( 1, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, {{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}});
+          int device = 0;
+          fineGridCell{{SOLVER_NAME}}CellLabel.setDeviceNumber(device);
+          fineGridCell{{SOLVER_NAME}}CellLabel.setDeviceMemoryAddress(tarch::accelerator::GPUMemoryManager::getInstance().allocate<double>(enumeratorWithAuxiliaryVariablesOnReconstructedPatch.size(), device));
+          fineGridCell{{SOLVER_NAME}}CellLabel.setDeviceMemoryStatus(celldata::{{SOLVER_NAME}}CellLabel::DeviceMemoryStatus::OutOfDate);
+          fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.reallocateOnDevice(device);
+
+          omp_target_memcpy(fineGridCell{{SOLVER_NAME}}CellLabel.getDeviceMemoryAddress(), oldQWithHalo, enumeratorWithAuxiliaryVariablesOnReconstructedPatch.size() * sizeof(double), 0, 0, device, omp_get_initial_device());
+        }
+      }
+      #endif
+      
       {% for PREDICATE_NO in range(0,PREDICATES|length) %}
       if ({{PREDICATES[PREDICATE_NO]}}) {
         ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariablesOnReconstructedPatch( 1, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, {{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}});
         ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithoutAuxiliaryVariables( {{RK_STEPS}}, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, 0, {{NUMBER_OF_UNKNOWNS}}, 0 );
     
-        dfor( dof, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ) {
-          for (int unknown=0; unknown<{{NUMBER_OF_UNKNOWNS}}; unknown++) {
-            {% for WEIGHT_NO in range(0,BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO]|length) %}
-            {% if BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]!=0 %}
-            oldQWithHalo[ enumeratorWithAuxiliaryVariablesOnReconstructedPatch(0,dof,unknown) ] += 
-              timeStepSize * {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}} * 
-              fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{WEIGHT_NO}},dof,unknown) ];
-            {% endif %}
-            {% endfor %}
-          }      
+        if (marker.willBeEnclaveCell() and {{DEVICE_RESIDENT_RK}}) {
+            ::exahype2::fd::fd4::omp::computeLinearCombinationStateless<{{SOLVER_NAME}}, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, {{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}, {{RK_ORDER}}, {{PREDICATE_NO}}>(fineGridCell{{SOLVER_NAME}}CellLabel.getDeviceNumber(), fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value, fineGridCell{{SOLVER_NAME}}CellLabel.getDeviceMemoryAddress(), timeStepSize);
+        } else{
+            dfor( dof, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ) {
+            for (int unknown=0; unknown<{{NUMBER_OF_UNKNOWNS}}; unknown++) {
+                {% for WEIGHT_NO in range(0,BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO]|length) %}
+                {% if BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]!=0 %}
+                oldQWithHalo[ enumeratorWithAuxiliaryVariablesOnReconstructedPatch(0,dof,unknown) ] += 
+                timeStepSize * {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}} * 
+                fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{WEIGHT_NO}},dof,unknown) ];
+                {% endif %}
+                {% endfor %}
+            }      
+            }
         }
         
         newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + enumeratorWithoutAuxiliaryVariables({{PREDICATE_NO}},0,0);
@@ -95,17 +117,39 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       else {
         assertion( marker.willBeEnclaveCell() );
         assertion( not marker.willBeRefined() );
-        auto newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
-          marker,
-          subTimeStamp,
-          timeStepSize,
-          oldQWithHalo,
-          {% if MAKE_COPY_OF_ENCLAVE_TASK_DATA %}
-          nullptr
-          {% else %}
-          newQ
-          {% endif %}
-        );
+        ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariablesOnReconstructedPatch( 1, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, {{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}});
+        
+        tasks::{{SOLVER_NAME}}EnclaveTask* newEnclaveTask;
+        if ({{DEVICE_RESIDENT_RK}}){
+            // The reconstructed patch is copied into the allocated device memory for the cell
+            const int device = fineGridCell{{SOLVER_NAME}}CellLabel.getDeviceNumber();
+            fineGridCell{{SOLVER_NAME}}CellLabel.setDeviceMemoryStatus(celldata::{{SOLVER_NAME}}CellLabel::DeviceMemoryStatus::UpToDate);
+
+            newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
+            marker,
+            subTimeStamp,
+            timeStepSize,
+            fineGridCell{{SOLVER_NAME}}CellLabel.getDeviceMemoryAddress(),
+            {% if MAKE_COPY_OF_ENCLAVE_TASK_DATA %}
+            nullptr
+            {% else %}
+            newQ
+            {% endif %}
+            , device
+            );
+        } else {
+            newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
+            marker,
+            subTimeStamp,
+            timeStepSize,
+            oldQWithHalo,
+            {% if MAKE_COPY_OF_ENCLAVE_TASK_DATA %}
+            nullptr
+            {% else %}
+            newQ
+            {% endif %}
+            );
+        }
         
         int predecessorEnclaveTaskNumber = fineGridCell{{SEMAPHORE_LABEL}}.getSemaphoreNumber();
   
@@ -156,6 +200,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
         )
 
         self._butcher_tableau = ButcherTableau(self._solver._rk_order)
+        self._device_resident_rk = solver._device_resident_rk
 
     def _add_action_set_entries_to_dictionary(self, d):
         """!
@@ -173,6 +218,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
         d[
             "BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES"
         ] = self._butcher_tableau.time_step_sizes()
+        d["DEVICE_RESIDENT_RK"] = str(self._device_resident_rk).lower()
 
         # Has to come after we've set the predicates, as we use these
         # fields in here already
@@ -212,18 +258,21 @@ class MergeEnclaveTaskOutcome(AbstractRKFDActionSet):
     and
     {{PREDICATES[PREDICATE_NO]}}
   ) {
-    #if Dimensions==2
-    constexpr int NumberOfDoFsPerCell = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}};
-    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * NumberOfDoFsPerCell * {{NUMBER_OF_UNKNOWNS}};
-    #elif Dimensions==3
-    constexpr int NumberOfDoFsPerCell = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}};
-    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * NumberOfDoFsPerCell * {{NUMBER_OF_UNKNOWNS}};
-    #endif
-    
     const int taskNumber = fineGridCell{{LABEL_NAME}}.getSemaphoreNumber();
     if ( taskNumber>=0 ) {
       double maxEigenvalue; // not used here
-      ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndCopyResultOver( taskNumber, QOut, maxEigenvalue, marker.x(), marker.h() );
+      if ({{DEVICE_RESIDENT_RK}}){
+        ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndWriteResultDirectly( taskNumber, marker.x(), marker.h() );
+      } else {
+        #if Dimensions==2
+        constexpr int NumberOfDoFsPerCell = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}};
+        double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * NumberOfDoFsPerCell * {{NUMBER_OF_UNKNOWNS}};
+        #elif Dimensions==3
+        constexpr int NumberOfDoFsPerCell = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}};
+        double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * NumberOfDoFsPerCell * {{NUMBER_OF_UNKNOWNS}};
+        #endif
+        ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndCopyResultOver( taskNumber, QOut, maxEigenvalue, marker.x(), marker.h() );
+      }
       fineGridCell{{LABEL_NAME}}.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
     }
   }
@@ -234,6 +283,7 @@ class MergeEnclaveTaskOutcome(AbstractRKFDActionSet):
         super(MergeEnclaveTaskOutcome, self).__init__(solver)
         self.descend_invocation_order = -1
         self.label_name = exahype2.grid.UpdateCellLabel.get_attribute_name(solver._name)
+        self._device_resident_rk = solver._device_resident_rk
 
     def get_body_of_operation(self, operation_name):
         result = ""
@@ -246,6 +296,7 @@ class MergeEnclaveTaskOutcome(AbstractRKFDActionSet):
             self._solver.add_entries_to_text_replacement_dictionary(d)
             d["LABEL_NAME"] = self.label_name
             d["PREDICATES"] = self._solver._secondary_sweeps_of_Runge_Kutta_step_on_cell
+            d["DEVICE_RESIDENT_RK"] = str(self._device_resident_rk).lower()
             result = jinja2.Template(self.Template).render(**d)
             pass
         return result
@@ -309,10 +360,12 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
         plot_grid_properties,
         kernel_namespace,
         pde_terms_without_state,
+        device_resident_rk = False
     ):
         """ """
         self._name = name
         self._rk_order = rk_order
+        self._device_resident_rk = device_resident_rk
 
         self._primary_sweeps_of_Runge_Kutta_step_on_cell = [
             "{} and repositories::{}.getSolverState()=={}::SolverState::RungeKuttaPrimarySubStep{}".format(
@@ -449,6 +502,19 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
             
         self.create_action_sets()
         self.create_data_structures()
+
+        self.add_solver_constants("static constexpr double RKWeights[] = {};\n\n".format(
+            render_tensor_1(tensor=ButcherTableau(self._rk_order).final_estimate_weights())
+        ))
+        tensor = render_tensor_2(tensor=ButcherTableau(self._rk_order).weight_matrix(), use_multidimensional_arrays=True)
+        # Get around Jinja2 errors when "{{" and "}}" appear in the output
+        tensor = tensor.replace("{{", "{ {")
+        tensor = tensor.replace("}}", "} }")
+        self.add_solver_constants("static constexpr double RKWeightMatrix[{}][{}] = {};\n\n".format(
+            self._rk_order,
+            self._rk_order,
+            tensor
+        ))
 
     def create_data_structures(self):
         """

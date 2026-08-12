@@ -24,7 +24,7 @@ def timeStepWithFD4(patchData: "CellData<double, double>&") -> "void":
   h = DataBlock([[0, N]], "patchData.cellSize", "tarch::la::Vector<3, double>")
   x = DataBlock([[0, N]], "patchData.cellCentre", "tarch::la::Vector<3, double>")
 
-  #H: HaloSize, NC:NumberOfCellsPerAxisInPatch
+  #H: H, NC:NumberOfCellsPerAxisInPatch
   input = DataBlock([[0, NumberOfUnknowns + NumberOfAuxiliaryVariables], [-H, NC + H], [-H, NC + H], [-H, NC + H], [0, N]], "patchData.QIn")
   output = DataBlock([[0, NumberOfUnknowns], [0, NC], [0, NC], [0, NC], [0, N]], "patchData.QOut")
   #initializing with all 0s
@@ -42,21 +42,26 @@ def timeStepWithFD4(patchData: "CellData<double, double>&") -> "void":
     output = output + (1/12.0) * NC * 1 / h(1) * (-1*flux_y[0:NumberOfUnknowns, 0:NC, -2:NC-2, 0:NC] + 1*flux_y[0:NumberOfUnknowns, 0:NC, 2:NC+2, 0:NC] + 8*flux_y[0:NumberOfUnknowns, 0:NC, -1:NC-1, 0:NC] - 8*flux_y[0:NumberOfUnknowns, 0:NC, 1:NC+1, 0:NC])
     output = output + (1/12.0) * NC * 1 / h(2) * (-1*flux_z[0:NumberOfUnknowns, 0:NC, 0:NC, -2:NC-2] + 1*flux_z[0:NumberOfUnknowns, 0:NC, 0:NC, 2:NC+2] + 8*flux_z[0:NumberOfUnknowns, 0:NC, 0:NC, -1:NC-1] - 8*flux_z[0:NumberOfUnknowns, 0:NC, 0:NC, 1:NC+1])
 
+  # TODO: there seem to be bugs in the MLIR generation here that can mostly be circumvented by modifying the statements
+  # Having the names of variables in commented out code seems to cause issues???
+  # Maybe its parsing the names in the comments too, then seeing conflicts with the real code
   if EvaluateNonconservativeProduct:
-    #for direct SO below we need an extra 1/cellsize scaling 
-    average_Q = input[:, 0:NC, 0:NC, 0:NC]
-
+    average_x = 0.5 * (input[:, 0:NC, 0:NC, 0:NC] + input[:, 0:NC, 0:NC, 0:NC])
     delta_x = 0 * input[:, 0:NC, 0:NC, 0:NC]
-    delta_x[:, 0:NC, 0:NC, 0:NC]  = (1/12.0) * (8*input[:, 1:NC+1, 0:NC, 0:NC] - 8*input[:, -1:NC-1, 0:NC, 0:NC] + 1*input[:, -2:NC-2, 0:NC, 0:NC] - 1*input[:, 2:NC+2, 0:NC, 0:NC])
-    nonconservative_x = DataBlock([[0, NumberOfUnknowns], [0, NC], [0, NC], [0, NC], [0, N]], eval("nonconservativeProduct", average_Q, delta_x, x, h, t, dt, 0))
+    delta_x = (1.0 / 12.0) * (8.0 * input[:, 1:NC+1, 0:NC, 0:NC] - 8.0 * input[:, -1:NC-1, 0:NC, 0:NC] + 1.0 * input[:, 2:NC+2, 0:NC, 0:NC] - 1.0 * input[:, -2:NC-2, 0:NC, 0:NC])
+    nonconservative_x = DataBlock([[0, NumberOfUnknowns], [0, NC], [0, NC], [0, NC], [0, N]], eval("nonconservativeProduct", average_x, delta_x, x, h, t, dt, 0))
+    
+    average_y = 0.5 * (input[:, 0:NC, 0:NC, 0:NC] + input[:, 0:NC, 0:NC, 0:NC])
     delta_y = 0 * input[:, 0:NC, 0:NC, 0:NC]
-    delta_y[:, 0:NC, 0:NC, 0:NC]  = (1/12.0) * (8*input[:, 0:NC, 1:NC+1, 0:NC] - 8*input[:, 0:NC, -1:NC-1, 0:NC] + 1*input[:, 0:NC, -2:NC-2, 0:NC] - 1*input[:, 0:NC, 2:NC+2, 0:NC])
-    nonconservative_y = DataBlock([[0, NumberOfUnknowns], [0, NC], [0, NC], [0, NC], [0, N]], eval("nonconservativeProduct", average_Q, delta_y, x, h, t, dt, 1))      
-    delta_z = 0 * input[:, 0:NC, 0:NC, 0:NC]
-    delta_z[:, 0:NC, 0:NC, 0:NC]  = (1/12.0) * (8*input[:, 0:NC, 0:NC, 1:NC+1] - 8*input[:, 0:NC, 0:NC, -1:NC-1] + 1*input[:, 0:NC, 0:NC, -2:NC-2] - 1*input[:, 0:NC, 0:NC, 2:NC+2])
-    nonconservative_z = DataBlock([[0, NumberOfUnknowns], [0, NC], [0, NC], [0, NC], [0, N]], eval("nonconservativeProduct", average_Q, delta_z, x, h, t, dt, 2))
+    delta_y = (1.0 / 12.0) * (8.0 * input[:, 0:NC, 1:NC+1, 0:NC] - 8.0 * input[:, 0:NC, -1:NC-1, 0:NC] + 1.0 * input[:, 0:NC, 2:NC+2, 0:NC] - 1.0 * input[:, 0:NC, -2:NC-2, 0:NC])
+    nonconservative_y = DataBlock([[0, NumberOfUnknowns], [0, NC], [0, NC], [0, NC], [0, N]], eval("nonconservativeProduct", average_y, delta_y, x, h, t, dt, 1))
 
-    output = output - (NC / h(0)) * delta_x - (NC / h(1)) * nonconservative_y - (NC / h(2)) * nonconservative_z #remember no need to scale with timestepsize
+    average_z = 0.5 * (input[:, 0:NC, 0:NC, 0:NC] + input[:, 0:NC, 0:NC, 0:NC])
+    delta_z = 0 * input[:, 0:NC, 0:NC, 0:NC]
+    delta_z = (1.0 / 12.0) * (8.0 * input[:, 0:NC, 0:NC, 1:NC+1] - 8.0 * input[:, 0:NC, 0:NC, -1:NC-1] + 1.0 * input[:, 0:NC, 0:NC, 2:NC+2] - 1.0 * input[:, 0:NC, 0:NC, -2:NC-2])
+    nonconservative_z = DataBlock([[0, NumberOfUnknowns], [0, NC], [0, NC], [0, NC], [0, N]], eval("nonconservativeProduct", average_z, delta_z, x, h, t, dt, 2))
+    
+    output = output - NC * (1.0 / h(0)) * delta_x - NC * (1.0 / h(1)) * nonconservative_y - NC * (1.0 / h(2)) * nonconservative_z #remember no need to scale with timestepsize
 
 #  #KO disspation
 #  KO_term_x = (1)  * input[0:NumberOfUnknowns, -3:NC-3, 0:NC, 0:NC] + (1)  * input[0:NumberOfUnknowns, 3:NC+3, 0:NC, 0:NC] + (-6) * input[0:NumberOfUnknowns, -2:NC-2, 0:NC, 0:NC] + (-6) * input[0:NumberOfUnknowns, 2:NC+2, 0:NC, 0:NC] \
