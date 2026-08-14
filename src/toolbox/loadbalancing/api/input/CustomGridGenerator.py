@@ -2,13 +2,11 @@
 # use, please see the copyright notice at www.peano-framework.org
 
 import os
-import sys
 import yaml
 import numpy as np
 import re
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from Tree import Tree
+from ..Tree import Tree
 
 """
 Custom Grid Generator for Peano Load Balancing API
@@ -63,12 +61,12 @@ This module fits into extended offline decomposition workflows:
 tree = CustomGridGenerator("MyCustomTree", "path/to/tree_structure.yaml")
 
 # Apply additional splitting
-from Strategies.SplitTrees import split_leaves
-further_split = split_leaves(tree, number_of_splits=2)
+from strategies.SplitTrees import split_tree
+split_tree(tree, number_of_subtrees=2)
 
 # Compare with original structure
-from Visualize.TreeVisualizer import TreeVisualizer
-TreeVisualizer(further_split, dimension=tree._dimension, filename="extended_splits")
+from visualize.TreeVisualizer import TreeVisualizer
+TreeVisualizer(tree, dimensions=tree._dimension, filename="extended_splits")
 ```
 
 ## Comparison with Other Input Methods
@@ -219,8 +217,8 @@ def CustomGridGenerator(name, yaml_file_path):
         print(f"Subtrees: {tree._subtree_count}")
         
         # Apply additional processing
-        from Strategies.SplitTrees import split_leaves
-        extended_tree = split_leaves(tree, number_of_splits=2)
+        from strategies.SplitTrees import split_tree
+        split_tree(tree, number_of_subtrees=2)
         ```
         
     Note:

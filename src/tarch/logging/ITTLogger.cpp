@@ -2,7 +2,7 @@
 
 #include "tarch/Assertions.h"
 
-#include "tarch/multicore/Lock.h"
+#include "tarch/multicore/MultiReadSingleWriteLock.h"
 #include "tarch/multicore/multicore.h"
 
 #include "LogFilter.h"
@@ -51,7 +51,8 @@ void tarch::logging::ITTLogger::continueTrace() {
 }
 
 
-void tarch::logging::ITTLogger::indent( bool, const std::string&, const std::string& ) {}
+// Now in header. See comments there.
+// void tarch::logging::ITTLogger::indent( bool, const std::string&, const std::string& ) {}
 
 
 std::string tarch::logging::ITTLogger::getTimeStampHumanReadable( long int timestampNanoseconds ) const {
@@ -113,7 +114,7 @@ void tarch::logging::ITTLogger::debug(long int timestampNanoseconds, int rank, i
     timestampNanoseconds, rank, threadId, trace, message
   );
 
-  tarch::multicore::Lock lockCout( _semaphore );
+  tarch::multicore::MultiReadSingleWriteSemaphore::Lock lockCout( _semaphore, tarch::multicore::MultiReadSingleWriteSemaphore::Lock::Read );
   std::cout << outputMessage;
 }
 
@@ -124,7 +125,7 @@ void tarch::logging::ITTLogger::info(long int timestampNanoseconds, int rank, in
     timestampNanoseconds, rank, threadId, trace, message
   );
 
-  tarch::multicore::Lock lockCout( _semaphore );
+  tarch::multicore::MultiReadSingleWriteSemaphore::Lock lockCout( _semaphore, tarch::multicore::MultiReadSingleWriteSemaphore::Lock::Read );
   std::cout << outputMessage;
 }
 
@@ -135,7 +136,7 @@ void tarch::logging::ITTLogger::warning(long int timestampNanoseconds, int rank,
     timestampNanoseconds, rank, threadId, trace, message
   );
 
-  tarch::multicore::Lock lockCout( _semaphore );
+  tarch::multicore::MultiReadSingleWriteSemaphore::Lock lockCout( _semaphore, tarch::multicore::MultiReadSingleWriteSemaphore::Lock::Read );
   std::cerr << outputMessage;
   std::cerr.flush();
 }
@@ -147,7 +148,7 @@ void tarch::logging::ITTLogger::error(long int timestampNanoseconds, int rank, i
     timestampNanoseconds, rank, threadId, trace, message
   );
 
-  tarch::multicore::Lock lockCout( _semaphore );
+  tarch::multicore::MultiReadSingleWriteSemaphore::Lock lockCout( _semaphore, tarch::multicore::MultiReadSingleWriteSemaphore::Lock::Read );
   std::cerr << outputMessage;
   std::cerr.flush();
 
@@ -169,7 +170,7 @@ void tarch::logging::ITTLogger::traceIn(
     continueTrace();
   }
 
-  tarch::multicore::Lock lock(_semaphore);
+  tarch::multicore::MultiReadSingleWriteSemaphore::Lock lockCout( _semaphore, tarch::multicore::MultiReadSingleWriteSemaphore::Lock::Write );
 
   if (_ittHandles.count(trace)==0) {
     __itt_event event = __itt_event_create(trace.c_str(), trace.size() );

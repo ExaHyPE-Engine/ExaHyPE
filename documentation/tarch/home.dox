@@ -12,6 +12,7 @@
 - \subpage tarch_NoncriticalAssertions
 - \subpage tarch_logging
 - \subpage tarch_tests
+- \subpage tarch_pytest
 - \subpage tarch_services
 - Input/output
   - \subpage tarch_plotting

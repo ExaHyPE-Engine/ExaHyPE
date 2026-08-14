@@ -56,7 +56,8 @@ class tarch::Enumerator {
      * at least scan only half of the overall number range that we might have
      * at our disposal.
      *
-     * @param value The number that we want to release.
+     * @param value The number that we want to release. If you pass in
+     *   NoNumber, then nothing happens.
      */
     void releaseNumber( int value );
 

@@ -257,28 +257,24 @@ Python 2 is not supported.
 
 ## Package Installation
 
-Our code base relies on several Python packages. Best practice it to install
-these into a virtual environment. There's a requirements specification file which 
-you can use to ensure that all requirements are met:
+Our code base relies on several Python packages.
+Best practice is to install these into a virtual environment.
+The recommended way is an editable install: navigate to `myPeanoDirectory/` first
+(you're in the right place if you see the `pyproject.toml` file),
+then create a virtual environment and install by running:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~
-python -m venv python-env
-source python-env/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate
 pip install --upgrade pip
-pip install -r requirements.txt
+pip install -e .
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-where the requirements.txt file resides within Peano's root directory.
-Depending on your system, you might have to use pip3 or install the
-packages in your user space by adding ```--user```.
-
-The easiest way to install the Peano Python packages and to set the Python path directly
-is to navigate to `myPeanoDirectory/` first (you're in the right place if you see the
-`pyproject.toml` file), and then run
-
-    pip3 install -e .
-
-to install the packages.
+This installs both the third-party dependencies (declared in
+`pyproject.toml`, which imports `requirements.txt` from Peano's root directory)
+and Peano's own Python packages, and it sets the Python path automatically.
+There is no need to run `pip install -r requirements.txt` separately on this
+path. Depending on your system, you might have to use `pip3` instead of `pip`.
 
 Note:
 - The Python path is set automatically to the respective Peano modules.
@@ -292,21 +288,29 @@ Note:
 Manually Adding the Python Path
 -------------------
 
-As an alternative to installing the packages, you can modify your Python path manually.
+As an alternative to the editable install above, you can modify your Python path manually.
 There are multiple ways to do so.
 The standard way is to set the `PYTHONPATH`, e.g.:
 
     export PYTHONPATH=$PYTHONPATH:myPeanoDirectory/python
 
 This can even be done in the `.bashrc`. If you "install" the Peano Python
-packages this way, you will also need to manually install additional
-dependencies, as noted below.
+packages this way, you skip `pip install -e .`, so you must install the
+third-party dependencies yourself from the requirements file in Peano's root
+directory:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ## Python Dependencies
 
 Peano currently relies on the following Python packages/projects:
 
-<!-- @include ../requirements.txt -->
+@verbinclude requirements.txt
 
 
 # Fortran

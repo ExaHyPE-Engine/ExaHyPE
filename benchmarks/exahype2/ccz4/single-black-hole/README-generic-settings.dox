@@ -32,7 +32,7 @@ tracers are not used.
 Builds always resemble:
 
 ~~~~~~~~~~~~~~~~~~~~~~~
-export PYTHONPATH=../../../../python:../../../../applications/exahype2/ccz4
+export PYTHONPATH=../../../../python:../../../../applications/exahype2/ccz4:../../../../src
 
 python3 specific-python-script
 ~~~~~~~~~~~~~~~~~~~~~~~

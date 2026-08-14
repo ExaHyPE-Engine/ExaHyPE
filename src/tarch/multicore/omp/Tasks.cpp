@@ -370,7 +370,7 @@ void tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDepend
 void tarch::multicore::native::waitForAllTasks() {
   #pragma omp taskwait
 }
-\
+
 
 bool tarch::multicore::omp::internal::canServeDependencyEntry(int taskNumber) {
   return taskNumber < dependencyTrackingMemorySize;

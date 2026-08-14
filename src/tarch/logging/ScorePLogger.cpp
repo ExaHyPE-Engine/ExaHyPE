@@ -2,7 +2,7 @@
 
 #include "tarch/Assertions.h"
 
-#include "tarch/multicore/Lock.h"
+#include "tarch/multicore/MultiReadSingleWriteLock.h"
 #include "tarch/multicore/multicore.h"
 
 #include "LogFilter.h"
@@ -33,7 +33,8 @@ tarch::logging::ScorePLogger::~ScorePLogger() {
   close();
 }
 
-void tarch::logging::ScorePLogger::indent( bool, const std::string&, const std::string& ) {}
+// Moved into header. See comments there.
+// void tarch::logging::ScorePLogger::indent( bool, const std::string&, const std::string& ) {}
 
 std::string tarch::logging::ScorePLogger::getTimeStampHumanReadable( long int timestampNanoseconds ) const {
   long int timestampSeconds = timestampNanoseconds / 1000 / 1000 / 1000;
@@ -92,7 +93,7 @@ void tarch::logging::ScorePLogger::debug(long int timestampNanoseconds, int rank
     timestampNanoseconds, rank, threadId, trace, message
   );
 
-  tarch::multicore::Lock lockCout( _semaphore );
+  tarch::multicore::MultiReadSingleWriteSemaphore::Lock lockCout( _semaphore, tarch::multicore::MultiReadSingleWriteSemaphore::Lock::Read );
   std::cout << outputMessage;
 }
 
@@ -102,7 +103,7 @@ void tarch::logging::ScorePLogger::info(long int timestampNanoseconds, int rank,
     timestampNanoseconds, rank, threadId, trace, message
   );
 
-  tarch::multicore::Lock lockCout( _semaphore );
+  tarch::multicore::MultiReadSingleWriteSemaphore::Lock lockCout( _semaphore, tarch::multicore::MultiReadSingleWriteSemaphore::Lock::Read );
   std::cout << outputMessage;
 }
 
@@ -112,7 +113,7 @@ void tarch::logging::ScorePLogger::warning(long int timestampNanoseconds, int ra
     timestampNanoseconds, rank, threadId, trace, message
   );
 
-  tarch::multicore::Lock lockCout( _semaphore );
+  tarch::multicore::MultiReadSingleWriteSemaphore::Lock lockCout( _semaphore, tarch::multicore::MultiReadSingleWriteSemaphore::Lock::Read );
   std::cerr << outputMessage;
   std::cerr.flush();
 }
@@ -123,7 +124,7 @@ void tarch::logging::ScorePLogger::error(long int timestampNanoseconds, int rank
     timestampNanoseconds, rank, threadId, trace, message
   );
 
-  tarch::multicore::Lock lockCout( _semaphore );
+  tarch::multicore::MultiReadSingleWriteSemaphore::Lock lockCout( _semaphore, tarch::multicore::MultiReadSingleWriteSemaphore::Lock::Read );
   std::cerr << outputMessage;
   std::cerr.flush();
 
@@ -139,10 +140,15 @@ void tarch::logging::ScorePLogger::traceIn(
   [[maybe_unused]] const std::string& message
 ) {
   #ifdef UseScoreP
-  tarch::multicore::Lock lock(_semaphore);
+  tarch::multicore::MultiReadSingleWriteSemaphore::Lock lock(_semaphore, tarch::multicore::MultiReadSingleWriteSemaphore::Lock::Read);
 
   if (_scorePHandles.count(trace)==0) {
-    _scorePHandles.insert( std::pair<std::string, int>(trace,SCOREP_USER_INVALID_REGION) );
+    lock.free();
+    tarch::multicore::MultiReadSingleWriteSemaphore::Lock lock(_semaphore, tarch::multicore::MultiReadSingleWriteSemaphore::Lock::Write);
+    _scorePHandles.insert( std::pair<std::string, SCOREP_User_RegionHandle>(trace,SCOREP_USER_INVALID_REGION) );
+    SCOREP_USER_REGION_INIT(
+      _scorePHandles[trace], trace, SCOREP_USER_REGION_TYPE_COMMON
+    );
   }
 
   SCOREP_USER_REGION_ENTER(_scorePHandles[trace]);
@@ -157,7 +163,9 @@ void tarch::logging::ScorePLogger::traceOut(
   [[maybe_unused]] const std::string& message
 ) {
   #ifdef UseScoreP
-  SCOREP_USER_REGION_LEAVE(_scorePHandles[trace]);
+  tarch::multicore::MultiReadSingleWriteSemaphore::Lock lock(_semaphore, tarch::multicore::MultiReadSingleWriteSemaphore::Lock::Read);
+
+  SCOREP_USER_REGION_END(_scorePHandles[trace]);
   #endif
 }
 

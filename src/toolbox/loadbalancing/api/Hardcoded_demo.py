@@ -5,59 +5,48 @@ sys.path.insert(0, os.path.abspath('../../../python'))
 import peano4
 import exahype2
 
-# Workspace API modules
-from Input.GridPatchFileReader import GridPatchFileReader  # [src/toolbox/loadbalancing/api/Input/GridPatchFileReader.py](src/toolbox/loadbalancing/api/Input/GridPatchFileReader.py)
-import Strategies.SplitTrees as split_strategy              # [src/toolbox/loadbalancing/api/Strategies/SplitTrees.py](src/toolbox/loadbalancing/api/Strategies/SplitTrees.py)
+# @todo Dmitry: This file does not belong in here! This is either part of the
+#               tutorials or the documentation, but not directly in the api 
+#               dir.
 
-def demo(file_path: str, dimension: int):
+
+# Workspace API modules
+from input.GridPatchFileReader import GridPatchFileReader  # [src/toolbox/loadbalancing/api/input/GridPatchFileReader.py](src/toolbox/loadbalancing/api/input/GridPatchFileReader.py)
+import strategies.SplitTrees as split_strategy              # [src/toolbox/loadbalancing/api/strategies/SplitTrees.py](src/toolbox/loadbalancing/api/strategies/SplitTrees.py)
+
+def demo(file_path: str, dimensions: int):
     """
     Demo: Read grid patch files, extract hardcoded split parameters, configure Hardcoded LB.
     
     Args:
         file_path: Directory containing Peano grid patch files (prefix 'grid-')
-        dimension: 2 or 3 (must match input files)
+        dimensions: 2 or 3 (must match input files)
     """
     if not os.path.isdir(file_path):
         raise FileNotFoundError(f"Input directory not found: {file_path}")
-    print(f"Loading grid patch files from '{file_path}' (dimension={dimension})")
-    tree = GridPatchFileReader(name=f"Files-{file_path}", file_path=file_path, dimension=dimension)
+    print(f"Loading grid patch files from '{file_path}' (dimensions={dimensions})")
+    tree = GridPatchFileReader(file_path=file_path, dimensions=dimensions)
     print(tree)
 
     # Reset to single subtree and apply splitting to create multiple subtrees for the demo
     tree = split_strategy.reset_tree_to_single_subtree(tree)
-    tree = split_strategy.split_leaves(tree, number_of_splits=2)  # creates subtrees {0,1,2}
-    print("After split_leaves():")
+
+    destination_ranks = [1, 2]
+    hardcoded_config, hardcoded_mode = split_strategy.split_tree(
+        tree,
+        number_of_subtrees=3,
+        enable_propagate_bottom_up=True,
+        enable_extract_split_instructions=True,
+        destination_ranks=destination_ranks,
+        verbose=True,
+    )  # creates subtrees {0,1,2}
+    print("After split_tree():")
     print(tree)
 
-    # Extract hardcoded split parameters
-    gridSweeps, splittingTrees, numberOfCells, subTrees = split_strategy.extract_hardcoded_split_parameters(tree)
-    print("Extracted hardcoded parameters:")
-    print("  gridSweeps     =", gridSweeps)
-    print("  splittingTrees =", splittingTrees)
-    print("  numberOfCells  =", numberOfCells)
-    print("  subTrees       =", subTrees, "(subtree ids, not ranks)")
-
-    # Map subtree ids to destination ranks (simple mapping; adjust for real MPI runs)
-    destinationRanks = [max(1, sid) for sid in subTrees]
-
-    # Build Hardcoded constructor argument string (single mode variant)
-    hardcoded_mode = "peano4::SplitInstruction::Mode::AggressiveTopDown"
-    hardcoded_config = (
-        "{"
-        f"{{{', '.join(map(str, gridSweeps))}}}, "
-        f"{{{', '.join(map(str, splittingTrees))}}}, "
-        f"{{{', '.join(map(str, numberOfCells))}}}, "
-        f"{{{', '.join(map(str, destinationRanks))}}}, "
-        f"{hardcoded_mode}"
-        "}"
-    )
-
     print("Hardcoded constructor arguments:")
-    print("  gridSweeps       =", gridSweeps)
-    print("  splittingTrees   =", splittingTrees)
-    print("  numberOfCells    =", numberOfCells)
-    print("  destinationRanks =", destinationRanks)
-    print("  mode             =", hardcoded_mode)
+    print("  destination_ranks =", destination_ranks)
+    print("  mode              =", hardcoded_mode)
+    print("  config            =", hardcoded_config)
 
     # Create minimal ExaHyPE2 project
     project = exahype2.Project(
@@ -105,28 +94,19 @@ def demo(file_path: str, dimension: int):
     peano4_project = project.generate_Peano4_project(verbose=True)
     peano4_project.generate()
     print("Demo project generated with Hardcoded load balancing.")
+    peano4_project.build(make_clean_first=True, number_of_parallel_builds=-1)
     
     # ---- Demo summary output -------------------------------------------------
     print("\n=== Hardcoded Load Balancing Summary ===")
     print(f"Subtrees: {tree._subtree_count}")
     print(f"Leaf count: {int(tree._leaf_count)}")
-    print("gridSweeps     =", gridSweeps)
-    print("splittingTrees =", splittingTrees)
-    print("numberOfCells  =", numberOfCells)
-    print("destinationRanks =", destinationRanks)
+    print("destination_ranks =", destination_ranks)
     print("Hardcoded mode =", hardcoded_mode)
-    print("\nC++ constructor example:")
-    print("toolbox::loadbalancing::strategies::Hardcoded(")
-    print(f"  {{{', '.join(map(str, gridSweeps))}}},")
-    print(f"  {{{', '.join(map(str, splittingTrees))}}},")
-    print(f"  {{{', '.join(map(str, numberOfCells))}}},")
-    print(f"  {{{', '.join(map(str, destinationRanks))}}},")
-    print(f"  {hardcoded_mode}")
-    print(");")
+    print("hardcoded_config =", hardcoded_config)
     print("\nProject object:")
     print(project)
 
 if __name__ == "__main__":
-    # Adjust file_path and dimension as needed
+    # Adjust file_path and dimensions as needed
     # Provide a directory containing 'grid-*' files.
-    demo(file_path="Input/example", dimension=3)
+    demo(file_path="Input/example", dimensions=3)

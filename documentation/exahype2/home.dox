@@ -21,8 +21,8 @@ and innovation programme under grant agreement No 671698 (ExaHyPE).
 
 - \subpage page_exahype_faq
 - \subpage page_exahype_solvers
+- \subpage page_exahype2_tutorials
 - Applications and user guides
-  - \subpage page_exahype2_tutorials
   - \subpage page_exahype_applications
   - \subpage page_exahype_benchmarks
 - Numerics tour de force (hands-on explanation of core numerical ingredients)

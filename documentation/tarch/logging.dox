@@ -9,7 +9,7 @@ Logging, tracing and assertion architecture
 -------------------------------------------
 
 Peano is built upon a technical architecture (`tarch`) which provides
-logging, tracing and assertions. This is also the layer which decides
+logging, tracing and assertions. This is also the layer which decides 
 which information is pre-prepared for the supported profiling tools. The
 two directory of relevance here is therefore `tarch/logging` plus the
 file `Assertions.h`. The latter file holds all the assertion macros,
@@ -272,6 +272,13 @@ information is only available in trace mode or higher
 All info log output as well as warning and error message are still
 shown on the terminal.
 
+More information on Score-P support can be found at @ref page_third-party_performance_analysis_tools.
+
+### No logger
+
+For performance measurements, it might make sense to use no logger at
+all. In this case, only errors and warnings are written. This degenerated
+log device is selected through `-DUseLogService=NoLogger`.
 
 
 

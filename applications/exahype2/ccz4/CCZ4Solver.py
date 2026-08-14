@@ -933,6 +933,7 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(
             time_step_relaxation=self.Default_Time_Step_Size_Relaxation,
             pde_terms_without_state=pde_terms_without_state,
             device_resident_rk=device_resident_rk,
+            plot_grid_properties=True
         )
 
         self._add_standard_includes()
