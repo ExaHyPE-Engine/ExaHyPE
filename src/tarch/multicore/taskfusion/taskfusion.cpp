@@ -8,6 +8,7 @@
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/MultiReadSingleWriteLock.h"
 #include "tarch/multicore/MultiReadSingleWriteSemaphore.h"
+#include "tarch/multicore/TaskEnumerator.h"
 
 #include "tarch/logging/Statistics.h"
 #include "tarch/logging/Log.h"
@@ -39,6 +40,11 @@ namespace {
   tarch::multicore::MultiReadSingleWriteSemaphore  fusableTaskQueueMapSemaphore;
 
   tarch::logging::Log _log("tarch::multicore::taskfusion");
+
+  /**
+   * Used to administer helper tasks
+   */
+  tarch::multicore::TaskEnumerator helperTaskEnumerator;
 }
 
 
@@ -155,11 +161,12 @@ void tarch::multicore::taskfusion::handleFusableTask_EagerConsumerTasks(
   const tarch::multicore::orchestration::Strategy::FuseInstruction&  fuseInstruction
 ) {
   if (taskQueue.getNumberOfReadyTasks()>=fuseInstruction.minTasks) {
-    tarch::multicore::Task* newFusionTask = new tarch::multicore::taskfusion::ProcessSetOfReadyTasks(taskNumber, taskQueue);
+    ProcessSetOfReadyTasks* newFusionTask = new tarch::multicore::taskfusion::ProcessSetOfReadyTasks(ProcessSetOfReadyTasks::AdministerYourOwnTemporaryTaskLocalNumber, taskQueue);
     tarch::multicore::spawnTask(
       newFusionTask,
-      tarch::multicore::NoInDependencies,
-      taskNumber
+      {taskNumber},
+//      tarch::multicore::NoInDependencies,
+      newFusionTask->getNumber()
     );
   }
 }
@@ -173,15 +180,14 @@ void tarch::multicore::taskfusion::handleFusableTask_ProducerConsumerTaskSequenc
   const tarch::multicore::orchestration::Strategy::FuseInstruction&  instruction
 ) {
   logDebug(
-    "handleFusableTask(...)",
+    "handleFusableTask_ProducerConsumerTaskSequence(...)",
     "spawn three tasks around " << taskNumber <<
     " (min-tasks=" << instruction.minTasks <<
     ", max-tasks=" << instruction.maxTasks <<
     ")"
   );
 
-  std::set<TaskNumber>  processReadyTaskInDependencyNumber = tarch::multicore::NoInDependencies;
-
+  std::set<TaskNumber>  processSetOfTasksInDependencies = tarch::multicore::NoInDependencies;
   if ( taskNumber==tarch::multicore::NoOutDependencies or inDependencies.empty() ) {
     ::tarch::logging::Statistics::getInstance().inc(DirectlyInsertFusedTaskIntoReadyQueueStatisticsIdentifier + "(" + std::to_string(task->getTaskType()) + ")", 1, false, true);
     taskQueue.insertReadyTask(
@@ -190,23 +196,31 @@ void tarch::multicore::taskfusion::handleFusableTask_ProducerConsumerTaskSequenc
     );
   }
   else {
-    Task* readyTask   = new LogReadyTask(task, taskNumber, taskQueue);
+    LogReadyTask* readyTask   = new LogReadyTask(task, LogReadyTask::AdministerYourOwnTemporaryTaskLocalNumber, taskQueue);
     readyTask->setPriority(task->getPriority());
-    tarch::multicore::native::spawnTask( readyTask, inDependencies, taskNumber);
-    processReadyTaskInDependencyNumber.insert( taskNumber );
+    processSetOfTasksInDependencies.insert( readyTask->getNumber() );
+
+    // spawn has to be very last thing
+    tarch::multicore::native::spawnTask( readyTask, inDependencies, readyTask->getNumber());
   }
 
-  tarch::multicore::Task* newFusionTask = new tarch::multicore::taskfusion::ProcessSetOfReadyTasks(taskNumber, taskQueue);
+  std::set<TaskNumber>  processTaskInDependencies = tarch::multicore::NoInDependencies;
+  ProcessSetOfReadyTasks* newFusionTask = new tarch::multicore::taskfusion::ProcessSetOfReadyTasks(
+    tarch::multicore::taskfusion::ProcessSetOfReadyTasks::AdministerYourOwnTemporaryTaskLocalNumber, 
+    taskQueue
+  );
+  processTaskInDependencies.insert( newFusionTask->getNumber() );
+
   tarch::multicore::spawnTask(
     newFusionTask,
-    processReadyTaskInDependencyNumber,
-    taskNumber
+    processSetOfTasksInDependencies,
+    newFusionTask->getNumber()
   );
 
   tarch::multicore::Task* newProcessTask = new tarch::multicore::taskfusion::ProcessOneReadyTask(taskNumber, taskQueue);
   tarch::multicore::spawnTask(
     newProcessTask,
-    {taskNumber},
+    processTaskInDependencies,
     taskNumber
   );
 }
@@ -322,11 +336,11 @@ bool tarch::multicore::taskfusion::ensureHeldBackTasksAreMappedOntoNativeTasks_L
       for (auto queue: fusableTaskQueue) {
         if (queue.second->isTaskReadyOrRunning(taskNumber, FusableTasksQueue::LockQueueAndReturnReliableResult)) {
           logDebug( "ensureHeldBackTasksAreMappedOntoNativeTasks_LazyEvaluation(std::set)", "fusable task " << taskNumber << " sits in queue and is ready or already running" );
-          tarch::multicore::Task* newFusionTask = new tarch::multicore::taskfusion::ProcessSetOfReadyTasks(taskNumber, *(queue.second));
+          ProcessSetOfReadyTasks* newFusionTask = new tarch::multicore::taskfusion::ProcessSetOfReadyTasks(ProcessSetOfReadyTasks::AdministerYourOwnTemporaryTaskLocalNumber, *(queue.second));
           tarch::multicore::spawnTask(
             newFusionTask,
             tarch::multicore::NoInDependencies,
-            taskNumber
+            newFusionTask->getNumber()
           );
 
           tarch::multicore::Task* newProcessTask = new tarch::multicore::taskfusion::ProcessOneReadyTask(taskNumber, *(queue.second));

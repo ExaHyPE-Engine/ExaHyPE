@@ -6,6 +6,7 @@
 #include "tarch/logging/Log.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Task.h"
+#include "tarch/multicore/TaskEnumerator.h"
 #include "tarch/multicore/taskfusion/taskfusion.h"
 
 
@@ -48,6 +49,8 @@ class tarch::multicore::taskfusion::LogReadyTask: public tarch::multicore::Task 
     const int           _taskNumber;
     FusableTasksQueue&  _taskQueue;
 
+    const bool          _administerYourOwnTemporaryTaskLocalNumber;
+
     /**
      * Statistics identifier
      *
@@ -61,7 +64,11 @@ class tarch::multicore::taskfusion::LogReadyTask: public tarch::multicore::Task 
     static const std::string SubmitFusedTasksStatisticsIdentifier;
 
     static tarch::logging::Log _log;
+
+    static tarch::multicore::TaskEnumerator _enumerator;
   public:
+    static constexpr TaskNumber AdministerYourOwnTemporaryTaskLocalNumber = -3;
+
     /**
      * Construct log read task
      *
@@ -70,7 +77,7 @@ class tarch::multicore::taskfusion::LogReadyTask: public tarch::multicore::Task 
      * @param taskNumber out dependency (no) of outgoing task
      * @param taskQueue  Reference to task queue
      */
-    LogReadyTask( Task* task, int taskNumber, FusableTasksQueue& taskQueue );
+    LogReadyTask( Task* task, TaskNumber taskNumber, FusableTasksQueue& taskQueue );
 
     /**
      * Run task
@@ -83,4 +90,6 @@ class tarch::multicore::taskfusion::LogReadyTask: public tarch::multicore::Task 
      * done here. No more work.
      */
     virtual void run() override;
+
+    TaskNumber getNumber() const;
 };

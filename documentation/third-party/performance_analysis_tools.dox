@@ -1,16 +1,58 @@
 /**
 
-@page page_third-party_performance_analysis_tools
+@page page_third-party_performance_analysis_tools Performance analysis tools
 
-## ScoreP
-When usng ScoreP the configure or cmake command should be prefixed with SCOREP_WRAPPER=off,
+<!-- Add this one for href links to subitems -->
+\tableofcontents
+
+Peano provides bespoke support for some external performance analysis tools.
+
+
+## Score-P
+
+When using ScoreP the configure or cmake command should be prefixed with SCOREP_WRAPPER=off,
 and the compiler names should be prefixed with scorep-. For an Intel toolchain
 with autotools this looks like:
+
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 SCOREP_WRAPPER=off ./configure CC=scorep-icx CXX=scorep-icpx ...
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+<<<<<<< HEAD
+
+### Score-P variants
+
+If we use scripts alike scorep-icx, we implicitly assume that Score-P has been
+built against the Intel compiler. If you install it manually on your system, 
+this might not be the default, i.e. Score-P might be built again GNU. To toggle
+this behaviour, ensure you configure Score-P with 
+
+        ./configure --with-nocross-compiler-suite=oneapi
+        
+=======
+The instruction above assumes that Score-P's module files are built such that 
+they provide scripts alike scorep-icx. If such a script does not exist, you 
+might have built Scalasca without the Intel compiler even though you want to 
+use the Intel compiler (default it GNU). If so, add
+
+
+           --with-nocross-compiler-suite=oneapi
+           
+to your configure call.
+>>>>>>> refs/remotes/origin/infrastructure
+
+
+### Logging against Score-P         
+
+Please consult @ref tarch_logging on some information how to pick proper 
+logging outputs (devices) for a build with Score-P. Using this logger ensures 
+that the trace and profile builds of Peano dump their output into an API that 
+helps Score-P to augment its traces. Otherwise, these outputs just go to the 
+terminal.
+ 
+
 ## MAQAO
+
 When using any performance analysis tool the compilation flag "-g" should be
 used, to generate debug information. For MAQAO this may not be sufficient, in 
 which case "-grecord-gcc-switches" should also be used.

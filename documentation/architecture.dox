@@ -153,19 +153,23 @@ By default, the code builds various versions of each library:
 
 The version terminology is as follows:
 
-- **debug** The debug versions of the archives all have the postfix
-  ```_debug```. If you link against these versions, the full set of
-  assertions, of all tracing and all debug messages is available;
-  though you can always filter on the application-level which
-  information you want to see.
-- **asserts** Thsee versions of the archives all have the postfix
-  ```_asserts```. If you link against these versions, all assertions are
-  on. The code also contains tracing macros (see below).
+-  **debug** The debug versions of the archives all have the postfix
+   ```_debug```. If you link against these versions, the full set of
+   assertions, of all tracing and all debug messages is available;
+   though you can always filter on the application-level which
+   information you want to see.
+-  **asserts** These versions of the archives all have the postfix
+   ```_asserts```. If you link against these versions, all assertions are
+   on. The code also contains tracing macros (see below).
 -  **tracing** The release versions of the archives all have the
    postfix ```_trace```. If you link against these versions, all assertions
    and debug messages are removed, but some tracing is active. You can
    switch on/off the tracing per class, and different tracing backends allow
    you to connect to different (profiling) tools.
+-  **stats** Stats builds are a release flavour of all libraries, where the
+   libraries track some statistics besides the core core performance.
+   Please note that statistics are ***not*** included in any other build
+   type by default.
 -  **release** The release versions of the archives have no particular
    postfix. They disable tracing, any debugging and all assertions.
    These archives should be used by production runs.
@@ -173,6 +177,13 @@ The version terminology is as follows:
 Peano's release components still write info messages (they suppress
 debug, tracing and logging, but not essential information). If you want
 to filter out these messages, too, you have to apply a log filter.
+
+<br /><br />
+<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+The tracing backend includes, by default, the assertions. If you want to use 
+the tracing for profiling, the assertions might spoil the outcomes. Please 
+consult the discussion on 
+</div>
 
 
 # Repository organisation

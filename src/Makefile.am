@@ -145,6 +145,7 @@ Tarch_SOURCES = tarch/tarch.cpp \
 	tarch/logging/ITTLogger.cpp \
 	tarch/logging/Log.cpp \
 	tarch/logging/LogFilterFileReader.cpp \
+	tarch/logging/NoLogger.cpp \
 	tarch/logging/NVTXLogger.cpp \
 	tarch/logging/ScorePLogger.cpp \
 	tarch/logging/LogFilter.cpp \

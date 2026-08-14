@@ -14,6 +14,7 @@
 #include <string>
 
 #include "tarch/multicore/BooleanSemaphore.h"
+#include "tarch/multicore/MultiReadSingleWriteSemaphore.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/logging/Log.h"
 
@@ -30,26 +31,50 @@ namespace tarch {
 /**
  * Command Line Logger
  *
- * Standard log output device. Implements the LogHandle. Usually there's only
- * one instance of this class for only the Log type aggregates it in a static
- * way. For a detailed description of this compiler flags please browse through
- * the static consts of the class or the howto page.
+ * Log output device connecting to Score-P. Implements the LogHandle. Usually
+ * there's only one instance of this class for only the Log type aggregates it
+ * in a static way.
  *
- * An interesting issue is the behaviour of the command line logger in the
- * parallel mode if debug is switched on. In this case the number of messages
- * soon becomes unreadable for any human. Thus, the command line logger
- * internally creates one output file rank.log for each rank and writes all the
- * information into this file. info, warnings and errors are written (in short form)
- * to std::cout / std::cerr, too.
+ * The logger accepts trace and log statements and forwards them to Score-P.
+ * Information messages, warning and errors are also piped onto the terminal.
+ * We follow the Score-P documentation from
  *
- * If the debug mode is not set, all information is written to std::cout.
+ * https://www.vi-hps.org/projects/score-p/documentation/documentation.html
  *
- * Note, that if multithreading is switched on (TBB-flag), the access to std::cout or the
- * logfile respectively is synchronized. The other methods are not thread-safe and should
- * be called only in safe context for defined behaviour.
+ * ## Implementation
+ *
+ * The idea is that the tracing holds one region handle per traced function.
+ * Per handle, we have to call
+ *
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * SCOREP_USER_REGION_DEFINE
+ * SCOREP_USER_REGION_INIT
+ * SCOREP_USER_REGION_ENTER
+ * SCOREP_USER_REGION_END
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * in line with https://perftools.pages.jsc.fz-juelich.de/cicd/scorep/tags/latest/html/group__SCOREP__User.html#ga8c8f772145f95dce57dcf86b6998365c.
+ * Obviously, define and init should be called only once, while we have an
+ * arbitrary number of enter-end calls.
+ *
+ * The logger works with lazy generation of regions.
+ *
+ * Obviously, we cannot use the define macro, as it creates a static instance
+ * and we work with lookup tables here instead of static attributes. Therefore,
+ * we do not work with the SCOREP_USER_REGION_DEFINE macro but instead directly
+ * with the underlying data type.
+ *
+ *
+ * ## Relation to Score-P instrumentation
+ *
+ * All of the Score-P labels here are logical. That is, they are tied to the
+ * logical function name and not the real one. In practice, this is not true,
+ * as Peano uses a lot of trace in and trace out macros to annotate specific
+ * regions. Anyway, we kind of replicate the Score-P instrumentation and
+ * both the instrumentation and the ScorePLogger can be used in tandem.
  *
  * @version $Revision: 1.19 $
- * @author  Tobias Weinzierl, Wolfgang Eckhardt
+ * @author  Tobias Weinzierl
  */
 class tarch::logging::ScorePLogger {
   private:
@@ -57,7 +82,7 @@ class tarch::logging::ScorePLogger {
 
     static ScorePLogger _singleton;
 
-    tarch::multicore::BooleanSemaphore _semaphore;
+    tarch::multicore::MultiReadSingleWriteSemaphore _semaphore;
 
     #ifdef UseScoreP
     std::map< std::string, SCOREP_User_RegionHandle > _scorePHandles;
@@ -157,35 +182,34 @@ class tarch::logging::ScorePLogger {
     void error(   long int timestampNanoseconds, int rank, int threadId, const std::string& trace, const std::string& message);
 
     void traceIn(   long int timestampNanoseconds, int rank, int threadId, const std::string& trace, const std::string& message);
+
+    /**
+     * Log trace out event
+     *
+     * This event forwards the call to a call of the
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * SCOREP_USER_REGION_END
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * macro. In earlier versions, it used to delegate to
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * SCOREP_USER_REGION_LEAVE
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * but that macro seems to be discontinued in Score-P 6.
+     */
     void traceOut(   long int timestampNanoseconds, int rank, int threadId, const std::string& trace, const std::string& message);
 
     /**
      * Tells the logger to increment/decrement the indent.
      *
-     * !!! Thread Safety
-     *
-     * _indent is a global static field shared by all threads. If we increment
-     * or decrement it, this is first of all a read followed by a write.
-     * Consequently data races could occur and the counter could become smaller
-     * than zero. This ain't possible in the sequential code as each increment
-     * is accompanied by a decrement. The following table illustrates the race:
-     *
-     * || value of _indent  || Thread 1 || Thread 2
-     * |  2                 |  initial condition   |  initial condition
-     * |                    |  enter indent(false) |  enter indent(true)
-     * |                    |  fetch indent into register |  fetch indent into register
-     * |                    |  register value -= 2 |  register value += 2
-     * |  4                 |  is a little bit slower |  write back new value of indent
-     * |  0                 |  write back new value of indent |
-     *
-     * To avoid this data race, I introduced a semaphore. This one could also
-     * be implemented with TBB's atomic construct, e.g., but I prefer the
-     * semaphor / critical section technique.
-     *
-     * @param trace    Needed in debug mode to be able to find out who called indent(false) without an indent(true)
-     * @param message  Needed in debug mode to be able to find out who called indent(false) without an indent(true)
+     * For Score-P, we do not need any indentation. Consequently, we put the
+     * nop implementation into the header, so the compiler can inline the
+     * call and eventually remove it completely.
      */
-    void indent( bool indent, const std::string& trace, const std::string& message );
+    void indent( bool indent, const std::string& trace ) {};
 
     void close();
 };

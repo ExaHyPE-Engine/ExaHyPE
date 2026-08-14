@@ -141,7 +141,7 @@ python3 performance-studies.py -s fv-6 -et 1e-2 --plot 0.0 --scheduler no-tasks 
 ## Building all the benchmarks in one go
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-rm README-*
+rm README-peano-*
 export PYTHONPATH=../../../../python:../../../../applications/exahype2/ccz4
 module load python
 for TREES in 1 2 3 4 6 8 9 16 27 32 64 128 256 
@@ -249,10 +249,10 @@ python3 performance-studies.py -s fv-6 -et 1e-2 --plot 0.0 --cell-size 1.8 --tre
 ## Building all the benchmarks in one go
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-rm README-*
+rm README-peano-*
 export PYTHONPATH=../../../../python:../../../../applications/exahype2/ccz4
 module load python
-for SCHEDULER in no-tasks native gpu-lazy-evaluation gpu-timed-execution gpu-eager-consumer-tasks
+for SCHEDULER in no-tasks native gpu-lazy-evaluation gpu-timed-execution gpu-eager-consumer-tasks gpu-producer-consumer
 do
   python3 performance-studies.py -s fv-6 -et 1e-2       --plot 0.0 --cell-size 1.8     --trees 27   --scheduler $SCHEDULER --output peano-regular-$SCHEDULER
   python3 performance-studies.py -s fv-6 -et 1e-6 -amr  --plot 0.0 --cell-size 0.00123 --trees 64   --scheduler $SCHEDULER --output peano-adaptive-$SCHEDULER

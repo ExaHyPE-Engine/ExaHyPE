@@ -289,7 +289,7 @@ void tarch::logging::CommandLineLogger::traceOut(long int timestampNanoseconds, 
 }
 
 
-void tarch::logging::CommandLineLogger::indent( [[maybe_unused]] bool indent, [[maybe_unused]] const std::string& trace, [[maybe_unused]] const std::string& message ) {
+void tarch::logging::CommandLineLogger::indent( [[maybe_unused]] bool indent, const std::string& trace ) {
   #if PeanoDebug>=1
   tarch::multicore::Lock lockCout( _semaphore );
   if (indent) {
@@ -299,24 +299,22 @@ void tarch::logging::CommandLineLogger::indent( [[maybe_unused]] bool indent, [[
     }
   } else {
     if ( tarch::multicore::Core::getInstance().getNumberOfThreads()<=1 ) {
-      assertion3(
+      assertion2(
         not _indentTraces.empty(),
         trace,
-        message,
         indent
       );
-      assertionEquals2(
+      assertionEquals1(
         _indentTraces.top(),
         trace,
-        message,
         indent
       );
       _indentTraces.pop();
-      assertion5(
+      assertion4(
         _indent >= NumberOfIndentSpaces,
         _indent, NumberOfIndentSpaces,
         "more logTraceOut calls than logTraceIn calls invoked before",
-        trace, message
+        trace
       );
     }
     _indent-=NumberOfIndentSpaces;
