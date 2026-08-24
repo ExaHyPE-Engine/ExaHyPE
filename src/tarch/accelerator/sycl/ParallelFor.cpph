@@ -1,12 +1,5 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#pragma once
-
-#include "tarch/accelerator/Range.h"
-#include "tarch/accelerator/Reducer.h"
-#include "tarch/accelerator/sycl/Device.h"
-
-#include <sycl/sycl.hpp>
 
 namespace tarch::accelerator {
   template <typename F>
@@ -52,9 +45,11 @@ namespace tarch {
       return;
     }
     auto& q = *static_cast<::sycl::queue*>(accelerator::getSYCLQueue(accelerator::getCurrentDevice()));
-    q.submit([&](::sycl::handler& h) {
-      h.parallel_for(::sycl::range<1>(r.n), [=](::sycl::id<1> id) { f(static_cast<int>(id[0])); });
-    }).wait();
+    q.submit(
+       [&](::sycl::handler& h) {
+         h.parallel_for(::sycl::range<1>(r.n), [=](::sycl::id<1> id) { f(static_cast<int>(id[0])); });
+       }
+    ).wait();
   }
 
   template <typename F>
@@ -63,11 +58,13 @@ namespace tarch {
       return;
     }
     auto& q = *static_cast<::sycl::queue*>(accelerator::getSYCLQueue(accelerator::getCurrentDevice()));
-    q.submit([&](::sycl::handler& h) {
-      h.parallel_for(::sycl::range<2>(r.n[0], r.n[1]), [=](::sycl::id<2> id) {
-        f(static_cast<int>(id[0]), static_cast<int>(id[1]));
-      });
-    }).wait();
+    q.submit(
+       [&](::sycl::handler& h) {
+         h.parallel_for(::sycl::range<2>(r.n[0], r.n[1]), [=](::sycl::id<2> id) {
+           f(static_cast<int>(id[0]), static_cast<int>(id[1]));
+         });
+       }
+    ).wait();
   }
 
   template <typename F>
@@ -76,11 +73,13 @@ namespace tarch {
       return;
     }
     auto& q = *static_cast<::sycl::queue*>(accelerator::getSYCLQueue(accelerator::getCurrentDevice()));
-    q.submit([&](::sycl::handler& h) {
-      h.parallel_for(::sycl::range<3>(r.n[0], r.n[1], r.n[2]), [=](::sycl::id<3> id) {
-        f(static_cast<int>(id[0]), static_cast<int>(id[1]), static_cast<int>(id[2]));
-      });
-    }).wait();
+    q.submit(
+       [&](::sycl::handler& h) {
+         h.parallel_for(::sycl::range<3>(r.n[0], r.n[1], r.n[2]), [=](::sycl::id<3> id) {
+           f(static_cast<int>(id[0]), static_cast<int>(id[1]), static_cast<int>(id[2]));
+         });
+       }
+    ).wait();
   }
 
   template <typename F>
@@ -93,10 +92,12 @@ namespace tarch {
       ::sycl::range<1>(r.n * accelerator::kSyclLocalSize),
       ::sycl::range<1>(accelerator::kSyclLocalSize)
     );
-    q.submit([&](::sycl::handler& h) {
-      h.parallel_for(nd, [=](::sycl::nd_item<1> item) {
-        f(static_cast<int>(item.get_group(0)), accelerator::SyclTeam{item});
-      });
-    }).wait();
+    q.submit(
+       [&](::sycl::handler& h) {
+         h.parallel_for(nd, [=](::sycl::nd_item<1> item) {
+           f(static_cast<int>(item.get_group(0)), accelerator::SyclTeam{item});
+         });
+       }
+    ).wait();
   }
 } // namespace tarch

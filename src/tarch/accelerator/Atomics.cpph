@@ -1,0 +1,54 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+TARGET_DECLARE
+/**
+ * Reads one integer whose caller excludes concurrent access to the same
+ * address.
+ *
+ * The host uses a relaxed atomic load, while device backends use an ordinary
+ * load. This routine is not a synchronisation boundary.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD int tarch::accelerator::atomicLoad(const int* const target) {
+  int result = 0;
+  COMPILE_IF_ON_HOST(result = std::atomic_ref<int>(const_cast<int&>(*target)).load(std::memory_order_relaxed);)
+  COMPILE_IF_ON_DEVICE(result = *target;)
+  return result;
+}
+
+/**
+ * Writes one integer whose caller excludes concurrent access to the same
+ * address. Device backends use an ordinary store, so this routine is not a
+ * synchronisation boundary.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD void tarch::accelerator::atomicStore(int* const target, const int value) {
+  COMPILE_IF_ON_HOST(std::atomic_ref<int>(*target).store(value, std::memory_order_relaxed);)
+  COMPILE_IF_ON_DEVICE(*target = value;)
+}
+
+/**
+ * Raises one integer to a larger value, keeping the maximum over concurrent
+ * writers so the result is independent of their order.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD void tarch::accelerator::atomicMaximum(int* const target, const int value) {
+#if defined(PEANO_WITH_GPU_BACKEND_KOKKOS)
+  Kokkos::atomic_max(target, value);
+#elif defined(PEANO_WITH_GPU_BACKEND_SYCL)
+  sycl::
+    atomic_ref<int, sycl::memory_order::relaxed, sycl::memory_scope::device, sycl::access::address_space::global_space>
+      reference(*target);
+  reference.fetch_max(value);
+#elif defined(PEANO_WITH_GPU_BACKEND_OMPT)
+#pragma omp atomic compare
+  if (*target < value) {
+    *target = value;
+  }
+#else
+  COMPILE_IF_ON_HOST(
+    std::atomic_ref<int> reference(*target); int current = reference.load(std::memory_order_relaxed);
+    while (current < value and not reference.compare_exchange_weak(current, value, std::memory_order_relaxed)){}
+  )
+  COMPILE_IF_ON_DEVICE(atomicMax(target, value);)
+#endif
+}
+TARGET_DECLARE_END

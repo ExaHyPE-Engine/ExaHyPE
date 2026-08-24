@@ -41,7 +41,6 @@ We however use a whole set of tools and extensions around it.
 - NVHPC, LLVM Clang, ROCm, AdaptiveCpp or Intel oneAPI for GPU offloading.
 - HDF5.
 - NetCDF.
-- LIBXSMM.
 
 You will also need Doxygen if you want to create HTML pages of the documentation yourself.
 Unless you work exclusively with the Peano core in C++, you will have to ensure that your Python installation meets all requirements (see remarks below).

@@ -38,7 +38,7 @@ class Zugspitze(Scenario):
         {DomainSize[0], DomainSize[2]},
         {DomainOffset[0], DomainOffset[2]}
       );
-      return -0.001*netcdfSampler.sample(
+      return -0.001*netcdfSampler.samplePiecewiseConstant(
         "perturbation",
         {x[0], x[2]}
       );

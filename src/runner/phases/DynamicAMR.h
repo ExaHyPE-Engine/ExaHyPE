@@ -12,34 +12,17 @@ namespace runner::tests {
   class DynamicAMRTest;
 } // namespace runner::tests
 
-/**
- * Realise committed refine/coarsen requests between time steps.
- *
- * The time loop invokes this phase whenever the completed time step committed
- * grid-control events. The phase drains them on the dedicated DynamicAMR
- * observer - one traversal triggers the topology transition, the next realises
- * the created/destroyed cells and faces - and keeps sweeping until the grid
- * reports itself stationary again, so the time loop always resumes on a
- * settled topology.
- *
- * A regridding scenario invokes the phase after almost every time step, so a
- * report per invocation would bury the time steps. The phase therefore collects
- * what it did, and the time loop asks for the collection before it prints a time
- * step. A single drain that runs past SweepsPerReport sweeps reports
- * every so many sweeps on its own, so a grid that cannot settle keeps writing
- * lines and cannot be mistaken for a hang.
- */
+/** Realises committed refinement and coarsening requests between time steps. */
 class runner::DynamicAMR final : public runner::Phase {
 public:
-  DynamicAMR(PhaseContext& context, int dynamicAMRStep);
+  DynamicAMR(runner::PhaseContext& context, const int dynamicAMRStep);
 
-  std::vector<std::string> widthSamples() const override;
-  void                     run() override;
+  void run() override;
 
   bool isEnabled() const;
   bool hasPendingMeshUpdates() const;
+  bool hasUndecidedRefinementCriterion() const;
 
-  /** Report the sweeps collected so far, if any. */
   void reportPendingSweeps();
 
 private:
@@ -69,9 +52,9 @@ private:
     int           maxLevel     = 0;
   };
 
-  PhaseContext& _context;
-  int           _dynamicAMRStep;
-  Activity      _activity;
+  runner::PhaseContext& _context;
+  int                   _dynamicAMRStep;
+  Activity              _activity;
 
   void               startActivity();
   void               reportActivity();

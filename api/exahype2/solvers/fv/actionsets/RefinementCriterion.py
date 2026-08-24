@@ -40,9 +40,10 @@ class RefinementCriterion(AbstractFVActionSet):
         build_up_new_refinement_instructions,
         implement_previous_refinement_instructions,
         called_by_grid_construction,
+        skip_after_topology_change,
     ):
         """
-        :: Attributes
+        :: Attributes.
 
         _implement_previous_refinement_instructions: Boolean
           Controls whether instructions are picked up from the RefinementControl
@@ -65,6 +66,11 @@ class RefinementCriterion(AbstractFVActionSet):
         called_by_grid_construction: Boolean
           Selects the grid construction variant of the criterion, which has no
           solution at hand and therefore evaluates it with a nullptr and t=0.
+
+        skip_after_topology_change: Boolean
+          Collect nothing while a realised topology change is still fresh. Only
+          the time step needs this; the realise sweeps evaluate the cells they
+          have just created, which is a decomposition-independent set.
         """
         super(RefinementCriterion, self).__init__(solver)
         self._guard = guard
@@ -75,6 +81,7 @@ class RefinementCriterion(AbstractFVActionSet):
             implement_previous_refinement_instructions
         )
         self._called_by_grid_construction = called_by_grid_construction
+        self._skip_after_topology_change = skip_after_topology_change
 
     def get_body_of_getGridControlEvents(self):
         if self._implement_previous_refinement_instructions:
@@ -117,10 +124,18 @@ class RefinementCriterion(AbstractFVActionSet):
             d["CELL_ACCESSOR"] = (
                 "fineGridCell" + self._solver.current_unknown_identifier()
             )
-            d["PREDICATE"] = (
-                "not marker.willBeRefined() and not marker.hasBeenRefined() and "
-                + self._guard
-            )
+            # The first time step after a realised topology change still carries
+            # refinement markers on some cells, and which cells carry them depends
+            # on how many sweeps the mesh update needed, which varies with the
+            # decomposition. Collecting no requests during that step keeps the
+            # committed event set identical for every decomposition.
+            d["PREDICATE"] = "not marker.willBeRefined() and not marker.hasBeenRefined() and "
+            if self._skip_after_topology_change:
+                d["PREDICATE"] += (
+                    "not ::exahype2::RefinementControlService::getInstance()"
+                    ".hasRealisedTopologyChangesSinceLastTimeStep() and "
+                )
+            d["PREDICATE"] += self._guard
             d["GRID_CONSTRUCTION"] = self._called_by_grid_construction
             self._solver._init_dictionary_with_default_parameters(d)
             self._solver.add_entries_to_text_replacement_dictionary(d)
@@ -141,8 +156,8 @@ class RefinementCriterion(AbstractFVActionSet):
             super(RefinementCriterion, self).get_includes()
             + """
 #include "exahype2/RefinementControlService.h"
-#include "runner/RuntimeParameters.h"
 #include "exahype2/fv/PatchUtils.h"
+#include "runner/RuntimeParameters.h"
 #include "Constants.h"
 """
         )

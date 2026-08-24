@@ -79,23 +79,12 @@ namespace benchmarks::exahype2::kernelbenchmarks {
     const auto cellCount  = std::pow(gridLength, DIMENSIONS);
     const auto faceCount  = std::pow(gridLength, DIMENSIONS - 1) * (gridLength + 1);
     const int  depth      = ::runner::RuntimeParameters::getInstance().getGridLevels();
-    _depthLevels.resize(depth + 1); // For 1 AMR level
+    _depthLevels.resize(depth);
     _depthLevels[depth - 1].QNew.resize(cellCount);
     _depthLevels[depth - 1].QOld.resize(cellCount);
     for (int axis = 0; axis < DIMENSIONS; ++axis) {
       _depthLevels[depth - 1].facesQNew[axis].resize(faceCount);
       _depthLevels[depth - 1].facesQOld[axis].resize(faceCount);
-    }
-
-    if (UseAMR) {
-      const auto cellCountAMR = std::pow(gridLength * 3, DIMENSIONS);
-      const auto faceCountAMR = std::pow(gridLength * 3, DIMENSIONS - 1) * (gridLength * 3 + 1);
-      _depthLevels[depth].QNew.resize(cellCountAMR);
-      _depthLevels[depth].QOld.resize(cellCountAMR);
-      for (int axis = 0; axis < DIMENSIONS; ++axis) {
-        _depthLevels[depth].facesQNew[axis].resize(faceCountAMR);
-        _depthLevels[depth].facesQOld[axis].resize(faceCountAMR);
-      }
     }
   }
 

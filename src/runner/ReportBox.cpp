@@ -5,16 +5,17 @@
 #include "runner/TextLayout.h"
 #include "tarch/instrumentation/Info.h"
 
-// ---------------------------------------------------------------------------
-// Table
-// ---------------------------------------------------------------------------
+namespace {
+  constexpr std::size_t ReportWidth = 100;
+} // namespace
+
 runner::Table::Section& runner::Table::sectionFor(const std::string& title) {
   for (auto& section : _sections) {
     if (section.title == title) {
       return section;
     }
   }
-  _sections.push_back(Section{title, {}});
+  _sections.push_back(runner::Table::Section{title, {}});
   return _sections.back();
 }
 
@@ -23,7 +24,7 @@ void runner::Table::add(const std::string& section, const std::string& label, co
 }
 
 std::vector<std::string> runner::Table::render() const {
-  std::size_t labelWidth = 0;
+  auto labelWidth = std::size_t{0};
   for (const auto& section : _sections) {
     for (const auto& entry : section.entries) {
       labelWidth = std::max(labelWidth, entry.first.size());
@@ -35,38 +36,35 @@ std::vector<std::string> runner::Table::render() const {
     if (section.entries.empty()) {
       continue;
     }
-    lines.push_back(std::string(BlockIndent, ' ') + section.title);
+    lines.push_back(std::string(runner::BlockIndent, ' ') + section.title);
     for (const auto& [label, value] : section.entries) {
       std::ostringstream line;
-      line << std::string(2 * BlockIndent, ' ') << std::left << std::setw(static_cast<int>(labelWidth)) << label << "  "
-           << value;
+      line << std::string(2 * runner::BlockIndent, ' ') << std::left << std::setw(static_cast<int>(labelWidth)) << label
+           << "  " << value;
       lines.push_back(line.str());
     }
   }
   return lines;
 }
 
-// ---------------------------------------------------------------------------
-// ReportBox
-// ---------------------------------------------------------------------------
-void runner::ReportBox::setWidth(int width) { _width = width; }
-
 void runner::ReportBox::emit(const std::string& text) {
-  logInfo("|* " + fitToWidth(text, static_cast<std::size_t>(_width)) + " *|");
+  logInfo("|* " + runner::fitToWidth(text, ReportWidth) + " *|");
   _started = true;
 }
 
-// Every rule is framed by a blank line on each side, so each section gets uniform
-// top/bottom padding. The padding is centralised here rather than sprinkled through the callers.
+/**
+ * Adds one blank line on each side of a section boundary. Keeping this spacing in the frame object
+ * gives all reporting phases the same layout.
+ */
 void runner::ReportBox::rule() {
   if (_lastWasRule) {
     return;
   }
-  if (_started and not _lastWasBlank) { // pad the bottom of the section this rule closes
+  if (_started and not _lastWasBlank) {
     emit("");
     _lastWasBlank = true;
   }
-  logInfo("|" + std::string(static_cast<std::size_t>(_width) + 4, '*') + "|");
+  logInfo("|" + std::string(ReportWidth + 4, '*') + "|");
   _started        = true;
   _lastWasRule    = true;
   _lastWasBlank   = false;
@@ -88,10 +86,12 @@ void runner::ReportBox::line(const std::string& text) {
     blank();
     return;
   }
-  if (_blankAfterRule) { // pad the top of the section the preceding rule opened
+  if (_blankAfterRule) {
     emit("");
   }
-  emit(text);
+  for (const auto& wrappedLine : runner::wrapToDisplayWidth(text, ReportWidth)) {
+    emit(wrappedLine);
+  }
   _lastWasRule    = false;
   _lastWasBlank   = false;
   _blankAfterRule = false;

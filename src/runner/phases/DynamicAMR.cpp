@@ -4,15 +4,13 @@
 
 #include "runner/Engine.h"
 #include "runner/Format.h"
-#include "runner/GridSnapshot.h"
 #include "runner/Instrumentation.h"
 #include "runner/LoadBalancer.h"
 #include "runner/PhaseNames.h"
 #include "runner/ReportBox.h"
-#include "runner/RuntimeParameters.h"
 #include "tarch/Termination.h"
 
-runner::DynamicAMR::DynamicAMR(PhaseContext& context, int dynamicAMRStep) :
+runner::DynamicAMR::DynamicAMR(runner::PhaseContext& context, const int dynamicAMRStep) :
   _context(context),
   _dynamicAMRStep(dynamicAMRStep) {}
 
@@ -22,58 +20,58 @@ bool runner::DynamicAMR::hasPendingMeshUpdates() const {
   return _context.repositories.hasPendingMeshUpdates and _context.repositories.hasPendingMeshUpdates();
 }
 
-std::string runner::DynamicAMR::describe(const Activity& activity) {
+/**
+ * Returns whether the last refinement criterion left its verdict open.
+ *
+ * A criterion that is skipped right after a mesh change reports no requests
+ * without having judged the mesh. A caller that adapts until the criterion falls
+ * silent has to keep going while this holds, or it settles for a mesh the
+ * criterion never approved.
+ */
+bool runner::DynamicAMR::hasUndecidedRefinementCriterion() const {
+  return _context.repositories.hasUndecidedRefinementCriterion
+     and _context.repositories.hasUndecidedRefinementCriterion();
+}
+
+std::string runner::DynamicAMR::describe(const runner::DynamicAMR::Activity& activity) {
   std::ostringstream leaves;
   if (activity.leavesBefore == activity.leavesAfter) {
-    leaves << Format::grouped(activity.leavesAfter);
+    leaves << runner::Format::grouped(activity.leavesAfter);
   } else {
-    leaves << Format::grouped(activity.leavesBefore) << " → " << Format::grouped(activity.leavesAfter);
+    leaves << runner::Format::grouped(activity.leavesBefore) << " → " << runner::Format::grouped(activity.leavesAfter);
   }
 
   std::ostringstream line;
-  line << std::string(BlockIndent, ' ') << PhaseName::DynamicAMR << "  " << Format::wallClock(activity.wallClock)
-       << " · Leaves = " << leaves.str() << " · Levels = " << activity.minLevel << " .. " << activity.maxLevel;
+  line << std::string(runner::BlockIndent, ' ') << runner::PhaseName::DynamicAMR << "  "
+       << runner::Format::wallClock(activity.wallClock) << " · Leaves = " << leaves.str()
+       << " · Levels = " << activity.minLevel << " .. " << activity.maxLevel;
   return line.str();
 }
 
-std::vector<std::string> runner::DynamicAMR::widthSamples() const {
-  const auto leaves = boundedFullyRefinedLeaves(_context.parameters.getMaxGridLevels());
-
-  Activity worstCase;
-  worstCase.wallClock = 9999.99;
-  // Neither a power of three nor the saturated maximum is a power of ten, so one less than
-  // the leaf count renders at the same width and the sample bounds both columns.
-  worstCase.leavesBefore = leaves;
-  worstCase.leavesAfter  = leaves - 1;
-  worstCase.minLevel     = 99;
-  worstCase.maxLevel     = 99;
-  return {describe(worstCase)};
-}
-
 void runner::DynamicAMR::startActivity() {
-  _activity = Activity{};
+  _activity = runner::DynamicAMR::Activity{};
   _activity.leavesBefore =
-    static_cast<unsigned long>(loadBalancer().getStatistics().getGlobalNumberOfInnerUnrefinedCells());
+    static_cast<unsigned long>(runner::loadBalancer().getStatistics().getGlobalNumberOfInnerUnrefinedCells());
 }
 
 void runner::DynamicAMR::reportActivity() {
-  const auto& statistics = loadBalancer().getStatistics();
+  const auto& statistics = runner::loadBalancer().getStatistics();
   _activity.leavesAfter  = static_cast<unsigned long>(statistics.getGlobalNumberOfInnerUnrefinedCells());
   _activity.minLevel     = statistics.getGlobalMinDepth();
   _activity.maxLevel     = statistics.getGlobalMaxDepth();
   // Plain line: it stacks with the plots and stays outside the time step's block.
-  _context.box.line(describe(_activity));
-  startActivity();
+  _context.box.line(runner::DynamicAMR::describe(_activity));
+  runner::DynamicAMR::startActivity();
 }
 
 void runner::DynamicAMR::reportPendingSweeps() {
   if (_activity.sweeps > 0) {
-    reportActivity();
+    runner::DynamicAMR::reportActivity();
   }
 }
 
 void runner::DynamicAMR::run() {
-  SCOREP_USER_REGION(PhaseName::DynamicAMR, SCOREP_USER_REGION_TYPE_PHASE)
+  SCOREP_USER_REGION(runner::PhaseName::DynamicAMR, SCOREP_USER_REGION_TYPE_PHASE)
 
   // Two quiet sweeps cover the one-sweep publication lag of the global grid statistics
   // under MPI.
@@ -87,7 +85,7 @@ void runner::DynamicAMR::run() {
   // mesh itself whether it settled.
   const auto meshHasNotSettled = [this]() {
     return hasPendingMeshUpdates()
-      or loadBalancer().getStatistics().getGlobalNumberOfStationarySweeps() < RequiredStationarySweeps;
+      or runner::loadBalancer().getStatistics().getGlobalNumberOfStationarySweeps() < RequiredStationarySweeps;
   };
 
   int sweeps = 0;

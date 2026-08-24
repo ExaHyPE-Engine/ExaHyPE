@@ -10,17 +10,21 @@ namespace tarch::plotter {
   class HDF5FileWriter;
 } // namespace tarch::plotter
 
-class tarch::plotter::HDF5FileWriter final: public FileWriter {
+class tarch::plotter::HDF5FileWriter final : public FileWriter {
 public:
-  HDF5FileWriter(const std::string& outputDirectory, int numberOfSubdomains);
-  ~HDF5FileWriter() override = default;
+  HDF5FileWriter(const std::string& outputDirectory, const int numberOfSubdomains);
+  HDF5FileWriter(const HDF5FileWriter&)            = delete;
+  HDF5FileWriter(HDF5FileWriter&&)                 = delete;
+  ~HDF5FileWriter() override                       = default;
+  HDF5FileWriter& operator=(const HDF5FileWriter&) = delete;
+  HDF5FileWriter& operator=(HDF5FileWriter&&)      = delete;
 
-  bool writeToFile(const std::string& filename, double time) override;
+  bool writeToFile(const std::string& filename, const double time) override;
 
   std::string getFileExtension() const override;
 
 private:
-  static int toXdmfType(int vtkType);
+  static int toXdmfType(const int vtkType);
 };
 
 #endif

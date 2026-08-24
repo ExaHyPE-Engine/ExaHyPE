@@ -8,49 +8,60 @@
 #include "FVSolver.h"
 #include "FusedDataRepository.h"
 
-#include "exahype2/fv/BoundaryConditions.h"
+#include "exahype2/fv/EigenvalueStatistics.h"
+#include "exahype2/fv/FiniteVolume.h"
+#include "exahype2/fv/HandleBoundary.h"
 #include "exahype2/fv/PatchUtils.h"
-#include "kernels/FVSolver/HandleBoundaryFused.h"
-#include "kernels/FVSolver/ProjectPatchFused.h"
-#include "kernels/FVSolver/RiemannSolverFused.h"
+#include "exahype2/fv/reconstruction/Constant.h"
+#include "exahype2/fv/timestepping/SingleStep.h"
 #include "peano4/Globals.h"
 #include "peano4/Init.h"
 #include "peano4/Loop.h"
 #include "peano4/datamanagement/CellMarker.h"
-#include "peano4/datamanagement/FaceEnumerator.h"
+#include "peano4/datamanagement/FaceMarker.h"
 #include "runner/RepositoryCallbacks.h"
 #include "runner/RuntimeParameters.h"
 #include "tarch/Init.h"
 #include "tarch/MemoryUsage.h"
+#include "tarch/accelerator/ParallelFor.h"
+#include "tarch/accelerator/ParallelReduce.h"
 #include "tarch/instrumentation/Log.h"
 #include "tarch/instrumentation/Measurement.h"
 #include "tarch/instrumentation/Watch.h"
 #include "tarch/plotter/PVDTimeSeriesWriter.h"
 #include "tarch/plotter/VTUFileWriter.h"
 #include "toolbox/blockstructured/AMRRoutines.h"
-
-using namespace benchmarks::exahype2::kernelbenchmarks;
+#include "toolbox/blockstructured/ProjectPatch.h"
 
 namespace {
+  constexpr int NumberOfVolumesPerAxis =
+    benchmarks::exahype2::kernelbenchmarks::AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch;
+  constexpr int NumberOfData = benchmarks::exahype2::kernelbenchmarks::AbstractFVSolver::NumberOfUnknowns
+    + benchmarks::exahype2::kernelbenchmarks::AbstractFVSolver::NumberOfAuxiliaryVariables;
+  constexpr int PatchCardinality = BasePowerExponent<NumberOfVolumesPerAxis, DIMENSIONS>::value * NumberOfData;
+  constexpr int FaceCardinality  = 2 * BasePowerExponent<NumberOfVolumesPerAxis, DIMENSIONS - 1>::value * NumberOfData;
+
   tarch::instrumentation::Measurement timeStepMeasurement;
   double                              logNextTimeStep                  = 0.0;
   bool                                haveReceivedNonCriticalAssertion = false;
 
-  std::vector<peano4::datamanagement::CellMarker> _cells;
+  std::vector<peano4::datamanagement::CellMarker> cells;
 
   int getGridLength() {
     int result = 1;
-    for (int level = 0; level < ::runner::RuntimeParameters::getInstance().getGridLevels(); ++level) {
+    for (int level = 0; level < runner::RuntimeParameters::getInstance().getGridLevels(); ++level) {
       result *= 3;
     }
     return result;
   }
 
-  tarch::la::Vector<DIMENSIONS, double> getCellSize() { return DomainSize / static_cast<double>(getGridLength()); }
+  tarch::la::Vector<DIMENSIONS, double> getCellSize() {
+    return benchmarks::exahype2::kernelbenchmarks::DomainSize / static_cast<double>(getGridLength());
+  }
 
-  bool helpRequested(int argc, char** argv) {
-    for (int index = 1; index < argc; ++index) {
-      const std::string argument = argv[index];
+  bool helpRequested(const int argumentCount, char* const* const arguments) {
+    for (int index = 1; index < argumentCount; ++index) {
+      const std::string argument = arguments[index];
       if (argument == "--help" or argument == "-h") {
         return true;
       }
@@ -58,13 +69,17 @@ namespace {
     return false;
   }
 
-  template <typename T>
-  std::string
-  toScientificNotationString(T value, int precision = 4, bool considerSign = false, double threshold = 1e6) {
+  template <typename Value>
+  std::string toScientificNotationString(
+    const Value  value,
+    const int    precision    = 4,
+    const bool   considerSign = false,
+    const double threshold    = 1e6
+  ) {
     std::ostringstream out;
-    double             v = static_cast<double>(value);
+    const double       numericValue = static_cast<double>(value);
 
-    if (std::abs(v) < threshold) {
+    if (std::abs(numericValue) < threshold) {
       if (considerSign) {
         out << std::showpos;
       }
@@ -76,7 +91,7 @@ namespace {
     if (considerSign) {
       out << std::showpos;
     }
-    out << v;
+    out << numericValue;
     return out.str();
   }
 
@@ -87,14 +102,14 @@ namespace {
     return result.str();
   }
 
-  std::string renderSolverStatistics(const std::vector<::runner::SolverStatistic>& statistics) {
+  std::string renderSolverStatistics(const std::vector<runner::SolverStatistic>& statistics) {
     std::ostringstream result;
     for (const auto& statistic : statistics) {
       if (not result.str().empty()) {
         result << "   ";
       }
       result << statistic.label << " = ";
-      if (statistic.kind == ::runner::SolverStatistic::Kind::Count) {
+      if (statistic.kind == runner::SolverStatistic::Kind::Count) {
         result << statistic.count;
       } else if (statistic.minimum == statistic.maximum) {
         result << toScientificNotationString(statistic.minimum);
@@ -108,12 +123,15 @@ namespace {
 
   std::string formatSimulationTime() {
     std::ostringstream result;
-    result << repositories::getMinTimeStamp() << " / "
-           << ::runner::RuntimeParameters::getInstance().getMinTerminalTime();
+    result << benchmarks::exahype2::kernelbenchmarks::repositories::getMinTimeStamp() << " / "
+           << runner::RuntimeParameters::getInstance().getMinTerminalTime();
     return formatStatistic("Time", result.str());
   }
 
-  std::string formatTimeStep(int numberOfCompletedTimeSteps, const tarch::instrumentation::Measurement& measurement) {
+  std::string formatTimeStep(
+    const int                                  numberOfCompletedTimeSteps,
+    const tarch::instrumentation::Measurement& measurement
+  ) {
     std::ostringstream result;
     result << "Time Step " << numberOfCompletedTimeSteps;
     if (measurement.getNumberOfMeasurements() > 0) {
@@ -128,7 +146,7 @@ namespace {
     return result.str();
   }
 
-  std::string formatMeasurementTotal(const tarch::instrumentation::Measurement& measurement, const char* unit) {
+  std::string formatMeasurementTotal(const tarch::instrumentation::Measurement& measurement, const char* const unit) {
     std::ostringstream result;
     result << "Total=" << measurement.getAccumulatedValue() << unit
            << ", Measurements=" << measurement.getNumberOfMeasurements();
@@ -138,17 +156,17 @@ namespace {
   std::vector<std::string> formatSolverStatistics() {
     std::vector<std::string> result;
     result.push_back(formatSimulationTime());
-    for (const auto& statistic : repositories::getSolverStatistics()) {
+    for (const auto& statistic : benchmarks::exahype2::kernelbenchmarks::repositories::getSolverStatistics()) {
       result.push_back(formatStatistic(statistic.first, renderSolverStatistics(statistic.second)));
     }
     return result;
   }
 
-  template <typename Bytes>
+  template <typename MemorySize>
   std::vector<std::string> formatKernelBenchmarkStatistics(
-    std::size_t                                globalNumberOfPatches,
-    double                                     totalNumberOfDoFs,
-    Bytes                                      totalPersistentMemory,
+    const std::size_t                          globalNumberOfPatches,
+    const double                               totalNumberOfDoFs,
+    const MemorySize                           totalPersistentMemory,
     const tarch::instrumentation::Measurement& measurement
   ) {
     std::vector<std::string> result;
@@ -166,9 +184,9 @@ namespace {
     result.push_back(formatStatistic("Memory", memoryMessage.str()));
 
     if (measurement.getNumberOfMeasurements() > 0) {
-      const auto dt               = measurement.getMostRecentValue();
-      const auto patchesPerSecond = globalNumberOfPatches / dt;
-      const auto dofsPerSecond    = totalNumberOfDoFs / dt;
+      const auto duration         = measurement.getMostRecentValue();
+      const auto patchesPerSecond = globalNumberOfPatches / duration;
+      const auto dofsPerSecond    = totalNumberOfDoFs / duration;
 
       std::ostringstream performanceMessage;
       performanceMessage << patchesPerSecond << " Patch/s, " << dofsPerSecond << " DoF/s";
@@ -177,312 +195,220 @@ namespace {
 
     return result;
   }
-} // namespace
 
-void logFinalStatistics(
-  const tarch::instrumentation::Measurement& measurement,
-  const tarch::instrumentation::Measurement& measurementBoundary,
-  const tarch::instrumentation::Measurement& measurementRiemann
-) {
-  if (measurementBoundary.getNumberOfMeasurements() > 0) {
-    logInfo(formatStatistic("Boundary Handling", formatMeasurementTotal(measurementBoundary, "s")));
+  void logFinalStatistics(
+    const tarch::instrumentation::Measurement& kernelMeasurement,
+    const tarch::instrumentation::Measurement& boundaryMeasurement,
+    const tarch::instrumentation::Measurement& riemannMeasurement
+  ) {
+    if (boundaryMeasurement.getNumberOfMeasurements() > 0) {
+      logInfo(formatStatistic("Boundary Handling", formatMeasurementTotal(boundaryMeasurement, "s")));
+    }
+    if (riemannMeasurement.getNumberOfMeasurements() > 0) {
+      logInfo(formatStatistic("Riemann Solver", formatMeasurementTotal(riemannMeasurement, "s")));
+    }
+
+    if (kernelMeasurement.getNumberOfMeasurements() > 0) {
+      logInfo(formatStatistic("Time Stepping", formatMeasurementTotal(kernelMeasurement, "s")));
+
+      const auto   globalNumberOfPatches = cells.size();
+      const double totalNumberOfDoFs     = static_cast<double>(globalNumberOfPatches) * PatchCardinality;
+      const auto   averageStepTime       = kernelMeasurement.getAverageValue();
+
+      std::ostringstream performanceMessage;
+      performanceMessage << "Average=" << globalNumberOfPatches / averageStepTime << " Patch/s, "
+                         << totalNumberOfDoFs / averageStepTime << " DoF/s";
+      logInfo(formatStatistic("Performance", performanceMessage.str()));
+    }
   }
-  if (measurementRiemann.getNumberOfMeasurements() > 0) {
-    logInfo(formatStatistic("Riemann Solver", formatMeasurementTotal(measurementRiemann, "s")));
-  }
 
-  if (measurement.getNumberOfMeasurements() > 0) {
-    logInfo(formatStatistic("Time Stepping", formatMeasurementTotal(measurement, "s")));
+  void plotGrid() {
+    benchmarks::exahype2::kernelbenchmarks::repositories::startPlottingStep();
 
-    const auto globalNumberOfPatches = _cells.size();
-    const auto totalNumberOfDoFs     = globalNumberOfPatches
-      * std::pow(AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch, DIMENSIONS)
-      * (AbstractFVSolver::NumberOfUnknowns + AbstractFVSolver::NumberOfAuxiliaryVariables);
-    const auto averageStepTime = measurement.getAverageValue();
+    const std::string outputDirectory  = "output";
+    const std::string solutionFileName = "FVSolver";
 
-    std::ostringstream performanceMessage;
-    performanceMessage << "Average=" << globalNumberOfPatches / averageStepTime << " Patch/s, "
-                       << totalNumberOfDoFs / averageStepTime << " DoF/s";
-    logInfo(formatStatistic("Performance", performanceMessage.str()));
-  }
-}
+    const double plotTimeStamp = 0.5
+      * (benchmarks::exahype2::kernelbenchmarks::repositories::getMinTimeStamp()
+         + benchmarks::exahype2::kernelbenchmarks::repositories::getMaxTimeStamp());
 
-void plotGrid() {
-  repositories::startPlottingStep();
+    static tarch::plotter::PVDTimeSeriesWriter timeSeriesWriter;
+    tarch::plotter::VTUFileWriter              fileWriter(outputDirectory, 1);
 
-  const std::string outputDirectory  = "output";
-  const std::string solutionFileName = "FVSolver";
+    auto vertexPlotter   = fileWriter.createVertexPlotter(0);
+    auto cellPlotter     = fileWriter.createCellPlotter(0);
+    auto cellDataPlotter = fileWriter.createCellDataPlotter(
+      0,
+      "FVSolverQ",
+      benchmarks::exahype2::kernelbenchmarks::AbstractFVSolver::NumberOfUnknowns
+    );
 
-  const double t = 0.5 * (repositories::getMinTimeStamp() + repositories::getMaxTimeStamp());
+    for (const auto& marker : cells) {
+      if (not marker.hasBeenRefined()) {
+        const auto& patchSize   = marker.getH();
+        const auto  patchOffset = marker.getX() - patchSize * 0.5;
 
-  static tarch::plotter::PVDTimeSeriesWriter timeSeriesWriter;
-  tarch::plotter::VTUFileWriter              fileWriter(outputDirectory, 1);
+        const auto        cellSize = patchSize / static_cast<double>(NumberOfVolumesPerAxis);
+        const auto* const qOut     = benchmarks::exahype2::kernelbenchmarks::DataRepository::getInstance().getCellQNew(
+          marker.getX(),
+          marker.getH()
+        );
 
-  auto vertexPlotter   = fileWriter.createVertexPlotter(0);
-  auto cellPlotter     = fileWriter.createCellPlotter(0);
-  auto cellDataPlotter = fileWriter.createCellDataPlotter(0, "FVSolverQ", AbstractFVSolver::NumberOfUnknowns);
-
-  for (auto& marker : _cells) {
-    if (not marker.hasBeenRefined()) {
-      const auto& patchSize   = marker.getH();
-      const auto& patchOffset = marker.getX() - patchSize * 0.5;
-
-      const auto  cellSize = patchSize / static_cast<double>(AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch);
-      const auto* QOut     = DataRepository::getInstance().getCellQNew(marker.getX(), marker.getH());
-
-      int currentDoF = 0;
-      peano4::dForEach(
-        AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        [&](const tarch::la::Vector<DIMENSIONS, int>& k) {
+        int currentDegreeOfFreedom = 0;
+        peano4::dForEach(NumberOfVolumesPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
 #if DIMENSIONS == 2
           tarch::la::Vector<2, double> cellOffset;
-          cellOffset(0) = patchOffset(0) + static_cast<double>(k(0)) * cellSize(0);
-          cellOffset(1) = patchOffset(1) + static_cast<double>(k(1)) * cellSize(1);
-          int v[4];
-          v[0] = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{cellOffset(0), cellOffset(1)});
-          v[1] = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{cellOffset(0) + cellSize(0), cellOffset(1)});
-          v[2] = vertexPlotter->plotVertex(
+          cellOffset(0) = patchOffset(0) + static_cast<double>(volume(0)) * cellSize(0);
+          cellOffset(1) = patchOffset(1) + static_cast<double>(volume(1)) * cellSize(1);
+          int vertices[4];
+          vertices[0] = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{cellOffset(0), cellOffset(1)});
+          vertices[1] =
+            vertexPlotter->plotVertex(tarch::la::Vector<2, double>{cellOffset(0) + cellSize(0), cellOffset(1)});
+          vertices[2] = vertexPlotter->plotVertex(
             tarch::la::Vector<2, double>{cellOffset(0) + cellSize(0), cellOffset(1) + cellSize(1)}
           );
-          v[3] = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{cellOffset(0), cellOffset(1) + cellSize(1)});
-          const int cellIndex = cellPlotter->plotQuadrangle(v);
+          vertices[3] =
+            vertexPlotter->plotVertex(tarch::la::Vector<2, double>{cellOffset(0), cellOffset(1) + cellSize(1)});
+          const auto cellIndex = cellPlotter->plotQuadrangle(vertices);
 #else
           tarch::la::Vector<3, double> cellOffset;
-          cellOffset(0) = patchOffset(0) + static_cast<double>(k(0)) * cellSize(0);
-          cellOffset(1) = patchOffset(1) + static_cast<double>(k(1)) * cellSize(1);
-          cellOffset(2) = patchOffset(2) + static_cast<double>(k(2)) * cellSize(2);
-          int v[8];
-          v[0] = vertexPlotter->plotVertex(tarch::la::Vector<3, double>{cellOffset(0), cellOffset(1), cellOffset(2)});
-          v[1] = vertexPlotter->plotVertex(
+          cellOffset(0) = patchOffset(0) + static_cast<double>(volume(0)) * cellSize(0);
+          cellOffset(1) = patchOffset(1) + static_cast<double>(volume(1)) * cellSize(1);
+          cellOffset(2) = patchOffset(2) + static_cast<double>(volume(2)) * cellSize(2);
+          int vertices[8];
+          vertices[0] = vertexPlotter->plotVertex(
+            tarch::la::Vector<3, double>{cellOffset(0), cellOffset(1), cellOffset(2)}
+          );
+          vertices[1] = vertexPlotter->plotVertex(
             tarch::la::Vector<3, double>{cellOffset(0) + cellSize(0), cellOffset(1), cellOffset(2)}
           );
-          v[2] = vertexPlotter->plotVertex(
+          vertices[2] = vertexPlotter->plotVertex(
             tarch::la::Vector<3, double>{cellOffset(0) + cellSize(0), cellOffset(1) + cellSize(1), cellOffset(2)}
           );
-          v[3] = vertexPlotter->plotVertex(
+          vertices[3] = vertexPlotter->plotVertex(
             tarch::la::Vector<3, double>{cellOffset(0), cellOffset(1) + cellSize(1), cellOffset(2)}
           );
-          v[4] = vertexPlotter->plotVertex(
+          vertices[4] = vertexPlotter->plotVertex(
             tarch::la::Vector<3, double>{cellOffset(0), cellOffset(1), cellOffset(2) + cellSize(2)}
           );
-          v[5] = vertexPlotter->plotVertex(
+          vertices[5] = vertexPlotter->plotVertex(
             tarch::la::Vector<3, double>{cellOffset(0) + cellSize(0), cellOffset(1), cellOffset(2) + cellSize(2)}
           );
-          v[6] = vertexPlotter->plotVertex(
+          vertices[6] = vertexPlotter->plotVertex(
             tarch::la::Vector<3, double>{
               cellOffset(0) + cellSize(0),
               cellOffset(1) + cellSize(1),
               cellOffset(2) + cellSize(2)
             }
           );
-          v[7] = vertexPlotter->plotVertex(
+          vertices[7] = vertexPlotter->plotVertex(
             tarch::la::Vector<3, double>{cellOffset(0), cellOffset(1) + cellSize(1), cellOffset(2) + cellSize(2)}
           );
-          const int cellIndex = cellPlotter->plotHexahedron(v);
+          const auto cellIndex = cellPlotter->plotHexahedron(vertices);
 #endif
 
-          const auto* values = QOut + currentDoF;
-          cellDataPlotter->plotCellData(cellIndex, values, AbstractFVSolver::NumberOfUnknowns);
+          const auto* const values = qOut + currentDegreeOfFreedom;
+          cellDataPlotter->plotCellData(
+            cellIndex,
+            values,
+            benchmarks::exahype2::kernelbenchmarks::AbstractFVSolver::NumberOfUnknowns
+          );
 
-          currentDoF += AbstractFVSolver::NumberOfUnknowns;
-        }
-      );
+          currentDegreeOfFreedom += NumberOfData;
+        });
+      }
     }
+
+    timeSeriesWriter.writeSnapshotFile(solutionFileName, plotTimeStamp, fileWriter);
+    timeSeriesWriter.writeTimeSeriesMetaFile(outputDirectory, solutionFileName);
+
+    benchmarks::exahype2::kernelbenchmarks::repositories::finishPlottingStep();
   }
 
-  timeSeriesWriter.writeSnapshotFile(solutionFileName, t, fileWriter);
-  timeSeriesWriter.writeTimeSeriesMetaFile(outputDirectory, solutionFileName);
-
-  repositories::finishPlottingStep();
-}
-
-void interpolateBetweenAMRBorder() {
-  const auto cellSize = getCellSize();
-  for (auto& marker : _cells) {
-    if (marker.getH()[0] < cellSize[0]) { // Check if cell is in AMR region
-      auto parentSize   = marker.getH() * 3.0;
-      auto parentCenter = marker.getInvokingParentCellsCentre();
-
-      for (int f = 0; f < TWO_TIMES_D; f++) {
-        int normal = f % DIMENSIONS;
-        if ((f >= DIMENSIONS and marker.getRelativePositionWithinFatherCell()[normal] == 2)
-            or (f < DIMENSIONS and marker.getRelativePositionWithinFatherCell()[normal] == 0)) {
-          peano4::datamanagement::FaceMarker faceMarker{};
-          faceMarker.relativePositionWithinFatherCell = marker.getRelativePositionWithinFatherCell();
-          faceMarker.selectedFace                     = f;
-          double*   fineGridFace   = DataRepository::getInstance().getFaceQNew(marker.getX(), marker.getH(), f);
-          double*   coarseGridFace = DataRepository::getInstance().getFaceQNew(parentCenter, parentSize, f);
-          const int facePosition   = faceMarker.getSelectedFaceNumber() < DIMENSIONS ? 1 : 0;
-          toolbox::blockstructured::restrictHaloLayer(
-            faceMarker,
-            coarseGridFace,
-            fineGridFace,
-            facePosition,
-            AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-            AbstractFVSolver::NumberOfUnknowns
+  void applyInitialConditions() {
+    for (const auto& marker : cells) {
+      if (not marker.hasBeenRefined()) {
+        auto* const qOut = benchmarks::exahype2::kernelbenchmarks::DataRepository::getInstance().getCellQNew(
+          marker.getX(),
+          marker.getH()
+        );
+        peano4::dForEach(NumberOfVolumesPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
+          const auto linearIndex = peano4::dLinearised(volume, NumberOfVolumesPerAxis) * NumberOfData;
+          benchmarks::exahype2::kernelbenchmarks::FVSolver::initialCondition(
+            qOut + linearIndex,
+            exahype2::fv::getVolumeCentre(marker.getX(), marker.getH(), NumberOfVolumesPerAxis, volume),
+            exahype2::fv::getVolumeSize(marker.getH(), NumberOfVolumesPerAxis)
           );
-        }
+        });
       }
     }
   }
-  for (auto& marker : _cells) {
-    if (marker.getH()[0] < cellSize[0]) { // Check if cell is in AMR region
-      auto parentCenter = marker.getInvokingParentCellsCentre();
-      auto parentSize   = marker.getH() * 3.0;
 
-      for (int f = 0; f < TWO_TIMES_D; f++) {
-        int normal = f % DIMENSIONS;
-        if ((f >= DIMENSIONS and marker.getRelativePositionWithinFatherCell()[normal] == 2)
-            or (f < DIMENSIONS and marker.getRelativePositionWithinFatherCell()[normal] == 0)) {
-          peano4::datamanagement::FaceMarker faceMarker{};
-          faceMarker.relativePositionWithinFatherCell = marker.getRelativePositionWithinFatherCell();
-          faceMarker.selectedFace                     = f;
-          double* fineGridFace   = DataRepository::getInstance().getFaceQNew(marker.getX(), marker.getH(), f);
-          double* coarseGridFace = DataRepository::getInstance().getFaceQNew(parentCenter, parentSize, f);
-          for (int facePos = 0; facePos < 2; facePos++) {
-            toolbox::blockstructured::interpolateHaloLayer(
-              faceMarker,
-              coarseGridFace,
-              fineGridFace,
-              facePos,
-              AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-              AbstractFVSolver::NumberOfUnknowns
-            );
-          }
-        }
-      }
-    }
-  }
-}
-
-void applyInitialConditions() {
-  for (auto& marker : _cells) {
-    if (not marker.hasBeenRefined()) {
-      double* QOut = DataRepository::getInstance().getCellQNew(marker.getX(), marker.getH());
-      // Initialise cell data with initial conditions.
-      peano4::dForEach(
-        AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
-          int linearIndex = peano4::dLinearised(volume, AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch)
-            * (AbstractFVSolver::NumberOfUnknowns + AbstractFVSolver::NumberOfAuxiliaryVariables);
-          FVSolver::initialCondition(
-            QOut + linearIndex,
-            ::exahype2::fv::getVolumeCentre(
-              marker.getX(),
-              marker.getH(),
-              AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-              volume
-            ),
-            ::exahype2::fv::getVolumeSize(marker.getH(), AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch)
-          );
-        }
-      );
-    }
-  }
-}
-
-peano4::datamanagement::CellMarker createMarkerFromIndex(const tarch ::la ::Vector<DIMENSIONS, int>& index) {
-  const auto                            cellSize         = getCellSize();
-  tarch::la::Vector<DIMENSIONS, double> cellIndex        = tarch::la::convertScalar<double>(index);
-  tarch::la::Vector<DIMENSIONS, double> cellPositionBase = DomainOffset + cellSize / 2.0;
-  tarch::la::Vector<DIMENSIONS, double> cellPosition =
-    cellPositionBase + tarch::la::multiplyComponents(cellIndex, cellSize);
-  peano4::datamanagement::CellMarker marker;
-  marker.h      = cellSize;
-  marker.centre = cellPosition;
-  return marker;
-}
-
-std::vector<peano4::datamanagement::CellMarker>
-createRefinedMarkersFromIndex(const tarch ::la ::Vector<DIMENSIONS, int>& index) {
-  const auto                            cellSize               = getCellSize();
-  tarch::la::Vector<DIMENSIONS, double> cellIndex              = tarch::la::convertScalar<double>(index);
-  tarch::la::Vector<DIMENSIONS, double> deeperCellIndex        = cellIndex * 3.0;
-  tarch::la::Vector<DIMENSIONS, double> deeperCellSize         = cellSize / 3.0;
-  tarch::la::Vector<DIMENSIONS, double> cellPositionBase       = DomainOffset + cellSize / 2.0;
-  tarch::la::Vector<DIMENSIONS, double> deepercellPositionBase = DomainOffset + deeperCellSize / 2.0;
-
-  std::vector<peano4::datamanagement::CellMarker> result;
-
-  tarch::la::Vector<DIMENSIONS, double> cellPosition =
-    cellPositionBase + tarch::la::multiplyComponents(cellIndex, cellSize);
-  peano4::datamanagement::CellMarker marker;
-  marker.centre = cellPosition;
-  marker.h      = cellSize;
-  marker.flags |= peano4::datamanagement::CellMarker::HasBeenRefined;
-  result.push_back(marker);
-
-  peano4::dForEach(3, [&](const tarch::la::Vector<DIMENSIONS, int>& offset) {
-    tarch::la::Vector<DIMENSIONS, double> deepCellOffset = tarch::la::convertScalar<double>(offset);
-    tarch::la::Vector<DIMENSIONS, double> localCellIndex = deepCellOffset + deeperCellIndex;
-    tarch::la::Vector<DIMENSIONS, double> deeperCellPosition =
-      deepercellPositionBase + tarch::la::multiplyComponents(localCellIndex, deeperCellSize);
+  peano4::datamanagement::CellMarker createMarkerFromIndex(const tarch::la::Vector<DIMENSIONS, int>& index) {
+    const auto cellSize         = getCellSize();
+    const auto cellIndex        = tarch::la::convertScalar<double>(index);
+    const auto cellPositionBase = benchmarks::exahype2::kernelbenchmarks::DomainOffset + cellSize / 2.0;
+    const auto cellPosition     = cellPositionBase + tarch::la::multiplyComponents(cellIndex, cellSize);
     peano4::datamanagement::CellMarker marker;
-    marker.centre                           = deeperCellPosition;
-    marker.h                                = deeperCellSize;
-    marker.relativePositionWithinFatherCell = offset;
-    result.push_back(marker);
-  });
-  return result;
-}
+    marker.h      = cellSize;
+    marker.centre = cellPosition;
+    return marker;
+  }
 
-void createGrid() {
-  repositories::startGridConstructionStep();
-  const int gridLength = getGridLength();
-  _cells.reserve(std::pow(gridLength, DIMENSIONS));
-  tarch::la::Vector<DIMENSIONS, double> DomainCenter = DomainOffset + DomainSize / 2.0;
-  peano4::dForEach(gridLength, [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
-    peano4::datamanagement::CellMarker marker = createMarkerFromIndex(volume);
-    if (UseAMR and tarch::la::norm2(marker.getX() - DomainCenter) < 0.1) {
-      auto markers = createRefinedMarkersFromIndex(volume);
-      _cells.insert(std::end(_cells), std::begin(markers), std::end(markers));
-    } else {
-      _cells.push_back(marker);
-    }
-  });
-  repositories::finishGridConstructionStep();
-}
+  void createGrid() {
+    benchmarks::exahype2::kernelbenchmarks::repositories::startGridConstructionStep();
+    const int gridLength = getGridLength();
+    cells.reserve(tarch::la::aPowI(DIMENSIONS, gridLength));
+    peano4::dForEach(gridLength, [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
+      cells.push_back(createMarkerFromIndex(volume));
+    });
+    benchmarks::exahype2::kernelbenchmarks::repositories::finishGridConstructionStep();
+  }
 
-void initGrid() {
-  repositories::startGridInitialisationStep();
-  applyInitialConditions();
-  repositories::finishGridInitialisationStep();
-}
+  void initGrid() {
+    benchmarks::exahype2::kernelbenchmarks::repositories::startGridInitialisationStep();
+    applyInitialConditions();
+    benchmarks::exahype2::kernelbenchmarks::repositories::finishGridInitialisationStep();
+  }
+} // namespace
 
-int main(int argc, char** argv) {
+int main(int argumentCount, char** arguments) {
   int returnCode = EXIT_SUCCESS;
 
-  auto& runtimeParameters = ::runner::RuntimeParameters::getInstance();
+  auto& runtimeParameters = runner::RuntimeParameters::getInstance();
   runtimeParameters.setGeneratedDefaults(
-    BenchmarkMinTerminalTime,
-    BenchmarkMaxTerminalTime,
-    BenchmarkGridLevels,
-    BenchmarkMaxGridLevels,
+    benchmarks::exahype2::kernelbenchmarks::BenchmarkMinTerminalTime,
+    benchmarks::exahype2::kernelbenchmarks::BenchmarkMaxTerminalTime,
+    benchmarks::exahype2::kernelbenchmarks::BenchmarkGridLevels,
+    benchmarks::exahype2::kernelbenchmarks::BenchmarkMaxGridLevels,
     "KernelBenchmarks"
   );
-  if (helpRequested(argc, argv)) {
+  if (helpRequested(argumentCount, arguments)) {
     runtimeParameters.printUsage("KernelBenchmarks");
     return EXIT_SUCCESS;
   }
   tarch::init(
-    &argc,
-    &argv,
+    &argumentCount,
+    &arguments,
     {runtimeParameters.getMPITimeoutWarning(),
      runtimeParameters.getMPIDeadlockTimeout(),
      runtimeParameters.isMPIRequestTrackingEnabled()}
   );
-  runtimeParameters.configure(argc, argv);
+  runtimeParameters.configure(argumentCount, arguments);
 
-  peano4::init(DomainOffset, DomainSize, PeriodicBC);
+  peano4::init(
+    benchmarks::exahype2::kernelbenchmarks::DomainOffset,
+    benchmarks::exahype2::kernelbenchmarks::DomainSize
+  );
 
-  repositories::startSimulation();
+  benchmarks::exahype2::kernelbenchmarks::repositories::startSimulation();
 
   createGrid();
   initGrid();
 
-  FusedDataRepository& fusedGrid = FusedDataRepository::getInstance();
+  auto& fusedGrid = benchmarks::exahype2::kernelbenchmarks::FusedDataRepository::getInstance();
   fusedGrid.startCollection();
-  for (auto& marker : _cells) {
+  for (const auto& marker : cells) {
     if (not marker.hasBeenRefined()) {
       fusedGrid.bookmarkCell(marker.getX(), marker.getH());
     }
@@ -490,24 +416,32 @@ int main(int argc, char** argv) {
 
   fusedGrid.buildFromBookmarks();
 
-  benchmarks::exahype2::kernelbenchmarks::kernels::FVSolver::projectPatchFused(
-    fusedGrid.getQNew(),
-    fusedGrid.getFaceQNewPool(),
-    fusedGrid.getFaceIndices(),
-    fusedGrid.getNumberFusedCells(),
-    0
-  );
+  {
+    const int                  numberOfPatches = fusedGrid.getNumberFusedCells();
+    double* const              qNewFlattened   = fusedGrid.getQNew();
+    double* const              facesPool       = fusedGrid.getFaceQNewPool();
+    const std::uint64_t* const faceIndices     = fusedGrid.getFaceIndices();
+    tarch::parallelFor(tarch::Range(numberOfPatches), [=] GPU_CALLABLE_LAMBDA(const int patchIndex) {
+      const double* const qIn = &qNewFlattened[patchIndex * PatchCardinality];
+      double*             faces[TWO_TIMES_D];
+      for (int faceNumber = 0; faceNumber < TWO_TIMES_D; ++faceNumber) {
+        const auto faceIndex = faceIndices[patchIndex * TWO_TIMES_D + faceNumber];
+        faces[faceNumber]    = &facesPool[faceIndex * FaceCardinality];
+      }
+      toolbox::blockstructured::projectPatch<NumberOfVolumesPerAxis, 1, NumberOfData, double>(qIn, faces);
+    });
+  }
 
-  tarch::instrumentation::Measurement measurement(1.0);
-  tarch::instrumentation::Measurement measurementBoundary(1.0);
-  tarch::instrumentation::Measurement measurementRiemann(1.0);
+  tarch::instrumentation::Measurement kernelMeasurement(1.0);
+  tarch::instrumentation::Measurement boundaryMeasurement(1.0);
+  tarch::instrumentation::Measurement riemannMeasurement(1.0);
   tarch::instrumentation::Measurement plotMeasurement(1.0);
   tarch::instrumentation::Watch       timeStepWatch("::", "main()", false);
   double                              timeStamp                            = 0.0;
   double                              nextMinPlotTimeStamp                 = runtimeParameters.getFirstPlotTimeStamp();
   double                              nextMaxPlotTimeStamp                 = runtimeParameters.getFirstPlotTimeStamp();
   bool                                continueToSolve                      = true;
-  int                                 count                                = 0;
+  int                                 sampleCount                          = 0;
   int                                 numberOfCompletedTimeSteps           = 0;
   int                                 lastLoggedNumberOfCompletedTimeSteps = 0;
   const double                        minTerminalTime                      = runtimeParameters.getMinTerminalTime();
@@ -519,15 +453,15 @@ int main(int argc, char** argv) {
 
   while (continueToSolve) {
     if (timeInBetweenPlots > 0.0
-        and (repositories::getMinTimeStamp() >= nextMinPlotTimeStamp or repositories::getMaxTimeStamp() >= nextMaxPlotTimeStamp)) {
-      if (repositories::getMinTimeStamp() >= nextMinPlotTimeStamp) {
+        and (benchmarks::exahype2::kernelbenchmarks::repositories::getMinTimeStamp() >= nextMinPlotTimeStamp or benchmarks::exahype2::kernelbenchmarks::repositories::getMaxTimeStamp() >= nextMaxPlotTimeStamp)) {
+      if (benchmarks::exahype2::kernelbenchmarks::repositories::getMinTimeStamp() >= nextMinPlotTimeStamp) {
         nextMinPlotTimeStamp += timeInBetweenPlots;
       }
-      if (repositories::getMaxTimeStamp() >= nextMaxPlotTimeStamp) {
+      if (benchmarks::exahype2::kernelbenchmarks::repositories::getMaxTimeStamp() >= nextMaxPlotTimeStamp) {
         nextMaxPlotTimeStamp += timeInBetweenPlots;
       }
 
-      if constexpr (ShouldPlot) {
+      if constexpr (benchmarks::exahype2::kernelbenchmarks::ShouldPlot) {
         tarch::instrumentation::Watch plotWatch("", "", false);
         plotWatch.start();
         fusedGrid.syncCellsDeviceToHost();
@@ -537,89 +471,130 @@ int main(int argc, char** argv) {
         logInfo(formatPlot(plotMeasurement));
       }
     }
-    fusedGrid.swapQNewAndQOld(); // rollover QNew -> QOld
-    if (UseAMR) {
-      fusedGrid.syncFacesDeviceToHost();
-      interpolateBetweenAMRBorder();
-      fusedGrid.syncFacesHostToDevice();
-      benchmarks::exahype2::kernelbenchmarks::kernels::FVSolver::projectPatchFused(
-        fusedGrid.getQOld(),
-        fusedGrid.getFaceQOldPool(),
-        fusedGrid.getFaceIndices(),
-        fusedGrid.getNumberFusedCells(),
-        0
-      );
-    }
+    fusedGrid.swapQNewAndQOld();
 
     timeStepWatch.start();
-    repositories::startTimeStep();
+    benchmarks::exahype2::kernelbenchmarks::repositories::startTimeStep();
 
-    double dt = repositories::instanceOfFVSolver.getAdmissibleTimeStepSize();
+    const double timeStepSize =
+      benchmarks::exahype2::kernelbenchmarks::repositories::instanceOfFVSolver.getAdmissibleTimeStepSize();
 
-    tarch::instrumentation::Watch watch("", "", false);
-    watch.start();
+    tarch::instrumentation::Watch kernelWatch("", "", false);
+    kernelWatch.start();
 
-    tarch::instrumentation::Watch watchBoundary("", "", false);
-    watchBoundary.start();
-    benchmarks::exahype2::kernelbenchmarks::kernels::FVSolver::handleBoundaryFused(
-      repositories::instanceOfFVSolver,
-      fusedGrid.getFaceQOldPool(),
-      fusedGrid.getBoundaryFaceIndices(),
-      fusedGrid.getBoundaryFaceNumbers(),
-      fusedGrid.getBoundaryCellIndices(),
-      fusedGrid.getCellCentres(),
-      fusedGrid.getCellSizes(),
-      timeStamp,
-      dt,
-      fusedGrid.getNumberOfBoundaryFaces(),
-      fusedGrid.getNumberFusedCells(),
-      0
-    );
-    watchBoundary.stop();
+    tarch::instrumentation::Watch boundaryWatch("", "", false);
+    boundaryWatch.start();
+    {
+      const int                                          numberOfBoundaryFaces = fusedGrid.getNumberOfBoundaryFaces();
+      double* const                                      facesPool             = fusedGrid.getFaceQOldPool();
+      const std::uint64_t* const                         boundaryFaceIndices   = fusedGrid.getBoundaryFaceIndices();
+      const std::uint8_t* const                          boundaryFaceNumbers   = fusedGrid.getBoundaryFaceNumbers();
+      const std::uint64_t* const                         boundaryCellIndices   = fusedGrid.getBoundaryCellIndices();
+      const tarch::la::Vector<DIMENSIONS, double>* const cellCentres           = fusedGrid.getCellCentres();
+      const tarch::la::Vector<DIMENSIONS, double>* const cellSizes             = fusedGrid.getCellSizes();
+      tarch::parallelFor(tarch::Range(numberOfBoundaryFaces), [=] GPU_CALLABLE_LAMBDA(const int boundaryFaceIndex) {
+        const auto faceIndex  = boundaryFaceIndices[boundaryFaceIndex];
+        const auto faceNumber = static_cast<int>(boundaryFaceNumbers[boundaryFaceIndex]);
+        const auto cellIndex  = boundaryCellIndices[boundaryFaceIndex];
+        exahype2::fv::handleBoundary<
+          benchmarks::exahype2::kernelbenchmarks::FVSolver,
+          NumberOfVolumesPerAxis,
+          1,
+          benchmarks::exahype2::kernelbenchmarks::AbstractFVSolver::NumberOfUnknowns,
+          benchmarks::exahype2::kernelbenchmarks::AbstractFVSolver::NumberOfAuxiliaryVariables,
+          double>(
+          benchmarks::exahype2::kernelbenchmarks::repositories::instanceOfFVSolver,
+          cellCentres[cellIndex],
+          cellSizes[cellIndex],
+          timeStamp,
+          faceNumber,
+          &facesPool[faceIndex * FaceCardinality]
+        );
+      });
+    }
+    boundaryWatch.stop();
 
-    tarch::instrumentation::Watch watchRiemann("", "", false);
-    watchRiemann.start();
-    const auto maxEigenvalue = benchmarks::exahype2::kernelbenchmarks::kernels::FVSolver::riemannSolverFused(
-      repositories::instanceOfFVSolver,
-      fusedGrid.getQOld(),
-      fusedGrid.getQNew(),
-      fusedGrid.getFaceQOldPool(),
-      fusedGrid.getFaceQNewPool(),
-      fusedGrid.getFaceIndices(),
-      timeStamp,
-      dt,
-      fusedGrid.getCellCentres()[0].data(),
-      fusedGrid.getCellSizes()[0].data(),
-      fusedGrid.getNumberFusedCells(),
-      0
-    );
-    watchRiemann.stop();
-    watch.stop();
+    tarch::instrumentation::Watch riemannWatch("", "", false);
+    riemannWatch.start();
+    double maxEigenvalue = 0.0;
+    {
+      const int                                          numberOfPatches = fusedGrid.getNumberFusedCells();
+      const double* const                                qOldFlattened   = fusedGrid.getQOld();
+      double* const                                      qNewFlattened   = fusedGrid.getQNew();
+      const double* const                                facesOldPool    = fusedGrid.getFaceQOldPool();
+      double* const                                      facesNewPool    = fusedGrid.getFaceQNewPool();
+      const std::uint64_t* const                         faceIndices     = fusedGrid.getFaceIndices();
+      const tarch::la::Vector<DIMENSIONS, double>* const cellCentres     = fusedGrid.getCellCentres();
+      const tarch::la::Vector<DIMENSIONS, double>* const cellSizes       = fusedGrid.getCellSizes();
+      tarch::parallelReduce(
+        tarch::TeamRange(numberOfPatches),
+        [=] GPU_CALLABLE_LAMBDA(
+          const int                                       patchIndex,
+          [[maybe_unused]] tarch::accelerator::TeamHandle teamHandle,
+          double&                                         reducedPatchEigenvalue
+        ) {
+          const double* const qIn         = &qOldFlattened[patchIndex * PatchCardinality];
+          double* const       qOut        = &qNewFlattened[patchIndex * PatchCardinality];
+          const auto          patchCentre = cellCentres[patchIndex];
+          const auto          patchSize   = cellSizes[patchIndex];
+          const double*       faceQOld[TWO_TIMES_D];
+          double*             faceQNew[TWO_TIMES_D];
+          for (int faceNumber = 0; faceNumber < TWO_TIMES_D; ++faceNumber) {
+            const auto faceIndex = faceIndices[patchIndex * TWO_TIMES_D + faceNumber];
+            faceQOld[faceNumber] = &facesOldPool[faceIndex * FaceCardinality];
+            faceQNew[faceNumber] = &facesNewPool[faceIndex * FaceCardinality];
+          }
+          const double patchEigenvalue = exahype2::fv::applyFiniteVolume<
+            exahype2::fv::reconstruction::Constant,
+            exahype2::fv::timestepping::SingleStep,
+            benchmarks::exahype2::kernelbenchmarks::FVSolver,
+            NumberOfVolumesPerAxis,
+            benchmarks::exahype2::kernelbenchmarks::AbstractFVSolver::NumberOfUnknowns,
+            benchmarks::exahype2::kernelbenchmarks::AbstractFVSolver::NumberOfAuxiliaryVariables,
+            true,
+            false,
+            false,
+            false,
+            false,
+            true,
+            true,
+            double,
+            double>(qIn, qOut, faceQOld, faceQNew, patchCentre, patchSize, timeStamp, timeStepSize);
+          // The maximum reduction seeds its accumulator with the lowest double, which lies
+          // outside the non-negative range exahype2::fv::accumulateMaxEigenvalue requires,
+          // so the patch maxima combine here directly.
+          reducedPatchEigenvalue = patchEigenvalue > reducedPatchEigenvalue ? patchEigenvalue : reducedPatchEigenvalue;
+        },
+        tarch::Max<double>{maxEigenvalue}
+      );
+    }
+    riemannWatch.stop();
+    kernelWatch.stop();
 
-    repositories::instanceOfFVSolver.setMaxEigenvalue(maxEigenvalue);
-    const auto newTimeStepSize = repositories::instanceOfFVSolver.getAdmissibleTimeStepSize();
-    repositories::instanceOfFVSolver
-      .update(newTimeStepSize, timeStamp + dt, fusedGrid.getMinVolumeH(), fusedGrid.getMaxVolumeH());
+    benchmarks::exahype2::kernelbenchmarks::repositories::instanceOfFVSolver.setMaxEigenvalue(maxEigenvalue);
+    const auto newTimeStepSize =
+      benchmarks::exahype2::kernelbenchmarks::repositories::instanceOfFVSolver.getAdmissibleTimeStepSize();
+    benchmarks::exahype2::kernelbenchmarks::repositories::instanceOfFVSolver
+      .update(newTimeStepSize, timeStamp + timeStepSize, fusedGrid.getMinVolumeH(), fusedGrid.getMaxVolumeH());
 
-    timeStamp += repositories::instanceOfFVSolver.getAdmissibleTimeStepSize();
-    repositories::finishTimeStep();
+    timeStamp += benchmarks::exahype2::kernelbenchmarks::repositories::instanceOfFVSolver.getAdmissibleTimeStepSize();
+    benchmarks::exahype2::kernelbenchmarks::repositories::finishTimeStep();
 
     timeStepWatch.stop();
 
-    if (repositories::mayPlot()) {
-      measurement.setValue(watch.getCalendarTime());
-      measurementBoundary.setValue(watchBoundary.getCalendarTime());
-      measurementRiemann.setValue(watchRiemann.getCalendarTime());
+    if (benchmarks::exahype2::kernelbenchmarks::repositories::mayPlot()) {
+      kernelMeasurement.setValue(kernelWatch.getCalendarTime());
+      boundaryMeasurement.setValue(boundaryWatch.getCalendarTime());
+      riemannMeasurement.setValue(riemannWatch.getCalendarTime());
       timeStepMeasurement.setValue(timeStepWatch.getCalendarTime());
-      numberOfCompletedTimeSteps++;
+      ++numberOfCompletedTimeSteps;
 
       if (timeStepMeasurement.getAccumulatedValue() >= logNextTimeStep) {
-        const auto totalPersistentMemory = DataRepository::getInstance().getMemoryUsageInBytes();
+        const auto totalPersistentMemory =
+          benchmarks::exahype2::kernelbenchmarks::DataRepository::getInstance().getMemoryUsageInBytes();
 
-        const auto globalNumberOfPatches = _cells.size();
-        const auto totalNumberOfDoFs     = globalNumberOfPatches
-          * std::pow(AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch, DIMENSIONS)
-          * (AbstractFVSolver::NumberOfUnknowns + AbstractFVSolver::NumberOfAuxiliaryVariables);
+        const auto   globalNumberOfPatches = cells.size();
+        const double totalNumberOfDoFs     = static_cast<double>(globalNumberOfPatches) * PatchCardinality;
 
         logInfo(formatTimeStep(numberOfCompletedTimeSteps, timeStepMeasurement));
         for (const auto& statistic : formatSolverStatistics()) {
@@ -629,7 +604,7 @@ int main(int argc, char** argv) {
                globalNumberOfPatches,
                totalNumberOfDoFs,
                totalPersistentMemory,
-               measurement
+               kernelMeasurement
              )) {
           logInfo(statistic);
         }
@@ -637,25 +612,26 @@ int main(int argc, char** argv) {
         logNextTimeStep += runtimeParameters.getTimeStepLogInterval();
       }
 
-      if (Samples > 0 and ++count >= Samples) {
+      if (benchmarks::exahype2::kernelbenchmarks::Samples > 0
+          and ++sampleCount >= benchmarks::exahype2::kernelbenchmarks::Samples) {
         continueToSolve = false;
       }
     }
 
-    if (repositories::getMinTimeStamp() >= minTerminalTime and repositories::getMaxTimeStamp() >= maxTerminalTime) {
+    if (benchmarks::exahype2::kernelbenchmarks::repositories::getMinTimeStamp() >= minTerminalTime
+        and benchmarks::exahype2::kernelbenchmarks::repositories::getMaxTimeStamp() >= maxTerminalTime) {
       continueToSolve = false;
     }
 
     if (tarch::hasNonCriticalAssertionBeenViolated() and not haveReceivedNonCriticalAssertion) {
       continueToSolve                  = false;
       haveReceivedNonCriticalAssertion = true;
-      logError("Non-critical assertion has been triggered in code. Dump final state and terminate.");
+      logError("A non-critical assertion was triggered. Dump the final state and terminate.");
     }
   }
 
-  // Plot last timestep
   if (timeInBetweenPlots > 0.0) {
-    if constexpr (ShouldPlot) {
+    if constexpr (benchmarks::exahype2::kernelbenchmarks::ShouldPlot) {
       tarch::instrumentation::Watch plotWatch("", "", false);
       plotWatch.start();
       fusedGrid.syncCellsDeviceToHost();
@@ -665,37 +641,35 @@ int main(int argc, char** argv) {
       logInfo(formatPlot(plotMeasurement));
     }
   }
-  repositories::finishSimulation();
+  benchmarks::exahype2::kernelbenchmarks::repositories::finishSimulation();
 
   if (haveReceivedNonCriticalAssertion) {
-    logWarning("Terminated gracefully after noncritical assertion");
+    logWarning("Terminated gracefully after a non-critical assertion.");
     returnCode = EXIT_FAILURE;
   } else {
-    // Log final timestep information
     if (numberOfCompletedTimeSteps > lastLoggedNumberOfCompletedTimeSteps) {
       logInfo(formatTimeStep(numberOfCompletedTimeSteps, timeStepMeasurement));
       for (const auto& statistic : formatSolverStatistics()) {
         logInfo(statistic);
       }
-      const auto totalPersistentMemory = DataRepository::getInstance().getMemoryUsageInBytes();
-      const auto globalNumberOfPatches = _cells.size();
-      const auto totalNumberOfDoFs     = globalNumberOfPatches
-        * std::pow(AbstractFVSolver::NumberOfFiniteVolumesPerAxisPerPatch, DIMENSIONS)
-        * (AbstractFVSolver::NumberOfUnknowns + AbstractFVSolver::NumberOfAuxiliaryVariables);
+      const auto totalPersistentMemory =
+        benchmarks::exahype2::kernelbenchmarks::DataRepository::getInstance().getMemoryUsageInBytes();
+      const auto   globalNumberOfPatches = cells.size();
+      const double totalNumberOfDoFs     = static_cast<double>(globalNumberOfPatches) * PatchCardinality;
       for (const auto& statistic : formatKernelBenchmarkStatistics(
              globalNumberOfPatches,
              totalNumberOfDoFs,
              totalPersistentMemory,
-             measurement
+             kernelMeasurement
            )) {
         logInfo(statistic);
       }
     }
-    logInfo("Terminated successfully");
+    logInfo("Terminated successfully.");
     returnCode = EXIT_SUCCESS;
   }
 
-  logFinalStatistics(measurement, measurementBoundary, measurementRiemann);
+  logFinalStatistics(kernelMeasurement, boundaryMeasurement, riemannMeasurement);
 
   fusedGrid.clear();
 

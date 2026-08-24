@@ -1,0 +1,196 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+TARGET_DECLARE
+/**
+ * Advances every volume from @p inputPatch into @p outputPatch, projects updated
+ * boundary values to @p faceOutputPatches, and returns the maximum eigenvalue
+ * encountered over the patch.
+ */
+template <
+  typename Reconstruction,
+  typename Solver,
+  int  NumberOfVolumesPerAxis,
+  int  NumberOfUnknowns,
+  int  NumberOfAuxiliaryVariables,
+  bool EvaluateFlux,
+  bool EvaluateNonconservativeProduct,
+  bool EvaluateSource,
+  bool EvaluateDiffusiveSource,
+  bool EvaluateCustomRiemann,
+  bool EvaluateMaxEigenvalue,
+  bool EvaluateMaxEigenvalueOfFinalState,
+  typename StoragePrecision,
+  typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD double exahype2::fv::timestepping::SingleStep::apply(
+  const StoragePrecision* NOALIAS const        inputPatch,
+  StoragePrecision* NOALIAS const              outputPatch,
+  const StoragePrecision* NOALIAS const        faceInputPatches[TWO_TIMES_D],
+  StoragePrecision* NOALIAS const              faceOutputPatches[TWO_TIMES_D],
+  const tarch::la::Vector<DIMENSIONS, double>& patchCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& patchSize,
+  const double                                 timeStamp,
+  const double                                 timeStepSize
+) {
+  constexpr int HaloSize               = Reconstruction::HaloSize;
+  constexpr int NumberOfData           = NumberOfUnknowns + NumberOfAuxiliaryVariables;
+  constexpr int NumberOfVolumesInPatch = [] {
+    int product = 1;
+    for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
+      product *= NumberOfVolumesPerAxis;
+    }
+    return product;
+  }();
+
+  double maxEigenvalueAfterTimeStep = 0.0;
+
+  for (int linearisedVolumeIndex = 0; linearisedVolumeIndex < NumberOfVolumesInPatch; linearisedVolumeIndex++) {
+    tarch::la::Vector<DIMENSIONS, int> volumeIndex;
+    int                                remainder = linearisedVolumeIndex;
+    for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
+      volumeIndex(dimension) = remainder % NumberOfVolumesPerAxis;
+      remainder /= NumberOfVolumesPerAxis;
+    }
+
+    const auto [volumeSize, volumeCentre] =
+      ::exahype2::fv::getVolumeSizeAndCentre<DIMENSIONS, NumberOfVolumesPerAxis>(patchCentre, patchSize, volumeIndex);
+
+    int centreOffset = 0;
+    int centreStride = NumberOfData;
+    for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
+      centreOffset += volumeIndex(dimension) * centreStride;
+      centreStride *= NumberOfVolumesPerAxis;
+    }
+    const StoragePrecision* NOALIAS const inputState         = &inputPatch[centreOffset];
+    StoragePrecision* NOALIAS const       outputStateInPatch = &outputPatch[centreOffset];
+
+#if defined(PEANO_WITH_GPU_BACKEND)
+    StoragePrecision centreState[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+    StoragePrecision outputState[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+    SIMD(aligned(centreState : PEANO_WITH_ALIGNMENT))
+    for (int unknown = 0; unknown < NumberOfData; unknown++) {
+      centreState[unknown] = inputState[unknown];
+    }
+#else
+    const StoragePrecision* NOALIAS const centreState = inputState;
+    StoragePrecision* NOALIAS const       outputState = outputStateInPatch;
+    assertion(centreState);
+    assertion(outputState);
+#endif
+
+    SIMD()
+    for (int unknown = 0; unknown < NumberOfData; unknown++) {
+      outputState[unknown] = centreState[unknown];
+    }
+
+    if constexpr (EvaluateSource) {
+      using TimeUpdatePrecision = decltype(StoragePrecision{} + ComputePrecision{} * double{});
+      [[maybe_unused]] ComputePrecision centreStateComputeBuffer[NumberOfData]
+        __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+      const ComputePrecision* NOALIAS centreStateForCompute;
+      if constexpr (std::is_same_v<StoragePrecision, ComputePrecision>) {
+        centreStateForCompute = centreState;
+      } else {
+        SIMD(aligned(centreStateComputeBuffer : PEANO_WITH_ALIGNMENT))
+        for (int unknown = 0; unknown < NumberOfData; unknown++) {
+          centreStateComputeBuffer[unknown] = static_cast<ComputePrecision>(centreState[unknown]);
+        }
+        centreStateForCompute = centreStateComputeBuffer;
+      }
+      ComputePrecision sources[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+      Solver::sourceTerm(centreStateForCompute, volumeCentre, volumeSize, timeStamp, timeStepSize, sources);
+      SIMD(aligned(sources : PEANO_WITH_ALIGNMENT))
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        outputState[unknown] = static_cast<StoragePrecision>(
+          static_cast<TimeUpdatePrecision>(outputState[unknown])
+          + static_cast<TimeUpdatePrecision>(timeStepSize) * static_cast<TimeUpdatePrecision>(sources[unknown])
+        );
+      }
+    }
+
+    Reconstruction::template accumulateFluxDivergence<
+      Solver,
+      NumberOfVolumesPerAxis,
+      NumberOfUnknowns,
+      NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateDiffusiveSource,
+      EvaluateCustomRiemann,
+      EvaluateMaxEigenvalue,
+      StoragePrecision,
+      ComputePrecision>(
+      inputPatch,
+      faceInputPatches,
+      volumeIndex,
+      centreOffset,
+      centreState,
+      patchCentre,
+      patchSize,
+      volumeCentre,
+      volumeSize,
+      timeStamp,
+      timeStepSize,
+      outputState,
+      maxEigenvalueAfterTimeStep
+    );
+
+    if constexpr (EvaluateMaxEigenvalueOfFinalState) {
+      [[maybe_unused]] ComputePrecision finalStateComputeBuffer[NumberOfData]
+        __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+      const ComputePrecision* NOALIAS finalState;
+      if constexpr (std::is_same_v<StoragePrecision, ComputePrecision>) {
+        finalState = outputState;
+      } else {
+        SIMD(aligned(finalStateComputeBuffer : PEANO_WITH_ALIGNMENT))
+        for (int unknown = 0; unknown < NumberOfData; unknown++) {
+          finalStateComputeBuffer[unknown] = static_cast<ComputePrecision>(outputState[unknown]);
+        }
+        finalState = finalStateComputeBuffer;
+      }
+      UNROLL(DIMENSIONS)
+      for (int normal = 0; normal < DIMENSIONS; normal++) {
+        ::exahype2::fv::accumulateMaxEigenvalue(
+          maxEigenvalueAfterTimeStep,
+          Solver::maxEigenvalue(finalState, volumeCentre, volumeSize, timeStamp + timeStepSize, timeStepSize, normal)
+        );
+      }
+    }
+
+#if defined(PEANO_WITH_GPU_BACKEND)
+    SIMD(aligned(outputState : PEANO_WITH_ALIGNMENT))
+    for (int unknown = 0; unknown < NumberOfData; unknown++) {
+      outputStateInPatch[unknown] = outputState[unknown];
+    }
+#endif
+
+    for (int normal = 0; normal < DIMENSIONS; normal++) {
+      if (volumeIndex(normal) < HaloSize) {
+        tarch::la::Vector<DIMENSIONS, int> overlapCell = volumeIndex;
+        overlapCell(normal)                            = volumeIndex(normal) + HaloSize;
+        const int overlapIndex =
+          toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell, NumberOfVolumesPerAxis, HaloSize, normal);
+        StoragePrecision* NOALIAS const faceData = faceOutputPatches[normal];
+        SIMD()
+        for (int unknown = 0; unknown < NumberOfData; unknown++) {
+          faceData[overlapIndex * NumberOfData + unknown] = outputStateInPatch[unknown];
+        }
+      }
+      if (volumeIndex(normal) >= NumberOfVolumesPerAxis - HaloSize) {
+        tarch::la::Vector<DIMENSIONS, int> overlapCell = volumeIndex;
+        overlapCell(normal)                            = volumeIndex(normal) - (NumberOfVolumesPerAxis - HaloSize);
+        const int overlapIndex =
+          toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell, NumberOfVolumesPerAxis, HaloSize, normal);
+        StoragePrecision* NOALIAS const faceData = faceOutputPatches[normal + DIMENSIONS];
+        SIMD()
+        for (int unknown = 0; unknown < NumberOfData; unknown++) {
+          faceData[overlapIndex * NumberOfData + unknown] = outputStateInPatch[unknown];
+        }
+      }
+    }
+  }
+
+  return maxEigenvalueAfterTimeStep;
+}
+TARGET_DECLARE_END

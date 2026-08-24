@@ -1,6 +1,7 @@
 #pragma once
 
 #include "tarch/la/Vector.h"
+#include "tarch/la/VectorOperations.h"
 
 namespace exahype2 {
   namespace fv {

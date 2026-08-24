@@ -5,7 +5,7 @@ import os
 import peano4
 import peano4.plotter
 import peano4.datamodel
-import peano4.toolbox.blockstructured
+import peano4.blockstructured
 import peano4.output.TemplatedHeaderFile
 import peano4.output.TemplatedHeaderImplementationFilePair
 import peano4.output.Jinja2TemplatedHeaderFile
@@ -518,7 +518,7 @@ We use RK("""
         self._estimate_projection.generator.can_receive      = self._load_face_data_default_guard()
         self._estimate_projection.generator.can_send         = self._store_face_data_default_guard()
         self._estimate_projection.generator.merge_method_definition = (
-            peano4.toolbox.blockstructured.get_face_merge_implementation(
+            peano4.blockstructured.get_face_merge_implementation(
                 self._estimate_projection
             )
         )
@@ -546,19 +546,6 @@ We use RK("""
 
         self._Riemann_solution.generator.includes += """
 #include "repositories/SolverRepository.h"
-"""
-
-        self._current_time_step.generator.includes += """
-#include "../repositories/SolverRepository.h"
-"""
-        self._rhs_estimates.generator.includes += """
-#include "../repositories/SolverRepository.h"
-"""
-        self._estimate_projection.generator.includes += """
-#include "../repositories/SolverRepository.h"
-"""
-        self._Riemann_solution.generator.includes += """
-#include "../repositories/SolverRepository.h"
 """
 
         self._cell_label = exahype2.grid.create_cell_label(self._name)
@@ -609,6 +596,7 @@ We use RK("""
             # observer, whose DynamicAMRTransfer delivers the committed events.
             implement_previous_refinement_instructions=False,
             called_by_grid_construction=False,
+            skip_after_topology_change=True,
         )
         self._action_set_AMR_throughout_grid_construction = (
             exahype2.solvers.rkdg.actionsets.RefinementCriterion(
@@ -617,6 +605,7 @@ We use RK("""
                 build_up_new_refinement_instructions=True,
                 implement_previous_refinement_instructions=True,
                 called_by_grid_construction=True,
+                skip_after_topology_change=False,
             )
         )
         # Re-evaluating the criterion within the realise sweeps lets one run of the
@@ -634,6 +623,7 @@ We use RK("""
                 build_up_new_refinement_instructions=True,
                 implement_previous_refinement_instructions=False,
                 called_by_grid_construction=False,
+                skip_after_topology_change=False,
             )
         )
         self._action_set_linear_combination_of_estimates = (
@@ -674,7 +664,7 @@ We use RK("""
             solver=self, face_projections=self._face_projections
         )
 
-        if self._action_set_postprocess_solution == None:
+        if self._action_set_postprocess_solution is None:
             self._action_set_postprocess_solution = (
                 exahype2.solvers.rkdg.actionsets.EmptyPostprocessSolution(solver=self)
             )
@@ -1341,50 +1331,15 @@ We use RK("""
         self._postprocess_updated_cell_after_Runge_Kutta_step = kernel
         self.create_data_structures()
         self.create_action_sets()
-
-
     @postprocess_updated_cell_after_final_linear_combination.setter
     def postprocess_updated_cell_after_final_linear_combination(self, kernel):
-        """
-        Define a postprocessing routine over the data.
+        """Set C++ code that runs after the final Runge-Kutta combination.
 
-        This routine allows you to update the patch data immediately after the
-        patch update. The routine provides the whole patch, and therefore you
-        can write code similar to
-
-             my_solver.postprocess_updated_cell = " ""
-             {
-               constexpr int itmax = ({{DG_ORDER}} +1 ) * ({{DG_ORDER}} + 1) * ({{DG_ORDER}} + 1);
-               int index = 0;
-               for (int i = 0; i < itmax; i++) {
-                 applications::exahype2::ccz4::enforceCCZ4constraints(dQdt + index);
-                 index += {{NUMBER_OF_UNKNOWNS}};
-               }
-             }
-
-
-        ## Difference to Finite Volume solvers
-
-        Unlike the Finite Volume solvers, you do not have the auxiliary
-        variables in this routine. You also do not have the new solution, but the
-        time derivative instead.
-
-
-        ## Available constants
-
-        This list is not complete. You might want to consult the generated code to
-        spot more variables that are on offer. The brackets below denote
-        symbolic constants which will be befilled with the proper constants
-        when the postprocessing code snippet is inserted into the generated code.
-        The other variables are directly available, i.e., no text replacement is done
-        here.
-
-        - {{DG_ORDER}} Spatial discretisation order.
-
-
-        ## Runge-Kutta steps
-
-        This postprocessing is called after each and every Runge-Kutta step.
+        The snippet can update the full nodal state through ``newQ`` and can use
+        ``timeStamp`` and ``timeStepSize``. ``{{DG_ORDER}}``,
+        ``{{NUMBER_OF_UNKNOWNS}}``, and ``{{NUMBER_OF_AUXILIARY_VARIABLES}}``
+        are available as template constants. The hook runs once per completed
+        time step before the final state is projected onto the faces.
         """
         self._postprocess_updated_cell_after_final_linear_combination = kernel
         self.create_data_structures()

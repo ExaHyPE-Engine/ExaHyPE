@@ -1,12 +1,5 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#pragma once
-
-#include "tarch/accelerator/Range.h"
-#include "tarch/accelerator/cuda/Device.h"
-#include "tarch/accelerator/cuda/ErrorCheck.h"
-
-#include <cuda_runtime.h>
 
 namespace tarch::accelerator {
   template <typename F>

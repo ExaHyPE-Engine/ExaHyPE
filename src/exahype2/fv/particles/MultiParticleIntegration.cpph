@@ -1,5 +1,3 @@
-#pragma once
-
 namespace exahype2 {
   namespace fv {
     namespace particles {
@@ -219,7 +217,7 @@ namespace exahype2 {
           State k1_2 = current2;
 
           // === k2 ===
-          //State temp1, temp2;
+          // State temp1, temp2;
 
           ParticleState k2_2, k2_1;
           k2_1 = exahype2::fv::particles::integration::updatePartialStep(k1_1, h, 0.5);
@@ -239,21 +237,15 @@ namespace exahype2 {
           // === Final update ===
           State y1_1, y1_2;
           for (int d = 0; d < DIMENSIONS; ++d) {
-            y1_1.position(
-              d
-            ) = current1.position(d) + h * (k1_1.velocity(d) + 4.0 * k2_1.velocity(d) + k3_1.velocity(d)) / 6.0;
-            y1_1.velocity(
-              d
-            ) = current1.velocity(d)
-                + h * (k1_1.acceleration(d) + 4.0 * k2_1.acceleration(d) + k3_1.acceleration(d)) / 6.0;
+            y1_1.position(d) =
+              current1.position(d) + h * (k1_1.velocity(d) + 4.0 * k2_1.velocity(d) + k3_1.velocity(d)) / 6.0;
+            y1_1.velocity(d) = current1.velocity(d)
+              + h * (k1_1.acceleration(d) + 4.0 * k2_1.acceleration(d) + k3_1.acceleration(d)) / 6.0;
             y1_1.acceleration(d) = k3_1.acceleration(d); // Update acceleration for consistency
-            y1_2.position(
-              d
-            ) = current2.position(d) + h * (k1_2.velocity(d) + 4.0 * k2_2.velocity(d) + k3_2.velocity(d)) / 6.0;
-            y1_2.velocity(
-              d
-            ) = current2.velocity(d)
-                + h * (k1_2.acceleration(d) + 4.0 * k2_2.acceleration(d) + k3_2.acceleration(d)) / 6.0;
+            y1_2.position(d) =
+              current2.position(d) + h * (k1_2.velocity(d) + 4.0 * k2_2.velocity(d) + k3_2.velocity(d)) / 6.0;
+            y1_2.velocity(d) = current2.velocity(d)
+              + h * (k1_2.acceleration(d) + 4.0 * k2_2.acceleration(d) + k3_2.acceleration(d)) / 6.0;
             y1_2.acceleration(d) = k3_2.acceleration(d); // Update acceleration for consistency
           }
 
@@ -310,29 +302,21 @@ namespace exahype2 {
           // === Final state update ===
           State y1_1, y1_2;
           for (int d = 0; d < DIMENSIONS; ++d) {
-            y1_1.position(
-              d
-            ) = current1.position(d)
-                + timeStepSize * (k1_1.velocity(d) + 2 * k2_1.velocity(d) + 2 * k3_1.velocity(d) + k4_1.velocity(d))
-                    / 6.0;
-            y1_1.velocity(
-              d
-            ) = current1.velocity(d)
-                + timeStepSize
-                    * (k1_1.acceleration(d) + 2 * k2_1.acceleration(d) + 2 * k3_1.acceleration(d) + k4_1.acceleration(d))
-                    / 6.0;
+            y1_1.position(d) = current1.position(d)
+              + timeStepSize * (k1_1.velocity(d) + 2 * k2_1.velocity(d) + 2 * k3_1.velocity(d) + k4_1.velocity(d))
+                / 6.0;
+            y1_1.velocity(d) = current1.velocity(d)
+              + timeStepSize
+                * (k1_1.acceleration(d) + 2 * k2_1.acceleration(d) + 2 * k3_1.acceleration(d) + k4_1.acceleration(d))
+                / 6.0;
 
-            y1_2.position(
-              d
-            ) = current2.position(d)
-                + timeStepSize * (k1_2.velocity(d) + 2 * k2_2.velocity(d) + 2 * k3_2.velocity(d) + k4_2.velocity(d))
-                    / 6.0;
-            y1_2.velocity(
-              d
-            ) = current2.velocity(d)
-                + timeStepSize
-                    * (k1_2.acceleration(d) + 2 * k2_2.acceleration(d) + 2 * k3_2.acceleration(d) + k4_2.acceleration(d))
-                    / 6.0;
+            y1_2.position(d) = current2.position(d)
+              + timeStepSize * (k1_2.velocity(d) + 2 * k2_2.velocity(d) + 2 * k3_2.velocity(d) + k4_2.velocity(d))
+                / 6.0;
+            y1_2.velocity(d) = current2.velocity(d)
+              + timeStepSize
+                * (k1_2.acceleration(d) + 2 * k2_2.acceleration(d) + 2 * k3_2.acceleration(d) + k4_2.acceleration(d))
+                / 6.0;
           }
 
           exahype2::fv::particles::utils::setParticleState(*p1, y1_1);

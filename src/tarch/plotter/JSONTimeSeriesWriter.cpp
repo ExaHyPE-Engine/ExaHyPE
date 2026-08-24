@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "JSONTimeSeriesWriter.h"
 
+#include "tarch/Termination.h"
 #include "tarch/mpi/Rank.h"
 
 void tarch::plotter::JSONTimeSeriesWriter::writeTimeSeriesMetaFile(
@@ -24,12 +25,11 @@ void tarch::plotter::JSONTimeSeriesWriter::writeTimeSeriesMetaFile(
     }
   }
 
-  std::filesystem::path p(outputDirectory);
-  p /= (filename + dataExtension + ".series");
+  const std::filesystem::path path = std::filesystem::path(outputDirectory) / (filename + dataExtension + ".series");
 
-  std::ofstream out(p);
+  std::ofstream out(path);
   if (not out) {
-    throw std::runtime_error("Failed to open '" + p.string() + "'");
+    tarch::terminateWithError("Failed to open '" + path.string() + "'.");
   }
 
   out << "{\n"
@@ -48,4 +48,7 @@ void tarch::plotter::JSONTimeSeriesWriter::writeTimeSeriesMetaFile(
 
   out << "  ]\n"
       << "}\n";
+  if (not out) {
+    tarch::terminateWithError("Failed to write '" + path.string() + "'.");
+  }
 }

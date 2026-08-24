@@ -191,8 +191,6 @@ project.constants.export_constexpr_with_type(
 
 project.constants.export_constexpr_with_type("ShouldPlot", "true", "bool")
 
-project.constants.export_constexpr_with_type("UseAMR", "false", "bool")
-
 project.constants.export_constexpr_with_type("Samples", str(args.samples), "int")
 
 makefile = project.output.makefile

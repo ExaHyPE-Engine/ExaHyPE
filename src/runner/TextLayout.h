@@ -3,10 +3,9 @@
 #pragma once
 
 namespace runner {
-  // Width means terminal columns, counted as UTF-8 code points - correct for the one-column glyphs
-  // the statistics box uses (ASCII, λ, ·, block elements).
-  std::size_t displayWidth(const std::string& text);
-  std::string truncateToDisplayWidth(const std::string& text, std::size_t columns);
-  std::string padToWidth(const std::string& text, std::size_t columns);
-  std::string fitToWidth(const std::string& text, std::size_t columns);
+  std::size_t              displayWidth(const std::string& text);
+  std::string              truncateToDisplayWidth(const std::string& text, const std::size_t columns);
+  std::string              padToWidth(const std::string& text, const std::size_t columns);
+  std::string              fitToWidth(const std::string& text, const std::size_t columns);
+  std::vector<std::string> wrapToDisplayWidth(const std::string& text, const std::size_t columns);
 } // namespace runner

@@ -1,5 +1,14 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
+"""Isothermal hydrostatic-atmosphere well-balancedness scenario.
+
+The exponential density and pressure profiles form a steady state. The
+reconstruction follows Käppeli and Mishra, doi:10.1051/0004-6361/201527815.
+Its face energy uses the first-order hydrostatic pressure because the
+second-order pressure perturbation is unstable here. The tenuous upper
+atmosphere also requires a positivity-preserving update; floating-point traps
+expose negative pressure through the sound-speed evaluation.
+"""
 import argparse
 
 import exahype2
@@ -14,7 +23,7 @@ def parse_arguments():
         "-h",
         "--help",
         action="store_true",
-        help="show this help message and continue with project help",
+        help="Show this help message and continue with project help.",
     )
     parser.add_argument("-et", "--end-time", type=float, default=0.5)
     parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=16)
@@ -28,39 +37,11 @@ def parse_arguments():
 
 args = parse_arguments()
 
-"""
-@article{WellBalancedness,
-	author = {{Käppeli, R.} and {Mishra, S.}},
-	title = {A well-balanced finite volume scheme for the Euler equations  with gravitation - The exact preservation of hydrostatic equilibrium with arbitrary entropy stratification},
-	DOI= "10.1051/0004-6361/201527815",
-	url= "https://doi.org/10.1051/0004-6361/201527815",
-	journal = {A&A},
-	year = 2016,
-	volume = 587,
-	pages = "A94",
-	month = "",
-}
-
-This artificial scenario describes a stratified atmosphere by ensuring that an exponentially decreasing density profile
-is exactly balanced with an exponentially decreasing pressure gradient.
-Therefore, no updates should occur over the duration of the simulation and nothing should change in the density
-and pressure profiles. This scenario can be used to test the well-balancedness of the underlying numerical scheme
-such that it accurately captures the initial steady state. This is particularly difficult for higher order methods,
-such as the MUSCL-Hancock scheme.
-
-The reconstruction proposed by Käppeli and Mishra aims at retaining an exponentially decaying pressure gradient
-within the MUSCL-Hancock boundary extrapolation phase. To this end, they detail first- and second-order
-pressure reconstruction techniques, which they find to capture the initial stratified steady state up to
-machine precision in a Runge-Kutta scheme. While the first-order accurate pressure reconstruction is found to work
-in this scenario, the necessary second-order reconstruction, which limits pressure perturbations after the initial
-time step t = 0 to t != 0, results in unphysical updates.
-In general, any sort of custom reconstruction of the volume boundary values using the limited slopes and original
-values can be implemented with the newly introduced reconstruction argument of the MUSCL-Hancock solver.
-"""
-
 initial_conditions = """
-  const auto scaleHeight  = (GAS_CONSTANT * TEMPERATURE) / GRAVITY / MEAN_MOLECULAR_MASS;
-  const auto exponentialDistribution = tarch::la::pow(tarch::la::E, -x(1) / scaleHeight);
+  const auto scaleHeight =
+    GAS_CONSTANT * TEMPERATURE / GRAVITY / MEAN_MOLECULAR_MASS;
+  const auto exponentialDistribution =
+    tarch::la::pow(tarch::la::E, -x(1) / scaleHeight);
 
   Q[Shortcuts::rho]       = GROUND_DENSITY * exponentialDistribution;
   Q[Shortcuts::rhoU + 0]  = 0.0;
@@ -69,53 +50,61 @@ initial_conditions = """
   Q[Shortcuts::rhoU + 2]  = 0.0;
 #endif
 
-  const auto pressure = Q[Shortcuts::rho] * GAS_CONSTANT * TEMPERATURE / MEAN_MOLECULAR_MASS;
+  const auto pressure =
+    Q[Shortcuts::rho] * GAS_CONSTANT * TEMPERATURE / MEAN_MOLECULAR_MASS;
   Q[Shortcuts::rhoE] = pressure / (GAMMA - 1.0);
 """
 
 boundary_conditions = """
-  // normal == 0 => left
-  // normal == 1 => bottom
-  // normal == 2 => right
-  // normal == 3 => top
+  // Face numbers 1 and 3 are the lower and upper boundaries.
+  if (normal == 1 or normal == 3) {
+    const auto verticalDisplacement = normal == 3 ? h(1) : -h(1);
+    const auto scaleHeight =
+      GAS_CONSTANT * TEMPERATURE / GRAVITY / MEAN_MOLECULAR_MASS;
+    const auto exponentialDistribution = tarch::la::pow(
+      tarch::la::E,
+      -verticalDisplacement / scaleHeight
+    );
 
-  if (normal == 1 || normal == 3) {
-    // positive dy upwards, negative dy downwards
-    const auto dy = (normal == 3 ? h(1) : -h(1));
-
-    const auto scaleHeight = GAS_CONSTANT * TEMPERATURE / GRAVITY / MEAN_MOLECULAR_MASS;
-    const auto exponentialDistribution = tarch::la::pow(tarch::la::E, -dy / scaleHeight);
-
-    const auto densityOutside   = Qinside[Shortcuts::rho] * exponentialDistribution;
-    const auto pressureOutside  = densityOutside * GAS_CONSTANT * TEMPERATURE / MEAN_MOLECULAR_MASS;
+    const auto densityOutside =
+      Qinside[Shortcuts::rho] * exponentialDistribution;
+    const auto pressureOutside =
+      densityOutside * GAS_CONSTANT * TEMPERATURE / MEAN_MOLECULAR_MASS;
 
     Qoutside[Shortcuts::rho] = densityOutside;
-    const auto u = Qinside[Shortcuts::rhoU + 0] / Qinside[Shortcuts::rho];
-    const auto v = Qinside[Shortcuts::rhoU + 1] / Qinside[Shortcuts::rho];
+    const auto horizontalVelocity =
+      Qinside[Shortcuts::rhoU + 0] / Qinside[Shortcuts::rho];
+    const auto verticalVelocity =
+      Qinside[Shortcuts::rhoU + 1] / Qinside[Shortcuts::rho];
 #if DIMENSIONS == 3
-    const auto w = Qinside[Shortcuts::rhoU + 2] / Qinside[Shortcuts::rho];
-    const auto uSq = u * u + v * v + w * w;
+    const auto depthVelocity =
+      Qinside[Shortcuts::rhoU + 2] / Qinside[Shortcuts::rho];
+    const auto velocitySquared =
+      horizontalVelocity * horizontalVelocity
+      + verticalVelocity * verticalVelocity
+      + depthVelocity * depthVelocity;
 #else
-    const auto uSq = u * u + v * v;
+    const auto velocitySquared =
+      horizontalVelocity * horizontalVelocity
+      + verticalVelocity * verticalVelocity;
 #endif
 
-    Qoutside[Shortcuts::rhoE] = pressureOutside / (GAMMA - 1) + 0.5 * densityOutside * uSq;
+    Qoutside[Shortcuts::rhoE] =
+      pressureOutside / (GAMMA - 1.0)
+      + 0.5 * densityOutside * velocitySquared;
 
-    Qoutside[Shortcuts::rhoU + 0] = u * densityOutside;
+    Qoutside[Shortcuts::rhoU + 0] = horizontalVelocity * densityOutside;
 #if DIMENSIONS == 3
-    Qoutside[Shortcuts::rhoU + 2] = w * densityOutside;
+    Qoutside[Shortcuts::rhoU + 2] = depthVelocity * densityOutside;
 #endif
 
     if (normal == 1) {
-      // Reflective at bottom to keep atmosphere
-      // from escaping the domain through the Earth's surface
-      Qoutside[Shortcuts::rhoU + 1] = -v * densityOutside;
+      // The lower wall prevents atmosphere leaving through the surface.
+      Qoutside[Shortcuts::rhoU + 1] = -verticalVelocity * densityOutside;
     } else {
-      // Outflow at top
-      Qoutside[Shortcuts::rhoU + 1] = v * densityOutside;
+      Qoutside[Shortcuts::rhoU + 1] = verticalVelocity * densityOutside;
     }
   } else {
-    // outflow in other directions than stratified
     for (int unknown = 0; unknown < NumberOfUnknowns; ++unknown) {
       Qoutside[unknown] = Qinside[unknown];
     }
@@ -123,84 +112,95 @@ boundary_conditions = """
 """
 
 compute_usq = """
-  auto computeUSq = [] (
-    const {{COMPUTE_PRECISION}}* const NOALIAS Q,
-    {{COMPUTE_PRECISION}}& uSq
+  auto computeVelocitySquared = [](
+    const {{COMPUTE_PRECISION}}* const NOALIAS state,
+    {{COMPUTE_PRECISION}}& velocitySquared
   ) {
-    const int ShortcutRho = 0;
-    const int ShortcutRhoU = 1;
+    constexpr int ShortcutRho = 0;
+    constexpr int ShortcutRhoU = 1;
 
-    const auto u    = Q[ShortcutRhoU + 0] / Q[ShortcutRho];
-    const auto v    = Q[ShortcutRhoU + 1] / Q[ShortcutRho];
-    #if DIMENSIONS == 3
-    const auto w    = Q[ShortcutRhoU + 2] / Q[ShortcutRho];
-    uSq  = u * u + v * v + w * w;
-    #else
-    uSq  = u * u + v * v;
-    #endif
+    const auto horizontalVelocity = state[ShortcutRhoU + 0] / state[ShortcutRho];
+    const auto verticalVelocity = state[ShortcutRhoU + 1] / state[ShortcutRho];
+#if DIMENSIONS == 3
+    const auto depthVelocity = state[ShortcutRhoU + 2] / state[ShortcutRho];
+    velocitySquared =
+      horizontalVelocity * horizontalVelocity
+      + verticalVelocity * verticalVelocity
+      + depthVelocity * depthVelocity;
+#else
+    velocitySquared =
+      horizontalVelocity * horizontalVelocity
+      + verticalVelocity * verticalVelocity;
+#endif
   };
 """
 
 calculate_pressure = (
     """
-  auto calculatePressure = [] (
-    const {{COMPUTE_PRECISION}}* const NOALIAS Q,
+  auto calculatePressure = [](
+    const {{COMPUTE_PRECISION}}* const NOALIAS state,
     {{COMPUTE_PRECISION}}& pressure,
-    {{COMPUTE_PRECISION}}& uSq
+    {{COMPUTE_PRECISION}}& velocitySquared
   ) {
-    const int ShortcutRho = 0;
-    const int ShortcutRhoE = DIMENSIONS + 1;
+    constexpr int ShortcutRho = 0;
+    constexpr int ShortcutRhoE = DIMENSIONS + 1;
 
     """
     + compute_usq
     + """
 
-    computeUSq(Q, uSq);
-    pressure = (GAMMA - 1.0) * (Q[ShortcutRhoE] - 0.5 * Q[ShortcutRho] * uSq);
+    computeVelocitySquared(state, velocitySquared);
+    pressure =
+      (GAMMA - 1.0)
+      * (
+        state[ShortcutRhoE]
+        - 0.5 * state[ShortcutRho] * velocitySquared
+      );
   };
 """
 )
 
 calculate_pressure_perturbations = (
     """
-  auto pressurePerturbations = [] (
-    const {{COMPUTE_PRECISION}}* const NOALIAS QL,
-    const {{COMPUTE_PRECISION}}* const NOALIAS Q,
-    const {{COMPUTE_PRECISION}}* const NOALIAS QR,
-    const tarch::la::Vector<DIMENSIONS, double> h,
+  auto pressurePerturbations = [](
+    const {{COMPUTE_PRECISION}}* const NOALIAS leftState,
+    const {{COMPUTE_PRECISION}}* const NOALIAS state,
+    const {{COMPUTE_PRECISION}}* const NOALIAS rightState,
+    const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
     const int normal,
     {{COMPUTE_PRECISION}}& pressurePerturbationLeft,
     {{COMPUTE_PRECISION}}& pressurePerturbationRight
   ) {
-    /**
-     * Following "A well-balanced finite volume scheme for the Euler equations with gravitation", R. Käppeli and S. Mishra, https://doi.org/10.1051/0004-6361/201527815 
-     */
-    const auto densityLeft  = QL[0];
-    const auto density      = Q[0];
-    const auto densityRight = QR[0];
+    // Equations 25–26 of Käppeli and Mishra define perturbations against
+    // the local hydrostatic pressure reconstruction.
+    const auto densityLeft = leftState[0];
+    const auto density = state[0];
+    const auto densityRight = rightState[0];
 
     """
     + calculate_pressure
     + """
 
     {{COMPUTE_PRECISION}} pressure;
-    {{COMPUTE_PRECISION}} uSq;
-    calculatePressure(Q, pressure, uSq);
+    {{COMPUTE_PRECISION}} velocitySquared;
+    calculatePressure(state, pressure, velocitySquared);
 
     {{COMPUTE_PRECISION}} pressureLeft;
-    {{COMPUTE_PRECISION}} uSqLeft;
-    calculatePressure(QL, pressureLeft, uSqLeft);
+    {{COMPUTE_PRECISION}} velocitySquaredLeft;
+    calculatePressure(leftState, pressureLeft, velocitySquaredLeft);
 
     {{COMPUTE_PRECISION}} pressureRight;
-    {{COMPUTE_PRECISION}} uSqRight;
-    calculatePressure(QR, pressureRight, uSqRight);
+    {{COMPUTE_PRECISION}} velocitySquaredRight;
+    calculatePressure(rightState, pressureRight, velocitySquaredRight);
 
-    // Eq. 26
-    const auto reconstructedPressureLeft   = pressure + 0.5 * (densityLeft + density) * -GRAVITY * h(normal);
-    const auto reconstructedPressureRight  = pressure - 0.5 * (densityRight + density) * -GRAVITY * h(normal);
+    const auto reconstructedPressureLeft =
+      pressure
+      + 0.5 * (densityLeft + density) * -GRAVITY * volumeSize(normal);
+    const auto reconstructedPressureRight =
+      pressure
+      - 0.5 * (densityRight + density) * -GRAVITY * volumeSize(normal);
 
-    // Eq. 25
-    pressurePerturbationLeft  = pressureLeft - reconstructedPressureLeft;
+    pressurePerturbationLeft = pressureLeft - reconstructedPressureLeft;
     pressurePerturbationRight = pressureRight - reconstructedPressureRight;
   };
 """
@@ -209,94 +209,83 @@ calculate_pressure_perturbations = (
 limiter = (
     calculate_pressure_perturbations
     + """
-  {{COMPUTE_PRECISION}} a;
-  {{COMPUTE_PRECISION}} b;
-  if (unknown == 3 && normal == 1) {
-    pressurePerturbations(QL, Q, QR, h, normal, b, a);
+  {{COMPUTE_PRECISION}} rightDifference;
+  {{COMPUTE_PRECISION}} leftDifference;
+  if (unknown == 3 and normal == 1) {
+    pressurePerturbations(
+      QL,
+      Q,
+      QR,
+      h,
+      normal,
+      leftDifference,
+      rightDifference
+    );
   } else {
-    a = QR[unknown] - Q[unknown];
-    b = Q[unknown] - QL[unknown];
+    rightDifference = QR[unknown] - Q[unknown];
+    leftDifference = Q[unknown] - QL[unknown];
   }
 
-  // Minmod
-  if (a * b <= 0.0) {
+  if (rightDifference * leftDifference <= 0.0) {
     return 0.0;
-  } else {
-    if (tarch::la::smaller(tarch::la::abs(a), tarch::la::abs(b))) {
-      return a;
-    } else {
-      return b;
-    }
   }
+  return tarch::la::smaller(
+    tarch::la::abs(rightDifference),
+    tarch::la::abs(leftDifference)
+  )
+    ? rightDifference
+    : leftDifference;
 """
 )
 
-"""
-Required in MUSCL-Hancock before we solve the Riemann Problem.
-
--> Not the same as a simple postprocessing step
-"""
+# The Riemann problem must see the hydrostatically reconstructed face states.
 reconstruction = (
-    """
-  auto reconstructEnergyAtBoundary = [] (
-    const {{COMPUTE_PRECISION}} * const NOALIAS Q,
-    const tarch::la::Vector<DIMENSIONS, double> h,
-    const int                                   normal,
-    const {{COMPUTE_PRECISION}}                 slope,
-    {{COMPUTE_PRECISION}}* const NOALIAS        extrapolatedBoundaryLeft,
-    {{COMPUTE_PRECISION}}* const NOALIAS        extrapolatedBoundaryRight
-  ) {
-
-    """
-    + calculate_pressure
+    calculate_pressure
+    + compute_usq
     + """
+  constexpr int ShortcutRho = 0;
+  constexpr int ShortcutE = DIMENSIONS + 1;
 
+  if (unknown == ShortcutE and normal == 1) {
     {{COMPUTE_PRECISION}} pressure;
-    {{COMPUTE_PRECISION}} uSq;
-    calculatePressure(Q, pressure, uSq);
-
-    const int ShortcutRho = 0;
-    const int ShortcutE = DIMENSIONS + 1;
+    {{COMPUTE_PRECISION}} velocitySquared;
+    calculatePressure(Q, pressure, velocitySquared);
 
     const {{COMPUTE_PRECISION}} density = Q[ShortcutRho];
 
-    // Eq. 16 Käppeli and Mishra
-    const auto reconstructedPressureLeftBoundary  = pressure + 0.5 * density * -GRAVITY * h(normal); 
-    const auto reconstructedPressureRightBoundary = pressure - 0.5 * density * -GRAVITY * h(normal);
+    // Eq. 16 Käppeli and Mishra: the first-order hydrostatic pressure at either
+    // boundary. The second-order pressure-perturbation slope is unstable for
+    // this scenario, so the reconstruction keeps the exact hydrostatic value.
+    const auto pressureLeftBoundary =
+      pressure + 0.5 * density * -GRAVITY * h(normal);
+    const auto pressureRightBoundary =
+      pressure - 0.5 * density * -GRAVITY * h(normal);
 
-    // Eq. 27 Käppeli and Mishra
-    // Following p_{1,i}(x_i) = p_i - p_{0,i}(x_i) = 0, all pressure perturbations are zero, 
-    // so we just add the perturbation slopes to the reconstructed pressure
-    const auto pressureLeftBoundary  = reconstructedPressureLeftBoundary - 0.5 * h(normal) * slope;
-    const auto pressureRightBoundary = reconstructedPressureRightBoundary + 0.5 * h(normal) * slope;
+    {{COMPUTE_PRECISION}} extrapolatedMinus[{{NUMBER_OF_UNKNOWNS}}];
+    {{COMPUTE_PRECISION}} extrapolatedPlus[{{NUMBER_OF_UNKNOWNS}}];
+    for (int component = 0; component < {{NUMBER_OF_UNKNOWNS}}; component++) {
+      extrapolatedMinus[component] = Q[component] - 0.5 * limitedDifferences[component];
+      extrapolatedPlus[component] =
+        Q[component] + 0.5 * limitedDifferences[component];
+    }
 
-    // compute boundary uSqs
-    {{COMPUTE_PRECISION}} uSqLeftBoundary;
-    {{COMPUTE_PRECISION}} uSqRightBoundary;
+    {{COMPUTE_PRECISION}} velocitySquaredLeftBoundary;
+    {{COMPUTE_PRECISION}} velocitySquaredRightBoundary;
+    computeVelocitySquared(extrapolatedMinus, velocitySquaredLeftBoundary);
+    computeVelocitySquared(extrapolatedPlus, velocitySquaredRightBoundary);
 
-    """
-    + compute_usq
-    + """
-
-    computeUSq(extrapolatedBoundaryLeft,  uSqLeftBoundary);
-    computeUSq(extrapolatedBoundaryRight, uSqRightBoundary);
-
-    // convert pressure back to energy
-    extrapolatedBoundaryLeft[ShortcutE]  = pressureLeftBoundary / (GAMMA - 1.0) + 0.5 * extrapolatedBoundaryLeft[ShortcutRho] * uSqLeftBoundary;
-    extrapolatedBoundaryRight[ShortcutE] = pressureRightBoundary / (GAMMA - 1.0) + 0.5 * extrapolatedBoundaryRight[ShortcutRho] * uSqRightBoundary;
-  };
-
-  if (unknown == 3 && normal == 1) {
-    reconstructEnergyAtBoundary(QInGathered,      volumeSize, normal, slopeGathered[normal][unknown],       extrapolatedBoundaryLeft,                       extrapolatedBoundaryRight);
-    reconstructEnergyAtBoundary(QInGatheredLeft,  volumeSize, normal, slopeGatheredLeft[normal][unknown],   extrapolatedBoundaryLeftNeighborLeftBoundary,   extrapolatedBoundaryLeftNeighborRightBoundary);
-    reconstructEnergyAtBoundary(QInGatheredRight, volumeSize, normal, slopeGatheredRight[normal][unknown],  extrapolatedBoundaryRightNeighborLeftBoundary,  extrapolatedBoundaryRightNeighborRightBoundary);
+    // Convert the reconstructed pressure back to energy.
+    reconstructedMinus =
+      pressureLeftBoundary / (GAMMA - 1.0)
+      + 0.5 * extrapolatedMinus[ShortcutRho]
+        * velocitySquaredLeftBoundary;
+    reconstructedPlus =
+      pressureRightBoundary / (GAMMA - 1.0)
+      + 0.5 * extrapolatedPlus[ShortcutRho]
+        * velocitySquaredRightBoundary;
   } else {
-    extrapolatedBoundaryLeft[unknown]                       = QInGathered[unknown] - 0.5 * volumeSize(normal) * slopeGathered[normal][unknown];
-    extrapolatedBoundaryRight[unknown]                      = QInGathered[unknown] + 0.5 * volumeSize(normal) * slopeGathered[normal][unknown];
-    extrapolatedBoundaryLeftNeighborLeftBoundary[unknown]   = QInGatheredLeft[unknown] - 0.5 * volumeSize(normal) * slopeGatheredLeft[normal][unknown];
-    extrapolatedBoundaryLeftNeighborRightBoundary[unknown]  = QInGatheredLeft[unknown] + 0.5 * volumeSize(normal) * slopeGatheredLeft[normal][unknown];
-    extrapolatedBoundaryRightNeighborLeftBoundary[unknown]  = QInGatheredRight[unknown] - 0.5 * volumeSize(normal) * slopeGatheredRight[normal][unknown];
-    extrapolatedBoundaryRightNeighborRightBoundary[unknown] = QInGatheredRight[unknown] + 0.5 * volumeSize(normal) * slopeGatheredRight[normal][unknown];
+    reconstructedMinus = Q[unknown] - 0.5 * limitedDifferences[unknown];
+    reconstructedPlus  = Q[unknown] + 0.5 * limitedDifferences[unknown];
   }
 """
 )
@@ -320,9 +309,12 @@ fv_solver = exahype2.solvers.fv.musclhancock.GlobalAdaptiveTimeStep(
     unknowns={"rho": 1, "rhoU": project.dimensions, "rhoE": 1},
     auxiliary_variables=0,
     time_step_relaxation=0.5,
-    reconstruction=reconstruction,  # Specific to MUSCL-Hancock
+    reconstruction=reconstruction,
 )
 
+# The f-wave face solver includes gravity. MUSCL-Hancock also needs the
+# cell-centred source update; a Godunov variant must omit it to avoid applying
+# gravity twice.
 fv_solver.set_implementation(
     initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
@@ -330,15 +322,6 @@ fv_solver.set_implementation(
     flux=flux,
     limiter=limiter,
     riemann_solver=fWave,
-)
-
-########################################################
-# Source term needs to be commented out for Godunov.   #
-# Otherwise, the effects of the source term will be    #
-# taken into account twice (f-wave and cell centered). #
-# MUSCL-Hancock needs the source term in both places.  #
-########################################################
-fv_solver.set_implementation(
     source_term=source_term,
 )
 

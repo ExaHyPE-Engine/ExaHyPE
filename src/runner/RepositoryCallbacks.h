@@ -48,6 +48,7 @@ struct runner::RepositoryCallbacks {
 
   std::function<bool()>             mayPlot;
   std::function<bool()>             hasPendingMeshUpdates;
+  std::function<bool()>             hasUndecidedRefinementCriterion;
   std::function<double()>           getMinTimeStamp;
   std::function<double()>           getMaxTimeStamp;
   std::function<int()>              getNumberOfDoFs;

@@ -8,6 +8,7 @@ set(SOURCES
   internal.cpp
   FileReader.cpp
   MultiscaleTransitions.cpp
+  ParticleFactory.cpp
   ParticleSet.cpp
   TrajectoryDatabase.cpp
   UnitTests.cpp

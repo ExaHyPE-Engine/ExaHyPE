@@ -6,10 +6,6 @@
 #include "runner/LoadBalancer.h"
 #include "runner/ReportBox.h"
 #include "runner/RepositoryCallbacks.h"
-#include "runner/RuntimeParameters.h"
-#include "tarch/MemoryUsage.h"
-#include "tarch/mpi/Rank.h"
-#include "tarch/multicore/Core.h"
 
 /** Configured levels can exceed a representable cell count, so the display bound saturates. */
 std::uint64_t runner::boundedFullyRefinedLeaves(const int maximumLevel) {
@@ -37,14 +33,14 @@ std::string runner::gridCellSummary(const std::uint64_t numberOfLeaves, const st
   constexpr auto MaximumCount = std::numeric_limits<std::uint64_t>::max();
   const auto     numberOfCells =
     numberOfRefinedCells > MaximumCount - numberOfLeaves ? MaximumCount : numberOfLeaves + numberOfRefinedCells;
-  return Format::grouped(numberOfLeaves) + "  (Cells " + Format::grouped(numberOfCells) + ")";
+  return runner::Format::grouped(numberOfLeaves) + "  (Cells " + runner::Format::grouped(numberOfCells) + ")";
 }
 
-void runner::writeGridSnapshot(ReportBox& box, const RepositoryCallbacks& callbacks) {
-  const auto& statistics           = loadBalancer().getStatistics();
-  const auto  numberOfLeaves       = statistics.getGlobalNumberOfInnerUnrefinedCells();
-  const auto  numberOfRefinedCells = statistics.getGlobalNumberOfInnerRefinedCells();
-  Table       report;
+void runner::writeGridSnapshot(runner::ReportBox& box, const runner::RepositoryCallbacks& callbacks) {
+  const auto&   statistics           = runner::loadBalancer().getStatistics();
+  const auto    numberOfLeaves       = statistics.getGlobalNumberOfInnerUnrefinedCells();
+  const auto    numberOfRefinedCells = statistics.getGlobalNumberOfInnerRefinedCells();
+  runner::Table report;
 
   {
     const auto     numberOfVertices        = statistics.getGlobalNumberOfVertices();
@@ -55,12 +51,12 @@ void runner::writeGridSnapshot(ReportBox& box, const RepositoryCallbacks& callba
               : numberOfVertices + numberOfHangingVertices;
 
     std::ostringstream vertices;
-    vertices << Format::grouped(numberOfAllVertices) << "  (Local " << Format::grouped(numberOfVertices)
-             << " · Hanging " << Format::grouped(numberOfHangingVertices) << ")";
+    vertices << runner::Format::grouped(numberOfAllVertices) << "  (Local " << runner::Format::grouped(numberOfVertices)
+             << " · Hanging " << runner::Format::grouped(numberOfHangingVertices) << ")";
     std::ostringstream levels;
     levels << statistics.getGlobalMinDepth() << " .. " << statistics.getGlobalMaxDepth();
 
-    report.add("Grid", "Number of Leaves", gridCellSummary(numberOfLeaves, numberOfRefinedCells));
+    report.add("Grid", "Number of Leaves", runner::gridCellSummary(numberOfLeaves, numberOfRefinedCells));
     report.add("Grid", "Number of Vertices", vertices.str());
     report.add("Grid", "Grid Levels", levels.str());
   }
@@ -83,21 +79,22 @@ void runner::writeGridSnapshot(ReportBox& box, const RepositoryCallbacks& callba
     const auto overhead = numberOfLeaves > 0 ? static_cast<double>(numberOfOuterCells) / numberOfLeaves * 100.0 : 0.0;
 
     std::ostringstream treeText;
-    treeText << Format::grouped(numberOfTrees) << "  (on " << Format::grouped(numberOfRanks) << " "
+    treeText << runner::Format::grouped(numberOfTrees) << "  (on " << runner::Format::grouped(numberOfRanks) << " "
              << (numberOfRanks == 1 ? "rank)" : "ranks)");
     std::ostringstream efficiencyText;
-    efficiencyText << Format::percentage(treeEfficiency) << "  (" << Format::grouped(minimumTreeLoad) << " .. "
-                   << Format::grouped(maximumTreeLoad) << ")";
+    efficiencyText << runner::Format::percentage(treeEfficiency) << "  (" << runner::Format::grouped(minimumTreeLoad)
+                   << " .. " << runner::Format::grouped(maximumTreeLoad) << ")";
     std::ostringstream overheadText;
-    overheadText << Format::overheadPercentage(overhead) << "  (" << Format::grouped(minimumOuterTreeLoad) << " .. "
-                 << Format::grouped(maximumOuterTreeLoad) << ")";
+    overheadText << runner::Format::overheadPercentage(overhead) << "  ("
+                 << runner::Format::grouped(minimumOuterTreeLoad) << " .. "
+                 << runner::Format::grouped(maximumOuterTreeLoad) << ")";
 
     report.add("Load Balancing", "Number of Trees", treeText.str());
     // Rank efficiency compares accumulated owned leaf cells between populated ranks, so it needs at least two ranks.
     if (numberOfRanks > 1) {
       std::ostringstream rankText;
-      rankText << Format::percentage(rankEfficiency) << "  (" << Format::grouped(minimumRankLoad) << " .. "
-               << Format::grouped(maximumRankLoad) << ")";
+      rankText << runner::Format::percentage(rankEfficiency) << "  (" << runner::Format::grouped(minimumRankLoad)
+               << " .. " << runner::Format::grouped(maximumRankLoad) << ")";
       report.add("Load Balancing", "Rank Efficiency", rankText.str());
     }
     report.add("Load Balancing", "Global Efficiency", efficiencyText.str());
@@ -119,17 +116,17 @@ void runner::writeGridSnapshot(ReportBox& box, const RepositoryCallbacks& callba
     const auto freeMemory  = statistics.getGlobalFreeMemoryInBytes();
 
     std::ostringstream system;
-    system << Format::memory(totalMemory) << " RAM · " << Format::memory(freeMemory) << " free · "
-           << Format::memory(residentSetSize) << " RSS";
+    system << runner::Format::memory(totalMemory) << " RAM · " << runner::Format::memory(freeMemory) << " free · "
+           << runner::Format::memory(residentSetSize) << " RSS";
     report.add("Memory", "System", system.str());
-    report.add("Memory", "Grid", Format::memory(gridMemory));
+    report.add("Memory", "Grid", runner::Format::memory(gridMemory));
     report.add(
       "Memory",
       "Heap",
-      "Cell " + Format::memory(cellMemory) + " · Face " + Format::memory(faceMemory) + " · Vertex "
-        + Format::memory(vertexMemory)
+      "Cell " + runner::Format::memory(cellMemory) + " · Face " + runner::Format::memory(faceMemory) + " · Vertex "
+        + runner::Format::memory(vertexMemory)
     );
-    report.add("Memory", "Total Data", Format::memory(dataTotal) + " tracked");
+    report.add("Memory", "Total Data", runner::Format::memory(dataTotal) + " tracked");
   }
 
   box.rule();
@@ -137,58 +134,4 @@ void runner::writeGridSnapshot(ReportBox& box, const RepositoryCallbacks& callba
     box.line(line);
   }
   box.rule();
-}
-
-std::vector<std::string> runner::gridSnapshotWidthSamples() {
-  const auto& parameters             = RuntimeParameters::getInstance();
-  const auto  leafBound              = boundedFullyRefinedLeaves(parameters.getMaxGridLevels());
-  const auto  numberOfRanks          = tarch::mpi::Rank::getInstance().getNumberOfRanks();
-  const auto  numberOfNodes          = tarch::mpi::Rank::getInstance().getNumberOfNodes();
-  const auto  configuredTreesPerRank = parameters.getMaxNumberOfTreesPerRank();
-  const auto  maximumTreesPerRank =
-    configuredTreesPerRank > 0 ? configuredTreesPerRank : tarch::multicore::Core::getInstance().getNumberOfThreads();
-  const auto saturatingMultiply = [](const std::uint64_t left, const std::uint64_t right) {
-    constexpr auto MaximumValue = std::numeric_limits<std::uint64_t>::max();
-    return right > 0 and left > MaximumValue / right ? MaximumValue : left * right;
-  };
-  const auto treeBound = saturatingMultiply(
-    static_cast<std::uint64_t>(std::max(1, numberOfRanks)),
-    static_cast<std::uint64_t>(std::max(1, maximumTreesPerRank))
-  );
-
-  // Per-tree replicas can increase aggregate grid counts, while summed process RSS can count shared pages per rank.
-  constexpr auto VerticesPerCell     = std::uint64_t{1} << DIMENSIONS;
-  const auto     replicatedCellBound = saturatingMultiply(leafBound, treeBound);
-  const auto     vertexBound         = saturatingMultiply(replicatedCellBound, VerticesPerCell);
-  const auto     memoryPerNode       = tarch::getTotalMemoryInBytes();
-  const auto     maximumMemoryInBytes =
-    saturatingMultiply(memoryPerNode, static_cast<std::uint64_t>(std::max({1, numberOfRanks, numberOfNodes})));
-
-  const auto maximumCount    = Format::grouped(vertexBound);
-  const auto leaves          = Format::grouped(leafBound);
-  const auto trees           = Format::grouped(treeBound);
-  const auto maximumMemory   = Format::memory(maximumMemoryInBytes);
-  const auto maximumLevel    = Format::number(parameters.getMaxGridLevels());
-  const auto fullEfficiency  = Format::percentage(100.0);
-  const auto maximumOverhead = Format::overheadPercentageWidthSample();
-
-  Table report;
-  report.add("Grid", "Number of Leaves", gridCellSummary(leafBound, replicatedCellBound));
-  report
-    .add("Grid", "Number of Vertices", maximumCount + "  (Local " + maximumCount + " · Hanging " + maximumCount + ")");
-  report.add("Grid", "Grid Levels", maximumLevel + " .. " + maximumLevel);
-  report.add(
-    "Load Balancing",
-    "Number of Trees",
-    trees + "  (on " + Format::grouped(numberOfRanks) + (numberOfRanks == 1 ? " rank)" : " ranks)")
-  );
-  report.add("Load Balancing", "Rank Efficiency", fullEfficiency + "  (" + leaves + " .. " + leaves + ")");
-  report.add("Load Balancing", "Global Efficiency", fullEfficiency + "  (" + leaves + " .. " + leaves + ")");
-  report.add("Load Balancing", "Global Overhead", maximumOverhead + "  (" + maximumCount + " .. " + maximumCount + ")");
-
-  report.add("Memory", "System", maximumMemory + " RAM · " + maximumMemory + " free · " + maximumMemory + " RSS");
-  report.add("Memory", "Grid", maximumMemory);
-  report.add("Memory", "Heap", "Cell " + maximumMemory + " · Face " + maximumMemory + " · Vertex " + maximumMemory);
-  report.add("Memory", "Total Data", maximumMemory + " tracked");
-  return report.render();
 }

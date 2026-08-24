@@ -10,7 +10,6 @@
 #include "FusedTasks.h"
 
 #include "exahype2/dg/DGUtils.h"
-#include "kernels/AderSolver/AMRRoutines.h"
 #include "peano4/Globals.h"
 #include "peano4/Init.h"
 #include "peano4/Loop.h"
@@ -25,32 +24,33 @@
 #include "tarch/plotter/HDF5FileWriter.h"
 #include "tarch/plotter/XDMFTimeSeriesWriter.h"
 
-#ifdef UseAMR
-#error "At the moment the kernel benchmark does not support AMR"
-#endif
-
-using namespace benchmarks::exahype2::kernelbenchmarks;
-
 namespace {
+  constexpr int NumberOfDofsPerAxis = benchmarks::exahype2::kernelbenchmarks::AbstractAderSolver::Order + 1;
+  constexpr int NumberOfData        = benchmarks::exahype2::kernelbenchmarks::AbstractAderSolver::NumberOfUnknowns
+    + benchmarks::exahype2::kernelbenchmarks::AbstractAderSolver::NumberOfAuxiliaryVariables;
+  constexpr int PatchCardinality = BasePowerExponent<NumberOfDofsPerAxis, DIMENSIONS>::value * NumberOfData;
+
   tarch::instrumentation::Measurement timeStepMeasurement;
   double                              logNextTimeStep                  = 0.0;
   bool                                haveReceivedNonCriticalAssertion = false;
 
-  std::vector<peano4::datamanagement::CellMarker> _cells;
+  std::vector<peano4::datamanagement::CellMarker> cells;
 
   int getGridLength() {
     int result = 1;
-    for (int level = 0; level < ::runner::RuntimeParameters::getInstance().getGridLevels(); ++level) {
+    for (int level = 0; level < runner::RuntimeParameters::getInstance().getGridLevels(); ++level) {
       result *= 3;
     }
     return result;
   }
 
-  tarch::la::Vector<DIMENSIONS, double> getCellSize() { return DomainSize / static_cast<double>(getGridLength()); }
+  tarch::la::Vector<DIMENSIONS, double> getCellSize() {
+    return benchmarks::exahype2::kernelbenchmarks::DomainSize / static_cast<double>(getGridLength());
+  }
 
-  bool helpRequested(int argc, char** argv) {
-    for (int index = 1; index < argc; ++index) {
-      const std::string argument = argv[index];
+  bool helpRequested(const int argumentCount, char* const* const arguments) {
+    for (int index = 1; index < argumentCount; ++index) {
+      const std::string argument = arguments[index];
       if (argument == "--help" or argument == "-h") {
         return true;
       }
@@ -58,13 +58,17 @@ namespace {
     return false;
   }
 
-  template <typename T>
-  std::string
-  toScientificNotationString(T value, int precision = 4, bool considerSign = false, double threshold = 1e6) {
+  template <typename Value>
+  std::string toScientificNotationString(
+    const Value  value,
+    const int    precision    = 4,
+    const bool   considerSign = false,
+    const double threshold    = 1e6
+  ) {
     std::ostringstream out;
-    double             v = static_cast<double>(value);
+    const double       numericValue = static_cast<double>(value);
 
-    if (std::abs(v) < threshold) {
+    if (std::abs(numericValue) < threshold) {
       if (considerSign) {
         out << std::showpos;
       }
@@ -76,7 +80,7 @@ namespace {
     if (considerSign) {
       out << std::showpos;
     }
-    out << v;
+    out << numericValue;
     return out.str();
   }
 
@@ -87,14 +91,14 @@ namespace {
     return result.str();
   }
 
-  std::string renderSolverStatistics(const std::vector<::runner::SolverStatistic>& statistics) {
+  std::string renderSolverStatistics(const std::vector<runner::SolverStatistic>& statistics) {
     std::ostringstream result;
     for (const auto& statistic : statistics) {
       if (not result.str().empty()) {
         result << "   ";
       }
       result << statistic.label << " = ";
-      if (statistic.kind == ::runner::SolverStatistic::Kind::Count) {
+      if (statistic.kind == runner::SolverStatistic::Kind::Count) {
         result << statistic.count;
       } else if (statistic.minimum == statistic.maximum) {
         result << toScientificNotationString(statistic.minimum);
@@ -108,12 +112,15 @@ namespace {
 
   std::string formatSimulationTime() {
     std::ostringstream result;
-    result << repositories::getMinTimeStamp() << " / "
-           << ::runner::RuntimeParameters::getInstance().getMinTerminalTime();
+    result << benchmarks::exahype2::kernelbenchmarks::repositories::getMinTimeStamp() << " / "
+           << runner::RuntimeParameters::getInstance().getMinTerminalTime();
     return formatStatistic("Time", result.str());
   }
 
-  std::string formatTimeStep(int numberOfCompletedTimeSteps, const tarch::instrumentation::Measurement& measurement) {
+  std::string formatTimeStep(
+    const int                                  numberOfCompletedTimeSteps,
+    const tarch::instrumentation::Measurement& measurement
+  ) {
     std::ostringstream result;
     result << "Time Step " << numberOfCompletedTimeSteps;
     if (measurement.getNumberOfMeasurements() > 0) {
@@ -128,7 +135,7 @@ namespace {
     return result.str();
   }
 
-  std::string formatMeasurementTotal(const tarch::instrumentation::Measurement& measurement, const char* unit) {
+  std::string formatMeasurementTotal(const tarch::instrumentation::Measurement& measurement, const char* const unit) {
     std::ostringstream result;
     result << "Total=" << measurement.getAccumulatedValue() << unit
            << ", Measurements=" << measurement.getNumberOfMeasurements();
@@ -138,17 +145,17 @@ namespace {
   std::vector<std::string> formatSolverStatistics() {
     std::vector<std::string> result;
     result.push_back(formatSimulationTime());
-    for (const auto& statistic : repositories::getSolverStatistics()) {
+    for (const auto& statistic : benchmarks::exahype2::kernelbenchmarks::repositories::getSolverStatistics()) {
       result.push_back(formatStatistic(statistic.first, renderSolverStatistics(statistic.second)));
     }
     return result;
   }
 
-  template <typename Bytes>
+  template <typename MemorySize>
   std::vector<std::string> formatKernelBenchmarkStatistics(
-    std::size_t                                globalNumberOfPatches,
-    double                                     totalNumberOfDoFs,
-    Bytes                                      totalPersistentMemory,
+    const std::size_t                          globalNumberOfPatches,
+    const double                               totalNumberOfDoFs,
+    const MemorySize                           totalPersistentMemory,
     const tarch::instrumentation::Measurement& measurement
   ) {
     std::vector<std::string> result;
@@ -166,9 +173,9 @@ namespace {
     result.push_back(formatStatistic("Memory", memoryMessage.str()));
 
     if (measurement.getNumberOfMeasurements() > 0) {
-      const auto dt               = measurement.getMostRecentValue();
-      const auto patchesPerSecond = globalNumberOfPatches / dt;
-      const auto dofsPerSecond    = totalNumberOfDoFs / dt;
+      const auto duration         = measurement.getMostRecentValue();
+      const auto patchesPerSecond = globalNumberOfPatches / duration;
+      const auto dofsPerSecond    = totalNumberOfDoFs / duration;
 
       std::ostringstream performanceMessage;
       performanceMessage << patchesPerSecond << " Patch/s, " << dofsPerSecond << " DoF/s";
@@ -177,367 +184,256 @@ namespace {
 
     return result;
   }
-} // namespace
 
-void logFinalStatistics(
-  const tarch::instrumentation::Measurement& measurement,
-  const tarch::instrumentation::Measurement& measurementBoundary,
-  const tarch::instrumentation::Measurement& measurementPredictor,
-  const tarch::instrumentation::Measurement& measurementRiemann,
-  const tarch::instrumentation::Measurement& measurementCorrector
-) {
-  if (measurementBoundary.getNumberOfMeasurements() > 0) {
-    logInfo(formatStatistic("Boundary Handling", formatMeasurementTotal(measurementBoundary, "s")));
+  void logFinalStatistics(
+    const tarch::instrumentation::Measurement& kernelMeasurement,
+    const tarch::instrumentation::Measurement& boundaryMeasurement,
+    const tarch::instrumentation::Measurement& predictorMeasurement,
+    const tarch::instrumentation::Measurement& riemannMeasurement,
+    const tarch::instrumentation::Measurement& correctorMeasurement
+  ) {
+    if (boundaryMeasurement.getNumberOfMeasurements() > 0) {
+      logInfo(formatStatistic("Boundary Handling", formatMeasurementTotal(boundaryMeasurement, "s")));
+    }
+    if (predictorMeasurement.getNumberOfMeasurements() > 0) {
+      logInfo(formatStatistic("Predictor", formatMeasurementTotal(predictorMeasurement, "s")));
+    }
+    if (riemannMeasurement.getNumberOfMeasurements() > 0) {
+      logInfo(formatStatistic("Riemann Solver", formatMeasurementTotal(riemannMeasurement, "s")));
+    }
+    if (correctorMeasurement.getNumberOfMeasurements() > 0) {
+      logInfo(formatStatistic("Corrector", formatMeasurementTotal(correctorMeasurement, "s")));
+    }
+
+    if (kernelMeasurement.getNumberOfMeasurements() > 0) {
+      logInfo(formatStatistic("Time Stepping", formatMeasurementTotal(kernelMeasurement, "s")));
+
+      const auto   globalNumberOfPatches = cells.size();
+      const double totalNumberOfDoFs     = static_cast<double>(globalNumberOfPatches) * PatchCardinality;
+      const auto   averageStepTime       = kernelMeasurement.getAverageValue();
+
+      std::ostringstream performanceMessage;
+      performanceMessage << "Average=" << globalNumberOfPatches / averageStepTime << " Patch/s, "
+                         << totalNumberOfDoFs / averageStepTime << " DoF/s";
+      logInfo(formatStatistic("Performance", performanceMessage.str()));
+    }
   }
-  if (measurementPredictor.getNumberOfMeasurements() > 0) {
-    logInfo(formatStatistic("Predictor", formatMeasurementTotal(measurementPredictor, "s")));
-  }
-  if (measurementRiemann.getNumberOfMeasurements() > 0) {
-    logInfo(formatStatistic("Riemann Solver", formatMeasurementTotal(measurementRiemann, "s")));
-  }
-  if (measurementCorrector.getNumberOfMeasurements() > 0) {
-    logInfo(formatStatistic("Corrector", formatMeasurementTotal(measurementCorrector, "s")));
-  }
 
-  if (measurement.getNumberOfMeasurements() > 0) {
-    logInfo(formatStatistic("Time Stepping", formatMeasurementTotal(measurement, "s")));
+  void plotGrid() {
+    benchmarks::exahype2::kernelbenchmarks::repositories::startPlottingStep();
 
-    const auto globalNumberOfPatches = _cells.size();
-    const auto totalNumberOfDoFs     = globalNumberOfPatches * std::pow(AbstractAderSolver::Order + 1, DIMENSIONS)
-      * (AbstractAderSolver::NumberOfUnknowns + AbstractAderSolver::NumberOfAuxiliaryVariables);
-    const auto averageStepTime = measurement.getAverageValue();
+    const std::string outputDirectory  = "output";
+    const std::string solutionFileName = "AderSolver";
 
-    std::ostringstream performanceMessage;
-    performanceMessage << "Average=" << globalNumberOfPatches / averageStepTime << " Patch/s, "
-                       << totalNumberOfDoFs / averageStepTime << " DoF/s";
-    logInfo(formatStatistic("Performance", performanceMessage.str()));
-  }
-}
+    const double plotTimeStamp = 0.5
+      * (benchmarks::exahype2::kernelbenchmarks::repositories::getMinTimeStamp()
+         + benchmarks::exahype2::kernelbenchmarks::repositories::getMaxTimeStamp());
 
-void plotGrid() {
-  repositories::startPlottingStep();
+    static tarch::plotter::XDMFTimeSeriesWriter timeSeriesWriter;
+    tarch::plotter::HDF5FileWriter              fileWriter(outputDirectory, 1);
 
-  const std::string outputDirectory  = "output";
-  const std::string solutionFileName = "AderSolver";
+    auto cellPlotter       = fileWriter.createCellPlotter(0);
+    auto vertexPlotter     = fileWriter.createVertexPlotter(0);
+    auto vertexDataPlotter = fileWriter.createVertexDataPlotter(
+      0,
+      "AderSolverQ",
+      benchmarks::exahype2::kernelbenchmarks::AbstractAderSolver::NumberOfUnknowns
+    );
 
-  const double t = 0.5 * (repositories::getMinTimeStamp() + repositories::getMaxTimeStamp());
+    for (const auto& marker : cells) {
+      if (not marker.hasBeenRefined()) {
+        const auto* const data =
+          benchmarks::exahype2::kernelbenchmarks::DataRepository::getInstance().getCellQ(marker.getX(), marker.getH());
 
-  static tarch::plotter::XDMFTimeSeriesWriter timeSeriesWriter;
-  tarch::plotter::HDF5FileWriter              fileWriter(outputDirectory, 1);
-  auto                                        _cellPlotter   = fileWriter.createCellPlotter(0);
-  auto                                        _vertexPlotter = fileWriter.createVertexPlotter(0);
+        constexpr int TotalPoints = BasePowerExponent<NumberOfDofsPerAxis, DIMENSIONS>::value;
 
-  auto _vertexDataPlotter = fileWriter.createVertexDataPlotter(0, "AderSolverQ", AbstractAderSolver::NumberOfUnknowns);
+        int vertexIndices[TotalPoints];
 
-  for (auto& marker : _cells) {
-    if (not marker.hasBeenRefined()) {
-      const auto* data = DataRepository::getInstance().getCellQ(marker.getX(), marker.getH());
+        int counter         = 0;
+        int linearisedIndex = 0;
+        peano4::dForEach(NumberOfDofsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& index) {
+          vertexIndices[counter] = vertexPlotter->plotVertex(
+            exahype2::dg::getQuadraturePoint(
+              marker.getX(),
+              marker.getH(),
+              index,
+              NumberOfDofsPerAxis,
+              benchmarks::exahype2::kernelbenchmarks::kernels::AderSolver::Quadrature<SolverStoragePrecision>::nodes
+            )
+          );
 
-      constexpr int PointsPerAxis = AbstractAderSolver::Order + 1;
-      constexpr int TotalPoints =
-        (DIMENSIONS == 2) ? PointsPerAxis * PointsPerAxis : PointsPerAxis * PointsPerAxis * PointsPerAxis;
+          double values[benchmarks::exahype2::kernelbenchmarks::AbstractAderSolver::NumberOfUnknowns];
+          for (int unknown = 0; unknown < benchmarks::exahype2::kernelbenchmarks::AbstractAderSolver::NumberOfUnknowns;
+               unknown++) {
+            values[unknown] = data[linearisedIndex + unknown];
+          }
+          vertexDataPlotter->plotVertexData(
+            vertexIndices[counter],
+            values,
+            benchmarks::exahype2::kernelbenchmarks::AbstractAderSolver::NumberOfUnknowns
+          );
 
-      int vertexIndices[TotalPoints];
-
-      int counter         = 0;
-      int linearisedIndex = 0;
-      peano4::dForEach(AbstractAderSolver::Order + 1, [&](const tarch::la::Vector<DIMENSIONS, int>& index) {
-        vertexIndices[counter] = _vertexPlotter->plotVertex(
-          ::exahype2::dg::getQuadraturePoint(
-            marker.getX(),
-            marker.getH(),
-            index,
-            repositories::instanceOfAderSolver.Order + 1,
-            kernels::AderSolver::Quadrature<SolverStoragePrecision>::nodes
-          )
-        );
-
-        double values[AbstractAderSolver::NumberOfUnknowns];
-        for (int u = 0; u < AbstractAderSolver::NumberOfUnknowns; u++) {
-          values[u] = data[linearisedIndex + u];
-        }
-        _vertexDataPlotter->plotVertexData(vertexIndices[counter], values, AbstractAderSolver::NumberOfUnknowns);
-
-        counter++;
-        linearisedIndex += AbstractAderSolver::NumberOfUnknowns + AbstractAderSolver::NumberOfAuxiliaryVariables;
-      });
+          counter++;
+          linearisedIndex += NumberOfData;
+        });
 
 #if DIMENSIONS == 3
-      for (int k = 0; k < PointsPerAxis - 1; k++) {
+        for (int k = 0; k < NumberOfDofsPerAxis - 1; k++) {
 #endif
-        for (int j = 0; j < PointsPerAxis - 1; j++) {
-          for (int i = 0; i < PointsPerAxis - 1; i++) {
-            int idx = i + j * PointsPerAxis
+          for (int j = 0; j < NumberOfDofsPerAxis - 1; j++) {
+            for (int i = 0; i < NumberOfDofsPerAxis - 1; i++) {
+              int idx = i + j * NumberOfDofsPerAxis
 #if DIMENSIONS == 3
-              + k * PointsPerAxis * PointsPerAxis
+                + k * NumberOfDofsPerAxis * NumberOfDofsPerAxis
 #endif
-              ;
+                ;
 
-            int s_x = 1;
-            int s_y = PointsPerAxis;
+              int s_x = 1;
+              int s_y = NumberOfDofsPerAxis;
 
 #if DIMENSIONS == 2
-            int v[4];
+              int v[4];
+              v[0]                                 = vertexIndices[idx];
+              v[1]                                 = vertexIndices[idx + s_x];
+              v[2]                                 = vertexIndices[idx + s_x + s_y];
+              v[3]                                 = vertexIndices[idx + s_y];
+              [[maybe_unused]] const int cellIndex = cellPlotter->plotQuadrangle(v);
+#elif DIMENSIONS == 3
+            int s_z = NumberOfDofsPerAxis * NumberOfDofsPerAxis;
+            int v[8];
             v[0]                                 = vertexIndices[idx];
             v[1]                                 = vertexIndices[idx + s_x];
             v[2]                                 = vertexIndices[idx + s_x + s_y];
             v[3]                                 = vertexIndices[idx + s_y];
-            [[maybe_unused]] const int cellIndex = _cellPlotter->plotQuadrangle(v);
-#elif DIMENSIONS == 3
-          int s_z = PointsPerAxis * PointsPerAxis;
-          int v[8];
-          v[0]                                 = vertexIndices[idx];
-          v[1]                                 = vertexIndices[idx + s_x];
-          v[2]                                 = vertexIndices[idx + s_x + s_y];
-          v[3]                                 = vertexIndices[idx + s_y];
-          v[4]                                 = vertexIndices[idx + s_z];
-          v[5]                                 = vertexIndices[idx + s_x + s_z];
-          v[6]                                 = vertexIndices[idx + s_x + s_y + s_z];
-          v[7]                                 = vertexIndices[idx + s_y + s_z];
-          [[maybe_unused]] const int cellIndex = _cellPlotter->plotHexahedron(v);
+            v[4]                                 = vertexIndices[idx + s_z];
+            v[5]                                 = vertexIndices[idx + s_x + s_z];
+            v[6]                                 = vertexIndices[idx + s_x + s_y + s_z];
+            v[7]                                 = vertexIndices[idx + s_y + s_z];
+            [[maybe_unused]] const int cellIndex = cellPlotter->plotHexahedron(v);
 #endif
+            }
           }
-        }
 #if DIMENSIONS == 3
-      }
-#endif
-    }
-  }
-
-  timeSeriesWriter.writeSnapshotFile(solutionFileName, t, fileWriter);
-  timeSeriesWriter.writeTimeSeriesMetaFile(outputDirectory, solutionFileName);
-  repositories::finishPlottingStep();
-}
-
-void interpolateBetweenAMRBorder() {
-  const auto cellSize = getCellSize();
-
-#if DIMENSIONS == 2
-  constexpr int SpaceFaceSize = AbstractAderSolver::Order + 1;
-#else
-  constexpr int SpaceFaceSize = (AbstractAderSolver::Order + 1) * (AbstractAderSolver::Order + 1);
-#endif
-
-  for (auto& marker : _cells) {
-    if (marker.getH()[0] < cellSize[0]) { // Check if cell is in AMR region
-      auto parentSize   = marker.getH() * 3.0;
-      auto parentCenter = marker.getInvokingParentCellsCentre();
-
-      for (int f = 0; f < TWO_TIMES_D; f++) {
-        int normal = f % DIMENSIONS;
-        if ((f >= DIMENSIONS and marker.getRelativePositionWithinFatherCell()[normal] == 2)
-            or (f < DIMENSIONS and marker.getRelativePositionWithinFatherCell()[normal] == 0)) {
-          peano4::datamanagement::FaceMarker faceMarker{};
-          faceMarker.relativePositionWithinFatherCell = marker.getRelativePositionWithinFatherCell();
-          faceMarker.selectedFace                     = f;
-
-          int facePosition = faceMarker.getSelectedFaceNumber() < DIMENSIONS ? 0 : 1;
-          if (repositories::instanceOfAderSolver.isFirstGridSweepOfTimeStep()) {
-            auto coarseGridFaceQFlux = DataRepository::getInstance().getFaceQFluxEstimates(parentCenter, parentSize, f);
-            std::fill_n(
-              coarseGridFaceQFlux + (1 - facePosition) * (SpaceFaceSize * AbstractAderSolver::NumberOfUnknowns),
-              (SpaceFaceSize * AbstractAderSolver::NumberOfUnknowns),
-              0.0
-            );
-          }
-          if (repositories::instanceOfAderSolver.getSolverState()
-              == AderSolver::SolverState::PredictionOnHangingCells) {
-            auto fineGridFaceQFlux =
-              DataRepository::getInstance().getFaceQFluxEstimates(marker.getX(), marker.getH(), f);
-            auto coarseGridFaceQFlux = DataRepository::getInstance().getFaceQFluxEstimates(parentCenter, parentSize, f);
-            // Fluxes
-            kernels::AderSolver::faceFluxRestriction(
-              coarseGridFaceQFlux + (1 - facePosition) * (SpaceFaceSize * AbstractAderSolver::NumberOfUnknowns),
-              fineGridFaceQFlux + facePosition * (SpaceFaceSize * AbstractAderSolver::NumberOfUnknowns),
-              faceMarker.getRelativePositionWithinFatherFace()
-            );
-          }
         }
+#endif
+      }
+    }
+
+    timeSeriesWriter.writeSnapshotFile(solutionFileName, plotTimeStamp, fileWriter);
+    timeSeriesWriter.writeTimeSeriesMetaFile(outputDirectory, solutionFileName);
+    benchmarks::exahype2::kernelbenchmarks::repositories::finishPlottingStep();
+  }
+
+  void applyInitialConditions() {
+    for (const auto& marker : cells) {
+      if (not marker.hasBeenRefined()) {
+        auto* const patchData =
+          benchmarks::exahype2::kernelbenchmarks::DataRepository::getInstance().getCellQ(marker.getX(), marker.getH());
+        int linearisedIndex = 0;
+        peano4::dForEach(NumberOfDofsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& index) {
+          benchmarks::exahype2::kernelbenchmarks::repositories::instanceOfAderSolver.initialCondition(
+            patchData + linearisedIndex,
+            exahype2::dg::getQuadraturePoint(
+              marker.getX(),
+              marker.getH(),
+              index,
+              NumberOfDofsPerAxis,
+              benchmarks::exahype2::kernelbenchmarks::kernels::AderSolver::Quadrature<SolverStoragePrecision>::nodes
+            ),
+            marker.getH()
+          );
+          linearisedIndex += NumberOfData;
+        });
       }
     }
   }
-  for (auto& marker : _cells) {
-    if (marker.getH()[0] < cellSize[0]) { // Check if cell is in AMR region
-      auto parentCenter = marker.getInvokingParentCellsCentre();
-      auto parentSize   = marker.getH() * 3.0;
 
-      for (int f = 0; f < TWO_TIMES_D; f++) {
-        int normal = f % DIMENSIONS;
-        if ((f >= DIMENSIONS and marker.getRelativePositionWithinFatherCell()[normal] == 2)
-            or (f < DIMENSIONS and marker.getRelativePositionWithinFatherCell()[normal] == 0)) {
-          peano4::datamanagement::FaceMarker faceMarker{};
-          faceMarker.relativePositionWithinFatherCell = marker.getRelativePositionWithinFatherCell();
-          faceMarker.selectedFace                     = f;
-          auto fineGridFaceQ     = DataRepository::getInstance().getFaceQEstimates(marker.getX(), marker.getH(), f);
-          auto coarseGridFaceQ   = DataRepository::getInstance().getFaceQEstimates(parentCenter, parentSize, f);
-          auto fineGridFaceQFlux = DataRepository::getInstance().getFaceQFluxEstimates(marker.getX(), marker.getH(), f);
-          auto coarseGridFaceQFlux = DataRepository::getInstance().getFaceQFluxEstimates(parentCenter, parentSize, f);
-
-          int facePosition = faceMarker.getSelectedFaceNumber() < DIMENSIONS ? 0 : SpaceFaceSize;
-
-          if (repositories::instanceOfAderSolver.getSolverState()
-              == AderSolver::SolverState::PredictionOnHangingCells) {
-            kernels::AderSolver::faceUnknownsProlongation(
-              fineGridFaceQ
-                + facePosition
-                  * (AbstractAderSolver::NumberOfUnknowns + AbstractAderSolver::NumberOfAuxiliaryVariables),
-              fineGridFaceQFlux + facePosition * AbstractAderSolver::NumberOfUnknowns,
-              coarseGridFaceQ
-                + facePosition
-                  * (AbstractAderSolver::NumberOfUnknowns + AbstractAderSolver::NumberOfAuxiliaryVariables),
-              coarseGridFaceQFlux + facePosition * AbstractAderSolver::NumberOfUnknowns,
-              faceMarker.getRelativePositionWithinFatherFace()
-            );
-          }
-        }
-      }
-    }
-  }
-}
-
-void applyInitialConditions() {
-  for (auto& marker : _cells) {
-    if (not marker.hasBeenRefined()) {
-      auto* QOut = DataRepository::getInstance().getCellQ(marker.getX(), marker.getH());
-      // Initialise cell data with initial conditions.
-      int linearisedIndex = 0;
-      peano4::dForEach(AbstractAderSolver::Order + 1, [&](const tarch::la::Vector<DIMENSIONS, int>& index) {
-        repositories::instanceOfAderSolver.initialCondition(
-          QOut + linearisedIndex,
-          ::exahype2::dg::getQuadraturePoint(
-            marker.getX(),
-            marker.getH(),
-            index,
-            repositories::instanceOfAderSolver.Order + 1,
-            kernels::AderSolver::Quadrature<SolverStoragePrecision>::nodes
-          ),
-          marker.getH()
-        );
-        linearisedIndex += (AbstractAderSolver::NumberOfUnknowns + AbstractAderSolver::NumberOfAuxiliaryVariables);
-      });
-    }
-  }
-}
-
-peano4::datamanagement::CellMarker createMarkerFromIndex(const tarch ::la ::Vector<DIMENSIONS, int>& index) {
-  const auto                            cellSize         = getCellSize();
-  tarch::la::Vector<DIMENSIONS, double> cellIndex        = tarch::la::convertScalar<double>(index);
-  tarch::la::Vector<DIMENSIONS, double> cellPositionBase = DomainOffset + cellSize / 2.0;
-  tarch::la::Vector<DIMENSIONS, double> cellPosition =
-    cellPositionBase + tarch::la::multiplyComponents(cellIndex, cellSize);
-  peano4::datamanagement::CellMarker marker;
-  marker.h      = cellSize;
-  marker.centre = cellPosition;
-  return marker;
-}
-
-std::vector<peano4::datamanagement::CellMarker>
-createRefinedMarkersFromIndex(const tarch ::la ::Vector<DIMENSIONS, int>& index) {
-  const auto                            cellSize               = getCellSize();
-  tarch::la::Vector<DIMENSIONS, double> cellIndex              = tarch::la::convertScalar<double>(index);
-  tarch::la::Vector<DIMENSIONS, double> deeperCellIndex        = cellIndex * 3.0;
-  tarch::la::Vector<DIMENSIONS, double> deeperCellSize         = cellSize / 3.0;
-  tarch::la::Vector<DIMENSIONS, double> cellPositionBase       = DomainOffset + cellSize / 2.0;
-  tarch::la::Vector<DIMENSIONS, double> deepercellPositionBase = DomainOffset + deeperCellSize / 2.0;
-
-  std::vector<peano4::datamanagement::CellMarker> result;
-
-  tarch::la::Vector<DIMENSIONS, double> cellPosition =
-    cellPositionBase + tarch::la::multiplyComponents(cellIndex, cellSize);
-  peano4::datamanagement::CellMarker marker;
-  marker.centre = cellPosition;
-  marker.h      = cellSize;
-  marker.flags |= peano4::datamanagement::CellMarker::HasBeenRefined;
-  result.push_back(marker);
-
-  peano4::dForEach(3, [&](const tarch::la::Vector<DIMENSIONS, int>& offset) {
-    tarch::la::Vector<DIMENSIONS, double> deepCellOffset = tarch::la::convertScalar<double>(offset);
-    tarch::la::Vector<DIMENSIONS, double> localCellIndex = deepCellOffset + deeperCellIndex;
-    tarch::la::Vector<DIMENSIONS, double> deeperCellPosition =
-      deepercellPositionBase + tarch::la::multiplyComponents(localCellIndex, deeperCellSize);
+  peano4::datamanagement::CellMarker createMarkerFromIndex(const tarch::la::Vector<DIMENSIONS, int>& index) {
+    const auto                            cellSize  = getCellSize();
+    tarch::la::Vector<DIMENSIONS, double> cellIndex = tarch::la::convertScalar<double>(index);
+    tarch::la::Vector<DIMENSIONS, double> cellPositionBase =
+      benchmarks::exahype2::kernelbenchmarks::DomainOffset + cellSize / 2.0;
+    tarch::la::Vector<DIMENSIONS, double> cellPosition =
+      cellPositionBase + tarch::la::multiplyComponents(cellIndex, cellSize);
     peano4::datamanagement::CellMarker marker;
-    marker.centre                           = deeperCellPosition;
-    marker.h                                = deeperCellSize;
-    marker.relativePositionWithinFatherCell = offset;
-    result.push_back(marker);
-  });
-  return result;
-}
+    marker.h      = cellSize;
+    marker.centre = cellPosition;
+    return marker;
+  }
 
-void createGrid() {
-  repositories::startGridConstructionStep();
-  const int gridLength = getGridLength();
-  _cells.reserve(std::pow(gridLength, DIMENSIONS));
-  tarch::la::Vector<DIMENSIONS, double> DomainCenter = DomainOffset + DomainSize / 2.0;
-  peano4::dForEach(gridLength, [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
-    peano4::datamanagement::CellMarker marker = createMarkerFromIndex(volume);
-    if (UseAMR and tarch::la::norm2(marker.getX() - DomainCenter) < 0.1) {
-      auto markers = createRefinedMarkersFromIndex(volume);
-      _cells.insert(std::end(_cells), std::begin(markers), std::end(markers));
-    } else {
-      _cells.push_back(marker);
-    }
-  });
-  repositories::finishGridConstructionStep();
-}
+  void createGrid() {
+    benchmarks::exahype2::kernelbenchmarks::repositories::startGridConstructionStep();
+    const int gridLength = getGridLength();
+    cells.reserve(tarch::la::aPowI(DIMENSIONS, gridLength));
+    peano4::dForEach(gridLength, [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
+      cells.push_back(createMarkerFromIndex(volume));
+    });
+    benchmarks::exahype2::kernelbenchmarks::repositories::finishGridConstructionStep();
+  }
 
-void initGrid() {
-  repositories::startGridInitialisationStep();
-  applyInitialConditions();
-  repositories::finishGridInitialisationStep();
-}
+  void initGrid() {
+    benchmarks::exahype2::kernelbenchmarks::repositories::startGridInitialisationStep();
+    applyInitialConditions();
+    benchmarks::exahype2::kernelbenchmarks::repositories::finishGridInitialisationStep();
+  }
+} // namespace
 
-int main(int argc, char** argv) {
+int main(int argumentCount, char** arguments) {
   int returnCode = EXIT_SUCCESS;
 
-  auto& runtimeParameters = ::runner::RuntimeParameters::getInstance();
+  auto& runtimeParameters = runner::RuntimeParameters::getInstance();
   runtimeParameters.setGeneratedDefaults(
-    BenchmarkMinTerminalTime,
-    BenchmarkMaxTerminalTime,
-    BenchmarkGridLevels,
-    BenchmarkMaxGridLevels,
+    benchmarks::exahype2::kernelbenchmarks::BenchmarkMinTerminalTime,
+    benchmarks::exahype2::kernelbenchmarks::BenchmarkMaxTerminalTime,
+    benchmarks::exahype2::kernelbenchmarks::BenchmarkGridLevels,
+    benchmarks::exahype2::kernelbenchmarks::BenchmarkMaxGridLevels,
     "KernelBenchmarks"
   );
-  if (helpRequested(argc, argv)) {
+  if (helpRequested(argumentCount, arguments)) {
     runtimeParameters.printUsage("KernelBenchmarks");
     return EXIT_SUCCESS;
   }
   tarch::init(
-    &argc,
-    &argv,
+    &argumentCount,
+    &arguments,
     {runtimeParameters.getMPITimeoutWarning(),
      runtimeParameters.getMPIDeadlockTimeout(),
      runtimeParameters.isMPIRequestTrackingEnabled()}
   );
-  runtimeParameters.configure(argc, argv);
+  runtimeParameters.configure(argumentCount, arguments);
 
-  peano4::init(DomainOffset, DomainSize, PeriodicBC);
+  peano4::init(
+    benchmarks::exahype2::kernelbenchmarks::DomainOffset,
+    benchmarks::exahype2::kernelbenchmarks::DomainSize
+  );
 
-  repositories::startSimulation();
+  benchmarks::exahype2::kernelbenchmarks::repositories::startSimulation();
 
   createGrid();
   initGrid();
-  FusedDataRepository& fusedGrid = FusedDataRepository::getInstance();
+
+  auto& fusedGrid = benchmarks::exahype2::kernelbenchmarks::FusedDataRepository::getInstance();
   fusedGrid.startCollection();
-  for (auto& marker : _cells) {
+  for (const auto& marker : cells) {
     if (not marker.hasBeenRefined()) {
       fusedGrid.bookmarkCell(marker.getX(), marker.getH());
     }
   }
+
   fusedGrid.buildFromBookmarks();
 
-  tarch::instrumentation::Measurement measurement(1.0);
-  tarch::instrumentation::Measurement measurementBoundary(1.0);
-  tarch::instrumentation::Measurement measurementPredictor(1.0);
-  tarch::instrumentation::Measurement measurementRiemann(1.0);
-  tarch::instrumentation::Measurement measurementCorrector(1.0);
+  tarch::instrumentation::Measurement kernelMeasurement(1.0);
+  tarch::instrumentation::Measurement boundaryMeasurement(1.0);
+  tarch::instrumentation::Measurement predictorMeasurement(1.0);
+  tarch::instrumentation::Measurement riemannMeasurement(1.0);
+  tarch::instrumentation::Measurement correctorMeasurement(1.0);
   tarch::instrumentation::Measurement plotMeasurement(1.0);
   tarch::instrumentation::Watch       timeStepWatch("::", "main()", false);
   double                              timeStamp                            = 0.0;
   double                              nextMinPlotTimeStamp                 = runtimeParameters.getFirstPlotTimeStamp();
   double                              nextMaxPlotTimeStamp                 = runtimeParameters.getFirstPlotTimeStamp();
   bool                                continueToSolve                      = true;
-  int                                 count                                = 0;
+  int                                 sampleCount                          = 0;
   int                                 numberOfCompletedTimeSteps           = 0;
   int                                 lastLoggedNumberOfCompletedTimeSteps = 0;
   const double                        minTerminalTime                      = runtimeParameters.getMinTerminalTime();
@@ -549,16 +445,16 @@ int main(int argc, char** argv) {
 
   while (continueToSolve) {
     if (timeInBetweenPlots > 0.0
-        and (repositories::getMinTimeStamp() >= nextMinPlotTimeStamp or repositories::getMaxTimeStamp() >= nextMaxPlotTimeStamp)
-        and repositories::mayPlot()) {
-      if (repositories::getMinTimeStamp() >= nextMinPlotTimeStamp) {
+        and (benchmarks::exahype2::kernelbenchmarks::repositories::getMinTimeStamp() >= nextMinPlotTimeStamp or benchmarks::exahype2::kernelbenchmarks::repositories::getMaxTimeStamp() >= nextMaxPlotTimeStamp)
+        and benchmarks::exahype2::kernelbenchmarks::repositories::mayPlot()) {
+      if (benchmarks::exahype2::kernelbenchmarks::repositories::getMinTimeStamp() >= nextMinPlotTimeStamp) {
         nextMinPlotTimeStamp += timeInBetweenPlots;
       }
-      if (repositories::getMaxTimeStamp() >= nextMaxPlotTimeStamp) {
+      if (benchmarks::exahype2::kernelbenchmarks::repositories::getMaxTimeStamp() >= nextMaxPlotTimeStamp) {
         nextMaxPlotTimeStamp += timeInBetweenPlots;
       }
 
-      if constexpr (ShouldPlot) {
+      if constexpr (benchmarks::exahype2::kernelbenchmarks::ShouldPlot) {
         tarch::instrumentation::Watch plotWatch("", "", false);
         plotWatch.start();
         fusedGrid.syncCellsDeviceToHost();
@@ -568,42 +464,37 @@ int main(int argc, char** argv) {
         logInfo(formatPlot(plotMeasurement));
       }
     }
-    if (UseAMR) {
-      fusedGrid.syncFacesDeviceToHost();
-      interpolateBetweenAMRBorder();
-      fusedGrid.syncFacesHostToDevice();
-    }
-
     timeStepWatch.start();
-    repositories::startTimeStep();
+    benchmarks::exahype2::kernelbenchmarks::repositories::startTimeStep();
 
-    double dt = repositories::instanceOfAderSolver.getAdmissibleTimeStepSize();
+    const double timeStepSize =
+      benchmarks::exahype2::kernelbenchmarks::repositories::instanceOfAderSolver.getAdmissibleTimeStepSize();
 
-    tarch::instrumentation::Watch watch("", "", false);
-    watch.start();
+    tarch::instrumentation::Watch kernelWatch("", "", false);
+    kernelWatch.start();
 
-    tarch::instrumentation::Watch watchPredictor("", "", false);
-    watchPredictor.start();
+    tarch::instrumentation::Watch predictorWatch("", "", false);
+    predictorWatch.start();
     benchmarks::exahype2::kernelbenchmarks::predictorFused(
-      repositories::instanceOfAderSolver,
+      benchmarks::exahype2::kernelbenchmarks::repositories::instanceOfAderSolver,
       fusedGrid.getQ(),
       fusedGrid.getQOld(),
       fusedGrid.getFaceEstimatesPool(),
       fusedGrid.getFaceFluxesPool(),
       fusedGrid.getFaceIndices(),
       timeStamp,
-      dt,
+      timeStepSize,
       fusedGrid.getCellCentres()[0].data(),
       fusedGrid.getCellSizes()[0].data(),
       fusedGrid.getNumberFusedCells(),
       0
     );
-    watchPredictor.stop();
+    predictorWatch.stop();
 
-    tarch::instrumentation::Watch watchBoundary("", "", false);
-    watchBoundary.start();
+    tarch::instrumentation::Watch boundaryWatch("", "", false);
+    boundaryWatch.start();
     benchmarks::exahype2::kernelbenchmarks::handleBoundaryFused(
-      repositories::instanceOfAderSolver,
+      benchmarks::exahype2::kernelbenchmarks::repositories::instanceOfAderSolver,
       fusedGrid.getFaceEstimatesPool(),
       fusedGrid.getFaceFluxesPool(),
       fusedGrid.getBoundaryFaceIndices(),
@@ -612,72 +503,73 @@ int main(int argc, char** argv) {
       fusedGrid.getCellCentres(),
       fusedGrid.getCellSizes(),
       timeStamp,
-      dt,
+      timeStepSize,
       fusedGrid.getNumberOfBoundaryFaces(),
       fusedGrid.getNumberFusedCells(),
       0
     );
-    watchBoundary.stop();
+    boundaryWatch.stop();
 
-    tarch::instrumentation::Watch watchRiemann("", "", false);
-    watchRiemann.start();
-    riemannFused(
-      repositories::instanceOfAderSolver,
+    tarch::instrumentation::Watch riemannWatch("", "", false);
+    riemannWatch.start();
+    benchmarks::exahype2::kernelbenchmarks::riemannFused(
+      benchmarks::exahype2::kernelbenchmarks::repositories::instanceOfAderSolver,
       fusedGrid.getFaceEstimatesPool(),
       fusedGrid.getFaceFluxesPool(),
       fusedGrid.getUniqueFaceIndices(),
       fusedGrid.getFaceNumbers(),
       fusedGrid.getFaceCellIndices(),
       timeStamp,
-      dt,
+      timeStepSize,
       fusedGrid.getCellCentres()[0].data(),
       fusedGrid.getCellSizes()[0].data(),
       fusedGrid.getNumberOfFaces(),
       0
     );
-    watchRiemann.stop();
+    riemannWatch.stop();
 
-    tarch::instrumentation::Watch watchCorrector("", "", false);
-    watchCorrector.start();
+    tarch::instrumentation::Watch correctorWatch("", "", false);
+    correctorWatch.start();
     benchmarks::exahype2::kernelbenchmarks::correctorFused(
-      repositories::instanceOfAderSolver,
+      benchmarks::exahype2::kernelbenchmarks::repositories::instanceOfAderSolver,
       fusedGrid.getQ(),
       fusedGrid.getFaceFluxesPool(),
       fusedGrid.getFaceIndices(),
       timeStamp,
-      dt,
+      timeStepSize,
       fusedGrid.getCellCentres()[0].data(),
       fusedGrid.getCellSizes()[0].data(),
       fusedGrid.getNumberFusedCells(),
       0
     );
-    watchCorrector.stop();
-    watch.stop();
+    correctorWatch.stop();
+    kernelWatch.stop();
 
-    const auto newTimeStepSize = repositories::instanceOfAderSolver.getAdmissibleTimeStepSize();
-    repositories::instanceOfAderSolver
-      .update(newTimeStepSize, timeStamp + dt, fusedGrid.getMinVolumeH(), fusedGrid.getMaxVolumeH());
+    const auto newTimeStepSize =
+      benchmarks::exahype2::kernelbenchmarks::repositories::instanceOfAderSolver.getAdmissibleTimeStepSize();
+    benchmarks::exahype2::kernelbenchmarks::repositories::instanceOfAderSolver
+      .update(newTimeStepSize, timeStamp + timeStepSize, fusedGrid.getMinVolumeH(), fusedGrid.getMaxVolumeH(), false);
 
-    timeStamp += repositories::instanceOfAderSolver.getAdmissibleTimeStepSize();
-    repositories::finishTimeStep();
+    timeStamp += benchmarks::exahype2::kernelbenchmarks::repositories::instanceOfAderSolver.getAdmissibleTimeStepSize();
+    benchmarks::exahype2::kernelbenchmarks::repositories::finishTimeStep();
 
     timeStepWatch.stop();
 
-    if (repositories::mayPlot()) {
-      measurement.setValue(watch.getCalendarTime());
-      measurementBoundary.setValue(watchBoundary.getCalendarTime());
-      measurementPredictor.setValue(watchPredictor.getCalendarTime());
-      measurementRiemann.setValue(watchRiemann.getCalendarTime());
-      measurementCorrector.setValue(watchCorrector.getCalendarTime());
+    if (benchmarks::exahype2::kernelbenchmarks::repositories::mayPlot()) {
+      kernelMeasurement.setValue(kernelWatch.getCalendarTime());
+      boundaryMeasurement.setValue(boundaryWatch.getCalendarTime());
+      predictorMeasurement.setValue(predictorWatch.getCalendarTime());
+      riemannMeasurement.setValue(riemannWatch.getCalendarTime());
+      correctorMeasurement.setValue(correctorWatch.getCalendarTime());
       timeStepMeasurement.setValue(timeStepWatch.getCalendarTime());
       numberOfCompletedTimeSteps++;
 
       if (timeStepMeasurement.getAccumulatedValue() >= logNextTimeStep) {
-        const auto totalPersistentMemory = DataRepository::getInstance().getMemoryUsageInBytes();
+        const auto totalPersistentMemory =
+          benchmarks::exahype2::kernelbenchmarks::DataRepository::getInstance().getMemoryUsageInBytes();
 
-        const auto globalNumberOfPatches = _cells.size();
-        const auto totalNumberOfDoFs     = globalNumberOfPatches * std::pow(AbstractAderSolver::Order + 1, DIMENSIONS)
-          * (AbstractAderSolver::NumberOfUnknowns + AbstractAderSolver::NumberOfAuxiliaryVariables);
+        const auto   globalNumberOfPatches = cells.size();
+        const double totalNumberOfDoFs     = static_cast<double>(globalNumberOfPatches) * PatchCardinality;
 
         logInfo(formatTimeStep(numberOfCompletedTimeSteps, timeStepMeasurement));
         for (const auto& statistic : formatSolverStatistics()) {
@@ -687,7 +579,7 @@ int main(int argc, char** argv) {
                globalNumberOfPatches,
                totalNumberOfDoFs,
                totalPersistentMemory,
-               measurement
+               kernelMeasurement
              )) {
           logInfo(statistic);
         }
@@ -695,12 +587,14 @@ int main(int argc, char** argv) {
         logNextTimeStep += runtimeParameters.getTimeStepLogInterval();
       }
 
-      if (Samples > 0 and ++count >= Samples) {
+      if (benchmarks::exahype2::kernelbenchmarks::Samples > 0
+          and ++sampleCount >= benchmarks::exahype2::kernelbenchmarks::Samples) {
         continueToSolve = false;
       }
     }
 
-    if (repositories::getMinTimeStamp() >= minTerminalTime and repositories::getMaxTimeStamp() >= maxTerminalTime) {
+    if (benchmarks::exahype2::kernelbenchmarks::repositories::getMinTimeStamp() >= minTerminalTime
+        and benchmarks::exahype2::kernelbenchmarks::repositories::getMaxTimeStamp() >= maxTerminalTime) {
       continueToSolve = false;
     }
 
@@ -712,8 +606,7 @@ int main(int argc, char** argv) {
 
   } // continueToSolve
 
-  // Plot last timestep
-  if constexpr (ShouldPlot) {
+  if constexpr (benchmarks::exahype2::kernelbenchmarks::ShouldPlot) {
     tarch::instrumentation::Watch plotWatch("", "", false);
     plotWatch.start();
     fusedGrid.syncCellsDeviceToHost();
@@ -722,27 +615,26 @@ int main(int argc, char** argv) {
     plotMeasurement.setValue(plotWatch.getCalendarTime());
     logInfo(formatPlot(plotMeasurement));
   }
-  repositories::finishSimulation();
+  benchmarks::exahype2::kernelbenchmarks::repositories::finishSimulation();
 
   if (haveReceivedNonCriticalAssertion) {
     logWarning("Terminated gracefully after noncritical assertion");
     returnCode = EXIT_FAILURE;
   } else {
-    // Log final timestep information
     if (numberOfCompletedTimeSteps > lastLoggedNumberOfCompletedTimeSteps) {
       logInfo(formatTimeStep(numberOfCompletedTimeSteps, timeStepMeasurement));
       for (const auto& statistic : formatSolverStatistics()) {
         logInfo(statistic);
       }
-      const auto totalPersistentMemory = DataRepository::getInstance().getMemoryUsageInBytes();
-      const auto globalNumberOfPatches = _cells.size();
-      const auto totalNumberOfDoFs     = globalNumberOfPatches * std::pow(AbstractAderSolver::Order + 1, DIMENSIONS)
-        * (AbstractAderSolver::NumberOfUnknowns + AbstractAderSolver::NumberOfAuxiliaryVariables);
+      const auto totalPersistentMemory =
+        benchmarks::exahype2::kernelbenchmarks::DataRepository::getInstance().getMemoryUsageInBytes();
+      const auto   globalNumberOfPatches = cells.size();
+      const double totalNumberOfDoFs     = static_cast<double>(globalNumberOfPatches) * PatchCardinality;
       for (const auto& statistic : formatKernelBenchmarkStatistics(
              globalNumberOfPatches,
              totalNumberOfDoFs,
              totalPersistentMemory,
-             measurement
+             kernelMeasurement
            )) {
         logInfo(statistic);
       }
@@ -751,7 +643,13 @@ int main(int argc, char** argv) {
     returnCode = EXIT_SUCCESS;
   }
 
-  logFinalStatistics(measurement, measurementBoundary, measurementPredictor, measurementRiemann, measurementCorrector);
+  logFinalStatistics(
+    kernelMeasurement,
+    boundaryMeasurement,
+    predictorMeasurement,
+    riemannMeasurement,
+    correctorMeasurement
+  );
 
   fusedGrid.clear();
   peano4::shutdown();

@@ -34,15 +34,14 @@ class SingleSweep(FV):
         overlap,
         unknowns,
         auxiliary_variables,
-        fuse_compute_kernels=False,
     ):
+        self._state_owner = None
         super(SingleSweep, self).__init__(
             name=name,
             patch_size=patch_size,
             overlap=overlap,
             unknowns=unknowns,
             auxiliary_variables=auxiliary_variables,
-            fuse_compute_kernels=fuse_compute_kernels,
         )
 
         self._solver_template_file_class_name = "SingleSweep"
@@ -50,6 +49,7 @@ class SingleSweep(FV):
     def create_action_sets(self):
         """
         Call superclass routine and then reconfigure for the single sweep setup.
+
         This operation is implicitly called via the superconstructor.
         """
         super(SingleSweep, self).create_action_sets()
@@ -57,6 +57,120 @@ class SingleSweep(FV):
         self._action_set_update_patch.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order + 2
         )
+        if self._state_owner is not None:
+            dynamic_amr = (
+                self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement
+            )
+            dynamic_amr.d["INTERPOLATE_GUARD"] = (
+                self._provide_face_data_to_compute_kernels_default_guard()
+                + " and "
+                + self._state_is_not("GridInitialisation")
+            )
+
+    def attach_state_owner(self, state_owner):
+        """Uses another solver as the state and PDE owner."""
+        if self._state_owner is not None:
+            raise RuntimeError("The FV solver already has a state owner.")
+        self._state_owner = state_owner
+
+    def get_name_of_global_instance(self):
+        if self._state_owner is None:
+            return super().get_name_of_global_instance()
+        return self._state_owner.get_name_of_global_instance()
+
+    def _provide_cell_data_to_compute_kernels_default_guard(self):
+        if self._state_owner is None:
+            return super()._provide_cell_data_to_compute_kernels_default_guard()
+        return "not marker.willBeRefined() and " + self._state_is_not(
+            "GridConstruction"
+        )
+
+    def _provide_face_data_to_compute_kernels_default_guard(self):
+        if self._state_owner is None:
+            return super()._provide_face_data_to_compute_kernels_default_guard()
+        return self._provide_cell_data_to_compute_kernels_default_guard()
+
+    def _store_cell_data_default_guard(self):
+        if self._state_owner is None:
+            return super()._store_cell_data_default_guard()
+        return self._provide_cell_data_to_compute_kernels_default_guard()
+
+    def _load_cell_data_default_guard(self):
+        if self._state_owner is None:
+            return super()._load_cell_data_default_guard()
+        return (
+            "not marker.hasBeenRefined() and "
+            + self._state_is_not("GridConstruction")
+            + " and "
+            + self._state_is_not("GridInitialisation")
+        )
+
+    def _store_face_data_default_guard(self):
+        if self._state_owner is None:
+            return super()._store_face_data_default_guard()
+        return self._provide_face_data_to_compute_kernels_default_guard()
+
+    def _load_face_data_default_guard(self):
+        if self._state_owner is None:
+            return super()._load_face_data_default_guard()
+        return self._load_cell_data_default_guard()
+
+    def _store_boundary_data_default_guard(self):
+        if self._state_owner is None:
+            return super()._store_boundary_data_default_guard()
+        return (
+            self._store_face_data_default_guard()
+            + " and not repositories::"
+            + self.get_name_of_global_instance()
+            + ".PeriodicBC[marker.getSelectedFaceNumber() % DIMENSIONS]"
+            + " and not marker.hasBeenRefined() and fineGridFace"
+            + self._face_label.name
+            + ".getBoundary()"
+        )
+
+    def _delete_face_data_default_guard(self):
+        if self._state_owner is None:
+            return super()._delete_face_data_default_guard()
+        return "true"
+
+    def _interpolate_face_data_default_guard(self):
+        if self._state_owner is None:
+            return super()._interpolate_face_data_default_guard()
+        return self._state_is_not("GridInitialisation")
+
+    def _restrict_face_data_default_guard(self):
+        if self._state_owner is None:
+            return super()._restrict_face_data_default_guard()
+        return "true"
+
+    def _state_is_not(self, state):
+        return (
+            "repositories::"
+            + self.get_name_of_global_instance()
+            + ".getSolverState() != "
+            + self._state_owner.name
+            + "::SolverState::"
+            + state
+        )
+
+    def _init_dictionary_with_default_parameters(self, dictionary):
+        super()._init_dictionary_with_default_parameters(dictionary)
+        if self._state_owner is None:
+            return
+        namespace = "::".join(self._namespace)
+        dictionary["FULL_QUALIFIED_SOLVER_NAME"] = (
+            namespace + "::" + self._state_owner.name
+        )
+        dictionary["SOLVER_INSTANCE"] = self.get_name_of_global_instance()
+        dictionary["RIEMANN_SOLVER_METHOD_NAME"] = "solveLimiterRiemannProblem"
+        dictionary["LIMITER_METHOD_NAME"] = "applyLimiterSlope"
+
+    def add_implementation_files_to_project(self, namespace, output, dimensions):
+        if self._state_owner is not None:
+            raise RuntimeError(
+                "An embedded FV backend is generated through its state owner."
+            )
+        super().add_implementation_files_to_project(namespace, output, dimensions)
 
     def set_implementation(
         self,
@@ -69,9 +183,23 @@ class SingleSweep(FV):
         riemann_solver=None,
         source_term=None,
         diffusive_source_term=None,
-        adjust_solution=None,
         limiter=None,
     ):
+        owner_pde_terms = (
+            initial_conditions,
+            boundary_conditions,
+            refinement_criterion,
+            flux,
+            ncp,
+            max_eigenvalue,
+            source_term,
+            diffusive_source_term,
+        )
+        if self._state_owner is not None and any(
+            implementation is not None for implementation in owner_pde_terms
+        ):
+            raise RuntimeError("Configure PDE terms through the state owner.")
+
         if initial_conditions is not None:
             self._initial_conditions_implementation = initial_conditions
             if initial_conditions is not PDETerms.User_Defined_Implementation:
@@ -116,11 +244,6 @@ class SingleSweep(FV):
             self._diffusive_source_term_implementation = diffusive_source_term
             if diffusive_source_term is not PDETerms.User_Defined_Implementation:
                 self._use_stateless_diffusive_source_term = True
-
-        if adjust_solution is not None:
-            self._adjust_solution_implementation = adjust_solution
-            if adjust_solution is not PDETerms.User_Defined_Implementation:
-                self._use_stateless_adjust_solution = True
 
         if limiter is not None:
             self._limiter_implementation = limiter
@@ -167,7 +290,8 @@ class SingleSweep(FV):
 
     def add_entries_to_text_replacement_dictionary(self, d):
         """
-        d: Dictionary of string to string
+        D: Dictionary of string to string.
+
            in/out argument
         """
         pass

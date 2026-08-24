@@ -5,6 +5,7 @@
 #include "peano4/Init.h"
 #include "runner/LoadBalancer.h"
 #include "runner/RuntimeParameters.h"
+#include "tarch/FloatingPointExceptions.h"
 #include "tarch/Init.h"
 #include "tarch/Termination.h"
 #include "tarch/instrumentation/Log.h"
@@ -13,15 +14,17 @@
 #include "tarch/plotter/FileWriter.h"
 #include "tarch/reader/JSONReader.h"
 
-static bool helpRequested(int argc, char* const* argv) {
-  for (int index = 1; index < argc; ++index) {
-    const auto argument = std::string(argv[index]);
-    if (argument == "--help" or argument == "-h") {
-      return true;
+namespace {
+  bool helpRequested(const int argc, char* const* const argv) {
+    for (int index = 1; index < argc; ++index) {
+      const auto argument = std::string(argv[index]);
+      if (argument == "--help" or argument == "-h") {
+        return true;
+      }
     }
+    return false;
   }
-  return false;
-}
+} // namespace
 
 /**
  * Parses merged runtime configuration, initialises tarch, Peano, the load
@@ -31,12 +34,12 @@ int runner::launch(
   const tarch::la::Vector<DIMENSIONS, double>& domainOffset,
   const tarch::la::Vector<DIMENSIONS, double>& domainSize,
   const std::bitset<DIMENSIONS>&               periodicBC,
-  RepositoryCallbacks                          callbacks,
-  std::vector<Step>                            steps,
+  runner::RepositoryCallbacks                  callbacks,
+  std::vector<runner::Step>                    steps,
   int&                                         argc,
   char**                                       argv
 ) {
-  auto& parameters = RuntimeParameters::getInstance();
+  auto& parameters = runner::RuntimeParameters::getInstance();
 
   if (helpRequested(argc, argv)) {
     parameters.printUsage(std::filesystem::path(argc > 0 ? argv[0] : "").filename().string());
@@ -101,6 +104,8 @@ int runner::launch(
     {parameters.getMPITimeoutWarning(), parameters.getMPIDeadlockTimeout(), parameters.isMPIRequestTrackingEnabled()}
   );
 
+  std::optional<tarch::FloatingPointExceptions::ScopedTrap> launchTrap(std::in_place, __FILE__, __LINE__);
+
   tarch::instrumentation::Log::setLogMachineName(tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1);
 
   tarch::plotter::FileWriter::setDoublePrecisionOutput(parameters.getPlotDoublePrecision());
@@ -136,34 +141,40 @@ int runner::launch(
 
   peano4::init(domainOffset, domainSize, periodicBC);
 
-  initLoadBalancer();
+  runner::initLoadBalancer();
 
   if (callbacks.startSimulation) {
     callbacks.startSimulation();
   }
 
-  Engine engine(domainOffset, domainSize, periodicBC, callbacks, std::move(steps));
+  runner::Engine engine(domainOffset, domainSize, periodicBC, callbacks, std::move(steps));
 
   int returnCode = EXIT_SUCCESS;
 #if defined(PEANO_WITH_OPENMP)
 #pragma omp parallel
+#endif
   {
+    const tarch::FloatingPointExceptions::ScopedTrap threadTrap(__FILE__, __LINE__);
+#if defined(PEANO_WITH_OPENMP)
+#pragma omp barrier
 #pragma omp master
     {
 #endif
       returnCode = engine.run();
 #if defined(PEANO_WITH_OPENMP)
     }
-  }
+#pragma omp barrier
 #endif
+  }
 
   if (callbacks.finishSimulation) {
     callbacks.finishSimulation();
   }
-  loadBalancer().shutdown();
+  runner::loadBalancer().shutdown();
   callbacks.shutdownDataRepository();
 
   peano4::shutdown();
+  launchTrap.reset();
   tarch::shutdown();
   return returnCode;
 }

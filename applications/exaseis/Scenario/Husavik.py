@@ -91,7 +91,7 @@ class Husavik(DynamicRuptureScenario):
         {DomainSize[0], DomainSize[2]},
         {DomainOffset[0], DomainOffset[2]}
       );
-      return netcdfSampler.sample(
+      return netcdfSampler.samplePiecewiseConstant(
         "perturbation",
         {x[0], x[2]}
       );
@@ -110,7 +110,7 @@ class Husavik(DynamicRuptureScenario):
         {112.823, 111.706},
         {-56.406, -1.106}
       );
-      return netcdfSampler.sample(
+      return netcdfSampler.samplePiecewiseConstant(
         "perturbation",
         {x[2], x[1]}
       );
@@ -145,13 +145,13 @@ class Husavik(DynamicRuptureScenario):
         const double y  = 7327057.0394108+(866.02540378*x[0]+500*x[2]);
         const double z  = 1000.*x[1];
 
-        Q[Shortcuts::rho] = materialSampler.sample(
+        Q[Shortcuts::rho] = materialSampler.samplePiecewiseConstant(
           "rho", {xx, y, z}
         );
-        Q[Shortcuts::cp] = materialSampler.sample(
+        Q[Shortcuts::cp] = materialSampler.samplePiecewiseConstant(
           "cp", {xx, y, z}
         );
-        Q[Shortcuts::cs] = materialSampler.sample(
+        Q[Shortcuts::cs] = materialSampler.samplePiecewiseConstant(
           "cs", {xx, y, z}
         );
 

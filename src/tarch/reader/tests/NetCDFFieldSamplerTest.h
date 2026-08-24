@@ -8,13 +8,17 @@ namespace tarch::reader::tests {
   class NetCDFFieldSamplerTest;
 } // namespace tarch::reader::tests
 
-class tarch::reader::tests::NetCDFFieldSamplerTest: public tarch::tests::TestCase {
+class tarch::reader::tests::NetCDFFieldSamplerTest : public tarch::tests::TestCase {
 private:
-  void testSampleSingleField();
+  void testPiecewiseConstantSampleSingleField();
   void testOutOfDomainReturnsZero();
   void testMultipleNamedFields();
   void testDisplacementUsesItsOwnCoordinateRange();
   void testSamplingWithSimulationOffset();
+  void testSamplingWithFileExtent();
+  void testBilinearSampling();
+  void testThreeDimensionalSampling();
+  void testThreeDimensionalBilinearSampling();
 
 public:
   NetCDFFieldSamplerTest();

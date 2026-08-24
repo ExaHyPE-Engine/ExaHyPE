@@ -1,5 +1,3 @@
-#include "peano4/Loop.h"
-
 template <typename Solver, int order, int unknowns, int auxiliaryVariables>
 void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre(
   ::exahype2::CellData<double, double>& cellData,

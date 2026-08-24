@@ -1,4 +1,3 @@
-#pragma once
 // ======================================================================================
 // Particle Attribute Layout (Important!)
 // ======================================================================================
@@ -30,9 +29,6 @@
 // In summary: **attribute order and accessor logic must stay consistent**.
 // If you customize one, remember to adjust the other.
 //
-
-#include "tarch/la/Vector.h"
-#include "tarch/la/VectorOperations.h"
 
 namespace exahype2 {
   namespace fv {

@@ -1,0 +1,13 @@
+{
+  "endTime": 80.0,
+  "gridLevels": 4,
+  "firstPlotTimeStamp": 0.0,
+  "numberOfSnapshots": 10,
+  "outputPath": "solutions",
+  "timeStepLogInterval": 10.0,
+  "loadBalancingQuality": 0.9,
+  "maxNumberOfTreesPerRank": -1,
+  "targetDevice": 0,
+  "bathymetryFile": "../../landslide/tafjord/bathymetry/TafjordBathymetry.nc",
+  "displacementFile": "../../landslide/tafjord/bathymetry/TafjordDisplacement.nc"
+}

@@ -2,37 +2,31 @@
 # use, please see the copyright notice at www.peano-framework.org
 
 
-def perserveCartesianTracerLayout(solver, particle_spacing):
+def preserveCartesianTracerLayout(solver, particle_spacing):
+    """Create a cell kernel that relaxes tracers towards Cartesian spacing.
+
+    The kernel uses the time step of the owning finite-volume cell and is
+    intended for a particle-particle interaction action set.
     """
-
-        This constraint is used in combination particle-particle interaction
-        for tracers. A typical invocation resembles
-
-    project.add_action_set_to_timestepping( peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(
-      particle_set = tracer_particles,
-      cell_compute_kernel = exahype2.tracer.perserveCartesianTracerLayout(thesolver,particle_spacing),
-      additional_includes = "#include "toolbox/particles/potentials/Springs.h"
-    ))
-
-    """
-    return (
-        """
-//Run over local set
-for (auto* p: localParticles) {
-  if ( marker.isContained( p->getX() ) ) {
-    tarch::la::Vector<DIMENSIONS,double> updatedX = p->getX();
-    for (auto* pp: activeParticles) {
-      if (p->getNumber()!=pp->getNumber()) {
-        updatedX += repositories::"""
-        + solver.get_name_of_global_instance()
-        + """ benutze den Time Stamp vom Cell Marker hier!.getMaxTimeStepSize()
-                  * toolbox::particles::potentials::springPotential(p->getX(), pp->getX(), """
-        + str(particle_spacing)
-        + """ );
-      }
-    }
-    p->setX(updatedX);
-  }
-}
-"""
+    return """
+const auto timeStepSize = fineGridCell{cell_label}.getTimeStepSize();
+for (auto* const particle : localParticles) {{
+  if (marker.isContained(particle->getX())) {{
+    auto updatedPosition = particle->getX();
+    for (const auto* const interactingParticle : activeParticles) {{
+      if (particle->getNumber() != interactingParticle->getNumber()) {{
+        updatedPosition += timeStepSize
+          * toolbox::particles::potentials::springPotential(
+            particle->getX(),
+            interactingParticle->getX(),
+            {particle_spacing}
+          );
+      }}
+    }}
+    particle->setX(updatedPosition);
+  }}
+}}
+""".format(
+        cell_label=solver._cell_label.name,
+        particle_spacing=particle_spacing,
     )

@@ -11,6 +11,9 @@
 #include "exahype2/RefinementControl.h"
 #include "exahype2/RefinementCriterionHelpers.h"
 #include "exahype2/PrecisionControl.h"
+{%- if SUBCELL_LIMITER %}
+#include "exahype2/dg/LimitingSolverState.h"
+{%- endif %}
 
 #include "peano4/Globals.h"
 
@@ -28,15 +31,11 @@
 
 {{SOLVER_INCLUDES}}
 
-{% for item in NAMESPACE -%}
-namespace {{ item }} {
-{%- endfor %}
+namespace {{NAMESPACE | join("::")}} {
   class {{CLASSNAME}};
-{% for item in NAMESPACE -%}
-}
-{%- endfor %}
+} // namespace {{NAMESPACE | join("::")}}
 
-class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
+class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
   public:
 {% if USE_VARIABLE_SHORTCUTS is sameas True %}
     /**
@@ -59,7 +58,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
       Suspended
     };
 
-    static std::string toString(SolverState);
+    static std::string toString(const SolverState state);
 
     static constexpr int Order                      = {{ORDER}};
     static constexpr int NumberOfUnknowns           = {{NUMBER_OF_UNKNOWNS}};
@@ -67,7 +66,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     static constexpr double CFL                     = {{CFL_SAFETY_FACTOR}};
     static constexpr double PNPM                    = {{CFL_ADER}};
 
-    // User-defined solver constants
     {{SOLVER_CONSTANTS}}
 
 {% if USE_POINT_SOURCE %}
@@ -77,11 +75,12 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 {% endif %}
 
     {{CLASSNAME}}();
-    ~{{CLASSNAME}}();
+    ~{{CLASSNAME}}() override;
+    {{CLASSNAME}}(const {{CLASSNAME}}& other) = delete;
+    {{CLASSNAME}}({{CLASSNAME}}&& other) = delete;
+    {{CLASSNAME}}& operator=(const {{CLASSNAME}}& other) = delete;
+    {{CLASSNAME}}& operator=({{CLASSNAME}}&& other) = delete;
 
-    /**
-     * Flags the coordinate axes along which the domain is periodic.
-     */
     static std::bitset<DIMENSIONS> PeriodicBC;
 
     double getMinTimeStamp() const override final;
@@ -100,11 +99,11 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * @param currentState  State of the solver at time of calling
      */
     virtual ::exahype2::PrecisionCommand precisionCriterion(
-      const {{SOLUTION_STORAGE_PRECISION}} * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<DIMENSIONS,double>&         x,
-      const tarch::la::Vector<DIMENSIONS,double>&         h,
-      double                                              t,
-      SolverState                                         currentState
+      const {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS Q, // [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<DIMENSIONS, double>&        x,
+      const tarch::la::Vector<DIMENSIONS, double>&        h,
+      const double                                        t,
+      const SolverState                                   currentState
     ) {% if ADAPTIVE_PRECISION_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final {% endif %};
     {% endif %}
 
@@ -122,9 +121,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     void startPlottingStep() override;
     void finishPlottingStep() override;
 
-    /**
-     * @return Observed sizes, not the admissible quantities
-     */
     double getMaxPatchSize() const override final;
     double getMinPatchSize() const override final;
     double getMaxCellSize() const override final;
@@ -132,18 +128,25 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
     int getNumberOfDoFs() const override final;
 
-    /**
-     * Update the global solver state, i.e. feed updated global quantities into
-     * the solver.
-     *
-     * @param timeStepSize Time step size to fold into the global extrema
-     * @param timeStamp    Time stamp to fold into the global extrema
-     * @param minCellSize  Smallest observed cell size
-     * @param maxCellSize  Largest observed cell size
-     */
-    void update(double timeStepSize, double timeStamp, double minCellSize, double maxCellSize);
+    void update(
+      const double timeStepSize,
+      const double timeStamp,
+      const double minCellSize,
+      const double maxCellSize,
+      const bool   hasHangingFaces
+    );
 
     SolverState getSolverState() const;
+{%- if SUBCELL_LIMITER %}
+
+    ::exahype2::dg::LimitingSolverState getLimitingSolverState() const;
+
+    void markCellAsTroubled();
+
+    long getNumberOfTroubledCells() const;
+
+    bool isFinalSubcellSpreadSweep() const;
+{%- endif %}
 
     bool mayPlot() const override;
 
@@ -157,27 +160,34 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
   protected:
     SolverState _solverState;
+{%- if SUBCELL_LIMITER %}
 
-    double     _minTimeStamp;
-    double     _maxTimeStamp;
+    ::exahype2::dg::LimitingSweep _limitingSweep;
 
-    double     _minTimeStampThisTimeStep;
-    double     _maxTimeStampThisTimeStep;
+    std::atomic<long> _numberOfTroubledCellsThisTimeStep{0};
+{%- endif %}
 
-    double     _localMinTimeStampThisTimeStep;
-    double     _localMaxTimeStampThisTimeStep;
+    double _minTimeStamp;
+    double _maxTimeStamp;
 
-    double     _minCellH;
-    double     _maxCellH;
+    double _minTimeStampThisTimeStep;
+    double _maxTimeStampThisTimeStep;
 
-    double     _minCellHThisTimeStep;
-    double     _maxCellHThisTimeStep;
+    double _localMinTimeStampThisTimeStep;
+    double _localMaxTimeStampThisTimeStep;
 
-    double     _minTimeStepSize;
-    double     _maxTimeStepSize;
+    double _minCellH;
+    double _maxCellH;
 
-    double     _minTimeStepSizeThisTimeStep;
-    double     _maxTimeStepSizeThisTimeStep;
+    double _minCellHThisTimeStep;
+    double _maxCellHThisTimeStep;
+    bool   _hasHangingFacesThisTimeStep;
+
+    double _minTimeStepSize;
+    double _maxTimeStepSize;
+
+    double _minTimeStepSizeThisTimeStep;
+    double _maxTimeStepSizeThisTimeStep;
 
     tarch::multicore::BooleanSemaphore _semaphore;
 };

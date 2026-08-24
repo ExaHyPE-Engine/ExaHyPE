@@ -10,7 +10,7 @@ low-density, low-pressure gas sits in a box of dense, high-pressure gas. When th
 simulation starts, the dense gas rushes into the corner, launching **shock waves**
 and **contact discontinuities**. The notebook is
 `tutorials/04_limiting/EulerShock.ipynb`, with its implementation in
-`ADERDGSolver.cpp`, `FVSolver.cpp` and `LimitingSolver.cpp`.
+`ADERDGSolver.cpp` and `Limiter.cpp`.
 
 # Why a Limiter
 
@@ -30,7 +30,7 @@ oscillations can drive the density or pressure negative and crash the run. The
 We solve the 2D compressible Euler equations for density \f$\rho\f$, momentum
 \f$\rho \mathbf{u}\f$ and energy \f$E\f$. There is no source term. The conserved
 variables are addressed through the generated `Shortcuts` enum (`Shortcuts::rho`,
-`Shortcuts::j + 0/1`, `Shortcuts::E`), so the same indices work in all three
+`Shortcuts::j + 0/1`, `Shortcuts::E`), so the same indices work in both
 implementation files.
 
 # The Configuration
@@ -40,42 +40,45 @@ The domain is the box \f$[-1, 1]^2\f$. The bottom-left quadrant starts with
 both at rest. The outer state never changes during the run, so the boundaries are
 Dirichlet conditions that simply hold that initial outer state.
 
-Both solvers solve the *same* equations, so we create a high-order `ADERDGSolver`
-and a robust `FVSolver` with the same terms and wrap them in a `PosterioriLimiting`
-solver. The limiter recomputes a cell with Finite Volumes whenever the discrete
-maximum principle or the physical admissibility criterion flags it as troubled:
+Limiting is a feature of a discontinuous Galerkin solver rather than a solver of
+its own. We create the high-order `ADERDGSolver` and switch its limiter on with
+`add_subcell_limiter`. The subcell scheme a troubled cell falls back on evaluates
+the same flux and eigenvalue as the high-order scheme:
 
     aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
         name = "ADERDGSolver", order = 5, ...
     )
-    fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
-        name = "FVSolver", patch_size = 2 * 5 + 1, ...
-    )
-    limiter = exahype2.solvers.limiting.PosterioriLimiting(
-        name                             = "LimitingSolver",
-        regular_solver                   = aderdg_solver,
-        limiting_solver                  = fv_solver,
+    aderdg_solver.add_subcell_limiter(
+        limiter_solver                   = exahype2.solvers.fv.godunov.subcell_scheme(),
         number_of_dmp_observables        = 4,
         dmp_relaxation_parameter         = 0.01,
         dmp_differences_scaling          = 0.03,
+        dmp_observables                  = exahype2.solvers.PDETerms.User_Defined_Implementation,
         physical_admissibility_criterion = exahype2.solvers.PDETerms.User_Defined_Implementation,
     )
 
+A cell is recomputed when either test rejects its candidate. The discrete maximum
+principle takes the observables written in `Limiter.cpp` and requires the
+candidate to stay inside the range the cell itself held one step earlier, widened
+by the `dmp_*` parameters. The troubled-cell test rejects any state that is not
+finite or whose density or pressure is not positive.
+
 # The Implementation Files
 
-`ADERDGSolver.cpp` holds the Euler equations as a 2D Riemann problem. The vacuum
-guard (`if (p > pZero)`) keeps the flux and eigenvalue well defined even when an
-oscillation briefly pushes a cell to a non-physical state; the limiter then
-recomputes that cell. `FVSolver.cpp` carries the identical physics, so it is not
-repeated here.
+`ADERDGSolver.cpp` holds the Euler equations as a 2D Riemann problem. The subcell
+scheme a troubled cell falls back on evaluates these same terms. A density floor
+keeps the reciprocal finite when an oscillation briefly pushes a cell towards the
+vacuum, and the eigenvalue takes the magnitude of the pressure, so a candidate the
+limiter is about to reject still yields a finite time step:
 
 @include tutorials/04_limiting/ADERDGSolver.cpp
 
-`LimitingSolver.cpp` holds the troubled-cell test - the limiter calls it for every
-cell and recomputes the ones it rejects with Finite Volumes. It reuses the
-regular solver's `Shortcuts` and `NumberOfUnknowns`, so nothing is hardcoded:
+`Limiter.cpp` holds the two callbacks the limiter asks the solver for: the
+troubled-cell test, and the observables the discrete maximum principle bounds. The
+solver declares them only while the limiter is configured, so the notebook adds
+this file to the build only then:
 
-@include tutorials/04_limiting/LimitingSolver.cpp
+@include tutorials/04_limiting/Limiter.cpp
 
 # Running and Visualising
 
@@ -98,6 +101,10 @@ limiter keeps the solution physical (positive density and pressure) right throug
 these discontinuities, quietly swapping troubled ADER-DG cells for Finite Volume
 ones.
 
+The limiter also writes a `LimiterStatus` field beside the solution, so picking it
+in the dropdown shows which cells ran on the Finite Volume subgrid at each
+snapshot. Expect a thin band tracking the shocks and the contact.
+
 # Why We Need the Limiter
 
 The limiter is not a cosmetic detail here - the scheme is unusable without it. In
@@ -106,13 +113,19 @@ the notebook, go back to the solver cell, set
     use_limiting = False
 
 and re-run from there. Now only the high-order ADER-DG scheme runs, with no Finite
-Volume fallback, and it oscillates uncontrollably at the shock fronts: within a
-fraction of the run the density goes negative, the solution blows up (densities of
-tens of thousands), the reported maximum eigenvalue explodes - past 900, versus
-around 50 with the limiter - and the time step collapses, so the run diverges and
-grinds to a halt. That is the whole point of a-posteriori limiting: for problems
-with shocks, a high-order scheme on its own is not robust, and the limiter is what
-makes it usable.
+Volume fallback, and it oscillates uncontrollably at the shock fronts. Within the
+first couple of percent of the run those oscillations drive the density negative,
+the state then grows without bound, the reported maximum eigenvalue jumps by more
+than an order of magnitude, and the time step collapses with it.
+
+You do not have to interrupt anything. Once the time step underflows, ExaHyPE
+trips a noncritical assertion on it, dumps the final state and shuts down within
+seconds, and the non-zero exit status makes the run cell raise. The dumped
+snapshot is worth plotting: its densities and energies are many orders of
+magnitude away from anything physical, and both signs appear where only positive
+values are meaningful. That is the whole point of a-posteriori limiting: for
+problems with shocks, a high-order scheme on its own is not robust, and the
+limiter is what makes it usable.
 
 # Experiment
 

@@ -16,19 +16,21 @@
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/Core.h"
 
-static std::size_t groupedWidth(const std::uint64_t bound) { return runner::Format::grouped(bound).size(); }
+namespace {
+  std::size_t groupedWidth(const std::uint64_t bound) { return runner::Format::grouped(bound).size(); }
+} // namespace
 
 runner::GridConstruction::GridConstruction(
-  PhaseContext& context,
-  const int     createGridStep,
-  const int     loadBalancingStep
+  runner::PhaseContext& context,
+  const int             createGridStep,
+  const int             loadBalancingStep
 ) :
   _context(context),
   _createGridStep(createGridStep),
   _loadBalancingStep(loadBalancingStep) {
   const auto maximumLevel = _context.parameters.getMaxGridLevels();
 
-  const auto leafBound              = boundedFullyRefinedLeaves(maximumLevel);
+  const auto leafBound              = runner::boundedFullyRefinedLeaves(maximumLevel);
   const auto configuredTreesPerRank = _context.parameters.getMaxNumberOfTreesPerRank();
   const auto maximumTreesPerRank =
     configuredTreesPerRank > 0 ? configuredTreesPerRank : tarch::multicore::Core::getInstance().getNumberOfThreads();
@@ -38,13 +40,13 @@ runner::GridConstruction::GridConstruction(
       * static_cast<unsigned long>(std::max(1, maximumTreesPerRank))
   );
 
-  const auto levelSample = Format::number(maximumLevel) + " / " + Format::number(maximumLevel);
+  const auto levelSample = runner::Format::number(maximumLevel) + " / " + runner::Format::number(maximumLevel);
   _widths.level          = static_cast<int>(std::max(levelSample.size(), std::string("Level").size()));
   _widths.leaves         = static_cast<int>(std::max(groupedWidth(leafBound), std::string("Leaves").size()));
   _widths.trees          = static_cast<int>(std::max(groupedWidth(treeBound), std::string("Trees").size()));
   _widths.efficiency     = static_cast<int>(std::max(std::string("Efficiency").size(), std::string("100.00 %").size()));
   _widths.overhead =
-    static_cast<int>(std::max(std::string("Overhead").size(), Format::overheadPercentageWidthSample().size()));
+    static_cast<int>(std::max(std::string("Overhead").size(), runner::Format::overheadPercentageWidthSample().size()));
 }
 
 std::string runner::GridConstruction::row(
@@ -56,21 +58,11 @@ std::string runner::GridConstruction::row(
   const std::string& load
 ) const {
   std::ostringstream result;
-  result << std::string(2 * BlockIndent, ' ') << std::left << std::setw(_widths.level) << level << "  " << std::right
-         << std::setw(_widths.leaves) << leaves << "  " << std::setw(_widths.trees) << trees << "  "
+  result << std::string(2 * runner::BlockIndent, ' ') << std::left << std::setw(_widths.level) << level << "  "
+         << std::right << std::setw(_widths.leaves) << leaves << "  " << std::setw(_widths.trees) << trees << "  "
          << std::setw(_widths.efficiency) << efficiency << "  " << std::setw(_widths.overhead) << overhead << "   "
          << load;
   return result.str();
-}
-
-std::vector<std::string> runner::GridConstruction::widthSamples() const {
-  const auto leavesFill = std::string(static_cast<std::size_t>(_widths.leaves), '9');
-  const auto treesFill  = std::string(static_cast<std::size_t>(_widths.trees), '9');
-  const auto levelFill  = std::string(static_cast<std::size_t>(_widths.level), '9');
-  return {
-    row("Level", "Leaves", "Trees", "Efficiency", "Overhead", "Load (min .. max)"),
-    row(levelFill, leavesFill, treesFill, "100.00 %", "100.00 %", leavesFill + " .. " + leavesFill)
-  };
 }
 
 void runner::GridConstruction::logRow(
@@ -83,21 +75,21 @@ void runner::GridConstruction::logRow(
   const unsigned long maximumTreeLoad
 ) {
   if (not _tableStarted) {
-    _context.box.line(std::string(BlockIndent, ' ') + "Grid Construction");
+    _context.box.line(std::string(runner::BlockIndent, ' ') + "Grid Construction");
     _context.box.line(row("Level", "Leaves", "Trees", "Efficiency", "Overhead", "Load (min .. max)"));
     _tableStarted = true;
   }
 
   const auto efficiency = maximumTreeLoad > 0 ? static_cast<double>(minimumTreeLoad) / maximumTreeLoad * 100.0 : 100.0;
   const auto overhead   = numberOfLeaves > 0 ? static_cast<double>(numberOfOuterCells) / numberOfLeaves * 100.0 : 0.0;
-  const auto load       = Format::grouped(minimumTreeLoad) + " .. " + Format::grouped(maximumTreeLoad);
+  const auto load       = runner::Format::grouped(minimumTreeLoad) + " .. " + runner::Format::grouped(maximumTreeLoad);
 
   _context.box.line(row(
-    Format::number(level) + " / " + Format::number(maximumLevel),
-    Format::grouped(numberOfLeaves),
-    Format::grouped(numberOfTrees),
-    Format::percentage(efficiency),
-    Format::overheadPercentage(overhead),
+    runner::Format::number(level) + " / " + runner::Format::number(maximumLevel),
+    runner::Format::grouped(numberOfLeaves),
+    runner::Format::grouped(numberOfTrees),
+    runner::Format::percentage(efficiency),
+    runner::Format::overheadPercentage(overhead),
     load
   ));
 }
@@ -118,7 +110,7 @@ void runner::GridConstruction::run() {
   // to hit: a scenario that seeds nothing has to converge on the coarsest level alone.
   const auto coarsestAdmissiblePatchSize = _context.parameters.getMaxAdmissiblePatchSize(_context.domainSize);
   const auto maximumLevel                = _context.parameters.getMaxGridLevels();
-  auto&      loadBalancerInstance        = loadBalancer();
+  auto&      loadBalancerInstance        = runner::loadBalancer();
 
   auto currentMinimumPatchSize = std::numeric_limits<double>::max();
   int  currentNumberOfTrees    = 0;
@@ -140,10 +132,10 @@ void runner::GridConstruction::run() {
   while (true) {
     const bool didRefineThisSweep = refine;
     if (refine) {
-      SCOREP_USER_REGION(PhaseName::GridConstruction, SCOREP_USER_REGION_TYPE_COMMON)
+      SCOREP_USER_REGION(runner::PhaseName::GridConstruction, SCOREP_USER_REGION_TYPE_COMMON)
       static_cast<void>(_context.engine.runStep(_createGridStep));
     } else {
-      SCOREP_USER_REGION(PhaseName::LoadBalancing, SCOREP_USER_REGION_TYPE_COMMON)
+      SCOREP_USER_REGION(runner::PhaseName::LoadBalancing, SCOREP_USER_REGION_TYPE_COMMON)
       static_cast<void>(_context.engine.runStep(_loadBalancingStep));
     }
 
@@ -159,8 +151,8 @@ void runner::GridConstruction::run() {
       loadBalancerInstance.notifyUniformGridComplete();
     }
 
-    // A row uses a sweep without a new or settling fork, then waits for refinement so late split statistics are
-    // included once.
+    // A clean sweep snapshots a row, which is emitted after refinement advances so late split statistics
+    // are included once.
     const bool cleanSweep =
       numberOfTrees == currentNumberOfTrees and statistics.getGlobalNumberOfStationarySweeps() >= 0;
     if (cleanSweep) {
@@ -241,6 +233,7 @@ void runner::GridConstruction::run() {
 
   _context.box.blank();
   _context.box.line(
-    std::string(BlockIndent, ' ') + "Grid Constructed " + Format::wallClock(constructionWatch.getCalendarTime())
+    std::string(runner::BlockIndent, ' ') + "Grid Constructed "
+    + runner::Format::wallClock(constructionWatch.getCalendarTime())
   );
 }

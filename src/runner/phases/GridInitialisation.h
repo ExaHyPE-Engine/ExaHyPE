@@ -11,10 +11,9 @@ namespace runner {
 
 class runner::GridInitialisation final : public runner::Phase {
 public:
-  GridInitialisation(PhaseContext& context, int initGridStep, DynamicAMR& dynamicAMR);
+  GridInitialisation(runner::PhaseContext& context, const int initGridStep, runner::DynamicAMR& dynamicAMR);
 
-  std::vector<std::string> widthSamples() const override;
-  void                     run() override;
+  void run() override;
 
 private:
   /**
@@ -25,7 +24,7 @@ private:
    */
   static constexpr int MaxRounds = 16;
 
-  PhaseContext& _context;
-  int           _initGridStep;
-  DynamicAMR&   _dynamicAMR;
+  runner::PhaseContext& _context;
+  int                   _initGridStep;
+  runner::DynamicAMR&   _dynamicAMR;
 };

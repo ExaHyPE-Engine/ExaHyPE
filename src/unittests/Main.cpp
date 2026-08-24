@@ -56,13 +56,23 @@ int main(int argc, char** argv) {
   // silent on success while retaining errors and its non-zero failure status.
   tarch::instrumentation::Log::setInfoOutputEnabled(false);
   tarch::instrumentation::Log::setWarningOutputEnabled(false);
+  // Every thread carries its own floating-point environment, so the traps are armed
+  // once here, once per worker inside the parallel region, and once around the tests
+  // so that the environment is restored afterwards. This one is dropped before
+  // tarch::shutdown(), because finalising MPI is outside our control and may compute
+  // with values we would abort on.
+  std::optional<tarch::FloatingPointExceptions::ScopedTrap> testProcessTrap(std::in_place, __FILE__, __LINE__);
   peano4::init(domainOffset, domainSize);
 
   int returnCode = EXIT_SUCCESS;
 
 #if defined(PEANO_WITH_OPENMP)
 #pragma omp parallel
+#endif
   {
+    const tarch::FloatingPointExceptions::ScopedTrap threadTrap(__FILE__, __LINE__);
+#if defined(PEANO_WITH_OPENMP)
+#pragma omp barrier
 #pragma omp master
     {
 #endif
@@ -77,10 +87,12 @@ int main(int argc, char** argv) {
       }
 #if defined(PEANO_WITH_OPENMP)
     }
-  }
+#pragma omp barrier
 #endif
+  }
 
   peano4::shutdown();
+  testProcessTrap.reset();
   tarch::shutdown();
   return returnCode;
 }

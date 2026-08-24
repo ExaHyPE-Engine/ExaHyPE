@@ -1,7 +1,8 @@
-#pragma once
-
-inline ParticleState exahype2::fv::particles::integration::
-  updatePartialStep(const ParticleState& current, double timeStepSize, double stepFraction) {
+inline ParticleState exahype2::fv::particles::integration::updatePartialStep(
+  const ParticleState& current,
+  double               timeStepSize,
+  double               stepFraction
+) {
   ParticleState state;
   double        factorDt = stepFraction * timeStepSize;
 
@@ -31,8 +32,11 @@ inline ParticleState exahype2::fv::particles::integration::updatePartialStepWith
   return result;
 }
 
-inline ParticleState exahype2::fv::particles::integration::
-  updateMidpointStep(const ParticleState& current, double timeStepSize, double stepFraction) {
+inline ParticleState exahype2::fv::particles::integration::updateMidpointStep(
+  const ParticleState& current,
+  double               timeStepSize,
+  double               stepFraction
+) {
   ParticleState state;
   double        factorDt = stepFraction * timeStepSize;
 

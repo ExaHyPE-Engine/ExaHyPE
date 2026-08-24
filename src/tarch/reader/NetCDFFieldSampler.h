@@ -42,7 +42,7 @@ public:
     std::string valueKey = "z";
     /**
      * Names of the netCDF variables holding the coordinates, one per field dimension, in the order
-     * sample() expects its argument in.
+     * the sampling routines expect their position argument in.
      */
     std::array<std::string, FieldDimensions> key = defaultCoordinateKeys();
   };
@@ -57,21 +57,53 @@ public:
   NetCDFFieldSampler& operator=(const NetCDFFieldSampler&) = delete;
   NetCDFFieldSampler& operator=(NetCDFFieldSampler&&)      = delete;
 
+  /**
+   * A file that carries its own coordinates needs no extent, and a simulation coordinate is then
+   * read as a coordinate of the stored mesh instead of being mapped onto it.
+   */
+  explicit NetCDFFieldSampler(std::initializer_list<FieldDescription> fields);
+
+  explicit NetCDFFieldSampler(const std::vector<FieldDescription>& fields);
+
+  /**
+   * Maps the simulation domain onto the coordinate range each field stores.
+   *
+   * The extents are taken as plain vectors, so a caller can write the two components in braces at
+   * the call. Wrapping them in an optional here would ask the language for two conversions at once,
+   * which it does not do.
+   */
   NetCDFFieldSampler(
-    std::initializer_list<FieldDescription>    fields,
-    tarch::la::Vector<FieldDimensions, double> lengthOfSimulationDomain,
-    tarch::la::Vector<FieldDimensions, double> offsetOfSimulationDomain
+    std::initializer_list<FieldDescription>           fields,
+    const tarch::la::Vector<FieldDimensions, double>& lengthOfSimulationDomain,
+    const tarch::la::Vector<FieldDimensions, double>& offsetOfSimulationDomain
   );
 
   NetCDFFieldSampler(
-    const std::vector<FieldDescription>&       fields,
-    tarch::la::Vector<FieldDimensions, double> lengthOfSimulationDomain,
-    tarch::la::Vector<FieldDimensions, double> offsetOfSimulationDomain
+    const std::vector<FieldDescription>&              fields,
+    const tarch::la::Vector<FieldDimensions, double>& lengthOfSimulationDomain,
+    const tarch::la::Vector<FieldDimensions, double>& offsetOfSimulationDomain
   );
 
   ~NetCDFFieldSampler() = default;
 
-  double sample(const std::string& fieldName, tarch::la::Vector<FieldDimensions, double> position) const;
+  /**
+   * Sample the value at the lower grid point in each coordinate direction.
+   *
+   * A coordinate outside the stored extent yields zero; an unknown field name is fatal.
+   */
+  double samplePiecewiseConstant(
+    const std::string&                         fieldName,
+    tarch::la::Vector<FieldDimensions, double> position
+  ) const;
+
+  /**
+   * Interpolate linearly between the surrounding grid points along every axis.
+   *
+   * The coordinate axes are assumed to be equidistant between their first and last stored
+   * coordinates. A coordinate outside the stored extent yields zero; an unknown field name
+   * is fatal.
+   */
+  double sampleBilinear(const std::string& fieldName, tarch::la::Vector<FieldDimensions, double> position) const;
 
 private:
   struct Field {
@@ -82,15 +114,19 @@ private:
       tarch::la::Vector<FieldDimensions, std::size_t>(std::size_t(0));
     tarch::la::Vector<FieldDimensions, double> firstElement = tarch::la::Vector<FieldDimensions, double>(0.0);
     tarch::la::Vector<FieldDimensions, double> lastElement  = tarch::la::Vector<FieldDimensions, double>(0.0);
+    // Resolved once per field, because a sampler without a configured extent maps each field
+    // onto the coordinate range that file itself stores.
+    tarch::la::Vector<FieldDimensions, double> lengthOfSimulationDomain =
+      tarch::la::Vector<FieldDimensions, double>(0.0);
+    tarch::la::Vector<FieldDimensions, double> offsetOfSimulationDomain =
+      tarch::la::Vector<FieldDimensions, double>(0.0);
   };
 
   NetCDFFileReader                       _netCDFFileReader;
   std::unordered_map<std::string, Field> _fields;
 
-  tarch::la::Vector<FieldDimensions, double> _lengthOfSimulationDomain =
-    tarch::la::Vector<FieldDimensions, double>(-1.0);
-  tarch::la::Vector<FieldDimensions, double> _offsetOfSimulationDomain =
-    tarch::la::Vector<FieldDimensions, double>(-1.0);
+  std::optional<tarch::la::Vector<FieldDimensions, double>> _lengthOfSimulationDomain;
+  std::optional<tarch::la::Vector<FieldDimensions, double>> _offsetOfSimulationDomain;
 
   static std::array<std::string, FieldDimensions> defaultCoordinateKeys();
 

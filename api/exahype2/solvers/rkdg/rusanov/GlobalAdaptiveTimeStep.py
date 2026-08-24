@@ -15,7 +15,7 @@ from exahype2.solvers.rkdg.kernels         import create_add_solver_contribution
 from exahype2.solvers.rkdg.kernels         import create_multiply_with_inverted_mass_matrix_call
 from exahype2.solvers.rkdg.rusanov.kernels import create_Riemann_solver_call
 
-from exahype2.solvers.rkdg.AdaptiveTimeSteppingCodeSnippets import AdaptiveTimeSteppingCodeSnippets
+from exahype2.solvers import AdaptiveTimeSteppingCodeSnippets
 
 from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import FaceProjections
 
@@ -121,7 +121,9 @@ class GlobalAdaptiveTimeStep(SeparateSweeps):
                                                           point_source=point_source
                                                           )
 
-    solver_code_snippets = AdaptiveTimeSteppingCodeSnippets(self._time_step_relaxation)
+    solver_code_snippets = AdaptiveTimeSteppingCodeSnippets.for_rkdg(
+      self._time_step_relaxation
+    )
 
     self._abstract_solver_user_declarations  = create_abstract_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._point_sources_implementation, self._pde_terms_without_state)
     self._abstract_solver_user_declarations += solver_code_snippets.create_abstract_solver_user_declarations()

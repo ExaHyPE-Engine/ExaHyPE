@@ -91,7 +91,7 @@ class TPV16(DynamicRuptureScenario):
   syy = 0;
   szz = 0;
   sxy = 0;
-  sxz = netcdfSampler.sample(
+  sxz = netcdfSampler.samplePiecewiseConstant(
     "stress",
     {x[2], x[1]}
   );
@@ -114,7 +114,7 @@ if(std::abs(x[1]-20.)<24. && x[1]<19.5){
     19.5}, // size[1], here vertical
     {-4., 0.}
   );
-  return netcdfSampler.sample(
+  return netcdfSampler.samplePiecewiseConstant(
     "slip",
     {x[2], x[1]}
   );

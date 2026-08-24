@@ -9,8 +9,8 @@
   "loadBalancingQuality": 0.9,
   "maxNumberOfTreesPerRank": -1,
   "targetDevice": 0,
-  "bathymetryFile": "bathymetry/artificial_bath_1000.nc",
-  "displacementFile": "bathymetry/artificial_displ_1000.nc",
+  "bathymetryFile": "bathymetry/ArtificialBathymetry.nc",
+  "displacementFile": "bathymetry/ArtificialDisplacement.nc",
   "bathymetrySize": [
     10000.0,
     10000.0

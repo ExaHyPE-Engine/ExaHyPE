@@ -10,15 +10,19 @@ namespace tarch::plotter {
 
 class tarch::plotter::FileWriter {
 public:
-  FileWriter(const std::string& outputDirectory, int numberOfSubdomains);
-  virtual ~FileWriter() = default;
+  FileWriter(const std::string& outputDirectory, const int numberOfSubdomains);
+  FileWriter(const FileWriter&)            = delete;
+  FileWriter(FileWriter&&)                 = delete;
+  virtual ~FileWriter()                    = default;
+  FileWriter& operator=(const FileWriter&) = delete;
+  FileWriter& operator=(FileWriter&&)      = delete;
 
   virtual bool isOpen() const;
-  virtual bool writeToFile(const std::string& filename, double time) = 0;
+  virtual bool writeToFile(const std::string& filename, const double time) = 0;
 
   virtual std::string getFileExtension() const = 0;
 
-  static void setDoublePrecisionOutput(bool value);
+  static void setDoublePrecisionOutput(const bool value);
   static bool getDoublePrecisionOutput();
 
 protected:
@@ -29,7 +33,7 @@ protected:
   };
 
   struct VertexHash {
-    std::size_t operator()(const std::tuple<long long, long long, long long>& k) const;
+    std::size_t operator()(const std::tuple<long long, long long, long long>& key) const;
   };
 
   struct SubdomainBuffers {
@@ -82,15 +86,19 @@ protected:
   public:
     DataPlotter(
       FileWriter&             plotter,
-      int                     subdomainId,
+      const int               subdomainId,
       std::vector<DataField>& targetFields,
       const std::string&      identifier,
-      int                     components
+      const int               components
     );
-    ~DataPlotter() = default;
+    DataPlotter(const DataPlotter&)            = delete;
+    DataPlotter(DataPlotter&&)                 = delete;
+    ~DataPlotter()                             = default;
+    DataPlotter& operator=(const DataPlotter&) = delete;
+    DataPlotter& operator=(DataPlotter&&)      = delete;
 
     template <class T>
-    void writeTuple(int index, const T* v, int n);
+    void writeTuple(const int index, const T* const values, const int numberOfValues);
 
   private:
     FileWriter&             _plotter;
@@ -100,101 +108,139 @@ protected:
   };
 
 public:
+  enum class VertexSharing { Shared, Distinct };
+
   class VertexPlotter {
   public:
-    VertexPlotter(FileWriter& plotter, int subdomainId);
-    ~VertexPlotter() = default;
+    VertexPlotter(FileWriter& plotter, const int subdomainId, const VertexSharing vertexSharing);
+    VertexPlotter(const VertexPlotter&)            = delete;
+    VertexPlotter(VertexPlotter&&)                 = delete;
+    ~VertexPlotter()                               = default;
+    VertexPlotter& operator=(const VertexPlotter&) = delete;
+    VertexPlotter& operator=(VertexPlotter&&)      = delete;
 
     int plotVertex(const tarch::la::Vector<2, double>& position);
     int plotVertex(const tarch::la::Vector<3, double>& position);
 
   private:
-    FileWriter&       _plotter;
-    SubdomainBuffers& _buffers;
+    FileWriter&         _plotter;
+    SubdomainBuffers&   _buffers;
+    const VertexSharing _vertexSharing;
   };
 
-  std::unique_ptr<VertexPlotter> createVertexPlotter(int subdomainId);
+  std::unique_ptr<VertexPlotter> createVertexPlotter(
+    const int           subdomainId,
+    const VertexSharing vertexSharing = VertexSharing::Shared
+  );
 
   class VertexDataPlotter {
   public:
-    VertexDataPlotter(FileWriter& plotter, int subdomainId, const std::string& id, int recordsPerVertex);
-    ~VertexDataPlotter() = default;
+    VertexDataPlotter(
+      FileWriter&        plotter,
+      const int          subdomainId,
+      const std::string& identifier,
+      const int          recordsPerVertex
+    );
+    VertexDataPlotter(const VertexDataPlotter&)            = delete;
+    VertexDataPlotter(VertexDataPlotter&&)                 = delete;
+    ~VertexDataPlotter()                                   = default;
+    VertexDataPlotter& operator=(const VertexDataPlotter&) = delete;
+    VertexDataPlotter& operator=(VertexDataPlotter&&)      = delete;
 
-    void plotVertexData(int index, double value);
-    void plotVertexData(int index, const tarch::la::Vector<2, double>& value);
-    void plotVertexData(int index, const tarch::la::Vector<3, double>& value);
-    void plotVertexData(int index, double* values, int numberOfValues);
+    void plotVertexData(const int index, const double value);
+    void plotVertexData(const int index, const tarch::la::Vector<2, double>& value);
+    void plotVertexData(const int index, const tarch::la::Vector<3, double>& value);
+    void plotVertexData(const int index, const double* const values, const int numberOfValues);
 
     template <class T>
-    void plotVertexData(int index, T value);
+    void plotVertexData(const int index, const T value);
     template <class T>
-    void plotVertexData(int index, const tarch::la::Vector<2, T>& value);
+    void plotVertexData(const int index, const tarch::la::Vector<2, T>& value);
     template <class T>
-    void plotVertexData(int index, const tarch::la::Vector<3, T>& value);
+    void plotVertexData(const int index, const tarch::la::Vector<3, T>& value);
     template <class T>
-    void plotVertexData(int index, T* values, int numberOfValues);
+    void plotVertexData(const int index, const T* const values, const int numberOfValues);
 
   private:
     DataPlotter _impl;
   };
 
-  std::unique_ptr<VertexDataPlotter>
-  createVertexDataPlotter(int subdomainId, const std::string& identifier, int recordsPerVertex);
+  std::unique_ptr<VertexDataPlotter> createVertexDataPlotter(
+    const int          subdomainId,
+    const std::string& identifier,
+    const int          recordsPerVertex
+  );
 
   class CellPlotter {
   public:
-    CellPlotter(FileWriter& plotter, int subdomainId);
-    ~CellPlotter() = default;
+    CellPlotter(FileWriter& plotter, const int subdomainId);
+    CellPlotter(const CellPlotter&)            = delete;
+    CellPlotter(CellPlotter&&)                 = delete;
+    ~CellPlotter()                             = default;
+    CellPlotter& operator=(const CellPlotter&) = delete;
+    CellPlotter& operator=(CellPlotter&&)      = delete;
 
-    int plotHexahedron(int vertexIndex[8]);
-    int plotQuadrangle(int vertexIndex[4]);
-    int plotLine(int vertexIndex[2]);
-    int plotPoint(int vertexIndex);
-    int plotTriangle(int vertexIndex[3]);
+    int plotHexahedron(const int* const vertexIndices);
+    int plotQuadrangle(const int* const vertexIndices);
+    int plotLine(const int* const vertexIndices);
+    int plotPoint(const int vertexIndex);
+    int plotTriangle(const int* const vertexIndices);
 
   private:
     FileWriter&       _plotter;
     SubdomainBuffers& _buffers;
     std::int32_t      _currentOffset = 0;
 
-    int pushCell(const std::int32_t* idx, int n, std::uint8_t vtkType);
+    int pushCell(const std::int32_t* const vertexIndices, const int numberOfVertices, const std::uint8_t vtkType);
 
     template <int N>
-    int plotStandardCell(const int* vertexIndex, std::uint8_t vtkType);
+    int plotStandardCell(const int* const vertexIndices, const std::uint8_t vtkType);
   };
 
-  std::unique_ptr<CellPlotter> createCellPlotter(int subdomainId);
+  std::unique_ptr<CellPlotter> createCellPlotter(const int subdomainId);
 
   class CellDataPlotter {
   public:
-    CellDataPlotter(FileWriter& plotter, int subdomainId, const std::string& id, int recordsPerCell);
-    ~CellDataPlotter() = default;
+    CellDataPlotter(
+      FileWriter&        plotter,
+      const int          subdomainId,
+      const std::string& identifier,
+      const int          recordsPerCell
+    );
+    CellDataPlotter(const CellDataPlotter&)            = delete;
+    CellDataPlotter(CellDataPlotter&&)                 = delete;
+    ~CellDataPlotter()                                 = default;
+    CellDataPlotter& operator=(const CellDataPlotter&) = delete;
+    CellDataPlotter& operator=(CellDataPlotter&&)      = delete;
 
-    void plotCellData(int index, double value);
-    void plotCellData(int index, const tarch::la::Vector<2, double>& value);
-    void plotCellData(int index, const tarch::la::Vector<3, double>& value);
-    void plotCellData(int index, const double* values, int numberOfValues);
+    void plotCellData(const int index, const double value);
+    void plotCellData(const int index, const tarch::la::Vector<2, double>& value);
+    void plotCellData(const int index, const tarch::la::Vector<3, double>& value);
+    void plotCellData(const int index, const double* const values, const int numberOfValues);
 
     template <class T>
-    void plotCellData(int index, T value);
+    void plotCellData(const int index, const T value);
     template <class T>
-    void plotCellData(int index, const tarch::la::Vector<2, T>& value);
+    void plotCellData(const int index, const tarch::la::Vector<2, T>& value);
     template <class T>
-    void plotCellData(int index, const tarch::la::Vector<3, T>& value);
+    void plotCellData(const int index, const tarch::la::Vector<3, T>& value);
     template <class T>
-    void plotCellData(int index, const T* values, int numberOfValues);
+    void plotCellData(const int index, const T* const values, const int numberOfValues);
 
   private:
     DataPlotter _impl;
   };
 
-  std::unique_ptr<CellDataPlotter>
-  createCellDataPlotter(int subdomainId, const std::string& identifier, int recordsPerCell);
+  std::unique_ptr<CellDataPlotter> createCellDataPlotter(
+    const int          subdomainId,
+    const std::string& identifier,
+    const int          recordsPerCell
+  );
 
 protected:
   static void validateIdentifier(const std::string& id);
-  void        createOutputDirectory();
-  void        checkCanOpenPlotter(int subdomainId) const;
+  void        createOutputDirectory() const;
+  void        checkCanOpenPlotter(const int subdomainId) const;
 
   // MPI-IO hints for the parallel writers (collective buffering for the large
   // collective writes).
@@ -204,18 +250,21 @@ protected:
   // Field schema from the local reference, no MPI exchange. The parallel writers run
   // their collective I/O on a sub-communicator of the data-holding ranks, so every
   // participant has a non-null reference with the identical field list.
-  static FieldSchema fieldSchemaFromReference(const SubdomainBuffers* localReference);
+  static FieldSchema fieldSchemaFromReference(const SubdomainBuffers* const localReference);
 
   // Classify a field by its source component count into the written width and
   // role every writer uses (see FieldLayout).
-  static FieldLayout classifyField(int sourceComponents);
+  static FieldLayout classifyField(const int sourceComponents);
 
   // Re-lay a component-major field buffer (values stored as
   // [tuple0 comp0..compN, tuple1 ...]) from sourceComponents to writtenComponents
   // per tuple, padding the extra trailing components with zero. Returns the input
   // unchanged when the widths already match.
-  static std::vector<double>
-  expandFieldComponents(const std::vector<double>& values, int sourceComponents, int writtenComponents);
+  static std::vector<double> expandFieldComponents(
+    const std::vector<double>& values,
+    const int                  sourceComponents,
+    const int                  writtenComponents
+  );
 
   // Narrow a double buffer to float for single-precision output.
   static std::vector<float> narrowToFloat(const std::vector<double>& values);

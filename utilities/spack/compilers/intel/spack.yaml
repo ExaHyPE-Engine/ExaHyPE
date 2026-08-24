@@ -8,7 +8,6 @@ spack:
     - intel-oneapi-advisor@2025.4.0
     - python@3.14.0
     - py-pip@25.1.1
-    - libxsmm@1.17 +generator
     - memkind@1.14.0
     - papi@7.2.0
     - likwid@5.4.1

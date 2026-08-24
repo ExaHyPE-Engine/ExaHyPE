@@ -9,6 +9,5 @@ namespace runner {
   std::uint64_t boundedFullyRefinedLeaves(const int maximumLevel);
   std::string   gridCellSummary(const std::uint64_t numberOfLeaves, const std::uint64_t numberOfRefinedCells);
 
-  void                     writeGridSnapshot(ReportBox& box, const RepositoryCallbacks& callbacks);
-  std::vector<std::string> gridSnapshotWidthSamples();
+  void writeGridSnapshot(ReportBox& box, const RepositoryCallbacks& callbacks);
 } // namespace runner

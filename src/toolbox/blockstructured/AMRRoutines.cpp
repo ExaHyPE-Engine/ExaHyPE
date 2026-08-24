@@ -19,15 +19,15 @@ template void toolbox::blockstructured::interpolateCell<
 template void toolbox::blockstructured::interpolateCell<double>(
   const peano4::datamanagement::CellMarker&,
   const double* NOALIAS,
-  double*       NOALIAS,
+  double* NOALIAS,
   const double* NOALIAS,
   const int,
   const int
 );
 template void toolbox::blockstructured::interpolateCell<float>(
   const peano4::datamanagement::CellMarker&,
-  const float*  NOALIAS,
-  float*        NOALIAS,
+  const float* NOALIAS,
+  float* NOALIAS,
   const double* NOALIAS,
   const int,
   const int
@@ -40,7 +40,7 @@ template void toolbox::blockstructured::restrictCell<
 
 template void toolbox::blockstructured::restrictCell<double>(
   const peano4::datamanagement::CellMarker&,
-  double*       NOALIAS,
+  double* NOALIAS,
   const double* NOALIAS,
   const double* NOALIAS,
   const double* NOALIAS,
@@ -49,10 +49,28 @@ template void toolbox::blockstructured::restrictCell<double>(
 );
 template void toolbox::blockstructured::restrictCell<float>(
   const peano4::datamanagement::CellMarker&,
-  float*        NOALIAS,
-  const float*  NOALIAS,
+  float* NOALIAS,
+  const float* NOALIAS,
   const double* NOALIAS,
   const double* NOALIAS,
+  const int,
+  const int
+);
+
+template void toolbox::blockstructured::restrictCellFromChildren<
+  double>(double* NOALIAS, const double* const* NOALIAS, const double* const* NOALIAS, const int, const int);
+template void toolbox::blockstructured::restrictCellFromChildren<
+  float>(float* NOALIAS, const float* const* NOALIAS, const double* const* NOALIAS, const int, const int);
+
+template void toolbox::blockstructured::restrictCellFromChildren<double>(
+  double* NOALIAS,
+  const double* const* NOALIAS,
+  const int,
+  const int
+);
+template void toolbox::blockstructured::restrictCellFromChildren<float>(
+  float* NOALIAS,
+  const float* const* NOALIAS,
   const int,
   const int
 );
@@ -74,5 +92,16 @@ namespace {
 
     [[maybe_unused]] auto* restrictHaloInDouble = &toolbox::blockstructured::restrictHaloLayer<double>;
     [[maybe_unused]] auto* restrictHaloInFloat  = &toolbox::blockstructured::restrictHaloLayer<float>;
+
+    [[maybe_unused]] auto* applyTensorProductInDouble =
+      &toolbox::blockstructured::applyTensorProductOrderInvariant<double>;
+    [[maybe_unused]] auto* applyTensorProductInFloat =
+      &toolbox::blockstructured::applyTensorProductOrderInvariant<float>;
+
+    [[maybe_unused]] auto* interpolateFaceInDouble = &toolbox::blockstructured::interpolateFaceFromCoarse<double>;
+    [[maybe_unused]] auto* interpolateFaceInFloat  = &toolbox::blockstructured::interpolateFaceFromCoarse<float>;
+
+    [[maybe_unused]] auto* restrictFaceInDouble = &toolbox::blockstructured::restrictFaceFromChildren<double>;
+    [[maybe_unused]] auto* restrictFaceInFloat  = &toolbox::blockstructured::restrictFaceFromChildren<float>;
   }
 } // namespace

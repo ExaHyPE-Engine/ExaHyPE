@@ -2,23 +2,42 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "FileWriter.h"
 
-tarch::plotter::FileWriter::CellDataPlotter::
-  CellDataPlotter(FileWriter& plotter, int subdomainId, const std::string& id, int records):
-  _impl(plotter, subdomainId, plotter._subdomains.at(subdomainId).cellFields, id, records) {}
+tarch::plotter::FileWriter::CellDataPlotter::CellDataPlotter(
+  FileWriter&        plotter,
+  const int          subdomainId,
+  const std::string& identifier,
+  const int          recordsPerCell
+) :
+  _impl(
+    plotter,
+    subdomainId,
+    plotter._subdomains.at(static_cast<std::size_t>(subdomainId)).cellFields,
+    identifier,
+    recordsPerCell
+  ) {}
 
-void tarch::plotter::FileWriter::CellDataPlotter::plotCellData(int index, double value) {
+void tarch::plotter::FileWriter::CellDataPlotter::plotCellData(const int index, const double value) {
   plotCellData<double>(index, value);
 }
 
-void tarch::plotter::FileWriter::CellDataPlotter::plotCellData(int index, const tarch::la::Vector<2, double>& value) {
+void tarch::plotter::FileWriter::CellDataPlotter::plotCellData(
+  const int                           index,
+  const tarch::la::Vector<2, double>& value
+) {
   plotCellData<double>(index, value);
 }
 
-void tarch::plotter::FileWriter::CellDataPlotter::plotCellData(int index, const tarch::la::Vector<3, double>& value) {
+void tarch::plotter::FileWriter::CellDataPlotter::plotCellData(
+  const int                           index,
+  const tarch::la::Vector<3, double>& value
+) {
   plotCellData<double>(index, value);
 }
 
-void tarch::plotter::FileWriter::CellDataPlotter::
-  plotCellData(int index, const double* const values, int numberOfValues) {
+void tarch::plotter::FileWriter::CellDataPlotter::plotCellData(
+  const int           index,
+  const double* const values,
+  const int           numberOfValues
+) {
   plotCellData<double>(index, values, numberOfValues);
 }

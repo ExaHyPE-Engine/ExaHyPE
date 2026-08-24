@@ -3,95 +3,46 @@
 #pragma once
 
 #include "peano4/Globals.h"
-#include "peano4/datamanagement/CellMarker.h"
-#include "peano4/datamanagement/VertexMarker.h"
+#include "peano4/Loop.h"
+#include "tarch/la/Vector.h"
 
-namespace toolbox {
-  namespace particles {
-    /**
-     * Init particle
-     *
-     * This is the most generic, minimalist initialisation of a particle that
-     * one can think of. The minimal data we need per particle is
-     *
-     * - a position x which defines where the particle is located,
-     * - a search radius which defines on which resolution level to hold the
-     *   particle.
-     *
-     * The further attribute that is set is the parallel state. At this point,
-     * we set it to Virtual. This highlights that fact that you should not
-     * add particles directly to the mesh, but instead use
-     * insertParticleIntoCell() which then in turn will toggle to Local.
-     */
-    template <class T>
-    void init(T& particle, const tarch::la::Vector<DIMENSIONS, double>& x, double searchRadius);
-    /**
-     * Initialize a particle with specific initial data values.
-     *
-     * @param particle The particle to initialize
-     * @param x The position vector of the particle
-     * @param searchRadius The search radius for the particle
-     * @param initialData Vector containing initial values for particle data.
-     *                   The size should match the number of data elements in the particle.
-     */
-    template <class T>
-    void initWithData(
-      T&                                           particle,
-      const tarch::la::Vector<DIMENSIONS, double>& x,
-      double                                       searchRadius,
-      const std::vector<double>&                   initialData
-    );
-    /**
-     * Create equally spaced particles for one cell
-     *
-     * This routine creates equally spaced particles within one cell. It is a
-     * solely cell-local factory method, i.e. it does not take any adjacent
-     * cell into account. As a consequence, you will get a locally equidistant
-     * layout of particles, but you will not get a globally equidistant layout:
-     * The particles will not be spaced the same way across a cell face as
-     * they are spaced out inside a cell. If you need a globally equidistant
-     * layout, you will have to use createParticlesAlignedWithGlobalCartesianMesh().
-     *
-     * The routine creates all the resulting particles on the heap via a plain
-     * new(). That is, the particles will be scattered in memory.
-     *
-     * @param spacingH Spacing of particles. Pick it smaller or equal to 0 and we'll always
-     *   create one particle in the center.
-     *
-     * @param voxelX Centre of voxel in space
-     *
-     * @param voxelH Size of voxel, i.e. subcell, into which the particles shall be embedded
-     *
-     */
-    template <class T>
-    std::vector<T*> createEquallySpacedParticles(
-      double                                       spacingH,
-      const tarch::la::Vector<DIMENSIONS, double>& voxelX,
-      const tarch::la::Vector<DIMENSIONS, double>& voxelH,
-      bool                                         addNoise
-    );
+namespace toolbox::particles {
+  double drawParticlePositionNoise();
 
-    /**
-     * Insert particles that are aligned along a Cartesian grid globally
-     *
-     * ## Biased insertion
-     *
-     * We compute the left number of the particle and the right one. If the
-     * left particle ends up exactly on the face, then we add it. If the right
-     * one ends up exactly on the face, we skip it. The rationale is that the
-     * right neighbour will insert that guy later on, and we don't want to
-     * insert particles twice.
-     */
-    template <class T>
-    std::vector<T*> createParticlesAlignedWithGlobalCartesianMesh(
-      double                                       spacingH,
-      const tarch::la::Vector<DIMENSIONS, double>& voxelX,
-      const tarch::la::Vector<DIMENSIONS, double>& voxelH,
-      const tarch::la::Vector<DIMENSIONS, double>& domainOffset,
-      const tarch::la::Vector<DIMENSIONS, double>& domainSize,
-      bool                                         addNoise
-    );
-  } // namespace particles
-} // namespace toolbox
+  template <class Particle>
+  INLINE_METHOD void init(
+    Particle&                                    particle,
+    const tarch::la::Vector<DIMENSIONS, double>& position,
+    const double                                 searchRadius
+  );
+
+  template <class Particle>
+  INLINE_METHOD void initWithData(
+    Particle&                                    particle,
+    const tarch::la::Vector<DIMENSIONS, double>& position,
+    const double                                 searchRadius,
+    const std::vector<double>&                   initialData
+  );
+
+  template <class Particle>
+  INLINE_METHOD std::vector<Particle*> createEquallySpacedParticles(
+    const double                                 spacing,
+    const tarch::la::Vector<DIMENSIONS, double>& voxelCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& voxelSize,
+    const bool                                   addNoise,
+    const double                                 noiseScale = 1.0
+  );
+
+  template <class Particle>
+  INLINE_METHOD std::vector<Particle*> createParticlesAlignedWithGlobalCartesianMesh(
+    const double                                 spacing,
+    const tarch::la::Vector<DIMENSIONS, double>& voxelCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& voxelSize,
+    const tarch::la::Vector<DIMENSIONS, double>& domainOffset,
+    const tarch::la::Vector<DIMENSIONS, double>& domainSize,
+    const bool                                   addNoise,
+    const double                                 noiseScale = 1.0
+  );
+} // namespace toolbox::particles
 
 #include "ParticleFactory.cpph"

@@ -81,7 +81,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 {% if NCP_IMPLEMENTATION=="<user-defined>" and NCP_IMPLEMENTATION!="<none>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS   deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS   deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const double                                 t,
@@ -94,7 +94,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 {% endif %}
 
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>" %}
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
@@ -107,9 +107,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(
 {% endif %}
 
 {% if DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION=="<user-defined>" and DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION!="<none>" %}
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::diffusiveAlgebraicSource(
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::diffusiveSourceTerm(
   [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS   deltaQ,
+  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS   deltaQ, // deltaQ[{{DIMENSIONS}} * {{NUMBER_OF_UNKNOWNS}}]
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
   [[maybe_unused]] const double                                 t,
@@ -164,17 +164,53 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::riemannSolver(
   // @todo Implement
 }
 {% endif %}
-{% endfor %}
 
-{% if ADJUST_SOLUTION_IMPLEMENTATION=="<user-defined>" and ADJUST_SOLUTION_IMPLEMENTATION!="<none>" %}
-double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::adjustSolution(
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>&   x,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>&   h,
-  [[maybe_unused]] const double                                   t,
-  [[maybe_unused]] const double                                   dt,
-  [[maybe_unused]] {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS  Q // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+{% if SUBCELL_RIEMANN_SOLVER_IMPLEMENTATION=="<user-defined>" %}
+double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::solveRiemannProblem(
+  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS QL,
+  [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS QR,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>&       x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>&       h,
+  [[maybe_unused]] const double                                       t,
+  [[maybe_unused]] const double                                       dt,
+  [[maybe_unused]] const int                                          normal,
+  [[maybe_unused]] {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS       FL,
+  [[maybe_unused]] {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS       FR
 ) {
   // @todo Implement
+  return 0.0;
+}
+{% endif %}
+{% endfor %}
+
+{% if SUBCELL_PAC_IMPLEMENTATION=="<user-defined>" %}
+bool {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::isPhysicallyAdmissible(
+  [[maybe_unused]] const {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS Q, // Q[numberOfStates * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})]
+  [[maybe_unused]] const int                                    numberOfStates,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
+) const {
+  // @todo Implement
+  return true;
+}
+{% endif %}
+
+{% if SUBCELL_DMP_OBSERVABLES_IMPLEMENTATION=="<user-defined>" %}
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::mapDmpObservables(
+  [[maybe_unused]] {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS       observables,
+  [[maybe_unused]] const {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS Q
+) const {
+  // @todo Implement
+}
+{% endif %}
+
+{% if SUBCELL_DMP_RELAXATION_IMPLEMENTATION=="<user-defined>" %}
+{{SOLUTION_STORAGE_PRECISION}} {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::dmpRelaxationParameter(
+  [[maybe_unused]] const int                            observable,
+  [[maybe_unused]] const {{SOLUTION_STORAGE_PRECISION}} specifiedRelaxationParameter
+) const {
+  // @todo Implement
+  return specifiedRelaxationParameter;
 }
 {% endif %}
 

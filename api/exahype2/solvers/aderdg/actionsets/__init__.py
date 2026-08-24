@@ -5,6 +5,5 @@ from .RefinementCriterion import RefinementCriterion
 from .InitialCondition import InitialCondition
 from .DynamicAMR import AdaptiveMeshFaceCoupling, DynamicAMRTransfer
 from .PostprocessSolution import EmptyPostprocessSolution
-from .HandleBoundary import HandleBoundary
 from .Correction import Correction
 from .Prediction import Prediction

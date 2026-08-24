@@ -35,7 +35,6 @@ class Exahype2(CMakePackage, CudaPackage):
     depends_on("py-pip")
 
     depends_on('gsl@2.8')
-    depends_on('libxsmm@1.17 +generator')
 
     depends_on("mpi")
 
@@ -63,7 +62,6 @@ class Exahype2(CMakePackage, CudaPackage):
 
     def cmake_args(self):
         args = [
-            "-DPEANO_WITH_LIBXSMM=OFF",
             self.define_from_variant("PEANO_WITH_MULTITHREADING", "multithreading"),
             self.define_from_variant("PEANO_WITH_HDF5", "hdf5"),
             self.define_from_variant("PEANO_WITH_NETCDF", "netcdf"),

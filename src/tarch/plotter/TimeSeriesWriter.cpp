@@ -4,7 +4,7 @@
 
 #include "FileWriter.h"
 
-std::string tarch::plotter::TimeSeriesWriter::snapshotName(const std::string& filename, double time) const {
+std::string tarch::plotter::TimeSeriesWriter::snapshotName(const std::string& filename, const double time) const {
   std::ostringstream oss;
   oss << filename << "-" << std::fixed << std::setprecision(6) << time;
   std::string name = oss.str();
@@ -14,7 +14,7 @@ std::string tarch::plotter::TimeSeriesWriter::snapshotName(const std::string& fi
 
 void tarch::plotter::TimeSeriesWriter::writeSnapshotFile(
   const std::string& filename,
-  double             time,
+  const double       time,
   FileWriter&        fileWriter
 ) {
   const std::string name = snapshotName(filename, time);

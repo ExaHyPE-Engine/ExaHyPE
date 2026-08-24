@@ -1,16 +1,5 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#pragma once
-
-#include "tarch/accelerator/MemoryLocation.h"
-#include "tarch/accelerator/Range.h"
-#include "tarch/accelerator/Reducer.h"
-#include "tarch/accelerator/accelerator.h"
-#include "tarch/accelerator/cuda/Device.h"
-#include "tarch/accelerator/cuda/ErrorCheck.h"
-
-#include <cub/cub.cuh>
-#include <cuda_runtime.h>
 
 namespace tarch::accelerator {
   template <typename T>
@@ -223,22 +212,30 @@ namespace tarch {
   inline void parallelReduce(const RangeMD<2>& r, F f, Reducer red) {
     const int total = r.n[0] * r.n[1];
     const int n1    = r.n[1];
-    parallelReduce(Range(total), [=] __device__(int idx, typename Reducer::value_type& acc) {
-      const int x = idx / n1;
-      const int y = idx % n1;
-      f(x, y, acc);
-    }, red);
+    parallelReduce(
+      Range(total),
+      [=] __device__(int idx, typename Reducer::value_type& acc) {
+        const int x = idx / n1;
+        const int y = idx % n1;
+        f(x, y, acc);
+      },
+      red
+    );
   }
   template <typename Reducer, typename F>
   inline void parallelReduce(const RangeMD<3>& r, F f, Reducer red) {
     const int total = r.n[0] * r.n[1] * r.n[2];
     const int n1    = r.n[1];
     const int n2    = r.n[2];
-    parallelReduce(Range(total), [=] __device__(int idx, typename Reducer::value_type& acc) {
-      const int x = idx / (n1 * n2);
-      const int y = (idx / n2) % n1;
-      const int z = idx % n2;
-      f(x, y, z, acc);
-    }, red);
+    parallelReduce(
+      Range(total),
+      [=] __device__(int idx, typename Reducer::value_type& acc) {
+        const int x = idx / (n1 * n2);
+        const int y = (idx / n2) % n1;
+        const int z = idx % n2;
+        f(x, y, z, acc);
+      },
+      red
+    );
   }
 } // namespace tarch

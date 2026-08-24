@@ -3,6 +3,7 @@
 #pragma once
 
 #include "Constants.h"
+#include "RuntimeParameters.h"
 
 #include "runner/RuntimeParameters.h"
 
@@ -23,16 +24,11 @@
 
 {{SOLVER_INCLUDES}}
 
-{% for item in NAMESPACE -%}
-  namespace {{ item }} {
-{%- endfor %}
+namespace {{NAMESPACE | join("::")}} {
   class {{CLASSNAME}};
+} // namespace {{NAMESPACE | join("::")}}
 
-{% for item in NAMESPACE -%}
-  }
-{%- endfor %}
-
-class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
+class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
   public:
   {% if USE_VARIABLE_SHORTCUTS is sameas True %}
   /**
@@ -53,18 +49,23 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
       {%- endfor %}
     };
 
-    static std::string toString(SolverState);
+    static std::string toString(const SolverState state);
 
-    static constexpr int  DGOrder = {{DG_ORDER}};
+    static constexpr int DGOrder = {{DG_ORDER}};
 
-    static constexpr int    NumberOfUnknowns           = {{NUMBER_OF_UNKNOWNS}};
-    static constexpr int    NumberOfAuxiliaryVariables = {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    static constexpr int NumberOfUnknowns = {{NUMBER_OF_UNKNOWNS}};
+    static constexpr int NumberOfAuxiliaryVariables = {{NUMBER_OF_AUXILIARY_VARIABLES}};
 
 {{BASIS_DECLARATIONS | indent(4,True) }}
 
     {{SOLVER_CONSTANTS}}
 
     {{CLASSNAME}}();
+    ~{{CLASSNAME}}() override;
+    {{CLASSNAME}}(const {{CLASSNAME}}& other) = delete;
+    {{CLASSNAME}}({{CLASSNAME}}&& other) = delete;
+    {{CLASSNAME}}& operator=(const {{CLASSNAME}}& other) = delete;
+    {{CLASSNAME}}& operator=({{CLASSNAME}}&& other) = delete;
 
     /**
      * Flags which coordinate axes use periodic boundary conditions.
@@ -85,10 +86,10 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * @param t Time.
      */
     virtual ::exahype2::RefinementCommand refinementCriterion(
-      const double * NOALIAS                  Q,
-      const tarch::la::Vector<DIMENSIONS,double>&  x,
-      const tarch::la::Vector<DIMENSIONS,double>&  h,
-      double                                       t
+      const double* const NOALIAS Q,
+      const tarch::la::Vector<DIMENSIONS, double>& x,
+      const tarch::la::Vector<DIMENSIONS, double>& h,
+      const double t
     ) {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
 
     /**
@@ -98,9 +99,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * @param h Size of cell within which the point is placed.
      */
     virtual void initialCondition(
-      double * NOALIAS                        Q,     // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<DIMENSIONS,double>&  x,
-      const tarch::la::Vector<DIMENSIONS,double>&  h
+      double* const NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<DIMENSIONS, double>& x,
+      const tarch::la::Vector<DIMENSIONS, double>& h
     ) {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
 
     {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<none>" %}
@@ -112,11 +113,11 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * the Riemann solver, i.e. flux and eigenvalues.
      */
     virtual void boundaryConditions(
-      const double * NOALIAS                  Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      double * NOALIAS                        Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<DIMENSIONS,double>&  x,
-      double                                       t,
-      int                                          normal
+      const double* const NOALIAS Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      double* const NOALIAS Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<DIMENSIONS, double>& x,
+      const double t,
+      const int normal
     ) {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final{% endif %};
     {% endif %}
 
@@ -191,9 +192,13 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      *
      * @see setTimeStepSize(double)
      */
-    void update(double timeStepSize, double timeStamp, double cellSize);
+    void update(
+      const double timeStepSize,
+      const double timeStamp,
+      const double cellSize
+    );
 
-    SolverState  getSolverState() const;
+    SolverState getSolverState() const;
 
     bool mayPlot() const override;
 
@@ -228,38 +233,38 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     {% endif %}
     virtual bool cellCanUseStatelessPDETerms(
-      const tarch::la::Vector<DIMENSIONS,double>&  cellCentre,
-      const tarch::la::Vector<DIMENSIONS,double>&  cellH,
-      double                                       t,
-      double                                       dt
+      const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+      const tarch::la::Vector<DIMENSIONS, double>& cellH,
+      const double timeStamp,
+      const double timeStepSize
     ) const;
 
   protected:
-    SolverState  _solverState;
-    SolverState  _solverStateBeforeDynamicMeshRefinement;
+    SolverState _solverState;
+    SolverState _solverStateBeforeDynamicMeshRefinement;
 
-    double     _minTimeStamp;
-    double     _maxTimeStamp;
+    double _minTimeStamp;
+    double _maxTimeStamp;
 
-    double     _minTimeStampThisTimeStep;
-    double     _maxTimeStampThisTimeStep;
+    double _minTimeStampThisTimeStep;
+    double _maxTimeStampThisTimeStep;
 
-    double     _localMinTimeStampThisTimeStep;
-    double     _localMaxTimeStampThisTimeStep;
+    double _localMinTimeStampThisTimeStep;
+    double _localMaxTimeStampThisTimeStep;
 
-    double     _minCellH;
-    double     _maxCellH;
+    double _minCellH;
+    double _maxCellH;
 
-    double     _minCellHThisTimeStep;
-    double     _maxCellHThisTimeStep;
+    double _minCellHThisTimeStep;
+    double _maxCellHThisTimeStep;
 
-    double     _minTimeStepSize;
-    double     _maxTimeStepSize;
+    double _minTimeStepSize;
+    double _maxTimeStepSize;
 
-    double     _minTimeStepSizeThisTimeStep;
-    double     _maxTimeStepSizeThisTimeStep;
+    double _minTimeStepSizeThisTimeStep;
+    double _maxTimeStepSizeThisTimeStep;
 
-    tarch::multicore::BooleanSemaphore  _semaphore;
+    tarch::multicore::BooleanSemaphore _semaphore;
 
   {{ABSTRACT_SOLVER_USER_DECLARATIONS}}
 };

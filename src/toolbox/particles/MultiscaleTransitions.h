@@ -7,6 +7,7 @@
 
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/VertexMarker.h"
+#include "tarch/la/VectorOperations.h"
 
 namespace toolbox {
   namespace particles {
@@ -19,8 +20,10 @@ namespace toolbox {
      * Take particle from current vertex and lift it or keep it local
      */
     template <typename Particle>
-    ParticleReassociationInstruction
-    liftParticleAssociatedWithVertex(const Particle& p, const peano4::datamanagement::VertexMarker marker);
+    ParticleReassociationInstruction liftParticleAssociatedWithVertex(
+      const Particle&                            p,
+      const peano4::datamanagement::VertexMarker marker
+    );
 
     /**
      * Implementation of liftParticleAssociatedWithVertex() without the template

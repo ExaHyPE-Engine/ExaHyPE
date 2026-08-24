@@ -41,14 +41,6 @@ public:
   inline static T* FLCoeff = nullptr;
   // Same thing, but on the positive edge of the cell (so x=1 for the example above)
   inline static T* FRCoeff = nullptr;
-
-  // Contains the coefficients for the projection of the basis polynomials to nodes of
-  // subcells of the reference element. Thus given a_i the values at the quadrature points
-  // x=x_i, then the value at point i/3 + x_j/3 (i.e. a Peano subcell, with 1/3 the size),
-  // would be sum_k{ a_k * FineGridProjector1d[i][j*n + k] }
-  inline static T** fineGridProjector1d = nullptr;
-  // Equivalent operator for restriction
-  inline static T** fineGridProjector1d_T_weighted = nullptr; // [k][i*nDof+j] = fineGridProjector1d[k][j*nDof+i] * weight[j] / weight[i] / 3.0
 };
 
 {% for item in NAMESPACE -%}

@@ -11,20 +11,18 @@ namespace runner {
 
 class runner::TimeLoop final : public runner::Phase {
 public:
-  TimeLoop(PhaseContext& context, int timeStepStep, int plotStep, DynamicAMR& dynamicAMR);
+  TimeLoop(runner::PhaseContext& context, const int timeStepStep, const int plotStep, runner::DynamicAMR& dynamicAMR);
 
-  std::vector<std::string> widthSamples() const override;
-  void                     run() override;
+  void run() override;
 
-  /** True if the run ended early on a noncritical assertion (one final plot was written). */
-  bool terminatedGracefully() const { return _terminatedGracefully; }
+  bool terminatedGracefully() const;
 
 private:
-  PhaseContext& _context;
-  int           _timeStepStep;
-  int           _plotStep;
-  DynamicAMR&   _dynamicAMR;
-  bool          _terminatedGracefully = false;
+  runner::PhaseContext& _context;
+  int                   _timeStepStep;
+  int                   _plotStep;
+  runner::DynamicAMR&   _dynamicAMR;
+  bool                  _terminatedGracefully = false;
 
   /**
    * Wall clock of every completed time step, the first one included. The throughput
@@ -42,13 +40,13 @@ private:
   double _dynamicAMRSecondsBeforeLoop = 0.0;
 
   void logTimeStep(
-    double        minTimeStamp,
-    double        maxTimeStamp,
-    double        terminalTime,
-    double        wallClockSeconds,
-    unsigned long completedSteps,
-    int           maxSteps
+    const double        minimumTimeStamp,
+    const double        maximumTimeStamp,
+    const double        terminalTime,
+    const double        wallClockSeconds,
+    const unsigned long completedSteps,
+    const int           maximumSteps
   );
-  void        logPlot(int snapshot, int numberOfSnapshots, double timeStamp, double wallClockSeconds);
-  std::string formatETA(double fraction) const;
+  void logPlot(const int snapshot, const int numberOfSnapshots, const double timeStamp, const double wallClockSeconds);
+  std::string formatETA(const double fraction) const;
 };

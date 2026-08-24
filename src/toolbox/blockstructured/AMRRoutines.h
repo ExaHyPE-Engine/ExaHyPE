@@ -5,6 +5,7 @@
 #include "peano4/Loop.h"
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/FaceMarker.h"
+#include "tarch/la/ExactAccumulator.h"
 
 /**
  * Interpolation and restriction for block-structured patch data
@@ -99,6 +100,53 @@ namespace toolbox::blockstructured {
     const double* NOALIAS                     quadratureWeights1d,
     const int                                 numberOfDofsPerAxis,
     const int                                 numberOfUnknownsPlusAuxiliaryVariables
+  );
+
+  INLINE_METHOD double orderInvariantProduct(double firstFactor, double secondFactor, double thirdFactor);
+
+  template <typename T>
+  INLINE_METHOD void applyTensorProductOrderInvariant(
+    T* NOALIAS                   targetValues,
+    const T* NOALIAS             sourceValues,
+    const double* const* NOALIAS matrixPerAxis,
+    const int                    numberOfSourceDofsPerAxis,
+    const int                    numberOfTargetDofsPerAxis,
+    const int                    numberOfUnknownsPlusAuxiliaryVariables
+  );
+
+  template <typename T>
+  INLINE_METHOD void restrictCellFromChildren(
+    T* NOALIAS                   coarseGridValues,
+    const T* const* NOALIAS      childGridValues,
+    const double* const* NOALIAS restrictionMatrixPerInterval,
+    const int                    numberOfDofsPerAxis,
+    const int                    numberOfUnknownsPlusAuxiliaryVariables
+  );
+
+  template <typename T>
+  INLINE_METHOD void restrictCellFromChildren(
+    T* NOALIAS              coarseGridValues,
+    const T* const* NOALIAS childGridValues,
+    const int               numberOfDofsPerAxis,
+    const int               numberOfUnknownsPlusAuxiliaryVariables
+  );
+
+  template <typename T>
+  INLINE_METHOD void interpolateFaceFromCoarse(
+    T* NOALIAS                   fineFaceValues,
+    const T* NOALIAS             coarseFaceValues,
+    const double* const* NOALIAS prolongationMatrixPerAxis,
+    const int                    numberOfDofsPerAxis,
+    const int                    numberOfUnknownsPlusAuxiliaryVariables
+  );
+
+  template <typename T>
+  INLINE_METHOD void restrictFaceFromChildren(
+    T* NOALIAS                   coarseFaceValues,
+    const T* const* NOALIAS      childFaceValues,
+    const double* const* NOALIAS restrictionMatrixPerInterval,
+    const int                    numberOfDofsPerAxis,
+    const int                    numberOfUnknownsPlusAuxiliaryVariables
   );
 } // namespace toolbox::blockstructured
 

@@ -14,15 +14,26 @@ initial_conditions = """
   Q[Shortcuts::rhoU + 0]  = 0.0;
   Q[Shortcuts::rhoU + 1]  = 0.0;
 #if DIMENSIONS == 2
-  Q[Shortcuts::rhoE]      = ((sqrt(pow(0.5 - x(0), 2) + pow(0.5 - x(1), 2)) < 0.2) ? (1.0) : (1.01));
+  Q[Shortcuts::rhoE] =
+    std::sqrt(
+      std::pow(0.5 - x(0), 2) + std::pow(0.5 - x(1), 2)
+    ) < 0.2
+      ? 1.0
+      : 1.01;
 #else
   Q[Shortcuts::rhoU + 2]  = 0.0;
-  Q[Shortcuts::rhoE]      = ((sqrt(pow(0.5 - x(0), 2) + pow(0.5 - x(1), 2) + pow(0.5 - x(2), 2)) < 0.2) ? (1.0) : (1.01));
+  Q[Shortcuts::rhoE] =
+    std::sqrt(
+      std::pow(0.5 - x(0), 2)
+      + std::pow(0.5 - x(1), 2)
+      + std::pow(0.5 - x(2), 2)
+    ) < 0.2
+      ? 1.0
+      : 1.01;
 #endif
 """
 
 boundary_conditions = """
-  // Reflective boundary conditions
   Qoutside[Shortcuts::rho]      = Qinside[Shortcuts::rho];
   Qoutside[Shortcuts::rhoU + 0] = -Qinside[Shortcuts::rhoU + 0];
   Qoutside[Shortcuts::rhoU + 1] = -Qinside[Shortcuts::rhoU + 1];
@@ -39,7 +50,7 @@ def parse_arguments():
         "-h",
         "--help",
         action="store_true",
-        help="show this help message and continue with project help",
+        help="Show this help message and continue with project help.",
     )
     parser.add_argument("-et", "--end-time", type=float, default=0.5)
     parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=16)
@@ -49,7 +60,7 @@ def parse_arguments():
         "--samples",
         type=int,
         default=0,
-        help="Set number of samples for benchmarking, if not set, run until scenario end",
+        help="Number of benchmark samples; zero runs to terminal time.",
     )
     args, _ = parser.parse_known_args()
     if args.help:
@@ -82,7 +93,6 @@ fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     unknowns={"rho": 1, "rhoU": project.dimensions, "rhoE": 1},
     auxiliary_variables=0,
     time_step_relaxation=0.5,
-    fuse_compute_kernels=True,
 )
 
 fv_solver.set_implementation(
@@ -108,8 +118,6 @@ project.constants.export_constexpr_with_type(
 )
 
 project.constants.export_constexpr_with_type("ShouldPlot", "true", "bool")
-
-project.constants.export_constexpr_with_type("UseAMR", "false", "bool")
 
 project.constants.export_constexpr_with_type("Samples", str(args.samples), "int")
 

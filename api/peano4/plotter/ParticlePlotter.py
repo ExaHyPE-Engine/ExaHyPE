@@ -58,15 +58,10 @@ class ParticlePlotter(BasePlotter):
   assertion(_subdomainPlotter);
   assertion(_refinementLevelPlotter);
 
-  for (auto* p: fineGridVertex{{PARTICLES_CONTAINER}}) {
-    if (p->getParallelState() == globaldata::{{PARTICLE}}::ParallelState::Local) {
-      // Plot geometry
-      int vertexIndex = _vertexPlotter->plotVertex(p->getX());
-
-      // Plot topology
-      int cellIndex = _cellPlotter->plotPoint(vertexIndex);
-
-      // Plot attributes
+  for (const auto* const particle : fineGridVertex{{PARTICLES_CONTAINER}}) {
+    if (particle->getParallelState() == globaldata::{{PARTICLE}}::ParallelState::Local) {
+      const int vertexIndex = _vertexPlotter->plotVertex(particle->getX());
+      const int cellIndex = _cellPlotter->plotPoint(vertexIndex);
       _subdomainPlotter->plotCellData(cellIndex, _treeNumber);
       _refinementLevelPlotter->plotCellData(cellIndex, 1);
     }
@@ -78,7 +73,7 @@ class ParticlePlotter(BasePlotter):
 
     def get_attributes(self):
         return (
-            super(ParticlePlotter, self).get_attributes()
+            super().get_attributes()
             + f"""
   std::unique_ptr<tarch::plotter::FileWriter::CellPlotter> _cellPlotter;
   std::unique_ptr<tarch::plotter::FileWriter::VertexPlotter> _vertexPlotter;

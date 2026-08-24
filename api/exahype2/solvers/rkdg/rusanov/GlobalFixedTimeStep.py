@@ -15,9 +15,7 @@ from exahype2.solvers.rkdg.kernels import create_add_solver_contributions_call
 from exahype2.solvers.rkdg.kernels import create_multiply_with_inverted_mass_matrix_call
 from exahype2.solvers.rkdg.rusanov.kernels import create_Riemann_solver_call
 
-from exahype2.solvers.rkdg.FixedTimeSteppingCodeSnippets import (
-    FixedTimeSteppingCodeSnippets,
-)
+from exahype2.solvers import FixedTimeSteppingCodeSnippets
 
 from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import FaceProjections
 
@@ -115,7 +113,7 @@ class GlobalFixedTimeStep(SeparateSweeps):
             point_source=point_source,
         )
 
-        solver_code_snippets = FixedTimeSteppingCodeSnippets(
+        solver_code_snippets = FixedTimeSteppingCodeSnippets.for_rkdg(
             self._normalised_time_step_size
         )
 

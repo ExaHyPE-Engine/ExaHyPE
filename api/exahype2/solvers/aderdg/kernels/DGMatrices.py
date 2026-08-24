@@ -7,6 +7,45 @@ import peano4.output
 from exahype2.solvers.MathUtils import MathUtils
 
 
+def create_triadic_transfer_matrices(polynomial_type, number_of_dof):
+    """Returns (prolongation, restriction) triples for the triadic subdivision.
+
+    Each entry is one matrix per subinterval, indexed [coarse][fine], with the
+    prolongation holding the coarse shape functions at the child's nodes and the
+    restriction its mass-lumped transpose. Both triples are symmetrised so that
+    mirror entries are identical to the last bit.
+    """
+    if polynomial_type == "legendre":
+        weights, nodes = MathUtils.getGaussLegendre(number_of_dof)
+    elif polynomial_type == "lobatto":
+        weights, nodes = MathUtils.getGaussLobatto(number_of_dof)
+        nodes = nodes[::-1]
+    else:
+        raise ValueError("Quadrature type " + polynomial_type + " not supported.")
+
+    prolongation = [
+        MathUtils.assembleFineGridProjector1d(nodes, interval, number_of_dof)
+        for interval in range(3)
+    ]
+    _symmetriseTriadicProjectors(
+        prolongation[0], prolongation[1], prolongation[2], number_of_dof
+    )
+
+    restriction = deepcopy(prolongation)
+    for interval in range(3):
+        for coarse in range(number_of_dof):
+            for fine in range(number_of_dof):
+                restriction[interval][coarse][fine] *= (
+                    weights[fine] / weights[coarse] / 3.0
+                )
+    # The quadrature weights are palindromic, but the division is not symmetric
+    # to the last bit, so the scaled operator is symmetrised again.
+    _symmetriseTriadicProjectors(
+        restriction[0], restriction[1], restriction[2], number_of_dof
+    )
+    return prolongation, restriction
+
+
 def _symmetriseTriadicProjectors(p0, p1, p2, n):
     """
     Overwrite the three triadic sub-cell projectors to be mirror symmetric.
@@ -83,64 +122,6 @@ class DGMatrices(object):
         dudx = MathUtils.assembleDiscreteDerivativeOperator(MM, Kxi)
         self.d["dudx"] = MathUtils.matrixPadAndFlatten_ColMajor(dudx, 0)
         self.d["dudx_T"] = MathUtils.matrixPadAndFlatten_RowMajor(dudx, padSize)
-
-        fineGridProjector1d_0 = MathUtils.assembleFineGridProjector1d(
-            xGPN, 0, self.d["NUMBER_OF_DOF"]
-        )
-        fineGridProjector1d_1 = MathUtils.assembleFineGridProjector1d(
-            xGPN, 1, self.d["NUMBER_OF_DOF"]
-        )
-        fineGridProjector1d_2 = MathUtils.assembleFineGridProjector1d(
-            xGPN, 2, self.d["NUMBER_OF_DOF"]
-        )
-
-        # Enforce mirror symmetry of the triadic sub-cell projectors. The raw
-        # Lagrange evaluation satisfies the reflection relation only to ~1e-15,
-        # because the product accumulates in a fixed node order and the mirror
-        # entry rounds differently. Averaging each mirror pair makes the stored
-        # doubles identical under reflection at a correction of O(1e-16).
-        _symmetriseTriadicProjectors(
-            fineGridProjector1d_0,
-            fineGridProjector1d_1,
-            fineGridProjector1d_2,
-            self.d["NUMBER_OF_DOF"],
-        )
-
-        self.d["fineGridProjector1d_0"] = MathUtils.matrixPadAndFlatten_ColMajor(
-            fineGridProjector1d_0, padSize
-        )
-        self.d["fineGridProjector1d_1"] = MathUtils.matrixPadAndFlatten_ColMajor(
-            fineGridProjector1d_1, padSize
-        )
-        self.d["fineGridProjector1d_2"] = MathUtils.matrixPadAndFlatten_ColMajor(
-            fineGridProjector1d_2, padSize
-        )
-
-        # Scale the projectors with the quadrature weights to turn them into the
-        # restriction operator.
-        for i in range(self.d["NUMBER_OF_DOF"]):
-            for j in range(self.d["NUMBER_OF_DOF"]):
-                fineGridProjector1d_0[i][j] *= wGPN[j] / wGPN[i] / 3.0
-                fineGridProjector1d_1[i][j] *= wGPN[j] / wGPN[i] / 3.0
-                fineGridProjector1d_2[i][j] *= wGPN[j] / wGPN[i] / 3.0
-        # Re-establish the mirror symmetry after the quadrature-weight scaling
-        # (the weights are palindromic, but the division is not symmetric to the
-        # last bit), so the restriction operator reflects like the prolongation.
-        _symmetriseTriadicProjectors(
-            fineGridProjector1d_0,
-            fineGridProjector1d_1,
-            fineGridProjector1d_2,
-            self.d["NUMBER_OF_DOF"],
-        )
-        self.d["fineGridProjector1d_T_weighted_0"] = (
-            MathUtils.matrixPadAndFlatten_RowMajor(fineGridProjector1d_0, padSize)
-        )
-        self.d["fineGridProjector1d_T_weighted_1"] = (
-            MathUtils.matrixPadAndFlatten_RowMajor(fineGridProjector1d_1, padSize)
-        )
-        self.d["fineGridProjector1d_T_weighted_2"] = (
-            MathUtils.matrixPadAndFlatten_RowMajor(fineGridProjector1d_2, padSize)
-        )
 
         generated_kernels = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
             headfile_template=template_prefix + "DGMatrices.template.h",

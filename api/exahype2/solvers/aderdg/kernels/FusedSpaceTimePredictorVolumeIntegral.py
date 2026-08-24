@@ -5,7 +5,6 @@ from copy import deepcopy
 import peano4.output
 
 from .Gemms import Gemms
-from .Gemms import generate_gemms
 
 from exahype2.solvers.MathUtils import MathUtils
 
@@ -14,10 +13,8 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
     def __init__(self, dictionary):
         self.d = deepcopy(dictionary)
 
-    def generate_kernels(
-        self, solver, namespace, output, template_prefix, output_path
-    ):
-        self._build_gemms(namespace, output, template_prefix, output_path)
+    def generate_kernels(self, solver, namespace, output, template_prefix, output_path):
+        self._build_gemms()
 
         self.d["NAME_SUFFIX"] = ""
 
@@ -96,11 +93,13 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
         generated_kernels = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
             headfile_template=template_prefix
             + "FusedSpaceTimePredictorVolumeIntegral.template.h",
-            cppfile_template=template_prefix
-            + "FusedSpaceTimePredictorVolumeIntegralLinear.template.cpp"
-            if self.d["IS_LINEAR"]
-            else template_prefix
-            + "FusedSpaceTimePredictorVolumeIntegralNonlinear.template.cpp",
+            cppfile_template=(
+                template_prefix
+                + "FusedSpaceTimePredictorVolumeIntegralLinear.template.cpp"
+                if self.d["IS_LINEAR"]
+                else template_prefix
+                + "FusedSpaceTimePredictorVolumeIntegralNonlinear.template.cpp"
+            ),
             classname=output_path + "/FusedSpaceTimePredictorVolumeIntegral",
             namespace=namespace,
             subdirectory=".",
@@ -118,10 +117,8 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
             f'#include "{output_path}/FusedSpaceTimePredictorVolumeIntegral.h"\n'
         )
 
-    def _build_gemms(
-        self, namespace, output, template_prefix, output_path
-    ):
-        # GEMMS: M, N, K, LDA, LDB, LDC, alpha, beta, Align A, Align C, name, prefetching, type
+    def _build_gemms(self):
+        # GEMMS: M, N, K, LDA, LDB, LDC, alpha, beta, Align A, Align C, name
         self.d["GEMMS"] = {}
         nDim = self.d["DIMENSIONS"]
         nDof = self.d["NUMBER_OF_DOF"]
@@ -132,108 +129,9 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
         nData = self.d["NUMBER_OF_DATA"]
         nDataPad = self.d["NUMBER_OF_DATA_PADDED"]
 
-        if self.d["IS_LINEAR"]:
-            if self.d["USE_FLUX"]:
-                self.d["GEMMS"]["flux_x"] = Gemms(
-                    nUnknownsPad,
-                    nDof,
-                    nDof,
-                    nUnknownsPad,
-                    nDofPad,
-                    nUnknownsPad,
-                    1,
-                    0,
-                    1,
-                    1,
-                    "flux_x",
-                    "nopf",
-                    "gemm",
-                    self.d["PREDICTOR_COMPUTATION_PRECISIONS"],
-                )  # beta, 0 => overwrite C
-                self.d["GEMMS"]["flux_y"] = Gemms(
-                    nUnknownsPad,
-                    nDof,
-                    nDof,
-                    nUnknownsPad * nDof,
-                    nDofPad,
-                    nUnknownsPad,
-                    1,
-                    0,
-                    1,
-                    1,
-                    "flux_y",
-                    "nopf",
-                    "gemm",
-                    self.d["PREDICTOR_COMPUTATION_PRECISIONS"],
-                )  # beta, 0 => overwrite C
-                if self.d["DIMENSIONS"] >= 3:
-                    self.d["GEMMS"]["flux_z"] = Gemms(
-                        nUnknownsPad,
-                        nDof,
-                        nDof,
-                        nUnknownsPad * nDof2,
-                        nDofPad,
-                        nUnknownsPad,
-                        1,
-                        0,
-                        1,
-                        1,
-                        "flux_z",
-                        "nopf",
-                        "gemm",
-                        self.d["PREDICTOR_COMPUTATION_PRECISIONS"],
-                    )  # beta, 0 => overwrite C
-            if self.d["USE_NCP"]:
-                self.d["GEMMS"]["gradQ_x"] = Gemms(
-                    nUnknowns,
-                    nDof,
-                    nDof,
-                    nDataPad,
-                    nDofPad,
-                    nUnknownsPad,
-                    1,
-                    1,
-                    1,
-                    1,
-                    "gradQ_x",
-                    "nopf",
-                    "gemm",
-                    self.d["PREDICTOR_COMPUTATION_PRECISIONS"],
-                )
-                self.d["GEMMS"]["gradQ_y"] = Gemms(
-                    nUnknowns,
-                    nDof,
-                    nDof,
-                    nDataPad * nDof,
-                    nDofPad,
-                    nUnknownsPad * nDof,
-                    1,
-                    1,
-                    1,
-                    1,
-                    "gradQ_y",
-                    "nopf",
-                    "gemm",
-                    self.d["PREDICTOR_COMPUTATION_PRECISIONS"],
-                )
-                if self.d["DIMENSIONS"] >= 3:
-                    self.d["GEMMS"]["gradQ_z"] = Gemms(
-                        nUnknowns,
-                        nDof,
-                        nDof,
-                        nDataPad * nDof2,
-                        nDofPad,
-                        nUnknownsPad * nDof2,
-                        1,
-                        1,
-                        1,
-                        1,
-                        "gradQ_z",
-                        "nopf",
-                        "gemm",
-                        self.d["PREDICTOR_COMPUTATION_PRECISIONS"],
-                    )
-        else:  # nonlinear
+        # Linear kernels expand their tensor-product operators inline, so only the
+        # nonlinear predictor needs matrix multiplication specifications.
+        if not self.d["IS_LINEAR"]:
             if self.d["USE_FLUX"]:
                 self.d["GEMMS"]["rhs_x"] = Gemms(
                     nUnknownsPad,
@@ -247,9 +145,6 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
                     1,
                     1,
                     "rhs_x",
-                    "nopf",
-                    "gemm",
-                    self.d["PREDICTOR_COMPUTATION_PRECISIONS"],
                 )
                 self.d["GEMMS"]["rhs_y"] = Gemms(
                     nUnknownsPad,
@@ -263,9 +158,6 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
                     1,
                     1,
                     "rhs_y",
-                    "nopf",
-                    "gemm",
-                    self.d["PREDICTOR_COMPUTATION_PRECISIONS"],
                 )
                 if self.d["DIMENSIONS"] >= 3:
                     self.d["GEMMS"]["rhs_z"] = Gemms(
@@ -280,9 +172,6 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
                         1,
                         1,
                         "rhs_z",
-                        "nopf",
-                        "gemm",
-                        self.d["PREDICTOR_COMPUTATION_PRECISIONS"],
                     )
                 self.d["GEMMS"]["lduh_x"] = Gemms(
                     nUnknowns,
@@ -296,9 +185,6 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
                     1,
                     1,
                     "lduh_x",
-                    "nopf",
-                    "gemm",
-                    self.d["PREDICTOR_COMPUTATION_PRECISIONS"],
                 )
                 self.d["GEMMS"]["lduh_y"] = Gemms(
                     nUnknowns,
@@ -312,9 +198,6 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
                     1,
                     1,
                     "lduh_y",
-                    "nopf",
-                    "gemm",
-                    self.d["PREDICTOR_COMPUTATION_PRECISIONS"],
                 )
                 if self.d["DIMENSIONS"] >= 3:
                     self.d["GEMMS"]["lduh_z"] = Gemms(
@@ -329,11 +212,12 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
                         1,
                         1,
                         "lduh_z",
-                        "nopf",
-                        "gemm",
-                        self.d["PREDICTOR_COMPUTATION_PRECISIONS"],
                     )
-            if self.d["USE_NCP"] or self.d["USE_DIFFUSIVE_FLUX"]:
+            if (
+                self.d["USE_NCP"]
+                or self.d["USE_DIFFUSIVE_FLUX"]
+                or self.d["USE_DIFFUSIVE_SOURCE"]
+            ):
                 self.d["GEMMS"]["gradQ_x"] = Gemms(
                     nUnknowns,
                     nDof,
@@ -346,9 +230,6 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
                     1,
                     1,
                     "gradQ_x",
-                    "nopf",
-                    "gemm",
-                    self.d["PREDICTOR_COMPUTATION_PRECISIONS"],
                 )
                 self.d["GEMMS"]["gradQ_y"] = Gemms(
                     nUnknowns,
@@ -362,9 +243,6 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
                     1,
                     1,
                     "gradQ_y",
-                    "nopf",
-                    "gemm",
-                    self.d["PREDICTOR_COMPUTATION_PRECISIONS"],
                 )
                 if self.d["DIMENSIONS"] >= 3:
                     self.d["GEMMS"]["gradQ_z"] = Gemms(
@@ -379,9 +257,6 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
                         1,
                         1,
                         "gradQ_z",
-                        "nopf",
-                        "gemm",
-                        self.d["PREDICTOR_COMPUTATION_PRECISIONS"],
                     )
 
             self.d["GEMMS"]["lqi"] = Gemms(
@@ -396,16 +271,4 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
                 1,
                 1,
                 "lqi",
-                "nopf",
-                "gemm",
-                self.d["PREDICTOR_COMPUTATION_PRECISIONS"],
             )  # beta, 0 => overwrite C
-
-        if self.d["USE_LIBXSMM"]:
-            generate_gemms(
-                output_path=output_path,
-                output_file_name="FusedSpaceTimePredictorVolumeIntegral_libxsmm.c",
-                namespace=namespace,
-                dict=self.d,
-                gemm_config_list=self.d["GEMMS"].values(),
-            )

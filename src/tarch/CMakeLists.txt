@@ -24,10 +24,12 @@ set(SOURCES
   database/tests/GlobalTimeSeriesDatabaseTest.cpp
 
   accelerator/accelerator.cpp
+  accelerator/Atomics.cpp
   accelerator/Device.cpp
   accelerator/MemoryAllocationCache.cpp
   accelerator/MemoryBlocks.cpp
   accelerator/MemoryLocation.cpp
+  accelerator/tests/AtomicsTest.cpp
   accelerator/tests/MemoryAllocationCacheTest.cpp
   accelerator/tests/MemoryAllocationTest.cpp
   accelerator/tests/ParallelConstructsTest.cpp
@@ -48,6 +50,7 @@ set(SOURCES
   accelerator/sycl/accelerator.cpp
   accelerator/sycl/Device.cpp
 
+  la/ExactAccumulator.cpp
   la/Matrix.cpp
   la/Matrix2x2.cpp
   la/Matrix3x3.cpp
@@ -66,6 +69,7 @@ set(SOURCES
   la/VectorOperations.cpp
   la/VectorScalarOperations.cpp
   la/VectorVectorOperations.cpp
+  la/tests/ExactAccumulatorTest.cpp
   la/tests/MatrixTest.cpp
   la/tests/MatrixVectorTest.cpp
   la/tests/ScalarTest.cpp
@@ -105,6 +109,7 @@ set(SOURCES
 
   plotter/CellDataPlotter.cpp
   plotter/CellPlotter.cpp
+  plotter/CellTypes.cpp
   plotter/FileWriter.cpp
   plotter/HDF5FileWriter.cpp
   plotter/JSONTimeSeriesWriter.cpp
@@ -137,10 +142,12 @@ set(SOURCES
 if(_peano_gpu_backend STREQUAL "cuda")
   list(APPEND SOURCES accelerator/cuda/tests/ReductionTest.cpp)
   set_source_files_properties(accelerator/cuda/tests/ReductionTest.cpp PROPERTIES LANGUAGE CUDA)
+  set_source_files_properties(accelerator/tests/AtomicsTest.cpp PROPERTIES LANGUAGE CUDA)
   set_source_files_properties(accelerator/tests/ParallelConstructsTest.cpp PROPERTIES LANGUAGE CUDA)
 elseif(_peano_gpu_backend STREQUAL "hip")
   list(APPEND SOURCES accelerator/hip/tests/ReductionTest.cpp)
   set_source_files_properties(accelerator/hip/tests/ReductionTest.cpp PROPERTIES LANGUAGE HIP)
+  set_source_files_properties(accelerator/tests/AtomicsTest.cpp PROPERTIES LANGUAGE HIP)
   set_source_files_properties(accelerator/tests/ParallelConstructsTest.cpp PROPERTIES LANGUAGE HIP)
 elseif(_peano_gpu_backend STREQUAL "sycl")
   list(APPEND SOURCES accelerator/sycl/tests/ReductionTest.cpp)
@@ -154,9 +161,14 @@ install_peano_headers(
   PATTERNS ${HEADER_EXTENSIONS_TO_GLOB}
 )
 
-set(TARCH_LINK_LIBRARIES)
-if(PEANO_WITH_FPE AND CMAKE_DL_LIBS)
-  list(APPEND TARCH_LINK_LIBRARIES ${CMAKE_DL_LIBS})
+set(TARCH_COMPILE_DEFINITIONS)
+if(
+  PEANO_WITH_FPE
+  AND CMAKE_SYSTEM_NAME STREQUAL "Linux"
+  AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|i.86)$"
+)
+  find_program(PEANO_FPE_SYMBOLISER NAMES llvm-addr2line addr2line REQUIRED)
+  list(APPEND TARCH_COMPILE_DEFINITIONS PEANO_FPE_SYMBOLISER="${PEANO_FPE_SYMBOLISER}")
 endif()
 
 foreach(mode IN LISTS SUPPORTED_BUILD_TYPES)
@@ -166,6 +178,6 @@ foreach(mode IN LISTS SUPPORTED_BUILD_TYPES)
     MODE ${mode}
     SOURCES ${SOURCES}
     HEADERS ${HEADERS}
-    LINK_LIBRARIES ${TARCH_LINK_LIBRARIES}
+    COMPILE_DEFINITIONS ${TARCH_COMPILE_DEFINITIONS}
   )
 endforeach()
