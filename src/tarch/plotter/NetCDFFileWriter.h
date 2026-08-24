@@ -10,17 +10,21 @@ namespace tarch::plotter {
   class NetCDFFileWriter;
 } // namespace tarch::plotter
 
-class tarch::plotter::NetCDFFileWriter final: public FileWriter {
+class tarch::plotter::NetCDFFileWriter final : public FileWriter {
 public:
-  NetCDFFileWriter(const std::string& outputDirectory, int numberOfSubdomains);
-  ~NetCDFFileWriter() override = default;
+  NetCDFFileWriter(const std::string& outputDirectory, const int numberOfSubdomains);
+  NetCDFFileWriter(const NetCDFFileWriter&)            = delete;
+  NetCDFFileWriter(NetCDFFileWriter&&)                 = delete;
+  ~NetCDFFileWriter() override                         = default;
+  NetCDFFileWriter& operator=(const NetCDFFileWriter&) = delete;
+  NetCDFFileWriter& operator=(NetCDFFileWriter&&)      = delete;
 
-  bool writeToFile(const std::string& filename, double time) override;
+  bool writeToFile(const std::string& filename, const double time) override;
 
   std::string getFileExtension() const override;
 
 private:
-  static void check(int status, const std::string& where);
+  static void check(const int status, const std::string& operation);
 };
 
 #endif

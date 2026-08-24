@@ -1,8 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-#pragma once
-
 template <typename Particle>
 tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::forces::computeCentralGravitationalForce(
   const tarch::la::Vector<DIMENSIONS, double>& particlePosition,

@@ -1,0 +1,342 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+TARGET_DECLARE
+/**
+ * Adds one volume's flux divergence to @p outputState with either a Rusanov flux or the
+ * solver's Riemann solver. Non-conservative and diffusive-source contributions
+ * are enabled by their template flags. The cell-centred physical flux cancels
+ * between the two faces, so the Rusanov path evaluates it only at neighbouring
+ * volumes. The @c EvaluateSource flag is part of the reconstruction interface,
+ * but the time-stepping policy owns source evaluation because this
+ * reconstruction has no predictor half-step.
+ */
+template <
+  typename Solver,
+  int  NumberOfVolumesPerAxis,
+  int  NumberOfUnknowns,
+  int  NumberOfAuxiliaryVariables,
+  bool EvaluateFlux,
+  bool EvaluateNonconservativeProduct,
+  bool EvaluateSource,
+  bool EvaluateDiffusiveSource,
+  bool EvaluateCustomRiemann,
+  bool EvaluateMaxEigenvalue,
+  typename StoragePrecision,
+  typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::Constant::accumulateFluxDivergence(
+  const StoragePrecision* NOALIAS const        inputPatch,
+  const StoragePrecision* NOALIAS const        faceInputPatches[TWO_TIMES_D],
+  const tarch::la::Vector<DIMENSIONS, int>&    volumeIndex,
+  const int                                    centreOffset,
+  const StoragePrecision* NOALIAS const        centreState,
+  const tarch::la::Vector<DIMENSIONS, double>& patchCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& patchSize,
+  const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
+  const double                                 timeStamp,
+  const double                                 timeStepSize,
+  StoragePrecision* NOALIAS const              outputState,
+  double&                                      maxEigenvalueAfterTimeStep
+) {
+  constexpr int NumberOfData = NumberOfUnknowns + NumberOfAuxiliaryVariables;
+  using GeometryPrecision    = decltype(ComputePrecision{} * double{});
+  using StateUpdatePrecision = decltype(StoragePrecision{} + ComputePrecision{});
+  using TimeUpdatePrecision  = decltype(StoragePrecision{} + GeometryPrecision{});
+
+  [[maybe_unused]] ComputePrecision centreStateComputeBuffer[NumberOfData]
+    __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+  const ComputePrecision* NOALIAS centreStateForCompute;
+  if constexpr (std::is_same_v<StoragePrecision, ComputePrecision>) {
+    centreStateForCompute = centreState;
+  } else {
+    SIMD(aligned(centreStateComputeBuffer : PEANO_WITH_ALIGNMENT))
+    for (int unknown = 0; unknown < NumberOfData; unknown++) {
+      centreStateComputeBuffer[unknown] = static_cast<ComputePrecision>(centreState[unknown]);
+    }
+    centreStateForCompute = centreStateComputeBuffer;
+  }
+
+  if constexpr (EvaluateDiffusiveSource) {
+    ComputePrecision stateGradient[DIMENSIONS * NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+    for (int normal = 0; normal < DIMENSIONS; normal++) {
+      int strideAlongNormal = NumberOfData;
+      for (int dimension = 0; dimension < normal; dimension++) {
+        strideAlongNormal *= NumberOfVolumesPerAxis;
+      }
+
+      // Forward difference needs the right neighbour: an interior volume if it
+      // exists, otherwise the halo layer in the right face of this patch.
+      const StoragePrecision* NOALIAS rightStateInStorage = nullptr;
+      if (volumeIndex(normal) + HaloSize < NumberOfVolumesPerAxis) {
+        rightStateInStorage = &inputPatch[centreOffset + HaloSize * strideAlongNormal];
+      } else {
+        tarch::la::Vector<DIMENSIONS, int> overlapCell = volumeIndex;
+        overlapCell(normal)                            = volumeIndex(normal) + 2 * HaloSize - NumberOfVolumesPerAxis;
+        const int overlapIndex =
+          toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell, NumberOfVolumesPerAxis, HaloSize, normal);
+        rightStateInStorage = &faceInputPatches[normal + DIMENSIONS][overlapIndex * NumberOfData];
+      }
+
+      const ComputePrecision inverseSpacing = static_cast<ComputePrecision>(
+        static_cast<GeometryPrecision>(NumberOfVolumesPerAxis)
+        / (static_cast<GeometryPrecision>(HaloSize) * static_cast<GeometryPrecision>(patchSize(normal)))
+      );
+      SIMD(aligned(stateGradient : PEANO_WITH_ALIGNMENT))
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        stateGradient[normal * NumberOfUnknowns + unknown] = inverseSpacing
+          * (static_cast<ComputePrecision>(rightStateInStorage[unknown]) - centreStateForCompute[unknown]);
+      }
+    }
+
+    ComputePrecision diffusiveSources[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+    Solver::diffusiveSourceTerm(
+      centreStateForCompute,
+      stateGradient,
+      volumeCentre,
+      volumeSize,
+      timeStamp,
+      timeStepSize,
+      diffusiveSources
+    );
+    SIMD(aligned(diffusiveSources : PEANO_WITH_ALIGNMENT))
+    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+      outputState[unknown] = static_cast<StoragePrecision>(
+        static_cast<TimeUpdatePrecision>(outputState[unknown])
+        + static_cast<TimeUpdatePrecision>(timeStepSize) * static_cast<TimeUpdatePrecision>(diffusiveSources[unknown])
+      );
+    }
+  }
+
+  for (int normal = 0; normal < DIMENSIONS; normal++) {
+    auto leftVolumeIndex  = volumeIndex;
+    auto rightVolumeIndex = volumeIndex;
+    leftVolumeIndex(normal) -= HaloSize;
+    rightVolumeIndex(normal) += HaloSize;
+
+    [[maybe_unused]] const auto [leftVolumeSize, leftVolumeCentre] =
+      ::exahype2::fv::getVolumeSizeAndCentre<DIMENSIONS, NumberOfVolumesPerAxis>(
+        patchCentre,
+        patchSize,
+        leftVolumeIndex
+      );
+    [[maybe_unused]] const auto [rightVolumeSize, rightVolumeCentre] =
+      ::exahype2::fv::getVolumeSizeAndCentre<DIMENSIONS, NumberOfVolumesPerAxis>(
+        patchCentre,
+        patchSize,
+        rightVolumeIndex
+      );
+
+    int strideAlongNormal = NumberOfData;
+    for (int dimension = 0; dimension < normal; dimension++) {
+      strideAlongNormal *= NumberOfVolumesPerAxis;
+    }
+
+    // Left neighbour: an interior volume if it exists, otherwise the halo
+    // layer the framework stored in the left face of this patch.
+    const StoragePrecision* NOALIAS leftStateInStorage = nullptr;
+    if (leftVolumeIndex(normal) >= 0) {
+      leftStateInStorage = &inputPatch[centreOffset - HaloSize * strideAlongNormal];
+    } else {
+      tarch::la::Vector<DIMENSIONS, int> overlapCell = volumeIndex;
+      overlapCell(normal)                            = volumeIndex(normal);
+      const int overlapIndex =
+        toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell, NumberOfVolumesPerAxis, HaloSize, normal);
+      leftStateInStorage = &faceInputPatches[normal][overlapIndex * NumberOfData];
+    }
+
+    // Right neighbour: an interior volume if it exists, otherwise the halo
+    // layer the framework stored in the right face of this patch.
+    const StoragePrecision* NOALIAS rightStateInStorage = nullptr;
+    if (rightVolumeIndex(normal) < NumberOfVolumesPerAxis) {
+      rightStateInStorage = &inputPatch[centreOffset + HaloSize * strideAlongNormal];
+    } else {
+      tarch::la::Vector<DIMENSIONS, int> overlapCell = volumeIndex;
+      overlapCell(normal)                            = volumeIndex(normal) + 2 * HaloSize - NumberOfVolumesPerAxis;
+      const int overlapIndex =
+        toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell, NumberOfVolumesPerAxis, HaloSize, normal);
+      rightStateInStorage = &faceInputPatches[normal + DIMENSIONS][overlapIndex * NumberOfData];
+    }
+
+    [[maybe_unused]] ComputePrecision leftStateComputeBuffer[NumberOfData]
+      __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+    [[maybe_unused]] ComputePrecision rightStateComputeBuffer[NumberOfData]
+      __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+    const ComputePrecision* NOALIAS leftState;
+    const ComputePrecision* NOALIAS rightState;
+#if defined(PEANO_WITH_GPU_BACKEND)
+    SIMD(aligned(leftStateComputeBuffer, rightStateComputeBuffer : PEANO_WITH_ALIGNMENT))
+    for (int unknown = 0; unknown < NumberOfData; unknown++) {
+      leftStateComputeBuffer[unknown]  = static_cast<ComputePrecision>(leftStateInStorage[unknown]);
+      rightStateComputeBuffer[unknown] = static_cast<ComputePrecision>(rightStateInStorage[unknown]);
+    }
+    leftState  = leftStateComputeBuffer;
+    rightState = rightStateComputeBuffer;
+#else
+    if constexpr (std::is_same_v<StoragePrecision, ComputePrecision>) {
+      leftState  = leftStateInStorage;
+      rightState = rightStateInStorage;
+    } else {
+      SIMD(aligned(leftStateComputeBuffer, rightStateComputeBuffer : PEANO_WITH_ALIGNMENT))
+      for (int unknown = 0; unknown < NumberOfData; unknown++) {
+        leftStateComputeBuffer[unknown]  = static_cast<ComputePrecision>(leftStateInStorage[unknown]);
+        rightStateComputeBuffer[unknown] = static_cast<ComputePrecision>(rightStateInStorage[unknown]);
+      }
+      leftState  = leftStateComputeBuffer;
+      rightState = rightStateComputeBuffer;
+    }
+    assertion(leftState);
+    assertion(rightState);
+#endif
+
+    if constexpr (EvaluateCustomRiemann) {
+      auto leftFaceCentre(volumeCentre);
+      leftFaceCentre(normal) -=
+        static_cast<GeometryPrecision>(0.5) * static_cast<GeometryPrecision>(volumeSize(normal));
+      auto rightFaceCentre(volumeCentre);
+      rightFaceCentre(normal) +=
+        static_cast<GeometryPrecision>(0.5) * static_cast<GeometryPrecision>(volumeSize(normal));
+
+      ComputePrecision leftGoingFluxLeftFace[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+      ComputePrecision rightGoingFluxLeftFace[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+      ComputePrecision leftGoingFluxRightFace[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+      ComputePrecision rightGoingFluxRightFace[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+
+      const ComputePrecision maxWaveSpeedLeft = Solver::solveRiemannProblem(
+        leftState,
+        centreStateForCompute,
+        leftFaceCentre,
+        volumeSize,
+        timeStamp,
+        timeStepSize,
+        normal,
+        leftGoingFluxLeftFace,
+        rightGoingFluxLeftFace
+      );
+      const ComputePrecision maxWaveSpeedRight = Solver::solveRiemannProblem(
+        centreStateForCompute,
+        rightState,
+        rightFaceCentre,
+        volumeSize,
+        timeStamp,
+        timeStepSize,
+        normal,
+        leftGoingFluxRightFace,
+        rightGoingFluxRightFace
+      );
+      // A custom Riemann solver may be the only thing that knows the speed it
+      // resolved, since a solver offering one need not offer an eigenvalue as
+      // well, so its verdict enters the step observation here. The Rusanov
+      // branch below needs no such report: it has to evaluate the solver's own
+      // eigenvalue for its diffusion coefficient, and the caller then measures
+      // the step on the final state, at the time level the next step starts from.
+      if constexpr (EvaluateMaxEigenvalue) {
+        ::exahype2::fv::accumulateMaxEigenvalue(maxEigenvalueAfterTimeStep, maxWaveSpeedLeft);
+        ::exahype2::fv::accumulateMaxEigenvalue(maxEigenvalueAfterTimeStep, maxWaveSpeedRight);
+      }
+
+      const ComputePrecision scale = static_cast<ComputePrecision>(
+        (static_cast<GeometryPrecision>(timeStepSize) * static_cast<GeometryPrecision>(NumberOfVolumesPerAxis))
+        / static_cast<GeometryPrecision>(patchSize(normal))
+      );
+      SIMD(aligned(rightGoingFluxLeftFace, leftGoingFluxRightFace : PEANO_WITH_ALIGNMENT))
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        const ComputePrecision fluxFromLeftInterface = rightGoingFluxLeftFace[unknown];
+        const ComputePrecision fluxToRightInterface  = leftGoingFluxRightFace[unknown];
+        outputState[unknown]                         = static_cast<StoragePrecision>(
+          static_cast<StateUpdatePrecision>(outputState[unknown])
+          + static_cast<StateUpdatePrecision>(scale * (fluxFromLeftInterface - fluxToRightInterface))
+        );
+      }
+      // The finiteness check stays out of the vectorised loop, whose body must
+      // be free of the diagnostics an assertion emits.
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        assertion(std::isfinite(outputState[unknown]));
+      }
+    } else {
+      ComputePrecision leftFluxes[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+      ComputePrecision rightFluxes[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+      if constexpr (EvaluateFlux) {
+        Solver::flux(leftState, leftVolumeCentre, volumeSize, timeStamp, timeStepSize, normal, leftFluxes);
+        Solver::flux(rightState, rightVolumeCentre, volumeSize, timeStamp, timeStepSize, normal, rightFluxes);
+      }
+
+      ComputePrecision centreNonconservativeProduct[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+      ComputePrecision leftNonconservativeProduct[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+      if constexpr (EvaluateNonconservativeProduct) {
+        ComputePrecision centreAverageState[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+        ComputePrecision leftAverageState[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+        ComputePrecision centreStateJump[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+        ComputePrecision leftStateJump[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+        SIMD(aligned(centreAverageState, leftAverageState : PEANO_WITH_ALIGNMENT))
+        for (int unknown = 0; unknown < NumberOfData; unknown++) {
+          centreAverageState[unknown] =
+            static_cast<ComputePrecision>(0.5) * (centreStateForCompute[unknown] + rightState[unknown]);
+          leftAverageState[unknown] =
+            static_cast<ComputePrecision>(0.5) * (leftState[unknown] + centreStateForCompute[unknown]);
+        }
+        SIMD(aligned(centreStateJump, leftStateJump : PEANO_WITH_ALIGNMENT))
+        for (int unknown = 0; unknown < NumberOfData; unknown++) {
+          centreStateJump[unknown] = rightState[unknown] - centreStateForCompute[unknown];
+          leftStateJump[unknown]   = centreStateForCompute[unknown] - leftState[unknown];
+        }
+        Solver::nonconservativeProduct(
+          centreAverageState,
+          centreStateJump,
+          volumeCentre,
+          volumeSize,
+          timeStamp,
+          timeStepSize,
+          normal,
+          centreNonconservativeProduct
+        );
+        Solver::nonconservativeProduct(
+          leftAverageState,
+          leftStateJump,
+          leftVolumeCentre,
+          volumeSize,
+          timeStamp,
+          timeStepSize,
+          normal,
+          leftNonconservativeProduct
+        );
+      }
+
+      ComputePrecision leftMaxEigenvalue =
+        Solver::maxEigenvalue(leftState, leftVolumeCentre, volumeSize, timeStamp, timeStepSize, normal);
+      ComputePrecision rightMaxEigenvalue =
+        Solver::maxEigenvalue(rightState, rightVolumeCentre, volumeSize, timeStamp, timeStepSize, normal);
+      const ComputePrecision centreMaxEigenvalue =
+        Solver::maxEigenvalue(centreStateForCompute, volumeCentre, volumeSize, timeStamp, timeStepSize, normal);
+      ::exahype2::fv::accumulateMaxEigenvalue(leftMaxEigenvalue, centreMaxEigenvalue);
+      ::exahype2::fv::accumulateMaxEigenvalue(rightMaxEigenvalue, centreMaxEigenvalue);
+
+      const ComputePrecision scale = static_cast<ComputePrecision>(
+        (static_cast<GeometryPrecision>(timeStepSize) * static_cast<GeometryPrecision>(NumberOfVolumesPerAxis)
+         * static_cast<GeometryPrecision>(0.5))
+        / static_cast<GeometryPrecision>(patchSize(normal))
+      );
+      UNROLL(DIMENSIONS)
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        // Rusanov diffusion across both faces, scaled by the larger neighbouring
+        // eigenvalue and the jump in the conserved quantity.
+        ComputePrecision fluxLeftFace  = -leftMaxEigenvalue * (centreStateForCompute[unknown] - leftState[unknown]);
+        ComputePrecision fluxRightFace = -rightMaxEigenvalue * (rightState[unknown] - centreStateForCompute[unknown]);
+        if constexpr (EvaluateFlux) {
+          fluxLeftFace += leftFluxes[unknown];
+          fluxRightFace += rightFluxes[unknown];
+        }
+        if constexpr (EvaluateNonconservativeProduct) {
+          fluxLeftFace -= leftNonconservativeProduct[unknown];
+          fluxRightFace += centreNonconservativeProduct[unknown];
+        }
+        outputState[unknown] = static_cast<StoragePrecision>(
+          static_cast<StateUpdatePrecision>(outputState[unknown])
+          + static_cast<StateUpdatePrecision>(scale * (fluxLeftFace - fluxRightFace))
+        );
+        assertion(std::isfinite(outputState[unknown]));
+      }
+    }
+  }
+}
+TARGET_DECLARE_END

@@ -40,6 +40,7 @@ class RefinementCriterion(AbstractRungeKuttaDGActionSet):
         build_up_new_refinement_instructions,
         implement_previous_refinement_instructions,
         called_by_grid_construction,
+        skip_after_topology_change,
     ):
         """
         :: Attributes.
@@ -71,6 +72,7 @@ class RefinementCriterion(AbstractRungeKuttaDGActionSet):
             implement_previous_refinement_instructions
         )
         self._called_by_grid_construction = called_by_grid_construction
+        self._skip_after_topology_change = skip_after_topology_change
 
     def get_body_of_getGridControlEvents(self):
         if self._implement_previous_refinement_instructions:
@@ -108,10 +110,18 @@ class RefinementCriterion(AbstractRungeKuttaDGActionSet):
             d = {}
             d["CELL_LABEL_NAME"] = self._solver._cell_label.name
             d["CELL_ACCESSOR"] = "fineGridCell" + self._solver._current_time_step.name
-            d["PREDICATE"] = (
-                "not marker.willBeRefined() and not marker.hasBeenRefined() and "
-                + self._guard
-            )
+            # The first time step after a realised topology change still carries
+            # refinement markers on some cells, and which cells carry them depends
+            # on how many sweeps the mesh update needed, which varies with the
+            # decomposition. Collecting no requests during that step keeps the
+            # committed event set identical for every decomposition.
+            d["PREDICATE"] = "not marker.willBeRefined() and not marker.hasBeenRefined() and "
+            if self._skip_after_topology_change:
+                d["PREDICATE"] += (
+                    "not ::exahype2::RefinementControlService::getInstance()"
+                    ".hasRealisedTopologyChangesSinceLastTimeStep() and "
+                )
+            d["PREDICATE"] += self._guard
             d["GRID_CONSTRUCTION"] = self._called_by_grid_construction
             # A Runge-Kutta DG solver cannot yet offload its criterion to a free function.
             d["STATELESS_REFINEMENT_CRITERION"] = False

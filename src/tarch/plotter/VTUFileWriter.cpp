@@ -2,20 +2,21 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "VTUFileWriter.h"
 
+#include "tarch/Termination.h"
 #include "tarch/mpi/Rank.h"
 
 #ifdef PEANO_WITH_ZLIB
 #include <zlib.h>
 #endif
 
-tarch::plotter::VTUFileWriter::VTUFileWriter(const std::string& outputDirectory, int numberOfSubdomains) :
+tarch::plotter::VTUFileWriter::VTUFileWriter(const std::string& outputDirectory, const int numberOfSubdomains) :
   FileWriter(outputDirectory, numberOfSubdomains) {}
 
 std::string tarch::plotter::VTUFileWriter::getFileExtension() const { return ".pvtu"; }
 
-bool tarch::plotter::VTUFileWriter::writeToFile(const std::string& filename, double time) {
+bool tarch::plotter::VTUFileWriter::writeToFile(const std::string& filename, [[maybe_unused]] const double time) {
   if (_written) {
-    throw std::runtime_error("Cannot write to file. File already written.");
+    throw std::runtime_error("Cannot write a plotter file more than once.");
   }
 
   createOutputDirectory();
@@ -30,15 +31,15 @@ bool tarch::plotter::VTUFileWriter::writeToFile(const std::string& filename, dou
   return true;
 }
 
-void tarch::plotter::VTUFileWriter::writeVTU(const std::string& filename) {
-  const auto  rank    = tarch::mpi::Rank::getInstance().getRank();
-  std::string           vtuFile = filename + "-rank-" + std::to_string(rank) + ".vtu";
+void tarch::plotter::VTUFileWriter::writeVTU(const std::string& filename) const {
+  const auto            rank    = tarch::mpi::Rank::getInstance().getRank();
+  const std::string     vtuFile = filename + "-rank-" + std::to_string(rank) + ".vtu";
   std::filesystem::path p(_outputDirectory);
   p /= vtuFile;
 
   std::ofstream out(p, std::ios::binary | std::ios::trunc);
   if (not out) {
-    throw std::runtime_error("Failed to open '" + p.string() + "'");
+    tarch::terminateWithError("Failed to open '" + p.string() + "'.");
   }
 
   const auto localData = getSubdomainBuffersSequenceForWriting();
@@ -54,6 +55,9 @@ void tarch::plotter::VTUFileWriter::writeVTU(const std::string& filename) {
         << "    </Piece>\n"
         << "  </UnstructuredGrid>\n"
         << "</VTKFile>\n";
+    if (not out) {
+      tarch::terminateWithError("Failed to write '" + p.string() + "'.");
+    }
     return;
   }
 
@@ -65,13 +69,13 @@ void tarch::plotter::VTUFileWriter::writeVTU(const std::string& filename) {
 
   std::uint64_t currentFileOffset = 0;
 
-  auto addBlock = [&](
-                    const std::string& tagName,
-                    const std::string& type,
-                    const std::string& name,
-                    int                components,
-                    const auto&        dataVec
-                  ) -> std::string {
+  const auto addBlock = [&](
+                          const std::string& tagName,
+                          const std::string& type,
+                          const std::string& name,
+                          const int          components,
+                          const auto&        dataVec
+                        ) -> std::string {
     std::ostringstream ss;
     ss << "        <" << tagName << " type=\"" << type << "\" Name=\"" << name << "\"";
     if (components > 1) {
@@ -106,17 +110,17 @@ void tarch::plotter::VTUFileWriter::writeVTU(const std::string& filename) {
       b.binaryData.resize(headerBytes + static_cast<std::size_t>(destLen));
       std::memcpy(b.binaryData.data(), header, 3 * sizeof(std::uint64_t));
 
-      int res = compress(
+      const int res = compress(
         reinterpret_cast<Bytef*>(b.binaryData.data() + headerBytes),
         &destLen,
         reinterpret_cast<const Bytef*>(dataVec.data()),
         static_cast<uLong>(dataBytes)
       );
       if (res != Z_OK) {
-        throw std::runtime_error("Zlib compression failed");
+        tarch::terminateWithError("Zlib compression failed while writing '" + p.string() + "'.");
       }
 
-      std::uint64_t compressedSize64 = destLen;
+      const std::uint64_t compressedSize64 = destLen;
       std::memcpy(b.binaryData.data() + 3 * sizeof(std::uint64_t), &compressedSize64, sizeof(std::uint64_t));
 
       b.binaryData.resize(headerBytes + static_cast<std::size_t>(destLen));
@@ -155,12 +159,12 @@ void tarch::plotter::VTUFileWriter::writeVTU(const std::string& filename) {
   // The buffers accumulate in double precision; single-precision output narrows
   // them right before the write.
   const bool writeDouble  = getDoublePrecisionOutput();
-  auto       addRealBlock = [&](const std::string& name, int components, const std::vector<double>& data) {
+  const auto addRealBlock = [&](const std::string& name, const int components, const std::vector<double>& data) {
     return writeDouble ? addBlock("DataArray", "Float64", name, components, data)
-                             : addBlock("DataArray", "Float32", name, components, narrowToFloat(data));
+                       : addBlock("DataArray", "Float32", name, components, narrowToFloat(data));
   };
 
-  auto writePiece = [&](const SubdomainBuffers& piece) {
+  const auto writePiece = [&](const SubdomainBuffers& piece) {
     out << "    <Piece NumberOfPoints=\"" << (piece.pointsXYZ.size() / 3) << "\" NumberOfCells=\"" << piece.types.size()
         << "\">\n";
 
@@ -211,7 +215,7 @@ void tarch::plotter::VTUFileWriter::writeVTU(const std::string& filename) {
   if (localData.payloads.empty()) {
     writePiece(*localData.reference);
   } else {
-    for (const SubdomainBuffers* piece : localData.payloads) {
+    for (const SubdomainBuffers* const piece : localData.payloads) {
       writePiece(*piece);
     }
   }
@@ -233,24 +237,27 @@ void tarch::plotter::VTUFileWriter::writeVTU(const std::string& filename) {
 
   out << "\n  </AppendedData>\n";
   out << "</VTKFile>\n";
+  if (not out) {
+    tarch::terminateWithError("Failed to write '" + p.string() + "'.");
+  }
 }
 
-void tarch::plotter::VTUFileWriter::writePVTU(const std::string& filename) {
-  std::string           pvtuFile = filename + ".pvtu";
+void tarch::plotter::VTUFileWriter::writePVTU(const std::string& filename) const {
+  const std::string     pvtuFile = filename + ".pvtu";
   std::filesystem::path p(_outputDirectory);
   p /= pvtuFile;
 
   std::ofstream out(p);
   if (not out) {
-    throw std::runtime_error("Failed to open '" + p.string() + "'");
+    tarch::terminateWithError("Failed to open '" + p.string() + "'.");
   }
 
   const std::uint16_t endianCheck = 1;
   const std::string   byteOrder =
     (*reinterpret_cast<const std::uint8_t*>(&endianCheck) == 1) ? "LittleEndian" : "BigEndian";
 
-  const SubdomainBuffers* ref          = findReferenceSubdomain();
-  const std::string       realTypeName = getDoublePrecisionOutput() ? "Float64" : "Float32";
+  const SubdomainBuffers* const ref          = findReferenceSubdomain();
+  const std::string             realTypeName = getDoublePrecisionOutput() ? "Float64" : "Float32";
 
   out << "<?xml version=\"1.0\"?>\n";
   out << "<VTKFile type=\"PUnstructuredGrid\" version=\"1.0\" byte_order=\"" << byteOrder
@@ -291,13 +298,16 @@ void tarch::plotter::VTUFileWriter::writePVTU(const std::string& filename) {
   out << "    </PPoints>\n";
 
   // -- Pieces --
-  int totalRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
+  const int totalRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
   for (int r = 0; r < totalRanks; ++r) {
-    std::string pieceName = filename + "-rank-" + std::to_string(r) + ".vtu";
+    const std::string pieceName = filename + "-rank-" + std::to_string(r) + ".vtu";
     // Source is relative to the .pvtu file, so use just the filename
     out << "    <Piece Source=\"" << pieceName << "\"/>\n";
   }
 
   out << "  </PUnstructuredGrid>\n";
   out << "</VTKFile>\n";
+  if (not out) {
+    tarch::terminateWithError("Failed to write '" + p.string() + "'.");
+  }
 }

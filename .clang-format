@@ -35,6 +35,8 @@ AlignOperands: DontAlign
 AlignTrailingComments:
   Kind: Always
   OverEmptyLines: 0
+AttributeMacros:
+  - NOALIAS
 BinPackArguments: false
 BinPackParameters: false
 AllowAllArgumentsOnNextLine: false
@@ -56,7 +58,7 @@ BreakConstructorInitializers: AfterColon
 BreakStringLiterals: false
 BreakTemplateDeclarations: Yes
 PackConstructorInitializers: Never
-PenaltyReturnTypeOnItsOwnLine: 60
+PenaltyReturnTypeOnItsOwnLine: 1000
 PenaltyBreakBeforeFirstCallParameter: 0
 PenaltyBreakAssignment: 2
 PenaltyBreakComment: 300

@@ -8,7 +8,11 @@ option(PEANO_WITH_FPE "Build with floating-point exception traps" OFF)
 option(PEANO_WITH_HDF5 "Build with HDF5 support" ON)
 option(PEANO_WITH_NETCDF "Build with NetCDF support" ON)
 option(PEANO_WITH_ZLIB "Build with ZLIB compression support" ON)
-option(PEANO_WITH_LIBXSMM "Build with LIBXSMM support" OFF)
+
+if(PEANO_WITH_FPE AND CMAKE_CXX_COMPILER_ID STREQUAL "NVHPC")
+  message(STATUS "Disabling floating-point exception traps because NVHPC can raise exceptions from unused SIMD lanes.")
+  set(PEANO_WITH_FPE OFF CACHE BOOL "Build with floating-point exception traps" FORCE)
+endif()
 
 set(PEANO_WITH_SANITIZER "none" CACHE STRING "Runtime sanitizer: none, address, undefined, address+undefined or thread")
 set_property(CACHE PEANO_WITH_SANITIZER PROPERTY STRINGS none address undefined address+undefined thread)

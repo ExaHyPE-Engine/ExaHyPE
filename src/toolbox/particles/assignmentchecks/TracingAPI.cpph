@@ -1,18 +1,10 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-#pragma once
-
-#include "Database.h"
-
 template <typename ParticleContainer>
-std::vector<toolbox::particles::assignmentchecks::ParticlePosition> toolbox::
-  particles::assignmentchecks::recordParticlePositions(
-    const ParticleContainer& container
-  ) {
-  std::vector<toolbox::particles::assignmentchecks::ParticlePosition> result(
-    container.size()
-  );
+std::vector<toolbox::particles::assignmentchecks::ParticlePosition> toolbox::particles::assignmentchecks::
+  recordParticlePositions(const ParticleContainer& container) {
+  std::vector<toolbox::particles::assignmentchecks::ParticlePosition> result(container.size());
 
 #ifdef ASSIGNMENT_CHECKS
   int entry = 0;
@@ -37,12 +29,10 @@ void toolbox::particles::assignmentchecks::traceParticleMovements(
 
   assertion((container.size()) == (recordedPositions.size()), container.size(), recordedPositions.size());
 
-  typename ParticleContainer::const_iterator    pParticle = container.begin();
-  std::vector<ParticlePosition>::const_iterator pRecordedPosition
-    = recordedPositions.begin();
+  typename ParticleContainer::const_iterator    pParticle         = container.begin();
+  std::vector<ParticlePosition>::const_iterator pRecordedPosition = recordedPositions.begin();
 
-  using Particle = typename std::remove_pointer<
-    typename ParticleContainer::value_type>::type;
+  using Particle = typename std::remove_pointer<typename ParticleContainer::value_type>::type;
 
   while (pParticle != container.end()) {
     if ((*pParticle)->getParallelState() == Particle::ParallelState::Local) {

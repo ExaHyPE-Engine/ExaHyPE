@@ -29,12 +29,16 @@ class Prediction(AbstractADERDGActionSet):
     constexpr int BasisElementsPerFace  = facedata::{{SOLVER_NAME}}QEstimates::Cardinality / 2;
     constexpr int FluxElementsPerFace   = facedata::{{SOLVER_NAME}}QFluxEstimates::Cardinality / 2;
 
-    auto* QNew = fineGridCell{{UNKNOWN_IDENTIFIER}}.data();
-    auto* QOld = fineGridCell{{UNKNOWN_IDENTIFIER}}_old.data();
+    auto* const updatedState = fineGridCell{{UNKNOWN_IDENTIFIER}}.data();
+    auto* const previousState = fineGridCell{{UNKNOWN_IDENTIFIER}}_old.data();
+
+    // User preprocessing kernels use the established QNew and QOld names.
+    [[maybe_unused]] auto* const QNew = updatedState;
+    [[maybe_unused]] auto* const QOld = previousState;
 
     {{PREPROCESS_RECONSTRUCTED_PATCH}}
 
-    {{CORRECTOR_COMPUTATION_PRECISION}}* lQhbnd[TWO_TIMES_D] = {
+    {{CORRECTOR_COMPUTATION_PRECISION}}* stateEstimates[TWO_TIMES_D] = {
       fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(0).data() + BasisElementsPerFace,
       fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(1).data() + BasisElementsPerFace,
 #if DIMENSIONS==3
@@ -47,7 +51,7 @@ class Prediction(AbstractADERDGActionSet):
 #endif
     };
 
-    {{CORRECTOR_COMPUTATION_PRECISION}}* lFhbnd[TWO_TIMES_D] = {
+    {{CORRECTOR_COMPUTATION_PRECISION}}* fluxEstimates[TWO_TIMES_D] = {
       fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(0).data() + FluxElementsPerFace,
       fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(1).data() + FluxElementsPerFace,
 #if DIMENSIONS==3
@@ -60,25 +64,50 @@ class Prediction(AbstractADERDGActionSet):
 #endif
     };
 
-    std::copy_n(QNew, SpaceBasisSize * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}), QOld);
+    // This copy determines which buffer is current at a subsequent plot. In
+    // ordinary fused ADER-DG, the correction has already committed the accepted
+    // state to Q earlier in this traversal, so Q_old becomes current and is
+    // plotted. With limiting, prediction and correction use separate traversals:
+    // Q_old remains the predictor backup while correction and subcell recomputation
+    // later commit the accepted state to Q, which the limiter plotter reads.
+    std::copy_n(
+      updatedState,
+      SpaceBasisSize * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}),
+      previousState
+    );
     {{SPACE_TIME_PREDICTOR_CALL}}
 
-    for (int d = 0; d < DIMENSIONS; d++) {
-      // Time stamp information for the boundary handling.
-      fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setNewTimeStamp(1, timeStamp);
-      fineGridFaces{{SOLVER_NAME}}FaceLabel(d + DIMENSIONS).setNewTimeStamp(0, timeStamp);
+    for (int direction = 0; direction < DIMENSIONS; direction++) {
+      fineGridFaces{{SOLVER_NAME}}FaceLabel(direction).setNewTimeStamp(1, timeStamp);
+      fineGridFaces{{SOLVER_NAME}}FaceLabel(direction + DIMENSIONS).setNewTimeStamp(0, timeStamp);
 
-      fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setUpdated(1, true);
-      fineGridFaces{{SOLVER_NAME}}FaceLabel(d + DIMENSIONS).setUpdated(0, true);
+      fineGridFaces{{SOLVER_NAME}}FaceLabel(direction).setUpdated(1, true);
+      fineGridFaces{{SOLVER_NAME}}FaceLabel(direction + DIMENSIONS).setUpdated(0, true);
 
       // The prediction derives this cell's face estimates, so its halves need
       // no mesh-transfer projection.
-      fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setRequiresDataTransfer(1, false);
-      fineGridFaces{{SOLVER_NAME}}FaceLabel(d + DIMENSIONS).setRequiresDataTransfer(0, false);
+      fineGridFaces{{SOLVER_NAME}}FaceLabel(direction).setRequiresDataTransfer(1, false);
+      fineGridFaces{{SOLVER_NAME}}FaceLabel(direction + DIMENSIONS).setRequiresDataTransfer(0, false);
     }
 
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(timeStepSize);
-    repositories::{{SOLVER_INSTANCE}}.update(timeStepSize, timeStamp, tarch::la::min(marker.getH()), tarch::la::max(marker.getH()));
+    bool hasHangingFaces = false;
+    for (int faceNumber = 0; faceNumber < TWO_TIMES_D; faceNumber++) {
+      const auto& faceLabel =
+        fineGridFaces{{SOLVER_NAME}}FaceLabel(faceNumber);
+      hasHangingFaces =
+        hasHangingFaces
+        or faceLabel.getIsHanging()
+        or faceLabel.getAboveHanging()[0]
+        or faceLabel.getAboveHanging()[1];
+    }
+    repositories::{{SOLVER_INSTANCE}}.update(
+      timeStepSize,
+      timeStamp,
+      tarch::la::min(marker.getH()),
+      tarch::la::max(marker.getH()),
+      hasHangingFaces
+    );
   }
 """
 
@@ -87,8 +116,8 @@ class Prediction(AbstractADERDGActionSet):
         self.guard = guard
         self.multiple_precisions = len(solver._predictor_computation_precisions) > 1
 
-    def _add_action_set_entries_to_dictionary(self, d):
-        d["GUARD"] = self.guard
+    def _add_action_set_entries_to_dictionary(self, dictionary):
+        dictionary["GUARD"] = self.guard
 
     def get_body_of_operation(self, operation_name):
         result = ""
@@ -96,11 +125,13 @@ class Prediction(AbstractADERDGActionSet):
             operation_name
             == peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME
         ):
-            d = {}
-            self._solver._init_dictionary_with_default_parameters(d)
-            self._solver.add_entries_to_text_replacement_dictionary(d)
-            self._add_action_set_entries_to_dictionary(d)
-            result = jinja2.Template(self._Template_TouchCellFirstTime).render(**d)
+            dictionary = {}
+            self._solver._init_dictionary_with_default_parameters(dictionary)
+            self._solver.add_entries_to_text_replacement_dictionary(dictionary)
+            self._add_action_set_entries_to_dictionary(dictionary)
+            result = jinja2.Template(self._Template_TouchCellFirstTime).render(
+                **dictionary
+            )
         return result
 
     def get_action_set_name(self):

@@ -1,12 +1,5 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#pragma once
-
-#include "tarch/accelerator/Range.h"
-#include "tarch/accelerator/Reducer.h"
-#include "tarch/accelerator/sycl/Device.h"
-
-#include <sycl/sycl.hpp>
 
 namespace tarch::accelerator {
   template <typename T>
@@ -105,14 +98,16 @@ namespace tarch {
     T     accInit   = red.target;
     T*    devTarget = ::sycl::malloc_shared<T>(1, q);
     *devTarget      = accInit;
-    q.submit([&](::sycl::handler& h) {
-      auto reduction = ::sycl::reduction(devTarget, accelerator::sycl_op(red));
-      h.parallel_for(::sycl::range<1>(r.n), reduction, [=](::sycl::id<1> id, auto& acc) {
-        T threadLocal = Reducer::identity();
-        f(static_cast<int>(id[0]), threadLocal);
-        acc.combine(threadLocal);
-      });
-    }).wait();
+    q.submit(
+       [&](::sycl::handler& h) {
+         auto reduction = ::sycl::reduction(devTarget, accelerator::sycl_op(red));
+         h.parallel_for(::sycl::range<1>(r.n), reduction, [=](::sycl::id<1> id, auto& acc) {
+           T threadLocal = Reducer::identity();
+           f(static_cast<int>(id[0]), threadLocal);
+           acc.combine(threadLocal);
+         });
+       }
+    ).wait();
     red.target = *devTarget;
     ::sycl::free(devTarget, q);
   }
@@ -121,23 +116,31 @@ namespace tarch {
   inline void parallelReduce(const RangeMD<2>& r, F f, Reducer red) {
     const int total = r.n[0] * r.n[1];
     const int n1    = r.n[1];
-    parallelReduce(Range(total), [=](int idx, typename Reducer::value_type& acc) {
-      const int x = idx / n1;
-      const int y = idx % n1;
-      f(x, y, acc);
-    }, red);
+    parallelReduce(
+      Range(total),
+      [=](int idx, typename Reducer::value_type& acc) {
+        const int x = idx / n1;
+        const int y = idx % n1;
+        f(x, y, acc);
+      },
+      red
+    );
   }
   template <typename Reducer, typename F>
   inline void parallelReduce(const RangeMD<3>& r, F f, Reducer red) {
     const int total = r.n[0] * r.n[1] * r.n[2];
     const int n1    = r.n[1];
     const int n2    = r.n[2];
-    parallelReduce(Range(total), [=](int idx, typename Reducer::value_type& acc) {
-      const int x = idx / (n1 * n2);
-      const int y = (idx / n2) % n1;
-      const int z = idx % n2;
-      f(x, y, z, acc);
-    }, red);
+    parallelReduce(
+      Range(total),
+      [=](int idx, typename Reducer::value_type& acc) {
+        const int x = idx / (n1 * n2);
+        const int y = (idx / n2) % n1;
+        const int z = idx % n2;
+        f(x, y, z, acc);
+      },
+      red
+    );
   }
 
   template <typename Reducer, typename F>
@@ -154,14 +157,16 @@ namespace tarch {
       ::sycl::range<1>(r.n * accelerator::kSyclLocalSize),
       ::sycl::range<1>(accelerator::kSyclLocalSize)
     );
-    q.submit([&](::sycl::handler& h) {
-      auto reduction = ::sycl::reduction(devTarget, accelerator::sycl_op(red));
-      h.parallel_for(nd, reduction, [=](::sycl::nd_item<1> item, auto& acc) {
-        T threadLocal = Reducer::identity();
-        f(static_cast<int>(item.get_group(0)), accelerator::SyclTeam{item}, threadLocal);
-        acc.combine(threadLocal);
-      });
-    }).wait();
+    q.submit(
+       [&](::sycl::handler& h) {
+         auto reduction = ::sycl::reduction(devTarget, accelerator::sycl_op(red));
+         h.parallel_for(nd, reduction, [=](::sycl::nd_item<1> item, auto& acc) {
+           T threadLocal = Reducer::identity();
+           f(static_cast<int>(item.get_group(0)), accelerator::SyclTeam{item}, threadLocal);
+           acc.combine(threadLocal);
+         });
+       }
+    ).wait();
     red.target = *devTarget;
     ::sycl::free(devTarget, q);
   }

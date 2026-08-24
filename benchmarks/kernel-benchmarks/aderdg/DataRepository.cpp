@@ -3,6 +3,7 @@
 #include "DataRepository.h"
 
 #include "AderSolver.h"
+
 #include "peano4/Loop.h"
 #include "runner/RuntimeParameters.h"
 
@@ -78,23 +79,12 @@ namespace benchmarks::exahype2::kernelbenchmarks {
     const auto faceCount  = std::pow(gridLength, DIMENSIONS - 1) * (gridLength + 1);
     const int  depth      = ::runner::RuntimeParameters::getInstance().getGridLevels();
 
-    _depthLevels.resize(depth + 1); // For 1 AMR level
+    _depthLevels.resize(depth);
     _depthLevels[depth - 1].Q.resize(cellCount);
     _depthLevels[depth - 1].QReconstructed.resize(cellCount);
     for (int axis = 0; axis < DIMENSIONS; ++axis) {
       _depthLevels[depth - 1].faceEstimates[axis].resize(faceCount);
       _depthLevels[depth - 1].faceFluxes[axis].resize(faceCount);
-    }
-
-    if (UseAMR) {
-      const auto cellCountAMR = std::pow(gridLength * 3, DIMENSIONS);
-      const auto faceCountAMR = std::pow(gridLength * 3, DIMENSIONS - 1) * (gridLength * 3 + 1);
-      _depthLevels[depth].Q.resize(cellCountAMR);
-      _depthLevels[depth].QReconstructed.resize(cellCountAMR);
-      for (int axis = 0; axis < DIMENSIONS; ++axis) {
-        _depthLevels[depth].faceEstimates[axis].resize(faceCountAMR);
-        _depthLevels[depth].faceFluxes[axis].resize(faceCountAMR);
-      }
     }
   }
 
@@ -119,11 +109,10 @@ namespace benchmarks::exahype2::kernelbenchmarks {
     const auto  faceCount         = std::pow(gridLength, DIMENSIONS - 1) * (gridLength + 1);
     const auto  volumeCount       = cellCount * std::pow(AbstractAderSolver::Order + 1, DIMENSIONS);
     const auto  facesVolumesCount = faceCount * std::pow(AbstractAderSolver::Order + 1, DIMENSIONS - 1) * 2;
-    std::size_t totalStorageSize =
-      2 * volumeCount * sizeof(SolverStoragePrecision) *
-        (AbstractAderSolver::NumberOfUnknowns + AbstractAderSolver::NumberOfAuxiliaryVariables) +
-      facesVolumesCount * sizeof(SolverCorrectorPrecision) *
-        (2 * AbstractAderSolver::NumberOfUnknowns + AbstractAderSolver::NumberOfAuxiliaryVariables);
+    std::size_t totalStorageSize  = 2 * volumeCount * sizeof(SolverStoragePrecision)
+        * (AbstractAderSolver::NumberOfUnknowns + AbstractAderSolver::NumberOfAuxiliaryVariables)
+      + facesVolumesCount * sizeof(SolverCorrectorPrecision)
+        * (2 * AbstractAderSolver::NumberOfUnknowns + AbstractAderSolver::NumberOfAuxiliaryVariables);
 
     return totalStorageSize;
   }

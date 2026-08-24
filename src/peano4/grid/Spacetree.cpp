@@ -130,8 +130,9 @@ int peano4::grid::Spacetree::getNeighbourSlot(int neighbourTreeId) const {
   return -1;
 }
 
-peano4::stacks::Stack<peano4::grid::GridVertex>&
-peano4::grid::Spacetree::getLocalExchangeVertexStack(int localStackId) {
+peano4::stacks::Stack<peano4::grid::GridVertex>& peano4::grid::Spacetree::getLocalExchangeVertexStack(
+  int localStackId
+) {
   assertion(
     localStackId >= 0 and localStackId < StackTopology::TotalNumberOfLocalExchangeStacks,
     localStackId,
@@ -154,8 +155,9 @@ std::vector<peano4::grid::PeriodicStamp>& peano4::grid::Spacetree::getLocalExcha
   return _localExchangeVertexStackStamps[localStackId];
 }
 
-const peano4::stacks::Stack<peano4::grid::GridVertex>&
-peano4::grid::Spacetree::getLocalExchangeVertexStack(int localStackId) const {
+const peano4::stacks::Stack<peano4::grid::GridVertex>& peano4::grid::Spacetree::getLocalExchangeVertexStack(
+  int localStackId
+) const {
   assertion(
     localStackId >= 0 and localStackId < StackTopology::TotalNumberOfLocalExchangeStacks,
     localStackId,
@@ -1358,6 +1360,9 @@ void peano4::grid::Spacetree::evaluateGridControlEvents(
       } else if (vertexState == GridVertex::State::Unrefined) {
         if (mayChangeGrid) {
           vertex.setState(GridVertex::State::RefinementTriggered);
+          // A multi-level event marks the next level's vertices only once this round has
+          // been realised; the count tells the event source to deliver the request again.
+          _statistics.numberOfRefinementsTriggeredByGridControl++;
         } else {
           // The requested refinement is deferred while neighbouring transitions are in
           // flight; the count tells the event source to deliver the request again.

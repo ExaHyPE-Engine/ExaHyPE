@@ -8,5 +8,5 @@
   "loadBalancingQuality": 0.9,
   "maxNumberOfTreesPerRank": -1,
   "targetDevice": 0,
-  "bathymetryFile": "bathymetry/gebco_projection.nc"
+  "bathymetryFile": "bathymetry/GulfOfMexicoBathymetry.nc"
 }

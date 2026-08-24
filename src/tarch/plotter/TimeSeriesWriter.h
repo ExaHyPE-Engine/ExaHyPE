@@ -9,8 +9,12 @@ namespace tarch::plotter {
 
 class tarch::plotter::TimeSeriesWriter {
 public:
-  TimeSeriesWriter()          = default;
-  virtual ~TimeSeriesWriter() = default;
+  TimeSeriesWriter()                                   = default;
+  TimeSeriesWriter(const TimeSeriesWriter&)            = delete;
+  TimeSeriesWriter(TimeSeriesWriter&&)                 = delete;
+  virtual ~TimeSeriesWriter()                          = default;
+  TimeSeriesWriter& operator=(const TimeSeriesWriter&) = delete;
+  TimeSeriesWriter& operator=(TimeSeriesWriter&&)      = delete;
 
   /**
    * @brief Adds a new timestep to the series and updates the time series file on disk.
@@ -20,7 +24,7 @@ public:
    * @param time The simulation time associated with this snapshot.
    * @param fileWriter The corresponding file writer.
    */
-  void writeSnapshotFile(const std::string& filename, double time, FileWriter& fileWriter);
+  void writeSnapshotFile(const std::string& filename, const double time, FileWriter& fileWriter);
 
   virtual void writeTimeSeriesMetaFile(const std::string& outputDirectory, const std::string& filename) const = 0;
 
@@ -29,7 +33,7 @@ protected:
   // time into the name (<filename>-<time>) so each snapshot is a distinct file.
   // A writer that keeps all time steps in one file (VTKHDF) overrides this to
   // return the stable base name unchanged.
-  virtual std::string snapshotName(const std::string& filename, double time) const;
+  virtual std::string snapshotName(const std::string& filename, const double time) const;
 
   struct Snapshot {
     double      time;

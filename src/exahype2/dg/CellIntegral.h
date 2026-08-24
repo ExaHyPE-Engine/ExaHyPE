@@ -7,6 +7,7 @@
 
 #include "exahype2/CellData.h"
 #include "peano4/Globals.h"
+#include "peano4/Loop.h"
 #include "peano4/grid/GridControlEvent.h"
 #include "tarch/la/Vector.h"
 #include "tarch/multicore/multicore.h"

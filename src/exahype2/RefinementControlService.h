@@ -80,6 +80,11 @@ public:
   bool hasRealisedTopologyChangesSinceLastTimeStep() const;
 
   /**
+   * Did the criterion traversal that just finished collect nothing because the mesh had changed?
+   */
+  bool lastCriterionStepWasSuppressed() const;
+
+  /**
    * Anchor used to identify Peano sibling groups when patch-local erase
    * requests are promoted to parent erase events.
    */
@@ -161,6 +166,14 @@ private:
    * decision is rank-uniform.
    */
   bool _topologyChangedSinceLastTimeStep;
+
+  /**
+   * True while the criterion traversal that finished last was the one silenced by
+   * _topologyChangedSinceLastTimeStep. Its empty request set says nothing about
+   * whether the mesh has settled, so a caller that drains mesh updates has to run
+   * one more round before it may conclude that the criterion wants nothing.
+   */
+  bool _lastCriterionStepWasSuppressed;
 
   tarch::la::Vector<DIMENSIONS, double> _domainOffset;
 

@@ -4,6 +4,11 @@
 
 #include "Constants.h"
 
+#include "exahype2/NonNegativeStatistics.h"
+{%- if SUBCELL_LIMITER %}
+#include "exahype2/dg/LimiterStatus.h"
+{%- endif %}
+#include "runner/RuntimeParameters.h"
 #include "tarch/instrumentation/Log.h"
 #include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
@@ -20,15 +25,18 @@ double                  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::pointSourceLo
   _solverState(SolverState::GridConstruction),
   _minTimeStamp(0.0),
   _maxTimeStamp(0.0),
-  _minTimeStampThisTimeStep(0.0),
+  _minTimeStampThisTimeStep(std::numeric_limits<double>::infinity()),
   _maxTimeStampThisTimeStep(0.0),
-  _minCellH(std::numeric_limits<double>::max()),
+  _localMinTimeStampThisTimeStep(std::numeric_limits<double>::infinity()),
+  _localMaxTimeStampThisTimeStep(0.0),
+  _minCellH(std::numeric_limits<double>::infinity()),
   _maxCellH(0.0),
-  _minCellHThisTimeStep(0.0),
+  _minCellHThisTimeStep(std::numeric_limits<double>::infinity()),
   _maxCellHThisTimeStep(0.0),
-  _minTimeStepSize(std::numeric_limits<double>::max()),
+  _hasHangingFacesThisTimeStep(false),
+  _minTimeStepSize(std::numeric_limits<double>::infinity()),
   _maxTimeStepSize(0.0),
-  _minTimeStepSizeThisTimeStep(std::numeric_limits<double>::max()),
+  _minTimeStepSizeThisTimeStep(std::numeric_limits<double>::infinity()),
   _maxTimeStepSizeThisTimeStep(0.0) {
   {{CONSTRUCTOR_IMPLEMENTATION}}
 }
@@ -58,34 +66,59 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxCellSize() const {
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStamp() const {
-  return _minTimeStampThisTimeStep < std::numeric_limits<double>::max() / 10.0 ? _minTimeStampThisTimeStep : _minTimeStamp;
+  return _minTimeStampThisTimeStep != std::numeric_limits<double>::infinity()
+    ? _minTimeStampThisTimeStep
+    : _minTimeStamp;
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStamp() const {
-  return _maxTimeStampThisTimeStep > std::numeric_limits<double>::min() * 10.0 ? _maxTimeStampThisTimeStep : _maxTimeStamp;
+  return _minTimeStampThisTimeStep != std::numeric_limits<double>::infinity()
+    ? _maxTimeStampThisTimeStep
+    : _maxTimeStamp;
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStepSize() const {
-  return _minTimeStepSizeThisTimeStep < std::numeric_limits<double>::max() / 10.0 ? _minTimeStepSizeThisTimeStep : _minTimeStepSize;
+  return _minTimeStepSizeThisTimeStep != std::numeric_limits<double>::infinity()
+    ? _minTimeStepSizeThisTimeStep
+    : _minTimeStepSize;
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStepSize() const {
-  return _maxTimeStepSizeThisTimeStep > std::numeric_limits<double>::min() * 10.0 ? _maxTimeStepSizeThisTimeStep : _maxTimeStepSize;
+  return _minTimeStepSizeThisTimeStep != std::numeric_limits<double>::infinity()
+    ? _maxTimeStepSizeThisTimeStep
+    : _maxTimeStepSize;
 }
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, double timeStamp, double minCellSize, double maxCellSize) {
-  tarch::multicore::Lock lock(_semaphore);
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(
+  const double timeStepSize,
+  const double timeStamp,
+  const double minCellSize,
+  const double maxCellSize,
+  const bool   hasHangingFaces
+) {
+  const tarch::multicore::Lock lock(_semaphore);
 
-  if (tarch::la::greater(timeStepSize, 0.0)) {
-    assertion(timeStepSize < std::numeric_limits<double>::max() / 10.0, timeStepSize);
-    assertion(timeStepSize >= 0.0, timeStepSize);
-    _minTimeStepSizeThisTimeStep = std::min(timeStepSize, _minTimeStepSizeThisTimeStep);
-    _maxTimeStepSizeThisTimeStep = std::max(timeStepSize, _maxTimeStepSizeThisTimeStep);
-    assertion(tarch::la::smallerEquals(_minTimeStepSizeThisTimeStep, _maxTimeStepSizeThisTimeStep), _minTimeStepSizeThisTimeStep, _maxTimeStepSizeThisTimeStep);
-
-    _localMinTimeStampThisTimeStep = std::min(_localMinTimeStampThisTimeStep, timeStamp);
-    _localMaxTimeStampThisTimeStep = std::max(_localMaxTimeStampThisTimeStep, timeStamp);
+  const auto observedTimeStepStatistics =
+    ::exahype2::NonNegativeStatistics{timeStepSize, timeStepSize};
+  if (not observedTimeStepStatistics.hasPhysicalValues()) {
+    tarch::triggerNonCriticalAssertion(
+      __FILE__,
+      __LINE__,
+      "The observed time step size is finite and non-negative.",
+      "Time step size bits="
+        + std::to_string(
+          observedTimeStepStatistics.invalidObservationBitsOrIdentity()
+        )
+    );
   }
+  const auto timeStepStatistics = ::exahype2::NonNegativeStatistics::accumulate(
+    {_minTimeStepSizeThisTimeStep, _maxTimeStepSizeThisTimeStep},
+    timeStepSize
+  );
+  _minTimeStepSizeThisTimeStep = timeStepStatistics.minimum;
+  _maxTimeStepSizeThisTimeStep = timeStepStatistics.maximum;
+  _localMinTimeStampThisTimeStep = std::min(_localMinTimeStampThisTimeStep, timeStamp);
+  _localMaxTimeStampThisTimeStep = std::max(_localMaxTimeStampThisTimeStep, timeStamp);
 
   assertion(timeStamp < std::numeric_limits<double>::max() / 10.0, timeStamp);
   assertion(timeStamp >= 0.0, timeStamp);
@@ -97,34 +130,96 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
   assertion(minCellSize > 0.0, minCellSize);
   _maxCellHThisTimeStep = std::max(_maxCellHThisTimeStep, maxCellSize);
   _minCellHThisTimeStep = std::min(_minCellHThisTimeStep, minCellSize);
+  _hasHangingFacesThisTimeStep = _hasHangingFacesThisTimeStep or hasHangingFaces;
 
   logDebug("Updated with dt=" << timeStepSize << ", t=" << timeStamp << ", h=" << minCellSize << " / " << maxCellSize << ": t(new)=" << _minTimeStampThisTimeStep);
 }
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::SolverState {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getSolverState() const {
+{%- if SUBCELL_LIMITER %}
+  // The limiter sweep is the single source of truth; the Galerkin solver state is
+  // projected from it for the plotting, prediction and precision paths that read it.
+  switch (_limitingSweep.state) {
+  case ::exahype2::dg::LimitingSolverState::GridConstruction:
+    return SolverState::GridConstruction;
+  case ::exahype2::dg::LimitingSolverState::GridInitialisation:
+    return SolverState::GridInitialisation;
+  case ::exahype2::dg::LimitingSolverState::Predict:
+    return SolverState::InitialPrediction;
+  case ::exahype2::dg::LimitingSolverState::PredictOnHangingCells:
+    return SolverState::PredictionOnHangingCells;
+  case ::exahype2::dg::LimitingSolverState::CorrectAndFlag:
+  case ::exahype2::dg::LimitingSolverState::SpreadDomain:
+  case ::exahype2::dg::LimitingSolverState::RecomputeSubcells:
+    return SolverState::TimeStep;
+  case ::exahype2::dg::LimitingSolverState::Plotting:
+    return SolverState::Plotting;
+  case ::exahype2::dg::LimitingSolverState::Suspended:
+    return SolverState::Suspended;
+  }
+  return SolverState::TimeStep;
+{%- else %}
   return _solverState;
+{%- endif %}
 }
+{%- if SUBCELL_LIMITER %}
+
+/**
+ * Returns the active a-posteriori limiter sweep for action-set guards.
+ */
+::exahype2::dg::LimitingSolverState {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getLimitingSolverState() const {
+  return _limitingSweep.state;
+}
+
+/**
+ * Records a troubled cell atomically because correctors update the rank-local
+ * count concurrently before its global reduction.
+ */
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::markCellAsTroubled() {
+  _numberOfTroubledCellsThisTimeStep.fetch_add(1, std::memory_order_relaxed);
+}
+
+long {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getNumberOfTroubledCells() const {
+  return _numberOfTroubledCellsThisTimeStep.load(std::memory_order_relaxed);
+}
+
+/**
+ * Identifies the spreading sweep that completes the halo before recomputation.
+ */
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFinalSubcellSpreadSweep() const {
+  return _limitingSweep.state == ::exahype2::dg::LimitingSolverState::SpreadDomain
+     and _limitingSweep.spreadRing + 1 == ::exahype2::dg::NumberOfSpreadRings;
+}
+{%- endif %}
 
 {% if ADAPTIVE_PRECISION_IMPLEMENTATION!="<empty>" and ADAPTIVE_PRECISION_IMPLEMENTATION!="<user-defined>" and ADAPTIVE_PRECISION_IMPLEMENTATION!="<none>"%}
     exahype2::PrecisionCommand {{NAMESPACE | join("::")}}::{{CLASSNAME}}::precisionCriterion(
-      const {{SOLUTION_STORAGE_PRECISION}} * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<DIMENSIONS,double>&         x,
-      const tarch::la::Vector<DIMENSIONS,double>&         h,
-      double                                              t,
-      SolverState                                         currentState
+      const {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS Q, // [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<DIMENSIONS, double>&        x,
+      const tarch::la::Vector<DIMENSIONS, double>&        h,
+      const double                                        t,
+      const SolverState                                   currentState
     ) {
   {{ADAPTIVE_PRECISION_IMPLEMENTATION}}
 }
 {% endif %}
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridConstructionStep() {
+{%- if SUBCELL_LIMITER %}
+  assertion(_limitingSweep.state == ::exahype2::dg::LimitingSolverState::GridConstruction);
+{%- else %}
   assertion(_solverState == SolverState::GridConstruction);
+{%- endif %}
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridConstructionStep() {}
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridInitialisationStep() {
+{%- if SUBCELL_LIMITER %}
+  _limitingSweep.state = ::exahype2::dg::LimitingSolverState::GridInitialisation;
+{%- else %}
   _solverState = SolverState::GridInitialisation;
+{%- endif %}
 
   {{START_GRID_INITIALISATION_IMPLEMENTATION}}
 
@@ -140,10 +235,36 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridInitialisationStep() {
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspendSolversForOneGridSweep() {
+{%- if SUBCELL_LIMITER %}
+  _limitingSweep.state = ::exahype2::dg::LimitingSolverState::Suspended;
+{%- else %}
   _solverState = SolverState::Suspended;
+{%- endif %}
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
+{%- if SUBCELL_LIMITER %}
+  const auto resumesFromSuspension =
+    _limitingSweep.state == ::exahype2::dg::LimitingSolverState::Suspended;
+  _limitingSweep                   = ::exahype2::dg::advanceLimitingSweep(
+    _limitingSweep,
+    ::exahype2::dg::LimitingBranchDecision{
+      .hasHangingFaces  = _hasHangingFacesThisTimeStep,
+      .hasTroubledCells = _numberOfTroubledCellsThisTimeStep.load(std::memory_order_relaxed) != 0
+    },
+    ::exahype2::dg::NumberOfSpreadRings
+  );
+  if (::exahype2::dg::isFirstSweepOfTimeStep(_limitingSweep)) {
+    // A new step opens at the predictor, so clear the troubled count the previous
+    // step raised, even when this sweep resumes from a suspended one.
+    _numberOfTroubledCellsThisTimeStep.store(0, std::memory_order_relaxed);
+  }
+  if (resumesFromSuspension) {
+    // A suspended sweep carries no time step, so resume without nullifying the
+    // accumulators the next real step still needs.
+    return;
+  }
+{%- else %}
   switch (_solverState) {
   case SolverState::GridConstruction:
     _solverState = SolverState::GridInitialisation;
@@ -161,7 +282,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
     // this picks the same successor as a plot does.
     _solverState = (_minTimeStamp == 0)
       ? SolverState::InitialPrediction
-      : ((_minCellHThisTimeStep < _maxCellHThisTimeStep or _meshRefinementRanSinceLastTimeStep)
+      : ((_hasHangingFacesThisTimeStep or _meshRefinementRanSinceLastTimeStep)
         ? SolverState::PredictionOnHangingCells
         : SolverState::TimeStep);
 {% endif %}
@@ -174,17 +295,13 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
     // sweep, so on an adaptive mesh that sweep still has to follow the plot.
     _solverState = (_minTimeStamp == 0)
       ? SolverState::InitialPrediction
-      : ((_minCellHThisTimeStep < _maxCellHThisTimeStep or _meshRefinementRanSinceLastTimeStep)
+      : ((_hasHangingFacesThisTimeStep or _meshRefinementRanSinceLastTimeStep)
         ? SolverState::PredictionOnHangingCells
         : SolverState::TimeStep);
 {% endif %}
     break;
   case SolverState::InitialPrediction:
-    // TODO: This assumes isotropic cells. On a regular rectangular global domain,
-    // this can still satisfy _minCellHThisTimeStep < _maxCellHThisTimeStep, which triggers
-    // the PredictionOnHangingCells state and can lead to wrong coupled limiter/FV updates.
-    // This may also be the case with limiting and (static) AMR.
-    _solverState = (_minCellHThisTimeStep < _maxCellHThisTimeStep or _meshRefinementRanSinceLastTimeStep)
+    _solverState = (_hasHangingFacesThisTimeStep or _meshRefinementRanSinceLastTimeStep)
       ? SolverState::PredictionOnHangingCells
       : SolverState::TimeStep;
     break;
@@ -195,40 +312,61 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
 {% if USE_SEPARATE_SWEEPS is sameas True %}
     _solverState = SolverState::InitialPrediction;
 {% else %}
-    // TODO: Same as above.
-    // The cell statistics stem from the previous time step, so a mesh that only
-    // just became adaptive is caught through the mesh-refinement flag.
-    _solverState = (_minCellHThisTimeStep < _maxCellHThisTimeStep or _meshRefinementRanSinceLastTimeStep)
+    _solverState = (_hasHangingFacesThisTimeStep or _meshRefinementRanSinceLastTimeStep)
       ? SolverState::PredictionOnHangingCells
       : SolverState::TimeStep;
 {% endif %}
     break;
   }
+{%- endif %}
 
   _meshRefinementRanSinceLastTimeStep = false;
 
   {{START_TIME_STEP_IMPLEMENTATION}}
 
   if (isFirstGridSweepOfTimeStep()) {
-    _minTimeStampThisTimeStep = std::numeric_limits<double>::max();
-    _maxTimeStampThisTimeStep = std::numeric_limits<double>::min();
+    _minTimeStampThisTimeStep = std::numeric_limits<double>::infinity();
+    _maxTimeStampThisTimeStep = 0.0;
 
-    _minTimeStepSizeThisTimeStep = std::numeric_limits<double>::max();
-    _maxTimeStepSizeThisTimeStep = std::numeric_limits<double>::min();
+    _minTimeStepSizeThisTimeStep = std::numeric_limits<double>::infinity();
+    _maxTimeStepSizeThisTimeStep = 0.0;
 
     _maxCellHThisTimeStep      = 0.0;
-    _minCellHThisTimeStep      = std::numeric_limits<double>::max();
+    _minCellHThisTimeStep      = std::numeric_limits<double>::infinity();
+    _hasHangingFacesThisTimeStep = false;
 
-    _localMinTimeStampThisTimeStep = std::numeric_limits<double>::max();
-    _localMaxTimeStampThisTimeStep = std::numeric_limits<double>::min();
+    _localMinTimeStampThisTimeStep = std::numeric_limits<double>::infinity();
+    _localMaxTimeStampThisTimeStep = 0.0;
   }
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
+{%- if SUBCELL_LIMITER %}
+  // The corrector counts troubled cells on each rank. Sum the count before the
+  // last-sweep test so every rank either grows the subcell domain or closes the
+  // step together, which keeps the recomputed domain independent of the
+  // decomposition.
+  if (getLimitingSolverState() == ::exahype2::dg::LimitingSolverState::CorrectAndFlag) {
+    const long localTroubledCells  = _numberOfTroubledCellsThisTimeStep.load(std::memory_order_relaxed);
+    long       globalTroubledCells = 0;
+    tarch::mpi::allreduce(
+      &localTroubledCells,
+      &globalTroubledCells,
+      1,
+      MPI_LONG,
+      MPI_SUM,
+      tarch::mpi::Rank::getInstance().getCommunicator()
+    );
+    _numberOfTroubledCellsThisTimeStep.store(globalTroubledCells, std::memory_order_relaxed);
+  }
+  if (isLastGridSweepOfTimeStep() or getLimitingSolverState() == ::exahype2::dg::LimitingSolverState::Predict) {
+{%- else %}
   if (isLastGridSweepOfTimeStep() or _solverState == SolverState::InitialPrediction) {
+{%- endif %}
     // The upper half holds the negated maxima, so one minimum reduction yields both
     // extrema. Negating an IEEE double is exact, so this matches a maximum bit for bit.
-    const double localExtrema[8] = {
+    // The hanging-face flag rides along as the last maximum.
+    const double localExtrema[9] = {
        _minTimeStampThisTimeStep,
        _minCellHThisTimeStep,
        _minTimeStepSizeThisTimeStep,
@@ -236,15 +374,36 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
       -_maxTimeStampThisTimeStep,
       -_maxCellHThisTimeStep,
       -_maxTimeStepSizeThisTimeStep,
-      -_localMaxTimeStampThisTimeStep
+      -_localMaxTimeStampThisTimeStep,
+      _hasHangingFacesThisTimeStep ? -1.0 : 0.0
     };
-    double         globalExtrema[8] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    double         globalExtrema[9] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     const MPI_Comm communicator     = tarch::mpi::Rank::getInstance().getCommunicator();
+
+    const auto localTimeStepStatistics = ::exahype2::NonNegativeStatistics{
+      _minTimeStepSizeThisTimeStep,
+      _maxTimeStepSizeThisTimeStep
+    };
+    const auto hasInvalidLocalTimeStepObservation =
+      localTimeStepStatistics.hasInvalidObservation();
+    const std::uint64_t localInvalidTimeStepObservation[2]{
+      hasInvalidLocalTimeStepObservation ? 0U : 1U,
+      localTimeStepStatistics.invalidObservationBitsOrIdentity()
+    };
+    std::uint64_t globalInvalidTimeStepObservation[2]{};
 
     tarch::mpi::allreduce(
       localExtrema,
       globalExtrema,
-      8, MPI_DOUBLE,
+      9, MPI_DOUBLE,
+      MPI_MIN,
+      communicator
+    );
+    tarch::mpi::allreduce(
+      localInvalidTimeStepObservation,
+      globalInvalidTimeStepObservation,
+      2,
+      MPI_UINT64_T,
       MPI_MIN,
       communicator
     );
@@ -258,13 +417,31 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
     _maxCellHThisTimeStep          = -globalExtrema[5];
     _maxTimeStepSizeThisTimeStep   = -globalExtrema[6];
     _localMaxTimeStampThisTimeStep = -globalExtrema[7];
+    _hasHangingFacesThisTimeStep   = globalExtrema[8] < 0.0;
+    if (globalInvalidTimeStepObservation[0] == 0U) {
+      const auto invalidTimeStepStatistics =
+        ::exahype2::NonNegativeStatistics::fromInvalidObservationBits(
+          globalInvalidTimeStepObservation[1]
+        );
+      _minTimeStepSizeThisTimeStep = invalidTimeStepStatistics.minimum;
+      _maxTimeStepSizeThisTimeStep = invalidTimeStepStatistics.maximum;
+    }
 
-    if (_minTimeStampThisTimeStep >= std::numeric_limits<double>::max() / 10.0) {
-      _minTimeStampThisTimeStep = 0.0;
-    }
-    if (_maxTimeStampThisTimeStep <= std::numeric_limits<double>::min() * 10.0) {
-      _maxTimeStampThisTimeStep = _maxTimeStamp;
-    }
+    assertion(
+      _minTimeStampThisTimeStep != std::numeric_limits<double>::infinity(),
+      _minTimeStampThisTimeStep,
+      _maxTimeStampThisTimeStep
+    );
+    assertion(
+      _minCellHThisTimeStep != std::numeric_limits<double>::infinity(),
+      _minCellHThisTimeStep,
+      _maxCellHThisTimeStep
+    );
+    assertion(
+      _minTimeStepSizeThisTimeStep != std::numeric_limits<double>::infinity(),
+      _minTimeStepSizeThisTimeStep,
+      _maxTimeStepSizeThisTimeStep
+    );
 
     {{FINISH_TIME_STEP_IMPLEMENTATION}}
 
@@ -281,12 +458,18 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep() {
   assertion(mayPlot() or tarch::hasNonCriticalAssertionBeenViolated());
+{%- if SUBCELL_LIMITER %}
+  _limitingSweep.state = ::exahype2::dg::LimitingSolverState::Plotting;
+{%- else %}
   _solverState = SolverState::Plotting;
+{%- endif %}
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishPlottingStep() {}
 
-std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState state) {
+std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(
+  const SolverState state
+) {
   switch (state) {
     case SolverState::GridConstruction:
       return "GridConstruction";
@@ -307,6 +490,15 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
 }
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
+{%- if SUBCELL_LIMITER %}
+  return (
+    _limitingSweep.state == ::exahype2::dg::LimitingSolverState::Suspended
+    or
+    _limitingSweep.state == ::exahype2::dg::LimitingSolverState::GridInitialisation
+    or
+    isLastGridSweepOfTimeStep()
+  );
+{%- else %}
   return (
     _solverState == SolverState::Suspended
     or
@@ -314,9 +506,13 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
     or
     isLastGridSweepOfTimeStep()
   );
+{%- endif %}
 }
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() const {
+{%- if SUBCELL_LIMITER %}
+  return ::exahype2::dg::isFirstSweepOfTimeStep(_limitingSweep);
+{%- else %}
 {% if USE_SEPARATE_SWEEPS is sameas True %}
   return _solverState == SolverState::InitialPrediction;
 {% else %}
@@ -326,14 +522,24 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() con
     _solverState == SolverState::InitialPrediction
   );
 {% endif %}
+{%- endif %}
 }
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() const {
+{%- if SUBCELL_LIMITER %}
+  return ::exahype2::dg::isLastSweepOfTimeStep(
+    _limitingSweep,
+    ::exahype2::dg::LimitingBranchDecision{
+      .hasHangingFaces  = _hasHangingFacesThisTimeStep,
+      .hasTroubledCells = _numberOfTroubledCellsThisTimeStep.load(std::memory_order_relaxed) != 0
+    }
+  );
+{%- else %}
   return _solverState == SolverState::TimeStep;
+{%- endif %}
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {
-  // Initialise nodes, weights and matrices for use of the kernels.
 {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
   kernels::{{SOLVER_NAME}}::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initQuadratureNodesAndWeights();
   kernels::{{SOLVER_NAME}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initDGMatrices();
@@ -345,7 +551,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishSimulation() {
   {{FINISH_SIMULATION_IMPLEMENTATION}}
 
-  // Free the generated nodes, weights and matrices.
 {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
   kernels::{{SOLVER_NAME}}::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::freeQuadratureNodesAndWeights();
   kernels::{{SOLVER_NAME}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::freeDGMatrices();

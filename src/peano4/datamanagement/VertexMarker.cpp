@@ -91,8 +91,9 @@ tarch::la::Vector<DIMENSIONS, int> peano4::datamanagement::VertexMarker::getRela
   return getRelativePositionWithinFatherCell(_select);
 }
 
-tarch::la::Vector<DIMENSIONS, int>
-peano4::datamanagement::VertexMarker::getRelativePositionWithinFatherCell(int i) const {
+tarch::la::Vector<DIMENSIONS, int> peano4::datamanagement::VertexMarker::getRelativePositionWithinFatherCell(
+  int i
+) const {
   tarch::la::Vector<DIMENSIONS, int> result = relativePositionWithinFatherCell;
   std::bitset<DIMENSIONS>            index  = i;
   for (int d = 0; d < DIMENSIONS; d++) {
@@ -163,10 +164,14 @@ bool peano4::datamanagement::VertexMarker::coincidesWithCoarseGridVertex() const
  */
 tarch::la::Vector<DIMENSIONS, double> peano4::datamanagement::VertexMarker::getX(int i) const {
   tarch::la::Vector<DIMENSIONS, double> result(_cellCentre);
-  std::bitset<DIMENSIONS>               myset(i);
+  const std::bitset<DIMENSIONS>         myset(i);
   for (int d = 0; d < DIMENSIONS; d++) {
     result(d) -= 0.5 * _h(d);
-    result(d) += static_cast<double>(myset[d]) * _h(d);
+    // Testing the bit avoids converting the bitset proxy into a floating-point factor,
+    // which is unreliable once a compiler preserves exception semantics.
+    if (myset[d]) {
+      result(d) += _h(d);
+    }
   }
   return result;
 }
@@ -250,8 +255,9 @@ bool peano4::datamanagement::VertexMarker::isContainedInAdjacentCellsByDimension
  * The plus marks the vertex. If x falls into cell 1, the routine returns
  * (1,0). If it falls into cell 3, it returns (1,1).
  */
-tarch::la::Vector<DIMENSIONS, int>
-peano4::datamanagement::VertexMarker::getRelativeAdjacentCell(const tarch::la::Vector<DIMENSIONS, double>& x) const {
+tarch::la::Vector<DIMENSIONS, int> peano4::datamanagement::VertexMarker::getRelativeAdjacentCell(
+  const tarch::la::Vector<DIMENSIONS, double>& x
+) const {
   tarch::la::Vector<DIMENSIONS, int> result;
   for (int d = 0; d < DIMENSIONS; d++) {
     result(d) = x(d) <= (this->getX())(d) ? 0 : 1;

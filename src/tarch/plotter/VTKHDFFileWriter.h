@@ -29,9 +29,14 @@ namespace tarch::plotter {
  */
 class tarch::plotter::VTKHDFFileWriter : public tarch::plotter::FileWriter {
 public:
-  VTKHDFFileWriter(const std::string& outputDirectory, int numberOfSubdomains);
+  VTKHDFFileWriter(const std::string& outputDirectory, const int numberOfSubdomains);
+  VTKHDFFileWriter(const VTKHDFFileWriter&)            = delete;
+  VTKHDFFileWriter(VTKHDFFileWriter&&)                 = delete;
+  ~VTKHDFFileWriter() override                         = default;
+  VTKHDFFileWriter& operator=(const VTKHDFFileWriter&) = delete;
+  VTKHDFFileWriter& operator=(VTKHDFFileWriter&&)      = delete;
 
   bool        isOpen() const override;
-  bool        writeToFile(const std::string& filename, double time) override;
+  bool        writeToFile(const std::string& filename, const double time) override;
   std::string getFileExtension() const override;
 };

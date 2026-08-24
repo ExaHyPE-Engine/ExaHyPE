@@ -8,10 +8,14 @@ namespace tarch::plotter {
   class JSONTimeSeriesWriter;
 } // namespace tarch::plotter
 
-class tarch::plotter::JSONTimeSeriesWriter: public TimeSeriesWriter {
+class tarch::plotter::JSONTimeSeriesWriter : public TimeSeriesWriter {
 public:
-  JSONTimeSeriesWriter()           = default;
-  ~JSONTimeSeriesWriter() override = default;
+  JSONTimeSeriesWriter()                                       = default;
+  JSONTimeSeriesWriter(const JSONTimeSeriesWriter&)            = delete;
+  JSONTimeSeriesWriter(JSONTimeSeriesWriter&&)                 = delete;
+  ~JSONTimeSeriesWriter() override                             = default;
+  JSONTimeSeriesWriter& operator=(const JSONTimeSeriesWriter&) = delete;
+  JSONTimeSeriesWriter& operator=(JSONTimeSeriesWriter&&)      = delete;
 
   void writeTimeSeriesMetaFile(const std::string& outputDirectory, const std::string& filename) const override;
 };

@@ -2,12 +2,13 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "FileWriter.h"
 
+#include "tarch/Termination.h"
 #include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
 
 bool tarch::plotter::FileWriter::_doublePrecisionOutput = false;
 
-tarch::plotter::FileWriter::FileWriter(const std::string& outputDirectory, int numberOfSubdomains) :
+tarch::plotter::FileWriter::FileWriter(const std::string& outputDirectory, const int numberOfSubdomains) :
   _outputDirectory(outputDirectory),
   _subdomains(static_cast<std::size_t>(numberOfSubdomains)) {}
 
@@ -22,7 +23,7 @@ bool tarch::plotter::FileWriter::isOpen() const { return not _written; }
  * double is what lets a plotter serve both settings without a second code path, and what
  * keeps the accumulated geometry exact while subdomains are merged.
  */
-void tarch::plotter::FileWriter::setDoublePrecisionOutput(bool value) { _doublePrecisionOutput = value; }
+void tarch::plotter::FileWriter::setDoublePrecisionOutput(const bool value) { _doublePrecisionOutput = value; }
 
 bool tarch::plotter::FileWriter::getDoublePrecisionOutput() { return _doublePrecisionOutput; }
 
@@ -35,31 +36,30 @@ std::vector<std::pair<std::string, std::string>> tarch::plotter::FileWriter::mpi
   };
 }
 
-void tarch::plotter::FileWriter::createOutputDirectory() {
+void tarch::plotter::FileWriter::createOutputDirectory() const {
   int         success = 1;
   std::string failureReason;
 
-  // Only the global master touches the filesystem, but it records the outcome in
-  // a flag rather than throwing straight away: throwing here would let the master
-  // leave the collective barrier below while the other ranks block on it forever.
+  // The global master records the filesystem outcome before all ranks agree on it.
+  // Entering the fatal path before this collective would leave the peers blocked.
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    std::filesystem::path p(_outputDirectory);
+    const std::filesystem::path outputPath(_outputDirectory);
 
     if (not _outputDirectory.empty()) {
       std::error_code ec;
-      if (not std::filesystem::exists(p)) {
-        if (not std::filesystem::create_directories(p, ec) and not std::filesystem::exists(p)) {
+      if (not std::filesystem::exists(outputPath)) {
+        if (not std::filesystem::create_directories(outputPath, ec) and not std::filesystem::exists(outputPath)) {
           success       = 0;
-          failureReason = "Failed to create output directory '" + p.string() + "': " + ec.message();
+          failureReason = "Failed to create output directory '" + outputPath.string() + "': " + ec.message() + ".";
         }
-      } else if (not std::filesystem::is_directory(p)) {
+      } else if (not std::filesystem::is_directory(outputPath)) {
         success       = 0;
-        failureReason = "Output path exists but is not a directory: '" + p.string() + "'";
+        failureReason = "Output path '" + outputPath.string() + "' is not a directory.";
       }
     }
   }
 
-  // Agree on the outcome so every rank proceeds or throws together. This allreduce
+  // Agree on the outcome so every rank proceeds or terminates together. This allreduce
   // also synchronises the ranks, so no separate barrier is needed before they write.
   int globalSuccess = success;
   tarch::mpi::allreduce(
@@ -74,9 +74,9 @@ void tarch::plotter::FileWriter::createOutputDirectory() {
 
   if (success == 0) {
     if (failureReason.empty()) {
-      failureReason = "Failed to create output directory '" + _outputDirectory + "' (reported by the global master)";
+      failureReason = "The global master failed to create output directory '" + _outputDirectory + "'.";
     }
-    throw std::runtime_error(failureReason);
+    tarch::terminateWithError(failureReason);
   }
 }
 
@@ -99,50 +99,63 @@ void tarch::plotter::FileWriter::validateIdentifier(const std::string& id) {
   }
 }
 
-void tarch::plotter::FileWriter::checkCanOpenPlotter(int subdomainId) const {
+void tarch::plotter::FileWriter::checkCanOpenPlotter(const int subdomainId) const {
   if (_written) {
-    throw std::runtime_error("Cannot create plotter. File already written.");
+    throw std::runtime_error("Cannot create a data plotter after the file has been written.");
   }
 
   if (subdomainId < 0 or subdomainId >= static_cast<int>(_subdomains.size())) {
     throw std::runtime_error(
-      "Invalid subdomainId " + std::to_string(subdomainId) + " (have " + std::to_string(_subdomains.size())
-      + " subdomains)"
+      "Subdomain identifier " + std::to_string(subdomainId) + " is outside the valid range for "
+      + std::to_string(_subdomains.size()) + " subdomains."
     );
   }
 }
 
-std::unique_ptr<tarch::plotter::FileWriter::VertexPlotter>
-tarch::plotter::FileWriter::createVertexPlotter(int subdomainId) {
-  return std::make_unique<VertexPlotter>(*this, subdomainId);
+/**
+ * Create a vertex plotter with the requested treatment of coincident points.
+ *
+ * Shared vertices reduce the geometry size for continuous fields. Distinct vertices
+ * preserve separate point-data values at the same position, as required by
+ * discontinuous fields.
+ */
+std::unique_ptr<tarch::plotter::FileWriter::VertexPlotter> tarch::plotter::FileWriter::createVertexPlotter(
+  const int           subdomainId,
+  const VertexSharing vertexSharing
+) {
+  return std::make_unique<VertexPlotter>(*this, subdomainId, vertexSharing);
 }
 
-std::unique_ptr<tarch::plotter::FileWriter::CellPlotter>
-tarch::plotter::FileWriter::createCellPlotter(int subdomainId) {
+std::unique_ptr<tarch::plotter::FileWriter::CellPlotter> tarch::plotter::FileWriter::createCellPlotter(
+  const int subdomainId
+) {
   return std::make_unique<CellPlotter>(*this, subdomainId);
 }
 
 std::unique_ptr<tarch::plotter::FileWriter::VertexDataPlotter> tarch::plotter::FileWriter::createVertexDataPlotter(
-  int                subdomainId,
+  const int          subdomainId,
   const std::string& identifier,
-  int                recordsPerVertex
+  const int          recordsPerVertex
 ) {
   validateIdentifier(identifier);
   return std::make_unique<VertexDataPlotter>(*this, subdomainId, identifier, recordsPerVertex);
 }
 
-std::unique_ptr<tarch::plotter::FileWriter::CellDataPlotter>
-tarch::plotter::FileWriter::createCellDataPlotter(int subdomainId, const std::string& identifier, int recordsPerCell) {
+std::unique_ptr<tarch::plotter::FileWriter::CellDataPlotter> tarch::plotter::FileWriter::createCellDataPlotter(
+  const int          subdomainId,
+  const std::string& identifier,
+  const int          recordsPerCell
+) {
   validateIdentifier(identifier);
   return std::make_unique<CellDataPlotter>(*this, subdomainId, identifier, recordsPerCell);
 }
 
 tarch::plotter::FileWriter::DataPlotter::DataPlotter(
   FileWriter&             plotter,
-  int                     subdomainId,
+  const int               subdomainId,
   std::vector<DataField>& targetFields,
   const std::string&      identifier,
-  int                     components
+  const int               components
 ) :
   _plotter(plotter),
   _targetFields(targetFields),
@@ -222,7 +235,7 @@ void tarch::plotter::FileWriter::validateSubdomainsForWriting(const SubdomainBuf
     }
 
     std::int32_t previousOffset = 0;
-    for (std::int32_t offset : s.offsets) {
+    for (const std::int32_t offset : s.offsets) {
       if (offset < previousOffset) {
         throw std::runtime_error("Cell offsets are not monotonically increasing.");
       }
@@ -274,8 +287,8 @@ void tarch::plotter::FileWriter::validateSubdomainsForWriting(const SubdomainBuf
   }
 }
 
-tarch::plotter::FileWriter::SubdomainBuffersSequence
-tarch::plotter::FileWriter::getSubdomainBuffersSequenceForWriting() const {
+tarch::plotter::FileWriter::SubdomainBuffersSequence tarch::plotter::FileWriter::
+  getSubdomainBuffersSequenceForWriting() const {
   SubdomainBuffersSequence result;
 
   result.reference = findReferenceSubdomain();
@@ -295,7 +308,7 @@ tarch::plotter::FileWriter::getSubdomainBuffersSequenceForWriting() const {
   return result;
 }
 
-tarch::plotter::FileWriter::FieldLayout tarch::plotter::FileWriter::classifyField(int sourceComponents) {
+tarch::plotter::FileWriter::FieldLayout tarch::plotter::FileWriter::classifyField(const int sourceComponents) {
   if (sourceComponents == 1) {
     return {FieldKind::Scalar, 1};
   }
@@ -310,8 +323,8 @@ tarch::plotter::FileWriter::FieldLayout tarch::plotter::FileWriter::classifyFiel
 
 std::vector<double> tarch::plotter::FileWriter::expandFieldComponents(
   const std::vector<double>& values,
-  int                        sourceComponents,
-  int                        writtenComponents
+  const int                  sourceComponents,
+  const int                  writtenComponents
 ) {
   if (writtenComponents == sourceComponents or sourceComponents <= 0) {
     return values;
@@ -328,17 +341,30 @@ std::vector<double> tarch::plotter::FileWriter::expandFieldComponents(
 
 std::vector<float> tarch::plotter::FileWriter::narrowToFloat(const std::vector<double>& values) {
   std::vector<float> result(values.size());
-  std::transform(values.begin(), values.end(), result.begin(), [](double value) { return static_cast<float>(value); });
+  std::transform(values.begin(), values.end(), result.begin(), [](double value) {
+    // The narrowing must not trap when floating-point exceptions are enabled:
+    // a value below float's normal range flushes to signed zero and a value
+    // beyond its finite range saturates, so every solution state remains
+    // plottable.
+    if (std::abs(value) < static_cast<double>(std::numeric_limits<float>::min())) {
+      return std::signbit(value) ? -0.0f : 0.0f;
+    }
+    if (std::abs(value) > static_cast<double>(std::numeric_limits<float>::max())) {
+      return std::signbit(value) ? -std::numeric_limits<float>::max() : std::numeric_limits<float>::max();
+    }
+    return static_cast<float>(value);
+  });
   return result;
 }
 
-tarch::plotter::FileWriter::FieldSchema
-tarch::plotter::FileWriter::fieldSchemaFromReference(const SubdomainBuffers* localReference) {
+tarch::plotter::FileWriter::FieldSchema tarch::plotter::FileWriter::fieldSchemaFromReference(
+  const SubdomainBuffers* const localReference
+) {
   // Names and component counts only; the field values are streamed from the
   // subdomain buffers at write time.
   FieldSchema schema;
   if (localReference != nullptr) {
-    auto seed = [](std::vector<DataField>& target, const std::vector<DataField>& source) {
+    const auto seed = [](std::vector<DataField>& target, const std::vector<DataField>& source) {
       target.reserve(source.size());
       for (const auto& f : source) {
         DataField entry;

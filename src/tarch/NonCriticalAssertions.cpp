@@ -25,13 +25,14 @@ void tarch::triggerNonCriticalAssertion(
   int expected = -1;
   if (not rankWhichHasSetNonCriticalAssertion
             .compare_exchange_strong(expected, tarch::mpi::Rank::getInstance().getRank())) {
-    logDebug("Non-critical assertion " << expression << " failed in (" << file << ":" << line << ")");
+    logDebug("A non-critical assertion failed in (" << file << ":" << line << "): " << expression);
+    logDebug("A non-critical assertion has already put this rank into shutdown mode.");
     return;
   }
 
-  logError("Non-critical assertion " << expression << " failed in (" << file << ":" << line << ")");
+  logError("A non-critical assertion failed in (" << file << ":" << line << "): " << expression);
   logError(parameterValuePairs);
-  logError("Mark application to dump solution and shut down");
+  logError("The application will dump the solution and shut down.");
 }
 
 bool tarch::hasNonCriticalAssertionBeenViolated() { return rankWhichHasSetNonCriticalAssertion.load() >= 0; }

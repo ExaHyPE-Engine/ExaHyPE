@@ -1,0 +1,81 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+TARGET_DECLARE
+/**
+ * Reports whether a cell recomputes its solution on the finite-volume subgrid.
+ *
+ * Troubled cells and their immediate neighbours run the subcell scheme; the halo
+ * ring only supplies subgrid data and keeps its Galerkin solution.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD constexpr bool exahype2::dg::runsSubcellScheme(const LimiterStatus status) {
+  return static_cast<int>(status) >= static_cast<int>(exahype2::dg::LimiterStatus::Limited);
+}
+
+/**
+ * Returns the more limited of two observations of one cell or one face side.
+ *
+ * The enum is ordered by increasing limiting, so the maximum keeps the stronger
+ * claim. A maximum is associative and commutative, so a face side merged across
+ * threads or ranks is independent of the order in which observations arrive.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD constexpr exahype2::dg::LimiterStatus exahype2::dg::mergeLimiterStatus(
+  const LimiterStatus left,
+  const LimiterStatus right
+) {
+  return static_cast<int>(left) > static_cast<int>(right) ? left : right;
+}
+
+/**
+ * Returns the status a cell inherits from one neighbour during a spreading sweep.
+ *
+ * The subcell domain grows one ring per sweep: a neighbour lifts a cell to the
+ * level just below its own, so a troubled cell pulls its neighbour to limited and
+ * a limited cell pulls its neighbour to halo, while halo and regular add nothing.
+ * A cell keeps the maximum over its neighbours, which is independent of the mesh
+ * decomposition.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD constexpr exahype2::dg::LimiterStatus exahype2::dg::spreadLimiterStatus(
+  const LimiterStatus neighbourStatus
+) {
+  const int loweredStatus = static_cast<int>(neighbourStatus) - 1;
+  return loweredStatus > static_cast<int>(exahype2::dg::LimiterStatus::Regular)
+    ? static_cast<exahype2::dg::LimiterStatus>(loweredStatus)
+    : exahype2::dg::LimiterStatus::Regular;
+}
+
+/**
+ * Reads one face side after its preceding face event has completed. Adjacent
+ * cells own different sides, so the same side is not updated concurrently.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::LimiterStatus exahype2::dg::loadFaceStatus(
+  const int* const faceStatus,
+  const int        side
+) {
+  return static_cast<exahype2::dg::LimiterStatus>(tarch::accelerator::atomicLoad(faceStatus + side));
+}
+
+/**
+ * Writes the side owned by one adjacent cell. The preceding face event has
+ * completed, and the other adjacent cell writes the opposite side.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::storeFaceStatus(
+  int* const          faceStatus,
+  const int           side,
+  const LimiterStatus status
+) {
+  tarch::accelerator::atomicStore(faceStatus + side, static_cast<int>(status));
+}
+
+/**
+ * Raises one face side to a more limited status, keeping the maximum over
+ * concurrent writers so the spread result is independent of their order.
+ */
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::raiseFaceStatus(
+  int* const          faceStatus,
+  const int           side,
+  const LimiterStatus status
+) {
+  tarch::accelerator::atomicMaximum(faceStatus + side, static_cast<int>(status));
+}
+TARGET_DECLARE_END

@@ -13,6 +13,13 @@ private:
   void testRestrictHaloLayer();
   void testRestrictCell();
   void testRestrictCellWithMatrixReproducesPolynomials();
+  void testOrderInvariantProduct();
+  void testRestrictCellFromChildrenReproducesRamp();
+  void testRestrictCellFromChildrenWithMatrixReproducesPolynomials();
+  void testRestrictCellFromChildrenIsSymmetryEquivariant();
+  void testApplyTensorProductOrderInvariant();
+  void testInterpolateFaceFromCoarse();
+  void testRestrictFaceFromChildren();
 
 public:
   RestrictionTest();

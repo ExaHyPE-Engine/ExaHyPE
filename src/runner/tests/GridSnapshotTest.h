@@ -16,5 +16,5 @@ public:
 private:
   void testBoundedFullyRefinedLeavesGrowsPerLevel();
   void testBoundedFullyRefinedLeavesHandlesLimits();
-  void testWidthSamplesUseRunBounds();
+  void testGridCellSummary();
 };

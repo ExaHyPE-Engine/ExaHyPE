@@ -63,4 +63,5 @@ foreach(mode IN LISTS SUPPORTED_BUILD_TYPES)
         "OMP_NUM_THREADS=${threads_per_rank};OMP_WAIT_POLICY=passive;OMPI_MCA_hwloc_base_binding_policy=none;OMPI_MCA_mca_base_component_show_load_errors=none"
     )
   endforeach()
+
 endforeach()

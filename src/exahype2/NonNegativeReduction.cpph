@@ -1,0 +1,51 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+TARGET_DECLARE
+template <typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD Value
+exahype2::NonNegativeReduction::minimum(const Value currentValue, const Value candidateValue) {
+  const bool currentValueIsPhysical   = isPhysicalValue(currentValue);
+  const bool candidateValueIsPhysical = isPhysicalValue(candidateValue);
+  if (not currentValueIsPhysical) {
+    return currentValue;
+  }
+  if (not candidateValueIsPhysical) {
+    return candidateValue;
+  }
+  return candidateValue < currentValue ? candidateValue : currentValue;
+}
+
+template <typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD Value
+exahype2::NonNegativeReduction::maximum(const Value currentValue, const Value candidateValue) {
+  const bool currentValueIsPhysical   = isPhysicalValue(currentValue);
+  const bool candidateValueIsPhysical = isPhysicalValue(candidateValue);
+  if (not currentValueIsPhysical) {
+    return currentValue;
+  }
+  if (not candidateValueIsPhysical) {
+    return candidateValue;
+  }
+  return candidateValue > currentValue ? candidateValue : currentValue;
+}
+
+template <typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD Value
+exahype2::NonNegativeReduction::sum(const Value currentValue, const Value candidateValue) {
+  const bool currentValueIsPhysical   = isPhysicalValue(currentValue);
+  const bool candidateValueIsPhysical = isPhysicalValue(candidateValue);
+  if (not currentValueIsPhysical) {
+    return currentValue;
+  }
+  if (not candidateValueIsPhysical) {
+    return candidateValue;
+  }
+  return currentValue + candidateValue;
+}
+
+template <typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD bool exahype2::NonNegativeReduction::isPhysicalValue(const Value value) {
+  return value >= Value{0} and std::isfinite(value);
+}
+TARGET_DECLARE_END

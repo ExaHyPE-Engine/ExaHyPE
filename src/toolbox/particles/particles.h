@@ -2,11 +2,17 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "internal.h"
+
+#include "peano4/Loop.h"
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/VertexEnumerator.h"
 #include "peano4/datamanagement/VertexMarker.h"
+#include "tarch/instrumentation/Debug.h"
 #include "tarch/la/Vector.h"
+#include "tarch/la/VectorVectorOperations.h"
 #include "tarch/mpi/Rank.h"
+#include "toolbox/particles/assignmentchecks/TracingAPI.h"
 
 namespace toolbox {
   namespace particles {

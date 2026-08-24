@@ -3,10 +3,14 @@
 #include "{{CLASSNAME}}.h"
 
 #include "repositories/SolverRepository.h"
+
+#include "exahype2/NonNegativeStatistics.h"
+#include "runner/RuntimeParameters.h"
 #include "tarch/instrumentation/Log.h"
 #include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/Lock.h"
+#include "tarch/NonCriticalAssertions.h"
 
 std::bitset<DIMENSIONS> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::PeriodicBC = {{NAMESPACE | join("::")}}::PeriodicBC;
 
@@ -14,19 +18,22 @@ std::bitset<DIMENSIONS> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::PeriodicBC = 
   _solverState(SolverState::GridConstruction),
   _minTimeStamp(0.0),
   _maxTimeStamp(0.0),
-  _minTimeStampThisTimeStep(0.0),
+  _minTimeStampThisTimeStep(std::numeric_limits<double>::infinity()),
   _maxTimeStampThisTimeStep(0.0),
-  // This way, we still compute the patch size without an overflow
-  _minVolumeH(std::numeric_limits<double>::max() / NumberOfFiniteVolumesPerAxisPerPatch / 2.0),
+  _localMinTimeStampThisTimeStep(std::numeric_limits<double>::infinity()),
+  _localMaxTimeStampThisTimeStep(0.0),
+  _minVolumeH(std::numeric_limits<double>::infinity()),
   _maxVolumeH(0.0),
-  _minVolumeHThisTimeStep(std::numeric_limits<double>::max() / NumberOfFiniteVolumesPerAxisPerPatch / 2.0),
+  _minVolumeHThisTimeStep(std::numeric_limits<double>::infinity()),
   _maxVolumeHThisTimeStep(0.0),
-  _minTimeStepSize(std::numeric_limits<double>::max()),
+  _minTimeStepSize(std::numeric_limits<double>::infinity()),
   _maxTimeStepSize(0.0),
-  _minTimeStepSizeThisTimeStep(std::numeric_limits<double>::max()),
+  _minTimeStepSizeThisTimeStep(std::numeric_limits<double>::infinity()),
   _maxTimeStepSizeThisTimeStep(0.0) {
   {{CONSTRUCTOR_IMPLEMENTATION}}
 }
+
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::~{{CLASSNAME}}() = default;
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspendSolversForOneGridSweep() {
   _solverState = SolverState::Suspended;
@@ -53,45 +60,109 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxCellSize() const {
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStamp() const {
-  return _minTimeStampThisTimeStep < std::numeric_limits<double>::max() / 10.0 ? _minTimeStampThisTimeStep : _minTimeStamp;
+  return _minTimeStampThisTimeStep != std::numeric_limits<double>::infinity()
+    ? _minTimeStampThisTimeStep
+    : _minTimeStamp;
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStamp() const {
-  return _maxTimeStampThisTimeStep > std::numeric_limits<double>::min() * 10.0 ? _maxTimeStampThisTimeStep : _maxTimeStamp;
+  return _minTimeStampThisTimeStep != std::numeric_limits<double>::infinity()
+    ? _maxTimeStampThisTimeStep
+    : _maxTimeStamp;
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStepSize() const {
-  return _minTimeStepSizeThisTimeStep < std::numeric_limits<double>::max() / 10.0 ? _minTimeStepSizeThisTimeStep : _minTimeStepSize;
+  return _minTimeStepSizeThisTimeStep != std::numeric_limits<double>::infinity()
+    ? _minTimeStepSizeThisTimeStep
+    : _minTimeStepSize;
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStepSize() const {
-  return _maxTimeStepSizeThisTimeStep > std::numeric_limits<double>::min() * 10.0 ? _maxTimeStepSizeThisTimeStep : _maxTimeStepSize;
+  return _minTimeStepSizeThisTimeStep != std::numeric_limits<double>::infinity()
+    ? _maxTimeStepSizeThisTimeStep
+    : _maxTimeStepSize;
 }
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, double timeStamp, double minVolumeSize, double maxVolumeSize) {
-  tarch::multicore::Lock lock(_semaphore);
+/**
+ * Accumulates a patch's time step, time stamp, and size extrema for the current solver step.
+ */
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(
+  const double timeStepSize,
+  const double timeStamp,
+  const double minPatchSize,
+  const double maxPatchSize
+) {
+  const tarch::multicore::Lock lock(_semaphore);
 
-  if (tarch::la::greater(timeStepSize, 0.0)) {
-    assertion(timeStepSize < std::numeric_limits<double>::max() / 10.0, timeStepSize);
-    assertion(timeStepSize >= 0.0, timeStepSize);
-    _minTimeStepSizeThisTimeStep = std::min(timeStepSize, _minTimeStepSizeThisTimeStep);
-    _maxTimeStepSizeThisTimeStep = std::max(timeStepSize, _maxTimeStepSizeThisTimeStep);
-    assertion(tarch::la::smallerEquals(_minTimeStepSizeThisTimeStep, _maxTimeStepSizeThisTimeStep), _minTimeStepSizeThisTimeStep, _maxTimeStepSizeThisTimeStep);
-
-    _localMinTimeStampThisTimeStep = std::min(_localMinTimeStampThisTimeStep, timeStamp);
-    _localMaxTimeStampThisTimeStep = std::max(_localMaxTimeStampThisTimeStep, timeStamp);
+  const auto observedTimeStepStatistics =
+    ::exahype2::NonNegativeStatistics{timeStepSize, timeStepSize};
+  if (not observedTimeStepStatistics.hasPhysicalValues()) {
+    tarch::triggerNonCriticalAssertion(
+      __FILE__,
+      __LINE__,
+      "The observed time step size is finite and non-negative.",
+      "Time step size bits="
+        + std::to_string(
+          observedTimeStepStatistics.invalidObservationBitsOrIdentity()
+        )
+    );
   }
+  const auto timeStepStatistics = ::exahype2::NonNegativeStatistics::accumulate(
+    {_minTimeStepSizeThisTimeStep, _maxTimeStepSizeThisTimeStep},
+    timeStepSize
+  );
+  _minTimeStepSizeThisTimeStep = timeStepStatistics.minimum;
+  _maxTimeStepSizeThisTimeStep = timeStepStatistics.maximum;
+  updateTimeStampAndPatchSizeWithoutLock(
+    timeStamp,
+    minPatchSize,
+    maxPatchSize
+  );
+}
 
-  assertion(timeStamp < std::numeric_limits<double>::max() / 10.0, timeStamp);
-  assertion(timeStamp >= 0.0, timeStamp);
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::updateTimeStampAndPatchSize(
+  const double timeStamp,
+  const double minPatchSize,
+  const double maxPatchSize
+) {
+  const tarch::multicore::Lock lock(_semaphore);
+  updateTimeStampAndPatchSizeWithoutLock(
+    timeStamp,
+    minPatchSize,
+    maxPatchSize
+  );
+}
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::updateTimeStampAndPatchSizeWithoutLock(
+  const double timeStamp,
+  const double minPatchSize,
+  const double maxPatchSize
+) {
+  assertion(std::isfinite(timeStamp) and timeStamp >= 0.0, timeStamp);
+  _localMinTimeStampThisTimeStep =
+    std::min(_localMinTimeStampThisTimeStep, timeStamp);
+  _localMaxTimeStampThisTimeStep =
+    std::max(_localMaxTimeStampThisTimeStep, timeStamp);
   _minTimeStampThisTimeStep = std::min(timeStamp, _minTimeStampThisTimeStep);
   _maxTimeStampThisTimeStep = std::max(timeStamp, _maxTimeStampThisTimeStep);
-  assertion(tarch::la::smallerEquals(_minTimeStampThisTimeStep, _maxTimeStampThisTimeStep), _minTimeStamp, _maxTimeStamp, _minTimeStampThisTimeStep, _maxTimeStampThisTimeStep, timeStepSize, timeStamp, minVolumeSize, maxVolumeSize);
-
-  assertion(maxVolumeSize < std::numeric_limits<double>::max() / NumberOfFiniteVolumesPerAxisPerPatch, maxVolumeSize);
-  assertion(minVolumeSize > 0.0, minVolumeSize);
-  _minVolumeHThisTimeStep = std::min(_minVolumeHThisTimeStep, minVolumeSize / NumberOfFiniteVolumesPerAxisPerPatch);
-  _maxVolumeHThisTimeStep = std::max(_maxVolumeHThisTimeStep, maxVolumeSize / NumberOfFiniteVolumesPerAxisPerPatch);
+  assertion(
+    std::isfinite(minPatchSize) and minPatchSize > 0.0,
+    minPatchSize,
+    maxPatchSize
+  );
+  assertion(
+    std::isfinite(maxPatchSize) and maxPatchSize >= minPatchSize,
+    minPatchSize,
+    maxPatchSize
+  );
+  _minVolumeHThisTimeStep = std::min(
+    _minVolumeHThisTimeStep,
+    minPatchSize / NumberOfFiniteVolumesPerAxisPerPatch
+  );
+  _maxVolumeHThisTimeStep = std::max(
+    _maxVolumeHThisTimeStep,
+    maxPatchSize / NumberOfFiniteVolumesPerAxisPerPatch
+  );
 }
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::SolverState {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getSolverState() const {
@@ -121,7 +192,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridInitialisationStep() {
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
   if (_solverState == SolverState::Suspended) {
     // Resume solving without resetting the per-time-step accumulators below, so
-    // that a suspended solver does not nullify its eigenvalue / time step sizes.
+    // that a suspended solver does not nullify its eigenvalue and time step sizes.
     _solverState = SolverState::TimeStep;
     return;
   }
@@ -131,17 +202,17 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
 
   {{START_TIME_STEP_IMPLEMENTATION}}
 
-  _minTimeStampThisTimeStep = std::numeric_limits<double>::max();
-  _maxTimeStampThisTimeStep = std::numeric_limits<double>::min();
+  _minTimeStampThisTimeStep = std::numeric_limits<double>::infinity();
+  _maxTimeStampThisTimeStep = 0.0;
 
-  _minTimeStepSizeThisTimeStep = std::numeric_limits<double>::max();
-  _maxTimeStepSizeThisTimeStep = std::numeric_limits<double>::min();
+  _minTimeStepSizeThisTimeStep = std::numeric_limits<double>::infinity();
+  _maxTimeStepSizeThisTimeStep = 0.0;
 
   _maxVolumeHThisTimeStep = 0.0;
-  _minVolumeHThisTimeStep = std::numeric_limits<double>::max() / NumberOfFiniteVolumesPerAxisPerPatch / 2.0;
+  _minVolumeHThisTimeStep = std::numeric_limits<double>::infinity();
 
-  _localMinTimeStampThisTimeStep = std::numeric_limits<double>::max();
-  _localMaxTimeStampThisTimeStep = std::numeric_limits<double>::min();
+  _localMinTimeStampThisTimeStep = std::numeric_limits<double>::infinity();
+  _localMaxTimeStampThisTimeStep = 0.0;
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
@@ -161,10 +232,30 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
     double         globalExtrema[8] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     const MPI_Comm communicator     = tarch::mpi::Rank::getInstance().getCommunicator();
 
+    const auto localTimeStepStatistics = ::exahype2::NonNegativeStatistics{
+      _minTimeStepSizeThisTimeStep,
+      _maxTimeStepSizeThisTimeStep
+    };
+    const auto hasInvalidLocalTimeStepObservation =
+      localTimeStepStatistics.hasInvalidObservation();
+    const std::uint64_t localInvalidTimeStepObservation[2]{
+      hasInvalidLocalTimeStepObservation ? 0U : 1U,
+      localTimeStepStatistics.invalidObservationBitsOrIdentity()
+    };
+    std::uint64_t globalInvalidTimeStepObservation[2]{};
+
     tarch::mpi::allreduce(
       localExtrema,
       globalExtrema,
       8, MPI_DOUBLE,
+      MPI_MIN,
+      communicator
+    );
+    tarch::mpi::allreduce(
+      localInvalidTimeStepObservation,
+      globalInvalidTimeStepObservation,
+      2,
+      MPI_UINT64_T,
       MPI_MIN,
       communicator
     );
@@ -178,14 +269,31 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
     _maxVolumeHThisTimeStep        = -globalExtrema[5];
     _maxTimeStepSizeThisTimeStep   = -globalExtrema[6];
     _localMaxTimeStampThisTimeStep = -globalExtrema[7];
+    if (globalInvalidTimeStepObservation[0] == 0U) {
+      const auto invalidTimeStepStatistics =
+        ::exahype2::NonNegativeStatistics::fromInvalidObservationBits(
+          globalInvalidTimeStepObservation[1]
+        );
+      _minTimeStepSizeThisTimeStep = invalidTimeStepStatistics.minimum;
+      _maxTimeStepSizeThisTimeStep = invalidTimeStepStatistics.maximum;
+    }
   }
 
-  if (_minTimeStampThisTimeStep >= std::numeric_limits<double>::max() / 10.0) {
-    _minTimeStampThisTimeStep = 0.0;
-  }
-  if (_maxTimeStampThisTimeStep <= std::numeric_limits<double>::min() * 10.0) {
-    _maxTimeStampThisTimeStep = _maxTimeStamp;
-  }
+  assertion(
+    _minTimeStampThisTimeStep != std::numeric_limits<double>::infinity(),
+    _minTimeStampThisTimeStep,
+    _maxTimeStampThisTimeStep
+  );
+  assertion(
+    _minVolumeHThisTimeStep != std::numeric_limits<double>::infinity(),
+    _minVolumeHThisTimeStep,
+    _maxVolumeHThisTimeStep
+  );
+  assertion(
+    _minTimeStepSizeThisTimeStep != std::numeric_limits<double>::infinity(),
+    _minTimeStepSizeThisTimeStep,
+    _maxTimeStepSizeThisTimeStep
+  );
 
   {{FINISH_TIME_STEP_IMPLEMENTATION}}
 
@@ -206,7 +314,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep() {
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishPlottingStep() {}
 
-std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState state) {
+std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(
+  const SolverState state
+) {
   switch (state) {
     case SolverState::GridConstruction:
       return "GridConstruction";
@@ -223,11 +333,8 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
 }
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
-  return
-    _solverState == SolverState::GridInitialisation
-    or
-    // The solver rests in TimeStep between time steps, so we may plot then.
-    isLastGridSweepOfTimeStep();
+  // The solver remains in TimeStep between time steps, so plotting is valid there.
+  return _solverState == SolverState::GridInitialisation or isLastGridSweepOfTimeStep();
 }
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() const {
@@ -235,7 +342,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() con
 }
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() const {
-  // The single-sweep solver does all its work in the TimeStep state.
   return _solverState == SolverState::TimeStep;
 }
 

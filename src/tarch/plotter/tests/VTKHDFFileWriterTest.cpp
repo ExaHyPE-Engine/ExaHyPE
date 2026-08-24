@@ -116,6 +116,7 @@ void tarch::plotter::tests::VTKHDFFileWriterTest::run() {
   // skipped, so the counter has to be raised here as well.
   try {
     testMethod(testSingleQuad2D);
+    testMethod(testVertexSharing);
     testMethod(testTwoTimeSteps);
     testMethod(testMultipleSubdomains);
     testMethod(testParticlePointCloud);
@@ -219,6 +220,68 @@ void tarch::plotter::tests::VTKHDFFileWriterTest::testSingleQuad2D() {
       check(points[(4 * r) * 3 + 2] == 0.0f, "2D points get z==0");
     }
 
+    H5Fclose(file);
+    removeFile(path);
+  }
+  barrier();
+}
+
+/**
+ * Coincident vertices either share one point-data tuple or retain independent
+ * tuples according to the selected vertex-sharing mode.
+ */
+void tarch::plotter::tests::VTKHDFFileWriterTest::testVertexSharing() {
+  const std::string filename = "VTKHDFTestVertexSharing";
+  const std::string path     = filename + ".vtkhdf";
+
+  {
+    tarch::plotter::VTKHDFFileWriter plotter(".", 2);
+    {
+      auto sharedVertexPlotter = plotter.createVertexPlotter(0, tarch::plotter::FileWriter::VertexSharing::Shared);
+      auto sharedDataPlotter   = plotter.createVertexDataPlotter(0, "Value", 1);
+      const auto position      = tarch::la::Vector<2, double>{4.0 * thisRank(), 0.0};
+      const auto firstVertex   = sharedVertexPlotter->plotVertex(position);
+      const auto secondVertex  = sharedVertexPlotter->plotVertex(position);
+      check(firstVertex == secondVertex, "Shared coincident vertices use one index");
+      sharedDataPlotter->plotVertexData(firstVertex, 1.0);
+    }
+    {
+      auto distinctVertexPlotter = plotter.createVertexPlotter(1, tarch::plotter::FileWriter::VertexSharing::Distinct);
+      auto distinctDataPlotter   = plotter.createVertexDataPlotter(1, "Value", 1);
+      const auto position        = tarch::la::Vector<2, double>{4.0 * thisRank() + 2.0, 0.0};
+      const auto firstVertex     = distinctVertexPlotter->plotVertex(position);
+      const auto secondVertex    = distinctVertexPlotter->plotVertex(position);
+      check(firstVertex != secondVertex, "Distinct coincident vertices use separate indices");
+      distinctDataPlotter->plotVertexData(firstVertex, 2.0);
+      distinctDataPlotter->plotVertexData(secondVertex, 3.0);
+    }
+    plotter.writeToFile(filename, 0.0);
+  }
+
+  barrier();
+  if (isMaster()) {
+    const auto numberOfRanks  = ranks();
+    const auto file           = openForRead(path);
+    const auto numberOfPoints = readI64(file, "/VTKHDF/NumberOfPoints");
+    const auto points         = readF32(file, "/VTKHDF/Points");
+    const auto values         = readF32(file, "/VTKHDF/PointData/Value");
+    check(
+      numberOfPoints.size() == 1 and numberOfPoints[0] == 3 * numberOfRanks,
+      "Each rank writes one shared point and two distinct points"
+    );
+    for (int rank = 0; rank < numberOfRanks; rank++) {
+      const auto firstDistinctPoint  = 3 * rank + 1;
+      const auto secondDistinctPoint = 3 * rank + 2;
+      for (int coordinate = 0; coordinate < 3; coordinate++) {
+        check(
+          points[3 * firstDistinctPoint + coordinate] == points[3 * secondDistinctPoint + coordinate],
+          "Distinct vertices retain coincident coordinates"
+        );
+      }
+      check(values[3 * rank] == 1.0f, "The shared point retains its value");
+      check(values[firstDistinctPoint] == 2.0f, "The first distinct point retains its value");
+      check(values[secondDistinctPoint] == 3.0f, "The second distinct point retains its value");
+    }
     H5Fclose(file);
     removeFile(path);
   }

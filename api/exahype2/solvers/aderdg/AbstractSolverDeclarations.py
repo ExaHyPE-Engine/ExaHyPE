@@ -74,7 +74,7 @@ class AbstractSolverDeclarations:
     {% endif %}
 
     {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
-    {% if MAX_EIGENVALUE_IMPLEMENTATION=="<user-defined>" and MAX_EIGENVALUE_IMPLEMENTATION!="<none>" %}
+    {% if MAX_EIGENVALUE_IMPLEMENTATION=="<user-defined>" and MAX_EIGENVALUE_IMPLEMENTATION!="<none>" and not SUBCELL_LIMITER %}
     virtual double maxEigenvalue(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<DIMENSIONS, double>&                    x,
@@ -85,9 +85,12 @@ class AbstractSolverDeclarations:
     ) = 0;
     {% endif %}
 
-    {% if FLUX_IMPLEMENTATION=="<user-defined>" and FLUX_IMPLEMENTATION!="<none>" %}
+    {% if FLUX_IMPLEMENTATION=="<user-defined>" and FLUX_IMPLEMENTATION!="<none>" and not SUBCELL_LIMITER %}
     virtual void flux(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+{% if USE_DIFFUSIVE_FLUX %}
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  deltaQ[DIMENSIONS], // deltaQ[{{NUMBER_OF_UNKNOWNS}}]
+{% endif %}
       const tarch::la::Vector<DIMENSIONS, double>&                    x,
       const tarch::la::Vector<DIMENSIONS, double>&                    h,
       const double                                                    t,
@@ -97,10 +100,10 @@ class AbstractSolverDeclarations:
     ) = 0;
     {% endif %}
 
-    {% if NCP_IMPLEMENTATION=="<user-defined>" and NCP_IMPLEMENTATION!="<none>" %}
+    {% if NCP_IMPLEMENTATION=="<user-defined>" and NCP_IMPLEMENTATION!="<none>" and not SUBCELL_LIMITER %}
     virtual void nonconservativeProduct(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<DIMENSIONS, double>&                    x,
       const tarch::la::Vector<DIMENSIONS, double>&                    h,
       const double                                                    t,
@@ -110,8 +113,8 @@ class AbstractSolverDeclarations:
     ) = 0;
     {% endif %}
 
-    {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>" %}
-    virtual void algebraicSource(
+    {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>" and not SUBCELL_LIMITER %}
+    virtual void sourceTerm(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q,
       const tarch::la::Vector<DIMENSIONS, double>&                    x,
       const tarch::la::Vector<DIMENSIONS, double>&                    h,
@@ -121,10 +124,10 @@ class AbstractSolverDeclarations:
     ) = 0;
     {% endif %}
 
-    {% if DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION=="<user-defined>" and DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION!="<none>" %}
-    virtual void diffusiveAlgebraicSource(
+    {% if DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION=="<user-defined>" and DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION!="<none>" and not SUBCELL_LIMITER %}
+    virtual void diffusiveSourceTerm(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  Q,
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  deltaQ,
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS  deltaQ, // deltaQ[{{DIMENSIONS}} * {{NUMBER_OF_UNKNOWNS}}]
       const tarch::la::Vector<DIMENSIONS, double>&                    x,
       const tarch::la::Vector<DIMENSIONS, double>&                    h,
       const double                                                    t,
@@ -172,15 +175,6 @@ class AbstractSolverDeclarations:
     ) = 0;
     {% endif %}
 
-    {% if ADJUST_SOLUTION_IMPLEMENTATION=="<user-defined>" and ADJUST_SOLUTION_IMPLEMENTATION!="<none>" %}
-    virtual void adjustSolution(
-      const tarch::la::Vector<DIMENSIONS, double>&  x,
-      const tarch::la::Vector<DIMENSIONS, double>&  h,
-      const double                                  t,
-      const double                                  dt,
-      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS Q // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-    ) = 0;
-    {% endif %}
     {% endfor %}
 """,
             undefined=jinja2.DebugUndefined,

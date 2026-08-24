@@ -7,33 +7,32 @@
 
 namespace runner {
   class Engine;
+  class Phase;
   class ReportBox;
   class RuntimeParameters;
-
-  struct PhaseContext {
-    Engine&                               engine;
-    ReportBox&                            box;
-    const RepositoryCallbacks&            repositories;
-    const RuntimeParameters&              parameters;
-    MainMeasurements&                     measurements;
-    tarch::la::Vector<DIMENSIONS, double> domainOffset;
-    tarch::la::Vector<DIMENSIONS, double> domainSize;
-    std::bitset<DIMENSIONS>               periodicBC;
-  };
-
-  class Phase {
-  public:
-    Phase()          = default;
-    virtual ~Phase() = default;
-    // Phases are held and run polymorphically, never copied or moved.
-    Phase(const Phase&)            = delete;
-    Phase(Phase&&)                 = delete;
-    Phase& operator=(const Phase&) = delete;
-    Phase& operator=(Phase&&)      = delete;
-
-    /** Widest lines this phase can print. */
-    virtual std::vector<std::string> widthSamples() const { return {}; }
-
-    virtual void run() = 0;
-  };
+  struct PhaseContext;
 } // namespace runner
+
+struct runner::PhaseContext {
+  runner::Engine&                       engine;
+  runner::ReportBox&                    box;
+  const runner::RepositoryCallbacks&    repositories;
+  const runner::RuntimeParameters&      parameters;
+  runner::MainMeasurements&             measurements;
+  tarch::la::Vector<DIMENSIONS, double> domainOffset;
+  tarch::la::Vector<DIMENSIONS, double> domainSize;
+  std::bitset<DIMENSIONS>               periodicBC;
+};
+
+class runner::Phase {
+public:
+  Phase()          = default;
+  virtual ~Phase() = default;
+  // Phases are held and run polymorphically, never copied or moved.
+  Phase(const runner::Phase& other)                    = delete;
+  Phase(runner::Phase&& other)                         = delete;
+  runner::Phase& operator=(const runner::Phase& other) = delete;
+  runner::Phase& operator=(runner::Phase&& other)      = delete;
+
+  virtual void run() = 0;
+};

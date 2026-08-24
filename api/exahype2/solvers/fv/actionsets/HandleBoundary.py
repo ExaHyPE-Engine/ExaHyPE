@@ -4,71 +4,66 @@ from .AbstractFVActionSet import AbstractFVActionSet
 
 import peano4.solversteps
 
-import os
 import jinja2
 
 
 class HandleBoundary(AbstractFVActionSet):
     """
-    The global periodic boundary conditions are set in the Constants.h.
+    Periodic axes are read from the generated Constants.h.
 
-    Boundary conditions are applied to QNew and QOld. The initialisation sweep
-    projects QNew, and the first solve sweep rolls it over before this action
-    set runs, so QOld is available here.
+    Boundary conditions fill the outer halo of the previous snapshot, which is the one
+    holding the solution while this action set runs. The current snapshot is the empty
+    destination that the sweep writes later.
     """
 
     TemplateHandleBoundary_Prologue = """
-    if (
-      {{PREDICATE}}
-      and
-      not marker.hasBeenRefined()
-    ) {
+  if ({{PREDICATE}} and not marker.hasBeenRefined()) {
 """
 
     TemplateHandleBoundary_KernelCalls = """
-      for (int f = 0; f < TWO_TIMES_D; f++) {
-        if (not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[f%DIMENSIONS] and fineGridFaces{{SOLVER_NAME}}FaceLabel(f).getBoundary()) {
-          kernels::{{SOLVER_NAME}}::handleBoundary(
-            repositories::{{SOLVER_INSTANCE}},
-            marker.getX(),
-            marker.getH(),
-            {{FACE_METADATA_ACCESSOR}}(f).getNewTimeStamp(f<DIMENSIONS ? 1 : 0),
-            repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
-            f,
-            fineGridFaces{{UNKNOWN_IDENTIFIER}}New(f).data()
-          );
-          kernels::{{SOLVER_NAME}}::handleBoundary(
-            repositories::{{SOLVER_INSTANCE}},
-            marker.getX(),
-            marker.getH(),
-            {{FACE_METADATA_ACCESSOR}}(f).getOldTimeStamp(f<DIMENSIONS ? 1 : 0),
-            repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
-            f,
-            fineGridFaces{{UNKNOWN_IDENTIFIER}}Old(f).data()
-          );
+    for (int faceNumber = 0; faceNumber < TWO_TIMES_D; faceNumber++) {
+      if (
+        not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[faceNumber % DIMENSIONS]
+        and fineGridFaces{{SOLVER_NAME}}FaceLabel(faceNumber).getBoundary()
+      ) {
+        const auto insideEntry  = faceNumber < DIMENSIONS ? 1 : 0;
+        const auto outsideEntry = 1 - insideEntry;
+        ::exahype2::fv::handleBoundary<
+          {{FULL_QUALIFIED_SOLVER_NAME}},
+          {{NUMBER_OF_VOLUMES_PER_AXIS}},
+          {{HALO_SIZE}},
+          {{NUMBER_OF_UNKNOWNS}},
+          {{NUMBER_OF_AUXILIARY_VARIABLES}},
+          {{STORAGE_PRECISION}}>(
+          repositories::{{SOLVER_INSTANCE}},
+          marker.getX(),
+          marker.getH(),
+          {{FACE_METADATA_ACCESSOR}}(faceNumber).getOldTimeStamp(insideEntry),
+          faceNumber,
+          fineGridFaces{{UNKNOWN_IDENTIFIER}}Old(faceNumber).data()
+        );
 """
 
     TemplateHandleBoundary_Epilogue = """
-          bool isLeftEntryOutside = f < DIMENSIONS;
-          double innerTimeStamp;
+        const auto updatedTimeStamp =
+          {{FACE_METADATA_ACCESSOR}}(faceNumber).getUpdatedTimeStamp(insideEntry);
+        {{FACE_METADATA_ACCESSOR}}(faceNumber).setUpdatedTimeStamp(outsideEntry, updatedTimeStamp);
 
-          innerTimeStamp = {{FACE_METADATA_ACCESSOR}}(f).getUpdatedTimeStamp(isLeftEntryOutside ? 1 : 0);
-          {{FACE_METADATA_ACCESSOR}}(f).setUpdatedTimeStamp(isLeftEntryOutside ? 0 : 1, innerTimeStamp);
+        const auto newTimeStamp =
+          {{FACE_METADATA_ACCESSOR}}(faceNumber).getNewTimeStamp(insideEntry);
+        {{FACE_METADATA_ACCESSOR}}(faceNumber).setNewTimeStamp(outsideEntry, newTimeStamp);
 
-          innerTimeStamp = {{FACE_METADATA_ACCESSOR}}(f).getNewTimeStamp(isLeftEntryOutside ? 1 : 0);
-          {{FACE_METADATA_ACCESSOR}}(f).setNewTimeStamp(isLeftEntryOutside ? 0 : 1, innerTimeStamp);
-
-          innerTimeStamp = {{FACE_METADATA_ACCESSOR}}(f).getOldTimeStamp(isLeftEntryOutside ? 1 : 0);
-          {{FACE_METADATA_ACCESSOR}}(f).setOldTimeStamp(isLeftEntryOutside ? 0 : 1, innerTimeStamp);
-        }
+        const auto oldTimeStamp =
+          {{FACE_METADATA_ACCESSOR}}(faceNumber).getOldTimeStamp(insideEntry);
+        {{FACE_METADATA_ACCESSOR}}(faceNumber).setOldTimeStamp(outsideEntry, oldTimeStamp);
       }
     }
+  }
 """
 
     def __init__(self, solver, guard):
-        AbstractFVActionSet.__init__(self, solver)
+        super().__init__(solver)
         self.guard = guard
-        self.solver_name = solver._name
 
     def get_body_of_operation(self, operation_name):
         result = ""
@@ -76,91 +71,31 @@ class HandleBoundary(AbstractFVActionSet):
             operation_name
             == peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME
         ):
-            self.d = {}
-            self._solver._init_dictionary_with_default_parameters(self.d)
-            self._solver.add_entries_to_text_replacement_dictionary(self.d)
-            self.d["PREDICATE"] = self.guard
-            self.d["FACE_METADATA_ACCESSOR"] = (
+            dictionary = {}
+            self._solver._init_dictionary_with_default_parameters(dictionary)
+            self._solver.add_entries_to_text_replacement_dictionary(dictionary)
+            dictionary["PREDICATE"] = self.guard
+            dictionary["FACE_METADATA_ACCESSOR"] = (
                 "fineGridFaces" + self._solver._face_label.name
             )
             result = jinja2.Template(self.TemplateHandleBoundary_Prologue).render(
-                **self.d
+                **dictionary
             )
             result += jinja2.Template(self.TemplateHandleBoundary_KernelCalls).render(
-                **self.d
+                **dictionary
             )
             result += jinja2.Template(self.TemplateHandleBoundary_Epilogue).render(
-                **self.d
+                **dictionary
             )
-            pass
         return result
 
     def get_includes(self):
-        return f"""
-#include "kernels/{self.solver_name}/HandleBoundary.h"
-""" + AbstractFVActionSet.get_includes(
-            self
+        return (
+            """
+#include "exahype2/fv/HandleBoundary.h"
+"""
+            + super().get_includes()
         )
 
     def get_action_set_name(self):
         return __name__.replace(".py", "").replace(".", "_")
-
-    def generate_kernels(self, namespace, output, dimensions):
-        kernels_namespace = namespace + ["kernels", self._solver._name]
-        kernels_output_path = f"kernels/{self._solver._name}"
-        kernels_templates_prefix = (
-            os.path.dirname(os.path.realpath(__file__)) + "/kernels"
-        )
-
-        d = output.makefile.dictionary()
-        self._solver._init_dictionary_with_default_parameters(d)
-        self._solver.add_entries_to_text_replacement_dictionary(d)
-
-        generated_kernels = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-            headfile_template=kernels_templates_prefix + "/HandleBoundary.template.h",
-            cppfile_template=kernels_templates_prefix + "/HandleBoundary.template.cpp",
-            classname=kernels_output_path + "/HandleBoundary",
-            namespace=kernels_namespace,
-            subdirectory=".",
-            dictionary=d,
-            apply_iteratively=True,
-        )
-        output.add(generated_kernels)
-        output.makefile.add_h_file(
-            kernels_output_path + "/HandleBoundary.h", generated=True
-        )
-        output.makefile.add_cpp_file(
-            kernels_output_path + "/HandleBoundary.cpp", generated=True
-        )
-        if self._solver._fuse_compute_kernels:
-            self.generate_fused_kernels(namespace, output, dimensions)
-
-    def generate_fused_kernels(self, namespace, output, dimensions):
-        kernels_namespace = namespace + ["kernels", self._solver._name]
-        kernels_output_path = f"kernels/{self._solver._name}"
-        kernels_templates_prefix = (
-            os.path.dirname(os.path.realpath(__file__)) + "/kernels"
-        )
-
-        d = output.makefile.dictionary()
-        self._solver._init_dictionary_with_default_parameters(d)
-        self._solver.add_entries_to_text_replacement_dictionary(d)
-
-        generated_kernels = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-            headfile_template=kernels_templates_prefix
-            + "/HandleBoundaryFused.template.h",
-            cppfile_template=kernels_templates_prefix
-            + "/HandleBoundaryFused.template.cpp",
-            classname=kernels_output_path + "/HandleBoundaryFused",
-            namespace=kernels_namespace,
-            subdirectory=".",
-            dictionary=d,
-            apply_iteratively=True,
-        )
-        output.add(generated_kernels)
-        output.makefile.add_h_file(
-            kernels_output_path + "/HandleBoundaryFused.h", generated=True
-        )
-        output.makefile.add_cpp_file(
-            kernels_output_path + "/HandleBoundaryFused.cpp", generated=True, is_gpu_kernel=True
-        )

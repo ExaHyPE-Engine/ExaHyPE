@@ -1,11 +1,5 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#pragma once
-
-#include "tarch/accelerator/Range.h"
-#include "tarch/accelerator/Reducer.h"
-#include "tarch/accelerator/accelerator.h"
-#include "tarch/accelerator/ompt/ParallelFor.cpph"
 
 #if defined(PEANO_WITH_GPU_BACKEND_OMPT)
 

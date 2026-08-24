@@ -24,15 +24,11 @@
 
 {{SOLVER_INCLUDES}}
 
-{% for item in NAMESPACE -%}
-namespace {{ item }} {
-{%- endfor %}
+namespace {{NAMESPACE | join("::")}} {
   class {{CLASSNAME}};
-{% for item in NAMESPACE -%}
-}
-{%- endfor %}
+} // namespace {{NAMESPACE | join("::")}}
 
-class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
+class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
   public:
 {% if USE_VARIABLE_SHORTCUTS is sameas True %}
     /**
@@ -52,7 +48,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
       Suspended
     };
 
-    static std::string toString(SolverState);
+    static std::string toString(const SolverState state);
 
     static constexpr int NumberOfFiniteVolumesPerAxisPerPatch = {{NUMBER_OF_VOLUMES_PER_AXIS}};
     static constexpr int NumberOfUnknowns                     = {{NUMBER_OF_UNKNOWNS}};
@@ -61,11 +57,12 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     {{SOLVER_CONSTANTS}}
 
     {{CLASSNAME}}();
-    ~{{CLASSNAME}}() = default;
+    ~{{CLASSNAME}}() override;
+    {{CLASSNAME}}(const {{CLASSNAME}}& other) = delete;
+    {{CLASSNAME}}({{CLASSNAME}}&& other) = delete;
+    {{CLASSNAME}}& operator=(const {{CLASSNAME}}& other) = delete;
+    {{CLASSNAME}}& operator=({{CLASSNAME}}&& other) = delete;
 
-    /**
-     * Flags the coordinate axes along which the domain is periodic.
-     */
     static std::bitset<DIMENSIONS> PeriodicBC;
 
     double getMinTimeStamp() const override final;
@@ -92,18 +89,17 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
     int getNumberOfDoFs() const override final;
 
-    /**
-     * Update the global solver state, i.e. feed updated global quantities into
-     * the solver.
-     *
-     * @param timeStepSize  Time step size to fold into the global extrema
-     * @param timeStamp     Time stamp to fold into the global extrema
-     * @param minVolumeSize Smallest observed patch size, from which the routine
-     *                      derives the volume size
-     * @param maxVolumeSize Largest observed patch size, from which the routine
-     *                      derives the volume size
-     */
-    void update(double timeStepSize, double timeStamp, double minVolumeSize, double maxVolumeSize);
+    void update(
+      const double timeStepSize,
+      const double timeStamp,
+      const double minPatchSize,
+      const double maxPatchSize
+    );
+    void updateTimeStampAndPatchSize(
+      const double timeStamp,
+      const double minPatchSize,
+      const double maxPatchSize
+    );
 
     SolverState getSolverState() const;
 
@@ -144,6 +140,11 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     double _maxTimeStepSizeThisTimeStep;
 
     tarch::multicore::BooleanSemaphore _semaphore;
-};
 
-{# Empty line here #}
+  private:
+    void updateTimeStampAndPatchSizeWithoutLock(
+      const double timeStamp,
+      const double minPatchSize,
+      const double maxPatchSize
+    );
+};

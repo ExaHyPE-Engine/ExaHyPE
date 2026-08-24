@@ -9,9 +9,7 @@ class BufferSizes(object):
     def __init__(self, dictionary):
         self.d = deepcopy(dictionary)
 
-    def generate_kernels(
-        self, solver, namespace, output, template_prefix, output_path
-    ):
+    def generate_kernels(self, solver, namespace, output, template_prefix, output_path):
         nUnknowns = self.d["NUMBER_OF_UNKNOWNS"]
         nUnknownsPad = self.d["NUMBER_OF_UNKNOWNS_PADDED"]
         nData = self.d["NUMBER_OF_DATA"]
@@ -22,17 +20,17 @@ class BufferSizes(object):
 
         # SPT buffer sizes
         # default values
-        self.d["lQiSize"]     = 0
-        self.d["rhsSize"]     = 0
+        self.d["lQiSize"] = 0
+        self.d["rhsSize"] = 0
         self.d["lQiNextSize"] = 0
-        self.d["lPiSize"]     = 0
-        self.d["lFiSize"]     = 0
-        self.d["lSiSize"]     = 0
-        self.d["lQhiSize"]    = 0
-        self.d["lFhiSize"]    = 0
-        self.d["lShiSize"]    = 0
-        self.d["gradQSize"]   = 0
-        self.d["PSiSize"]     = 0
+        self.d["lPiSize"] = 0
+        self.d["lFiSize"] = 0
+        self.d["lSiSize"] = 0
+        self.d["lQhiSize"] = 0
+        self.d["lFhiSize"] = 0
+        self.d["lShiSize"] = 0
+        self.d["gradQSize"] = 0
+        self.d["PSiSize"] = 0
 
         if self.d["IS_LINEAR"]:
             self.d["lQiSize"] = nDataPad * (nDof**nDim)
@@ -54,10 +52,18 @@ class BufferSizes(object):
             if self.d["USE_FLUX"]:
                 self.d["lFiSize"] = nUnknownsPad * (nDof ** (nDim + 1)) * nDim
                 self.d["lFhiSize"] = nUnknownsPad * (nDof**nDim) * nDim
-            if self.d["USE_SOURCE"] or self.d["USE_NCP"]:
+            if (
+                self.d["USE_SOURCE"]
+                or self.d["USE_DIFFUSIVE_SOURCE"]
+                or self.d["USE_NCP"]
+            ):
                 self.d["lSiSize"] = nUnknownsPad * (nDof ** (nDim + 1))
                 self.d["lShiSize"] = nUnknownsPad * (nDof**nDim)
-            if self.d["USE_NCP"] or self.d["USE_DIFFUSIVE_FLUX"]:
+            if (
+                self.d["USE_NCP"]
+                or self.d["USE_DIFFUSIVE_FLUX"]
+                or self.d["USE_DIFFUSIVE_SOURCE"]
+            ):
                 self.d["gradQSize"] = nUnknownsPad * (nDof**nDim) * nDim
 
         # Face buffer size (Riemann)

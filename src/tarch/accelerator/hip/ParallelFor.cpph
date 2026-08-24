@@ -1,12 +1,5 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#pragma once
-
-#include "tarch/accelerator/Range.h"
-#include "tarch/accelerator/hip/Device.h"
-#include "tarch/accelerator/hip/ErrorCheck.h"
-
-#include <hip/hip_runtime.h>
 
 namespace tarch::accelerator {
   template <typename F>

@@ -8,10 +8,11 @@ import jinja2
 import peano4.output
 import peano4.datamodel
 import peano4.plotter
-import peano4.toolbox.blockstructured
+import peano4.blockstructured
 
 import exahype2.solvers.fv.actionsets
 
+from exahype2.solvers.fv.PatchData import create_patch_and_halo
 from exahype2.solvers import PDETerms
 from exahype2.VariableShortcuts import VariableShortcuts
 from peano4.output.Helper import render_jinja2_template
@@ -21,7 +22,7 @@ from peano4.Logger import log
 
 class FV(object):
     """!
-    Abstract finite volume solver that works on patch-based AMR with a halo layer of one.
+    Abstract finite volume solver for patch-based AMR with a configurable halo.
 
     FV is the base class of all FV solvers. It defines what kind of action sets do
     exist, i.e., what in principle can be done while we run through the grid. It also
@@ -47,9 +48,8 @@ class FV(object):
 
     ## Parallelisation
 
-    Both Q and NewQ come with proper merge routines. All merge guards however are
-    set to "never" by default. If you need some data exchange, you have to activate
-    them manually.
+    Cell patches remain local. The old halo is reconstructed from local data, while
+    the new halo is exchanged after a sweep has stored face data.
 
     ## Control flow between this class and subclasses
 
@@ -114,7 +114,6 @@ class FV(object):
         overlap,
         unknowns,
         auxiliary_variables,
-        fuse_compute_kernels=False,
         baseline_action_set_descend_invocation_order=0,
     ):
         """!
@@ -194,9 +193,6 @@ class FV(object):
         self._postprocess_updated_patch = ""
 
         self._compute_kernel_call = "#error Not yet defined"
-        self._fused_compute_kernel_call = "#error Not yet defined"
-
-        self._fuse_compute_kernels = fuse_compute_kernels
 
         self._initial_conditions_implementation = PDETerms.User_Defined_Implementation
         self._boundary_conditions_implementation = PDETerms.User_Defined_Implementation
@@ -208,19 +204,18 @@ class FV(object):
         self._riemann_solver_implementation = PDETerms.None_Implementation
         self._source_term_implementation = PDETerms.None_Implementation
         self._diffusive_source_term_implementation = PDETerms.None_Implementation
-        self._adjust_solution_implementation = PDETerms.None_Implementation
         self._limiter_implementation = PDETerms.None_Implementation
 
         self._use_stateless_initial_conditions = False
         self._use_stateless_boundary_conditions = False
-        self._use_stateless_refinement_criterion = False  # TODO: Should not be stateless, as we might want to call helper functions such as getMinMeshSize()
+        # Refinement criteria may query mesh-size information from the solver.
+        self._use_stateless_refinement_criterion = False
         self._use_stateless_flux = False
         self._use_stateless_ncp = False
         self._use_stateless_max_eigenvalue = False
         self._use_stateless_riemann_solver = False
         self._use_stateless_source_term = False
         self._use_stateless_diffusive_source_term = False
-        self._use_stateless_adjust_solution = False
         self._use_stateless_limiter = False
 
         self._compute_eigenvalue = True
@@ -257,9 +252,11 @@ Real type of this solver: """
             + str(type(self))
             + """
 
-We assume that you use a domain size of (0,"""
+We use a domain with offset ("""
+            + str(domain_offset)
+            + ") and size ("
             + str(domain_size)
-            + """)^d. Peano 4 will cut this domain equidistantly
+            + """). Peano 4 cuts this domain equidistantly
 and recursively into three parts along each coordinate axis. This yields a spacetree.
 
 ExaHyPE 2 embeds """
@@ -321,51 +318,30 @@ and additional AMR levels is configured by the executable at runtime.
 
         :: Attributes
 
-        _patch: Patch (NxNxN)
+        _patch: Patch (N^d)
           Actual patch data. We use Finite Volumes, so this is
           always the current snapshot, i.e. the valid data at one point.
 
-        _patch_old: Patch (NxNxN)
+        _patch_old: Patch (N^d)
           The snapshot of _patch that the preceding time step produced.
 
-        _patch_overlap_old, _patch_overlap_new: Patch (2xNxN)
-          This is a copy/excerpt from the two adjacent finite volume
-          snapshots plus the old data as a backup. Local time stepping does
-          not need a backup of the whole patch (see _patch); a backup of the
-          face data suffices to interpolate in time.
+        _patch_overlap_old, _patch_overlap_new: Patch (2M x N^(d-1))
+          Each face stores M halo layers from both adjacent patches. The old
+          and new snapshots support interpolation in time.
         """
 
-        self._patch = peano4.datamodel.Patch(
-            (self._patch_size, self._patch_size, self._patch_size),
+        (
+            self._patch,
+            self._patch_old,
+            self._patch_overlap_old,
+            self._patch_overlap_new,
+        ) = create_patch_and_halo(
+            self.current_unknown_identifier(),
+            self.previous_unknown_identifier(),
+            self._patch_size,
+            self._overlap,
             self._variable_shortcuts.unknowns + self._variable_shortcuts.auxiliary_variables,
-            self.current_unknown_identifier(), self._storage_precision
-        )
-        self._patch_old = peano4.datamodel.Patch(
-            (self._patch_size, self._patch_size, self._patch_size),
-            self._variable_shortcuts.unknowns + self._variable_shortcuts.auxiliary_variables,
-            self.previous_unknown_identifier(), self._storage_precision
-        )
-        self._patch_overlap_old = peano4.datamodel.Patch(
-            (2 * self._overlap, self._patch_size, self._patch_size),
-            self._variable_shortcuts.unknowns + self._variable_shortcuts.auxiliary_variables,
-            self.previous_unknown_identifier(), self._storage_precision
-        )
-        self._patch_overlap_new = peano4.datamodel.Patch(
-            (2 * self._overlap, self._patch_size, self._patch_size),
-            self._variable_shortcuts.unknowns + self._variable_shortcuts.auxiliary_variables,
-            self.current_unknown_identifier(), self._storage_precision
-        )
-        self._patch.generator = peano4.datamodel.PatchToData(
-            self._patch, self._storage_precision
-        )
-        self._patch_old.generator = peano4.datamodel.PatchToData(
-            self._patch_old, self._storage_precision
-        )
-        self._patch_overlap_old.generator = peano4.datamodel.PatchToData(
-            self._patch_overlap_old, self._storage_precision
-        )
-        self._patch_overlap_new.generator = peano4.datamodel.PatchToData(
-            self._patch_overlap_new, self._storage_precision
+            self._storage_precision,
         )
 
         self._patch_overlap_old.generator.includes += """
@@ -377,19 +353,9 @@ and additional AMR levels is configured by the executable at runtime.
 #include "repositories/SolverRepository.h"
 """
 
-        # Cell data is not sent/received
-        self._patch.generator.send_condition = "false"
-        self._patch.generator.receive_and_merge_condition = "false"
-        self._patch.generator.can_receive = "false"
-        self._patch.generator.can_send = "false"
-
-        self._patch_old.generator.send_condition = "false"
-        self._patch_old.generator.receive_and_merge_condition = "false"
-        self._patch_old.generator.can_receive = "false"
-        self._patch_old.generator.can_send = "false"
-
-        # The exchange view must copy the sender's persistent overlap: a move-steal
-        # merge consumes the source buffer, which is order-dependent and breaks mirror
+        # The old halo is filled locally, so only the new halo is exchanged. The
+        # exchange view copies the sender's persistent overlap: a move-steal merge
+        # consumes the source buffer, which is order-dependent and breaks mirror
         # symmetry under dynamic AMR. The toolbox element-wise merge writes only the
         # halo layers the sender owns.
         self._patch_overlap_old.generator.send_condition = "false"
@@ -398,7 +364,7 @@ and additional AMR levels is configured by the executable at runtime.
         self._patch_overlap_old.generator.can_send = "false"
         self._patch_overlap_old.generator.use_copy_for_exchange = "true"
         self._patch_overlap_old.generator.merge_method_definition = (
-            peano4.toolbox.blockstructured.get_face_merge_implementation(
+            peano4.blockstructured.get_face_merge_implementation(
                 self._patch_overlap_old
             )
         )
@@ -409,22 +375,16 @@ and additional AMR levels is configured by the executable at runtime.
         self._patch_overlap_new.generator.can_send = self._store_face_data_default_guard()
         self._patch_overlap_new.generator.use_copy_for_exchange = "true"
         self._patch_overlap_new.generator.merge_method_definition = (
-            peano4.toolbox.blockstructured.get_face_merge_implementation(
+            peano4.blockstructured.get_face_merge_implementation(
                 self._patch_overlap_new
             )
         )
 
         self._patch.generator.includes += """
-#include "../repositories/SolverRepository.h"
+#include "repositories/SolverRepository.h"
 """
         self._patch_old.generator.includes += """
-#include "../repositories/SolverRepository.h"
-"""
-        self._patch_overlap_old.generator.includes += """
-#include "../repositories/SolverRepository.h"
-"""
-        self._patch_overlap_new.generator.includes += """
-#include "../repositories/SolverRepository.h"
+#include "repositories/SolverRepository.h"
 """
 
         self._cell_label = exahype2.grid.create_cell_label(self._name)
@@ -473,6 +433,7 @@ and additional AMR levels is configured by the executable at runtime.
             build_up_new_refinement_instructions=True,
             implement_previous_refinement_instructions=True,
             called_by_grid_construction=True,
+            skip_after_topology_change=False,
         )
         self._action_set_AMR = exahype2.solvers.fv.actionsets.RefinementCriterion(
             solver=self,
@@ -483,6 +444,7 @@ and additional AMR levels is configured by the executable at runtime.
             # observer, whose DynamicAMRTransfer delivers the committed events.
             implement_previous_refinement_instructions=False,
             called_by_grid_construction=False,
+            skip_after_topology_change=True,
         )
         # Re-evaluating the criterion within the realise sweeps lets one round of
         # dedicated mesh-refinement sweeps climb every level the data justifies.
@@ -498,6 +460,7 @@ and additional AMR levels is configured by the executable at runtime.
             build_up_new_refinement_instructions=True,
             implement_previous_refinement_instructions=False,
             called_by_grid_construction=False,
+            skip_after_topology_change=False,
         )
         self._action_set_handle_boundary = (
             exahype2.solvers.fv.actionsets.HandleBoundary(
@@ -521,13 +484,12 @@ and additional AMR levels is configured by the executable at runtime.
             solver=self,
         )
 
-        # This one is different: it is the hook-in point for other solvers, so we create it
-        # only once if it does not exist.
-        if self._action_set_postprocess_solution == None:
+        # Preserve user-configured hooks when action sets are recreated.
+        if self._action_set_postprocess_solution is None:
             self._action_set_postprocess_solution = (
                 exahype2.solvers.fv.actionsets.EmptyPostprocessSolution(self)
             )
-        if self._action_set_preprocess_solution == None:
+        if self._action_set_preprocess_solution is None:
             self._action_set_preprocess_solution = (
                 exahype2.solvers.fv.actionsets.EmptyPreprocessSolution(self)
             )
@@ -548,7 +510,7 @@ and additional AMR levels is configured by the executable at runtime.
         )
         self._action_set_project_patch_onto_faces.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order + 1
-        )  # touch cell last time, i.e. leave cell
+        )
         self._action_set_roll_over_updates.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order
         )
@@ -560,7 +522,7 @@ and additional AMR levels is configured by the executable at runtime.
         )
         self._action_set_postprocess_solution.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order
-        )  # touch cell last time, i.e. leave cell
+        )
         self._action_set_preprocess_solution.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order
         )
@@ -574,20 +536,20 @@ and additional AMR levels is configured by the executable at runtime.
         keeping the topology criterion but toggling data exchange depending on
         the solver phase.
         """
-        return "not marker.willBeRefined() and repositories::{}.getSolverState()!={}::SolverState::GridConstruction".format(
-                   self.get_name_of_global_instance(),
-                   self._name
-               )
+        return (
+            "not marker.willBeRefined() and repositories::{}.getSolverState()"
+            "!={}::SolverState::GridConstruction"
+        ).format(self.get_name_of_global_instance(), self._name)
 
     def _provide_face_data_to_compute_kernels_default_guard(self):
         return (
-                        "not marker.willBeRefined() "
-                        + "and repositories::"
-                        + self.get_name_of_global_instance()
-                        + ".getSolverState()!="
-                        + self._name
-                        + "::SolverState::GridConstruction"
-                )
+            "not marker.willBeRefined() "
+            + "and repositories::"
+            + self.get_name_of_global_instance()
+            + ".getSolverState()!="
+            + self._name
+            + "::SolverState::GridConstruction"
+        )
 
     def _store_cell_data_default_guard(self):
         """!
@@ -705,15 +667,15 @@ and additional AMR levels is configured by the executable at runtime.
         use_cell and use_face commands. This operation is generic from
         ExaHyPE's point of view, i.e. it serves all grid sweep types.
 
-        The cell label has to come first, as some other data might make their
-        load/store decisions depend on the label.
+        Cell and face labels come before the data whose load/store decisions
+        depend on them.
         """
+        step.use_cell(self._cell_label)
         step.use_cell(self._patch)
         step.use_cell(self._patch_old)
-        step.use_cell(self._cell_label)
+        step.use_face(self._face_label)
         step.use_face(self._patch_overlap_old)
         step.use_face(self._patch_overlap_new)
-        step.use_face(self._face_label)
         for tracer_set in self._tracer_particle_sets:
             step.use_vertex(tracer_set)
 
@@ -885,7 +847,7 @@ and additional AMR levels is configured by the executable at runtime.
         self._namespace = namespace
 
         if (
-                self._riemann_solver_implementation == PDETerms.None_Implementation
+            self._riemann_solver_implementation == PDETerms.None_Implementation
             and self._max_eigenvalue_implementation == PDETerms.None_Implementation
         ):
             raise AssertionError(
@@ -893,7 +855,6 @@ and additional AMR levels is configured by the executable at runtime.
             )
 
         self._generate_kernels(output)
-        self._action_set_handle_boundary.generate_kernels(namespace, output, dimensions)
         self._action_set_project_patch_onto_faces.generate_kernels(namespace, output, dimensions)
 
         # Assemble the template prefix in a local: mutating the attribute would
@@ -954,10 +915,10 @@ and additional AMR levels is configured by the executable at runtime.
         self._solver_constants += datastring + "\n"
 
     def set_solver_precisions(self, storage_precision="double", compute_precision="double"):
-      self._storage_precision = storage_precision
-      self._compute_precision = compute_precision
-      self.set_implementation()
-      self.create_data_structures()
+        self._storage_precision = storage_precision
+        self._compute_precision = compute_precision
+        self.set_implementation()
+        self.create_data_structures()
 
     def _init_dictionary_with_default_parameters(self, d):
         def render_template(template):
@@ -1006,8 +967,6 @@ and additional AMR levels is configured by the executable at runtime.
         d["RIEMANN_SOLVER_IMPLEMENTATION"] = self._riemann_solver_implementation
         d["SOURCE_TERM_IMPLEMENTATION"] = self._source_term_implementation
         d["DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION"] = self._diffusive_source_term_implementation
-        d["ADJUST_SOLUTION_IMPLEMENTATION"] = self._adjust_solution_implementation
-        d["LIMITER_IMPLEMENTATION"] = self._limiter_implementation
 
         d["USE_FLUX"]                 = self._flux_implementation != PDETerms.None_Implementation
         d["USE_NCP"]                  = self._ncp_implementation != PDETerms.None_Implementation
@@ -1015,7 +974,6 @@ and additional AMR levels is configured by the executable at runtime.
         d["USE_RIEMANN_SOLVER"]       = self._riemann_solver_implementation != PDETerms.None_Implementation
         d["USE_SOURCE"]               = self._source_term_implementation != PDETerms.None_Implementation
         d["USE_DIFFUSIVE_SOURCE"]     = self._diffusive_source_term_implementation != PDETerms.None_Implementation
-        d["USE_ADJUST_SOLUTION"]      = self._adjust_solution_implementation != PDETerms.None_Implementation
 
         d["STATELESS_INITIAL_CONDITIONS"] = self._use_stateless_initial_conditions
         d["STATELESS_BOUNDARY_CONDITIONS"] = self._use_stateless_boundary_conditions
@@ -1026,11 +984,8 @@ and additional AMR levels is configured by the executable at runtime.
         d["STATELESS_RIEMANN_SOLVER"] = self._use_stateless_riemann_solver
         d["STATELESS_SOURCE_TERM"] = self._use_stateless_source_term
         d["STATELESS_DIFFUSIVE_SOURCE_TERM"] = self._use_stateless_diffusive_source_term
-        d["STATELESS_ADJUST_SOLUTION"] = self._use_stateless_adjust_solution
-        d["STATELESS_LIMITER"] = self._use_stateless_limiter
 
         d["COMPUTE_KERNEL_CALL"] = render_template(self._compute_kernel_call)
-        d["FUSED_COMPUTE_KERNEL_CALL"] = render_template(self._fused_compute_kernel_call)
 
         d["ABSTRACT_SOLVER_USER_DECLARATIONS"] = render_template(
             self._abstract_solver_user_declarations
@@ -1088,7 +1043,7 @@ and additional AMR levels is configured by the executable at runtime.
         plot_descend_invocation_order_within_action_sets=65536,
     ):
         self._tracer_names.append(name)
-        particle = peano4.toolbox.particles.Particle(name)
+        particle = peano4.particles.Particle(name)
         particle.association = peano4.datamodel.DoFAssociation.Global
         self._plot_descend_invocation_order_within_action_sets = plot_descend_invocation_order_within_action_sets
         self._sort_descend_invocation_order_within_action_sets = sort_descend_invocation_order_within_action_sets
@@ -1122,13 +1077,13 @@ and additional AMR levels is configured by the executable at runtime.
         particle.add_attribute(particle_number)
         self._particle_number.append(particle_number)
 
-        particles = peano4.toolbox.particles.ParticleSet(particle)
+        particles = peano4.particles.ParticleSet(particle)
         particles.association = peano4.datamodel.DoFAssociation.Vertex
 
-        updateParticleGridAssociation_LiftDrop = peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop(particles)
+        updateParticleGridAssociation_LiftDrop = peano4.particles.UpdateParticleGridAssociation_LiftDrop(particles)
         updateParticleGridAssociation_LiftDrop.descend_invocation_order = self._sort_descend_invocation_order_within_action_sets
         self._update_particle_association_action_sets.append(updateParticleGridAssociation_LiftDrop)
-        parallel_state_action_set = peano4.toolbox.particles.api.UpdateParallelState(particles)
+        parallel_state_action_set = peano4.particles.UpdateParallelState(particles)
         parallel_state_action_set.descend_invocation_order = self._sort_descend_invocation_order_within_action_sets
         self._update_particle_parallel_state_action_sets.append(parallel_state_action_set)
 
@@ -1173,37 +1128,13 @@ and additional AMR levels is configured by the executable at runtime.
     @preprocess_reconstructed_patch.setter
     def preprocess_reconstructed_patch(self, kernel):
         """!
-        Set a new processing kernel.
+        Set C++ code that runs immediately before the finite-volume update.
 
-        Before the update, the numerical solver takes the solution
-        including all auxiliary variables and copies it into another array which
-        is called reconstructedPatch (in FD4, this field is called oldQWithHalo).
-        This array is bigger than the actual patch data, as it also holds the
-        halo. Once the solution is copied over, the kernel writes in the halo
-        data using data from the faces. This reconstructed object is now passed
-        into the compute kernel, which derives new values for all evolution
-        variables. That is, the compute kernels' output does not hold the auxiliary
-        variables anymore, as they are not subject to the PDE. The new variables
-        are eventually written back into the real data, where they replace the
-        old quantities (the auxiliary variables in there remain untouched).
-        After the compute kernel has terminated, the reconstructed data including
-        the halo is thrown away.
-
-        ## Auxiliary variables
-
-        If you alter the auxiliary variables (material parameters) in the patch
-        preparation, this is fine, but the change will not be committed
-        into the real data. It is only there temporarily while the patch
-        will continue to hold the original material parameters.
-
-        You can alter the patch data Q in the preprocessing. If that
-        data are evolution (PDE) parameters, these changes however will
-        be overwritten by the compute kernel. If you alter auxiliary variables
-        within the preprocessing within the patch (Q), then this is fine, but the
-        changes will not be visible to the reconstructed patch immediately. They
-        will be visible there in the next time step. So you might be well-advised
-        to alter the auxiliary variables in both the patch data and the
-        reconstructed data.
+        The snippet can access QIn, the previous cell snapshot, and QOut, the
+        current output snapshot. Both patches exclude the halo. It can also use
+        marker, timeStamp, and timeStepSize. The update kernel may overwrite
+        changes to QOut. Face data are assembled after this hook and are not
+        available here.
         """
         self._preprocess_reconstructed_patch = kernel
         self.create_data_structures()
@@ -1220,54 +1151,12 @@ and additional AMR levels is configured by the executable at runtime.
     @postprocess_updated_patch.setter
     def postprocess_updated_patch(self, kernel):
         """
-        Define a postprocessing routine over the data.
+        Set C++ code that runs immediately after the finite-volume update.
 
-        The postprocessing kernel often looks similar to the following code:
-
-             {
-               int index = 0;
-               peano4::dForEach({{NUMBER_OF_VOLUMES_PER_AXIS}}, [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
-                 enforceCCZ4constraints( newQ+index );
-                 index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-               });
-             }
-
-         but often, it is nicer to use one of the pre-defined kernels in ExaHyPE
-         for postprocessing:
-
-             ::exahype2::fv::mapInnerNeighbourVoxelAlongBoundayOntoAuxiliaryVariable(
-               newQ,
-               {{NUMBER_OF_VOLUMES_PER_AXIS}},
-               {{NUMBER_OF_UNKNOWNS}},
-               {{NUMBER_OF_AUXILIARY_VARIABLES}}
-             );
-
-        As the examples above show, you can use the normal ExaHyPE constants
-        within your injected code. Furthermore, you have the following two variables
-        available:
-
-        - newQ This is a pointer to the whole data structure (one large
-            array). The patch is not supplemented by a halo layer.
-        - marker An instance of the CellMarker which identifies the cell.
-
-        In ExaHyPE's finite volume solvers, there are two different ways to inject
-        postprocessing: you can either define your own postprocessing step by setting
-        _action_set_postprocess_solution, or you can use this setter to inject some
-        source code. The two options are not equivalent: the snippet injected here is
-        executed directly after the kernel update. Consequently, it also runs on a GPU
-        if GPUs are employed, or it runs directly after a task has been launched to
-        update a cell.
-
-        The postprocessing action set is launched when the cell update is committed,
-        i.e., after the cell task has terminated or a task result came back from the
-        GPU. Consequently, the snippet injected here might not have access to global
-        variables (if it executes on a GPU) while the postprocessing action set
-        always has access to the global program state.
-
-        ## Attributes
-
-        kernel: String
-          C++ code that holds the postprocessing kernel
+        The snippet can access QIn, QOut, faceQIn, faceQOut, marker, timeStamp,
+        and timeStepSize. QIn and QOut exclude the halo; the face arrays contain
+        the old and new halo snapshots. This hook is part of the cell update,
+        while _action_set_postprocess_solution runs as a separate action set.
         """
         self._postprocess_updated_patch = kernel
         self.create_data_structures()
@@ -1290,5 +1179,5 @@ and additional AMR levels is configured by the executable at runtime.
         self.create_action_sets()
 
     @abstractmethod
-    def _generate_kernels(self, namespace, output, dimensions):
+    def _generate_kernels(self, output):
         pass

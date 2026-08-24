@@ -93,6 +93,7 @@ exahype2::RefinementControlService& exahype2::RefinementControlService::getInsta
 
 exahype2::RefinementControlService::RefinementControlService() :
   _topologyChangedSinceLastTimeStep(false),
+  _lastCriterionStepWasSuppressed(false),
   _domainOffset(0.0),
   _numberOfSolvers(1) {
   // One accumulation buffer per thread so merge() needs no lock. The buffers are sized once
@@ -174,7 +175,10 @@ void exahype2::RefinementControlService::finishStep(int numberOfDeferredTopology
  */
 void exahype2::RefinementControlService::finishRefinementCriterionStep() {
   // The completed traversal is a time step: its roll-over has compensated any
-  // Updated entries the preceding mesh-update sweeps cleared.
+  // Updated entries the preceding mesh-update sweeps cleared. Whether the
+  // criterion was silenced during it outlives the flag, because the empty set it
+  // then produced must not be mistaken for a settled mesh.
+  _lastCriterionStepWasSuppressed   = _topologyChangedSinceLastTimeStep;
   _topologyChangedSinceLastTimeStep = false;
   finishStep(true, false);
 }
@@ -508,6 +512,17 @@ bool exahype2::RefinementControlService::hasGridControlEvents() const { return n
  */
 bool exahype2::RefinementControlService::hasRealisedTopologyChangesSinceLastTimeStep() const {
   return _topologyChangedSinceLastTimeStep;
+}
+
+/**
+ * Did the criterion traversal that just finished collect nothing because the mesh had changed?
+ *
+ * A caller that keeps updating the mesh until the criterion asks for nothing has to
+ * treat such a traversal as undecided. Reading its empty request set as agreement
+ * ends the drain one round early and leaves the mesh coarser than the criterion wants.
+ */
+bool exahype2::RefinementControlService::lastCriterionStepWasSuppressed() const {
+  return _lastCriterionStepWasSuppressed;
 }
 
 void exahype2::RefinementControlService::setDomainOffset(const tarch::la::Vector<DIMENSIONS, double>& domainOffset) {

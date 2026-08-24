@@ -8,8 +8,8 @@
   "loadBalancingQuality": 0.9,
   "maxNumberOfTreesPerRank": -1,
   "targetDevice": 0,
-  "bathymetryFile": "bathymetry/chile_gebco_usgs_2000m_bath.nc",
-  "displacementFile": "bathymetry/chile_gebco_usgs_2000m_displ.nc",
+  "bathymetryFile": "bathymetry/ChileBathymetry.nc",
+  "displacementFile": "bathymetry/ChileDisplacement.nc",
   "bathymetrySize": [
     7000000.0,
     4000000.0

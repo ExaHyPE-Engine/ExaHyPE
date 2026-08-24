@@ -303,6 +303,8 @@ the ExaHyPE release paper:
             f"{repository_namespace}::mayPlot(); }};\n"
             "  result.hasPendingMeshUpdates   = []() { return "
             "::exahype2::RefinementControlService::getInstance().hasGridControlEvents(); };\n"
+            "  result.hasUndecidedRefinementCriterion = []() { return "
+            "::exahype2::RefinementControlService::getInstance().lastCriterionStepWasSuppressed(); };\n"
             f"  result.getMinTimeStamp         = []() {{ return "
             f"{repository_namespace}::getMinTimeStamp(); }};\n"
             f"  result.getMaxTimeStamp         = []() {{ return "
@@ -358,8 +360,7 @@ the ExaHyPE release paper:
         sort_descend_invocation_order_within_action_sets=-1,
         plot_descend_invocation_order_within_action_sets=65536,
     ):
-        del plot_descend_invocation_order_within_action_sets
-        particle = peano4.toolbox.particles.Particle(name)
+        particle = peano4.particles.Particle(name)
         if isinstance(particle_attributes, dict):
             self._particle_unknowns = sum(particle_attributes["unknowns"].values())
             self._particle_variable_names += list(
@@ -394,7 +395,7 @@ the ExaHyPE release paper:
         particle.add_attribute(particle_number)
 
         self.datamodel.add_global_object(particle)
-        particle_set = peano4.toolbox.particles.ParticleSet(particle)
+        particle_set = peano4.particles.ParticleSet(particle)
         self.datamodel.add_vertex(particle_set)
 
         self.plot_solution.use_vertex(particle_set)
@@ -404,22 +405,18 @@ the ExaHyPE release paper:
         self.load_balancing.use_vertex(particle_set)
 
         self.init_grid.add_action_set(
-            peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop(
-                particle_set
-            )
+            peano4.particles.UpdateParticleGridAssociation_LiftDrop(particle_set)
         )
 
         update_particle_association_action_set = (
-            peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop(
-                particle_set
-            )
+            peano4.particles.UpdateParticleGridAssociation_LiftDrop(particle_set)
         )
         update_particle_association_action_set.descend_invocation_order = (
             sort_descend_invocation_order_within_action_sets
         )
 
         update_particle_parallel_state_action_set = (
-            peano4.toolbox.particles.api.UpdateParallelState(particle_set)
+            peano4.particles.UpdateParallelState(particle_set)
         )
         update_particle_parallel_state_action_set.descend_invocation_order = (
             sort_descend_invocation_order_within_action_sets
@@ -443,7 +440,6 @@ the ExaHyPE release paper:
             self.namespace,
             ".",
             {
-                "NUMBER_OF_VARIABLES": len(self._particle_variable_names),
                 "VARIABLE_NAMES": self._particle_variable_names,
                 "VARIABLE_POSITIONS": self._particle_variable_positions,
                 "SOLVER_NAME": name,
@@ -487,7 +483,18 @@ the ExaHyPE release paper:
         The configured Peano project is generated and built once these ExaHyPE
         components are in place.
         """
-        # A generated solver set cannot accept incremental additions.
+        for solver in self._solvers:
+            configuration_validator = getattr(
+                solver, "validate_project_configuration", None
+            )
+            if configuration_validator is not None:
+                configuration_validator(
+                    self._min_grid_levels,
+                    self._max_grid_levels,
+                )
+
+        # Generating freezes the declared solver set: the next add_solver call
+        # (a re-executed configuration) starts a fresh declaration round.
         self._solver_set_generated = True
 
         # Build settings such as the SIMD width affect generated solver code.

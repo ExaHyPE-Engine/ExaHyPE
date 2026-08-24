@@ -8,10 +8,14 @@ namespace tarch::plotter {
   class PVDTimeSeriesWriter;
 } // namespace tarch::plotter
 
-class tarch::plotter::PVDTimeSeriesWriter final: public TimeSeriesWriter {
+class tarch::plotter::PVDTimeSeriesWriter final : public TimeSeriesWriter {
 public:
-  PVDTimeSeriesWriter()           = default;
-  ~PVDTimeSeriesWriter() override = default;
+  PVDTimeSeriesWriter()                                      = default;
+  PVDTimeSeriesWriter(const PVDTimeSeriesWriter&)            = delete;
+  PVDTimeSeriesWriter(PVDTimeSeriesWriter&&)                 = delete;
+  ~PVDTimeSeriesWriter() override                            = default;
+  PVDTimeSeriesWriter& operator=(const PVDTimeSeriesWriter&) = delete;
+  PVDTimeSeriesWriter& operator=(PVDTimeSeriesWriter&&)      = delete;
 
   void writeTimeSeriesMetaFile(const std::string& outputDirectory, const std::string& filename) const override;
 };

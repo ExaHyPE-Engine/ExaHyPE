@@ -9,6 +9,6 @@
   "loadBalancingQuality": 0.9,
   "maxNumberOfTreesPerRank": -1,
   "targetDevice": 0,
-  "bathymetryFile": "bathymetry/Tafjord_5m_EPSG25832.nc",
-  "displacementFile": "bathymetry/ini_3.0Mm3_5m_EPSG25832.nc"
+  "bathymetryFile": "bathymetry/TafjordBathymetry.nc",
+  "displacementFile": "bathymetry/TafjordDisplacement.nc"
 }

@@ -2,7 +2,9 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "tarch/accelerator/accelerator.h"
 #include "tarch/multicore/BooleanSemaphore.h"
+#include "tarch/multicore/Lock.h"
 
 namespace toolbox {
   namespace particles {
@@ -10,7 +12,7 @@ namespace toolbox {
       template <class T>
       class GlobalContinuousMemoryPool;
     } // namespace memorypool
-  }   // namespace particles
+  } // namespace particles
 } // namespace toolbox
 
 /**

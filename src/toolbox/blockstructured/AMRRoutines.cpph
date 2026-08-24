@@ -52,8 +52,9 @@ INLINE_METHOD void toolbox::blockstructured::interpolateHaloLayer(
       const auto iPos = iStride * ((i + numberOfDofsPerAxis * marker.getRelativePositionWithinFatherFace()[0]) / 3);
 
       for (int u = 0; u < numberOfUnknownsPlusAuxiliaryVariables; u++) {
-        fineGridFaceValues[(side * sideStride + i * iStride + j * jStride) * numberOfUnknownsPlusAuxiliaryVariables + u] =
-          coarseGridFaceValues[(side * sideStride + iPos + jPos) * numberOfUnknownsPlusAuxiliaryVariables + u];
+        fineGridFaceValues
+          [(side * sideStride + i * iStride + j * jStride) * numberOfUnknownsPlusAuxiliaryVariables + u] =
+            coarseGridFaceValues[(side * sideStride + iPos + jPos) * numberOfUnknownsPlusAuxiliaryVariables + u];
       }
     }
   }
@@ -92,7 +93,14 @@ INLINE_METHOD void toolbox::blockstructured::interpolateHaloLayerWithTangentialS
 ) {
   static_assert(std::is_floating_point_v<T>, "The tangential slope requires a floating-point type");
 
-  interpolateHaloLayer(marker, coarseGridFaceValues, fineGridFaceValues, side, numberOfDofsPerAxis, numberOfUnknownsPlusAuxiliaryVariables);
+  interpolateHaloLayer(
+    marker,
+    coarseGridFaceValues,
+    fineGridFaceValues,
+    side,
+    numberOfDofsPerAxis,
+    numberOfUnknownsPlusAuxiliaryVariables
+  );
 
   const auto normal = marker.getSelectedFaceNumber() % DIMENSIONS;
 
@@ -166,7 +174,8 @@ INLINE_METHOD void toolbox::blockstructured::interpolateHaloLayerWithTangentialS
 #else
         const T correction = static_cast<T>(iPos - 1) * iSlope;
 #endif
-        fineGridFaceValues[(side * sideStride + i * iStride + j * jStride) * numberOfUnknownsPlusAuxiliaryVariables + u] += correction;
+        fineGridFaceValues
+          [(side * sideStride + i * iStride + j * jStride) * numberOfUnknownsPlusAuxiliaryVariables + u] += correction;
       }
     }
   }
@@ -306,8 +315,9 @@ INLINE_METHOD void toolbox::blockstructured::restrictHaloLayer(
       const auto iPos = iStride * ((i + numberOfDofsPerAxis * marker.getRelativePositionWithinFatherFace()[0]) / 3);
 
       for (int u = 0; u < numberOfUnknownsPlusAuxiliaryVariables; u++) {
-        coarseGridFaceValues[(side * sideStride + iPos + jPos) * numberOfUnknownsPlusAuxiliaryVariables + u] +=
-          Scale * fineGridFaceValues[(side * sideStride + i * iStride + j * jStride) * numberOfUnknownsPlusAuxiliaryVariables + u];
+        coarseGridFaceValues[(side * sideStride + iPos + jPos) * numberOfUnknownsPlusAuxiliaryVariables + u] += Scale
+          * fineGridFaceValues[(side * sideStride + i * iStride + j * jStride) * numberOfUnknownsPlusAuxiliaryVariables
+                               + u];
       }
     }
   }
@@ -336,8 +346,10 @@ INLINE_METHOD void toolbox::blockstructured::interpolateCell(
       for (int x = 0; x < numberOfDofsPerAxis; x++) {
         const auto xPos = (x + numberOfDofsPerAxis * marker.getRelativePositionWithinFatherCell()[0]) / 3;
         for (int u = 0; u < numberOfUnknownsPlusAuxiliaryVariables; u++) {
-          fineGridValues[(z * numberOfDofsPerAxis * numberOfDofsPerAxis + y * numberOfDofsPerAxis + x) * numberOfUnknownsPlusAuxiliaryVariables + u] =
-            coarseGridValues[(zPos + yPos + xPos) * numberOfUnknownsPlusAuxiliaryVariables + u];
+          fineGridValues
+            [(z * numberOfDofsPerAxis * numberOfDofsPerAxis + y * numberOfDofsPerAxis + x)
+               * numberOfUnknownsPlusAuxiliaryVariables
+             + u] = coarseGridValues[(zPos + yPos + xPos) * numberOfUnknownsPlusAuxiliaryVariables + u];
         }
       }
     }
@@ -375,7 +387,8 @@ INLINE_METHOD void toolbox::blockstructured::interpolateCell(
           [subcellIndex(d) * numberOfDofsPerAxis * numberOfDofsPerAxis + fineNode(d) * numberOfDofsPerAxis
            + coarseNode(d)];
       }
-      const int coarseIndex = peano4::dLinearised(coarseNode, numberOfDofsPerAxis) * numberOfUnknownsPlusAuxiliaryVariables;
+      const int coarseIndex =
+        peano4::dLinearised(coarseNode, numberOfDofsPerAxis) * numberOfUnknownsPlusAuxiliaryVariables;
       // The matrix holds doubles whatever the patch is stored in, so the product forms in
       // double and only the stored result narrows back to T.
       for (int unknown = 0; unknown < numberOfUnknownsPlusAuxiliaryVariables; unknown++) {
@@ -420,7 +433,8 @@ INLINE_METHOD void toolbox::blockstructured::restrictCell(
         const auto xPos = (x + numberOfDofsPerAxis * marker.getRelativePositionWithinFatherCell()[0]) / 3;
         for (int u = 0; u < numberOfUnknownsPlusAuxiliaryVariables; u++) {
           coarseGridValues[(zPos + yPos + xPos) * numberOfUnknownsPlusAuxiliaryVariables + u] += Scale
-            * fineGridValues[(z * numberOfDofsPerAxis * numberOfDofsPerAxis + y * numberOfDofsPerAxis + x) * numberOfUnknownsPlusAuxiliaryVariables
+            * fineGridValues[(z * numberOfDofsPerAxis * numberOfDofsPerAxis + y * numberOfDofsPerAxis + x)
+                               * numberOfUnknownsPlusAuxiliaryVariables
                              + u];
         }
       }
@@ -453,7 +467,8 @@ INLINE_METHOD void toolbox::blockstructured::restrictCell(
   static_assert(std::is_floating_point_v<T>, "The mass-lumped projection requires a floating-point type");
   const auto subcellIndex = marker.getRelativePositionWithinFatherCell();
   peano4::dForEach(numberOfDofsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& coarseNode) {
-    const int coarseIndex = peano4::dLinearised(coarseNode, numberOfDofsPerAxis) * numberOfUnknownsPlusAuxiliaryVariables;
+    const int coarseIndex =
+      peano4::dLinearised(coarseNode, numberOfDofsPerAxis) * numberOfUnknownsPlusAuxiliaryVariables;
     peano4::dForEach(numberOfDofsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& fineNode) {
       double weight = 1.0;
       for (int d = 0; d < DIMENSIONS; d++) {
@@ -472,4 +487,316 @@ INLINE_METHOD void toolbox::blockstructured::restrictCell(
       }
     });
   });
+}
+
+/**
+ * Multiplies three factors in ascending value order.
+ *
+ * A grid symmetry that swaps axes permutes the per-axis factors of a
+ * tensor-product weight; multiplying them in a value-canonical order keeps the
+ * rounded product identical for every permutation.
+ */
+INLINE_METHOD double toolbox::blockstructured::orderInvariantProduct(
+  double firstFactor,
+  double secondFactor,
+  double thirdFactor
+) {
+  auto low    = firstFactor;
+  auto middle = secondFactor;
+  auto high   = thirdFactor;
+  if (low > middle) {
+    std::swap(low, middle);
+  }
+  if (middle > high) {
+    std::swap(middle, high);
+  }
+  if (low > middle) {
+    std::swap(low, middle);
+  }
+  return (low * middle) * high;
+}
+
+/**
+ * Applies a separable operator through symmetry-invariant sums.
+ *
+ * Every target degree of freedom contracts the whole source patch against the
+ * tensor product of the per-axis matrix entries, with entry
+ * matrixPerAxis[axis][source * numberOfTargetDofsPerAxis + target]. The per-axis
+ * factors combine through a value-canonical product and the terms fold through
+ * an exact accumulator, so a reflection or axis swap of the patch maps the
+ * computation onto itself term by term: mirrored data yields the bitwise
+ * mirrored result. The matrices must themselves be mirror symmetric to the last
+ * bit for that to hold.
+ */
+template <typename T>
+INLINE_METHOD void toolbox::blockstructured::applyTensorProductOrderInvariant(
+  T* NOALIAS                   targetValues,
+  const T* NOALIAS             sourceValues,
+  const double* const* NOALIAS matrixPerAxis,
+  const int                    numberOfSourceDofsPerAxis,
+  const int                    numberOfTargetDofsPerAxis,
+  const int                    numberOfUnknownsPlusAuxiliaryVariables
+) {
+  tarch::la::ExactAccumulator accumulator;
+  peano4::dForEach(numberOfTargetDofsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& targetDof) {
+    const int targetIndex =
+      peano4::dLinearised(targetDof, numberOfTargetDofsPerAxis) * numberOfUnknownsPlusAuxiliaryVariables;
+    for (int unknown = 0; unknown < numberOfUnknownsPlusAuxiliaryVariables; unknown++) {
+      accumulator.clear();
+      peano4::dForEach(numberOfSourceDofsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& sourceDof) {
+#if DIMENSIONS == 2
+        const double weight = matrixPerAxis[0][sourceDof(0) * numberOfTargetDofsPerAxis + targetDof(0)]
+          * matrixPerAxis[1][sourceDof(1) * numberOfTargetDofsPerAxis + targetDof(1)];
+#else
+        const double weight = toolbox::blockstructured::orderInvariantProduct(
+          matrixPerAxis[0][sourceDof(0) * numberOfTargetDofsPerAxis + targetDof(0)],
+          matrixPerAxis[1][sourceDof(1) * numberOfTargetDofsPerAxis + targetDof(1)],
+          matrixPerAxis[2][sourceDof(2) * numberOfTargetDofsPerAxis + targetDof(2)]
+        );
+#endif
+        const int sourceIndex =
+          peano4::dLinearised(sourceDof, numberOfSourceDofsPerAxis) * numberOfUnknownsPlusAuxiliaryVariables;
+        accumulator.add(weight * static_cast<double>(sourceValues[sourceIndex + unknown]));
+      });
+      targetValues[targetIndex + unknown] = static_cast<T>(accumulator.round());
+    }
+  });
+}
+
+/**
+ * Mass-lumped restriction of a complete sibling set onto the coarse cell.
+ *
+ * The caller collects all 3^d destroyed children, indexed by their linearised
+ * position within the father, and hands them over in one call. Every coarse
+ * node then sums the weighted contributions of every fine node of every child
+ * through an exact accumulator, so the result does not depend on the order in
+ * which the traversal destroyed the children, and mirrored sibling sets
+ * restrict to bitwise mirrored coarse cells. The per-interval matrices hold
+ * the weighted restriction operator with entry [fine * numberOfDofsPerAxis +
+ * coarse] and must be mirror symmetric to the last bit.
+ */
+template <typename T>
+INLINE_METHOD void toolbox::blockstructured::restrictCellFromChildren(
+  T* NOALIAS                   coarseGridValues,
+  const T* const* NOALIAS      childGridValues,
+  const double* const* NOALIAS restrictionMatrixPerInterval,
+  const int                    numberOfDofsPerAxis,
+  const int                    numberOfUnknownsPlusAuxiliaryVariables
+) {
+  tarch::la::ExactAccumulator accumulator;
+  peano4::dForEach(numberOfDofsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& coarseNode) {
+    const int coarseIndex =
+      peano4::dLinearised(coarseNode, numberOfDofsPerAxis) * numberOfUnknownsPlusAuxiliaryVariables;
+    for (int unknown = 0; unknown < numberOfUnknownsPlusAuxiliaryVariables; unknown++) {
+      accumulator.clear();
+      peano4::dForEach(3, [&](const tarch::la::Vector<DIMENSIONS, int>& childPosition) {
+        const auto* const childValues = childGridValues[peano4::dLinearised(childPosition, 3)];
+        peano4::dForEach(numberOfDofsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& fineNode) {
+#if DIMENSIONS == 2
+          const double weight =
+            restrictionMatrixPerInterval[childPosition(0)][fineNode(0) * numberOfDofsPerAxis + coarseNode(0)]
+            * restrictionMatrixPerInterval[childPosition(1)][fineNode(1) * numberOfDofsPerAxis + coarseNode(1)];
+#else
+          const double weight = toolbox::blockstructured::orderInvariantProduct(
+            restrictionMatrixPerInterval[childPosition(0)][fineNode(0) * numberOfDofsPerAxis + coarseNode(0)],
+            restrictionMatrixPerInterval[childPosition(1)][fineNode(1) * numberOfDofsPerAxis + coarseNode(1)],
+            restrictionMatrixPerInterval[childPosition(2)][fineNode(2) * numberOfDofsPerAxis + coarseNode(2)]
+          );
+#endif
+          const int fineIndex =
+            peano4::dLinearised(fineNode, numberOfDofsPerAxis) * numberOfUnknownsPlusAuxiliaryVariables;
+          accumulator.add(weight * static_cast<double>(childValues[fineIndex + unknown]));
+        });
+      });
+      coarseGridValues[coarseIndex + unknown] = static_cast<T>(accumulator.round());
+    }
+  });
+}
+
+/**
+ * Averaging restriction of a complete sibling set onto the coarse cell.
+ *
+ * The caller collects all 3^d destroyed children, indexed by their linearised
+ * position within the father, and hands them over in one call. Every coarse
+ * volume averages its 3^d covering fine volumes, which can straddle child
+ * boundaries when the patch size is no multiple of three. The fine values fold
+ * through an exact accumulator and scale once at the end, so the result does
+ * not depend on the order in which the traversal destroyed the children, and
+ * mirrored sibling sets restrict to bitwise mirrored coarse cells.
+ */
+template <typename T>
+INLINE_METHOD void toolbox::blockstructured::restrictCellFromChildren(
+  T* NOALIAS              coarseGridValues,
+  const T* const* NOALIAS childGridValues,
+  const int               numberOfDofsPerAxis,
+  const int               numberOfUnknownsPlusAuxiliaryVariables
+) {
+#if DIMENSIONS == 2
+  constexpr double Scale = 1.0 / 9.0;
+#else
+  constexpr double Scale = 1.0 / 27.0;
+#endif
+  tarch::la::ExactAccumulator accumulator;
+  peano4::dForEach(numberOfDofsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& coarseVolume) {
+    const int coarseIndex =
+      peano4::dLinearised(coarseVolume, numberOfDofsPerAxis) * numberOfUnknownsPlusAuxiliaryVariables;
+    for (int unknown = 0; unknown < numberOfUnknownsPlusAuxiliaryVariables; unknown++) {
+      accumulator.clear();
+      peano4::dForEach(3, [&](const tarch::la::Vector<DIMENSIONS, int>& fineOffset) {
+        tarch::la::Vector<DIMENSIONS, int> childPosition;
+        tarch::la::Vector<DIMENSIONS, int> fineVolume;
+        for (int axis = 0; axis < DIMENSIONS; axis++) {
+          const int globalFineVolume = 3 * coarseVolume(axis) + fineOffset(axis);
+          childPosition(axis)        = globalFineVolume / numberOfDofsPerAxis;
+          fineVolume(axis)           = globalFineVolume % numberOfDofsPerAxis;
+        }
+        const auto* const childValues = childGridValues[peano4::dLinearised(childPosition, 3)];
+        accumulator.add(
+          static_cast<double>(
+            childValues
+              [peano4::dLinearised(fineVolume, numberOfDofsPerAxis) * numberOfUnknownsPlusAuxiliaryVariables + unknown]
+          )
+        );
+      });
+      coarseGridValues[coarseIndex + unknown] = static_cast<T>(accumulator.round() * Scale);
+    }
+  });
+}
+
+/**
+ * Interpolates one hanging subface's half of a face from the coarse face it
+ * hangs below.
+ *
+ * The caller selects, per tangential axis, the prolongation operator of the
+ * subface's interval within the father face, with entry
+ * [coarse * numberOfDofsPerAxis + fine]. Every fine node contracts the whole
+ * coarse face half, the per-axis factors combine through a commutative product
+ * and the terms fold through an exact accumulator, so mirrored coarse faces
+ * interpolate to bitwise mirrored subfaces. The matrices must be mirror
+ * symmetric to the last bit for that to hold.
+ */
+template <typename T>
+INLINE_METHOD void toolbox::blockstructured::interpolateFaceFromCoarse(
+  T* NOALIAS                   fineFaceValues,
+  const T* NOALIAS             coarseFaceValues,
+  const double* const* NOALIAS prolongationMatrixPerAxis,
+  const int                    numberOfDofsPerAxis,
+  const int                    numberOfUnknownsPlusAuxiliaryVariables
+) {
+  tarch::la::ExactAccumulator accumulator;
+#if DIMENSIONS == 2
+  for (int fineNode = 0; fineNode < numberOfDofsPerAxis; fineNode++) {
+    for (int unknown = 0; unknown < numberOfUnknownsPlusAuxiliaryVariables; unknown++) {
+      accumulator.clear();
+      for (int coarseNode = 0; coarseNode < numberOfDofsPerAxis; coarseNode++) {
+        accumulator.add(
+          prolongationMatrixPerAxis[0][coarseNode * numberOfDofsPerAxis + fineNode]
+          * static_cast<double>(coarseFaceValues[coarseNode * numberOfUnknownsPlusAuxiliaryVariables + unknown])
+        );
+      }
+      fineFaceValues[fineNode * numberOfUnknownsPlusAuxiliaryVariables + unknown] = static_cast<T>(accumulator.round());
+    }
+  }
+#else
+  for (int fineOuter = 0; fineOuter < numberOfDofsPerAxis; fineOuter++) {
+    for (int fineInner = 0; fineInner < numberOfDofsPerAxis; fineInner++) {
+      const int fineIndex = (fineOuter * numberOfDofsPerAxis + fineInner) * numberOfUnknownsPlusAuxiliaryVariables;
+      for (int unknown = 0; unknown < numberOfUnknownsPlusAuxiliaryVariables; unknown++) {
+        accumulator.clear();
+        for (int coarseOuter = 0; coarseOuter < numberOfDofsPerAxis; coarseOuter++) {
+          for (int coarseInner = 0; coarseInner < numberOfDofsPerAxis; coarseInner++) {
+            const double weight = prolongationMatrixPerAxis[0][coarseInner * numberOfDofsPerAxis + fineInner]
+              * prolongationMatrixPerAxis[1][coarseOuter * numberOfDofsPerAxis + fineOuter];
+            accumulator.add(
+              weight
+              * static_cast<double>(
+                coarseFaceValues
+                  [(coarseOuter * numberOfDofsPerAxis + coarseInner) * numberOfUnknownsPlusAuxiliaryVariables + unknown]
+              )
+            );
+          }
+        }
+        fineFaceValues[fineIndex + unknown] = static_cast<T>(accumulator.round());
+      }
+    }
+  }
+#endif
+}
+
+/**
+ * Restricts one half of a face from its collected hanging subfaces.
+ *
+ * The caller stages the subface values it holds, indexed by their linearised
+ * tangential position within the father face, and hands them over in one call
+ * once the sweep leaves the face. Every coarse node sums the weighted
+ * contributions of every fine node of every present subface through an exact
+ * accumulator, so the result does not depend on the order in which the
+ * traversal visited the subfaces. A null child stands for a subface another
+ * tree holds and contributes nothing, which matches the exchange that copies
+ * whole face halves between the trees' replicas. The per-interval matrices use
+ * entry [fine * numberOfDofsPerAxis + coarse] and must be mirror symmetric to
+ * the last bit.
+ */
+template <typename T>
+INLINE_METHOD void toolbox::blockstructured::restrictFaceFromChildren(
+  T* NOALIAS                   coarseFaceValues,
+  const T* const* NOALIAS      childFaceValues,
+  const double* const* NOALIAS restrictionMatrixPerInterval,
+  const int                    numberOfDofsPerAxis,
+  const int                    numberOfUnknownsPlusAuxiliaryVariables
+) {
+  tarch::la::ExactAccumulator accumulator;
+#if DIMENSIONS == 2
+  for (int coarseNode = 0; coarseNode < numberOfDofsPerAxis; coarseNode++) {
+    for (int unknown = 0; unknown < numberOfUnknownsPlusAuxiliaryVariables; unknown++) {
+      accumulator.clear();
+      for (int subface = 0; subface < 3; subface++) {
+        if (childFaceValues[subface] == nullptr) {
+          continue;
+        }
+        for (int fineNode = 0; fineNode < numberOfDofsPerAxis; fineNode++) {
+          accumulator.add(
+            restrictionMatrixPerInterval[subface][fineNode * numberOfDofsPerAxis + coarseNode]
+            * static_cast<double>(childFaceValues[subface][fineNode * numberOfUnknownsPlusAuxiliaryVariables + unknown])
+          );
+        }
+      }
+      coarseFaceValues[coarseNode * numberOfUnknownsPlusAuxiliaryVariables + unknown] =
+        static_cast<T>(accumulator.round());
+    }
+  }
+#else
+  for (int coarseOuter = 0; coarseOuter < numberOfDofsPerAxis; coarseOuter++) {
+    for (int coarseInner = 0; coarseInner < numberOfDofsPerAxis; coarseInner++) {
+      const int coarseIndex =
+        (coarseOuter * numberOfDofsPerAxis + coarseInner) * numberOfUnknownsPlusAuxiliaryVariables;
+      for (int unknown = 0; unknown < numberOfUnknownsPlusAuxiliaryVariables; unknown++) {
+        accumulator.clear();
+        for (int subfaceOuter = 0; subfaceOuter < 3; subfaceOuter++) {
+          for (int subfaceInner = 0; subfaceInner < 3; subfaceInner++) {
+            const auto* const subfaceValues = childFaceValues[subfaceOuter * 3 + subfaceInner];
+            if (subfaceValues == nullptr) {
+              continue;
+            }
+            for (int fineOuter = 0; fineOuter < numberOfDofsPerAxis; fineOuter++) {
+              for (int fineInner = 0; fineInner < numberOfDofsPerAxis; fineInner++) {
+                const double weight =
+                  restrictionMatrixPerInterval[subfaceInner][fineInner * numberOfDofsPerAxis + coarseInner]
+                  * restrictionMatrixPerInterval[subfaceOuter][fineOuter * numberOfDofsPerAxis + coarseOuter];
+                accumulator.add(
+                  weight
+                  * static_cast<double>(
+                    subfaceValues
+                      [(fineOuter * numberOfDofsPerAxis + fineInner) * numberOfUnknownsPlusAuxiliaryVariables + unknown]
+                  )
+                );
+              }
+            }
+          }
+        }
+        coarseFaceValues[coarseIndex + unknown] = static_cast<T>(accumulator.round());
+      }
+    }
+  }
+#endif
 }

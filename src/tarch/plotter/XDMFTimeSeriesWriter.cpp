@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "XDMFTimeSeriesWriter.h"
 
+#include "tarch/Termination.h"
 #include "tarch/mpi/Rank.h"
 
 namespace {
@@ -13,20 +14,20 @@ namespace {
    * the temporal collection.
    */
   std::string extractGridBody(const std::filesystem::path& perStepFile) {
-    std::ifstream in(perStepFile);
-    if (not in) {
-      throw std::runtime_error("Failed to read per-step XDMF file '" + perStepFile.string() + "'");
+    const std::ifstream input(perStepFile);
+    if (not input) {
+      tarch::terminateWithError("Failed to read '" + perStepFile.string() + "'.");
     }
     std::stringstream buffer;
-    buffer << in.rdbuf();
+    buffer << input.rdbuf();
     const std::string content = buffer.str();
 
     const std::size_t gridOpen   = content.find("<Grid");
     const std::size_t openTagEnd = gridOpen == std::string::npos ? std::string::npos : content.find('>', gridOpen);
     const std::size_t gridClose  = content.rfind("</Grid>");
-    if (gridOpen == std::string::npos or openTagEnd == std::string::npos or gridClose == std::string::npos or
-        gridClose <= openTagEnd) {
-      throw std::runtime_error("Per-step XDMF file '" + perStepFile.string() + "' has no <Grid> element to inline.");
+    if (gridOpen == std::string::npos or openTagEnd == std::string::npos or gridClose == std::string::npos
+        or gridClose <= openTagEnd) {
+      tarch::terminateWithError("Per-step XDMF file '" + perStepFile.string() + "' has no <Grid> element to inline.");
     }
     return content.substr(openTagEnd + 1, gridClose - (openTagEnd + 1));
   }
@@ -40,12 +41,12 @@ void tarch::plotter::XDMFTimeSeriesWriter::writeTimeSeriesMetaFile(
     return;
   }
 
-  std::filesystem::path directory(outputDirectory);
-  std::filesystem::path p = directory / (filename + ".xmf");
+  const std::filesystem::path directory(outputDirectory);
+  const std::filesystem::path path = directory / (filename + ".xmf");
 
-  std::ofstream out(p);
+  std::ofstream out(path);
   if (not out) {
-    throw std::runtime_error("Failed to open '" + p.string() + "'");
+    tarch::terminateWithError("Failed to open '" + path.string() + "'.");
   }
 
   out << "<?xml version=\"1.0\" ?>\n"
@@ -64,4 +65,8 @@ void tarch::plotter::XDMFTimeSeriesWriter::writeTimeSeriesMetaFile(
   out << "  </Grid>\n"
       << " </Domain>\n"
       << "</Xdmf>\n";
+
+  if (not out) {
+    tarch::terminateWithError("Failed to write '" + path.string() + "'.");
+  }
 }

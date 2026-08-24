@@ -11,7 +11,7 @@
 namespace {{ item }} {
 {%- endfor %}
 
-// TODO: This should be centralised somewhere (DataRepository) and count to the memory usage
+// TODO: Move scratch ownership to DataRepository so memory accounting includes it.
 template <typename T>
 struct PredictorScratchBuffer{{NAME_SUFFIX}} {
   T* data = nullptr;
@@ -28,9 +28,7 @@ struct PredictorScratchBuffer{{NAME_SUFFIX}} {
 
   T* get(const std::size_t entries) {
     if (data == nullptr and entries > 0) {
-      // This buffer is thread-local. Bypass the heap allocation cache here, as
-      // thread-local scratch teardown can happen after the cache state for the
-      // same thread has already been destroyed.
+      // Bypass the cache because thread-local scratch can outlive its cache state.
       data = reinterpret_cast<T*>(tarch::accelerator::allocateHeapMemory(entries * sizeof(T)));
     }
 

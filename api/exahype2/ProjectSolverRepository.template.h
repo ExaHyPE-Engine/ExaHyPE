@@ -5,35 +5,16 @@
 #include "exahype2/RefinementControl.h"
 #include "runner/RepositoryCallbacks.h"
 
-{% for item in SOLVERS -%}
+{% for item in SOLVERS %}
 #include "{{ item[0] }}.h"
 {% endfor %}
 
 namespace {{ NAMESPACE | join("::") }} {
-  {% for item in SOLVERS -%}
+  {% for item in SOLVERS %}
   extern {{ item[0] }} {{ item[1] }};
   {% endfor %}
 
-  /**
-   * Return the global min time stamp over all solvers.
-   *
-   * There are two different flavours of a minimal time stamp: On the one hand,
-   * there's a global minimum time stamp over all solvers. This might not
-   * be the min time stamp after the last update. If you have local time
-   * stepping, then some cells might just have done a tiny time step,
-   * whereas the big cells still span a large time span. Hence, on the other
-   * hand, there's also a (time-)local time stamp.
-   */
   double getMinTimeStamp();
-
-  /**
-   * Return max time stamp of all solvers.
-   *
-   * This routine returns the minimum over the maximum time stamp of all
-   * solvers. It is important that we use the minimum here: We usually want
-   * to know how far in the future all the solvers are, but we still want to
-   * know what a valid time stamp is. So we have to take the minimum here.
-   */
   double getMaxTimeStamp();
   double getMinTimeStepSize();
   double getMaxTimeStepSize();
@@ -42,14 +23,6 @@ namespace {{ NAMESPACE | join("::") }} {
   void startGridInitialisationStep();
   void startDynamicMeshRefinementStep();
 
-  /**
-   * Start a new time step
-   *
-   * The solvers analyse their current solver state and toggle it. After
-   * this routine is called, the solvers' states remain invariant until
-   * the next startTimeStep() call or a suspension. Notably,
-   * finishTimeStep() does not alter the solvers' states.
-   */
   void startTimeStep();
   void startPlottingStep();
 
@@ -57,9 +30,6 @@ namespace {{ NAMESPACE | join("::") }} {
   void finishGridInitialisationStep();
   void finishDynamicMeshRefinementStep();
 
-  /**
-   * @see startTimeStep()
-   */
   void finishTimeStep();
   void finishPlottingStep();
 
@@ -68,34 +38,7 @@ namespace {{ NAMESPACE | join("::") }} {
 
   bool mayPlot();
 
-  /**
-   * Is this the first sweep of a time step
-   *
-   * This query should be used with care within a user function and only once
-   * you have studied isLastGridSweepOfTimeStep(). startTimeStep() switches
-   * into this state. That is, when you call startTimeStep() and it turns out
-   * to be the first sweep, the predicate will be true after startTimeStep()
-   * has been called, and it will be true once the first mesh sweep has
-   * terminated and the control comes back to the main routine. It is nice to
-   * query stuff, but you should not "disturb" the solvers' mesh sweep
-   * sequence. If you have a Runge-Kutta solver for example, the fact that this
-   * predicate holds means that you've just finished the very first mesh
-   * run-through of a time step, but the time step overall is not finished
-   * yet.
-   */
   bool isFirstGridSweepOfTimeStep();
-
-  /**
-   * Is this the last sweep of a time step
-   *
-   * Some solvers require multiple mesh sweeps to realise their behaviour.
-   * Runge-Kutta solvers and task-based solvers are the most prominent examples.
-   * Once you call startTimeStep() for the last time, the internal states will
-   * toggle and this predicate will hold. After the time step has terminated
-   * and finishTimeStep() has been called, this predicate holds. That is, you
-   * can query it in the main and find out that a solver has just finished its
-   * time step.
-   */
   bool isLastGridSweepOfTimeStep();
 
   void suspendSolversForOneGridSweep();

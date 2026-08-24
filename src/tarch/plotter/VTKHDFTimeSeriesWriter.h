@@ -17,8 +17,15 @@ namespace tarch::plotter {
  */
 class tarch::plotter::VTKHDFTimeSeriesWriter : public tarch::plotter::TimeSeriesWriter {
 public:
+  VTKHDFTimeSeriesWriter()                                         = default;
+  VTKHDFTimeSeriesWriter(const VTKHDFTimeSeriesWriter&)            = delete;
+  VTKHDFTimeSeriesWriter(VTKHDFTimeSeriesWriter&&)                 = delete;
+  ~VTKHDFTimeSeriesWriter() override                               = default;
+  VTKHDFTimeSeriesWriter& operator=(const VTKHDFTimeSeriesWriter&) = delete;
+  VTKHDFTimeSeriesWriter& operator=(VTKHDFTimeSeriesWriter&&)      = delete;
+
   void writeTimeSeriesMetaFile(const std::string& outputDirectory, const std::string& filename) const override;
 
 protected:
-  std::string snapshotName(const std::string& filename, double time) const override;
+  std::string snapshotName(const std::string& filename, const double time) const override;
 };

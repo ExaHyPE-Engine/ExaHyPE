@@ -8,5 +8,5 @@
   "loadBalancingQuality": 0.9,
   "maxNumberOfTreesPerRank": -1,
   "targetDevice": 0,
-  "bathymetryFile": "bathymetry/test_R1_dx100_H50_b.grd"
+  "bathymetryFile": "bathymetry/R1BathymetryDepth50m.nc"
 }

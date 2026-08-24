@@ -1,14 +1,12 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 
-import peano4.toolbox.particles
+import peano4.particles
 
 import jinja2
 
 
-class FiniteVolumesTracing(
-    peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_Sets
-):
+class FiniteVolumesTracing(peano4.particles.UpdateParticle_MultiLevelInteraction_Sets):
     """!
 
     Particle tracing over the Finite Volumes solver.
@@ -40,9 +38,9 @@ class FiniteVolumesTracing(
         projection_kernel_arguments="""
         marker,
         {{PATCH_SIZE}},
-        {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
+        {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}},
         fineGridCell{{CURRENT_UNKNOWN_IDENTIFIER}}.data(),
-        *p
+        *particle
 """,
     ):
         """!
@@ -113,27 +111,30 @@ if (
     repositories::{{SOLVER_INSTANCE}}.getSolverState() == {{SOLVER_NAME}}::SolverState::GridInitialisation
   )
 ) {
-  for (auto* p: localParticles) {
+  for (auto* const particle : localParticles) {
     if (
-      p->getMoveState()==globaldata::{{PARTICLE}}::MoveState::NotMovedYet and marker.isContained(p->getX())
+      particle->getMoveState() == globaldata::{{PARTICLE}}::MoveState::NotMovedYet
+      and marker.isContained(particle->getX())
     ) {
-      p->setMoveState(globaldata::{{PARTICLE}}::MoveState::Moved);
+      particle->setMoveState(globaldata::{{PARTICLE}}::MoveState::Moved);
 
+{% if PROJECTION_KERNEL %}
       {{PROJECTION_KERNEL}}(
         {{PROJECTION_KERNEL_ARGUMENTS}}
       );
+{% endif %}
     }
   }
 }
 """
 
         touch_vertex_first_time_compute_kernel = """
-  for (auto* p: assignedParticles) {
-    p->setMoveState(globaldata::{{PARTICLE}}::MoveState::NotMovedYet);
+  for (auto* const particle : assignedParticles) {
+    particle->setMoveState(globaldata::{{PARTICLE}}::MoveState::NotMovedYet);
   }
 """
 
-        super(FiniteVolumesTracing, self).__init__(
+        super().__init__(
             particle_set,
             jinja2.Template(cell_compute_kernel).render(**self.tracerDict),
             jinja2.Template(touch_vertex_first_time_compute_kernel).render(
@@ -148,7 +149,7 @@ if (
         return False
 
     def get_includes(self):
-        result = jinja2.Template(
+        includes = jinja2.Template(
             """
 #include "tarch/multicore/Lock.h"
 #include "peano4/Loop.h"
@@ -158,16 +159,4 @@ if (
 #include "exahype2/fv/Tracer.h"
 """
         )
-        return (
-            super(FiniteVolumesTracing, self).get_includes()
-            + "\n"
-            + result.render(**self.tracerDict)
-        )
-
-    def get_attributes(self):
-        return (
-            super(FiniteVolumesTracing, self).get_attributes()
-            + """
-double _timeStepSize;
-"""
-        )
+        return super().get_includes() + "\n" + includes.render(**self.tracerDict)

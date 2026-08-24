@@ -1,12 +1,5 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "internal.h"
-
-#include "peano4/Loop.h"
-#include "peano4/datamanagement/CellMarker.h"
-#include "peano4/datamanagement/VertexMarker.h"
-#include "tarch/la/VectorVectorOperations.h"
-#include "toolbox/particles/assignmentchecks/TracingAPI.h"
 
 /**
  * Check if there is already a particle at the position of particle.
@@ -239,7 +232,7 @@ void toolbox::particles::insertParticleIntoCell(
   );
   fineGridVertices(linearisedTargetVertex).addParticle(newParticle);
 
-#if PEANO_DEBUG
+#if PEANO_ASSERTIONS
   // Give the particle a unique identifier. The assignment-consistency checks
   // (assignmentchecks::Database) key every particle on this id together with the
   // tree and the vertex it sits on - but deliberately not on its position, since

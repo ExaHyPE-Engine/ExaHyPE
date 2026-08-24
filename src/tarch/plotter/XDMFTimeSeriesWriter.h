@@ -9,14 +9,16 @@ namespace tarch::plotter {
 } // namespace tarch::plotter
 
 /**
- * XDMF Time Series Writer.
- * Generates a master XDMF file that links to individual time-step XDMF files
- * using XInclude.
+ * Generates a master XDMF file by embedding each time-step file's `<Grid>` body.
  */
-class tarch::plotter::XDMFTimeSeriesWriter final: public TimeSeriesWriter {
+class tarch::plotter::XDMFTimeSeriesWriter final : public TimeSeriesWriter {
 public:
-  XDMFTimeSeriesWriter()           = default;
-  ~XDMFTimeSeriesWriter() override = default;
+  XDMFTimeSeriesWriter()                                       = default;
+  XDMFTimeSeriesWriter(const XDMFTimeSeriesWriter&)            = delete;
+  XDMFTimeSeriesWriter(XDMFTimeSeriesWriter&&)                 = delete;
+  ~XDMFTimeSeriesWriter() override                             = default;
+  XDMFTimeSeriesWriter& operator=(const XDMFTimeSeriesWriter&) = delete;
+  XDMFTimeSeriesWriter& operator=(XDMFTimeSeriesWriter&&)      = delete;
 
   void writeTimeSeriesMetaFile(const std::string& outputDirectory, const std::string& filename) const override;
 };

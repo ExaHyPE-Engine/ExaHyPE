@@ -2,81 +2,58 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "tarch/CompilerSpecificSettings.h"
+
+namespace tarch::plotter {
+  enum class CellType : std::uint8_t;
+  struct CellTypeInfo;
+} // namespace tarch::plotter
+
+/**
+ * Cell types supported by the plotters.
+ *
+ * The numeric values are the standard VTK cell-type codes. All plotter
+ * backends use CellTypes as the canonical mapping of codes, node counts,
+ * dimensions, names, and XDMF topology codes.
+ */
+enum class tarch::plotter::CellType : std::uint8_t {
+  Vertex      = 1,
+  Line        = 3,
+  Triangle    = 5,
+  Quadrangle  = 9,
+  Tetrahedron = 10,
+  Hexahedron  = 12,
+  Wedge       = 13,
+  Pyramid     = 14
+};
+
+struct tarch::plotter::CellTypeInfo {
+  tarch::plotter::CellType type;      ///< VTK cell-type code.
+  int                      nodes;     ///< Number of corner nodes.
+  int                      dimension; ///< Topological dimension from zero to three.
+  const char*              name;      ///< Human-readable UGRID name.
+  int                      xdmf;      ///< XDMF topology code, or zero if no representation exists.
+};
+
 namespace tarch::plotter {
   /**
-   * The cell types the plotter understands, gathered in one table.
-   *
-   * The numeric values are the standard VTK cell-type codes (see the VTK file
-   * format specification). Every plotter backend (VTU, HDF5/XDMF, NetCDF/UGRID)
-   * as well as the CellPlotter front-end must agree on these codes, the number
-   * of corner nodes, the topological dimension and the human-readable name.
+   * Canonical cell-type mapping for all plotter backends, ordered by VTK code.
    */
-  enum class CellType : std::uint8_t {
-    Vertex      = 1,
-    Line        = 3,
-    Triangle    = 5,
-    Quadrangle  = 9,
-    Tetrahedron = 10,
-    Hexahedron  = 12,
-    Wedge       = 13,
-    Pyramid     = 14
+  inline constexpr tarch::plotter::CellTypeInfo CellTypes[] = {
+    {tarch::plotter::CellType::Vertex, 1, 0, "vertex", 1},
+    {tarch::plotter::CellType::Line, 2, 1, "line", 2},
+    {tarch::plotter::CellType::Triangle, 3, 2, "triangle", 4},
+    {tarch::plotter::CellType::Quadrangle, 4, 2, "quadrangle", 5},
+    {tarch::plotter::CellType::Tetrahedron, 4, 3, "tetrahedron", 6},
+    {tarch::plotter::CellType::Hexahedron, 8, 3, "hexahedron", 9},
+    {tarch::plotter::CellType::Wedge, 6, 3, "wedge", 8},
+    {tarch::plotter::CellType::Pyramid, 5, 3, "pyramid", 7}
   };
 
-  struct CellTypeInfo {
-    CellType    type;      //< VTK cell-type code
-    int         nodes;     //< number of corner nodes
-    int         dimension; //< topological dimension (0=point, 1=line, 2=face, 3=volume)
-    const char* name;      //< human/UGRID name
-    int         xdmf;      //< XDMF topology type code (0 == not representable in XDMF)
-  };
-
-  /**
-   * The cell-type table, ordered by VTK code. Add a row here (and nowhere else)
-   * to teach the whole plotter about a new cell type.
-   */
-  inline constexpr CellTypeInfo CellTypes[] = {
-    {CellType::Vertex, 1, 0, "vertex", 1},
-    {CellType::Line, 2, 1, "line", 2},
-    {CellType::Triangle, 3, 2, "triangle", 4},
-    {CellType::Quadrangle, 4, 2, "quadrangle", 5},
-    {CellType::Tetrahedron, 4, 3, "tetrahedron", 6},
-    {CellType::Hexahedron, 8, 3, "hexahedron", 9},
-    {CellType::Wedge, 6, 3, "wedge", 8},
-    {CellType::Pyramid, 5, 3, "pyramid", 7}
-  };
-
-  /**
-   * Look a cell type up by its raw VTK code. Returns nullptr for an unknown
-   * code so callers can decide whether that is an error.
-   */
-  constexpr const CellTypeInfo* lookupCellType(int vtkCode) {
-    for (const CellTypeInfo& info : CellTypes) {
-      if (static_cast<int>(info.type) == vtkCode) {
-        return &info;
-      }
-    }
-    return nullptr;
-  }
-
-  constexpr const CellTypeInfo* lookupCellType(CellType type) { return lookupCellType(static_cast<int>(type)); }
-
-  /**
-   * Number of corner nodes of a (known) cell type, usable in constant
-   * expressions. Returns -1 for an unknown type.
-   */
-  constexpr int nodesOf(CellType type) {
-    for (const CellTypeInfo& info : CellTypes) {
-      if (info.type == type) {
-        return info.nodes;
-      }
-    }
-    return -1;
-  }
-
-  /**
-   * The XDMF "poly" topologies (Polyvertex=1, Polyline=2, Polygon=3) are
-   * variable-length and therefore require an explicit node-count integer in
-   * the mixed-topology stream; all other XDMF topologies have a fixed arity.
-   */
-  constexpr bool xdmfTypeNeedsNodeCount(int xdmfType) { return xdmfType >= 1 and xdmfType <= 3; }
+  INLINE_METHOD constexpr const tarch::plotter::CellTypeInfo* lookupCellType(const int vtkCode);
+  INLINE_METHOD constexpr const tarch::plotter::CellTypeInfo* lookupCellType(const tarch::plotter::CellType type);
+  INLINE_METHOD constexpr int                                 nodesOf(const tarch::plotter::CellType type);
+  INLINE_METHOD constexpr bool                                xdmfTypeNeedsNodeCount(const int xdmfType);
 } // namespace tarch::plotter
+
+#include "CellTypes.cpph"

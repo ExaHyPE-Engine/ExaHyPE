@@ -21,6 +21,8 @@ private:
    */
   void testSingleQuad2D();
 
+  void testVertexSharing();
+
   /**
    * Two traversals appending to one file.
    */

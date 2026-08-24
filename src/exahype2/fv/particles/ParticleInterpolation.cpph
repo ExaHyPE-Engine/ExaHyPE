@@ -1,5 +1,3 @@
-#pragma once
-
 // ================================================================================================
 // Projection Functions
 // ================================================================================================
@@ -16,8 +14,14 @@ void exahype2::fv::particles::interpolation::projectValues_piecewiseConstant(
   [&]<std::size_t... I>(std::index_sequence<I...>) {
     (particle.setData(
        Indices,
-       ::exahype2::fv::particles::interpolation::internal::
-         projectValueOntoParticle_piecewiseConstant(marker, voxelsPerAxis, unknownsPerVoxel, Q, pos, static_cast<int>(I))
+       ::exahype2::fv::particles::interpolation::internal::projectValueOntoParticle_piecewiseConstant(
+         marker,
+         voxelsPerAxis,
+         unknownsPerVoxel,
+         Q,
+         pos,
+         static_cast<int>(I)
+       )
      ),
      ...);
   }(std::make_index_sequence<sizeof...(Indices)>{});
@@ -57,16 +61,34 @@ void exahype2::fv::particles::interpolation::applyInterpolation(
   case 0:
     break;
   case 1:
-    exahype2::fv::particles::interpolation::projectValues_piecewiseConstant<
-      Indices...>(marker, _voxelsPerAxis, _unknownsPerVoxel, Q, particle, pos);
+    exahype2::fv::particles::interpolation::projectValues_piecewiseConstant<Indices...>(
+      marker,
+      _voxelsPerAxis,
+      _unknownsPerVoxel,
+      Q,
+      particle,
+      pos
+    );
     break;
   case 2:
-    exahype2::fv::particles::interpolation::projectValues_piecewiseLinear<
-      Indices...>(marker, _voxelsPerAxis, _unknownsPerVoxel, Q, particle, pos);
+    exahype2::fv::particles::interpolation::projectValues_piecewiseLinear<Indices...>(
+      marker,
+      _voxelsPerAxis,
+      _unknownsPerVoxel,
+      Q,
+      particle,
+      pos
+    );
     break;
   default:
-    exahype2::fv::particles::interpolation::projectValues_piecewiseConstant<
-      Indices...>(marker, _voxelsPerAxis, _unknownsPerVoxel, Q, particle, pos);
+    exahype2::fv::particles::interpolation::projectValues_piecewiseConstant<Indices...>(
+      marker,
+      _voxelsPerAxis,
+      _unknownsPerVoxel,
+      Q,
+      particle,
+      pos
+    );
     break;
   }
 }
@@ -102,7 +124,11 @@ void exahype2::fv::particles::interpolation::handleMidpoints(
       adjustedMidpointPosition(d) = midpointPosition(d) - offset;
     }
 
-    exahype2::fv::particles::interpolation::applyInterpolation<
-      Indices...>(particle, adjustedMidpointPosition, marker, neighborQ);
+    exahype2::fv::particles::interpolation::applyInterpolation<Indices...>(
+      particle,
+      adjustedMidpointPosition,
+      marker,
+      neighborQ
+    );
   }
 }

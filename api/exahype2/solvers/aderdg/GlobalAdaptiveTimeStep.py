@@ -1,7 +1,7 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 from .SingleSweep import SingleSweep
-from .AdaptiveTimeSteppingCodeSnippets import AdaptiveTimeSteppingCodeSnippets
+from exahype2.solvers import AdaptiveTimeSteppingCodeSnippets
 
 
 class GlobalAdaptiveTimeStep(SingleSweep):
@@ -21,4 +21,6 @@ class GlobalAdaptiveTimeStep(SingleSweep):
         )
 
         self._cflSafetyFactor = time_step_relaxation
-        self._time_stepping_code_snippets = AdaptiveTimeSteppingCodeSnippets()
+        self._time_stepping_code_snippets = (
+            AdaptiveTimeSteppingCodeSnippets.for_aderdg()
+        )

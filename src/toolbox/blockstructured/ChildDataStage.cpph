@@ -1,0 +1,112 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+template <typename T>
+toolbox::blockstructured::ChildDataStage<T>::ChildDataStage(int numberOfChildren, int valuesPerChild) :
+  _numberOfChildren(numberOfChildren),
+  _valuesPerChild(valuesPerChild) {
+  assertion(numberOfChildren > 0 and numberOfChildren < 64);
+  assertion(valuesPerChild > 0);
+}
+
+/**
+ * A sibling set that started to stage has to complete within the same grid
+ * sweep, so a frame that is still in flight when the stage dies marks a
+ * destroyed sibling set whose restriction never ran.
+ */
+template <typename T>
+toolbox::blockstructured::ChildDataStage<T>::ChildDataStage::~ChildDataStage() {
+  assertion(_frames.empty());
+}
+
+template <typename T>
+INLINE_METHOD typename toolbox::blockstructured::ChildDataStage<T>::Frame* toolbox::blockstructured::ChildDataStage<
+  T>::find(const void* coarseCellKey) {
+  for (auto frame = _frames.rbegin(); frame != _frames.rend(); ++frame) {
+    if (frame->key == coarseCellKey) {
+      return &(*frame);
+    }
+  }
+  return nullptr;
+}
+
+template <typename T>
+INLINE_METHOD const typename toolbox::blockstructured::ChildDataStage<T>::Frame* toolbox::blockstructured::
+  ChildDataStage<T>::find(const void* coarseCellKey) const {
+  for (auto frame = _frames.rbegin(); frame != _frames.rend(); ++frame) {
+    if (frame->key == coarseCellKey) {
+      return &(*frame);
+    }
+  }
+  return nullptr;
+}
+
+/**
+ * Copies one child's values into the frame of its coarse cell.
+ *
+ * The coarse cell is identified by a stable address, typically its patch
+ * storage, because recomputing a parent position from child geometry could
+ * round differently for different children. Destroyed sibling sets nest along
+ * the depth-first traversal, so the frame is searched from the innermost end.
+ * Returns true when this call completes the sibling set.
+ */
+template <typename T>
+INLINE_METHOD bool toolbox::blockstructured::ChildDataStage<T>::stage(
+  const void*    coarseCellKey,
+  int            childIndex,
+  const T* const childValues
+) {
+  assertion(childIndex >= 0 and childIndex < _numberOfChildren);
+  auto* frame = find(coarseCellKey);
+  if (frame == nullptr) {
+    _frames.emplace_back();
+    frame      = &_frames.back();
+    frame->key = coarseCellKey;
+    frame->values.resize(static_cast<std::size_t>(_numberOfChildren) * _valuesPerChild);
+  }
+  assertion((frame->filledChildren & (std::uint64_t{1} << childIndex)) == 0);
+  frame->filledChildren |= std::uint64_t{1} << childIndex;
+  std::copy_n(
+    childValues,
+    _valuesPerChild,
+    frame->values.data() + static_cast<std::size_t>(childIndex) * _valuesPerChild
+  );
+  return frame->filledChildren == (std::uint64_t{1} << _numberOfChildren) - 1;
+}
+
+template <typename T>
+INLINE_METHOD bool toolbox::blockstructured::ChildDataStage<T>::hasFrame(const void* coarseCellKey) const {
+  return find(coarseCellKey) != nullptr;
+}
+
+template <typename T>
+INLINE_METHOD bool toolbox::blockstructured::ChildDataStage<T>::hasChild(
+  const void* coarseCellKey,
+  int         childIndex
+) const {
+  assertion(childIndex >= 0 and childIndex < _numberOfChildren);
+  const auto* frame = find(coarseCellKey);
+  return frame != nullptr and (frame->filledChildren & (std::uint64_t{1} << childIndex)) != 0;
+}
+
+template <typename T>
+INLINE_METHOD const T* toolbox::blockstructured::ChildDataStage<T>::child(
+  const void* coarseCellKey,
+  int         childIndex
+) const {
+  assertion(childIndex >= 0 and childIndex < _numberOfChildren);
+  const auto* frame = find(coarseCellKey);
+  assertion(frame != nullptr);
+  return frame->values.data() + static_cast<std::size_t>(childIndex) * _valuesPerChild;
+}
+
+template <typename T>
+INLINE_METHOD void toolbox::blockstructured::ChildDataStage<T>::discard(const void* coarseCellKey) {
+  for (auto frame = _frames.rbegin(); frame != _frames.rend(); ++frame) {
+    if (frame->key == coarseCellKey) {
+      _frames.erase(std::next(frame).base());
+      return;
+    }
+  }
+  assertion(false);
+}

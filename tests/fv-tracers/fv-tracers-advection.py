@@ -133,7 +133,7 @@ tracing_action_set = exahype2.tracer.FiniteVolumesTracing(
     fv_solver,
     project_on_tracer_properties_kernel="::exahype2::fv::updateParticleState<0, 1, 2>",
     projection_kernel_arguments=""" // TODO: Also way too complicated!
-  *p,
+  *particle,
   fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
   marker,
   {{PATCH_SIZE}},

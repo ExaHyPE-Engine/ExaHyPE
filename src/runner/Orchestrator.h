@@ -12,7 +12,6 @@ namespace runner {
   public:
     explicit Orchestrator(const std::vector<Step>& steps);
 
-    /** True if a noncritical assertion ended the run early. */
     bool run(PhaseContext& context);
 
   private:

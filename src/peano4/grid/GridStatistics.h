@@ -31,6 +31,16 @@ struct peano4::grid::GridStatistics {
    */
   int numberOfDeferredGridControlChanges = 0;
 
+  /**
+   * Vertices the traversal switched to refinement triggered on behalf of a
+   * grid-control event. An event whose target spans several levels marks the
+   * next level's vertices only once the previous round has been realised, so
+   * the events have to be delivered again until this count drops to zero.
+   * Unlike an erase mark, a refinement mark cannot repeat: a triggered vertex
+   * leaves the unrefined state, so the count reaches zero on a settled grid.
+   */
+  int numberOfRefinementsTriggeredByGridControl = 0;
+
   std::uint8_t flags = 0;
 
   static constexpr std::uint8_t CoarseningHasBeenVetoed = 1 << 0;
@@ -59,6 +69,8 @@ struct peano4::grid::GridStatistics {
 
 std::ostream& operator<<(std::ostream& out, const peano4::grid::GridStatistics& statistics);
 
-peano4::grid::GridStatistics
-operator+(const peano4::grid::GridStatistics& lhs, const peano4::grid::GridStatistics& rhs);
+peano4::grid::GridStatistics operator+(
+  const peano4::grid::GridStatistics& lhs,
+  const peano4::grid::GridStatistics& rhs
+);
 peano4::grid::GridStatistics operator+=(peano4::grid::GridStatistics& lhs, const peano4::grid::GridStatistics& rhs);
