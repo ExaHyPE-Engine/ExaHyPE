@@ -89,6 +89,32 @@ class AbstractLimiterActionSet(ActionSet):
             [value for row in dg_to_subcells for value in row]
         )
 
+    @staticmethod
+    def _dmp_extrema_reduction_snippet(state, minimum, maximum, dictionary):
+        """Returns the C++ that reduces ``state``'s observable extrema.
+
+        ``minimum`` and ``maximum`` name arrays the snippet seeds with infinities
+        and reduces over the native nodes, the Lobatto samples and the subcell
+        averages of the polynomial at ``state``. The splice site declares
+        ``NumberOfObservables``, ``NumberOfDofsPerAxis``, ``NumberOfSubcellsPerAxis``,
+        ``NumberOfNodes``, ``DataPerNode``, ``mapStateToObservables``,
+        ``DgToLobattoMatrix`` and ``DgToSubcellMatrix``.
+        """
+        precision = dictionary["SOLUTION_STORAGE_PRECISION"]
+        return f"""
+    std::fill_n({minimum}, NumberOfObservables, std::numeric_limits<{precision}>::infinity());
+    std::fill_n({maximum}, NumberOfObservables, -std::numeric_limits<{precision}>::infinity());
+    ::exahype2::dg::reduceObservableExtrema<NumberOfObservables>(
+      {minimum}, {maximum}, {state}, NumberOfNodes, DataPerNode, mapStateToObservables
+    );
+    ::exahype2::dg::reduceProjectedObservableExtrema<
+      DIMENSIONS, NumberOfDofsPerAxis, NumberOfDofsPerAxis, DataPerNode, NumberOfObservables
+    >({minimum}, {maximum}, {state}, DgToLobattoMatrix, mapStateToObservables);
+    ::exahype2::dg::reduceProjectedObservableExtrema<
+      DIMENSIONS, NumberOfDofsPerAxis, NumberOfSubcellsPerAxis, DataPerNode, NumberOfObservables
+    >({minimum}, {maximum}, {state}, DgToSubcellMatrix, mapStateToObservables);
+"""
+
     def get_includes(self):
         return (
             self._solver._get_default_includes()

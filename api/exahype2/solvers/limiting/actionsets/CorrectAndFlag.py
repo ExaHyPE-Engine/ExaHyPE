@@ -3,8 +3,10 @@
 from .AbstractLimiterActionSet import AbstractLimiterActionSet
 from ..Labels import (
     cell_status_to_face_snippet,
+    face_neighbour_dmp_extrema_merge_snippet,
+    hanging_face_dmp_extrema_from_coarse_snippet,
     hanging_face_status_from_coarse_snippet,
-    hanging_face_status_fold_snippet,
+    hanging_face_status_reduce_snippet,
     reset_refined_face_status_snippet,
 )
 
@@ -53,117 +55,33 @@ class CorrectAndFlag(AbstractLimiterActionSet):
     constexpr int NumberOfDofsPerAxis     = {{ORDER}} + 1;
     constexpr int NumberOfSubcellsPerAxis = 2 * {{ORDER}} + 1;
 
-    {{SOLUTION_STORAGE_PRECISION}} candidateMinimum[NumberOfObservables];
-    {{SOLUTION_STORAGE_PRECISION}} candidateMaximum[NumberOfObservables];
-    std::fill_n(
-      candidateMinimum,
-      NumberOfObservables,
-      std::numeric_limits<{{SOLUTION_STORAGE_PRECISION}}>::infinity()
-    );
-    std::fill_n(
-      candidateMaximum,
-      NumberOfObservables,
-      -std::numeric_limits<{{SOLUTION_STORAGE_PRECISION}}>::infinity()
-    );
     const auto mapStateToObservables = [](
       const {{SOLUTION_STORAGE_PRECISION}}* const Q,
       {{SOLUTION_STORAGE_PRECISION}}* const observables
     ) {
       {{DMP_OBSERVABLES}}
     };
-    ::exahype2::dg::reduceObservableExtrema<NumberOfObservables>(
-      candidateMinimum,
-      candidateMaximum,
-      candidate,
-      NumberOfNodes,
-      DataPerNode,
-      mapStateToObservables
-    );
-
     // A polynomial can attain extrema between its storage nodes. Lobatto samples
     // cover the cell boundary, while subcell averages cover the fallback grid.
     static constexpr {{SOLUTION_STORAGE_PRECISION}} DgToLobattoMatrix[] = {{DMP_DG_TO_LOBATTO_MATRIX}};
     static constexpr {{SOLUTION_STORAGE_PRECISION}} DgToSubcellMatrix[] = {{DMP_DG_TO_SUBCELL_MATRIX}};
-    ::exahype2::dg::reduceProjectedObservableExtrema<
-      DIMENSIONS,
-      NumberOfDofsPerAxis,
-      NumberOfDofsPerAxis,
-      DataPerNode,
-      NumberOfObservables
-    >(
-      candidateMinimum,
-      candidateMaximum,
-      candidate,
-      DgToLobattoMatrix,
-      mapStateToObservables
-    );
-    ::exahype2::dg::reduceProjectedObservableExtrema<
-      DIMENSIONS,
-      NumberOfDofsPerAxis,
-      NumberOfSubcellsPerAxis,
-      DataPerNode,
-      NumberOfObservables
-    >(
-      candidateMinimum,
-      candidateMaximum,
-      candidate,
-      DgToSubcellMatrix,
-      mapStateToObservables
-    );
+
+    {{SOLUTION_STORAGE_PRECISION}} candidateMinimum[NumberOfObservables];
+    {{SOLUTION_STORAGE_PRECISION}} candidateMaximum[NumberOfObservables];
+{{CANDIDATE_EXTREMA_REDUCTION}}
 
     // The reference is the cell's own previous-step range, sampled like the
-    // candidate. Folding the neighbours' ranges in would widen it by an
-    // approaching jump, so a cell ahead of a front would accept its ringing
-    // candidate and the front would cross the mesh unflagged. The corrector has
-    // not touched the predictor backup, so it still holds the accepted
-    // previous solution.
+    // candidate. The corrector has not touched the predictor backup, so it
+    // still holds the accepted previous solution.
     const auto* const previousSolution = fineGridCell{{UNKNOWN_IDENTIFIER}}_old.data();
     {{SOLUTION_STORAGE_PRECISION}} referenceMinimum[NumberOfObservables];
     {{SOLUTION_STORAGE_PRECISION}} referenceMaximum[NumberOfObservables];
-    std::fill_n(
-      referenceMinimum,
-      NumberOfObservables,
-      std::numeric_limits<{{SOLUTION_STORAGE_PRECISION}}>::infinity()
-    );
-    std::fill_n(
-      referenceMaximum,
-      NumberOfObservables,
-      -std::numeric_limits<{{SOLUTION_STORAGE_PRECISION}}>::infinity()
-    );
-    ::exahype2::dg::reduceObservableExtrema<NumberOfObservables>(
-      referenceMinimum,
-      referenceMaximum,
-      previousSolution,
-      NumberOfNodes,
-      DataPerNode,
-      mapStateToObservables
-    );
-    ::exahype2::dg::reduceProjectedObservableExtrema<
-      DIMENSIONS,
-      NumberOfDofsPerAxis,
-      NumberOfDofsPerAxis,
-      DataPerNode,
-      NumberOfObservables
-    >(
-      referenceMinimum,
-      referenceMaximum,
-      previousSolution,
-      DgToLobattoMatrix,
-      mapStateToObservables
-    );
-    ::exahype2::dg::reduceProjectedObservableExtrema<
-      DIMENSIONS,
-      NumberOfDofsPerAxis,
-      NumberOfSubcellsPerAxis,
-      DataPerNode,
-      NumberOfObservables
-    >(
-      referenceMinimum,
-      referenceMaximum,
-      previousSolution,
-      DgToSubcellMatrix,
-      mapStateToObservables
-    );
+{{REFERENCE_EXTREMA_REDUCTION}}
+    // The face neighbours' previous-step ranges widen the reference (Dumbser,
+    // Zanotti, Loubere and Diot, J. Comput. Phys. 278 (2014) 47-75). The
+    // predictor sweep writes them onto the face sides, and the exchange carries
+    // them across the rank boundaries.
+{{NEIGHBOUR_EXTREMA_MERGE}}
 
 {% if DMP_RELAXATION_PARAMETER_IMPLEMENTATION %}
     const auto relaxationParameterForObservable = [](
@@ -245,12 +163,15 @@ class CorrectAndFlag(AbstractLimiterActionSet):
     _Template_TouchHangingFaceFirstTime = """
   if ({{FACE_GUARD}}) {
 {{HANGING_FACE_STATUS_FROM_COARSE}}
+{% if USES_DMP %}
+{{HANGING_FACE_DMP_EXTREMA_FROM_COARSE}}
+{% endif %}
   }
 """
 
     _Template_TouchHangingFaceLastTime = """
   if ({{FACE_GUARD}}) {
-{{HANGING_FACE_STATUS_FOLD}}
+{{HANGING_FACE_STATUS_REDUCE}}
   }
 """
 
@@ -268,7 +189,7 @@ class CorrectAndFlag(AbstractLimiterActionSet):
         dictionary["HANGING_FACE_STATUS_FROM_COARSE"] = (
             hanging_face_status_from_coarse_snippet(self._solver._name)
         )
-        dictionary["HANGING_FACE_STATUS_FOLD"] = hanging_face_status_fold_snippet(
+        dictionary["HANGING_FACE_STATUS_REDUCE"] = hanging_face_status_reduce_snippet(
             self._solver._name
         )
         dictionary["USES_DMP"] = self._solver._subcell_limiter_uses_dmp
@@ -281,6 +202,31 @@ class CorrectAndFlag(AbstractLimiterActionSet):
         dictionary["DMP_OBSERVABLES"] = self._rendered_dmp_observables(dictionary)
         if dictionary["USES_DMP"]:
             self._add_dmp_sampling_matrices_to_dictionary(dictionary)
+            dictionary["CANDIDATE_EXTREMA_REDUCTION"] = (
+                self._dmp_extrema_reduction_snippet(
+                    "candidate", "candidateMinimum", "candidateMaximum", dictionary
+                )
+            )
+            dictionary["REFERENCE_EXTREMA_REDUCTION"] = (
+                self._dmp_extrema_reduction_snippet(
+                    "previousSolution", "referenceMinimum", "referenceMaximum", dictionary
+                )
+            )
+            number_of_observables = self._solver._subcell_limiter_number_of_dmp_observables
+            dictionary["NEIGHBOUR_EXTREMA_MERGE"] = (
+                face_neighbour_dmp_extrema_merge_snippet(
+                    self._solver._name,
+                    number_of_observables,
+                    "referenceMinimum",
+                    "referenceMaximum",
+                    dictionary["SOLUTION_STORAGE_PRECISION"],
+                )
+            )
+            dictionary["HANGING_FACE_DMP_EXTREMA_FROM_COARSE"] = (
+                hanging_face_dmp_extrema_from_coarse_snippet(
+                    self._solver._name, number_of_observables
+                )
+            )
         dictionary["DMP_RELAXATION_PARAMETER"] = (
             self._solver._subcell_limiter_dmp_relaxation_parameter
         )
@@ -297,7 +243,7 @@ class CorrectAndFlag(AbstractLimiterActionSet):
             self._solver._name
         )
         # Only an adaptive solver derives its step from the eigenvalue, so only it
-        # folds an admissible cell's wave speed in here.
+        # reduces an admissible cell's wave speed here.
         dictionary["IS_ADAPTIVE"] = bool(
             self._solver._compute_new_time_step_size.strip()
         )

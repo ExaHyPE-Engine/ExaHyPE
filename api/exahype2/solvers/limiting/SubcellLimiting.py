@@ -70,7 +70,10 @@ class SubcellLimiting:
         criterion or discrete maximum principle is required. A positive
         ``number_of_dmp_observables`` enables the latter. Its ``dmp_observables``
         C++ body maps one nodal ``Q`` state to exactly that many ``observables``;
-        ``{{COMPUTE_PRECISION}}`` expands to the state precision. Bounds use
+        ``{{COMPUTE_PRECISION}}`` expands to the state precision. The reference
+        range of a cell is its own previous-step range merged with its face
+        neighbours' (Dumbser, Zanotti, Loubere and Diot, J. Comput. Phys. 278
+        (2014) 47-75), and the bounds widen it by
         ``max(dmp_relaxation_parameter, dmp_differences_scaling * (maximum - minimum))``.
         An optional ``dmp_relaxation_parameter_implementation`` C++ body returns
         each relaxation from ``observable`` and ``specifiedRelaxationParameter``.
@@ -202,7 +205,9 @@ class SubcellLimiting:
         if not self.subcell_limiter_is_enabled:
             return
         add_limiter_attributes_to_cell_label(self._cell_label)
-        add_limiter_attributes_to_face_label(self._face_label)
+        add_limiter_attributes_to_face_label(
+            self._face_label, self._subcell_limiter_number_of_dmp_observables
+        )
 
         merge = self._face_label.merge_method_definition
         if _FACE_MERGE_ANCHOR not in merge:
@@ -211,7 +216,9 @@ class SubcellLimiting:
                 "so the limiter status cannot be spliced into it."
             )
         self._face_label.merge_method_definition = merge.replace(
-            _FACE_MERGE_ANCHOR, _FACE_MERGE_ANCHOR + face_status_merge_snippet()
+            _FACE_MERGE_ANCHOR,
+            _FACE_MERGE_ANCHOR
+            + face_status_merge_snippet(self._subcell_limiter_number_of_dmp_observables),
         )
 
         self._create_subcell_patches()
@@ -298,7 +305,9 @@ class SubcellLimiting:
             _SUBCELL_INITIALISE_DESCEND_ORDER
         )
         self._action_set_subcell_predict = Predict(
-            self, store_cell + " and " + self._subcell_limiter_state_guard("Predict")
+            self,
+            store_cell + " and " + self._subcell_limiter_state_guard("Predict"),
+            self._subcell_limiter_state_guard("Predict"),
         )
         self._action_set_subcell_correct_and_flag = CorrectAndFlag(
             self,

@@ -95,7 +95,7 @@ aderdg_solver.add_subcell_limiter(
     ),
     number_of_dmp_observables=3,
     dmp_relaxation_parameter=0.0,
-    dmp_differences_scaling=0.01,
+    dmp_differences_scaling=1.0e-3,
     dmp_observables=exahype2.solvers.PDETerms.User_Defined_Implementation,
     dmp_relaxation_parameter_implementation=exahype2.solvers.PDETerms.User_Defined_Implementation,
     physical_admissibility_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation,
@@ -115,8 +115,8 @@ for name, kind, value in (
     project.add_runtime_parameter(name, kind, value)
 
 project.constants.export_constexpr_with_type("g", str(9.81), "double")
-# The slide descends dry terrain, so nothing submerges it: the water level and the
-# water density are both zero and the slide feels no buoyancy.
+# The slide descends dry terrain, so nothing submerges it: The water level and the
+# water density are both zero, and the buoyancy of the slide is zero.
 project.constants.export_constexpr_with_type("waterLevel", str(0.0), "double")
 project.constants.export_constexpr_with_type("rhoSlide", str(1100.0), "double")
 project.constants.export_constexpr_with_type("rhoWater", str(0.0), "double")
@@ -141,8 +141,6 @@ project.constants.export_constexpr_with_type(
     "mu", str(math.tan(math.pi / 180.0 * 25.0)), "double"
 )
 
-# The include directory is the repository root, which is what lets every file below
-# include the shared ExaSkred headers by their full path.
 project.output.makefile.add_include_directory("../../../..")
 project.output.makefile.add_cpp_file("../../AugmentedState.cpp")
 project.output.makefile.add_cpp_file("../../Landslide.cpp")

@@ -8,7 +8,7 @@ completed, so accessors rely on side ownership and traversal order.
 """
 import peano4.datamodel
 
-from peano4.datamodel.MetaDataAttribute import Integer, IntegerArray
+from peano4.datamodel.MetaDataAttribute import DoubleArray, Integer, IntegerArray
 
 
 _STATUS_INCLUDE = """
@@ -64,6 +64,28 @@ class _FaceLimiterStatus(IntegerArray):
         ]
 
 
+class _FaceDmpExtremum(DoubleArray):
+    """Stores one previous-solution observable extremum per face side.
+
+    Each cell writes its own side in the predictor sweep, and the flagging reads
+    the neighbour side after the exchange.
+    """
+
+    def __init__(self, name, number_of_observables):
+        super().__init__(name, 2 * number_of_observables)
+        self._number_of_observables = number_of_observables
+
+    def get_public_declarations(self):
+        return super().get_public_declarations() + [
+            f"""  INLINE_METHOD double get{self.accessor_name}(const int side, const int observable) const {{
+    return {self.field_name}(side * {self._number_of_observables} + observable);
+  }}""",
+            f"""  INLINE_METHOD void set{self.accessor_name}(const int side, const int observable, const double value) {{
+    {self.field_name}(side * {self._number_of_observables} + observable) = value;
+  }}""",
+        ]
+
+
 _CELL_MERGE = """
   switch (context) {
   case ::peano4::stacks::SendReceiveContext::BoundaryExchange:
@@ -100,34 +122,50 @@ def add_limiter_attributes_to_cell_label(label):
     return label
 
 
-def add_limiter_attributes_to_face_label(label):
+def add_limiter_attributes_to_face_label(label, number_of_dmp_observables=0):
     """Adds both face sides' live and snapshot limiter status to a face label.
 
     The snapshot is a frozen copy of the previous spreading ring's status. Within a
     ring a cell reads the snapshot and writes the live status, so it sees the same
-    neighbour statuses whatever the traversal order or mesh decomposition, which is
-    what makes the grown finite-volume domain reproducible. Only the live status is
-    exchanged; the face merge for it is assembled by the solver, which alone knows
-    the base face-label fields, and :func:`face_status_merge_snippet` supplies its
-    status part.
+    neighbour statuses whatever the traversal order or mesh decomposition. Only
+    the live status is exchanged; the face merge for it is assembled by the
+    solver, which alone knows the base face-label fields, and
+    :func:`face_status_merge_snippet` supplies its status part. A positive
+    ``number_of_dmp_observables`` adds both sides' previous-solution observable
+    extrema, which the flagging reads from its neighbours.
     """
-    _require_attributes_absent(label, ("limiterStatus", "limiterStatusSnapshot"))
+    _require_attributes_absent(
+        label,
+        ("limiterStatus", "limiterStatusSnapshot", "dmpMinimum", "dmpMaximum"),
+    )
     label.add_attribute(_FaceLimiterStatus("limiterStatus"))
     label.add_attribute(_FaceLimiterStatus("limiterStatusSnapshot"))
+    if number_of_dmp_observables > 0:
+        label.add_attribute(_FaceDmpExtremum("dmpMinimum", number_of_dmp_observables))
+        label.add_attribute(_FaceDmpExtremum("dmpMaximum", number_of_dmp_observables))
     label.includes += _STATUS_INCLUDE
     return label
 
 
-def face_status_merge_snippet():
-    """Returns the face-merge line that copies the neighbour-owned status side.
+def face_status_merge_snippet(number_of_dmp_observables=0):
+    """Returns the face-merge lines that copy the neighbour-owned status side.
 
     Only the neighbour side is copied, chosen from the geometric outer normal, so
     the two sides stay independent and the merged status is the same for any mesh
     decomposition. The solver splices this next to its other per-side face fields.
+    A positive ``number_of_dmp_observables`` also copies the neighbour side's
+    observable extrema.
     """
-    return """
+    result = """
       setLimiterStatus(neighbourEntry, neighbour.getLimiterStatus(neighbourEntry));
 """
+    if number_of_dmp_observables > 0:
+        result += f"""      for (int observable = 0; observable < {number_of_dmp_observables}; observable++) {{
+        setDmpMinimum(neighbourEntry, observable, neighbour.getDmpMinimum(neighbourEntry, observable));
+        setDmpMaximum(neighbourEntry, observable, neighbour.getDmpMaximum(neighbourEntry, observable));
+      }}
+"""
+    return result
 
 
 def cell_status_to_face_snippet(solver_name):
@@ -166,15 +204,15 @@ def hanging_face_status_from_coarse_snippet(solver_name):
 """
 
 
-def hanging_face_status_fold_snippet(solver_name):
-    """Returns the C++ that folds a hanging face's fine-cell status upwards.
+def hanging_face_status_reduce_snippet(solver_name):
+    """Returns the C++ that reduces a hanging face's fine-cell status upwards.
 
     The refined side of a face above hanging faces has no adjacent cell left to
-    write it, so without this fold it would keep the status of the refined-away
-    cell. By the time a hanging face is left, its adjacent fine cell has written
-    its status onto its side, and the maximum over the subfaces lands on the
-    coarse face's refined side. A maximum is the same for every subface order,
-    so the fold does not depend on the traversal or the decomposition.
+    write it. By the time a hanging face is left, its adjacent fine cell has
+    written its status onto its side, and the maximum over the subfaces lands on
+    the coarse face's refined side. A maximum is the same for every subface
+    order, so the reduction does not depend on the traversal or the
+    decomposition.
     """
     return f"""
     const auto refinedSide = marker.getSelectedFaceNumber() < DIMENSIONS ? 1 : 0;
@@ -184,18 +222,131 @@ def hanging_face_status_fold_snippet(solver_name):
 
 
 def reset_refined_face_status_snippet(solver_name):
-    """Returns the C++ that restarts the fold on a face's refined sides.
+    """Returns the C++ that restarts the reduction on a face's refined sides.
 
     The hanging subfaces raise the fine statuses onto a refined side while the
-    sweep descends, and the fold has to restart from Regular each sweep or a
-    raised status could never drop again. The face touch runs before the
-    subtree below is entered, so the reset precedes every fold of the sweep.
+    sweep descends, and the reduction restarts from Regular each sweep, so a
+    raised status can drop again. The face touch runs before the subtree below
+    is entered, so the reset precedes every reduction of the sweep.
     """
     return f"""
     for (int faceSide = 0; faceSide < 2; faceSide++) {{
       if (fineGridFace{solver_name}FaceLabel.getAboveHanging(faceSide)) {{
         fineGridFace{solver_name}FaceLabel.setLimiterStatus(faceSide, ::exahype2::dg::LimiterStatus::Regular);
       }}
+    }}
+"""
+
+
+def reset_face_dmp_extrema_snippet(solver_name, number_of_observables):
+    """Returns the C++ that seeds both sides of a face's extrema with infinities.
+
+    The face touch runs before either adjacent cell writes its side, so a side no
+    cell writes keeps the infinities: a domain boundary, or a rank boundary until
+    the exchange copies the neighbour's side. A merge with an infinity leaves a
+    reference range unchanged.
+    """
+    return f"""
+    for (int faceSide = 0; faceSide < 2; faceSide++) {{
+      for (int observable = 0; observable < {number_of_observables}; observable++) {{
+        fineGridFace{solver_name}FaceLabel.setDmpMinimum(faceSide, observable, std::numeric_limits<double>::infinity());
+        fineGridFace{solver_name}FaceLabel.setDmpMaximum(faceSide, observable, -std::numeric_limits<double>::infinity());
+      }}
+    }}
+"""
+
+
+def cell_dmp_extrema_to_face_snippet(solver_name, number_of_observables, minimum, maximum):
+    """Returns the C++ that writes a cell's observable extrema onto its face sides.
+
+    ``minimum`` and ``maximum`` name arrays of ``number_of_observables`` values.
+    The cell owns the right side of its lower faces and the left side of its
+    upper faces, as :func:`cell_status_to_face_snippet` does.
+    """
+    return f"""
+    for (int faceNumber = 0; faceNumber < 2 * DIMENSIONS; faceNumber++) {{
+      const auto ownSide = faceNumber < DIMENSIONS ? 1 : 0;
+      for (int observable = 0; observable < {number_of_observables}; observable++) {{
+        fineGridFaces{solver_name}FaceLabel(faceNumber).setDmpMinimum(ownSide, observable, static_cast<double>({minimum}[observable]));
+        fineGridFaces{solver_name}FaceLabel(faceNumber).setDmpMaximum(ownSide, observable, static_cast<double>({maximum}[observable]));
+      }}
+    }}
+"""
+
+
+def face_neighbour_dmp_extrema_merge_snippet(
+    solver_name, number_of_observables, minimum, maximum, precision
+):
+    """Returns the C++ that merges the face neighbours' extrema into a cell's range.
+
+    ``minimum`` and ``maximum`` name arrays of ``number_of_observables`` values of
+    type ``precision``. The neighbour side of a face without a neighbour holds
+    infinities, which leave the range unchanged.
+    """
+    return f"""
+    for (int faceNumber = 0; faceNumber < 2 * DIMENSIONS; faceNumber++) {{
+      const auto  neighbourSide = faceNumber < DIMENSIONS ? 0 : 1;
+      const auto& faceLabel     = fineGridFaces{solver_name}FaceLabel(faceNumber);
+      for (int observable = 0; observable < {number_of_observables}; observable++) {{
+        {minimum}[observable] = ::exahype2::dg::mergeDiscreteMaximumPrincipleMinimum(
+          {minimum}[observable],
+          static_cast<{precision}>(faceLabel.getDmpMinimum(neighbourSide, observable))
+        );
+        {maximum}[observable] = ::exahype2::dg::mergeDiscreteMaximumPrincipleMaximum(
+          {maximum}[observable],
+          static_cast<{precision}>(faceLabel.getDmpMaximum(neighbourSide, observable))
+        );
+      }}
+    }}
+"""
+
+
+def hanging_face_dmp_extrema_from_coarse_snippet(solver_name, number_of_observables):
+    """Returns the C++ that copies the coarse face's extrema onto a hanging face.
+
+    A hanging face keeps whatever its storage slot last held, so the fine cell
+    reads its coarse neighbour's extrema from the coarse face's copy.
+    """
+    return f"""
+    const auto& coarseFaceLabel = coarseGridFaces{solver_name}FaceLabel(marker.getSelectedFaceNumber());
+    for (int faceSide = 0; faceSide < 2; faceSide++) {{
+      for (int observable = 0; observable < {number_of_observables}; observable++) {{
+        fineGridFace{solver_name}FaceLabel.setDmpMinimum(faceSide, observable, coarseFaceLabel.getDmpMinimum(faceSide, observable));
+        fineGridFace{solver_name}FaceLabel.setDmpMaximum(faceSide, observable, coarseFaceLabel.getDmpMaximum(faceSide, observable));
+      }}
+    }}
+"""
+
+
+def hanging_face_dmp_extrema_reduce_snippet(solver_name, number_of_observables):
+    """Returns the C++ that reduces a hanging face's fine-cell extrema upwards.
+
+    By the time a hanging face is left, its adjacent fine cell has written its
+    extrema onto its side, and the minimum and maximum over the subfaces land on
+    the coarse face's refined side, which the face touch seeded with infinities.
+    A minimum and a maximum are the same for every subface order, so the
+    reduction does not depend on the traversal or the decomposition.
+    """
+    return f"""
+    const auto reducedSide     = marker.getSelectedFaceNumber() < DIMENSIONS ? 1 : 0;
+    auto&      coarseFaceLabel = coarseGridFaces{solver_name}FaceLabel(marker.getSelectedFaceNumber());
+    for (int observable = 0; observable < {number_of_observables}; observable++) {{
+      coarseFaceLabel.setDmpMinimum(
+        reducedSide,
+        observable,
+        ::exahype2::dg::mergeDiscreteMaximumPrincipleMinimum(
+          coarseFaceLabel.getDmpMinimum(reducedSide, observable),
+          fineGridFace{solver_name}FaceLabel.getDmpMinimum(reducedSide, observable)
+        )
+      );
+      coarseFaceLabel.setDmpMaximum(
+        reducedSide,
+        observable,
+        ::exahype2::dg::mergeDiscreteMaximumPrincipleMaximum(
+          coarseFaceLabel.getDmpMaximum(reducedSide, observable),
+          fineGridFace{solver_name}FaceLabel.getDmpMaximum(reducedSide, observable)
+        )
+      );
     }}
 """
 

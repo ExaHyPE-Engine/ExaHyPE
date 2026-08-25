@@ -233,7 +233,7 @@ def add_limiter(
         solver.add_subcell_limiter(
             limiter_solver=scheme,
             number_of_dmp_observables=dimensions + 2,
-            dmp_relaxation_parameter=0.01,
+            dmp_relaxation_parameter=1.0e-4,
             dmp_differences_scaling=differences_scaling,
             physical_admissibility_criterion=physical_admissibility_criterion,
             dmp_observables=observable_mapping,

@@ -197,11 +197,11 @@ class RecomputeSubcells(AbstractLimiterActionSet):
         fineGridCell{{SOLVER_NAME}}SubcellOld.data()
       );
 {% if IS_ADAPTIVE %}
-      // The subgrid resolves waves the smoothed candidate hides, so the admissible
-      // step must come from the finite-volume wave speed, not from re-measuring the
-      // projected-back polynomial. Folding it through the same statistics with the
-      // cell size keeps it consistent with the Galerkin cells: the polynomial order
-      // factor in the step formula already accounts for the subcell resolution.
+      // The subgrid resolves waves the smoothed candidate hides, so the
+      // admissible step comes from the finite-volume wave speed. The statistics
+      // take it with the cell size, as they take a Galerkin cell's wave speed:
+      // The polynomial order factor in the step formula accounts for the
+      // subcell resolution.
       ::exahype2::dg::MaxEigenvalueStatistics subcellEigenvalueStatistics;
       subcellEigenvalueStatistics.accumulate<DIMENSIONS>(
         marker.getH(),
@@ -235,7 +235,7 @@ class RecomputeSubcells(AbstractLimiterActionSet):
             self._solver._subcell_limiter_solver.time_stepping
         )
         # Only an adaptive solver derives the step from eigenvalues; a fixed step
-        # is the user's and needs no fold-in.
+        # is the user's and takes no wave speed.
         is_adaptive = bool(self._solver._compute_new_time_step_size.strip())
         dictionary["IS_ADAPTIVE"] = is_adaptive
         dictionary["EVALUATE_FLUX"] = self._cpp_bool(dictionary["USE_FLUX"])

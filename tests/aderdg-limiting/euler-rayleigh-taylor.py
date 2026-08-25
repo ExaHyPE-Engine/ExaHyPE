@@ -112,9 +112,6 @@ solver.set_implementation(
     refinement_criterion=refinement_criterion,
 )
 
-# The density contact stays admissible for the plain criterion, so the limiter
-# would never fire and Gibbs oscillations would survive at the interface. The
-# contact sensor rejects cells that straddle the contact with a resolved jump.
 euler.add_limiter(
     solver,
     arguments.limiter_solver,
@@ -126,7 +123,7 @@ euler.add_limiter(
         heavy_density=2.0,
     ),
     euler.dmp_observables(gamma),
-    differences_scaling=0.03,
+    differences_scaling=1.0e-3,
 )
 
 project.add_solver(solver)
