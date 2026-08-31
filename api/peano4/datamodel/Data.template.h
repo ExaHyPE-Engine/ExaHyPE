@@ -36,20 +36,14 @@ public:
   static constexpr int Cardinality = {{CARDINALITY_3D}};
 #endif
 
-private:
-  DoFType* _data;
+  explicit {{CLASSNAME}}() noexcept = default;
 
-  template <typename LeftData, typename RightData>
-  friend struct ::peano4::datamanagement::SwapHelper;
-
-public:
-  explicit {{CLASSNAME}}() noexcept;
-  ~{{CLASSNAME}}() noexcept;
-
-  INLINE_METHOD {{CLASSNAME}}(const {{CLASSNAME}}& other):
-    _data(nullptr) {
+  INLINE_METHOD {{CLASSNAME}}(const {{CLASSNAME}}& other) {
     *this = other;
   }
+
+  INLINE_METHOD {{CLASSNAME}}({{CLASSNAME}}&& other) noexcept:
+    _data(std::exchange(other._data, nullptr)) {}
 
   INLINE_METHOD {{CLASSNAME}}& operator=(const {{CLASSNAME}}& other) {
     if (this == &other) {
@@ -57,11 +51,10 @@ public:
     }
 
     if (other._data == nullptr) {
-      // A null pointer is the only empty-state marker. Clear the target so
-      // reused stack slots cannot expose data from an earlier traversal.
-      // This is semantically required for stack reuse, but it gives up the
-      // target's reusable heap buffer.
-      // TODO: Remove, once we have memory pools.
+      // A null pointer is the only empty-state marker, so the target releases
+      // its buffer and a reused stack slot exposes no data of an earlier
+      // traversal.
+      // @todo Remove once memory pools exist.
       if (_data != nullptr) {
         tarch::freeMemory(_data, tarch::MemoryLocation::Heap);
         _data = nullptr;
@@ -69,8 +62,6 @@ public:
       return *this;
     }
 
-    // Reuse existing memory
-    // If we already have memory, don't free and malloc again. Just overwrite.
     if (_data == nullptr) {
       _data = tarch::allocateMemory<DoFType>(Cardinality, tarch::MemoryLocation::Heap);
     }
@@ -78,9 +69,6 @@ public:
     std::memcpy(_data, other._data, Cardinality * sizeof(DoFType));
     return *this;
   }
-
-  INLINE_METHOD {{CLASSNAME}}({{CLASSNAME}}&& other) noexcept:
-    _data(std::exchange(other._data, nullptr)) {}
 
   INLINE_METHOD {{CLASSNAME}}& operator=({{CLASSNAME}}&& other) noexcept {
     std::swap(_data, other._data);
@@ -104,11 +92,11 @@ public:
 {% if DATA_ASSOCIATION == 1 -%}
   bool send(const ::peano4::datamanagement::VertexMarker& marker, ::peano4::stacks::SendReceiveContext context) const;
   bool receiveAndMerge(const ::peano4::datamanagement::VertexMarker& marker, ::peano4::stacks::SendReceiveContext context) const;
-  void merge(::peano4::stacks::SendReceiveContext context, {{CLASSNAME}}&& neighbour, const ::peano4::datamanagement::VertexMarker& marker, int spacetreeId);
+  void merge(::peano4::stacks::SendReceiveContext context, {{CLASSNAME}}&& neighbour, const ::peano4::datamanagement::VertexMarker& marker, int treeId);
 
   INLINE_METHOD static bool load(const ::peano4::datamanagement::VertexMarker& marker) {
-    // Local persistence is intentionally topology-driven. Solver-state guards
-    // belong to send()/receiveAndMerge() and only affect exchange.
+    // The grid topology alone decides on local persistence, so a solver-state
+    // guard belongs to send() and receiveAndMerge().
     return not marker.hasBeenRefined();
   }
   INLINE_METHOD static bool store(const ::peano4::datamanagement::VertexMarker& marker) {
@@ -119,11 +107,11 @@ public:
 {% if DATA_ASSOCIATION == 2 -%}
   bool send(const ::peano4::datamanagement::FaceMarker& marker, ::peano4::stacks::SendReceiveContext context) const;
   bool receiveAndMerge(const ::peano4::datamanagement::FaceMarker& marker, ::peano4::stacks::SendReceiveContext context) const;
-  void merge(::peano4::stacks::SendReceiveContext context, {{CLASSNAME}}&& neighbour, const ::peano4::datamanagement::FaceMarker& marker, int spacetreeId);
+  void merge(::peano4::stacks::SendReceiveContext context, {{CLASSNAME}}&& neighbour, const ::peano4::datamanagement::FaceMarker& marker, int treeId);
 
   INLINE_METHOD static bool load(const ::peano4::datamanagement::FaceMarker& marker) {
-    // Local persistence is intentionally topology-driven. Solver-state guards
-    // belong to send()/receiveAndMerge() and only affect exchange.
+    // The grid topology alone decides on local persistence, so a solver-state
+    // guard belongs to send() and receiveAndMerge().
     return not marker.hasBeenRefined();
   }
   INLINE_METHOD static bool store(const ::peano4::datamanagement::FaceMarker& marker) {
@@ -134,15 +122,23 @@ public:
 {% if DATA_ASSOCIATION == 3 -%}
   bool send(const ::peano4::datamanagement::CellMarker& marker, ::peano4::stacks::SendReceiveContext context) const;
   bool receiveAndMerge(const ::peano4::datamanagement::CellMarker& marker, ::peano4::stacks::SendReceiveContext context) const;
-  void merge(::peano4::stacks::SendReceiveContext context, {{CLASSNAME}}&& neighbour, const ::peano4::datamanagement::CellMarker& marker, int spacetreeId);
+  void merge(::peano4::stacks::SendReceiveContext context, {{CLASSNAME}}&& neighbour, const ::peano4::datamanagement::CellMarker& marker, int treeId);
 
   INLINE_METHOD static bool load(const ::peano4::datamanagement::CellMarker& marker) {
-    // Local persistence is intentionally topology-driven. Solver-state guards
-    // belong to send()/receiveAndMerge() and only affect exchange.
+    // The grid topology alone decides on local persistence, so a solver-state
+    // guard belongs to send() and receiveAndMerge().
     return not marker.hasBeenRefined();
   }
   INLINE_METHOD static bool store(const ::peano4::datamanagement::CellMarker& marker) {
     return not marker.willBeRefined();
   }
 {% endif -%}
+
+  ~{{CLASSNAME}}() noexcept;
+
+private:
+  DoFType* _data{nullptr};
+
+  template <typename LeftData, typename RightData>
+  friend struct ::peano4::datamanagement::SwapHelper;
 };

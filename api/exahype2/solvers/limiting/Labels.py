@@ -1,11 +1,5 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-"""Cell and face label attributes for the subcell limiter.
-
-``exahype2::dg::LimiterStatus`` owns the status ordering and merge. Each
-adjacent cell writes a different face side after the preceding face event has
-completed, so accessors rely on side ownership and traversal order.
-"""
 import peano4.datamodel
 
 from peano4.datamodel.MetaDataAttribute import Integer, IntegerArray
@@ -19,8 +13,6 @@ _STATUS_ENUM = "::exahype2::dg::LimiterStatus"
 
 
 class _CellLimiterStatus(Integer):
-    """Stores a cell's limiter ownership as ``exahype2::dg::LimiterStatus``."""
-
     def get_public_declarations(self):
         return [
             f"""  INLINE_METHOD {_STATUS_ENUM} get{self.accessor_name}() const {{
@@ -37,10 +29,8 @@ class _CellLimiterStatus(Integer):
 
 
 class _FaceLimiterStatus(IntegerArray):
-    """Stores both face sides' independently owned limiter status.
-
-    The preceding face event initialises both sides before either adjacent cell
-    accesses them, and each cell writes only its own side.
+    """The preceding face event initialises both sides before either adjacent
+    cell accesses them, and each cell writes only its own side.
     """
 
     def __init__(self, name):
@@ -66,14 +56,11 @@ class _FaceLimiterStatus(IntegerArray):
 
 _CELL_MERGE = """
   switch (context) {
-  case ::peano4::stacks::SendReceiveContext::BoundaryExchange:
-    assertion(false, "Cell labels are never exchanged across a boundary.");
+  case ::peano4::stacks::SendReceiveContext::InterRank:
+  case ::peano4::stacks::SendReceiveContext::IntraRank:
+  case ::peano4::stacks::SendReceiveContext::Consolidation:
+    assertion(false, "Cell labels are never merged.");
     break;
-  case ::peano4::stacks::SendReceiveContext::ForkDomain:
-    *this = neighbour;
-    break;
-  default:
-    assertion(false, "The cell-label merge context is unsupported.");
   }
 """
 
@@ -103,13 +90,8 @@ def add_limiter_attributes_to_cell_label(label):
 def add_limiter_attributes_to_face_label(label):
     """Adds both face sides' live and snapshot limiter status to a face label.
 
-    The snapshot is a frozen copy of the previous spreading ring's status. Within a
-    ring a cell reads the snapshot and writes the live status, so it sees the same
-    neighbour statuses whatever the traversal order or mesh decomposition, which is
-    what makes the grown finite-volume domain reproducible. Only the live status is
-    exchanged; the face merge for it is assembled by the solver, which alone knows
-    the base face-label fields, and :func:`face_status_merge_snippet` supplies its
-    status part.
+    The snapshot holds the previous spreading ring's status, and a cell reads the
+    snapshot and writes the live status. Only the live status is exchanged.
     """
     _require_attributes_absent(label, ("limiterStatus", "limiterStatusSnapshot"))
     label.add_attribute(_FaceLimiterStatus("limiterStatus"))
@@ -121,9 +103,8 @@ def add_limiter_attributes_to_face_label(label):
 def face_status_merge_snippet():
     """Returns the face-merge line that copies the neighbour-owned status side.
 
-    Only the neighbour side is copied, chosen from the geometric outer normal, so
-    the two sides stay independent and the merged status is the same for any mesh
-    decomposition. The solver splices this next to its other per-side face fields.
+    The side is chosen from the geometric outer normal, so the two sides stay
+    independent.
     """
     return """
       setLimiterStatus(neighbourEntry, neighbour.getLimiterStatus(neighbourEntry));
@@ -134,9 +115,7 @@ def cell_status_to_face_snippet(solver_name):
     """Returns the C++ that projects a cell's limiter status onto its faces.
 
     A cell owns one side of each adjacent face, the lower faces on their right and
-    the upper faces on their left. Writing the cell status there is the single place
-    the per-side projection is formed, so the flagging and the spreading sweeps
-    share this projection.
+    the upper faces on their left.
     """
     return f"""
     const auto limiterStatus = fineGridCell{solver_name}CellLabel.getLimiterStatus();
@@ -152,9 +131,7 @@ def hanging_face_status_from_coarse_snippet(solver_name):
 
     A hanging face keeps whatever its storage slot last held, so both its live
     and its snapshot status are derived on first touch from the coarse face's
-    snapshot. The spreading then reads the coarse neighbour's previous-ring
-    status across the resolution transition, whatever the traversal order, and
-    the adjacent fine cell overwrites its own side afterwards.
+    snapshot.
     """
     return f"""
     for (int faceSide = 0; faceSide < 2; faceSide++) {{
@@ -167,14 +144,12 @@ def hanging_face_status_from_coarse_snippet(solver_name):
 
 
 def hanging_face_status_fold_snippet(solver_name):
-    """Returns the C++ that folds a hanging face's fine-cell status upwards.
+    """Returns the C++ that raises a hanging face's fine-cell status onto the
+    coarse face's refined side.
 
-    The refined side of a face above hanging faces has no adjacent cell left to
-    write it, so without this fold it would keep the status of the refined-away
-    cell. By the time a hanging face is left, its adjacent fine cell has written
-    its status onto its side, and the maximum over the subfaces lands on the
-    coarse face's refined side. A maximum is the same for every subface order,
-    so the fold does not depend on the traversal or the decomposition.
+    The adjacent fine cell has written its status onto its side by the time a
+    hanging face is left, and the maximum over the subfaces is the same for
+    every subface order.
     """
     return f"""
     const auto refinedSide = marker.getSelectedFaceNumber() < DIMENSIONS ? 1 : 0;
@@ -184,12 +159,11 @@ def hanging_face_status_fold_snippet(solver_name):
 
 
 def reset_refined_face_status_snippet(solver_name):
-    """Returns the C++ that restarts the fold on a face's refined sides.
+    """Returns the C++ that resets a face's refined sides to Regular.
 
     The hanging subfaces raise the fine statuses onto a refined side while the
-    sweep descends, and the fold has to restart from Regular each sweep or a
-    raised status could never drop again. The face touch runs before the
-    subtree below is entered, so the reset precedes every fold of the sweep.
+    sweep descends, so a raised status could never drop again without this reset.
+    The face touch runs before the subtree below is entered.
     """
     return f"""
     for (int faceSide = 0; faceSide < 2; faceSide++) {{

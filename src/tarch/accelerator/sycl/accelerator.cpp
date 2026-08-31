@@ -4,8 +4,8 @@
 
 #if defined(PEANO_WITH_GPU_BACKEND_SYCL)
 
-#include "Device.h"
 #include "tarch/Assertions.h"
+#include "tarch/accelerator/sycl/Device.h"
 
 #include <sycl/sycl.hpp>
 
@@ -39,8 +39,12 @@ void tarch::accelerator::copyToDeviceMemory(void* target, const void* source, st
   queue.memcpy(target, source, sizeInBytes).wait();
 }
 
-void tarch::accelerator::
-  copyToPinnedMemory(void* target, const void* source, std::size_t sizeInBytes, [[maybe_unused]] int device) {
+void tarch::accelerator::copyToPinnedMemory(
+  void*                target,
+  const void*          source,
+  std::size_t          sizeInBytes,
+  [[maybe_unused]] int device
+) {
   std::memcpy(target, source, sizeInBytes);
 }
 
@@ -50,8 +54,12 @@ void tarch::accelerator::copyFromDeviceMemory(const void* source, void* target, 
   queue.memcpy(target, source, sizeInBytes).wait();
 }
 
-void tarch::accelerator::
-  copyFromPinnedMemory(const void* source, void* target, std::size_t sizeInBytes, [[maybe_unused]] int device) {
+void tarch::accelerator::copyFromPinnedMemory(
+  const void*          source,
+  void*                target,
+  std::size_t          sizeInBytes,
+  [[maybe_unused]] int device
+) {
   std::memcpy(target, source, sizeInBytes);
 }
 

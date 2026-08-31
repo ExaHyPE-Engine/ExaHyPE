@@ -10,8 +10,6 @@ import peano4.solversteps
 
 
 class DynamicAMR(AbstractLimiterActionSet):
-    """Transfers limiter state when the mesh creates or destroys cells."""
-
     _Template_TouchCellFirstTime = """
   if (marker.hasBeenRefined() and not marker.willBeRefined()) {
     fineGridCell{{SOLVER_NAME}}CellLabel.setLimiterStatus(::exahype2::dg::LimiterStatus::Regular);

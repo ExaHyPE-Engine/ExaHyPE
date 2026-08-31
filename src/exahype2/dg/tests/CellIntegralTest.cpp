@@ -2,30 +2,25 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "CellIntegralTest.h"
 
-#include "TestUtils.h"
-
-#include "../BoundaryConditions.h"
-#include "../CellIntegral.h"
-#include "../DGUtils.h"
-#include "../Riemann.h"
-#include "../rusanov/Rusanov.h"
 #include "exahype2/CellData.h"
+#include "exahype2/dg/BoundaryConditions.h"
+#include "exahype2/dg/CellIntegral.h"
+#include "exahype2/dg/DGUtils.h"
+#include "exahype2/dg/Riemann.h"
+#include "exahype2/dg/rusanov/Rusanov.h"
+#include "exahype2/dg/tests/TestUtils.h"
 
-/**
- * We use precomputed values for Lagrange polynomials as basis functions
- * on Gauss-Legendre nodes.
- */
 exahype2::dg::tests::CellIntegralTest::CellIntegralTest() :
   TestCase("exahype2::dg::tests::CellIntegralTest"),
-  _Order4_QuadraturePoints1d{0.04691007703066802, 0.23076534494715845, 0.5, 0.7692346550528415, 0.9530899229693319},
-  _Order4_MassMatrixDiagonal1d{
+  _orderFourQuadraturePoints1D{0.04691007703066802, 0.23076534494715845, 0.5, 0.7692346550528415, 0.9530899229693319},
+  _orderFourMassMatrixDiagonal1D{
     0.11846344252809464,
     0.23931433524968335,
     0.2844444444444444,
     0.2393143352496833,
     0.11846344252809476
   },
-  _Order4_StiffnessOperator1d{
+  _orderFourStiffnessOperator1D{
     -1.2005181447816875017764459698810242116451263427734375,
     -0.459606063929972219472830374797922559082508087158203125,
     0.1713312197562774918946360003246809355914592742919921875,
@@ -52,7 +47,7 @@ exahype2::dg::tests::CellIntegralTest::CellIntegralTest() :
     0.459606063929972219472830374797922559082508087158203125,
     1.2005181447816877238210508949123322963714599609375
   },
-  _Order4_DerivativeOperator1d{
+  _orderFourDerivativeOperator1D{
     -10.1340811913090842466544927447102963924407958984375,    15.4039041703444912201348415692336857318878173828125,
     -8.0870875087753280041624748264439404010772705078125,     3.920798231666558830710300753707997500896453857421875,
     -1.1035337019266335811806811761925928294658660888671875,  -1.9205120472639156670169313656515441834926605224609375,
@@ -67,9 +62,9 @@ exahype2::dg::tests::CellIntegralTest::CellIntegralTest() :
     8.087087508775329780519314226694405078887939453125,       -15.4039041703444912201348415692336857318878173828125,
     10.13408119130908602301133214496076107025146484375
   },
-  _Order2_QuadraturePoints1d{0.1127016653792583, 0.5, 0.8872983346207417},
-  _Order2_MassMatrixDiagonal1d{0.2777777777777777, 0.44444444444444436, 0.27777777777777773},
-  _Order2_StiffnessOperator1d{
+  _orderTwoQuadraturePoints1D{0.1127016653792583, 0.5, 0.8872983346207417},
+  _orderTwoMassMatrixDiagonal1D{0.2777777777777777, 0.44444444444444436, 0.27777777777777773},
+  _orderTwoStiffnessOperator1D{
     -1.0758287072798378,
     -0.5737753105492469,
     0.35860956909327923,
@@ -80,7 +75,7 @@ exahype2::dg::tests::CellIntegralTest::CellIntegralTest() :
     0.5737753105492469,
     1.0758287072798378
   },
-  _Order2_DerivativeOperator1d{
+  _orderTwoDerivativeOperator1D{
     -3.872983346207417,
     5.163977794943222,
     -1.2909944487358056,
@@ -99,54 +94,43 @@ void exahype2::dg::tests::CellIntegralTest::run() {
 }
 
 /**
- * We initialise all velocity data with zero and set the density to one.
- * First, we set the inner energy to zero. After that, we set it to four.
- *
- * One might think that the result should always be 0 for all components,
- * but the result is not zero if the inner energy is positive. You get
- * a zero update for the density, and you get a zero update for the
- * energy. The velocity however becomes star shaped, i.e. it looks like
- * matter pressed out from the centre.
- *
- * This behaviour is due to the internal energy pushing matter out of the
- * domain. If the inner energy equals zero, then nothing moves at all.
+ * Verifies two order-two Euler volume residuals.
  */
 void exahype2::dg::tests::CellIntegralTest::runEulerOrder2OnStationarySetup() {
-  // We use the Euler equations as an example.
-  constexpr int unknowns           = 5;
-  constexpr int auxiliaryVariables = 0;
-  constexpr int order              = 2;
+  constexpr int Unknowns           = 5;
+  constexpr int AuxiliaryVariables = 0;
+  constexpr int Order              = 2;
 
 #if DIMENSIONS == 2
   const tarch::la::Vector<2, double> x({0.0, 0.0});
   const tarch::la::Vector<2, double> cellSize({1.0, 1.0});
-  constexpr int                      numberOfDoFs = (order + 1) * (order + 1);
+  constexpr int                      NumberOfDoFs = (Order + 1) * (Order + 1);
 #else
   const tarch::la::Vector<3, double> x({0.0, 0.0, 0.0});
   const tarch::la::Vector<3, double> cellSize({1.0, 1.0, 1.0});
-  constexpr int                      numberOfDoFs = (order + 1) * (order + 1) * (order + 1);
+  constexpr int                      NumberOfDoFs = (Order + 1) * (Order + 1) * (Order + 1);
 #endif
   const double t  = 0.0;
   const double dt = 0.01;
 
-  double QIn[numberOfDoFs * (unknowns + auxiliaryVariables)];
-  double QOut[numberOfDoFs * (unknowns + auxiliaryVariables)];
+  double QIn[NumberOfDoFs * (Unknowns + AuxiliaryVariables)];
+  double QOut[NumberOfDoFs * (Unknowns + AuxiliaryVariables)];
 
-  for (int dof = 0; dof < numberOfDoFs; dof++) {
-    QIn[dof * (unknowns + auxiliaryVariables) + 0] = 0.1;
-    QIn[dof * (unknowns + auxiliaryVariables) + 1] = 0.0;
-    QIn[dof * (unknowns + auxiliaryVariables) + 2] = 0.0;
-    QIn[dof * (unknowns + auxiliaryVariables) + 3] = 0.0;
-    QIn[dof * (unknowns + auxiliaryVariables) + 4] = 0.0;
+  for (int dof = 0; dof < NumberOfDoFs; dof++) {
+    QIn[dof * (Unknowns + AuxiliaryVariables) + 0] = 0.1;
+    QIn[dof * (Unknowns + AuxiliaryVariables) + 1] = 0.0;
+    QIn[dof * (Unknowns + AuxiliaryVariables) + 2] = 0.0;
+    QIn[dof * (Unknowns + AuxiliaryVariables) + 3] = 0.0;
+    QIn[dof * (Unknowns + AuxiliaryVariables) + 4] = 0.0;
   }
 
   ::exahype2::CellData cellData(QIn, x, cellSize, t, dt, QOut);
 
   cellIntegral_patchwise_in_situ_GaussLegendre_functors(
     cellData,
-    order,
-    unknowns,
-    auxiliaryVariables,
+    Order,
+    Unknowns,
+    AuxiliaryVariables,
     [&](
       const double* NOALIAS                        Q,
       const tarch::la::Vector<DIMENSIONS, double>& x,
@@ -158,62 +142,62 @@ void exahype2::dg::tests::CellIntegralTest::runEulerOrder2OnStationarySetup() {
     nullptr, // ncp
     nullptr, // source
     nullptr, // pointSources
-    _Order2_QuadraturePoints1d,
-    _Order2_MassMatrixDiagonal1d, // massMatrixDiagonal
-    _Order2_StiffnessOperator1d,
-    _Order2_DerivativeOperator1d,
+    _orderTwoQuadraturePoints1D,
+    _orderTwoMassMatrixDiagonal1D, // massMatrixDiagonal
+    _orderTwoStiffnessOperator1D,
+    _orderTwoDerivativeOperator1D,
     true,  // flux
     false, // ncp
     false, // source
     false
   ); // pointSources
 
-  for (int dof = 0; dof < numberOfDoFs; dof++) {
+  for (int dof = 0; dof < NumberOfDoFs; dof++) {
     validateNumericalEqualsWithParams2(
-      QOut[dof * (unknowns + auxiliaryVariables) + 0],
+      QOut[dof * (Unknowns + AuxiliaryVariables) + 0],
       0.0,
       dof,
-      plotCell(QOut, order, unknowns, auxiliaryVariables)
+      plotCell(QOut, Order, Unknowns, AuxiliaryVariables)
     );
     validateNumericalEqualsWithParams2(
-      QOut[dof * (unknowns + auxiliaryVariables) + 1],
+      QOut[dof * (Unknowns + AuxiliaryVariables) + 1],
       0.0,
       dof,
-      plotCell(QOut, order, unknowns, auxiliaryVariables)
+      plotCell(QOut, Order, Unknowns, AuxiliaryVariables)
     );
     validateNumericalEqualsWithParams2(
-      QOut[dof * (unknowns + auxiliaryVariables) + 2],
+      QOut[dof * (Unknowns + AuxiliaryVariables) + 2],
       0.0,
       dof,
-      plotCell(QOut, order, unknowns, auxiliaryVariables)
+      plotCell(QOut, Order, Unknowns, AuxiliaryVariables)
     );
     validateNumericalEqualsWithParams2(
-      QOut[dof * (unknowns + auxiliaryVariables) + 3],
+      QOut[dof * (Unknowns + AuxiliaryVariables) + 3],
       0.0,
       dof,
-      plotCell(QOut, order, unknowns, auxiliaryVariables)
+      plotCell(QOut, Order, Unknowns, AuxiliaryVariables)
     );
     validateNumericalEqualsWithParams2(
-      QOut[dof * (unknowns + auxiliaryVariables) + 4],
+      QOut[dof * (Unknowns + AuxiliaryVariables) + 4],
       0.0,
       dof,
-      plotCell(QOut, order, unknowns, auxiliaryVariables)
+      plotCell(QOut, Order, Unknowns, AuxiliaryVariables)
     );
   }
 
-  for (int dof = 0; dof < numberOfDoFs; dof++) {
-    QIn[dof * (unknowns + auxiliaryVariables) + 0] = 0.1;
-    QIn[dof * (unknowns + auxiliaryVariables) + 1] = 0.0;
-    QIn[dof * (unknowns + auxiliaryVariables) + 2] = 0.0;
-    QIn[dof * (unknowns + auxiliaryVariables) + 3] = 0.0;
-    QIn[dof * (unknowns + auxiliaryVariables) + 4] = 4.0;
+  for (int dof = 0; dof < NumberOfDoFs; dof++) {
+    QIn[dof * (Unknowns + AuxiliaryVariables) + 0] = 0.1;
+    QIn[dof * (Unknowns + AuxiliaryVariables) + 1] = 0.0;
+    QIn[dof * (Unknowns + AuxiliaryVariables) + 2] = 0.0;
+    QIn[dof * (Unknowns + AuxiliaryVariables) + 3] = 0.0;
+    QIn[dof * (Unknowns + AuxiliaryVariables) + 4] = 4.0;
   }
 
   cellIntegral_patchwise_in_situ_GaussLegendre_functors(
     cellData,
-    order,
-    unknowns,
-    auxiliaryVariables,
+    Order,
+    Unknowns,
+    AuxiliaryVariables,
     [&](
       const double* NOALIAS                        Q,
       const tarch::la::Vector<DIMENSIONS, double>& x,
@@ -225,95 +209,95 @@ void exahype2::dg::tests::CellIntegralTest::runEulerOrder2OnStationarySetup() {
     nullptr, // ncp
     nullptr, // source
     nullptr, // pointSources
-    _Order2_QuadraturePoints1d,
-    _Order2_MassMatrixDiagonal1d, // massMatrixDiagonal
-    _Order2_StiffnessOperator1d,
-    _Order2_DerivativeOperator1d,
+    _orderTwoQuadraturePoints1D,
+    _orderTwoMassMatrixDiagonal1D, // massMatrixDiagonal
+    _orderTwoStiffnessOperator1D,
+    _orderTwoDerivativeOperator1D,
     true,  // flux
     false, // ncp
     false, // source
     false
   ); // pointSources
 
-  peano4::dForEach(order + 1, [&](const tarch::la::Vector<DIMENSIONS, int>& dof) {
-    const auto dofLinearised = peano4::dLinearised(dof, order + 1);
+  peano4::dForEach(Order + 1, [&](const tarch::la::Vector<DIMENSIONS, int>& dof) {
+    const auto dofLinearised = peano4::dLinearised(dof, Order + 1);
     validateNumericalEqualsWithParams2(
-      QOut[dofLinearised * (unknowns + auxiliaryVariables) + 0],
+      QOut[dofLinearised * (Unknowns + AuxiliaryVariables) + 0],
       0.0,
       dof,
-      plotCell(QOut, order, unknowns, auxiliaryVariables)
+      plotCell(QOut, Order, Unknowns, AuxiliaryVariables)
     );
-    if (dof(0) < (order + 1) / 2) {
+    if (dof(0) < (Order + 1) / 2) {
       validateWithParams2(
-        QOut[dofLinearised * (unknowns + auxiliaryVariables) + 1] < 0.0,
+        QOut[dofLinearised * (Unknowns + AuxiliaryVariables) + 1] < 0.0,
         dof,
-        plotCell(QOut, order, unknowns, auxiliaryVariables)
+        plotCell(QOut, Order, Unknowns, AuxiliaryVariables)
       );
-    } else if (dof(0) > (order + 1) / 2) {
+    } else if (dof(0) > (Order + 1) / 2) {
       validateWithParams2(
-        QOut[dofLinearised * (unknowns + auxiliaryVariables) + 1] > 0.0,
+        QOut[dofLinearised * (Unknowns + AuxiliaryVariables) + 1] > 0.0,
         dof,
-        plotCell(QOut, order, unknowns, auxiliaryVariables)
+        plotCell(QOut, Order, Unknowns, AuxiliaryVariables)
       );
     }
-    if (dof(1) < (order + 1) / 2) {
+    if (dof(1) < (Order + 1) / 2) {
       validateWithParams2(
-        QOut[dofLinearised * (unknowns + auxiliaryVariables) + 2] < 0.0,
+        QOut[dofLinearised * (Unknowns + AuxiliaryVariables) + 2] < 0.0,
         dof,
-        plotCell(QOut, order, unknowns, auxiliaryVariables)
+        plotCell(QOut, Order, Unknowns, AuxiliaryVariables)
       );
-    } else if (dof(1) > (order + 1) / 2) {
+    } else if (dof(1) > (Order + 1) / 2) {
       validateWithParams2(
-        QOut[dofLinearised * (unknowns + auxiliaryVariables) + 2] > 0.0,
+        QOut[dofLinearised * (Unknowns + AuxiliaryVariables) + 2] > 0.0,
         dof,
-        plotCell(QOut, order, unknowns, auxiliaryVariables)
+        plotCell(QOut, Order, Unknowns, AuxiliaryVariables)
       );
     }
     validateNumericalEqualsWithParams2(
-      QOut[dofLinearised * (unknowns + auxiliaryVariables) + 4],
+      QOut[dofLinearised * (Unknowns + AuxiliaryVariables) + 4],
       0.0,
       dof,
-      plotCell(QOut, order, unknowns, auxiliaryVariables)
+      plotCell(QOut, Order, Unknowns, AuxiliaryVariables)
     );
   });
 }
 
+/** Verifies that the order-four kernel preserves a constant zero-pressure Euler state. */
 void exahype2::dg::tests::CellIntegralTest::runEulerOrder4OnStationarySetup() {
-  // We use the Euler equations as an example.
-  constexpr int unknowns           = 5;
-  constexpr int auxiliaryVariables = 0;
-  constexpr int order              = 4;
+  constexpr int Unknowns           = 5;
+  constexpr int AuxiliaryVariables = 0;
+  constexpr int Order              = 4;
 
 #if DIMENSIONS == 2
   const tarch::la::Vector<2, double> x({0.0, 0.0});
   const tarch::la::Vector<2, double> cellSize({1.0, 1.0});
-  constexpr int                      numberOfDoFs = (order + 1) * (order + 1);
+  constexpr int                      NumberOfDoFs = (Order + 1) * (Order + 1);
 #else
   const tarch::la::Vector<3, double> x({0.0, 0.0, 0.0});
   const tarch::la::Vector<3, double> cellSize({1.0, 1.0, 1.0});
-  constexpr int                      numberOfDoFs = (order + 1) * (order + 1) * (order + 1);
+  constexpr int                      NumberOfDoFs = (Order + 1) * (Order + 1) * (Order + 1);
 #endif
   const double t  = 0.0;
   const double dt = 0.01;
 
-  double QIn[numberOfDoFs * (unknowns + auxiliaryVariables)];
-  double QOut[numberOfDoFs * (unknowns + auxiliaryVariables)];
+  double QIn[NumberOfDoFs * (Unknowns + AuxiliaryVariables)];
+  double QOut[NumberOfDoFs * (Unknowns + AuxiliaryVariables)];
 
-  for (int dof = 0; dof < numberOfDoFs; dof++) {
-    QIn[dof * (unknowns + auxiliaryVariables) + 0] = 0.1;
-    QIn[dof * (unknowns + auxiliaryVariables) + 1] = 0.0;
-    QIn[dof * (unknowns + auxiliaryVariables) + 2] = 0.0;
-    QIn[dof * (unknowns + auxiliaryVariables) + 3] = 0.0;
-    QIn[dof * (unknowns + auxiliaryVariables) + 4] = 0.0;
+  for (int dof = 0; dof < NumberOfDoFs; dof++) {
+    QIn[dof * (Unknowns + AuxiliaryVariables) + 0] = 0.1;
+    QIn[dof * (Unknowns + AuxiliaryVariables) + 1] = 0.0;
+    QIn[dof * (Unknowns + AuxiliaryVariables) + 2] = 0.0;
+    QIn[dof * (Unknowns + AuxiliaryVariables) + 3] = 0.0;
+    QIn[dof * (Unknowns + AuxiliaryVariables) + 4] = 0.0;
   }
 
   ::exahype2::CellData cellData(QIn, x, cellSize, t, dt, QOut);
 
   cellIntegral_patchwise_in_situ_GaussLegendre_functors(
     cellData,
-    order,
-    unknowns,
-    auxiliaryVariables,
+    Order,
+    Unknowns,
+    AuxiliaryVariables,
     [&](
       const double* NOALIAS                        Q,
       const tarch::la::Vector<DIMENSIONS, double>& x,
@@ -325,50 +309,51 @@ void exahype2::dg::tests::CellIntegralTest::runEulerOrder4OnStationarySetup() {
     nullptr, // ncp
     nullptr, // source
     nullptr, // pointSources
-    _Order4_QuadraturePoints1d,
-    _Order4_MassMatrixDiagonal1d, // massMatrixDiagonal
-    _Order4_StiffnessOperator1d,
-    _Order4_DerivativeOperator1d,
+    _orderFourQuadraturePoints1D,
+    _orderFourMassMatrixDiagonal1D, // massMatrixDiagonal
+    _orderFourStiffnessOperator1D,
+    _orderFourDerivativeOperator1D,
     true,  // flux
     false, // ncp
     false, // source
     false
   ); // pointSources
 
-  for (int dof = 0; dof < numberOfDoFs; dof++) {
+  for (int dof = 0; dof < NumberOfDoFs; dof++) {
     validateNumericalEqualsWithParams2(
-      QOut[dof * (unknowns + auxiliaryVariables) + 0],
+      QOut[dof * (Unknowns + AuxiliaryVariables) + 0],
       0.0,
       dof,
-      plotCell(QOut, order, unknowns, auxiliaryVariables)
+      plotCell(QOut, Order, Unknowns, AuxiliaryVariables)
     );
     validateNumericalEqualsWithParams2(
-      QOut[dof * (unknowns + auxiliaryVariables) + 1],
+      QOut[dof * (Unknowns + AuxiliaryVariables) + 1],
       0.0,
       dof,
-      plotCell(QOut, order, unknowns, auxiliaryVariables)
+      plotCell(QOut, Order, Unknowns, AuxiliaryVariables)
     );
     validateNumericalEqualsWithParams2(
-      QOut[dof * (unknowns + auxiliaryVariables) + 2],
+      QOut[dof * (Unknowns + AuxiliaryVariables) + 2],
       0.0,
       dof,
-      plotCell(QOut, order, unknowns, auxiliaryVariables)
+      plotCell(QOut, Order, Unknowns, AuxiliaryVariables)
     );
     validateNumericalEqualsWithParams2(
-      QOut[dof * (unknowns + auxiliaryVariables) + 3],
+      QOut[dof * (Unknowns + AuxiliaryVariables) + 3],
       0.0,
       dof,
-      plotCell(QOut, order, unknowns, auxiliaryVariables)
+      plotCell(QOut, Order, Unknowns, AuxiliaryVariables)
     );
     validateNumericalEqualsWithParams2(
-      QOut[dof * (unknowns + auxiliaryVariables) + 4],
+      QOut[dof * (Unknowns + AuxiliaryVariables) + 4],
       0.0,
       dof,
-      plotCell(QOut, order, unknowns, auxiliaryVariables)
+      plotCell(QOut, Order, Unknowns, AuxiliaryVariables)
     );
   }
 }
 
+/** Verifies the distinction between per-cell scaled and global physical eigenvalues. */
 void exahype2::dg::tests::CellIntegralTest::runReduceMaxScaledEigenvalue() {
   constexpr int    Unknowns           = 1;
   constexpr int    AuxiliaryVariables = 0;
@@ -402,12 +387,11 @@ void exahype2::dg::tests::CellIntegralTest::runReduceMaxScaledEigenvalue() {
     AuxiliaryVariables,
     [](const double* NOALIAS Q, const tarch::la::Vector<DIMENSIONS, double>& x, double t, double dt, int normal)
       -> double { return Q[0] * (normal + 1.0); },
-    _Order2_QuadraturePoints1d
+    _orderTwoQuadraturePoints1D
   );
 
-  // The largest nodal value carries an eigenvalue of normal+1 per direction; the scaled
-  // eigenvalue sums these over the directions and divides by the cell width, while the
-  // physical maximum is the largest directional eigenvalue itself.
+  // The scaled eigenvalue sums the directional eigenvalues and divides by the cell width,
+  // while the physical maximum is the largest directional eigenvalue.
   constexpr double DirectionSum = DIMENSIONS == 2 ? 3.0 : 6.0;
   validateNumericalEquals(cellData.maxEigenvalue[0], 2.0 * DirectionSum / CellWidth);
   validateNumericalEquals(maxPhysicalEigenvalue, 2.0 * DIMENSIONS);

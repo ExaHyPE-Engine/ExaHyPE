@@ -15,8 +15,7 @@ namespace {
   void barrier() { tarch::mpi::barrier(tarch::mpi::Rank::getInstance().getCommunicator()); }
 
   /**
-   * Checks that the generated .xmf file contains a substring, which validates
-   * metadata such as AttributeType or TopologyType.
+   * Throws when the .xmf file does not exist or does not contain the substring.
    */
   void validateXMFContent(const std::string& filepath, const std::string& expectedSubstring) {
     if (not std::filesystem::exists(filepath)) {
@@ -36,50 +35,47 @@ namespace {
   }
 
   void cleanup(const std::string& filename) {
-    std::filesystem::path p(filename);
-    if (std::filesystem::exists(p)) {
-      std::filesystem::remove(p);
+    std::filesystem::path filePath(filename);
+    if (std::filesystem::exists(filePath)) {
+      std::filesystem::remove(filePath);
     }
 
-    if (p.extension() == ".xmf") {
-      std::filesystem::path h5 = p;
-      h5.replace_extension(".h5");
-      if (std::filesystem::exists(h5)) {
-        std::filesystem::remove(h5);
+    if (filePath.extension() == ".xmf") {
+      std::filesystem::path hdf5Path = filePath;
+      hdf5Path.replace_extension(".h5");
+      if (std::filesystem::exists(hdf5Path)) {
+        std::filesystem::remove(hdf5Path);
       }
     }
   }
 } // namespace
 
 tarch::plotter::tests::HDF5FileWriterTest::HDF5FileWriterTest() :
-  TestCase("tarch::plotter::tests::HDF5FileWriterTest") {}
+  tarch::tests::TestCase("tarch::plotter::tests::HDF5FileWriterTest") {}
 
 void tarch::plotter::tests::HDF5FileWriterTest::testHeterogeneousRanks() {
-  // Only the global master contributes geometry + a "Marker" cell field; every
-  // other rank leaves the plotter empty. With parallel collective IO the empty
-  // ranks must still participate in every dataset create/write, which works only
-  // because the field schema is reduced globally. Without that, writeToFile
-  // deadlocks for more than one rank.
+  // Only the global master contributes geometry and a "Marker" cell field, and every
+  // other rank leaves the plotter empty. writeToFile() stays collective for all ranks.
   const std::string filename = "HDF5TestHeterogeneous";
 
-  HDF5FileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
+  HDF5FileWriter plotter(tarch::tests::getWritableTestDirectory().string());
+  plotter.acquirePiece(0);
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    auto v  = plotter.createVertexPlotter(0);
-    auto c  = plotter.createCellPlotter(0);
-    auto cd = plotter.createCellDataPlotter(0, "Marker", 1);
+    auto vertexPlotter   = plotter.createVertexPlotter(0);
+    auto cellPlotter     = plotter.createCellPlotter(0);
+    auto cellDataPlotter = plotter.createCellDataPlotter(0, "Marker", 1);
 
-    int p0      = v->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
-    int p1      = v->plotVertex(tarch::la::Vector<2, double>{1.0, 0.0});
-    int p2      = v->plotVertex(tarch::la::Vector<2, double>{1.0, 1.0});
-    int p3      = v->plotVertex(tarch::la::Vector<2, double>{0.0, 1.0});
+    int p0      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
+    int p1      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{1.0, 0.0});
+    int p2      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{1.0, 1.0});
+    int p3      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.0, 1.0});
     int quad[4] = {p0, p1, p2, p3};
-    int cell    = c->plotQuadrangle(quad);
-    cd->plotCellData(cell, 1.0);
+    int cell    = cellPlotter->plotQuadrangle(quad);
+    cellDataPlotter->plotCellData(cell, 1.0);
   }
-  // All non-master ranks intentionally contribute nothing.
 
-  plotter.writeToFile(filename, 0); // collective; must not deadlock
+  plotter.writeToFile(filename, 0);
 
   barrier();
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
@@ -97,7 +93,8 @@ void tarch::plotter::tests::HDF5FileWriterTest::testHeterogeneousRanks() {
 void tarch::plotter::tests::HDF5FileWriterTest::testInvalidIdentifierThrows() {
   // A data identifier is written into the XML, an HDF5 path and a NetCDF name, so
   // a character that would corrupt those (here '/') must be rejected up front.
-  HDF5FileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
+  HDF5FileWriter plotter(tarch::tests::getWritableTestDirectory().string());
+  plotter.acquirePiece(0);
 
   bool thrown = false;
   try {
@@ -111,10 +108,8 @@ void tarch::plotter::tests::HDF5FileWriterTest::testInvalidIdentifierThrows() {
 }
 
 void tarch::plotter::tests::HDF5FileWriterTest::run() {
-  // The read-back helpers report a malformed file by throwing. Without this catch the
-  // exception leaves run(), which the test framework does not guard, and the whole unit-test
-  // binary aborts instead of recording a failed case. The remaining cases are then skipped,
-  // so the counter has to be raised here as well.
+  // The read-back helpers report a malformed file by throwing, and the test framework
+  // does not guard run(), so this catch records the failure and keeps the binary alive.
   try {
     testMethod(test2DSimpleTriangle);
     testMethod(test2DParticlesWithData);
@@ -139,20 +134,23 @@ void tarch::plotter::tests::HDF5FileWriterTest::testUnevenSubdomainCounts() {
 
   // Master contributes 3 quads, every other rank 2 - non-zero but unequal counts.
   const int      numberOfSubdomains = tarch::mpi::Rank::getInstance().isGlobalMaster() ? 3 : 2;
-  HDF5FileWriter plotter(tarch::tests::getWritableTestDirectory().string(), numberOfSubdomains);
-  for (int sd = 0; sd < numberOfSubdomains; ++sd) {
-    auto         v       = plotter.createVertexPlotter(sd);
-    auto         c       = plotter.createCellPlotter(sd);
-    const double s       = 100.0 * tarch::mpi::Rank::getInstance().getRank() + 2.0 * sd;
-    int          p0      = v->plotVertex(tarch::la::Vector<2, double>{s + 0.0, 0.0});
-    int          p1      = v->plotVertex(tarch::la::Vector<2, double>{s + 1.0, 0.0});
-    int          p2      = v->plotVertex(tarch::la::Vector<2, double>{s + 1.0, 1.0});
-    int          p3      = v->plotVertex(tarch::la::Vector<2, double>{s + 0.0, 1.0});
-    int          quad[4] = {p0, p1, p2, p3};
-    c->plotQuadrangle(quad);
+  HDF5FileWriter plotter(tarch::tests::getWritableTestDirectory().string());
+  for (int subdomain = 0; subdomain < numberOfSubdomains; ++subdomain) {
+    plotter.acquirePiece(subdomain);
+  }
+  for (int subdomain = 0; subdomain < numberOfSubdomains; ++subdomain) {
+    auto         vertexPlotter = plotter.createVertexPlotter(subdomain);
+    auto         cellPlotter   = plotter.createCellPlotter(subdomain);
+    const double origin        = 100.0 * tarch::mpi::Rank::getInstance().getRank() + 2.0 * subdomain;
+    int          p0            = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{origin + 0.0, 0.0});
+    int          p1            = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{origin + 1.0, 0.0});
+    int          p2            = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{origin + 1.0, 1.0});
+    int          p3            = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{origin + 0.0, 1.0});
+    int          quad[4]       = {p0, p1, p2, p3};
+    cellPlotter->plotQuadrangle(quad);
   }
 
-  plotter.writeToFile(filename, 0); // uneven non-zero counts; must not deadlock
+  plotter.writeToFile(filename, 0);
 
   barrier();
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
@@ -170,21 +168,22 @@ void tarch::plotter::tests::HDF5FileWriterTest::testUnevenSubdomainCounts() {
 void tarch::plotter::tests::HDF5FileWriterTest::testVectorAndTensorPadding() {
   const std::string filename = "HDF5TestVectorTensor";
 
-  HDF5FileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
-  auto           v    = plotter.createVertexPlotter(0);
-  auto           c    = plotter.createCellPlotter(0);
-  auto           vec2 = plotter.createCellDataPlotter(0, "V2", 2);
-  auto           ten9 = plotter.createCellDataPlotter(0, "T9", 9);
+  HDF5FileWriter plotter(tarch::tests::getWritableTestDirectory().string());
+  plotter.acquirePiece(0);
+  auto vertexPlotter = plotter.createVertexPlotter(0);
+  auto cellPlotter   = plotter.createCellPlotter(0);
+  auto vectorPlotter = plotter.createCellDataPlotter(0, "V2", 2);
+  auto tensorPlotter = plotter.createCellDataPlotter(0, "T9", 9);
 
-  int p0      = v->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
-  int p1      = v->plotVertex(tarch::la::Vector<2, double>{1.0, 0.0});
-  int p2      = v->plotVertex(tarch::la::Vector<2, double>{1.0, 1.0});
-  int p3      = v->plotVertex(tarch::la::Vector<2, double>{0.0, 1.0});
+  int p0      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
+  int p1      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{1.0, 0.0});
+  int p2      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{1.0, 1.0});
+  int p3      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.0, 1.0});
   int quad[4] = {p0, p1, p2, p3};
-  int cell    = c->plotQuadrangle(quad);
-  vec2->plotCellData(cell, tarch::la::Vector<2, double>{1.5, -1.5});
-  double t9[9] = {1, 2, 3, 4, 5, 6, 7, 8, 9};
-  ten9->plotCellData(cell, t9, 9);
+  int cell    = cellPlotter->plotQuadrangle(quad);
+  vectorPlotter->plotCellData(cell, tarch::la::Vector<2, double>{1.5, -1.5});
+  double tensorValues[9] = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+  tensorPlotter->plotCellData(cell, tensorValues, 9);
 
   plotter.writeToFile(filename, 0);
 
@@ -206,17 +205,17 @@ void tarch::plotter::tests::HDF5FileWriterTest::testVectorAndTensorPadding() {
       H5F_ACC_RDONLY,
       H5P_DEFAULT
     );
-    hid_t   dataset = H5Dopen(file, "/cell_data/V2", H5P_DEFAULT);
-    hid_t   space   = H5Dget_space(dataset);
-    hsize_t dims[2] = {0, 0};
-    H5Sget_simple_extent_dims(space, dims, nullptr);
-    std::vector<float> values(dims[0] * dims[1]);
+    hid_t   dataset       = H5Dopen(file, "/cell_data/V2", H5P_DEFAULT);
+    hid_t   dataSpace     = H5Dget_space(dataset);
+    hsize_t dimensions[2] = {0, 0};
+    H5Sget_simple_extent_dims(dataSpace, dimensions, nullptr);
+    std::vector<float> values(dimensions[0] * dimensions[1]);
     H5Dread(dataset, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, values.data());
-    H5Sclose(space);
+    H5Sclose(dataSpace);
     H5Dclose(dataset);
     H5Fclose(file);
 
-    if (dims[1] != 3) {
+    if (dimensions[1] != 3) {
       throw std::runtime_error("Expected the 2D vector field to be written with 3 components.");
     }
     if (values[0] != 1.5f or values[1] != -1.5f or values[2] != 0.0f) {
@@ -230,16 +229,17 @@ void tarch::plotter::tests::HDF5FileWriterTest::testVectorAndTensorPadding() {
 void tarch::plotter::tests::HDF5FileWriterTest::test2DSimpleTriangle() {
   const std::string filename = "HDF5Test2DTriangle";
 
-  HDF5FileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
-  auto           v = plotter.createVertexPlotter(0);
-  auto           c = plotter.createCellPlotter(0);
+  HDF5FileWriter plotter(tarch::tests::getWritableTestDirectory().string());
+  plotter.acquirePiece(0);
+  auto vertexPlotter = plotter.createVertexPlotter(0);
+  auto cellPlotter   = plotter.createCellPlotter(0);
 
-  int p0 = v->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
-  int p1 = v->plotVertex(tarch::la::Vector<2, double>{1.0, 0.0});
-  int p2 = v->plotVertex(tarch::la::Vector<2, double>{0.0, 1.0});
+  int p0 = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
+  int p1 = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{1.0, 0.0});
+  int p2 = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.0, 1.0});
 
   int indices[] = {p0, p1, p2};
-  c->plotTriangle(indices);
+  cellPlotter->plotTriangle(indices);
 
   plotter.writeToFile(filename, 0);
 
@@ -265,15 +265,16 @@ void tarch::plotter::tests::HDF5FileWriterTest::test2DSimpleTriangle() {
 void tarch::plotter::tests::HDF5FileWriterTest::test2DParticlesWithData() {
   const std::string filename = "HDF5Test2DParticles";
 
-  HDF5FileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
-  auto           v  = plotter.createVertexPlotter(0);
-  auto           vd = plotter.createVertexDataPlotter(0, "Mass", 1);
+  HDF5FileWriter plotter(tarch::tests::getWritableTestDirectory().string());
+  plotter.acquirePiece(0);
+  auto vertexPlotter     = plotter.createVertexPlotter(0);
+  auto vertexDataPlotter = plotter.createVertexDataPlotter(0, "Mass", 1);
 
-  int p0 = v->plotVertex(tarch::la::Vector<2, double>{0.5, 0.5});
-  vd->plotVertexData(p0, 10.0);
+  int p0 = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.5, 0.5});
+  vertexDataPlotter->plotVertexData(p0, 10.0);
 
-  int p1 = v->plotVertex(tarch::la::Vector<2, double>{0.6, 0.6});
-  vd->plotVertexData(p1, 20.0);
+  int p1 = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.6, 0.6});
+  vertexDataPlotter->plotVertexData(p1, 20.0);
 
   plotter.writeToFile(filename, 0);
 
@@ -292,18 +293,19 @@ void tarch::plotter::tests::HDF5FileWriterTest::test2DParticlesWithData() {
 void tarch::plotter::tests::HDF5FileWriterTest::test3DCellData() {
   const std::string filename = "HDF5Test3DCellData";
 
-  HDF5FileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
-  auto           v  = plotter.createVertexPlotter(0);
-  auto           c  = plotter.createCellPlotter(0);
-  auto           cd = plotter.createCellDataPlotter(0, "Density", 1);
+  HDF5FileWriter plotter(tarch::tests::getWritableTestDirectory().string());
+  plotter.acquirePiece(0);
+  auto vertexPlotter   = plotter.createVertexPlotter(0);
+  auto cellPlotter     = plotter.createCellPlotter(0);
+  auto cellDataPlotter = plotter.createCellDataPlotter(0, "Density", 1);
 
   int cornerIndices[8] = {};
   for (int i = 0; i < 8; i++) {
-    cornerIndices[i] = v->plotVertex(tarch::la::Vector<3, double>{0.0, 0.0, 0.0});
+    cornerIndices[i] = vertexPlotter->plotVertex(tarch::la::Vector<3, double>{0.0, 0.0, 0.0});
   }
 
-  int cellIndex = c->plotHexahedron(cornerIndices);
-  cd->plotCellData(cellIndex, 1.234);
+  int cellIndex = cellPlotter->plotHexahedron(cornerIndices);
+  cellDataPlotter->plotCellData(cellIndex, 1.234);
 
   plotter.writeToFile(filename, 0);
 
@@ -322,20 +324,21 @@ void tarch::plotter::tests::HDF5FileWriterTest::test3DCellData() {
 void tarch::plotter::tests::HDF5FileWriterTest::testAttributeTypes() {
   const std::string filename = "HDF5TestTypes";
 
-  HDF5FileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
-  auto           v  = plotter.createVertexPlotter(0);
-  int            p0 = v->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
+  HDF5FileWriter plotter(tarch::tests::getWritableTestDirectory().string());
+  plotter.acquirePiece(0);
+  auto vertexPlotter = plotter.createVertexPlotter(0);
+  int  p0            = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
 
-  auto s = plotter.createVertexDataPlotter(0, "ScalarField", 1);
-  s->plotVertexData(p0, 1.0);
+  auto scalarPlotter = plotter.createVertexDataPlotter(0, "ScalarField", 1);
+  scalarPlotter->plotVertexData(p0, 1.0);
 
-  auto vec = plotter.createVertexDataPlotter(0, "VectorField", 3);
-  vec->plotVertexData(p0, tarch::la::Vector<3, double>{1.0, 2.0, 3.0});
+  auto vectorPlotter = plotter.createVertexDataPlotter(0, "VectorField", 3);
+  vectorPlotter->plotVertexData(p0, tarch::la::Vector<3, double>{1.0, 2.0, 3.0});
 
   // A 4-component field is neither a vector nor a tensor, so it stays generic.
-  double mat4[4] = {1, 0, 0, 1};
-  auto   mat     = plotter.createVertexDataPlotter(0, "TensorField", 4);
-  mat->plotVertexData(p0, mat4, 4);
+  double matrixValues[4] = {1, 0, 0, 1};
+  auto   matrixPlotter   = plotter.createVertexDataPlotter(0, "TensorField", 4);
+  matrixPlotter->plotVertexData(p0, matrixValues, 4);
 
   plotter.writeToFile(filename, 0);
 
@@ -361,33 +364,35 @@ void tarch::plotter::tests::HDF5FileWriterTest::testAttributeTypes() {
 void tarch::plotter::tests::HDF5FileWriterTest::testMultipleSubdomains() {
   const std::string filename = "HDF5TestMultipleSubdomains";
 
-  HDF5FileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 2);
+  HDF5FileWriter plotter(tarch::tests::getWritableTestDirectory().string());
+  plotter.acquirePiece(0);
+  plotter.acquirePiece(1);
 
   {
-    auto v  = plotter.createVertexPlotter(0);
-    auto c  = plotter.createCellPlotter(0);
-    auto cd = plotter.createCellDataPlotter(0, "Marker", 1);
+    auto vertexPlotter   = plotter.createVertexPlotter(0);
+    auto cellPlotter     = plotter.createCellPlotter(0);
+    auto cellDataPlotter = plotter.createCellDataPlotter(0, "Marker", 1);
 
-    int p0          = v->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
-    int p1          = v->plotVertex(tarch::la::Vector<2, double>{1.0, 0.0});
-    int p2          = v->plotVertex(tarch::la::Vector<2, double>{0.0, 1.0});
+    int p0          = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
+    int p1          = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{1.0, 0.0});
+    int p2          = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.0, 1.0});
     int triangle[3] = {p0, p1, p2};
-    int cell        = c->plotTriangle(triangle);
-    cd->plotCellData(cell, 1.0);
+    int cell        = cellPlotter->plotTriangle(triangle);
+    cellDataPlotter->plotCellData(cell, 1.0);
   }
 
   {
-    auto v  = plotter.createVertexPlotter(1);
-    auto c  = plotter.createCellPlotter(1);
-    auto cd = plotter.createCellDataPlotter(1, "Marker", 1);
+    auto vertexPlotter   = plotter.createVertexPlotter(1);
+    auto cellPlotter     = plotter.createCellPlotter(1);
+    auto cellDataPlotter = plotter.createCellDataPlotter(1, "Marker", 1);
 
-    int p0      = v->plotVertex(tarch::la::Vector<2, double>{2.0, 0.0});
-    int p1      = v->plotVertex(tarch::la::Vector<2, double>{3.0, 0.0});
-    int p2      = v->plotVertex(tarch::la::Vector<2, double>{3.0, 1.0});
-    int p3      = v->plotVertex(tarch::la::Vector<2, double>{2.0, 1.0});
+    int p0      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{2.0, 0.0});
+    int p1      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{3.0, 0.0});
+    int p2      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{3.0, 1.0});
+    int p3      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{2.0, 1.0});
     int quad[4] = {p0, p1, p2, p3};
-    int cell    = c->plotQuadrangle(quad);
-    cd->plotCellData(cell, 2.0);
+    int cell    = cellPlotter->plotQuadrangle(quad);
+    cellDataPlotter->plotCellData(cell, 2.0);
   }
 
   plotter.writeToFile(filename, 0);
@@ -418,7 +423,8 @@ void tarch::plotter::tests::HDF5FileWriterTest::testMultipleSubdomains() {
 
 void tarch::plotter::tests::HDF5FileWriterTest::testEmptyPlotter() {
   const std::string filename = "HDF5TestEmpty";
-  HDF5FileWriter    plotter(tarch::tests::getWritableTestDirectory().string(), 1);
+  HDF5FileWriter    plotter(tarch::tests::getWritableTestDirectory().string());
+  plotter.acquirePiece(0);
   plotter.writeToFile(filename, 0);
 
   barrier();
@@ -437,15 +443,16 @@ void tarch::plotter::tests::HDF5FileWriterTest::testInconsistentDataSizeThrows()
 
   bool exceptionThrown = false;
   try {
-    HDF5FileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
-    auto           v  = plotter.createVertexPlotter(0);
-    auto           vd = plotter.createVertexDataPlotter(0, "BrokenField", 1);
+    HDF5FileWriter plotter(tarch::tests::getWritableTestDirectory().string());
+    plotter.acquirePiece(0);
+    auto vertexPlotter     = plotter.createVertexPlotter(0);
+    auto vertexDataPlotter = plotter.createVertexDataPlotter(0, "BrokenField", 1);
 
-    v->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
-    v->plotVertex(tarch::la::Vector<2, double>{1.0, 1.0});
+    vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
+    vertexPlotter->plotVertex(tarch::la::Vector<2, double>{1.0, 1.0});
 
     // Data for only one of the two vertices, which the write validation rejects.
-    vd->plotVertexData(0, 5.0);
+    vertexDataPlotter->plotVertexData(0, 5.0);
 
     plotter.writeToFile(filename, 0);
   } catch (const std::runtime_error&) {
@@ -470,7 +477,7 @@ void tarch::plotter::tests::HDF5FileWriterTest::testInconsistentDataSizeThrows()
 
 // Dummy implementation to satisfy the linker when compiled without HDF5.
 tarch::plotter::tests::HDF5FileWriterTest::HDF5FileWriterTest() :
-  TestCase("tarch::plotter::tests::HDF5FileWriterTest") {}
+  tarch::tests::TestCase("tarch::plotter::tests::HDF5FileWriterTest") {}
 
 void tarch::plotter::tests::HDF5FileWriterTest::run() {}
 

@@ -2,7 +2,9 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "LoopTest.h"
 
+#include "peano4/Globals.h"
 #include "peano4/Loop.h"
+#include "tarch/la/Vector.h"
 
 peano4::tests::LoopTest::LoopTest() :
   TestCase("peano4::tests::LoopTest") {}
@@ -25,14 +27,13 @@ void peano4::tests::LoopTest::run() {
 }
 
 /**
- * dForEach(max, body) has to visit every point of [0,max)^d exactly once, with
- * the 0th component running fastest, i.e. in dLinearised order.
+ * dForEach(max, body) visits every point of [0,max)^d exactly once in
+ * dLinearised order, with the 0th component running fastest.
  */
 void peano4::tests::LoopTest::testDForEachVisitsAllPointsInLinearOrder() {
   for (int max = 1; max <= 5; max++) {
     int expected = 0;
     peano4::dForEach(max, [&](const tarch::la::Vector<DIMENSIONS, int>& k) {
-      // independent linearisation: component 0 runs fastest
       int manualIndex = 0;
       int factor      = 1;
       for (int d = 0; d < DIMENSIONS; d++) {
@@ -51,8 +52,6 @@ void peano4::tests::LoopTest::testDForEachVisitsAllPointsInLinearOrder() {
  * degenerate axis of extent one, has to enumerate the full box exactly once.
  */
 void peano4::tests::LoopTest::testDForEachWithPerAxisRange() {
-  // distinct per-axis extents, and one degenerate axis of extent 1 in every
-  // position, which is how a caller enumerates a face.
   for (int flatDimension = -1; flatDimension < DIMENSIONS; flatDimension++) {
     tarch::la::Vector<DIMENSIONS, int> range;
     long                               total = 1;
@@ -63,7 +62,6 @@ void peano4::tests::LoopTest::testDForEachWithPerAxisRange() {
 
     long count = 0;
     peano4::dForEach(range, [&](const tarch::la::Vector<DIMENSIONS, int>& k) {
-      // independent mixed-radix expectation, component 0 fastest
       long t = count;
       for (int d = 0; d < DIMENSIONS; d++) {
         validateEqualsWithParams2(k(d), static_cast<int>(t % range(d)), k, range);
@@ -81,11 +79,6 @@ void peano4::tests::LoopTest::testDForEachWithPerAxisRange() {
  * not.
  */
 void peano4::tests::LoopTest::testDIncrementOverloadConsistency() {
-  // The scalar dIncrement(counter,int) and the per-axis dIncrement(counter,Vector) are the
-  // same operation, so they must agree for every counter - also for
-  // non-canonical counters whose components already reach/exceed max. We sweep
-  // each component over [0,max] so that genuinely non-canonical states (a
-  // component == max) are included.
   const int                          max = 3;
   tarch::la::Vector<DIMENSIONS, int> uniformMax(max);
 
@@ -100,7 +93,8 @@ void peano4::tests::LoopTest::testDIncrementOverloadConsistency() {
       validateEqualsWithParams1(viaScalar(d), viaVector(d), counter);
     }
 
-    // odometer over [0,max] per component (max+1 values) to reach non-canonical states
+    // Every component runs up to max, so the sweep also reaches the
+    // non-canonical counters whose components equal max.
     for (int d = 0; d < DIMENSIONS; d++) {
       counter(d)++;
       if (counter(d) <= max) {
@@ -115,10 +109,10 @@ void peano4::tests::LoopTest::testDIncrementOverloadConsistency() {
 }
 
 /**
- * dStartVector seeds a d-dimensional loop: the plain overload is the zero
- * vector, dStartVector(dim,value) is zero except for the given dimension, and
- * dStartVector(max,direction) seeds the oscillating z-loop with 0 where the
- * direction bit is set and max-1 where it is not.
+ * dStartVector seeds a d-dimensional loop. The plain overload returns the zero
+ * vector, dStartVector(dim,value) returns zero except for the given dimension,
+ * and dStartVector(max,direction) returns 0 where the direction bit is set and
+ * max-1 where it is not.
  */
 void peano4::tests::LoopTest::testDStartVector() {
   const auto zero = peano4::dStartVector();
@@ -134,7 +128,6 @@ void peano4::tests::LoopTest::testDStartVector() {
     }
   }
 
-  // The direction-seeded start: a set bit maps to 0, an unset bit to max-1.
   const int max = 4;
   for (int directionBits = 0; directionBits < TWO_POWER_D; directionBits++) {
     const peano4::LoopDirection direction(directionBits);
@@ -147,9 +140,9 @@ void peano4::tests::LoopTest::testDStartVector() {
 }
 
 /**
- * dIncrement(counter,max,doNotExamine) is the increment behind
- * dForEachExclusive: it leaves the doNotExamine axis untouched and walks the
- * remaining axes over [0,max), terminating by pushing one free axis to max.
+ * dIncrement(counter,max,doNotExamine) leaves the doNotExamine axis untouched
+ * and walks the remaining axes over [0,max), terminating by pushing one free
+ * axis to max.
  */
 void peano4::tests::LoopTest::testDIncrementExclusive() {
   const int max = 3;
@@ -197,9 +190,6 @@ void peano4::tests::LoopTest::testDLinearised() {
 void peano4::tests::LoopTest::testDForEachExclusiveKeepsFixedDimensionAndIsComplete() {
   for (int fixedDimension = 0; fixedDimension < DIMENSIONS; fixedDimension++) {
     for (int max = 2; max <= 4; max++) {
-      // The pinned dimension must keep its start value for every value in
-      // [0,max). A caller enumerating a face pins it to the side, so a
-      // non-zero value has to work.
       for (int value = 0; value < max; value++) {
         std::set<int> visited;
         peano4::dForEachExclusive(max, fixedDimension, value, [&](const tarch::la::Vector<DIMENSIONS, int>& k) {
@@ -230,10 +220,9 @@ void peano4::tests::LoopTest::testDCompare() {
   validate(peano4::dCompare(inRange, max));
 
   tarch::la::Vector<DIMENSIONS, int> atUpperBound(0);
-  atUpperBound(DIMENSIONS - 1) = max; // the loop terminal state
+  atUpperBound(DIMENSIONS - 1) = max;
   validate(not peano4::dCompare(atUpperBound, max));
 
-  // per-axis overload
   tarch::la::Vector<DIMENSIONS, int> range;
   for (int d = 0; d < DIMENSIONS; d++) {
     range(d) = 2 + d;
@@ -247,8 +236,7 @@ void peano4::tests::LoopTest::testDCompare() {
 
 /**
  * dCompareExclusive returns true if every component except the ignored
- * dimension is within range; the ignored component must not be consulted. This
- * is the comparison behind the exclusive dForEachExclusive loop.
+ * dimension is within range, and it does not consult the ignored component.
  */
 void peano4::tests::LoopTest::testDCompareExclusive() {
   const int max = 3;
@@ -277,7 +265,7 @@ void peano4::tests::LoopTest::testDCompareExclusive() {
 void peano4::tests::LoopTest::testDForEachCornerEnumeratesCornersInLinearisedOrder() {
   std::set<int> visited;
   int           count = 0;
-  peano4::dForEachCorner([&](const tarch::la::Vector<DIMENSIONS, int>& k, int kScalar) {
+  peano4::dForEachCorner([&](const tarch::la::Vector<DIMENSIONS, int>& k, const int kScalar) {
     for (int d = 0; d < DIMENSIONS; d++) {
       validateWithParams1(k(d) == 0 or k(d) == 1, k);
     }
@@ -294,7 +282,7 @@ void peano4::tests::LoopTest::testDForEachCornerEnumeratesCornersInLinearisedOrd
  */
 void peano4::tests::LoopTest::testDForEachStencilEnumeratesStencil() {
   int expected = 0;
-  peano4::dForEachStencil([&](const tarch::la::Vector<DIMENSIONS, int>& k, int) {
+  peano4::dForEachStencil([&](const tarch::la::Vector<DIMENSIONS, int>& k, [[maybe_unused]] const int kScalar) {
     for (int d = 0; d < DIMENSIONS; d++) {
       validateWithParams1(k(d) >= 0 and k(d) < 3, k);
     }
@@ -317,8 +305,7 @@ void peano4::tests::LoopTest::testZForEach3IsAHamiltonianPath() {
       for (int d = 0; d < DIMENSIONS; d++) {
         validateWithParams1(k(d) >= 0 and k(d) < 3, k);
       }
-      // A space-filling path visits neighbours: consecutive cells differ by one
-      // in exactly one coordinate.
+      // Consecutive cells of the path differ by one in exactly one coordinate.
       if (count > 0) {
         int changedAxes = 0;
         for (int d = 0; d < DIMENSIONS; d++) {
@@ -403,8 +390,8 @@ void peano4::tests::LoopTest::testGenericZForEachMatchesZForEach3() {
       static_cast<int>(tableSequence.size()),
       initialDirection
     );
-    for (int i = 0; i < static_cast<int>(tableSequence.size()); i++) {
-      validateEqualsWithParams2(genericSequence[i], tableSequence[i], initialDirection, i);
+    for (int cellNumber = 0; cellNumber < static_cast<int>(tableSequence.size()); cellNumber++) {
+      validateEqualsWithParams2(genericSequence[cellNumber], tableSequence[cellNumber], initialDirection, cellNumber);
     }
   }
 }

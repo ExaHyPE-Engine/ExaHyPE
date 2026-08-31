@@ -12,11 +12,10 @@ namespace {
   }
 
   /**
-   * Reproduce the per-rank file name that TrajectoryDatabase writes, so a test
-   * can read the snapshots back in.
+   * Returns the file name TrajectoryDatabase writes for the calling rank.
    */
   std::string outputFileName(const std::string& baseName) {
-    if (tarch::mpi::Rank::getInstance().getNumberOfRanks() > 0) {
+    if (tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1) {
       return baseName + "-rank-" + std::to_string(tarch::mpi::Rank::getInstance().getRank()) + ".csv";
     }
     return baseName + ".csv";
@@ -44,7 +43,7 @@ namespace {
     return values;
   }
 
-  tarch::la::Vector<DIMENSIONS, double> movingPosition(int step, double offset) {
+  tarch::la::Vector<DIMENSIONS, double> movingPosition(const int step, const double offset) {
     tarch::la::Vector<DIMENSIONS, double> x;
     for (int axis = 0; axis < DIMENSIONS; axis++) {
       x(axis) = offset + static_cast<double>(step) * (axis + 1);
@@ -83,8 +82,8 @@ void toolbox::particles::tests::TrajectoryDatabaseTest::testAppendsChronological
 
     int firstParticleRows  = 0;
     int secondParticleRows = 0;
-    for (std::size_t line = 1; line < lines.size(); line++) {
-      const std::vector<double> values = parseRow(lines[line]);
+    for (std::size_t lineIndex = 1; lineIndex < lines.size(); lineIndex++) {
+      const std::vector<double> values = parseRow(lines[lineIndex]);
       if (not values.empty() and static_cast<int>(values[0]) == 1) {
         firstParticleRows++;
       } else if (not values.empty() and static_cast<int>(values[0]) == 2) {

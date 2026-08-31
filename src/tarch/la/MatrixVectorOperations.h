@@ -7,9 +7,7 @@
 
 namespace tarch::la {
   /**
-   * Performs a matrix x vector multiplication.
-   *
-   * The result vector has to be created outside and given as a parameter.
+   * Returns the product of the matrix and the vector.
    */
   template <int Rows, int Cols, typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Vector<Rows, Scalar> multiply(
@@ -34,7 +32,7 @@ namespace tarch::la {
   );
 
   /**
-   * Compute r = r + alpha * M * v in-situ
+   * Adds alpha times the product of the matrix and v to r in place.
    */
   template <int Rows, int Cols, typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD void matVec(
@@ -66,12 +64,6 @@ namespace tarch::la {
     Vector<4, Scalar>&          r
   );
 
-  /**
-   * Performs a matrix x vector multiplication.
-   *
-   * The result vector is created inside, multiply is used to execute the
-   * multiplication.
-   */
   template <int Rows, int Cols, typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Vector<Rows, Scalar> operator*(
     const Matrix<Rows, Cols, Scalar>& matrix,
@@ -94,9 +86,6 @@ namespace tarch::la {
     const Vector<4, Scalar>&    vector
   );
 
-  /**
-   * Outer dot product.
-   */
   template <int Size, typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Matrix<Size, Size, Scalar> outerDot(
     const Vector<Size, Scalar>& lhs,
@@ -104,4 +93,4 @@ namespace tarch::la {
   );
 } // namespace tarch::la
 
-#include "MatrixVectorOperations.cpph"
+#include "tarch/la/MatrixVectorOperations.cpph"

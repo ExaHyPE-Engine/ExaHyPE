@@ -5,7 +5,7 @@
 #ifdef PEANO_WITH_NETCDF
 
 #include "tarch/Termination.h"
-#include "tarch/instrumentation/Log.h"
+#include "tarch/instrumentation/Debug.h"
 #include "tarch/la/ScalarOperations.h"
 
 namespace {
@@ -107,9 +107,9 @@ void tarch::reader::NetCDFFieldSampler<FieldDimensions>::parseFieldFile(const Fi
   int ncid = -1;
 
   if ((ncid = _netCDFFileReader.open(fieldDescription.filePath)) == -1) {
-    std::stringstream ss;
-    ss << "Field file " << fieldDescription.filePath << " could not be opened.";
-    tarch::terminateWithError(ss.str());
+    std::stringstream message;
+    message << "Field file " << fieldDescription.filePath << " could not be opened.";
+    tarch::terminateWithError(message.str());
   }
 
   Field field;
@@ -120,12 +120,12 @@ void tarch::reader::NetCDFFieldSampler<FieldDimensions>::parseFieldFile(const Fi
     }
 
     {
-      std::vector<double> tmp(field.length[i], 0.0);
-      if (_netCDFFileReader.readVariable1D(ncid, fieldDescription.key[i].c_str(), tmp.data()) == -1) {
+      std::vector<double> coordinates(field.length[i], 0.0);
+      if (_netCDFFileReader.readVariable1D(ncid, fieldDescription.key[i].c_str(), coordinates.data()) == -1) {
         tarch::terminateWithError("Field coordinates \"" + fieldDescription.key[i] + "\" could not be read.");
       }
-      field.firstElement[i] = tmp.front();
-      field.lastElement[i]  = tmp.back();
+      field.firstElement[i] = coordinates.front();
+      field.lastElement[i]  = coordinates.back();
     }
 
     // A sampler without a configured extent maps this field onto the coordinate range the
@@ -173,21 +173,22 @@ double tarch::reader::NetCDFFieldSampler<FieldDimensions>::samplePiecewiseConsta
 
   const Field& field = fieldIterator->second;
 
-  tarch::la::Vector<FieldDimensions, double> posCDF;
+  tarch::la::Vector<FieldDimensions, double> positionInCDFRange;
   for (int i = 0; i < FieldDimensions; i++) {
-    posCDF[i] = transformSimulationCoordinateToCDFRange(
+    positionInCDFRange[i] = transformSimulationCoordinateToCDFRange(
       position[i],
       field.lengthOfSimulationDomain[i],
       field.firstElement[i],
       field.lastElement[i],
       field.offsetOfSimulationDomain[i]
     );
-    if (not isCoordinateInRange(posCDF[i], field.firstElement[i], field.lastElement[i])) {
+    if (not isCoordinateInRange(positionInCDFRange[i], field.firstElement[i], field.lastElement[i])) {
       return 0.0;
     }
   }
 
-  return field.values[transformIndexCDFRangeToArray(posCDF, field.firstElement, field.lastElement, field.length)];
+  return field
+    .values[transformIndexCDFRangeToArray(positionInCDFRange, field.firstElement, field.lastElement, field.length)];
 }
 
 template <int FieldDimensions>
@@ -265,12 +266,10 @@ double tarch::reader::NetCDFFieldSampler<FieldDimensions>::transformSimulationCo
   const double minZ = offsetOfSimulationSpaceInZDirection;
   const double maxZ = sizeOfSimulationSpaceInZDirection + minZ;
 
-  const double m = ((maxIndexOfCDFspaceInZDirection - minIndexOfCDFspaceInZDirection) / (maxZ - minZ));
+  const double slope     = ((maxIndexOfCDFspaceInZDirection - minIndexOfCDFspaceInZDirection) / (maxZ - minZ));
+  const double intercept = minIndexOfCDFspaceInZDirection - slope * minZ;
 
-  // Correction for y-intercept in index interpolation.
-  const double b = minIndexOfCDFspaceInZDirection - m * minZ;
-
-  return m * coordinateOfDimensionZInSimulationSpace + b;
+  return slope * coordinateOfDimensionZInSimulationSpace + intercept;
 }
 
 /**
@@ -299,7 +298,7 @@ std::size_t tarch::reader::NetCDFFieldSampler<FieldDimensions>::transformIndexCD
     );
   };
 
-  // std::size_t rather than int: a three-dimensional field easily holds more than 2^31 entries.
+  // A three-dimensional field holds more than 2^31 entries, so the flat index needs std::size_t.
   std::size_t index  = 0;
   std::size_t length = 1;
   for (int i = 0; i < FieldDimensions; i++) {

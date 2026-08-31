@@ -7,7 +7,7 @@
 
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/accelerator.h"
-#include "tarch/instrumentation/Log.h"
+#include "tarch/instrumentation/Trace.h"
 
 template <typename cCompType>
 void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
@@ -47,7 +47,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   );
   traceLeave("User Riemann solver");
 {% else %}
-  cCompType* tmp_bnd = tarch::allocateMemory<cCompType>({{NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}, tarch::MemoryLocation::Heap);
+  cCompType* rusanovPenalty = tarch::allocateMemory<cCompType>({{NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}, tarch::MemoryLocation::Heap);
   cCompType QavL[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {0.0};
   cCompType QavR[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {0.0};
 
@@ -93,20 +93,20 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
 
   traceEnter("Rusanov flux");
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xy++) {
-    SIMD(aligned(tmp_bnd:PEANO_WITH_ALIGNMENT))
+    SIMD(aligned(rusanovPenalty:PEANO_WITH_ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
-      tmp_bnd[xy * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] = smax * (QL[xy * {{NUMBER_OF_DATA}} + n] - QR[xy * {{NUMBER_OF_DATA}} + n]);
+      rusanovPenalty[xy * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] = smax * (QL[xy * {{NUMBER_OF_DATA}} + n] - QR[xy * {{NUMBER_OF_DATA}} + n]);
     }
   }
 
-  SIMD(aligned(tmp_bnd:PEANO_WITH_ALIGNMENT))
+  SIMD(aligned(rusanovPenalty:PEANO_WITH_ALIGNMENT))
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xy++) {
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
-      FL[xy*{{NUMBER_OF_UNKNOWNS}} + n] = 0.5 * (FL[xy*{{NUMBER_OF_UNKNOWNS}} + n] + FR[xy*{{NUMBER_OF_UNKNOWNS}} + n] + tmp_bnd[xy*{{NUMBER_OF_UNKNOWNS_PADDED}} + n]);
+      FL[xy*{{NUMBER_OF_UNKNOWNS}} + n] = 0.5 * (FL[xy*{{NUMBER_OF_UNKNOWNS}} + n] + FR[xy*{{NUMBER_OF_UNKNOWNS}} + n] + rusanovPenalty[xy*{{NUMBER_OF_UNKNOWNS_PADDED}} + n]);
     }
   }
   std::copy_n(FL, {{NUMBER_OF_UNKNOWNS*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}, FR);
-  tarch::freeMemory(tmp_bnd, tarch::MemoryLocation::Heap);
+  tarch::freeMemory(rusanovPenalty, tarch::MemoryLocation::Heap);
   traceLeave("Rusanov flux");
 
 {% if USE_NCP %}

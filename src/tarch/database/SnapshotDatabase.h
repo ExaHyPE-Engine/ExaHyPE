@@ -2,45 +2,48 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "tarch/multicore/BooleanSemaphore.h"
-
 namespace tarch::database {
   class SnapshotDatabase;
 } // namespace tarch::database
 
-/**
- * Base class for the CSV snapshot databases
- *
- * A snapshot database records a growing series of measurements and appends
- * them, oldest first, to a single CSV file as they arrive. The concrete
- * databases add the storage, the rule that decides whether a new measurement
- * is kept, and the CSV serialisation. The base holds the shared configuration,
- * the incremental file writer and the thread protection.
- */
 class tarch::database::SnapshotDatabase {
+public:
+  SnapshotDatabase(const SnapshotDatabase&)            = delete;
+  SnapshotDatabase(SnapshotDatabase&&)                 = delete;
+  SnapshotDatabase& operator=(const SnapshotDatabase&) = delete;
+  SnapshotDatabase& operator=(SnapshotDatabase&&)      = delete;
+  virtual ~SnapshotDatabase()                          = default;
+
+  void dumpCSVFile();
+  void clear(bool lockMutex = true);
+
+  void setOutputFileName(const std::string& filename);
+  void setOutputPrecision(int precision);
+  void setTimeDeltaBetweenTwoSnapshots(double value);
+
 protected:
-  std::string _fileName;
+  std::string _fileName{};
 
-  double _timeDelta;
+  double _timeDelta{0.0};
 
-  int  _precision;
-  bool _deltasAreRelative;
-  bool _csvHeaderWritten;
+  int  _precision{0};
+  bool _deltasAreRelative{false};
+  bool _csvHeaderWritten{false};
 
-  static constexpr double DeltaCutOffThreshold = 1e-6;
+  static constexpr double DeltaCutoffThreshold = 1e-6;
 
   enum class AddSnapshotAction { Ignore, Append, Replace };
 
   struct Snapshot {
-    double              timestamp;
-    std::vector<double> data;
+    double              timestamp{0.0};
+    std::vector<double> data{};
 
-    Snapshot(double timestamp_, int numberOfDataEntries);
+    Snapshot(double timestamp, int numberOfDataEntries);
   };
 
-  int _rank;
+  int _rank{-1};
 
-  tarch::multicore::BooleanSemaphore _semaphore;
+  std::mutex _mutex{};
 
   SnapshotDatabase(double timeDelta, bool deltasAreRelative);
 
@@ -52,18 +55,4 @@ protected:
   virtual void writeUnwrittenSnapshots(std::ostream& file)   = 0;
   virtual void clearStorage()                                = 0;
   virtual void resetWriteTracking()                          = 0;
-
-public:
-  SnapshotDatabase(const SnapshotDatabase&)            = delete;
-  SnapshotDatabase(SnapshotDatabase&&)                 = delete;
-  SnapshotDatabase& operator=(const SnapshotDatabase&) = delete;
-  SnapshotDatabase& operator=(SnapshotDatabase&&)      = delete;
-  virtual ~SnapshotDatabase()                          = default;
-
-  void dumpCSVFile();
-  void clear(bool lockSemaphore = true);
-
-  void setOutputFileName(const std::string& filename);
-  void setOutputPrecision(int precision);
-  void setTimeDeltaBetweenTwoSnapshots(double value);
 };

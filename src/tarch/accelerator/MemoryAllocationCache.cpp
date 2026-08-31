@@ -2,274 +2,275 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "MemoryAllocationCache.h"
 
-#include "accelerator.h"
 #include "tarch/Assertions.h"
+#include "tarch/accelerator/accelerator.h"
 
-struct DeviceMemoryAllocationCacheKey {
-  std::size_t sizeInBytes;
-  int         device;
+namespace {
+  struct DeviceMemoryAllocationCacheKey {
+    std::size_t sizeInBytes;
+    int         device;
 
-  bool operator==(const DeviceMemoryAllocationCacheKey& other) const {
-    return sizeInBytes == other.sizeInBytes and device == other.device;
-  }
-};
+    bool operator==(const DeviceMemoryAllocationCacheKey& other) const {
+      return sizeInBytes == other.sizeInBytes and device == other.device;
+    }
+  };
 
-struct DeviceMemoryAllocationCacheKeyHash {
-  std::size_t operator()(const DeviceMemoryAllocationCacheKey& key) const {
-    std::size_t result = std::hash<std::size_t>{}(key.sizeInBytes);
-    result ^= std::hash<int>{}(key.device) + 0x9e3779b9 + (result << 6) + (result >> 2);
-    return result;
-  }
-};
+  struct DeviceMemoryAllocationCacheKeyHash {
+    std::size_t operator()(const DeviceMemoryAllocationCacheKey& key) const {
+      std::size_t result = std::hash<std::size_t>{}(key.sizeInBytes);
+      result ^= std::hash<int>{}(key.device) + 0x9e3779b9 + (result << 6) + (result >> 2);
+      return result;
+    }
+  };
 
-struct CachedAllocationHeader {
-  std::size_t             sizeInBytes;
-  CachedAllocationHeader* next;
-};
+  struct CachedAllocationHeader {
+    std::size_t             sizeInBytes;
+    CachedAllocationHeader* next;
+  };
 
-struct MemoryAllocationCacheBucket {
-  CachedAllocationHeader* first = nullptr;
-  std::size_t             count = 0;
-};
+  struct MemoryAllocationCacheBucket {
+    CachedAllocationHeader* first = nullptr;
+    std::size_t             count = 0;
+  };
 
-struct DeviceMemoryAllocationCacheBucket {
-  std::vector<void*> pointers;
-};
+  struct DeviceMemoryAllocationCacheBucket {
+    std::vector<void*> pointers;
+  };
 
-struct DeviceAllocationMetadata {
-  std::size_t sizeInBytes;
-  int         device;
-};
+  struct DeviceAllocationMetadata {
+    std::size_t sizeInBytes;
+    int         device;
+  };
 
-struct MemoryAllocationCacheState {
-  std::unordered_map<std::size_t, MemoryAllocationCacheBucket> heapFreeLists;
-  std::
-    unordered_map<DeviceMemoryAllocationCacheKey, DeviceMemoryAllocationCacheBucket, DeviceMemoryAllocationCacheKeyHash>
+  struct MemoryAllocationCacheState {
+    std::unordered_map<std::size_t, MemoryAllocationCacheBucket> heapFreeLists;
+    std::unordered_map<
+      DeviceMemoryAllocationCacheKey,
+      DeviceMemoryAllocationCacheBucket,
+      DeviceMemoryAllocationCacheKeyHash>
       deviceFreeLists;
-  std::unordered_map<DeviceMemoryAllocationCacheKey, MemoryAllocationCacheBucket, DeviceMemoryAllocationCacheKeyHash>
-              pinnedFreeLists;
-  std::size_t cachedBytes = 0;
+    std::unordered_map<DeviceMemoryAllocationCacheKey, MemoryAllocationCacheBucket, DeviceMemoryAllocationCacheKeyHash>
+                pinnedFreeLists;
+    std::size_t cachedBytes = 0;
 
-  MemoryAllocationCacheState();
-  ~MemoryAllocationCacheState();
-};
+    MemoryAllocationCacheState();
+    ~MemoryAllocationCacheState();
+  };
 
-static constexpr std::size_t CachedAllocationHeaderSize = ((sizeof(CachedAllocationHeader) + PEANO_WITH_ALIGNMENT - 1) / PEANO_WITH_ALIGNMENT)
-                                                          * PEANO_WITH_ALIGNMENT;
-static constexpr std::size_t MaxCachedBlockSize       = 8 * 1024 * 1024;
-static constexpr std::size_t MaxCachedBytesPerThread  = 64 * 1024 * 1024;
-static constexpr std::size_t MaxCachedBlocksPerBucket = 8;
+  constexpr std::size_t CachedAllocationHeaderSize =
+    ((sizeof(CachedAllocationHeader) + PEANO_WITH_ALIGNMENT - 1) / PEANO_WITH_ALIGNMENT) * PEANO_WITH_ALIGNMENT;
+  constexpr std::size_t MaxCachedBlockSize       = 8 * 1024 * 1024;
+  constexpr std::size_t MaxCachedBytesPerThread  = 64 * 1024 * 1024;
+  constexpr std::size_t MaxCachedBlocksPerBucket = 8;
 
-static_assert(
-  CachedAllocationHeaderSize % PEANO_WITH_ALIGNMENT == 0,
-  "Memory allocation cache metadata has to preserve the public pointer alignment"
-);
+  static_assert(
+    CachedAllocationHeaderSize % PEANO_WITH_ALIGNMENT == 0,
+    "Memory allocation cache metadata has to preserve the public pointer alignment"
+  );
 
-// The registry and its lock must outlive every thread: OpenMP workers destroy
-// their thread_local cache state during library teardown, after the main thread
-// has run static destructors, so a registry with static storage duration would
-// already be freed. Each accessor holds a never-freed heap object behind a live
-// pointer, which stays reachable to the leak checker.
-static std::mutex& memoryAllocationCacheRegistrySemaphore() {
-  static std::mutex* const semaphore = new std::mutex();
-  return *semaphore;
-}
-static std::vector<MemoryAllocationCacheState*>& memoryAllocationCacheRegistry() {
-  static auto* const registry = new std::vector<MemoryAllocationCacheState*>();
-  return *registry;
-}
-static thread_local MemoryAllocationCacheState             ThreadLocalMemoryAllocationCache;
-static std::shared_mutex                                   DeviceAllocationMetadataSemaphore;
-static std::unordered_map<void*, DeviceAllocationMetadata> DeviceAllocationMetadataTable;
+  // The registry and its lock outlive every thread: OpenMP workers destroy their thread_local cache
+  // state during library teardown, after the main thread has run its static destructors. Each
+  // accessor keeps a heap object that nothing frees and that stays reachable to the leak checker.
+  std::mutex& memoryAllocationCacheRegistrySemaphore() {
+    static std::mutex* const semaphore = new std::mutex();
+    return *semaphore;
+  }
+  std::vector<MemoryAllocationCacheState*>& memoryAllocationCacheRegistry() {
+    static auto* const registry = new std::vector<MemoryAllocationCacheState*>();
+    return *registry;
+  }
+  thread_local MemoryAllocationCacheState             ThreadLocalMemoryAllocationCache;
+  std::shared_mutex                                   DeviceAllocationMetadataSemaphore;
+  std::unordered_map<void*, DeviceAllocationMetadata> DeviceAllocationMetadataTable;
 
-static CachedAllocationHeader* getAllocationHeader(void* payloadPointer) {
-  return reinterpret_cast<CachedAllocationHeader*>(static_cast<char*>(payloadPointer) - CachedAllocationHeaderSize);
-}
-
-static void* getPayloadPointer(CachedAllocationHeader* allocationHeader) {
-  return reinterpret_cast<char*>(allocationHeader) + CachedAllocationHeaderSize;
-}
-
-static CachedAllocationHeader* allocateUnderlyingMemory(
-  std::size_t           totalSizeInBytes,
-  tarch::MemoryLocation location,
-  int                   device
-) {
-  if (location == tarch::MemoryLocation::Heap) {
-    return static_cast<CachedAllocationHeader*>(tarch::accelerator::allocateHeapMemory(totalSizeInBytes));
+  CachedAllocationHeader* getAllocationHeader(void* payloadPointer) {
+    return reinterpret_cast<CachedAllocationHeader*>(static_cast<char*>(payloadPointer) - CachedAllocationHeaderSize);
   }
 
-  return static_cast<CachedAllocationHeader*>(tarch::accelerator::allocatePinnedMemory(totalSizeInBytes, device));
-}
-
-static void freeUnderlyingMemory(CachedAllocationHeader* allocationHeader, tarch::MemoryLocation location, int device) {
-  if (location == tarch::MemoryLocation::Heap) {
-    tarch::accelerator::freeHeapMemory(allocationHeader);
-    return;
+  void* getPayloadPointer(CachedAllocationHeader* allocationHeader) {
+    return reinterpret_cast<char*>(allocationHeader) + CachedAllocationHeaderSize;
   }
 
-  tarch::accelerator::freePinnedMemory(allocationHeader, device);
-}
+  CachedAllocationHeader* allocateUnderlyingMemory(
+    std::size_t           totalSizeInBytes,
+    tarch::MemoryLocation location,
+    int                   device
+  ) {
+    if (location == tarch::MemoryLocation::Heap) {
+      return static_cast<CachedAllocationHeader*>(tarch::accelerator::allocateHeapMemory(totalSizeInBytes));
+    }
 
-static void bookmarkDeviceAllocation(void* pointer, std::size_t sizeInBytes, int device) {
-  std::unique_lock<std::shared_mutex> guard(DeviceAllocationMetadataSemaphore);
-  [[maybe_unused]] const bool         inserted = DeviceAllocationMetadataTable
-                                           .emplace(pointer, DeviceAllocationMetadata{sizeInBytes, device})
-                                           .second;
-  assertion(inserted, pointer, sizeInBytes);
-}
-
-static DeviceAllocationMetadata getDeviceAllocationMetadata(void* pointer) {
-  std::shared_lock<std::shared_mutex> guard(DeviceAllocationMetadataSemaphore);
-  auto                                entry = DeviceAllocationMetadataTable.find(pointer);
-  assertion(entry != DeviceAllocationMetadataTable.end(), pointer);
-  if (entry == DeviceAllocationMetadataTable.end()) {
-    // Unreachable by the bookmarking invariant (asserted above). Telling the optimiser the
-    // iterator is valid stops -Wnull-dereference firing once assertions are compiled out.
-    __builtin_unreachable();
-  }
-  return entry->second;
-}
-
-static void removeDeviceAllocationMetadata(void* pointer) {
-  std::unique_lock<std::shared_mutex> guard(DeviceAllocationMetadataSemaphore);
-  [[maybe_unused]] const std::size_t  erased = DeviceAllocationMetadataTable.erase(pointer);
-  assertion(erased == 1, pointer);
-}
-
-static void clearMemoryAllocationCacheBucket(
-  MemoryAllocationCacheBucket& bucket,
-  tarch::MemoryLocation        location,
-  int                          device
-) {
-  while (bucket.first != nullptr) {
-    CachedAllocationHeader* next = bucket.first->next;
-    freeUnderlyingMemory(bucket.first, location, device);
-    bucket.first = next;
+    return static_cast<CachedAllocationHeader*>(tarch::accelerator::allocatePinnedMemory(totalSizeInBytes, device));
   }
 
-  bucket.count = 0;
-}
+  void freeUnderlyingMemory(CachedAllocationHeader* allocationHeader, tarch::MemoryLocation location, int device) {
+    if (location == tarch::MemoryLocation::Heap) {
+      tarch::accelerator::freeHeapMemory(allocationHeader);
+      return;
+    }
 
-static void clearDeviceMemoryAllocationCacheBucket(DeviceMemoryAllocationCacheBucket& bucket, int device) {
-  for (void* pointer : bucket.pointers) {
-    tarch::accelerator::freeDeviceMemory(pointer, device);
-    removeDeviceAllocationMetadata(pointer);
+    tarch::accelerator::freePinnedMemory(allocationHeader, device);
   }
 
-  bucket.pointers.clear();
-}
-
-static void clearMemoryAllocationCacheState(MemoryAllocationCacheState& state) {
-  for (auto& [sizeInBytes, bucket] : state.heapFreeLists) {
-    clearMemoryAllocationCacheBucket(bucket, tarch::MemoryLocation::Heap, 0);
+  void bookmarkDeviceAllocation(void* pointer, std::size_t sizeInBytes, int device) {
+    std::unique_lock<std::shared_mutex> guard(DeviceAllocationMetadataSemaphore);
+    [[maybe_unused]] const bool         inserted =
+      DeviceAllocationMetadataTable.emplace(pointer, DeviceAllocationMetadata{sizeInBytes, device}).second;
+    assertion(inserted, pointer, sizeInBytes);
   }
 
-  for (auto& [key, bucket] : state.deviceFreeLists) {
-    clearDeviceMemoryAllocationCacheBucket(bucket, key.device);
+  DeviceAllocationMetadata getDeviceAllocationMetadata(void* pointer) {
+    std::shared_lock<std::shared_mutex> guard(DeviceAllocationMetadataSemaphore);
+    auto                                entry = DeviceAllocationMetadataTable.find(pointer);
+    assertion(entry != DeviceAllocationMetadataTable.end(), pointer);
+    if (entry == DeviceAllocationMetadataTable.end()) {
+      // Unreachable by the bookmarking invariant (asserted above). Telling the optimiser the
+      // iterator is valid stops -Wnull-dereference firing once assertions are compiled out.
+      __builtin_unreachable();
+    }
+    return entry->second;
   }
 
-  for (auto& [key, bucket] : state.pinnedFreeLists) {
-    clearMemoryAllocationCacheBucket(bucket, tarch::MemoryLocation::Pinned, key.device);
+  void removeDeviceAllocationMetadata(void* pointer) {
+    std::unique_lock<std::shared_mutex> guard(DeviceAllocationMetadataSemaphore);
+    [[maybe_unused]] const std::size_t  erased = DeviceAllocationMetadataTable.erase(pointer);
+    assertion(erased == 1, pointer);
   }
 
-  state.heapFreeLists.clear();
-  state.deviceFreeLists.clear();
-  state.pinnedFreeLists.clear();
-  state.cachedBytes = 0;
-}
+  void clearMemoryAllocationCacheBucket(
+    MemoryAllocationCacheBucket& bucket,
+    tarch::MemoryLocation        location,
+    int                          device
+  ) {
+    while (bucket.first != nullptr) {
+      CachedAllocationHeader* next = bucket.first->next;
+      freeUnderlyingMemory(bucket.first, location, device);
+      bucket.first = next;
+    }
 
-static MemoryAllocationCacheBucket* getMemoryAllocationCacheBucket(
-  MemoryAllocationCacheState& state,
-  std::size_t                 sizeInBytes,
-  tarch::MemoryLocation       location,
-  int                         device
-) {
-  if (location == tarch::MemoryLocation::Heap) {
-    auto bucket = state.heapFreeLists.find(sizeInBytes);
-    return bucket == state.heapFreeLists.end() ? nullptr : &bucket->second;
+    bucket.count = 0;
   }
 
-  const DeviceMemoryAllocationCacheKey key{sizeInBytes, device};
-  auto                                 bucket = state.pinnedFreeLists.find(key);
-  return bucket == state.pinnedFreeLists.end() ? nullptr : &bucket->second;
-}
+  void clearDeviceMemoryAllocationCacheBucket(DeviceMemoryAllocationCacheBucket& bucket, int device) {
+    for (void* pointer : bucket.pointers) {
+      tarch::accelerator::freeDeviceMemory(pointer, device);
+      removeDeviceAllocationMetadata(pointer);
+    }
 
-static DeviceMemoryAllocationCacheBucket* getDeviceMemoryAllocationCacheBucket(
-  MemoryAllocationCacheState& state,
-  std::size_t                 sizeInBytes,
-  int                         device
-) {
-  const DeviceMemoryAllocationCacheKey key{sizeInBytes, device};
-  auto                                 bucket = state.deviceFreeLists.find(key);
-  return bucket == state.deviceFreeLists.end() ? nullptr : &bucket->second;
-}
-
-static MemoryAllocationCacheBucket& createMemoryAllocationCacheBucket(
-  MemoryAllocationCacheState& state,
-  std::size_t                 sizeInBytes,
-  tarch::MemoryLocation       location,
-  int                         device
-) {
-  if (location == tarch::MemoryLocation::Heap) {
-    return state.heapFreeLists[sizeInBytes];
+    bucket.pointers.clear();
   }
 
-  const DeviceMemoryAllocationCacheKey key{sizeInBytes, device};
-  return state.pinnedFreeLists[key];
-}
+  void clearMemoryAllocationCacheState(MemoryAllocationCacheState& state) {
+    for (auto& [sizeInBytes, bucket] : state.heapFreeLists) {
+      clearMemoryAllocationCacheBucket(bucket, tarch::MemoryLocation::Heap, 0);
+    }
 
-static DeviceMemoryAllocationCacheBucket& createDeviceMemoryAllocationCacheBucket(
-  MemoryAllocationCacheState& state,
-  std::size_t                 sizeInBytes,
-  int                         device
-) {
-  const DeviceMemoryAllocationCacheKey key{sizeInBytes, device};
-  DeviceMemoryAllocationCacheBucket&   bucket = state.deviceFreeLists[key];
-  if (bucket.pointers.capacity() == 0) {
-    bucket.pointers.reserve(MaxCachedBlocksPerBucket);
+    for (auto& [key, bucket] : state.deviceFreeLists) {
+      clearDeviceMemoryAllocationCacheBucket(bucket, key.device);
+    }
+
+    for (auto& [key, bucket] : state.pinnedFreeLists) {
+      clearMemoryAllocationCacheBucket(bucket, tarch::MemoryLocation::Pinned, key.device);
+    }
+
+    state.heapFreeLists.clear();
+    state.deviceFreeLists.clear();
+    state.pinnedFreeLists.clear();
+    state.cachedBytes = 0;
   }
-  return bucket;
-}
 
-MemoryAllocationCacheState::MemoryAllocationCacheState() {
-  heapFreeLists.reserve(32);
-  deviceFreeLists.reserve(16);
-  pinnedFreeLists.reserve(16);
+  MemoryAllocationCacheBucket* getMemoryAllocationCacheBucket(
+    MemoryAllocationCacheState& state,
+    std::size_t                 sizeInBytes,
+    tarch::MemoryLocation       location,
+    int                         device
+  ) {
+    if (location == tarch::MemoryLocation::Heap) {
+      auto bucket = state.heapFreeLists.find(sizeInBytes);
+      return bucket == state.heapFreeLists.end() ? nullptr : &bucket->second;
+    }
 
-  std::lock_guard<std::mutex> guard(memoryAllocationCacheRegistrySemaphore());
-  memoryAllocationCacheRegistry().push_back(this);
-}
-
-MemoryAllocationCacheState::~MemoryAllocationCacheState() {
-  std::lock_guard<std::mutex> guard(memoryAllocationCacheRegistrySemaphore());
-  clearMemoryAllocationCacheState(*this);
-
-  auto& registry = memoryAllocationCacheRegistry();
-  auto  it       = std::find(registry.begin(), registry.end(), this);
-  if (it != registry.end()) {
-    registry.erase(it);
+    const DeviceMemoryAllocationCacheKey key{sizeInBytes, device};
+    auto                                 bucket = state.pinnedFreeLists.find(key);
+    return bucket == state.pinnedFreeLists.end() ? nullptr : &bucket->second;
   }
-}
+
+  DeviceMemoryAllocationCacheBucket* getDeviceMemoryAllocationCacheBucket(
+    MemoryAllocationCacheState& state,
+    std::size_t                 sizeInBytes,
+    int                         device
+  ) {
+    const DeviceMemoryAllocationCacheKey key{sizeInBytes, device};
+    auto                                 bucket = state.deviceFreeLists.find(key);
+    return bucket == state.deviceFreeLists.end() ? nullptr : &bucket->second;
+  }
+
+  MemoryAllocationCacheBucket& createMemoryAllocationCacheBucket(
+    MemoryAllocationCacheState& state,
+    std::size_t                 sizeInBytes,
+    tarch::MemoryLocation       location,
+    int                         device
+  ) {
+    if (location == tarch::MemoryLocation::Heap) {
+      return state.heapFreeLists[sizeInBytes];
+    }
+
+    const DeviceMemoryAllocationCacheKey key{sizeInBytes, device};
+    return state.pinnedFreeLists[key];
+  }
+
+  DeviceMemoryAllocationCacheBucket& createDeviceMemoryAllocationCacheBucket(
+    MemoryAllocationCacheState& state,
+    std::size_t                 sizeInBytes,
+    int                         device
+  ) {
+    const DeviceMemoryAllocationCacheKey key{sizeInBytes, device};
+    DeviceMemoryAllocationCacheBucket&   bucket = state.deviceFreeLists[key];
+    if (bucket.pointers.capacity() == 0) {
+      bucket.pointers.reserve(MaxCachedBlocksPerBucket);
+    }
+    return bucket;
+  }
+
+  MemoryAllocationCacheState::MemoryAllocationCacheState() {
+    heapFreeLists.reserve(32);
+    deviceFreeLists.reserve(16);
+    pinnedFreeLists.reserve(16);
+
+    std::lock_guard<std::mutex> guard(memoryAllocationCacheRegistrySemaphore());
+    memoryAllocationCacheRegistry().push_back(this);
+  }
+
+  MemoryAllocationCacheState::~MemoryAllocationCacheState() {
+    std::lock_guard<std::mutex> guard(memoryAllocationCacheRegistrySemaphore());
+    clearMemoryAllocationCacheState(*this);
+
+    auto& registry = memoryAllocationCacheRegistry();
+    auto  it       = std::find(registry.begin(), registry.end(), this);
+    if (it != registry.end()) {
+      registry.erase(it);
+    }
+  }
+} // namespace
 
 tarch::accelerator::MemoryAllocationCache& tarch::accelerator::MemoryAllocationCache::getInstance() {
   static MemoryAllocationCache instance;
   return instance;
 }
 
-void* tarch::accelerator::MemoryAllocationCache::
-  allocate(std::size_t sizeInBytes, MemoryLocation location, int device) {
+void* tarch::accelerator::MemoryAllocationCache::allocate(
+  std::size_t    sizeInBytes,
+  MemoryLocation location,
+  int            device
+) {
   assertion(
     location == MemoryLocation::Heap or location == MemoryLocation::Device or location == MemoryLocation::Pinned
   );
   assertion(sizeInBytes > 0, sizeInBytes);
 
   if (location == MemoryLocation::Device) {
-    DeviceMemoryAllocationCacheBucket* bucket = getDeviceMemoryAllocationCacheBucket(
-      ThreadLocalMemoryAllocationCache,
-      sizeInBytes,
-      device
-    );
+    DeviceMemoryAllocationCacheBucket* bucket =
+      getDeviceMemoryAllocationCacheBucket(ThreadLocalMemoryAllocationCache, sizeInBytes, device);
 
     if (bucket != nullptr and not bucket->pointers.empty()) {
       void* result = bucket->pointers.back();
@@ -285,12 +286,8 @@ void* tarch::accelerator::MemoryAllocationCache::
     return result;
   }
 
-  MemoryAllocationCacheBucket* bucket = getMemoryAllocationCacheBucket(
-    ThreadLocalMemoryAllocationCache,
-    sizeInBytes,
-    location,
-    device
-  );
+  MemoryAllocationCacheBucket* bucket =
+    getMemoryAllocationCacheBucket(ThreadLocalMemoryAllocationCache, sizeInBytes, location, device);
 
   if (bucket != nullptr and bucket->first != nullptr) {
     CachedAllocationHeader* allocationHeader = bucket->first;
@@ -330,11 +327,8 @@ void tarch::accelerator::MemoryAllocationCache::free(void* pointer, MemoryLocati
       return;
     }
 
-    DeviceMemoryAllocationCacheBucket& bucket = createDeviceMemoryAllocationCacheBucket(
-      ThreadLocalMemoryAllocationCache,
-      metadata.sizeInBytes,
-      device
-    );
+    DeviceMemoryAllocationCacheBucket& bucket =
+      createDeviceMemoryAllocationCacheBucket(ThreadLocalMemoryAllocationCache, metadata.sizeInBytes, device);
     if (bucket.pointers.size() >= MaxCachedBlocksPerBucket) {
       tarch::accelerator::freeDeviceMemory(pointer, device);
       removeDeviceAllocationMetadata(pointer);
@@ -373,12 +367,9 @@ void tarch::accelerator::MemoryAllocationCache::free(void* pointer, MemoryLocati
 }
 
 void tarch::accelerator::MemoryAllocationCache::clear() {
-  // clear() is only called during shutdown or test setup/teardown, i.e. when
-  // allocator traffic is quiescent. Heap/pinned reuse and device allocation
-  // reuse avoid global locks; device free still needs the metadata table. Keep
-  // the registry lock while walking it, as thread-local cache destructors also
-  // unregister through this mutex. Otherwise a worker thread can destroy a TLS
-  // cache after we copy the registry but before we clear the copied pointer.
+  // A caller runs clear() only while no thread allocates through the cache. The lock stays held
+  // over the whole loop, because a thread-local cache state removes itself from the registry
+  // through the same mutex while its thread shuts down.
   std::lock_guard<std::mutex> guard(memoryAllocationCacheRegistrySemaphore());
   for (MemoryAllocationCacheState* state : memoryAllocationCacheRegistry()) {
     if (state != nullptr) {

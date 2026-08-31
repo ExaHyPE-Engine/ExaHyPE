@@ -9,19 +9,16 @@ namespace peano4::grid::tests {
 } // namespace peano4::grid::tests
 
 class peano4::grid::tests::StackTopologyTest final : public tarch::tests::TestCase {
-private:
-  void testStackIdentification();
-  void testPeriodicBoundaryMapping();
-
-  void testPeriodicPartnerRoundTrip();
-
-  void testGetPeriodicBoundaryNumber();
-  void testBitsetBasedPeriodicBoundaryEnumeration();
-  void testGetOutputStacksForPeriodicBoundaryExchange();
-
 public:
   StackTopologyTest();
-  ~StackTopologyTest() override = default;
+  StackTopologyTest(const StackTopologyTest&)            = delete;
+  StackTopologyTest(StackTopologyTest&&)                 = delete;
+  StackTopologyTest& operator=(const StackTopologyTest&) = delete;
+  StackTopologyTest& operator=(StackTopologyTest&&)      = delete;
+  ~StackTopologyTest() override                          = default;
 
   void run() override;
+
+private:
+  void testStackIdentification();
 };

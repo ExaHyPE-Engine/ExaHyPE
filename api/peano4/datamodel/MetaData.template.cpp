@@ -32,7 +32,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
   [[maybe_unused]] ::peano4::stacks::SendReceiveContext           context,
   [[maybe_unused]] const {{CLASSNAME}}&                           neighbour,
   [[maybe_unused]] const ::peano4::datamanagement::VertexMarker&  marker,
-  [[maybe_unused]] int                                            spacetreeId
+  [[maybe_unused]] int                                            treeId
 ) {
   {{MERGE_METHOD_DEFINITION}}
 }
@@ -43,7 +43,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
   [[maybe_unused]] ::peano4::stacks::SendReceiveContext         context,
   [[maybe_unused]] const {{CLASSNAME}}&                         neighbour,
   [[maybe_unused]] const ::peano4::datamanagement::FaceMarker&  marker,
-  [[maybe_unused]] int                                          spacetreeId
+  [[maybe_unused]] int                                          treeId
 ) {
   {{MERGE_METHOD_DEFINITION}}
 }
@@ -54,7 +54,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
   [[maybe_unused]] ::peano4::stacks::SendReceiveContext         context,
   [[maybe_unused]] const {{CLASSNAME}}&                         neighbour,
   [[maybe_unused]] const ::peano4::datamanagement::CellMarker&  marker,
-  [[maybe_unused]] int                                          spacetreeId
+  [[maybe_unused]] int                                          treeId
 ) {
   {{MERGE_METHOD_DEFINITION}}
 }

@@ -1,82 +1,52 @@
 /**
 
-@page page_exahype_domain-decomposition Domain decomposition (parallelisation with MPI or multithreading)
+@page page_exahype_domain-decomposition Domain decomposition
 
-<!-- Add this one for href links to subitems -->
 \tableofcontents
 
-Peano's domain decomposition is used for both MPI and multithreading.
-It is used as is by ExaHyPE.
-The one thing ExaHyPE adds on top is some bespoke/abstracted load-balancing,
-while its solvers themselves obviously are made domain decomposition-aware.
+ExaHyPE uses Peano's deterministic rank ownership and subtree-task traversal.
+@ref page_peano_domain_decomposition describes the tree, pools, boundary
+exchange, and regrid migration. @ref page_peano_runtime_analysis describes the
+reported balance metrics.
 
-This page is all about how the domain decomposition is realised within ExaHyPE, i.e. what specific aspects an
-ExaHyPE solver has to take into account. There is other domain decomposition material available on the pages:
+# Solver data
 
-- The page @ref toolbox_loadbalancing discusses various load balancing variants as offered through the load balancing toolbox.
-- The page @ref page_peano_domain_decomposition in Peano's documentation demonstrates how the domain decomposition is technically realised on the mesh level.
-- The page @ref page_exahype_runtime_analysis touches upon domain decomposition from a performance point of view.
+Each MPI rank owns its solver repository and the rank-local cell, face, and
+vertex pools. Generated observers translate traversal pool slots into solver
+data references. Cells belong to one rank. Faces and vertices on a rank
+boundary have local copies that are merged with the remote frozen state before
+their first consuming event.
 
+Subtree tasks use observer clones and task-local copies of the interface
+entities. The generated merge routines receive `InterRank` or `IntraRank` so a
+data model can apply the appropriate exchange policy.
 
-## Adding your own parallel features to an ExaHyPE solver (programmer view)
+# Solver state
 
+All observer clones on one rank refer to the same persistent solver instances.
+A mutable solver attribute accessed from cell callbacks therefore requires a
+thread-safe update. A scalable reduction lets each observer clone accumulate
+private state and combines it once from `endTraversal()`.
 
-Most users that write extensions to ExaHyPE which need some global data
-exchange are users which add new fields to their solver. Examples are global
-statistics that they want to track over the solution or global variables that
-they control.
+Attributes that must agree across ranks require an explicit MPI collective at
+a point reached by every rank in the same program step. The tarch MPI wrappers
+provide reductions and broadcasts with the runtime's timeout and progress
+handling.
 
-Each MPI rank holds one instance of the solver.
-All threads per MPI rank share the same instance of the solver.
-Peano splits up the domain into chunks along the space-filling curve.
-If you use a task-based solver, it then splits up these chunks further into tasks.
-That is, operations per cell such as the Riemann solves and the patch
-postprocessing can run in parallel on each thread.
+ExaHyPE applies this pattern to admissible time-step sizes, mesh-size bounds,
+and other solver-wide values. An override of a solver lifecycle routine calls
+its base implementation so these reductions remain active.
 
-If you add new attributes to your solver, this attribute exists on each solver
-on each rank.
-You therefore have to
+# Adaptive ownership
 
-- ensure that no two threads access the attribute at the same time;
-- ensure that the attributes of the individual solver instances per rank
-  remain consistent.
+ExaHyPE commits cell-based refine and erase events through
+exahype2::RefinementControlService. The service gives every rank the same
+canonical request set. Peano derives the target tree and leaf-weighted rank
+ownership from that set and migrates solver pools as part of the transition.
 
-The first item is relatively simple: You might, for example, decide to protect
-all accesses to your own variables via a semaphore.
-There is no specific place to take care of the protection:
-Just protect the actual data access.
+The geometric partition uses leaf counts. Particle-heavy cells, limiter work,
+or heterogeneous kernels can therefore produce application load imbalance on
+a geometrically balanced mesh. Solver tasking and parallel kernels provide the
+additional concurrency for these cases.
 
-
-The second item requires slightly more work, as you have to globally reduce the
-attribute: After each time step, you have to ensure that all ranks exchange
-their attributes with each other, and you then have to merge these data.
-I recommend not to use MPI's data exchange routine directly, but to use Peano's
-wrappers around these routines.
-
-
-The actual data exchange should be done at the end of a each time step.
-For this, you add
-
-~~~~~~~~~~~~~~~~~~~
-  void finishTimeStep() override;
-~~~~~~~~~~~~~~~~~~~
-
-
-
-to your solver. The implementation should first invoke the superclass
-and then add the additional data exchange.
-
-
-~~~~~~~~~~~~~~~~~~~
-void mynamespace::MyFancySolver::finishTimeStep() {
-  MyFancyAbstractSolver::finishTimeStep();
-  // additional data exchange
-}
-~~~~~~~~~~~~~~~~~~~
-
-
-ExaHyPE internally realises these two steps for all of its solver attributes
-such as the maximum mesh size or the admissible time step sizes.
-This is the reason why you have to call the superclass implementation, too.
-
- */
+*/

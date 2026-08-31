@@ -69,26 +69,23 @@ class FacePlotter(BasePlotter):
                 + jinja2.Template(
                     """
   _vertexPlotter.reset();
-  _vertexPlotter = _fileWriter->createVertexPlotter(
-    _localTreeNumber,
-    tarch::plotter::FileWriter::VertexSharing::Distinct
-  );
+  _vertexPlotter = _fileWriter->createVertexPlotter(_pieceId, tarch::plotter::FileWriter::VertexMerging::Distinct);
 
   _cellPlotter.reset();
-  _cellPlotter = _fileWriter->createCellPlotter(_localTreeNumber);
+  _cellPlotter = _fileWriter->createCellPlotter(_pieceId);
 
 {% if DESCRIPTION %}
 {% for name, count in DESCRIPTION.items() %}
   _{{name}}DataPlotterL.reset();
-  _{{name}}DataPlotterL = _fileWriter->createVertexDataPlotter(_localTreeNumber, "{{name}}L", {{count}});
+  _{{name}}DataPlotterL = _fileWriter->createVertexDataPlotter(_pieceId, "{{name}}L", {{count}});
   _{{name}}DataPlotterR.reset();
-  _{{name}}DataPlotterR = _fileWriter->createVertexDataPlotter(_localTreeNumber, "{{name}}R", {{count}});
+  _{{name}}DataPlotterR = _fileWriter->createVertexDataPlotter(_pieceId, "{{name}}R", {{count}});
 {% endfor %}
 {% else %}
   _vertexDataPlotterL.reset();
-  _vertexDataPlotterL = _fileWriter->createVertexDataPlotter(_localTreeNumber, "{{NAME}}L", {{UNKNOWNS}});
+  _vertexDataPlotterL = _fileWriter->createVertexDataPlotter(_pieceId, "{{NAME}}L", {{UNKNOWNS}});
   _vertexDataPlotterR.reset();
-  _vertexDataPlotterR = _fileWriter->createVertexDataPlotter(_localTreeNumber, "{{NAME}}R", {{UNKNOWNS}});
+  _vertexDataPlotterR = _fileWriter->createVertexDataPlotter(_pieceId, "{{NAME}}R", {{UNKNOWNS}});
 {% endif %}
 """
                 ).render(**self.d)
@@ -103,6 +100,7 @@ class FacePlotter(BasePlotter):
     assertion(_vertexPlotter);
     assertion(_cellPlotter);
     assertion(_subdomainPlotter);
+    assertion(_subtreeTaskPlotter);
     assertion(_refinementLevelPlotter);
 
 {% if DESCRIPTION %}
@@ -134,10 +132,7 @@ class FacePlotter(BasePlotter):
 #endif
 
     constexpr int PointsPerAxis = {{DOFS_PER_AXIS}};
-    constexpr int TotalPoints =
-      (DIMENSIONS == 2)
-        ? PointsPerAxis
-        : PointsPerAxis * PointsPerAxis;
+    constexpr int TotalPoints   = DIMENSIONS == 2 ? PointsPerAxis : PointsPerAxis * PointsPerAxis;
 
     int vertexIndices[TotalPoints];
     tarch::la::Vector<DIMENSIONS, double> position;
@@ -234,8 +229,9 @@ class FacePlotter(BasePlotter):
         const int cellIndex = _cellPlotter->plotQuadrangle(vertices);
 #endif
 
-        _subdomainPlotter->plotCellData(cellIndex, _treeNumber);
-        _refinementLevelPlotter->plotCellData(cellIndex, 0);
+          _subdomainPlotter->plotCellData(cellIndex, tarch::mpi::Rank::getInstance().getRank());
+          _subtreeTaskPlotter->plotCellData(cellIndex, getSubtreeTask());
+          _refinementLevelPlotter->plotCellData(cellIndex, 0);
       }
 #if DIMENSIONS == 3
     }

@@ -2,64 +2,34 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "RuntimeParameters.h"
 
-#include "tarch/accelerator/Device.h"
+#include "tarch/Termination.h"
 #include "tarch/reader/JSONReader.h"
 
-runner::RuntimeParameters::RuntimeParameters() :
-  // No rank makes progress on another rank's behalf, so a mismatched send, receive or collective
-  // simply waits forever. The warning names the operation and the source location a wait hangs in;
-  // two minutes is far longer than any healthy wait inside one MPI call, so a scaling run does not
-  // warn about itself. The abort terminates the run after ten minutes inside one wait, which turns a
-  // wedged job that would burn its whole allocation into a named failure; a run whose single waits
-  // legitimately exceed that raises or disables the bound with --deadlockTimeout.
-  _mpiTimeoutWarning(120.0),
-  _mpiDeadlockTimeout(600.0),
-  _mpiTimeoutConfigured(false),
-  _loadBalancingQuality(0.75),
-  _maxNumberOfTreesPerRank(-1),
-  _targetDevice(tarch::accelerator::Device::DefaultDevice),
-  _verbose(false),
-  _configFilePath(),
-  _minTerminalTime(0.1),
-  _maxTerminalTime(std::numeric_limits<double>::max()),
-  _numberOfTimeSteps(-1),
-  _firstPlotTimeStamp(0.0),
-  _numberOfSnapshots(10),
-  _outputPath(normaliseOutputPath("output")),
-  _outputPathConfigured(false),
-  _plotDoublePrecision(false),
-  _projectName(),
-  _executableName(),
-  _timeStepLogInterval(5.0),
-  _gridLevels(3),
-  _maxGridLevels(3),
-  _gridLevelsConfigured(false),
-  _maxGridLevelsConfigured(false) {}
-
+runner::RuntimeParameters::RuntimeParameters()  = default;
 runner::RuntimeParameters::~RuntimeParameters() = default;
 
 runner::RuntimeParameters& runner::RuntimeParameters::getInstance() {
-  static RuntimeParameters result;
+  static runner::RuntimeParameters result;
   return result;
 }
 
-std::string runner::RuntimeParameters::formatDefault(double value) {
+std::string runner::RuntimeParameters::formatDefault(const double value) {
   std::ostringstream result;
   result << value;
   return result.str();
 }
 
-std::string runner::RuntimeParameters::formatDefault(int value) { return std::to_string(value); }
+std::string runner::RuntimeParameters::formatDefault(const int value) { return std::to_string(value); }
 
 std::string runner::RuntimeParameters::formatDefault(const std::string& value) {
   return value.empty() ? "<none>" : value;
 }
 
-std::string runner::RuntimeParameters::formatTerminalTime(double value) {
+std::string runner::RuntimeParameters::formatTerminalTime(const double value) {
   return value < std::numeric_limits<double>::max() / 10.0 ? formatDefault(value) : "unbounded";
 }
 
-double runner::RuntimeParameters::divideByThreePower(double value, int exponent) {
+double runner::RuntimeParameters::divideByThreePower(double value, const int exponent) {
   if (exponent < 0) {
     throw std::runtime_error("Grid levels must not be negative.");
   }
@@ -102,7 +72,12 @@ std::string runner::RuntimeParameters::normaliseOutputPath(const std::string& pa
   return path.back() == '/' ? path : path + "/";
 }
 
-std::string runner::RuntimeParameters::consumeValue(int& index, int argc, char** argv, const std::string& argument) {
+std::string runner::RuntimeParameters::consumeValue(
+  int&               index,
+  const int          argc,
+  char**             argv,
+  const std::string& argument
+) {
   if (index + 1 >= argc) {
     throw std::runtime_error("Missing value for " + argument + ".");
   }
@@ -141,10 +116,7 @@ void runner::RuntimeParameters::printUsage(const std::string& executableName) co
       + formatDefault(_numberOfSnapshots) + ")."
   );
   addOption("-o, --outputPath <path>", "Output path (default: " + formatDefault(_outputPath) + ").");
-  addOption(
-    "-pdp, --plotDoublePrecision",
-    "Write plot files in double precision instead of single precision (default: off)."
-  );
+  addOption("-pdp, --plotDoublePrecision", "Write plot files in double precision (default: off, single precision).");
   addOption(
     "-li, --timeStepLogInterval <seconds>",
     "Minimum wall-clock seconds between time-step reports (default: " + formatDefault(_timeStepLogInterval) + ")."
@@ -155,15 +127,6 @@ void runner::RuntimeParameters::printUsage(const std::string& executableName) co
   );
   addOption("-lmin, --minGridLevels <n>", "Coarsest grid level (default: " + formatDefault(_gridLevels) + ").");
   addOption("-lmax, --maxGridLevels <n>", "Finest grid level (default: " + formatDefault(_maxGridLevels) + ").");
-  addOption(
-    "-lbq, --loadBalancingQuality <q>",
-    "Worst-case load-balancing ratio (default: " + formatDefault(_loadBalancingQuality) + ")."
-  );
-  addOption(
-    "-trees, --maxNumberOfTreesPerRank <n>",
-    "Maximum trees per rank; positive values must not exceed " + formatDefault(MAX_SPACETREES_PER_RANK)
-      + ", and a non-positive value uses the thread count (default: " + formatDefault(_maxNumberOfTreesPerRank) + ")."
-  );
   addOption(
     "-td, --targetDevice <n>",
     "Logical accelerator device id (default: " + formatDefault(_targetDevice) + ")."
@@ -180,6 +143,17 @@ void runner::RuntimeParameters::printUsage(const std::string& executableName) co
     "Terminate after this many seconds waiting for MPI progress; fractional values such as 0.1 are "
     "allowed, 0 disables. Records requests in the same detail as --timeoutWarning (default: "
       + formatDefault(_mpiDeadlockTimeout) + ")."
+  );
+  addOption(
+    "-ct, --communicationThread",
+    "Drive the outstanding MPI communication on a thread of its own. The thread reserves a core and "
+    "only runs where a job has more than one rank (default: off)."
+  );
+  addOption(
+    "-dlb, --disableLoadBalancing",
+    "Keep the rank partition of the grid construction across regrids. A regrid still repartitions "
+    "when the kept partition would spread a coarse cell's children, one of them a leaf, over "
+    "several ranks; those children have to stay on one rank (default: off)."
   );
   addOption("-v, --verbose", "Show the full log line prefix (timestamp, core, scope) (default: off).");
   addOption("-h, --help", "Print this help and exit.");
@@ -202,11 +176,11 @@ void runner::RuntimeParameters::normaliseGridLevels() {
     _gridLevels = _maxGridLevels;
   }
 
-  if (_gridLevels < 0) {
-    throw std::runtime_error("Grid levels must not be negative.");
+  if (_gridLevels < 1) {
+    throw std::runtime_error("Grid levels must be at least one.");
   }
-  if (_maxGridLevels < 0) {
-    throw std::runtime_error("Maximum grid levels must not be negative.");
+  if (_maxGridLevels < 1) {
+    throw std::runtime_error("Maximum grid levels must be at least one.");
   }
   if (_maxGridLevels < _gridLevels) {
     throw std::runtime_error("Maximum grid levels must be greater than or equal to the coarsest grid level.");
@@ -214,49 +188,43 @@ void runner::RuntimeParameters::normaliseGridLevels() {
 }
 
 void runner::RuntimeParameters::validateParameterRanges() const {
-  if (_minTerminalTime < 0.0) {
-    throw std::runtime_error("Terminal time must not be negative (got " + formatDefault(_minTerminalTime) + ").");
+  if (not std::isfinite(_minTerminalTime) or _minTerminalTime < 0.0) {
+    throw std::runtime_error(
+      "Terminal time must be finite and non-negative (got " + formatDefault(_minTerminalTime) + ")."
+    );
+  }
+  if (not std::isfinite(_maxTerminalTime)) {
+    throw std::runtime_error("Maximum terminal time must be finite.");
   }
   if (_maxTerminalTime < _minTerminalTime) {
     throw std::runtime_error("Maximum terminal time must be greater than or equal to the minimum terminal time.");
   }
-  if (_firstPlotTimeStamp < 0.0) {
+  if (not std::isfinite(_firstPlotTimeStamp) or _firstPlotTimeStamp < 0.0) {
     throw std::runtime_error(
-      "First plot time stamp must not be negative (got " + formatDefault(_firstPlotTimeStamp) + ")."
+      "First plot time stamp must be finite and non-negative (got " + formatDefault(_firstPlotTimeStamp) + ")."
     );
   }
-  if (_timeStepLogInterval <= 0.0) {
+  if (not std::isfinite(_timeStepLogInterval) or _timeStepLogInterval <= 0.0) {
     throw std::runtime_error(
-      "Time-step log interval must be positive (got " + formatDefault(_timeStepLogInterval) + " s)."
-    );
-  }
-  if (_loadBalancingQuality <= 0.0 or _loadBalancingQuality > 1.0) {
-    throw std::runtime_error(
-      "Load-balancing quality must lie in (0, 1] (got " + formatDefault(_loadBalancingQuality) + ")."
+      "Time-step log interval must be finite and positive (got " + formatDefault(_timeStepLogInterval) + " s)."
     );
   }
   if (_targetDevice < 0) {
     throw std::runtime_error("Target device id must not be negative (got " + formatDefault(_targetDevice) + ").");
   }
-  if (_maxNumberOfTreesPerRank > MAX_SPACETREES_PER_RANK) {
+  if (not std::isfinite(_mpiTimeoutWarning) or _mpiTimeoutWarning < 0.0) {
     throw std::runtime_error(
-      "Maximum trees per rank must not exceed " + formatDefault(MAX_SPACETREES_PER_RANK) + " (got "
-      + formatDefault(_maxNumberOfTreesPerRank) + ")."
+      "MPI timeout warning must be finite and non-negative (got " + formatDefault(_mpiTimeoutWarning) + " s)."
     );
   }
-  if (_mpiTimeoutWarning < 0.0) {
+  if (not std::isfinite(_mpiDeadlockTimeout) or _mpiDeadlockTimeout < 0.0) {
     throw std::runtime_error(
-      "MPI timeout warning must not be negative (got " + formatDefault(_mpiTimeoutWarning) + " s)."
-    );
-  }
-  if (_mpiDeadlockTimeout < 0.0) {
-    throw std::runtime_error(
-      "MPI deadlock timeout must not be negative (got " + formatDefault(_mpiDeadlockTimeout) + " s)."
+      "MPI deadlock timeout must be finite and non-negative (got " + formatDefault(_mpiDeadlockTimeout) + " s)."
     );
   }
 }
 
-void runner::RuntimeParameters::extractConfigFileFromCommandLine(int argc, char** argv) {
+void runner::RuntimeParameters::extractConfigFileFromCommandLine(const int argc, char** argv) {
   for (int index = 1; index < argc; ++index) {
     const auto argument = std::string(argv[index]);
     if (argument == "--configFile" or argument == "-cf") {
@@ -275,19 +243,17 @@ void runner::RuntimeParameters::readJsonConfiguration() {
 
   const auto configuredTimeoutWarning  = reader.getDouble("timeoutWarning", _mpiTimeoutWarning);
   const auto configuredDeadlockTimeout = reader.getDouble("deadlockTimeout", _mpiDeadlockTimeout);
-  if (configuredTimeoutWarning != _mpiTimeoutWarning or configuredDeadlockTimeout != _mpiDeadlockTimeout) {
+  if (reader.hasKey("timeoutWarning") or reader.hasKey("deadlockTimeout")) {
     _mpiTimeoutConfigured = true;
   }
-  _mpiTimeoutWarning       = configuredTimeoutWarning;
-  _mpiDeadlockTimeout      = configuredDeadlockTimeout;
-  _loadBalancingQuality    = reader.getDouble("loadBalancingQuality", _loadBalancingQuality);
-  _maxNumberOfTreesPerRank = reader.getInteger("maxNumberOfTreesPerRank", _maxNumberOfTreesPerRank);
-  _targetDevice            = reader.getInteger("targetDevice", _targetDevice);
-  _verbose                 = reader.getBoolean("verbose", _verbose);
-  _numberOfTimeSteps       = reader.getInteger("numberOfTimeSteps", _numberOfTimeSteps);
-  _firstPlotTimeStamp      = reader.getDouble("firstPlotTimeStamp", _firstPlotTimeStamp);
-  _numberOfSnapshots       = reader.getInteger("numberOfSnapshots", _numberOfSnapshots);
-  _timeStepLogInterval     = reader.getDouble("timeStepLogInterval", _timeStepLogInterval);
+  _mpiTimeoutWarning   = configuredTimeoutWarning;
+  _mpiDeadlockTimeout  = configuredDeadlockTimeout;
+  _targetDevice        = reader.getInteger("targetDevice", _targetDevice);
+  _verbose             = reader.getBoolean("verbose", _verbose);
+  _numberOfTimeSteps   = reader.getInteger("numberOfTimeSteps", _numberOfTimeSteps);
+  _firstPlotTimeStamp  = reader.getDouble("firstPlotTimeStamp", _firstPlotTimeStamp);
+  _numberOfSnapshots   = reader.getInteger("numberOfSnapshots", _numberOfSnapshots);
+  _timeStepLogInterval = reader.getDouble("timeStepLogInterval", _timeStepLogInterval);
 
   if (reader.hasKey("endTime")) {
     _minTerminalTime = reader.getDouble("endTime");
@@ -302,6 +268,12 @@ void runner::RuntimeParameters::readJsonConfiguration() {
   }
   if (reader.hasKey("plotDoublePrecision")) {
     _plotDoublePrecision = reader.getBoolean("plotDoublePrecision");
+  }
+  if (reader.hasKey("communicationThread")) {
+    _communicationThread = reader.getBoolean("communicationThread");
+  }
+  if (reader.hasKey("disableLoadBalancing")) {
+    _disableLoadBalancing = reader.getBoolean("disableLoadBalancing");
   }
   if (reader.hasKey("gridLevels")) {
     _gridLevels              = reader.getInteger("gridLevels");
@@ -357,10 +329,6 @@ void runner::RuntimeParameters::applyCommandLineConfiguration(int& argc, char** 
     } else if (argument == "--maxGridLevels" or argument == "-lmax") {
       _maxGridLevels           = parseInteger(consumeValue(readIndex, argc, argv, argument), argument);
       _maxGridLevelsConfigured = true;
-    } else if (argument == "--loadBalancingQuality" or argument == "-lbq") {
-      _loadBalancingQuality = parseDouble(consumeValue(readIndex, argc, argv, argument), argument);
-    } else if (argument == "--maxNumberOfTreesPerRank" or argument == "-trees") {
-      _maxNumberOfTreesPerRank = parseInteger(consumeValue(readIndex, argc, argv, argument), argument);
     } else if (argument == "--targetDevice" or argument == "-td") {
       _targetDevice = parseInteger(consumeValue(readIndex, argc, argv, argument), argument);
     } else if (argument == "--verbose" or argument == "-v") {
@@ -371,6 +339,10 @@ void runner::RuntimeParameters::applyCommandLineConfiguration(int& argc, char** 
     } else if (argument == "--deadlockTimeout") {
       _mpiDeadlockTimeout   = parseDouble(consumeValue(readIndex, argc, argv, argument), argument);
       _mpiTimeoutConfigured = true;
+    } else if (argument == "--communicationThread" or argument == "-ct") {
+      _communicationThread = true;
+    } else if (argument == "--disableLoadBalancing" or argument == "-dlb") {
+      _disableLoadBalancing = true;
     } else {
       argv[writeIndex] = argv[readIndex];
       ++writeIndex;
@@ -382,10 +354,10 @@ void runner::RuntimeParameters::applyCommandLineConfiguration(int& argc, char** 
 }
 
 void runner::RuntimeParameters::setGeneratedDefaults(
-  double             minTerminalTime,
-  double             maxTerminalTime,
-  int                gridLevels,
-  int                maxGridLevels,
+  const double       minTerminalTime,
+  const double       maxTerminalTime,
+  const int          gridLevels,
+  const int          maxGridLevels,
   const std::string& projectName
 ) {
   _projectName = projectName;
@@ -419,20 +391,24 @@ void runner::RuntimeParameters::setGeneratedDefaults(
 }
 
 void runner::RuntimeParameters::configure(int& argc, char** argv) {
-  if (argc > 0) {
-    _executableName = std::filesystem::path(argv[0]).filename().string();
+  try {
+    if (argc > 0) {
+      _executableName = std::filesystem::path(argv[0]).filename().string();
+    }
+
+    extractConfigFileFromCommandLine(argc, argv);
+
+    if (_configFilePath.empty() and std::filesystem::exists("./config.json")) {
+      _configFilePath = "./config.json";
+    }
+
+    readJsonConfiguration();
+    applyCommandLineConfiguration(argc, argv);
+    normaliseGridLevels();
+    validateParameterRanges();
+  } catch (const std::exception& exception) {
+    tarch::terminateWithError(exception.what());
   }
-
-  extractConfigFileFromCommandLine(argc, argv);
-
-  if (_configFilePath.empty() and std::filesystem::exists("./config.json")) {
-    _configFilePath = "./config.json";
-  }
-
-  readJsonConfiguration();
-  applyCommandLineConfiguration(argc, argv);
-  normaliseGridLevels();
-  validateParameterRanges();
 }
 
 /** Returns the reader used by both runtime and application parsers, or nullptr when no configuration file is active. */
@@ -442,16 +418,22 @@ double runner::RuntimeParameters::getMPITimeoutWarning() const { return _mpiTime
 double runner::RuntimeParameters::getMPIDeadlockTimeout() const { return _mpiDeadlockTimeout; }
 
 /**
- * Whether to record the origin, partner and tag of every non-blocking request
- *
- * A run that asks for a timeout of its own is hunting a hang, so it wants the warning to name the
- * request that hangs. The bookkeeping writes a table entry for every request, which is more than a
- * run needs that only carries the default timeout as a safety net.
+ * Returns whether to record the origin, partner and tag of every non-blocking request. The record
+ * costs one table entry per request, so only a run that set --timeoutWarning or --deadlockTimeout
+ * itself writes it.
  */
-bool   runner::RuntimeParameters::isMPIRequestTrackingEnabled() const { return _mpiTimeoutConfigured; }
-double runner::RuntimeParameters::getLoadBalancingQuality() const { return _loadBalancingQuality; }
-int    runner::RuntimeParameters::getMaxNumberOfTreesPerRank() const { return _maxNumberOfTreesPerRank; }
-int    runner::RuntimeParameters::getTargetDevice() const { return _targetDevice; }
+bool runner::RuntimeParameters::isMPIRequestTrackingEnabled() const { return _mpiTimeoutConfigured; }
+bool runner::RuntimeParameters::isCommunicationThreadEnabled() const { return _communicationThread; }
+
+/**
+ * Returns whether every regrid keeps the current domain decomposition.
+ *
+ * The grid construction still spreads the blocks over the ranks. A regrid
+ * keeps every block on its current rank.
+ */
+bool runner::RuntimeParameters::isLoadBalancingDisabled() const { return _disableLoadBalancing; }
+
+int runner::RuntimeParameters::getTargetDevice() const { return _targetDevice; }
 
 bool   runner::RuntimeParameters::isVerbose() const { return _verbose; }
 double runner::RuntimeParameters::getTimeStepLogInterval() const { return _timeStepLogInterval; }
@@ -470,20 +452,22 @@ const std::string& runner::RuntimeParameters::getOutputPath() const { return _ou
 const std::string& runner::RuntimeParameters::getProjectName() const { return _projectName; }
 const std::string& runner::RuntimeParameters::getExecutableName() const { return _executableName; }
 
-double
-runner::RuntimeParameters::getMaxAdmissiblePatchSize(const tarch::la::Vector<DIMENSIONS, double>& domainSize) const {
+double runner::RuntimeParameters::getMaxAdmissiblePatchSize(
+  const tarch::la::Vector<DIMENSIONS, double>& domainSize
+) const {
   // The tolerance absorbs round-off, and the longest edge avoids over-refining rectangular domains.
   return divideByThreePower(1.1 * tarch::la::max(domainSize), _gridLevels);
 }
 
-double
-runner::RuntimeParameters::getMinAdmissiblePatchSize(const tarch::la::Vector<DIMENSIONS, double>& domainSize) const {
+double runner::RuntimeParameters::getMinAdmissiblePatchSize(
+  const tarch::la::Vector<DIMENSIONS, double>& domainSize
+) const {
   return divideByThreePower(1.1 * tarch::la::max(domainSize), _maxGridLevels);
 }
 
 double runner::RuntimeParameters::getMaxAdmissibleCellSize(
   const tarch::la::Vector<DIMENSIONS, double>& domainSize,
-  int                                          cellsPerPatchPerAxis
+  const int                                    cellsPerPatchPerAxis
 ) const {
   if (cellsPerPatchPerAxis <= 0) {
     throw std::runtime_error("The number of cells per patch per axis must be positive.");

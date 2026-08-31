@@ -26,13 +26,12 @@ mkdir build
 cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release \
          -DCMAKE_C_COMPILER=icx -DCMAKE_CXX_COMPILER=icpx \
-         -DPEANO_WITH_MULTITHREADING=ON \
          -DPEANO_EXTRA_CXX_FLAGS="-funroll-loops;-Ofast"
 make -j
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-The toolboxes (blockstructured, loadbalancing, particles) and the ExaHyPE 2
-extension are always built, so there is nothing to switch on for them.
+The toolboxes and the ExaHyPE 2 extension are always built, so there is nothing
+to switch on for them.
 
 There are a few things to consider whenever you use DINE:
 

@@ -2,13 +2,10 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "FileSink.h"
 
-#include "tarch/multicore/Lock.h"
-
 tarch::instrumentation::FileSink::~FileSink() { close(); }
 
 tarch::instrumentation::FileSink& tarch::instrumentation::FileSink::getInstance() {
-  // Deliberately leaked: the log sink must outlive every other static object,
-  // since some (e.g. solver globals dumping a database) log from their destructor.
+  // Process-lifetime storage keeps logging available during static destruction.
   static FileSink& singleton = *new FileSink();
   return singleton;
 }
@@ -25,37 +22,45 @@ void tarch::instrumentation::FileSink::reopenOutputStream() {
 }
 
 void tarch::instrumentation::FileSink::setOutputFile(const std::string& outputLogFileName) {
-  tarch::multicore::Lock lock(_semaphore);
+  const std::scoped_lock lock(_mutex);
   _outputFileName = outputLogFileName;
 
   reopenOutputStream();
 }
 
-void tarch::instrumentation::FileSink::write(std::string_view message) {
-  tarch::multicore::Lock lock(_semaphore);
-
-  if (_outputStream.is_open()) {
-    _outputStream.write(message.data(), static_cast<std::streamsize>(message.size()));
+/**
+ * Writes the message and flushes the stream at most once per FlushInterval, so
+ * a process that dies loses at most one interval of lines.
+ */
+void tarch::instrumentation::FileSink::writeAndFlushPeriodically(const std::string_view message) {
+  if (not _outputStream.is_open()) {
+    return;
+  }
+  _outputStream.write(message.data(), static_cast<std::streamsize>(message.size()));
+  const auto now = std::chrono::steady_clock::now();
+  if (now - _lastFlush >= FlushInterval) {
     _outputStream.flush();
+    _lastFlush = now;
   }
 }
 
-void tarch::instrumentation::FileSink::write(std::string_view message, std::string_view outputLogFileName) {
-  tarch::multicore::Lock lock(_semaphore);
+void tarch::instrumentation::FileSink::write(const std::string_view message) {
+  const std::scoped_lock lock(_mutex);
+  writeAndFlushPeriodically(message);
+}
+
+void tarch::instrumentation::FileSink::write(const std::string_view message, const std::string_view outputLogFileName) {
+  const std::scoped_lock lock(_mutex);
 
   if (_outputFileName != outputLogFileName) {
     _outputFileName.assign(outputLogFileName.data(), outputLogFileName.size());
     reopenOutputStream();
   }
-
-  if (_outputStream.is_open()) {
-    _outputStream.write(message.data(), static_cast<std::streamsize>(message.size()));
-    _outputStream.flush();
-  }
+  writeAndFlushPeriodically(message);
 }
 
 void tarch::instrumentation::FileSink::close() {
-  tarch::multicore::Lock lock(_semaphore);
+  const std::scoped_lock lock(_mutex);
 
   if (_outputStream.is_open()) {
     _outputStream.flush();

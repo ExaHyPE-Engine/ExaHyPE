@@ -2,8 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "Matrix.h"
-#include "Vector.h"
+#include "tarch/la/Matrix.h"
+#include "tarch/la/Vector.h"
 
 namespace tarch::la {
   /**
@@ -27,15 +27,9 @@ namespace tarch::la {
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Matrix<4, 4, Scalar> transpose(const Matrix<4, 4, Scalar>& matrix);
 
-  /**
-   * Returns the identity matrix.
-   */
   template <int Rows, typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD static Matrix<Rows, Rows, Scalar> identity();
 
-  /**
-   * Extract diagonal vector from matrix
-   */
   template <int Rows, typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Vector<Rows, Scalar> diag(const Matrix<Rows, Rows, Scalar>& matrix);
   template <typename Scalar>
@@ -45,9 +39,6 @@ namespace tarch::la {
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Vector<4, Scalar> diag(const Matrix<4, 4, Scalar>& matrix);
 
-  /**
-   * Extract row from matrix
-   */
   template <int Rows, int Cols, typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Vector<Cols, Scalar> row(const Matrix<Rows, Cols, Scalar>& matrix, int whichRow);
   template <typename Scalar>
@@ -57,9 +48,6 @@ namespace tarch::la {
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Vector<4, Scalar> row(const Matrix<4, 4, Scalar>& matrix, int whichRow);
 
-  /**
-   * Extract column from matrix
-   */
   template <int Rows, int Cols, typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Vector<Rows, Scalar> col(const Matrix<Rows, Cols, Scalar>& matrix, int whichColumn);
   template <typename Scalar>
@@ -70,7 +58,7 @@ namespace tarch::la {
   INLINE_METHOD GPU_CALLABLE_METHOD Vector<4, Scalar> col(const Matrix<4, 4, Scalar>& matrix, int whichColumn);
 
   /**
-   * Inverts each individual entry
+   * Returns a matrix that holds the reciprocal of every entry.
    *
    * @see tarch::la::invert()
    */
@@ -93,7 +81,7 @@ namespace tarch::la {
   INLINE_METHOD GPU_CALLABLE_METHOD Scalar frobeniusNorm(const Matrix<4, 4, Scalar>& matrix);
 
   /**
-   * Max norm
+   * Returns the largest absolute entry of the matrix.
    */
   template <int Rows, int Cols, typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Scalar elementMax(const Matrix<Rows, Cols, Scalar>& matrix);

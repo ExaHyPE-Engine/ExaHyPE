@@ -4,8 +4,8 @@
 
 #if defined(PEANO_WITH_GPU_BACKEND_HIP)
 
-#include "DevicePropertiesCache.h"
-#include "ErrorCheck.h"
+#include "tarch/accelerator/hip/DevicePropertiesCache.h"
+#include "tarch/accelerator/hip/ErrorCheck.h"
 
 #include <hip/hip_runtime.h>
 
@@ -14,14 +14,6 @@ namespace tarch::accelerator::hip {
 } // namespace tarch::accelerator::hip
 
 class tarch::accelerator::hip::ExecutionPolicy {
-private:
-  int         _state;
-  int         _gridSize;
-  int         _blockSize;
-  int         _maxBlockSize;
-  std::size_t _sharedMemBytes;
-  hipStream_t _stream;
-
 public:
   enum ConfigurationState {
     Automatic    = 0,
@@ -50,54 +42,58 @@ public:
   void setStream(hipStream_t stream);
 
   /**
-   * Auto-configure grid dimensions using HIP occupancy API.
-   * Uses hipOccupancyMaxPotentialBlockSize for automatic block size selection.
+   * Reads the grid size and the block size from the HIP occupancy interface and stores them, unless
+   * the caller has set every field by hand.
    */
   template <class KernelFunc>
-  hipError_t configureGrid(KernelFunc k) {
-    int configState = getConfigState();
+  hipError_t configureGrid(KernelFunc kernel) {
+    const int configurationState = getConfigState();
 
-    if (configState == ExecutionPolicy::FullManual) {
+    if (configurationState == ExecutionPolicy::FullManual) {
       return hipSuccess;
     }
 
-    hipDeviceProp_t* prop   = &DevicePropertiesCache::get();
-    int              numSMs = prop->multiProcessorCount;
+    const hipDeviceProp_t* properties              = &DevicePropertiesCache::get();
+    const int              numberOfMultiprocessors = properties->multiProcessorCount;
 
-    if ((configState & ExecutionPolicy::BlockSize) == 0) {
-      int        blockSize = 0, minGridSize = 0;
-      hipError_t err = hipOccupancyMaxPotentialBlockSize(
-        &minGridSize,
-        &blockSize,
-        k,
-        getSharedMemBytes(),
-        0 // no block size limit
-      );
-      if (err != hipSuccess || blockSize < 0) {
+    if ((configurationState & ExecutionPolicy::BlockSize) == 0) {
+      int              blockSize       = 0;
+      int              minimumGridSize = 0;
+      const hipError_t blockSizeError =
+        hipOccupancyMaxPotentialBlockSize(&minimumGridSize, &blockSize, kernel, getSharedMemBytes(), 0);
+      if (blockSizeError != hipSuccess or blockSize < 0) {
         return hipErrorInvalidConfiguration;
       }
       setBlockSize(blockSize);
     }
 
-    if ((configState & ExecutionPolicy::GridSize) == 0) {
-      int        blocksPerSM = 0;
-      hipError_t err         = hipOccupancyMaxActiveBlocksPerMultiprocessor(
-        &blocksPerSM,
-        k,
+    if ((configurationState & ExecutionPolicy::GridSize) == 0) {
+      int              blocksPerMultiprocessor = 0;
+      const hipError_t blockCountError         = hipOccupancyMaxActiveBlocksPerMultiprocessor(
+        &blocksPerMultiprocessor,
+        kernel,
         getBlockSize(),
         getSharedMemBytes()
       );
-      if (err != hipSuccess) {
+      if (blockCountError != hipSuccess) {
         return hipErrorInvalidConfiguration;
       }
-      setGridSize(blocksPerSM * numSMs);
-      if (getGridSize() < numSMs) {
+      setGridSize(blocksPerMultiprocessor * numberOfMultiprocessors);
+      if (getGridSize() < numberOfMultiprocessors) {
         return hipErrorInvalidConfiguration;
       }
     }
 
     return hipSuccess;
   }
+
+private:
+  int         _state;
+  int         _gridSize;
+  int         _blockSize;
+  int         _maxBlockSize;
+  std::size_t _sharedMemBytes;
+  hipStream_t _stream;
 };
 
 #endif

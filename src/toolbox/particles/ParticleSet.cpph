@@ -1,8 +1,10 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 template <typename T>
 toolbox::particles::SieveParticles<T> toolbox::particles::ParticleSet<T>::_sieveParticles;
 
 template <typename T>
-tarch::multicore::BooleanSemaphore toolbox::particles::ParticleSet<T>::_statisticsSemaphore;
+std::mutex toolbox::particles::ParticleSet<T>::_statisticsMutex;
 
 template <typename T>
 int toolbox::particles::ParticleSet<T>::_numberOfLifts;
@@ -38,19 +40,19 @@ template <typename T>
 int toolbox::particles::ParticleSet<T>::_numberOfParticlesThatHaveLeftTheirDomain;
 
 template <typename T>
-int toolbox::particles::ParticleSet<T>::_numberOfDroppedIncomingVirtualParticles;
+std::atomic<int> toolbox::particles::ParticleSet<T>::_numberOfDroppedIncomingVirtualParticles{0};
 
 template <typename T>
-int toolbox::particles::ParticleSet<T>::_numberOfRedundantlySharedLocalParticles;
+std::atomic<int> toolbox::particles::ParticleSet<T>::_numberOfRedundantlyOwnedLocalParticles{0};
 
 template <typename T>
-int toolbox::particles::ParticleSet<T>::_numberOfReplacedVirtualParticlesAlongBoundary;
+std::atomic<int> toolbox::particles::ParticleSet<T>::_numberOfReplacedVirtualParticlesAlongBoundary{0};
 
 template <typename T>
-int toolbox::particles::ParticleSet<T>::_numberOfAddedLocalParticlesAlongBoundary;
+std::atomic<int> toolbox::particles::ParticleSet<T>::_numberOfAddedLocalParticlesAlongBoundary{0};
 
 template <typename T>
-int toolbox::particles::ParticleSet<T>::_numberOfAddedVirtualParticlesAlongBoundary;
+std::atomic<int> toolbox::particles::ParticleSet<T>::_numberOfAddedVirtualParticlesAlongBoundary{0};
 
 #if PEANO_DEBUG
 template <typename T>
@@ -76,11 +78,12 @@ tarch::la::Vector<DIMENSIONS, double> toolbox::particles::ParticleSet<T>::getDeb
 
 template <typename T>
 void toolbox::particles::ParticleSet<T>::clearReassignmentStatistics() {
-  _numberOfLifts             = 0;
-  _numberOfDrops             = 0;
-  _numberOfLiftsIntoSieveSet = 0;
-  _numberOfDropsFromSieveSet = 0;
-  _numberOfReassignments     = 0;
+  _numberOfLifts                                = 0;
+  _numberOfDrops                                = 0;
+  _numberOfLiftsIntoSieveSet                    = 0;
+  _numberOfDropsFromSieveSet                    = 0;
+  _numberOfDropsIntoHorizontalTreeDecomposition = 0;
+  _numberOfReassignments                        = 0;
 }
 
 template <typename T>
@@ -91,31 +94,37 @@ void toolbox::particles::ParticleSet<T>::clearParticleStateStatistics() {
   _numberOfExpiredHaloParticles             = 0;
   _numberOfParticlesThatHaveLeftTheirDomain = 0;
 
-  _numberOfDroppedIncomingVirtualParticles       = 0;
-  _numberOfRedundantlySharedLocalParticles       = 0;
-  _numberOfReplacedVirtualParticlesAlongBoundary = 0;
-  _numberOfReplacedVirtualParticlesAlongBoundary = 0;
+  _numberOfDroppedIncomingVirtualParticles.store(0, std::memory_order_relaxed);
+  _numberOfRedundantlyOwnedLocalParticles.store(0, std::memory_order_relaxed);
+  _numberOfReplacedVirtualParticlesAlongBoundary.store(0, std::memory_order_relaxed);
 
-  _numberOfAddedLocalParticlesAlongBoundary   = 0;
-  _numberOfAddedVirtualParticlesAlongBoundary = 0;
+  _numberOfAddedLocalParticlesAlongBoundary.store(0, std::memory_order_relaxed);
+  _numberOfAddedVirtualParticlesAlongBoundary.store(0, std::memory_order_relaxed);
 }
 
 template <typename T>
 std::string toolbox::particles::ParticleSet<T>::printParticleStateStatistics() {
-  std::ostringstream msg;
-  msg << "#remaining=" << _numberOfRemainingLocalParticles << ", #expired halo=" << _numberOfExpiredHaloParticles
-      << ", #unique-remaining=" << _remainingLocalParticleNumbers.size()
-      << ", #left=" << _numberOfParticlesThatHaveLeftTheirDomain
-      << ", #dropped virtual copy from neighbour=" << _numberOfDroppedIncomingVirtualParticles
-      << ", #redundantly owned=" << _numberOfRedundantlySharedLocalParticles
-      << ", #replaced virtual=" << _numberOfReplacedVirtualParticlesAlongBoundary
-      << ", #added local (inflying)=" << _numberOfAddedLocalParticlesAlongBoundary
-      << ", #added virtual=" << _numberOfAddedVirtualParticlesAlongBoundary
-      << " (subdomain-local state updates due to UpdateParallelState (3x) vs boundary merges prior "
-         "to each mesh sweep (5x))";
-  return msg.str();
+  std::ostringstream description;
+  description << "#remaining=" << _numberOfRemainingLocalParticles
+              << ", #expired halo=" << _numberOfExpiredHaloParticles
+              << ", #unique-remaining=" << _remainingLocalParticleNumbers.size()
+              << ", #left=" << _numberOfParticlesThatHaveLeftTheirDomain << ", #dropped virtual copy from neighbour="
+              << _numberOfDroppedIncomingVirtualParticles.load(std::memory_order_relaxed)
+              << ", #redundantly owned=" << _numberOfRedundantlyOwnedLocalParticles.load(std::memory_order_relaxed)
+              << ", #replaced virtual="
+              << _numberOfReplacedVirtualParticlesAlongBoundary.load(std::memory_order_relaxed)
+              << ", #added local (inflying)="
+              << _numberOfAddedLocalParticlesAlongBoundary.load(std::memory_order_relaxed)
+              << ", #added virtual=" << _numberOfAddedVirtualParticlesAlongBoundary.load(std::memory_order_relaxed)
+              << " (subdomain-local state updates due to UpdateParallelState (3x) vs boundary merges prior "
+                 "to each mesh sweep (5x))";
+  return description.str();
 }
 
+/**
+ * The ranks exchange their particle identities collectively, so every rank has
+ * to call reduceNumberOfParticles().
+ */
 template <typename T>
 void toolbox::particles::ParticleSet<T>::reduceNumberOfParticles() {
   std::vector<int> localParticleNumbers;
@@ -134,9 +143,9 @@ void toolbox::particles::ParticleSet<T>::reduceNumberOfParticles() {
 
   std::vector<int> displacements(numberOfRanks, 0);
   int              totalNumberOfEntries = 0;
-  for (int rank = 0; rank < numberOfRanks; rank++) {
-    displacements[rank] = totalNumberOfEntries;
-    totalNumberOfEntries += entriesPerRank[rank];
+  for (int rankIndex = 0; rankIndex < numberOfRanks; rankIndex++) {
+    displacements[rankIndex] = totalNumberOfEntries;
+    totalNumberOfEntries += entriesPerRank[rankIndex];
   }
 
   std::vector<int> globalParticleNumbers(totalNumberOfEntries);
@@ -153,8 +162,8 @@ void toolbox::particles::ParticleSet<T>::reduceNumberOfParticles() {
 
   std::set<std::array<int, 2>> globalUniqueParticleNumbers;
   assertion(totalNumberOfEntries % 2 == 0, totalNumberOfEntries);
-  for (int i = 0; i < totalNumberOfEntries; i += 2) {
-    globalUniqueParticleNumbers.insert({globalParticleNumbers[i], globalParticleNumbers[i + 1]});
+  for (int entryIndex = 0; entryIndex < totalNumberOfEntries; entryIndex += 2) {
+    globalUniqueParticleNumbers.insert({globalParticleNumbers[entryIndex], globalParticleNumbers[entryIndex + 1]});
   }
   _numberOfRemainingGlobalParticles = static_cast<int>(globalUniqueParticleNumbers.size());
 }
@@ -199,15 +208,27 @@ void toolbox::particles::ParticleSet<T>::reduceParticleStateStatistics() {
     communicator
   );
 
-  const int localNumberOfDroppedIncomingVirtualParticles       = _numberOfDroppedIncomingVirtualParticles;
-  const int localNumberOfRedundantlySharedLocalParticles       = _numberOfRedundantlySharedLocalParticles;
-  const int localNumberOfReplacedVirtualParticlesAlongBoundary = _numberOfReplacedVirtualParticlesAlongBoundary;
-  const int localNumberOfAddedLocalParticlesAlongBoundary      = _numberOfAddedLocalParticlesAlongBoundary;
-  const int localNumberOfAddedVirtualParticlesAlongBoundary    = _numberOfAddedVirtualParticlesAlongBoundary;
+  const int localNumberOfDroppedIncomingVirtualParticles =
+    _numberOfDroppedIncomingVirtualParticles.load(std::memory_order_relaxed);
+  const int localNumberOfRedundantlyOwnedLocalParticles =
+    _numberOfRedundantlyOwnedLocalParticles.load(std::memory_order_relaxed);
+  const int localNumberOfReplacedVirtualParticlesAlongBoundary =
+    _numberOfReplacedVirtualParticlesAlongBoundary.load(std::memory_order_relaxed);
+  const int localNumberOfAddedLocalParticlesAlongBoundary =
+    _numberOfAddedLocalParticlesAlongBoundary.load(std::memory_order_relaxed);
+  const int localNumberOfAddedVirtualParticlesAlongBoundary =
+    _numberOfAddedVirtualParticlesAlongBoundary.load(std::memory_order_relaxed);
+  // The reduction fills the buffers on the global master only, so every other
+  // rank keeps its local count.
+  int globalNumberOfDroppedIncomingVirtualParticles       = localNumberOfDroppedIncomingVirtualParticles;
+  int globalNumberOfRedundantlyOwnedLocalParticles        = localNumberOfRedundantlyOwnedLocalParticles;
+  int globalNumberOfReplacedVirtualParticlesAlongBoundary = localNumberOfReplacedVirtualParticlesAlongBoundary;
+  int globalNumberOfAddedLocalParticlesAlongBoundary      = localNumberOfAddedLocalParticlesAlongBoundary;
+  int globalNumberOfAddedVirtualParticlesAlongBoundary    = localNumberOfAddedVirtualParticlesAlongBoundary;
 
   tarch::mpi::reduce(
     &localNumberOfDroppedIncomingVirtualParticles,
-    &_numberOfDroppedIncomingVirtualParticles,
+    &globalNumberOfDroppedIncomingVirtualParticles,
     1,
     MPI_INT,
     MPI_SUM,
@@ -215,8 +236,8 @@ void toolbox::particles::ParticleSet<T>::reduceParticleStateStatistics() {
     communicator
   );
   tarch::mpi::reduce(
-    &localNumberOfRedundantlySharedLocalParticles,
-    &_numberOfRedundantlySharedLocalParticles,
+    &localNumberOfRedundantlyOwnedLocalParticles,
+    &globalNumberOfRedundantlyOwnedLocalParticles,
     1,
     MPI_INT,
     MPI_SUM,
@@ -225,7 +246,7 @@ void toolbox::particles::ParticleSet<T>::reduceParticleStateStatistics() {
   );
   tarch::mpi::reduce(
     &localNumberOfReplacedVirtualParticlesAlongBoundary,
-    &_numberOfReplacedVirtualParticlesAlongBoundary,
+    &globalNumberOfReplacedVirtualParticlesAlongBoundary,
     1,
     MPI_INT,
     MPI_SUM,
@@ -234,7 +255,7 @@ void toolbox::particles::ParticleSet<T>::reduceParticleStateStatistics() {
   );
   tarch::mpi::reduce(
     &localNumberOfAddedLocalParticlesAlongBoundary,
-    &_numberOfAddedLocalParticlesAlongBoundary,
+    &globalNumberOfAddedLocalParticlesAlongBoundary,
     1,
     MPI_INT,
     MPI_SUM,
@@ -243,25 +264,45 @@ void toolbox::particles::ParticleSet<T>::reduceParticleStateStatistics() {
   );
   tarch::mpi::reduce(
     &localNumberOfAddedVirtualParticlesAlongBoundary,
-    &_numberOfAddedVirtualParticlesAlongBoundary,
+    &globalNumberOfAddedVirtualParticlesAlongBoundary,
     1,
     MPI_INT,
     MPI_SUM,
     tarch::mpi::Rank::getGlobalMasterRank(),
     communicator
   );
+  _numberOfDroppedIncomingVirtualParticles.store(
+    globalNumberOfDroppedIncomingVirtualParticles,
+    std::memory_order_relaxed
+  );
+  _numberOfRedundantlyOwnedLocalParticles.store(
+    globalNumberOfRedundantlyOwnedLocalParticles,
+    std::memory_order_relaxed
+  );
+  _numberOfReplacedVirtualParticlesAlongBoundary.store(
+    globalNumberOfReplacedVirtualParticlesAlongBoundary,
+    std::memory_order_relaxed
+  );
+  _numberOfAddedLocalParticlesAlongBoundary.store(
+    globalNumberOfAddedLocalParticlesAlongBoundary,
+    std::memory_order_relaxed
+  );
+  _numberOfAddedVirtualParticlesAlongBoundary.store(
+    globalNumberOfAddedVirtualParticlesAlongBoundary,
+    std::memory_order_relaxed
+  );
 }
 
 template <typename T>
 std::string toolbox::particles::ParticleSet<T>::printReassignmentStatistics() {
-  std::ostringstream msg;
-  msg << "sort statistics"
-      << ": #lifts=" << _numberOfLifts << ", #drops=" << _numberOfDrops
-      << ", #lifts-into-sieve-set=" << _numberOfLiftsIntoSieveSet
-      << ", #drops-from-sieve-set=" << _numberOfDropsFromSieveSet
-      << ", #drops-into-horizontal-tree-decomposition=" << _numberOfDropsIntoHorizontalTreeDecomposition
-      << ", #reassignments=" << _numberOfReassignments;
-  return msg.str();
+  std::ostringstream description;
+  description << "sort statistics"
+              << ": #lifts=" << _numberOfLifts << ", #drops=" << _numberOfDrops
+              << ", #lifts-into-sieve-set=" << _numberOfLiftsIntoSieveSet
+              << ", #drops-from-sieve-set=" << _numberOfDropsFromSieveSet
+              << ", #drops-into-horizontal-tree-decomposition=" << _numberOfDropsIntoHorizontalTreeDecomposition
+              << ", #reassignments=" << _numberOfReassignments;
+  return description.str();
 }
 
 template <typename T>
@@ -339,7 +380,7 @@ void toolbox::particles::ParticleSet<T>::updateLiftDropStatistics(
   int numberOfDropsFromSieveSetInThisTree,
   int numberOfDropsIntoHorizontalTreeDecomposition
 ) {
-  tarch::multicore::Lock lock(_statisticsSemaphore);
+  const std::scoped_lock lock(_statisticsMutex);
   _numberOfLifts += numberOfLiftsInThisTree;
   _numberOfDrops += numberOfDropsInThisTree;
   _numberOfReassignments += numberOfReassignmentsInThisTree;
@@ -355,7 +396,7 @@ void toolbox::particles::ParticleSet<T>::updateNumberOfLocalAndExpiredParticles(
   int                                 numberOfParticlesThatHaveLeftTheirDomain,
   const std::set<std::array<int, 2>>& remainingLocalParticleNumbers
 ) {
-  tarch::multicore::Lock lock(_statisticsSemaphore);
+  const std::scoped_lock lock(_statisticsMutex);
   _numberOfRemainingLocalParticles += numberOfRemainingLocalParticles;
   _remainingLocalParticleNumbers.insert(remainingLocalParticleNumbers.begin(), remainingLocalParticleNumbers.end());
   _numberOfExpiredHaloParticles += numberOfExpiredHaloParticles;
@@ -374,6 +415,10 @@ bool toolbox::particles::ParticleSet<T>::registeredAnyResorting() {
     > 0;
 }
 
+/**
+ * The ranks exchange their sieve lists collectively, so every rank has to call
+ * finishedTraversal() after its traversal.
+ */
 template <typename T>
 void toolbox::particles::ParticleSet<T>::finishedTraversal(
   const tarch::la::Vector<DIMENSIONS, double> domainOffset,
@@ -383,22 +428,24 @@ void toolbox::particles::ParticleSet<T>::finishedTraversal(
   _sieveParticles.exchangeSieveListsGlobally(domainOffset, domainSize, periodicBC);
 }
 
+/** Returns a deep copy of the particles that await sieving. */
 template <typename T>
 typename toolbox::particles::SieveParticles<T> toolbox::particles::ParticleSet<T>::cloneParticlesToBeSieved() {
   return _sieveParticles.cloneParticlesToBeSieved();
 }
 
+/**
+ * Removes the sieve particles that belong to the marked local vertex from the
+ * sieve set and returns them.
+ */
 template <typename T>
-typename toolbox::particles::ParticleSet<T>::ParticleList
-toolbox::particles::ParticleSet<T>::getParticlesToBeSievedIntoVertex(
-  const peano4::datamanagement::VertexMarker& marker
-) {
+typename toolbox::particles::ParticleSet<T>::ParticleList toolbox::particles::ParticleSet<
+  T>::getParticlesToBeSievedIntoVertex(const peano4::datamanagement::VertexMarker& marker) {
   return _sieveParticles.getParticlesToBeSievedIntoVertex(
     marker,
-    true, // removeReturnedParticlesFromSet
-    true, // onlyReturnParticlesThatWillBeLocal
-    true  // don't have to lock underlying semaphore, as I don't
-          // alter sieve set
+    true, // Remove returned particles from the sieve.
+    true, // Return only particles that will be local.
+    true  // Lock the sieve set while removing entries.
   );
 }
 
@@ -414,22 +461,24 @@ int toolbox::particles::ParticleSet<T>::getNumberOfParticlesThatHaveBeSievedInto
 
 template <typename T>
 std::string toolbox::particles::ParticleSet<T>::toString(bool addBrackets) const {
-  std::ostringstream msg;
-  if (addBrackets)
-    msg << "(";
+  std::ostringstream description;
+  if (addBrackets) {
+    description << "(";
+  }
 
-  msg << "#lifts=" << _numberOfLifts << ", #drops=" << _numberOfDrops << ", #assignments=" << _numberOfReassignments
-      << ", #lifts-into-sieve-set=" << _numberOfLiftsIntoSieveSet
-      << ", #drops-from-sieve-set=" << _numberOfDropsFromSieveSet
-      << ", #remaining-particles=" << _numberOfRemainingLocalParticles;
+  description << "#lifts=" << _numberOfLifts << ", #drops=" << _numberOfDrops
+              << ", #assignments=" << _numberOfReassignments << ", #lifts-into-sieve-set=" << _numberOfLiftsIntoSieveSet
+              << ", #drops-from-sieve-set=" << _numberOfDropsFromSieveSet
+              << ", #remaining-particles=" << _numberOfRemainingLocalParticles;
 
 #if PEANO_DEBUG
-  msg << ",x=" << _debugX << ",h=" << _debugH;
+  description << ",x=" << _debugX << ",h=" << _debugH;
 #endif
 
-  if (addBrackets)
-    msg << ")";
-  return msg.str();
+  if (addBrackets) {
+    description << ")";
+  }
+  return description.str();
 }
 
 template <typename T>

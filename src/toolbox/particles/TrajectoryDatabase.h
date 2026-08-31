@@ -11,47 +11,15 @@ namespace toolbox::particles {
 } // namespace toolbox::particles
 
 /**
- * A particle trajectory database
- *
- * Records, per particle, a series of snapshots (position plus optional data)
- * and appends them to a CSV file. A particle is identified by a pair of
- * integers. Particles are distributed over the ranks, so each rank writes its
- * own file. As snapshots are dumped from the multithreaded grid traversal, the
- * database is fed concurrently and thus locked.
+ * Records a series of snapshots per particle, each snapshot holding a position
+ * and optional data, and appends them to a CSV file. A pair of integers
+ * identifies a particle. The threads of a traversal add snapshots at the same
+ * time, so addParticleSnapshot() locks _mutex.
  */
 class toolbox::particles::TrajectoryDatabase final : public tarch::database::SnapshotDatabase {
-private:
-  double _positionDelta;
-  double _maxPositionDelta;
-  int    _numberOfDataPointsPerParticle;
-
-  std::map<std::pair<int, int>, int> _writtenSnapshotsPerParticle;
-
-  struct Entry : Snapshot {
-    tarch::la::Vector<DIMENSIONS, double> x;
-
-    Entry(const tarch::la::Vector<DIMENSIONS, double>& x_, double timestamp_, int numberOfDataEntries);
-  };
-
-  std::map<std::pair<int, int>, std::list<Entry>> _data;
-
-  void writeRow(std::ostream& file, const std::pair<int, int>& number, const Entry& snapshot) const;
-
-  AddSnapshotAction
-  getAction(const std::pair<int, int>& number, const tarch::la::Vector<DIMENSIONS, double>& x, double timestamp);
-
-protected:
-  std::string outputFileName() const override;
-  void        prepareOutputStream(std::ostream& file) const override;
-  void        writeHeader(std::ostream& file) const override;
-  bool        hasUnwrittenSnapshots() const override;
-  void        writeUnwrittenSnapshots(std::ostream& file) override;
-  void        clearStorage() override;
-  void        resetWriteTracking() override;
-
 public:
   TrajectoryDatabase(double positionDelta = 1e-8, double timeDelta = 0.0, bool deltasAreRelative = false);
-  ~TrajectoryDatabase();
+  ~TrajectoryDatabase() override;
 
   void setPositionDeltaBetweenTwoSnapshots(double value, bool deltasAreRelative = false);
 
@@ -75,5 +43,37 @@ public:
     const tarch::la::Vector<DIMENSIONS, double>& x,
     int                                          numberOfDataEntries,
     const double*                                data
+  );
+
+protected:
+  std::string outputFileName() const override;
+  void        prepareOutputStream(std::ostream& file) const override;
+  void        writeHeader(std::ostream& file) const override;
+  bool        hasUnwrittenSnapshots() const override;
+  void        writeUnwrittenSnapshots(std::ostream& file) override;
+  void        clearStorage() override;
+  void        resetWriteTracking() override;
+
+private:
+  double _positionDelta;
+  double _maxPositionDelta{0.0};
+  int    _numberOfDataPointsPerParticle{0};
+
+  std::map<std::pair<int, int>, int> _writtenSnapshotsPerParticle;
+
+  struct Entry : Snapshot {
+    tarch::la::Vector<DIMENSIONS, double> x;
+
+    Entry(const tarch::la::Vector<DIMENSIONS, double>& position, double timestamp, int numberOfDataEntries);
+  };
+
+  std::map<std::pair<int, int>, std::list<Entry>> _data;
+
+  void writeRow(std::ostream& file, const std::pair<int, int>& number, const Entry& snapshot) const;
+
+  AddSnapshotAction getAction(
+    const std::pair<int, int>&                   number,
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    double                                       timestamp
   );
 };

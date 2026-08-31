@@ -4,22 +4,22 @@
 
 #if defined(PEANO_WITH_GPU_BACKEND_HIP)
 
-#include "ErrorCheck.h"
+#include "tarch/accelerator/hip/ErrorCheck.h"
 
 #include <hip/hip_runtime.h>
 
 namespace tarch::accelerator {
   hipStream_t deviceStreamCreate();
-  void        deviceStreamDestroy(hipStream_t*);
-  void        deviceStreamSync(hipStream_t);
+  void        deviceStreamDestroy(hipStream_t* stream);
+  void        deviceStreamSync(hipStream_t stream);
 
-  void        deviceStreamSet(hipStream_t);
+  void        deviceStreamSet(hipStream_t stream);
   hipStream_t deviceStreamGet();
 
   struct HipTeam {};
   using TeamHandle = HipTeam;
 
-  inline constexpr int kHipBlockSize = 256;
+  inline constexpr int HipBlockSize = 256;
 } // namespace tarch::accelerator
 
 #endif

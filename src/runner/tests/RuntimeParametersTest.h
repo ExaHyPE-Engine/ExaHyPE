@@ -11,9 +11,18 @@ namespace runner::tests {
 class runner::tests::RuntimeParametersTest final : public tarch::tests::TestCase {
 public:
   RuntimeParametersTest();
+  RuntimeParametersTest(const RuntimeParametersTest&)            = delete;
+  RuntimeParametersTest(RuntimeParametersTest&&)                 = delete;
+  RuntimeParametersTest& operator=(const RuntimeParametersTest&) = delete;
+  RuntimeParametersTest& operator=(RuntimeParametersTest&&)      = delete;
+  ~RuntimeParametersTest() override                              = default;
+
   void run() override;
 
 private:
-  void testLoadBalancingQualityLimits();
-  void testMaxNumberOfTreesPerRankLimits();
+  void testNumbersParseOnlyWhenTheWholeArgumentIsANumber();
+  void testTheOutputPathAlwaysEndsInASeparator();
+  void testTheMeshSizeDividesOncePerLevel();
+  void testDefaultsReadBackAsTheyWereGiven();
+  void testBothSpellingsOfTheLoadBalancingSwitchAreConsumed();
 };

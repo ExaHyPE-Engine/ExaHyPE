@@ -2,12 +2,12 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "Scalar.h"
-#include "Vector.h"
+#include "tarch/la/Scalar.h"
+#include "tarch/la/Vector.h"
 
 namespace tarch::la {
   /**
-   * Adds rVector to lVector and assigns the result to lVector.
+   * Adds rhs to lhs and assigns the result to lhs.
    *
    * No temporary vector is created.
    */
@@ -25,7 +25,7 @@ namespace tarch::la {
   INLINE_METHOD GPU_CALLABLE_METHOD Vector<4, Scalar>& operator+=(Vector<4, Scalar>& lhs, const Vector<4, Scalar>& rhs);
 
   /**
-   * Subtracts rVector from lVector and assigns the result to lVector.
+   * Subtracts rhs from lhs and assigns the result to lhs.
    *
    * No temporary vector is created.
    */
@@ -43,9 +43,9 @@ namespace tarch::la {
   INLINE_METHOD GPU_CALLABLE_METHOD Vector<4, Scalar>& operator-=(Vector<4, Scalar>& lhs, const Vector<4, Scalar>& rhs);
 
   /**
-   * Adds rVector to lVector.
+   * Adds rhs to lhs.
    *
-   * A temporary vector is created and copied to store return back the result.
+   * Returns the result in a temporary vector.
    */
   template <int Size, typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Vector<Size, Scalar> operator+(
@@ -70,9 +70,9 @@ namespace tarch::la {
   );
 
   /**
-   * Subtracts rVector from lVector.
+   * Subtracts rhs from lhs.
    *
-   * A temporary vector is created and copied to store return back the result.
+   * Returns the result in a temporary vector.
    */
   template <int Size, typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Vector<Size, Scalar> operator-(
@@ -97,8 +97,7 @@ namespace tarch::la {
   );
 
   /**
-   * Multiplies every component of the vectors with each other and writes the
-   * results into result.
+   * Multiplies lhs and rhs component by component and returns the result.
    */
   template <int Size, typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Vector<Size, Scalar> multiplyComponents(
@@ -123,8 +122,7 @@ namespace tarch::la {
   );
 
   /**
-   * Divides every component of the vectors with each other and writes the
-   * results into result.
+   * Divides lhs by rhs component by component and returns the result.
    */
   template <int Size, typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Vector<Size, Scalar> divideComponents(
@@ -194,13 +192,13 @@ namespace tarch::la {
   INLINE_METHOD GPU_CALLABLE_METHOD Scalar innerDot(const Vector<4, Scalar>& lhs, const Vector<4, Scalar>& rhs);
 
   /**
-   * Performs the cross product of two 3D vectors into result.
+   * Returns the cross product of two 3D vectors.
    */
   template <typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Vector<3, Scalar> cross(const Vector<3, Scalar>& lhs, const Vector<3, Scalar>& rhs);
 
   /**
-   * Compares to vectors on equality by means of a numerical accuracy.
+   * Compares two vectors for equality up to a numerical accuracy.
    *
    * @param tolerance Absolute tolerance. If you prefer to use a relative
    *  measure, you might want to use tarch::la::relativeEps()
@@ -213,7 +211,7 @@ namespace tarch::la {
   );
 
   /**
-   * Compares sequentially every component pair of lVector and rVector, and stops
+   * Compares sequentially every component pair of lhs and rhs, and stops
    * as soon as one is greater than the other.
    *
    * Defines an absolute pairwise ordering between (unequal) vectors.
@@ -229,8 +227,8 @@ namespace tarch::la {
   );
 
   /**
-   * Returns true, if one component of lVector is greater than the corresponding
-   * component in rVector up to numerical accuracy.
+   * Returns true, if one component of lhs is greater than the corresponding
+   * component in rhs up to numerical accuracy.
    *
    * @param tolerance Absolute tolerance. If you prefer to use a relative
    *  measure, you might want to use tarch::la::relativeEps()
@@ -243,8 +241,8 @@ namespace tarch::la {
   );
 
   /**
-   * Returns true, if one component of lVector is greater or equals than the
-   * corresponding component in rVector up to numerical accuracy.
+   * Returns true, if one component of lhs is greater or equals than the
+   * corresponding component in rhs up to numerical accuracy.
    */
   template <int Size, typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD bool oneGreaterEquals(
@@ -254,8 +252,8 @@ namespace tarch::la {
   );
 
   /**
-   * Returns true, if all components of lVector are greater than the corresponding
-   * components in rVector up to numerical accuracy.
+   * Returns true, if all components of lhs are greater than the corresponding
+   * components in rhs up to numerical accuracy.
    *
    * @param tolerance Absolute tolerance. If you prefer to use a relative
    *  measure, you might want to use tarch::la::relativeEps()
@@ -268,8 +266,8 @@ namespace tarch::la {
   );
 
   /**
-   * Returns true, if all components of lVector are greater or equals than the corresponding
-   * components in rVector up to numerical accuracy.
+   * Returns true, if all components of lhs are greater or equals than the corresponding
+   * components in rhs up to numerical accuracy.
    */
   template <int Size, typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD bool allGreaterEquals(
@@ -343,8 +341,7 @@ namespace tarch::la {
   INLINE_METHOD GPU_CALLABLE_METHOD bool operator!=(const Vector<Size, Scalar>& lhs, const Vector<Size, Scalar>& rhs);
 
   /**
-   * Return Index of element which is not equals.
-   *
+   * Returns the index of the first component pair that differs.
    */
   template <int Size, typename Scalar>
   INLINE_METHOD int equalsReturnIndex(
@@ -370,4 +367,4 @@ namespace tarch::la {
   );
 } // namespace tarch::la
 
-#include "VectorVectorOperations.cpph"
+#include "tarch/la/VectorVectorOperations.cpph"

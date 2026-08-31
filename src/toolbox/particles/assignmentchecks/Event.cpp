@@ -12,7 +12,7 @@ toolbox::particles::assignmentchecks::internal::Event::Event(
   int                                          treeId_,
   const std::string&                           trace_,
   const int                                    meshSweepIndex_
-):
+) :
   type(type_),
   isLocal(isLocal_),
   vertexX(vertexX_),
@@ -30,7 +30,7 @@ toolbox::particles::assignmentchecks::internal::Event::Event(
   const tarch::la::Vector<DIMENSIONS, double>& vertexH_,
   int                                          treeId_,
   const std::string&                           trace_
-):
+) :
   type(type_),
   isLocal(isLocal_),
   vertexX(vertexX_),
@@ -41,8 +41,12 @@ toolbox::particles::assignmentchecks::internal::Event::Event(
   assertion(type == Type::AssignToVertex or type == Type::DetachFromVertex);
 }
 
-toolbox::particles::assignmentchecks::internal::Event::
-  Event(Type type_, bool isLocal_, int treeId_, const std::string& trace_):
+toolbox::particles::assignmentchecks::internal::Event::Event(
+  Type               type_,
+  bool               isLocal_,
+  int                treeId_,
+  const std::string& trace_
+) :
   type(type_),
   isLocal(isLocal_),
   vertexX(tarch::la::Vector<DIMENSIONS, double>(0.0)),
@@ -53,7 +57,7 @@ toolbox::particles::assignmentchecks::internal::Event::
   assertion(type == Type::AssignToSieveSet or type == Type::Erase);
 }
 
-toolbox::particles::assignmentchecks::internal::Event::Event(Type type_):
+toolbox::particles::assignmentchecks::internal::Event::Event(Type type_) :
   type(type_),
   isLocal(false),
   vertexX(tarch::la::Vector<DIMENSIONS, double>(0.0)),
@@ -71,7 +75,7 @@ toolbox::particles::assignmentchecks::internal::Event::Event(
   const tarch::la::Vector<DIMENSIONS, double>& vertexH_,
   int                                          treeId_,
   const std::string&                           trace_
-):
+) :
   type(type_),
   isLocal(true),
   vertexX(vertexX_),
@@ -82,8 +86,7 @@ toolbox::particles::assignmentchecks::internal::Event::Event(
   assertion(type == Type::MoveWhileAssociatedToVertex);
 }
 
-std::string toolbox::particles::assignmentchecks::internal::Event::toString(
-) const {
+std::string toolbox::particles::assignmentchecks::internal::Event::toString() const {
   std::ostringstream msg;
 
   msg << "(";
@@ -93,35 +96,27 @@ std::string toolbox::particles::assignmentchecks::internal::Event::toString(
         << ",local=" << isLocal << ",tree=" << treeId << ",trace=" << trace;
     break;
   case Type::AssignToVertex:
-    msg
-      << "assign-to-vertex"
-      << ",local=" << isLocal << ",x=" << vertexX << ",h=" << vertexH
-      << ",tree=" << treeId << ",trace=" << trace;
+    msg << "assign-to-vertex"
+        << ",local=" << isLocal << ",x=" << vertexX << ",h=" << vertexH << ",tree=" << treeId << ",trace=" << trace;
     break;
   case Type::Erase:
     msg << "erase"
         << ",local=" << isLocal << ",tree=" << treeId << ",trace=" << trace;
     break;
   case Type::DetachFromVertex:
-    msg
-      << "detach-from-vertex"
-      << ",local=" << isLocal << ",x=" << vertexX << ",h=" << vertexH
-      << ",tree=" << treeId << ",trace=" << trace;
+    msg << "detach-from-vertex"
+        << ",local=" << isLocal << ",x=" << vertexX << ",h=" << vertexH << ",tree=" << treeId << ",trace=" << trace;
     break;
   case Type::NotFound:
     msg << "not-found";
     break;
   case Type::MoveWhileAssociatedToVertex:
-    msg
-      << "moved-while-associated-to-vertex"
-      << "," << previousParticleX << "->x_new,tree=" << treeId
-      << ",trace=" << trace;
+    msg << "moved-while-associated-to-vertex"
+        << "," << previousParticleX << "->x_new,tree=" << treeId << ",trace=" << trace;
     break;
   case Type::ConsecutiveMoveWhileAssociatedToVertex:
-    msg
-      << "consecutive-moved-while-associated-to-vertex"
-      << "," << previousParticleX << "->x_new,tree=" << treeId
-      << ",trace=" << trace;
+    msg << "consecutive-moved-while-associated-to-vertex"
+        << "," << previousParticleX << "->x_new,tree=" << treeId << ",trace=" << trace;
     break;
   };
   msg << ")";

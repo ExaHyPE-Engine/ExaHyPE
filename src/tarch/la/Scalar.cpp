@@ -1,6 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "tarch/la/Scalar.h"
+#include "Scalar.h"
 
 static_assert(tarch::la::NUMERICAL_ZERO_DIFFERENCE > 0.0, "Scalar tolerances should be positive");
 

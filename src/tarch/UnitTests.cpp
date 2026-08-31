@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "UnitTests.h"
 
+#include "tarch/accelerator/tests/AtomicTest.h"
 #include "tarch/accelerator/tests/AtomicsTest.h"
 #include "tarch/accelerator/tests/MemoryAllocationCacheTest.h"
 #include "tarch/accelerator/tests/MemoryAllocationTest.h"
@@ -23,11 +24,13 @@
 #include "tarch/la/tests/MatrixVectorTest.h"
 #include "tarch/la/tests/ScalarTest.h"
 #include "tarch/la/tests/VectorTest.h"
+#include "tarch/mpi/tests/CommunicationManagerTest.h"
 #include "tarch/mpi/tests/DiagnosticsTest.h"
+#include "tarch/mpi/tests/HelperThreadTest.h"
 #include "tarch/mpi/tests/PersistentChannelTest.h"
+#include "tarch/mpi/tests/PingPongTest.h"
 #include "tarch/mpi/tests/PollPacingTest.h"
 #include "tarch/mpi/tests/RequestGroupTest.h"
-#include "tarch/multicore/tests/SpawnTaskTest.h"
 #include "tarch/plotter/tests/HDF5FileWriterTest.h"
 #include "tarch/plotter/tests/NetCDFFileWriterTest.h"
 #include "tarch/plotter/tests/VTKHDFFileWriterTest.h"
@@ -35,6 +38,8 @@
 #include "tarch/reader/tests/JSONReaderTest.h"
 #include "tarch/reader/tests/NetCDFFieldSamplerTest.h"
 #include "tarch/reader/tests/NetCDFFileReaderTest.h"
+#include "tarch/tasking/tests/RuntimeTest.h"
+#include "tarch/tasking/tests/TaskGraphTest.h"
 #include "tarch/tests/NonCriticalAssertionsTest.h"
 #include "tarch/tests/TreeTestCaseCollection.h"
 
@@ -51,11 +56,15 @@ tarch::tests::TestCase* tarch::getUnitTests() {
 
   result->addTestCase(new tarch::database::tests::GlobalTimeSeriesDatabaseTest());
 
+  result->addTestCase(new tarch::mpi::tests::CommunicationManagerTest());
   result->addTestCase(new tarch::mpi::tests::DiagnosticsTest());
+  result->addTestCase(new tarch::mpi::tests::HelperThreadTest());
   result->addTestCase(new tarch::mpi::tests::PersistentChannelTest());
+  result->addTestCase(new tarch::mpi::tests::PingPongTest());
   result->addTestCase(new tarch::mpi::tests::PollPacingTest());
   result->addTestCase(new tarch::mpi::tests::RequestGroupTest());
 
+  result->addTestCase(new tarch::accelerator::tests::AtomicTest());
   result->addTestCase(new tarch::accelerator::tests::AtomicsTest());
   result->addTestCase(new tarch::accelerator::tests::MemoryAllocationCacheTest());
   result->addTestCase(new tarch::accelerator::tests::MemoryAllocationTest());
@@ -73,7 +82,8 @@ tarch::tests::TestCase* tarch::getUnitTests() {
   result->addTestCase(new tarch::accelerator::ompt::tests::ReductionTest());
 #endif
 
-  result->addTestCase(new tarch::multicore::tests::SpawnTaskTest());
+  result->addTestCase(new tarch::tasking::tests::RuntimeTest());
+  result->addTestCase(new tarch::tasking::tests::TaskGraphTest());
 
   result->addTestCase(new tarch::plotter::tests::HDF5FileWriterTest());
   result->addTestCase(new tarch::plotter::tests::NetCDFFileWriterTest());

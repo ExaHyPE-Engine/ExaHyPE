@@ -1,12 +1,8 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-"""Euler flow around a symmetric airfoil with a subcell limiter."""
-
 import exahype2
 import euler
 
-# The scenario also runs as a plain finite-volume solver, which the shared limiter
-# modes do not cover, so it offers one mode of its own.
 arguments = euler.standard_arguments(
     end_time=10.0,
     min_grid_levels=3,

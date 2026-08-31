@@ -16,9 +16,8 @@ class SingleSweep(ADERDG):
         auxiliary_variables,
         split_sweeps=False,
     ):
-        # If enabled, the predictor and the corrector run on separate traversals of
-        # the domain. That helps when debugging and it enables additional features
-        # such as limiting.
+        # With split sweeps the predictor and the corrector run on separate
+        # traversals of the domain; the limiter needs them.
         self._split_sweeps = split_sweeps
 
         super(SingleSweep, self).__init__(
@@ -91,9 +90,9 @@ class SingleSweep(ADERDG):
             )
         )
 
-        # The limiter corrects and flags in its own pipeline sweep, which is not
-        # the last sweep of a troubled step, so its corrector keys on that sweep
-        # rather than on the last-sweep test the unlimited solver uses.
+        # The limiter corrects and flags in its own pipeline sweep, and that
+        # sweep is not the last sweep of a troubled step, so its corrector guard
+        # tests the limiter state.
         if self.subcell_limiter_is_enabled:
             corrector_guard = self._subcell_limiter_state_guard("CorrectAndFlag")
         else:
@@ -133,6 +132,13 @@ class SingleSweep(ADERDG):
             super(SingleSweep, self).get_user_action_set_includes()
             + """
 """
+        )
+
+    def _store_boundary_data_default_guard(self):
+        return super(
+            SingleSweep, self
+        )._store_boundary_data_default_guard() + " and repositories::{}.isLastGridSweepOfTimeStep()".format(
+            self.get_name_of_global_instance()
         )
 
     def _delete_face_data_default_guard(self):

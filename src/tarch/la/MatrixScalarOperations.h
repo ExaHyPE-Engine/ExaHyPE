@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "Matrix.h"
+#include "tarch/la/Matrix.h"
 
 namespace tarch::la {
   template <int Rows, int Cols, typename Scalar>
@@ -27,9 +27,7 @@ namespace tarch::la {
   );
 
   /**
-   * Multiplies every component of the matrix with the scalar
-   *
-   * No temporary objects are created during the operation.
+   * Multiplies every component of the matrix with the scalar.
    */
   template <int Rows, int Cols, typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Matrix<Rows, Cols, Scalar> operator*(
@@ -53,9 +51,7 @@ namespace tarch::la {
   );
 
   /**
-   * Multiplies every component of the matrix with the scalar
-   *
-   * No temporary objects are created during the operation.
+   * Multiplies every component of the matrix with the scalar.
    */
   template <int Rows, int Cols, typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Matrix<Rows, Cols, Scalar> operator*(

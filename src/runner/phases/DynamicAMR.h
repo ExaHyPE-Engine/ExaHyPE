@@ -12,7 +12,11 @@ namespace runner::tests {
   class DynamicAMRTest;
 } // namespace runner::tests
 
-/** Realises committed refinement and coarsening requests between time steps. */
+/**
+ * Realises the committed refine and erase requests between time steps. The phase sweeps until the
+ * grid reports itself stationary, so a caller resumes on a settled topology. It collects what it
+ * did across its invocations and writes the collection when a caller asks for it.
+ */
 class runner::DynamicAMR final : public runner::Phase {
 public:
   DynamicAMR(runner::PhaseContext& context, const int dynamicAMRStep);
@@ -23,40 +27,54 @@ public:
   bool hasPendingMeshUpdates() const;
   bool hasUndecidedRefinementCriterion() const;
 
+  static bool resolvePendingMeshUpdates(const runner::RepositoryCallbacks& repositories);
+
   void reportPendingSweeps();
 
 private:
   friend class runner::tests::DynamicAMRTest;
 
-  /**
-   * Sweeps a single drain may run before it reports its progress. Ordinary
-   * drains stay below this, so their collected activity only surfaces with the
-   * next time-step block; a drain beyond it is in trouble and writes a line
-   * before the MaxSweeps abort, which tells a slow drain from a hang.
-   */
-  static constexpr int SweepsPerReport = 32;
+  /** Wall-clock seconds between the progress reports one drain writes. */
+  static constexpr double SecondsBetweenReports = 5.0;
+
+  /** Bounds the sweeps of one drain; a drain that reaches this cap stops the run with an error. */
+  static constexpr int MaximumSweeps = 1024;
 
   /**
-   * Bound on one drain. One committed event set realises within a handful of sweeps, so a
-   * drain that reaches this cap means the grid cannot settle and the run stops with an error.
+   * Records the drains a report line covers with their sweeps, the grid they
+   * left behind, and both load balances before and after.
    */
-  static constexpr int MaxSweeps = 64;
-
-  /** The sweeps a report line covers, and the grid they left behind. */
   struct Activity {
-    int           sweeps       = 0;
-    double        wallClock    = 0.0;
-    unsigned long leavesBefore = 0;
-    unsigned long leavesAfter  = 0;
-    int           minLevel     = 0;
-    int           maxLevel     = 0;
+    int           regrids{0};
+    int           sweeps{0};
+    double        wallClock{0.0};
+    unsigned long leavesBefore{0};
+    unsigned long leavesAfter{0};
+    int           minimumLevel{0};
+    int           maximumLevel{0};
+
+    int           numberOfRanks{1};
+    double        interRankBalanceBefore{0.0};
+    double        interRankBalanceAfter{0.0};
+    unsigned long minimumRankLeaves{0};
+    unsigned long maximumRankLeaves{0};
+    double        replicationOverhead{0.0};
+
+    unsigned long subtreeTasksBefore{0};
+    unsigned long subtreeTasksAfter{0};
+    unsigned long minimumTaskCells{0};
+    unsigned long maximumTaskCells{0};
+    double        threadUtilisation{0.0};
   };
 
   runner::PhaseContext& _context;
-  int                   _dynamicAMRStep;
-  Activity              _activity;
+  int                   _dynamicAMRStep{-1};
+  Activity              _activity{};
+  /** Stores the task time accumulated when the current drain begins. */
+  double _taskSecondsAtStart{0.0};
 
-  void               startActivity();
-  void               reportActivity();
-  static std::string describe(const Activity& activity);
+  double                          accumulatedTaskSeconds() const;
+  void                            startActivity();
+  void                            reportActivity();
+  static std::vector<std::string> describe(const runner::DynamicAMR::Activity& activity);
 };

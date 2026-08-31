@@ -2,94 +2,70 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "TestCase.h"
+#include "tarch/tests/TestCase.h"
 
-namespace tarch {
-  namespace tests {
-    class TreeTestCaseCollection;
-  } // namespace tests
-} // namespace tarch
+namespace tarch::tests {
+  class TreeTestCaseCollection;
+} // namespace tarch::tests
 
 /**
+ * Holds test cases and further collections in a tree that follows the ::
+ * separated names of the test cases.
  *
  * @author Tobias Weinzierl
  * @author Wolfgang Eckhardt
- * @version $Revision: 1.7 $
  */
-class tarch::tests::TreeTestCaseCollection: public tarch::tests::TestCase {
-private:
-  /**
-   * Sequence of test cases that are executes on a run() call. The class is
-   * not responsible for destroying them.
-   */
-  std::list<TestCase*>                           _testCases;
-  std::map<std::string, TreeTestCaseCollection*> _subTests;
-
-  /**
-   * Tells the collection whether to log a progression bar.
-   */
-  bool _writeToLog;
-
-  /**
-   * Tells whether the testcases contained should be deleted upon destruction of this object.
-   */
-  bool _deleteTestCases;
-
-  static bool        isNameWithoutHierarchy(const std::string& testCaseName);
-  static std::string getFirstIdentifierInHierarchy(const std::string& testCaseName);
-  static std::string getRemainingPathWithoutIdentifier(const std::string& testCaseName);
-
+class tarch::tests::TreeTestCaseCollection final : public tarch::tests::TestCase {
 public:
   /**
-   * Creates a test case collection.
-   *
-   * @param testCaseCollectionName Name of the test case collection. May not
-   *   contain ::. If you pass in the empty string "", it is a mere
-   *   container. It still runs all sub test cases, but it does not dump any
-   *   progress info on this particular package: Usually you get
-   *
-   *         a.b.c ... ok
-   *         a.b ... ok
-   *         a ... pass (no local tests)
-   *
-   *   If a is "", then no message is written.
+   * @param treeTestCaseCollectionName Name without ::. The empty string makes
+   *   the collection a container that runs its sub collections without writing
+   *   a progress line of its own.
    */
   TreeTestCaseCollection(
-    const std::string& testCaseCollectionName = "",
-    bool               deleteTestCases        = true,
-    bool               writeToLog             = true
+    const std::string& treeTestCaseCollectionName = "",
+    bool               deleteTestCases            = true,
+    bool               writeToLog                 = true
   );
 
-  /**
-   * Destructor
-   */
   ~TreeTestCaseCollection() override;
 
-  /**
-   * Runs all test cases assigned.
-   */
   void run() override;
 
   /**
-   * Runs all test cases assigned, prefixing each name.
+   * Runs every test case of this collection and puts the prefix in front of
+   * each name.
    */
-  virtual void run(const std::string& prefix);
+  void run(const std::string& prefix);
 
   /**
-   * Adds a new test case.
-   *
-   * Although you pass a pointer, you are still responsible for the instance
-   * management.
-   *
-   * You have to specify in the constructor of a TestCaseCollection whether
-   * it should delete testcases contained on construction.
-   *
-   * @Note: default is set to false (i.e. no destruction)
+   * Adds the test case under its fully qualified path. The collection deletes
+   * it in the destructor when the constructor was called with
+   * deleteTestCases set.
    */
   void addTestCase(const std::string& fullQualifiedPath, TestCase* testCase);
 
   /**
-   * Same as above, but fully qualified test case name is extracted from passed object.
+   * Adds the test case under the path that getTestCaseName() returns.
    */
   void addTestCase(TestCase* testCase);
+
+private:
+  std::list<TestCase*>                           _testCases;
+  std::map<std::string, TreeTestCaseCollection*> _subTests;
+
+  /**
+   * The run() call writes a progress line if this flag is set.
+   */
+  bool _writeToLog{true};
+
+  /**
+   * The destructor deletes the test cases and sub collections if this flag is
+   * set.
+   */
+  bool _deleteTestCases{true};
+
+  static bool        isNameWithoutHierarchy(const std::string& testCaseName);
+  static std::string getFirstIdentifierInHierarchy(const std::string& testCaseName);
+  static std::string getRemainingPathWithoutIdentifier(const std::string& testCaseName);
 };

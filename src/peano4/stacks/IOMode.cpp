@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "IOMode.h"
 
-std::string toString(peano4::stacks::IOMode mode) {
+std::string peano4::stacks::toString(peano4::stacks::IOMode mode) {
   switch (mode) {
   case peano4::stacks::IOMode::MPIReceive:
     return "MPIReceive";

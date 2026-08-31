@@ -3,33 +3,28 @@
 
 namespace tarch::accelerator {
   template <typename T>
-  inline auto sycl_op(Max<T>) {
+  inline auto syclOp(Max<T> reducer) {
     return ::sycl::maximum<T>{};
   }
   template <typename T>
-  inline auto sycl_op(Min<T>) {
+  inline auto syclOp(Min<T> reducer) {
     return ::sycl::minimum<T>{};
   }
   template <typename T>
-  inline auto sycl_op(Sum<T>) {
+  inline auto syclOp(Sum<T> reducer) {
     return ::sycl::plus<T>{};
   }
 
-  // Device-side leader combine (folds a work-group result into red.target). In SYCL
-  // single-source no __device__ annotation is needed; the name matches the CUDA/HIP
-  // helper. TODO: the TeamRange path uses a 1D nd_range of local size kSyclLocalSize
-  // (=256); the deleted per-backend kernels used 16x16 (2D)/8x8x8=512 (3D) tiling, so
-  // the 3D work-group is now smaller — retune kSyclLocalSize if profiling regresses.
   template <typename T>
-  inline T combine_op(Max<T>, T a, T b) {
+  inline T combineOp(Max<T> reducer, T a, T b) {
     return a > b ? a : b;
   }
   template <typename T>
-  inline T combine_op(Min<T>, T a, T b) {
+  inline T combineOp(Min<T> reducer, T a, T b) {
     return a < b ? a : b;
   }
   template <typename T>
-  inline T combine_op(Sum<T>, T a, T b) {
+  inline T combineOp(Sum<T> reducer, T a, T b) {
     return a + b;
   }
 
@@ -42,9 +37,9 @@ namespace tarch::accelerator {
     for (int i = local; i < r.n; i += stride) {
       f(i, localAcc);
     }
-    T groupResult = ::sycl::reduce_over_group(team.item.get_group(), localAcc, sycl_op(red));
+    T groupResult = ::sycl::reduce_over_group(team.item.get_group(), localAcc, syclOp(red));
     if (local == 0) {
-      red.target = combine_op(red, red.target, groupResult);
+      red.target = combineOp(red, red.target, groupResult);
     }
   }
   template <typename Reducer, typename F>
@@ -60,9 +55,9 @@ namespace tarch::accelerator {
       const int y = idx % n1;
       f(x, y, localAcc);
     }
-    T groupResult = ::sycl::reduce_over_group(team.item.get_group(), localAcc, sycl_op(red));
+    T groupResult = ::sycl::reduce_over_group(team.item.get_group(), localAcc, syclOp(red));
     if (local == 0) {
-      red.target = combine_op(red, red.target, groupResult);
+      red.target = combineOp(red, red.target, groupResult);
     }
   }
   template <typename Reducer, typename F>
@@ -80,9 +75,9 @@ namespace tarch::accelerator {
       const int z = idx % n2;
       f(x, y, z, localAcc);
     }
-    T groupResult = ::sycl::reduce_over_group(team.item.get_group(), localAcc, sycl_op(red));
+    T groupResult = ::sycl::reduce_over_group(team.item.get_group(), localAcc, syclOp(red));
     if (local == 0) {
-      red.target = combine_op(red, red.target, groupResult);
+      red.target = combineOp(red, red.target, groupResult);
     }
   }
 } // namespace tarch::accelerator
@@ -100,7 +95,7 @@ namespace tarch {
     *devTarget      = accInit;
     q.submit(
        [&](::sycl::handler& h) {
-         auto reduction = ::sycl::reduction(devTarget, accelerator::sycl_op(red));
+         auto reduction = ::sycl::reduction(devTarget, accelerator::syclOp(red));
          h.parallel_for(::sycl::range<1>(r.n), reduction, [=](::sycl::id<1> id, auto& acc) {
            T threadLocal = Reducer::identity();
            f(static_cast<int>(id[0]), threadLocal);
@@ -154,12 +149,12 @@ namespace tarch {
     T*    devTarget = ::sycl::malloc_shared<T>(1, q);
     *devTarget      = accInit;
     ::sycl::nd_range<1> nd(
-      ::sycl::range<1>(r.n * accelerator::kSyclLocalSize),
-      ::sycl::range<1>(accelerator::kSyclLocalSize)
+      ::sycl::range<1>(r.n * accelerator::SyclLocalSize),
+      ::sycl::range<1>(accelerator::SyclLocalSize)
     );
     q.submit(
        [&](::sycl::handler& h) {
-         auto reduction = ::sycl::reduction(devTarget, accelerator::sycl_op(red));
+         auto reduction = ::sycl::reduction(devTarget, accelerator::syclOp(red));
          h.parallel_for(nd, reduction, [=](::sycl::nd_item<1> item, auto& acc) {
            T threadLocal = Reducer::identity();
            f(static_cast<int>(item.get_group(0)), accelerator::SyclTeam{item}, threadLocal);

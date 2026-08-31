@@ -2,14 +2,12 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "Matrix.h"
-#include "Scalar.h"
+#include "tarch/la/Matrix.h"
+#include "tarch/la/Scalar.h"
 
 namespace tarch::la {
   /**
-   * Performs a matrix x matrix multiplication.
-   *
-   * The resulting matrix has to be created outside and given as a parameter.
+   * Returns the product of the two matrices.
    */
   template <int Rows, int Cols, int X, typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Matrix<Rows, Cols, Scalar> multiply(
@@ -77,7 +75,7 @@ namespace tarch::la {
   );
 
   /**
-   * Bitwise comparison of the components of two matrices on equality.
+   * Compares every component of the two matrices bitwise.
    */
   template <int Rows, int Cols, typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD bool operator==(
@@ -92,7 +90,7 @@ namespace tarch::la {
   INLINE_METHOD GPU_CALLABLE_METHOD bool operator==(const Matrix<4, 4, Scalar>& lhs, const Matrix<4, 4, Scalar>& rhs);
 
   /**
-   * Compares to matrices on equality by means of a numerical accuracy.
+   * Compares every component of the two matrices within the given tolerance.
    */
   template <int Rows, int Cols, typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD bool equals(
@@ -162,8 +160,8 @@ namespace tarch::la {
   );
 
   /**
-   * Return Index of element which is not equals.
-   *
+   * Returns the row and column index of the first entry pair whose difference
+   * exceeds the tolerance, and (-1, -1) if no such pair exists.
    */
   template <int Rows, int Cols, typename Scalar>
   INLINE_METHOD std::pair<int, int> equalsReturnIndex(

@@ -27,7 +27,6 @@ class Exahype2(CMakePackage, CudaPackage):
 
     version("muc", branch="muc/exahype")
 
-    variant("multithreading", default=True, description="Build with multithreading (OpenMP) support")
     variant("hdf5", default=True, description="Build with HDF5 support")
     variant("netcdf", default=True, description="Build with NetCDF support")
 
@@ -59,10 +58,8 @@ class Exahype2(CMakePackage, CudaPackage):
         when="+cuda",
     )
 
-
     def cmake_args(self):
         args = [
-            self.define_from_variant("PEANO_WITH_MULTITHREADING", "multithreading"),
             self.define_from_variant("PEANO_WITH_HDF5", "hdf5"),
             self.define_from_variant("PEANO_WITH_NETCDF", "netcdf"),
         ]
@@ -75,7 +72,6 @@ class Exahype2(CMakePackage, CudaPackage):
 
         return args
 
-
     def install(self, spec, prefix):
         super(Exahype2, self).install(spec, prefix)
 
@@ -85,21 +81,15 @@ class Exahype2(CMakePackage, CudaPackage):
         if os.path.exists(requirements_path):
             python_exe('-m', 'pip', 'install', '--prefix=' + prefix, '-r', requirements_path)
 
-
     def setup_run_environment(self, env):
         env.set("PEANO_SRC_ROOT_DIR", self.spec.prefix)
         env.set("PEANO_BUILD_DIR", self.spec.prefix)
         env.set("PEANO_CMAKE_BUILD_DIR", self.spec.prefix)  # alias for PEANO_BUILD_DIR
         env.prepend_path("PYTHONPATH", self.spec.prefix + "/api")
         env.prepend_path("PYTHONPATH", join_path(self.spec.prefix, "lib", "python" + str(self.spec["python"].version.up_to(2)), "site-packages"))
-        # The notebook dependencies (jupyterlab, ipywidgets, matplotlib, ...)
-        # are pip-installed into the package prefix by install(). Setting only
-        # PYTHONPATH lets `import ipywidgets` succeed, but the JupyterLab server
-        # also needs to discover the pip-installed frontend extensions and kernels
-        # under <prefix>/share/jupyter - otherwise the interactive renderers import
-        # without error yet never draw anything in the browser. Put the prefix's
-        # bin on PATH (so the matching jupyter is used) and its jupyter data/config
-        # dirs on the jupyter search paths.
+        # The JupyterLab server reads its frontend extensions and kernels from the
+        # directories on JUPYTER_PATH and JUPYTER_CONFIG_PATH, so both point into
+        # the package prefix that install() pip-installs them into.
         env.prepend_path("PATH", join_path(self.spec.prefix, "bin"))
         env.prepend_path("JUPYTER_PATH", join_path(self.spec.prefix, "share", "jupyter"))
         env.prepend_path("JUPYTER_CONFIG_PATH", join_path(self.spec.prefix, "etc", "jupyter"))

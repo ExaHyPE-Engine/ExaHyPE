@@ -4,6 +4,6 @@
 
 namespace peano4::stacks {
   enum class IOMode { None, MPISend, MPIReceive };
-} // namespace peano4::stacks
 
-std::string toString(peano4::stacks::IOMode mode);
+  std::string toString(peano4::stacks::IOMode mode);
+} // namespace peano4::stacks

@@ -3,14 +3,71 @@
 #include "GridSnapshot.h"
 
 #include "runner/Format.h"
-#include "runner/LoadBalancer.h"
+#include "runner/GlobalStatistics.h"
 #include "runner/ReportBox.h"
 #include "runner/RepositoryCallbacks.h"
+#include "tarch/Termination.h"
+#include "tarch/mpi/Rank.h"
+
+namespace {
+  enum SnapshotRowNumber {
+    GridLeaves,
+    GridVertices,
+    GridLevels,
+    MpiRanks,
+    MpiLoadBalance,
+    MpiSpineReplication,
+    OpenMpSubtreeTasks,
+    OpenMpCellsPerTask,
+    OpenMpThreadCeiling,
+    MemorySystem,
+    MemoryProcess,
+    MemoryGridVertices,
+    MemorySolverHeap,
+    MemoryTrackedData,
+    SnapshotRowCount
+  };
+
+  struct SnapshotRow {
+    const char* section{nullptr};
+    const char* label{nullptr};
+  };
+
+  constexpr std::array<SnapshotRow, SnapshotRowCount> SnapshotRows{{
+    {"Grid", "Number of Leaves"},
+    {"Grid", "Number of Vertices"},
+    {"Grid", "Grid Levels"},
+    {"MPI Decomposition", "Number of MPI Ranks"},
+    {"MPI Decomposition", "MPI Load Balance"},
+    {"MPI Decomposition", "Spine Replication"},
+    {"OpenMP Decomposition", "Subtree Tasks"},
+    {"OpenMP Decomposition", "Cells per Task"},
+    {"OpenMP Decomposition", "Thread Ceiling"},
+    {"Memory", "System Memory"},
+    {"Memory", "Process RSS"},
+    {"Memory", "Grid Vertices"},
+    {"Memory", "Solver Heap"},
+    {"Memory", "Tracked Data"},
+  }};
+
+  using SnapshotValues = std::array<std::string, SnapshotRowCount>;
+
+  /** Renders the rows that carry a value; a row left empty stays out of the report. */
+  std::vector<std::string> renderSnapshotRows(const SnapshotValues& values) {
+    runner::Table report;
+    for (int rowNumber = 0; rowNumber < SnapshotRowCount; rowNumber++) {
+      if (not values[rowNumber].empty()) {
+        report.add(SnapshotRows[rowNumber].section, SnapshotRows[rowNumber].label, values[rowNumber]);
+      }
+    }
+    return report.render();
+  }
+} // namespace
 
 /** Configured levels can exceed a representable cell count, so the display bound saturates. */
 std::uint64_t runner::boundedFullyRefinedLeaves(const int maximumLevel) {
   if (maximumLevel < 0) {
-    throw std::invalid_argument("The maximum grid level must not be negative.");
+    tarch::terminateWithError("The maximum grid level has to be non-negative.");
   }
 
   constexpr auto MaximumCount   = std::numeric_limits<std::uint64_t>::max();
@@ -27,7 +84,8 @@ std::uint64_t runner::boundedFullyRefinedLeaves(const int maximumLevel) {
 }
 
 /**
- * Cells cover owned leaves and refined parents. Outer and halo cells are excluded, and the sum saturates on overflow.
+ * Counts owned leaves and refined parents. Outer and halo cells are excluded,
+ * and the sum saturates on overflow.
  */
 std::string runner::gridCellSummary(const std::uint64_t numberOfLeaves, const std::uint64_t numberOfRefinedCells) {
   constexpr auto MaximumCount = std::numeric_limits<std::uint64_t>::max();
@@ -37,10 +95,10 @@ std::string runner::gridCellSummary(const std::uint64_t numberOfLeaves, const st
 }
 
 void runner::writeGridSnapshot(runner::ReportBox& box, const runner::RepositoryCallbacks& callbacks) {
-  const auto&   statistics           = runner::loadBalancer().getStatistics();
-  const auto    numberOfLeaves       = statistics.getGlobalNumberOfInnerUnrefinedCells();
-  const auto    numberOfRefinedCells = statistics.getGlobalNumberOfInnerRefinedCells();
-  runner::Table report;
+  const auto&    statistics           = runner::globalStatistics();
+  const auto     numberOfLeaves       = statistics.getGlobalNumberOfInnerUnrefinedCells();
+  const auto     numberOfRefinedCells = statistics.getGlobalNumberOfInnerRefinedCells();
+  SnapshotValues values;
 
   {
     const auto     numberOfVertices        = statistics.getGlobalNumberOfVertices();
@@ -56,49 +114,60 @@ void runner::writeGridSnapshot(runner::ReportBox& box, const runner::RepositoryC
     std::ostringstream levels;
     levels << statistics.getGlobalMinDepth() << " .. " << statistics.getGlobalMaxDepth();
 
-    report.add("Grid", "Number of Leaves", runner::gridCellSummary(numberOfLeaves, numberOfRefinedCells));
-    report.add("Grid", "Number of Vertices", vertices.str());
-    report.add("Grid", "Grid Levels", levels.str());
+    values[GridLeaves]   = runner::gridCellSummary(numberOfLeaves, numberOfRefinedCells);
+    values[GridVertices] = vertices.str();
+    values[GridLevels]   = levels.str();
   }
 
   {
-    const auto numberOfOuterCells   = statistics.getGlobalNumberOfOuterUnrefinedCells();
-    const auto numberOfTrees        = static_cast<unsigned long>(statistics.getGlobalNumberOfTrees());
-    const auto numberOfRanks        = static_cast<unsigned long>(statistics.getGlobalNumberOfRanksWithAtLeastOneTree());
-    const auto minimumTreeLoad      = static_cast<unsigned long>(statistics.getGlobalMinTreeLoad());
-    const auto maximumTreeLoad      = static_cast<unsigned long>(statistics.getGlobalMaxTreeLoad());
-    const auto minimumOuterTreeLoad = static_cast<unsigned long>(statistics.getGlobalMinTreeOuterLoad());
-    const auto maximumOuterTreeLoad = static_cast<unsigned long>(statistics.getGlobalMaxTreeOuterLoad());
-    const auto minimumRankLoad      = statistics.getGlobalMinRankLoad();
-    const auto maximumRankLoad      = statistics.getGlobalMaxRankLoad();
+    const auto numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
 
-    const auto treeEfficiency =
-      maximumTreeLoad > 0 ? static_cast<double>(minimumTreeLoad) / maximumTreeLoad * 100.0 : 100.0;
-    const auto rankEfficiency =
-      maximumRankLoad > 0 ? static_cast<double>(minimumRankLoad) / maximumRankLoad * 100.0 : 100.0;
-    const auto overhead = numberOfLeaves > 0 ? static_cast<double>(numberOfOuterCells) / numberOfLeaves * 100.0 : 0.0;
-
-    std::ostringstream treeText;
-    treeText << runner::Format::grouped(numberOfTrees) << "  (on " << runner::Format::grouped(numberOfRanks) << " "
-             << (numberOfRanks == 1 ? "rank)" : "ranks)");
-    std::ostringstream efficiencyText;
-    efficiencyText << runner::Format::percentage(treeEfficiency) << "  (" << runner::Format::grouped(minimumTreeLoad)
-                   << " .. " << runner::Format::grouped(maximumTreeLoad) << ")";
-    std::ostringstream overheadText;
-    overheadText << runner::Format::overheadPercentage(overhead) << "  ("
-                 << runner::Format::grouped(minimumOuterTreeLoad) << " .. "
-                 << runner::Format::grouped(maximumOuterTreeLoad) << ")";
-
-    report.add("Load Balancing", "Number of Trees", treeText.str());
-    // Rank efficiency compares accumulated owned leaf cells between populated ranks, so it needs at least two ranks.
+    // A single rank owns everything it visits.
     if (numberOfRanks > 1) {
-      std::ostringstream rankText;
-      rankText << runner::Format::percentage(rankEfficiency) << "  (" << runner::Format::grouped(minimumRankLoad)
-               << " .. " << runner::Format::grouped(maximumRankLoad) << ")";
-      report.add("Load Balancing", "Rank Efficiency", rankText.str());
+      std::ostringstream interRankText;
+      interRankText << runner::Format::percentage(statistics.getGlobalInterRankBalance()) << "  ("
+                    << runner::Format::grouped(statistics.getGlobalMinRankLoad()) << " .. "
+                    << runner::Format::grouped(statistics.getGlobalMaxRankLoad()) << " Leaves/Rank)";
+      std::ostringstream replicationText;
+      replicationText << runner::Format::overheadPercentage(statistics.getGlobalReplicationOverhead()) << "  ("
+                      << runner::Format::grouped(statistics.getGlobalMinRankReplicatedCells()) << " .. "
+                      << runner::Format::grouped(statistics.getGlobalMaxRankReplicatedCells()) << " Spine Cells/Rank)";
+
+      values[MpiRanks]            = runner::Format::grouped(static_cast<std::uint64_t>(numberOfRanks));
+      values[MpiLoadBalance]      = interRankText.str();
+      values[MpiSpineReplication] = replicationText.str();
     }
-    report.add("Load Balancing", "Global Efficiency", efficiencyText.str());
-    report.add("Load Balancing", "Global Overhead", overheadText.str());
+
+    // A rank traverses serially when it has one thread, when the grid is too
+    // flat to decompose, or when a container cannot be split across tasks, and
+    // then it owns no task at all.
+    const auto         numberOfSubtreeTasks = statistics.getGlobalNumberOfSubtreeTasks();
+    std::ostringstream subtreeTaskText;
+    std::ostringstream taskLoadText;
+    std::ostringstream threadCeilingText;
+    if (numberOfSubtreeTasks == 0) {
+      subtreeTaskText << "None  (Ranks traverse serially)";
+      taskLoadText << "Not applicable";
+      threadCeilingText << "Not applicable";
+    } else {
+      subtreeTaskText << runner::Format::grouped(numberOfSubtreeTasks) << "  ("
+                      << runner::Format::grouped(statistics.getGlobalMinRankSubtreeTasks()) << " .. "
+                      << runner::Format::grouped(statistics.getGlobalMaxRankSubtreeTasks()) << " Tasks/Rank)";
+      taskLoadText << runner::Format::grouped(statistics.getGlobalMinSubtreeTaskCells()) << " .. "
+                   << runner::Format::grouped(statistics.getGlobalMaxSubtreeTaskCells()) << " Cells  (Mean "
+                   << runner::Format::grouped(statistics.getGlobalSubtreeTaskCells() / numberOfSubtreeTasks) << ")";
+      const auto threadCeiling   = statistics.getGlobalThreadCeiling();
+      const auto numberOfThreads = statistics.getGlobalNumberOfThreads();
+      threadCeilingText << runner::Format::grouped(threadCeiling) << " of " << runner::Format::grouped(numberOfThreads)
+                        << " Threads";
+      if (threadCeiling < numberOfThreads) {
+        threadCeilingText << "  (Largest Task " << runner::Format::grouped(statistics.getGlobalMaxSubtreeTaskCells())
+                          << " Cells)";
+      }
+    }
+    values[OpenMpSubtreeTasks]  = subtreeTaskText.str();
+    values[OpenMpCellsPerTask]  = taskLoadText.str();
+    values[OpenMpThreadCeiling] = threadCeilingText.str();
   }
 
   {
@@ -115,22 +184,18 @@ void runner::writeGridSnapshot(runner::ReportBox& box, const runner::RepositoryC
     const auto totalMemory = statistics.getGlobalTotalMemoryInBytes();
     const auto freeMemory  = statistics.getGlobalFreeMemoryInBytes();
 
-    std::ostringstream system;
-    system << runner::Format::memory(totalMemory) << " RAM · " << runner::Format::memory(freeMemory) << " free · "
-           << runner::Format::memory(residentSetSize) << " RSS";
-    report.add("Memory", "System", system.str());
-    report.add("Memory", "Grid", runner::Format::memory(gridMemory));
-    report.add(
-      "Memory",
-      "Heap",
-      "Cell " + runner::Format::memory(cellMemory) + " · Face " + runner::Format::memory(faceMemory) + " · Vertex "
-        + runner::Format::memory(vertexMemory)
-    );
-    report.add("Memory", "Total Data", runner::Format::memory(dataTotal) + " tracked");
+    std::ostringstream systemMemory;
+    systemMemory << runner::Format::memory(totalMemory) << " RAM · " << runner::Format::memory(freeMemory) << " free";
+    values[MemorySystem]       = systemMemory.str();
+    values[MemoryProcess]      = runner::Format::memory(residentSetSize) + "  (Sum over Ranks)";
+    values[MemoryGridVertices] = runner::Format::memory(gridMemory) + "  (Estimated)";
+    values[MemorySolverHeap]   = "Cell " + runner::Format::memory(cellMemory) + " · Face "
+      + runner::Format::memory(faceMemory) + " · Vertex " + runner::Format::memory(vertexMemory);
+    values[MemoryTrackedData] = runner::Format::memory(dataTotal);
   }
 
   box.rule();
-  for (const auto& line : report.render()) {
+  for (const auto& line : renderSnapshotRows(values)) {
     box.line(line);
   }
   box.rule();

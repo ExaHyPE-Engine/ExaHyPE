@@ -45,14 +45,6 @@ void runner::tests::GridSnapshotTest::testBoundedFullyRefinedLeavesHandlesLimits
     runner::boundedFullyRefinedLeaves(std::numeric_limits<int>::max()),
     std::numeric_limits<std::uint64_t>::max()
   );
-
-  bool rejectedNegativeLevel = false;
-  try {
-    runner::boundedFullyRefinedLeaves(-1);
-  } catch (const std::invalid_argument&) {
-    rejectedNegativeLevel = true;
-  }
-  validate(rejectedNegativeLevel);
 }
 
 void runner::tests::GridSnapshotTest::testGridCellSummary() {

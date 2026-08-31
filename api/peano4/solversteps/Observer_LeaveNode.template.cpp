@@ -2,19 +2,19 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveNode(const ::peano4::grid::GridTraversal
   const auto callStack = static_cast<int>(::peano4::grid::StackTopology::BaseStack::Call);
 
 {%- for vertex in VERTICES %}
-  auto& {{ vertex.logical_type_name }}Stack = repositories::DataRepository::{{ vertex.logical_type_name }}StackContainer.getLocalExchangeStack(_spacetreeId, callStack);
+  auto& {{ vertex.logical_type_name }}Stack = repositories::DataRepository::{{ vertex.logical_type_name }}StackContainer.getLocalExchangeStack(_treeId, callStack);
   ::peano4::datamanagement::VertexEnumerator<{{ vertex.full_qualified_type }}> fineGrid{{ vertex.logical_type_name }}(&{{ vertex.logical_type_name }}Stack.top(TWO_POWER_D - 1));
   ::peano4::datamanagement::VertexEnumerator<{{ vertex.full_qualified_type }}> coarseGrid{{ vertex.logical_type_name }}(&{{ vertex.logical_type_name }}Stack.top(TWO_POWER_D * 2 - 1));
 {%- endfor %}
 
 {%- for face in FACES %}
-  auto& {{ face.logical_type_name }}Stack = repositories::DataRepository::{{ face.logical_type_name }}StackContainer.getLocalExchangeStack(_spacetreeId, callStack);
+  auto& {{ face.logical_type_name }}Stack = repositories::DataRepository::{{ face.logical_type_name }}StackContainer.getLocalExchangeStack(_treeId, callStack);
   ::peano4::datamanagement::FaceEnumerator<{{ face.full_qualified_type }}> fineGrid{{ face.logical_type_name }}(&{{ face.logical_type_name }}Stack.top(TWO_TIMES_D - 1));
   ::peano4::datamanagement::FaceEnumerator<{{ face.full_qualified_type }}> coarseGrid{{ face.logical_type_name }}(&{{ face.logical_type_name }}Stack.top(TWO_TIMES_D * 2 - 1));
 {%- endfor %}
 
 {%- for cell in CELLS %}
-  auto& {{ cell.logical_type_name }}Stack = repositories::DataRepository::{{ cell.logical_type_name }}StackContainer.getLocalExchangeStack(_spacetreeId, callStack);
+  auto& {{ cell.logical_type_name }}Stack = repositories::DataRepository::{{ cell.logical_type_name }}StackContainer.getLocalExchangeStack(_treeId, callStack);
   auto& fineGrid{{ cell.logical_type_name }} = {{ cell.logical_type_name }}Stack.top(0);
   auto& coarseGrid{{ cell.logical_type_name }} = {{ cell.logical_type_name }}Stack.top(1);
 {%- endfor %}
@@ -58,7 +58,9 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveNode(const ::peano4::grid::GridTraversal
     faceMarker.select(pick);
 
     const auto isLocal = faceMarker.isLocal();
-    if (not isLocal) { continue; }
+    if (not isLocal) {
+      continue;
+    }
 
     const auto isCreateOrDestroy = outFaceStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyGridEntity;
     const auto isHanging         = faceMarker.isHanging();
@@ -107,7 +109,9 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveNode(const ::peano4::grid::GridTraversal
     vertexMarker.select(pick);
 
     const auto isLocal = vertexMarker.isLocal();
-    if (not isLocal) { continue; }
+    if (not isLocal) {
+      continue;
+    }
 
     const auto isCreateOrDestroy = outVertexStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyGridEntity;
     const auto isHanging         = vertexMarker.isHanging();

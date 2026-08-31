@@ -4,196 +4,125 @@
 
 \tableofcontents
 
-A Peano 4 application is a plain C++ code organised into layers.
-Users obviously might want to inject Fortran or similar, but Peano 4 itself sticks to C++.
-There is a Python API, but this Python API is merely a code generator, i.e. it produces stand-alone C++ executables.
-
+A Peano 4 application is a generated C++ program organised into layers. The
+Python API describes data, algorithmic steps, and action sets, then emits the
+stand-alone C++ sources and build files.
 
 # Code organisation
 
-Peano is organised into layers.
-The components per layer are delivered as static libraries.
-All their C/C++ code is held within the directory src.
-Peano's layer architecture applies to all simulations built on top of Peano, too, i.e.
-every Peano application, at the end of the day, follows a similar architecture blueprint.
+The dependency order is tarch, peano4, toolbox, and then either exahype2 or
+runner. The application target combines the runner with its selected
+simulation extension.
 
-@image html documentation/architecture-static.png
+- **Technical architecture (`tarch`)** provides tasking, MPI wrappers,
+  accelerator support, logging, plotting, and small linear-algebra utilities.
+  It hides backend-specific APIs from the upper layers.
+- **Peano core (`peano4`)** owns the index-linked spacetree, traversal,
+  rank-boundary exchange, and the pool interface used by generated data.
+- **Toolboxes (`toolbox`)** add solver-independent facilities such as
+  block-structured data and particles.
+- **Extensions (`exahype2`)** assemble toolbox facilities into numerical
+  solver families.
+- **Runner (`runner`)** executes generated program steps, coordinates the SPMD
+  control flow, and reports global statistics.
+- **Application code** supplies the problem-specific kernels, parameters, and
+  generated project description.
 
-- **Technical Architecture (tarch)** The @ref page_tarch_home "technical architecture" provides unified interfaces for tasking,
-  the logging, GPU offloading, basic linear algebra, and so forth.
-  It is a set of loosely coupled building
-  blocks that hide away technical details.
-  It is used
-  by Peano's core, all the toolboxes, extensions, and we also recommend the user
-  codes to use the features from the tarch. Details on the tarch are given
-  in the @ref page_peano4_home "core Peano documentation".
-  There's for example a namespace to
-  handle multicore parallelism, a logging component, or a collection of
-  primitive linear algebra routines for small problems. It is written solely in
-  C++ and its purpose is to hide away third-party dependencies such as OpenMP
-  or MPI. I originally designed it as a stand-alone thing which is not tied to
-  Peano though I'm not aware of any other project that currently uses it. The
-  layer is pronounced "T Arch" and is encapsulated in a namespace
-  tarch, as I didn't want to write the full name technical
-  architecture every time.
-- **Peano** The namespace peano4 hosts the @ref page_peano4_home "Peano 4 core". It is
-  entirely written in C++ (using the tarch) and holds the heart and brain of the
-  code, i.e. all the data management, the mesh management, the tree traversals and the domain
-  decomposition.
-  This core is dimension-generic and builds on top of the tarch only.
-- **Toolboxes** There are multiple toolboxes shipped with Peano. These add generic,
-  solver-independent ingredients such as particle management or support for
-  blockstructured meshes which can be embedded into the Peano trees. Using the
-  technical architecture to be independent of the tasking backend, e.g., or to
-  provide well-defined logging, they are on the same abstraction level as a mesh
-  management or the domain decomposition, though they are typically way smaller
-  than Peano and focus on one particular subaspect.
-- **Peano 4 extensions** Extensions to Peano such as ExaHyPE usually are built on
-  top of Peano plus some toolboxes. They provide a higher abstraction level than
-  Peano or the toolboxes and basically tailor the AMR and the features provided
-  by the toolboxes to one particular problem domain.
-- **User code** The actual user code sits on the top level and solves one particular
-  problem. Some user codes are built on Peano (and maybe some toolboxes). Other
-  user codes use the extensions such as ExaHyPE. Besides the user code, Peano's
-  repository also ships a set of benchmarks. They are similar to mini-apps and
-  typically benchmark certain machine or algorithm properties.
+# Runtime architecture
 
+## Program steps
 
-# Simulation workflow
+The generated main registers each algorithmic step as a `runner::Step` and
+calls runner::launch(). The global master selects the phase and program step.
+runner::Engine distributes the same step identifier to every rank, executes
+the registered body, and synchronises the global statistics afterwards.
 
-The simulation workflow inverts the control flow between the layers.
-This is, to a certain degree, a USP of Peano and discussed in the original Peano TOMS paper,
-where we use the term Hollywood Principle to explain this design decision.
-Roughly, any Peano 4 application realises the following control flow:
+A step constructs its observer, calls the static `prepareTraversal()` hook,
+passes the observer to peano4::topology::TopologyManager::traverse(), and calls
+`unprepareTraversal()` after every observer clone has finished.
 
-@image html documentation/architecture-dynamic.png
+## Grid representation and data pools
 
-1. The user codes hosts the main file. It creates a spacetree. If you have a run a
-   parallel code, each rank hosts a sets of spacetrees, as spacetrees can decide to
-   fork.
-2. The user's main runs through its algorithmic steps. Per step, it might decide to
-   trigger a mesh traversal. In this case, it tells Peano 4 to run through all the
-   spacetrees. Once you call peano4::parallel::SpacetreeSet::traverse(), you have no
-   control over the traversal anymore. It is Peano that ensures that all spacetrees
-   are traversed, but it retains control in which order, where to parallelise, what
-   the precise order is (subject to some constraints) and so forth.
-3. Throughout the traversal, the Peano core informs a peano4::grid::GridTraversalObserver
-   about observations. The notifications (callbacks) are basically messages that the
-   traversal has entered a cell or left it. They however are supplemented with a lot
-   of contextual information.
-4. The observer is an object that the user code passes into traverse(). It can be
-   very simple (visualise a cell, e.g.) but it can also take the contextual information
-   passed as argument and break them down into actions. These actions comprise, *hey, I've just read a vertex for the first time*,
-   or *I am about to kick off a traversal of a tree*, *I've just left a mesh cell*, and so forth.
-   If the observer breaks a notification down into these individual actions, it can
-   call one function per action from the user code.
+Every MPI rank owns one peano4::topology::TopologyManager. Its
+peano4::topology::Tree holds flat cell, face, and vertex arrays linked by
+integer indices. Adjacent cells reference the same face and vertex indices.
+Periodic boundary entities are aliases of the same indices.
 
-Most extensions provide the implementations of the actions and map them in turn again
-on domain-specific routines.
-If you enter a cell for the first time, you might for example decide to move all
-particles within that cell, or update a finite volume solution.
-Therefore, the sketch above blends out the toolbox and the extensions.
-They play some of the roles described above, but they do not alter the principles.
+The rank ownership table is identical on every rank, but the materialised
+structure is not: a rank builds the levels above the spawn level in full and,
+below it, only its own blocks plus one ring of neighbours. Everything outside
+that region is answered from the refinement plan by lattice arithmetic instead
+of being stored. Each cell carries its owning rank, and a traversal skips
+subtrees that do not touch the local rank. Solver data is allocated only for
+locally relevant entities in flat pools. peano4::grid::GridTraversalEvent maps
+tree entity indices to the corresponding rank-local pool slots.
 
-@image html documentation/sequence-diagram.png
+## Traversal task graph
 
+peano4::topology::TreeTraversal walks the tree in Peano curve order and emits
+the established observer callbacks. With several threads, the traversal
+decomposes the local curve segment into subtree tasks. Spawn-level blocks form
+the initial task roots, and heavy refined subtrees contribute deeper roots.
+Each task owns an observer clone and private traversal state.
+
+Standing traversals record their event streams. Later sweeps replay these
+flat recordings while the task graph schedules independent subtree tasks. A
+registered data container can reject subtree-task replication; the rank then
+traverses serially for that step.
+
+## Data consistency
+
+Cells have one owning rank. A face or a vertex that two ranks or two subtree
+tasks hold at the same time keeps a live copy for the current sweep and frozen
+copies for the partner state. The generated merge callbacks receive partner data before the first
+local touch that consumes it.
+
+Rank-boundary data is packed once per neighbour rank and data container after
+a sweep. Non-blocking transfers overlap the following sweep's interior tasks,
+and boundary tasks wait until the received frozen slots are ready. Intra-rank
+task interfaces use the same one-sweep-lag merge semantics without MPI.
+
+## Regridding
+
+Grid control events update a discrete refinement plan. Before solver data
+becomes persistent, a changed plan directly rebuilds the tree and runs a
+creational sweep. With live solver data, a stable single-owner delta appends or
+prunes in place. Other changes prepare the required migration structures and
+pool-slot mappings. Both paths emit one transition sweep with the required
+create and destroy events. The target plan also determines a new
+weight-balanced rank ownership table.
 
 # Python API
 
-As you can pass in a different observer per traversal, you can trigger different algorithmic steps.
-All of this requires significant work:
-A user has to write an observer class per algorithmic step, write the observer's
-mapping onto actions, and eventually has to implement these action sets, even
-though some of them might be trivial.
-Therefore, Peano 4 comes along with a Python API.
+The Python API models the generated program at two levels:
 
-This Python API provides the opportunity to specify these different observers and
-to add to each observer a sequence of action sets.
-Eventually, users have to invoke generate_and_build() and the Python API will generate all required C++ classes,
-leaving the body of the action sets and the main routine to the user to implement.
+- A domain-specific project describes solvers and application features.
+- A Peano project records data models, algorithmic steps, observers, and
+  action sets.
 
-Most extensions of Peano 4 (such as ExaHyPE 2 or Swift 2 or our MGHyPE
-extensions) add an additional layer: They provide a domain-specific API.
-In this API, users describe what they want to do. The API manages a
-domain-specific project. Every time the user adds a new feature, the
-API breaks this down into the
-
-- data required to implement this feature
-- grid traversals, i.e. algorithm steps, required to implement this feature
-- actions required to realise this feature
-
-and they add it to an internal Peano 4 Python object.
-
-@image html documentation/generic-python-workflow.png
-
-Eventually, this Python 4 object is returned.
-It now contains a description of all observers, action sets, and additional
-classes that we need to run the experiment.
-The user can now call generate_and_build() on the Python 4 project.
-This generates all the classes in plain C++ plus a CMakeLists.txt (and a fallback Makefile) to build them.
-Classes means actual computations but also all glue code that is
-required to make Peano's core interact with any user C++ code.
-So the top-level API represents the domain knowledge.
-The Peano 4 Python object represents how the data and behaviour will be implemented eventually.
-The C++ view then is the actual implementation.
-
+`generate_and_build()` emits the C++ observers, repositories, program-step
+registry, main routine, and build files. Generated observers translate the
+generic traversal events into the action-set callbacks supplied by the
+application and its extension.
 
 # Build variants
 
-Peano currently is delivered as a set of archives, i.e. static libraries.
-By default, the CMake build builds various versions of each library:
+Peano libraries are available in release, asserts, trace, and debug modes.
+Dimension-dependent libraries carry a `2d` or `3d` suffix; tarch is
+dimension-independent.
 
-- Each archive variant is available in four build modes: a release
-  version, an asserts version, a trace version, and a debug
-  version.
-- Each archive variant is available as 2d build and as 3d build. If
-  you need higher dimensions, you have to extend `SUPPORTED_DIMENSIONS`
-  and build the required libraries manually.
-
-Each library carries the build mode in its name, followed by the
-dimension suffix `2d` or `3d`. The technical architecture is
-dimension-independent and therefore only carries the mode. So the core
-ships, for example, as `Peano4Release2d`, `Peano4Debug3d`,
-`ExaHyPE2Trace3d`, or `TarchAsserts`. The build modes are as follows:
-
-- **debug** The debug versions of the archives carry the `Debug`
-  infix. If you link against these versions, the full set of
-  assertions, of all tracing and all debug messages is available;
-  though you can always filter on the application level which
-  information you want to see.
-- **asserts** These versions of the archives carry the `Asserts`
-  infix. If you link against these versions, all assertions are
-  on. The code also contains tracing macros (see below).
--  **trace** These versions of the archives carry the `Trace` infix.
-   If you link against these versions, all assertions and debug
-   messages are removed, but some tracing is active. You can
-   switch on/off the tracing per class, and different tracing backends allow
-   you to connect to different (profiling) tools.
--  **release** The release versions of the archives carry the `Release`
-   infix. They disable tracing, any debugging and all assertions.
-   These archives should be used by production runs.
-
-Peano's release components still write info messages (they suppress
-debug, tracing and logging, but not essential information). If you want
-to filter out these messages, too, you have to apply a log filter.
-
+- **Release** removes assertions, debug logging, and tracing.
+- **Asserts** enables assertions and retains tracing support.
+- **Trace** disables assertions and debug logging while retaining selected
+  instrumentation.
+- **Debug** enables assertions, tracing, and debug logging.
 
 # Repository organisation
 
-Peano's core is a collection of static libraries.
-A Peano application consists of C++ glue code which combines all of these
-libraries.  This glue code is generated through the Python API.
-
-- **documentation** Hosts the sources of the document that you hold
-  in your hands.
-- **src** Holds the C++ Peano sources of the Peano core and all the
-  toolboxes.
-- **api** Holds the Python API scripts. Within this directory, you
-  find the Peano core API and the toolboxes (`api/peano4`), the
-  extensions such as ExaHyPE 2 (`api/exahype2`), and the
-  postprocessing helpers (`postprocessing`).
-- **tests** Collection of small test cases that can be automised.
-- **benchmarks** Collection of benchmark scripts.
-- **applications** Proper, real-world applications.
+- `src` contains the C++ libraries.
+- `api` contains the Python generators and templates.
+- `documentation` contains the Doxygen pages and assets.
+- `tests` contains application and integration test cases.
+- `applications` contains complete applications.
 
 */

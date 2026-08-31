@@ -15,27 +15,27 @@ namespace {
     ScopedTracking() :
       _timeoutWarning(tarch::mpi::Diagnostics::getInstance().getTimeoutWarning().count()),
       _deadlockTimeout(tarch::mpi::Diagnostics::getInstance().getDeadlockTimeout().count()),
-      _requestTracking(tarch::mpi::Diagnostics::getInstance().isRequestTrackingEnabled()) {
+      _requestTrackingWasEnabled(tarch::mpi::Diagnostics::getInstance().isRequestTrackingEnabled()) {
       auto& diagnostics = tarch::mpi::Diagnostics::getInstance();
       diagnostics.setTimeoutWarning(3600.0);
       diagnostics.setDeadlockTimeout(3600.0);
       diagnostics.setRequestTracking(true);
     }
+    ScopedTracking(const ScopedTracking&)            = delete;
+    ScopedTracking(ScopedTracking&&)                 = delete;
+    ScopedTracking& operator=(const ScopedTracking&) = delete;
+    ScopedTracking& operator=(ScopedTracking&&)      = delete;
     ~ScopedTracking() {
       auto& diagnostics = tarch::mpi::Diagnostics::getInstance();
-      diagnostics.setRequestTracking(_requestTracking);
+      diagnostics.setRequestTracking(_requestTrackingWasEnabled);
       diagnostics.setDeadlockTimeout(_deadlockTimeout);
       diagnostics.setTimeoutWarning(_timeoutWarning);
     }
-    ScopedTracking(const ScopedTracking&)            = delete;
-    ScopedTracking& operator=(const ScopedTracking&) = delete;
-    ScopedTracking(ScopedTracking&&)                 = delete;
-    ScopedTracking& operator=(ScopedTracking&&)      = delete;
 
   private:
     const double _timeoutWarning;
     const double _deadlockTimeout;
-    const bool   _requestTracking;
+    const bool   _requestTrackingWasEnabled;
   };
 
   /**
@@ -53,7 +53,7 @@ namespace {
 } // namespace
 
 tarch::mpi::tests::DiagnosticsTest::DiagnosticsTest() :
-  TestCase("tarch::mpi::tests::DiagnosticsTest") {}
+  tarch::tests::TestCase("tarch::mpi::tests::DiagnosticsTest") {}
 
 void tarch::mpi::tests::DiagnosticsTest::run() {
   testMethod(testRegisterReportClear);
@@ -62,56 +62,55 @@ void tarch::mpi::tests::DiagnosticsTest::run() {
 
 /** A registered request is found and named, and a cleared one is gone. */
 void tarch::mpi::tests::DiagnosticsTest::testRegisterReportClear() {
-  ScopedTracking tracking;
-  auto&          diagnostics = tarch::mpi::Diagnostics::getInstance();
+  const ScopedTracking tracking;
+  auto&                diagnostics = tarch::mpi::Diagnostics::getInstance();
 
-  MPI_Request request = fabricatedHandle<MPI_Request>();
-  diagnostics.registerRequest(&request, "MPI_Isend", 3, 7, std::source_location::current());
-  validate(diagnostics.reportRequest(&request, "MPI_Wait", std::source_location::current()));
+  const MPI_Request registeredRequest = fabricatedHandle<MPI_Request>();
+  diagnostics.registerRequest(&registeredRequest, "MPI_Isend", 3, 7, std::source_location::current());
+  validate(diagnostics.reportRequest(&registeredRequest, "MPI_Wait", std::source_location::current()));
 
-  diagnostics.clearRequest(&request);
-  validate(not diagnostics.reportRequest(&request, "MPI_Wait", std::source_location::current()));
+  diagnostics.clearRequest(&registeredRequest);
+  validate(not diagnostics.reportRequest(&registeredRequest, "MPI_Wait", std::source_location::current()));
 }
 
 /**
- * Two threads register, report and clear disjoint request sets concurrently.
- * The slot protocol has no lock, so the test asserts that no entry is lost,
- * duplicated or left behind under churn.
+ * Two threads register, report and clear disjoint request sets concurrently,
+ * and the lock-free slot protocol loses, duplicates or strands no entry.
  */
 void tarch::mpi::tests::DiagnosticsTest::testTableSurvivesConcurrentChurn() {
-  ScopedTracking tracking;
-  auto&          diagnostics = tarch::mpi::Diagnostics::getInstance();
+  const ScopedTracking tracking;
+  auto&                diagnostics = tarch::mpi::Diagnostics::getInstance();
 
   constexpr int RequestsPerThread = 64;
   constexpr int Rounds            = 500;
 
-  auto churn = [&diagnostics](std::array<MPI_Request, RequestsPerThread>& requests) {
+  const auto exerciseRequestTable = [&diagnostics](const std::array<MPI_Request, RequestsPerThread>& requests) {
     for (int round = 0; round < Rounds; round++) {
-      for (auto& request : requests) {
+      for (const auto& request : requests) {
         diagnostics.registerRequest(&request, "MPI_Irecv", 1, 2, std::source_location::current());
       }
-      for (auto& request : requests) {
+      for (const auto& request : requests) {
         diagnostics.reportRequest(&request, "MPI_Wait", std::source_location::current());
       }
-      for (auto& request : requests) {
+      for (const auto& request : requests) {
         diagnostics.clearRequest(&request);
       }
     }
   };
 
-  std::array<MPI_Request, RequestsPerThread> firstSet;
-  std::array<MPI_Request, RequestsPerThread> secondSet;
-  firstSet.fill(fabricatedHandle<MPI_Request>());
-  secondSet.fill(fabricatedHandle<MPI_Request>());
+  std::array<MPI_Request, RequestsPerThread> mainThreadRequests;
+  std::array<MPI_Request, RequestsPerThread> partnerThreadRequests;
+  mainThreadRequests.fill(fabricatedHandle<MPI_Request>());
+  partnerThreadRequests.fill(fabricatedHandle<MPI_Request>());
 
-  std::thread partner(churn, std::ref(secondSet));
-  churn(firstSet);
-  partner.join();
+  std::thread partnerThread(exerciseRequestTable, std::ref(partnerThreadRequests));
+  exerciseRequestTable(mainThreadRequests);
+  partnerThread.join();
 
-  for (auto& request : firstSet) {
+  for (const auto& request : mainThreadRequests) {
     validate(not diagnostics.reportRequest(&request, "MPI_Wait", std::source_location::current()));
   }
-  for (auto& request : secondSet) {
+  for (const auto& request : partnerThreadRequests) {
     validate(not diagnostics.reportRequest(&request, "MPI_Wait", std::source_location::current()));
   }
 }

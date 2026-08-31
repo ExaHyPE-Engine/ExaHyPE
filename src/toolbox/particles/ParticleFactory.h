@@ -45,4 +45,4 @@ namespace toolbox::particles {
   );
 } // namespace toolbox::particles
 
-#include "ParticleFactory.cpph"
+#include "toolbox/particles/ParticleFactory.cpph"

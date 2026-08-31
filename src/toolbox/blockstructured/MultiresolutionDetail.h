@@ -19,4 +19,4 @@ namespace toolbox::blockstructured {
   );
 } // namespace toolbox::blockstructured
 
-#include "MultiresolutionDetail.cpph"
+#include "toolbox/blockstructured/MultiresolutionDetail.cpph"

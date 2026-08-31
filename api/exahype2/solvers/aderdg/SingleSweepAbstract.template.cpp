@@ -3,16 +3,14 @@
 #include "{{CLASSNAME}}.h"
 
 #include "Constants.h"
-
-#include "exahype2/NonNegativeStatistics.h"
 {%- if SUBCELL_LIMITER %}
 #include "exahype2/dg/LimiterStatus.h"
 {%- endif %}
-#include "runner/RuntimeParameters.h"
-#include "tarch/instrumentation/Log.h"
+#include "tarch/instrumentation/Debug.h"
+#include "tarch/instrumentation/Warning.h"
 #include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
-#include "tarch/multicore/Lock.h"
+#include "tarch/accelerator/Atomic.h"
 #include "tarch/NonCriticalAssertions.h"
 
 std::bitset<DIMENSIONS> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::PeriodicBC = {{NAMESPACE | join("::")}}::PeriodicBC;
@@ -21,23 +19,7 @@ std::bitset<DIMENSIONS> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::PeriodicBC = 
 double                  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::pointSourceLocation[NumberOfPointSources][DIMENSIONS]{};
 {% endif %}
 
-{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
-  _solverState(SolverState::GridConstruction),
-  _minTimeStamp(0.0),
-  _maxTimeStamp(0.0),
-  _minTimeStampThisTimeStep(std::numeric_limits<double>::infinity()),
-  _maxTimeStampThisTimeStep(0.0),
-  _localMinTimeStampThisTimeStep(std::numeric_limits<double>::infinity()),
-  _localMaxTimeStampThisTimeStep(0.0),
-  _minCellH(std::numeric_limits<double>::infinity()),
-  _maxCellH(0.0),
-  _minCellHThisTimeStep(std::numeric_limits<double>::infinity()),
-  _maxCellHThisTimeStep(0.0),
-  _hasHangingFacesThisTimeStep(false),
-  _minTimeStepSize(std::numeric_limits<double>::infinity()),
-  _maxTimeStepSize(0.0),
-  _minTimeStepSizeThisTimeStep(std::numeric_limits<double>::infinity()),
-  _maxTimeStepSizeThisTimeStep(0.0) {
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}() {
   {{CONSTRUCTOR_IMPLEMENTATION}}
 }
 
@@ -89,6 +71,8 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStepSize() const {
     : _maxTimeStepSize;
 }
 
+thread_local typename {{NAMESPACE | join("::")}}::{{CLASSNAME}}::LocalUpdates {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_localUpdates;
+
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(
   const double timeStepSize,
   const double timeStamp,
@@ -96,8 +80,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(
   const double maxCellSize,
   const bool   hasHangingFaces
 ) {
-  const tarch::multicore::Lock lock(_semaphore);
-
   const auto observedTimeStepStatistics =
     ::exahype2::NonNegativeStatistics{timeStepSize, timeStepSize};
   if (not observedTimeStepStatistics.hasPhysicalValues()) {
@@ -111,34 +93,65 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(
         )
     );
   }
-  const auto timeStepStatistics = ::exahype2::NonNegativeStatistics::accumulate(
-    {_minTimeStepSizeThisTimeStep, _maxTimeStepSizeThisTimeStep},
-    timeStepSize
-  );
-  _minTimeStepSizeThisTimeStep = timeStepStatistics.minimum;
-  _maxTimeStepSizeThisTimeStep = timeStepStatistics.maximum;
-  _localMinTimeStampThisTimeStep = std::min(_localMinTimeStampThisTimeStep, timeStamp);
-  _localMaxTimeStampThisTimeStep = std::max(_localMaxTimeStampThisTimeStep, timeStamp);
+
+  _localUpdates.timeStepSize = ::exahype2::NonNegativeStatistics::accumulate(_localUpdates.timeStepSize, timeStepSize);
 
   assertion(timeStamp < std::numeric_limits<double>::max() / 10.0, timeStamp);
   assertion(timeStamp >= 0.0, timeStamp);
-  _maxTimeStampThisTimeStep = std::max(timeStamp, _maxTimeStampThisTimeStep);
-  _minTimeStampThisTimeStep = std::min(timeStamp, _minTimeStampThisTimeStep);
-  assertion(tarch::la::smallerEquals(_minTimeStampThisTimeStep, _maxTimeStampThisTimeStep), _minTimeStamp, _maxTimeStamp, _minTimeStampThisTimeStep, _maxTimeStampThisTimeStep, timeStepSize, timeStamp, minCellSize, maxCellSize);
+  _localUpdates.localMinTimeStamp = std::min(_localUpdates.localMinTimeStamp, timeStamp);
+  _localUpdates.localMaxTimeStamp = std::max(_localUpdates.localMaxTimeStamp, timeStamp);
+  _localUpdates.minTimeStamp      = std::min(_localUpdates.minTimeStamp, timeStamp);
+  _localUpdates.maxTimeStamp      = std::max(_localUpdates.maxTimeStamp, timeStamp);
+  assertion(tarch::la::smallerEquals(_localUpdates.minTimeStamp, _localUpdates.maxTimeStamp), _minTimeStamp, _maxTimeStamp, _localUpdates.minTimeStamp, _localUpdates.maxTimeStamp, timeStepSize, timeStamp, minCellSize, maxCellSize);
 
   assertion(maxCellSize < std::numeric_limits<double>::max() / 10.0, maxCellSize);
   assertion(minCellSize > 0.0, minCellSize);
-  _maxCellHThisTimeStep = std::max(_maxCellHThisTimeStep, maxCellSize);
-  _minCellHThisTimeStep = std::min(_minCellHThisTimeStep, minCellSize);
-  _hasHangingFacesThisTimeStep = _hasHangingFacesThisTimeStep or hasHangingFaces;
+  _localUpdates.maxCellH        = std::max(_localUpdates.maxCellH, maxCellSize);
+  _localUpdates.minCellH        = std::min(_localUpdates.minCellH, minCellSize);
+  _localUpdates.hasHangingFaces = _localUpdates.hasHangingFaces or hasHangingFaces;
+  _localUpdates.empty           = false;
 
-  logDebug("Updated with dt=" << timeStepSize << ", t=" << timeStamp << ", h=" << minCellSize << " / " << maxCellSize << ": t(new)=" << _minTimeStampThisTimeStep);
+  logDebug(
+    "Updated with dt=" << timeStepSize << ", t=" << timeStamp << ", h=" << minCellSize << " / " << maxCellSize
+                       << ": t(new)=" << _localUpdates.minTimeStamp
+  );
+}
+
+/**
+ * Reduces the extrema update() accumulated in this traversal into the solver. One call per
+ * tree at the end of a traversal keeps the per-cell update free of atomic operations.
+ */
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::reduceLocalUpdates() {
+  if (_localUpdates.empty) {
+    return;
+  }
+
+  // An invalid observation overwrites both extrema, and a later atomic minimum
+  // or maximum keeps at least one of them, so the rank reduction reads the
+  // invalid observation.
+  if (_localUpdates.timeStepSize.hasInvalidObservation()) {
+    tarch::accelerator::storeAtomic(_minTimeStepSizeThisTimeStep, _localUpdates.timeStepSize.minimum);
+    tarch::accelerator::storeAtomic(_maxTimeStepSizeThisTimeStep, _localUpdates.timeStepSize.maximum);
+  } else {
+    tarch::accelerator::updateAtomicMin(_minTimeStepSizeThisTimeStep, _localUpdates.timeStepSize.minimum);
+    tarch::accelerator::updateAtomicMax(_maxTimeStepSizeThisTimeStep, _localUpdates.timeStepSize.maximum);
+  }
+  tarch::accelerator::updateAtomicMin(_localMinTimeStampThisTimeStep, _localUpdates.localMinTimeStamp);
+  tarch::accelerator::updateAtomicMax(_localMaxTimeStampThisTimeStep, _localUpdates.localMaxTimeStamp);
+  tarch::accelerator::updateAtomicMin(_minTimeStampThisTimeStep, _localUpdates.minTimeStamp);
+  tarch::accelerator::updateAtomicMax(_maxTimeStampThisTimeStep, _localUpdates.maxTimeStamp);
+  tarch::accelerator::updateAtomicMin(_minCellHThisTimeStep, _localUpdates.minCellH);
+  tarch::accelerator::updateAtomicMax(_maxCellHThisTimeStep, _localUpdates.maxCellH);
+  if (_localUpdates.hasHangingFaces) {
+    _hasHangingFacesThisTimeStep = true;
+  }
+
+  _localUpdates = LocalUpdates{};
 }
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::SolverState {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getSolverState() const {
 {%- if SUBCELL_LIMITER %}
-  // The limiter sweep is the single source of truth; the Galerkin solver state is
-  // projected from it for the plotting, prediction and precision paths that read it.
+  // The limiting sweep holds the state, and the Galerkin solver state follows from it.
   switch (_limitingSweep.state) {
   case ::exahype2::dg::LimitingSolverState::GridConstruction:
     return SolverState::GridConstruction;
@@ -164,16 +177,13 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(
 }
 {%- if SUBCELL_LIMITER %}
 
-/**
- * Returns the active a-posteriori limiter sweep for action-set guards.
- */
 ::exahype2::dg::LimitingSolverState {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getLimitingSolverState() const {
   return _limitingSweep.state;
 }
 
 /**
- * Records a troubled cell atomically because correctors update the rank-local
- * count concurrently before its global reduction.
+ * Increments the troubled-cell count atomically, because correctors of several threads
+ * report at the same time.
  */
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::markCellAsTroubled() {
   _numberOfTroubledCellsThisTimeStep.fetch_add(1, std::memory_order_relaxed);
@@ -338,14 +348,27 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
     _localMinTimeStampThisTimeStep = std::numeric_limits<double>::infinity();
     _localMaxTimeStampThisTimeStep = 0.0;
   }
+
+  // The corrector rewrites every cell's stamp, so the stamps a separate
+  // predictor sweep reported are stale: The stamp extrema restart with the
+  // corrector's sweep.
+{%- if SUBCELL_LIMITER %}
+  const bool isCorrectorSweep = _limitingSweep.state == ::exahype2::dg::LimitingSolverState::CorrectAndFlag;
+{%- else %}
+  const bool isCorrectorSweep = _solverState == SolverState::TimeStep;
+{%- endif %}
+  if (isCorrectorSweep and not isFirstGridSweepOfTimeStep()) {
+    _minTimeStampThisTimeStep      = std::numeric_limits<double>::infinity();
+    _maxTimeStampThisTimeStep      = 0.0;
+    _localMinTimeStampThisTimeStep = std::numeric_limits<double>::infinity();
+    _localMaxTimeStampThisTimeStep = 0.0;
+  }
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
 {%- if SUBCELL_LIMITER %}
-  // The corrector counts troubled cells on each rank. Sum the count before the
-  // last-sweep test so every rank either grows the subcell domain or closes the
-  // step together, which keeps the recomputed domain independent of the
-  // decomposition.
+  // The counts of every rank are summed before the last-sweep test, so all ranks grow the
+  // subcell domain or close the step together.
   if (getLimitingSolverState() == ::exahype2::dg::LimitingSolverState::CorrectAndFlag) {
     const long localTroubledCells  = _numberOfTroubledCellsThisTimeStep.load(std::memory_order_relaxed);
     long       globalTroubledCells = 0;
@@ -363,9 +386,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
 {%- else %}
   if (isLastGridSweepOfTimeStep() or _solverState == SolverState::InitialPrediction) {
 {%- endif %}
-    // The upper half holds the negated maxima, so one minimum reduction yields both
-    // extrema. Negating an IEEE double is exact, so this matches a maximum bit for bit.
-    // The hanging-face flag rides along as the last maximum.
+    // The upper half holds the negated maxima, so one minimum reduction returns both
+    // extrema. The last entry carries the hanging-face flag.
     const double localExtrema[9] = {
        _minTimeStampThisTimeStep,
        _minCellHThisTimeStep,

@@ -1,127 +1,85 @@
 /**
 
-@page peano_main The typical main.cpp in a Peano code
+@page peano_main The generated main routine
 
+\tableofcontents
 
+The generated main is a small adapter between an application's repositories
+and runner::launch(). It registers the algorithmic steps and lets the runner
+own initialisation, phase ordering, rank coordination, reporting, and
+shutdown.
 
-Though I do not tell users exactly how to write their code, there's some kind of
-generic structure that is common to all Peano simulations and their mains.
-We can consider it to be some kind of pattern/best practice.
+# Registered steps
 
-
-
-## Startup and shutdown
-
-At startup, any Peano application has to configure its MPI and shared memory
-environment and to create the initial spacetree.
-All of this is split across two calls:
+Each generated observer becomes one `runner::Step`. Its body follows this
+lifecycle:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  tarch::init(&argc, &argv, {0.0, 0.0, true});
-  peano4::init(
-    {0.0, 0.0, 0.0},
-    {1.0, 1.0, 1.0}
+observers::TimeStep::prepareTraversal();
+observers::TimeStep observer;
+peano4::topology::TopologyManager::getInstance().traverse(observer);
+observers::TimeStep::unprepareTraversal();
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+`prepareTraversal()` and `unprepareTraversal()` run once per rank and step.
+The topology manager creates the observer clones required by the rank traversal
+and its subtree tasks. The call returns after all clones finish and the
+rank-boundary payloads for that sweep have been submitted.
+
+The generated StepRepository maps each generated step enumeration to the
+integer program-step identifier distributed by runner::RunControl.
+Every rank registers the same ordered step list.
+
+# Launch
+
+The generated entry point has the following shape:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+int main(int argc, char** argv) {
+  runner::RuntimeParameters::getInstance().setGeneratedDefaults(
+    minimumTerminalTime,
+    maximumTerminalTime,
+    gridLevels,
+    maximumGridLevels,
+    projectName
   );
+
+  return runner::launch(
+    DomainOffset,
+    DomainSize,
+    PeriodicBC,
+    createRepositoryCallbacks(),
+    createSteps(),
+    argc,
+    argv
+  );
+}
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-tarch::init() takes the command line arguments and performs all MPI initialisation
-(hence ensuring that the singleton tarch::mpi::Rank is properly configured); it
-also brings up the shared memory and accelerator environment. Its third argument is
-a tarch::InitConfiguration controlling the MPI timeout/deadlock detection.
-peano4::init() then takes the offset and the bounding box (width) of the
-computational domain and creates the spacetree set.
-An optional third argument to peano4::init() (a std::bitset<DIMENSIONS>) lets you
-switch on periodic boundary conditions per coordinate axis.
-There are corresponding tarch::shutdown() and peano4::shutdown() calls that tear
-everything down again at the end of the program.
+runner::launch() configures the runtime parameters, initialises tarch and
+Peano, constructs runner::Engine, and performs the matching shutdown sequence.
+The repository callbacks connect application-specific parameter loading,
+memory accounting, help text, and repository shutdown to this lifecycle.
 
+# SPMD control flow
 
-## The spacetree set
+runner::Engine gives the global master to runner::Orchestrator. The
+orchestrator runs configuration, grid construction, grid initialisation, time
+loop, dynamic AMR, and final reporting phases as required by the registered
+steps. Before each step, the master publishes its program-step identifier.
+Worker ranks receive the identifier through
+runner::RunControl::continueToRun() and execute the same registered
+body. The terminate identifier ends every worker loop.
 
-The set of spacetrees in Peano is, atm, unique, i.e. there is only one set.
-However, the set can host multiple trees, which basically means you apply
-domain decomposition.
-The offset and bounding box handed into peano4::init() create a trivial
-spacetree, i.e. a degenerated tree spanning a 3x3 (2d) or 3x3x3 (3d) mesh.
-You can later on refine it, but this is where we start.
-If you have many ranks, only the first rank will hold a tree initially.
-All other ranks host an empty spacetree set.
+A step therefore has one collective ordering across the MPI ranks. Custom
+work outside the registered body must preserve that ordering whenever it uses
+MPI or mesh-bound data.
 
+# Python API
 
-## Run through a mesh
+The Python API builds the step list from the project's solver steps. It emits
+the observers and repositories and assigns stable enumerators through
+StepRepository. Application code normally adds action sets and callbacks to
+these generated steps.
 
-Peano realises an SPMD paradigm, i.e. if one rank runs through its spacetrees,
-all ranks have to traverse their trees.
-Furthermore, if one rank uses a particular observer for one traversal, all other
-traversals have to use the same observer, too.
-
-
-A simple way to ensure this is to let
-the global master set a counter/id which uniquely
-identifies which step to run next.
-It then says ```go ahead``` and runs this step itself.
-All the other ranks are noticed (via an internal broadcast in the core) which
-step to run, do the same thing, and then wait for the next wake-up call.
-At the end, the global master sets the id of a terminate.
-As all the ranks loop until they receive this terminate id, they do go down as
-well in the end.
-The code for this resembles
-
-~~~~~~~~~~~~~~~~~~~~~~~~~
-  if (tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
-    while ( selectNextAlgorithmicStep() ) {
-      step();
-    }
-  }
-  else {
-    while (peano4::parallel::RunControl::getInstance().continueToRun()) {
-      step();
-    }
-  }
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-where the routine selectNextAlgorithmicStep()} issues one call of
-peano4::parallel::RunControl::getInstance().setNextProgramStep().
-
-The ```step()``` routine then is usually a big switch statement:
-
-~~~~~~~~~~~~~~~~~~~~~~~~~
-int stepIdentifier = peano4::parallel::RunControl::getInstance().getCurrentProgramStep();
-switch (stepIdentifier) {
-  case 0:
-    {
-      observers::CreateGrid  observer;
-      peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-    }
-    break;
-  case 1:
-    {
-      // split up domain
-    }
-}
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-Nothing stops you from triggering multiple traversals (or none at all) within a
-step, as long as all ranks do exactly the same.
-
-
-The numbers within the case statements are kind of magic constants and you can
-redefine them.
-However, I recommend to read the documentation of peano4::parallel::RunControl::setNextProgramStep().
-There are some predefined constants that you should not use.
-
-
-## Python API
-
-If you use the Python API, you specify the individual algorithmic steps of
-interest. The generator creates one observer per step (hosted in a generated
-subdirectory observers) and it also generates a subdirectory repositories.
-
-repositories in turn hosts a generated class StepRepository. It defines a big
-enumeration for all potential steps, i.e. you don't have to write the switch
-statements over your own integers. You can exchange the enums.
-
-
- */
-
+*/

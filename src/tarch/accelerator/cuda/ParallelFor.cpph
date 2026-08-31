@@ -53,9 +53,9 @@ namespace tarch {
       return;
     }
     CHECK_CUDA_ERROR(cudaSetDevice(accelerator::getCurrentDevice()));
-    int blocks = (r.n + accelerator::kCudaBlockSize - 1) / accelerator::kCudaBlockSize;
+    int blocks = (r.n + accelerator::CudaBlockSize - 1) / accelerator::CudaBlockSize;
     blocks     = std::min(blocks, 65535);
-    accelerator::flat_kernel_1d<<<blocks, accelerator::kCudaBlockSize, 0, accelerator::deviceStreamGet()>>>(f, r.n);
+    accelerator::flat_kernel_1d<<<blocks, accelerator::CudaBlockSize, 0, accelerator::deviceStreamGet()>>>(f, r.n);
     CHECK_CUDA_ERROR(cudaStreamSynchronize(accelerator::deviceStreamGet()));
   }
 
@@ -89,7 +89,7 @@ namespace tarch {
       return;
     }
     CHECK_CUDA_ERROR(cudaSetDevice(accelerator::getCurrentDevice()));
-    accelerator::team_kernel<<<r.n, accelerator::kCudaBlockSize, 0, accelerator::deviceStreamGet()>>>(f);
+    accelerator::team_kernel<<<r.n, accelerator::CudaBlockSize, 0, accelerator::deviceStreamGet()>>>(f);
     CHECK_CUDA_ERROR(cudaStreamSynchronize(accelerator::deviceStreamGet()));
   }
 } // namespace tarch

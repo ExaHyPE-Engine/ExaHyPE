@@ -1,221 +1,76 @@
 /**
 
-@page page_toolbox_particles_mesh_consistency Sorting: Preserving the mesh-particle data consistency
+@page page_toolbox_particles_mesh_consistency Particle sorting and mesh consistency
 
-If a particle moves or changes its search radius, it might be associated
-to the wrong vertex. Consequently, it is important to be always aware of
-situations when the mesh-particle association is not consistent and to
-understand how you can minimise the time spans in which data remains
-messed up.
+\tableofcontents
 
+A position or search-radius update can invalidate a particle's vertex and
+level association. The update action sets under
+peano4.toolbox.particles.api.AbstractUpdateParticleGridAssociation restore the
+association over subsequent mesh sweeps.
 
+# Sorting sequence
 
-# Particle sorting
+The first sorting sweep detaches a moved particle and reassigns it spatially.
+It can lift the particle to a coarser level where the destination is reachable.
+A following sweep drops it through refined children until its search radius
+matches the selected level.
 
-The particle sorting is realised through peano4.toolbox.particles.api.AbstractUpdateParticleGridAssociation
-and subclasses of this type. In principle all flavours work in a similar way
-and spread up the sorting over at least two mesh traversals. That is, once
-you have updated either a particle position or a particle's search radius,
-you have to ensure that there are two consecutive mesh traversals which
-integrate a sorting action set. In the ideal case, you add this action set
-directly to the mesh traversal where you alter the particle state, and then
-you also add the sorting action set to the subsequent mesh sweep.
+Rank-boundary movement adds one exchange step. The source rank sends the
+particle after its sweep, and the target rank receives and continues the drop
+in the next sweep. A particle that cannot reach a local destination enters the
+sieve and is inserted from there on a later sweep.
 
+Every algorithmic step that changes positions or search radii therefore also
+installs the sorting action set, and at least one following step continues the
+sort. The application keeps sorting while `registeredAnyResorting()` or
+`hasParticlesToBeSievedIntoVertices()` reports pending movement.
 
-It is important that you merge the two update
-action sets into the action set where you change the particle position (in the
-last access of a vertex) plus into the subsequent grid sweep:
-Once the particle position has changed, Peano tries to associate the particle
-again to the right vertex.
-If the associativity however has changed, it might (temporarily) move particles
-to a coarser level.
-It is the subsequent grid sweep that then sorts the particles again into the
-right resolution of the mesh plus associates it with the right vertex.
-So it needs access to UpdateParticleGridAssocation.
+# Safe update point
 
+`touchVertexLastTime()` is the preferred position update point because all
+cell work involving the current vertex has finished. The parallel state and
+search radius remain stable during the sweep, and the sorting action observes
+the new position immediately afterwards.
 
-Please note that you will need potentially multiple follow-up action sets
-aka mesh sweeps:
-In the first sweep, all particles are put into the right place in space and
-the mesh hierarchy yet may be on a too coarse level.
-In the second sweep, we drop them.
-Throughout the drop, we might drop them through a horizontal tree cut.
-We cannot handle this, so have to send out the particle through message passing
-and then drop once more.
+A particle can be reassigned to a vertex whose last-touch event is still
+pending. The particle's `MoveState` prevents a second physical update in that
+sweep. Application kernels update only particles whose parallel state is
+`Local`; virtual copies follow from the boundary merge.
 
+# Dynamic mesh changes
 
-While both a position update of a particle and an
-alteration of the search radius require resorts, mesh rebalancing
-does not require you to resort as Peano automatically transfers all data in
-sync. Dynamic mesh refinement also does not mean that you have to resort:
-Particles residing within erased fine grid partitions are automatically
-lifted to a coarser level. If you have added new AMR levels, the particles
-will simply reside on the coarser level until you decide to issue a new
-sort anyway.
+Regrid migration carries vertex particle sets with their pool slots when rank
+ownership changes. Erasing fine cells lifts affected associations towards
+surviving levels. New refined levels do not force an immediate drop; the next
+sorting sequence moves eligible particles onto them.
 
+# Tunnelling
 
-# Particle storage
+Tunnelling means a particle travels farther than the cell range represented by
+its current association. The sorting algorithm lifts it until the displacement
+is local on a coarser level, moves it there, and drops it again. Applications
+can enable diagnostics when such movement violates their numerical model.
 
-The way how we sort particles is not decoupled from the way that we store the
-particles. If the particles are all scattered over the memory, you can sort in
-various ways. However, if you want to store particles en bloc (to vectorise, e.g.)
-then it is important to understand that your sorting will likely destory your nice memory layout.
-You will have to reconsolidate (move memory around) after the sorting.
-Some of these aspects are discussed on
-@ref toolbox_particles_memorypool "in the context of memory pools".
+# Sieve
 
+Each particle type owns a toolbox::particles::SieveParticles instance. It
+holds particles that cannot be inserted into a local vertex slot during the
+current sweep. A subsequent sorting sweep bucket-sorts the sieve records into
+the available rank-local mesh.
 
+The collective sieve exchange concatenates the records submitted by all ranks.
+It does not deduplicate physical particle identities.
 
-# Timing of particle changes
+Large sieve populations add global sorting and exchange work. Frequent sieve
+use indicates displacements, rank crossings, or associations that the ordinary
+lift-and-drop sequence cannot settle locally.
 
-I recommend that you never alter the particle positions throughout the
-traversal. The only time you should set a new position is within
-touchVertexLastTime(). This gives Peano's particle toolbox the time to
-re-sort the particles in-between two traversals as long as you ensure
-that every mesh sweep where you alter the particle position also resorts.
+# Parallel execution
 
-As long as you alter particle positions only in touchVertexLastTime(),
-you can then assume that the mesh topology is consistent throughout the
-traversal. That is, all particles within the search readius are properly
-indexed and available. This implies that you also should not alter the
-search radius throughout the mesh traversal. You can do so, but you have
-to accept that the mesh then becomes inconsistent, i.e. you might see more
-or less particles than what you actually would require, as the particle-mesh
-association is not updated yet.
-
-
-
-# Uniqueness of particle changes
-
-Most codes move a particle in touchVertexLastTime().
-This is convenient as we know that any particle associated with the respective
-vertex also has been touched for the last time.
-We can safely update it.
-However, if we change a particle's position and merge
-UpdateParticleGridAssociation into the respective algorithmic step,
-then the particle might immediately be associated to another vertex after it has
-been updated and this vertex might later on become subject of touchVertexLastTime().
-
-If you update particles with touchCell, you face a similar dilemma:
-A particle might reside in up to @f$ 2^d @f$ cells, as we work with
-floating point data and hence the association with cells is not
-unique.
-
-
-Consequently, it can happen that a particle is updated multiple times.
-To avoid this, I recommend that you add a boolean to each vertex:
-
-~~~~~~~~~~~~~~~~~
-            particle.add_attribute( peano4.datamodel.Enumeration("MoveState",["New","NotMovedYet","Moved"]) )
-~~~~~~~~~~~~~~~~~
-
-
-You can then set the value of MoveState to NotMovedYet in
-touchVertexFirstTime(), set it to ```Moved``` once we update the
-position, but only update its position as long as it has not been moved yet.
-Peano's built-in re-assignment of positions does only move particles around
-when vertices are touched for the last time, so there's no risk here that you
-update a particle in touchVertexLastTime(), assign it to a particle which
-has not been used yet and then reset it wrongly to not moved again.
-Similar patterns hold for other state updates.
-
-
-Further to that, I recommend that you work with special care in any
-parallel simulations: Particles then have a parallel state which indicated
-whether they are halo particles (virtual ones) or real ones. I recommend
-only to alter the positions of real particles:
-
-
-~~~~~~~~~~~~~~~~~
-if (
-  particle->getMoveState()==std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::NotMovedYet
-  and
-  particle->getParallelState()==std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
-) {
-  // update position
-
-  particle->setMoveState( std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::Moved );
-}
-~~~~~~~~~~~~~~~~~
-
-
-Keeping track of parallel states is not totally straightforward, as there are
-numerous pitfalls. Study the documentation of peano4.toolbox.particles.api.UpdateParallelState
-for details on these pitfalls. Once again however, I maintain two different particle
-states, i.e. a parallel state and a new parallel state. You may assume that the
-parallel state as used above is always consistent throughout one mesh sweep, but
-might change between two sweeps.
-
-
-# Tunneling
-
-Tunneling means that a particle moves more than one mesh cell per time
-step. They ***jump*** or ***tunnel*** through cells.
-In the context of Peano's multiscale tree structure, this is equivalent to
-particles which travel more than their search radius per step.
-
-
-Tunneling arises whenever search radii change suddenly, meshes are extremely
-refined where they should likely not refine, and particles suddenly accelerate
-or are inserted.
-It also arises if you have particles which do not or only weakly interact
-with neighbours or the environment and hence have velocities which are higher
-than the maximum signal velocity otherwise.
-
-
-
-Peano does support tunneling in principle, but you can tell the update script
-if you want to get a warning if particles tunnel - in some applications, this is
-unphysical.
-Tunneling is not handled separately.
-Instead, we simply lift a particle to a coarser level on which we can
-accommodate the movement by just pushing the particle one cell.
-After it is pushed, we drop the particle again.
-
-
-# Parallelisation
-
-Peano's sorting in the context is shaped by the observation that we only ever
-let particles move one cell at a time.
-If this is violated, we first lift particles to a coarser level and then drop
-them again (this is not totally true - see below - but overall indeed a
-guiding principle).
-
-
-If two cells are held by different trees and a particle leaves the domain of
-tree A, we send it out at the end of the traversal.
-In the next traversal, it will be received by B (and subsequently dropped
-within the tree hierarchy).
-
-
-# Sieving
-
-Sieving is Peano's word for global sorting:
-There are cases, where we might not be able to lift particles easily, or we
-might not want to.
-In this case, we move the particle into the sieve set.
-The sieve set is the set of particles that we cannot push into the right
-cell in an iteration.
-
-In the subsequent mesh traversal, the particles from the sieve set are sieved
-straight into the right cell.
-Sieving means bucket sorting.
-While this is a robust way to handle particle sorting, it can become very
-expensive if the sieve sets grow large.
-
-Each particle type has a sieve set tied to it.
-So you can tell any particle set that one if its particles has to be lifted
-(moved) into the sieve set and you can ask the global sieve set tied to a
-particle at any point if there are still particles within that set that have
-to be dumped into the domain.
-All of this is realised through a static attribute
-toolbox::particles::ParticleSet::_sieveParticles which holds and instance
-of toolbox::particles::SieveParticles.
-
-Various sieving strategies exist. They are realised by the different subclasses
-of peano4.toolbox.particles.api.AbstractUpdateParticleGridAssociation.
-However, this superclass holds all the relevant docu and an overview of the
-usage of the sieve set.
-
+Particle containers reject subtree-task replication, so a particle step traverses
+each rank serially. MPI rank boundaries still use local and virtual particle
+states and the generated `InterRank` merge. No intra-rank particle merge is
+issued.
 
 */

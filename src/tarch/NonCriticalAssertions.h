@@ -3,12 +3,10 @@
 #pragma once
 
 /**
- * @page tarch_NoncriticalAssertions Non-critical assertions
+ * @page tarch_NonCriticalAssertions Non-critical assertions
  *
- * @brief A non-critical assertion indicates that something went horribly
- * wrong due to a programming error, without stopping the run immediately.
- * We record which rank first raised it and let every rank query and adopt
- * that rank, so a caller can decide when and how to wind down.
+ * @brief A non-critical assertion records a programming error and lets the run continue. Every
+ * rank can read and adopt the rank that raised the first one.
  */
 namespace tarch {
   void triggerNonCriticalAssertion(

@@ -9,15 +9,7 @@ from peano4.solversteps.ActionSet import ActionSet
 
 
 class UpdateParallelState(ActionSet):
-    """Maintains local and virtual particle ownership across tree boundaries.
-
-    First-touch processing marks local particles that left a tree as virtual.
-    Last-touch processing records local particle identities and removes virtual
-    copies; the next boundary exchange recreates current copies from their owner.
-    ``ParticleSet.merge()`` ignores incoming virtual copies to prevent replicas
-    from being echoed between neighbouring trees.
-
-    Particle positions remain fixed between this action's first- and last-touch
+    """Particle positions remain fixed between this action's first- and last-touch
     callbacks. Add the action after insertion and sorting callbacks whenever a
     traversal can change particle positions or ownership.
 
@@ -66,7 +58,7 @@ class UpdateParallelState(ActionSet):
     ) {
       particle->setParallelState(globaldata::{{PARTICLE}}::ParallelState::Virtual);
       logDebug(
-        "Particle " << particle->toString() << " left tree " << _spacetreeId
+        "Particle " << particle->toString() << " left tree " << _treeId
                     << " through " << marker.toString() << "."
       );
       ++_numberOfParticlesThatHaveLeftTheirDomain;
@@ -84,7 +76,7 @@ class UpdateParallelState(ActionSet):
         true,
         marker.getX(),
         marker.getH(),
-        _spacetreeId,
+        _treeId,
         "UpdateParallelState::__Template_TouchVertexFirstTime"
       );
       toolbox::particles::assignmentchecks::assignParticleToVertex(
@@ -94,7 +86,48 @@ class UpdateParallelState(ActionSet):
         false,
         marker.getX(),
         marker.getH(),
-        _spacetreeId,
+        _treeId,
+        "UpdateParallelState::__Template_TouchVertexFirstTime",
+        marker.getX(),
+        marker.getH()
+      );
+    }
+    // The boundary exchange rebuilds the vertex copy from a neighbour copy that
+    // stores the particle as virtual.
+    else if (
+      particleWillBeLocal
+      and particle->getParallelState() == globaldata::{{PARTICLE}}::ParallelState::Virtual
+    ) {
+      particle->setParallelState(globaldata::{{PARTICLE}}::ParallelState::Local);
+      logDebug(
+        "Virtual copy of particle " << particle->toString() << " lies in a local cell of tree "
+                                    << _treeId << " at " << marker.toString() << " and becomes local."
+      );
+
+#if PEANO_ASSERTIONS
+      const int particleId = particle->getPartid();
+#else
+      const int particleId = -1;
+#endif
+
+      toolbox::particles::assignmentchecks::detachParticleFromVertex(
+        "{{PARTICLE}}",
+        particle->getX(),
+        particleId,
+        false,
+        marker.getX(),
+        marker.getH(),
+        _treeId,
+        "UpdateParallelState::__Template_TouchVertexFirstTime"
+      );
+      toolbox::particles::assignmentchecks::assignParticleToVertex(
+        "{{PARTICLE}}",
+        particle->getX(),
+        particleId,
+        true,
+        marker.getX(),
+        marker.getH(),
+        _treeId,
         "UpdateParallelState::__Template_TouchVertexFirstTime",
         marker.getX(),
         marker.getH()
@@ -126,7 +159,7 @@ class UpdateParallelState(ActionSet):
 
       logDebug(
         "Remove virtual particle " << particle->toString() << " from "
-                                   << marker.toString() << " on tree " << _spacetreeId << "."
+                                   << marker.toString() << " on tree " << _treeId << "."
       );
       toolbox::particles::assignmentchecks::detachParticleFromVertex(
         "{{PARTICLE}}",
@@ -135,7 +168,7 @@ class UpdateParallelState(ActionSet):
         false,
         marker.getX(),
         marker.getH(),
-        _spacetreeId,
+        _treeId,
         "UpdateParallelState::__Template_TouchVertexLastTime"
       );
       toolbox::particles::assignmentchecks::eraseParticle(
@@ -145,7 +178,7 @@ class UpdateParallelState(ActionSet):
         false,
         marker.getX(),
         marker.getH(),
-        _spacetreeId,
+        _treeId,
         "UpdateParallelState::__Template_TouchVertexLastTime"
       );
       ++_numberOfExpiredHaloParticles;
@@ -157,7 +190,7 @@ class UpdateParallelState(ActionSet):
     )
 
     def get_constructor_body(self):
-        return "  _spacetreeId = treeNumber;\n"
+        return "  _treeId = treeNumber;\n"
 
     def get_body_of_operation(self, operation_name):
         if operation_name == ActionSet.OPERATION_BEGIN_TRAVERSAL:
@@ -192,7 +225,7 @@ class UpdateParallelState(ActionSet):
 
     def get_attributes(self):
         return """
-  int _spacetreeId;
+  int _treeId;
   int _numberOfRemainingLocalParticles;
   std::set<std::array<int, 2>> _remainingLocalParticleNumbers;
   int _numberOfExpiredHaloParticles;

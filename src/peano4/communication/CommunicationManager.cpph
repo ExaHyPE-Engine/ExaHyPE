@@ -1,0 +1,288 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+/**
+ * Sends one rank pair's boundary payload, receives the peer's, and hands both
+ * messages to the poller. Both ranks derive the same canonical boundary order
+ * and payload length from the refinement and ownership plans.
+ */
+template <class Container>
+void peano4::communication::CommunicationManager::postPayloadExchange(Container& stackContainer, const int remoteRank) {
+  auto& rankExchange = stackContainer.getBoundaryDataAggregation().getRankExchange(remoteRank);
+
+  const int numberOfElements = toMessageElementCount(rankExchange.outgoingPayload.size());
+  if (numberOfElements == 0) {
+    rankExchange.transferComplete.store(true, std::memory_order_release);
+    return;
+  }
+
+  const auto payloadChannel = getInstance().getAggregatedBoundaryExchangeMetaInformation(
+    stackContainer.getContainerId(),
+    AggregatedBoundaryMessage::Payload
+  );
+
+  // Receives go out first, so a peer whose send is already posted matches a
+  // waiting receive and parks no data as an unexpected message.
+  rankExchange.incomingPayload.startReceive(
+    peano4::stacks::SendReceiveContext::InterRank,
+    remoteRank,
+    payloadChannel.first,
+    payloadChannel.second,
+    numberOfElements
+  );
+
+  rankExchange.outgoingPayload
+    .startSend(peano4::stacks::SendReceiveContext::InterRank, remoteRank, payloadChannel.first, payloadChannel.second);
+
+  // From here on the requests belong to the manager's poller; nothing else may
+  // test them, as two threads must not touch one request. Consumers read the
+  // transferComplete flag, which the poller raises after both requests finish.
+  getInstance().registerInFlightTransfer(
+    remoteRank,
+    [&rankExchange]() -> bool {
+      const bool sendFinished    = rankExchange.outgoingPayload.tryToFinishSendOrReceive();
+      const bool receiveFinished = rankExchange.incomingPayload.tryToFinishSendOrReceive();
+      return sendFinished and receiveFinished;
+    },
+    [&rankExchange]() { rankExchange.transferComplete.store(true, std::memory_order_release); }
+  );
+}
+
+/**
+ * Packs the tree's rank-boundary pool slots towards every neighbour rank and
+ * posts the aggregated messages.
+ *
+ * The pack list towards a rank names the entities both ranks touch, by local
+ * pool slot and in canonical level, normal, and lattice-key order. The slots
+ * are copied, so the entities keep their state for the following local sweeps.
+ * Every rank pair is posted before anything waits, so no pair blocks another.
+ */
+template <class Container>
+void peano4::communication::CommunicationManager::packPoolSlots(
+  Container&                           stackContainer,
+  const std::vector<std::vector<int>>& packLists
+) {
+  auto&       aggregation = stackContainer.getBoundaryDataAggregation();
+  auto&       manager     = getInstance();
+  const auto& remoteRanks = manager.getRemoteRanks();
+
+  assertion(packLists.size() == remoteRanks.size(), packLists.size(), remoteRanks.size());
+  aggregation.rebuildRankTable(manager.getTopologyVersion(), remoteRanks);
+  for (std::size_t rankNumber = 0; rankNumber < remoteRanks.size(); rankNumber++) {
+    const int remoteRank = remoteRanks[rankNumber];
+    aggregation.prepareRankExchange(manager._generation, remoteRank);
+    auto&       rankExchange = aggregation.getRankExchange(remoteRank);
+    const auto& packList     = packLists[rankNumber];
+    // Checks the pack list against the message interface's element range while
+    // the untruncated size is still available.
+    toMessageElementCount(packList.size());
+    if (not packList.empty()) {
+      auto destination = rankExchange.outgoingPayload.pushBlock(packList.size());
+      for (std::size_t packPosition = 0; packPosition < packList.size(); packPosition++) {
+        const int poolSlot = packList[packPosition];
+        assertion(
+          poolSlot >= 0 and static_cast<std::size_t>(poolSlot) < stackContainer.getPoolSize(),
+          poolSlot,
+          stackContainer.getPoolSize(),
+          remoteRank,
+          packPosition
+        );
+        // Assigning into the slot reuses its buffer.
+        destination.get(packPosition) = stackContainer.getPoolSlot(poolSlot);
+      }
+    }
+    postPayloadExchange(stackContainer, remoteRank);
+  }
+}
+
+/**
+ * Moves pool slot data between ranks during a repartition. Both ranks hold
+ * matching transfer lists, ordered by the entities' lattice keys, so every
+ * receive posts first with its known length and every send follows. A caller
+ * has drained all other traffic from the channels, so this completes the
+ * transfers synchronously.
+ */
+template <class Container>
+void peano4::communication::CommunicationManager::transferPoolSlots(
+  Container&                                                    stackContainer,
+  const std::map<int, std::vector<int>>&                        sendSlotLists,
+  const std::map<int, std::vector<int>>&                        receiveSlotLists,
+  std::vector<std::pair<int, typename Container::ElementType>>& pendingReceives
+) {
+  using Stack = typename Container::Stack;
+
+  const int  containerId = stackContainer.getContainerId();
+  const auto payloadChannel =
+    getInstance().getAggregatedBoundaryExchangeMetaInformation(containerId, AggregatedBoundaryMessage::Migration);
+
+  std::map<int, Stack> incomingStacks;
+  for (const auto& [remoteRank, receiveSlots] : receiveSlotLists) {
+    const int numberOfElements = toMessageElementCount(receiveSlots.size());
+    if (numberOfElements == 0) {
+      continue;
+    }
+    auto& stack = incomingStacks[remoteRank];
+    stack.startReceive(
+      peano4::stacks::SendReceiveContext::InterRank,
+      remoteRank,
+      payloadChannel.first,
+      payloadChannel.second,
+      numberOfElements
+    );
+  }
+  std::map<int, Stack> outgoingStacks;
+  for (const auto& [remoteRank, sendSlots] : sendSlotLists) {
+    const int numberOfElements = toMessageElementCount(sendSlots.size());
+    if (numberOfElements == 0) {
+      continue;
+    }
+    auto& stack = outgoingStacks[remoteRank];
+    auto  block = stack.pushBlock(static_cast<std::size_t>(numberOfElements));
+    for (std::size_t slotNumber = 0; slotNumber < static_cast<std::size_t>(numberOfElements); slotNumber++) {
+      const int poolSlot = sendSlots[slotNumber];
+      assertion(
+        poolSlot >= 0 and static_cast<std::size_t>(poolSlot) < stackContainer.getPoolSize(),
+        poolSlot,
+        stackContainer.getPoolSize(),
+        remoteRank,
+        slotNumber
+      );
+      block.get(slotNumber) = stackContainer.getPoolSlot(poolSlot);
+    }
+    stack.startSend(
+      peano4::stacks::SendReceiveContext::InterRank,
+      remoteRank,
+      payloadChannel.first,
+      payloadChannel.second
+    );
+  }
+
+  tarch::mpi::Diagnostics::getInstance().setDeadlockWarningTimeStamp();
+  tarch::mpi::Diagnostics::getInstance().setDeadlockTimeoutTimeStamp();
+
+  bool                   transfersPending = true;
+  tarch::mpi::PollPacing pacing;
+  while (transfersPending) {
+    transfersPending           = false;
+    int firstUnfinishedPartner = -1;
+    for (auto& [remoteRank, stack] : incomingStacks) {
+      if (not stack.tryToFinishSendOrReceive()) {
+        transfersPending       = true;
+        firstUnfinishedPartner = firstUnfinishedPartner < 0 ? remoteRank : firstUnfinishedPartner;
+      }
+    }
+    for (auto& [remoteRank, stack] : outgoingStacks) {
+      if (not stack.tryToFinishSendOrReceive()) {
+        transfersPending       = true;
+        firstUnfinishedPartner = firstUnfinishedPartner < 0 ? remoteRank : firstUnfinishedPartner;
+      }
+    }
+    if (transfersPending and pacing.reportProgressNow()) {
+      tarch::mpi::Diagnostics::getInstance().writeTimeoutWarning(
+        "peano4::communication::CommunicationManager",
+        "transferPoolSlots()",
+        firstUnfinishedPartner,
+        payloadChannel.first,
+        1
+      );
+      tarch::mpi::Diagnostics::getInstance().triggerDeadlockTimeout(
+        "peano4::communication::CommunicationManager",
+        "transferPoolSlots()",
+        firstUnfinishedPartner,
+        payloadChannel.first,
+        1
+      );
+    }
+  }
+
+  for (auto& [remoteRank, stack] : incomingStacks) {
+    const auto& receiveSlots     = receiveSlotLists.at(remoteRank);
+    const int   numberOfElements = toMessageElementCount(receiveSlots.size());
+    for (std::size_t slotNumber = 0; slotNumber < receiveSlots.size(); slotNumber++) {
+      const int poolSlot = receiveSlots[slotNumber];
+      assertion(poolSlot >= 0, poolSlot, remoteRank, slotNumber);
+      pendingReceives.emplace_back(poolSlot, std::move(stack.top(numberOfElements - 1 - static_cast<int>(slotNumber))));
+    }
+    stack.clear();
+  }
+}
+
+/**
+ * Waits for the neighbour ranks' aggregated messages and unpacks each rank's
+ * payload into the (entity, remote rank) frozen slots in pack-list order.
+ *
+ * Both ranks pack the entities they hold together in the same order, so the
+ * received elements land behind the rank's frozen slot base one by one without
+ * any per-entity header.
+ */
+template <class Container>
+void peano4::communication::CommunicationManager::finishPoolExchange(
+  Container&                           stackContainer,
+  const std::vector<std::vector<int>>& packLists,
+  const std::vector<int>&              frozenSlotBases
+) {
+  auto&       aggregation = stackContainer.getBoundaryDataAggregation();
+  auto&       manager     = getInstance();
+  const auto& remoteRanks = manager.getRemoteRanks();
+
+  assertion(packLists.size() == remoteRanks.size(), packLists.size(), remoteRanks.size());
+  assertion(frozenSlotBases.size() == remoteRanks.size(), frozenSlotBases.size(), remoteRanks.size());
+
+  const auto payloadChannel = manager.getAggregatedBoundaryExchangeMetaInformation(
+    stackContainer.getContainerId(),
+    AggregatedBoundaryMessage::Payload
+  );
+
+  tarch::mpi::Diagnostics::getInstance().setDeadlockWarningTimeStamp();
+  tarch::mpi::Diagnostics::getInstance().setDeadlockTimeoutTimeStamp();
+
+  for (std::size_t rankNumber = 0; rankNumber < remoteRanks.size(); rankNumber++) {
+    const int remoteRank   = remoteRanks[rankNumber];
+    auto&     rankExchange = aggregation.getRankExchange(remoteRank);
+
+    tarch::mpi::PollPacing pacing;
+    while (not rankExchange.transferComplete.load(std::memory_order_acquire)) {
+      // Under the serial manager this call is what completes the aggregated
+      // transfers; under the threaded one it is a no-op and the wait ends
+      // when the polling thread flags them complete.
+      tarch::mpi::AbstractCommunicationManager::getInstance().progress();
+      if (pacing.reportProgressNow()) {
+        tarch::mpi::Diagnostics::getInstance().writeTimeoutWarning(
+          "peano4::communication::CommunicationManager",
+          "finishPoolExchange()",
+          remoteRank,
+          payloadChannel.first,
+          1
+        );
+        tarch::mpi::Diagnostics::getInstance().triggerDeadlockTimeout(
+          "peano4::communication::CommunicationManager",
+          "finishPoolExchange()",
+          remoteRank,
+          payloadChannel.first,
+          1
+        );
+      }
+    }
+
+    const auto& packList = packLists[rankNumber];
+    assertion(
+      rankExchange.incomingPayload.size() == packList.size(),
+      rankExchange.incomingPayload.size(),
+      packList.size(),
+      remoteRank
+    );
+    assertion(frozenSlotBases[rankNumber] >= 0, frozenSlotBases[rankNumber], remoteRank);
+    for (std::size_t packPosition = 0; packPosition < packList.size(); packPosition++) {
+      const auto poolSlot = static_cast<std::size_t>(frozenSlotBases[rankNumber]) + packPosition;
+      assertion(
+        poolSlot < stackContainer.getPoolSize()
+          and poolSlot <= static_cast<std::size_t>(std::numeric_limits<int>::max()),
+        poolSlot,
+        stackContainer.getPoolSize(),
+        remoteRank,
+        packPosition
+      );
+      stackContainer.getPoolSlot(static_cast<int>(poolSlot)) = std::move(rankExchange.incomingPayload[packPosition]);
+    }
+  }
+}

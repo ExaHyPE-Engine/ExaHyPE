@@ -6,17 +6,15 @@
 #include "tarch/mpi/Rank.h"
 
 {% for container in VERTEX_DATA_CONTAINERS -%}
-::peano4::grid::StackContainer<{{container.stack}}> {{FULL_QUALIFIED_CLASSNAME}}::{{container.name}}StackContainer({{container.container_id}});
-::peano4::grid::StackContainer<{{container.stack}}> {{FULL_QUALIFIED_CLASSNAME}}::{{container.name}}HangingStackContainer({{container.hanging_container_id}});
+::peano4::data::RegisteredStackContainer<{{container.stack}}> {{FULL_QUALIFIED_CLASSNAME}}::{{container.name}}StackContainer({{container.container_id}}, ::peano4::data::ManagedContainerKind::VertexData);
 {% endfor -%}
 
 {% for container in FACE_DATA_CONTAINERS -%}
-::peano4::grid::StackContainer<{{container.stack}}> {{FULL_QUALIFIED_CLASSNAME}}::{{container.name}}StackContainer({{container.container_id}});
-::peano4::grid::StackContainer<{{container.stack}}> {{FULL_QUALIFIED_CLASSNAME}}::{{container.name}}HangingStackContainer({{container.hanging_container_id}});
+::peano4::data::RegisteredStackContainer<{{container.stack}}> {{FULL_QUALIFIED_CLASSNAME}}::{{container.name}}StackContainer({{container.container_id}}, ::peano4::data::ManagedContainerKind::FaceData);
 {% endfor -%}
 
 {% for container in CELL_DATA_CONTAINERS -%}
-::peano4::grid::StackContainer<{{container.stack}}> {{FULL_QUALIFIED_CLASSNAME}}::{{container.name}}StackContainer({{container.container_id}});
+::peano4::data::RegisteredStackContainer<{{container.stack}}> {{FULL_QUALIFIED_CLASSNAME}}::{{container.name}}StackContainer({{container.container_id}}, ::peano4::data::ManagedContainerKind::CellData);
 {% endfor %}
 
 std::uint64_t {{FULL_QUALIFIED_CLASSNAME}}::_localCellDataMemoryUsageInBytes = 0;
@@ -30,7 +28,8 @@ namespace {
   constexpr int NumberOfDataMemoryWords = 3;
 
   /**
-   * The sums of the preceding sweep, and whether they are still waiting to be published.
+   * Holds the sums of the preceding sweep. hasPendingDataMemory says whether
+   * the global counters still have to read them.
    */
   std::array<std::uint64_t, NumberOfDataMemoryWords> reducedDataMemory{};
   bool                                              hasPendingDataMemory = false;
@@ -39,11 +38,9 @@ namespace {
 void {{FULL_QUALIFIED_CLASSNAME}}::shutdown() {
 {%- for container in VERTEX_DATA_CONTAINERS %}
   {{ container.name }}StackContainer.clear();
-  {{ container.name }}HangingStackContainer.clear();
 {%- endfor %}
 {%- for container in FACE_DATA_CONTAINERS %}
   {{ container.name }}StackContainer.clear();
-  {{ container.name }}HangingStackContainer.clear();
 {%- endfor %}
 {%- for container in CELL_DATA_CONTAINERS %}
   {{ container.name }}StackContainer.clear();
@@ -60,16 +57,14 @@ void {{FULL_QUALIFIED_CLASSNAME}}::updateMemoryUsage() {
 {%- endfor %}
 {%- for container in FACE_DATA_CONTAINERS %}
   _localFaceDataMemoryUsageInBytes += {{container.name}}StackContainer.size() * {{container.fq}}::Cardinality * sizeof({{container.fq}}::DoFType);
-  _localFaceDataMemoryUsageInBytes += {{container.name}}HangingStackContainer.size() * {{container.fq}}::Cardinality * sizeof({{container.fq}}::DoFType);
 {%- endfor %}
 {%- for container in VERTEX_DATA_CONTAINERS %}
   _localVertexDataMemoryUsageInBytes += {{container.name}}StackContainer.size() * {{container.fq}}::Cardinality * sizeof({{container.fq}}::DoFType);
-  _localVertexDataMemoryUsageInBytes += {{container.name}}HangingStackContainer.size() * {{container.fq}}::Cardinality * sizeof({{container.fq}}::DoFType);
 {%- endfor %}
 
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1) {
-    // Publish the sums the preceding sweep reduced, so the global figures lag that sweep. The
-    // first sweep has nothing to publish yet and falls back to the local view.
+    // The global counters take the sums the preceding sweep reduced, so they lag that sweep by
+    // one. The first sweep has no reduced sums and falls back to the local counters.
     if (hasPendingDataMemory) {
       _globalCellDataMemoryUsageInBytes   = reducedDataMemory[0];
       _globalFaceDataMemoryUsageInBytes   = reducedDataMemory[1];
@@ -80,7 +75,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::updateMemoryUsage() {
       _globalVertexDataMemoryUsageInBytes = _localVertexDataMemoryUsageInBytes;
     }
 
-    // Reduce this sweep's figures for the next one to publish. Every rank reaches this once per
+    // Reduce this sweep's counters for the next sweep to read. Every rank reaches this once per
     // sweep, right after its traversal has joined.
     reducedDataMemory[0] = _localCellDataMemoryUsageInBytes;
     reducedDataMemory[1] = _localFaceDataMemoryUsageInBytes;

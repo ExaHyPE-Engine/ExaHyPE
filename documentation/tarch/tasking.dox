@@ -1,0 +1,47 @@
+/**
+
+\page page_tarch_tasking Tasking
+
+\tableofcontents
+
+The tasking backend maps dependency graphs onto OpenMP and is always built.
+Callers work against the classes and functions in tarch::tasking.
+
+# Runtime
+
+tarch::tasking::Runtime owns the backend's process-wide state. init() caps the
+OpenMP thread count to the processors available to the process and records the
+result. shutdown() is a lifecycle hook; OpenMP requires no explicit teardown.
+
+# Tasks
+
+One unit of work is a subclass of tarch::tasking::Task, or a
+tarch::tasking::FunctorTask for lambda-based work. tarch::tasking::spawnTask()
+owns a task after submission.
+
+spawnTask() accepts incoming and outgoing dependencies as token addresses. An
+incoming token delays a task until the producer of that token completes.
+tarch::tasking::waitForDependency() waits for one token, while
+tarch::tasking::waitForAllTasks() waits for the task region.
+
+# Synchronisation
+
+Keep a `std::mutex` next to the data it protects and enter a cold critical
+region through a scoped guard:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+{
+  const std::scoped_lock lock(myMutex);
+  updateProtectedState();
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+`std::unique_lock` with `std::defer_lock` supports conditional locking and early
+release. Polling and traversal paths use tasks or atomic updates so that a
+contending thread can return without serialising the process.
+
+`tarch/accelerator/Atomic.h` offers min, max, add and increment updates through
+`std::atomic_ref` with relaxed ordering. These operations are atomic but are not
+guaranteed to be lock-free and do not order unrelated memory.
+
+*/

@@ -1,48 +1,44 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-
 #pragma once
 
-#include "ParticleHelper.h"
+#include "exahype2/fv/particles/ParticleHelper.h"
 #include "tarch/la/Vector.h"
 
-using namespace exahype2::fv::particles::utils;
+namespace exahype2::fv::particles::integration {
+  /**
+   * Returns the state with
+   * v_new = v + stepFraction * timeStepSize * a and
+   * x_new = x + stepFraction * timeStepSize * v.
+   */
+  exahype2::fv::particles::utils::ParticleState updatePartialStep(
+    const exahype2::fv::particles::utils::ParticleState& current,
+    double                                               timeStepSize,
+    double                                               stepFraction
+  );
 
-namespace exahype2 {
-  namespace fv {
-    namespace particles {
-      namespace integration {
-        /**
-         * Compute a forward step using the current state:
-         *
-         * vₙ₊₁ = vₙ + stepFraction · Δt · aₙ
-         * xₙ₊₁ = xₙ + stepFraction · Δt · vₙ
-         */
-        ParticleState updatePartialStep(const ParticleState& current, double timeStepSize, double stepFraction);
+  /**
+   * Returns the state with
+   * v_new = v of base + factor * timeStepSize * a of update and
+   * x_new = x of base + factor * timeStepSize * v of update.
+   */
+  exahype2::fv::particles::utils::ParticleState updatePartialStepWithBase(
+    const exahype2::fv::particles::utils::ParticleState& base,
+    const exahype2::fv::particles::utils::ParticleState& update,
+    double                                               timeStepSize,
+    double                                               factor
+  );
 
-        /**
-         * Combine two states by advancing the base using the update state:
-         *
-         * vₙ₊₁ = v_base + factor · Δt · a_update
-         * xₙ₊₁ = x_base + factor · Δt · v_update
-         */
-        ParticleState updatePartialStepWithBase(
-          const ParticleState& base,
-          const ParticleState& update,
-          double               timeStepSize,
-          double               factor
-        );
+  /**
+   * Returns the state with
+   * v_new = v + stepFraction * timeStepSize * a and
+   * x_new = x + stepFraction * timeStepSize * v_new.
+   */
+  exahype2::fv::particles::utils::ParticleState updateMidpointStep(
+    const exahype2::fv::particles::utils::ParticleState& current,
+    double                                               timeStepSize,
+    double                                               stepFraction
+  );
+} // namespace exahype2::fv::particles::integration
 
-        /**
-         * Compute a forward step using the current state:
-         *
-         * vₙ₊₁ = vₙ + stepFraction · Δt · aₙ
-         * xₙ₊₁ = xₙ + stepFraction · Δt · vₙ₊₁
-         */
-        ParticleState updateMidpointStep(const ParticleState& current, double timeStepSize, double stepFraction);
-      } // namespace integration
-    } // namespace particles
-  } // namespace fv
-} // namespace exahype2
-
-#include "ParticleIntegrationHelper.cpph"
+#include "exahype2/fv/particles/ParticleIntegrationHelper.cpph"

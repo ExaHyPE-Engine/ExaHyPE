@@ -1,7 +1,5 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-"""Euler corner blast with reflective lower and left walls."""
-
 import exahype2
 import euler
 

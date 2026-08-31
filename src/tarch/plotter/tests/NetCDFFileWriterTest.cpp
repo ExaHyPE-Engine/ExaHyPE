@@ -12,7 +12,7 @@
 #include <netcdf.h>
 
 namespace {
-  void checkNc(int status, const std::string& where) {
+  void checkNc(const int status, const std::string& where) {
     if (status != NC_NOERR) {
       throw std::runtime_error("NetCDF test error in " + where + ": " + std::string(nc_strerror(status)));
     }
@@ -32,14 +32,14 @@ namespace {
     int ncid = -1;
     checkNc(nc_open(filepath.c_str(), NC_NOWRITE, &ncid), "nc_open(" + filepath + ")");
 
-    // Read everything we assert first, close the file, then check, so a failed
-    // expectation never leaves the file handle open.
+    // Every value is read before the file closes, so a failed expectation never leaves
+    // the file handle open.
     auto readVarId = [&](const char* name) {
       int varId = -1;
       checkNc(nc_inq_varid(ncid, name, &varId), std::string("inq var ") + name);
       return varId;
     };
-    auto readDimLen = [&](const char* name) {
+    auto readDimensionLength = [&](const char* name) {
       int dimId = -1;
       checkNc(nc_inq_dimid(ncid, name, &dimId), std::string("inq dim ") + name);
       std::size_t length = 0;
@@ -51,17 +51,19 @@ namespace {
     int       topologyDimension = 0;
     checkNc(nc_get_att_int(ncid, meshVar, "topology_dimension", &topologyDimension), "mesh3d topology_dimension");
 
-    const std::size_t nodeCount   = readDimLen("nMesh3d_node");
-    const std::size_t volumeCount = readDimLen("nMesh3d_volume");
+    const std::size_t nodeCount   = readDimensionLength("nMesh3d_node");
+    const std::size_t volumeCount = readDimensionLength("nMesh3d_volume");
 
-    // The first volume belongs to rank 0 (offsets are assigned by an MPI scan,
-    // so rank 0 starts at 0), so its connectivity and node coordinates are
-    // deterministic regardless of the number of ranks.
-    const int   volumeNodesVar  = readVarId("volume_nodes");
-    std::size_t connStart[2]    = {0, 0};
-    std::size_t connCount[2]    = {1, 8};
-    int         connectivity[8] = {-2, -2, -2, -2, -2, -2, -2, -2};
-    checkNc(nc_get_vara_int(ncid, volumeNodesVar, connStart, connCount, connectivity), "read volume_nodes");
+    // The MPI scan gives rank 0 the offset 0, so the first volume belongs to rank 0 and
+    // its connectivity and node coordinates hold for every rank count.
+    const int   volumeNodesVar       = readVarId("volume_nodes");
+    std::size_t connectivityStart[2] = {0, 0};
+    std::size_t connectivityCount[2] = {1, 8};
+    int         connectivity[8]      = {-2, -2, -2, -2, -2, -2, -2, -2};
+    checkNc(
+      nc_get_vara_int(ncid, volumeNodesVar, connectivityStart, connectivityCount, connectivity),
+      "read volume_nodes"
+    );
 
     std::size_t orderingLen = 0;
     checkNc(nc_inq_attlen(ncid, volumeNodesVar, "node_ordering", &orderingLen), "volume_nodes node_ordering len");
@@ -71,14 +73,14 @@ namespace {
     const int   shapeVar      = readVarId("volume_shape_type");
     std::size_t shapeStart[1] = {0};
     std::size_t shapeCount[1] = {1};
-    int         shape         = -1;
-    checkNc(nc_get_vara_int(ncid, shapeVar, shapeStart, shapeCount, &shape), "read volume_shape_type");
+    int         shapeTag      = -1;
+    checkNc(nc_get_vara_int(ncid, shapeVar, shapeStart, shapeCount, &shapeTag), "read volume_shape_type");
 
-    const int   zVar      = readVarId("z");
-    std::size_t zStart[1] = {0};
-    std::size_t zCount[1] = {8};
-    float       z[8]      = {0.0f};
-    checkNc(nc_get_vara_float(ncid, zVar, zStart, zCount, z), "read z");
+    const int   zVar            = readVarId("z");
+    std::size_t zStart[1]       = {0};
+    std::size_t zCount[1]       = {8};
+    float       zCoordinates[8] = {0.0f};
+    checkNc(nc_get_vara_float(ncid, zVar, zStart, zCount, zCoordinates), "read z");
 
     const int   densityVar = readVarId("Density");
     std::size_t attrLen    = 0;
@@ -109,12 +111,12 @@ namespace {
     if (nodeOrdering.find("VTK_HEXAHEDRON") == std::string::npos) {
       throw std::runtime_error("Expected a documented VTK_HEXAHEDRON node_ordering attribute on volume_nodes.");
     }
-    if (shape != 2) {
+    if (shapeTag != 2) {
       throw std::runtime_error("Expected UGRID hexahedron shape tag 2.");
     }
     const float expectedZ[8] = {0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f};
     for (int i = 0; i < 8; ++i) {
-      if (z[i] != expectedZ[i]) {
+      if (zCoordinates[i] != expectedZ[i]) {
         throw std::runtime_error("Unexpected 3D hexahedron z coordinates.");
       }
     }
@@ -176,43 +178,40 @@ namespace {
   }
 
   void cleanup(const std::string& filename) {
-    std::filesystem::path p(filename);
-    if (std::filesystem::exists(p)) {
-      std::filesystem::remove(p);
+    std::filesystem::path filePath(filename);
+    if (std::filesystem::exists(filePath)) {
+      std::filesystem::remove(filePath);
     }
   }
 } // namespace
 
 tarch::plotter::tests::NetCDFFileWriterTest::NetCDFFileWriterTest() :
-  TestCase("tarch::plotter::tests::NetCDFFileWriterTest") {}
+  tarch::tests::TestCase("tarch::plotter::tests::NetCDFFileWriterTest") {}
 
 void tarch::plotter::tests::NetCDFFileWriterTest::testHeterogeneousRanks() {
-  // Only the global master contributes geometry + a "Material" cell field; every
-  // other rank leaves the plotter empty. With parallel collective IO the empty
-  // ranks must still define and write the same NetCDF variables, which only works
-  // because the field schema is reduced globally. Without that, this writeToFile
-  // deadlocks (or corrupts the file) for more than one rank.
+  // Only the global master contributes geometry and a "Material" cell field, and every
+  // other rank leaves the plotter empty. writeToFile() stays collective for all ranks.
   const std::string filename = "NetCDFTestHeterogeneous";
   const std::string fullPath = (tarch::tests::getWritableTestDirectory() / (filename + ".nc")).string();
 
   {
-    NetCDFFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
+    NetCDFFileWriter plotter(tarch::tests::getWritableTestDirectory().string());
+    plotter.acquirePiece(0);
     if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-      auto v  = plotter.createVertexPlotter(0);
-      auto c  = plotter.createCellPlotter(0);
-      auto cd = plotter.createCellDataPlotter(0, "Material", 1);
+      auto vertexPlotter   = plotter.createVertexPlotter(0);
+      auto cellPlotter     = plotter.createCellPlotter(0);
+      auto cellDataPlotter = plotter.createCellDataPlotter(0, "Material", 1);
 
-      int p0      = v->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
-      int p1      = v->plotVertex(tarch::la::Vector<2, double>{1.0, 0.0});
-      int p2      = v->plotVertex(tarch::la::Vector<2, double>{1.0, 1.0});
-      int p3      = v->plotVertex(tarch::la::Vector<2, double>{0.0, 1.0});
+      int p0      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
+      int p1      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{1.0, 0.0});
+      int p2      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{1.0, 1.0});
+      int p3      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.0, 1.0});
       int quad[4] = {p0, p1, p2, p3};
-      int cell    = c->plotQuadrangle(quad);
-      cd->plotCellData(cell, 3.0);
+      int cell    = cellPlotter->plotQuadrangle(quad);
+      cellDataPlotter->plotCellData(cell, 3.0);
     }
-    // All non-master ranks intentionally contribute nothing.
 
-    plotter.writeToFile(filename, 0); // collective; must not deadlock
+    plotter.writeToFile(filename, 0);
   }
 
   barrier();
@@ -224,10 +223,8 @@ void tarch::plotter::tests::NetCDFFileWriterTest::testHeterogeneousRanks() {
 }
 
 void tarch::plotter::tests::NetCDFFileWriterTest::run() {
-  // The read-back helpers report a malformed file by throwing. Without this catch the
-  // exception leaves run(), which the test framework does not guard, and the whole unit-test
-  // binary aborts instead of recording a failed case. The remaining cases are then skipped,
-  // so the counter has to be raised here as well.
+  // The read-back helpers report a malformed file by throwing, and the test framework
+  // does not guard run(), so this catch records the failure and keeps the binary alive.
   try {
     testMethod(test2DSimpleTriangle);
     testMethod(test2DQuadWithData);
@@ -247,8 +244,9 @@ void tarch::plotter::tests::NetCDFFileWriterTest::run() {
 }
 
 void tarch::plotter::tests::NetCDFFileWriterTest::testInvalidIdentifierThrows() {
-  NetCDFFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
-  bool             thrown = false;
+  NetCDFFileWriter plotter(tarch::tests::getWritableTestDirectory().string());
+  plotter.acquirePiece(0);
+  bool thrown = false;
   try {
     plotter.createCellDataPlotter(0, "bad/name", 1);
   } catch (const std::runtime_error&) {
@@ -264,16 +262,17 @@ void tarch::plotter::tests::NetCDFFileWriterTest::test2DSimpleTriangle() {
   const std::string fullPath = (tarch::tests::getWritableTestDirectory() / (filename + ".nc")).string();
 
   {
-    NetCDFFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
-    auto             v = plotter.createVertexPlotter(0);
-    auto             c = plotter.createCellPlotter(0);
+    NetCDFFileWriter plotter(tarch::tests::getWritableTestDirectory().string());
+    plotter.acquirePiece(0);
+    auto vertexPlotter = plotter.createVertexPlotter(0);
+    auto cellPlotter   = plotter.createCellPlotter(0);
 
-    int i0         = v->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
-    int i1         = v->plotVertex(tarch::la::Vector<2, double>{1.0, 0.0});
-    int i2         = v->plotVertex(tarch::la::Vector<2, double>{0.5, 1.0});
+    int i0         = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
+    int i1         = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{1.0, 0.0});
+    int i2         = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.5, 1.0});
     int indices[3] = {i0, i1, i2};
 
-    c->plotTriangle(indices);
+    cellPlotter->plotTriangle(indices);
 
     plotter.writeToFile(filename, 0);
   }
@@ -291,27 +290,27 @@ void tarch::plotter::tests::NetCDFFileWriterTest::test2DQuadWithData() {
   const std::string fullPath = (tarch::tests::getWritableTestDirectory() / (filename + ".nc")).string();
 
   {
-    NetCDFFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
-    auto             v  = plotter.createVertexPlotter(0);
-    auto             c  = plotter.createCellPlotter(0);
-    auto             vd = plotter.createVertexDataPlotter(0, "Pressure", 1);
-    auto             cd = plotter.createCellDataPlotter(0, "Velocity", 2);
+    NetCDFFileWriter plotter(tarch::tests::getWritableTestDirectory().string());
+    plotter.acquirePiece(0);
+    auto vertexPlotter     = plotter.createVertexPlotter(0);
+    auto cellPlotter       = plotter.createCellPlotter(0);
+    auto vertexDataPlotter = plotter.createVertexDataPlotter(0, "Pressure", 1);
+    auto cellDataPlotter   = plotter.createCellDataPlotter(0, "Velocity", 2);
 
-    int i0         = v->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
-    int i1         = v->plotVertex(tarch::la::Vector<2, double>{1.0, 0.0});
-    int i2         = v->plotVertex(tarch::la::Vector<2, double>{1.0, 1.0});
-    int i3         = v->plotVertex(tarch::la::Vector<2, double>{0.0, 1.0});
+    int i0         = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
+    int i1         = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{1.0, 0.0});
+    int i2         = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{1.0, 1.0});
+    int i3         = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.0, 1.0});
     int indices[4] = {i0, i1, i2, i3};
 
-    int cellIndex = c->plotQuadrangle(indices);
+    int cellIndex = cellPlotter->plotQuadrangle(indices);
 
-    // Add Data
-    vd->plotVertexData(i0, 10.0);
-    vd->plotVertexData(i1, 11.0);
-    vd->plotVertexData(i2, 12.0);
-    vd->plotVertexData(i3, 13.0);
+    vertexDataPlotter->plotVertexData(i0, 10.0);
+    vertexDataPlotter->plotVertexData(i1, 11.0);
+    vertexDataPlotter->plotVertexData(i2, 12.0);
+    vertexDataPlotter->plotVertexData(i3, 13.0);
 
-    cd->plotCellData(cellIndex, tarch::la::Vector<2, double>{1.5, -1.5});
+    cellDataPlotter->plotCellData(cellIndex, tarch::la::Vector<2, double>{1.5, -1.5});
 
     plotter.writeToFile(filename, 0);
   }
@@ -329,23 +328,24 @@ void tarch::plotter::tests::NetCDFFileWriterTest::test3DHexahedronWithData() {
   const std::string fullPath = (tarch::tests::getWritableTestDirectory() / (filename + ".nc")).string();
 
   {
-    NetCDFFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
-    auto             v  = plotter.createVertexPlotter(0);
-    auto             c  = plotter.createCellPlotter(0);
-    auto             cd = plotter.createCellDataPlotter(0, "Density", 1);
+    NetCDFFileWriter plotter(tarch::tests::getWritableTestDirectory().string());
+    plotter.acquirePiece(0);
+    auto vertexPlotter   = plotter.createVertexPlotter(0);
+    auto cellPlotter     = plotter.createCellPlotter(0);
+    auto cellDataPlotter = plotter.createCellDataPlotter(0, "Density", 1);
 
     int indices[8];
-    indices[0] = v->plotVertex(tarch::la::Vector<3, double>{0.0, 0.0, 0.0});
-    indices[1] = v->plotVertex(tarch::la::Vector<3, double>{1.0, 0.0, 0.0});
-    indices[2] = v->plotVertex(tarch::la::Vector<3, double>{1.0, 1.0, 0.0});
-    indices[3] = v->plotVertex(tarch::la::Vector<3, double>{0.0, 1.0, 0.0});
-    indices[4] = v->plotVertex(tarch::la::Vector<3, double>{0.0, 0.0, 1.0});
-    indices[5] = v->plotVertex(tarch::la::Vector<3, double>{1.0, 0.0, 1.0});
-    indices[6] = v->plotVertex(tarch::la::Vector<3, double>{1.0, 1.0, 1.0});
-    indices[7] = v->plotVertex(tarch::la::Vector<3, double>{0.0, 1.0, 1.0});
+    indices[0] = vertexPlotter->plotVertex(tarch::la::Vector<3, double>{0.0, 0.0, 0.0});
+    indices[1] = vertexPlotter->plotVertex(tarch::la::Vector<3, double>{1.0, 0.0, 0.0});
+    indices[2] = vertexPlotter->plotVertex(tarch::la::Vector<3, double>{1.0, 1.0, 0.0});
+    indices[3] = vertexPlotter->plotVertex(tarch::la::Vector<3, double>{0.0, 1.0, 0.0});
+    indices[4] = vertexPlotter->plotVertex(tarch::la::Vector<3, double>{0.0, 0.0, 1.0});
+    indices[5] = vertexPlotter->plotVertex(tarch::la::Vector<3, double>{1.0, 0.0, 1.0});
+    indices[6] = vertexPlotter->plotVertex(tarch::la::Vector<3, double>{1.0, 1.0, 1.0});
+    indices[7] = vertexPlotter->plotVertex(tarch::la::Vector<3, double>{0.0, 1.0, 1.0});
 
-    const int cellIndex = c->plotHexahedron(indices);
-    cd->plotCellData(cellIndex, 2.5);
+    const int cellIndex = cellPlotter->plotHexahedron(indices);
+    cellDataPlotter->plotCellData(cellIndex, 2.5);
 
     plotter.writeToFile(filename, 0);
   }
@@ -363,44 +363,46 @@ void tarch::plotter::tests::NetCDFFileWriterTest::testMultipleSubdomains2DWithDa
   const std::string fullPath = (tarch::tests::getWritableTestDirectory() / (filename + ".nc")).string();
 
   {
-    NetCDFFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 2);
+    NetCDFFileWriter plotter(tarch::tests::getWritableTestDirectory().string());
+    plotter.acquirePiece(0);
+    plotter.acquirePiece(1);
 
     {
-      auto v  = plotter.createVertexPlotter(0);
-      auto c  = plotter.createCellPlotter(0);
-      auto vd = plotter.createVertexDataPlotter(0, "Pressure", 1);
-      auto cd = plotter.createCellDataPlotter(0, "Material", 1);
+      auto vertexPlotter     = plotter.createVertexPlotter(0);
+      auto cellPlotter       = plotter.createCellPlotter(0);
+      auto vertexDataPlotter = plotter.createVertexDataPlotter(0, "Pressure", 1);
+      auto cellDataPlotter   = plotter.createCellDataPlotter(0, "Material", 1);
 
-      int p0      = v->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
-      int p1      = v->plotVertex(tarch::la::Vector<2, double>{1.0, 0.0});
-      int p2      = v->plotVertex(tarch::la::Vector<2, double>{1.0, 1.0});
-      int p3      = v->plotVertex(tarch::la::Vector<2, double>{0.0, 1.0});
+      int p0      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
+      int p1      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{1.0, 0.0});
+      int p2      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{1.0, 1.0});
+      int p3      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.0, 1.0});
       int quad[4] = {p0, p1, p2, p3};
-      int cell    = c->plotQuadrangle(quad);
+      int cell    = cellPlotter->plotQuadrangle(quad);
 
-      vd->plotVertexData(p0, 10.0);
-      vd->plotVertexData(p1, 11.0);
-      vd->plotVertexData(p2, 12.0);
-      vd->plotVertexData(p3, 13.0);
-      cd->plotCellData(cell, 3.0);
+      vertexDataPlotter->plotVertexData(p0, 10.0);
+      vertexDataPlotter->plotVertexData(p1, 11.0);
+      vertexDataPlotter->plotVertexData(p2, 12.0);
+      vertexDataPlotter->plotVertexData(p3, 13.0);
+      cellDataPlotter->plotCellData(cell, 3.0);
     }
 
     {
-      auto v  = plotter.createVertexPlotter(1);
-      auto c  = plotter.createCellPlotter(1);
-      auto vd = plotter.createVertexDataPlotter(1, "Pressure", 1);
-      auto cd = plotter.createCellDataPlotter(1, "Material", 1);
+      auto vertexPlotter     = plotter.createVertexPlotter(1);
+      auto cellPlotter       = plotter.createCellPlotter(1);
+      auto vertexDataPlotter = plotter.createVertexDataPlotter(1, "Pressure", 1);
+      auto cellDataPlotter   = plotter.createCellDataPlotter(1, "Material", 1);
 
-      int p0          = v->plotVertex(tarch::la::Vector<2, double>{2.0, 0.0});
-      int p1          = v->plotVertex(tarch::la::Vector<2, double>{3.0, 0.0});
-      int p2          = v->plotVertex(tarch::la::Vector<2, double>{2.5, 1.0});
+      int p0          = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{2.0, 0.0});
+      int p1          = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{3.0, 0.0});
+      int p2          = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{2.5, 1.0});
       int triangle[3] = {p0, p1, p2};
-      int cell        = c->plotTriangle(triangle);
+      int cell        = cellPlotter->plotTriangle(triangle);
 
-      vd->plotVertexData(p0, 20.0);
-      vd->plotVertexData(p1, 21.0);
-      vd->plotVertexData(p2, 22.0);
-      cd->plotCellData(cell, 7.0);
+      vertexDataPlotter->plotVertexData(p0, 20.0);
+      vertexDataPlotter->plotVertexData(p1, 21.0);
+      vertexDataPlotter->plotVertexData(p2, 22.0);
+      cellDataPlotter->plotCellData(cell, 7.0);
     }
 
     plotter.writeToFile(filename, 0);
@@ -421,21 +423,24 @@ void tarch::plotter::tests::NetCDFFileWriterTest::testUnevenSubdomainCounts() {
   // Master holds 3 subdomains, every other rank 2 - non-zero but unequal counts.
   const int numberOfSubdomains = tarch::mpi::Rank::getInstance().isGlobalMaster() ? 3 : 2;
   {
-    NetCDFFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), numberOfSubdomains);
-    for (int sd = 0; sd < numberOfSubdomains; ++sd) {
-      auto         v       = plotter.createVertexPlotter(sd);
-      auto         c       = plotter.createCellPlotter(sd);
-      auto         cd      = plotter.createCellDataPlotter(sd, "Material", 1);
-      const double s       = 100.0 * tarch::mpi::Rank::getInstance().getRank() + 2.0 * sd;
-      int          p0      = v->plotVertex(tarch::la::Vector<2, double>{s + 0.0, 0.0});
-      int          p1      = v->plotVertex(tarch::la::Vector<2, double>{s + 1.0, 0.0});
-      int          p2      = v->plotVertex(tarch::la::Vector<2, double>{s + 1.0, 1.0});
-      int          p3      = v->plotVertex(tarch::la::Vector<2, double>{s + 0.0, 1.0});
-      int          quad[4] = {p0, p1, p2, p3};
-      int          cell    = c->plotQuadrangle(quad);
-      cd->plotCellData(cell, 1.0);
+    NetCDFFileWriter plotter(tarch::tests::getWritableTestDirectory().string());
+    for (int subdomain = 0; subdomain < numberOfSubdomains; ++subdomain) {
+      plotter.acquirePiece(subdomain);
     }
-    plotter.writeToFile(filename, 0); // uneven non-zero counts; must not deadlock
+    for (int subdomain = 0; subdomain < numberOfSubdomains; ++subdomain) {
+      auto         vertexPlotter   = plotter.createVertexPlotter(subdomain);
+      auto         cellPlotter     = plotter.createCellPlotter(subdomain);
+      auto         cellDataPlotter = plotter.createCellDataPlotter(subdomain, "Material", 1);
+      const double origin          = 100.0 * tarch::mpi::Rank::getInstance().getRank() + 2.0 * subdomain;
+      int          p0              = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{origin + 0.0, 0.0});
+      int          p1              = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{origin + 1.0, 0.0});
+      int          p2              = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{origin + 1.0, 1.0});
+      int          p3              = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{origin + 0.0, 1.0});
+      int          quad[4]         = {p0, p1, p2, p3};
+      int          cell            = cellPlotter->plotQuadrangle(quad);
+      cellDataPlotter->plotCellData(cell, 1.0);
+    }
+    plotter.writeToFile(filename, 0);
   }
 
   barrier();
@@ -467,7 +472,8 @@ void tarch::plotter::tests::NetCDFFileWriterTest::testEmptyPlotter() {
   const std::string fullPath = (tarch::tests::getWritableTestDirectory() / (filename + ".nc")).string();
 
   {
-    NetCDFFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
+    NetCDFFileWriter plotter(tarch::tests::getWritableTestDirectory().string());
+    plotter.acquirePiece(0);
     plotter.writeToFile(filename, 0);
   }
 
@@ -486,15 +492,16 @@ void tarch::plotter::tests::NetCDFFileWriterTest::testInconsistentDataSizeThrows
 
   bool exceptionThrown = false;
   try {
-    NetCDFFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
-    auto             v  = plotter.createVertexPlotter(0);
-    auto             vd = plotter.createVertexDataPlotter(0, "BrokenField", 1);
+    NetCDFFileWriter plotter(tarch::tests::getWritableTestDirectory().string());
+    plotter.acquirePiece(0);
+    auto vertexPlotter     = plotter.createVertexPlotter(0);
+    auto vertexDataPlotter = plotter.createVertexDataPlotter(0, "BrokenField", 1);
 
-    v->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
-    v->plotVertex(tarch::la::Vector<2, double>{1.0, 1.0});
+    vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
+    vertexPlotter->plotVertex(tarch::la::Vector<2, double>{1.0, 1.0});
 
     // Data for only one of the two vertices, which the write validation rejects.
-    vd->plotVertexData(0, 5.0);
+    vertexDataPlotter->plotVertexData(0, 5.0);
 
     plotter.writeToFile(filename, 0);
   } catch (const std::runtime_error&) {
@@ -522,15 +529,16 @@ void tarch::plotter::tests::NetCDFFileWriterTest::testUnsupportedCellType() {
 
   bool exceptionThrown = false;
   try {
-    NetCDFFileWriter plotter(tarch::tests::getWritableTestDirectory().string(), 1);
-    auto             v = plotter.createVertexPlotter(0);
-    auto             c = plotter.createCellPlotter(0);
+    NetCDFFileWriter plotter(tarch::tests::getWritableTestDirectory().string());
+    plotter.acquirePiece(0);
+    auto vertexPlotter = plotter.createVertexPlotter(0);
+    auto cellPlotter   = plotter.createCellPlotter(0);
 
     int indices[2];
-    indices[0] = v->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
-    indices[1] = v->plotVertex(tarch::la::Vector<2, double>{1.0, 0.0});
+    indices[0] = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
+    indices[1] = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{1.0, 0.0});
 
-    c->plotLine(indices);
+    cellPlotter->plotLine(indices);
 
     plotter.writeToFile(filename, 0);
   } catch (const std::runtime_error&) {
@@ -551,7 +559,7 @@ void tarch::plotter::tests::NetCDFFileWriterTest::testUnsupportedCellType() {
 
 // Dummy implementation for the build when NetCDF is disabled.
 tarch::plotter::tests::NetCDFFileWriterTest::NetCDFFileWriterTest() :
-  TestCase("tarch::plotter::tests::NetCDFFileWriterTest") {}
+  tarch::tests::TestCase("tarch::plotter::tests::NetCDFFileWriterTest") {}
 
 void tarch::plotter::tests::NetCDFFileWriterTest::run() {}
 

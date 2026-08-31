@@ -3,7 +3,7 @@
 #pragma once
 
 #if PEANO_TRACE
-#include "Log.h"
+#include "tarch/instrumentation/Log.h"
 
 #define traceEnter(...) \
   do { \

@@ -8,30 +8,6 @@ import peano4.solversteps
 
 
 class RefinementCriterion(AbstractRungeKuttaDGActionSet):
-    """
-    The action set that evaluates the refinement criterion.
-
-    AMR is a multistep process in ExaHyPE. The class exahype2::RefinementControl
-    holds most of the relevant documentation.
-
-    ExaHyPE runs through different phases: grid generation (with or without
-    refinement), initialisation, plotting and time stepping. Which phase
-    evaluates AMR depends on the solver, but some points hold for all schemes:
-
-    - The grid creation does not use any actual solver data, so we should not
-      evaluate the criterion here.
-    - The initialisation has volumetric data and may evaluate the criterion.
-      The updated flag that the initial condition sets lets the evaluation
-      through.
-    - The plotting does not alter the solution. It thus makes no sense to
-      evaluate the criterion here.
-
-    The criterion is evaluated once per cell: the solver's refinementCriterion()
-    receives the whole node block of the current Runge-Kutta step in AoS layout
-    together with the cell centre and size, so it can compute cell-wide
-    quantities such as a multiresolution detail. During grid construction there
-    is no solution yet, so Q is nullptr.
-    """
 
     def __init__(
         self,
@@ -43,25 +19,9 @@ class RefinementCriterion(AbstractRungeKuttaDGActionSet):
         skip_after_topology_change,
     ):
         """
-        :: Attributes.
-
-        _implement_previous_refinement_instructions: Boolean
-          This name might be misleading. Consult exahype2::RefinementControl for
-          a description of the control flow. This flag controls whether
-          instructions are picked up from the RefinementControl database.
-
-        :: Arguments
-
-        guard: C++ expression which evaluates to true or false
-          A per-cell decision whether we study a cell.
-
-        build_up_new_refinement_instructions: Boolean
-          See remarks on multistep realisation of AMR in C++ class
-          exahype2::RefinementControl.
-
-        implement_previous_refinement_instructions: Boolean
-          See remarks on multistep realisation of AMR in C++ class
-          exahype2::RefinementControl.
+        `guard` is a C++ expression that decides per cell whether the criterion
+        runs. `implement_previous_refinement_instructions` decides whether the
+        action set reads the instructions from the RefinementControl database.
         """
         super(RefinementCriterion, self).__init__(solver)
         self._guard = guard
@@ -115,7 +75,9 @@ class RefinementCriterion(AbstractRungeKuttaDGActionSet):
             # on how many sweeps the mesh update needed, which varies with the
             # decomposition. Collecting no requests during that step keeps the
             # committed event set identical for every decomposition.
-            d["PREDICATE"] = "not marker.willBeRefined() and not marker.hasBeenRefined() and "
+            d["PREDICATE"] = (
+                "not marker.willBeRefined() and not marker.hasBeenRefined() and "
+            )
             if self._skip_after_topology_change:
                 d["PREDICATE"] += (
                     "not ::exahype2::RefinementControlService::getInstance()"
@@ -145,6 +107,7 @@ class RefinementCriterion(AbstractRungeKuttaDGActionSet):
             + """
 #include "exahype2/RefinementControlService.h"
 #include "runner/RuntimeParameters.h"
+#include "tarch/instrumentation/Debug.h"
 #include "Constants.h"
 """
         )

@@ -4,7 +4,13 @@
 
 #include "peano4/Loop.h"
 
-void exahype2::fv::mapInnerNeighbourVoxelAlongBoundayOntoAuxiliaryVariable(
+/**
+ * Copy entry fromIndex of the innermost neighbouring voxel onto entry toIndex
+ * of every voxel in the patch's outermost layer. The source voxel is the
+ * boundary voxel's neighbour shifted one voxel towards the patch interior
+ * along every axis on which the voxel touches the patch boundary.
+ */
+void exahype2::fv::mapInnerNeighbourVoxelAlongBoundaryOntoAuxiliaryVariable(
   double* NOALIAS Q,
   int             unknowns,
   int             auxiliaryVariables,

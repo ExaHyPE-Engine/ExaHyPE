@@ -9,16 +9,16 @@ You have to clone this archive first.
 We grant access free of charge, and the repository is public. However,
 we ask users to sign up for the software if they intend to push
 modifications to the code - which we very much appreciate. This way, we
-can report to funding agencies how frequently the software is used, and I
+can report to funding agencies how frequently the software is used, and we
 also have at least some ideas about which application areas benefit from the
 software and where it is actively used and developed. If you do not
-intend to modify the core code base, you can just clone the code
+intend to modify the core code base, you can clone the code
 anonymously.
 
     git clone https://gitlab.lrz.de/hpcsoftware/Peano.git
 
-I still maintain the "old" Peano in the repository (version 3).
-However, we now work with the fourth generation of Peano (p4).
+We still maintain Peano version 3 in the repository.
+We work with the fourth generation of Peano (p4).
 Therefore, the default master is called ```p4```.
 
 
@@ -33,7 +33,7 @@ We however use a whole set of tools and extensions around it.
 - CMake 3.27 or newer.
 - Python 3.11 or newer.
 - MPI. MPI's multithreaded support is recommended.
-- OpenMP for multithreading
+- OpenMP for multithreading.
 
 ## Optional
 
@@ -43,7 +43,7 @@ We however use a whole set of tools and extensions around it.
 - NetCDF.
 
 You will also need Doxygen if you want to create HTML pages of the documentation yourself.
-Unless you work exclusively with the Peano core in C++, you will have to ensure that your Python installation meets all requirements (see remarks below).
+Unless you work exclusively with the Peano core in C++, you have to check that your Python installation meets all requirements (see remarks below).
 
 We test and maintain Peano for Linux only.
 If you prefer Windows or MacOS, it should work as long as you provide the
@@ -54,8 +54,8 @@ but these are all optional.
 
 # Configure Peano
 
-Peano is compiled using, CMake, after you have cloned the repository,
-you will have to to set up your installation using it.
+Peano is compiled using CMake. After you have cloned the repository,
+you have to set up your installation using it.
 This will allow you to build the Peano core libraries and is a step
 required before you use any application or tool built on top of Peano such as ExaHyPE.
 
@@ -92,11 +92,11 @@ instead, where you replace Peano-dir with the directory of Peano's sources.
 Handing in .. does the job for most of the setups.
 
 <div style="color:Black ; background-color: #cfc ; padding: 10px; border: 1px solid black;">
-This might be the right time to look ahead and study the tutorials of the codes you wanna use.
-The toolboxes (blockstructured, loadbalancing, particles, ...) and the ExaHyPE 2 extension are
-always built, so there is nothing to switch on for them. What you do toggle here are the
-feature options, all named `PEANO_WITH_*` (e.g. `PEANO_WITH_MULTITHREADING`, `PEANO_WITH_HDF5`);
-see the comments next to each entry in ccmake for details.
+This might be the right time to look ahead and study the tutorials of the codes you want to use.
+The blockstructured and particle toolboxes and the ExaHyPE 2 extension are
+always built, so there is nothing to switch on for them. The configurable
+feature options are named `PEANO_WITH_*` (for example `PEANO_WITH_HDF5` and
+`PEANO_WITH_NETCDF`); see the comments next to each entry in ccmake for details.
 </div>
 
 Configure by pressing c and then q to finish the configuration. Next, continue
@@ -133,7 +133,7 @@ core plus the extensions and toolboxes.
 <div style="color:Black ; background-color: #ccf ; padding: 10px; border: 1px solid black;">
 Good time to stop. Jump straight into one of the tutorials if you want to.
 If things don't work (Python complains for example), return to this page and
-read through the text below. But maybe it is the right time just to play around
+read through the text below. But maybe it is the right time to play around
 with code.
 </div>
 
@@ -154,7 +154,7 @@ make install
 Peano is ***not*** a piece of software that you use as a black box.
 It is an engine that you use to write your own code.
 You can install Peano and its extensions.
-That means basically that you move its static libraries to a separate directory.
+That means that you move its static libraries to a separate directory.
 But there is no such thing as a Peano application.
 </div>
 
@@ -167,8 +167,7 @@ Python 2 is not supported.
 ## Package Installation
 
 Our code base relies on several Python packages. There's a requirements
-specification file which you can use to ensure that all requirements are
-met:
+specification file which you can use to install all of them:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 pip install -r requirements.txt
@@ -189,11 +188,11 @@ to install the packages.
 Note:
 - The Python path is set automatically to the respective Peano modules.
 - It is strongly recommended to install the Python packages in editable mode
-  (which is what the `-e` flag does). Otherwise, you'll have to re-install the
+  (the `-e` flag does this). Otherwise, you'll have to re-install the
   packages every time something is changed.
 - The packages are not, and likely will never be, available through PyPI or
-  other official Python package distributions. It simply doesn't make sense for
-  them to be published this way.
+  other official Python package distributions. It doesn't make sense for
+  them to be distributed this way.
 
 Manually Adding the Python Path
 -------------------
@@ -206,11 +205,11 @@ The standard way is to set the `PYTHONPATH`, e.g.:
 
 This can even be done in the `.bashrc`. If you "install" the Peano Python
 packages this way, you will also need to manually install additional
-dependencies, as noted below.
+dependencies, as listed below.
 
 ## Python Dependencies
 
-Peano currently relies on the following Python packages/projects:
+Peano relies on the following Python packages/projects:
 
 @verbinclude requirements.txt
 

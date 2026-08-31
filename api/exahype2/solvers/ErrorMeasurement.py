@@ -6,11 +6,10 @@ from .PDETerms import PDETerms
 
 
 def build_measured_unknowns_initializer_list(solver, measured_unknowns):
-    """!
+    """Returns a C++ array initialiser list of unknown indices, such as "{0, 2, 3}".
 
-    Resolve `measured_unknowns` into a C++ array initialiser list of unknown
-    indices (e.g. "{0, 2, 3}"). None selects all unknowns; otherwise an int/str
-    or any iterable of unknown indices and/or variable names.
+    ``measured_unknowns`` is None for every unknown, one index or one variable name, or an
+    iterable of indices and variable names.
     """
     shortcuts = solver._variable_shortcuts
     number_of_unknowns = shortcuts.unknowns
@@ -50,7 +49,6 @@ def build_measured_unknowns_initializer_list(solver, measured_unknowns):
                     )
                 )
 
-    # De-duplicate while preserving order.
     seen = set()
     unique_indices = []
     for index in indices:
@@ -74,18 +72,13 @@ def build_measured_unknowns_initializer_list(solver, measured_unknowns):
 
 
 def add_error_database_to_solver(solver):
-    """!
-
-    Add the shared error database, the per-rank error accumulator and the
-    setError() method to a solver. Common to every error-measurement variant,
-    so both the cell-based and the particle-based tools reuse it.
-    """
     solver.add_user_solver_includes(
         """
 #include "tarch/database/GlobalTimeSeriesDatabase.h"
 #include "runner/RuntimeParameters.h"
 #include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
+#include "tarch/accelerator/Atomic.h"
 """
     )
 
@@ -93,56 +86,23 @@ def add_error_database_to_solver(solver):
 public:
   tarch::database::GlobalTimeSeriesDatabase _errorDatabase;
   double _errors[3] = {0.0, 0.0, 0.0};
-  void setError(double* error);
+  void setError(const double* const error);
 """
 
     solver._abstract_solver_user_definitions += """
-void {{"{{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}"}}::setError(double* error) {
-  tarch::multicore::Lock lock(_semaphore);
-  _errors[0] += error[0];
-  _errors[1] += error[1];
-  _errors[2] = std::max(_errors[2], error[2]);
+void {{"{{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}"}}::setError(const double* const error) {
+  tarch::accelerator::addAtomic(_errors[0], error[0]);
+  tarch::accelerator::addAtomic(_errors[1], error[1]);
+  tarch::accelerator::updateAtomicMax(_errors[2], error[2]);
 }
 """
 
 
 class ErrorMeasurement:
-    """!
+    """Adds analyticalSolution() and the L1, L2 and Linf error norms over it to a solver.
 
-    Error measurement tool for ExaHyPE 2 solvers, this is the base class that must
-    be specialised for different solvers.
-
-    Used by calling the corresponding specialisation by calling it using the solver
-    instance as an argument.
-
-    When called, it adds an additional function analyticalSolution() to the user-defined
-    code snippets, through which the user can define what the solution should be.
-
-    The error measurement also adds a postprocessing step to the corresponding solver,
-    which computes the L1, L2 and Linf error between the computed solution and the
-    analytical solution at each data point over the domain. These are then summed up
-    over the entire volume to get the integrated errors over the entire domain.
-
-    Finally, these are added to a GlobalTimeSeriesDatabase object by the global master thread, and
-    outputted to csv files at regular intervals.
-
-    @parameters:
-
-    solver: the solver for which the errors should be measured
-
-    error_measurement_implementation: allows one to specify the analytical
-      solution directly instead of manually filling it in the user-defined
-      code snippets, analogously to fluxes and such in the solvers.
-
-    output_file_name: specify what the output .csv files should be named
-
-    time_delta_between_snapshots: record a measurement only once this much
-      simulation time has elapsed since the last (default 0 = every step).
-
-    measured_unknowns: restrict the error norms to a subset of the unknowns.
-      None (default) selects all unknowns; otherwise an int/str or iterable of
-      unknown indices and/or variable names. See
-      build_measured_unknowns_initializer_list.
+    A specialisation of this class binds the norms to the data layout of one solver family.
+    ``time_delta_between_snapshots`` of 0.0 records a measurement in every time step.
     """
 
     def __init__(
@@ -183,7 +143,7 @@ class ErrorMeasurement:
 def create_start_simulation_implementation_for_error_measurement(
     output_file_name, time_delta_between_snapshots
 ):
-    Template = jinja2.Template(
+    template = jinja2.Template(
         """
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     _errorDatabase.setOutputFileName(::runner::RuntimeParameters::getInstance().getOutputPath() + "{{FILENAME}}");
@@ -198,7 +158,7 @@ def create_start_simulation_implementation_for_error_measurement(
     d = {}
     d["FILENAME"] = output_file_name
     d["TIME_DELTA"] = time_delta_between_snapshots
-    return Template.render(**d)
+    return template.render(**d)
 
 
 def create_finish_time_step_implementation_for_error_measurement(guard):
@@ -212,7 +172,7 @@ def create_finish_time_step_implementation_for_error_measurement(guard):
       double localMaxError[1] = {_errors[2]};
       double globalMaxError[1] = {0.0};
       MPI_Comm communicator = tarch::mpi::Rank::getInstance().getCommunicator();
-      // A sum and a maximum cannot share one built-in reduction operator, so the L1
+      // One built-in reduction operator computes either a sum or a maximum, so the L1
       // and L2 accumulators reduce separately from the Linf norm.
       tarch::mpi::allreduce(
           localSummedErrors,
@@ -248,14 +208,6 @@ def create_finish_time_step_implementation_for_error_measurement(guard):
 
 def create_solver_user_abstract_declarations():
     return """
-    /**
-     * Exact solution of the equation at a given point and time
-     *
-     * @param x             Position
-     * @param t             Time
-     * @param dt            Timestep size
-     * @param sol           Analytical solution of the equation
-     */
     virtual void analyticalSolution(
       const tarch::la::Vector<DIMENSIONS, double>&  x,
       const double                                  t,

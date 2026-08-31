@@ -8,28 +8,42 @@
 
 bool tarch::plotter::FileWriter::_doublePrecisionOutput = false;
 
-tarch::plotter::FileWriter::FileWriter(const std::string& outputDirectory, const int numberOfSubdomains) :
-  _outputDirectory(outputDirectory),
-  _subdomains(static_cast<std::size_t>(numberOfSubdomains)) {}
+tarch::plotter::FileWriter::FileWriter(const std::string& outputDirectory) :
+  _outputDirectory(outputDirectory) {}
+
+int tarch::plotter::FileWriter::acquirePiece(int orderKey) {
+  const std::lock_guard<std::mutex> acquisitionGuard(_pieceAcquisitionMutex);
+  if (_written) {
+    tarch::terminateWithError("Cannot acquire a plot piece, as the file has already been written.");
+  }
+
+  // The order key decides where a piece lands in the file, so two pieces
+  // claiming the same one would write over each other.
+  if (not _claimedPieceOrderKeys.insert(orderKey).second) {
+    tarch::terminateWithError("Plot piece order key " + std::to_string(orderKey) + " is already claimed.");
+  }
+
+  _pieceOrderKeys.push_back(orderKey);
+  _subdomains.emplace_back();
+  return static_cast<int>(_subdomains.size()) - 1;
+}
 
 bool tarch::plotter::FileWriter::isOpen() const { return not _written; }
 
 /**
- * Select the width the writers store their fields in.
+ * Selects the width the writers store their fields in.
  *
  * The setting reaches the file only. Every plotter accumulates its points and fields in
  * DataField, whose values are double, and narrows them as it writes, so single precision
- * halves the file and leaves the memory a plot holds unchanged. Keeping the buffers in
- * double is what lets a plotter serve both settings without a second code path, and what
- * keeps the accumulated geometry exact while subdomains are merged.
+ * halves the file and leaves the memory a plot holds unchanged.
  */
 void tarch::plotter::FileWriter::setDoublePrecisionOutput(const bool value) { _doublePrecisionOutput = value; }
 
 bool tarch::plotter::FileWriter::getDoublePrecisionOutput() { return _doublePrecisionOutput; }
 
 std::vector<std::pair<std::string, std::string>> tarch::plotter::FileWriter::mpiIoHints() {
-  // Collective buffering for these large collective writes. ROMIO keys (MPICH); other
-  // MPI-IO stacks ignore unknown keys.
+  // Collective buffering for these large collective writes. The keys belong to ROMIO;
+  // other MPI-IO stacks ignore unknown keys.
   return {
     {"romio_cb_write", "enable"},
     {"romio_ds_write", "disable"},
@@ -40,26 +54,39 @@ void tarch::plotter::FileWriter::createOutputDirectory() const {
   int         success = 1;
   std::string failureReason;
 
-  // The global master records the filesystem outcome before all ranks agree on it.
-  // Entering the fatal path before this collective would leave the peers blocked.
+  // Only the global master touches the filesystem, and it records the outcome in a
+  // flag: A stop here would let the master leave the collective call below while the
+  // other ranks block on it forever.
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     const std::filesystem::path outputPath(_outputDirectory);
 
     if (not _outputDirectory.empty()) {
-      std::error_code ec;
-      if (not std::filesystem::exists(outputPath)) {
-        if (not std::filesystem::create_directories(outputPath, ec) and not std::filesystem::exists(outputPath)) {
-          success       = 0;
-          failureReason = "Failed to create output directory '" + outputPath.string() + "': " + ec.message() + ".";
+      std::error_code filesystemError;
+      const bool      outputPathExists = std::filesystem::exists(outputPath, filesystemError);
+      if (filesystemError) {
+        success = 0;
+        failureReason =
+          "Failed to inspect output directory '" + outputPath.string() + "': " + filesystemError.message();
+      } else if (not outputPathExists) {
+        std::filesystem::create_directories(outputPath, filesystemError);
+        if (filesystemError) {
+          success = 0;
+          failureReason =
+            "Failed to create output directory '" + outputPath.string() + "': " + filesystemError.message();
         }
-      } else if (not std::filesystem::is_directory(outputPath)) {
+      }
+
+      filesystemError.clear();
+      if (success != 0 and not std::filesystem::is_directory(outputPath, filesystemError)) {
         success       = 0;
-        failureReason = "Output path '" + outputPath.string() + "' is not a directory.";
+        failureReason = filesystemError
+          ? "Failed to inspect output directory '" + outputPath.string() + "': " + filesystemError.message()
+          : "Output path exists but is not a directory: '" + outputPath.string() + "'";
       }
     }
   }
 
-  // Agree on the outcome so every rank proceeds or terminates together. This allreduce
+  // Agree on the outcome so every rank proceeds or stops together. This allreduce
   // also synchronises the ranks, so no separate barrier is needed before they write.
   int globalSuccess = success;
   tarch::mpi::allreduce(
@@ -89,17 +116,18 @@ void tarch::plotter::FileWriter::validateIdentifier(const std::string& id) {
   // component and as a NetCDF variable name. Reject the characters that would
   // produce malformed XML, an invalid HDF5 path component, or a rejected NetCDF
   // variable name.
-  const std::string illegal = " \t\n\r\"'<>&/\\";
-  const std::size_t pos     = id.find_first_of(illegal);
-  if (pos != std::string::npos) {
+  const std::string illegalCharacters = " \t\n\r\"'<>&/\\";
+  const std::size_t illegalPosition   = id.find_first_of(illegalCharacters);
+  if (illegalPosition != std::string::npos) {
     throw std::runtime_error(
-      std::string("Invalid plotter data identifier '") + id + "': the character '" + id[pos]
+      std::string("Invalid plotter data identifier '") + id + "': The character '" + id[illegalPosition]
       + "' is not allowed. Avoid whitespace, quotes, '<', '>', '&', '/' and '\\'."
     );
   }
 }
 
-void tarch::plotter::FileWriter::checkCanOpenPlotter(const int subdomainId) const {
+tarch::plotter::FileWriter::SubdomainBuffers& tarch::plotter::FileWriter::pieceBuffers(int subdomainId) {
+  const std::lock_guard<std::mutex> acquisitionGuard(_pieceAcquisitionMutex);
   if (_written) {
     throw std::runtime_error("Cannot create a data plotter after the file has been written.");
   }
@@ -110,20 +138,21 @@ void tarch::plotter::FileWriter::checkCanOpenPlotter(const int subdomainId) cons
       + std::to_string(_subdomains.size()) + " subdomains."
     );
   }
+  return _subdomains[static_cast<std::size_t>(subdomainId)];
 }
 
 /**
- * Create a vertex plotter with the requested treatment of coincident points.
+ * Creates a vertex plotter with the requested treatment of coincident points.
  *
- * Shared vertices reduce the geometry size for continuous fields. Distinct vertices
- * preserve separate point-data values at the same position, as required by
- * discontinuous fields.
+ * A vertex that two adjacent cells hold once reduces the geometry size for continuous
+ * fields. A distinct vertex per cell keeps separate point-data values at the same
+ * position, which a discontinuous field needs.
  */
 std::unique_ptr<tarch::plotter::FileWriter::VertexPlotter> tarch::plotter::FileWriter::createVertexPlotter(
   const int           subdomainId,
-  const VertexSharing vertexSharing
+  const VertexMerging vertexMerging
 ) {
-  return std::make_unique<VertexPlotter>(*this, subdomainId, vertexSharing);
+  return std::make_unique<VertexPlotter>(*this, subdomainId, vertexMerging);
 }
 
 std::unique_ptr<tarch::plotter::FileWriter::CellPlotter> tarch::plotter::FileWriter::createCellPlotter(
@@ -151,25 +180,20 @@ std::unique_ptr<tarch::plotter::FileWriter::CellDataPlotter> tarch::plotter::Fil
 }
 
 tarch::plotter::FileWriter::DataPlotter::DataPlotter(
-  FileWriter&             plotter,
-  const int               subdomainId,
   std::vector<DataField>& targetFields,
   const std::string&      identifier,
   const int               components
 ) :
-  _plotter(plotter),
   _targetFields(targetFields),
   _components(components) {
-  _plotter.checkCanOpenPlotter(subdomainId);
+  assertion(components > 0, components);
 
-  // Reuse the field if it already exists, otherwise append it.
-  _fieldIndex = -1;
-  for (size_t i = 0; i < _targetFields.size(); ++i) {
-    if (_targetFields[i].name == identifier) {
-      if (_targetFields[i].components != components) {
+  for (std::size_t field = 0; field < _targetFields.size(); field++) {
+    if (_targetFields[field].name == identifier) {
+      if (_targetFields[field].components != components) {
         throw std::runtime_error("Field '" + identifier + "' already exists with different component count.");
       }
-      _fieldIndex = static_cast<int>(i);
+      _fieldIndex = static_cast<int>(field);
       break;
     }
   }
@@ -208,79 +232,81 @@ bool tarch::plotter::FileWriter::hasPayload(const SubdomainBuffers& buffers) {
 }
 
 const tarch::plotter::FileWriter::SubdomainBuffers* tarch::plotter::FileWriter::findReferenceSubdomain() const {
-  for (const auto& s : _subdomains) {
-    if (hasSchemaOrGeometry(s)) {
-      return &s;
+  for (const auto& subdomain : _subdomains) {
+    if (hasSchemaOrGeometry(subdomain)) {
+      return &subdomain;
     }
   }
   return nullptr;
 }
 
 void tarch::plotter::FileWriter::validateSubdomainsForWriting(const SubdomainBuffers& reference) const {
-  for (const auto& s : _subdomains) {
-    if (not hasSchemaOrGeometry(s)) {
+  for (const auto& subdomain : _subdomains) {
+    if (not hasSchemaOrGeometry(subdomain)) {
       continue;
     }
 
-    if (s.pointsXYZ.size() % 3 != 0) {
+    if (subdomain.pointsXYZ.size() % 3 != 0) {
       throw std::runtime_error("Point coordinate buffer size is not a multiple of 3.");
     }
 
-    if (s.offsets.size() != s.types.size()) {
+    if (subdomain.offsets.size() != subdomain.types.size()) {
       throw std::runtime_error("Cell offset count does not match cell type count.");
     }
 
-    if (s.offsets.empty() and not s.connectivity.empty()) {
+    if (subdomain.offsets.empty() and not subdomain.connectivity.empty()) {
       throw std::runtime_error("Connectivity buffer is non-empty but no cell offsets are defined.");
     }
 
     std::int32_t previousOffset = 0;
-    for (const std::int32_t offset : s.offsets) {
+    for (const std::int32_t offset : subdomain.offsets) {
       if (offset < previousOffset) {
         throw std::runtime_error("Cell offsets are not monotonically increasing.");
       }
       previousOffset = offset;
     }
 
-    if (not s.offsets.empty() and static_cast<std::size_t>(s.offsets.back()) != s.connectivity.size()) {
+    if (not subdomain.offsets.empty()
+        and static_cast<std::size_t>(subdomain.offsets.back()) != subdomain.connectivity.size()) {
       throw std::runtime_error("Last cell offset does not match connectivity buffer size.");
     }
 
-    if (s.pointFields.size() != reference.pointFields.size() or s.cellFields.size() != reference.cellFields.size()) {
+    if (subdomain.pointFields.size() != reference.pointFields.size()
+        or subdomain.cellFields.size() != reference.cellFields.size()) {
       throw std::runtime_error("Inconsistent data field counts across subdomains.");
     }
 
-    for (std::size_t i = 0; i < reference.pointFields.size(); ++i) {
-      if (s.pointFields[i].name != reference.pointFields[i].name
-          or s.pointFields[i].components != reference.pointFields[i].components) {
-        throw std::runtime_error("Mismatch in point data field '" + reference.pointFields[i].name + "'.");
+    for (std::size_t field = 0; field < reference.pointFields.size(); field++) {
+      if (subdomain.pointFields[field].name != reference.pointFields[field].name
+          or subdomain.pointFields[field].components != reference.pointFields[field].components) {
+        throw std::runtime_error("Mismatch in point data field '" + reference.pointFields[field].name + "'.");
       }
     }
 
-    for (std::size_t i = 0; i < reference.cellFields.size(); ++i) {
-      if (s.cellFields[i].name != reference.cellFields[i].name
-          or s.cellFields[i].components != reference.cellFields[i].components) {
-        throw std::runtime_error("Mismatch in cell data field '" + reference.cellFields[i].name + "'.");
+    for (std::size_t field = 0; field < reference.cellFields.size(); field++) {
+      if (subdomain.cellFields[field].name != reference.cellFields[field].name
+          or subdomain.cellFields[field].components != reference.cellFields[field].components) {
+        throw std::runtime_error("Mismatch in cell data field '" + reference.cellFields[field].name + "'.");
       }
     }
 
-    const std::size_t nPoints = s.pointsXYZ.size() / 3;
-    const std::size_t nCells  = s.types.size();
+    const std::size_t numberOfPoints = subdomain.pointsXYZ.size() / 3;
+    const std::size_t numberOfCells  = subdomain.types.size();
 
-    for (const auto& f : s.pointFields) {
-      if (f.values.size() != nPoints * f.components) {
+    for (const auto& field : subdomain.pointFields) {
+      if (field.values.size() != numberOfPoints * field.components) {
         throw std::runtime_error(
-          "Mismatch in point data field '" + f.name + "'. Expected " + std::to_string(nPoints) + " tuples but got "
-          + std::to_string(f.values.size() / f.components) + "."
+          "Mismatch in point data field '" + field.name + "'. Expected " + std::to_string(numberOfPoints)
+          + " tuples but got " + std::to_string(field.values.size() / field.components) + "."
         );
       }
     }
 
-    for (const auto& f : s.cellFields) {
-      if (f.values.size() != nCells * f.components) {
+    for (const auto& field : subdomain.cellFields) {
+      if (field.values.size() != numberOfCells * field.components) {
         throw std::runtime_error(
-          "Mismatch in cell data field '" + f.name + "'. Expected " + std::to_string(nCells) + " tuples but got "
-          + std::to_string(f.values.size() / f.components) + "."
+          "Mismatch in cell data field '" + field.name + "'. Expected " + std::to_string(numberOfCells)
+          + " tuples but got " + std::to_string(field.values.size() / field.components) + "."
         );
       }
     }
@@ -298,10 +324,18 @@ tarch::plotter::FileWriter::SubdomainBuffersSequence tarch::plotter::FileWriter:
 
   validateSubdomainsForWriting(*result.reference);
 
+  // The pieces enter the file ordered by their keys, so the output does not
+  // depend on the order in which concurrent writers claimed them.
+  std::vector<std::size_t> pieceOrder(_subdomains.size());
+  std::iota(pieceOrder.begin(), pieceOrder.end(), std::size_t{0});
+  std::sort(pieceOrder.begin(), pieceOrder.end(), [this](std::size_t leftPiece, std::size_t rightPiece) {
+    return _pieceOrderKeys[leftPiece] < _pieceOrderKeys[rightPiece];
+  });
+
   result.payloads.reserve(_subdomains.size());
-  for (const auto& s : _subdomains) {
-    if (hasPayload(s)) {
-      result.payloads.push_back(&s);
+  for (const std::size_t piece : pieceOrder) {
+    if (hasPayload(_subdomains[piece])) {
+      result.payloads.push_back(&_subdomains[piece]);
     }
   }
 
@@ -331,9 +365,9 @@ std::vector<double> tarch::plotter::FileWriter::expandFieldComponents(
   }
   const std::size_t   tuples = values.size() / static_cast<std::size_t>(sourceComponents);
   std::vector<double> result(tuples * static_cast<std::size_t>(writtenComponents), 0.0);
-  for (std::size_t t = 0; t < tuples; ++t) {
-    for (int c = 0; c < sourceComponents; ++c) {
-      result[t * writtenComponents + c] = values[t * sourceComponents + c];
+  for (std::size_t tuple = 0; tuple < tuples; tuple++) {
+    for (int component = 0; component < sourceComponents; component++) {
+      result[tuple * writtenComponents + component] = values[tuple * sourceComponents + component];
     }
   }
   return result;
@@ -341,7 +375,7 @@ std::vector<double> tarch::plotter::FileWriter::expandFieldComponents(
 
 std::vector<float> tarch::plotter::FileWriter::narrowToFloat(const std::vector<double>& values) {
   std::vector<float> result(values.size());
-  std::transform(values.begin(), values.end(), result.begin(), [](double value) {
+  std::transform(values.begin(), values.end(), result.begin(), [](const double value) {
     // The narrowing must not trap when floating-point exceptions are enabled:
     // a value below float's normal range flushes to signed zero and a value
     // beyond its finite range saturates, so every solution state remains
@@ -366,10 +400,10 @@ tarch::plotter::FileWriter::FieldSchema tarch::plotter::FileWriter::fieldSchemaF
   if (localReference != nullptr) {
     const auto seed = [](std::vector<DataField>& target, const std::vector<DataField>& source) {
       target.reserve(source.size());
-      for (const auto& f : source) {
+      for (const auto& field : source) {
         DataField entry;
-        entry.name       = f.name;
-        entry.components = f.components;
+        entry.name       = field.name;
+        entry.components = field.components;
         target.push_back(std::move(entry));
       }
     };

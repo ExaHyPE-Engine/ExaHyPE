@@ -8,31 +8,6 @@ import peano4.solversteps
 
 
 class RefinementCriterion(AbstractFVActionSet):
-    """
-    The action set that evaluates the refinement criterion.
-
-    AMR is a multistep process in ExaHyPE. Most of the relevant documentation
-    lives in the class exahype2::RefinementControl.
-
-    There are different phases in ExaHyPE: grid generation (either with
-    refinement or without), initialisation, plotting and time stepping. Which
-    time stepping evaluates AMR depends on the solver, but a few points hold
-    for all schemes:
-
-    - The grid creation does not work on solver data, so we do not evaluate
-      the criterion here.
-    - InitGrid has volumetric data and can evaluate the criterion. The guard
-      that a solver passes in enables that.
-    - The plotting does not alter the solution. It thus makes no sense to
-      evaluate the criterion here.
-
-    The criterion is evaluated once per patch: the solver's
-    refinementCriterion() receives the whole patch in AoS layout together with
-    the patch centre and size, so it can compute patch-wide quantities such as a
-    multiresolution detail. During grid construction there is no solution yet,
-    so Q is nullptr.
-    """
-
     def __init__(
         self,
         solver,
@@ -43,34 +18,10 @@ class RefinementCriterion(AbstractFVActionSet):
         skip_after_topology_change,
     ):
         """
-        :: Attributes.
-
-        _implement_previous_refinement_instructions: Boolean
-          Controls whether instructions are picked up from the RefinementControl
-          database. Consult exahype2::RefinementControl for a description of the
-          control flow.
-
-        :: Arguments
-
-        guard: C++ expression which evaluates to true or false
-          A per-cell decision whether to study a cell.
-
-        build_up_new_refinement_instructions: Boolean
-          See remarks on multistep realisation of AMR in C++ class
-          exahype2::RefinementControl.
-
-        implement_previous_refinement_instructions: Boolean
-          See remarks on multistep realisation of AMR in C++ class
-          exahype2::RefinementControl.
-
-        called_by_grid_construction: Boolean
-          Selects the grid construction variant of the criterion, which has no
-          solution at hand and therefore evaluates it with a nullptr and t=0.
-
-        skip_after_topology_change: Boolean
-          Collect nothing while a realised topology change is still fresh. Only
-          the time step needs this; the realise sweeps evaluate the cells they
-          have just created, which is a decomposition-independent set.
+        The guard is a C++ expression that decides per cell whether the criterion
+        runs. called_by_grid_construction selects the variant that evaluates the
+        criterion with a nullptr solution and t=0, and skip_after_topology_change
+        collects no request while a realised topology change is still fresh.
         """
         super(RefinementCriterion, self).__init__(solver)
         self._guard = guard
@@ -119,27 +70,28 @@ class RefinementCriterion(AbstractFVActionSet):
             if self._solver._patch.dim[0] != self._solver._patch.dim[1]:
                 raise Exception("Error: Can only handle square patches.")
 
-            d = {}
-            d["CELL_LABEL_NAME"] = self._solver._cell_label.name
-            d["CELL_ACCESSOR"] = (
+            dictionary = {}
+            dictionary["CELL_LABEL_NAME"] = self._solver._cell_label.name
+            dictionary["CELL_ACCESSOR"] = (
                 "fineGridCell" + self._solver.current_unknown_identifier()
             )
             # The first time step after a realised topology change still carries
-            # refinement markers on some cells, and which cells carry them depends
-            # on how many sweeps the mesh update needed, which varies with the
-            # decomposition. Collecting no requests during that step keeps the
-            # committed event set identical for every decomposition.
-            d["PREDICATE"] = "not marker.willBeRefined() and not marker.hasBeenRefined() and "
+            # refinement markers on a set of cells that depends on the decomposition.
+            # Collecting no requests during that step keeps the committed event set
+            # identical for every decomposition.
+            dictionary["PREDICATE"] = (
+                "not marker.willBeRefined() and not marker.hasBeenRefined() and "
+            )
             if self._skip_after_topology_change:
-                d["PREDICATE"] += (
+                dictionary["PREDICATE"] += (
                     "not ::exahype2::RefinementControlService::getInstance()"
                     ".hasRealisedTopologyChangesSinceLastTimeStep() and "
                 )
-            d["PREDICATE"] += self._guard
-            d["GRID_CONSTRUCTION"] = self._called_by_grid_construction
-            self._solver._init_dictionary_with_default_parameters(d)
-            self._solver.add_entries_to_text_replacement_dictionary(d)
-            result = jinja2.Template(RefinementCriterionTemplate).render(**d)
+            dictionary["PREDICATE"] += self._guard
+            dictionary["GRID_CONSTRUCTION"] = self._called_by_grid_construction
+            self._solver._init_dictionary_with_default_parameters(dictionary)
+            self._solver.add_entries_to_text_replacement_dictionary(dictionary)
+            result = jinja2.Template(RefinementCriterionTemplate).render(**dictionary)
 
         return result
 
@@ -157,7 +109,7 @@ class RefinementCriterion(AbstractFVActionSet):
             + """
 #include "exahype2/RefinementControlService.h"
 #include "exahype2/fv/PatchUtils.h"
-#include "runner/RuntimeParameters.h"
+#include "tarch/instrumentation/Debug.h"
 #include "Constants.h"
 """
         )

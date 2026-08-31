@@ -7,6 +7,7 @@
 
 #include "runner/RuntimeParameters.h"
 
+#include "exahype2/NonNegativeStatistics.h"
 #include "exahype2/Solver.h"
 #include "exahype2/RefinementControl.h"
 #include "exahype2/RefinementCriterionHelpers.h"
@@ -16,7 +17,6 @@
 #include "tarch/Assertions.h"
 #include "tarch/NonCriticalAssertions.h"
 #include "tarch/la/Vector.h"
-#include "tarch/multicore/BooleanSemaphore.h"
 
 {% if USE_VARIABLE_SHORTCUTS is sameas True %}
 #include "VariableShortcuts{{SOLVER_NAME}}.h"
@@ -32,7 +32,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
   public:
   {% if USE_VARIABLE_SHORTCUTS is sameas True %}
   /**
-   * Enables the usage of shortcuts to access variables, e.g. use Q[Shortcuts::{{VARIABLE_NAMES[0]}}] instead of Q[0].
+   * Names the variables: Q[Shortcuts::{{VARIABLE_NAMES[0]}}] is Q[0].
    */
   using Shortcuts = {{NAMESPACE | join("::")}}::VariableShortcuts{{SOLVER_NAME}};
 {% endif %}
@@ -61,11 +61,11 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
     {{SOLVER_CONSTANTS}}
 
     {{CLASSNAME}}();
-    ~{{CLASSNAME}}() override;
     {{CLASSNAME}}(const {{CLASSNAME}}& other) = delete;
     {{CLASSNAME}}({{CLASSNAME}}&& other) = delete;
     {{CLASSNAME}}& operator=(const {{CLASSNAME}}& other) = delete;
     {{CLASSNAME}}& operator=({{CLASSNAME}}&& other) = delete;
+    ~{{CLASSNAME}}() override;
 
     /**
      * Flags which coordinate axes use periodic boundary conditions.
@@ -78,7 +78,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
     double getMaxTimeStepSize() const override final;
 
     /**
-     * Evaluate the refinement criterion over one cell patch.
+     * Evaluates the refinement criterion over one cell patch.
      *
      * @param Q Whole nodal patch in AoS layout, or nullptr during grid construction.
      * @param x Patch centre.
@@ -93,10 +93,10 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
     ) {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
 
     /**
-     * Set the initial condition in one nodal point.
+     * Sets the initial condition in one nodal point.
      *
-     * @param x Position of point that is to be initialised within computational domain.
-     * @param h Size of cell within which the point is placed.
+     * @param x Position of the point within the computational domain.
+     * @param h Size of the cell that holds the point.
      */
     virtual void initialCondition(
       double* const NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -107,10 +107,10 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
     {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<none>" %}
     {% else %}
     /**
-     * Apply boundary conditions. You can overwrite both the inside and
-     * outside values, though most boundary conditions modify only the
-     * outside ones. The values set here are subsequently passed through
-     * the Riemann solver, i.e. flux and eigenvalues.
+     * Applies the boundary conditions to one face point.
+     *
+     * The routine overwrites the inside and the outside values, and the
+     * Riemann solver reads both afterwards.
      */
     virtual void boundaryConditions(
       const double* const NOALIAS Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -124,32 +124,27 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
     void suspendSolversForOneGridSweep() override;
 
     /**
-     * If you hook into this routine, ensure the abstract base class
-     * operation is still invoked.
+     * An override calls this base class operation.
      */
     void startGridConstructionStep() override;
 
     /**
-     * If you hook into this routine, ensure the abstract base class
-     * operation is still invoked.
+     * An override calls this base class operation.
      */
     void finishGridConstructionStep() override;
 
     /**
-     * If you hook into this routine, ensure the abstract base class
-     * operation is still invoked.
+     * An override calls this base class operation.
      */
     void startGridInitialisationStep() override;
 
     /**
-     * If you hook into this routine, ensure the abstract base class
-     * operation is still invoked.
+     * An override calls this base class operation.
      */
     void finishGridInitialisationStep() override;
 
     /**
-     * If you hook into this routine, ensure the abstract base class
-     * operation is still invoked.
+     * An override calls this base class operation.
      */
     void startTimeStep() override;
 
@@ -162,20 +157,17 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
     void finishDynamicMeshRefinementStep() override;
 
     /**
-     * If you hook into this routine, ensure the abstract base class
-     * operation is still invoked.
+     * An override calls this base class operation.
      */
     void finishTimeStep() override;
 
     /**
-     * If you hook into this routine, ensure the abstract base class
-     * operation is still invoked.
+     * An override calls this base class operation.
      */
     void startPlottingStep() override;
 
     /**
-     * If you hook into this routine, ensure the abstract base class
-     * operation is still invoked.
+     * An override calls this base class operation.
      */
     void finishPlottingStep() override;
 
@@ -187,10 +179,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
     int getNumberOfDoFs() const override final;
 
     /**
-     * Update the global solver state, i.e. inform the solver about some
-     * updated global quantities.
-     *
-     * @see setTimeStepSize(double)
+     * Adds one cell's time step size, time stamp and cell size to the extrema
+     * of the current traversal.
      */
     void update(
       const double timeStepSize,
@@ -198,7 +188,14 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
       const double cellSize
     );
 
-    SolverState getSolverState() const;
+    /**
+     * Reduces the extrema the current traversal has accumulated through update()
+     * into the solver. Runs once per tree at traversal end, so the per-cell
+     * update writes thread-local data only.
+     */
+    void reduceLocalUpdates();
+
+    SolverState  getSolverState() const;
 
     bool mayPlot() const override;
 
@@ -206,30 +203,26 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
     bool isLastGridSweepOfTimeStep() const;
 
     /**
-     * If you hook into this routine, ensure the abstract base class
-     * operation is still invoked.
+     * An override calls this base class operation.
      */
     void startSimulation() override;
 
     /**
-     * If you hook into this routine, ensure the abstract base class
-     * operation is still invoked.
+     * An override calls this base class operation.
      */
     void finishSimulation() override;
 
     {% if STATELESS_PDE_TERMS %}
     /**
-     * By default each cell can use stateless PDE terms, i.e. the static
-     * versions of the operators. Therefore, each cell can go to the GPU
-     * or inline aggressively. You can disable this behaviour for selected
-     * cells via this callback.
+     * Returns whether the cell uses the static versions of the PDE operators,
+     * which lets the cell run on the GPU. An override returns false for a cell
+     * that needs the solver state.
      */
     {% else %}
     /**
-     * Warning: This operation has no semantics, as you have disabled
-     * stateless PDE terms. The routine is here to allow you to write one
-     * code version for both a GPU-enabled solver and a solver without
-     * GPU support.
+     * Returns true, since the solver holds no stateless PDE terms. The
+     * operation lets one code version serve a GPU-enabled solver and a solver
+     * without GPU support.
      */
     {% endif %}
     virtual bool cellCanUseStatelessPDETerms(
@@ -240,8 +233,22 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
     ) const;
 
   protected:
-    SolverState _solverState;
-    SolverState _solverStateBeforeDynamicMeshRefinement;
+    /** Stores one traversal's extrema until reduceLocalUpdates() reduces them. */
+    struct LocalUpdates {
+      double                            minTimeStamp{std::numeric_limits<double>::infinity()};
+      double                            maxTimeStamp{0.0};
+      double                            localMinTimeStamp{std::numeric_limits<double>::infinity()};
+      double                            localMaxTimeStamp{0.0};
+      double                            minCellH{std::numeric_limits<double>::infinity()};
+      double                            maxCellH{0.0};
+      ::exahype2::NonNegativeStatistics timeStepSize{};
+      bool                              empty{true};
+    };
+
+    static thread_local LocalUpdates _localUpdates;
+
+    SolverState  _solverState;
+    SolverState  _solverStateBeforeDynamicMeshRefinement;
 
     double _minTimeStamp;
     double _maxTimeStamp;
@@ -263,8 +270,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
 
     double _minTimeStepSizeThisTimeStep;
     double _maxTimeStepSizeThisTimeStep;
-
-    tarch::multicore::BooleanSemaphore _semaphore;
 
   {{ABSTRACT_SOLVER_USER_DECLARATIONS}}
 };

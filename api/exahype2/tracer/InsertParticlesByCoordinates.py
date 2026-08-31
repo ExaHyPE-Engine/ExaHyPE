@@ -6,9 +6,8 @@ import peano4.particles
 
 class InsertParticlesByCoordinates(peano4.particles.InsertParticlesByCoordinates):
     """
-    Insert particles by explicit coordinates and assign spacetree-local IDs.
-
-    Adds spacetree ID and local particle number to each inserted particle.
+    Adds the spacetree number and a tree-local particle number to every inserted
+    particle.
     """
 
     def __init__(
@@ -26,7 +25,7 @@ class InsertParticlesByCoordinates(peano4.particles.InsertParticlesByCoordinates
             coordinates=coordinates,
             initialisation_call=jinja2.Template(
                 """
-      particle->setNumber(0, _spacetreeId);
+      particle->setNumber(0, _treeId);
       particle->setNumber(1, _particleNumberOnThisTree);
       particle->setMoveState(globaldata::{{PARTICLE}}::MoveState::NotMovedYet);
 
@@ -40,6 +39,7 @@ class InsertParticlesByCoordinates(peano4.particles.InsertParticlesByCoordinates
                 """
 #include "Constants.h"
 #include "globaldata/{{PARTICLE}}.h"
+#include "tarch/instrumentation/Info.h"
 """
             ).render(**dictionary),
         )
@@ -59,6 +59,6 @@ class InsertParticlesByCoordinates(peano4.particles.InsertParticlesByCoordinates
         return (
             super().get_attributes()
             + """
-  int _particleNumberOnThisTree;
+  int _particleNumberOnThisTree{0};
 """
         )

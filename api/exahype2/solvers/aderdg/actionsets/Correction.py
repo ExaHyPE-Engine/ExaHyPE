@@ -205,10 +205,8 @@ class Correction(AbstractADERDGActionSet):
     constexpr int SpaceBasisSize = NodesPerCell * {{NUMBER_OF_DATA}};
 
     // Each direction's two faces accumulate into a direction buffer, and the
-    // buffers combine through a commutative pairwise sum. A fixed face order
-    // would tie the committed state's rounding to the axis order, so two
-    // mirror-image cells would drift apart in the last bits and knife-edge
-    // admissibility verdicts would flip one-sided.
+    // buffers combine through a commutative pairwise sum, so two mirror-image
+    // cells commit bitwise mirrored states.
     {{SOLUTION_STORAGE_PRECISION}} directionUpdates[DIMENSIONS][SpaceBasisSize];
     // Hanging-face Riemann data resides on the side that sent it.
     for (int direction = 0; direction < DIMENSIONS; direction++) {
@@ -326,6 +324,12 @@ class Correction(AbstractADERDGActionSet):
         ):
             result = jinja2.Template(self._Template_TouchCellFirstTime).render(
                 **dictionary
+            )
+        if operation_name == peano4.solversteps.ActionSet.OPERATION_END_TRAVERSAL:
+            result = (
+                "  repositories::"
+                + self._solver.get_name_of_global_instance()
+                + ".reduceLocalUpdates();\n"
             )
         return result
 

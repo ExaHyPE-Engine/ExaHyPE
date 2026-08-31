@@ -33,8 +33,8 @@ def get_face_merge_implementation(patch_overlap):
   }};
 
   switch (context) {{
-    case ::peano4::stacks::SendReceiveContext::PeriodicBoundaryDataSwap:
-    case ::peano4::stacks::SendReceiveContext::BoundaryExchange: {{
+    case ::peano4::stacks::SendReceiveContext::InterRank:
+    case ::peano4::stacks::SendReceiveContext::IntraRank: {{
         auto* const destination = this->data();
         const auto* const source = neighbour.data();
         assertion(destination);
@@ -62,11 +62,8 @@ def get_face_merge_implementation(patch_overlap):
         );
         break;
       }}
-    case ::peano4::stacks::SendReceiveContext::MultiscaleExchange:
-      assertion(false, "Multiscale exchange is not implemented.");
-      break;
-    default:
-      assertion(false, "This exchange context is not implemented.");
+    case ::peano4::stacks::SendReceiveContext::Consolidation:
+      assertion(false, "The rank rebuilds this data with a copy, so its merge never sees a consolidation.");
       break;
   }}
 """
@@ -77,17 +74,10 @@ def get_face_merge_implementation(patch_overlap):
 def get_cell_merge_implementation(patch_overlap):
     template = """
   switch (context) {{
-    case ::peano4::stacks::SendReceiveContext::BoundaryExchange:
-      assertion(false, "Cells on the same level cannot overlap in Peano.");
-      break;
-    case ::peano4::stacks::SendReceiveContext::MultiscaleExchange:
-      assertion(false, "Multiscale exchange is not implemented.");
-      break;
-    case ::peano4::stacks::SendReceiveContext::PeriodicBoundaryDataSwap:
-      assertion(false, "Cell data has no periodic boundary swap.");
-      break;
-    default:
-      assertion(false, "This exchange context is not implemented.");
+    case ::peano4::stacks::SendReceiveContext::InterRank:
+    case ::peano4::stacks::SendReceiveContext::IntraRank:
+    case ::peano4::stacks::SendReceiveContext::Consolidation:
+      assertion(false, "Cells on one level never overlap in Peano, so they are never merged.");
       break;
   }}
 """

@@ -15,27 +15,24 @@ public:
 
   void run() override;
 
-  bool terminatedGracefully() const;
+  /** True if the run ended early on a non-critical assertion (one final plot was written). */
+  bool stoppedAfterNonCriticalAssertion() const { return _stoppedAfterNonCriticalAssertion; }
 
 private:
   runner::PhaseContext& _context;
   int                   _timeStepStep;
   int                   _plotStep;
   runner::DynamicAMR&   _dynamicAMR;
-  bool                  _terminatedGracefully = false;
+  bool                  _stoppedAfterNonCriticalAssertion = false;
 
   /**
-   * Wall clock of every completed time step, the first one included. The throughput
-   * measurement skips that step because its allocation cost is not representative, which
-   * is the wrong basis for an extrapolation: the step still consumed wall clock and still
-   * advanced the simulated time the estimate divides by.
+   * Wall clock in seconds of every completed time step, the first one included.
    */
   double _timeSteppingSeconds = 0.0;
 
   /**
-   * Drain wall clock already accumulated when the loop starts. Grid initialisation drains
-   * through the same phase object and into the same measurement, and that work is one-off
-   * setup, so the estimate must not extrapolate it as a recurring cost.
+   * Wall clock in seconds that the DynamicAMR measurement holds when the loop starts. Grid
+   * initialisation runs through the same measurement, and the estimate subtracts this offset.
    */
   double _dynamicAMRSecondsBeforeLoop = 0.0;
 

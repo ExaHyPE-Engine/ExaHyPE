@@ -16,8 +16,6 @@ class _AdaptiveTimeSteppingScheme(Enum):
 
 
 class AdaptiveTimeSteppingCodeSnippets(SolverCodeSnippets):
-    """Generates adaptive time-stepping code."""
-
     def __init__(self, scheme, time_step_relaxation=None):
         self._scheme = scheme
         self._time_step_relaxation = time_step_relaxation
@@ -65,13 +63,10 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::setMaxEigenvalue(const double 
         )
     );
   }
-  const auto lock = tarch::multicore::Lock(_semaphore);
-  const auto accumulatedEigenvalueStatistics =
-    ::exahype2::NonNegativeStatistics::accumulate(
-      {_maxEigenvalueThisTimeStep, _maxEigenvalueThisTimeStep},
-      eigenvalue
-    );
-  _maxEigenvalueThisTimeStep = accumulatedEigenvalueStatistics.maximum;
+  // Every traversal task may report concurrently, so the extremum updates atomically.
+  if (tarch::la::greater(eigenvalue, 0.0)) {
+    tarch::accelerator::updateAtomicMax(_maxEigenvalueThisTimeStep, eigenvalue);
+  }
 }
 """
 
@@ -98,13 +93,10 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::setMaxScaledEigenvalue(const d
         )
     );
   }
-  const auto lock = tarch::multicore::Lock(_semaphore);
-  const auto accumulatedEigenvalueStatistics =
-    ::exahype2::NonNegativeStatistics::accumulate(
-      {_maxScaledEigenvalueThisTimeStep, _maxScaledEigenvalueThisTimeStep},
-      eigenvalue
-    );
-  _maxScaledEigenvalueThisTimeStep = accumulatedEigenvalueStatistics.maximum;
+  // Every traversal task may report concurrently, so the extremum updates atomically.
+  if (tarch::la::greater(eigenvalue, 0.0)) {
+    tarch::accelerator::updateAtomicMax(_maxScaledEigenvalueThisTimeStep, eigenvalue);
+  }
 }
 """
 
@@ -136,12 +128,10 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::setMaxScaledEigenvalue(const d
         )
 
     def create_abstract_solver_user_declarations(self):
-        """Returns the abstract solver's declarations, closing on ``public:``.
+        """Returns the declarations of the abstract solver.
 
-        A scenario appends its own declarations to this string, so whichever
-        access label it emits last decides how those additions are reachable.
-        Anything a generated action set reads from the solver instance therefore
-        has to find the string ending in ``public:``.
+        The string ends in ``public:``, so the declarations a scenario appends stay reachable
+        for a generated action set.
         """
         return (
             """
@@ -248,11 +238,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() 
 """
 
     def create_reduced_eigenvalues(self):
-        """Names of the eigenvalue members that the end-of-time-step reduction covers.
-
-        A solver that tracks further eigenvalues extends this list rather than adding a
-        reduction of its own.
-        """
+        """Returns the names of the eigenvalue members the reduction of a time step covers."""
         eigenvalues = ["_maxEigenvalueThisTimeStep"]
         if self._uses_scaled_eigenvalue():
             eigenvalues.append("_maxScaledEigenvalueThisTimeStep")
@@ -261,10 +247,9 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() 
     def create_max_eigenvalue_reduction(self):
         """Turns the rank-local eigenvalue maxima into global maxima.
 
-        Every reduction synchronises all ranks, so all eigenvalues share one buffer. The
-        second buffer carries each observation's validity flag beside its bits, reduced
-        with a minimum, so a rank that saw an invalid value decides the outcome instead of
-        being outvoted by a larger value elsewhere.
+        One buffer holds every eigenvalue, so the ranks synchronise once. A second buffer
+        carries the validity flag of each observation beside its bits and reduces with a
+        minimum, so one rank with an invalid value decides the outcome.
         """
         eigenvalues = self.create_reduced_eigenvalues()
         width = max(len(eigenvalue) for eigenvalue in eigenvalues)
@@ -292,7 +277,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() 
             for index, eigenvalue in enumerate(eigenvalues)
         )
 
-        Template = jinja2.Template(
+        reduction_template = jinja2.Template(
             """
 {{STATISTICS}}
 
@@ -327,7 +312,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() 
             keep_trailing_newline=True,
         )
 
-        return Template.render(
+        return reduction_template.render(
             STATISTICS=statistics,
             INITIALISER="{" + ", ".join(eigenvalues) + "}",
             ZEROS="{" + ", ".join(["0.0"] * len(eigenvalues)) + "}",
@@ -365,9 +350,6 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() 
     def _create_time_step_size_from_cfl(self):
         if self._scheme is _AdaptiveTimeSteppingScheme.FiniteVolume:
             template = """
-      // One explicit Euler step accumulates the fluxes of all 2 * DIMENSIONS faces.
-      // Its stability limit is the volume width divided by DIMENSIONS and the
-      // maximum eigenvalue; the relaxation selects a fraction of that limit.
       const auto timeStepSizeFromCFL = $time_step_relaxation
         * _minVolumeHThisTimeStep
         / (DIMENSIONS * _maxEigenvalueThisTimeStep);
@@ -385,8 +367,6 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() 
                 "\n"
             )
         template = """
-      // The scaled eigenvalue includes the cell size and all directional
-      // eigenvalues; the relaxation selects a fraction of its stability limit.
       const auto waveSpeedDamping = 1.0 / _maxScaledEigenvalueThisTimeStep;
       constexpr double CockburnShuDamping =
         1.0 / (2.0 * {{RK_ORDER}} - 1.0);

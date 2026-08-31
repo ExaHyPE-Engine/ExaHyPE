@@ -10,8 +10,7 @@ struct alignas(8) tarch::la::Vector<2, Scalar> {
 
   INLINE_METHOD GPU_CALLABLE_METHOD Vector(const Scalar* values);
 
-  INLINE_METHOD GPU_CALLABLE_METHOD
-  Vector(std::initializer_list<Scalar> values);
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector(std::initializer_list<Scalar> values);
 
   INLINE_METHOD
   Vector(const std::bitset<2>& values);
@@ -33,4 +32,4 @@ struct alignas(8) tarch::la::Vector<2, Scalar> {
   INLINE_METHOD GPU_CALLABLE_METHOD const Scalar* data() const;
 };
 
-#include "Vector2.cpph"
+#include "tarch/la/Vector2.cpph"

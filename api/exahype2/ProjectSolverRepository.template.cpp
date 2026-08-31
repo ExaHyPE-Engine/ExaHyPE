@@ -5,9 +5,10 @@
 #include "Constants.h"
 #include "exahype2/NonNegativeReduction.h"
 #include "exahype2/RefinementControlService.h"
-#include "peano4/parallel/SpacetreeSet.h"
+#include "peano4/topology/TopologyManager.h"
 
-#include "tarch/instrumentation/Log.h"
+#include "tarch/Assertions.h"
+#include "tarch/instrumentation/Debug.h"
 #include "tarch/mpi/Rank.h"
 
 {% for particleName in TRACERS %}
@@ -23,6 +24,19 @@
 {% endfor %}
 
 namespace {
+  /**
+   * Records a committed event set the refinement plan rejects as realised, so
+   * no mesh-refinement sweep runs for it. Every rank holds the same committed
+   * set and evaluates the same plan, so every rank drops the same set.
+   */
+  void realisePlanRejectedEvents() {
+    auto& service = ::exahype2::RefinementControlService::getInstance();
+    auto& manager = ::peano4::topology::TopologyManager::getInstance();
+    if (service.hasGridControlEvents() and not manager.controlEventsChangePlan(service.getGridControlEvents())) {
+      service.realiseCommittedEventsWithoutSweep();
+    }
+  }
+
   ::runner::SolverStatistic makeValue(const char* const label, const double value) {
     return {label, ::runner::SolverStatistic::Kind::Value, value, value, 0};
   }
@@ -161,10 +175,9 @@ std::vector<std::pair<std::string, std::vector<::runner::SolverStatistic>>>
 }
 
 /**
- * Return whether any solver is in its first grid sweep of a time step.
+ * Returns whether any solver is in its first grid sweep of a time step.
  *
- * startTimeStep() enters this state. It remains observable after the mesh
- * traversal because finishTimeStep() does not advance the solver state.
+ * startTimeStep() enters this state, and finishTimeStep() leaves it in place.
  */
 bool {{ NAMESPACE | join("::") }}::isFirstGridSweepOfTimeStep() {
   bool result = false;
@@ -175,10 +188,9 @@ bool {{ NAMESPACE | join("::") }}::isFirstGridSweepOfTimeStep() {
 }
 
 /**
- * Return whether any solver is in its last grid sweep of a time step.
+ * Returns whether any solver is in its last grid sweep of a time step.
  *
- * The state remains observable after finishTimeStep(), which lets the caller
- * recognise a completed multi-sweep time step.
+ * finishTimeStep() leaves the state in place, so a caller reads it after the sweep.
  */
 bool {{ NAMESPACE | join("::") }}::isLastGridSweepOfTimeStep() {
   bool result = false;
@@ -189,10 +201,9 @@ bool {{ NAMESPACE | join("::") }}::isLastGridSweepOfTimeStep() {
 }
 
 /**
- * Return the earliest time stamp exposed by any solver.
+ * Returns the earliest time stamp of any solver.
  *
- * With local time stepping this is the time reached by every cell; other cells
- * can already expose a later maximum time stamp.
+ * Under local time stepping every cell has reached this time, and a cell can carry a later one.
  */
 double {{ NAMESPACE | join("::") }}::getMinTimeStamp() {
   double result = std::numeric_limits<double>::max();
@@ -203,9 +214,7 @@ double {{ NAMESPACE | join("::") }}::getMinTimeStamp() {
 }
 
 /**
- * Return the latest time stamp exposed by any solver.
- *
- * It marks the leading edge when local time stepping spans multiple times.
+ * Returns the latest time stamp of any solver.
  */
 double {{ NAMESPACE | join("::") }}::getMaxTimeStamp() {
   double result = 0.0;
@@ -258,12 +267,12 @@ void {{ NAMESPACE | join("::") }}::startGridInitialisationStep() {
 }
 
 /**
- * Advance every solver to its next sweep state.
+ * Advances every solver to its next sweep state.
  *
- * The state stays fixed until this function is called again or the solver is
- * suspended; finishTimeStep() does not alter it.
+ * The state stays fixed until the next call of this function or a suspension of the solver.
  */
 void {{ NAMESPACE | join("::") }}::startTimeStep() {
+  assertion(::exahype2::RefinementControlService::getInstance().committedEventsAgreeAcrossRanks());
 {% for solver in SOLVERS %}
   {{ solver[1] }}.startTimeStep();
 {% endfor %}
@@ -281,11 +290,10 @@ void {{ NAMESPACE | join("::") }}::finishTimeStep() {
 {% endfor %}
   const bool commitDynamicMeshRefinementEvents = isLastGridSweepOfTimeStep();
   if (commitDynamicMeshRefinementEvents) {
-    // Every rank must observe the identical merged event set before the DynamicAMR observer
-    // starts, or the trigger/realise cycle acts on rank-dependent sets and the topology
-    // change never completes. The commit therefore gathers collectively, once per completed
-    // time step on its last grid sweep.
+    // Every rank holds the identical merged event set before the mesh-refinement sweep
+    // starts, so the commit gathers collectively on the last grid sweep of a time step.
     ::exahype2::RefinementControlService::getInstance().finishRefinementCriterionStep();
+    realisePlanRejectedEvents();
   }
 {% for particleName in TRACERS %}
   ::{{ NAMESPACE[:-1] | join("::") }}::vertexdata::{{ particleName }}Set::reduceNumberOfParticles();
@@ -294,46 +302,39 @@ void {{ NAMESPACE | join("::") }}::finishTimeStep() {
 }
 
 void {{ NAMESPACE | join("::") }}::startDynamicMeshRefinementStep() {
+  assertion(::exahype2::RefinementControlService::getInstance().committedEventsAgreeAcrossRanks());
 {% for solver in SOLVERS %}
   {{ solver[1] }}.startDynamicMeshRefinementStep();
 {% endfor %}
 }
 
 void {{ NAMESPACE | join("::") }}::finishDynamicMeshRefinementStep() {
-{% for solver in SOLVERS %}
+  {%- for solver in SOLVERS %}
   {{ solver[1] }}.finishDynamicMeshRefinementStep();
-{% endfor %}
-  // Vertex changes deferred while neighbouring transitions are in flight need
-  // their refinement events retained for delivery in the next traversal. The
-  // same holds for refinements the traversal has just triggered: an event whose
-  // target spans several levels can mark the next level's vertices only once
-  // this round has been realised, so retiring the set here would realise an
-  // incomplete, traversal-order-shaped subset of it.
-  const auto gridStatistics = ::peano4::parallel::SpacetreeSet::getInstance().getGridStatistics();
-  ::exahype2::RefinementControlService::getInstance().finishDynamicMeshRefinementStep(
-    gridStatistics.numberOfDeferredGridControlChanges
-      + gridStatistics.numberOfRefinementsTriggeredByGridControl
-  );
+  {%- endfor %}
+
+  ::exahype2::RefinementControlService::getInstance().finishDynamicMeshRefinementStep();
+  realisePlanRejectedEvents();
 }
 
 void {{ NAMESPACE | join("::") }}::finishGridConstructionStep() {
-{% for solver in SOLVERS %}
+  {%- for solver in SOLVERS %}
   {{ solver[1] }}.finishGridConstructionStep();
-{% endfor %}
-  ::exahype2::RefinementControlService::getInstance().finishStep(
-    ::peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().numberOfDeferredGridControlChanges
-  );
+  {%- endfor %}
+
+  ::exahype2::RefinementControlService::getInstance().finishStep();
+  realisePlanRejectedEvents();
 }
 
 void {{ NAMESPACE | join("::") }}::finishGridInitialisationStep() {
 {% for solver in SOLVERS %}
   {{ solver[1] }}.finishGridInitialisationStep();
 {% endfor %}
-  // The initialisation sweep evaluates the refinement criterion on the exact initial
-  // condition. Committing the events here means the dedicated mesh-refinement sweeps
-  // can realise them and re-apply the initial condition on the finer mesh before time
-  // stepping starts.
+  // The initialisation sweep evaluates the refinement criterion on the initial condition.
+  // The commit here lets the mesh-refinement sweeps set the initial condition on the finer
+  // mesh before time stepping starts.
   ::exahype2::RefinementControlService::getInstance().finishRefinementCriterionStep();
+  realisePlanRejectedEvents();
 }
 
 void {{ NAMESPACE | join("::") }}::finishPlottingStep() {
@@ -343,10 +344,10 @@ void {{ NAMESPACE | join("::") }}::finishPlottingStep() {
 }
 
 void {{ NAMESPACE | join("::") }}::startSimulation() {
-  // The domain offset anchors sibling groups when patch-local erase requests are
-  // promoted to parent events. Coarsening requires consent from each solver that
-  // evaluates a refinement criterion, so the service also needs the participant count.
-  ::exahype2::RefinementControlService::getInstance().setDomainOffset(::{{ NAMESPACE[:-1] | join("::") }}::DomainOffset);
+  // A refinement request names its cell by level and lattice position, so the service needs
+  // the anchor and the extent of the cell lattice. Coarsening needs the count of the solvers
+  // that evaluate a refinement criterion, because every one of them has to consent.
+  ::exahype2::RefinementControlService::getInstance().setDomain(DomainOffset, DomainSize);
   ::exahype2::RefinementControlService::getInstance().setNumberOfSolvers({{ NUMBER_OF_AMR_PARTICIPANTS }});
 
 {% for solver in SOLVERS %}
@@ -359,4 +360,5 @@ void {{ NAMESPACE | join("::") }}::finishSimulation() {
   {{ solver[1] }}.finishSimulation();
 {% endfor %}
   ::exahype2::RefinementControlService::getInstance().finishStep();
+  ::exahype2::RefinementControlService::getInstance().shutdown();
 }

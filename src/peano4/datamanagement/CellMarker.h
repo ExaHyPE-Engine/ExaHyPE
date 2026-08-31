@@ -3,29 +3,17 @@
 #pragma once
 
 #include "peano4/Globals.h"
+#include "tarch/Assertions.h"
 #include "tarch/la/Vector.h"
-#include "tarch/mpi/Rank.h"
 
 namespace peano4::datamanagement {
   struct CellMarker;
 } // namespace peano4::datamanagement
 
 /**
- * Cell marker
- *
- * This object provides information on the cell aka octant within the
- * spacetree. This includes spatial
- * information such as size and position. It also comprises mesh topology
- * properties such as "will this cell be refined" or "is its parent a
- * local cell".
- *
- * It is an object which users are not supposed to manipulate. The mesh
- * traversal automaton creates it once per octant while it runs through
- * the mesh and passes in information about adjacent vertices, parent
- * data, and so forth. The constructor then distills the user
- * representation from that data and, from hereon, users can use this
- * distilled information to make logical decisions what to do and how
- * to do things within the spacetree octant.
+ * Describes the cell a traversal event visits: Its level, width, centre and
+ * position within the father cell, plus its refinement and ownership flags.
+ * The traversal automaton builds one marker per cell.
  */
 struct peano4::datamanagement::CellMarker {
   int level{0};
@@ -39,18 +27,18 @@ struct peano4::datamanagement::CellMarker {
   tarch::la::Vector<DIMENSIONS, int> relativePositionWithinFatherCell{};
 
   enum : std::uint16_t {
-    HasBeenRefined = 1u << 0,
-    WillBeRefined  = 1u << 1,
-    IsLocal        = 1u << 2,
-    IsParentLocal  = 1u << 3
+    HasBeenRefined = 1U << 0,
+    WillBeRefined  = 1U << 1,
+    IsLocal        = 1U << 2,
+    IsParentLocal  = 1U << 3
   };
 
   std::uint16_t flags{0};
 
-  INLINE_METHOD bool hasBeenRefined() const { return flags & HasBeenRefined; }
-  INLINE_METHOD bool willBeRefined() const { return flags & WillBeRefined; }
-  INLINE_METHOD bool isLocal() const { return flags & IsLocal; }
-  INLINE_METHOD bool isParentLocal() const { return flags & IsParentLocal; }
+  INLINE_METHOD bool hasBeenRefined() const { return (flags & HasBeenRefined) != 0; }
+  INLINE_METHOD bool willBeRefined() const { return (flags & WillBeRefined) != 0; }
+  INLINE_METHOD bool isLocal() const { return (flags & IsLocal) != 0; }
+  INLINE_METHOD bool isParentLocal() const { return (flags & IsParentLocal) != 0; }
 
   INLINE_METHOD const tarch::la::Vector<DIMENSIONS, double>& getH() const { return h; }
   INLINE_METHOD const tarch::la::Vector<DIMENSIONS, double>& getX() const { return centre; }

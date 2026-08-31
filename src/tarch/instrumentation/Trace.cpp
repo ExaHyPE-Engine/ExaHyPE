@@ -5,19 +5,19 @@
 #if PEANO_TRACE
 
 #include "tarch/mpi/Rank.h"
-#include "tarch/multicore/Core.h"
+#include "tarch/tasking/Runtime.h"
 
 namespace {
   struct TraceScope {
-    std::string name;
-    long int    startTimeStampMicroseconds;
-    long int    childDurationMicroseconds = 0;
+    std::string name{};
+    long int    startTimeStampMicroseconds{0};
+    long int    childDurationMicroseconds{0};
   };
 
   struct TraceKey {
-    int                      rank;
-    int                      threadId;
-    std::vector<std::string> path;
+    int                      rank{-1};
+    int                      threadId{-1};
+    std::vector<std::string> path{};
 
     bool operator<(const TraceKey& other) const {
       if (rank != other.rank) {
@@ -31,15 +31,15 @@ namespace {
   };
 
   struct TraceSummary {
-    long int inclusiveDurationMicroseconds = 0;
-    long int exclusiveDurationMicroseconds = 0;
-    long int numberOfCalls                 = 0;
+    long int inclusiveDurationMicroseconds{0};
+    long int exclusiveDurationMicroseconds{0};
+    long int numberOfCalls{0};
   };
 
   struct ThreadTraceData {
-    int                                              rank;
-    int                                              threadId;
-    std::map<std::vector<std::string>, TraceSummary> entries;
+    int                                              rank{-1};
+    int                                              threadId{-1};
+    std::map<std::vector<std::string>, TraceSummary> entries{};
   };
 
   std::vector<TraceScope>& getTraceStack() {
@@ -59,19 +59,19 @@ namespace {
 
   ThreadTraceData& getThreadTraceData() {
     // Intentionally kept alive until process shutdown so final trace collection can read data from completed threads.
-    thread_local ThreadTraceData* data = []() {
-      auto* result = new ThreadTraceData{
+    thread_local ThreadTraceData* threadTraceData = []() {
+      auto* newThreadTraceData = new ThreadTraceData{
         tarch::mpi::Rank::getInstance().getRank(),
-        tarch::multicore::Core::getInstance().getCoreNumber(),
+        tarch::tasking::Runtime::getInstance().getCoreNumber(),
         {}
       };
 
-      std::lock_guard<std::mutex> lock(getThreadTraceDataRegistryMutex());
-      getThreadTraceDataRegistry().push_back(result);
-      return result;
+      std::lock_guard<std::mutex> registryLock(getThreadTraceDataRegistryMutex());
+      getThreadTraceDataRegistry().push_back(newThreadTraceData);
+      return newThreadTraceData;
     }();
 
-    return *data;
+    return *threadTraceData;
   }
 
   void reportTraceWarning(std::string_view message, std::string_view scopeName) {
@@ -84,89 +84,94 @@ namespace {
   }
 
   std::string escapeJson(std::string_view value) {
-    std::string result;
-    result.reserve(value.size());
+    std::string escapedValue;
+    escapedValue.reserve(value.size());
     static constexpr char HexDigits[] = "0123456789abcdef";
 
-    for (const char c : value) {
-      switch (c) {
+    for (const char character : value) {
+      switch (character) {
       case '"':
-        result += "\\\"";
+        escapedValue += "\\\"";
         break;
       case '\\':
-        result += "\\\\";
+        escapedValue += "\\\\";
         break;
       case '\b':
-        result += "\\b";
+        escapedValue += "\\b";
         break;
       case '\f':
-        result += "\\f";
+        escapedValue += "\\f";
         break;
       case '\n':
-        result += "\\n";
+        escapedValue += "\\n";
         break;
       case '\r':
-        result += "\\r";
+        escapedValue += "\\r";
         break;
       case '\t':
-        result += "\\t";
+        escapedValue += "\\t";
         break;
       default:
-        if (static_cast<unsigned char>(c) < 0x20) {
-          result += "\\u00";
-          result += HexDigits[(static_cast<unsigned char>(c) >> 4) & 0x0f];
-          result += HexDigits[static_cast<unsigned char>(c) & 0x0f];
+        if (static_cast<unsigned char>(character) < 0x20) {
+          escapedValue += "\\u00";
+          escapedValue += HexDigits[(static_cast<unsigned char>(character) >> 4) & 0x0f];
+          escapedValue += HexDigits[static_cast<unsigned char>(character) & 0x0f];
         } else {
-          result += c;
+          escapedValue += character;
         }
         break;
       }
     }
 
-    return result;
+    return escapedValue;
   }
 
-  void appendJsonString(std::ostringstream& out, std::string_view value) { out << '"' << escapeJson(value) << '"'; }
-
-  void appendMilliseconds(std::ostringstream& out, long int microseconds) {
-    out << std::fixed << std::setprecision(3) << static_cast<double>(microseconds) / 1000.0;
+  void appendJsonString(std::ostringstream& output, std::string_view value) {
+    output << '"' << escapeJson(value) << '"';
   }
 
-  void appendMicrosecondsAverage(std::ostringstream& out, long int microseconds, long int calls) {
-    out << std::fixed << std::setprecision(3);
+  void appendMilliseconds(std::ostringstream& output, long int microseconds) {
+    output << std::fixed << std::setprecision(3) << static_cast<double>(microseconds) / 1000.0;
+  }
+
+  void appendMicrosecondsAverage(std::ostringstream& output, long int microseconds, long int calls) {
+    output << std::fixed << std::setprecision(3);
     if (calls == 0) {
-      out << 0.0;
+      output << 0.0;
     } else {
-      out << static_cast<double>(microseconds) / static_cast<double>(calls);
+      output << static_cast<double>(microseconds) / static_cast<double>(calls);
     }
   }
 
-  void appendPath(std::ostringstream& out, const std::vector<std::string>& path) {
-    out << '[';
-    for (std::size_t i = 0; i < path.size(); i++) {
-      if (i > 0) {
-        out << ',';
+  void appendPath(std::ostringstream& output, const std::vector<std::string>& path) {
+    output << '[';
+    for (std::size_t pathIndex = 0; pathIndex < path.size(); pathIndex++) {
+      if (pathIndex > 0) {
+        output << ',';
       }
-      appendJsonString(out, path[i]);
+      appendJsonString(output, path[pathIndex]);
     }
-    out << ']';
+    output << ']';
   }
 
-  void
-  appendTraceEntryPrefix(std::ostringstream& out, const std::vector<std::string>& path, const TraceSummary& summary) {
-    out << "{\"depth\":" << path.size() - 1 << ",\"name\":";
-    appendJsonString(out, path.back());
-    out << ",\"path\":";
-    appendPath(out, path);
-    out << ",\"calls\":" << summary.numberOfCalls << ",\"inclusive_us\":" << summary.inclusiveDurationMicroseconds
-        << ",\"inclusive_ms\":";
-    appendMilliseconds(out, summary.inclusiveDurationMicroseconds);
-    out << ",\"exclusive_us\":" << summary.exclusiveDurationMicroseconds << ",\"exclusive_ms\":";
-    appendMilliseconds(out, summary.exclusiveDurationMicroseconds);
-    out << ",\"average_inclusive_us\":";
-    appendMicrosecondsAverage(out, summary.inclusiveDurationMicroseconds, summary.numberOfCalls);
-    out << ",\"average_exclusive_us\":";
-    appendMicrosecondsAverage(out, summary.exclusiveDurationMicroseconds, summary.numberOfCalls);
+  void appendTraceEntryPrefix(
+    std::ostringstream&             output,
+    const std::vector<std::string>& path,
+    const TraceSummary&             summary
+  ) {
+    output << "{\"depth\":" << path.size() - 1 << ",\"name\":";
+    appendJsonString(output, path.back());
+    output << ",\"path\":";
+    appendPath(output, path);
+    output << ",\"calls\":" << summary.numberOfCalls << ",\"inclusive_us\":" << summary.inclusiveDurationMicroseconds
+           << ",\"inclusive_ms\":";
+    appendMilliseconds(output, summary.inclusiveDurationMicroseconds);
+    output << ",\"exclusive_us\":" << summary.exclusiveDurationMicroseconds << ",\"exclusive_ms\":";
+    appendMilliseconds(output, summary.exclusiveDurationMicroseconds);
+    output << ",\"average_inclusive_us\":";
+    appendMicrosecondsAverage(output, summary.inclusiveDurationMicroseconds, summary.numberOfCalls);
+    output << ",\"average_exclusive_us\":";
+    appendMicrosecondsAverage(output, summary.exclusiveDurationMicroseconds, summary.numberOfCalls);
   }
 
   double computePercentage(long int value, long int total) {
@@ -179,11 +184,7 @@ namespace {
     target.numberOfCalls += source.numberOfCalls;
   }
 
-  class TraceSummaryFile {
-  private:
-    std::map<TraceKey, TraceSummary> _entries;
-    bool                             _isClosed = false;
-
+  class TraceSummaryFile final {
   public:
     ~TraceSummaryFile() { close(false); }
 
@@ -230,40 +231,40 @@ namespace {
           aggregateEntries.push_back(entry);
         }
       }
-      std::sort(aggregateEntries.begin(), aggregateEntries.end(), [](const auto& lhs, const auto& rhs) {
-        if (lhs.second.exclusiveDurationMicroseconds != rhs.second.exclusiveDurationMicroseconds) {
-          return lhs.second.exclusiveDurationMicroseconds > rhs.second.exclusiveDurationMicroseconds;
+      std::sort(aggregateEntries.begin(), aggregateEntries.end(), [](const auto& left, const auto& right) {
+        if (left.second.exclusiveDurationMicroseconds != right.second.exclusiveDurationMicroseconds) {
+          return left.second.exclusiveDurationMicroseconds > right.second.exclusiveDurationMicroseconds;
         }
-        if (lhs.second.inclusiveDurationMicroseconds != rhs.second.inclusiveDurationMicroseconds) {
-          return lhs.second.inclusiveDurationMicroseconds > rhs.second.inclusiveDurationMicroseconds;
+        if (left.second.inclusiveDurationMicroseconds != right.second.inclusiveDurationMicroseconds) {
+          return left.second.inclusiveDurationMicroseconds > right.second.inclusiveDurationMicroseconds;
         }
-        return lhs.first < rhs.first;
+        return left.first < right.first;
       });
 
-      std::ostringstream out;
-      out << "{\"rank\":" << rank << ",\"top_level_us\":" << topLevelInclusiveMicroseconds << ",\"top_level_ms\":";
-      appendMilliseconds(out, topLevelInclusiveMicroseconds);
-      out << ",\"top_level_calls\":" << topLevelCalls << ",\"summary\":[";
+      std::ostringstream output;
+      output << "{\"rank\":" << rank << ",\"top_level_us\":" << topLevelInclusiveMicroseconds << ",\"top_level_ms\":";
+      appendMilliseconds(output, topLevelInclusiveMicroseconds);
+      output << ",\"top_level_calls\":" << topLevelCalls << ",\"summary\":[";
 
       bool hasAggregateEntry = false;
       for (const auto& [path, summary] : aggregateEntries) {
         if (hasAggregateEntry) {
-          out << ',';
+          output << ',';
         }
-        appendTraceEntryPrefix(out, path, summary);
-        out << ",\"percent_of_top_level\":" << std::fixed << std::setprecision(2)
-            << computePercentage(summary.inclusiveDurationMicroseconds, topLevelInclusiveMicroseconds)
-            << ",\"self_percent_of_top_level\":" << std::fixed << std::setprecision(2)
-            << computePercentage(summary.exclusiveDurationMicroseconds, topLevelInclusiveMicroseconds) << "}";
+        appendTraceEntryPrefix(output, path, summary);
+        output << ",\"percent_of_top_level\":" << std::fixed << std::setprecision(2)
+               << computePercentage(summary.inclusiveDurationMicroseconds, topLevelInclusiveMicroseconds)
+               << ",\"self_percent_of_top_level\":" << std::fixed << std::setprecision(2)
+               << computePercentage(summary.exclusiveDurationMicroseconds, topLevelInclusiveMicroseconds) << "}";
         hasAggregateEntry = true;
       }
 
-      out << "],\"threads\":[";
+      output << "],\"threads\":[";
 
       bool hasThread = false;
       for (auto& [threadId, threadEntries] : entriesByThread) {
-        std::sort(threadEntries.begin(), threadEntries.end(), [](const auto& lhs, const auto& rhs) {
-          return lhs.first.path < rhs.first.path;
+        std::sort(threadEntries.begin(), threadEntries.end(), [](const auto& left, const auto& right) {
+          return left.first.path < right.first.path;
         });
 
         long int threadInclusiveMicroseconds = 0;
@@ -279,12 +280,12 @@ namespace {
         }
 
         if (hasThread) {
-          out << ',';
+          output << ',';
         }
-        out << "{\"thread\":" << threadId << ",\"inclusive_us\":" << threadInclusiveMicroseconds
-            << ",\"inclusive_ms\":";
-        appendMilliseconds(out, threadInclusiveMicroseconds);
-        out << ",\"entries\":[";
+        output << "{\"thread\":" << threadId << ",\"inclusive_us\":" << threadInclusiveMicroseconds
+               << ",\"inclusive_ms\":";
+        appendMilliseconds(output, threadInclusiveMicroseconds);
+        output << ",\"entries\":[";
 
         bool hasEntry = false;
         for (const auto& [key, summary] : threadEntries) {
@@ -302,26 +303,26 @@ namespace {
               / static_cast<double>(threadInclusiveMicroseconds);
 
           if (hasEntry) {
-            out << ',';
+            output << ',';
           }
-          appendTraceEntryPrefix(out, key.path, summary);
-          out << ",\"percent_of_thread\":" << std::fixed << std::setprecision(2) << percentOfThread
-              << ",\"self_percent_of_thread\":" << std::fixed << std::setprecision(2) << selfPercentOfThread << "}";
+          appendTraceEntryPrefix(output, key.path, summary);
+          output << ",\"percent_of_thread\":" << std::fixed << std::setprecision(2) << percentOfThread
+                 << ",\"self_percent_of_thread\":" << std::fixed << std::setprecision(2) << selfPercentOfThread << "}";
 
           hasEntry = true;
         }
 
-        out << "]}";
+        output << "]}";
         hasThread = true;
       }
 
-      out << "]}";
-      return out.str();
+      output << "]}";
+      return output.str();
     }
 
     static std::string assembleTraceJson(const std::vector<std::string>& rankFragments) {
-      std::ostringstream out;
-      out << "{\"schema\":\"peanoTraceSummaryV2\",\"unit\":\"microseconds\",\"ranks\":[\n";
+      std::ostringstream output;
+      output << "{\"schema\":\"peanoTraceSummaryV2\",\"unit\":\"microseconds\",\"ranks\":[\n";
 
       bool hasRank = false;
       for (const std::string& fragment : rankFragments) {
@@ -329,18 +330,18 @@ namespace {
           continue;
         }
         if (hasRank) {
-          out << ",\n";
+          output << ",\n";
         }
-        out << fragment;
+        output << fragment;
         hasRank = true;
       }
 
-      out << "\n]}\n";
-      return out.str();
+      output << "\n]}\n";
+      return output.str();
     }
 
-    static void writeTraceHtml(std::ostream& out, std::string_view traceJson) {
-      out << R"peanoTraceHtml(<!doctype html>
+    static void writeTraceHtml(std::ostream& output, std::string_view traceJson) {
+      output << R"peanoTraceHtml(<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -366,7 +367,7 @@ details{margin-top:1rem;} summary{cursor:pointer;color:#36514a;font-weight:600;}
 <p>The main table is a call tree aggregated over all threads on a rank. Top-level trace scopes are the outermost <span class="scope">traceEnter</span>/<span class="scope">traceLeave</span> pairs observed in the run, wherever the application placed them.</p>
 <script type="application/json" id="traceData">
 )peanoTraceHtml"
-          << traceJson << R"peanoTraceHtml(</script>
+             << traceJson << R"peanoTraceHtml(</script>
 <div id="content"></div>
 <script>
 const data=JSON.parse(document.getElementById('traceData').textContent);
@@ -507,7 +508,7 @@ function callTreeTable(rows,totalUs){
   const tree=buildTree(normalised);
   const table=document.createElement('table');
   table.className='traceTree';
-  table.innerHTML='<thead><tr><th class="name">Trace scope</th><th>Calls</th><th>Inclusive ms</th><th>Self ms</th><th>% top-level</th><th>Avg incl. us</th><th>Top-level share</th></tr></thead>';
+  table.innerHTML='<thead><tr><th class="name">Trace scope</th><th>Calls</th><th>Inclusive ms</th><th>Self ms</th><th>% top-level</th><th>Avg incl. us</th><th>Top-level fraction</th></tr></thead>';
   const tbody=document.createElement('tbody');
   appendTreeRows(tbody,tree,rootUs,0);
   table.appendChild(tbody);
@@ -520,7 +521,7 @@ for(const rank of data.ranks||[]){
   const topLevelCalls=num(rank.top_level_calls)||derived.topLevelCalls;
   const rankSection=document.createElement('section');
   rankSection.className='rank';
-  rankSection.innerHTML=`<h2>Rank ${rank.rank} <span class="muted">(${(rank.threads||[]).length} thread(s), ${fixed(msFromUs(topLevelUs))} ms accumulated top-level trace work, ${topLevelCalls} top-level calls)</span></h2><h3>Trace call tree</h3><p class="hint">Rows are sorted by inclusive time among siblings. Percentages and bars are always relative to the accumulated top-level trace work. For any expanded parent, its children plus the <span class="scope">Untraced in this scope</span> row add up to the parent's top-level share.</p>${highFrequencyNote(rows)}`;
+  rankSection.innerHTML=`<h2>Rank ${rank.rank} <span class="muted">(${(rank.threads||[]).length} thread(s), ${fixed(msFromUs(topLevelUs))} ms accumulated top-level trace work, ${topLevelCalls} top-level calls)</span></h2><h3>Trace call tree</h3><p class="hint">Rows are sorted by inclusive time among siblings. Percentages and bars are always relative to the accumulated top-level trace work. For any expanded parent, its children plus the <span class="scope">Untraced in this scope</span> row add up to the parent's top-level fraction.</p>${highFrequencyNote(rows)}`;
   rankSection.appendChild(callTreeTable(rows,topLevelUs));
   const details=document.createElement('details');
   details.innerHTML='<summary>Per-thread call trees</summary>';
@@ -543,8 +544,8 @@ for(const rank of data.ranks||[]){
 )peanoTraceHtml";
     }
 
-    static std::string traceFileStem(bool useCollective) {
-      int mpiInitialised = 0;
+    static std::string traceFileStem(const bool useCollective) {
+      int mpiInitialised{0};
       MPI_Initialized(&mpiInitialised);
 
       if (not useCollective and mpiInitialised and tarch::mpi::Rank::getInstance().isInitialised()
@@ -555,26 +556,46 @@ for(const rank of data.ranks||[]){
       return "Trace";
     }
 
-    static void writeTraceFiles(std::string_view traceJson, bool useCollective) {
+    /**
+     * Writes both trace representations. Failures go directly to stderr
+     * because the logging subsystem may already be closing.
+     */
+    static void writeTraceFiles(const std::string_view traceJson, const bool useCollective) {
       const std::string fileStem = traceFileStem(useCollective);
       {
-        std::ofstream stream(fileStem + ".json", std::ios::out | std::ios::trunc);
-        if (stream.is_open()) {
-          stream << traceJson;
+        const std::string jsonFileName = fileStem + ".json";
+        std::ofstream     jsonStream(jsonFileName, std::ios::out | std::ios::trunc);
+        if (not jsonStream.is_open()) {
+          std::cerr << "Peano trace warning: Could not open " << jsonFileName << "." << std::endl;
+        } else {
+          jsonStream << traceJson;
+          jsonStream.flush();
+          if (not jsonStream.good()) {
+            std::cerr << "Peano trace warning: Could not write " << jsonFileName << "." << std::endl;
+          }
         }
       }
       {
-        std::ofstream stream(fileStem + ".html", std::ios::out | std::ios::trunc);
-        if (stream.is_open()) {
-          writeTraceHtml(stream, traceJson);
+        const std::string htmlFileName = fileStem + ".html";
+        std::ofstream     htmlStream(htmlFileName, std::ios::out | std::ios::trunc);
+        if (not htmlStream.is_open()) {
+          std::cerr << "Peano trace warning: Could not open " << htmlFileName << "." << std::endl;
+        } else {
+          writeTraceHtml(htmlStream, traceJson);
+          htmlStream.flush();
+          if (not htmlStream.good()) {
+            std::cerr << "Peano trace warning: Could not write " << htmlFileName << "." << std::endl;
+          }
         }
       }
     }
 
-    static std::vector<std::string>
-    gatherFragmentsToGlobalMaster(const std::string& localFragment, bool useCollective) {
-      int mpiInitialised = 0;
-      int mpiFinalised   = 0;
+    static std::vector<std::string> gatherFragmentsToGlobalMaster(
+      const std::string& localFragment,
+      const bool         useCollective
+    ) {
+      int mpiInitialised{0};
+      int mpiFinalised{0};
       MPI_Initialized(&mpiInitialised);
       if (mpiInitialised) {
         MPI_Finalized(&mpiFinalised);
@@ -583,54 +604,61 @@ for(const rank of data.ranks||[]){
       if (useCollective and mpiInitialised and not mpiFinalised and tarch::mpi::Rank::getInstance().isInitialised()
           and tarch::mpi::Rank::getInstance().getRank() >= 0
           and tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1) {
-        const int localSize = static_cast<int>(localFragment.size());
-        const int root      = tarch::mpi::Rank::getGlobalMasterRank();
-        const int rank      = tarch::mpi::Rank::getInstance().getRank();
-        const int ranks     = tarch::mpi::Rank::getInstance().getNumberOfRanks();
+        const int localFragmentSize = static_cast<int>(localFragment.size());
+        const int rootRank          = tarch::mpi::Rank::getGlobalMasterRank();
+        const int localRank         = tarch::mpi::Rank::getInstance().getRank();
+        const int numberOfRanks     = tarch::mpi::Rank::getInstance().getNumberOfRanks();
 
-        std::vector<int> sizes(rank == root ? ranks : 0, 0);
+        std::vector<int> fragmentSizes(localRank == rootRank ? numberOfRanks : 0, 0);
         MPI_Gather(
-          &localSize,
+          &localFragmentSize,
           1,
           MPI_INT,
-          sizes.data(),
+          fragmentSizes.data(),
           1,
           MPI_INT,
-          root,
+          rootRank,
           tarch::mpi::Rank::getInstance().getCommunicator()
         );
 
         std::vector<int>  displacements;
         std::vector<char> gatheredCharacters;
-        if (rank == root) {
-          displacements.resize(ranks, 0);
-          int totalSize = 0;
-          for (int i = 0; i < ranks; i++) {
-            displacements[i] = totalSize;
-            totalSize += sizes[i];
+        if (localRank == rootRank) {
+          displacements.resize(numberOfRanks, 0);
+          int totalCharacterCount = 0;
+          for (int rankIndex = 0; rankIndex < numberOfRanks; rankIndex++) {
+            displacements[rankIndex] = totalCharacterCount;
+            totalCharacterCount += fragmentSizes[rankIndex];
           }
-          gatheredCharacters.resize(totalSize);
+          gatheredCharacters.resize(totalCharacterCount);
         }
 
         MPI_Gatherv(
           localFragment.data(),
-          localSize,
+          localFragmentSize,
           MPI_CHAR,
           gatheredCharacters.data(),
-          sizes.data(),
+          fragmentSizes.data(),
           displacements.data(),
           MPI_CHAR,
-          root,
+          rootRank,
           tarch::mpi::Rank::getInstance().getCommunicator()
         );
 
-        if (rank == root) {
-          std::vector<std::string> fragments;
-          fragments.reserve(ranks);
-          for (int i = 0; i < ranks; i++) {
-            fragments.emplace_back(gatheredCharacters.data() + displacements[i], sizes[i]);
+        if (localRank == rootRank) {
+          std::vector<std::string> rankFragments;
+          rankFragments.reserve(numberOfRanks);
+          for (int rankIndex = 0; rankIndex < numberOfRanks; rankIndex++) {
+            if (fragmentSizes[rankIndex] == 0) {
+              rankFragments.emplace_back();
+            } else {
+              rankFragments.emplace_back(
+                gatheredCharacters.data() + displacements[rankIndex],
+                fragmentSizes[rankIndex]
+              );
+            }
           }
-          return fragments;
+          return rankFragments;
         }
 
         return {};
@@ -639,7 +667,7 @@ for(const rank of data.ranks||[]){
       return {localFragment};
     }
 
-    void close(bool useCollective) {
+    void close(const bool useCollective) {
       if (_isClosed) {
         return;
       }
@@ -658,6 +686,10 @@ for(const rank of data.ranks||[]){
 
       _isClosed = true;
     }
+
+  private:
+    std::map<TraceKey, TraceSummary> _entries{};
+    bool                             _isClosed{false};
   };
 
   TraceSummaryFile& getTraceSummaryFile() {
@@ -692,46 +724,47 @@ void tarch::instrumentation::Log::leaveTimedScope(std::string_view scopeName) {
   auto& traceStack = getTraceStack();
 
   if (traceStack.empty()) {
-    reportTraceWarning("traceLeave() without matching traceEnter() ignored", scopeName);
+    reportTraceWarning("Ignoring traceLeave() without a matching traceEnter().", scopeName);
     return;
   }
 
   if (traceStack.back().name != scopeName) {
-    reportTraceWarning("traceLeave() scope mismatch ignored", scopeName, traceStack.back().name);
+    reportTraceWarning("Ignoring mismatched traceLeave().", scopeName, traceStack.back().name);
     return;
   }
 
-  TraceScope scope = std::move(traceStack.back());
+  TraceScope completedScope = std::move(traceStack.back());
   traceStack.pop_back();
 
-  const long int durationMicroseconds = getTimeStamp() / 1000 - scope.startTimeStampMicroseconds;
+  const long int durationMicroseconds = getTimeStamp() / 1000 - completedScope.startTimeStampMicroseconds;
   if (durationMicroseconds < 0) {
-    reportTraceWarning("trace scope has negative duration and was ignored", scope.name);
+    reportTraceWarning("Ignoring a trace scope with negative duration.", completedScope.name);
     return;
   }
 
-  const long int accountedChildDurationMicroseconds = std::min(scope.childDurationMicroseconds, durationMicroseconds);
-  const long int exclusiveDurationMicroseconds      = durationMicroseconds - accountedChildDurationMicroseconds;
+  const long int accountedChildDurationMicroseconds =
+    std::min(completedScope.childDurationMicroseconds, durationMicroseconds);
+  const long int exclusiveDurationMicroseconds = durationMicroseconds - accountedChildDurationMicroseconds;
 
-  std::vector<std::string> path;
-  path.reserve(traceStack.size() + 1);
+  std::vector<std::string> scopePath;
+  scopePath.reserve(traceStack.size() + 1);
   for (const TraceScope& parent : traceStack) {
-    path.push_back(parent.name);
+    scopePath.push_back(parent.name);
   }
-  path.push_back(scope.name);
+  scopePath.push_back(completedScope.name);
 
   if (not traceStack.empty()) {
     traceStack.back().childDurationMicroseconds += durationMicroseconds;
   }
 
-  TraceSummary& summary = getThreadTraceData().entries[std::move(path)];
+  TraceSummary& summary = getThreadTraceData().entries[std::move(scopePath)];
   summary.inclusiveDurationMicroseconds += durationMicroseconds;
   summary.exclusiveDurationMicroseconds += exclusiveDurationMicroseconds;
   summary.numberOfCalls++;
 }
 
-void tarch::instrumentation::Log::closeTrace(bool useCollective) {
-  std::lock_guard<std::mutex> lock(getThreadTraceDataRegistryMutex());
+void tarch::instrumentation::Log::closeTrace(const bool useCollective) {
+  std::lock_guard<std::mutex> registryLock(getThreadTraceDataRegistryMutex());
   TraceSummaryFile&           traceSummaryFile = getTraceSummaryFile();
   for (const ThreadTraceData* threadData : getThreadTraceDataRegistry()) {
     for (const auto& [path, summary] : threadData->entries) {

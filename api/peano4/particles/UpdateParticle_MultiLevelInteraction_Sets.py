@@ -104,9 +104,13 @@ class UpdateParticle_MultiLevelInteraction_Sets(ActionSet):
       adjacentCellMask.set(TWO_POWER_D - vertex - 1);
       const bool isLocal = (adjacentCellMask & particle->getContainedInAdjacentCell()).any();
       assertion(
-        isLocal == marker.isContained(particle->getX(), ownershipTolerance),
+        isLocal
+          == marker.isContained(
+            toolbox::particles::periodicImageTowardsCell(particle->getX(), marker),
+            ownershipTolerance
+          ),
         isLocal,
-        marker.isContained(particle->getX(), ownershipTolerance),
+        marker.isContained(toolbox::particles::periodicImageTowardsCell(particle->getX(), marker), ownershipTolerance),
         marker.toString(),
         particle->toString(),
         vertex,

@@ -12,11 +12,8 @@ from peano4.Logger import log
 class ActionSet(object):
   def __init__(self,classname,namespace,subdirectory,implementation = None):
     """!
-     Implementation of an Action Set
-     Please consult peano4.solversteps.ActionSet for a description.
      implementation Should be of type peano4.solversteps.Mapping or None. If
-                    it is None, then the generated stuff will be a sole
-                    interface.
+                    it is None, then the generated class is a pure interface.
     """
     self.classname    = classname
     self.namespace    = namespace
@@ -79,7 +76,7 @@ class ActionSet(object):
     return full_qualified_classname
 
   def __generate_header(self,directory,protected_files):
-    filename = directory + "/" + self.subdirectory + "/" + self.classname + ".h";
+    filename = directory + "/" + self.subdirectory + "/" + self.classname + ".h"
     if write_file(directory,protected_files,filename):
       log.debug("Write {}".format(filename))
 
@@ -118,18 +115,11 @@ class ActionSet(object):
           outputfile.write( "  public:\n" )
           outputfile.write( """
     /**
-     * Create action instance for one tree for one grid sweep
+     * Creates the action instance of one tree for one grid sweep. The creation
+     * of actions is not thread-safe.
      *
-     * <h2> Thread safety </h2>
-     *
-     * The creation of individual trees usually happens through ::peano4::parallel::SpacetreeSet::createObserverCloneIfRequired().
-     * This routine is called lazily when we start to traverse a subtree.
-     * Therefore, the creation of actions is not thread-safe.
-     *
-     *
-     * @param treeNumber Number of the spacetree for which we create the tree instance. Is
-     *                   smaller 0 if this is the prototype action used on a rank from which
-     *                   the real actions are constructed from.
+     * @param treeNumber Number of the spacetree this instance serves. It is
+     *                   smaller than 0 for the prototype action of a rank.
      */
 """ )
           outputfile.write( "    " + self.classname + "(int treeNumber);\n\n" )
@@ -153,10 +143,7 @@ class ActionSet(object):
       log.debug("Write {}".format(filename))
       outputfile = open( filename, "w" )
 
-      #full_qualified_classname = self.__get_full_qualified_class_name()
-
       outputfile.write( "#include \"" + self.classname + ".h\"\n\n\n" )
-
 
       outputfile.write( self.implementation.get_static_initialisations(self.__get_full_qualified_class_name()) )
       outputfile.write( "\n\n\n" )

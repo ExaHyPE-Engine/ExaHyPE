@@ -1,55 +1,43 @@
 /**
 
- @page page_exahype_multicore Tasking (multicore parallelisation)
+@page page_exahype_multicore Tasking
 
+\tableofcontents
 
- ExaHyPE starts from @ref page_exahype_domain-decomposition "plain domain decomposition".
- Its domain decomposition splits up the domain over multiple MPI ranks, but it also
- can make one rank hold multiple subpartitions, and these subpartitions are then
- processed by different threads.
- On top of this domain decomposition, you can add tasking which only works per rank.
- That is, if you give each rank only one subdomain and if you add tasking on top,
- then you can get genuine task parallelism.
- Typically, this is a poor idea, i.e. you are better off with a mixture of domain
- decomposition and tasking to exploit many threads.
- Further to that, only some ExaHyPE solver variants support tasking and
- therefore benefit from the discussion below.
+ExaHyPE uses two complementary task graphs. Peano decomposes each rank's mesh
+traversal into subtree tasks, while task-enabled solvers can submit numerical
+work independently through tarch::tasking.
 
+# Traversal tasks
 
- If you have a solver with tasking and want to activate this tasking, you have
- to do the following steps:
+Peano derives subtree tasks from the local spawn-level blocks and heavy refined
+subtrees. Every task owns an observer clone and private interface copies. The
+Grid Snapshot reports their count, the cells per task and the thread ceiling.
 
- 1. @ref page_installation_home "Configure" Peano with multithreading support.
- 2. Pick a proper @ref page_exahype_domain-decomposition "load balancing scheme" no matter if you want subpartitions per
-    rank or not.
- 3. Run some @ref page_exahype_runtime_analysis "performance analysis".
- 4. Study the @ref page_exahype_performance_optimisation "optimisation recommendations".
+Generated data containers participate only when they support subtree-task
+replication. Particle sets make the corresponding rank traversal serial, while
+ordinary cell, face, and vertex patch data uses the parallel copy-and-merge
+protocol.
 
+# Solver tasks
 
+Task-enabled ExaHyPE solvers submit patch or kernel work through the interfaces
+described on @ref page_tarch_tasking. A solver task can carry incoming and
+outgoing dependency tokens so later mesh events wait for the produced data.
 
- ## Using ExaHyPE 2 with tasks
+Solver tasks complement the traversal graph when a small number of expensive
+patches or kernels would otherwise dominate one subtree task. Their lifetime
+and dependencies must preserve the data ownership of the action set that
+creates them.
 
- The setup instructions for tasking support are collected on
- @ref page_tarch_multicore "the multicore programming page".
+# Choosing granularity
 
+Small tasks spend a large fraction of time in scheduling and dependency
+management. Large tasks reduce the ready work available to other threads.
+Profiles, `Cells per Task`, and the phase report line `Utilisation` distinguish
+these cases.
 
- ## How the tasking works
+@ref page_exahype_performance_optimisation provides solver-specific guidance,
+and @ref page_peano_performance_optimisation covers the traversal graph.
 
- The solvers in ExaHyPE that support tasking work directly with the
- abstractions of the multithreading as it is provided by the
- @ref page_tarch_multicore "technical architecture". All the documentation
- how tasking works in Peano can be found there.
-
-
- ## Adding tasks to your ExaHyPE solver (programmer view)
-
- If you write a solver variant that adds its own tasks, you work directly with
- the abstractions from the @ref page_tarch_multicore "tarch::multicore layer".
- Each task is modelled as a subclass of tarch::multicore::Task (a functor-based
- specialisation exists if you prefer to work with lambdas). You submit a task
- through tarch::multicore::spawnTask(), optionally passing incoming and outgoing
- dependencies so that the runtime can build up the task graph. A set of tasks
- that has to run in a fork-join fashion is handed to tarch::multicore::spawnTasks()
- instead.
-
- */
+*/

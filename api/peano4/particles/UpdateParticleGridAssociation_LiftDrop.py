@@ -9,24 +9,12 @@ from .AbstractUpdateParticleGridAssociation import AbstractUpdateParticleGridAss
 
 
 class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociation):
-    """! Associate particles with vertices through vertical lifts and drops.
+    """! The last vertex event lifts a particle until it lies within the owning
+    vertex's adjacent cells, and the next traversal drops it to the finest level
+    that accommodates its search radius.
 
-    The last vertex event lifts a particle until it lies within the owning
-    vertex's adjacent cells.  The next traversal drops it to the finest level
-    that accommodates its search radius.  Moving between neighbouring finest
-    vertices can therefore pass through their common parent level.
-
-    A lift that crosses a tree boundary enters the global sieve because the
-    parent vertex is unavailable locally.  Exchanging this sieve between
-    traversals also supports particles that cross several cells in one time
-    step.  Sorting needs at least two sweeps, with one additional sweep for
-    each level crossed at a horizontal tree cut.
-
-    Add the action early in a step: Peano then performs drops before particle
-    updates on descent and lifts after those updates on backtracking.  Hanging
-    vertices never receive particles.  Since lifts and drops change particle
-    storage, gather and resort any continuous particle memory pool around this
-    action.  See @ref toolbox_particles_memorypool.
+    Add the action early in a step: Peano then drops before particle updates on
+    descent and lifts after those updates on backtracking.
     """
 
     _Template_Sieve = jinja2.Template(
@@ -40,7 +28,7 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
       fineGridVertex{{PARTICLES_CONTAINER}}.mergeWithParticle(
         newParticle,
         marker,
-        _spacetreeId
+        _treeId
       );
     }
 
@@ -57,6 +45,13 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
   auto particleIterator = fineGridVertex{{PARTICLES_CONTAINER}}.begin();
   while (particleIterator != fineGridVertex{{PARTICLES_CONTAINER}}.end()) {
     auto* const particle = *particleIterator;
+    // A particle that left the domain through a periodic wall re-enters at
+    // the opposite wall before the lift reads its position.
+    if (PeriodicBC.any()) {
+      particle->setX(
+        toolbox::particles::applyPeriodicBoundaryConditions(particle->getX(), DomainOffset, DomainSize, PeriodicBC)
+      );
+    }
     const auto instruction = toolbox::particles::liftParticleAssociatedWithVertex(*particle, marker);
 
 #if PEANO_ASSERTIONS
@@ -68,16 +63,16 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
       particle->getParallelState() == globaldata::{{PARTICLE}}::ParallelState::Local;
 
     switch (instruction) {
-      case toolbox::particles::ParticleReassociationInstruction_Keep:
+      case toolbox::particles::ParticleReassociationInstructionKeep:
         toolbox::particles::updateContainedInAdjacentCellProperty(marker, *particle);
         ++particleIterator;
         break;
 
-      case toolbox::particles::ParticleReassociationInstruction_SieveGlobally:
+      case toolbox::particles::ParticleReassociationInstructionSieveGlobally:
         ++_numberOfLiftsIntoSieveSet;
         logDebug(
           "Lift particle " << particle->toString() << " globally from " << marker.toString()
-                           << " on tree " << _spacetreeId << "."
+                           << " on tree " << _treeId << "."
         );
         toolbox::particles::assignmentchecks::detachParticleFromVertex(
           "{{PARTICLE}}",
@@ -86,7 +81,7 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
           particleIsLocal,
           marker.getX(),
           marker.getH(),
-          _spacetreeId,
+          _treeId,
           "UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles"
         );
         toolbox::particles::assignmentchecks::assignParticleToSieveSet(
@@ -96,7 +91,7 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
           particleIsLocal,
           marker.getX(),
           marker.getH(),
-          _spacetreeId,
+          _treeId,
           "UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles"
         );
         particleIterator =
@@ -141,7 +136,7 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
           particleIsLocal,
           marker.getX(),
           marker.getH(),
-          _spacetreeId,
+          _treeId,
           "UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles"
         );
         toolbox::particles::assignmentchecks::assignParticleToVertex(
@@ -151,7 +146,7 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
           particleIsLocal,
           parentVertexPosition,
           parentCellSize,
-          _spacetreeId,
+          _treeId,
           "UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles",
           marker.getX(),
           marker.getH()

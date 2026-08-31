@@ -942,7 +942,6 @@ WARN_LOGFILE           =
 
 INPUT                  = documentation \
                          tutorials \
-                         benchmarks \
                          tests \
                          applications \
                          utilities

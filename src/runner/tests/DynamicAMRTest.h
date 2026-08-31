@@ -15,7 +15,12 @@ public:
   void run() override;
 
 private:
-  void testDescribeReportsOneCountWhenTheLeafCountIsUnchanged();
-  void testDescribeReportsBothCountsWhenTheGridChanged();
-  void testReportThresholdStaysBelowTheDrainBound();
+  void testDescribeReportsExplicitUnchangedTransitions();
+  void testDescribeReportsGridTransitions();
+  void testDescribeReportsOneLinePerLoadCategory();
+  void testDescribeDropsTheInterRankLineOnOneRank();
+  void testDescribeReportsBalanceTransitions();
+  void testDescribeReportsTaskLoadAndUtilisation();
+  void testDescribeReportsTheSweepCountAndWallClock();
+  void testADrainNeedsPendingMeshUpdates();
 };

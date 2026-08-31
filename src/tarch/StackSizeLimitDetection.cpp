@@ -2,10 +2,12 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "StackSizeLimitDetection.h"
 
-#include "tarch/instrumentation/Log.h"
 #include "tarch/MemoryUsage.h"
+#include "tarch/instrumentation/Debug.h"
+#include "tarch/instrumentation/Error.h"
+#include "tarch/instrumentation/Warning.h"
 
-#if !defined(_WIN32)
+#if not defined(_WIN32)
 #include <sys/resource.h>
 #endif
 

@@ -6,18 +6,14 @@
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/FaceMarker.h"
 #include "tarch/la/ExactAccumulator.h"
+#include "toolbox/blockstructured/ChildDataStage.h"
 
 /**
- * Interpolation and restriction for block-structured patch data
+ * Interpolation and restriction for block-structured patch data.
  *
  * A cell holds numberOfDofsPerAxis^DIMENSIONS volumes of numberOfUnknownsPlusAuxiliaryVariables elements each; a face
  * holds 2 * numberOfDofsPerAxis^(DIMENSIONS-1) * numberOfUnknownsPlusAuxiliaryVariables values (both sides), in
  * lexicographic order.
- *
- * Peano subdivides every cell into 3^DIMENSIONS children. Cell interpolation therefore
- * copies each coarse volume onto its 3^DIMENSIONS fine volumes and cell restriction
- * averages them back, while a face carries one dimension less and works on 3^(DIMENSIONS-1)
- * fine values per coarse one.
  *
  * The routines assume a halo of size 1; a larger halo would need extrapolation because a
  * fine face is smaller than the coarse face it restricts onto.
@@ -61,6 +57,39 @@ namespace toolbox::blockstructured {
     const int                                 side,
     const int                                 numberOfDofsPerAxis,
     const int                                 numberOfUnknownsPlusAuxiliaryVariables
+  );
+
+  template <typename T>
+  INLINE_METHOD void stageHaloLayerForGatheredRestriction(
+    const peano4::datamanagement::FaceMarker&    marker,
+    toolbox::blockstructured::ChildDataStage<T>& stage,
+    const void*                                  coarseFaceKey,
+    const T* NOALIAS                             fineGridFaceValues,
+    const int                                    side,
+    const int                                    numberOfDofsPerAxis,
+    const int                                    numberOfUnknownsPlusAuxiliaryVariables
+  );
+
+  template <typename T>
+  INLINE_METHOD void restrictHaloLayerFromStagedSubfaces(
+    toolbox::blockstructured::ChildDataStage<T>& stage,
+    const void*                                  coarseFaceKey,
+    T* NOALIAS                                   coarseGridFaceValues,
+    const int                                    normal,
+    const int                                    numberOfDofsPerAxis,
+    const int                                    numberOfUnknownsPlusAuxiliaryVariables
+  );
+
+  template <typename T>
+  INLINE_METHOD void restrictHaloLayerFromStagedSubfaces(
+    toolbox::blockstructured::ChildDataStage<T>& stage,
+    const void*                                  coarseFaceKey,
+    T* NOALIAS                                   coarseGridFaceValues,
+    const double* NOALIAS                        restrictionMatrix1d,
+    const double* NOALIAS                        quadratureWeights1d,
+    const int                                    normal,
+    const int                                    numberOfDofsPerAxis,
+    const int                                    numberOfUnknownsPlusAuxiliaryVariables
   );
 
   template <typename T>
@@ -150,4 +179,4 @@ namespace toolbox::blockstructured {
   );
 } // namespace toolbox::blockstructured
 
-#include "AMRRoutines.cpph"
+#include "toolbox/blockstructured/AMRRoutines.cpph"

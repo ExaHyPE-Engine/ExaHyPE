@@ -153,7 +153,6 @@ export CXX=icpx
 
 echo ">>> [BUILD JOB] Running CMake with Ninja..."
 cmake .. -GNinja \
-    -DPEANO_WITH_MULTITHREADING=ON \
     -DPEANO_WITH_HDF5=ON \
     -DPEANO_WITH_NETCDF=ON
 

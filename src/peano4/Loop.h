@@ -3,117 +3,101 @@
 #pragma once
 
 #include "peano4/Globals.h"
+#include "tarch/Assertions.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/la/Vector.h"
 
 namespace peano4 {
   /**
-   * Is used by the z-loop. See zForEach and zForEach3.
+   * One bit per axis, giving the direction zForEach and zForEach3 run that axis in.
    */
   using LoopDirection = std::bitset<DIMENSIONS>;
 
   /**
-   * Construct start vector (0,0,....) for d-dimensional loop
-   *
-   * @return a vector containing zero values only.
+   * @return a vector whose entries are all zero.
    */
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> dStartVector();
 
   /**
-   * @return a vector containing only zero values besides the dim-th entry. This
-   *         entry is set value.
+   * @return a vector whose entries are all zero besides the dim-th one, which
+   *         holds value.
    */
   INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, int> dStartVector(int dim, int value);
 
   /**
-   * Creates a start vector. Each component is set either 0 or max-1 depending
-   * on direction: If direction is true, then the value 0 is zero. Used to seed
-   * the generic zForEach z-loop.
-   *
-   * @return a start vector for an oscillating loop.
+   * @return a start vector whose entry per axis is 0 where direction holds that
+   *         axis's bit and max-1 where it does not.
    */
   INLINE_METHOD tarch::la::Vector<DIMENSIONS, int> dStartVector(int max, const LoopDirection& direction);
 
   /**
-   * d-dimensional counterpart of increment operator
-   *
-   * This operation performs a d-dimensional increment on a given integer vector:
-   * The first component of the vector is incremented. If the first component is
-   * greater than max-1, the component is set zero and the next component is
-   * incremented by one. This operation is used often by d-dimensional for-loops.
+   * Increments the first entry of counter, and carries over into the next entry
+   * once an entry passes max-1.
    */
   INLINE_METHOD GPU_CALLABLE_METHOD void dIncrement(tarch::la::Vector<DIMENSIONS, int>& counter, int max);
 
   /**
-   * d-dimensional counterpart of increment, where individual vector components have different max values
-   *
-   * This operation performs a d-dimensional increment on a given integer vector:
-   * The first component of the vector is incremented. If the first component is
-   * greater than max(0)-1, the component is set zero and the next component is
-   * incremented by one. This operation is used often by d-dimensional for-loops.
+   * Increments the first entry of counter, and carries over into the next entry
+   * once an entry passes that entry's own max-1.
    */
-  INLINE_METHOD GPU_CALLABLE_METHOD void
-  dIncrement(tarch::la::Vector<DIMENSIONS, int>& counter, const tarch::la::Vector<DIMENSIONS, int>& max);
+  INLINE_METHOD GPU_CALLABLE_METHOD void dIncrement(
+    tarch::la::Vector<DIMENSIONS, int>&       counter,
+    const tarch::la::Vector<DIMENSIONS, int>& max
+  );
 
   /**
-   * Same operation as dIncrement(tarch::la::Vector<DIMENSIONS,int>,int), but now one dimension is not taken
-   * into consideration. This is the increment behind the dForEachExclusive loop.
+   * Increments counter like dIncrement(counter, max) and leaves the entry
+   * doNotExamine untouched.
    */
-  INLINE_METHOD GPU_CALLABLE_METHOD void
-  dIncrement(tarch::la::Vector<DIMENSIONS, int>& counter, int max, int doNotExamine);
+  INLINE_METHOD GPU_CALLABLE_METHOD void dIncrement(
+    tarch::la::Vector<DIMENSIONS, int>& counter,
+    int                                 max,
+    int                                 doNotExamine
+  );
 
   /**
-   * Operation similar to dIncrement, but is given a direction bitset that identifies
-   * whether the counters has to be incremented or decremented. This is the
-   * increment behind the generic zForEach z-loop (used for DIMENSIONS > 3; for
-   * DIMENSIONS 2 and 3 zForEach3 is table-driven).
+   * Increments an entry of counter where direction holds that entry's bit and
+   * decrements it where it does not. The z-loop drives its counter with this.
    */
-  INLINE_METHOD GPU_CALLABLE_METHOD void
-  dIncrement(tarch::la::Vector<DIMENSIONS, int>& counter, int max, LoopDirection& direction);
+  INLINE_METHOD GPU_CALLABLE_METHOD void dIncrement(
+    tarch::la::Vector<DIMENSIONS, int>& counter,
+    int                                 max,
+    LoopDirection&                      direction
+  );
 
   /**
-   * Element-wise comparison for the for d-dimensional for loops
-   *
-   * @return true if all entries of counter are smaller max
+   * @return true if all entries of counter are smaller than max.
    */
   INLINE_METHOD GPU_CALLABLE_METHOD int dCompare(const tarch::la::Vector<DIMENSIONS, int>& counter, int max);
 
   /**
-   * Element-wise comparison for the for d-dimensional for loops
-   *
-   * Element-wise comparison for the loops. Different to the other dCompare()
-   * operation, this one works fine even if the max range per vector entry is
-   * different.
-   *
    * @return true if all entries of counter are smaller than their corresponding
-   *         entries in max
+   *         entries in max.
    */
-  INLINE_METHOD GPU_CALLABLE_METHOD int
-  dCompare(const tarch::la::Vector<DIMENSIONS, int>& counter, const tarch::la::Vector<DIMENSIONS, int>& max);
+  INLINE_METHOD GPU_CALLABLE_METHOD int dCompare(
+    const tarch::la::Vector<DIMENSIONS, int>& counter,
+    const tarch::la::Vector<DIMENSIONS, int>& max
+  );
 
   /**
-   * Exclusive element-wise comparison for d-dimensional for loops, ignoring one
-   * specified dimension. This is the comparison behind the dForEachExclusive
-   * loop.
-   *
-   * @return true if all entries of counter (ignoring the specified dimension)
-   *         are smaller than max
+   * @return true if all entries of counter besides the dim-th one are smaller
+   *         than max.
    */
-  INLINE_METHOD GPU_CALLABLE_METHOD int
-  dCompareExclusive(const tarch::la::Vector<DIMENSIONS, int>& counter, int max, int dim);
+  INLINE_METHOD GPU_CALLABLE_METHOD int dCompareExclusive(
+    const tarch::la::Vector<DIMENSIONS, int>& counter,
+    int                                       max,
+    int                                       dim
+  );
 
   /**
-   * Map d-dimensional vector onto integer index
-   *
-   * @return the linearisation of the counter, i.e. the k-th component is
-   *         multiplied by max^k and the results are accumulated. Component 0
-   *         is therefore the fastest running index.
+   * @return the linearisation of counter, where entry k is multiplied by max^k
+   *         and the products are accumulated. Entry 0 runs fastest.
    */
   INLINE_METHOD GPU_CALLABLE_METHOD int dLinearised(const tarch::la::Vector<DIMENSIONS, int>& counter, int max);
 
   /**
-   * Invoke body(counter) for every point of [0,max)^d, component 0 running
+   * Invokes body(counter) for every point of [0,max)^d, entry 0 running
    * fastest.
    */
   template <typename Functor>
@@ -133,15 +117,15 @@ namespace peano4 {
   INLINE_METHOD GPU_CALLABLE_METHOD void dForEachExclusive(int max, int dim, int value, const Functor& body);
 
   /**
-   * Visit the 2^d cube corners. body receives the corner and its scalar
-   * (linearised) index.
+   * Invokes body for each of the 2^d cube corners with the corner and its
+   * linearised index.
    */
   template <typename Functor>
   INLINE_METHOD GPU_CALLABLE_METHOD void dForEachCorner(const Functor& body);
 
   /**
-   * Visit the 3^d stencil in lexicographic order. body receives the point and
-   * its scalar (linearised) index.
+   * Invokes body for each point of the 3^d stencil in lexicographic order with
+   * the point and its linearised index.
    */
   template <typename Functor>
   INLINE_METHOD GPU_CALLABLE_METHOD void dForEachStencil(const Functor& body);
@@ -163,4 +147,4 @@ namespace peano4 {
   INLINE_METHOD void zForEach3(LoopDirection direction, const Functor& body);
 } // namespace peano4
 
-#include "Loop.cpph"
+#include "peano4/Loop.cpph"

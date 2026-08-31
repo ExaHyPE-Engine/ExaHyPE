@@ -3,13 +3,18 @@
 
 namespace tarch::accelerator {
   template <typename F>
-  inline void parallelFor(const CpuTeam&, const Range& r, F f) {
+  inline void parallelFor(const CpuTeam& team, const Range& r, F f) {
+    static_cast<void>(team);
+    assertion(r.n >= 0, r.n);
     for (int i = 0; i < r.n; ++i) {
       f(i);
     }
   }
   template <typename F>
-  inline void parallelFor(const CpuTeam&, const RangeMD<2>& r, F f) {
+  inline void parallelFor(const CpuTeam& team, const RangeMD<2>& r, F f) {
+    static_cast<void>(team);
+    assertion(r.n[0] >= 0, r.n[0]);
+    assertion(r.n[1] >= 0, r.n[1]);
     for (int x = 0; x < r.n[0]; ++x) {
       for (int y = 0; y < r.n[1]; ++y) {
         f(x, y);
@@ -17,7 +22,11 @@ namespace tarch::accelerator {
     }
   }
   template <typename F>
-  inline void parallelFor(const CpuTeam&, const RangeMD<3>& r, F f) {
+  inline void parallelFor(const CpuTeam& team, const RangeMD<3>& r, F f) {
+    static_cast<void>(team);
+    assertion(r.n[0] >= 0, r.n[0]);
+    assertion(r.n[1] >= 0, r.n[1]);
+    assertion(r.n[2] >= 0, r.n[2]);
     for (int x = 0; x < r.n[0]; ++x) {
       for (int y = 0; y < r.n[1]; ++y) {
         for (int z = 0; z < r.n[2]; ++z) {
@@ -31,6 +40,35 @@ namespace tarch::accelerator {
 namespace tarch {
   template <typename F>
   inline void parallelFor(const Range& r, F f) {
+    assertion(r.n >= 0, r.n);
+#if defined(_OPENMP)
+    if (omp_in_parallel()) {
+      // Inside an enclosing parallel region a worksharing loop would bind to
+      // an inactive nested region and run serially, so the loop becomes tasks
+      // the enclosing team executes.
+      const int numberOfTasks = std::max(1, std::min(r.n, 4 * omp_get_num_threads()));
+#if defined(PEANO_OPENMP_TASKLOOP_SUPPORTED)
+      const auto numberOfItems = static_cast<unsigned long>(r.n);
+#pragma omp taskloop num_tasks(static_cast<unsigned long>(numberOfTasks))
+      for (unsigned long i = 0; i < numberOfItems; ++i) {
+        f(static_cast<int>(i));
+      }
+#else
+      // Without taskloop support the loop spawns one task per chunk of the range.
+      accelerator::reportMissingTaskloopSupportOnce();
+      for (int taskNumber = 0; taskNumber < numberOfTasks; taskNumber++) {
+        const int begin = static_cast<int>(static_cast<std::int64_t>(r.n) * taskNumber / numberOfTasks);
+        const int end   = static_cast<int>(static_cast<std::int64_t>(r.n) * (taskNumber + 1) / numberOfTasks);
+#pragma omp task firstprivate(begin, end) shared(f)
+        for (int i = begin; i < end; i++) {
+          f(i);
+        }
+      }
+#pragma omp taskwait
+#endif
+      return;
+    }
+#endif
     accelerator::run_in_parallel_region([&]() {
 #pragma omp for schedule(static)
       for (int i = 0; i < r.n; ++i) {
@@ -41,6 +79,8 @@ namespace tarch {
 
   template <typename F>
   inline void parallelFor(const RangeMD<2>& r, F f) {
+    assertion(r.n[0] >= 0, r.n[0]);
+    assertion(r.n[1] >= 0, r.n[1]);
     accelerator::run_in_parallel_region([&]() {
 #pragma omp for collapse(2) schedule(static)
       for (int x = 0; x < r.n[0]; ++x) {
@@ -53,6 +93,9 @@ namespace tarch {
 
   template <typename F>
   inline void parallelFor(const RangeMD<3>& r, F f) {
+    assertion(r.n[0] >= 0, r.n[0]);
+    assertion(r.n[1] >= 0, r.n[1]);
+    assertion(r.n[2] >= 0, r.n[2]);
     accelerator::run_in_parallel_region([&]() {
 #pragma omp for collapse(3) schedule(static)
       for (int x = 0; x < r.n[0]; ++x) {
@@ -65,12 +108,11 @@ namespace tarch {
     });
   }
 
-  // On the host the team model parallelises only across teams; the inner Range/RangeMD
-  // (the CpuTeam overloads above) runs serially. This mirrors the GPU hierarchy but
-  // means few/large teams (numberOfPatches < threads) leave cores idle — unlike the old
-  // host kernels that flattened the whole patch x volume iteration space.
+  // On the host the loop runs across teams only, and the CpuTeam overloads above run their range
+  // serially.
   template <typename F>
   inline void parallelFor(const TeamRange& r, F f) {
+    assertion(r.n >= 0, r.n);
     accelerator::run_in_parallel_region([&]() {
 #pragma omp for schedule(static)
       for (int i = 0; i < r.n; ++i) {

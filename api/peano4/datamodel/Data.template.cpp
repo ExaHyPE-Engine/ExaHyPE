@@ -2,11 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "{{CLASSNAME}}.h"
 
-{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}() noexcept :
-  _data(nullptr) {}
-
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::~{{CLASSNAME}}() noexcept {
-  if (_data) {
+  if (_data != nullptr) {
     tarch::freeMemory(_data, tarch::MemoryLocation::Heap);
     _data = nullptr;
   }
@@ -35,11 +32,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::send(
   [[maybe_unused]] const ::peano4::datamanagement::VertexMarker& marker,
   [[maybe_unused]] ::peano4::stacks::SendReceiveContext          context
 ) const {
-  using enum ::peano4::stacks::SendReceiveContext;
-  const bool isCopyContext = (context == ForkDomain) or (context == JoinDomain);
-  if (isCopyContext) {
-    return true;
-  }
   if (not ({{CAN_SEND}})) {
     return false;
   }
@@ -50,11 +42,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(
   [[maybe_unused]] const ::peano4::datamanagement::VertexMarker& marker,
   [[maybe_unused]] ::peano4::stacks::SendReceiveContext          context
 ) const {
-  using enum ::peano4::stacks::SendReceiveContext;
-  const bool isCopyContext = (context == ForkDomain) or (context == JoinDomain);
-  if (isCopyContext) {
-    return true;
-  }
   if (not ({{CAN_RECEIVE}})) {
     return false;
   }
@@ -65,7 +52,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
   ::peano4::stacks::SendReceiveContext          context,
   {{CLASSNAME}}&&                               neighbour,
   const ::peano4::datamanagement::VertexMarker& marker,
-  int                                           spacetreeId
+  int                                           treeId
 ) {
   {{MERGE_METHOD_DEFINITION}}
 }
@@ -76,11 +63,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::send(
   [[maybe_unused]] const ::peano4::datamanagement::FaceMarker& marker,
   [[maybe_unused]] ::peano4::stacks::SendReceiveContext        context
 ) const {
-  using enum ::peano4::stacks::SendReceiveContext;
-  const bool isCopyContext = (context == ForkDomain) or (context == JoinDomain);
-  if (isCopyContext) {
-    return true;
-  }
   if (not ({{CAN_SEND}})) {
     return false;
   }
@@ -91,11 +73,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(
   [[maybe_unused]] const ::peano4::datamanagement::FaceMarker& marker,
   [[maybe_unused]] ::peano4::stacks::SendReceiveContext        context
 ) const {
-  using enum ::peano4::stacks::SendReceiveContext;
-  const bool isCopyContext = (context == ForkDomain) or (context == JoinDomain);
-  if (isCopyContext) {
-    return true;
-  }
   if (not ({{CAN_RECEIVE}})) {
     return false;
   }
@@ -106,7 +83,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
   ::peano4::stacks::SendReceiveContext        context,
   {{CLASSNAME}}&&                             neighbour,
   const ::peano4::datamanagement::FaceMarker& marker,
-  int                                         spacetreeId
+  int                                         treeId
 ) {
   {{MERGE_METHOD_DEFINITION}}
 }
@@ -117,11 +94,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::send(
   [[maybe_unused]] const ::peano4::datamanagement::CellMarker& marker,
   [[maybe_unused]] ::peano4::stacks::SendReceiveContext        context
 ) const {
-  using enum ::peano4::stacks::SendReceiveContext;
-  const bool isCopyContext = (context == ForkDomain) or (context == JoinDomain);
-  if (isCopyContext) {
-    return true;
-  }
   if (not ({{CAN_SEND}})) {
     return false;
   }
@@ -132,11 +104,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(
   [[maybe_unused]] const ::peano4::datamanagement::CellMarker& marker,
   [[maybe_unused]] ::peano4::stacks::SendReceiveContext        context
 ) const {
-  using enum ::peano4::stacks::SendReceiveContext;
-  const bool isCopyContext = (context == ForkDomain) or (context == JoinDomain);
-  if (isCopyContext) {
-    return true;
-  }
   if (not ({{CAN_RECEIVE}})) {
     return false;
   }
@@ -147,7 +114,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
   ::peano4::stacks::SendReceiveContext        context,
   {{CLASSNAME}}&&                             neighbour,
   const ::peano4::datamanagement::CellMarker& marker,
-  int                                         spacetreeId
+  int                                         treeId
 ) {
   {{MERGE_METHOD_DEFINITION}}
 }

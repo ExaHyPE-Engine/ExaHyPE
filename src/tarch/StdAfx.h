@@ -10,7 +10,7 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
-#if !defined(__NVCOMPILER)
+#if not defined(__NVCOMPILER)
 #include <bit>
 #endif
 #include <bitset>
@@ -21,6 +21,7 @@
 #include <chrono>
 #include <climits>
 #include <cmath>
+#include <concepts>
 #include <csignal>
 #include <cstddef>
 #include <cstdint>
@@ -29,6 +30,7 @@
 #include <cstring>
 #include <ctime>
 #include <deque>
+#include <exception>
 #include <filesystem>
 #include <fstream>
 #include <functional>
@@ -53,6 +55,7 @@
 #include <set>
 #include <shared_mutex>
 #include <source_location>
+#include <span>
 #include <sstream>
 #include <stdexcept>
 #if __has_include(<stdfloat>)
@@ -64,6 +67,7 @@
 #include <thread>
 #include <tuple>
 #include <type_traits>
+#include <typeindex>
 #include <typeinfo>
 #include <unordered_map>
 #include <unordered_set>

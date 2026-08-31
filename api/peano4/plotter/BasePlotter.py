@@ -72,7 +72,7 @@ def set_available_formats(formats):
 
 
 def _resolve_available_format(file_format):
-    """Use VTU so unavailable optional backends do not leave linker dependencies."""
+    """Return file_format if the build offers it, and VTU otherwise."""
     if _AVAILABLE_FORMATS is None or file_format in _AVAILABLE_FORMATS:
         return file_format
     fallback_format = "vtu"
@@ -85,22 +85,17 @@ def _resolve_available_format(file_format):
 
 
 class BasePlotter(ActionSet):
-    """! Provide writer lifecycle and shared cell metadata for plotters.
+    """! One file writer serves all trees of a plotter during a traversal, and it
+    is recreated with the current number of local trees, since load balancing can
+    change that number between snapshots.
 
-    One file writer serves all trees of a plotter during a traversal. It is
-    recreated with the current number of local trees because load balancing can
-    change that number between snapshots. The time-series writer persists and
-    records every completed snapshot.
-
-    The three additional_cell_data arguments inject member declarations,
-    traversal initialisation, and cell plot calls. Subclasses may override the
-    corresponding methods when these snippets depend on their configuration.
-    The cell-plot snippet runs with cellIndex in scope.
+    The three additional_cell_data arguments inject member declarations, traversal
+    initialisation and cell plot calls, and the cell-plot snippet runs with
+    cellIndex in scope.
 
     When file_format is None, the project default is resolved during code
-    generation. A backend unavailable in the generated build falls back to
-    VTU, which is always available. VTKHDF appends every snapshot to one
-    file; the other backends use their paired time-series writer.
+    generation, and a backend that the generated build does not offer falls back
+    to VTU.
     """
 
     def __init__(
@@ -155,7 +150,7 @@ class BasePlotter(ActionSet):
     def get_constructor_body(self):
         return """
   _treeNumber = treeNumber;
-  _localTreeNumber = ::peano4::parallel::TreeIdMapping::getLocalTreeId(treeNumber);
+  _pieceId    = -1;
 """.format(
             **self.d
         )
@@ -180,17 +175,8 @@ class BasePlotter(ActionSet):
     _timeSeriesWriter = std::make_unique<tarch::plotter::{{TIME_SERIES_WRITER}}>();
   }
 
-  // Recreate to track the spacetree count under dynamic load balancing
-  const auto localSpacetrees = ::peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees();
-  const auto numberOfLocalSubdomains =
-    localSpacetrees.empty()
-      ? 0
-      : ::peano4::parallel::TreeIdMapping::getLocalTreeId(*localSpacetrees.rbegin()) + 1;
   _fileWriter.reset();
-  _fileWriter = std::make_unique<tarch::plotter::{{FILE_WRITER}}>(
-    ::runner::RuntimeParameters::getInstance().getOutputPath() + "{{OUTPUT_SUBFOLDER}}",
-    numberOfLocalSubdomains
-  );
+  _fileWriter = std::make_unique<tarch::plotter::{{FILE_WRITER}}>(::runner::RuntimeParameters::getInstance().getOutputPath() + "{{OUTPUT_SUBFOLDER}}");
 
   _time = {{TIMESTAMP}};
 """
@@ -216,8 +202,18 @@ class BasePlotter(ActionSet):
             result = (
                 jinja2.Template(
                     """
-  _subdomainPlotter       = _fileWriter->createCellDataPlotter(_localTreeNumber, "Subdomain", 1);
-  _refinementLevelPlotter = _fileWriter->createCellDataPlotter(_localTreeNumber, "RefinementLevel", 1);
+  // The tree number orders the pieces within the file deterministically,
+  // whatever order concurrent traversals reach this point in.
+  _pieceId = _fileWriter->acquirePiece(_treeNumber);
+
+  _subdomainPlotter.reset();
+  _subdomainPlotter = _fileWriter->createCellDataPlotter(_pieceId, "Subdomain", 1);
+
+  _subtreeTaskPlotter.reset();
+  _subtreeTaskPlotter = _fileWriter->createCellDataPlotter(_pieceId, "Subtree", 1);
+
+  _refinementLevelPlotter.reset();
+  _refinementLevelPlotter = _fileWriter->createCellDataPlotter(_pieceId, "RefinementLevel", 1);
 """
                 ).render(**self._dictionary)
                 + self.additional_cell_data_construction()
@@ -225,29 +221,37 @@ class BasePlotter(ActionSet):
         return result
 
     def additional_cell_data_declarations(self):
-        """Return extra per-cell data plotter member declarations."""
         return self._additional_cell_data_declarations
 
     def additional_cell_data_construction(self):
-        """Return extra per-cell data plotter initialisation."""
         return self._additional_cell_data_construction
 
     def additional_cell_data_plots(self):
-        """Return extra per-cell plot calls with cellIndex in scope."""
         return self._additional_cell_data_plots
 
     def get_attributes(self):
         return (
             """
   int _treeNumber;
-  int _localTreeNumber;
+  int _pieceId;
 
   static double                                            _time;
   static std::unique_ptr<tarch::plotter::FileWriter>       _fileWriter;
   static std::unique_ptr<tarch::plotter::TimeSeriesWriter> _timeSeriesWriter;
 
   std::unique_ptr<tarch::plotter::FileWriter::CellDataPlotter> _subdomainPlotter;
+  std::unique_ptr<tarch::plotter::FileWriter::CellDataPlotter> _subtreeTaskPlotter;
   std::unique_ptr<tarch::plotter::FileWriter::CellDataPlotter> _refinementLevelPlotter;
+
+  /**
+   * Returns the subtree task that emitted a cell: 0 is the rank's own spine
+   * traversal, k the k-th subtree task of the sweep. A tree id is the rank plus
+   * a multiple of the rank count, so the division removes that multiple.
+   */
+  INLINE_METHOD int getSubtreeTask() const {
+    return (_treeNumber - tarch::mpi::Rank::getInstance().getRank())
+           / tarch::mpi::Rank::getInstance().getNumberOfRanks();
+  }
 """
             + self.additional_cell_data_declarations()
         )
@@ -256,12 +260,11 @@ class BasePlotter(ActionSet):
         self._ensure_format_resolved()
         return (
             """
+#include "tarch/mpi/Rank.h"
 #include "tarch/plotter/FileWriter.h"
 #include "tarch/plotter/TimeSeriesWriter.h"
 
 #include "peano4/Loop.h"
-#include "peano4/parallel/SpacetreeSet.h"
-#include "peano4/parallel/TreeIdMapping.h"
 #include "runner/RuntimeParameters.h"
 """
             + self._dictionary["OUTPUT_FORMAT_INCLUDES"]

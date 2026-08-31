@@ -1,6 +1,7 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+/** Returns one attribute from the halo-free volume containing particleX. */
 template <typename DataType>
 DataType exahype2::fv::internal::projectValueOntoParticle_piecewiseConstant(
   const peano4::datamanagement::CellMarker&    marker,
@@ -10,14 +11,18 @@ DataType exahype2::fv::internal::projectValueOntoParticle_piecewiseConstant(
   const tarch::la::Vector<DIMENSIONS, double>& particleX,
   int                                          unknown
 ) {
-  tarch::la::Vector<DIMENSIONS, int> voxel =
+  const tarch::la::Vector<DIMENSIONS, int> voxel =
     exahype2::fv::internal::mapParticleOntoVoxel(marker, voxelsPerAxis, particleX);
 
-  int voxelIndex = peano4::dLinearised(voxel, voxelsPerAxis);
+  const int voxelIndex = peano4::dLinearised(voxel, voxelsPerAxis);
 
   return Q[voxelIndex * unknownsPerVoxel + unknown];
 }
 
+/**
+ * Returns one multilinearly interpolated attribute at particleX.
+ * Boundary points use the closest volume value along directions lacking a neighbour.
+ */
 template <typename DataType>
 DataType exahype2::fv::internal::projectValueOntoParticle_piecewiseLinear(
   const peano4::datamanagement::CellMarker&    marker,
@@ -27,42 +32,39 @@ DataType exahype2::fv::internal::projectValueOntoParticle_piecewiseLinear(
   const tarch::la::Vector<DIMENSIONS, double>& particleX,
   int                                          unknown
 ) {
-  tarch::la::Vector<DIMENSIONS, int> biasedVoxel = mapBiasedParticleOntoVoxel(marker, voxelsPerAxis, particleX);
+  const tarch::la::Vector<DIMENSIONS, int> biasedVoxel = mapBiasedParticleOntoVoxel(marker, voxelsPerAxis, particleX);
 
-  double h = getVolumeLength(marker.getH(), voxelsPerAxis);
+  const double volumeWidth = getVolumeLength(marker.getH(), voxelsPerAxis);
 
-  double result = 0.0;
-  peano4::dForEachCorner([&](const tarch::la::Vector<DIMENSIONS, int>& k, int kScalar) {
-    tarch::la::Vector<DIMENSIONS, int>    currentVoxel = biasedVoxel + k;
-    tarch::la::Vector<DIMENSIONS, double> currentVoxelX =
+  double interpolatedValue = 0.0;
+  peano4::dForEachCorner([&](const tarch::la::Vector<DIMENSIONS, int>& corner, int /*linearisedCorner*/) {
+    const tarch::la::Vector<DIMENSIONS, int>    currentVoxel = biasedVoxel + corner;
+    const tarch::la::Vector<DIMENSIONS, double> currentVoxelX =
       getVolumeCentre(marker.getX(), marker.getH(), voxelsPerAxis, currentVoxel);
-    int    currentVoxelIndex = peano4::dLinearised(currentVoxel, voxelsPerAxis);
-    double weight            = 1.0;
-    for (int d = 0; d < DIMENSIONS; d++) {
-      double relativeDistance = std::abs(currentVoxelX(d) - particleX(d)) / h;
-      if (particleX(d) < currentVoxelX(d) and currentVoxel(d) == 0) {
-        weight = 1.0;
-      } else if (particleX(d) > currentVoxelX(d) and currentVoxel(d) == voxelsPerAxis - 1) {
-        weight = 1.0;
+    const int currentVoxelIndex = peano4::dLinearised(currentVoxel, voxelsPerAxis);
+    double    weight            = 1.0;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      const double relativeDistance     = std::abs(currentVoxelX(axis) - particleX(axis)) / volumeWidth;
+      const bool   extendsBoundaryValue = (particleX(axis) < currentVoxelX(axis) and currentVoxel(axis) == 0)
+        or (particleX(axis) > currentVoxelX(axis) and currentVoxel(axis) == voxelsPerAxis - 1);
+      if (extendsBoundaryValue) {
+        continue;
       } else if (relativeDistance < 1.0) {
         weight *= (1.0 - relativeDistance);
       } else {
         weight = 0.0;
       }
-      assertion(tarch::la::smallerEquals(weight, 1.0), weight, k, relativeDistance);
+      assertion(tarch::la::smallerEquals(weight, 1.0), weight, corner, relativeDistance);
     }
     if (weight > 0.0) {
-      result += weight * Q[currentVoxelIndex * unknownsPerVoxel + unknown];
+      interpolatedValue += weight * Q[currentVoxelIndex * unknownsPerVoxel + unknown];
     }
   });
-  // if (unknown==0){
-  //   //std::cout << "exahype2::fv::internal::projectValueOntoParticle_piecewiseLinear(): Q_0(should close to 1.0
-  //   always)=" << result <<std::endl;
-  // }
 
-  return result;
+  return interpolatedValue;
 }
 
+/** Maps the source attribute pack to particle data entries starting at zero. */
 template <typename DataType, int SourceIndex, int... SourceIndices, typename Particle>
 void exahype2::fv::projectValuesOntoParticle_piecewiseConstant(
   const peano4::datamanagement::CellMarker& marker,
@@ -81,6 +83,7 @@ void exahype2::fv::projectValuesOntoParticle_piecewiseConstant(
   );
 }
 
+/** Multilinearly maps the source attribute pack to particle data entries starting at zero. */
 template <typename DataType, int SourceIndex, int... SourceIndices, typename Particle>
 void exahype2::fv::projectValuesOntoParticle_piecewiseLinear(
   const peano4::datamanagement::CellMarker& marker,
@@ -99,6 +102,7 @@ void exahype2::fv::projectValuesOntoParticle_piecewiseLinear(
   );
 }
 
+/** Writes one piecewise-constant source attribute and recursively processes the remaining pack. */
 template <typename DataType, typename Particle, int SourceIndex, int... SourceIndices>
 void exahype2::fv::internal::projectValuesOntoParticle_piecewiseConstant(
   const peano4::datamanagement::CellMarker& marker,
@@ -116,11 +120,22 @@ void exahype2::fv::internal::projectValuesOntoParticle_piecewiseConstant(
       unknownsPerVoxel,
       Q,
       particle.getX(),
-      destinationIndex
+      SourceIndex
     )
   );
+  if constexpr (sizeof...(SourceIndices) > 0) {
+    internal::projectValuesOntoParticle_piecewiseConstant<DataType, Particle, SourceIndices...>(
+      marker,
+      voxelsPerAxis,
+      unknownsPerVoxel,
+      Q,
+      particle,
+      destinationIndex + 1
+    );
+  }
 }
 
+/** Writes one multilinear source attribute and recursively processes the remaining pack. */
 template <typename DataType, typename Particle, int SourceIndex, int... SourceIndices>
 void exahype2::fv::internal::projectValuesOntoParticle_piecewiseLinear(
   const peano4::datamanagement::CellMarker& marker,
@@ -138,11 +153,22 @@ void exahype2::fv::internal::projectValuesOntoParticle_piecewiseLinear(
       unknownsPerVoxel,
       Q,
       particle.getX(),
-      destinationIndex
+      SourceIndex
     )
   );
+  if constexpr (sizeof...(SourceIndices) > 0) {
+    internal::projectValuesOntoParticle_piecewiseLinear<DataType, Particle, SourceIndices...>(
+      marker,
+      voxelsPerAxis,
+      unknownsPerVoxel,
+      Q,
+      particle,
+      destinationIndex + 1
+    );
+  }
 }
 
+/** Maps SourceIndex from the containing volume to particle data entry DestIndex. */
 template <int SourceIndex, int DestIndex, typename Particle, typename DataType>
 void exahype2::fv::projectValueOntoParticle_piecewiseConstant(
   const peano4::datamanagement::CellMarker& marker,
@@ -164,6 +190,7 @@ void exahype2::fv::projectValueOntoParticle_piecewiseConstant(
   );
 }
 
+/** Maps every volume attribute to the particle entry with the same index. */
 template <typename Particle, typename DataType>
 void exahype2::fv::projectAllValuesOntoParticle_piecewiseConstant(
   const peano4::datamanagement::CellMarker& marker,
@@ -172,21 +199,22 @@ void exahype2::fv::projectAllValuesOntoParticle_piecewiseConstant(
   const DataType* NOALIAS                   Q,
   Particle&                                 particle
 ) {
-  for (int unknown = 0; unknown < unknownsPerVoxel; unknown++) {
+  for (int sourceAttribute = 0; sourceAttribute < unknownsPerVoxel; sourceAttribute++) {
     particle.setData(
-      unknown,
+      sourceAttribute,
       internal::projectValueOntoParticle_piecewiseConstant(
         marker,
         voxelsPerAxis,
         unknownsPerVoxel,
         Q,
         particle.getX(),
-        unknown
+        sourceAttribute
       )
     );
   }
 }
 
+/** Multilinearly maps SourceIndex to particle data entry DestIndex. */
 template <int SourceIndex, int DestIndex, typename Particle, typename DataType>
 void exahype2::fv::projectValueOntoParticle_piecewiseLinear(
   const peano4::datamanagement::CellMarker& marker,
@@ -195,16 +223,20 @@ void exahype2::fv::projectValueOntoParticle_piecewiseLinear(
   const DataType* NOALIAS                   Q,
   Particle&                                 particle
 ) {
-  particle.setData(DestIndex) = internal::projectValueOntoParticle_piecewiseLinear(
-    marker,
-    voxelsPerAxis,
-    unknownsPerVoxel,
-    Q,
-    particle.getX(),
-    SourceIndex
+  particle.setData(
+    DestIndex,
+    internal::projectValueOntoParticle_piecewiseLinear(
+      marker,
+      voxelsPerAxis,
+      unknownsPerVoxel,
+      Q,
+      particle.getX(),
+      SourceIndex
+    )
   );
 }
 
+/** Multilinearly maps every volume attribute to the particle entry with the same index. */
 template <typename Particle, typename DataType>
 void exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear(
   const peano4::datamanagement::CellMarker& marker,
@@ -213,47 +245,59 @@ void exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear(
   const DataType* NOALIAS                   Q,
   Particle&                                 particle
 ) {
-  for (int unknown = 0; unknown < unknownsPerVoxel; unknown++) {
-    double value = internal::projectValueOntoParticle_piecewiseLinear(
+  for (int sourceAttribute = 0; sourceAttribute < unknownsPerVoxel; sourceAttribute++) {
+    const DataType interpolatedValue = internal::projectValueOntoParticle_piecewiseLinear(
       marker,
       voxelsPerAxis,
       unknownsPerVoxel,
       Q,
       particle.getX(),
-      unknown
+      sourceAttribute
     );
 
-    assertion(value == value);
-    particle.setData(unknown, value);
+    assertion(interpolatedValue == interpolatedValue);
+    particle.setData(sourceAttribute, interpolatedValue);
   }
 }
 
+/**
+ * Multilinearly maps every volume attribute to the corresponding particle data index.
+ */
 template <typename Particle, typename DataType>
 void exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear_explicit_Euler(
-  const peano4::datamanagement::CellMarker& marker,
-  int                                       voxelsPerAxis,
-  int                                       unknownsPerVoxel,
-  const DataType* NOALIAS                   Q,
-  double                                    timeStepSize,
-  tarch::la::Vector<DIMENSIONS, int>        indices,
-  tarch::la::Vector<DIMENSIONS, double>     factors,
-  Particle&                                 particle
+  const peano4::datamanagement::CellMarker&              marker,
+  int                                                    voxelsPerAxis,
+  int                                                    unknownsPerVoxel,
+  const DataType* NOALIAS                                Q,
+  [[maybe_unused]] double                                timeStepSize,
+  [[maybe_unused]] tarch::la::Vector<DIMENSIONS, int>    indices,
+  [[maybe_unused]] tarch::la::Vector<DIMENSIONS, double> factors,
+  Particle&                                              particle
 ) {
-  for (int unknown = 0; unknown < unknownsPerVoxel; unknown++) {
-    double value = internal::projectValueOntoParticle_piecewiseLinear(
+  for (int sourceAttribute = 0; sourceAttribute < unknownsPerVoxel; sourceAttribute++) {
+    const DataType interpolatedValue = internal::projectValueOntoParticle_piecewiseLinear(
       marker,
       voxelsPerAxis,
       unknownsPerVoxel,
       Q,
       particle.getX(),
-      unknown
+      sourceAttribute
     );
 
-    assertion(value == value); // Ensure value is not NaN
-    particle.setData(unknown, value);
+    assertion(interpolatedValue == interpolatedValue);
+    particle.setData(sourceAttribute, interpolatedValue);
   }
 }
 
+/**
+ * Interpolates selected attributes, applies gravity along the last coordinate axis,
+ * advances the particle, and commits its position.
+ *
+ * Particle data entries beginning at ParticleVelocityAttributeOffset hold
+ * velocity; entries beginning at ParticleAccelerationAttributeOffset hold
+ * acceleration. The reflection at the domain boundary runs when one component
+ * of periodicBoundaryConditions equals one.
+ */
 template <int SourceIndex, int... SourceIndices, typename Particle, typename DataType>
 void exahype2::fv::updateParticleState(
   Particle&                                 particle,
@@ -262,11 +306,10 @@ void exahype2::fv::updateParticleState(
   int                                       voxelsPerAxis,
   int                                       unknownsPerVoxel,
   const DataType* NOALIAS                   Q,
-  tarch::la::Vector<DIMENSIONS, double>     DomainSize,
-  tarch::la::Vector<DIMENSIONS, double>     DomainOffset,
-  tarch::la::Vector<DIMENSIONS, double>     PeriodicBC
+  tarch::la::Vector<DIMENSIONS, double>     domainSize,
+  tarch::la::Vector<DIMENSIONS, double>     domainOffset,
+  tarch::la::Vector<DIMENSIONS, double>     periodicBoundaryConditions
 ) {
-  // 🔹 Step 1: Interpolation (Store values directly in the particle)
   projectValuesOntoParticle_piecewiseLinear<DataType, SourceIndex, SourceIndices...>(
     marker,
     voxelsPerAxis,
@@ -275,64 +318,72 @@ void exahype2::fv::updateParticleState(
     particle
   );
 
-  // 🔹 Step 2: Compute Forces (e.g., gravity, drag) - To be implemented
-  // Example: Applying only gravity for now
-  particle.setData(5, 0.0);
-  particle.setData(6, -9.81);
-
-  // 🔹 Step 3: Perform Integration
-  tarch::la::Vector<DIMENSIONS, double> newPosition;
-
-  newPosition = explicitEulerIntegration(particle, timeStepSize);
-
-  // 🔹 Step 4: Handle Boundary Collisions (if periodic BC is not active)
-  if (tarch::la::max(PeriodicBC) == 1.0) {
-    handleBoundaryCollisions(particle, newPosition, DomainSize, DomainOffset);
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    particle.setData(internal::ParticleAccelerationAttributeOffset + axis, axis == DIMENSIONS - 1 ? -9.81 : 0.0);
   }
 
-  // 🔹 Step 5: Update Particle Position
+  tarch::la::Vector<DIMENSIONS, double> newPosition = explicitEulerIntegration(particle, timeStepSize);
+
+  if (tarch::la::max(periodicBoundaryConditions) == 1.0) {
+    reflectParticleAtDomainBoundary(particle, newPosition, domainSize, domainOffset);
+  }
+
   particle.setX(newPosition);
 }
 
+/**
+ * Updates the velocity and derives a candidate particle position.
+ *
+ * For each axis, the method computes v_new = clamp(v_old + a*dt) and then
+ * x_new = x_old + v_new*dt + 0.5*a*dt^2.
+ */
 template <typename Particle>
 tarch::la::Vector<DIMENSIONS, double> exahype2::fv::explicitEulerIntegration(Particle& particle, double timeStepSize) {
   tarch::la::Vector<DIMENSIONS, double> newPosition;
-  // Set initial acceleration for testing purposes
-  for (int d = 0; d < DIMENSIONS; ++d) {
-    double velocity     = particle.getData(3 + d);
-    double acceleration = particle.getData(5 + d);
-    velocity += acceleration * timeStepSize; // Update velocity
-    velocity = std::min(std::max(velocity, -10.0), 10.0);
+  for (int axis = 0; axis < DIMENSIONS; ++axis) {
+    double       velocity     = particle.getData(internal::ParticleVelocityAttributeOffset + axis);
+    const double acceleration = particle.getData(internal::ParticleAccelerationAttributeOffset + axis);
+    velocity += acceleration * timeStepSize;
+    velocity = std::min(std::max(velocity, -internal::MaximumParticleSpeed), internal::MaximumParticleSpeed);
 
-    particle.setData(3 + d, velocity);
+    particle.setData(internal::ParticleVelocityAttributeOffset + axis, velocity);
 
-    newPosition[d] = particle.getX(d) + velocity * timeStepSize + 0.5 * acceleration * timeStepSize * timeStepSize;
+    newPosition[axis] =
+      particle.getX(axis) + velocity * timeStepSize + 0.5 * acceleration * timeStepSize * timeStepSize;
   }
 
   return newPosition;
 }
 
+/**
+ * Mirrors an out-of-domain candidate position and reverses its normal velocity.
+ * CollisionVelocityRetention supplies the damping factor after each impact.
+ */
 template <typename Particle>
-void exahype2::fv::handleBoundaryCollisions(
+void exahype2::fv::reflectParticleAtDomainBoundary(
   Particle&                              particle,
   tarch::la::Vector<DIMENSIONS, double>& newPosition,
-  tarch::la::Vector<DIMENSIONS, double>  DomainSize,
-  tarch::la::Vector<DIMENSIONS, double>  DomainOffset
+  tarch::la::Vector<DIMENSIONS, double>  domainSize,
+  tarch::la::Vector<DIMENSIONS, double>  domainOffset
 ) {
-  for (int d = 0; d < DIMENSIONS; d++) {
-    double lowerBound = DomainOffset[d];
-    double upperBound = DomainOffset[d] + DomainSize[d];
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    const double lowerBound = domainOffset[axis];
+    const double upperBound = domainOffset[axis] + domainSize[axis];
 
-    double velocity = particle.getData(3 + d);
+    const double velocity = particle.getData(internal::ParticleVelocityAttributeOffset + axis);
 
-    if (newPosition[d] < lowerBound) {
-      // Reflect at lower boundary
-      newPosition[d] = lowerBound + (lowerBound - newPosition[d]);
-      particle.setData(3 + d, -velocity * 0.9); // Reverse & damp velocity
-    } else if (newPosition[d] > upperBound) {
-      // Reflect at upper boundary
-      newPosition[d] = upperBound - (newPosition[d] - upperBound);
-      particle.setData(3 + d, -velocity * 0.9); // Reverse & damp velocity
+    if (newPosition[axis] < lowerBound) {
+      newPosition[axis] = lowerBound + (lowerBound - newPosition[axis]);
+      particle.setData(
+        internal::ParticleVelocityAttributeOffset + axis,
+        -velocity * internal::CollisionVelocityRetention
+      );
+    } else if (newPosition[axis] > upperBound) {
+      newPosition[axis] = upperBound - (newPosition[axis] - upperBound);
+      particle.setData(
+        internal::ParticleVelocityAttributeOffset + axis,
+        -velocity * internal::CollisionVelocityRetention
+      );
     }
   }
 }

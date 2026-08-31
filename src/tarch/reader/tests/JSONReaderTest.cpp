@@ -1,25 +1,26 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "tarch/reader/tests/JSONReaderTest.h"
+#include "JSONReaderTest.h"
 
 #include "tarch/reader/JSONReader.h"
 
 namespace {
   std::string writeTempFile(const std::string& stem, const std::string& content) {
+    // The file name carries a per-run identifier, so two processes that write into the test
+    // directory at the same time do not overwrite each other's fixture.
+    static const std::string testRunIdentifier =
+      std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) + "-"
+      + std::to_string(std::random_device{}());
     static std::atomic<int> counter = 0;
 
-    const std::filesystem::path path =
-      tarch::tests::getWritableTestDirectory() /
-      std::filesystem::path(
-        stem + "-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) + "-" +
-        std::to_string(counter++) + ".json"
-      );
+    const std::filesystem::path path = tarch::tests::getWritableTestDirectory()
+      / std::filesystem::path(stem + "-" + testRunIdentifier + "-" + std::to_string(counter++) + ".json");
 
     std::ofstream output(path);
-    if (!output.is_open()) {
-      std::stringstream ss;
-      ss << "Failed to create temp file \"" << path.string() << "\".";
-      throw std::runtime_error(ss.str());
+    if (not output.is_open()) {
+      std::stringstream message;
+      message << "Failed to create temporary file \"" << path.string() << "\".";
+      throw std::runtime_error(message.str());
     }
     output << content;
     return path.string();
@@ -27,7 +28,7 @@ namespace {
 } // namespace
 
 tarch::reader::tests::JSONReaderTest::JSONReaderTest() :
-  TestCase("tarch::reader::tests::JSONReaderTest") {}
+  tarch::tests::TestCase("tarch::reader::tests::JSONReaderTest") {}
 
 void tarch::reader::tests::JSONReaderTest::run() {
   testMethod(testReadPrimitivesAndArrays);

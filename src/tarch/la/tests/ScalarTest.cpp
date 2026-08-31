@@ -1,11 +1,11 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "tarch/la/tests/ScalarTest.h"
+#include "ScalarTest.h"
 
 #include "tarch/la/Scalar.h"
 #include "tarch/la/ScalarOperations.h"
 
-tarch::la::tests::ScalarTest::ScalarTest():
+tarch::la::tests::ScalarTest::ScalarTest() :
   TestCase("tarch::la::tests::ScalarTest") {}
 
 void tarch::la::tests::ScalarTest::run() {
@@ -15,22 +15,22 @@ void tarch::la::tests::ScalarTest::run() {
 }
 
 void tarch::la::tests::ScalarTest::testComparison() {
-  double a   = 1.0;
-  double b   = 2.0;
-  double eps = 1e-14;
+  const double a   = 1.0;
+  const double b   = 2.0;
+  const double eps = 1e-14;
 
   validate(greater(b, a, eps));
-  validate(!greater(a, a - eps, eps));
+  validate(not greater(a, a - eps, eps));
   validate(greater(a, a - 10.0 * eps, eps));
 
-  validate(!greaterEquals(a, b, eps));
+  validate(not greaterEquals(a, b, eps));
   validate(greaterEquals(b, a, eps));
   validate(greaterEquals(a, a, eps));
   validate(greaterEquals(a, a + 0.1 * eps, eps));
-  validate(!greaterEquals(a, a + 10 * eps, eps));
+  validate(not greaterEquals(a, a + 10 * eps, eps));
 
   validate(smaller(a, b, eps));
-  validate(!smaller(a, a + eps, eps));
+  validate(not smaller(a, a + eps, eps));
   validate(smaller(a, a + 10.0 * eps, eps));
 
   validate(smallerEquals(a, b, eps));
@@ -38,16 +38,16 @@ void tarch::la::tests::ScalarTest::testComparison() {
   validate(smallerEquals(a + eps, a, eps));
   validate(smallerEquals(a, a + 10.0 * eps, eps));
 
-  validate(!equals(a, b, eps));
+  validate(not equals(a, b, eps));
   validate(equals(a, a, eps));
   validate(equals(a, a + eps, eps));
-  validate(!equals(a, a + 10.0 * eps, eps));
+  validate(not equals(a, a + 10.0 * eps, eps));
   validate(equals(a, a + 10.0 * eps, 10.0 * eps));
 }
 
 void tarch::la::tests::ScalarTest::testAbs() {
-  double a = -1.0;
-  int    b = -1;
+  const double a = -1.0;
+  const int    b = -1;
 
   validateEquals(abs(a), 1.0);
   validateEquals(abs(b), 1);

@@ -11,9 +11,7 @@ import jinja2
 
 class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
   """
-  Solve the Riemann problem and add its contribution back to the solution.
-
-  See RungeKuttaDG for a discussion of the individual steps.
+  Solves the Riemann problem and adds its contribution back to the solution.
   """
 
   TemplateProject = """
@@ -41,14 +39,6 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
 
 
   def __init__(self,solver):
-    """
-    Construct the action set for the Riemann solve.
-
-    :: Arguments
-
-    solver: RungeKuttaDG
-      Reference to creating class.
-    """
     super(SolveRiemannProblem,self).__init__(solver)
     self.guards            = []
     self._butcher_tableau     = ButcherTableau(self._solver._rk_order)

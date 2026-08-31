@@ -1,0 +1,50 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#include "LatticeIndexMap.h"
+
+/**
+ * Sizes the table for a number of entries and drops everything it held.
+ *
+ * The table takes twice the requested entries rounded up to a power of two, so
+ * a caller that knows how many entries a level holds fills it without a rehash.
+ */
+void peano4::grid::LatticeIndexMap::reserve(const std::size_t numberOfEntries) {
+  std::size_t capacity = SmallestCapacity;
+  while (capacity < 2 * numberOfEntries) {
+    capacity *= 2;
+  }
+  _keys.assign(capacity, EmptyKey);
+  _values.assign(capacity, NoEntry);
+  _slotMask           = capacity - 1;
+  _size               = 0;
+  _numberOfTombstones = 0;
+}
+
+void peano4::grid::LatticeIndexMap::clear() {
+  _keys.clear();
+  _values.clear();
+  _slotMask           = 0;
+  _size               = 0;
+  _numberOfTombstones = 0;
+}
+
+/**
+ * Doubles the table and reinserts every entry, dropping the tombstones.
+ */
+void peano4::grid::LatticeIndexMap::grow() {
+  const auto heldKeys   = std::move(_keys);
+  const auto heldValues = std::move(_values);
+
+  const std::size_t capacity = heldKeys.empty() ? SmallestCapacity : 2 * heldKeys.size();
+  _keys.assign(capacity, EmptyKey);
+  _values.assign(capacity, NoEntry);
+  _slotMask           = capacity - 1;
+  _size               = 0;
+  _numberOfTombstones = 0;
+
+  for (std::size_t slot = 0; slot < heldKeys.size(); slot++) {
+    if (heldKeys[slot] != EmptyKey and heldKeys[slot] != TombstoneKey) {
+      insert(heldKeys[slot], heldValues[slot]);
+    }
+  }
+}

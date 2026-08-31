@@ -1,0 +1,79 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+/**
+ * Lowers the target atomically when the candidate value is smaller.
+ *
+ * Relaxed ordering makes the numeric update atomic without ordering other
+ * memory. Callers provide any additional ordering.
+ *
+ * @return The value stored after this update attempt.
+ */
+template <typename T>
+INLINE_METHOD T tarch::accelerator::updateAtomicMin(T& target, const T value) {
+  std::atomic_ref<T> atomicTarget(target);
+  auto               current = atomicTarget.load(std::memory_order_relaxed);
+  while (value < current) {
+    if (atomicTarget.compare_exchange_weak(current, value, std::memory_order_relaxed)) {
+      return value;
+    }
+  }
+  return current;
+}
+
+/**
+ * Raises the target atomically when the candidate value is larger.
+ *
+ * Relaxed ordering makes the numeric update atomic without ordering other
+ * memory. Callers provide any additional ordering.
+ *
+ * @return The value stored after this update attempt.
+ */
+template <typename T>
+INLINE_METHOD T tarch::accelerator::updateAtomicMax(T& target, const T value) {
+  std::atomic_ref<T> atomicTarget(target);
+  auto               current = atomicTarget.load(std::memory_order_relaxed);
+  while (value > current) {
+    if (atomicTarget.compare_exchange_weak(current, value, std::memory_order_relaxed)) {
+      return value;
+    }
+  }
+  return current;
+}
+
+/**
+ * Increments the target atomically with relaxed memory ordering.
+ *
+ * @return The value stored after the increment.
+ */
+template <typename T>
+INLINE_METHOD T tarch::accelerator::incrementAtomic(T& target) {
+  std::atomic_ref<T> atomicTarget(target);
+  return atomicTarget.fetch_add(1, std::memory_order_relaxed) + 1;
+}
+
+/**
+ * Adds the value atomically with relaxed memory ordering.
+ *
+ * @return The value stored after the addition.
+ */
+template <typename T>
+INLINE_METHOD T tarch::accelerator::addAtomic(T& target, const T value) {
+  std::atomic_ref<T> atomicTarget(target);
+  auto               current = atomicTarget.load(std::memory_order_relaxed);
+  while (true) {
+    const auto updatedValue = current + value;
+    if (atomicTarget.compare_exchange_weak(current, updatedValue, std::memory_order_relaxed)) {
+      return updatedValue;
+    }
+  }
+}
+
+/**
+ * Overwrites the target atomically with relaxed memory ordering.
+ */
+template <typename T>
+INLINE_METHOD void tarch::accelerator::storeAtomic(T& target, const T value) {
+  std::atomic_ref<T> atomicTarget(target);
+  atomicTarget.store(value, std::memory_order_relaxed);
+}

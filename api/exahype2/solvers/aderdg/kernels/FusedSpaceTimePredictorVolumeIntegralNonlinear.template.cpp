@@ -9,7 +9,7 @@
 #include "exahype2/dg/DGUtils.h"
 
 #include "tarch/CompilerSpecificSettings.h"
-#include "tarch/instrumentation/Log.h"
+#include "tarch/instrumentation/Trace.h"
 
 {% import 'Gemms.template.h' as m with context %}
 
@@ -376,7 +376,6 @@ double {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
 
     pCompType* dudx_T = DGMatrices<pCompType>::dudx_T;
 
-    // The tensor-product stiffness matrix produces each spatial derivative independently.
     for (int z = 0; z < {{NUMBER_OF_DOF_3D}}; z++) {
       for (int y = 0; y < {{NUMBER_OF_DOF}}; y++) {
         {{ m.gemm('gradQ_x', 'lQi', 'dudx_T', 'gradQ',
@@ -618,7 +617,6 @@ double {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
 
         SIMD(aligned(nonconservativeProduct:PEANO_WITH_ALIGNMENT))
         for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
-          // The predictor treats the nonconservative product as a negative source contribution.
           localSource[n] -= nonconservativeProduct[n];
         }
       }

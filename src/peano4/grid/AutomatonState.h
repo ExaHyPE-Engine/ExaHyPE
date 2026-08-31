@@ -17,20 +17,13 @@ struct peano4::grid::AutomatonState {
   tarch::la::Vector<DIMENSIONS, double> x{};
   tarch::la::Vector<DIMENSIONS, double> h{};
 
-  // Does not have to be tarch::la::Vector as we don't do linear algebra on this
-  std::array<std::int8_t, TWO_TIMES_D> accessNumber{};
-
-  // Bits [0..DIMENSIONS-1] hold the even flags, bit [DIMENSIONS] the inverted flag.
+  // Bits [0..DIMENSIONS-1] hold the even flags.
   FlagType flags{0};
 
   AutomatonState() noexcept = default;
 
   static constexpr FlagType evenMaskAll() { return (FlagType(1) << DIMENSIONS) - FlagType(1); }
   static constexpr FlagType evenMask(int i) { return FlagType(1) << i; }
-  static constexpr FlagType invertedMask() { return FlagType(1) << DIMENSIONS; }
-
-  INLINE_METHOD bool getInverted() const noexcept { return (flags & invertedMask()) != 0; }
-  INLINE_METHOD void setInverted(bool value) noexcept { setFlag(invertedMask(), value); }
 
   INLINE_METHOD bool getEvenFlag(int d) const noexcept { return (flags & evenMask(d)) != 0; }
   INLINE_METHOD void setEvenFlag(int d, bool value) noexcept { setFlag(evenMask(d), value); }

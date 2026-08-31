@@ -4,11 +4,11 @@
 
 #if defined(PEANO_WITH_GPU_BACKEND_HIP)
 
-#include "DevicePropertiesCache.h"
 #include "tarch/Assertions.h"
 #include "tarch/accelerator/Device.h"
 #include "tarch/accelerator/MemoryAllocationCache.h"
 #include "tarch/accelerator/accelerator.h"
+#include "tarch/accelerator/hip/DevicePropertiesCache.h"
 #include "tarch/instrumentation/Debug.h"
 #include "tarch/instrumentation/Info.h"
 
@@ -22,23 +22,26 @@ bool tarch::accelerator::Device::init() {
   CHECK_HIP_ERROR(hipGetDeviceCount(&numberOfDevices));
   for (int device = 0; device < numberOfDevices; device++) {
     CHECK_HIP_ERROR(hipSetDevice(device));
-    CHECK_HIP_ERROR(hipFree(0));
-    hipDeviceProp_t* prop = &hip::DevicePropertiesCache::get();
-    std::size_t      free = 0, total = 0;
-    CHECK_HIP_ERROR(hipMemGetInfo(&free, &total));
+    CHECK_HIP_ERROR(hipFree(nullptr));
+    const hipDeviceProp_t* properties = &hip::DevicePropertiesCache::get();
+    std::size_t            freeBytes  = 0;
+    std::size_t            totalBytes = 0;
+    CHECK_HIP_ERROR(hipMemGetInfo(&freeBytes, &totalBytes));
 
-    logInfo("[" << device << "]: " << prop->name);
-    logDebug("  " << prop->major << "." << prop->minor << " CC");
-    logDebug("  " << free / (1024 * 1024) << " MB free of " << total / (1024 * 1024) << " MB total global memory");
-    logDebug("  " << prop->totalConstMem << " bytes constant memory");
-    logDebug("  " << prop->multiProcessorCount << " SMs");
-    logDebug("  " << prop->maxThreadsPerMultiProcessor << " threads per SM");
-    logDebug("  " << prop->regsPerMultiprocessor << " registers per SM");
-    logDebug("  " << prop->sharedMemPerMultiprocessor << " bytes shared memory per SM");
-    logDebug("  " << prop->maxThreadsPerBlock << " threads per block");
-    logDebug("  " << prop->regsPerBlock << " registers per block");
-    logDebug("  " << prop->sharedMemPerBlock << " bytes shared memory per block");
-    logDebug("  " << prop->warpSize << " threads per warp");
+    logInfo("[" << device << "]: " << properties->name);
+    logDebug("  " << properties->major << "." << properties->minor << " CC");
+    logDebug(
+      "  " << freeBytes / (1024 * 1024) << " MB free of " << totalBytes / (1024 * 1024) << " MB total global memory"
+    );
+    logDebug("  " << properties->totalConstMem << " bytes constant memory");
+    logDebug("  " << properties->multiProcessorCount << " SMs");
+    logDebug("  " << properties->maxThreadsPerMultiProcessor << " threads per SM");
+    logDebug("  " << properties->regsPerMultiprocessor << " registers per SM");
+    logDebug("  " << properties->sharedMemPerMultiprocessor << " bytes shared memory per SM");
+    logDebug("  " << properties->maxThreadsPerBlock << " threads per block");
+    logDebug("  " << properties->regsPerBlock << " registers per block");
+    logDebug("  " << properties->sharedMemPerBlock << " bytes shared memory per block");
+    logDebug("  " << properties->warpSize << " threads per warp");
   }
   logDebug("-----------------------------------------");
 
@@ -67,14 +70,14 @@ bool tarch::accelerator::Device::isInitialised() const { return numberOfDevices 
 int tarch::accelerator::Device::getNumberOfDevices() const { return numberOfDevices; }
 
 hipStream_t tarch::accelerator::deviceStreamCreate() {
-  hipStream_t stream = 0;
+  hipStream_t stream = nullptr;
   CHECK_HIP_ERROR(hipStreamCreate(&stream));
   return stream;
 }
 
 void tarch::accelerator::deviceStreamDestroy(hipStream_t* stream) {
   CHECK_HIP_ERROR(hipStreamDestroy(*stream));
-  *stream = (hipStream_t)0;
+  *stream = nullptr;
 }
 
 void tarch::accelerator::deviceStreamSync(hipStream_t stream) { CHECK_HIP_ERROR(hipStreamSynchronize(stream)); }
@@ -88,8 +91,8 @@ void tarch::accelerator::deviceStreamSet(hipStream_t stream) {
 hipStream_t tarch::accelerator::deviceStreamGet() {
   int device = 0;
   CHECK_HIP_ERROR(hipGetDevice(&device));
-  auto it = activeStreams.find(device);
-  return it == activeStreams.end() ? static_cast<hipStream_t>(0) : it->second;
+  const auto activeStream = activeStreams.find(device);
+  return activeStream == activeStreams.end() ? nullptr : activeStream->second;
 }
 
 #endif // defined(PEANO_WITH_GPU_BACKEND_HIP)

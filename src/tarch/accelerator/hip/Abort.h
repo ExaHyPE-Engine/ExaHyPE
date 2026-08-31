@@ -4,21 +4,12 @@
 
 #if defined(PEANO_WITH_GPU_BACKEND_HIP)
 
-#include "Device.h"
+#include "tarch/accelerator/hip/Device.h"
 
 namespace tarch::accelerator {
   inline __host__ __device__ void abort(const char* message) {
-    COMPILE_IF_ON_DEVICE(
-      const char empty[] = "";
-      __assert_fail(message, empty, 0, empty);
-      while (true) {
-      }
-    )
-    COMPILE_IF_ON_HOST(
-      std::fputs(message, stderr);
-      std::fflush(stderr);
-      std::_Exit(EXIT_FAILURE);
-    )
+    COMPILE_IF_ON_DEVICE(const char empty[] = ""; __assert_fail(message, empty, 0, empty); while (true){})
+    COMPILE_IF_ON_HOST(std::fputs(message, stderr); std::fflush(stderr); std::_Exit(EXIT_FAILURE);)
   }
 } // namespace tarch::accelerator
 

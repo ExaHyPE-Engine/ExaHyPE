@@ -59,7 +59,7 @@ namespace {
   }
 
   // The equivariance tests need the restriction operator mirror symmetric to the
-  // last bit, so the mirror half is copied instead of recomputed.
+  // last bit, so the upper half is a copy of the lower half.
   std::array<double, 3 * NodesPerAxis * NodesPerAxis> inputMajorSymmetricRestrictionMatrix() {
     std::array<double, 3 * NodesPerAxis * NodesPerAxis> result{};
     constexpr int                                       Stride = NodesPerAxis * NodesPerAxis;
@@ -112,6 +112,34 @@ namespace {
   }
 
   std::uint64_t bitPattern(const double value) { return std::bit_cast<std::uint64_t>(value); }
+
+  constexpr int NumberOfSubfaces = DIMENSIONS == 2 ? 3 : 9;
+
+  /**
+   * Returns one face-node index independently of the routines under test.
+   * A face stores both halves, so the side carries the largest stride along the
+   * normal and the tangential axes keep the patch's own extent.
+   */
+  int faceNodeIndex(
+    const int normal,
+    const int side,
+    const int tangentialI,
+    const int tangentialJ,
+    const int numberOfDofsPerAxis
+  ) {
+    const int iStride    = normal == 0 ? 2 : 1;
+    const int jStride    = normal == 2 ? numberOfDofsPerAxis : 2 * numberOfDofsPerAxis;
+    const int sideStride = normal == 0 ? 1
+      : normal == 1                    ? numberOfDofsPerAxis
+                                       : numberOfDofsPerAxis * numberOfDofsPerAxis;
+    return side * sideStride + tangentialI * iStride + tangentialJ * jStride;
+  }
+
+  /** Returns the number of values in both halves of a face array. */
+  constexpr int faceValueCount(const int numberOfDofsPerAxis, const int numberOfUnknowns) {
+    return DIMENSIONS == 2 ? 2 * numberOfDofsPerAxis * numberOfUnknowns
+                           : 2 * numberOfDofsPerAxis * numberOfDofsPerAxis * numberOfUnknowns;
+  }
 } // namespace
 
 toolbox::blockstructured::tests::RestrictionTest::RestrictionTest() :
@@ -128,6 +156,10 @@ void toolbox::blockstructured::tests::RestrictionTest::run() {
   testMethod(testApplyTensorProductOrderInvariant);
   testMethod(testInterpolateFaceFromCoarse);
   testMethod(testRestrictFaceFromChildren);
+  testMethod(testGatheredHaloRestrictionAveragesTheSubfaceRamp);
+  testMethod(testGatheredHaloRestrictionIsStagingOrderInvariant);
+  testMethod(testGatheredHaloRestrictionScalesAPartialSubfaceSet);
+  testMethod(testGatheredHaloRestrictionRunsInSinglePrecision);
 }
 
 void toolbox::blockstructured::tests::RestrictionTest::testOrderInvariantProduct() {
@@ -354,6 +386,249 @@ void toolbox::blockstructured::tests::RestrictionTest::testRestrictCellFromChild
         validateEquals(bitPattern(mirroredCoarse[targetIndex + u]), bitPattern(coarse[sourceIndex + u]));
       }
     });
+  }
+}
+
+/**
+ * Verifies that a coarse node of the gathered restriction comes out as the mean
+ * of the three fine nodes it covers, on both halves and every normal.
+ */
+void toolbox::blockstructured::tests::RestrictionTest::testGatheredHaloRestrictionAveragesTheSubfaceRamp() {
+  constexpr int NumberOfUnknowns    = 2;
+  constexpr int NumberOfDofsPerAxis = 2;
+  constexpr int FaceSize            = faceValueCount(NumberOfDofsPerAxis, NumberOfUnknowns);
+  constexpr int ValuesPerSubface    = DIMENSIONS == 2 ? NumberOfDofsPerAxis * NumberOfUnknowns
+                                                      : NumberOfDofsPerAxis * NumberOfDofsPerAxis * NumberOfUnknowns;
+
+  for (int normal = 0; normal < DIMENSIONS; normal++) {
+    for (int side = 0; side < 2; side++) {
+      toolbox::blockstructured::ChildDataStage<double> stage(NumberOfSubfaces, ValuesPerSubface);
+      std::vector<double>                              coarseGridFaceValues(FaceSize, -1.0);
+      const auto* const                                coarseFaceKey = coarseGridFaceValues.data();
+
+      peano4::grid::GridTraversalEvent event;
+      peano4::dForEach(3, [&](const tarch::la::Vector<DIMENSIONS, int>& subCellIndex) {
+        event.setRelativePositionToFather(subCellIndex);
+        auto faceMarker = event.getFaceMarker();
+        faceMarker.select(normal + side * DIMENSIONS);
+        if (faceMarker.isInteriorFaceWithinPatch()) {
+          return;
+        }
+
+        const auto subfacePosition = faceMarker.getRelativePositionWithinFatherFace();
+        const int  subfaceI        = subfacePosition[0];
+#if DIMENSIONS == 3
+        const int subfaceJ = subfacePosition[1];
+#else
+        const int subfaceJ = 0;
+#endif
+
+        std::vector<double> fineGridFaceValues(FaceSize, 0.0);
+#if DIMENSIONS == 3
+        for (int fineJ = 0; fineJ < NumberOfDofsPerAxis; fineJ++) {
+#else
+        const int fineJ = 0;
+        {
+#endif
+          for (int fineI = 0; fineI < NumberOfDofsPerAxis; fineI++) {
+            const auto index = faceNodeIndex(normal, side, fineI, fineJ, NumberOfDofsPerAxis) * NumberOfUnknowns;
+            fineGridFaceValues[index]     = subfaceI * NumberOfDofsPerAxis + fineI;
+            fineGridFaceValues[index + 1] = subfaceJ * NumberOfDofsPerAxis + fineJ;
+          }
+        }
+
+        toolbox::blockstructured::stageHaloLayerForGatheredRestriction(
+          faceMarker,
+          stage,
+          coarseFaceKey,
+          fineGridFaceValues.data(),
+          side,
+          NumberOfDofsPerAxis,
+          NumberOfUnknowns
+        );
+      });
+
+      validateEquals(stage.frameTag(coarseFaceKey), side);
+      toolbox::blockstructured::restrictHaloLayerFromStagedSubfaces(
+        stage,
+        coarseFaceKey,
+        coarseGridFaceValues.data(),
+        normal,
+        NumberOfDofsPerAxis,
+        NumberOfUnknowns
+      );
+      validate(not stage.hasFrame(coarseFaceKey));
+
+#if DIMENSIONS == 3
+      for (int coarseJ = 0; coarseJ < NumberOfDofsPerAxis; coarseJ++) {
+#else
+      const int coarseJ = 0;
+      {
+#endif
+        for (int coarseI = 0; coarseI < NumberOfDofsPerAxis; coarseI++) {
+          const auto index = faceNodeIndex(normal, side, coarseI, coarseJ, NumberOfDofsPerAxis) * NumberOfUnknowns;
+          validateNumericalEquals(coarseGridFaceValues[index], 3.0 * coarseI + 1.0);
+#if DIMENSIONS == 3
+          validateNumericalEquals(coarseGridFaceValues[index + 1], 3.0 * coarseJ + 1.0);
+#endif
+          // The opposite half belongs to the neighbouring cell and stays as the
+          // caller left it.
+          const auto oppositeIndex =
+            faceNodeIndex(normal, 1 - side, coarseI, coarseJ, NumberOfDofsPerAxis) * NumberOfUnknowns;
+          validateNumericalEquals(coarseGridFaceValues[oppositeIndex], -1.0);
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Verifies that staging one subface set forwards and backwards restricts to
+ * bitwise identical halves.
+ */
+void toolbox::blockstructured::tests::RestrictionTest::testGatheredHaloRestrictionIsStagingOrderInvariant() {
+  constexpr int NumberOfUnknowns    = 1;
+  constexpr int NumberOfDofsPerAxis = 2;
+  constexpr int FaceSize            = faceValueCount(NumberOfDofsPerAxis, NumberOfUnknowns);
+  constexpr int ValuesPerSubface    = DIMENSIONS == 2 ? NumberOfDofsPerAxis * NumberOfUnknowns
+                                                      : NumberOfDofsPerAxis * NumberOfDofsPerAxis * NumberOfUnknowns;
+  constexpr int Normal              = DIMENSIONS - 1;
+  constexpr int Side                = 1;
+
+  const auto restrictInStagingOrder = [&](const bool stageBackwards) {
+    toolbox::blockstructured::ChildDataStage<double> stage(NumberOfSubfaces, ValuesPerSubface);
+    std::vector<double>                              coarseGridFaceValues(FaceSize, 0.0);
+    const auto* const                                coarseFaceKey = coarseGridFaceValues.data();
+
+    for (int subfaceNumber = 0; subfaceNumber < NumberOfSubfaces; subfaceNumber++) {
+      const int   stagedSubface = stageBackwards ? NumberOfSubfaces - 1 - subfaceNumber : subfaceNumber;
+      auto* const stagedValues  = stage.claim(coarseFaceKey, stagedSubface, Side);
+      for (int value = 0; value < ValuesPerSubface; value++) {
+        // Values of very different magnitude expose a plain running sum, whose
+        // result would follow the order the addends arrive in.
+        stagedValues[value] = std::pow(-8.0, stagedSubface - 4) * (value + 1);
+      }
+    }
+
+    toolbox::blockstructured::restrictHaloLayerFromStagedSubfaces(
+      stage,
+      coarseFaceKey,
+      coarseGridFaceValues.data(),
+      Normal,
+      NumberOfDofsPerAxis,
+      NumberOfUnknowns
+    );
+    return coarseGridFaceValues;
+  };
+
+  const auto forwardHalf  = restrictInStagingOrder(false);
+  const auto backwardHalf = restrictInStagingOrder(true);
+  for (int value = 0; value < FaceSize; value++) {
+    validateEquals(bitPattern(backwardHalf[value]), bitPattern(forwardHalf[value]));
+  }
+}
+
+/**
+ * Verifies that an absent subface adds nothing to a coarse node and leaves the
+ * scale of the restriction untouched.
+ */
+void toolbox::blockstructured::tests::RestrictionTest::testGatheredHaloRestrictionScalesAPartialSubfaceSet() {
+  constexpr int NumberOfUnknowns    = 1;
+  constexpr int NumberOfDofsPerAxis = 2;
+  constexpr int FaceSize            = faceValueCount(NumberOfDofsPerAxis, NumberOfUnknowns);
+  constexpr int ValuesPerSubface    = DIMENSIONS == 2 ? NumberOfDofsPerAxis * NumberOfUnknowns
+                                                      : NumberOfDofsPerAxis * NumberOfDofsPerAxis * NumberOfUnknowns;
+  constexpr int Normal              = 0;
+  constexpr int Side                = 0;
+  constexpr int AbsentSubface       = 1;
+
+  toolbox::blockstructured::ChildDataStage<double> stage(NumberOfSubfaces, ValuesPerSubface);
+  std::vector<double>                              coarseGridFaceValues(FaceSize, 0.0);
+  const auto* const                                coarseFaceKey = coarseGridFaceValues.data();
+
+  for (int subfaceNumber = 0; subfaceNumber < NumberOfSubfaces; subfaceNumber++) {
+    if (subfaceNumber == AbsentSubface) {
+      continue;
+    }
+    auto* const stagedValues = stage.claim(coarseFaceKey, subfaceNumber, Side);
+    std::fill_n(stagedValues, ValuesPerSubface, 1.0);
+  }
+  validate(not stage.hasChild(coarseFaceKey, AbsentSubface));
+
+  toolbox::blockstructured::restrictHaloLayerFromStagedSubfaces(
+    stage,
+    coarseFaceKey,
+    coarseGridFaceValues.data(),
+    Normal,
+    NumberOfDofsPerAxis,
+    NumberOfUnknowns
+  );
+
+  // Every coarse node of the first column draws one of its three tangential
+  // addends from the absent subface, so it loses exactly that one addend.
+  constexpr double RestrictionScale = DIMENSIONS == 2 ? 1.0 / 3.0 : 1.0 / 9.0;
+  constexpr int    AddendsPerNode   = DIMENSIONS == 2 ? 3 : 9;
+  double           restrictedTotal  = 0.0;
+#if DIMENSIONS == 3
+  for (int coarseJ = 0; coarseJ < NumberOfDofsPerAxis; coarseJ++) {
+#else
+  const int coarseJ = 0;
+  {
+#endif
+    for (int coarseI = 0; coarseI < NumberOfDofsPerAxis; coarseI++) {
+      const auto index = faceNodeIndex(Normal, Side, coarseI, coarseJ, NumberOfDofsPerAxis) * NumberOfUnknowns;
+      validate(coarseGridFaceValues[index] <= AddendsPerNode * RestrictionScale);
+      validate(coarseGridFaceValues[index] > 0.0);
+      restrictedTotal += coarseGridFaceValues[index];
+    }
+  }
+  // The staged subfaces carry one unit per fine node, so the restricted half
+  // sums to the staged node count scaled once.
+  const double stagedNodeCount = static_cast<double>(NumberOfSubfaces - 1) * ValuesPerSubface;
+  validateNumericalEquals(restrictedTotal, stagedNodeCount * RestrictionScale);
+}
+
+/**
+ * Exercises the gathered path end to end for single-precision patch data.
+ */
+void toolbox::blockstructured::tests::RestrictionTest::testGatheredHaloRestrictionRunsInSinglePrecision() {
+  constexpr int NumberOfUnknowns    = 1;
+  constexpr int NumberOfDofsPerAxis = 2;
+  constexpr int FaceSize            = faceValueCount(NumberOfDofsPerAxis, NumberOfUnknowns);
+  constexpr int ValuesPerSubface    = DIMENSIONS == 2 ? NumberOfDofsPerAxis * NumberOfUnknowns
+                                                      : NumberOfDofsPerAxis * NumberOfDofsPerAxis * NumberOfUnknowns;
+  constexpr int Normal              = 0;
+  constexpr int Side                = 1;
+
+  toolbox::blockstructured::ChildDataStage<float> stage(NumberOfSubfaces, ValuesPerSubface);
+  std::vector<float>                              coarseGridFaceValues(FaceSize, 0.0F);
+  const auto* const                               coarseFaceKey = coarseGridFaceValues.data();
+
+  for (int subfaceNumber = 0; subfaceNumber < NumberOfSubfaces; subfaceNumber++) {
+    auto* const stagedValues = stage.claim(coarseFaceKey, subfaceNumber, Side);
+    std::fill_n(stagedValues, ValuesPerSubface, 3.0F);
+  }
+
+  toolbox::blockstructured::restrictHaloLayerFromStagedSubfaces(
+    stage,
+    coarseFaceKey,
+    coarseGridFaceValues.data(),
+    Normal,
+    NumberOfDofsPerAxis,
+    NumberOfUnknowns
+  );
+
+  // A constant field restricts to itself, whatever the scale and the precision.
+#if DIMENSIONS == 3
+  for (int coarseJ = 0; coarseJ < NumberOfDofsPerAxis; coarseJ++) {
+#else
+  const int coarseJ = 0;
+  {
+#endif
+    for (int coarseI = 0; coarseI < NumberOfDofsPerAxis; coarseI++) {
+      const auto index = faceNodeIndex(Normal, Side, coarseI, coarseJ, NumberOfDofsPerAxis) * NumberOfUnknowns;
+      validateNumericalEquals(static_cast<double>(coarseGridFaceValues[index]), 3.0);
+    }
   }
 }
 
@@ -708,8 +983,8 @@ void toolbox::blockstructured::tests::RestrictionTest::testRestrictCellWithMatri
     coarse[index + 1] = 4.0;
   });
 
-  // Interpolate onto every child, restrict every child back: the round trip is the identity
-  // for every field the coarse basis represents.
+  // The interpolate-then-restrict round trip over all children is the identity for every
+  // field the coarse basis represents.
   peano4::grid::GridTraversalEvent event;
   std::vector<double>              restricted(static_cast<std::size_t>(nodesPerCell) * Unknowns, 0.0);
   peano4::dForEach(3, [&](const tarch::la::Vector<DIMENSIONS, int>& child) {
@@ -781,7 +1056,7 @@ void toolbox::blockstructured::tests::RestrictionTest::testRestrictHaloLayer() {
     };
 
     for (int side = 0; side < 2; side++) {
-      // Pre-zero the coarse face: the averaging restriction accumulates onto it.
+      // The averaging restriction accumulates onto the coarse face, which starts at zero.
       std::fill_n(coarseGridFaceValues, FaceSize, 0.);
 
       peano4::grid::GridTraversalEvent event;

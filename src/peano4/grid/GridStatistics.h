@@ -3,7 +3,6 @@
 #pragma once
 
 #include "tarch/la/Vector.h"
-#include "tarch/mpi/Rank.h"
 
 namespace peano4::grid {
   struct GridStatistics;
@@ -24,23 +23,6 @@ struct peano4::grid::GridStatistics {
 
   int numberOfStationarySweeps = 0;
 
-  /**
-   * Requested vertex refinements/erases the traversal could not apply because the
-   * surrounding coarse vertices were still in transitional states. The requesting
-   * grid-control events have to be delivered again until this count drops to zero.
-   */
-  int numberOfDeferredGridControlChanges = 0;
-
-  /**
-   * Vertices the traversal switched to refinement triggered on behalf of a
-   * grid-control event. An event whose target spans several levels marks the
-   * next level's vertices only once the previous round has been realised, so
-   * the events have to be delivered again until this count drops to zero.
-   * Unlike an erase mark, a refinement mark cannot repeat: a triggered vertex
-   * leaves the unrefined state, so the count reaches zero on a settled grid.
-   */
-  int numberOfRefinementsTriggeredByGridControl = 0;
-
   std::uint8_t flags = 0;
 
   static constexpr std::uint8_t CoarseningHasBeenVetoed = 1 << 0;
@@ -51,13 +33,13 @@ struct peano4::grid::GridStatistics {
 
   GridStatistics() noexcept = default;
 
-  inline bool getCoarseningHasBeenVetoed() const noexcept { return (flags & CoarseningHasBeenVetoed) != 0; }
-  inline void setCoarseningHasBeenVetoed(bool value) noexcept {
+  INLINE_METHOD bool getCoarseningHasBeenVetoed() const noexcept { return (flags & CoarseningHasBeenVetoed) != 0; }
+  INLINE_METHOD void setCoarseningHasBeenVetoed(bool value) noexcept {
     value ? (flags |= CoarseningHasBeenVetoed) : (flags &= ~CoarseningHasBeenVetoed);
   }
 
-  inline bool getRemovedEmptySubtree() const noexcept { return (flags & RemovedEmptySubtree) != 0; }
-  inline void setRemovedEmptySubtree(bool value) noexcept {
+  INLINE_METHOD bool getRemovedEmptySubtree() const noexcept { return (flags & RemovedEmptySubtree) != 0; }
+  INLINE_METHOD void setRemovedEmptySubtree(bool value) noexcept {
     value ? (flags |= RemovedEmptySubtree) : (flags &= ~RemovedEmptySubtree);
   }
 

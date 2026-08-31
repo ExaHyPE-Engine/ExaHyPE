@@ -40,13 +40,13 @@ cmake .. -DPEANO_EXTRA_CXX_FLAGS="-std=c++20"
   ~~~~~~~~~~~~~~~~~~~
 cmake .. -DPEANO_EXTRA_CXX_FLAGS="--std=c++20"
   ~~~~~~~~~~~~~~~~~~~
-  Some compilers want you to use two hyphens, others expect one. Please note
-  that most Clang-based compiler installations do not bring their own C++ standard
+  Some compilers want you to use two hyphens, others expect one. Most
+  Clang-based compiler installations do not bring their own C++ standard
   library to the table. They use the pre-existing GCC STL. Now, if your
   Clang-based compiler - that includes NVIDIA and Intel - is built against a
   version of GNU whose STL is too old, you will get errors despite the std
   flag. In this case, you have to load a newer GCC module *after* you have
-  loaded your Intel, NVIDIA or Clang module. You basically load the Clang-based
+  loaded your Intel, NVIDIA or Clang module. You load the Clang-based
   compiler which will introduce a GNU STL, i.e. set the corresponding environment
   variables. After that, you manually load a newer GCC which redirects all of
   these variables.
@@ -83,16 +83,16 @@ error: name followed by "::" must be a class or namespace name
   ~~~~~~~~~~~~~~~~~~~
 `error: unknown attribute 'optimize' ignored*`
   ~~~~~~~~~~~~~~~~~~~
-   We have seen this issue notably on macOS
+   We have seen this issue on macOS
    with CLANG replacing GCC. Unfortunately, CLANG seems to pretend to be GNU on
    some systems and then the wrong header is included. Consult the remarks on
-   @ref page_compiler_specific_settings_home "compiler-specific settings". Ensure that
-   you select the Clang toolchain explicitly via
+   @ref page_compiler_specific_settings_home "compiler-specific settings". Select
+   the Clang toolchain explicitly via
    ```cmake .. -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang``` so that
    Peano's compiler-specific settings header picks up the correct compiler.
 
 - ***My compiler terminates with errors when I enable OpenMP multithreading***
-  Make sure that you are using a compiler with OpenMP 5.0 support, such as GCC 9.x.
+  Use a compiler with OpenMP 5.0 support, such as GCC 9.x.
 
 - ***I configured Peano with HDF5, but my application (experiment or benchmark) will not compile***
   HDF5 support is enabled through the CMake option `PEANO_WITH_HDF5` (on by
@@ -111,7 +111,7 @@ cmake .. -DPEANO_WITH_HDF5=ON
 - ***The configuration fails for the NVIDIA compiler*** For NVIDIA, we have to
   make both the C and the C++ compiler point to the C++ compiler `nvc++`, as
   both are passed the same arguments which are actually only understood by the
-  C++ version. So please ensure that both compiler switches delegate to nvc++.
+  C++ version. So please point both compiler switches to nvc++.
   ~~~~~~~~~~~~~~~~~~~
 export NVCPP=/opt/nvidia/hpc_sdk/Linux_x86_64/2022/compilers/bin/nvc++
 cmake .. -DCMAKE_CXX_COMPILER=$NVCPP -DCMAKE_C_COMPILER=$NVCPP ...
@@ -131,12 +131,8 @@ cmake .. -DCMAKE_CXX_COMPILER=$NVCPP -DCMAKE_C_COMPILER=$NVCPP ...
   We have seen this with too ***new*** C++ standard libs such as the version 13.2.
   Use an older one such as 11.2.
 
-- ***With Intel's OpenMP, we get the following error***
-
-  ~~~~~~~~~~~~~~~~~~~
-libTarchDebug.a(Task.o): In function `tarch::multicore::native::spawnTask(...)':
-undefined reference to `__kmpc_omp_taskwait_deps_51'
-  ~~~~~~~~~~~~~~~~~~~
+- ***With Intel's OpenMP, the link fails with an undefined reference to
+  `__kmpc_omp_taskwait_deps_51` in the tasking layer***
 
   We have seen this with Intel compiler when you use the Clang LLVM OpenMP
   runtime, i.e. use -fopenmp. Switch to -fiopenmp instead.
@@ -171,29 +167,22 @@ undefined reference to for_write_seq_list
   -lifcore. Pass them to your build via `-DPEANO_EXTRA_LINK_FLAGS="-lgfortran"`
   (or `-lifcore`).
   You can add these flags manually via your Python script to the code, but
-  I think this is a flaw. They belong into the build configuration, not into your
+  this is a flaw. They belong into the build configuration, not into your
   Python script.
 
 - ***The linker complains about some routines/classes from the technical
   architectures, but they are definitely there***
   GCC/C++ is extremely sensitive when it comes to the order of the libraries
   used. You might have to edit your makefile manually to get a "valid"
-  ordering that works. My recommendation is that you always link from the most
+  ordering that works. We recommend that you always link from the most
   abstract library to the lowest level lib. In one ExaHyPE project, e.g., the
   following order worked whereas all others resulted in linker errors:
-  -lExaHyPE2Asserts2d, -lToolboxLoadBalancingAsserts2d, -lPeano4Asserts2d,
-  -lTarchAsserts.
+  -lExaHyPE2Asserts2d, -lToolboxBlockStructuredAsserts2d,
+  -lToolboxParticlesAsserts2d, -lPeano4Asserts2d, -lTarchAsserts.
   So the link order is high-level extensions, toolboxes, core, tarch. The
   library name encodes the build mode (Release, Debug, Trace, Asserts) and the
   dimension. The Makefile which is generated by the Python API should follow
   this convention.
-
-- ***Linking fails for Intel icpx compilers***
-  When encountering linker errors such as undefined reference to `__kmpc_omp_taskwait_deps_51'
-  when compiling with OpenMP multithreading using the icpx compiler,
-  you are probably not using the new -fiopenmp flag. Make sure to pass -fiopenmp
-  via `-DPEANO_EXTRA_CXX_FLAGS="-fiopenmp"` instead of -fopenmp.
-
 
 # Runtime
 
@@ -205,13 +194,13 @@ undefined reference to for_write_seq_list
     you might have to manually load a newer GNU version after you've loaded your
     core compiler.
 
-  - ***sycl-ls show OpenCL devices instead of Level Zero (Intel PVC)*** This can happen if the following environment variable was set ZET_ENABLE_PROGRAM_DEBUGGING=1. Simply unset it to fix the issue.
+  - ***sycl-ls shows OpenCL devices and no Level Zero device (Intel PVC)*** This can happen if the following environment variable was set ZET_ENABLE_PROGRAM_DEBUGGING=1. Unset it to fix the issue.
 
 
 # Python API
 
 -   ***`import peano4` yields not found error***. You haven't set your
-    `PYTHONPATH` properly. Ensure that it points to Peano's api
+    `PYTHONPATH` properly. It has to point to Peano's api
     subdirectory. So use something similar to
 
              export PYTHONPATH=~/git/Peano/api
@@ -224,25 +213,24 @@ undefined reference to for_write_seq_list
 
              pip3 install --user numpy
 
-    Similar arguments hold for jinja2. Please note that Peano's API
-    and all extensions are written in a way that they can work without
+    Similar arguments hold for jinja2. Peano's API and all extensions can work without
     numpy in principle. However, not all features (solvers in ExaHyPE, e.g.)
     might be available if you have no numpy.
 
 - ***The formatting scripts yields error messages***. Remove the .formatting_python_env
   directory and re-run the format.py script. Sometimes, errors can occur if the
   system python libraries get updated or the user has altered their pythonpath
-  (which is why the PYTHONPATH variable is best left unmodified.)
+  (so the PYTHONPATH variable is best left unmodified.)
   Removing the .formatting_python_env dir will prompt format.py to re-install all it needs.
 
 # Performance analysis
 
 - ***The Intel/NVIDIA tools do not provide meaningful insight*** Read through
   the vendor-specific \ref page_compiler_specific_settings_home "supercomputer/tool remarks"
-  and pick the vendor-specific built toolchain. After that, ensure that you
-  profile the code in the profile version and not only in the release version.
+  and pick the vendor-specific built toolchain. After that, profile the code in
+  the profile version.
   The release builds of the libraries do not yield much additional information
-  that can be used to spot runtime flaws, e.g.
+  for spotting runtime flaws.
 - ***The Intel/NVIDIA tools yield too much data*** First, pick the
   \ref page_compiler_specific_settings_home "vendor-specific toolchain" fitting to your system/compiler. After that,
   amend your log filter. See \ref tarch_logging for more info.
@@ -252,15 +240,11 @@ undefined reference to for_write_seq_list
 
 - ***I can't see my log/trace statements.*** There's a whole set of
   things that can go wrong.
-  -   Ensure that your main code is translated with a reasonable debug
+  -   Translate your main code with a reasonable debug
       flag. The makefile has to translate your code with
       `-DPEANO_DEBUG=1` (or `-DPEANO_TRACE=1` if you are only interested in tracing).
-  -   Ensure you link to libraries which are built with a reasonable
-      diagnostic switch. For this, run your code and search for the header
-
-                   build: 2d, no mpi, C++ threading, debug=On
-
-      on the terminal. For tracing, the corresponding trace flag has to be on.
+  -   Link to libraries which are built with a reasonable
+      diagnostic switch. For tracing, the corresponding trace flag has to be on.
 
 
 # MPI troubleshooting
@@ -271,18 +255,16 @@ undefined reference to for_write_seq_list
   as some of Peano's classes use `MPI_C_BOOL` or `MPI_CXX_BOOL`. They
   seem not be supported properly.
 
-- ***With more and more ranks, I suddenly run into timeouts***. Peano has a
-  built-in deadlock/timeout detection with a default threshold of 3600s. There is
-  no `--timeout` command-line flag; adjust the threshold in code via
-  `tarch::mpi::Rank::setDeadlockTimeOut()` and `setTimeOutWarning()` (set it to 0
-  to disable timeouts).
+- ***With more and more ranks, I suddenly run into timeouts***. Peano has a
+  built-in deadlock detector with a default threshold of 600 seconds inside one
+  wait. Use `--deadlockTimeout` to raise the threshold or disable it.
 
 
 C++ core
 --------
 
 -   **Where is the information whether a point or face is at the
-    boundary or not?** I do not provide any such feature. Many codes for
+    boundary or not?** Peano does not provide any such feature. Many codes for
     example use the grid to represent complicated domains, and thus
     would need such a feature anyway. So what you have to do is to add a
     bool to each vertex/face and set this boolean yourself.
@@ -291,46 +273,22 @@ C++ core
 Parallelisation
 ---------------
 
--   **Why do I (temporarily) get an adaptive grid even though I specify
-    a regular one?** This phenomenon arises if your adaptive refinements
-    and (dynamic) load balancing happen at the same time. Load balancing
-    is realised by transfering a whole tree part (subpartition
-    incl. coarser scales) to another rank after a grid sweep. Refinement
-    happens in multiple stages: After a grid traversal, the rank takes
-    all the refinement instructions and then realises them throughout
-    the subsequent grid sweep. So if a rank gets a refinement command
-    and then gives away parts of its mesh, then it might not be able to
-    realise this refinement. At the same time, the rank accepting the
-    new partition is not aware of the refinement requests yet. So it
-    might get the refinement request, but with one step delay: It sets
-    up the local partition, evaluates the refinement criterion, is
-    informed about a refinement wish for this area, and subsequently
-    realises it. For most codes, that delay by one iteration is not a
-    problem as the newly established rank will just realise the
-    refinement one grid sweep later, but the point is: refine and erase
-    commands in Peano are always a wishlist to the kernel. The kernel can
-    decide to ignore it---at least for one grid sweep.
+-   **Why does adaptive refinement need several sweeps?** A refinement
+    request names a cell that already exists and can expose one additional
+    level. The next criterion evaluation can then request cells on that new
+    level. A regrid also uses a transition sweep to create and destroy entities
+    while it migrates persistent data into the target rank ownership.
 
--   **Why do I get imbalanced partitions even though I tried to tell my
-    load balancer of choice to balance brilliantly?** Peano is based upon
-    three-partitioning, i.e. whenever it refines a cell it yields $3^d$
-    new cells. Most users scale up in multiples of two. As $3^d$ cannot
-    be divided into two equally-sized chunks, we always have some
-    imbalance.
+-   **Why can the rank partition remain imbalanced?** Peano assigns complete
+    spawn-level blocks, or the children of a heavy block, using leaf-cell
+    weights. An indivisible heavy unit limits the attainable balance, and
+    equal leaf weights do not represent solver-specific work such as limiters
+    or particle interactions.
 
--   **Why do some load balancing schemes report that they have to
-    extrapolate data?** A typical message you get is "global number of
-    cells lags behind local one. ..."' Most of my toolbox load balancing
-    relies on asynchronous (non-blocking) collectives to gather
-    information about the total grid structure. As a consequence, this
-    information always might lag behind the actual status quo (load
-    balancing info is sent out while the mesh refines, e.g.). Some load
-    balancing schemes can detect such inconsistencies---they only arise
-    due to AMR and typically are sorted out an iteration later
-    anyway---and apply heuristics. If they detect that the global cell
-    number seems to be too small, e.g., they assume that every rank
-    meanwhile has refined once more and multiply the global cell count
-    with $3^d$.
+-   **Where is the load-balancer configuration?** Rank partitioning is part of
+    the spacetree engine. Every rank derives the same ownership table from the
+    rank count and refinement plan; an application does not select a separate
+    load-balancer object.
 
 -   **I get a timeout but Peano claims that there are still messages in the
     MPI queue. How do I know what certain MPI messages tags mean?** All
@@ -338,21 +296,21 @@ Parallelisation
     `tarch::mpi::Rank::reserveFreeTag`. If you translate with
     `PEANO_DEBUG=1`, then you get a list of tag semantics at
     startup. These lists are the same as the ones you use in release
-    mode, i.e. when this information is not dumped. Please note that the
+    mode, i.e. when this information is not dumped. The
     info goes straight to cout, i.e. you can't filter it. That's because
     the tag allocation usually happens before our logging landscape is
     up and configured properly.
 
--   **I have previously introduced auxiliary (material) parameters and
-    now the code crashes every now and then.** Ensure that you
-    initialise all data in your code. That includes any potential
-    auxiliary variables. I usually use
+-   **I have introduced auxiliary (material) parameters and
+    the code crashes every now and then.** Initialise all data in your
+    code. That includes any potential
+    auxiliary variables. We usually use
 
     for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++)
       Q[i] = 0.0;
 
-    as a first step within `initialCondition()`. So I ensure first that
-    there is no garbage in the data. Further to that, ensure that you
+    as a first step within `initialCondition()`. This leaves no garbage
+    in the data. Further to that,
     also set proper boundary data for any auxiliary value. You might not
     need these data, as you do not use the auxiliary variables to
     exchange information between patches, but you have to set proper

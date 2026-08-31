@@ -22,27 +22,13 @@ namespace {{ item }} {
 {%- endfor %}
 
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}} final: public ::peano4::grid::GridTraversalObserver {
-private:
-  const int _spacetreeId;
-
-  {{ATTRIBUTES}}
-
 public:
-  /**
-   * If you pass this marker into the constructor, it implies that this
-   * observer is used as prototype for the real observers which are created
-   * per local spacetree.
-   */
-  static constexpr int SpacetreePrototype = -1;
+  /** Tree id of the observer prototype. */
+  static constexpr int TreePrototype = -1;
 
-  /**
-   * @param spacetreeId -1 is the dummy, i.e. this observer is not
-   *                    instantiated for a spacetree yet but serves as
-   *                    blueprint for the real trees later on.
-   */
-  {{CLASSNAME}}(int spacetreeId = SpacetreePrototype);
+  {{CLASSNAME}}(int treeId = TreePrototype);
 
-  GridTraversalObserver* clone(int spacetreeId) override;
+  GridTraversalObserver* clone(int treeId) override;
 
   std::vector<::peano4::grid::GridControlEvent> getGridControlEvents() const override;
 
@@ -61,35 +47,19 @@ public:
   void enterNode(const ::peano4::grid::GridTraversalEvent& event) override;
   void leaveNode(const ::peano4::grid::GridTraversalEvent& event) override;
 
-  void setLocalTrees() override;
-
   void loadNodeData(const ::peano4::grid::GridTraversalEvent& event) override;
   void storeNodeData(const ::peano4::grid::GridTraversalEvent& event) override;
 
-  void sendNodeData(
-    ::peano4::grid::GridTraversalObserver::NodeData nodeData,
-    int                                             position,
-    int                                             toStack,
-    ::peano4::stacks::SendReceiveContext            context,
-    const ::peano4::grid::GridTraversalEvent&       event,
-    const ::peano4::grid::PeriodicStamp*            periodicStamp = nullptr
-  ) override;
   void receiveNodeData(
     ::peano4::grid::GridTraversalObserver::NodeData nodeData,
     int                                             position,
     int                                             fromStack,
     ::peano4::stacks::SendReceiveContext            context,
-    const ::peano4::grid::GridTraversalEvent&       event,
-    const ::peano4::grid::PeriodicStamp*            periodicStamp = nullptr
+    const ::peano4::grid::GridTraversalEvent&       event
   ) override;
 
-  void exchangeAllHorizontalDataExchangeStacks() override;
-  void purgePeriodicBoundaryDataStacks() override;
-  void exchangeAllPeriodicBoundaryDataStacks() override;
-  void exchangeCrossRankPeriodicData() override;
+private:
+  const int _treeId;
 
-  void streamDataFromSplittingTreeToNewTree(int newWorker) override;
-  void streamDataFromJoiningTreeToMasterTree(int masterId) override;
-
-  void finishAllOutstandingSendsAndReceives() override;
+  {{ATTRIBUTES}}
 };

@@ -13,6 +13,7 @@ set(SOURCES
   TrajectoryDatabase.cpp
   UnitTests.cpp
   tests/MultiscaleTransitionsTest.cpp
+  tests/ParticlesTest.cpp
   tests/TestHelpers.cpp
   tests/TestParticle.cpp
   tests/TrajectoryDatabaseTest.cpp

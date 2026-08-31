@@ -59,7 +59,7 @@ class InsertParticlesByCoordinates(ActionSet):
         marker,
         particle,
         fineGridVertices{{PARTICLES_CONTAINER}},
-        _spacetreeId
+        _treeId
       );
     }
   }
@@ -96,7 +96,7 @@ class InsertParticlesByCoordinates(ActionSet):
     def get_constructor_body(self):
         return jinja2.Template(
             """
-  _spacetreeId = treeNumber;
+  _treeId = treeNumber;
 {% if COORDINATE_DIMENSIONS == 2 %}
   static_assert(DIMENSIONS == 2, "Two-component coordinates require a two-dimensional build.");
 {% endif %}
@@ -141,6 +141,6 @@ const std::array<tarch::la::Vector<DIMENSIONS, double>, {{NUMBER_OF_PARTICLES}}>
     tarch::la::Vector<DIMENSIONS, double>,
     {{NUMBER_OF_PARTICLES}}
   > _coordinates;
-  int _spacetreeId;
+  int _treeId{-1};
 """
         ).render(**self._dictionary)
