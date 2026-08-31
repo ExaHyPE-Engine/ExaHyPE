@@ -9,8 +9,8 @@
 
 ExaHyPE uses GPUs in a classic ***offloading*** mode:
 It takes particular tasks, ships them to the GPU and then ships them
-back. This happens under the hood, and neither does data reside on the
-accelerator permanently nor is the accelerator used all the time.
+back. Data does not reside on the accelerator permanently, and the accelerator
+is not used all the time.
 Not all solvers support GPU offloading, but solver variants with tasking or
 fused-kernel support can either have accelerator support built in or can be
 tweaked relatively easily to gain something from GPU devices.
@@ -18,7 +18,7 @@ tweaked relatively easily to gain something from GPU devices.
 If you have a solver with GPU support and want to activate this offloading, you
 have to do the following steps:
 
-1. @ref page_installation_home "Configure" Peano with GPU plus multithreading support.
+1. @ref page_installation_home "Configure" Peano with a GPU backend.
 2. Follow the instructions around @ref page_exahype_multicore "tasking".
 3. Pick a solver with GPU support.
 4. Enable stateless compute kernels and provide the additional PDE terms.
@@ -31,7 +31,7 @@ have to do the following steps:
 The setup instructions for the GPU backends are collected on
 @ref page_compiler_specific_settings_home "the compiler-specific settings page".
 This page focuses on how GPU offloading works in ExaHyPE and how you can
-introduce it systematically, such that you gain performance (sometimes, just
+introduce it systematically, such that you gain performance (sometimes,
 throwing stuff onto the accelerator without any further thought slows the code
 down).
 
@@ -40,7 +40,7 @@ down).
 
 ExaHyPE's GPU offloading approach assumes that there are computations (cell/patch
 updates) which can be done without any effect on global variables. It
-works if and only if we can ship a task to the GPU, then get the
+works if we can ship a task to the GPU, then get the
 solution data for this task back, and no other global variable changes.
 We furthermore assume that the computations that fit onto the GPU have
 no state. They can use some global, static variables, but they cannot
@@ -104,9 +104,8 @@ don't do it!
 ### Enable stateless compute kernels
 
 You next have to instruct your solver that you plan to have patch or cell
-updates without (write) access to the solver's internal state. They also don't
-alter the global state. Obviously, you can weaken these assumptions later on,
-but this then requires further manual work.
+updates without write access to the solver's state. They also do not alter
+global state. Supporting stateful updates requires a tailored implementation.
 
 The exact switch depends on the solver family. The DG solvers expose this as
 a `pde_terms_without_state=True` constructor argument. FV Godunov solvers use
@@ -169,13 +168,11 @@ void flux( ... ) {
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The static version is used on the GPU. The normal one is used on the CPU
-yet defers immediately to the static version. Please note that GPUs are
-quite restrictive with respect to terminal output and assertions. You will have
-to remove both from your static routine versions. In the example above, the
-non-static version can wrap the core functionality into assertions and logging,
-while the static part that goes to the GPU is free of both. ExaHyPE calls the
-static variant from its compute kernels through, for example,
+The static version is used on the GPU. The CPU variant delegates immediately
+to it. GPU kernels cannot use the host's terminal output or assertion
+facilities, so the static routine omits both. The non-static variant can wrap
+the computation in assertions and logging. ExaHyPE calls the static variant
+from its compute kernels through, for example,
 `Solver::flux( ..., Solver::Offloadable::Yes )`.
 
 <div style="background-color: #cfc ; padding: 10px; border: 1px solid green;">
@@ -190,8 +187,8 @@ manual implementation and move the GPU routines into the headers.
 
 ## Compile, run and check
 
-The build system is CMake. Configure Peano (and hence the ExaHyPE libraries)
-with a GPU backend plus multithreading. The relevant flags are
+The build system is CMake. Configure Peano and the ExaHyPE libraries with a GPU
+backend. The relevant flags are
 `PEANO_WITH_GPU_BACKEND` (one of `none`, `native`, `kokkos`, `acpp`, `ompt`)
 and `PEANO_WITH_GPU_ARCH` (e.g. an NVIDIA `sm_*`, an AMD `gfx*`, or `spir64`
 for Intel). A typical configuration reads:
@@ -199,7 +196,6 @@ for Intel). A typical configuration reads:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release \
-         -DPEANO_WITH_MULTITHREADING=ON \
          -DPEANO_WITH_GPU_BACKEND=native \
          -DPEANO_WITH_GPU_ARCH=sm_80
 make -j
@@ -225,8 +221,7 @@ stored as strings:
   whenever it encounters a set of octants in the tree which can be processed
   embarrassingly parallel, as they all invoke the same PDE and none of them
   alters the state of the underlying solver object. The compute kernels
-  identified by this string call the static flux and eigenvalue variants
-  instead of the virtual functions.
+  identified by this string call the static flux and eigenvalue variants.
 
 For the FV Godunov solvers, `fuse_compute_kernels=True` makes the code
 generator populate these strings for you. The normal call resolves to
@@ -286,6 +281,6 @@ kernels on the host.
 - Switch to a toolchain for your particular GPU backend. Information on this can
   be found on the @ref page_compiler_specific_settings_home "compiler-specific settings page".
 - Consult the @ref page_exahype_performance_optimisation "performance optimisation" discussion.
-- @ref page_tarch_multicore "The multicore layer in the technical architecture".
+- @ref page_tarch_tasking "The tasking layer in the technical architecture".
 
   */

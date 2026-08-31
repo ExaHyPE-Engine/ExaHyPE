@@ -10,37 +10,21 @@ namespace peano4::grid {
 } // namespace peano4::grid
 
 struct peano4::grid::GridVertex {
-  enum class State : std::uint8_t {
-    HangingVertex       = 0,
-    New                 = 1,
-    Unrefined           = 2,
-    Refined             = 3,
-    RefinementTriggered = 4,
-    Refining            = 5,
-    EraseTriggered      = 6,
-    Erasing             = 7,
-    Delete              = 8
-  };
+  /**
+   * A vertex is refined where the tree continues below it, hanging where a
+   * refinement transition cuts through it, and unrefined otherwise. The
+   * spacetree holds a settled structure, so a structure change is expressed by
+   * the transition sweep's own before and after masks.
+   */
+  enum class State : std::uint8_t { HangingVertex = 0, Unrefined = 1, Refined = 2 };
 
-  std::uint8_t flags{0};
-  std::uint8_t state{static_cast<std::uint8_t>(State::New)};
+  std::uint8_t state{static_cast<std::uint8_t>(State::Unrefined)};
 
   int level{0};
-  int numberOfAdjacentRefinedLocalCells{0};
-  int numberOfAdjacentRefinedRemoteCells{0};
+
 #if PEANO_DEBUG
   tarch::la::Vector<DIMENSIONS, double> x{};
 #endif
-
-  std::array<int, TWO_POWER_D> adjacentRanks{};
-  std::array<int, TWO_POWER_D> backupOfAdjacentRanks{};
-
-  static constexpr std::uint8_t HasBeenAntecessorOfRefinedVertexInPreviousTreeSweep = 1 << 0;
-  static constexpr std::uint8_t IsAntecessorOfRefinedVertexInCurrentTreeSweep       = 1 << 1;
-  static constexpr std::uint8_t HasBeenParentOfSubtreeVertexInPreviousTreeSweep     = 1 << 2;
-  static constexpr std::uint8_t IsParentOfSubtreeVertexInCurrentTreeSweep           = 1 << 3;
-  static constexpr std::uint8_t HasBeenVertexTypeHangingInPreviousTreeSweep         = 1 << 4;
-  static constexpr std::uint8_t HasBeenSurroundedByRefinedCellsInPreviousTreeSweep  = 1 << 5;
 
   GridVertex() noexcept = default;
 
@@ -50,51 +34,15 @@ struct peano4::grid::GridVertex {
 #if PEANO_DEBUG
   INLINE_METHOD const tarch::la::Vector<DIMENSIONS, double>& getX() const noexcept { return x; }
   INLINE_METHOD void   setX(const tarch::la::Vector<DIMENSIONS, double>& value) noexcept { x = value; }
-  INLINE_METHOD double getX(int d) const noexcept { return x[d]; }
-  INLINE_METHOD void   setX(int d, double value) noexcept { x[d] = value; }
-
-  static tarch::la::Vector<DIMENSIONS, double> getVertexCoordinate(
-    const tarch::la::Vector<DIMENSIONS, double>& cellX,
-    const tarch::la::Vector<DIMENSIONS, double>& cellH,
-    int                                          vertexIndex
-  );
+  INLINE_METHOD double getX(int axis) const noexcept { return x[axis]; }
+  INLINE_METHOD void   setX(int axis, double value) noexcept { x[axis] = value; }
 #endif
-
-  INLINE_METHOD bool getFlag(std::uint8_t bit) const noexcept { return (flags & bit) != 0; }
-  INLINE_METHOD void setFlag(std::uint8_t bit) noexcept { flags |= bit; }
-  INLINE_METHOD void setFlag(std::uint8_t bit, bool value) noexcept { value ? setFlag(bit) : clearFlag(bit); }
-  INLINE_METHOD void clearFlag(std::uint8_t bit) noexcept { flags &= ~bit; }
 
   std::string toString() const;
 
-  static GridVertex create(
-    int                                          level,
-    GridVertex::State                            state,
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    const std::array<int, TWO_POWER_D>&          adjacentRanks,
-    bool                                         isNewFineGridVertex
-  );
+  static bool areAllVerticesRefined(const GridVertex vertices[TWO_POWER_D]);
 
-  static GridVertex create(
-    int                                          level,
-    GridVertex::State                            state,
-    const tarch::la::Vector<DIMENSIONS, double>& cellX,
-    const tarch::la::Vector<DIMENSIONS, double>& cellH,
-    int                                          vertexIndex,
-    const std::array<int, TWO_POWER_D>&          adjacentRanks,
-    bool                                         isNewFineGridVertex
-  );
-
-  static bool areAllVerticesRefined(GridVertex vertices[TWO_POWER_D]);
-  static bool areAllVerticesUnrefined(GridVertex vertices[TWO_POWER_D]);
-
-  static bool willVertexBeRefined(const GridVertex& vertex);
-
-  static bool hasVertexBeenRefined(const GridVertex& vertex);
-
-  static std::bitset<TWO_POWER_D> willVerticesBeRefined(GridVertex vertices[TWO_POWER_D]);
-
-  static std::bitset<TWO_POWER_D> haveVerticesBeenRefined(GridVertex vertices[TWO_POWER_D]);
+  static std::bitset<TWO_POWER_D> getRefinedVertices(const GridVertex vertices[TWO_POWER_D]);
 };
 
 std::ostream& operator<<(std::ostream& out, const peano4::grid::GridVertex& vertex);

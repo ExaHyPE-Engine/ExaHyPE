@@ -5,94 +5,95 @@
 #include "runner/RuntimeParameters.h"
 
 runner::tests::RuntimeParametersTest::RuntimeParametersTest() :
-  tarch::tests::TestCase("runner::tests::RuntimeParametersTest") {}
+  TestCase("runner::tests::RuntimeParametersTest") {}
 
 void runner::tests::RuntimeParametersTest::run() {
-  testMethod(testLoadBalancingQualityLimits);
-  testMethod(testMaxNumberOfTreesPerRankLimits);
+  testMethod(testNumbersParseOnlyWhenTheWholeArgumentIsANumber);
+  testMethod(testTheOutputPathAlwaysEndsInASeparator);
+  testMethod(testTheMeshSizeDividesOncePerLevel);
+  testMethod(testDefaultsReadBackAsTheyWereGiven);
+  testMethod(testBothSpellingsOfTheLoadBalancingSwitchAreConsumed);
 }
 
-void runner::tests::RuntimeParametersTest::testLoadBalancingQualityLimits() {
-  auto&      parameters                   = runner::RuntimeParameters::getInstance();
-  const auto originalLoadBalancingQuality = parameters.getLoadBalancingQuality();
-  const auto configureQuality = [&parameters](const std::string& optionName, const double loadBalancingQuality) {
-    auto               executableName = std::string("RuntimeParametersTest");
-    auto               option         = optionName;
-    std::ostringstream value;
-    value << std::setprecision(std::numeric_limits<double>::max_digits10) << loadBalancingQuality;
-    auto valueString       = value.str();
-    auto arguments         = std::array<char*, 4>{executableName.data(), option.data(), valueString.data(), nullptr};
-    int  numberOfArguments = 3;
-    parameters.configure(numberOfArguments, arguments.data());
-    return numberOfArguments;
-  };
-  const auto readRejectionMessage = [&configureQuality](const std::string& optionName, const double value) {
+void runner::tests::RuntimeParametersTest::testNumbersParseOnlyWhenTheWholeArgumentIsANumber() {
+  validateEquals(runner::RuntimeParameters::parseInteger("42", "-lmax"), 42);
+  validateEquals(runner::RuntimeParameters::parseInteger("-7", "-lmax"), -7);
+  validateNumericalEquals(runner::RuntimeParameters::parseDouble("0.25", "-et"), 0.25);
+  validateNumericalEquals(runner::RuntimeParameters::parseDouble("-1.5e2", "-et"), -150.0);
+
+  const auto rejects = [](const auto& parse, const std::string& value) {
     try {
-      configureQuality(optionName, value);
-    } catch (const std::runtime_error& exception) {
-      return std::string(exception.what());
+      parse(value, "-key");
+    } catch (const std::runtime_error&) {
+      return true;
     }
-    return std::string();
+    return false;
   };
 
-  const auto shortOptionArgumentCount = configureQuality("-lbq", 0.5);
-  const auto shortOptionValue         = parameters.getLoadBalancingQuality();
-  const auto longOptionArgumentCount  = configureQuality("--loadBalancingQuality", 1.0);
-  const auto longOptionValue          = parameters.getLoadBalancingQuality();
-  const auto lowerBoundRejection      = readRejectionMessage("-lbq", 0.0);
-  const auto upperBoundRejection      = readRejectionMessage("--loadBalancingQuality", 1.01);
-  const auto restoredArgumentCount    = configureQuality("-lbq", originalLoadBalancingQuality);
-
-  validateEquals(shortOptionArgumentCount, 1);
-  validateNumericalEquals(shortOptionValue, 0.5);
-  validateEquals(longOptionArgumentCount, 1);
-  validateNumericalEquals(longOptionValue, 1.0);
-  validate(lowerBoundRejection.find("(0, 1]") != std::string::npos);
-  validate(upperBoundRejection.find("(0, 1]") != std::string::npos);
-  validateEquals(restoredArgumentCount, 1);
+  validate(rejects(runner::RuntimeParameters::parseInteger, "42x"));
+  validate(rejects(runner::RuntimeParameters::parseInteger, "4.2"));
+  validate(rejects(runner::RuntimeParameters::parseInteger, ""));
+  validate(rejects(runner::RuntimeParameters::parseInteger, "abc"));
+  validate(rejects(runner::RuntimeParameters::parseDouble, "0.25m"));
+  validate(rejects(runner::RuntimeParameters::parseDouble, ""));
+  validate(rejects(runner::RuntimeParameters::parseDouble, "abc"));
 }
 
-void runner::tests::RuntimeParametersTest::testMaxNumberOfTreesPerRankLimits() {
-  static_assert(MAX_SPACETREES_PER_RANK > 0, "The tree limit must be positive.");
-  static_assert(MAX_SPACETREES_PER_RANK < std::numeric_limits<int>::max(), "The tree limit must fit into an int.");
+void runner::tests::RuntimeParametersTest::testTheOutputPathAlwaysEndsInASeparator() {
+  validateEquals(runner::RuntimeParameters::normaliseOutputPath("solutions"), std::string("solutions/"));
+  validateEquals(runner::RuntimeParameters::normaliseOutputPath("solutions/"), std::string("solutions/"));
+  validateEquals(runner::RuntimeParameters::normaliseOutputPath("/tmp/a/b"), std::string("/tmp/a/b/"));
+  validateEquals(runner::RuntimeParameters::normaliseOutputPath(""), std::string("./"));
+}
 
-  auto&      parameters                   = runner::RuntimeParameters::getInstance();
-  const auto originalNumberOfTreesPerRank = parameters.getMaxNumberOfTreesPerRank();
-  const auto configureTrees               = [&parameters](const int numberOfTreesPerRank) {
-    auto executableName    = std::string("RuntimeParametersTest");
-    auto option            = std::string("-trees");
-    auto value             = std::to_string(numberOfTreesPerRank);
-    auto arguments         = std::array<char*, 4>{executableName.data(), option.data(), value.data(), nullptr};
-    int  numberOfArguments = 3;
-    parameters.configure(numberOfArguments, arguments.data());
-    return numberOfArguments;
-  };
+void runner::tests::RuntimeParametersTest::testTheMeshSizeDividesOncePerLevel() {
+  validateNumericalEquals(runner::RuntimeParameters::divideByThreePower(1.0, 0), 1.0);
+  validateNumericalEquals(runner::RuntimeParameters::divideByThreePower(1.0, 1), 1.0 / 3.0);
+  validateNumericalEquals(runner::RuntimeParameters::divideByThreePower(9.0, 2), 1.0);
 
-  constexpr auto AlwaysAcceptedNumbersOfTrees = std::array<int, 3>{-1, 0, MAX_SPACETREES_PER_RANK};
-  for (const auto numberOfTreesPerRank : AlwaysAcceptedNumbersOfTrees) {
-    validateEquals(configureTrees(numberOfTreesPerRank), 1);
-    validateEquals(parameters.getMaxNumberOfTreesPerRank(), numberOfTreesPerRank);
-  }
-  if constexpr (MAX_SPACETREES_PER_RANK >= 128) {
-    validateEquals(configureTrees(128), 1);
-    validateEquals(parameters.getMaxNumberOfTreesPerRank(), 128);
-  }
-  if constexpr (MAX_SPACETREES_PER_RANK >= 256) {
-    validateEquals(configureTrees(256), 1);
-    validateEquals(parameters.getMaxNumberOfTreesPerRank(), 256);
-  }
-
-  constexpr int RejectedNumberOfTrees = MAX_SPACETREES_PER_RANK + 1;
-  auto          rejectionMessage      = std::string();
+  bool rejectedNegativeExponent = false;
   try {
-    configureTrees(RejectedNumberOfTrees);
-  } catch (const std::runtime_error& exception) {
-    rejectionMessage = exception.what();
+    runner::RuntimeParameters::divideByThreePower(1.0, -1);
+  } catch (const std::runtime_error&) {
+    rejectedNegativeExponent = true;
   }
-  const auto restoredNumberOfArguments = configureTrees(originalNumberOfTreesPerRank);
+  validate(rejectedNegativeExponent);
+}
 
-  validate(not rejectionMessage.empty());
-  validate(rejectionMessage.find(std::to_string(MAX_SPACETREES_PER_RANK)) != std::string::npos);
-  validate(rejectionMessage.find(std::to_string(RejectedNumberOfTrees)) != std::string::npos);
-  validateEquals(restoredNumberOfArguments, 1);
+void runner::tests::RuntimeParametersTest::testDefaultsReadBackAsTheyWereGiven() {
+  validateEquals(runner::RuntimeParameters::formatDefault(7), std::string("7"));
+  validateEquals(runner::RuntimeParameters::parseInteger(runner::RuntimeParameters::formatDefault(7), "-key"), 7);
+  validateNumericalEquals(
+    runner::RuntimeParameters::parseDouble(runner::RuntimeParameters::formatDefault(0.5), "-key"),
+    0.5
+  );
+
+  validateEquals(runner::RuntimeParameters::formatDefault(std::string("")), std::string("<none>"));
+  validateEquals(runner::RuntimeParameters::formatDefault(std::string("out/")), std::string("out/"));
+  validateEquals(
+    runner::RuntimeParameters::formatTerminalTime(std::numeric_limits<double>::max()),
+    std::string("unbounded")
+  );
+  validateEquals(runner::RuntimeParameters::formatTerminalTime(2.0), std::string("2"));
+}
+
+void runner::tests::RuntimeParametersTest::testBothSpellingsOfTheLoadBalancingSwitchAreConsumed() {
+  runner::RuntimeParameters longFormParameters;
+  char                      executableName[] = "ExaHyPE";
+  char                      longSpelling[]   = "--disableLoadBalancing";
+  std::array<char*, 2>      longForm{executableName, longSpelling};
+  int                       numberOfLongFormArguments = static_cast<int>(longForm.size());
+  validateEquals(longFormParameters.isLoadBalancingDisabled(), false);
+  longFormParameters.applyCommandLineConfiguration(numberOfLongFormArguments, longForm.data());
+  validateEquals(longFormParameters.isLoadBalancingDisabled(), true);
+  validateEquals(numberOfLongFormArguments, 1);
+
+  runner::RuntimeParameters shortFormParameters;
+  char                      shortSpelling[] = "-dlb";
+  std::array<char*, 2>      shortForm{executableName, shortSpelling};
+  int                       numberOfShortFormArguments = static_cast<int>(shortForm.size());
+  validateEquals(shortFormParameters.isLoadBalancingDisabled(), false);
+  shortFormParameters.applyCommandLineConfiguration(numberOfShortFormArguments, shortForm.data());
+  validateEquals(shortFormParameters.isLoadBalancingDisabled(), true);
+  validateEquals(numberOfShortFormArguments, 1);
 }

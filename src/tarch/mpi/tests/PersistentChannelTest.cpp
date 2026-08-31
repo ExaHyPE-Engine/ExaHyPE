@@ -7,9 +7,9 @@
 #include "tarch/mpi/Request.h"
 
 namespace {
-  /** Every test sends to its own rank, so the case runs on any rank count. */
+  /** Loopback transfers let the case run with any number of ranks. */
   int channelTestTag() {
-    static int tag = tarch::mpi::Rank::reserveFreeTag("tarch::mpi::tests::PersistentChannelTest");
+    static const int tag = tarch::mpi::Rank::reserveFreeTag("tarch::mpi::tests::PersistentChannelTest");
     return tag;
   }
 
@@ -20,7 +20,7 @@ namespace {
 } // namespace
 
 tarch::mpi::tests::PersistentChannelTest::PersistentChannelTest() :
-  TestCase("tarch::mpi::tests::PersistentChannelTest") {}
+  tarch::tests::TestCase("tarch::mpi::tests::PersistentChannelTest") {}
 
 void tarch::mpi::tests::PersistentChannelTest::run() {
   testMethod(testRoundTripRepeats);
@@ -39,16 +39,16 @@ void tarch::mpi::tests::PersistentChannelTest::testRoundTripRepeats() {
   tarch::mpi::PersistentChannel receiveChannel;
 
   for (int round = 0; round < 50; round++) {
-    for (std::size_t i = 0; i < outgoing.size(); i++) {
-      outgoing[i] = round * 10 + static_cast<int>(i);
+    for (std::size_t elementIndex = 0; elementIndex < outgoing.size(); elementIndex++) {
+      outgoing[elementIndex] = round * 10 + static_cast<int>(elementIndex);
     }
     receiveChannel
       .startReceive(incoming.data(), static_cast<int>(sizeof(incoming)), rank, channelTestTag(), communicator);
     sendChannel.startSend(outgoing.data(), static_cast<int>(sizeof(outgoing)), rank, channelTestTag(), communicator);
     completeBoth(sendChannel, receiveChannel);
 
-    for (std::size_t i = 0; i < incoming.size(); i++) {
-      validateEqualsWithParams2(incoming[i], outgoing[i], round, i);
+    for (std::size_t elementIndex = 0; elementIndex < incoming.size(); elementIndex++) {
+      validateEqualsWithParams2(incoming[elementIndex], outgoing[elementIndex], round, elementIndex);
     }
   }
 }
@@ -77,8 +77,8 @@ void tarch::mpi::tests::PersistentChannelTest::testTransferChangeRebinds() {
   sendChannel
     .startSend(largeOutgoing.data(), static_cast<int>(sizeof(largeOutgoing)), rank, channelTestTag(), communicator);
   completeBoth(sendChannel, receiveChannel);
-  for (std::size_t i = 0; i < largeIncoming.size(); i++) {
-    validateEqualsWithParams1(largeIncoming[i], largeOutgoing[i], i);
+  for (std::size_t elementIndex = 0; elementIndex < largeIncoming.size(); elementIndex++) {
+    validateEqualsWithParams1(largeIncoming[elementIndex], largeOutgoing[elementIndex], elementIndex);
   }
 }
 
@@ -104,7 +104,7 @@ void tarch::mpi::tests::PersistentChannelTest::testMoveTransfersOwnership() {
     .startReceive(incoming.data(), static_cast<int>(sizeof(incoming)), rank, channelTestTag(), communicator);
   movedSendChannel.startSend(outgoing.data(), static_cast<int>(sizeof(outgoing)), rank, channelTestTag(), communicator);
   completeBoth(movedSendChannel, receiveChannel);
-  for (std::size_t i = 0; i < incoming.size(); i++) {
-    validateEqualsWithParams1(incoming[i], outgoing[i], i);
+  for (std::size_t elementIndex = 0; elementIndex < incoming.size(); elementIndex++) {
+    validateEqualsWithParams1(incoming[elementIndex], outgoing[elementIndex], elementIndex);
   }
 }

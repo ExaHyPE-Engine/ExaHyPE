@@ -4,7 +4,6 @@
 file(GLOB_RECURSE HEADERS ${HEADER_EXTENSIONS_TO_GLOB})
 
 set(SOURCES
-  CellAccess.cpp
   CellData.cpp
   NonNegativeReduction.cpp
   NonNegativeStatistics.cpp
@@ -59,7 +58,6 @@ set(SOURCES
   fv/reconstruction/Constant.cpp
   fv/reconstruction/LimitedLinear.cpp
   fv/timestepping/SingleStep.cpp
-  fv/particles/MultiParticleIntegration.cpp
   fv/particles/ParticleDomainBoundary.cpp
   fv/particles/ParticleForces.cpp
   fv/particles/ParticleHelper.cpp
@@ -83,7 +81,7 @@ foreach(mode IN LISTS SUPPORTED_BUILD_TYPES)
       DIMENSION ${dimensions}
       SOURCES ${SOURCES}
       HEADERS ${HEADERS}
-      LINK_LIBRARIES ToolboxBlockStructured${mode}${dimensions}d ToolboxLoadBalancing${mode}${dimensions}d ToolboxParticles${mode}${dimensions}d
+      LINK_LIBRARIES ToolboxBlockStructured${mode}${dimensions}d ToolboxParticles${mode}${dimensions}d
     )
   endforeach()
 endforeach()

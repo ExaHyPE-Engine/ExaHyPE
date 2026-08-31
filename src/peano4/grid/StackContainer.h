@@ -3,218 +3,106 @@
 #pragma once
 
 #include "peano4/grid/BoundaryDataAggregation.h"
-#include "peano4/grid/PeriodicTopology.h"
 #include "peano4/grid/StackTopology.h"
 #include "tarch/Assertions.h"
+#include "tarch/Termination.h"
+#include "tarch/accelerator/ParallelFor.h"
+#include "tarch/mpi/Rank.h"
 
 namespace peano4::grid {
   template <class StackType>
   class StackContainer;
 } // namespace peano4::grid
 
+/**
+ * Storage of one data container on the rank's tree.
+ *
+ * Holds the flat entity pool a traversal addresses by pool slot, one observer
+ * call block per subtree task, and the buffers of the aggregated boundary
+ * exchange. The tree id every call carries selects the call block by
+ * arithmetic: The rank's own id names slot zero, which the serial traversal
+ * and the master both use, and a subtree task passes its own id one above it.
+ */
 template <class StackType>
-class peano4::grid::StackContainer final {
+class peano4::grid::StackContainer {
 public:
-  using Stack                 = StackType;
-  using ParallelExchangeStack = StackTopology::ParallelExchangeStack;
-  using ElementType           = std::decay_t<decltype(std::declval<StackType&>().pop())>;
+  using Stack       = StackType;
+  using ElementType = std::decay_t<decltype(std::declval<StackType&>().pop())>;
 
   StackContainer() = default;
 
-  /**
-   * The container id identifies this container within the aggregated boundary
-   * exchange. Every rank builds the same containers in the same order, so the
-   * same container carries the same id everywhere, and its aggregated messages
-   * cannot be taken for another container's.
-   */
-  explicit StackContainer(int containerId) :
-    _containerId(containerId) {
-    assertion(containerId >= 0, containerId);
-  }
+  explicit StackContainer(const int containerId);
 
-  ~StackContainer()                                = default;
   StackContainer(const StackContainer&)            = delete;
-  StackContainer& operator=(const StackContainer&) = delete;
   StackContainer(StackContainer&&)                 = delete;
+  StackContainer& operator=(const StackContainer&) = delete;
   StackContainer& operator=(StackContainer&&)      = delete;
-
-  void stageCrossRankPeriodicEntry(
-    int                  sendTree,
-    int                  recvTree,
-    const PeriodicStamp& stamp,
-    int                  depositStack,
-    ElementType          data
-  ) {
-    _crossRankPeriodicStaging.push_back(
-      CrossRankPeriodicEntry<ElementType>{sendTree, recvTree, stamp, depositStack, std::move(data)}
-    );
-  }
-
-  std::vector<CrossRankPeriodicEntry<ElementType>>& getCrossRankPeriodicStaging() { return _crossRankPeriodicStaging; }
-
-  void clearCrossRankPeriodicStaging() { _crossRankPeriodicStaging.clear(); }
+  ~StackContainer()                                = default;
 
   int getContainerId() const { return _containerId; }
 
   BoundaryDataAggregation<StackType>& getBoundaryDataAggregation() { return _boundaryDataAggregation; }
 
-  static constexpr auto LocalStackCount       = StackTopology::TotalNumberOfLocalExchangeStacks;
-  static constexpr auto ParallelStacksPerSlot = static_cast<int>(ParallelExchangeStack::NumberOfStacks);
+  static constexpr auto LocalStackCount = StackTopology::TotalNumberOfLocalExchangeStacks;
 
-  using LocalStacksPerTree       = std::array<Stack, static_cast<std::size_t>(LocalStackCount)>;
-  using ParallelStacksForOneSlot = std::array<Stack, static_cast<std::size_t>(ParallelStacksPerSlot)>;
+  using LocalStacksPerTree = std::array<Stack, static_cast<std::size_t>(LocalStackCount)>;
 
-  void setLocalTrees(const std::set<int>& localTreeIds) {
-    std::vector<PerTreeStorage>      newTrees(localTreeIds.size());
-    std::vector<std::pair<int, int>> newMap;
-    newMap.reserve(localTreeIds.size());
+  Stack& getLocalExchangeStack(const int treeId, const int localStackId);
 
-    int idx = 0;
-    for (const int treeId : localTreeIds) {
-      newMap.emplace_back(treeId, idx);
+  INLINE_METHOD ElementType& getPoolSlot(const int poolIndex);
 
-      const int oldIndex = tryGetLocalTreeIndex(treeId);
-      if (oldIndex >= 0) {
-        newTrees[idx] = std::move(_trees[oldIndex]);
-      }
-      idx++;
-    }
+  INLINE_METHOD std::size_t getPoolSize() const;
 
-    _trees              = std::move(newTrees);
-    _treeIdToLocalIndex = std::move(newMap);
-  }
+  void resizePool(const std::size_t entityCount);
 
-  Stack& getLocalExchangeStack(int treeId, int localStackId) {
-    assertion(localStackId >= 0);
-    assertion(localStackId < LocalStackCount);
+  void replicatePoolSlots(
+    const std::vector<std::pair<int, int>>& sourceAndTargetSlots,
+    int                                     chunkNumber,
+    int                                     numberOfChunks
+  );
 
-    int localIndex = ensureLocalTreeIndex(treeId);
-    return _trees[localIndex].local[localStackId];
-  }
+  void migratePoolSlots(const std::vector<std::pair<int, int>>& sourceAndTargetSlots, const std::size_t entityCount);
 
   /**
-   * Stamp list running in lockstep with the payload of a local exchange
-   * stack, so that periodic boundary data can be paired with its wrapped
-   * partner by identity rather than by traversal order. Only the periodic
-   * boundary stacks carry entries. See PeriodicTopology.h.
+   * Creates the serial slot and anchors the tree-id mapping on the rank.
+   * Runs once at start-up, so no getter has to bootstrap storage lazily.
    */
-  std::vector<PeriodicStamp>& getLocalExchangeStamps(int treeId, int localStackId) {
-    assertion(localStackId >= 0);
-    assertion(localStackId < LocalStackCount);
-    return _trees[ensureLocalTreeIndex(treeId)].localStamps[localStackId];
-  }
-
-  void pushLocalExchangeStamp(int treeId, int localStackId, const PeriodicStamp& stamp) {
-    getLocalExchangeStamps(treeId, localStackId).push_back(stamp);
-  }
+  void initialiseSerialSlot();
 
   /**
-   * Remove and return the entry on the given periodic input stack that is the
-   * wrapped partner of readerStamp; see peano4::grid::popPeriodicEntryMatching().
+   * Grows the local slot storage to the requested count. Slot growth is
+   * serial: The engine grows before it spawns tasks, so concurrent slot
+   * accesses never mutate the storage.
    */
-  std::optional<ElementType>
-  popLocalExchangeStackEntryMatching(int treeId, int localStackId, const PeriodicStamp& readerStamp) {
-    return popPeriodicEntryMatching(
-      getLocalExchangeStack(treeId, localStackId),
-      getLocalExchangeStamps(treeId, localStackId),
-      readerStamp
-    );
-  }
+  void growLocalSlots(const int numberOfSlots);
 
-  void resizeParallelExchangeStacks(int treeId, int numberOfSlots) {
-    assertion(numberOfSlots >= 0);
-    const int localIndex = ensureLocalTreeIndex(treeId);
-    if (_trees[localIndex].parallel.size() < static_cast<std::size_t>(numberOfSlots)) {
-      _trees[localIndex].parallel.resize(static_cast<std::size_t>(numberOfSlots));
-    }
-  }
+  std::size_t size() const;
 
-  Stack& getParallelExchangeStack(int treeId, int slot, ParallelExchangeStack which) {
-    assertion(slot >= 0);
-
-    const int localIndex = ensureLocalTreeIndex(treeId);
-
-    assertion(static_cast<std::size_t>(slot) < _trees[localIndex].parallel.size());
-
-    const int whichIndex = StackTopology::toIndex(which);
-    assertion(whichIndex >= 0);
-    assertion(whichIndex < ParallelStacksPerSlot);
-
-    return _trees[localIndex].parallel[static_cast<std::size_t>(slot)][static_cast<std::size_t>(whichIndex)];
-  }
-
-  std::size_t size() const {
-    std::size_t count = 0;
-    for (const auto& tree : _trees) {
-      for (const auto& stack : tree.local) {
-        count += stack.size();
-      }
-      for (const auto& neighborSlot : tree.parallel) {
-        for (const auto& stack : neighborSlot) {
-          count += stack.size();
-        }
-      }
-    }
-    return count;
-  }
-
-  void clear() {
-    _trees.clear();
-    _treeIdToLocalIndex.clear();
-    _crossRankPeriodicStaging.clear();
-    _boundaryDataAggregation.clear();
-  }
+  void clear();
 
 private:
-  struct PerTreeStorage {
-    LocalStacksPerTree                    local;
-    std::vector<ParallelStacksForOneSlot> parallel;
-    // Parallel to `local`: stamps for periodic boundary stacks (others stay empty).
-    std::array<std::vector<PeriodicStamp>, static_cast<std::size_t>(LocalStackCount)> localStamps;
-  };
-
-  int tryGetLocalTreeIndex(int treeId) const {
-    auto it = std::lower_bound(
-      _treeIdToLocalIndex.begin(),
-      _treeIdToLocalIndex.end(),
-      treeId,
-      [](const std::pair<int, int>& p, int v) { return p.first < v; }
-    );
-    if (it == _treeIdToLocalIndex.end() or it->first != treeId) {
-      return -1;
-    }
-    return it->second;
-  }
+  std::size_t localSlotIndex(const int treeId) const;
 
   /**
-   * Index of treeId's storage, registering it on demand if it is not present.
-   *
-   * setLocalTrees() registers the container's trees once, before the traversal.
-   * The tree management can create a worker tree later in the same sweep, and
-   * such a tree is in the spacetree set but not yet in this container, so empty
-   * storage is allocated for it on demand. Registered trees are unaffected, and
-   * the next setLocalTrees() re-establishes the canonical ordering and keeps
-   * this storage.
+   * Local stacks per slot: Slot zero serves the rank's serial traversal and
+   * the spine, one further slot serves each subtree task. A deque never
+   * relocates its entries when it grows, so references handed out earlier
+   * stay valid.
    */
-  int ensureLocalTreeIndex(int treeId) {
-    const int existing = tryGetLocalTreeIndex(treeId);
-    if (existing >= 0) {
-      return existing;
-    }
-    const int newIndex = static_cast<int>(_trees.size());
-    _trees.emplace_back();
-    _treeIdToLocalIndex.emplace_back(treeId, newIndex);
-    std::sort(_treeIdToLocalIndex.begin(), _treeIdToLocalIndex.end());
-    return newIndex;
-  }
+  std::deque<LocalStacksPerTree> _localSlotStacks{};
 
-  std::vector<PerTreeStorage> _trees;
-  // Sorted by tree id.
-  std::vector<std::pair<int, int>> _treeIdToLocalIndex;
+  /** Flat per-rank entity storage of the spacetree. */
+  std::vector<ElementType> _pool{};
 
-  std::vector<CrossRankPeriodicEntry<ElementType>> _crossRankPeriodicStaging;
+  /** Stores the tree id of slot zero, which initialiseSerialSlot() resolves at start-up. */
+  int _firstLocalSlot{-1};
+
+  /** Stores the rank-count stride between the rank's local slots. */
+  int _localSlotStride{1};
 
   BoundaryDataAggregation<StackType> _boundaryDataAggregation;
 
   int _containerId{-1};
 };
+
+#include "peano4/grid/StackContainer.cpph"

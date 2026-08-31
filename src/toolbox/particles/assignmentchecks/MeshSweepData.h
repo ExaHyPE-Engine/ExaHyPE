@@ -2,33 +2,19 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "Event.h"
-#include "ParticleIdentifier.h"
+#include "toolbox/particles/assignmentchecks/Event.h"
+#include "toolbox/particles/assignmentchecks/ParticleIdentifier.h"
 
-namespace toolbox {
-  namespace particles {
-    namespace assignmentchecks {
-      namespace internal {
-        /**
-         * Mesh sweep data.
-         *
-         * For now, only contains the name of the current sweep as a string.
-         * Keeping this as a separate class in case we decide one day that
-         * we need more associated data, e.g. current simulation time,
-         * timings, or whatnot.
-         *
-         */
+namespace toolbox::particles::assignmentchecks::internal {
+  class MeshSweepData;
+} // namespace toolbox::particles::assignmentchecks::internal
 
-        class MeshSweepData {
-        public:
-          MeshSweepData(const std::string& meshSweepName);
+class toolbox::particles::assignmentchecks::internal::MeshSweepData final {
+public:
+  MeshSweepData(const std::string& meshSweepName);
 
-          std::string getName() const;
+  std::string getName() const;
 
-        private:
-          const std::string _meshSweepName;
-        };
-      } // namespace internal
-    } // namespace assignmentchecks
-  } // namespace particles
-} // namespace toolbox
+private:
+  const std::string _meshSweepName;
+};

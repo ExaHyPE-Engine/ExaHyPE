@@ -2,20 +2,20 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "TimeSeriesWriter.h"
+#include "tarch/plotter/TimeSeriesWriter.h"
 
 namespace tarch::plotter {
   class PVDTimeSeriesWriter;
 } // namespace tarch::plotter
 
-class tarch::plotter::PVDTimeSeriesWriter final : public TimeSeriesWriter {
+class tarch::plotter::PVDTimeSeriesWriter final : public tarch::plotter::TimeSeriesWriter {
 public:
   PVDTimeSeriesWriter()                                      = default;
   PVDTimeSeriesWriter(const PVDTimeSeriesWriter&)            = delete;
   PVDTimeSeriesWriter(PVDTimeSeriesWriter&&)                 = delete;
-  ~PVDTimeSeriesWriter() override                            = default;
   PVDTimeSeriesWriter& operator=(const PVDTimeSeriesWriter&) = delete;
   PVDTimeSeriesWriter& operator=(PVDTimeSeriesWriter&&)      = delete;
+  ~PVDTimeSeriesWriter() override                            = default;
 
   void writeTimeSeriesMetaFile(const std::string& outputDirectory, const std::string& filename) const override;
 };

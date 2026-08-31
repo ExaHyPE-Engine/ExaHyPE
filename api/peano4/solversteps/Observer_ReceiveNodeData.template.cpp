@@ -3,54 +3,26 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveNodeData(
   int                                             position,
   int                                             fromStack,
   ::peano4::stacks::SendReceiveContext            context,
-  const ::peano4::grid::GridTraversalEvent&       event,
-  const ::peano4::grid::PeriodicStamp*            periodicStamp
+  const ::peano4::grid::GridTraversalEvent&       event
 ) {
   using NodeData = ::peano4::grid::GridTraversalObserver::NodeData;
-  const auto callStack = static_cast<int>(::peano4::grid::StackTopology::BaseStack::Call);
 
-  auto incomingStack = [&](auto& container) -> typename std::remove_reference_t<decltype(container)>::Stack& {
-    switch (context) {
-    case ::peano4::stacks::SendReceiveContext::PeriodicBoundaryDataSwap:
-      assertion(fromStack >= 0 and fromStack < ::peano4::grid::StackTopology::TotalNumberOfLocalExchangeStacks, fromStack, _spacetreeId);
-      return container.getLocalExchangeStack(_spacetreeId, fromStack); // local stack id
-    case ::peano4::stacks::SendReceiveContext::BoundaryExchange:
-      container.resizeParallelExchangeStacks(_spacetreeId, fromStack + 1);
-      return container.getParallelExchangeStack(_spacetreeId, fromStack, ::peano4::grid::StackTopology::ParallelExchangeStack::HorizontalInput);
-    case ::peano4::stacks::SendReceiveContext::ForkDomain:
-    case ::peano4::stacks::SendReceiveContext::JoinDomain:
-      container.resizeParallelExchangeStacks(_spacetreeId, fromStack + 1);
-      return container.getParallelExchangeStack(_spacetreeId, fromStack, ::peano4::grid::StackTopology::ParallelExchangeStack::VerticalInput);
-    default:
-      assertion(false, "Unsupported receive context");
-      return container.getLocalExchangeStack(_spacetreeId, callStack);
-    }
-  };
-
+  // The live pool slot of the subtree task merges the frozen copy that fromStack
+  // addresses, and the context says whether that copy comes from a partner task
+  // or from a neighbour rank. The other partners read the frozen copy afterwards,
+  // so the merge works on a copy of it.
   switch (nodeData) {
   case NodeData::Vertex:
     {
 {%- if VERTICES %}
+      assertion(event.getVertexPoolIndex(position) >= 0);
       auto marker = ::peano4::datamanagement::VertexMarker(event, position);
 {%- for vertex in VERTICES %}
       {
-        auto& data = repositories::DataRepository::{{vertex.logical_type_name}}StackContainer.getLocalExchangeStack(_spacetreeId, callStack).top(TWO_POWER_D - 1 - position);
-        if (data.receiveAndMerge(marker, context)) {
-          if (context == ::peano4::stacks::SendReceiveContext::PeriodicBoundaryDataSwap and periodicStamp != nullptr) {
-            // Match by identity, not by arrival order, and merge one copy per
-            // tree holding the wrapped image. Finding nothing is legitimate on
-            // the first sweep after a regrid, when the partner side had not
-            // produced data yet.
-            while (auto incomingData = repositories::DataRepository::{{vertex.logical_type_name}}StackContainer.popLocalExchangeStackEntryMatching(_spacetreeId, fromStack, *periodicStamp)) {
-              data.merge(context, std::move(incomingData.value()), marker, _spacetreeId);
-            }
-          } else {
-            auto& stack = incomingStack(repositories::DataRepository::{{vertex.logical_type_name}}StackContainer);
-            assertion(not stack.empty());
-            auto incomingData = stack.pop();
-            data.merge(context, std::move(incomingData), marker, _spacetreeId);
-          }
-        }
+        auto& data = repositories::DataRepository::{{vertex.logical_type_name}}StackContainer.getPoolSlot(event.getVertexPoolIndex(position));
+        ::peano4::stacks::applyIncomingCopy(data, context, marker, _treeId, [&]() {
+          return repositories::DataRepository::{{vertex.logical_type_name}}StackContainer.getPoolSlot(fromStack);
+        });
       }
 {%- endfor %}
 {%- endif %}
@@ -59,49 +31,22 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveNodeData(
   case NodeData::Face:
     {
 {%- if FACES %}
+      assertion(event.getFacePoolIndex(position) >= 0);
       auto marker = event.getFaceMarker();
       marker.select(position);
 {%- for face in FACES %}
       {
-        auto& data = repositories::DataRepository::{{face.logical_type_name}}StackContainer.getLocalExchangeStack(_spacetreeId, callStack).top(TWO_TIMES_D - 1 - position);
-        if (data.receiveAndMerge(marker, context)) {
-          if (context == ::peano4::stacks::SendReceiveContext::PeriodicBoundaryDataSwap and periodicStamp != nullptr) {
-            // Match by identity, not by arrival order. Finding nothing is
-            // legitimate on the first sweep after a regrid, when the partner
-            // side had not produced data yet; the merge is skipped then.
-            auto incomingData = repositories::DataRepository::{{face.logical_type_name}}StackContainer.popLocalExchangeStackEntryMatching(_spacetreeId, fromStack, *periodicStamp);
-            if (incomingData.has_value()) {
-              data.merge(context, std::move(incomingData.value()), marker, _spacetreeId);
-            }
-          } else {
-            auto& stack = incomingStack(repositories::DataRepository::{{face.logical_type_name}}StackContainer);
-            assertion(not stack.empty());
-            auto incomingData = stack.pop();
-            data.merge(context, std::move(incomingData), marker, _spacetreeId);
-          }
-        }
+        auto& data = repositories::DataRepository::{{face.logical_type_name}}StackContainer.getPoolSlot(event.getFacePoolIndex(position));
+        ::peano4::stacks::applyIncomingCopy(data, context, marker, _treeId, [&]() {
+          return repositories::DataRepository::{{face.logical_type_name}}StackContainer.getPoolSlot(fromStack);
+        });
       }
 {%- endfor %}
 {%- endif %}
     }
     break;
   case NodeData::Cell:
-    {
-{%- if CELLS %}
-      auto marker = event.getCellMarker();
-{%- for cell in CELLS %}
-      {
-        auto& data = repositories::DataRepository::{{cell.logical_type_name}}StackContainer.getLocalExchangeStack(_spacetreeId, callStack).top();
-        if (data.receiveAndMerge(marker, context)) {
-          auto& stack = incomingStack(repositories::DataRepository::{{cell.logical_type_name}}StackContainer);
-          assertion(not stack.empty());
-          auto incomingData = stack.pop();
-          data.merge(context, std::move(incomingData), marker, _spacetreeId);
-        }
-      }
-{%- endfor %}
-{%- endif %}
-    }
+    assertion(false, "Cell data never travels between subtree tasks or ranks");
     break;
   }
 }

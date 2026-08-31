@@ -2,19 +2,19 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "Device.h"
-#include "MemoryLocation.h"
+#include "tarch/accelerator/Device.h"
+#include "tarch/accelerator/MemoryLocation.h"
 
 #if defined(PEANO_WITH_GPU_BACKEND_CUDA)
-#include "cuda/Device.h" // To get access to the __device__ keyword
+#include "tarch/accelerator/cuda/Device.h" // To get access to the __device__ keyword
 #endif
 
 #if defined(PEANO_WITH_GPU_BACKEND_HIP)
-#include "hip/Device.h" // To get access to the __device__ keyword
+#include "tarch/accelerator/hip/Device.h" // To get access to the __device__ keyword
 #endif
 
 #if defined(PEANO_WITH_GPU_BACKEND_KOKKOS)
-#include "kokkos/Device.h" // To get access to the KOKKOS_FUNCTION keyword
+#include "tarch/accelerator/kokkos/Device.h" // To get access to the KOKKOS_FUNCTION keyword
 #endif
 
 #include "tarch/CompilerSpecificSettings.h"
@@ -24,9 +24,7 @@
 #define GPU_CALLABLE_METHOD
 #define GPU_CALLABLE_LAMBDA
 
-// https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/#nvcc-identification-macro
-// defined(_NVHPC_CUDA) || defined(__NVCOMPILER_CUDA__) || defined(__CUDACC__) || defined(NVCC) || defined(__NVCC__)
-#if defined(PEANO_WITH_GPU_BACKEND_CUDA) || defined(PEANO_WITH_GPU_BACKEND_HIP)
+#if defined(PEANO_WITH_GPU_BACKEND_CUDA) or defined(PEANO_WITH_GPU_BACKEND_HIP)
 #undef GPU_CALLABLE_METHOD
 #define GPU_CALLABLE_METHOD __host__ __device__
 #undef GPU_CALLABLE_LAMBDA
@@ -37,18 +35,16 @@
 #undef GPU_CALLABLE_METHOD
 #define GPU_CALLABLE_METHOD KOKKOS_FUNCTION
 #undef GPU_CALLABLE_LAMBDA
-#if defined(KOKKOS_ENABLE_CUDA) || defined(KOKKOS_ENABLE_HIP)
+#if defined(KOKKOS_ENABLE_CUDA) or defined(KOKKOS_ENABLE_HIP)
 #define GPU_CALLABLE_LAMBDA __host__ __device__
 #else
 #define GPU_CALLABLE_LAMBDA
 #endif
 #endif
 
-// nvcc warns (#20013) when a host+device function calls a constexpr but host-only stdlib helper
-// (std::min/max/abs, std::numeric_limits). The calls are compile-time and safe; the native cuda
-// backend allows them via FindCUDA's --expt-relaxed-constexpr, but that flag cannot be placed in the
-// Kokkos launcher model without hitting host-only g++ units, so we relax the diagnostic here. No-op
-// off nvcc.
+// The nvcc warning 20013 fires when a host and device function calls a constexpr host-only standard
+// library helper. The Kokkos launcher model cannot pass --expt-relaxed-constexpr, so this pragma
+// suppresses the warning.
 #if defined(__CUDACC__)
 #pragma nv_diag_suppress 20013
 #endif
@@ -64,8 +60,8 @@
 #define COMPILE_IF_ON_DEVICE(CODE) KOKKOS_IF_ON_DEVICE(CODE)
 #define COMPILE_IF_ON_HOST(CODE) KOKKOS_IF_ON_HOST(CODE)
 #else
-#if defined(__CUDA_ARCH__) or defined(__HIP_DEVICE_COMPILE__) or defined(__SPIR__) or defined(__SPIRV__) or \
-  defined(__SYCL_DEVICE_ONLY__) or defined(__NVPTX__) or defined(__AMDGCN__)
+#if defined(__CUDA_ARCH__) or defined(__HIP_DEVICE_COMPILE__) or defined(__SPIR__) or defined(__SPIRV__) \
+  or defined(__SYCL_DEVICE_ONLY__) or defined(__NVPTX__) or defined(__AMDGCN__)
 #define COMPILE_IF_ON_DEVICE(CODE) {CODE}
 #define COMPILE_IF_ON_HOST(CODE)
 #else
@@ -75,22 +71,22 @@
 #endif
 
 #if defined(PEANO_WITH_GPU_BACKEND_KOKKOS)
-#include "kokkos/Abort.h"
+#include "tarch/accelerator/kokkos/Abort.h"
 #elif defined(PEANO_WITH_GPU_BACKEND_CUDA)
-#include "cuda/Abort.h"
+#include "tarch/accelerator/cuda/Abort.h"
 #elif defined(PEANO_WITH_GPU_BACKEND_HIP)
-#include "hip/Abort.h"
+#include "tarch/accelerator/hip/Abort.h"
 #elif defined(PEANO_WITH_GPU_BACKEND_SYCL)
-#include "sycl/Abort.h"
+#include "tarch/accelerator/sycl/Abort.h"
 #elif defined(PEANO_WITH_GPU_BACKEND_OMPT)
-#include "ompt/Abort.h"
+#include "tarch/accelerator/ompt/Abort.h"
 #endif
 
 namespace tarch {
   namespace accelerator {
-#if !defined(PEANO_WITH_GPU_BACKEND_KOKKOS) && !defined(PEANO_WITH_GPU_BACKEND_CUDA) && \
-  !defined(PEANO_WITH_GPU_BACKEND_HIP) && !defined(PEANO_WITH_GPU_BACKEND_SYCL) && \
-  !defined(PEANO_WITH_GPU_BACKEND_OMPT)
+#if not defined(PEANO_WITH_GPU_BACKEND_KOKKOS) and not defined(PEANO_WITH_GPU_BACKEND_CUDA) \
+  and not defined(PEANO_WITH_GPU_BACKEND_HIP) and not defined(PEANO_WITH_GPU_BACKEND_SYCL) \
+  and not defined(PEANO_WITH_GPU_BACKEND_OMPT)
     TARGET_DECLARE
     inline GPU_CALLABLE_METHOD void abort(const char* message) {
       std::fputs(message, stderr);
@@ -117,30 +113,15 @@ namespace tarch {
     void  copyFromPinnedMemory(const void* source, void* target, std::size_t sizeInBytes, int device);
     void  copyFrom(const void* source, void* target, std::size_t sizeInBytes, MemoryLocation location, int device);
 
-    /**
-     * Set / get the implicit current device used by tarch::parallelFor and
-     * tarch::parallelReduce on backends that target an accelerator.
-     *
-     * Storage is thread-local: each host thread carries its own selection so
-     * concurrent host threads can dispatch to different GPUs without locking.
-     * The default value is Device::DefaultDevice (0). The CPU OpenMP backend
-     * ignores this state.
-     */
     void setCurrentDevice(int device);
     int  getCurrentDevice();
+
+    void reportMissingTaskloopSupportOnce();
   } // namespace accelerator
 
   /**
-   * Allocates memory on the specified memory location
-   *
-   * The device id is an optional argument that is required for
-   * memory allocation on an accelerator. Default is 0 (DefaultDevice).
-   * For memory allocation on accelerators, passing a device id >= 0 is
-   * necessary.
-   *
-   * @param count Number of elements to allocate memory for.
-   * @param location Location on where to allocate the memory.
-   * @param device (Optional) device id for memory allocation on accelerators.
+   * Allocates memory for count elements of T at the given memory location. An allocation on an
+   * accelerator needs the id of that device.
    */
   template <class T>
   T* allocateMemory(std::size_t count, MemoryLocation location, int device = accelerator::Device::DefaultDevice) {

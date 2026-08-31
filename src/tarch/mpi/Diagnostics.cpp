@@ -4,7 +4,8 @@
 
 #include "tarch/Assertions.h"
 #include "tarch/Termination.h"
-#include "tarch/instrumentation/Log.h"
+#include "tarch/instrumentation/Error.h"
+#include "tarch/instrumentation/Warning.h"
 #include "tarch/mpi/Rank.h"
 
 namespace {
@@ -309,11 +310,10 @@ void tarch::mpi::Diagnostics::clearRequest(const MPI_Request* request) {
 /**
  * Names the pending request a wait hangs on, warns once the warning threshold
  * passes and terminates once the deadlock threshold passes. Returns whether
- * the request is in the table at all, so a caller can fall back to a generic
- * report for an untracked request. The per-request deadlines are mutated under
- * the slot's sequence claim; only the thread that waits on a request reports
- * on it, so the claim only ever contends with the completion that removes the
- * entry.
+ * the request sits in the table, so a caller can fall back to a generic report
+ * for an untracked request. Only the thread that waits on a request updates
+ * its deadlines, so the slot's sequence claim only ever contends with the
+ * completion that removes the entry.
  */
 bool tarch::mpi::Diagnostics::reportRequest(
   const MPI_Request*          request,

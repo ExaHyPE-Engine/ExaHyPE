@@ -17,14 +17,13 @@
 {% for step in MAIN_STEPS | sort(attribute="name") -%}
 #include "observers/{{ step.name }}.h"
 {% endfor -%}
-#include "peano4/parallel/SpacetreeSet.h"
+#include "peano4/topology/TopologyManager.h"
 #include "repositories/DataRepository.h"
 #include "repositories/StepRepository.h"
 #include "runner/Engine.h"
 #include "runner/Launch.h"
 #include "runner/RuntimeParameters.h"
 {% if ADDITIONAL_INCLUDES -%}
-// Application headers can depend on the generated repositories and runner API.
 {% for include in ADDITIONAL_INCLUDES -%}
 {{ include }}
 {% endfor -%}
@@ -46,7 +45,7 @@ namespace {
 {%- endif %}
         ::{{ project_namespace }}::observers::{{ step.name }}::prepareTraversal();
         ::{{ project_namespace }}::observers::{{ step.name }} observer;
-        ::peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        ::peano4::topology::TopologyManager::getInstance().traverse(observer);
         ::{{ project_namespace }}::observers::{{ step.name }}::unprepareTraversal();
 {%- if step.finish_hooks %}
 {{ step.finish_hooks | join("\n") | indent(8, true) }}
@@ -60,7 +59,8 @@ namespace {
   ::runner::RepositoryCallbacks createRepositoryCallbacks() {
     ::runner::RepositoryCallbacks result;
 
-    // The runner updates the load balancer before the application refreshes repository memory statistics.
+    // The grid statistics of a sweep are reduced before this callback refreshes the
+    // repository's memory statistics, so both describe the same sweep.
     result.afterStep = ::{{ project_namespace }}::repositories::DataRepository::updateMemoryUsage;
 
     result.shutdownDataRepository = ::{{ project_namespace }}::repositories::DataRepository::shutdown;
@@ -80,7 +80,7 @@ namespace {
       ::{{ project_namespace }}::RuntimeParameters::load(reader, argc, argv);
     };
 {% if ADDITIONAL_REPOSITORY_CALLBACKS %}
-{{ ADDITIONAL_REPOSITORY_CALLBACKS | indent(2, true) }}
+{{ ADDITIONAL_REPOSITORY_CALLBACKS | indent(4, true) }}
 {% endif %}
     return result;
   }

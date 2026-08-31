@@ -19,22 +19,10 @@ Iterator toolbox::particles::particleIsDuplicate(
   const Iterator&                      end
 ) {
   while (begin != end) {
-    // Two particles are the same if they carry the same global identity
-    // getNumber() = (inserting tree, running index on that tree). This pair is
-    // unique per physical particle and is copied along with every (halo) copy,
-    // so it is the robust criterion for detecting a duplicate.
-    //
-    // We deliberately do not also require the positions to match within
-    // SpatialDuplicateTolerance. A particle sitting on a domain-/tree-boundary
-    // vertex is exchanged as a redundant copy by every adjacent tree, and these
-    // copies can drift apart by more than a fixed spatial tolerance (floating
-    // point differences accumulated during multiscale boundary transport).
-    // Gating the duplicate test on position therefore missed genuine duplicates
-    // and let the same particle be assigned to one vertex twice, tripping the
-    // assignmentchecks (an AssignToVertex directly following another
-    // AssignToVertex without an intervening detach/erase). Distinct particles
-    // always carry distinct numbers, so dropping the position test cannot merge
-    // two genuinely different particles that happen to coincide spatially.
+    // getNumber() returns the pair of inserting tree and running index on that
+    // tree, and every copy of a particle carries it, so two entries with the
+    // same number are one particle. The positions are not compared, because the
+    // copies of a particle on a tree boundary drift apart.
     if ((*begin)->getNumber() == particle->getNumber()) {
       logDebug(
         "Particles " << particle->toString() << " and " << (*begin)->toString()
@@ -48,56 +36,25 @@ Iterator toolbox::particles::particleIsDuplicate(
 }
 
 /**
- * Check if a particle is local and inside the computational domain
- *
- * Return true exactly when
- *
- * - we deal with a local particle (virtual ones are copies, so we are not
- *   really entitled to say something about them), and
- * - the particle resides within the computational domain.
- */
-template <typename Particle>
-bool toolbox::particles::particleWillStayWithinComputationalDomain(
-  const Particle&                              particle,
-  const tarch::la::Vector<DIMENSIONS, double>& domainOffset,
-  const tarch::la::Vector<DIMENSIONS, double>& domainWidth
-) {
-  return particle.getParallelState() == Particle::ParallelState::Local
-    and tarch::la::allGreaterEquals(particle.getX(), domainOffset)
-    and tarch::la::allSmallerEquals(particle.getX(), domainOffset + domainWidth);
-}
-
-/**
- * Insert particle into a cell
- *
- * Shallow copy, i.e. you can remove the input container newParticles, but
- * you may not delete the particles it is pointing to.
- *
- * This routine runs through the vector passed and calls the other
- * insertParticleIntoCell() operation per particle.
+ * Inserts every particle of newParticles into the cell of marker. The vertices
+ * take over the particle pointers, so the caller may destroy newParticles but
+ * not the particles it points to.
  */
 template <typename Particle, typename ParticleSet>
 void toolbox::particles::insertParticlesIntoCell(
   const peano4::datamanagement::CellMarker&              marker,
   const std::vector<Particle*>&                          newParticles,
   peano4::datamanagement::VertexEnumerator<ParticleSet>& fineGridVertices,
-  int                                                    spacetreeId
+  int                                                    treeId
 ) {
-  for (auto& p : newParticles) {
-    insertParticleIntoCell(marker, p, fineGridVertices, spacetreeId);
+  for (const auto& particle : newParticles) {
+    toolbox::particles::insertParticleIntoCell(marker, particle, fineGridVertices, treeId);
   }
 }
 
 /**
- * Update helper flag per particle for cell
- *
- * Each particle is associated with a vertex of a cell. This vertex is
- * identified by assignedVertex. We now compute a bitset that tells us,
- * from the vertex' point of view, which of the adjacent cells will
- * host this particle. This might not be unique, as we work with a
- * fuzzy geometric ownership.
- *
- * @see the explanation in peano4.toolbox.particles.Particle
+ * Sets the bitset in particle that flags which cells around the vertex
+ * assignedVertex of marker contain the particle.
  */
 template <typename Particle>
 void toolbox::particles::updateContainedInAdjacentCellProperty(
@@ -107,7 +64,7 @@ void toolbox::particles::updateContainedInAdjacentCellProperty(
 ) {
   const tarch::la::Vector<DIMENSIONS, double> vertexPositionOfAssignedVertex = marker.getOffset()
     + tarch::la::multiplyComponents(tarch::la::Vector<DIMENSIONS, double>(assignedVertex), marker.getH());
-  updateContainedInAdjacentCellProperty(vertexPositionOfAssignedVertex, marker.getH(), particle);
+  toolbox::particles::updateContainedInAdjacentCellProperty(vertexPositionOfAssignedVertex, marker.getH(), particle);
 }
 
 template <typename Particle>
@@ -115,30 +72,14 @@ void toolbox::particles::updateContainedInAdjacentCellProperty(
   const peano4::datamanagement::VertexMarker& marker,
   Particle&                                   particle
 ) {
-  updateContainedInAdjacentCellProperty(marker.getX(), marker.getH(), particle);
+  particle.setContainedInAdjacentCell(toolbox::particles::getAdjacentCellsOwningParticle(particle.getX(), marker));
 }
 
 /**
- * Update internal marker of particle
- *
- * Each particle is associated to a vertex. The vertex is identified by
- * its position x and the surrounding cells with size h. Each vertex has
- * @f$ 2^d @f$ adjacent cells. The particle's
- * ContainedInAdjacentCellProperty bitset flags which of these adjacent
- * cells consider the particle to fall in their area.
- *
- * As we work with a weak ownership, more than one bit can be set, for
- * example if the particle sits exactly on the face between two adjacent
- * cells.
- *
- * ## Particle movement
- *
- * We have to call updateContainedInAdjacentCellProperty() after each
- * particle movement. Even if we don't change the vertex association as a
- * particle drifts, it might stay with the same vertex and still move from
- * one cell into another one and hence require an update of the flags.
- *
- * @see the explanation in peano4.toolbox.particles.Particle
+ * Sets the bitset in particle that flags which of the @f$ 2^d @f$ cells around
+ * the vertex at x with mesh size h contain the particle. More than one bit is
+ * set when the particle sits on a face between two of these cells. A caller
+ * calls this routine after every movement of the particle.
  */
 template <typename Particle>
 void toolbox::particles::updateContainedInAdjacentCellProperty(
@@ -147,12 +88,13 @@ void toolbox::particles::updateContainedInAdjacentCellProperty(
   Particle&                                    particle
 ) {
   std::bitset<TWO_POWER_D> result = 0;
+  const auto               image  = toolbox::particles::periodicImageTowards(particle.getX(), x);
 
   peano4::dForEachCorner([&](const tarch::la::Vector<DIMENSIONS, int>& k, int kScalar) {
     const tarch::la::Vector<DIMENSIONS, double> adjacentCellCentre =
       x - 0.5 * h + tarch::la::multiplyComponents(tarch::la::convertScalar<double>(k), h);
     result[kScalar] = peano4::datamanagement::CellMarker::isContained(
-      particle.getX(),
+      image,
       adjacentCellCentre,
       h,
       toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance(h)
@@ -164,34 +106,17 @@ void toolbox::particles::updateContainedInAdjacentCellProperty(
 }
 
 /**
- * Insert particle into cell
- *
- * This routine assumes that the particle indeed fits into a cell, as it
- * cannot be assigned properly otherwise. A particle which falls into a
- * cell is local, and setting that flag matters: Peano's locality analysis
- * usually sets particles to local in touchCellFirstTime(), and the
- * insertion may well run after that analysis step, so the particle would
- * be missed.
- *
- * Never insert a particle directly. Always run through this routine and
- * combine it with a particle sorting step. This keeps the insertion
- * consistent, i.e. particles end up next to their closest neighbour, and
- * it keeps a particle from being assigned to a hanging vertex and then
- * lost: in a step where no grid re-sorting is active, such a particle
- * disappears with the elimination of the hanging vertex.
- *
- * ## Realisation
- *
- * - Find which vertex in the cell is the closest vertex.
- * - Set the particle state to local. As we know that we insert only into
- *   local cells, we can do this without any fear.
+ * Adds newParticle to the closest vertex of the cell of marker and sets its
+ * state to local. The position of newParticle has to lie within that cell. A
+ * caller combines the insertion with a particle sorting step, so the particle
+ * does not end up on a hanging vertex and disappear with it.
  */
 template <typename Particle, typename ParticleSet>
 void toolbox::particles::insertParticleIntoCell(
   const peano4::datamanagement::CellMarker&              marker,
   Particle*                                              newParticle,
   peano4::datamanagement::VertexEnumerator<ParticleSet>& fineGridVertices,
-  int                                                    spacetreeId
+  int                                                    treeId
 ) {
   std::bitset<DIMENSIONS> targetVertex;
   for (int d = 0; d < DIMENSIONS; d++) {
@@ -216,55 +141,46 @@ void toolbox::particles::insertParticleIntoCell(
     tarch::la::smaller(2.0 * newParticle->getSearchRadius(), tarch::la::min(marker.getH())),
     marker.toString(),
     newParticle->toString(),
-    spacetreeId
+    treeId
   );
 
   newParticle->setParallelState(Particle::ParallelState::Local);
   newParticle->setCellH(marker.getH());
-  updateContainedInAdjacentCellProperty(marker, targetVertex, *newParticle);
+  toolbox::particles::updateContainedInAdjacentCellProperty(marker, targetVertex, *newParticle);
 
   const int linearisedTargetVertex = targetVertex.to_ulong();
 
   logDebug(
-    "assign particle " << newParticle->toString() << " to vertex " << linearisedTargetVertex << " in cell "
+    "Assign particle " << newParticle->toString() << " to vertex " << linearisedTargetVertex << " in cell "
                        << marker.toString() << " (vertex=" << fineGridVertices(targetVertex.to_ulong()).toString()
                        << ")"
   );
   fineGridVertices(linearisedTargetVertex).addParticle(newParticle);
 
 #if PEANO_ASSERTIONS
-  // Give the particle a unique identifier. The assignment-consistency checks
-  // (assignmentchecks::Database) key every particle on this id together with the
-  // tree and the vertex it sits on - but deliberately not on its position, since
-  // a particle moves. Consequently two distinct particles that share a (e.g.
-  // domain-boundary) vertex on the same tree must carry distinct ids; otherwise
-  // their independent assign/erase events are attributed to one and the same
-  // particle and look like an illegal repeated assignment, tripping the checks.
-  // We hand out a rank-local running number and fold in the MPI rank so the
-  // ids stay unique once particles travel to other ranks as halo copies (the
-  // id is part of the particle and is sent along with it). The split allows
-  // 2^11 ranks x 2^20 particles per rank and type.
-  // Widen it (or switch to the globally unique (tree,number) pair) if a
-  // run ever exceeds that.
+  // The assignment checks key a particle on this id together with its tree and
+  // its vertex, so two particles on one vertex of one tree carry distinct ids.
+  // The rank sits in the upper bits, so the ids stay distinct once a particle
+  // travels to another rank as a copy.
   static std::atomic<int> particleCounter{0};
   const int               rank = tarch::mpi::Rank::getInstance().getRank();
   newParticle->setPartid((rank << 20) | (particleCounter.fetch_add(1) & 0xFFFFF));
 #endif
 
-  tarch::la::Vector<DIMENSIONS, double> vertexX = marker.getX() - 0.5 * marker.getH()
+  const tarch::la::Vector<DIMENSIONS, double> vertexX = marker.getX() - 0.5 * marker.getH()
     + tarch::la::multiplyComponents(tarch::la::Vector<DIMENSIONS, double>(targetVertex), marker.getH());
 
   toolbox::particles::assignmentchecks::assignParticleToVertex(
     toolbox::particles::assignmentchecks::pruneTypeName<Particle>(),
     newParticle->getX(),
     newParticle->getPartid(),
-    true, // is always local, we set that a few lines above
+    true, // isLocal
     vertexX,
     marker.getH(), // vertexH
-    spacetreeId,
+    treeId,
     "toolbox::particles::insertParticleIntoCell()",
     vertexX,
     marker.getH(),
-    true // particle is new
+    true // isNew
   );
 }

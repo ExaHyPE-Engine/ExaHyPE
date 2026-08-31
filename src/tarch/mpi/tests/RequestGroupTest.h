@@ -11,6 +11,11 @@ namespace tarch::mpi::tests {
 class tarch::mpi::tests::RequestGroupTest final : public tarch::tests::TestCase {
 public:
   RequestGroupTest();
+  RequestGroupTest(const RequestGroupTest&)            = delete;
+  RequestGroupTest(RequestGroupTest&&)                 = delete;
+  RequestGroupTest& operator=(const RequestGroupTest&) = delete;
+  RequestGroupTest& operator=(RequestGroupTest&&)      = delete;
+  ~RequestGroupTest() override                         = default;
 
   void run() override;
 

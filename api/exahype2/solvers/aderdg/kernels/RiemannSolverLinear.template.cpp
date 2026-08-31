@@ -6,7 +6,7 @@
 #include "Quadrature.h"
 
 #include "tarch/CompilerSpecificSettings.h"
-#include "tarch/instrumentation/Log.h"
+#include "tarch/instrumentation/Trace.h"
 
 template <typename cCompType>
 void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
@@ -46,16 +46,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   );
   traceLeave("User Riemann solver");
 {% else %}
-  /*
-   * For the linear kernels, we need the material parameters in the
-   * extrapolated predictor.
-   * We compute the averages of the material parameters but
-   * do not use them in the max eigenvalue calculation.
-   */
   std::memset(FL, 0, {{NUMBER_OF_UNKNOWNS * NUMBER_OF_DOF * NUMBER_OF_DOF_3D}} * sizeof(cCompType));
   std::memset(FR, 0, {{NUMBER_OF_UNKNOWNS * NUMBER_OF_DOF * NUMBER_OF_DOF_3D}} * sizeof(cCompType));
 
-  // Compute the average unkown and auxiliary variables from the left and the right
   cCompType QavL[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {0.0};
   cCompType QavR[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {0.0};
 
@@ -110,7 +103,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   cCompType Qdiff[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
 
 {% if NUMBER_OF_AUXILIARY_VARIABLES > 0 %}
-  // We copy the averaged material parameters to Qdiff as they are used in the flux term
+  // The flux call reads the material parameters from Qdiff.
   std::copy_n(Qavg + {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_DATA_PADDED - NUMBER_OF_UNKNOWNS}}, Qdiff + {{NUMBER_OF_UNKNOWNS}});
 {% endif %}
 

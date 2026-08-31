@@ -12,36 +12,34 @@ class ModelToDataRepository(object):
 
     def __reserve_container_id(self):
         """
-        A container id identifies a container within the aggregated boundary.
+        A container id addresses one container's messages in the aggregated
+        boundary exchange.
 
-        exchange, where it takes the place the tree pair holds in a per-tree-pair
-        exchange. Every rank generates this repository from the same model, so a
-        container ends up with the same id everywhere. Zero belongs to the grid
-        vertices, which the spacetree set exchanges in its own container role.
+        Every rank generates this repository from the same model, so a container
+        ends up with the same id everywhere and both sides of a rank pair read
+        the same tag.
         """
         result = self.__next_container_id
         self.__next_container_id += 1
         return result
 
-    def __build_up_dictionary_for_one_data_set(self, i, prefix):
+    def __build_up_dictionary_for_one_data_set(self, data_set, prefix):
         """:param prefix: Should be "CELL", "FACE" or "VERTEX"."""
         self.d[
             prefix + "_DATA_CONTAINER_INCLUDES"
-        ] += i.generator.get_header_file_include()
+        ] += data_set.generator.get_header_file_include()
         self.d[prefix + "_DATA_CONTAINER_INCLUDES"] += "\n"
 
         container = {
-            "stack": i.generator.get_stack_container(),
-            "name": i.get_logical_type_name(),
-            "fq": i.get_full_qualified_type(),
+            "stack": data_set.generator.get_stack_container(),
+            "name": data_set.get_logical_type_name(),
+            "fq": data_set.get_full_qualified_type(),
             "container_id": self.__reserve_container_id(),
         }
-        if prefix != "CELL":
-            container["hanging_container_id"] = self.__reserve_container_id()
 
         self.d[prefix + "_DATA_CONTAINERS"].append(container)
 
-    def __parse_data_declarations_in_model(self, n):
+    def __parse_data_declarations_in_model(self, namespace_index):
         self.__next_container_id = 1
 
         for prefix in ["CELL", "FACE", "VERTEX"]:
@@ -49,7 +47,7 @@ class ModelToDataRepository(object):
             self.d[prefix + "_DATA_CONTAINERS"] = []
 
         self.d["FULL_QUALIFIED_CLASSNAME"] = ""
-        for i in self.__get_full_namespace(n):
+        for i in self.__get_full_namespace(namespace_index):
             self.d["FULL_QUALIFIED_CLASSNAME"] += i
             self.d["FULL_QUALIFIED_CLASSNAME"] += "::"
         self.d["FULL_QUALIFIED_CLASSNAME"] += self.__get_class_name()

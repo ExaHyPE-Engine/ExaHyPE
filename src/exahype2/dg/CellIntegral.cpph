@@ -1,10 +1,19 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+/**
+ * Computes the cell-local DG volume contribution with compile-time solver callbacks.
+ *
+ * The output contains the weak-form flux, source, and non-conservative-product
+ * contributions selected by the evaluation flags. Point sources are not
+ * implemented by this kernel.
+ */
 template <typename Solver, int order, int unknowns, int auxiliaryVariables>
 void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre(
   ::exahype2::CellData<double, double>& cellData,
   bool                                  evaluateFlux,
   bool                                  evaluateNonconservativeProduct,
   bool                                  evaluateSource,
-  bool /*evaluatePointSources*/
+  [[maybe_unused]] bool                 evaluatePointSources
 ) {
   const int inputStride  = unknowns + auxiliaryVariables;
   const int outputStride = unknowns;
@@ -18,7 +27,6 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre(
 
     const int nodesPerAxis = order + 1;
     const int strideQ      = unknowns + auxiliaryVariables;
-    // const int nodesPerCell = getNodesPerCell(nodesPerAxis);
 
     peano4::dForEach(order + 1, [&](const tarch::la::Vector<DIMENSIONS, int>& dof) {
       const int dofSerialised = peano4::dLinearised(dof, nodesPerAxis);
@@ -32,13 +40,11 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre(
       }
 
       if (evaluateFlux) {
-        // direction in which flux contributions are being computed
-        for (int dim = 0; dim < DIMENSIONS; dim++)
+        for (int dim = 0; dim < DIMENSIONS; dim++) {
           for (int i = 0; i < nodesPerAxis; i++) {
-            // compute contributing node real position
             tarch::la::Vector<DIMENSIONS, int> contributingNodeIndex = dof;
             contributingNodeIndex[dim]                               = i;
-            tarch::la::Vector<DIMENSIONS, double> position =
+            const tarch::la::Vector<DIMENSIONS, double> position =
               getQuadraturePoint(x, h, contributingNodeIndex, order, Solver::QuadraturePoints1d);
             const int contributingNodeSerialised = peano4::dLinearised(contributingNodeIndex, nodesPerAxis);
 
@@ -60,16 +66,15 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre(
 
             for (int var = 0; var < unknowns; var++) {
               cellQout[dofSerialised * outputStride + var] += coeff * fluxValues[var];
-            } // var
-          } // dim/i combination
-      } // if useFlux
+            }
+          }
+        }
+      }
 
       if (evaluateSource) {
-        // compute real node position
-        tarch::la::Vector<DIMENSIONS, double> position =
+        const tarch::la::Vector<DIMENSIONS, double> position =
           getQuadraturePoint(x, h, dof, order, Solver::QuadraturePoints1d);
 
-        // compute source term contributions
         Solver::sourceTerm(
           &cellQin[dofSerialised * inputStride],
           position,
@@ -80,40 +85,38 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre(
         );
 
 #if DIMENSIONS == 2
-        double coeff =
+        const double coeff =
           Solver::MassMatrixDiagonal1d[dof(0)] * Solver::MassMatrixDiagonal1d[dof(1)] * tarch::la::volume(h);
 #else
-        double coeff = Solver::MassMatrixDiagonal1d[dof(0)] * Solver::MassMatrixDiagonal1d[dof(1)]
+        const double coeff = Solver::MassMatrixDiagonal1d[dof(0)] * Solver::MassMatrixDiagonal1d[dof(1)]
           * Solver::MassMatrixDiagonal1d[dof(2)] * tarch::la::volume(h);
 #endif
 
         for (int var = 0; var < unknowns; var++) {
           cellQout[dofSerialised * outputStride + var] += coeff * sourceValues[var];
-        } // var
-      } // if useSource
+        }
+      }
 
       // @todo Point Source missing
 
       if (evaluateNonconservativeProduct) {
-        // compute real node position
-        tarch::la::Vector<DIMENSIONS, double> position =
+        const tarch::la::Vector<DIMENSIONS, double> position =
           getQuadraturePoint(x, h, dof, order, Solver::QuadraturePoints1d);
 
 #if DIMENSIONS == 2
-        double coeff = Solver::massMatrixDiagonal[dof(0)] * Solver::massMatrixDiagonal[dof(1)] * tarch::la::volume(h);
+        const double coeff =
+          Solver::MassMatrixDiagonal1d[dof(0)] * Solver::MassMatrixDiagonal1d[dof(1)] * tarch::la::volume(h);
 #else
-        double coeff = Solver::massMatrixDiagonal[dof(0)] * Solver::massMatrixDiagonal[dof(1)]
-          * Solver::massMatrixDiagonal[dof(2)] * tarch::la::volume(h);
+        const double coeff = Solver::MassMatrixDiagonal1d[dof(0)] * Solver::MassMatrixDiagonal1d[dof(1)]
+          * Solver::MassMatrixDiagonal1d[dof(2)] * tarch::la::volume(h);
 #endif
 
         for (int dim = 0; dim < DIMENSIONS; dim++) {
-          // computes gradient values in all directions for the given node
           std::fill_n(gradientValues, strideQ, 0.0);
 
-          const int invDx = 1 / h(dim);
+          const double invDx = 1.0 / h(dim);
 
           tarch::la::Vector<DIMENSIONS, int> contributingNodeIndex = dof;
-          // computing gradients in direction dim
           for (int node = 0; node < nodesPerAxis; node++) {
             contributingNodeIndex[dim]   = node;
             const double coeffDerivative = invDx * Solver::DerivativeOperator1d[node + nodesPerAxis * dof(dim)];
@@ -122,8 +125,8 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre(
             for (int var = 0; var < strideQ; var++) {
               gradientValues[var] += coeffDerivative * cellQin[contributingNodeSerialised * inputStride + var];
               assertion(gradientValues[var] == gradientValues[var]);
-            } // var
-          } // node
+            }
+          }
 
           Solver::nonconservativeProduct(
             &cellQin[dofSerialised * inputStride],
@@ -139,9 +142,9 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre(
           for (int var = 0; var < unknowns; var++) {
             assertion(ncpValues[var] == ncpValues[var]);
             cellQout[dofSerialised * outputStride + var] -= coeff * ncpValues[var];
-          } // var
-        } // dim
-      } // if useNCP
-    }); // dof
-  } // currentCell
+          }
+        }
+      }
+    });
+  }
 }

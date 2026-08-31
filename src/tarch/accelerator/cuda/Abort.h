@@ -4,21 +4,20 @@
 
 #if defined(PEANO_WITH_GPU_BACKEND_CUDA)
 
-#include "Device.h"
+#include "tarch/accelerator/cuda/Device.h"
 
 extern "C" [[noreturn]] __device__ void __assertfail(
-  const void* message,
-  const void* file,
+  const void*  message,
+  const void*  file,
   unsigned int line,
-  const void* function,
-  std::size_t charSize
+  const void*  function,
+  std::size_t  charSize
 );
 
 namespace tarch::accelerator {
   inline __host__ __device__ void abort(const char* message) {
     COMPILE_IF_ON_DEVICE(
-      const char empty[] = "";
-      __assertfail(
+      const char empty[] = ""; __assertfail(
         static_cast<const void*>(message),
         static_cast<const void*>(empty),
         0,
@@ -26,11 +25,7 @@ namespace tarch::accelerator {
         sizeof(char)
       );
     )
-    COMPILE_IF_ON_HOST(
-      std::fputs(message, stderr);
-      std::fflush(stderr);
-      std::_Exit(EXIT_FAILURE);
-    )
+    COMPILE_IF_ON_HOST(std::fputs(message, stderr); std::fflush(stderr); std::_Exit(EXIT_FAILURE);)
   }
 } // namespace tarch::accelerator
 

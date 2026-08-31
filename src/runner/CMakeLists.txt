@@ -4,8 +4,9 @@
 file(GLOB_RECURSE HEADERS ${HEADER_EXTENSIONS_TO_GLOB})
 
 set(SOURCES
+  RunControl.cpp
   RuntimeParameters.cpp
-  LoadBalancer.cpp
+  GlobalStatistics.cpp
   Format.cpp
   TextLayout.cpp
   ReportBox.cpp
@@ -23,6 +24,7 @@ set(SOURCES
   tests/DynamicAMRTest.cpp
   tests/FormatTest.cpp
   tests/GridSnapshotTest.cpp
+  tests/RunControlTest.cpp
   tests/RuntimeParametersTest.cpp
   tests/TableTest.cpp
   tests/TextLayoutTest.cpp
@@ -41,7 +43,7 @@ foreach(mode IN LISTS SUPPORTED_BUILD_TYPES)
       DIMENSION ${dim}
       SOURCES ${SOURCES}
       HEADERS ${HEADERS}
-      LINK_LIBRARIES Peano4${mode}${dim}d ToolboxLoadBalancing${mode}${dim}d
+      LINK_LIBRARIES Peano4${mode}${dim}d
     )
   endforeach()
 endforeach()

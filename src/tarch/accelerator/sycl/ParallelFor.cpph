@@ -54,7 +54,7 @@ namespace tarch {
 
   template <typename F>
   inline void parallelFor(const RangeMD<2>& r, F f) {
-    if (r.n[0] <= 0 || r.n[1] <= 0) {
+    if (r.n[0] <= 0 or r.n[1] <= 0) {
       return;
     }
     auto& q = *static_cast<::sycl::queue*>(accelerator::getSYCLQueue(accelerator::getCurrentDevice()));
@@ -69,7 +69,7 @@ namespace tarch {
 
   template <typename F>
   inline void parallelFor(const RangeMD<3>& r, F f) {
-    if (r.n[0] <= 0 || r.n[1] <= 0 || r.n[2] <= 0) {
+    if (r.n[0] <= 0 or r.n[1] <= 0 or r.n[2] <= 0) {
       return;
     }
     auto& q = *static_cast<::sycl::queue*>(accelerator::getSYCLQueue(accelerator::getCurrentDevice()));
@@ -89,8 +89,8 @@ namespace tarch {
     }
     auto&               q = *static_cast<::sycl::queue*>(accelerator::getSYCLQueue(accelerator::getCurrentDevice()));
     ::sycl::nd_range<1> nd(
-      ::sycl::range<1>(r.n * accelerator::kSyclLocalSize),
-      ::sycl::range<1>(accelerator::kSyclLocalSize)
+      ::sycl::range<1>(r.n * accelerator::SyclLocalSize),
+      ::sycl::range<1>(accelerator::SyclLocalSize)
     );
     q.submit(
        [&](::sycl::handler& h) {

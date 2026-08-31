@@ -1,6 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "tarch/reader/tests/NetCDFFileReaderTest.h"
+#include "NetCDFFileReaderTest.h"
 
 #ifdef PEANO_WITH_NETCDF
 
@@ -18,16 +18,17 @@ namespace {
     const std::string&         xKey     = "x",
     const std::string&         yKey     = "y"
   ) {
+    // The file name carries a per-run identifier, so two processes that write into the test
+    // directory at the same time do not overwrite each other's fixture.
+    static const std::string testRunIdentifier =
+      std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) + "-"
+      + std::to_string(std::random_device{}());
     static std::atomic<int> counter = 0;
 
-    const std::filesystem::path path
-      = tarch::tests::getWritableTestDirectory()
-        / std::filesystem::path(
-          stem + "-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) + "-"
-          + std::to_string(counter++) + ".nc"
-        );
+    const std::filesystem::path path = tarch::tests::getWritableTestDirectory()
+      / std::filesystem::path(stem + "-" + testRunIdentifier + "-" + std::to_string(counter++) + ".nc");
 
-    auto check = [&](int status, const std::string& operation) {
+    auto check = [&](const int status, const std::string& operation) {
       if (status != NC_NOERR) {
         throw std::runtime_error(operation + ": " + nc_strerror(status));
       }
@@ -63,8 +64,8 @@ namespace {
   }
 } // namespace
 
-tarch::reader::tests::NetCDFFileReaderTest::NetCDFFileReaderTest():
-  TestCase("tarch::reader::tests::NetCDFFileReaderTest") {}
+tarch::reader::tests::NetCDFFileReaderTest::NetCDFFileReaderTest() :
+  tarch::tests::TestCase("tarch::reader::tests::NetCDFFileReaderTest") {}
 
 void tarch::reader::tests::NetCDFFileReaderTest::run() {
   testMethod(testOpenReadAndClose);
@@ -72,12 +73,8 @@ void tarch::reader::tests::NetCDFFileReaderTest::run() {
 }
 
 void tarch::reader::tests::NetCDFFileReaderTest::testOpenReadAndClose() {
-  const std::string path = writeTempNetCDFFile(
-    "peano-netcdf-reader",
-    {1.0, 3.0, 5.0},
-    {-2.0, 4.0},
-    {10.0, 11.0, 12.0, 20.0, 21.0, 22.0}
-  );
+  const std::string path =
+    writeTempNetCDFFile("peano-netcdf-reader", {1.0, 3.0, 5.0}, {-2.0, 4.0}, {10.0, 11.0, 12.0, 20.0, 21.0, 22.0});
 
   try {
     tarch::reader::NetCDFFileReader reader;
@@ -120,8 +117,8 @@ void tarch::reader::tests::NetCDFFileReaderTest::testMissingFileFails() {
 
 #else
 
-tarch::reader::tests::NetCDFFileReaderTest::NetCDFFileReaderTest():
-  TestCase("tarch::reader::tests::NetCDFFileReaderTest") {}
+tarch::reader::tests::NetCDFFileReaderTest::NetCDFFileReaderTest() :
+  tarch::tests::TestCase("tarch::reader::tests::NetCDFFileReaderTest") {}
 
 void tarch::reader::tests::NetCDFFileReaderTest::run() {}
 

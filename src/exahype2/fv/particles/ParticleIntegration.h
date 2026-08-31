@@ -11,12 +11,6 @@
 #include "tarch/la/Vector.h"
 
 namespace exahype2::fv::particles::integration {
-  // Multi-particle integration reads these process-wide settings.
-  extern double _timeStepSize;
-  extern int    _integrationMethod;
-
-  void setGlobalIntegrationParameters(const double timeStepSize, const int integrationMethod);
-
   template <typename Particle>
   INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> explicitEulerIntegration(
     Particle&    particle,

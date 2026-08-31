@@ -1,7 +1,5 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-"""Euler point explosion with a subcell limiter and dynamic refinement."""
-
 import exahype2
 import euler
 

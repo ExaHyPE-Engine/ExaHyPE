@@ -4,9 +4,8 @@
 
 We recommend using `gpu10`, `gpu11` or `gpu12`, i.e. the A100 machines.
 These cards have compute capability 8.0, so the GPU architecture is
-`sm_80` throughout. Peano builds with CMake; the toolboxes
-(blockstructured, loadbalancing, particles) and the ExaHyPE 2 extension
-are always built, so you only toggle the `PEANO_WITH_*` feature options.
+`sm_80` throughout. Peano builds with CMake; its toolboxes and the ExaHyPE 2
+extension are always built, so you only toggle the `PEANO_WITH_*` feature options.
 NVC++ and the oneAPI software stack both work on this cluster.
 
 # OpenMP offloading with Clang
@@ -19,7 +18,6 @@ mkdir build
 cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_CXX_COMPILER=clang++ \
-  -DPEANO_WITH_MULTITHREADING=ON \
   -DPEANO_WITH_GPU_BACKEND=ompt \
   -DPEANO_WITH_GPU_ARCH=sm_80
 make -j
@@ -27,7 +25,7 @@ make -j
 
 The `ompt` backend drives OpenMP target offloading. CMake adds the
 matching `-fopenmp-targets=nvptx64-nvidia-cuda --offload-arch=sm_80`
-flags for you, so you no longer have to pass them by hand.
+flags for you.
 
 # OpenMP offloading with NVC++
 
@@ -39,7 +37,6 @@ cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_CXX_COMPILER=nvc++ \
   -DCMAKE_C_COMPILER=nvc \
-  -DPEANO_WITH_MULTITHREADING=ON \
   -DPEANO_WITH_GPU_BACKEND=ompt \
   -DPEANO_WITH_GPU_ARCH=sm_80
 make -j
@@ -78,7 +75,7 @@ make -j
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 CMake emits the required `-fsycl -fsycl-targets=spir64` flags for you.
-Note that `icpx` uses a lower floating-point precision by default in
+`icpx` uses a lower floating-point precision by default in
 favour of performance; pass `-DPEANO_EXTRA_CXX_FLAGS=-fp-model=precise`
 if you need stricter semantics.
 

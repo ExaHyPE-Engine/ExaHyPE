@@ -1,52 +1,57 @@
 /**
 
-  @page page_peano_localisation Localisation of data and data exchange
+@page page_peano_localisation Localisation of generated data
 
-Peano allows you to attach data to faces, cells and vertices.
-By default, it stores these
-data everywhere within the domain on each and every resolution level.
-However, you can alter this behaviour.
-This page discusses how this altering is implemented.
-The same mechanism is used by generated tutorials and examples that mask out temporary data.
+\tableofcontents
 
+Peano keeps one replicated grid structure per rank and rank-local pools for
+generated cell, face, and vertex data. Traversal events map the global tree
+entity indices to the pool slots relevant to the current rank and subtree
+task.
 
+# Rank-local pools
 
-## Alter the storage logic
+Each generated data type owns a peano4::grid::StackContainer. Its flat pool
+contains slots for locally relevant entities, rank-boundary frozen copies, and
+subtree-task interface copies. An event uses
+peano4::grid::GridTraversalObserver::NoData for an entity that has no data in
+the current rank traversal.
 
-Typically, each data structure has a generator object attached to it which defines how
-to translate the logical data model into C++ data structures. These generators
-further add MPI logic and logic whether to  load and store data or not. This
-latter logic is kind of an aspect to the corresponding classes.
+Cells have one owning rank. Faces and vertices can have slots on several ranks
+when cells from those ranks touch them. Their generated merge routine combines
+the partner copies before the first consuming callback.
 
-The key contribution of this logic (from a storage point of view) is that it
-supplements the generated class with static routines
+# Storage predicates
 
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-bool MyClass::load(...)
-bool MyClass::store(...)
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+Generated data types provide static `load()` and `store()` predicates that
+receive the entity marker. On a first touch, `load()` decides whether the pool
+slot moves into the observer's call block. On a last touch, `store()` decides
+whether the call-block value moves back into the persistent pool slot.
 
-These routines dictate if data is stored or loaded. Whenever Peano runs into a
-cell, vertex, or face, it ensures that all the user data is there. This is
-important to ensure that all pointer arithmetic behind the scenes makes sense.
-However, you might work with data which is held on the heap, i.e. your face data
-for example might point to a chunk of data on the heap. In this case, you can
-instruct Peano that you don't want to store and load the pointers to these heap
-data.
-Along these lines, you can also associate data with grid entitites which is
-always created temporarily and made available to the solver, but is never
-ever stored or loaded. This is quite useful if you have multiple action sets
-within one observer which pass on information. In some way, such temporary data
-resemble temporary/local variables.
+Repeated touches within one observer always preserve the call-block value.
+Creation and destruction events use their dedicated lifecycle callbacks and do
+not load a standing pool value.
 
+Storage predicates are suitable for temporary data and data that exists only
+on selected entities. A disabled first touch receives a default object, so an
+action set does not observe stale content from a reused call-block position.
 
-## Parallelisation
+# Task-local copies
 
-Peano automatically masks out the data outside of the local subdomain of a
-thread or rank. When Peano traverses the grid, the markers handed to the action
-sets carry locality information (see, e.g., the `isLocal()` queries on
-peano4::datamanagement::VertexMarker and peano4::datamanagement::FaceMarker).
-The grid traversal skips grid entities whose `isLocal()` flag is not set, so
-remote and halo data are not processed by the local thread or rank.
+A parallel traversal redirects a face or vertex that two subtree tasks hold to
+the live slot of the current subtree task. Each task completes its first-touch
+and last-touch lifecycle on that copy. The post-sweep merge freezes the result,
+and the next sweep merges partner copies according to the generated data policy.
+
+A generated container can reject this copy protocol through its subtree-task
+replication property. If any container rejects it, the rank traversal remains
+serial.
+
+# Markers
+
+Vertex, face, and cell markers report rank locality, hanging state, refinement
+state, position, and mesh width for the selected event entity. Action sets use
+these marker queries in their storage and compute predicates. They do not infer
+locality from a tree identifier or a pool-slot value.
 
 */

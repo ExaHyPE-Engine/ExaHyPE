@@ -1,0 +1,193 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+template <class StackType>
+INLINE_METHOD peano4::data::RegisteredStackContainer<StackType>::RegisteredStackContainer(
+  const int                                containerId,
+  const peano4::data::ManagedContainerKind kind
+) :
+  peano4::grid::StackContainer<StackType>(containerId),
+  _kind(kind) {
+  peano4::data::ContainerRegistry::getInstance().attachContainer(this);
+}
+
+template <class StackType>
+INLINE_METHOD peano4::data::RegisteredStackContainer<StackType>::RegisteredStackContainer::~RegisteredStackContainer() {
+  peano4::data::ContainerRegistry::getInstance().detachContainer(this);
+}
+
+template <class StackType>
+INLINE_METHOD int peano4::data::RegisteredStackContainer<StackType>::getManagedContainerId() const {
+  return this->getContainerId();
+}
+
+/**
+ * Returns whether the element type may be replicated into one copy per subtree
+ * task. A data type opts out by declaring the SupportsSubtreeTaskReplication
+ * constant false; every other type is replicated.
+ */
+template <class StackType>
+INLINE_METHOD bool peano4::data::RegisteredStackContainer<StackType>::supportsSubtreeTaskReplication() const {
+  using ElementType = typename peano4::grid::StackContainer<StackType>::ElementType;
+  if constexpr (requires { ElementType::SupportsSubtreeTaskReplication; }) {
+    return ElementType::SupportsSubtreeTaskReplication;
+  } else {
+    return true;
+  }
+}
+
+template <class StackType>
+INLINE_METHOD void peano4::data::RegisteredStackContainer<StackType>::initialiseSerialSlot() {
+  peano4::grid::StackContainer<StackType>::initialiseSerialSlot();
+}
+
+template <class StackType>
+INLINE_METHOD void peano4::data::RegisteredStackContainer<StackType>::resizePoolForTree(
+  const std::size_t cellCount,
+  const std::size_t faceCount,
+  const std::size_t vertexCount
+) {
+  switch (_kind) {
+  case peano4::data::ManagedContainerKind::CellData:
+    peano4::grid::StackContainer<StackType>::resizePool(cellCount);
+    break;
+  case peano4::data::ManagedContainerKind::FaceData:
+    peano4::grid::StackContainer<StackType>::resizePool(faceCount);
+    break;
+  case peano4::data::ManagedContainerKind::VertexData:
+    peano4::grid::StackContainer<StackType>::resizePool(vertexCount);
+    break;
+  }
+}
+
+template <class StackType>
+INLINE_METHOD void peano4::data::RegisteredStackContainer<StackType>::migratePoolForTree(
+  const std::vector<std::pair<int, int>>& cellSlotPairs,
+  const std::vector<std::pair<int, int>>& faceSlotPairs,
+  const std::vector<std::pair<int, int>>& vertexSlotPairs,
+  const std::size_t                       cellCount,
+  const std::size_t                       faceCount,
+  const std::size_t                       vertexCount
+) {
+  switch (_kind) {
+  case peano4::data::ManagedContainerKind::CellData:
+    peano4::grid::StackContainer<StackType>::migratePoolSlots(cellSlotPairs, cellCount);
+    break;
+  case peano4::data::ManagedContainerKind::FaceData:
+    peano4::grid::StackContainer<StackType>::migratePoolSlots(faceSlotPairs, faceCount);
+    break;
+  case peano4::data::ManagedContainerKind::VertexData:
+    peano4::grid::StackContainer<StackType>::migratePoolSlots(vertexSlotPairs, vertexCount);
+    break;
+  }
+  // Repartitioned data received before the swap lands in its new slots now.
+  for (auto& pendingTransfer : _pendingPoolTransfers) {
+    this->getPoolSlot(pendingTransfer.first) = std::move(pendingTransfer.second);
+  }
+  _pendingPoolTransfers.clear();
+}
+
+template <class StackType>
+INLINE_METHOD void peano4::data::RegisteredStackContainer<StackType>::replicateInterfaceSlots(
+  const std::vector<std::pair<int, int>>& facePairs,
+  const std::vector<std::pair<int, int>>& vertexPairs,
+  const int                               chunkNumber,
+  const int                               numberOfChunks
+) {
+  switch (_kind) {
+  case peano4::data::ManagedContainerKind::FaceData:
+    peano4::grid::StackContainer<StackType>::replicatePoolSlots(facePairs, chunkNumber, numberOfChunks);
+    break;
+  case peano4::data::ManagedContainerKind::VertexData:
+    peano4::grid::StackContainer<StackType>::replicatePoolSlots(vertexPairs, chunkNumber, numberOfChunks);
+    break;
+  case peano4::data::ManagedContainerKind::CellData:
+    break;
+  }
+}
+
+template <class StackType>
+INLINE_METHOD void peano4::data::RegisteredStackContainer<StackType>::packBoundarySlots(
+  const std::vector<std::vector<int>>& facePackLists,
+  const std::vector<std::vector<int>>& vertexPackLists
+) {
+  switch (_kind) {
+  case peano4::data::ManagedContainerKind::FaceData:
+    peano4::communication::CommunicationManager::packPoolSlots(*this, facePackLists);
+    break;
+  case peano4::data::ManagedContainerKind::VertexData:
+    peano4::communication::CommunicationManager::packPoolSlots(*this, vertexPackLists);
+    break;
+  case peano4::data::ManagedContainerKind::CellData:
+    break;
+  }
+}
+
+/** Moves this container's pool data of repartitioned entities between the ranks. */
+template <class StackType>
+INLINE_METHOD void peano4::data::RegisteredStackContainer<StackType>::transferPoolSlotsForTree(
+  const std::map<int, std::vector<int>>& sendCellSlots,
+  const std::map<int, std::vector<int>>& receiveCellSlots,
+  const std::map<int, std::vector<int>>& sendFaceSlots,
+  const std::map<int, std::vector<int>>& receiveFaceSlots,
+  const std::map<int, std::vector<int>>& sendVertexSlots,
+  const std::map<int, std::vector<int>>& receiveVertexSlots
+) {
+  switch (_kind) {
+  case peano4::data::ManagedContainerKind::CellData:
+    peano4::communication::CommunicationManager::transferPoolSlots(
+      *this,
+      sendCellSlots,
+      receiveCellSlots,
+      _pendingPoolTransfers
+    );
+    break;
+  case peano4::data::ManagedContainerKind::FaceData:
+    peano4::communication::CommunicationManager::transferPoolSlots(
+      *this,
+      sendFaceSlots,
+      receiveFaceSlots,
+      _pendingPoolTransfers
+    );
+    break;
+  case peano4::data::ManagedContainerKind::VertexData:
+    peano4::communication::CommunicationManager::transferPoolSlots(
+      *this,
+      sendVertexSlots,
+      receiveVertexSlots,
+      _pendingPoolTransfers
+    );
+    break;
+  }
+}
+
+template <class StackType>
+INLINE_METHOD void peano4::data::RegisteredStackContainer<StackType>::finishBoundaryExchange(
+  const std::vector<std::vector<int>>& facePackLists,
+  const std::vector<std::vector<int>>& vertexPackLists,
+  const std::vector<int>&              faceFrozenSlotBases,
+  const std::vector<int>&              vertexFrozenSlotBases
+) {
+  switch (_kind) {
+  case peano4::data::ManagedContainerKind::FaceData:
+    peano4::communication::CommunicationManager::finishPoolExchange(*this, facePackLists, faceFrozenSlotBases);
+    break;
+  case peano4::data::ManagedContainerKind::VertexData:
+    peano4::communication::CommunicationManager::finishPoolExchange(*this, vertexPackLists, vertexFrozenSlotBases);
+    break;
+  case peano4::data::ManagedContainerKind::CellData:
+    break;
+  }
+}
+
+template <class StackType>
+INLINE_METHOD void peano4::data::RegisteredStackContainer<StackType>::prepareLocalSlots(const int numberOfSlots) {
+  assertion(numberOfSlots > 0, numberOfSlots);
+  this->growLocalSlots(numberOfSlots);
+}
+
+template <class StackType>
+INLINE_METHOD void peano4::data::RegisteredStackContainer<StackType>::clear() {
+  _pendingPoolTransfers.clear();
+  peano4::grid::StackContainer<StackType>::clear();
+}

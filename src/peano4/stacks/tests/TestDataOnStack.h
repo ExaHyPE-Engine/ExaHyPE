@@ -6,20 +6,20 @@ namespace peano4::stacks::tests {
   class TestDataOnStack;
 } // namespace peano4::stacks::tests
 
-class peano4::stacks::tests::TestDataOnStack {
+class peano4::stacks::tests::TestDataOnStack final {
 public:
   static constexpr int Cardinality = 1024;
 
-  std::array<int, Cardinality> data;
+  std::array<int, Cardinality> data{};
 
-  explicit TestDataOnStack();
-  explicit TestDataOnStack(int v);
-  ~TestDataOnStack() noexcept = default;
+  TestDataOnStack() = default;
+  explicit TestDataOnStack(const int value);
 
   TestDataOnStack(const TestDataOnStack& other);
   TestDataOnStack(TestDataOnStack&& other) noexcept;
   TestDataOnStack& operator=(const TestDataOnStack& other) = delete;
   TestDataOnStack& operator=(TestDataOnStack&& other) noexcept;
+  ~TestDataOnStack() noexcept = default;
 
   void clone(const TestDataOnStack& other);
 };

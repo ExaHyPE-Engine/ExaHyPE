@@ -6,57 +6,13 @@ from peano4.solversteps.ActionSet import ActionSet
 
 
 class AbstractUpdateParticleGridAssociation(ActionSet):
-    """Maintains the dual-tree association between particles and vertices.
+    """Maintains the association between particles and vertices.
 
     Each particle is stored at the closest vertex on the finest level that can
-    accommodate its search radius. The subclasses implement different sorting
-    strategies for this relation:
-
-    peano4.particles.UpdateParticleGridAssociation_Reassign,
-    peano4.particles.UpdateParticleGridAssociation_LiftDrop, or
-    peano4.particles.UpdateParticleGridAssociation_BucketSort.
-
-    @image html dual-tree.png
-
-    Changing a particle position or search radius invalidates its association
-    until a sorting traversal completes. Neighbourhood queries are invalid during
-    this interval. The action set invokes finishedTraversal() after every rank has
-    completed its local trees so the sieve exchange advances to the next sweep.
-
-    ## Domain decomposition
-
-    A caller combines a sorting action with
-    peano4.particles.UpdateParallelState. Sorting requires at least two sweeps:
-    the first lifts misplaced particles or inserts them into a sieve, and following
-    sweeps exchange and drop them. A horizontal tree cut can require one additional
-    sweep per crossed level.
-
-    A caller gives sorting a low descend_invocation_order. Drops then precede
-    particle updates during descent, while reassignment and lifts follow updates
-    during backtracking.
-
-    ## Particle interactions during sorting
-
-    Persistent vertices next to an AMR boundary retain particles whose finer
-    destination would be a hanging vertex. These particles therefore participate
-    in multilevel interactions.
-
-    @image html SievingAlongAMRBoundaries.png
-
-    A particle that drops during an interaction sweep can contribute on both
-    levels. A caller disables interactions during such a sweep unless the
-    interaction update can remove the contribution accumulated before the drop.
-
-    ## Sieving
-
-    Particles use a type-wide toolbox::particles::SieveParticles instance when
-    they cross a horizontal tree cut or move farther than a local lift can handle.
-    Bucket sorting uses the sieve for every transition; the other variants use it
-    only when a transition cannot remain on the current tree.
-
-    Sorting changes particle-list storage. A continuous particle memory pool must
-    gather and resort its lists around this action. See
-    @ref toolbox_particles_memorypool and @ref page_toolbox_particles_mesh_consistency.
+    accommodate its search radius, and a change of a particle position or search
+    radius invalidates that association until a sorting traversal completes.
+    Sorting changes particle-list storage, so a continuous particle memory pool
+    has to gather and resort its lists around this action.
     """
 
     DefaultDescendInvocationOrder = -65536
@@ -101,7 +57,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
   for ([[maybe_unused]] const auto* const particle : fineGridVertex{{PARTICLES_CONTAINER}}) {
     assertion(
       marker.isContainedInAdjacentCells(
-        particle->getX(),
+        toolbox::particles::periodicImageTowardsVertex(particle->getX(), marker),
         0.5,
         ownershipTolerance
       ),
@@ -113,14 +69,8 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
 """
     )
 
-    """Drops fitting particles from a local parent vertex.
-
-    A vertical tree cut can make a parent vertex remote, so only local parent
-    vertices may provide particles. A drop into a horizontal cut is copied to
-    the next sweep's sieve because the child tree is unavailable locally.
-
-    @image html UpdateParticleGridAssociation_LiftDrop.png
-    """
+    # A vertical tree cut can make a parent vertex remote, so only a local parent
+    # vertex hands out particles.
     _Template_Drop = jinja2.Template(
         """
   for (int parentVertex = 0; parentVertex < TWO_POWER_D; parentVertex++) {
@@ -141,10 +91,9 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
         if (particleFitsFineLevel and marker.isParentOfSubtree()
             and toolbox::particles::particleWillBeDroppedFurther(*particle, marker)) {
           ++_numberOfDropsIntoHorizontalTreeDecomposition;
-          fineGridVertex{{PARTICLES_CONTAINER}}.particlesCanNotBeDroppedLocallySoRollOverForNextMeshSweep(
-            particle
-          );
-          ++particleIterator;
+          // The sieve set takes ownership of the particle, so the coarse
+          // container has to release it and the loop advances to the next one.
+          particleIterator = parentParticles.particleCanNotBeLiftedLocally(particleIterator);
         } else if (particleFitsFineLevel) {
           ++_numberOfDrops;
           particle->setCellH(marker.getH());
@@ -158,7 +107,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
             particleIsLocal,
             parentVertexPosition,
             3.0 * marker.getH(),
-            _spacetreeId,
+            _treeId,
             "AbstractUpdateParticleGridAssociation::_Template_Drop"
           );
           toolbox::particles::assignmentchecks::assignParticleToVertex(
@@ -168,7 +117,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
             particleIsLocal,
             marker.getX(),
             marker.getH(),
-            _spacetreeId,
+            _treeId,
             "AbstractUpdateParticleGridAssociation::_Template_Drop",
             parentVertexPosition,
             3.0 * marker.getH()
@@ -177,13 +126,13 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
             fineGridVertex{{PARTICLES_CONTAINER}}.isValid(),
             fineGridVertex{{PARTICLES_CONTAINER}}.toString(),
             parentParticles.toString(),
-            _spacetreeId
+            _treeId
           );
           assertion(
             parentParticles.isValid(),
             fineGridVertex{{PARTICLES_CONTAINER}}.toString(),
             parentParticles.toString(),
-            _spacetreeId
+            _treeId
           );
           logDebug(
             "Drop particle " << particle->toString() << " from " << parentParticles.toString()
@@ -202,11 +151,8 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
 """
     )
 
-    """Lifts every particle before its vertex is destroyed.
-
-    A local parent vertex receives the particles directly. Particles whose
-    parent vertex is remote enter the sieve for the next traversal.
-    """
+    # A local parent vertex receives the particles directly. A particle whose
+    # parent vertex is remote enters the sieve for the next traversal.
     _Template_LiftAllParticles = jinja2.Template(
         """
   std::bitset<DIMENSIONS> parentVertex;
@@ -252,7 +198,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
         particleIsLocal,
         marker.getX(),
         marker.getH(),
-        _spacetreeId,
+        _treeId,
         "AbstractUpdateParticleGridAssociation::_Template_LiftAllParticles (parent vertex is local)"
       );
       toolbox::particles::assignmentchecks::assignParticleToVertex(
@@ -262,7 +208,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
         particleIsLocal,
         parentVertexPosition,
         parentCellSize,
-        _spacetreeId,
+        _treeId,
         "AbstractUpdateParticleGridAssociation::_Template_LiftAllParticles (parent vertex is local)",
         marker.getX(),
         marker.getH()
@@ -286,7 +232,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
         particleIsLocal,
         marker.getX(),
         marker.getH(),
-        _spacetreeId,
+        _treeId,
         "AbstractUpdateParticleGridAssociation::_Template_LiftAllParticles"
       );
       toolbox::particles::assignmentchecks::assignParticleToSieveSet(
@@ -296,7 +242,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
         particleIsLocal,
         marker.getX(),
         marker.getH(),
-        _spacetreeId,
+        _treeId,
         "AbstractUpdateParticleGridAssociation::_Template_LiftAllParticles"
       );
     }
@@ -316,11 +262,8 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
         return False
 
     def get_includes(self):
-        """Provides particle sorting and generated-record dependencies."""
         return jinja2.Template(
             """
-#include "tarch/multicore/Lock.h"
-
 #include "toolbox/particles/MultiscaleTransitions.h"
 #include "toolbox/particles/assignmentchecks/TracingAPI.h"
 
@@ -332,18 +275,18 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
         ).render(**self.d)
 
     def get_constructor_body(self):
-        return super().get_constructor_body() + "\n  _spacetreeId = treeNumber;\n"
+        return super().get_constructor_body() + "\n  _treeId = treeNumber;\n"
 
     def get_attributes(self):
         return jinja2.Template(
             """
-  int _spacetreeId;
-  int _numberOfParticleReassignmentsOnCurrentLevel;
-  int _numberOfLifts;
-  int _numberOfDrops;
-  int _numberOfLiftsIntoSieveSet;
-  int _numberOfDropsFromSieveSet;
-  int _numberOfDropsIntoHorizontalTreeDecomposition;
+  int _treeId{-1};
+  int _numberOfParticleReassignmentsOnCurrentLevel{0};
+  int _numberOfLifts{0};
+  int _numberOfDrops{0};
+  int _numberOfLiftsIntoSieveSet{0};
+  int _numberOfDropsFromSieveSet{0};
+  int _numberOfDropsIntoHorizontalTreeDecomposition{0};
 """
         ).render(**self.d)
 

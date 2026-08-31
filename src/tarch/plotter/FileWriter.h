@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "tarch/Assertions.h"
 #include "tarch/la/Vector.h"
 
 namespace tarch::plotter {
@@ -10,12 +11,20 @@ namespace tarch::plotter {
 
 class tarch::plotter::FileWriter {
 public:
-  FileWriter(const std::string& outputDirectory, const int numberOfSubdomains);
+  explicit FileWriter(const std::string& outputDirectory);
   FileWriter(const FileWriter&)            = delete;
   FileWriter(FileWriter&&)                 = delete;
-  virtual ~FileWriter()                    = default;
   FileWriter& operator=(const FileWriter&) = delete;
   FileWriter& operator=(FileWriter&&)      = delete;
+  virtual ~FileWriter()                    = default;
+
+  /**
+   * Claims one piece of the output file and returns its id for the create
+   * calls. Any number of concurrent plot writers can claim pieces; the file
+   * orders them by the caller's key, so the output is deterministic however
+   * the writers are scheduled.
+   */
+  int acquirePiece(int orderKey);
 
   virtual bool isOpen() const;
   virtual bool writeToFile(const std::string& filename, const double time) = 0;
@@ -26,6 +35,9 @@ public:
   static bool getDoublePrecisionOutput();
 
 protected:
+  /** A plot point's coordinates quantised to the deduplication tolerance. */
+  using VertexKey = std::tuple<std::int64_t, std::int64_t, std::int64_t>;
+
   struct DataField {
     std::string         name{};
     int                 components = 1;
@@ -33,7 +45,7 @@ protected:
   };
 
   struct VertexHash {
-    std::size_t operator()(const std::tuple<long long, long long, long long>& key) const;
+    std::size_t operator()(const VertexKey& key) const;
   };
 
   struct SubdomainBuffers {
@@ -45,7 +57,7 @@ protected:
     std::vector<DataField> pointFields{};
     std::vector<DataField> cellFields{};
 
-    std::unordered_map<std::tuple<long long, long long, long long>, int, VertexHash> vertexMap;
+    std::unordered_map<VertexKey, int, VertexHash> vertexMap;
   };
 
   struct SubdomainBuffersSequence {
@@ -54,83 +66,67 @@ protected:
   };
 
   /**
-   * Globally-agreed data-field schema for a collective parallel write. Holds
-   * the field names and component counts (the `values` of the DataFields stay
-   * empty); it exists so that every rank - including ranks that hold no local
-   * data - creates and collectively writes the identical set of datasets /
-   * variables. Without it, an empty rank derives an empty field list from its
-   * (null) local reference and skips the per-field collective calls that the
-   * non-empty ranks make, which deadlocks collective HDF5/NetCDF IO.
+   * Field names and component counts for a collective parallel write; the
+   * `values` of the DataFields stay empty. Every rank creates and writes the
+   * identical set of datasets, a rank without local data included.
    */
   struct FieldSchema {
     std::vector<DataField> pointFields{};
     std::vector<DataField> cellFields{};
   };
 
-  // Semantic role of a data field, inferred from its component count. The plotter
-  // API only carries a count, so the role follows the usual visualisation
-  // convention: 1 = scalar, 2 or 3 = vector, 9 = tensor. Any other count stays a
-  // generic multi-component array.
+  // Role of a data field, derived from its component count: A count of 1 is a
+  // scalar, 2 or 3 a vector, 9 a tensor, every other count generic.
   enum class FieldKind { Scalar, Vector, Tensor, Generic };
 
   struct FieldLayout {
     FieldKind kind;
-    // Number of components written. A vector is always written with 3
-    // components (a 2D vector is padded with a zero z) and a tensor with 9, so
-    // ParaView and the other readers interpret the field as a vector or tensor
-    // regardless of the source count. Generic fields keep their source count.
+    // Number of components written. A vector takes 3 components, padded with a
+    // zero z in 2D, and a tensor 9; a generic field keeps its source count.
     int writtenComponents;
   };
 
   class DataPlotter {
   public:
-    DataPlotter(
-      FileWriter&             plotter,
-      const int               subdomainId,
-      std::vector<DataField>& targetFields,
-      const std::string&      identifier,
-      const int               components
-    );
+    DataPlotter(std::vector<DataField>& targetFields, const std::string& identifier, const int components);
     DataPlotter(const DataPlotter&)            = delete;
     DataPlotter(DataPlotter&&)                 = delete;
-    ~DataPlotter()                             = default;
     DataPlotter& operator=(const DataPlotter&) = delete;
     DataPlotter& operator=(DataPlotter&&)      = delete;
+    ~DataPlotter()                             = default;
 
     template <class T>
     void writeTuple(const int index, const T* const values, const int numberOfValues);
 
   private:
-    FileWriter&             _plotter;
     std::vector<DataField>& _targetFields;
-    int                     _fieldIndex;
-    int                     _components;
+    int                     _fieldIndex{-1};
+    int                     _components{1};
   };
 
 public:
-  enum class VertexSharing { Shared, Distinct };
+  enum class VertexMerging { Merged, Distinct };
 
   class VertexPlotter {
   public:
-    VertexPlotter(FileWriter& plotter, const int subdomainId, const VertexSharing vertexSharing);
+    VertexPlotter(FileWriter& plotter, int subdomainId, VertexMerging vertexMerging);
     VertexPlotter(const VertexPlotter&)            = delete;
     VertexPlotter(VertexPlotter&&)                 = delete;
-    ~VertexPlotter()                               = default;
     VertexPlotter& operator=(const VertexPlotter&) = delete;
     VertexPlotter& operator=(VertexPlotter&&)      = delete;
+    ~VertexPlotter()                               = default;
 
     int plotVertex(const tarch::la::Vector<2, double>& position);
     int plotVertex(const tarch::la::Vector<3, double>& position);
 
   private:
-    FileWriter&         _plotter;
     SubdomainBuffers&   _buffers;
-    const VertexSharing _vertexSharing;
+    const VertexMerging _vertexMerging;
   };
 
   std::unique_ptr<VertexPlotter> createVertexPlotter(
-    const int           subdomainId,
-    const VertexSharing vertexSharing = VertexSharing::Shared
+    int           subdomainId,
+    VertexMerging vertexMerging = VertexMerging::Merged
   );
 
   class VertexDataPlotter {
@@ -143,9 +139,9 @@ public:
     );
     VertexDataPlotter(const VertexDataPlotter&)            = delete;
     VertexDataPlotter(VertexDataPlotter&&)                 = delete;
-    ~VertexDataPlotter()                                   = default;
     VertexDataPlotter& operator=(const VertexDataPlotter&) = delete;
     VertexDataPlotter& operator=(VertexDataPlotter&&)      = delete;
+    ~VertexDataPlotter()                                   = default;
 
     void plotVertexData(const int index, const double value);
     void plotVertexData(const int index, const tarch::la::Vector<2, double>& value);
@@ -176,9 +172,9 @@ public:
     CellPlotter(FileWriter& plotter, const int subdomainId);
     CellPlotter(const CellPlotter&)            = delete;
     CellPlotter(CellPlotter&&)                 = delete;
-    ~CellPlotter()                             = default;
     CellPlotter& operator=(const CellPlotter&) = delete;
     CellPlotter& operator=(CellPlotter&&)      = delete;
+    ~CellPlotter()                             = default;
 
     int plotHexahedron(const int* const vertexIndices);
     int plotQuadrangle(const int* const vertexIndices);
@@ -187,9 +183,8 @@ public:
     int plotTriangle(const int* const vertexIndices);
 
   private:
-    FileWriter&       _plotter;
     SubdomainBuffers& _buffers;
-    std::int32_t      _currentOffset = 0;
+    std::int32_t      _currentOffset;
 
     int pushCell(const std::int32_t* const vertexIndices, const int numberOfVertices, const std::uint8_t vtkType);
 
@@ -209,9 +204,9 @@ public:
     );
     CellDataPlotter(const CellDataPlotter&)            = delete;
     CellDataPlotter(CellDataPlotter&&)                 = delete;
-    ~CellDataPlotter()                                 = default;
     CellDataPlotter& operator=(const CellDataPlotter&) = delete;
     CellDataPlotter& operator=(CellDataPlotter&&)      = delete;
+    ~CellDataPlotter()                                 = default;
 
     void plotCellData(const int index, const double value);
     void plotCellData(const int index, const tarch::la::Vector<2, double>& value);
@@ -240,7 +235,14 @@ public:
 protected:
   static void validateIdentifier(const std::string& id);
   void        createOutputDirectory() const;
-  void        checkCanOpenPlotter(const int subdomainId) const;
+
+  /**
+   * Validates the piece id and returns its buffer set, under the acquisition
+   * lock: Concurrent writers may still be claiming pieces, which grows the
+   * deque, and even a growing deque's size and element lookup must not be
+   * read unguarded. The returned reference stays valid without the lock.
+   */
+  SubdomainBuffers& pieceBuffers(int subdomainId);
 
   // MPI-IO hints for the parallel writers (collective buffering for the large
   // collective writes).
@@ -277,12 +279,28 @@ protected:
   std::string _outputDirectory;
   bool        _written = false;
 
-  std::vector<SubdomainBuffers> _subdomains{};
+  /**
+   * One buffer set per acquired piece. A deque never relocates its entries
+   * when it grows, so the references the plotters bind stay valid while
+   * further pieces are claimed.
+   */
+  std::deque<SubdomainBuffers> _subdomains{};
 
 private:
+  /** Order keys of the pieces, parallel to the buffer deque. */
+  std::vector<int>        _pieceOrderKeys{};
+  std::unordered_set<int> _claimedPieceOrderKeys{};
+
+  /**
+   * Serialises piece acquisition and the piece lookups of the plotter
+   * constructors. Each plot writer claims one piece per snapshot before it
+   * plots, so the lock sits outside every per-patch path.
+   */
+  std::mutex _pieceAcquisitionMutex{};
+
   static bool _doublePrecisionOutput;
 };
 
-#include "CellDataPlotter.cpph"
-#include "FileWriter.cpph"
-#include "VertexDataPlotter.cpph"
+#include "tarch/plotter/CellDataPlotter.cpph"
+#include "tarch/plotter/FileWriter.cpph"
+#include "tarch/plotter/VertexDataPlotter.cpph"

@@ -4,8 +4,8 @@
 
 #include "runner/Engine.h"
 #include "runner/Format.h"
+#include "runner/GlobalStatistics.h"
 #include "runner/Instrumentation.h"
-#include "runner/LoadBalancer.h"
 #include "runner/PhaseNames.h"
 #include "runner/ReportBox.h"
 #include "runner/RuntimeParameters.h"
@@ -64,11 +64,7 @@ runner::TimeLoop::TimeLoop(
   _plotStep(plotStep),
   _dynamicAMR(dynamicAMR) {}
 
-bool runner::TimeLoop::terminatedGracefully() const { return _terminatedGracefully; }
-
 std::string runner::TimeLoop::formatETA(const double fraction) const {
-  // Allocation-heavy first-step timing is retained, while initialisation drains are excluded from
-  // recurring-work extrapolation.
   const auto drainSeconds = _context.measurements.dynamicAMR.getAccumulatedValue() - _dynamicAMRSecondsBeforeLoop;
   const auto elapsed      = _timeSteppingSeconds + _context.measurements.plot.getAccumulatedValue() + drainSeconds;
   if (elapsed <= 0.0 or fraction <= 0.0 or fraction >= 1.0) {
@@ -98,7 +94,7 @@ void runner::TimeLoop::logTimeStep(
   if (maximumSteps > 0) {
     fraction = std::clamp(static_cast<double>(completedSteps) / maximumSteps, 0.0, 1.0);
   } else if (timeBounded) {
-    // The minimum stamp is the time the whole domain has reached; it drives progress and completion.
+    // The minimum stamp is the time the whole domain has reached.
     fraction = std::clamp(minimumTimeStamp / terminalTime, 0.0, 1.0);
   }
   const std::string estimatedTimeRemaining = fraction > 0.0 ? formatETA(fraction) : "";
@@ -113,7 +109,7 @@ void runner::TimeLoop::logTimeStep(
 
   std::ostringstream timeStep;
   timeStep << runner::Format::wallClock(wallClockSeconds) << " · t = " << runner::Format::scientific(minimumTimeStamp);
-  // Local time stepping spans a range; globally stepped cells share one stamp.
+  // Local time stepping spans a range of stamps, global time stepping gives every cell one stamp.
   if (maximumTimeStamp > minimumTimeStamp) {
     timeStep << " .. " << runner::Format::scientific(maximumTimeStamp);
   }
@@ -124,10 +120,8 @@ void runner::TimeLoop::logTimeStep(
     box.line(labelledRow(name, renderStatistics(statistics), labelWidth));
   }
 
-  // Grid-wide throughput; skipped on the warm-up step, whose wall time is allocation-dominated.
   if (showPerformance) {
-    const auto leaves =
-      static_cast<double>(runner::loadBalancer().getStatistics().getGlobalNumberOfInnerUnrefinedCells());
+    const auto         leaves = static_cast<double>(runner::globalStatistics().getGlobalNumberOfInnerUnrefinedCells());
     std::ostringstream performance;
     performance << runner::Format::rate(leaves / wallClockSeconds, "cell");
     if (_context.repositories.getNumberOfDoFs) {
@@ -168,7 +162,6 @@ void runner::TimeLoop::logPlot(
       label << "/" << numberOfSnapshots;
     }
   }
-  // Plain line: keeps the rules' padding, but consecutive plots stack without a blank between them.
   _context.box.line(
     std::string(runner::BlockIndent, ' ') + label.str() + "  " + runner::Format::wallClock(wallClockSeconds)
     + " · t = " + runner::Format::scientific(timeStamp)
@@ -205,10 +198,9 @@ void runner::TimeLoop::run() {
   enum class Action { TimeStep, Plot, Stop };
 
   while (true) {
-    // A completed time step may have committed refine/coarsen events. Realise them on the
-    // dedicated DynamicAMR observer before the next plot or time step, so both always run
-    // on a settled topology. A run that is terminating on a non-critical assertion skips
-    // the regrid and dumps its final state on the grid it has.
+    // A completed time step may have committed refine or coarsen events, and the DynamicAMR
+    // observer realises them before the next plot or time step. A run that terminates on a
+    // non-critical assertion dumps its final state on the grid it has.
     if (_dynamicAMR.isEnabled() and _dynamicAMR.hasPendingMeshUpdates()
         and not tarch::hasNonCriticalAssertionBeenViolated()) {
       _dynamicAMR.run();
@@ -235,8 +227,8 @@ void runner::TimeLoop::run() {
 
     Action action;
     if (tarch::hasNonCriticalAssertionBeenViolated()) {
-      if (not _terminatedGracefully) {
-        _terminatedGracefully = true;
+      if (not _stoppedAfterNonCriticalAssertion) {
+        _stoppedAfterNonCriticalAssertion = true;
         logError("Non-critical assertion has been triggered in code. Dump final state and terminate.");
         action = Action::Plot;
       } else {
@@ -254,13 +246,8 @@ void runner::TimeLoop::run() {
     } else if (not stepLimited and snapInterval > 0.0 and keepTimeStepping and completedPlots < snapshots - 1
                and (minStamp >= nextMinPlot or maxStamp >= nextMaxPlot) and repositories.mayPlot()) {
       // The final-state dump at termination completes the numbered snapshot count, so the
-      // interval trigger stops one short. Solvers advancing at different rates spread the
-      // stamps: minStamp belongs to the slowest solver, maxStamp to the fastest, and with
-      // subcycling or local time stepping a plot target can sit between the two for many
-      // sweeps. Without the bound the fastest stamp crosses surplus targets before the
-      // slowest one ends the run. The snapshot spacing follows the fastest solver; testing
-      // only the slowest stamp would space the snapshots evenly in terminal time, at the
-      // price of plotting nothing until the slowest solver reaches each target.
+      // interval trigger stops one short. minStamp belongs to the slowest solver and maxStamp
+      // to the fastest, so the snapshot spacing follows the fastest solver.
       nextMinPlot += snapInterval;
       nextMaxPlot += snapInterval;
       if (nextMinPlot < minStamp) {
@@ -277,10 +264,9 @@ void runner::TimeLoop::run() {
       justWroteSnapshot = false;
       action            = Action::TimeStep;
     } else if (timeStepInFlight and not repositories.mayPlot()) {
-      // Terminal reached mid logical step: finish it before stopping (a step spans several sweeps),
-      // regardless of whether plotting is enabled - otherwise we would stop in an inconsistent state.
-      // A plot sweep also clears mayPlot(), so only an actually in-flight time step warrants
-      // another sweep; otherwise a run ending on its final plot would compute one surplus step.
+      // A logical time step spans several sweeps, so a step that is in flight when the terminal
+      // time arrives runs to its end. A plot sweep also clears mayPlot(), so only an in-flight
+      // time step starts another sweep.
       action = Action::TimeStep;
     } else if (not justWroteSnapshot and (snapInterval > 0.0 or stepPlotInterval > 0.0)) {
       justWroteSnapshot = true;
@@ -294,7 +280,7 @@ void runner::TimeLoop::run() {
 
     if (action == Action::Stop) {
       // After a non-critical assertion we only dump the final state; no closing time-step summary.
-      if (not _terminatedGracefully and completedTimeSteps > 0 and completedTimeSteps != lastLoggedStep) {
+      if (not _stoppedAfterNonCriticalAssertion and completedTimeSteps > 0 and completedTimeSteps != lastLoggedStep) {
         logTimeStep(
           repositories.getMinTimeStamp(),
           repositories.getMaxTimeStamp(),

@@ -2,14 +2,14 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "Watch.h"
 
-#include "Log.h"
+#include "tarch/instrumentation/Info.h"
 
 tarch::instrumentation::Watch::Watch(
   [[maybe_unused]] const std::string& className,
   const std::string&                  operationName,
   const bool                          plotResultInDestructor,
-  bool                                startToTickImmediately // = true
-):
+  bool                                startToTickImmediately
+) :
   _plotResultInDestructor(plotResultInDestructor),
   _operationName(operationName),
   _startClockTicks(0),
@@ -30,32 +30,24 @@ tarch::instrumentation::Watch::~Watch() {
   if (_plotResultInDestructor) {
     if (_operationName.empty()) {
       logInfo(
-        "Total number of clock ticks within block (CPU time, calendar time): "
-        << "(" << getCPUTime() << "s"
-        << "," << getCalendarTime() << "s"
-        << ")"
+        "Total number of clock ticks within block (CPU time, calendar time): " << "(" << getCPUTime() << "s"
+                                                                               << "," << getCalendarTime() << "s"
+                                                                               << ")"
       );
     } else {
       logInfo(
-        "Operation "
-        << _operationName << ": Total number of clock ticks within block (CPU time, calendar time): "
-        << "(" << getCPUTime() << "s"
-        << "," << getCalendarTime() << "s"
-        << ")"
+        "Operation " << _operationName << ": Total number of clock ticks within block (CPU time, calendar time): "
+                     << "(" << getCPUTime() << "s"
+                     << "," << getCalendarTime() << "s"
+                     << ")"
       );
     }
   }
 }
 
 /**
- * (Re)start the timer
- *
- * The constructor invokes this operation as well, so a call here restarts the
- * measurement. There is no need to call start() after stop(): omitting it
- * simply keeps the baseline, i.e. all getters continue to refer to the time
- * zero from the watch's construction.
- *
- * @see stop()
+ * Restarts the timer, so the getters report the time between this call and the
+ * next stop().
  */
 void tarch::instrumentation::Watch::start() {
   _startClockTicks = std::clock();
@@ -64,13 +56,9 @@ void tarch::instrumentation::Watch::start() {
 }
 
 /**
- * Stop the timer
- *
- * A timer may be stopped multiple times, as stopping does not reset the start
- * time. The getters return meaningful results only once stop() has been
- * called.
- *
- * @see start()
+ * Stops the timer without resetting the start time, so a repeated call
+ * measures from the same start. The getters return the elapsed time only after
+ * this call.
  */
 void tarch::instrumentation::Watch::stop() {
   _elapsedClockTicks = std::clock() - _startClockTicks;
@@ -79,24 +67,13 @@ void tarch::instrumentation::Watch::stop() {
 }
 
 /**
- * Return CPU time in seconds
- *
- * Returns the elapsed CPU time between the start and the stop command of the
- * timer, i.e. the clock ticks spent by the process. Take care: this counter
- * might overflow, especially on a 32 bit architecture.
- *
- * ## Multithreading
- *
- * Under multithreading, CPU time sums up the clock ticks invested by the
- * individual cores, i.e. moving from a one core to a dual core machine
- * roughly doubles the CPU time.
- *
- * @return CPU time in seconds
+ * Returns the CPU time in seconds between start() and stop(), summed over the
+ * cores the process ran on. The clock tick counter can overflow.
  */
 double tarch::instrumentation::Watch::getCPUTime() const {
-  double lhs = static_cast<double>(_elapsedClockTicks);
-  double rhs = static_cast<double>(CLOCKS_PER_SEC);
-  return lhs / rhs;
+  const double elapsedTicks   = static_cast<double>(_elapsedClockTicks);
+  const double ticksPerSecond = static_cast<double>(CLOCKS_PER_SEC);
+  return elapsedTicks / ticksPerSecond;
 }
 
 std::clock_t tarch::instrumentation::Watch::getCPUTicks() const { return _elapsedClockTicks; }
@@ -110,8 +87,6 @@ double tarch::instrumentation::Watch::getCalendarTime() const {
 }
 
 /**
- * Returns whether the watch is currently on, and false once it is stopped.
- * On and off is a logical concept: internally a watch administers system time
- * snapshots, and the getters return differences of these snapshots.
+ * Returns true between start() and stop(), and false after stop().
  */
 bool tarch::instrumentation::Watch::isOn() const { return _isRunning; }

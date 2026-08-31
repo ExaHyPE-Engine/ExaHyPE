@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 template <typename T>
-toolbox::blockstructured::ChildDataStage<T>::ChildDataStage(int numberOfChildren, int valuesPerChild) :
+toolbox::blockstructured::ChildDataStage<T>::ChildDataStage(const int numberOfChildren, const int valuesPerChild) :
   _numberOfChildren(numberOfChildren),
   _valuesPerChild(valuesPerChild) {
   assertion(numberOfChildren > 0 and numberOfChildren < 64);
@@ -14,16 +14,19 @@ toolbox::blockstructured::ChildDataStage<T>::ChildDataStage(int numberOfChildren
  * sweep, so a frame that is still in flight when the stage dies marks a
  * destroyed sibling set whose restriction never ran.
  */
+// The injected class name after the template argument list keeps the destructor name in the scope
+// ISO C++ looks it up in.
 template <typename T>
 toolbox::blockstructured::ChildDataStage<T>::ChildDataStage::~ChildDataStage() {
   assertion(_frames.empty());
 }
 
+/** Returns the frame of a coarse entity, or nullptr while none is open. */
 template <typename T>
-INLINE_METHOD typename toolbox::blockstructured::ChildDataStage<T>::Frame* toolbox::blockstructured::ChildDataStage<
-  T>::find(const void* coarseCellKey) {
+INLINE_METHOD const typename toolbox::blockstructured::ChildDataStage<T>::Frame* toolbox::blockstructured::
+  ChildDataStage<T>::find(const void* const coarseEntityKey) const {
   for (auto frame = _frames.rbegin(); frame != _frames.rend(); ++frame) {
-    if (frame->key == coarseCellKey) {
+    if (frame->key == coarseEntityKey) {
       return &(*frame);
     }
   }
@@ -31,37 +34,31 @@ INLINE_METHOD typename toolbox::blockstructured::ChildDataStage<T>::Frame* toolb
 }
 
 template <typename T>
-INLINE_METHOD const typename toolbox::blockstructured::ChildDataStage<T>::Frame* toolbox::blockstructured::
-  ChildDataStage<T>::find(const void* coarseCellKey) const {
-  for (auto frame = _frames.rbegin(); frame != _frames.rend(); ++frame) {
-    if (frame->key == coarseCellKey) {
-      return &(*frame);
-    }
-  }
-  return nullptr;
+INLINE_METHOD typename toolbox::blockstructured::ChildDataStage<T>::Frame* toolbox::blockstructured::ChildDataStage<
+  T>::find(const void* const coarseEntityKey) {
+  return const_cast<Frame*>(std::as_const(*this).find(coarseEntityKey));
 }
 
 /**
- * Copies one child's values into the frame of its coarse cell.
+ * Copies one child's values into the frame of its coarse entity.
  *
- * The coarse cell is identified by a stable address, typically its patch
- * storage, because recomputing a parent position from child geometry could
- * round differently for different children. Destroyed sibling sets nest along
- * the depth-first traversal, so the frame is searched from the innermost end.
- * Returns true when this call completes the sibling set.
+ * The caller identifies the coarse entity by a stable address, typically its
+ * patch storage. Destroyed sibling sets nest along the depth-first traversal,
+ * so the frame is searched from the innermost end. Returns true when this call
+ * completes the sibling set.
  */
 template <typename T>
 INLINE_METHOD bool toolbox::blockstructured::ChildDataStage<T>::stage(
-  const void*    coarseCellKey,
-  int            childIndex,
-  const T* const childValues
+  const void* const coarseEntityKey,
+  const int         childIndex,
+  const T* const    childValues
 ) {
   assertion(childIndex >= 0 and childIndex < _numberOfChildren);
-  auto* frame = find(coarseCellKey);
+  auto* frame = find(coarseEntityKey);
   if (frame == nullptr) {
     _frames.emplace_back();
     frame      = &_frames.back();
-    frame->key = coarseCellKey;
+    frame->key = coarseEntityKey;
     frame->values.resize(static_cast<std::size_t>(_numberOfChildren) * _valuesPerChild);
   }
   assertion((frame->filledChildren & (std::uint64_t{1} << childIndex)) == 0);
@@ -74,39 +71,84 @@ INLINE_METHOD bool toolbox::blockstructured::ChildDataStage<T>::stage(
   return frame->filledChildren == (std::uint64_t{1} << _numberOfChildren) - 1;
 }
 
+/**
+ * Hands out one child's staging slot so the caller can fill it in place.
+ *
+ * The frame remembers the tag of its first claim, which lets a caller carry one
+ * small datum, such as the face side a restriction targets, alongside the
+ * values. Every claim of one frame has to agree on the tag.
+ */
 template <typename T>
-INLINE_METHOD bool toolbox::blockstructured::ChildDataStage<T>::hasFrame(const void* coarseCellKey) const {
-  return find(coarseCellKey) != nullptr;
+INLINE_METHOD T* toolbox::blockstructured::ChildDataStage<T>::claim(
+  const void* const coarseEntityKey,
+  const int         childIndex,
+  const int         frameTag
+) {
+  assertion(childIndex >= 0 and childIndex < _numberOfChildren);
+  auto* frame = find(coarseEntityKey);
+  if (frame == nullptr) {
+    _frames.emplace_back();
+    frame      = &_frames.back();
+    frame->key = coarseEntityKey;
+    frame->tag = frameTag;
+    frame->values.resize(static_cast<std::size_t>(_numberOfChildren) * _valuesPerChild);
+  }
+  assertion(frame->tag == frameTag);
+  assertion((frame->filledChildren & (std::uint64_t{1} << childIndex)) == 0);
+  frame->filledChildren |= std::uint64_t{1} << childIndex;
+  return frame->values.data() + static_cast<std::size_t>(childIndex) * _valuesPerChild;
 }
 
+/** Returns whether any child of a coarse entity has arrived. */
+template <typename T>
+INLINE_METHOD bool toolbox::blockstructured::ChildDataStage<T>::hasFrame(const void* const coarseEntityKey) const {
+  return find(coarseEntityKey) != nullptr;
+}
+
+/** Returns the datum the first claim of a coarse entity's frame carried. */
+template <typename T>
+INLINE_METHOD int toolbox::blockstructured::ChildDataStage<T>::frameTag(const void* const coarseEntityKey) const {
+  const auto* const frame = find(coarseEntityKey);
+  assertion(frame != nullptr);
+  return frame->tag;
+}
+
+/** Returns whether one named child of a coarse entity has arrived. */
 template <typename T>
 INLINE_METHOD bool toolbox::blockstructured::ChildDataStage<T>::hasChild(
-  const void* coarseCellKey,
-  int         childIndex
+  const void* const coarseEntityKey,
+  const int         childIndex
 ) const {
   assertion(childIndex >= 0 and childIndex < _numberOfChildren);
-  const auto* frame = find(coarseCellKey);
+  const auto* const frame = find(coarseEntityKey);
   return frame != nullptr and (frame->filledChildren & (std::uint64_t{1} << childIndex)) != 0;
 }
 
+/** Returns one child's staged values, which the caller has to have staged. */
 template <typename T>
 INLINE_METHOD const T* toolbox::blockstructured::ChildDataStage<T>::child(
-  const void* coarseCellKey,
-  int         childIndex
+  const void* const coarseEntityKey,
+  const int         childIndex
 ) const {
   assertion(childIndex >= 0 and childIndex < _numberOfChildren);
-  const auto* frame = find(coarseCellKey);
+  const auto* const frame = find(coarseEntityKey);
   assertion(frame != nullptr);
   return frame->values.data() + static_cast<std::size_t>(childIndex) * _valuesPerChild;
 }
 
+/**
+ * Drops a coarse entity's frame once its reduction has run.
+ *
+ * A caller reaches this only for a frame it opened, so a key that names no open
+ * frame stops the run.
+ */
 template <typename T>
-INLINE_METHOD void toolbox::blockstructured::ChildDataStage<T>::discard(const void* coarseCellKey) {
+INLINE_METHOD void toolbox::blockstructured::ChildDataStage<T>::discard(const void* const coarseEntityKey) {
   for (auto frame = _frames.rbegin(); frame != _frames.rend(); ++frame) {
-    if (frame->key == coarseCellKey) {
+    if (frame->key == coarseEntityKey) {
       _frames.erase(std::next(frame).base());
       return;
     }
   }
-  assertion(false);
+  tarch::terminateWithError("A discard names a coarse entity that holds no open frame.");
 }

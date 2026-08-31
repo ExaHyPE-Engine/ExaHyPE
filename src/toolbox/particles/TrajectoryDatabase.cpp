@@ -3,17 +3,17 @@
 #include "TrajectoryDatabase.h"
 
 #include "tarch/Assertions.h"
-#include "tarch/instrumentation/Log.h"
+#include "tarch/Termination.h"
+#include "tarch/instrumentation/Warning.h"
 #include "tarch/mpi/Rank.h"
-#include "tarch/multicore/Lock.h"
 
 toolbox::particles::TrajectoryDatabase::Entry::Entry(
-  const tarch::la::Vector<DIMENSIONS, double>& x_,
-  double                                       timestamp_,
+  const tarch::la::Vector<DIMENSIONS, double>& position,
+  double                                       timestamp,
   int                                          numberOfDataEntries
 ) :
-  Snapshot(timestamp_, numberOfDataEntries),
-  x(x_) {}
+  Snapshot(timestamp, numberOfDataEntries),
+  x(position) {}
 
 toolbox::particles::TrajectoryDatabase::TrajectoryDatabase(
   double positionDelta,
@@ -21,20 +21,18 @@ toolbox::particles::TrajectoryDatabase::TrajectoryDatabase(
   bool   deltasAreRelative
 ) :
   SnapshotDatabase(timeDelta, deltasAreRelative),
-  _positionDelta(positionDelta),
-  _maxPositionDelta(0.0),
-  _numberOfDataPointsPerParticle(0) {
+  _positionDelta(positionDelta) {
   _precision = 8;
 }
 
 toolbox::particles::TrajectoryDatabase::~TrajectoryDatabase() { clear(); }
 
 /**
- * Particles are spread over the ranks, so each rank writes its own file to
- * avoid clashes. In a serial run the rank suffix is dropped.
+ * Each rank owns a part of the particles and writes its own file, so the name
+ * carries the rank number as soon as more than one rank runs.
  */
 std::string toolbox::particles::TrajectoryDatabase::outputFileName() const {
-  if (tarch::mpi::Rank::getInstance().getNumberOfRanks() > 0) {
+  if (tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1) {
     return _fileName + "-rank-" + std::to_string(_rank) + ".csv";
   }
   return _fileName + ".csv";
@@ -67,17 +65,18 @@ void toolbox::particles::TrajectoryDatabase::writeHeader(std::ostream& file) con
 #else
   file << "number(0), number(1), t, x(0), x(1), x(2)";
 #endif
-  for (int i = 0; i < _numberOfDataPointsPerParticle; i++) {
-    file << ", data(" << i << ")";
+  for (int dataIndex = 0; dataIndex < _numberOfDataPointsPerParticle; dataIndex++) {
+    file << ", data(" << dataIndex << ")";
   }
   file << std::endl;
 }
 
 bool toolbox::particles::TrajectoryDatabase::hasUnwrittenSnapshots() const {
-  for (const auto& particle : _data) {
-    auto      it      = _writtenSnapshotsPerParticle.find(particle.first);
-    const int written = (it == _writtenSnapshotsPerParticle.end()) ? 0 : it->second;
-    if (static_cast<int>(particle.second.size()) > written) {
+  for (const auto& particleEntry : _data) {
+    const auto snapshotCountEntry = _writtenSnapshotsPerParticle.find(particleEntry.first);
+    const int  writtenSnapshots =
+      (snapshotCountEntry == _writtenSnapshotsPerParticle.end()) ? 0 : snapshotCountEntry->second;
+    if (static_cast<int>(particleEntry.second.size()) > writtenSnapshots) {
       return true;
     }
   }
@@ -85,23 +84,23 @@ bool toolbox::particles::TrajectoryDatabase::hasUnwrittenSnapshots() const {
 }
 
 void toolbox::particles::TrajectoryDatabase::writeUnwrittenSnapshots(std::ostream& file) {
-  for (const auto& particle : _data) {
-    const int total    = static_cast<int>(particle.second.size());
-    int&      written  = _writtenSnapshotsPerParticle[particle.first];
-    const int newCount = total - written;
-    if (newCount > 0) {
+  for (const auto& particleEntry : _data) {
+    const int totalSnapshots       = static_cast<int>(particleEntry.second.size());
+    int&      writtenSnapshots     = _writtenSnapshotsPerParticle[particleEntry.first];
+    const int numberOfNewSnapshots = totalSnapshots - writtenSnapshots;
+    if (numberOfNewSnapshots > 0) {
       // New snapshots sit at the front of the newest-first list; emit them oldest-first.
-      std::vector<const Entry*> fresh;
-      fresh.reserve(newCount);
-      auto it = particle.second.begin();
-      for (int i = 0; i < newCount; i++) {
-        fresh.push_back(&(*it));
-        ++it;
+      std::vector<const Entry*> unwrittenSnapshots;
+      unwrittenSnapshots.reserve(numberOfNewSnapshots);
+      auto snapshotIterator = particleEntry.second.begin();
+      for (int snapshotIndex = 0; snapshotIndex < numberOfNewSnapshots; snapshotIndex++) {
+        unwrittenSnapshots.push_back(&(*snapshotIterator));
+        ++snapshotIterator;
       }
-      for (auto r = fresh.rbegin(); r != fresh.rend(); ++r) {
-        writeRow(file, particle.first, **r);
+      for (auto snapshot = unwrittenSnapshots.rbegin(); snapshot != unwrittenSnapshots.rend(); ++snapshot) {
+        writeRow(file, particleEntry.first, **snapshot);
       }
-      written = total;
+      writtenSnapshots = totalSnapshots;
     }
   }
 }
@@ -112,47 +111,47 @@ void toolbox::particles::TrajectoryDatabase::resetWriteTracking() { _writtenSnap
 
 void toolbox::particles::TrajectoryDatabase::setPositionDeltaBetweenTwoSnapshots(double value, bool deltasAreRelative) {
   assertion(value >= 0.0);
+  const std::scoped_lock lock(_mutex);
   _positionDelta     = value;
   _maxPositionDelta  = 1e-20;
   _deltasAreRelative = deltasAreRelative;
 }
 
 /**
- * A new snapshot is kept if the particle is new, if it has moved far enough, or
- * if enough time has passed. Two positions for the same time stamp are flagged
- * as inconsistent and replace the existing one.
+ * The caller holds _mutex. The call inserts an empty entry for a particle that
+ * the database does not hold yet.
  */
 toolbox::particles::TrajectoryDatabase::AddSnapshotAction toolbox::particles::TrajectoryDatabase::getAction(
   const std::pair<int, int>&                   number,
   const tarch::la::Vector<DIMENSIONS, double>& x,
   double                                       timestamp
 ) {
-  auto [iterator, inserted] = _data.try_emplace(number);
-  const auto& entries       = iterator->second;
+  auto [particleIterator, inserted] = _data.try_emplace(number);
+  const auto& entries               = particleIterator->second;
   if (inserted or entries.empty()) {
     return AddSnapshotAction::Append;
   }
 
-  const auto&  newest = entries.front();
-  const auto   oldX   = newest.x;
-  const double delta  = tarch::la::norm2(oldX - x);
-  _maxPositionDelta   = std::max(delta, _maxPositionDelta);
+  const auto&  newest           = entries.front();
+  const auto   previousPosition = newest.x;
+  const double positionDelta    = tarch::la::norm2(previousPosition - x);
+  _maxPositionDelta             = std::max(positionDelta, _maxPositionDelta);
 
-  if (tarch::la::equals(newest.timestamp, timestamp) and not tarch::la::equals(oldX, x)) {
+  if (tarch::la::equals(newest.timestamp, timestamp) and not tarch::la::equals(previousPosition, x)) {
     logWarning(
-      "Particle " << number.first << "x" << number.second << " has two locations " << x << " and " << oldX
-                  << " for same time stamp " << timestamp << ". This is inconsistent"
+      "Particle " << number.first << "x" << number.second << " has two locations " << x << " and " << previousPosition
+                  << " for same time stamp " << timestamp << ". This is inconsistent."
     );
     return AddSnapshotAction::Replace;
   }
   if (tarch::la::equals(newest.timestamp, timestamp)) {
     return AddSnapshotAction::Ignore;
   }
-  if (_deltasAreRelative and _maxPositionDelta >= DeltaCutOffThreshold
-      and delta / _maxPositionDelta >= _positionDelta) {
+  if (_deltasAreRelative and _maxPositionDelta >= DeltaCutoffThreshold
+      and positionDelta / _maxPositionDelta >= _positionDelta) {
     return AddSnapshotAction::Append;
   }
-  if (not _deltasAreRelative and delta >= _positionDelta) {
+  if (not _deltasAreRelative and positionDelta >= _positionDelta) {
     return AddSnapshotAction::Append;
   }
   if (timestamp - newest.timestamp >= _timeDelta and _timeDelta > 0.0) {
@@ -166,22 +165,22 @@ void toolbox::particles::TrajectoryDatabase::addParticleSnapshot(
   double                                       timestamp,
   const tarch::la::Vector<DIMENSIONS, double>& x
 ) {
-  if (_rank < 0) {
-    _rank = tarch::mpi::Rank::getInstance().getRank();
+  {
+    const std::scoped_lock lock(_mutex);
+    if (_rank < 0) {
+      _rank = tarch::mpi::Rank::getInstance().getRank();
+    }
+    switch (getAction(number, x, timestamp)) {
+    case AddSnapshotAction::Ignore:
+      break;
+    case AddSnapshotAction::Append:
+      _data.at(number).push_front(Entry(x, timestamp, _numberOfDataPointsPerParticle));
+      break;
+    case AddSnapshotAction::Replace:
+      _data.at(number).front().x = x;
+      break;
+    }
   }
-
-  tarch::multicore::Lock lock(_semaphore);
-  switch (getAction(number, x, timestamp)) {
-  case AddSnapshotAction::Ignore:
-    break;
-  case AddSnapshotAction::Append:
-    _data.at(number).push_front(Entry(x, timestamp, _numberOfDataPointsPerParticle));
-    break;
-  case AddSnapshotAction::Replace:
-    _data.at(number).front().x = x;
-    break;
-  }
-  lock.free();
 
   dumpCSVFile();
 }
@@ -202,33 +201,33 @@ void toolbox::particles::TrajectoryDatabase::addParticleSnapshot(
   int                                          numberOfDataEntries,
   const double*                                data
 ) {
-  if (not _data.empty() and _numberOfDataPointsPerParticle != numberOfDataEntries) {
-    std::ostringstream message;
-    message << "Inconsistent number of particle data entries: database expects " << _numberOfDataPointsPerParticle
-            << " but received " << numberOfDataEntries << ".";
-    throw std::runtime_error(message.str());
-  }
-  assertion(_numberOfDataPointsPerParticle == numberOfDataEntries or _data.empty());
-  _numberOfDataPointsPerParticle = std::max(_numberOfDataPointsPerParticle, numberOfDataEntries);
+  {
+    const std::scoped_lock lock(_mutex);
+    if (not _data.empty() and _numberOfDataPointsPerParticle != numberOfDataEntries) {
+      std::ostringstream message;
+      message << "Inconsistent number of particle data entries: database expects " << _numberOfDataPointsPerParticle
+              << " but received " << numberOfDataEntries << ".";
+      tarch::terminateWithError(message.str());
+    }
+    assertion(_numberOfDataPointsPerParticle == numberOfDataEntries or _data.empty());
+    _numberOfDataPointsPerParticle = std::max(_numberOfDataPointsPerParticle, numberOfDataEntries);
 
-  if (_rank < 0) {
-    _rank = tarch::mpi::Rank::getInstance().getRank();
+    if (_rank < 0) {
+      _rank = tarch::mpi::Rank::getInstance().getRank();
+    }
+    switch (getAction(number, x, timestamp)) {
+    case AddSnapshotAction::Ignore:
+      break;
+    case AddSnapshotAction::Append:
+      _data.at(number).push_front(Entry(x, timestamp, _numberOfDataPointsPerParticle));
+      std::copy_n(data, _numberOfDataPointsPerParticle, _data.at(number).front().data.begin());
+      break;
+    case AddSnapshotAction::Replace:
+      _data.at(number).front().x = x;
+      std::copy_n(data, _numberOfDataPointsPerParticle, _data.at(number).front().data.begin());
+      break;
+    }
   }
-
-  tarch::multicore::Lock lock(_semaphore);
-  switch (getAction(number, x, timestamp)) {
-  case AddSnapshotAction::Ignore:
-    break;
-  case AddSnapshotAction::Append:
-    _data.at(number).push_front(Entry(x, timestamp, _numberOfDataPointsPerParticle));
-    std::copy_n(data, _numberOfDataPointsPerParticle, _data.at(number).front().data.begin());
-    break;
-  case AddSnapshotAction::Replace:
-    _data.at(number).front().x = x;
-    std::copy_n(data, _numberOfDataPointsPerParticle, _data.at(number).front().data.begin());
-    break;
-  }
-  lock.free();
 
   dumpCSVFile();
 }

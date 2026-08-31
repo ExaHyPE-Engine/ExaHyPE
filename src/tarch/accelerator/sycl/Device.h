@@ -7,36 +7,21 @@
 #include <sycl/sycl.hpp>
 
 namespace tarch::accelerator {
-  // Opaque team handle wrapping a SYCL nd_item. The reference points to the
-  // item parameter of the enclosing kernel; lifetime is the entire outer-lambda
-  // body, so any nested call that captures SyclTeam by value remains valid.
+  /**
+   * Opaque team handle for a SYCL work item. The reference stays valid for the enclosing kernel
+   * invocation, so a nested call may capture this handle by value.
+   */
   struct SyclTeam {
-    // Global-qualify ::sycl: the directory-derived test namespace
-    // tarch::accelerator::sycl::tests makes an (unqualified) `sycl` resolve to
-    // tarch::accelerator::sycl inside this namespace, shadowing the SYCL library.
+    // The global qualifier avoids collision with tarch::accelerator::sycl.
     const ::sycl::nd_item<1>& item;
   };
   using TeamHandle = SyclTeam;
 
-  inline constexpr int kSyclLocalSize = 256;
+  inline constexpr int SyclLocalSize = 256;
 
   /**
-   * Get a SYCL queue
-   *
-   * The Device singleton instantiates all SYCL queues. You can query the
-   * singleton for the total number of (logical) devices. Per device,
-   * we hold one SYCL queue persistently. You can gain access to this
-   * one queue via this getter.
-   *
-   * number is a logical number, i.e. it is a number from 0 to
-   * getNumberOfSYCLQueues(). The actual device number might be totally
-   * different.
-   *
-   * If you use SYCL on the host, too, you should not access this queue
-   * through he accelerator namespace, but use the tarch::multicore
-   * namespace.
-   *
-   * @see tarch::multicore::getHostSYCLQueue()
+   * Returns the queue of a logical device index. That index counts the accelerators only and does
+   * not match a physical device number.
    */
   void* getSYCLQueue(int number);
 } // namespace tarch::accelerator

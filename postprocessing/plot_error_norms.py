@@ -3,13 +3,10 @@
 # use, please see the copyright notice at www.peano-framework.org
 
 import argparse
-import csv
 from pathlib import Path
 import shutil
-from typing import Iterable
 
 import numpy as np
-import pandas as pd
 
 import matplotlib
 
@@ -23,12 +20,16 @@ import matplotlib.pyplot as plt
 
 register_backend("pgf", FigureCanvasPgf)
 
-EXPECTED_COLUMNS = ("t", "l1-error", "l2-error", "l_inf-error")
+try:
+    from postprocessing.check_error_norms import COLUMNS, read_error_norms
+except ImportError:
+    from check_error_norms import COLUMNS, read_error_norms
+
 DEFAULT_DPI = 300
 SERIES_STYLES = (
     ("l1-error", "L1", "#e64b35"),
     ("l2-error", "L2", "#4dbbd5"),
-    ("l_inf-error", "L_inf", "#00a087"),
+    ("linf-error", "L_inf", "#00a087"),
 )
 
 
@@ -79,49 +80,32 @@ def _build_argument_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _normalise_header(fieldnames: Iterable[str | None]) -> list[str]:
-    return [field.strip() for field in fieldnames if field is not None]
-
-
 def _load_csv(path: Path) -> dict[str, np.ndarray]:
-    with path.open(newline="") as handle:
-        reader = csv.reader(handle)
-        try:
-            header = _normalise_header(next(reader))
-        except StopIteration as exc:
-            raise SystemExit(f"ERROR: CSV file is empty: {path}") from exc
-
-    if tuple(header) != EXPECTED_COLUMNS:
+    try:
+        header, rows = read_error_norms(str(path))
+    except OSError as exc:
+        raise SystemExit(f"ERROR: Failed to read CSV file {path}: {exc}") from exc
+    if tuple(header) != COLUMNS:
         raise SystemExit(
             "ERROR: Unexpected CSV header in "
-            f"{path}. Expected {EXPECTED_COLUMNS}, got {tuple(header)}."
+            f"{path}. Expected {COLUMNS}, got {tuple(header)}."
         )
 
-    try:
-        frame = pd.read_csv(path, skipinitialspace=True)
-    except Exception as exc:
-        raise SystemExit(f"ERROR: Failed to read CSV file {path}: {exc}") from exc
-
-    frame.columns = [column.strip() for column in frame.columns]
-    if tuple(frame.columns) != EXPECTED_COLUMNS:
-        raise SystemExit(
-            "ERROR: Unexpected CSV columns in "
-            f"{path}. Expected {EXPECTED_COLUMNS}, got {tuple(frame.columns)}."
-        )
-
-    frame = frame.dropna(how="all")
-    if frame.empty:
+    measurements = [row for row in rows if any(field.strip() for field in row)]
+    if not measurements:
         raise SystemExit(f"ERROR: CSV file contains no data rows: {path}")
+    if any(len(row) != len(COLUMNS) for row in measurements):
+        raise SystemExit(f"ERROR: CSV file contains malformed rows: {path}")
 
     try:
-        frame = frame.astype(float)
+        values = np.asarray(measurements, dtype=float)
     except ValueError as exc:
         raise SystemExit(
             f"ERROR: CSV file contains non-numeric values: {path}"
         ) from exc
 
-    frame = frame.sort_values("t", kind="mergesort")
-    return {column: frame[column].to_numpy() for column in EXPECTED_COLUMNS}
+    order = np.argsort(values[:, 0], kind="stable")
+    return {column: values[order, index] for index, column in enumerate(COLUMNS)}
 
 
 def _resolve_output_path(csv_path: Path, output: str | None) -> Path:
@@ -243,8 +227,8 @@ def _write_outputs(
         figure.savefig(pgf_path, bbox_inches="tight")
     except Exception as exc:
         raise SystemExit(
-            "ERROR: Failed to write PGF output. Ensure a TeX-compatible Matplotlib PGF "
-            f"setup is available. Original error: {exc}"
+            "ERROR: Failed to write PGF output. A TeX-compatible Matplotlib PGF "
+            f"setup has to be available. Original error: {exc}"
         ) from exc
 
     print(f"Wrote PGF: {pgf_path.resolve()}")

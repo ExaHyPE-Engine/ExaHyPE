@@ -2,154 +2,64 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "../DGUtils.h"
-#include "../Functors.h"
-
-/**
- * For the generic kernels that I use here most of the time
- */
-#include "../CellIntegral.h"
-#include "../Riemann.h"
-
-#include "tarch/la/Vector.h"
-#include "tarch/multicore/multicore.h"
-
-#include "peano4/grid/GridControlEvent.h"
+#include "exahype2/dg/CellIntegral.h"
+#include "exahype2/dg/Functors.h"
 #include "peano4/Globals.h"
+#include "tarch/la/Vector.h"
 
-namespace exahype2 {
-  namespace dg {
-    namespace rusanov {
-      /**
-       * Solve Riemann problem on face
-       *
-       * This routine solves the Riemann problem on one face through a Rusanov
-       * solver. It takes the average of the flux left and right, reduces it by
-       * the jump subject to a scaling with the maximum eigenvalue, and finally
-       * adds/substracts the ncp terms.
-       *
-       * The implementation is purely point-wise, i.e. we run over the quadrature
-       * points and use Rusanov per point. It is not clear if this is reasonable
-       * in all cases. It might be better for example to determine the max
-       * eigenvalue per face once and then update all quadrature point subject to
-       * this one eigenvalue.
-       *
-       * ## Implementation details
-       *
-       * The DoFs per face are ordered in standard Peano order:
-       *
-       *         2 3
-       *         0 1
-       *   2 3 [ o o ] 2 3
-       *   0 1 [ o o ] 0 1
-       *         2 3
-       *         0 1
-       *
-       * We serialise the face-local degrees of freedom explicitly and then
-       * multiply the resulting index with the input or output stride.
-       *
-       * ## Linearity in h
-       *
-       * The ncp - as so often - deserves special attention: As we have a
-       * non-conservative term here, we don't write the same flux to the left
-       * and the right face. Indeed, they carry exactly switched signs. We
-       * furthermore note that the original PDE formulation speaks of a
-       * term @f$ B(Q) \nabla B @f$ whereas the Finite Volume formulation's
-       * Rusanov solver uses a @f$ 0.5 B( 0.5(Q^++Q^-) ) (Q^+-Q^-) @f$ term.
-       * Therefore, we need an additional factor of 0.5. However, we do not
-       * need any additional calibration, as we simply pass in the Q
-       * differences into the DG ncp term which expects the gradient. Whatever
-       * comes out of it, should be by a factor of h too big already, i.e.
-       * have the right cardinality of the FV expression.
-       *
-       * In theory, it might be that B is not linear in the vector, i.e. not
-       * linear in an h scaling. However, we always can assume that the B that
-       * is passed in here is a linearisation along the face. Therefore, we can
-       * assume that the scaling is by definition fine with our observation.
-       *
-       *
-       * ## Sign discussion
-       *
-       * We rely on the formulation as discussed on the page Discontinuous Galerkin.
-       * See dg.h or the doxygen html pages for details. I also recommend to read
-       * through the documentation of cellIntegral_patchwise_in_situ_GaussLegendre_functors()
-       * before we dive into the discussion.
-       *
-       * All the comments below assume that both the left and the right side of
-       * the flux compute the flux in the normal direction. It is then the
-       * backpropagation of the Riemann solution which takes into the account
-       * that the ``right'' faces denote an outflow, while the ``left'' faces
-       * encode an inflow.
-       *
-       * @see integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre()
-       *
-       * Bringing all these facts together, we conclude that we end up with a
-       * 1:1 translation of Finite Volumes into the DG world.
-       *
-       */
-      void solveRiemannProblem_pointwise_in_situ(
-        ::exahype2::dg::Flux                         flux,
-        ::exahype2::dg::NonConservativeProduct       ncp,
-        ::exahype2::dg::MaxEigenvalue                maxEigenvalue,
-        const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
-        const tarch::la::Vector<DIMENSIONS,double>&  cellSize,
-        double                                       t,
-        double                                       dt,
-        int                                          order,
-        int                                          unknowns,
-        int                                          auxiliaryVariables,
-        int                                          faceNumber,
-        const double* NOALIAS                   quadraturePoints,
-        bool                                         useFlux,
-        bool                                         useNcp,
-        const double* NOALIAS                   projectedValues,
-        double* NOALIAS                         solution
-      );
+namespace exahype2::dg::rusanov {
+  void solveRiemannProblem_pointwise_in_situ(
+    ::exahype2::dg::Flux                         flux,
+    ::exahype2::dg::NonConservativeProduct       nonConservativeProduct,
+    ::exahype2::dg::MaxEigenvalue                maxEigenvalue,
+    const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+    double                                       t,
+    double                                       dt,
+    int                                          order,
+    int                                          unknowns,
+    int                                          auxiliaryVariables,
+    int                                          faceNumber,
+    const double* NOALIAS                        quadraturePoints,
+    bool                                         evaluateFlux,
+    bool                                         evaluateNonconservativeProduct,
+    const double* NOALIAS                        projectedValues,
+    double* NOALIAS                              solution
+  );
 
-      /**
-       *
-       * @see solveRiemannProblem_pointwise_in_situ()
-       */
-      void solveRiemannProblem_pointwise_in_situ_with_gradient_projection(
-        ::exahype2::dg::Flux                         flux,
-        ::exahype2::dg::NonConservativeProduct       ncp,
-        ::exahype2::dg::MaxEigenvalue                maxEigenvalue,
-        const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
-        const tarch::la::Vector<DIMENSIONS,double>&  cellSize,
-        double                                       t,
-        double                                       dt,
-        int                                          order,
-        int                                          unknowns,
-        int                                          auxiliaryVariables,
-        int                                          faceNumber,
-        const double* NOALIAS                   quadraturePoints,
-        bool                                         useFlux,
-        bool                                         useNcp,
-        const double* NOALIAS                   projectedValues,
-        double* NOALIAS                         solution
-      );
+  void solveRiemannProblem_pointwise_in_situ_with_gradient_projection(
+    ::exahype2::dg::Flux                         flux,
+    ::exahype2::dg::NonConservativeProduct       nonConservativeProduct,
+    ::exahype2::dg::MaxEigenvalue                maxEigenvalue,
+    const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
+    const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+    double                                       t,
+    double                                       dt,
+    int                                          order,
+    int                                          unknowns,
+    int                                          auxiliaryVariables,
+    int                                          faceNumber,
+    const double* NOALIAS                        quadraturePoints,
+    bool                                         evaluateFlux,
+    bool                                         evaluateNonconservativeProduct,
+    const double* NOALIAS                        projectedValues,
+    double* NOALIAS                              solution
+  );
 
-      template <
-        typename Solver,
-        int      order,
-        int      unknowns,
-        int      auxiliaryVariables
-      >
-      void cellIntegral_patchwise_in_situ_GaussLegendre(
-        ::exahype2::CellData<double, double>&          cellData,
-        bool                                           evaluateFlux,
-        bool                                           evaluateNonconservativeProduct,
-        bool                                           evaluateSource,
-        bool                                           evaluatePointSources
-      ) {
-        ::exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre<Solver,order,unknowns,auxiliaryVariables>(
-          cellData,
-          evaluateFlux,
-          evaluateNonconservativeProduct,
-          evaluateSource,
-          evaluatePointSources
-        );
-      }
-    }
+  template <typename Solver, int order, int unknowns, int auxiliaryVariables>
+  void cellIntegral_patchwise_in_situ_GaussLegendre(
+    ::exahype2::CellData<double, double>& cellData,
+    bool                                  evaluateFlux,
+    bool                                  evaluateNonconservativeProduct,
+    bool                                  evaluateSource,
+    bool                                  evaluatePointSources
+  ) {
+    ::exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre<Solver, order, unknowns, auxiliaryVariables>(
+      cellData,
+      evaluateFlux,
+      evaluateNonconservativeProduct,
+      evaluateSource,
+      evaluatePointSources
+    );
   }
-}
+} // namespace exahype2::dg::rusanov

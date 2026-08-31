@@ -13,17 +13,9 @@ class DiscontinuousGalerkinTracing(
 
     Particle tracing over the DG solver.
 
-    The class mirrors FiniteVolumesTracing: it couples a tracer particle set to
-    the solver and projects the cell solution onto the tracer attributes. The
-    default argument list passes the polynomial order and the solver's quadrature
-    points, so the projection kernel can evaluate the DG polynomial right at the
-    particle position.
-
-    ## Update plug-in points
-
-    We only update cells which are marked with getHasUpdated(). For Runge-Kutta
-    type solvers, we assume that this flag is set by the computation of the final
-    linear combination of estimates.
+    The action set couples a tracer particle set to the solver and projects the
+    cell solution onto the tracer attributes. It updates only cells which are
+    marked with getHasUpdated().
     """
 
     def __init__(
@@ -44,11 +36,8 @@ class DiscontinuousGalerkinTracing(
 
         Set up the tracing.
 
-        Setting up the tracing means that we couple the tracer particle set with
-        the solver and state which projection kernel writes solver data into the
-        tracer. The file exahype2/dg/Tracer.h provides a few pre-manufactured
-        routines. The kernel is a plain function call, so you have to ensure that
-        its argument list matches the data you want to dump.
+        The projection kernel is a plain function call, so its argument list has
+        to match the data the tracer stores.
 
         ## Arguments
 
@@ -72,7 +61,7 @@ class DiscontinuousGalerkinTracing(
         """
 
         self.tracerDict = {}
-        # Do not overwrite the dictionary of the superclass, as we need it.
+        # Do not overwrite the dictionary of the superclass.
         self.tracerDict["PARTICLE"] = particle_set.particle_model.name
         self.tracerDict["PARTICLES_CONTAINER"] = particle_set.name
         self.tracerDict["SOLVER_NAME"] = solver._name
@@ -98,11 +87,20 @@ if (
     repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::GridInitialisation
   )
 ) {
+  const bool domainWrapsParticles = toolbox::particles::domainHasPeriodicAxes();
   for (auto* const particle : localParticles) {
+    // The wall vertex of a periodic axis holds particles from both walls, so
+    // the cell reads a particle through its periodic image.
+    const auto image = domainWrapsParticles
+      ? toolbox::particles::periodicImageTowardsCell(particle->getX(), marker)
+      : particle->getX();
     if (
       particle->getMoveState() == globaldata::{{PARTICLE}}::MoveState::NotMovedYet
-      and marker.isContained(particle->getX())
+      and marker.isContained(image)
     ) {
+      if (domainWrapsParticles) {
+        particle->setX(image);
+      }
 {% if PROJECTION_KERNEL %}
       {{PROJECTION_KERNEL}}(
         {{PROJECTION_KERNEL_ARGUMENTS}}
@@ -138,12 +136,12 @@ if (
     def get_includes(self):
         includes = jinja2.Template(
             """
-#include "tarch/multicore/Lock.h"
 #include "peano4/Loop.h"
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
 #include "repositories/SolverRepository.h"
 #include "exahype2/dg/Tracer.h"
+#include "toolbox/particles/particles.h"
 """
         )
         return super().get_includes() + "\n" + includes.render(**self.tracerDict)

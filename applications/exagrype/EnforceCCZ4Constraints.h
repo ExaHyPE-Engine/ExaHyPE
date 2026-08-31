@@ -6,13 +6,11 @@
 
 namespace applications::exahype2::exagrype {
   /**
-   * A postprocessing routine which pushes the solution back into the
-   * area of the CCZ4 constraints. This is a local operation that we can
-   * invoke after each time step per cell.
-   *
-   * It works on the full set of unknowns of the first-order formulation
+   * Pushes the solution of one cell back into the area of the CCZ4 constraints.
+   * The routine reads and writes the full set of unknowns of the first-order
+   * formulation.
    */
-  static inline GPU_CALLABLE_METHOD void enforceCCZ4constraints(double* __restrict__ newQ);
+  static inline GPU_CALLABLE_METHOD void enforceCCZ4constraints(double* NOALIAS newQ);
 } // namespace applications::exahype2::exagrype
 
 #include "EnforceCCZ4Constraints.cpph"

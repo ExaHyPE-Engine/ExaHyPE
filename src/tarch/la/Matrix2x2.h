@@ -4,18 +4,12 @@
 
 template <typename Scalar>
 struct alignas(8) tarch::la::Matrix<2, 2, Scalar> {
-private:
-  Scalar _values[4];
-
-  friend Matrix<2, 2, Scalar> buildMatrix<2, 2, Scalar>(const Scalar* values);
-
 public:
   INLINE_METHOD GPU_CALLABLE_METHOD Matrix();
 
   INLINE_METHOD GPU_CALLABLE_METHOD Matrix(const Scalar& value);
 
-  INLINE_METHOD GPU_CALLABLE_METHOD
-  Matrix(std::initializer_list<Scalar> values);
+  INLINE_METHOD GPU_CALLABLE_METHOD Matrix(std::initializer_list<Scalar> values);
 
   INLINE_METHOD GPU_CALLABLE_METHOD int rows() const;
 
@@ -37,6 +31,11 @@ public:
   INLINE_METHOD GPU_CALLABLE_METHOD Scalar* data();
 
   INLINE_METHOD GPU_CALLABLE_METHOD const Scalar* data() const;
+
+private:
+  Scalar _values[4];
+
+  friend Matrix<2, 2, Scalar> buildMatrix<2, 2, Scalar>(const Scalar* values);
 };
 
-#include "Matrix2x2.cpph"
+#include "tarch/la/Matrix2x2.cpph"

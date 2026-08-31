@@ -31,25 +31,13 @@ class EmptyPreprocessSolution(AbstractFVActionSet):
 
 
 class VolumeWisePreprocessSolution(AbstractFVActionSet):
-  """!
+  """
+  Runs a code snippet over the solution volume by volume.
 
-  Run over the solution volume by volume.
-
-  PreprocessSolution differs from other action sets, as we create it only once.
-  See FV.create_action_sets(). Once the instance does exist, you can tailor it.
-  You can also completely overwrite it.
-
-  See also FV.postprocess_updated_patch(self, kernel) for a discussion of the
-  options ExaHyPE offers. This volume-wise variant might be too heavy-weight for
-  some applications.
-
-  The kernel plugs into touch cell last time. It is the last action set added by
-  the default implementation, so it is the first action set of which
-  touchCellLastTime() is called. We plug into the leaving of the cell because
-  some solvers add further action sets to the solve. Those action sets typically
-  plug into touchCellFirstTime(), and their first time is therefore called after
-  this action set's first time. Using touchCellLastTime() lets any action set
-  added by a subclass still precede this one.
+  FV.create_action_sets() creates this action set once, and a solver can tailor
+  or replace the instance afterwards. The kernel plugs into touchCellLastTime(),
+  so an action set that a subclass adds on touchCellFirstTime() still runs
+  before it.
   """
   def __init__(self,solver):
     AbstractFVActionSet.__init__(self,solver)
@@ -60,19 +48,11 @@ class VolumeWisePreprocessSolution(AbstractFVActionSet):
 
   def add_postprocessing_kernel(self, operation_per_point):
     """
-    Add a code snippet which is applied to every finite volume.
+    Adds the C++ snippet operation_per_point, which runs on every finite volume.
 
-    The snippet can use the following variables:
-
-    - value: Pointer to the current finite volume's data.
-    - x: Centre of the volume as tarch::la::Vector over doubles.
-    - h: Size of the volume as tarch::la::Vector over doubles.
-    - timeStamp: Time stamp of the enclosing cell.
-
-    ## Arguments
-
-    operation_per_point: String
-      C/C++ code snippet.
+    The snippet reads value, the pointer to the volume's data, x, the volume
+    centre, h, the volume size, and timeStamp, the time stamp of the enclosing
+    cell.
     """
     self._compute_kernel += """
 {

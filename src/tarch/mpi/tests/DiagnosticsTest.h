@@ -11,6 +11,11 @@ namespace tarch::mpi::tests {
 class tarch::mpi::tests::DiagnosticsTest final : public tarch::tests::TestCase {
 public:
   DiagnosticsTest();
+  DiagnosticsTest(const DiagnosticsTest&)            = delete;
+  DiagnosticsTest(DiagnosticsTest&&)                 = delete;
+  DiagnosticsTest& operator=(const DiagnosticsTest&) = delete;
+  DiagnosticsTest& operator=(DiagnosticsTest&&)      = delete;
+  ~DiagnosticsTest() override                        = default;
 
   void run() override;
 

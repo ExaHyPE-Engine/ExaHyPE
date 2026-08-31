@@ -21,13 +21,9 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
 
     @f$ Q^{new} = Q^{old} + \sum_i a_i \Delta t F_i(Q). @f$
 
-    The cell array initially contains @f$ Q^{old} @f$ and is updated in place.
-    The stage estimates cover unknowns only, so auxiliary variables remain
+    The cell array holds @f$ Q^{old} @f$ on entry and is updated in place. The
+    stage estimates cover the unknowns only, so the auxiliary variables stay
     unchanged.
-
-    Estimate projections contain intermediate stages, while consumers such as
-    local time stepping require the final state on each face. The final state is
-    therefore projected after every combination, including the first stage.
     """
 
     _Template_Project = """
@@ -70,7 +66,7 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
 
     const auto timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
-    // User postprocessing kernels use the established newQ name.
+    // The postprocessing snippet reads the updated state through newQ.
     [[maybe_unused]] auto* const newQ = updatedState;
     {{POSTPROCESS_UPDATED_CELL_AFTER_FINAL_LINEAR_COMBINATION}}
 
@@ -205,10 +201,8 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
 """
 
     def __init__(self, solver, guard, face_projections: FaceProjections):
-        """Initialise the final Runge-Kutta combination.
-
-        ``guard`` selects the cells to update. ``face_projections`` selects the
-        output projection; only the solution projection is supported.
+        """``guard`` selects the cells to update, and ``face_projections`` has
+        to be the solution projection.
         """
         super().__init__(solver)
         self._guard = guard
@@ -246,6 +240,12 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
             == peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_LAST_TIME
         ):
             result = jinja2.Template(self._Template_UpdateFace).render(**dictionary)
+        elif operation_name == peano4.solversteps.ActionSet.OPERATION_END_TRAVERSAL:
+            result = (
+                "  repositories::"
+                + self._solver.get_name_of_global_instance()
+                + ".reduceLocalUpdates();\n"
+            )
         return result
 
     def get_action_set_name(self):

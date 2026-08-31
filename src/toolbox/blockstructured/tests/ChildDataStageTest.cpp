@@ -1,6 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "toolbox/blockstructured/tests/ChildDataStageTest.h"
+#include "ChildDataStageTest.h"
 
 #include "toolbox/blockstructured/ChildDataStage.h"
 
@@ -11,6 +11,7 @@ void toolbox::blockstructured::tests::ChildDataStageTest::run() {
   testMethod(testSiblingSetLifecycle);
   testMethod(testNestedFrames);
   testMethod(testPartialFrameAccessors);
+  testMethod(testClaimedFramesCarryTheirTag);
 }
 
 void toolbox::blockstructured::tests::ChildDataStageTest::testSiblingSetLifecycle() {
@@ -74,4 +75,34 @@ void toolbox::blockstructured::tests::ChildDataStageTest::testPartialFrameAccess
   validate(not stage.hasChild(&coarseKey, 2));
   validateNumericalEquals(stage.child(&coarseKey, 1)[0], 7.0);
   stage.discard(&coarseKey);
+}
+
+void toolbox::blockstructured::tests::ChildDataStageTest::testClaimedFramesCarryTheirTag() {
+  toolbox::blockstructured::ChildDataStage<double> stage(3, 2);
+  const int                                        coarseKey = 0;
+  constexpr int                                    Side      = 1;
+
+  // The frame carries the side a restriction targets alongside the claimed values.
+  double* const firstChild = stage.claim(&coarseKey, 0, Side);
+  firstChild[0]            = 4.0;
+  firstChild[1]            = 4.5;
+  validateEquals(stage.frameTag(&coarseKey), Side);
+  validate(stage.hasChild(&coarseKey, 0));
+  validate(not stage.hasChild(&coarseKey, 1));
+
+  // A child another rank holds never claims, so the gap between the claims has
+  // to survive until the reduction reads the frame.
+  double* const lastChild = stage.claim(&coarseKey, 2, Side);
+  lastChild[0]            = 6.0;
+  lastChild[1]            = 6.5;
+  validateEquals(stage.frameTag(&coarseKey), Side);
+  validate(not stage.hasChild(&coarseKey, 1));
+
+  validateNumericalEquals(stage.child(&coarseKey, 0)[0], 4.0);
+  validateNumericalEquals(stage.child(&coarseKey, 0)[1], 4.5);
+  validateNumericalEquals(stage.child(&coarseKey, 2)[0], 6.0);
+  validateNumericalEquals(stage.child(&coarseKey, 2)[1], 6.5);
+
+  stage.discard(&coarseKey);
+  validate(not stage.hasFrame(&coarseKey));
 }

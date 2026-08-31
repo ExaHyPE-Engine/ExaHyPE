@@ -3,34 +3,30 @@
 #include "SnapshotDatabase.h"
 
 #include "tarch/Assertions.h"
-#include "tarch/multicore/Lock.h"
+#include "tarch/instrumentation/Error.h"
 
 tarch::database::SnapshotDatabase::SnapshotDatabase(double timeDelta, bool deltasAreRelative) :
-  _fileName(""),
   _timeDelta(timeDelta),
-  _precision(0),
-  _deltasAreRelative(deltasAreRelative),
-  _csvHeaderWritten(false),
-  _rank(-1) {}
+  _deltasAreRelative(deltasAreRelative) {}
 
-tarch::database::SnapshotDatabase::Snapshot::Snapshot(double timestamp_, int numberOfDataEntries) :
-  timestamp(timestamp_),
+tarch::database::SnapshotDatabase::Snapshot::Snapshot(double timestamp, int numberOfDataEntries) :
+  timestamp(timestamp),
   data(numberOfDataEntries, 0.0) {}
 
 /**
- * The name of the CSV file. Only the file base name has to be set by the user;
- * the suffix is added here. Global data goes into one file, so this default
- * appends nothing but the extension.
+ * Returns the name of the CSV file. The caller sets the file base name; the
+ * suffix is added here.
  */
 std::string tarch::database::SnapshotDatabase::outputFileName() const { return _fileName + ".csv"; }
 
 /**
- * Append the snapshots not yet on disk to the CSV file. The header is written,
- * and the file truncated, on the first flush; every later flush appends. So a
- * long run grows the file in place instead of rewriting it over and over.
+ * Appends snapshots not yet on disk. The first flush truncates the file and
+ * writes its header; later flushes append. Directory, open, or write failures
+ * leave all snapshots marked as unwritten, so the next call retries by
+ * rewriting the complete file.
  */
 void tarch::database::SnapshotDatabase::dumpCSVFile() {
-  tarch::multicore::Lock lock(_semaphore);
+  const std::scoped_lock lock(_mutex);
 
   if (not hasUnwrittenSnapshots()) {
     return;
@@ -40,26 +36,44 @@ void tarch::database::SnapshotDatabase::dumpCSVFile() {
   const std::string           fileName       = outputFileName();
   const std::filesystem::path outputPath(fileName);
   if (writeHeaderNow and outputPath.has_parent_path()) {
-    std::filesystem::create_directories(outputPath.parent_path());
+    std::error_code directoryError;
+    std::filesystem::create_directories(outputPath.parent_path(), directoryError);
+    if (directoryError) {
+      logError("Could not create output directory " << outputPath.parent_path() << ": " << directoryError.message());
+      return;
+    }
   }
 
   std::ofstream file(fileName, writeHeaderNow ? std::ios::trunc : std::ios::app);
+  if (not file.is_open()) {
+    logError("Could not open snapshot database file " << fileName << ".");
+    return;
+  }
+
   prepareOutputStream(file);
   if (writeHeaderNow) {
     writeHeader(file);
-    _csvHeaderWritten = true;
   }
   writeUnwrittenSnapshots(file);
+  file.flush();
+
+  if (file.good()) {
+    _csvHeaderWritten = true;
+  } else {
+    logError("Could not write snapshot database file " << fileName << ".");
+    resetWriteTracking();
+    _csvHeaderWritten = false;
+  }
 }
 
 /**
- * Erase the whole database. As nothing is on disk anymore, the next flush
- * rewrites the file from scratch. Thread-safe if lockSemaphore is set.
+ * Erases the whole database. The next flush rewrites the file from scratch.
+ * The caller owns the lock when lockMutex is false.
  */
-void tarch::database::SnapshotDatabase::clear(bool lockSemaphore) {
-  tarch::multicore::Lock lock(_semaphore, false);
+void tarch::database::SnapshotDatabase::clear(bool lockMutex) {
+  std::unique_lock<std::mutex> lock(_mutex, std::defer_lock);
 
-  if (lockSemaphore) {
+  if (lockMutex) {
     lock.lock();
   }
 
@@ -69,14 +83,19 @@ void tarch::database::SnapshotDatabase::clear(bool lockSemaphore) {
 }
 
 void tarch::database::SnapshotDatabase::setOutputFileName(const std::string& filename) {
+  const std::scoped_lock lock(_mutex);
   _fileName         = filename;
   _csvHeaderWritten = false;
   resetWriteTracking();
 }
 
-void tarch::database::SnapshotDatabase::setOutputPrecision(int precision) { _precision = precision; }
+void tarch::database::SnapshotDatabase::setOutputPrecision(int precision) {
+  const std::scoped_lock lock(_mutex);
+  _precision = precision;
+}
 
 void tarch::database::SnapshotDatabase::setTimeDeltaBetweenTwoSnapshots(double value) {
   assertion(value >= 0.0);
+  const std::scoped_lock lock(_mutex);
   _timeDelta = value;
 }

@@ -9,6 +9,12 @@ namespace toolbox::blockstructured::tests {
 } // namespace toolbox::blockstructured::tests
 
 class toolbox::blockstructured::tests::RestrictionTest final : public tarch::tests::TestCase {
+public:
+  RestrictionTest();
+  ~RestrictionTest() override = default;
+
+  void run() override;
+
 private:
   void testRestrictHaloLayer();
   void testRestrictCell();
@@ -20,10 +26,8 @@ private:
   void testApplyTensorProductOrderInvariant();
   void testInterpolateFaceFromCoarse();
   void testRestrictFaceFromChildren();
-
-public:
-  RestrictionTest();
-  ~RestrictionTest() override = default;
-
-  void run() override;
+  void testGatheredHaloRestrictionAveragesTheSubfaceRamp();
+  void testGatheredHaloRestrictionIsStagingOrderInvariant();
+  void testGatheredHaloRestrictionScalesAPartialSubfaceSet();
+  void testGatheredHaloRestrictionRunsInSinglePrecision();
 };

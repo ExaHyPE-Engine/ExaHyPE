@@ -1,6 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "tarch/reader/tests/NetCDFFieldSamplerTest.h"
+#include "NetCDFFieldSamplerTest.h"
 
 #ifdef PEANO_WITH_NETCDF
 
@@ -18,13 +18,17 @@ namespace {
     const std::string&         xKey     = "x",
     const std::string&         yKey     = "y"
   ) {
+    // The file name carries a per-run identifier, so two processes that write into the test
+    // directory at the same time do not overwrite each other's fixture.
+    static const std::string testRunIdentifier =
+      std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) + "-"
+      + std::to_string(std::random_device{}());
     static std::atomic<int> counter = 0;
 
     const std::filesystem::path path = tarch::tests::getWritableTestDirectory()
-      / std::filesystem::path(stem + "-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count())
-                              + "-" + std::to_string(counter++) + ".nc");
+      / std::filesystem::path(stem + "-" + testRunIdentifier + "-" + std::to_string(counter++) + ".nc");
 
-    auto check = [&](int status, const std::string& operation) {
+    auto check = [&](const int status, const std::string& operation) {
       if (status != NC_NOERR) {
         throw std::runtime_error(operation + ": " + nc_strerror(status));
       }
@@ -77,7 +81,7 @@ namespace {
       / std::filesystem::path(stem + "-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count())
                               + "-" + std::to_string(counter++) + ".nc");
 
-    auto check = [&](int status, const std::string& operation) {
+    auto check = [&](const int status, const std::string& operation) {
       if (status != NC_NOERR) {
         throw std::runtime_error(operation + ": " + nc_strerror(status));
       }
@@ -87,14 +91,14 @@ namespace {
       throw std::runtime_error("Invalid fixture dimensions.");
     }
 
-    int ncid     = -1;
-    int xDimId   = -1;
-    int yDimId   = -1;
-    int zDimId   = -1;
-    int xVarId   = -1;
-    int yVarId   = -1;
-    int zVarId   = -1;
-    int fieldVar = -1;
+    int ncid       = -1;
+    int xDimId     = -1;
+    int yDimId     = -1;
+    int zDimId     = -1;
+    int xVarId     = -1;
+    int yVarId     = -1;
+    int zVarId     = -1;
+    int fieldVarId = -1;
 
     check(nc_create(path.string().c_str(), NC_CLOBBER | NC_NETCDF4, &ncid), "Failed to create test NetCDF file");
     check(nc_def_dim(ncid, "x", xValues.size(), &xDimId), "Failed to define x dimension");
@@ -105,13 +109,13 @@ namespace {
     check(nc_def_var(ncid, "z", NC_DOUBLE, 1, &zDimId, &zVarId), "Failed to define z variable");
 
     const int dimensions[3] = {zDimId, yDimId, xDimId};
-    check(nc_def_var(ncid, valueKey.c_str(), NC_DOUBLE, 3, dimensions, &fieldVar), "Failed to define field variable");
+    check(nc_def_var(ncid, valueKey.c_str(), NC_DOUBLE, 3, dimensions, &fieldVarId), "Failed to define field variable");
 
     check(nc_enddef(ncid), "Failed to end NetCDF definition mode");
     check(nc_put_var_double(ncid, xVarId, xValues.data()), "Failed to write x values");
     check(nc_put_var_double(ncid, yVarId, yValues.data()), "Failed to write y values");
     check(nc_put_var_double(ncid, zVarId, zValues.data()), "Failed to write z values");
-    check(nc_put_var_double(ncid, fieldVar, fieldValues.data()), "Failed to write field values");
+    check(nc_put_var_double(ncid, fieldVarId, fieldValues.data()), "Failed to write field values");
     check(nc_close(ncid), "Failed to close test NetCDF file");
 
     return path.string();
@@ -119,7 +123,7 @@ namespace {
 } // namespace
 
 tarch::reader::tests::NetCDFFieldSamplerTest::NetCDFFieldSamplerTest() :
-  TestCase("tarch::reader::tests::NetCDFFieldSamplerTest") {}
+  tarch::tests::TestCase("tarch::reader::tests::NetCDFFieldSamplerTest") {}
 
 void tarch::reader::tests::NetCDFFieldSamplerTest::run() {
   testMethod(testPiecewiseConstantSampleSingleField);
@@ -335,7 +339,6 @@ void tarch::reader::tests::NetCDFFieldSamplerTest::testThreeDimensionalBilinearS
     validateNumericalEquals(sampler.sampleBilinear("material", {5.0, 0.0, 0.0}), 0.5);
     validateNumericalEquals(sampler.sampleBilinear("material", {0.0, 5.0, 0.0}), 1.0);
     validateNumericalEquals(sampler.sampleBilinear("material", {0.0, 0.0, 5.0}), 2.0);
-    // A grid point reproduces its stored value exactly.
     validateNumericalEquals(sampler.sampleBilinear("material", {10.0, 10.0, 10.0}), 7.0);
     validateNumericalEquals(sampler.sampleBilinear("material", {0.0, 0.0, -0.1}), 0.0);
   } catch (...) {
@@ -349,7 +352,7 @@ void tarch::reader::tests::NetCDFFieldSamplerTest::testThreeDimensionalBilinearS
 #else
 
 tarch::reader::tests::NetCDFFieldSamplerTest::NetCDFFieldSamplerTest() :
-  TestCase("tarch::reader::tests::NetCDFFieldSamplerTest") {}
+  tarch::tests::TestCase("tarch::reader::tests::NetCDFFieldSamplerTest") {}
 
 void tarch::reader::tests::NetCDFFieldSamplerTest::run() {}
 

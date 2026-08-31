@@ -3,7 +3,6 @@
 
 include_guard(GLOBAL)
 
-option(PEANO_WITH_MULTITHREADING "Build with multithreading (OpenMP) support" ON)
 option(PEANO_WITH_FPE "Build with floating-point exception traps" OFF)
 option(PEANO_WITH_HDF5 "Build with HDF5 support" ON)
 option(PEANO_WITH_NETCDF "Build with NetCDF support" ON)
@@ -45,9 +44,6 @@ set(SUPPORTED_BUILD_TYPES
 )
 mark_as_advanced(SUPPORTED_BUILD_TYPES)
 
-set(MAX_SPACETREES_PER_RANK "1024" CACHE STRING "Maximum number of spacetrees per MPI rank")
-mark_as_advanced(MAX_SPACETREES_PER_RANK)
-
 function(peano_create_options_target)
   add_library(PeanoOptions INTERFACE)
   target_compile_features(PeanoOptions INTERFACE
@@ -57,7 +53,9 @@ function(peano_create_options_target)
   install(TARGETS PeanoOptions EXPORT ${PROJECT_NAME}Targets)
 
   target_compile_definitions(PeanoOptions INTERFACE
-    MAX_SPACETREES_PER_RANK=${MAX_SPACETREES_PER_RANK}
+    # Source-level spelling of the compiler's restrict qualifier. Hiding the
+    # qualifier behind this macro lets clang-format align declarations.
+    $<$<COMPILE_LANGUAGE:C,CXX,CUDA,HIP>:NOALIAS=__restrict__>
   )
 
   target_include_directories(PeanoOptions INTERFACE

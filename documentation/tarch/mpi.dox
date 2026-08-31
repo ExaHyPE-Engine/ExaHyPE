@@ -4,81 +4,46 @@
 
 \tableofcontents
 
+The tarch::mpi wrappers add return-value checks, timeout diagnostics, and
+watched waits to MPI operations.
 
+# Point-to-point communication
 
-Distributed memory programming in Peano can be tricky, as we have a lot
-of different threads per rank and the ranks run pretty asynchronously.
-Therefore, it is always a bad idea to use blocking or synchronising
-routines. Instead, you should use on routines implemented within
-tarch::mpi as they usually take the MPI+X stuff into account.
-Here are a few recommendations:
+Reserve point-to-point tags through tarch::mpi::Rank::reserveFreeTag(). Two
+variable-length payloads between the same ranks use distinct tags so a receive
+cannot match the wrong message. Start a pairwise exchange only when both ranks
+derive the same participants and payload size.
 
-1.  Do not use a blocking send or receive, even if routines are
-    logically blocking. Instead, use a non-blocking routine and poll the
-    termination via `MPI_Test`. While you poll, invoke
-    `receiveDanglingMessages()` on the services to allow Peano to free the
-    queue from other messages such as load balancing requests which
-    might be in your way.
+Non-blocking operations use tarch::mpi::Request, tarch::mpi::RequestGroup, or
+the stack communication interface. The communication manager can poll
+registered transfers on the calling thread or on the optional communication
+thread. One MPI request has one poller.
 
-2.  Register your own routine as a service (see
-    `tarch::services::Service`) and equip it with a
-    `receiveDanglingMessages()` routine which probes the MPI queues. If
-    a message of relevance is in the MPI queue, receive it. If you can't
-    react directly, buffer it internally. This routine ensures that the
-    MPI buffers can't overflow. Overflows force MPI to fall back from
-    eager to rendeszouz communication which can lead to deadlocks.
+# Collectives
 
-3.  Do never impose any synchronisation unless absolutely required.
-    Notably, try to avoid synchronisation within the action sets! In the
-    ideal case, you implement a Jacobi-like data exchange: The action
-    sets send stuff out. There's a service (see above) which receives
-    the data. This data is then used by the action set (or another one)
-    in the subsequent grid pass.
-
-4.  If you have a global operation, use a non-blocking collective and
-    wait for the collective's test in the subsequent grid run-through.
-
-If a message consists of multiple parts, you might have to fuse it into
-one message to avoid that the first part of a message is received and
-queue polling (on another thread) then grabs the second part
-misinterpreting it for the first part of yet another message.
-
-
-
-# Exchange global data between ranks (reduction)
-
-If you reduce data betwen the ranks, I recommend that you use the tarch
-wrappers. They have two advantages: They automatically provide deadlock
-tracking, and they poll the MPI queues, i.e. if the code stalls as too
-many other messages for other purposes (global load balancing, plotting,
-...) drop in, and remove these messages from the buffers such that MPI
-can make progress. The usage is detailed in
-tarch::mpi::allreduce(), but the code usually resembles:
-
+The collective wrappers create a non-blocking MPI collective and complete its
+watched wait inside the same call. Every rank in the communicator enters
+collectives in the same order, and a collective is skipped only when all ranks
+derive the same condition.
 
 ~~~~~~~~~~~~~~~~~~~~~
-double myBuffer = _myVariable;
+double localValue = 1.0;
+double globalValue = 0.0;
 
 tarch::mpi::allreduce(
-  &myBuffer,
-  &_myVariable,
-  1, MPI_DOUBLE,
+  &localValue,
+  &globalValue,
+  1,
+  MPI_DOUBLE,
   MPI_MIN,
-  tarch::mpi::Rank::getInstance().getCommunicator(),
-  [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+  tarch::mpi::Rank::getInstance().getCommunicator()
 );
 ~~~~~~~~~~~~~~~~~~~~~
 
 # Synchronisation
 
-Peano no longer ships a dedicated boolean semaphore across all MPI ranks; such
-global locks are very expensive and are best avoided. For mutual exclusion within
-a single rank, use the shared memory tarch::multicore::BooleanSemaphore; for
-coordination across ranks, prefer the reduction wrappers above. A global barrier
-is available as the free function `tarch::mpi::barrier()` (with a non-blocking
-`tarch::mpi::ibarrier()`), but I recommend avoiding MPI barriers whenever possible.
+Use rank-local C++ synchronisation for threads and MPI collectives or
+point-to-point messages for ranks. tarch::mpi::barrier() is available when the
+algorithm requires an explicit communicator barrier.
 
-
-
- */
- 
+*/

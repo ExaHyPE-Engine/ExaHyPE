@@ -2,123 +2,32 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "GridVertex.h"
 
-#include "peano4/Loop.h"
+static_assert(
+  std::is_standard_layout_v<peano4::grid::GridVertex>,
+  "A grid vertex travels between ranks as raw bytes, so its layout has to be standard."
+);
+static_assert(
+  std::is_trivially_copyable_v<peano4::grid::GridVertex>,
+  "A grid vertex travels between ranks as raw bytes, so it has to be trivially copyable."
+);
 
-static_assert(std::is_standard_layout_v<peano4::grid::GridVertex>);
-static_assert(std::is_trivially_copyable_v<peano4::grid::GridVertex>);
+/** Returns whether the tree continues below every corner of one cell. */
+bool peano4::grid::GridVertex::areAllVerticesRefined(const peano4::grid::GridVertex vertices[TWO_POWER_D]) {
+  return getRefinedVertices(vertices).all();
+}
 
-#if PEANO_DEBUG
-tarch::la::Vector<DIMENSIONS, double> peano4::grid::GridVertex::getVertexCoordinate(
-  const tarch::la::Vector<DIMENSIONS, double>& cellX,
-  const tarch::la::Vector<DIMENSIONS, double>& cellH,
-  int                                          vertexIndex
+/**
+ * Returns one bit per vertex, set where the vertex is refined. A zero result
+ * means the cell holding those vertices is a leaf.
+ */
+std::bitset<TWO_POWER_D> peano4::grid::GridVertex::getRefinedVertices(
+  const peano4::grid::GridVertex vertices[TWO_POWER_D]
 ) {
-  tarch::la::Vector<DIMENSIONS, double> result = cellX;
-  for (int d = 0; d < DIMENSIONS; ++d) {
-    if ((vertexIndex & (1 << d)) != 0) {
-      result[d] += cellH[d];
-    }
+  std::bitset<TWO_POWER_D> refinedVertices;
+  for (int vertexNumber = 0; vertexNumber < TWO_POWER_D; vertexNumber++) {
+    refinedVertices.set(vertexNumber, vertices[vertexNumber].getState() == peano4::grid::GridVertex::State::Refined);
   }
-  return result;
-}
-#endif
-
-peano4::grid::GridVertex peano4::grid::GridVertex::create(
-  int                                          level,
-  GridVertex::State                            state,
-  const tarch::la::Vector<DIMENSIONS, double>& x,
-  const std::array<int, TWO_POWER_D>&          adjacentRanks,
-  bool                                         isNewFineGridVertex
-) {
-  GridVertex newVertex;
-  newVertex.level = level;
-  newVertex.setState(state);
-#if PEANO_DEBUG
-  newVertex.setX(x);
-#endif
-  newVertex.adjacentRanks         = adjacentRanks;
-  newVertex.backupOfAdjacentRanks = adjacentRanks;
-  newVertex.setFlag(GridVertex::HasBeenAntecessorOfRefinedVertexInPreviousTreeSweep, not isNewFineGridVertex);
-  newVertex.setFlag(GridVertex::IsAntecessorOfRefinedVertexInCurrentTreeSweep, not isNewFineGridVertex);
-  newVertex.clearFlag(peano4::grid::GridVertex::HasBeenParentOfSubtreeVertexInPreviousTreeSweep);
-  newVertex.clearFlag(peano4::grid::GridVertex::IsParentOfSubtreeVertexInCurrentTreeSweep);
-  newVertex.clearFlag(peano4::grid::GridVertex::HasBeenVertexTypeHangingInPreviousTreeSweep);
-  return newVertex;
-}
-
-peano4::grid::GridVertex peano4::grid::GridVertex::create(
-  int                                          level,
-  GridVertex::State                            state,
-  const tarch::la::Vector<DIMENSIONS, double>& cellX,
-  const tarch::la::Vector<DIMENSIONS, double>& cellH,
-  int                                          vertexIndex,
-  const std::array<int, TWO_POWER_D>&          adjacentRanks,
-  bool                                         isNewFineGridVertex
-) {
-#if PEANO_DEBUG
-  return create(level, state, getVertexCoordinate(cellX, cellH, vertexIndex), adjacentRanks, isNewFineGridVertex);
-#else
-  return create(level, state, tarch::la::Vector<DIMENSIONS, double>(0.0), adjacentRanks, isNewFineGridVertex);
-#endif
-}
-
-bool peano4::grid::GridVertex::areAllVerticesRefined(GridVertex vertices[TWO_POWER_D]) {
-  bool result = true;
-  peano4::dForEachCorner([&](const tarch::la::Vector<DIMENSIONS, int>& k, int kScalar) {
-    result &= (vertices[kScalar].getState() == GridVertex::State::Refined);
-  });
-  return result;
-}
-
-bool peano4::grid::GridVertex::areAllVerticesUnrefined(GridVertex vertices[TWO_POWER_D]) {
-  bool result = true;
-  peano4::dForEachCorner([&](const tarch::la::Vector<DIMENSIONS, int>& k, int kScalar) {
-    result &= (vertices[kScalar].getState() == GridVertex::State::Unrefined);
-  });
-  return result;
-}
-
-/**
- * A vertex will be refined if it is already refined or currently refining. It
- * also will be refined if the erase is only triggered.
- */
-bool peano4::grid::GridVertex::willVertexBeRefined(const GridVertex& vertex) {
-  return vertex.getState() == GridVertex::State::Refining or vertex.getState() == GridVertex::State::Refined
-    or vertex.getState() == GridVertex::State::EraseTriggered;
-}
-
-/**
- * A vertex has been refined if it is (already) refined or is erasing or the
- * erase has been triggered.
- */
-bool peano4::grid::GridVertex::hasVertexBeenRefined(const GridVertex& vertex) {
-  return vertex.getState() == GridVertex::State::Refined or vertex.getState() == GridVertex::State::EraseTriggered
-    or vertex.getState() == GridVertex::State::Erasing;
-}
-
-/**
- * @return One bit per vertex, set where willVertexBeRefined() holds. Compare
- *   the result to zero to learn whether a cell is refined.
- */
-std::bitset<TWO_POWER_D> peano4::grid::GridVertex::willVerticesBeRefined(GridVertex vertices[TWO_POWER_D]) {
-  std::bitset<TWO_POWER_D> bitset;
-  for (int i = 0; i < TWO_POWER_D; i++) {
-    assertion(not willVertexBeRefined(vertices[i]) or vertices[i].getState() != GridVertex::State::HangingVertex);
-    bitset.set(i, willVertexBeRefined(vertices[i]));
-  }
-  return bitset;
-}
-
-/**
- * @return One bit per vertex, set where hasVertexBeenRefined() holds.
- */
-std::bitset<TWO_POWER_D> peano4::grid::GridVertex::haveVerticesBeenRefined(GridVertex vertices[TWO_POWER_D]) {
-  std::bitset<TWO_POWER_D> bitset;
-  for (int i = 0; i < TWO_POWER_D; i++) {
-    assertion(not hasVertexBeenRefined(vertices[i]) or vertices[i].getState() != GridVertex::State::HangingVertex);
-    bitset.set(i, hasVertexBeenRefined(vertices[i]));
-  }
-  return bitset;
+  return refinedVertices;
 }
 
 std::ostream& operator<<(std::ostream& out, const peano4::grid::GridVertex& vertex) {
@@ -133,70 +42,19 @@ std::string peano4::grid::GridVertex::toString() const {
   case State::HangingVertex:
     out << "HangingVertex";
     break;
-  case State::New:
-    out << "New";
-    break;
   case State::Unrefined:
     out << "Unrefined";
     break;
   case State::Refined:
     out << "Refined";
     break;
-  case State::RefinementTriggered:
-    out << "RefinementTriggered";
-    break;
-  case State::Refining:
-    out << "Refining";
-    break;
-  case State::EraseTriggered:
-    out << "EraseTriggered";
-    break;
-  case State::Erasing:
-    out << "Erasing";
-    break;
-  case State::Delete:
-    out << "Delete";
-    break;
   }
   out << ")";
 
-  out << ", Flags=0b" << std::bitset<8>(flags) << " [";
-  bool first   = true;
-  auto addFlag = [&](const char* name, std::uint8_t mask) {
-    if (getFlag(mask)) {
-      if (not first) {
-        out << ", ";
-      }
-      out << name;
-      first = false;
-    }
-  };
-  addFlag("HasBeenAntecessorOfRefinedVertexInPreviousTreeSweep", HasBeenAntecessorOfRefinedVertexInPreviousTreeSweep);
-  addFlag("IsAntecessorOfRefinedVertexInCurrentTreeSweep", IsAntecessorOfRefinedVertexInCurrentTreeSweep);
-  addFlag("HasBeenParentOfSubtreeVertexInPreviousTreeSweep", HasBeenParentOfSubtreeVertexInPreviousTreeSweep);
-  addFlag("IsParentOfSubtreeVertexInCurrentTreeSweep", IsParentOfSubtreeVertexInCurrentTreeSweep);
-  addFlag("HasBeenVertexTypeHangingInPreviousTreeSweep", HasBeenVertexTypeHangingInPreviousTreeSweep);
-  addFlag("HasBeenSurroundedByRefinedCellsInPreviousTreeSweep", HasBeenSurroundedByRefinedCellsInPreviousTreeSweep);
-  if (first) {
-    out << "None";
-  }
-  out << "]";
-
-  out << ", NumberOfAdjacentRefinedLocalCells=" << numberOfAdjacentRefinedLocalCells;
-  out << ", NumberOfAdjacentRefinedRemoteCells=" << numberOfAdjacentRefinedRemoteCells;
   out << ", Level=" << level;
 #if PEANO_DEBUG
-  out << ", X=" << x;
+  out << ", Position=" << x;
 #endif
-  out << ", AdjacentRanks=(";
-  for (std::size_t i = 0; i < adjacentRanks.size(); ++i) {
-    if (i > 0) {
-      out << ",";
-    }
-    out << adjacentRanks[i];
-  }
-  out << ")";
-
   out << "}";
 
   return out.str();

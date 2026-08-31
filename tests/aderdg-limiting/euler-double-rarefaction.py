@@ -1,15 +1,5 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-"""Planar Euler double rarefaction with a subcell limiter.
-
-The two rarefactions generate a true vacuum: the velocity jump of eight exceeds
-the vacuum threshold of two sound speeds over the pressure exponent, so the exact
-solution consists of two self-similar fans with vacuum between their tails (Toro,
-"Riemann Solvers and Numerical Methods for Fluid Dynamics", 3rd edition,
-section 4.6). The run measures its error against that closed form, which is the
-reference solution for this scenario.
-"""
-
 import exahype2
 import euler
 

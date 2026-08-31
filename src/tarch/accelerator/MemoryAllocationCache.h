@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "MemoryLocation.h"
+#include "tarch/accelerator/MemoryLocation.h"
 
 namespace tarch::accelerator {
   struct MemoryAllocationCache {
@@ -13,8 +13,8 @@ namespace tarch::accelerator {
     void  clear();
 
     MemoryAllocationCache(const MemoryAllocationCache&)            = delete;
-    MemoryAllocationCache& operator=(const MemoryAllocationCache&) = delete;
     MemoryAllocationCache(MemoryAllocationCache&&)                 = delete;
+    MemoryAllocationCache& operator=(const MemoryAllocationCache&) = delete;
     MemoryAllocationCache& operator=(MemoryAllocationCache&&)      = delete;
 
   private:

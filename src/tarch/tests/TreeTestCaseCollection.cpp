@@ -1,26 +1,32 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #include "TreeTestCaseCollection.h"
-#include "tarch/instrumentation/Log.h"
+
 #include "tarch/Assertions.h"
 
-tarch::tests::TreeTestCaseCollection::
-  TreeTestCaseCollection(const std::string& treeTestCaseCollectionName, bool deleteTestCases, bool writeToLog):
-  TestCase::TestCase(treeTestCaseCollectionName),
+tarch::tests::TreeTestCaseCollection::TreeTestCaseCollection(
+  const std::string& treeTestCaseCollectionName,
+  bool               deleteTestCases,
+  bool               writeToLog
+) :
+  tarch::tests::TestCase(treeTestCaseCollectionName),
   _writeToLog(writeToLog),
   _deleteTestCases(deleteTestCases) {
-  assertion(isNameWithoutHierarchy(treeTestCaseCollectionName), treeTestCaseCollectionName, deleteTestCases, writeToLog);
+  assertion(
+    isNameWithoutHierarchy(treeTestCaseCollectionName),
+    treeTestCaseCollectionName,
+    deleteTestCases,
+    writeToLog
+  );
 }
 
 tarch::tests::TreeTestCaseCollection::~TreeTestCaseCollection() {
   if (_deleteTestCases) {
-    for (std::list<tarch::tests::TestCase*>::iterator p = _testCases.begin(); p != _testCases.end(); p++) {
-      tarch::tests::TestCase* currentTestCase = *p;
-      delete currentTestCase;
+    for (tarch::tests::TestCase* const testCase : _testCases) {
+      delete testCase;
     }
-    for (std::map<std::string, TreeTestCaseCollection*>::iterator p = _subTests.begin(); p != _subTests.end(); p++) {
-      TreeTestCaseCollection* currentTestCase = (*p).second;
-      delete currentTestCase;
+    for (const auto& subTest : _subTests) {
+      delete subTest.second;
     }
   }
 }
@@ -36,7 +42,7 @@ std::string tarch::tests::TreeTestCaseCollection::getFirstIdentifierInHierarchy(
 }
 
 std::string tarch::tests::TreeTestCaseCollection::getRemainingPathWithoutIdentifier(const std::string& testCaseName) {
-  assertion(!isNameWithoutHierarchy(testCaseName));
+  assertion(not isNameWithoutHierarchy(testCaseName));
   std::string result = testCaseName.substr(testCaseName.find("::") + 2);
   return result;
 }
@@ -44,40 +50,38 @@ std::string tarch::tests::TreeTestCaseCollection::getRemainingPathWithoutIdentif
 void tarch::tests::TreeTestCaseCollection::run() { run(""); }
 
 void tarch::tests::TreeTestCaseCollection::run(const std::string& prefix) {
-  std::string logInformation;
+  std::string progressMessage;
   if ((prefix + _testCaseName).length() > 0) {
-    logInformation = "Running test case collection \"" + prefix + _testCaseName + "\" ...";
+    progressMessage = "Running test case collection \"" + prefix + _testCaseName + "\" ...";
   } else {
-    logInformation = "Running test case collection ...";
+    progressMessage = "Running test case collection ...";
   }
 
-  // Run nested test cases recursively
-  std::string fullQualifiedName = _testCaseName.length() > 0 ? prefix + _testCaseName + "." : prefix;
-  for (std::map<std::string, TreeTestCaseCollection*>::iterator p = _subTests.begin(); p != _subTests.end(); p++) {
-    (*p).second->run(fullQualifiedName);
-    _errors += (*p).second->getNumberOfErrors();
+  const std::string fullQualifiedName = _testCaseName.empty() ? prefix : prefix + _testCaseName + ".";
+  for (const auto& subTest : _subTests) {
+    subTest.second->run(fullQualifiedName);
+    _errors += subTest.second->getNumberOfErrors();
   }
 
-  for (std::list<tarch::tests::TestCase*>::iterator p = _testCases.begin(); p != _testCases.end(); p++) {
-    tarch::tests::TestCase* currentTestCase = *p;
-    logInformation += ".";
-    currentTestCase->run();
-    int additionalErrors = currentTestCase->getNumberOfErrors();
+  for (tarch::tests::TestCase* const testCase : _testCases) {
+    progressMessage += ".";
+    testCase->run();
+    const int additionalErrors = testCase->getNumberOfErrors();
     if (additionalErrors > 0) {
-      _errors += currentTestCase->getNumberOfErrors();
+      _errors += additionalErrors;
     } else {
-      logInformation += ".";
+      progressMessage += ".";
     }
   }
 
   if (_errors == 0) {
-    logInformation += " ok (" + std::to_string(_testCases.size()) + " tests)";
+    progressMessage += " ok (" + std::to_string(_testCases.size()) + " tests)";
   } else {
-    logInformation += " failed";
+    progressMessage += " failed";
   }
 
-  if (_writeToLog and _testCaseName != "" and not _testCases.empty()) {
-    logInfo(logInformation);
+  if (_writeToLog and not _testCaseName.empty() and not _testCases.empty()) {
+    std::cout << progressMessage << std::endl;
   }
 }
 
@@ -89,8 +93,8 @@ void tarch::tests::TreeTestCaseCollection::addTestCase(const std::string& fullQu
   if (isNameWithoutHierarchy(fullQualifiedPath)) {
     _testCases.push_back(testCase);
   } else {
-    std::string firstPartOfIdentifier  = getFirstIdentifierInHierarchy(fullQualifiedPath);
-    std::string secondPartOfIdentifier = getRemainingPathWithoutIdentifier(fullQualifiedPath);
+    const std::string firstPartOfIdentifier  = getFirstIdentifierInHierarchy(fullQualifiedPath);
+    const std::string secondPartOfIdentifier = getRemainingPathWithoutIdentifier(fullQualifiedPath);
     if (_subTests.find(firstPartOfIdentifier) == _subTests.end()) {
       _subTests.insert(
         std::pair<std::string, TreeTestCaseCollection*>(

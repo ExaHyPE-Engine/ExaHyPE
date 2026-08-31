@@ -10,41 +10,37 @@ namespace runner {
 
 class runner::GridConstruction final : public runner::Phase {
 public:
-  GridConstruction(runner::PhaseContext& context, const int createGridStep, const int loadBalancingStep);
+  GridConstruction(runner::PhaseContext& context, int createGridStep);
 
   void run() override;
 
 private:
   struct ColumnWidths {
-    int level;
-    int leaves;
-    int trees;
-    int efficiency;
-    int overhead;
+    int level{0};
+    int leaves{0};
+    int efficiency{0};
+    int overhead{0};
   };
 
   runner::PhaseContext& _context;
-  int                   _createGridStep;
-  int                   _loadBalancingStep;
-  ColumnWidths          _widths;
-  bool                  _tableStarted = false;
+  int                   _createGridStep{-1};
+  ColumnWidths          _widths{};
+  bool                  _tableStarted{false};
 
   std::string row(
     const std::string& level,
     const std::string& leaves,
-    const std::string& trees,
     const std::string& efficiency,
     const std::string& overhead,
     const std::string& load
   ) const;
 
   void logRow(
-    const int           level,
-    const int           maximumLevel,
-    const std::uint64_t numberOfLeaves,
-    const std::uint64_t numberOfOuterCells,
-    const unsigned long numberOfTrees,
-    const unsigned long minimumTreeLoad,
-    const unsigned long maximumTreeLoad
+    int           level,
+    int           maximumLevel,
+    std::uint64_t numberOfLeaves,
+    double        replicationOverhead,
+    std::uint64_t minimumRankLoad,
+    std::uint64_t maximumRankLoad
   );
 };

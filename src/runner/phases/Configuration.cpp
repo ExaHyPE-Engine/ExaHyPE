@@ -4,14 +4,46 @@
 
 #include "peano4/Version.h"
 #include "runner/Format.h"
-#include "runner/LoadBalancer.h"
 #include "runner/ReportBox.h"
 #include "runner/RuntimeParameters.h"
 #include "tarch/CPUFeatureDetection.h"
 #include "tarch/StackSizeLimitDetection.h"
 #include "tarch/accelerator/Device.h"
+#include "tarch/mpi/AbstractCommunicationManager.h"
 #include "tarch/mpi/Rank.h"
-#include "tarch/multicore/Core.h"
+#include "tarch/tasking/Runtime.h"
+
+namespace {
+  /**
+   * Names the point-to-point layer and the byte transports the run selected. An unset
+   * environment variable reports the library's own default.
+   */
+  std::string mpiTransport() {
+    const auto* const pointToPointLayer = std::getenv("OMPI_MCA_pml");
+    const auto* const byteTransport     = std::getenv("OMPI_MCA_btl");
+    if (pointToPointLayer == nullptr and byteTransport == nullptr) {
+      return "library default";
+    }
+    std::string description = pointToPointLayer != nullptr ? pointToPointLayer : "library default";
+    if (byteTransport != nullptr) {
+      description += std::string(" over ") + byteTransport;
+    }
+    return description;
+  }
+
+  /**
+   * Reports the total and the free space of the memory filesystem the OpenMP runtime and the
+   * byte transports of one node map their segments into.
+   */
+  std::string memoryFilesystemHeadroom() {
+    std::error_code error;
+    const auto      space = std::filesystem::space("/dev/shm", error);
+    if (error) {
+      return "unavailable";
+    }
+    return runner::Format::memory(space.capacity) + " total · " + runner::Format::memory(space.available) + " free";
+  }
+} // namespace
 
 runner::Configuration::Configuration(runner::PhaseContext& context) :
   _context(context) {
@@ -36,13 +68,9 @@ runner::Configuration::Configuration(runner::PhaseContext& context) :
     runner::Format::number(numberOfRanks) + (numberOfRanks == 1 ? " Rank on " : " Ranks on ")
       + runner::Format::number(numberOfNodes) + (numberOfNodes == 1 ? " Node" : " Nodes")
   );
-#if defined(PEANO_WITH_OPENMP)
-  const auto numberOfThreads = tarch::multicore::Core::getInstance().getNumberOfThreads();
+  const auto numberOfThreads = tarch::tasking::Runtime::getInstance().getNumberOfThreads();
   report
     .add("Build", "OpenMP", runner::Format::number(numberOfThreads) + (numberOfThreads == 1 ? " Thread" : " Threads"));
-#else
-  report.add("Build", "OpenMP", "off");
-#endif
   report.add("Build", "CPU Features", runner::Format::number(tarch::detectCPUFeatures()));
   report.add("Build", "Stack Size", runner::Format::number(tarch::detectStackSizeLimit()));
 
@@ -121,14 +149,12 @@ runner::Configuration::Configuration(runner::PhaseContext& context) :
   report
     .add("Time Stepping", "Time Step Log Interval", runner::Format::number(parameters.getTimeStepLogInterval()) + " s");
 
-  report.add("Load Balancing", "Quality", runner::Format::number(parameters.getLoadBalancingQuality()));
-  report.add(
-    "Load Balancing",
-    "Maximum Trees per Rank",
-    runner::Format::number(runner::loadBalancer().getMaxPermittedTreesPerRank())
-  );
   report.add("Accelerator", "Target Device", runner::Format::number(parameters.getTargetDevice()));
 
+  report.add("MPI", "Transport", mpiTransport());
+  report.add("MPI", "Memory Filesystem", memoryFilesystemHeadroom());
+  report
+    .add("MPI", "Communication Thread", tarch::mpi::AbstractCommunicationManager::usesDedicatedThread() ? "on" : "off");
   report.add("MPI", "Timeout Warning", runner::Format::number(parameters.getMPITimeoutWarning()) + " s");
   report.add("MPI", "Deadlock Timeout", runner::Format::number(parameters.getMPIDeadlockTimeout()) + " s");
   report.add("MPI", "Request Tracking", parameters.isMPIRequestTrackingEnabled() ? "on" : "off");

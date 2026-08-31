@@ -14,42 +14,42 @@
 namespace {
   void barrier() { tarch::mpi::barrier(tarch::mpi::Rank::getInstance().getCommunicator()); }
 
-  int  ranks() { return tarch::mpi::Rank::getInstance().getNumberOfRanks(); }
+  int  getNumberOfRanks() { return tarch::mpi::Rank::getInstance().getNumberOfRanks(); }
   int  thisRank() { return tarch::mpi::Rank::getInstance().getRank(); }
   bool isMaster() { return tarch::mpi::Rank::getInstance().isGlobalMaster(); }
 
-  void check(bool condition, const std::string& message) {
+  void check(const bool condition, const std::string& message) {
     if (not condition) {
       throw std::runtime_error("VTKHDFFileWriterTest failed: " + message);
     }
   }
 
-  // Serial read-back helpers (master only, after the collective write closed the
-  // file). Each reads a whole dataset; the file is small.
-  std::vector<long long> readI64(hid_t file, const std::string& path) {
-    hid_t dataset = H5Dopen(file, path.c_str(), H5P_DEFAULT);
+  // The global master calls the read-back helpers once the collective write has closed the
+  // file, and each of them reads a whole dataset.
+  std::vector<long long> readInt64Dataset(const hid_t file, const std::string& path) {
+    const hid_t dataset = H5Dopen(file, path.c_str(), H5P_DEFAULT);
     check(dataset >= 0, "Missing dataset " + path);
-    hid_t                  dataSpace       = H5Dget_space(dataset);
-    hsize_t                dims[2]         = {0, 0};
-    const int              rank            = H5Sget_simple_extent_dims(dataSpace, dims, nullptr);
-    const hsize_t          numberOfEntries = (rank == 2) ? dims[0] * dims[1] : dims[0];
-    std::vector<long long> out(numberOfEntries);
+    const hid_t            dataSpace       = H5Dget_space(dataset);
+    hsize_t                dimensions[2]   = {0, 0};
+    const int              rank            = H5Sget_simple_extent_dims(dataSpace, dimensions, nullptr);
+    const hsize_t          numberOfEntries = (rank == 2) ? dimensions[0] * dimensions[1] : dimensions[0];
+    std::vector<long long> values(numberOfEntries);
     if (numberOfEntries > 0) {
-      H5Dread(dataset, H5T_NATIVE_LLONG, H5S_ALL, H5S_ALL, H5P_DEFAULT, out.data());
+      H5Dread(dataset, H5T_NATIVE_LLONG, H5S_ALL, H5S_ALL, H5P_DEFAULT, values.data());
     }
     H5Sclose(dataSpace);
     H5Dclose(dataset);
-    return out;
+    return values;
   }
 
-  std::vector<int> readU8AsInt(hid_t file, const std::string& path) {
-    hid_t dataset = H5Dopen(file, path.c_str(), H5P_DEFAULT);
+  std::vector<int> readUnsignedByteDataset(const hid_t file, const std::string& path) {
+    const hid_t dataset = H5Dopen(file, path.c_str(), H5P_DEFAULT);
     check(dataset >= 0, "Missing dataset " + path);
-    hid_t   dataSpace = H5Dget_space(dataset);
-    hsize_t dims[1]   = {0};
-    H5Sget_simple_extent_dims(dataSpace, dims, nullptr);
-    std::vector<unsigned char> raw(dims[0]);
-    if (dims[0] > 0) {
+    const hid_t dataSpace     = H5Dget_space(dataset);
+    hsize_t     dimensions[1] = {0};
+    H5Sget_simple_extent_dims(dataSpace, dimensions, nullptr);
+    std::vector<unsigned char> raw(dimensions[0]);
+    if (dimensions[0] > 0) {
       H5Dread(dataset, H5T_NATIVE_UCHAR, H5S_ALL, H5S_ALL, H5P_DEFAULT, raw.data());
     }
     H5Sclose(dataSpace);
@@ -57,25 +57,25 @@ namespace {
     return std::vector<int>(raw.begin(), raw.end());
   }
 
-  std::vector<float> readF32(hid_t file, const std::string& path) {
-    hid_t dataset = H5Dopen(file, path.c_str(), H5P_DEFAULT);
+  std::vector<float> readFloat32Dataset(const hid_t file, const std::string& path) {
+    const hid_t dataset = H5Dopen(file, path.c_str(), H5P_DEFAULT);
     check(dataset >= 0, "Missing dataset " + path);
-    hid_t              dataSpace       = H5Dget_space(dataset);
-    hsize_t            dims[2]         = {0, 0};
-    const int          rank            = H5Sget_simple_extent_dims(dataSpace, dims, nullptr);
-    const hsize_t      numberOfEntries = (rank == 2) ? dims[0] * dims[1] : dims[0];
-    std::vector<float> out(numberOfEntries);
+    const hid_t        dataSpace       = H5Dget_space(dataset);
+    hsize_t            dimensions[2]   = {0, 0};
+    const int          rank            = H5Sget_simple_extent_dims(dataSpace, dimensions, nullptr);
+    const hsize_t      numberOfEntries = (rank == 2) ? dimensions[0] * dimensions[1] : dimensions[0];
+    std::vector<float> values(numberOfEntries);
     if (numberOfEntries > 0) {
-      H5Dread(dataset, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, out.data());
+      H5Dread(dataset, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, values.data());
     }
     H5Sclose(dataSpace);
     H5Dclose(dataset);
-    return out;
+    return values;
   }
 
-  std::vector<long long> readVersion(hid_t file) {
-    hid_t                  group     = H5Gopen(file, "/VTKHDF", H5P_DEFAULT);
-    hid_t                  attribute = H5Aopen(group, "Version", H5P_DEFAULT);
+  std::vector<long long> readVersion(const hid_t file) {
+    const hid_t            group     = H5Gopen(file, "/VTKHDF", H5P_DEFAULT);
+    const hid_t            attribute = H5Aopen(group, "Version", H5P_DEFAULT);
     std::vector<long long> version(2, 0);
     H5Aread(attribute, H5T_NATIVE_LLONG, version.data());
     H5Aclose(attribute);
@@ -83,10 +83,10 @@ namespace {
     return version;
   }
 
-  long long readNSteps(hid_t file) {
-    hid_t     group         = H5Gopen(file, "/VTKHDF/Steps", H5P_DEFAULT);
-    hid_t     attribute     = H5Aopen(group, "NSteps", H5P_DEFAULT);
-    long long numberOfSteps = 0;
+  long long readNumberOfSteps(const hid_t file) {
+    const hid_t group         = H5Gopen(file, "/VTKHDF/Steps", H5P_DEFAULT);
+    const hid_t attribute     = H5Aopen(group, "NSteps", H5P_DEFAULT);
+    long long   numberOfSteps = 0;
     H5Aread(attribute, H5T_NATIVE_LLONG, &numberOfSteps);
     H5Aclose(attribute);
     H5Gclose(group);
@@ -94,7 +94,7 @@ namespace {
   }
 
   hid_t openForRead(const std::string& path) {
-    hid_t file = H5Fopen(path.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+    const hid_t file = H5Fopen(path.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
     check(file >= 0, "Could not reopen " + path);
     return file;
   }
@@ -107,16 +107,15 @@ namespace {
 } // namespace
 
 tarch::plotter::tests::VTKHDFFileWriterTest::VTKHDFFileWriterTest() :
-  TestCase("tarch::plotter::tests::VTKHDFFileWriterTest") {}
+  tarch::tests::TestCase("tarch::plotter::tests::VTKHDFFileWriterTest") {}
 
 void tarch::plotter::tests::VTKHDFFileWriterTest::run() {
-  // check() and the read-back helpers report a malformed file by throwing. Without this
-  // catch the exception leaves run(), which the test framework does not guard, and the whole
-  // unit-test binary aborts instead of recording a failed case. The remaining cases are then
-  // skipped, so the counter has to be raised here as well.
+  // check() and the read-back helpers report a malformed file by throwing. An exception that
+  // leaves run() takes the whole unit test binary down, so this catch counts the failure and
+  // the cases behind it stay unrun.
   try {
     testMethod(testSingleQuad2D);
-    testMethod(testVertexSharing);
+    testMethod(testVertexMerging);
     testMethod(testTwoTimeSteps);
     testMethod(testMultipleSubdomains);
     testMethod(testParticlePointCloud);
@@ -135,89 +134,99 @@ void tarch::plotter::tests::VTKHDFFileWriterTest::run() {
 }
 
 /**
- * One quad, one step: checks the NumberOf* per-step totals, Offsets=[0,4], the
- * vertex coordinates and the cell-data value round-trip.
+ * Checks the per-step NumberOf* totals, the Offsets, the vertex coordinates and the cell-data
+ * value that one quad in one step writes.
  */
 void tarch::plotter::tests::VTKHDFFileWriterTest::testSingleQuad2D() {
   const std::string filename = "VTKHDFTestSingleQuad";
   const std::string path     = filename + ".vtkhdf";
 
-  // Every rank contributes one quad, shifted in x by 2*rank so the points are
-  // distinct. The writer must merge them into one part whose connectivity is
-  // rebased: rank r's quad must reference points [4r, 4r+3].
+  // Every rank contributes one quad and shifts it in x by twice its rank number, so the
+  // points are distinct. The writer merges them into one part and rebases the connectivity of
+  // rank r onto the points 4r to 4r+3.
   {
-    VTKHDFFileWriter plotter(".", 1);
-    auto             v       = plotter.createVertexPlotter(0);
-    auto             c       = plotter.createCellPlotter(0);
-    auto             cd      = plotter.createCellDataPlotter(0, "v", 1);
-    const double     s       = 2.0 * thisRank();
-    int              p0      = v->plotVertex(tarch::la::Vector<2, double>{s + 0.0, 0.0});
-    int              p1      = v->plotVertex(tarch::la::Vector<2, double>{s + 1.0, 0.0});
-    int              p2      = v->plotVertex(tarch::la::Vector<2, double>{s + 1.0, 1.0});
-    int              p3      = v->plotVertex(tarch::la::Vector<2, double>{s + 0.0, 1.0});
-    int              quad[4] = {p0, p1, p2, p3};
-    int              cell    = c->plotQuadrangle(quad);
-    cd->plotCellData(cell, static_cast<double>(thisRank()));
+    tarch::plotter::VTKHDFFileWriter plotter(".");
+    plotter.acquirePiece(0);
+    auto         vertexPlotter   = plotter.createVertexPlotter(0);
+    auto         cellPlotter     = plotter.createCellPlotter(0);
+    auto         cellDataPlotter = plotter.createCellDataPlotter(0, "v", 1);
+    const double offset          = 2.0 * thisRank();
+    const int    firstIndex      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{offset + 0.0, 0.0});
+    const int    secondIndex     = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{offset + 1.0, 0.0});
+    const int    thirdIndex      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{offset + 1.0, 1.0});
+    const int    fourthIndex     = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{offset + 0.0, 1.0});
+    const int    quadrangle[4]   = {firstIndex, secondIndex, thirdIndex, fourthIndex};
+    const int    cellIndex       = cellPlotter->plotQuadrangle(quadrangle);
+    cellDataPlotter->plotCellData(cellIndex, static_cast<double>(thisRank()));
     plotter.writeToFile(filename, 0.0);
   }
 
   barrier();
   if (isMaster()) {
-    const int numberOfRanks = ranks();
-    hid_t     file          = openForRead(path);
+    const int   numberOfRanks = getNumberOfRanks();
+    const hid_t file          = openForRead(path);
 
-    check(readNSteps(file) == 1, "NSteps should be 1");
-    // The declared specification version stays at the floor the file's features
-    // need; a higher number makes readers that could parse the file reject it.
+    check(readNumberOfSteps(file) == 1, "NSteps should be 1");
+    // The declared specification version stays at the floor the file's features need; a
+    // higher number makes readers that could parse the file reject it.
     const auto version = readVersion(file);
     check(version[0] == 2 and version[1] == 0, "VTKHDF version should be 2.0");
-    const auto        nPoints     = readI64(file, "/VTKHDF/NumberOfPoints");
-    const auto        nCells      = readI64(file, "/VTKHDF/NumberOfCells");
-    const auto        nConn       = readI64(file, "/VTKHDF/NumberOfConnectivityIds");
-    const std::string nPointsInfo = "size=" + std::to_string(nPoints.size())
-      + " value=" + (nPoints.empty() ? std::string("none") : std::to_string(nPoints[0]));
+    const auto        numberOfPoints          = readInt64Dataset(file, "/VTKHDF/NumberOfPoints");
+    const auto        numberOfCells           = readInt64Dataset(file, "/VTKHDF/NumberOfCells");
+    const auto        numberOfConnectivityIds = readInt64Dataset(file, "/VTKHDF/NumberOfConnectivityIds");
+    const std::string numberOfPointsInfo      = "size=" + std::to_string(numberOfPoints.size())
+      + " value=" + (numberOfPoints.empty() ? std::string("none") : std::to_string(numberOfPoints[0]));
     check(
-      nPoints.size() == 1 and nPoints[0] == 4 * numberOfRanks,
+      numberOfPoints.size() == 1 and numberOfPoints[0] == 4 * numberOfRanks,
       "NumberOfPoints must be one per-step total of 4*ranks (ranks=" + std::to_string(numberOfRanks) + ", got "
-        + nPointsInfo + ")"
+        + numberOfPointsInfo + ")"
     );
     check(
-      nCells.size() == 1 and nCells[0] == numberOfRanks,
+      numberOfCells.size() == 1 and numberOfCells[0] == numberOfRanks,
       "NumberOfCells must be one per-step total of ranks (single part)"
     );
-    check(nConn.size() == 1 and nConn[0] == 4 * numberOfRanks, "NumberOfConnectivityIds total must be 4*ranks");
+    check(
+      numberOfConnectivityIds.size() == 1 and numberOfConnectivityIds[0] == 4 * numberOfRanks,
+      "NumberOfConnectivityIds total must be 4*ranks"
+    );
 
-    const auto types = readU8AsInt(file, "/VTKHDF/Types");
+    const auto types = readUnsignedByteDataset(file, "/VTKHDF/Types");
     check(static_cast<int>(types.size()) == numberOfRanks, "Types holds one entry per cell");
-    for (int t : types) {
-      check(t == 9, "Every cell must be a VTK quad (9)");
+    for (const int type : types) {
+      check(type == 9, "Every cell must be a VTK quad (9)");
     }
 
-    const auto offsets = readI64(file, "/VTKHDF/Offsets");
+    const auto offsets = readInt64Dataset(file, "/VTKHDF/Offsets");
     check(static_cast<int>(offsets.size()) == numberOfRanks + 1, "Offsets must have cells+1 entries (single part)");
-    for (int i = 0; i <= numberOfRanks; i++) {
-      check(offsets[i] == 4 * i, "Offsets must be the global cumulative 0,4,8,...");
+    for (int cellIndex = 0; cellIndex <= numberOfRanks; cellIndex++) {
+      check(offsets[cellIndex] == 4 * cellIndex, "Offsets must be the global cumulative 0,4,8,...");
     }
 
-    const auto conn = readI64(file, "/VTKHDF/Connectivity");
-    check(static_cast<int>(conn.size()) == 4 * numberOfRanks, "Connectivity total");
-    for (int r = 0; r < numberOfRanks; r++) {
-      for (int k = 0; k < 4; k++) {
-        check(conn[4 * r + k] == 4 * r + k, "Connectivity must be rebased to global point indices per rank");
+    const auto connectivity = readInt64Dataset(file, "/VTKHDF/Connectivity");
+    check(static_cast<int>(connectivity.size()) == 4 * numberOfRanks, "Connectivity total");
+    for (int rankIndex = 0; rankIndex < numberOfRanks; rankIndex++) {
+      for (int nodeIndex = 0; nodeIndex < 4; nodeIndex++) {
+        check(
+          connectivity[4 * rankIndex + nodeIndex] == 4 * rankIndex + nodeIndex,
+          "Connectivity must be rebased to global point indices per rank"
+        );
       }
     }
 
-    const auto cellData = readF32(file, "/VTKHDF/CellData/v");
+    const auto cellData = readFloat32Dataset(file, "/VTKHDF/CellData/v");
     check(static_cast<int>(cellData.size()) == numberOfRanks, "One cell value per cell");
-    for (int r = 0; r < numberOfRanks; r++) {
-      check(cellData[r] == static_cast<float>(r), "Cell value must equal the contributing rank id, in rank order");
+    for (int rankIndex = 0; rankIndex < numberOfRanks; rankIndex++) {
+      check(
+        cellData[rankIndex] == static_cast<float>(rankIndex),
+        "Cell value must equal the contributing rank id, in rank order"
+      );
     }
 
-    const auto points = readF32(file, "/VTKHDF/Points");
+    const auto points = readFloat32Dataset(file, "/VTKHDF/Points");
     check(static_cast<int>(points.size()) == 4 * numberOfRanks * 3, "Points are (4*ranks, 3)");
-    for (int r = 0; r < numberOfRanks; r++) {
-      check(points[(4 * r) * 3 + 0] == static_cast<float>(2 * r), "Rank quad x-origin");
-      check(points[(4 * r) * 3 + 2] == 0.0f, "2D points get z==0");
+    for (int rankIndex = 0; rankIndex < numberOfRanks; rankIndex++) {
+      check(points[(4 * rankIndex) * 3 + 0] == static_cast<float>(2 * rankIndex), "Rank quad x-origin");
+      check(points[(4 * rankIndex) * 3 + 2] == 0.0f, "2D points get z==0");
     }
 
     H5Fclose(file);
@@ -227,26 +236,28 @@ void tarch::plotter::tests::VTKHDFFileWriterTest::testSingleQuad2D() {
 }
 
 /**
- * Coincident vertices either share one point-data tuple or retain independent
- * tuples according to the selected vertex-sharing mode.
+ * Two coincident vertices map onto one point under VertexMerging::Merged and onto two points
+ * under VertexMerging::Distinct.
  */
-void tarch::plotter::tests::VTKHDFFileWriterTest::testVertexSharing() {
-  const std::string filename = "VTKHDFTestVertexSharing";
+void tarch::plotter::tests::VTKHDFFileWriterTest::testVertexMerging() {
+  const std::string filename = "VTKHDFTestVertexMerging";
   const std::string path     = filename + ".vtkhdf";
 
   {
-    tarch::plotter::VTKHDFFileWriter plotter(".", 2);
+    tarch::plotter::VTKHDFFileWriter plotter(".");
+    plotter.acquirePiece(0);
+    plotter.acquirePiece(1);
     {
-      auto sharedVertexPlotter = plotter.createVertexPlotter(0, tarch::plotter::FileWriter::VertexSharing::Shared);
-      auto sharedDataPlotter   = plotter.createVertexDataPlotter(0, "Value", 1);
-      const auto position      = tarch::la::Vector<2, double>{4.0 * thisRank(), 0.0};
-      const auto firstVertex   = sharedVertexPlotter->plotVertex(position);
-      const auto secondVertex  = sharedVertexPlotter->plotVertex(position);
-      check(firstVertex == secondVertex, "Shared coincident vertices use one index");
-      sharedDataPlotter->plotVertexData(firstVertex, 1.0);
+      auto mergingVertexPlotter = plotter.createVertexPlotter(0, tarch::plotter::FileWriter::VertexMerging::Merged);
+      auto mergingDataPlotter   = plotter.createVertexDataPlotter(0, "Value", 1);
+      const auto position       = tarch::la::Vector<2, double>{4.0 * thisRank(), 0.0};
+      const auto firstVertex    = mergingVertexPlotter->plotVertex(position);
+      const auto secondVertex   = mergingVertexPlotter->plotVertex(position);
+      check(firstVertex == secondVertex, "Coincident vertices merge onto one index");
+      mergingDataPlotter->plotVertexData(firstVertex, 1.0);
     }
     {
-      auto distinctVertexPlotter = plotter.createVertexPlotter(1, tarch::plotter::FileWriter::VertexSharing::Distinct);
+      auto distinctVertexPlotter = plotter.createVertexPlotter(1, tarch::plotter::FileWriter::VertexMerging::Distinct);
       auto distinctDataPlotter   = plotter.createVertexDataPlotter(1, "Value", 1);
       const auto position        = tarch::la::Vector<2, double>{4.0 * thisRank() + 2.0, 0.0};
       const auto firstVertex     = distinctVertexPlotter->plotVertex(position);
@@ -260,14 +271,14 @@ void tarch::plotter::tests::VTKHDFFileWriterTest::testVertexSharing() {
 
   barrier();
   if (isMaster()) {
-    const auto numberOfRanks  = ranks();
+    const auto numberOfRanks  = getNumberOfRanks();
     const auto file           = openForRead(path);
-    const auto numberOfPoints = readI64(file, "/VTKHDF/NumberOfPoints");
-    const auto points         = readF32(file, "/VTKHDF/Points");
-    const auto values         = readF32(file, "/VTKHDF/PointData/Value");
+    const auto numberOfPoints = readInt64Dataset(file, "/VTKHDF/NumberOfPoints");
+    const auto points         = readFloat32Dataset(file, "/VTKHDF/Points");
+    const auto values         = readFloat32Dataset(file, "/VTKHDF/PointData/Value");
     check(
       numberOfPoints.size() == 1 and numberOfPoints[0] == 3 * numberOfRanks,
-      "Each rank writes one shared point and two distinct points"
+      "Each rank writes one merged point and two distinct points"
     );
     for (int rank = 0; rank < numberOfRanks; rank++) {
       const auto firstDistinctPoint  = 3 * rank + 1;
@@ -278,7 +289,7 @@ void tarch::plotter::tests::VTKHDFFileWriterTest::testVertexSharing() {
           "Distinct vertices retain coincident coordinates"
         );
       }
-      check(values[3 * rank] == 1.0f, "The shared point retains its value");
+      check(values[3 * rank] == 1.0f, "The merged point retains its value");
       check(values[firstDistinctPoint] == 2.0f, "The first distinct point retains its value");
       check(values[secondDistinctPoint] == 3.0f, "The second distinct point retains its value");
     }
@@ -289,63 +300,63 @@ void tarch::plotter::tests::VTKHDFFileWriterTest::testVertexSharing() {
 }
 
 /**
- * Two traversals append to one file: NSteps grows to 2 and the Steps offsets are
- * the cumulative prior-step sizes, which a reader uses to slice the steps.
+ * Two writes into one file raise NSteps to 2 and fill the Steps offsets with the cumulative
+ * sizes of the preceding steps.
  */
 void tarch::plotter::tests::VTKHDFFileWriterTest::testTwoTimeSteps() {
   const std::string filename = "VTKHDFTestTwoSteps";
   const std::string path     = filename + ".vtkhdf";
 
   {
-    VTKHDFFileWriter plotter(".", 1);
-    auto             v       = plotter.createVertexPlotter(0);
-    auto             c       = plotter.createCellPlotter(0);
-    const double     s       = 2.0 * thisRank();
-    int              p0      = v->plotVertex(tarch::la::Vector<2, double>{s + 0.0, 0.0});
-    int              p1      = v->plotVertex(tarch::la::Vector<2, double>{s + 1.0, 0.0});
-    int              p2      = v->plotVertex(tarch::la::Vector<2, double>{s + 1.0, 1.0});
-    int              p3      = v->plotVertex(tarch::la::Vector<2, double>{s + 0.0, 1.0});
-    int              quad[4] = {p0, p1, p2, p3};
-    c->plotQuadrangle(quad);
-    // Two PlotSolution traversals append two steps to the same file.
+    tarch::plotter::VTKHDFFileWriter plotter(".");
+    plotter.acquirePiece(0);
+    auto         vertexPlotter = plotter.createVertexPlotter(0);
+    auto         cellPlotter   = plotter.createCellPlotter(0);
+    const double offset        = 2.0 * thisRank();
+    const int    firstIndex    = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{offset + 0.0, 0.0});
+    const int    secondIndex   = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{offset + 1.0, 0.0});
+    const int    thirdIndex    = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{offset + 1.0, 1.0});
+    const int    fourthIndex   = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{offset + 0.0, 1.0});
+    const int    quadrangle[4] = {firstIndex, secondIndex, thirdIndex, fourthIndex};
+    cellPlotter->plotQuadrangle(quadrangle);
     plotter.writeToFile(filename, 0.0);
     plotter.writeToFile(filename, 0.5);
   }
 
   barrier();
   if (isMaster()) {
-    const int numberOfRanks = ranks();
-    hid_t     file          = openForRead(path);
+    const int   numberOfRanks = getNumberOfRanks();
+    const hid_t file          = openForRead(path);
 
-    check(readNSteps(file) == 2, "Two appends must give NSteps==2");
-    const auto values = readF32(file, "/VTKHDF/Steps/Values");
+    check(readNumberOfSteps(file) == 2, "Two appends must give NSteps==2");
+    const auto values = readFloat32Dataset(file, "/VTKHDF/Steps/Values");
     check(values.size() == 2 and values[0] == 0.0f and values[1] == 0.5f, "Steps/Values must be the two times");
 
-    const auto pointOff = readI64(file, "/VTKHDF/Steps/PointOffsets");
-    const auto cellOff  = readI64(file, "/VTKHDF/Steps/CellOffsets");
-    const auto connOff  = readI64(file, "/VTKHDF/Steps/ConnectivityIdOffsets");
-    const auto partOff  = readI64(file, "/VTKHDF/Steps/PartOffsets");
+    const auto pointOffsets        = readInt64Dataset(file, "/VTKHDF/Steps/PointOffsets");
+    const auto cellOffsets         = readInt64Dataset(file, "/VTKHDF/Steps/CellOffsets");
+    const auto connectivityOffsets = readInt64Dataset(file, "/VTKHDF/Steps/ConnectivityIdOffsets");
+    const auto partOffsets         = readInt64Dataset(file, "/VTKHDF/Steps/PartOffsets");
     check(
-      pointOff.size() == 2 and pointOff[0] == 0 and pointOff[1] == 4 * numberOfRanks,
+      pointOffsets.size() == 2 and pointOffsets[0] == 0 and pointOffsets[1] == 4 * numberOfRanks,
       "PointOffsets are cumulative prior-step points"
     );
     check(
-      cellOff.size() == 2 and cellOff[0] == 0 and cellOff[1] == numberOfRanks,
+      cellOffsets.size() == 2 and cellOffsets[0] == 0 and cellOffsets[1] == numberOfRanks,
       "CellOffsets are cumulative prior-step cells"
     );
     check(
-      connOff.size() == 2 and connOff[0] == 0 and connOff[1] == 4 * numberOfRanks,
+      connectivityOffsets.size() == 2 and connectivityOffsets[0] == 0 and connectivityOffsets[1] == 4 * numberOfRanks,
       "ConnectivityIdOffsets are cumulative prior-step connectivity entries"
     );
     check(
-      partOff.size() == 2 and partOff[0] == 0 and partOff[1] == 1,
+      partOffsets.size() == 2 and partOffsets[0] == 0 and partOffsets[1] == 1,
       "PartOffsets are cumulative parts (1 part/step)"
     );
 
-    // Geometry arrays hold both steps concatenated.
-    const auto nPoints = readI64(file, "/VTKHDF/NumberOfPoints");
+    // The geometry arrays hold both steps one after the other.
+    const auto numberOfPoints = readInt64Dataset(file, "/VTKHDF/NumberOfPoints");
     check(
-      nPoints.size() == 2 and nPoints[0] == 4 * numberOfRanks and nPoints[1] == 4 * numberOfRanks,
+      numberOfPoints.size() == 2 and numberOfPoints[0] == 4 * numberOfRanks and numberOfPoints[1] == 4 * numberOfRanks,
       "Two per-step point totals"
     );
 
@@ -356,78 +367,87 @@ void tarch::plotter::tests::VTKHDFFileWriterTest::testTwoTimeSteps() {
 }
 
 /**
- * Two subdomains are merged into a single part for the step, and the second
- * subdomain's connectivity is rebased past the first's points. Scales with the
- * MPI rank count.
+ * Two subdomains merge into a single part of the step, and the connectivity of the second
+ * subdomain is rebased past the points of the first.
  */
 void tarch::plotter::tests::VTKHDFFileWriterTest::testMultipleSubdomains() {
   const std::string filename = "VTKHDFTestMultiSubdomain";
   const std::string path     = filename + ".vtkhdf";
 
-  // Each rank holds two subdomains: a triangle (3 pts) and a quad (4 pts). They
-  // must merge into one part of 2 cells / 7 points, with the quad's connectivity
-  // rebased past the triangle's 3 points.
+  // Every rank holds a triangle of three points in one subdomain and a quad of four points in
+  // the other, and the two merge into one part of two cells and seven points.
   {
-    VTKHDFFileWriter plotter(".", 2);
-    const double     s = 10.0 * thisRank();
+    tarch::plotter::VTKHDFFileWriter plotter(".");
+    plotter.acquirePiece(0);
+    plotter.acquirePiece(1);
+    const double offset = 10.0 * thisRank();
     {
-      auto v      = plotter.createVertexPlotter(0);
-      auto c      = plotter.createCellPlotter(0);
-      int  p0     = v->plotVertex(tarch::la::Vector<2, double>{s + 0.0, 0.0});
-      int  p1     = v->plotVertex(tarch::la::Vector<2, double>{s + 1.0, 0.0});
-      int  p2     = v->plotVertex(tarch::la::Vector<2, double>{s + 0.0, 1.0});
-      int  tri[3] = {p0, p1, p2};
-      c->plotTriangle(tri);
+      auto      vertexPlotter = plotter.createVertexPlotter(0);
+      auto      cellPlotter   = plotter.createCellPlotter(0);
+      const int firstIndex    = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{offset + 0.0, 0.0});
+      const int secondIndex   = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{offset + 1.0, 0.0});
+      const int thirdIndex    = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{offset + 0.0, 1.0});
+      const int triangle[3]   = {firstIndex, secondIndex, thirdIndex};
+      cellPlotter->plotTriangle(triangle);
     }
     {
-      auto v       = plotter.createVertexPlotter(1);
-      auto c       = plotter.createCellPlotter(1);
-      int  p0      = v->plotVertex(tarch::la::Vector<2, double>{s + 2.0, 0.0});
-      int  p1      = v->plotVertex(tarch::la::Vector<2, double>{s + 3.0, 0.0});
-      int  p2      = v->plotVertex(tarch::la::Vector<2, double>{s + 3.0, 1.0});
-      int  p3      = v->plotVertex(tarch::la::Vector<2, double>{s + 2.0, 1.0});
-      int  quad[4] = {p0, p1, p2, p3};
-      c->plotQuadrangle(quad);
+      auto      vertexPlotter = plotter.createVertexPlotter(1);
+      auto      cellPlotter   = plotter.createCellPlotter(1);
+      const int firstIndex    = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{offset + 2.0, 0.0});
+      const int secondIndex   = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{offset + 3.0, 0.0});
+      const int thirdIndex    = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{offset + 3.0, 1.0});
+      const int fourthIndex   = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{offset + 2.0, 1.0});
+      const int quadrangle[4] = {firstIndex, secondIndex, thirdIndex, fourthIndex};
+      cellPlotter->plotQuadrangle(quadrangle);
     }
     plotter.writeToFile(filename, 0.0);
   }
 
   barrier();
   if (isMaster()) {
-    const int numberOfRanks = ranks();
-    hid_t     file          = openForRead(path);
+    const int   numberOfRanks = getNumberOfRanks();
+    const hid_t file          = openForRead(path);
 
-    const auto nPoints = readI64(file, "/VTKHDF/NumberOfPoints");
-    const auto nCells  = readI64(file, "/VTKHDF/NumberOfCells");
-    const auto nConn   = readI64(file, "/VTKHDF/NumberOfConnectivityIds");
+    const auto numberOfPoints          = readInt64Dataset(file, "/VTKHDF/NumberOfPoints");
+    const auto numberOfCells           = readInt64Dataset(file, "/VTKHDF/NumberOfCells");
+    const auto numberOfConnectivityIds = readInt64Dataset(file, "/VTKHDF/NumberOfConnectivityIds");
     check(
-      nPoints.size() == 1 and nPoints[0] == 7 * numberOfRanks,
+      numberOfPoints.size() == 1 and numberOfPoints[0] == 7 * numberOfRanks,
       "Two subdomains merge to 7*ranks points (one entry)"
     );
-    check(nCells.size() == 1 and nCells[0] == 2 * numberOfRanks, "Merged cell count is 2*ranks (single part)");
-    check(nConn.size() == 1 and nConn[0] == 7 * numberOfRanks, "Merged connectivity is 7*ranks");
+    check(
+      numberOfCells.size() == 1 and numberOfCells[0] == 2 * numberOfRanks,
+      "Merged cell count is 2*ranks (single part)"
+    );
+    check(
+      numberOfConnectivityIds.size() == 1 and numberOfConnectivityIds[0] == 7 * numberOfRanks,
+      "Merged connectivity is 7*ranks"
+    );
 
-    const auto types = readU8AsInt(file, "/VTKHDF/Types");
+    const auto types = readUnsignedByteDataset(file, "/VTKHDF/Types");
     check(static_cast<int>(types.size()) == 2 * numberOfRanks, "Two cells per rank");
-    for (int r = 0; r < numberOfRanks; r++) {
-      check(types[2 * r] == 5, "First cell of each rank is a triangle (5)");
-      check(types[2 * r + 1] == 9, "Second cell of each rank is a quad (9)");
+    for (int rankIndex = 0; rankIndex < numberOfRanks; rankIndex++) {
+      check(types[2 * rankIndex] == 5, "First cell of each rank is a triangle (5)");
+      check(types[2 * rankIndex + 1] == 9, "Second cell of each rank is a quad (9)");
     }
 
-    const auto offsets = readI64(file, "/VTKHDF/Offsets");
+    const auto offsets = readInt64Dataset(file, "/VTKHDF/Offsets");
     check(static_cast<int>(offsets.size()) == 2 * numberOfRanks + 1, "Offsets holds cells+1 entries (single part)");
-    for (int r = 0; r < numberOfRanks; r++) {
-      check(offsets[2 * r] == 7 * r, "Before-offset of the rank's triangle");
-      check(offsets[2 * r + 1] == 7 * r + 3, "Before-offset of the rank's quad, past the triangle's 3 nodes");
+    for (int rankIndex = 0; rankIndex < numberOfRanks; rankIndex++) {
+      check(offsets[2 * rankIndex] == 7 * rankIndex, "Before-offset of the rank's triangle");
+      check(
+        offsets[2 * rankIndex + 1] == 7 * rankIndex + 3,
+        "Before-offset of the rank's quad, past the triangle's 3 nodes"
+      );
     }
     check(offsets[2 * numberOfRanks] == 7 * numberOfRanks, "Trailing sentinel equals the total connectivity");
 
-    const auto conn = readI64(file, "/VTKHDF/Connectivity");
-    for (int r = 0; r < numberOfRanks; r++) {
-      // Triangle nodes [7r,7r+1,7r+2]; quad nodes [7r+3..7r+6] (rebased).
-      check(conn[7 * r + 0] == 7 * r + 0, "Triangle node rebase");
-      check(conn[7 * r + 3] == 7 * r + 3, "Quad node rebase past the triangle");
-      check(conn[7 * r + 6] == 7 * r + 6, "Quad last node rebase");
+    const auto connectivity = readInt64Dataset(file, "/VTKHDF/Connectivity");
+    for (int rankIndex = 0; rankIndex < numberOfRanks; rankIndex++) {
+      // The triangle owns the nodes 7r to 7r+2 and the quad the nodes 7r+3 to 7r+6.
+      check(connectivity[7 * rankIndex + 0] == 7 * rankIndex + 0, "Triangle node rebase");
+      check(connectivity[7 * rankIndex + 3] == 7 * rankIndex + 3, "Quad node rebase past the triangle");
+      check(connectivity[7 * rankIndex + 6] == 7 * rankIndex + 6, "Quad last node rebase");
     }
 
     H5Fclose(file);
@@ -437,38 +457,37 @@ void tarch::plotter::tests::VTKHDFFileWriterTest::testMultipleSubdomains() {
 }
 
 /**
- * A pure point cloud (vertices and vertex data, no cells), as produced by the
- * particle plotter: NumberOfCells==0 and Offsets==[0].
+ * A grid of vertices and vertex data without cells writes NumberOfCells 0 and Offsets [0].
  */
 void tarch::plotter::tests::VTKHDFFileWriterTest::testParticlePointCloud() {
   const std::string filename = "VTKHDFTestParticles";
   const std::string path     = filename + ".vtkhdf";
 
-  // The particle plotter emits vertices + vertex data, no cells.
   {
-    VTKHDFFileWriter plotter(".", 1);
-    auto             v  = plotter.createVertexPlotter(0);
-    auto             vd = plotter.createVertexDataPlotter(0, "Mass", 1);
-    int              a  = v->plotVertex(tarch::la::Vector<2, double>{0.5 + thisRank(), 0.5});
-    vd->plotVertexData(a, 10.0);
-    int b = v->plotVertex(tarch::la::Vector<2, double>{0.6 + thisRank(), 0.6});
-    vd->plotVertexData(b, 20.0);
+    tarch::plotter::VTKHDFFileWriter plotter(".");
+    plotter.acquirePiece(0);
+    auto      vertexPlotter     = plotter.createVertexPlotter(0);
+    auto      vertexDataPlotter = plotter.createVertexDataPlotter(0, "Mass", 1);
+    const int firstVertex       = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.5 + thisRank(), 0.5});
+    vertexDataPlotter->plotVertexData(firstVertex, 10.0);
+    const int secondVertex = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.6 + thisRank(), 0.6});
+    vertexDataPlotter->plotVertexData(secondVertex, 20.0);
     plotter.writeToFile(filename, 0.0);
   }
 
   barrier();
   if (isMaster()) {
-    const int numberOfRanks = ranks();
-    hid_t     file          = openForRead(path);
+    const int   numberOfRanks = getNumberOfRanks();
+    const hid_t file          = openForRead(path);
 
-    const auto nPoints = readI64(file, "/VTKHDF/NumberOfPoints");
-    const auto nCells  = readI64(file, "/VTKHDF/NumberOfCells");
-    const auto offsets = readI64(file, "/VTKHDF/Offsets");
-    check(nPoints.size() == 1 and nPoints[0] == 2 * numberOfRanks, "Point cloud has 2*ranks points");
-    check(nCells.size() == 1 and nCells[0] == 0, "Point cloud has no cells");
+    const auto numberOfPoints = readInt64Dataset(file, "/VTKHDF/NumberOfPoints");
+    const auto numberOfCells  = readInt64Dataset(file, "/VTKHDF/NumberOfCells");
+    const auto offsets        = readInt64Dataset(file, "/VTKHDF/Offsets");
+    check(numberOfPoints.size() == 1 and numberOfPoints[0] == 2 * numberOfRanks, "Point cloud has 2*ranks points");
+    check(numberOfCells.size() == 1 and numberOfCells[0] == 0, "Point cloud has no cells");
     check(offsets.size() == 1 and offsets[0] == 0, "Offsets is the [0] sentinel alone for a cell-less grid");
 
-    const auto mass = readF32(file, "/VTKHDF/PointData/Mass");
+    const auto mass = readFloat32Dataset(file, "/VTKHDF/PointData/Mass");
     check(static_cast<int>(mass.size()) == 2 * numberOfRanks, "One Mass value per point");
 
     H5Fclose(file);
@@ -478,56 +497,60 @@ void tarch::plotter::tests::VTKHDFFileWriterTest::testParticlePointCloud() {
 }
 
 /**
- * A 3D hexahedron (VTK type 12) with cell data and non-zero z coordinates, which
- * covers the 3D geometry and connectivity path alongside the 2D tests.
+ * A hexahedron of VTK type 12 with cell data and non-zero z coordinates covers the 3D
+ * geometry and connectivity path.
  */
 void tarch::plotter::tests::VTKHDFFileWriterTest::test3DHexahedron() {
   const std::string filename = "VTKHDFTest3DHex";
   const std::string path     = filename + ".vtkhdf";
 
-  // Every rank contributes one unit cube (8 corners), shifted in x by 2*rank.
+  // Every rank contributes one unit cube of eight corners and shifts it in x by twice its
+  // rank number.
   {
-    VTKHDFFileWriter plotter(".", 1);
-    auto             v                = plotter.createVertexPlotter(0);
-    auto             c                = plotter.createCellPlotter(0);
-    auto             cd               = plotter.createCellDataPlotter(0, "rho", 1);
-    const double     s                = 2.0 * thisRank();
-    const double     cornerX[8]       = {0, 1, 1, 0, 0, 1, 1, 0};
-    const double     cornerY[8]       = {0, 0, 1, 1, 0, 0, 1, 1};
-    const double     cornerZ[8]       = {0, 0, 0, 0, 1, 1, 1, 1};
-    int              cornerIndices[8] = {};
-    for (int i = 0; i < 8; i++) {
-      cornerIndices[i] = v->plotVertex(tarch::la::Vector<3, double>{s + cornerX[i], cornerY[i], cornerZ[i]});
+    tarch::plotter::VTKHDFFileWriter plotter(".");
+    plotter.acquirePiece(0);
+    auto         vertexPlotter    = plotter.createVertexPlotter(0);
+    auto         cellPlotter      = plotter.createCellPlotter(0);
+    auto         cellDataPlotter  = plotter.createCellDataPlotter(0, "rho", 1);
+    const double offset           = 2.0 * thisRank();
+    const double cornerX[8]       = {0, 1, 1, 0, 0, 1, 1, 0};
+    const double cornerY[8]       = {0, 0, 1, 1, 0, 0, 1, 1};
+    const double cornerZ[8]       = {0, 0, 0, 0, 1, 1, 1, 1};
+    int          cornerIndices[8] = {};
+    for (int cornerIndex = 0; cornerIndex < 8; cornerIndex++) {
+      cornerIndices[cornerIndex] = vertexPlotter->plotVertex(
+        tarch::la::Vector<3, double>{offset + cornerX[cornerIndex], cornerY[cornerIndex], cornerZ[cornerIndex]}
+      );
     }
-    int cell = c->plotHexahedron(cornerIndices);
-    cd->plotCellData(cell, 2.5);
+    const int cellIndex = cellPlotter->plotHexahedron(cornerIndices);
+    cellDataPlotter->plotCellData(cellIndex, 2.5);
     plotter.writeToFile(filename, 0.0);
   }
 
   barrier();
   if (isMaster()) {
-    const int  numberOfRanks = ranks();
-    hid_t      file          = openForRead(path);
-    const auto nCells        = readI64(file, "/VTKHDF/NumberOfCells");
-    const auto nPoints       = readI64(file, "/VTKHDF/NumberOfPoints");
-    const auto types         = readU8AsInt(file, "/VTKHDF/Types");
-    const auto rho           = readF32(file, "/VTKHDF/CellData/rho");
-    const auto points        = readF32(file, "/VTKHDF/Points");
-    check(nCells.size() == 1 and nCells[0] == numberOfRanks, "One hexahedron per rank, merged");
-    check(nPoints.size() == 1 and nPoints[0] == 8 * numberOfRanks, "Eight nodes per hexahedron");
+    const int   numberOfRanks  = getNumberOfRanks();
+    const hid_t file           = openForRead(path);
+    const auto  numberOfCells  = readInt64Dataset(file, "/VTKHDF/NumberOfCells");
+    const auto  numberOfPoints = readInt64Dataset(file, "/VTKHDF/NumberOfPoints");
+    const auto  types          = readUnsignedByteDataset(file, "/VTKHDF/Types");
+    const auto  density        = readFloat32Dataset(file, "/VTKHDF/CellData/rho");
+    const auto  points         = readFloat32Dataset(file, "/VTKHDF/Points");
+    check(numberOfCells.size() == 1 and numberOfCells[0] == numberOfRanks, "One hexahedron per rank, merged");
+    check(numberOfPoints.size() == 1 and numberOfPoints[0] == 8 * numberOfRanks, "Eight nodes per hexahedron");
     check(static_cast<int>(types.size()) == numberOfRanks, "One cell type per cell");
-    for (int t : types) {
-      check(t == 12, "VTK hexahedron type is 12");
+    for (const int type : types) {
+      check(type == 12, "VTK hexahedron type is 12");
     }
-    check(static_cast<int>(rho.size()) == numberOfRanks, "One cell value per hexahedron");
-    for (float r : rho) {
-      check(r == 2.5f, "Hexahedron cell value round-trips");
+    check(static_cast<int>(density.size()) == numberOfRanks, "One cell value per hexahedron");
+    for (const float value : density) {
+      check(value == 2.5f, "Hexahedron cell value round-trips");
     }
     check(static_cast<int>(points.size()) == 8 * numberOfRanks * 3, "3D points are (8*ranks, 3)");
     // The top face of the cube contributes the non-zero z coordinates.
     bool anyNonZeroZ = false;
-    for (std::size_t i = 0; i < points.size() / 3; i++) {
-      if (points[3 * i + 2] != 0.0f) {
+    for (std::size_t pointIndex = 0; pointIndex < points.size() / 3; pointIndex++) {
+      if (points[3 * pointIndex + 2] != 0.0f) {
         anyNonZeroZ = true;
       }
     }
@@ -539,41 +562,40 @@ void tarch::plotter::tests::VTKHDFFileWriterTest::test3DHexahedron() {
 }
 
 /**
- * Only the global master holds data; every other rank is empty. The collective
- * parallel write must not deadlock, and the merged grid carries only the
- * master's cells.
+ * Only the global master holds data and every other rank stays empty. The collective write
+ * must not deadlock, and the merged grid carries only the master's cells.
  */
 void tarch::plotter::tests::VTKHDFFileWriterTest::testHeterogeneousRanks() {
   const std::string filename = "VTKHDFTestHeterogeneous";
   const std::string path     = filename + ".vtkhdf";
 
-  // Only the master holds data; the other ranks are empty. The collective write
-  // must not deadlock and the merged grid must carry exactly the master's cell.
   {
-    VTKHDFFileWriter plotter(".", 1);
+    tarch::plotter::VTKHDFFileWriter plotter(".");
+    plotter.acquirePiece(0);
     if (isMaster()) {
-      auto v       = plotter.createVertexPlotter(0);
-      auto c       = plotter.createCellPlotter(0);
-      auto cd      = plotter.createCellDataPlotter(0, "Marker", 1);
-      int  p0      = v->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
-      int  p1      = v->plotVertex(tarch::la::Vector<2, double>{1.0, 0.0});
-      int  p2      = v->plotVertex(tarch::la::Vector<2, double>{1.0, 1.0});
-      int  p3      = v->plotVertex(tarch::la::Vector<2, double>{0.0, 1.0});
-      int  quad[4] = {p0, p1, p2, p3};
-      int  cell    = c->plotQuadrangle(quad);
-      cd->plotCellData(cell, 7.0);
+      auto      vertexPlotter   = plotter.createVertexPlotter(0);
+      auto      cellPlotter     = plotter.createCellPlotter(0);
+      auto      cellDataPlotter = plotter.createCellDataPlotter(0, "Marker", 1);
+      const int firstIndex      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
+      const int secondIndex     = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{1.0, 0.0});
+      const int thirdIndex      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{1.0, 1.0});
+      const int fourthIndex     = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.0, 1.0});
+      const int quadrangle[4]   = {firstIndex, secondIndex, thirdIndex, fourthIndex};
+      const int cellIndex       = cellPlotter->plotQuadrangle(quadrangle);
+      cellDataPlotter->plotCellData(cellIndex, 7.0);
     }
-    plotter.writeToFile(filename, 0.0); // collective; must not deadlock
+    // Every rank enters this collective call.
+    plotter.writeToFile(filename, 0.0);
   }
 
   barrier();
   if (isMaster()) {
-    hid_t      file    = openForRead(path);
-    const auto nPoints = readI64(file, "/VTKHDF/NumberOfPoints");
-    const auto nCells  = readI64(file, "/VTKHDF/NumberOfCells");
-    const auto marker  = readF32(file, "/VTKHDF/CellData/Marker");
-    check(nPoints.size() == 1 and nPoints[0] == 4, "Only the master's 4 points");
-    check(nCells.size() == 1 and nCells[0] == 1, "Only the master's 1 cell");
+    const hid_t file           = openForRead(path);
+    const auto  numberOfPoints = readInt64Dataset(file, "/VTKHDF/NumberOfPoints");
+    const auto  numberOfCells  = readInt64Dataset(file, "/VTKHDF/NumberOfCells");
+    const auto  marker         = readFloat32Dataset(file, "/VTKHDF/CellData/Marker");
+    check(numberOfPoints.size() == 1 and numberOfPoints[0] == 4, "Only the master's 4 points");
+    check(numberOfCells.size() == 1 and numberOfCells[0] == 1, "Only the master's 1 cell");
     check(marker.size() == 1 and marker[0] == 7.0f, "The master's cell value survived");
     H5Fclose(file);
     removeFile(path);
@@ -582,43 +604,48 @@ void tarch::plotter::tests::VTKHDFFileWriterTest::testHeterogeneousRanks() {
 }
 
 /**
- * Ranks hold different non-zero subdomain counts (master 3, the rest 2), as a
- * load-balanced distribution produces. A per-subdomain collective write loop
- * would mismatch the collective call count across ranks and deadlock.
+ * The global master holds three subdomains and every other rank holds two, so a write loop
+ * over the subdomains would make the ranks enter a different number of collective calls.
  */
 void tarch::plotter::tests::VTKHDFFileWriterTest::testUnevenSubdomainCounts() {
   const std::string filename = "VTKHDFTestUneven";
   const std::string path     = filename + ".vtkhdf";
 
-  // Master contributes 3 quads, every other rank 2 - non-zero but unequal counts.
   const int numberOfSubdomains = isMaster() ? 3 : 2;
   {
-    VTKHDFFileWriter plotter(".", numberOfSubdomains);
-    for (int sd = 0; sd < numberOfSubdomains; sd++) {
-      auto         v       = plotter.createVertexPlotter(sd);
-      auto         c       = plotter.createCellPlotter(sd);
-      const double s       = 100.0 * thisRank() + 2.0 * sd;
-      int          p0      = v->plotVertex(tarch::la::Vector<2, double>{s + 0.0, 0.0});
-      int          p1      = v->plotVertex(tarch::la::Vector<2, double>{s + 1.0, 0.0});
-      int          p2      = v->plotVertex(tarch::la::Vector<2, double>{s + 1.0, 1.0});
-      int          p3      = v->plotVertex(tarch::la::Vector<2, double>{s + 0.0, 1.0});
-      int          quad[4] = {p0, p1, p2, p3};
-      c->plotQuadrangle(quad);
+    tarch::plotter::VTKHDFFileWriter plotter(".");
+    for (int subdomainIndex = 0; subdomainIndex < numberOfSubdomains; subdomainIndex++) {
+      plotter.acquirePiece(subdomainIndex);
     }
-    plotter.writeToFile(filename, 0.0); // uneven non-zero counts; must not deadlock
+    for (int subdomainIndex = 0; subdomainIndex < numberOfSubdomains; subdomainIndex++) {
+      auto         vertexPlotter = plotter.createVertexPlotter(subdomainIndex);
+      auto         cellPlotter   = plotter.createCellPlotter(subdomainIndex);
+      const double offset        = 100.0 * thisRank() + 2.0 * subdomainIndex;
+      const int    firstIndex    = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{offset + 0.0, 0.0});
+      const int    secondIndex   = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{offset + 1.0, 0.0});
+      const int    thirdIndex    = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{offset + 1.0, 1.0});
+      const int    fourthIndex   = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{offset + 0.0, 1.0});
+      const int    quadrangle[4] = {firstIndex, secondIndex, thirdIndex, fourthIndex};
+      cellPlotter->plotQuadrangle(quadrangle);
+    }
+    // Every rank enters this collective call once, whatever its subdomain count.
+    plotter.writeToFile(filename, 0.0);
   }
 
   barrier();
   if (isMaster()) {
-    const long long cells   = 3 + 2 * (ranks() - 1); // master 3, the other ranks 2 each
-    hid_t           file    = openForRead(path);
-    const auto      nCells  = readI64(file, "/VTKHDF/NumberOfCells");
-    const auto      nPoints = readI64(file, "/VTKHDF/NumberOfPoints");
+    const long long expectedNumberOfCells = 3 + 2 * (getNumberOfRanks() - 1);
+    const hid_t     file                  = openForRead(path);
+    const auto      numberOfCells         = readInt64Dataset(file, "/VTKHDF/NumberOfCells");
+    const auto      numberOfPoints        = readInt64Dataset(file, "/VTKHDF/NumberOfPoints");
     check(
-      nCells.size() == 1 and nCells[0] == cells,
+      numberOfCells.size() == 1 and numberOfCells[0] == expectedNumberOfCells,
       "Uneven distribution merges to one part with the summed cell total"
     );
-    check(nPoints.size() == 1 and nPoints[0] == 4 * cells, "Uneven distribution merged node total");
+    check(
+      numberOfPoints.size() == 1 and numberOfPoints[0] == 4 * expectedNumberOfCells,
+      "Uneven distribution merged node total"
+    );
     H5Fclose(file);
     removeFile(path);
   }
@@ -630,19 +657,21 @@ void tarch::plotter::tests::VTKHDFFileWriterTest::testEmptyPlotter() {
   const std::string path     = filename + ".vtkhdf";
 
   {
-    VTKHDFFileWriter plotter(".", 1);
-    plotter.writeToFile(filename, 0.0); // every rank empty; must not deadlock
+    tarch::plotter::VTKHDFFileWriter plotter(".");
+    plotter.acquirePiece(0);
+    // Every rank enters this collective call with an empty grid.
+    plotter.writeToFile(filename, 0.0);
   }
 
   barrier();
   if (isMaster()) {
-    hid_t      file    = openForRead(path);
-    const auto nPoints = readI64(file, "/VTKHDF/NumberOfPoints");
-    const auto nCells  = readI64(file, "/VTKHDF/NumberOfCells");
-    const auto offsets = readI64(file, "/VTKHDF/Offsets");
-    check(readNSteps(file) == 1, "An empty write still records a step");
-    check(nPoints.size() == 1 and nPoints[0] == 0, "Empty grid has 0 points");
-    check(nCells.size() == 1 and nCells[0] == 0, "Empty grid has 0 cells");
+    const hid_t file           = openForRead(path);
+    const auto  numberOfPoints = readInt64Dataset(file, "/VTKHDF/NumberOfPoints");
+    const auto  numberOfCells  = readInt64Dataset(file, "/VTKHDF/NumberOfCells");
+    const auto  offsets        = readInt64Dataset(file, "/VTKHDF/Offsets");
+    check(readNumberOfSteps(file) == 1, "An empty write still records a step");
+    check(numberOfPoints.size() == 1 and numberOfPoints[0] == 0, "Empty grid has 0 points");
+    check(numberOfCells.size() == 1 and numberOfCells[0] == 0, "Empty grid has 0 cells");
     check(offsets.size() == 1 and offsets[0] == 0, "Empty grid Offsets is [0]");
     H5Fclose(file);
     removeFile(path);
@@ -653,64 +682,67 @@ void tarch::plotter::tests::VTKHDFFileWriterTest::testEmptyPlotter() {
 void tarch::plotter::tests::VTKHDFFileWriterTest::testInconsistentDataSizeThrows() {
   const std::string filename = "VTKHDFTestInconsistent";
 
-  bool thrown = false;
+  bool exceptionThrown = false;
   try {
-    VTKHDFFileWriter plotter(".", 1);
-    auto             v  = plotter.createVertexPlotter(0);
-    auto             vd = plotter.createVertexDataPlotter(0, "Broken", 1);
-    v->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
-    v->plotVertex(tarch::la::Vector<2, double>{1.0, 1.0});
-    vd->plotVertexData(0, 5.0); // data for only one of two vertices
+    tarch::plotter::VTKHDFFileWriter plotter(".");
+    plotter.acquirePiece(0);
+    auto vertexPlotter     = plotter.createVertexPlotter(0);
+    auto vertexDataPlotter = plotter.createVertexDataPlotter(0, "Broken", 1);
+    vertexPlotter->plotVertex(tarch::la::Vector<2, double>{0.0, 0.0});
+    vertexPlotter->plotVertex(tarch::la::Vector<2, double>{1.0, 1.0});
+    // Only one of the two vertices carries data.
+    vertexDataPlotter->plotVertexData(0, 5.0);
     plotter.writeToFile(filename, 0.0);
   } catch (const std::runtime_error&) {
-    thrown = true;
+    exceptionThrown = true;
   }
   if (isMaster()) {
     removeFile(filename + ".vtkhdf");
   }
-  check(thrown, "Inconsistent field size must be rejected on write");
+  check(exceptionThrown, "Inconsistent field size must be rejected on write");
 }
 
 void tarch::plotter::tests::VTKHDFFileWriterTest::testInvalidIdentifierThrows() {
-  VTKHDFFileWriter plotter(".", 1);
-  bool             thrown = false;
+  tarch::plotter::VTKHDFFileWriter plotter(".");
+  plotter.acquirePiece(0);
+  bool exceptionThrown = false;
   try {
     plotter.createCellDataPlotter(0, "bad/name", 1);
   } catch (const std::runtime_error&) {
-    thrown = true;
+    exceptionThrown = true;
   }
-  check(thrown, "An illegal data identifier must be rejected");
+  check(exceptionThrown, "An illegal data identifier must be rejected");
 }
 
 /**
- * The precision switch selects the storage type: single-precision output stores
- * 4-byte reals, double-precision output stores 8-byte reals and round-trips a
- * value below single-precision resolution exactly.
+ * Single-precision output stores 4-byte reals and double-precision output stores 8-byte reals
+ * and returns a value below single-precision resolution unchanged.
  */
 void tarch::plotter::tests::VTKHDFFileWriterTest::testPrecisionSwitch() {
-  // The value differs from 1.0 by less than single precision resolves, so an
-  // exact round-trip proves the data travelled in double precision.
+  // The value differs from 1.0 by less than single precision resolves, so an exact round-trip
+  // proves the data travelled in double precision.
   const double fineValue = 1.0 + 1.0e-12;
 
   auto writeQuadWithValue = [&](const std::string& filename) {
-    VTKHDFFileWriter plotter(".", 1);
-    auto             v       = plotter.createVertexPlotter(0);
-    auto             c       = plotter.createCellPlotter(0);
-    auto             cd      = plotter.createCellDataPlotter(0, "v", 1);
-    const double     s       = 2.0 * thisRank();
-    int              p0      = v->plotVertex(tarch::la::Vector<2, double>{s + 0.0, 0.0});
-    int              p1      = v->plotVertex(tarch::la::Vector<2, double>{s + 1.0, 0.0});
-    int              p2      = v->plotVertex(tarch::la::Vector<2, double>{s + 1.0, 1.0});
-    int              p3      = v->plotVertex(tarch::la::Vector<2, double>{s + 0.0, 1.0});
-    int              quad[4] = {p0, p1, p2, p3};
-    int              cell    = c->plotQuadrangle(quad);
-    cd->plotCellData(cell, fineValue);
+    tarch::plotter::VTKHDFFileWriter plotter(".");
+    plotter.acquirePiece(0);
+    auto         vertexPlotter   = plotter.createVertexPlotter(0);
+    auto         cellPlotter     = plotter.createCellPlotter(0);
+    auto         cellDataPlotter = plotter.createCellDataPlotter(0, "v", 1);
+    const double offset          = 2.0 * thisRank();
+    const int    firstIndex      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{offset + 0.0, 0.0});
+    const int    secondIndex     = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{offset + 1.0, 0.0});
+    const int    thirdIndex      = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{offset + 1.0, 1.0});
+    const int    fourthIndex     = vertexPlotter->plotVertex(tarch::la::Vector<2, double>{offset + 0.0, 1.0});
+    const int    quadrangle[4]   = {firstIndex, secondIndex, thirdIndex, fourthIndex};
+    const int    cellIndex       = cellPlotter->plotQuadrangle(quadrangle);
+    cellDataPlotter->plotCellData(cellIndex, fineValue);
     plotter.writeToFile(filename, 0.0);
   };
 
-  auto storageBytes = [](hid_t file, const std::string& path) {
-    hid_t             dataset = H5Dopen(file, path.c_str(), H5P_DEFAULT);
-    hid_t             type    = H5Dget_type(dataset);
+  auto storageBytes = [](const hid_t file, const std::string& path) {
+    const hid_t       dataset = H5Dopen(file, path.c_str(), H5P_DEFAULT);
+    const hid_t       type    = H5Dget_type(dataset);
     const std::size_t bytes   = H5Tget_size(type);
     H5Tclose(type);
     H5Dclose(dataset);
@@ -720,34 +752,34 @@ void tarch::plotter::tests::VTKHDFFileWriterTest::testPrecisionSwitch() {
   const std::string singleName = "VTKHDFTestSinglePrecision";
   const std::string doubleName = "VTKHDFTestDoublePrecision";
 
-  check(not FileWriter::getDoublePrecisionOutput(), "Single precision is the default");
+  check(not tarch::plotter::FileWriter::getDoublePrecisionOutput(), "Single precision is the default");
   writeQuadWithValue(singleName);
 
-  FileWriter::setDoublePrecisionOutput(true);
+  tarch::plotter::FileWriter::setDoublePrecisionOutput(true);
   writeQuadWithValue(doubleName);
-  FileWriter::setDoublePrecisionOutput(false);
+  tarch::plotter::FileWriter::setDoublePrecisionOutput(false);
 
   barrier();
   if (isMaster()) {
-    hid_t singleFile = openForRead(singleName + ".vtkhdf");
+    const hid_t singleFile = openForRead(singleName + ".vtkhdf");
     check(storageBytes(singleFile, "/VTKHDF/Points") == 4, "Single-precision output stores 4-byte points");
     check(storageBytes(singleFile, "/VTKHDF/CellData/v") == 4, "Single-precision output stores 4-byte fields");
     H5Fclose(singleFile);
     removeFile(singleName + ".vtkhdf");
 
-    hid_t doubleFile = openForRead(doubleName + ".vtkhdf");
+    const hid_t doubleFile = openForRead(doubleName + ".vtkhdf");
     check(storageBytes(doubleFile, "/VTKHDF/Points") == 8, "Double-precision output stores 8-byte points");
     check(storageBytes(doubleFile, "/VTKHDF/CellData/v") == 8, "Double-precision output stores 8-byte fields");
 
-    hid_t   dataset   = H5Dopen(doubleFile, "/VTKHDF/CellData/v", H5P_DEFAULT);
-    hid_t   dataSpace = H5Dget_space(dataset);
-    hsize_t dims[2]   = {0, 0};
-    H5Sget_simple_extent_dims(dataSpace, dims, nullptr);
-    std::vector<double> values(dims[0]);
+    const hid_t dataset       = H5Dopen(doubleFile, "/VTKHDF/CellData/v", H5P_DEFAULT);
+    const hid_t dataSpace     = H5Dget_space(dataset);
+    hsize_t     dimensions[2] = {0, 0};
+    H5Sget_simple_extent_dims(dataSpace, dimensions, nullptr);
+    std::vector<double> values(dimensions[0]);
     H5Dread(dataset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, values.data());
     H5Sclose(dataSpace);
     H5Dclose(dataset);
-    for (double value : values) {
+    for (const double value : values) {
       check(value == fineValue, "Double-precision output round-trips below single-precision resolution");
     }
 
@@ -760,7 +792,7 @@ void tarch::plotter::tests::VTKHDFFileWriterTest::testPrecisionSwitch() {
 #else // No HDF5
 
 tarch::plotter::tests::VTKHDFFileWriterTest::VTKHDFFileWriterTest() :
-  TestCase("tarch::plotter::tests::VTKHDFFileWriterTest") {}
+  tarch::tests::TestCase("tarch::plotter::tests::VTKHDFFileWriterTest") {}
 
 void tarch::plotter::tests::VTKHDFFileWriterTest::run() {}
 

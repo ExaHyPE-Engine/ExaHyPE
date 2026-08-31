@@ -21,4 +21,4 @@ namespace exahype2 {
   );
 } // namespace exahype2
 
-#include "RefinementCriterionHelpers.cpph"
+#include "exahype2/RefinementCriterionHelpers.cpph"

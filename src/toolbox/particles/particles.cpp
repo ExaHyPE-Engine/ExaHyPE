@@ -2,75 +2,120 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "particles.h"
 
-#include "MultiscaleTransitions.h"
+#include "peano4/topology/TopologyManager.h"
 
-#include "peano4/Init.h"
+/**
+ * Returns the periodic image of x that lies nearest to referencePosition. On a
+ * periodic axis the image lies within half the domain width of the reference.
+ */
+tarch::la::Vector<DIMENSIONS, double> toolbox::particles::periodicImageTowards(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& referencePosition,
+  const tarch::la::Vector<DIMENSIONS, double>& domainWidth,
+  const std::bitset<DIMENSIONS>&               periodicBC
+) {
+  tarch::la::Vector<DIMENSIONS, double> image = x;
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    if (periodicBC[axis]) {
+      assertion(domainWidth(axis) > 0.0, domainWidth, axis);
+      const double halfWidth = 0.5 * domainWidth(axis);
+      if (image(axis) - referencePosition(axis) > halfWidth) {
+        image(axis) -= domainWidth(axis);
+      } else if (referencePosition(axis) - image(axis) > halfWidth) {
+        image(axis) += domainWidth(axis);
+      }
+    }
+  }
+  return image;
+}
+
+/** Returns the periodic image of x nearest to referencePosition within the domain the topology holds. */
+tarch::la::Vector<DIMENSIONS, double> toolbox::particles::periodicImageTowards(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& referencePosition
+) {
+  const auto& topology = peano4::topology::TopologyManager::getInstance();
+  if (topology.getPeriodicBC().none()) {
+    return x;
+  }
+  return toolbox::particles::periodicImageTowards(
+    x,
+    referencePosition,
+    topology.getDomainWidth(),
+    topology.getPeriodicBC()
+  );
+}
+
+/**
+ * Returns the periodic image of x nearest to the vertex the marker selects. A
+ * periodic wall vertex is one entity whose marker carries the position of the
+ * invoking cell's corner, so a particle at the opposite wall lies in the
+ * adjacent cells as this image.
+ */
+tarch::la::Vector<DIMENSIONS, double> toolbox::particles::periodicImageTowardsVertex(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const peano4::datamanagement::VertexMarker&  marker
+) {
+  return toolbox::particles::periodicImageTowards(x, marker.getX());
+}
+
+/**
+ * Returns the periodic image of x nearest to the centre of the cell of marker.
+ * A cell at a periodic wall holds the wall vertex, whose particles carry
+ * positions from either wall, so the cell reads a particle through this image.
+ */
+tarch::la::Vector<DIMENSIONS, double> toolbox::particles::periodicImageTowardsCell(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const peano4::datamanagement::CellMarker&    marker
+) {
+  return toolbox::particles::periodicImageTowards(x, marker.getX());
+}
+
+/** Returns whether the domain the topology holds has a periodic axis. */
+bool toolbox::particles::domainHasPeriodicAxes() {
+  return peano4::topology::TopologyManager::getInstance().getPeriodicBC().any();
+}
+
+/**
+ * Returns the adjacent cells that claim the particle at x. The cells overlap by
+ * the sorting tolerance, so more than one of them can claim the same particle.
+ */
+std::bitset<TWO_POWER_D> toolbox::particles::getAdjacentCellsOwningParticle(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const peano4::datamanagement::VertexMarker&  marker
+) {
+  std::bitset<TWO_POWER_D>                    result = 0;
+  const auto                                  image  = toolbox::particles::periodicImageTowardsVertex(x, marker);
+  const tarch::la::Vector<DIMENSIONS, double> selectedVertex = marker.getX();
+  const tarch::la::Vector<DIMENSIONS, double> h              = marker.getH();
+  const double tolerance = toolbox::particles::internal::relativeGrabOwnershipSpatialSortingTolerance(marker)
+    * tarch::la::NUMERICAL_ZERO_DIFFERENCE;
+
+  peano4::dForEachCorner([&](const tarch::la::Vector<DIMENSIONS, int>& k, const int kScalar) {
+    const tarch::la::Vector<DIMENSIONS, int> adjacentCell(k);
+    tarch::la::Vector<DIMENSIONS, double>    adjacentCellCentre(0.0);
+    for (int d = 0; d < DIMENSIONS; d++) {
+      adjacentCellCentre(d) = selectedVertex(d) + (static_cast<double>(adjacentCell(d)) - 0.5) * h(d);
+    }
+    result[kScalar] = peano4::datamanagement::CellMarker::isContained(image, adjacentCellCentre, h, tolerance);
+  });
+
+  return result;
+}
 
 bool toolbox::particles::particleAssignedToVertexWillBeLocal(
   const tarch::la::Vector<DIMENSIONS, double>& x,
   const peano4::datamanagement::VertexMarker&  marker
 ) {
-  std::bitset<TWO_POWER_D> adjacentCellWhichHostsParticle = getAdjacentCellsOwningParticle(x, marker);
-  return adjacentCellWhichHostsParticle.to_ulong() & marker.areAdjacentCellsLocal().to_ulong();
+  const std::bitset<TWO_POWER_D> adjacentCellWhichHostsParticle =
+    toolbox::particles::getAdjacentCellsOwningParticle(x, marker);
+  return (adjacentCellWhichHostsParticle & marker.areAdjacentCellsLocal()).any();
 }
 
 /**
- * Mirror a particle along the periodic domain boundaries.
- *
- * We check for every boundary whether it is periodic. Furthermore, we check
- * whether the particle would be already contained within a vertex along
- * each dimension. This is necessary for vertices in corners of the domain:
- * In these cases, we need to mirror the particle only along the boundary
- * that isn't contained in the vertex. Otherwise, the particle is displaced
- * too far away. For a vertex at (0, 0), a particle at (0.95, 0.) has to be
- * displaced to (-0.05, 0.) and not to (-0.05, -1.).
- *
- * @param x Position of the particle as received along a periodic boundary
- *   exchange.
- * @param marker Marker of vertex which triggers the receive, i.e. the one
- *   to which the incoming particle at x will be attached to.
- * @return Position of particle as "seen" from receiving side
- */
-tarch::la::Vector<DIMENSIONS, double> toolbox::particles::mirrorParticleAlongPeriodicDomains(
-  const tarch::la::Vector<DIMENSIONS, double>& x,
-  const peano4::datamanagement::VertexMarker&  marker,
-  const tarch::la::Vector<DIMENSIONS, double>  domainOffset,
-  const tarch::la::Vector<DIMENSIONS, double>  domainSize,
-  const std::bitset<DIMENSIONS>                periodicBC
-) {
-  // Create a copy of the input position vector
-  tarch::la::Vector<DIMENSIONS, double> mirroredPosition = x;
-
-  // Check each dimension for periodic boundary conditions
-  for (int d = 0; d < DIMENSIONS; d++) {
-    // Skip non-periodic dimensions
-    if (!periodicBC[d])
-      continue;
-
-    // Calculate domain boundaries for this dimension
-    const double lowerBoundary = domainOffset[d];
-    const double upperBoundary = domainOffset[d] + domainSize[d];
-
-    // Apply mirroring for particles outside the domain boundaries
-    if (tarch::la::smallerEquals(x(d), lowerBoundary)) {
-      mirroredPosition(d) += domainSize(d);
-    } else if (tarch::la::greaterEquals(x(d), upperBoundary)) {
-      mirroredPosition(d) -= domainSize(d);
-    }
-  }
-
-  return mirroredPosition;
-}
-
-/**
- * Applies the periodic boundary condition on particle coordinates `x`.
- *
- * In mirrorParticleAlongPeriodicDomains(), we check whether a vertex is
- * located on the boundary, and if it is, apply the boundary conditions
- * such that the vertex would "see" the particles.
- * In contrast, here we blindly apply the periodic boundary conditions
- * to a particle. This function is intended to be run on global particle
- * lists, such as is used e.g. in exchangeSieveListsGlobally().
+ * Applies the periodic boundary condition on the particle coordinates x and
+ * returns them. The routine reads no vertex, so a caller applies it to a
+ * global particle list such as the one of exchangeSieveListsGlobally().
  */
 tarch::la::Vector<DIMENSIONS, double> toolbox::particles::applyPeriodicBoundaryConditions(
   const tarch::la::Vector<DIMENSIONS, double>& x,

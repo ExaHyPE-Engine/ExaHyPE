@@ -9,10 +9,8 @@ namespace tarch::plotter::tests {
 } // namespace tarch::plotter::tests
 
 /**
- * Tests for the single-file VTKHDF writer. They read the produced .vtkhdf back
- * through the HDF5 C API and assert the VTKHDF UnstructuredGrid layout: one
- * merged grid (part) per step, connectivity rebased to global point indices,
- * and the cumulative /VTKHDF/Steps offsets a reader needs to slice each step.
+ * Reads the written .vtkhdf back through the HDF5 C API and checks the VTKHDF
+ * UnstructuredGrid layout that a reader needs to slice each step.
  */
 class tarch::plotter::tests::VTKHDFFileWriterTest final : public tarch::tests::TestCase {
 private:
@@ -21,7 +19,7 @@ private:
    */
   void testSingleQuad2D();
 
-  void testVertexSharing();
+  void testVertexMerging();
 
   /**
    * Two traversals appending to one file.

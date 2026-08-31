@@ -2,8 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "ScalarOperations.h"
-#include "Vector.h"
+#include "tarch/la/ScalarOperations.h"
+#include "tarch/la/Vector.h"
 
 namespace tarch::la {
   template <int Size, typename Scalar>
@@ -365,14 +365,10 @@ namespace tarch::la {
   );
 
   /**
-   * Return the remainder of a division
-   *
-   * Per component x_i, the function computes
-   * x_i/h and then returns the remaining fraction of x_i which did
-   * not fit into h. The function therefore resembles modulo.
+   * Returns the remainder of every component of the vector divided by h.
    */
   template <int Size, typename Scalar>
   INLINE_METHOD GPU_CALLABLE_METHOD Vector<Size, Scalar> remainder(const Vector<Size, Scalar>& vector, double h);
 } // namespace tarch::la
 
-#include "VectorScalarOperations.cpph"
+#include "tarch/la/VectorScalarOperations.cpph"

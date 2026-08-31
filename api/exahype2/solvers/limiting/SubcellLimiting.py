@@ -1,6 +1,5 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-"""Adds a-posteriori subcell limiting to discontinuous Galerkin solvers."""
 import functools
 
 from exahype2.solvers.fv import create_patch_and_halo
@@ -65,25 +64,14 @@ class SubcellLimiting:
     ):
         """Enables a-posteriori limiting with ``limiter_solver``.
 
-        ``limiter_solver`` is a finite-volume :class:`SubcellScheme`, and solution
-        storage is ``float`` or ``double``. At least one physical-admissibility
-        criterion or discrete maximum principle is required. A positive
-        ``number_of_dmp_observables`` enables the latter. Its ``dmp_observables``
-        C++ body maps one nodal ``Q`` state to exactly that many ``observables``;
-        ``{{COMPUTE_PRECISION}}`` expands to the state precision. Bounds use
-        ``max(dmp_relaxation_parameter, dmp_differences_scaling * (maximum - minimum))``.
-        An optional ``dmp_relaxation_parameter_implementation`` C++ body returns
-        each relaxation from ``observable`` and ``specifiedRelaxationParameter``.
-
-        ``physical_admissibility_criterion`` is a C++ body returning a Boolean for
-        ``numberOfStates`` consecutive states at ``Q``. Candidate checks pass all
-        discontinuous-Galerkin nodes; finite-volume and projected-node checks pass
-        one state. Available names are ``NumberOfUnknowns``,
-        ``NumberOfAuxiliaryVariables``, ``Shortcuts``, the cell centre ``x``, and
-        the cell size ``h``.
-
-        Grid initialisation calls the pointwise initial-condition callback at each
-        subcell centre with its size, so ``initialise_patches=True`` is unsupported.
+        ``limiter_solver`` is a finite-volume :class:`SubcellScheme`, and the
+        solver requires a ``physical_admissibility_criterion``, a positive
+        ``number_of_dmp_observables``, or both. ``dmp_observables`` maps one nodal
+        ``Q`` state to that many ``observables``, and
+        ``dmp_relaxation_parameter_implementation`` returns each relaxation from
+        ``observable`` and ``specifiedRelaxationParameter``. The admissible range
+        widens by the larger of ``dmp_relaxation_parameter`` and
+        ``dmp_differences_scaling`` times the reference range.
         """
         if self.subcell_limiter_is_enabled:
             raise RuntimeError("The subcell limiter is already configured.")
@@ -151,20 +139,14 @@ class SubcellLimiting:
         self.create_data_structures()
         self.create_action_sets()
 
-        # Plot the per-cell limiter status beside the solution, so the finite-volume
-        # domain is visible. The base patch plotter takes the extra field through its
-        # cell-data callbacks, so no dedicated plotter is needed.
         if hasattr(self, "_plotter"):
             self._plotter = self._subcell_limiter_status_plotter()
 
     def _subcell_limiter_status_plotter(self):
         """Wraps the solution plotter so it also writes the per-cell limiter status.
 
-        The status is the ``exahype2::dg::LimiterStatus`` integer the cell held at
-        the plotted step, added through the base plotter's cell-data callbacks. A
-        recomputed cell's polynomial is only a smoothed mirror of its subcell
-        solution and can leave the admissible range between the subcell averages,
-        so such a cell plots the subcell values themselves.
+        A recomputed cell's polynomial can leave the admissible range between the
+        subcell averages, so such a cell plots its subcell values.
         """
         status = "fineGridCell{}CellLabel.getLimiterStatus()".format(self._name)
         return functools.partial(
@@ -184,7 +166,7 @@ class SubcellLimiting:
             additional_cell_data_construction=(
                 "\n  _limiterStatusPlotter.reset();\n"
                 "  _limiterStatusPlotter = _fileWriter->createCellDataPlotter("
-                '_localTreeNumber, "LimiterStatus", 1);\n'
+                '_pieceId, "LimiterStatus", 1);\n'
             ),
             additional_cell_data_plots=(
                 "\n            _limiterStatusPlotter->plotCellData(cellIndex, "
@@ -196,8 +178,6 @@ class SubcellLimiting:
         """Attaches the limiter labels once the base labels exist.
 
         A limiter-capable solver calls this at the end of ``create_data_structures``.
-        It is a no-op while limiting is off and does not affect unlimited solver
-        generation.
         """
         if not self.subcell_limiter_is_enabled:
             return
@@ -219,10 +199,8 @@ class SubcellLimiting:
     def _create_subcell_patches(self):
         """Creates the finite-volume subgrid a troubled cell recomputes on.
 
-        The subgrid is the same patch and halo any finite-volume scheme stores, so
-        it comes from :func:`create_patch_and_halo`: ``2 * order + 1`` subcells per
-        axis, with a halo ``limiter_solver.halo_width`` subcells deep. The pipeline
-        decides in which sweep that halo is exchanged.
+        The subgrid holds ``2 * order + 1`` subcells per axis and a halo
+        ``limiter_solver.halo_width`` subcells deep.
         """
         subcells_per_axis = 2 * self._order + 1
         (
@@ -280,9 +258,8 @@ class SubcellLimiting:
     def _create_subcell_limiter_action_sets(self):
         """Creates the limiter's pipeline and mesh-transfer action sets.
 
-        The predictor and ``Predict`` share the first sweep, the corrector and
-        ``CorrectAndFlag`` the second, and the spreading and recompute sweeps run
-        alone. All descend after the Galerkin kernels so they read the candidate.
+        Every pipeline action set descends after the Galerkin kernels, so it reads
+        the candidate the corrector wrote.
         """
         if not self.subcell_limiter_is_enabled:
             return
@@ -352,13 +329,10 @@ class SubcellLimiting:
     def _configure_subcell_limiter_exchange(self):
         """Sets when the limiter's face data travels between cells.
 
-        The estimates publish in both predictor sweeps and merge in the sweep
-        that follows each publication, since sent face data arrives one sweep
-        later: without hanging faces that is the corrector, with them the
-        hanging-cell re-prediction and then the corrector. The repeated merge
-        is idempotent. The subcell halo is filled by the final spreading sweep
-        and read by the recompute, so it travels once between those two
-        consecutive sweeps; the new halo never travels.
+        Sent face data arrives one sweep later, so the estimates are sent in both
+        predictor sweeps and merged in the sweep that follows each send. The old
+        subcell halo travels from the final spreading sweep to the recompute, and
+        the new halo never travels.
         """
         if not self.subcell_limiter_is_enabled:
             return
@@ -366,8 +340,8 @@ class SubcellLimiting:
         predict_on_hanging = self._subcell_limiter_state_guard("PredictOnHangingCells")
         correct = self._subcell_limiter_state_guard("CorrectAndFlag")
         recompute = self._subcell_limiter_state_guard("RecomputeSubcells")
-        publish = "(" + predict + " or " + predict_on_hanging + ")"
-        consume = "(" + predict_on_hanging + " or " + correct + ")"
+        send = "(" + predict + " or " + predict_on_hanging + ")"
+        merge = "(" + predict_on_hanging + " or " + correct + ")"
         final_spread = (
             "repositories::"
             + self.get_name_of_global_instance()
@@ -377,8 +351,8 @@ class SubcellLimiting:
             self._rhs_estimates_projection.generator,
             self._flux_estimates_projection.generator,
         ):
-            generator.send_condition = publish
-            generator.receive_and_merge_condition = consume
+            generator.send_condition = send
+            generator.receive_and_merge_condition = merge
         self._subcell_halo_old.generator.send_condition = final_spread
         self._subcell_halo_old.generator.receive_and_merge_condition = recompute
         self._subcell_halo_new.generator.send_condition = "false"
@@ -387,8 +361,7 @@ class SubcellLimiting:
     def subcell_limiter_candidate_state(self):
         """Returns the solver state whose sweep first holds the DG candidate.
 
-        ADER-DG has it after the predictor and corrector, Runge-Kutta DG after the
-        final stage. A limiter-capable solver overrides this.
+        A limiter-capable solver overrides this.
         """
         raise NotImplementedError(
             "A limiter-capable solver must name the state that holds its candidate."

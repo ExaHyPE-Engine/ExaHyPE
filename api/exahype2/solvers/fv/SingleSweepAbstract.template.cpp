@@ -3,33 +3,16 @@
 #include "{{CLASSNAME}}.h"
 
 #include "repositories/SolverRepository.h"
-
-#include "exahype2/NonNegativeStatistics.h"
-#include "runner/RuntimeParameters.h"
-#include "tarch/instrumentation/Log.h"
+#include "tarch/NonCriticalAssertions.h"
+#include "tarch/accelerator/Atomic.h"
+#include "tarch/instrumentation/Debug.h"
+#include "tarch/instrumentation/Warning.h"
 #include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
-#include "tarch/multicore/Lock.h"
-#include "tarch/NonCriticalAssertions.h"
 
 std::bitset<DIMENSIONS> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::PeriodicBC = {{NAMESPACE | join("::")}}::PeriodicBC;
 
-{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
-  _solverState(SolverState::GridConstruction),
-  _minTimeStamp(0.0),
-  _maxTimeStamp(0.0),
-  _minTimeStampThisTimeStep(std::numeric_limits<double>::infinity()),
-  _maxTimeStampThisTimeStep(0.0),
-  _localMinTimeStampThisTimeStep(std::numeric_limits<double>::infinity()),
-  _localMaxTimeStampThisTimeStep(0.0),
-  _minVolumeH(std::numeric_limits<double>::infinity()),
-  _maxVolumeH(0.0),
-  _minVolumeHThisTimeStep(std::numeric_limits<double>::infinity()),
-  _maxVolumeHThisTimeStep(0.0),
-  _minTimeStepSize(std::numeric_limits<double>::infinity()),
-  _maxTimeStepSize(0.0),
-  _minTimeStepSizeThisTimeStep(std::numeric_limits<double>::infinity()),
-  _maxTimeStepSizeThisTimeStep(0.0) {
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}() {
   {{CONSTRUCTOR_IMPLEMENTATION}}
 }
 
@@ -83,6 +66,8 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStepSize() const {
     : _maxTimeStepSize;
 }
 
+thread_local typename {{NAMESPACE | join("::")}}::{{CLASSNAME}}::LocalUpdates {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_localUpdates;
+
 /**
  * Accumulates a patch's time step, time stamp, and size extrema for the current solver step.
  */
@@ -92,8 +77,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(
   const double minPatchSize,
   const double maxPatchSize
 ) {
-  const tarch::multicore::Lock lock(_semaphore);
-
   const auto observedTimeStepStatistics =
     ::exahype2::NonNegativeStatistics{timeStepSize, timeStepSize};
   if (not observedTimeStepStatistics.hasPhysicalValues()) {
@@ -107,62 +90,58 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(
         )
     );
   }
-  const auto timeStepStatistics = ::exahype2::NonNegativeStatistics::accumulate(
-    {_minTimeStepSizeThisTimeStep, _maxTimeStepSizeThisTimeStep},
-    timeStepSize
-  );
-  _minTimeStepSizeThisTimeStep = timeStepStatistics.minimum;
-  _maxTimeStepSizeThisTimeStep = timeStepStatistics.maximum;
-  updateTimeStampAndPatchSizeWithoutLock(
-    timeStamp,
-    minPatchSize,
-    maxPatchSize
-  );
+
+  _localUpdates.timeStepSize = ::exahype2::NonNegativeStatistics::accumulate(_localUpdates.timeStepSize, timeStepSize);
+
+  updateTimeStampAndPatchSize(timeStamp, minPatchSize, maxPatchSize);
 }
 
+/**
+ * Accumulates a patch's time stamp and size extrema without a time step.
+ *
+ * A cell that skips its update this sweep still names its stamp and extent, so
+ * the global statistics cover every cell of the mesh.
+ */
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::updateTimeStampAndPatchSize(
   const double timeStamp,
   const double minPatchSize,
   const double maxPatchSize
 ) {
-  const tarch::multicore::Lock lock(_semaphore);
-  updateTimeStampAndPatchSizeWithoutLock(
-    timeStamp,
-    minPatchSize,
-    maxPatchSize
-  );
+  assertion(std::isfinite(timeStamp) and timeStamp >= 0.0, timeStamp);
+  _localUpdates.localMinTimeStamp = std::min(_localUpdates.localMinTimeStamp, timeStamp);
+  _localUpdates.localMaxTimeStamp = std::max(_localUpdates.localMaxTimeStamp, timeStamp);
+  _localUpdates.minTimeStamp      = std::min(_localUpdates.minTimeStamp, timeStamp);
+  _localUpdates.maxTimeStamp      = std::max(_localUpdates.maxTimeStamp, timeStamp);
+  assertion(std::isfinite(minPatchSize) and minPatchSize > 0.0, minPatchSize, maxPatchSize);
+  assertion(std::isfinite(maxPatchSize) and maxPatchSize >= minPatchSize, minPatchSize, maxPatchSize);
+  _localUpdates.minVolumeH = std::min(_localUpdates.minVolumeH, minPatchSize / NumberOfFiniteVolumesPerAxisPerPatch);
+  _localUpdates.maxVolumeH = std::max(_localUpdates.maxVolumeH, maxPatchSize / NumberOfFiniteVolumesPerAxisPerPatch);
+  _localUpdates.empty      = false;
 }
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::updateTimeStampAndPatchSizeWithoutLock(
-  const double timeStamp,
-  const double minPatchSize,
-  const double maxPatchSize
-) {
-  assertion(std::isfinite(timeStamp) and timeStamp >= 0.0, timeStamp);
-  _localMinTimeStampThisTimeStep =
-    std::min(_localMinTimeStampThisTimeStep, timeStamp);
-  _localMaxTimeStampThisTimeStep =
-    std::max(_localMaxTimeStampThisTimeStep, timeStamp);
-  _minTimeStampThisTimeStep = std::min(timeStamp, _minTimeStampThisTimeStep);
-  _maxTimeStampThisTimeStep = std::max(timeStamp, _maxTimeStampThisTimeStep);
-  assertion(
-    std::isfinite(minPatchSize) and minPatchSize > 0.0,
-    minPatchSize,
-    maxPatchSize
-  );
-  assertion(
-    std::isfinite(maxPatchSize) and maxPatchSize >= minPatchSize,
-    minPatchSize,
-    maxPatchSize
-  );
-  _minVolumeHThisTimeStep = std::min(
-    _minVolumeHThisTimeStep,
-    minPatchSize / NumberOfFiniteVolumesPerAxisPerPatch
-  );
-  _maxVolumeHThisTimeStep = std::max(
-    _maxVolumeHThisTimeStep,
-    maxPatchSize / NumberOfFiniteVolumesPerAxisPerPatch
-  );
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::reduceLocalUpdates() {
+  if (_localUpdates.empty) {
+    return;
+  }
+
+  // An invalid observation overwrites both extrema, and a later atomic minimum
+  // or maximum keeps at least one of them, so the rank reduction reads the
+  // invalid observation.
+  if (_localUpdates.timeStepSize.hasInvalidObservation()) {
+    tarch::accelerator::storeAtomic(_minTimeStepSizeThisTimeStep, _localUpdates.timeStepSize.minimum);
+    tarch::accelerator::storeAtomic(_maxTimeStepSizeThisTimeStep, _localUpdates.timeStepSize.maximum);
+  } else {
+    tarch::accelerator::updateAtomicMin(_minTimeStepSizeThisTimeStep, _localUpdates.timeStepSize.minimum);
+    tarch::accelerator::updateAtomicMax(_maxTimeStepSizeThisTimeStep, _localUpdates.timeStepSize.maximum);
+  }
+  tarch::accelerator::updateAtomicMin(_localMinTimeStampThisTimeStep, _localUpdates.localMinTimeStamp);
+  tarch::accelerator::updateAtomicMax(_localMaxTimeStampThisTimeStep, _localUpdates.localMaxTimeStamp);
+  tarch::accelerator::updateAtomicMin(_minTimeStampThisTimeStep, _localUpdates.minTimeStamp);
+  tarch::accelerator::updateAtomicMax(_maxTimeStampThisTimeStep, _localUpdates.maxTimeStamp);
+  tarch::accelerator::updateAtomicMin(_minVolumeHThisTimeStep, _localUpdates.minVolumeH);
+  tarch::accelerator::updateAtomicMax(_maxVolumeHThisTimeStep, _localUpdates.maxVolumeH);
+
+  _localUpdates = LocalUpdates{};
 }
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::SolverState {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getSolverState() const {

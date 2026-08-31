@@ -11,23 +11,10 @@ class FiniteVolumesTracing(peano4.particles.UpdateParticle_MultiLevelInteraction
 
     Particle tracing over the Finite Volumes solver.
 
-    The action set works for cell-centred Finite Differences, too.
-
-    ## Update plug-in points
-
-    We only update cells which are marked with getHasUpdated(). Further to that,
-    we also trace in the grid initialisation. If we did not trace there, the first
-    dump prior to the first time step would always yield uninitialised tracer
-    data. It would not even help to add tracing to the plot, as the tracing
-    typically is cell-based, whereas most plotters plug into
-    touchVertexFirstTime(), i.e. they would still dump the particle data prior to
-    the tracing.
-
-    The class supports different ways how the data is projected onto tracer
-    attributes (both which data entries and how they are interpolated), as
-    well as various time integrators. The integration happens patch by patch,
-    i.e. you cannot access any neighbouring patches or intermediate data from
-    the time stepping calculations.
+    The action set works for cell-centred Finite Differences, too. It updates
+    cells which are marked with getHasUpdated() and traces in the grid
+    initialisation. The projection runs patch by patch, so it reads no
+    neighbouring patch.
     """
 
     def __init__(
@@ -47,20 +34,8 @@ class FiniteVolumesTracing(peano4.particles.UpdateParticle_MultiLevelInteraction
 
         Set up the tracing.
 
-        Setting up the tracing first and foremost means that we have to couple
-        the tracer particle set with the solver, and then we have to specify which
-        projection kernels and which time integrator we want to use. We have to
-        provide the C++ kernels which shall be used to move the tracer and to
-        write new data into the tracer.
-
-        For the time stepping, Peano's particle toolbox provides some default
-        integrators. If you use stationary tracers, toolbox::particles::StaticPosition
-        (handed in as string) or None do the job.
-
-        For the projection of solution data onto the tracer, the file
-        exahype2/fv/Tracer.h provides a few pre-manufactured routines. Again, the
-        projection kernel here requires a plain function call, and you have to
-        ensure that this function call matches the data you want to dump.
+        The projection kernel is a plain function call, so its argument list has
+        to match the data the tracer stores.
 
         ## Arguments
 
@@ -75,8 +50,7 @@ class FiniteVolumesTracing(peano4.particles.UpdateParticle_MultiLevelInteraction
          Name of the routine that projects the Finite Volumes representation
          onto the tracers' properties. Hand in None if you do not want any field
          properties to be projected on the tracer. This makes sense if the
-         velocity/trajectory of a tracer already encodes all information.
-         Some popular arguments for this routine are listed above.
+         velocity or trajectory of a tracer already encodes all information.
 
         projection_kernel_arguments: String
          Argument list handed to the projection kernel. The default passes the
@@ -85,7 +59,7 @@ class FiniteVolumesTracing(peano4.particles.UpdateParticle_MultiLevelInteraction
         """
 
         self.tracerDict = {}
-        # Do not overwrite the dictionary of the superclass, as we need it.
+        # Do not overwrite the dictionary of the superclass.
         self.tracerDict["PARTICLE"] = particle_set.particle_model.name
         self.tracerDict["PARTICLES_CONTAINER"] = particle_set.name
         self.tracerDict["SOLVER_NAME"] = solver._name
@@ -111,11 +85,20 @@ if (
     repositories::{{SOLVER_INSTANCE}}.getSolverState() == {{SOLVER_NAME}}::SolverState::GridInitialisation
   )
 ) {
+  const bool domainWrapsParticles = toolbox::particles::domainHasPeriodicAxes();
   for (auto* const particle : localParticles) {
+    // The wall vertex of a periodic axis holds particles from both walls, so
+    // the cell reads a particle through its periodic image.
+    const auto image = domainWrapsParticles
+      ? toolbox::particles::periodicImageTowardsCell(particle->getX(), marker)
+      : particle->getX();
     if (
       particle->getMoveState() == globaldata::{{PARTICLE}}::MoveState::NotMovedYet
-      and marker.isContained(particle->getX())
+      and marker.isContained(image)
     ) {
+      if (domainWrapsParticles) {
+        particle->setX(image);
+      }
       particle->setMoveState(globaldata::{{PARTICLE}}::MoveState::Moved);
 
 {% if PROJECTION_KERNEL %}
@@ -151,12 +134,12 @@ if (
     def get_includes(self):
         includes = jinja2.Template(
             """
-#include "tarch/multicore/Lock.h"
 #include "peano4/Loop.h"
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
 #include "repositories/SolverRepository.h"
 #include "exahype2/fv/Tracer.h"
+#include "toolbox/particles/particles.h"
 """
         )
         return super().get_includes() + "\n" + includes.render(**self.tracerDict)

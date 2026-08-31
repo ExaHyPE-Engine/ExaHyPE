@@ -2,27 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "ParticleIntegration.h"
 
-/**
- * Time step size used by multi-particle integration.
- */
-double exahype2::fv::particles::integration::_timeStepSize = 0.01;
-
-/**
- * Integration-method selector used by multi-particle integration.
- */
-int exahype2::fv::particles::integration::_integrationMethod = 1;
-
-/**
- * Sets the process-wide settings read by multi-particle integration.
- */
-void exahype2::fv::particles::integration::setGlobalIntegrationParameters(
-  const double timeStepSize,
-  const int    integrationMethod
-) {
-  _timeStepSize      = timeStepSize;
-  _integrationMethod = integrationMethod;
-}
-
 namespace {
   struct StubParticle final {
     tarch::la::Vector<DIMENSIONS, double> getX() const { return _position; }

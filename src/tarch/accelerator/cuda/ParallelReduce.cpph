@@ -17,11 +17,11 @@ namespace tarch::accelerator {
 
   template <typename Reducer, typename T>
   __device__ inline T blockReduce(Reducer red, T localAcc) {
-    __shared__ T sdata[kCudaBlockSize];
+    __shared__ T sdata[CudaBlockSize];
     const int    tid = threadIdx.x;
     sdata[tid]       = localAcc;
     __syncthreads();
-    for (int s = kCudaBlockSize / 2; s > 0; s >>= 1) {
+    for (int s = CudaBlockSize / 2; s > 0; s >>= 1) {
       if (tid < s) {
         sdata[tid] = combine_op(red, sdata[tid], sdata[tid + s]);
       }
@@ -30,7 +30,7 @@ namespace tarch::accelerator {
     return sdata[0];
   }
 
-  // `red` is unused in the body but must stay in the parameter list: it is the only
+  // `red` is unused in the body but must stay in the parameter list: It is the only
   // deduced occurrence of Reducer (perBlockOut's type is a non-deduced context). It
   // carries a host reference (red.target) that must never be dereferenced on device.
   template <typename Reducer, typename F>
@@ -162,13 +162,13 @@ namespace tarch {
     }
     const int device = accelerator::getCurrentDevice();
     CHECK_CUDA_ERROR(cudaSetDevice(device));
-    int blocks = (r.n + accelerator::kCudaBlockSize - 1) / accelerator::kCudaBlockSize;
+    int blocks = (r.n + accelerator::CudaBlockSize - 1) / accelerator::CudaBlockSize;
     blocks     = std::min(blocks, 65535);
 
     T* perBlock = allocateMemory<T>(blocks, MemoryLocation::Device, device);
     T* finalDev = allocateMemory<T>(1, MemoryLocation::Device, device);
 
-    accelerator::flat_reduce_kernel_1d<<<blocks, accelerator::kCudaBlockSize, 0, accelerator::deviceStreamGet()>>>(
+    accelerator::flat_reduce_kernel_1d<<<blocks, accelerator::CudaBlockSize, 0, accelerator::deviceStreamGet()>>>(
       f,
       red,
       r.n,
@@ -196,7 +196,7 @@ namespace tarch {
     T* perBlock = allocateMemory<T>(r.n, MemoryLocation::Device, device);
     T* finalDev = allocateMemory<T>(1, MemoryLocation::Device, device);
 
-    accelerator::team_reduce_kernel<<<r.n, accelerator::kCudaBlockSize, 0, accelerator::deviceStreamGet()>>>(
+    accelerator::team_reduce_kernel<<<r.n, accelerator::CudaBlockSize, 0, accelerator::deviceStreamGet()>>>(
       f,
       red,
       perBlock

@@ -8,7 +8,12 @@ namespace tarch::la::tests {
   class VectorTest;
 } // namespace tarch::la::tests
 
-class tarch::la::tests::VectorTest final: public tarch::tests::TestCase {
+class tarch::la::tests::VectorTest final : public tarch::tests::TestCase {
+public:
+  VectorTest();
+  ~VectorTest() override = default;
+  void run() override;
+
 private:
   void testConstruction();
   void testAssignment();
@@ -20,9 +25,4 @@ private:
   void testSpecialisedVectorLayouts();
   void testAdditionalVectorOperations();
   void testSpecialisedVectorMembers();
-
-public:
-  VectorTest();
-  ~VectorTest() override = default;
-  void run() override;
 };

@@ -1,12 +1,18 @@
 #include "BoundaryConditions.h"
 
-#include "DGUtils.h"
-
+#include "exahype2/dg/DGUtils.h"
 #include "peano4/Globals.h"
 #include "peano4/Loop.h"
-#include "tarch/instrumentation/Log.h"
 #include "toolbox/blockstructured/Enumeration.h"
 
+/**
+ * Fills the exterior trace of one projected DG face.
+ *
+ * Q contains the interior and exterior overlap layers, and the callback receives each interior
+ * trace value and writes the corresponding exterior value. faceNumber follows Peano's face
+ * enumeration in [0, 2*DIMENSIONS), and the order+1 quadrature points are reference coordinates
+ * on [0, 1].
+ */
 void exahype2::dg::applyBoundaryConditions(
   std::function<void(
     const double* NOALIAS                        Qinside,
@@ -27,8 +33,6 @@ void exahype2::dg::applyBoundaryConditions(
   const double* NOALIAS                        quadraturePoints,
   double* NOALIAS                              Q
 ) {
-  //  tarch::la::Vector<DIMENSIONS,double> volumeH    = exahype2::fv::getVolumeSize(patchSize,
-  //  numberOfVolumesPerAxisInPatch);
   const int                             normal     = faceNumber % DIMENSIONS;
   const int                             stride     = unknowns + auxiliaryVariables;
   tarch::la::Vector<DIMENSIONS, double> faceOffset = faceCentre - 0.5 * cellSize;
@@ -36,9 +40,9 @@ void exahype2::dg::applyBoundaryConditions(
 
   peano4::dForEachExclusive(order + 1, normal, 0, [&](const tarch::la::Vector<DIMENSIONS, int>& dof) {
     tarch::la::Vector<DIMENSIONS, double> x;
-    for (int d = 0; d < DIMENSIONS; d++) {
-      x(d) = faceOffset(d);
-      x(d) += (d == normal) ? 0.0 : quadraturePoints[dof(d)] * cellSize(d);
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      x(axis) = faceOffset(axis);
+      x(axis) += (axis == normal) ? 0.0 : quadraturePoints[dof(axis)] * cellSize(axis);
     }
 
     tarch::la::Vector<DIMENSIONS, int> insideDoF  = dof;

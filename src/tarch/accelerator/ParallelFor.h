@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "tarch/Assertions.h"
 #include "tarch/accelerator/ParallelRegion.h"
 #include "tarch/accelerator/Range.h"
 #include "tarch/accelerator/accelerator.h"

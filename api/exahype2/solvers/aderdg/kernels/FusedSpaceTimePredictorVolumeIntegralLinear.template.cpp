@@ -7,7 +7,7 @@
 #include "BufferSizes.h"
 
 #include "tarch/CompilerSpecificSettings.h"
-#include "tarch/instrumentation/Log.h"
+#include "tarch/instrumentation/Trace.h"
 
 {% if USE_POINT_SOURCE %}
 {% for item in NAMESPACE -%}
@@ -39,7 +39,6 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
 ) {
   traceEnter();
 
-  // Each thread reuses its own scratch storage across calls.
   static thread_local {{FULL_QUALIFIED_NAMESPACE}}::PredictorScratchBuffer{{NAME_SUFFIX}}<pCompType> scratch;
 
   pCompType* memory = scratch.get(getFusedSTPVISize());
@@ -442,7 +441,6 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
     }
 {% endif %}{# USE_SOURCE #}
 
-    // Accumulate the time-averaged flux and source polynomials.
     for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
       SIMD(aligned(lFhi,lFi{{',lShi,lSi' if USE_SOURCE else ''}}:PEANO_WITH_ALIGNMENT))
       for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
@@ -488,14 +486,15 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
       }
     }
 
-    pCompType derPS_buffer[{{NUMBER_OF_DOF_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
-    std::memset(derPS_buffer, 0.0, {{NUMBER_OF_DOF_PADDED}} * sizeof(pCompType));
+    pCompType derPSBuffer[{{NUMBER_OF_DOF_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+    std::memset(derPSBuffer, 0.0, {{NUMBER_OF_DOF_PADDED}} * sizeof(pCompType));
     for (int it_1 = 0; it_1 < {{NUMBER_OF_DOF}}; it_1++) {
-      SIMD(aligned(derPS_buffer,derPS:PEANO_WITH_ALIGNMENT))
+      SIMD(aligned(derPSBuffer,derPS:PEANO_WITH_ALIGNMENT))
       for (int it_2 = 0; it_2 < {{NUMBER_OF_DOF}}; it_2++) {
-        derPS_buffer[it_2] += derPS[it_1] * DGMatrices<pCompType>::dudx[it_1 * {{NUMBER_OF_DOF}} + it_2];
+        derPSBuffer[it_2] += derPS[it_1] * DGMatrices<pCompType>::dudx[it_1 * {{NUMBER_OF_DOF}} + it_2];
       }
     }
+    // std::copy_n(derPSBuffer, {{NUMBER_OF_DOF_PADDED}}, derPS);
 {% endif %}
 
     dtavFac *= static_cast<pCompType>(timeStepSize / (i + 2));
@@ -535,12 +534,11 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   traceLeave("Cauchy Kovalewski predictor");
 
   traceEnter("Extrapolation");
-  for(int i = 0; i < 2 * DIMENSIONS; i++) {
+  for (int i = 0; i < 2 * DIMENSIONS; i++) {
     std::memset(lQhbnd[i], 0, {{NUMBER_OF_DATA*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}} * sizeof(pStoreType));
     std::memset(lFhbnd[i], 0, {{NUMBER_OF_UNKNOWNS*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}} * sizeof(pStoreType));
   }
 
-  // Project onto the two x-normal faces.
   for (int yz = 0; yz < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; yz++) {
     for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
       SIMD(aligned(lQhi:PEANO_WITH_ALIGNMENT))
@@ -556,7 +554,6 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
     }
   }
 
-  // Project onto the two y-normal faces.
   for (int z = 0; z < {{NUMBER_OF_DOF_3D}}; z++) {
     for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
       for (int y = 0; y < {{NUMBER_OF_DOF}}; y++) {
@@ -575,7 +572,6 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   }
 
 {% if DIMENSIONS==3 %}
-  // Project onto the two z-normal faces.
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xy++) {
     for (int z = 0; z < {{NUMBER_OF_DOF}}; z++) {
       SIMD(aligned(lQhi:PEANO_WITH_ALIGNMENT))
@@ -594,9 +590,6 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   traceLeave("Extrapolation");
 
   traceEnter("Volume integral");
-
-  // For linear non-conservative PDE, the volume integral is trivial, since it
-  // only involves the element mass matrix, which cancels out.
 
   for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
     SIMD(aligned(lFhi{{',lShi' if USE_SOURCE else ''}}:PEANO_WITH_ALIGNMENT))

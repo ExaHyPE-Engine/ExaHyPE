@@ -2,8 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "ScalarOperations.h"
-#include "Vector.h"
+#include "tarch/la/ScalarOperations.h"
+#include "tarch/la/Vector.h"
 
 template <int Size, typename Scalar>
 std::string toString(const tarch::la::Vector<Size, Scalar>& vector);
@@ -187,4 +187,4 @@ namespace tarch::la {
 template <int Size, typename Scalar>
 INLINE_METHOD std::ostream& operator<<(std::ostream& os, const tarch::la::Vector<Size, Scalar>& vector);
 
-#include "VectorOperations.cpph"
+#include "tarch/la/VectorOperations.cpph"

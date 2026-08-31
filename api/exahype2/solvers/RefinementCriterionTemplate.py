@@ -29,20 +29,25 @@ RefinementCriterionTemplate = """
   if ({{PREDICATE}}
       and tarch::la::greater(tarch::la::max(marker.getH()), maxAdmissiblePatchSize)) {
     refinementCriterion = ::exahype2::RefinementCommand::Refine;
-  } else if ({{PREDICATE}} and fineGridCell{{CELL_LABEL_NAME}}.getHasUpdated()) {
+  } else if ({{PREDICATE}} and fineGridCell{{CELL_LABEL_NAME}}.getHasUpdated()
+             and (tarch::la::greater(tarch::la::max(marker.getH()), minAdmissiblePatchSize)
+                  or 3.0 * tarch::la::max(marker.getH()) <= maxAdmissiblePatchSize)) {
+    // A cell that can neither refine nor erase keeps its grid, so the criterion is not
+    // evaluated there. The cell label carries the time of the solution the criterion
+    // reads, because the solver's running minimum changes while other tasks update it.
     {% if STATELESS_REFINEMENT_CRITERION %}
     refinementCriterion = {{FULL_QUALIFIED_SOLVER_NAME}}::refinementCriterion(
       {{CELL_ACCESSOR}}.data(),
       marker.getX(),
       marker.getH(),
-      repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp()
+      fineGridCell{{CELL_LABEL_NAME}}.getTimeStamp()
     );
     {% else %}
     refinementCriterion = repositories::{{SOLVER_INSTANCE}}.refinementCriterion(
       {{CELL_ACCESSOR}}.data(),
       marker.getX(),
       marker.getH(),
-      repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp()
+      fineGridCell{{CELL_LABEL_NAME}}.getTimeStamp()
     );
     {% endif %}
     if (refinementCriterion == ::exahype2::RefinementCommand::Refine

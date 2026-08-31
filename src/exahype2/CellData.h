@@ -8,13 +8,9 @@
 
 namespace exahype2 {
   /**
-   * Representation of a number of cells which contains all information
-   * that's required to process the stored patches or polynomial shape
-   * functions (given you know the semantics of the data).
-   *
-   * As the CellData does maintain some internal tables which are allocated
-   * in the constructor and freed in the destructor, it does not provide a copy
-   * constructor. This one is explicitly deleted.
+   * Holds a set of cells with the data a kernel requires to process the stored
+   * patches or polynomial shape functions. The constructor allocates the
+   * internal tables, and the destructor frees them.
    */
   template <typename inType, typename outType, int NumFaceTypes = 1>
   struct CellData {
@@ -72,8 +68,8 @@ namespace exahype2 {
       int                   targetDevice_   = tarch::accelerator::Device::DefaultDevice
     );
 
-    CellData(const CellData& copy)       = delete;
-    CellData& operator=(const CellData&) = delete;
+    CellData(const CellData& copy)            = delete;
+    CellData& operator=(const CellData& copy) = delete;
 
     ~CellData();
 
@@ -81,4 +77,4 @@ namespace exahype2 {
   };
 } // namespace exahype2
 
-#include "CellData.cpph"
+#include "exahype2/CellData.cpph"

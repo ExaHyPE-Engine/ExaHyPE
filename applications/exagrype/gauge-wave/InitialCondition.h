@@ -5,5 +5,5 @@
 #include "tarch/la/Vector.h"
 
 namespace applications::exahype2::exagrype {
-  void initialCondition(const tarch::la::Vector<3, double>& x, double t, int nVars, double* __restrict__ Q);
+  void initialCondition(const tarch::la::Vector<3, double>& x, double t, int nVars, double* NOALIAS Q);
 } // namespace applications::exahype2::exagrype

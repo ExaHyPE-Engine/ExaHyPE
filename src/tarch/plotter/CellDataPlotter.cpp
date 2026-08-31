@@ -1,6 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "FileWriter.h"
+#include "tarch/plotter/FileWriter.h"
 
 tarch::plotter::FileWriter::CellDataPlotter::CellDataPlotter(
   FileWriter&        plotter,
@@ -8,13 +8,7 @@ tarch::plotter::FileWriter::CellDataPlotter::CellDataPlotter(
   const std::string& identifier,
   const int          recordsPerCell
 ) :
-  _impl(
-    plotter,
-    subdomainId,
-    plotter._subdomains.at(static_cast<std::size_t>(subdomainId)).cellFields,
-    identifier,
-    recordsPerCell
-  ) {}
+  _impl(plotter.pieceBuffers(subdomainId).cellFields, identifier, recordsPerCell) {}
 
 void tarch::plotter::FileWriter::CellDataPlotter::plotCellData(const int index, const double value) {
   plotCellData<double>(index, value);

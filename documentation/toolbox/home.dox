@@ -5,7 +5,6 @@
 \tableofcontents
 
 \li \subpage toolbox_blockstructured
-\li \subpage toolbox_loadbalancing
 \li \subpage toolbox_particles
 
 A toolbox is a set of routines and algorithms for a specific challenge which

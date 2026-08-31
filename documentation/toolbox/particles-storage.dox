@@ -1,43 +1,38 @@
 /**
 
-@page page_toolbox_particles_mesh_storage Multiscale particle storage within mesh
+@page page_toolbox_particles_mesh_storage Multiscale particle storage
 
+Particles use a dual-tree association. The replicated spacetree supplies the
+multilevel geometry, while each rank stores particle sets only in its relevant
+vertex pool slots.
 
-The particles are stored following the dual tree storage paradigm.
+# Level selection
 
-@image html api/peano4/toolbox/particles/api/dual-tree.png
+A particle resides on a level whose cell width can accommodate its search
+diameter. The association chooses the vertex on that level closest to the
+particle centre. Particles with different search radii can therefore occupy
+different levels of the same spacetree.
 
-We hold the whole spacetree with all of its levels. This is similar to holding
-a cascade of finer and finer, ragged Cartesian meshes. First, each particle is
-assigned into the grid level within this tree that can just accommodate its
-search diameter within one cell lenght. Particles therefore can reside on
-different mesh levels. After that, we store each particle in the vertex closest
-to its centre.
+For a particle with search radius @f$r@f$ and level width @f$h@f$, the
+association selects a level satisfying the particle model's @f$r@f$ to
+@f$h@f$ constraint. The update action sets lift or drop the particle when a
+position or radius change invalidates that selection.
 
-- A particle resides on a mesh level within the tree such that the
-  search radius @f$ r \leq h@f$ if h is the resolution of this level.
-- A particle is associated to the vertex of this level that's closest to
-  its centre x.
+# Dual-grid interpretation
 
-These two conventions effectively span a dual grid over the spacetree if you
-think of particles to be stored within cells:
-Just impose a grid on top of your actual grid which is shifted by half a mesh
-lenght.
-Particles are contained within these shifted grid's cells.
-Alternatively, you can think of the vertices of the tree spanning a Voronoi
-diagram, and particles are then held by the cells of this Voronoi diagram.
+The vertex association is equivalent to a cell association on a grid shifted
+by half a cell width along every axis. The spacetree vertices form the centres
+of these dual cells, or equivalently the sites of a Voronoi partition on each
+level.
 
+# Rank ownership
 
-Our storage is vertex-oriented whereas most particle literature stores
-particles within cells.
-If we think of a dual multiscale mesh, i.e. a mesh that is shifed by @f$h/2@f$
-alon each coordinate axis, then Peano's approach also works with cells.
-Such shifted meshes are often called ***dual*** meshes and I therefore speak
-of a ***dual tree***.
-There are other notions of dual trees in literature, where two trees are used
-to construct the interaction sets.
-We do not follow this naming convention.
+The authoritative particle is local on the rank owning its associated mesh
+region. Other ranks can hold virtual boundary copies. A rank-boundary merge
+updates these copies with one sweep of lag, and the sieve routes a particle
+whose destination is not available in the local vertex pool.
 
+Particle containers make their rank traversal serial, so no
+subtree-task particle copies exist within a rank.
 
 */
-

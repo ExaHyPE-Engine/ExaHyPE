@@ -9,14 +9,15 @@ namespace toolbox::blockstructured::tests {
 } // namespace toolbox::blockstructured::tests
 
 class toolbox::blockstructured::tests::ChildDataStageTest final : public tarch::tests::TestCase {
-private:
-  void testSiblingSetLifecycle();
-  void testNestedFrames();
-  void testPartialFrameAccessors();
-
 public:
   ChildDataStageTest();
   ~ChildDataStageTest() override = default;
 
   void run() override;
+
+private:
+  void testSiblingSetLifecycle();
+  void testNestedFrames();
+  void testPartialFrameAccessors();
+  void testClaimedFramesCarryTheirTag();
 };

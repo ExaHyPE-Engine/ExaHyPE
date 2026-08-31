@@ -2,24 +2,18 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "Scalar.h"
 #include "tarch/accelerator/accelerator.h"
+#include "tarch/la/Scalar.h"
 
 TARGET_DECLARE
 
 namespace tarch::la {
-  /**
-   * Returns the absolute value of a type by redirecting to std::abs.
-   */
   INLINE_METHOD GPU_CALLABLE_METHOD double abs(double value);
 
-  /**
-   * Returns the absolute value of the given int.
-   */
   INLINE_METHOD GPU_CALLABLE_METHOD int abs(int value);
 
   /**
-   * Computes the i-th power of a in integer arithmetic.
+   * Returns a raised to the power i in integer arithmetic.
    */
   INLINE_METHOD GPU_CALLABLE_METHOD int aPowI(int i, int a);
 
@@ -57,7 +51,7 @@ namespace tarch::la {
   );
 
   /**
-   * @return -10, or 1 depending on the sign of value
+   * @return -1, 0, or 1 depending on the sign of value
    */
   INLINE_METHOD GPU_CALLABLE_METHOD int sign(double value, double tolerance = NUMERICAL_ZERO_DIFFERENCE);
 
@@ -65,6 +59,6 @@ namespace tarch::la {
   INLINE_METHOD GPU_CALLABLE_METHOD int round(float value);
 } // namespace tarch::la
 
-#include "ScalarOperations.cpph"
+#include "tarch/la/ScalarOperations.cpph"
 
 TARGET_DECLARE_END

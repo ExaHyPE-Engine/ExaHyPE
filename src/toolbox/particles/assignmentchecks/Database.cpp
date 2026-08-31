@@ -3,170 +3,190 @@
 
 #include "Database.h"
 
-#include "Event.h"
-#include "ParticleIdentifier.h"
-#include "tarch/instrumentation/Log.h"
+#include "tarch/instrumentation/Debug.h"
 #include "tarch/la/Vector.h"
-#include "tarch/multicore/MultiReadSingleWriteLock.h"
+#include "toolbox/particles/assignmentchecks/Event.h"
+#include "toolbox/particles/assignmentchecks/ParticleIdentifier.h"
 
-void toolbox::particles::assignmentchecks::internal::Database::
-  setMaxParticleSnapshotsToKeepTrackOf(const size_t n) {
-  _maxParticleEventsToKeepTrackOf = n;
+/**
+ * Returns the one assignment-history database for this process.
+ */
+toolbox::particles::assignmentchecks::internal::Database& toolbox::particles::assignmentchecks::internal::Database::
+  getInstance() {
+  static Database instance;
+  return instance;
 }
 
-void toolbox::particles::assignmentchecks::internal::Database::startMeshSweep(
-  const std::string& meshSweepName
+toolbox::particles::assignmentchecks::internal::Database::Database() { _meshSweepData.emplace_back("initial"); }
+
+/**
+ * Sets the history limit applied independently to each particle.
+ */
+void toolbox::particles::assignmentchecks::internal::Database::setMaxParticleSnapshotsToKeepTrackOf(
+  size_t maximumNumberOfSnapshots
 ) {
-  logDebug("finish old mesh sweep with and start new one for " << meshSweepName);
-
-  tarch::multicore::MultiReadSingleWriteLock
-    lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Write);
-
-  _meshSweepData.push_back(MeshSweepData(meshSweepName));
-  _currentMeshSweepIndex++;
-};
-
-int toolbox::particles::assignmentchecks::internal::Database::
-  getNumberOfSnapshots() const {
-  return _meshSweepData.size();
+  const std::unique_lock<std::shared_mutex> lock(_mutex);
+  _maxParticleEventsToKeepTrackOf = maximumNumberOfSnapshots;
 }
 
-std::vector<toolbox::particles::assignmentchecks::internal::MeshSweepData>& toolbox::
-  particles::assignmentchecks::internal::Database::getMeshSweepData() {
+/**
+ * Starts a mesh sweep and makes it the target for subsequently added events.
+ */
+void toolbox::particles::assignmentchecks::internal::Database::startMeshSweep(const std::string& meshSweepName) {
+  logDebug("Finish the current mesh sweep and start " << meshSweepName);
+
+  const std::unique_lock<std::shared_mutex> lock(_mutex);
+
+  _meshSweepData.emplace_back(meshSweepName);
+  _currentMeshSweepIndex++;
+}
+
+/**
+ * Returns the number of mesh-sweep snapshots retained by the database.
+ */
+int toolbox::particles::assignmentchecks::internal::Database::getNumberOfSnapshots() const {
+  const std::shared_lock<std::shared_mutex> lock(_mutex);
+  return static_cast<int>(_meshSweepData.size());
+}
+
+/**
+ * Returns the mesh-sweep entries without locking _mutex, so no other method of
+ * this object may run while the caller holds the reference.
+ */
+std::vector<toolbox::particles::assignmentchecks::internal::MeshSweepData>& toolbox::particles::assignmentchecks::
+  internal::Database::getMeshSweepData() {
   return _meshSweepData;
 }
 
-size_t toolbox::particles::assignmentchecks::internal::Database::
-  getCurrentMeshSweepIndex() const {
-  return _currentMeshSweepIndex;
+size_t toolbox::particles::assignmentchecks::internal::Database::getCurrentMeshSweepIndex() const {
+  const std::shared_lock<std::shared_mutex> lock(_mutex);
+  return static_cast<size_t>(_currentMeshSweepIndex);
 }
 
-int toolbox::particles::assignmentchecks::internal::Database::
-  getNumberOfTracedParticles() const {
-  return _data.size();
+int toolbox::particles::assignmentchecks::internal::Database::getNumberOfTracedParticles() const {
+  const std::shared_lock<std::shared_mutex> lock(_mutex);
+  return static_cast<int>(_data.size());
 }
 
+/**
+ * Clears all histories and recreates the initial mesh-sweep entry.
+ */
 void toolbox::particles::assignmentchecks::internal::Database::reset() {
+  const std::unique_lock<std::shared_mutex> lock(_mutex);
   logDebug("Resetting database");
 
   _data.clear();
   _meshSweepData.clear();
 
-  // and re-initialize.
-  _meshSweepData.push_back(MeshSweepData("initial"));
+  _meshSweepData.emplace_back("initial");
   _currentMeshSweepIndex = 0;
 }
 
-toolbox::particles::assignmentchecks::internal::ParticleEvents toolbox::
-  particles::assignmentchecks::internal::Database::getParticleHistory(
-    const ParticleIdentifier& identifier
-  ) {
-  tarch::multicore::MultiReadSingleWriteLock
-    lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Read);
+/**
+ * Returns a copy of the particle history. An unknown identifier yields one
+ * Event::Type::NotFound entry.
+ */
+toolbox::particles::assignmentchecks::internal::ParticleEvents toolbox::particles::assignmentchecks::internal::
+  Database::getParticleHistory(const ParticleIdentifier& identifier) const {
+  const std::shared_lock<std::shared_mutex> lock(_mutex);
 
   auto search = _data.find(identifier);
 
   if (search == _data.end()) {
-    ParticleEvents* newEventHistory = new ParticleEvents();
-    newEventHistory->push_back(Event(Event::Type::NotFound));
-    return *newEventHistory;
-  } else {
+    ParticleEvents newEventHistory;
+    newEventHistory.push_back(Event(Event::Type::NotFound));
+    return newEventHistory;
+  }
 #if PEANO_DEBUG
+  assertion(
+    search->first.particleId == identifier.particleId,
+    "Particle identifier ID not identical",
+    search->first.particleId,
+    identifier.particleId
+  );
+  assertion(
+    search->first.treeId == identifier.treeId,
+    "Particle treeId not identical",
+    search->first.treeId,
+    identifier.treeId
+  );
+  for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
     assertion(
-      search->first.particleID == identifier.particleID,
-      "Particle identifier ID not identical",
-      search->first.particleID,
-      identifier.particleID
+      search->first.vertexInd(dimension) == identifier.vertexInd(dimension),
+      "Particle vertex index not identical",
+      search->first.vertexInd(dimension),
+      identifier.vertexInd(dimension)
     );
-    assertion(
-      search->first.treeID == identifier.treeID,
-      "Particle treeID not identical",
-      search->first.treeID,
-      identifier.treeID
-    );
-    for (int i = 0; i < DIMENSIONS; i++) {
-      assertion(
-        search->first.vertexInd(i) == identifier.vertexInd(i),
-        "Particle treeID not identical",
-        search->first.vertexInd(i),
-        identifier.vertexInd(i)
-      );
-    }
-    assertion(
-      search->first.vertexDepth == identifier.vertexDepth,
-      "Particle depth not identical",
-      search->first.vertexDepth,
-      identifier.vertexDepth
-    );
+  }
+  assertion(
+    search->first.vertexDepth == identifier.vertexDepth,
+    "Particle depth not identical",
+    search->first.vertexDepth,
+    identifier.vertexDepth
+  );
 #endif
 
-    ParticleEvents history = search->second;
-    return history;
-  }
+  return search->second;
 }
 
-std::string toolbox::particles::assignmentchecks::internal::Database::toString(
-) {
-  tarch::multicore::MultiReadSingleWriteLock
-    lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Read);
+std::string toolbox::particles::assignmentchecks::internal::Database::toString() const {
+  const std::shared_lock<std::shared_mutex> lock(_mutex);
 
-  std::ostringstream msg;
+  std::ostringstream description;
 
-  msg << "--------------------------\n";
-  msg << "Full database dump\n";
-  msg << "--------------------------\n";
+  description << "--------------------------\n";
+  description << "Full database dump\n";
+  description << "--------------------------\n";
 
   for (auto entry = _data.cbegin(); entry != _data.cend(); entry++) {
-    ParticleIdentifier identifier = entry->first;
-    ParticleEvents     history    = entry->second;
+    const ParticleIdentifier& identifier = entry->first;
+    const ParticleEvents&     history    = entry->second;
 
-    msg << "\n" << identifier.toString();
+    description << "\n" << identifier.toString();
     int meshSweepIndex = -1;
 
     for (auto event = history.crbegin(); event != history.crend(); event++) {
       if (event->meshSweepIndex != meshSweepIndex) {
-        std::string sweepname = _meshSweepData.at(event->meshSweepIndex)
-                                  .getName();
-        msg << "\n\t[Sweep " << sweepname << ",index=" << event->meshSweepIndex
-            << "]:";
+        const std::string meshSweepName = _meshSweepData.at(event->meshSweepIndex).getName();
+        description << "\n\t[Sweep " << meshSweepName << ",index=" << event->meshSweepIndex << "]:";
       }
       meshSweepIndex = event->meshSweepIndex;
-      msg << "\n\t\t->" << event->toString();
+      description << "\n\t\t->" << event->toString();
     }
   }
 
-  msg << "\n";
+  description << "\n";
 
-  return msg.str();
+  return description.str();
 }
 
-int toolbox::particles::assignmentchecks::internal::Database::
-  getTotalParticleEntries(const ParticleIdentifier& identifier) {
-  tarch::multicore::MultiReadSingleWriteLock
-    lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Read);
+int toolbox::particles::assignmentchecks::internal::Database::getTotalParticleEntries(
+  const ParticleIdentifier& identifier
+) const {
+  const std::shared_lock<std::shared_mutex> lock(_mutex);
 
   auto search = _data.find(identifier);
 
   if (search != _data.end()) {
 #if PEANO_DEBUG
     assertion(
-      search->first.particleID == identifier.particleID,
+      search->first.particleId == identifier.particleId,
       "Particle identifier ID not identical",
-      search->first.particleID,
-      identifier.particleID
+      search->first.particleId,
+      identifier.particleId
     );
     assertion(
-      search->first.treeID == identifier.treeID,
-      "Particle treeID not identical",
-      search->first.treeID,
-      identifier.treeID
+      search->first.treeId == identifier.treeId,
+      "Particle treeId not identical",
+      search->first.treeId,
+      identifier.treeId
     );
-    for (int i = 0; i < DIMENSIONS; i++) {
+    for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
       assertion(
-        search->first.vertexInd(i) == identifier.vertexInd(i),
-        "Particle treeID not identical",
-        search->first.vertexInd(i),
-        identifier.vertexInd(i)
+        search->first.vertexInd(dimension) == identifier.vertexInd(dimension),
+        "Particle vertex index not identical",
+        search->first.vertexInd(dimension),
+        identifier.vertexInd(dimension)
       );
     }
     assertion(
@@ -177,89 +197,81 @@ int toolbox::particles::assignmentchecks::internal::Database::
     );
 #endif
 
-    int result = search->second.size();
-    return result;
+    return static_cast<int>(search->second.size());
   }
   return 0;
 }
 
-std::string toolbox::particles::assignmentchecks::internal::Database::
-  lastMeshSweepSnapshot() {
-  tarch::multicore::MultiReadSingleWriteLock
-    lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Read);
+std::string toolbox::particles::assignmentchecks::internal::Database::lastMeshSweepSnapshot() const {
+  const std::shared_lock<std::shared_mutex> lock(_mutex);
 
-  std::ostringstream msg;
-  int                cmswi = getCurrentMeshSweepIndex();
+  std::ostringstream description;
+  const int          currentMeshSweepIndex = _currentMeshSweepIndex;
 
-  msg << "--------------------------\n";
-  msg << "Last sweep dump: Sweep [" << _meshSweepData.at(cmswi).getName()
-      << "]\n";
-  msg << "--------------------------\n";
+  description << "--------------------------\n";
+  description << "Last sweep dump: Sweep [" << _meshSweepData.at(currentMeshSweepIndex).getName() << "]\n";
+  description << "--------------------------\n";
 
   for (auto entry = _data.cbegin(); entry != _data.cend(); entry++) {
-    ParticleIdentifier identifier = entry->first;
-    ParticleEvents     history    = entry->second;
+    const ParticleIdentifier& identifier = entry->first;
+    const ParticleEvents&     history    = entry->second;
 
-    msg << "\n" << identifier.toString();
+    description << "\n" << identifier.toString();
 
     for (auto event = history.crbegin(); event != history.crend(); event++) {
-      if (event->meshSweepIndex != cmswi) {
+      if (event->meshSweepIndex != currentMeshSweepIndex) {
         break;
       }
-      msg << "\n\t->" << event->toString();
+      description << "\n\t->" << event->toString();
     }
   }
 
-  return msg.str();
+  return description.str();
 }
 
-std::string toolbox::particles::assignmentchecks::internal::Database::
-  sweepHistory() {
-  tarch::multicore::MultiReadSingleWriteLock
-    lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Read);
+std::string toolbox::particles::assignmentchecks::internal::Database::sweepHistory() const {
+  const std::shared_lock<std::shared_mutex> lock(_mutex);
 
-  std::ostringstream msg;
-  int                counter = 0;
-  for (auto sweep = _meshSweepData.cbegin(); sweep != _meshSweepData.cend();
-       sweep++) {
-    msg << std::endl << "sweep #" << counter << ": " << sweep->getName();
-    counter++;
+  std::ostringstream description;
+  int                meshSweepIndex = 0;
+  for (auto meshSweep = _meshSweepData.cbegin(); meshSweep != _meshSweepData.cend(); meshSweep++) {
+    description << '\n' << "sweep #" << meshSweepIndex << ": " << meshSweep->getName();
+    meshSweepIndex++;
   }
-  msg << "\n";
+  description << "\n";
 
-  return msg.str();
+  return description.str();
 }
 
-std::string toolbox::particles::assignmentchecks::internal::Database::
-  particleHistory(const ParticleIdentifier& identifier) {
-  tarch::multicore::MultiReadSingleWriteLock
-    lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Read);
+std::string toolbox::particles::assignmentchecks::internal::Database::particleHistory(
+  const ParticleIdentifier& identifier
+) const {
+  const std::shared_lock<std::shared_mutex> lock(_mutex);
 
-  std::ostringstream msg;
-  msg << "\n============================\n"
-      << identifier.toString() << "\n============================\n";
+  std::ostringstream description;
+  description << "\n============================\n" << identifier.toString() << "\n============================\n";
 
   auto search = _data.find(identifier);
   if (search != _data.end()) {
 #if PEANO_DEBUG
     assertion(
-      search->first.particleID == identifier.particleID,
+      search->first.particleId == identifier.particleId,
       "Particle identifier ID not identical",
-      search->first.particleID,
-      identifier.particleID
+      search->first.particleId,
+      identifier.particleId
     );
     assertion(
-      search->first.treeID == identifier.treeID,
-      "Particle treeID not identical",
-      search->first.treeID,
-      identifier.treeID
+      search->first.treeId == identifier.treeId,
+      "Particle treeId not identical",
+      search->first.treeId,
+      identifier.treeId
     );
-    for (int i = 0; i < DIMENSIONS; i++) {
+    for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
       assertion(
-        search->first.vertexInd(i) == identifier.vertexInd(i),
-        "Particle treeID not identical",
-        search->first.vertexInd(i),
-        identifier.vertexInd(i)
+        search->first.vertexInd(dimension) == identifier.vertexInd(dimension),
+        "Particle vertex index not identical",
+        search->first.vertexInd(dimension),
+        identifier.vertexInd(dimension)
       );
     }
     assertion(
@@ -270,162 +282,68 @@ std::string toolbox::particles::assignmentchecks::internal::Database::
     );
 #endif
 
-    ParticleEvents& history = search->second;
-    auto            ev      = history.crbegin();
+    const ParticleEvents& history       = search->second;
+    auto                  eventIterator = history.crbegin();
 
-    // mesh sweep index of the previous event.
-    int prevMeshSweepInd = -1;
+    int previousMeshSweepIndex = -1;
 
-    while (ev != history.crend()) {
-      int meshSweepInd = ev->meshSweepIndex;
+    while (eventIterator != history.crend()) {
+      const int meshSweepIndex = eventIterator->meshSweepIndex;
 
-      if (meshSweepInd != prevMeshSweepInd) {
-        // We're starting new sweep. Print header.
-        msg << "\nsweep #" << meshSweepInd << " ("
-            << _meshSweepData.at(meshSweepInd).getName() << "):";
+      if (meshSweepIndex != previousMeshSweepIndex) {
+        description << "\nsweep #" << meshSweepIndex << " (" << _meshSweepData.at(meshSweepIndex).getName() << "):";
       }
-      msg << "\n\t->" << ev->toString();
+      description << "\n\t->" << eventIterator->toString();
 
-      prevMeshSweepInd = meshSweepInd;
-      ev++;
+      previousMeshSweepIndex = meshSweepIndex;
+      eventIterator++;
     }
   }
 
-  msg << "\n";
+  description << "\n";
 
-  return msg.str();
+  return description.str();
 }
 
-toolbox::particles::assignmentchecks::internal::Event toolbox::particles::
-  assignmentchecks::internal::Database::
-    addEvent(ParticleIdentifier identifier, Event& event) {
+/**
+ * Appends an event to the particle history and returns its previous event.
+ * When the history limit is reached, the newest retained event first becomes
+ * the substitute for the discarded history.
+ */
+toolbox::particles::assignmentchecks::internal::Event toolbox::particles::assignmentchecks::internal::Database::
+  addEvent(ParticleIdentifier identifier, Event& event) {
   logDebug("Adding event for " << identifier.toString());
 
-  tarch::multicore::MultiReadSingleWriteLock
-    lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Write);
+  const std::unique_lock<std::shared_mutex> lock(_mutex);
 
-  // Take note of the current mesh sweep index.
-  event.meshSweepIndex = getCurrentMeshSweepIndex();
+  event.meshSweepIndex = _currentMeshSweepIndex;
 
-  // Try finding existing previous event.
   auto search = _data.find(identifier);
 
   if (search == _data.end()) {
-    // This is a new particle.
-
-    ParticleEvents newEventHistory = ParticleEvents();
-    newEventHistory.push_back(event);
-    _data.insert(
-      std::pair<ParticleIdentifier, ParticleEvents>(identifier, newEventHistory)
-    );
-    logDebug("add new particle history thread for " + identifier.toString()
-        + ",Event:" + event.toString());
-    // there is no previous event.
+    _data.emplace(identifier, ParticleEvents{event});
+    logDebug("Add a particle history for " << identifier.toString() << ", event: " << event.toString());
     return Event(Event::Type::NotFound);
-  } else {
-#if PEANO_DEBUG
-    assertion(
-      search->first.particleID == identifier.particleID,
-      "Particle identifier ID not identical",
-      search->first.particleID,
-      identifier.particleID
-    );
-    assertion(
-      search->first.treeID == identifier.treeID,
-      "Particle treeID not identical",
-      search->first.treeID,
-      identifier.treeID
-    );
-    for (int i = 0; i < DIMENSIONS; i++) {
-      assertion(
-        search->first.vertexInd(i) == identifier.vertexInd(i),
-        "Particle treeID not identical",
-        search->first.vertexInd(i),
-        identifier.vertexInd(i)
-      );
-    }
-    assertion(
-      search->first.vertexDepth == identifier.vertexDepth,
-      "Particle depth not identical",
-      search->first.vertexDepth,
-      identifier.vertexDepth
-    );
-#endif
-
-    ParticleEvents& history = search->second;
-
-    // First: Do we need to downsize the history?
-    if (history.size() >= _maxParticleEventsToKeepTrackOf) {
-      // make copy, not reference
-      Event lastEvent = history.back();
-
-#if PEANO_DEBUG
-      if (lastEvent.type == Event::Type::NotFound) {
-        logDebug("Particle histroy shouldn't contain an invalid event");
-      }
-#endif
-
-      // In certain cases, especially for virtual particles, the last saved
-      // event may be a substitution already. We don't want to keep
-      // prepending the string with the notifier, so check for it.
-      //if (not lastEvent.trace.starts_with("substitute-for-whole-trajectory/")) {
-      if (lastEvent.trace.compare(0, std::string("substitute-for-whole-trajectory/").length(), "substitute-for-whole-trajectory/") != 0) {
-        lastEvent.trace = "substitute-for-whole-trajectory/" + lastEvent.trace;
-      }
-
-      logDebug("shortening history of " << identifier.toString(
-        ) << " to " << lastEvent.toString());
-
-      history.clear();
-      history.push_back(lastEvent);
-    }
-
-    // Add the new event now.
-    Event previousEvent = history.back();
-    history.push_back(event);
-    logDebug("added event " + event.toString() + " " + identifier.toString());
-
-    return previousEvent;
   }
-}
-
-void toolbox::particles::assignmentchecks::internal::Database::replaceEvent(
-  ParticleIdentifier identifier,
-  Event&             oldEvent,
-  Event&             newEvent
-) {
-  tarch::multicore::MultiReadSingleWriteLock
-    lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Write);
-
-  // Take note of the current mesh sweep index.
-  newEvent.meshSweepIndex = getCurrentMeshSweepIndex();
-
-  auto search = _data.find(identifier);
-
-  assertion(
-    search != _data.end(),
-    "Trying to replace event of particle with no history"
-  );
-
 #if PEANO_DEBUG
   assertion(
-    search->first.particleID == identifier.particleID,
+    search->first.particleId == identifier.particleId,
     "Particle identifier ID not identical",
-    search->first.particleID,
-    identifier.particleID
+    search->first.particleId,
+    identifier.particleId
   );
   assertion(
-    search->first.treeID == identifier.treeID,
-    "Particle treeID not identical",
-    search->first.treeID,
-    identifier.treeID
+    search->first.treeId == identifier.treeId,
+    "Particle treeId not identical",
+    search->first.treeId,
+    identifier.treeId
   );
-  for (int i = 0; i < DIMENSIONS; i++) {
+  for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
     assertion(
-      search->first.vertexInd(i) == identifier.vertexInd(i),
-      "Particle treeID not identical",
-      search->first.vertexInd(i),
-      identifier.vertexInd(i)
+      search->first.vertexInd(dimension) == identifier.vertexInd(dimension),
+      "Particle vertex index not identical",
+      search->first.vertexInd(dimension),
+      identifier.vertexInd(dimension)
     );
   }
   assertion(
@@ -438,62 +356,69 @@ void toolbox::particles::assignmentchecks::internal::Database::replaceEvent(
 
   ParticleEvents& history = search->second;
 
-  // Get previous event
-  Event previousEventOnThisTree = Event(Event::Type::NotFound);
+  if (history.size() >= _maxParticleEventsToKeepTrackOf) {
+    Event lastEvent = history.back();
 
-  for (auto it = history.begin(); it != history.end(); it++) {
-    if ((it->meshSweepIndex == oldEvent.meshSweepIndex) and
-        (it->type == oldEvent.type) and
-        (it->treeId == oldEvent.treeId) and
-        (it->isLocal == oldEvent.isLocal) ){
-      it->type           = newEvent.type;
-      it->isLocal        = newEvent.isLocal;
-      it->vertexX        = newEvent.vertexX;
-      it->vertexH        = newEvent.vertexH;
-      it->treeId         = newEvent.treeId;
-      it->trace          = newEvent.trace;
-      it->meshSweepIndex = newEvent.meshSweepIndex;
-
-      break;
+#if PEANO_DEBUG
+    if (lastEvent.type == Event::Type::NotFound) {
+      logDebug("Particle history should not contain an invalid event");
     }
+#endif
+
+    static const std::string SubstitutionPrefix = "substitute-for-whole-trajectory/";
+    if (lastEvent.trace.compare(0, SubstitutionPrefix.length(), SubstitutionPrefix) != 0) {
+      lastEvent.trace = SubstitutionPrefix + lastEvent.trace;
+    }
+
+    logDebug("Shorten the history of " << identifier.toString() << " to " << lastEvent.toString());
+
+    history.clear();
+    history.push_back(lastEvent);
   }
+
+  const Event previousEvent = history.back();
+  history.push_back(event);
+  logDebug("Added event " << event.toString() << " " << identifier.toString());
+
+  return previousEvent;
 }
 
-void toolbox::particles::assignmentchecks::internal::Database::
-  shiftIdentifierVertexInd(
-    ParticleIdentifier&                       identifier,
-    tarch::la::Vector<DIMENSIONS, long long>& newVertexInd,
-    const int                                 newVertexDepth
-  ) {
-  tarch::multicore::MultiReadSingleWriteLock
-    lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Write);
+/**
+ * Replaces a matching event and assigns the current mesh-sweep index to the
+ * replacement.
+ */
+void toolbox::particles::assignmentchecks::internal::Database::replaceEvent(
+  ParticleIdentifier identifier,
+  Event&             oldEvent,
+  Event&             newEvent
+) {
+  const std::unique_lock<std::shared_mutex> lock(_mutex);
+
+  newEvent.meshSweepIndex = _currentMeshSweepIndex;
 
   auto search = _data.find(identifier);
 
-  assertion(
-    search != _data.end(),
-    "Particle not found through its identifier"
-  );
+  assertion(search != _data.end(), "Trying to replace event of particle with no history");
 
 #if PEANO_DEBUG
   assertion(
-    search->first.particleID == identifier.particleID,
+    search->first.particleId == identifier.particleId,
     "Particle identifier ID not identical",
-    search->first.particleID,
-    identifier.particleID
+    search->first.particleId,
+    identifier.particleId
   );
   assertion(
-    search->first.treeID == identifier.treeID,
-    "Particle treeID not identical",
-    search->first.treeID,
-    identifier.treeID
+    search->first.treeId == identifier.treeId,
+    "Particle treeId not identical",
+    search->first.treeId,
+    identifier.treeId
   );
-  for (int i = 0; i < DIMENSIONS; i++) {
+  for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
     assertion(
-      search->first.vertexInd(i) == identifier.vertexInd(i),
-      "Particle treeID not identical",
-      search->first.vertexInd(i),
-      identifier.vertexInd(i)
+      search->first.vertexInd(dimension) == identifier.vertexInd(dimension),
+      "Particle vertex index not identical",
+      search->first.vertexInd(dimension),
+      identifier.vertexInd(dimension)
     );
   }
   assertion(
@@ -504,80 +429,132 @@ void toolbox::particles::assignmentchecks::internal::Database::
   );
 #endif
 
-  // Do we need to shift the coordinates of the identifier?  Use the one the
-  // search gives you back, because we allow for a fuzzy search.  You need to
-  // compare to the actually stored coordinates, not to whatever you think they
-  // currently may be.
-  ParticleIdentifier key     = search->first;
-  ParticleEvents&    history = search->second;
+  ParticleEvents& history = search->second;
 
-  // delete old entry in database and add the new one.
-  logDebug("shifting particle identifier from "
-      << key.vertexInd << " to " << newVertexInd);
-
-  ParticleEvents historyCopy = history;
-  _data.erase(key);
-  ParticleIdentifier newIdentifier = ParticleIdentifier(
-    identifier.particleName,
-    identifier.particleX,
-    newVertexInd,
-    newVertexDepth,
-    identifier.particleID,
-    identifier.treeID
-  );
-  // Important: if particle already exists with this identifier (e.g. because
-  // if was on this vertex before), map.insert() will not replace the existing
-  // entry. Use insert_or_assign instead, which replaces it.
-  // TODO: Instead of replacing, append history.
-  _data.insert_or_assign(newIdentifier, historyCopy);
+  for (auto eventIterator = history.begin(); eventIterator != history.end(); eventIterator++) {
+    if ((eventIterator->meshSweepIndex == oldEvent.meshSweepIndex) and (eventIterator->type == oldEvent.type)
+        and (eventIterator->treeId == oldEvent.treeId) and (eventIterator->isLocal == oldEvent.isLocal)) {
+      eventIterator->type           = newEvent.type;
+      eventIterator->isLocal        = newEvent.isLocal;
+      eventIterator->vertexX        = newEvent.vertexX;
+      eventIterator->vertexH        = newEvent.vertexH;
+      eventIterator->treeId         = newEvent.treeId;
+      eventIterator->trace          = newEvent.trace;
+      eventIterator->meshSweepIndex = newEvent.meshSweepIndex;
+      return;
+    }
+  }
+  assertion(false, "Event to replace is not part of the particle history");
 }
 
-void toolbox::particles::assignmentchecks::internal::Database::
-  eliminateExistingParticles() {
-  tarch::multicore::MultiReadSingleWriteLock
-    lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Write);
+/**
+ * Moves the history of the particle to the key that carries newVertexIndex and
+ * newVertexDepth. A history under the target key is overwritten.
+ */
+void toolbox::particles::assignmentchecks::internal::Database::shiftIdentifierVertexInd(
+  ParticleIdentifier&                       identifier,
+  tarch::la::Vector<DIMENSIONS, long long>& newVertexIndex,
+  const int                                 newVertexDepth
+) {
+  const std::unique_lock<std::shared_mutex> lock(_mutex);
 
-  for (auto it = _data.begin(); it != _data.end();) {
-    internal::Event& lastEvent = it->second.back();
+  auto search = _data.find(identifier);
+
+  assertion(search != _data.end(), "Particle not found through its identifier");
+
+#if PEANO_DEBUG
+  assertion(
+    search->first.particleId == identifier.particleId,
+    "Particle identifier ID not identical",
+    search->first.particleId,
+    identifier.particleId
+  );
+  assertion(
+    search->first.treeId == identifier.treeId,
+    "Particle treeId not identical",
+    search->first.treeId,
+    identifier.treeId
+  );
+  for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
+    assertion(
+      search->first.vertexInd(dimension) == identifier.vertexInd(dimension),
+      "Particle vertex index not identical",
+      search->first.vertexInd(dimension),
+      identifier.vertexInd(dimension)
+    );
+  }
+  assertion(
+    search->first.vertexDepth == identifier.vertexDepth,
+    "Particle depth not identical",
+    search->first.vertexDepth,
+    identifier.vertexDepth
+  );
+#endif
+
+  // The heterogeneous lookup may be fuzzy, so re-key the stored identifier.
+  const ParticleIdentifier storedIdentifier = search->first;
+  const ParticleEvents     history          = search->second;
+
+  logDebug("Shift particle identifier from " << storedIdentifier.vertexInd << " to " << newVertexIndex);
+
+  _data.erase(storedIdentifier);
+  const ParticleIdentifier newIdentifier(
+    identifier.particleName,
+    identifier.particleX,
+    newVertexIndex,
+    newVertexDepth,
+    identifier.particleId,
+    identifier.treeId
+  );
+  _data.insert_or_assign(newIdentifier, history);
+}
+
+/**
+ * Deletes every particle whose newest event neither assigns it to a vertex nor
+ * moves it along a vertex, and keeps every particle that a remote rank owns.
+ */
+void toolbox::particles::assignmentchecks::internal::Database::eliminateExistingParticles() {
+  const std::unique_lock<std::shared_mutex> lock(_mutex);
+
+  for (auto particleIterator = _data.begin(); particleIterator != _data.end();) {
+    const internal::Event& lastEvent = particleIterator->second.back();
 
     if (lastEvent.type == internal::Event::Type::AssignToVertex
         or lastEvent.type == internal::Event::Type::ConsecutiveMoveWhileAssociatedToVertex
-        or lastEvent.type == internal::Event::Type::MoveWhileAssociatedToVertex
-        or (not lastEvent.isLocal)) {
-      ++it;
+        or lastEvent.type == internal::Event::Type::MoveWhileAssociatedToVertex or (not lastEvent.isLocal)) {
+      ++particleIterator;
     } else {
-      it = _data.erase(it);
+      particleIterator = _data.erase(particleIterator);
     }
   }
 }
 
-toolbox::particles::assignmentchecks::internal::Event toolbox::particles::
-  assignmentchecks::internal::Database::getPreviousEvent(
-    ParticleEvents& particleHistory,
-    int             spacetreeId,
-    size_t          nFirstEventsToSkip
-  ) {
-  tarch::multicore::MultiReadSingleWriteLock
-    lock(_semaphore, tarch::multicore::MultiReadSingleWriteLock::Read);
-
-  if (particleHistory.size() <= nFirstEventsToSkip) {
+/**
+ * Returns the newest event for the requested spacetree after skipping the
+ * requested number of newest entries. AnyTree accepts the first candidate.
+ */
+toolbox::particles::assignmentchecks::internal::Event toolbox::particles::assignmentchecks::internal::Database::
+  getPreviousEvent(const ParticleEvents& particleHistory, int treeId, size_t numberOfFirstEventsToSkip) const {
+  if (particleHistory.size() <= numberOfFirstEventsToSkip) {
     return Event(Event::Type::NotFound);
   }
 
-  auto it = particleHistory.crbegin();
-  std::advance(it, nFirstEventsToSkip);
+  auto eventIterator = particleHistory.crbegin();
+  std::advance(eventIterator, numberOfFirstEventsToSkip);
 
-  if (it == particleHistory.crend()) {
+  if (eventIterator == particleHistory.crend()) {
     return Event(Event::Type::NotFound);
   }
 
-  if (spacetreeId == Database::AnyTree)
-    return *it;
+  if (treeId == Database::AnyTree) {
+    return *eventIterator;
+  }
 
-  while (it != particleHistory.crend()) {
-    if (it->treeId == spacetreeId)
-      return *it;
-    it++;
+  while (eventIterator != particleHistory.crend()) {
+    if (eventIterator->treeId == treeId) {
+      return *eventIterator;
+    }
+    eventIterator++;
   }
 
   return Event(Event::Type::NotFound);

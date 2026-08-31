@@ -7,9 +7,6 @@
 namespace exahype2 {
   enum class RefinementCommand { Keep, Refine, Erase };
 
-  /**
-   * The default is coarsen as this is the lowest priority command.
-   */
   RefinementCommand getDefaultRefinementCommand();
 
   class RefinementControl;
@@ -17,39 +14,20 @@ namespace exahype2 {
 } // namespace exahype2
 
 /**
- * Manage refine/erase requests within ExaHyPE 2
+ * Collects one solver's refine and erase requests.
  *
- * One of these containers lives in each RefinementCriterion action set. It collects the
- * commands a traversal raises, one grid-control event per command, and
- * RefinementControlService::merge() reduces the per-tree containers into the rank's request
- * set at the end of the traversal.
- *
- * ## Refinement process
- *
- * A criterion traversal collects the requests. The service then commits them, and Peano
- * spends two further traversals on them: the first triggers the topology change on the
- * affected vertices, the second realises it. Re-delivering an event for that second
- * traversal is the service's job, so a command carries no lifetime.
- *
- * @see RefinementControlService::finishStep()
+ * One container lives in each refinement-criterion action set. It collects one
+ * grid-control event per command, and RefinementControlService::merge() reduces
+ * the per-observer containers into the rank's request set after the traversal.
  */
 class exahype2::RefinementControl final {
 public:
   friend class RefinementControlService;
 
-  /**
-   * Create a container for the requests of one solver.
-   */
   explicit RefinementControl(int solverNumber = 0);
 
-  /**
-   * Drop the events collected so far.
-   */
   void clear();
 
-  /**
-   * Add a refine, keep or erase request for one cell.
-   */
   void addCommand(
     const tarch::la::Vector<DIMENSIONS, double>& x,
     const tarch::la::Vector<DIMENSIONS, double>& h,
@@ -59,28 +37,24 @@ public:
   std::string toString() const;
 
 private:
+  /**
+   * Stores one request with the solver that raised it. Two requests order by
+   * their events, then by their solver numbers.
+   */
   struct NewEvent {
-    enum class RealisationPhase { TriggerTopologyChange, RealiseTopologyChange };
+    peano4::grid::GridControlEvent event{};
+    int                            solverNumber{0};
 
-    peano4::grid::GridControlEvent event;
-    RealisationPhase               phase;
-    int                            solverNumber;
+    bool operator<(const NewEvent& other) const noexcept;
+    bool operator==(const NewEvent& other) const noexcept;
   };
 
-  typedef std::list<NewEvent> NewEvents;
-
-  void addCommand(
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    const tarch::la::Vector<DIMENSIONS, double>& h,
-    exahype2::RefinementCommand                  command,
-    NewEvent::RealisationPhase                   phase
-  );
+  using NewEvents = std::vector<NewEvent>;
 
   /**
-   * Container to accumulate new events. This is a list as we may assume
-   * that a lot of inserts are done per iteration.
+   * Stores the requests a criterion has raised, one per cell it looked at.
    */
   NewEvents _newEvents;
 
-  int _solverNumber;
+  int _solverNumber{0};
 };

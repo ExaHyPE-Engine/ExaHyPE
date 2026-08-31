@@ -44,8 +44,8 @@ peano4::datamanagement::CellMarker peano4::grid::GridTraversalEvent::getCellMark
   marker.centre                           = x;
   marker.relativePositionWithinFatherCell = relativePositionToFather;
 
-  auto setFlag = [&](bool cond, std::uint16_t flag) {
-    if (cond) {
+  auto setFlag = [&](const bool condition, const std::uint16_t flag) {
+    if (condition) {
       marker.flags |= flag;
     }
   };
@@ -73,17 +73,17 @@ peano4::datamanagement::FaceMarker peano4::grid::GridTraversalEvent::getFaceMark
   marker.hasBeenRefinedMask = 0;
   marker.willBeRefinedMask  = 0;
 
-  for (int faceNumber = 0; faceNumber < 2 * DIMENSIONS; ++faceNumber) {
+  for (int faceNumber = 0; faceNumber < 2 * DIMENSIONS; faceNumber++) {
     bool hasRefined = false;
     bool willRefine = false;
 
     const int normal = faceNumber % DIMENSIONS;
-    for (int i = 0; i < TWO_POWER_D; ++i) {
+    for (int i = 0; i < TWO_POWER_D; i++) {
       std::bitset<DIMENSIONS> studiedVertex(static_cast<unsigned long>(i));
       studiedVertex.set(normal, faceNumber >= DIMENSIONS);
-      const int v = static_cast<int>(studiedVertex.to_ulong());
-      hasRefined |= bitTest8(hasBeenRefined, v);
-      willRefine |= bitTest8(willBeRefined, v);
+      const int vertexNumber = static_cast<int>(studiedVertex.to_ulong());
+      hasRefined |= bitTest8(hasBeenRefined, vertexNumber);
+      willRefine |= bitTest8(willBeRefined, vertexNumber);
     }
 
     marker.hasBeenRefinedMask |= static_cast<std::uint8_t>(hasRefined) << faceNumber;

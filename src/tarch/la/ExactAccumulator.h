@@ -20,7 +20,7 @@ public:
 
 private:
   static constexpr int          BitsPerLimb   = 32;
-  static constexpr int          NumberOfLimbs = 66;
+  static constexpr int          NumberOfLimbs = 67;
   static constexpr std::int64_t LimbMask      = 0xffffffff;
 
   std::int64_t _limbs[NumberOfLimbs]{};

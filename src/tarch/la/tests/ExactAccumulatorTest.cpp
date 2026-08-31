@@ -1,6 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "tarch/la/tests/ExactAccumulatorTest.h"
+#include "ExactAccumulatorTest.h"
 
 #include "tarch/la/ExactAccumulator.h"
 
@@ -12,13 +12,13 @@ void tarch::la::tests::ExactAccumulatorTest::run() {
   testMethod(testOrderInvariance);
   testMethod(testNegationSymmetry);
   testMethod(testSubnormalsAndZero);
+  testMethod(testOverflow);
   testMethod(testClear);
 }
 
 void tarch::la::tests::ExactAccumulatorTest::testCorrectRounding() {
   tarch::la::ExactAccumulator accumulator;
 
-  // A naive left-to-right sum loses the 1.0 entirely.
   accumulator.add(1.0e16);
   accumulator.add(1.0);
   accumulator.add(-1.0e16);
@@ -127,7 +127,6 @@ void tarch::la::tests::ExactAccumulatorTest::testSubnormalsAndZero() {
   accumulator.add(MinimumSubnormal);
   validateEquals(std::bit_cast<std::uint64_t>(accumulator.round()), std::bit_cast<std::uint64_t>(SmallestNormal));
 
-  // An empty accumulator and one fed only signed zeroes both round to plus zero.
   accumulator.clear();
   validateNumericalEquals(accumulator.round(), 0.0);
   validate(not std::signbit(accumulator.round()));
@@ -136,11 +135,42 @@ void tarch::la::tests::ExactAccumulatorTest::testSubnormalsAndZero() {
   validateNumericalEquals(accumulator.round(), 0.0);
   validate(not std::signbit(accumulator.round()));
 
-  // Exact cancellation of finite values also yields plus zero.
   accumulator.add(2.5);
   accumulator.add(-2.5);
   validateNumericalEquals(accumulator.round(), 0.0);
   validate(not std::signbit(accumulator.round()));
+}
+
+void tarch::la::tests::ExactAccumulatorTest::testOverflow() {
+  constexpr double MaximumFinite = std::numeric_limits<double>::max();
+  constexpr double Infinity      = std::numeric_limits<double>::infinity();
+
+  tarch::la::ExactAccumulator accumulator;
+  accumulator.add(MaximumFinite);
+  accumulator.add(std::ldexp(1.0, 969));
+  validateEquals(std::bit_cast<std::uint64_t>(accumulator.round()), std::bit_cast<std::uint64_t>(MaximumFinite));
+
+  // A second half-ulp reaches the overflow tie, which rounds away from the
+  // maximum finite value because its significand is odd.
+  accumulator.add(std::ldexp(1.0, 969));
+  validateEquals(std::bit_cast<std::uint64_t>(accumulator.round()), std::bit_cast<std::uint64_t>(Infinity));
+
+  accumulator.clear();
+  accumulator.add(MaximumFinite);
+  accumulator.add(MaximumFinite);
+  validateEquals(std::bit_cast<std::uint64_t>(accumulator.round()), std::bit_cast<std::uint64_t>(Infinity));
+
+  accumulator.clear();
+  constexpr int NumberOfLargeValues = 1 << 16;
+  for (int value = 0; value < NumberOfLargeValues; value++) {
+    accumulator.add(MaximumFinite);
+  }
+  validateEquals(std::bit_cast<std::uint64_t>(accumulator.round()), std::bit_cast<std::uint64_t>(Infinity));
+
+  accumulator.clear();
+  accumulator.add(-MaximumFinite);
+  accumulator.add(-MaximumFinite);
+  validateEquals(std::bit_cast<std::uint64_t>(accumulator.round()), std::bit_cast<std::uint64_t>(-Infinity));
 }
 
 void tarch::la::tests::ExactAccumulatorTest::testClear() {

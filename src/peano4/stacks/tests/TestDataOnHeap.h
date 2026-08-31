@@ -6,27 +6,26 @@ namespace peano4::stacks::tests {
   class TestDataOnHeap;
 } // namespace peano4::stacks::tests
 
-class peano4::stacks::tests::TestDataOnHeap {
+class peano4::stacks::tests::TestDataOnHeap final {
 public:
   using DoFType = int;
 
   static constexpr int Cardinality = 1024;
 
-private:
-  DoFType* _data;
-
-public:
-  explicit TestDataOnHeap();
-  explicit TestDataOnHeap(DoFType v);
-  ~TestDataOnHeap() noexcept;
+  TestDataOnHeap();
+  explicit TestDataOnHeap(const DoFType value);
 
   TestDataOnHeap(const TestDataOnHeap& other);
   TestDataOnHeap(TestDataOnHeap&& other) noexcept;
   TestDataOnHeap& operator=(const TestDataOnHeap& other) = delete;
   TestDataOnHeap& operator=(TestDataOnHeap&& other) noexcept;
+  ~TestDataOnHeap() noexcept;
 
   DoFType*       data();
   const DoFType* data() const;
 
   void clone(const TestDataOnHeap& other);
+
+private:
+  DoFType* _data{nullptr};
 };

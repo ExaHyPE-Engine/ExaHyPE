@@ -2,10 +2,27 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "accelerator.h"
 
-#include "MemoryAllocationCache.h"
-#include "MemoryBlocks.h"
 #include "tarch/Assertions.h"
-#include "tarch/instrumentation/Log.h"
+#include "tarch/accelerator/MemoryAllocationCache.h"
+#include "tarch/accelerator/MemoryBlocks.h"
+#include "tarch/instrumentation/Debug.h"
+#include "tarch/instrumentation/Warning.h"
+
+namespace {
+  std::atomic<bool> loggedMissingTaskloopSupport{false};
+} // namespace
+
+/**
+ * Writes one warning per run that this toolchain offers no OpenMP taskloop. parallelFor() is a
+ * template, so its fallback branch reaches this function from every translation unit that uses it.
+ */
+void tarch::accelerator::reportMissingTaskloopSupportOnce() {
+  if (not loggedMissingTaskloopSupport.exchange(true, std::memory_order_relaxed)) {
+    logWarning(
+      "OpenMP taskloop is unavailable on this toolchain. A parallel range is split into tasks by hand, which costs one spawn per chunk. Expect degraded performance."
+    );
+  }
+}
 
 void* tarch::accelerator::allocateHeapMemory(std::size_t sizeInBytes) {
   return ::operator new(sizeInBytes, std::align_val_t(PEANO_WITH_ALIGNMENT));
@@ -47,7 +64,7 @@ void* tarch::accelerator::allocateRawData(std::size_t sizeInBytes, MemoryLocatio
 }
 
 void tarch::accelerator::freeRawData(void* data, MemoryLocation location, int device) {
-  if (!data) {
+  if (data == nullptr) {
     return;
   }
 
@@ -121,14 +138,18 @@ void tarch::accelerator::copyFrom(
 }
 
 namespace {
-  thread_local int _currentDevice = tarch::accelerator::Device::DefaultDevice;
-}
+  thread_local int currentDevice = tarch::accelerator::Device::DefaultDevice;
+} // namespace
 
-void tarch::accelerator::setCurrentDevice(int device) { _currentDevice = device; }
+/**
+ * Selects the device that tarch::parallelFor and tarch::parallelReduce target. Every host thread
+ * holds its own selection, which starts at Device::DefaultDevice.
+ */
+void tarch::accelerator::setCurrentDevice(int device) { currentDevice = device; }
 
-int tarch::accelerator::getCurrentDevice() { return _currentDevice; }
+int tarch::accelerator::getCurrentDevice() { return currentDevice; }
 
-#if !defined(PEANO_WITH_GPU_BACKEND)
+#if not defined(PEANO_WITH_GPU_BACKEND)
 void* tarch::accelerator::allocateDeviceMemory(std::size_t sizeInBytes, [[maybe_unused]] int device) {
   return allocateHeapMemory(sizeInBytes);
 }

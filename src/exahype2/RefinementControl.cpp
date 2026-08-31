@@ -2,43 +2,37 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "RefinementControl.h"
 
-#include "tarch/instrumentation/Log.h"
+#include "exahype2/RefinementControlService.h"
+#include "tarch/Assertions.h"
+#include "tarch/instrumentation/Debug.h"
 
+/** Returns Erase, the lowest-priority refinement command. */
 exahype2::RefinementCommand exahype2::getDefaultRefinementCommand() { return RefinementCommand::Erase; }
 
 /**
- * Create a container for the requests of one solver.
+ * Creates a container for the requests of one solver.
  *
- * @param solverNumber Identifies the solver whose criterion fills this container. The
- *   service resolves coarsening as a consensus across all solvers, so every erase
- *   request carries its author.
+ * @param solverNumber Identifies the solver whose criterion fills this container.
  */
-exahype2::RefinementControl::RefinementControl(int solverNumber) :
+exahype2::RefinementControl::RefinementControl(const int solverNumber) :
   _solverNumber(solverNumber) {}
 
 /**
- * Drop the events collected so far.
- *
- * Only this container's events are affected; the events the service has already
- * committed survive. An action set calls this on its own local assembly once the
- * service has merged it. The service exposes no counterpart, as it re-delivers a
- * committed event for the traversal that realises the topology change and drops
- * it afterwards, so there is no user-managed lifetime to reset.
+ * Drops the events collected so far. The events the service has already
+ * committed survive.
  */
 void exahype2::RefinementControl::clear() { _newEvents.clear(); }
 
 /**
- * Add a refine, keep or erase request for one cell.
+ * Adds a refine or erase request for one cell and drops a keep request.
  *
- * A refine command becomes a 3h box centred on the cell, i.e. the requester plus one
- * full cell of every neighbour, asking for a third of the cell size. An erase command
- * becomes an event covering exactly the cell and asking for three times its size, which
- * RefinementControlService::finaliseCoarseningEvents() promotes to the cell's parent
- * once the whole sibling group agrees.
+ * A refine request refines that cell together with one full cell of every
+ * neighbour. An erase request is a vote that
+ * RefinementControlService::finaliseCoarseningEvents() promotes to the cell's
+ * parent once the whole sibling group agrees.
  *
- * @param x       Centre of the cell for which this command is triggered. This is
- *                typically marker.getX().
- * @param h       Size of this cell. Typically marker.getH().
+ * @param x       Centre of the cell for which this command is triggered.
+ * @param h       Size of this cell.
  * @param command Request raised by the solver's refinement criterion.
  */
 void exahype2::RefinementControl::addCommand(
@@ -46,69 +40,43 @@ void exahype2::RefinementControl::addCommand(
   const tarch::la::Vector<DIMENSIONS, double>& h,
   exahype2::RefinementCommand                  command
 ) {
-  addCommand(x, h, command, NewEvent::RealisationPhase::TriggerTopologyChange);
+  if (command == exahype2::RefinementCommand::Keep) {
+    return;
+  }
+
+  const auto& service      = exahype2::RefinementControlService::getInstance();
+  const auto& domainOffset = service.getDomainOffset();
+  const auto& domainWidth  = service.getDomainWidth();
+
+  const auto newEvent = peano4::grid::GridControlEvent::forCell(
+    command == exahype2::RefinementCommand::Refine ? peano4::grid::GridControlEvent::RefinementControl::Refine
+                                                   : peano4::grid::GridControlEvent::RefinementControl::Erase,
+    x,
+    h,
+    domainOffset,
+    domainWidth
+  );
+
+  _newEvents.push_back(NewEvent{newEvent, _solverNumber});
+
+  logDebug(
+    "Added instruction for x=" << x << ", h=" << h << ": " << newEvent.toString() << " (total of " << _newEvents.size()
+                               << " instructions)"
+  );
 }
 
-void exahype2::RefinementControl::addCommand(
-  const tarch::la::Vector<DIMENSIONS, double>& x,
-  const tarch::la::Vector<DIMENSIONS, double>& h,
-  exahype2::RefinementCommand                  command,
-  NewEvent::RealisationPhase                   phase
-) {
-  switch (command) {
-  case exahype2::RefinementCommand::Refine: {
-    // The event box deliberately covers the requester and one full cell of every
-    // neighbour: with the positive-volume overlap test in
-    // Spacetree::evaluateGridControlEvents this refines a protective band around the
-    // requester. A moving feature then stays inside its refined region for several
-    // steps, the re-committed merged event sets stay identical, and the service
-    // suppresses the mesh-update drains in between; without the band nearly every step
-    // commits a one-cell change and pays a full drain. The full-cell width keeps the
-    // boxes cell-aligned, so neighbouring requesters fuse into few large events.
-    const tarch::la::Vector<DIMENSIONS, double> targetH = 1.0 / 3.0 * h;
-
-    peano4::grid::GridControlEvent newEvent;
-    newEvent.setRefinementControl(peano4::grid::GridControlEvent::RefinementControl::Refine);
-    newEvent.offset  = x - 1.5 * h;
-    newEvent.width   = 3.0 * h;
-    newEvent.targetH = targetH;
-
-    assertion(newEvent.width[0] > 0.0, newEvent.toString());
-    assertion(newEvent.targetH[0] > 0.0, newEvent.toString());
-
-    _newEvents.push_back(NewEvent{newEvent, phase, _solverNumber});
-
-    logDebug(
-      "Added refinement for x=" << x << ", h=" << h << ": " << newEvent.toString() << " (total of " << _newEvents.size()
-                                << " instructions)"
-    );
-  } break;
-  case exahype2::RefinementCommand::Keep:
-    break;
-  case exahype2::RefinementCommand::Erase: {
-    // Coarsening is finalised by RefinementControlService as a sibling-group decision: we
-    // emit a leaf-sized erase request, and the service promotes it to a parent-sized event
-    // once the whole 3^d sibling group requests it. This keeps a single smooth fine patch
-    // from erasing its parent while siblings still carry the feature.
-    const tarch::la::Vector<DIMENSIONS, double> targetH = 3.0 * h;
-
-    peano4::grid::GridControlEvent newEvent;
-    newEvent.setRefinementControl(peano4::grid::GridControlEvent::RefinementControl::Erase);
-    newEvent.offset  = x - 0.5 * h;
-    newEvent.width   = h;
-    newEvent.targetH = targetH;
-
-    assertion(newEvent.width[0] > 0.0, newEvent.toString());
-    assertion(newEvent.targetH[0] > 0.0, newEvent.toString());
-
-    _newEvents.push_back(NewEvent{newEvent, phase, _solverNumber});
-
-    logDebug(
-      "Added erase for x=" << x << ", h=" << h << ": " << newEvent.toString() << " (total of " << _newEvents.size()
-                           << " instructions)"
-    );
-  } break;
+bool exahype2::RefinementControl::NewEvent::operator<(const NewEvent& other) const noexcept {
+  if (event < other.event) {
+    return true;
   }
+  if (other.event < event) {
+    return false;
+  }
+  return solverNumber < other.solverNumber;
+}
+
+bool exahype2::RefinementControl::NewEvent::operator==(const NewEvent& other) const noexcept {
+  return event == other.event and solverNumber == other.solverNumber;
 }
 
 std::string exahype2::RefinementControl::toString() const {

@@ -15,9 +15,11 @@ namespace {
   struct StubParticle final {
     enum class ParallelState { Local, Virtual };
 
+#if PEANO_DEBUG
     void setDebugX(const tarch::la::Vector<DIMENSIONS, double>& position) { _debugPosition = position; }
 
     void setDebugH(const double cellSize) { _debugCellSize = cellSize; }
+#endif
 
     void setX(const tarch::la::Vector<DIMENSIONS, double>& position) { _position = position; }
 
@@ -30,9 +32,11 @@ namespace {
     void setParallelState(const ParallelState parallelState) { _parallelState = parallelState; }
 
   private:
+#if PEANO_DEBUG
     tarch::la::Vector<DIMENSIONS, double> _debugPosition{0.0};
-    tarch::la::Vector<DIMENSIONS, double> _position{0.0};
     double                                _debugCellSize{0.0};
+#endif
+    tarch::la::Vector<DIMENSIONS, double> _position{0.0};
     double                                _searchRadius{0.0};
     std::array<double, 1>                 _data{};
     ParallelState                         _parallelState{ParallelState::Virtual};

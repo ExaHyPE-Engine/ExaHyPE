@@ -23,12 +23,14 @@ set(SOURCES
   database/GlobalTimeSeriesDatabase.cpp
   database/tests/GlobalTimeSeriesDatabaseTest.cpp
 
+  accelerator/Atomic.cpp
   accelerator/accelerator.cpp
   accelerator/Atomics.cpp
   accelerator/Device.cpp
   accelerator/MemoryAllocationCache.cpp
   accelerator/MemoryBlocks.cpp
   accelerator/MemoryLocation.cpp
+  accelerator/tests/AtomicTest.cpp
   accelerator/tests/AtomicsTest.cpp
   accelerator/tests/MemoryAllocationCacheTest.cpp
   accelerator/tests/MemoryAllocationTest.cpp
@@ -84,28 +86,29 @@ set(SOURCES
   instrumentation/Trace.cpp
   instrumentation/Warning.cpp
 
+  mpi/AbstractCommunicationManager.cpp
   mpi/Collectives.cpp
   mpi/Diagnostics.cpp
+  mpi/HelperThread.cpp
   mpi/PersistentChannel.cpp
   mpi/Rank.cpp
   mpi/Request.cpp
   mpi/RequestGroup.cpp
+  mpi/SerialCommunicationManager.cpp
+  mpi/ThreadedCommunicationManager.cpp
+  mpi/tests/CommunicationManagerTest.cpp
   mpi/tests/DiagnosticsTest.cpp
+  mpi/tests/HelperThreadTest.cpp
   mpi/tests/PersistentChannelTest.cpp
+  mpi/tests/PingPongTest.cpp
   mpi/tests/PollPacingTest.cpp
   mpi/tests/RequestGroupTest.cpp
 
-  multicore/multicore.cpp
-  multicore/BooleanSemaphore.cpp
-  multicore/Core.cpp
-  multicore/Lock.cpp
-  multicore/MultiReadSingleWriteLock.cpp
-  multicore/MultiReadSingleWriteSemaphore.cpp
-  multicore/Task.cpp
-  multicore/tests/SpawnTaskTest.cpp
-  multicore/omp/multicore.cpp
-  multicore/omp/BooleanSemaphore.cpp
-  multicore/omp/Core.cpp
+  tasking/Runtime.cpp
+  tasking/FunctorTask.cpp
+  tasking/TaskGraph.cpp
+  tasking/tests/RuntimeTest.cpp
+  tasking/tests/TaskGraphTest.cpp
 
   plotter/CellDataPlotter.cpp
   plotter/CellPlotter.cpp

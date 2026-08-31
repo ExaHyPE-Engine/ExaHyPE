@@ -51,7 +51,7 @@ class Euler(Equation):
   F[Shortcuts::v+0] = Q[Shortcuts::v + normal] * Q[Shortcuts::v+0] * irho;
   F[Shortcuts::v+1] = Q[Shortcuts::v + normal] * Q[Shortcuts::v+1] * irho;"""
             + (
-                """ 
+                """
   F[Shortcuts::v+2] = Q[Shortcuts::v + normal] * Q[Shortcuts::v+2] * irho; """
                 if self.dimensions == 3
                 else ""

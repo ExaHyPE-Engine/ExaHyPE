@@ -10,23 +10,6 @@ import peano4.solversteps
 
 
 class AdaptiveMeshFaceCoupling(AbstractADERDGActionSet):
-    """
-    Per-time-step resolution-transition coupling for ADER-DG adaptive meshes.
-
-    On an adaptive mesh, every time step interpolates the coarse solution down
-    onto the hanging faces of the finer level and solves the Riemann problem
-    there, plus restricts the fine fluxes back onto the coarse face. This action
-    set does that coupling on a stable grid: it switches the create/destroy
-    inter-grid transfer off and reports no grid-control events. Changing the
-    topology (creating/destroying cells and faces and moving the solution across
-    the resolution transitions) is the job of the dedicated DynamicAMR observer's
-    DynamicAMRTransfer.
-
-    The per-step coupling is this class; the one-off topology-change transfer is
-    DynamicAMRTransfer below. They mirror the FV solver's AdaptiveMeshFaceCoupling
-    / DynamicAMRTransfer split.
-    """
-
     def __init__(
         self,
         solver,
@@ -52,7 +35,7 @@ class AdaptiveMeshFaceCoupling(AbstractADERDGActionSet):
             ),
             number_of_dofs_per_axis,
         )
-        # The transfer kernels read both operators input-major: the prolongation
+        # The transfer kernels read both operators input-major: The prolongation
         # by coarse node, the restriction by fine node.
         self._prolongation_matrices = [
             render_tensor_1([value for row in matrix for value in row])
@@ -99,10 +82,8 @@ class AdaptiveMeshFaceCoupling(AbstractADERDGActionSet):
     };
 
     if (not marker.isInteriorFaceWithinPatch()) {
-      // Interpolate the coarse neighbour's estimates and fluxes onto the half the fine
-      // cells cannot supply. The fine half and the Riemann solve follow at the fine
-      // cell's first touch, where the space-time predictor re-runs on the same input
-      // the persistent faces' estimates came from.
+      // The fine cells supply one half of the face only, so the coarse neighbour's
+      // estimates and fluxes fill the other half here.
       const auto subfacePosition = marker.getRelativePositionWithinFatherFace();
       const double* prolongationMatrixPerAxis[DIMENSIONS - 1];
       for (int tangentialAxis = 0; tangentialAxis < DIMENSIONS - 1; tangentialAxis++) {
@@ -194,14 +175,9 @@ class AdaptiveMeshFaceCoupling(AbstractADERDGActionSet):
 """
 
         # A hanging face carries no valid fine-side trace when it is touched, so the
-        # fine cell reproduces it here. The trace the persistent faces hold was
-        # predicted from the pre-prediction solution (kept in the _old buffer) with
-        # the time step size the prediction stored in the cell label; re-running the
-        # predictor on a scratch copy of exactly that state yields the identical
-        # trace. The fused predictor would otherwise add the volume integral into
-        # the live solution a second time. With both halves in place the Riemann
-        # problems on the hanging faces are solved at fine resolution; the
-        # restriction then feeds the same fluxes to the coarse cell.
+        # fine cell reproduces it here. Re-running the predictor on a scratch copy of
+        # the _old buffer with the time step size the cell label carries yields the
+        # trace the persistent faces hold.
         self._Template_SolveRiemannProblemsOnHangingFaces = """
   if ({{SOLVE_GUARD}}) {
     auto hasHangingFace = false;
@@ -297,8 +273,6 @@ class AdaptiveMeshFaceCoupling(AbstractADERDGActionSet):
   }
 """
 
-        # Topology-change (inter-grid transfer) operations are disabled for the
-        # per-step coupling; DynamicAMRTransfer switches them back on.
         self._Template_CreateCell = ""
         self._Template_DestroyCell = ""
         self._Template_CreateFace = ""
@@ -397,20 +371,6 @@ class AdaptiveMeshFaceCoupling(AbstractADERDGActionSet):
 
 
 class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
-    """
-    The action set that realises ADER-DG topology changes.
-
-    It lives in the dedicated DynamicAMR observer and runs on a stable,
-    completed-time-step grid. It (i) hands the committed refine/coarsen events
-    back to Peano (get_body_of_getGridControlEvents) so the trigger/realise
-    traversals create/destroy cells and faces, and (ii) prolongs the DG solution
-    and face estimates onto cells/faces Peano creates and restricts them back from
-    cells/faces Peano destroys.
-
-    No PDE update happens here, so the inherited hanging-face coupling is switched
-    off. Mirrors exahype2.solvers.fv.actionsets DynamicAMRTransfer.
-    """
-
     def __init__(
         self,
         solver,
@@ -420,23 +380,16 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
     ):
         super().__init__(solver, delete_guard, interpolate_guard, restrict_guard)
 
-        # The hanging-face coupling stays off in the realise sweeps: no solver reads the
+        # The hanging-face coupling stays off in the realise sweeps: No solver reads the
         # halos here, and the next time step rebuilds them on the settled grid.
         self._Template_TouchHangingFaceFirstTime = ""
         self._Template_TouchHangingFaceLastTime = ""
         self._Template_TouchFaceLastTime = ""
         self._Template_SolveRiemannProblemsOnHangingFaces = ""
 
-        # Created and destroyed faces need no estimate transfer: every consumed slot
-        # is rewritten before its first read. The deferred projector in an unlimited
-        # solver, or the next Predict sweep in a limited solver, refills both halves
-        # of a created face between local leaf cells; the following
-        # prediction-on-hanging-cells sweep clears and restricts the fine-side flux
-        # halves of faces above hanging faces, and the boundary handling refills
-        # domain-wall halves at the start of the next time step. The face label's
-        # RequiresDataTransfer entries, set on creation, tell the projector which
-        # halves still need their estimates; the face-label merge carries them
-        # across tree boundaries. Only the time-stamp labels carry over.
+        # Created and destroyed faces need no estimate transfer: Every consumed slot
+        # is rewritten before its first read, and the RequiresDataTransfer entries
+        # the face creation sets name the halves that still wait for their estimates.
         self._Template_CreateFace = """
   for (int facePosition = 0; facePosition < 2; facePosition++) {
     fineGridFace{{SOLVER_NAME}}FaceLabel.setNewTimeStamp(
@@ -507,8 +460,8 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
             + """.setTimeStepSize(coarseGridCell"""
             + solver._cell_label.name
             + """.getTimeStepSize());
-  // A created cell inherits its parent's update state and is marked for the
-  // criterion pass, so the running mesh-refinement sweeps evaluate its data once.
+  // The criterion flag makes the running mesh-refinement sweeps evaluate the
+  // created cell's data once.
   fineGridCell"""
             + solver._cell_label.name
             + """.setHasUpdated(coarseGridCell"""
@@ -605,32 +558,10 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
 """
         )
 
-        # For an unlimited pipelined solver, re-derive a cell's live solution and
-        # its own-side face estimates from the pre-prediction solution in the _old
-        # buffer. Between grid sweeps the live
-        # buffer already carries the volume-integral part of the next update and the
-        # persistent faces carry the matching predicted traces, so a cell whose _old
-        # buffer the create/destroy transfer just filled (a created cell or a
-        # coarsening parent) obtains exactly the state it would hold had it existed
-        # during the last prediction: the prediction is re-run in place with the
-        # time step size the cell label carries. The pass runs only where the
-        # topology change left work behind: a coarsening parent, or a cell with a
-        # face half whose RequiresDataTransfer entry the face creation set. The
-        # second condition also reaches the pre-existing neighbour of a created
-        # face, whose re-run supplies the other half of that face's estimates, and
-        # cells the surrounded-vertex post-refinement creates without a committed
-        # grid-control event. The pass is deferred until the mesh-refinement sweeps
-        # have no further committed events, so it runs once per changed cell on the
-        # settled topology and no fabricated state is ever prolonged further down;
-        # while those sweeps still realise deeper levels, only the pure solution in
-        # the _old buffers flows down. A coarsening parent keeps its marker only in
-        # the sweep that removes its children, so it is flagged through its faces
-        # too. In the very first round of mesh-refinement sweeps no prediction has
-        # run yet and the label carries a zero time step size; the prolonged data is
-        # already consistent then and the initial prediction follows on the settled
-        # grid. A limiter pipeline instead ends with an accepted live solution;
-        # its branch below retains that solution and leaves face reconstruction to
-        # the next ordinary Predict sweep.
+        # An unlimited solver re-derives a cell's live solution and its own-side face
+        # estimates from the pre-prediction solution in the _old buffer. The
+        # re-derivation waits until the mesh-refinement sweeps hold no further
+        # committed grid-control event, so it reads a settled topology.
         self._project_guard = solver._store_cell_data_default_guard()
         self._Template_TouchCellLastTime = """
 {% if SUBCELL_LIMITER %}
@@ -732,11 +663,6 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
 """
 
     def get_body_of_operation(self, operation_name):
-        # Realise-observer cell hooks, delegating everything else (create/destroy
-        # cell+face, the inherited per-step coupling templates) to
-        # AdaptiveMeshFaceCoupling. touchCellLastTime (on leave) re-derives the
-        # cell's live solution and its own face estimates from the _old buffer,
-        # which by then has been prolonged (refine) or restricted (coarsen).
         dictionary = {}
         self._solver._init_dictionary_with_default_parameters(dictionary)
         self._solver.add_entries_to_text_replacement_dictionary(dictionary)
@@ -782,8 +708,6 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
         )
 
     def get_body_of_getGridControlEvents(self):
-        # Hand the committed refine/coarsen events back to Peano so the
-        # trigger/realise traversals change the topology here, on a stable grid.
         return "  return ::exahype2::RefinementControlService::getInstance().getGridControlEvents();\n"
 
     def get_includes(self):

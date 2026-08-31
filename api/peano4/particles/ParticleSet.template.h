@@ -31,11 +31,16 @@ public:
 
   static constexpr int Cardinality = 1;
 
+  /**
+   * The set holds pointers to its particles, so it deletes them itself when the
+   * rank overwrites its copy of the vertex with a subtree task's copy.
+   */
+  static constexpr bool RebuildsConsolidationSlotByMerge{true};
+
   explicit {{CLASSNAME}}() = default;
-  ~{{CLASSNAME}}() noexcept;
   {{CLASSNAME}}(const {{CLASSNAME}}& other);
-  {{CLASSNAME}}& operator=(const {{CLASSNAME}}& other);
   {{CLASSNAME}}({{CLASSNAME}}&& other) noexcept;
+  {{CLASSNAME}}& operator=(const {{CLASSNAME}}& other);
   {{CLASSNAME}}& operator=({{CLASSNAME}}&& other) noexcept;
 
   void clear();
@@ -46,12 +51,16 @@ public:
     const peano4::stacks::SendReceiveContext context,
     const {{CLASSNAME}}& neighbour,
     const peano4::datamanagement::VertexMarker& marker,
-    const int spacetreeId
+    const int treeId
   );
   void mergeWithParticle(
     DoFType* const neighbourParticle,
     const peano4::datamanagement::VertexMarker& marker,
-    const int spacetreeId
+    const int treeId
+  );
+  void deleteParticlesForSlotRebuild(
+    const peano4::datamanagement::VertexMarker& marker,
+    const int treeId
   );
   bool send(
     const peano4::datamanagement::VertexMarker& marker,
@@ -97,6 +106,8 @@ public:
   );
   static bool tryToFinishSendOrReceive(peano4::stacks::Stack<{{CLASSNAME}}>& stack);
 
+  ~{{CLASSNAME}}() noexcept;
+
 private:
-  Container _container;
+  Container _container{};
 };

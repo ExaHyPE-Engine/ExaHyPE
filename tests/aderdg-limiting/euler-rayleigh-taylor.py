@@ -1,7 +1,5 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-"""Compressible Euler Rayleigh-Taylor instability with a subcell limiter."""
-
 import exahype2
 import euler
 
@@ -112,9 +110,6 @@ solver.set_implementation(
     refinement_criterion=refinement_criterion,
 )
 
-# The density contact stays admissible for the plain criterion, so the limiter
-# would never fire and Gibbs oscillations would survive at the interface. The
-# contact sensor rejects cells that straddle the contact with a resolved jump.
 euler.add_limiter(
     solver,
     arguments.limiter_solver,

@@ -7,15 +7,15 @@
 #include "tarch/mpi/RequestGroup.h"
 
 namespace {
-  /** Every transfer goes to the own rank, so the case runs on any rank count. */
+  /** Loopback transfers let the case run with any number of ranks. */
   int groupTestTag() {
-    static int tag = tarch::mpi::Rank::reserveFreeTag("tarch::mpi::tests::RequestGroupTest", 4);
+    static const int tag = tarch::mpi::Rank::reserveFreeTag("tarch::mpi::tests::RequestGroupTest", 4);
     return tag;
   }
 } // namespace
 
 tarch::mpi::tests::RequestGroupTest::RequestGroupTest() :
-  TestCase("tarch::mpi::tests::RequestGroupTest") {}
+  tarch::tests::TestCase("tarch::mpi::tests::RequestGroupTest") {}
 
 void tarch::mpi::tests::RequestGroupTest::run() {
   testMethod(testWaitAllCompletesPostedTransfers);
@@ -35,46 +35,46 @@ void tarch::mpi::tests::RequestGroupTest::testWaitAllCompletesPostedTransfers() 
   std::array<MPI_Request, NumberOfTransfers> sendRequests{};
   std::array<MPI_Request, NumberOfTransfers> receiveRequests{};
 
-  tarch::mpi::RequestGroup group;
-  for (int transfer = 0; transfer < NumberOfTransfers; transfer++) {
-    outgoing[transfer]        = 100 + transfer;
-    sendRequests[transfer]    = MPI_REQUEST_NULL;
-    receiveRequests[transfer] = MPI_REQUEST_NULL;
+  tarch::mpi::RequestGroup requestGroup;
+  for (int transferIndex = 0; transferIndex < NumberOfTransfers; transferIndex++) {
+    outgoing[transferIndex]        = 100 + transferIndex;
+    sendRequests[transferIndex]    = MPI_REQUEST_NULL;
+    receiveRequests[transferIndex] = MPI_REQUEST_NULL;
     tarch::mpi::irecv(
-      &incoming[transfer],
+      &incoming[transferIndex],
       1,
       MPI_INT,
       rank,
-      groupTestTag() + transfer,
+      groupTestTag() + transferIndex,
       communicator,
-      &receiveRequests[transfer]
+      &receiveRequests[transferIndex]
     );
     tarch::mpi::isend(
-      &outgoing[transfer],
+      &outgoing[transferIndex],
       1,
       MPI_INT,
       rank,
-      groupTestTag() + transfer,
+      groupTestTag() + transferIndex,
       communicator,
-      &sendRequests[transfer]
+      &sendRequests[transferIndex]
     );
-    group.add(&sendRequests[transfer]);
-    group.add(&receiveRequests[transfer]);
+    requestGroup.add(&sendRequests[transferIndex]);
+    requestGroup.add(&receiveRequests[transferIndex]);
   }
 
-  group.waitAll("tarch::mpi::tests::RequestGroupTest", "testWaitAllCompletesPostedTransfers()");
+  requestGroup.waitAll("tarch::mpi::tests::RequestGroupTest", "testWaitAllCompletesPostedTransfers()");
 
-  for (int transfer = 0; transfer < NumberOfTransfers; transfer++) {
-    validateEqualsWithParams1(incoming[transfer], outgoing[transfer], transfer);
+  for (int transferIndex = 0; transferIndex < NumberOfTransfers; transferIndex++) {
+    validateEqualsWithParams1(incoming[transferIndex], outgoing[transferIndex], transferIndex);
   }
-  validate(group.testAll());
+  validate(requestGroup.testAll());
 }
 
 /** An empty group is complete by definition. */
 void tarch::mpi::tests::RequestGroupTest::testEmptyGroupNeedsNoWait() {
-  tarch::mpi::RequestGroup group;
-  validate(group.testAll());
-  group.waitAll("tarch::mpi::tests::RequestGroupTest", "testEmptyGroupNeedsNoWait()");
+  tarch::mpi::RequestGroup requestGroup;
+  validate(requestGroup.testAll());
+  requestGroup.waitAll("tarch::mpi::tests::RequestGroupTest", "testEmptyGroupNeedsNoWait()");
 }
 
 /** clear() empties the set, so the group can drain a fresh round of requests. */
@@ -87,16 +87,16 @@ void tarch::mpi::tests::RequestGroupTest::testClearedGroupStartsOver() {
   MPI_Request sendRequest    = MPI_REQUEST_NULL;
   MPI_Request receiveRequest = MPI_REQUEST_NULL;
 
-  tarch::mpi::RequestGroup group;
+  tarch::mpi::RequestGroup requestGroup;
   tarch::mpi::irecv(&incoming, 1, MPI_INT, rank, groupTestTag(), communicator, &receiveRequest);
   tarch::mpi::isend(&outgoing, 1, MPI_INT, rank, groupTestTag(), communicator, &sendRequest);
-  group.add(&sendRequest);
-  group.add(&receiveRequest);
-  group.waitAll("tarch::mpi::tests::RequestGroupTest", "testClearedGroupStartsOver()");
+  requestGroup.add(&sendRequest);
+  requestGroup.add(&receiveRequest);
+  requestGroup.waitAll("tarch::mpi::tests::RequestGroupTest", "testClearedGroupStartsOver()");
   validateEquals(incoming, outgoing);
 
-  group.clear();
-  validate(group.testAll());
+  requestGroup.clear();
+  validate(requestGroup.testAll());
 
   outgoing       = 42;
   incoming       = 0;
@@ -104,8 +104,8 @@ void tarch::mpi::tests::RequestGroupTest::testClearedGroupStartsOver() {
   receiveRequest = MPI_REQUEST_NULL;
   tarch::mpi::irecv(&incoming, 1, MPI_INT, rank, groupTestTag(), communicator, &receiveRequest);
   tarch::mpi::isend(&outgoing, 1, MPI_INT, rank, groupTestTag(), communicator, &sendRequest);
-  group.add(&sendRequest);
-  group.add(&receiveRequest);
-  group.waitAll("tarch::mpi::tests::RequestGroupTest", "testClearedGroupStartsOver()");
+  requestGroup.add(&sendRequest);
+  requestGroup.add(&receiveRequest);
+  requestGroup.waitAll("tarch::mpi::tests::RequestGroupTest", "testClearedGroupStartsOver()");
   validateEquals(incoming, 42);
 }

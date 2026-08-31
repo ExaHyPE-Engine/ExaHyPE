@@ -11,6 +11,11 @@ namespace tarch::mpi::tests {
 class tarch::mpi::tests::PollPacingTest final : public tarch::tests::TestCase {
 public:
   PollPacingTest();
+  PollPacingTest(const PollPacingTest&)            = delete;
+  PollPacingTest(PollPacingTest&&)                 = delete;
+  PollPacingTest& operator=(const PollPacingTest&) = delete;
+  PollPacingTest& operator=(PollPacingTest&&)      = delete;
+  ~PollPacingTest() override                       = default;
 
   void run() override;
 

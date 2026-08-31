@@ -37,6 +37,28 @@ class UpdatePatch(AbstractFVActionSet):
     for (int faceNumber = 0; faceNumber < TWO_TIMES_D; faceNumber++) {
       faceQIn[faceNumber]  = {{OLD_FACE_ACCESSOR}}(faceNumber).data();
       faceQOut[faceNumber] = {{NEW_FACE_ACCESSOR}}(faceNumber).data();
+      // A projection, a restriction from finer cells, the boundary treatment or
+      // the periodic exchange fills each half of the halo and takes that half's
+      // transfer flag down.
+      const auto&                 faceLabel    = {{FACE_METADATA_ACCESSOR}}(faceNumber);
+      [[maybe_unused]] const int  ownSide      = faceNumber < DIMENSIONS ? 1 : 0;
+      [[maybe_unused]] const bool isDomainWall = faceLabel.getBoundary()
+        and not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[faceNumber % DIMENSIONS];
+      assertion(
+        faceLabel.getIsHanging() or not faceLabel.getRequiresDataTransfer(ownSide),
+        marker.toString(),
+        faceLabel.toString(),
+        faceNumber,
+        timeStamp
+      );
+      assertion(
+        faceLabel.getIsHanging() or isDomainWall or faceLabel.getAboveHanging(1 - ownSide)
+          or not faceLabel.getRequiresDataTransfer(1 - ownSide),
+        marker.toString(),
+        faceLabel.toString(),
+        faceNumber,
+        timeStamp
+      );
     }
 
     {% if COMPUTE_MAX_EIGENVALUE %}
@@ -128,6 +150,12 @@ class UpdatePatch(AbstractFVActionSet):
             self._solver.add_entries_to_text_replacement_dictionary(dictionary)
             self._add_action_set_entries_to_dictionary(dictionary)
             result = self._Template_TouchCellFirstTime.render(**dictionary)
+        if operation_name == peano4.solversteps.ActionSet.OPERATION_END_TRAVERSAL:
+            result = (
+                "  repositories::"
+                + self._solver.get_name_of_global_instance()
+                + ".reduceLocalUpdates();\n"
+            )
         return result
 
     def get_action_set_name(self):

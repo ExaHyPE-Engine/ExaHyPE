@@ -26,11 +26,11 @@ from exahype2.VariableShortcuts import VariableShortcuts
 from peano4.Logger import log
 from peano4.output.Helper import render_jinja2_template
 
-class Polynomials(IntEnum):
-    """Identifies the nodal basis used by an ADER-DG solver."""
 
-    Gauss_Legendre = 0,
+class Polynomials(IntEnum):
+    Gauss_Legendre = 0
     Gauss_Lobatto = 1
+
 
 PrecisionType = {
     "SP":     "float",
@@ -54,6 +54,7 @@ PrecisionType = {
     "bf16":             "__bf16"
 }
 
+
 class ADERDG(SubcellLimiting):
     def __init__(
         self,
@@ -65,10 +66,6 @@ class ADERDG(SubcellLimiting):
         self._name = name
         self._solver_number = 0
 
-        """
-        Polynomial order of the representation of the underlying function in each spatial dimension.
-        The number of support points that represent this polynomial is always the order plus one.
-        """
         self._order = order
 
         self._variable_shortcuts = VariableShortcuts(name, unknowns, auxiliary_variables)
@@ -98,11 +95,7 @@ class ADERDG(SubcellLimiting):
         self._user_action_set_includes = ""
         self._user_solver_includes = ""
 
-        """
-        These specify the time step and have to be set by a child class to advance the time stepping.
-        They are the main difference between the child classes, as all of them share the same
-        underlying routines.
-        """
+        # A child class sets these to advance the time stepping.
         self._compute_time_step_size = "#error Not yet defined"
         self._compute_new_time_step_size = "#error Not yet defined"
 
@@ -186,10 +179,7 @@ class ADERDG(SubcellLimiting):
         # Safety factor for CFL (Courant-Friedrichs-Lewy) condition
         self._cflSafetyFactor = 0.0
 
-        """
-        Holds a user-supplied postprocessing action set. It runs once every other
-        ADER-DG computation of the sweep has completed.
-        """
+        # The postprocessing action set runs after every other ADER-DG computation of the sweep.
         self._action_set_postprocess_solution = None
 
         self._preprocess_reconstructed_patch = ""
@@ -200,12 +190,10 @@ class ADERDG(SubcellLimiting):
 
     @abstractmethod
     def create_data_structures(self):
-        """Creates the cell and face patches and their exchange conditions."""
-
         self._number_of_face_projections = 1
 
-        # The current time step holds the solution. The two projections hold the solution and
-        # the fluxes on the faces as predicted by the space-time predictor.
+        # The two projections hold the solution and the fluxes the space-time predictor
+        # writes on the faces.
         self._current_time_step = peano4.datamodel.Patch(
             (self._order + 1, self._order + 1, self._order + 1),
             self._variable_shortcuts.unknowns + self._variable_shortcuts.auxiliary_variables,
@@ -248,8 +236,8 @@ class ADERDG(SubcellLimiting):
             self._corrector_computation_precision
         )
 
-        # Custom merge implementation takes into account that the faces project such that
-        # the left cell projects to the left half of the face and the right cell projects to the right half.
+        # The left cell projects to the left half of the face and the right cell to the
+        # right half, so the merge copies half a face.
         self._rhs_estimates_projection.generator.merge_method_definition = (
             get_face_overlap_merge_implementation(self._rhs_estimates_projection)
         )
@@ -268,7 +256,7 @@ class ADERDG(SubcellLimiting):
 
         self._rhs_estimates_projection.generator.use_copy_for_exchange = "true"
 
-        # Gets overwritten in subclasses to take into account when to send or receive faces
+        # A child class overwrites the send and the receive condition.
         self._rhs_estimates_projection.generator.send_condition = "false"
         self._rhs_estimates_projection.generator.receive_and_merge_condition = "false"
         self._rhs_estimates_projection.generator.can_receive = self._load_face_data_default_guard()
@@ -302,9 +290,6 @@ class ADERDG(SubcellLimiting):
 
     @abstractmethod
     def create_action_sets(self):
-        """Creates the solver's grid action sets and execution guards."""
-
-        # Updates faces and cells (whether at boundary, refined etc.)
         self._action_set_update_face_label = exahype2.grid.UpdateFaceLabel(self._name)
         self._action_set_update_cell_label = exahype2.grid.UpdateCellLabel(self._name)
         self._action_set_update_face_label.descend_invocation_order = 0
@@ -313,35 +298,27 @@ class ADERDG(SubcellLimiting):
         self._action_set_initial_conditions = exahype2.solvers.aderdg.actionsets.InitialCondition(self, self._store_cell_data_default_guard())
         self._action_set_initial_conditions.descend_invocation_order = 1
 
-        # Per-time-step resolution-transition coupling on a stable grid. It does not
-        # change the topology (create/destroy off, no grid-control events); that is
-        # exclusively the dedicated DynamicAMR observer's job below.
+        # This action set couples the resolution transitions of a stable grid and changes
+        # no topology.
         self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.aderdg.actionsets.AdaptiveMeshFaceCoupling(
             solver=self,
-            delete_guard=self._delete_face_data_default_guard(),
             interpolate_guard=self._interpolate_face_data_default_guard(),
             restrict_guard=self._restrict_face_data_default_guard(),
             solve_guard=self._store_cell_data_default_guard(),
         )
         self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.descend_invocation_order = 1
 
-        # The one action set that realises topology changes. It lives in the dedicated
-        # DynamicAMR observer (see add_actions_to_dynamic_mesh_refinement), reports the
-        # committed grid-control events back to Peano, and transfers the solution across
+        # This action set realises the topology changes and transfers the solution across
         # every created or destroyed resolution transition.
         self._action_set_dynamic_amr_transfer = exahype2.solvers.aderdg.actionsets.DynamicAMRTransfer(
             solver=self,
-            delete_guard=self._delete_face_data_default_guard(),
             interpolate_guard=self._interpolate_face_data_default_guard(),
             restrict_guard=self._restrict_face_data_default_guard(),
         )
         self._action_set_dynamic_amr_transfer.descend_invocation_order = 1
 
-        # The computation of the solution happens in the prediction and correction action sets.
-        # Prediction extrapolates the solution from time t onto the time nodes, then projects
-        # this extrapolated solution to the faces.
-        # Correction uses the extrapolated face solutions from the predictor and the neighbouring
-        # cells to compute a solution at the next time step.
+        # Prediction extrapolates the solution onto the time nodes and projects it to the
+        # faces. Correction reads those face values and computes the next time step.
         self._action_set_correction = exahype2.solvers.aderdg.actionsets.Correction(
             solver=self,
             cell_guard=self._store_cell_data_default_guard(),
@@ -365,9 +342,7 @@ class ADERDG(SubcellLimiting):
             + "::SolverState::GridInitialisation)",
             build_up_new_refinement_instructions=True,
             called_by_grid_construction=False,
-            # A time step never realises topology changes; it only commits the
-            # refine/coarsen requests. Realisation happens in the DynamicAMR
-            # observer, whose DynamicAMRTransfer delivers the committed events.
+            # A time step commits the refine and erase requests and realises none of them.
             implement_previous_refinement_instructions=False,
             skip_after_topology_change=True,
         )
@@ -383,14 +358,9 @@ class ADERDG(SubcellLimiting):
         )
         self._action_set_AMR_throughout_grid_construction.descend_invocation_order = 4
 
-        # Re-evaluating the criterion within the realise sweeps lets one round of
-        # dedicated mesh-refinement sweeps climb every level the data justifies:
-        # freshly transferred cells commit further refinement, and the sweeps
-        # repeat until the mesh satisfies the criterion. A delayed source therefore
-        # reaches its full depth before the next time step. Only cells that these
-        # sweeps have just created evaluate the criterion; every other cell
-        # committed its request in the preceding time step, and re-issuing it each
-        # sweep would keep the sweeps running forever.
+        # A cell the mesh-refinement sweeps have just created evaluates the criterion again,
+        # so one round of sweeps reaches every level the data asks for. Every other cell
+        # committed its request in the preceding time step and would never stop repeating it.
         self._action_set_AMR_throughout_dynamic_amr = exahype2.solvers.aderdg.actionsets.RefinementCriterion(
             solver=self,
             guard=self._store_cell_data_default_guard()
@@ -408,12 +378,8 @@ class ADERDG(SubcellLimiting):
             self._action_set_postprocess_solution = exahype2.solvers.aderdg.actionsets.EmptyPostprocessSolution(solver=self)
         self._action_set_postprocess_solution.descend_invocation_order = 4
 
-        # The cell/nodal plotter is always present; the face plotter is optional
-        # and only wired in when the user calls add_face_plotter(). Both are
-        # instantiated lazily in add_actions_to_plot_solution(), matching the
-        # finite-volume / finite-difference / Runge-Kutta solvers. The output
-        # format is a project-wide setting (--plot-format / project.set_plot_format),
-        # so it is not configured per solver here.
+        # add_actions_to_plot_solution() constructs both plotters. add_face_plotter() sets
+        # the face plotter, which stays None without that call.
         self._plotter = peano4.plotter.PatchPlotter
         self._face_plotter = None
         self._face_plotter_guard = None
@@ -476,11 +442,9 @@ class ADERDG(SubcellLimiting):
                 )
 
     def _load_face_data_default_guard(self):
-        # Receiving consumes the batch the previous sweep sent, so it is enabled
-        # from the first sweep that follows a face-data-storing sweep on. A guard
-        # keyed on the solver state alone cannot express that: the state stays at
-        # GridInitialisation across the initialise-drain loop, whose every sweep
-        # sends.
+        # Receiving consumes the batch the previous sweep sent, so it starts with the first
+        # sweep that follows a face-data-storing sweep. The solver state alone does not say
+        # that, because it stays at GridInitialisation across every sending sweep.
         return (
             "not marker.hasBeenRefined() "
             + "and repositories::"
@@ -513,6 +477,17 @@ class ADERDG(SubcellLimiting):
                     + "::SolverState::GridConstruction"
                 )
 
+    def _store_boundary_data_default_guard(self):
+        return (
+            self._store_face_data_default_guard()
+            + " and not repositories::"
+            + self.get_name_of_global_instance()
+            + ".PeriodicBC[marker.getSelectedFaceNumber()%DIMENSIONS]"
+            + " and not marker.hasBeenRefined() and fineGridFace"
+            + self._name
+            + "FaceLabel.getBoundary()"
+        )
+
     def _delete_face_data_default_guard(self):
         return "true"
 
@@ -538,26 +513,17 @@ class ADERDG(SubcellLimiting):
         return self._name + "Q_old"
 
     def _plotted_solution_patch(self):
-        """Return the cell patch that holds the accepted state at plot time.
+        """Returns the cell patch that holds the accepted solution at plot time.
 
-        Ordinary fused ADER-DG plots ``Q_old``. Its correction and next
-        prediction share one traversal: the correction commits the accepted
-        state to ``Q``, and the prediction then copies ``Q`` into ``Q_old``.
-        Consequently, ``Q_old`` is current rather than stale when the following
-        plot traversal runs.
-
-        Limiting separates prediction and correction into different traversals.
-        After correction, ``Q`` holds the accepted DG state on regular cells;
-        on limited cells, ``RecomputeSubcells`` replaces it with the projection
-        of the current finite-volume subgrid. ``Q_old`` remains the predictor
-        backup, so the limiter plotter has to read ``Q``.
+        Fused ADER-DG corrects into ``Q`` and copies ``Q`` into ``Q_old`` in one traversal.
+        With subcell limiting ``Q_old`` stays the predictor backup and ``Q`` carries the
+        accepted solution.
         """
         if self.subcell_limiter_is_enabled:
             return self._current_time_step
         return self._previous_time_step
 
     def _plotted_solution_identifier(self):
-        """Return the identifier matching :meth:`_plotted_solution_patch`."""
         if self.subcell_limiter_is_enabled:
             return self.current_unknown_identifier()
         return self.previous_unknown_identifier()
@@ -620,9 +586,6 @@ class ADERDG(SubcellLimiting):
                 for x in self._basis.quadrature_points():
                     mapping.append((x, y, z))
 
-        # Keep the patch and its generated data-set identifier in lockstep. The
-        # selector documents why ordinary fused ADER-DG plots Q_old while a
-        # limiter plots Q.
         plotter = self._plotter(
             filename=self._name,
             patch=self._plotted_solution_patch(),
@@ -635,7 +598,6 @@ class ADERDG(SubcellLimiting):
         )
         step.add_action_set(plotter)
 
-        # The face plotter is optional - only added when the user asked for it.
         if self._face_plotter is not None:
             face_plotter = self._face_plotter(
                 filename=self._name + "-face",
@@ -649,15 +611,9 @@ class ADERDG(SubcellLimiting):
             step.add_action_set(face_plotter)
 
     def add_actions_to_dynamic_mesh_refinement(self, step):
-        """!
-        Add action sets to the dedicated DynamicAMR observer.
+        """Adds the action sets of the one observer that changes the topology.
 
-        This is the only observer that changes the topology. It triggers and
-        realises the committed refine/coarsen requests, prolongs/restricts the
-        ADER-DG solution across every resolution transition Peano creates or
-        destroys, and re-evaluates the refinement criterion on cells it created,
-        so one round of these sweeps realises the full depth the data justifies.
-        Mirrors exahype2.solvers.fv.FV.add_actions_to_dynamic_mesh_refinement.
+        This observer realises the refine and erase requests the time step committed.
         """
         step.add_action_set(self._action_set_update_face_label)
         step.add_action_set(self._action_set_update_cell_label)
@@ -688,7 +644,7 @@ class ADERDG(SubcellLimiting):
             or self._point_sources_implementation != PDETerms.None_Implementation
         ):
             raise AssertionError(
-                "Material parameters and point sources are currently only available for linear generated kernels."
+                "Material parameters and point sources are only available for linear generated kernels."
             )
 
         if (
@@ -703,9 +659,8 @@ class ADERDG(SubcellLimiting):
                 f"or when global adaptive time stepping is enabled."
             )
 
-        # Assemble the template prefix in a local: mutating the attribute would
-        # double the class name when the generator runs a second time on the
-        # same solver object.
+        # The class name goes into a local, because a second generation run on the same
+        # solver object would append it to the attribute twice.
         if self._solver_template_file_class_name is None:
             templatefile_prefix = self._templatefile_prefix + self.__class__.__name__
         else:
@@ -786,11 +741,9 @@ class ADERDG(SubcellLimiting):
 
     @preprocess_reconstructed_patch.setter
     def preprocess_reconstructed_patch(self, kernel):
-        """Set C++ code that runs immediately before the predictor.
+        """Sets the C++ code that runs before the predictor.
 
-        The snippet can access ``QNew``, the current cell state, and ``QOld``,
-        its backup, together with ``marker``, ``timeStamp``, and
-        ``timeStepSize``.
+        The code reads ``QNew``, ``QOld``, ``marker``, ``timeStamp`` and ``timeStepSize``.
         """
         self._preprocess_reconstructed_patch = kernel
         self.create_data_structures()
@@ -802,10 +755,9 @@ class ADERDG(SubcellLimiting):
 
     @postprocess_updated_patch.setter
     def postprocess_updated_patch(self, kernel):
-        """Set C++ code that runs immediately after the corrector.
+        """Sets the C++ code that runs after the corrector.
 
-        The snippet can access the candidate through ``QNew`` together with
-        ``marker``, ``timeStamp``, and ``timeStepSize``.
+        The code reads ``QNew``, ``marker``, ``timeStamp`` and ``timeStepSize``.
         """
         self._postprocess_updated_patch = kernel
         self.create_data_structures()
@@ -910,10 +862,10 @@ class ADERDG(SubcellLimiting):
 
         d["ABSTRACT_SOLVER_USER_DECLARATIONS"] = render_template(
             self._abstract_solver_user_declarations
-        )
+        ).strip("\n")
         d["ABSTRACT_SOLVER_USER_DEFINITIONS"] = render_template(
             self._abstract_solver_user_definitions
-        )
+        ).strip("\n")
         d["SOLVER_USER_DECLARATIONS"] = render_template(
             self._solver_user_declarations
         )
@@ -1018,8 +970,6 @@ class ADERDG(SubcellLimiting):
         d["FACE_INTEGRAL_CALL"] = jinja2.Template(self._face_integral_call, undefined=jinja2.DebugUndefined).render(**d)
 
         d["QUADRATURE_POINTS"]      = ", ".join(self._basis.quadrature_points())
-
-        # self._basis.init_dictionary_with_default_parameters(d)
 
     @staticmethod
     def _validate_diffusive_configuration(
@@ -1127,7 +1077,7 @@ class ADERDG(SubcellLimiting):
                     self._use_stateless_init_point_sources = True
 
         if use_diffusive_flux is not None:
-          self._use_diffusive_flux = use_diffusive_flux
+            self._use_diffusive_flux = use_diffusive_flux
 
         self.create_data_structures()
         self.create_action_sets()
@@ -1201,13 +1151,15 @@ class ADERDG(SubcellLimiting):
 
         if predictor_computation_precisions != False:
             self._predictor_computation_precisions = []
-            for prec in predictor_computation_precisions:
-                if prec not in PrecisionType.keys():
+            for predictor_precision in predictor_computation_precisions:
+                if predictor_precision not in PrecisionType.keys():
                     raise AssertionError(
                         "The chosen precision is not valid. Valid choices are: "
                         + ", ".join(PrecisionType.keys())
                     )
-                self._predictor_computation_precisions.append(PrecisionType[prec])
+                self._predictor_computation_precisions.append(
+                    PrecisionType[predictor_precision]
+                )
 
         if len(self._predictor_computation_precisions) > 1:
             self._precision_criterion_implementation = precision_criterion_implementation
@@ -1218,18 +1170,13 @@ class ADERDG(SubcellLimiting):
         self.create_action_sets()
 
     def add_face_plotter(self, guard="true"):
-        """Also plot the faces (the projected face estimates).
-
-        Optional. The cell/nodal volume plotter is always present; calling this
-        adds a face plot in a separate '<name>-face' output alongside it. The
-        output format is the project-wide one (--plot-format / set_plot_format).
-        """
+        """Adds a plotter that writes the projected face estimates to ``<name>-face``."""
         self._face_plotter = peano4.plotter.FacePlotter
         self._face_plotter_guard = guard
 
 
 def get_face_overlap_merge_implementation(patch_overlap):
-    Template = """
+    template = """
   constexpr int SpaceFaceSize = Cardinality / 2;
 
   auto* dst = this->data();
@@ -1238,7 +1185,6 @@ def get_face_overlap_merge_implementation(patch_overlap):
   assertion(src);
 
   const int faceDimension = marker.getSelectedFaceNumber() % DIMENSIONS;
-  // If the outer normal is positive, the normal points to the right so the face is on the right.
   const int faceLR = (marker.outerNormal()[faceDimension] > 0.0 ? 0 : 1);
 
   std::copy_n(
@@ -1247,4 +1193,4 @@ def get_face_overlap_merge_implementation(patch_overlap):
     &dst[(1 - faceLR) * SpaceFaceSize]
   );
 """
-    return Template
+    return template

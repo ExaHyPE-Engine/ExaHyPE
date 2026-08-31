@@ -2,8 +2,14 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "peano4/stacks/IOMode.h"
+#include "peano4/stacks/SendReceiveContext.h"
 #include "peano4/stacks/Stack.h"
+#include "tarch/Assertions.h"
+#include "tarch/instrumentation/Debug.h"
 #include "tarch/mpi/Request.h"
+
+#include <mpi.h>
 
 namespace peano4::stacks {
   template <class T>
@@ -11,133 +17,42 @@ namespace peano4::stacks {
 } // namespace peano4::stacks
 
 template <class T>
-class peano4::stacks::StackWithSerialisation : public Stack<T> {
-private:
+class peano4::stacks::StackWithSerialisation final : public peano4::stacks::Stack<T> {
+public:
   static_assert(T::Cardinality > 0);
   static_assert(std::is_trivial_v<typename T::DoFType>);
   static_assert(std::is_standard_layout_v<typename T::DoFType>);
 
-  std::vector<typename T::DoFType> _sendBuffer;
-  std::vector<typename T::DoFType> _receiveBuffer;
-
-public:
   StackWithSerialisation()                                             = default;
-  virtual ~StackWithSerialisation() override                           = default;
   StackWithSerialisation(const StackWithSerialisation&)                = delete;
-  StackWithSerialisation& operator=(const StackWithSerialisation&)     = delete;
   StackWithSerialisation(StackWithSerialisation&&) noexcept            = default;
+  StackWithSerialisation& operator=(const StackWithSerialisation&)     = delete;
   StackWithSerialisation& operator=(StackWithSerialisation&&) noexcept = default;
+  ~StackWithSerialisation() override                                   = default;
 
-  void
-  startSend([[maybe_unused]] const SendReceiveContext context, const int rank, const int tag, const MPI_Comm comm) {
-    assertion(this->_ioMode == IOMode::None);
-    assertion(this->size() > 0);
-    assertion(not this->_ioMPIActive);
-
-    this->_ioMode = IOMode::MPISend;
-    this->_ioTag  = tag;
-    this->_ioRank = rank;
-
-    logDebug(this->toString());
-
-    _sendBuffer.resize(this->size() * T::Cardinality);
-    serialise();
-
-    // MPI counts in an int, so counting bytes rather than unknowns lowers the
-    // number of unknowns one message can carry by sizeof(DoFType).
-    const std::size_t numberOfBytes = _sendBuffer.size() * sizeof(typename T::DoFType);
-    assertion(
-      numberOfBytes <= static_cast<std::size_t>(std::numeric_limits<int>::max()),
-      numberOfBytes,
-      _sendBuffer.size(),
-      sizeof(typename T::DoFType)
-    );
-
-    this->_ioChannel.startSend(_sendBuffer.data(), static_cast<int>(numberOfBytes), this->_ioRank, this->_ioTag, comm);
-    this->_ioMPIActive = true;
-  }
+  void startSend(
+    const peano4::stacks::SendReceiveContext context,
+    const int                                rank,
+    const int                                tag,
+    const MPI_Comm                           comm
+  ) override;
 
   void startReceive(
-    [[maybe_unused]] const SendReceiveContext context,
-    const int                                 rank,
-    const int                                 tag,
-    const MPI_Comm                            comm,
-    const int                                 numberOfElements
-  ) {
-    assertion(this->_ioMode == IOMode::None, rank, tag, numberOfElements);
-    assertion(numberOfElements > 0, rank, tag, numberOfElements);
-    assertion(not this->_ioMPIActive);
+    const peano4::stacks::SendReceiveContext context,
+    const int                                rank,
+    const int                                tag,
+    const MPI_Comm                           comm,
+    const int                                numberOfElements
+  ) override;
 
-    this->_ioMode = IOMode::MPIReceive;
-    this->_ioTag  = tag;
-    this->_ioRank = rank;
-
-    logDebug(this->toString());
-
-    this->resize(numberOfElements);
-    _receiveBuffer.resize(numberOfElements * T::Cardinality);
-
-    // MPI counts in an int, so counting bytes rather than unknowns lowers the
-    // number of unknowns one message can carry by sizeof(DoFType).
-    const std::size_t numberOfBytes = _receiveBuffer.size() * sizeof(typename T::DoFType);
-    assertion(
-      numberOfBytes <= static_cast<std::size_t>(std::numeric_limits<int>::max()),
-      numberOfBytes,
-      _receiveBuffer.size(),
-      sizeof(typename T::DoFType)
-    );
-
-    this->_ioChannel
-      .startReceive(_receiveBuffer.data(), static_cast<int>(numberOfBytes), this->_ioRank, this->_ioTag, comm);
-    this->_ioMPIActive = true;
-  }
-
-  bool tryToFinishSendOrReceive() {
-    if (this->_ioMode == IOMode::None or not this->_ioMPIActive) {
-      return true;
-    }
-
-    int flag = 0;
-    tarch::mpi::test(this->_ioChannel.getRequest(), &flag, MPI_STATUS_IGNORE);
-    if (flag) {
-      if (this->_ioMode == IOMode::MPISend) {
-        this->shallowClear();
-        logDebug("Send complete: " << this->toString());
-      } else if (this->_ioMode == IOMode::MPIReceive) {
-        deserialise();
-        logDebug("Receive complete: " << this->toString());
-      }
-      this->_ioMode      = IOMode::None;
-      this->_ioMPIActive = false;
-
-      return true;
-    }
-
-    return false;
-  }
+  bool tryToFinishSendOrReceive() override;
 
 private:
-  void serialise() {
-    for (std::size_t i = 0; i < this->size(); ++i) {
-      // Use non-const data(): generated lazy patch data materialises
-      // deterministic storage here instead of exposing stale reused slots.
-      typename T::DoFType* source = this->_data[i].data();
-      assertion(source != nullptr);
-      std::copy_n(source, T::Cardinality, _sendBuffer.data() + i * T::Cardinality);
-    }
-  }
+  std::vector<typename T::DoFType> _sendBuffer{};
+  std::vector<typename T::DoFType> _receiveBuffer{};
 
-  void deserialise() {
-    for (std::size_t i = 0; i < this->size(); ++i) {
-      // Use non-const data(): generated lazy patch data materialises receive
-      // storage on demand before the incoming payload is copied into it.
-      typename T::DoFType* target = this->_data[i].data();
-      if (target == nullptr) {
-        this->_data[i] = T();
-        target         = this->_data[i].data();
-      }
-      assertion(target != nullptr);
-      std::copy_n(_receiveBuffer.data() + i * T::Cardinality, T::Cardinality, target);
-    }
-  }
+  void serialise();
+  void deserialise();
 };
+
+#include "peano4/stacks/StackWithSerialisation.cpph"

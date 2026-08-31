@@ -9,16 +9,13 @@ from .BasePlotter import BasePlotter
 
 
 class PatchPlotter(BasePlotter):
-    """! Plot patch data on an unstructured mesh.
+    """! The nodal representation gives every patch its own mapped vertices and
+    connects neighbouring vertices within that patch, so a patch boundary keeps
+    two traces. The cell representation writes one cell-data value per finite
+    volume and ignores mapping.
 
-    The nodal representation gives every patch its own mapped vertices and
-    connects neighbouring vertices within that patch, preserving distinct
-    traces at patch boundaries. The cell representation writes one cell-data
-    value per finite volume and ignores mapping.
-
-    The description argument may map field names to component counts. Each
-    field gets a separate data array in the order supplied by the mapping. An
-    empty description writes all unknowns under the dataset name.
+    The description argument maps field names to component counts, and an empty
+    description writes all unknowns under the dataset name.
     """
 
     def __init__(
@@ -39,11 +36,9 @@ class PatchPlotter(BasePlotter):
         alternative_data_access="",
         alternative_data_dofs_per_axis=0,
     ):
-        """A cell whose stored dataset is not the authoritative solution can
-        plot an alternative per-cell array instead: whenever
-        ``alternative_data_guard`` evaluates to true, every plot point reads
-        the alternative array's nearest degree of freedom, resolved from the
-        point's reference coordinate on a grid of
+        """Whenever ``alternative_data_guard`` evaluates to true, every plot point
+        reads the nearest degree of freedom of the array that
+        ``alternative_data_access`` yields, on a grid of
         ``alternative_data_dofs_per_axis`` entries per axis."""
         super().__init__(
             filename,
@@ -130,18 +125,20 @@ class PatchPlotter(BasePlotter):
                 super().get_body_of_operation(operation_name)
                 + jinja2.Template(
                     """
-  _vertexPlotter = _fileWriter->createVertexPlotter(
-    _localTreeNumber,
-    tarch::plotter::FileWriter::VertexSharing::Distinct
-  );
-  _cellPlotter            = _fileWriter->createCellPlotter(_localTreeNumber);
+  _vertexPlotter.reset();
+  _vertexPlotter = _fileWriter->createVertexPlotter(_pieceId, tarch::plotter::FileWriter::VertexMerging::Distinct);
+
+  _cellPlotter.reset();
+  _cellPlotter = _fileWriter->createCellPlotter(_pieceId);
 
 {% if DESCRIPTION %}
 {% for name, count in DESCRIPTION.items() %}
-  _{{name}}DataPlotter = _fileWriter->createVertexDataPlotter(_localTreeNumber, "{{name}}", {{count}});
+  _{{name}}DataPlotter.reset();
+  _{{name}}DataPlotter = _fileWriter->createVertexDataPlotter(_pieceId, "{{name}}", {{count}});
 {% endfor %}
 {% else %}
-  _vertexDataPlotter = _fileWriter->createVertexDataPlotter(_localTreeNumber, "{{NAME}}", {{UNKNOWNS}});
+  _vertexDataPlotter.reset();
+  _vertexDataPlotter = _fileWriter->createVertexDataPlotter(_pieceId, "{{NAME}}", {{UNKNOWNS}});
 {% endif %}
 """,
                     trim_blocks=True,
@@ -155,6 +152,7 @@ class PatchPlotter(BasePlotter):
     assertion(_vertexPlotter);
     assertion(_cellPlotter);
     assertion(_subdomainPlotter);
+    assertion(_subtreeTaskPlotter);
     assertion(_refinementLevelPlotter);
 {% if DESCRIPTION %}
 {% for name, count in DESCRIPTION.items() %}
@@ -281,7 +279,8 @@ class PatchPlotter(BasePlotter):
           };
           const int cellIndex = _cellPlotter->plotHexahedron(vertices.data());
 #endif
-          _subdomainPlotter->plotCellData(cellIndex, _treeNumber);
+          _subdomainPlotter->plotCellData(cellIndex, tarch::mpi::Rank::getInstance().getRank());
+          _subtreeTaskPlotter->plotCellData(cellIndex, getSubtreeTask());
           _refinementLevelPlotter->plotCellData(cellIndex, refinementLevel);
 {% if ADDITIONAL_CELL_DATA_PLOTS %}
 {{ADDITIONAL_CELL_DATA_PLOTS}}
@@ -305,15 +304,19 @@ class PatchPlotter(BasePlotter):
                 super().get_body_of_operation(operation_name)
                 + jinja2.Template(
                     """
-  _vertexPlotter          = _fileWriter->createVertexPlotter(_localTreeNumber);
-  _cellPlotter            = _fileWriter->createCellPlotter(_localTreeNumber);
+  _vertexPlotter.reset();
+  _vertexPlotter = _fileWriter->createVertexPlotter(_pieceId);
+
+  _cellPlotter.reset();
+  _cellPlotter = _fileWriter->createCellPlotter(_pieceId);
 
 {% if DESCRIPTION %}
 {% for name, count in DESCRIPTION.items() %}
-  _{{name}}DataPlotter = _fileWriter->createCellDataPlotter(_localTreeNumber, "{{name}}", {{count}});
+  _{{name}}DataPlotter.reset();
+  _{{name}}DataPlotter = _fileWriter->createCellDataPlotter(_pieceId, "{{name}}", {{count}});
 {% endfor %}
 {% else %}
-  _cellDataPlotter = _fileWriter->createCellDataPlotter(_localTreeNumber, "{{NAME}}", {{UNKNOWNS}});
+  _cellDataPlotter = _fileWriter->createCellDataPlotter(_pieceId, "{{NAME}}", {{UNKNOWNS}});
 {% endif %}
 """,
                     trim_blocks=True,
@@ -327,6 +330,7 @@ class PatchPlotter(BasePlotter):
     assertion(_vertexPlotter);
     assertion(_cellPlotter);
     assertion(_subdomainPlotter);
+    assertion(_subtreeTaskPlotter);
     assertion(_refinementLevelPlotter);
 {% if DESCRIPTION %}
 {% for name, count in DESCRIPTION.items() %}
@@ -410,7 +414,9 @@ class PatchPlotter(BasePlotter):
 {% else %}
       _cellDataPlotter->plotCellData(cellIndex, data, {{UNKNOWNS}});
 {% endif %}
-      _subdomainPlotter->plotCellData(cellIndex, _treeNumber);
+
+      _subdomainPlotter->plotCellData(cellIndex, tarch::mpi::Rank::getInstance().getRank());
+      _subtreeTaskPlotter->plotCellData(cellIndex, getSubtreeTask());
       _refinementLevelPlotter->plotCellData(cellIndex, refinementLevel);
 {% if ADDITIONAL_CELL_DATA_PLOTS %}
 {{ADDITIONAL_CELL_DATA_PLOTS}}

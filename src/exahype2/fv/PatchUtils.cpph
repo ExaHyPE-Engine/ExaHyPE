@@ -1,10 +1,11 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+/** Copies either the lower or upper half of an array-of-structures face overlap. */
 template <typename T>
 void exahype2::fv::copyHalfOfHalo(
   int              unknownsPlusAuxiliaryVariables,
-  int              numberOfGridCellsPerPatchPerAxis,
+  int              numberOfVolumesPerAxisInPatch,
   int              haloSize, // same as overlap
   int              normal,
   bool             isRightLayer,
@@ -12,27 +13,37 @@ void exahype2::fv::copyHalfOfHalo(
   T* NOALIAS       destQ
 ) {
   peano4::dForEachExclusive(
-    numberOfGridCellsPerPatchPerAxis,
+    numberOfVolumesPerAxisInPatch,
     normal,
     0,
-    [&](const tarch::la::Vector<DIMENSIONS, int>& k) {
-      for (int i = (isRightLayer ? haloSize : 0); i < (isRightLayer ? 2 * haloSize : haloSize); i++) {
-        tarch::la::Vector<DIMENSIONS, int> overlapCell = k;
-        overlapCell(normal)                            = i;
-        const int index                                = toolbox::blockstructured::serialiseVoxelIndexInOverlap(
+    [&](const tarch::la::Vector<DIMENSIONS, int>& tangentialIndex) {
+      for (int overlapIndex = (isRightLayer ? haloSize : 0); overlapIndex < (isRightLayer ? 2 * haloSize : haloSize);
+           overlapIndex++) {
+        tarch::la::Vector<DIMENSIONS, int> overlapCell = tangentialIndex;
+        overlapCell(normal)                            = overlapIndex;
+        const int serialisedOverlapIndex               = toolbox::blockstructured::serialiseVoxelIndexInOverlap(
           overlapCell,
-          numberOfGridCellsPerPatchPerAxis,
+          numberOfVolumesPerAxisInPatch,
           haloSize,
           normal
         );
-        for (int j = 0; j < unknownsPlusAuxiliaryVariables; j++) {
-          destQ[index * unknownsPlusAuxiliaryVariables + j] = srcQ[index * unknownsPlusAuxiliaryVariables + j];
+        for (int quantity = 0; quantity < unknownsPlusAuxiliaryVariables; quantity++) {
+          destQ[serialisedOverlapIndex * unknownsPlusAuxiliaryVariables + quantity] =
+            srcQ[serialisedOverlapIndex * unknownsPlusAuxiliaryVariables + quantity];
         }
       }
     }
   );
 }
 
+/**
+ * Validates every interior and face-connected halo value of an array-of-structures patch.
+ *
+ * Diagonal halo entries are skipped because dimension-split halo exchange does not
+ * initialise them. minValues and maxValues, when non-null, contain one bound per
+ * unknown or auxiliary variable. The routine only reads Q and is thread-safe when
+ * its data and bound arrays are not mutated concurrently.
+ */
 template <typename T>
 void exahype2::fv::validatePatch(
   const T* NOALIAS                    Q,
@@ -45,27 +56,29 @@ void exahype2::fv::validatePatch(
   double*                             minValues,
   double*                             maxValues
 ) {
-  const int PatchSize = numberOfVolumesPerAxisInPatch + 2 * haloSize;
-  peano4::dForEach(PatchSize, [&](const tarch::la::Vector<DIMENSIONS, int>& k) {
-    int index = peano4::dLinearised(k, PatchSize) * (unknowns + auxiliaryVariables);
+  const int patchSize = numberOfVolumesPerAxisInPatch + 2 * haloSize;
+  peano4::dForEach(patchSize, [&](const tarch::la::Vector<DIMENSIONS, int>& patchIndex) {
+    const int volumeOffset = peano4::dLinearised(patchIndex, patchSize) * (unknowns + auxiliaryVariables);
 
     int outsidePatchAlongCoordinateAxis = 0;
-    for (int d = 0; d < DIMENSIONS; d++) {
-      if (k(d) < haloSize)
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      if (patchIndex(axis) < haloSize) {
         outsidePatchAlongCoordinateAxis++;
-      if (k(d) >= haloSize + numberOfVolumesPerAxisInPatch)
+      }
+      if (patchIndex(axis) >= haloSize + numberOfVolumesPerAxisInPatch) {
         outsidePatchAlongCoordinateAxis++;
+      }
     }
-    bool isDiagonal = outsidePatchAlongCoordinateAxis > 1;
+    const bool isDiagonal = outsidePatchAlongCoordinateAxis > 1;
 
     if (haloSize == 0 or not isDiagonal) {
-      for (int i = 0; i < unknowns + auxiliaryVariables; i++) {
-        const int             entry     = index + i;
+      for (int quantity = 0; quantity < unknowns + auxiliaryVariables; quantity++) {
+        const int             entry     = volumeOffset + quantity;
         [[maybe_unused]] bool dataValid = true;
-        if (minValues != nullptr and minValues[i] > Q[entry]) {
+        if (minValues != nullptr and minValues[quantity] > Q[entry]) {
           dataValid = false;
         }
-        if (maxValues != nullptr and maxValues[i] < Q[entry]) {
+        if (maxValues != nullptr and maxValues[quantity] < Q[entry]) {
           dataValid = false;
         }
         const bool isValid = Q[entry] == Q[entry] and std::isfinite(Q[entry]) and dataValid;
@@ -75,8 +88,8 @@ void exahype2::fv::validatePatch(
             details << "Q[entry]=" << Q[entry] << ", unknowns=" << unknowns
                     << ", auxiliaryVariables=" << auxiliaryVariables << ", isDiagonal=" << isDiagonal
                     << ", haloSize=" << haloSize << ", entry=" << entry
-                    << ", numberOfVolumesPerAxisInPatch=" << numberOfVolumesPerAxisInPatch << ", k=" << k
-                    << ", unknown=" << i << ", location=" << location;
+                    << ", numberOfVolumesPerAxisInPatch=" << numberOfVolumesPerAxisInPatch
+                    << ", patchIndex=" << patchIndex << ", unknown=" << quantity << ", location=" << location;
             ::tarch::triggerNonCriticalAssertion(
               __FILE__,
               __LINE__,
@@ -92,11 +105,11 @@ void exahype2::fv::validatePatch(
             auxiliaryVariables,
             isDiagonal,
             haloSize,
-            i,
+            quantity,
             numberOfVolumesPerAxisInPatch,
             haloSize,
-            k,
-            i,
+            patchIndex,
+            quantity,
             location,
             plotPatch(Q, unknowns, auxiliaryVariables, numberOfVolumesPerAxisInPatch, haloSize)
           );

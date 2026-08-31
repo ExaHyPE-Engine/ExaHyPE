@@ -4,7 +4,6 @@ import jinja2
 
 from enum import Enum
 
-
 from exahype2.solvers.LagrangeBasisWithDiagonalMassMatrix import GaussLegendreBasis
 
 
@@ -30,11 +29,6 @@ def create_abstract_solver_declarations(
     {% endif %}
 
     {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-    /**
-     * Depending on the implementation, this variant might be slow as it 
-     * lacks an inline define. Also, if you don't want to use ipo aggressively,
-     * it might be clever to put the implementation into the header.
-     */
     static double maxEigenvalue(
       const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
@@ -46,11 +40,8 @@ def create_abstract_solver_declarations(
     {% endif %}
 
     /**
-     * Determine max eigenvalue over Jacobian in a given point with solution values
-     * (states) Q. All parameters are in.
-     *
-     * @return Max eigenvalue. Result has to be positive, so we are actually speaking
-     *   about the maximum absolute eigenvalue.
+     * Returns the maximum absolute eigenvalue of the Jacobian in the point with
+     * the solution values Q. All parameters are in.
      */
     virtual double maxEigenvalue(
       const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
@@ -61,11 +52,6 @@ def create_abstract_solver_declarations(
     ) {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final{% endif %};
 
     {% if FLUX_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-    /**
-     * Depending on the implementation, this variant might be slow as it 
-     * lacks an inline define. Also, if you don't want to use ipo aggressively,
-     * it might be clever to put the implementation into the header.
-     */
     static void flux(
       const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
@@ -89,11 +75,6 @@ def create_abstract_solver_declarations(
     {% endif %}
 
     {% if NCP_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-    /**
-     * Depending on the implementation, this variant might be slow as it
-     * lacks an inline define. Also, if you don't want to use ipo aggressively,
-     * it might be clever to put the implementation into the header.
-     */
     static void nonconservativeProduct(
       const double * NOALIAS                  Q,    // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const double * NOALIAS                  deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
@@ -119,11 +100,6 @@ def create_abstract_solver_declarations(
     {% endif %}
 
     {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-    /**
-     * Depending on the implementation, this variant might be slow as it
-     * lacks an inline define. Also, if you don't want to use ipo aggressively,
-     * it might be clever to put the implementation into the header.
-     */
     static void sourceTerm(
       const double * NOALIAS Q,
       const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
@@ -145,11 +121,6 @@ def create_abstract_solver_declarations(
     {% endif %}
 
     {% if POINT_SOURCE_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-    /**
-     * Depending on the implementation, this variant might be slow as it 
-     * lacks an inline define. Also, if you don't want to use ipo aggressively,
-     * it might be clever to put the implementation into the header.
-     */
     void pointSource(
       const double * NOALIAS Q,
       const tarch::la::Vector<DIMENSIONS,double>&  x,
@@ -167,7 +138,7 @@ def create_abstract_solver_declarations(
       double                                       t,
       double                                       dt,
       double * NOALIAS S
-    ) {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
+    ) {% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
     {% endif %}
 """,
         undefined=jinja2.DebugUndefined,
@@ -437,23 +408,13 @@ def create_solver_declarations(
 
     {% if STATELESS_PDE_TERMS  and SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
     /**
-     * To obtain the best performance, I recommend to man inline command to
-     * this signature and to copy the implementation into the header. So it would
-     * read
-     *
-     * static inline void sourceTerm( ... ) {
-     *  code here
-     * }
-     *
-     * The GPU offloading requires static functions. As we cannot overload the
-     * original (virtual) function with a static alternative, we do the
-     * TBB trick and overload by adding an additional enum. It has no semantics
-     * but helps the compiler to distinguish the different function variants.
+     * The GPU offloading requires a static function. As we cannot overload the
+     * virtual function of the same name with a static one, the additional enum
+     * separates the two signatures.
      */
      static void sourceTerm(
        const double * NOALIAS Q,
        const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
-       const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
        double                                       t,
        double                                       dt,
        double * NOALIAS S,
@@ -463,18 +424,9 @@ def create_solver_declarations(
 
     {% if STATELESS_PDE_TERMS  and POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}
     /**
-     * To obtain the best performance, I recommend to man inline command to
-     * this signature and to copy the implementation into the header. So it would
-     * read
-     *
-     * static inline void pointSource( ... ) {
-     *  code here
-     * }
-     *
-     * The GPU offloading requires static functions. As we cannot overload the
-     * original (virtual) function with a static alternative, we do the
-     * TBB trick and overload by adding an additional enum. It has no semantics
-     * but helps the compiler to distinguish the different function variants.
+     * The GPU offloading requires a static function. As we cannot overload the
+     * virtual function of the same name with a static one, the additional enum
+     * separates the two signatures.
      */
      #error point sources not implemented yet
      static void pointSource(
@@ -490,18 +442,9 @@ def create_solver_declarations(
 
     {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
     /**
-     * To obtain the best performance, I recommend to man inline command to 
-     * this signature and to copy the implementation into the header. So it would
-     * read 
-     *
-     * static inline double maxEigenvalue( ... ) {
-     *  code here
-     * }
-     *
-     * The GPU offloading requires static functions. As we cannot overload the
-     * original (virtual) function with a static alternative, we do the
-     * TBB trick and overload by adding an additional enum. It has no semantics
-     * but helps the compiler to distinguish the different function variants.
+     * The GPU offloading requires a static function. As we cannot overload the
+     * virtual function of the same name with a static one, the additional enum
+     * separates the two signatures.
      */
     static double maxEigenvalue(
       const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
@@ -515,18 +458,9 @@ def create_solver_declarations(
 
     {% if STATELESS_PDE_TERMS  and FLUX_IMPLEMENTATION=="<user-defined>" %}
     /**
-     * To obtain the best performance, I recommend to man inline command to
-     * this signature and to copy the implementation into the header. So it would
-     * read
-     *
-     * static inline void flux( ... ) {
-     *  code here
-     * }
-     *
-     * The GPU offloading requires static functions. As we cannot overload the
-     * original (virtual) function with a static alternative, we do the
-     * TBB trick and overload by adding an additional enum. It has no semantics
-     * but helps the compiler to distinguish the different function variants.
+     * The GPU offloading requires a static function. As we cannot overload the
+     * virtual function of the same name with a static one, the additional enum
+     * separates the two signatures.
      */
     static void flux(
       const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
@@ -541,18 +475,9 @@ def create_solver_declarations(
 
     {% if STATELESS_PDE_TERMS  and NCP_IMPLEMENTATION=="<user-defined>" %}
     /**
-     * To obtain the best performance, I recommend to man inline command to 
-     * this signature and to copy the implementation into the header. So it would
-     * read
-     *
-     * static inline void nonconservativeProduct( ... ) {
-     *  code here
-     * }
-     *
-     * The GPU offloading requires static functions. As we cannot overload the
-     * original (virtual) function with a static alternative, we do the
-     * TBB trick and overload by adding an additional enum. It has no semantics
-     * but helps the compiler to distinguish the different function variants.
+     * The GPU offloading requires a static function. As we cannot overload the
+     * virtual function of the same name with a static one, the additional enum
+     * separates the two signatures.
      */
     static void nonconservativeProduct(
       const double * NOALIAS                  Q,       // Q[5+0],
@@ -635,12 +560,10 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   double                                       dt,
   double * NOALIAS                        S  // S[{{NUMBER_OF_UNKNOWNS}}]
 ) {
-
-  // @todo implement and ensure that all entries of S are properly set
+  // @todo implement and set every entry of S
   for (int i=0; i<NumberOfUnknowns; i++) {
     S[i] = 0.0;
   }
-
 }
 {% endif %}
 
@@ -700,7 +623,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 {% endif %}
 
 {% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-#error  point sources not implemented yet
+#error point sources not implemented yet
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   const double * NOALIAS Q,
   const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
@@ -726,31 +649,28 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 
 
 def get_face_merge_implementation(patch_overlap):
-    assert False, "I don't think this one is used anymore. @todo Remove"
+    assert False, "@todo Remove: no caller"
 
     d = {
-        "OVERLAP": patch_overlap.dim[0]
-        / 2,  # assumed to always be two, but present here anyway
+        "OVERLAP": patch_overlap.dim[0] / 2,
         "DOFS_PER_AXIS": patch_overlap.dim[1],
         "UNKNOWNS": patch_overlap.no_of_unknowns,
     }
     template = """
-  
   #if DIMENSIONS==2
   constexpr int nodesPerFace = {DOFS_PER_AXIS};
   #else
   constexpr int nodesPerFace = {DOFS_PER_AXIS}*{DOFS_PER_AXIS};
   #endif
-  
+
   constexpr int strideQ = {UNKNOWNS};
-    
+
   const int faceDimension = marker.getSelectedFaceNumber()%DIMENSIONS;
-  //if the outer normal is positive, the normal points to the right so the face is on the right
-  const int faceLR = (marker.outerNormal()[faceDimension]>0.0 ? 1 : 0);
+  const int faceIndex = (marker.outerNormal()[faceDimension]>0.0 ? 1 : 0);
 
   for(int i=0; i<nodesPerFace; i++){{
     for(int j=0; j<strideQ ; j++){{
-      value[(2*i+faceLR)*strideQ+j] = neighbour.data()[(2*i+faceLR)*strideQ+j];
+      value[(2*i+faceIndex)*strideQ+j] = neighbour.data()[(2*i+faceIndex)*strideQ+j];
     }}
   }}
 
@@ -762,10 +682,6 @@ def get_face_merge_implementation(patch_overlap):
 def create_start_time_step_implementation_for_fixed_time_stepping(
     normalised_time_step_size,
 ):
-    """
-    We roll over all reduced data after the last time step, and we
-    plot status info in the first step.
-    """
     return (
         """
   if (
@@ -787,24 +703,8 @@ def create_start_time_step_implementation_for_fixed_time_stepping(
 
 def create_volumetric_solver_call(polynomial_basis, solver_variant):
     """
-    A set of default volumetric kernel calls. You might want to use different
-    solver calls in your code depending on the context.
-
-    ## Difference to Finite Volume (FV) implementation
-
-    In the FV code base, I need the implementation routines as argument: As we work
-    with FV, the generic FV class does not know which implementations are around. If
-    you work with a domain-specific Rusanov solver, e.g., then there is no such
-    thing as an ncp.
-
-    For the DG schemes, things are different: Every DG solver in ExaHyPE 2 in principle
-    supports the ncp. So the base Python class already instantiates the corresponding
-    dictionary entries, and we can use them straightaway.
-
-    ## Arguments
-
-    solver_variant: SolverVariant
-      Picks different implementation variants
+    Returns the volumetric kernel call that matches polynomial_basis and
+    solver_variant.
     """
     if (
         isinstance(polynomial_basis, GaussLegendreBasis)
@@ -812,7 +712,7 @@ def create_volumetric_solver_call(polynomial_basis, solver_variant):
     ):
         return """cellIntegral_patchwise_in_situ_GaussLegendre_functors(
       cellData,
-      {{ORDER}},                                                   
+      {{ORDER}},
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       [&](

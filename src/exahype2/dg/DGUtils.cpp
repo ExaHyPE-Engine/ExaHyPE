@@ -1,17 +1,20 @@
-#include "exahype2/dg/DGUtils.h"
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#include "DGUtils.h"
 
+/** Copies one side of a DG face projection using the finite-volume halo layout helper. */
 void exahype2::dg::copyOneSideOfFaceProjection(
-  int    unknownsPlusAuxiliaryVariables,
-  int    order,
-  int    numberOfProjectedQuantities,
-  int    normal,
-  int    isRightFaceHalf,
-  const double* NOALIAS   srcQ,
-  double* NOALIAS         destQ
+  int                   unknownsPlusAuxiliaryVariables,
+  int                   order,
+  int                   numberOfProjectedQuantities,
+  int                   normal,
+  int                   isRightFaceHalf,
+  const double* NOALIAS srcQ,
+  double* NOALIAS       destQ
 ) {
   ::exahype2::fv::copyHalfOfHalo(
     unknownsPlusAuxiliaryVariables,
-    order+1,
+    order + 1,
     numberOfProjectedQuantities,
     normal,
     isRightFaceHalf,
@@ -20,158 +23,154 @@ void exahype2::dg::copyOneSideOfFaceProjection(
   );
 }
 
-double  exahype2::dg::getQuadratureWeight(
-  const tarch::la::Vector<3,double>&  cellSize,
-  const tarch::la::Vector<3,int>&     index,
-  const double* NOALIAS          quadratureWeights
+/** Returns the tensor-product quadrature weight scaled by the cell size. */
+double exahype2::dg::getQuadratureWeight(
+  const tarch::la::Vector<3, double>& cellSize,
+  const tarch::la::Vector<3, int>&    index,
+  const double* NOALIAS               quadratureWeights
 ) {
-  double result = 1.0;
-  for (int d=0; d<DIMENSIONS; d++) {
-    result *= cellSize(d) * quadratureWeights[ index(d) ];
+  double quadratureWeight = 1.0;
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    quadratureWeight *= cellSize(axis) * quadratureWeights[index(axis)];
   }
-  return result;
+  return quadratureWeight;
 }
 
-int exahype2::dg::getNodesPerCell(int nodesPerAxis){
-  int nodesPerCell=nodesPerAxis;
-  for(int d=1; d<DIMENSIONS; d++) {
+/** Returns nodesPerAxis raised to DIMENSIONS. */
+int exahype2::dg::getNodesPerCell(int nodesPerAxis) {
+  int nodesPerCell = nodesPerAxis;
+  for (int axis = 1; axis < DIMENSIONS; axis++) {
     nodesPerCell *= nodesPerAxis;
   }
   return nodesPerCell;
 }
 
-tarch::la::Vector<DIMENSIONS,int> exahype2::dg::getStrides(int nodesPerAxis){
-  tarch::la::Vector<DIMENSIONS,int> strides(1);
-  for(int i=1; i<DIMENSIONS; i++){
-    strides[i] = strides[i-1]*nodesPerAxis;
+/** Returns the lexicographic node stride for every coordinate axis. */
+tarch::la::Vector<DIMENSIONS, int> exahype2::dg::getStrides(int nodesPerAxis) {
+  tarch::la::Vector<DIMENSIONS, int> strides(1);
+  for (int axis = 1; axis < DIMENSIONS; axis++) {
+    strides[axis] = strides[axis - 1] * nodesPerAxis;
   }
   return strides;
 }
 
-tarch::la::Vector<DIMENSIONS,int> exahype2::dg::getIndex(
-    int                                   node,
-    tarch::la::Vector<DIMENSIONS,int>  strides
-){
-  tarch::la::Vector<DIMENSIONS,int> index(0);
-  int tmp = 0;
-  for(int d=DIMENSIONS-1; d>=0; d--){
-    index[d] = (node - tmp) / strides[d];
-    tmp += strides[d]*index[d];
+/** Converts a lexicographically serialised node into its Cartesian index. */
+tarch::la::Vector<DIMENSIONS, int> exahype2::dg::getIndex(int node, tarch::la::Vector<DIMENSIONS, int> strides) {
+  tarch::la::Vector<DIMENSIONS, int> index(0);
+  int                                consumedNodeIndex = 0;
+  for (int axis = DIMENSIONS - 1; axis >= 0; axis--) {
+    index[axis] = (node - consumedNodeIndex) / strides[axis];
+    consumedNodeIndex += strides[axis] * index[axis];
   }
   return index;
 }
 
+/**
+ * Converts a cell node index into the serialised index on one oriented face.
+ * orientation is zero for the lower face and one for the upper face.
+ */
 int exahype2::dg::cellIndexToHullIndex(
-    const tarch::la::Vector<DIMENSIONS,int>&  indexCell,
-    const int                                 direction,
-    const int                                 orientation,
-    const int                                 nodesPerAxis
-    ){
-  /*
-   * Imagine a 3d cell of order 2, so there are 9 nodes
-   * for a node [i,j,k], we want face element [j,k] if in
-   * direction i, [i,k] in direction j and [i,j] if in
-   * direction k.
-   * Element [a,b] of a face is element a*strides[0]+b
-   * (concept is same in other dimensions but with
-   * additional terms and greater strides)
-   *
-   * However since the Hull is one array, we need to skip
-   * the previous faces, so ignore nodesPerFace*dimensions
-   * indexes (nodesPerFace*dimensions+1) if right.
-  */
-
-  int HullIndex = 0;
-  int stride = 1;
-
-  for(int dim=0; dim<DIMENSIONS; dim++){
-    if(dim!=direction){
-      HullIndex += indexCell[dim]*stride;
-      stride *= nodesPerAxis;
-    }
-  }
-
-  /* if left face need to skip left and right faces for each previous dimension
-   * if right face, need to skip those plus the left face
-   */
-  return HullIndex + stride*(2*direction+orientation); //stride is nodesPerAxis^(d)
-}
-
-void exahype2::dg::computeGradient(
-        const double* NOALIAS const QCell,
-        const double* NOALIAS const derivativeOperator,
-        const double                     invDx,
-        const int                        nodesPerAxis,
-        const int                        strideQ,
-        const int                        scalarIndex,
-        double* NOALIAS             gradQ
-        ){
-  tarch::la::Vector<DIMENSIONS,int> strides = getStrides(nodesPerAxis);
-  tarch::la::Vector<DIMENSIONS,int> index   = getIndex(scalarIndex, strides);
-
-  for(int dim=0; dim<DIMENSIONS; dim++){
-    for(int var=0; var<strideQ; var++){
-      gradQ[dim*strideQ+var] = 0.0;
-    }//var
-
-    for(int node=0; node<nodesPerAxis; node++){
-//      const double coeff = invDx * derivativeOperator[node+nodesPerAxis*index[dim]];
-      const double coeff = invDx * derivativeOperator[node+nodesPerAxis*index[dim]];
-      for(int var=0; var<strideQ; var++){
-          gradQ[dim*strideQ+var] += coeff*QCell[(scalarIndex + (node-index[dim])*strides[dim])*strideQ + var];
-      }//var
-    }//node
-  }//dim
-}
-
-void exahype2::dg::subtractCell(
-    double* NOALIAS        QOut,
-    const double* NOALIAS  Qsubstract,
-    const int                   order,
-    const int                   unknowns,
-    const int                   auxiliaryVariables
+  const tarch::la::Vector<DIMENSIONS, int>& indexCell,
+  const int                                 direction,
+  const int                                 orientation,
+  const int                                 nodesPerAxis
 ) {
-  const int nodesPerAxis = order+1;
-  const int nodesPerCell = getNodesPerCell(nodesPerAxis);
-  const int strideQ = unknowns+auxiliaryVariables;
+  int hullIndex  = 0;
+  int faceStride = 1;
 
-  for(int node=0; node<nodesPerCell; node++){
-    for(int var=0; var<strideQ; var++){
-      QOut[node*strideQ+var] -= Qsubstract[node*strideQ+var];
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    if (axis != direction) {
+      hullIndex += indexCell[axis] * faceStride;
+      faceStride *= nodesPerAxis;
+    }
+  }
+
+  // The hull stores the two faces of every direction one after another, so the index skips
+  // faceStride entries for each preceding face.
+  return hullIndex + faceStride * (2 * direction + orientation);
+}
+
+/**
+ * Evaluates the nodal DG gradient in every coordinate direction.
+ *
+ * gradQ contains DIMENSIONS consecutive blocks of strideQ values. invDx
+ * assumes an isotropic cell and scales the one-dimensional derivative operator.
+ */
+void exahype2::dg::computeGradient(
+  const double* NOALIAS const QCell,
+  const double* NOALIAS const derivativeOperator,
+  const double                invDx,
+  const int                   nodesPerAxis,
+  const int                   strideQ,
+  const int                   scalarIndex,
+  double* NOALIAS             gradQ
+) {
+  const tarch::la::Vector<DIMENSIONS, int> strides = getStrides(nodesPerAxis);
+  const tarch::la::Vector<DIMENSIONS, int> index   = getIndex(scalarIndex, strides);
+
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    for (int quantity = 0; quantity < strideQ; quantity++) {
+      gradQ[axis * strideQ + quantity] = 0.0;
+    }
+
+    for (int node = 0; node < nodesPerAxis; node++) {
+      const double coefficient = invDx * derivativeOperator[node + nodesPerAxis * index[axis]];
+      for (int quantity = 0; quantity < strideQ; quantity++) {
+        gradQ[axis * strideQ + quantity] +=
+          coefficient * QCell[(scalarIndex + (node - index[axis]) * strides[axis]) * strideQ + quantity];
+      }
     }
   }
 }
 
+/** Subtracts all unknowns and auxiliary variables of Qsubstract from QOut. */
+void exahype2::dg::subtractCell(
+  double* NOALIAS       QOut,
+  const double* NOALIAS Qsubstract,
+  const int             order,
+  const int             unknowns,
+  const int             auxiliaryVariables
+) {
+  const int nodesPerAxis = order + 1;
+  const int nodesPerCell = getNodesPerCell(nodesPerAxis);
+  const int strideQ      = unknowns + auxiliaryVariables;
+
+  for (int node = 0; node < nodesPerCell; node++) {
+    for (int quantity = 0; quantity < strideQ; quantity++) {
+      QOut[node * strideQ + quantity] -= Qsubstract[node * strideQ + quantity];
+    }
+  }
+}
+
+/** Returns a diagnostic string for a cell in lexicographic node order. */
 std::string exahype2::dg::plotCell(
   const double* NOALIAS Q,
-  const int order,
-  const int unknowns,
-  const int auxiliaryVariables
+  const int             order,
+  const int             unknowns,
+  const int             auxiliaryVariables
 ) {
-  return ::exahype2::fv::plotPatch(
-    Q,
-    order+1,
-    unknowns,
-    auxiliaryVariables,
-    DIMENSIONS==2
-  );
+  return ::exahype2::fv::plotPatch(Q, order + 1, unknowns, auxiliaryVariables, DIMENSIONS == 2);
 }
 
+/**
+ * Returns a diagnostic string for both sides of a projected face.
+ * Values remain in their serialised face order; normal determines the spatial layout.
+ */
 std::string exahype2::dg::plotFace(
-  const double* NOALIAS  Q,
-  const int                   order,
-  const int                   unknowns,
-  const int                   auxiliaryVariables,
-  int                         normal,
-  int                         numberOfQuantitiesProjectedOntoFace
+  const double* NOALIAS Q,
+  const int             order,
+  const int             unknowns,
+  const int             auxiliaryVariables,
+  int                   normal,
+  int                   numberOfQuantitiesProjectedOntoFace
 ) {
   return ::exahype2::fv::plotPatchOverlap(
     Q,
     unknowns,
     auxiliaryVariables,
-    order+1,
+    order + 1,
     numberOfQuantitiesProjectedOntoFace,
     normal,
-    DIMENSIONS==2
+    DIMENSIONS == 2
   );
 }

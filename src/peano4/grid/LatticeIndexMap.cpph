@@ -1,0 +1,130 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+/**
+ * Returns the slot a key probes first.
+ *
+ * The key is a packed lattice position, so neighbouring positions differ in
+ * their low bits alone and would pile into one region of the table. The
+ * multiply-shift finaliser spreads those bits over the whole word before the
+ * mask cuts it down to a slot.
+ */
+INLINE_METHOD std::size_t peano4::grid::LatticeIndexMap::firstSlotOf(const std::int64_t key) const {
+  constexpr int           MixShift     = 33;
+  constexpr std::uint64_t FirstFactor  = 0xff51afd7ed558ccdULL;
+  constexpr std::uint64_t SecondFactor = 0xc4ceb9fe1a85ec53ULL;
+
+  auto mixed = static_cast<std::uint64_t>(key);
+  mixed ^= mixed >> MixShift;
+  mixed *= FirstFactor;
+  mixed ^= mixed >> MixShift;
+  mixed *= SecondFactor;
+  mixed ^= mixed >> MixShift;
+  return static_cast<std::size_t>(mixed) & _slotMask;
+}
+
+/**
+ * Returns the value stored for a key, or NoEntry.
+ *
+ * Probing stops at the first free slot, since an insert would have taken it.
+ */
+INLINE_METHOD int peano4::grid::LatticeIndexMap::find(const std::int64_t key) const {
+  assertion(key >= 0, key);
+  if (_keys.empty()) {
+    return NoEntry;
+  }
+  auto slot = firstSlotOf(key);
+  while (true) {
+    const auto occupant = _keys[slot];
+    if (occupant == key) {
+      return _values[slot];
+    }
+    if (occupant == EmptyKey) {
+      return NoEntry;
+    }
+    slot = (slot + 1) & _slotMask;
+  }
+}
+
+/**
+ * Stores a value under a key unless the key is already held.
+ *
+ * Returns the value the map holds afterwards and whether this call stored it.
+ * A caller assigning consecutive indices reads the second half to decide
+ * whether to consume one.
+ * A new entry reuses the first tombstone of its probe chain, so erased slots
+ * recycle before the table grows.
+ */
+INLINE_METHOD std::pair<int, bool> peano4::grid::LatticeIndexMap::insert(const std::int64_t key, const int value) {
+  assertion(key >= 0, key);
+  // Half the slots stay free, so a probe run stays short.
+  if (2 * (_size + _numberOfTombstones + 1) > _keys.size()) {
+    grow();
+  }
+  auto        slot          = firstSlotOf(key);
+  std::size_t insertionSlot = _keys.size();
+  while (true) {
+    const auto occupant = _keys[slot];
+    if (occupant == key) {
+      return {_values[slot], false};
+    }
+    if (occupant == TombstoneKey and insertionSlot == _keys.size()) {
+      insertionSlot = slot;
+    }
+    if (occupant == EmptyKey) {
+      if (insertionSlot == _keys.size()) {
+        insertionSlot = slot;
+      } else {
+        _numberOfTombstones--;
+      }
+      _keys[insertionSlot]   = key;
+      _values[insertionSlot] = value;
+      _size++;
+      return {value, true};
+    }
+    slot = (slot + 1) & _slotMask;
+  }
+}
+
+/**
+ * Removes a key and returns whether it was held. The slot stays a tombstone
+ * so probe chains across it keep working; the next growth drops it.
+ */
+INLINE_METHOD bool peano4::grid::LatticeIndexMap::erase(const std::int64_t key) {
+  assertion(key >= 0, key);
+  if (_keys.empty()) {
+    return false;
+  }
+  auto slot = firstSlotOf(key);
+  while (true) {
+    const auto occupant = _keys[slot];
+    if (occupant == key) {
+      _keys[slot]   = TombstoneKey;
+      _values[slot] = NoEntry;
+      _size--;
+      _numberOfTombstones++;
+      return true;
+    }
+    if (occupant == EmptyKey) {
+      return false;
+    }
+    slot = (slot + 1) & _slotMask;
+  }
+}
+
+INLINE_METHOD std::size_t peano4::grid::LatticeIndexMap::size() const { return _size; }
+
+/**
+ * Hands every held key and its value to the callback.
+ *
+ * The order is the table's slot order, which a caller must not read anything
+ * into: It follows from the hash and from the sequence the entries arrived in.
+ */
+template <typename Callback>
+INLINE_METHOD void peano4::grid::LatticeIndexMap::forEachEntry(const Callback& callback) const {
+  for (std::size_t slot = 0; slot < _keys.size(); slot++) {
+    if (_keys[slot] != EmptyKey and _keys[slot] != TombstoneKey) {
+      callback(_keys[slot], _values[slot]);
+    }
+  }
+}

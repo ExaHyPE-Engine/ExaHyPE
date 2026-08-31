@@ -9,17 +9,17 @@
 #include "tarch/Termination.h"
 #include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
+#include "tarch/plotter/CellTypes.h"
 
 #include <netcdf.h>
 #include <netcdf_par.h>
 
 namespace {
-  // Largest 2D face / 3D volume corner counts, taken from the CellTypes table
-  // (CellTypes.h) so the fixed-width connectivity padding cannot drift.
-  constexpr int MaxFaceNodes   = tarch::plotter::nodesOf(tarch::plotter::CellType::Quadrangle); // 4: triangles/quads
-  constexpr int MaxVolumeNodes = tarch::plotter::nodesOf(tarch::plotter::CellType::Hexahedron); // 8: hexahedra
-  constexpr std::int32_t FillValue          = -1; // for unused nodes in padded connectivities
-  constexpr int          UgridHexahedronTag = 2;  // UGRID flag_values: 0=tetrahedron, 1=wedge, 2=hexahedron
+  // Corner counts the fixed-width connectivity pads to, taken from the CellTypes table.
+  constexpr int          MaxFaceNodes       = tarch::plotter::nodesOf(tarch::plotter::CellType::Quadrangle);
+  constexpr int          MaxVolumeNodes     = tarch::plotter::nodesOf(tarch::plotter::CellType::Hexahedron);
+  constexpr std::int32_t FillValue          = -1; // Marks an unused node of a padded connectivity
+  constexpr int          UgridHexahedronTag = 2;  // UGRID flag value; 0 is a tetrahedron, 1 a wedge
 
   enum class MeshTopologyDimension { TwoD = 2, ThreeD = 3 };
 
@@ -44,8 +44,8 @@ namespace {
   }
 } // namespace
 
-tarch::plotter::NetCDFFileWriter::NetCDFFileWriter(const std::string& outputDirectory, const int numberOfSubdomains) :
-  FileWriter(outputDirectory, numberOfSubdomains) {}
+tarch::plotter::NetCDFFileWriter::NetCDFFileWriter(const std::string& outputDirectory) :
+  tarch::plotter::FileWriter(outputDirectory) {}
 
 void tarch::plotter::NetCDFFileWriter::check(const int status, const std::string& operation) {
   if (status != NC_NOERR) {
@@ -67,11 +67,11 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
 
   const auto localData = getSubdomainBuffersSequenceForWriting();
 
-  unsigned long long localNumNodes    = 0;
-  unsigned long long localNumElements = 0;
+  unsigned long long localNumberOfNodes    = 0;
+  unsigned long long localNumberOfElements = 0;
   for (const SubdomainBuffers* const subdomain : localData.payloads) {
-    localNumNodes += subdomain->pointsXYZ.size() / 3;
-    localNumElements += subdomain->types.size();
+    localNumberOfNodes += subdomain->pointsXYZ.size() / 3;
+    localNumberOfElements += subdomain->types.size();
   }
 
   bool localHasFaces   = false;
@@ -101,9 +101,9 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
   bool        useParallelIO = rank.getNumberOfRanks() > 1;
   bool        isMasterRank  = rank.isGlobalMaster();
 
-  // Do the I/O on a sub-communicator of the ranks that hold data. An empty rank's
-  // count-0 collective write to a compressed variable deadlocks parallel netCDF (the
-  // MPI implementations disagree on whether it engages), so we exclude such ranks.
+  // The collective netCDF calls run on a sub-communicator of the ranks that hold data.
+  // A count-0 collective write to a compressed variable deadlocks parallel netCDF on
+  // some MPI implementations.
   MPI_Comm ioComm = MPI_COMM_NULL;
   if (useParallelIO) {
     const bool hasData    = localData.reference != nullptr;
@@ -112,7 +112,7 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
     tarch::mpi::allreduce(&localHas, &anyHasData, 1, MPI_INT, MPI_MAX, comm);
 
     if (anyHasData == 0) {
-      // Every rank is empty: the master alone writes a (serial) valid empty file.
+      // Every rank is empty: The master alone writes a valid empty file, serially.
       if (not isMasterRank) {
         _written = true;
         return true;
@@ -122,7 +122,7 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
       MPI_Comm_split(comm, hasData ? 0 : MPI_UNDEFINED, rank.getRank(), &ioComm);
       if (not hasData) {
         _written = true;
-        return true; // nothing to contribute; the ranks with data write the file
+        return true; // The data-holding ranks write the file
       }
       comm       = ioComm;
       int ioRank = 0;
@@ -136,9 +136,8 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
   bool globalHas3DCoordinates = localHas3DCoordinates;
 
   if (useParallelIO) {
-    // One max-allreduce so every participating rank agrees on the global mesh
-    // character: [0] any rank has 2D faces, [1] any rank has 3D volumes, [2] any rank
-    // has a non-zero z coordinate.
+    // One max-allreduce lets every participating rank agree on the presence of 2D
+    // faces, of 3D volumes and of a non-zero z coordinate.
     const int localReduce[3]  = {localHasFaces ? 1 : 0, localHasVolumes ? 1 : 0, localHas3DCoordinates ? 1 : 0};
     int       globalReduce[3] = {0, 0, 0};
     tarch::mpi::allreduce(localReduce, globalReduce, 3, MPI_INT, MPI_MAX, comm);
@@ -169,9 +168,9 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
 
       const std::size_t numberOfPoints    = subdomain.pointsXYZ.size() / 3;
       std::int32_t      connectivityBegin = 0;
-      for (std::size_t c = 0; c < subdomain.types.size(); ++c) {
-        const int           vtkType = static_cast<int>(subdomain.types[c]);
-        const CellTypeInfo* info    = lookupCellType(vtkType);
+      for (std::size_t cell = 0; cell < subdomain.types.size(); ++cell) {
+        const int                 vtkType = static_cast<int>(subdomain.types[cell]);
+        const CellTypeInfo* const info    = lookupCellType(vtkType);
 
         if ((is3DTopology and not is3DCell(vtkType)) or (not is3DTopology and not is2DCell(vtkType))) {
           throw std::runtime_error(
@@ -180,7 +179,7 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
         }
         // The consistency check above guarantees a known 2D/3D cell, so info is non-null here.
 
-        const std::int32_t connectivityEnd = subdomain.offsets[c];
+        const std::int32_t connectivityEnd = subdomain.offsets[cell];
         const std::int32_t numberOfNodes   = connectivityEnd - connectivityBegin;
         const int          expectedNodes   = info->nodes;
 
@@ -191,8 +190,8 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
           );
         }
 
-        for (int k = 0; k < numberOfNodes; ++k) {
-          const std::int32_t localIndex = subdomain.connectivity[connectivityBegin + k];
+        for (int node = 0; node < numberOfNodes; ++node) {
+          const std::int32_t localIndex = subdomain.connectivity[connectivityBegin + node];
           if (localIndex < 0 or static_cast<std::size_t>(localIndex) >= numberOfPoints) {
             throw std::runtime_error("NetCDFFileWriter encountered a cell connectivity index outside its subdomain.");
           }
@@ -202,7 +201,7 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
             throw std::runtime_error("NetCDFFileWriter cannot write node indices that exceed 32-bit integer range.");
           }
 
-          elementNodes[base + c * static_cast<std::size_t>(maxElementNodes) + k] = static_cast<int>(globalIndex);
+          elementNodes[base + cell * static_cast<std::size_t>(maxElementNodes) + node] = static_cast<int>(globalIndex);
         }
 
         connectivityBegin = connectivityEnd;
@@ -211,17 +210,16 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
 
   unsigned long long offsetNodes    = 0;
   unsigned long long offsetElements = 0;
-  unsigned long long totalNodes     = localNumNodes;
-  unsigned long long totalElements  = localNumElements;
+  unsigned long long totalNodes     = localNumberOfNodes;
+  unsigned long long totalElements  = localNumberOfElements;
 
   if (useParallelIO) {
-    // One scan and one allreduce over a 2-element array, rather than two of each.
-    const unsigned long long localCounts[2] = {localNumNodes, localNumElements};
+    const unsigned long long localCounts[2] = {localNumberOfNodes, localNumberOfElements};
 
     unsigned long long prefix[2] = {0, 0};
     tarch::mpi::scan(localCounts, prefix, 2, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
-    offsetNodes    = prefix[0] - localNumNodes;
-    offsetElements = prefix[1] - localNumElements;
+    offsetNodes    = prefix[0] - localNumberOfNodes;
+    offsetElements = prefix[1] - localNumberOfElements;
 
     unsigned long long totals[2] = {0, 0};
     tarch::mpi::allreduce(localCounts, totals, 2, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
@@ -249,36 +247,35 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
     check(nc_create(filePath.string().c_str(), NC_NETCDF4 | NC_CLOBBER, &ncid), "nc_create(" + filePath.string() + ")");
   }
 
-  // Close the open file if a check() throws before the explicit nc_close below.
-  // Disarmed on the success path.
-  class NcFileCloser {
+  // Closes the open file when a check() throws before the explicit nc_close at the end
+  // of this function. Disarmed on the success path.
+  class NcFileCloser final {
   public:
-    explicit NcFileCloser(const int id) :
-      _id(id) {}
-    NcFileCloser(const NcFileCloser&) = delete;
-    NcFileCloser(NcFileCloser&&)      = delete;
-    ~NcFileCloser() {
-      if (_armed and _id >= 0) {
-        nc_close(_id);
-      }
-    }
+    explicit NcFileCloser(const int fileId) :
+      _fileId(fileId) {}
+    NcFileCloser(const NcFileCloser&)            = delete;
+    NcFileCloser(NcFileCloser&&)                 = delete;
     NcFileCloser& operator=(const NcFileCloser&) = delete;
     NcFileCloser& operator=(NcFileCloser&&)      = delete;
 
     void release() { _armed = false; }
 
+    ~NcFileCloser() {
+      if (_armed and _fileId >= 0) {
+        nc_close(_fileId);
+      }
+    }
+
   private:
-    const int _id;
+    const int _fileId;
     bool      _armed = true;
   } ncFileCloser(ncid);
 
-  // Disable pre-filling: the payload variables are written whole. The connectivity index
-  // variables are the exception and stay undefined on read, which their own definition
-  // records.
+  // The payload variables are written whole, so the file needs no pre-filling. The
+  // connectivity index variables stay undefined on read, which their definition records.
   int oldFill = 0;
   check(nc_set_fill(ncid, NC_NOFILL, &oldFill), "nc_set_fill(NO_FILL)");
 
-  // Global attributes
   {
     const char* const conventions = "CF-1.10 UGRID-1.0";
     check(nc_put_att_text(ncid, NC_GLOBAL, "Conventions", std::strlen(conventions), conventions), "put Conventions");
@@ -293,9 +290,6 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
   const char* const elementDimensionAtt = is3DTopology ? "volume_dimension" : "face_dimension";
   const char* const elementLocation     = is3DTopology ? "volume" : "face";
 
-  // Size deflated chunks to a ~1 MiB byte target, which the element count derives from
-  // through the width the bulk variables are stored in. Tiny chunks multiply the per-chunk
-  // filter cost; larger ones reach across more rank boundaries.
   constexpr std::size_t ChunkByteTarget    = 1u << 20;
   const std::size_t     bytesPerBulkScalar = getDoublePrecisionOutput() ? sizeof(double) : sizeof(float);
 
@@ -305,17 +299,17 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
         return;
       }
 
-      const std::size_t targetElems = ChunkByteTarget / bytesPerBulkScalar;
-      const std::size_t chunk0 =
-        std::max<std::size_t>(1, std::min<std::size_t>(static_cast<std::size_t>(globalLength), targetElems));
-      const std::size_t chunks[1] = {chunk0};
+      const std::size_t targetElements = ChunkByteTarget / bytesPerBulkScalar;
+      const std::size_t chunkLength =
+        std::max<std::size_t>(1, std::min<std::size_t>(static_cast<std::size_t>(globalLength), targetElements));
+      const std::size_t chunks[1] = {chunkLength};
       check(nc_def_var_chunking(ncid, variableId, NC_CHUNKED, chunks), "chunking " + name);
       check(nc_def_var_deflate(ncid, variableId, 1, 1, 1), "deflate " + name);
       // Size the cache to hold the chunk, so each slab is deflated once.
       nc_set_var_chunk_cache(
         ncid,
         variableId,
-        std::max<std::size_t>(chunk0 * bytesPerBulkScalar, ChunkByteTarget),
+        std::max<std::size_t>(chunkLength * bytesPerBulkScalar, ChunkByteTarget),
         1009,
         0.75f
       );
@@ -343,7 +337,6 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
       );
     };
 
-  // Dimensions
   int dimOne = -1;
   check(nc_def_dim(ncid, "one", 1, &dimOne), "def dim one");
   int dimTime = -1;
@@ -364,11 +357,9 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
     std::string("def dim ") + maxElementDimName
   );
 
-  // A dimension with no same-named coordinate variable gets a phony dimension scale that
-  // parallel netCDF-4 stores uncompressed and fully pre-allocated (megabytes per large
-  // mesh dimension). A chunked, deflated coordinate variable named after the dimension
-  // replaces it; left unwritten it costs no I/O, and readers treat a variable named after
-  // its dimension as a coordinate, not a field.
+  // A dimension without a same-named variable makes parallel netCDF-4 store an
+  // uncompressed, fully pre-allocated dimension scale. A chunked and deflated variable
+  // named after the dimension takes that place, and a reader treats it as a coordinate.
   int varNodeIndex = -1;
   check(
     nc_def_var(ncid, nodeDimName, NC_INT, 1, &dimNode, &varNodeIndex),
@@ -382,15 +373,17 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
   );
   configure1DVariable(varElementIndex, totalElements, elementDimName);
 
-  // Mesh topology dummy variable
   int varMesh = -1;
   {
     const int meshDims[1] = {dimOne};
     check(nc_def_var(ncid, meshName, NC_INT, 1, meshDims, &varMesh), std::string("def var ") + meshName);
     const char* const role = "mesh_topology";
     check(nc_put_att_text(ncid, varMesh, "cf_role", std::strlen(role), role), "mesh cf_role");
-    const int topoDim = static_cast<int>(topologyDimension);
-    check(nc_put_att_int(ncid, varMesh, "topology_dimension", NC_INT, 1, &topoDim), "mesh topology_dimension");
+    const int topologyDimensionValue = static_cast<int>(topologyDimension);
+    check(
+      nc_put_att_int(ncid, varMesh, "topology_dimension", NC_INT, 1, &topologyDimensionValue),
+      "mesh topology_dimension"
+    );
     const char* const nodeCoords = writeZCoordinate ? "x y z" : "x y";
     check(
       nc_put_att_text(ncid, varMesh, "node_coordinates", std::strlen(nodeCoords), nodeCoords),
@@ -413,7 +406,6 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
     }
   }
 
-  // Time
   int varTime = -1;
   {
     const int timeDims[1] = {dimTime};
@@ -427,21 +419,21 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
     );
   }
 
-  // Coordinates. Single-precision output narrows the double buffers at write time.
+  // The buffers accumulate in double precision; single-precision output narrows them
+  // right before the write.
   const bool    writeDouble     = getDoublePrecisionOutput();
   const nc_type realStorageType = writeDouble ? NC_DOUBLE : NC_FLOAT;
   int           varX            = -1;
   int           varY            = -1;
   int           varZ            = -1;
   {
-    const int dims1[1] = {dimNode};
-    check(nc_def_var(ncid, "x", realStorageType, 1, dims1, &varX), "def var x");
-    check(nc_def_var(ncid, "y", realStorageType, 1, dims1, &varY), "def var y");
+    const int nodeDimensions[1] = {dimNode};
+    check(nc_def_var(ncid, "x", realStorageType, 1, nodeDimensions, &varX), "def var x");
+    check(nc_def_var(ncid, "y", realStorageType, 1, nodeDimensions, &varY), "def var y");
     if (writeZCoordinate) {
-      check(nc_def_var(ncid, "z", realStorageType, 1, dims1, &varZ), "def var z");
+      check(nc_def_var(ncid, "z", realStorageType, 1, nodeDimensions, &varZ), "def var z");
     }
 
-    // Minimal CF metadata
     const char* const standardNameX = "projection_x_coordinate";
     const char* const standardNameY = "projection_y_coordinate";
     check(nc_put_att_text(ncid, varX, "standard_name", std::strlen(standardNameX), standardNameX), "x standard_name");
@@ -458,12 +450,11 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
     }
   }
 
-  // Face-node or volume-node connectivity
   int varElementNodes = -1;
   {
-    const int dims2[2] = {dimElement, dimMaxElementNodes};
+    const int elementNodeDimensions[2] = {dimElement, dimMaxElementNodes};
     check(
-      nc_def_var(ncid, elementNodesName, NC_INT, 2, dims2, &varElementNodes),
+      nc_def_var(ncid, elementNodesName, NC_INT, 2, elementNodeDimensions, &varElementNodes),
       std::string("def var ") + elementNodesName
     );
     check(
@@ -487,9 +478,8 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
       std::string(elementNodesName) + " _FillValue"
     );
 
-    // UGRID-1.0 does not standardise the corner ordering of 3D volume
-    // connectivity, so document the convention we write. 2D faces follow the
-    // UGRID counter-clockwise face convention.
+    // UGRID-1.0 fixes the corner order of a 2D face and leaves the corner order of a
+    // 3D volume open, so the node_ordering attribute records the order written here.
     const char* const nodeOrdering = is3DTopology
       ? "Corner order follows VTK_HEXAHEDRON (cell type 12): nodes 0-3 form one quadrilateral face "
         "listed counter-clockwise, nodes 4-7 the opposite face in the same orientation, with node 4 "
@@ -545,10 +535,10 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
     const int                dimensionId  = onNodes ? dimNode : dimElement;
     const unsigned long long globalLength = onNodes ? totalNodes : totalElements;
 
-    for (int c = 0; c < field.components; ++c) {
+    for (int component = 0; component < field.components; ++component) {
       std::string name = field.name;
       if (field.components > 1) {
-        name += "_" + std::to_string(c);
+        name += "_" + std::to_string(component);
       }
 
       int       varId              = -1;
@@ -557,7 +547,7 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
 
       std::string longName = field.name;
       if (field.components > 1) {
-        longName += " (component " + std::to_string(c) + ")";
+        longName += " (component " + std::to_string(component) + ")";
       } else {
         longName += " (scalar)";
       }
@@ -589,11 +579,9 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
   if (useParallelIO) {
     // Collective access (independent deadlocks because the file has an unlimited time
     // dimension). A rank that registered field names but plotted nothing joins with a
-    // zero-length count, which the write sites below pass explicitly.
-    // The mesh-topology scalar is collective too: if a single rank wrote it independently
-    // the ranks' HDF5 metadata caches would diverge, and the collective metadata flush in
-    // nc_close then deadlocks, because the ranks end up waiting in different collective
-    // operations of the cache synchronisation.
+    // zero-length count, which the write sites below pass explicitly. The mesh-topology
+    // scalar is collective too, because a write from one rank alone diverges the ranks'
+    // metadata caches and deadlocks the collective metadata flush of nc_close.
     check(nc_var_par_access(ncid, varMesh, NC_COLLECTIVE), "par_access mesh topology");
     check(nc_var_par_access(ncid, varTime, NC_COLLECTIVE), "par_access time");
     check(nc_var_par_access(ncid, varX, NC_COLLECTIVE), "par_access x");
@@ -617,22 +605,19 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
     }
   }
 
-  // Write time scalar
   {
-    // Every rank writes the same single time value, so this collective write has no
-    // count-0 participant (a count-0 write to a record variable deadlocks parallel
-    // netCDF on some MPI implementations).
-    const std::size_t startT[1] = {0};
-    const std::size_t countT[1] = {1};
-    check(nc_put_vara_double(ncid, varTime, startT, countT, &time), "write time value");
+    // Every rank writes the same time value, so this collective write has no count-0
+    // participant. A count-0 write to a record variable deadlocks parallel netCDF on
+    // some MPI implementations.
+    const std::size_t start[1] = {0};
+    const std::size_t count[1] = {1};
+    check(nc_put_vara_double(ncid, varTime, start, count, &time), "write time value");
   }
 
-  const int dummyI = 0;
+  const int meshTopologyValue = 0;
 
-  // Write a defined value for the mesh topology dummy variable. All participating ranks
-  // write the same scalar collectively: a master-only write would diverge the ranks'
-  // metadata caches and deadlock the collective nc_close (see par_access note above).
-  check(nc_put_var_int(ncid, varMesh, &dummyI), "write mesh topology");
+  // Every participating rank writes the same scalar into the mesh topology variable.
+  check(nc_put_var_int(ncid, varMesh, &meshTopologyValue), "write mesh topology");
 
   const auto writeVara1DReal = [&](
                                  const int                  varId,
@@ -641,56 +626,56 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
                                  const unsigned long long   count,
                                  const std::string&         where
                                ) {
-    const std::size_t start[1]  = {static_cast<std::size_t>(offset)};
-    const std::size_t countA[1] = {static_cast<std::size_t>(count)};
+    const std::size_t start[1]        = {static_cast<std::size_t>(offset)};
+    const std::size_t writtenCount[1] = {static_cast<std::size_t>(count)};
     if (writeDouble) {
-      const double dummyD = 0.0;
-      check(nc_put_vara_double(ncid, varId, start, countA, count > 0 ? data.data() : &dummyD), where);
+      const double placeholder = 0.0;
+      check(nc_put_vara_double(ncid, varId, start, writtenCount, count > 0 ? data.data() : &placeholder), where);
     } else {
-      const std::vector<float> narrowed = narrowToFloat(data);
-      const float              dummyF   = 0.0f;
-      check(nc_put_vara_float(ncid, varId, start, countA, count > 0 ? narrowed.data() : &dummyF), where);
+      const std::vector<float> narrowed    = narrowToFloat(data);
+      const float              placeholder = 0.0f;
+      check(nc_put_vara_float(ncid, varId, start, writtenCount, count > 0 ? narrowed.data() : &placeholder), where);
     }
   };
 
-  // Coordinates: de-interleave each subdomain's XYZ into contiguous per-axis
-  // buffers, then one collective write per axis (an empty rank writes count 0).
+  // Each subdomain's interleaved XYZ buffer splits into one contiguous buffer per axis,
+  // and each axis takes one collective write in which an empty rank writes count 0.
   std::vector<double> mergedX, mergedY, mergedZ;
-  mergedX.reserve(localNumNodes);
-  mergedY.reserve(localNumNodes);
+  mergedX.reserve(localNumberOfNodes);
+  mergedY.reserve(localNumberOfNodes);
   if (writeZCoordinate) {
-    mergedZ.reserve(localNumNodes);
+    mergedZ.reserve(localNumberOfNodes);
   }
   for (const SubdomainBuffers* const subdomain : localData.payloads) {
     const unsigned long long numberOfPoints = subdomain->pointsXYZ.size() / 3;
-    for (unsigned long long p = 0; p < numberOfPoints; ++p) {
-      mergedX.push_back(subdomain->pointsXYZ[3 * p + 0]);
-      mergedY.push_back(subdomain->pointsXYZ[3 * p + 1]);
+    for (unsigned long long point = 0; point < numberOfPoints; ++point) {
+      mergedX.push_back(subdomain->pointsXYZ[3 * point + 0]);
+      mergedY.push_back(subdomain->pointsXYZ[3 * point + 1]);
       if (writeZCoordinate) {
-        mergedZ.push_back(subdomain->pointsXYZ[3 * p + 2]);
+        mergedZ.push_back(subdomain->pointsXYZ[3 * point + 2]);
       }
     }
   }
-  writeVara1DReal(varX, mergedX, offsetNodes, localNumNodes, "write x");
-  writeVara1DReal(varY, mergedY, offsetNodes, localNumNodes, "write y");
+  writeVara1DReal(varX, mergedX, offsetNodes, localNumberOfNodes, "write x");
+  writeVara1DReal(varY, mergedY, offsetNodes, localNumberOfNodes, "write y");
   if (writeZCoordinate) {
-    writeVara1DReal(varZ, mergedZ, offsetNodes, localNumNodes, "write z");
+    writeVara1DReal(varZ, mergedZ, offsetNodes, localNumberOfNodes, "write z");
   }
 
-  // Connectivity: merge every subdomain's element-node table into one buffer (node
-  // indices rebased to global) and write it once.
+  // The element-node tables of all subdomains merge into one buffer with node indices
+  // rebased to the global numbering, and one write stores it.
   {
     std::vector<int> mergedElementNodes;
-    mergedElementNodes.reserve(localNumElements * static_cast<std::size_t>(maxElementNodes));
+    mergedElementNodes.reserve(localNumberOfElements * static_cast<std::size_t>(maxElementNodes));
     unsigned long long pointCursor = 0;
     for (const SubdomainBuffers* const subdomain : localData.payloads) {
       appendElementNodes(mergedElementNodes, *subdomain, offsetNodes + pointCursor);
       pointCursor += subdomain->pointsXYZ.size() / 3;
     }
-    const int         dummyConnectivity = FillValue;
-    const std::size_t start[2]          = {static_cast<std::size_t>(offsetElements), 0};
-    const std::size_t count[2]          = {
-      static_cast<std::size_t>(localNumElements),
+    const int         placeholderConnectivity = FillValue;
+    const std::size_t start[2]                = {static_cast<std::size_t>(offsetElements), 0};
+    const std::size_t count[2]                = {
+      static_cast<std::size_t>(localNumberOfElements),
       static_cast<std::size_t>(maxElementNodes)
     };
     check(
@@ -699,47 +684,47 @@ bool tarch::plotter::NetCDFFileWriter::writeToFile(const std::string& filename, 
         varElementNodes,
         start,
         count,
-        localNumElements > 0 ? mergedElementNodes.data() : &dummyConnectivity
+        localNumberOfElements > 0 ? mergedElementNodes.data() : &placeholderConnectivity
       ),
       std::string("write ") + elementNodesName
     );
   }
 
   if (is3DTopology) {
-    const std::vector<int> mergedShapeTypes(localNumElements, UgridHexahedronTag);
-    const int              dummyShapeType = UgridHexahedronTag;
-    const std::size_t      start[1]       = {static_cast<std::size_t>(offsetElements)};
-    const std::size_t      count[1]       = {static_cast<std::size_t>(localNumElements)};
+    const std::vector<int> mergedShapeTypes(localNumberOfElements, UgridHexahedronTag);
+    const int              placeholderShapeType = UgridHexahedronTag;
+    const std::size_t      start[1]             = {static_cast<std::size_t>(offsetElements)};
+    const std::size_t      count[1]             = {static_cast<std::size_t>(localNumberOfElements)};
     check(
       nc_put_vara_int(
         ncid,
         varVolumeShapeType,
         start,
         count,
-        localNumElements > 0 ? mergedShapeTypes.data() : &dummyShapeType
+        localNumberOfElements > 0 ? mergedShapeTypes.data() : &placeholderShapeType
       ),
       "write volume_shape_type"
     );
   }
 
-  // Field data: gather each component into one contiguous per-rank buffer (the
-  // subdomain values are component-major) and write it.
+  // The subdomain values are component-major, so each component gathers into one
+  // contiguous per-rank buffer before its write.
   const auto writeMergedField =
     [&](const std::vector<int>& variableIds, const bool onNodes, const std::size_t fieldIndex) {
-      const unsigned long long count  = onNodes ? localNumNodes : localNumElements;
+      const unsigned long long count  = onNodes ? localNumberOfNodes : localNumberOfElements;
       const unsigned long long offset = onNodes ? offsetNodes : offsetElements;
       const int components = onNodes ? pointFields[fieldIndex].components : cellFields[fieldIndex].components;
-      for (int c = 0; c < components; ++c) {
+      for (int component = 0; component < components; ++component) {
         std::vector<double> buffer;
         buffer.reserve(count);
         for (const SubdomainBuffers* const subdomain : localData.payloads) {
           const DataField&  field = onNodes ? subdomain->pointFields[fieldIndex] : subdomain->cellFields[fieldIndex];
           const std::size_t numberOfTuples = field.values.size() / static_cast<std::size_t>(components);
-          for (std::size_t t = 0; t < numberOfTuples; ++t) {
-            buffer.push_back(field.values[t * components + c]);
+          for (std::size_t tuple = 0; tuple < numberOfTuples; ++tuple) {
+            buffer.push_back(field.values[tuple * components + component]);
           }
         }
-        writeVara1DReal(variableIds[c], buffer, offset, count, "write field");
+        writeVara1DReal(variableIds[component], buffer, offset, count, "write field");
       }
     };
 

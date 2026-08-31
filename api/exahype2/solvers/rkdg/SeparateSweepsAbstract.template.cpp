@@ -4,17 +4,13 @@
 
 #include "Constants.h"
 
-#include <algorithm>
-#include <cstdint>
-#include <limits>
-
-#include "exahype2/NonNegativeStatistics.h"
-#include "runner/RuntimeParameters.h"
-#include "tarch/instrumentation/Log.h"
+#include "tarch/NonCriticalAssertions.h"
+#include "tarch/instrumentation/Debug.h"
+#include "tarch/instrumentation/Info.h"
+#include "tarch/instrumentation/Warning.h"
 #include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
-#include "tarch/multicore/Lock.h"
-#include "tarch/NonCriticalAssertions.h"
+#include "tarch/accelerator/Atomic.h"
 
 std::bitset<DIMENSIONS> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::PeriodicBC = {{NAMESPACE | join("::")}}::PeriodicBC;
 
@@ -89,13 +85,13 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStepSize() const {
     : _maxTimeStepSize;
 }
 
+thread_local typename {{NAMESPACE | join("::")}}::{{CLASSNAME}}::LocalUpdates {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_localUpdates;
+
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(
   const double timeStepSize,
   const double timeStamp,
   const double cellSize
 ) {
-  const tarch::multicore::Lock lock(_semaphore);
-
   const auto observedTimeStepStatistics =
     ::exahype2::NonNegativeStatistics{timeStepSize, timeStepSize};
   if (not observedTimeStepStatistics.hasPhysicalValues()) {
@@ -109,41 +105,52 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(
         )
     );
   }
-  const auto timeStepStatistics = ::exahype2::NonNegativeStatistics::accumulate(
-    {_minTimeStepSizeThisTimeStep, _maxTimeStepSizeThisTimeStep},
-    timeStepSize
-  );
-  _minTimeStepSizeThisTimeStep = timeStepStatistics.minimum;
-  _maxTimeStepSizeThisTimeStep = timeStepStatistics.maximum;
-  _localMinTimeStampThisTimeStep = std::min(_localMinTimeStampThisTimeStep, timeStamp);
-  _localMaxTimeStampThisTimeStep = std::max(_localMaxTimeStampThisTimeStep, timeStamp);
 
-  assertion(
-    timeStamp < std::numeric_limits<double>::max() / 10.0,
-    timeStamp
-  );
-  assertion(timeStamp >= 0.0, timeStamp);
-  _maxTimeStampThisTimeStep = std::max(timeStamp, _maxTimeStampThisTimeStep);
-  _minTimeStampThisTimeStep = std::min(timeStamp, _minTimeStampThisTimeStep);
-  assertion(
-    tarch::la::smallerEquals(_minTimeStamp, _maxTimeStampThisTimeStep),
-    _minTimeStamp,
-    _minTimeStampThisTimeStep,
-    _maxTimeStampThisTimeStep,
-    timeStepSize,
-    timeStamp,
-    cellSize
-  );
+  _localUpdates.timeStepSize = ::exahype2::NonNegativeStatistics::accumulate(_localUpdates.timeStepSize, timeStepSize);
 
-  assertion(
-    cellSize < std::numeric_limits<double>::max() / 10.0,
-    cellSize
-  );
-  assertion(cellSize > 0.0, cellSize);
-  _maxCellHThisTimeStep = std::max(_maxCellHThisTimeStep, cellSize);
-  _minCellHThisTimeStep = std::min(_minCellHThisTimeStep, cellSize);
+  assertion(timeStamp<std::numeric_limits<double>::max()/10.0,timeStamp);
+  assertion(timeStamp>=0.0,timeStamp);
+  _localUpdates.localMinTimeStamp = std::min(_localUpdates.localMinTimeStamp, timeStamp);
+  _localUpdates.localMaxTimeStamp = std::max(_localUpdates.localMaxTimeStamp, timeStamp);
+  _localUpdates.minTimeStamp      = std::min(_localUpdates.minTimeStamp, timeStamp);
+  _localUpdates.maxTimeStamp      = std::max(_localUpdates.maxTimeStamp, timeStamp);
+  assertion( tarch::la::smallerEquals(_localUpdates.minTimeStamp,_localUpdates.maxTimeStamp), _minTimeStamp, _localUpdates.minTimeStamp, _localUpdates.maxTimeStamp, timeStepSize, timeStamp, cellSize );
 
-  logDebug("Updated with dt=" << timeStepSize << ", t=" << timeStamp << ", h=" << cellSize << ": t(new)=" << _minTimeStampThisTimeStep);
+  assertion(cellSize<std::numeric_limits<double>::max()/10.0,cellSize);
+  assertion(cellSize>0.0,cellSize);
+  _localUpdates.maxCellH = std::max(_localUpdates.maxCellH, cellSize);
+  _localUpdates.minCellH = std::min(_localUpdates.minCellH, cellSize);
+  _localUpdates.empty    = false;
+
+  logDebug(
+    "Updated with dt=" << timeStepSize << ", t=" << timeStamp << ", h=" << cellSize
+                       << ": t(new)=" << _localUpdates.minTimeStamp
+  );
+}
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::reduceLocalUpdates() {
+  if (_localUpdates.empty) {
+    return;
+  }
+
+  // An invalid observation overwrites both extrema, and a later atomic minimum
+  // or maximum keeps at least one of them, so the rank reduction reads the
+  // invalid observation.
+  if (_localUpdates.timeStepSize.hasInvalidObservation()) {
+    tarch::accelerator::storeAtomic(_minTimeStepSizeThisTimeStep, _localUpdates.timeStepSize.minimum);
+    tarch::accelerator::storeAtomic(_maxTimeStepSizeThisTimeStep, _localUpdates.timeStepSize.maximum);
+  } else {
+    tarch::accelerator::updateAtomicMin(_minTimeStepSizeThisTimeStep, _localUpdates.timeStepSize.minimum);
+    tarch::accelerator::updateAtomicMax(_maxTimeStepSizeThisTimeStep, _localUpdates.timeStepSize.maximum);
+  }
+  tarch::accelerator::updateAtomicMin(_localMinTimeStampThisTimeStep, _localUpdates.localMinTimeStamp);
+  tarch::accelerator::updateAtomicMax(_localMaxTimeStampThisTimeStep, _localUpdates.localMaxTimeStamp);
+  tarch::accelerator::updateAtomicMin(_minTimeStampThisTimeStep, _localUpdates.minTimeStamp);
+  tarch::accelerator::updateAtomicMax(_maxTimeStampThisTimeStep, _localUpdates.maxTimeStamp);
+  tarch::accelerator::updateAtomicMin(_minCellHThisTimeStep, _localUpdates.minCellH);
+  tarch::accelerator::updateAtomicMax(_maxCellHThisTimeStep, _localUpdates.maxCellH);
+
+  _localUpdates = LocalUpdates{};
 }
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::SolverState {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getSolverState() const {

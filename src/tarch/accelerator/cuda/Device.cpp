@@ -4,11 +4,11 @@
 
 #if defined(PEANO_WITH_GPU_BACKEND_CUDA)
 
-#include "DevicePropertiesCache.h"
 #include "tarch/Assertions.h"
 #include "tarch/accelerator/Device.h"
 #include "tarch/accelerator/MemoryAllocationCache.h"
 #include "tarch/accelerator/accelerator.h"
+#include "tarch/accelerator/cuda/DevicePropertiesCache.h"
 #include "tarch/instrumentation/Debug.h"
 #include "tarch/instrumentation/Info.h"
 
@@ -22,25 +22,28 @@ bool tarch::accelerator::Device::init() {
   CHECK_CUDA_ERROR(cudaGetDeviceCount(&numberOfDevices));
   for (int device = 0; device < numberOfDevices; device++) {
     CHECK_CUDA_ERROR(cudaSetDevice(device));
-    CHECK_CUDA_ERROR(cudaFree(0));
-    cudaDeviceProp* prop = &cuda::DevicePropertiesCache::get();
-    std::size_t     free = 0, total = 0;
-    CHECK_CUDA_ERROR(cudaMemGetInfo(&free, &total));
+    CHECK_CUDA_ERROR(cudaFree(nullptr));
+    const cudaDeviceProp* properties = &cuda::DevicePropertiesCache::get();
+    std::size_t           freeBytes  = 0;
+    std::size_t           totalBytes = 0;
+    CHECK_CUDA_ERROR(cudaMemGetInfo(&freeBytes, &totalBytes));
 
-    logInfo("[" << device << "]: " << prop->name);
-    logDebug("  " << prop->major << "." << prop->minor << " CC");
-    logDebug("  " << free / (1024 * 1024) << " MB free of " << total / (1024 * 1024) << " MB total global memory");
-    logDebug("  " << prop->totalConstMem << " bytes constant memory");
-    logDebug("  " << prop->multiProcessorCount << " SMs");
-    logDebug("  " << prop->maxBlocksPerMultiProcessor << " blocks per SM");
-    logDebug("  " << prop->maxThreadsPerMultiProcessor << " threads per SM");
-    logDebug("  " << prop->regsPerMultiprocessor << " registers per SM");
-    logDebug("  " << prop->sharedMemPerMultiprocessor << " bytes shared memory per SM");
-    logDebug("  " << prop->maxThreadsPerBlock << " threads per block");
-    logDebug("  " << prop->regsPerBlock << " registers per block");
-    logDebug("  " << prop->sharedMemPerBlock << " bytes shared memory per block");
-    logDebug("  " << prop->warpSize << " threads per warp");
-    logDebug("  " << prop->asyncEngineCount << " asynchronous engines");
+    logInfo("[" << device << "]: " << properties->name);
+    logDebug("  " << properties->major << "." << properties->minor << " CC");
+    logDebug(
+      "  " << freeBytes / (1024 * 1024) << " MB free of " << totalBytes / (1024 * 1024) << " MB total global memory"
+    );
+    logDebug("  " << properties->totalConstMem << " bytes constant memory");
+    logDebug("  " << properties->multiProcessorCount << " SMs");
+    logDebug("  " << properties->maxBlocksPerMultiProcessor << " blocks per SM");
+    logDebug("  " << properties->maxThreadsPerMultiProcessor << " threads per SM");
+    logDebug("  " << properties->regsPerMultiprocessor << " registers per SM");
+    logDebug("  " << properties->sharedMemPerMultiprocessor << " bytes shared memory per SM");
+    logDebug("  " << properties->maxThreadsPerBlock << " threads per block");
+    logDebug("  " << properties->regsPerBlock << " registers per block");
+    logDebug("  " << properties->sharedMemPerBlock << " bytes shared memory per block");
+    logDebug("  " << properties->warpSize << " threads per warp");
+    logDebug("  " << properties->asyncEngineCount << " asynchronous engines");
   }
   logDebug("-----------------------------------------");
 
@@ -69,14 +72,14 @@ bool tarch::accelerator::Device::isInitialised() const { return numberOfDevices 
 int tarch::accelerator::Device::getNumberOfDevices() const { return numberOfDevices; }
 
 cudaStream_t tarch::accelerator::deviceStreamCreate() {
-  cudaStream_t stream = 0;
+  cudaStream_t stream = nullptr;
   CHECK_CUDA_ERROR(cudaStreamCreate(&stream));
   return stream;
 }
 
 void tarch::accelerator::deviceStreamDestroy(cudaStream_t* stream) {
   CHECK_CUDA_ERROR(cudaStreamDestroy(*stream));
-  *stream = (cudaStream_t)0;
+  *stream = nullptr;
 }
 
 void tarch::accelerator::deviceStreamSync(cudaStream_t stream) { CHECK_CUDA_ERROR(cudaStreamSynchronize(stream)); }
@@ -90,8 +93,8 @@ void tarch::accelerator::deviceStreamSet(cudaStream_t stream) {
 cudaStream_t tarch::accelerator::deviceStreamGet() {
   int device = 0;
   CHECK_CUDA_ERROR(cudaGetDevice(&device));
-  auto it = activeStreams.find(device);
-  return it == activeStreams.end() ? static_cast<cudaStream_t>(0) : it->second;
+  const auto activeStream = activeStreams.find(device);
+  return activeStream == activeStreams.end() ? nullptr : activeStream->second;
 }
 
 #endif // defined(PEANO_WITH_GPU_BACKEND_CUDA)

@@ -4,24 +4,16 @@
 
 #if defined(PEANO_WITH_GPU_BACKEND_CUDA)
 
-#include <cuda_occupancy.h>
+#include "tarch/accelerator/cuda/DevicePropertiesCache.h"
+#include "tarch/accelerator/cuda/ErrorCheck.h"
 
-#include "ErrorCheck.h"
-#include "DevicePropertiesCache.h"
+#include <cuda_occupancy.h>
 
 namespace tarch::accelerator::cuda {
   class ExecutionPolicy;
 } // namespace tarch::accelerator::cuda
 
 class tarch::accelerator::cuda::ExecutionPolicy {
-private:
-  int          _state;
-  int          _gridSize;
-  int          _blockSize;
-  int          _maxBlockSize;
-  std::size_t  _sharedMemBytes;
-  cudaStream_t _stream;
-
 public:
   enum ConfigurationState {
     Automatic    = 0,
@@ -33,12 +25,7 @@ public:
 
   ExecutionPolicy();
   ExecutionPolicy(int gridSize, int blockSize, std::size_t sharedMemBytes);
-  ExecutionPolicy(
-    int          gridSize,
-    int          blockSize,
-    std::size_t  sharedMemBytes,
-    cudaStream_t stream
-  );
+  ExecutionPolicy(int gridSize, int blockSize, std::size_t sharedMemBytes, cudaStream_t stream);
   ~ExecutionPolicy() = default;
 
   int          getConfigState() const;
@@ -62,83 +49,89 @@ public:
   );
 
   template <class KernelFunc>
-  cudaError_t configureGrid(KernelFunc k) {
-    int configState = getConfigState();
+  cudaError_t configureGrid(KernelFunc kernel) {
+    const int configurationState = getConfigState();
 
-    if (configState == ExecutionPolicy::FullManual) {
+    if (configurationState == ExecutionPolicy::FullManual) {
       return cudaSuccess;
     }
 
-    cudaDeviceProp* prop = &DevicePropertiesCache::get();
+    const cudaDeviceProp* properties = &DevicePropertiesCache::get();
 
     cudaFuncAttributes attributes;
-    cudaOccDeviceProp  occProp(*prop);
+    cudaOccDeviceProp  occupancyProperties(*properties);
 
-    CHECK_CUDA_ERROR(cudaFuncGetAttributes(&attributes, k));
-    cudaOccFuncAttributes occAttrib(attributes);
+    CHECK_CUDA_ERROR(cudaFuncGetAttributes(&attributes, kernel));
+    cudaOccFuncAttributes occupancyAttributes(attributes);
 
-    cudaFuncCache cacheConfig;
-    CHECK_CUDA_ERROR(cudaDeviceGetCacheConfig(&cacheConfig));
-    cudaOccDeviceState occState;
-    occState.cacheConfig = (cudaOccCacheConfig)cacheConfig;
+    cudaFuncCache cacheConfiguration;
+    CHECK_CUDA_ERROR(cudaDeviceGetCacheConfig(&cacheConfiguration));
+    cudaOccDeviceState occupancyState;
+    occupancyState.cacheConfig = static_cast<cudaOccCacheConfig>(cacheConfiguration);
 
-    int numSMs = prop->multiProcessorCount;
+    const int numberOfMultiprocessors = properties->multiProcessorCount;
 
-    if ((configState & ExecutionPolicy::BlockSize) == 0) {
-      int          blockSize = 0, minGridSize = 0;
-      cudaOccError occErr = cudaOccMaxPotentialOccupancyBlockSize(
-        &minGridSize,
+    if ((configurationState & ExecutionPolicy::BlockSize) == 0) {
+      int                blockSize          = 0;
+      int                minimumGridSize    = 0;
+      const cudaOccError blockSizeOccupancy = cudaOccMaxPotentialOccupancyBlockSize(
+        &minimumGridSize,
         &blockSize,
-        &occProp,
-        &occAttrib,
-        &occState,
+        &occupancyProperties,
+        &occupancyAttributes,
+        &occupancyState,
         getSharedMemBytes()
       );
-      if (occErr != CUDA_OCC_SUCCESS || blockSize < 0) {
+      if (blockSizeOccupancy != CUDA_OCC_SUCCESS or blockSize < 0) {
         return cudaErrorInvalidConfiguration;
       }
       setBlockSize(blockSize);
     }
 
-    if ((configState & ExecutionPolicy::GridSize) == 0) {
-      cudaOccResult result;
-      cudaOccError  occErr = cudaOccMaxActiveBlocksPerMultiprocessor(
+    if ((configurationState & ExecutionPolicy::GridSize) == 0) {
+      cudaOccResult      result;
+      const cudaOccError blockCountOccupancy = cudaOccMaxActiveBlocksPerMultiprocessor(
         &result,
-        &occProp,
-        &occAttrib,
-        &occState,
+        &occupancyProperties,
+        &occupancyAttributes,
+        &occupancyState,
         getBlockSize(),
         getSharedMemBytes()
       );
-      if (occErr != CUDA_OCC_SUCCESS) {
+      if (blockCountOccupancy != CUDA_OCC_SUCCESS) {
         return cudaErrorInvalidConfiguration;
       }
-      setGridSize(result.activeBlocksPerMultiprocessor * numSMs);
-      if (getGridSize() < numSMs) {
+      setGridSize(result.activeBlocksPerMultiprocessor * numberOfMultiprocessors);
+      if (getGridSize() < numberOfMultiprocessors) {
         return cudaErrorInvalidConfiguration;
       }
     }
 
-    if ((configState & ExecutionPolicy::SharedMemory) == 0) {
-      int          smemGranularity = 0;
-      cudaOccError occErr          = cudaOccSMemAllocationGranularity(
-        &smemGranularity,
-        &occProp
-      );
-      if (occErr != CUDA_OCC_SUCCESS) {
+    if ((configurationState & ExecutionPolicy::SharedMemory) == 0) {
+      int                granularity          = 0;
+      const cudaOccError granularityOccupancy = cudaOccSMemAllocationGranularity(&granularity, &occupancyProperties);
+      if (granularityOccupancy != CUDA_OCC_SUCCESS) {
         return cudaErrorInvalidConfiguration;
       }
-      std::size_t sbytes = availableSharedBytesPerBlock(
-        prop->sharedMemPerBlock,
+      const std::size_t bytesPerBlock = availableSharedBytesPerBlock(
+        properties->sharedMemPerBlock,
         attributes.sharedSizeBytes,
-        __occDivideRoundUp(getGridSize(), numSMs),
-        smemGranularity
+        __occDivideRoundUp(getGridSize(), numberOfMultiprocessors),
+        granularity
       );
-      setSharedMemBytes(sbytes);
+      setSharedMemBytes(bytesPerBlock);
     }
 
     return cudaSuccess;
   }
+
+private:
+  int          _state;
+  int          _gridSize;
+  int          _blockSize;
+  int          _maxBlockSize;
+  std::size_t  _sharedMemBytes;
+  cudaStream_t _stream;
 };
 
 #endif

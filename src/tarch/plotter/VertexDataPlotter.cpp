@@ -1,6 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "FileWriter.h"
+#include "tarch/plotter/FileWriter.h"
 
 tarch::plotter::FileWriter::VertexDataPlotter::VertexDataPlotter(
   FileWriter&        plotter,
@@ -8,13 +8,7 @@ tarch::plotter::FileWriter::VertexDataPlotter::VertexDataPlotter(
   const std::string& identifier,
   const int          recordsPerVertex
 ) :
-  _impl(
-    plotter,
-    subdomainId,
-    plotter._subdomains.at(static_cast<std::size_t>(subdomainId)).pointFields,
-    identifier,
-    recordsPerVertex
-  ) {}
+  _impl(plotter.pieceBuffers(subdomainId).pointFields, identifier, recordsPerVertex) {}
 
 void tarch::plotter::FileWriter::VertexDataPlotter::plotVertexData(const int index, const double value) {
   _impl.writeTuple(index, &value, 1);

@@ -11,24 +11,32 @@ namespace exahype2::tests {
 class exahype2::tests::RefinementControlServiceTest final : public tarch::tests::TestCase {
 public:
   RefinementControlServiceTest();
+  RefinementControlServiceTest(const RefinementControlServiceTest&)            = delete;
+  RefinementControlServiceTest(RefinementControlServiceTest&&)                 = delete;
+  RefinementControlServiceTest& operator=(const RefinementControlServiceTest&) = delete;
+  RefinementControlServiceTest& operator=(RefinementControlServiceTest&&)      = delete;
+  ~RefinementControlServiceTest() override                                     = default;
 
   void run() override;
 
 private:
-  void testRefineCommandBecomesBandedEvent();
+  void testRefineCommandNamesTheRequestingCell();
+  void testEveryCellIsNamedExactlyOnAnyDomain();
   void testCompleteEraseSiblingGroupBecomesParentEvent();
   void testEraseSiblingGroupIsAnchoredAtDomainOffset();
   void testEraseSiblingGroupIsAnchoredPerAxis();
   void testIncompleteEraseSiblingGroupIsDiscarded();
   void testShiftedEraseSiblingGroupIsDiscarded();
-  void testTriggerEventIsRedeliveredForRealisation();
-  void testMixedTriggerAndRealiseBatchRedeliversTrigger();
-  void testSiblingGroupCompletedAcrossSweepsRedeliversParent();
-  void testDeferredTopologyChangeKeepsEventsAlive();
+  void testCommittedEventIsConsumedByOneTraversal();
+  void testEachBatchCarriesOnlyItsOwnRequests();
+  void testSiblingGroupNeedsEveryChildInOneBatch();
   void testUnchangedEventSetIsSuppressed();
+  void testRepeatedContributionsReuseTheCommittedSet();
+  void testARealisedSetWithoutSweepSuppressesItsRepetition();
+  void testARealisedSetWithoutSweepKeepsTheShippedLists();
   void testEraseOnlyBatchIsCommitted();
   void testComplementaryEraseSubsetsOfTwoSolversAreDiscarded();
   void testEraseNeedsUnanimousSolverConsent();
   void testReportTracksEveryStageOfARequest();
-  void testDeliveryFiltersAgainstTreeExtents();
+  void testTheDeltaExchangeTracksEveryRanksWishlist();
 };

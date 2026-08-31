@@ -14,56 +14,37 @@ set(SOURCES
   Loop.cpp
   UnitTests.cpp
 
+  communication/CommunicationManager.cpp
+  communication/tests/CommunicationManagerTest.cpp
+
+  data/ContainerRegistry.cpp
+  data/RegisteredStackContainer.cpp
+  data/tests/ContainerRegistryTest.cpp
+  data/tests/RegisteredStackContainerTest.cpp
+
   datamanagement/CellMarker.cpp
   datamanagement/FaceMarker.cpp
   datamanagement/VertexMarker.cpp
 
   grid/AutomatonState.cpp
   grid/BoundaryDataAggregation.cpp
-  grid/CellType.cpp
-  grid/FaceType.cpp
   grid/GridControlEvent.cpp
   grid/GridStatistics.cpp
   grid/GridTraversalEvent.cpp
-  grid/GridTraversalEventGenerator.cpp
   grid/GridTraversalObserver.cpp
   grid/GridVertex.cpp
+  grid/LatticeIndexMap.cpp
   grid/PeanoCurve.cpp
-  grid/PeriodicTopology.cpp
-  grid/Spacetree.cpp
-  grid/SpacetreeHelper.cpp
-  grid/SpacetreeState.cpp
-  grid/SplitInstruction.cpp
   grid/StackContainer.cpp
   grid/StackTopology.cpp
-  grid/VertexLookupTable.cpp
-  grid/VertexType.cpp
   grid/tests/AutomatonStateTest.cpp
   grid/tests/BoundaryDataAggregationTest.cpp
-  grid/tests/CellTypeTest.cpp
-  grid/tests/FaceTypeTest.cpp
   grid/tests/GridControlEventTest.cpp
   grid/tests/GridStatisticsTest.cpp
-  grid/tests/TreeIdSetTest.cpp
-  grid/tests/GridTraversalEventGeneratorTest.cpp
+  grid/tests/GridTraversalEventTest.cpp
   grid/tests/GridVertexTest.cpp
-  grid/tests/PeriodicTopologyTest.cpp
-  grid/tests/SpacetreeHelperTest.cpp
-  grid/tests/SpacetreeTest.cpp
-  grid/tests/StackContainerTest.cpp
+  grid/tests/LatticeIndexMapTest.cpp
   grid/tests/StackTopologyTest.cpp
-  grid/tests/VertexLookupTableTest.cpp
-  grid/tests/VertexTypeTest.cpp
-
-  parallel/ExchangeChannels.cpp
-  parallel/RunControl.cpp
-  parallel/SpacetreeSet.cpp
-  parallel/TreeIdMapping.cpp
-  parallel/tests/ExchangeChannelsTest.cpp
-  parallel/tests/PingPongTest.cpp
-  parallel/tests/RunControlTest.cpp
-  parallel/tests/SpacetreeSetTest.cpp
-  parallel/tests/TreeIdMappingTest.cpp
 
   stacks/IOMode.cpp
   stacks/SendReceiveContext.cpp
@@ -76,6 +57,15 @@ set(SOURCES
   stacks/tests/TestDataOnStack.cpp
 
   tests/LoopTest.cpp
+
+  topology/ChunkedTasks.cpp
+  topology/TopologyManager.cpp
+  topology/Tree.cpp
+  topology/TreeTraversal.cpp
+  topology/tests/ChunkedTasksTest.cpp
+  topology/tests/TopologyManagerTest.cpp
+  topology/tests/TreeTest.cpp
+  topology/tests/TreeTraversalTest.cpp
 )
 
 install_peano_headers(

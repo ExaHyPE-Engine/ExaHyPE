@@ -2,12 +2,14 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "Init.h"
 
+#include "tarch/Termination.h"
 #include "tarch/accelerator/Device.h"
 #include "tarch/accelerator/MemoryBlocks.h"
 #include "tarch/instrumentation/Log.h"
+#include "tarch/mpi/AbstractCommunicationManager.h"
 #include "tarch/mpi/Diagnostics.h"
 #include "tarch/mpi/Rank.h"
-#include "tarch/multicore/Core.h"
+#include "tarch/tasking/Runtime.h"
 
 void tarch::init(int* argc, char*** argv, const InitConfiguration& configuration) {
   if (tarch::mpi::Rank::getInstance().init(argc, argv)) {
@@ -15,15 +17,19 @@ void tarch::init(int* argc, char*** argv, const InitConfiguration& configuration
     tarch::mpi::Diagnostics::getInstance().setDeadlockTimeout(configuration.mpiDeadlockTimeout);
     tarch::mpi::Diagnostics::getInstance().setRequestTracking(configuration.mpiRequestTrackingEnabled);
   } else {
-    throw std::runtime_error("Cannot initialise parallel environment");
+    tarch::terminateWithError("Cannot initialise parallel environment.");
   }
 
-  if (not tarch::multicore::Core::getInstance().init()) {
-    throw std::runtime_error("Cannot initialise shared memory environment");
+  // The communication thread reserves one core, so this call runs before the task runtime sizes
+  // its team.
+  tarch::mpi::AbstractCommunicationManager::configure(configuration.communicationThreadEnabled);
+
+  if (not tarch::tasking::Runtime::getInstance().init()) {
+    tarch::terminateWithError("Cannot initialise multithreading environment.");
   }
 
   if (not tarch::accelerator::Device::getInstance().init()) {
-    throw std::runtime_error("Cannot initialise accelerator environment");
+    tarch::terminateWithError("Cannot initialise accelerator environment.");
   }
 }
 
@@ -33,7 +39,7 @@ void tarch::shutdown() {
   tarch::accelerator::MemoryBlocks::getInstance().checkForMemoryLeaks();
   tarch::accelerator::MemoryBlocks::getInstance().clear();
 #endif
-  tarch::multicore::Core::getInstance().shutdown();
+  tarch::tasking::Runtime::getInstance().shutdown();
   tarch::instrumentation::Log::close();
   tarch::mpi::Rank::getInstance().shutdown();
 }

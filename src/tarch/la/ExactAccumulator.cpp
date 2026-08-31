@@ -1,19 +1,12 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "tarch/la/ExactAccumulator.h"
-
-#include "tarch/Assertions.h"
+#include "ExactAccumulator.h"
 
 /**
- * Returns the running sum rounded to the nearest double.
- *
- * The limbs hold the exact sum, so the result is a pure function of the values
- * added so far: it is identical for every addition order, and negating every
- * addend negates the result to the last bit. The routine first propagates the
- * pending carries into canonical base-2^32 digits, takes the magnitude, and then
- * rounds the leading mantissa bits to nearest with ties to even. A sum whose
- * leading bit falls into the subnormal range keeps correspondingly fewer
- * mantissa bits, so the single rounding step here is also the final one.
+ * Returns the running sum rounded to the nearest double, with ties to even.
+ * The limbs hold the exact sum, so the result is the same for every order in
+ * which the addends arrived. A result outside the finite double range becomes
+ * signed infinity.
  */
 double tarch::la::ExactAccumulator::round() const {
   std::int64_t digits[NumberOfLimbs];
@@ -83,7 +76,10 @@ double tarch::la::ExactAccumulator::round() const {
 
   // Assembling the fields keeps a subnormal result exact, as scaling a
   // significand into the subnormal range raises an underflow exception.
-  const auto exponentField = static_cast<std::uint64_t>(exponentOfMsb - mantissaBits + 1075);
-  const auto signField     = isNegative ? std::uint64_t{1} << 63 : std::uint64_t{0};
-  return std::bit_cast<double>(signField | ((exponentField << 52) + mantissa));
+  constexpr std::uint64_t InfinityBits         = 0x7ff0000000000000ULL;
+  const auto              exponentField        = static_cast<std::uint64_t>(exponentOfMsb - mantissaBits + 1075);
+  const auto              magnitudeBits        = (exponentField << 52) + mantissa;
+  const auto              roundedMagnitudeBits = std::min(magnitudeBits, InfinityBits);
+  const auto              signField            = isNegative ? std::uint64_t{1} << 63 : std::uint64_t{0};
+  return std::bit_cast<double>(signField | roundedMagnitudeBits);
 }

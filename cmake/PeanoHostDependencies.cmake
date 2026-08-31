@@ -6,38 +6,28 @@ include_guard(GLOBAL)
 macro(peano_find_host_dependencies)
   if(TARGET PeanoOptions)
     find_package(MPI REQUIRED)
-    # Link the MPI imported target for every enabled core language (C and C++). The C
-    # variant is inert until a .c source is added, but keeps the two languages consistent.
+    # The C variant stays inert until a .c source joins the build.
     target_link_libraries(PeanoOptions INTERFACE
       MPI::MPI_CXX
       $<TARGET_NAME_IF_EXISTS:MPI::MPI_C>
     )
-    # Skip MPI's deprecated C++ bindings (mpicxx.h). We only use the C API,
-    # and on some OpenMPI/MPICH installs <mpi.h> auto-includes them, which
-    # triggers -Wcast-function-type warnings from inside the MPI headers.
+    # Peano calls the MPI C API only. On some OpenMPI and MPICH installations
+    # <mpi.h> includes the deprecated C++ bindings, and those headers raise
+    # -Wcast-function-type warnings.
     target_compile_definitions(PeanoOptions INTERFACE OMPI_SKIP_MPICXX MPICH_SKIP_MPICXX)
   else()
     find_dependency(MPI REQUIRED)
   endif()
 
-  if(PEANO_WITH_MULTITHREADING)
-    if(TARGET PeanoOptions)
-      find_package(OpenMP)
-      if(OpenMP_FOUND)
-        # Link the OpenMP imported target for every enabled core language (C and C++). The C
-        # variant is inert until a .c source is added, but keeps the two languages consistent.
-        target_link_libraries(PeanoOptions INTERFACE
-          OpenMP::OpenMP_CXX
-          $<TARGET_NAME_IF_EXISTS:OpenMP::OpenMP_C>
-        )
-        target_compile_definitions(PeanoOptions INTERFACE PEANO_WITH_OPENMP PEANO_WITH_MULTITHREADING)
-      else()
-        message(WARNING "PEANO_WITH_MULTITHREADING=ON but OpenMP was not found; continuing without multithreading support.")
-        set(PEANO_WITH_MULTITHREADING OFF CACHE BOOL "Build with multithreading (OpenMP) support" FORCE)
-      endif()
-    else()
-      find_dependency(OpenMP)
-    endif()
+  if(TARGET PeanoOptions)
+    find_package(OpenMP REQUIRED)
+    # The C variant stays inert until a .c source joins the build.
+    target_link_libraries(PeanoOptions INTERFACE
+      OpenMP::OpenMP_CXX
+      $<TARGET_NAME_IF_EXISTS:OpenMP::OpenMP_C>
+    )
+  else()
+    find_dependency(OpenMP REQUIRED)
   endif()
 
   if(PEANO_WITH_HDF5)
@@ -77,8 +67,8 @@ macro(peano_find_host_dependencies)
         set(PEANO_WITH_NETCDF OFF CACHE BOOL "Build with NetCDF support" FORCE)
       endif()
     endif()
-    # Application: NetCDF is baked into the exported target by absolute library
-    # path and include directory (no imported target), so nothing is re-imported.
+    # The exported target carries the absolute NetCDF library path and include
+    # directory, so a consumer of the export imports no NetCDF target.
   endif()
 
   if(PEANO_WITH_ZLIB)

@@ -4,36 +4,15 @@
 
 #include "tarch/la/Vector.h"
 
-namespace toolbox {
-  namespace particles {
-    namespace assignmentchecks {
-      namespace tests {
-        class TestParticle;
-      } // namespace tests
-    }   // namespace assignmentchecks
-  }     // namespace particles
-} // namespace toolbox
+namespace toolbox::particles::assignmentchecks::tests {
+  class TestParticle;
+} // namespace toolbox::particles::assignmentchecks::tests
 
-class toolbox::particles::assignmentchecks::tests::TestParticle {
-private:
-  tarch::la::Vector<DIMENSIONS, double> _x;
-  int                                   _partid;
-  bool                                  _isLocal;
-
-  // helper variables of vertex particle is associated with
-  tarch::la::Vector<DIMENSIONS, double> _vertexH;
-  int                                   _depth;
-
+class toolbox::particles::assignmentchecks::tests::TestParticle final {
 public:
-  // Mimic proper particle behaviour
   enum class ParallelState : int { Local = 0, Virtual = 1 };
 
-public:
-  TestParticle(
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    int                                          particleID,
-    bool                                         local = false
-  );
+  TestParticle(const tarch::la::Vector<DIMENSIONS, double>& x, int particleId, bool isLocal = false);
 
   int                                   getDepth() const;
   int                                   getPartid() const;
@@ -43,9 +22,18 @@ public:
   TestParticle::ParallelState           getParallelState() const;
 
   void setDepth(const int depth);
-  void setPartid(const int partid);
+  void setPartid(const int particleId);
   void setIsLocal(const bool isLocal);
-  void setVertexH(const tarch::la::Vector<DIMENSIONS, double>& x);
+  void setVertexH(const tarch::la::Vector<DIMENSIONS, double>& vertexH);
   void setX(const tarch::la::Vector<DIMENSIONS, double>& x);
   void setParallelState(const TestParticle::ParallelState parallelState);
+
+private:
+  tarch::la::Vector<DIMENSIONS, double> _x{};
+  int                                   _particleId{0};
+  bool                                  _isLocal{false};
+
+  // Size and depth of the vertex that holds the particle.
+  tarch::la::Vector<DIMENSIONS, double> _vertexH{};
+  int                                   _depth{0};
 };

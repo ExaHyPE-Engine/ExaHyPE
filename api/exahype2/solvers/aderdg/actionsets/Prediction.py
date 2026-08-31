@@ -7,14 +7,6 @@ import peano4.solversteps
 
 
 class Prediction(AbstractADERDGActionSet):
-    """
-    ADER-DG prediction action set.
-
-    The extrapolated solution from the space-time predictor has to be projected onto
-    the faces before we can solve the Riemann problems. The projection therefore
-    happens in one grid sweep and the corresponding Riemann solve in the next one.
-    """
-
     _Template_TouchCellFirstTime = """
   if ({{GUARD}}) {
     const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
@@ -64,12 +56,10 @@ class Prediction(AbstractADERDGActionSet):
 #endif
     };
 
-    // This copy determines which buffer is current at a subsequent plot. In
-    // ordinary fused ADER-DG, the correction has already committed the accepted
-    // state to Q earlier in this traversal, so Q_old becomes current and is
-    // plotted. With limiting, prediction and correction use separate traversals:
-    // Q_old remains the predictor backup while correction and subcell recomputation
-    // later commit the accepted state to Q, which the limiter plotter reads.
+    // This copy decides which buffer a plotter reads: In fused ADER-DG the
+    // correction writes the accepted state into Q earlier in this traversal, so
+    // Q_old carries it. A limiting solver corrects in its own traversal and leaves
+    // the accepted state in Q.
     std::copy_n(
       updatedState,
       SpaceBasisSize * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}),
@@ -131,6 +121,12 @@ class Prediction(AbstractADERDGActionSet):
             self._add_action_set_entries_to_dictionary(dictionary)
             result = jinja2.Template(self._Template_TouchCellFirstTime).render(
                 **dictionary
+            )
+        if operation_name == peano4.solversteps.ActionSet.OPERATION_END_TRAVERSAL:
+            result = (
+                "  repositories::"
+                + self._solver.get_name_of_global_instance()
+                + ".reduceLocalUpdates();\n"
             )
         return result
 
