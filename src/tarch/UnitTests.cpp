@@ -38,6 +38,7 @@
 #include "tarch/reader/tests/JSONReaderTest.h"
 #include "tarch/reader/tests/NetCDFFieldSamplerTest.h"
 #include "tarch/reader/tests/NetCDFFileReaderTest.h"
+#include "tarch/reader/tests/VTKSamplerTest.h"
 #include "tarch/tasking/tests/RuntimeTest.h"
 #include "tarch/tasking/tests/TaskGraphTest.h"
 #include "tarch/tests/NonCriticalAssertionsTest.h"
@@ -93,6 +94,7 @@ tarch::tests::TestCase* tarch::getUnitTests() {
   result->addTestCase(new tarch::reader::tests::JSONReaderTest());
   result->addTestCase(new tarch::reader::tests::NetCDFFileReaderTest());
   result->addTestCase(new tarch::reader::tests::NetCDFFieldSamplerTest());
+  result->addTestCase(new tarch::reader::tests::VTKSamplerTest());
 
   return result;
 }

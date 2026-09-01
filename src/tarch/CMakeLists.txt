@@ -123,6 +123,8 @@ set(SOURCES
   plotter/VertexPlotter.cpp
   plotter/VTKHDFFileWriter.cpp
   plotter/VTKHDFTimeSeriesWriter.cpp
+  plotter/VTKHDFFileWriter.cpp
+  plotter/VTKHDFTimeSeriesWriter.cpp
   plotter/VTUFileWriter.cpp
   plotter/XDMFTimeSeriesWriter.cpp
   plotter/tests/HDF5FileWriterTest.cpp
@@ -134,9 +136,13 @@ set(SOURCES
   reader/JSONReader.cpp
   reader/NetCDFFieldSampler.cpp
   reader/NetCDFFileReader.cpp
+  reader/VTKSampler.cpp
+  reader/VTKSamplerVTKHDF.cpp
+  reader/VTKSamplerVTU.cpp
   reader/tests/NetCDFFieldSamplerTest.cpp
   reader/tests/NetCDFFileReaderTest.cpp
   reader/tests/JSONReaderTest.cpp
+  reader/tests/VTKSamplerTest.cpp
 
   instrumentation/Measurement.cpp
   instrumentation/Watch.cpp
