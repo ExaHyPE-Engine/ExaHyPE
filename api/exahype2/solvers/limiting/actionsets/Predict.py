@@ -2,9 +2,9 @@
 # use, please see the copyright notice at www.peano-framework.org
 from .AbstractLimiterActionSet import AbstractLimiterActionSet
 from ..Labels import (
-    cell_dmp_extrema_to_face_snippet,
-    hanging_face_dmp_extrema_reduce_snippet,
-    reset_face_dmp_extrema_snippet,
+    cell_dmp_extrema_to_vertices_snippet,
+    hanging_vertex_dmp_extrema_reduce_snippet,
+    reset_vertex_dmp_extrema_snippet,
 )
 
 import jinja2
@@ -12,21 +12,29 @@ import peano4.solversteps
 
 
 class Predict(AbstractLimiterActionSet):
-    """Prepares each cell's limiter status and its face sides' extrema for the
+    """Prepares each cell's limiter status and its vertices' extrema for the
     next candidate solution."""
 
-    _Template_TouchFaceFirstTime = """
+    _Template_TouchVertexFirstTime = """
 {% if USES_DMP %}
-  if ({{FACE_GUARD}}) {
-{{RESET_FACE_DMP_EXTREMA}}
+  if ({{SWEEP_GUARD}}) {
+{{RESET_VERTEX_DMP_EXTREMA}}
   }
 {% endif %}
 """
 
-    _Template_TouchHangingFaceLastTime = """
+    _Template_TouchHangingVertexFirstTime = """
 {% if USES_DMP %}
-  if ({{FACE_GUARD}}) {
-{{HANGING_FACE_DMP_EXTREMA_REDUCE}}
+  if ({{SWEEP_GUARD}}) {
+{{RESET_VERTEX_DMP_EXTREMA}}
+  }
+{% endif %}
+"""
+
+    _Template_TouchHangingVertexLastTime = """
+{% if USES_DMP %}
+  if ({{SWEEP_GUARD}}) {
+{{HANGING_VERTEX_DMP_EXTREMA_REDUCE}}
   }
 {% endif %}
 """
@@ -44,8 +52,9 @@ class Predict(AbstractLimiterActionSet):
     );
 {% if USES_DMP %}
     // The predictor has copied the accepted solution into its backup. The cell
-    // writes the backup's extrema, sampled like a candidate, onto its face
-    // sides. The flagging of every neighbour reads them after the exchange.
+    // reduces the backup's extrema, sampled like a candidate, into its
+    // vertices. The flagging of every cell sharing a node with it reads them
+    // after the exchange.
     constexpr int NumberOfObservables     = {{NUMBER_OF_DMP_OBSERVABLES}};
     constexpr int NumberOfDofsPerAxis     = {{ORDER}} + 1;
     constexpr int NumberOfSubcellsPerAxis = 2 * {{ORDER}} + 1;
@@ -68,19 +77,19 @@ class Predict(AbstractLimiterActionSet):
     {{SOLUTION_STORAGE_PRECISION}} acceptedMinimum[NumberOfObservables];
     {{SOLUTION_STORAGE_PRECISION}} acceptedMaximum[NumberOfObservables];
 {{ACCEPTED_EXTREMA_REDUCTION}}
-{{CELL_DMP_EXTREMA_TO_FACES}}
+{{CELL_DMP_EXTREMA_TO_VERTICES}}
 {% endif %}
   }
 """
 
-    def __init__(self, solver, cell_guard, face_guard):
+    def __init__(self, solver, cell_guard, sweep_guard):
         super().__init__(solver)
         self._cell_guard = cell_guard
-        self._face_guard = face_guard
+        self._sweep_guard = sweep_guard
 
     def _add_action_set_entries_to_dictionary(self, dictionary):
         dictionary["CELL_GUARD"] = self._cell_guard
-        dictionary["FACE_GUARD"] = self._face_guard
+        dictionary["SWEEP_GUARD"] = self._sweep_guard
         dictionary["USES_DMP"] = self._solver._subcell_limiter_uses_dmp
         if not dictionary["USES_DMP"]:
             return
@@ -91,14 +100,14 @@ class Predict(AbstractLimiterActionSet):
         dictionary["ACCEPTED_EXTREMA_REDUCTION"] = self._dmp_extrema_reduction_snippet(
             "acceptedSolution", "acceptedMinimum", "acceptedMaximum", dictionary
         )
-        dictionary["RESET_FACE_DMP_EXTREMA"] = reset_face_dmp_extrema_snippet(
+        dictionary["RESET_VERTEX_DMP_EXTREMA"] = reset_vertex_dmp_extrema_snippet(
             self._solver._name, number_of_observables
         )
-        dictionary["CELL_DMP_EXTREMA_TO_FACES"] = cell_dmp_extrema_to_face_snippet(
+        dictionary["CELL_DMP_EXTREMA_TO_VERTICES"] = cell_dmp_extrema_to_vertices_snippet(
             self._solver._name, number_of_observables, "acceptedMinimum", "acceptedMaximum"
         )
-        dictionary["HANGING_FACE_DMP_EXTREMA_REDUCE"] = (
-            hanging_face_dmp_extrema_reduce_snippet(self._solver._name, number_of_observables)
+        dictionary["HANGING_VERTEX_DMP_EXTREMA_REDUCE"] = (
+            hanging_vertex_dmp_extrema_reduce_snippet(self._solver._name, number_of_observables)
         )
 
     def get_body_of_operation(self, operation_name):
@@ -109,16 +118,23 @@ class Predict(AbstractLimiterActionSet):
         self._add_action_set_entries_to_dictionary(dictionary)
         if (
             operation_name
-            == peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME
+            == peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME
         ):
-            result = jinja2.Template(self._Template_TouchFaceFirstTime).render(
+            result = jinja2.Template(self._Template_TouchVertexFirstTime).render(
                 **dictionary
             )
         if (
             operation_name
-            == peano4.solversteps.ActionSet.OPERATION_TOUCH_HANGING_FACE_LAST_TIME
+            == peano4.solversteps.ActionSet.OPERATION_TOUCH_HANGING_VERTEX_FIRST_TIME
         ):
-            result = jinja2.Template(self._Template_TouchHangingFaceLastTime).render(
+            result = jinja2.Template(self._Template_TouchHangingVertexFirstTime).render(
+                **dictionary
+            )
+        if (
+            operation_name
+            == peano4.solversteps.ActionSet.OPERATION_TOUCH_HANGING_VERTEX_LAST_TIME
+        ):
+            result = jinja2.Template(self._Template_TouchHangingVertexLastTime).render(
                 **dictionary
             )
         if (

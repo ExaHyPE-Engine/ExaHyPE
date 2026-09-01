@@ -4,6 +4,7 @@
 
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/accelerator.h"
+#include "tarch/la/Vector.h"
 
 TARGET_DECLARE
 namespace exahype2::dg {
@@ -50,6 +51,12 @@ namespace exahype2::dg {
     const Value* const nodalState,
     const Value* const samplingMatrix,
     ObservableMapping  mapStateToObservables
+  );
+
+  template <int Dimensions>
+  INLINE_METHOD GPU_CALLABLE_METHOD bool isCoarseVertexOnFacetOfHangingVertex(
+    const tarch::la::Vector<Dimensions, int>& hangingVertexPosition,
+    const int                                 coarseVertexNumber
   );
 } // namespace exahype2::dg
 TARGET_DECLARE_END

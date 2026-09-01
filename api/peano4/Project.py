@@ -342,7 +342,7 @@ class Project (object):
         len(self.output.artefacts),
       )
 
-    # Generation must be idempotent: the construct_output() calls below append
+    # Generation must be idempotent: The construct_output() calls below append
     # artefacts anew on every call. Snapshot the pre-registered artefacts and
     # restore them afterwards so repeated calls do not pile up duplicates.
     pre_generation_artefacts = list(self.output.artefacts)

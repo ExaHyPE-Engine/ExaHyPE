@@ -21,9 +21,10 @@ namespace {
       &exahype2::dg::reduceProjectedObservableExtrema<DIMENSIONS, 2, 3, 2, 2, Value, ObservableMapping<Value>>;
   }
 
-  // The two precisions a solver may store its solution in.
+  // The two precisions a solver may store its solution in, and the build's dimension.
   [[maybe_unused]] void instantiateLimiterTemplates() {
     instantiateLimiterTemplates<float>();
     instantiateLimiterTemplates<double>();
+    [[maybe_unused]] auto* hangingVertexFacet = &exahype2::dg::isCoarseVertexOnFacetOfHangingVertex<DIMENSIONS>;
   }
 } // namespace

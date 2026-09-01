@@ -251,4 +251,35 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::reduceProjectedObservableEx
   }
 }
 
+/**
+ * Returns whether a coarse vertex lies on the facet of the father cell that
+ * contains a hanging vertex.
+ *
+ * The hanging vertex position is its place in the father cell's vertex pattern,
+ * zero to three per axis, and the coarse vertex number is the lexicographic
+ * number of a father-cell vertex. The facet is the lowest-dimensional one that
+ * contains the hanging vertex: Along an axis where the hanging vertex sits on
+ * the father cell's boundary, the coarse vertex has to sit on the same side;
+ * along every other axis both sides lie on the facet. A hanging vertex that
+ * coincides with a coarse vertex has that vertex alone.
+ */
+template <int Dimensions>
+INLINE_METHOD GPU_CALLABLE_METHOD bool exahype2::dg::isCoarseVertexOnFacetOfHangingVertex(
+  const tarch::la::Vector<Dimensions, int>& hangingVertexPosition,
+  const int                                 coarseVertexNumber
+) {
+  constexpr int LowerBoundary = 0;
+  constexpr int UpperBoundary = 3;
+  for (int axis = 0; axis < Dimensions; axis++) {
+    const int coarseVertexSide = (coarseVertexNumber >> axis) & 1;
+    if (hangingVertexPosition(axis) == LowerBoundary and coarseVertexSide == 1) {
+      return false;
+    }
+    if (hangingVertexPosition(axis) == UpperBoundary and coarseVertexSide == 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
 TARGET_DECLARE_END

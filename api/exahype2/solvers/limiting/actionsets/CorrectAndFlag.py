@@ -3,11 +3,11 @@
 from .AbstractLimiterActionSet import AbstractLimiterActionSet
 from ..Labels import (
     cell_status_to_face_snippet,
-    face_neighbour_dmp_extrema_merge_snippet,
-    hanging_face_dmp_extrema_from_coarse_snippet,
     hanging_face_status_from_coarse_snippet,
     hanging_face_status_reduce_snippet,
+    hanging_vertex_dmp_extrema_from_coarse_snippet,
     reset_refined_face_status_snippet,
+    vertex_dmp_extrema_merge_snippet,
 )
 
 import jinja2
@@ -77,10 +77,11 @@ class CorrectAndFlag(AbstractLimiterActionSet):
     {{SOLUTION_STORAGE_PRECISION}} referenceMinimum[NumberOfObservables];
     {{SOLUTION_STORAGE_PRECISION}} referenceMaximum[NumberOfObservables];
 {{REFERENCE_EXTREMA_REDUCTION}}
-    // The face neighbours' previous-step ranges widen the reference (Dumbser,
-    // Zanotti, Loubere and Diot, J. Comput. Phys. 278 (2014) 47-75). The
-    // predictor sweep writes them onto the face sides, and the exchange carries
-    // them across the rank boundaries.
+    // The previous-step ranges of every cell sharing a node with this one widen
+    // the reference, which is the neighbourhood V_i of Dumbser, Zanotti,
+    // Loubere and Diot, J. Comput. Phys. 278 (2014) 47-75, arXiv 1406.7416,
+    // equation 23. The predictor sweep reduces them into the vertices, and the
+    // exchange merges the vertices across the rank boundaries.
 {{NEIGHBOUR_EXTREMA_MERGE}}
 
 {% if DMP_RELAXATION_PARAMETER_IMPLEMENTATION %}
@@ -155,34 +156,39 @@ class CorrectAndFlag(AbstractLimiterActionSet):
 """
 
     _Template_TouchFaceFirstTime = """
-  if ({{FACE_GUARD}}) {
+  if ({{SWEEP_GUARD}}) {
 {{RESET_REFINED_FACE_STATUS}}
   }
 """
 
     _Template_TouchHangingFaceFirstTime = """
-  if ({{FACE_GUARD}}) {
+  if ({{SWEEP_GUARD}}) {
 {{HANGING_FACE_STATUS_FROM_COARSE}}
-{% if USES_DMP %}
-{{HANGING_FACE_DMP_EXTREMA_FROM_COARSE}}
-{% endif %}
   }
 """
 
     _Template_TouchHangingFaceLastTime = """
-  if ({{FACE_GUARD}}) {
+  if ({{SWEEP_GUARD}}) {
 {{HANGING_FACE_STATUS_REDUCE}}
   }
 """
 
-    def __init__(self, solver, cell_guard, face_guard):
+    _Template_TouchHangingVertexFirstTime = """
+{% if USES_DMP %}
+  if ({{SWEEP_GUARD}}) {
+{{HANGING_VERTEX_DMP_EXTREMA_FROM_COARSE}}
+  }
+{% endif %}
+"""
+
+    def __init__(self, solver, cell_guard, sweep_guard):
         super().__init__(solver)
         self._cell_guard = cell_guard
-        self._face_guard = face_guard
+        self._sweep_guard = sweep_guard
 
     def _add_action_set_entries_to_dictionary(self, dictionary):
         dictionary["CELL_GUARD"] = self._cell_guard
-        dictionary["FACE_GUARD"] = self._face_guard
+        dictionary["SWEEP_GUARD"] = self._sweep_guard
         dictionary["RESET_REFINED_FACE_STATUS"] = reset_refined_face_status_snippet(
             self._solver._name
         )
@@ -213,17 +219,15 @@ class CorrectAndFlag(AbstractLimiterActionSet):
                 )
             )
             number_of_observables = self._solver._subcell_limiter_number_of_dmp_observables
-            dictionary["NEIGHBOUR_EXTREMA_MERGE"] = (
-                face_neighbour_dmp_extrema_merge_snippet(
-                    self._solver._name,
-                    number_of_observables,
-                    "referenceMinimum",
-                    "referenceMaximum",
-                    dictionary["SOLUTION_STORAGE_PRECISION"],
-                )
+            dictionary["NEIGHBOUR_EXTREMA_MERGE"] = vertex_dmp_extrema_merge_snippet(
+                self._solver._name,
+                number_of_observables,
+                "referenceMinimum",
+                "referenceMaximum",
+                dictionary["SOLUTION_STORAGE_PRECISION"],
             )
-            dictionary["HANGING_FACE_DMP_EXTREMA_FROM_COARSE"] = (
-                hanging_face_dmp_extrema_from_coarse_snippet(
+            dictionary["HANGING_VERTEX_DMP_EXTREMA_FROM_COARSE"] = (
+                hanging_vertex_dmp_extrema_from_coarse_snippet(
                     self._solver._name, number_of_observables
                 )
             )
@@ -273,6 +277,13 @@ class CorrectAndFlag(AbstractLimiterActionSet):
             == peano4.solversteps.ActionSet.OPERATION_TOUCH_HANGING_FACE_LAST_TIME
         ):
             result = jinja2.Template(self._Template_TouchHangingFaceLastTime).render(
+                **dictionary
+            )
+        if (
+            operation_name
+            == peano4.solversteps.ActionSet.OPERATION_TOUCH_HANGING_VERTEX_FIRST_TIME
+        ):
+            result = jinja2.Template(self._Template_TouchHangingVertexFirstTime).render(
                 **dictionary
             )
         if (

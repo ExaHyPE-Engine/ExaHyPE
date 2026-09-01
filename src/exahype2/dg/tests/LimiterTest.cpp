@@ -13,6 +13,36 @@ void exahype2::dg::tests::LimiterTest::run() {
   testMethod(testObservableExtremaReduction);
   testMethod(testProjectedObservableExtremaReduction);
   testMethod(testExtremumQuantisation);
+  testMethod(testHangingVertexFacet);
+}
+
+void exahype2::dg::tests::LimiterTest::testHangingVertexFacet() {
+  // A hanging vertex on the lower boundary of the first axis and inside the
+  // second axis lies on the father cell's left face, whose vertices are 0 and 2.
+  const tarch::la::Vector<2, int> onLeftFace = {0, 1};
+  validate(exahype2::dg::isCoarseVertexOnFacetOfHangingVertex(onLeftFace, 0));
+  validate(not exahype2::dg::isCoarseVertexOnFacetOfHangingVertex(onLeftFace, 1));
+  validate(exahype2::dg::isCoarseVertexOnFacetOfHangingVertex(onLeftFace, 2));
+  validate(not exahype2::dg::isCoarseVertexOnFacetOfHangingVertex(onLeftFace, 3));
+
+  // A hanging vertex that coincides with the upper-right coarse vertex lies on
+  // that vertex alone.
+  const tarch::la::Vector<2, int> onCorner = {3, 3};
+  validate(not exahype2::dg::isCoarseVertexOnFacetOfHangingVertex(onCorner, 0));
+  validate(not exahype2::dg::isCoarseVertexOnFacetOfHangingVertex(onCorner, 1));
+  validate(not exahype2::dg::isCoarseVertexOnFacetOfHangingVertex(onCorner, 2));
+  validate(exahype2::dg::isCoarseVertexOnFacetOfHangingVertex(onCorner, 3));
+
+  // In three dimensions a hanging vertex inside an edge lies on the edge's two
+  // vertices: Lower along the second axis, upper along the third.
+  const tarch::la::Vector<3, int> onEdge = {2, 0, 3};
+  for (int coarseVertexNumber = 0; coarseVertexNumber < 8; coarseVertexNumber++) {
+    const bool onEdgeVertices = coarseVertexNumber == 4 or coarseVertexNumber == 5;
+    validateEquals(
+      exahype2::dg::isCoarseVertexOnFacetOfHangingVertex(onEdge, coarseVertexNumber),
+      onEdgeVertices
+    );
+  }
 }
 
 void exahype2::dg::tests::LimiterTest::testExtremumQuantisation() {
