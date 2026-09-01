@@ -6,13 +6,13 @@ namespace {
   template <int NumberOfUnknowns, typename ComputePrecision>
   struct StubSolver final {
     static GPU_CALLABLE_METHOD void flux(
-      const ComputePrecision* NOALIAS const        state,
-      const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
-      const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
-      const double                                 timeStamp,
-      const double                                 timeStepSize,
-      const int                                    normal,
-      ComputePrecision* NOALIAS const              fluxes
+      [[maybe_unused]] const ComputePrecision* NOALIAS const        state,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
+      [[maybe_unused]] const double                                 timeStamp,
+      [[maybe_unused]] const double                                 timeStepSize,
+      [[maybe_unused]] const int                                    normal,
+      ComputePrecision* NOALIAS const                               fluxes
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         fluxes[unknown] = static_cast<ComputePrecision>(0);
@@ -20,14 +20,14 @@ namespace {
     }
 
     static GPU_CALLABLE_METHOD void nonconservativeProduct(
-      const ComputePrecision* NOALIAS const        averageState,
-      const ComputePrecision* NOALIAS const        stateJump,
-      const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
-      const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
-      const double                                 timeStamp,
-      const double                                 timeStepSize,
-      const int                                    normal,
-      ComputePrecision* NOALIAS const              result
+      [[maybe_unused]] const ComputePrecision* NOALIAS const        averageState,
+      [[maybe_unused]] const ComputePrecision* NOALIAS const        stateJump,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
+      [[maybe_unused]] const double                                 timeStamp,
+      [[maybe_unused]] const double                                 timeStepSize,
+      [[maybe_unused]] const int                                    normal,
+      ComputePrecision* NOALIAS const                               result
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         result[unknown] = static_cast<ComputePrecision>(0);
@@ -35,24 +35,24 @@ namespace {
     }
 
     static GPU_CALLABLE_METHOD ComputePrecision maxEigenvalue(
-      const ComputePrecision* NOALIAS const        state,
-      const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
-      const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
-      const double                                 timeStamp,
-      const double                                 timeStepSize,
-      const int                                    normal
+      [[maybe_unused]] const ComputePrecision* NOALIAS const        state,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
+      [[maybe_unused]] const double                                 timeStamp,
+      [[maybe_unused]] const double                                 timeStepSize,
+      [[maybe_unused]] const int                                    normal
     ) {
       return static_cast<ComputePrecision>(1);
     }
 
     static GPU_CALLABLE_METHOD void diffusiveSourceTerm(
-      const ComputePrecision* NOALIAS const        state,
-      const ComputePrecision* NOALIAS const        stateGradient,
-      const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
-      const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
-      const double                                 timeStamp,
-      const double                                 timeStepSize,
-      ComputePrecision* NOALIAS const              diffusiveSources
+      [[maybe_unused]] const ComputePrecision* NOALIAS const        state,
+      [[maybe_unused]] const ComputePrecision* NOALIAS const        stateGradient,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
+      [[maybe_unused]] const double                                 timeStamp,
+      [[maybe_unused]] const double                                 timeStepSize,
+      ComputePrecision* NOALIAS const                               diffusiveSources
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         diffusiveSources[unknown] = static_cast<ComputePrecision>(0);
@@ -60,15 +60,15 @@ namespace {
     }
 
     static GPU_CALLABLE_METHOD ComputePrecision solveRiemannProblem(
-      const ComputePrecision* NOALIAS const        leftState,
-      const ComputePrecision* NOALIAS const        rightState,
-      const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
-      const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
-      const double                                 timeStamp,
-      const double                                 timeStepSize,
-      const int                                    normal,
-      ComputePrecision* NOALIAS const              leftGoingFlux,
-      ComputePrecision* NOALIAS const              rightGoingFlux
+      [[maybe_unused]] const ComputePrecision* NOALIAS const        leftState,
+      [[maybe_unused]] const ComputePrecision* NOALIAS const        rightState,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
+      [[maybe_unused]] const double                                 timeStamp,
+      [[maybe_unused]] const double                                 timeStepSize,
+      [[maybe_unused]] const int                                    normal,
+      ComputePrecision* NOALIAS const                               leftGoingFlux,
+      ComputePrecision* NOALIAS const                               rightGoingFlux
     ) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         leftGoingFlux[unknown]  = static_cast<ComputePrecision>(0);

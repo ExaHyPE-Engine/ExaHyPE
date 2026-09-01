@@ -7,6 +7,7 @@ from exahype2.solvers.fv import create_patch_and_halo
 from .Labels import (
     add_limiter_attributes_to_cell_label,
     add_limiter_attributes_to_face_label,
+    create_limiter_vertex_label,
     face_status_merge_snippet,
 )
 from exahype2.solvers.fv.SubcellScheme import SubcellScheme
@@ -66,12 +67,9 @@ class SubcellLimiting:
 
         ``limiter_solver`` is a finite-volume :class:`SubcellScheme`, and the
         solver requires a ``physical_admissibility_criterion``, a positive
-        ``number_of_dmp_observables``, or both. ``dmp_observables`` maps one nodal
-        ``Q`` state to that many ``observables``, and
-        ``dmp_relaxation_parameter_implementation`` returns each relaxation from
-        ``observable`` and ``specifiedRelaxationParameter``. The admissible range
-        widens by the larger of ``dmp_relaxation_parameter`` and
-        ``dmp_differences_scaling`` times the reference range.
+        ``number_of_dmp_observables``, or both. A DMP merges previous-step ranges
+        across the nodal neighbourhood V_i and widens the result by its absolute
+        or scaled relaxation (Dumbser et al., arXiv:1406.7416, equation 23).
         """
         if self.subcell_limiter_is_enabled:
             raise RuntimeError("The subcell limiter is already configured.")
@@ -178,6 +176,8 @@ class SubcellLimiting:
         """Attaches the limiter labels once the base labels exist.
 
         A limiter-capable solver calls this at the end of ``create_data_structures``.
+        A discrete maximum principle adds the vertex label that carries the
+        previous-solution extrema.
         """
         if not self.subcell_limiter_is_enabled:
             return
@@ -192,6 +192,14 @@ class SubcellLimiting:
             )
         self._face_label.merge_method_definition = merge.replace(
             _FACE_MERGE_ANCHOR, _FACE_MERGE_ANCHOR + face_status_merge_snippet()
+        )
+
+        self._subcell_limiter_vertex_label = (
+            create_limiter_vertex_label(
+                self._name, self._subcell_limiter_number_of_dmp_observables
+            )
+            if self._subcell_limiter_uses_dmp
+            else None
         )
 
         self._create_subcell_patches()
@@ -229,6 +237,8 @@ class SubcellLimiting:
         datamodel.add_cell(self._subcell_solution_old)
         datamodel.add_face(self._subcell_halo_old)
         datamodel.add_face(self._subcell_halo_new)
+        if self._subcell_limiter_vertex_label is not None:
+            datamodel.add_vertex(self._subcell_limiter_vertex_label)
 
     def _use_subcell_limiter_data(self, step):
         """Makes the limiter's required patches available to a solver sweep.
@@ -241,6 +251,8 @@ class SubcellLimiting:
             return
         step.use_cell(self._subcell_solution)
         step.use_cell(self._subcell_solution_old)
+        if self._subcell_limiter_vertex_label is not None:
+            step.use_vertex(self._subcell_limiter_vertex_label)
         if step.name == "DynamicAMR":
             return
         step.use_face(self._subcell_halo_old)
@@ -275,7 +287,9 @@ class SubcellLimiting:
             _SUBCELL_INITIALISE_DESCEND_ORDER
         )
         self._action_set_subcell_predict = Predict(
-            self, store_cell + " and " + self._subcell_limiter_state_guard("Predict")
+            self,
+            store_cell + " and " + self._subcell_limiter_state_guard("Predict"),
+            self._subcell_limiter_state_guard("Predict"),
         )
         self._action_set_subcell_correct_and_flag = CorrectAndFlag(
             self,

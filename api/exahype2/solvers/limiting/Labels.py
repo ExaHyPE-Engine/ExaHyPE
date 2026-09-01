@@ -2,11 +2,15 @@
 # use, please see the copyright notice at www.peano-framework.org
 import peano4.datamodel
 
-from peano4.datamodel.MetaDataAttribute import Integer, IntegerArray
+from peano4.datamodel.MetaDataAttribute import DoubleArray, Integer, IntegerArray
 
 
 _STATUS_INCLUDE = """
 #include "exahype2/dg/LimiterStatus.h"
+"""
+
+_LIMITER_INCLUDE = """
+#include "exahype2/dg/Limiter.h"
 """
 
 _STATUS_ENUM = "::exahype2::dg::LimiterStatus"
@@ -101,13 +105,59 @@ def add_limiter_attributes_to_face_label(label):
 
 
 def face_status_merge_snippet():
-    """Returns the face-merge line that copies the neighbour-owned status side.
+    """Returns the face-merge lines that copy the neighbour-owned status side.
 
     The side is chosen from the geometric outer normal, so the two sides stay
     independent.
     """
     return """
       setLimiterStatus(neighbourEntry, neighbour.getLimiterStatus(neighbourEntry));
+"""
+
+
+def create_limiter_vertex_label(solver_name, number_of_dmp_observables):
+    """Creates the vertex label that carries the previous-solution extrema.
+
+    The predictor sweep seeds each vertex with infinities and reduces the accepted
+    solutions of the adjacent cells into it.
+    """
+    label = peano4.datamodel.MetaData(solver_name + "VertexLabel")
+    label.add_attribute(DoubleArray("dmpMinimum", number_of_dmp_observables))
+    label.add_attribute(DoubleArray("dmpMaximum", number_of_dmp_observables))
+    label.includes += _LIMITER_INCLUDE
+    label.merge_method_definition = _vertex_extrema_merge(number_of_dmp_observables)
+    return label
+
+
+def _vertex_extrema_merge(number_of_observables):
+    """Returns the merge that reduces two copies of one vertex into its extrema.
+
+    A minimum and a maximum are the same for every order of the copies, so the
+    merged vertex does not depend on the traversal or the decomposition.
+    """
+    return f"""
+  switch (context) {{
+  case ::peano4::stacks::SendReceiveContext::InterRank:
+  case ::peano4::stacks::SendReceiveContext::IntraRank:
+    for (int observable = 0; observable < {number_of_observables}; observable++) {{
+      setDmpMinimum(
+        observable,
+        ::exahype2::dg::mergeDiscreteMaximumPrincipleMinimum(
+          getDmpMinimum(observable), neighbour.getDmpMinimum(observable)
+        )
+      );
+      setDmpMaximum(
+        observable,
+        ::exahype2::dg::mergeDiscreteMaximumPrincipleMaximum(
+          getDmpMaximum(observable), neighbour.getDmpMaximum(observable)
+        )
+      );
+    }}
+    break;
+  case ::peano4::stacks::SendReceiveContext::Consolidation:
+    assertion(false, "The rank rebuilds the vertex label with a copy, so its merge never sees a consolidation.");
+    break;
+  }}
 """
 
 
@@ -143,7 +193,7 @@ def hanging_face_status_from_coarse_snippet(solver_name):
 """
 
 
-def hanging_face_status_fold_snippet(solver_name):
+def hanging_face_status_reduce_snippet(solver_name):
     """Returns the C++ that raises a hanging face's fine-cell status onto the
     coarse face's refined side.
 
@@ -169,6 +219,145 @@ def reset_refined_face_status_snippet(solver_name):
     for (int faceSide = 0; faceSide < 2; faceSide++) {{
       if (fineGridFace{solver_name}FaceLabel.getAboveHanging(faceSide)) {{
         fineGridFace{solver_name}FaceLabel.setLimiterStatus(faceSide, ::exahype2::dg::LimiterStatus::Regular);
+      }}
+    }}
+"""
+
+
+def reset_vertex_dmp_extrema_snippet(solver_name, number_of_observables):
+    """Returns the C++ that seeds a vertex's extrema with infinities.
+
+    The vertex touch runs before any adjacent cell reduces into the vertex, so a
+    vertex no cell writes keeps the infinities.
+    """
+    return f"""
+    for (int observable = 0; observable < {number_of_observables}; observable++) {{
+      fineGridVertex{solver_name}VertexLabel.setDmpMinimum(observable, std::numeric_limits<double>::infinity());
+      fineGridVertex{solver_name}VertexLabel.setDmpMaximum(observable, -std::numeric_limits<double>::infinity());
+    }}
+"""
+
+
+def cell_dmp_extrema_to_vertices_snippet(
+    solver_name, number_of_observables, minimum, maximum
+):
+    """Returns the C++ that reduces a cell's observable extrema into its vertices.
+
+    ``minimum`` and ``maximum`` name arrays of ``number_of_observables`` values.
+    A minimum and a maximum are the same for every order of the adjacent cells,
+    so the vertex does not depend on the traversal or the decomposition.
+    """
+    return f"""
+    for (int vertexNumber = 0; vertexNumber < TWO_POWER_D; vertexNumber++) {{
+      auto& vertexLabel = fineGridVertices{solver_name}VertexLabel(vertexNumber);
+      for (int observable = 0; observable < {number_of_observables}; observable++) {{
+        vertexLabel.setDmpMinimum(
+          observable,
+          ::exahype2::dg::mergeDiscreteMaximumPrincipleMinimum(
+            vertexLabel.getDmpMinimum(observable), static_cast<double>({minimum}[observable])
+          )
+        );
+        vertexLabel.setDmpMaximum(
+          observable,
+          ::exahype2::dg::mergeDiscreteMaximumPrincipleMaximum(
+            vertexLabel.getDmpMaximum(observable), static_cast<double>({maximum}[observable])
+          )
+        );
+      }}
+    }}
+"""
+
+
+def vertex_dmp_extrema_merge_snippet(
+    solver_name, number_of_observables, minimum, maximum, precision
+):
+    """Returns the C++ that merges a cell's vertices' extrema into its range.
+
+    ``minimum`` and ``maximum`` name arrays of ``number_of_observables`` values of
+    type ``precision``. A vertex holds the range of every cell adjacent to it, so
+    the merged range covers every cell adjacent to a node of the cell.
+    """
+    return f"""
+    for (int vertexNumber = 0; vertexNumber < TWO_POWER_D; vertexNumber++) {{
+      const auto& vertexLabel = fineGridVertices{solver_name}VertexLabel(vertexNumber);
+      for (int observable = 0; observable < {number_of_observables}; observable++) {{
+        {minimum}[observable] = ::exahype2::dg::mergeDiscreteMaximumPrincipleMinimum(
+          {minimum}[observable],
+          static_cast<{precision}>(vertexLabel.getDmpMinimum(observable))
+        );
+        {maximum}[observable] = ::exahype2::dg::mergeDiscreteMaximumPrincipleMaximum(
+          {maximum}[observable],
+          static_cast<{precision}>(vertexLabel.getDmpMaximum(observable))
+        );
+      }}
+    }}
+"""
+
+
+def hanging_vertex_dmp_extrema_from_coarse_snippet(solver_name, number_of_observables):
+    """Returns the C++ that derives a hanging vertex's extrema from the coarse vertices.
+
+    A hanging vertex keeps whatever its storage slot last held, so its extrema
+    are seeded with infinities and reduced over the coarse vertices on every
+    father-cell boundary facet that contains it.
+    """
+    return (
+        reset_vertex_dmp_extrema_snippet(solver_name, number_of_observables)
+        + f"""
+    const auto hangingVertexPosition = marker.getRelativePositionWithinFatherCell();
+    for (int coarseVertexNumber = 0; coarseVertexNumber < TWO_POWER_D; coarseVertexNumber++) {{
+      if (::exahype2::dg::isCoarseVertexOnFacetOfHangingVertex(hangingVertexPosition, coarseVertexNumber)) {{
+        const auto& coarseVertexLabel = coarseGridVertices{solver_name}VertexLabel(coarseVertexNumber);
+        for (int observable = 0; observable < {number_of_observables}; observable++) {{
+          fineGridVertex{solver_name}VertexLabel.setDmpMinimum(
+            observable,
+            ::exahype2::dg::mergeDiscreteMaximumPrincipleMinimum(
+              fineGridVertex{solver_name}VertexLabel.getDmpMinimum(observable),
+              coarseVertexLabel.getDmpMinimum(observable)
+            )
+          );
+          fineGridVertex{solver_name}VertexLabel.setDmpMaximum(
+            observable,
+            ::exahype2::dg::mergeDiscreteMaximumPrincipleMaximum(
+              fineGridVertex{solver_name}VertexLabel.getDmpMaximum(observable),
+              coarseVertexLabel.getDmpMaximum(observable)
+            )
+          );
+        }}
+      }}
+    }}
+"""
+    )
+
+
+def hanging_vertex_dmp_extrema_reduce_snippet(solver_name, number_of_observables):
+    """Returns the C++ that reduces a hanging vertex's extrema into the coarse vertices.
+
+    By the time a hanging vertex is left, its adjacent fine cells have reduced
+    their extrema into it. A minimum and a maximum are the same for every order,
+    so the reduction does not depend on the traversal or the decomposition.
+    """
+    return f"""
+    const auto hangingVertexPosition = marker.getRelativePositionWithinFatherCell();
+    for (int coarseVertexNumber = 0; coarseVertexNumber < TWO_POWER_D; coarseVertexNumber++) {{
+      if (::exahype2::dg::isCoarseVertexOnFacetOfHangingVertex(hangingVertexPosition, coarseVertexNumber)) {{
+        auto& coarseVertexLabel = coarseGridVertices{solver_name}VertexLabel(coarseVertexNumber);
+        for (int observable = 0; observable < {number_of_observables}; observable++) {{
+          coarseVertexLabel.setDmpMinimum(
+            observable,
+            ::exahype2::dg::mergeDiscreteMaximumPrincipleMinimum(
+              coarseVertexLabel.getDmpMinimum(observable),
+              fineGridVertex{solver_name}VertexLabel.getDmpMinimum(observable)
+            )
+          );
+          coarseVertexLabel.setDmpMaximum(
+            observable,
+            ::exahype2::dg::mergeDiscreteMaximumPrincipleMaximum(
+              coarseVertexLabel.getDmpMaximum(observable),
+              fineGridVertex{solver_name}VertexLabel.getDmpMaximum(observable)
+            )
+          );
+        }}
       }}
     }}
 """

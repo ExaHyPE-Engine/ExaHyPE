@@ -1,7 +1,5 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-"""Meteotsunami in the Gulf of Mexico driven by a storm's pressure anomaly."""
-
 import argparse
 
 import exahype2
@@ -27,8 +25,6 @@ def parse_arguments():
 
 args = parse_arguments()
 
-# The bathymetry raster covers a wide rectangle of the basin, and the mesh is the
-# square that encloses it, so that the traversal keeps cubic cells.
 raster_offset = [-1514683.37644735, -1108652.87362612]
 raster_size = [3029257.84023389, 2284903.696092]
 mesh_side = max(raster_size)
@@ -85,34 +81,24 @@ for name, kind, value in (
     ("bathymetryFile", "string", "bathymetry/GulfOfMexicoBathymetry.nc"),
     ("bathymetryOffset", ("double", 2), raster_offset),
     ("bathymetrySize", ("double", 2), raster_size),
-    # The raster stores its own projection, so the scenario reads it on the same one.
     ("projectionCentralMeridian", "double", -84.0),
     ("projectionOriginLatitude", "double", 25.0),
     ("projectionFirstParallel", "double", 18.3333333),
     ("projectionSecondParallel", "double", 31.6666667),
     ("projectionSemiMajorAxis", "double", 6378137.0),
     ("projectionEccentricity", "double", 0.08181919084262157),
-    # Cells the survey never covered carry a fill value far below any sea floor, and
-    # interpolating one against its surveyed neighbours yields depths between the
-    # two. The survey itself bottoms out at 7422 m, so anything deeper came from a
-    # fill value and describes no sea floor.
     ("deepestSeaFloor", "double", 7500.0),
     ("referenceOceanDepth", "double", 999.0),
-    # A basin this deep resolves nothing thinner than metres, and a column allowed to
-    # thin below that keeps the momentum it arrived with, whose velocity then grows
-    # without bound and takes the admissible step with it.
     ("minimumWaterHeight", "double", 10.0),
     ("coastalDepth", "double", 20.0),
     ("waterDensity", "double", 1000.0),
     ("manningCoefficient", "double", 0.025),
     ("earthAngularVelocity", "double", 7.2921150e-5),
-    # The storm runs between these two points at a fixed speed.
     ("trackStartLongitude", "double", -85.107),
     ("trackStartLatitude", "double", 30.747),
     ("trackEndLongitude", "double", -81.562),
     ("trackEndLatitude", "double", 23.4480),
     ("trackSpeed", "double", 20.0),
-    # The anomaly is steeper ahead of the storm centre than behind it.
     ("pressureLeadingAmplitude", "double", 3761.0),
     ("pressureTrailingAmplitude", "double", 466.5),
     ("pressureLeadingWidth", "double", 0.31),
@@ -123,8 +109,6 @@ for name, kind, value in (
 
 project.constants.export_constexpr_with_type("g", str(9.81), "double")
 
-# The include directory is the repository root, which is what lets every file below
-# include the shared ExaSkred headers by their full path.
 project.output.makefile.add_include_directory("../../../..")
 project.output.makefile.add_cpp_file("../../AlbersEqualArea.cpp")
 project.output.makefile.add_cpp_file("../../AugmentedState.cpp")
