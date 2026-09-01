@@ -4,7 +4,7 @@ from .AbstractLimiterActionSet import AbstractLimiterActionSet
 from ..Labels import (
     cell_status_to_face_snippet,
     hanging_face_status_from_coarse_snippet,
-    hanging_face_status_fold_snippet,
+    hanging_face_status_reduce_snippet,
     reset_refined_face_status_snippet,
 )
 from ..ProjectionMatrices import create_subcell_projection_matrices
@@ -38,7 +38,7 @@ class SpreadDomain(AbstractLimiterActionSet):
 
     _Template_TouchHangingFaceLastTime = """
   if ({{FACE_GUARD}}) {
-{{HANGING_FACE_STATUS_FOLD}}
+{{HANGING_FACE_STATUS_REDUCE}}
   }
 """
 
@@ -66,16 +66,9 @@ class SpreadDomain(AbstractLimiterActionSet):
       constexpr int NumberOfData            = {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
       static constexpr {{SOLUTION_STORAGE_PRECISION}} DgToFvMatrix[] = {{DG_TO_FV_MATRIX}};
 
-      // A cell already on the subcell scheme carries its evolved subgrid forward;
-      // only a cell entering the scheme takes the projection of its accepted
-      // polynomial. Re-projecting a carried subgrid every step would smooth it
-      // through the polynomial and dig spurious minima at persistent fronts.
-      // A cell entering within the first time step still holds the directly
-      // sampled initial subcells from grid initialisation. They stay in place:
-      // at a discontinuity the initial polynomial rings, and projecting it
-      // would carry that ringing onto the subgrid. The corrector has already
-      // advanced the stamp, so the first recomputed step is the one whose
-      // stamp equals its step size.
+      // The projection of the accepted polynomial overwrites only the subgrid of
+      // a cell entering the scheme; a cell entering within the first time step
+      // keeps the subcells that grid initialisation sampled.
       const bool holdsInitialSubcells =
         fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp() <= fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize();
       if (not ::exahype2::dg::runsSubcellScheme(fineGridCell{{SOLVER_NAME}}CellLabel.getPreviousLimiterStatus())
@@ -87,9 +80,9 @@ class SpreadDomain(AbstractLimiterActionSet):
         );
       }
 
-      // The recompute reads its halo from the previous-solution faces, and only
-      // those travel between the spreading and the recompute sweep, so the cell
-      // publishes its boundary layers there.
+      // The recompute reads its halo from the previous-solution faces. Only
+      // those travel between the spreading and the recompute sweep, so the
+      // cell writes its boundary layers there.
       {{SOLUTION_STORAGE_PRECISION}}* haloFaces[2 * DIMENSIONS];
       for (int faceNumber = 0; faceNumber < 2 * DIMENSIONS; faceNumber++) {
         haloFaces[faceNumber] = fineGridFaces{{SOLVER_NAME}}SubcellOld(faceNumber).data();
@@ -102,20 +95,6 @@ class SpreadDomain(AbstractLimiterActionSet):
         // the user's boundary conditions derive them from the inner ones.
         if (not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[faceNumber % DIMENSIONS]
             and fineGridFaces{{SOLVER_NAME}}FaceLabel(faceNumber).getBoundary()) {
-          ::exahype2::fv::handleBoundary<
-            {{FULL_QUALIFIED_SOLVER_NAME}},
-            NumberOfSubcellsPerAxis,
-            {{HALO_WIDTH}},
-            {{NUMBER_OF_UNKNOWNS}},
-            {{NUMBER_OF_AUXILIARY_VARIABLES}},
-            {{SOLUTION_STORAGE_PRECISION}}>(
-            repositories::{{SOLVER_INSTANCE}},
-            marker.getX(),
-            marker.getH(),
-            fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp(),
-            faceNumber,
-            fineGridFaces{{SOLVER_NAME}}Subcell(faceNumber).data()
-          );
           ::exahype2::fv::handleBoundary<
             {{FULL_QUALIFIED_SOLVER_NAME}},
             NumberOfSubcellsPerAxis,
@@ -154,7 +133,7 @@ class SpreadDomain(AbstractLimiterActionSet):
         dictionary["HANGING_FACE_STATUS_FROM_COARSE"] = (
             hanging_face_status_from_coarse_snippet(self._solver._name)
         )
-        dictionary["HANGING_FACE_STATUS_FOLD"] = hanging_face_status_fold_snippet(
+        dictionary["HANGING_FACE_STATUS_REDUCE"] = hanging_face_status_reduce_snippet(
             self._solver._name
         )
         dg_to_fv, _ = create_subcell_projection_matrices(self._solver._basis)

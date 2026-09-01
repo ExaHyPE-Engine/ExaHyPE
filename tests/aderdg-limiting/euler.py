@@ -12,7 +12,6 @@ def standard_arguments(
     max_grid_levels=3,
     limiter_modes=("active", "all-accepted", "all-limited"),
 ):
-    """Parses the command line shared by every limiting scenario."""
     parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
     parser.add_argument("-et", "--end-time", type=float, default=end_time)
     parser.add_argument("--degrees-of-freedom", type=int, default=degrees_of_freedom)
@@ -231,7 +230,7 @@ def add_limiter(
         solver.add_subcell_limiter(
             limiter_solver=scheme,
             number_of_dmp_observables=dimensions + 2,
-            dmp_relaxation_parameter=0.01,
+            dmp_relaxation_parameter=1.0e-4,
             dmp_differences_scaling=differences_scaling,
             physical_admissibility_criterion=physical_admissibility_criterion,
             dmp_observables=observable_mapping,

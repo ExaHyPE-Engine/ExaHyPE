@@ -8,7 +8,6 @@ namespace {
     GPU_CALLABLE_METHOD void operator()(const Value* const state, Value* const observables) const {}
   };
 
-  // Taking these addresses makes the core library compile every public branch.
   template <typename Value>
   void instantiateLimiterTemplates() {
     [[maybe_unused]] auto* mergeMinimum              = &exahype2::dg::mergeDiscreteMaximumPrincipleMinimum<Value>;
@@ -21,9 +20,9 @@ namespace {
       &exahype2::dg::reduceProjectedObservableExtrema<DIMENSIONS, 2, 3, 2, 2, Value, ObservableMapping<Value>>;
   }
 
-  // The two precisions a solver may store its solution in.
   [[maybe_unused]] void instantiateLimiterTemplates() {
     instantiateLimiterTemplates<float>();
     instantiateLimiterTemplates<double>();
+    [[maybe_unused]] auto* hangingVertexFacet = &exahype2::dg::isCoarseVertexOnFacetOfHangingVertex<DIMENSIONS>;
   }
 } // namespace

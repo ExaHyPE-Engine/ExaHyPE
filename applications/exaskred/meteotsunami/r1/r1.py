@@ -1,7 +1,5 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-"""Meteotsunami in the idealised R1 channel driven by a travelling pressure pulse."""
-
 import argparse
 import math
 
@@ -35,8 +33,6 @@ def parse_arguments():
 
 args = parse_arguments()
 
-# The channel is a long strip, and the mesh is the square that encloses it, so that
-# the traversal keeps cubic cells. The bathymetry raster covers the strip alone.
 channel_offset = [-39870.0, 0.0]
 channel_size = [379700.0, 100e3]
 mesh_side = max(channel_size)
@@ -96,8 +92,6 @@ for name, kind, value in (
     ("minimumWaterHeight", "double", 1.0),
     ("coastalDepth", "double", 5.0),
     ("waterDensity", "double", 1000.0),
-    # The channel has one uniform depth, which the raster's name states, so the
-    # roughness follows whichever raster the run reads.
     ("manningCoefficient", "double", manning_coefficient(50.0)),
     ("coriolisParameter", "double", 9.35e-5),
     ("pressureAmplitude", "double", 100.0),
@@ -108,8 +102,6 @@ for name, kind, value in (
 
 project.constants.export_constexpr_with_type("g", str(9.81), "double")
 
-# The include directory is the repository root, which is what lets every file below
-# include the shared ExaSkred headers by their full path.
 project.output.makefile.add_include_directory("../../../..")
 project.output.makefile.add_cpp_file("../../AugmentedState.cpp")
 project.output.makefile.add_cpp_file("../../Forcing.cpp")

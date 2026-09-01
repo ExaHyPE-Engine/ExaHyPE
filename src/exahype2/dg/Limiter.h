@@ -2,38 +2,40 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "tarch/Assertions.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/accelerator.h"
+#include "tarch/la/Vector.h"
 
 TARGET_DECLARE
 namespace exahype2::dg {
   template <typename Value>
-  INLINE_METHOD GPU_CALLABLE_METHOD Value mergeDiscreteMaximumPrincipleMinimum(const Value left, const Value right);
+  INLINE_METHOD GPU_CALLABLE_METHOD Value mergeDiscreteMaximumPrincipleMinimum(Value left, Value right);
 
   template <typename Value>
-  INLINE_METHOD GPU_CALLABLE_METHOD Value mergeDiscreteMaximumPrincipleMaximum(const Value left, const Value right);
+  INLINE_METHOD GPU_CALLABLE_METHOD Value mergeDiscreteMaximumPrincipleMaximum(Value left, Value right);
 
   template <typename Value>
-  INLINE_METHOD GPU_CALLABLE_METHOD Value quantiseObservableExtremum(const Value extremum);
+  INLINE_METHOD GPU_CALLABLE_METHOD Value quantiseObservableExtremum(Value extremum);
 
   template <typename Value>
   INLINE_METHOD GPU_CALLABLE_METHOD bool satisfiesDiscreteMaximumPrinciple(
-    const Value candidateMinimum,
-    const Value candidateMaximum,
-    const Value referenceMinimum,
-    const Value referenceMaximum,
-    const Value relaxationParameter,
-    const Value differencesScaling
+    Value candidateMinimum,
+    Value candidateMaximum,
+    Value referenceMinimum,
+    Value referenceMaximum,
+    Value relaxationParameter,
+    Value differencesScaling
   );
 
   template <int NumberOfObservables, typename Value, typename ObservableMapping>
   INLINE_METHOD GPU_CALLABLE_METHOD void reduceObservableExtrema(
-    Value* const       minimum,
-    Value* const       maximum,
-    const Value* const nodalState,
-    const int          numberOfNodes,
-    const int          strideBetweenNodes,
-    ObservableMapping  mapStateToObservables
+    Value*            minimum,
+    Value*            maximum,
+    const Value*      nodalState,
+    int               numberOfNodes,
+    int               strideBetweenNodes,
+    ObservableMapping mapStateToObservables
   );
 
   template <
@@ -45,11 +47,17 @@ namespace exahype2::dg {
     typename Value,
     typename ObservableMapping>
   INLINE_METHOD GPU_CALLABLE_METHOD void reduceProjectedObservableExtrema(
-    Value* const       minimum,
-    Value* const       maximum,
-    const Value* const nodalState,
-    const Value* const samplingMatrix,
-    ObservableMapping  mapStateToObservables
+    Value*            minimum,
+    Value*            maximum,
+    const Value*      nodalState,
+    const Value*      samplingMatrix,
+    ObservableMapping mapStateToObservables
+  );
+
+  template <int Dimensions>
+  INLINE_METHOD GPU_CALLABLE_METHOD bool isCoarseVertexOnFacetOfHangingVertex(
+    const tarch::la::Vector<Dimensions, int>& hangingVertexPosition,
+    int                                       coarseVertexNumber
   );
 } // namespace exahype2::dg
 TARGET_DECLARE_END

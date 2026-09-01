@@ -20,4 +20,5 @@ private:
   void testObservableExtremaReduction();
   void testProjectedObservableExtremaReduction();
   void testExtremumQuantisation();
+  void testHangingVertexFacet();
 };
