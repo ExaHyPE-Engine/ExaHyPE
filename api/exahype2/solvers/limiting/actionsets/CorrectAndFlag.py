@@ -4,8 +4,10 @@ from .AbstractLimiterActionSet import AbstractLimiterActionSet
 from ..Labels import (
     cell_status_to_face_snippet,
     hanging_face_status_from_coarse_snippet,
-    hanging_face_status_fold_snippet,
+    hanging_face_status_reduce_snippet,
+    hanging_vertex_dmp_extrema_from_coarse_snippet,
     reset_refined_face_status_snippet,
+    vertex_dmp_extrema_merge_snippet,
 )
 
 import jinja2
@@ -53,117 +55,31 @@ class CorrectAndFlag(AbstractLimiterActionSet):
     constexpr int NumberOfDofsPerAxis     = {{ORDER}} + 1;
     constexpr int NumberOfSubcellsPerAxis = 2 * {{ORDER}} + 1;
 
-    {{SOLUTION_STORAGE_PRECISION}} candidateMinimum[NumberOfObservables];
-    {{SOLUTION_STORAGE_PRECISION}} candidateMaximum[NumberOfObservables];
-    std::fill_n(
-      candidateMinimum,
-      NumberOfObservables,
-      std::numeric_limits<{{SOLUTION_STORAGE_PRECISION}}>::infinity()
-    );
-    std::fill_n(
-      candidateMaximum,
-      NumberOfObservables,
-      -std::numeric_limits<{{SOLUTION_STORAGE_PRECISION}}>::infinity()
-    );
     const auto mapStateToObservables = [](
       const {{SOLUTION_STORAGE_PRECISION}}* const Q,
       {{SOLUTION_STORAGE_PRECISION}}* const observables
     ) {
       {{DMP_OBSERVABLES}}
     };
-    ::exahype2::dg::reduceObservableExtrema<NumberOfObservables>(
-      candidateMinimum,
-      candidateMaximum,
-      candidate,
-      NumberOfNodes,
-      DataPerNode,
-      mapStateToObservables
-    );
-
     // A polynomial can attain extrema between its storage nodes. Lobatto samples
     // cover the cell boundary, while subcell averages cover the fallback grid.
     static constexpr {{SOLUTION_STORAGE_PRECISION}} DgToLobattoMatrix[] = {{DMP_DG_TO_LOBATTO_MATRIX}};
     static constexpr {{SOLUTION_STORAGE_PRECISION}} DgToSubcellMatrix[] = {{DMP_DG_TO_SUBCELL_MATRIX}};
-    ::exahype2::dg::reduceProjectedObservableExtrema<
-      DIMENSIONS,
-      NumberOfDofsPerAxis,
-      NumberOfDofsPerAxis,
-      DataPerNode,
-      NumberOfObservables
-    >(
-      candidateMinimum,
-      candidateMaximum,
-      candidate,
-      DgToLobattoMatrix,
-      mapStateToObservables
-    );
-    ::exahype2::dg::reduceProjectedObservableExtrema<
-      DIMENSIONS,
-      NumberOfDofsPerAxis,
-      NumberOfSubcellsPerAxis,
-      DataPerNode,
-      NumberOfObservables
-    >(
-      candidateMinimum,
-      candidateMaximum,
-      candidate,
-      DgToSubcellMatrix,
-      mapStateToObservables
-    );
 
-    // The reference is the cell's own previous-step range, sampled like the
-    // candidate. Folding the neighbours' ranges in would widen it by an
-    // approaching jump, so a cell ahead of a front would accept its ringing
-    // candidate and the front would cross the mesh unflagged. The corrector has
-    // not touched the predictor backup, so it still holds the accepted
-    // previous solution.
+    {{SOLUTION_STORAGE_PRECISION}} candidateMinimum[NumberOfObservables];
+    {{SOLUTION_STORAGE_PRECISION}} candidateMaximum[NumberOfObservables];
+{{CANDIDATE_EXTREMA_REDUCTION}}
+
+    // The corrector has not touched the predictor backup, so it still holds the
+    // accepted previous solution.
     const auto* const previousSolution = fineGridCell{{UNKNOWN_IDENTIFIER}}_old.data();
     {{SOLUTION_STORAGE_PRECISION}} referenceMinimum[NumberOfObservables];
     {{SOLUTION_STORAGE_PRECISION}} referenceMaximum[NumberOfObservables];
-    std::fill_n(
-      referenceMinimum,
-      NumberOfObservables,
-      std::numeric_limits<{{SOLUTION_STORAGE_PRECISION}}>::infinity()
-    );
-    std::fill_n(
-      referenceMaximum,
-      NumberOfObservables,
-      -std::numeric_limits<{{SOLUTION_STORAGE_PRECISION}}>::infinity()
-    );
-    ::exahype2::dg::reduceObservableExtrema<NumberOfObservables>(
-      referenceMinimum,
-      referenceMaximum,
-      previousSolution,
-      NumberOfNodes,
-      DataPerNode,
-      mapStateToObservables
-    );
-    ::exahype2::dg::reduceProjectedObservableExtrema<
-      DIMENSIONS,
-      NumberOfDofsPerAxis,
-      NumberOfDofsPerAxis,
-      DataPerNode,
-      NumberOfObservables
-    >(
-      referenceMinimum,
-      referenceMaximum,
-      previousSolution,
-      DgToLobattoMatrix,
-      mapStateToObservables
-    );
-    ::exahype2::dg::reduceProjectedObservableExtrema<
-      DIMENSIONS,
-      NumberOfDofsPerAxis,
-      NumberOfSubcellsPerAxis,
-      DataPerNode,
-      NumberOfObservables
-    >(
-      referenceMinimum,
-      referenceMaximum,
-      previousSolution,
-      DgToSubcellMatrix,
-      mapStateToObservables
-    );
+{{REFERENCE_EXTREMA_REDUCTION}}
+    // The previous-step ranges of every cell adjacent to a node of this one widen
+    // the reference, the neighbourhood V_i of Dumbser, Zanotti, Loubere and Diot,
+    // arXiv 1406.7416, equation 23.
+{{NEIGHBOUR_EXTREMA_MERGE}}
 
 {% if DMP_RELAXATION_PARAMETER_IMPLEMENTATION %}
     const auto relaxationParameterForObservable = [](
@@ -196,17 +112,13 @@ class CorrectAndFlag(AbstractLimiterActionSet):
     }
 {% endif %}
     const auto remainsOnSubcellScheme = fineGridCell{{SOLVER_NAME}}CellLabel.getWasTroubledInPreviousStep();
-    // The persistence bit is consumed once. A new rejection or its directly
-    // limited ring sets the bit again for the following step.
+    // A new rejection or its directly limited ring sets the bit again for the
+    // following step.
     fineGridCell{{SOLVER_NAME}}CellLabel.setWasTroubledInPreviousStep(false);
 {% if IS_ADAPTIVE %}
-    // Only a cell that leaves the flagging on the Galerkin path may set the next
-    // step. The candidate of a rejected cell, of one that stays on the subcell
-    // scheme, and of one the subcell domain had already reached is discarded, so
-    // none of them may hand the reduction a wave speed no accepted state carries;
-    // the recompute reports theirs. The status the spreading left in the previous
-    // step records the last of these, and reading it off the cell's own label keeps
-    // the verdict independent of the order a traversal visits neighbours in.
+    // A cell that stays on the subcell scheme discards its candidate, so the
+    // recompute reports its wave speed. Its previous status makes this verdict
+    // independent of the order a traversal visits neighbours in.
     if (admissible and not remainsOnSubcellScheme
         and fineGridCell{{SOLVER_NAME}}CellLabel.getPreviousLimiterStatus() == ::exahype2::dg::LimiterStatus::Regular) {
       const double timeStamp      = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
@@ -237,38 +149,46 @@ class CorrectAndFlag(AbstractLimiterActionSet):
 """
 
     _Template_TouchFaceFirstTime = """
-  if ({{FACE_GUARD}}) {
+  if ({{SWEEP_GUARD}}) {
 {{RESET_REFINED_FACE_STATUS}}
   }
 """
 
     _Template_TouchHangingFaceFirstTime = """
-  if ({{FACE_GUARD}}) {
+  if ({{SWEEP_GUARD}}) {
 {{HANGING_FACE_STATUS_FROM_COARSE}}
   }
 """
 
     _Template_TouchHangingFaceLastTime = """
-  if ({{FACE_GUARD}}) {
-{{HANGING_FACE_STATUS_FOLD}}
+  if ({{SWEEP_GUARD}}) {
+{{HANGING_FACE_STATUS_REDUCE}}
   }
 """
 
-    def __init__(self, solver, cell_guard, face_guard):
+    _Template_TouchHangingVertexFirstTime = """
+{% if USES_DMP %}
+  if ({{SWEEP_GUARD}}) {
+{{HANGING_VERTEX_DMP_EXTREMA_FROM_COARSE}}
+  }
+{% endif %}
+"""
+
+    def __init__(self, solver, cell_guard, sweep_guard):
         super().__init__(solver)
         self._cell_guard = cell_guard
-        self._face_guard = face_guard
+        self._sweep_guard = sweep_guard
 
     def _add_action_set_entries_to_dictionary(self, dictionary):
         dictionary["CELL_GUARD"] = self._cell_guard
-        dictionary["FACE_GUARD"] = self._face_guard
+        dictionary["SWEEP_GUARD"] = self._sweep_guard
         dictionary["RESET_REFINED_FACE_STATUS"] = reset_refined_face_status_snippet(
             self._solver._name
         )
         dictionary["HANGING_FACE_STATUS_FROM_COARSE"] = (
             hanging_face_status_from_coarse_snippet(self._solver._name)
         )
-        dictionary["HANGING_FACE_STATUS_FOLD"] = hanging_face_status_fold_snippet(
+        dictionary["HANGING_FACE_STATUS_REDUCE"] = hanging_face_status_reduce_snippet(
             self._solver._name
         )
         dictionary["USES_DMP"] = self._solver._subcell_limiter_uses_dmp
@@ -281,6 +201,34 @@ class CorrectAndFlag(AbstractLimiterActionSet):
         dictionary["DMP_OBSERVABLES"] = self._rendered_dmp_observables(dictionary)
         if dictionary["USES_DMP"]:
             self._add_dmp_sampling_matrices_to_dictionary(dictionary)
+            dictionary["CANDIDATE_EXTREMA_REDUCTION"] = (
+                self._dmp_extrema_reduction_snippet(
+                    "candidate", "candidateMinimum", "candidateMaximum", dictionary
+                )
+            )
+            dictionary["REFERENCE_EXTREMA_REDUCTION"] = (
+                self._dmp_extrema_reduction_snippet(
+                    "previousSolution",
+                    "referenceMinimum",
+                    "referenceMaximum",
+                    dictionary,
+                )
+            )
+            number_of_observables = (
+                self._solver._subcell_limiter_number_of_dmp_observables
+            )
+            dictionary["NEIGHBOUR_EXTREMA_MERGE"] = vertex_dmp_extrema_merge_snippet(
+                self._solver._name,
+                number_of_observables,
+                "referenceMinimum",
+                "referenceMaximum",
+                dictionary["SOLUTION_STORAGE_PRECISION"],
+            )
+            dictionary["HANGING_VERTEX_DMP_EXTREMA_FROM_COARSE"] = (
+                hanging_vertex_dmp_extrema_from_coarse_snippet(
+                    self._solver._name, number_of_observables
+                )
+            )
         dictionary["DMP_RELAXATION_PARAMETER"] = (
             self._solver._subcell_limiter_dmp_relaxation_parameter
         )
@@ -296,8 +244,7 @@ class CorrectAndFlag(AbstractLimiterActionSet):
         dictionary["PROJECT_STATUS_TO_FACES"] = cell_status_to_face_snippet(
             self._solver._name
         )
-        # Only an adaptive solver derives its step from the eigenvalue, so only it
-        # folds an admissible cell's wave speed in here.
+        # Only an adaptive solver reduces an admissible cell's wave speed here.
         dictionary["IS_ADAPTIVE"] = bool(
             self._solver._compute_new_time_step_size.strip()
         )
@@ -327,6 +274,13 @@ class CorrectAndFlag(AbstractLimiterActionSet):
             == peano4.solversteps.ActionSet.OPERATION_TOUCH_HANGING_FACE_LAST_TIME
         ):
             result = jinja2.Template(self._Template_TouchHangingFaceLastTime).render(
+                **dictionary
+            )
+        if (
+            operation_name
+            == peano4.solversteps.ActionSet.OPERATION_TOUCH_HANGING_VERTEX_FIRST_TIME
+        ):
+            result = jinja2.Template(self._Template_TouchHangingVertexFirstTime).render(
                 **dictionary
             )
         if (

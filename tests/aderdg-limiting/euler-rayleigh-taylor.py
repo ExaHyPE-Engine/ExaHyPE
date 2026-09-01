@@ -121,7 +121,7 @@ euler.add_limiter(
         heavy_density=2.0,
     ),
     euler.dmp_observables(gamma),
-    differences_scaling=0.03,
+    differences_scaling=1.0e-3,
 )
 
 project.add_solver(solver)

@@ -3,13 +3,10 @@
 
 TARGET_DECLARE
 /**
- * Adds one volume's flux divergence to @p outputState with either a Rusanov flux or the
- * solver's Riemann solver. Non-conservative and diffusive-source contributions
- * are enabled by their template flags. The cell-centred physical flux cancels
- * between the two faces, so the Rusanov path evaluates it only at neighbouring
- * volumes. The @c EvaluateSource flag is part of the reconstruction interface,
- * but the time-stepping policy owns source evaluation because this
- * reconstruction has no predictor half-step.
+ * Adds one volume's flux divergence to @p outputState with a Rusanov flux or the
+ * solver's Riemann solver. Template flags enable non-conservative and diffusive
+ * terms; the time-stepping policy owns source evaluation. The cell-centred
+ * physical flux cancels between the two faces of the Rusanov path.
  */
 template <
   typename Solver,
@@ -65,7 +62,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::Constant::a
         strideAlongNormal *= NumberOfVolumesPerAxis;
       }
 
-      // Forward difference needs the right neighbour: an interior volume if it
+      // Forward difference needs the right neighbour: An interior volume if it
       // exists, otherwise the halo layer in the right face of this patch.
       const StoragePrecision* NOALIAS rightStateInStorage = nullptr;
       if (volumeIndex(normal) + HaloSize < NumberOfVolumesPerAxis) {
@@ -75,10 +72,11 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::Constant::a
         overlapCell(normal)                            = volumeIndex(normal) + 2 * HaloSize - NumberOfVolumesPerAxis;
         const int overlapIndex =
           toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell, NumberOfVolumesPerAxis, HaloSize, normal);
-        rightStateInStorage = &faceInputPatches[normal + DIMENSIONS][overlapIndex * NumberOfData];
+        rightStateInStorage =
+          &faceInputPatches[normal + DIMENSIONS][static_cast<std::ptrdiff_t>(overlapIndex) * NumberOfData];
       }
 
-      const ComputePrecision inverseSpacing = static_cast<ComputePrecision>(
+      const auto inverseSpacing = static_cast<ComputePrecision>(
         static_cast<GeometryPrecision>(NumberOfVolumesPerAxis)
         / (static_cast<GeometryPrecision>(HaloSize) * static_cast<GeometryPrecision>(patchSize(normal)))
       );
@@ -132,7 +130,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::Constant::a
       strideAlongNormal *= NumberOfVolumesPerAxis;
     }
 
-    // Left neighbour: an interior volume if it exists, otherwise the halo
+    // Left neighbour: An interior volume if it exists, otherwise the halo
     // layer the framework stored in the left face of this patch.
     const StoragePrecision* NOALIAS leftStateInStorage = nullptr;
     if (leftVolumeIndex(normal) >= 0) {
@@ -142,10 +140,10 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::Constant::a
       overlapCell(normal)                            = volumeIndex(normal);
       const int overlapIndex =
         toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell, NumberOfVolumesPerAxis, HaloSize, normal);
-      leftStateInStorage = &faceInputPatches[normal][overlapIndex * NumberOfData];
+      leftStateInStorage = &faceInputPatches[normal][static_cast<std::ptrdiff_t>(overlapIndex) * NumberOfData];
     }
 
-    // Right neighbour: an interior volume if it exists, otherwise the halo
+    // Right neighbour: An interior volume if it exists, otherwise the halo
     // layer the framework stored in the right face of this patch.
     const StoragePrecision* NOALIAS rightStateInStorage = nullptr;
     if (rightVolumeIndex(normal) < NumberOfVolumesPerAxis) {
@@ -155,7 +153,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::Constant::a
       overlapCell(normal)                            = volumeIndex(normal) + 2 * HaloSize - NumberOfVolumesPerAxis;
       const int overlapIndex =
         toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell, NumberOfVolumesPerAxis, HaloSize, normal);
-      rightStateInStorage = &faceInputPatches[normal + DIMENSIONS][overlapIndex * NumberOfData];
+      rightStateInStorage =
+        &faceInputPatches[normal + DIMENSIONS][static_cast<std::ptrdiff_t>(overlapIndex) * NumberOfData];
     }
 
     [[maybe_unused]] ComputePrecision leftStateComputeBuffer[NumberOfData]
@@ -227,7 +226,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::Constant::a
       // A custom Riemann solver may be the only thing that knows the speed it
       // resolved, since a solver offering one need not offer an eigenvalue as
       // well, so its verdict enters the step observation here. The Rusanov
-      // branch below needs no such report: it has to evaluate the solver's own
+      // branch below needs no such report: It has to evaluate the solver's own
       // eigenvalue for its diffusion coefficient, and the caller then measures
       // the step on the final state, at the time level the next step starts from.
       if constexpr (EvaluateMaxEigenvalue) {
@@ -235,7 +234,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::Constant::a
         ::exahype2::fv::accumulateMaxEigenvalue(maxEigenvalueAfterTimeStep, maxWaveSpeedRight);
       }
 
-      const ComputePrecision scale = static_cast<ComputePrecision>(
+      const auto scale = static_cast<ComputePrecision>(
         (static_cast<GeometryPrecision>(timeStepSize) * static_cast<GeometryPrecision>(NumberOfVolumesPerAxis))
         / static_cast<GeometryPrecision>(patchSize(normal))
       );
@@ -311,12 +310,12 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::Constant::a
       ::exahype2::fv::accumulateMaxEigenvalue(leftMaxEigenvalue, centreMaxEigenvalue);
       ::exahype2::fv::accumulateMaxEigenvalue(rightMaxEigenvalue, centreMaxEigenvalue);
 
-      const ComputePrecision scale = static_cast<ComputePrecision>(
+      const auto scale = static_cast<ComputePrecision>(
         (static_cast<GeometryPrecision>(timeStepSize) * static_cast<GeometryPrecision>(NumberOfVolumesPerAxis)
          * static_cast<GeometryPrecision>(0.5))
         / static_cast<GeometryPrecision>(patchSize(normal))
       );
-      UNROLL(DIMENSIONS)
+      SIMD()
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         // Rusanov diffusion across both faces, scaled by the larger neighbouring
         // eigenvalue and the jump in the conserved quantity.
@@ -334,6 +333,9 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::Constant::a
           static_cast<StateUpdatePrecision>(outputState[unknown])
           + static_cast<StateUpdatePrecision>(scale * (fluxLeftFace - fluxRightFace))
         );
+      }
+      // The finiteness check stays out of the vectorised loop.
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         assertion(std::isfinite(outputState[unknown]));
       }
     }

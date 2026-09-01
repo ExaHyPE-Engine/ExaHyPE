@@ -137,7 +137,7 @@ euler.add_limiter(
     dimensions,
     euler.physical_admissibility(gamma),
     euler.dmp_observables(gamma),
-    differences_scaling=0.01,
+    differences_scaling=1.0e-3,
 )
 
 exahype2.solvers.aderdg.ErrorMeasurement(

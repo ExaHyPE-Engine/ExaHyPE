@@ -251,4 +251,40 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::reduceProjectedObservableEx
   }
 }
 
+/**
+ * Returns whether a coarse vertex lies on every father-cell boundary facet
+ * that contains a hanging vertex.
+ *
+ * The hanging vertex position is its place in the father cell's vertex pattern,
+ * from zero to three per axis. Each boundary coordinate selects the coarse
+ * vertices on that side.
+ */
+template <int Dimensions>
+INLINE_METHOD GPU_CALLABLE_METHOD bool exahype2::dg::isCoarseVertexOnFacetOfHangingVertex(
+  const tarch::la::Vector<Dimensions, int>& hangingVertexPosition,
+  const int                                 coarseVertexNumber
+) {
+  static_assert(Dimensions == 2 or Dimensions == 3, "Hanging vertices exist in two or three dimensions.");
+  assertion(coarseVertexNumber >= 0);
+  assertion(coarseVertexNumber < (1 << Dimensions));
+  constexpr int LowerBoundary  = 0;
+  constexpr int UpperBoundary  = 3;
+  bool          liesOnBoundary = false;
+  for (int axis = 0; axis < Dimensions; axis++) {
+    assertion(hangingVertexPosition(axis) >= LowerBoundary);
+    assertion(hangingVertexPosition(axis) <= UpperBoundary);
+    liesOnBoundary =
+      liesOnBoundary or hangingVertexPosition(axis) == LowerBoundary or hangingVertexPosition(axis) == UpperBoundary;
+    const int coarseVertexSide = (coarseVertexNumber >> axis) & 1;
+    if (hangingVertexPosition(axis) == LowerBoundary and coarseVertexSide == 1) {
+      return false;
+    }
+    if (hangingVertexPosition(axis) == UpperBoundary and coarseVertexSide == 0) {
+      return false;
+    }
+  }
+  assertion(liesOnBoundary);
+  return true;
+}
+
 TARGET_DECLARE_END

@@ -1,7 +1,5 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-"""Tafjord 1934 rock slide driving the fjord it collapses into."""
-
 import argparse
 import math
 
@@ -89,7 +87,7 @@ aderdg_solver.add_subcell_limiter(
     ),
     number_of_dmp_observables=6,
     dmp_relaxation_parameter=0.0,
-    dmp_differences_scaling=0.01,
+    dmp_differences_scaling=1.0e-3,
     dmp_observables=exahype2.solvers.PDETerms.User_Defined_Implementation,
     dmp_relaxation_parameter_implementation=exahype2.solvers.PDETerms.User_Defined_Implementation,
     physical_admissibility_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation,
@@ -129,13 +127,8 @@ project.constants.export_constexpr_with_type(
 project.constants.export_constexpr_with_type(
     "waterPressureDragCoefficient", str(1.0), "double"
 )
-# A submerged layer thinner than this drives the friction-stiffness eigenvalue above a
-# thousand and strangles the admissible step; the runup sheets on the steep fjord shores
-# need the same protection, one order coarser.
 project.constants.export_constexpr_with_type("hThresholdSlide", str(3.0e-1), "double")
 project.constants.export_constexpr_with_type("hThresholdWater", str(0.5), "double")
-# Fjord waves reach metres, so relaxing at the dry threshold would put every wave cell
-# on the subcell scheme.
 project.constants.export_constexpr_with_type("waterDmpRelaxation", str(0.1), "double")
 project.constants.export_constexpr_with_type(
     "maxFrictionStiffnessRatio", str(2.0 * args.degrees_of_freedom), "double"
@@ -147,8 +140,6 @@ project.constants.export_constexpr_with_type(
     "mu", str(math.tan(math.pi / 180.0 * 25.0)), "double"
 )
 
-# The include directory is the repository root, which is what lets every file below
-# include the shared ExaSkred headers by their full path.
 project.output.makefile.add_include_directory("../../../..")
 project.output.makefile.add_cpp_file("../../AugmentedState.cpp")
 project.output.makefile.add_cpp_file("../../Coupled.cpp")
