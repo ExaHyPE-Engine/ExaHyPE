@@ -2,10 +2,10 @@
 # use, please see the copyright notice at www.peano-framework.org
 import peano4
 
-import peano4.blockstructured.ProjectPatchOntoFaces
+import exahype2.blockstructured.ProjectPatchOntoFaces
 
 
-class ProjectPatchOntoFaces(peano4.blockstructured.ProjectPatchOntoFaces):
+class ProjectPatchOntoFaces(exahype2.blockstructured.ProjectPatchOntoFaces):
     """Projects patch data into the configured face halo and updates its metadata.
 
     The updated flag and timestamp tell ``RollOverUpdates`` which face halves

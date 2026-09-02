@@ -161,7 +161,7 @@ function(peano_add_target)
   # PEANO_<MODE>_DEFINITIONS, PEANO_C_FLAGS_<MODE>, PEANO_CXX_FLAGS_<MODE> and
   # PEANO_Fortran_FLAGS_<MODE> are core-build cache variables. In a generated application
   # they are undefined and expand to nothing here; the application instead inherits the mode
-  # definitions and flags transitively from the linked Peano::PeanoRuntime<MODE><DIM>d
+  # definitions and flags transitively from the linked Peano::PeanoRuntime<MODE><DIM>D
   # target (a STATIC library, hence PUBLIC scope). These calls are therefore only
   # effective in the core build.
   target_compile_definitions(${target} ${variant_scope}

@@ -150,7 +150,7 @@ class RollOverUpdates(AbstractFVActionSet):
     def get_includes(self):
         return """
 #include "peano4/Loop.h"
-#include "toolbox/blockstructured/Enumeration.h"
+#include "exahype2/Enumeration.h"
 #include "exahype2/fv/PatchUtils.h"
 #include "exahype2/RefinementControlService.h"
 """ + AbstractFVActionSet.get_includes(

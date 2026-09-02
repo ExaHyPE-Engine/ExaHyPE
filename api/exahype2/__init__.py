@@ -4,6 +4,7 @@
 import importlib
 
 _LAZY_MODULES = {
+    "blockstructured": "exahype2.blockstructured",
     "tracer": "exahype2.tracer",
     "grid": "exahype2.grid",
     "solvers": "exahype2.solvers",

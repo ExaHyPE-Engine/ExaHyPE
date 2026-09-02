@@ -91,9 +91,9 @@ def _create_postprocessing_kernel_for_error_measurement(guard, time_step_size_ac
       // Iterate over all quadrature points in the cell
       peano4::dForEach({{DG_ORDER}} + 1, [&](const tarch::la::Vector<DIMENSIONS, int>& index) {
 #if DIMENSIONS==2
-        double weight = cellVolume * repositories::{{SOLVER_INSTANCE}}.QuadratureWeights1d[index[0]] * repositories::{{SOLVER_INSTANCE}}.QuadratureWeights1d[index[1]];
+        double weight = cellVolume * repositories::{{SOLVER_INSTANCE}}.QuadratureWeights1D[index[0]] * repositories::{{SOLVER_INSTANCE}}.QuadratureWeights1D[index[1]];
 #else
-        double weight = cellVolume * repositories::{{SOLVER_INSTANCE}}.QuadratureWeights1d[index[0]] * repositories::{{SOLVER_INSTANCE}}.QuadratureWeights1d[index[1]] * repositories::{{SOLVER_INSTANCE}}.QuadratureWeights1d[index[2]];
+        double weight = cellVolume * repositories::{{SOLVER_INSTANCE}}.QuadratureWeights1D[index[0]] * repositories::{{SOLVER_INSTANCE}}.QuadratureWeights1D[index[1]] * repositories::{{SOLVER_INSTANCE}}.QuadratureWeights1D[index[2]];
 #endif
 
         // Compute the exact solution
@@ -103,7 +103,7 @@ def _create_postprocessing_kernel_for_error_measurement(guard, time_step_size_ac
             marker.getH(),
             index,
             {{DG_ORDER}}+1,
-            repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d
+            repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1D
           ),
           fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp(),
           repositories::{{SOLVER_INSTANCE}}."""

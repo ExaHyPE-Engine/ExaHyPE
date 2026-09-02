@@ -52,12 +52,12 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     _Template_ValidateParticleLevelAssociation = jinja2.Template(
         """
   [[maybe_unused]] const auto ownershipTolerance =
-    toolbox::particles::ReleaseOwnershipSpatialSortingTolerance * tarch::la::max(marker.getH())
+    peano4::particles::ReleaseOwnershipSpatialSortingTolerance * tarch::la::max(marker.getH())
     * tarch::la::NUMERICAL_ZERO_DIFFERENCE;
   for ([[maybe_unused]] const auto* const particle : fineGridVertex{{PARTICLES_CONTAINER}}) {
     assertion(
       marker.isContainedInAdjacentCells(
-        toolbox::particles::periodicImageTowardsVertex(particle->getX(), marker),
+        peano4::particles::periodicImageTowardsVertex(particle->getX(), marker),
         0.5,
         ownershipTolerance
       ),
@@ -86,10 +86,10 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
 #endif
         const bool particleIsLocal =
           particle->getParallelState() == globaldata::{{PARTICLE}}::ParallelState::Local;
-        const bool particleFitsFineLevel = toolbox::particles::dropParticle(*particle, marker);
+        const bool particleFitsFineLevel = peano4::particles::dropParticle(*particle, marker);
 
         if (particleFitsFineLevel and marker.isParentOfSubtree()
-            and toolbox::particles::particleWillBeDroppedFurther(*particle, marker)) {
+            and peano4::particles::particleWillBeDroppedFurther(*particle, marker)) {
           ++_numberOfDropsIntoHorizontalTreeDecomposition;
           // The sieve set takes ownership of the particle, so the coarse
           // container has to release it and the loop advances to the next one.
@@ -97,10 +97,10 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
         } else if (particleFitsFineLevel) {
           ++_numberOfDrops;
           particle->setCellH(marker.getH());
-          toolbox::particles::updateContainedInAdjacentCellProperty(marker, *particle);
+          peano4::particles::updateContainedInAdjacentCellProperty(marker, *particle);
           const auto parentVertexPosition =
             peano4::datamanagement::reconstructXOfParentVertex(marker, parentVertex);
-          toolbox::particles::assignmentchecks::detachParticleFromVertex(
+          peano4::particles::assignmentchecks::detachParticleFromVertex(
             "{{PARTICLE}}",
             particle->getX(),
             particleId,
@@ -110,7 +110,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
             _treeId,
             "AbstractUpdateParticleGridAssociation::_Template_Drop"
           );
-          toolbox::particles::assignmentchecks::assignParticleToVertex(
+          peano4::particles::assignmentchecks::assignParticleToVertex(
             "{{PARTICLE}}",
             particle->getX(),
             particleId,
@@ -186,12 +186,12 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
       const bool particleIsLocal =
         particle->getParallelState() == globaldata::{{PARTICLE}}::ParallelState::Local;
       particle->setCellH(parentCellSize);
-      toolbox::particles::updateContainedInAdjacentCellProperty(
+      peano4::particles::updateContainedInAdjacentCellProperty(
         parentVertexPosition,
         parentCellSize,
         *particle
       );
-      toolbox::particles::assignmentchecks::detachParticleFromVertex(
+      peano4::particles::assignmentchecks::detachParticleFromVertex(
         "{{PARTICLE}}",
         particle->getX(),
         particleId,
@@ -201,7 +201,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
         _treeId,
         "AbstractUpdateParticleGridAssociation::_Template_LiftAllParticles (parent vertex is local)"
       );
-      toolbox::particles::assignmentchecks::assignParticleToVertex(
+      peano4::particles::assignmentchecks::assignParticleToVertex(
         "{{PARTICLE}}",
         particle->getX(),
         particleId,
@@ -225,7 +225,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
 #endif
       const bool particleIsLocal =
         particle->getParallelState() == globaldata::{{PARTICLE}}::ParallelState::Local;
-      toolbox::particles::assignmentchecks::detachParticleFromVertex(
+      peano4::particles::assignmentchecks::detachParticleFromVertex(
         "{{PARTICLE}}",
         particle->getX(),
         particleId,
@@ -235,7 +235,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
         _treeId,
         "AbstractUpdateParticleGridAssociation::_Template_LiftAllParticles"
       );
-      toolbox::particles::assignmentchecks::assignParticleToSieveSet(
+      peano4::particles::assignmentchecks::assignParticleToSieveSet(
         "{{PARTICLE}}",
         particle->getX(),
         particleId,
@@ -264,8 +264,8 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     def get_includes(self):
         return jinja2.Template(
             """
-#include "toolbox/particles/MultiscaleTransitions.h"
-#include "toolbox/particles/assignmentchecks/TracingAPI.h"
+#include "peano4/particles/MultiscaleTransitions.h"
+#include "peano4/particles/assignmentchecks/TracingAPI.h"
 
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"

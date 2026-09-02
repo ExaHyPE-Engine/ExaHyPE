@@ -6,7 +6,6 @@
 #include "Quadrature.h"
 
 #include "tarch/CompilerSpecificSettings.h"
-#include "tarch/instrumentation/Trace.h"
 
 template <typename cCompType>
 void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
@@ -23,10 +22,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   const bool                                        isBoundary,
   const int                                         faceNumber
 ) {
-  traceEnter();
-
 {% if USE_RIEMANN_SOLVER %}
-  traceEnter("User Riemann solver");
 {% if STATELESS_RIEMANN_SOLVER %}
   {{FULL_QUALIFIED_SOLVER_NAME}}::riemannSolver(
 {% else %}
@@ -44,7 +40,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
     isBoundary,
     faceNumber
   );
-  traceLeave("User Riemann solver");
 {% else %}
   std::memset(FL, 0, {{NUMBER_OF_UNKNOWNS * NUMBER_OF_DOF * NUMBER_OF_DOF_3D}} * sizeof(cCompType));
   std::memset(FR, 0, {{NUMBER_OF_UNKNOWNS * NUMBER_OF_DOF * NUMBER_OF_DOF_3D}} * sizeof(cCompType));
@@ -52,7 +47,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   cCompType QavL[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {0.0};
   cCompType QavR[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {0.0};
 
-  traceEnter("Average states");
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xy++) {
     SIMD(aligned(QavL,QavR:PEANO_WITH_ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_DATA}}; n++) {
@@ -60,9 +54,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
       QavR[n] += Quadrature<cCompType>::weights2[xy] * QR[xy * {{NUMBER_OF_DATA}} + n];
     }
   }
-  traceLeave("Average states");
 
-  traceEnter("Max eigenvalue evaluation");
 {% if STATELESS_MAX_EIGENVALUE %}
   cCompType smaxL = {{FULL_QUALIFIED_SOLVER_NAME}}::maxEigenvalue(
 {% else %}
@@ -89,7 +81,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   );
 
   cCompType smax = std::fmax(smaxL, smaxR);
-  traceLeave("Max eigenvalue evaluation");
 
 {% if USE_NCP or USE_MATERIAL_PARAMETERS or NUMBER_OF_AUXILIARY_VARIABLES > 0 %}
   cCompType Qavg[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
@@ -115,7 +106,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   cCompType fluxValues[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {0.0};
 {% endif %}
 
-  traceEnter("Flux and nonconservative product evaluation");
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xy++) {
     SIMD(aligned(Qdiff:PEANO_WITH_ALIGNMENT))
     for (int n = 0 ; n < {{NUMBER_OF_UNKNOWNS}} ; n++) {
@@ -203,9 +193,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
       FL[xy * {{NUMBER_OF_UNKNOWNS}} + n] -= smax * Qdiff[n];
     }
   } // xy
-  traceLeave("Flux and nonconservative product evaluation");
 {% endif %}
-  traceLeave();
 }
 
 template void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(

@@ -95,12 +95,12 @@ fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
       repositories::{{SOLVER_INSTANCE}}.getSolverState() == {{SOLVER_NAME}}::SolverState::GridInitialisation
     )
   ) {
-    const bool domainWrapsParticles = toolbox::particles::domainHasPeriodicAxes();
+    const bool domainWrapsParticles = peano4::particles::domainHasPeriodicAxes();
     for (auto* const particle : localParticles) {
       // The wall vertex of a periodic axis holds particles from both walls, so
       // the cell reads a particle through its periodic image.
       const auto image = domainWrapsParticles
-        ? toolbox::particles::periodicImageTowardsCell(particle->getX(), marker)
+        ? peano4::particles::periodicImageTowardsCell(particle->getX(), marker)
         : particle->getX();
       if (
         particle->getMoveState() == globaldata::{{PARTICLE}}::MoveState::NotMovedYet
@@ -176,7 +176,7 @@ fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
 #include "exahype2/fv/particles/ParticleInterpolation.h"
 #include "exahype2/fv/particles/ParticleUpdate.h"
 #include "repositories/SolverRepository.h"
-#include "toolbox/particles/particles.h"
+#include "peano4/particles/particles.h"
 """
         )
         return super().get_includes() + "\n" + includes.render(**self.tracerDict)

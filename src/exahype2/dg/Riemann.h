@@ -71,7 +71,7 @@
  *     SolveRiemannProblemOnHangingFaces).
  *   - When a hanging face is left, stage its projected fine trace; the
  *     persistent coarse face reduces the staged subfaces at its last touch
- *     (toolbox::blockstructured::restrictHaloLayerFromStagedSubfaces()).
+ *     (exahype2::amr::restrictHaloLayerFromStagedSubfaces()).
  * - In the secondary grid sweep where we solve the Riemann problems and
  *   bring the solutions together:
  *   - Solve the Riemann problem on the persistent faces (action set
@@ -102,7 +102,7 @@ namespace exahype2::dg {
    * @image html src/exahype2/dg/interpolation.png
    *
    * In the example above, the weights in c1, c2, c3 and c4 span a
-   * polynomial (blue). InterpolationMatrix1d points to
+   * polynomial (blue). InterpolationMatrix1D points to
    * @f$ 3 \cdot 4^2 @f$ entries. If we want to know the interpolated
    * value for f31, we have to pick the third matrix (matrix index 2
    * as we start counting at zero), then take the first row of this
@@ -126,7 +126,7 @@ namespace exahype2::dg {
     int                                       numberOfProjectedQuantities,
     int                                       unknowns,
     int                                       auxiliaryVariables,
-    const double* NOALIAS                     InterpolationMatrix1d,
+    const double* NOALIAS                     InterpolationMatrix1D,
     const double* NOALIAS                     coarseGridFaceQ,
     double* NOALIAS                           fineGridFaceQ
   );
@@ -154,7 +154,7 @@ namespace exahype2::dg {
     int                                       unknowns,
     int                                       auxiliaryVariables,
     double                                    maxEigenvalue,
-    const double* NOALIAS                     InterpolationMatrix1d,
+    const double* NOALIAS                     InterpolationMatrix1D,
     const double* NOALIAS                     coarseGridFaceRiemannSolution,
     const double* NOALIAS                     coarseGridFaceProjection,
     const double* NOALIAS                     fineGridFaceProjection,
@@ -298,7 +298,7 @@ namespace exahype2::dg {
    *   boundary influences the value at a given node. The basis function values on the
    *   right side are symmetric to those on the left side, so this array serves both.
    *
-   * @param MassMatrixDiagonal1d Quadrature weight of each quadrature node in one
+   * @param MassMatrixDiagonal1D Quadrature weight of each quadrature node in one
    *   dimension.
    *
    * @param cellQ The current solution, expected to be the solution already updated
@@ -316,7 +316,7 @@ namespace exahype2::dg {
     const int                           auxiliaryVariables,
     const tarch::la::Vector<2, double>& cellSize,
     const double* const NOALIAS         BasisFunctionValuesLeft,
-    const double* NOALIAS               MassMatrixDiagonal1d,
+    const double* NOALIAS               MassMatrixDiagonal1D,
     double* NOALIAS                     cellQ
   );
 
@@ -344,7 +344,7 @@ namespace exahype2::dg {
     const int                           auxiliaryVariables,
     const tarch::la::Vector<3, double>& cellSize,
     const double* const NOALIAS         BasisFunctionValuesLeft,
-    const double* NOALIAS               MassMatrixDiagonal1d,
+    const double* NOALIAS               MassMatrixDiagonal1D,
     double* NOALIAS                     cellQ
   );
 } // namespace exahype2::dg

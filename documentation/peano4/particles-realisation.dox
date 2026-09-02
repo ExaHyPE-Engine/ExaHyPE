@@ -1,0 +1,83 @@
+/**
+
+@page page_peano4_particles_realisation Particle storage and exchange
+
+\tableofcontents
+
+\li \subpage page_peano4_particles_realisation_particle_lift_flavours
+
+@page page_peano4_particles_realisation_particle_lift_flavours Particle-set storage
+
+The generator peano4.particles.ParticleSet selects the C++ container
+used by a generated particle set. Every set stores pointers to particles and
+inherits the common peano4::particles::ParticleSet lifecycle.
+
+# Particle allocation
+
+Set storage and particle allocation are separate choices. The allocation puts
+every particle on the heap on its own.
+
+The rank-local Peano vertex pool stores one generated particle-set object per
+relevant vertex slot. Each object owns its pointer container, while particle
+objects follow the selected allocation policy.
+
+# Container operations
+
+Generated sets provide standard iteration and size operations. `clear()`
+removes the pointers without deleting the particles. `deleteParticle()` and
+`deleteParticles()` remove the pointers and release the corresponding particle
+objects through the configured allocation policy.
+
+Deleting a particle invalidates every other pointer to it. Callers therefore
+delete only after the particle has left all vertex, boundary, and sieve
+containers that can reference it.
+
+# Persistent storage and exchange
+
+The generated `load()` and `store()` predicates select whether a vertex's
+particle set participates in a traversal event. `send()` and
+`receiveAndMerge()` implement the data-type-specific boundary policy.
+
+Particle sets declare that they do not support subtree-task replication. A step
+using them traverses each rank serially, so
+peano4::stacks::SendReceiveContext::IntraRank is invalid for their generated
+merge routine. Rank-boundary exchange uses
+peano4::stacks::SendReceiveContext::InterRank.
+
+peano4::communication::CommunicationManager transports the registered
+container payload. The container serialisation creates independent incoming
+particle objects before `receiveAndMerge()` applies particle ownership and
+duplicate rules.
+
+# Merge policy
+
+`mergeWithParticle()` examines the incoming particle's parallel and movement
+state and either inserts it, replaces a local copy, keeps it as a virtual copy,
+or deletes it. The merge checks for a duplicate immediately before insertion
+so the decision observes all particles accepted earlier in the same payload.
+
+Particle identity and spatial duplication answer different questions. The
+stable particle number identifies the physical particle, while
+peano4::particles::particleIsDuplicate() detects two records at the same
+position within peano4::particles::SpatialDuplicateTolerance. Removing a
+spatial duplicate also releases its incoming particle object.
+
+# Multiscale movement
+
+Particle association follows the vertex and cell hierarchy described on
+@ref page_peano4_particles_mesh_consistency. A particle can lift towards a
+coarser cell, drop into a refined child, move through the sieve when its target
+is not locally available, and cross an MPI rank boundary through the generated
+exchange policy.
+
+The particle state records whether the local copy is authoritative or virtual.
+Movement actions update this state before the boundary merge decides which
+copy survives.
+
+# Copying
+
+The generated copy constructor, copy assignment, and `clone()` create
+independent particle objects. Boundary deserialisation also creates owning
+incoming objects so a rejected record can be deleted safely.
+
+*/

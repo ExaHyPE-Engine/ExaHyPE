@@ -46,6 +46,27 @@ set(SOURCES
   grid/tests/LatticeIndexMapTest.cpp
   grid/tests/StackTopologyTest.cpp
 
+  particles/FileReader.cpp
+  particles/MultiscaleTransitions.cpp
+  particles/ParticleFactory.cpp
+  particles/ParticleSet.cpp
+  particles/TrajectoryDatabase.cpp
+  particles/internal.cpp
+  particles/particles.cpp
+  particles/assignmentchecks/Database.cpp
+  particles/assignmentchecks/Event.cpp
+  particles/assignmentchecks/MeshSweepData.cpp
+  particles/assignmentchecks/ParticleIdentifier.cpp
+  particles/assignmentchecks/TracingAPI.cpp
+  particles/assignmentchecks/tests/TestHelpers.cpp
+  particles/assignmentchecks/tests/TestParticle.cpp
+  particles/potentials/Springs.cpp
+  particles/tests/MultiscaleTransitionsTest.cpp
+  particles/tests/ParticlesTest.cpp
+  particles/tests/TestHelpers.cpp
+  particles/tests/TestParticle.cpp
+  particles/tests/TrajectoryDatabaseTest.cpp
+
   stacks/IOMode.cpp
   stacks/SendReceiveContext.cpp
   stacks/Stack.cpp
@@ -81,7 +102,7 @@ foreach(mode IN LISTS SUPPORTED_BUILD_TYPES)
   foreach(dim IN LISTS SUPPORTED_DIMENSIONS)
     peano_add_target(
       TYPE STATIC_LIBRARY
-      NAME Peano4${mode}${dim}d
+      NAME Peano${mode}${dim}D
       MODE ${mode}
       DIMENSION ${dim}
       SOURCES ${SOURCES}

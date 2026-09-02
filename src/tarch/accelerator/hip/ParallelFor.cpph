@@ -3,7 +3,7 @@
 
 namespace tarch::accelerator {
   template <typename F>
-  __global__ void flat_kernel_1d(F f, int n) {
+  __global__ void flat_kernel_1D(F f, int n) {
     const int idx    = blockIdx.x * blockDim.x + threadIdx.x;
     const int stride = gridDim.x * blockDim.x;
     for (int i = idx; i < n; i += stride) {
@@ -55,7 +55,7 @@ namespace tarch {
     CHECK_HIP_ERROR(hipSetDevice(accelerator::getCurrentDevice()));
     int blocks = (r.n + accelerator::HipBlockSize - 1) / accelerator::HipBlockSize;
     blocks     = std::min(blocks, 65535);
-    accelerator::flat_kernel_1d<<<blocks, accelerator::HipBlockSize, 0, accelerator::deviceStreamGet()>>>(f, r.n);
+    accelerator::flat_kernel_1D<<<blocks, accelerator::HipBlockSize, 0, accelerator::deviceStreamGet()>>>(f, r.n);
     CHECK_HIP_ERROR(hipStreamSynchronize(accelerator::deviceStreamGet()));
   }
 

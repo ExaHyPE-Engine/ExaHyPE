@@ -306,15 +306,15 @@ def userIncludes():
 #include "../riemannSolvers/curvilinearRoutines.h"
 #include "../riemannSolvers/riemannsolverIsotropic.h"
 
+#include "exahype2/Curvi.h"
 #include "exahype2/dg/DGUtils.h"
-#include "toolbox/blockstructured/Curvi.h"
 
 #include "tarch/reader/NetCDFFieldSampler.h"
 """
 
 def abstractUserDefinitions():
   return """
-std::unique_ptr<toolbox::blockstructured::Curvi> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_curvi;
+std::unique_ptr<::exahype2::Curvi> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_curvi;
 
 tarch::la::Vector<DIMENSIONS,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::invertProjection(const tarch::la::Vector<DIMENSIONS,double> coordinates){
 
@@ -326,12 +326,12 @@ tarch::la::Vector<DIMENSIONS,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::
 def abstractDeclarations():
   return """
 public:
-  double QuadraturePoints1d[Order+1];
+  double QuadraturePoints1D[Order+1];
 
   tarch::la::Vector<DIMENSIONS,double> invertProjection(const tarch::la::Vector<DIMENSIONS,double> coordinates);
 
 protected:
-  static std::unique_ptr<toolbox::blockstructured::Curvi> _curvi;
+  static std::unique_ptr<::exahype2::Curvi> _curvi;
 """
 
 def init_grid_step_implementation(scenario_perturbations):
@@ -339,7 +339,7 @@ def init_grid_step_implementation(scenario_perturbations):
   std::copy_n(
     kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes,
     (Order+1),
-    QuadraturePoints1d
+    QuadraturePoints1D
   );
 
   //setting minCellSize
@@ -354,7 +354,7 @@ def init_grid_step_implementation(scenario_perturbations):
   // Grid initialisation is re-run once per round of static AMR, so this hook fires more than once.
   // Assigning to the unique_ptr releases the Curvi the earlier round built, and the perturbations
   // below then rebuild it from scratch.
-  _curvi = std::make_unique<toolbox::blockstructured::Curvi>(
+  _curvi = std::make_unique<::exahype2::Curvi>(
     DomainOffset,
     DomainSize,
     minCellSize

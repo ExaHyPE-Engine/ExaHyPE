@@ -62,22 +62,6 @@ public:
   static void warningWithScopeName(std::string_view scopeName, std::string_view message);
   static void errorWithScopeName(std::string_view scopeName, std::string_view message);
 
-#if PEANO_TRACE
-  static std::string makeTraceScopeName(
-    std::string_view functionSignature,
-    std::string_view functionName,
-    std::string_view fileName
-  );
-  static std::string makeTraceScopeName(
-    std::string_view functionSignature,
-    std::string_view functionName,
-    std::string_view fileName,
-    std::string_view traceScopeName
-  );
-  static void enterTimedScope(std::string scopeName);
-  static void leaveTimedScope(std::string_view scopeName);
-#endif
-
   static void setLogColumnSeparator(const std::string& separator = " ");
   static void setLogTimeStamp(bool value = true);
   static void setLogTimeStampHumanReadable(bool value = true);
@@ -209,10 +193,6 @@ private:
     ConsoleStream    consoleStream,
     bool             flushConsole
   );
-
-#if PEANO_TRACE
-  static void closeTrace(bool useCollective);
-#endif
 
   static std::chrono::steady_clock::time_point                    _startupTime;
   static const Configuration* const                               _defaultConfiguration;

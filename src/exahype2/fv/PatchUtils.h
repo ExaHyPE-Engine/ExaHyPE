@@ -2,13 +2,13 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "exahype2/Enumeration.h"
 #include "peano4/Globals.h"
 #include "peano4/Loop.h"
 #include "tarch/Assertions.h"
 #include "tarch/NonCriticalAssertions.h"
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/la/Vector.h"
-#include "toolbox/blockstructured/Enumeration.h"
 
 namespace exahype2::fv {
   TARGET_DECLARE

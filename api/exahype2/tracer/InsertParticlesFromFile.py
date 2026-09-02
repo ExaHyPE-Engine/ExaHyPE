@@ -53,7 +53,7 @@ if (not marker.willBeRefined()) {
         newParticle->setNumber(1, _particleNumberOnThisTree);
         _particleNumberOnThisTree++;
 
-        toolbox::particles::init(*newParticle, position, 0.0);
+        peano4::particles::init(*newParticle, position, 0.0);
 
 {% if SAVE_INITIALPOS %}
         newParticle->setData({{ INITIAL_POSITION_INDEX[0] }}, position(0));
@@ -63,7 +63,7 @@ if (not marker.willBeRefined()) {
 #endif
 {% endif %}
 
-        toolbox::particles::insertParticleIntoCell(
+        peano4::particles::insertParticleIntoCell(
             marker,
             newParticle,
             fineGridVertices{{PARTICLES_CONTAINER}},
@@ -104,9 +104,9 @@ if (not marker.willBeRefined()) {
 #include "tarch/instrumentation/Info.h"
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
-#include "toolbox/particles/FileReader.h"
-#include "toolbox/particles/particles.h"
-#include "toolbox/particles/ParticleFactory.h"
+#include "peano4/particles/FileReader.h"
+#include "peano4/particles/particles.h"
+#include "peano4/particles/ParticleFactory.h"
 #include "exahype2/fv/particles/ParticleHelper.h"
 """
         ).render(**self.d)
@@ -114,7 +114,7 @@ if (not marker.willBeRefined()) {
     def get_static_initialisations(self, full_qualified_classname):
         return f"""
 std::mutex {full_qualified_classname}::_mutex;
-toolbox::particles::FileReader {full_qualified_classname}::_fileReader;
+peano4::particles::FileReader {full_qualified_classname}::_fileReader;
 """
 
     def get_constructor_body(self):
@@ -133,5 +133,5 @@ if (_fileReader.empty()) {{
 static std::mutex _mutex;
 int _particleNumberOnThisTree{0};
 int _treeId{-1};
-static toolbox::particles::FileReader _fileReader;
+static peano4::particles::FileReader _fileReader;
 """

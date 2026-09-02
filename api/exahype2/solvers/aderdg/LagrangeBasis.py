@@ -390,7 +390,7 @@ class LagrangeBasis():
       var_key  = "_LagrangeBasis__" + var # prefix for privat variables of class LagrangeBasis
       var_name = snake_to_camel(var) # C++ name
       if var == "quadrature_points":
-        var_name = "QuadraturePoints1d"
+        var_name = "QuadraturePoints1D"
       if var in ["quadrature_points","quadrature_weights","barycentric_weights","basis_function_values_left","basis_function_values_right"]:
           basisDeclarations += "const double {var_name}[{order}+1];\n".format(var_name=var_name,order=self.__max_poly_order)
           basisInitializers += "{var_name}{initializer},\n".format(var_name=var_name,\

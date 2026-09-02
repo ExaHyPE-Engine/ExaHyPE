@@ -87,7 +87,7 @@ class SpreadDomain(AbstractLimiterActionSet):
       for (int faceNumber = 0; faceNumber < 2 * DIMENSIONS; faceNumber++) {
         haloFaces[faceNumber] = fineGridFaces{{SOLVER_NAME}}SubcellOld(faceNumber).data();
       }
-      ::toolbox::blockstructured::projectPatch<
+      ::exahype2::projectPatch<
         NumberOfSubcellsPerAxis, {{HALO_WIDTH}}, NumberOfData, {{SOLUTION_STORAGE_PRECISION}}
       >(fineGridCell{{SOLVER_NAME}}SubcellOld.data(), haloFaces);
       for (int faceNumber = 0; faceNumber < 2 * DIMENSIONS; faceNumber++) {
@@ -187,6 +187,6 @@ class SpreadDomain(AbstractLimiterActionSet):
 #include "exahype2/dg/LimiterStatus.h"
 #include "exahype2/dg/SubcellProjection.h"
 #include "exahype2/fv/HandleBoundary.h"
-#include "toolbox/blockstructured/ProjectPatch.h"
+#include "exahype2/ProjectPatch.h"
 """
         )

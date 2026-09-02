@@ -26,7 +26,7 @@ class DiscontinuousGalerkinTracing(
         projection_kernel_arguments="""
         marker,
         {{ORDER}},
-        repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
+        repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1D,
         {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}},
         fineGridCell{{CURRENT_UNKNOWN_IDENTIFIER}}.data(),
         *particle
@@ -87,12 +87,12 @@ if (
     repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::GridInitialisation
   )
 ) {
-  const bool domainWrapsParticles = toolbox::particles::domainHasPeriodicAxes();
+  const bool domainWrapsParticles = peano4::particles::domainHasPeriodicAxes();
   for (auto* const particle : localParticles) {
     // The wall vertex of a periodic axis holds particles from both walls, so
     // the cell reads a particle through its periodic image.
     const auto image = domainWrapsParticles
-      ? toolbox::particles::periodicImageTowardsCell(particle->getX(), marker)
+      ? peano4::particles::periodicImageTowardsCell(particle->getX(), marker)
       : particle->getX();
     if (
       particle->getMoveState() == globaldata::{{PARTICLE}}::MoveState::NotMovedYet
@@ -141,7 +141,7 @@ if (
 #include "globaldata/{{PARTICLE}}.h"
 #include "repositories/SolverRepository.h"
 #include "exahype2/dg/Tracer.h"
-#include "toolbox/particles/particles.h"
+#include "peano4/particles/particles.h"
 """
         )
         return super().get_includes() + "\n" + includes.render(**self.tracerDict)

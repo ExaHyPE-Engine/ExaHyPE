@@ -2,11 +2,11 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "RiemannTest.h"
 
+#include "exahype2/Enumeration.h"
 #include "exahype2/dg/DGUtils.h"
 #include "exahype2/dg/Riemann.h"
 #include "exahype2/dg/tests/TestUtils.h"
 #include "peano4/grid/GridTraversalEvent.h"
-#include "toolbox/blockstructured/Enumeration.h"
 
 namespace {
   // A two-point Gauss-Legendre basis on the unit interval. The matrices below match what
@@ -89,8 +89,7 @@ void exahype2::dg::tests::RiemannTest::testInterpolateProjectedFacePolynomialRep
       for (int side = 0; side < 2; side++) {
         auto shiftedDoF    = dof;
         shiftedDoF(normal) = side;
-        const int offset =
-          toolbox::blockstructured::serialiseVoxelIndexInOverlap(shiftedDoF, NodesPerAxis, 1, normal) * Stride;
+        const int offset   = exahype2::serialiseVoxelIndexInOverlap(shiftedDoF, NodesPerAxis, 1, normal) * Stride;
         coarseGridFaceQ[offset]     = affineTrace(position, normal) + side;
         coarseGridFaceQ[offset + 1] = 4.0 - side;
         coarseGridFaceQ[offset + 2] = -1.0;
@@ -129,8 +128,7 @@ void exahype2::dg::tests::RiemannTest::testInterpolateProjectedFacePolynomialRep
         for (int side = 0; side < 2; side++) {
           auto shiftedDoF    = dof;
           shiftedDoF(normal) = side;
-          const int offset =
-            toolbox::blockstructured::serialiseVoxelIndexInOverlap(shiftedDoF, NodesPerAxis, 1, normal) * Stride;
+          const int offset   = exahype2::serialiseVoxelIndexInOverlap(shiftedDoF, NodesPerAxis, 1, normal) * Stride;
           if (side == coarseSide) {
             validateNumericalEqualsWithParams3(
               fineGridFaceQ[offset],
@@ -194,7 +192,7 @@ void exahype2::dg::tests::RiemannTest::testInterpolateRiemannSolutionReproducesP
       for (int side = 0; side < 2; side++) {
         auto shiftedDoF    = dof;
         shiftedDoF(normal) = side;
-        const int slot = toolbox::blockstructured::serialiseVoxelIndexInOverlap(shiftedDoF, NodesPerAxis, 1, normal);
+        const int slot = exahype2::serialiseVoxelIndexInOverlap(shiftedDoF, NodesPerAxis, 1, normal);
         coarseRiemannSolution[slot * Unknowns]        = side == coarseSideLayer ? affineTrace(position, normal) : 9.0;
         coarseRiemannSolution[slot * Unknowns + 1]    = side == coarseSideLayer ? 4.0 : 9.0;
         coarseProjection[slot * ProjectionStride]     = RestrictedTrace;
@@ -220,7 +218,7 @@ void exahype2::dg::tests::RiemannTest::testInterpolateRiemannSolutionReproducesP
       tarch::la::Vector<DIMENSIONS, int> perturbedDoF(0);
       perturbedDoF(normal) = fineSideLayer;
       const int perturbedSlot =
-        toolbox::blockstructured::serialiseVoxelIndexInOverlap(perturbedDoF, NodesPerAxis, 1, normal);
+        exahype2::serialiseVoxelIndexInOverlap(perturbedDoF, NodesPerAxis, 1, normal);
       fineProjection[perturbedSlot * ProjectionStride] += Perturbation;
 
       std::array<double, FluxFaceSize> fineRiemannSolution{};
@@ -249,7 +247,7 @@ void exahype2::dg::tests::RiemannTest::testInterpolateRiemannSolutionReproducesP
         for (int side = 0; side < 2; side++) {
           auto shiftedDoF    = dof;
           shiftedDoF(normal) = side;
-          const int slot = toolbox::blockstructured::serialiseVoxelIndexInOverlap(shiftedDoF, NodesPerAxis, 1, normal);
+          const int slot = exahype2::serialiseVoxelIndexInOverlap(shiftedDoF, NodesPerAxis, 1, normal);
           if (side == coarseSideLayer) {
             // The coarse side's layer of the hanging face stays untouched.
             validateNumericalEqualsWithParams3(fineRiemannSolution[slot * Unknowns], 7.0, faceNumber, side, dof);
@@ -366,20 +364,20 @@ void exahype2::dg::tests::RiemannTest::testProjectVolumetricDataOntoFacesForCons
   validateNumericalEquals(QyL[12], 1.0);
   validateNumericalEquals(QyL[13], -1.0);
 #if DIMENSIONS == 3
-  validateEquals(toolbox::blockstructured::serialiseVoxelIndexInOverlap({0, 0, 0}, 3 + 1, 1, 1) * 2 + 0, 0);
-  validateEquals(toolbox::blockstructured::serialiseVoxelIndexInOverlap({0, 0, 0}, 3 + 1, 1, 1) * 2 + 1, 1);
-  validateEquals(toolbox::blockstructured::serialiseVoxelIndexInOverlap({1, 0, 0}, 3 + 1, 1, 1) * 2 + 0, 2);
-  validateEquals(toolbox::blockstructured::serialiseVoxelIndexInOverlap({1, 0, 0}, 3 + 1, 1, 1) * 2 + 1, 3);
-  validateEquals(toolbox::blockstructured::serialiseVoxelIndexInOverlap({0, 1, 0}, 3 + 1, 1, 1) * 2 + 0, 8);
-  validateEquals(toolbox::blockstructured::serialiseVoxelIndexInOverlap({0, 1, 0}, 3 + 1, 1, 1) * 2 + 1, 9);
-  validateEquals(toolbox::blockstructured::serialiseVoxelIndexInOverlap({1, 1, 0}, 3 + 1, 1, 1) * 2 + 0, 10);
-  validateEquals(toolbox::blockstructured::serialiseVoxelIndexInOverlap({1, 1, 0}, 3 + 1, 1, 1) * 2 + 1, 11);
-  validateEquals(toolbox::blockstructured::serialiseVoxelIndexInOverlap({2, 1, 0}, 3 + 1, 1, 1) * 2 + 0, 12);
-  validateEquals(toolbox::blockstructured::serialiseVoxelIndexInOverlap({2, 1, 0}, 3 + 1, 1, 1) * 2 + 1, 13);
-  validateEquals(toolbox::blockstructured::serialiseVoxelIndexInOverlap({3, 1, 0}, 3 + 1, 1, 1) * 2 + 0, 14);
-  validateEquals(toolbox::blockstructured::serialiseVoxelIndexInOverlap({3, 1, 0}, 3 + 1, 1, 1) * 2 + 1, 15);
-  validateEquals(toolbox::blockstructured::serialiseVoxelIndexInOverlap({0, 0, 1}, 3 + 1, 1, 1) * 2 + 0, 16);
-  validateEquals(toolbox::blockstructured::serialiseVoxelIndexInOverlap({0, 0, 1}, 3 + 1, 1, 1) * 2 + 1, 17);
+  validateEquals(exahype2::serialiseVoxelIndexInOverlap({0, 0, 0}, 3 + 1, 1, 1) * 2 + 0, 0);
+  validateEquals(exahype2::serialiseVoxelIndexInOverlap({0, 0, 0}, 3 + 1, 1, 1) * 2 + 1, 1);
+  validateEquals(exahype2::serialiseVoxelIndexInOverlap({1, 0, 0}, 3 + 1, 1, 1) * 2 + 0, 2);
+  validateEquals(exahype2::serialiseVoxelIndexInOverlap({1, 0, 0}, 3 + 1, 1, 1) * 2 + 1, 3);
+  validateEquals(exahype2::serialiseVoxelIndexInOverlap({0, 1, 0}, 3 + 1, 1, 1) * 2 + 0, 8);
+  validateEquals(exahype2::serialiseVoxelIndexInOverlap({0, 1, 0}, 3 + 1, 1, 1) * 2 + 1, 9);
+  validateEquals(exahype2::serialiseVoxelIndexInOverlap({1, 1, 0}, 3 + 1, 1, 1) * 2 + 0, 10);
+  validateEquals(exahype2::serialiseVoxelIndexInOverlap({1, 1, 0}, 3 + 1, 1, 1) * 2 + 1, 11);
+  validateEquals(exahype2::serialiseVoxelIndexInOverlap({2, 1, 0}, 3 + 1, 1, 1) * 2 + 0, 12);
+  validateEquals(exahype2::serialiseVoxelIndexInOverlap({2, 1, 0}, 3 + 1, 1, 1) * 2 + 1, 13);
+  validateEquals(exahype2::serialiseVoxelIndexInOverlap({3, 1, 0}, 3 + 1, 1, 1) * 2 + 0, 14);
+  validateEquals(exahype2::serialiseVoxelIndexInOverlap({3, 1, 0}, 3 + 1, 1, 1) * 2 + 1, 15);
+  validateEquals(exahype2::serialiseVoxelIndexInOverlap({0, 0, 1}, 3 + 1, 1, 1) * 2 + 0, 16);
+  validateEquals(exahype2::serialiseVoxelIndexInOverlap({0, 0, 1}, 3 + 1, 1, 1) * 2 + 1, 17);
 
   validateNumericalEquals(QyL[16], 0.0);
   validateNumericalEquals(QyL[17], 0.0);

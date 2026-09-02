@@ -49,10 +49,10 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
     // the opposite wall before the lift reads its position.
     if (PeriodicBC.any()) {
       particle->setX(
-        toolbox::particles::applyPeriodicBoundaryConditions(particle->getX(), DomainOffset, DomainSize, PeriodicBC)
+        peano4::particles::applyPeriodicBoundaryConditions(particle->getX(), DomainOffset, DomainSize, PeriodicBC)
       );
     }
-    const auto instruction = toolbox::particles::liftParticleAssociatedWithVertex(*particle, marker);
+    const auto instruction = peano4::particles::liftParticleAssociatedWithVertex(*particle, marker);
 
 #if PEANO_ASSERTIONS
     const int particleId = particle->getPartid();
@@ -63,18 +63,18 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
       particle->getParallelState() == globaldata::{{PARTICLE}}::ParallelState::Local;
 
     switch (instruction) {
-      case toolbox::particles::ParticleReassociationInstructionKeep:
-        toolbox::particles::updateContainedInAdjacentCellProperty(marker, *particle);
+      case peano4::particles::ParticleReassociationInstructionKeep:
+        peano4::particles::updateContainedInAdjacentCellProperty(marker, *particle);
         ++particleIterator;
         break;
 
-      case toolbox::particles::ParticleReassociationInstructionSieveGlobally:
+      case peano4::particles::ParticleReassociationInstructionSieveGlobally:
         ++_numberOfLiftsIntoSieveSet;
         logDebug(
           "Lift particle " << particle->toString() << " globally from " << marker.toString()
                            << " on tree " << _treeId << "."
         );
-        toolbox::particles::assignmentchecks::detachParticleFromVertex(
+        peano4::particles::assignmentchecks::detachParticleFromVertex(
           "{{PARTICLE}}",
           particle->getX(),
           particleId,
@@ -84,7 +84,7 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
           _treeId,
           "UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles"
         );
-        toolbox::particles::assignmentchecks::assignParticleToSieveSet(
+        peano4::particles::assignmentchecks::assignParticleToSieveSet(
           "{{PARTICLE}}",
           particle->getX(),
           particleId,
@@ -124,12 +124,12 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
           peano4::datamanagement::reconstructXOfParentVertex(marker, instruction);
         const auto parentCellSize = 3.0 * marker.getH();
         particle->setCellH(parentCellSize);
-        toolbox::particles::updateContainedInAdjacentCellProperty(
+        peano4::particles::updateContainedInAdjacentCellProperty(
           parentVertexPosition,
           parentCellSize,
           *particle
         );
-        toolbox::particles::assignmentchecks::detachParticleFromVertex(
+        peano4::particles::assignmentchecks::detachParticleFromVertex(
           "{{PARTICLE}}",
           particle->getX(),
           particleId,
@@ -139,7 +139,7 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
           _treeId,
           "UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles"
         );
-        toolbox::particles::assignmentchecks::assignParticleToVertex(
+        peano4::particles::assignmentchecks::assignParticleToVertex(
           "{{PARTICLE}}",
           particle->getX(),
           particleId,

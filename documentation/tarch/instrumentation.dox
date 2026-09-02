@@ -1,45 +1,38 @@
 /**
 
-\page tarch_logging Logging, tracing, profiling and assertions
+\page tarch_logging Logging, profiling and assertions
 
 \tableofcontents
 
-\section tarch_logging_architecture Logging, Tracing And Assertion Architecture
+\section tarch_logging_architecture Logging And Assertion Architecture
 
 Peano is built upon a technical architecture (`tarch`) which provides
-logging, tracing and assertions. The relevant files are
+logging and assertions. The relevant files are
 `tarch/instrumentation/Log.h`, the level specific macro headers
-`Debug.h`, `Info.h`, `Warning.h`, `Error.h` and `Trace.h`,
+`Debug.h`, `Info.h`, `Warning.h` and `Error.h`,
 `tarch/instrumentation/CommandLineSink.h`,
 `tarch/instrumentation/FileSink.h`, `tarch/instrumentation/Watch.h`,
 `tarch/instrumentation/Measurement.h` and `Assertions.h`.
 
-When we build Peano, diagnostics are controlled by three independent
+When we build Peano, diagnostics are controlled by two independent
 compile-time switches:
 
--   If a code is translated with `-DPEANO_TRACE=0`,
-    `-DPEANO_ASSERTIONS=0` and `-DPEANO_DEBUG=0`,
-    debug logging, tracing and assertion macros are disabled, i.e. replaced by
+-   If a code is translated with `-DPEANO_ASSERTIONS=0` and `-DPEANO_DEBUG=0`,
+    debug logging and assertion macros are disabled, i.e. replaced by
     empty statements. Warnings, information and error messages are still
     displayed.
-
--   If a code is translated with `-DPEANO_TRACE=1`, `traceEnter()` and
-    `traceLeave()` emit timed events into a trace file. Both macros can take
-    an explicit label string for function local trace scopes. Peano's `Trace`
-    build mode enables `PEANO_TRACE`, keeps `PEANO_ASSERTIONS=0` and
-    `PEANO_DEBUG=0`, and defines `NDEBUG`.
 
 -   If a code is translated with `-DPEANO_ASSERTIONS=1`, Peano's assertions are
     enabled, i.e. assertion macros do not degenerate to nop but actually run
     tests. This might increase the runtime significantly as tests run
-    permanently. Assertions do not imply trace file output.
+    permanently.
 
 -   If a code is translated with `-DPEANO_DEBUG=1`, debug-only data,
     consistency checks and debug messages are compiled in. Debug messages are
     still filtered at runtime before the message is constructed. This avoids
     unbounded file and terminal output in full simulation runs.
 
-\section tarch_logging_interface Using The Logging And Tracing Interface
+\section tarch_logging_interface Using The Logging Interface
 
 Peano relies on a plain interface to write out user information. All
 constituents of this interface are collected in the package
@@ -50,7 +43,7 @@ constituents of this interface are collected in the package
     information when the function is implemented in a namespace or class.
 2.  The macro argument is a stream expression.
 
-Peano offers user facing logging macros and separate trace instrumentation:
+Peano offers user facing logging macros:
 
 -   **Info**. Should be used to inform your user about the application's
     state.
@@ -64,12 +57,6 @@ Peano offers user facing logging macros and separate trace instrumentation:
     highlighted in bold red on interactive terminals. `logError(...)` does not
     terminate the process.
 
--   **Tracing**. `traceEnter()` and `traceLeave()` mark timed instrumentation
-    scopes. The macros also accept a label string, e.g.
-    `traceEnter("Source term evaluation")`. Trace events are not forwarded to
-    the command line or file sinks. They are accumulated by rank, thread and
-    call hierarchy, and dumped to `Trace.json` and `Trace.html` at shutdown.
-
 -   **Debug**. Should be used to write debug data. All debug data is removed
     unless you translate with `PEANO_DEBUG`. Debug messages are runtime
     filtered before the message is constructed. If enabled, they are written to
@@ -82,8 +69,7 @@ formats each line once and then dispatches it to the configured sinks. The
 tarch::instrumentation::CommandLineSink remains the default terminal sink.
 The same formatted line is also forwarded to tarch::instrumentation::FileSink,
 which writes `Peano.log` in the process working directory by default. Info,
-Warning, Error and Debug messages are forwarded to the file sink. Trace events
-are not handled by either the command line sink or the file sink. The file sink
+Warning, Error and Debug messages are forwarded to the file sink. The file sink
 flushes every write.
 
 Warning and Error messages are highlighted only in the terminal sink and only
@@ -92,29 +78,6 @@ file output stay plain text without ANSI escape sequences.
 Stdout-style messages, such as Info and Debug, are written only by the global
 master rank. The same rank filter applies to the file sink. Stderr-style
 messages, such as Warning and Error, remain visible from every rank.
-
-Trace instrumentation uses `traceEnter()` and `traceLeave()` pairs and is
-compiled only if `PEANO_TRACE=1`. The macros derive the event name from the
-compiler function signature at the call site and accumulate inclusive and
-exclusive timings per rank, thread and call path. The trace dump is written to
-`Trace.json` at shutdown; the same data is rendered as a static `Trace.html`
-table with bars and millisecond values. Each traced call path appears once per
-rank and thread with its call count, accumulated time, average time per call,
-and percentage of the thread's traced runtime.
-
-Function local trace scopes can be nested below the current function by passing
-the same label to `traceEnter(...)` and `traceLeave(...)`:
-
-~~~~~~~~~~~~~~~~~~~~~~~~~
-traceEnter();
-traceEnter("Source term evaluation");
-evaluateSourceTerm();
-traceLeave("Source term evaluation");
-traceLeave();
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-In the trace output this produces a child entry named `Source term evaluation`
-below the function scope.
 
 Debug logging has an additional runtime filter. The simplest way to configure
 it for a simulation run is the `PEANO_LOG_DEBUG` environment variable:
