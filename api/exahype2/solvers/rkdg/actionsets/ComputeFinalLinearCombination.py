@@ -101,7 +101,7 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
             normal
           );
         },
-        repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d
+        repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1D
       );
 
     const auto maxScaledEigenvalue = cellData.maxEigenvalue[0];
@@ -137,7 +137,7 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
       {{ORDER}},
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1d,
+      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1D,
       leftFaceProjection,
       rightFaceProjection,
       bottomFaceProjection,
@@ -161,7 +161,7 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
       {{ORDER}},
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1d,
+      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1D,
       leftFaceProjection,
       rightFaceProjection,
       bottomFaceProjection,

@@ -7,6 +7,7 @@
 #include "exahype2/fv/particles/ParticleIntegrationHelper.h"
 #include "exahype2/fv/particles/ParticleInterpolation.h"
 #include "peano4/datamanagement/CellMarker.h"
+#include "peano4/particles/potentials/Springs.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/la/Vector.h"
 

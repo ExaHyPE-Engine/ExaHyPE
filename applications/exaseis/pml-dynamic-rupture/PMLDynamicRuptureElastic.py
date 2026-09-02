@@ -17,8 +17,8 @@ def userIncludes():
 #include "DynamicRuptureParameters.h"
 #include "../riemannSolvers/riemannsolverPMLDynamicRupture.h"
 
+#include "exahype2/Curvi.h"
 #include "exahype2/dg/DGUtils.h"
-#include "toolbox/blockstructured/Curvi.h"
 
 #include "tarch/reader/NetCDFFieldSampler.h"
 """

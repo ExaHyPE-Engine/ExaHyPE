@@ -13,7 +13,7 @@ class InsertParticlesByCoordinates(ActionSet):
     consistently. Three-component coordinates work in two- and three-dimensional
     builds; a two-component layout requires a two-dimensional build.
 
-    The ``toolbox::particles::init`` function sets the position and a zero search
+    The ``peano4::particles::init`` function sets the position and a zero search
     radius before initialisation_call runs with ``particle`` in scope. A caller
     runs this action only in an initialisation traversal; each later traversal
     inserts another copy of every particle.
@@ -53,9 +53,9 @@ class InsertParticlesByCoordinates(ActionSet):
   for (const auto& coordinate : _coordinates) {
     if (not marker.willBeRefined() and marker.isContained(coordinate)) {
       auto* const particle = new globaldata::{{PARTICLE}}();
-      toolbox::particles::init(*particle, coordinate, 0.0);
+      peano4::particles::init(*particle, coordinate, 0.0);
       {{INITIALISATION_CALL}}
-      toolbox::particles::insertParticleIntoCell(
+      peano4::particles::insertParticleIntoCell(
         marker,
         particle,
         fineGridVertices{{PARTICLES_CONTAINER}},
@@ -85,8 +85,8 @@ class InsertParticlesByCoordinates(ActionSet):
             jinja2.Template(
                 """
 #include "globaldata/{{PARTICLE}}.h"
-#include "toolbox/particles/ParticleFactory.h"
-#include "toolbox/particles/particles.h"
+#include "peano4/particles/ParticleFactory.h"
+#include "peano4/particles/particles.h"
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 """
             ).render(**self._dictionary)

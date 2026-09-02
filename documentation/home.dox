@@ -34,7 +34,6 @@ balancing, sophisticated geometry representations, and other features.
 - The core
   - @subpage page_tarch_home
   - @subpage page_peano4_home
-  - @subpage page_toolbox_home
 - Extensions
   - @subpage page_exahype2_home
 - Third-party extensions

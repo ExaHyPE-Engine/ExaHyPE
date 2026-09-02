@@ -5,19 +5,34 @@ file(GLOB_RECURSE HEADERS ${HEADER_EXTENSIONS_TO_GLOB})
 
 set(SOURCES
   CellData.cpp
+  Curvi.cpp
+  Enumeration.cpp
   NonNegativeReduction.cpp
   NonNegativeStatistics.cpp
   PrecisionControl.cpp
+  ProjectPatch.cpp
+  ReconstructPatch.cpp
   RefinementControl.cpp
   RefinementControlService.cpp
   RefinementCriterionHelpers.cpp
   TimeStepping.cpp
   UnitTests.cpp
+  tests/CurviTest.cpp
+  tests/EnumerationTest.cpp
   tests/NonNegativeReductionTest.cpp
   tests/NonNegativeStatisticsTest.cpp
+  tests/PatchKernelsTest.cpp
   tests/RefinementControlServiceTest.cpp
   tests/RefinementControlTest.cpp
   tests/RefinementCriterionHelpersTest.cpp
+
+  amr/AMRRoutines.cpp
+  amr/ChildDataStage.cpp
+  amr/MultiresolutionDetail.cpp
+  amr/tests/ChildDataStageTest.cpp
+  amr/tests/InterpolationTest.cpp
+  amr/tests/MultiresolutionDetailTest.cpp
+  amr/tests/RestrictionTest.cpp
 
   dg/BoundaryConditions.cpp
   dg/CellIntegral.cpp
@@ -76,12 +91,12 @@ foreach(mode IN LISTS SUPPORTED_BUILD_TYPES)
   foreach(dimensions IN LISTS SUPPORTED_DIMENSIONS)
     peano_add_target(
       TYPE STATIC_LIBRARY
-      NAME ExaHyPE2${mode}${dimensions}d
+      NAME ExaHyPE${mode}${dimensions}D
       MODE ${mode}
       DIMENSION ${dimensions}
       SOURCES ${SOURCES}
       HEADERS ${HEADERS}
-      LINK_LIBRARIES ToolboxBlockStructured${mode}${dimensions}d ToolboxParticles${mode}${dimensions}d
+      LINK_LIBRARIES Peano${mode}${dimensions}D
     )
   endforeach()
 endforeach()

@@ -7,7 +7,7 @@ Two front-ends share the readers and the renderer:
 
   * a batch command line that writes image files for a single snapshot or a
     whole time series (see ``--help``), and
-  * notebook viewers :func:`show_solution` (2D) and :func:`show_solution_3d`
+  * notebook viewers :func:`show_solution` (2D) and :func:`show_solution_3D`
     (axis-aligned slices through a cube), each with a time slider, a field
     selector and play/stop.
 """
@@ -192,8 +192,8 @@ def _grid_image(
 # --------------------------------------------------------------------------- #
 # Polygon path (unstructured / adaptively refined / 3D slice)
 # --------------------------------------------------------------------------- #
-def _order_polygon(points_2d: np.ndarray) -> np.ndarray:
-    rounded = np.round(points_2d, 12)
+def _order_polygon(points_2D: np.ndarray) -> np.ndarray:
+    rounded = np.round(points_2D, 12)
     unique = np.unique(rounded, axis=0)
     if len(unique) <= 2:
         return unique
@@ -408,7 +408,7 @@ def _figure_to_png(figure) -> bytes:
 # --------------------------------------------------------------------------- #
 # 3D slicing (axis-aligned planes through a uniform hexahedral mesh)
 # --------------------------------------------------------------------------- #
-def _cell_centres_3d(snapshot: MeshSnapshot) -> np.ndarray:
+def _cell_centres_3D(snapshot: MeshSnapshot) -> np.ndarray:
     cells = snapshot.cells
     if not isinstance(cells, np.ndarray):
         raise ValueError("3D slicing needs a uniform (hexahedral) mesh")
@@ -418,7 +418,7 @@ def _cell_centres_3d(snapshot: MeshSnapshot) -> np.ndarray:
 
 
 def slice_layers(snapshot: MeshSnapshot, axis: str) -> np.ndarray:
-    return np.unique(np.round(_cell_centres_3d(snapshot)[:, AXIS_TO_INDEX[axis]], 9))
+    return np.unique(np.round(_cell_centres_3D(snapshot)[:, AXIS_TO_INDEX[axis]], 9))
 
 
 def render_slice_figure(
@@ -438,7 +438,7 @@ def render_slice_figure(
     b0, b1 = [index for index in (0, 1, 2) if index != a]
     layers = slice_layers(snapshot, axis)
     layer_index = int(np.clip(layer_index, 0, len(layers) - 1))
-    centres = _cell_centres_3d(snapshot)
+    centres = _cell_centres_3D(snapshot)
     mask = np.round(centres[:, a], 9) == layers[layer_index]
     values = cell_scalar(snapshot, field, component)[mask]
     p0 = np.round(centres[mask, b0], 9)
@@ -826,7 +826,7 @@ def show_solution(
     first = source.snapshot(0)
     if first.points.shape[1] >= 3 and regular_grid(first) is None:
         raise ValueError(
-            "This looks like a 3D mesh. Use show_solution_3d() to slice through it."
+            "This looks like a 3D mesh. Use show_solution_3D() to slice through it."
         )
     if regular_grid(first) is None and first.num_cells > LARGE_MESH:
         raise ValueError(
@@ -1023,7 +1023,7 @@ def show_solution(
 # --------------------------------------------------------------------------- #
 # Interactive 3D slice viewer
 # --------------------------------------------------------------------------- #
-def show_solution_3d(
+def show_solution_3D(
     solver_name: str,
     field: str | None = None,
     directory: str | Path | None = None,

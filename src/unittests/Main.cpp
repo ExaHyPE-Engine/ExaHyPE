@@ -13,8 +13,6 @@
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/tasking/Runtime.h"
-#include "toolbox/blockstructured/UnitTests.h"
-#include "toolbox/particles/UnitTests.h"
 
 namespace {
   int runTests() {
@@ -28,8 +26,6 @@ namespace {
 
     runTestCollection(tarch::getUnitTests());
     runTestCollection(peano4::getUnitTests());
-    runTestCollection(toolbox::blockstructured::getUnitTests());
-    runTestCollection(toolbox::particles::getUnitTests());
     runTestCollection(exahype2::getUnitTests());
     runTestCollection(runner::getUnitTests());
 

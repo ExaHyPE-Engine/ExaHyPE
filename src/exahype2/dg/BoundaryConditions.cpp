@@ -1,9 +1,11 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "BoundaryConditions.h"
 
+#include "exahype2/Enumeration.h"
 #include "exahype2/dg/DGUtils.h"
 #include "peano4/Globals.h"
 #include "peano4/Loop.h"
-#include "toolbox/blockstructured/Enumeration.h"
 
 /**
  * Fills the exterior trace of one projected DG face.
@@ -55,10 +57,8 @@ void exahype2::dg::applyBoundaryConditions(
       outsideDoF(normal) = 1;
     }
 
-    const int insideDoFSerialised =
-      toolbox::blockstructured::serialiseVoxelIndexInOverlap(insideDoF, order + 1, 1, normal) * stride;
-    const int outsideDoFSerialised =
-      toolbox::blockstructured::serialiseVoxelIndexInOverlap(outsideDoF, order + 1, 1, normal) * stride;
+    const int insideDoFSerialised  = exahype2::serialiseVoxelIndexInOverlap(insideDoF, order + 1, 1, normal) * stride;
+    const int outsideDoFSerialised = exahype2::serialiseVoxelIndexInOverlap(outsideDoF, order + 1, 1, normal) * stride;
 
     boundaryCondition(Q + insideDoFSerialised, Q + outsideDoFSerialised, x, t, dt, normal);
   });

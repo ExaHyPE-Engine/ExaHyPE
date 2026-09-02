@@ -44,8 +44,8 @@ on this machine.
 
 
 All builds use CMake. Create a build directory and configure with the Intel
-compilers and the machine-specific flags. The toolboxes and the ExaHyPE 2
-extension are always built, so there is no need to enable them individually.
+compilers and the machine-specific flags. The ExaHyPE 2
+extension is always built, so there is no need to enable it individually.
 
 - Single-node runs, i.e. one rank with all cores as OpenMP threads
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -70,7 +70,7 @@ make -j
 ~~~~~~~~~~~~~~~~~~~~~~
 module load vtune
 mkdir build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Trace \
+cmake .. -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_CXX_COMPILER=icpx -DCMAKE_C_COMPILER=icx \
   -DPEANO_EXTRA_CXX_FLAGS="-Ofast;-g;-mtune=native;-march=native;-fma;-fomit-frame-pointer;-Wno-unknown-attributes;-I${VTUNE_HOME}/vtune/latest/include" \
   -DPEANO_EXTRA_LINK_FLAGS="-g;-L${VTUNE_HOME}/vtune/latest/lib64;-littnotify"
@@ -81,7 +81,7 @@ make -j
 ~~~~~~~~~~~~~~~~~~~~~~
 module load vtune
 mkdir build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Trace \
+cmake .. -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_CXX_COMPILER=icpx -DCMAKE_C_COMPILER=icx \
   -DPEANO_EXTRA_CXX_FLAGS="-Ofast;-g;-mtune=native;-march=native;-fma;-fomit-frame-pointer;-Wno-unknown-attributes;-I${VTUNE_HOME}/vtune/latest/include;-I${VT_ROOT}/include" \
   -DPEANO_EXTRA_LINK_FLAGS="-g;-L${VT_LIB_DIR};-L${VTUNE_HOME}/vtune/latest/lib64;-lVT;-littnotify"

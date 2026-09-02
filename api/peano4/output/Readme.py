@@ -14,14 +14,14 @@ class Readme(object):
   the readme is actually dumped. Finally, there is information about the
   individual tools used. This information is generated from
   peano4.datamodel.Model where each individual model that we use adds
-  entries to the readme. Particular toolboxes or extensions can add their
+  entries to the readme. Particular extensions can add their
   information through their models, too
   """
 
   __Header = """
 # Readme of a Peano 4 project
 
-This experiment did rely on Peano 4 or a toolbox created on top of Peano.   
+This experiment did rely on Peano 4.                                        
 If you publish results obtained with this source code, we would appreciate  
 if you could point to the project homepage                                  
                                                                             

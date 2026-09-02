@@ -51,7 +51,7 @@ class UpdateParallelState(ActionSet):
         """
   for (auto* const particle : fineGridVertex{{PARTICLES_CONTAINER}}) {
     const bool particleWillBeLocal =
-      toolbox::particles::particleAssignedToVertexWillBeLocal(particle->getX(), marker);
+      peano4::particles::particleAssignedToVertexWillBeLocal(particle->getX(), marker);
     if (
       not particleWillBeLocal
       and particle->getParallelState() == globaldata::{{PARTICLE}}::ParallelState::Local
@@ -69,7 +69,7 @@ class UpdateParallelState(ActionSet):
       const int particleId = -1;
 #endif
 
-      toolbox::particles::assignmentchecks::detachParticleFromVertex(
+      peano4::particles::assignmentchecks::detachParticleFromVertex(
         "{{PARTICLE}}",
         particle->getX(),
         particleId,
@@ -79,7 +79,7 @@ class UpdateParallelState(ActionSet):
         _treeId,
         "UpdateParallelState::__Template_TouchVertexFirstTime"
       );
-      toolbox::particles::assignmentchecks::assignParticleToVertex(
+      peano4::particles::assignmentchecks::assignParticleToVertex(
         "{{PARTICLE}}",
         particle->getX(),
         particleId,
@@ -110,7 +110,7 @@ class UpdateParallelState(ActionSet):
       const int particleId = -1;
 #endif
 
-      toolbox::particles::assignmentchecks::detachParticleFromVertex(
+      peano4::particles::assignmentchecks::detachParticleFromVertex(
         "{{PARTICLE}}",
         particle->getX(),
         particleId,
@@ -120,7 +120,7 @@ class UpdateParallelState(ActionSet):
         _treeId,
         "UpdateParallelState::__Template_TouchVertexFirstTime"
       );
-      toolbox::particles::assignmentchecks::assignParticleToVertex(
+      peano4::particles::assignmentchecks::assignParticleToVertex(
         "{{PARTICLE}}",
         particle->getX(),
         particleId,
@@ -161,7 +161,7 @@ class UpdateParallelState(ActionSet):
         "Remove virtual particle " << particle->toString() << " from "
                                    << marker.toString() << " on tree " << _treeId << "."
       );
-      toolbox::particles::assignmentchecks::detachParticleFromVertex(
+      peano4::particles::assignmentchecks::detachParticleFromVertex(
         "{{PARTICLE}}",
         particle->getX(),
         particleId,
@@ -171,7 +171,7 @@ class UpdateParallelState(ActionSet):
         _treeId,
         "UpdateParallelState::__Template_TouchVertexLastTime"
       );
-      toolbox::particles::assignmentchecks::eraseParticle(
+      peano4::particles::assignmentchecks::eraseParticle(
         "{{PARTICLE}}",
         particle->getX(),
         particleId,
@@ -215,8 +215,8 @@ class UpdateParallelState(ActionSet):
     def get_includes(self):
         return jinja2.Template(
             """
-#include "toolbox/particles/MultiscaleTransitions.h"
-#include "toolbox/particles/assignmentchecks/TracingAPI.h"
+#include "peano4/particles/MultiscaleTransitions.h"
+#include "peano4/particles/assignmentchecks/TracingAPI.h"
 
 #include "globaldata/{{PARTICLE}}.h"
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"

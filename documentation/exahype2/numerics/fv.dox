@@ -5,7 +5,7 @@
 
 The finite volume method (FVM) is a discretization technique for PDEs, especially those that arise from physical conservation laws.
 FVM employs a volume integral formulation of the problem, utilizing a finite partitioning set of volumes to discretize the equations. Here we consider
-the following 1d example:
+the following 1D example:
 
 @image html finite-volumes.png
 

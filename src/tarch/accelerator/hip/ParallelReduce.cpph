@@ -51,7 +51,7 @@ namespace tarch::accelerator {
   }
 
   template <typename Reducer, typename F>
-  __global__ void flat_reduce_kernel_1d(F f, Reducer red, int n, typename Reducer::value_type* perBlockOut) {
+  __global__ void flat_reduce_kernel_1D(F f, Reducer red, int n, typename Reducer::value_type* perBlockOut) {
     using T            = typename Reducer::value_type;
     T         localAcc = Reducer::identity();
     const int idx      = blockIdx.x * blockDim.x + threadIdx.x;
@@ -165,7 +165,7 @@ namespace tarch {
     T* perBlock = allocateMemory<T>(blocks, MemoryLocation::Device, device);
     T* finalDev = allocateMemory<T>(1, MemoryLocation::Device, device);
 
-    accelerator::flat_reduce_kernel_1d<<<blocks, accelerator::HipBlockSize, 0, accelerator::deviceStreamGet()>>>(
+    accelerator::flat_reduce_kernel_1D<<<blocks, accelerator::HipBlockSize, 0, accelerator::deviceStreamGet()>>>(
       f,
       red,
       r.n,

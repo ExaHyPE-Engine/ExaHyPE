@@ -20,10 +20,10 @@ namespace exahype2::dg {
     NonConservativeProduct                nonconservativeProduct,
     Source                                source,
     PointSources                          pointSources,
-    const double* NOALIAS                 QuadratureNodes1d,
-    const double* NOALIAS                 MassMatrixDiagonal1d,
-    const double* NOALIAS                 StiffnessMatrix1d,
-    const double* NOALIAS                 DerivativeOperator1d,
+    const double* NOALIAS                 QuadratureNodes1D,
+    const double* NOALIAS                 MassMatrixDiagonal1D,
+    const double* NOALIAS                 StiffnessMatrix1D,
+    const double* NOALIAS                 DerivativeOperator1D,
     bool                                  evaluateFlux,
     bool                                  evaluateNonconservativeProduct,
     bool                                  evaluateSource,
@@ -44,7 +44,7 @@ namespace exahype2::dg {
     const int                             order,
     const int                             unknowns,
     const int                             auxiliaryVariables,
-    const double* NOALIAS                 MassMatrixDiagonal1d
+    const double* NOALIAS                 MassMatrixDiagonal1D
   );
 
   double reduceMaxScaledEigenvalue_patchwise_functors(
@@ -53,7 +53,7 @@ namespace exahype2::dg {
     const int                             unknowns,
     const int                             auxiliaryVariables,
     MaxEigenvalue                         maxEigenvalue,
-    const double* NOALIAS                 QuadratureNodes1d
+    const double* NOALIAS                 QuadratureNodes1D
   );
 
   namespace internal {

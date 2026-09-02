@@ -3,7 +3,7 @@
 #include "HandleBoundaryTest.h"
 
 #include "exahype2/fv/HandleBoundary.h"
-#include "toolbox/blockstructured/Enumeration.h"
+#include "exahype2/Enumeration.h"
 
 namespace {
   // Copies the inner state into the halo, the discrete equivalent of a
@@ -119,7 +119,7 @@ void exahype2::fv::tests::HandleBoundaryTest::testEachGhostLayerUsesMatchingInte
 
       for (int layer = 0; layer < MusclHaloSize; layer++) {
         overlapVolume(normal)   = faceNumber < DIMENSIONS ? MusclHaloSize + layer : MusclHaloSize - 1 - layer;
-        const auto insideVolume = toolbox::blockstructured::serialiseVoxelIndexInOverlap(
+        const auto insideVolume = exahype2::serialiseVoxelIndexInOverlap(
           overlapVolume,
           NumberOfVolumesPerAxis,
           MusclHaloSize,
@@ -154,7 +154,7 @@ void exahype2::fv::tests::HandleBoundaryTest::testEachGhostLayerUsesMatchingInte
 
       for (int layer = 0; layer < MusclHaloSize; layer++) {
         overlapVolume(normal)    = faceNumber < DIMENSIONS ? MusclHaloSize - 1 - layer : MusclHaloSize + layer;
-        const auto outsideVolume = toolbox::blockstructured::serialiseVoxelIndexInOverlap(
+        const auto outsideVolume = exahype2::serialiseVoxelIndexInOverlap(
           overlapVolume,
           NumberOfVolumesPerAxis,
           MusclHaloSize,

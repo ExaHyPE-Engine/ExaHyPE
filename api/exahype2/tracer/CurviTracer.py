@@ -53,17 +53,17 @@ class CurviTracer(ActionSet):
 
         position_delta_between_two_snapshots: Float
           Maps to the positionDelta argument of
-          toolbox::particles::TrajectoryDatabase::TrajectoryDatabase().
+          peano4::particles::TrajectoryDatabase::TrajectoryDatabase().
 
         time_delta_between_two_snapshots: Float
           Maps to the timeDelta argument of
-          toolbox::particles::TrajectoryDatabase::TrajectoryDatabase().
+          peano4::particles::TrajectoryDatabase::TrajectoryDatabase().
 
         output_precision: Int
           Number of digits the database writes per value.
 
         use_relative_deltas: Boolean
-          See description of the C++ class toolbox::particles::TrajectoryDatabase.
+          See description of the C++ class peano4::particles::TrajectoryDatabase.
 
         initial_record_time: Float
           Lower bound of the recording time window handed to the generated code.
@@ -143,7 +143,7 @@ class CurviTracer(ActionSet):
           data[unknown] = ::exahype2::dg::evaluatePolynomial(
               marker,
               {{ORDER}},
-              repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
+              repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1D,
               UnknownsPerDoF,
               fineGridCell{{SOLVER_NAME}}Q.data(),
               _coordinates[i],
@@ -222,7 +222,7 @@ class CurviTracer(ActionSet):
             ::exahype2::dg::evaluatePolynomial(
               marker,
               {{ORDER}},
-              repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
+              repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1D,
               UnknownsPerDoF,
               fineGridFace{{SOLVER_NAME}}QEstimates.data() + BasisElementsPerFace,
               _faultCoordinates[i],
@@ -231,7 +231,7 @@ class CurviTracer(ActionSet):
             ::exahype2::dg::evaluatePolynomial(
               marker,
               {{ORDER}},
-              repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
+              repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1D,
               UnknownsPerDoF,
               fineGridFace{{SOLVER_NAME}}QEstimates.data(),
               _faultCoordinates[i],
@@ -245,7 +245,7 @@ class CurviTracer(ActionSet):
           data[unknown] = (double) (::exahype2::dg::evaluatePolynomial(
               marker,
               {{ORDER}},
-              repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
+              repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1D,
               UnknownsPerDoF,
               fineGridFace{{SOLVER_NAME}}QEstimates.data() + BasisElementsPerFace,
               _faultCoordinates[i],
@@ -253,7 +253,7 @@ class CurviTracer(ActionSet):
             ) - ::exahype2::dg::evaluatePolynomial(
               marker,
               {{ORDER}},
-              repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
+              repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1D,
               UnknownsPerDoF,
               fineGridFace{{SOLVER_NAME}}QEstimates.data(),
               _faultCoordinates[i],
@@ -265,7 +265,7 @@ class CurviTracer(ActionSet):
           data[unknown] = (double) (::exahype2::dg::evaluatePolynomial(
               marker,
               {{ORDER}},
-              repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
+              repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1D,
               UnknownsPerDoF,
               fineGridFace{{SOLVER_NAME}}QEstimates.data() + BasisElementsPerFace,
               _faultCoordinates[i],
@@ -273,7 +273,7 @@ class CurviTracer(ActionSet):
             ) - ::exahype2::dg::evaluatePolynomial(
               marker,
               {{ORDER}},
-              repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
+              repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1D,
               UnknownsPerDoF,
               fineGridFace{{SOLVER_NAME}}QEstimates.data(),
               _faultCoordinates[i],
@@ -417,7 +417,7 @@ if (_faultCoordinates.empty()) {
 #include "repositories/SolverRepository.h"
 #include "runner/RuntimeParameters.h"
 #include "exahype2/dg/Tracer.h"
-#include "toolbox/particles/TrajectoryDatabase.h"
+#include "peano4/particles/TrajectoryDatabase.h"
 #include "VariableShortcuts{{SOLVER_NAME}}.h"
         """
         ).render(**self.d)
@@ -434,7 +434,7 @@ std::vector<tarch::la::Vector<DIMENSIONS,double>>  """
 std::mutex     """
             + full_qualified_classname
             + """::_coordinatesMutex;
-toolbox::particles::TrajectoryDatabase  """
+peano4::particles::TrajectoryDatabase  """
             + full_qualified_classname
             + """::_database;
 """
@@ -448,7 +448,7 @@ toolbox::particles::TrajectoryDatabase  """
 
     int                                        _treeId;
 
-    static toolbox::particles::TrajectoryDatabase  _database;
+    static peano4::particles::TrajectoryDatabase  _database;
 
   public:
     static std::vector<tarch::la::Vector<DIMENSIONS,double>> getCoordinates() {

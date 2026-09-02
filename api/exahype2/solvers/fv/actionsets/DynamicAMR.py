@@ -107,7 +107,7 @@ class AdaptiveMeshFaceCoupling(peano4.solversteps.ActionSet):
     // its own. They reduce here, so the chained restriction is complete before
     // this face stages itself.
     if (_haloRestrictionStageQNew.hasFrame({{FINE_GRID_FACE_Q_NEW_ACCESSOR}}.data() + facePosition)) {
-      ::toolbox::blockstructured::restrictHaloLayerFromStagedSubfaces(
+      ::exahype2::amr::restrictHaloLayerFromStagedSubfaces(
         _haloRestrictionStageQNew,
         {{FINE_GRID_FACE_Q_NEW_ACCESSOR}}.data() + facePosition,
         {{FINE_GRID_FACE_Q_NEW_ACCESSOR}}.data(),
@@ -116,7 +116,7 @@ class AdaptiveMeshFaceCoupling(peano4.solversteps.ActionSet):
         {{UNKNOWNS}}
       );
     }
-    ::toolbox::blockstructured::stageHaloLayerForGatheredRestriction(
+    ::exahype2::amr::stageHaloLayerForGatheredRestriction(
       marker,
       _haloRestrictionStageQNew,
       {{COARSE_GRID_FACES_Q_NEW_ACCESSOR}}(marker.getSelectedFaceNumber()).data() + facePosition,
@@ -142,7 +142,7 @@ class AdaptiveMeshFaceCoupling(peano4.solversteps.ActionSet):
   if ({{RESTRICT_GUARD}}) {
     for (int facePosition = 0; facePosition < 2; facePosition++) {
       if (_haloRestrictionStageQNew.hasFrame({{FINE_GRID_FACE_Q_NEW_ACCESSOR}}.data() + facePosition)) {
-        ::toolbox::blockstructured::restrictHaloLayerFromStagedSubfaces(
+        ::exahype2::amr::restrictHaloLayerFromStagedSubfaces(
           _haloRestrictionStageQNew,
           {{FINE_GRID_FACE_Q_NEW_ACCESSOR}}.data() + facePosition,
           {{FINE_GRID_FACE_Q_NEW_ACCESSOR}}.data(),
@@ -175,7 +175,7 @@ class AdaptiveMeshFaceCoupling(peano4.solversteps.ActionSet):
   if ({{INTERPOLATE_GUARD}}) {
     const auto leftRightEntry = marker.getSelectedFaceNumber() < DIMENSIONS ? 0 : 1;
     if (not marker.isInteriorFaceWithinPatch()) {
-      ::toolbox::blockstructured::interpolateHaloLayerWithTangentialSlope(
+      ::exahype2::amr::interpolateHaloLayerWithTangentialSlope(
         marker,
         {{COARSE_GRID_FACES_Q_OLD_ACCESSOR}}(marker.getSelectedFaceNumber()).data(),
         {{FINE_GRID_FACE_Q_OLD_ACCESSOR}}.data(),
@@ -239,7 +239,7 @@ class AdaptiveMeshFaceCoupling(peano4.solversteps.ActionSet):
 
     def get_attributes(self):
         return f"""
-    ::toolbox::blockstructured::ChildDataStage<{self.d["STORAGE_PRECISION"]}> _haloRestrictionStageQNew{{
+    ::exahype2::amr::ChildDataStage<{self.d["STORAGE_PRECISION"]}> _haloRestrictionStageQNew{{
       THREE_POWER_D / 3,
       (DIMENSIONS == 3 ? {self.d["DOFS_PER_AXIS"]} * {self.d["DOFS_PER_AXIS"]} : {self.d["DOFS_PER_AXIS"]}) * {self.d["UNKNOWNS"]}}};
 """
@@ -247,9 +247,9 @@ class AdaptiveMeshFaceCoupling(peano4.solversteps.ActionSet):
     def get_includes(self):
         return """
 #include "peano4/Loop.h"
-#include "toolbox/blockstructured/AMRRoutines.h"
+#include "exahype2/amr/AMRRoutines.h"
 #include "exahype2/fv/PatchUtils.h"
-#include "toolbox/blockstructured/ChildDataStage.h"
+#include "exahype2/amr/ChildDataStage.h"
 #include "../repositories/SolverRepository.h"
 """
 
@@ -325,7 +325,7 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
   for (int facePosition = 0; facePosition < 2; facePosition++) {
     if (_haloRestrictionStageQNew.hasFrame({{FINE_GRID_FACE_Q_NEW_ACCESSOR}}.data() + facePosition)) {
       if ({{FINE_GRID_FACE_LABEL_ACCESSOR}}.getRequiresDataTransfer(facePosition)) {
-        ::toolbox::blockstructured::restrictHaloLayerFromStagedSubfaces(
+        ::exahype2::amr::restrictHaloLayerFromStagedSubfaces(
           _haloRestrictionStageQNew,
           {{FINE_GRID_FACE_Q_NEW_ACCESSOR}}.data() + facePosition,
           {{FINE_GRID_FACE_Q_NEW_ACCESSOR}}.data(),
@@ -333,7 +333,7 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
           {{DOFS_PER_AXIS}},
           {{UNKNOWNS}}
         );
-        ::toolbox::blockstructured::restrictHaloLayerFromStagedSubfaces(
+        ::exahype2::amr::restrictHaloLayerFromStagedSubfaces(
           _haloRestrictionStageQOld,
           {{FINE_GRID_FACE_Q_OLD_ACCESSOR}}.data() + facePosition,
           {{FINE_GRID_FACE_Q_OLD_ACCESSOR}}.data(),
@@ -358,7 +358,7 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
     // A face on the domain wall carries no refined vertex, so its first touch
     // clears neither its content nor its flags.
     for (int facePosition = 0; facePosition < 2; facePosition++) {
-      ::toolbox::blockstructured::stageHaloLayerForGatheredRestriction(
+      ::exahype2::amr::stageHaloLayerForGatheredRestriction(
         marker,
         _haloRestrictionStageQNew,
         {{COARSE_GRID_FACES_Q_NEW_ACCESSOR}}(marker.getSelectedFaceNumber()).data() + facePosition,
@@ -367,7 +367,7 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
         {{DOFS_PER_AXIS}},
         {{UNKNOWNS}}
       );
-      ::toolbox::blockstructured::stageHaloLayerForGatheredRestriction(
+      ::exahype2::amr::stageHaloLayerForGatheredRestriction(
         marker,
         _haloRestrictionStageQOld,
         {{COARSE_GRID_FACES_Q_OLD_ACCESSOR}}(marker.getSelectedFaceNumber()).data() + facePosition,
@@ -414,7 +414,7 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
         self._Template_CreateFace = """
   if (marker.isInteriorFaceWithinPatch()) {
     for (int side = 0; side < 2; side++) {
-      ::toolbox::blockstructured::interpolateHaloLayerFromCoarseCell(
+      ::exahype2::amr::interpolateHaloLayerFromCoarseCell(
         marker,
         {{COARSE_GRID_CELL_Q_OLD_ACCESSOR}}.data(),
         {{FINE_GRID_FACE_Q_OLD_ACCESSOR}}.data(),
@@ -422,7 +422,7 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
         {{DOFS_PER_AXIS}},
         {{UNKNOWNS}}
       );
-      ::toolbox::blockstructured::interpolateHaloLayerFromCoarseCell(
+      ::exahype2::amr::interpolateHaloLayerFromCoarseCell(
         marker,
         {{COARSE_GRID_CELL_Q_NEW_ACCESSOR}}.data(),
         {{FINE_GRID_FACE_Q_NEW_ACCESSOR}}.data(),
@@ -433,7 +433,7 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
     }
   } else {
     for (int side = 0; side < 2; side++) {
-      ::toolbox::blockstructured::interpolateHaloLayerWithTangentialSlope(
+      ::exahype2::amr::interpolateHaloLayerWithTangentialSlope(
         marker,
         {{COARSE_GRID_FACES_Q_OLD_ACCESSOR}}(marker.getSelectedFaceNumber()).data(),
         {{FINE_GRID_FACE_Q_OLD_ACCESSOR}}.data(),
@@ -441,7 +441,7 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
         {{DOFS_PER_AXIS}},
         {{UNKNOWNS}}
       );
-      ::toolbox::blockstructured::interpolateHaloLayerWithTangentialSlope(
+      ::exahype2::amr::interpolateHaloLayerWithTangentialSlope(
         marker,
         {{COARSE_GRID_FACES_Q_NEW_ACCESSOR}}(marker.getSelectedFaceNumber()).data(),
         {{FINE_GRID_FACE_Q_NEW_ACCESSOR}}.data(),
@@ -457,14 +457,14 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
 """
 
         self._Template_CreateCell = """
-  ::toolbox::blockstructured::interpolateCell(
+  ::exahype2::amr::interpolateCell(
     marker,
     {{COARSE_GRID_CELL_Q_NEW_ACCESSOR}}.data(),
     {{FINE_GRID_CELL_Q_NEW_ACCESSOR}}.data(),
     {{DOFS_PER_AXIS}},
     {{UNKNOWNS}}
   );
-  ::toolbox::blockstructured::interpolateCell(
+  ::exahype2::amr::interpolateCell(
     marker,
     {{COARSE_GRID_CELL_Q_OLD_ACCESSOR}}.data(),
     {{FINE_GRID_CELL_Q_OLD_ACCESSOR}}.data(),
@@ -525,13 +525,13 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
       childValuesQNew[childIndex] = _cellRestrictionStageQNew.child({{COARSE_GRID_CELL_Q_NEW_ACCESSOR}}.data(), childIndex);
       childValuesQOld[childIndex] = _cellRestrictionStageQOld.child({{COARSE_GRID_CELL_Q_OLD_ACCESSOR}}.data(), childIndex);
     }
-    ::toolbox::blockstructured::restrictCellFromChildren(
+    ::exahype2::amr::restrictCellFromChildren(
       {{COARSE_GRID_CELL_Q_NEW_ACCESSOR}}.data(),
       childValuesQNew,
       {{DOFS_PER_AXIS}},
       {{UNKNOWNS}}
     );
-    ::toolbox::blockstructured::restrictCellFromChildren(
+    ::exahype2::amr::restrictCellFromChildren(
       {{COARSE_GRID_CELL_Q_OLD_ACCESSOR}}.data(),
       childValuesQOld,
       {{DOFS_PER_AXIS}},
@@ -596,7 +596,7 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
       facesOut[face] = {{FINE_GRID_FACES_Q_NEW_ACCESSOR}}(face).data();
     }
 
-    ::toolbox::blockstructured::projectPatch<
+    ::exahype2::projectPatch<
       {{DOFS_PER_AXIS}},
       {{OVERLAP}},
       {{UNKNOWNS}},
@@ -643,13 +643,13 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
         return (
             super(DynamicAMRTransfer, self).get_attributes()
             + f"""
-    ::toolbox::blockstructured::ChildDataStage<{self.d["STORAGE_PRECISION"]}> _haloRestrictionStageQOld{{
+    ::exahype2::amr::ChildDataStage<{self.d["STORAGE_PRECISION"]}> _haloRestrictionStageQOld{{
       THREE_POWER_D / 3,
       (DIMENSIONS == 3 ? {self.d["DOFS_PER_AXIS"]} * {self.d["DOFS_PER_AXIS"]} : {self.d["DOFS_PER_AXIS"]}) * {self.d["UNKNOWNS"]}}};
-    ::toolbox::blockstructured::ChildDataStage<{self.d["STORAGE_PRECISION"]}> _cellRestrictionStageQNew{{
+    ::exahype2::amr::ChildDataStage<{self.d["STORAGE_PRECISION"]}> _cellRestrictionStageQNew{{
       THREE_POWER_D,
       (DIMENSIONS == 3 ? {self.d["DOFS_PER_AXIS"]} * {self.d["DOFS_PER_AXIS"]} * {self.d["DOFS_PER_AXIS"]} : {self.d["DOFS_PER_AXIS"]} * {self.d["DOFS_PER_AXIS"]}) * {self.d["UNKNOWNS"]}}};
-    ::toolbox::blockstructured::ChildDataStage<{self.d["STORAGE_PRECISION"]}> _cellRestrictionStageQOld{{
+    ::exahype2::amr::ChildDataStage<{self.d["STORAGE_PRECISION"]}> _cellRestrictionStageQOld{{
       THREE_POWER_D,
       (DIMENSIONS == 3 ? {self.d["DOFS_PER_AXIS"]} * {self.d["DOFS_PER_AXIS"]} * {self.d["DOFS_PER_AXIS"]} : {self.d["DOFS_PER_AXIS"]} * {self.d["DOFS_PER_AXIS"]}) * {self.d["UNKNOWNS"]}}};
 """
@@ -658,5 +658,5 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
     def get_includes(self):
         return f"""{super(DynamicAMRTransfer, self).get_includes()}
 #include "exahype2/RefinementControlService.h"
-#include "toolbox/blockstructured/ProjectPatch.h"
+#include "exahype2/ProjectPatch.h"
 """

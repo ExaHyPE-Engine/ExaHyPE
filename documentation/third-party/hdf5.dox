@@ -9,7 +9,7 @@
 
 Peano does not need HDF5. There's no generic input file format, and it can write
 its own mesh files without HDF5. Things are different if you want to dump HDF5,
-or if you use an extension/toolbox which requires HDF5. HDF5 support is controlled
+or if you use an extension which requires HDF5. HDF5 support is controlled
 by the CMake option PEANO_WITH_HDF5, which is enabled by default:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

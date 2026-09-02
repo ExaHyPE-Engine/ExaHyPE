@@ -28,14 +28,12 @@ math(EXPR parallel_test_processors "${mpi_ranks} * ${threads_per_rank}")
 
 foreach(mode IN LISTS SUPPORTED_BUILD_TYPES)
   foreach(dimensions IN LISTS SUPPORTED_DIMENSIONS)
-    set(target "UnitTests${mode}${dimensions}d")
+    set(target "UnitTests${mode}${dimensions}D")
 
     set(test_dependencies
-      Peano4${mode}${dimensions}d
-      ToolboxParticles${mode}${dimensions}d
-      ToolboxBlockStructured${mode}${dimensions}d
-      ExaHyPE2${mode}${dimensions}d
-      Runner${mode}${dimensions}d
+      Peano${mode}${dimensions}D
+      ExaHyPE${mode}${dimensions}D
+      Runner${mode}${dimensions}D
     )
 
     peano_add_target(

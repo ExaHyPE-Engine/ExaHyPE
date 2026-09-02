@@ -20,17 +20,13 @@ namespace peano4 {
   } // namespace datamanagement
 } // namespace peano4
 
-namespace toolbox {
-  namespace particles {
-    namespace tests {
-      /**
-       * Forward declarations for test purposes
-       */
-      class MultiscaleTransitionsTest;
-      class TestHelpers;
-    } // namespace tests
-  } // namespace particles
-} // namespace toolbox
+namespace peano4::particles::tests {
+  /**
+   * Forward declarations for test purposes
+   */
+  class MultiscaleTransitionsTest;
+  class TestHelpers;
+} // namespace peano4::particles::tests
 
 std::ostream& operator<<(std::ostream& out, const peano4::datamanagement::VertexMarker& marker);
 
@@ -72,8 +68,8 @@ private:
   /**
    * For unit tests
    */
-  friend class toolbox::particles::tests::MultiscaleTransitionsTest;
-  friend class toolbox::particles::tests::TestHelpers;
+  friend class peano4::particles::tests::MultiscaleTransitionsTest;
+  friend class peano4::particles::tests::TestHelpers;
 
   /**
    * Centre of the underlying cell

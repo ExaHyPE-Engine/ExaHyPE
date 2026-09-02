@@ -1,0 +1,97 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+/**
+ * Returns ParticleReassociationInstructionKeep if the particle remains at its vertex, or
+ * a value between 0 and @f$ 2^d-1 @f$ naming another vertex of the same cell. A particle
+ * that is not local or that the cell does not cover keeps its vertex.
+ */
+template <typename Particle>
+peano4::particles::ParticleReassociationInstruction peano4::particles::
+  getParticleReassociationInstructionWithinCellWithIntraCellReassignment(
+    const Particle&                           particle,
+    const peano4::datamanagement::CellMarker& marker,
+    const int                                 numberOfVertexWithinCell
+  ) {
+  return getParticleReassociationInstructionWithinCellWithIntraCellReassignment(
+    particle.getParallelState() == Particle::ParallelState::Local,
+    particle.getSearchRadius(),
+    particle.getX(),
+    marker,
+    numberOfVertexWithinCell
+  );
+}
+
+/**
+ * Returns one of three instructions for the particle at its current vertex.
+ *
+ * - ParticleReassociationInstructionKeep leaves the particle where it is. A particle
+ *   that is not local always keeps its vertex.
+ * - ParticleReassociationInstructionSieveGlobally removes the particle from the mesh
+ *   and pushes it into the global sieve list.
+ * - A value between 0 and @f$ 2^d-1 @f$ names the vertex of the parent cell the particle
+ *   lifts to. A lift stays within the local spacetree, so a particle that would cross a
+ *   tree cut sieves globally.
+ *
+ * @see peano4::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance()
+ */
+template <typename Particle>
+peano4::particles::ParticleReassociationInstruction peano4::particles::liftParticleAssociatedWithVertex(
+  const Particle&                            particle,
+  const peano4::datamanagement::VertexMarker marker
+) {
+  return liftParticleAssociatedWithVertex(
+    particle.getParallelState() == Particle::ParallelState::Local,
+    particle.getSearchRadius(),
+    particle.getX(),
+    marker
+  );
+}
+
+/**
+ * Returns whether the particle is sieved into the vertex the marker names, which holds if
+ *
+ * - the vertex is closer to the particle than half the mesh size of an adjacent mesh
+ *   element; and
+ * - the search radius does not fit into the next finer mesh level, or there is no next
+ *   finer mesh level; and
+ * - the search radius is not too big for the current mesh level.
+ *
+ * The routine does not check whether the particle will be local. The grab tolerance has to
+ * stay smaller than the release tolerance, so a particle that is sieved into a vertex does
+ * not lift away from it again.
+ */
+template <typename Particle>
+bool peano4::particles::sieveParticle(const Particle& particle, const peano4::datamanagement::VertexMarker& marker) {
+  return sieveParticle(particle.getSearchRadius(), particle.getX(), marker);
+}
+
+/**
+ * Returns whether a later step of the same mesh traversal pulls the particle down into a
+ * finer level. This holds if the cell has children or gains them in this sweep, and the
+ * search radius fits into the next finer level.
+ */
+template <typename Particle>
+bool peano4::particles::particleWillBeDroppedFurther(
+  const Particle&                           particle,
+  const peano4::datamanagement::CellMarker& marker
+) {
+  return particleWillBeDroppedFurther(particle.getSearchRadius(), marker);
+}
+
+/**
+ * Returns whether a later step of the same mesh traversal strips the particle from the
+ * vertex the marker names. The marker carries no multiscale relation.
+ */
+template <typename Particle>
+bool peano4::particles::particleWillBeDroppedFurther(
+  const Particle&                             particle,
+  const peano4::datamanagement::VertexMarker& marker
+) {
+  return particleWillBeDroppedFurther(particle.getSearchRadius(), marker);
+}
+
+template <typename Particle>
+bool peano4::particles::dropParticle(const Particle& particle, const peano4::datamanagement::VertexMarker& marker) {
+  return dropParticle(particle.getSearchRadius(), particle.getX(), marker);
+}

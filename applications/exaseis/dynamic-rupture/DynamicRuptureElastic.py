@@ -21,8 +21,8 @@ def userIncludes():
 #include "DynamicRuptureParameters.h"
 #include "../riemannSolvers/riemannsolverDynamicRupture.h"
 
+#include "exahype2/Curvi.h"
 #include "exahype2/dg/DGUtils.h"
-#include "toolbox/blockstructured/Curvi.h"
 """
 
 def abstractDeclarations():

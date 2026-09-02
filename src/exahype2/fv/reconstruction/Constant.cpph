@@ -71,9 +71,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::Constant::a
         tarch::la::Vector<DIMENSIONS, int> overlapCell = volumeIndex;
         overlapCell(normal)                            = volumeIndex(normal) + 2 * HaloSize - NumberOfVolumesPerAxis;
         const int overlapIndex =
-          toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell, NumberOfVolumesPerAxis, HaloSize, normal);
-        rightStateInStorage =
-          &faceInputPatches[normal + DIMENSIONS][static_cast<std::ptrdiff_t>(overlapIndex) * NumberOfData];
+          exahype2::serialiseVoxelIndexInOverlap(overlapCell, NumberOfVolumesPerAxis, HaloSize, normal);
+        rightStateInStorage = &faceInputPatches[normal + DIMENSIONS][static_cast<std::ptrdiff_t>(overlapIndex) * NumberOfData];
       }
 
       const auto inverseSpacing = static_cast<ComputePrecision>(
@@ -139,7 +138,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::Constant::a
       tarch::la::Vector<DIMENSIONS, int> overlapCell = volumeIndex;
       overlapCell(normal)                            = volumeIndex(normal);
       const int overlapIndex =
-        toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell, NumberOfVolumesPerAxis, HaloSize, normal);
+        exahype2::serialiseVoxelIndexInOverlap(overlapCell, NumberOfVolumesPerAxis, HaloSize, normal);
       leftStateInStorage = &faceInputPatches[normal][static_cast<std::ptrdiff_t>(overlapIndex) * NumberOfData];
     }
 
@@ -152,9 +151,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::Constant::a
       tarch::la::Vector<DIMENSIONS, int> overlapCell = volumeIndex;
       overlapCell(normal)                            = volumeIndex(normal) + 2 * HaloSize - NumberOfVolumesPerAxis;
       const int overlapIndex =
-        toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell, NumberOfVolumesPerAxis, HaloSize, normal);
-      rightStateInStorage =
-        &faceInputPatches[normal + DIMENSIONS][static_cast<std::ptrdiff_t>(overlapIndex) * NumberOfData];
+        exahype2::serialiseVoxelIndexInOverlap(overlapCell, NumberOfVolumesPerAxis, HaloSize, normal);
+      rightStateInStorage = &faceInputPatches[normal + DIMENSIONS][static_cast<std::ptrdiff_t>(overlapIndex) * NumberOfData];
     }
 
     [[maybe_unused]] ComputePrecision leftStateComputeBuffer[NumberOfData]

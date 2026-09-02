@@ -111,7 +111,7 @@ class RecomputeSubcells(AbstractLimiterActionSet):
             for (int layer = 0; layer < {{FV_HALO_WIDTH}}; layer++) {
               auto outerIndex            = tangentialIndex;
               outerIndex(axis)           = faceNumber < DIMENSIONS ? layer : {{FV_HALO_WIDTH}} + layer;
-              const auto serialisedOuter = ::toolbox::blockstructured::serialiseVoxelIndexInOverlap(
+              const auto serialisedOuter = ::exahype2::serialiseVoxelIndexInOverlap(
                 outerIndex,
                 NumberOfSubcellsPerAxis,
                 {{FV_HALO_WIDTH}},
@@ -290,7 +290,7 @@ class RecomputeSubcells(AbstractLimiterActionSet):
 #include "exahype2/dg/EigenvalueStatistics.h"
 #include "exahype2/dg/LimiterStatus.h"
 #include "exahype2/dg/SubcellProjection.h"
-#include "toolbox/blockstructured/Enumeration.h"
+#include "exahype2/Enumeration.h"
 """
             + scheme_includes
         )

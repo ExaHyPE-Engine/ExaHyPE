@@ -1,0 +1,202 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+template <typename T>
+std::mutex peano4::particles::SieveParticles<T>::_particlesToBeSievedMutex;
+
+template <typename T>
+void peano4::particles::SieveParticles<T>::deleteParticles(ParticleList& list) {
+  for (auto* particle : list) {
+    delete particle;
+  }
+  list.clear();
+}
+
+/**
+ * Replaces the sieve list with the particles that every rank could not lift
+ * within its own trees. Each rank calls this once its traversal tasks have
+ * joined. The local particles move into the sieve list as pointers, the remote
+ * ones arrive as new heap copies.
+ */
+template <typename T>
+void peano4::particles::SieveParticles<T>::exchangeSieveListsGlobally(
+  const tarch::la::Vector<DIMENSIONS, double> domainOffset,
+  const tarch::la::Vector<DIMENSIONS, double> domainSize,
+  const std::bitset<DIMENSIONS>               periodicBC
+) {
+  static_assert(std::is_trivially_copyable_v<T>, "Sieve exchange requires a trivially copyable particle record");
+
+  logDebug("There are " << _particlesThatHaveToBeSieved.size() << " particles left in the previous sieve list");
+
+  deleteParticles(_particlesThatHaveToBeSieved);
+
+  logDebug("Pack the particles that cannot be sorted locally into a contiguous buffer");
+  std::vector<T> sendBuffer;
+  sendBuffer.reserve(_particlesThatCanNotBeLiftedWithinTheirTree.size());
+  for (const auto* particle : _particlesThatCanNotBeLiftedWithinTheirTree) {
+    sendBuffer.push_back(*particle);
+  }
+
+  const int        numberOfRanks          = tarch::mpi::Rank::getInstance().getNumberOfRanks();
+  const int        localRank              = tarch::mpi::Rank::getInstance().getRank();
+  const MPI_Comm   communicator           = tarch::mpi::Rank::getInstance().getCommunicator();
+  const int        numberOfLocalParticles = static_cast<int>(sendBuffer.size());
+  std::vector<int> particlesPerRank(numberOfRanks, 0);
+
+  tarch::mpi::allgather(&numberOfLocalParticles, 1, MPI_INT, particlesPerRank.data(), 1, MPI_INT, communicator);
+
+  // The particles travel as raw bytes, so both the per-rank counts and the offsets into the
+  // receive buffer are byte counts, and an int has to span the whole gathered block.
+  std::vector<int> bytesPerRank(numberOfRanks, 0);
+  std::vector<int> displacements(numberOfRanks, 0);
+  std::size_t      numberOfBytes           = 0;
+  std::size_t      numberOfGlobalParticles = 0;
+  for (int rankIndex = 0; rankIndex < numberOfRanks; rankIndex++) {
+    const std::size_t rankParticleBytes = static_cast<std::size_t>(particlesPerRank[rankIndex]) * sizeof(T);
+    if (rankParticleBytes > static_cast<std::size_t>(std::numeric_limits<int>::max())
+        or numberOfBytes > static_cast<std::size_t>(std::numeric_limits<int>::max()) - rankParticleBytes) {
+      tarch::terminateWithError("The global particle sieve exceeds the MPI byte-count range.");
+    }
+    displacements[rankIndex] = static_cast<int>(numberOfBytes);
+    bytesPerRank[rankIndex]  = static_cast<int>(rankParticleBytes);
+    numberOfBytes += rankParticleBytes;
+    numberOfGlobalParticles += static_cast<std::size_t>(particlesPerRank[rankIndex]);
+  }
+
+  std::vector<T> receiveBuffer(numberOfGlobalParticles);
+  tarch::mpi::allgatherv(
+    sendBuffer.empty() ? nullptr : sendBuffer.data(),
+    bytesPerRank[localRank],
+    MPI_BYTE,
+    receiveBuffer.empty() ? nullptr : receiveBuffer.data(),
+    bytesPerRank.data(),
+    displacements.data(),
+    MPI_BYTE,
+    communicator
+  );
+
+  // This rank's own segment comes back with the rest, but its particles are handed over
+  // below as pointers, so copying them out here would duplicate every one of them.
+  int firstParticleIndexForRank = 0;
+  for (int rankIndex = 0; rankIndex < numberOfRanks; rankIndex++) {
+    if (rankIndex != localRank) {
+      for (int particleIndex = 0; particleIndex < particlesPerRank[rankIndex]; particleIndex++) {
+        _particlesThatHaveToBeSieved.push_back(new T(receiveBuffer[firstParticleIndexForRank + particleIndex]));
+      }
+    }
+    firstParticleIndexForRank += particlesPerRank[rankIndex];
+  }
+
+  _particlesThatHaveToBeSieved.insert(
+    _particlesThatHaveToBeSieved.end(),
+    _particlesThatCanNotBeLiftedWithinTheirTree.begin(),
+    _particlesThatCanNotBeLiftedWithinTheirTree.end()
+  );
+
+  // The pointers now belong to _particlesThatHaveToBeSieved.
+  _particlesThatCanNotBeLiftedWithinTheirTree.clear();
+
+  if (periodicBC.any()) {
+    for (auto* particle : _particlesThatHaveToBeSieved) {
+      particle->setX(
+        peano4::particles::applyPeriodicBoundaryConditions(particle->getX(), domainOffset, domainSize, periodicBC)
+      );
+    }
+  }
+}
+
+template <typename T>
+std::string peano4::particles::SieveParticles<T>::toString() const {
+  std::ostringstream description;
+
+  description << "(#particles-that-cannot-be-lifted=" << _particlesThatCanNotBeLiftedWithinTheirTree.size()
+              << ",#particles-that-have-to-be-sieved=" << _particlesThatHaveToBeSieved.size() << ")";
+
+  return description.str();
+}
+
+template <typename T>
+void peano4::particles::SieveParticles<T>::deleteParticles() {
+  deleteParticles(_particlesThatCanNotBeLiftedWithinTheirTree);
+  deleteParticles(_particlesThatHaveToBeSieved);
+
+  _particlesThatCanNotBeLiftedWithinTheirTree.clear();
+  _particlesThatHaveToBeSieved.clear();
+}
+
+/** Returns a deep copy of the sieve list; the particles awaiting the exchange are not copied. */
+template <typename T>
+peano4::particles::SieveParticles<T> peano4::particles::SieveParticles<T>::cloneParticlesToBeSieved() {
+  SieveParticles<T> clone;
+
+  for (const auto* particle : _particlesThatHaveToBeSieved) {
+    clone._particlesThatHaveToBeSieved.push_back(new T(*particle));
+  }
+
+  logDebug("Created a clone of the particle set: " << this->toString() << "->" << clone.toString());
+
+  return clone;
+}
+
+/** Takes over the ownership of particle. */
+template <typename T>
+void peano4::particles::SieveParticles<T>::addParticleThatCanNotBeLiftedWithinItsTree(T* particle) {
+  logDebug("Particle cannot be lifted: " << particle->toString());
+  const std::scoped_lock lock(_particlesToBeSievedMutex);
+  _particlesThatCanNotBeLiftedWithinTheirTree.push_back(particle);
+}
+
+/** Returns the number of particles not yet assigned to a vertex. */
+template <typename T>
+int peano4::particles::SieveParticles<T>::getNumberOfParticlesThatHaveBeSievedIntoVertices() const {
+  return static_cast<int>(_particlesThatHaveToBeSieved.size());
+}
+
+template <typename T>
+bool peano4::particles::SieveParticles<T>::hasParticlesToBeSievedIntoVertices() const {
+  return not _particlesThatHaveToBeSieved.empty();
+}
+
+/**
+ * Returns the particles assigned to marker and sets their cell size to the
+ * cell size of marker. removeReturnedParticlesFromSet transfers the returned
+ * pointers out of this object. lockMutex has to be true when more than one
+ * thread calls this method on the same object and removal is enabled.
+ */
+template <typename T>
+typename peano4::particles::SieveParticles<T>::ParticleList peano4::particles::SieveParticles<T>::
+  getParticlesToBeSievedIntoVertex(
+    const peano4::datamanagement::VertexMarker& marker,
+    bool                                        removeReturnedParticlesFromSet,
+    bool                                        onlyReturnParticlesThatWillBeLocal,
+    bool                                        lockMutex
+  ) {
+  std::unique_lock<std::mutex> lock(_particlesToBeSievedMutex, std::defer_lock);
+  if (removeReturnedParticlesFromSet and lockMutex) {
+    lock.lock();
+  }
+
+  ParticleList selectedParticles;
+  auto         particleIterator = _particlesThatHaveToBeSieved.begin();
+  while (particleIterator != _particlesThatHaveToBeSieved.end()) {
+    const bool willBeLocal = peano4::particles::particleAssignedToVertexWillBeLocal((*particleIterator)->getX(), marker);
+    if (::peano4::particles::sieveParticle(**particleIterator, marker)
+        and (willBeLocal or not onlyReturnParticlesThatWillBeLocal)) {
+      logDebug(
+        "Drop particle " << (*particleIterator)->toString() << " from global sieve list into vertex "
+                         << marker.toString()
+      );
+
+      (*particleIterator)->setCellH(marker.getH());
+
+      selectedParticles.push_back(*particleIterator);
+      if (removeReturnedParticlesFromSet) {
+        particleIterator = _particlesThatHaveToBeSieved.erase(particleIterator);
+      } else {
+        particleIterator++;
+      }
+    } else {
+      particleIterator++;
+    }
+  }
+  return selectedParticles;
+}

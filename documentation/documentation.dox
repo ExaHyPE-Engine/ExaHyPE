@@ -4,7 +4,7 @@
 
 \tableofcontents
 
-Peano and its toolboxes and extensions follow some very simplistic documentation paradigms:
+Peano and its extensions follow some very simplistic documentation paradigms:
 
 - Everything is in the code;
 - All documentation is created via \c doxygen;
@@ -39,7 +39,7 @@ We want to have one medium which integrates top-level and high-level overview in
 with low-level source code documentation (normally stored in `*.h` and `*.py` files).
 
 
-Peano's documentation can be quite complex with all the toolboxes and
+Peano's documentation can be quite complex with all the
 extensions being part of the code plus the fact that we combine C/C++
 and Python in numerous ways.
 Therefore, the file structure of the documentation reflects the logical

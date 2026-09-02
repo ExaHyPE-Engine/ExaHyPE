@@ -9,16 +9,16 @@
 #include "peano4/datamanagement/VertexMarker.h"
 #include "peano4/stacks/Stack.h"
 
-#include "toolbox/particles/ParticleSet.h"
+#include "peano4/particles/ParticleSet.h"
 
 namespace {{NAMESPACE | join("::")}} {
   class {{CLASSNAME}};
 } // namespace {{NAMESPACE | join("::")}}
 
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}} final :
-  public toolbox::particles::ParticleSet<::{{PARTICLE_FULL_QUALIFIED_TYPE}}> {
+  public peano4::particles::ParticleSet<::{{PARTICLE_FULL_QUALIFIED_TYPE}}> {
 public:
-  using Base = toolbox::particles::ParticleSet<
+  using Base = peano4::particles::ParticleSet<
     ::{{PARTICLE_FULL_QUALIFIED_TYPE}}
   >;
   using Container = std::vector<

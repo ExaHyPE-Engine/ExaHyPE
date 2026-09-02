@@ -484,9 +484,6 @@ tarch::instrumentation::Log::Context tarch::instrumentation::Log::createContext(
 void tarch::instrumentation::Log::flushBeforeAssertion() {
   CommandLineSink::getInstance().close();
   FileSink::getInstance().close();
-#if PEANO_TRACE
-  closeTrace(false);
-#endif
 }
 
 long int tarch::instrumentation::Log::getTimeStamp() {
@@ -603,7 +600,4 @@ void tarch::instrumentation::Log::clearDebugFilter() {
 void tarch::instrumentation::Log::close() {
   CommandLineSink::getInstance().close();
   FileSink::getInstance().close();
-#if PEANO_TRACE
-  closeTrace(true);
-#endif
 }
