@@ -11,7 +11,6 @@ _LAZY_MODULES = {
     "datamodel": "peano4.datamodel",
     "solversteps": "peano4.solversteps",
     "output": "peano4.output",
-    "blockstructured": "peano4.blockstructured",
     "particles": "peano4.particles",
     "plotter": "peano4.plotter",
 }

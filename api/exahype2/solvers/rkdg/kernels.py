@@ -764,10 +764,10 @@ def create_volumetric_solver_call(polynomial_basis, solver_variant):
         return std::vector<::exahype2::dg::PointSource>();
         {% endif %}
       }, //source
-      repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
-      repositories::{{SOLVER_INSTANCE}}.MassMatrixDiagonal1d,
-      repositories::{{SOLVER_INSTANCE}}.StiffnessOperator1d,
-      repositories::{{SOLVER_INSTANCE}}.DerivativeOperator1d,
+      repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1D,
+      repositories::{{SOLVER_INSTANCE}}.MassMatrixDiagonal1D,
+      repositories::{{SOLVER_INSTANCE}}.StiffnessOperator1D,
+      repositories::{{SOLVER_INSTANCE}}.DerivativeOperator1D,
       {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }}, //useFlux
       {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }}, //useNCP
       {{ "true" if SOURCE_TERM_IMPLEMENTATION!="<none>" else "false" }}, //useSource
@@ -823,8 +823,8 @@ def create_add_solver_contributions_call(polynomial_basis):
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       marker.getH(),
-      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1d,
-      repositories::{{SOLVER_INSTANCE}}.MassMatrixDiagonal1d,
+      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1D,
+      repositories::{{SOLVER_INSTANCE}}.MassMatrixDiagonal1D,
       dQdt
     );
 """
@@ -839,7 +839,7 @@ def create_multiply_with_inverted_mass_matrix_call(polynomial_basis):
       {{ORDER}},
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      repositories::{{SOLVER_INSTANCE}}.MassMatrixDiagonal1d
+      repositories::{{SOLVER_INSTANCE}}.MassMatrixDiagonal1D
     );
 """
     else:

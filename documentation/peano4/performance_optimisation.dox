@@ -5,8 +5,7 @@
 \tableofcontents
 
 Performance work starts from a release build, the Grid Snapshot, and an
-external profiler. Trace builds add selected instrumentation when a profile
-needs Peano regions. Logging filters keep diagnostic output from dominating
+external profiler. Logging filters keep diagnostic output from dominating
 the measurement.
 
 # Interpreting the decomposition

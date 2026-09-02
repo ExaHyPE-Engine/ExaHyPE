@@ -1,0 +1,38 @@
+/**
+
+@page page_peano4_particles_mesh_storage Multiscale particle storage
+
+Particles use a dual-tree association. The replicated spacetree supplies the
+multilevel geometry, while each rank stores particle sets only in its relevant
+vertex pool slots.
+
+# Level selection
+
+A particle resides on a level whose cell width can accommodate its search
+diameter. The association chooses the vertex on that level closest to the
+particle centre. Particles with different search radii can therefore occupy
+different levels of the same spacetree.
+
+For a particle with search radius @f$r@f$ and level width @f$h@f$, the
+association selects a level satisfying the particle model's @f$r@f$ to
+@f$h@f$ constraint. The update action sets lift or drop the particle when a
+position or radius change invalidates that selection.
+
+# Dual-grid interpretation
+
+The vertex association is equivalent to a cell association on a grid shifted
+by half a cell width along every axis. The spacetree vertices form the centres
+of these dual cells, or equivalently the sites of a Voronoi partition on each
+level.
+
+# Rank ownership
+
+The authoritative particle is local on the rank owning its associated mesh
+region. Other ranks can hold virtual boundary copies. A rank-boundary merge
+updates these copies with one sweep of lag, and the sieve routes a particle
+whose destination is not available in the local vertex pool.
+
+Particle containers make their rank traversal serial, so no
+subtree-task particle copies exist within a rank.
+
+*/

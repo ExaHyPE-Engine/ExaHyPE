@@ -170,7 +170,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD double exahype2::fv::timestepping::SingleStep:
         tarch::la::Vector<DIMENSIONS, int> overlapCell = volumeIndex;
         overlapCell(normal)                            = volumeIndex(normal) + HaloSize;
         const int overlapIndex =
-          toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell, NumberOfVolumesPerAxis, HaloSize, normal);
+          exahype2::serialiseVoxelIndexInOverlap(overlapCell, NumberOfVolumesPerAxis, HaloSize, normal);
         StoragePrecision* NOALIAS const faceData = faceOutputPatches[normal];
         SIMD()
         for (int unknown = 0; unknown < NumberOfData; unknown++) {
@@ -181,7 +181,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD double exahype2::fv::timestepping::SingleStep:
         tarch::la::Vector<DIMENSIONS, int> overlapCell = volumeIndex;
         overlapCell(normal)                            = volumeIndex(normal) - (NumberOfVolumesPerAxis - HaloSize);
         const int overlapIndex =
-          toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell, NumberOfVolumesPerAxis, HaloSize, normal);
+          exahype2::serialiseVoxelIndexInOverlap(overlapCell, NumberOfVolumesPerAxis, HaloSize, normal);
         StoragePrecision* NOALIAS const faceData = faceOutputPatches[normal + DIMENSIONS];
         SIMD()
         for (int unknown = 0; unknown < NumberOfData; unknown++) {

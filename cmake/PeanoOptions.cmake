@@ -39,7 +39,7 @@ mark_as_advanced(SUPPORTED_DIMENSIONS)
 
 set(CMAKE_BUILD_TYPE "" CACHE INTERNAL "")
 set(SUPPORTED_BUILD_TYPES
-  Release Debug Trace Asserts
+  Release Debug Asserts
   CACHE STRING "Editable list of supported build types"
 )
 mark_as_advanced(SUPPORTED_BUILD_TYPES)

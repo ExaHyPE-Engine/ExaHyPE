@@ -92,7 +92,7 @@ class UpdateParticle_MultiLevelInteraction_Sets(ActionSet):
   std::vector<int>                           numberOfCoalescedActiveParticlesPerVertex(TWO_POWER_D, -1);
   std::vector<bool>                          localParticleIsContainedInCell;
   [[maybe_unused]] const auto                ownershipTolerance =
-    toolbox::particles::GrabOwnershipSpatialSortingTolerance * tarch::la::max(marker.getH())
+    peano4::particles::GrabOwnershipSpatialSortingTolerance * tarch::la::max(marker.getH())
     * tarch::la::NUMERICAL_ZERO_DIFFERENCE;
 
   for (int vertex = 0; vertex < TWO_POWER_D; vertex++) {
@@ -106,11 +106,11 @@ class UpdateParticle_MultiLevelInteraction_Sets(ActionSet):
       assertion(
         isLocal
           == marker.isContained(
-            toolbox::particles::periodicImageTowardsCell(particle->getX(), marker),
+            peano4::particles::periodicImageTowardsCell(particle->getX(), marker),
             ownershipTolerance
           ),
         isLocal,
-        marker.isContained(toolbox::particles::periodicImageTowardsCell(particle->getX(), marker), ownershipTolerance),
+        marker.isContained(peano4::particles::periodicImageTowardsCell(particle->getX(), marker), ownershipTolerance),
         marker.toString(),
         particle->toString(),
         vertex,
@@ -129,7 +129,7 @@ class UpdateParticle_MultiLevelInteraction_Sets(ActionSet):
   for (int vertex = 0; vertex < TWO_POWER_D; vertex++) {
     const std::bitset<DIMENSIONS> assignedVertex(vertex);
     for (auto* const particle : fineGridVertices{{LOCAL_PARTICLES_CONTAINER}}(vertex)) {
-      toolbox::particles::updateContainedInAdjacentCellProperty(marker, assignedVertex, *particle);
+      peano4::particles::updateContainedInAdjacentCellProperty(marker, assignedVertex, *particle);
     }
   }
 {% endif %}
@@ -184,7 +184,7 @@ class UpdateParticle_MultiLevelInteraction_Sets(ActionSet):
 {% if ACTIVE_PARTICLE != LOCAL_PARTICLE %}
 #include "globaldata/{{ACTIVE_PARTICLE}}.h"
 {% endif %}
-#include "toolbox/particles/particles.h"
+#include "peano4/particles/particles.h"
 #include "vertexdata/{{LOCAL_PARTICLES_CONTAINER}}.h"
 {% if ACTIVE_PARTICLES_CONTAINER != LOCAL_PARTICLES_CONTAINER %}
 #include "vertexdata/{{ACTIVE_PARTICLES_CONTAINER}}.h"

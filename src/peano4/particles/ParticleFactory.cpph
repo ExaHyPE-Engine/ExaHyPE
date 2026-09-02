@@ -1,0 +1,167 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+/**
+ * Initialises the position, search radius, data, and parallel state.
+ *
+ * A factory particle starts as virtual because insertion into the mesh assigns
+ * its local or virtual ownership.
+ */
+template <class Particle>
+INLINE_METHOD void peano4::particles::init(
+  Particle&                                    particle,
+  const tarch::la::Vector<DIMENSIONS, double>& position,
+  const double                                 searchRadius
+) {
+#if PEANO_DEBUG
+  particle.setDebugX(position);
+  particle.setDebugH(0.0);
+#endif
+  particle.setX(position);
+  particle.setSearchRadius(searchRadius);
+
+  const auto numberOfDataValues = particle.getData().size();
+  for (std::size_t dataIndex = 0; dataIndex < numberOfDataValues; ++dataIndex) {
+    particle.setData(static_cast<int>(dataIndex), 0.0);
+  }
+  particle.setParallelState(Particle::ParallelState::Virtual);
+}
+
+/**
+ * Initialises a particle and copies the available data values.
+ *
+ * Missing values are zero-filled, and excess input values are ignored.
+ */
+template <class Particle>
+INLINE_METHOD void peano4::particles::initWithData(
+  Particle&                                    particle,
+  const tarch::la::Vector<DIMENSIONS, double>& position,
+  const double                                 searchRadius,
+  const std::vector<double>&                   initialData
+) {
+#if PEANO_DEBUG
+  particle.setDebugX(position);
+  particle.setDebugH(0.0);
+#endif
+  particle.setX(position);
+  particle.setSearchRadius(searchRadius);
+
+  const auto numberOfDataValues = particle.getData().size();
+  for (std::size_t dataIndex = 0; dataIndex < numberOfDataValues; ++dataIndex) {
+    const auto value = dataIndex < initialData.size() ? initialData[dataIndex] : 0.0;
+    particle.setData(static_cast<int>(dataIndex), value);
+  }
+  particle.setParallelState(Particle::ParallelState::Virtual);
+}
+
+/**
+ * Creates a cell-local Cartesian particle layout on the heap.
+ *
+ * The positive spacing determines the number of particles per axis. Layouts
+ * in adjacent cells need not align. Noise perturbs each coordinate by at most
+ * half the local particle spacing multiplied by noiseScale.
+ */
+template <class Particle>
+INLINE_METHOD std::vector<Particle*> peano4::particles::createEquallySpacedParticles(
+  const double                                 spacing,
+  const tarch::la::Vector<DIMENSIONS, double>& voxelCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& voxelSize,
+  const bool                                   addNoise,
+  const double                                 noiseScale
+) {
+  std::vector<Particle*> result;
+
+  auto       continuousParticlesPerAxis = voxelSize(0) / spacing;
+  const auto particlesPerAxis           = static_cast<int>(std::floor(continuousParticlesPerAxis));
+  continuousParticlesPerAxis -= particlesPerAxis;
+  assertion(continuousParticlesPerAxis >= 0.0, continuousParticlesPerAxis, particlesPerAxis, voxelSize(0), spacing);
+  assertion(continuousParticlesPerAxis <= 1.0, continuousParticlesPerAxis, particlesPerAxis, voxelSize(0), spacing);
+
+  const auto layoutWidth = particlesPerAxis * spacing;
+  assertion(tarch::la::smallerEquals(layoutWidth, voxelSize(0)));
+
+  if (particlesPerAxis > 0) {
+    const auto particleSpacing = voxelSize(0) / particlesPerAxis;
+    const auto offset          = voxelCentre - 0.5 * layoutWidth;
+
+    peano4::dForEach(particlesPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& particleIndex) {
+      auto        position = offset + particleSpacing * tarch::la::convertScalar<double>(particleIndex);
+      auto* const particle = new Particle();
+
+      if (addNoise) {
+        for (int dimension = 0; dimension < DIMENSIONS; ++dimension) {
+          position(dimension) += peano4::particles::drawParticlePositionNoise() * particleSpacing * noiseScale;
+        }
+      }
+
+      peano4::particles::init(*particle, position, 0.9 * tarch::la::min(voxelSize));
+      result.push_back(particle);
+    });
+  }
+
+  return result;
+}
+
+/**
+ * Creates particles on one domain-wide Cartesian layout.
+ *
+ * A cell includes particles on its lower faces and excludes those on its upper
+ * faces, so adjacent cells do not create duplicates. The upper domain boundary
+ * is excluded. Noise perturbs each coordinate by at most half the global
+ * spacing multiplied by noiseScale.
+ */
+template <class Particle>
+INLINE_METHOD std::vector<Particle*> peano4::particles::createParticlesAlignedWithGlobalCartesianMesh(
+  const double                                 spacing,
+  const tarch::la::Vector<DIMENSIONS, double>& voxelCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& voxelSize,
+  const tarch::la::Vector<DIMENSIONS, double>& domainOffset,
+  const tarch::la::Vector<DIMENSIONS, double>& domainSize,
+  const bool                                   addNoise,
+  const double                                 noiseScale
+) {
+  std::vector<Particle*> result;
+
+  const auto biasedOffset = domainOffset + 0.5 * tarch::la::remainder(domainOffset, spacing);
+
+  tarch::la::Vector<DIMENSIONS, int>    particlesPerAxis;
+  tarch::la::Vector<DIMENSIONS, double> firstParticlePosition;
+  for (int dimension = 0; dimension < DIMENSIONS; ++dimension) {
+    auto leftParticleNumber = static_cast<int>(
+      std::round((voxelCentre(dimension) - 0.5 * voxelSize(dimension) - biasedOffset(dimension)) / spacing)
+    );
+    auto rightParticleNumber = static_cast<int>(
+      std::round((voxelCentre(dimension) + 0.5 * voxelSize(dimension) - biasedOffset(dimension)) / spacing)
+    );
+
+    const auto leftPosition  = biasedOffset(dimension) + spacing * leftParticleNumber;
+    const auto rightPosition = biasedOffset(dimension) + spacing * rightParticleNumber;
+
+    if (tarch::la::smaller(leftPosition, voxelCentre(dimension) - 0.5 * voxelSize(dimension))) {
+      ++leftParticleNumber;
+    }
+    if (tarch::la::greaterEquals(rightPosition, voxelCentre(dimension) + 0.5 * voxelSize(dimension))
+        or tarch::la::greaterEquals(rightPosition, domainOffset(dimension) + domainSize(dimension))) {
+      --rightParticleNumber;
+    }
+
+    particlesPerAxis(dimension)      = std::max(0, rightParticleNumber - leftParticleNumber + 1);
+    firstParticlePosition(dimension) = biasedOffset(dimension) + spacing * leftParticleNumber;
+  }
+
+  peano4::dForEach(particlesPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& particleIndex) {
+    auto        position = firstParticlePosition + spacing * tarch::la::convertScalar<double>(particleIndex);
+    auto* const particle = new Particle();
+
+    if (addNoise) {
+      for (int dimension = 0; dimension < DIMENSIONS; ++dimension) {
+        position(dimension) += peano4::particles::drawParticlePositionNoise() * spacing * noiseScale;
+      }
+    }
+
+    peano4::particles::init(*particle, position, 0.9 * tarch::la::min(voxelSize));
+    result.push_back(particle);
+  });
+
+  return result;
+}

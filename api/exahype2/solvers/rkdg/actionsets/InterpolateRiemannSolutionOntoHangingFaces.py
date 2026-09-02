@@ -57,7 +57,7 @@ class InterpolateRiemannSolutionOntoHangingFaces(AbstractRungeKuttaDGActionSet):
         {{ORDER}},
         {{NUMBER_OF_UNKNOWNS}},
         {{NUMBER_OF_AUXILIARY_VARIABLES}},
-        repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1d,
+        repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1D,
         projectionTargets[0], // Left
         projectionTargets[2], // Right
         projectionTargets[1], // Down
@@ -69,7 +69,7 @@ class InterpolateRiemannSolutionOntoHangingFaces(AbstractRungeKuttaDGActionSet):
         {{ORDER}},
         {{NUMBER_OF_UNKNOWNS}},
         {{NUMBER_OF_AUXILIARY_VARIABLES}},
-        repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1d,
+        repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1D,
         projectionTargets[0], // Left
         projectionTargets[3], // Right
         projectionTargets[1], // Down
@@ -107,14 +107,14 @@ class InterpolateRiemannSolutionOntoHangingFaces(AbstractRungeKuttaDGActionSet):
             tarch::la::Vector<DIMENSIONS, double> x = parentFaceOffset;
             for (int d = 0; d < DIMENSIONS; d++) {
               if (d != normal) {
-                x(d) += repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d[dof(d)] * parentCellSize(d);
+                x(d) += repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1D[dof(d)] * parentCellSize(d);
               }
             }
             for (int layer = 0; layer < 2; layer++) {
               auto shiftedDoF    = dof;
               shiftedDoF(normal) = layer;
               const int offset =
-                toolbox::blockstructured::serialiseVoxelIndexInOverlap(shiftedDoF, {{ORDER}} + 1, 1, normal)
+                ::exahype2::serialiseVoxelIndexInOverlap(shiftedDoF, {{ORDER}} + 1, 1, normal)
                 * ProjectionStride;
               maxEigenvalue = std::fmax(
                 maxEigenvalue,
@@ -130,7 +130,7 @@ class InterpolateRiemannSolutionOntoHangingFaces(AbstractRungeKuttaDGActionSet):
             {{NUMBER_OF_UNKNOWNS}},
             {{NUMBER_OF_AUXILIARY_VARIABLES}},
             maxEigenvalue,
-            repositories::{{SOLVER_INSTANCE}}.InterpolationMatrix1d,
+            repositories::{{SOLVER_INSTANCE}}.InterpolationMatrix1D,
             coarseGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(hangingFaceNumber).data(),
             coarseFaceProjection,
             fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(hangingFaceNumber).data(),
@@ -192,6 +192,6 @@ class InterpolateRiemannSolutionOntoHangingFaces(AbstractRungeKuttaDGActionSet):
             super(InterpolateRiemannSolutionOntoHangingFaces, self).get_includes()
             + """
 #include "exahype2/dg/Riemann.h"
-#include "toolbox/blockstructured/Enumeration.h"
+#include "exahype2/Enumeration.h"
 """
         )

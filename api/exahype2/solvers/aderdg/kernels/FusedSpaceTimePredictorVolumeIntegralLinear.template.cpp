@@ -7,7 +7,6 @@
 #include "BufferSizes.h"
 
 #include "tarch/CompilerSpecificSettings.h"
-#include "tarch/instrumentation/Trace.h"
 
 {% if USE_POINT_SOURCE %}
 {% for item in NAMESPACE -%}
@@ -37,8 +36,6 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   , const std::vector<int>&                         pointSources
 {% endif %}
 ) {
-  traceEnter();
-
   static thread_local {{FULL_QUALIFIED_NAMESPACE}}::PredictorScratchBuffer{{NAME_SUFFIX}}<pCompType> scratch;
 
   pCompType* memory = scratch.get(getFusedSTPVISize());
@@ -64,8 +61,6 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   pCompType tmpArray[{{TMP_ARRAY_SIZE}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
 {% endif %}
 
-  traceEnter("Cauchy Kovalewski predictor");
-
   // The initial condition supplies the zeroth time derivative.
   for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
     auto* const localPredictorState = lQi + xyz * {{NUMBER_OF_DATA_PADDED}};
@@ -85,7 +80,6 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
 {% if USE_POINT_SOURCE %}
   pCompType PSi[getPSiSize()] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
 
-  traceEnter("Point source evaluation");
   {
     std::memset(PSi, 0, {{(NUMBER_OF_DOF+1)*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}} * sizeof(pCompType));
 
@@ -146,7 +140,6 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
       }
     }
   }
-  traceLeave("Point source evaluation");
 
   // Time quadrature adds the point source to the zeroth derivative.
   for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
@@ -508,7 +501,6 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   } // i
 
 {% if USE_POINT_SOURCE %}
-  traceEnter("Point source projection");
   pCompType sumArray[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
   for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
     std::memset(sumArray, 0, {{NUMBER_OF_UNKNOWNS_PADDED}} * sizeof(pCompType));
@@ -528,12 +520,8 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
 {% endif %}
     }
   }
-  traceLeave("Point source projection");
 {% endif %}
 
-  traceLeave("Cauchy Kovalewski predictor");
-
-  traceEnter("Extrapolation");
   for (int i = 0; i < 2 * DIMENSIONS; i++) {
     std::memset(lQhbnd[i], 0, {{NUMBER_OF_DATA*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}} * sizeof(pStoreType));
     std::memset(lFhbnd[i], 0, {{NUMBER_OF_UNKNOWNS*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}} * sizeof(pStoreType));
@@ -587,9 +575,6 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
     }
   }
 {% endif %}
-  traceLeave("Extrapolation");
-
-  traceEnter("Volume integral");
 
   for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
     SIMD(aligned(lFhi{{',lShi' if USE_SOURCE else ''}}:PEANO_WITH_ALIGNMENT))
@@ -610,8 +595,6 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
     }
   }
 
-  traceLeave("Volume integral");
-  traceLeave();
   // Linear predictors do not run Picard iterations.
   return -1;
 }

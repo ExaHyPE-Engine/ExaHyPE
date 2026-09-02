@@ -187,7 +187,7 @@ double exahype2::dg::reduceMaxScaledEigenvalue_patchwise_functors(
   const int                             unknowns,
   const int                             auxiliaryVariables,
   MaxEigenvalue                         maxEigenvalue,
-  const double* NOALIAS                 QuadratureNodes1d
+  const double* NOALIAS                 QuadratureNodes1D
 ) {
   const int stride = unknowns + auxiliaryVariables;
 
@@ -202,7 +202,7 @@ double exahype2::dg::reduceMaxScaledEigenvalue_patchwise_functors(
       for (int direction = 0; direction < DIMENSIONS; direction++) {
         const double directionalEigenvalue = maxEigenvalue(
           cellData.QOut[cellIndex] + dofSerialised * stride,
-          getQuadraturePoint(cellData.cellCentre[cellIndex], cellData.cellSize[cellIndex], k, order, QuadratureNodes1d),
+          getQuadraturePoint(cellData.cellCentre[cellIndex], cellData.cellSize[cellIndex], k, order, QuadratureNodes1D),
           cellData.t,
           cellData.dt,
           direction
@@ -249,7 +249,7 @@ void exahype2::dg::multiplyWithInvertedMassMatrix_GaussLegendre(
   const int                             order,
   const int                             unknowns,
   [[maybe_unused]] const int            auxiliaryVariables,
-  const double* NOALIAS                 massMatrixDiagonal1d
+  const double* NOALIAS                 massMatrixDiagonal1D
 ) {
   const int stride = unknowns;
 
@@ -259,10 +259,10 @@ void exahype2::dg::multiplyWithInvertedMassMatrix_GaussLegendre(
       double* NOALIAS cellQInOut    = cellData.QOut[currentCell];
 
 #if DIMENSIONS == 2
-      const double diagonal = massMatrixDiagonal1d[dof(0)] * massMatrixDiagonal1d[dof(1)]
+      const double diagonal = massMatrixDiagonal1D[dof(0)] * massMatrixDiagonal1D[dof(1)]
         * (cellData.cellSize[currentCell])(0) * (cellData.cellSize[currentCell])(1);
 #else
-      const double diagonal = massMatrixDiagonal1d[dof(0)] * massMatrixDiagonal1d[dof(1)] * massMatrixDiagonal1d[dof(2)]
+      const double diagonal = massMatrixDiagonal1D[dof(0)] * massMatrixDiagonal1D[dof(1)] * massMatrixDiagonal1D[dof(2)]
         * (cellData.cellSize[currentCell])(0) * (cellData.cellSize[currentCell])(1)
         * (cellData.cellSize[currentCell])(2);
 #endif

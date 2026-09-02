@@ -93,8 +93,8 @@ Handing in .. does the job for most of the setups.
 
 <div style="color:Black ; background-color: #cfc ; padding: 10px; border: 1px solid black;">
 This might be the right time to look ahead and study the tutorials of the codes you want to use.
-The blockstructured and particle toolboxes and the ExaHyPE 2 extension are
-always built, so there is nothing to switch on for them. The configurable
+The ExaHyPE 2 extension is always built, so there is nothing to switch on for
+it. The configurable
 feature options are named `PEANO_WITH_*` (for example `PEANO_WITH_HDF5` and
 `PEANO_WITH_NETCDF`); see the comments next to each entry in ccmake for details.
 </div>
@@ -108,7 +108,7 @@ Once the configuration has been successful, a simple
 
     make
 
-should build the core together with all the extensions and toolboxes,
+should build the core together with all the extensions,
 which are always part of the build. All of these go into
 static libraries. The code is not small and you thus might prefer a parallel
 build
@@ -128,7 +128,7 @@ Once you have compiled, we recommend that you run all tests using
 for CMake.
 
 The call launches Peano's unit test, i.e. all the unit tests for the
-core plus the extensions and toolboxes.
+core plus the extensions.
 
 <div style="color:Black ; background-color: #ccf ; padding: 10px; border: 1px solid black;">
 Good time to stop. Jump straight into one of the tutorials if you want to.

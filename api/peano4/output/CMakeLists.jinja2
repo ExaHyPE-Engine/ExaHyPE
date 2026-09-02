@@ -119,7 +119,7 @@ list(APPEND GENERATED_LINK_OPTIONS
 {% endfor %}
 )
 
-set(PEANO_RUNTIME_TARGET "Peano::PeanoRuntime{{MODE}}{{DIMENSIONS}}d")
+set(PEANO_RUNTIME_TARGET "Peano::PeanoRuntime{{MODE}}{{DIMENSIONS}}D")
 if(NOT TARGET ${PEANO_RUNTIME_TARGET})
   message(FATAL_ERROR "Peano package does not provide ${PEANO_RUNTIME_TARGET}. Check that the core build includes mode {{MODE}} and dimension {{DIMENSIONS}}.")
 endif()

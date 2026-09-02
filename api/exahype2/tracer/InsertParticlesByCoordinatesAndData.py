@@ -82,14 +82,14 @@ if (not marker.willBeRefined()) {
             }
 
             auto* const newParticle = new globaldata::{{PARTICLE}}();
-            toolbox::particles::initWithData(*newParticle, position, 0.0, particleData);
+            peano4::particles::initWithData(*newParticle, position, 0.0, particleData);
 
             newParticle->setNumber(0, _treeId);
             newParticle->setNumber(1, _particleNumberOnThisTree);
 
             ++_particleNumberOnThisTree;
 
-            toolbox::particles::insertParticleIntoCell(
+            peano4::particles::insertParticleIntoCell(
                 marker,
                 newParticle,
                 fineGridVertices{{PARTICLES_CONTAINER}},
@@ -134,8 +134,8 @@ _particleAlreadyInserted.clear();
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
 #include "tarch/la/ScalarOperations.h"
-#include "toolbox/particles/ParticleFactory.h"
-#include "toolbox/particles/particles.h"
+#include "peano4/particles/ParticleFactory.h"
+#include "peano4/particles/particles.h"
 """
         ).render(**self.d)
 

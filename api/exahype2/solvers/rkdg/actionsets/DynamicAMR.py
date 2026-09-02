@@ -48,12 +48,12 @@ class AdaptiveMeshFaceCoupling(AbstractRungeKuttaDGActionSet):
     // its own. They reduce here, so the chained restriction is complete before
     // this face stages itself.
     if (_projectionRestrictionStage.hasFrame(fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.data() + facePosition)) {
-      ::toolbox::blockstructured::restrictHaloLayerFromStagedSubfaces(
+      ::exahype2::amr::restrictHaloLayerFromStagedSubfaces(
         _projectionRestrictionStage,
         fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.data() + facePosition,
         fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.data(),
-        repositories::{{SOLVER_INSTANCE}}.RestrictionMatrix1d,
-        repositories::{{SOLVER_INSTANCE}}.QuadratureWeights1d,
+        repositories::{{SOLVER_INSTANCE}}.RestrictionMatrix1D,
+        repositories::{{SOLVER_INSTANCE}}.QuadratureWeights1D,
         marker.getSelectedFaceNumber() % DIMENSIONS,
         {{ORDER}} + 1,
         {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}
@@ -63,7 +63,7 @@ class AdaptiveMeshFaceCoupling(AbstractRungeKuttaDGActionSet):
     // persistent face reduces in one order-invariant pass when the sweep leaves
     // it, so the restricted trace depends neither on the visit order nor on the
     // decomposition.
-    ::toolbox::blockstructured::stageHaloLayerForGatheredRestriction(
+    ::exahype2::amr::stageHaloLayerForGatheredRestriction(
       marker,
       _projectionRestrictionStage,
       coarseGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(marker.getSelectedFaceNumber()).data() + facePosition,
@@ -93,12 +93,12 @@ class AdaptiveMeshFaceCoupling(AbstractRungeKuttaDGActionSet):
     // half, so a frame reduces here in one order-invariant pass.
     for (int facePosition = 0; facePosition < 2; facePosition++) {
       if (_projectionRestrictionStage.hasFrame(fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.data() + facePosition)) {
-        ::toolbox::blockstructured::restrictHaloLayerFromStagedSubfaces(
+        ::exahype2::amr::restrictHaloLayerFromStagedSubfaces(
           _projectionRestrictionStage,
           fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.data() + facePosition,
           fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.data(),
-          repositories::{{SOLVER_INSTANCE}}.RestrictionMatrix1d,
-          repositories::{{SOLVER_INSTANCE}}.QuadratureWeights1d,
+          repositories::{{SOLVER_INSTANCE}}.RestrictionMatrix1D,
+          repositories::{{SOLVER_INSTANCE}}.QuadratureWeights1D,
           marker.getSelectedFaceNumber() % DIMENSIONS,
           {{ORDER}} + 1,
           {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}
@@ -154,7 +154,7 @@ class AdaptiveMeshFaceCoupling(AbstractRungeKuttaDGActionSet):
         self._solver._init_dictionary_with_default_parameters(d)
         self._solver.add_entries_to_text_replacement_dictionary(d)
         return f"""
-    ::toolbox::blockstructured::ChildDataStage<double> _projectionRestrictionStage{{
+    ::exahype2::amr::ChildDataStage<double> _projectionRestrictionStage{{
       THREE_POWER_D / 3,
       facedata::{d["UNKNOWN_IDENTIFIER"]}EstimateProjection::Cardinality / 2}};
 """
@@ -163,8 +163,8 @@ class AdaptiveMeshFaceCoupling(AbstractRungeKuttaDGActionSet):
         return (
             super(AdaptiveMeshFaceCoupling, self).get_includes()
             + """
-#include "toolbox/blockstructured/AMRRoutines.h"
-#include "toolbox/blockstructured/ChildDataStage.h"
+#include "exahype2/amr/AMRRoutines.h"
+#include "exahype2/amr/ChildDataStage.h"
 """
         )
 
@@ -190,11 +190,11 @@ class AdaptiveMeshFaceCoupling(AbstractRungeKuttaDGActionSet):
 
 class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
     _Template_CreateCell = """
-  ::toolbox::blockstructured::interpolateCell(
+  ::exahype2::amr::interpolateCell(
     marker,
     coarseGridCell{{UNKNOWN_IDENTIFIER}}.data(),
     fineGridCell{{UNKNOWN_IDENTIFIER}}.data(),
-    repositories::{{SOLVER_INSTANCE}}.InterpolationMatrix1d,
+    repositories::{{SOLVER_INSTANCE}}.InterpolationMatrix1D,
     {{DG_ORDER}} + 1,
     {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}
   );
@@ -252,10 +252,10 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
       for (int coarseNode = 0; coarseNode < NodesPerAxis; coarseNode++) {
         for (int fineNode = 0; fineNode < NodesPerAxis; fineNode++) {
           weightedRestrictionMatrix[interval][fineNode * NodesPerAxis + coarseNode] =
-            repositories::{{SOLVER_INSTANCE}}.RestrictionMatrix1d
+            repositories::{{SOLVER_INSTANCE}}.RestrictionMatrix1D
               [interval * NodesPerAxis * NodesPerAxis + coarseNode * NodesPerAxis + fineNode]
-            * repositories::{{SOLVER_INSTANCE}}.QuadratureWeights1d[fineNode]
-            / repositories::{{SOLVER_INSTANCE}}.QuadratureWeights1d[coarseNode];
+            * repositories::{{SOLVER_INSTANCE}}.QuadratureWeights1D[fineNode]
+            / repositories::{{SOLVER_INSTANCE}}.QuadratureWeights1D[coarseNode];
         }
       }
     }
@@ -263,7 +263,7 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
     for (int childIndex = 0; childIndex < THREE_POWER_D; childIndex++) {
       childValues[childIndex] = _cellRestrictionStage.child(coarseGridCell{{UNKNOWN_IDENTIFIER}}.data(), childIndex);
     }
-    ::toolbox::blockstructured::restrictCellFromChildren(
+    ::exahype2::amr::restrictCellFromChildren(
       coarseGridCell{{UNKNOWN_IDENTIFIER}}.data(),
       childValues,
       restrictionMatrixPerInterval,
@@ -341,7 +341,7 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
         return (
             super(DynamicAMRTransfer, self).get_attributes()
             + f"""
-    ::toolbox::blockstructured::ChildDataStage<double> _cellRestrictionStage{{
+    ::exahype2::amr::ChildDataStage<double> _cellRestrictionStage{{
       THREE_POWER_D,
       celldata::{d["UNKNOWN_IDENTIFIER"]}::Cardinality}};
 """

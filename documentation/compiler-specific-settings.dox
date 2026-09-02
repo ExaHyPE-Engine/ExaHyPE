@@ -103,7 +103,7 @@ the standard CMake compiler switches.
 ### Build modes and tracing
 
 Trace and annotation data only become available if you do not build in release
-mode. Switch to the trace mode (or assertions or debug) - compare the general
+mode. Switch to the assertions or the debug mode - compare the general
 remarks on @ref page_architecture_home "Peano's build variants" - to get traces
 or annotation information. For further discussion on logging, please see the
 \ref tarch_logging "generic logging description for Peano".

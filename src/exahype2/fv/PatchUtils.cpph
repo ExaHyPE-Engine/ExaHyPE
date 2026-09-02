@@ -21,7 +21,7 @@ void exahype2::fv::copyHalfOfHalo(
            overlapIndex++) {
         tarch::la::Vector<DIMENSIONS, int> overlapCell = tangentialIndex;
         overlapCell(normal)                            = overlapIndex;
-        const int serialisedOverlapIndex               = toolbox::blockstructured::serialiseVoxelIndexInOverlap(
+        const int serialisedOverlapIndex               = exahype2::serialiseVoxelIndexInOverlap(
           overlapCell,
           numberOfVolumesPerAxisInPatch,
           haloSize,

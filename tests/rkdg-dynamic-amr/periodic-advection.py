@@ -67,7 +67,7 @@ refinement_criterion = """
     NumberOfUnknowns + NumberOfAuxiliaryVariables,
     1.0e-2,
     9.0,
-    QuadraturePoints1d,
+    QuadraturePoints1D,
     [](const double* const values) { return 1.0 + values[Shortcuts::q]; }
   );
 """

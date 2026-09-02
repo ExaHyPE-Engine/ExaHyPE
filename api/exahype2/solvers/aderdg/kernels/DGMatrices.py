@@ -24,7 +24,7 @@ def create_triadic_transfer_matrices(polynomial_type, number_of_dof):
         raise ValueError("Quadrature type " + polynomial_type + " not supported.")
 
     prolongation = [
-        MathUtils.assembleFineGridProjector1d(nodes, interval, number_of_dof)
+        MathUtils.assembleFineGridProjector1D(nodes, interval, number_of_dof)
         for interval in range(3)
     ]
     _symmetriseTriadicProjectors(
@@ -98,10 +98,10 @@ class DGMatrices(object):
         )
 
         # [FLCoeff 0...0]; [FRCoeff 0...0];
-        FLCoeff, _ = MathUtils.baseFunc1d(
+        FLCoeff, _ = MathUtils.baseFunc1D(
             0.0, xGPN, self.d["NUMBER_OF_DOF"]
         )  # Also known as F0
-        FRCoeff, _ = MathUtils.baseFunc1d(1.0, xGPN, self.d["NUMBER_OF_DOF"])
+        FRCoeff, _ = MathUtils.baseFunc1D(1.0, xGPN, self.d["NUMBER_OF_DOF"])
         self.d["FLCoeff"] = MathUtils.vectorPad(FLCoeff, padSize)
         self.d["FRCoeff"] = MathUtils.vectorPad(FRCoeff, padSize)
 

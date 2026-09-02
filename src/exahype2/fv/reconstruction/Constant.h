@@ -9,7 +9,7 @@
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/la/Vector.h"
-#include "toolbox/blockstructured/Enumeration.h"
+#include "exahype2/Enumeration.h"
 
 namespace exahype2::fv::reconstruction {
   struct Constant;

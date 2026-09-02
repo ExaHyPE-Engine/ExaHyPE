@@ -10,7 +10,7 @@ stand-alone C++ sources and build files.
 
 # Code organisation
 
-The dependency order is tarch, peano4, toolbox, and then either exahype2 or
+The dependency order is tarch, peano4, and then either exahype2 or
 runner. The application target combines the runner with its selected
 simulation extension.
 
@@ -18,11 +18,11 @@ simulation extension.
   accelerator support, logging, plotting, and small linear-algebra utilities.
   It hides backend-specific APIs from the upper layers.
 - **Peano core (`peano4`)** owns the index-linked spacetree, traversal,
-  rank-boundary exchange, and the pool interface used by generated data.
-- **Toolboxes (`toolbox`)** add solver-independent facilities such as
-  block-structured data and particles.
-- **Extensions (`exahype2`)** assemble toolbox facilities into numerical
-  solver families.
+  rank-boundary exchange, and the pool interface used by generated data. Its
+  sub-package `peano4::particles` adds the solver-independent particle model,
+  its vertex-associated storage and its sorting.
+- **Extensions (`exahype2`)** assemble the core facilities into numerical
+  solver families and own the patch operations on top of the spacetree.
 - **Runner (`runner`)** executes generated program steps, coordinates the SPMD
   control flow, and reports global statistics.
 - **Application code** supplies the problem-specific kernels, parameters, and
@@ -107,15 +107,13 @@ application and its extension.
 
 # Build variants
 
-Peano libraries are available in release, asserts, trace, and debug modes.
-Dimension-dependent libraries carry a `2d` or `3d` suffix; tarch is
+Peano libraries are available in release, asserts, and debug modes.
+Dimension-dependent libraries carry a `2D` or `3D` suffix; tarch is
 dimension-independent.
 
-- **Release** removes assertions, debug logging, and tracing.
-- **Asserts** enables assertions and retains tracing support.
-- **Trace** disables assertions and debug logging while retaining selected
-  instrumentation.
-- **Debug** enables assertions, tracing, and debug logging.
+- **Release** removes assertions and debug logging.
+- **Asserts** enables assertions.
+- **Debug** enables assertions and debug logging.
 
 # Repository organisation
 

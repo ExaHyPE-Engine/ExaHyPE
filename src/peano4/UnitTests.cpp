@@ -13,6 +13,11 @@
 #include "peano4/grid/tests/GridVertexTest.h"
 #include "peano4/grid/tests/LatticeIndexMapTest.h"
 #include "peano4/grid/tests/StackTopologyTest.h"
+#include "peano4/particles/assignmentchecks/tests/TestHelpers.h"
+#include "peano4/particles/tests/MultiscaleTransitionsTest.h"
+#include "peano4/particles/tests/ParticlesTest.h"
+#include "peano4/particles/tests/TestHelpers.h"
+#include "peano4/particles/tests/TrajectoryDatabaseTest.h"
 #include "peano4/stacks/tests/StackTest.h"
 #include "peano4/tests/LoopTest.h"
 #include "peano4/topology/tests/ChunkedTasksTest.h"
@@ -36,6 +41,12 @@ tarch::tests::TestCase* peano4::getUnitTests() {
   result->addTestCase(new peano4::communication::tests::CommunicationManagerTest());
   result->addTestCase(new peano4::data::tests::ContainerRegistryTest());
   result->addTestCase(new peano4::data::tests::RegisteredStackContainerTest());
+
+  result->addTestCase(new peano4::particles::tests::MultiscaleTransitionsTest());
+  result->addTestCase(new peano4::particles::tests::ParticlesTest());
+  result->addTestCase(new peano4::particles::tests::TestHelpers());
+  result->addTestCase(new peano4::particles::tests::TrajectoryDatabaseTest());
+  result->addTestCase(new peano4::particles::assignmentchecks::tests::TestHelpers());
 
   result->addTestCase(new peano4::topology::tests::ChunkedTasksTest());
   result->addTestCase(new peano4::topology::tests::TopologyManagerTest());

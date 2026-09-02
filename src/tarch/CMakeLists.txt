@@ -83,7 +83,6 @@ set(SOURCES
   instrumentation/FileSink.cpp
   instrumentation/Info.cpp
   instrumentation/Log.cpp
-  instrumentation/Trace.cpp
   instrumentation/Warning.cpp
 
   mpi/AbstractCommunicationManager.cpp
