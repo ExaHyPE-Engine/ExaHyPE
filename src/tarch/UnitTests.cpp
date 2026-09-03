@@ -31,10 +31,12 @@
 #include "tarch/mpi/tests/PingPongTest.h"
 #include "tarch/mpi/tests/PollPacingTest.h"
 #include "tarch/mpi/tests/RequestGroupTest.h"
+#include "tarch/plotter/tests/HDF5FileTest.h"
 #include "tarch/plotter/tests/HDF5FileWriterTest.h"
 #include "tarch/plotter/tests/NetCDFFileWriterTest.h"
 #include "tarch/plotter/tests/VTKHDFFileWriterTest.h"
 #include "tarch/plotter/tests/VTUFileWriterTest.h"
+#include "tarch/reader/tests/HDF5FileReaderTest.h"
 #include "tarch/reader/tests/JSONReaderTest.h"
 #include "tarch/reader/tests/NetCDFFieldSamplerTest.h"
 #include "tarch/reader/tests/NetCDFFileReaderTest.h"
@@ -85,11 +87,13 @@ tarch::tests::TestCase* tarch::getUnitTests() {
   result->addTestCase(new tarch::tasking::tests::RuntimeTest());
   result->addTestCase(new tarch::tasking::tests::TaskGraphTest());
 
+  result->addTestCase(new tarch::plotter::tests::HDF5FileTest());
   result->addTestCase(new tarch::plotter::tests::HDF5FileWriterTest());
   result->addTestCase(new tarch::plotter::tests::NetCDFFileWriterTest());
   result->addTestCase(new tarch::plotter::tests::VTKHDFFileWriterTest());
   result->addTestCase(new tarch::plotter::tests::VTUFileWriterTest());
 
+  result->addTestCase(new tarch::reader::tests::HDF5FileReaderTest());
   result->addTestCase(new tarch::reader::tests::JSONReaderTest());
   result->addTestCase(new tarch::reader::tests::NetCDFFileReaderTest());
   result->addTestCase(new tarch::reader::tests::NetCDFFieldSamplerTest());

@@ -232,6 +232,10 @@ public:
     const int          recordsPerCell
   );
 
+  // MPI-IO hints for the parallel writers (collective buffering for the large
+  // collective writes).
+  static std::vector<std::pair<std::string, std::string>> mpiIoHints();
+
 protected:
   static void validateIdentifier(const std::string& id);
   void        createOutputDirectory() const;
@@ -244,10 +248,7 @@ protected:
    */
   SubdomainBuffers& pieceBuffers(int subdomainId);
 
-  // MPI-IO hints for the parallel writers (collective buffering for the large
-  // collective writes).
-  static std::vector<std::pair<std::string, std::string>> mpiIoHints();
-  SubdomainBuffersSequence                                getSubdomainBuffersSequenceForWriting() const;
+  SubdomainBuffersSequence getSubdomainBuffersSequenceForWriting() const;
 
   // Field schema from the local reference, no MPI exchange. The parallel writers run
   // their collective I/O on a sub-communicator of the data-holding ranks, so every

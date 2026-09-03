@@ -9,7 +9,11 @@ RefinementCriterionTemplate = """
     ::runner::RuntimeParameters::getInstance().getMinAdmissiblePatchSize(DomainSize);
 
   {% if GRID_CONSTRUCTION %}
-  if (not marker.willBeRefined() and tarch::la::greater(tarch::la::max(marker.getH()), maxAdmissiblePatchSize)) {
+  // A resumed run builds its grid from the checkpointed refinement plan, so
+  // the construction criterion stays quiet.
+  if (::runner::RuntimeParameters::getInstance().hasCheckpointLoadPath()) {
+    refinementCriterion = ::exahype2::RefinementCommand::Keep;
+  } else if (not marker.willBeRefined() and tarch::la::greater(tarch::la::max(marker.getH()), maxAdmissiblePatchSize)) {
     refinementCriterion = ::exahype2::RefinementCommand::Refine;
   } else if (not marker.willBeRefined()
              and tarch::la::greaterEquals(tarch::la::max(marker.getH()), minAdmissiblePatchSize)
@@ -31,7 +35,17 @@ RefinementCriterionTemplate = """
     refinementCriterion = ::exahype2::RefinementCommand::Refine;
   } else if ({{PREDICATE}} and fineGridCell{{CELL_LABEL_NAME}}.getHasUpdated()
              and (tarch::la::greater(tarch::la::max(marker.getH()), minAdmissiblePatchSize)
-                  or 3.0 * tarch::la::max(marker.getH()) <= maxAdmissiblePatchSize)) {
+                  or 3.0 * tarch::la::max(marker.getH()) <= maxAdmissiblePatchSize)
+             // On a resume the initialisation and replay traversals read checkpointed data
+             // whose refinement requests the restored refinement-control state already
+             // carries, so the criterion stays quiet until regular time stepping starts.
+             and not (
+               ::runner::RuntimeParameters::getInstance().hasCheckpointLoadPath()
+               and (
+                 repositories::{{SOLVER_INSTANCE}}.getSolverState() == {{SOLVER_NAME}}::SolverState::GridInitialisation
+                 {{CHECKPOINT_SUPPRESSED_SOLVER_STATES}}
+               )
+             )) {
     // A cell that can neither refine nor erase keeps its grid, so the criterion is not
     // evaluated there. The cell label carries the time of the solution the criterion
     // reads, because the solver's running minimum changes while other tasks update it.

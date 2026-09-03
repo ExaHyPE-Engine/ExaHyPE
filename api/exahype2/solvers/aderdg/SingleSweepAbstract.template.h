@@ -85,6 +85,10 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
 
     double getMinTimeStamp() const override final;
     double getMaxTimeStamp() const override final;
+
+    /** Overwrites every time stamp the solver tracks; a checkpoint resume reinstates the stored time. */
+    void setTimeStamp(double timeStamp);
+
     double getMinTimeStepSize() const override final;
     double getMaxTimeStepSize() const override final;
 

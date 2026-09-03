@@ -59,6 +59,26 @@ public:
 
   void realiseCommittedEventsWithoutSweep();
 
+  /** Row width of the checkpoint table: A kind, a control, a level, and the lattice position. */
+  static constexpr int CheckpointTableColumns = 3 + DIMENSIONS;
+
+  /**
+   * Serialises the committed events, the last realised events and the
+   * topology-changed flag into one integer table of CheckpointTableColumns
+   * columns. Every field is rank-uniform, so one rank's table restores every
+   * rank.
+   */
+  [[nodiscard]] std::vector<std::int32_t> serialiseForCheckpoint() const;
+
+  /**
+   * Overwrites the committed events, the last realised events and the
+   * topology-changed flag from a table serialiseForCheckpoint() produced.
+   * The delta-exchange baselines and the per-kind outcome cache stay empty on
+   * every rank, so the first exchange after the restore ships complete lists
+   * and reuses no committed set of the writing run.
+   */
+  void restoreFromCheckpoint(const std::vector<std::int32_t>& table, int columns);
+
   std::string toString() const;
 
   void merge(const RefinementControl& control);

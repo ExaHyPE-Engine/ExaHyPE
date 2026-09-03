@@ -22,14 +22,14 @@ from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFac
 
 class GlobalAdaptiveTimeStep(SeparateSweeps):
   """!
-  
+
   RKDG solver with Rusanov Riemann solver employing global adaptive time stepping
-  
+
   Please consult GlobalFixedTimeStep for details. This version is very similar
-  with the big difference being that we add the evaluation  and global 
+  with the big difference being that we add the evaluation  and global
   reduction of the maximum eigenvalue and then adopt the time step size
   accordingly.
-  
+
   """
   def __init__(self,
     name,
@@ -49,16 +49,16 @@ class GlobalAdaptiveTimeStep(SeparateSweeps):
     pde_terms_without_state=False,
     ):
     """!
-        
-    Construct RKDG solver with adaptive global time step 
-        
+
+    Construct RKDG solver with adaptive global time step
+
     """
-    super(GlobalAdaptiveTimeStep,self).__init__(name, 
-                                                rk_order, 
-                                                polynomials, 
+    super(GlobalAdaptiveTimeStep,self).__init__(name,
+                                                rk_order,
+                                                polynomials,
                                                 FaceProjections.Solution,
-                                                unknowns, 
-                                                auxiliary_variables, 
+                                                unknowns,
+                                                auxiliary_variables,
                                                 pde_terms_without_state,
                                                 )
 
@@ -69,7 +69,7 @@ class GlobalAdaptiveTimeStep(SeparateSweeps):
     self._volumetric_compute_kernel_call                  = create_volumetric_solver_call(self._basis, SolverVariant.WithVirtualFunctions)
     self._volumetric_compute_kernel_call_stateless        = create_volumetric_solver_call(self._basis, SolverVariant.Stateless)
     self._Riemann_compute_kernel_call                     = create_Riemann_solver_call(self._basis, FaceProjections.Solution)
-    # TODO: self._Riemann_compute_kernel_call_stateless =
+    # TODO: Set self._Riemann_compute_kernel_call_stateless once a stateless Riemann kernel exists
     self._add_solver_contributions_call                   = create_add_solver_contributions_call(self._basis)
     self._multiply_with_inverted_mass_matrix_call         = create_multiply_with_inverted_mass_matrix_call(self._basis)
 
@@ -105,7 +105,7 @@ class GlobalAdaptiveTimeStep(SeparateSweeps):
     is copied 1:1 into the implementation. If you pass in None, then the
     set value so far won't be overwritten.
 
-    Please note that not all options are supported by all solvers.
+    Some solvers support only a subset of these options.
 
     This routine should be the very last invoked by the constructor.
     """
@@ -124,6 +124,7 @@ class GlobalAdaptiveTimeStep(SeparateSweeps):
     solver_code_snippets = AdaptiveTimeSteppingCodeSnippets.for_rkdg(
       self._time_step_relaxation
     )
+    self._time_stepping_code_snippets = solver_code_snippets
 
     self._abstract_solver_user_declarations  = create_abstract_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._point_sources_implementation, self._pde_terms_without_state)
     self._abstract_solver_user_declarations += solver_code_snippets.create_abstract_solver_user_declarations()

@@ -5,6 +5,8 @@ import os
 import peano4
 import peano4.datamodel
 
+import exahype2.checkpoint
+
 from exahype2.solvers.PDETerms import PDETerms
 from peano4.Logger import log
 
@@ -65,6 +67,8 @@ class Project(peano4.Project):
         self.solversteps.add_step(self.init_grid)
         self.plot_solution = peano4.solversteps.Step("PlotSolution", False)
         self.solversteps.add_step(self.plot_solution)
+        self.checkpoint_solution = peano4.solversteps.Step("CheckpointSolution", False)
+        self.solversteps.add_step(self.checkpoint_solution)
         self.perform_time_step = peano4.solversteps.Step("TimeStep", False)
         self.solversteps.add_step(self.perform_time_step)
         self.dynamic_amr = peano4.solversteps.Step("DynamicAMR", False)
@@ -236,6 +240,14 @@ the ExaHyPE release paper:
         self.plot_solution.runner_finish_hook = (
             f"{repository_namespace}::finishPlottingStep();"
         )
+        # A checkpoint runs at the same points of the loop as a plot and needs
+        # the same solver state, so it uses the plotting hooks.
+        self.checkpoint_solution.runner_start_hook = (
+            f"{repository_namespace}::startPlottingStep();"
+        )
+        self.checkpoint_solution.runner_finish_hook = (
+            f"{repository_namespace}::finishPlottingStep();"
+        )
         self.perform_time_step.runner_start_hook = (
             f"{repository_namespace}::startTimeStep();"
         )
@@ -251,7 +263,8 @@ the ExaHyPE release paper:
 
         peano_main.additional_includes = (
             '#include "repositories/SolverRepository.h"\n'
-            '#include "exahype2/RefinementControlService.h"'
+            '#include "exahype2/RefinementControlService.h"\n'
+            '#include "peano4/checkpoint/GridCheckpoint.h"'
         )
 
         peano_main.additional_repository_callbacks = (
@@ -265,7 +278,16 @@ the ExaHyPE release paper:
             "::exahype2::RefinementControlService::getInstance().hasGridControlEvents(); };\n"
             "  result.hasUndecidedRefinementCriterion = []() { return "
             "::exahype2::RefinementControlService::getInstance().lastCriterionStepWasSuppressed(); };\n"
-            f"  result.getMinTimeStamp         = []() {{ return "
+            + "#ifdef PEANO_WITH_HDF5\n"
+            "  result.restoreCheckpointState  = []() {\n"
+            "    int columns = 0;\n"
+            "    const auto table = ::peano4::checkpoint::readExtraTable(\n"
+            "      ::runner::RuntimeParameters::getInstance().getCheckpointLoadPath(), columns\n"
+            "    );\n"
+            "    ::exahype2::RefinementControlService::getInstance().restoreFromCheckpoint(table, columns);\n"
+            "  };\n"
+            "#endif\n"
+            + f"  result.getMinTimeStamp         = []() {{ return "
             f"{repository_namespace}::getMinTimeStamp(); }};\n"
             f"  result.getMaxTimeStamp         = []() {{ return "
             f"{repository_namespace}::getMaxTimeStamp(); }};\n"
@@ -359,6 +381,7 @@ the ExaHyPE release paper:
         self.datamodel.add_vertex(particle_set)
 
         self.plot_solution.use_vertex(particle_set)
+        self.checkpoint_solution.use_vertex(particle_set)
         self.init_grid.use_vertex(particle_set)
         self.perform_time_step.use_vertex(particle_set)
         self.create_grid.use_vertex(particle_set)
@@ -472,10 +495,24 @@ the ExaHyPE release paper:
             solver_steps = (
                 self.create_grid,
                 self.plot_solution,
+                self.checkpoint_solution,
                 self.perform_time_step,
                 self.init_grid,
                 self.dynamic_amr,
             )
+            self.checkpoint_solution.add_action_set(exahype2.checkpoint.GridWriter())
+            checkpointed_tracer_sets = list(self._tracer_particle_sets)
+            for solver in self._solvers:
+                checkpointed_tracer_sets += getattr(
+                    solver, "_tracer_particle_sets", []
+                )
+            for tracer_set in checkpointed_tracer_sets:
+                self.checkpoint_solution.add_action_set(
+                    exahype2.checkpoint.ParticleDataWriter(tracer_set)
+                )
+                self.init_grid.add_action_set(
+                    exahype2.checkpoint.ParticleDataLoader(tracer_set)
+                )
             for solver in self._solvers:
                 log.debug("Prepare solver %s.", solver._name)
                 log.debug("Solver configuration: %s.", solver)
@@ -489,6 +526,7 @@ the ExaHyPE release paper:
 
                 solver.add_actions_to_init_grid(self.init_grid)
                 solver.add_actions_to_plot_solution(self.plot_solution)
+                solver.add_actions_to_checkpoint_solution(self.checkpoint_solution)
 
                 solver.add_actions_to_perform_time_step(self.perform_time_step)
                 if hasattr(solver, "add_actions_to_dynamic_mesh_refinement"):

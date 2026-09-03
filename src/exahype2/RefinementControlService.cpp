@@ -71,6 +71,32 @@ namespace {
 
     return true;
   }
+
+  /** Names what one row of the checkpoint table carries. */
+  enum class CheckpointRowKind : std::int32_t { CommittedEvent = 0, LastRealisedEvent = 1, TopologyChangedFlag = 2 };
+
+  void appendEventRow(
+    std::vector<std::int32_t>&            table,
+    const CheckpointRowKind               kind,
+    const peano4::grid::GridControlEvent& event
+  ) {
+    table.push_back(static_cast<std::int32_t>(kind));
+    table.push_back(event.refinementControl);
+    table.push_back(event.level);
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      table.push_back(event.latticeIndex(axis));
+    }
+  }
+
+  peano4::grid::GridControlEvent readEventRow(const std::int32_t* const row) {
+    peano4::grid::GridControlEvent event;
+    event.refinementControl = static_cast<std::uint8_t>(row[1]);
+    event.level             = row[2];
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      event.latticeIndex(axis) = row[3 + axis];
+    }
+    return event;
+  }
 } // namespace
 
 exahype2::RefinementControlService& exahype2::RefinementControlService::getInstance() {
@@ -154,6 +180,59 @@ void exahype2::RefinementControlService::realiseCommittedEventsWithoutSweep() {
   assertion(not _committedEvents.empty());
   _lastRealisedEvents = std::move(_committedEvents);
   _committedEvents.clear();
+}
+
+std::vector<std::int32_t> exahype2::RefinementControlService::serialiseForCheckpoint() const {
+  std::vector<std::int32_t> table;
+  table.reserve((_committedEvents.size() + _lastRealisedEvents.size() + 1) * CheckpointTableColumns);
+  for (const auto& event : _committedEvents) {
+    appendEventRow(table, CheckpointRowKind::CommittedEvent, event);
+  }
+  for (const auto& event : _lastRealisedEvents) {
+    appendEventRow(table, CheckpointRowKind::LastRealisedEvent, event);
+  }
+  // The flag row pads to the common width, so the table stays a plain matrix.
+  table.push_back(static_cast<std::int32_t>(CheckpointRowKind::TopologyChangedFlag));
+  table.push_back(_topologyChangedSinceLastTimeStep ? 1 : 0);
+  table.resize(table.size() + CheckpointTableColumns - 2, 0);
+  assertion(table.size() % CheckpointTableColumns == 0);
+  return table;
+}
+
+void exahype2::RefinementControlService::restoreFromCheckpoint(
+  const std::vector<std::int32_t>& table,
+  const int                        columns
+) {
+  if (columns != CheckpointTableColumns or table.size() % CheckpointTableColumns != 0) {
+    tarch::terminateWithError(
+      "The checkpointed refinement table carries " + std::to_string(columns) + " columns, but this build expects "
+      + std::to_string(CheckpointTableColumns) + ". The checkpoint was written for a different number of dimensions."
+    );
+  }
+
+  _committedEvents.clear();
+  _lastRealisedEvents.clear();
+  _topologyChangedSinceLastTimeStep = false;
+  // A restored committed set belongs to no contribution this run reduced, so the reuse
+  // cache and the delta baseline of every step kind start empty and the first exchange
+  // after the restore ships complete lists.
+  _lastOutcomePerKind            = {};
+  _shippedRequestsPerKindAndRank = {};
+
+  for (std::size_t row = 0; row < table.size() / CheckpointTableColumns; row++) {
+    const std::int32_t* const entries = table.data() + row * CheckpointTableColumns;
+    switch (static_cast<CheckpointRowKind>(entries[0])) {
+    case CheckpointRowKind::CommittedEvent:
+      _committedEvents.push_back(readEventRow(entries));
+      break;
+    case CheckpointRowKind::LastRealisedEvent:
+      _lastRealisedEvents.push_back(readEventRow(entries));
+      break;
+    case CheckpointRowKind::TopologyChangedFlag:
+      _topologyChangedSinceLastTimeStep = entries[1] != 0;
+      break;
+    }
+  }
 }
 
 /**

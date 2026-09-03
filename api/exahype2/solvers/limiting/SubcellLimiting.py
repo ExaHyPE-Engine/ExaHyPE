@@ -2,6 +2,10 @@
 # use, please see the copyright notice at www.peano-framework.org
 import functools
 
+import jinja2
+
+import peano4.checkpoint
+
 from exahype2.solvers.fv import create_patch_and_halo
 
 from .Labels import (
@@ -10,6 +14,7 @@ from .Labels import (
     face_status_merge_snippet,
 )
 from exahype2.solvers.fv.SubcellScheme import SubcellScheme
+from .actionsets.CheckpointLoading import CheckpointLoading
 from .actionsets.InitialiseSubcells import InitialiseSubcells
 from .actionsets.Predict import Predict
 from .actionsets.CorrectAndFlag import CorrectAndFlag
@@ -31,6 +36,11 @@ _SUBCELL_DYNAMIC_AMR_DESCEND_ORDER = 2
 
 # The subcell sampling follows the nodal initial conditions, which descend at 1.
 _SUBCELL_INITIALISE_DESCEND_ORDER = 2
+
+
+# The checkpoint loader overwrites the sampled subcells, so it descends after
+# the initialisation.
+_SUBCELL_CHECKPOINT_LOADING_DESCEND_ORDER = 3
 
 
 # The line the base face-label merge (grid/FaceLabel.py) ends its owned-side block
@@ -274,6 +284,12 @@ class SubcellLimiting:
         self._action_set_subcell_initialise.descend_invocation_order = (
             _SUBCELL_INITIALISE_DESCEND_ORDER
         )
+        self._action_set_subcell_checkpoint_loading = CheckpointLoading(
+            self, store_cell
+        )
+        self._action_set_subcell_checkpoint_loading.descend_invocation_order = (
+            _SUBCELL_CHECKPOINT_LOADING_DESCEND_ORDER
+        )
         self._action_set_subcell_predict = Predict(
             self, store_cell + " and " + self._subcell_limiter_state_guard("Predict")
         )
@@ -312,10 +328,51 @@ class SubcellLimiting:
         step.add_action_set(self._action_set_subcell_dynamic_amr)
 
     def _add_subcell_limiter_actions_to_init_grid(self, step):
-        """Adds the direct subcell sampling to the grid-initialisation step."""
+        """Adds the direct subcell sampling and the checkpoint loader to the grid-initialisation step."""
         if not self.subcell_limiter_is_enabled:
             return
         step.add_action_set(self._action_set_subcell_initialise)
+        step.add_action_set(self._action_set_subcell_checkpoint_loading)
+
+    def _add_subcell_limiter_actions_to_checkpoint_solution(self, step):
+        """Adds the limiter file's writer: Per cell the status, the troubled bit and the subcell values."""
+        if not self.subcell_limiter_is_enabled:
+            return
+        dictionary = {}
+        self._init_dictionary_with_default_parameters(dictionary)
+        self.add_entries_to_text_replacement_dictionary(dictionary)
+        values_per_cell = jinja2.Template(
+            "2 + BasePowerExponent<2 * {{ORDER}} + 1, DIMENSIONS>::value"
+            " * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}})"
+        ).render(**dictionary)
+        record_statements = jinja2.Template(
+            """std::array<double, {{VALUES_PER_CELL}}> limiterRecord;
+    limiterRecord[0]
+      = static_cast<double>(static_cast<int>(fineGridCell{{SOLVER_NAME}}CellLabel.getLimiterStatus()));
+    limiterRecord[1] = fineGridCell{{SOLVER_NAME}}CellLabel.getWasTroubledInPreviousStep() ? 1.0 : 0.0;
+    std::copy_n(
+      fineGridCell{{SOLVER_NAME}}SubcellOld.data(), {{VALUES_PER_CELL}} - 2, limiterRecord.begin() + 2
+    );"""
+        ).render(VALUES_PER_CELL=values_per_cell, **dictionary)
+        step.add_action_set(
+            peano4.checkpoint.CellDataWriter(
+                filename=self._name + "Limiter",
+                output_path_expression=(
+                    "::runner::RuntimeParameters::getInstance().getCheckpointOutputPath()"
+                ),
+                cell_data_name="",
+                values_per_cell_expression=values_per_cell,
+                guard=self._load_cell_data_default_guard(),
+                scalars_expression="std::vector<double>{}",
+                time_stamp_expression="repositories::getMinTimeStamp()",
+                additional_includes="""
+#include "repositories/SolverRepository.h"
+#include "runner/RuntimeParameters.h"
+""",
+                record_statements=record_statements,
+                record_expression="limiterRecord.data()",
+            )
+        )
 
     def _add_subcell_limiter_actions_to_perform_time_step(self, step):
         """Adds the pipeline action sets to the time step while limiting is on."""

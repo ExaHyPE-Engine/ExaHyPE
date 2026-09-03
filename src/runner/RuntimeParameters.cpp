@@ -118,6 +118,20 @@ void runner::RuntimeParameters::printUsage(const std::string& executableName) co
   addOption("-o, --outputPath <path>", "Output path (default: " + formatDefault(_outputPath) + ").");
   addOption("-pdp, --plotDoublePrecision", "Write plot files in double precision (default: off, single precision).");
   addOption(
+    "-nc, --numberOfCheckpoints <n>",
+    "Number of checkpoints; use a non-positive value to disable checkpointing (default: "
+      + formatDefault(_numberOfCheckpoints) + ")."
+  );
+  addOption(
+    "-fct, --firstCheckpointTimeStamp <t>",
+    "First checkpoint time stamp (default: " + formatDefault(_firstCheckpointTimeStamp) + ")."
+  );
+  addOption(
+    "-cop, --checkpointOutputPath <path>",
+    "Checkpoint output path (default: " + formatDefault(_checkpointOutputPath) + ")."
+  );
+  addOption("-clp, --checkpointLoadPath <path>", "Resume from the checkpoint in this directory (default: not set).");
+  addOption(
     "-li, --timeStepLogInterval <seconds>",
     "Minimum wall-clock seconds between time-step reports (default: " + formatDefault(_timeStepLogInterval) + ")."
   );
@@ -204,6 +218,12 @@ void runner::RuntimeParameters::validateParameterRanges() const {
       "First plot time stamp must be finite and non-negative (got " + formatDefault(_firstPlotTimeStamp) + ")."
     );
   }
+  if (not std::isfinite(_firstCheckpointTimeStamp) or _firstCheckpointTimeStamp < 0.0) {
+    throw std::runtime_error(
+      "First checkpoint time stamp must be finite and non-negative (got " + formatDefault(_firstCheckpointTimeStamp)
+      + ")."
+    );
+  }
   if (not std::isfinite(_timeStepLogInterval) or _timeStepLogInterval <= 0.0) {
     throw std::runtime_error(
       "Time-step log interval must be finite and positive (got " + formatDefault(_timeStepLogInterval) + " s)."
@@ -269,6 +289,14 @@ void runner::RuntimeParameters::readJsonConfiguration() {
   if (reader.hasKey("plotDoublePrecision")) {
     _plotDoublePrecision = reader.getBoolean("plotDoublePrecision");
   }
+  _numberOfCheckpoints      = reader.getInteger("numberOfCheckpoints", _numberOfCheckpoints);
+  _firstCheckpointTimeStamp = reader.getDouble("firstCheckpointTimeStamp", _firstCheckpointTimeStamp);
+  if (reader.hasKey("checkpointOutputPath")) {
+    _checkpointOutputPath = reader.getString("checkpointOutputPath");
+  }
+  if (reader.hasKey("checkpointLoadPath")) {
+    _checkpointLoadPath = reader.getString("checkpointLoadPath");
+  }
   if (reader.hasKey("communicationThread")) {
     _communicationThread = reader.getBoolean("communicationThread");
   }
@@ -316,6 +344,14 @@ void runner::RuntimeParameters::applyCommandLineConfiguration(int& argc, char** 
       _outputPathConfigured = true;
     } else if (argument == "--plotDoublePrecision" or argument == "-pdp") {
       _plotDoublePrecision = true;
+    } else if (argument == "--numberOfCheckpoints" or argument == "-nc") {
+      _numberOfCheckpoints = parseInteger(consumeValue(readIndex, argc, argv, argument), argument);
+    } else if (argument == "--firstCheckpointTimeStamp" or argument == "-fct") {
+      _firstCheckpointTimeStamp = parseDouble(consumeValue(readIndex, argc, argv, argument), argument);
+    } else if (argument == "--checkpointOutputPath" or argument == "-cop") {
+      _checkpointOutputPath = consumeValue(readIndex, argc, argv, argument);
+    } else if (argument == "--checkpointLoadPath" or argument == "-clp") {
+      _checkpointLoadPath = consumeValue(readIndex, argc, argv, argument);
     } else if (argument == "--timeStepLogInterval" or argument == "-li") {
       _timeStepLogInterval = parseDouble(consumeValue(readIndex, argc, argv, argument), argument);
     } else if (argument == "--gridLevels" or argument == "-l") {
@@ -444,6 +480,13 @@ int    runner::RuntimeParameters::getNumberOfTimeSteps() const { return _numberO
 double runner::RuntimeParameters::getFirstPlotTimeStamp() const { return _firstPlotTimeStamp; }
 int    runner::RuntimeParameters::getNumberOfSnapshots() const { return _numberOfSnapshots; }
 bool   runner::RuntimeParameters::getPlotDoublePrecision() const { return _plotDoublePrecision; }
+
+double runner::RuntimeParameters::getFirstCheckpointTimeStamp() const { return _firstCheckpointTimeStamp; }
+int    runner::RuntimeParameters::getNumberOfCheckpoints() const { return _numberOfCheckpoints; }
+bool   runner::RuntimeParameters::hasCheckpointLoadPath() const { return not _checkpointLoadPath.empty(); }
+
+const std::string& runner::RuntimeParameters::getCheckpointOutputPath() const { return _checkpointOutputPath; }
+const std::string& runner::RuntimeParameters::getCheckpointLoadPath() const { return _checkpointLoadPath; }
 int    runner::RuntimeParameters::getGridLevels() const { return _gridLevels; }
 int    runner::RuntimeParameters::getMaxGridLevels() const { return _maxGridLevels; }
 

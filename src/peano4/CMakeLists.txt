@@ -14,6 +14,15 @@ set(SOURCES
   Loop.cpp
   UnitTests.cpp
 
+  checkpoint/CellDataLoader.cpp
+  checkpoint/CellDataWriter.cpp
+  checkpoint/GridCheckpoint.cpp
+  checkpoint/Lattice.cpp
+  checkpoint/ParticleDataWriter.cpp
+  checkpoint/tests/CellDataWriterTest.cpp
+  checkpoint/tests/LatticeTest.cpp
+  checkpoint/tests/ParticleDataWriterTest.cpp
+
   communication/CommunicationManager.cpp
   communication/tests/CommunicationManagerTest.cpp
 

@@ -1,0 +1,14 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+template <typename SourceType>
+INLINE_METHOD void peano4::checkpoint::CellDataWriter::Records::append(
+  const int                                 level,
+  const tarch::la::Vector<DIMENSIONS, int>& latticeIndex,
+  const SourceType* const                   cellValues,
+  const int                                 count
+) {
+  levels.push_back(level);
+  keys.push_back(triadicMortonKey(latticeIndex, level));
+  values.insert(values.end(), cellValues, cellValues + count);
+}

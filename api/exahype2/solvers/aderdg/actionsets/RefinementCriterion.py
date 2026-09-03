@@ -92,6 +92,20 @@ class RefinementCriterion(AbstractADERDGActionSet):
             dictionary["GRID_CONSTRUCTION"] = self._called_by_grid_construction
             self._solver._init_dictionary_with_default_parameters(dictionary)
             self._solver.add_entries_to_text_replacement_dictionary(dictionary)
+            # The fused solver's InitialPrediction sweep replays the checkpointed
+            # prediction, whose refinement requests the restored refinement-control
+            # state already carries. The limiting solver replays nothing, and each
+            # of its predictor sweeps maps onto InitialPrediction, so it suppresses
+            # no state.
+            dictionary["CHECKPOINT_SUPPRESSED_SOLVER_STATES"] = ""
+            if not self._solver.subcell_limiter_is_enabled:
+                dictionary["CHECKPOINT_SUPPRESSED_SOLVER_STATES"] = (
+                    "or repositories::"
+                    + dictionary["SOLVER_INSTANCE"]
+                    + ".getSolverState() == "
+                    + dictionary["SOLVER_NAME"]
+                    + "::SolverState::InitialPrediction"
+                )
             result = jinja2.Template(RefinementCriterionTemplate).render(**dictionary)
 
         return result

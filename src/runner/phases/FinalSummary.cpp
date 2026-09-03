@@ -21,6 +21,9 @@ namespace {
     if (observerName == runner::StepName::PlotSolution) {
       return runner::PhaseName::Plot;
     }
+    if (observerName == runner::StepName::CheckpointSolution) {
+      return runner::PhaseName::Checkpoint;
+    }
     if (observerName == runner::StepName::TimeStep) {
       return runner::PhaseName::TimeStep;
     }
@@ -46,10 +49,11 @@ void runner::FinalSummary::run() {
   const auto& measurements = _context.measurements;
 
   // The rows follow the phase order of a run; steps outside this list keep their first-use order.
-  constexpr std::array<const char*, 5> StepOrder = {
+  constexpr std::array<const char*, 6> StepOrder = {
     runner::StepName::CreateGrid,
     runner::StepName::InitGrid,
     runner::StepName::PlotSolution,
+    runner::StepName::CheckpointSolution,
     runner::StepName::DynamicAMR,
     runner::StepName::TimeStep
   };

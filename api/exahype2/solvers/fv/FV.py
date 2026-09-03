@@ -7,6 +7,7 @@ import jinja2
 
 import peano4.output
 import peano4.datamodel
+import peano4.checkpoint
 import peano4.plotter
 import peano4.blockstructured
 
@@ -70,6 +71,7 @@ class FV(object):
         self._templatefile_prefix = os.path.dirname(os.path.realpath(__file__)) + "/"
 
         self._action_set_initial_conditions = None
+        self._action_set_checkpoint_loading = None
         self._action_set_AMR = None
         self._action_set_AMR_throughout_grid_construction = None
         self._action_set_handle_boundary = None
@@ -254,8 +256,17 @@ and additional AMR levels is configured by the executable at runtime.
         postprocessing action sets survive the call and keep what a user set on
         them.
         """
+        # On a resume the checkpoint loader replaces the initial condition.
         self._action_set_initial_conditions = (
             exahype2.solvers.fv.actionsets.InitialCondition(
+                self,
+                "not ::runner::RuntimeParameters::getInstance().hasCheckpointLoadPath() and ("
+                + self._store_cell_data_default_guard()
+                + ")",
+            )
+        )
+        self._action_set_checkpoint_loading = (
+            exahype2.solvers.fv.actionsets.CheckpointLoading(
                 self, self._store_cell_data_default_guard()
             )
         )
@@ -330,6 +341,9 @@ and additional AMR levels is configured by the executable at runtime.
         self._action_set_update_patch = None
 
         self._action_set_initial_conditions.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 1
+        )
+        self._action_set_checkpoint_loading.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order + 1
         )
         self._action_set_AMR.descend_invocation_order = self._baseline_action_set_descend_invocation_order + 2
@@ -505,6 +519,7 @@ and additional AMR levels is configured by the executable at runtime.
         step.add_action_set(self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement)
         step.add_action_set(self._action_set_roll_over_updates)
         step.add_action_set(self._action_set_initial_conditions)
+        step.add_action_set(self._action_set_checkpoint_loading)
         step.add_action_set(self._action_set_project_patch_onto_faces)
         step.add_action_set(self._action_set_update_face_label)
         step.add_action_set(self._action_set_update_cell_label)
@@ -570,6 +585,34 @@ and additional AMR levels is configured by the executable at runtime.
 
             step.add_action_set(self._update_particle_association_action_sets[tracer_set_index])
             step.add_action_set(self._update_particle_parallel_state_action_sets[tracer_set_index])
+
+    def add_actions_to_checkpoint_solution(self, step):
+        dictionary = {}
+        self._init_dictionary_with_default_parameters(dictionary)
+        self.add_entries_to_text_replacement_dictionary(dictionary)
+
+        writer = peano4.checkpoint.CellDataWriter(
+            filename=self._name,
+            output_path_expression="::runner::RuntimeParameters::getInstance().getCheckpointOutputPath()",
+            cell_data_name=self.current_unknown_identifier(),
+            values_per_cell_expression=(
+                "BasePowerExponent<"
+                + str(self._patch.dim[0])
+                + ", DIMENSIONS>::value * "
+                + str(self._patch.no_of_unknowns)
+            ),
+            guard=self._load_cell_data_default_guard(),
+            scalars_expression=jinja2.Template(
+                self._time_stepping_code_snippets.create_checkpoint_scalars()
+            ).render(**dictionary),
+            time_stamp_expression="repositories::getMinTimeStamp()",
+            additional_includes="""
+#include "repositories/SolverRepository.h"
+#include "runner/RuntimeParameters.h"
+""",
+        )
+        writer.descend_invocation_order = self._baseline_action_set_descend_invocation_order
+        step.add_action_set(writer)
 
     def add_actions_to_dynamic_mesh_refinement(self, step):
         """!

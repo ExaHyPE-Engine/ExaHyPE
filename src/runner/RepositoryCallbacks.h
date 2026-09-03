@@ -52,8 +52,16 @@ struct runner::RepositoryCallbacks {
    * committed set the refinement plan rejects does not count, and the answer
    * is the same on every rank.
    */
-  std::function<bool()>             hasPendingMeshUpdates;
-  std::function<bool()>             hasUndecidedRefinementCriterion;
+  std::function<bool()> hasPendingMeshUpdates;
+  std::function<bool()> hasUndecidedRefinementCriterion;
+
+  /**
+   * Reinstates the solver-side state a checkpoint stores beyond the grid and
+   * the cell data, such as pending mesh-refinement events. The time loop calls
+   * it once, before its first iteration, when a checkpoint load path is set.
+   */
+  std::function<void()> restoreCheckpointState;
+
   std::function<double()>           getMinTimeStamp;
   std::function<double()>           getMaxTimeStamp;
   std::function<int()>              getNumberOfDoFs;

@@ -7,6 +7,7 @@ from abc import abstractmethod
 import jinja2
 
 import peano4.output
+import peano4.checkpoint
 import peano4.datamodel
 import peano4.plotter
 
@@ -295,8 +296,18 @@ class ADERDG(SubcellLimiting):
         self._action_set_update_face_label.descend_invocation_order = 0
         self._action_set_update_cell_label.descend_invocation_order = 0
 
-        self._action_set_initial_conditions = exahype2.solvers.aderdg.actionsets.InitialCondition(self, self._store_cell_data_default_guard())
+        # On a resume the checkpoint loader replaces the initial condition.
+        self._action_set_initial_conditions = exahype2.solvers.aderdg.actionsets.InitialCondition(
+            self,
+            "not ::runner::RuntimeParameters::getInstance().hasCheckpointLoadPath() and ("
+            + self._store_cell_data_default_guard()
+            + ")",
+        )
         self._action_set_initial_conditions.descend_invocation_order = 1
+        self._action_set_checkpoint_loading = exahype2.solvers.aderdg.actionsets.CheckpointLoading(
+            self, self._store_cell_data_default_guard()
+        )
+        self._action_set_checkpoint_loading.descend_invocation_order = 1
 
         # This action set couples the resolution transitions of a stable grid and changes
         # no topology.
@@ -564,6 +575,7 @@ class ADERDG(SubcellLimiting):
 
     def add_actions_to_init_grid(self, step):
         step.add_action_set(self._action_set_initial_conditions)
+        step.add_action_set(self._action_set_checkpoint_loading)
         self._add_subcell_limiter_actions_to_init_grid(step)
         step.add_action_set(self._action_set_update_face_label)
         step.add_action_set(self._action_set_update_cell_label)
@@ -609,6 +621,57 @@ class ADERDG(SubcellLimiting):
                 guard=self._load_face_data_default_guard() + " and " + self._face_plotter_guard,
             )
             step.add_action_set(face_plotter)
+
+    def add_actions_to_checkpoint_solution(self, step):
+        dictionary = {}
+        self._init_dictionary_with_default_parameters(dictionary)
+        self.add_entries_to_text_replacement_dictionary(dictionary)
+
+        # The cell labels carry the time step size the last prediction ran
+        # with, which a fused resume's replayed prediction needs. A limiting
+        # resume computes its next prediction afresh and captures nothing.
+        capture_arguments = {}
+        if not self.subcell_limiter_is_enabled:
+            capture_arguments = {
+                "capture_attributes": """
+  static double _capturedTimeStepSize;
+""",
+                "capture_statement": (
+                    "_capturedTimeStepSize = fineGridCell"
+                    + self._name
+                    + "CellLabel.getTimeStepSize();"
+                ),
+                "capture_static_initialisations": """
+double {{FULL_QUALIFIED_CLASSNAME}}::_capturedTimeStepSize = 0.0;
+""",
+            }
+        writer = peano4.checkpoint.CellDataWriter(
+            filename=self._name,
+            output_path_expression="::runner::RuntimeParameters::getInstance().getCheckpointOutputPath()",
+            # The named array holds the accepted solution of the completed
+            # step: Q_old for the fused solver, whose unknowns already carry
+            # the following correction's partial update by the time the
+            # checkpoint sweep runs, and Q for the limiting solver.
+            cell_data_name=self._plotted_solution_identifier(),
+            values_per_cell_expression=(
+                "BasePowerExponent<"
+                + str(self._current_time_step.dim[0])
+                + ", DIMENSIONS>::value * "
+                + str(self._current_time_step.no_of_unknowns)
+            ),
+            guard=self._load_cell_data_default_guard(),
+            scalars_expression=jinja2.Template(
+                self._time_stepping_code_snippets.create_checkpoint_scalars()
+            ).render(**dictionary),
+            time_stamp_expression="repositories::getMinTimeStamp()",
+            additional_includes="""
+#include "repositories/SolverRepository.h"
+#include "runner/RuntimeParameters.h"
+""",
+            **capture_arguments,
+        )
+        step.add_action_set(writer)
+        self._add_subcell_limiter_actions_to_checkpoint_solution(step)
 
     def add_actions_to_dynamic_mesh_refinement(self, step):
         """Adds the action sets of the one observer that changes the topology.

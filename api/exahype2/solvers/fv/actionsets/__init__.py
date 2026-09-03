@@ -4,6 +4,7 @@
 from .RefinementCriterion import RefinementCriterion
 from .HandleBoundary import HandleBoundary
 from .InitialCondition import InitialCondition
+from .CheckpointLoading import CheckpointLoading
 from .ProjectPatchOntoFaces import ProjectPatchOntoFaces
 from .RollOverUpdates import RollOverUpdates
 from .DynamicAMR import AdaptiveMeshFaceCoupling

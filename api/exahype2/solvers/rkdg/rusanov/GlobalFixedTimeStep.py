@@ -26,8 +26,8 @@ class GlobalFixedTimeStep(SeparateSweeps):
     RKDG solver with Rusanov Riemann solver and global fixed time step.
 
     We take over all parameters from the superclass. The major difference is
-    that the time step size is prescribed rather than derived from an
-    eigenvalue, so the solver needs no admissible-step reduction.
+    that the configuration prescribes the time step size, so the solver
+    derives no eigenvalue and needs no admissible-step reduction.
     """
     def __init__(
         self,
@@ -116,6 +116,7 @@ class GlobalFixedTimeStep(SeparateSweeps):
         solver_code_snippets = FixedTimeSteppingCodeSnippets.for_rkdg(
             self._normalised_time_step_size
         )
+        self._time_stepping_code_snippets = solver_code_snippets
 
         self._abstract_solver_user_declarations = create_abstract_solver_declarations(
             self._flux_implementation,

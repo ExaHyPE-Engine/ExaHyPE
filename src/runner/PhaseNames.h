@@ -13,4 +13,5 @@ struct runner::PhaseName {
   static constexpr const char* TimeStep           = "Time Step";
   static constexpr const char* DynamicAMR         = "Dynamic AMR";
   static constexpr const char* Plot               = "Plot";
+  static constexpr const char* Checkpoint         = "Checkpoint";
 };

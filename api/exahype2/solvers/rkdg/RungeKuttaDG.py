@@ -3,6 +3,7 @@
 import os
 
 import peano4
+import peano4.checkpoint
 import peano4.plotter
 import peano4.datamodel
 import peano4.blockstructured
@@ -341,8 +342,17 @@ We use RK("""
         Only the last of repeated calls matters, and a subclass calls this
         version first.
         """
+        # On a resume the checkpoint loader replaces the initial condition.
         self._action_set_initial_conditions = (
             exahype2.solvers.rkdg.actionsets.InitialCondition(
+                self,
+                "not ::runner::RuntimeParameters::getInstance().hasCheckpointLoadPath() and ("
+                + self._query_fine_grid_cell_in_action_set_if_it_holds_solution()
+                + ")",
+            )
+        )
+        self._action_set_checkpoint_loading = (
+            exahype2.solvers.rkdg.actionsets.CheckpointLoading(
                 self,
                 self._query_fine_grid_cell_in_action_set_if_it_holds_solution(),
             )
@@ -657,6 +667,7 @@ We use RK("""
         """
         step.add_action_set(self._action_set_preprocess_solution)
         step.add_action_set(self._action_set_initial_conditions)
+        step.add_action_set(self._action_set_checkpoint_loading)
         step.add_action_set(self._action_set_update_face_label)
         step.add_action_set(self._action_set_update_cell_label)
         step.add_action_set(self._action_set_AMR)
@@ -719,6 +730,33 @@ We use RK("""
         )
         step.add_action_set(self._action_set_AMR)
         step.add_action_set(self._action_set_postprocess_solution)
+
+    def add_actions_to_checkpoint_solution(self, step):
+        dictionary = {}
+        self._init_dictionary_with_default_parameters(dictionary)
+        self.add_entries_to_text_replacement_dictionary(dictionary)
+
+        writer = peano4.checkpoint.CellDataWriter(
+            filename=self._name,
+            output_path_expression="::runner::RuntimeParameters::getInstance().getCheckpointOutputPath()",
+            cell_data_name=self._unknown_identifier(),
+            values_per_cell_expression=(
+                "BasePowerExponent<"
+                + str(self._current_time_step.dim[0])
+                + ", DIMENSIONS>::value * "
+                + str(self._current_time_step.no_of_unknowns)
+            ),
+            guard=self._load_cell_data_default_guard(),
+            scalars_expression=jinja2.Template(
+                self._time_stepping_code_snippets.create_checkpoint_scalars()
+            ).render(**dictionary),
+            time_stamp_expression="repositories::getMinTimeStamp()",
+            additional_includes="""
+#include "repositories/SolverRepository.h"
+#include "runner/RuntimeParameters.h"
+""",
+        )
+        step.add_action_set(writer)
 
     def add_actions_to_dynamic_mesh_refinement(self, step):
         """!

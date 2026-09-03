@@ -2,6 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 import jinja2
 import peano4.particles
+from peano4.solversteps.ActionSet import ActionSet
 
 
 class InsertParticlesByCoordinates(peano4.particles.InsertParticlesByCoordinates):
@@ -39,10 +40,23 @@ class InsertParticlesByCoordinates(peano4.particles.InsertParticlesByCoordinates
                 """
 #include "Constants.h"
 #include "globaldata/{{PARTICLE}}.h"
+#include "runner/RuntimeParameters.h"
 #include "tarch/instrumentation/Info.h"
 """
             ).render(**dictionary),
         )
+
+    def get_body_of_operation(self, operation_name):
+        body = super().get_body_of_operation(operation_name)
+        if operation_name == ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+            # A resumed run takes its particles from the checkpoint loader, so
+            # the insertion stays off while a load path is set.
+            return (
+                "  if (not ::runner::RuntimeParameters::getInstance().hasCheckpointLoadPath()) {\n"
+                + body
+                + "  }\n"
+            )
+        return body
 
     def get_action_set_name(self):
         return __name__.replace(".py", "").replace(".", "_")

@@ -3,6 +3,7 @@
 #include "Launch.h"
 
 #include "peano4/Init.h"
+#include "peano4/checkpoint/GridCheckpoint.h"
 #include "peano4/topology/TopologyManager.h"
 #include "runner/GlobalStatistics.h"
 #include "runner/RuntimeParameters.h"
@@ -150,7 +151,18 @@ int runner::launch(
 
   // Every rank schedules the same plan, so the first grid sweep builds the
   // complete base grid with each rank owning its contiguous curve segment.
-  peano4::topology::TopologyManager::getInstance().scheduleRegularGridConstruction(parameters.getGridLevels());
+  if (parameters.hasCheckpointLoadPath()) {
+#ifdef PEANO_WITH_HDF5
+    // The checkpoint carries the base depth and the refinement plan, so the
+    // first grid sweep builds the checkpointed grid; -lmin plays no role here.
+    const int depth = peano4::checkpoint::restoreGrid(parameters.getCheckpointLoadPath(), domainOffset, domainSize);
+    peano4::topology::TopologyManager::getInstance().scheduleRegularGridConstruction(depth);
+#else
+    tarch::terminateWithError("Resuming from a checkpoint needs a build with PEANO_WITH_HDF5.");
+#endif
+  } else {
+    peano4::topology::TopologyManager::getInstance().scheduleRegularGridConstruction(parameters.getGridLevels());
+  }
 
   if (callbacks.startSimulation) {
     callbacks.startSimulation();

@@ -114,6 +114,7 @@ set(SOURCES
   plotter/CellPlotter.cpp
   plotter/CellTypes.cpp
   plotter/FileWriter.cpp
+  plotter/HDF5File.cpp
   plotter/HDF5FileWriter.cpp
   plotter/JSONTimeSeriesWriter.cpp
   plotter/NetCDFFileWriter.cpp
@@ -125,15 +126,18 @@ set(SOURCES
   plotter/VTKHDFTimeSeriesWriter.cpp
   plotter/VTUFileWriter.cpp
   plotter/XDMFTimeSeriesWriter.cpp
+  plotter/tests/HDF5FileTest.cpp
   plotter/tests/HDF5FileWriterTest.cpp
   plotter/tests/NetCDFFileWriterTest.cpp
   plotter/tests/VTKHDFFileWriterTest.cpp
   plotter/tests/VTUFileWriterTest.cpp
 
   reader/CSVReader.cpp
+  reader/HDF5FileReader.cpp
   reader/JSONReader.cpp
   reader/NetCDFFieldSampler.cpp
   reader/NetCDFFileReader.cpp
+  reader/tests/HDF5FileReaderTest.cpp
   reader/tests/NetCDFFieldSamplerTest.cpp
   reader/tests/NetCDFFileReaderTest.cpp
   reader/tests/JSONReaderTest.cpp

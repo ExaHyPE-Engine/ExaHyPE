@@ -11,7 +11,13 @@ namespace runner {
 
 class runner::TimeLoop final : public runner::Phase {
 public:
-  TimeLoop(runner::PhaseContext& context, const int timeStepStep, const int plotStep, runner::DynamicAMR& dynamicAMR);
+  TimeLoop(
+    runner::PhaseContext& context,
+    int                   timeStepStep,
+    int                   plotStep,
+    runner::DynamicAMR&   dynamicAMR,
+    int                   checkpointStep
+  );
 
   void run() override;
 
@@ -23,27 +29,29 @@ private:
   int                   _timeStepStep;
   int                   _plotStep;
   runner::DynamicAMR&   _dynamicAMR;
-  bool                  _stoppedAfterNonCriticalAssertion = false;
+  int                   _checkpointStep;
+  bool                  _stoppedAfterNonCriticalAssertion{false};
 
   /**
    * Wall clock in seconds of every completed time step, the first one included.
    */
-  double _timeSteppingSeconds = 0.0;
+  double _timeSteppingSeconds{0.0};
 
   /**
    * Wall clock in seconds that the DynamicAMR measurement holds when the loop starts. Grid
    * initialisation runs through the same measurement, and the estimate subtracts this offset.
    */
-  double _dynamicAMRSecondsBeforeLoop = 0.0;
+  double _dynamicAMRSecondsBeforeLoop{0.0};
 
   void logTimeStep(
-    const double        minimumTimeStamp,
-    const double        maximumTimeStamp,
-    const double        terminalTime,
-    const double        wallClockSeconds,
-    const unsigned long completedSteps,
-    const int           maximumSteps
+    double        minimumTimeStamp,
+    double        maximumTimeStamp,
+    double        terminalTime,
+    double        wallClockSeconds,
+    unsigned long completedSteps,
+    int           maximumSteps
   );
-  void logPlot(const int snapshot, const int numberOfSnapshots, const double timeStamp, const double wallClockSeconds);
-  std::string formatETA(const double fraction) const;
+  void        logPlot(int snapshot, int numberOfSnapshots, double timeStamp, double wallClockSeconds);
+  void        logCheckpoint(int checkpoint, int numberOfCheckpoints, double timeStamp, double wallClockSeconds);
+  std::string formatETA(double fraction) const;
 };

@@ -75,6 +75,20 @@ void peano4::topology::TopologyManager::init(
  */
 void peano4::topology::TopologyManager::scheduleRegularGridConstruction(int targetLevel) { _targetLevel = targetLevel; }
 
+void peano4::topology::TopologyManager::adoptRefinementPlan(peano4::topology::Tree::RefinementPlan refinementPlan) {
+  assertion(_tree == nullptr);
+  _refinementPlan = std::move(refinementPlan);
+}
+
+const peano4::topology::Tree::RefinementPlan& peano4::topology::TopologyManager::getRefinementPlan() const {
+  return _refinementPlan;
+}
+
+const peano4::topology::Tree& peano4::topology::TopologyManager::getTree() const {
+  assertion(_tree != nullptr);
+  return *_tree;
+}
+
 /**
  * Records that the solvers' data is initialised. A regrid then migrates the
  * pools so solver data survives.

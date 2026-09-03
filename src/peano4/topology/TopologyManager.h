@@ -44,6 +44,18 @@ public:
 
   void scheduleRegularGridConstruction(int targetLevel);
 
+  /**
+   * Installs a refinement plan before the first traversal, so the first grid
+   * sweep builds the plan's complete grid. A checkpoint resume passes the
+   * plan the writing run had settled on.
+   */
+  void adoptRefinementPlan(peano4::topology::Tree::RefinementPlan refinementPlan);
+
+  [[nodiscard]] const peano4::topology::Tree::RefinementPlan& getRefinementPlan() const;
+
+  /** The rank's tree; valid from the first traversal on. */
+  [[nodiscard]] const peano4::topology::Tree& getTree() const;
+
   void markPersistentDataLive();
 
   void enableDynamicLoadBalancing(bool enable);

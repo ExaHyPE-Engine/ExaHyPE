@@ -91,6 +91,7 @@ class RefinementCriterion(AbstractFVActionSet):
             dictionary["GRID_CONSTRUCTION"] = self._called_by_grid_construction
             self._solver._init_dictionary_with_default_parameters(dictionary)
             self._solver.add_entries_to_text_replacement_dictionary(dictionary)
+            dictionary["CHECKPOINT_SUPPRESSED_SOLVER_STATES"] = ""
             result = jinja2.Template(RefinementCriterionTemplate).render(**dictionary)
 
         return result

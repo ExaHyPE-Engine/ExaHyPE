@@ -3,6 +3,7 @@
 
 from .RefinementCriterion import RefinementCriterion
 from .InitialCondition import InitialCondition
+from .CheckpointLoading import CheckpointLoading
 from .DynamicAMR import AdaptiveMeshFaceCoupling, DynamicAMRTransfer
 from .PostprocessSolution import EmptyPostprocessSolution
 from .Correction import Correction

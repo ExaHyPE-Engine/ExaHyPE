@@ -1,0 +1,69 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+INLINE_METHOD int peano4::checkpoint::blockLevelOfLevel(const int cellLevel) {
+  return std::min(cellLevel, BlockLevelBound);
+}
+
+INLINE_METHOD std::int64_t peano4::checkpoint::numberOfBlocksOnLevel(const int cellLevel) {
+  std::int64_t result = 1;
+  for (int axis = 0; axis < DIMENSIONS * blockLevelOfLevel(cellLevel); axis++) {
+    result *= 3;
+  }
+  return result;
+}
+
+INLINE_METHOD std::int64_t peano4::checkpoint::triadicMortonKey(
+  const tarch::la::Vector<DIMENSIONS, int>& latticeIndex, const int level
+) {
+  // 3^(DIMENSIONS * level) has to fit the key, so the level is capped by the axis digits.
+  assertion(level >= 0, level);
+  assertion(DIMENSIONS * level < 39, level);
+  std::int64_t key = 0;
+  for (int digit = level - 1; digit >= 0; digit--) {
+    std::int64_t divisor = 1;
+    for (int i = 0; i < digit; i++) {
+      divisor *= 3;
+    }
+    int axisWeight = 1;
+    int digitValue = 0;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      digitValue += static_cast<int>((latticeIndex(axis) / divisor) % 3) * axisWeight;
+      axisWeight *= 3;
+    }
+    key = key * THREE_POWER_D + digitValue;
+  }
+  return key;
+}
+
+INLINE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::checkpoint::latticeIndexOfTriadicMortonKey(
+  std::int64_t key, const int level
+) {
+  tarch::la::Vector<DIMENSIONS, int> latticeIndex(0);
+  int                                digitWeight = 1;
+  for (int digit = 0; digit < level; digit++) {
+    int digitValue = static_cast<int>(key % THREE_POWER_D);
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      latticeIndex(axis) += (digitValue % 3) * digitWeight;
+      digitValue /= 3;
+    }
+    key /= THREE_POWER_D;
+    digitWeight *= 3;
+  }
+  return latticeIndex;
+}
+
+INLINE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::checkpoint::ancestorOfCell(
+  const tarch::la::Vector<DIMENSIONS, int>& latticeIndex, const int cellLevel, const int ancestorLevel
+) {
+  assertion(ancestorLevel <= cellLevel, ancestorLevel, cellLevel);
+  int divisor = 1;
+  for (int digit = 0; digit < cellLevel - ancestorLevel; digit++) {
+    divisor *= 3;
+  }
+  tarch::la::Vector<DIMENSIONS, int> result(0);
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    result(axis) = latticeIndex(axis) / divisor;
+  }
+  return result;
+}

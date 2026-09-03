@@ -2,6 +2,9 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "UnitTests.h"
 
+#include "peano4/checkpoint/tests/CellDataWriterTest.h"
+#include "peano4/checkpoint/tests/LatticeTest.h"
+#include "peano4/checkpoint/tests/ParticleDataWriterTest.h"
 #include "peano4/communication/tests/CommunicationManagerTest.h"
 #include "peano4/data/tests/ContainerRegistryTest.h"
 #include "peano4/data/tests/RegisteredStackContainerTest.h"
@@ -24,6 +27,9 @@
 tarch::tests::TestCase* peano4::getUnitTests() {
   auto* result = new tarch::tests::TreeTestCaseCollection();
 
+  result->addTestCase(new peano4::checkpoint::tests::CellDataWriterTest());
+  result->addTestCase(new peano4::checkpoint::tests::LatticeTest());
+  result->addTestCase(new peano4::checkpoint::tests::ParticleDataWriterTest());
   result->addTestCase(new peano4::grid::tests::AutomatonStateTest());
   result->addTestCase(new peano4::grid::tests::BoundaryDataAggregationTest());
   result->addTestCase(new peano4::grid::tests::GridControlEventTest());

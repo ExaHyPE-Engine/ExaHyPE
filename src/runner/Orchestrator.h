@@ -20,6 +20,7 @@ private:
   int _createGridStep{-1};
   int _initGridStep{-1};
   int _plotStep{-1};
+  int _checkpointStep{-1};
   int _timeStepStep{-1};
   int _dynamicAMRStep{-1};
 };

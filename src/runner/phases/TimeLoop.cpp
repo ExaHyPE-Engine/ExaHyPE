@@ -57,12 +57,14 @@ runner::TimeLoop::TimeLoop(
   runner::PhaseContext& context,
   const int             timeStepStep,
   const int             plotStep,
-  runner::DynamicAMR&   dynamicAMR
+  runner::DynamicAMR&   dynamicAMR,
+  const int             checkpointStep
 ) :
   _context(context),
   _timeStepStep(timeStepStep),
   _plotStep(plotStep),
-  _dynamicAMR(dynamicAMR) {}
+  _dynamicAMR(dynamicAMR),
+  _checkpointStep(checkpointStep) {}
 
 std::string runner::TimeLoop::formatETA(const double fraction) const {
   const auto drainSeconds = _context.measurements.dynamicAMR.getAccumulatedValue() - _dynamicAMRSecondsBeforeLoop;
@@ -168,6 +170,23 @@ void runner::TimeLoop::logPlot(
   );
 }
 
+void runner::TimeLoop::logCheckpoint(
+  const int    checkpoint,
+  const int    numberOfCheckpoints,
+  const double timeStamp,
+  const double wallClockSeconds
+) {
+  std::ostringstream label;
+  label << "Checkpoint " << checkpoint;
+  if (numberOfCheckpoints > 0) {
+    label << "/" << numberOfCheckpoints;
+  }
+  _context.box.line(
+    std::string(runner::BlockIndent, ' ') + label.str() + "  " + runner::Format::wallClock(wallClockSeconds)
+    + " · t = " + runner::Format::scientific(timeStamp)
+  );
+}
+
 void runner::TimeLoop::run() {
   SCOREP_USER_REGION(runner::PhaseName::TimeLoop, SCOREP_USER_REGION_TYPE_PHASE)
 
@@ -178,24 +197,61 @@ void runner::TimeLoop::run() {
 
   _dynamicAMRSecondsBeforeLoop = measurements.dynamicAMR.getAccumulatedValue();
 
-  const auto    firstPlotTimeStamp = parameters.getFirstPlotTimeStamp();
-  double        nextMinPlot        = firstPlotTimeStamp;
-  double        nextMaxPlot        = firstPlotTimeStamp;
-  double        nextPlotAtStep     = 0.0;
-  double        logNextTimeStep    = 0.0;
-  unsigned long completedTimeSteps = 0;
-  int           completedPlots     = 0;
+  // A resume reinstates the pending mesh-refinement events before the first drain check
+  // realises them.
+  if (parameters.hasCheckpointLoadPath() and repositories.restoreCheckpointState) {
+    repositories.restoreCheckpointState();
+  }
+
+  const auto    firstPlotTimeStamp   = parameters.getFirstPlotTimeStamp();
+  double        nextMinPlot          = firstPlotTimeStamp;
+  double        nextMaxPlot          = firstPlotTimeStamp;
+  double        nextPlotAtStep       = 0.0;
+  double        nextCheckpoint       = parameters.getFirstCheckpointTimeStamp();
+  double        logNextTimeStep      = 0.0;
+  unsigned long completedTimeSteps   = 0;
+  int           completedPlots       = 0;
+  int           completedCheckpoints = 0;
   // Tracks the last reported step so shutdown does not print it twice.
-  unsigned long lastLoggedStep     = 0;
-  double        currentStepElapsed = 0.0;
-  double        lastStepElapsed    = 0.0;
-  bool          justWroteSnapshot  = false;
-  bool          timeStepInFlight   = false;
+  unsigned long lastLoggedStep       = 0;
+  double        currentStepElapsed   = 0.0;
+  double        lastStepElapsed      = 0.0;
+  bool          justWroteSnapshot    = false;
+  bool          wroteFinalCheckpoint = false;
+  bool          timeStepInFlight     = false;
 
   const int  maxTimeSteps = parameters.getNumberOfTimeSteps();
   const bool stepLimited  = maxTimeSteps > 0;
 
-  enum class Action { TimeStep, Plot, Stop };
+  // A resumed run starts partway through the simulated interval, so the plot and checkpoint
+  // targets that already passed move to the first ones ahead of the resume time.
+  if (parameters.hasCheckpointLoadPath()) {
+    const double resumeTime = repositories.getMinTimeStamp();
+    if (resumeTime > 0.0) {
+      const double maxTerminal = parameters.getMaxTerminalTime();
+      const double plotEnd     = maxTerminal < std::numeric_limits<double>::max() / 10.0
+                                   ? maxTerminal
+                                   : parameters.getMinTerminalTime();
+      const int    snapshots    = parameters.getNumberOfSnapshots();
+      const double snapInterval = snapshots <= 0 ? 0.0 : plotEnd / snapshots;
+      if (snapInterval > 0.0 and nextMinPlot <= resumeTime) {
+        const auto intervalsPassed = static_cast<long>(std::floor((resumeTime - firstPlotTimeStamp) / snapInterval))
+                                     + 1;
+        nextMinPlot = firstPlotTimeStamp + static_cast<double>(intervalsPassed) * snapInterval;
+        nextMaxPlot = nextMinPlot;
+      }
+      const int    checkpoints        = parameters.getNumberOfCheckpoints();
+      const double firstCheckpoint    = parameters.getFirstCheckpointTimeStamp();
+      const double checkpointInterval = checkpoints <= 1 ? 0.0 : (plotEnd - firstCheckpoint) / (checkpoints - 1);
+      if (checkpointInterval > 0.0 and nextCheckpoint <= resumeTime) {
+        const auto intervalsPassed = static_cast<long>(std::floor((resumeTime - firstCheckpoint) / checkpointInterval))
+                                     + 1;
+        nextCheckpoint = firstCheckpoint + static_cast<double>(intervalsPassed) * checkpointInterval;
+      }
+    }
+  }
+
+  enum class Action { TimeStep, Plot, Checkpoint, Stop };
 
   while (true) {
     // A completed time step may have committed refine or coarsen events, and the DynamicAMR
@@ -209,8 +265,12 @@ void runner::TimeLoop::run() {
     const double minTerminal  = parameters.getMinTerminalTime();
     const double maxTerminal  = parameters.getMaxTerminalTime();
     const double plotEnd      = maxTerminal < std::numeric_limits<double>::max() / 10.0 ? maxTerminal : minTerminal;
-    const int    snapshots    = parameters.getNumberOfSnapshots();
-    const double snapInterval = snapshots <= 0 ? 0.0 : plotEnd / snapshots;
+    const int    snapshots          = parameters.getNumberOfSnapshots();
+    const double snapInterval       = snapshots <= 0 ? 0.0 : plotEnd / snapshots;
+    const int    checkpoints        = parameters.getNumberOfCheckpoints();
+    const double firstCheckpoint    = parameters.getFirstCheckpointTimeStamp();
+    const bool   checkpointing      = checkpoints > 0 and _checkpointStep >= 0;
+    const double checkpointInterval = checkpoints <= 1 ? 0.0 : (plotEnd - firstCheckpoint) / (checkpoints - 1);
     // A run bounded by a fixed number of time steps ends at that step budget, so its snapshots
     // spread over the steps.
     const double stepPlotInterval =
@@ -260,6 +320,19 @@ void runner::TimeLoop::run() {
       nextMaxPlot       = std::max(nextMaxPlot, nextMinPlot);
       justWroteSnapshot = true;
       action            = Action::Plot;
+    } else if (checkpointing and keepTimeStepping and completedCheckpoints < checkpoints and minStamp >= nextCheckpoint
+               and repositories.mayPlot()) {
+      if (checkpointInterval > 0.0) {
+        nextCheckpoint += checkpointInterval;
+        if (nextCheckpoint < minStamp) {
+          logWarning("Asked to checkpoint more often than the time step size allows; postponing the next checkpoint.");
+          nextCheckpoint = minStamp + checkpointInterval;
+        }
+      } else {
+        // A single checkpoint has no interval, so its target moves out of reach once written.
+        nextCheckpoint = std::numeric_limits<double>::max();
+      }
+      action = Action::Checkpoint;
     } else if (keepTimeStepping) {
       justWroteSnapshot = false;
       action            = Action::TimeStep;
@@ -274,6 +347,9 @@ void runner::TimeLoop::run() {
       nextMaxPlot       = std::numeric_limits<double>::max();
       nextPlotAtStep    = std::numeric_limits<double>::max();
       action            = Action::Plot;
+    } else if (checkpointing and not wroteFinalCheckpoint and completedCheckpoints < checkpoints) {
+      wroteFinalCheckpoint = true;
+      action               = Action::Checkpoint;
     } else {
       action = Action::Stop;
     }
@@ -309,6 +385,17 @@ void runner::TimeLoop::run() {
         ++completedPlots;
         logPlot(completedPlots, snapshots, repositories.getMinTimeStamp(), elapsedSeconds);
       }
+      continue;
+    }
+
+    if (action == Action::Checkpoint) {
+      double elapsedSeconds = 0.0;
+      {
+        SCOREP_USER_REGION(runner::PhaseName::Checkpoint, SCOREP_USER_REGION_TYPE_COMMON)
+        elapsedSeconds = engine.runStep(_checkpointStep);
+      }
+      ++completedCheckpoints;
+      logCheckpoint(completedCheckpoints, checkpoints, repositories.getMinTimeStamp(), elapsedSeconds);
       continue;
     }
 

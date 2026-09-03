@@ -3,6 +3,7 @@
 
 from .RefinementCriterion import RefinementCriterion
 from .InitialCondition import InitialCondition
+from .CheckpointLoading import CheckpointLoading
 from .LinearCombinationOfEstimates import LinearCombinationOfEstimates
 from .ProjectLinearCombinationOfEstimatesOntoFaces import (
     ProjectLinearCombinationOfEstimatesOntoFaces,

@@ -85,6 +85,13 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStepSize() const {
     : _maxTimeStepSize;
 }
 
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setTimeStamp(const double timeStamp) {
+  _minTimeStamp             = timeStamp;
+  _maxTimeStamp             = timeStamp;
+  _minTimeStampThisTimeStep = timeStamp;
+  _maxTimeStampThisTimeStep = timeStamp;
+}
+
 thread_local typename {{NAMESPACE | join("::")}}::{{CLASSNAME}}::LocalUpdates {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_localUpdates;
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(

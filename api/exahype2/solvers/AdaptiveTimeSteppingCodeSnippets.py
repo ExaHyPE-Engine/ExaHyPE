@@ -45,7 +45,7 @@ class AdaptiveTimeSteppingCodeSnippets(SolverCodeSnippets):
         )
 
     def create_max_eigenvalue_declaration(self):
-        return "  void setMaxEigenvalue(const double eigenvalue);\n"
+        return "  void setMaxEigenvalue(double eigenvalue);\n"
 
     def create_max_eigenvalue_definition(self):
         return """
@@ -73,7 +73,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::setMaxEigenvalue(const double 
     def create_max_scaled_eigenvalue_declaration(self):
         if not self._uses_scaled_eigenvalue():
             return ""
-        return "  void setMaxScaledEigenvalue(const double eigenvalue);\n"
+        return "  void setMaxScaledEigenvalue(double eigenvalue);\n"
 
     def create_max_scaled_eigenvalue_definition(self):
         if not self._uses_scaled_eigenvalue():
@@ -101,13 +101,30 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::setMaxScaledEigenvalue(const d
 """
 
     def create_abstract_solver_public_declarations(self):
+        scaled_eigenvalue_getter = ""
+        if self._uses_scaled_eigenvalue():
+            scaled_eigenvalue_getter = """
+  double getMaxScaledEigenvalueThisTimeStep() const;
+"""
         return (
             self.create_max_eigenvalue_declaration()
             + self.create_max_scaled_eigenvalue_declaration()
             + """
   double getMaxEigenvalue() const;
   virtual double getAdmissibleTimeStepSize() const;
+
+  double getAdmissibleTimeStepSizeThisTimeStep() const;
+
+  /** Overwrites the admissible time step size; a checkpoint resume reinstates it. */
+  void setAdmissibleTimeStepSize(double timeStepSize);
+
+  /** Overwrites the next step's admissible time step size; a checkpoint resume reinstates it. */
+  void setAdmissibleTimeStepSizeThisTimeStep(double timeStepSize);
+
+  /** Overwrites the reduced eigenvalue of the last completed step; a checkpoint resume reinstates it. */
+  void setReducedMaxEigenvalue(double eigenvalue);
 """
+            + scaled_eigenvalue_getter
         )
 
     def create_abstract_solver_protected_declarations(self):
@@ -148,6 +165,13 @@ public:
         )
 
     def create_abstract_solver_user_definitions(self):
+        scaled_eigenvalue_getter = ""
+        if self._uses_scaled_eigenvalue():
+            scaled_eigenvalue_getter = """
+double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getMaxScaledEigenvalueThisTimeStep() const {
+  return _maxScaledEigenvalueThisTimeStep;
+}
+"""
         return (
             self.create_max_eigenvalue_definition()
             + self.create_max_scaled_eigenvalue_definition()
@@ -163,7 +187,24 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getMaxEigenvalue() const {
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() const {
   return _admissibleTimeStepSize;
 }
+
+double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSizeThisTimeStep() const {
+  return _admissibleTimeStepSizeThisTimeStep;
+}
+
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::setAdmissibleTimeStepSize(const double timeStepSize) {
+  _admissibleTimeStepSize = timeStepSize;
+}
+
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::setAdmissibleTimeStepSizeThisTimeStep(const double timeStepSize) {
+  _admissibleTimeStepSizeThisTimeStep = timeStepSize;
+}
+
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::setReducedMaxEigenvalue(const double eigenvalue) {
+  _maxEigenvalue = eigenvalue;
+}
 """
+            + scaled_eigenvalue_getter
         )
 
     def create_abstract_solver_constructor_statements(self):
@@ -222,6 +263,18 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() 
 """
 
     def create_start_time_step_implementation(self):
+        if self._scheme is _AdaptiveTimeSteppingScheme.ADERDG:
+            return """
+  // A resume seeds the time step sizes and the eigenvalues of the replayed sweep before
+  // the InitialPrediction starts, so that sweep keeps them.
+  if (isFirstGridSweepOfTimeStep()
+      and not (_solverState == SolverState::InitialPrediction
+               and ::runner::RuntimeParameters::getInstance().hasCheckpointLoadPath())) {
+    _admissibleTimeStepSize          = _admissibleTimeStepSizeThisTimeStep;
+    _maxEigenvalueThisTimeStep       = 0.0;
+    _maxScaledEigenvalueThisTimeStep = 0.0;
+  }
+"""
         if self._uses_scaled_eigenvalue():
             return """
   if (isFirstGridSweepOfTimeStep()) {
@@ -381,12 +434,26 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() 
             .strip("\n")
         )
 
+    def _finish_time_step_condition(self):
+        """Returns the C++ predicate that guards the end-of-step reduction.
+
+        A resumed ADER-DG run replays the last prediction as its InitialPrediction sweep,
+        so that sweep also reduces the eigenvalues and derives the next admissible time
+        step size, exactly as the replayed sweep did in the writing run.
+        """
+        if self._scheme is _AdaptiveTimeSteppingScheme.ADERDG:
+            return (
+                "isLastGridSweepOfTimeStep() or (_solverState == SolverState::InitialPrediction "
+                "and ::runner::RuntimeParameters::getInstance().hasCheckpointLoadPath())"
+            )
+        return "isLastGridSweepOfTimeStep()"
+
     def create_finish_time_step_implementation(self):
         stability_eigenvalue_condition = "hasPositiveReducedEigenvalue"
         if self._uses_scaled_eigenvalue():
             stability_eigenvalue_condition = "hasPositiveReducedScaledEigenvalue"
         template = """
-  if (isLastGridSweepOfTimeStep()) {
+  if ($finish_time_step_condition) {
 $max_eigenvalue_reduction
 
     const auto reducedEigenvalueStatistics =
@@ -455,6 +522,7 @@ $time_step_size_from_cfl
   }
 """
         return Template(template).substitute(
+            finish_time_step_condition=(self._finish_time_step_condition()),
             max_eigenvalue_reduction=(
                 self.create_max_eigenvalue_reduction().strip("\n")
             ),
@@ -464,3 +532,71 @@ $time_step_size_from_cfl
             stability_eigenvalue_condition=(stability_eigenvalue_condition),
             time_step_size_from_cfl=(self._create_time_step_size_from_cfl()),
         )
+
+    def create_checkpoint_scalars(self):
+        """Returns the C++ expression for the solver scalars a checkpoint stores.
+
+        A fused ADER-DG resume replays the last prediction, which ran with the time step
+        size the cell labels carry, so the checkpoint keeps that size beside the
+        admissible one and both reduced eigenvalues. A limiting ADER-DG resume and every
+        other scheme continue with their regular first sweep and store the two
+        admissible sizes.
+        """
+        if self._scheme is _AdaptiveTimeSteppingScheme.ADERDG:
+            return (
+                "{% if SUBCELL_LIMITER %}"
+                "std::vector<double>{"
+                "repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize(), "
+                "repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSizeThisTimeStep(), "
+                "repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue()}"
+                "{% else %}"
+                "std::vector<double>{"
+                "repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize(), "
+                "_capturedTimeStepSize, "
+                "repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue(), "
+                "repositories::{{SOLVER_INSTANCE}}.getMaxScaledEigenvalueThisTimeStep()}"
+                "{% endif %}"
+            )
+        if self._scheme is _AdaptiveTimeSteppingScheme.RKDG:
+            return (
+                "std::vector<double>{"
+                "repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize(), "
+                "repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSizeThisTimeStep(), "
+                "repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue()}"
+            )
+        return (
+            "std::vector<double>{"
+            "repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSizeThisTimeStep(), "
+            "repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue()}"
+        )
+
+    def create_checkpoint_scalar_restore(self):
+        """Returns the C++ statements that reinstate the scalars a checkpoint stored."""
+        if self._scheme is _AdaptiveTimeSteppingScheme.ADERDG:
+            return """
+{% if SUBCELL_LIMITER %}
+    const std::vector<double>& checkpointScalars = _checkpointLoader->getSolverScalars();
+    repositories::{{SOLVER_INSTANCE}}.setAdmissibleTimeStepSize(checkpointScalars.at(0));
+    repositories::{{SOLVER_INSTANCE}}.setAdmissibleTimeStepSizeThisTimeStep(checkpointScalars.at(1));
+    repositories::{{SOLVER_INSTANCE}}.setReducedMaxEigenvalue(checkpointScalars.at(2));
+{% else %}
+    const std::vector<double>& checkpointScalars = _checkpointLoader->getSolverScalars();
+    repositories::{{SOLVER_INSTANCE}}.setAdmissibleTimeStepSizeThisTimeStep(checkpointScalars.at(0));
+    repositories::{{SOLVER_INSTANCE}}.setAdmissibleTimeStepSize(checkpointScalars.at(1));
+    repositories::{{SOLVER_INSTANCE}}.setMaxEigenvalue(checkpointScalars.at(2));
+    repositories::{{SOLVER_INSTANCE}}.setMaxScaledEigenvalue(checkpointScalars.at(3));
+{% endif %}
+"""
+        if self._scheme is _AdaptiveTimeSteppingScheme.RKDG:
+            return """
+    const std::vector<double>& checkpointScalars = _checkpointLoader->getSolverScalars();
+    repositories::{{SOLVER_INSTANCE}}.setAdmissibleTimeStepSize(checkpointScalars.at(0));
+    repositories::{{SOLVER_INSTANCE}}.setAdmissibleTimeStepSizeThisTimeStep(checkpointScalars.at(1));
+    repositories::{{SOLVER_INSTANCE}}.setReducedMaxEigenvalue(checkpointScalars.at(2));
+"""
+        return """
+    const std::vector<double>& checkpointScalars = _checkpointLoader->getSolverScalars();
+    repositories::{{SOLVER_INSTANCE}}.setAdmissibleTimeStepSize(checkpointScalars.at(0));
+    repositories::{{SOLVER_INSTANCE}}.setAdmissibleTimeStepSizeThisTimeStep(checkpointScalars.at(0));
+    repositories::{{SOLVER_INSTANCE}}.setReducedMaxEigenvalue(checkpointScalars.at(1));
+"""

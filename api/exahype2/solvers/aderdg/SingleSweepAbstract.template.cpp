@@ -71,6 +71,13 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStepSize() const {
     : _maxTimeStepSize;
 }
 
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setTimeStamp(const double timeStamp) {
+  _minTimeStamp             = timeStamp;
+  _maxTimeStamp             = timeStamp;
+  _minTimeStampThisTimeStep = timeStamp;
+  _maxTimeStampThisTimeStep = timeStamp;
+}
+
 thread_local typename {{NAMESPACE | join("::")}}::{{CLASSNAME}}::LocalUpdates {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_localUpdates;
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(
@@ -467,7 +474,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
 
     {{FINISH_TIME_STEP_IMPLEMENTATION}}
 
-    if (isLastGridSweepOfTimeStep()) {
+    // A resume replays the last prediction as the InitialPrediction sweep, so
+    // that sweep also rolls the reduced extrema over, exactly as the replayed
+    // sweep did in the writing run.
+    if (isLastGridSweepOfTimeStep()
+        or (_solverState == SolverState::InitialPrediction and ::runner::RuntimeParameters::getInstance().hasCheckpointLoadPath())) {
       _minTimeStamp    = _minTimeStampThisTimeStep;
       _maxTimeStamp    = _maxTimeStampThisTimeStep;
       _minTimeStepSize = _minTimeStepSizeThisTimeStep;

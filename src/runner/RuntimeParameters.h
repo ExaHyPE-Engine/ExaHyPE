@@ -59,6 +59,12 @@ public:
   int    getGridLevels() const;
   int    getMaxGridLevels() const;
 
+  double getFirstCheckpointTimeStamp() const;
+  int    getNumberOfCheckpoints() const;
+  bool   hasCheckpointLoadPath() const;
+
+  const std::string& getCheckpointOutputPath() const;
+  const std::string& getCheckpointLoadPath() const;
   const std::string& getConfigFilePath() const;
   const std::string& getOutputPath() const;
   const std::string& getProjectName() const;
@@ -107,6 +113,10 @@ private:
   bool        _plotDoublePrecision{false};
   std::string _projectName{};
   std::string _executableName{};
+  double      _firstCheckpointTimeStamp{0.0};
+  int         _numberOfCheckpoints{0};
+  std::string _checkpointOutputPath{"checkpoints"};
+  std::string _checkpointLoadPath{};
   double      _timeStepLogInterval{5.0};
   int         _gridLevels{3};
   int         _maxGridLevels{3};

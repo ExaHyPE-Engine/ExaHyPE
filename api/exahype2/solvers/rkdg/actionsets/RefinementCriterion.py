@@ -89,6 +89,7 @@ class RefinementCriterion(AbstractRungeKuttaDGActionSet):
             d["STATELESS_REFINEMENT_CRITERION"] = False
             self._solver._init_dictionary_with_default_parameters(d)
             self._solver.add_entries_to_text_replacement_dictionary(d)
+            d["CHECKPOINT_SUPPRESSED_SOLVER_STATES"] = ""
             result = jinja2.Template(RefinementCriterionTemplate).render(**d)
 
         return result

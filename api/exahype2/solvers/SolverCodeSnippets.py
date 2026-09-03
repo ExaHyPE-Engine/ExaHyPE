@@ -63,3 +63,22 @@ class SolverCodeSnippets(ABC):
   @abstractmethod
   def create_finish_time_step_implementation(self):
     raise Exception( "abstract method, not implemented")
+
+  def create_checkpoint_scalars(self):
+    """
+
+    C++ expression for the scheme's scalar state a checkpoint stores, as a
+    std::vector<double>. A scheme whose state follows from its configuration
+    stores nothing.
+
+    """
+    return "std::vector<double>{}"
+
+  def create_checkpoint_scalar_restore(self):
+    """
+
+    C++ statements reinstating the scalars of create_checkpoint_scalars() from
+    _checkpointLoader->getSolverScalars(), in the same order.
+
+    """
+    return ""

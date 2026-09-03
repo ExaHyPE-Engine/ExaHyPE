@@ -19,6 +19,8 @@ runner::Orchestrator::Orchestrator(const std::vector<runner::Step>& steps) {
       _initGridStep = step.programStep;
     } else if (step.name == runner::StepName::PlotSolution) {
       _plotStep = step.programStep;
+    } else if (step.name == runner::StepName::CheckpointSolution) {
+      _checkpointStep = step.programStep;
     } else if (step.name == runner::StepName::TimeStep) {
       _timeStepStep = step.programStep;
     } else if (step.name == runner::StepName::DynamicAMR) {
@@ -33,7 +35,7 @@ bool runner::Orchestrator::run(runner::PhaseContext& context) {
   runner::GridConstruction   gridConstruction(context, _createGridStep);
   runner::DynamicAMR         dynamicAMR(context, _dynamicAMRStep);
   runner::GridInitialisation gridInitialisation(context, _initGridStep, dynamicAMR);
-  runner::TimeLoop           timeLoop(context, _timeStepStep, _plotStep, dynamicAMR);
+  runner::TimeLoop           timeLoop(context, _timeStepStep, _plotStep, dynamicAMR, _checkpointStep);
 
   std::vector<runner::Phase*> phases;
   phases.push_back(&configuration);

@@ -20,11 +20,12 @@ struct runner::Step {
 };
 
 struct runner::StepName {
-  static constexpr const char* CreateGrid   = "CreateGrid";
-  static constexpr const char* InitGrid     = "InitGrid";
-  static constexpr const char* PlotSolution = "PlotSolution";
-  static constexpr const char* TimeStep     = "TimeStep";
-  static constexpr const char* DynamicAMR   = "DynamicAMR";
+  static constexpr const char* CreateGrid         = "CreateGrid";
+  static constexpr const char* InitGrid           = "InitGrid";
+  static constexpr const char* PlotSolution       = "PlotSolution";
+  static constexpr const char* CheckpointSolution = "CheckpointSolution";
+  static constexpr const char* TimeStep           = "TimeStep";
+  static constexpr const char* DynamicAMR         = "DynamicAMR";
 };
 
 /**

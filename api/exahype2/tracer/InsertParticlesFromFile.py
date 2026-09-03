@@ -84,7 +84,13 @@ if (not marker.willBeRefined()) {
 
     def get_body_of_operation(self, operation_name):
         if operation_name == ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-            return self.__Template_TouchCellFirstTime.render(**self.d)
+            # A resumed run takes its particles from the checkpoint loader, so
+            # the insertion stays off while a load path is set.
+            return (
+                "  if (not ::runner::RuntimeParameters::getInstance().hasCheckpointLoadPath()) {\n"
+                + self.__Template_TouchCellFirstTime.render(**self.d)
+                + "  }\n"
+            )
         if operation_name == ActionSet.OPERATION_END_TRAVERSAL:
             return self.__Template_EndTraversal.render(**self.d)
         return "\n"
@@ -101,6 +107,7 @@ if (not marker.willBeRefined()) {
     def get_includes(self):
         return jinja2.Template(
             """
+#include "runner/RuntimeParameters.h"
 #include "tarch/instrumentation/Info.h"
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
