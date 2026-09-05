@@ -229,14 +229,13 @@ void runner::TimeLoop::run() {
     const double resumeTime = repositories.getMinTimeStamp();
     if (resumeTime > 0.0) {
       const double maxTerminal = parameters.getMaxTerminalTime();
-      const double plotEnd     = maxTerminal < std::numeric_limits<double>::max() / 10.0
-                                   ? maxTerminal
-                                   : parameters.getMinTerminalTime();
+      const double plotEnd =
+        maxTerminal < std::numeric_limits<double>::max() / 10.0 ? maxTerminal : parameters.getMinTerminalTime();
       const int    snapshots    = parameters.getNumberOfSnapshots();
       const double snapInterval = snapshots <= 0 ? 0.0 : plotEnd / snapshots;
       if (snapInterval > 0.0 and nextMinPlot <= resumeTime) {
-        const auto intervalsPassed = static_cast<long>(std::floor((resumeTime - firstPlotTimeStamp) / snapInterval))
-                                     + 1;
+        const auto intervalsPassed =
+          static_cast<long>(std::floor((resumeTime - firstPlotTimeStamp) / snapInterval)) + 1;
         nextMinPlot = firstPlotTimeStamp + static_cast<double>(intervalsPassed) * snapInterval;
         nextMaxPlot = nextMinPlot;
       }
@@ -244,8 +243,8 @@ void runner::TimeLoop::run() {
       const double firstCheckpoint    = parameters.getFirstCheckpointTimeStamp();
       const double checkpointInterval = checkpoints <= 1 ? 0.0 : (plotEnd - firstCheckpoint) / (checkpoints - 1);
       if (checkpointInterval > 0.0 and nextCheckpoint <= resumeTime) {
-        const auto intervalsPassed = static_cast<long>(std::floor((resumeTime - firstCheckpoint) / checkpointInterval))
-                                     + 1;
+        const auto intervalsPassed =
+          static_cast<long>(std::floor((resumeTime - firstCheckpoint) / checkpointInterval)) + 1;
         nextCheckpoint = firstCheckpoint + static_cast<double>(intervalsPassed) * checkpointInterval;
       }
     }
@@ -262,14 +261,14 @@ void runner::TimeLoop::run() {
       _dynamicAMR.run();
     }
 
-    const double minTerminal  = parameters.getMinTerminalTime();
-    const double maxTerminal  = parameters.getMaxTerminalTime();
-    const double plotEnd      = maxTerminal < std::numeric_limits<double>::max() / 10.0 ? maxTerminal : minTerminal;
-    const int    snapshots          = parameters.getNumberOfSnapshots();
-    const double snapInterval       = snapshots <= 0 ? 0.0 : plotEnd / snapshots;
-    const int    checkpoints        = parameters.getNumberOfCheckpoints();
-    const double firstCheckpoint    = parameters.getFirstCheckpointTimeStamp();
-    const bool   checkpointing      = checkpoints > 0 and _checkpointStep >= 0;
+    const double minTerminal     = parameters.getMinTerminalTime();
+    const double maxTerminal     = parameters.getMaxTerminalTime();
+    const double plotEnd         = maxTerminal < std::numeric_limits<double>::max() / 10.0 ? maxTerminal : minTerminal;
+    const int    snapshots       = parameters.getNumberOfSnapshots();
+    const double snapInterval    = snapshots <= 0 ? 0.0 : plotEnd / snapshots;
+    const int    checkpoints     = parameters.getNumberOfCheckpoints();
+    const double firstCheckpoint = parameters.getFirstCheckpointTimeStamp();
+    const bool   checkpointing   = checkpoints > 0 and _checkpointStep >= 0;
     const double checkpointInterval = checkpoints <= 1 ? 0.0 : (plotEnd - firstCheckpoint) / (checkpoints - 1);
     // A run bounded by a fixed number of time steps ends at that step budget, so its snapshots
     // spread over the steps.

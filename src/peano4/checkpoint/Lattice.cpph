@@ -15,7 +15,8 @@ INLINE_METHOD std::int64_t peano4::checkpoint::numberOfBlocksOnLevel(const int c
 }
 
 INLINE_METHOD std::int64_t peano4::checkpoint::triadicMortonKey(
-  const tarch::la::Vector<DIMENSIONS, int>& latticeIndex, const int level
+  const tarch::la::Vector<DIMENSIONS, int>& latticeIndex,
+  const int                                 level
 ) {
   // 3^(DIMENSIONS * level) has to fit the key, so the level is capped by the axis digits.
   assertion(level >= 0, level);
@@ -38,7 +39,8 @@ INLINE_METHOD std::int64_t peano4::checkpoint::triadicMortonKey(
 }
 
 INLINE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::checkpoint::latticeIndexOfTriadicMortonKey(
-  std::int64_t key, const int level
+  std::int64_t key,
+  const int    level
 ) {
   assertion(level >= 0, level);
   assertion(key >= 0, key);
@@ -57,7 +59,9 @@ INLINE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::checkpoint::latticeInde
 }
 
 INLINE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::checkpoint::ancestorOfCell(
-  const tarch::la::Vector<DIMENSIONS, int>& latticeIndex, const int cellLevel, const int ancestorLevel
+  const tarch::la::Vector<DIMENSIONS, int>& latticeIndex,
+  const int                                 cellLevel,
+  const int                                 ancestorLevel
 ) {
   assertion(ancestorLevel <= cellLevel, ancestorLevel, cellLevel);
   int divisor = 1;

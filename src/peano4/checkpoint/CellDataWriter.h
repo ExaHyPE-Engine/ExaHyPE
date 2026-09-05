@@ -46,7 +46,7 @@ public:
   CellDataWriter(CellDataWriter&&)                 = delete;
   CellDataWriter& operator=(const CellDataWriter&) = delete;
   CellDataWriter& operator=(CellDataWriter&&)      = delete;
-  ~CellDataWriter() = default;
+  ~CellDataWriter()                                = default;
 
   void collect(Records&& records);
 

@@ -10,15 +10,12 @@
 #ifdef PEANO_WITH_HDF5
 
 namespace {
-  std::string testFilePath() {
-    return (tarch::tests::getWritableTestDirectory() / "HDF5FileReaderTest.h5").string();
-  }
+  std::string testFilePath() { return (tarch::tests::getWritableTestDirectory() / "HDF5FileReaderTest.h5").string(); }
 
   /** The master writes the fixture; the others reuse it after the barrier. */
   void writeFixture(const std::string& path) {
-    const auto file = tarch::plotter::HDF5File::openForDataHoldingRanks(
-      path, tarch::mpi::Rank::getInstance().isGlobalMaster()
-    );
+    const auto file =
+      tarch::plotter::HDF5File::openForDataHoldingRanks(path, tarch::mpi::Rank::getInstance().isGlobalMaster());
     if (file == nullptr) {
       return;
     }

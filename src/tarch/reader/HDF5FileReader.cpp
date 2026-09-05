@@ -36,7 +36,8 @@ bool tarch::reader::HDF5FileReader::datasetExists(const std::string& path) const
   return H5Lexists(_file, path.c_str(), H5P_DEFAULT) > 0;
 }
 
-std::pair<std::uint64_t, std::uint64_t> tarch::reader::HDF5FileReader::getDatasetDimensions(const std::string& path
+std::pair<std::uint64_t, std::uint64_t> tarch::reader::HDF5FileReader::getDatasetDimensions(
+  const std::string& path
 ) const {
   const hid_t dataset = H5Dopen(_file, path.c_str(), H5P_DEFAULT);
   if (dataset < 0) {
@@ -81,9 +82,8 @@ void tarch::reader::HDF5FileReader::readRows(
   const hsize_t localDims[2] = {rows, dims[1]};
   const herr_t  selectStatus = H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offsets, nullptr, localDims, nullptr);
   const hid_t   memspace     = H5Screate_simple(numberOfDimensions, localDims, nullptr);
-  const herr_t  readStatus   = selectStatus >= 0
-      ? H5Dread(dataset, memoryType, memspace, filespace, H5P_DEFAULT, target)
-      : -1;
+  const herr_t  readStatus =
+    selectStatus >= 0 ? H5Dread(dataset, memoryType, memspace, filespace, H5P_DEFAULT, target) : -1;
   H5Sclose(memspace);
   H5Sclose(filespace);
   H5Dclose(dataset);
@@ -93,7 +93,9 @@ void tarch::reader::HDF5FileReader::readRows(
 }
 
 std::vector<double> tarch::reader::HDF5FileReader::readDoubleRows(
-  const std::string& path, const std::uint64_t firstRow, const std::uint64_t rows
+  const std::string&  path,
+  const std::uint64_t firstRow,
+  const std::uint64_t rows
 ) const {
   std::vector<double> result(rows * getDatasetDimensions(path).second, 0.0);
   readRows(path, firstRow, rows, result.data(), H5T_NATIVE_DOUBLE);
@@ -101,7 +103,9 @@ std::vector<double> tarch::reader::HDF5FileReader::readDoubleRows(
 }
 
 std::vector<std::int32_t> tarch::reader::HDF5FileReader::readInt32Rows(
-  const std::string& path, const std::uint64_t firstRow, const std::uint64_t rows
+  const std::string&  path,
+  const std::uint64_t firstRow,
+  const std::uint64_t rows
 ) const {
   std::vector<std::int32_t> result(rows * getDatasetDimensions(path).second, 0);
   readRows(path, firstRow, rows, result.data(), H5T_NATIVE_INT);
@@ -109,7 +113,9 @@ std::vector<std::int32_t> tarch::reader::HDF5FileReader::readInt32Rows(
 }
 
 std::vector<std::int64_t> tarch::reader::HDF5FileReader::readInt64Rows(
-  const std::string& path, const std::uint64_t firstRow, const std::uint64_t rows
+  const std::string&  path,
+  const std::uint64_t firstRow,
+  const std::uint64_t rows
 ) const {
   std::vector<std::int64_t> result(rows * getDatasetDimensions(path).second, 0);
   readRows(path, firstRow, rows, result.data(), H5T_NATIVE_LLONG);

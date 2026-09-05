@@ -14,13 +14,22 @@
 #include "tarch/plotter/HDF5File.h"
 
 template void peano4::checkpoint::CellDataWriter::Records::append(
-  int level, const tarch::la::Vector<DIMENSIONS, int>& latticeIndex, const float* cellValues, int count
+  int                                       level,
+  const tarch::la::Vector<DIMENSIONS, int>& latticeIndex,
+  const float*                              cellValues,
+  int                                       count
 );
 template void peano4::checkpoint::CellDataWriter::Records::append(
-  int level, const tarch::la::Vector<DIMENSIONS, int>& latticeIndex, const double* cellValues, int count
+  int                                       level,
+  const tarch::la::Vector<DIMENSIONS, int>& latticeIndex,
+  const double*                             cellValues,
+  int                                       count
 );
 template void peano4::checkpoint::CellDataWriter::Records::append(
-  int level, const tarch::la::Vector<DIMENSIONS, int>& latticeIndex, const long double* cellValues, int count
+  int                                       level,
+  const tarch::la::Vector<DIMENSIONS, int>& latticeIndex,
+  const long double*                        cellValues,
+  int                                       count
 );
 
 void peano4::checkpoint::CellDataWriter::Records::clear() {
@@ -96,11 +105,11 @@ void peano4::checkpoint::CellDataWriter::write(const std::vector<double>& solver
   // table every rank derives its row offsets from.
   std::vector<std::int64_t> firstBlockOfLevel(numberOfLevels + 1, 0);
   for (int level = depth; level <= maxLevel; level++) {
-    firstBlockOfLevel[level - depth + 1] = firstBlockOfLevel[level - depth]
-                                           + peano4::checkpoint::numberOfBlocksOnLevel(level);
+    firstBlockOfLevel[level - depth + 1] =
+      firstBlockOfLevel[level - depth] + peano4::checkpoint::numberOfBlocksOnLevel(level);
   }
   std::vector<std::int64_t> blockCounts(firstBlockOfLevel[numberOfLevels], 0);
-  const auto             blockOfRecord = [depth, &levels, &keys, &firstBlockOfLevel](const std::size_t record) {
+  const auto                blockOfRecord = [depth, &levels, &keys, &firstBlockOfLevel](const std::size_t record) {
     const int level = levels[record];
     assertion(level >= depth, level, depth);
     std::int64_t blockKey = keys[record];
@@ -138,8 +147,8 @@ void peano4::checkpoint::CellDataWriter::write(const std::vector<double>& solver
     std::vector<std::int64_t> blockLeafKeys;
     std::size_t               record = 0;
     while (record < numberOfRecords) {
-      const std::int64_t block      = blockOfRecord(record);
-      std::size_t        blockEnd   = record;
+      const std::int64_t block    = blockOfRecord(record);
+      std::size_t        blockEnd = record;
       while (blockEnd < numberOfRecords and blockOfRecord(blockEnd) == block) {
         blockEnd++;
       }
@@ -168,8 +177,8 @@ void peano4::checkpoint::CellDataWriter::write(const std::vector<double>& solver
         if (leaf >= blockLeafKeys.size() or blockLeafKeys[leaf] != keys[record]) {
           tarch::terminateWithError("A checkpointed cell is not a leaf of the refinement plan.");
         }
-        rows[record] = firstRowOfBlock[block] - firstRowOfLevel[levels[record] - depth]
-                       + static_cast<std::int64_t>(leaf);
+        rows[record] =
+          firstRowOfBlock[block] - firstRowOfLevel[levels[record] - depth] + static_cast<std::int64_t>(leaf);
         leaf++;
       }
     }
@@ -179,9 +188,9 @@ void peano4::checkpoint::CellDataWriter::write(const std::vector<double>& solver
 
   std::size_t firstRecordOfLevel = 0;
   for (int level = depth; level <= maxLevel; level++) {
-    const std::string        prefix    = _group + "/cells/level" + std::to_string(level);
-    const std::int64_t       totalRows = firstRowOfLevel[level - depth + 1] - firstRowOfLevel[level - depth];
-    std::size_t              levelEnd  = firstRecordOfLevel;
+    const std::string  prefix    = _group + "/cells/level" + std::to_string(level);
+    const std::int64_t totalRows = firstRowOfLevel[level - depth + 1] - firstRowOfLevel[level - depth];
+    std::size_t        levelEnd  = firstRecordOfLevel;
     while (levelEnd < numberOfRecords and levels[levelEnd] == level) {
       levelEnd++;
     }

@@ -12,9 +12,7 @@
 namespace {
   constexpr int ExtraTableColumns = 3;
 
-  std::string testDirectory() {
-    return (tarch::tests::getWritableTestDirectory() / "GridCheckpointTest").string();
-  }
+  std::string testDirectory() { return (tarch::tests::getWritableTestDirectory() / "GridCheckpointTest").string(); }
 
   void removeFixture(const std::string& directory) {
     tarch::mpi::barrier(tarch::mpi::Rank::getInstance().getCommunicator());
@@ -51,9 +49,8 @@ void peano4::checkpoint::tests::GridCheckpointTest::testReadExtraTable() {
 
   const std::int32_t rows[2 * ExtraTableColumns] = {1, 2, 3, 4, 5, 6};
   {
-    const auto file = tarch::plotter::HDF5File::openForDataHoldingRanks(
-      path, tarch::mpi::Rank::getInstance().isGlobalMaster()
-    );
+    const auto file =
+      tarch::plotter::HDF5File::openForDataHoldingRanks(path, tarch::mpi::Rank::getInstance().isGlobalMaster());
     if (file != nullptr) {
       file->writeTable(std::string(peano4::checkpoint::GridGroup) + "/extra", 2, ExtraTableColumns, rows);
     }

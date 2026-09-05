@@ -24,16 +24,16 @@ namespace {
    * stamp. Collective over every rank.
    */
   void writeFixture(const std::string& path) {
-    const auto file = tarch::plotter::HDF5File::openForDataHoldingRanks(
-      path, tarch::mpi::Rank::getInstance().isGlobalMaster()
-    );
+    const auto file =
+      tarch::plotter::HDF5File::openForDataHoldingRanks(path, tarch::mpi::Rank::getInstance().isGlobalMaster());
     if (file == nullptr) {
       return;
     }
 
     const std::string         prefix = SolverGroup + "/cells/level" + std::to_string(RecordLevel);
     std::vector<std::int64_t> counts(
-      static_cast<std::size_t>(peano4::checkpoint::numberOfBlocksOnLevel(RecordLevel)), 0
+      static_cast<std::size_t>(peano4::checkpoint::numberOfBlocksOnLevel(RecordLevel)),
+      0
     );
     counts.front() = 1;
     file->writeTable(prefix + "/count", counts.size(), 0, counts.data());

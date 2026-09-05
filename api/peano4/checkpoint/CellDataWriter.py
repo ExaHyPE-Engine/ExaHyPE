@@ -156,13 +156,10 @@ class CellDataWriter(ActionSet):
         )
 
     def get_static_initialisations(self, full_qualified_classname):
-        return (
-            f"""
+        return f"""
 std::unique_ptr<::peano4::checkpoint::CellDataWriter> {full_qualified_classname}::_writer = nullptr;
-"""
-            + self._capture_static_initialisations.replace(
-                "{{FULL_QUALIFIED_CLASSNAME}}", full_qualified_classname
-            )
+""" + self._capture_static_initialisations.replace(
+            "{{FULL_QUALIFIED_CLASSNAME}}", full_qualified_classname
         )
 
     def get_includes(self):

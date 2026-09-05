@@ -63,10 +63,8 @@ bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, [[
     localTopologySize += computeXdmfTopologySize(*subdomain);
   }
 
-  const auto file = tarch::plotter::HDF5File::openForDataHoldingRanks(
-    h5FilePath.string(),
-    localData.reference != nullptr
-  );
+  const auto file =
+    tarch::plotter::HDF5File::openForDataHoldingRanks(h5FilePath.string(), localData.reference != nullptr);
   if (file == nullptr) {
     _written = true;
     return true; // The data-holding ranks write the file
@@ -116,9 +114,9 @@ bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, [[
   // The buffers accumulate in double precision; single-precision output narrows
   // them right before the write.
   const bool writeDouble = getDoublePrecisionOutput();
-  const auto realStorageType = writeDouble ? tarch::plotter::HDF5File::ElementType::Float64
-                                           : tarch::plotter::HDF5File::ElementType::Float32;
-  const auto writeRealRows   = [&](
+  const auto realStorageType =
+    writeDouble ? tarch::plotter::HDF5File::ElementType::Float64 : tarch::plotter::HDF5File::ElementType::Float32;
+  const auto writeRealRows = [&](
                                tarch::plotter::HDF5File::Dataset& dataset,
                                const unsigned long long           firstRow,
                                const unsigned long long           rows,
@@ -158,13 +156,8 @@ bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, [[
   }
 
   {
-    tarch::plotter::HDF5File::Dataset topologyDataset(
-      *file,
-      "/topology",
-      totalTopology,
-      0,
-      tarch::plotter::HDF5File::ElementType::Int32
-    );
+    tarch::plotter::HDF5File::Dataset
+      topologyDataset(*file, "/topology", totalTopology, 0, tarch::plotter::HDF5File::ElementType::Int32);
     std::vector<std::int32_t> mergedTopology;
     mergedTopology.reserve(localTopologySize);
     unsigned long long pointCursor = 0;
@@ -189,15 +182,10 @@ bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, [[
   // One merged collective write per point field. A vector is padded to 3 components
   // and a tensor to 9, as classifyField() prescribes.
   for (std::size_t fieldIndex = 0; fieldIndex < pointFields.size(); ++fieldIndex) {
-    const auto&                       field  = pointFields[fieldIndex];
-    const FieldLayout                 layout = classifyField(field.components);
-    tarch::plotter::HDF5File::Dataset dataset(
-      *file,
-      "/data/" + field.name,
-      totalPoints,
-      layout.writtenComponents,
-      realStorageType
-    );
+    const auto&       field  = pointFields[fieldIndex];
+    const FieldLayout layout = classifyField(field.components);
+    tarch::plotter::HDF5File::Dataset
+                        dataset(*file, "/data/" + field.name, totalPoints, layout.writtenComponents, realStorageType);
     std::vector<double> mergedField;
     mergedField.reserve(localNumberOfPoints * static_cast<unsigned long long>(field.components));
     for (const SubdomainBuffers* const subdomain : localData.payloads) {
@@ -211,15 +199,10 @@ bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, [[
   }
 
   for (std::size_t fieldIndex = 0; fieldIndex < cellFields.size(); ++fieldIndex) {
-    const auto&                       field  = cellFields[fieldIndex];
-    const FieldLayout                 layout = classifyField(field.components);
-    tarch::plotter::HDF5File::Dataset dataset(
-      *file,
-      "/cell_data/" + field.name,
-      totalCells,
-      layout.writtenComponents,
-      realStorageType
-    );
+    const auto&       field  = cellFields[fieldIndex];
+    const FieldLayout layout = classifyField(field.components);
+    tarch::plotter::HDF5File::Dataset
+      dataset(*file, "/cell_data/" + field.name, totalCells, layout.writtenComponents, realStorageType);
     std::vector<double> mergedField;
     mergedField.reserve(localNumberOfCells * static_cast<unsigned long long>(field.components));
     for (const SubdomainBuffers* const subdomain : localData.payloads) {

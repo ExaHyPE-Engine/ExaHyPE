@@ -34,9 +34,7 @@ void peano4::checkpoint::writeGrid(
   const double                                 timeStamp
 ) {
   assertion(extraTableColumns >= 0, extraTableColumns);
-  assertion(
-    extraTableColumns == 0 or extraTable.size() % extraTableColumns == 0, extraTable.size(), extraTableColumns
-  );
+  assertion(extraTableColumns == 0 or extraTable.size() % extraTableColumns == 0, extraTable.size(), extraTableColumns);
 
   tarch::plotter::HDF5File& file  = peano4::checkpoint::CheckpointFile::getInstance().getFile();
   const std::string         group = peano4::checkpoint::GridGroup;
@@ -108,9 +106,9 @@ int peano4::checkpoint::restoreGrid(
 
   peano4::topology::Tree::RefinementPlan plan;
   for (int level = depth; reader.datasetExists(group + "/plan/level" + std::to_string(level)); level++) {
-    const std::string planPath = group + "/plan/level" + std::to_string(level);
-    const auto        rows     = reader.getDatasetDimensions(planPath).first;
-    const auto        flat     = reader.readInt32Rows(planPath, 0, rows);
+    const std::string planPath        = group + "/plan/level" + std::to_string(level);
+    const auto        rows            = reader.getDatasetDimensions(planPath).first;
+    const auto        flat            = reader.readInt32Rows(planPath, 0, rows);
     auto&             flaggedVertices = plan.emplace_back();
     flaggedVertices.reserve(rows);
     for (std::uint64_t row = 0; row < rows; row++) {

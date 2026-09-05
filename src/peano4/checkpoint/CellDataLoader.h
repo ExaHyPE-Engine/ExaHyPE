@@ -29,7 +29,7 @@ public:
   CellDataLoader(CellDataLoader&&)                 = delete;
   CellDataLoader& operator=(const CellDataLoader&) = delete;
   CellDataLoader& operator=(CellDataLoader&&)      = delete;
-  ~CellDataLoader() = default;
+  ~CellDataLoader()                                = default;
 
   void loadLocalRecords();
 

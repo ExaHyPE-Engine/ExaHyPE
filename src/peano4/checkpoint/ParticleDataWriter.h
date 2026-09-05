@@ -28,7 +28,7 @@ public:
   ParticleDataWriter(ParticleDataWriter&&)                 = delete;
   ParticleDataWriter& operator=(const ParticleDataWriter&) = delete;
   ParticleDataWriter& operator=(ParticleDataWriter&&)      = delete;
-  ~ParticleDataWriter() = default;
+  ~ParticleDataWriter()                                    = default;
 
   void collect(std::vector<double>&& rows);
 

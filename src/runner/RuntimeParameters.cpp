@@ -487,8 +487,8 @@ bool   runner::RuntimeParameters::hasCheckpointLoadPath() const { return not _ch
 
 const std::string& runner::RuntimeParameters::getCheckpointOutputPath() const { return _checkpointOutputPath; }
 const std::string& runner::RuntimeParameters::getCheckpointLoadPath() const { return _checkpointLoadPath; }
-int    runner::RuntimeParameters::getGridLevels() const { return _gridLevels; }
-int    runner::RuntimeParameters::getMaxGridLevels() const { return _maxGridLevels; }
+int                runner::RuntimeParameters::getGridLevels() const { return _gridLevels; }
+int                runner::RuntimeParameters::getMaxGridLevels() const { return _maxGridLevels; }
 
 const std::string& runner::RuntimeParameters::getConfigFilePath() const { return _configFilePath; }
 const std::string& runner::RuntimeParameters::getOutputPath() const { return _outputPath; }

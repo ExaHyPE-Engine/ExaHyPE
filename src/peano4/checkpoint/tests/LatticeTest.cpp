@@ -20,7 +20,9 @@ void peano4::checkpoint::tests::LatticeTest::testTriadicMortonKeyRoundTrip() {
     }
     const std::int64_t key = peano4::checkpoint::triadicMortonKey(latticeIndex, Level);
     validateWithParams2(
-      peano4::checkpoint::latticeIndexOfTriadicMortonKey(key, Level) == latticeIndex, key, latticeIndex(0)
+      peano4::checkpoint::latticeIndexOfTriadicMortonKey(key, Level) == latticeIndex,
+      key,
+      latticeIndex(0)
     );
   }
 
@@ -37,8 +39,8 @@ void peano4::checkpoint::tests::LatticeTest::testAncestorKeysArePrefixes() {
   }
   const std::int64_t key = peano4::checkpoint::triadicMortonKey(cell, Level);
   for (int ancestorLevel = 0; ancestorLevel <= Level; ancestorLevel++) {
-    const auto   ancestor    = peano4::checkpoint::ancestorOfCell(cell, Level, ancestorLevel);
-    std::int64_t shiftedKey  = key;
+    const auto   ancestor   = peano4::checkpoint::ancestorOfCell(cell, Level, ancestorLevel);
+    std::int64_t shiftedKey = key;
     for (int digit = ancestorLevel; digit < Level; digit++) {
       shiftedKey /= THREE_POWER_D;
     }

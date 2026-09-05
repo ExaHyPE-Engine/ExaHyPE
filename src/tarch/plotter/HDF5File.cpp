@@ -74,11 +74,11 @@ tarch::plotter::HDF5File::Dataset::Dataset(
   const hid_t creationProperties = H5Pcreate(H5P_DATASET_CREATE);
 
   // A chunk holds whole rows and targets about one MiB.
-  constexpr hsize_t ChunkByteTarget     = 1U << 20;
-  const hsize_t     rowElements         = std::max<hsize_t>(1, dimensions[1]);
-  const hsize_t     bytesPerRow         = std::max<hsize_t>(1, rowElements * static_cast<hsize_t>(H5Tget_size(type)));
-  const hsize_t     targetRows          = std::max<hsize_t>(1, ChunkByteTarget / bytesPerRow);
-  const hsize_t     chunkDimensions[2]  = {std::min(static_cast<hsize_t>(rows), targetRows), dimensions[1]};
+  constexpr hsize_t ChunkByteTarget    = 1U << 20;
+  const hsize_t     rowElements        = std::max<hsize_t>(1, dimensions[1]);
+  const hsize_t     bytesPerRow        = std::max<hsize_t>(1, rowElements * static_cast<hsize_t>(H5Tget_size(type)));
+  const hsize_t     targetRows         = std::max<hsize_t>(1, ChunkByteTarget / bytesPerRow);
+  const hsize_t     chunkDimensions[2] = {std::min(static_cast<hsize_t>(rows), targetRows), dimensions[1]};
   H5Pset_chunk(creationProperties, fileDimensions, chunkDimensions);
 
   // The rank slabs tile the dataset exactly, so skip the default pre-write chunk fill.
@@ -88,15 +88,8 @@ tarch::plotter::HDF5File::Dataset::Dataset(
   H5Pset_shuffle(creationProperties);
   H5Pset_deflate(creationProperties, 1);
 
-  _dataset = H5Dcreate(
-    file._file,
-    name.c_str(),
-    type,
-    fileSpace,
-    file._linkCreationProperties,
-    creationProperties,
-    H5P_DEFAULT
-  );
+  _dataset =
+    H5Dcreate(file._file, name.c_str(), type, fileSpace, file._linkCreationProperties, creationProperties, H5P_DEFAULT);
   H5Pclose(creationProperties);
   H5Sclose(fileSpace);
   if (_dataset < 0) {
@@ -128,10 +121,9 @@ void tarch::plotter::HDF5File::Dataset::writeRows(
     const hid_t   memorySpace        = H5Screate_simple(fileDimensions, localDimensions, nullptr);
     const herr_t  selectStatus =
       H5Sselect_hyperslab(fileSpace, H5S_SELECT_SET, offsets, nullptr, localDimensions, nullptr);
-    const herr_t writeStatus =
-      selectStatus >= 0
-        ? H5Dwrite(_dataset, toNativeType(memoryType), memorySpace, fileSpace, _transferProperties, data)
-        : -1;
+    const herr_t writeStatus = selectStatus >= 0
+      ? H5Dwrite(_dataset, toNativeType(memoryType), memorySpace, fileSpace, _transferProperties, data)
+      : -1;
     H5Sclose(memorySpace);
     if (selectStatus < 0 or writeStatus < 0) {
       H5Sclose(fileSpace);
@@ -192,9 +184,9 @@ void tarch::plotter::HDF5File::Dataset::writeRuns(
 
   const hsize_t localDimensions[2] = {rows, static_cast<hsize_t>(_columns)};
   const hid_t   memorySpace        = H5Screate_simple(fileDimensions, localDimensions, nullptr);
-  const herr_t  writeStatus =
-    selectStatus >= 0 ? H5Dwrite(_dataset, toNativeType(memoryType), memorySpace, fileSpace, _transferProperties, data)
-                      : -1;
+  const herr_t  writeStatus        = selectStatus >= 0
+            ? H5Dwrite(_dataset, toNativeType(memoryType), memorySpace, fileSpace, _transferProperties, data)
+            : -1;
   H5Sclose(memorySpace);
   H5Sclose(fileSpace);
   if (selectStatus < 0 or writeStatus < 0) {
@@ -221,8 +213,10 @@ tarch::plotter::HDF5File::~HDF5File() {
   H5Fclose(_file);
 }
 
-std::unique_ptr<tarch::plotter::HDF5File>
-tarch::plotter::HDF5File::openForDataHoldingRanks(const std::string& path, const bool holdsData) {
+std::unique_ptr<tarch::plotter::HDF5File> tarch::plotter::HDF5File::openForDataHoldingRanks(
+  const std::string& path,
+  const bool         holdsData
+) {
   const auto& rank          = tarch::mpi::Rank::getInstance();
   MPI_Comm    communicator  = rank.getCommunicator();
   bool        useParallelIO = rank.getNumberOfRanks() > 1;
@@ -348,18 +342,18 @@ void tarch::plotter::HDF5File::writeTable(
 }
 
 void tarch::plotter::HDF5File::writeTable(
-  const std::string&       name,
-  const unsigned long long rows,
-  const int                columns,
+  const std::string&        name,
+  const unsigned long long  rows,
+  const int                 columns,
   const std::int32_t* const data
 ) {
   writeTable(name, rows, columns, static_cast<const void*>(data), ElementType::Int32);
 }
 
 void tarch::plotter::HDF5File::writeTable(
-  const std::string&       name,
-  const unsigned long long rows,
-  const int                columns,
+  const std::string&        name,
+  const unsigned long long  rows,
+  const int                 columns,
   const std::int64_t* const data
 ) {
   writeTable(name, rows, columns, static_cast<const void*>(data), ElementType::Int64);
@@ -378,8 +372,14 @@ void tarch::plotter::HDF5File::writeTable(
   const int     fileDimensions = columns == 0 ? 1 : 2;
   const hsize_t dimensions[2]  = {rows, static_cast<hsize_t>(columns)};
   const hid_t   fileSpace      = H5Screate_simple(fileDimensions, dimensions, nullptr);
-  const hid_t   dataset = H5Dcreate(
-    _file, name.c_str(), toFileType(storageType), fileSpace, _linkCreationProperties, H5P_DEFAULT, H5P_DEFAULT
+  const hid_t   dataset        = H5Dcreate(
+    _file,
+    name.c_str(),
+    toFileType(storageType),
+    fileSpace,
+    _linkCreationProperties,
+    H5P_DEFAULT,
+    H5P_DEFAULT
   );
   if (dataset < 0) {
     H5Sclose(fileSpace);
@@ -394,8 +394,8 @@ void tarch::plotter::HDF5File::writeTable(
       H5Sselect_none(fileSpace);
       H5Sselect_none(memorySpace);
     }
-    const herr_t writeStatus
-      = H5Dwrite(dataset, toNativeType(storageType), memorySpace, fileSpace, _transferProperties, data);
+    const herr_t writeStatus =
+      H5Dwrite(dataset, toNativeType(storageType), memorySpace, fileSpace, _transferProperties, data);
     H5Sclose(memorySpace);
     if (writeStatus < 0) {
       H5Dclose(dataset);

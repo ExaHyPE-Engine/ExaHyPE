@@ -30,12 +30,21 @@ public:
   [[nodiscard]] std::pair<std::uint64_t, std::uint64_t> getDatasetDimensions(const std::string& path) const;
 
   /** Reads rows [firstRow, firstRow + rows) with every column, row-major. */
-  [[nodiscard]] std::vector<double> readDoubleRows(const std::string& path, std::uint64_t firstRow, std::uint64_t rows)
-    const;
-  [[nodiscard]] std::vector<std::int32_t>
-    readInt32Rows(const std::string& path, std::uint64_t firstRow, std::uint64_t rows) const;
-  [[nodiscard]] std::vector<std::int64_t>
-    readInt64Rows(const std::string& path, std::uint64_t firstRow, std::uint64_t rows) const;
+  [[nodiscard]] std::vector<double> readDoubleRows(
+    const std::string& path,
+    std::uint64_t      firstRow,
+    std::uint64_t      rows
+  ) const;
+  [[nodiscard]] std::vector<std::int32_t> readInt32Rows(
+    const std::string& path,
+    std::uint64_t      firstRow,
+    std::uint64_t      rows
+  ) const;
+  [[nodiscard]] std::vector<std::int64_t> readInt64Rows(
+    const std::string& path,
+    std::uint64_t      firstRow,
+    std::uint64_t      rows
+  ) const;
 
   [[nodiscard]] const std::string& getFilename() const;
 
