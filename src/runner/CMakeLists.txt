@@ -38,12 +38,12 @@ foreach(mode IN LISTS SUPPORTED_BUILD_TYPES)
   foreach(dim IN LISTS SUPPORTED_DIMENSIONS)
     peano_add_target(
       TYPE STATIC_LIBRARY
-      NAME Runner${mode}${dim}d
+      NAME Runner${mode}${dim}D
       MODE ${mode}
       DIMENSION ${dim}
       SOURCES ${SOURCES}
       HEADERS ${HEADERS}
-      LINK_LIBRARIES Peano4${mode}${dim}d
+      LINK_LIBRARIES Peano${mode}${dim}D
     )
   endforeach()
 endforeach()

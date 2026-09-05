@@ -3,7 +3,7 @@
 #include "RiemannTest.h"
 
 #include "exahype2/dg/rusanov/Rusanov.h"
-#include "toolbox/blockstructured/Enumeration.h"
+#include "exahype2/Enumeration.h"
 
 namespace {
   constexpr int    Order              = 1;
@@ -121,7 +121,7 @@ void exahype2::dg::rusanov::tests::RiemannTest::testSolveRiemannProblemAddsJumpT
     tarch::la::Vector<DIMENSIONS, int> rightDoF = dof;
     rightDoF(normal)                            = 1;
     projectedValues
-      [toolbox::blockstructured::serialiseVoxelIndexInOverlap(rightDoF, Order + 1, 1, normal)
+      [exahype2::serialiseVoxelIndexInOverlap(rightDoF, Order + 1, 1, normal)
        * (Unknowns + AuxiliaryVariables)] = rightState;
   });
 

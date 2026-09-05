@@ -825,7 +825,7 @@ class MathUtils:
     # ****************************************
     # ****************************************
     @staticmethod
-    def baseFunc1d(xi, xin, N):
+    def baseFunc1D(xi, xin, N):
         """
         Computes the ADER-DG basis functions and their first derivative.
 
@@ -884,7 +884,7 @@ class MathUtils:
         Kxi = [[0 for _ in range(N)] for _ in range(N)]
 
         for i in range(0, N):
-            phi, phi_xi = MathUtils.baseFunc1d(xGPN[i], xGPN, N)
+            phi, phi_xi = MathUtils.baseFunc1D(xGPN[i], xGPN, N)
             for k in range(0, N):
                 for l in range(0, N):
                     Kxi[k][l] += wGPN[i] * phi_xi[k] * phi[l]
@@ -909,7 +909,7 @@ class MathUtils:
            K1:
               <unknown>
         """
-        phi1, _ = MathUtils.baseFunc1d(1.0, xGPN, N)
+        phi1, _ = MathUtils.baseFunc1D(1.0, xGPN, N)
         FRm = [[0 for _ in range(N)] for _ in range(N)]
 
         for k in range(0, N):
@@ -939,7 +939,7 @@ class MathUtils:
         MM = [[0 for _ in range(N)] for _ in range(N)]
 
         for i in range(0, N):
-            phi, _ = MathUtils.baseFunc1d(xGPN[i], xGPN, N)
+            phi, _ = MathUtils.baseFunc1D(xGPN[i], xGPN, N)
             for k in range(0, N):
                 for l in range(0, N):
                     MM[k][l] += wGPN[i] * phi[k] * phi[l]
@@ -969,13 +969,13 @@ class MathUtils:
         return dudx
 
     @staticmethod
-    def assembleFineGridProjector1d(xGPN, j, N):
+    def assembleFineGridProjector1D(xGPN, j, N):
         """
         Transforms the degrees of freedom located on a coarse grid edge
         nodes to degrees of freedoms located on nodes of a fine grid edge.
         The difference in levels is 1.
 
-        Let us denote by P the 1d fine grid projector (=1d equidistantGridProjector). The fine grid DoF
+        Let us denote by P the 1D fine grid projector (=1D equidistantGridProjector). The fine grid DoF
         are computed according to:
 
         u^{fine;j}_i =  sum_{m} P^{j}_im u^{coarse}_m
@@ -991,13 +991,13 @@ class MathUtils:
            equidistantGridProjector:
               The corresponding degrees of freedom located at nodes of an equidistant grid over (0,1).
         """
-        fineGridProjector1d = [[0 for _ in range(N)] for _ in range(N)]
+        fineGridProjector1D = [[0 for _ in range(N)] for _ in range(N)]
 
         for i in range(0, N):  # Eq. basis
-            phi_i, _ = MathUtils.baseFunc1d((xGPN[i] + j) / 3.0, xGPN, N)
+            phi_i, _ = MathUtils.baseFunc1D((xGPN[i] + j) / 3.0, xGPN, N)
             for m in range(0, N):  # DG basis
-                fineGridProjector1d[m][i] = phi_i[m]
-        return fineGridProjector1d
+                fineGridProjector1D[m][i] = phi_i[m]
+        return fineGridProjector1D
 
     @staticmethod
     def LagrangBasisPoly(x, order, i, xi=None):
@@ -1066,7 +1066,7 @@ class MathUtils:
         """Return base conversion matrix"""
         conversionMat = [[0.0 for _ in range(N)] for _ in range(N)]
         for i in range(0, N):
-            phi, _ = MathUtils.baseFunc1d(toQ[i], fromQ, N)
+            phi, _ = MathUtils.baseFunc1D(toQ[i], fromQ, N)
             for j in range(0, N):
                 conversionMat[j][i] = phi[j]  # check order
         return conversionMat
@@ -1082,7 +1082,7 @@ class MathUtils:
             xLeft = i * dxi
             for j in range(0, N):
                 xi = xLeft + dxi * nodes[j]
-                phi, _ = MathUtils.baseFunc1d(xi, nodes, N)
+                phi, _ = MathUtils.baseFunc1D(xi, nodes, N)
                 for k in range(0, N):
                     dg2fv[k][i] += weights[j] * phi[k]
         return dg2fv

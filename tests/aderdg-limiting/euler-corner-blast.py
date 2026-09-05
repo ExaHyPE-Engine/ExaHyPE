@@ -43,11 +43,7 @@ boundary_conditions = """
     Qoutside[Shortcuts::j + dimension] = Qinside[Shortcuts::j + dimension];
   }
   Qoutside[Shortcuts::rhoE] = Qinside[Shortcuts::rhoE];
-  // The upper and lower wall of an axis share the normal, so the position decides
-  // which one the call carries.
-  const bool isReflectiveWall =
-    (normal == 0 and x[0] < DomainOffset[0] + h[0])
-    or (normal == 1 and x[1] < DomainOffset[1] + h[1]);
+  const bool isReflectiveWall = (normal == 0 and x[0] < DomainOffset[0] + h[0]) or (normal == 1 and x[1] < DomainOffset[1] + h[1]);
   if (isReflectiveWall) {
     Qoutside[Shortcuts::j + normal] = -Qinside[Shortcuts::j + normal];
   }
@@ -85,7 +81,7 @@ euler.add_limiter(
     dimensions,
     euler.physical_admissibility(gamma),
     euler.dmp_observables(gamma),
-    differences_scaling=0.03,
+    differences_scaling=1.0e-3,
 )
 
 project.add_solver(solver)

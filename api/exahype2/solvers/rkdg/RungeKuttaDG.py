@@ -6,7 +6,7 @@ import peano4
 import peano4.checkpoint
 import peano4.plotter
 import peano4.datamodel
-import peano4.blockstructured
+import exahype2.blockstructured
 import peano4.output.TemplatedHeaderFile
 import peano4.output.TemplatedHeaderImplementationFilePair
 import peano4.output.Jinja2TemplatedHeaderFile
@@ -296,7 +296,7 @@ We use RK("""
         self._estimate_projection.generator.can_receive      = self._load_face_data_default_guard()
         self._estimate_projection.generator.can_send         = self._store_face_data_default_guard()
         self._estimate_projection.generator.merge_method_definition = (
-            peano4.blockstructured.get_face_merge_implementation(
+            exahype2.blockstructured.get_face_merge_implementation(
                 self._estimate_projection
             )
         )

@@ -2,9 +2,9 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "Rusanov.h"
 
+#include "exahype2/Enumeration.h"
 #include "peano4/Loop.h"
 #include "tarch/Termination.h"
-#include "toolbox/blockstructured/Enumeration.h"
 
 /**
  * Solves the Rusanov problem independently at each face quadrature point.
@@ -55,14 +55,10 @@ void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
 
     leftDoF(normal)  = 0;
     rightDoF(normal) = 1;
-    const int leftInputOffset =
-      toolbox::blockstructured::serialiseVoxelIndexInOverlap(leftDoF, order + 1, 1, normal) * inputStride;
-    const int rightInputOffset =
-      toolbox::blockstructured::serialiseVoxelIndexInOverlap(rightDoF, order + 1, 1, normal) * inputStride;
-    const int leftOutputOffset =
-      toolbox::blockstructured::serialiseVoxelIndexInOverlap(leftDoF, order + 1, 1, normal) * outputStride;
-    const int rightOutputOffset =
-      toolbox::blockstructured::serialiseVoxelIndexInOverlap(rightDoF, order + 1, 1, normal) * outputStride;
+    const int leftInputOffset   = exahype2::serialiseVoxelIndexInOverlap(leftDoF, order + 1, 1, normal) * inputStride;
+    const int rightInputOffset  = exahype2::serialiseVoxelIndexInOverlap(rightDoF, order + 1, 1, normal) * inputStride;
+    const int leftOutputOffset  = exahype2::serialiseVoxelIndexInOverlap(leftDoF, order + 1, 1, normal) * outputStride;
+    const int rightOutputOffset = exahype2::serialiseVoxelIndexInOverlap(rightDoF, order + 1, 1, normal) * outputStride;
 
     for (int var = 0; var < unknowns; var++) {
       solution[leftOutputOffset + var]  = 0.0;

@@ -59,7 +59,7 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
       {{ORDER}},
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1d,
+      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1D,
       fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(0).data(), //left
       fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(2).data(), //right
       fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(1).data(), //down
@@ -71,7 +71,7 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
       {{ORDER}},
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1d,
+      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1D,
       fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(0).data(), //left
       fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(3).data(), //right
       fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(1).data(), //down

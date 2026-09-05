@@ -12,7 +12,7 @@ namespace exahype2::dg {
   void projectValueOntoParticle(
     const peano4::datamanagement::CellMarker& marker,
     int                                       order,
-    const double* NOALIAS                     QuadratureNodes1d,
+    const double* NOALIAS                     QuadratureNodes1D,
     int                                       unknownsPerDoF,
     const double* NOALIAS                     Q,
     Particle&                                 particle
@@ -22,7 +22,7 @@ namespace exahype2::dg {
   void projectAllValuesOntoParticle(
     const peano4::datamanagement::CellMarker& marker,
     int                                       order,
-    const double* NOALIAS                     QuadratureNodes1d,
+    const double* NOALIAS                     QuadratureNodes1D,
     int                                       unknownsPerDoF,
     const QStoreType* NOALIAS                 Q,
     Particle&                                 particle

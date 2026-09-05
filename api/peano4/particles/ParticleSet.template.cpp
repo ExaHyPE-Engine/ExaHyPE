@@ -10,9 +10,9 @@
 
 #include "peano4/stacks/StackWithCustomSerialisation.h"
 
-#include "toolbox/particles/MultiscaleTransitions.h"
-#include "toolbox/particles/assignmentchecks/TracingAPI.h"
-#include "toolbox/particles/particles.h"
+#include "peano4/particles/MultiscaleTransitions.h"
+#include "peano4/particles/assignmentchecks/TracingAPI.h"
+#include "peano4/particles/particles.h"
 
 namespace {
   int getMpiElementCount(const std::size_t numberOfElements) {
@@ -40,11 +40,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
   const int treeId
 ) {
   [[maybe_unused]] const auto ownershipTolerance =
-    toolbox::particles::ReleaseOwnershipSpatialSortingTolerance
+    peano4::particles::ReleaseOwnershipSpatialSortingTolerance
     * tarch::la::max(marker.getH()) * tarch::la::NUMERICAL_ZERO_DIFFERENCE;
   assertion(
     marker.isContainedInAdjacentCells(
-      toolbox::particles::periodicImageTowardsVertex(neighbourParticle->getX(), marker),
+      peano4::particles::periodicImageTowardsVertex(neighbourParticle->getX(), marker),
       0.5,
       ownershipTolerance
     ),
@@ -53,8 +53,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
     treeId
   );
   const bool incomingParticleWillBeLocal =
-    toolbox::particles::particleAssignedToVertexWillBeLocal(neighbourParticle->getX(), marker);
-  const auto iteratorToExistingCopy = toolbox::particles::particleIsDuplicate(
+    peano4::particles::particleAssignedToVertexWillBeLocal(neighbourParticle->getX(), marker);
+  const auto iteratorToExistingCopy = peano4::particles::particleIsDuplicate(
     neighbourParticle,
     _container.begin(),
     _container.end()
@@ -120,9 +120,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
       );
     }
 
-    toolbox::particles::updateContainedInAdjacentCellProperty(marker, *neighbourParticle);
-    toolbox::particles::assignmentchecks::detachParticleFromVertex(
-      toolbox::particles::assignmentchecks::pruneTypeName<DoFType>(),
+    peano4::particles::updateContainedInAdjacentCellProperty(marker, *neighbourParticle);
+    peano4::particles::assignmentchecks::detachParticleFromVertex(
+      peano4::particles::assignmentchecks::pruneTypeName<DoFType>(),
       neighbourParticle->getX(),
       particleId,
       (*iteratorToExistingCopy)->getParallelState() == DoFType::ParallelState::Local,
@@ -132,8 +132,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
       "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(marker="
         + marker.toString() + ")"
     );
-    toolbox::particles::assignmentchecks::eraseParticle(
-      toolbox::particles::assignmentchecks::pruneTypeName<DoFType>(),
+    peano4::particles::assignmentchecks::eraseParticle(
+      peano4::particles::assignmentchecks::pruneTypeName<DoFType>(),
       neighbourParticle->getX(),
       particleId,
       (*iteratorToExistingCopy)->getParallelState() == DoFType::ParallelState::Local,
@@ -143,8 +143,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
       "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(marker="
         + marker.toString() + ")"
     );
-    toolbox::particles::assignmentchecks::assignParticleToVertex(
-      toolbox::particles::assignmentchecks::pruneTypeName<DoFType>(),
+    peano4::particles::assignmentchecks::assignParticleToVertex(
+      peano4::particles::assignmentchecks::pruneTypeName<DoFType>(),
       neighbourParticle->getX(),
       particleId,
       neighbourParticle->getParallelState() == DoFType::ParallelState::Local,
@@ -188,9 +188,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
       );
     }
 
-    toolbox::particles::updateContainedInAdjacentCellProperty(marker, *neighbourParticle);
-    toolbox::particles::assignmentchecks::assignParticleToVertex(
-      toolbox::particles::assignmentchecks::pruneTypeName<DoFType>(),
+    peano4::particles::updateContainedInAdjacentCellProperty(marker, *neighbourParticle);
+    peano4::particles::assignmentchecks::assignParticleToVertex(
+      peano4::particles::assignmentchecks::pruneTypeName<DoFType>(),
       neighbourParticle->getX(),
       particleId,
       neighbourParticle->getParallelState() == DoFType::ParallelState::Local,
@@ -230,8 +230,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::deleteParticlesForSlotRebuild(
 #endif
     const bool particleIsLocal = particle->getParallelState() == DoFType::ParallelState::Local;
 
-    toolbox::particles::assignmentchecks::detachParticleFromVertex(
-      toolbox::particles::assignmentchecks::pruneTypeName<DoFType>(),
+    peano4::particles::assignmentchecks::detachParticleFromVertex(
+      peano4::particles::assignmentchecks::pruneTypeName<DoFType>(),
       particle->getX(),
       particleId,
       particleIsLocal,
@@ -240,8 +240,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::deleteParticlesForSlotRebuild(
       treeId,
       trace
     );
-    toolbox::particles::assignmentchecks::eraseParticle(
-      toolbox::particles::assignmentchecks::pruneTypeName<DoFType>(),
+    peano4::particles::assignmentchecks::eraseParticle(
+      peano4::particles::assignmentchecks::pruneTypeName<DoFType>(),
       particle->getX(),
       particleId,
       particleIsLocal,

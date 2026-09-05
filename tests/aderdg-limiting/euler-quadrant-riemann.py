@@ -86,7 +86,7 @@ euler.add_limiter(
     dimensions,
     euler.physical_admissibility(gamma),
     euler.dmp_observables(gamma),
-    differences_scaling=0.03,
+    differences_scaling=1.0e-3,
 )
 
 project.add_solver(solver)

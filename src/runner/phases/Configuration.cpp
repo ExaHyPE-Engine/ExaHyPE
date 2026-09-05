@@ -97,8 +97,7 @@ runner::Configuration::Configuration(runner::PhaseContext& context) :
   report.add(
     "Build",
     "Diagnostics",
-    std::string("Trace=") + (PEANO_TRACE ? "on" : "off") + " · Assertions=" + (PEANO_ASSERTIONS ? "on" : "off")
-      + " · Debug=" + (PEANO_DEBUG ? "on" : "off")
+    std::string("Assertions=") + (PEANO_ASSERTIONS ? "on" : "off") + " · Debug=" + (PEANO_DEBUG ? "on" : "off")
   );
   report.add("Build", "Git Branch", peano4::version::GitBranch);
   report.add("Build", "Git Commit", peano4::version::GitCommitHash);

@@ -89,7 +89,7 @@ solver values such as a cell time-step size when required.
 The tracing kernels update only `Local` records and use `MoveState` to prevent
 a second update during the same rank traversal. The particle sorting action
 sets then restore the vertex and level association. @ref
-page_toolbox_particles_mesh_consistency describes the required follow-up
+page_peano4_particles_mesh_consistency describes the required follow-up
 sweeps, rank-boundary transfer, and sieve redistribution.
 
 # Parallel behaviour

@@ -94,19 +94,19 @@ class PatchPlotter(BasePlotter):
         if representation == "nodal":
             if mapping is None or len(mapping) == 0:
                 raise ValueError("The nodal representation requires mapping coordinates")
-            mapping_2d = []
-            mapping_3d = []
+            mapping_2D = []
+            mapping_3D = []
             for point_index, point in enumerate(mapping):
                 if len(point) < 2:
                     raise ValueError("Each mapping point requires at least two coordinates")
                 if point_index < degrees_of_freedom_per_axis**2:
-                    mapping_2d.extend((point[0], point[1]))
-                mapping_3d.extend((point[0], point[1], point[2] if len(point) > 2 else 0.0))
+                    mapping_2D.extend((point[0], point[1]))
+                mapping_3D.extend((point[0], point[1], point[2] if len(point) > 2 else 0.0))
             self._dictionary["MAPPING_2D"] = (
-                "{" + ", ".join(str(value) for value in mapping_2d) + "}"
+                "{" + ", ".join(str(value) for value in mapping_2D) + "}"
             )
             self._dictionary["MAPPING_3D"] = (
-                "{" + ", ".join(str(value) for value in mapping_3d) + "}"
+                "{" + ", ".join(str(value) for value in mapping_3D) + "}"
             )
 
     def get_action_set_name(self):

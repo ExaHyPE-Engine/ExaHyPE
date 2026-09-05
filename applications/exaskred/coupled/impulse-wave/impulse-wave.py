@@ -1,7 +1,5 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-"""Granular slide entering a reservoir and radiating an impulse wave."""
-
 import argparse
 import math
 
@@ -89,7 +87,7 @@ aderdg_solver.add_subcell_limiter(
     ),
     number_of_dmp_observables=6,
     dmp_relaxation_parameter=0.0,
-    dmp_differences_scaling=0.01,
+    dmp_differences_scaling=1.0e-3,
     dmp_observables=exahype2.solvers.PDETerms.User_Defined_Implementation,
     dmp_relaxation_parameter_implementation=exahype2.solvers.PDETerms.User_Defined_Implementation,
     physical_admissibility_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation,
@@ -112,8 +110,6 @@ project.constants.export_constexpr_with_type(
 )
 project.constants.export_constexpr_with_type("hThresholdSlide", str(1.0e-1), "double")
 project.constants.export_constexpr_with_type("hThresholdWater", str(1.0e-3), "double")
-# A basin-filling wave reaches decimetres, so a relaxation at the dry threshold would
-# put nearly every wet cell on the subcell scheme.
 project.constants.export_constexpr_with_type(
     "waterDmpRelaxation", str(1.0e-2), "double"
 )
@@ -127,8 +123,6 @@ project.constants.export_constexpr_with_type(
     "mu", str(math.tan(math.pi / 180.0 * 25.0)), "double"
 )
 
-# The include directory is the repository root, which is what lets every file below
-# include the shared ExaSkred headers by their full path.
 project.output.makefile.add_include_directory("../../../..")
 project.output.makefile.add_cpp_file("../../AugmentedState.cpp")
 project.output.makefile.add_cpp_file("../../Coupled.cpp")

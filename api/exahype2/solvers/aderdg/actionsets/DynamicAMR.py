@@ -75,7 +75,7 @@ class AdaptiveMeshFaceCoupling(AbstractADERDGActionSet):
     constexpr int NumberOfDofsPerAxis  = {{ORDER}} + 1;
     constexpr int FluxElementsPerFace  = facedata::{{SOLVER_NAME}}QFluxEstimates::Cardinality / 2;
     constexpr int BasisElementsPerFace = facedata::{{SOLVER_NAME}}QEstimates::Cardinality / 2;
-    static constexpr double ProlongationMatrix1d[3][NumberOfDofsPerAxis * NumberOfDofsPerAxis] = {
+    static constexpr double ProlongationMatrix1D[3][NumberOfDofsPerAxis * NumberOfDofsPerAxis] = {
       {{PROLONGATION_MATRIX_0}},
       {{PROLONGATION_MATRIX_1}},
       {{PROLONGATION_MATRIX_2}}
@@ -88,9 +88,9 @@ class AdaptiveMeshFaceCoupling(AbstractADERDGActionSet):
       const double* prolongationMatrixPerAxis[DIMENSIONS - 1];
       for (int tangentialAxis = 0; tangentialAxis < DIMENSIONS - 1; tangentialAxis++) {
         prolongationMatrixPerAxis[tangentialAxis] =
-          ProlongationMatrix1d[subfacePosition(tangentialAxis)];
+          ProlongationMatrix1D[subfacePosition(tangentialAxis)];
       }
-      ::toolbox::blockstructured::interpolateFaceFromCoarse(
+      ::exahype2::amr::interpolateFaceFromCoarse(
         fineGridFace{{SOLVER_NAME}}QEstimates.data() + facePosition * BasisElementsPerFace,
         coarseGridFaces{{SOLVER_NAME}}QEstimates(marker.getSelectedFaceNumber()).data()
           + facePosition * BasisElementsPerFace,
@@ -98,7 +98,7 @@ class AdaptiveMeshFaceCoupling(AbstractADERDGActionSet):
         NumberOfDofsPerAxis,
         {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}
       );
-      ::toolbox::blockstructured::interpolateFaceFromCoarse(
+      ::exahype2::amr::interpolateFaceFromCoarse(
         fineGridFace{{SOLVER_NAME}}QFluxEstimates.data() + facePosition * FluxElementsPerFace,
         coarseGridFaces{{SOLVER_NAME}}QFluxEstimates(marker.getSelectedFaceNumber()).data()
           + facePosition * FluxElementsPerFace,
@@ -140,7 +140,7 @@ class AdaptiveMeshFaceCoupling(AbstractADERDGActionSet):
     constexpr int NumberOfDofsPerAxis = {{ORDER}} + 1;
     constexpr int FluxElementsPerFace = facedata::{{SOLVER_NAME}}QFluxEstimates::Cardinality / 2;
     constexpr int NumberOfSubfaces = DIMENSIONS == 2 ? 3 : 9;
-    static constexpr double RestrictionMatrix1d[3][NumberOfDofsPerAxis * NumberOfDofsPerAxis] = {
+    static constexpr double RestrictionMatrix1D[3][NumberOfDofsPerAxis * NumberOfDofsPerAxis] = {
       {{RESTRICTION_MATRIX_0}},
       {{RESTRICTION_MATRIX_1}},
       {{RESTRICTION_MATRIX_2}}
@@ -151,9 +151,9 @@ class AdaptiveMeshFaceCoupling(AbstractADERDGActionSet):
         fineGridFace{{SOLVER_NAME}}QFluxEstimates.data() + faceSide * FluxElementsPerFace;
       if (_fluxRestrictionStage.hasFrame(restrictedFluxHalf)) {
         const double* restrictionMatrixPerInterval[3] = {
-          RestrictionMatrix1d[0],
-          RestrictionMatrix1d[1],
-          RestrictionMatrix1d[2]
+          RestrictionMatrix1D[0],
+          RestrictionMatrix1D[1],
+          RestrictionMatrix1D[2]
         };
         const {{CORRECTOR_COMPUTATION_PRECISION}}* stagedSubfaces[NumberOfSubfaces];
         for (int subface = 0; subface < NumberOfSubfaces; subface++) {
@@ -161,7 +161,7 @@ class AdaptiveMeshFaceCoupling(AbstractADERDGActionSet):
                                       ? _fluxRestrictionStage.child(restrictedFluxHalf, subface)
                                       : nullptr;
         }
-        ::toolbox::blockstructured::restrictFaceFromChildren(
+        ::exahype2::amr::restrictFaceFromChildren(
           restrictedFluxHalf,
           stagedSubfaces,
           restrictionMatrixPerInterval,
@@ -291,7 +291,7 @@ class AdaptiveMeshFaceCoupling(AbstractADERDGActionSet):
         return (
             super().get_attributes()
             + f"""
-    ::toolbox::blockstructured::ChildDataStage<{self._solver._corrector_computation_precision}>
+    ::exahype2::amr::ChildDataStage<{self._solver._corrector_computation_precision}>
       _fluxRestrictionStage{{DIMENSIONS == 2 ? 3 : 9, {values_per_subface}}};
 """
         )
@@ -364,8 +364,8 @@ class AdaptiveMeshFaceCoupling(AbstractADERDGActionSet):
             super().get_includes()
             + """
 #include "tarch/CompilerSpecificSettings.h"
-#include "toolbox/blockstructured/AMRRoutines.h"
-#include "toolbox/blockstructured/ChildDataStage.h"
+#include "exahype2/amr/AMRRoutines.h"
+#include "exahype2/amr/ChildDataStage.h"
 """
         )
 
@@ -419,7 +419,7 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
             """
   constexpr int NumberOfDofsPerAxis = {{ORDER}} + 1;
   constexpr int NumberOfData = {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-  static constexpr double ProlongationMatrix1d[3][NumberOfDofsPerAxis * NumberOfDofsPerAxis] = {
+  static constexpr double ProlongationMatrix1D[3][NumberOfDofsPerAxis * NumberOfDofsPerAxis] = {
     {{PROLONGATION_MATRIX_0}},
     {{PROLONGATION_MATRIX_1}},
     {{PROLONGATION_MATRIX_2}}
@@ -428,9 +428,9 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
   const double* prolongationMatrixPerAxis[DIMENSIONS];
   for (int axis = 0; axis < DIMENSIONS; axis++) {
     prolongationMatrixPerAxis[axis] =
-      ProlongationMatrix1d[marker.getRelativePositionWithinFatherCell()(axis)];
+      ProlongationMatrix1D[marker.getRelativePositionWithinFatherCell()(axis)];
   }
-  ::toolbox::blockstructured::applyTensorProductOrderInvariant(
+  ::exahype2::amr::applyTensorProductOrderInvariant(
     fineGridCell{{SOLVER_NAME}}Q.data(),
     coarseGridCell{{SOLVER_NAME}}Q.data(),
     prolongationMatrixPerAxis,
@@ -441,7 +441,7 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
   // The _old buffer holds the pre-prediction solution. An unlimited solver uses
   // it to re-derive the live prediction; a limited solver keeps the accepted live
   // solution and starts a new prediction in its next Predict sweep.
-  ::toolbox::blockstructured::applyTensorProductOrderInvariant(
+  ::exahype2::amr::applyTensorProductOrderInvariant(
     fineGridCell{{SOLVER_NAME}}Q_old.data(),
     coarseGridCell{{SOLVER_NAME}}Q_old.data(),
     prolongationMatrixPerAxis,
@@ -477,7 +477,7 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
             """
   constexpr int NumberOfDofsPerAxis = {{ORDER}} + 1;
   constexpr int NumberOfData = {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-  static constexpr double RestrictionMatrix1d[3][NumberOfDofsPerAxis * NumberOfDofsPerAxis] = {
+  static constexpr double RestrictionMatrix1D[3][NumberOfDofsPerAxis * NumberOfDofsPerAxis] = {
     {{RESTRICTION_MATRIX_0}},
     {{RESTRICTION_MATRIX_1}},
     {{RESTRICTION_MATRIX_2}}
@@ -502,16 +502,16 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
   );
   if (siblingSetComplete) {
     const double* restrictionMatrixPerInterval[3] = {
-      RestrictionMatrix1d[0],
-      RestrictionMatrix1d[1],
-      RestrictionMatrix1d[2]
+      RestrictionMatrix1D[0],
+      RestrictionMatrix1D[1],
+      RestrictionMatrix1D[2]
     };
     const {{SOLUTION_STORAGE_PRECISION}}* stagedChildren[THREE_POWER_D];
     for (int child = 0; child < THREE_POWER_D; child++) {
       stagedChildren[child] =
         _solutionRestrictionStage.child(coarseGridCell{{SOLVER_NAME}}Q.data(), child);
     }
-    ::toolbox::blockstructured::restrictCellFromChildren(
+    ::exahype2::amr::restrictCellFromChildren(
       coarseGridCell{{SOLVER_NAME}}Q.data(),
       stagedChildren,
       restrictionMatrixPerInterval,
@@ -523,7 +523,7 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
       stagedChildren[child] =
         _previousSolutionRestrictionStage.child(coarseGridCell{{SOLVER_NAME}}Q_old.data(), child);
     }
-    ::toolbox::blockstructured::restrictCellFromChildren(
+    ::exahype2::amr::restrictCellFromChildren(
       coarseGridCell{{SOLVER_NAME}}Q_old.data(),
       stagedChildren,
       restrictionMatrixPerInterval,
@@ -700,9 +700,9 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
         return (
             super().get_attributes()
             + f"""
-    ::toolbox::blockstructured::ChildDataStage<{self._solver._solution_persistent_storage_precision}>
+    ::exahype2::amr::ChildDataStage<{self._solver._solution_persistent_storage_precision}>
       _solutionRestrictionStage{{THREE_POWER_D, {values_per_child}}};
-    ::toolbox::blockstructured::ChildDataStage<{self._solver._solution_persistent_storage_precision}>
+    ::exahype2::amr::ChildDataStage<{self._solver._solution_persistent_storage_precision}>
       _previousSolutionRestrictionStage{{THREE_POWER_D, {values_per_child}}};
 """
         )

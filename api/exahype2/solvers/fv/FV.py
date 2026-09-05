@@ -9,7 +9,7 @@ import peano4.output
 import peano4.datamodel
 import peano4.checkpoint
 import peano4.plotter
-import peano4.blockstructured
+import exahype2.blockstructured
 
 import exahype2.solvers.fv.actionsets
 
@@ -222,7 +222,7 @@ and additional AMR levels is configured by the executable at runtime.
         self._patch_overlap_old.generator.can_send = "false"
         self._patch_overlap_old.generator.use_copy_for_exchange = "true"
         self._patch_overlap_old.generator.merge_method_definition = (
-            peano4.blockstructured.get_face_merge_implementation(
+            exahype2.blockstructured.get_face_merge_implementation(
                 self._patch_overlap_old
             )
         )
@@ -233,7 +233,7 @@ and additional AMR levels is configured by the executable at runtime.
         self._patch_overlap_new.generator.can_send = self._store_face_data_default_guard()
         self._patch_overlap_new.generator.use_copy_for_exchange = "true"
         self._patch_overlap_new.generator.merge_method_definition = (
-            peano4.blockstructured.get_face_merge_implementation(
+            exahype2.blockstructured.get_face_merge_implementation(
                 self._patch_overlap_new
             )
         )

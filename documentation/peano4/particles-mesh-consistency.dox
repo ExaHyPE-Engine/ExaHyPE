@@ -1,0 +1,76 @@
+/**
+
+@page page_peano4_particles_mesh_consistency Particle sorting and mesh consistency
+
+\tableofcontents
+
+A position or search-radius update can invalidate a particle's vertex and
+level association. The update action sets under
+peano4.particles.AbstractUpdateParticleGridAssociation restore the
+association over subsequent mesh sweeps.
+
+# Sorting sequence
+
+The first sorting sweep detaches a moved particle and reassigns it spatially.
+It can lift the particle to a coarser level where the destination is reachable.
+A following sweep drops it through refined children until its search radius
+matches the selected level.
+
+Rank-boundary movement adds one exchange step. The source rank sends the
+particle after its sweep, and the target rank receives and continues the drop
+in the next sweep. A particle that cannot reach a local destination enters the
+sieve and is inserted from there on a later sweep.
+
+Every algorithmic step that changes positions or search radii therefore also
+installs the sorting action set, and at least one following step continues the
+sort. The application keeps sorting while `registeredAnyResorting()` or
+`hasParticlesToBeSievedIntoVertices()` reports pending movement.
+
+# Safe update point
+
+`touchVertexLastTime()` is the preferred position update point because all
+cell work involving the current vertex has finished. The parallel state and
+search radius remain stable during the sweep, and the sorting action observes
+the new position immediately afterwards.
+
+A particle can be reassigned to a vertex whose last-touch event is still
+pending. The particle's `MoveState` prevents a second physical update in that
+sweep. Application kernels update only particles whose parallel state is
+`Local`; virtual copies follow from the boundary merge.
+
+# Dynamic mesh changes
+
+Regrid migration carries vertex particle sets with their pool slots when rank
+ownership changes. Erasing fine cells lifts affected associations towards
+surviving levels. New refined levels do not force an immediate drop; the next
+sorting sequence moves eligible particles onto them.
+
+# Tunnelling
+
+Tunnelling means a particle travels farther than the cell range represented by
+its current association. The sorting algorithm lifts it until the displacement
+is local on a coarser level, moves it there, and drops it again. Applications
+can enable diagnostics when such movement violates their numerical model.
+
+# Sieve
+
+Each particle type owns a peano4::particles::SieveParticles instance. It
+holds particles that cannot be inserted into a local vertex slot during the
+current sweep. A subsequent sorting sweep bucket-sorts the sieve records into
+the available rank-local mesh.
+
+The collective sieve exchange concatenates the records submitted by all ranks.
+It does not deduplicate physical particle identities.
+
+Large sieve populations add global sorting and exchange work. Frequent sieve
+use indicates displacements, rank crossings, or associations that the ordinary
+lift-and-drop sequence cannot settle locally.
+
+# Parallel execution
+
+Particle containers reject subtree-task replication, so a particle step traverses
+each rank serially. MPI rank boundaries still use local and virtual particle
+states and the generated `InterRank` merge. No intra-rank particle merge is
+issued.
+
+*/

@@ -1,7 +1,5 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-"""Tohoku 2011 tsunami with optional gauge probes."""
-
 import argparse
 
 import exahype2
@@ -33,8 +31,6 @@ def parse_arguments():
 args = parse_arguments()
 dg_order = max(1, args.degrees_of_freedom - 1)
 
-# The displacement raster spans 250 by 400 grid points, and the low-pass filter below
-# is specified as a multiple of its spacing.
 displacement_grid_spacing = min(
     498000.0 / (250 - 1),
     798000.0 / (400 - 1),
@@ -145,15 +141,12 @@ project.constants.export_constexpr_with_type(
 project.constants.export_constexpr_with_type(
     "sourceLowPassEffectiveRadius", str(12.0 * displacement_grid_spacing), "double"
 )
-# The shorter side of the domain sets the cell width the mesh reaches at this level.
 project.constants.export_constexpr_with_type(
     "sourceFilterMinimumCellH",
     str(min([1798000.0, 1798000.0]) / (3.0**args.grid_levels)),
     "double",
 )
 
-# The include directory is the repository root, which is what lets every file below
-# include the shared ExaSkred headers by their full path.
 project.output.makefile.add_include_directory("../../../..")
 project.output.makefile.add_cpp_file("../../AugmentedState.cpp")
 project.output.makefile.add_cpp_file("../../Limiting.cpp")

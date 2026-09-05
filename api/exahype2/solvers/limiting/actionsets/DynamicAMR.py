@@ -28,14 +28,14 @@ class DynamicAMR(AbstractLimiterActionSet):
       : NumberOfSubcellsPerAxis * NumberOfSubcellsPerAxis * NumberOfSubcellsPerAxis * NumberOfData;
 
   if (::exahype2::dg::runsSubcellScheme(coarseGridCell{{SOLVER_NAME}}CellLabel.getLimiterStatus())) {
-    ::toolbox::blockstructured::interpolateCell(
+    ::exahype2::amr::interpolateCell(
       marker,
       coarseGridCell{{SOLVER_NAME}}Subcell.data(),
       fineGridCell{{SOLVER_NAME}}Subcell.data(),
       NumberOfSubcellsPerAxis,
       NumberOfData
     );
-    ::toolbox::blockstructured::interpolateCell(
+    ::exahype2::amr::interpolateCell(
       marker,
       coarseGridCell{{SOLVER_NAME}}SubcellOld.data(),
       fineGridCell{{SOLVER_NAME}}SubcellOld.data(),
@@ -48,7 +48,7 @@ class DynamicAMR(AbstractLimiterActionSet):
     for (int axis = 0; axis < DIMENSIONS; axis++) {
       dgToFvMatrixPerAxis[axis] = DgToFvMatrix;
     }
-    ::toolbox::blockstructured::applyTensorProductOrderInvariant(
+    ::exahype2::amr::applyTensorProductOrderInvariant(
       fineGridCell{{SOLVER_NAME}}SubcellOld.data(),
       fineGridCell{{UNKNOWN_IDENTIFIER}}.data(),
       dgToFvMatrixPerAxis,
@@ -97,7 +97,7 @@ class DynamicAMR(AbstractLimiterActionSet):
     for (int axis = 0; axis < DIMENSIONS; axis++) {
       dgToFvMatrixPerAxis[axis] = DgToFvMatrix;
     }
-    ::toolbox::blockstructured::applyTensorProductOrderInvariant(
+    ::exahype2::amr::applyTensorProductOrderInvariant(
       fineGridCell{{SOLVER_NAME}}SubcellOld.data(),
       fineGridCell{{UNKNOWN_IDENTIFIER}}.data(),
       dgToFvMatrixPerAxis,
@@ -121,7 +121,7 @@ class DynamicAMR(AbstractLimiterActionSet):
     for (int child = 0; child < THREE_POWER_D; child++) {
       stagedChildren[child] = _subcellRestrictionStage.child(coarseGridCell{{SOLVER_NAME}}Subcell.data(), child);
     }
-    ::toolbox::blockstructured::restrictCellFromChildren(
+    ::exahype2::amr::restrictCellFromChildren(
       coarseGridCell{{SOLVER_NAME}}Subcell.data(),
       stagedChildren,
       NumberOfSubcellsPerAxis,
@@ -131,7 +131,7 @@ class DynamicAMR(AbstractLimiterActionSet):
     for (int child = 0; child < THREE_POWER_D; child++) {
       stagedChildren[child] = _subcellOldRestrictionStage.child(coarseGridCell{{SOLVER_NAME}}SubcellOld.data(), child);
     }
-    ::toolbox::blockstructured::restrictCellFromChildren(
+    ::exahype2::amr::restrictCellFromChildren(
       coarseGridCell{{SOLVER_NAME}}SubcellOld.data(),
       stagedChildren,
       NumberOfSubcellsPerAxis,
@@ -205,9 +205,9 @@ class DynamicAMR(AbstractLimiterActionSet):
         return (
             super().get_attributes()
             + f"""
-    ::toolbox::blockstructured::ChildDataStage<{precision}>
+    ::exahype2::amr::ChildDataStage<{precision}>
       _subcellRestrictionStage{{THREE_POWER_D, {values_per_child}}};
-    ::toolbox::blockstructured::ChildDataStage<{precision}>
+    ::exahype2::amr::ChildDataStage<{precision}>
       _subcellOldRestrictionStage{{THREE_POWER_D, {values_per_child}}};
 """
         )
@@ -218,7 +218,7 @@ class DynamicAMR(AbstractLimiterActionSet):
             + """
 #include "exahype2/dg/LimiterStatus.h"
 #include "peano4/Globals.h"
-#include "toolbox/blockstructured/AMRRoutines.h"
-#include "toolbox/blockstructured/ChildDataStage.h"
+#include "exahype2/amr/AMRRoutines.h"
+#include "exahype2/amr/ChildDataStage.h"
 """
         )

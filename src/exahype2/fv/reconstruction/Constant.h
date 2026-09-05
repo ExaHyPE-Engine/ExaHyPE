@@ -9,7 +9,7 @@
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/la/Vector.h"
-#include "toolbox/blockstructured/Enumeration.h"
+#include "exahype2/Enumeration.h"
 
 namespace exahype2::fv::reconstruction {
   struct Constant;
@@ -38,18 +38,18 @@ struct exahype2::fv::reconstruction::Constant final {
     typename StoragePrecision,
     typename ComputePrecision>
   INLINE_METHOD GPU_CALLABLE_METHOD static void accumulateFluxDivergence(
-    const StoragePrecision* NOALIAS const        inputPatch,
+    const StoragePrecision* NOALIAS              inputPatch,
     const StoragePrecision* NOALIAS const        faceInputPatches[TWO_TIMES_D],
     const tarch::la::Vector<DIMENSIONS, int>&    volumeIndex,
-    const int                                    centreOffset,
-    const StoragePrecision* NOALIAS const        centreState,
+    int                                          centreOffset,
+    const StoragePrecision* NOALIAS              centreState,
     const tarch::la::Vector<DIMENSIONS, double>& patchCentre,
     const tarch::la::Vector<DIMENSIONS, double>& patchSize,
     const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
     const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
-    const double                                 timeStamp,
-    const double                                 timeStepSize,
-    StoragePrecision* NOALIAS const              outputState,
+    double                                       timeStamp,
+    double                                       timeStepSize,
+    StoragePrecision* NOALIAS                    outputState,
     double&                                      maxEigenvalueAfterTimeStep
   );
 };

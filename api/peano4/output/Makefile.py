@@ -108,8 +108,6 @@ class Makefile(object):
             self.d["MODE"] = "Debug"
         elif mode == CompileMode.Asserts:
             self.d["MODE"] = "Asserts"
-        elif mode == CompileMode.Trace:
-            self.d["MODE"] = "Trace"
         elif mode == CompileMode.Release:
             self.d["MODE"] = "Release"
         else:

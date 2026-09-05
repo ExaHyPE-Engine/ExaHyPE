@@ -67,14 +67,14 @@ class ParticleDataLoader(ActionSet):
       }
       if (marker.isContained(position)) {
         auto* const particle = new globaldata::{{PARTICLE}}();
-        toolbox::particles::init(*particle, position, 0.0);
+        peano4::particles::init(*particle, position, 0.0);
         particle->setNumber(0, static_cast<int>(record[0]));
         particle->setNumber(1, static_cast<int>(record[1]));
         particle->setMoveState(static_cast<globaldata::{{PARTICLE}}::MoveState>(static_cast<int>(record[2])));
         for (std::size_t value = 0; value < particle->getData().size(); value++) {
           particle->setData(static_cast<int>(value), record[3 + DIMENSIONS + value]);
         }
-        toolbox::particles::insertParticleIntoCell(marker, particle, fineGridVertices{{PARTICLES_CONTAINER}}, _treeId);
+        peano4::particles::insertParticleIntoCell(marker, particle, fineGridVertices{{PARTICLES_CONTAINER}}, _treeId);
       }
     }
   }
@@ -103,10 +103,10 @@ std::vector<double> {full_qualified_classname}::_particleRows;
         return jinja2.Template(
             """
 #include "globaldata/{{PARTICLE}}.h"
+#include "peano4/particles/ParticleFactory.h"
+#include "peano4/particles/particles.h"
 #include "runner/RuntimeParameters.h"
 #include "tarch/reader/HDF5FileReader.h"
-#include "toolbox/particles/ParticleFactory.h"
-#include "toolbox/particles/particles.h"
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 """
         ).render(**self.d)

@@ -77,8 +77,8 @@ information from the neighbour patch.
 ### Keeping face and patch data consistent
 
 Projecting the patches onto the face data structures and back is a
-mechanical task. Therefore, we offer a toolbox to relieve you from the
-pain to recode it over and over again. Using this toolbox, you add the
+mechanical task. Therefore, we offer action sets to relieve you from the
+pain to recode it over and over again. Using them, you add the
 projections to your algorithmic steps, and the API then automatically
 injects these features (aspects) into your code:
 
@@ -107,7 +107,7 @@ data plus the cells around it in one big patch.
 
 ## Code organisation
 
-Peano offers a toolbox in  `toolbox::blockstructured` which offers most of the
+The @ref page_exahype2_blockstructured "patch operations" offer most of the
 basic data structures and action sets.
 The actual patches can either be embedded as plain arrays into each cell, or
 they can be held as arrays on the heap and the cells hold (smart) pointers

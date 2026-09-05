@@ -18,8 +18,8 @@ class DumpTracerIntoDatabase(peano4.solversteps.ActionSet):
     a new snapshot whenever a tracer has moved far enough or enough time has
     passed. Both thresholds are set via the deltas in the constructor.
 
-    This class uses the C++ class toolbox::particles::TrajectoryDatabase from the
-    particles toolbox to realise the actual storage.
+    This class uses the C++ class peano4::particles::TrajectoryDatabase from the
+    particles package to realise the actual storage.
     """
 
     def __init__(
@@ -43,14 +43,14 @@ class DumpTracerIntoDatabase(peano4.solversteps.ActionSet):
 
         position_delta_between_two_snapshots: Float
           Maps to the positionDelta argument of
-          toolbox::particles::TrajectoryDatabase::TrajectoryDatabase().
+          peano4::particles::TrajectoryDatabase::TrajectoryDatabase().
 
         time_delta_between_two_snapshots: Float
           Maps to the timeDelta argument of
-          toolbox::particles::TrajectoryDatabase::TrajectoryDatabase().
+          peano4::particles::TrajectoryDatabase::TrajectoryDatabase().
 
         use_relative_deltas: Boolean
-          See description of C++ class in toolbox::particles::TrajectoryDatabase.
+          See description of C++ class in peano4::particles::TrajectoryDatabase.
 
         initial_record_time: Float
           Time from which on the tracer starts to dump data to files.
@@ -144,7 +144,7 @@ if (
     def get_includes(self):
         result = jinja2.Template(
             """
-#include "toolbox/particles/TrajectoryDatabase.h"
+#include "peano4/particles/TrajectoryDatabase.h"
 #include "runner/RuntimeParameters.h"
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
@@ -155,13 +155,13 @@ if (
 
     def get_attributes(self):
         return """
-    static toolbox::particles::TrajectoryDatabase _database;
+    static peano4::particles::TrajectoryDatabase _database;
 """
 
     def get_static_initialisations(self, full_qualified_class_name):
         return (
             """
-toolbox::particles::TrajectoryDatabase """
+peano4::particles::TrajectoryDatabase """
             + full_qualified_class_name
             + """::_database;
 """

@@ -32,12 +32,12 @@ INLINE_METHOD GPU_CALLABLE_METHOD const StoragePrecision* exahype2::fv::reconstr
   if (neighbourIndexAlongNormal < 0) {
     overlapCell(normal) = neighbourIndexAlongNormal + HaloSize;
     const int overlapIndex =
-      toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell, NumberOfVolumesPerAxis, HaloSize, normal);
+      exahype2::serialiseVoxelIndexInOverlap(overlapCell, NumberOfVolumesPerAxis, HaloSize, normal);
     return &faceInputPatches[normal][overlapIndex * NumberOfData];
   }
   overlapCell(normal) = neighbourIndexAlongNormal - NumberOfVolumesPerAxis + HaloSize;
   const int overlapIndex =
-    toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell, NumberOfVolumesPerAxis, HaloSize, normal);
+    exahype2::serialiseVoxelIndexInOverlap(overlapCell, NumberOfVolumesPerAxis, HaloSize, normal);
   return &faceInputPatches[normal + DIMENSIONS][overlapIndex * NumberOfData];
 }
 

@@ -7,7 +7,7 @@
 #include "exahype2/fv/reconstruction/Constant.h"
 #include "exahype2/fv/reconstruction/LimitedLinear.h"
 #include "exahype2/fv/timestepping/SingleStep.h"
-#include "toolbox/blockstructured/Enumeration.h"
+#include "exahype2/Enumeration.h"
 
 namespace {
   // Exposes every term the kernel can evaluate through a small PDE. The exact
@@ -223,7 +223,7 @@ namespace {
             side == 0 ? overlapCell(normal) - HaloWidth : VolumesPerAxis - HaloWidth + overlapCell(normal);
           const int face = side == 0 ? normal : normal + DIMENSIONS;
           const int overlapIndex =
-            toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell, VolumesPerAxis, HaloWidth, normal);
+            exahype2::serialiseVoxelIndexInOverlap(overlapCell, VolumesPerAxis, HaloWidth, normal);
           functor(volumeIndex, face, overlapIndex);
         }
         int axis = 0;

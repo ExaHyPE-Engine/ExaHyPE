@@ -1,7 +1,5 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-"""Solitary wave running up a plane beach."""
-
 import argparse
 
 import exahype2
@@ -82,8 +80,6 @@ project.add_solver(aderdg_solver)
 project.constants.export_constexpr_with_type("g", str(9.81), "double")
 project.constants.export_constexpr_with_type("hThreshold", str(1e-5), "double")
 
-# The include directory is the repository root, which is what lets every file below
-# include the shared ExaSkred headers by their full path.
 project.output.makefile.add_include_directory("../../../..")
 project.output.makefile.add_cpp_file("../../AugmentedState.cpp")
 project.output.makefile.add_cpp_file("../../Limiting.cpp")

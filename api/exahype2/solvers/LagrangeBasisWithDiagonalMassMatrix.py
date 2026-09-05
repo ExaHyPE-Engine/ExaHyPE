@@ -34,11 +34,11 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
   own. That way it shows up in the doxygen documentation and can be piped into
   the generated C++ code.
 
-  - QuadraturePoints1d
-  - MassMatrixDiagonal1d
+  - QuadraturePoints1D
+  - MassMatrixDiagonal1D
   - StiffnessOperator
-  - RestrictionMatrix1d
-  - InterpolationMatrix1d
+  - RestrictionMatrix1D
+  - InterpolationMatrix1D
 
   ## Realisation
 
@@ -58,18 +58,18 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
 
   __repr__ = __str__
 
-  QuadraturePoints1dDocumentation = r"""
+  QuadraturePoints1DDocumentation = r"""
   The quadrature points are an array of size [p+1] if p is the order of the
   chosen polynomial. The double array defines the spacing of the quadrature points
   over the unit interval. See the helper routine exahype2::dg::getQuadraturePoint()
   for an example of how the points identify the actual location in space of the
   quadrature points.
 
-  As we work in a tensor product world, the 2d and 3d quadrature points can be
+  As we work in a tensor product world, the 2D and 3D quadrature points can be
   simply constructed by multiplying the respective coordinate system indices.
 """
 
-  QuadratureWeights1dDocumentation = r"""
+  QuadratureWeights1DDocumentation = r"""
   The quadrature weights are an array of size [p+1] if p is the order of the
   chosen polynomial. The double array defines the integral over the polynomial
   over the unit interval. We use Lagrangian bases here, i.e. only one polynomial
@@ -78,11 +78,11 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
   integral over this particular polynomial. That is the weight associated with
   it.
 
-  As we work in a tensor product world, the 2d and 3d weights can be
+  As we work in a tensor product world, the 2D and 3D weights can be
   simply constructed by multiplying the respective coordinate system indices.
 """
 
-  MassMatrix1dDocumentation = r"""
+  MassMatrix1DDocumentation = r"""
   Computes the (reference) element mass matrix' diagonal. The mass matrix is defined
   via
 
@@ -95,7 +95,7 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
   coincide with the quadrature weights. This is exact for Legendre nodes and the
   intended lumped approximation for Lobatto-type nodes.
 
-  This is a 1d mass matrix: if we have a polynomial of order p, we have
+  This is a 1D mass matrix: if we have a polynomial of order p, we have
   @f$ (p+1)^d @f$ dofs in total per cell. The matrix has only the dimensions
   @f$ (p+1) \times (p+1) @f$ so it effectively only models how the dofs along one
   horizontal or vertical line within the cell interact. This is sufficient
@@ -103,12 +103,12 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
   diagonal mass matrix.
 
   This is an operation which maps nodal data into a weak space, i.e. the outcome has
-  to be scaled with h to be correct. It stems from a 1d integral. If you want to
+  to be scaled with h to be correct. It stems from a 1D integral. If you want to
   compute the real mass matrix output, you have to multiply the outcome along each
   coordinate axis.
 """
 
-  StiffnessOperator1dDocumentation = r"""
+  StiffnessOperator1DDocumentation = r"""
   The stiffness operator is a [p+1]x[p+1] matrix which is constructed in
   __compute_stiffness_operator().
 
@@ -129,7 +129,7 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
   one but has side length @f$ h @f$, you have to multiply the outcome with
   @f$ h @f$ as you integrate. At the same time, the derivative however has to be
   rescaled with @f$ h^{-1} @f$ and the two h-recalibrations thus cancel out.
-  If you have a 2d or 3d function space, you still have to multiply with these
+  If you have a 2D or 3D function space, you still have to multiply with these
   shape functions (see discussion around mass matrix), and you will get an
   additional @f$ h^{d-1} @f$ scaling of the outcome.
 
@@ -137,8 +137,8 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
   degree in one scalar product operand.
 """
 
-  BasisFunctionValuesLeft1dDocumentation = r"""
-  This is a vector of p+1 entries which tells you for a 1d interval
+  BasisFunctionValuesLeft1DDocumentation = r"""
+  This is a vector of p+1 entries which tells you for a 1D interval
   what the function on the left side is. Assume all Lagrange polynomials
   are defined over the unit interval. The first entry in this vector
   tells you what the leftmost polynomial's value is at x=0. The second
@@ -150,13 +150,13 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
   If the rightmost value, i.e. the value at x=1 is of interest, the order
   within this vector has to be inverted.
 
-  This is a nodal 1d operation, i.e. there are no integrals or similar
-  involved. We take the real 1d polynomial from the shape function.
+  This is a nodal 1D operation, i.e. there are no integrals or similar
+  involved. We take the real 1D polynomial from the shape function.
 """
 
-  DerivativeOperator1dDocumentation = r"""
+  DerivativeOperator1DDocumentation = r"""
     Matrix which is given the p+1 weights of the shape function
-    along a 1d line. It then returns the p+1 gradients at the integration
+    along a 1D line. It then returns the p+1 gradients at the integration
     points.
 
     This is a point-wise operator, i.e. it works directly with the weights
@@ -164,13 +164,13 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
     integral. Furthermore, it is exact for a given Lagrange polynomial.
 """
 
-  InterpolationMatrix1dDocumentation = r"""
+  InterpolationMatrix1DDocumentation = r"""
     This is essentially a @f$ 3 \cdot (order+1)^d-1 @f$ matrix split up
     into a three-dimensional tensor. The page about DG AMR in the file
     exahype2/dg/Riemann.h documents its content.
 """
 
-  RestrictionMatrix1dDocumentation = r"""
+  RestrictionMatrix1DDocumentation = r"""
     This is essentially a @f$ 3 \cdot (order+1)^d-1 @f$ matrix split up
     into a three-dimensional tensor. The page about DG AMR in the file
     exahype2/dg/Riemann.h documents its content.
@@ -192,7 +192,7 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
 
     Compute the (reference) element stiffness matrix for the configured polynomial order.
 
-    @see StiffnessOperator1dDocumentation which is also used to dump documentation
+    @see StiffnessOperator1DDocumentation which is also used to dump documentation
       into generated C++ code.
 
     """
@@ -203,7 +203,7 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
 
     for row in range(dofs_per_axis):
       for col in range(dofs_per_axis):
-        stiffness_matrix[row][col] = quadrature_weights[col] * self.derivative1d(quadrature_points[col],row)
+        stiffness_matrix[row][col] = quadrature_weights[col] * self.derivative1D(quadrature_points[col],row)
 
     return stiffness_matrix
 
@@ -213,8 +213,8 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
     Compute the interpolation matrix.
 
     The matrix prepares the halo layer data for the fine grid points at a
-    refinement boundary. It is a 1d mapping only, i.e. it serves the "surface"
-    of a 2d domain, and has a size of 3Dof \times Dof.
+    refinement boundary. It is a 1D mapping only, i.e. it serves the "surface"
+    of a 2D domain, and has a size of 3Dof \times Dof.
     Its elements are \phi_j(x^f_i), i.e. the value of the coarse grid basis
     functions at a fine grid point. In practice we multiply this matrix with the
     vector of coarse grid weights (u^c_i):
@@ -241,7 +241,7 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
       for block in range(3):
         for row in range(dofs_per_axis):
           for col in range(dofs_per_axis):
-            interp_matrix[block][row][col] = self.value1d(fine_grid_points[row + block*dofs_per_axis],col)
+            interp_matrix[block][row][col] = self.value1D(fine_grid_points[row + block*dofs_per_axis],col)
 
       return interp_matrix
 
@@ -251,8 +251,8 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
     Compute the restriction matrix.
 
     The matrix prepares the halo layer data for the coarse cells at a refinement
-    boundary, and its formulation follows the interpolation scheme. It is a 1d
-    mapping only, i.e. it serves the "surface" of a 2d domain, and has a size of
+    boundary, and its formulation follows the interpolation scheme. It is a 1D
+    mapping only, i.e. it serves the "surface" of a 2D domain, and has a size of
     Dof \times 3Dof.
 
     We can also use the same matrix along the normal direction.
@@ -272,14 +272,14 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
       for block in range(3):
         for row in range(dofs_per_axis):
           for col in range(dofs_per_axis):
-            restriction_matrix[block][row][col] = self.value1d(fine_grid_points[col + block*dofs_per_axis],row) / 3.0
+            restriction_matrix[block][row][col] = self.value1D(fine_grid_points[col + block*dofs_per_axis],row) / 3.0
 
       return restriction_matrix
 
   def __compute_derivative_operator(self):
     r"""
 
-    @see DerivativeOperator1dDocumentation which is also used to dump documentation
+    @see DerivativeOperator1DDocumentation which is also used to dump documentation
       into generated C++ code.
 
     """
@@ -289,7 +289,7 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
 
     for row in range(dofs_per_axis):
       for col in range(dofs_per_axis):
-        dQdx[row][col] = self.derivative1d(quadrature_points[row], col)
+        dQdx[row][col] = self.derivative1D(quadrature_points[row], col)
 
     return dQdx
 
@@ -298,11 +298,11 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
 
     Compute the value of every basis function at the left end of the interval.
 
-    @see BasisFunctionValuesLeft1dDocumentation which defines what this routine
+    @see BasisFunctionValuesLeft1DDocumentation which defines what this routine
       does and is also used to inject documentation into the generated C++ code.
 
     """
-    return [ self.value1d(0.0, number) for number in range(self.dofs_per_axis) ]
+    return [ self.value1D(0.0, number) for number in range(self.dofs_per_axis) ]
 
   def _get_cached_basis_entry(self, key, compute):
     if key not in self._cached_basis_entries:
@@ -319,18 +319,18 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
       basis_declarations = ""
 
       basis_declarations += self.__render_basis_declaration(
-        self.QuadraturePoints1dDocumentation,
-        "static constexpr double QuadraturePoints1d[] = {};".format( render_tensor_1(self.quadrature_points) )
+        self.QuadraturePoints1DDocumentation,
+        "static constexpr double QuadraturePoints1D[] = {};".format( render_tensor_1(self.quadrature_points) )
       )
 
       basis_declarations += self.__render_basis_declaration(
-        self.QuadratureWeights1dDocumentation,
-        "static constexpr double QuadratureWeights1d[] = {};".format( render_tensor_1(self.quadrature_weights) )
+        self.QuadratureWeights1DDocumentation,
+        "static constexpr double QuadratureWeights1D[] = {};".format( render_tensor_1(self.quadrature_weights) )
       )
 
       basis_declarations += self.__render_basis_declaration(
-        self.MassMatrix1dDocumentation,
-        "static constexpr double MassMatrixDiagonal1d[] = {};".format(
+        self.MassMatrix1DDocumentation,
+        "static constexpr double MassMatrixDiagonal1D[] = {};".format(
           render_tensor_1(
             self._get_cached_basis_entry("mass_matrix_diagonal", self.__compute_mass_matrix_diagonal)
           )
@@ -339,18 +339,18 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
 
       stiffness_operator = self._get_cached_basis_entry("stiffness_operator", self.__compute_stiffness_operator)
       if use_multidimensional_arrays:
-        stiffness_declaration = "static constexpr double StiffnessOperator1d[][] = {};".format(
+        stiffness_declaration = "static constexpr double StiffnessOperator1D[][] = {};".format(
           render_tensor_2(stiffness_operator,use_multidimensional_arrays)
         )
       else:
-        stiffness_declaration = "static constexpr double StiffnessOperator1d[] = {};".format(
+        stiffness_declaration = "static constexpr double StiffnessOperator1D[] = {};".format(
           render_tensor_2(stiffness_operator,use_multidimensional_arrays)
         )
-      basis_declarations += self.__render_basis_declaration(self.StiffnessOperator1dDocumentation, stiffness_declaration)
+      basis_declarations += self.__render_basis_declaration(self.StiffnessOperator1DDocumentation, stiffness_declaration)
 
       basis_declarations += self.__render_basis_declaration(
-        self.BasisFunctionValuesLeft1dDocumentation,
-        "static constexpr double BasisFunctionValuesLeft1d[] = {};".format(
+        self.BasisFunctionValuesLeft1DDocumentation,
+        "static constexpr double BasisFunctionValuesLeft1D[] = {};".format(
           render_tensor_1(
             self._get_cached_basis_entry("basis_function_values_left", self.__compute_basis_function_values_left)
           )
@@ -359,36 +359,36 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
 
       derivative_operator = self._get_cached_basis_entry("derivative_operator", self.__compute_derivative_operator)
       if use_multidimensional_arrays:
-        derivative_declaration = "static constexpr double DerivativeOperator1d[][] = {};".format(
+        derivative_declaration = "static constexpr double DerivativeOperator1D[][] = {};".format(
           render_tensor_2(derivative_operator,use_multidimensional_arrays)
         )
       else:
-        derivative_declaration = "static constexpr double DerivativeOperator1d[] = {};".format(
+        derivative_declaration = "static constexpr double DerivativeOperator1D[] = {};".format(
           render_tensor_2(derivative_operator,use_multidimensional_arrays)
         )
-      basis_declarations += self.__render_basis_declaration(self.DerivativeOperator1dDocumentation, derivative_declaration)
+      basis_declarations += self.__render_basis_declaration(self.DerivativeOperator1DDocumentation, derivative_declaration)
 
       restriction_matrix = self._get_cached_basis_entry("restriction_matrix", self.__compute_restriction_matrix)
       if use_multidimensional_arrays:
-        restriction_declaration = "static constexpr double RestrictionMatrix1d[][][] = {};".format(
+        restriction_declaration = "static constexpr double RestrictionMatrix1D[][][] = {};".format(
           render_tensor_3(restriction_matrix,use_multidimensional_arrays)
         )
       else:
-        restriction_declaration = "static constexpr double RestrictionMatrix1d[] = {};".format(
+        restriction_declaration = "static constexpr double RestrictionMatrix1D[] = {};".format(
           render_tensor_3(restriction_matrix,use_multidimensional_arrays)
         )
-      basis_declarations += self.__render_basis_declaration(self.RestrictionMatrix1dDocumentation, restriction_declaration)
+      basis_declarations += self.__render_basis_declaration(self.RestrictionMatrix1DDocumentation, restriction_declaration)
 
       interpolation_matrix = self._get_cached_basis_entry("interpolation_matrix", self.__compute_interpolation_matrix)
       if use_multidimensional_arrays:
-        interpolation_declaration = "static constexpr double InterpolationMatrix1d[][][] = {};".format(
+        interpolation_declaration = "static constexpr double InterpolationMatrix1D[][][] = {};".format(
           render_tensor_3(interpolation_matrix,use_multidimensional_arrays)
         )
       else:
-        interpolation_declaration = "static constexpr double InterpolationMatrix1d[] = {};".format(
+        interpolation_declaration = "static constexpr double InterpolationMatrix1D[] = {};".format(
           render_tensor_3(interpolation_matrix,use_multidimensional_arrays)
         )
-      basis_declarations += self.__render_basis_declaration(self.InterpolationMatrix1dDocumentation, interpolation_declaration)
+      basis_declarations += self.__render_basis_declaration(self.InterpolationMatrix1DDocumentation, interpolation_declaration)
 
       self._cached_basis_declarations[use_multidimensional_arrays] = basis_declarations
 
@@ -405,12 +405,12 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
   def quadrature_weights(self):
     assert False, "To be implemented by a subclass"
 
-  def value1d(self,x,number):
+  def value1D(self,x,number):
     r"""
 
     Return the value of the shape function ``number`` at x.
 
-    The routine evaluates one single shape function. derivative1d() provides the
+    The routine evaluates one single shape function. derivative1D() provides the
     matching derivative.
 
     """
@@ -427,7 +427,7 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
 
     return enumerator/denominator
 
-  def derivative1d(self,x,number):
+  def derivative1D(self,x,number):
     r"""
 
     Return the derivative of the shape function ``number`` at x.

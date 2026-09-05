@@ -47,12 +47,9 @@ class RecomputeSubcells(AbstractLimiterActionSet):
       }
 
       // The subcell halo never travels across a resolution transition, so the
-      // outer layers of such a face are rebuilt in the very traversal that
-      // consumes them. A persistent coarse face samples its neighbour's
-      // reconciled Galerkin face trace, projected onto the tangential subcell
-      // grid. A hanging face is recreated each traversal without valid data, so
-      // the cell extrapolates its own face-touching layer; an outgoing wave
-      // still reaches the coarse side through its trace sampling.
+      // outer layers of such a face are rebuilt in the traversal that consumes
+      // them: A persistent coarse face samples its neighbour's Galerkin face
+      // trace, a hanging face extrapolates the cell's own face-touching layer.
       for (int faceNumber = 0; faceNumber < 2 * DIMENSIONS; faceNumber++) {
         const auto& transitionFaceLabel = fineGridFaces{{SOLVER_NAME}}FaceLabel(faceNumber);
         const auto  isCoarseTransitionSide =
@@ -114,7 +111,7 @@ class RecomputeSubcells(AbstractLimiterActionSet):
             for (int layer = 0; layer < {{FV_HALO_WIDTH}}; layer++) {
               auto outerIndex            = tangentialIndex;
               outerIndex(axis)           = faceNumber < DIMENSIONS ? layer : {{FV_HALO_WIDTH}} + layer;
-              const auto serialisedOuter = ::toolbox::blockstructured::serialiseVoxelIndexInOverlap(
+              const auto serialisedOuter = ::exahype2::serialiseVoxelIndexInOverlap(
                 outerIndex,
                 NumberOfSubcellsPerAxis,
                 {{FV_HALO_WIDTH}},
@@ -169,15 +166,13 @@ class RecomputeSubcells(AbstractLimiterActionSet):
         }
       }
       if (needsFallbackReconstruction) {
-        // The fallback shares the primary scheme's halo layout, so it can
-        // overwrite the patch and its face data without reallocating storage.
+        // The fallback has the primary scheme's halo layout, so it overwrites the
+        // patch and its face data without reallocating storage.
         maxEigenvalue = advanceSubcells.template operator()<{{FV_FALLBACK_RECONSTRUCTION}}>();
       }
 {% endif %}
 
-      // Q is the limiter's current plot buffer. Regular cells retain the accepted
-      // DG correction there; a limited cell replaces it here with the projection
-      // of its current finite-volume subgrid. Q_old remains the predictor backup.
+      // Q is the limiter's plot buffer and Q_old stays the predictor backup.
       auto* const updatedState = fineGridCell{{UNKNOWN_IDENTIFIER}}.data();
       static constexpr {{SOLUTION_STORAGE_PRECISION}} FvToDgMatrix[] = {{FV_TO_DG_MATRIX}};
       ::exahype2::dg::projectTensorProduct<DIMENSIONS, NumberOfSubcellsPerAxis, NumberOfDofsPerAxis, NumberOfData>(
@@ -197,11 +192,8 @@ class RecomputeSubcells(AbstractLimiterActionSet):
         fineGridCell{{SOLVER_NAME}}SubcellOld.data()
       );
 {% if IS_ADAPTIVE %}
-      // The subgrid resolves waves the smoothed candidate hides, so the admissible
-      // step must come from the finite-volume wave speed, not from re-measuring the
-      // projected-back polynomial. Folding it through the same statistics with the
-      // cell size keeps it consistent with the Galerkin cells: the polynomial order
-      // factor in the step formula already accounts for the subcell resolution.
+      // The subgrid resolves waves the smoothed candidate hides, so the
+      // admissible step comes from the finite-volume wave speed.
       ::exahype2::dg::MaxEigenvalueStatistics subcellEigenvalueStatistics;
       subcellEigenvalueStatistics.accumulate<DIMENSIONS>(
         marker.getH(),
@@ -235,7 +227,7 @@ class RecomputeSubcells(AbstractLimiterActionSet):
             self._solver._subcell_limiter_solver.time_stepping
         )
         # Only an adaptive solver derives the step from eigenvalues; a fixed step
-        # is the user's and needs no fold-in.
+        # is the user's and takes no wave speed.
         is_adaptive = bool(self._solver._compute_new_time_step_size.strip())
         dictionary["IS_ADAPTIVE"] = is_adaptive
         dictionary["EVALUATE_FLUX"] = self._cpp_bool(dictionary["USE_FLUX"])
@@ -298,7 +290,7 @@ class RecomputeSubcells(AbstractLimiterActionSet):
 #include "exahype2/dg/EigenvalueStatistics.h"
 #include "exahype2/dg/LimiterStatus.h"
 #include "exahype2/dg/SubcellProjection.h"
-#include "toolbox/blockstructured/Enumeration.h"
+#include "exahype2/Enumeration.h"
 """
             + scheme_includes
         )

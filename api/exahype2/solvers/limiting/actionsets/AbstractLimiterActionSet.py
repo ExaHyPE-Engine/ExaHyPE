@@ -89,6 +89,28 @@ class AbstractLimiterActionSet(ActionSet):
             [value for row in dg_to_subcells for value in row]
         )
 
+    @staticmethod
+    def _dmp_extrema_reduction_snippet(state, minimum, maximum, dictionary):
+        """Returns the C++ that seeds and reduces ``state``'s observable extrema.
+
+        The reduction samples the polynomial at its native nodes, Lobatto nodes
+        and subcell averages.
+        """
+        precision = dictionary["SOLUTION_STORAGE_PRECISION"]
+        return f"""
+    std::fill_n({minimum}, NumberOfObservables, std::numeric_limits<{precision}>::infinity());
+    std::fill_n({maximum}, NumberOfObservables, -std::numeric_limits<{precision}>::infinity());
+    ::exahype2::dg::reduceObservableExtrema<NumberOfObservables>(
+      {minimum}, {maximum}, {state}, NumberOfNodes, DataPerNode, mapStateToObservables
+    );
+    ::exahype2::dg::reduceProjectedObservableExtrema<
+      DIMENSIONS, NumberOfDofsPerAxis, NumberOfDofsPerAxis, DataPerNode, NumberOfObservables
+    >({minimum}, {maximum}, {state}, DgToLobattoMatrix, mapStateToObservables);
+    ::exahype2::dg::reduceProjectedObservableExtrema<
+      DIMENSIONS, NumberOfDofsPerAxis, NumberOfSubcellsPerAxis, DataPerNode, NumberOfObservables
+    >({minimum}, {maximum}, {state}, DgToSubcellMatrix, mapStateToObservables);
+"""
+
     def get_includes(self):
         return (
             self._solver._get_default_includes()

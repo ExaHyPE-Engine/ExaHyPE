@@ -13,6 +13,27 @@ void exahype2::dg::tests::LimiterTest::run() {
   testMethod(testObservableExtremaReduction);
   testMethod(testProjectedObservableExtremaReduction);
   testMethod(testExtremumQuantisation);
+  testMethod(testHangingVertexFacet);
+}
+
+void exahype2::dg::tests::LimiterTest::testHangingVertexFacet() {
+  const tarch::la::Vector<2, int> onLeftFace = {0, 1};
+  validate(exahype2::dg::isCoarseVertexOnFacetOfHangingVertex(onLeftFace, 0));
+  validate(not exahype2::dg::isCoarseVertexOnFacetOfHangingVertex(onLeftFace, 1));
+  validate(exahype2::dg::isCoarseVertexOnFacetOfHangingVertex(onLeftFace, 2));
+  validate(not exahype2::dg::isCoarseVertexOnFacetOfHangingVertex(onLeftFace, 3));
+
+  const tarch::la::Vector<2, int> onCorner = {3, 3};
+  validate(not exahype2::dg::isCoarseVertexOnFacetOfHangingVertex(onCorner, 0));
+  validate(not exahype2::dg::isCoarseVertexOnFacetOfHangingVertex(onCorner, 1));
+  validate(not exahype2::dg::isCoarseVertexOnFacetOfHangingVertex(onCorner, 2));
+  validate(exahype2::dg::isCoarseVertexOnFacetOfHangingVertex(onCorner, 3));
+
+  const tarch::la::Vector<3, int> onEdge = {2, 0, 3};
+  for (int coarseVertexNumber = 0; coarseVertexNumber < 8; coarseVertexNumber++) {
+    const bool onEdgeVertices = coarseVertexNumber == 4 or coarseVertexNumber == 5;
+    validateEquals(exahype2::dg::isCoarseVertexOnFacetOfHangingVertex(onEdge, coarseVertexNumber), onEdgeVertices);
+  }
 }
 
 void exahype2::dg::tests::LimiterTest::testExtremumQuantisation() {
@@ -144,8 +165,8 @@ void exahype2::dg::tests::LimiterTest::testExtremaMerges() {
   constexpr double        PositiveInfinity    = std::numeric_limits<double>::infinity();
   constexpr double        NegativeInfinity    = -PositiveInfinity;
   constexpr std::uint64_t NoncanonicalNaNBits = 0x7ff8000000000042ULL;
-  constexpr std::uint64_t CanonicalNaNBits    = std::bit_cast<std::uint64_t>(std::numeric_limits<double>::quiet_NaN());
-  constexpr double        NoncanonicalNaN     = std::bit_cast<double>(NoncanonicalNaNBits);
+  constexpr auto          CanonicalNaNBits    = std::bit_cast<std::uint64_t>(std::numeric_limits<double>::quiet_NaN());
+  constexpr auto          NoncanonicalNaN     = std::bit_cast<double>(NoncanonicalNaNBits);
 
   validateNumericalEquals(
     exahype2::dg::mergeDiscreteMaximumPrincipleMinimum(FiniteValue, SmallerFiniteValue),

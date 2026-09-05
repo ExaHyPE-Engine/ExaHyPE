@@ -1,7 +1,5 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-"""Chile 1960 tsunami over the surveyed south-east Pacific bathymetry."""
-
 import argparse
 
 import exahype2
@@ -82,13 +80,8 @@ for name, kind, value in (
     project.add_runtime_parameter(name, kind, value)
 
 project.constants.export_constexpr_with_type("g", str(9.81), "double")
-# A basin-scale tsunami resolves nothing thinner than this, and a column allowed to
-# thin below it keeps the momentum it arrived with, whose velocity then grows without
-# bound and takes the admissible step with it.
 project.constants.export_constexpr_with_type("hThreshold", str(10.0), "double")
 
-# The include directory is the repository root, which is what lets every file below
-# include the shared ExaSkred headers by their full path.
 project.output.makefile.add_include_directory("../../../..")
 project.output.makefile.add_cpp_file("../../AugmentedState.cpp")
 project.output.makefile.add_cpp_file("../../Limiting.cpp")
