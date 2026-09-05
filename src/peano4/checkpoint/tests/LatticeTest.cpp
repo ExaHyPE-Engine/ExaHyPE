@@ -18,13 +18,15 @@ void peano4::checkpoint::tests::LatticeTest::testTriadicMortonKeyRoundTrip() {
       latticeIndex(axis) = remainder % CellsPerAxis;
       remainder /= 3;
     }
-    const std::int64_t key = triadicMortonKey(latticeIndex, Level);
-    validateWithParams2(latticeIndexOfTriadicMortonKey(key, Level) == latticeIndex, key, latticeIndex(0));
+    const std::int64_t key = peano4::checkpoint::triadicMortonKey(latticeIndex, Level);
+    validateWithParams2(
+      peano4::checkpoint::latticeIndexOfTriadicMortonKey(key, Level) == latticeIndex, key, latticeIndex(0)
+    );
   }
 
   const tarch::la::Vector<DIMENSIONS, int> origin(0);
-  validateEquals(triadicMortonKey(origin, 0), 0);
-  validateEquals(triadicMortonKey(origin, 5), 0);
+  validateEquals(peano4::checkpoint::triadicMortonKey(origin, 0), 0);
+  validateEquals(peano4::checkpoint::triadicMortonKey(origin, 5), 0);
 }
 
 void peano4::checkpoint::tests::LatticeTest::testAncestorKeysArePrefixes() {
@@ -33,14 +35,14 @@ void peano4::checkpoint::tests::LatticeTest::testAncestorKeysArePrefixes() {
   for (int axis = 0; axis < DIMENSIONS; axis++) {
     cell(axis) = 7 + axis * 5;
   }
-  const std::int64_t key = triadicMortonKey(cell, Level);
+  const std::int64_t key = peano4::checkpoint::triadicMortonKey(cell, Level);
   for (int ancestorLevel = 0; ancestorLevel <= Level; ancestorLevel++) {
-    const auto   ancestor    = ancestorOfCell(cell, Level, ancestorLevel);
+    const auto   ancestor    = peano4::checkpoint::ancestorOfCell(cell, Level, ancestorLevel);
     std::int64_t shiftedKey  = key;
     for (int digit = ancestorLevel; digit < Level; digit++) {
       shiftedKey /= THREE_POWER_D;
     }
-    validateEqualsWithParams1(triadicMortonKey(ancestor, ancestorLevel), shiftedKey, ancestorLevel);
+    validateEqualsWithParams1(peano4::checkpoint::triadicMortonKey(ancestor, ancestorLevel), shiftedKey, ancestorLevel);
   }
 }
 
@@ -57,17 +59,17 @@ void peano4::checkpoint::tests::LatticeTest::testLeafEnumerationOnRegularGrid() 
     block(axis) = axis == 0 ? 2 : 1;
   }
   std::vector<std::int64_t> keys;
-  appendLeafKeysOfBlock(tree, 2, 1, block, keys);
+  peano4::checkpoint::appendLeafKeysOfBlock(tree, 2, 1, block, keys);
 
   validateEquals(keys.size(), THREE_POWER_D);
-  const std::int64_t firstKey = triadicMortonKey(block, 1) * THREE_POWER_D;
+  const std::int64_t firstKey = peano4::checkpoint::triadicMortonKey(block, 1) * THREE_POWER_D;
   for (int leaf = 0; leaf < THREE_POWER_D; leaf++) {
     validateEqualsWithParams1(keys[leaf], firstKey + leaf, leaf);
   }
 
   // The whole domain as one level-0 block enumerates every level-2 cell.
   keys.clear();
-  appendLeafKeysOfBlock(tree, 2, 0, tarch::la::Vector<DIMENSIONS, int>(0), keys);
+  peano4::checkpoint::appendLeafKeysOfBlock(tree, 2, 0, tarch::la::Vector<DIMENSIONS, int>(0), keys);
   validateEquals(keys.size(), static_cast<std::size_t>(THREE_POWER_D) * THREE_POWER_D);
   validate(std::is_sorted(keys.begin(), keys.end()));
 }

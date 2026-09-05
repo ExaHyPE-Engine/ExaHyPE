@@ -646,7 +646,7 @@ double {{FULL_QUALIFIED_CLASSNAME}}::_capturedTimeStepSize = 0.0;
 """,
             }
         writer = peano4.checkpoint.CellDataWriter(
-            filename=self._name,
+            group_name="/solvers/" + self._name,
             output_path_expression="::runner::RuntimeParameters::getInstance().getCheckpointOutputPath()",
             # The named array holds the accepted solution of the completed
             # step: Q_old for the fused solver, whose unknowns already carry

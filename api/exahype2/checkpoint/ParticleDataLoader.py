@@ -38,10 +38,9 @@ class ParticleDataLoader(ActionSet):
         return jinja2.Template(
             """
   if (::runner::RuntimeParameters::getInstance().hasCheckpointLoadPath()) {
-    const tarch::reader::HDF5FileReader reader(
-      ::runner::RuntimeParameters::getInstance().getCheckpointLoadPath() + "/{{PARTICLES_CONTAINER}}.h5"
-    );
-    _particleRows = reader.readDoubleRows("/particles", 0, reader.getDatasetDimensions("/particles").first);
+    const tarch::reader::HDF5FileReader reader(::runner::RuntimeParameters::getInstance().getCheckpointLoadPath());
+    const std::string particlePath = "/particles/{{PARTICLES_CONTAINER}}/particles";
+    _particleRows = reader.readDoubleRows(particlePath, 0, reader.getDatasetDimensions(particlePath).first);
   }
 """
         ).render(**self.d)

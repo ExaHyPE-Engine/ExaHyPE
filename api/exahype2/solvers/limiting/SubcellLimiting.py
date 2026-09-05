@@ -356,7 +356,7 @@ class SubcellLimiting:
         ).render(VALUES_PER_CELL=values_per_cell, **dictionary)
         step.add_action_set(
             peano4.checkpoint.CellDataWriter(
-                filename=self._name + "Limiter",
+                group_name="/solvers/" + self._name + "Limiter",
                 output_path_expression=(
                     "::runner::RuntimeParameters::getInstance().getCheckpointOutputPath()"
                 ),

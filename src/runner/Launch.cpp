@@ -56,7 +56,7 @@ int runner::launch(
   parameters.configure(argc, argv);
 
   // The runtime and application parsers use one reader, whose usage tracking identifies keys neither consumes.
-  const auto configReader         = parameters.getConfigReader();
+  auto* const configReader        = parameters.getConfigReader();
   const auto applicationParserRan = static_cast<bool>(callbacks.loadApplicationParameters);
   if (applicationParserRan) {
     callbacks.loadApplicationParameters(configReader, argc, argv);

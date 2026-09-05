@@ -737,7 +737,7 @@ We use RK("""
         self.add_entries_to_text_replacement_dictionary(dictionary)
 
         writer = peano4.checkpoint.CellDataWriter(
-            filename=self._name,
+            group_name="/solvers/" + self._name,
             output_path_expression="::runner::RuntimeParameters::getInstance().getCheckpointOutputPath()",
             cell_data_name=self._unknown_identifier(),
             values_per_cell_expression=(

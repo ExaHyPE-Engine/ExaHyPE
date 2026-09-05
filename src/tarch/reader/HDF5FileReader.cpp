@@ -4,6 +4,7 @@
 
 #ifdef PEANO_WITH_HDF5
 
+#include "tarch/Assertions.h"
 #include "tarch/Termination.h"
 
 #include <hdf5.h>
@@ -14,6 +15,7 @@ static_assert(std::is_same_v<hid_t, std::int64_t>);
 tarch::reader::HDF5FileReader::HDF5FileReader(const std::string& filename) :
   _filename(filename),
   _file(H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT)) {
+  assertion(not filename.empty());
   if (_file < 0) {
     tarch::terminateWithError("Failed to open the HDF5 file '" + filename + "' for reading.");
   }
@@ -72,6 +74,8 @@ void tarch::reader::HDF5FileReader::readRows(
   const int   numberOfDimensions = H5Sget_simple_extent_ndims(filespace);
   hsize_t     dims[2]            = {0, 0};
   H5Sget_simple_extent_dims(filespace, dims, nullptr);
+  assertion(target != nullptr);
+  assertion(firstRow + rows <= dims[0], firstRow, rows, dims[0]);
 
   const hsize_t offsets[2]   = {firstRow, 0};
   const hsize_t localDims[2] = {rows, dims[1]};

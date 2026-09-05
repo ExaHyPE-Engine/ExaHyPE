@@ -68,7 +68,7 @@ class RefinementCriterion(AbstractFVActionSet):
             == peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_LAST_TIME
         ):
             if self._solver._patch.dim[0] != self._solver._patch.dim[1]:
-                raise Exception("Error: Can only handle square patches.")
+                raise Exception("Error: The refinement criterion needs a square patch.")
 
             dictionary = {}
             dictionary["CELL_LABEL_NAME"] = self._solver._cell_label.name

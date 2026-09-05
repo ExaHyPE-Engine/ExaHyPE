@@ -12,17 +12,17 @@ namespace peano4::checkpoint {
 } // namespace peano4::checkpoint
 
 /**
- * Writes one solver's cell records into one checkpoint file.
+ * Writes one solver's cell records into one group of the checkpoint file.
  *
  * Every mesh traversal task appends the records of the leaf cells it visits
  * into its own Records buffer and hands the buffer over through collect().
  * write() then derives each record's global row from the refinement plan,
- * which is identical on every rank, and places every rank's rows into one
- * file with one collective write per dataset. The file holds, per
- * level, the per-block record counts, the sorted triadic Morton keys and the
- * record values, plus the solver's scalar state and the checkpoint time.
+ * which is identical on every rank, and places every rank's rows into the
+ * group with one collective write per dataset. The group holds, per level,
+ * the per-block record counts, the sorted triadic Morton keys and the record
+ * values, plus the solver's scalar state and the checkpoint time.
  */
-class peano4::checkpoint::CellDataWriter {
+class peano4::checkpoint::CellDataWriter final {
 public:
   /** One traversal task's record buffer; append() runs without synchronisation. */
   struct Records {
@@ -40,7 +40,8 @@ public:
     void clear();
   };
 
-  CellDataWriter(const std::string& path, int valuesPerRecord);
+  /** The group is the checkpoint file's group this solver writes into, such as "/solvers/Euler". */
+  CellDataWriter(const std::string& group, int valuesPerRecord);
   CellDataWriter(const CellDataWriter&)            = delete;
   CellDataWriter(CellDataWriter&&)                 = delete;
   CellDataWriter& operator=(const CellDataWriter&) = delete;
@@ -56,9 +57,13 @@ public:
   void write(const std::vector<double>& solverScalars, double timeStamp);
 
 private:
-  const std::string _path;
+  const std::string _group;
   const int         _valuesPerRecord;
 
+  /**
+   * Each traversal task takes this lock once, when collect() hands its buffer
+   * over. The buffer moves into the deque, which no atomic operation performs.
+   */
   std::mutex          _collectMutex;
   std::deque<Records> _collectedRecords;
 };

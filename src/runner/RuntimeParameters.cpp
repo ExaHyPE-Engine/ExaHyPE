@@ -130,7 +130,7 @@ void runner::RuntimeParameters::printUsage(const std::string& executableName) co
     "-cop, --checkpointOutputPath <path>",
     "Checkpoint output path (default: " + formatDefault(_checkpointOutputPath) + ")."
   );
-  addOption("-clp, --checkpointLoadPath <path>", "Resume from the checkpoint in this directory (default: not set).");
+  addOption("-clp, --checkpointLoadPath <file>", "Resume from this checkpoint file (default: not set).");
   addOption(
     "-li, --timeStepLogInterval <seconds>",
     "Minimum wall-clock seconds between time-step reports (default: " + formatDefault(_timeStepLogInterval) + ")."

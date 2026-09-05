@@ -3,6 +3,7 @@
 #pragma once
 
 #include "peano4/Globals.h"
+#include "tarch/Assertions.h"
 #include "tarch/la/Vector.h"
 
 namespace peano4::topology {

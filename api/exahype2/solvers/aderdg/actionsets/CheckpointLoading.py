@@ -28,7 +28,9 @@ class CheckpointLoading(AbstractADERDGActionSet):
         = BasePowerExponent<{{ORDER}} + 1, DIMENSIONS>::value
           * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}});
       _checkpointLoader = std::make_unique<::peano4::checkpoint::CellDataLoader>(
-        ::runner::RuntimeParameters::getInstance().getCheckpointLoadPath() + "/{{SOLVER_NAME}}.h5", ValuesPerCell
+        ::runner::RuntimeParameters::getInstance().getCheckpointLoadPath(),
+        "/solvers/{{SOLVER_NAME}}",
+        ValuesPerCell
       );
     }
     _checkpointLoader->loadLocalRecords();
@@ -61,7 +63,6 @@ class CheckpointLoading(AbstractADERDGActionSet):
     std::copy_n(record, ValuesPerCell, fineGridCell{{UNKNOWN_IDENTIFIER}}.data());
     std::copy_n(record, ValuesPerCell, fineGridCell{{UNKNOWN_IDENTIFIER}}_old.data());
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(_checkpointLoader->getTimeStamp());
-    coarseGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(_checkpointLoader->getTimeStamp());
     fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
   }
 """

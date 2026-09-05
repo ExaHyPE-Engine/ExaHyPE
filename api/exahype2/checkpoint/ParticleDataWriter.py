@@ -13,8 +13,9 @@ class ParticleDataWriter(ActionSet):
     The action set buffers one row per local particle, holding the particle's
     two numbers, its move state, its position and its data values, and hands
     the rows to peano4::checkpoint::ParticleDataWriter, which writes them into
-    <checkpoint output path>/checkpoint-<n>/<particle set name>.h5 with one
-    collective write. n counts the checkpoints this run has written.
+    the group /particles/<particle set name> of
+    <checkpoint output path>/checkpoint-<n>.h5 with one collective write. n
+    counts the checkpoints this run has written.
     """
 
     def __init__(self, particle_set):
@@ -37,10 +38,12 @@ class ParticleDataWriter(ActionSet):
     def get_body_of_prepareTraversal(self):
         return jinja2.Template(
             """
+  ::peano4::checkpoint::CheckpointFile::getInstance().open(
+    ::runner::RuntimeParameters::getInstance().getCheckpointOutputPath()
+  );
   _writer.reset();
   _writer = std::make_unique<::peano4::checkpoint::ParticleDataWriter>(
-    ::runner::RuntimeParameters::getInstance().getCheckpointOutputPath()
-      + "/checkpoint-" + std::to_string(_checkpointCounter) + "/{{PARTICLES_CONTAINER}}.h5",
+    "/particles/{{PARTICLES_CONTAINER}}",
     3 + DIMENSIONS + static_cast<int>(globaldata::{{PARTICLE}}().getData().size())
   );
 """
@@ -50,7 +53,7 @@ class ParticleDataWriter(ActionSet):
         return """
   _writer->write();
   _writer.reset();
-  _checkpointCounter++;
+  ::peano4::checkpoint::CheckpointFile::getInstance().close();
 """
 
     def get_body_of_operation(self, operation_name):
@@ -95,13 +98,11 @@ class ParticleDataWriter(ActionSet):
         return """
   std::vector<double> _rows;
 
-  static int _checkpointCounter;
   static std::unique_ptr<::peano4::checkpoint::ParticleDataWriter> _writer;
 """
 
     def get_static_initialisations(self, full_qualified_classname):
         return f"""
-int {full_qualified_classname}::_checkpointCounter = 0;
 std::unique_ptr<::peano4::checkpoint::ParticleDataWriter> {full_qualified_classname}::_writer = nullptr;
 """
 
@@ -109,6 +110,7 @@ std::unique_ptr<::peano4::checkpoint::ParticleDataWriter> {full_qualified_classn
         return jinja2.Template(
             """
 #include "globaldata/{{PARTICLE}}.h"
+#include "peano4/checkpoint/CheckpointFile.h"
 #include "peano4/checkpoint/ParticleDataWriter.h"
 #include "runner/RuntimeParameters.h"
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"

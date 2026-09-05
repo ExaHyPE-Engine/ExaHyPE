@@ -4,9 +4,10 @@
 
 #ifdef PEANO_WITH_HDF5
 
-#include "peano4/checkpoint/GridCheckpoint.h"
+#include "peano4/checkpoint/CheckpointFile.h"
 #include "peano4/topology/TopologyManager.h"
 #include "peano4/topology/Tree.h"
+#include "tarch/Assertions.h"
 #include "tarch/Termination.h"
 #include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
@@ -28,9 +29,13 @@ void peano4::checkpoint::CellDataWriter::Records::clear() {
   values.clear();
 }
 
-peano4::checkpoint::CellDataWriter::CellDataWriter(const std::string& path, const int valuesPerRecord) :
-  _path(path),
-  _valuesPerRecord(valuesPerRecord) {}
+peano4::checkpoint::CellDataWriter::CellDataWriter(const std::string& group, const int valuesPerRecord) :
+  _group(group),
+  _valuesPerRecord(valuesPerRecord) {
+  assertion(not group.empty());
+  assertion(group.front() == '/', group);
+  assertion(valuesPerRecord > 0, valuesPerRecord);
+}
 
 void peano4::checkpoint::CellDataWriter::collect(Records&& records) {
   const std::lock_guard<std::mutex> lock(_collectMutex);
@@ -91,13 +96,15 @@ void peano4::checkpoint::CellDataWriter::write(const std::vector<double>& solver
   // table every rank derives its row offsets from.
   std::vector<std::int64_t> firstBlockOfLevel(numberOfLevels + 1, 0);
   for (int level = depth; level <= maxLevel; level++) {
-    firstBlockOfLevel[level - depth + 1] = firstBlockOfLevel[level - depth] + numberOfBlocksOnLevel(level);
+    firstBlockOfLevel[level - depth + 1] = firstBlockOfLevel[level - depth]
+                                           + peano4::checkpoint::numberOfBlocksOnLevel(level);
   }
   std::vector<std::int64_t> blockCounts(firstBlockOfLevel[numberOfLevels], 0);
   const auto             blockOfRecord = [depth, &levels, &keys, &firstBlockOfLevel](const std::size_t record) {
-    const int    level     = levels[record];
-    std::int64_t blockKey  = keys[record];
-    for (int digit = blockLevelOfLevel(level); digit < level; digit++) {
+    const int level = levels[record];
+    assertion(level >= depth, level, depth);
+    std::int64_t blockKey = keys[record];
+    for (int digit = peano4::checkpoint::blockLevelOfLevel(level); digit < level; digit++) {
       blockKey /= THREE_POWER_D;
     }
     return firstBlockOfLevel[level - depth] + blockKey;
@@ -137,13 +144,13 @@ void peano4::checkpoint::CellDataWriter::write(const std::vector<double>& solver
         blockEnd++;
       }
       const int level      = levels[record];
-      const int blockLevel = blockLevelOfLevel(level);
+      const int blockLevel = peano4::checkpoint::blockLevelOfLevel(level);
       blockLeafKeys.clear();
-      appendLeafKeysOfBlock(
+      peano4::checkpoint::appendLeafKeysOfBlock(
         tree,
         level,
         blockLevel,
-        latticeIndexOfTriadicMortonKey(block - firstBlockOfLevel[level - depth], blockLevel),
+        peano4::checkpoint::latticeIndexOfTriadicMortonKey(block - firstBlockOfLevel[level - depth], blockLevel),
         blockLeafKeys
       );
       if (static_cast<std::int64_t>(blockLeafKeys.size()) != globalBlockCounts[block]) {
@@ -161,21 +168,18 @@ void peano4::checkpoint::CellDataWriter::write(const std::vector<double>& solver
         if (leaf >= blockLeafKeys.size() or blockLeafKeys[leaf] != keys[record]) {
           tarch::terminateWithError("A checkpointed cell is not a leaf of the refinement plan.");
         }
-        rows[record] = firstRowOfBlock[block] - firstRowOfLevel[levels[record] - depth] + static_cast<std::int64_t>(leaf);
+        rows[record] = firstRowOfBlock[block] - firstRowOfLevel[levels[record] - depth]
+                       + static_cast<std::int64_t>(leaf);
         leaf++;
       }
     }
   }
 
-  createDirectoryFor(_path);
-  const auto file = tarch::plotter::HDF5File::openForDataHoldingRanks(_path, numberOfRecords > 0);
-  if (file == nullptr) {
-    return;
-  }
+  tarch::plotter::HDF5File& file = peano4::checkpoint::CheckpointFile::getInstance().getFile();
 
   std::size_t firstRecordOfLevel = 0;
   for (int level = depth; level <= maxLevel; level++) {
-    const std::string        prefix    = "/cells/level" + std::to_string(level);
+    const std::string        prefix    = _group + "/cells/level" + std::to_string(level);
     const std::int64_t       totalRows = firstRowOfLevel[level - depth + 1] - firstRowOfLevel[level - depth];
     std::size_t              levelEnd  = firstRecordOfLevel;
     while (levelEnd < numberOfRecords and levels[levelEnd] == level) {
@@ -197,15 +201,19 @@ void peano4::checkpoint::CellDataWriter::write(const std::vector<double>& solver
     }
     const int numberOfRuns = static_cast<int>(runFirstRows.size());
 
-    file->writeTable(
+    file.writeTable(
       prefix + "/count",
-      static_cast<unsigned long long>(numberOfBlocksOnLevel(level)),
+      static_cast<unsigned long long>(peano4::checkpoint::numberOfBlocksOnLevel(level)),
       0,
       globalBlockCounts.data() + firstBlockOfLevel[level - depth]
     );
     {
       tarch::plotter::HDF5File::Dataset keyDataset(
-        *file, prefix + "/key", static_cast<unsigned long long>(totalRows), 0, tarch::plotter::HDF5File::ElementType::Int64
+        file,
+        prefix + "/key",
+        static_cast<unsigned long long>(totalRows),
+        0,
+        tarch::plotter::HDF5File::ElementType::Int64
       );
       keyDataset.writeRuns(
         runFirstRows.data(),
@@ -217,7 +225,7 @@ void peano4::checkpoint::CellDataWriter::write(const std::vector<double>& solver
     }
     {
       tarch::plotter::HDF5File::Dataset valueDataset(
-        *file,
+        file,
         prefix + "/values",
         static_cast<unsigned long long>(totalRows),
         _valuesPerRecord,
@@ -235,8 +243,8 @@ void peano4::checkpoint::CellDataWriter::write(const std::vector<double>& solver
     firstRecordOfLevel = levelEnd;
   }
 
-  file->writeTable("/scalars", solverScalars.size(), 0, solverScalars.data());
-  file->writeTable("/time", 1, 0, &timeStamp);
+  file.writeTable(_group + "/scalars", solverScalars.size(), 0, solverScalars.data());
+  file.writeTable(_group + "/time", 1, 0, &timeStamp);
 }
 
 #endif

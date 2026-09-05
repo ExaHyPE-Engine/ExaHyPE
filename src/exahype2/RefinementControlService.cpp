@@ -519,7 +519,7 @@ bool exahype2::RefinementControlService::exchangeRawRequests(
 
   std::size_t totalRequestCount = 0;
   for (int rankIndex = 0; rankIndex < numberOfRanks; rankIndex++) {
-    std::size_t  readOffset = static_cast<std::size_t>(displacements[rankIndex]);
+    auto         readOffset = static_cast<std::size_t>(displacements[rankIndex]);
     std::int32_t numberOfRemovals{};
     std::int32_t numberOfAdditions{};
     std::memcpy(&numberOfRemovals, gatheredBlobs.data() + readOffset, sizeof(std::int32_t));

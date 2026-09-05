@@ -40,7 +40,7 @@ void tarch::reader::tests::HDF5FileReaderTest::testReadRowRanges() {
   tarch::mpi::barrier(tarch::mpi::Rank::getInstance().getCommunicator());
 
   {
-    const HDF5FileReader reader(path);
+    const tarch::reader::HDF5FileReader reader(path);
 
     const auto valueDimensions = reader.getDatasetDimensions("/cells/values");
     validateEquals(valueDimensions.first, 3U);
@@ -81,7 +81,7 @@ void tarch::reader::tests::HDF5FileReaderTest::testDatasetExists() {
   tarch::mpi::barrier(tarch::mpi::Rank::getInstance().getCommunicator());
 
   {
-    const HDF5FileReader reader(path);
+    const tarch::reader::HDF5FileReader reader(path);
     validate(reader.datasetExists("/cells/values"));
     validate(reader.datasetExists("/marks"));
     validate(not reader.datasetExists("/absent"));

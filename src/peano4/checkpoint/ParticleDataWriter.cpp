@@ -4,8 +4,10 @@
 
 #ifdef PEANO_WITH_HDF5
 
-#include "peano4/checkpoint/GridCheckpoint.h"
+#include "peano4/checkpoint/CheckpointFile.h"
 #include "tarch/Assertions.h"
+#include "tarch/mpi/Collectives.h"
+#include "tarch/mpi/Rank.h"
 #include "tarch/plotter/HDF5File.h"
 
 void peano4::checkpoint::sortParticleRows(std::vector<double>& rows, const int valuesPerParticle) {
@@ -30,9 +32,13 @@ void peano4::checkpoint::sortParticleRows(std::vector<double>& rows, const int v
   rows = std::move(sortedRows);
 }
 
-peano4::checkpoint::ParticleDataWriter::ParticleDataWriter(const std::string& path, const int valuesPerParticle) :
-  _path(path),
-  _valuesPerParticle(valuesPerParticle) {}
+peano4::checkpoint::ParticleDataWriter::ParticleDataWriter(const std::string& group, const int valuesPerParticle) :
+  _group(group),
+  _valuesPerParticle(valuesPerParticle) {
+  assertion(not group.empty());
+  assertion(group.front() == '/', group);
+  assertion(valuesPerParticle >= 2, valuesPerParticle);
+}
 
 void peano4::checkpoint::ParticleDataWriter::collect(std::vector<double>&& rows) {
   assertion(rows.size() % _valuesPerParticle == 0);
@@ -46,21 +52,84 @@ void peano4::checkpoint::ParticleDataWriter::write() {
     rows.insert(rows.end(), collected.begin(), collected.end());
   }
   _collectedRows.clear();
-  sortParticleRows(rows, _valuesPerParticle);
+  peano4::checkpoint::sortParticleRows(rows, _valuesPerParticle);
 
-  createDirectoryFor(_path);
-  const unsigned long long localRows = rows.size() / _valuesPerParticle;
-  const auto               file      = tarch::plotter::HDF5File::openForDataHoldingRanks(_path, localRows > 0);
-  if (file == nullptr) {
-    return;
+  tarch::plotter::HDF5File& file      = peano4::checkpoint::CheckpointFile::getInstance().getFile();
+  const int                 localRows = static_cast<int>(rows.size() / _valuesPerParticle);
+
+  // The checkpoint file spans every rank, so the numbers travel over the global
+  // communicator. Every rank then derives each row from the particle numbers
+  // alone, which gives the same file whatever rank holds which particle.
+  const MPI_Comm   communicator  = tarch::mpi::Rank::getInstance().getCommunicator();
+  const int        numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
+  std::vector<int> rowsPerRank(numberOfRanks, 0);
+  tarch::mpi::allgather(&localRows, 1, MPI_INT, rowsPerRank.data(), 1, MPI_INT, communicator);
+
+  std::vector<int> numbersPerRank(numberOfRanks, 0);
+  std::vector<int> displacements(numberOfRanks, 0);
+  int              totalRows = 0;
+  for (int rank = 0; rank < numberOfRanks; rank++) {
+    numbersPerRank[rank] = 2 * rowsPerRank[rank];
+    displacements[rank]  = 2 * totalRows;
+    totalRows += rowsPerRank[rank];
   }
-  unsigned long long firstRow  = 0;
-  unsigned long long totalRows = 0;
-  file->deriveRowRanges(&localRows, &firstRow, &totalRows, 1);
-  tarch::plotter::HDF5File::Dataset dataset(
-    *file, "/particles", totalRows, _valuesPerParticle, tarch::plotter::HDF5File::ElementType::Float64
+
+  std::vector<double> localNumbers(2 * static_cast<std::size_t>(localRows), 0.0);
+  for (std::size_t row = 0; row < static_cast<std::size_t>(localRows); row++) {
+    localNumbers[2 * row]     = rows[row * _valuesPerParticle];
+    localNumbers[2 * row + 1] = rows[row * _valuesPerParticle + 1];
+  }
+  std::vector<double> gatheredNumbers(2 * static_cast<std::size_t>(totalRows), 0.0);
+  tarch::mpi::allgatherv(
+    localNumbers.data(),
+    2 * localRows,
+    MPI_DOUBLE,
+    gatheredNumbers.data(),
+    numbersPerRank.data(),
+    displacements.data(),
+    MPI_DOUBLE,
+    communicator
   );
-  dataset.writeRows(firstRow, localRows, rows.data(), tarch::plotter::HDF5File::ElementType::Float64);
+
+  std::vector<std::pair<double, double>> sortedNumbers;
+  sortedNumbers.reserve(static_cast<std::size_t>(totalRows));
+  for (std::size_t row = 0; row < static_cast<std::size_t>(totalRows); row++) {
+    sortedNumbers.emplace_back(gatheredNumbers[2 * row], gatheredNumbers[2 * row + 1]);
+  }
+  std::sort(sortedNumbers.begin(), sortedNumbers.end());
+  assertion(std::adjacent_find(sortedNumbers.begin(), sortedNumbers.end()) == sortedNumbers.end());
+
+  // The local rows ascend in the same order as the global ones, so consecutive
+  // rows merge into runs and one collective write covers them all.
+  std::vector<unsigned long long> runFirstRows;
+  std::vector<unsigned long long> runRowCounts;
+  for (std::size_t row = 0; row < static_cast<std::size_t>(localRows); row++) {
+    const std::pair<double, double> number(localNumbers[2 * row], localNumbers[2 * row + 1]);
+    const auto                      entry = std::lower_bound(sortedNumbers.begin(), sortedNumbers.end(), number);
+    assertion(entry != sortedNumbers.end() and *entry == number, number.first, number.second);
+    const auto globalRow = static_cast<unsigned long long>(entry - sortedNumbers.begin());
+    if (not runFirstRows.empty() and runFirstRows.back() + runRowCounts.back() == globalRow) {
+      runRowCounts.back()++;
+    } else {
+      runFirstRows.push_back(globalRow);
+      runRowCounts.push_back(1);
+    }
+  }
+
+  tarch::plotter::HDF5File::Dataset dataset(
+    file,
+    _group + "/particles",
+    static_cast<unsigned long long>(totalRows),
+    _valuesPerParticle,
+    tarch::plotter::HDF5File::ElementType::Float64
+  );
+  dataset.writeRuns(
+    runFirstRows.data(),
+    runRowCounts.data(),
+    static_cast<int>(runFirstRows.size()),
+    rows.data(),
+    tarch::plotter::HDF5File::ElementType::Float64
+  );
 }
 
 #endif

@@ -12,13 +12,13 @@ class CellDataWriter(ActionSet):
 
     The action set buffers one record per visited leaf cell, keyed by the
     cell's level and lattice position, and hands the buffers to
-    peano4::checkpoint::CellDataWriter, which writes them into
-    <checkpoint output path>/checkpoint-<n>/<filename>.h5 with one collective
-    write per dataset. n counts the checkpoints this run has written.
+    peano4::checkpoint::CellDataWriter, which writes them into the group
+    group_name of <checkpoint output path>/checkpoint-<n>.h5 with one
+    collective write per dataset. n counts the checkpoints this run has
+    written, and every writer of a checkpoint fills a group of that one file.
 
-    filename: str
-      Solver name; also the base name of the file inside the checkpoint
-      directory.
+    group_name: str
+      Path of the group inside the checkpoint file, such as "/solvers/Euler".
 
     output_path_expression: str
       C++ expression for the checkpoint output path; the caller names the
@@ -54,7 +54,7 @@ class CellDataWriter(ActionSet):
 
     def __init__(
         self,
-        filename,
+        group_name,
         output_path_expression,
         cell_data_name,
         values_per_cell_expression,
@@ -70,7 +70,7 @@ class CellDataWriter(ActionSet):
     ):
         super().__init__(descend_invocation_order=1)
         self.d = {
-            "FILENAME": filename,
+            "GROUP_NAME": group_name,
             "OUTPUT_PATH": output_path_expression,
             "CELL_DATA_NAME": cell_data_name,
             "VALUES_PER_CELL": values_per_cell_expression,
@@ -86,7 +86,11 @@ class CellDataWriter(ActionSet):
         self._capture_static_initialisations = capture_static_initialisations
 
     def get_action_set_name(self):
-        return __name__.replace(".py", "").replace(".", "_") + "_" + self.d["FILENAME"]
+        return (
+            __name__.replace(".py", "").replace(".", "_")
+            + "_"
+            + self.d["GROUP_NAME"].replace("/", "_")
+        )
 
     def user_should_modify_template(self):
         return False
@@ -94,11 +98,9 @@ class CellDataWriter(ActionSet):
     def get_body_of_prepareTraversal(self):
         return jinja2.Template(
             """
+  ::peano4::checkpoint::CheckpointFile::getInstance().open({{OUTPUT_PATH}});
   _writer.reset();
-  _writer = std::make_unique<::peano4::checkpoint::CellDataWriter>(
-    {{OUTPUT_PATH}} + "/checkpoint-" + std::to_string(_checkpointCounter) + "/{{FILENAME}}.h5",
-    {{VALUES_PER_CELL}}
-  );
+  _writer = std::make_unique<::peano4::checkpoint::CellDataWriter>("{{GROUP_NAME}}", {{VALUES_PER_CELL}});
 """
         ).render(**self.d)
 
@@ -107,7 +109,7 @@ class CellDataWriter(ActionSet):
             """
   _writer->write({{SCALARS}}, {{TIMESTAMP}});
   _writer.reset();
-  _checkpointCounter++;
+  ::peano4::checkpoint::CheckpointFile::getInstance().close();
 """
         ).render(**self.d)
 
@@ -148,7 +150,6 @@ class CellDataWriter(ActionSet):
             """
   ::peano4::checkpoint::CellDataWriter::Records _records;
 
-  static int _checkpointCounter;
   static std::unique_ptr<::peano4::checkpoint::CellDataWriter> _writer;
 """
             + self._capture_attributes
@@ -157,7 +158,6 @@ class CellDataWriter(ActionSet):
     def get_static_initialisations(self, full_qualified_classname):
         return (
             f"""
-int {full_qualified_classname}::_checkpointCounter = 0;
 std::unique_ptr<::peano4::checkpoint::CellDataWriter> {full_qualified_classname}::_writer = nullptr;
 """
             + self._capture_static_initialisations.replace(
@@ -170,6 +170,7 @@ std::unique_ptr<::peano4::checkpoint::CellDataWriter> {full_qualified_classname}
             """
 #include "Constants.h"
 #include "peano4/checkpoint/CellDataWriter.h"
+#include "peano4/checkpoint/CheckpointFile.h"
 #include "peano4/grid/GridControlEvent.h"
 """
             + self._additional_includes

@@ -6,14 +6,23 @@
 
 #include "peano4/topology/TopologyManager.h"
 #include "peano4/topology/Tree.h"
+#include "tarch/Assertions.h"
 #include "tarch/Termination.h"
 #include "tarch/mpi/Rank.h"
 
-peano4::checkpoint::CellDataLoader::CellDataLoader(const std::string& path, const int valuesPerRecord) :
+peano4::checkpoint::CellDataLoader::CellDataLoader(
+  const std::string& path, const std::string& group, const int valuesPerRecord
+) :
   _reader(path),
+  _group(group),
   _valuesPerRecord(valuesPerRecord) {
-  _timeStamp     = _reader.readDoubleRows("/time", 0, 1).front();
-  _solverScalars = _reader.readDoubleRows("/scalars", 0, _reader.getDatasetDimensions("/scalars").first);
+  assertion(not group.empty());
+  assertion(group.front() == '/', group);
+  assertion(valuesPerRecord > 0, valuesPerRecord);
+  _timeStamp     = _reader.readDoubleRows(_group + "/time", 0, 1).front();
+  _solverScalars = _reader.readDoubleRows(
+    _group + "/scalars", 0, _reader.getDatasetDimensions(_group + "/scalars").first
+  );
 }
 
 void peano4::checkpoint::CellDataLoader::loadLocalRecords() {
@@ -24,10 +33,11 @@ void peano4::checkpoint::CellDataLoader::loadLocalRecords() {
   _values.clear();
   _recordOfKey.clear();
 
-  for (int level = _depth; _reader.datasetExists("/cells/level" + std::to_string(level) + "/count"); level++) {
-    const std::string prefix     = "/cells/level" + std::to_string(level);
-    const int         blockLevel = blockLevelOfLevel(level);
-    const auto        counts     = _reader.readInt64Rows(prefix + "/count", 0, numberOfBlocksOnLevel(level));
+  for (int level = _depth; _reader.datasetExists(_group + "/cells/level" + std::to_string(level) + "/count"); level++) {
+    const std::string prefix     = _group + "/cells/level" + std::to_string(level);
+    const int         blockLevel = peano4::checkpoint::blockLevelOfLevel(level);
+    const auto        counts
+      = _reader.readInt64Rows(prefix + "/count", 0, peano4::checkpoint::numberOfBlocksOnLevel(level));
 
     auto& values      = _values.emplace_back();
     auto& recordOfKey = _recordOfKey.emplace_back();
@@ -50,7 +60,9 @@ void peano4::checkpoint::CellDataLoader::loadLocalRecords() {
     for (std::int64_t block = 0; block < static_cast<std::int64_t>(counts.size()); block++) {
       const std::int64_t rows = counts[block];
       if (rows > 0
-          and tree.subtreeTouchesRankAt(blockLevel, latticeIndexOfTriadicMortonKey(block, blockLevel), rank)) {
+          and tree.subtreeTouchesRankAt(
+            blockLevel, peano4::checkpoint::latticeIndexOfTriadicMortonKey(block, blockLevel), rank
+          )) {
         const auto keys       = _reader.readInt64Rows(prefix + "/key", firstRow, rows);
         const auto blockValues = _reader.readDoubleRows(prefix + "/values", firstRow, rows);
         const auto firstRecord = values.size() / _valuesPerRecord;
@@ -72,7 +84,7 @@ const double* peano4::checkpoint::CellDataLoader::record(
   if (planLevel < 0 or planLevel >= static_cast<int>(_recordOfKey.size())) {
     return nullptr;
   }
-  const auto entry = _recordOfKey[planLevel].find(triadicMortonKey(latticeIndex, level));
+  const auto entry = _recordOfKey[planLevel].find(peano4::checkpoint::triadicMortonKey(latticeIndex, level));
   if (entry == _recordOfKey[planLevel].end()) {
     return nullptr;
   }

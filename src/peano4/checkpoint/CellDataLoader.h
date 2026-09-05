@@ -13,7 +13,7 @@ namespace peano4::checkpoint {
 } // namespace peano4::checkpoint
 
 /**
- * Reads one solver's cell records back from a checkpoint file.
+ * Reads one solver's cell records back from a group of the checkpoint file.
  *
  * loadLocalRecords() reads, per level, every block whose subtree holds cells
  * of this rank, so the resident data is bounded by the cells this rank owns
@@ -21,9 +21,10 @@ namespace peano4::checkpoint {
  * traversal; record() answers the traversal's per-cell queries from the
  * resident tables without a lock.
  */
-class peano4::checkpoint::CellDataLoader {
+class peano4::checkpoint::CellDataLoader final {
 public:
-  CellDataLoader(const std::string& path, int valuesPerRecord);
+  /** The path names the checkpoint file, the group the solver's records inside it. */
+  CellDataLoader(const std::string& path, const std::string& group, int valuesPerRecord);
   CellDataLoader(const CellDataLoader&)            = delete;
   CellDataLoader(CellDataLoader&&)                 = delete;
   CellDataLoader& operator=(const CellDataLoader&) = delete;
@@ -41,6 +42,7 @@ public:
 
 private:
   tarch::reader::HDF5FileReader _reader;
+  const std::string             _group;
   const int                     _valuesPerRecord;
 
   double              _timeStamp{0.0};

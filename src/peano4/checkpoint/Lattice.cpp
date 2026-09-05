@@ -12,6 +12,7 @@ namespace {
     const tarch::la::Vector<DIMENSIONS, int>& latticeIndex,
     std::vector<std::int64_t>&                keys
   ) {
+    assertion(level <= cellLevel, level, cellLevel);
     if (level == cellLevel) {
       if (not tree.isCellRefinedInPlan(level, latticeIndex)) {
         keys.push_back(peano4::checkpoint::triadicMortonKey(latticeIndex, level));
@@ -43,6 +44,7 @@ void peano4::checkpoint::appendLeafKeysOfBlock(
   const tarch::la::Vector<DIMENSIONS, int>& blockLattice,
   std::vector<std::int64_t>&                keys
 ) {
+  assertion(blockLevel >= 0, blockLevel);
   assertion(blockLevel <= cellLevel, blockLevel, cellLevel);
   if (not tree.cellExistsInPlan(blockLevel, blockLattice)) {
     return;

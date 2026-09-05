@@ -6,8 +6,9 @@ INLINE_METHOD int peano4::checkpoint::blockLevelOfLevel(const int cellLevel) {
 }
 
 INLINE_METHOD std::int64_t peano4::checkpoint::numberOfBlocksOnLevel(const int cellLevel) {
-  std::int64_t result = 1;
-  for (int axis = 0; axis < DIMENSIONS * blockLevelOfLevel(cellLevel); axis++) {
+  const int    numberOfDigits = DIMENSIONS * peano4::checkpoint::blockLevelOfLevel(cellLevel);
+  std::int64_t result         = 1;
+  for (int digit = 0; digit < numberOfDigits; digit++) {
     result *= 3;
   }
   return result;
@@ -39,6 +40,8 @@ INLINE_METHOD std::int64_t peano4::checkpoint::triadicMortonKey(
 INLINE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::checkpoint::latticeIndexOfTriadicMortonKey(
   std::int64_t key, const int level
 ) {
+  assertion(level >= 0, level);
+  assertion(key >= 0, key);
   tarch::la::Vector<DIMENSIONS, int> latticeIndex(0);
   int                                digitWeight = 1;
   for (int digit = 0; digit < level; digit++) {

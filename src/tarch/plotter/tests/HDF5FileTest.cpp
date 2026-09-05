@@ -63,7 +63,7 @@ void tarch::plotter::tests::HDF5FileTest::testDatasetsAndTables() {
   const int         ranks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
 
   {
-    const auto file = HDF5File::openForDataHoldingRanks(path, true);
+    const auto file = tarch::plotter::HDF5File::openForDataHoldingRanks(path, true);
     validate(file != nullptr);
 
     const unsigned long long localValueRows  = rank + 1;
@@ -76,29 +76,37 @@ void tarch::plotter::tests::HDF5FileTest::testDatasetsAndTables() {
     validateEquals(firstRows[0], static_cast<unsigned long long>(rank) * (rank + 1) / 2);
 
     {
-      HDF5File::Dataset values(*file, "/values", totalRows[0], 2, HDF5File::ElementType::Float64);
+      tarch::plotter::HDF5File::Dataset values(
+        *file, "/values", totalRows[0], 2, tarch::plotter::HDF5File::ElementType::Float64
+      );
       std::vector<double> localValues;
       localValues.reserve(localValueRows * 2);
       for (unsigned long long row = 0; row < localValueRows; row++) {
         localValues.push_back(100.0 * rank + static_cast<double>(row));
         localValues.push_back(-1.0 * rank);
       }
-      values.writeRows(firstRows[0], localValueRows, localValues.data(), HDF5File::ElementType::Float64);
+      values.writeRows(
+        firstRows[0], localValueRows, localValues.data(), tarch::plotter::HDF5File::ElementType::Float64
+      );
     }
     {
-      HDF5File::Dataset keys(*file, "/key", totalRows[0], 0, HDF5File::ElementType::Int64);
+      tarch::plotter::HDF5File::Dataset keys(
+        *file, "/key", totalRows[0], 0, tarch::plotter::HDF5File::ElementType::Int64
+      );
       std::vector<std::int64_t> localKeys;
       localKeys.reserve(localValueRows);
       for (unsigned long long row = 0; row < localValueRows; row++) {
         localKeys.push_back(1000LL * rank + static_cast<std::int64_t>(row));
       }
-      keys.writeRows(firstRows[0], localValueRows, localKeys.data(), HDF5File::ElementType::Int64);
+      keys.writeRows(firstRows[0], localValueRows, localKeys.data(), tarch::plotter::HDF5File::ElementType::Int64);
     }
     {
       // The odd ranks pass zero rows here and still join the collective write.
-      HDF5File::Dataset sparse(*file, "/sparse", totalRows[1], 0, HDF5File::ElementType::Float64);
+      tarch::plotter::HDF5File::Dataset sparse(
+        *file, "/sparse", totalRows[1], 0, tarch::plotter::HDF5File::ElementType::Float64
+      );
       const double      sparseValue = 0.5 + rank;
-      sparse.writeRows(firstRows[1], localSparseRows, &sparseValue, HDF5File::ElementType::Float64);
+      sparse.writeRows(firstRows[1], localSparseRows, &sparseValue, tarch::plotter::HDF5File::ElementType::Float64);
     }
 
     const std::int32_t intTable[6] = {1, 2, 3, 4, 5, 6};
@@ -149,7 +157,7 @@ void tarch::plotter::tests::HDF5FileTest::testWithoutDataHoldingRanks() {
   const std::string path = (tarch::tests::getWritableTestDirectory() / "HDF5FileTestEmpty.h5").string();
 
   {
-    const auto file = HDF5File::openForDataHoldingRanks(path, false);
+    const auto file = tarch::plotter::HDF5File::openForDataHoldingRanks(path, false);
     if (file != nullptr) {
       validate(file->writesTables());
       const double tableData[3] = {1.0, 2.0, 3.0};
@@ -175,7 +183,7 @@ void tarch::plotter::tests::HDF5FileTest::testSubsetOfDataHoldingRanks() {
   const bool        isMaster = tarch::mpi::Rank::getInstance().isGlobalMaster();
 
   {
-    const auto file           = HDF5File::openForDataHoldingRanks(path, isMaster);
+    const auto file           = tarch::plotter::HDF5File::openForDataHoldingRanks(path, isMaster);
     const bool receivedTheFile = file != nullptr;
     validateEquals(receivedTheFile, isMaster);
     if (file != nullptr) {
@@ -186,9 +194,11 @@ void tarch::plotter::tests::HDF5FileTest::testSubsetOfDataHoldingRanks() {
       validateEquals(totalRows[0], 4ULL);
       validateEquals(firstRows[0], 0ULL);
 
-      HDF5File::Dataset values(*file, "/values", totalRows[0], 0, HDF5File::ElementType::Float64);
+      tarch::plotter::HDF5File::Dataset values(
+        *file, "/values", totalRows[0], 0, tarch::plotter::HDF5File::ElementType::Float64
+      );
       const double      localValues[4] = {4.0, 3.0, 2.0, 1.0};
-      values.writeRows(firstRows[0], localRows[0], localValues, HDF5File::ElementType::Float64);
+      values.writeRows(firstRows[0], localRows[0], localValues, tarch::plotter::HDF5File::ElementType::Float64);
     }
   }
 

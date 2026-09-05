@@ -25,7 +25,9 @@ class CheckpointLoading(AbstractLimiterActionSet):
         = 2 + BasePowerExponent<2 * {{ORDER}} + 1, DIMENSIONS>::value
           * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}});
       _limiterCheckpointLoader = std::make_unique<::peano4::checkpoint::CellDataLoader>(
-        ::runner::RuntimeParameters::getInstance().getCheckpointLoadPath() + "/{{SOLVER_NAME}}Limiter.h5", ValuesPerCell
+        ::runner::RuntimeParameters::getInstance().getCheckpointLoadPath(),
+        "/solvers/{{SOLVER_NAME}}Limiter",
+        ValuesPerCell
       );
     }
     _limiterCheckpointLoader->loadLocalRecords();

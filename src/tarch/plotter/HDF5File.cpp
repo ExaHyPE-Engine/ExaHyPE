@@ -4,6 +4,7 @@
 
 #ifdef PEANO_WITH_HDF5
 
+#include "tarch/Assertions.h"
 #include "tarch/Termination.h"
 #include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
@@ -28,6 +29,25 @@ namespace {
     }
     tarch::terminateWithError("Unknown HDF5 element type.");
   }
+
+  /**
+   * Returns the type a dataset carries in the file. The little-endian types
+   * give the file the same layout on every machine, and HDF5 converts them
+   * into the reader's native type.
+   */
+  hid_t toFileType(const tarch::plotter::HDF5File::ElementType type) {
+    switch (type) {
+    case tarch::plotter::HDF5File::ElementType::Float32:
+      return H5T_IEEE_F32LE;
+    case tarch::plotter::HDF5File::ElementType::Float64:
+      return H5T_IEEE_F64LE;
+    case tarch::plotter::HDF5File::ElementType::Int32:
+      return H5T_STD_I32LE;
+    case tarch::plotter::HDF5File::ElementType::Int64:
+      return H5T_STD_I64LE;
+    }
+    tarch::terminateWithError("Unknown HDF5 element type.");
+  }
 } // namespace
 
 tarch::plotter::HDF5File::Dataset::Dataset(
@@ -47,7 +67,7 @@ tarch::plotter::HDF5File::Dataset::Dataset(
   const int     fileDimensions = columns == 0 ? 1 : 2;
   const hsize_t dimensions[2]  = {rows, static_cast<hsize_t>(columns)};
   const hid_t   fileSpace      = H5Screate_simple(fileDimensions, dimensions, nullptr);
-  const hid_t   type           = toNativeType(storageType);
+  const hid_t   type           = toFileType(storageType);
 
   // Chunk and deflate the dataset; readers decompress transparently. Parallel
   // HDF5 needs collective writes to filtered datasets, which writeRows() are.
@@ -186,22 +206,17 @@ tarch::plotter::HDF5File::HDF5File(
   const std::int64_t file,
   const std::int64_t linkCreationProperties,
   const std::int64_t transferProperties,
-  const std::int64_t tableTransferProperties,
   const bool         writesTables
 ) :
   _file(file),
   _linkCreationProperties(linkCreationProperties),
   _transferProperties(transferProperties),
-  _tableTransferProperties(tableTransferProperties),
   _writesTables(writesTables) {}
 
 tarch::plotter::HDF5File::~HDF5File() {
   H5Pclose(_linkCreationProperties);
   if (_transferProperties != H5P_DEFAULT) {
     H5Pclose(_transferProperties);
-  }
-  if (_tableTransferProperties != H5P_DEFAULT) {
-    H5Pclose(_tableTransferProperties);
   }
   H5Fclose(_file);
 }
@@ -237,9 +252,8 @@ tarch::plotter::HDF5File::openForDataHoldingRanks(const std::string& path, const
     }
   }
 
-  hid_t fileAccessProperties    = H5P_DEFAULT;
-  hid_t transferProperties      = H5P_DEFAULT;
-  hid_t tableTransferProperties = H5P_DEFAULT;
+  hid_t fileAccessProperties = H5P_DEFAULT;
+  hid_t transferProperties   = H5P_DEFAULT;
 
   if (useParallelIO) {
     fileAccessProperties = H5Pcreate(H5P_FILE_ACCESS);
@@ -267,10 +281,6 @@ tarch::plotter::HDF5File::openForDataHoldingRanks(const std::string& path, const
     // ROMIO aggregate the per-rank slabs into large file writes.
     transferProperties = H5Pcreate(H5P_DATASET_XFER);
     H5Pset_dxpl_mpio(transferProperties, H5FD_MPIO_COLLECTIVE);
-
-    // One rank writes each table whole, so tables go out independently.
-    tableTransferProperties = H5Pcreate(H5P_DATASET_XFER);
-    H5Pset_dxpl_mpio(tableTransferProperties, H5FD_MPIO_INDEPENDENT);
   }
 
   const hid_t file = H5Fcreate(path.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, fileAccessProperties);
@@ -288,18 +298,13 @@ tarch::plotter::HDF5File::openForDataHoldingRanks(const std::string& path, const
     if (transferProperties != H5P_DEFAULT) {
       H5Pclose(transferProperties);
     }
-    if (tableTransferProperties != H5P_DEFAULT) {
-      H5Pclose(tableTransferProperties);
-    }
     tarch::terminateWithError("Failed to create '" + path + "'.");
   }
 
   const hid_t linkCreationProperties = H5Pcreate(H5P_LINK_CREATE);
   H5Pset_create_intermediate_group(linkCreationProperties, 1);
 
-  return std::unique_ptr<HDF5File>(
-    new HDF5File(file, linkCreationProperties, transferProperties, tableTransferProperties, writesTables)
-  );
+  return std::unique_ptr<HDF5File>(new HDF5File(file, linkCreationProperties, transferProperties, writesTables));
 }
 
 bool tarch::plotter::HDF5File::writesTables() const { return _writesTables; }
@@ -367,18 +372,32 @@ void tarch::plotter::HDF5File::writeTable(
   const void* const        data,
   const ElementType        storageType
 ) {
+  assertion(columns >= 0, name, columns);
+  assertion(rows == 0 or not _writesTables or data != nullptr, name, rows);
+
   const int     fileDimensions = columns == 0 ? 1 : 2;
   const hsize_t dimensions[2]  = {rows, static_cast<hsize_t>(columns)};
-  const hid_t   type           = toNativeType(storageType);
   const hid_t   fileSpace      = H5Screate_simple(fileDimensions, dimensions, nullptr);
-  const hid_t   dataset
-    = H5Dcreate(_file, name.c_str(), type, fileSpace, _linkCreationProperties, H5P_DEFAULT, H5P_DEFAULT);
+  const hid_t   dataset = H5Dcreate(
+    _file, name.c_str(), toFileType(storageType), fileSpace, _linkCreationProperties, H5P_DEFAULT, H5P_DEFAULT
+  );
   if (dataset < 0) {
     H5Sclose(fileSpace);
     tarch::terminateWithError("Failed to create HDF5 table '" + name + "'.");
   }
-  if (_writesTables and rows > 0) {
-    if (H5Dwrite(dataset, type, H5S_ALL, fileSpace, _tableTransferProperties, data) < 0) {
+  if (rows > 0) {
+    // A rank that writesTables() does not select joins the collective write
+    // with an empty selection. HDF5 refuses an independent write to a file
+    // whose ROMIO driver requires MPI_File_sync.
+    const hid_t memorySpace = H5Screate_simple(fileDimensions, dimensions, nullptr);
+    if (not _writesTables) {
+      H5Sselect_none(fileSpace);
+      H5Sselect_none(memorySpace);
+    }
+    const herr_t writeStatus
+      = H5Dwrite(dataset, toNativeType(storageType), memorySpace, fileSpace, _transferProperties, data);
+    H5Sclose(memorySpace);
+    if (writeStatus < 0) {
       H5Dclose(dataset);
       H5Sclose(fileSpace);
       tarch::terminateWithError("Failed to write HDF5 table '" + name + "'.");

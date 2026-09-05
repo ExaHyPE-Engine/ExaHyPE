@@ -15,7 +15,7 @@ namespace tarch::reader {
  * The file handle is an hid_t stored as std::int64_t, so this header needs no
  * HDF5 include; the implementation asserts that the two types match.
  */
-class tarch::reader::HDF5FileReader {
+class tarch::reader::HDF5FileReader final {
 public:
   explicit HDF5FileReader(const std::string& filename);
   HDF5FileReader(const HDF5FileReader&)            = delete;

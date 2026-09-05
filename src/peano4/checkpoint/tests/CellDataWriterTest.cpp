@@ -16,7 +16,7 @@ void peano4::checkpoint::tests::CellDataWriterTest::testAppendWidensEverySourceT
   const double                             doubleValues[2]     = {0.25, -4.0};
   const long double                        longDoubleValues[2] = {0.125L, -8.0L};
 
-  CellDataWriter::Records records;
+  peano4::checkpoint::CellDataWriter::Records records;
   records.append(1, latticeIndex, floatValues, 2);
   records.append(1, latticeIndex, doubleValues, 2);
   records.append(1, latticeIndex, longDoubleValues, 2);

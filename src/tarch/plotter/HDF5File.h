@@ -20,7 +20,7 @@ namespace tarch::plotter {
  * The handle members store hid_t values as std::int64_t, so this header needs
  * no HDF5 include; the implementation asserts that the two types match.
  */
-class tarch::plotter::HDF5File {
+class tarch::plotter::HDF5File final {
 public:
   enum class ElementType { Float32, Float64, Int32, Int64 };
 
@@ -29,7 +29,7 @@ public:
    * row count of zero creates no dataset, and writeRows() on such a dataset
    * returns without an HDF5 call on every rank.
    */
-  class Dataset {
+  class Dataset final {
   public:
     /** Zero columns create a one-dimensional dataset, a positive count a two-dimensional one. */
     Dataset(HDF5File& file, const std::string& name, unsigned long long rows, int columns, ElementType storageType);
@@ -104,20 +104,15 @@ public:
 
   /**
    * Creates a small contiguous, uncompressed dataset and fills it from the
-   * rank writesTables() selects; data may be nullptr on every other rank.
+   * rank writesTables() selects. Every other rank joins the collective write
+   * with an empty selection, so data may be nullptr there.
    */
   void writeTable(const std::string& name, unsigned long long rows, int columns, const double* data);
   void writeTable(const std::string& name, unsigned long long rows, int columns, const std::int32_t* data);
   void writeTable(const std::string& name, unsigned long long rows, int columns, const std::int64_t* data);
 
 private:
-  HDF5File(
-    std::int64_t file,
-    std::int64_t linkCreationProperties,
-    std::int64_t transferProperties,
-    std::int64_t tableTransferProperties,
-    bool         writesTables
-  );
+  HDF5File(std::int64_t file, std::int64_t linkCreationProperties, std::int64_t transferProperties, bool writesTables);
 
   void writeTable(
     const std::string& name,
@@ -130,7 +125,6 @@ private:
   std::int64_t _file;
   std::int64_t _linkCreationProperties;
   std::int64_t _transferProperties;
-  std::int64_t _tableTransferProperties;
   bool         _writesTables;
 };
 

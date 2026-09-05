@@ -16,10 +16,14 @@ set(SOURCES
 
   checkpoint/CellDataLoader.cpp
   checkpoint/CellDataWriter.cpp
+  checkpoint/CheckpointFile.cpp
   checkpoint/GridCheckpoint.cpp
   checkpoint/Lattice.cpp
   checkpoint/ParticleDataWriter.cpp
+  checkpoint/tests/CellDataLoaderTest.cpp
   checkpoint/tests/CellDataWriterTest.cpp
+  checkpoint/tests/CheckpointFileTest.cpp
+  checkpoint/tests/GridCheckpointTest.cpp
   checkpoint/tests/LatticeTest.cpp
   checkpoint/tests/ParticleDataWriterTest.cpp
 

@@ -8,7 +8,9 @@ INLINE_METHOD void peano4::checkpoint::CellDataWriter::Records::append(
   const SourceType* const                   cellValues,
   const int                                 count
 ) {
+  assertion(count > 0, count);
+  assertion(cellValues != nullptr);
   levels.push_back(level);
-  keys.push_back(triadicMortonKey(latticeIndex, level));
+  keys.push_back(peano4::checkpoint::triadicMortonKey(latticeIndex, level));
   values.insert(values.end(), cellValues, cellValues + count);
 }
