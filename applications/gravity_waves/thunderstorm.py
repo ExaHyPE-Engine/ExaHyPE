@@ -24,18 +24,20 @@ use_limiting = True
 # restart_step = -61
 # restart_time = 4000
 
+file = '/work_fast/go78vuz/EXAHYPE/GW/applications/gravity_waves/AMR/patch/ADERDGSolver.vtkhdf'
 # restart_from = '/work_fast/go78vuz/EXAHYPE/mario_new_limiting/applications/gravity_waves/restart_26_08/patch/ADERDGSolver.vtkhdf'
-# restart_step = -417
-# restart_time = 2000
+restart_from = file
+restart_step = 30
+restart_time = 3000
 
 # A run of a build without HDF5 support plots VTU instead, and its .pvd
 # collection restarts just as well: the step is the entry in that collection,
 # and restart_time the time stamp the sampler logs for it.
-restart_from = 'Thunderstorm_Euler_lim_AMR2.output/patch/ADERDGSolver.pvd'
-restart_step = -72
-restart_time = 3000
+# restart_from = 'Thunderstorm_Euler_lim_AMR2.output/patch/ADERDGSolver.pvd'
+# restart_step = -72
+# restart_time = 3000
 
-restart_from = None
+#restart_from = None
 
 if restart_from is None:
     initial_conditions = stratified_atmosphere.initial_conditions()
