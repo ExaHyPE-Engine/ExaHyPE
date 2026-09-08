@@ -1,8 +1,5 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-
-# A moving refinement shell transfers a constant state across resolution
-# changes and coarsens behind it.
 import argparse
 
 import exahype2
@@ -46,7 +43,6 @@ project = exahype2.Project(
     max_grid_levels=args.max_grid_levels,
 )
 
-# A constant acoustic state isolates mesh-transfer errors from physical evolution.
 initial_conditions = """
   Q[Shortcuts::p] = 1.0;
   for (int d = 0; d < DIMENSIONS; d++) {
@@ -54,8 +50,6 @@ initial_conditions = """
   }
 """
 
-# Prescribing the free stream keeps boundary dissipation active and avoids the
-# unstable mode produced by copied exterior states.
 boundary_conditions = """
   for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
     Qoutside[i] = 0.0;
@@ -63,8 +57,6 @@ boundary_conditions = """
   Qoutside[Shortcuts::p] = 1.0;
 """
 
-# Testing the shell against each cell's extent keeps the moving ring closed on
-# every grid level.
 refinement_criterion = """
   const tarch::la::Vector<DIMENSIONS, double> centre(5.0);
 #if DIMENSIONS == 3
@@ -74,9 +66,6 @@ refinement_criterion = """
 #endif
 
   const double     startRadius = ::runner::RuntimeParameters::getInstance().getMaxAdmissiblePatchSize(DomainSize);
-  // The growth rate carries the shell from the coarsest patch out to MaxRadius well inside
-  // the default end time, so a default run refines outwards, coarsens behind the band and
-  // ends with the band resting on the domain wall.
   constexpr double GrowthRate  = 1.5;
   constexpr double BandWidth   = 0.05;
 
@@ -121,6 +110,18 @@ solver.set_implementation(
 )
 
 solver.add_kernel_optimisations(is_linear=True)
+
+exahype2.solvers.aderdg.ErrorMeasurement(
+    solver,
+    error_measurement_implementation="""
+  solution[Shortcuts::p] = 1.0;
+  for (int d = 0; d < DIMENSIONS; d++) {
+    solution[Shortcuts::u + d] = 0.0;
+  }
+""",
+    output_file_name="Error",
+    time_delta_between_snapshots=args.end_time / 10.0,
+)
 
 project.add_solver(solver)
 project.generate_and_build()

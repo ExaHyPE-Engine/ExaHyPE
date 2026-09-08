@@ -3,40 +3,45 @@
 #include "Launch.h"
 
 #include "peano4/Init.h"
-#include "runner/LoadBalancer.h"
+#include "peano4/topology/TopologyManager.h"
+#include "runner/GlobalStatistics.h"
 #include "runner/RuntimeParameters.h"
+#include "tarch/FloatingPointExceptions.h"
 #include "tarch/Init.h"
 #include "tarch/Termination.h"
 #include "tarch/instrumentation/Log.h"
+#include "tarch/mpi/AbstractCommunicationManager.h"
 #include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/plotter/FileWriter.h"
 #include "tarch/reader/JSONReader.h"
 
-static bool helpRequested(int argc, char* const* argv) {
-  for (int index = 1; index < argc; ++index) {
-    const auto argument = std::string(argv[index]);
-    if (argument == "--help" or argument == "-h") {
-      return true;
+namespace {
+  bool helpRequested(const int argc, char* const* const argv) {
+    for (int index = 1; index < argc; ++index) {
+      const auto argument = std::string(argv[index]);
+      if (argument == "--help" or argument == "-h") {
+        return true;
+      }
     }
+    return false;
   }
-  return false;
-}
+} // namespace
 
 /**
- * Parses merged runtime configuration, initialises tarch, Peano, the load
- * balancer, and the data repository, runs the engine, and shuts them down.
+ * Parses the merged runtime configuration, initialises tarch and Peano, runs
+ * the engine, and shuts them down.
  */
 int runner::launch(
   const tarch::la::Vector<DIMENSIONS, double>& domainOffset,
   const tarch::la::Vector<DIMENSIONS, double>& domainSize,
   const std::bitset<DIMENSIONS>&               periodicBC,
-  RepositoryCallbacks                          callbacks,
-  std::vector<Step>                            steps,
+  runner::RepositoryCallbacks                  callbacks,
+  std::vector<runner::Step>                    steps,
   int&                                         argc,
   char**                                       argv
 ) {
-  auto& parameters = RuntimeParameters::getInstance();
+  auto& parameters = runner::RuntimeParameters::getInstance();
 
   if (helpRequested(argc, argv)) {
     parameters.printUsage(std::filesystem::path(argc > 0 ? argv[0] : "").filename().string());
@@ -65,8 +70,8 @@ int runner::launch(
         joined += joined.empty() ? "" : ", ";
         joined += key;
       }
-      throw std::runtime_error(
-        "Unrecognised key(s) in configuration file \"" + parameters.getConfigFilePath() + "\": " + joined
+      tarch::terminateWithError(
+        "Unrecognised keys in configuration file \"" + parameters.getConfigFilePath() + "\": " + joined
         + ". Run with --help to list the available runtime options."
       );
     }
@@ -81,8 +86,8 @@ int runner::launch(
       }
       unrecognised += argv[index];
     }
-    throw std::runtime_error(
-      "Unrecognised command-line argument(s): " + unrecognised
+    tarch::terminateWithError(
+      "Unrecognised command-line arguments: " + unrecognised
       + ". Run with --help to list the available runtime options."
     );
   }
@@ -98,12 +103,19 @@ int runner::launch(
   tarch::init(
     &argc,
     &argv,
-    {parameters.getMPITimeoutWarning(), parameters.getMPIDeadlockTimeout(), parameters.isMPIRequestTrackingEnabled()}
+    {parameters.getMPITimeoutWarning(),
+     parameters.getMPIDeadlockTimeout(),
+     parameters.isMPIRequestTrackingEnabled(),
+     parameters.isCommunicationThreadEnabled()}
   );
+
+  std::optional<tarch::FloatingPointExceptions::ScopedTrap> launchTrap(std::in_place, __FILE__, __LINE__);
 
   tarch::instrumentation::Log::setLogMachineName(tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1);
 
   tarch::plotter::FileWriter::setDoublePrecisionOutput(parameters.getPlotDoublePrecision());
+
+  peano4::topology::TopologyManager::getInstance().enableDynamicLoadBalancing(not parameters.isLoadBalancingDisabled());
 
   const auto& outputDirectory = parameters.getOutputPath();
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
@@ -136,34 +148,44 @@ int runner::launch(
 
   peano4::init(domainOffset, domainSize, periodicBC);
 
-  initLoadBalancer();
+  // Every rank schedules the same plan, so the first grid sweep builds the
+  // complete base grid with each rank owning its contiguous curve segment.
+  peano4::topology::TopologyManager::getInstance().scheduleRegularGridConstruction(parameters.getGridLevels());
 
   if (callbacks.startSimulation) {
     callbacks.startSimulation();
   }
 
-  Engine engine(domainOffset, domainSize, periodicBC, callbacks, std::move(steps));
+  runner::Engine engine(domainOffset, domainSize, periodicBC, callbacks, std::move(steps));
 
   int returnCode = EXIT_SUCCESS;
-#if defined(PEANO_WITH_OPENMP)
 #pragma omp parallel
   {
+    // Every worker arms its own trap: The traversal tasks run on all threads, and the
+    // floating-point environment is a per-thread state.
+    const tarch::FloatingPointExceptions::ScopedTrap threadTrap(__FILE__, __LINE__);
+#pragma omp barrier
 #pragma omp master
     {
-#endif
       returnCode = engine.run();
-#if defined(PEANO_WITH_OPENMP)
     }
+#pragma omp barrier
   }
-#endif
+
+  // The last sweep's boundary messages and periodic pipeline may still be in
+  // flight, and they reference container buffers, so they complete before any
+  // teardown below frees those buffers.
+  tarch::mpi::AbstractCommunicationManager::getInstance().finishPendingWork();
+  tarch::mpi::AbstractCommunicationManager::getInstance().stop();
 
   if (callbacks.finishSimulation) {
     callbacks.finishSimulation();
   }
-  loadBalancer().shutdown();
   callbacks.shutdownDataRepository();
 
+  runner::shutdownGlobalStatistics();
   peano4::shutdown();
+  launchTrap.reset();
   tarch::shutdown();
   return returnCode;
 }

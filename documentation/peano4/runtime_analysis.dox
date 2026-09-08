@@ -4,18 +4,47 @@
 
 \tableofcontents
 
-Peano applications can emit runtime and load-balancing statistics through their
-standard logging output. These records are the basis for postprocessing scripts
-that inspect tree sizes, remote-cell counts, rank balance, and time spent in
-different phases of a run.
+Peano applications report global grid, memory, rank-partition, and subtree-task
+statistics after program steps. The Grid Snapshot presents the latest
+synchronised view across all ranks.
 
-For load-balancing analysis, dump the program output into a file and inspect the
-Grid Snapshot table. Global Efficiency reports the global leaf-cell balance and
-the minimum and maximum leaf counts per tree. Global Overhead reports the global
-outer-cell ratio and the minimum and maximum outer-cell counts per tree. Together,
-these rows reveal underfilled and uneven trees.
+# Grid
 
-For ExaHyPE-specific timing and scaling scripts, see
-@ref page_exahype_runtime_analysis.
+The grid section reports leaf and refined cells, persistent and hanging
+vertices, and the minimum and maximum grid levels. These counts describe the
+global logical grid. The replicated structural cells that reach the local
+subtrees are reported separately as decomposition overhead.
+
+# Inter-rank decomposition
+
+`MPI Load Balance` compares the average owned leaf count with the most loaded
+rank and prints the minimum and maximum leaves per rank. `Spine Replication`
+reports replicated structural cells relative to owned cells and gives the
+minimum and maximum replicated counts per rank.
+
+A low balance value identifies unequal geometric ownership. High spine
+replication identifies a small local workload relative to the replicated
+coarse structure and rank interfaces.
+
+# Intra-rank decomposition
+
+`Subtree Tasks` gives the global task count and its range per rank. `Cells per
+Task` gives the smallest, largest, and mean number of cells. `Thread Ceiling`
+estimates the best utilisation permitted by the largest task, while the phase
+report line `Utilisation` measures the task time accumulated during the latest
+sweep against its wall-clock task window.
+
+A high ceiling with low measured utilisation points to scheduling,
+dependencies, communication waits, memory bandwidth, or serial work outside
+the subtree tasks. A low ceiling identifies insufficient or uneven task
+decomposition.
+
+# Regridding
+
+The dynamic-AMR report records the leaf count, level range, MPI load balance,
+subtree tasks, and thread ceiling before and after a drain. It also reports
+the number and duration of the sweeps needed to settle the topology.
+
+@ref page_peano_performance_optimisation provides tuning guidance.
 
 */

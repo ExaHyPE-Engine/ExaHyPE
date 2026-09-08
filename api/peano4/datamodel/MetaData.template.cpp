@@ -15,13 +15,8 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString() const {
   std::ostringstream out;
   out << std::boolalpha;
   out << "(";
-  bool printSeparator = false;
 {% for attribute in ATTRIBUTE_TO_STRING_PAIRS %}
-  if (printSeparator) {
-    out << ",";
-  }
-  out << "{{attribute.name}}=" << {{attribute.expression}};
-  printSeparator = true;
+  out << "{% if not loop.first %},{% endif %}{{attribute.name}}=" << {{attribute.expression}};
 {% endfor %}
   out << ")";
   return out.str();
@@ -32,7 +27,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
   [[maybe_unused]] ::peano4::stacks::SendReceiveContext           context,
   [[maybe_unused]] const {{CLASSNAME}}&                           neighbour,
   [[maybe_unused]] const ::peano4::datamanagement::VertexMarker&  marker,
-  [[maybe_unused]] int                                            spacetreeId
+  [[maybe_unused]] int                                            treeId
 ) {
   {{MERGE_METHOD_DEFINITION}}
 }
@@ -43,7 +38,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
   [[maybe_unused]] ::peano4::stacks::SendReceiveContext         context,
   [[maybe_unused]] const {{CLASSNAME}}&                         neighbour,
   [[maybe_unused]] const ::peano4::datamanagement::FaceMarker&  marker,
-  [[maybe_unused]] int                                          spacetreeId
+  [[maybe_unused]] int                                          treeId
 ) {
   {{MERGE_METHOD_DEFINITION}}
 }
@@ -54,7 +49,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
   [[maybe_unused]] ::peano4::stacks::SendReceiveContext         context,
   [[maybe_unused]] const {{CLASSNAME}}&                         neighbour,
   [[maybe_unused]] const ::peano4::datamanagement::CellMarker&  marker,
-  [[maybe_unused]] int                                          spacetreeId
+  [[maybe_unused]] int                                          treeId
 ) {
   {{MERGE_METHOD_DEFINITION}}
 }

@@ -1,18 +1,13 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-
-
 import jinja2
-import peano4.toolbox.particles
+import peano4.particles
 
 
-class InsertParticlesByCoordinates(
-    peano4.toolbox.particles.InsertParticlesByCoordinates
-):
+class InsertParticlesByCoordinates(peano4.particles.InsertParticlesByCoordinates):
     """
-    Insert particles by explicit coordinates and assign spacetree-local IDs.
-
-    Adds spacetree ID and local particle number to each inserted particle.
+    Adds the spacetree number and a tree-local particle number to every inserted
+    particle.
     """
 
     def __init__(
@@ -21,33 +16,32 @@ class InsertParticlesByCoordinates(
         coordinates,
         additional_includes="",
     ):
-        # Set dictionary for template rendering
-        self.d = {
+        dictionary = {
             "PARTICLE": particle_set.particle_model.name,
         }
 
-        # Call superclass constructor with correct templated code
-        super(InsertParticlesByCoordinates, self).__init__(
+        super().__init__(
             particle_set=particle_set,
             coordinates=coordinates,
             initialisation_call=jinja2.Template(
                 """
-      particle->setNumber(0,_spacetreeId);
-      particle->setNumber(1,_particleNumberOnThisTree);
+      particle->setNumber(0, _treeId);
+      particle->setNumber(1, _particleNumberOnThisTree);
       particle->setMoveState(globaldata::{{PARTICLE}}::MoveState::NotMovedYet);
 
       _particleNumberOnThisTree++;
 
       logInfo("Insert particle at " << particle->getX());
       """
-            ).render(**self.d),
+            ).render(**dictionary),
             additional_includes=additional_includes
             + jinja2.Template(
                 """
 #include "Constants.h"
 #include "globaldata/{{PARTICLE}}.h"
+#include "tarch/instrumentation/Info.h"
 """
-            ).render(**self.d),
+            ).render(**dictionary),
         )
 
     def get_action_set_name(self):
@@ -55,7 +49,7 @@ class InsertParticlesByCoordinates(
 
     def get_constructor_body(self):
         return (
-            super(InsertParticlesByCoordinates, self).get_constructor_body()
+            super().get_constructor_body()
             + """
   _particleNumberOnThisTree = 0;
 """
@@ -63,8 +57,8 @@ class InsertParticlesByCoordinates(
 
     def get_attributes(self):
         return (
-            super(InsertParticlesByCoordinates, self).get_attributes()
+            super().get_attributes()
             + """
-  int _particleNumberOnThisTree;
+  int _particleNumberOnThisTree{0};
 """
         )

@@ -1,29 +1,42 @@
-#pragma once
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 
-#include "tarch/la/VectorOperations.h"
-
-template <int... Indices, typename Particle>
-void exahype2::fv::particles::updateParticleState(
+/**
+ * Interpolates consecutive solver values into selected particle attributes,
+ * evaluates the configured forces, advances the particle, and reflects it with
+ * a damping factor of 0.8 at non-periodic domain boundaries.
+ *
+ * @tparam ParticleAttributeIndices Destination particle attributes for
+ * consecutive solver values.
+ */
+template <int... ParticleAttributeIndices, typename Particle>
+INLINE_METHOD void exahype2::fv::particles::updateParticleState(
   Particle&                                 particle,
-  const peano4::datamanagement::CellMarker& marker,
-  const double* __restrict__ Q
+  const peano4::datamanagement::CellMarker& cellMarker,
+  const double* NOALIAS const               cellValues,
+  const double                              timeStepSize,
+  const int                                 integrationMethod
 ) {
-  // Reset acceleration components to zero
   exahype2::fv::particles::utils::resetAcceleration(particle);
-
-  // Interpolate fields from the grid into the particle attributes
-  exahype2::fv::particles::interpolation::applyInterpolation<Indices...>(particle, particle.getX(), marker, Q);
-
-  // Apply external or user-defined forces (e.g. gravity)
+  exahype2::fv::particles::interpolation::applyInterpolation<ParticleAttributeIndices...>(
+    particle,
+    particle.getX(),
+    cellMarker,
+    cellValues
+  );
   exahype2::fv::particles::forces::applyForces(particle, particle.getX());
-  // Compute new position based on integration scheme
-  tarch::la::Vector<DIMENSIONS, double>
-    newPosition = exahype2::fv::particles::integration::applyIntegration<Indices...>(particle, marker, Q);
-  // Apply boundary handling (e.g. reflective domain)
+
+  auto newPosition = exahype2::fv::particles::integration::applyIntegration<ParticleAttributeIndices...>(
+    particle,
+    cellMarker,
+    cellValues,
+    timeStepSize,
+    integrationMethod
+  );
   if (tarch::la::min(exahype2::fv::particles::utils::isPeriodic) == 0) {
-    exahype2::fv::particles::boundary::reflectIfOutOfDomain(particle, newPosition, 0.8);
+    constexpr double BoundaryDamping = 0.8;
+    exahype2::fv::particles::boundary::reflectIfOutOfDomain(particle, newPosition, BoundaryDamping);
   }
 
-  // Update particle position
   particle.setX(newPosition);
 }

@@ -5,179 +5,12 @@ import math
 
 import exahype2
 
-LENGTH = 300e3
-PHYSICAL_OFFSET = [-39870.0, 0.0]
-PHYSICAL_SIZE = [379700.0, LENGTH / 3.0]
-SQUARE_SIDE = max(PHYSICAL_SIZE)
 
-DOMAIN_OFFSET = [
-    PHYSICAL_OFFSET[0] - 0.5 * (SQUARE_SIDE - PHYSICAL_SIZE[0]),
-    PHYSICAL_OFFSET[1] - 0.5 * (SQUARE_SIDE - PHYSICAL_SIZE[1]),
-]
-DOMAIN_SIZE = [SQUARE_SIDE, SQUARE_SIDE]
-
-
-def manning_coefficient(depth: float, roughness_length: float = 0.003) -> float:
+def manning_coefficient(depth, roughness_length=0.003):
+    """Manning coefficient of a channel of the given depth, after Chezy."""
     if depth <= 0.0:
         raise ValueError("Water depth must be positive.")
-
-    chezy = 18.0 * math.log10(0.37 * depth / roughness_length)
-    return depth ** (1.0 / 6.0) / chezy
-
-
-DEPTH = 50
-BATHYMETRY_FILE = "bathymetry/test_R1_dx100_H50_b.grd"
-
-initial_conditions = f"""
-  static tarch::reader::NetCDFFieldSampler fieldSampler(
-    {{
-      {{"bathymetry", RuntimeParameters::getBathymetryFile(), "z", "x", "y"}}
-    }},
-    {{PhysicalDomainSizeX, PhysicalDomainSizeY}},
-    {{PhysicalDomainOffsetX, PhysicalDomainOffsetY}}
-  );
-
-  const double sampleX =
-    x(0) < PhysicalDomainOffsetX ? PhysicalDomainOffsetX :
-    (x(0) > PhysicalDomainOffsetX + PhysicalDomainSizeX ? PhysicalDomainOffsetX + PhysicalDomainSizeX : x(0));
-  const double sampleY =
-    x(1) < PhysicalDomainOffsetY ? PhysicalDomainOffsetY :
-    (x(1) > PhysicalDomainOffsetY + PhysicalDomainSizeY ? PhysicalDomainOffsetY + PhysicalDomainSizeY : x(1));
-
-  const double bathymetry = fieldSampler.sample("bathymetry", {{sampleX, sampleY}});
-  Q[Shortcuts::h]  = -std::min(bathymetry, 0.0);
-  Q[Shortcuts::hu] = 0.0;
-  Q[Shortcuts::hv] = 0.0;
-  Q[Shortcuts::b]  = bathymetry;
-"""
-
-boundary_conditions = """
-  if (normal == 0) {
-    Qoutside[Shortcuts::h]  = Qinside[Shortcuts::h];
-    Qoutside[Shortcuts::hu] = Qinside[Shortcuts::hu];
-    Qoutside[Shortcuts::hv] = Qinside[Shortcuts::hv];
-    Qoutside[Shortcuts::b]  = Qinside[Shortcuts::b];
-  } else {
-    Qoutside[Shortcuts::h]  = Qinside[Shortcuts::h];
-    Qoutside[Shortcuts::hu] = Qinside[Shortcuts::hu];
-    Qoutside[Shortcuts::hv] = -Qinside[Shortcuts::hv];
-    Qoutside[Shortcuts::b]  = Qinside[Shortcuts::b];
-  }
-"""
-
-source_term = """
-  for (int n = 0; n < NumberOfUnknowns; ++n) {
-    S[n] = 0.0;
-  }
-
-  if (Q[Shortcuts::h] <= hThreshold) {
-    return;
-  }
-
-  const double xCoord = x(0);
-  const double yCoord = x(1);
-  const double coriolis =
-    ::applications::exahype2::exaskred::meteotsunami::coriolisForce::constant(corriolis_param);
-  const double friction =
-    ::applications::exahype2::exaskred::meteotsunami::bottomFriction::manningFriction(
-      Q[Shortcuts::h],
-      Q[Shortcuts::hu],
-      Q[Shortcuts::hv],
-      g,
-      manning_param
-    );
-
-  S[Shortcuts::hu] = coriolis * Q[Shortcuts::hv] + friction * Q[Shortcuts::hu];
-  S[Shortcuts::hv] = -coriolis * Q[Shortcuts::hu] + friction * Q[Shortcuts::hv];
-  S[Shortcuts::hu] += -Q[Shortcuts::h]
-    * ::applications::exahype2::exaskred::meteotsunami::numerics::partialX(
-      ::applications::exahype2::exaskred::meteotsunami::r1::atmosphericPressure,
-      xCoord,
-      yCoord,
-      t
-    ) / water_density;
-  S[Shortcuts::hv] += -Q[Shortcuts::h]
-    * ::applications::exahype2::exaskred::meteotsunami::numerics::partialY(
-      ::applications::exahype2::exaskred::meteotsunami::r1::atmosphericPressure,
-      xCoord,
-      yCoord,
-      t
-    ) / water_density;
-"""
-
-flux = """
-  ::applications::exahype2::exaskred::meteotsunami::flux<Shortcuts, NumberOfUnknowns>(
-    Q, x, h, t, dt, normal, F
-  );
-"""
-
-max_eigenvalue = """
-  return ::applications::exahype2::exaskred::meteotsunami::maxEigenvalue<Shortcuts>(
-    Q, x, h, t, dt, normal
-  );
-"""
-
-nonconservative_product = """
-  ::applications::exahype2::exaskred::meteotsunami::nonconservativeProduct<Shortcuts, NumberOfUnknowns>(
-    Q, deltaQ, x, h, t, dt, normal, BTimesDeltaQ
-  );
-"""
-
-aderdg_riemann_solver = """
-  ::applications::exahype2::exaskred::riemann::wellBalancedRusanov<Shortcuts, NumberOfUnknowns, Order>(
-    QL,
-    QR,
-    x,
-    h,
-    t,
-    dt,
-    direction,
-    FL,
-    FR
-  );
-"""
-
-fv_riemann_solver = """
-  return ::applications::exahype2::exaskred::riemann::fWave<Shortcuts>(
-    QL,
-    QR,
-    x,
-    h,
-    t,
-    dt,
-    normal,
-    FL,
-    FR
-  );
-"""
-
-is_physically_admissible = """
-  if (x(0) < PhysicalDomainOffsetX - h[0] || x(0) > PhysicalDomainOffsetX + PhysicalDomainSizeX + h[0]) {
-    return false;
-  }
-  if (x(1) < PhysicalDomainOffsetY - h[1] || x(1) > PhysicalDomainOffsetY + PhysicalDomainSizeY + h[1]) {
-    return false;
-  }
-
-  if (std::abs(x[0] - DomainOffset[0]) < h[0] || std::abs(x[0] - DomainOffset[0] - DomainSize[0]) < h[0]) {
-    return false;
-  }
-  if (std::abs(x[1] - DomainOffset[1]) < h[1] || std::abs(x[1] - DomainOffset[1] - DomainSize[1]) < h[1]) {
-    return false;
-  }
-
-  const double targetMinX = PhysicalDomainOffsetX + 0.15 * PhysicalDomainSizeX;
-  const double targetMaxX = PhysicalDomainOffsetX + 0.85 * PhysicalDomainSizeX;
-
-  if (x(0) > targetMaxX + h[0]) {
-    return false;
-  }
-  if (x(0) < targetMinX - h[0]) {
-    return false;
-  }
-
-  return true;
-"""
+    return depth ** (1.0 / 6.0) / (18.0 * math.log10(0.37 * depth / roughness_length))
 
 
 def parse_arguments():
@@ -200,30 +33,19 @@ def parse_arguments():
 
 args = parse_arguments()
 
-constants = {
-    "g": [9.81, "double"],
-    "hThreshold": [1e-5, "double"],
-    "PhysicalDomainOffsetX": [PHYSICAL_OFFSET[0], "double"],
-    "PhysicalDomainOffsetY": [PHYSICAL_OFFSET[1], "double"],
-    "PhysicalDomainSizeX": [PHYSICAL_SIZE[0], "double"],
-    "PhysicalDomainSizeY": [PHYSICAL_SIZE[1], "double"],
-    "water_density": [1000.0, "double"],
-    "manning_param": [manning_coefficient(DEPTH), "double"],
-    "corriolis_param": [9.35e-5, "double"],
-    "pressure": [100.0, "double"],
-    "speed_pressure": [22.15, "double"],
-    "period_pressure": [1800.0, "double"],
-    "background_pressure": [101300.0, "double"],
-}
-
-dg_order = args.degrees_of_freedom - 1
+channel_offset = [-39870.0, 0.0]
+channel_size = [379700.0, 100e3]
+mesh_side = max(channel_size)
 
 project = exahype2.Project(
     namespace=["applications", "exahype2", "exaskred"],
     project_name="MeteotsunamiR1",
     dimensions=2,
-    offset=DOMAIN_OFFSET,
-    size=DOMAIN_SIZE,
+    offset=[
+        channel_offset[0] - 0.5 * (mesh_side - channel_size[0]),
+        channel_offset[1] - 0.5 * (mesh_side - channel_size[1]),
+    ],
+    size=[mesh_side, mesh_side],
     periodic_bc=[False, False],
     executable="ExaSkred-Meteotsunami",
     min_end_time=args.end_time,
@@ -236,75 +58,55 @@ if project.dimensions != 2:
 
 aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     name="ADERDGSolver",
-    order=dg_order,
-    unknowns={"h": 1, "hu": 1, "hv": 1, "b": 1},
+    order=max(1, args.degrees_of_freedom - 1),
+    unknowns={"h": 1, "hu": project.dimensions, "b": 1},
     auxiliary_variables=0,
-    time_step_relaxation=0.9,
+    time_step_relaxation=0.6,
 )
 aderdg_solver.set_implementation(
-    initial_conditions=initial_conditions,
-    boundary_conditions=boundary_conditions,
-    flux=flux,
-    ncp=nonconservative_product,
-    max_eigenvalue=max_eigenvalue,
-    riemann_solver=aderdg_riemann_solver,
-    source_term=source_term,
+    initial_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
+    boundary_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
+    refinement_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation,
+    flux=exahype2.solvers.PDETerms.User_Defined_Implementation,
+    max_eigenvalue=exahype2.solvers.PDETerms.User_Defined_Implementation,
+    ncp=exahype2.solvers.PDETerms.User_Defined_Implementation,
+    source_term=exahype2.solvers.PDETerms.User_Defined_Implementation,
+    riemann_solver=exahype2.solvers.PDETerms.User_Defined_Implementation,
 )
-aderdg_solver.add_user_solver_includes(
-    """
-#include "../Flux.h"
-#include "../NonconservativeProduct.h"
-#include "../../tsunami/riemann/WellBalancedRusanov.h"
-#include "../MathDerivatives.h"
-#include "../MeteotsunamiLaws.h"
-#include "AtmosphericPressure.h"
-#include "tarch/reader/NetCDFFieldSampler.h"
-"""
+aderdg_solver.add_subcell_limiter(
+    limiter_solver=exahype2.solvers.fv.godunov.subcell_scheme(
+        riemann_solver=exahype2.solvers.PDETerms.User_Defined_Implementation
+    ),
+    number_of_dmp_observables=4,
+    dmp_relaxation_parameter=1.0e-2,
+    dmp_differences_scaling=1.0e-3,
+    dmp_observables=exahype2.solvers.PDETerms.User_Defined_Implementation,
+    physical_admissibility_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation,
 )
-
-fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
-    name="FVSolver",
-    patch_size=2 * dg_order + 1,
-    unknowns={"h": 1, "hu": 1, "hv": 1},
-    auxiliary_variables={"b": 1},
-    time_step_relaxation=0.9,
-)
-fv_solver.set_implementation(
-    initial_conditions=initial_conditions,
-    boundary_conditions=boundary_conditions,
-    flux=flux,
-    ncp=nonconservative_product,
-    max_eigenvalue=max_eigenvalue,
-    riemann_solver=fv_riemann_solver,
-    source_term=source_term,
-)
-fv_solver.add_user_solver_includes(
-    """
-#include "../Flux.h"
-#include "../NonconservativeProduct.h"
-#include "../../tsunami/riemann/FWave.h"
-#include "../MathDerivatives.h"
-#include "../MeteotsunamiLaws.h"
-#include "AtmosphericPressure.h"
-#include "tarch/reader/NetCDFFieldSampler.h"
-"""
-)
-
-limiter_solver = exahype2.solvers.limiting.StaticLimiting(
-    name="LimiterSolver",
-    regular_solver=aderdg_solver,
-    limiting_solver=fv_solver,
-    physical_admissibility_criterion=is_physically_admissible,
-)
-
 project.add_solver(aderdg_solver)
-project.add_solver(fv_solver)
-project.add_solver(limiter_solver)
-project.add_runtime_parameter("bathymetryFile", "string", BATHYMETRY_FILE)
-for const_name, (const_val, const_type) in constants.items():
-    project.constants.export_constexpr_with_type(const_name, str(const_val), const_type)
 
-project.output.makefile.add_cpp_file("../MathDerivatives.cpp")
-project.output.makefile.add_cpp_file("../MeteotsunamiLaws.cpp")
-project.output.makefile.add_cpp_file("AtmosphericPressure.cpp")
+for name, kind, value in (
+    ("bathymetryFile", "string", "bathymetry/R1BathymetryDepth50m.nc"),
+    ("bathymetryOffset", ("double", 2), channel_offset),
+    ("bathymetrySize", ("double", 2), channel_size),
+    ("minimumWaterHeight", "double", 1.0),
+    ("coastalDepth", "double", 5.0),
+    ("waterDensity", "double", 1000.0),
+    ("manningCoefficient", "double", manning_coefficient(50.0)),
+    ("coriolisParameter", "double", 9.35e-5),
+    ("pressureAmplitude", "double", 100.0),
+    ("pressureSpeed", "double", 22.15),
+    ("pressurePeriod", "double", 1800.0),
+):
+    project.add_runtime_parameter(name, kind, value)
+
+project.constants.export_constexpr_with_type("g", str(9.81), "double")
+
+project.output.makefile.add_include_directory("../../../..")
+project.output.makefile.add_cpp_file("../../AugmentedState.cpp")
+project.output.makefile.add_cpp_file("../../Forcing.cpp")
+project.output.makefile.add_cpp_file("../../Limiting.cpp")
+project.output.makefile.add_cpp_file("../../ShallowWater.cpp")
+project.output.makefile.add_cpp_file("../../WellBalancedRusanov.cpp")
+project.output.makefile.add_cpp_file("ADERDGSolver.cpp")
 project.generate_and_build()

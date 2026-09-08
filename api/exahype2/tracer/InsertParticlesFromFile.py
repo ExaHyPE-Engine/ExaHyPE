@@ -12,10 +12,11 @@ class InsertParticlesFromFile(ActionSet):
         filename,
         scale_factor=1.0,
         save_initialpos=False,
-        initial_position_index=(1, 2),
+        initial_position_index=(1, 2, 3),
     ):
         """
         particle_set: ParticleSet
+            The tracer particles which are inserted
 
         filename: String
             Name of the sample point file
@@ -41,36 +42,33 @@ class InsertParticlesFromFile(ActionSet):
     __Template_TouchCellFirstTime = jinja2.Template(
         """
 if (not marker.willBeRefined()) {
-    tarch::multicore::Lock lock(_semaphore);
+    const std::scoped_lock lock(_mutex);
 
-    std::list< tarch::la::Vector<DIMENSIONS,double> > coords = _fileReader.getParticlesWithinVoxel(marker.getX(), marker.getH(), true);
-    std::list< tarch::la::Vector<DIMENSIONS,double> >::iterator p = coords.begin();
+    const std::list< tarch::la::Vector<DIMENSIONS,double> > coordinates = _fileReader.getParticlesWithinVoxel(marker.getX(), marker.getH(), true);
 
-    while (p != coords.end()) {
-        globaldata::{{PARTICLE}}* newParticle = new globaldata::{{PARTICLE}}();
+    for (const auto& position : coordinates) {
+        auto* const newParticle = new globaldata::{{PARTICLE}}();
 
-        newParticle->setNumber(0, _spacetreeId);
+        newParticle->setNumber(0, _treeId);
         newParticle->setNumber(1, _particleNumberOnThisTree);
         _particleNumberOnThisTree++;
 
-        toolbox::particles::init(*newParticle, *p, 0.0);
+        peano4::particles::init(*newParticle, position, 0.0);
 
 {% if SAVE_INITIALPOS %}
-        // Save initial position into particle data
-        newParticle->setData({{ INITIAL_POSITION_INDEX[0] }}, (*p)(0));
-        newParticle->setData({{ INITIAL_POSITION_INDEX[1] }}, (*p)(1));
+        newParticle->setData({{ INITIAL_POSITION_INDEX[0] }}, position(0));
+        newParticle->setData({{ INITIAL_POSITION_INDEX[1] }}, position(1));
 #if DIMENSIONS==3
-        newParticle->setData({{ INITIAL_POSITION_INDEX[2] }}, (*p)(2));
+        newParticle->setData({{ INITIAL_POSITION_INDEX[2] }}, position(2));
 #endif
 {% endif %}
 
-        toolbox::particles::insertParticleIntoCell(
+        peano4::particles::insertParticleIntoCell(
             marker,
             newParticle,
             fineGridVertices{{PARTICLES_CONTAINER}},
-            _spacetreeId
+            _treeId
         );
-        p++;
     }
 }
 """
@@ -78,9 +76,8 @@ if (not marker.willBeRefined()) {
 
     __Template_EndTraversal = jinja2.Template(
         """
-  //assertion(_particleNumberOnThisTree > 0);
   if (_particleNumberOnThisTree > 0) {
-    logInfo("Inserted " << _particleNumberOnThisTree << " particle(s) on tree " << _spacetreeId << " (boundary vertices might host redundant particle data)");
+    logInfo("Inserted " << _particleNumberOnThisTree << " particle(s) on tree " << _treeId << " (boundary vertices might host redundant particle data)");
   }
 """
     )
@@ -104,37 +101,37 @@ if (not marker.willBeRefined()) {
     def get_includes(self):
         return jinja2.Template(
             """
-#include "tarch/multicore/Lock.h"
-#include "tarch/multicore/multicore.h"
+#include "tarch/instrumentation/Info.h"
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
-#include "toolbox/particles/FileReader.h"
-#include "toolbox/particles/particles.h"
-#include "toolbox/particles/ParticleFactory.h"
+#include "peano4/particles/FileReader.h"
+#include "peano4/particles/particles.h"
+#include "peano4/particles/ParticleFactory.h"
 #include "exahype2/fv/particles/ParticleHelper.h"
 """
         ).render(**self.d)
 
     def get_static_initialisations(self, full_qualified_classname):
         return f"""
-tarch::multicore::BooleanSemaphore {full_qualified_classname}::_semaphore;
-toolbox::particles::FileReader {full_qualified_classname}::_fileReader;
+std::mutex {full_qualified_classname}::_mutex;
+peano4::particles::FileReader {full_qualified_classname}::_fileReader;
 """
 
     def get_constructor_body(self):
         return f"""
 _particleNumberOnThisTree = 0;
-_spacetreeId = treeNumber;
+_treeId = treeNumber;
 
-tarch::multicore::Lock lock(_semaphore);
-if (_fileReader.empty())
+const std::scoped_lock lock(_mutex);
+if (_fileReader.empty()) {{
     _fileReader.readDatFile("{self._filename}", {self._scale});
+}}
 """
 
     def get_attributes(self):
         return """
-static tarch::multicore::BooleanSemaphore _semaphore;
-int _particleNumberOnThisTree;
-int _spacetreeId;
-static toolbox::particles::FileReader _fileReader;
+static std::mutex _mutex;
+int _particleNumberOnThisTree{0};
+int _treeId{-1};
+static peano4::particles::FileReader _fileReader;
 """

@@ -3,24 +3,20 @@
 
 include_guard(GLOBAL)
 
-set(PEANO_RELEASE_DEFINITIONS -DPEANO_TRACE=0 -DPEANO_ASSERTIONS=0 -DPEANO_DEBUG=0 -DNDEBUG CACHE INTERNAL "" FORCE)
-set(PEANO_ASSERTS_DEFINITIONS -DPEANO_TRACE=0 -DPEANO_ASSERTIONS=1 -DPEANO_DEBUG=0          CACHE INTERNAL "" FORCE)
-set(PEANO_TRACE_DEFINITIONS   -DPEANO_TRACE=1 -DPEANO_ASSERTIONS=0 -DPEANO_DEBUG=0 -DNDEBUG CACHE INTERNAL "" FORCE)
-set(PEANO_DEBUG_DEFINITIONS   -DPEANO_TRACE=0 -DPEANO_ASSERTIONS=1 -DPEANO_DEBUG=1          CACHE INTERNAL "" FORCE)
+set(PEANO_RELEASE_DEFINITIONS -DPEANO_ASSERTIONS=0 -DPEANO_DEBUG=0 -DNDEBUG CACHE INTERNAL "" FORCE)
+set(PEANO_ASSERTS_DEFINITIONS -DPEANO_ASSERTIONS=1 -DPEANO_DEBUG=0          CACHE INTERNAL "" FORCE)
+set(PEANO_DEBUG_DEFINITIONS   -DPEANO_ASSERTIONS=1 -DPEANO_DEBUG=1          CACHE INTERNAL "" FORCE)
 
 set(PEANO_C_FLAGS_RELEASE       -O3 -fomit-frame-pointer    CACHE INTERNAL "")
 set(PEANO_C_FLAGS_ASSERTS       -g -O3                      CACHE INTERNAL "")
-set(PEANO_C_FLAGS_TRACE         -g -O3 -fomit-frame-pointer CACHE INTERNAL "")
 set(PEANO_C_FLAGS_DEBUG         -g -O0                      CACHE INTERNAL "")
 
 set(PEANO_CXX_FLAGS_RELEASE     -O3 -fomit-frame-pointer    CACHE INTERNAL "")
 set(PEANO_CXX_FLAGS_ASSERTS     -g -O3                      CACHE INTERNAL "")
-set(PEANO_CXX_FLAGS_TRACE       -g -O3 -fomit-frame-pointer CACHE INTERNAL "")
 set(PEANO_CXX_FLAGS_DEBUG       -g -O0                      CACHE INTERNAL "")
 
 set(PEANO_Fortran_FLAGS_RELEASE -O3                         CACHE INTERNAL "")
 set(PEANO_Fortran_FLAGS_ASSERTS -g -O3                      CACHE INTERNAL "")
-set(PEANO_Fortran_FLAGS_TRACE   -g -O3                      CACHE INTERNAL "")
 set(PEANO_Fortran_FLAGS_DEBUG   -g -O0                      CACHE INTERNAL "")
 
 set(PEANO_EXTRA_C_FLAGS       "" CACHE STRING "Extra C flags (semicolon-separated)")
@@ -57,42 +53,37 @@ function(peano_apply_flags)
     -Wextra
   )
 
-  # nvcc is split: -Xcompiler forwards the host warnings to its host compiler (assumed
-  # GCC/Clang; an NVHPC host would want PEANO_NVHPC_WARNINGS), but that reaches only the host
-  # half of a .cu. The device (kernel) code is compiled by nvcc's own front-end and ptxas,
-  # which -Xcompiler does not touch, so it needs nvcc's native device warnings and ptxas
-  # spill warnings.
+  # CUDA routes host warnings through -Xcompiler because they do not reach nvcc or ptxas device
+  # compilation. An NVHPC host requires PEANO_NVHPC_WARNINGS.
   set(PEANO_CUDA_WARNINGS "")
   foreach(_peano_warning ${PEANO_CXX_WARNINGS})
     list(APPEND PEANO_CUDA_WARNINGS "-Xcompiler=${_peano_warning}")
   endforeach()
 
   list(APPEND PEANO_CUDA_WARNINGS
-    -Wreorder                          # nvcc-native device diagnostics
+    -Wreorder                          # Diagnose device member initialisation order.
     -Wdefault-stream-launch
     -Wext-lambda-captures-this
-    -Xptxas=--warn-on-spills           # ptxas: warn on register spills
+    -Xptxas=--warn-on-spills           # Diagnose device register spills.
   )
 
   target_compile_options(PeanoOptions INTERFACE
-    # NVHPC / PGI front-ends.
+    # NVHPC and PGI use a smaller compatible warning set.
     $<$<COMPILE_LANG_AND_ID:C,NVHPC,PGI>:${PEANO_NVHPC_WARNINGS}>
     $<$<COMPILE_LANG_AND_ID:CXX,NVHPC,PGI>:${PEANO_NVHPC_WARNINGS}>
-    # Every other (GCC / Clang / Intel) C or C++ front-end.
+    # Other C and C++ front-ends use the full warning set.
     $<$<AND:$<COMPILE_LANGUAGE:C>,$<NOT:$<COMPILE_LANG_AND_ID:C,NVHPC,PGI>>>:${PEANO_C_WARNINGS}>
     $<$<AND:$<COMPILE_LANGUAGE:CXX>,$<NOT:$<COMPILE_LANG_AND_ID:CXX,NVHPC,PGI>>>:${PEANO_CXX_WARNINGS}>
-    # GPU host+device code: HIP (clang) directly, CUDA via nvcc's -Xcompiler + native diagnostics.
+    # HIP accepts the warning set directly, while CUDA uses the routed set above.
     $<$<COMPILE_LANGUAGE:HIP>:${PEANO_CXX_WARNINGS}>
     $<$<COMPILE_LANGUAGE:CUDA>:${PEANO_CUDA_WARNINGS}>
-    # NVHPC needs IEEE-754 arithmetic; applied to whichever language it compiles, Fortran included.
+    # NVHPC requires explicit IEEE-754 semantics in every supported language.
     $<$<COMPILE_LANG_AND_ID:C,NVHPC,PGI>:-Kieee>
     $<$<COMPILE_LANG_AND_ID:CXX,NVHPC,PGI>:-Kieee>
     $<$<COMPILE_LANG_AND_ID:Fortran,NVHPC,PGI>:-Kieee>
-    # Intel's LLVM front-end defaults to value-unsafe fast maths, which breaks the exact
-    # grid-event arithmetic and the bitwise symmetry of the interpolation and restriction
-    # kernels; precise restores value-safe IEEE semantics, and the explicit contraction
-    # flag pins fused multiply-adds to single statements whatever the model maps it to.
-    # FENV_ACCESS also requires precise semantics.
+    # IntelLLVM precise semantics preserve exact grid arithmetic and the symmetry of
+    # interpolation and restriction. Explicit contraction confines fused operations to
+    # individual expressions and supports FENV_ACCESS.
     $<$<COMPILE_LANG_AND_ID:C,IntelLLVM>:-ffp-model=precise>
     $<$<COMPILE_LANG_AND_ID:C,IntelLLVM>:-ffp-contract=on>
     $<$<COMPILE_LANG_AND_ID:CXX,IntelLLVM>:-ffp-model=precise>
@@ -125,20 +116,33 @@ function(peano_apply_flags)
     else()
       message(FATAL_ERROR "Invalid PEANO_WITH_SANITIZER='${PEANO_WITH_SANITIZER}'. Expected none, address, undefined, address+undefined or thread.")
     endif()
-    # Frame pointers and line tables keep the sanitizer stack traces readable in
-    # the optimised build types, which otherwise drop both.
+    # Frame pointers and line tables retain source locations in optimised sanitizer reports.
     set(PEANO_SANITIZER_FLAGS ${_peano_sanitize_flag} -g -fno-omit-frame-pointer)
     target_compile_options(PeanoOptions INTERFACE
       $<$<COMPILE_LANGUAGE:C>:${PEANO_SANITIZER_FLAGS}>
       $<$<COMPILE_LANGUAGE:CXX>:${PEANO_SANITIZER_FLAGS}>
     )
     target_link_options(PeanoOptions INTERFACE ${_peano_sanitize_flag})
-    # libstdc++ bounds and precondition checks catch container misuse the
-    # sanitizer cannot see.
+    # libstdc++ assertions detect library precondition violations outside sanitizer coverage.
     target_compile_definitions(PeanoOptions INTERFACE _GLIBCXX_ASSERTIONS)
   endif()
 
   if(PEANO_WITH_FPE)
     target_compile_definitions(PeanoOptions INTERFACE PEANO_WITH_FPE)
+    # Frame pointers and debug information preserve fault locations in fatal reports.
+    # Strict exception semantics keep a compiler from evaluating operations the source
+    # does not reach, whose exceptions a trap would otherwise report.
+    target_compile_options(PeanoOptions INTERFACE
+      $<$<COMPILE_LANG_AND_ID:C,GNU>:-ftrapping-math>
+      $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-ftrapping-math>
+      $<$<COMPILE_LANG_AND_ID:C,Clang,AppleClang,IntelLLVM>:-ffp-exception-behavior=strict>
+      $<$<COMPILE_LANG_AND_ID:CXX,Clang,AppleClang,IntelLLVM>:-ffp-exception-behavior=strict>
+      $<$<COMPILE_LANG_AND_ID:C,NVHPC,PGI>:-Ktrap=fp>
+      $<$<COMPILE_LANG_AND_ID:CXX,NVHPC,PGI>:-Ktrap=fp>
+      $<$<COMPILE_LANG_AND_ID:C,GNU,Clang,AppleClang,IntelLLVM>:-fno-omit-frame-pointer>
+      $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang,IntelLLVM>:-fno-omit-frame-pointer>
+      $<$<COMPILE_LANG_AND_ID:C,GNU,Clang,AppleClang,IntelLLVM>:-g>
+      $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang,IntelLLVM>:-g>
+    )
   endif()
 endfunction()

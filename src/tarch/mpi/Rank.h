@@ -5,7 +5,7 @@
 #include <mpi.h>
 
 namespace tarch::mpi {
-  void abort(int errorCode);
+  void abort(const int errorCode);
   class Rank;
 } // namespace tarch::mpi
 
@@ -14,20 +14,19 @@ namespace tarch::mpi {
  * class is a singleton.
  *
  * A rank owns the MPI environment: init() brings it up and determines the
- * rank id, the number of ranks, the node layout and the supported thread
+ * rank number, the number of ranks, the node layout and the supported thread
  * level, while shutdown() tears it down again. The class furthermore hands
  * out the message tags through reserveFreeTag(). The supervision of the
  * message exchange, i.e. the timeout warnings and the deadlock abort, lives
- * in Diagnostics.
+ * in tarch::mpi::Diagnostics.
  *
- * Every MPI error is fatal, i.e. the whole parallel application is shut down
- * as soon as one occurs.
+ * A detected MPI failure either stops initialisation or terminates the job.
  *
  * @author Tobias Weinzierl
  */
 class tarch::mpi::Rank final {
 public:
-  static Rank& getInstance();
+  static tarch::mpi::Rank& getInstance();
 
   Rank(const Rank&)            = delete;
   Rank(Rank&&)                 = delete;
@@ -36,9 +35,9 @@ public:
 
   static int getGlobalMasterRank();
 
-  static int reserveFreeTag(const std::string& fullQualifiedMessageName, int numberOfTags = 1);
+  static int reserveFreeTag(const std::string& fullQualifiedMessageName, const int numberOfTags = 1);
 
-  bool init(int* argc, char*** argv);
+  bool init(int* const argc, char*** const argv);
 
   void shutdown();
 
@@ -61,49 +60,23 @@ public:
 private:
   static Rank _singleton;
 
-  /**
-   * Set by init() and stores the number of valid tags.
-   */
-  static int _maxTags;
+  static int _maximumTagValue;
+  static int _nextFreeTag;
 
-  /**
-   * Counts the tags that have already been handed out.
-   */
-  static int _tagCounter;
-
-  /**
-   * Is set true if init() is called.
-   */
   bool _initIsCalled{false};
-
-  /**
-   * Rank (id) of this process.
-   */
-  int _rank{-1};
-
-  /**
-   * Number of ranks in the communicator.
-   */
-  int _numberOfProcessors{-1};
-
-  int _providedThreadLevelSupport{-1};
+  int  _rank{-1};
+  int  _numberOfRanks{-1};
+  int  _providedThreadLevelSupport{-1};
 
   // Node layout, computed once in init() so later queries need no collective.
   int  _numberOfNodes{1};
   bool _isNodeMaster{true};
 
-  /**
-   * MPI Communicator this process belongs to.
-   */
   MPI_Comm _communicator{MPI_COMM_WORLD};
 
-  /**
-   * The rank and the number of processors stay invalid until init() has
-   * determined them.
-   */
   Rank() = default;
 
   ~Rank() = default;
 
-  static bool validateMaxTagIsSupported();
+  static bool validateReservedTagsAreSupported();
 };

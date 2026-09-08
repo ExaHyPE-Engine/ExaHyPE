@@ -10,13 +10,12 @@ namespace runner {
 
 class runner::Configuration final : public runner::Phase {
 public:
-  explicit Configuration(PhaseContext& context);
+  explicit Configuration(runner::PhaseContext& context);
 
-  std::vector<std::string> widthSamples() const override;
-  void                     run() override;
+  void run() override;
 
 private:
-  PhaseContext&            _context;
+  runner::PhaseContext&    _context;
   std::vector<std::string> _banners;
   std::vector<std::string> _body;
 };

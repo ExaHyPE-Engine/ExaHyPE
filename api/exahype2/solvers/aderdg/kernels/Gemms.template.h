@@ -1,29 +1,5 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#pragma once
-
-{% for item in NAMESPACE -%}
-namespace {{ item }} {
-{%- endfor %}
-
-{% if USE_LIBXSMM %}
-
-{% for gemm,precision in GEMM_LIST %}
-{% if precision == "DP" %}
-void {{gemm}}(const double* A, const double* B, double* C);
-{% elif precision == "SP"%}
-void {{gemm}}(const float* A, const float* B, float* C);
-{% else %}
-void {{gemm}}(const long double* A, const long double* B, long double* C);
-{% endif %}
-{% endfor %}
-
-{% endif %}{# USE_LIBXSMM #}
-
-{% for item in NAMESPACE -%}
-}
-{%- endfor %}
-
 {% macro gemm(gemm_key, A, B, C, A_shift, B_shift, C_shift, true_alpha="", true_B="", force_coeff_matrix=False) %}
 {#
       C       = alpha  *   A   *    B   + beta  *  C
@@ -39,9 +15,9 @@ void {{gemm}}(const long double* A, const long double* B, long double* C);
   String C_shift   : shift to the zero of C
 
   optional
-  String true_B             : true array B, B must b a true matrix, not a tensor slice
-  String true_alpha         : true value of the coefficent alpha (note: it will be multiplied by the GEMMS alpha, /!\ sign error)
-  bool force_coeff_matrix   : only when using true_B, true_alpha, force the no libxsmm case to also generate the coeff matrix.
+  String true_B             : true array B, B must be a true matrix, not a tensor slice
+  String true_alpha         : true value of the coefficient alpha, multiplied by the GEMMS alpha, so watch the sign
+  bool force_coeff_matrix   : only when using true_B, true_alpha, scale B into a temporary coefficient matrix instead of scaling inside the loop
 
   If true_B is used, a temporary array true_alpha*true_B is generated
 #}
@@ -73,15 +49,6 @@ void {{gemm}}(const long double* A, const long double* B, long double* C);
 {% set alpha = GEMMS[gemm_key].alpha %}
 {% set beta = GEMMS[gemm_key].beta %}
 
-{% set precision = GEMMS[gemm_key].precision[0] %}
-{% if precision == "DP" %}
-  {% set precision_prefix = "d" %}
-  {% set precision_type = "double" %}
-{% elif precision == "SP" %}
-  {% set precision_prefix = "s" %}
-  {% set precision_type = "float" %}
-{% endif %}
-
 {# A and C carry unpadded row strides for the face and cell projections, so a
    per-slice base is aligned only when the alignment flag says so. B is loop
    invariant in the vectorised it_3 loop, so its alignment never helps and it
@@ -96,9 +63,6 @@ void {{gemm}}(const long double* A, const long double* B, long double* C);
 {% set main_aligned = ("aligned(" ~ aligned_list | join(",") ~ ":PEANO_WITH_ALIGNMENT)") if aligned_list else "" %}
 {% set reset_aligned = ("aligned(" ~ Cp ~ ":PEANO_WITH_ALIGNMENT)") if GEMMS[gemm_key].alignment_C == 1 else "" %}
 
-{% if USE_LIBXSMM %}
-  {{gemms.baseroutinename}}({{A}}{% if A_shift != '0' %}+{{A_shift}}{% endif %}, {{B}}{% if B_shift != '0' %}+{{B_shift}}{% endif %}, {{C}}{% if C_shift != '0' %}+{{C_shift}}{% endif %});
-{% else %}
 {% if force_coeff_matrix %}
   double {{B}}[{{gemms.LDB*gemms.K}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
   SIMD(aligned({{Bp}},{{true_Bp}}:PEANO_WITH_ALIGNMENT))
@@ -127,6 +91,5 @@ for (int it_1 = 0; it_1 < {{gemms.N}}; it_1++) {
     }
   }
 }
-{% endif %} {# USE_LIBXSMM #}
 {% endwith %}
 {% endmacro %}

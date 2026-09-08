@@ -6,7 +6,5 @@ from .InsertParticlesByCoordinates import InsertParticlesByCoordinates
 from .InsertParticlesFromFile import InsertParticlesFromFile
 from .FiniteVolumesTracing import FiniteVolumesTracing
 from .FiniteVolumesTracingWithForce import FiniteVolumesTracingWithForce
-from .TracerInteraction import perserveCartesianTracerLayout
 from .CurviTracer import CurviTracer
 from .InsertParticlesByCoordinatesAndData import InsertParticlesByCoordinatesAndData
-from .PlotTracer import PlotTracer

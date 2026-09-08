@@ -11,44 +11,39 @@ namespace runner {
 
 class runner::TimeLoop final : public runner::Phase {
 public:
-  TimeLoop(PhaseContext& context, int timeStepStep, int plotStep, DynamicAMR& dynamicAMR);
+  TimeLoop(runner::PhaseContext& context, const int timeStepStep, const int plotStep, runner::DynamicAMR& dynamicAMR);
 
-  std::vector<std::string> widthSamples() const override;
-  void                     run() override;
+  void run() override;
 
-  /** True if the run ended early on a noncritical assertion (one final plot was written). */
-  bool terminatedGracefully() const { return _terminatedGracefully; }
+  /** True if the run ended early on a non-critical assertion (one final plot was written). */
+  bool stoppedAfterNonCriticalAssertion() const { return _stoppedAfterNonCriticalAssertion; }
 
 private:
-  PhaseContext& _context;
-  int           _timeStepStep;
-  int           _plotStep;
-  DynamicAMR&   _dynamicAMR;
-  bool          _terminatedGracefully = false;
+  runner::PhaseContext& _context;
+  int                   _timeStepStep;
+  int                   _plotStep;
+  runner::DynamicAMR&   _dynamicAMR;
+  bool                  _stoppedAfterNonCriticalAssertion = false;
 
   /**
-   * Wall clock of every completed time step, the first one included. The throughput
-   * measurement skips that step because its allocation cost is not representative, which
-   * is the wrong basis for an extrapolation: the step still consumed wall clock and still
-   * advanced the simulated time the estimate divides by.
+   * Wall clock in seconds of every completed time step, the first one included.
    */
   double _timeSteppingSeconds = 0.0;
 
   /**
-   * Drain wall clock already accumulated when the loop starts. Grid initialisation drains
-   * through the same phase object and into the same measurement, and that work is one-off
-   * setup, so the estimate must not extrapolate it as a recurring cost.
+   * Wall clock in seconds that the DynamicAMR measurement holds when the loop starts. Grid
+   * initialisation runs through the same measurement, and the estimate subtracts this offset.
    */
   double _dynamicAMRSecondsBeforeLoop = 0.0;
 
   void logTimeStep(
-    double        minTimeStamp,
-    double        maxTimeStamp,
-    double        terminalTime,
-    double        wallClockSeconds,
-    unsigned long completedSteps,
-    int           maxSteps
+    const double        minimumTimeStamp,
+    const double        maximumTimeStamp,
+    const double        terminalTime,
+    const double        wallClockSeconds,
+    const unsigned long completedSteps,
+    const int           maximumSteps
   );
-  void        logPlot(int snapshot, int numberOfSnapshots, double timeStamp, double wallClockSeconds);
-  std::string formatETA(double fraction) const;
+  void logPlot(const int snapshot, const int numberOfSnapshots, const double timeStamp, const double wallClockSeconds);
+  std::string formatETA(const double fraction) const;
 };

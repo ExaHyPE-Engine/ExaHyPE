@@ -4,8 +4,8 @@
 
 #if defined(PEANO_WITH_GPU_BACKEND_CUDA)
 
-#include "Device.h"
 #include "tarch/Assertions.h"
+#include "tarch/accelerator/cuda/Device.h"
 
 namespace {
   void activateDevice(int device) {
@@ -51,8 +51,12 @@ void tarch::accelerator::copyToDeviceMemory(void* target, const void* source, st
   CHECK_CUDA_ERROR(cudaMemcpyAsync(target, source, sizeInBytes, cudaMemcpyHostToDevice, deviceStreamGet()));
 }
 
-void tarch::accelerator::
-  copyToPinnedMemory(void* target, const void* source, std::size_t sizeInBytes, [[maybe_unused]] int device) {
+void tarch::accelerator::copyToPinnedMemory(
+  void*                target,
+  const void*          source,
+  std::size_t          sizeInBytes,
+  [[maybe_unused]] int device
+) {
   std::memcpy(target, source, sizeInBytes);
 }
 
@@ -62,8 +66,12 @@ void tarch::accelerator::copyFromDeviceMemory(const void* source, void* target, 
   CHECK_CUDA_ERROR(cudaMemcpyAsync(target, source, sizeInBytes, cudaMemcpyDeviceToHost, deviceStreamGet()));
 }
 
-void tarch::accelerator::
-  copyFromPinnedMemory(const void* source, void* target, std::size_t sizeInBytes, [[maybe_unused]] int device) {
+void tarch::accelerator::copyFromPinnedMemory(
+  const void*          source,
+  void*                target,
+  std::size_t          sizeInBytes,
+  [[maybe_unused]] int device
+) {
   std::memcpy(target, source, sizeInBytes);
 }
 

@@ -8,12 +8,12 @@ namespace exahype2::fv::tests {
   class ApplySplit1DRiemannToPatchTest;
 } // namespace exahype2::fv::tests
 
-class exahype2::fv::tests::ApplySplit1DRiemannToPatchTest : public tarch::tests::TestCase {
+class exahype2::fv::tests::ApplySplit1DRiemannToPatchTest final : public tarch::tests::TestCase {
 public:
   ApplySplit1DRiemannToPatchTest();
 
   void run() override;
 
 private:
-  void testIterateGrid();
+  void testSplitTraversalMatchesReference();
 };

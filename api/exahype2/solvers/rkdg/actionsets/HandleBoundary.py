@@ -11,16 +11,10 @@ import jinja2
 
 class HandleBoundary(AbstractRungeKuttaDGActionSet):
     """
-    Apply the boundary conditions along the faces flagged as boundary.
+    Applies the boundary conditions along the faces flagged as boundary.
 
-    The linear combination of the Runge-Kutta trials has to be projected onto
-    the faces, so we can then solve the Riemann problems. So the projection
-    happens in one grid sweep, the corresponding Riemann solve in the next one.
-
-    ## Time step/time stamp handling
-
-    We rely on ProjectLinearCombinationOfEstimatesOntoFaces to project the
-    current solution onto the faces.
+    One grid sweep projects the linear combination of the Runge-Kutta trials
+    onto the faces, and the next sweep solves the Riemann problems there.
     """
 
     TemplateHandleBoundary_Prologue = """
@@ -49,12 +43,12 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
     TemplateHandleBoundary_KernelCalls = """
     ::exahype2::dg::applyBoundaryConditions(
       [&](
-        const double * NOALIAS                  Qinside,
-        double * NOALIAS                        Qoutside,
+        const double* const NOALIAS                  Qinside,
+        double* const NOALIAS                        Qoutside,
         const tarch::la::Vector<DIMENSIONS,double>&  x,
-        double                                       t,
-        double                                       dt,
-        int                                          normal
+        const double                                 t,
+        const double                                 dt,
+        const int                                    normal
       ) -> void {
         repositories::{{SOLVER_INSTANCE}}.boundaryConditions( Qinside, Qoutside, x, t, normal );
       },
@@ -66,7 +60,7 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       marker.getSelectedFaceNumber(),
-      repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
+      repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1D,
       fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.data()
     );
 """
@@ -89,15 +83,7 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
 
     def __init__(self, solver, guard):
         """
-        Construct the action set for the boundary treatment.
-
-        :: Arguments
-
-        solver: RungeKuttaDG
-          Reference to creating class.
-
-        guard: String (C++ code)
-          Not evaluated. The predicates are set through the guards property.
+        `guard` is not evaluated; the predicates come from the guards property.
         """
         super(HandleBoundary, self).__init__(solver)
         self.guards = []
@@ -132,9 +118,9 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
             self._solver._init_dictionary_with_default_parameters(d)
             self._solver.add_entries_to_text_replacement_dictionary(d)
             d["PREDICATES"] = self.guards
-            d[
-                "BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES"
-            ] = self._butcher_tableau.time_step_sizes()
+            d["BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES"] = (
+                self._butcher_tableau.time_step_sizes()
+            )
             result = jinja2.Template(
                 self.TemplateHandleBoundary_Prologue
                 + self.TemplateHandleBoundary_KernelCalls

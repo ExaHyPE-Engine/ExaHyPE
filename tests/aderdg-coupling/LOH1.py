@@ -156,12 +156,12 @@ for theSolver in [hpSolver, lpSolver]:
         )
     )
 
-    theSolver._abstract_solver_user_declarations += "double QuadraturePoints1d[Order+1];"
+    theSolver._abstract_solver_user_declarations += "double QuadraturePoints1D[Order+1];"
     theSolver._start_simulation_implementation += """
     std::copy_n(
       kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes,
       (Order+1),
-      QuadraturePoints1d
+      QuadraturePoints1D
     );"""
 
 # sys.path.insert(0, os.path.abspath("./coupling"))

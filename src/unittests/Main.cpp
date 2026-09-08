@@ -8,11 +8,11 @@
 #include "tarch/Init.h"
 #include "tarch/NonCriticalAssertions.h"
 #include "tarch/UnitTests.h"
+#include "tarch/instrumentation/Error.h"
 #include "tarch/instrumentation/Log.h"
 #include "tarch/la/Vector.h"
-#include "toolbox/blockstructured/UnitTests.h"
-#include "toolbox/loadbalancing/UnitTests.h"
-#include "toolbox/particles/UnitTests.h"
+#include "tarch/mpi/Rank.h"
+#include "tarch/tasking/Runtime.h"
 
 namespace {
   int runTests() {
@@ -26,9 +26,6 @@ namespace {
 
     runTestCollection(tarch::getUnitTests());
     runTestCollection(peano4::getUnitTests());
-    runTestCollection(toolbox::blockstructured::getUnitTests());
-    runTestCollection(toolbox::loadbalancing::getUnitTests());
-    runTestCollection(toolbox::particles::getUnitTests());
     runTestCollection(exahype2::getUnitTests());
     runTestCollection(runner::getUnitTests());
 
@@ -50,22 +47,29 @@ int main(int argc, char** argv) {
   const tarch::la::Vector<DIMENSIONS, double> domainSize   = {1.0, 1.0, 1.0};
 #endif
 
-  // No timeout warning: the runner silences warnings, so only the abort speaks.
-  tarch::init(&argc, &argv, {0.0, 60.0, true});
-  // Several tests intentionally exercise warning paths. Keep the test runner
-  // silent on success while retaining errors and its non-zero failure status.
+  tarch::init(&argc, &argv, {0.0, 0.0, false, false});
   tarch::instrumentation::Log::setInfoOutputEnabled(false);
   tarch::instrumentation::Log::setWarningOutputEnabled(false);
+
+  // Every thread carries its own floating-point environment, so one trap is armed
+  // here, one per worker inside the parallel region and one around the tests. This
+  // trap is dropped before tarch::shutdown(), so a floating-point exception raised
+  // inside the MPI finalisation does not abort the run.
+  std::optional<tarch::FloatingPointExceptions::ScopedTrap> testProcessTrap(std::in_place, __FILE__, __LINE__);
   peano4::init(domainOffset, domainSize);
+
+  std::cout << "Rank " << tarch::mpi::Rank::getInstance().getRank() << " of "
+            << tarch::mpi::Rank::getInstance().getNumberOfRanks() << " runs the unit tests with "
+            << tarch::tasking::Runtime::getInstance().getNumberOfThreads() << " threads." << std::endl;
 
   int returnCode = EXIT_SUCCESS;
 
-#if defined(PEANO_WITH_OPENMP)
 #pragma omp parallel
   {
+    const tarch::FloatingPointExceptions::ScopedTrap threadTrap(__FILE__, __LINE__);
+#pragma omp barrier
 #pragma omp master
     {
-#endif
       {
         const tarch::FloatingPointExceptions::ScopedTrap scopedTrap(__FILE__, __LINE__);
         returnCode = runTests();
@@ -75,12 +79,12 @@ int main(int argc, char** argv) {
         logError("Non-critical assertion has been triggered while running the unit tests. Quit.");
         returnCode = EXIT_FAILURE;
       }
-#if defined(PEANO_WITH_OPENMP)
     }
+#pragma omp barrier
   }
-#endif
 
   peano4::shutdown();
+  testProcessTrap.reset();
   tarch::shutdown();
   return returnCode;
 }

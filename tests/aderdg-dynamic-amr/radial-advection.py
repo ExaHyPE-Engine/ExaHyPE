@@ -46,10 +46,16 @@ project = exahype2.Project(
 initial_conditions = """
   const tarch::la::Vector<DIMENSIONS, double> centre(1.0);
   constexpr double BumpRadius = 0.3;
-  const double scaledRadiusSquared = tarch::la::norm2Squared(x - centre) / (BumpRadius * BumpRadius);
-  Q[Shortcuts::rho] = scaledRadiusSquared < 1.0
-    ? std::exp(1.0 - 1.0 / (1.0 - scaledRadiusSquared))
-    : 0.0;
+  const auto scaledRadiusSquared =
+    tarch::la::norm2Squared(x - centre) / (BumpRadius * BumpRadius);
+  Q[Shortcuts::rho] = 0.0;
+  if (scaledRadiusSquared < 1.0) {
+    const auto exponent = 1.0 - 1.0 / (1.0 - scaledRadiusSquared);
+    const auto minimumNormalExponent = std::log(std::numeric_limits<double>::min());
+    if (exponent >= minimumNormalExponent) {
+      Q[Shortcuts::rho] = std::exp(exponent);
+    }
+  }
 """
 
 boundary_conditions = """

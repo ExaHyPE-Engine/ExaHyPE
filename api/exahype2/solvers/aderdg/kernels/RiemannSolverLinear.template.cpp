@@ -6,7 +6,6 @@
 #include "Quadrature.h"
 
 #include "tarch/CompilerSpecificSettings.h"
-#include "tarch/instrumentation/Log.h"
 
 template <typename cCompType>
 void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
@@ -23,10 +22,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   const bool                                        isBoundary,
   const int                                         faceNumber
 ) {
-  traceEnter();
-
 {% if USE_RIEMANN_SOLVER %}
-  traceEnter("User Riemann solver");
 {% if STATELESS_RIEMANN_SOLVER %}
   {{FULL_QUALIFIED_SOLVER_NAME}}::riemannSolver(
 {% else %}
@@ -44,22 +40,13 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
     isBoundary,
     faceNumber
   );
-  traceLeave("User Riemann solver");
 {% else %}
-  /*
-   * For the linear kernels, we need the material parameters in the
-   * extrapolated predictor.
-   * We compute the averages of the material parameters but
-   * do not use them in the max eigenvalue calculation.
-   */
   std::fill_n(FL, {{NUMBER_OF_UNKNOWNS * NUMBER_OF_DOF * NUMBER_OF_DOF_3D}}, 0);
   std::fill_n(FR, {{NUMBER_OF_UNKNOWNS * NUMBER_OF_DOF * NUMBER_OF_DOF_3D}}, 0);
 
-  // Compute the average unkown and auxiliary variables from the left and the right
   cCompType QavL[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {0};
   cCompType QavR[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {0};
 
-  traceEnter("Average states");
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xy++) {
     SIMD(aligned(QavL,QavR:PEANO_WITH_ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_DATA}}; n++) {
@@ -67,9 +54,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
       QavR[n] += Quadrature<cCompType>::weights2[xy] * QR[xy * {{NUMBER_OF_DATA}} + n];
     }
   }
-  traceLeave("Average states");
 
-  traceEnter("Max eigenvalue evaluation");
 {% if STATELESS_MAX_EIGENVALUE %}
   cCompType smaxL = static_cast<cCompType> ({{FULL_QUALIFIED_SOLVER_NAME}}::maxEigenvalue(
 {% else %}
@@ -96,7 +81,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   ));
 
   cCompType smax = fmax(smaxL, smaxR);
-  traceLeave("Max eigenvalue evaluation");
 
 {% if USE_NCP or USE_MATERIAL_PARAMETERS or NUMBER_OF_AUXILIARY_VARIABLES > 0 %}
   cCompType Qavg[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
@@ -110,7 +94,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   cCompType Qdiff[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
 
 {% if NUMBER_OF_AUXILIARY_VARIABLES > 0 %}
-  // We copy the averaged material parameters to Qdiff as they are used in the flux term
+  // The flux call reads the material parameters from Qdiff.
   std::copy_n(Qavg + {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_DATA_PADDED - NUMBER_OF_UNKNOWNS}}, Qdiff + {{NUMBER_OF_UNKNOWNS}});
 {% endif %}
 
@@ -122,7 +106,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
   cCompType fluxValues[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {0};
 {% endif %}
 
-  traceEnter("Flux and nonconservative product evaluation");
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xy++) {
     SIMD(aligned(Qdiff:PEANO_WITH_ALIGNMENT))
     for (int n = 0 ; n < {{NUMBER_OF_UNKNOWNS}} ; n++) {
@@ -210,9 +193,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
       FL[xy * {{NUMBER_OF_UNKNOWNS}} + n] -= smax * Qdiff[n];
     }
   } // xy
-  traceLeave("Flux and nonconservative product evaluation");
 {% endif %}
-  traceLeave();
 }
 
 template void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(

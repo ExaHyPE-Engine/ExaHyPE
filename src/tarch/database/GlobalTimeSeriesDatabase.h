@@ -8,23 +8,14 @@ namespace tarch::database {
   class GlobalTimeSeriesDatabase;
 } // namespace tarch::database
 
-/**
- * A global time-series database
- *
- * Records domain-global data, identified solely by its time stamp, and appends
- * it to a single CSV file. The typical client is the solver error norm, which
- * is reduced across all ranks and thus written only once.
- */
 class tarch::database::GlobalTimeSeriesDatabase final : public tarch::database::SnapshotDatabase {
-private:
-  std::string _dataName;
-  int         _numberOfGlobalDataPoints;
-  int         _numberOfEntriesWrittenToFile;
+public:
+  GlobalTimeSeriesDatabase(double timeDelta = 0.0, bool deltasAreRelative = false);
+  ~GlobalTimeSeriesDatabase() override;
 
-  std::list<Snapshot> _data;
+  void setDataName(const std::string& dataName);
 
-  void              writeRow(std::ostream& file, const Snapshot& snapshot) const;
-  AddSnapshotAction getAction(double timestamp);
+  void addGlobalSnapshot(double timestamp, int numberOfDataEntries, const double* data);
 
 protected:
   void prepareOutputStream(std::ostream& file) const override;
@@ -34,11 +25,13 @@ protected:
   void clearStorage() override;
   void resetWriteTracking() override;
 
-public:
-  GlobalTimeSeriesDatabase(double timeDelta = 0.0, bool deltasAreRelative = false);
-  ~GlobalTimeSeriesDatabase();
+private:
+  std::string _dataName{" data "};
+  int         _numberOfGlobalDataPoints{0};
+  int         _numberOfEntriesWrittenToFile{0};
 
-  void setDataName(const std::string& dataname);
+  std::list<Snapshot> _data{};
 
-  void addGlobalSnapshot(double timestamp, int numberOfDataEntries, const double* data);
+  void              writeRow(std::ostream& file, const Snapshot& snapshot) const;
+  AddSnapshotAction getAction(double timestamp);
 };

@@ -8,37 +8,37 @@
 peano4::stacks::tests::TestDataOnHeap::TestDataOnHeap() :
   _data(tarch::allocateMemory<DoFType>(Cardinality, tarch::MemoryLocation::Heap)) {}
 
-peano4::stacks::tests::TestDataOnHeap::TestDataOnHeap(DoFType v) :
-  TestDataOnHeap() {
-  for (int i = 0; i < Cardinality; ++i) {
-    _data[i] = v;
+peano4::stacks::tests::TestDataOnHeap::TestDataOnHeap(const DoFType value) :
+  peano4::stacks::tests::TestDataOnHeap() {
+  for (int index = 0; index < Cardinality; ++index) {
+    _data[index] = value;
   }
 }
 
-peano4::stacks::tests::TestDataOnHeap::~TestDataOnHeap() noexcept {
-  if (_data) {
-    tarch::freeMemory(_data, tarch::MemoryLocation::Heap);
-    _data = nullptr;
-  }
-}
-
-peano4::stacks::tests::TestDataOnHeap::TestDataOnHeap(const TestDataOnHeap& other) :
-  _data(nullptr) {
+peano4::stacks::tests::TestDataOnHeap::TestDataOnHeap(const peano4::stacks::tests::TestDataOnHeap& other) {
   clone(other);
 }
 
-peano4::stacks::tests::TestDataOnHeap::TestDataOnHeap(TestDataOnHeap&& other) noexcept :
+peano4::stacks::tests::TestDataOnHeap::TestDataOnHeap(peano4::stacks::tests::TestDataOnHeap&& other) noexcept :
   _data(std::exchange(other._data, nullptr)) {}
 
-peano4::stacks::tests::TestDataOnHeap&
-peano4::stacks::tests::TestDataOnHeap::operator=(TestDataOnHeap&& other) noexcept {
+peano4::stacks::tests::TestDataOnHeap& peano4::stacks::tests::TestDataOnHeap::operator=(
+  peano4::stacks::tests::TestDataOnHeap&& other
+) noexcept {
   if (this != &other) {
-    if (_data) {
+    if (_data != nullptr) {
       tarch::freeMemory(_data, tarch::MemoryLocation::Heap);
     }
     _data = std::exchange(other._data, nullptr);
   }
   return *this;
+}
+
+peano4::stacks::tests::TestDataOnHeap::~TestDataOnHeap() noexcept {
+  if (_data != nullptr) {
+    tarch::freeMemory(_data, tarch::MemoryLocation::Heap);
+    _data = nullptr;
+  }
 }
 
 peano4::stacks::tests::TestDataOnHeap::DoFType* peano4::stacks::tests::TestDataOnHeap::data() { return _data; }
@@ -47,26 +47,27 @@ const peano4::stacks::tests::TestDataOnHeap::DoFType* peano4::stacks::tests::Tes
   return _data;
 }
 
-void peano4::stacks::tests::TestDataOnHeap::clone(const TestDataOnHeap& other) {
-  if (this == &other)
+void peano4::stacks::tests::TestDataOnHeap::clone(const peano4::stacks::tests::TestDataOnHeap& other) {
+  if (this == &other) {
     return;
+  }
 
   if (other._data == nullptr) {
-    // other has no _data: just reset
-    if (_data) {
+    if (_data != nullptr) {
       tarch::freeMemory(_data, tarch::MemoryLocation::Heap);
       _data = nullptr;
     }
     return;
   }
 
-  DoFType* newbuf = tarch::allocateMemory<DoFType>(Cardinality, tarch::MemoryLocation::Heap);
-  assertion(newbuf);
-  std::memcpy(newbuf, other._data, Cardinality * sizeof(DoFType));
+  DoFType* const clonedData = tarch::allocateMemory<DoFType>(Cardinality, tarch::MemoryLocation::Heap);
+  assertion(clonedData != nullptr);
+  std::memcpy(clonedData, other._data, Cardinality * sizeof(DoFType));
 
-  // Commit
-  if (_data) {
+  // The held buffer is released only once the copy exists, so a failed
+  // allocation leaves the held buffer in place.
+  if (_data != nullptr) {
     tarch::freeMemory(_data, tarch::MemoryLocation::Heap);
   }
-  _data = newbuf;
+  _data = clonedData;
 }

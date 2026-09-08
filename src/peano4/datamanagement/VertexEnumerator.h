@@ -26,7 +26,7 @@ namespace peano4 {
  * the data.
  *
  * Yet, Peano logically orders the vertices. They are enumerated from
- * @f$ [0,2^d-1] @f$ lexicographically with the bottom left (2d) bottom left
+ * @f$ [0,2^d-1] @f$ lexicographically with the bottom left (2D) bottom left
  * front vertex being vertex number 0.
  *
  * @image html VertexEnumerator.png

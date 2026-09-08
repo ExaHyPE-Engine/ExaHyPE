@@ -5,12 +5,8 @@
 #include "DGMatrices.h"
 #include "Quadrature.h"
 #include "BufferSizes.h"
-{% if USE_LIBXSMM %}
-#include "Gemms.h"
-{% endif %}
 
 #include "tarch/CompilerSpecificSettings.h"
-#include "tarch/instrumentation/Log.h"
 
 {% if USE_POINT_SOURCE %}
 {% for item in NAMESPACE -%}
@@ -22,13 +18,9 @@ namespace {{ item }} {
 {%- endfor %}
 {% endif %}
 
-{% import 'Gemms.template.h' as m with context %}{# get template macros #}
-
-/*
- * For the linear kernels, we need the material parameters in the
- * space-time predictor lQi, time-averaged predictor lQhi,
- * and extrapolated predictor lQhbnd.
- * Currently we simply copy them over from the solution array.
+/**
+ * Copies material parameters through each predictor representation because
+ * linear kernels do not evolve them.
  */
 template <typename cStoreType, typename pCompType, typename pStoreType>
 int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SUFFIX}}(
@@ -44,9 +36,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   , const std::vector<int>&                         pointSources
 {% endif %}
 ) {
-  traceEnter();
-
-  static thread_local {{FULL_QUALIFIED_NAMESPACE}}::PredictorScratchBuffer{{NAME_SUFFIX}}<pCompType> scratch; // Per-thread and per-instantiation scratch allocates on first use and is reused afterwards.
+  static thread_local {{FULL_QUALIFIED_NAMESPACE}}::PredictorScratchBuffer{{NAME_SUFFIX}}<pCompType> scratch;
 
   pCompType* memory = scratch.get(getFusedSTPVISize());
 
@@ -67,17 +57,15 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
 
   const tarch::la::Vector<DIMENSIONS, pCompType> invDx = convertScalar<pCompType>(invertEntries(cellSize));
 
+{% if USE_FLUX %}
   pCompType tmpArray[{{TMP_ARRAY_SIZE}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+{% endif %}
 
-  //***************************
-  //**** Cauchy-Kovalewski ****
-  //***************************
-  traceEnter("Cauchy Kovalewski predictor");
-
-  // 1: Initialise time derivative
-  // The zeroth time derivative (time dof number 1) is the initial condition
+  // The initial condition supplies the zeroth time derivative.
   for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
-    std::copy_n(luh + xyz * {{NUMBER_OF_DATA}}, {{NUMBER_OF_DATA}}, lQi + xyz * {{NUMBER_OF_DATA_PADDED}});
+    auto* const localPredictorState = lQi + xyz * {{NUMBER_OF_DATA_PADDED}};
+    std::fill_n(localPredictorState, {{NUMBER_OF_DATA_PADDED}}, pCompType(0.0));
+    std::copy_n(luh + xyz * {{NUMBER_OF_DATA}}, {{NUMBER_OF_DATA}}, localPredictorState);
   }
 
   // Zero out the arrays which will contain the time-averaged space-time polynomials
@@ -87,37 +75,34 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   std::fill_n(lShi, {{(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}}, 0);
 {% endif %}
 
-  // Will be used to store the operator for the contribution to the average sp-t polynomials
+  // The ith Taylor derivative enters a time average with dt^i / (i + 1)!.
   pCompType dtavFac = 1;
 
 {% if USE_POINT_SOURCE %}
   pCompType PSi[getPSiSize()] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
 
-  traceEnter("Point source evaluation");
-  { // 1.5: Compute point source contribution
-    sstd::fill_n(PSi, {{(NUMBER_OF_DOF+1)*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}}, 0);
+  {
+    std::fill_n(PSi, {{(NUMBER_OF_DOF+1)*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}}, 0);
 
     pCompType tn = 0;
-    double x1[{{DIMENSIONS}}]; // Position
+    double x1[{{DIMENSIONS}}];
     const pCompType ivolume = 1 / (cellSize[0] * cellSize[1]{{' * cellSize[2]' if DIMENSIONS==3}});
 
     pCompType forceVectorSource[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
     std::fill_n(forceVectorSource, {{NUMBER_OF_UNKNOWNS_PADDED}}, 0);
 
-    // Loop over all quadrature points
-    for (int t = 0; t < {{NUMBER_OF_DOF+1}}; t++) { // Time loop
-      t == 0 ? tn = timeStamp : tn = timeStepSize * Quadrature<pCompType>::nodes[t - 1] + timeStamp; // First point in time is current time, then use GL nodes in time.
+    for (int t = 0; t < {{NUMBER_OF_DOF+1}}; t++) {
+      // The first point is the current time; later points use Gauss-Legendre nodes.
+      t == 0 ? tn = timeStamp : tn = timeStepSize * Quadrature<pCompType>::nodes[t - 1] + timeStamp;
       for (int z = 0; z < {{NUMBER_OF_DOF_3D}}; z++) {
 {% if DIMENSIONS==3 %}
-        x1[2] = cellCentre[2] + cellSize[2] * (Quadrature<pCompType>::nodes[z] - 0.5); // Transform onto element
+        x1[2] = cellCentre[2] + cellSize[2] * (Quadrature<pCompType>::nodes[z] - 0.5);
 {% endif %}
         for (int y = 0; y < {{NUMBER_OF_DOF}}; y++) {
           x1[1] = cellCentre[1] + cellSize[1] * (Quadrature<pCompType>::nodes[y] - 0.5);
           for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
             x1[0] = cellCentre[0] + cellSize[0] * (Quadrature<pCompType>::nodes[x] - 0.5);
-            // Loop over all point sources
             for (int p : pointSources) {
-              // Get the source vector located at quadrature node x at time tn
 {% if STATELESS_POINT_SOURCE %}
               {{FULL_QUALIFIED_SOLVER_NAME}}::pointSource(
 {% else %}
@@ -131,22 +116,23 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
                 p
               );
 
-              // Map point source location onto reference element
 {% if STATELESS_INIT_POINT_SOURCES %}
               const double* const pointSourceLocation = {{FULL_QUALIFIED_SOLVER_NAME}}::pointSourceLocation[p];
 {% else %}
               const double* const pointSourceLocation = solver.pointSourceLocation[p];
 {% endif %}
 
+              // Basis functions use the source's reference coordinates;
+              // reciprocal quadrature weights and inverse cell volume normalise its delta.
               const pCompType update = basisFunction[x]((pointSourceLocation[0] - cellCentre[0]) * invDx[0] + 0.5)
                                      * basisFunction[y]((pointSourceLocation[1] - cellCentre[1]) * invDx[1] + 0.5)
 {% if DIMENSIONS==3 %}
                                      * basisFunction[z]((pointSourceLocation[2] - cellCentre[2]) * invDx[2] + 0.5)
 {% endif %}
-                                     * Quadrature<pCompType>::iweights3[(z * {{NUMBER_OF_DOF_3D}} + y) * {{NUMBER_OF_DOF}} + x] * ivolume; // Division by weights product and volume
+                                     * Quadrature<pCompType>::iweights3[(z * {{NUMBER_OF_DOF_3D}} + y) * {{NUMBER_OF_DOF}} + x] * ivolume;
 
               SIMD(aligned(PSi,forceVectorSource:PEANO_WITH_ALIGNMENT))
-              for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) { // Evaluate
+              for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
                 PSi[(((t * {{NUMBER_OF_DOF_3D}} + z) * {{NUMBER_OF_DOF}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] += update * forceVectorSource[n];
               }
             }
@@ -155,9 +141,8 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
       }
     }
   }
-  traceLeave("Point source evaluation");
 
-  // Add point source to the zeroth time derivative
+  // Time quadrature adds the point source to the zeroth derivative.
   for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
     for (int t = 0; t < {{NUMBER_OF_DOF}}; t++) {
       SIMD(aligned(lQi,PSi:PEANO_WITH_ALIGNMENT))
@@ -168,16 +153,18 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
     }
   }
 
-  // Initialise point source (PS) derivation operator
+  // FLCoeff initialises the temporal point-source derivative operator.
   pCompType derPS[{{NUMBER_OF_DOF_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
   std::copy_n(DGMatrices<pCompType>::FLCoeff, {{NUMBER_OF_DOF}}, derPS);
 {% endif %}
 
-  // Add first contribution to lQhi
   std::copy_n(lQi, {{NUMBER_OF_DATA_PADDED*NUMBER_OF_DOF**DIMENSIONS}}, lQhi);
 
-  // 3: Cauchy-Kovalewski procedure
-  for (int i = 0; i < {{NUMBER_OF_DOF}}; i++) { // Time DOFs
+  for (int i = 0; i < {{NUMBER_OF_DOF}}; i++) {
+    std::fill_n(lFi, {{DIMENSIONS*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}}, pCompType(0.0));
+{% if USE_SOURCE %}
+    std::fill_n(lSi, {{(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}}, pCompType(0.0));
+{% endif %}
 {% if USE_FLUX %}
     pCompType* F[{{DIMENSIONS}}];
     for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
@@ -278,7 +265,6 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
 {% endif %}{# USE_FLUX #}
 
 {% if USE_NCP %}
-    // x-loop
     for (int yz = 0; yz < {{NUMBER_OF_DOF_3D*NUMBER_OF_DOF}}; yz++) {
       std::fill_n(gradQ, {{NUMBER_OF_DOF_3D*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}}, 0);
 
@@ -292,7 +278,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
               * invDx[0] * DGMatrices<pCompType>::dudx_T[it_1 * {{NUMBER_OF_DOF_PADDED}} + it_2];
           }
         }
-      } // it_2
+      }
 
       for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
         pCompType tmpNcp[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {0};
@@ -315,10 +301,9 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
         for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
           lFi[yz*{{NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}} + x * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] += tmpNcp[n];
         }
-      } // x
-    } // yz
+      }
+    }
 
-    // y-loop
     for (int z = 0; z < {{NUMBER_OF_DOF_3D}}; z++) {
       for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
         std::fill_n(gradQ, {{NUMBER_OF_DOF_3D*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}}, 0);
@@ -333,7 +318,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
                 * invDx[1] * DGMatrices<pCompType>::dudx_T[it_1 * {{NUMBER_OF_DOF_PADDED}} + it_2];
             }
           }
-        } // it_2
+        }
 
         for (int y = 0; y < {{NUMBER_OF_DOF}}; y++) {
           pCompType tmpNcp[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {0};
@@ -359,10 +344,9 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
           }
         }
       }
-    } // z
+    }
 
 {% if DIMENSIONS==3 %}
-    // z-loop
     for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF}}; xy++) {
       std::fill_n(gradQ, {{NUMBER_OF_DOF_3D*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}}, 0);
 
@@ -376,7 +360,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
               * invDx[2] * DGMatrices<pCompType>::dudx_T[it_1 * {{NUMBER_OF_DOF_PADDED}} + it_2];
           }
         }
-      } // it_2
+      }
 
       for (int z = 0; z < {{NUMBER_OF_DOF}}; z++) {
         pCompType tmpNcp[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {0};
@@ -401,7 +385,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
             += tmpNcp[n];
         }
       }
-    } // xy
+    }
 {% endif %}{# DIMENSIONS 3 #}
 {% endif %}{# USE_NCP #}
 
@@ -437,9 +421,9 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
 {% if USE_SOURCE %}
     for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
 {% if STATELESS_SOURCE_TERM %}
-      {{FULL_QUALIFIED_SOLVER_NAME}}::algebraicSource(
+      {{FULL_QUALIFIED_SOLVER_NAME}}::sourceTerm(
 {% else %}
-      solver.algebraicSource(
+      solver.sourceTerm(
 {% endif %}
         lQi + xyz * {{NUMBER_OF_DATA_PADDED}},
         cellCentre,
@@ -451,7 +435,6 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
     }
 {% endif %}{# USE_SOURCE #}
 
-    // Averaging lFhi (and if necessary lShi over time directly in the CK-loop)
     for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
       SIMD(aligned(lFhi,lFi{{',lShi,lSi' if USE_SOURCE else ''}}:PEANO_WITH_ALIGNMENT))
       for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
@@ -466,8 +449,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
       }
     }
 
-    // Break for loop to avoid having an extra contribution to lQhi
-    // and some unnecessary computation for lQi.
+    // The final derivative contributes no later predictor state.
     if (i == {{NUMBER_OF_DOF-1}}) {
       break;
     }
@@ -489,7 +471,6 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
     }
 
 {% if USE_POINT_SOURCE %}
-    // Add point source contribution to the time derivatives
     for (int t = 0; t < {{NUMBER_OF_DOF}}; t++) {
       for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
         SIMD(aligned(lQi,PSi,derPS:PEANO_WITH_ALIGNMENT))
@@ -499,14 +480,15 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
       }
     }
 
-    pCompType derPS_buffer[{{NUMBER_OF_DOF_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+    pCompType derPSBuffer[{{NUMBER_OF_DOF_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
     std::fill_n(derPS_buffer, {{NUMBER_OF_DOF_PADDED}}, 0);
     for (int it_1 = 0; it_1 < {{NUMBER_OF_DOF}}; it_1++) {
-      SIMD(aligned(derPS_buffer,derPS:PEANO_WITH_ALIGNMENT))
+      SIMD(aligned(derPSBuffer,derPS:PEANO_WITH_ALIGNMENT))
       for (int it_2 = 0; it_2 < {{NUMBER_OF_DOF}}; it_2++) {
-        derPS_buffer[it_2] += derPS[it_1] * DGMatrices<pCompType>::dudx[it_1 * {{NUMBER_OF_DOF}} + it_2];
+        derPSBuffer[it_2] += derPS[it_1] * DGMatrices<pCompType>::dudx[it_1 * {{NUMBER_OF_DOF}} + it_2];
       }
     }
+    // std::copy_n(derPSBuffer, {{NUMBER_OF_DOF_PADDED}}, derPS);
 {% endif %}
 
     dtavFac *= static_cast<pCompType>(timeStepSize / (i + 2));
@@ -520,8 +502,6 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   } // i
 
 {% if USE_POINT_SOURCE %}
-  traceEnter("Point source projection");
-  // Add point source to the right hand side
   pCompType sumArray[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
   for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
     std::fill_n(sumArray, {{NUMBER_OF_UNKNOWNS_PADDED}}, 0);
@@ -541,56 +521,39 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
 {% endif %}
     }
   }
-  traceLeave("Point source projection");
 {% endif %}
 
-  traceLeave("Cauchy Kovalewski predictor");
-
-  //***********************
-  //**** Extrapolation ****
-  //***********************
-  traceEnter("Extrapolation");
-  for(int i = 0; i < 2 * DIMENSIONS; i++) {
+  for (int i = 0; i < 2 * DIMENSIONS; i++) {
     std::fill_n(lQhbnd[i], {{NUMBER_OF_DATA*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}, 0);
     std::fill_n(lFhbnd[i], {{NUMBER_OF_UNKNOWNS*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}, 0);
   }
 
-  // x-direction: face 0 (left) and face 2(2D) / 3(3D) (right)
   for (int yz = 0; yz < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; yz++) {
     for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
       SIMD(aligned(lQhi:PEANO_WITH_ALIGNMENT))
       for (int n = 0; n < {{NUMBER_OF_DATA}}; n++) {
-        // Left
         lQhbnd[0][yz * {{NUMBER_OF_DATA}} + n] += lQhi[(yz * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DATA_PADDED}} + n] * DGMatrices<pCompType>::FLCoeff[x];
-        // Right
         lQhbnd[DIMENSIONS][yz * {{NUMBER_OF_DATA}} + n] += lQhi[(yz * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DATA_PADDED}} + n] * DGMatrices<pCompType>::FRCoeff[x];
       }
       SIMD(aligned(lFhi:PEANO_WITH_ALIGNMENT))
       for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
-        // Left
         lFhbnd[0][yz * {{NUMBER_OF_UNKNOWNS}} + n] += lFhi[(yz * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] * DGMatrices<pCompType>::FLCoeff[x];
-        // Right
         lFhbnd[DIMENSIONS][yz * {{NUMBER_OF_UNKNOWNS}} + n] += lFhi[(yz * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] * DGMatrices<pCompType>::FRCoeff[x];
       }
     }
   }
 
-  // y-direction: face 1 (left) and face 3(2D) / 4(3D) (right)
   for (int z = 0; z < {{NUMBER_OF_DOF_3D}}; z++) {
     for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
       for (int y = 0; y < {{NUMBER_OF_DOF}}; y++) {
         SIMD(aligned(lQhi:PEANO_WITH_ALIGNMENT))
         for (int n = 0; n < {{NUMBER_OF_DATA}}; n++) {
-          // Left
           lQhbnd[1][(z * {{NUMBER_OF_DOF_3D}} + x) * {{NUMBER_OF_DATA}} + n] += lQhi[((z * {{NUMBER_OF_DOF_3D}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DATA_PADDED}} + n] * DGMatrices<pCompType>::FLCoeff[y];
-          // Right
           lQhbnd[1+DIMENSIONS][(z * {{NUMBER_OF_DOF_3D}} + x) * {{NUMBER_OF_DATA}} + n] += lQhi[((z * {{NUMBER_OF_DOF_3D}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DATA_PADDED}} + n] * DGMatrices<pCompType>::FRCoeff[y];
         }
         SIMD(aligned(lFhi:PEANO_WITH_ALIGNMENT))
         for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
-          // Left
           lFhbnd[1][(z * {{NUMBER_OF_DOF_3D}} + x) * {{NUMBER_OF_UNKNOWNS}} + n] += lFhi[((z * {{NUMBER_OF_DOF_3D}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{1*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}}] * DGMatrices<pCompType>::FLCoeff[y];
-          // Right
           lFhbnd[1+DIMENSIONS][(z * {{NUMBER_OF_DOF_3D}} + x) * {{NUMBER_OF_UNKNOWNS}} + n] += lFhi[((z * {{NUMBER_OF_DOF_3D}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{1*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}}] * DGMatrices<pCompType>::FRCoeff[y];
         }
       }
@@ -598,40 +561,26 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   }
 
 {% if DIMENSIONS==3 %}
-  // z-direction: face 2 (left) and face 5 (right)
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xy++) {
     for (int z = 0; z < {{NUMBER_OF_DOF}}; z++) {
       SIMD(aligned(lQhi:PEANO_WITH_ALIGNMENT))
       for (int n = 0; n < {{NUMBER_OF_DATA}}; n++) {
-        // Left
         lQhbnd[2][xy * {{NUMBER_OF_DATA}} + n] += lQhi[(z * {{NUMBER_OF_DOF*NUMBER_OF_DOF}} + xy) * {{NUMBER_OF_DATA_PADDED}} + n] * DGMatrices<pCompType>::FLCoeff[z];
-        // Right
         lQhbnd[2+DIMENSIONS][xy * {{NUMBER_OF_DATA}} + n] += lQhi[(z * {{NUMBER_OF_DOF*NUMBER_OF_DOF}} + xy) * {{NUMBER_OF_DATA_PADDED}} + n] * DGMatrices<pCompType>::FRCoeff[z];
       }
       SIMD(aligned(lFhi:PEANO_WITH_ALIGNMENT))
       for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
-        // Left
         lFhbnd[2][xy * {{NUMBER_OF_UNKNOWNS}} + n] += lFhi[(z * {{NUMBER_OF_DOF*NUMBER_OF_DOF}} + xy) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{2*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}}] * DGMatrices<pCompType>::FLCoeff[z];
-        // Right
         lFhbnd[2+DIMENSIONS][xy * {{NUMBER_OF_UNKNOWNS}} + n] += lFhi[(z * {{NUMBER_OF_DOF*NUMBER_OF_DOF}} + xy) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{2*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}}] * DGMatrices<pCompType>::FRCoeff[z];
       }
     }
   }
 {% endif %}
-  traceLeave("Extrapolation");
-
-  //*****************************
-  //****** Volume Integral ******
-  //*****************************
-  traceEnter("Volume integral");
-
-  // For linear non-conservative PDE, the volume integral is trivial, since it
-  // only involves the element mass matrix, which cancels out.
 
   for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
     SIMD(aligned(lFhi{{',lShi' if USE_SOURCE else ''}}:PEANO_WITH_ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
-        luh[xyz*{{NUMBER_OF_DATA}} + n] -= static_cast<cStoreType>(timeStepSize) * //Quadrature<pCompType>::weights3[xyz] *
+        luh[xyz*{{NUMBER_OF_DATA}} + n] -= static_cast<cStoreType>(timeStepSize) *
           static_cast<cStoreType>(
 {% if USE_FLUX or USE_NCP %}
                 lFhi[xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{0*NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF**DIMENSIONS}}] // x
@@ -647,9 +596,8 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
     }
   }
 
-  traceLeave("Volume integral");
-  traceLeave();
-  return -1; // No picard iteration in linear case
+  // Linear predictors do not run Picard iterations.
+  return -1;
 }
 
 {% for PRECISION_NUM in range(0,PREDICTOR_COMPUTATION_PRECISIONS|length) %}

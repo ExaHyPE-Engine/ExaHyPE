@@ -1,10 +1,5 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#pragma once
-
-#include "tarch/accelerator/Range.h"
-#include "tarch/accelerator/Reducer.h"
-#include "tarch/accelerator/kokkos/Device.h"
 
 namespace tarch::accelerator {
   namespace internal {
@@ -59,9 +54,10 @@ namespace tarch {
   // parallelReduce overloads need no fence: reducing into a host scalar is blocking.
   template <typename F>
   inline void parallelFor(const Range& r, F f) {
-    Kokkos::parallel_for(Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(0, r.n), KOKKOS_LAMBDA(const int i) {
-      f(i);
-    });
+    Kokkos::parallel_for(
+      Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(0, r.n),
+      KOKKOS_LAMBDA(const int i) { f(i); }
+    );
     Kokkos::fence();
   }
 
@@ -86,9 +82,12 @@ namespace tarch {
   template <typename F>
   inline void parallelFor(const TeamRange& r, F f) {
     Kokkos::TeamPolicy<Kokkos::DefaultExecutionSpace> policy(r.n, Kokkos::AUTO);
-    Kokkos::parallel_for(policy, KOKKOS_LAMBDA(const accelerator::KokkosTeam::member_type& team) {
-      f(team.league_rank(), accelerator::KokkosTeam{team});
-    });
+    Kokkos::parallel_for(
+      policy,
+      KOKKOS_LAMBDA(const accelerator::KokkosTeam::member_type& team) {
+        f(team.league_rank(), accelerator::KokkosTeam{team});
+      }
+    );
     Kokkos::fence();
   }
 } // namespace tarch

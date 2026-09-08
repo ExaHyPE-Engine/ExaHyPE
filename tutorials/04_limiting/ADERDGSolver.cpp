@@ -7,12 +7,26 @@
 //   Shortcuts::rho      density        (1 component)
 //   Shortcuts::j        momentum       (2 components: +0 is x, +1 is y)
 //   Shortcuts::E        total energy   (1 component)
+//
+// The subcell scheme a troubled cell falls back on evaluates these same terms.
 #include "ADERDGSolver.h"
 
 namespace {
   constexpr double Gamma         = 1.4;
   constexpr double ShockPosition = 0.111;
-  constexpr double pZero         = 1.0e-4;   // pressure floor for the vacuum guard
+  // A high-order candidate can reach the vacuum at a shock before the limiter
+  // rejects it. The floor lies far below any density the limiter accepts, so it
+  // bounds the reciprocal without altering an admissible state.
+  constexpr double DensityFloor = 1.0e-12;
+
+  double momentumSquared(const double* const Q) {
+    using Shortcuts = tutorials::exahype2::limiting::ADERDGSolver::Shortcuts;
+    double result   = 0.0;
+    for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
+      result += Q[Shortcuts::j + dimension] * Q[Shortcuts::j + dimension];
+    }
+    return result;
+  }
 } // namespace
 
 void tutorials::exahype2::limiting::ADERDGSolver::initialCondition(
@@ -20,15 +34,15 @@ void tutorials::exahype2::limiting::ADERDGSolver::initialCondition(
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize
 ) {
-  // Low-density, low-pressure gas in the bottom-left quadrant; dense, high-pressure
-  // gas everywhere else. The discontinuity drives shocks and a contact.
-  const bool   low = cellCentre[0] < -ShockPosition && cellCentre[1] < -ShockPosition;
-  const double p   = low ? 0.1 : 1.0;
+  // The jump between the corner and the rest of the box drives the shocks and the
+  // contact this tutorial limits.
+  const bool   inLowPressureCorner = cellCentre[0] < -ShockPosition and cellCentre[1] < -ShockPosition;
+  const double pressure            = inLowPressureCorner ? 0.1 : 1.0;
 
-  Q[Shortcuts::rho]   = low ? 0.125 : 1.0;
+  Q[Shortcuts::rho]   = inLowPressureCorner ? 0.125 : 1.0;
   Q[Shortcuts::j + 0] = 0.0;
   Q[Shortcuts::j + 1] = 0.0;
-  Q[Shortcuts::E]     = p / (Gamma - 1.0);
+  Q[Shortcuts::E]     = pressure / (Gamma - 1.0);
 }
 
 void tutorials::exahype2::limiting::ADERDGSolver::boundaryConditions(
@@ -40,13 +54,13 @@ void tutorials::exahype2::limiting::ADERDGSolver::boundaryConditions(
   const int                                    normal
 ) {
   // Hold the initial outer state at the boundary (the shocks never reach it).
-  const bool   low = faceCentre[0] < -ShockPosition && faceCentre[1] < -ShockPosition;
-  const double p   = low ? 0.1 : 1.0;
+  const bool   inLowPressureCorner = faceCentre[0] < -ShockPosition and faceCentre[1] < -ShockPosition;
+  const double pressure            = inLowPressureCorner ? 0.1 : 1.0;
 
-  Qoutside[Shortcuts::rho]   = low ? 0.125 : 1.0;
+  Qoutside[Shortcuts::rho]   = inLowPressureCorner ? 0.125 : 1.0;
   Qoutside[Shortcuts::j + 0] = 0.0;
   Qoutside[Shortcuts::j + 1] = 0.0;
-  Qoutside[Shortcuts::E]     = p / (Gamma - 1.0);
+  Qoutside[Shortcuts::E]     = pressure / (Gamma - 1.0);
 }
 
 void tutorials::exahype2::limiting::ADERDGSolver::flux(
@@ -58,24 +72,16 @@ void tutorials::exahype2::limiting::ADERDGSolver::flux(
   const int                                    normal,
   double* const NOALIAS                        F
 ) {
-  const double irho = Q[Shortcuts::rho] > 0.0 ? 1.0 / Q[Shortcuts::rho] : 0.0;
-  const double p    = (Gamma - 1.0)
-    * (Q[Shortcuts::E] - 0.5 * irho * (Q[Shortcuts::j + 0] * Q[Shortcuts::j + 0] + Q[Shortcuts::j + 1] * Q[Shortcuts::j + 1]));
+  const double inverseDensity = 1.0 / std::max(Q[Shortcuts::rho], DensityFloor);
+  const double pressure       = (Gamma - 1.0) * (Q[Shortcuts::E] - 0.5 * inverseDensity * momentumSquared(Q));
+  const double normalMomentum = Q[Shortcuts::j + normal];
 
-  if (p > pZero) {
-    const double jn   = Q[Shortcuts::j + normal];
-    F[Shortcuts::rho]   = jn;
-    F[Shortcuts::j + 0] = jn * Q[Shortcuts::j + 0] * irho;
-    F[Shortcuts::j + 1] = jn * Q[Shortcuts::j + 1] * irho;
-    F[Shortcuts::E]     = jn * irho * (Q[Shortcuts::E] + p);
-    F[Shortcuts::j + normal] += p;
-  } else {
-    // Non-physical state: emit no flux and let the limiter recompute the cell.
-    F[Shortcuts::rho]   = 0.0;
-    F[Shortcuts::j + 0] = 0.0;
-    F[Shortcuts::j + 1] = 0.0;
-    F[Shortcuts::E]     = 0.0;
-  }
+  F[Shortcuts::rho]   = normalMomentum;
+  F[Shortcuts::j + 0] = normalMomentum * Q[Shortcuts::j + 0] * inverseDensity;
+  F[Shortcuts::j + 1] = normalMomentum * Q[Shortcuts::j + 1] * inverseDensity;
+  F[Shortcuts::E]     = normalMomentum * inverseDensity * (Q[Shortcuts::E] + pressure);
+
+  F[Shortcuts::j + normal] += pressure;
 }
 
 double tutorials::exahype2::limiting::ADERDGSolver::maxEigenvalue(
@@ -86,14 +92,12 @@ double tutorials::exahype2::limiting::ADERDGSolver::maxEigenvalue(
   const double                                 timeStepSize,
   const int                                    normal
 ) {
-  const double irho = Q[Shortcuts::rho] > 0.0 ? 1.0 / Q[Shortcuts::rho] : 0.0;
-  const double p    = (Gamma - 1.0)
-    * (Q[Shortcuts::E] - 0.5 * irho * (Q[Shortcuts::j + 0] * Q[Shortcuts::j + 0] + Q[Shortcuts::j + 1] * Q[Shortcuts::j + 1]));
+  const double inverseDensity = 1.0 / std::max(Q[Shortcuts::rho], DensityFloor);
+  const double pressure       = (Gamma - 1.0) * (Q[Shortcuts::E] - 0.5 * inverseDensity * momentumSquared(Q));
+  // The time step is computed before the limiter has judged the cell, so a
+  // candidate whose pressure has gone negative still has to yield a finite bound.
+  const double soundSpeed     = std::sqrt(std::abs(Gamma * pressure * inverseDensity));
+  const double normalVelocity = Q[Shortcuts::j + normal] * inverseDensity;
 
-  if (p > pZero) {
-    const double c  = std::sqrt(Gamma * p * irho);
-    const double un = Q[Shortcuts::j + normal] * irho;
-    return std::fmax(std::fabs(un - c), std::fabs(un + c));
-  }
-  return 0.0;   // troubled cell: the limiter recomputes it with Finite Volumes
+  return std::abs(normalVelocity) + soundSpeed;
 }

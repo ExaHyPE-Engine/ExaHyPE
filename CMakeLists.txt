@@ -106,10 +106,12 @@ include(PeanoOptions)
 include(PeanoFlags)
 include(PeanoDetectCPUArch)
 include(PeanoClangTidy)
+include(PeanoOpenMPFeatures)
 
 peano_create_options_target()
 peano_apply_flags()
 peano_find_host_dependencies()
+peano_check_openmp_features()
 peano_resolve_gpu_backend()
 peano_detect_cpu_architecture()
 

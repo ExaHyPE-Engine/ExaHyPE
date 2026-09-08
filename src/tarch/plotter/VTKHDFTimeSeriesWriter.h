@@ -2,23 +2,28 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "TimeSeriesWriter.h"
+#include "tarch/plotter/TimeSeriesWriter.h"
 
 namespace tarch::plotter {
   class VTKHDFTimeSeriesWriter;
 } // namespace tarch::plotter
 
 /**
- * Time-series writer for the VTKHDF format. A VTKHDFFileWriter keeps every time
- * step in one growing .vtkhdf file, so that single file already is the temporal
- * collection: there is no separate index file to emit, and the per-step file
- * name must stay stable (no time stamp) so each traversal appends to the same
- * file.
+ * Writes no index file, because one .vtkhdf file already holds every time step.
+ * The snapshot name carries no time stamp, so each traversal appends to the
+ * same file.
  */
-class tarch::plotter::VTKHDFTimeSeriesWriter : public tarch::plotter::TimeSeriesWriter {
+class tarch::plotter::VTKHDFTimeSeriesWriter final : public tarch::plotter::TimeSeriesWriter {
 public:
+  VTKHDFTimeSeriesWriter()                                         = default;
+  VTKHDFTimeSeriesWriter(const VTKHDFTimeSeriesWriter&)            = delete;
+  VTKHDFTimeSeriesWriter(VTKHDFTimeSeriesWriter&&)                 = delete;
+  VTKHDFTimeSeriesWriter& operator=(const VTKHDFTimeSeriesWriter&) = delete;
+  VTKHDFTimeSeriesWriter& operator=(VTKHDFTimeSeriesWriter&&)      = delete;
+  ~VTKHDFTimeSeriesWriter() override                               = default;
+
   void writeTimeSeriesMetaFile(const std::string& outputDirectory, const std::string& filename) const override;
 
 protected:
-  std::string snapshotName(const std::string& filename, double time) const override;
+  std::string snapshotName(const std::string& filename, const double time) const override;
 };

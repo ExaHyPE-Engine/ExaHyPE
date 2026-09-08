@@ -13,15 +13,15 @@ namespace tarch::la {
 
 template <int N>
 struct tarch::la::VectorCompare {
-private:
-  const double _accuracy;
-
 public:
   INLINE_METHOD
   VectorCompare(double accuracy = NUMERICAL_ZERO_DIFFERENCE);
 
   INLINE_METHOD
   bool operator()(const Vector<N, double>& left, const Vector<N, double>& right) const;
+
+private:
+  const double _accuracy;
 };
 
-#include "VectorCompare.cpph"
+#include "tarch/la/VectorCompare.cpph"

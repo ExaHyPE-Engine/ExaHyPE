@@ -1,0 +1,290 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+TARGET_DECLARE
+/**
+ * Returns a commutative minimum with one quiet NaN representation and deterministic signed zero.
+ */
+template <typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD Value
+exahype2::dg::mergeDiscreteMaximumPrincipleMinimum(const Value left, const Value right) {
+  static_assert(std::is_floating_point_v<Value>, "The DMP extrema type has to be floating point.");
+  if (std::isnan(left) or std::isnan(right)) {
+    return std::numeric_limits<Value>::quiet_NaN();
+  }
+  constexpr auto Zero = static_cast<Value>(0);
+  if (left == Zero and right == Zero) {
+    return std::signbit(left) or std::signbit(right) ? -Zero : Zero;
+  }
+  return std::min(left, right);
+}
+
+/**
+ * Returns a commutative maximum with one quiet NaN representation and deterministic signed zero.
+ */
+template <typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD Value
+exahype2::dg::mergeDiscreteMaximumPrincipleMaximum(const Value left, const Value right) {
+  static_assert(std::is_floating_point_v<Value>, "The DMP extrema type has to be floating point.");
+  if (std::isnan(left) or std::isnan(right)) {
+    return std::numeric_limits<Value>::quiet_NaN();
+  }
+  constexpr auto Zero = static_cast<Value>(0);
+  if (left == Zero and right == Zero) {
+    return std::signbit(left) and std::signbit(right) ? -Zero : Zero;
+  }
+  return std::max(left, right);
+}
+
+/**
+ * Rounds an observable extremum to a coarser floating-point grid.
+ *
+ * Two mirror-image cells hold bitwise-mirrored states, yet their extrema pass
+ * through tensor-product sums whose summation order differs, so the results
+ * can differ in the last bits. A verdict taken at the admissibility margin
+ * would then flip in one cell and not in its mirror image, and that one-sided
+ * flip seeds a lasting asymmetry. Rounding to twelve fewer mantissa bits
+ * removes this noise while staying orders of magnitude below any physical
+ * relaxation margin.
+ */
+template <typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD Value exahype2::dg::quantiseObservableExtremum(const Value extremum) {
+  static_assert(std::is_floating_point_v<Value>, "The DMP observable type has to be floating point.");
+  constexpr int DiscardedMantissaBits = 12;
+  if (extremum == static_cast<Value>(0) or not std::isfinite(extremum)) {
+    return extremum;
+  }
+  const int roundingStepExponent =
+    std::ilogb(extremum) - (std::numeric_limits<Value>::digits - 1 - DiscardedMantissaBits);
+  // An extremum this close to the bottom of the range has fewer mantissa bits left
+  // than the rounding would discard, and the step itself would stop being a normal
+  // number. Such a value already sits below any margin a verdict rests on.
+  if (roundingStepExponent < std::numeric_limits<Value>::min_exponent - 1) {
+    return extremum;
+  }
+  const Value roundingStep = std::ldexp(static_cast<Value>(1), roundingStepExponent);
+  return std::nearbyint(extremum / roundingStep) * roundingStep;
+}
+
+/**
+ * Returns whether a finite candidate range lies inside a finite reference range
+ * after quantisation and relaxation. The relaxation is the larger of an absolute
+ * parameter and a scaled fraction of the reference range.
+ */
+template <typename Value>
+INLINE_METHOD GPU_CALLABLE_METHOD bool exahype2::dg::satisfiesDiscreteMaximumPrinciple(
+  const Value candidateMinimum,
+  const Value candidateMaximum,
+  const Value referenceMinimum,
+  const Value referenceMaximum,
+  const Value relaxationParameter,
+  const Value differencesScaling
+) {
+  static_assert(std::is_floating_point_v<Value>, "The DMP observable type has to be floating point.");
+  if (not std::isfinite(candidateMinimum) or not std::isfinite(candidateMaximum)) {
+    return false;
+  }
+  if (not std::isfinite(referenceMinimum) or not std::isfinite(referenceMaximum)) {
+    return false;
+  }
+  const Value roundedCandidateMinimum = exahype2::dg::quantiseObservableExtremum(candidateMinimum);
+  const Value roundedCandidateMaximum = exahype2::dg::quantiseObservableExtremum(candidateMaximum);
+  const Value roundedReferenceMinimum = exahype2::dg::quantiseObservableExtremum(referenceMinimum);
+  const Value roundedReferenceMaximum = exahype2::dg::quantiseObservableExtremum(referenceMaximum);
+  const Value scaledReferenceRange    = (roundedReferenceMaximum - roundedReferenceMinimum) * differencesScaling;
+  const Value widening = exahype2::dg::mergeDiscreteMaximumPrincipleMaximum(scaledReferenceRange, relaxationParameter);
+  if (not std::isfinite(widening)) {
+    return false;
+  }
+  return roundedCandidateMinimum >= roundedReferenceMinimum - widening
+    and roundedCandidateMaximum <= roundedReferenceMaximum + widening;
+}
+
+/**
+ * Reduces the observables of a cell's nodal state into a running per-observable
+ * minimum and maximum.
+ *
+ * The minimum and maximum accumulate, so the caller seeds them with infinities
+ * and calls this once per sample set (nodal, Lobatto, subcell). The NaN-preserving
+ * merges keep an unphysical node visible to the following admissibility check.
+ */
+template <int NumberOfObservables, typename Value, typename ObservableMapping>
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::reduceObservableExtrema(
+  Value* const       minimum,
+  Value* const       maximum,
+  const Value* const nodalState,
+  const int          numberOfNodes,
+  const int          strideBetweenNodes,
+  ObservableMapping  mapStateToObservables
+) {
+  static_assert(NumberOfObservables > 0, "The DMP requires at least one observable.");
+  Value observables[NumberOfObservables];
+  for (int node = 0; node < numberOfNodes; node++) {
+    mapStateToObservables(nodalState + node * strideBetweenNodes, observables);
+    for (int observable = 0; observable < NumberOfObservables; observable++) {
+      minimum[observable] =
+        exahype2::dg::mergeDiscreteMaximumPrincipleMinimum(minimum[observable], observables[observable]);
+      maximum[observable] =
+        exahype2::dg::mergeDiscreteMaximumPrincipleMaximum(maximum[observable], observables[observable]);
+    }
+  }
+}
+
+/**
+ * Projects a tensor-product nodal state onto another sample grid and reduces
+ * the mapped observables without materialising the full projected tensor. The
+ * matrix uses the input-major layout of `projectTensorProduct`, and the
+ * axis-by-axis contraction runs over stack intermediates.
+ */
+template <
+  int Dimensions,
+  int InputDofs,
+  int SampleDofs,
+  int NumberOfData,
+  int NumberOfObservables,
+  typename Value,
+  typename ObservableMapping>
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::reduceProjectedObservableExtrema(
+  Value* const       minimum,
+  Value* const       maximum,
+  const Value* const nodalState,
+  const Value* const samplingMatrix,
+  ObservableMapping  mapStateToObservables
+) {
+  static_assert(Dimensions == 2 or Dimensions == 3, "DMP sampling supports two or three dimensions.");
+  static_assert(InputDofs > 0, "DMP sampling requires at least one input degree of freedom.");
+  static_assert(SampleDofs > 0, "DMP sampling requires at least one output sample.");
+  static_assert(NumberOfData > 0, "DMP sampling requires at least one data value.");
+  static_assert(NumberOfObservables > 0, "The DMP requires at least one observable.");
+
+  Value sampledState[NumberOfData];
+  if constexpr (Dimensions == 2) {
+    Value scratch[InputDofs * SampleDofs * NumberOfData];
+    for (int inputY = 0; inputY < InputDofs; inputY++) {
+      for (int sampleX = 0; sampleX < SampleDofs; sampleX++) {
+        for (int data = 0; data < NumberOfData; data++) {
+          Value projected{0};
+          for (int inputX = 0; inputX < InputDofs; inputX++) {
+            projected += nodalState[(inputY * InputDofs + inputX) * NumberOfData + data]
+              * samplingMatrix[inputX * SampleDofs + sampleX];
+          }
+          scratch[(inputY * SampleDofs + sampleX) * NumberOfData + data] = projected;
+        }
+      }
+    }
+    for (int sampleY = 0; sampleY < SampleDofs; sampleY++) {
+      for (int sampleX = 0; sampleX < SampleDofs; sampleX++) {
+        for (int data = 0; data < NumberOfData; data++) {
+          Value projected{0};
+          for (int inputY = 0; inputY < InputDofs; inputY++) {
+            projected += scratch[(inputY * SampleDofs + sampleX) * NumberOfData + data]
+              * samplingMatrix[inputY * SampleDofs + sampleY];
+          }
+          sampledState[data] = projected;
+        }
+        exahype2::dg::reduceObservableExtrema<NumberOfObservables>(
+          minimum,
+          maximum,
+          sampledState,
+          1,
+          NumberOfData,
+          mapStateToObservables
+        );
+      }
+    }
+  } else {
+    Value firstIntermediate[InputDofs * InputDofs * SampleDofs * NumberOfData];
+    Value secondIntermediate[InputDofs * SampleDofs * SampleDofs * NumberOfData];
+    for (int inputZ = 0; inputZ < InputDofs; inputZ++) {
+      for (int inputY = 0; inputY < InputDofs; inputY++) {
+        for (int sampleX = 0; sampleX < SampleDofs; sampleX++) {
+          for (int data = 0; data < NumberOfData; data++) {
+            Value projected{0};
+            for (int inputX = 0; inputX < InputDofs; inputX++) {
+              projected += nodalState[((inputZ * InputDofs + inputY) * InputDofs + inputX) * NumberOfData + data]
+                * samplingMatrix[inputX * SampleDofs + sampleX];
+            }
+            firstIntermediate[((inputZ * InputDofs + inputY) * SampleDofs + sampleX) * NumberOfData + data] = projected;
+          }
+        }
+      }
+    }
+    for (int inputZ = 0; inputZ < InputDofs; inputZ++) {
+      for (int sampleY = 0; sampleY < SampleDofs; sampleY++) {
+        for (int sampleX = 0; sampleX < SampleDofs; sampleX++) {
+          for (int data = 0; data < NumberOfData; data++) {
+            Value projected{0};
+            for (int inputY = 0; inputY < InputDofs; inputY++) {
+              projected +=
+                firstIntermediate[((inputZ * InputDofs + inputY) * SampleDofs + sampleX) * NumberOfData + data]
+                * samplingMatrix[inputY * SampleDofs + sampleY];
+            }
+            secondIntermediate[((inputZ * SampleDofs + sampleY) * SampleDofs + sampleX) * NumberOfData + data] =
+              projected;
+          }
+        }
+      }
+    }
+    for (int sampleZ = 0; sampleZ < SampleDofs; sampleZ++) {
+      for (int sampleY = 0; sampleY < SampleDofs; sampleY++) {
+        for (int sampleX = 0; sampleX < SampleDofs; sampleX++) {
+          for (int data = 0; data < NumberOfData; data++) {
+            Value projected{0};
+            for (int inputZ = 0; inputZ < InputDofs; inputZ++) {
+              projected +=
+                secondIntermediate[((inputZ * SampleDofs + sampleY) * SampleDofs + sampleX) * NumberOfData + data]
+                * samplingMatrix[inputZ * SampleDofs + sampleZ];
+            }
+            sampledState[data] = projected;
+          }
+          exahype2::dg::reduceObservableExtrema<NumberOfObservables>(
+            minimum,
+            maximum,
+            sampledState,
+            1,
+            NumberOfData,
+            mapStateToObservables
+          );
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Returns whether a coarse vertex lies on every father-cell boundary facet
+ * that contains a hanging vertex.
+ *
+ * The hanging vertex position is its place in the father cell's vertex pattern,
+ * from zero to three per axis. Each boundary coordinate selects the coarse
+ * vertices on that side.
+ */
+template <int Dimensions>
+INLINE_METHOD GPU_CALLABLE_METHOD bool exahype2::dg::isCoarseVertexOnFacetOfHangingVertex(
+  const tarch::la::Vector<Dimensions, int>& hangingVertexPosition,
+  const int                                 coarseVertexNumber
+) {
+  static_assert(Dimensions == 2 or Dimensions == 3, "Hanging vertices exist in two or three dimensions.");
+  assertion(coarseVertexNumber >= 0);
+  assertion(coarseVertexNumber < (1 << Dimensions));
+  constexpr int LowerBoundary  = 0;
+  constexpr int UpperBoundary  = 3;
+  bool          liesOnBoundary = false;
+  for (int axis = 0; axis < Dimensions; axis++) {
+    assertion(hangingVertexPosition(axis) >= LowerBoundary);
+    assertion(hangingVertexPosition(axis) <= UpperBoundary);
+    liesOnBoundary =
+      liesOnBoundary or hangingVertexPosition(axis) == LowerBoundary or hangingVertexPosition(axis) == UpperBoundary;
+    const int coarseVertexSide = (coarseVertexNumber >> axis) & 1;
+    if (hangingVertexPosition(axis) == LowerBoundary and coarseVertexSide == 1) {
+      return false;
+    }
+    if (hangingVertexPosition(axis) == UpperBoundary and coarseVertexSide == 0) {
+      return false;
+    }
+  }
+  assertion(liesOnBoundary);
+  return true;
+}
+
+TARGET_DECLARE_END

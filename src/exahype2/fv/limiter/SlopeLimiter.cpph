@@ -1,0 +1,82 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+TARGET_DECLARE
+template <typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision exahype2::fv::limiter::Zero::limitedDifference(
+  [[maybe_unused]] const ComputePrecision forwardDifference,
+  [[maybe_unused]] const ComputePrecision backwardDifference
+) {
+  return ComputePrecision(0);
+}
+
+template <typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision exahype2::fv::limiter::Average::limitedDifference(
+  const ComputePrecision forwardDifference,
+  const ComputePrecision backwardDifference
+) {
+  return static_cast<ComputePrecision>(0.5) * (forwardDifference + backwardDifference);
+}
+
+template <typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision exahype2::fv::limiter::Minmod::limitedDifference(
+  const ComputePrecision forwardDifference,
+  const ComputePrecision backwardDifference
+) {
+  if (forwardDifference * backwardDifference <= ComputePrecision(0)) {
+    return ComputePrecision(0);
+  }
+  const ComputePrecision forwardMagnitude =
+    forwardDifference < ComputePrecision(0) ? -forwardDifference : forwardDifference;
+  const ComputePrecision backwardMagnitude =
+    backwardDifference < ComputePrecision(0) ? -backwardDifference : backwardDifference;
+  return forwardMagnitude < backwardMagnitude ? forwardDifference : backwardDifference;
+}
+
+template <typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision exahype2::fv::limiter::VanAlbada::limitedDifference(
+  const ComputePrecision forwardDifference,
+  const ComputePrecision backwardDifference
+) {
+  if (backwardDifference == ComputePrecision(0)) {
+    return ComputePrecision(0);
+  }
+  const ComputePrecision ratio        = forwardDifference / backwardDifference;
+  const ComputePrecision ratioSquared = ratio * ratio;
+  return (ratioSquared + ratio) / (ratioSquared + ComputePrecision(1)) * backwardDifference;
+}
+
+template <typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision exahype2::fv::limiter::Superbee::limitedDifference(
+  const ComputePrecision forwardDifference,
+  const ComputePrecision backwardDifference
+) {
+  if (backwardDifference == ComputePrecision(0)) {
+    return ComputePrecision(0);
+  }
+  const ComputePrecision ratio = forwardDifference / backwardDifference;
+  const ComputePrecision steepBranch =
+    ComputePrecision(2) * ratio < ComputePrecision(1) ? ComputePrecision(2) * ratio : ComputePrecision(1);
+  const ComputePrecision flatBranch = ratio < ComputePrecision(2) ? ratio : ComputePrecision(2);
+  const ComputePrecision larger     = steepBranch > flatBranch ? steepBranch : flatBranch;
+  const ComputePrecision phi        = larger > ComputePrecision(0) ? larger : ComputePrecision(0);
+  return phi * backwardDifference;
+}
+
+template <typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision exahype2::fv::limiter::MinmodCentral::limitedDifference(
+  const ComputePrecision forwardDifference,
+  const ComputePrecision backwardDifference
+) {
+  if (backwardDifference == ComputePrecision(0)) {
+    return ComputePrecision(0);
+  }
+  const ComputePrecision ratio        = forwardDifference / backwardDifference;
+  const ComputePrecision centred      = (ComputePrecision(1) + ratio) / ComputePrecision(2);
+  const ComputePrecision centredOrTwo = centred < ComputePrecision(2) ? centred : ComputePrecision(2);
+  const ComputePrecision clamped =
+    centredOrTwo < ComputePrecision(2) * ratio ? centredOrTwo : ComputePrecision(2) * ratio;
+  const ComputePrecision phi = clamped > ComputePrecision(0) ? clamped : ComputePrecision(0);
+  return phi * backwardDifference;
+}
+TARGET_DECLARE_END

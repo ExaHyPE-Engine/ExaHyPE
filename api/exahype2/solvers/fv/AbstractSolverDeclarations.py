@@ -7,7 +7,7 @@ class AbstractSolverDeclarations:
         template = """
     {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
     virtual void initialCondition(
-      {{COMPUTE_PRECISION}}* const NOALIAS          Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      {{STORAGE_PRECISION}}* const NOALIAS          Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<DIMENSIONS, double>&  x,
       const tarch::la::Vector<DIMENSIONS, double>&  h
     ) = 0;
@@ -21,8 +21,8 @@ class AbstractSolverDeclarations:
      * i.e. to the flux and the eigenvalues.
      */
     virtual void boundaryConditions(
-      const {{COMPUTE_PRECISION}}* const NOALIAS    Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      {{COMPUTE_PRECISION}}* const NOALIAS          Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{STORAGE_PRECISION}}* const NOALIAS    Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      {{STORAGE_PRECISION}}* const NOALIAS          Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<DIMENSIONS, double>&  x,
       const tarch::la::Vector<DIMENSIONS, double>&  h,
       const double                                  t,
@@ -55,105 +55,10 @@ class AbstractSolverDeclarations:
      * @param t Time stamp of the patch.
      */
     virtual ::exahype2::RefinementCommand refinementCriterion(
-      const {{COMPUTE_PRECISION}}* const NOALIAS    Q, // Q[patch-size * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})]
+      const {{STORAGE_PRECISION}}* const NOALIAS    Q, // Q[patch-size * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})]
       const tarch::la::Vector<DIMENSIONS, double>&  x,
       const tarch::la::Vector<DIMENSIONS, double>&  h,
       const double                                  t
-    ) = 0;
-    {% endif %}
-
-    {% if MAX_EIGENVALUE_IMPLEMENTATION=="<user-defined>" and MAX_EIGENVALUE_IMPLEMENTATION!="<none>" %}
-    virtual double maxEigenvalue(
-      const {{COMPUTE_PRECISION}}* const NOALIAS    Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<DIMENSIONS, double>&  x,
-      const tarch::la::Vector<DIMENSIONS, double>&  h,
-      const double                                  t,
-      const double                                  dt,
-      const int                                     normal
-    ) = 0;
-    {% endif %}
-
-    {% if FLUX_IMPLEMENTATION=="<user-defined>" and FLUX_IMPLEMENTATION!="<none>" %}
-    virtual void flux(
-      const {{COMPUTE_PRECISION}}* const NOALIAS    Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<DIMENSIONS, double>&  x,
-      const tarch::la::Vector<DIMENSIONS, double>&  h,
-      const double                                  t,
-      const double                                  dt,
-      const int                                     normal,
-      {{COMPUTE_PRECISION}}* const NOALIAS          F // F[{{NUMBER_OF_UNKNOWNS}}]
-    ) = 0;
-    {% endif %}
-
-    {% if NCP_IMPLEMENTATION=="<user-defined>" and NCP_IMPLEMENTATION!="<none>" %}
-    virtual void nonconservativeProduct(
-      const {{COMPUTE_PRECISION}}* const NOALIAS    Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const {{COMPUTE_PRECISION}}* const NOALIAS    deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<DIMENSIONS, double>&  x,
-      const tarch::la::Vector<DIMENSIONS, double>&  h,
-      const double                                  t,
-      const double                                  dt,
-      const int                                     normal,
-      {{COMPUTE_PRECISION}}* const NOALIAS          BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
-    ) = 0;
-    {% endif %}
-
-    {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>" %}
-    virtual void sourceTerm(
-      const {{COMPUTE_PRECISION}}* const NOALIAS    Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<DIMENSIONS, double>&  x,
-      const tarch::la::Vector<DIMENSIONS, double>&  h,
-      const double                                  t,
-      const double                                  dt,
-      {{COMPUTE_PRECISION}}* const NOALIAS          S // S[{{NUMBER_OF_UNKNOWNS}}]
-    ) = 0;
-    {% endif %}
-
-    {% if DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION=="<user-defined>" and DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION!="<none>" %}
-    virtual void diffusiveSourceTerm(
-      const {{COMPUTE_PRECISION}}* const NOALIAS    Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const {{COMPUTE_PRECISION}}* const NOALIAS    deltaQ, // deltaQ[{{DIMENSIONS}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})]
-      const tarch::la::Vector<DIMENSIONS, double>&  x,
-      const tarch::la::Vector<DIMENSIONS, double>&  h,
-      const double                                  t,
-      const double                                  dt,
-      {{COMPUTE_PRECISION}}* const NOALIAS          S // S[{{NUMBER_OF_UNKNOWNS}}]
-    ) = 0;
-    {% endif %}
-
-    {% if RIEMANN_SOLVER_IMPLEMENTATION=="<user-defined>" and RIEMANN_SOLVER_IMPLEMENTATION!="<none>" %}
-    virtual double solveRiemannProblem(
-      const {{COMPUTE_PRECISION}}* const NOALIAS    QL, // QL[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const {{COMPUTE_PRECISION}}* const NOALIAS    QR, // QR[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<DIMENSIONS, double>&  x,
-      const tarch::la::Vector<DIMENSIONS, double>&  h,
-      const double                                  t,
-      const double                                  dt,
-      const int                                     normal,
-      {{COMPUTE_PRECISION}}* const NOALIAS          FL, // FL[{{NUMBER_OF_UNKNOWNS}}]
-      {{COMPUTE_PRECISION}}* const NOALIAS          FR  // FR[{{NUMBER_OF_UNKNOWNS}}]
-    ) = 0;
-    {% endif %}
-
-    {% if ADJUST_SOLUTION_IMPLEMENTATION=="<user-defined>" and ADJUST_SOLUTION_IMPLEMENTATION!="<none>" %}
-    virtual void adjustSolution(
-      const tarch::la::Vector<DIMENSIONS, double>&  x,
-      const tarch::la::Vector<DIMENSIONS, double>&  h,
-      const double                                  t,
-      const double                                  dt,
-      {{STORAGE_PRECISION}}* const NOALIAS          Q // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-    ) = 0;
-    {% endif %}
-
-    {% if LIMITER_IMPLEMENTATION=="<user-defined>" and LIMITER_IMPLEMENTATION!="<none>" %}
-    virtual {{COMPUTE_PRECISION}} limit(
-      const {{COMPUTE_PRECISION}}* const NOALIAS   QL,
-      const {{COMPUTE_PRECISION}}* const NOALIAS   Q,
-      const {{COMPUTE_PRECISION}}* const NOALIAS   QR,
-      const tarch::la::Vector<DIMENSIONS, double>& x,
-      const tarch::la::Vector<DIMENSIONS, double>& h,
-      const int                                    normal,
-      const int                                    unknown
     ) = 0;
     {% endif %}
 """

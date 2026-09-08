@@ -84,7 +84,7 @@ unitTestsErrors += tests->getNumberOfErrors();
 delete tests;
 ~~~~~~~~~~~~~~~~~
 
-one per component (tarch, peano4, the toolboxes and exahype2). It returns
+one per component (tarch, peano4, exahype2 and runner). It returns
 an output similar to
 
 ~~~~~~~~~~~~~~~~~

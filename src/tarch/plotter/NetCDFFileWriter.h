@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "FileWriter.h"
+#include "tarch/plotter/FileWriter.h"
 
 #ifdef PEANO_WITH_NETCDF
 
@@ -10,17 +10,21 @@ namespace tarch::plotter {
   class NetCDFFileWriter;
 } // namespace tarch::plotter
 
-class tarch::plotter::NetCDFFileWriter final: public FileWriter {
+class tarch::plotter::NetCDFFileWriter final : public tarch::plotter::FileWriter {
 public:
-  NetCDFFileWriter(const std::string& outputDirectory, int numberOfSubdomains);
-  ~NetCDFFileWriter() override = default;
+  explicit NetCDFFileWriter(const std::string& outputDirectory);
+  NetCDFFileWriter(const NetCDFFileWriter&)            = delete;
+  NetCDFFileWriter(NetCDFFileWriter&&)                 = delete;
+  NetCDFFileWriter& operator=(const NetCDFFileWriter&) = delete;
+  NetCDFFileWriter& operator=(NetCDFFileWriter&&)      = delete;
+  ~NetCDFFileWriter() override                         = default;
 
-  bool writeToFile(const std::string& filename, double time) override;
+  bool writeToFile(const std::string& filename, const double time) override;
 
   std::string getFileExtension() const override;
 
 private:
-  static void check(int status, const std::string& where);
+  static void check(const int status, const std::string& operation);
 };
 
 #endif

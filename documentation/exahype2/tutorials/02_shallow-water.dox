@@ -77,7 +77,7 @@ generated `Shortcuts` enum (`Shortcuts::h`, `Shortcuts::hu + 0/1`,
   term in the momentum component for now. Leave `nonconservativeProduct` zero.
 
 Rebuild and run. Exercise 1 has no refinement criterion yet, so this is a
-**uniform grid**: set `-lmin` and `-lmax` to the *same* level. We use level 4 -
+**uniform grid**: Set `-lmin` and `-lmax` to the *same* level. We use level 4 -
 the dam break is a sharp step and this scheme has no limiter (that comes in
 Part 4), so it needs enough resolution to resolve the front; a coarser uniform
 level lets the time step collapse there. The run takes a few minutes; for a
@@ -159,7 +159,7 @@ continue with @ref page_exahype2_tutorials_euler.
 Initial conditions:
 
     void tutorials::exahype2::swe::ADERDGSolver::initialCondition(
-      double* const NOALIAS                        Q,
+      double* const NOALIAS                   Q,
       const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
       const tarch::la::Vector<DIMENSIONS, double>& cellSize
     ) {
@@ -172,8 +172,8 @@ Initial conditions:
 Boundary conditions:
 
     void tutorials::exahype2::swe::ADERDGSolver::boundaryConditions(
-      const double* const NOALIAS                  Qinside,
-      double* const NOALIAS                        Qoutside,
+      const double* const NOALIAS             Qinside,
+      double* const NOALIAS                   Qoutside,
       const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
       const tarch::la::Vector<DIMENSIONS, double>& cellSize,
       const double                                 time,
@@ -188,7 +188,7 @@ Boundary conditions:
 Max eigenvalue:
 
     double tutorials::exahype2::swe::ADERDGSolver::maxEigenvalue(
-      const double* const NOALIAS                  Q,
+      const double* const NOALIAS             Q,
       const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
       const tarch::la::Vector<DIMENSIONS, double>& cellSize,
       const double                                 time,
@@ -204,13 +204,13 @@ Max eigenvalue:
 Flux (with the pressure term still in the flux):
 
     void tutorials::exahype2::swe::ADERDGSolver::flux(
-      const double* const NOALIAS                  Q,
+      const double* const NOALIAS             Q,
       const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
       const tarch::la::Vector<DIMENSIONS, double>& cellSize,
       const double                                 time,
       const double                                 timeStepSize,
       const int                                    normal,
-      double* const NOALIAS                        F
+      double* const NOALIAS                   F
     ) {
       const double     ih = 1.0 / Q[Shortcuts::h];
       constexpr double g  = 9.81;
@@ -237,7 +237,7 @@ The non-conservative product and refinement criterion stay at their stub values
 Initial conditions (radial bump in the bed):
 
     void tutorials::exahype2::swe::ADERDGSolver::initialCondition(
-      double* const NOALIAS                        Q,
+      double* const NOALIAS                   Q,
       const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
       const tarch::la::Vector<DIMENSIONS, double>& cellSize
     ) {
@@ -247,16 +247,16 @@ Initial conditions (radial bump in the bed):
       Q[Shortcuts::b]      = (::tarch::la::norm2(cellCentre) < 0.5 ? 0.1 : 0.0);
     }
 
-Flux (pressure term removed - it now lives in the NCP):
+Flux (pressure term removed - it lives in the NCP):
 
     void tutorials::exahype2::swe::ADERDGSolver::flux(
-      const double* const NOALIAS                  Q,
+      const double* const NOALIAS             Q,
       const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
       const tarch::la::Vector<DIMENSIONS, double>& cellSize,
       const double                                 time,
       const double                                 timeStepSize,
       const int                                    normal,
-      double* const NOALIAS                        F
+      double* const NOALIAS                   F
     ) {
       const double ih = 1.0 / Q[Shortcuts::h];
       F[Shortcuts::h]      = Q[Shortcuts::hu + normal];
@@ -268,14 +268,14 @@ Flux (pressure term removed - it now lives in the NCP):
 Non-conservative product:
 
     void tutorials::exahype2::swe::ADERDGSolver::nonconservativeProduct(
-      const double* const NOALIAS                  Q,
-      const double* const NOALIAS                  deltaQ,
+      const double* const NOALIAS             Q,
+      const double* const NOALIAS             deltaQ,
       const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
       const tarch::la::Vector<DIMENSIONS, double>& cellSize,
       const double                                 time,
       const double                                 timeStepSize,
       const int                                    normal,
-      double* const NOALIAS                        BTimesDeltaQ
+      double* const NOALIAS                   BTimesDeltaQ
     ) {
       constexpr double g         = 9.81;
       BTimesDeltaQ[Shortcuts::h] = 0.0;
@@ -295,7 +295,7 @@ Non-conservative product:
 Refinement criterion (a fixed, finely resolved disc over the bump):
 
     ::exahype2::RefinementCommand tutorials::exahype2::swe::ADERDGSolver::refinementCriterion(
-      const double* const NOALIAS                  Q,
+      const double* const NOALIAS             Q,
       const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
       const tarch::la::Vector<DIMENSIONS, double>& cellSize,
       const double                                 time

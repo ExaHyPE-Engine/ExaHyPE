@@ -2,8 +2,9 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "StepRepository.h"
 
-#include "peano4/parallel/RunControl.h"
+#include "runner/RunControl.h"
 
+/** Returns the generated name of one step. */
 std::string {FULL_QUALIFIED_CLASSNAME}::toString( Steps value ) {{
   switch (value) {{
     case Steps::Undef: return "Undef";
@@ -12,14 +13,16 @@ std::string {FULL_QUALIFIED_CLASSNAME}::toString( Steps value ) {{
   return "<undef>";
 }}
 
+/** Returns the program-step identifier of one generated step. */
 int {FULL_QUALIFIED_CLASSNAME}::toProgramStep( Steps value ) {{
   switch (value) {{
-    case Steps::Undef: return ::peano4::parallel::RunControl::UndefProgramStep;
+    case Steps::Undef: return ::runner::RunControl::UndefProgramStep;
 {INT_RETURN_CASE}
   }}
-  return ::peano4::parallel::RunControl::Terminate;
+  return ::runner::RunControl::Terminate;
 }}
 
+/** Returns the generated step for one program-step identifier. */
 {FULL_QUALIFIED_CLASSNAME}::Steps {FULL_QUALIFIED_CLASSNAME}::toStepEnum( int value ) {{
   switch (value) {{
 {STEP_RETURN_CASE}

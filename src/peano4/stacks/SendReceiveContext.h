@@ -2,36 +2,32 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "tarch/CompilerSpecificSettings.h"
+
 namespace peano4::stacks {
   /**
-   * There are three different scenarios when we merge data:
+   * Identifies the source relationship of two entity copies.
    *
-   * - We exchange data as we are at a proper parallel boundary. As we work
-   *   with a non-overlapping domain decomposition and handle the individual
-   *   levels separately, this can only happen for vertices and faces. It
-   *   never happens for cells.
-   * - We exchange data as we are at a periodic boundary. Again, this happens
-   *   only for vertices and faces.
-   * - We exchange data between different levels of the tree, where the
-   *   parent cell is hosted on another tree than the child. In this case,
-   *   we also exchange cell data.
+   * - `InterRank`: merge() combines vertex or face copies received from two ranks.
+   * - `IntraRank`: merge() combines copies written by two subtree tasks on one rank.
+   * - `Consolidation`: applyIncomingCopy() rebuilds a rank-owned slot from task-local
+   *   copies before boundary packing.
    *
-   * There are two more modes: join and fork. These
-   * differ from the aforementioned modi, as forks and joins are
-   * realised as copies. We do not merge existing data structures, but we
-   * copy them. As such, the context fork and the context join do arise when
-   * we discuss data exchange. They do never arise when we speak about data
-   * merges. If you have a case distinction within a merge, those two modi
-   * should be left out (or equipped with assertion). They should be never
-   * entered.
+   * A periodic entity within one rank uses one storage slot. A periodic entity on
+   * a rank boundary uses `InterRank`.
    */
-  enum class SendReceiveContext {
-    BoundaryExchange,
-    MultiscaleExchange,
-    ForkDomain,
-    JoinDomain,
-    PeriodicBoundaryDataSwap
-  };
+  enum class SendReceiveContext { InterRank, IntraRank, Consolidation };
+
+  std::string toString(const peano4::stacks::SendReceiveContext context);
+
+  template <typename Element, typename Marker, typename GetIncomingCopy>
+  INLINE_METHOD void applyIncomingCopy(
+    Element&                                 data,
+    const peano4::stacks::SendReceiveContext context,
+    const Marker&                            marker,
+    const int                                treeId,
+    const GetIncomingCopy&                   getIncomingCopy
+  );
 } // namespace peano4::stacks
 
-std::string toString(peano4::stacks::SendReceiveContext context);
+#include "peano4/stacks/SendReceiveContext.cpph"

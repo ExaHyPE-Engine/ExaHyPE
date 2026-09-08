@@ -150,17 +150,17 @@ class TPV34(DynamicRuptureScenario):
           {DomainOffset[0], DomainOffset[1], DomainOffset[2]}
         );
 
-        Q[Shortcuts::rho] = materialSampler.sample(
+        Q[Shortcuts::rho] = materialSampler.samplePiecewiseConstant(
           "rho",
           {x[0], x[1], x[2]}
         );
 
-        Q[Shortcuts::cp]  = materialSampler.sample(
+        Q[Shortcuts::cp]  = materialSampler.samplePiecewiseConstant(
           "cp",
           {x[0], x[1], x[2]}
         );
 
-        Q[Shortcuts::cs]  = materialSampler.sample(
+        Q[Shortcuts::cs]  = materialSampler.samplePiecewiseConstant(
           "cs",
           {x[0], x[1], x[2]}
         );
@@ -189,7 +189,7 @@ class TPV34(DynamicRuptureScenario):
     {DomainSize[2], DomainSize[1]},
     {DomainOffset[2], DomainOffset[1]}
   );
-  double mu = muSampler.sample(
+  double mu = muSampler.samplePiecewiseConstant(
     "stress",
     {x[2], x[1]}
   );

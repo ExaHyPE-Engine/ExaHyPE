@@ -25,13 +25,7 @@ public:
   static constexpr int Cardinality = 1;
 {{ENUM_DECLARATIONS}}
 
-private:
-{{ATTRIBUTES}}
-{{STATIC_ATTRIBUTES}}
-
-public:
   {{CLASSNAME}}();
-  ~{{CLASSNAME}}() noexcept = default;
 
 {{ATTRIBUTE_METHOD_DECLARATIONS}}
 
@@ -41,25 +35,17 @@ public:
   }
 
 {% if DATA_ASSOCIATION == 1 -%}
-  void merge(::peano4::stacks::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const ::peano4::datamanagement::VertexMarker& marker, int spacetreeId);
+  void merge(::peano4::stacks::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const ::peano4::datamanagement::VertexMarker& marker, int treeId);
   INLINE_METHOD bool send(
     [[maybe_unused]] const ::peano4::datamanagement::VertexMarker& marker,
     [[maybe_unused]] ::peano4::stacks::SendReceiveContext          context
   ) const {
-    using enum ::peano4::stacks::SendReceiveContext;
-    if ((context == ForkDomain) or (context == JoinDomain)) {
-      return true;
-    }
     return {{SEND_CONDITION}};
   }
   INLINE_METHOD bool receiveAndMerge(
     [[maybe_unused]] const ::peano4::datamanagement::VertexMarker& marker,
     [[maybe_unused]] ::peano4::stacks::SendReceiveContext          context
   ) const {
-    using enum ::peano4::stacks::SendReceiveContext;
-    if ((context == ForkDomain) or (context == JoinDomain)) {
-      return true;
-    }
     return {{RECEIVE_AND_MERGE_CONDITION}};
   }
   INLINE_METHOD static bool load([[maybe_unused]] const ::peano4::datamanagement::VertexMarker& marker) {
@@ -71,25 +57,17 @@ public:
 {% endif -%}
 
 {% if DATA_ASSOCIATION == 2 -%}
-  void merge(::peano4::stacks::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const ::peano4::datamanagement::FaceMarker& marker, int spacetreeId);
+  void merge(::peano4::stacks::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const ::peano4::datamanagement::FaceMarker& marker, int treeId);
   INLINE_METHOD bool send(
     [[maybe_unused]] const ::peano4::datamanagement::FaceMarker& marker,
     [[maybe_unused]] ::peano4::stacks::SendReceiveContext        context
   ) const {
-    using enum ::peano4::stacks::SendReceiveContext;
-    if ((context == ForkDomain) or (context == JoinDomain)) {
-      return true;
-    }
     return {{SEND_CONDITION}};
   }
   INLINE_METHOD bool receiveAndMerge(
     [[maybe_unused]] const ::peano4::datamanagement::FaceMarker& marker,
     [[maybe_unused]] ::peano4::stacks::SendReceiveContext        context
   ) const {
-    using enum ::peano4::stacks::SendReceiveContext;
-    if ((context == ForkDomain) or (context == JoinDomain)) {
-      return true;
-    }
     return {{RECEIVE_AND_MERGE_CONDITION}};
   }
   INLINE_METHOD static bool load([[maybe_unused]] const ::peano4::datamanagement::FaceMarker& marker) {
@@ -101,25 +79,17 @@ public:
 {% endif -%}
 
 {% if DATA_ASSOCIATION == 3 -%}
-  void merge(::peano4::stacks::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const ::peano4::datamanagement::CellMarker& marker, int spacetreeId);
+  void merge(::peano4::stacks::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const ::peano4::datamanagement::CellMarker& marker, int treeId);
   INLINE_METHOD bool send(
     [[maybe_unused]] const ::peano4::datamanagement::CellMarker& marker,
     [[maybe_unused]] ::peano4::stacks::SendReceiveContext        context
   ) const {
-    using enum ::peano4::stacks::SendReceiveContext;
-    if ((context == ForkDomain) or (context == JoinDomain)) {
-      return true;
-    }
     return {{SEND_CONDITION}};
   }
   INLINE_METHOD bool receiveAndMerge(
     [[maybe_unused]] const ::peano4::datamanagement::CellMarker& marker,
     [[maybe_unused]] ::peano4::stacks::SendReceiveContext        context
   ) const {
-    using enum ::peano4::stacks::SendReceiveContext;
-    if ((context == ForkDomain) or (context == JoinDomain)) {
-      return true;
-    }
     return {{RECEIVE_AND_MERGE_CONDITION}};
   }
   INLINE_METHOD static bool load([[maybe_unused]] const ::peano4::datamanagement::CellMarker& marker) {
@@ -129,4 +99,10 @@ public:
     return true;
   }
 {% endif -%}
+
+  ~{{CLASSNAME}}() noexcept = default;
+
+private:
+{{ATTRIBUTES}}
+{{STATIC_ATTRIBUTES}}
 };

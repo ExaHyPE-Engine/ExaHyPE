@@ -2,15 +2,14 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "RiemannTest.h"
 
-#include "TestUtils.h"
-
-#include "../DGUtils.h"
-#include "../Riemann.h"
+#include "exahype2/Enumeration.h"
+#include "exahype2/dg/DGUtils.h"
+#include "exahype2/dg/Riemann.h"
+#include "exahype2/dg/tests/TestUtils.h"
 #include "peano4/grid/GridTraversalEvent.h"
-#include "toolbox/blockstructured/Enumeration.h"
 
 namespace {
-  // A two-point Gauss-Legendre basis on the unit interval: the matrices below are what
+  // A two-point Gauss-Legendre basis on the unit interval. The matrices below match what
   // exahype2.solvers.LagrangeBasisWithDiagonalMassMatrix generates for polynomial order one.
   constexpr int    NodesPerAxis = 2;
   constexpr double Node0        = 0.5 - 0.5 / 1.7320508075688772;
@@ -32,22 +31,6 @@ namespace {
     }
     return result;
   }
-
-  std::array<double, 3 * NodesPerAxis * NodesPerAxis> restrictionMatrix() {
-    std::array<double, 3 * NodesPerAxis * NodesPerAxis> result{};
-    for (int block = 0; block < 3; block++) {
-      for (int coarse = 0; coarse < NodesPerAxis; coarse++) {
-        for (int fine = 0; fine < NodesPerAxis; fine++) {
-          const double fineNode = ((fine == 0 ? Node0 : Node1) + block) / 3.0;
-          result[block * NodesPerAxis * NodesPerAxis + coarse * NodesPerAxis + fine] =
-            shapeFunction(coarse, fineNode) / 3.0;
-        }
-      }
-    }
-    return result;
-  }
-
-  constexpr std::array<double, NodesPerAxis> QuadratureWeights = {0.5, 0.5};
 
   double nodePosition(const int node) { return node == 0 ? Node0 : Node1; }
 
@@ -71,17 +54,11 @@ void exahype2::dg::tests::RiemannTest::run() {
   testMethod(testProjectVolumetricDataOntoFacesForConstantSolutionOrder3);
   testMethod(testProjectVolumetricDataOntoFacesForConstantSolutionOrder0);
   testMethod(testInterpolateProjectedFacePolynomialReproducesPolynomials);
-  testMethod(testRestrictAndAccumulateProjectedFacePolynomialReproducesPolynomials);
   testMethod(testInterpolateRiemannSolutionReproducesPolynomials);
 }
 
 /**
- * The coarse-to-fine trace interpolation reproduces the coarse polynomial
- *
- * The interpolation evaluates the coarse face polynomial at the child faces'
- * nodes on the half the fine cells cannot supply, so a field the coarse basis
- * represents is reproduced exactly on every child while the fine cells' own
- * half stays untouched.
+ * The coarse-to-fine trace interpolation reproduces the coarse polynomial.
  */
 void exahype2::dg::tests::RiemannTest::testInterpolateProjectedFacePolynomialReproducesPolynomials() {
   constexpr int Order              = NodesPerAxis - 1;
@@ -112,8 +89,7 @@ void exahype2::dg::tests::RiemannTest::testInterpolateProjectedFacePolynomialRep
       for (int side = 0; side < 2; side++) {
         auto shiftedDoF    = dof;
         shiftedDoF(normal) = side;
-        const int offset =
-          toolbox::blockstructured::serialiseVoxelIndexInOverlap(shiftedDoF, NodesPerAxis, 1, normal) * Stride;
+        const int offset   = exahype2::serialiseVoxelIndexInOverlap(shiftedDoF, NodesPerAxis, 1, normal) * Stride;
         coarseGridFaceQ[offset]     = affineTrace(position, normal) + side;
         coarseGridFaceQ[offset + 1] = 4.0 - side;
         coarseGridFaceQ[offset + 2] = -1.0;
@@ -152,8 +128,7 @@ void exahype2::dg::tests::RiemannTest::testInterpolateProjectedFacePolynomialRep
         for (int side = 0; side < 2; side++) {
           auto shiftedDoF    = dof;
           shiftedDoF(normal) = side;
-          const int offset =
-            toolbox::blockstructured::serialiseVoxelIndexInOverlap(shiftedDoF, NodesPerAxis, 1, normal) * Stride;
+          const int offset   = exahype2::serialiseVoxelIndexInOverlap(shiftedDoF, NodesPerAxis, 1, normal) * Stride;
           if (side == coarseSide) {
             validateNumericalEqualsWithParams3(
               fineGridFaceQ[offset],
@@ -175,11 +150,7 @@ void exahype2::dg::tests::RiemannTest::testInterpolateProjectedFacePolynomialRep
 }
 
 /**
- * The transition flux a fine cell consumes reproduces the coarse polynomial
- *
- * The flux has to be the coarse face's flux polynomial evaluated at the hanging
- * face's nodes, written into the fine side's layer while the coarse side's
- * layer stays untouched.
+ * The transition flux a fine cell consumes reproduces the coarse polynomial.
  */
 void exahype2::dg::tests::RiemannTest::testInterpolateRiemannSolutionReproducesPolynomials() {
   constexpr int    Order              = NodesPerAxis - 1;
@@ -221,7 +192,7 @@ void exahype2::dg::tests::RiemannTest::testInterpolateRiemannSolutionReproducesP
       for (int side = 0; side < 2; side++) {
         auto shiftedDoF    = dof;
         shiftedDoF(normal) = side;
-        const int slot = toolbox::blockstructured::serialiseVoxelIndexInOverlap(shiftedDoF, NodesPerAxis, 1, normal);
+        const int slot = exahype2::serialiseVoxelIndexInOverlap(shiftedDoF, NodesPerAxis, 1, normal);
         coarseRiemannSolution[slot * Unknowns]        = side == coarseSideLayer ? affineTrace(position, normal) : 9.0;
         coarseRiemannSolution[slot * Unknowns + 1]    = side == coarseSideLayer ? 4.0 : 9.0;
         coarseProjection[slot * ProjectionStride]     = RestrictedTrace;
@@ -247,7 +218,7 @@ void exahype2::dg::tests::RiemannTest::testInterpolateRiemannSolutionReproducesP
       tarch::la::Vector<DIMENSIONS, int> perturbedDoF(0);
       perturbedDoF(normal) = fineSideLayer;
       const int perturbedSlot =
-        toolbox::blockstructured::serialiseVoxelIndexInOverlap(perturbedDoF, NodesPerAxis, 1, normal);
+        exahype2::serialiseVoxelIndexInOverlap(perturbedDoF, NodesPerAxis, 1, normal);
       fineProjection[perturbedSlot * ProjectionStride] += Perturbation;
 
       std::array<double, FluxFaceSize> fineRiemannSolution{};
@@ -276,7 +247,7 @@ void exahype2::dg::tests::RiemannTest::testInterpolateRiemannSolutionReproducesP
         for (int side = 0; side < 2; side++) {
           auto shiftedDoF    = dof;
           shiftedDoF(normal) = side;
-          const int slot = toolbox::blockstructured::serialiseVoxelIndexInOverlap(shiftedDoF, NodesPerAxis, 1, normal);
+          const int slot = exahype2::serialiseVoxelIndexInOverlap(shiftedDoF, NodesPerAxis, 1, normal);
           if (side == coarseSideLayer) {
             // The coarse side's layer of the hanging face stays untouched.
             validateNumericalEqualsWithParams3(fineRiemannSolution[slot * Unknowns], 7.0, faceNumber, side, dof);
@@ -300,137 +271,7 @@ void exahype2::dg::tests::RiemannTest::testInterpolateRiemannSolutionReproducesP
 }
 
 /**
- * The fine-to-coarse trace restriction reproduces the coarse polynomial
- *
- * The restriction of the projected face polynomials is the mass-lumped L2
- * projection: accumulated over the three child faces it reproduces every
- * polynomial the coarse face basis represents, the constant state included.
- */
-void exahype2::dg::tests::RiemannTest::testRestrictAndAccumulateProjectedFacePolynomialReproducesPolynomials() {
-  constexpr int Order              = NodesPerAxis - 1;
-  constexpr int Unknowns           = 2;
-  constexpr int AuxiliaryVariables = 1;
-  constexpr int Stride             = Unknowns + AuxiliaryVariables;
-
-#if DIMENSIONS == 2
-  constexpr int FaceSize = NodesPerAxis * 2 * Stride;
-#else
-  constexpr int FaceSize = NodesPerAxis * NodesPerAxis * 2 * Stride;
-#endif
-
-  const auto restriction = restrictionMatrix();
-
-  for (int faceNumber = 0; faceNumber < 2 * DIMENSIONS; faceNumber++) {
-    const int normal = faceNumber % DIMENSIONS;
-    // The restriction fills the half of the coarse face the fine cells project onto.
-    const int restrictedSide = faceNumber < DIMENSIONS ? 1 : 0;
-
-    std::array<double, FaceSize> coarseGridFaceQ{};
-
-    peano4::grid::GridTraversalEvent event;
-    peano4::dForEach(3, [&](const tarch::la::Vector<DIMENSIONS, int>& subCellIndex) {
-      if (subCellIndex(normal) != (faceNumber < DIMENSIONS ? 0 : 2)) {
-        return;
-      }
-      event.setRelativePositionToFather(subCellIndex);
-      auto faceMarker = event.getFaceMarker();
-      faceMarker.select(faceNumber);
-
-      std::array<double, FaceSize> fineGridFaceQ{};
-      peano4::dForEachExclusive(NodesPerAxis, normal, 0, [&](const tarch::la::Vector<DIMENSIONS, int>& dof) {
-        tarch::la::Vector<DIMENSIONS, double> position(0.0);
-        for (int d = 0; d < DIMENSIONS; d++) {
-          if (d != normal) {
-            position(d) = (nodePosition(dof(d)) + subCellIndex(d)) / 3.0;
-          }
-        }
-        auto shiftedDoF    = dof;
-        shiftedDoF(normal) = restrictedSide;
-        const int offset =
-          toolbox::blockstructured::serialiseVoxelIndexInOverlap(shiftedDoF, NodesPerAxis, 1, normal) * Stride;
-        fineGridFaceQ[offset]     = affineTrace(position, normal);
-        fineGridFaceQ[offset + 1] = 4.0;
-        fineGridFaceQ[offset + 2] = -1.0;
-      });
-
-      restrictAndAccumulateProjectedFacePolynomial(
-        faceMarker,
-        Order,
-        1,
-        Unknowns,
-        AuxiliaryVariables,
-        restriction.data(),
-        QuadratureWeights.data(),
-        fineGridFaceQ.data(),
-        coarseGridFaceQ.data()
-      );
-    });
-
-    peano4::dForEachExclusive(NodesPerAxis, normal, 0, [&](const tarch::la::Vector<DIMENSIONS, int>& dof) {
-      tarch::la::Vector<DIMENSIONS, double> position(0.0);
-      for (int d = 0; d < DIMENSIONS; d++) {
-        if (d != normal) {
-          position(d) = nodePosition(dof(d));
-        }
-      }
-      for (int side = 0; side < 2; side++) {
-        auto shiftedDoF    = dof;
-        shiftedDoF(normal) = side;
-        const int offset =
-          toolbox::blockstructured::serialiseVoxelIndexInOverlap(shiftedDoF, NodesPerAxis, 1, normal) * Stride;
-        if (side == restrictedSide) {
-          validateNumericalEqualsWithParams3(
-            coarseGridFaceQ[offset],
-            affineTrace(position, normal),
-            faceNumber,
-            side,
-            dof
-          );
-          validateNumericalEqualsWithParams3(coarseGridFaceQ[offset + 1], 4.0, faceNumber, side, dof);
-          validateNumericalEqualsWithParams3(coarseGridFaceQ[offset + 2], -1.0, faceNumber, side, dof);
-        } else {
-          validateNumericalEqualsWithParams3(coarseGridFaceQ[offset], 0.0, faceNumber, side, dof);
-        }
-      }
-    });
-  }
-}
-
-/**
- * Project a constant order-3 solution onto the faces
- *
- * We construct a cell patch which hosts one unknown and one auxiliary variable
- * per degree of freedom. The unknown is set to 1 and the auxiliary variable to
- * -1. We then project onto the 2d faces and look at their values. All is
- * hard-coded to order 3, i.e. we need four quadrature points per coordinate
- * axis, and the projected values have to be the same constant.
- *
- * For the left face of the cell, we have
- *
- *         ... | ...         ... | ...
- *         4,5 | 6,7    ->   0,0 | 1,-1
- *         0,1 | 2,3         0,0 | 1,-1
- *
- * where the commas separate the unknown from the auxiliary variable.
- * For the right face, we have the same enumeration, but the values
- * are mirrored along the vertical line.
- *
- * For the bottom face, we have the enumeration
- *
- *          8,9   10,11  12,13  14,15
- *         --------------------------
- *          0,1    2,3    4,5    6,7
- *
- * which translates into values
- *
- *         1,-1   1,-1   1,-1   1,-1
- *         --------------------------
- *          0,0    0,0    0,0    0,0
- *
- * In a 3d setup, both patterns are repeated in the z-direction, so
- * the same pattern restarts at index 16. The 3d case therefore means that the
- * 4*4*2=32 first entries of the left side are all 0. The remaining entries
- * then exhibit the 1,-1 pattern.
+ * Project a constant order-3 solution onto the faces.
  */
 void exahype2::dg::tests::RiemannTest::testProjectVolumetricDataOntoFacesForConstantSolutionOrder3() {
   const int order        = 3;
@@ -442,13 +283,11 @@ void exahype2::dg::tests::RiemannTest::testProjectVolumetricDataOntoFacesForCons
 #endif
   const int nodesPerFace = nodesPerCell / nodesPerAxis;
 
-  // 1 unknown, 1 auxiliary variable
   double cellQin[2 * nodesPerCell];
   for (int i = 0; i < 2 * nodesPerCell; i++) {
     cellQin[i] = i % 2 == 0 ? 1.0 : -1.0;
   }
 
-  // Values on the faces: left and right, one unknown, one auxiliary variable
   double QxL[2 * nodesPerFace * 2];
   double QxR[2 * nodesPerFace * 2];
   double QyL[2 * nodesPerFace * 2];
@@ -525,20 +364,20 @@ void exahype2::dg::tests::RiemannTest::testProjectVolumetricDataOntoFacesForCons
   validateNumericalEquals(QyL[12], 1.0);
   validateNumericalEquals(QyL[13], -1.0);
 #if DIMENSIONS == 3
-  validateEquals(toolbox::blockstructured::serialiseVoxelIndexInOverlap({0, 0, 0}, 3 + 1, 1, 1) * 2 + 0, 0);
-  validateEquals(toolbox::blockstructured::serialiseVoxelIndexInOverlap({0, 0, 0}, 3 + 1, 1, 1) * 2 + 1, 1);
-  validateEquals(toolbox::blockstructured::serialiseVoxelIndexInOverlap({1, 0, 0}, 3 + 1, 1, 1) * 2 + 0, 2);
-  validateEquals(toolbox::blockstructured::serialiseVoxelIndexInOverlap({1, 0, 0}, 3 + 1, 1, 1) * 2 + 1, 3);
-  validateEquals(toolbox::blockstructured::serialiseVoxelIndexInOverlap({0, 1, 0}, 3 + 1, 1, 1) * 2 + 0, 8);
-  validateEquals(toolbox::blockstructured::serialiseVoxelIndexInOverlap({0, 1, 0}, 3 + 1, 1, 1) * 2 + 1, 9);
-  validateEquals(toolbox::blockstructured::serialiseVoxelIndexInOverlap({1, 1, 0}, 3 + 1, 1, 1) * 2 + 0, 10);
-  validateEquals(toolbox::blockstructured::serialiseVoxelIndexInOverlap({1, 1, 0}, 3 + 1, 1, 1) * 2 + 1, 11);
-  validateEquals(toolbox::blockstructured::serialiseVoxelIndexInOverlap({2, 1, 0}, 3 + 1, 1, 1) * 2 + 0, 12);
-  validateEquals(toolbox::blockstructured::serialiseVoxelIndexInOverlap({2, 1, 0}, 3 + 1, 1, 1) * 2 + 1, 13);
-  validateEquals(toolbox::blockstructured::serialiseVoxelIndexInOverlap({3, 1, 0}, 3 + 1, 1, 1) * 2 + 0, 14);
-  validateEquals(toolbox::blockstructured::serialiseVoxelIndexInOverlap({3, 1, 0}, 3 + 1, 1, 1) * 2 + 1, 15);
-  validateEquals(toolbox::blockstructured::serialiseVoxelIndexInOverlap({0, 0, 1}, 3 + 1, 1, 1) * 2 + 0, 16);
-  validateEquals(toolbox::blockstructured::serialiseVoxelIndexInOverlap({0, 0, 1}, 3 + 1, 1, 1) * 2 + 1, 17);
+  validateEquals(exahype2::serialiseVoxelIndexInOverlap({0, 0, 0}, 3 + 1, 1, 1) * 2 + 0, 0);
+  validateEquals(exahype2::serialiseVoxelIndexInOverlap({0, 0, 0}, 3 + 1, 1, 1) * 2 + 1, 1);
+  validateEquals(exahype2::serialiseVoxelIndexInOverlap({1, 0, 0}, 3 + 1, 1, 1) * 2 + 0, 2);
+  validateEquals(exahype2::serialiseVoxelIndexInOverlap({1, 0, 0}, 3 + 1, 1, 1) * 2 + 1, 3);
+  validateEquals(exahype2::serialiseVoxelIndexInOverlap({0, 1, 0}, 3 + 1, 1, 1) * 2 + 0, 8);
+  validateEquals(exahype2::serialiseVoxelIndexInOverlap({0, 1, 0}, 3 + 1, 1, 1) * 2 + 1, 9);
+  validateEquals(exahype2::serialiseVoxelIndexInOverlap({1, 1, 0}, 3 + 1, 1, 1) * 2 + 0, 10);
+  validateEquals(exahype2::serialiseVoxelIndexInOverlap({1, 1, 0}, 3 + 1, 1, 1) * 2 + 1, 11);
+  validateEquals(exahype2::serialiseVoxelIndexInOverlap({2, 1, 0}, 3 + 1, 1, 1) * 2 + 0, 12);
+  validateEquals(exahype2::serialiseVoxelIndexInOverlap({2, 1, 0}, 3 + 1, 1, 1) * 2 + 1, 13);
+  validateEquals(exahype2::serialiseVoxelIndexInOverlap({3, 1, 0}, 3 + 1, 1, 1) * 2 + 0, 14);
+  validateEquals(exahype2::serialiseVoxelIndexInOverlap({3, 1, 0}, 3 + 1, 1, 1) * 2 + 1, 15);
+  validateEquals(exahype2::serialiseVoxelIndexInOverlap({0, 0, 1}, 3 + 1, 1, 1) * 2 + 0, 16);
+  validateEquals(exahype2::serialiseVoxelIndexInOverlap({0, 0, 1}, 3 + 1, 1, 1) * 2 + 1, 17);
 
   validateNumericalEquals(QyL[16], 0.0);
   validateNumericalEquals(QyL[17], 0.0);
@@ -568,14 +407,9 @@ void exahype2::dg::tests::RiemannTest::testProjectVolumetricDataOntoFacesForCons
 }
 
 /**
- * Project a constant solution onto the faces for the order-0 Euler setup
- *
- * This is the projection that is used if DG degenerates to a Finite Volumes
- * scheme for the Euler equation, i.e. for 5 unknowns.
+ * Project a constant solution onto the faces for the order-0 Euler setup.
  */
 void exahype2::dg::tests::RiemannTest::testProjectVolumetricDataOntoFacesForConstantSolutionOrder0() {
-  // const int order        = 0;
-
   double QIn[]     = {0.1, 0.2, 0.3, 0.4, 0.5};
   double leftQ[]   = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
   double rightQ[]  = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};

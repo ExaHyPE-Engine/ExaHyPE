@@ -6,12 +6,11 @@
 
 \tableofcontents
 
-Peano handles system- and compiler-specific settings in two complementary
-ways:
+Peano keeps system- and compiler-specific settings in two places:
 
-- The build configuration is driven entirely by CMake. Which features are
-  enabled (multithreading, a GPU backend, ...) is selected through
-  `PEANO_WITH_*` options, and the resulting preprocessor defines and compiler
+- The build configuration is driven entirely by CMake. Optional features such
+  as GPU backends and I/O libraries are selected through `PEANO_WITH_*`
+  options, and the resulting preprocessor defines and compiler
   and linker flags are attached to the `PeanoOptions` interface target, so
   every library and application built on top of Peano inherits them. CMake
   also writes a `PeanoConfig.cmake` file into the build directory; the Python
@@ -20,12 +19,13 @@ ways:
 - At compile time, a single header derives a small set of portability macros
   from the compiler that is actually in use (through standard predefined
   preprocessor symbols such as `__NVCOMPILER`, `__GNUC__` or `__clang__`).
-  This lets Peano paper over differences between compiler flavours.
+  This header hides the differences between the compilers from the rest of the
+  code.
 
 The page below discusses how to build Peano with the major vendor toolchains
 and provides some hints on compiler and linker flags for each of them.
-Before we dive into particular toolchains, a general remark on how the
-compiler dependencies are managed:
+Before the particular toolchains, a general remark on how the compiler
+dependencies are managed:
 
 
 # Realisation of Peano's internal compiler-specific switches
@@ -43,8 +43,8 @@ Most expressions within the compiler-specific settings header can manually
 be overwritten via defines.
 Consult the file itself for details.
 
-The build defines provided by CMake (for example `PEANO_WITH_OPENMP`,
-`PEANO_WITH_ALIGNMENT` or `PEANO_WITH_SIMDLEN`) feed into this header. Whenever
+The build defines provided by CMake (for example `PEANO_WITH_ALIGNMENT`
+or `PEANO_WITH_SIMDLEN`) feed into this header. Whenever
 certain macro combinations have knock-on effects on other features, they are
 evaluated here and mapped onto further portability macros.
 
@@ -86,7 +86,6 @@ GCC offers OpenMP host threading out of the box and OpenMP GPU offloading via
 ~~~~~~~~~~~~~~~~~~~~~~~
 cmake .. -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ \
-  -DPEANO_WITH_MULTITHREADING=ON \
   -DPEANO_WITH_GPU_BACKEND=ompt -DPEANO_WITH_GPU_ARCH=sm_90 \
   -DPEANO_EXTRA_CXX_FLAGS="-march=native"
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -104,7 +103,7 @@ the standard CMake compiler switches.
 ### Build modes and tracing
 
 Trace and annotation data only become available if you do not build in release
-mode. Switch to the trace mode (or assertions or debug) - compare the general
+mode. Switch to the assertions or the debug mode - compare the general
 remarks on @ref page_architecture_home "Peano's build variants" - to get traces
 or annotation information. For further discussion on logging, please see the
 \ref tarch_logging "generic logging description for Peano".
@@ -125,7 +124,6 @@ front-end flag for performance and features.
 ~~~~~~~~~~~~~~~~~~~~~~~
 cmake .. -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_C_COMPILER=icx -DCMAKE_CXX_COMPILER=icpx \
-  -DPEANO_WITH_MULTITHREADING=ON \
   -DPEANO_WITH_GPU_BACKEND=ompt -DPEANO_WITH_GPU_ARCH=spir64 \
   -DPEANO_EXTRA_CXX_FLAGS="-fiopenmp;-march=native"
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -145,9 +143,9 @@ cmake .. -DCMAKE_BUILD_TYPE=Release \
   -DPEANO_WITH_GPU_BACKEND=native -DPEANO_WITH_GPU_ARCH=spir64
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-If you only add `-lsycl` (rather than letting the SYCL toolchain handle the
-linking) the build succeeds, but the very first time you invoke a SYCL kernel
-you get a message similar to
+If you add `-lsycl` alone and leave the linking to the plain linker, the build
+succeeds, but the very first time you invoke a SYCL kernel you get a message
+similar to
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 terminate called after throwing an instance of 'sycl::_V1::runtime_error'
@@ -170,9 +168,9 @@ is supplied through `PEANO_WITH_GPU_ARCH`.
 
 ### MPI
 
-Intel's MPI compiler wrapper is `mpiicpc`, even though oneAPI now wants you to
-use `icpx` instead of `icc`/`icpc`. To make the wrapper use `icpx`, export the
-corresponding environment variable and point the CMake compiler at the wrapper:
+Intel's MPI compiler wrapper is `mpiicpc`, and oneAPI expects `icpx` as its C++
+compiler. To make the wrapper call `icpx`, export the corresponding environment
+variable and point the CMake compiler at the wrapper:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 export I_MPI_CXX=icpx
@@ -192,7 +190,6 @@ architecture.
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 cmake .. -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
-  -DPEANO_WITH_MULTITHREADING=ON \
   -DPEANO_WITH_GPU_BACKEND=ompt -DPEANO_WITH_GPU_ARCH=sm_90 \
   -DPEANO_EXTRA_CXX_FLAGS="-march=native"
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -210,13 +207,10 @@ in this toolchain, point both `CMAKE_C_COMPILER` and `CMAKE_CXX_COMPILER` at it.
 
 ### OpenMP and OpenMP offloading
 
-NVIDIA's compiler does not support all of OpenMP. Therefore, its OpenMP
-implementation is rather picky when it comes to taskloops and
-other C++ features. Peano has internal workarounds for all of these items
-(see the `TASKLOOP_NOT_SUPPORTED` and `TASK_DEPENDENCIES_NOT_SUPPORTED`
-switches in tarch/CompilerSpecificSettings.h), i.e. the build should in
-principle succeed, yet the code might be slightly slower than the Intel or
-native Clang counterpart.
+NVIDIA's compiler supports a subset of recent OpenMP task features. CMake
+tests whether iterator expressions are accepted in task dependencies; when
+the probe fails, the tasking layer uses conservative dependency waits that
+preserve ordering with less parallelism.
 
 The OMPT backend translates the requested architecture into the `-mp=gpu
 -gpu=ccXX` flags that NVHPC expects:
@@ -224,7 +218,6 @@ The OMPT backend translates the requested architecture into the `-mp=gpu
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 cmake .. -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_C_COMPILER=nvc++ -DCMAKE_CXX_COMPILER=nvc++ \
-  -DPEANO_WITH_MULTITHREADING=ON \
   -DPEANO_WITH_GPU_BACKEND=ompt -DPEANO_WITH_GPU_ARCH=sm_90 \
   -DPEANO_EXTRA_CXX_FLAGS="--diag_suppress=unrecognized_attribute;-Munroll=c:100;-march=native"
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -249,7 +242,6 @@ architecture:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 cmake .. -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_C_COMPILER=amdclang -DCMAKE_CXX_COMPILER=amdclang++ \
-  -DPEANO_WITH_MULTITHREADING=ON \
   -DPEANO_WITH_GPU_BACKEND=ompt -DPEANO_WITH_GPU_ARCH=gfx90a \
   -DPEANO_EXTRA_CXX_FLAGS="-march=native"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

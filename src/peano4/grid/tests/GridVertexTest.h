@@ -11,12 +11,17 @@ namespace peano4::grid::tests {
 class peano4::grid::tests::GridVertexTest final : public tarch::tests::TestCase {
 public:
   GridVertexTest();
-  ~GridVertexTest() override final = default;
+  GridVertexTest(const GridVertexTest&)            = delete;
+  GridVertexTest(GridVertexTest&&)                 = delete;
+  GridVertexTest& operator=(const GridVertexTest&) = delete;
+  GridVertexTest& operator=(GridVertexTest&&)      = delete;
+  ~GridVertexTest() override                       = default;
 
-  void run() override final;
+  void run() override;
 
 private:
-  void testFlagsAndState();
-  void testCreateGridVertex();
+  void testState();
+  void testRefinedVertices();
+  void testTheByteRepresentationCarriesEveryField();
   void testSendAndReceiveInARing();
 };

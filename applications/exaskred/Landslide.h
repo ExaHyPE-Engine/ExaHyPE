@@ -1,0 +1,189 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#pragma once
+
+#include "tarch/accelerator/accelerator.h"
+#include "tarch/la/Vector.h"
+
+namespace applications::exahype2::exaskred::landslide {
+  /**
+   * The landslide layer's material and coupling constants gathered into one
+   * aggregate, so every kernel receives the complete parameter set through a
+   * single argument built from a scenario's generated constants.
+   */
+  struct Physics {
+    double gravity;
+    double dryHeightThreshold;
+    double coulombFriction;
+    double inverseTurbulentFrictionLength;
+    double slideDensity;
+    double waterDensity;
+    double waterLevel;
+    double waterFrictionDragCoefficient;
+    double waterPressureDragCoefficient;
+  };
+
+  template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
+  INLINE_METHOD GPU_CALLABLE_METHOD void sanitiseDryState(
+    const T* const NOALIAS QIn,
+    T* const NOALIAS       QOut,
+    const Physics&         physics
+  );
+
+  INLINE_METHOD GPU_CALLABLE_METHOD double submergedGravity(const Physics& physics);
+
+  template <class Shortcuts, typename T>
+  INLINE_METHOD GPU_CALLABLE_METHOD bool isSubmergedByBathymetry(const T* const NOALIAS Q, const Physics& physics);
+
+  template <class Shortcuts, typename T>
+  INLINE_METHOD GPU_CALLABLE_METHOD double effectiveGravity(const T* const NOALIAS Q, const Physics& physics);
+
+  template <class Shortcuts, typename T>
+  INLINE_METHOD GPU_CALLABLE_METHOD double interfaceEffectiveGravity(
+    const T* const NOALIAS QL,
+    const T* const NOALIAS QR,
+    const Physics&         physics
+  );
+
+  template <class Shortcuts, typename T>
+  INLINE_METHOD GPU_CALLABLE_METHOD double waterFrictionDragSourceSpeed(
+    const T* const NOALIAS Q,
+    const Physics&         physics,
+    const bool             submerged
+  );
+
+  template <class Shortcuts, typename T>
+  INLINE_METHOD GPU_CALLABLE_METHOD double waterFrictionDragSourceSpeed(
+    const T* const NOALIAS Q,
+    const Physics&         physics
+  );
+
+  template <class Shortcuts, int NumberOfUnknowns, typename T>
+  INLINE_METHOD GPU_CALLABLE_METHOD void flux(
+    const T* const NOALIAS                       Q,
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    const tarch::la::Vector<DIMENSIONS, double>& h,
+    const double                                 t,
+    const double                                 dt,
+    const int                                    normal,
+    const Physics&                               physics,
+    const double                                 gravity,
+    T* const NOALIAS                             F
+  );
+
+  template <class Shortcuts, int NumberOfUnknowns, typename T>
+  INLINE_METHOD GPU_CALLABLE_METHOD void flux(
+    const T* const NOALIAS                       Q,
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    const tarch::la::Vector<DIMENSIONS, double>& h,
+    const double                                 t,
+    const double                                 dt,
+    const int                                    normal,
+    const Physics&                               physics,
+    T* const NOALIAS                             F
+  );
+
+  template <class Shortcuts, typename T>
+  INLINE_METHOD GPU_CALLABLE_METHOD double fluxEigenvalue(
+    const T* const NOALIAS                       Q,
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    const tarch::la::Vector<DIMENSIONS, double>& h,
+    const double                                 t,
+    const double                                 dt,
+    const int                                    normal,
+    const Physics&                               physics,
+    const double                                 gravity
+  );
+
+  template <class Shortcuts, typename T>
+  INLINE_METHOD GPU_CALLABLE_METHOD double fluxEigenvalue(
+    const T* const NOALIAS                       Q,
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    const tarch::la::Vector<DIMENSIONS, double>& h,
+    const double                                 t,
+    const double                                 dt,
+    const int                                    normal,
+    const Physics&                               physics
+  );
+
+  template <class Shortcuts, typename T>
+  INLINE_METHOD GPU_CALLABLE_METHOD double effectiveMaxEigenvalue(
+    const T* const NOALIAS                       Q,
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    const tarch::la::Vector<DIMENSIONS, double>& h,
+    const double                                 t,
+    const double                                 dt,
+    const int                                    normal,
+    const Physics&                               physics,
+    const double                                 gravity,
+    const bool                                   submerged,
+    const double                                 sourceEigenvalueScaling
+  );
+
+  template <class Shortcuts, typename T>
+  INLINE_METHOD GPU_CALLABLE_METHOD double effectiveMaxEigenvalue(
+    const T* const NOALIAS                       Q,
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    const tarch::la::Vector<DIMENSIONS, double>& h,
+    const double                                 t,
+    const double                                 dt,
+    const int                                    normal,
+    const Physics&                               physics,
+    const double                                 sourceEigenvalueScaling
+  );
+
+  template <class Shortcuts, int NumberOfUnknowns, typename T>
+  INLINE_METHOD GPU_CALLABLE_METHOD void nonconservativeProduct(
+    const T* const NOALIAS                       Q,
+    const T* const NOALIAS                       deltaQ,
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    const tarch::la::Vector<DIMENSIONS, double>& h,
+    const double                                 t,
+    const double                                 dt,
+    const int                                    normal,
+    const Physics&                               physics,
+    const double                                 gravity,
+    T* const NOALIAS                             BTimesDeltaQ
+  );
+
+  template <class Shortcuts, int NumberOfUnknowns, typename T>
+  INLINE_METHOD GPU_CALLABLE_METHOD void nonconservativeProduct(
+    const T* const NOALIAS                       Q,
+    const T* const NOALIAS                       deltaQ,
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    const tarch::la::Vector<DIMENSIONS, double>& h,
+    const double                                 t,
+    const double                                 dt,
+    const int                                    normal,
+    const Physics&                               physics,
+    T* const NOALIAS                             BTimesDeltaQ
+  );
+
+  template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
+  INLINE_METHOD GPU_CALLABLE_METHOD void diffusiveSourceTerm(
+    const T* const NOALIAS                       Q,
+    const T* const NOALIAS                       deltaQ,
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    const tarch::la::Vector<DIMENSIONS, double>& h,
+    const double                                 t,
+    const double                                 dt,
+    const Physics&                               physics,
+    const double                                 gravity,
+    const bool                                   submerged,
+    T* const NOALIAS                             S
+  );
+
+  template <class Shortcuts, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename T>
+  INLINE_METHOD GPU_CALLABLE_METHOD void diffusiveSourceTerm(
+    const T* const NOALIAS                       Q,
+    const T* const NOALIAS                       deltaQ,
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    const tarch::la::Vector<DIMENSIONS, double>& h,
+    const double                                 t,
+    const double                                 dt,
+    const Physics&                               physics,
+    T* const NOALIAS                             S
+  );
+} // namespace applications::exahype2::exaskred::landslide
+
+#include "Landslide.cpph"

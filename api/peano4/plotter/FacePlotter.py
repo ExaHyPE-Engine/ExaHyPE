@@ -8,7 +8,6 @@ from peano4.solversteps.ActionSet import ActionSet
 import jinja2
 
 
-# Analogous to PatchPlotter (nodal representation) but for faces instead of cells.
 class FacePlotter(BasePlotter):
     def __init__(
         self,
@@ -32,31 +31,28 @@ class FacePlotter(BasePlotter):
 
         self.d["OUTPUT_SUBFOLDER"] = "face/"
 
-        # for i in patch.dim:
-        #     assert i == patch.dim[1]
-
         self.d["DOFS_PER_AXIS"] = str(patch.dim[1])
         self.d["UNKNOWNS"] = str(patch.no_of_unknowns)
 
         assert len(mapping) > 0
 
-        counter = 0
-        self.d["MAPPING_2D"] = "constexpr double mapping[" + str(patch.dim[1]) + "] = {"
+        point_index = 0
+        self.d["MAPPING_2D"] = "constexpr double Mapping[" + str(patch.dim[1]) + "] = {"
         self.d["MAPPING_3D"] = (
-            "constexpr double mapping[" + str(2 * patch.dim[1] * patch.dim[1]) + "] = {"
+            "constexpr double Mapping[" + str(2 * patch.dim[1] * patch.dim[1]) + "] = {"
         )
-        for i in mapping:
-            if counter > 0:
+        for point in mapping:
+            if point_index > 0:
                 separator = ", "
             else:
                 separator = " "
-            if counter < patch.dim[1]:
-                self.d["MAPPING_2D"] += separator + str(i[0]) + "\n"
-            if counter < patch.dim[1] * patch.dim[1]:
-                self.d["MAPPING_3D"] += separator + str(i[0])
-                self.d["MAPPING_3D"] += ", " + str(i[1])
+            if point_index < patch.dim[1]:
+                self.d["MAPPING_2D"] += separator + str(point[0]) + "\n"
+            if point_index < patch.dim[1] * patch.dim[1]:
+                self.d["MAPPING_3D"] += separator + str(point[0])
+                self.d["MAPPING_3D"] += ", " + str(point[1])
                 self.d["MAPPING_3D"] += "\n"
-            counter += 1
+            point_index += 1
 
         self.d["MAPPING_2D"] += "};"
         self.d["MAPPING_3D"] += "};"
@@ -73,23 +69,23 @@ class FacePlotter(BasePlotter):
                 + jinja2.Template(
                     """
   _vertexPlotter.reset();
-  _vertexPlotter = _fileWriter->createVertexPlotter(_localTreeNumber);
+  _vertexPlotter = _fileWriter->createVertexPlotter(_pieceId, tarch::plotter::FileWriter::VertexMerging::Distinct);
 
   _cellPlotter.reset();
-  _cellPlotter = _fileWriter->createCellPlotter(_localTreeNumber);
+  _cellPlotter = _fileWriter->createCellPlotter(_pieceId);
 
 {% if DESCRIPTION %}
 {% for name, count in DESCRIPTION.items() %}
   _{{name}}DataPlotterL.reset();
-  _{{name}}DataPlotterL = _fileWriter->createVertexDataPlotter(_localTreeNumber, "{{name}}L", {{count}});
+  _{{name}}DataPlotterL = _fileWriter->createVertexDataPlotter(_pieceId, "{{name}}L", {{count}});
   _{{name}}DataPlotterR.reset();
-  _{{name}}DataPlotterR = _fileWriter->createVertexDataPlotter(_localTreeNumber, "{{name}}R", {{count}});
+  _{{name}}DataPlotterR = _fileWriter->createVertexDataPlotter(_pieceId, "{{name}}R", {{count}});
 {% endfor %}
 {% else %}
   _vertexDataPlotterL.reset();
-  _vertexDataPlotterL = _fileWriter->createVertexDataPlotter(_localTreeNumber, "{{NAME}}L", {{UNKNOWNS}});
+  _vertexDataPlotterL = _fileWriter->createVertexDataPlotter(_pieceId, "{{NAME}}L", {{UNKNOWNS}});
   _vertexDataPlotterR.reset();
-  _vertexDataPlotterR = _fileWriter->createVertexDataPlotter(_localTreeNumber, "{{NAME}}R", {{UNKNOWNS}});
+  _vertexDataPlotterR = _fileWriter->createVertexDataPlotter(_pieceId, "{{NAME}}R", {{UNKNOWNS}});
 {% endif %}
 """
                 ).render(**self.d)
@@ -104,6 +100,7 @@ class FacePlotter(BasePlotter):
     assertion(_vertexPlotter);
     assertion(_cellPlotter);
     assertion(_subdomainPlotter);
+    assertion(_subtreeTaskPlotter);
     assertion(_refinementLevelPlotter);
 
 {% if DESCRIPTION %}
@@ -112,127 +109,133 @@ class FacePlotter(BasePlotter):
     assertion(_{{name}}DataPlotterR);
 {% endfor %}
 {% else %}
-    assertion(_vertexDataPlotterL)
-    assertion(_vertexDataPlotterR)
+    assertion(_vertexDataPlotterL);
+    assertion(_vertexDataPlotterR);
 {% endif %}
 
-    #if DIMENSIONS == 2
+#if DIMENSIONS == 2
     {{MAPPING_2D}}
-    #else
+#else
     {{MAPPING_3D}}
-    #endif
+#endif
 
-    const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
+    const int normalDimension = marker.getSelectedFaceNumber() % DIMENSIONS;
 
-    auto faceSize    = marker.getH();
-    const auto& faceOffset     = marker.getX() - faceSize * 0.5;
-    faceSize[normal] = 0.;
+    auto faceSize = marker.getH();
+    const auto& faceOffset = marker.getX() - faceSize * 0.5;
+    faceSize[normalDimension] = 0.;
 
-    // Face directions: a face with normal 0 is a y-z (1,2) face
-    const int fD_1 = (normal==0);
+    // The tangential dimensions enumerate the axes other than the normal dimension.
+    const int firstTangentialDimension = normalDimension == 0;
 #if DIMENSIONS == 3
-    const int fD_2 = 2 - (normal==2);
+    const int secondTangentialDimension = 2 - (normalDimension == 2);
 #endif
 
     constexpr int PointsPerAxis = {{DOFS_PER_AXIS}};
-    constexpr int TotalPoints   = (DIMENSIONS==2) ? PointsPerAxis*PointsPerAxis : PointsPerAxis*PointsPerAxis*PointsPerAxis;
+    constexpr int TotalPoints   = DIMENSIONS == 2 ? PointsPerAxis : PointsPerAxis * PointsPerAxis;
 
     int vertexIndices[TotalPoints];
-    tarch::la::Vector<DIMENSIONS, double> p;
-    p(normal) = faceOffset(normal);
+    tarch::la::Vector<DIMENSIONS, double> position;
+    position(normalDimension) = faceOffset(normalDimension);
 
 #if DIMENSIONS == 3
-    constexpr int elementsPerFace = {{DOFS_PER_AXIS}} * {{DOFS_PER_AXIS}} * {{UNKNOWNS}};
+    constexpr int ElementsPerFace = {{DOFS_PER_AXIS}} * {{DOFS_PER_AXIS}} * {{UNKNOWNS}};
 #else
-    constexpr int elementsPerFace = {{DOFS_PER_AXIS}} * {{UNKNOWNS}};
+    constexpr int ElementsPerFace = {{DOFS_PER_AXIS}} * {{UNKNOWNS}};
 #endif
 
-    const auto* dataL = fineGridFace{{NAME}}.data();
-    const auto* dataR = fineGridFace{{NAME}}.data() + elementsPerFace;
+    const auto* const leftData = fineGridFace{{NAME}}.data();
+    const auto* const rightData = fineGridFace{{NAME}}.data() + ElementsPerFace;
 
-    int counter = 0;
+#if DIMENSIONS == 3
+    for (int pointY = 0; pointY < PointsPerAxis; pointY++) {
+#endif
+      for (int pointX = 0; pointX < PointsPerAxis; pointX++) {
+#if DIMENSIONS == 2
+        const int pointIndex = pointX;
+#else
+        const int pointIndex = pointX + pointY * PointsPerAxis;
+#endif
+        const int mappingOffset = pointIndex * (DIMENSIONS - 1);
+        position(firstTangentialDimension) =
+          faceOffset(firstTangentialDimension)
+          + faceSize(firstTangentialDimension) * Mapping[mappingOffset];
+#if DIMENSIONS == 3
+        position(secondTangentialDimension) =
+          faceOffset(secondTangentialDimension)
+          + faceSize(secondTangentialDimension) * Mapping[mappingOffset + 1];
+#endif
 
-    #if DIMENSIONS == 3
-    for (int j=0; j<PointsPerAxis; j++) {
-    #endif
-      for (int i=0; i<PointsPerAxis; i++) {
-        // Apply mapping
-        int baseIndex = counter * (DIMENSIONS-1);
-        p(fD_1) = faceOffset(fD_1) + faceSize(fD_1) * mapping[baseIndex + 0];
-        #if DIMENSIONS == 3
-        p(fD_2) = faceOffset(fD_2) + faceSize(fD_2) * mapping[baseIndex + 1];
-        #endif
+        vertexIndices[pointIndex] = _vertexPlotter->plotVertex(position);
 
-        // Plot vertex
-        vertexIndices[counter] = _vertexPlotter->plotVertex(p);
-
-        const int dofIndex = counter * {{UNKNOWNS}};
+        const int unknownOffset = pointIndex * {{UNKNOWNS}};
 
 {% if DESCRIPTION %}
         int dataOffset = 0;
 {% for name, count in DESCRIPTION.items() %}
         double {{name}}Values[{{count}}];
-        for (int u=0; u<{{count}}; u++) {
-          {{name}}Values[u] = (double) dataL[dofIndex + dataOffset + u];
+        for (int unknown = 0; unknown < {{count}}; unknown++) {
+          {{name}}Values[unknown] = (double) leftData[unknownOffset + dataOffset + unknown];
         }
-        _{{name}}DataPlotterL->plotVertexData(vertexIndices[counter], {{name}}Values, {{count}});
-        for (int u=0; u<{{count}}; u++) {
-          {{name}}Values[u] = (double) dataR[dofIndex + dataOffset + u];
+        _{{name}}DataPlotterL->plotVertexData(vertexIndices[pointIndex], {{name}}Values, {{count}});
+        for (int unknown = 0; unknown < {{count}}; unknown++) {
+          {{name}}Values[unknown] = (double) rightData[unknownOffset + dataOffset + unknown];
         }
-        _{{name}}DataPlotterR->plotVertexData(vertexIndices[counter], {{name}}Values, {{count}});
+        _{{name}}DataPlotterR->plotVertexData(vertexIndices[pointIndex], {{name}}Values, {{count}});
         dataOffset += {{count}};
 {% endfor %}
 {% else %}
-        double values[2*{{UNKNOWNS}}];
-        for (int u=0; u<{{UNKNOWNS}}; u++) {
-          values[u] = (double) dataL[dofIndex + u];
+        double values[{{UNKNOWNS}}];
+        for (int unknown = 0; unknown < {{UNKNOWNS}}; unknown++) {
+          values[unknown] = (double) leftData[unknownOffset + unknown];
         }
-        _vertexDataPlotterL->plotVertexData(vertexIndices[counter], values, {{UNKNOWNS}});
-        for (int u=0; u<{{UNKNOWNS}}; u++) {
-          values[u] = (double) dataR[dofIndex + u];
+        _vertexDataPlotterL->plotVertexData(vertexIndices[pointIndex], values, {{UNKNOWNS}});
+        for (int unknown = 0; unknown < {{UNKNOWNS}}; unknown++) {
+          values[unknown] = (double) rightData[unknownOffset + unknown];
         }
-        _vertexDataPlotterR->plotVertexData(vertexIndices[counter], values, {{UNKNOWNS}});
+        _vertexDataPlotterR->plotVertexData(vertexIndices[pointIndex], values, {{UNKNOWNS}});
 {% endif %}
-        counter++;
       }
 
-    #if DIMENSIONS == 3
+#if DIMENSIONS == 3
     }
-    #endif
+#endif
 
-    #if DIMENSIONS == 3
-    for (int j=0; j<PointsPerAxis - 1; j++) {
-    #endif
-      for (int i=0; i<PointsPerAxis - 1; i++) {
-          int idx = i
-          #if DIMENSIONS == 3
-            + j * PointsPerAxis
-          #endif
-          ;
+#if DIMENSIONS == 3
+    for (int cellY = 0; cellY < PointsPerAxis - 1; cellY++) {
+#endif
+      for (int cellX = 0; cellX < PointsPerAxis - 1; cellX++) {
+#if DIMENSIONS == 2
+        const int firstVertex = cellX;
+#else
+        const int firstVertex = cellX + cellY * PointsPerAxis;
+#endif
 
-          int s_x = 1;
-          int s_y = PointsPerAxis;
+        constexpr int XStride = 1;
+#if DIMENSIONS == 3
+        constexpr int YStride = PointsPerAxis;
+#endif
 
-          #if DIMENSIONS == 2
-          int v[2];
-          v[0] = vertexIndices[idx];
-          v[1] = vertexIndices[idx + s_x];
-          int cellIndex = _cellPlotter->plotLine(v);
-          #elif DIMENSIONS == 3
-          int v[4];
-          v[0] = vertexIndices[idx];
-          v[1] = vertexIndices[idx + s_x];
-          v[2] = vertexIndices[idx + s_x + s_y];
-          v[3] = vertexIndices[idx + s_y];
-          int cellIndex = _cellPlotter->plotQuadrangle(v);
-          #endif
+#if DIMENSIONS == 2
+        const int vertices[2] = {vertexIndices[firstVertex], vertexIndices[firstVertex + XStride]};
+        const int cellIndex = _cellPlotter->plotLine(vertices);
+#elif DIMENSIONS == 3
+        const int vertices[4] = {
+          vertexIndices[firstVertex],
+          vertexIndices[firstVertex + XStride],
+          vertexIndices[firstVertex + XStride + YStride],
+          vertexIndices[firstVertex + YStride]
+        };
+        const int cellIndex = _cellPlotter->plotQuadrangle(vertices);
+#endif
 
-          _subdomainPlotter->plotCellData(cellIndex, _treeNumber);
+          _subdomainPlotter->plotCellData(cellIndex, tarch::mpi::Rank::getInstance().getRank());
+          _subtreeTaskPlotter->plotCellData(cellIndex, getSubtreeTask());
           _refinementLevelPlotter->plotCellData(cellIndex, 0);
       }
-    #if DIMENSIONS == 3
+#if DIMENSIONS == 3
     }
-    #endif
+#endif
   }
 """
             ).render(**self.d)

@@ -11,9 +11,13 @@ namespace peano4::stacks::tests {
 class peano4::stacks::tests::StackTest final : public tarch::tests::TestCase {
 public:
   StackTest();
-  ~StackTest() override final = default;
+  StackTest(const StackTest&)            = delete;
+  StackTest(StackTest&&)                 = delete;
+  StackTest& operator=(const StackTest&) = delete;
+  StackTest& operator=(StackTest&&)      = delete;
+  ~StackTest() override                  = default;
 
-  void run() override final;
+  void run() override;
 
 private:
   void testPushData();
@@ -26,5 +30,8 @@ private:
   void testPushBlockView();
   void testPopBlockView();
   void testSendAndReceiveToSelf();
+  void testSendAndReceiveThroughBaseReference();
   void testSendAndReceiveInARing();
+  void testSendAndReceiveInARingFromTasks();
+  void testTheConsolidationContextPicksThePathTheElementDeclares();
 };

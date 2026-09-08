@@ -1,44 +1,37 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#pragma once
-
-#include "tarch/accelerator/Range.h"
-#include "tarch/accelerator/Reducer.h"
-#include "tarch/accelerator/kokkos/Device.h"
 
 namespace tarch::accelerator {
   template <typename T>
-  KOKKOS_INLINE_FUNCTION auto kokkos_reducer(Max<T> r) {
-    return Kokkos::Max<T>(r.target);
+  KOKKOS_INLINE_FUNCTION auto kokkosReducer(Max<T> reducer) {
+    return Kokkos::Max<T>(reducer.target);
   }
   template <typename T>
-  KOKKOS_INLINE_FUNCTION auto kokkos_reducer(Min<T> r) {
-    return Kokkos::Min<T>(r.target);
+  KOKKOS_INLINE_FUNCTION auto kokkosReducer(Min<T> reducer) {
+    return Kokkos::Min<T>(reducer.target);
   }
   template <typename T>
-  KOKKOS_INLINE_FUNCTION auto kokkos_reducer(Sum<T> r) {
-    return Kokkos::Sum<T>(r.target);
+  KOKKOS_INLINE_FUNCTION auto kokkosReducer(Sum<T> reducer) {
+    return Kokkos::Sum<T>(reducer.target);
   }
 
-  // Host-side fold of a freshly computed device result into the caller's pre-existing
-  // target. Kokkos reducers seed from their own identity and overwrite the bound
-  // scalar, so the top-level overloads reduce into a local scratch and then combine
-  // here, matching the combine-into-target contract of all other backends (Reducer.h).
+  // A Kokkos reducer starts from its identity and overwrites the scalar it binds, so every overload
+  // below reduces into a local scratch value. combineOnHost() merges that scratch into the target
+  // the caller passed in.
   template <typename T>
-  inline T combine_host(Max<T>, T a, T b) {
-    return a > b ? a : b;
+  inline T combineOnHost([[maybe_unused]] Max<T> reducer, T left, T right) {
+    return left > right ? left : right;
   }
   template <typename T>
-  inline T combine_host(Min<T>, T a, T b) {
-    return a < b ? a : b;
+  inline T combineOnHost([[maybe_unused]] Min<T> reducer, T left, T right) {
+    return left < right ? left : right;
   }
   template <typename T>
-  inline T combine_host(Sum<T>, T a, T b) {
-    return a + b;
+  inline T combineOnHost([[maybe_unused]] Sum<T> reducer, T left, T right) {
+    return left + right;
   }
 
   namespace internal {
-    // Named functors instead of in-place [=] __device__ lambdas: see ParallelFor.cpph.
     template <typename F, typename T>
     struct TeamReduce1D {
       F                           f;
@@ -68,7 +61,7 @@ namespace tarch::accelerator {
     Kokkos::parallel_reduce(
       Kokkos::TeamVectorRange(team.m, r.n),
       internal::TeamReduce1D<F, typename Reducer::value_type>{f},
-      kokkos_reducer(red)
+      kokkosReducer(red)
     );
   }
 
@@ -78,7 +71,7 @@ namespace tarch::accelerator {
     Kokkos::parallel_reduce(
       Kokkos::TeamVectorRange(team.m, total),
       internal::TeamReduce2D<F, typename Reducer::value_type>{f, r.n[1]},
-      kokkos_reducer(red)
+      kokkosReducer(red)
     );
   }
 
@@ -88,7 +81,7 @@ namespace tarch::accelerator {
     Kokkos::parallel_reduce(
       Kokkos::TeamVectorRange(team.m, total),
       internal::TeamReduce3D<F, typename Reducer::value_type>{f, r.n[1], r.n[2]},
-      kokkos_reducer(red)
+      kokkosReducer(red)
     );
   }
 } // namespace tarch::accelerator
@@ -102,9 +95,9 @@ namespace tarch {
     Kokkos::parallel_reduce(
       Kokkos::RangePolicy<Kokkos::DefaultExecutionSpace>(0, r.n),
       KOKKOS_LAMBDA(const int i, T& acc) { f(i, acc); },
-      accelerator::kokkos_reducer(scratchRed)
+      accelerator::kokkosReducer(scratchRed)
     );
-    red.target = accelerator::combine_host(red, red.target, scratch);
+    red.target = accelerator::combineOnHost(red, red.target, scratch);
   }
 
   template <typename Reducer, typename F>
@@ -115,9 +108,9 @@ namespace tarch {
     Kokkos::parallel_reduce(
       Kokkos::MDRangePolicy<Kokkos::DefaultExecutionSpace, Kokkos::Rank<2>>({0, 0}, {r.n[0], r.n[1]}),
       KOKKOS_LAMBDA(const int x, const int y, T& acc) { f(x, y, acc); },
-      accelerator::kokkos_reducer(scratchRed)
+      accelerator::kokkosReducer(scratchRed)
     );
-    red.target = accelerator::combine_host(red, red.target, scratch);
+    red.target = accelerator::combineOnHost(red, red.target, scratch);
   }
 
   template <typename Reducer, typename F>
@@ -128,9 +121,9 @@ namespace tarch {
     Kokkos::parallel_reduce(
       Kokkos::MDRangePolicy<Kokkos::DefaultExecutionSpace, Kokkos::Rank<3>>({0, 0, 0}, {r.n[0], r.n[1], r.n[2]}),
       KOKKOS_LAMBDA(const int x, const int y, const int z, T& acc) { f(x, y, z, acc); },
-      accelerator::kokkos_reducer(scratchRed)
+      accelerator::kokkosReducer(scratchRed)
     );
-    red.target = accelerator::combine_host(red, red.target, scratch);
+    red.target = accelerator::combineOnHost(red, red.target, scratch);
   }
 
   template <typename Reducer, typename F>
@@ -144,8 +137,8 @@ namespace tarch {
       KOKKOS_LAMBDA(const accelerator::KokkosTeam::member_type& team, T& acc) {
         f(team.league_rank(), accelerator::KokkosTeam{team}, acc);
       },
-      accelerator::kokkos_reducer(scratchRed)
+      accelerator::kokkosReducer(scratchRed)
     );
-    red.target = accelerator::combine_host(red, red.target, scratch);
+    red.target = accelerator::combineOnHost(red, red.target, scratch);
   }
 } // namespace tarch

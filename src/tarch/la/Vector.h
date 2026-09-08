@@ -40,16 +40,12 @@ std::string toString(const tarch::la::Vector<Size, Scalar>& vector);
 TARGET_DECLARE
 template <int Size, typename Scalar>
 struct tarch::la::Vector {
-private:
-  Scalar _values[Size]{};
-
 public:
   INLINE_METHOD GPU_CALLABLE_METHOD Vector();
 
   INLINE_METHOD GPU_CALLABLE_METHOD Vector(const Scalar* values);
 
-  INLINE_METHOD GPU_CALLABLE_METHOD
-  Vector(std::initializer_list<Scalar> values);
+  INLINE_METHOD GPU_CALLABLE_METHOD Vector(std::initializer_list<Scalar> values);
 
   INLINE_METHOD
   Vector(const std::bitset<Size>& values);
@@ -69,6 +65,9 @@ public:
   INLINE_METHOD GPU_CALLABLE_METHOD Scalar* data();
 
   INLINE_METHOD GPU_CALLABLE_METHOD const Scalar* data() const;
+
+private:
+  Scalar _values[Size]{};
 };
 TARGET_DECLARE_END
 
@@ -84,8 +83,11 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<2, Scalar> tarch::la::makeVe
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, Scalar> tarch::la::
-  makeVector(const Scalar& value0, const Scalar& value1, const Scalar& value2) {
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, Scalar> tarch::la::makeVector(
+  const Scalar& value0,
+  const Scalar& value1,
+  const Scalar& value2
+) {
   Vector<3, Scalar> result;
   result._values[0] = value0;
   result._values[1] = value1;
@@ -94,8 +96,12 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, Scalar> tarch::la::
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar> tarch::la::
-  makeVector(const Scalar& value0, const Scalar& value1, const Scalar& value2, const Scalar& value3) {
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar> tarch::la::makeVector(
+  const Scalar& value0,
+  const Scalar& value1,
+  const Scalar& value2,
+  const Scalar& value3
+) {
   Vector<4, Scalar> result;
   result._values[0] = value0;
   result._values[1] = value1;
@@ -105,11 +111,11 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar> tarch::la::
 }
 
 TARGET_DECLARE
-#include "Vector.cpph"
-#include "Vector2.h"
-#include "Vector3.h"
-#include "Vector4.h"
-#include "VectorOperations.h"
-#include "VectorScalarOperations.h"
-#include "VectorVectorOperations.h"
+#include "tarch/la/Vector.cpph"
+#include "tarch/la/Vector2.h"
+#include "tarch/la/Vector3.h"
+#include "tarch/la/Vector4.h"
+#include "tarch/la/VectorOperations.h"
+#include "tarch/la/VectorScalarOperations.h"
+#include "tarch/la/VectorVectorOperations.h"
 TARGET_DECLARE_END

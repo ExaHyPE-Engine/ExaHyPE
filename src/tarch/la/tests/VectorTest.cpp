@@ -1,6 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "tarch/la/tests/VectorTest.h"
+#include "VectorTest.h"
 
 #include "tarch/la/Vector.h"
 #include "tarch/la/VectorCompare.h"
@@ -8,7 +8,7 @@
 #include "tarch/la/VectorScalarOperations.h"
 #include "tarch/la/VectorVectorOperations.h"
 
-tarch::la::tests::VectorTest::VectorTest():
+tarch::la::tests::VectorTest::VectorTest() :
   TestCase("tarch::la::tests::VectorTest") {}
 
 void tarch::la::tests::VectorTest::run() {
@@ -28,9 +28,9 @@ void tarch::la::tests::VectorTest::run() {
 void tarch::la::tests::VectorTest::testVectorVectorCompare() {
   std::map<tarch::la::Vector<2, double>, int, tarch::la::VectorCompare<2>> map;
 
-  tarch::la::Vector<2, double> a = {0.0, 0.0};
-  tarch::la::Vector<2, double> b = {0.0, 0.3};
-  tarch::la::Vector<2, double> c = {1.0, 0.0};
+  const tarch::la::Vector<2, double> a = {0.0, 0.0};
+  const tarch::la::Vector<2, double> b = {0.0, 0.3};
+  const tarch::la::Vector<2, double> c = {1.0, 0.0};
 
   validate(map.empty());
 
@@ -46,31 +46,28 @@ void tarch::la::tests::VectorTest::testVectorVectorCompare() {
 }
 
 void tarch::la::tests::VectorTest::testConstruction() {
-  // Test construction with uniform initialization
-  Vector<1, int> vector1(1);
+  const Vector<1, int> vector1(1);
   validateEquals(vector1[0], 1);
 
-  Vector<2, int> vector2(1);
+  const Vector<2, int> vector2(1);
   validateEquals(vector2[0], 1);
   validateEquals(vector2[1], 1);
 
-  // Test construction with direct individual initialization
-  Vector<2, int> vector3 = {1, 2};
+  const Vector<2, int> vector3 = {1, 2};
   validateEquals(vector3[0], 1);
   validateEquals(vector3[1], 2);
 
-  Vector<3, int> vector4 = {1, 2, 3};
+  const Vector<3, int> vector4 = {1, 2, 3};
   validateEquals(vector4[0], 1);
   validateEquals(vector4[1], 2);
   validateEquals(vector4[2], 3);
 
-  // Test copy construction
-  Vector<3, int> vector5(vector4);
+  const Vector<3, int> vector5(vector4);
   validateEquals(vector5[0], 1);
   validateEquals(vector5[1], 2);
   validateEquals(vector5[2], 3);
 
-  Vector<3, int> vector6 = vector5;
+  const Vector<3, int> vector6 = vector5;
   validateEquals(vector6[0], 1);
   validateEquals(vector6[1], 2);
   validateEquals(vector6[2], 3);
@@ -97,26 +94,25 @@ void tarch::la::tests::VectorTest::testVectorOperations() {
   result = norm1(vector);
   validateEquals(result, 5.0);
 
-  // Test indexMin, indexMax, min, and max methods
   vector = {1, 2, 3};
   validateEquals(indexMin(vector), 0);
   validateEquals(indexMax(vector), 2);
   validateEquals(min(vector), 1);
   validateEquals(max(vector), 3);
 
-  Vector<3, int>     vector3 = {1, 2, 3};
-  std::ostringstream stream;
+  const Vector<3, int> vector3 = {1, 2, 3};
+  std::ostringstream   stream;
   stream << vector3;
-  std::string vector3string(stream.str());
-  validateEquals(vector3string, std::string("[1,2,3]"));
+  const std::string vector3String(stream.str());
+  validateEquals(vector3String, std::string("[1,2,3]"));
 
-  Vector<2, double> vector2 = {-1.5, 3.0};
+  const Vector<2, double> vector2 = {-1.5, 3.0};
   validateNumericalEquals(norm2Squared(vector2), 11.25);
   validateNumericalEquals(normMax(vector2), 3.0);
   validateEquals(count(Vector<2, int>{4, 4}, 4), 2);
   validate(allEntriesAreTheSame(Vector<2, int>{4, 4}));
 
-  Vector<4, int> vector4 = {3, -1, 5, 2};
+  const Vector<4, int> vector4 = {3, -1, 5, 2};
   validateEquals(sum(vector4), 9);
   validateEquals(volume(Vector<4, int>{2, 3, 4, 5}), 120);
   validateEquals(indexMin(vector4), 1);
@@ -125,21 +121,21 @@ void tarch::la::tests::VectorTest::testVectorOperations() {
   validateEquals(max(vector4), 5);
   validateEquals(maxAbs(vector4), 5);
   validate(contains(vector4, 2));
-  validate(!contains(vector4, 7));
+  validate(not contains(vector4, 7));
   validate(isEntryFinite(Vector<4, double>{1.0, 2.0, 3.0, 4.0}));
 
-  Vector<4, double> floorResult = floor(Vector<4, double>{1.2, -1.2, 3.99, 4.01});
+  const Vector<4, double> floorResult = floor(Vector<4, double>{1.2, -1.2, 3.99, 4.01});
   validateNumericalEquals(floorResult[0], 1.0);
   validateNumericalEquals(floorResult[1], -2.0);
   validateNumericalEquals(floorResult[2], 3.0);
   validateNumericalEquals(floorResult[3], 4.0);
 
-  Vector<3, double> inverted = invertEntries(Vector<3, double>{2.0, 4.0, 8.0});
+  const Vector<3, double> inverted = invertEntries(Vector<3, double>{2.0, 4.0, 8.0});
   validateNumericalEquals(inverted[0], 0.5);
   validateNumericalEquals(inverted[1], 0.25);
   validateNumericalEquals(inverted[2], 0.125);
 
-  Vector<5, int> generic5 = {1, -2, 3, -4, 5};
+  const Vector<5, int> generic5 = {1, -2, 3, -4, 5};
   validateEquals(sum(generic5), 3);
   validateEquals(norm1(generic5), 15);
   validateEquals(norm2Squared(generic5), 55);
@@ -150,10 +146,10 @@ void tarch::la::tests::VectorTest::testVectorOperations() {
   validateEquals(max(generic5), 5);
   validateEquals(maxAbs(generic5), 5);
   validate(contains(generic5, 3));
-  validate(!contains(generic5, 9));
+  validate(not contains(generic5, 9));
   validateEquals(count(Vector<5, int>{1, 2, 1, 3, 1}, 1), 3);
 
-  Vector<7, double> generic7Floor = floor(Vector<7, double>{1.2, 2.9, -1.2, -3.0, 0.0, 4.01, 5.99});
+  const Vector<7, double> generic7Floor = floor(Vector<7, double>{1.2, 2.9, -1.2, -3.0, 0.0, 4.01, 5.99});
   validateNumericalEquals(generic7Floor[0], 1.0);
   validateNumericalEquals(generic7Floor[1], 2.0);
   validateNumericalEquals(generic7Floor[2], -2.0);
@@ -162,7 +158,7 @@ void tarch::la::tests::VectorTest::testVectorOperations() {
   validateNumericalEquals(generic7Floor[5], 4.0);
   validateNumericalEquals(generic7Floor[6], 5.0);
 
-  Vector<5, double> generic5Inv = invertEntries(Vector<5, double>{2.0, 4.0, 5.0, 8.0, 10.0});
+  const Vector<5, double> generic5Inv = invertEntries(Vector<5, double>{2.0, 4.0, 5.0, 8.0, 10.0});
   validateNumericalEquals(generic5Inv[0], 0.5);
   validateNumericalEquals(generic5Inv[1], 0.25);
   validateNumericalEquals(generic5Inv[2], 0.2);
@@ -173,7 +169,6 @@ void tarch::la::tests::VectorTest::testVectorOperations() {
 void tarch::la::tests::VectorTest::testVectorScalarOperations() {
   Vector<3, int> vector(0);
 
-  // Compound assignment operators
   vector += 1;
   validateEquals(vector[0], 1);
   validateEquals(vector[1], 1);
@@ -194,7 +189,6 @@ void tarch::la::tests::VectorTest::testVectorScalarOperations() {
   validateEquals(vector[1], 1);
   validateEquals(vector[2], 1);
 
-  // Arithmetic operators
   vector = vector * 2;
   validateEquals(vector[0], 2);
   validateEquals(vector[1], 2);
@@ -246,19 +240,19 @@ void tarch::la::tests::VectorTest::testVectorScalarOperations() {
   validateNumericalEquals(vector2[0], 0.5);
   validateNumericalEquals(vector2[1], 1.0);
 
-  Vector<4, int> vector4 = {2, 2, 3, 4};
-  validate(!equals(vector4, 2));
+  const Vector<4, int> vector4 = {2, 2, 3, 4};
+  validate(not equals(vector4, 2));
   validate(oneEquals(vector4, 2));
   validate(oneGreater(vector4, 2));
   validate(oneGreaterEquals(vector4, 4));
-  validate(!oneSmaller(vector4, 2));
+  validate(not oneSmaller(vector4, 2));
   validate(oneSmallerEquals(vector4, 2));
-  validate(!allGreater(vector4, 2));
+  validate(not allGreater(vector4, 2));
   validate(allGreaterEquals(vector4, 2));
-  validate(!allSmaller(vector4, 4));
+  validate(not allSmaller(vector4, 4));
   validate(allSmallerEquals(vector4, 4));
 
-  Vector<3, double> tolerant = {1.0 + 1e-15, 1.0 - 1e-15, 1.0};
+  const Vector<3, double> tolerant = {1.0 + 1e-15, 1.0 - 1e-15, 1.0};
   validate(equals(tolerant, 1.0, 1e-14));
   validate(oneEquals(tolerant, 1.0, 1e-14));
   validate(allGreaterEquals(tolerant, 1.0, 1e-14));
@@ -290,19 +284,19 @@ void tarch::la::tests::VectorTest::testVectorScalarOperations() {
   validateEquals(generic5[0], 1);
   validateEquals(generic5[4], 5);
 
-  Vector<5, int> generic5Compare = {2, 2, 3, 4, 5};
-  validate(!equals(generic5Compare, 2));
+  const Vector<5, int> generic5Compare = {2, 2, 3, 4, 5};
+  validate(not equals(generic5Compare, 2));
   validate(oneEquals(generic5Compare, 2));
   validate(oneGreater(generic5Compare, 4));
   validate(oneGreaterEquals(generic5Compare, 5));
-  validate(!oneSmaller(generic5Compare, 2));
+  validate(not oneSmaller(generic5Compare, 2));
   validate(oneSmallerEquals(generic5Compare, 2));
-  validate(!allGreater(generic5Compare, 2));
+  validate(not allGreater(generic5Compare, 2));
   validate(allGreaterEquals(generic5Compare, 2));
-  validate(!allSmaller(generic5Compare, 5));
+  validate(not allSmaller(generic5Compare, 5));
   validate(allSmallerEquals(generic5Compare, 5));
 
-  Vector<7, double> generic7Compare = {1.0, 1.0 + 1e-15, 1.0 - 1e-15, 1.0, 1.0, 1.0, 1.0};
+  const Vector<7, double> generic7Compare = {1.0, 1.0 + 1e-15, 1.0 - 1e-15, 1.0, 1.0, 1.0, 1.0};
   validate(equals(generic7Compare, 1.0, 1e-14));
   validate(oneEquals(generic7Compare, 1.0, 1e-14));
   validate(allGreaterEquals(generic7Compare, 1.0, 1e-14));
@@ -312,92 +306,83 @@ void tarch::la::tests::VectorTest::testVectorScalarOperations() {
 void tarch::la::tests::VectorTest::testVectorVectorOperations() {
   Vector<3, int> vector(1);
 
-  // Addition assignment
   vector += vector;
   validateEquals(vector[0], 2);
   validateEquals(vector[1], 2);
   validateEquals(vector[2], 2);
 
-  // Subtraction assignment
   vector -= vector;
   validateEquals(vector[0], 0);
   validateEquals(vector[1], 0);
   validateEquals(vector[2], 0);
 
-  // Addition
   vector = {1, 2, 3};
   vector = vector + vector;
   validateEquals(vector[0], 2);
   validateEquals(vector[1], 4);
   validateEquals(vector[2], 6);
 
-  // Subtraction
   vector = {1, 2, 3};
   vector = vector - vector;
   validateEquals(vector[0], 0);
   validateEquals(vector[1], 0);
   validateEquals(vector[2], 0);
 
-  // Dot product
   vector        = {2, 3, 4};
-  int dotresult = dot(vector, vector);
-  validateEquals(dotresult, 29);
-  validateEquals(dotresult, 29);
-  dotresult = vector * vector;
-  validateEquals(dotresult, 29);
+  int dotResult = dot(vector, vector);
+  validateEquals(dotResult, 29);
+  validateEquals(dotResult, 29);
+  dotResult = vector * vector;
+  validateEquals(dotResult, 29);
 
-  // Cross product (only works for same types)
-  Vector<3, int> b = {2, 3, 4};
-  Vector<3, int> a = {1, 2, 3};
-  Vector<3, int> crossresult(0);
-  crossresult = cross(a, b);
-  validateEquals(crossresult[0], a[1] * b[2] - a[2] * b[1]);
-  validateEquals(crossresult[1], a[2] * b[0] - a[0] * b[2]);
-  validateEquals(crossresult[2], a[0] * b[1] - a[1] * b[0]);
+  const Vector<3, int> b           = {2, 3, 4};
+  const Vector<3, int> a           = {1, 2, 3};
+  const Vector<3, int> crossResult = cross(a, b);
+  validateEquals(crossResult[0], a[1] * b[2] - a[2] * b[1]);
+  validateEquals(crossResult[1], a[2] * b[0] - a[0] * b[2]);
+  validateEquals(crossResult[2], a[0] * b[1] - a[1] * b[0]);
 
-  // Comparisons
   Vector<3, double> vec0 = {1.0, 2.0, 3.0};
   Vector<3, double> vec1(vec0);
   validate(equals(vec0, vec1));
-  validate(!oneGreater(vec0, vec1));
+  validate(not oneGreater(vec0, vec1));
   validate(oneGreaterEquals(vec0, vec1));
-  validate(!allGreater(vec0, vec1));
-  validate(!firstGreater(vec0, vec1));
+  validate(not allGreater(vec0, vec1));
+  validate(not firstGreater(vec0, vec1));
 
   vec0 = {2.0, 2.0, 3.0};
-  validate(!equals(vec0, vec1));
+  validate(not equals(vec0, vec1));
   validate(oneGreater(vec0, vec1));
   validate(oneGreaterEquals(vec0, vec1));
-  validate(!allGreater(vec0, vec1));
+  validate(not allGreater(vec0, vec1));
   validate(firstGreater(vec0, vec1));
 
   vec0 = {2.0, 3.0, 4.0};
-  validate(!equals(vec0, vec1));
+  validate(not equals(vec0, vec1));
   validate(oneGreater(vec0, vec1));
   validate(oneGreaterEquals(vec0, vec1));
   validate(allGreater(vec0, vec1));
 
-  // up to here vec1=vec0
   const double tolerance = 1e-14;
   vec0(0)                = vec1(0);
   vec0(1)                = vec1(1);
   vec0(2)                = vec1(2) + 0.99 * tolerance;
   validateWithParams3(equals(vec0, vec1, tolerance), vec0, vec1, vec0(2) - vec1(2));
-  validate(!oneGreater(vec0, vec1, tolerance));
+  validate(not oneGreater(vec0, vec1, tolerance));
   validate(oneGreaterEquals(vec0, vec1));
-  validate(!allGreater(vec0, vec1, tolerance));
-  validateWithParams2(!firstGreater(vec0, vec1, tolerance), vec0, vec1);
+  validate(not allGreater(vec0, vec1, tolerance));
+  validateWithParams2(not firstGreater(vec0, vec1, tolerance), vec0, vec1);
 
   vec0(2) = vec1(2) + 10.0 * tolerance;
-  validate(!equals(vec0, vec1, tolerance));
+  validate(not equals(vec0, vec1, tolerance));
   validate(oneGreater(vec0, vec1, tolerance));
   validate(oneGreaterEquals(vec0, vec1));
-  validate(!allGreater(vec0, vec1, tolerance));
+  validate(not allGreater(vec0, vec1, tolerance));
   validateWithParams3(firstGreater(vec0, vec1, tolerance), vec0, vec1, vec0(2) - vec1(2));
 
   vec0 = {1.0, 2.0, 3.0};
   vec0 += 10.0 * tolerance;
-  validate(!equals(vec0, vec1, tolerance));
+  validate(not equals(vec0, vec1, tolerance));
   validate(oneGreater(vec0, vec1, tolerance));
   validate(oneGreaterEquals(vec0, vec1));
   validate(allGreater(vec0, vec1, tolerance));
@@ -408,17 +393,16 @@ void tarch::la::tests::VectorTest::testVectorVectorOperations() {
   validate(oneGreaterEquals(vec0, vec1));
 
   vec0 = {1.0, 1.0, 4.0};
-  validate(!firstGreater(vec0, vec1));
+  validate(not firstGreater(vec0, vec1));
   vec0 = {2.0, 0.0, 0.0};
   validate(firstGreater(vec0, vec1));
   vec0 = {1.0, 2.0 + 10.0 * tolerance, 2.0};
   validate(firstGreater(vec0, vec1, tolerance));
 
-  // Test equalsReturnIndex
-  vec0  = {1.0, 2.0, 3.0 + 0.99 * tolerance};
-  vec1  = {1.0, 2.0, 3.0};
-  int i = equalsReturnIndex(vec0, vec1, tolerance);
-  validateEquals(i, -1);
+  vec0            = {1.0, 2.0, 3.0 + 0.99 * tolerance};
+  vec1            = {1.0, 2.0, 3.0};
+  const int index = equalsReturnIndex(vec0, vec1, tolerance);
+  validateEquals(index, -1);
 }
 
 void tarch::la::tests::VectorTest::testSpecialisedVectorLayouts() {
@@ -430,12 +414,12 @@ void tarch::la::tests::VectorTest::testSpecialisedVectorLayouts() {
   static_assert(alignof(Vector<4, int>) == 16);
   static_assert(std::is_trivially_copyable<Vector<3, double>>::value);
 
-  Vector<2, double> vector2 = {1.5, 2.5};
+  const Vector<2, double> vector2 = {1.5, 2.5};
   validateEquals(vector2.size(), 2);
   validateEquals(vector2.data()[0], 1.5);
   validateEquals(vector2.data()[1], 2.5);
 
-  Vector<3, int> vector3 = {4, 5, 6};
+  const Vector<3, int> vector3 = {4, 5, 6};
   validateEquals(vector3.size(), 3);
   validateEquals(vector3.data()[0], 4);
   validateEquals(vector3.data()[1], 5);
@@ -444,7 +428,7 @@ void tarch::la::tests::VectorTest::testSpecialisedVectorLayouts() {
   validateEquals(vector3[1], 5);
   validateEquals(vector3[2], 6);
 
-  Vector<4, int> vector4(7);
+  const Vector<4, int> vector4(7);
   validateEquals(vector4.size(), 4);
   validateEquals(vector4.data()[0], 7);
   validateEquals(vector4.data()[1], 7);
@@ -453,7 +437,7 @@ void tarch::la::tests::VectorTest::testSpecialisedVectorLayouts() {
 }
 
 void tarch::la::tests::VectorTest::testAdditionalVectorOperations() {
-  Vector<3, double> vector = {-1.2, 2.0, 3.0};
+  const Vector<3, double> vector = {-1.2, 2.0, 3.0};
   validateNumericalEquals(norm2Squared(vector), 14.44);
   validateNumericalEquals(norm2(vector), std::sqrt(14.44));
   validateNumericalEquals(normMax(vector), 3.0);
@@ -461,17 +445,17 @@ void tarch::la::tests::VectorTest::testAdditionalVectorOperations() {
   validateNumericalEquals(average(vector), 1.2666666666666666);
   validateNumericalEquals(maxAbs(vector), 3.0);
 
-  auto absolute = abs(vector);
+  const auto absolute = abs(vector);
   validateNumericalEquals(absolute[0], 1.2);
   validateNumericalEquals(absolute[1], 2.0);
   validateNumericalEquals(absolute[2], 3.0);
 
-  Vector<3, double> floored = floor(vector);
+  const Vector<3, double> floored = floor(vector);
   validateEquals(floored[0], -2.0);
   validateEquals(floored[1], 2.0);
   validateEquals(floored[2], 3.0);
 
-  Vector<3, double> inverted = invertEntries(Vector<3, double>{2.0, 4.0, 0.5});
+  const Vector<3, double> inverted = invertEntries(Vector<3, double>{2.0, 4.0, 0.5});
   validateNumericalEquals(inverted[0], 0.5);
   validateNumericalEquals(inverted[1], 0.25);
   validateNumericalEquals(inverted[2], 2.0);
@@ -479,22 +463,22 @@ void tarch::la::tests::VectorTest::testAdditionalVectorOperations() {
   validate(contains(Vector<3, int>{1, 2, 3}, 2));
   validateEquals(count(Vector<4, int>{1, 2, 2, 3}, 2), 2);
   validate(allEntriesAreTheSame(Vector<3, int>{5, 5, 5}));
-  validate(!allEntriesAreTheSame(Vector<3, int>{5, 6, 5}));
+  validate(not allEntriesAreTheSame(Vector<3, int>{5, 6, 5}));
   validateEquals(isEntryFinite(Vector<3, double>{1.0, 2.0, 3.0}), 1);
   validateEquals(isEntryNan(Vector<3, double>{1.0, std::numeric_limits<double>::quiet_NaN(), 3.0}), 1);
 
-  std::vector<int> stlVector = toSTLVector(Vector<3, int>{4, 5, 6});
+  const std::vector<int> stlVector = toSTLVector(Vector<3, int>{4, 5, 6});
   validateEquals(static_cast<int>(stlVector.size()), 3);
   validateEquals(stlVector[0], 4);
   validateEquals(stlVector[2], 6);
 
-  Vector<3, int> ints      = {1, 2, 3};
-  auto           converted = tarch::la::convertScalar<double>(ints);
+  const Vector<3, int> ints      = {1, 2, 3};
+  const auto           converted = tarch::la::convertScalar<double>(ints);
   validateEquals(converted[0], 1.0);
   validateEquals(converted[1], 2.0);
   validateEquals(converted[2], 3.0);
 
-  Vector<3, double> scalarCmp = {1.0, 2.0, 3.0};
+  const Vector<3, double> scalarCmp = {1.0, 2.0, 3.0};
   validate(equals(Vector<3, int>{3, 3, 3}, 3));
   validate(oneEquals(Vector<3, int>{1, 2, 3}, 2));
   validate(oneGreater(Vector<3, int>{1, 4, 3}, 3));
@@ -517,12 +501,12 @@ void tarch::la::tests::VectorTest::testAdditionalVectorOperations() {
   validate(allSmaller(Vector<3, double>{1.0, 2.0, 3.0}, 4.0));
   validate(allSmallerEquals(Vector<3, double>{1.0, 2.0, 3.0}, 3.0));
 
-  Vector<3, int> lhs       = {1, 4, 2};
-  Vector<3, int> rhs       = {3, 1, 2};
-  auto           maxVector = max(lhs, rhs);
-  auto           minVector = min(lhs, rhs);
-  auto           mulVector = multiplyComponents(lhs, rhs);
-  auto           divVector = divideComponents(Vector<3, int>{8, 9, 10}, Vector<3, int>{2, 3, 5});
+  const Vector<3, int> lhs       = {1, 4, 2};
+  const Vector<3, int> rhs       = {3, 1, 2};
+  const auto           maxVector = max(lhs, rhs);
+  const auto           minVector = min(lhs, rhs);
+  const auto           mulVector = multiplyComponents(lhs, rhs);
+  const auto           divVector = divideComponents(Vector<3, int>{8, 9, 10}, Vector<3, int>{2, 3, 5});
   validateEquals(maxVector[0], 3);
   validateEquals(maxVector[1], 4);
   validateEquals(minVector[0], 1);
@@ -539,29 +523,29 @@ void tarch::la::tests::VectorTest::testAdditionalVectorOperations() {
     2
   );
 
-  Vector<3, double> remainderVector = remainder(Vector<3, double>{5.5, 7.25, 10.0}, 2.0);
+  const Vector<3, double> remainderVector = remainder(Vector<3, double>{5.5, 7.25, 10.0}, 2.0);
   validateNumericalEquals(remainderVector[0], 8.25);
   validateNumericalEquals(remainderVector[1], 9.0625);
   validateNumericalEquals(remainderVector[2], 0.0);
 }
 
 void tarch::la::tests::VectorTest::testSpecialisedVectorMembers() {
-  const int      raw2[] = {7, 8};
-  Vector<2, int> vector2(raw2);
+  const int            raw2[] = {7, 8};
+  const Vector<2, int> vector2(raw2);
   validateEquals(vector2.size(), 2);
   validateEquals(vector2.data()[0], 7);
   validateEquals(vector2(1), 8);
 
-  Vector<2, int> bits2(std::bitset<2>(std::string("10")));
+  const Vector<2, int> bits2(std::bitset<2>(std::string("10")));
   validateEquals(bits2[0], 0);
   validateEquals(bits2[1], 1);
 
-  const double      raw3[] = {1.5, 2.5, 3.5};
-  Vector<3, double> vector3(raw3);
+  const double            raw3[] = {1.5, 2.5, 3.5};
+  const Vector<3, double> vector3(raw3);
   validateNumericalEquals(vector3.data()[2], 3.5);
   validateNumericalEquals(vector3[1], 2.5);
 
-  Vector<3, int> bits3(std::bitset<3>(std::string("101")));
+  const Vector<3, int> bits3(std::bitset<3>(std::string("101")));
   validateEquals(bits3[0], 1);
   validateEquals(bits3[1], 0);
   validateEquals(bits3[2], 1);
@@ -573,7 +557,7 @@ void tarch::la::tests::VectorTest::testSpecialisedVectorMembers() {
   vector4[0] = 9;
   validateEquals(vector4.data()[0], 9);
 
-  Vector<4, int> bits4(std::bitset<4>(std::string("1101")));
+  const Vector<4, int> bits4(std::bitset<4>(std::string("1101")));
   validateEquals(bits4[0], 1);
   validateEquals(bits4[1], 0);
   validateEquals(bits4[2], 1);
@@ -581,14 +565,14 @@ void tarch::la::tests::VectorTest::testSpecialisedVectorMembers() {
 }
 
 void tarch::la::tests::VectorTest::testVectorCompare() {
-  tarch::la::VectorCompare<2> compare(1.0e-12);
+  const tarch::la::VectorCompare<2> compare(1.0e-12);
 
-  tarch::la::Vector<2, double> left  = {1.0, 2.0};
-  tarch::la::Vector<2, double> same  = {1.0 + 1.0e-14, 2.0};
-  tarch::la::Vector<2, double> right = {1.0, 3.0};
+  const tarch::la::Vector<2, double> left  = {1.0, 2.0};
+  const tarch::la::Vector<2, double> same  = {1.0 + 1.0e-14, 2.0};
+  const tarch::la::Vector<2, double> right = {1.0, 3.0};
 
-  validate(!compare(left, same));
-  validate(!compare(same, left));
+  validate(not compare(left, same));
+  validate(not compare(same, left));
   validate(compare(left, right));
-  validate(!compare(right, left));
+  validate(not compare(right, left));
 }

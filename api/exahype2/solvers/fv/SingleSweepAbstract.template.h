@@ -7,6 +7,7 @@
 
 #include "runner/RuntimeParameters.h"
 
+#include "exahype2/NonNegativeStatistics.h"
 #include "exahype2/Solver.h"
 #include "exahype2/RefinementControl.h"
 #include "exahype2/RefinementCriterionHelpers.h"
@@ -16,7 +17,6 @@
 #include "tarch/Assertions.h"
 #include "tarch/NonCriticalAssertions.h"
 #include "tarch/la/Vector.h"
-#include "tarch/multicore/BooleanSemaphore.h"
 
 {% if USE_VARIABLE_SHORTCUTS is sameas True %}
 #include "VariableShortcuts{{SOLVER_NAME}}.h"
@@ -24,19 +24,15 @@
 
 {{SOLVER_INCLUDES}}
 
-{% for item in NAMESPACE -%}
-namespace {{ item }} {
-{%- endfor %}
+namespace {{NAMESPACE | join("::")}} {
   class {{CLASSNAME}};
-{% for item in NAMESPACE -%}
-}
-{%- endfor %}
+} // namespace {{NAMESPACE | join("::")}}
 
-class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
+class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
   public:
 {% if USE_VARIABLE_SHORTCUTS is sameas True %}
     /**
-     * Enables shortcuts to access variables, e.g. Q[Shortcuts::{{VARIABLE_NAMES[0]}}] instead of Q[0].
+     * Names the variables: Q[Shortcuts::{{VARIABLE_NAMES[0]}}] is Q[0].
      */
     using Shortcuts = {{NAMESPACE | join("::")}}::VariableShortcuts{{SOLVER_NAME}};
 {% endif %}
@@ -52,7 +48,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
       Suspended
     };
 
-    static std::string toString(SolverState);
+    static std::string toString(const SolverState state);
 
     static constexpr int NumberOfFiniteVolumesPerAxisPerPatch = {{NUMBER_OF_VOLUMES_PER_AXIS}};
     static constexpr int NumberOfUnknowns                     = {{NUMBER_OF_UNKNOWNS}};
@@ -61,11 +57,12 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     {{SOLVER_CONSTANTS}}
 
     {{CLASSNAME}}();
-    ~{{CLASSNAME}}() = default;
+    {{CLASSNAME}}(const {{CLASSNAME}}& other) = delete;
+    {{CLASSNAME}}({{CLASSNAME}}&& other) = delete;
+    {{CLASSNAME}}& operator=(const {{CLASSNAME}}& other) = delete;
+    {{CLASSNAME}}& operator=({{CLASSNAME}}&& other) = delete;
+    ~{{CLASSNAME}}() override;
 
-    /**
-     * Flags the coordinate axes along which the domain is periodic.
-     */
     static std::bitset<DIMENSIONS> PeriodicBC;
 
     double getMinTimeStamp() const override final;
@@ -92,18 +89,24 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
     int getNumberOfDoFs() const override final;
 
+    void update(
+      const double timeStepSize,
+      const double timeStamp,
+      const double minPatchSize,
+      const double maxPatchSize
+    );
+    void updateTimeStampAndPatchSize(
+      const double timeStamp,
+      const double minPatchSize,
+      const double maxPatchSize
+    );
+
     /**
-     * Update the global solver state, i.e. feed updated global quantities into
-     * the solver.
-     *
-     * @param timeStepSize  Time step size to fold into the global extrema
-     * @param timeStamp     Time stamp to fold into the global extrema
-     * @param minVolumeSize Smallest observed patch size, from which the routine
-     *                      derives the volume size
-     * @param maxVolumeSize Largest observed patch size, from which the routine
-     *                      derives the volume size
+     * Reduces the extrema the current traversal has accumulated through update()
+     * into the solver. Runs once per tree at traversal end, so the per-patch
+     * update writes thread-local data only.
      */
-    void update(double timeStepSize, double timeStamp, double minVolumeSize, double maxVolumeSize);
+    void reduceLocalUpdates();
 
     SolverState getSolverState() const;
 
@@ -120,30 +123,40 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     {{ABSTRACT_SOLVER_USER_DECLARATIONS}}
 
   protected:
-    SolverState _solverState;
+    /** Stores one traversal's extrema until reduceLocalUpdates() reduces them. */
+    struct LocalUpdates {
+      double                            minTimeStamp{std::numeric_limits<double>::infinity()};
+      double                            maxTimeStamp{0.0};
+      double                            localMinTimeStamp{std::numeric_limits<double>::infinity()};
+      double                            localMaxTimeStamp{0.0};
+      double                            minVolumeH{std::numeric_limits<double>::infinity()};
+      double                            maxVolumeH{0.0};
+      ::exahype2::NonNegativeStatistics timeStepSize{};
+      bool                              empty{true};
+    };
 
-    double _minTimeStamp;
-    double _maxTimeStamp;
+    static thread_local LocalUpdates _localUpdates;
 
-    double _minTimeStampThisTimeStep;
-    double _maxTimeStampThisTimeStep;
+    SolverState _solverState{SolverState::GridConstruction};
 
-    double _localMinTimeStampThisTimeStep;
-    double _localMaxTimeStampThisTimeStep;
+    double _minTimeStamp{0.0};
+    double _maxTimeStamp{0.0};
 
-    double _minVolumeH;
-    double _maxVolumeH;
+    double _minTimeStampThisTimeStep{std::numeric_limits<double>::infinity()};
+    double _maxTimeStampThisTimeStep{0.0};
 
-    double _minVolumeHThisTimeStep;
-    double _maxVolumeHThisTimeStep;
+    double _localMinTimeStampThisTimeStep{std::numeric_limits<double>::infinity()};
+    double _localMaxTimeStampThisTimeStep{0.0};
 
-    double _minTimeStepSize;
-    double _maxTimeStepSize;
+    double _minVolumeH{std::numeric_limits<double>::infinity()};
+    double _maxVolumeH{0.0};
 
-    double _minTimeStepSizeThisTimeStep;
-    double _maxTimeStepSizeThisTimeStep;
+    double _minVolumeHThisTimeStep{std::numeric_limits<double>::infinity()};
+    double _maxVolumeHThisTimeStep{0.0};
 
-    tarch::multicore::BooleanSemaphore _semaphore;
+    double _minTimeStepSize{std::numeric_limits<double>::infinity()};
+    double _maxTimeStepSize{0.0};
+
+    double _minTimeStepSizeThisTimeStep{std::numeric_limits<double>::infinity()};
+    double _maxTimeStepSizeThisTimeStep{0.0};
 };
-
-{# Empty line here #}

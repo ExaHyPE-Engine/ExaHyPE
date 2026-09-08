@@ -3,7 +3,7 @@
 #pragma once
 
 #include "exahype2/RefinementControl.h"
-#include "toolbox/blockstructured/MultiresolutionDetail.h"
+#include "exahype2/amr/MultiresolutionDetail.h"
 
 namespace exahype2 {
   INLINE_METHOD RefinementCommand
@@ -21,4 +21,4 @@ namespace exahype2 {
   );
 } // namespace exahype2
 
-#include "RefinementCriterionHelpers.cpph"
+#include "exahype2/RefinementCriterionHelpers.cpph"

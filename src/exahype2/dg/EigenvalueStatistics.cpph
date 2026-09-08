@@ -1,0 +1,20 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+template <int Dimensions, typename EigenvalueEvaluator>
+INLINE_METHOD void exahype2::dg::MaxEigenvalueStatistics::accumulate(
+  const tarch::la::Vector<Dimensions, double>& cellSize,
+  EigenvalueEvaluator&&                        evaluateEigenvalue
+) {
+  double scaledEigenvalue = 0.0;
+  for (int dimension = 0; dimension < Dimensions; dimension++) {
+    assertion(std::isfinite(cellSize(dimension)) and cellSize(dimension) > 0.0, cellSize, dimension);
+    const auto physicalEigenvalue = static_cast<double>(evaluateEigenvalue(dimension));
+    assertion(std::isfinite(physicalEigenvalue) and physicalEigenvalue >= 0.0, physicalEigenvalue, dimension);
+    maxPhysicalEigenvalue = ::exahype2::NonNegativeReduction::maximum(maxPhysicalEigenvalue, physicalEigenvalue);
+    const auto scaledEigenvalueContribution = physicalEigenvalue / cellSize(dimension);
+    scaledEigenvalue = ::exahype2::NonNegativeReduction::sum(scaledEigenvalue, scaledEigenvalueContribution);
+  }
+  assertion(std::isfinite(scaledEigenvalue) and scaledEigenvalue >= 0.0, scaledEigenvalue, cellSize);
+  maxScaledEigenvalue = ::exahype2::NonNegativeReduction::maximum(maxScaledEigenvalue, scaledEigenvalue);
+}

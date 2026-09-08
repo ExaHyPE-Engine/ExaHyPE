@@ -4,18 +4,16 @@
 
 #include "runner/Engine.h"
 #include "runner/Format.h"
+#include "runner/GlobalStatistics.h"
 #include "runner/GridSnapshot.h"
-#include "runner/LoadBalancer.h"
 #include "runner/PhaseNames.h"
 #include "runner/ReportBox.h"
+#include "tarch/tasking/Runtime.h"
 
 namespace {
   std::string displayLabel(const std::string& observerName) {
     if (observerName == runner::StepName::CreateGrid) {
       return runner::PhaseName::GridConstruction;
-    }
-    if (observerName == runner::StepName::LoadBalancing) {
-      return runner::PhaseName::LoadBalancing;
     }
     if (observerName == runner::StepName::InitGrid) {
       return runner::PhaseName::GridInitialisation;
@@ -34,56 +32,73 @@ namespace {
 
   std::string seconds(const double value) {
     std::ostringstream result;
-    result << std::fixed << std::setprecision(2) << std::setw(12) << value << " s";
+    result << std::fixed << std::setprecision(2) << value << " s";
     return result.str();
   }
 } // namespace
 
-runner::FinalSummary::FinalSummary(PhaseContext& context) :
+runner::FinalSummary::FinalSummary(runner::PhaseContext& context) :
   _context(context) {}
 
 void runner::FinalSummary::run() {
-  loadBalancer().synchroniseGlobalView();
-  writeGridSnapshot(_context.box, _context.repositories);
+  runner::writeGridSnapshot(_context.box, _context.repositories);
 
   const auto& measurements = _context.measurements;
 
   // The rows follow the phase order of a run; steps outside this list keep their first-use order.
-  constexpr std::array<const char*, 6> StepOrder = {
-    StepName::CreateGrid,
-    StepName::LoadBalancing,
-    StepName::InitGrid,
-    StepName::PlotSolution,
-    StepName::DynamicAMR,
-    StepName::TimeStep
+  constexpr std::array<const char*, 5> StepOrder = {
+    runner::StepName::CreateGrid,
+    runner::StepName::InitGrid,
+    runner::StepName::PlotSolution,
+    runner::StepName::DynamicAMR,
+    runner::StepName::TimeStep
   };
-  auto rank = [&StepOrder](const std::string& name) {
+  const auto stepPosition = [&StepOrder](const std::string& name) {
     const auto* const position = std::find(StepOrder.begin(), StepOrder.end(), name);
     return std::distance(StepOrder.begin(), position);
   };
   auto stepTimes = measurements.stepTimes;
-  std::stable_sort(stepTimes.begin(), stepTimes.end(), [&rank](const auto& lhs, const auto& rhs) {
-    return rank(lhs.first) < rank(rhs.first);
+  std::stable_sort(stepTimes.begin(), stepTimes.end(), [&stepPosition](const auto& left, const auto& right) {
+    return stepPosition(left.first) < stepPosition(right.first);
   });
+
+  // Task time divided by wall time and thread count gives the fraction of the cores each step occupies.
+  const auto taskSecondsOf = [&measurements](const std::string& name) {
+    for (const auto& [stepName, taskSeconds] : measurements.stepTaskSeconds) {
+      if (stepName == name) {
+        return taskSeconds;
+      }
+    }
+    return 0.0;
+  };
+  const auto numberOfThreads = tarch::tasking::Runtime::getInstance().getNumberOfThreads();
 
   std::vector<std::pair<std::string, std::string>> entries;
   for (const auto& [name, measurement] : stepTimes) {
-    const auto         count = measurement.getNumberOfMeasurements();
+    const auto         numberOfSweeps = measurement.getNumberOfMeasurements();
+    const auto         wallClock      = measurement.getAccumulatedValue();
     std::ostringstream value;
-    value << seconds(measurement.getAccumulatedValue()) << "  (" << count << (count == 1 ? " sweep)" : " sweeps)");
+    value << seconds(wallClock) << "  (" << numberOfSweeps << (numberOfSweeps == 1 ? " Sweep" : " Sweeps");
+    if (numberOfThreads > 1 and wallClock > 0.0) {
+      value << " · Cores " << runner::Format::percentage(100.0 * taskSecondsOf(name) / (numberOfThreads * wallClock));
+    }
+    value << ")";
     entries.emplace_back("Total Time Spent in " + displayLabel(name), value.str());
   }
 
   if (measurements.timeStep.getNumberOfMeasurements() > 0) {
     entries.emplace_back("Average Time per Time Step", seconds(measurements.timeStep.getAverageValue()));
-    const auto leaves = static_cast<double>(loadBalancer().getStatistics().getGlobalNumberOfInnerUnrefinedCells());
-    const auto dt     = measurements.timeStep.getAverageValue();
-    if (dt > 0.0) {
+    const auto leaves          = static_cast<double>(runner::globalStatistics().getGlobalNumberOfInnerUnrefinedCells());
+    const auto averageTimeStep = measurements.timeStep.getAverageValue();
+    if (averageTimeStep > 0.0) {
       std::ostringstream value;
-      value << Format::rate(leaves / dt, "cell");
+      value << runner::Format::rate(leaves / averageTimeStep, "cell");
       if (_context.repositories.getNumberOfDoFs) {
         value << " · "
-              << Format::rate(static_cast<double>(_context.repositories.getNumberOfDoFs()) * leaves / dt, "dof");
+              << runner::Format::rate(
+                   static_cast<double>(_context.repositories.getNumberOfDoFs()) * leaves / averageTimeStep,
+                   "dof"
+                 );
       }
       entries.emplace_back("Average Performance", value.str());
     }
@@ -97,10 +112,10 @@ void runner::FinalSummary::run() {
 
   box.rule();
   for (const auto& [label, value] : entries) {
-    std::ostringstream out;
-    out << std::string(BlockIndent, ' ') << std::left << std::setw(static_cast<int>(labelWidth)) << label << "  "
-        << value;
-    box.line(out.str());
+    std::ostringstream line;
+    line << std::string(runner::BlockIndent, ' ') << std::left << std::setw(static_cast<int>(labelWidth)) << label
+         << "  " << value;
+    box.line(line.str());
   }
   box.rule();
 }

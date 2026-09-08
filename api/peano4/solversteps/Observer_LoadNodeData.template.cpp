@@ -4,68 +4,29 @@ namespace {
     Block& block,
     int    blockPosition
   ) {
-    // pushBlock() reuses physical stack slots. If this traversal does not
-    // load data for a slot, the old object in that reused slot would otherwise
-    // remain visible and could later be passed to user callbacks, stored, or
-    // exchanged as stale mesh data.
-    //
-    // This reset is therefore a correctness guard, but emplace_default()
-    // destroys the old object. For generated patch data this frees reusable
-    // heap storage and later data() calls allocate/zero it again. A faster
-    // follow-up would be an explicit cheap semantic reset on the data object,
-    // e.g. a validity flag or clearForReuse(), that invalidates stale content
-    // while keeping reusable payload capacity alive.
-    block.emplace_default(blockPosition);
+    // pushBlock() reuses physical stack slots. Without this reset, the object of
+    // an earlier traversal stays visible in a slot that this traversal does not
+    // load and reaches user callbacks as stale mesh data.
+    block.emplaceDefault(blockPosition);
   }
 
-  template <typename Data, typename Block, typename Stack, typename Marker>
+  template <typename Data, typename Block, typename Container, typename Marker>
   inline void loadDataIntoBlock(
     Block&        block,
     int           blockPosition,
-    Stack&        stack,
+    Container&    container,
+    int           poolIndex,
     const Marker& marker,
-    bool          isInOutStack
+    bool          isFirstTouch
   ) {
-    if (not isInOutStack) {
-      assertion(not stack.empty());
-      block.set(blockPosition, stack.pop());
-      return;
+    // A repeat touch always moves the slot back into the block; the first
+    // touch respects the storage guard, so a guard-off entity keeps its slot
+    // untouched.
+    if (not isFirstTouch or Data::load(marker)) {
+      block.set(blockPosition, std::move(container.getPoolSlot(poolIndex)));
+    } else {
+      resetDataInBlock(block, blockPosition);
     }
-
-    if (Data::load(marker) and not stack.empty()) {
-      block.set(blockPosition, stack.pop());
-      return;
-    }
-
-    // resetDataInBlock(block, blockPosition);
-  }
-
-  template <typename Data, typename Block, typename Stack, typename Marker>
-  inline void loadDataIntoBlock(
-    Block&        block,
-    int           blockPosition,
-    Stack&        stack,
-    Stack&        hangingStack,
-    const Marker& marker,
-    bool          isInOutStack,
-    bool          isHanging
-  ) {
-    if (not isInOutStack) {
-      assertion(not isHanging);
-      assertion(not stack.empty());
-      block.set(blockPosition, stack.pop());
-      return;
-    }
-
-    if (Data::load(marker)) {
-      auto& sourceStack = isHanging ? hangingStack : stack;
-      if (not sourceStack.empty()) {
-        block.set(blockPosition, sourceStack.pop());
-        return;
-      }
-    }
-
-    // resetDataInBlock(block, blockPosition);
   }
 }
 
@@ -73,13 +34,13 @@ void {{FULL_QUALIFIED_CLASSNAME}}::loadNodeData(const ::peano4::grid::GridTraver
   const auto callStack = static_cast<int>(::peano4::grid::StackTopology::BaseStack::Call);
 
 {%- for vertex in VERTICES %}
-  auto pushBlock{{ vertex.logical_type_name }} = repositories::DataRepository::{{ vertex.logical_type_name }}StackContainer.getLocalExchangeStack(_spacetreeId, callStack).pushBlock(TWO_POWER_D);
+  auto pushBlock{{ vertex.logical_type_name }} = repositories::DataRepository::{{ vertex.logical_type_name }}StackContainer.getLocalExchangeStack(_treeId, callStack).pushBlock(TWO_POWER_D);
 {%- endfor %}
 {%- for face in FACES %}
-  auto pushBlock{{ face.logical_type_name }} = repositories::DataRepository::{{ face.logical_type_name }}StackContainer.getLocalExchangeStack(_spacetreeId, callStack).pushBlock(TWO_TIMES_D);
+  auto pushBlock{{ face.logical_type_name }} = repositories::DataRepository::{{ face.logical_type_name }}StackContainer.getLocalExchangeStack(_treeId, callStack).pushBlock(TWO_TIMES_D);
 {%- endfor %}
 {%- for cell in CELLS %}
-  auto pushBlock{{ cell.logical_type_name }} = repositories::DataRepository::{{ cell.logical_type_name }}StackContainer.getLocalExchangeStack(_spacetreeId, callStack).pushBlock(1);
+  auto pushBlock{{ cell.logical_type_name }} = repositories::DataRepository::{{ cell.logical_type_name }}StackContainer.getLocalExchangeStack(_treeId, callStack).pushBlock(1);
 {%- endfor %}
 
 {%- if VERTICES %}
@@ -92,25 +53,22 @@ void {{FULL_QUALIFIED_CLASSNAME}}::loadNodeData(const ::peano4::grid::GridTraver
     if (not isCreateOrDestroy and not isNoData) {
       assertion(inVertexStack >= static_cast<int>(::peano4::grid::StackTopology::BaseStack::Call));
 
-      auto       vertexMarker    = ::peano4::datamanagement::VertexMarker(event, outVertexStackPosition);
-      const auto isInOutStack    = ::peano4::grid::StackTopology::isInOutStack(inVertexStack);
-      const auto isHangingVertex = vertexMarker.isHanging();
+      auto       vertexMarker = ::peano4::datamanagement::VertexMarker(event, outVertexStackPosition);
+      const auto isFirstTouch = ::peano4::grid::StackTopology::isInOutStack(inVertexStack);
 
 {%- for vertex in VERTICES %}
-      // Load vertex {{ vertex.logical_type_name }}
       loadDataIntoBlock<{{ vertex.full_qualified_type }}>(
         pushBlock{{ vertex.logical_type_name }},
         outVertexStackPosition,
-        repositories::DataRepository::{{ vertex.logical_type_name }}StackContainer.getLocalExchangeStack(_spacetreeId, inVertexStack),
-        repositories::DataRepository::{{ vertex.logical_type_name }}HangingStackContainer.getLocalExchangeStack(_spacetreeId, inVertexStack),
+        repositories::DataRepository::{{ vertex.logical_type_name }}StackContainer,
+        event.getVertexPoolIndex(outVertexStackPosition),
         vertexMarker,
-        isInOutStack,
-        isHangingVertex
+        isFirstTouch
       );
 {%- endfor %}
     } else {
 {%- for vertex in VERTICES %}
-      // resetDataInBlock(pushBlock{{ vertex.logical_type_name }}, outVertexStackPosition);
+      resetDataInBlock(pushBlock{{ vertex.logical_type_name }}, outVertexStackPosition);
 {%- endfor %}
     }
   }
@@ -126,26 +84,23 @@ void {{FULL_QUALIFIED_CLASSNAME}}::loadNodeData(const ::peano4::grid::GridTraver
     if (not isCreateOrDestroy and not isNoData) {
       assertion(inFaceStack >= static_cast<int>(::peano4::grid::StackTopology::BaseStack::Call));
 
-      auto       faceMarker    = event.getFaceMarker();
+      auto faceMarker = event.getFaceMarker();
       faceMarker.select(outFaceStackPosition);
-      const auto isInOutStack  = ::peano4::grid::StackTopology::isInOutStack(inFaceStack);
-      const auto isHangingFace = faceMarker.isHanging();
+      const auto isFirstTouch = ::peano4::grid::StackTopology::isInOutStack(inFaceStack);
 
 {%- for face in FACES %}
-      // Load face {{ face.logical_type_name }}
       loadDataIntoBlock<{{ face.full_qualified_type }}>(
         pushBlock{{ face.logical_type_name }},
         outFaceStackPosition,
-        repositories::DataRepository::{{ face.logical_type_name }}StackContainer.getLocalExchangeStack(_spacetreeId, inFaceStack),
-        repositories::DataRepository::{{ face.logical_type_name }}HangingStackContainer.getLocalExchangeStack(_spacetreeId, inFaceStack),
+        repositories::DataRepository::{{ face.logical_type_name }}StackContainer,
+        event.getFacePoolIndex(outFaceStackPosition),
         faceMarker,
-        isInOutStack,
-        isHangingFace
+        isFirstTouch
       );
 {%- endfor %}
     } else {
 {%- for face in FACES %}
-      // resetDataInBlock(pushBlock{{ face.logical_type_name }}, outFaceStackPosition);
+      resetDataInBlock(pushBlock{{ face.logical_type_name }}, outFaceStackPosition);
 {%- endfor %}
     }
   }
@@ -162,21 +117,21 @@ void {{FULL_QUALIFIED_CLASSNAME}}::loadNodeData(const ::peano4::grid::GridTraver
       assertion(inCellStack >= static_cast<int>(::peano4::grid::StackTopology::BaseStack::Call));
 
       auto       cellMarker   = event.getCellMarker();
-      const auto isInOutStack = ::peano4::grid::StackTopology::isInOutStack(inCellStack);
+      const auto isFirstTouch = ::peano4::grid::StackTopology::isInOutStack(inCellStack);
 
 {%- for cell in CELLS %}
-      // Load cell {{ cell.logical_type_name }}
       loadDataIntoBlock<{{ cell.full_qualified_type }}>(
         pushBlock{{ cell.logical_type_name }},
         outCellStackPosition,
-        repositories::DataRepository::{{ cell.logical_type_name }}StackContainer.getLocalExchangeStack(_spacetreeId, inCellStack),
+        repositories::DataRepository::{{ cell.logical_type_name }}StackContainer,
+        event.getCellPoolIndex(),
         cellMarker,
-        isInOutStack
+        isFirstTouch
       );
 {%- endfor %}
     } else {
 {%- for cell in CELLS %}
-      // resetDataInBlock(pushBlock{{ cell.logical_type_name }}, outCellStackPosition);
+      resetDataInBlock(pushBlock{{ cell.logical_type_name }}, outCellStackPosition);
 {%- endfor %}
     }
   }

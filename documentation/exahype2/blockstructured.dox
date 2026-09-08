@@ -1,0 +1,35 @@
+/**
+
+@page page_exahype2_blockstructured Block-structured patch operations
+
+\tableofcontents
+
+ExaHyPE 2 embeds a patch into every cell of Peano's adaptive Cartesian grid: a
+@f$ k \times k @f$ or @f$ k \times k \times k @f$ block of degrees of freedom
+plus an optional halo layer around it. The routines below operate on that
+layout and are independent of the numerical scheme, so the finite-volume, the
+Runge-Kutta DG and the ADER-DG solvers all assemble their kernels from them.
+
+## Functionality
+
+\li `exahype2/Enumeration.h` Lexicographic serialisation of the voxel indices
+  within a patch overlap (halo layer). This defines the canonical ordering of
+  halo data.
+\li `exahype2/amr/AMRRoutines.h` Interpolation of coarse patch data onto
+  embedded fine patches at resolution transitions, together with the matching
+  restriction of fine data back onto the coarse patch. These are the
+  inter-resolution transfer operators for adaptive mesh refinement.
+\li `exahype2/amr/ChildDataStage.h` Collects the data of the children of one
+  coarse cell or face until the sweep restricts it.
+\li `exahype2/amr/MultiresolutionDetail.h` Relative representation error of an
+  affine fit over one patch. exahype2::refineOnDetail() maps it onto a
+  refinement command.
+\li `exahype2/Curvi.h` Transformation between a Cartesian domain and a
+  curvilinear one whose cells are connected the same way but are not
+  equidistant.
+
+To plot patch data, use the writers in `tarch::plotter` (the VTU, HDF5 and
+NetCDF writers together with `tarch::plotter::TimeSeriesWriter` for the
+snapshot/index handling).
+
+*/

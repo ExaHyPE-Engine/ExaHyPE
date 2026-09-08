@@ -2,28 +2,48 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "ParticleIntegration.h"
 
-// ================================================================================================
-// Global Integration Settings
-// ================================================================================================
+namespace {
+  struct StubParticle final {
+    tarch::la::Vector<DIMENSIONS, double> getX() const { return _position; }
 
-/**
- * Default time step size used by integration methods.
- */
-double exahype2::fv::particles::integration::_timeStepSize = 0.01;
+    void setX(const tarch::la::Vector<DIMENSIONS, double>& position) { _position = position; }
 
-/**
- * Default integration method:
- *   1 = Explicit Euler
- */
-int exahype2::fv::particles::integration::_integrationMethod = 1;
+    double getData(const int index) const { return _data[index]; }
 
-/**
- * Set global parameters controlling particle integration behavior.
- *
- * @param timeStepSize       Time step size used in the integrator
- * @param integrationMethod  Method selector (see header for valid keys)
- */
-void exahype2::fv::particles::integration::setGlobalIntegrationParameters(double timeStepSize, int integrationMethod) {
-  _timeStepSize      = timeStepSize;
-  _integrationMethod = integrationMethod;
-}
+    void setData(const int index, const double value) { _data[index] = value; }
+
+  private:
+    tarch::la::Vector<DIMENSIONS, double> _position{0.0};
+    double                                _data[16]{};
+  };
+
+  // Taking these addresses makes the core library compile every integration method.
+  [[maybe_unused]] void instantiateParticleIntegrationTemplates() {
+    using EulerIntegration =
+      tarch::la::Vector<DIMENSIONS, double> (*)(StubParticle& particle, const double timeStepSize);
+    using Integration = tarch::la::Vector<DIMENSIONS, double> (*)(
+      StubParticle&                             particle,
+      const peano4::datamanagement::CellMarker& cellMarker,
+      const double* const                       cellValues,
+      const double                              timeStepSize
+    );
+    using IntegrationDispatch = tarch::la::Vector<DIMENSIONS, double> (*)(
+      StubParticle&                             particle,
+      const peano4::datamanagement::CellMarker& cellMarker,
+      const double* const                       cellValues,
+      const double                              timeStepSize,
+      const int                                 integrationMethod
+    );
+
+    [[maybe_unused]] EulerIntegration explicitEuler =
+      &exahype2::fv::particles::integration::explicitEulerIntegration<StubParticle>;
+    [[maybe_unused]] EulerIntegration semiImplicitEuler =
+      &exahype2::fv::particles::integration::semiImplicitEulerIntegration<StubParticle>;
+    [[maybe_unused]] Integration midpoint = &exahype2::fv::particles::integration::midpointIntegration<0, 1>;
+    [[maybe_unused]] Integration rk3      = &exahype2::fv::particles::integration::rk3Integration<0, 1>;
+    [[maybe_unused]] Integration rk4      = &exahype2::fv::particles::integration::rk4Integration<0, 1>;
+    [[maybe_unused]] Integration velocityVerlet =
+      &exahype2::fv::particles::integration::velocityVerletIntegration<0, 1>;
+    [[maybe_unused]] IntegrationDispatch apply = &exahype2::fv::particles::integration::applyIntegration<0, 1>;
+  }
+} // namespace

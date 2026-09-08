@@ -2,19 +2,19 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "TimeSeriesWriter.h"
 
-#include "FileWriter.h"
+#include "tarch/plotter/FileWriter.h"
 
-std::string tarch::plotter::TimeSeriesWriter::snapshotName(const std::string& filename, double time) const {
-  std::ostringstream oss;
-  oss << filename << "-" << std::fixed << std::setprecision(6) << time;
-  std::string name = oss.str();
+std::string tarch::plotter::TimeSeriesWriter::snapshotName(const std::string& filename, const double time) const {
+  std::ostringstream stream;
+  stream << filename << "-" << std::fixed << std::setprecision(6) << time;
+  std::string name = stream.str();
   std::replace(name.begin(), name.end(), '.', '_');
   return name;
 }
 
 void tarch::plotter::TimeSeriesWriter::writeSnapshotFile(
   const std::string& filename,
-  double             time,
+  const double       time,
   FileWriter&        fileWriter
 ) {
   const std::string name = snapshotName(filename, time);

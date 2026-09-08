@@ -1,0 +1,157 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+/**
+ * Assigns the identifier used by aggregated boundary exchange.
+ *
+ * Every rank constructs its containers in the same order. The identifier
+ * therefore distinguishes one container's messages from every other
+ * container's messages on all ranks.
+ */
+template <class StackType>
+peano4::grid::StackContainer<StackType>::StackContainer(const int containerId) :
+  _containerId(containerId) {
+  assertion(containerId >= 0, containerId);
+}
+
+template <class StackType>
+void peano4::grid::StackContainer<StackType>::initialiseSerialSlot() {
+  _firstLocalSlot  = tarch::mpi::Rank::getInstance().getRank();
+  _localSlotStride = tarch::mpi::Rank::getInstance().getNumberOfRanks();
+  if (_localSlotStacks.empty()) {
+    _localSlotStacks.emplace_back();
+  }
+}
+
+/**
+ * Maps a tree id onto its local slot index. The serial slot exists from
+ * initialiseSerialSlot() on and every further slot has to be grown through
+ * growLocalSlots() before tasks access it, so this path never mutates the
+ * storage.
+ */
+template <class StackType>
+std::size_t peano4::grid::StackContainer<StackType>::localSlotIndex(const int treeId) const {
+  assertion(_firstLocalSlot >= 0, treeId, _containerId);
+  assertion(treeId >= _firstLocalSlot, treeId, _firstLocalSlot, _containerId);
+  assertion(
+    (treeId - _firstLocalSlot) % _localSlotStride == 0,
+    treeId,
+    _firstLocalSlot,
+    _localSlotStride,
+    _containerId
+  );
+  const auto slotIndex = static_cast<std::size_t>((treeId - _firstLocalSlot) / _localSlotStride);
+  assertion(slotIndex < _localSlotStacks.size(), slotIndex, _localSlotStacks.size(), _containerId);
+  return slotIndex;
+}
+
+template <class StackType>
+typename peano4::grid::StackContainer<StackType>::Stack& peano4::grid::StackContainer<StackType>::getLocalExchangeStack(
+  const int treeId,
+  const int localStackId
+) {
+  assertion(localStackId >= 0);
+  assertion(localStackId < LocalStackCount);
+  return _localSlotStacks[localSlotIndex(treeId)][localStackId];
+}
+
+/**
+ * Returns one element of the flat per-rank pool.
+ *
+ * The traversal topology maps tree entities to pool slots and writes those
+ * slots into traversal events. Slot inheritance can therefore leave gaps and
+ * makes the pool index distinct from the tree entity index.
+ */
+template <class StackType>
+INLINE_METHOD typename peano4::grid::StackContainer<StackType>::ElementType& peano4::grid::StackContainer<
+  StackType>::getPoolSlot(const int poolIndex) {
+  assertion(poolIndex >= 0 and poolIndex < static_cast<int>(_pool.size()), poolIndex, _pool.size(), _containerId);
+  return _pool[poolIndex];
+}
+
+template <class StackType>
+INLINE_METHOD std::size_t peano4::grid::StackContainer<StackType>::getPoolSize() const {
+  return _pool.size();
+}
+
+template <class StackType>
+void peano4::grid::StackContainer<StackType>::resizePool(const std::size_t entityCount) {
+  _pool.resize(entityCount);
+}
+
+/**
+ * Carries the pool across a regrid in place. An entity keeping its slot
+ * needs no copy at all, so only the pairs whose source and target differ
+ * stage their data and land on the target after the resize; the staging
+ * makes arbitrary overlaps of the source and target ranges safe.
+ */
+template <class StackType>
+void peano4::grid::StackContainer<StackType>::migratePoolSlots(
+  const std::vector<std::pair<int, int>>& sourceAndTargetSlots,
+  const std::size_t                       entityCount
+) {
+  std::vector<ElementType> stagedData;
+  std::vector<int>         stagedTargets;
+  for (const auto& [sourceSlot, targetSlot] : sourceAndTargetSlots) {
+    if (sourceSlot != targetSlot) {
+      stagedData.push_back(std::move(_pool[sourceSlot]));
+      stagedTargets.push_back(targetSlot);
+    }
+  }
+  if (entityCount > _pool.capacity()) {
+    _pool.reserve(std::max(entityCount, 2 * _pool.size()));
+  }
+  _pool.resize(entityCount);
+  tarch::parallelFor(
+    tarch::Range(static_cast<int>(stagedTargets.size())),
+    [this, &stagedData, &stagedTargets](const int pairNumber) {
+      _pool[stagedTargets[pairNumber]] = std::move(stagedData[pairNumber]);
+    }
+  );
+}
+
+template <class StackType>
+void peano4::grid::StackContainer<StackType>::replicatePoolSlots(
+  const std::vector<std::pair<int, int>>& sourceAndTargetSlots,
+  const int                               chunkNumber,
+  const int                               numberOfChunks
+) {
+  assertion(chunkNumber >= 0 and chunkNumber < numberOfChunks, chunkNumber, numberOfChunks);
+  const auto numberOfPairs = static_cast<std::int64_t>(sourceAndTargetSlots.size());
+  const auto firstPair     = numberOfPairs * chunkNumber / numberOfChunks;
+  const auto endPair       = numberOfPairs * (chunkNumber + 1) / numberOfChunks;
+  for (auto pairNumber = firstPair; pairNumber < endPair; pairNumber++) {
+    const auto& [sourceSlot, targetSlot] = sourceAndTargetSlots[pairNumber];
+    assertion(sourceSlot >= 0 and sourceSlot < static_cast<int>(_pool.size()), sourceSlot, _pool.size());
+    assertion(targetSlot >= 0 and targetSlot < static_cast<int>(_pool.size()), targetSlot, _pool.size());
+    _pool[targetSlot] = _pool[sourceSlot];
+  }
+}
+
+template <class StackType>
+void peano4::grid::StackContainer<StackType>::growLocalSlots(const int numberOfSlots) {
+  while (_localSlotStacks.size() < static_cast<std::size_t>(numberOfSlots)) {
+    _localSlotStacks.emplace_back();
+  }
+}
+
+template <class StackType>
+std::size_t peano4::grid::StackContainer<StackType>::size() const {
+  std::size_t numberOfEntries = 0;
+  for (const auto& slotStacks : _localSlotStacks) {
+    for (const auto& stack : slotStacks) {
+      numberOfEntries += stack.size();
+    }
+  }
+  numberOfEntries += _pool.size();
+  return numberOfEntries;
+}
+
+template <class StackType>
+void peano4::grid::StackContainer<StackType>::clear() {
+  _localSlotStacks.clear();
+  _pool.clear();
+  _boundaryDataAggregation.clear();
+  _firstLocalSlot  = -1;
+  _localSlotStride = 1;
+}

@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "MemoryUsage.h"
 
-#include "tarch/instrumentation/Log.h"
+#include "tarch/instrumentation/Error.h"
 
 #if defined(COMPILER_HAS_PROC_STAT)
 #include <unistd.h>
@@ -43,14 +43,14 @@ double tarch::convertMemorySize(unsigned long long bytes, MemoryUsageFormat form
 std::uint64_t tarch::getTotalMemoryInBytes() {
   struct sysinfo info;
   sysinfo(&info);
-  // sysinfo reports memory in multiples of mem_unit bytes, not bytes.
+  // The sysinfo fields count multiples of mem_unit bytes.
   return static_cast<std::uint64_t>(info.totalram) * info.mem_unit;
 }
 
 std::uint64_t tarch::getFreeMemoryInBytes() {
   struct sysinfo info;
   sysinfo(&info);
-  // sysinfo reports memory in multiples of mem_unit bytes, not bytes.
+  // The sysinfo fields count multiples of mem_unit bytes.
   return static_cast<std::uint64_t>(info.freeram) * info.mem_unit;
 }
 
@@ -58,18 +58,15 @@ std::uint64_t tarch::getFreeMemoryInBytes() {
 
 std::uint64_t tarch::getTotalMemoryInBytes() {
   int     mib[] = {CTL_HW, HW_MEMSIZE};
-  int64_t physical_memory;
+  int64_t physicalMemory;
   size_t  length;
 
-  // Get the physical memory size
   length = sizeof(int64_t);
-  sysctl(mib, 2, &physical_memory, &length, nullptr, 0);
-  return static_cast<std::uint64_t>(physical_memory);
+  sysctl(mib, 2, &physicalMemory, &length, nullptr, 0);
+  return static_cast<std::uint64_t>(physicalMemory);
 }
 
 std::uint64_t tarch::getFreeMemoryInBytes() {
-  // System-wide free physical memory is the count of free pages from the Mach VM statistics (strictly
-  // free, mirroring the Linux freeram above).
   const mach_port_t      host     = mach_host_self();
   vm_size_t              pageSize = 0;
   vm_statistics64_data_t stats;
@@ -96,41 +93,38 @@ double tarch::getFreeMemory(const MemoryUsageFormat format) {
 
 std::uint64_t tarch::getMemoryUsageInBytes() {
 #if defined(COMPILER_HAS_PROC_STAT)
-  char  work[4096];
-  FILE* f   = nullptr;
-  char* pCh = nullptr;
+  char        buffer[4096];
+  const pid_t processId = getpid();
 
-  pid_t pid = getpid();
+  sprintf(buffer, "/proc/%d/stat", static_cast<int>(processId));
+  FILE* statFile = fopen(buffer, "r");
 
-  sprintf(work, "/proc/%d/stat", (int)pid);
-  f = fopen(work, "r");
-
-  if (f == nullptr) {
-    logError("Can't open file " << work);
-    return (0);
-  }
-  if (fgets(work, sizeof(work), f) == nullptr) {
-    logError("Error while reading from file");
-  }
-  fclose(f);
-
-  // Field 24 of /proc/<pid>/stat is the resident set size in pages (field 23 is the virtual size).
-  // Field 2 (comm) is parenthesised and may itself contain spaces, so start parsing after its closing ')'.
-  char* afterComm = strrchr(work, ')');
-  if (afterComm == nullptr) {
-    logError("Unexpected format in " << work);
+  if (statFile == nullptr) {
+    logError("Can't open file " << buffer);
     return 0;
   }
-  pCh = strtok(afterComm + 1, " "); // field 3 (state)
-  for (int i = 3; i < 24 and pCh != nullptr; i++) {
-    pCh = strtok(nullptr, " ");
+  if (fgets(buffer, sizeof(buffer), statFile) == nullptr) {
+    logError("Error while reading from file");
   }
-  if (pCh == nullptr) {
+  fclose(statFile);
+
+  // Field 24 of /proc/<pid>/stat is the resident set size in pages. Field 2 is parenthesised and
+  // may contain spaces, so the parsing starts after its closing bracket.
+  char* afterComm = strrchr(buffer, ')');
+  if (afterComm == nullptr) {
+    logError("Unexpected format in " << buffer);
+    return 0;
+  }
+  char* field = strtok(afterComm + 1, " ");
+  for (int fieldNumber = 3; fieldNumber < 24 and field != nullptr; fieldNumber++) {
+    field = strtok(nullptr, " ");
+  }
+  if (field == nullptr) {
     logError("Could not read resident set size from /proc stat");
     return 0;
   }
 
-  std::size_t residentPages = atol(pCh);
+  std::size_t residentPages = atol(field);
   std::size_t rawInput      = residentPages * static_cast<std::size_t>(sysconf(_SC_PAGESIZE));
 #elif defined(__APPLE__)
   mach_task_basic_info_data_t taskInfo;

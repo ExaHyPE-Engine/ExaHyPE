@@ -5,7 +5,7 @@
  * Map a relative multiresolution detail to a refinement command.
  *
  * @param detail relative representation error from
- *   toolbox::blockstructured::computeMultiresolutionDetail.
+ *   exahype2::amr::computeMultiresolutionDetail.
  * @param eps relative representation error tolerated before refinement.
  * @param coarsenSafetyFactor hysteresis ratio. Erasure requires a detail below
  *   eps/coarsenSafetyFactor. The default reflects the factor 3^(p+1) = 9 for an
@@ -54,7 +54,7 @@ INLINE_METHOD exahype2::RefinementCommand exahype2::refineOnDetail(
   double detail = 0.0;
   ((detail = std::max(
       detail,
-      toolbox::blockstructured::computeMultiresolutionDetail(
+      exahype2::amr::computeMultiresolutionDetail(
         Q,
         numberOfDofsPerAxis,
         numberOfUnknownsPlusAuxiliaryVariables,

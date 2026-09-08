@@ -59,7 +59,7 @@ def create_Riemann_solver_call(polynomial_basis,
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       marker.getSelectedFaceNumber(),
-      repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
+      repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1D,
       {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }}, //useFlux
       {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }},   //useNCP
       fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.data(),
@@ -110,7 +110,7 @@ def create_Riemann_solver_call(polynomial_basis,
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       marker.getSelectedFaceNumber(),
-      repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
+      repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1D,
       {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }}, //useFlux
       {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }},   //useNCP
       fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.data(),

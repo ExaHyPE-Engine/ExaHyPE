@@ -7,7 +7,6 @@ spack:
     - hwloc@2.12.2 +cuda
     - ucx@1.19.0 +cuda
     - openmpi@5.0.8 +cuda fabrics=ucx
-    - libxsmm@1.17 +generator
     - memkind@1.14.0
     - papi@7.2.0
     - likwid@5.4.1

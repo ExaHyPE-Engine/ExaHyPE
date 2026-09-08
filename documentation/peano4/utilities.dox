@@ -6,8 +6,8 @@
 ### d-dimensional loops
 
 I wrote Peano to support arbitrary spatial dimensions. By default, I
-build only 2d and 3d versions of the code/core, but in principle you can
-write also simulations over 4d or 5d domains, e.g. The choice of a
+build only 2D and 3D versions of the code/core, but in principle you can
+write also simulations over 4D or 5D domains, e.g. The choice of a
 particular dimension d is done at compile time via the preprocessor
 macro `DIMENSIONS`, which the build system sets per target from the
 CMake `DIMENSION` keyword (the supported values are listed in the

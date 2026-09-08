@@ -9,30 +9,21 @@ namespace peano4::grid::tests {
 } // namespace peano4::grid::tests
 
 class peano4::grid::tests::GridControlEventTest final : public tarch::tests::TestCase {
+public:
+  GridControlEventTest();
+  GridControlEventTest(const GridControlEventTest&)            = delete;
+  GridControlEventTest(GridControlEventTest&&)                 = delete;
+  GridControlEventTest& operator=(const GridControlEventTest&) = delete;
+  GridControlEventTest& operator=(GridControlEventTest&&)      = delete;
+  ~GridControlEventTest() override                             = default;
+
+  void run() override;
+
 private:
   void testOperatorEquals();
   void testOperatorLess();
-  void testSort();
-  void testSortDeterministicGrid();
-  void testMergeExactTouchVersusGap();
-  void testMergeAdjacency();
-  void testMergeEraseAdjacency();
-  void testMergeEraseDoesNotOverMergeLShape();
-  void testMergeDoesNotChangeGridDecisions();
-  void testMergeEraseChainCollapsesToOne();
-  void testMergeEraseSiblingGroup();
-  void testMergeKeepsRefineAndEraseSeparate();
-  void testMergeRowAndBlockCollapseToOne();
-  void testMergeDoesNotMergeDiagonalOrDifferentTargetH();
-  void testMergeUnionIsPreserved();
-  void testMerge1();
-  void testMerge2();
-  void testMerge3();
+  void testOrderIsATotalOrder();
+  void testCanonicalFormIsIndependentOfInputOrder();
+  void testToString();
   void testMPI();
-
-public:
-  GridControlEventTest();
-  ~GridControlEventTest() override = default;
-
-  void run() override;
 };

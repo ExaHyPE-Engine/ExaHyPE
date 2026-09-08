@@ -2,40 +2,43 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "PatchUtils.h"
 
+/** Returns the isotropic volume width along the first coordinate axis. */
 double exahype2::fv::getVolumeLength(const tarch::la::Vector<2, double>& h, int numberOfVolumesPerAxisInPatch) {
   return h(0) / numberOfVolumesPerAxisInPatch;
 }
 
+/** Returns the isotropic volume width along the first coordinate axis. */
 double exahype2::fv::getVolumeLength(const tarch::la::Vector<3, double>& h, int numberOfVolumesPerAxisInPatch) {
   assertion(numberOfVolumesPerAxisInPatch >= 1, h, numberOfVolumesPerAxisInPatch);
   return h(0) / numberOfVolumesPerAxisInPatch;
 }
 
+/** Returns a diagnostic, non-round-trip representation of one volume. */
 std::string exahype2::fv::plotVolume(const double* NOALIAS Q, int unknowns) {
-  std::string result = "(" + std::to_string(Q[0]);
-  for (int i = 1; i < unknowns; i++)
-    result += "," + std::to_string(Q[i]);
-  result += ")";
-  return result;
+  std::string description = "(" + std::to_string(Q[0]);
+  for (int quantity = 1; quantity < unknowns; quantity++) {
+    description += "," + std::to_string(Q[quantity]);
+  }
+  description += ")";
+  return description;
 }
 
 namespace {
   /**
-   * Helper for the patch plots. Truncates many entries and also
-   * inserts the commas. The plotter is not thread-safe and not
-   * particularly sophisticated.
+   * Formats one diagnostic patch entry and inserts its separator.
+   *
+   * State is thread-local, so concurrent plot calls do not race. The result is
+   * not a lossless serialisation: std::to_string limits precision and release
+   * builds compress consecutive zero entries.
    */
   template <typename T>
   std::string prettyFormat(T value, bool isFirst) {
-    [[maybe_unused]] static int previousZeroDataEntries = 0;
+    [[maybe_unused]] thread_local static int previousZeroDataEntries = 0;
 
-    // first entry equals zero
     if (tarch::la::equals(double(value), 0.0, 1e-8) and isFirst) {
       previousZeroDataEntries = 1;
       return "0";
-    }
-    // first entry does not equal zero
-    else if (isFirst) {
+    } else if (isFirst) {
       previousZeroDataEntries = 0;
       return std::to_string(value);
     }
@@ -47,17 +50,25 @@ namespace {
     else if (not tarch::la::equals(double(value), 0.0, 1e-8)) {
       previousZeroDataEntries = 0;
       return "," + std::to_string(value);
-    } else if (tarch::la::equals(double(value), 0.0, 1e-8) and previousZeroDataEntries == 1) {
-      previousZeroDataEntries += 1;
+    } else if (previousZeroDataEntries == 0) {
+      previousZeroDataEntries = 1;
+      return ",0";
+    } else if (previousZeroDataEntries == 1) {
+      previousZeroDataEntries = 2;
       return ",...";
     } else {
-      assertion(false);
-      return "<undef>";
+      return "";
     }
 #endif
   }
 } // namespace
 
+/**
+ * Returns a diagnostic representation of an array-of-structures patch.
+ *
+ * The routine is thread-safe when Q is not mutated concurrently. It is not a
+ * lossless serialisation; prettyPrint controls line breaks, not precision.
+ */
 template <typename T>
 std::string exahype2::fv::plotPatch(
   const T* NOALIAS Q,
@@ -67,73 +78,79 @@ std::string exahype2::fv::plotPatch(
   int              haloSize,
   bool             prettyPrint
 ) {
-  const int PatchSize = numberOfVolumesPerAxisInPatch + 2 * haloSize;
+  const int patchSize = numberOfVolumesPerAxisInPatch + 2 * haloSize;
 
-  std::ostringstream result;
+  std::ostringstream description;
 
-  if (prettyPrint)
-    result << std::endl;
+  if (prettyPrint) {
+    description << std::endl;
+  }
 
 #if DIMENSIONS == 2
-  for (int y = 0; y < PatchSize; y++) {
-    for (int x = 0; x < PatchSize; x++) {
-      int index = (y * PatchSize + x) * (unknowns + auxiliaryVariables);
+  for (int y = 0; y < patchSize; y++) {
+    for (int x = 0; x < patchSize; x++) {
+      const int volumeOffset = (y * patchSize + x) * (unknowns + auxiliaryVariables);
 
-      // It is a diagonal entry if this counter is bigger than 1. If it equals
-      // 0, it is interior. If it equals 1, then this is a face-connected halo
-      // entry.
-      bool isDiagonal = (x < haloSize and y < haloSize)
+      const bool isDiagonal = (x < haloSize and y < haloSize)
         or (x >= numberOfVolumesPerAxisInPatch + haloSize and y < haloSize)
         or (x < haloSize and y >= numberOfVolumesPerAxisInPatch + haloSize)
         or (x >= numberOfVolumesPerAxisInPatch + haloSize and y >= numberOfVolumesPerAxisInPatch + haloSize);
 
-      result << "(";
-      for (int i = 0; i < unknowns + auxiliaryVariables; i++) {
-        const int entry = index + i;
+      description << "(";
+      for (int quantity = 0; quantity < unknowns + auxiliaryVariables; quantity++) {
+        const int entry = volumeOffset + quantity;
 
-        if (not isDiagonal)
-          result << prettyFormat(Q[entry], i == 0);
-        else
-          result << "x";
+        if (not isDiagonal) {
+          description << prettyFormat(Q[entry], quantity == 0);
+        } else {
+          description << "x";
+        }
       }
-      result << ")";
+      description << ")";
     }
-    result << std::endl;
+    description << std::endl;
   }
 #else
-  peano4::dForEach(PatchSize, [&](const tarch::la::Vector<DIMENSIONS, int>& k) {
-    int index = peano4::dLinearised(k, PatchSize) * (unknowns + auxiliaryVariables);
+  peano4::dForEach(patchSize, [&](const tarch::la::Vector<DIMENSIONS, int>& patchIndex) {
+    const int volumeOffset = peano4::dLinearised(patchIndex, patchSize) * (unknowns + auxiliaryVariables);
 
-    // It is a diagonal entry if this counter is bigger than 1. If it equals
-    // 0, it is interior. If it equals 1, then this is a face-connected halo
-    // entry.
-    bool isDiagonal = (tarch::la::count(k, 0) + tarch::la::count(k, PatchSize - 1)) > 1;
+    const bool isDiagonal = (tarch::la::count(patchIndex, 0) + tarch::la::count(patchIndex, patchSize - 1)) > 1;
 
-    result << "(";
-    for (int i = 0; i < unknowns + auxiliaryVariables; i++) {
-      const int entry = index + i;
+    description << "(";
+    for (int quantity = 0; quantity < unknowns + auxiliaryVariables; quantity++) {
+      const int entry = volumeOffset + quantity;
 
-      if (i != 0)
-        result << ",";
+      if (quantity != 0) {
+        description << ",";
+      }
 
-      if (haloSize == 0 or not isDiagonal)
-        result << Q[entry];
-      else
-        result << "x";
+      if (haloSize == 0 or not isDiagonal) {
+        description << Q[entry];
+      } else {
+        description << "x";
+      }
     }
-    result << ")";
+    description << ")";
   });
 #endif
 
-  if (prettyPrint)
-    result << std::endl;
+  if (prettyPrint) {
+    description << std::endl;
+  }
 
-  return result.str();
+  return description.str();
 }
 
 template std::string exahype2::fv::plotPatch<float>(const float* NOALIAS, int, int, int, int, bool);
 template std::string exahype2::fv::plotPatch<double>(const double* NOALIAS, int, int, int, int, bool);
 
+/**
+ * Returns a diagnostic representation of both layers of a face overlap.
+ *
+ * The routine is thread-safe when Q is not mutated concurrently and is not a
+ * lossless serialisation. Three-dimensional pretty printing is unavailable;
+ * the compact representation supports both dimensions.
+ */
 template <typename T>
 std::string exahype2::fv::plotPatchOverlap(
   const T* NOALIAS Q,
@@ -147,71 +164,77 @@ std::string exahype2::fv::plotPatchOverlap(
   assertion(normal >= 0);
   assertion(normal < DIMENSIONS);
 
-  std::ostringstream result;
+  std::ostringstream description;
   if (prettyPrint) {
-    result << std::endl;
+    description << std::endl;
 
 #if DIMENSIONS == 2
     if (normal == 0) {
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++) {
         for (int x = 0; x < 2 * haloSize; x++) {
-          int index = (y * numberOfVolumesPerAxisInPatch + x) * (unknowns + auxiliaryVariables);
-          result << "(";
-          for (int i = 0; i < unknowns + auxiliaryVariables; i++) {
-            const int entry = index + i;
-            result << prettyFormat(Q[entry], i == 0);
+          const int volumeOffset = (y * numberOfVolumesPerAxisInPatch + x) * (unknowns + auxiliaryVariables);
+          description << "(";
+          for (int quantity = 0; quantity < unknowns + auxiliaryVariables; quantity++) {
+            const int entry = volumeOffset + quantity;
+            description << prettyFormat(Q[entry], quantity == 0);
           }
-          result << ")";
-          if (x == haloSize - 1)
-            result << " | ";
+          description << ")";
+          if (x == haloSize - 1) {
+            description << " | ";
+          }
         }
-        result << std::endl;
+        description << std::endl;
       }
     } else {
       for (int y = 0; y < 2 * haloSize; y++) {
         for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-          int index = (y * numberOfVolumesPerAxisInPatch + x) * (unknowns + auxiliaryVariables);
-          result << "(";
-          for (int i = 0; i < unknowns + auxiliaryVariables; i++) {
-            const int entry = index + i;
-            result << prettyFormat(Q[entry], i == 0);
+          const int volumeOffset = (y * numberOfVolumesPerAxisInPatch + x) * (unknowns + auxiliaryVariables);
+          description << "(";
+          for (int quantity = 0; quantity < unknowns + auxiliaryVariables; quantity++) {
+            const int entry = volumeOffset + quantity;
+            description << prettyFormat(Q[entry], quantity == 0);
           }
-          result << ")";
+          description << ")";
         }
-        result << std::endl;
+        description << std::endl;
 
         if (y == haloSize - 1) {
           for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-            result << " --- ";
+            description << " --- ";
           }
         }
       }
     }
 #else
-    result << "<not implemented yet>";
+    description << "<3D pretty printing is unavailable>";
 #endif
-    result << std::endl;
+    description << std::endl;
   } else {
-    int entry = 0;
-    for (int overlap = 0; overlap < 2 * haloSize; overlap++)
+    int valueOffset = 0;
+    for (int overlapIndex = 0; overlapIndex < 2 * haloSize; overlapIndex++) {
 #if DIMENSIONS == 3
-      for (int i = 0; i < numberOfVolumesPerAxisInPatch; i++)
+      for (int firstTangentialIndex = 0; firstTangentialIndex < numberOfVolumesPerAxisInPatch; firstTangentialIndex++) {
 #endif
-        for (int ii = 0; ii < numberOfVolumesPerAxisInPatch; ii++) {
-          if (ii == 0) {
-            result << "(";
+        for (int secondTangentialIndex = 0; secondTangentialIndex < numberOfVolumesPerAxisInPatch;
+             secondTangentialIndex++) {
+          if (secondTangentialIndex == 0) {
+            description << "(";
           } else {
-            result << ",(";
+            description << ",(";
           }
-          for (int iii = 0; iii < unknowns + auxiliaryVariables; iii++) {
-            result << prettyFormat(Q[entry], iii == 0);
-            entry++;
+          for (int quantity = 0; quantity < unknowns + auxiliaryVariables; quantity++) {
+            description << prettyFormat(Q[valueOffset], quantity == 0);
+            valueOffset++;
           }
-          result << ")";
+          description << ")";
         }
+#if DIMENSIONS == 3
+      }
+#endif
+    }
   }
 
-  return result.str();
+  return description.str();
 }
 
 template std::string exahype2::fv::plotPatchOverlap<float>(const float* NOALIAS, int, int, int, int, int, bool);

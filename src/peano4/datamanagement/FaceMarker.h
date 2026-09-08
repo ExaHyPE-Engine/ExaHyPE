@@ -3,20 +3,16 @@
 #pragma once
 
 #include "peano4/Globals.h"
+#include "tarch/Assertions.h"
 #include "tarch/la/Vector.h"
-#include "tarch/mpi/Rank.h"
 
 namespace peano4::datamanagement {
   struct FaceMarker;
 } // namespace peano4::datamanagement
 
 /**
- * Provide information about selected face
- *
- * This routine is passed into any observer/action set routine which
- * refers to a face, so routines like touchFaceFirstTime(). It provides
- * you with information about the particular face as well as their location
- * within the mesh.
+ * Describes the faces of the cell a traversal event visits. Every observer
+ * routine that refers to a face, such as touchFaceFirstTime(), receives one.
  *
  * @see FaceEnumerator for a discussion of the ordering of the faces.
  */
@@ -26,11 +22,10 @@ struct peano4::datamanagement::FaceMarker {
 
   int selectedFace{-1};
 
-  bool cellIsLocal;
+  bool cellIsLocal{false};
 
   /**
-   * Packed per-face state:
-   * bit i corresponds to face i in [0, 2*DIMENSIONS)
+   * Packed per-face state, where bit i belongs to face i in [0, 2*DIMENSIONS).
    */
   std::uint8_t hasBeenRefinedMask{0};
   std::uint8_t willBeRefinedMask{0};
@@ -43,9 +38,7 @@ struct peano4::datamanagement::FaceMarker {
   tarch::la::Vector<DIMENSIONS, int> relativePositionWithinFatherCell{};
 
   /**
-   * Selects a face within a cell, i.e. now the marker knows to which
-   * face it corresponds. After that, the routine returns a this
-   * reference.
+   * Selects the face the marker refers to and returns the marker.
    *
    * @param face Number from 0 to 2d-1
    */
@@ -55,10 +48,8 @@ struct peano4::datamanagement::FaceMarker {
   }
 
   /**
-   * Return the number of the face.
-   *
-   * If you use the modulo DIMENSIONS, then you implicitly know along which
-   * coordinate axis the corresponding face normal points.
+   * Returns the number of the selected face; its value modulo DIMENSIONS is
+   * the axis of the face normal.
    *
    * @see FaceEnumerator for a discussion of the face ordering.
    *
@@ -67,60 +58,48 @@ struct peano4::datamanagement::FaceMarker {
   INLINE_METHOD int getSelectedFaceNumber() const { return selectedFace; }
 
   /**
-   * Center of a particular face with respective reference cell.
+   * Returns the centre of face faceNumber of the cell.
    */
-  INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> getX(int i) const {
+  INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> getX(int faceNumber) const {
     tarch::la::Vector<DIMENSIONS, double> result(cellCentre);
-    const auto                            normal = i % DIMENSIONS;
-    result(normal) += i >= DIMENSIONS ? h(normal) / 2.0 : -h(normal) / 2.0;
+    const auto                            normal = faceNumber % DIMENSIONS;
+    result(normal) += faceNumber >= DIMENSIONS ? h(normal) / 2.0 : -h(normal) / 2.0;
     return result;
   }
 
   /**
-   * A marker is always tied to one particular face. You can still
-   * get the data of all faces of a cell (see getX(int)), but this
-   * particular function gives you the x coordinate with the centre
-   * of the currently selected face.
+   * Returns the centre of the selected face; getX(int) returns the centre of
+   * any face of the cell.
    *
    * @see select(int)
    */
   INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> getX() const { return getX(selectedFace); }
 
   /**
-   * This operation gives you the normal of a certain face.
-   *
-   * The orientation of the normal depends on the context in which
-   * the face marker is used: Every operation within Peano is
-   * always triggered from a cell point of view. The normal corresponds
-   * to this view. If you run through a mesh twice, and if you twice
-   * hit the same face, the normal thus might be mirrored as a
-   * face marker might be constructed from the other adjacent cell.
-   *
-   * We do enumerate the faces as follows: The first face is the one
-   * whose normal is parallel to first coordinate axis. The second
-   * face is the one whose normal is parallel to the second axis. The
-   * d+1th face is the one parallel to the very first face. The very
-   * first face however is closer to the origin in the unit cube.
+   * Returns the normal of face faceNumber, scaled with the cell width and
+   * oriented from the cell's point of view, so a marker built from the other
+   * adjacent cell returns the mirrored normal. Face faceNumber has its normal
+   * along axis faceNumber modulo DIMENSIONS, and the faces below DIMENSIONS
+   * lie closer to the origin of the unit cube.
    *
    * @image html FaceEnumerator.png
    */
-  INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> normal(int i) const {
+  INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> normal(int faceNumber) const {
     tarch::la::Vector<DIMENSIONS, double> result(0.0);
-    const auto                            index = i % DIMENSIONS;
-    result(index) += i < DIMENSIONS ? -h(index) : h(index);
+    const auto                            index = faceNumber % DIMENSIONS;
+    result(index) += faceNumber < DIMENSIONS ? -h(index) : h(index);
     return result;
   }
   INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> normal() const { return normal(selectedFace); }
 
   /**
-   * This operation gives you the outer normal of a cell. Different to
-   * normal(int), the normal however is oriented along the domain
-   * boundaries, i.e. it always points outside from the local domain.
+   * Returns the normal of face faceNumber oriented away from the local
+   * domain: For a remote cell the sign of normal(int) flips.
    */
-  INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> outerNormal(int i) const {
+  INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> outerNormal(int faceNumber) const {
     tarch::la::Vector<DIMENSIONS, double> result(0.0);
-    const auto                            index        = i % DIMENSIONS;
-    bool                                  negativeSign = i < DIMENSIONS;
+    const auto                            index        = faceNumber % DIMENSIONS;
+    bool                                  negativeSign = faceNumber < DIMENSIONS;
     if (not cellIsLocal) {
       negativeSign = not negativeSign;
     }
@@ -130,60 +109,53 @@ struct peano4::datamanagement::FaceMarker {
   INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> outerNormal() const { return outerNormal(selectedFace); }
 
   /**
-   * Size of the underlying cell
+   * Returns the width of the cell.
    */
   INLINE_METHOD const tarch::la::Vector<DIMENSIONS, double>& getH() const { return h; }
 
   /**
-   * Has a face been refined
-   *
-   * We do not really refine faces. We refine cells. Cells in turn are
-   * refined if one of their adjacent vertices holds a refine
-   * flag. Consequently, if one vertex adjacent to a face carries the
-   * refine flag, the face will be refined as well. In this case, it is
-   * not hanging.
+   * Returns whether face faceNumber holds a refined vertex. A refined vertex
+   * refines every adjacent cell, so such a face lies between two refined
+   * cells and is not hanging.
    */
   INLINE_METHOD bool hasBeenRefined() const { return hasBeenRefined(selectedFace); }
-  INLINE_METHOD bool hasBeenRefined(int i) const { return (hasBeenRefinedMask >> i) & 1u; }
+  INLINE_METHOD bool hasBeenRefined(int faceNumber) const { return ((hasBeenRefinedMask >> faceNumber) & 1U) != 0; }
 
   INLINE_METHOD bool willBeRefined() const { return willBeRefined(selectedFace); }
-  INLINE_METHOD bool willBeRefined(int i) const { return (willBeRefinedMask >> i) & 1u; }
+  INLINE_METHOD bool willBeRefined(int faceNumber) const { return ((willBeRefinedMask >> faceNumber) & 1U) != 0; }
 
   INLINE_METHOD bool isLocal() const { return isLocal(selectedFace); }
-  INLINE_METHOD bool isLocal(int i) const { return (isLocalMask >> i) & 1u; }
+  INLINE_METHOD bool isLocal(int faceNumber) const { return ((isLocalMask >> faceNumber) & 1U) != 0; }
 
   INLINE_METHOD bool isHanging() const { return isHanging(selectedFace); }
-  INLINE_METHOD bool isHanging(int i) const { return (isHangingMask >> i) & 1u; }
+  INLINE_METHOD bool isHanging(int faceNumber) const { return ((isHangingMask >> faceNumber) & 1U) != 0; }
 
   /**
-   * Return relative position within father cell. The result is from
-   * (0,1,2,3) x (0,1,2) x (0,1,2) or (0,1,2) x (0,1,2,3) x (0,1,2) or
+   * Returns the relative position of face faceNumber within the father cell:
+   * The cell's position with the entry along the face normal raised by one
+   * for a face on the positive side, so the result is from
+   * (0,1,2,3) x (0,1,2) x (0,1,2), (0,1,2) x (0,1,2,3) x (0,1,2) or
    * (0,1,2) x (0,1,2) x (0,1,2,3).
    */
   INLINE_METHOD tarch::la::Vector<DIMENSIONS, int> getRelativePositionWithinFatherCell() const {
     assertion(selectedFace >= 0, toString());
     return getRelativePositionWithinFatherCell(selectedFace);
   }
-  INLINE_METHOD tarch::la::Vector<DIMENSIONS, int> getRelativePositionWithinFatherCell(int i) const {
-    assertion(i >= 0, i, toString());
+  INLINE_METHOD tarch::la::Vector<DIMENSIONS, int> getRelativePositionWithinFatherCell(int faceNumber) const {
+    assertion(faceNumber >= 0, faceNumber, toString());
     tarch::la::Vector<DIMENSIONS, int> result = relativePositionWithinFatherCell;
-    const auto                         normal = i % DIMENSIONS;
-    result(normal) += i >= DIMENSIONS ? 1 : 0;
+    const auto                         normal = faceNumber % DIMENSIONS;
+    result(normal) += faceNumber >= DIMENSIONS ? 1 : 0;
     return result;
   }
 
   /**
-   * Return relative position of a subface within its father face. The
-   * result is from (0,1,2)^(DIMENSIONS-1)
-   *
-   * Should return the position in all directions but the normal direction
-   * of the face. I.e. if I am at the left, front, bottom position, then
-   * relative to the right face I am at the front and bottom.
-   * Therefore in 2D, if the normal is 0 it should return pos[1], and if
-   * the normal is 1 it should return pos[0].
-   * In 3D, if the normal is 0 it should return (pos[1], pos[2]), if the
-   * normal is 1 it should return (pos[0], pos[2]), it the normal is 2 it
-   * should return (pos[0], pos[1]).
+   * Returns the relative position of a subface within its father face, an
+   * entry of (0,1,2)^(DIMENSIONS-1): The entries of the father-cell position
+   * along every axis except the face normal. In 2D a normal of 0 returns
+   * pos[1] and a normal of 1 returns pos[0]; in 3D a normal of 0 returns
+   * (pos[1], pos[2]), a normal of 1 returns (pos[0], pos[2]) and a normal of
+   * 2 returns (pos[0], pos[1]).
    */
   INLINE_METHOD tarch::la::Vector<DIMENSIONS - 1, int> getRelativePositionWithinFatherFace() const {
     const auto                             normal = getSelectedFaceNumber() % DIMENSIONS;
@@ -199,17 +171,17 @@ struct peano4::datamanagement::FaceMarker {
   }
 
   /**
-   * The term patch here refers to a 3x3 or 3x3x3 refinement. The routine
-   * determines whether the face is on the boundary of this patch of not.
-   * A face is interior if it is on subcell 1 (inside in the patch) or
-   * on the right of subcell 0, or on the left of subcell 2.
+   * Returns whether the selected face lies inside the 3x3 or 3x3x3 patch of
+   * the father cell: On subcell 1 along the normal, on the positive side of
+   * subcell 0 or on the negative side of subcell 2.
    */
   INLINE_METHOD bool isInteriorFaceWithinPatch() const {
     assertion(getSelectedFaceNumber() >= 0, toString());
-    const auto normal = getSelectedFaceNumber() % DIMENSIONS;
-    const auto faceLR = getSelectedFaceNumber() < DIMENSIONS; // 1 if left, 0 if right
+    const auto normal             = getSelectedFaceNumber() % DIMENSIONS;
+    const bool faceOnNegativeSide = getSelectedFaceNumber() < DIMENSIONS;
     return (
-      (relativePositionWithinFatherCell[normal] == 1) or (relativePositionWithinFatherCell[normal] == 2 * faceLR)
+      (relativePositionWithinFatherCell[normal] == 1)
+      or (relativePositionWithinFatherCell[normal] == (faceOnNegativeSide ? 2 : 0))
     );
   }
 

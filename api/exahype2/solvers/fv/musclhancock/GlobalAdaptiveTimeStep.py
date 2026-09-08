@@ -1,11 +1,12 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from .GenerateKernels import *
-
-from exahype2.solvers.fv.SingleSweep import SingleSweep
-from exahype2.solvers.fv.AdaptiveTimeSteppingCodeSnippets import (
-    AdaptiveTimeSteppingCodeSnippets,
+from . import (
+    configure_compute_kernel_call,
+    validate_overlap,
 )
+
+from exahype2.solvers import AdaptiveTimeSteppingCodeSnippets
+from exahype2.solvers.fv.SingleSweep import SingleSweep
 
 
 class GlobalAdaptiveTimeStep(SingleSweep):
@@ -18,36 +19,21 @@ class GlobalAdaptiveTimeStep(SingleSweep):
         time_step_relaxation,
         reconstruction=None,
         overlap=2,
-        fuse_compute_kernels=False,
     ):
-        super(GlobalAdaptiveTimeStep, self).__init__(
+        validate_overlap(overlap)
+        super().__init__(
             name=name,
             patch_size=patch_size,
             overlap=overlap,
             unknowns=unknowns,
             auxiliary_variables=auxiliary_variables,
-            fuse_compute_kernels=fuse_compute_kernels,
         )
-        if self._fuse_compute_kernels:
-            raise NotImplementedError(
-                "fuse_compute_kernels is only implemented for Godunov FV solvers."
-            )
 
         self._compute_eigenvalue = True
-        self._time_stepping_code_snippets = AdaptiveTimeSteppingCodeSnippets(
-            time_step_relaxation
+        self._time_stepping_code_snippets = (
+            AdaptiveTimeSteppingCodeSnippets.for_finite_volume(time_step_relaxation)
         )
         self._reconstruction = reconstruction
 
     def _generate_kernels(self, output):
-        generate_kernels(
-            solver=self,
-            output=output,
-            reconstruction=self._reconstruction,
-        )
-        if self._fuse_compute_kernels:
-            generate_fused_kernels(
-                solver=self,
-                output=output,
-                reconstruction=self._reconstruction,
-            )
+        configure_compute_kernel_call(self, output, self._reconstruction)

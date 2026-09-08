@@ -109,7 +109,7 @@ class TPV29(DynamicRuptureScenario):
   // these can be disabled by uncommenting the corresponding sections of code
 
 //      if(x[0]>0. && x[0]<40. && x[1]<20.){
-        return 0.001*netcdfSampler.sample(
+        return 0.001*netcdfSampler.samplePiecewiseConstant(
           "perturbation",
           {x[2], x[1]}
         );

@@ -19,13 +19,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION
   Kxi    = tarch::allocateMemory<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>({{NUMBER_OF_DOF_PADDED*NUMBER_OF_DOF}}, tarch::MemoryLocation::Heap);
   Kxi_T  = tarch::allocateMemory<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>({{NUMBER_OF_DOF_PADDED*NUMBER_OF_DOF}}, tarch::MemoryLocation::Heap);
 
-  fineGridProjector1d            = new {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* [3];
-  fineGridProjector1d_T_weighted = new {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* [3];
-  for (int i = 0; i < 3; i++) {
-    fineGridProjector1d[i]            = tarch::allocateMemory<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>({{NUMBER_OF_DOF_PADDED*NUMBER_OF_DOF}}, tarch::MemoryLocation::Heap);
-    fineGridProjector1d_T_weighted[i] = tarch::allocateMemory<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>({{NUMBER_OF_DOF_PADDED*NUMBER_OF_DOF}}, tarch::MemoryLocation::Heap);
-  }
-
 {% for i in nDofPad_seq %}
   FLCoeff[{{i}}] = ({{COMPUTATION_PRECISIONS[PRECISION_NUM]}}) {{"{:.15e}".format(FLCoeff[i])}};
 {% endfor %}
@@ -53,26 +46,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION
 {% for i in nDofPadTimesnDof_seq %}
   Kxi_T[{{i}}] = ({{COMPUTATION_PRECISIONS[PRECISION_NUM]}}) {{"{:.15e}".format(Kxi_T[i])}};
 {% endfor %}
-
-{% for i in nDofPadTimesnDof_seq %}
-  fineGridProjector1d[0][{{i}}] = ({{COMPUTATION_PRECISIONS[PRECISION_NUM]}}) {{"{:.15e}".format(fineGridProjector1d_0[i])}};
-{% endfor %}
-{% for i in nDofPadTimesnDof_seq %}
-  fineGridProjector1d[1][{{i}}] = ({{COMPUTATION_PRECISIONS[PRECISION_NUM]}}) {{"{:.15e}".format(fineGridProjector1d_1[i])}};
-{% endfor %}
-{% for i in nDofPadTimesnDof_seq %}
-  fineGridProjector1d[2][{{i}}] = ({{COMPUTATION_PRECISIONS[PRECISION_NUM]}}) {{"{:.15e}".format(fineGridProjector1d_2[i])}};
-{% endfor %}
-
-{% for i in nDofPadTimesnDof_seq %}
-  fineGridProjector1d_T_weighted[0][{{i}}] = ({{COMPUTATION_PRECISIONS[PRECISION_NUM]}}) {{"{:.15e}".format(fineGridProjector1d_T_weighted_0[i])}};
-{% endfor %}
-{% for i in nDofPadTimesnDof_seq %}
-  fineGridProjector1d_T_weighted[1][{{i}}] = ({{COMPUTATION_PRECISIONS[PRECISION_NUM]}}) {{"{:.15e}".format(fineGridProjector1d_T_weighted_1[i])}};
-{% endfor %}
-{% for i in nDofPadTimesnDof_seq %}
-  fineGridProjector1d_T_weighted[2][{{i}}] = ({{COMPUTATION_PRECISIONS[PRECISION_NUM]}}) {{"{:.15e}".format(fineGridProjector1d_T_weighted_2[i])}};
-{% endfor %}
 }
 
 template <>
@@ -84,15 +57,5 @@ void {{FULL_QUALIFIED_NAMESPACE}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION
   tarch::freeMemory(iK1_T, tarch::MemoryLocation::Heap);
   tarch::freeMemory(Kxi, tarch::MemoryLocation::Heap);
   tarch::freeMemory(Kxi_T, tarch::MemoryLocation::Heap);
-
-  tarch::freeMemory(fineGridProjector1d[0], tarch::MemoryLocation::Heap);
-  tarch::freeMemory(fineGridProjector1d[1], tarch::MemoryLocation::Heap);
-  tarch::freeMemory(fineGridProjector1d[2], tarch::MemoryLocation::Heap);
-  delete[] fineGridProjector1d;
-
-  tarch::freeMemory(fineGridProjector1d_T_weighted[0], tarch::MemoryLocation::Heap);
-  tarch::freeMemory(fineGridProjector1d_T_weighted[1], tarch::MemoryLocation::Heap);
-  tarch::freeMemory(fineGridProjector1d_T_weighted[2], tarch::MemoryLocation::Heap);
-  delete[] fineGridProjector1d_T_weighted;
 }
 {% endfor %}

@@ -2,38 +2,42 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "GridInitialisation.h"
 
+#include "peano4/topology/TopologyManager.h"
 #include "runner/Engine.h"
 #include "runner/Format.h"
 #include "runner/GridSnapshot.h"
 #include "runner/Instrumentation.h"
-#include "runner/LoadBalancer.h"
 #include "runner/PhaseNames.h"
 #include "runner/ReportBox.h"
 #include "runner/phases/DynamicAMR.h"
 #include "tarch/Termination.h"
 
-runner::GridInitialisation::GridInitialisation(PhaseContext& context, int initGridStep, DynamicAMR& dynamicAMR) :
+runner::GridInitialisation::GridInitialisation(
+  runner::PhaseContext& context,
+  const int             initGridStep,
+  runner::DynamicAMR&   dynamicAMR
+) :
   _context(context),
   _initGridStep(initGridStep),
   _dynamicAMR(dynamicAMR) {}
 
-std::vector<std::string> runner::GridInitialisation::widthSamples() const { return gridSnapshotWidthSamples(); }
-
 /**
- * Initialise the solution and adapt the mesh before time stepping.
- *
- * Each completed mesh update is followed by another initialisation sweep, which re-applies
- * the analytic initial condition, so every cell the drain created holds analytically
- * sampled data. The loop ends once the criterion asks for nothing further, and a run that
- * still has events after MaxRounds rounds stops, because the time loop would drain them
- * without a following initialisation sweep.
+ * Initialises the solution and adapts the mesh before time stepping. Each completed mesh update is
+ * followed by another initialisation sweep, which re-applies the analytic initial condition, so
+ * every cell a drain created holds analytically sampled data. A run that still has events after
+ * MaxRounds rounds stops with an error.
  */
 void runner::GridInitialisation::run() {
-  SCOREP_USER_REGION(PhaseName::GridInitialisation, SCOREP_USER_REGION_TYPE_PHASE)
+  SCOREP_USER_REGION(runner::PhaseName::GridInitialisation, SCOREP_USER_REGION_TYPE_PHASE)
 
   double elapsedSeconds = _context.engine.runStep(_initGridStep);
-  int    rounds         = 1;
-  while (_dynamicAMR.isEnabled() and _dynamicAMR.hasPendingMeshUpdates() and rounds < MaxRounds) {
+  // From the first initialised sweep on, a regrid has to preserve solver data
+  // across its topology transition.
+  peano4::topology::TopologyManager::getInstance().markPersistentDataLive();
+  int rounds = 1;
+  while (_dynamicAMR.isEnabled()
+         and (_dynamicAMR.hasPendingMeshUpdates() or _dynamicAMR.hasUndecidedRefinementCriterion())
+         and rounds < MaxRounds) {
     _dynamicAMR.run();
     elapsedSeconds += _context.engine.runStep(_initGridStep);
     rounds++;
@@ -49,7 +53,8 @@ void runner::GridInitialisation::run() {
     tarch::terminateWithError(message);
   }
   _dynamicAMR.reportPendingSweeps();
-  _context.box.line(std::string(BlockIndent, ' ') + "Grid Initialised " + Format::wallClock(elapsedSeconds));
-  loadBalancer().synchroniseGlobalView();
-  writeGridSnapshot(_context.box, _context.repositories);
+  _context.box.line(
+    std::string(runner::BlockIndent, ' ') + "Grid Initialised " + runner::Format::wallClock(elapsedSeconds)
+  );
+  runner::writeGridSnapshot(_context.box, _context.repositories);
 }

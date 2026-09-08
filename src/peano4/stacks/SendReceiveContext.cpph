@@ -1,0 +1,41 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+/**
+ * Applies one incoming entity copy to data.
+ *
+ * getIncomingCopy() constructs that copy, and runs only where an assignment or
+ * a merge consumes it.
+ *
+ * An Element declaring `RebuildsConsolidationSlotByMerge` true reaches merge()
+ * in every context, so its merge() overwrites data on a consolidation and
+ * combines the copies in the other two contexts. An Element that declares the
+ * member false, or declares nothing, takes the assignment on a consolidation
+ * and reaches merge() in the other two contexts. Every merge() call follows a
+ * receiveAndMerge() that returned true.
+ */
+template <typename Element, typename Marker, typename GetIncomingCopy>
+INLINE_METHOD void peano4::stacks::applyIncomingCopy(
+  Element&                                 data,
+  const peano4::stacks::SendReceiveContext context,
+  const Marker&                            marker,
+  const int                                treeId,
+  const GetIncomingCopy&                   getIncomingCopy
+) {
+  constexpr bool RebuildsConsolidationSlotByMerge = []() {
+    if constexpr (requires { Element::RebuildsConsolidationSlotByMerge; }) {
+      return Element::RebuildsConsolidationSlotByMerge;
+    }
+    return false;
+  }();
+
+  if constexpr (RebuildsConsolidationSlotByMerge) {
+    if (data.receiveAndMerge(marker, context)) {
+      data.merge(context, getIncomingCopy(), marker, treeId);
+    }
+  } else if (context == peano4::stacks::SendReceiveContext::Consolidation) {
+    data = getIncomingCopy();
+  } else if (data.receiveAndMerge(marker, context)) {
+    data.merge(context, getIncomingCopy(), marker, treeId);
+  }
+}

@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "CompilerSpecificSettings.h"
+#include "tarch/CompilerSpecificSettings.h"
 
 namespace tarch {
   enum class MemoryUsageFormat {
@@ -29,13 +29,6 @@ namespace tarch {
 
   double convertMemorySize(unsigned long long bytes, MemoryUsageFormat format);
 
-  /**
-   * Return memory counters in bytes. The formatted overloads below are kept
-   * for callers that display one particular binary unit.
-   *
-   * The implementation of the process footprint is based on the C version by
-   * Michael Moltenbrey.
-   */
   std::uint64_t getMemoryUsageInBytes();
   std::uint64_t getTotalMemoryInBytes();
   std::uint64_t getFreeMemoryInBytes();

@@ -16,9 +16,8 @@ class SingleSweep(ADERDG):
         auxiliary_variables,
         split_sweeps=False,
     ):
-        # If enabled, the predictor and the corrector run on separate traversals of
-        # the domain. That helps when debugging and it enables additional features
-        # such as limiting.
+        # With split sweeps the predictor and the corrector run on separate
+        # traversals of the domain; the limiter needs them.
         self._split_sweeps = split_sweeps
 
         super(SingleSweep, self).__init__(
@@ -79,6 +78,8 @@ class SingleSweep(ADERDG):
         self._flux_estimates_projection.generator.send_condition = send_condition if not self._split_sweeps else send_condition_split_sweeps
         self._flux_estimates_projection.generator.receive_and_merge_condition = receive_condition if not self._split_sweeps else receive_condition_split_sweeps
 
+        self._configure_subcell_limiter_exchange()
+
     def create_action_sets(self):
         super(SingleSweep, self).create_action_sets()
 
@@ -89,18 +90,24 @@ class SingleSweep(ADERDG):
             )
         )
 
-        self._action_set_correction.cell_guard = (
-            self._store_cell_data_default_guard()
-            + " and repositories::{}.isLastGridSweepOfTimeStep()".format(
+        # The limiter corrects and flags in its own pipeline sweep, and that
+        # sweep is not the last sweep of a troubled step, so its corrector guard
+        # tests the limiter state.
+        if self.subcell_limiter_is_enabled:
+            corrector_guard = self._subcell_limiter_state_guard("CorrectAndFlag")
+        else:
+            corrector_guard = "repositories::{}.isLastGridSweepOfTimeStep()".format(
                 self.get_name_of_global_instance()
             )
+
+        self._action_set_correction._cell_guard = (
+            self._store_cell_data_default_guard() + " and " + corrector_guard
         )
 
-        self._action_set_correction.face_guard = (
+        self._action_set_correction._face_guard = (
             self._store_cell_data_default_guard()
-            + " and repositories::{}.isLastGridSweepOfTimeStep()".format(
-                self.get_name_of_global_instance()
-            )
+            + " and "
+            + corrector_guard
             + " and not (fineGridFace"
             + self._name
             + "FaceLabel.getAboveHanging()[0] or fineGridFace"
@@ -117,6 +124,8 @@ class SingleSweep(ADERDG):
                 self.get_name_of_global_instance(), self._name
             )
         )
+
+        self._create_subcell_limiter_action_sets()
 
     def get_user_action_set_includes(self):
         return (
@@ -159,6 +168,30 @@ class SingleSweep(ADERDG):
         super(SingleSweep, self)._init_dictionary_with_default_parameters(d)
         d["USE_SEPARATE_SWEEPS"] = self._split_sweeps
 
+    def _refresh_solver_user_code(self, replacement_dictionary=None):
+        if replacement_dictionary is None:
+            replacement_dictionary = {}
+            self._init_dictionary_with_default_parameters(replacement_dictionary)
+            self.add_entries_to_text_replacement_dictionary(replacement_dictionary)
+        abstract_solver_declarations = AbstractSolverDeclarations(
+            replacement_dictionary
+        )
+        self._abstract_solver_user_declarations = (
+            abstract_solver_declarations.create_abstract_solver_user_declarations()
+            + self._time_stepping_code_snippets.create_abstract_solver_user_declarations()
+        )
+        self._abstract_solver_user_definitions = (
+            self._time_stepping_code_snippets.create_abstract_solver_user_definitions()
+        )
+        solver_declarations = SolverDeclarations(replacement_dictionary)
+        solver_definitions = SolverDefinitions(replacement_dictionary)
+        self._solver_user_declarations = (
+            solver_declarations.create_solver_user_declarations()
+        )
+        self._solver_user_definitions = (
+            solver_definitions.create_solver_user_definitions()
+        )
+
     def set_implementation(
         self,
         initial_conditions=None,
@@ -170,7 +203,6 @@ class SingleSweep(ADERDG):
         riemann_solver=None,
         source_term=None,
         diffusive_source_term=None,
-        adjust_solution=None,
         material_parameters=None,
         number_of_point_sources=0,
         point_source=None,
@@ -187,7 +219,6 @@ class SingleSweep(ADERDG):
             riemann_solver=riemann_solver,
             source_term=source_term,
             diffusive_source_term=diffusive_source_term,
-            adjust_solution=adjust_solution,
             material_parameters=material_parameters,
             number_of_point_sources=number_of_point_sources,
             point_source=point_source,
@@ -199,25 +230,7 @@ class SingleSweep(ADERDG):
         self._init_dictionary_with_default_parameters(d)
         self.add_entries_to_text_replacement_dictionary(d)
 
-        abstract_solver_declarations = AbstractSolverDeclarations(d)
-        solver_declarations = SolverDeclarations(d)
-        solver_definitions = SolverDefinitions(d)
-
-        self._abstract_solver_user_declarations = (
-            abstract_solver_declarations.create_abstract_solver_user_declarations()
-        )
-        self._abstract_solver_user_declarations += (
-            self._time_stepping_code_snippets.create_abstract_solver_user_declarations()
-        )
-        self._abstract_solver_user_definitions = (
-            self._time_stepping_code_snippets.create_abstract_solver_user_definitions()
-        )
-        self._solver_user_declarations = (
-            solver_declarations.create_solver_user_declarations()
-        )
-        self._solver_user_definitions = (
-            solver_definitions.create_solver_user_definitions()
-        )
+        self._refresh_solver_user_code(d)
 
         self._compute_time_step_size = (
             self._time_stepping_code_snippets.create_compute_time_step_size()

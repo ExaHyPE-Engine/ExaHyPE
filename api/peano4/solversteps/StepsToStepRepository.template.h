@@ -4,9 +4,6 @@
 
 {OPEN_NAMESPACE}
   class {CLASSNAME};
-  /**
-   * Forward declarations
-   */
 {FORWARD_DECLARATIONS};
 {CLOSE_NAMESPACE}
 
@@ -16,15 +13,8 @@ class {FULL_QUALIFIED_CLASSNAME} {{
       Undef{ENUM_VARIANTS}
     }};
 
-    /**
-     * Convert step into string
-     */
     static std::string toString( Steps value );
 
-    /**
-     * Convert step into program step, so you can use it in
-     * ::peano4::parallel::RunControl::getInstance().setNextProgramStep()
-     */
     static int   toProgramStep( Steps value );
     static Steps toStepEnum( int value );
 }};

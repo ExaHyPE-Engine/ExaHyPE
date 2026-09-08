@@ -2,338 +2,121 @@
 
 @page page_peano_performance_optimisation Performance optimisation
 
-<!-- Add this one for href links to subitems -->
-@tableofcontents
-
-This section discusses some Peano-specific performance optimisation steps.
-While Peano provides simplistic performance analysis
-features to spot some flaws, proper performance optimisation relies on external
-performance analysis tools.
-
-If you plan to run any performance analysis with the Intel or NVIDIA tools, we
-recommend switching to the @ref page_compiler_specific_settings_home "respective toolchain and logging"
-before you continue.
-For other performance tools such as Scalasca/Score-P, Peano offers bespoke
-toolchains, too.
-These toolchains ensure that all tracing information is piped into appropriate
-data formats.
-
-Most developers start with a release build for the performance analysis.
-However, you might want to switch the tracing on for a
-deeper insight.
-Consult Peano's discussion of @ref page_architecture_home "Build variants".
-If you use tracing, apply a proper log filter, as Peano's log
-information otherwise becomes huge, i.e. challenging to handle, and the enormous
-data quickly pollutes the runtime measurements.
-The data also might be skewed slightly due to measurement overhead.
-
-## Compiler
-
-### Compiler feedback
-
-Any optimisation should be guided by compiler feedback and proper performance
-analysis. For the (online) performance analysis, Peano provides tailored
-extensions for some tools such as Intel's VTune or the NVIDIA NSight tools.
-They are realised as bespoke @ref tarch_logging "logging devices".
-
-If you want to use compiler feedback, we do routinely use the Intel toolchain.
-For them, the flag -qopt-report=3 yields useful feedback. However, running the
-whole code with compiler feedback yields many files. It also seems
-to slow the translation process down. We therefore recommend that you first
-find the observer class which invokes the compute kernel
-you are interested in. After that, create the Makefile (only once, as it will
-be overwritten). Within the Makefile, alter the linker step:
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-OPTIMISED_FILE=observers/StephydroPartForceLoop_sweep62peano4_toolbox_particles_UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles4
-
-
-#
-# Linker arguments are read from left to right and objects are thrown away
-# per step if they are not required anymore. That is: left libraries can
-# depend objects right but not the other way round.
-#
-solver:  $(CXX_OBJS) $(FORTRAN_OBJS)
-        rm $(OPTIMISED_FILE).o*
-        $(CXX) -qopt-report=3 $(CXXFLAGS) -c -o $(OPTIMISED_FILE).o $(OPTIMISED_FILE).cpp
-        $(CXX) $(FORTRAN_MODULE_OBJS) $(FORTRAN_OBJS) $(CXX_OBJS) $(LDFLAGS) $(GPU_OBJS) $(CU_OBJS) $(LIBS) -o noh2D
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-You throw away the object file and then you rebuild this single file yet with
-the optimisation reports on.
-
-### Inter-procedural optimisation
-
-Most successful vectorisation passes depend upon successful inlining (despite
-marking functions as vectorisable). To facilitate this inlining, you can either
-move implementations into the header, or you can use ipo. The following remarks
-discuss ipo in the context of the Intel compiler, but we assume similar
-workflows to apply to any LLVM-based toolchain.
-
-The switch to ipo requires some manual modifications of the underlying
-Makefile:
-
-1. We remove the object files manually which have been produced by the standard
-   compilation process.
-2. We retranslate all the cpp files again in one rush using the -c -ipo option.
-3. All resulting object files appear directly in the root. We
-   consequently rescatter them, i.e. move them again into the places where the
-   object files had originally been placed.
-4. We add -ipo as an additional linker command, as the linker otherwise does not
-   recognise the object file format. Repeating the opt-report flag for the
-   linker phase enables linker feedback.
-
-Here is an example excerpt of a successful, modified Makefile:
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-solver:  $(CXX_OBJS) $(FORTRAN_OBJS)
-    rm tasks/*.o AbstractCCZ4SBH_FD4.o  AbstractCCZ4SBH_FV.o  CCZ4SBH_FD4.o  CCZ4SBH_FV.o
-    $(CXX) $(CXXFLAGS) -qopt-report=3 -ipo -c tasks/CCZ4SBH_FD4Task.cpp tasks/CCZ4SBH_FVTask.cpp AbstractCCZ4SBH_FD4.cpp AbstractCCZ4SBH_FV.cpp CCZ4SBH_FD4.cpp CCZ4SBH_FV.cpp
-    mv *Task.o tasks
-    $(CXX) -ipo -O3 -qopt-report=3 $(FORTRAN_MODULE_OBJS) $(FORTRAN_OBJS) $(CXX_OBJS) $(LDFLAGS) $(GPU_OBJS) $(CU_OBJS) $(LIBS) -o peano_sbh_2.0
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The final ipo optimisation report is written to ipo_out.optrpt.
-
-## Domain decomposition
-
-We use the same geometric load balancing for both the MPI code and on the node.
-In the latter case, subpartitions, or subtrees, are distributed over several
-threads. The load balancing can be written manually for your application, or you
-can use classes from the @ref toolbox_loadbalancing "load balancing toolbox"
-that is shipped with Peano.
-
-The documentation of the @ref toolbox_loadbalancing "load balancing toolbox"
-contains some generic explanations why certain things work the way they do
-and what has to be taken into account if a code suffers from certain behaviour.
-It is important to read through these explanations prior to tweaking the load
-balancing as discussed below.
-
-### The domain decomposition creates multiple trees, but does not yield good speedup
-
-Before you continue, check if the individual trees are well-balanced. Do they
-have the same size? If not, you might want to study the remarks below on
-ill-balanced partitions. Now, assume they are well-balanced.
-If you have a well balanced problem, the trees have all roughly the same amount
-of local cells. The Grid Snapshot reports the minimum and maximum tree loads
-in parentheses. For example, 235,737 leaves distributed over 12 trees with
-19,644 to 19,653 leaves per tree are well balanced. If this decomposition does
-not yield a reasonable speedup, inspect the ratio between local and outer cells,
-which is the decomposition granularity. With 33,331 outer cells, the example
-has a granularity of approximately 7.07.
-
-Heuristic measurements suggest that granularity greater than about 10 produces
-linear strong-scaling speedup when effects such as memory bandwidth do not
-dominate. Smaller granularity reduces efficiency, and the loss grows as the
-granularity decreases.
-
-To remedy this effect, increase the granularity of the simulation.
-
-Possible ways to do so are:
-
-- Increase the problem size. If your problem is too small, you always run risk to
-  overdecompose. Once the problem per thread or rank is too small, there's not much
-  you can do anymore.
-- Restrict the number of spacetrees (subpartitions) per rank.
-- Add task-based parallelism. Try out task-based solvers (with restricted number
-  of trees) for ExaHyPE, e.g.
-
-<div style="color:Black ; background-color:#75e12f">
- Domain decomposition introduces a severe overhead. Therefore, your runtime might go down as you
- increase the number of trees. More trees means more effort to keep data consistent between
- subpartitions. Therefore, it can be advantageous to limit the number of trees, i.e. not to
- book out all threads. The threads then have to be kept busy otherwise (through
- task parallelism or parallel fors inside compute kernels, e.g.).
-</div>
-
-### The individual trees are of significantly different sizes
-
-Most of Peano's solvers (such as ExaHyPE) support tasking to facilitate
-light-weight load balancing. However, tasking cannot compensate for a poor
-initial geometric distribution. To assess
-the quality of your partition, Peano's runtime analysis documentation
-@ref page_peano_runtime_analysis "describes scripts" that visualise the distribution of cells.
-
-If the cell distribution is similar to the one above, you have subpartitions
-of significantly different sizes.
-In a profile, such an ill-balanced setup materialises typically in high task
-runtime spin times.
-In OpenMP for example, __kmp_fork_barrier() appears high up in the list of the most expensive routine.
-If you don't want to use the visualisation script, you can also check the program dump of your code.
-A decomposition with 13 and 14 leaves per tree is balanced, even though 715
-and 716 outer cells per tree indicate that the trees are too small.
-The initial decomposition is fixed once its splits have completed. Relevant
-tuning options are:
-
-1. Set the maximum number of trees per rank with `-trees`. The default creates
-   one tree per thread. Additional trees can improve scheduling flexibility but
-   increase boundary and traversal overhead.
-2. Use a uniform base grid with enough cells for the requested tree count. A
-   finer base grid gives the discrete splitter more candidate cells, at the cost
-   of additional construction work and memory.
-3. Use task parallelism or parallel kernels if geometric decomposition leaves
-   cores idle. Dynamic geometric rebalancing is not implemented.
-4. Account for the fixed geometric cost metric. Cell counts can misrepresent
-   workloads from particles, nonlinear solvers, or localised kernels.
-
-It is important to keep in mind that all data displayed here on the terminal
-are geometric data. If you have a highly inhomogeneous cost, as you use kernels
-with varying workload (particles or non-linear solvers within cells), if you
-use task parallelism heavily, if you use adaptive mesh refinement, or if you
-use different localised solvers in different subdomains, then all the data
-here and the recommendations require application-specific interpretation.
-
-### The grid splitting needs too much time
-
-Each fork needs multiple mesh sweeps to advertise the new tree, transfer data,
-and settle its topology. Large rank and thread counts can therefore make grid
-construction expensive even when the final decomposition is balanced.
-
-- Reduce `-trees` if the resulting trees are too small to amortise their
-  traversal and boundary overhead.
-- Choose a uniform minimum grid level that contains enough cells for the
-  requested tree count. The runner reports an exact-tree-count error when the
-  uniform grid cannot provide all requested trees.
-- Inspect the construction logs for repeated split waves. The
-  toolbox::loadbalancing::State::InitialInterRankSplit and
-  toolbox::loadbalancing::State::InitialIntraRankSplit phases perform all
-  initial distribution before dynamic refinement starts.
-
-### The code shows very high spin time
-
-Before you continue, ensure that the individual subtrees are well-balanced (see
-comment above). Once you are sure that this is the case, a high spin time implies
-that the trees are simply too small.
-In an OpenMP profile, this typically makes `__kmp_fork_barrier()` dominate the
-runtime.
-
-Once you dump the output into a file and inspect the Grid Snapshot
-(see @ref page_peano_runtime_analysis "Peano's runtime analysis"), too small
-trees usually manifest in high outer-cell counts. The Global Efficiency row
-shows the minimum and maximum owned leaves per tree; Global Overhead shows the
-global outer-to-owned ratio followed by the minimum and maximum outer-cell
-counts per tree.
-For example, a 128-tree rank with 5 to 162 owned leaves and 229 to 2,127
-outer cells per tree is overdecomposed.
-
-This setup manifests in plots as the one below:
-
-@image html performance_optimisation_remote_cells_per_rank.png
-
-The local cells per thread (solid circles) cluster around the intended value,
-but the remote cells (empty circles) outnumber them by orders of magnitude.
-In this case, reduce the number of trees so each remaining tree becomes larger.
-The `-trees` runtime option caps the number of trees per rank.
-
-If fewer trees leave some cores idle, increase the code's concurrency through
-tasking or parallel compute kernels.
-
-## Single core optimisation
-
-### The code fails to use aligned data
-
-See general remarks in documentation of tarch::allocateMemory() and
-tarch::MemoryLocation.
-
-@see tarch::allocateMemory()
-@see tarch::MemoryLocation
-
-### Adaptive mesh refinement is very expensive
-
-Peano realises a strict cell-wise traversal paradigm, where individual
-actions @ref peano_action_sets "are tied to single cells, faces or vertices".
-Therefore, @ref page_peano_amr "Peano's AMR" is also controlled by sets of
-refine and erase events. The decision to refine or erase a mesh is made
-by Peano by comparing each and every mesh entity against the set of
-erase and refine commands. This happens in
-peano4::grid::Spacetree::updateVertexAfterLoad().
-
-If you work with thousands of mesh refinement and coarsening events, the
-AMR checks themselves become time-consuming. Therefore, each tree traversal
-invokes peano4::grid::GridControlEvent::merge() on the command first. This routine tries to
-consolidate many erase and refine commands into fewer ones, and it also
-throws away those erase commands which contradict refines. However, you
-can still tune this behaviour:
-
-- As each and every traversal automaton calls the merger, it might make
-  sense that you invoke GridControlEvent::merge() yourself earlier, before you hand data
-  over to Peano. This way, you avoid multiple (though parallel) merges
-  on different threads and ranks.
-- The GridControlEvent::merge() operation searches for refine and erase commands which
-  are adjacent to each other and combine them into one. So it
-  intrinsically works with hexahedral areas. Try to ensure that your
-  refine and erase commands span a hexahedral area, so they can be
-  combined into one single command. For this, you might refine a little
-  bit too aggressively but gain in terms of effective runtime.
-- The GridControlEvent::merge() operation works with a certain tolerance (as it works with
-  floating point numbers, but also with geometric data). If you invoke
-  GridControlEvent::merge() yourself, you can add in a higher tolerance and hence merge
-  together subareas that are to be refined or erased which are not
-  exactly adjacent to each other but close.
-
-## Multithreading optimisation
-
-Peano supports both task-based and data parallelism. The former is specific to
-extensions such as Swift or ExaHyPE, i.e. each has their own tasking approach.
-There are some generic recommendations though, and we discuss them below. All
-Peano codes can support data parallelism by a textbook non-overlapping domain
-decomposition. Actually, we use the same tree-based multiscale domain
-decomposition that we also use for MPI.
-
-To enable the tree decomposition, a load balancing scheme has to be activated.
-This makes Peano yield multiple trees and these trees are then either distributed
-among ranks or among threads or both.
-Therefore, the generic domain decomposition tweaks and flaws are discussed in a
-section of its own above on data decomposition.
-
-### Tasks make the code slower
-
-In this case, the tasks are typically too small.
-Tiny tasks flood the system and then induce a massive overhead.
-In this case, you have to increase the task granularity, i.e. ensure each task
-carries enough work to amortise the scheduling overhead.
-
-### The code shows significant spinning time
-
-If these spinning times are introduced through tarch::multicore::waitForTask()
-or tarch::multicore::waitForAllTasks(), then it might pay off to restructure the
-code such that fewer explicit waits are required, e.g. by overlapping the
-dependent work with other tasks.
-
-## MPI optimisation
-
-### Switching from one to two ranks increases the runtime
-
-Validate if both ranks get roughly the same number of cells. If this holds, the
-performance drop is due to a bad per-rank (shared memory) load balancing most of
-the times. Study the recommendations above after you have visualised the distribution
-of the cells per rank.
-
-@image html performance_optimisation_mpi_cells_per_rank.png
-
-The visualised run has 41 and 49 trees on ranks with 64 threads. While the
-trees might be reasonably balanced, the rank cannot keep every thread busy and
-hence can conclude that our load balancing does not keep all cores busy.
-We lose out on threads.
-Tasking and parallel compute kernels can, to some degree, mitigate this
-problem, but we should aim for a proper work distribution right from the
-start, i.e. geometrically.
-Further to our observations so far, we see that rank 0 is significantly heavier in terms of total cell
-count.
-
-The logs and plot also show that each rank
-has one massive tree, and then a lot of smaller trees. The smaller ones are all
-properly balanced, i.e. they are all of the same size (around 75 on rank 0 and around 38
-on rank 1). But then we have this one massive tree besides these small ones.
-That is not a good load balancing and manifests in
-high spin times per node, with the OpenMP fork barrier typically dominating a
-profile.
-
-Exact split enforcement terminates if a request asks the traversal to deploy
-more eligible cells than it can assign to the new tree. The load balancer has
-to postpone the split until enough eligible cells exist, or request fewer cells. Study the
-single-node load-balancing discussion above when the grid does not yet offer
-enough cells to keep all cores busy.
-
- */
+\tableofcontents
+
+Performance work starts from a release build, the Grid Snapshot, and an
+external profiler. Logging filters keep diagnostic output from dominating
+the measurement.
+
+# Interpreting the decomposition
+
+@ref page_peano_runtime_analysis defines the reported fields. Three values
+separate common scaling limits:
+
+- `MPI Load Balance` measures geometric leaf balance across MPI ranks.
+- `Thread Ceiling` estimates the limit imposed by the largest subtree
+  task on each rank.
+- The phase report line `Utilisation` measures how much of the sweep window the
+  subtree tasks occupied across the available threads.
+
+The first two are structural bounds. The third includes the effects of task
+dependencies, rank-boundary waits, memory bandwidth, and the work that each
+callback performs.
+
+# Inter-rank imbalance
+
+The adaptive owner table balances leaf counts at spawn-block or block-child
+granularity. A localised refined region can still leave one indivisible child
+heavier than the leaf count a rank targets. Application work can also be imbalanced
+even when leaf counts are equal.
+
+Useful responses are:
+
+- Increase the regular base depth when coarse partition units limit the
+  balance and the extra grid fits in memory.
+- Increase the global problem size so each rank receives more useful cells.
+- Reduce the MPI rank count when boundary and replicated-spine costs dominate
+  a small problem.
+- Use solver tasking or parallel kernels when leaf counts do not represent the
+  true work.
+
+Profiles and application counters determine whether expensive particles,
+limiters, source terms, or local solver variants correlate with the heavy
+rank.
+
+# Intra-rank imbalance
+
+Standing sweeps derive subtree tasks from spawn-level blocks and nested heavy
+refined subtrees. Too few tasks, one dominant task, or a data container that
+only one task may enter lowers the attainable utilisation.
+
+- Increase the problem size or base depth when the tree exposes too few task
+  roots.
+- Inspect `Cells per Task` before attributing idle time to the scheduler.
+- Use solver-created tasks or parallel kernels when a single cell callback
+  dominates a balanced traversal task.
+- Treat particle steps separately: particle containers make their rank
+  traversal serial.
+
+A high intra-rank ceiling with low thread utilisation calls for a profile of
+the sweep. Ready-task starvation, interface dependencies, memory bandwidth,
+and work outside the traversal tasks have different remedies.
+
+# Boundary and replication overhead
+
+Every rank stores the structural spine needed to reach its local cells. A face
+or a vertex that two ranks hold also requires a local entity slot on each of
+them and a frozen partner slot.
+More ranks increase these costs and reduce the interior work available to hide
+the non-blocking boundary exchange.
+
+High `Spine Replication` together with good inter-rank balance indicates
+overdecomposition. A larger problem or fewer MPI ranks increases the ratio of
+owned work to structural and boundary data.
+
+# Standing-sweep replay
+
+The first standing traversal records its event streams. Later sweeps replay
+flat per-task buffers. A profile dominated by callback code therefore points
+to the application or solver kernels. A profile dominated by traversal merge,
+reduction, or wait regions points to task interfaces or rank-boundary traffic.
+
+# Adaptive mesh refinement
+
+Refinement-plan evaluation performs integer lattice work proportional to the
+request count. The substantial regrid costs are structure and topology
+construction, transition derivation, pool migration, and the transition
+sweep.
+
+A criterion can ask only from cells that already exist, so refinement over
+several additional levels requires several drains. Oscillating refine and
+erase decisions multiply this cost. Stable thresholds and a suitable regular
+base depth reduce repeated topology changes.
+
+The dynamic-AMR report separates sweep count, wall time, rank balance, task
+balance, and thread utilisation. Compare its before and after fields to see
+whether the new mesh also changes the decomposition.
+
+# Solver and kernel parallelism
+
+The traversal task graph parallelises independent mesh regions. A solver can
+also submit tasks through tarch::tasking or use parallel kernels inside one
+callback. These forms complement the geometric decomposition when the mesh
+does not provide enough independent subtree work.
+
+Tasks must contain enough work to amortise scheduling and dependency costs.
+Parallel kernels must preserve the callback's data ownership and complete
+before the callback exposes results that another event consumes.
+
+# MPI analysis
+
+When adding ranks slows a run, compare leaves per rank, spine replication, and
+the amount of interior work first. If those remain healthy, profile boundary
+packing, MPI progress, and boundary-task waits. The exchange overlaps with
+interior tasks only while such tasks remain ready.
+
+Pinning can restrict the processors visible to a rank and therefore reduce the
+thread count selected by tarch::tasking::Runtime. Confirm the runtime's thread
+report before interpreting a hybrid scaling result.
+
+*/

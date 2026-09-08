@@ -11,13 +11,19 @@ namespace peano4::grid::tests {
 class peano4::grid::tests::BoundaryDataAggregationTest final : public tarch::tests::TestCase {
 public:
   BoundaryDataAggregationTest();
+  BoundaryDataAggregationTest(const BoundaryDataAggregationTest&)            = delete;
+  BoundaryDataAggregationTest(BoundaryDataAggregationTest&&)                 = delete;
+  BoundaryDataAggregationTest& operator=(const BoundaryDataAggregationTest&) = delete;
+  BoundaryDataAggregationTest& operator=(BoundaryDataAggregationTest&&)      = delete;
+  ~BoundaryDataAggregationTest() override                                    = default;
 
   void run() override;
 
 private:
-  void testPrepareArmsContributorCountdown();
   void testPrepareIsIdempotentWithinOneGeneration();
   void testPrepareClearsBuffersForTheNextGeneration();
-  void testChangedRankSetDiscardsRecords();
-  void testAppendOutgoingMovesPayloadAndRecordsSegment();
+  void testRankExchangesAdvanceGenerationsIndependently();
+  void testRebuildRankTableKeepsRecordsForUnchangedRankSet();
+  void testRebuildRankTableDiscardsRecordsForChangedRankSet();
+  void testRebuildRankTableSkipsKnownTopologyVersion();
 };

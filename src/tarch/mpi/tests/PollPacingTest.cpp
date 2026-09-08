@@ -19,7 +19,7 @@ namespace {
 } // namespace
 
 tarch::mpi::tests::PollPacingTest::PollPacingTest() :
-  TestCase("tarch::mpi::tests::PollPacingTest") {}
+  tarch::tests::TestCase("tarch::mpi::tests::PollPacingTest") {}
 
 void tarch::mpi::tests::PollPacingTest::run() {
   testMethod(testFirstPollReportsProgress);
@@ -44,10 +44,7 @@ void tarch::mpi::tests::PollPacingTest::testTurnsWidenWhileTheWaitLasts() {
   }
 }
 
-/**
- * The widening is bounded, so a wait of any length keeps checking its timeouts. Over a hundred thousand
- * polls the turns stay far below the poll count while never thinning out to nothing.
- */
+/** The widening is bounded, so a wait of any length keeps checking its timeouts. */
 void tarch::mpi::tests::PollPacingTest::testStrideSaturatesSoReportingContinues() {
   constexpr int NumberOfPolls = 100000;
   const auto    turns         = collectTurns(NumberOfPolls);

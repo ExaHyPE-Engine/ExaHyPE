@@ -11,10 +11,10 @@ class UpdatePatch(AbstractFVActionSet):
     _Template_TouchCellFirstTime = jinja2.Template(
         """
   if ({{GUARD}}) {
-    auto* QIn = {{OLD_ACCESSOR}}.data();
-    auto* QOut = {{NEW_ACCESSOR}}.data();
+    auto* const QIn  = {{OLD_ACCESSOR}}.data();
+    auto* const QOut = {{NEW_ACCESSOR}}.data();
 
-    const double timeStamp = {{CELL_METADATA_ACCESSOR}}.getTimeStamp();
+    const auto timeStamp = {{CELL_METADATA_ACCESSOR}}.getTimeStamp();
 
     {{COMPUTE_TIME_STEP_SIZE}}
     assertion(tarch::la::greaterEquals(timeStamp,    0.0), timeStamp, timeStepSize);
@@ -26,23 +26,45 @@ class UpdatePatch(AbstractFVActionSet):
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       {{NUMBER_OF_VOLUMES_PER_AXIS}},
-      0, // Halo size
+      0,
       std::string(__FILE__) + "(" + std::to_string(__LINE__) + ")"
-    ); // Previous time step has to be valid
+    );
 #endif
 
     {{PREPROCESS_RECONSTRUCTED_PATCH}}
     const {{STORAGE_PRECISION}}* faceQIn[TWO_TIMES_D];
     {{STORAGE_PRECISION}}* faceQOut[TWO_TIMES_D];
-    for (int faceDir = 0; faceDir < TWO_TIMES_D; ++faceDir) {
-      faceQIn[faceDir]  = {{OLD_FACE_ACCESSOR}}(faceDir).data();
-      faceQOut[faceDir] = {{NEW_FACE_ACCESSOR}}(faceDir).data();
+    for (int faceNumber = 0; faceNumber < TWO_TIMES_D; faceNumber++) {
+      faceQIn[faceNumber]  = {{OLD_FACE_ACCESSOR}}(faceNumber).data();
+      faceQOut[faceNumber] = {{NEW_FACE_ACCESSOR}}(faceNumber).data();
+      // A projection, a restriction from finer cells, the boundary treatment or
+      // the periodic exchange fills each half of the halo and takes that half's
+      // transfer flag down.
+      const auto&                 faceLabel    = {{FACE_METADATA_ACCESSOR}}(faceNumber);
+      [[maybe_unused]] const int  ownSide      = faceNumber < DIMENSIONS ? 1 : 0;
+      [[maybe_unused]] const bool isDomainWall = faceLabel.getBoundary()
+        and not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[faceNumber % DIMENSIONS];
+      assertion(
+        faceLabel.getIsHanging() or not faceLabel.getRequiresDataTransfer(ownSide),
+        marker.toString(),
+        faceLabel.toString(),
+        faceNumber,
+        timeStamp
+      );
+      assertion(
+        faceLabel.getIsHanging() or isDomainWall or faceLabel.getAboveHanging(1 - ownSide)
+          or not faceLabel.getRequiresDataTransfer(1 - ownSide),
+        marker.toString(),
+        faceLabel.toString(),
+        faceNumber,
+        timeStamp
+      );
     }
 
     {% if COMPUTE_MAX_EIGENVALUE %}
     const auto maxEigenvalue = {{COMPUTE_KERNEL_CALL}}
     {% else %}
-    const auto _ = {{COMPUTE_KERNEL_CALL}}
+    [[maybe_unused]] const auto maxEigenvalue = {{COMPUTE_KERNEL_CALL}}
     {% endif %}
 
     {{POSTPROCESS_UPDATED_PATCH}}
@@ -53,37 +75,49 @@ class UpdatePatch(AbstractFVActionSet):
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       {{NUMBER_OF_VOLUMES_PER_AXIS}},
-      0, // Halo size
+      0,
       std::string(__FILE__) + "(" + std::to_string(__LINE__) + ")"
-    ); // Outcome has to be valid
+    );
 #endif
 
     {{COMPUTE_NEW_TIME_STEP_SIZE}}
     {{CELL_METADATA_ACCESSOR}}.setHasUpdated(true);
     {{CELL_METADATA_ACCESSOR}}.setTimeStepSize(newTimeStepSize);
-    repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp + timeStepSize, tarch::la::min(marker.getH()), tarch::la::max(marker.getH()));
+    repositories::{{SOLVER_INSTANCE}}
+      .update(
+        timeStepSize,
+        timeStamp + timeStepSize,
+        tarch::la::min(marker.getH()),
+        tarch::la::max(marker.getH())
+      );
     {{CELL_METADATA_ACCESSOR}}.setTimeStamp(timeStamp + timeStepSize);
-    // Set the updated flag for all faces, which the roll-over needs.
-    for (int d = 0; d < DIMENSIONS; d++) {
-      {{FACE_METADATA_ACCESSOR}}(d).setUpdated(1, true);
-      {{FACE_METADATA_ACCESSOR}}(d).setUpdatedTimeStamp(1, {{CELL_METADATA_ACCESSOR}}.getTimeStamp());
-      {{FACE_METADATA_ACCESSOR}}(d + DIMENSIONS).setUpdated(0, true);
-      {{FACE_METADATA_ACCESSOR}}(d + DIMENSIONS).setUpdatedTimeStamp(0, {{CELL_METADATA_ACCESSOR}}.getTimeStamp());
+    const auto updatedTimeStamp = {{CELL_METADATA_ACCESSOR}}.getTimeStamp();
+    for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
+      {{FACE_METADATA_ACCESSOR}}(dimension).setUpdated(1, true);
+      {{FACE_METADATA_ACCESSOR}}(dimension).setUpdatedTimeStamp(1, updatedTimeStamp);
+      {{FACE_METADATA_ACCESSOR}}(dimension + DIMENSIONS).setUpdated(0, true);
+      {{FACE_METADATA_ACCESSOR}}(dimension + DIMENSIONS).setUpdatedTimeStamp(0, updatedTimeStamp);
     }
-  } else if (not marker.willBeRefined() and not marker.hasBeenRefined()) { // Required in cases where the if-guard above is extended by a solver
-    const double timeStamp    = {{CELL_METADATA_ACCESSOR}}.getTimeStamp();
-    [[maybe_unused]] const double timeStepSize = {{CELL_METADATA_ACCESSOR}}.getTimeStepSize();
+  } else if (not marker.willBeRefined() and not marker.hasBeenRefined()) {
+    // Leaves excluded by solver-specific guards still contribute global mesh statistics.
+    const auto                  timeStamp    = {{CELL_METADATA_ACCESSOR}}.getTimeStamp();
+    [[maybe_unused]] const auto timeStepSize = {{CELL_METADATA_ACCESSOR}}.getTimeStepSize();
 
     assertion(tarch::la::greaterEquals(timeStepSize, 0.0), timeStepSize, timeStamp);
-    assertion(tarch::la::greaterEquals(timeStamp,    0.0), timeStepSize, timeStamp);
+    assertion(tarch::la::greaterEquals(timeStamp, 0.0), timeStepSize, timeStamp);
 
-    repositories::{{SOLVER_INSTANCE}}.update(0.0, timeStamp, tarch::la::min(marker.getH()), tarch::la::max(marker.getH()));
+    repositories::{{SOLVER_INSTANCE}}
+      .updateTimeStampAndPatchSize(
+        timeStamp,
+        tarch::la::min(marker.getH()),
+        tarch::la::max(marker.getH())
+      );
   }
 """
     )
 
     def __init__(self, solver):
-        super(UpdatePatch, self).__init__(solver)
+        super().__init__(solver)
         self.guard = (
             "not marker.willBeRefined() and not marker.hasBeenRefined()"
             + " and "
@@ -94,16 +128,16 @@ class UpdatePatch(AbstractFVActionSet):
         self.old_face_accessor = "fineGridFaces" + solver.previous_unknown_identifier()
         self.new_face_accessor = "fineGridFaces" + solver.current_unknown_identifier()
         self._face_metadata_accessor = "fineGridFaces" + solver._face_label.name
-        self._cell_metadata_accessor = "fineGridCell" "" + solver._cell_label.name
+        self._cell_metadata_accessor = "fineGridCell" + solver._cell_label.name
 
-    def _add_action_set_entries_to_dictionary(self, d):
-        d["GUARD"] = self.guard
-        d["OLD_ACCESSOR"] = self.old_accessor
-        d["NEW_ACCESSOR"] = self.new_accessor
-        d["OLD_FACE_ACCESSOR"] = self.old_face_accessor
-        d["NEW_FACE_ACCESSOR"] = self.new_face_accessor
-        d["FACE_METADATA_ACCESSOR"] = self._face_metadata_accessor
-        d["CELL_METADATA_ACCESSOR"] = self._cell_metadata_accessor
+    def _add_action_set_entries_to_dictionary(self, dictionary):
+        dictionary["GUARD"] = self.guard
+        dictionary["OLD_ACCESSOR"] = self.old_accessor
+        dictionary["NEW_ACCESSOR"] = self.new_accessor
+        dictionary["OLD_FACE_ACCESSOR"] = self.old_face_accessor
+        dictionary["NEW_FACE_ACCESSOR"] = self.new_face_accessor
+        dictionary["FACE_METADATA_ACCESSOR"] = self._face_metadata_accessor
+        dictionary["CELL_METADATA_ACCESSOR"] = self._cell_metadata_accessor
 
     def get_body_of_operation(self, operation_name):
         result = ""
@@ -111,18 +145,24 @@ class UpdatePatch(AbstractFVActionSet):
             operation_name
             == peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME
         ):
-            d = {}
-            self._solver._init_dictionary_with_default_parameters(d)
-            self._solver.add_entries_to_text_replacement_dictionary(d)
-            self._add_action_set_entries_to_dictionary(d)
-            result = self._Template_TouchCellFirstTime.render(**d)
+            dictionary = {}
+            self._solver._init_dictionary_with_default_parameters(dictionary)
+            self._solver.add_entries_to_text_replacement_dictionary(dictionary)
+            self._add_action_set_entries_to_dictionary(dictionary)
+            result = self._Template_TouchCellFirstTime.render(**dictionary)
+        if operation_name == peano4.solversteps.ActionSet.OPERATION_END_TRAVERSAL:
+            result = (
+                "  repositories::"
+                + self._solver.get_name_of_global_instance()
+                + ".reduceLocalUpdates();\n"
+            )
         return result
 
     def get_action_set_name(self):
         return __name__.replace(".py", "").replace(".", "_")
 
     def get_includes(self):
-        result = super(UpdatePatch, self).get_includes()
+        result = super().get_includes()
         result += """
 #include "exahype2/fv/PatchUtils.h"
 """

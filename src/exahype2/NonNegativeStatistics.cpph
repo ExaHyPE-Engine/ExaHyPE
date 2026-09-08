@@ -1,0 +1,47 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+INLINE_METHOD bool exahype2::NonNegativeStatistics::hasObservation() const {
+  const auto minimumBits = std::bit_cast<std::uint64_t>(minimum);
+  const auto maximumBits = std::bit_cast<std::uint64_t>(maximum);
+  return minimumBits != std::bit_cast<std::uint64_t>(std::numeric_limits<double>::infinity())
+    or maximumBits != std::bit_cast<std::uint64_t>(0.0);
+}
+
+INLINE_METHOD bool exahype2::NonNegativeStatistics::hasPhysicalValues() const {
+  return isPhysicalValue(minimum) and isPhysicalValue(maximum);
+}
+
+INLINE_METHOD bool exahype2::NonNegativeStatistics::hasInvalidObservation() const {
+  return hasObservation() and not hasPhysicalValues();
+}
+
+INLINE_METHOD std::uint64_t exahype2::NonNegativeStatistics::invalidObservationBitsOrIdentity() const {
+  return hasInvalidObservation() ? std::bit_cast<std::uint64_t>(minimum) : std::numeric_limits<std::uint64_t>::max();
+}
+
+INLINE_METHOD exahype2::NonNegativeStatistics exahype2::NonNegativeStatistics::accumulate(
+  const exahype2::NonNegativeStatistics& currentStatistics,
+  const double                           observedValue
+) {
+  const bool currentContainsInvalidObservation = currentStatistics.hasInvalidObservation();
+  const bool observedValueIsPhysical           = isPhysicalValue(observedValue);
+  if (currentContainsInvalidObservation) {
+    return currentStatistics;
+  }
+  if (not observedValueIsPhysical) {
+    return {observedValue, observedValue};
+  }
+  return {std::min(currentStatistics.minimum, observedValue), std::max(currentStatistics.maximum, observedValue)};
+}
+
+INLINE_METHOD exahype2::NonNegativeStatistics exahype2::NonNegativeStatistics::fromInvalidObservationBits(
+  const std::uint64_t invalidObservationBits
+) {
+  const auto invalidObservation = std::bit_cast<double>(invalidObservationBits);
+  return {invalidObservation, invalidObservation};
+}
+
+INLINE_METHOD bool exahype2::NonNegativeStatistics::isPhysicalValue(const double value) {
+  return value >= 0.0 and std::isfinite(value);
+}

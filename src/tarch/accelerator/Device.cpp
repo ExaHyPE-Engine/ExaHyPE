@@ -2,14 +2,14 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "Device.h"
 
-#include "MemoryAllocationCache.h"
+#include "tarch/accelerator/MemoryAllocationCache.h"
 
 tarch::accelerator::Device& tarch::accelerator::Device::getInstance() {
   static Device instance;
   return instance;
 }
 
-#if !defined(PEANO_WITH_GPU_BACKEND)
+#if not defined(PEANO_WITH_GPU_BACKEND)
 
 bool tarch::accelerator::Device::init() { return isInitialised(); }
 

@@ -52,7 +52,7 @@ class NavierStokes(Equation):
         self._reference_viscosity = reference_viscosity
         self._Pr = Pr  # Prandtl number
         self._molecular_diffusion_coeff = molecular_diffusion_coeff
-        self._q0 = q0  # q0 not explained in the old version, merely marked with ???
+        self._q0 = q0
 
         self.use_diffusive_flux = True
 
@@ -63,8 +63,6 @@ class NavierStokes(Equation):
     """
             + (
                 """
-    // add gravity Potential to the chemical energy for simplicity, 
-    // but it is technically a separate term
     chemicalEnergy += rho * gravity * height;
 """
                 if self._use_gravity
@@ -89,8 +87,6 @@ class NavierStokes(Equation):
     """
             + (
                 """
-    // add gravity Potential to the chemical energy for simplicity, 
-    // but it is technically a separate term
     chemicalEnergy += rho * gravity * height;
 """
                 if self._use_gravity
@@ -107,10 +103,6 @@ class NavierStokes(Equation):
 """
         )
 
-    # these get used both here and in the Riemann solver, but need
-    # different factors in their sum (i.e lambda + a * lambda_diff)
-    # in an effort to minimize code duplication we therefore define
-    # both of these once and just refer to them
     def eigenvalue_functions(self):
         return (
             """
@@ -126,13 +118,13 @@ class NavierStokes(Equation):
             + """;
   constexpr auto Pr = """
             + str(self._Pr)
-            + """; //Prandtl number
+            + """; // Prandtl number
   constexpr auto molecularDiffusionCoeff = """
             + str(self._molecular_diffusion_coeff)
             + """;
 
   auto maxEval = [&](
-    const {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS  Q,
+    const {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS Q,
     const int normal
   ){
     const auto j = &Q[Shortcuts::j];
@@ -145,16 +137,16 @@ class NavierStokes(Equation):
             + ("Q[Shortcuts::Z];" if self._use_advection else "0;")
             + self.evaluate_pressure()
             + """
-    const auto u_n = Q[Shortcuts::j+normal]/rho;
+    const auto normalVelocity = Q[Shortcuts::j+normal]/rho;
     const auto c = std::sqrt(gamma * (pressure/rho));
-    double lambda = std::fmax(
-      std::abs(u_n-c), std::abs(u_n+c)
+    const double lambda = std::fmax(
+      std::abs(normalVelocity-c), std::abs(normalVelocity+c)
     );
     return lambda;
   };
 
   auto diffusiveEval = [&](
-    const {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS  Q,
+    const {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS Q,
     const int normal
   ){
     double smaxDiffusive = molecularDiffusionCoeff;
@@ -164,7 +156,6 @@ class NavierStokes(Equation):
     return std::fmax(
       smaxDiffusive, (gamma * referenceViscosity) / (Pr * Q[Shortcuts::rho])
     );
-
   };
 """
         )
@@ -173,13 +164,12 @@ class NavierStokes(Equation):
         return (
             self.eigenvalue_functions()
             + """
-    return maxEval(Q, normal) 
+    return maxEval(Q, normal)
       + diffusiveEval(Q, normal)*2/(h[normal]*PNPM);
 """
         )
 
     def flux(self):
-        # define parameters that will be used in the flux
         flux_init = (
             """  const auto rho = Q[Shortcuts::rho];
   const auto j = &Q[Shortcuts::j];
@@ -211,7 +201,6 @@ class NavierStokes(Equation):
             + self.evaluate_pressure()
         )
 
-        # part of the flux which corresponds to the Euler equations
         flux_euler = """
   F[Shortcuts::rho] = j[normal];
   F[Shortcuts::j+0] = invRho * j[normal] * j[0];
@@ -225,14 +214,13 @@ class NavierStokes(Equation):
 """
         flux_viscous = (
             """
-  // TODO Support different visc. models?
   constexpr auto referenceViscosity = """
             + str(self._reference_viscosity)
             + """;
   constexpr auto mu = referenceViscosity;
   constexpr auto Pr = """
             + str(self._Pr)
-            + """; //Prandtl number
+            + """; // Prandtl number
   constexpr auto kappa = 1./Pr * referenceViscosity * gamma * cv;
 
   const auto uu   = invRho * Q[Shortcuts::j];
@@ -249,14 +237,14 @@ class NavierStokes(Equation):
   const auto ww   = invRho * Q[Shortcuts::j+2];
   const auto uuz  = invRho * (deltaQ[2][Shortcuts::j+0] - uu * deltaQ[2][Shortcuts::rho]);
   const auto vvz  = invRho * (deltaQ[2][Shortcuts::j+1] - vv * deltaQ[2][Shortcuts::rho]);
-  const auto wwx  = invRho * (deltaQ[2][Shortcuts::j+2] - ww * deltaQ[0][Shortcuts::rho]);
-  const auto wwy  = invRho * (deltaQ[2][Shortcuts::j+2] - ww * deltaQ[1][Shortcuts::rho]);
+  const auto wwx  = invRho * (deltaQ[0][Shortcuts::j+2] - ww * deltaQ[0][Shortcuts::rho]);
+  const auto wwy  = invRho * (deltaQ[1][Shortcuts::j+2] - ww * deltaQ[1][Shortcuts::rho]);
   const auto wwz  = invRho * (deltaQ[2][Shortcuts::j+2] - ww * deltaQ[2][Shortcuts::rho]);
   const auto divV23 = 2./3. * (uux + vvy + wwz);
 #endif
 
   double Fj[DIMENSIONS];
-  switch(normal){
+  switch (normal) {
     case 0:
       Fj[0] = mu * (2 * uux - divV23);
       Fj[1] = mu * (uuy + vvx);
@@ -311,43 +299,37 @@ class NavierStokes(Equation):
 #if DIMENSIONS == 3
             dTdW4 * deltaQ[normal][Shortcuts::j+2] +
 #endif
-            invRho * deltaQ[normal][Shortcuts::E]); 
+            invRho * deltaQ[normal][Shortcuts::E]);
             """
             + (
                 """
-  // Including the gravitational potential in the pressure
-  // implies that we need to change the derivative of the temperature as well,
-  // but only in z direction
-  // Gravity happens in y direction in 2D and in z direction in 3D
-  if(normal==DIMENSIONS-1){
+  // Gravity acts in y direction in 2D and in z direction in 3D.
+  if (normal == DIMENSIONS - 1) {
     T -= (gravity * (gamma - 1)) / gasConstant;
   } """
                 if self._use_gravity
                 else ""
             )
             + """
-  // Heat flux
   F[Shortcuts::E] -= kappa * T;
 """
         )
 
         flux_advection = (
             """
-  // Euler flux
   F[Shortcuts::Z] = j[normal] * Z * invRho;
-  // Contribution to the Heat flux
+
   const auto factor = invCv * q0 * invRho2;
   T = -factor *
           (Q[Shortcuts::rho] * deltaQ[normal][Shortcuts::Z] -
             Q[Shortcuts::Z] * deltaQ[normal][Shortcuts::rho]);
   F[Shortcuts::E] -= kappa * T;
 
-  // Molecular diffusion for Advection-Reaction-Diffusion part.
   constexpr auto molecularDiffusionCoeff = """
             + str(self._molecular_diffusion_coeff)
             + """;
   F[Shortcuts::rho] -= molecularDiffusionCoeff * deltaQ[normal][Shortcuts::rho];
-  F[Shorcuts::Z] -= molecularDiffusionCoeff * deltaQ[normal][Shortcuts::Z];
+  F[Shortcuts::Z] -= molecularDiffusionCoeff * deltaQ[normal][Shortcuts::Z];
 """
         )
 
@@ -360,29 +342,31 @@ class NavierStokes(Equation):
         )
 
     def source(self):
-        # If both terms are 0, no need for a source
         if not (self._use_gravity or self._use_background_state):
             return PDETerms.None_Implementation
         return (
             """
   std::fill_n(S, NumberOfUnknowns, 0);
 
-  auto rhoPertubation = Q[Shortcuts::rho];
+  auto rhoPerturbation = Q[Shortcuts::rho];
 """
             + (
                 """
-  auto backgroundRho  = Q[Shortcuts::backgroundstate+0];
-  rhoPertubation      -= backgroundRho;
+  const auto backgroundRho = Q[Shortcuts::backgroundstate+0];
+  rhoPerturbation -= backgroundRho;
 """
                 if self._use_background_state
                 else ""
             )
-            + """
+            + (
+                """
   constexpr auto gravity = 9.81;
-  //vertical direction is either y or z
-  S[Shortcuts::j+DIMENSIONS-1] = -1 * rhoPertubation * gravity;
+  // Gravity acts in y direction in 2D and in z direction in 3D.
+  S[Shortcuts::j+DIMENSIONS-1] = -1 * rhoPerturbation * gravity;
 """
-            + ("" if self._use_gravity else "")
+                if self._use_gravity
+                else ""
+            )
         )
 
     def riemann_solver(self):
@@ -403,19 +387,17 @@ class NavierStokes(Equation):
       QavL[n] += kernels::{{SOLVER_NAME}}::Quadrature<{{CORRECTOR_COMPUTATION_PRECISION}}>::weights2[xy] * QL[xy * strideQ + n];
       QavR[n] += kernels::{{SOLVER_NAME}}::Quadrature<{{CORRECTOR_COMPUTATION_PRECISION}}>::weights2[xy] * QR[xy * strideQ + n];
     }
-  } 
+  }
 
   """
             + self.eigenvalue_functions()
             + """
 
-  // Compute max eigenvalue over face
   auto smax = std::fmax(
-    maxEval(&QavL[0], direction), 
+    maxEval(&QavL[0], direction),
     maxEval(&QavR[0], direction)
   );
 
-  // Add viscous eigenvalue term to max eigenvalue
   const auto factor = 2 * (2 * Order + 1) / (h[direction] * std::sqrt(0.5 * std::numbers::pi));
   smax += factor*std::fmax(
     diffusiveEval(&QavL[0], direction), diffusiveEval(&QavR[0], direction)
@@ -423,7 +405,7 @@ class NavierStokes(Equation):
 
   for (int xy = 0; xy < faceSize; xy++) {
     for (int n = 0; n < NumberOfUnknowns; n++) {
-      FL[xy*NumberOfUnknowns+n] = 0.5 * (FL[xy * NumberOfUnknowns + n] + FR[xy * NumberOfUnknowns + n] 
+      FL[xy*NumberOfUnknowns+n] = 0.5 * (FL[xy * NumberOfUnknowns + n] + FR[xy * NumberOfUnknowns + n]
         + smax * (QL[xy * strideQ + n] - QR[xy * strideQ + n]) );
     }
   }

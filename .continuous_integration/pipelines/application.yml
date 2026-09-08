@@ -56,7 +56,7 @@ ExaSkred Coupled:
   stage: Application
   parallel:
     matrix:
-    - scenario: [fv, limited]
+    - scenario: [impulse-wave, tafjord]
       build_type: [Release, Debug]
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exaskred/coupled/$scenario && PYTHONPATH=$CI_PROJECT_DIR/api python3 $scenario.py --build-mode $build_type"

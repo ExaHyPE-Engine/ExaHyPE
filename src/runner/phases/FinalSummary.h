@@ -10,10 +10,10 @@ namespace runner {
 
 class runner::FinalSummary final : public runner::Phase {
 public:
-  explicit FinalSummary(PhaseContext& context);
+  explicit FinalSummary(runner::PhaseContext& context);
 
   void run() override;
 
 private:
-  PhaseContext& _context;
+  runner::PhaseContext& _context;
 };

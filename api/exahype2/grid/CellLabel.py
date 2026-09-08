@@ -6,18 +6,12 @@ import peano4.datamodel
 
 
 class UpdateCellLabel(ActionSet):
-    """!
-
-    Initialise the cell label when a cell is created and reset the update flag.
-    """
-
     def get_attribute_name(solver_name):
         return solver_name + "CellLabel"
 
     def __init__(self, solver_name):
         super(UpdateCellLabel, self).__init__(descend_invocation_order=1)
         self._solver_name = solver_name
-        pass
 
     def get_constructor_body(self):
         return ""
@@ -80,24 +74,6 @@ class UpdateCellLabel(ActionSet):
 
 
 def create_cell_label(solver_name):
-    """!
-
-    Build the per-cell metadata that we maintain for one solver.
-
-    :: Attributes per cell
-    - timeStamp holds the local time stamp of the current cell. Even global time
-      stepping keeps it per cell, as postprocessing such as tracer particles
-      reads the field.
-    - timeStepSize holds the time step size the cell last advanced with.
-    - hasUpdated records whether the cell was updated in the current sweep.
-    - AMRCriterionEvaluatedThroughoutGridConstruction records whether the
-      refinement criterion has already seen the cell while the grid was built.
-    - requiresCriterionEvaluation marks a cell a topology change has just
-      produced, so the realisation sweeps evaluate the criterion only there.
-
-    solver_name: string
-      Name of the solver
-    """
     result = peano4.datamodel.MetaData(UpdateCellLabel.get_attribute_name(solver_name))
 
     result.add_attribute(peano4.datamodel.Double("timeStamp"))
@@ -106,18 +82,14 @@ def create_cell_label(solver_name):
     result.add_attribute(
         peano4.datamodel.Boolean("AMRCriterionEvaluatedThroughoutGridConstruction")
     )
-    # The cell has just been created by a mesh transfer and the refinement
-    # criterion has not evaluated its data yet. Restricts the criterion pass of
-    # the realisation sweeps to the cells a topology change actually produced.
+    # Marks a cell a topology change has just created, so the realisation sweeps
+    # evaluate the refinement criterion only there.
     result.add_attribute(peano4.datamodel.Boolean("requiresCriterionEvaluation"))
 
     result.merge_method_definition = """
   switch (context) {
-    case ::peano4::stacks::SendReceiveContext::BoundaryExchange:
-      assertion(false, "Cells are never subject to a boundary exchange");
-      break;
-    case ::peano4::stacks::SendReceiveContext::ForkDomain:
-      *this = neighbour;
+    case ::peano4::stacks::SendReceiveContext::InterRank:
+      assertion(false, "Cells are never subject to an inter-rank exchange");
       break;
     default:
       assertion(false, "Not implemented yet");

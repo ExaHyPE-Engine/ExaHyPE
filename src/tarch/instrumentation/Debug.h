@@ -2,17 +2,21 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "Log.h"
+#include "tarch/instrumentation/Log.h"
 
 #if PEANO_DEBUG
 #define logDebug(logMacroMessageStream) \
   do { \
-    tarch::instrumentation::Log:: \
-      debugIfEnabled(TARCH_LOGGING_FUNCTION_SIGNATURE, TARCH_LOGGING_FUNCTION_NAME, __FILE__, [&]() -> std::string { \
+    tarch::instrumentation::Log::debugIfEnabled( \
+      TARCH_LOGGING_FUNCTION_SIGNATURE, \
+      TARCH_LOGGING_FUNCTION_NAME, \
+      __FILE__, \
+      [&]() -> std::string { \
         std::ostringstream conv; \
         conv << logMacroMessageStream; \
         return conv.str(); \
-      }); \
+      } \
+    ); \
   } while (false)
 #else
 #define logDebug(logMacroMessageStream) \

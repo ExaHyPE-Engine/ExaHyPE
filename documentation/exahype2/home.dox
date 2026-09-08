@@ -19,13 +19,13 @@ ExaHyPE has received funding from the European Union’s Horizon 2020 research
 and innovation programme under grant agreement No 671698 (ExaHyPE).
 
 - \subpage page_exahype_faq
+- \subpage page_exahype2_tutorials
 - Applications and user guides
-  - \subpage page_exahype2_tutorials
   - \subpage page_exahype_applications
-  - \subpage page_exahype_benchmarks
   - \subpage page_numerics
   - \subpage page_solvers
   - Core functionality, numerics and ingredients
+    - \subpage page_exahype2_blockstructured
     - \subpage page_exahype_tracer
     - \subpage page_exahype_boundary_conditions
     - \subpage page_exahype_amr
@@ -48,14 +48,13 @@ As ExaHyPE 2 is a Peano 4 extension, you first have to
 @ref page_installation_home "configure and build" the core
 Peano code base, i.e. its libraries, before you start any work.
 
-We recommend that you run a few of the @ref page_exahype_benchmarks benchmarks
-to ensure that all is properly set up before you start developing your own
-codes.
+We recommend that you run a few of the test cases in `tests` to check that
+all is properly set up before you start developing your own codes.
 
 ExaHyPE 2 follows the @ref page_architecture_home "Peano 4 architecture" and hence
 consists of two major parts: a set of C++ routines, classes, macros, ... which
 are built on top of Peano's @ref page_tarch_home "Technical architecture",
-the @ref page_peano4_home "Peano core" and various toolboxes, plus a set of
+and the @ref page_peano4_home "Peano core", plus a set of
 Python scripts which are built on top of Peano's Python API.
 
 Every run of the Python script produces a file called README-executablename.md

@@ -19,26 +19,19 @@ from exahype2.AlignmentHelper import AlignmentHelper
 
 from exahype2.solvers.PDETerms import PDETerms
 from exahype2.solvers.aderdg.LagrangeBasis import GaussLegendreBasis, GaussLobattoBasis
+from exahype2.solvers.limiting.SubcellLimiting import SubcellLimiting
 
 from exahype2.VariableShortcuts import VariableShortcuts
 
 from peano4.Logger import log
 from peano4.output.Helper import render_jinja2_template
 
-"""
-Central enumeration that lets every ADER-DG solver distinguish Gauss-Legendre from
-Gauss-Lobatto nodes. It avoids passing a string around and keeps the naming of the
-node type identical everywhere.
-"""
+
 class Polynomials(IntEnum):
-    Gauss_Legendre = 0,
+    Gauss_Legendre = 0
     Gauss_Lobatto = 1
 
-"""
-Valid precisions for kernels and storage. Each C++ type accepts several spellings, so a
-user can write float, single or fp32 for the same type and pick whichever name is most
-familiar.
-"""
+
 PrecisionType = {
     "SP":     "float",
     "float":  "float",
@@ -63,7 +56,7 @@ PrecisionType = {
 }
 
 
-class ADERDG(object):
+class ADERDG(SubcellLimiting):
     def __init__(
         self,
         name,
@@ -74,10 +67,6 @@ class ADERDG(object):
         self._name = name
         self._solver_number = 0
 
-        """
-        Polynomial order of the representation of the underlying function in each spatial dimension.
-        The number of support points that represent this polynomial is always the order plus one.
-        """
         self._order = order
 
         self._variable_shortcuts = VariableShortcuts(name, unknowns, auxiliary_variables)
@@ -91,7 +80,6 @@ class ADERDG(object):
         self._is_linear     = False
         self._polynomials   = Polynomials.Gauss_Legendre
         self._basis         = GaussLegendreBasis(order + 1)
-        self._use_libxsmm   = False
 
         self._initialise_patches = False
 
@@ -108,11 +96,7 @@ class ADERDG(object):
         self._user_action_set_includes = ""
         self._user_solver_includes = ""
 
-        """
-        These specify the time step and have to be set by a child class to advance the time stepping.
-        They are the main difference between the child classes, as all of them share the same
-        underlying routines.
-        """
+        # A child class sets these to advance the time stepping.
         self._compute_time_step_size = "#error Not yet defined"
         self._compute_new_time_step_size = "#error Not yet defined"
 
@@ -130,7 +114,6 @@ class ADERDG(object):
         self._point_sources_implementation        = PDETerms.None_Implementation
         self._init_point_sources_implementation   = PDETerms.None_Implementation
         self._max_eigenvalue_implementation       = PDETerms.None_Implementation
-        self._adjust_solution_implementation      = PDETerms.None_Implementation
         self._material_param_implementation       = PDETerms.None_Implementation
         self._precision_criterion_implementation  = PDETerms.None_Implementation
         self._riemann_solver_implementation       = PDETerms.None_Implementation
@@ -147,7 +130,6 @@ class ADERDG(object):
         self._use_stateless_diffusive_source_term = False
         self._use_stateless_point_source = False
         self._use_stateless_init_point_sources = False
-        self._use_stateless_adjust_solution = False
         self._use_stateless_material_parameters = False
         self._use_diffusive_flux = False
 
@@ -198,10 +180,7 @@ class ADERDG(object):
         # Safety factor for CFL (Courant-Friedrichs-Lewy) condition
         self._cflSafetyFactor = 0.0
 
-        """
-        Holds a user-supplied postprocessing action set. It runs once every other
-        ADER-DG computation of the sweep has completed.
-        """
+        # The postprocessing action set runs after every other ADER-DG computation of the sweep.
         self._action_set_postprocess_solution = None
 
         self._preprocess_reconstructed_patch = ""
@@ -210,17 +189,12 @@ class ADERDG(object):
         self.create_data_structures()
         self.create_action_sets()
 
-    """
-    Creates all the structures that are attached to the Peano grid, either in a cell or on the faces.
-    These are defined as Peano patches which have given sizes to contain persistent data as well as
-    conditions for when they should be merged, sent, received, stored, loaded, etc.
-    """
     @abstractmethod
     def create_data_structures(self):
         self._number_of_face_projections = 1
 
-        # The current time step holds the solution. The two projections hold the solution and
-        # the fluxes on the faces as predicted by the space-time predictor.
+        # The two projections hold the solution and the fluxes the space-time predictor
+        # writes on the faces.
         self._current_time_step = peano4.datamodel.Patch(
             (self._order + 1, self._order + 1, self._order + 1),
             self._variable_shortcuts.unknowns + self._variable_shortcuts.auxiliary_variables,
@@ -263,8 +237,8 @@ class ADERDG(object):
             self._corrector_computation_precision
         )
 
-        # Custom merge implementation takes into account that the faces project such that
-        # the left cell projects to the left half of the face and the right cell projects to the right half.
+        # The left cell projects to the left half of the face and the right cell to the
+        # right half, so the merge copies half a face.
         self._rhs_estimates_projection.generator.merge_method_definition = (
             get_face_overlap_merge_implementation(self._rhs_estimates_projection)
         )
@@ -283,7 +257,7 @@ class ADERDG(object):
 
         self._rhs_estimates_projection.generator.use_copy_for_exchange = "true"
 
-        # Gets overwritten in subclasses to take into account when to send or receive faces
+        # A child class overwrites the send and the receive condition.
         self._rhs_estimates_projection.generator.send_condition = "false"
         self._rhs_estimates_projection.generator.receive_and_merge_condition = "false"
         self._rhs_estimates_projection.generator.can_receive = self._load_face_data_default_guard()
@@ -303,34 +277,20 @@ class ADERDG(object):
         self._current_time_step.generator.can_send = self._store_cell_data_default_guard()
 
         self._current_time_step.generator.includes += """
-#include "../repositories/SolverRepository.h"
+#include "repositories/SolverRepository.h"
 """
 
         self._previous_time_step.generator.includes += """
-#include "../repositories/SolverRepository.h"
-"""
-
-        self._rhs_estimates_projection.generator.includes += """
-#include "../repositories/SolverRepository.h"
-"""
-
-        self._flux_estimates_projection.generator.includes += """
-#include "../repositories/SolverRepository.h"
+#include "repositories/SolverRepository.h"
 """
 
         self._cell_label = exahype2.grid.create_cell_label(self._name)
         self._face_label = exahype2.grid.create_face_label(self._name)
 
-    """
-    Creates the action sets. These are actions tied to the grid which run at given points of
-    grid generation, construction or steps of the ADER-DG solver. Peano handles grid structures
-    that contain data as well as operations that run on that data, and these are the latter.
-    A guard is the condition for the execution of an operation: the operation runs only if its
-    guard evaluates to true.
-    """
+        self._add_subcell_limiter_data_structures()
+
     @abstractmethod
     def create_action_sets(self):
-        # Updates faces and cells (whether at boundary, refined etc.)
         self._action_set_update_face_label = exahype2.grid.UpdateFaceLabel(self._name)
         self._action_set_update_cell_label = exahype2.grid.UpdateCellLabel(self._name)
         self._action_set_update_face_label.descend_invocation_order = 0
@@ -339,44 +299,34 @@ class ADERDG(object):
         self._action_set_initial_conditions = exahype2.solvers.aderdg.actionsets.InitialCondition(self, self._store_cell_data_default_guard())
         self._action_set_initial_conditions.descend_invocation_order = 1
 
-        self._action_set_handle_boundary = exahype2.solvers.aderdg.actionsets.HandleBoundary(self, self._store_boundary_data_default_guard())
-        self._action_set_handle_boundary.descend_invocation_order = 1
-
-        # Per-time-step resolution-transition coupling on a stable grid. It does not
-        # change the topology (create/destroy off, no grid-control events); that is
-        # exclusively the dedicated DynamicAMR observer's job below.
+        # This action set couples the resolution transitions of a stable grid and changes
+        # no topology.
         self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.aderdg.actionsets.AdaptiveMeshFaceCoupling(
             solver=self,
-            delete_guard=self._delete_face_data_default_guard(),
             interpolate_guard=self._interpolate_face_data_default_guard(),
             restrict_guard=self._restrict_face_data_default_guard(),
             solve_guard=self._store_cell_data_default_guard(),
         )
         self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.descend_invocation_order = 1
 
-        # The one action set that realises topology changes. It lives in the dedicated
-        # DynamicAMR observer (see add_actions_to_dynamic_mesh_refinement), reports the
-        # committed grid-control events back to Peano, and transfers the solution across
+        # This action set realises the topology changes and transfers the solution across
         # every created or destroyed resolution transition.
         self._action_set_dynamic_amr_transfer = exahype2.solvers.aderdg.actionsets.DynamicAMRTransfer(
             solver=self,
-            delete_guard=self._delete_face_data_default_guard(),
             interpolate_guard=self._interpolate_face_data_default_guard(),
             restrict_guard=self._restrict_face_data_default_guard(),
         )
         self._action_set_dynamic_amr_transfer.descend_invocation_order = 1
 
-        # The computation of the solution happens in the prediction and correction action sets.
-        # Prediction extrapolates the solution from time t onto the time nodes, then projects
-        # this extrapolated solution to the faces.
-        # Correction uses the extrapolated face solutions from the predictor and the neighbouring
-        # cells to compute a solution at the next time step.
+        # Prediction extrapolates the solution onto the time nodes and projects it to the
+        # faces. Correction reads those face values and computes the next time step.
         self._action_set_correction = exahype2.solvers.aderdg.actionsets.Correction(
             solver=self,
             cell_guard=self._store_cell_data_default_guard(),
-            face_guard=self._store_face_data_default_guard()
+            face_guard=self._store_face_data_default_guard(),
+            hanging_face_guard=self._interpolate_face_data_default_guard(),
         )
-        self._action_set_correction.descend_invocation_order = 2  # Needs to happen after handle_boundary
+        self._action_set_correction.descend_invocation_order = 2  # Follows AMR prolongation.
 
         self._action_set_prediction = exahype2.solvers.aderdg.actionsets.Prediction(self, self._store_cell_data_default_guard())
         self._action_set_prediction.descend_invocation_order = 3
@@ -393,10 +343,9 @@ class ADERDG(object):
             + "::SolverState::GridInitialisation)",
             build_up_new_refinement_instructions=True,
             called_by_grid_construction=False,
-            # A time step never realises topology changes; it only commits the
-            # refine/coarsen requests. Realisation happens in the DynamicAMR
-            # observer, whose DynamicAMRTransfer delivers the committed events.
-            implement_previous_refinement_instructions=False
+            # A time step commits the refine and erase requests and realises none of them.
+            implement_previous_refinement_instructions=False,
+            skip_after_topology_change=True,
         )
         self._action_set_AMR.descend_invocation_order = 4
 
@@ -406,17 +355,13 @@ class ADERDG(object):
             build_up_new_refinement_instructions=True,
             implement_previous_refinement_instructions=True,
             called_by_grid_construction=True,
+            skip_after_topology_change=False,
         )
         self._action_set_AMR_throughout_grid_construction.descend_invocation_order = 4
 
-        # Re-evaluating the criterion within the realise sweeps lets one round of
-        # dedicated mesh-refinement sweeps climb every level the data justifies:
-        # freshly transferred cells commit further refinement, and the sweeps
-        # repeat until the mesh satisfies the criterion. A delayed source therefore
-        # reaches its full depth before the next time step. Only cells that these
-        # sweeps have just created evaluate the criterion; every other cell
-        # committed its request in the preceding time step, and re-issuing it each
-        # sweep would keep the sweeps running forever.
+        # A cell the mesh-refinement sweeps have just created evaluates the criterion again,
+        # so one round of sweeps reaches every level the data asks for. Every other cell
+        # committed its request in the preceding time step and would never stop repeating it.
         self._action_set_AMR_throughout_dynamic_amr = exahype2.solvers.aderdg.actionsets.RefinementCriterion(
             solver=self,
             guard=self._store_cell_data_default_guard()
@@ -426,19 +371,16 @@ class ADERDG(object):
             build_up_new_refinement_instructions=True,
             implement_previous_refinement_instructions=False,
             called_by_grid_construction=False,
+            skip_after_topology_change=False,
         )
         self._action_set_AMR_throughout_dynamic_amr.descend_invocation_order = 4
 
-        if self._action_set_postprocess_solution == None:
+        if self._action_set_postprocess_solution is None:
             self._action_set_postprocess_solution = exahype2.solvers.aderdg.actionsets.EmptyPostprocessSolution(solver=self)
         self._action_set_postprocess_solution.descend_invocation_order = 4
 
-        # The cell/nodal plotter is always present; the face plotter is optional
-        # and only wired in when the user calls add_face_plotter(). Both are
-        # instantiated lazily in add_actions_to_plot_solution(), matching the
-        # finite-volume / finite-difference / Runge-Kutta solvers. The output
-        # format is a project-wide setting (--plot-format / project.set_plot_format),
-        # so it is not configured per solver here.
+        # add_actions_to_plot_solution() constructs both plotters. add_face_plotter() sets
+        # the face plotter, which stays None without that call.
         self._plotter = peano4.plotter.PatchPlotter
         self._face_plotter = None
         self._face_plotter_guard = None
@@ -501,11 +443,9 @@ class ADERDG(object):
                 )
 
     def _load_face_data_default_guard(self):
-        # Receiving consumes the batch the previous sweep sent, so it is enabled
-        # from the first sweep that follows a face-data-storing sweep on. A guard
-        # keyed on the solver state alone cannot express that: the state stays at
-        # GridInitialisation across the initialise-drain loop, whose every sweep
-        # sends.
+        # Receiving consumes the batch the previous sweep sent, so it starts with the first
+        # sweep that follows a face-data-storing sweep. The solver state alone does not say
+        # that, because it stays at GridInitialisation across every sending sweep.
         return (
             "not marker.hasBeenRefined() "
             + "and repositories::"
@@ -573,6 +513,22 @@ class ADERDG(object):
     def previous_unknown_identifier(self):
         return self._name + "Q_old"
 
+    def _plotted_solution_patch(self):
+        """Returns the cell patch that holds the accepted solution at plot time.
+
+        Fused ADER-DG corrects into ``Q`` and copies ``Q`` into ``Q_old`` in one traversal.
+        With subcell limiting ``Q_old`` stays the predictor backup and ``Q`` carries the
+        accepted solution.
+        """
+        if self.subcell_limiter_is_enabled:
+            return self._current_time_step
+        return self._previous_time_step
+
+    def _plotted_solution_identifier(self):
+        if self.subcell_limiter_is_enabled:
+            return self.current_unknown_identifier()
+        return self.previous_unknown_identifier()
+
     def get_name_of_global_instance(self):
         return "instanceOf" + self._name
 
@@ -596,6 +552,7 @@ class ADERDG(object):
         datamodel.add_face(self._face_label)
         datamodel.add_face(self._rhs_estimates_projection)
         datamodel.add_face(self._flux_estimates_projection)
+        self._add_subcell_limiter_to_datamodel(datamodel)
 
     def add_use_data_statements_to_Peano4_solver_step(self, step):
         step.use_cell(self._cell_label)
@@ -604,9 +561,11 @@ class ADERDG(object):
         step.use_face(self._face_label)
         step.use_face(self._rhs_estimates_projection)
         step.use_face(self._flux_estimates_projection)
+        self._use_subcell_limiter_data(step)
 
     def add_actions_to_init_grid(self, step):
         step.add_action_set(self._action_set_initial_conditions)
+        self._add_subcell_limiter_actions_to_init_grid(step)
         step.add_action_set(self._action_set_update_face_label)
         step.add_action_set(self._action_set_update_cell_label)
         step.add_action_set(self._action_set_AMR)
@@ -628,11 +587,10 @@ class ADERDG(object):
                 for x in self._basis.quadrature_points():
                     mapping.append((x, y, z))
 
-        # The cell/nodal plotter is always present.
         plotter = self._plotter(
             filename=self._name,
-            patch=self._previous_time_step,
-            dataset_name=self._unknown_identifier() + "_old",
+            patch=self._plotted_solution_patch(),
+            dataset_name=self._plotted_solution_identifier(),
             description=self._variable_shortcuts.plot_description,
             representation="nodal",
             mapping=mapping,
@@ -641,7 +599,6 @@ class ADERDG(object):
         )
         step.add_action_set(plotter)
 
-        # The face plotter is optional - only added when the user asked for it.
         if self._face_plotter is not None:
             face_plotter = self._face_plotter(
                 filename=self._name + "-face",
@@ -655,19 +612,14 @@ class ADERDG(object):
             step.add_action_set(face_plotter)
 
     def add_actions_to_dynamic_mesh_refinement(self, step):
-        """!
-        Add action sets to the dedicated DynamicAMR observer.
+        """Adds the action sets of the one observer that changes the topology.
 
-        This is the only observer that changes the topology. It triggers and
-        realises the committed refine/coarsen requests, prolongs/restricts the
-        ADER-DG solution across every resolution transition Peano creates or
-        destroys, and re-evaluates the refinement criterion on cells it created,
-        so one round of these sweeps realises the full depth the data justifies.
-        Mirrors exahype2.solvers.fv.FV.add_actions_to_dynamic_mesh_refinement.
+        This observer realises the refine and erase requests the time step committed.
         """
         step.add_action_set(self._action_set_update_face_label)
         step.add_action_set(self._action_set_update_cell_label)
         step.add_action_set(self._action_set_dynamic_amr_transfer)
+        self._add_subcell_limiter_actions_to_dynamic_mesh_refinement(step)
         step.add_action_set(self._action_set_AMR_throughout_dynamic_amr)
 
     def add_actions_to_perform_time_step(self, step):
@@ -675,12 +627,13 @@ class ADERDG(object):
         step.add_action_set(self._action_set_update_cell_label)
         step.add_action_set(self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement)
 
-        step.add_action_set(self._action_set_handle_boundary)
         step.add_action_set(self._action_set_correction)
         step.add_action_set(self._action_set_prediction)
 
         step.add_action_set(self._action_set_AMR)
         step.add_action_set(self._action_set_postprocess_solution)
+
+        self._add_subcell_limiter_actions_to_perform_time_step(step)
 
     def add_implementation_files_to_project(self, namespace, output, dimensions):
         self._dimensions = dimensions
@@ -692,7 +645,7 @@ class ADERDG(object):
             or self._point_sources_implementation != PDETerms.None_Implementation
         ):
             raise AssertionError(
-                "Material parameters and point sources are currently only available for linear generated kernels."
+                "Material parameters and point sources are only available for linear generated kernels."
             )
 
         if (
@@ -707,9 +660,8 @@ class ADERDG(object):
                 f"or when global adaptive time stepping is enabled."
             )
 
-        # Assemble the template prefix in a local: mutating the attribute would
-        # double the class name when the generator runs a second time on the
-        # same solver object.
+        # The class name goes into a local, because a second generation run on the same
+        # solver object would append it to the attribute twice.
         if self._solver_template_file_class_name is None:
             templatefile_prefix = self._templatefile_prefix + self.__class__.__name__
         else:
@@ -753,7 +705,7 @@ class ADERDG(object):
         output.makefile.add_cpp_file("Abstract" + self._name + ".cpp", generated=True)
         output.makefile.add_cpp_file(self._name + ".cpp", generated=True)
 
-        generate_kernels(solver=self, d=d, output=output)
+        generate_kernels(solver=self, dictionary=d, output=output)
 
     def set_solver_constants(self, datastring):
         self._solver_constants = datastring
@@ -790,6 +742,10 @@ class ADERDG(object):
 
     @preprocess_reconstructed_patch.setter
     def preprocess_reconstructed_patch(self, kernel):
+        """Sets the C++ code that runs before the predictor.
+
+        The code reads ``QNew``, ``QOld``, ``marker``, ``timeStamp`` and ``timeStepSize``.
+        """
         self._preprocess_reconstructed_patch = kernel
         self.create_data_structures()
         self.create_action_sets()
@@ -800,6 +756,10 @@ class ADERDG(object):
 
     @postprocess_updated_patch.setter
     def postprocess_updated_patch(self, kernel):
+        """Sets the C++ code that runs after the corrector.
+
+        The code reads ``QNew``, ``marker``, ``timeStamp`` and ``timeStepSize``.
+        """
         self._postprocess_updated_patch = kernel
         self.create_data_structures()
         self.create_action_sets()
@@ -839,6 +799,37 @@ class ADERDG(object):
         d["CFL_SAFETY_FACTOR"]  = self._cflSafetyFactor
         d["CFL_ADER"]           = self._cflAder[self._order]
 
+        d["SUBCELL_LIMITER"]    = self.subcell_limiter_is_enabled
+        d["SUBCELL_RIEMANN_SOLVER_IMPLEMENTATION"] = (
+            self._subcell_limiter_solver.riemann_solver
+            if self.subcell_limiter_is_enabled
+            and self._subcell_limiter_solver.riemann_solver is not None
+            else PDETerms.None_Implementation
+        )
+        d["SUBCELL_PAC_IMPLEMENTATION"] = (
+            self._subcell_limiter_physical_admissibility_criterion
+            if self.subcell_limiter_is_enabled
+            and self._subcell_limiter_physical_admissibility_criterion is not None
+            else PDETerms.None_Implementation
+        )
+        d["SUBCELL_DMP_OBSERVABLES_IMPLEMENTATION"] = (
+            self._subcell_limiter_dmp_observables
+            if self.subcell_limiter_is_enabled
+            and self._subcell_limiter_dmp_observables is not None
+            else PDETerms.None_Implementation
+        )
+        d["SUBCELL_NUMBER_OF_DMP_OBSERVABLES"] = (
+            self._subcell_limiter_number_of_dmp_observables
+            if self.subcell_limiter_is_enabled
+            else 0
+        )
+        d["SUBCELL_DMP_RELAXATION_IMPLEMENTATION"] = (
+            self._subcell_limiter_dmp_relaxation_parameter_implementation
+            if self.subcell_limiter_is_enabled
+            and self._subcell_limiter_dmp_relaxation_parameter_implementation is not None
+            else PDETerms.None_Implementation
+        )
+
         d["USE_HALF_PRECISION"] = self._use_half_precision
         d["IS_LINEAR"] = self._is_linear
         d["LINEARITY"] = "linear" if self._is_linear else "nonlinear"
@@ -853,7 +844,10 @@ class ADERDG(object):
         d["PICARD_COMPUTATION_PRECISION"]     = self._precompute_picard_precision
 
         d["COMPUTATION_PRECISIONS"] = self._predictor_computation_precisions[:]
-        if self._additional_precisions!=None and self._additional_precisions not in d["COMPUTATION_PRECISIONS"]:
+        if (
+            self._additional_precisions is not None
+            and self._additional_precisions not in d["COMPUTATION_PRECISIONS"]
+        ):
             d["COMPUTATION_PRECISIONS"].append(self._additional_precisions)
         if self._corrector_computation_precision not in d["COMPUTATION_PRECISIONS"]:
             d["COMPUTATION_PRECISIONS"].append(self._corrector_computation_precision)
@@ -869,10 +863,10 @@ class ADERDG(object):
 
         d["ABSTRACT_SOLVER_USER_DECLARATIONS"] = render_template(
             self._abstract_solver_user_declarations
-        )
+        ).strip("\n")
         d["ABSTRACT_SOLVER_USER_DEFINITIONS"] = render_template(
             self._abstract_solver_user_definitions
-        )
+        ).strip("\n")
         d["SOLVER_USER_DECLARATIONS"] = render_template(
             self._solver_user_declarations
         )
@@ -925,7 +919,6 @@ class ADERDG(object):
         d["RIEMANN_SOLVER_IMPLEMENTATION"] = self._riemann_solver_implementation
         d["SOURCE_TERM_IMPLEMENTATION"] = self._source_term_implementation
         d["DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION"] = self._diffusive_source_term_implementation
-        d["ADJUST_SOLUTION_IMPLEMENTATION"] = self._adjust_solution_implementation
         d["NUMBER_OF_POINT_SOURCES"]  = self._number_of_point_sources
         d["POINT_SOURCES_IMPLEMENTATION"] = self._point_sources_implementation
         d["INIT_POINT_SOURCES_IMPLEMENTATION"] = self._init_point_sources_implementation
@@ -939,19 +932,36 @@ class ADERDG(object):
         d["USE_DIFFUSIVE_SOURCE"]     = self._diffusive_source_term_implementation != PDETerms.None_Implementation
         d["USE_MATERIAL_PARAMETERS"]  = self._material_param_implementation != PDETerms.None_Implementation
         d["USE_POINT_SOURCE"]         = self._point_sources_implementation != PDETerms.None_Implementation
-        d["USE_ADJUST_SOLUTION"]      = self._adjust_solution_implementation != PDETerms.None_Implementation
         d["USE_DIFFUSIVE_FLUX"]       = self._use_diffusive_flux
 
         d["STATELESS_INITIAL_CONDITIONS"] = self._use_stateless_initial_conditions
         d["STATELESS_BOUNDARY_CONDITIONS"] = self._use_stateless_boundary_conditions
         d["STATELESS_REFINEMENT_CRITERION"] = self._use_stateless_refinement_criterion
-        d["STATELESS_FLUX"] = self._use_stateless_flux
-        d["STATELESS_NCP"] = self._use_stateless_ncp
-        d["STATELESS_MAX_EIGENVALUE"] = self._use_stateless_max_eigenvalue
+        # The subcell scheme's kernels reach every PDE term through the solver
+        # type, so a limited solver's user-defined terms are static members and
+        # every call site uses the stateless form.
+        def stateless_or_static_member(stateless, implementation):
+            return stateless or (
+                self.subcell_limiter_is_enabled
+                and implementation == PDETerms.User_Defined_Implementation
+            )
+        d["STATELESS_FLUX"] = stateless_or_static_member(
+            self._use_stateless_flux, self._flux_implementation
+        )
+        d["STATELESS_NCP"] = stateless_or_static_member(
+            self._use_stateless_ncp, self._ncp_implementation
+        )
+        d["STATELESS_MAX_EIGENVALUE"] = stateless_or_static_member(
+            self._use_stateless_max_eigenvalue, self._max_eigenvalue_implementation
+        )
         d["STATELESS_RIEMANN_SOLVER"] = self._use_stateless_riemann_solver
-        d["STATELESS_SOURCE_TERM"] = self._use_stateless_source_term
-        d["STATELESS_DIFFUSIVE_SOURCE_TERM"] = self._use_stateless_diffusive_source_term
-        d["STATELESS_ADJUST_SOLUTION"] = self._use_stateless_adjust_solution
+        d["STATELESS_SOURCE_TERM"] = stateless_or_static_member(
+            self._use_stateless_source_term, self._source_term_implementation
+        )
+        d["STATELESS_DIFFUSIVE_SOURCE_TERM"] = stateless_or_static_member(
+            self._use_stateless_diffusive_source_term,
+            self._diffusive_source_term_implementation,
+        )
         d["STATELESS_POINT_SOURCE"] = self._use_stateless_point_source
         d["STATELESS_INIT_POINT_SOURCES"] = self._use_stateless_init_point_sources
         d["STATELESS_MATERIAL_PARAMETERS"] = self._use_stateless_material_parameters
@@ -962,7 +972,19 @@ class ADERDG(object):
 
         d["QUADRATURE_POINTS"]      = ", ".join(self._basis.quadrature_points())
 
-        d["USE_LIBXSMM"] = self._use_libxsmm
+    @staticmethod
+    def _validate_diffusive_configuration(
+        is_linear,
+        use_diffusive_flux,
+        diffusive_source_term,
+    ):
+        if is_linear and (
+            use_diffusive_flux
+            or diffusive_source_term != PDETerms.None_Implementation
+        ):
+            raise ValueError(
+                "Linear ADER-DG does not support diffusive fluxes or source terms."
+            )
 
     def set_implementation(
         self,
@@ -975,13 +997,21 @@ class ADERDG(object):
         riemann_solver=None,
         source_term=None,
         diffusive_source_term=None,
-        adjust_solution=None,
         material_parameters=None,
         number_of_point_sources=0,
         point_source=None,
         init_point_source_location=None,
         use_diffusive_flux=None,
     ):
+        self._validate_diffusive_configuration(
+            self._is_linear,
+            self._use_diffusive_flux
+            if use_diffusive_flux is None
+            else use_diffusive_flux,
+            self._diffusive_source_term_implementation
+            if diffusive_source_term is None
+            else diffusive_source_term,
+        )
         if initial_conditions is not None:
             self._initial_conditions_implementation = initial_conditions
             if initial_conditions is not PDETerms.User_Defined_Implementation:
@@ -1027,11 +1057,6 @@ class ADERDG(object):
             if diffusive_source_term is not PDETerms.User_Defined_Implementation:
                 self._use_stateless_diffusive_source_term = True
 
-        if adjust_solution is not None:
-            self._adjust_solution_implementation = adjust_solution
-            if adjust_solution is not PDETerms.User_Defined_Implementation:
-                self._use_stateless_adjust_solution = True
-
         if material_parameters is not None:
             self._material_param_implementation = material_parameters
             if material_parameters is not PDETerms.User_Defined_Implementation:
@@ -1053,7 +1078,7 @@ class ADERDG(object):
                     self._use_stateless_init_point_sources = True
 
         if use_diffusive_flux is not None:
-          self._use_diffusive_flux = use_diffusive_flux
+            self._use_diffusive_flux = use_diffusive_flux
 
         self.create_data_structures()
         self.create_action_sets()
@@ -1062,7 +1087,6 @@ class ADERDG(object):
         self,
         is_linear                             = False,
         polynomials                           = Polynomials.Gauss_Legendre,
-        use_libxsmm                           = False,
         precision                             = False,
         predictor_computation_precisions      = False,
         corrector_computation_precision       = False,
@@ -1071,6 +1095,11 @@ class ADERDG(object):
         precision_criterion_implementation    = PDETerms.User_Defined_Implementation,
         initialise_patches                    = False
     ):
+        self._validate_diffusive_configuration(
+            is_linear,
+            self._use_diffusive_flux,
+            self._diffusive_source_term_implementation,
+        )
         if polynomials is Polynomials.Gauss_Legendre:
             self._basis = GaussLegendreBasis(self._order + 1)
         elif polynomials is Polynomials.Gauss_Lobatto:
@@ -1084,8 +1113,6 @@ class ADERDG(object):
 
         self._is_linear = is_linear
         self._polynomials = polynomials
-
-        self._use_libxsmm = use_libxsmm
 
         if precision != False:
             if precision in PrecisionType.keys():
@@ -1112,10 +1139,13 @@ class ADERDG(object):
 
         if predictor_computation_precisions != False:
             self._predictor_computation_precisions = []
-            for prec in predictor_computation_precisions:
-                if prec in PrecisionType.keys():
-                    prec = PrecisionType[prec]
-                self._predictor_computation_precisions.append(prec)
+            for predictor_precision in predictor_computation_precisions:
+                if predictor_precision not in PrecisionType.keys():
+                    raise AssertionError(
+                        "The chosen precision is not valid. Valid choices are: "
+                        + ", ".join(PrecisionType.keys())
+                    )
+                self._predictor_computation_precisions.append(PrecisionType[predictor_precision])
 
         if len(self._predictor_computation_precisions) > 1:
             self._precision_criterion_implementation = precision_criterion_implementation
@@ -1126,18 +1156,13 @@ class ADERDG(object):
         self.create_action_sets()
 
     def add_face_plotter(self, guard="true"):
-        """Also plot the faces (the projected face estimates).
-
-        Optional. The cell/nodal volume plotter is always present; calling this
-        adds a face plot in a separate '<name>-face' output alongside it. The
-        output format is the project-wide one (--plot-format / set_plot_format).
-        """
+        """Adds a plotter that writes the projected face estimates to ``<name>-face``."""
         self._face_plotter = peano4.plotter.FacePlotter
         self._face_plotter_guard = guard
 
 
 def get_face_overlap_merge_implementation(patch_overlap):
-    Template = """
+    template = """
   constexpr int SpaceFaceSize = Cardinality / 2;
 
   auto* dst = this->data();
@@ -1146,7 +1171,6 @@ def get_face_overlap_merge_implementation(patch_overlap):
   assertion(src);
 
   const int faceDimension = marker.getSelectedFaceNumber() % DIMENSIONS;
-  // If the outer normal is positive, the normal points to the right so the face is on the right.
   const int faceLR = (marker.outerNormal()[faceDimension] > 0.0 ? 0 : 1);
 
   std::copy_n(
@@ -1155,4 +1179,4 @@ def get_face_overlap_merge_implementation(patch_overlap):
     &dst[(1 - faceLR) * SpaceFaceSize]
   );
 """
-    return Template
+    return template

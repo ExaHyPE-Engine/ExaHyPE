@@ -8,7 +8,6 @@ Peano can use several optional third-party libraries. These dependencies are not
 required for every application, but they enable additional solver, output, or
 performance functionality.
 
-- @subpage page_third-party_OpenBLAS
 - @subpage page_third-party_hdf5
 
 */

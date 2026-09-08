@@ -2,14 +2,13 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "exahype2/Enumeration.h"
 #include "peano4/Globals.h"
 #include "peano4/Loop.h"
 #include "tarch/Assertions.h"
 #include "tarch/NonCriticalAssertions.h"
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/la/Vector.h"
-#include "tarch/multicore/multicore.h"
-#include "toolbox/blockstructured/Enumeration.h"
 
 namespace exahype2::fv {
   TARGET_DECLARE
@@ -31,20 +30,21 @@ namespace exahype2::fv {
     tarch::la::Vector<Dimensions, double> size;
     tarch::la::Vector<Dimensions, double> centre;
 
-    const auto* xd = x.data();
-    const auto* hd = h.data();
-    const auto* id = index.data();
+    const auto* cellCentreData  = x.data();
+    const auto* cellSizeData    = h.data();
+    const auto* volumeIndexData = index.data();
 
-    auto* sd = size.data();
-    auto* cd = centre.data();
+    auto* volumeSizeData   = size.data();
+    auto* volumeCentreData = centre.data();
 
-    constexpr double InvN = 1.0 / NumberOfVolumesPerAxisInPatch;
+    constexpr double InverseVolumesPerAxis = 1.0 / NumberOfVolumesPerAxisInPatch;
 
     UNROLL(DIMENSIONS)
-    for (int d = 0; d < Dimensions; d++) {
-      const double volumeSize = hd[d] * InvN;
-      sd[d]                   = volumeSize;
-      cd[d]                   = xd[d] - 0.5 * hd[d] + (0.5 + id[d]) * volumeSize;
+    for (int axis = 0; axis < Dimensions; axis++) {
+      const double volumeSize = cellSizeData[axis] * InverseVolumesPerAxis;
+      volumeSizeData[axis]    = volumeSize;
+      volumeCentreData[axis] =
+        cellCentreData[axis] - 0.5 * cellSizeData[axis] + (0.5 + volumeIndexData[axis]) * volumeSize;
     }
 
     return {size, centre};
@@ -65,26 +65,25 @@ namespace exahype2::fv {
     tarch::la::Vector<Dimensions, double> faceSize;
     tarch::la::Vector<Dimensions, double> faceCentre;
 
-    const auto* xd = x.data();
-    const auto* hd = h.data();
-    const auto* id = index.data();
+    const auto* cellCentreData = x.data();
+    const auto* cellSizeData   = h.data();
+    const auto* faceIndexData  = index.data();
 
-    auto* fsd = faceSize.data();
-    auto* fcd = faceCentre.data();
+    auto* faceSizeData   = faceSize.data();
+    auto* faceCentreData = faceCentre.data();
 
-    constexpr double InvN = 1.0 / NumberOfVolumesPerAxisInPatch;
+    constexpr double InverseVolumesPerAxis = 1.0 / NumberOfVolumesPerAxisInPatch;
 
     UNROLL(DIMENSIONS)
-    for (int d = 0; d < Dimensions; d++) {
-      const double volumeSize = hd[d] * InvN;
-      fsd[d]                  = volumeSize;
+    for (int axis = 0; axis < Dimensions; axis++) {
+      const double volumeSize = cellSizeData[axis] * InverseVolumesPerAxis;
+      faceSizeData[axis]      = volumeSize;
 
-      // Base centre
-      double centre = (d == normal) ? xd[d] - overlap * volumeSize + 0.5 * volumeSize
-                                    : xd[d] - 0.5 * hd[d] + 0.5 * volumeSize;
+      const double faceCentreOnAxis = (axis == normal)
+        ? cellCentreData[axis] - overlap * volumeSize + 0.5 * volumeSize
+        : cellCentreData[axis] - 0.5 * cellSizeData[axis] + 0.5 * volumeSize;
 
-      // Shift by index
-      fcd[d] = centre + id[d] * volumeSize;
+      faceCentreData[axis] = faceCentreOnAxis + faceIndexData[axis] * volumeSize;
     }
 
     return {faceSize, faceCentre};
@@ -96,8 +95,8 @@ namespace exahype2::fv {
   ) {
     assertion(numberOfVolumesPerAxisInPatch >= 1, h, numberOfVolumesPerAxisInPatch);
     tarch::la::Vector<2, double> volumeSize;
-    for (int d = 0; d < 2; d++) {
-      volumeSize(d) = h(d) / numberOfVolumesPerAxisInPatch;
+    for (int axis = 0; axis < 2; axis++) {
+      volumeSize(axis) = h(axis) / numberOfVolumesPerAxisInPatch;
     }
     return volumeSize;
   }
@@ -108,8 +107,8 @@ namespace exahype2::fv {
   ) {
     assertion(numberOfVolumesPerAxisInPatch >= 1, h, numberOfVolumesPerAxisInPatch);
     tarch::la::Vector<3, double> volumeSize;
-    for (int d = 0; d < 3; d++) {
-      volumeSize(d) = h(d) / numberOfVolumesPerAxisInPatch;
+    for (int axis = 0; axis < 3; axis++) {
+      volumeSize(axis) = h(axis) / numberOfVolumesPerAxisInPatch;
     }
     return volumeSize;
   }
@@ -134,12 +133,12 @@ namespace exahype2::fv {
     const int                           numberOfVolumesPerAxisInPatch,
     const tarch::la::Vector<2, int>&    index
   ) {
-    tarch::la::Vector<2, double> volumeSize = getVolumeSize(h, numberOfVolumesPerAxisInPatch);
-    tarch::la::Vector<2, double> result     = x - 0.5 * h + 0.5 * volumeSize;
-    for (int d = 0; d < 2; d++) {
-      result(d) += index(d) * volumeSize(d);
+    tarch::la::Vector<2, double> volumeSize   = getVolumeSize(h, numberOfVolumesPerAxisInPatch);
+    tarch::la::Vector<2, double> volumeCentre = x - 0.5 * h + 0.5 * volumeSize;
+    for (int axis = 0; axis < 2; axis++) {
+      volumeCentre(axis) += index(axis) * volumeSize(axis);
     }
-    return result;
+    return volumeCentre;
   }
 
   static INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, double> getVolumeCentre(
@@ -148,12 +147,12 @@ namespace exahype2::fv {
     const int                           numberOfVolumesPerAxisInPatch,
     const tarch::la::Vector<3, int>&    index
   ) {
-    tarch::la::Vector<3, double> volumeSize = getVolumeSize(h, numberOfVolumesPerAxisInPatch);
-    tarch::la::Vector<3, double> result     = x - 0.5 * h + 0.5 * volumeSize;
-    for (int d = 0; d < 3; d++) {
-      result(d) += index(d) * volumeSize(d);
+    tarch::la::Vector<3, double> volumeSize   = getVolumeSize(h, numberOfVolumesPerAxisInPatch);
+    tarch::la::Vector<3, double> volumeCentre = x - 0.5 * h + 0.5 * volumeSize;
+    for (int axis = 0; axis < 3; axis++) {
+      volumeCentre(axis) += index(axis) * volumeSize(axis);
     }
-    return result;
+    return volumeCentre;
   }
 
   static INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<2, double> getFaceCentre(
@@ -165,16 +164,16 @@ namespace exahype2::fv {
     const tarch::la::Vector<2, int>&    index
   ) {
     tarch::la::Vector<2, double> volumeSize = getFaceSize(h, numberOfVolumesPerAxisInPatch);
-    tarch::la::Vector<2, double> result;
-    for (int d = 0; d < 2; d++) {
-      if (d == normal) {
-        result(d) = x(d) - overlap * volumeSize(d) + 0.5 * volumeSize(d);
+    tarch::la::Vector<2, double> faceCentre;
+    for (int axis = 0; axis < 2; axis++) {
+      if (axis == normal) {
+        faceCentre(axis) = x(axis) - overlap * volumeSize(axis) + 0.5 * volumeSize(axis);
       } else {
-        result(d) = x(d) - 0.5 * h(d) + 0.5 * volumeSize(d);
+        faceCentre(axis) = x(axis) - 0.5 * h(axis) + 0.5 * volumeSize(axis);
       }
-      result(d) += index(d) * volumeSize(d);
+      faceCentre(axis) += index(axis) * volumeSize(axis);
     }
-    return result;
+    return faceCentre;
   }
 
   static INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, double> getFaceCentre(
@@ -186,16 +185,16 @@ namespace exahype2::fv {
     const tarch::la::Vector<3, int>&    index
   ) {
     tarch::la::Vector<3, double> volumeSize = getVolumeSize(h, numberOfVolumesPerAxisInPatch);
-    tarch::la::Vector<3, double> result     = x - 0.5 * h + 0.5 * volumeSize;
-    for (int d = 0; d < 3; d++) {
-      if (d == normal) {
-        result(d) = x(d) - overlap * volumeSize(d) + 0.5 * volumeSize(d);
+    tarch::la::Vector<3, double> faceCentre = x - 0.5 * h + 0.5 * volumeSize;
+    for (int axis = 0; axis < 3; axis++) {
+      if (axis == normal) {
+        faceCentre(axis) = x(axis) - overlap * volumeSize(axis) + 0.5 * volumeSize(axis);
       } else {
-        result(d) = x(d) - 0.5 * h(d) + 0.5 * volumeSize(d);
+        faceCentre(axis) = x(axis) - 0.5 * h(axis) + 0.5 * volumeSize(axis);
       }
-      result(d) += index(d) * volumeSize(d);
+      faceCentre(axis) += index(axis) * volumeSize(axis);
     }
-    return result;
+    return faceCentre;
   }
 
   TARGET_DECLARE_END
@@ -206,19 +205,6 @@ namespace exahype2::fv {
 
   std::string plotVolume(const double* NOALIAS Q, int unknowns);
 
-  /**
-   * Just runs over the patch and ensures that no entry is non or infinite. In
-   * ExaHyPE, we primarily work with split approaches. That is, diagonal halo
-   * entries are never initialised properly: We can copy over the face-connected
-   * data, but we lack information through the diagonals. This routine takes
-   * this into account when it validates the entries.
-   *
-   * Assumes all data are held as AoS.
-   *
-   * @param location String that tells system from where this routine got called
-   * @param minValues Is either a nullptr or it points to a double array with
-   *   exactly unknowns+auxiliaryVariables entries
-   */
   template <typename T>
   void validatePatch(
     const T* NOALIAS   Q,
@@ -232,13 +218,6 @@ namespace exahype2::fv {
     double*            maxValues                   = nullptr
   );
 
-  /**
-   * Plot patch.
-   *
-   * Usually used for debugging.
-   *
-   * Assumes all data are held as AoS.
-   */
   template <typename T>
   std::string plotPatch(
     const T* NOALIAS Q,
@@ -254,23 +233,16 @@ namespace exahype2::fv {
     const T* NOALIAS Q,
     int              unknowns,
     int              auxiliaryVariables,
-    int              numberOfGridCellsPerPatchPerAxis,
+    int              numberOfVolumesPerAxisInPatch,
     int              haloSize,
     int              normal,
     bool             prettyPrint = false
   );
 
-  /**
-   * A face always holds a left and a right overlap
-   *
-   * This routine copies over half of the overlap
-   *
-   * @param isRightLayer
-   */
   template <typename T>
   void copyHalfOfHalo(
     int              unknownsPlusAuxiliaryVariables,
-    int              numberOfGridCellsPerPatchPerAxis,
+    int              numberOfVolumesPerAxisInPatch,
     int              haloSize, // same as overlap
     int              normal,
     bool             isRightLayer,
@@ -279,4 +251,4 @@ namespace exahype2::fv {
   );
 } // namespace exahype2::fv
 
-#include "PatchUtils.cpph"
+#include "exahype2/fv/PatchUtils.cpph"

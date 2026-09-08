@@ -1,9 +1,12 @@
-#pragma once
-
-inline ParticleState exahype2::fv::particles::integration::
-  updatePartialStep(const ParticleState& current, double timeStepSize, double stepFraction) {
-  ParticleState state;
-  double        factorDt = stepFraction * timeStepSize;
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+inline exahype2::fv::particles::utils::ParticleState exahype2::fv::particles::integration::updatePartialStep(
+  const exahype2::fv::particles::utils::ParticleState& current,
+  double                                               timeStepSize,
+  double                                               stepFraction
+) {
+  exahype2::fv::particles::utils::ParticleState state;
+  const double                                  factorDt = stepFraction * timeStepSize;
 
   for (int d = 0; d < DIMENSIONS; ++d) {
     state.velocity(d) = current.velocity(d) + factorDt * current.acceleration(d);
@@ -13,14 +16,14 @@ inline ParticleState exahype2::fv::particles::integration::
   return state;
 }
 
-inline ParticleState exahype2::fv::particles::integration::updatePartialStepWithBase(
-  const ParticleState& base,
-  const ParticleState& update,
-  double               timeStepSize,
-  double               factor
+inline exahype2::fv::particles::utils::ParticleState exahype2::fv::particles::integration::updatePartialStepWithBase(
+  const exahype2::fv::particles::utils::ParticleState& base,
+  const exahype2::fv::particles::utils::ParticleState& update,
+  double                                               timeStepSize,
+  double                                               factor
 ) {
-  ParticleState result;
-  double        factorDt = factor * timeStepSize;
+  exahype2::fv::particles::utils::ParticleState result;
+  const double                                  factorDt = factor * timeStepSize;
 
   for (int d = 0; d < DIMENSIONS; ++d) {
     result.velocity(d)     = base.velocity(d) + factorDt * update.acceleration(d);
@@ -31,16 +34,20 @@ inline ParticleState exahype2::fv::particles::integration::updatePartialStepWith
   return result;
 }
 
-inline ParticleState exahype2::fv::particles::integration::
-  updateMidpointStep(const ParticleState& current, double timeStepSize, double stepFraction) {
-  ParticleState state;
-  double        factorDt = stepFraction * timeStepSize;
+inline exahype2::fv::particles::utils::ParticleState exahype2::fv::particles::integration::updateMidpointStep(
+  const exahype2::fv::particles::utils::ParticleState& current,
+  double                                               timeStepSize,
+  double                                               stepFraction
+) {
+  exahype2::fv::particles::utils::ParticleState state;
+  const double                                  factorDt = stepFraction * timeStepSize;
 
   for (int d = 0; d < DIMENSIONS; ++d) {
     state.velocity(d) = current.velocity(d) + factorDt * current.acceleration(d);
     state.position(d) = current.position(d) + factorDt * state.velocity(d);
   }
 
-  state.acceleration = current.acceleration; // Will be overwritten later
+  // The caller replaces the acceleration after the force evaluation of the midpoint state.
+  state.acceleration = current.acceleration;
   return state;
 }

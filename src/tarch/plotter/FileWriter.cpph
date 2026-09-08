@@ -2,31 +2,39 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 template <class T>
-void tarch::plotter::FileWriter::DataPlotter::writeTuple(int index, const T* const v, int n) {
-  // We look up the field every time to be safe against vector reallocation
-  // of _targetFields (if new fields are added by other plotters).
+void tarch::plotter::FileWriter::DataPlotter::writeTuple(
+  const int      index,
+  const T* const values,
+  const int      numberOfValues
+) {
+  assertion(index >= 0, index);
+  assertion(values != nullptr);
+  assertion(numberOfValues == _components, numberOfValues, _components);
+
+  // The field is looked up on every call, as adding a field elsewhere reallocates _targetFields.
+  assertion(_fieldIndex >= 0, _fieldIndex);
+  assertion(static_cast<std::size_t>(_fieldIndex) < _targetFields.size(), _fieldIndex, _targetFields.size());
   DataField& field = _targetFields[_fieldIndex];
 
-  const std::size_t base = static_cast<std::size_t>(index) * _components;
+  const auto tupleIndex     = static_cast<std::size_t>(index);
+  const auto componentCount = static_cast<std::size_t>(_components);
+  const auto base           = tupleIndex * componentCount;
+  const auto need           = base + componentCount;
 
-  // Fast path for sequential writes
-  // This avoids zero-initialising memory that we are about to overwrite.
+  // An append needs no zero fill, so a sequential write skips the resize below.
   if (base == field.values.size()) {
-    field.values.insert(field.values.end(), v, v + n);
+    field.values.insert(field.values.end(), values, values + numberOfValues);
     return;
   }
 
-  // Fallback: Random access or filling gaps
-  const std::size_t need = base + n;
   if (field.values.size() < need) {
-    // If we need to resize, reserve more to amortise cost if we are filling gaps sequentially
     if (field.values.capacity() < need) {
       field.values.reserve(std::max(need, field.values.capacity() * 2));
     }
     field.values.resize(need, 0.0);
   }
 
-  for (int i = 0; i < n; ++i) {
-    field.values[base + i] = v[i];
+  for (int component = 0; component < numberOfValues; component++) {
+    field.values[base + component] = values[component];
   }
 }

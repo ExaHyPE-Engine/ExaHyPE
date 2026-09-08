@@ -5,51 +5,36 @@ import peano4
 import exahype2
 
 import peano4.solversteps
-import peano4.toolbox.blockstructured.DynamicAMR
 
 
-class AdaptiveMeshFaceCoupling(peano4.toolbox.blockstructured.DynamicAMR):
-    """
-    Per-step coupling across a resolution transition (hanging faces).
-
-    On an adaptive mesh, every solver traversal interpolates the coarse
-    solution down onto the hanging faces of the finer level and restricts the
-    fine data back up. This is a per-sweep operation on a grid whose topology
-    does not change, so this action set goes into InitGrid and TimeStep.
-
-    The create/destroy inter-grid transfer is switched off here: changing the
-    topology (creating and destroying cells and faces) is the job of the
-    dedicated DynamicAMR observer via DynamicAMRTransfer.
-
-    The halo prolongation uses the tangential-slope variant: it removes the
-    piecewise-constant staircase along a coarse-fine face - which a Riemann
-    flux would turn into a spurious tangential velocity - while staying
-    bitwise mirror-symmetric.
-    """
-
+class AdaptiveMeshFaceCoupling(peano4.solversteps.ActionSet):
     def __init__(self, solver):
+        super(AdaptiveMeshFaceCoupling, self).__init__(descend_invocation_order=1)
+
+        patch_overlap = solver._patch_overlap_new
+        if patch_overlap.dim[0] % 2 != 0:
+            raise Exception(
+                "Error: Patch associated to face has to have an even number of cells, as the overlap would not be symmetric otherwise."
+            )
+
         face_label_name = solver._face_label.name
         cell_label_name = solver._cell_label.name
         update_face_label_attribute = exahype2.grid.UpdateFaceLabel.get_attribute_name(
             solver._name
         )
         default_guard = solver._provide_face_data_to_compute_kernels_default_guard()
-        super(AdaptiveMeshFaceCoupling, self).__init__(
-            patch=solver._patch,
-            patch_overlap_interpolation=solver._patch_overlap_new,
-            patch_overlap_restriction=solver._patch_overlap_new,
-            clear_guard=default_guard,
-            interpolate_guard=(
-                f"{default_guard} and \n"
-                f" repositories::{solver.get_name_of_global_instance()}.getSolverState()!={solver._name}::SolverState::GridInitialisation\n"
-            ),
-            restrict_guard=default_guard,
-            additional_includes="""
-#include "../repositories/SolverRepository.h"
-""",
+
+        self.d = {}
+        self.d["UNKNOWNS"] = str(patch_overlap.no_of_unknowns)
+        self.d["DOFS_PER_AXIS"] = str(patch_overlap.dim[1])
+        self.d["OVERLAP"] = str(int(patch_overlap.dim[0] / 2))
+        self.d["CLEAR_GUARD"] = default_guard
+        self.d["RESTRICT_GUARD"] = default_guard
+        self.d["INTERPOLATE_GUARD"] = (
+            f"{default_guard} and \n"
+            f" repositories::{solver.get_name_of_global_instance()}.getSolverState()!={solver._name}::SolverState::GridInitialisation\n"
         )
 
-        # Solver identity
         self.d["SOLVER_NAME"] = solver._name
         self.d["SOLVER_REPOSITORY"] = (
             f"repositories::{solver.get_name_of_global_instance()}"
@@ -97,8 +82,6 @@ class AdaptiveMeshFaceCoupling(peano4.toolbox.blockstructured.DynamicAMR):
 
         self._Template_TouchFaceFirstTime = """
   if ({{CLEAR_GUARD}}) {
-    // Only the exterior side of the face is needed, but the interior half is
-    // unused, so we clear the entire face.
     std::fill_n(
       {{FINE_GRID_FACE_Q_NEW_ACCESSOR}}.data(),
 #if DIMENSIONS == 2
@@ -111,20 +94,32 @@ class AdaptiveMeshFaceCoupling(peano4.toolbox.blockstructured.DynamicAMR):
   }
 """
 
-        # The coarsening-parent clears live in DynamicAMRTransfer: a solver traversal
-        # never changes the topology, so no cell can be a coarsening parent here.
         self._Template_TouchCellFirstTime = ""
 
-        # Restricts the inner half of the halo layer from fine to coarse. In
-        # addition to the data restriction, we also restrict the updated flag
-        # and the face's time stamp.
+        # The inner half of the halo layer is staged here, and the coarse face
+        # reduces every staged subface in one order-invariant pass when the sweep
+        # leaves it.
         self._Template_TouchHangingFaceLastTime = """
   if ({{RESTRICT_GUARD}}) {
     const auto isLeftEntryOnCoarseFaceLabel = marker.getSelectedFaceNumber() >= DIMENSIONS;
     const auto facePosition                 = marker.getSelectedFaceNumber() < DIMENSIONS ? 1 : 0;
-    ::toolbox::blockstructured::restrictHaloLayer(
+    // Across a level jump of two or more, this face carries staged subfaces of
+    // its own. They reduce here, so the chained restriction is complete before
+    // this face stages itself.
+    if (_haloRestrictionStageQNew.hasFrame({{FINE_GRID_FACE_Q_NEW_ACCESSOR}}.data() + facePosition)) {
+      ::exahype2::amr::restrictHaloLayerFromStagedSubfaces(
+        _haloRestrictionStageQNew,
+        {{FINE_GRID_FACE_Q_NEW_ACCESSOR}}.data() + facePosition,
+        {{FINE_GRID_FACE_Q_NEW_ACCESSOR}}.data(),
+        marker.getSelectedFaceNumber() % DIMENSIONS,
+        {{DOFS_PER_AXIS}},
+        {{UNKNOWNS}}
+      );
+    }
+    ::exahype2::amr::stageHaloLayerForGatheredRestriction(
       marker,
-      {{COARSE_GRID_FACES_Q_NEW_ACCESSOR}}(marker.getSelectedFaceNumber()).data(),
+      _haloRestrictionStageQNew,
+      {{COARSE_GRID_FACES_Q_NEW_ACCESSOR}}(marker.getSelectedFaceNumber()).data() + facePosition,
       {{FINE_GRID_FACE_Q_NEW_ACCESSOR}}.data(),
       facePosition,
       {{DOFS_PER_AXIS}},
@@ -141,15 +136,32 @@ class AdaptiveMeshFaceCoupling(peano4.toolbox.blockstructured.DynamicAMR):
   }
 """
 
-        # Hanging-face interpolation fills QOld only. The solver callback
-        # handles solution initialisation separately.
+        # The last touch of every subface precedes the last touch of this face, so
+        # the staged set is complete apart from subfaces other ranks hold.
+        self._Template_TouchFaceLastTime = """
+  if ({{RESTRICT_GUARD}}) {
+    for (int facePosition = 0; facePosition < 2; facePosition++) {
+      if (_haloRestrictionStageQNew.hasFrame({{FINE_GRID_FACE_Q_NEW_ACCESSOR}}.data() + facePosition)) {
+        ::exahype2::amr::restrictHaloLayerFromStagedSubfaces(
+          _haloRestrictionStageQNew,
+          {{FINE_GRID_FACE_Q_NEW_ACCESSOR}}.data() + facePosition,
+          {{FINE_GRID_FACE_Q_NEW_ACCESSOR}}.data(),
+          marker.getSelectedFaceNumber() % DIMENSIONS,
+          {{DOFS_PER_AXIS}},
+          {{UNKNOWNS}}
+        );
+      }
+    }
+  }
+"""
+
+        # The interpolation fills the QOld halo of a hanging face.
         self._Template_TouchHangingFaceFirstTime = """
   if ({{RESTRICT_GUARD}}) {
     // Across a level jump of two or more, a hanging face between two hanging
-    // levels stages the chained restriction in its QNew halo. QNew is an
-    // accumulation target, so it has to start at zero even when Peano reuses a
-    // storage slot. The lowest hanging level is unaffected because its cell's
-    // projection overwrites the staging layer.
+    // levels takes the chained restriction in its QNew halo. A half that no
+    // subface stages into keeps what its storage slot holds, so the halo starts
+    // at zero.
     std::fill_n(
       {{FINE_GRID_FACE_Q_NEW_ACCESSOR}}.data(),
 #if DIMENSIONS == 2
@@ -163,7 +175,7 @@ class AdaptiveMeshFaceCoupling(peano4.toolbox.blockstructured.DynamicAMR):
   if ({{INTERPOLATE_GUARD}}) {
     const auto leftRightEntry = marker.getSelectedFaceNumber() < DIMENSIONS ? 0 : 1;
     if (not marker.isInteriorFaceWithinPatch()) {
-      ::toolbox::blockstructured::interpolateHaloLayerWithTangentialSlope(
+      ::exahype2::amr::interpolateHaloLayerWithTangentialSlope(
         marker,
         {{COARSE_GRID_FACES_Q_OLD_ACCESSOR}}(marker.getSelectedFaceNumber()).data(),
         {{FINE_GRID_FACE_Q_OLD_ACCESSOR}}.data(),
@@ -184,8 +196,8 @@ class AdaptiveMeshFaceCoupling(peano4.toolbox.blockstructured.DynamicAMR):
   }
 """
 
-        # A solver traversal never changes the topology, so the create/destroy
-        # inter-grid transfer is disabled here; DynamicAMRTransfer re-enables it.
+        # A solver traversal never changes the topology, so no cell or face is
+        # created or destroyed while this action set runs.
         self._Template_CreateFace = ""
         self._Template_DestroyFace = ""
         self._Template_CreateCell = ""
@@ -194,40 +206,66 @@ class AdaptiveMeshFaceCoupling(peano4.toolbox.blockstructured.DynamicAMR):
     def get_action_set_name(self):
         return "exahype2_solvers_fv_actionsets_" + type(self).__name__
 
+    def get_constructor_body(self):
+        return ""
+
+    def get_destructor_body(self):
+        return ""
+
+    def get_body_of_getGridControlEvents(self):
+        return "  return std::vector< ::peano4::grid::GridControlEvent >();\n"
+
+    def user_should_modify_template(self):
+        return False
+
+    def get_body_of_operation(self, operation_name):
+        operations = peano4.solversteps.ActionSet
+        template_of_operation = {
+            operations.OPERATION_CREATE_FACE: self._Template_CreateFace,
+            operations.OPERATION_DESTROY_FACE: self._Template_DestroyFace,
+            operations.OPERATION_CREATE_CELL: self._Template_CreateCell,
+            operations.OPERATION_DESTROY_CELL: self._Template_DestroyCell,
+            operations.OPERATION_TOUCH_FACE_FIRST_TIME: self._Template_TouchFaceFirstTime,
+            operations.OPERATION_TOUCH_FACE_LAST_TIME: self._Template_TouchFaceLastTime,
+            operations.OPERATION_TOUCH_CELL_FIRST_TIME: self._Template_TouchCellFirstTime,
+            operations.OPERATION_TOUCH_HANGING_FACE_FIRST_TIME: self._Template_TouchHangingFaceFirstTime,
+            operations.OPERATION_TOUCH_HANGING_FACE_LAST_TIME: self._Template_TouchHangingFaceLastTime,
+        }
+        if operation_name in template_of_operation:
+            return jinja2.Template(template_of_operation[operation_name]).render(
+                **self.d
+            )
+        return "\n"
+
+    def get_attributes(self):
+        return f"""
+    ::exahype2::amr::ChildDataStage<{self.d["STORAGE_PRECISION"]}> _haloRestrictionStageQNew{{
+      THREE_POWER_D / 3,
+      (DIMENSIONS == 3 ? {self.d["DOFS_PER_AXIS"]} * {self.d["DOFS_PER_AXIS"]} : {self.d["DOFS_PER_AXIS"]}) * {self.d["UNKNOWNS"]}}};
+"""
+
     def get_includes(self):
-        return f"""{super(AdaptiveMeshFaceCoupling, self).get_includes()}
+        return """
+#include "peano4/Loop.h"
+#include "exahype2/amr/AMRRoutines.h"
 #include "exahype2/fv/PatchUtils.h"
-#include "toolbox/blockstructured/AMRRoutines.h"
+#include "exahype2/amr/ChildDataStage.h"
+#include "../repositories/SolverRepository.h"
 """
 
 
 class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
-    """
-    Full inter-grid transfer for the dedicated DynamicAMR observer.
-
-    This is the action set that changes the topology: it hands the committed
-    refine/coarsen events to Peano via getGridControlEvents, so the observer's
-    traversals trigger and realise the requests the RefinementCriterion
-    accumulated during the preceding time step. It interpolates the coarse
-    solution (QNew and QOld) onto cells and faces Peano creates and restricts
-    the fine solution back onto cells and faces Peano destroys. No PDE update
-    happens here.
-    """
-
     def __init__(self, solver):
         super(DynamicAMRTransfer, self).__init__(solver)
 
-        # The averaging restriction accumulates the destroyed fine entities onto
-        # their coarsening parent, so the parent's cell and face targets are zeroed
-        # before the children restrict into them on the descent. Both QNew and QOld
-        # are cleared, since stale QOld would blow up through the QOld/QNew
-        # roll-over.
+        # A coarsening parent's cell and face targets are zeroed before the
+        # destroyed children stage into them, so a target that nothing on this rank
+        # reduces into carries a defined value.
         self._Template_TouchFaceFirstTime = """
   if (marker.hasBeenRefined() and not marker.willBeRefined()) {
-    // The clear also wipes the half a surviving equal-level neighbour projected: its
-    // fine counterparts hang, so no restriction refills the face, and the neighbour
-    // re-projects only where a data-transfer flag asks for it. Flag both halves; each
-    // side's projection completes its half and takes its flag back down.
+    // The clear also wipes the half a surviving equal-level neighbour projected.
+    // Both halves are flagged, and each side's projection completes its half and
+    // takes its flag back down.
     {{FINE_GRID_FACE_LABEL_ACCESSOR}}.setRequiresDataTransfer(0, true);
     {{FINE_GRID_FACE_LABEL_ACCESSOR}}.setRequiresDataTransfer(1, true);
     std::fill_n(
@@ -274,21 +312,40 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
   }
 """
 
-        # The hanging-face coupling stays off in the realise sweeps: no solver reads the
-        # halos here, and the next time step rebuilds them on the settled grid.
+        # The hanging-face coupling stays off in the realise sweeps: No solver reads
+        # the halos here, and the next time step rebuilds them on the settled grid.
         self._Template_TouchHangingFaceFirstTime = ""
         self._Template_TouchHangingFaceLastTime = ""
 
-        # By this face's last touch every destroyed child has contributed its share, so a
-        # half the restriction filled is complete and current. Its transfer flag comes down
-        # here, so the roll-over of the following time step backs the half up instead of
-        # skipping it as pending. Halves that stay flagged received no data in this sweep.
+        # Every destroyed child has staged its halo layers by this face's last touch.
+        # A half whose transfer flag is still up takes its content from the staged
+        # subfaces in one order-invariant reduction, and a half that a projection
+        # completed discards its staged subfaces, so each half has one writer.
         self._Template_TouchFaceLastTime = """
-  if (marker.hasBeenRefined() and not marker.willBeRefined()) {
-    for (int facePosition = 0; facePosition < 2; facePosition++) {
-      if ({{FINE_GRID_FACE_LABEL_ACCESSOR}}.getRequiresDataTransfer(facePosition)
-          and {{FINE_GRID_FACE_LABEL_ACCESSOR}}.getUpdated(facePosition)) {
+  for (int facePosition = 0; facePosition < 2; facePosition++) {
+    if (_haloRestrictionStageQNew.hasFrame({{FINE_GRID_FACE_Q_NEW_ACCESSOR}}.data() + facePosition)) {
+      if ({{FINE_GRID_FACE_LABEL_ACCESSOR}}.getRequiresDataTransfer(facePosition)) {
+        ::exahype2::amr::restrictHaloLayerFromStagedSubfaces(
+          _haloRestrictionStageQNew,
+          {{FINE_GRID_FACE_Q_NEW_ACCESSOR}}.data() + facePosition,
+          {{FINE_GRID_FACE_Q_NEW_ACCESSOR}}.data(),
+          marker.getSelectedFaceNumber() % DIMENSIONS,
+          {{DOFS_PER_AXIS}},
+          {{UNKNOWNS}}
+        );
+        ::exahype2::amr::restrictHaloLayerFromStagedSubfaces(
+          _haloRestrictionStageQOld,
+          {{FINE_GRID_FACE_Q_OLD_ACCESSOR}}.data() + facePosition,
+          {{FINE_GRID_FACE_Q_OLD_ACCESSOR}}.data(),
+          marker.getSelectedFaceNumber() % DIMENSIONS,
+          {{DOFS_PER_AXIS}},
+          {{UNKNOWNS}}
+        );
+        {{FINE_GRID_FACE_LABEL_ACCESSOR}}.setUpdated(facePosition, true);
         {{FINE_GRID_FACE_LABEL_ACCESSOR}}.setRequiresDataTransfer(facePosition, false);
+      } else {
+        _haloRestrictionStageQNew.discard({{FINE_GRID_FACE_Q_NEW_ACCESSOR}}.data() + facePosition);
+        _haloRestrictionStageQOld.discard({{FINE_GRID_FACE_Q_OLD_ACCESSOR}}.data() + facePosition);
       }
     }
   }
@@ -296,40 +353,32 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
 
         self._Template_DestroyFace = """
   if (not marker.isInteriorFaceWithinPatch()) {
-    // The coarsening sweep zeroed the coarse face and raised both data-transfer
-    // flags, and every projection that completes a half takes its flag down
-    // within this sweep. The restriction therefore fills only halves whose flag
-    // is still up: accumulating into a half a projection already assigned would
-    // double it, in whichever order the traversal visits the two writers. The
-    // flagged halves have no equal-level cell to project them, such as the half
-    // beneath the still-refined neighbour of a newly formed level jump, and
-    // take their content from the destroyed fine faces instead.
+    // Every destroyed subface stages both of its halves here, and the coarse
+    // face's last touch reduces the halves whose data-transfer flag is still up.
+    // A face on the domain wall carries no refined vertex, so its first touch
+    // clears neither its content nor its flags.
     for (int facePosition = 0; facePosition < 2; facePosition++) {
-      if ({{COARSE_GRID_FACES_LABEL_ACCESSOR}}(marker.getSelectedFaceNumber()).getRequiresDataTransfer(facePosition)) {
-        ::toolbox::blockstructured::restrictHaloLayer(
-          marker,
-          {{COARSE_GRID_FACES_Q_NEW_ACCESSOR}}(marker.getSelectedFaceNumber()).data(),
-          {{FINE_GRID_FACE_Q_NEW_ACCESSOR}}.data(),
-          facePosition,
-          {{DOFS_PER_AXIS}},
-          {{UNKNOWNS}}
-        );
-
-        ::toolbox::blockstructured::restrictHaloLayer(
-          marker,
-          {{COARSE_GRID_FACES_Q_OLD_ACCESSOR}}(marker.getSelectedFaceNumber()).data(),
-          {{FINE_GRID_FACE_Q_OLD_ACCESSOR}}.data(),
-          facePosition,
-          {{DOFS_PER_AXIS}},
-          {{UNKNOWNS}}
-        );
-
-        {{COARSE_GRID_FACES_LABEL_ACCESSOR}}(marker.getSelectedFaceNumber()).setUpdated(facePosition, true);
-      }
+      ::exahype2::amr::stageHaloLayerForGatheredRestriction(
+        marker,
+        _haloRestrictionStageQNew,
+        {{COARSE_GRID_FACES_Q_NEW_ACCESSOR}}(marker.getSelectedFaceNumber()).data() + facePosition,
+        {{FINE_GRID_FACE_Q_NEW_ACCESSOR}}.data(),
+        facePosition,
+        {{DOFS_PER_AXIS}},
+        {{UNKNOWNS}}
+      );
+      ::exahype2::amr::stageHaloLayerForGatheredRestriction(
+        marker,
+        _haloRestrictionStageQOld,
+        {{COARSE_GRID_FACES_Q_OLD_ACCESSOR}}(marker.getSelectedFaceNumber()).data() + facePosition,
+        {{FINE_GRID_FACE_Q_OLD_ACCESSOR}}.data(),
+        facePosition,
+        {{DOFS_PER_AXIS}},
+        {{UNKNOWNS}}
+      );
     }
-    // A coarse face might have been non-persistent before. So it might
-    // not carry a valid boundary flag, and we have to re-analyse it and
-    // set it accordingly.
+    // The coarse face carries no valid boundary flag until this loop derives it
+    // from the face position within the domain.
     const tarch::la::Vector<DIMENSIONS, double> offset(DomainOffset);
     const tarch::la::Vector<DIMENSIONS, double> size(DomainSize);
     bool                                        isBoundary = false;
@@ -360,13 +409,12 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
   }
 """
 
-        # This variant interpolates both QOld and QNew. As we deal with a
-        # persistent face, we set both the left and the right time stamp from
-        # the coarse face.
+        # A created face is persistent, so both its halves take their time stamps
+        # from the coarse cell.
         self._Template_CreateFace = """
   if (marker.isInteriorFaceWithinPatch()) {
     for (int side = 0; side < 2; side++) {
-      ::toolbox::blockstructured::interpolateHaloLayerFromCoarseCell(
+      ::exahype2::amr::interpolateHaloLayerFromCoarseCell(
         marker,
         {{COARSE_GRID_CELL_Q_OLD_ACCESSOR}}.data(),
         {{FINE_GRID_FACE_Q_OLD_ACCESSOR}}.data(),
@@ -374,7 +422,7 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
         {{DOFS_PER_AXIS}},
         {{UNKNOWNS}}
       );
-      ::toolbox::blockstructured::interpolateHaloLayerFromCoarseCell(
+      ::exahype2::amr::interpolateHaloLayerFromCoarseCell(
         marker,
         {{COARSE_GRID_CELL_Q_NEW_ACCESSOR}}.data(),
         {{FINE_GRID_FACE_Q_NEW_ACCESSOR}}.data(),
@@ -385,7 +433,7 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
     }
   } else {
     for (int side = 0; side < 2; side++) {
-      ::toolbox::blockstructured::interpolateHaloLayerWithTangentialSlope(
+      ::exahype2::amr::interpolateHaloLayerWithTangentialSlope(
         marker,
         {{COARSE_GRID_FACES_Q_OLD_ACCESSOR}}(marker.getSelectedFaceNumber()).data(),
         {{FINE_GRID_FACE_Q_OLD_ACCESSOR}}.data(),
@@ -393,7 +441,7 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
         {{DOFS_PER_AXIS}},
         {{UNKNOWNS}}
       );
-      ::toolbox::blockstructured::interpolateHaloLayerWithTangentialSlope(
+      ::exahype2::amr::interpolateHaloLayerWithTangentialSlope(
         marker,
         {{COARSE_GRID_FACES_Q_NEW_ACCESSOR}}(marker.getSelectedFaceNumber()).data(),
         {{FINE_GRID_FACE_Q_NEW_ACCESSOR}}.data(),
@@ -409,14 +457,14 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
 """
 
         self._Template_CreateCell = """
-  ::toolbox::blockstructured::interpolateCell(
+  ::exahype2::amr::interpolateCell(
     marker,
     {{COARSE_GRID_CELL_Q_NEW_ACCESSOR}}.data(),
     {{FINE_GRID_CELL_Q_NEW_ACCESSOR}}.data(),
     {{DOFS_PER_AXIS}},
     {{UNKNOWNS}}
   );
-  ::toolbox::blockstructured::interpolateCell(
+  ::exahype2::amr::interpolateCell(
     marker,
     {{COARSE_GRID_CELL_Q_OLD_ACCESSOR}}.data(),
     {{FINE_GRID_CELL_Q_OLD_ACCESSOR}}.data(),
@@ -446,81 +494,91 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
   {{FINE_GRID_CELL_LABEL_ACCESSOR}}.setTimeStamp({{COARSE_GRID_CELL_LABEL_ACCESSOR}}.getTimeStamp());
   {{FINE_GRID_CELL_LABEL_ACCESSOR}}.setTimeStepSize({{COARSE_GRID_CELL_LABEL_ACCESSOR}}.getTimeStepSize());
 
-  // The parent's pending roll-over travels with its data: without it a created
-  // cell keeps hasUpdated=false, the next time step never swaps its buffers,
-  // and the cell resumes from the interpolation of the parent's previous state
-  // while its neighbours already advanced.
+  // The parent's pending roll-over travels with its data. A created cell that
+  // keeps hasUpdated at false never swaps its buffers in the next time step.
   {{FINE_GRID_CELL_LABEL_ACCESSOR}}.setHasUpdated({{COARSE_GRID_CELL_LABEL_ACCESSOR}}.getHasUpdated());
 
-  // The created cell is marked for the criterion pass, so the running
-  // mesh-refinement sweeps evaluate its data once and keep descending while the
-  // data justifies it.
+  // The criterion flag makes the running mesh-refinement sweeps evaluate the
+  // created cell's data once.
   {{FINE_GRID_CELL_LABEL_ACCESSOR}}.setRequiresCriterionEvaluation(true);
 """
 
         self._Template_DestroyCell = """
-  ::toolbox::blockstructured::restrictCell(
-    marker,
-    {{COARSE_GRID_CELL_Q_NEW_ACCESSOR}}.data(),
-    {{FINE_GRID_CELL_Q_NEW_ACCESSOR}}.data(),
-    {{DOFS_PER_AXIS}},
-    {{UNKNOWNS}}
-  );
-  ::toolbox::blockstructured::restrictCell(
-    marker,
+  // The destroyed child stages its patches, and the sibling that completes the
+  // set reduces the whole set onto the parent in one order-invariant pass. The
+  // load balancer places no rank boundary inside a cell that has a leaf child,
+  // so the set always completes on one rank.
+  const int linearisedChildPosition = peano4::dLinearised(marker.getRelativePositionWithinFatherCell(), 3);
+  _cellRestrictionStageQOld.stage(
     {{COARSE_GRID_CELL_Q_OLD_ACCESSOR}}.data(),
-    {{FINE_GRID_CELL_Q_OLD_ACCESSOR}}.data(),
-    {{DOFS_PER_AXIS}},
-    {{UNKNOWNS}}
+    linearisedChildPosition,
+    {{FINE_GRID_CELL_Q_OLD_ACCESSOR}}.data()
   );
+  if (_cellRestrictionStageQNew.stage(
+        {{COARSE_GRID_CELL_Q_NEW_ACCESSOR}}.data(),
+        linearisedChildPosition,
+        {{FINE_GRID_CELL_Q_NEW_ACCESSOR}}.data()
+      )) {
+    const {{STORAGE_PRECISION}}* childValuesQNew[THREE_POWER_D];
+    const {{STORAGE_PRECISION}}* childValuesQOld[THREE_POWER_D];
+    for (int childIndex = 0; childIndex < THREE_POWER_D; childIndex++) {
+      childValuesQNew[childIndex] = _cellRestrictionStageQNew.child({{COARSE_GRID_CELL_Q_NEW_ACCESSOR}}.data(), childIndex);
+      childValuesQOld[childIndex] = _cellRestrictionStageQOld.child({{COARSE_GRID_CELL_Q_OLD_ACCESSOR}}.data(), childIndex);
+    }
+    ::exahype2::amr::restrictCellFromChildren(
+      {{COARSE_GRID_CELL_Q_NEW_ACCESSOR}}.data(),
+      childValuesQNew,
+      {{DOFS_PER_AXIS}},
+      {{UNKNOWNS}}
+    );
+    ::exahype2::amr::restrictCellFromChildren(
+      {{COARSE_GRID_CELL_Q_OLD_ACCESSOR}}.data(),
+      childValuesQOld,
+      {{DOFS_PER_AXIS}},
+      {{UNKNOWNS}}
+    );
+    _cellRestrictionStageQNew.discard({{COARSE_GRID_CELL_Q_NEW_ACCESSOR}}.data());
+    _cellRestrictionStageQOld.discard({{COARSE_GRID_CELL_Q_OLD_ACCESSOR}}.data());
 
 #if PEANO_DEBUG
-  ::exahype2::fv::validatePatch(
-    {{COARSE_GRID_CELL_Q_NEW_ACCESSOR}}.data(),
-    {{UNKNOWNS}},
-    0, // Auxiliary values. Not known here.
-    {{DOFS_PER_AXIS}},
-    0, // No halo
-    std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
-  );
-  ::exahype2::fv::validatePatch(
-    {{COARSE_GRID_CELL_Q_OLD_ACCESSOR}}.data(),
-    {{UNKNOWNS}},
-    0, // Auxiliary values. Not known here.
-    {{DOFS_PER_AXIS}},
-    0, // No halo
-    std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
-  );
+    ::exahype2::fv::validatePatch(
+      {{COARSE_GRID_CELL_Q_NEW_ACCESSOR}}.data(),
+      {{UNKNOWNS}},
+      0, // Auxiliary values. Not known here.
+      {{DOFS_PER_AXIS}},
+      0, // No halo
+      std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
+    );
+    ::exahype2::fv::validatePatch(
+      {{COARSE_GRID_CELL_Q_OLD_ACCESSOR}}.data(),
+      {{UNKNOWNS}},
+      0, // Auxiliary values. Not known here.
+      {{DOFS_PER_AXIS}},
+      0, // No halo
+      std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
+    );
 #endif
+  }
 
   {{COARSE_GRID_CELL_LABEL_ACCESSOR}}.setTimeStamp({{FINE_GRID_CELL_LABEL_ACCESSOR}}.getTimeStamp());
   {{COARSE_GRID_CELL_LABEL_ACCESSOR}}.setTimeStepSize({{FINE_GRID_CELL_LABEL_ACCESSOR}}.getTimeStepSize());
 
-  // The children's pending roll-over travels with their data: without it a
-  // parent that has never been a leaf keeps hasUpdated=false, the next time
-  // step never swaps its buffers, and the cell resumes from the restriction of
-  // the children's previous state while its neighbours already advanced.
+  // The children's pending roll-over travels with their data. A parent that
+  // keeps hasUpdated at false never swaps its buffers in the next time step.
   if ({{FINE_GRID_CELL_LABEL_ACCESSOR}}.getHasUpdated()) {
     {{COARSE_GRID_CELL_LABEL_ACCESSOR}}.setHasUpdated(true);
   }
 
-  // The freshly exposed parent is marked for the criterion pass, so the running
-  // mesh-refinement sweeps evaluate its restricted data once and keep
-  // ascending while the data justifies it.
+  // The criterion flag makes the running mesh-refinement sweeps evaluate the
+  // exposed parent's restricted data once.
   {{COARSE_GRID_CELL_LABEL_ACCESSOR}}.setRequiresCriterionEvaluation(true);
 """
 
-        # The create/destroy transfer interpolates or restricts face halves, so
-        # their content differs from the exact boundary volumes of the owning cells.
-        # The two sides of such a face would solve different Riemann problems in
-        # the next time step and mass would leak across it. The projection runs
-        # only where the topology change left work behind: a coarsening parent,
-        # identified by its marker, or a cell with a face half whose
-        # RequiresDataTransfer entry the face creation set. The second condition
-        # also reaches the pre-existing neighbour of a created face, whose
-        # projection supplies the other half of that face's halo. Completed
-        # halves are marked current, so a later mesh-refinement sweep skips
-        # every settled cell.
+        # The interpolated or restricted content of a face half differs from the
+        # boundary volumes of the cell that owns it, so the owner projects its
+        # patch onto that half again. The projection runs on a coarsening parent
+        # and on every cell with a face half whose RequiresDataTransfer entry is
+        # up.
         self.d["PROJECT_GUARD"] = solver._store_cell_data_default_guard()
         self._Template_ProjectPatchOntoFaces = """
   bool requiresProjection = marker.hasBeenRefined() and not marker.willBeRefined();
@@ -538,7 +596,12 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
       facesOut[face] = {{FINE_GRID_FACES_Q_NEW_ACCESSOR}}(face).data();
     }
 
-    kernels::{{SOLVER_NAME}}::projectPatch(QIn, facesOut);
+    ::exahype2::projectPatch<
+      {{DOFS_PER_AXIS}},
+      {{OVERLAP}},
+      {{UNKNOWNS}},
+      {{STORAGE_PRECISION}}
+    >(QIn, facesOut);
 
     for (int d = 0; d < DIMENSIONS; d++) {
       {{FINE_GRID_FACES_LABEL_ACCESSOR}}(d).setUpdated(1, true);
@@ -576,8 +639,24 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
     def get_body_of_getGridControlEvents(self):
         return "  return ::exahype2::RefinementControlService::getInstance().getGridControlEvents();\n"
 
+    def get_attributes(self):
+        return (
+            super(DynamicAMRTransfer, self).get_attributes()
+            + f"""
+    ::exahype2::amr::ChildDataStage<{self.d["STORAGE_PRECISION"]}> _haloRestrictionStageQOld{{
+      THREE_POWER_D / 3,
+      (DIMENSIONS == 3 ? {self.d["DOFS_PER_AXIS"]} * {self.d["DOFS_PER_AXIS"]} : {self.d["DOFS_PER_AXIS"]}) * {self.d["UNKNOWNS"]}}};
+    ::exahype2::amr::ChildDataStage<{self.d["STORAGE_PRECISION"]}> _cellRestrictionStageQNew{{
+      THREE_POWER_D,
+      (DIMENSIONS == 3 ? {self.d["DOFS_PER_AXIS"]} * {self.d["DOFS_PER_AXIS"]} * {self.d["DOFS_PER_AXIS"]} : {self.d["DOFS_PER_AXIS"]} * {self.d["DOFS_PER_AXIS"]}) * {self.d["UNKNOWNS"]}}};
+    ::exahype2::amr::ChildDataStage<{self.d["STORAGE_PRECISION"]}> _cellRestrictionStageQOld{{
+      THREE_POWER_D,
+      (DIMENSIONS == 3 ? {self.d["DOFS_PER_AXIS"]} * {self.d["DOFS_PER_AXIS"]} * {self.d["DOFS_PER_AXIS"]} : {self.d["DOFS_PER_AXIS"]} * {self.d["DOFS_PER_AXIS"]}) * {self.d["UNKNOWNS"]}}};
+"""
+        )
+
     def get_includes(self):
         return f"""{super(DynamicAMRTransfer, self).get_includes()}
 #include "exahype2/RefinementControlService.h"
-#include "kernels/{self.d["SOLVER_NAME"]}/ProjectPatch.h"
+#include "exahype2/ProjectPatch.h"
 """

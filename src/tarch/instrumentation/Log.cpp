@@ -2,21 +2,22 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "Log.h"
 
-#include "CommandLineSink.h"
-#include "FileSink.h"
-
 #include "tarch/Assertions.h"
+#include "tarch/instrumentation/CommandLineSink.h"
+#include "tarch/instrumentation/FileSink.h"
 #include "tarch/mpi/Rank.h"
-#include "tarch/multicore/BooleanSemaphore.h"
-#include "tarch/multicore/Core.h"
-#include "tarch/multicore/Lock.h"
+#include "tarch/tasking/Runtime.h"
+
+std::ostream& tarch::align(std::ostream& out) {
+  out.put('\x1f');
+  return out;
+}
 
 std::chrono::steady_clock::time_point tarch::instrumentation::Log::_startupTime{std::chrono::steady_clock::now()};
 
 // The default configuration and the snapshot store are heap objects that are
-// never freed. Destructors of other globals still emit log messages, so the
-// published configuration must stay valid throughout static destruction. Both
-// remain reachable through their pointers, so no leak is reported.
+// never freed. Destructors of other globals still write log messages, so the
+// configuration these pointers name stays valid throughout static destruction.
 const tarch::instrumentation::Log::Configuration* const tarch::instrumentation::Log::_defaultConfiguration{
   new tarch::instrumentation::Log::Configuration{}
 };
@@ -50,17 +51,12 @@ namespace {
     }
     return value.substr(0, last);
   }
+
+  std::mutex& configurationMutex() {
+    static std::mutex mutex;
+    return mutex;
+  }
 } // namespace
-
-tarch::multicore::BooleanSemaphore& tarch::instrumentation::Log::getSemaphore() {
-  static tarch::multicore::BooleanSemaphore semaphore;
-  return semaphore;
-}
-
-tarch::multicore::BooleanSemaphore& tarch::instrumentation::Log::getConfigurationSemaphore() {
-  static tarch::multicore::BooleanSemaphore semaphore;
-  return semaphore;
-}
 
 const tarch::instrumentation::Log::Configuration& tarch::instrumentation::Log::getConfiguration() {
   return *_configuration.load(std::memory_order_acquire);
@@ -73,7 +69,7 @@ bool tarch::instrumentation::Log::isInfoOutputEnabled() {
 bool tarch::instrumentation::Log::isWarningOutputEnabled() { return getConfiguration().warningOutputEnabled; }
 
 void tarch::instrumentation::Log::updateConfiguration(const std::function<void(Configuration&)>& update) {
-  tarch::multicore::Lock lock(getConfigurationSemaphore());
+  const std::scoped_lock lock(configurationMutex());
   auto                   next = std::make_unique<Configuration>(getConfiguration());
   update(*next);
 
@@ -135,8 +131,8 @@ std::string tarch::instrumentation::Log::extractQualifiedFunctionName(std::strin
   int              braceDepth      = 0;
 
   for (std::size_t i = beforeArguments.size(); i > 0; i--) {
-    const char c = beforeArguments[i - 1];
-    switch (c) {
+    const char character = beforeArguments[i - 1];
+    switch (character) {
     case ')':
       parenDepth++;
       break;
@@ -170,7 +166,7 @@ std::string tarch::instrumentation::Log::extractQualifiedFunctionName(std::strin
       }
       break;
     default:
-      if (isWhitespace(c) and parenDepth == 0 and angleDepth == 0 and bracketDepth == 0 and braceDepth == 0) {
+      if (isWhitespace(character) and parenDepth == 0 and angleDepth == 0 and bracketDepth == 0 and braceDepth == 0) {
         nameStart = i;
         i         = 1;
       }
@@ -185,6 +181,10 @@ std::string tarch::instrumentation::Log::extractQualifiedFunctionName(std::strin
   return std::string(beforeArguments);
 }
 
+/**
+ * Returns a scope label such as namespace::Class::method(), derived from the
+ * compiler function signature the macro call site passes in.
+ */
 std::string tarch::instrumentation::Log::makeScopeName(
   std::string_view functionSignature,
   std::string_view functionName,
@@ -241,17 +241,16 @@ void tarch::instrumentation::Log::appendMessageColumn(
 }
 
 std::string tarch::instrumentation::Log::getTimeStampHumanReadable(long int timestampNanoseconds) {
-  long int  timestampSeconds = timestampNanoseconds / 1000 / 1000 / 1000;
-  const int HourScaling      = 60 * 60;
-  long int  hours            = timestampSeconds / HourScaling;
-  timestampSeconds           = timestampSeconds - HourScaling * hours;
+  long int      timestampSeconds = timestampNanoseconds / 1000 / 1000 / 1000;
+  constexpr int SecondsPerHour   = 60 * 60;
+  long int      hours            = timestampSeconds / SecondsPerHour;
+  timestampSeconds               = timestampSeconds - SecondsPerHour * hours;
 
-  const int MinutesScaling = 60;
-  long int  minutes        = timestampSeconds / MinutesScaling;
-  timestampSeconds         = timestampSeconds - MinutesScaling * minutes;
+  constexpr int SecondsPerMinute = 60;
+  long int      minutes          = timestampSeconds / SecondsPerMinute;
+  timestampSeconds               = timestampSeconds - SecondsPerMinute * minutes;
 
-  const int SecondsScaling = 1;
-  long int  seconds        = timestampSeconds / SecondsScaling;
+  const long int seconds = timestampSeconds;
 
   std::string result;
   result.reserve(8);
@@ -272,8 +271,10 @@ std::string tarch::instrumentation::Log::getTimeStampHumanReadable(long int time
   return result;
 }
 
-std::string
-tarch::instrumentation::Log::alignMessage(std::string_view message, std::string::size_type messageStartColumn) {
+std::string tarch::instrumentation::Log::alignMessage(
+  std::string_view       message,
+  std::string::size_type messageStartColumn
+) {
   const std::size_t marker = message.find(AlignmentMarker);
   if (marker == std::string_view::npos) {
     return std::string(message);
@@ -344,8 +345,6 @@ std::string tarch::instrumentation::Log::constructMessageString(
     appendColumn(result, configuration.logColumnSeparator, NumberOfScopeColumnSpaces, scopeName);
   }
 
-  // Only the alignment-marker path needs a rewritten (copied) message; the common
-  // case appends the trimmed view directly to avoid an allocation per line.
   if (message.find(AlignmentMarker) == std::string_view::npos) {
     appendMessageColumn(result, configuration.logColumnSeparator, 0, 0, trimRightView(message));
   } else {
@@ -478,16 +477,13 @@ tarch::instrumentation::Log::Context tarch::instrumentation::Log::createContext(
   return {
     getTimeStamp(),
     tarch::mpi::Rank::getInstance().getRank(),
-    tarch::multicore::Core::getInstance().getCoreNumber()
+    tarch::tasking::Runtime::getInstance().getCoreNumber()
   };
 }
 
 void tarch::instrumentation::Log::flushBeforeAssertion() {
   CommandLineSink::getInstance().close();
   FileSink::getInstance().close();
-#if PEANO_TRACE
-  closeTrace(false);
-#endif
 }
 
 long int tarch::instrumentation::Log::getTimeStamp() {
@@ -604,7 +600,4 @@ void tarch::instrumentation::Log::clearDebugFilter() {
 void tarch::instrumentation::Log::close() {
   CommandLineSink::getInstance().close();
   FileSink::getInstance().close();
-#if PEANO_TRACE
-  closeTrace(true);
-#endif
 }

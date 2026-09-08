@@ -1,20 +1,14 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#pragma once
-
-#include "tarch/accelerator/Range.h"
-#include "tarch/accelerator/hip/Device.h"
-#include "tarch/accelerator/hip/ErrorCheck.h"
-
-#include <hip/hip_runtime.h>
 
 namespace tarch::accelerator {
   template <typename F>
-  __global__ void flat_kernel_1d(F f, int n) {
+  __global__ void flat_kernel_1D(F f, int n) {
     const int idx    = blockIdx.x * blockDim.x + threadIdx.x;
     const int stride = gridDim.x * blockDim.x;
-    for (int i = idx; i < n; i += stride)
+    for (int i = idx; i < n; i += stride) {
       f(i);
+    }
   }
 
   template <typename F>
@@ -24,8 +18,9 @@ namespace tarch::accelerator {
 
   template <typename F>
   __device__ inline void parallelFor(const HipTeam&, const Range& r, F f) {
-    for (int i = threadIdx.x; i < r.n; i += blockDim.x)
+    for (int i = threadIdx.x; i < r.n; i += blockDim.x) {
       f(i);
+    }
   }
   template <typename F>
   __device__ inline void parallelFor(const HipTeam&, const RangeMD<2>& r, F f) {
@@ -58,9 +53,9 @@ namespace tarch {
       return;
     }
     CHECK_HIP_ERROR(hipSetDevice(accelerator::getCurrentDevice()));
-    int blocks = (r.n + accelerator::kHipBlockSize - 1) / accelerator::kHipBlockSize;
+    int blocks = (r.n + accelerator::HipBlockSize - 1) / accelerator::HipBlockSize;
     blocks     = std::min(blocks, 65535);
-    accelerator::flat_kernel_1d<<<blocks, accelerator::kHipBlockSize, 0, accelerator::deviceStreamGet()>>>(f, r.n);
+    accelerator::flat_kernel_1D<<<blocks, accelerator::HipBlockSize, 0, accelerator::deviceStreamGet()>>>(f, r.n);
     CHECK_HIP_ERROR(hipStreamSynchronize(accelerator::deviceStreamGet()));
   }
 
@@ -90,10 +85,11 @@ namespace tarch {
 
   template <typename F>
   inline void parallelFor(const TeamRange& r, F f) {
-    if (r.n <= 0)
+    if (r.n <= 0) {
       return;
+    }
     CHECK_HIP_ERROR(hipSetDevice(accelerator::getCurrentDevice()));
-    accelerator::team_kernel<<<r.n, accelerator::kHipBlockSize, 0, accelerator::deviceStreamGet()>>>(f);
+    accelerator::team_kernel<<<r.n, accelerator::HipBlockSize, 0, accelerator::deviceStreamGet()>>>(f);
     CHECK_HIP_ERROR(hipStreamSynchronize(accelerator::deviceStreamGet()));
   }
 } // namespace tarch

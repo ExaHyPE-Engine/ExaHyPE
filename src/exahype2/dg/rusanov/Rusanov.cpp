@@ -1,8 +1,18 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "Rusanov.h"
 
+#include "exahype2/Enumeration.h"
 #include "peano4/Loop.h"
-#include "toolbox/blockstructured/Enumeration.h"
+#include "tarch/Termination.h"
 
+/**
+ * Solves the Rusanov problem independently at each face quadrature point.
+ *
+ * The two output layers receive the same physical flux and dissipation. The
+ * non-conservative contribution has opposite signs on the two sides. The
+ * characteristic speed is evaluated separately for both traces at each point.
+ */
 void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
   [[maybe_unused]] ::exahype2::dg::Flux                         flux,
   [[maybe_unused]] ::exahype2::dg::NonConservativeProduct       nonConservativeProduct,
@@ -34,10 +44,10 @@ void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
   double* ncpValues       = new double[unknowns];
 
   peano4::dForEachExclusive(order + 1, faceNumber % DIMENSIONS, 0, [&](const tarch::la::Vector<DIMENSIONS, int>& dof) {
-    tarch::la::Vector<DIMENSIONS, double> x;
-    for (int d = 0; d < DIMENSIONS; d++) {
-      x(d) = faceOffset(d);
-      x(d) += (d == faceNumber % DIMENSIONS) ? 0.0 : quadraturePoints[dof(d)] * cellSize(d);
+    tarch::la::Vector<DIMENSIONS, double> quadraturePoint;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      quadraturePoint(axis) = faceOffset(axis);
+      quadraturePoint(axis) += (axis == faceNumber % DIMENSIONS) ? 0.0 : quadraturePoints[dof(axis)] * cellSize(axis);
     }
 
     tarch::la::Vector<DIMENSIONS, int> leftDoF  = dof;
@@ -45,16 +55,11 @@ void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
 
     leftDoF(normal)  = 0;
     rightDoF(normal) = 1;
-    const int leftInputOffset =
-      toolbox::blockstructured::serialiseVoxelIndexInOverlap(leftDoF, order + 1, 1, normal) * inputStride;
-    const int rightInputOffset =
-      toolbox::blockstructured::serialiseVoxelIndexInOverlap(rightDoF, order + 1, 1, normal) * inputStride;
-    const int leftOutputOffset =
-      toolbox::blockstructured::serialiseVoxelIndexInOverlap(leftDoF, order + 1, 1, normal) * outputStride;
-    const int rightOutputOffset =
-      toolbox::blockstructured::serialiseVoxelIndexInOverlap(rightDoF, order + 1, 1, normal) * outputStride;
+    const int leftInputOffset   = exahype2::serialiseVoxelIndexInOverlap(leftDoF, order + 1, 1, normal) * inputStride;
+    const int rightInputOffset  = exahype2::serialiseVoxelIndexInOverlap(rightDoF, order + 1, 1, normal) * inputStride;
+    const int leftOutputOffset  = exahype2::serialiseVoxelIndexInOverlap(leftDoF, order + 1, 1, normal) * outputStride;
+    const int rightOutputOffset = exahype2::serialiseVoxelIndexInOverlap(rightDoF, order + 1, 1, normal) * outputStride;
 
-    // initialize solution to 0
     for (int var = 0; var < unknowns; var++) {
       solution[leftOutputOffset + var]  = 0.0;
       solution[rightOutputOffset + var] = 0.0;
@@ -65,20 +70,18 @@ void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
       averageQ[var] = 0.5 * projectedValues[rightInputOffset + var] + 0.5 * projectedValues[leftInputOffset + var];
     }
 
-    double leftEigenvalue = maxEigenvalue(projectedValues + leftInputOffset, x, t, dt, normal);
-
-    double rightEigenvalue = maxEigenvalue(projectedValues + rightInputOffset, x, t, dt, normal);
-
-    double maxEigenvalue = std::max(leftEigenvalue, rightEigenvalue);
+    const double leftEigenvalue  = maxEigenvalue(projectedValues + leftInputOffset, quadraturePoint, t, dt, normal);
+    const double rightEigenvalue = maxEigenvalue(projectedValues + rightInputOffset, quadraturePoint, t, dt, normal);
+    const double maximumInterfaceEigenvalue = std::max(leftEigenvalue, rightEigenvalue);
 
     for (int var = 0; var < unknowns; var++) {
-      solution[leftOutputOffset + var] -= 0.5 * maxEigenvalue * deltaQ[var];
-      solution[rightOutputOffset + var] -= 0.5 * maxEigenvalue * deltaQ[var];
+      solution[leftOutputOffset + var] -= 0.5 * maximumInterfaceEigenvalue * deltaQ[var];
+      solution[rightOutputOffset + var] -= 0.5 * maximumInterfaceEigenvalue * deltaQ[var];
     }
 
     if (evaluateFlux) {
-      flux(projectedValues + leftInputOffset, x, t, dt, normal, fluxValuesLeft);
-      flux(projectedValues + rightInputOffset, x, t, dt, normal, fluxValuesRight);
+      flux(projectedValues + leftInputOffset, quadraturePoint, t, dt, normal, fluxValuesLeft);
+      flux(projectedValues + rightInputOffset, quadraturePoint, t, dt, normal, fluxValuesRight);
 
       for (int var = 0; var < unknowns; var++) {
         solution[leftOutputOffset + var] += 0.5 * (fluxValuesLeft[var] + fluxValuesRight[var]);
@@ -87,7 +90,7 @@ void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
     }
 
     if (evaluateNonconservativeProduct) {
-      nonConservativeProduct(averageQ, deltaQ, x, t, dt, normal, ncpValues);
+      nonConservativeProduct(averageQ, deltaQ, quadraturePoint, t, dt, normal, ncpValues);
 
       for (int var = 0; var < unknowns; var++) {
         solution[leftOutputOffset + var] += 0.5 * ncpValues[var];
@@ -121,5 +124,5 @@ void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ_with_gradient_
   [[maybe_unused]] const double* NOALIAS                        projectedValues,
   [[maybe_unused]] double* NOALIAS                              solution
 ) {
-  assertion(false, "not implemented yet");
+  tarch::terminateWithError("The Rusanov solve with projected gradients is unavailable.");
 }

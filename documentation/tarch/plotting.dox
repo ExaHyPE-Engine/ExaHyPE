@@ -3,23 +3,19 @@
 \page tarch_plotting Plotting
 
 All plotting in Peano is typically realised through the files in tarch/plotter.
-The idea is that you have an action set which dumps the data. To do so, it owns
-a plotter class. This implies that each tree in the system owns its own plotter
-and writes (logically) into its own output file. The plotter under the hood
-might do something clever with merging those guys, but logically it is a one
-file per action set approach.
+An action set dumps the data. To do so, it owns one file writer, and its
+observer clones write into that writer. Each clone claims one ordered
+piece, and the writer combines these pieces into one snapshot per action set
+and time stamp.
 
 
 ## Action set pattern
 
-You never know how much meta data a plotter object holds and when this data is
-dumped into the file. Therefore, most action sets which dump data create the
-plotter object within beginTraversal(). They release this object again in
-endTraversal(), which is the latest point when the plotter will actually stream
-its data into a file. In modern code the action set holds the writer in a
-std::unique_ptr, creates it through std::make_unique() and releases it via
-reset(), so there are no raw new/delete calls and the writer is destroyed (and
-hence flushed) deterministically.
+Plotting action sets create the file writer in `prepareTraversal()`. Each
+observer clone claims its piece in `beginTraversal()` and fills that piece
+during its callbacks. `unprepareTraversal()` writes the completed snapshot
+after all clones have joined. The action set owns its writers through
+`std::unique_ptr`.
 
 
 ## File writers and time series
@@ -28,21 +24,20 @@ The plotting is split into two responsibilities. The actual data of one
 traversal is written through a concrete subclass of the abstract
 tarch::plotter::FileWriter. Peano ships VTU (tarch::plotter::VTUFileWriter),
 HDF5 (tarch::plotter::HDF5FileWriter) and NetCDF
-(tarch::plotter::NetCDFFileWriter) implementations. A file writer is told an
-output directory and the number of local subdomains (trees) and then hands out
-vertex, cell and data plotters via its create...() factory methods.
+(tarch::plotter::NetCDFFileWriter) implementations. A file writer receives an
+output directory. `acquirePiece()` allocates an ordered piece, and the
+`create...()` factory methods bind vertex, cell, and data plotters to it.
 
 The bookkeeping over all snapshots, i.e. the index/meta file that ties the
-individual snapshots into one time series, is handled separately by a subclass
-of tarch::plotter::TimeSeriesWriter. The VTU writer pairs with
-tarch::plotter::PVDTimeSeriesWriter (a ParaView .pvd index), HDF5/NetCDF pair
-with tarch::plotter::XDMFTimeSeriesWriter, and
-tarch::plotter::JSONTimeSeriesWriter is available too.
+individual snapshots into one time series, is written separately by a subclass
+of tarch::plotter::TimeSeriesWriter. VTU uses
+tarch::plotter::PVDTimeSeriesWriter, HDF5 uses
+tarch::plotter::XDMFTimeSeriesWriter, and NetCDF uses
+tarch::plotter::JSONTimeSeriesWriter. VTKHDF keeps its time steps in one file.
 
-A plotting action set typically owns both writers as std::unique_ptr. The time
+A plotting action set typically owns both writers as `std::unique_ptr`. The time
 series writer is created once and kept alive for the whole simulation, while
-the file writer is recreated per snapshot so that it picks up the current
-number of subdomains (which may change under dynamic load balancing):
+the file writer is recreated for each snapshot with empty piece buffers:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   if (_timeSeriesWriter == nullptr) {
@@ -50,10 +45,15 @@ number of subdomains (which may change under dynamic load balancing):
   }
 
   _fileWriter.reset();
-  _fileWriter = std::make_unique<tarch::plotter::VTUFileWriter>(
-    runner::RuntimeParameters::getInstance().getOutputPath(),
-    numberOfLocalSubdomains
-  );
+  _fileWriter = std::make_unique<tarch::plotter::VTUFileWriter>(outputPath);
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Each observer clone claims its piece with a unique ordering key before it
+creates the associated data plotters:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  const int pieceId = _fileWriter->acquirePiece(observerId);
+  auto cellPlotter = _fileWriter->createCellPlotter(pieceId);
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Once a traversal has filled the file writer, the snapshot is committed and
@@ -62,7 +62,7 @@ registered with the time series in one go:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   _timeSeriesWriter->writeSnapshotFile(filename, time, *_fileWriter);
   _timeSeriesWriter->writeTimeSeriesMetaFile(
-    runner::RuntimeParameters::getInstance().getOutputPath(), filename
+    outputPath, filename
   );
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -74,11 +74,10 @@ post-processing tools.
 
 ## Parallel plotting
 
-Writing the shared time series meta file is neither thread-safe nor MPI-safe.
-That is, you should not update it concurrently from two threads or two ranks.
-To ensure that this does not happen, you typically wrap the critical region
-into a tarch::multicore::Lock around a global instance of
-tarch::multicore::BooleanSemaphore.
+The concrete file writer owns the MPI coordination for a snapshot. VTU writes
+one `.vtu` file per rank and a global `.pvtu` descriptor; collective HDF5 and
+NetCDF writers agree on a field schema, including on empty ranks. Time-series
+metadata is written by the global master where the format requires it.
 
 
 */

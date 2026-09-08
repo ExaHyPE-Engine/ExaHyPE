@@ -12,7 +12,7 @@ runner::tests::GridSnapshotTest::GridSnapshotTest() :
 void runner::tests::GridSnapshotTest::run() {
   testMethod(testBoundedFullyRefinedLeavesGrowsPerLevel);
   testMethod(testBoundedFullyRefinedLeavesHandlesLimits);
-  testMethod(testWidthSamplesUseRunBounds);
+  testMethod(testGridCellSummary);
 }
 
 void runner::tests::GridSnapshotTest::testBoundedFullyRefinedLeavesGrowsPerLevel() {
@@ -45,36 +45,13 @@ void runner::tests::GridSnapshotTest::testBoundedFullyRefinedLeavesHandlesLimits
     runner::boundedFullyRefinedLeaves(std::numeric_limits<int>::max()),
     std::numeric_limits<std::uint64_t>::max()
   );
-
-  bool rejectedNegativeLevel = false;
-  try {
-    runner::boundedFullyRefinedLeaves(-1);
-  } catch (const std::invalid_argument&) {
-    rejectedNegativeLevel = true;
-  }
-  validate(rejectedNegativeLevel);
 }
 
-void runner::tests::GridSnapshotTest::testWidthSamplesUseRunBounds() {
+void runner::tests::GridSnapshotTest::testGridCellSummary() {
   validateEquals(runner::gridCellSummary(81, 10), std::string("81  (Cells 91)"));
   validateEquals(runner::gridCellSummary(1234, 5678), std::string("1,234  (Cells 6,912)"));
   validateEquals(
     runner::gridCellSummary(std::numeric_limits<std::uint64_t>::max(), 1),
     std::string("18,446,744,073,709,551,615  (Cells 18,446,744,073,709,551,615)")
   );
-
-  const auto samples  = runner::gridSnapshotWidthSamples();
-  const auto contains = [&samples](const std::string& value) {
-    for (const auto& line : samples) {
-      if (line.find(value) != std::string::npos) {
-        return true;
-      }
-    }
-    return false;
-  };
-
-  validate(contains(runner::Format::overheadPercentageWidthSample()));
-  validate(not contains(runner::Format::memory(std::numeric_limits<unsigned long long>::max())));
-  validate(not contains(runner::Format::grouped(std::numeric_limits<std::uint64_t>::max())));
-  validate(contains("Cells "));
 }

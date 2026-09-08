@@ -2,8 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "CommandLineSink.h"
 
-#include "tarch/multicore/Lock.h"
-
 #if defined(_WIN32)
 #include <io.h>
 #ifndef NOMINMAX
@@ -17,7 +15,7 @@
 #include <unistd.h>
 #endif
 
-tarch::instrumentation::CommandLineSink::CommandLineSink():
+tarch::instrumentation::CommandLineSink::CommandLineSink() :
   _stdoutSupportsAnsi(streamSupportsAnsi(1)),
   _stderrSupportsAnsi(streamSupportsAnsi(2)) {
   configureOutputStreams();
@@ -26,8 +24,7 @@ tarch::instrumentation::CommandLineSink::CommandLineSink():
 tarch::instrumentation::CommandLineSink::~CommandLineSink() { close(); }
 
 tarch::instrumentation::CommandLineSink& tarch::instrumentation::CommandLineSink::getInstance() {
-  // Deliberately leaked: the log sink must outlive every other static object,
-  // since some (e.g. solver globals dumping a database) log from their destructor.
+  // Process-lifetime storage keeps logging available during static destruction.
   static CommandLineSink& singleton = *new CommandLineSink();
   return singleton;
 }
@@ -39,7 +36,7 @@ void tarch::instrumentation::CommandLineSink::configureOutputStreams() {
   std::cerr.precision(20);
 }
 
-bool tarch::instrumentation::CommandLineSink::streamSupportsAnsi(int fileDescriptor) {
+bool tarch::instrumentation::CommandLineSink::streamSupportsAnsi(const int fileDescriptor) {
 #if defined(_WIN32)
   if (_isatty(fileDescriptor) == 0) {
     return false;
@@ -55,7 +52,7 @@ bool tarch::instrumentation::CommandLineSink::streamSupportsAnsi(int fileDescrip
     return false;
   }
 
-  DWORD mode = 0;
+  DWORD mode{0};
   if (not GetConsoleMode(console, &mode)) {
     return false;
   }
@@ -70,7 +67,7 @@ bool tarch::instrumentation::CommandLineSink::streamSupportsAnsi(int fileDescrip
 #endif
 }
 
-const char* tarch::instrumentation::CommandLineSink::getAnsiPrefix(TerminalStyle terminalStyle) {
+const char* tarch::instrumentation::CommandLineSink::getAnsiPrefix(const TerminalStyle terminalStyle) {
   switch (terminalStyle) {
   case TerminalStyle::Warning:
     return "\033[33m";
@@ -83,9 +80,12 @@ const char* tarch::instrumentation::CommandLineSink::getAnsiPrefix(TerminalStyle
   return "";
 }
 
-void tarch::instrumentation::CommandLineSink::
-  writeToStdOut(std::string_view message, bool flush, TerminalStyle terminalStyle) {
-  tarch::multicore::Lock lock(_semaphore);
+void tarch::instrumentation::CommandLineSink::writeToStdOut(
+  const std::string_view message,
+  const bool             flush,
+  const TerminalStyle    terminalStyle
+) {
+  const std::scoped_lock lock(_mutex);
 
   const bool useAnsi = _stdoutSupportsAnsi and terminalStyle != TerminalStyle::Plain;
   if (useAnsi) {
@@ -100,9 +100,12 @@ void tarch::instrumentation::CommandLineSink::
   }
 }
 
-void tarch::instrumentation::CommandLineSink::
-  writeToStdErr(std::string_view message, bool flush, TerminalStyle terminalStyle) {
-  tarch::multicore::Lock lock(_semaphore);
+void tarch::instrumentation::CommandLineSink::writeToStdErr(
+  const std::string_view message,
+  const bool             flush,
+  const TerminalStyle    terminalStyle
+) {
+  const std::scoped_lock lock(_mutex);
 
   const bool useAnsi = _stderrSupportsAnsi and terminalStyle != TerminalStyle::Plain;
   if (useAnsi) {
@@ -118,7 +121,7 @@ void tarch::instrumentation::CommandLineSink::
 }
 
 void tarch::instrumentation::CommandLineSink::close() {
-  tarch::multicore::Lock lock(_semaphore);
+  const std::scoped_lock lock(_mutex);
 
   std::cout.flush();
   std::cerr.flush();

@@ -11,19 +11,9 @@ class CurviTracer(ActionSet):
     Record the DG solution at fixed coordinates of a curvilinear mesh.
 
     The coordinates are handed in as physical positions and are mapped into the
-    mesh through the solver's invertProjection(). Whenever a cell holds one of
-    these positions, we evaluate the DG polynomial there and append a snapshot to
-    a toolbox::particles::TrajectoryDatabase.
-
-    Fault coordinates are recorded from the face estimates. There the two
-    estimates of a face are averaged, except for the components addressed by the
-    solver's u and v shortcuts, which are recorded as the jump across the face.
-
-    ## Update plug-in points
-
-    We only record from cells and faces which are marked as updated, and from the
-    grid initialisation. For Runge-Kutta type solvers, we assume that the updated
-    flag is set by the computation of the final linear combination of estimates.
+    mesh through the solver's invertProjection(). Fault coordinates are recorded
+    from the face estimates, where the two estimates of a face are averaged
+    except for the components addressed by the solver's u and v shortcuts.
     """
 
     def __init__(
@@ -36,6 +26,8 @@ class CurviTracer(ActionSet):
         time_delta_between_two_snapshots=0,
         output_precision=8,
         use_relative_deltas=False,
+        initial_record_time=-1,
+        last_record_time=1e8,
         unknowns_to_store=0,
     ):
         """!
@@ -61,17 +53,17 @@ class CurviTracer(ActionSet):
 
         position_delta_between_two_snapshots: Float
           Maps to the positionDelta argument of
-          toolbox::particles::TrajectoryDatabase::TrajectoryDatabase().
+          peano4::particles::TrajectoryDatabase::TrajectoryDatabase().
 
         time_delta_between_two_snapshots: Float
           Maps to the timeDelta argument of
-          toolbox::particles::TrajectoryDatabase::TrajectoryDatabase().
+          peano4::particles::TrajectoryDatabase::TrajectoryDatabase().
 
         output_precision: Int
           Number of digits the database writes per value.
 
         use_relative_deltas: Boolean
-          See description of the C++ class toolbox::particles::TrajectoryDatabase.
+          See description of the C++ class peano4::particles::TrajectoryDatabase.
 
         initial_record_time: Float
           Lower bound of the recording time window handed to the generated code.
@@ -89,7 +81,7 @@ class CurviTracer(ActionSet):
         self._coordinates = coordinates
 
         self.d = {}
-        # Do not overwrite the dictionary of the superclass, as we need it.
+        # Do not overwrite the dictionary of the superclass.
         self.d["SOLVER_NAME"] = solver._name
         self.d["SOLVER_INSTANCE"] = solver.get_name_of_global_instance()
         self.d["ORDER"] = solver._basis.order
@@ -111,14 +103,23 @@ class CurviTracer(ActionSet):
         else:
             self.d["USE_RELATIVE_DELTAS"] = "false"
 
+        self.d["INI_RECORD"] = initial_record_time
+        self.d["LAST_RECORD"] = last_record_time
+
         self.d["N"] = len(coordinates)
 
     __Template_TouchCellLastTime = jinja2.Template(
         """
+  const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+
   if (
     not marker.willBeRefined()
     and
     fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated()
+    and
+    timeStamp >= {{INI_RECORD}}
+    and
+    timeStamp <= {{LAST_RECORD}}
     and
       (
         repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep()
@@ -126,8 +127,7 @@ class CurviTracer(ActionSet):
         repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::GridInitialisation
       )
   ) {
-
-    for(int i=0; i<(int) _coordinates.size(); i++){
+    for (int i=0; i<(int) _coordinates.size(); i++) {
       // A coordinate has to be recorded by exactly one cell, as the database
       // would otherwise hold duplicate snapshots for the same time stamp.
       if (
@@ -135,17 +135,16 @@ class CurviTracer(ActionSet):
         and
         marker.isContained(_coordinates[i])
       ) {
+        constexpr int UnknownsToStore = {{UNKNOWNS_TO_STORE}};
+        constexpr int UnknownsPerDoF = {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}};
 
-        constexpr int unknownsToStore = {{UNKNOWNS_TO_STORE}};
-        constexpr int unknownsPerDoF = {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}};
-
-        double data[unknownsToStore];
-        for (int unknown=0; unknown<unknownsToStore; unknown++) {
+        double data[UnknownsToStore];
+        for (int unknown=0; unknown<UnknownsToStore; unknown++) {
           data[unknown] = ::exahype2::dg::evaluatePolynomial(
               marker,
               {{ORDER}},
-              repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
-              unknownsPerDoF,
+              repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1D,
+              UnknownsPerDoF,
               fineGridCell{{SOLVER_NAME}}Q.data(),
               _coordinates[i],
               unknown
@@ -154,12 +153,11 @@ class CurviTracer(ActionSet):
 
         _database.addParticleSnapshot(
           i, i,
-          fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp(),
+          timeStamp,
           _coordinates[i],
-          unknownsToStore,
+          UnknownsToStore,
           data
         );
-
       }
     }
   }
@@ -168,10 +166,19 @@ class CurviTracer(ActionSet):
 
     __Template_TouchFaceLastTime = jinja2.Template(
         """
+  const double timeStamp = std::max(
+    fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(0),
+    fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(1)
+  );
+
   if (
     not marker.willBeRefined()
     and
     fineGridFace{{SOLVER_NAME}}FaceLabel.getUpdated()[0]
+    and
+    timeStamp >= {{INI_RECORD}}
+    and
+    timeStamp <= {{LAST_RECORD}}
     and
       (
         repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep()
@@ -182,118 +189,94 @@ class CurviTracer(ActionSet):
       std::abs(marker.getX()[repositories::{{SOLVER_INSTANCE}}.getFaultNormal()]-repositories::{{SOLVER_INSTANCE}}.getFaultPosition())
         < 0.5*marker.getH()[repositories::{{SOLVER_INSTANCE}}.getFaultNormal()]
   ) {
-
-    const double timeStamp = std::max(
-      fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(0),
-      fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(1)
-    );
-
-    auto isContained = [&marker](tarch::la::Vector<DIMENSIONS, double> coordinates){
+    auto isContained = [&marker](const tarch::la::Vector<DIMENSIONS, double>& coordinates) {
       const int normal = (marker.getSelectedFaceNumber() % DIMENSIONS);
-      bool is_contained = true;
-      for(int d=0; d<DIMENSIONS; d++){
-        if(d==normal){continue;}
-        is_contained &= coordinates[d] < marker.getX()[d] + 0.5*marker.getH()[d];
-        is_contained &= coordinates[d] > marker.getX()[d] - 0.5*marker.getH()[d];
+      bool isInside = true;
+      for (int d=0; d<DIMENSIONS; d++) {
+        if (d==normal) {
+          continue;
+        }
+        isInside &= coordinates[d] < marker.getX()[d] + 0.5*marker.getH()[d];
+        isInside &= coordinates[d] > marker.getX()[d] - 0.5*marker.getH()[d];
       }
-      return is_contained;
+      return isInside;
     };
 
-    for(int i=0; i<(int) _fault_coordinates.size(); i++){
+    for (int i=0; i<(int) _faultCoordinates.size(); i++) {
       // A fault coordinate has to be recorded by exactly one face, as the
       // database would otherwise hold duplicate snapshots for the same time
       // stamp.
       if (
         not marker.willBeRefined()
         and
-        isContained(_fault_coordinates[i])
+        isContained(_faultCoordinates[i])
       ) {
-
-        constexpr int unknownsToStore = {{UNKNOWNS_TO_STORE}};
-        constexpr int unknownsPerDoF = {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}};
+        constexpr int UnknownsToStore = {{UNKNOWNS_TO_STORE}};
+        constexpr int UnknownsPerDoF = {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}};
 
         constexpr int BasisElementsPerFace  = facedata::{{SOLVER_NAME}}QEstimates::Cardinality / 2;
 
-        double data[unknownsPerDoF];
-        for (int unknown=0; unknown<unknownsToStore; unknown++) {
+        double data[UnknownsPerDoF];
+        for (int unknown=0; unknown<UnknownsToStore; unknown++) {
           data[unknown] = 0.5 * (double) (
             ::exahype2::dg::evaluatePolynomial(
               marker,
               {{ORDER}},
-              repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
-              unknownsPerDoF,
+              repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1D,
+              UnknownsPerDoF,
               fineGridFace{{SOLVER_NAME}}QEstimates.data() + BasisElementsPerFace,
-              _fault_coordinates[i],
+              _faultCoordinates[i],
               unknown
             ) +
             ::exahype2::dg::evaluatePolynomial(
               marker,
               {{ORDER}},
-              repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
-              unknownsPerDoF,
+              repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1D,
+              UnknownsPerDoF,
               fineGridFace{{SOLVER_NAME}}QEstimates.data(),
-              _fault_coordinates[i],
+              _faultCoordinates[i],
               unknown
             )
           );
         }
 
         using Shortcuts = VariableShortcuts{{SOLVER_NAME}};
-        for(int unknown=Shortcuts::v; unknown<Shortcuts::v+3; unknown++) {
+        for (int unknown=Shortcuts::v; unknown<Shortcuts::v+3; unknown++) {
           data[unknown] = (double) (::exahype2::dg::evaluatePolynomial(
               marker,
               {{ORDER}},
-              repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
-              unknownsPerDoF,
+              repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1D,
+              UnknownsPerDoF,
               fineGridFace{{SOLVER_NAME}}QEstimates.data() + BasisElementsPerFace,
-              _fault_coordinates[i],
+              _faultCoordinates[i],
               unknown
             ) - ::exahype2::dg::evaluatePolynomial(
               marker,
               {{ORDER}},
-              repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
-              unknownsPerDoF,
+              repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1D,
+              UnknownsPerDoF,
               fineGridFace{{SOLVER_NAME}}QEstimates.data(),
-              _fault_coordinates[i],
+              _faultCoordinates[i],
               unknown
             ));
         }
 
-        for(int unknown=Shortcuts::v; unknown<Shortcuts::v+3; unknown++) {
+        for (int unknown=Shortcuts::u; unknown<Shortcuts::u+3; unknown++) {
           data[unknown] = (double) (::exahype2::dg::evaluatePolynomial(
               marker,
               {{ORDER}},
-              repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
-              unknownsPerDoF,
+              repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1D,
+              UnknownsPerDoF,
               fineGridFace{{SOLVER_NAME}}QEstimates.data() + BasisElementsPerFace,
-              _fault_coordinates[i],
+              _faultCoordinates[i],
               unknown
             ) - ::exahype2::dg::evaluatePolynomial(
               marker,
               {{ORDER}},
-              repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
-              unknownsPerDoF,
+              repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1D,
+              UnknownsPerDoF,
               fineGridFace{{SOLVER_NAME}}QEstimates.data(),
-              _fault_coordinates[i],
-              unknown
-            ));
-        }
-        for(int unknown=Shortcuts::u; unknown<Shortcuts::u+3; unknown++) {
-          data[unknown] = (double) (::exahype2::dg::evaluatePolynomial(
-              marker,
-              {{ORDER}},
-              repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
-              unknownsPerDoF,
-              fineGridFace{{SOLVER_NAME}}QEstimates.data() + BasisElementsPerFace,
-              _fault_coordinates[i],
-              unknown
-            ) - ::exahype2::dg::evaluatePolynomial(
-              marker,
-              {{ORDER}},
-              repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
-              unknownsPerDoF,
-              fineGridFace{{SOLVER_NAME}}QEstimates.data(),
-              _fault_coordinates[i],
+              _faultCoordinates[i],
               unknown
           ));
         }
@@ -301,11 +284,10 @@ class CurviTracer(ActionSet):
         _database.addParticleSnapshot(
           i+{{N}}, i+{{N}},
           timeStamp,
-          _fault_coordinates[i],
-          unknownsToStore,
+          _faultCoordinates[i],
+          UnknownsToStore,
           data
         );
-
       }
     }
   }
@@ -336,10 +318,10 @@ _database.setOutputPrecision( {{OUTPUT_PRECISION}} );
 _database.setPositionDeltaBetweenTwoSnapshots( {{POSITION_DELTA}}, {{USE_RELATIVE_DELTAS}} );
 _database.setTimeDeltaBetweenTwoSnapshots( {{TIME_DELTA}} );
 
-_spacetreeId = treeNumber;
+_treeId = treeNumber;
 
-tarch::multicore::Lock lock (_coordinatesSemaphore);
-if(_coordinates.empty()){
+const std::scoped_lock lock(_coordinatesMutex);
+if (_coordinates.empty()) {
     """
         dimensions = -1
         for i in range(len(self._coordinates)):
@@ -382,13 +364,13 @@ if(_coordinates.empty()){
                 dimensions = 2
         result += """
 }
-if(_fault_coordinates.empty()){
+if (_faultCoordinates.empty()) {
     """
         dimensions = -1
         for i in range(len(self._fault_coordinates)):
             if len(self._fault_coordinates[i]) == 3:
                 result += (
-                    " _fault_coordinates.push_back(repositories::{{SOLVER_INSTANCE}}.invertProjection(\n"
+                    " _faultCoordinates.push_back(repositories::{{SOLVER_INSTANCE}}.invertProjection(\n"
                     + "    {\n      "
                     + str(self._fault_coordinates[i][0])
                     + ", "
@@ -408,7 +390,7 @@ if(_fault_coordinates.empty()){
                 dimensions = 3
             if len(self._fault_coordinates[i]) == 2:
                 result += (
-                    " _fault_coordinates.push_back(repositories::{{SOLVER_INSTANCE}}.invertProjection(\n"
+                    " _faultCoordinates.push_back(repositories::{{SOLVER_INSTANCE}}.invertProjection(\n"
                     + "    {\n      "
                     + str(self._fault_coordinates[i][0])
                     + ", "
@@ -431,12 +413,11 @@ if(_fault_coordinates.empty()){
     def get_includes(self):
         return jinja2.Template(
             """
-#include "tarch/multicore/Lock.h"
 #include "peano4/Loop.h"
 #include "repositories/SolverRepository.h"
 #include "runner/RuntimeParameters.h"
 #include "exahype2/dg/Tracer.h"
-#include "toolbox/particles/TrajectoryDatabase.h"
+#include "peano4/particles/TrajectoryDatabase.h"
 #include "VariableShortcuts{{SOLVER_NAME}}.h"
         """
         ).render(**self.d)
@@ -449,11 +430,11 @@ std::vector<tarch::la::Vector<DIMENSIONS,double>>  """
             + """::_coordinates;
 std::vector<tarch::la::Vector<DIMENSIONS,double>>  """
             + full_qualified_classname
-            + """::_fault_coordinates;
-tarch::multicore::BooleanSemaphore     """
+            + """::_faultCoordinates;
+std::mutex     """
             + full_qualified_classname
-            + """::_coordinatesSemaphore;
-toolbox::particles::TrajectoryDatabase  """
+            + """::_coordinatesMutex;
+peano4::particles::TrajectoryDatabase  """
             + full_qualified_classname
             + """::_database;
 """
@@ -461,16 +442,16 @@ toolbox::particles::TrajectoryDatabase  """
 
     def get_attributes(self):
         return """
-    static tarch::multicore::BooleanSemaphore                 _coordinatesSemaphore;
+    static std::mutex                                         _coordinatesMutex;
     static std::vector<tarch::la::Vector<DIMENSIONS,double>>  _coordinates;
-    static std::vector<tarch::la::Vector<DIMENSIONS,double>>  _fault_coordinates;
+    static std::vector<tarch::la::Vector<DIMENSIONS,double>>  _faultCoordinates;
 
-    int                                        _spacetreeId;
+    int                                        _treeId;
 
-    static toolbox::particles::TrajectoryDatabase  _database;
+    static peano4::particles::TrajectoryDatabase  _database;
 
   public:
-    static std::vector<tarch::la::Vector<DIMENSIONS,double>> getCoordinates(){
+    static std::vector<tarch::la::Vector<DIMENSIONS,double>> getCoordinates() {
       return _coordinates;
     }
 """

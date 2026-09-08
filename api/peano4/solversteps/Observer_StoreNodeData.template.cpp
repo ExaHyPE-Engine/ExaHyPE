@@ -1,32 +1,18 @@
 namespace {
-  template <typename Data, typename Block, typename Stack, typename Marker>
+  template <typename Data, typename Block, typename Container, typename Marker>
   inline void storeDataFromBlock(
     Block&        block,
     int           blockPosition,
-    Stack&        stack,
+    Container&    container,
+    int           poolIndex,
     const Marker& marker,
-    bool          isInOutStack
+    bool          isLastTouch
   ) {
-    if (not isInOutStack or Data::store(marker)) {
-      auto& data = block.get(blockPosition);
-      stack.push(std::move(data));
-    }
-  }
-
-  template <typename Data, typename Block, typename Stack, typename Marker>
-  inline void storeDataFromBlock(
-    Block&        block,
-    int           blockPosition,
-    Stack&        stack,
-    Stack&        hangingStack,
-    const Marker& marker,
-    bool          isInOutStack,
-    bool          isHanging
-  ) {
-    if (not isInOutStack or Data::store(marker)) {
-      auto& data        = block.get(blockPosition);
-      auto& targetStack = isHanging ? hangingStack : stack;
-      targetStack.push(std::move(data));
+    // A repeat touch always moves the block entry back into its slot; the
+    // last touch respects the storage guard, so a guard-off entity leaves
+    // its slot alone.
+    if (not isLastTouch or Data::store(marker)) {
+      container.getPoolSlot(poolIndex) = std::move(block.get(blockPosition));
     }
   }
 }
@@ -35,13 +21,13 @@ void {{FULL_QUALIFIED_CLASSNAME}}::storeNodeData(const ::peano4::grid::GridTrave
   const auto callStack = static_cast<int>(::peano4::grid::StackTopology::BaseStack::Call);
 
 {%- for cell in CELLS | reverse %}
-  auto popBlock{{ cell.logical_type_name }} = repositories::DataRepository::{{ cell.logical_type_name }}StackContainer.getLocalExchangeStack(_spacetreeId, callStack).popBlock(1);
+  auto popBlock{{ cell.logical_type_name }} = repositories::DataRepository::{{ cell.logical_type_name }}StackContainer.getLocalExchangeStack(_treeId, callStack).popBlock(1);
 {%- endfor %}
 {%- for face in FACES | reverse %}
-  auto popBlock{{ face.logical_type_name }} = repositories::DataRepository::{{ face.logical_type_name }}StackContainer.getLocalExchangeStack(_spacetreeId, callStack).popBlock(TWO_TIMES_D);
+  auto popBlock{{ face.logical_type_name }} = repositories::DataRepository::{{ face.logical_type_name }}StackContainer.getLocalExchangeStack(_treeId, callStack).popBlock(TWO_TIMES_D);
 {%- endfor %}
 {%- for vertex in VERTICES | reverse %}
-  auto popBlock{{ vertex.logical_type_name }} = repositories::DataRepository::{{ vertex.logical_type_name }}StackContainer.getLocalExchangeStack(_spacetreeId, callStack).popBlock(TWO_POWER_D);
+  auto popBlock{{ vertex.logical_type_name }} = repositories::DataRepository::{{ vertex.logical_type_name }}StackContainer.getLocalExchangeStack(_treeId, callStack).popBlock(TWO_POWER_D);
 {%- endfor %}
 
 {%- if CELLS %}
@@ -54,17 +40,17 @@ void {{FULL_QUALIFIED_CLASSNAME}}::storeNodeData(const ::peano4::grid::GridTrave
     if (not isCreateOrDestroy and not isNoData) {
       assertion(outCellStack >= static_cast<int>(::peano4::grid::StackTopology::BaseStack::Call));
 
-      auto       cellMarker   = event.getCellMarker();
-      const auto isInOutStack = ::peano4::grid::StackTopology::isInOutStack(outCellStack);
+      auto       cellMarker  = event.getCellMarker();
+      const auto isLastTouch = ::peano4::grid::StackTopology::isInOutStack(outCellStack);
 
 {%- for cell in CELLS | reverse %}
-      // Store cell {{ cell.logical_type_name }}
       storeDataFromBlock<{{ cell.full_qualified_type }}>(
         popBlock{{ cell.logical_type_name }},
         inCellStackPosition,
-        repositories::DataRepository::{{ cell.logical_type_name }}StackContainer.getLocalExchangeStack(_spacetreeId, outCellStack),
+        repositories::DataRepository::{{ cell.logical_type_name }}StackContainer,
+        event.getCellPoolIndex(),
         cellMarker,
-        isInOutStack
+        isLastTouch
       );
 {%- endfor %}
     }
@@ -81,21 +67,18 @@ void {{FULL_QUALIFIED_CLASSNAME}}::storeNodeData(const ::peano4::grid::GridTrave
     if (not isCreateOrDestroy and not isNoData) {
       assertion(outFaceStack >= static_cast<int>(::peano4::grid::StackTopology::BaseStack::Call));
 
-      auto       faceMarker    = event.getFaceMarker();
+      auto faceMarker = event.getFaceMarker();
       faceMarker.select(inFaceStackPosition);
-      const auto isInOutStack  = ::peano4::grid::StackTopology::isInOutStack(outFaceStack);
-      const auto isHangingFace = faceMarker.isHanging();
+      const auto isLastTouch = ::peano4::grid::StackTopology::isInOutStack(outFaceStack);
 
 {%- for face in FACES | reverse %}
-      // Store face {{ face.logical_type_name }}
       storeDataFromBlock<{{ face.full_qualified_type }}>(
         popBlock{{ face.logical_type_name }},
         inFaceStackPosition,
-        repositories::DataRepository::{{ face.logical_type_name }}StackContainer.getLocalExchangeStack(_spacetreeId, outFaceStack),
-        repositories::DataRepository::{{ face.logical_type_name }}HangingStackContainer.getLocalExchangeStack(_spacetreeId, outFaceStack),
+        repositories::DataRepository::{{ face.logical_type_name }}StackContainer,
+        event.getFacePoolIndex(inFaceStackPosition),
         faceMarker,
-        isInOutStack,
-        isHangingFace
+        isLastTouch
       );
 {%- endfor %}
     }
@@ -112,20 +95,17 @@ void {{FULL_QUALIFIED_CLASSNAME}}::storeNodeData(const ::peano4::grid::GridTrave
     if (not isCreateOrDestroy and not isNoData) {
       assertion(outVertexStack >= static_cast<int>(::peano4::grid::StackTopology::BaseStack::Call));
 
-      auto       vertexMarker    = ::peano4::datamanagement::VertexMarker(event, inVertexStackPosition);
-      const auto isInOutStack    = ::peano4::grid::StackTopology::isInOutStack(outVertexStack);
-      const auto isHangingVertex = vertexMarker.isHanging();
+      auto       vertexMarker = ::peano4::datamanagement::VertexMarker(event, inVertexStackPosition);
+      const auto isLastTouch  = ::peano4::grid::StackTopology::isInOutStack(outVertexStack);
 
 {%- for vertex in VERTICES | reverse %}
-      // Store vertex {{ vertex.logical_type_name }}
       storeDataFromBlock<{{ vertex.full_qualified_type }}>(
         popBlock{{ vertex.logical_type_name }},
         inVertexStackPosition,
-        repositories::DataRepository::{{ vertex.logical_type_name }}StackContainer.getLocalExchangeStack(_spacetreeId, outVertexStack),
-        repositories::DataRepository::{{ vertex.logical_type_name }}HangingStackContainer.getLocalExchangeStack(_spacetreeId, outVertexStack),
+        repositories::DataRepository::{{ vertex.logical_type_name }}StackContainer,
+        event.getVertexPoolIndex(inVertexStackPosition),
         vertexMarker,
-        isInOutStack,
-        isHangingVertex
+        isLastTouch
       );
 {%- endfor %}
     }

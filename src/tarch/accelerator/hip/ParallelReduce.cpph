@@ -1,16 +1,5 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#pragma once
-
-#include "tarch/accelerator/MemoryLocation.h"
-#include "tarch/accelerator/Range.h"
-#include "tarch/accelerator/Reducer.h"
-#include "tarch/accelerator/accelerator.h"
-#include "tarch/accelerator/hip/Device.h"
-#include "tarch/accelerator/hip/ErrorCheck.h"
-
-#include <hip/hip_runtime.h>
-#include <hipcub/hipcub.hpp>
 
 namespace tarch::accelerator {
   template <typename T>
@@ -28,11 +17,11 @@ namespace tarch::accelerator {
 
   template <typename Reducer, typename T>
   __device__ inline T blockReduce(Reducer red, T localAcc) {
-    __shared__ T sdata[kHipBlockSize];
+    __shared__ T sdata[HipBlockSize];
     const int    tid = threadIdx.x;
     sdata[tid]       = localAcc;
     __syncthreads();
-    for (int s = kHipBlockSize / 2; s > 0; s >>= 1) {
+    for (int s = HipBlockSize / 2; s > 0; s >>= 1) {
       if (tid < s) {
         sdata[tid] = combine_op(red, sdata[tid], sdata[tid + s]);
       }
@@ -41,7 +30,7 @@ namespace tarch::accelerator {
     return sdata[0];
   }
 
-  // `red` is unused in the body but must stay in the parameter list: it is the only
+  // `red` is unused in the body but must stay in the parameter list: It is the only
   // deduced occurrence of Reducer (perBlockOut's type is a non-deduced context). It
   // carries a host reference (red.target) that must never be dereferenced on device.
   template <typename Reducer, typename F>
@@ -62,7 +51,7 @@ namespace tarch::accelerator {
   }
 
   template <typename Reducer, typename F>
-  __global__ void flat_reduce_kernel_1d(F f, Reducer red, int n, typename Reducer::value_type* perBlockOut) {
+  __global__ void flat_reduce_kernel_1D(F f, Reducer red, int n, typename Reducer::value_type* perBlockOut) {
     using T            = typename Reducer::value_type;
     T         localAcc = Reducer::identity();
     const int idx      = blockIdx.x * blockDim.x + threadIdx.x;
@@ -170,13 +159,13 @@ namespace tarch {
     }
     const int device = accelerator::getCurrentDevice();
     CHECK_HIP_ERROR(hipSetDevice(device));
-    int blocks = (r.n + accelerator::kHipBlockSize - 1) / accelerator::kHipBlockSize;
+    int blocks = (r.n + accelerator::HipBlockSize - 1) / accelerator::HipBlockSize;
     blocks     = std::min(blocks, 65535);
 
     T* perBlock = allocateMemory<T>(blocks, MemoryLocation::Device, device);
     T* finalDev = allocateMemory<T>(1, MemoryLocation::Device, device);
 
-    accelerator::flat_reduce_kernel_1d<<<blocks, accelerator::kHipBlockSize, 0, accelerator::deviceStreamGet()>>>(
+    accelerator::flat_reduce_kernel_1D<<<blocks, accelerator::HipBlockSize, 0, accelerator::deviceStreamGet()>>>(
       f,
       red,
       r.n,
@@ -204,7 +193,7 @@ namespace tarch {
     T* perBlock = allocateMemory<T>(r.n, MemoryLocation::Device, device);
     T* finalDev = allocateMemory<T>(1, MemoryLocation::Device, device);
 
-    accelerator::team_reduce_kernel<<<r.n, accelerator::kHipBlockSize, 0, accelerator::deviceStreamGet()>>>(
+    accelerator::team_reduce_kernel<<<r.n, accelerator::HipBlockSize, 0, accelerator::deviceStreamGet()>>>(
       f,
       red,
       perBlock
@@ -220,22 +209,30 @@ namespace tarch {
   inline void parallelReduce(const RangeMD<2>& r, F f, Reducer red) {
     const int total = r.n[0] * r.n[1];
     const int n1    = r.n[1];
-    parallelReduce(Range(total), [=] __device__(int idx, typename Reducer::value_type& acc) {
-      const int x = idx / n1;
-      const int y = idx % n1;
-      f(x, y, acc);
-    }, red);
+    parallelReduce(
+      Range(total),
+      [=] __device__(int idx, typename Reducer::value_type& acc) {
+        const int x = idx / n1;
+        const int y = idx % n1;
+        f(x, y, acc);
+      },
+      red
+    );
   }
   template <typename Reducer, typename F>
   inline void parallelReduce(const RangeMD<3>& r, F f, Reducer red) {
     const int total = r.n[0] * r.n[1] * r.n[2];
     const int n1    = r.n[1];
     const int n2    = r.n[2];
-    parallelReduce(Range(total), [=] __device__(int idx, typename Reducer::value_type& acc) {
-      const int x = idx / (n1 * n2);
-      const int y = (idx / n2) % n1;
-      const int z = idx % n2;
-      f(x, y, z, acc);
-    }, red);
+    parallelReduce(
+      Range(total),
+      [=] __device__(int idx, typename Reducer::value_type& acc) {
+        const int x = idx / (n1 * n2);
+        const int y = (idx / n2) % n1;
+        const int z = idx % n2;
+        f(x, y, z, acc);
+      },
+      red
+    );
   }
 } // namespace tarch

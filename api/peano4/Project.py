@@ -26,7 +26,6 @@ class Project (object):
     [ "tests", "mysolver" ] for example if you want to write a solver that
     is embedded into the namespace tests::mysolver.
 
-
   ## Global project properties
 
   If you want to alter some global constants, you should manipulate
@@ -37,9 +36,6 @@ class Project (object):
   def __init__(self, namespace, project_name, executable = "",
                dimensions = None, offset = None, size = None, periodic_bc = None,
                grid_levels = None, build_mode = None, directory = "."):
-    # Standard project command-line arguments for every project: -d/--dimensions
-    # and -m/--build-mode override the constructor defaults, -v enables verbose logging,
-    # -h prints the help.
     arguments = Project._parse_project_arguments()
     setup_logging(level=logging.DEBUG if arguments.verbose else logging.INFO)
 
@@ -101,7 +97,6 @@ class Project (object):
 
     self.is_extended = False
 
-
   _project_arguments = None
 
   @staticmethod
@@ -148,7 +143,6 @@ class Project (object):
   def dimensions(self):
     return self._dimensions
 
-
   def __str__(self):
     return "(#steps=" + str(self.solversteps) + ",model=" + str(self.datamodel) + ")"
 
@@ -172,9 +166,6 @@ class Project (object):
   def _create_steps(self):
     self.create_grid = peano4.solversteps.Step("CreateGrid", False)
     self.solversteps.add_step(self.create_grid)
-
-    self.load_balancing = peano4.solversteps.Step("LoadBalancing", False)
-    self.solversteps.add_step(self.load_balancing)
 
   def add_runtime_parameter(self, name, parameter_type, default_value):
     """Register a runtime parameter, read at start-up from config.json and the command line."""
@@ -319,15 +310,11 @@ class Project (object):
     )
     self.is_built = False
 
-    # Honour --generate-only / -j / --clean-first from the command line.
     self._configure_build_from_project_arguments()
-
-    # Honour --plot-format from the command line.
     self._configure_plotting_from_project_arguments()
 
-    # Apply the constructor's build configuration to the makefile. A subclass may
-    # already have parsed it earlier (needed during code generation); the flag
-    # avoids parsing twice.
+    # A subclass may have parsed the build configuration during code generation,
+    # so the flag keeps this call from parsing it a second time.
     if self._dimensions is not None:
       if not self._makefile_configured:
         self.output.makefile.parse_configuration_outcome()
@@ -342,9 +329,8 @@ class Project (object):
         len(self.output.artefacts),
       )
 
-    # Generation must be idempotent: the construct_output() calls below append
-    # artefacts anew on every call. Snapshot the pre-registered artefacts and
-    # restore them afterwards so repeated calls do not pile up duplicates.
+    # The construct_output() calls below append artefacts anew on every call, so
+    # the pre-registered artefacts are stored here and restored afterwards.
     pre_generation_artefacts = list(self.output.artefacts)
     pre_generation_readme_entries = list(self.output.readme._entries)
 

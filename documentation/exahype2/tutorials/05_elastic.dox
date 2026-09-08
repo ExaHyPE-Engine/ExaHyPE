@@ -88,7 +88,7 @@ A 3D high-order run is heavier than the 2D tutorials - at order 4 each cell carr
     export OMP_NUM_THREADS=4
     ./Elastic -et 0.5 -ns 10 -l 2
 
-A 3D field is best explored slice by slice. `show_solution_3d` cuts axis-aligned
+A 3D field is best explored slice by slice. `show_solution_3D` cuts axis-aligned
 2D slices through the cube: pick the slice axis with the **slice ⊥** dropdown
 (x/y/z), move the **slice** slider through the volume, pick a field, and animate
 over time with the **time** slider / Play. Picking a slice (or the field or axis)
@@ -96,7 +96,7 @@ warms all of that slice's time frames in parallel across cores - a brief
 *Prefetching N/M* - so the time slider and playback are then smooth:
 
     from postprocessing import render_solution
-    render_solution.show_solution_3d("ADERDGSolver", field="sigma")
+    render_solution.show_solution_3D("ADERDGSolver", field="sigma")
 
 The expanding spherical P-wave appears in the mid-plane slice as concentric
 rings - the cross-section of the spherical shell. Moving the slice slider
@@ -106,7 +106,7 @@ off-centre should:
 @image html documentation/exahype2/tutorials/Elastic_slice.png
 
 @note The pictures in this part were produced at `-l 3` (a \f$27^3\f$-cell
-grid, a few-minutes run). The default level 2 shows the same physics, just
+grid, a few-minutes run). The default level 2 shows the same physics, only
 coarser - raise the level in the run command if you want the same crispness.
 
 # A Taste of HPC
@@ -118,8 +118,8 @@ surfaces**, neither of which needs a code change:
 - **Distributed memory (MPI).** Launch under `mpirun -n N ./Elastic ...`: ExaHyPE
   decomposes the domain across the ranks and balances the load automatically. MPI
   is built in by default; the banner reports `MPI   N Rank(s)` plus the
-  domain-decomposition `Load Balancing` statistics.
-- **Shared memory (OpenMP).** The thread count per rank is the `OMP_NUM_THREADS`
+  domain-decomposition `MPI Load Balance` statistics.
+- **Threads (OpenMP).** The thread count per rank is the `OMP_NUM_THREADS`
   environment variable; the startup banner echoes it as `OpenMP   N Thread(s)`.
 
 The notebook measures the first one, **MPI strong scaling**: it runs the same

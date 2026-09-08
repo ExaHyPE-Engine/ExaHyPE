@@ -11,21 +11,7 @@ from .ProjectLinearCombinationOfEstimatesOntoFaces import (
 
 
 class AdaptiveMeshFaceCoupling(AbstractRungeKuttaDGActionSet):
-    """
-    Per-time-step resolution-transition coupling for Runge-Kutta DG adaptive meshes.
-
-    In the primary sweep of every Runge-Kutta step it restricts the fine cells'
-    projected traces onto the coarse face, whose own Riemann solve then serves
-    both sides of the transition: the fine cells consume its flux through the
-    action set InterpolateRiemannSolutionOntoHangingFaces in the secondary
-    sweep, and the hanging faces lift their time stamps from the coarse face.
-    It changes no topology and reports no grid-control events. The file
-    exahype2/dg/Riemann.h describes the DG AMR semantics in detail. This action
-    set mirrors the FV and ADER-DG AdaptiveMeshFaceCoupling.
-    """
-
     def __init__(self, solver, face_projections: FaceProjections):
-        """The guards are those for the projection onto the faces."""
         super(AdaptiveMeshFaceCoupling, self).__init__(solver)
         self.guards = []
         self.face_projections = face_projections
@@ -57,16 +43,34 @@ class AdaptiveMeshFaceCoupling(AbstractRungeKuttaDGActionSet):
     __Template_TouchHangingFaceLastTime = """
   {% for PREDICATE_NO in range(0,PREDICATES|length) %}
   if ( {{PREDICATES[PREDICATE_NO]}} ) {
-    ::exahype2::dg::restrictAndAccumulateProjectedFacePolynomial(
+    const int facePosition = marker.getSelectedFaceNumber() < DIMENSIONS ? 1 : 0;
+    // Across a level jump of two or more, this face carries staged subfaces of
+    // its own. They reduce here, so the chained restriction is complete before
+    // this face stages itself.
+    if (_projectionRestrictionStage.hasFrame(fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.data() + facePosition)) {
+      ::exahype2::amr::restrictHaloLayerFromStagedSubfaces(
+        _projectionRestrictionStage,
+        fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.data() + facePosition,
+        fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.data(),
+        repositories::{{SOLVER_INSTANCE}}.RestrictionMatrix1D,
+        repositories::{{SOLVER_INSTANCE}}.QuadratureWeights1D,
+        marker.getSelectedFaceNumber() % DIMENSIONS,
+        {{ORDER}} + 1,
+        {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}
+      );
+    }
+    // The subface's trace half stages for the gathered restriction, which the
+    // persistent face reduces in one order-invariant pass when the sweep leaves
+    // it, so the restricted trace depends neither on the visit order nor on the
+    // decomposition.
+    ::exahype2::amr::stageHaloLayerForGatheredRestriction(
       marker,
-      {{ORDER}},
-      {{NUMBER_OF_PROJECTED_QUANTITIES}},
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      repositories::{{SOLVER_INSTANCE}}.RestrictionMatrix1d,
-      repositories::{{SOLVER_INSTANCE}}.QuadratureWeights1d,
+      _projectionRestrictionStage,
+      coarseGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(marker.getSelectedFaceNumber()).data() + facePosition,
       fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.data(),
-      coarseGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(marker.getSelectedFaceNumber()).data()
+      facePosition,
+      {{ORDER}} + 1,
+      {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}
     );
 
     const bool isLeftEntryOnCoarseFaceLabel = marker.getSelectedFaceNumber() >= DIMENSIONS;
@@ -78,6 +82,29 @@ class AdaptiveMeshFaceCoupling(AbstractRungeKuttaDGActionSet):
         fineGridFace{{FACE_LABEL}}.getUpdatedTimeStamp( isLeftEntryOnCoarseFaceLabel ? 0 : 1 )
       )
     );
+  }
+  {% endfor %}
+"""
+
+    __Template_TouchFaceLastTime = """
+  {% for PREDICATE_NO in range(0,PREDICATES|length) %}
+  if ( {{PREDICATES[PREDICATE_NO]}} ) {
+    // By this face's last touch every hanging subface has staged its trace
+    // half, so a frame reduces here in one order-invariant pass.
+    for (int facePosition = 0; facePosition < 2; facePosition++) {
+      if (_projectionRestrictionStage.hasFrame(fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.data() + facePosition)) {
+        ::exahype2::amr::restrictHaloLayerFromStagedSubfaces(
+          _projectionRestrictionStage,
+          fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.data() + facePosition,
+          fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.data(),
+          repositories::{{SOLVER_INSTANCE}}.RestrictionMatrix1D,
+          repositories::{{SOLVER_INSTANCE}}.QuadratureWeights1D,
+          marker.getSelectedFaceNumber() % DIMENSIONS,
+          {{ORDER}} + 1,
+          {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}
+        );
+      }
+    }
   }
   {% endfor %}
 """
@@ -112,7 +139,34 @@ class AdaptiveMeshFaceCoupling(AbstractRungeKuttaDGActionSet):
             == peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME
         ):
             result = jinja2.Template(self.__Template_TouchFaceFirstTime).render(**d)
+        if (
+            operation_name
+            == peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_LAST_TIME
+        ):
+            result = jinja2.Template(self.__Template_TouchFaceLastTime).render(**d)
         return result
+
+    def get_attributes(self):
+        assert (
+            compute_number_of_face_projection_quantities(self.face_projections) == 1
+        ), "The gathered trace restriction supports one projected quantity per face."
+        d = {}
+        self._solver._init_dictionary_with_default_parameters(d)
+        self._solver.add_entries_to_text_replacement_dictionary(d)
+        return f"""
+    ::exahype2::amr::ChildDataStage<double> _projectionRestrictionStage{{
+      THREE_POWER_D / 3,
+      facedata::{d["UNKNOWN_IDENTIFIER"]}EstimateProjection::Cardinality / 2}};
+"""
+
+    def get_includes(self):
+        return (
+            super(AdaptiveMeshFaceCoupling, self).get_includes()
+            + """
+#include "exahype2/amr/AMRRoutines.h"
+#include "exahype2/amr/ChildDataStage.h"
+"""
+        )
 
     @property
     def guards(self):
@@ -135,40 +189,12 @@ class AdaptiveMeshFaceCoupling(AbstractRungeKuttaDGActionSet):
 
 
 class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
-    """
-    Full inter-grid transfer for the dedicated DynamicAMR observer.
-
-    This is the action set that changes the topology: it hands the committed
-    refine/coarsen events to Peano via getGridControlEvents, so the observer's
-    traversals trigger and realise the requests the RefinementCriterion
-    accumulated during the preceding time step. It interpolates the nodal DG
-    solution onto cells Peano creates and restricts it back onto cells Peano
-    destroys; the Runge-Kutta estimates and the face projections are rebuilt by
-    the next time step on the settled grid, so created cells and faces start
-    from cleared buffers.
-
-    No PDE update happens here, so the inherited hanging-face coupling is
-    switched off. This action set mirrors the FV and ADER-DG DynamicAMRTransfer.
-    """
-
-    _Template_TouchCellFirstTime = """
-  if (marker.hasBeenRefined() and not marker.willBeRefined()) {
-    // The restriction accumulates the destroyed children into the parent, so a coarsening
-    // parent's stale buffer is cleared before its children restrict into it on the descent.
-    std::fill_n(
-      fineGridCell{{UNKNOWN_IDENTIFIER}}.data(),
-      std::remove_reference_t<decltype(fineGridCell{{UNKNOWN_IDENTIFIER}})>::Cardinality,
-      0.0
-    );
-  }
-"""
-
     _Template_CreateCell = """
-  ::toolbox::blockstructured::interpolateCell(
+  ::exahype2::amr::interpolateCell(
     marker,
     coarseGridCell{{UNKNOWN_IDENTIFIER}}.data(),
     fineGridCell{{UNKNOWN_IDENTIFIER}}.data(),
-    repositories::{{SOLVER_INSTANCE}}.InterpolationMatrix1d,
+    repositories::{{SOLVER_INSTANCE}}.InterpolationMatrix1D,
     {{DG_ORDER}} + 1,
     {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}
   );
@@ -202,15 +228,50 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
 """
 
     _Template_DestroyCell = """
-  ::toolbox::blockstructured::restrictCell(
-    marker,
-    coarseGridCell{{UNKNOWN_IDENTIFIER}}.data(),
-    fineGridCell{{UNKNOWN_IDENTIFIER}}.data(),
-    repositories::{{SOLVER_INSTANCE}}.RestrictionMatrix1d,
-    repositories::{{SOLVER_INSTANCE}}.QuadratureWeights1d,
-    {{DG_ORDER}} + 1,
-    {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}
-  );
+  // The destroyed child stages its solution; the completing sibling reduces the
+  // whole set onto the parent in one order-invariant pass, so the restriction
+  // cannot depend on the order the traversal destroys the children. The set
+  // always completes on one rank: The load balancer refuses to place a rank
+  // boundary inside a cell that has a leaf child, so a family that can coarsen
+  // is never split. ~ChildDataStage catches a violation of that.
+  const int linearisedChildPosition = peano4::dLinearised(marker.getRelativePositionWithinFatherCell(), 3);
+  if (_cellRestrictionStage.stage(
+        coarseGridCell{{UNKNOWN_IDENTIFIER}}.data(),
+        linearisedChildPosition,
+        fineGridCell{{UNKNOWN_IDENTIFIER}}.data()
+      )) {
+    constexpr int NodesPerAxis = {{DG_ORDER}} + 1;
+    // The gathered reduction expects one matrix per child interval with entry
+    // [fine * NodesPerAxis + coarse] that already carries the quadrature
+    // weighting, while the solver stores the operator packed per interval as
+    // [coarse][fine] with the weights separate.
+    double        weightedRestrictionMatrix[3][NodesPerAxis * NodesPerAxis];
+    const double* restrictionMatrixPerInterval[3];
+    for (int interval = 0; interval < 3; interval++) {
+      restrictionMatrixPerInterval[interval] = weightedRestrictionMatrix[interval];
+      for (int coarseNode = 0; coarseNode < NodesPerAxis; coarseNode++) {
+        for (int fineNode = 0; fineNode < NodesPerAxis; fineNode++) {
+          weightedRestrictionMatrix[interval][fineNode * NodesPerAxis + coarseNode] =
+            repositories::{{SOLVER_INSTANCE}}.RestrictionMatrix1D
+              [interval * NodesPerAxis * NodesPerAxis + coarseNode * NodesPerAxis + fineNode]
+            * repositories::{{SOLVER_INSTANCE}}.QuadratureWeights1D[fineNode]
+            / repositories::{{SOLVER_INSTANCE}}.QuadratureWeights1D[coarseNode];
+        }
+      }
+    }
+    const double* childValues[THREE_POWER_D];
+    for (int childIndex = 0; childIndex < THREE_POWER_D; childIndex++) {
+      childValues[childIndex] = _cellRestrictionStage.child(coarseGridCell{{UNKNOWN_IDENTIFIER}}.data(), childIndex);
+    }
+    ::exahype2::amr::restrictCellFromChildren(
+      coarseGridCell{{UNKNOWN_IDENTIFIER}}.data(),
+      childValues,
+      restrictionMatrixPerInterval,
+      NodesPerAxis,
+      {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}
+    );
+    _cellRestrictionStage.discard(coarseGridCell{{UNKNOWN_IDENTIFIER}}.data());
+  }
 
   coarseGridCell{{CELL_LABEL_NAME}}.setTimeStamp(
     std::max(coarseGridCell{{CELL_LABEL_NAME}}.getTimeStamp(), fineGridCell{{CELL_LABEL_NAME}}.getTimeStamp())
@@ -255,11 +316,6 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
 
         if (
             operation_name
-            == peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME
-        ):
-            return jinja2.Template(self._Template_TouchCellFirstTime).render(**d)
-        if (
-            operation_name
             == peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_LAST_TIME
         ):
             return jinja2.Template(self._Template_TouchCellLastTime).render(**d)
@@ -269,20 +325,32 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
             return jinja2.Template(self._Template_DestroyCell).render(**d)
         if operation_name == peano4.solversteps.ActionSet.OPERATION_CREATE_FACE:
             return jinja2.Template(self._Template_CreateFace).render(**d)
-        # The hanging-face coupling stays off in the realise sweeps: no solver reads the
+        # The hanging-face coupling stays off in the realise sweeps: No solver reads the
         # projections here, and the next time step rebuilds them on the settled grid.
         return "\n"
 
     def get_body_of_getGridControlEvents(self):
-        # Hand the committed refine/coarsen events back to Peano, so the trigger/realise
-        # traversals change the topology here, on a stable grid.
+        # The dedicated DynamicAMR traversal consumes the committed batch only
+        # after the solver sweeps have left the grid stable.
         return "  return ::exahype2::RefinementControlService::getInstance().getGridControlEvents();\n"
+
+    def get_attributes(self):
+        d = {}
+        self._solver._init_dictionary_with_default_parameters(d)
+        self._solver.add_entries_to_text_replacement_dictionary(d)
+        return (
+            super(DynamicAMRTransfer, self).get_attributes()
+            + f"""
+    ::exahype2::amr::ChildDataStage<double> _cellRestrictionStage{{
+      THREE_POWER_D,
+      celldata::{d["UNKNOWN_IDENTIFIER"]}::Cardinality}};
+"""
+        )
 
     def get_includes(self):
         return (
             super(DynamicAMRTransfer, self).get_includes()
             + """
-#include "toolbox/blockstructured/AMRRoutines.h"
 #include "exahype2/RefinementControlService.h"
 """
         )

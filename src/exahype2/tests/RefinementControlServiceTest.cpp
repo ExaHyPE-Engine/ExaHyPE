@@ -5,49 +5,115 @@
 #include "exahype2/RefinementControl.h"
 #include "exahype2/RefinementControlService.h"
 #include "peano4/Globals.h"
+#include "peano4/Loop.h"
+#include "peano4/grid/AutomatonState.h"
 #include "peano4/grid/GridControlEvent.h"
-#include "peano4/parallel/SpacetreeSet.h"
+#include "peano4/topology/Tree.h"
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 
 namespace {
+  // A request names the cell it was raised for, so the domain carries 81 unit-sized cells
+  // per axis on level four and their parents on level three.
+  constexpr double TestDomainWidth = 81.0;
+  constexpr int    LeafLevel       = 4;
+  constexpr int    ParentLevel     = 3;
+
+  constexpr int DeepestTestLevel = 7;
+
   tarch::la::Vector<DIMENSIONS, double> uniformVector(double value) {
     return tarch::la::Vector<DIMENSIONS, double>(value);
   }
 
-  // Delivery filters the committed set against tree extents. The semantic tests inspect
-  // the complete set, so they deliver against one extent that covers every coordinate
-  // the tests use.
-  std::vector<peano4::parallel::SpacetreeSet::TreeExtent> allCoveringTreeExtents() {
-    return {{uniformVector(-1000.0), uniformVector(2000.0)}};
+  struct TestDomain {
+    double offset[3];
+    double width[3];
+  };
+
+  constexpr TestDomain TestDomains[] = {
+    {{0.0, 0.0, 0.0}, {1.0, 1.0, 1.0}},
+    {{-1.0, -1.0, -1.0}, {2.0, 2.0, 2.0}},
+    {{0.0, 0.0, 0.0}, {10.0, 10.0, 10.0}},
+    {{-4.5, 0.0, -4.5}, {9.0, 9.0, 9.0}},
+    {{0.0, 0.0, 0.0}, {1.0, 3.0, 7.0}},
+    {{-0.25, -7.5, 3.0}, {0.5, 15.0, 6.0}},
+    {{414895.5, 6489600.0, -3000.0}, {1900.0, 1400.0, 3000.0}},
+    {{0.001, -0.002, 0.0}, {0.001, 0.002, 0.0005}},
+    {{-1.0e6, 0.0, 1.0e6}, {1.0e6, 3.0e6, 2.0e6}},
+  };
+
+  constexpr int numberOfTestDomains() { return static_cast<int>(std::size(TestDomains)); }
+
+  tarch::la::Vector<DIMENSIONS, double> testDomainOffset(int domainIndex) {
+    tarch::la::Vector<DIMENSIONS, double> offset;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      offset(axis) = TestDomains[domainIndex].offset[axis];
+    }
+    return offset;
   }
 
-  // The unit tests bring up and tear down MPI exactly like a full application, so the service
-  // runs the same exchange the generated solver repository drives. That exchange is
-  // self-synchronising, so every rank holds an identical committed-event set after each step
-  // and the data-dependent drain below stays in lockstep across ranks.
+  tarch::la::Vector<DIMENSIONS, double> testDomainWidth(int domainIndex) {
+    tarch::la::Vector<DIMENSIONS, double> width;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      width(axis) = TestDomains[domainIndex].width[axis];
+    }
+    return width;
+  }
+
+  // Each axis carries its own index, a third of the level's cell count apart from its
+  // neighbour.
+  tarch::la::Vector<DIMENSIONS, int> sweepPosition(int index, int cellsPerAxisOnLevel) {
+    tarch::la::Vector<DIMENSIONS, int> position;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      position(axis) = (index + axis * (cellsPerAxisOnLevel / 3)) % cellsPerAxisOnLevel;
+    }
+    return position;
+  }
+
+  // Descends to one cell along its lattice position read in base three, so the
+  // command carries the width and centre a traversal computes.
+  peano4::grid::AutomatonState descendToCell(
+    const peano4::grid::AutomatonState&       rootState,
+    int                                       targetLevel,
+    const tarch::la::Vector<DIMENSIONS, int>& latticeIndex
+  ) {
+    auto state = rootState;
+    for (int level = 1; level <= targetLevel; level++) {
+      peano4::grid::AutomatonState children[THREE_POWER_D];
+      peano4::grid::AutomatonState::refineState(state, children);
+
+      tarch::la::Vector<DIMENSIONS, int> childPosition;
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        childPosition(axis) = (latticeIndex(axis) / peano4::topology::cellsPerAxis(targetLevel - level)) % 3;
+      }
+      state = children[peano4::dLinearised(childPosition, 3)];
+    }
+    return state;
+  }
+
+  // Every rank holds the same committed-event set after each step, so this loop runs the
+  // same number of sweeps on every rank.
   void drainRefinementControlService() {
-    auto& service = exahype2::RefinementControlService::getInstance();
-    // Drain pending re-delivered events so each test starts from a clean service state.
-    // The iteration cap is only a safety net against an unexpectedly non-draining set.
-    int remainingSweeps = 16;
+    auto& service         = exahype2::RefinementControlService::getInstance();
+    int   remainingSweeps = 16;
     do {
       service.finishDynamicMeshRefinementStep();
-    } while (not service.getGridControlEvents(allCoveringTreeExtents()).empty() and --remainingSweeps > 0);
+    } while (not service.getGridControlEvents().empty() and --remainingSweeps > 0);
   }
 
-  bool isParentEraseEvent(
-    const peano4::grid::GridControlEvent&        event,
-    const tarch::la::Vector<DIMENSIONS, double>& domainOffset
-  ) {
-    return event.getRefinementControl() == peano4::grid::GridControlEvent::RefinementControl::Erase
-      and event.offset == domainOffset and event.width == uniformVector(3.0) and event.targetH == uniformVector(3.0);
+  // A promoted group names the parent cell one level above the erased leaves, at the
+  // lattice position the group's own position divided by three.
+  bool isParentEraseEvent(const peano4::grid::GridControlEvent& event, int parentLatticePosition) {
+    bool namesTheParent = event.getRefinementControl() == peano4::grid::GridControlEvent::RefinementControl::Erase
+      and event.level == ParentLevel;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      namesTheParent = namesTheParent and event.latticeIndex(axis) == parentLatticePosition;
+    }
+    return namesTheParent;
   }
 
-  // Add one erase command, but assign each sibling to a single rank in round-robin order.
-  // On several ranks the sibling group is therefore split across them, so the gather inside
-  // finishRefinementCriterionStep is what reassembles it; on one rank every command lands on
-  // that rank, so behaviour is unchanged.
+  // Adds one erase command on the rank the sibling index selects in round-robin order, so
+  // the gather inside finishRefinementCriterionStep reassembles the sibling group.
   void addEraseCommand(
     exahype2::RefinementControl&                 control,
     const tarch::la::Vector<DIMENSIONS, double>& offset,
@@ -64,6 +130,20 @@ namespace {
   // gather hands it to everybody else.
   void addRefineCommand(exahype2::RefinementControl& control, const tarch::la::Vector<DIMENSIONS, double>& offset) {
     if (tarch::mpi::Rank::getInstance().getRank() != 0) {
+      return;
+    }
+    control.addCommand(offset + 0.5 * uniformVector(1.0), uniformVector(1.0), exahype2::RefinementCommand::Refine);
+  }
+
+  // Raises the refine command on the rank the raiser number selects in round-robin order,
+  // so on several ranks the wishlists of all ranks change between steps.
+  void addRefineCommandOnRank(
+    exahype2::RefinementControl&                 control,
+    const tarch::la::Vector<DIMENSIONS, double>& offset,
+    int                                          raiserNumber
+  ) {
+    if (raiserNumber % tarch::mpi::Rank::getInstance().getNumberOfRanks()
+        != tarch::mpi::Rank::getInstance().getRank()) {
       return;
     }
     control.addCommand(offset + 0.5 * uniformVector(1.0), uniformVector(1.0), exahype2::RefinementCommand::Refine);
@@ -135,66 +215,164 @@ exahype2::tests::RefinementControlServiceTest::RefinementControlServiceTest() :
   TestCase("exahype2::tests::RefinementControlServiceTest") {}
 
 void exahype2::tests::RefinementControlServiceTest::run() {
-  testMethod(testRefineCommandBecomesBandedEvent);
+  testMethod(testRefineCommandNamesTheRequestingCell);
+  testMethod(testEveryCellIsNamedExactlyOnAnyDomain);
   testMethod(testCompleteEraseSiblingGroupBecomesParentEvent);
   testMethod(testEraseSiblingGroupIsAnchoredAtDomainOffset);
   testMethod(testEraseSiblingGroupIsAnchoredPerAxis);
   testMethod(testIncompleteEraseSiblingGroupIsDiscarded);
   testMethod(testShiftedEraseSiblingGroupIsDiscarded);
-  testMethod(testTriggerEventIsRedeliveredForRealisation);
-  testMethod(testMixedTriggerAndRealiseBatchRedeliversTrigger);
-  testMethod(testSiblingGroupCompletedAcrossSweepsRedeliversParent);
-  testMethod(testDeferredTopologyChangeKeepsEventsAlive);
+  testMethod(testCommittedEventIsConsumedByOneTraversal);
+  testMethod(testEachBatchCarriesOnlyItsOwnRequests);
+  testMethod(testSiblingGroupNeedsEveryChildInOneBatch);
   testMethod(testUnchangedEventSetIsSuppressed);
+  testMethod(testRepeatedContributionsReuseTheCommittedSet);
+  testMethod(testARealisedSetWithoutSweepSuppressesItsRepetition);
+  testMethod(testARealisedSetWithoutSweepKeepsTheShippedLists);
   testMethod(testEraseOnlyBatchIsCommitted);
   testMethod(testComplementaryEraseSubsetsOfTwoSolversAreDiscarded);
   testMethod(testEraseNeedsUnanimousSolverConsent);
   testMethod(testReportTracksEveryStageOfARequest);
-  testMethod(testDeliveryFiltersAgainstTreeExtents);
+  testMethod(testTheDeltaExchangeTracksEveryRanksWishlist);
+}
+
+/**
+ * The exchange ships deltas against the list each rank shipped last, so every rank derives
+ * the same committed set while the wishlist grows, shrinks, empties and refills.
+ */
+void exahype2::tests::RefinementControlServiceTest::testTheDeltaExchangeTracksEveryRanksWishlist() {
+  drainRefinementControlService();
+  auto& service = exahype2::RefinementControlService::getInstance();
+  service.setDomain(uniformVector(0.0), uniformVector(TestDomainWidth));
+
+  const std::vector<std::vector<int>> wishlistPerStep{{70, 71, 72}, {71, 72}, {71, 72, 73, 74}, {72}, {}, {70, 72}};
+  for (const auto& wishlist : wishlistPerStep) {
+    exahype2::RefinementControl control;
+    for (const int cell : wishlist) {
+      addRefineCommandOnRank(control, uniformVector(static_cast<double>(cell)), cell);
+    }
+    commitCriterionStep(control);
+    validateTrue(service.committedEventsAgreeAcrossRanks());
+
+    const auto events = service.getGridControlEvents();
+    validateEquals(events.size(), wishlist.size());
+    for (const int cell : wishlist) {
+      const auto expectedLatticeIndex = tarch::la::Vector<DIMENSIONS, int>(cell);
+      int        numberOfMatches      = 0;
+      for (const auto& event : events) {
+        if (event.getRefinementControl() == peano4::grid::GridControlEvent::RefinementControl::Refine
+            and event.level == LeafLevel and event.latticeIndex == expectedLatticeIndex) {
+          numberOfMatches++;
+        }
+      }
+      validateEqualsWithParams1(numberOfMatches, 1, cell);
+    }
+  }
+
+  drainRefinementControlService();
 }
 
 void exahype2::tests::RefinementControlServiceTest::testEraseOnlyBatchIsCommitted() {
   drainRefinementControlService();
   auto& service = exahype2::RefinementControlService::getInstance();
-  service.setDomainOffset(uniformVector(0.0));
+  service.setDomain(uniformVector(0.0), uniformVector(TestDomainWidth));
 
-  // A batch whose committed events only erase still realises: once a feature has decayed
-  // or left the domain the criterion never refines again, and the remaining coarsening
-  // must not wait for a refining batch that never comes.
   exahype2::RefinementControl control;
   addEraseSiblingGroup(control, uniformVector(42.0), -1);
   commitCriterionStep(control);
 
-  const auto events = service.getGridControlEvents(allCoveringTreeExtents());
+  const auto events = service.getGridControlEvents();
   validateEquals(events.size(), 1u);
-  validateTrue(isParentEraseEvent(events[0], uniformVector(42.0)));
+  validateTrue(isParentEraseEvent(events[0], 14));
 
   drainRefinementControlService();
 }
 
-void exahype2::tests::RefinementControlServiceTest::testRefineCommandBecomesBandedEvent() {
+void exahype2::tests::RefinementControlServiceTest::testRefineCommandNamesTheRequestingCell() {
   drainRefinementControlService();
   auto& service = exahype2::RefinementControlService::getInstance();
-  service.setDomainOffset(uniformVector(0.0));
+  service.setDomain(uniformVector(0.0), uniformVector(TestDomainWidth));
 
   exahype2::RefinementControl control;
   addRefineCommand(control, uniformVector(1.0));
   commitCriterionStep(control);
 
-  const auto events = service.getGridControlEvents(allCoveringTreeExtents());
+  const auto events = service.getGridControlEvents();
   validateEquals(events.size(), 1u);
   validateTrue(events[0].getRefinementControl() == peano4::grid::GridControlEvent::RefinementControl::Refine);
-  validateTrue(events[0].offset == uniformVector(0.0));
-  validateTrue(events[0].width == uniformVector(3.0));
-  validateTrue(events[0].targetH == uniformVector(1.0 / 3.0));
+  validateEquals(events[0].level, LeafLevel);
+  const auto expectedLatticeIndex = tarch::la::Vector<DIMENSIONS, int>(1);
+  validateTrue(events[0].latticeIndex == expectedLatticeIndex);
 
   drainRefinementControlService();
+}
+
+/**
+ * Naming a cell inverts the chain of divisions and additions the traversal walks, so this
+ * checks every cell of every level against the states the traversal itself produces.
+ */
+void exahype2::tests::RefinementControlServiceTest::testEveryCellIsNamedExactlyOnAnyDomain() {
+  drainRefinementControlService();
+  auto& service = exahype2::RefinementControlService::getInstance();
+
+  for (int domainIndex = 0; domainIndex < numberOfTestDomains(); domainIndex++) {
+    const auto domainOffset = testDomainOffset(domainIndex);
+    const auto domainWidth  = testDomainWidth(domainIndex);
+    service.setDomain(domainOffset, domainWidth);
+
+    peano4::grid::AutomatonState rootState;
+    rootState.level = 0;
+    rootState.x     = domainOffset;
+    rootState.h     = domainWidth;
+
+    // The levels ascend so that no two batches in a row carry the same events, which the
+    // service drops as already realised.
+    for (int level = 1; level <= DeepestTestLevel; level++) {
+      const int cellsPerAxisOnLevel = peano4::topology::cellsPerAxis(level);
+
+      exahype2::RefinementControl                 control;
+      std::vector<peano4::grid::GridControlEvent> expectedEvents;
+      for (int index = 0; index < cellsPerAxisOnLevel; index++) {
+        const auto latticeIndex = sweepPosition(index, cellsPerAxisOnLevel);
+
+        peano4::grid::GridControlEvent expectedEvent;
+        expectedEvent.setRefinementControl(peano4::grid::GridControlEvent::RefinementControl::Refine);
+        expectedEvent.level        = level;
+        expectedEvent.latticeIndex = latticeIndex;
+        expectedEvents.push_back(expectedEvent);
+
+        // Spreading the sweep over the ranks makes the exchange reassemble it.
+        if (index % tarch::mpi::Rank::getInstance().getNumberOfRanks() == tarch::mpi::Rank::getInstance().getRank()) {
+          const auto cellState = descendToCell(rootState, level, latticeIndex);
+          control.addCommand(cellState.x + 0.5 * cellState.h, cellState.h, exahype2::RefinementCommand::Refine);
+        }
+      }
+      commitCriterionStep(control);
+
+      std::sort(expectedEvents.begin(), expectedEvents.end());
+      const auto events = service.getGridControlEvents();
+      validateEqualsWithParams3(events.size(), expectedEvents.size(), domainIndex, level, domainOffset);
+      for (std::size_t eventIndex = 0; eventIndex < std::min(events.size(), expectedEvents.size()); eventIndex++) {
+        validateWithParams4(
+          events[eventIndex] == expectedEvents[eventIndex],
+          domainIndex,
+          level,
+          events[eventIndex],
+          expectedEvents[eventIndex]
+        );
+      }
+
+      drainRefinementControlService();
+    }
+  }
+
+  service.setDomain(uniformVector(0.0), uniformVector(TestDomainWidth));
 }
 
 void exahype2::tests::RefinementControlServiceTest::testCompleteEraseSiblingGroupBecomesParentEvent() {
   drainRefinementControlService();
   auto& service = exahype2::RefinementControlService::getInstance();
-  service.setDomainOffset(uniformVector(0.0));
+  service.setDomain(uniformVector(0.0), uniformVector(TestDomainWidth));
 
   // The refine command keeps the committed set distinct from every set realised before, so
   // the commit is not suppressed.
@@ -203,9 +381,9 @@ void exahype2::tests::RefinementControlServiceTest::testCompleteEraseSiblingGrou
   addRefineCommand(control, uniformVector(50.0));
   commitCriterionStep(control);
 
-  const auto events = service.getGridControlEvents(allCoveringTreeExtents());
+  const auto events = service.getGridControlEvents();
   validateEquals(events.size(), 2u);
-  validateTrue(isParentEraseEvent(events[0], uniformVector(0.0)) or isParentEraseEvent(events[1], uniformVector(0.0)));
+  validateTrue(isParentEraseEvent(events[0], 0) or isParentEraseEvent(events[1], 0));
 
   drainRefinementControlService();
 }
@@ -216,63 +394,64 @@ void exahype2::tests::RefinementControlServiceTest::testEraseSiblingGroupIsAncho
   // The parent grid starts at the domain offset, so a group anchored there is complete even
   // though none of its coordinates is a multiple of the parent size.
   const auto domainOffset = uniformVector(0.5);
-  service.setDomainOffset(domainOffset);
+  service.setDomain(domainOffset, uniformVector(TestDomainWidth));
 
   exahype2::RefinementControl control;
   addEraseSiblingGroup(control, domainOffset, -1);
-  addRefineCommand(control, uniformVector(53.0));
+  // The cell a command names is counted from the domain offset, so a command far from the
+  // group has to be placed relative to that offset as well.
+  addRefineCommand(control, domainOffset + uniformVector(53.0));
   commitCriterionStep(control);
 
-  const auto events = service.getGridControlEvents(allCoveringTreeExtents());
+  const auto events = service.getGridControlEvents();
   validateEquals(events.size(), 2u);
-  validateTrue(isParentEraseEvent(events[0], domainOffset) or isParentEraseEvent(events[1], domainOffset));
+  validateTrue(isParentEraseEvent(events[0], 0) or isParentEraseEvent(events[1], 0));
 
   drainRefinementControlService();
-  service.setDomainOffset(uniformVector(0.0));
+  service.setDomain(uniformVector(0.0), uniformVector(TestDomainWidth));
 }
 
-// createEraseParent() anchors each axis on its own component of the domain offset. An offset
-// that differs per axis is what separates that from a routine reading component zero for all
-// axes, or from two axes being transposed.
+// A command names its cell against its own axis's component of the domain offset, and the
+// offsets here differ by more than half a cell from axis to axis.
 void exahype2::tests::RefinementControlServiceTest::testEraseSiblingGroupIsAnchoredPerAxis() {
   drainRefinementControlService();
   auto& service = exahype2::RefinementControlService::getInstance();
 
   tarch::la::Vector<DIMENSIONS, double> domainOffset;
-  for (int d = 0; d < DIMENSIONS; d++) {
-    domainOffset(d) = 0.5 + 0.25 * static_cast<double>(d);
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    domainOffset(axis) = 0.5 + 0.75 * static_cast<double>(axis);
   }
-  service.setDomainOffset(domainOffset);
+  service.setDomain(domainOffset, uniformVector(TestDomainWidth));
 
   exahype2::RefinementControl control;
   addEraseSiblingGroup(control, domainOffset, -1);
-  addRefineCommand(control, uniformVector(53.0));
+  // This position keeps the committed set distinct from the preceding test's, which the
+  // service drops as already realised.
+  addRefineCommand(control, domainOffset + uniformVector(47.0));
   commitCriterionStep(control);
 
-  const auto events = service.getGridControlEvents(allCoveringTreeExtents());
+  const auto events = service.getGridControlEvents();
   validateEquals(events.size(), 2u);
-  validateTrue(isParentEraseEvent(events[0], domainOffset) or isParentEraseEvent(events[1], domainOffset));
+  validateTrue(isParentEraseEvent(events[0], 0) or isParentEraseEvent(events[1], 0));
 
   drainRefinementControlService();
-  service.setDomainOffset(uniformVector(0.0));
+  service.setDomain(uniformVector(0.0), uniformVector(TestDomainWidth));
 }
 
 void exahype2::tests::RefinementControlServiceTest::testIncompleteEraseSiblingGroupIsDiscarded() {
   drainRefinementControlService();
   auto& service = exahype2::RefinementControlService::getInstance();
-  service.setDomainOffset(uniformVector(0.0));
+  service.setDomain(uniformVector(0.0), uniformVector(TestDomainWidth));
 
-  // Leave out the centre child, the one a feature would keep refined. The refine command
-  // proves the batch is processed: an incorrectly promoted group would surface as a
-  // second event.
+  // The refine command proves the batch is processed.
   exahype2::RefinementControl control;
   addEraseSiblingGroup(control, uniformVector(0.0), THREE_POWER_D / 2);
   addRefineCommand(control, uniformVector(56.0));
   commitCriterionStep(control);
 
-  validateEquals(service.getGridControlEvents(allCoveringTreeExtents()).size(), 1u);
+  validateEquals(service.getGridControlEvents().size(), 1u);
   validateTrue(
-    service.getGridControlEvents(allCoveringTreeExtents())[0].getRefinementControl()
+    service.getGridControlEvents()[0].getRefinementControl()
     == peano4::grid::GridControlEvent::RefinementControl::Refine
   );
 
@@ -282,7 +461,7 @@ void exahype2::tests::RefinementControlServiceTest::testIncompleteEraseSiblingGr
 void exahype2::tests::RefinementControlServiceTest::testShiftedEraseSiblingGroupIsDiscarded() {
   drainRefinementControlService();
   auto& service = exahype2::RefinementControlService::getInstance();
-  service.setDomainOffset(uniformVector(0.0));
+  service.setDomain(uniformVector(0.0), uniformVector(TestDomainWidth));
 
   // A full block of 3^d leaves that spreads over two parents fills neither of them.
   exahype2::RefinementControl           control;
@@ -292,145 +471,104 @@ void exahype2::tests::RefinementControlServiceTest::testShiftedEraseSiblingGroup
   addRefineCommand(control, uniformVector(59.0));
   commitCriterionStep(control);
 
-  validateEquals(service.getGridControlEvents(allCoveringTreeExtents()).size(), 1u);
+  validateEquals(service.getGridControlEvents().size(), 1u);
   validateTrue(
-    service.getGridControlEvents(allCoveringTreeExtents())[0].getRefinementControl()
+    service.getGridControlEvents()[0].getRefinementControl()
     == peano4::grid::GridControlEvent::RefinementControl::Refine
   );
 
   drainRefinementControlService();
 }
 
-void exahype2::tests::RefinementControlServiceTest::testTriggerEventIsRedeliveredForRealisation() {
+void exahype2::tests::RefinementControlServiceTest::testCommittedEventIsConsumedByOneTraversal() {
   drainRefinementControlService();
   auto& service = exahype2::RefinementControlService::getInstance();
-  service.setDomainOffset(uniformVector(0.0));
+  service.setDomain(uniformVector(0.0), uniformVector(TestDomainWidth));
 
   // The service remembers the last realised set across tests, so every test works on a cell
   // of its own and none of them is suppressed by a predecessor.
   exahype2::RefinementControl control;
   addRefineCommand(control, uniformVector(10.0));
   commitCriterionStep(control);
+  validateEquals(service.getGridControlEvents().size(), 1u);
 
-  const auto triggerEvents = service.getGridControlEvents(allCoveringTreeExtents());
-  validateEquals(triggerEvents.size(), 1u);
-
-  // Peano needs the event once more to realise the topology change it just triggered.
   service.finishDynamicMeshRefinementStep();
-  const auto realiseEvents = service.getGridControlEvents(allCoveringTreeExtents());
-  validateEquals(realiseEvents.size(), 1u);
-  validateTrue(realiseEvents[0] == triggerEvents[0]);
+  validateTrue(service.getGridControlEvents().empty());
 
-  // After the realisation the service has nothing left to hand out.
+  // The realised set is what the suppression compares against, so the same request asks for
+  // a mesh that already stands.
+  exahype2::RefinementControl repeatedControl;
+  addRefineCommand(repeatedControl, uniformVector(10.0));
+  service.merge(repeatedControl);
   service.finishDynamicMeshRefinementStep();
-  validateTrue(service.getGridControlEvents(allCoveringTreeExtents()).empty());
+  validateTrue(service.getGridControlEvents().empty());
 
   drainRefinementControlService();
 }
 
-void exahype2::tests::RefinementControlServiceTest::testMixedTriggerAndRealiseBatchRedeliversTrigger() {
+void exahype2::tests::RefinementControlServiceTest::testEachBatchCarriesOnlyItsOwnRequests() {
   drainRefinementControlService();
   auto& service = exahype2::RefinementControlService::getInstance();
-  service.setDomainOffset(uniformVector(0.0));
+  service.setDomain(uniformVector(0.0), uniformVector(TestDomainWidth));
 
-  // First commit: trigger A. Its re-delivery for the realisation traversal is now pending.
   exahype2::RefinementControl controlA;
   addRefineCommand(controlA, uniformVector(30.0));
   commitCriterionStep(controlA);
-  validateEquals(service.getGridControlEvents(allCoveringTreeExtents()).size(), 1u);
+  validateEquals(service.getGridControlEvents().size(), 1u);
 
-  // Second commit mixes A's pending realisation with a fresh trigger B (a cell far enough
-  // away that the two banded refine boxes cannot fuse). Both must be active for the next
-  // traversal.
+  // The next batch collects request B while the traversal realises A, so it carries B alone.
   exahype2::RefinementControl controlB;
   addRefineCommand(controlB, uniformVector(36.0));
   service.merge(controlB);
   service.finishDynamicMeshRefinementStep();
-  validateEquals(service.getGridControlEvents(allCoveringTreeExtents()).size(), 2u);
 
-  // B still needs its own realisation traversal, so it survives into a third delivery even
-  // though it travelled in one batch with A's realisation.
-  service.finishDynamicMeshRefinementStep();
-  const auto realiseEvents = service.getGridControlEvents(allCoveringTreeExtents());
-  validateEquals(realiseEvents.size(), 1u);
-  validateTrue(realiseEvents[0].offset == uniformVector(35.0));
+  const auto events = service.getGridControlEvents();
+  validateEquals(events.size(), 1u);
+  const auto expectedLatticeIndex = tarch::la::Vector<DIMENSIONS, int>(36);
+  validateTrue(events[0].latticeIndex == expectedLatticeIndex);
 
   service.finishDynamicMeshRefinementStep();
-  validateTrue(service.getGridControlEvents(allCoveringTreeExtents()).empty());
+  validateTrue(service.getGridControlEvents().empty());
 
   drainRefinementControlService();
 }
 
-void exahype2::tests::RefinementControlServiceTest::testSiblingGroupCompletedAcrossSweepsRedeliversParent() {
+/**
+ * A batch carries the votes raised while it was collected, so a group assembles only from
+ * children that vote in that batch.
+ */
+void exahype2::tests::RefinementControlServiceTest::testSiblingGroupNeedsEveryChildInOneBatch() {
   drainRefinementControlService();
   auto& service = exahype2::RefinementControlService::getInstance();
-  service.setDomainOffset(uniformVector(0.0));
+  service.setDomain(uniformVector(0.0), uniformVector(TestDomainWidth));
 
-  // First commit: all children but one request the erase, plus a refine command that keeps
-  // the batch from being suppressed. The group is incomplete, so only the refine is
-  // committed, and the children are staged for their second delivery.
+  // The refine command keeps the batch from being suppressed.
   exahype2::RefinementControl incompleteControl;
   addEraseSiblingGroupChildRange(incompleteControl, uniformVector(39.0), 0, THREE_POWER_D - 1, -1);
   addRefineCommand(incompleteControl, uniformVector(62.0));
   commitCriterionStep(incompleteControl);
-  validateEquals(service.getGridControlEvents(allCoveringTreeExtents()).size(), 1u);
+  validateEquals(service.getGridControlEvents().size(), 1u);
   validateTrue(
-    service.getGridControlEvents(allCoveringTreeExtents())[0].getRefinementControl()
+    service.getGridControlEvents()[0].getRefinementControl()
     == peano4::grid::GridControlEvent::RefinementControl::Refine
   );
 
-  // The missing child arrives while the other children are on their spent second delivery.
-  // The group completes, so the parent must be committed now and once more for the
-  // realisation traversal, even though its constituents' deliveries are used up.
+  // The missing child votes on its own in the next batch, which leaves that batch's group
+  // incomplete as well.
   exahype2::RefinementControl completingControl;
   addEraseSiblingGroupChildRange(completingControl, uniformVector(39.0), THREE_POWER_D - 1, THREE_POWER_D, -1);
   service.merge(completingControl);
   service.finishDynamicMeshRefinementStep();
+  validateTrue(service.getGridControlEvents().empty());
 
-  const auto triggerEvents = service.getGridControlEvents(allCoveringTreeExtents());
-  validateEquals(triggerEvents.size(), 2u);
-  validateTrue(
-    isParentEraseEvent(triggerEvents[0], uniformVector(39.0))
-    or isParentEraseEvent(triggerEvents[1], uniformVector(39.0))
-  );
-
+  exahype2::RefinementControl completeControl;
+  addEraseSiblingGroup(completeControl, uniformVector(39.0), -1);
+  service.merge(completeControl);
   service.finishDynamicMeshRefinementStep();
-  const auto realiseEvents = service.getGridControlEvents(allCoveringTreeExtents());
-  validateEquals(realiseEvents.size(), 1u);
-  validateTrue(isParentEraseEvent(realiseEvents[0], uniformVector(39.0)));
 
-  service.finishDynamicMeshRefinementStep();
-  validateTrue(service.getGridControlEvents(allCoveringTreeExtents()).empty());
-
-  drainRefinementControlService();
-}
-
-void exahype2::tests::RefinementControlServiceTest::testDeferredTopologyChangeKeepsEventsAlive() {
-  drainRefinementControlService();
-  auto& service = exahype2::RefinementControlService::getInstance();
-  service.setDomainOffset(uniformVector(0.0));
-
-  exahype2::RefinementControl control;
-  addRefineCommand(control, uniformVector(40.0));
-  commitCriterionStep(control);
-  validateEquals(service.getGridControlEvents(allCoveringTreeExtents()).size(), 1u);
-
-  // The realisation traversal deferred vertex changes: the event set stays alive for
-  // another delivery, so it is not yet recorded as realised.
-  service.finishDynamicMeshRefinementStep(3);
-  validateEquals(service.getGridControlEvents(allCoveringTreeExtents()).size(), 1u);
-  service.finishDynamicMeshRefinementStep(1);
-  validateEquals(service.getGridControlEvents(allCoveringTreeExtents()).size(), 1u);
-
-  // A traversal that defers nothing drains the set and records it as realised.
-  service.finishDynamicMeshRefinementStep(0);
-  validateTrue(service.getGridControlEvents(allCoveringTreeExtents()).empty());
-
-  // Only now is the identical command suppressed as already realised.
-  exahype2::RefinementControl identicalControl;
-  addRefineCommand(identicalControl, uniformVector(40.0));
-  commitCriterionStep(identicalControl);
-  validateTrue(service.getGridControlEvents(allCoveringTreeExtents()).empty());
+  const auto events = service.getGridControlEvents();
+  validateEquals(events.size(), 1u);
+  validateTrue(isParentEraseEvent(events[0], 13));
 
   drainRefinementControlService();
 }
@@ -438,13 +576,13 @@ void exahype2::tests::RefinementControlServiceTest::testDeferredTopologyChangeKe
 void exahype2::tests::RefinementControlServiceTest::testUnchangedEventSetIsSuppressed() {
   drainRefinementControlService();
   auto& service = exahype2::RefinementControlService::getInstance();
-  service.setDomainOffset(uniformVector(0.0));
+  service.setDomain(uniformVector(0.0), uniformVector(TestDomainWidth));
 
   {
     exahype2::RefinementControl control;
     addRefineCommand(control, uniformVector(20.0));
     commitCriterionStep(control);
-    validateEquals(service.getGridControlEvents(allCoveringTreeExtents()).size(), 1u);
+    validateEquals(service.getGridControlEvents().size(), 1u);
   }
   drainRefinementControlService();
 
@@ -453,7 +591,7 @@ void exahype2::tests::RefinementControlServiceTest::testUnchangedEventSetIsSuppr
     exahype2::RefinementControl control;
     addRefineCommand(control, uniformVector(20.0));
     commitCriterionStep(control);
-    validateTrue(service.getGridControlEvents(allCoveringTreeExtents()).empty());
+    validateTrue(service.getGridControlEvents().empty());
   }
 
   // A command for a different cell is a different set and survives.
@@ -461,7 +599,131 @@ void exahype2::tests::RefinementControlServiceTest::testUnchangedEventSetIsSuppr
     exahype2::RefinementControl control;
     addRefineCommand(control, uniformVector(23.0));
     commitCriterionStep(control);
-    validateEquals(service.getGridControlEvents(allCoveringTreeExtents()).size(), 1u);
+    validateEquals(service.getGridControlEvents().size(), 1u);
+  }
+
+  drainRefinementControlService();
+}
+
+/**
+ * A step whose merged contributions repeat the preceding step's reuses that step's
+ * committed set.
+ */
+void exahype2::tests::RefinementControlServiceTest::testRepeatedContributionsReuseTheCommittedSet() {
+  drainRefinementControlService();
+  auto& service = exahype2::RefinementControlService::getInstance();
+  service.setDomain(uniformVector(0.0), uniformVector(TestDomainWidth));
+
+  constexpr int ParentLatticePosition = 10;
+  const auto    parentOffset          = uniformVector(3.0 * ParentLatticePosition);
+  for (int repetition = 0; repetition < 2; repetition++) {
+    exahype2::RefinementControl control;
+    addEraseSiblingGroup(control, parentOffset, -1);
+    service.merge(control);
+    service.finishStep();
+    validateEquals(service.getGridControlEvents().size(), 1u);
+    validateTrue(isParentEraseEvent(service.getGridControlEvents().front(), ParentLatticePosition));
+  }
+
+  {
+    exahype2::RefinementControl firstHalf;
+    exahype2::RefinementControl secondHalf;
+    addEraseSiblingGroupChildRange(firstHalf, parentOffset, 0, THREE_POWER_D / 2, -1);
+    addEraseSiblingGroupChildRange(secondHalf, parentOffset, THREE_POWER_D / 2, THREE_POWER_D, -1);
+    service.merge(firstHalf);
+    service.merge(secondHalf);
+    service.finishStep();
+    validateEquals(service.getGridControlEvents().size(), 1u);
+    validateTrue(isParentEraseEvent(service.getGridControlEvents().front(), ParentLatticePosition));
+  }
+
+  {
+    exahype2::RefinementControl control;
+    addEraseSiblingGroup(control, parentOffset, THREE_POWER_D / 2);
+    service.merge(control);
+    service.finishStep();
+    validateTrue(service.getGridControlEvents().empty());
+  }
+
+  drainRefinementControlService();
+}
+
+/**
+ * A committed set recorded as realised without a sweep leaves the committed
+ * set empty and the topology unchanged; the same requests raised again are
+ * suppressed while a different cell survives.
+ */
+void exahype2::tests::RefinementControlServiceTest::testARealisedSetWithoutSweepSuppressesItsRepetition() {
+  drainRefinementControlService();
+  auto& service = exahype2::RefinementControlService::getInstance();
+  service.setDomain(uniformVector(0.0), uniformVector(TestDomainWidth));
+  service.finishRefinementCriterionStep();
+
+  {
+    exahype2::RefinementControl control;
+    addRefineCommand(control, uniformVector(26.0));
+    commitCriterionStep(control);
+    validateEquals(service.getGridControlEvents().size(), 1u);
+  }
+  service.realiseCommittedEventsWithoutSweep();
+  validateTrue(service.getGridControlEvents().empty());
+  validateFalse(service.hasRealisedTopologyChangesSinceLastTimeStep());
+
+  {
+    exahype2::RefinementControl control;
+    addRefineCommand(control, uniformVector(26.0));
+    commitCriterionStep(control);
+    validateTrue(service.getGridControlEvents().empty());
+    validateFalse(service.hasRealisedTopologyChangesSinceLastTimeStep());
+  }
+  {
+    exahype2::RefinementControl control;
+    addRefineCommand(control, uniformVector(29.0));
+    commitCriterionStep(control);
+    validateEquals(service.getGridControlEvents().size(), 1u);
+  }
+
+  drainRefinementControlService();
+}
+
+/**
+ * A rank that raises nothing after a set realised without a sweep ships the
+ * delta against the list it shipped last, so that list leaves with the delta
+ * and a request the last rank raises afterwards arrives alone.
+ */
+void exahype2::tests::RefinementControlServiceTest::testARealisedSetWithoutSweepKeepsTheShippedLists() {
+  drainRefinementControlService();
+  auto& service = exahype2::RefinementControlService::getInstance();
+  service.setDomain(uniformVector(0.0), uniformVector(TestDomainWidth));
+  const int numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
+
+  // Every rank raises one cell of its own, so every rank ships a list with one entry.
+  {
+    exahype2::RefinementControl control;
+    const auto                  cell = 40.0 + tarch::mpi::Rank::getInstance().getRank();
+    control.addCommand(
+      uniformVector(cell) + 0.5 * uniformVector(1.0),
+      uniformVector(1.0),
+      exahype2::RefinementCommand::Refine
+    );
+    service.merge(control);
+    service.finishDynamicMeshRefinementStep();
+    validateEquals(service.getGridControlEvents().size(), static_cast<std::size_t>(numberOfRanks));
+  }
+  service.realiseCommittedEventsWithoutSweep();
+  validateTrue(service.getGridControlEvents().empty());
+
+  {
+    exahype2::RefinementControl control;
+    addRefineCommandOnRank(control, uniformVector(60.0), numberOfRanks - 1);
+    service.merge(control);
+    service.finishDynamicMeshRefinementStep();
+    validateTrue(service.committedEventsAgreeAcrossRanks());
+    const auto                               events = service.getGridControlEvents();
+    const tarch::la::Vector<DIMENSIONS, int> expectedLatticeIndex(60);
+    validateEquals(events.size(), 1u);
+    validateEquals(events.front().level, LeafLevel);
+    validateTrue(events.front().latticeIndex == expectedLatticeIndex);
   }
 
   drainRefinementControlService();
@@ -470,12 +732,11 @@ void exahype2::tests::RefinementControlServiceTest::testUnchangedEventSetIsSuppr
 void exahype2::tests::RefinementControlServiceTest::testComplementaryEraseSubsetsOfTwoSolversAreDiscarded() {
   drainRefinementControlService();
   auto& service = exahype2::RefinementControlService::getInstance();
-  service.setDomainOffset(uniformVector(0.0));
+  service.setDomain(uniformVector(0.0), uniformVector(TestDomainWidth));
   service.setNumberOfSolvers(2);
 
-  // Two solvers split one sibling group between them: together they cover all children, but
-  // neither solver consents to the complete group, so nothing may coarsen. The refine
-  // command proves the batch is processed.
+  // Two solvers split one sibling group between them, so neither solver consents to the
+  // complete group.
   exahype2::RefinementControl controlOfFirstSolver(0);
   exahype2::RefinementControl controlOfSecondSolver(1);
   addEraseSiblingGroupChildRange(controlOfFirstSolver, uniformVector(30.0), 0, THREE_POWER_D / 2, -1);
@@ -484,9 +745,9 @@ void exahype2::tests::RefinementControlServiceTest::testComplementaryEraseSubset
   service.merge(controlOfFirstSolver);
   commitCriterionStep(controlOfSecondSolver);
 
-  validateEquals(service.getGridControlEvents(allCoveringTreeExtents()).size(), 1u);
+  validateEquals(service.getGridControlEvents().size(), 1u);
   validateTrue(
-    service.getGridControlEvents(allCoveringTreeExtents())[0].getRefinementControl()
+    service.getGridControlEvents()[0].getRefinementControl()
     == peano4::grid::GridControlEvent::RefinementControl::Refine
   );
 
@@ -497,11 +758,10 @@ void exahype2::tests::RefinementControlServiceTest::testComplementaryEraseSubset
 void exahype2::tests::RefinementControlServiceTest::testEraseNeedsUnanimousSolverConsent() {
   drainRefinementControlService();
   auto& service = exahype2::RefinementControlService::getInstance();
-  service.setDomainOffset(uniformVector(0.0));
+  service.setDomain(uniformVector(0.0), uniformVector(TestDomainWidth));
   service.setNumberOfSolvers(2);
 
-  // Both solvers request the complete group: the erase is unanimous and realised. The
-  // refine command keeps the committed set distinct from every set realised before.
+  // The refine command keeps the committed set distinct from every set realised before.
   {
     exahype2::RefinementControl controlOfFirstSolver(0);
     exahype2::RefinementControl controlOfSecondSolver(1);
@@ -511,25 +771,22 @@ void exahype2::tests::RefinementControlServiceTest::testEraseNeedsUnanimousSolve
     service.merge(controlOfFirstSolver);
     commitCriterionStep(controlOfSecondSolver);
 
-    const auto events = service.getGridControlEvents(allCoveringTreeExtents());
+    const auto events = service.getGridControlEvents();
     validateEquals(events.size(), 2u);
-    validateTrue(
-      isParentEraseEvent(events[0], uniformVector(33.0)) or isParentEraseEvent(events[1], uniformVector(33.0))
-    );
+    validateTrue(isParentEraseEvent(events[0], 11) or isParentEraseEvent(events[1], 11));
   }
   drainRefinementControlService();
 
-  // One solver keeps every sibling (and hence submits no erase request): its missing consent
-  // vetoes the other solver's complete group.
+  // A solver that submits no erase request vetoes the other solver's complete group.
   {
     exahype2::RefinementControl controlOfFirstSolver(0);
     addEraseSiblingGroup(controlOfFirstSolver, uniformVector(36.0), -1);
     addRefineCommand(controlOfFirstSolver, uniformVector(71.0));
     commitCriterionStep(controlOfFirstSolver);
 
-    validateEquals(service.getGridControlEvents(allCoveringTreeExtents()).size(), 1u);
+    validateEquals(service.getGridControlEvents().size(), 1u);
     validateTrue(
-      service.getGridControlEvents(allCoveringTreeExtents())[0].getRefinementControl()
+      service.getGridControlEvents()[0].getRefinementControl()
       == peano4::grid::GridControlEvent::RefinementControl::Refine
     );
   }
@@ -538,79 +795,36 @@ void exahype2::tests::RefinementControlServiceTest::testEraseNeedsUnanimousSolve
   service.setNumberOfSolvers(1);
 }
 
-// The report is the only view on the service's internal state, so it is checked against a
-// request driven through all of its stages rather than against one snapshot. The offsets
-// belong to this test alone, so no committed set matches one realised earlier and the
-// suppression never interferes.
+// The offsets belong to this test alone, so no committed set matches one realised earlier.
 void exahype2::tests::RefinementControlServiceTest::testReportTracksEveryStageOfARequest() {
   drainRefinementControlService();
   auto& service = exahype2::RefinementControlService::getInstance();
-  service.setDomainOffset(uniformVector(0.0));
+  service.setDomain(uniformVector(0.0), uniformVector(TestDomainWidth));
   service.setNumberOfSolvers(1);
 
   // A drain leaves the realised set of whichever request it drained last, so one full cycle
-  // runs first to make that set this test's own and every count below known.
+  // runs first to make that set this test's own.
   {
     exahype2::RefinementControl control;
     addRefineCommand(control, uniformVector(74.0));
     commitCriterionStep(control);
     service.finishDynamicMeshRefinementStep();
-    service.finishDynamicMeshRefinementStep();
   }
   validateEquals(service.toString(), describeServiceState(0, 0, 1, true, 1));
 
-  // A completed time step clears the topology flag and keeps the realised set as reference.
   service.finishRefinementCriterionStep();
   validateEquals(service.toString(), describeServiceState(0, 0, 1, false, 1));
 
-  // A merged command is a local request and nothing else yet.
   exahype2::RefinementControl control;
   addRefineCommand(control, uniformVector(77.0));
   service.merge(control);
   validateEquals(service.toString(), describeServiceState(numberOfLocalRefineRequests(), 0, 1, false, 1));
 
-  // The criterion commit turns it into a committed event and re-stages it on the rank that
-  // raised it, so that rank still holds a local request.
   service.finishRefinementCriterionStep();
-  validateEquals(service.toString(), describeServiceState(numberOfLocalRefineRequests(), 1, 1, false, 1));
+  validateEquals(service.toString(), describeServiceState(0, 1, 1, false, 1));
 
-  // The realisation delivery consumes the trigger set, which is the topology change.
-  service.finishDynamicMeshRefinementStep();
-  validateEquals(service.toString(), describeServiceState(0, 1, 1, true, 1));
-
-  // Nothing is left to deliver, so the consumed set becomes the set to suppress against.
   service.finishDynamicMeshRefinementStep();
   validateEquals(service.toString(), describeServiceState(0, 0, 1, true, 1));
-
-  drainRefinementControlService();
-}
-
-void exahype2::tests::RefinementControlServiceTest::testDeliveryFiltersAgainstTreeExtents() {
-  drainRefinementControlService();
-  auto& service = exahype2::RefinementControlService::getInstance();
-  service.setDomainOffset(uniformVector(0.0));
-
-  // The banded refine event covers offset 0 with width 3, so its delivery box,
-  // enlarged by one event width on either side, spans -3 to 6 per axis.
-  exahype2::RefinementControl control;
-  addRefineCommand(control, uniformVector(1.0));
-  commitCriterionStep(control);
-
-  const std::vector<peano4::parallel::SpacetreeSet::TreeExtent> overlappingExtent{
-    {uniformVector(1.0), uniformVector(1.0)}
-  };
-  validateEquals(service.getGridControlEvents(overlappingExtent).size(), 1u);
-
-  const std::vector<peano4::parallel::SpacetreeSet::TreeExtent> seamExtent{{uniformVector(5.0), uniformVector(1.0)}};
-  validateEquals(service.getGridControlEvents(seamExtent).size(), 1u);
-
-  const std::vector<peano4::parallel::SpacetreeSet::TreeExtent> disjointExtent{
-    {uniformVector(7.0), uniformVector(1.0)}
-  };
-  validateTrue(service.getGridControlEvents(disjointExtent).empty());
-
-  // A rank hosting no tree receives nothing.
-  validateTrue(service.getGridControlEvents({}).empty());
 
   drainRefinementControlService();
 }

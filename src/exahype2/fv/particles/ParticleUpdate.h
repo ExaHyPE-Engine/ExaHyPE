@@ -1,39 +1,25 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "ParticleDomainBoundary.h"
-#include "ParticleForces.h"
-#include "ParticleHelper.h"
-#include "ParticleIntegration.h"
-#include "ParticleInterpolation.h"
-
+#include "exahype2/fv/particles/ParticleDomainBoundary.h"
+#include "exahype2/fv/particles/ParticleForces.h"
+#include "exahype2/fv/particles/ParticleHelper.h"
+#include "exahype2/fv/particles/ParticleIntegration.h"
+#include "exahype2/fv/particles/ParticleInterpolation.h"
 #include "peano4/datamanagement/CellMarker.h"
-#include "tarch/la/Vector.h"
+#include "tarch/CompilerSpecificSettings.h"
+#include "tarch/la/VectorOperations.h"
 
-namespace exahype2 {
-  namespace fv {
-    namespace particles {
-      /**
-       * Updates the state of a particle:
-       * - Resets acceleration
-       * - Interpolates fields from the grid
-       * - Applies forces (e.g. gravity)
-       * - Computes new position using integration scheme
-       * - Applies domain boundary handling (e.g. reflection)
-       *
-       * @tparam Indices Indices used to extract Q entries
-       * @tparam Particle The particle type
-       * @param particle Reference to the particle to be updated
-       * @param marker The cell marker for position context
-       * @param Q Pointer to the cell-based solver data
-       */
-      template <int... Indices, typename Particle>
-      void updateParticleState(
-        Particle&                                 particle,
-        const peano4::datamanagement::CellMarker& marker,
-        const double* __restrict__ Q
-      );
-    } // namespace particles
-  } // namespace fv
-} // namespace exahype2
+namespace exahype2::fv::particles {
+  template <int... ParticleAttributeIndices, typename Particle>
+  INLINE_METHOD void updateParticleState(
+    Particle&                                 particle,
+    const peano4::datamanagement::CellMarker& cellMarker,
+    const double* NOALIAS const               cellValues,
+    const double                              timeStepSize,
+    const int                                 integrationMethod
+  );
+} // namespace exahype2::fv::particles
 
-#include "ParticleUpdate.cpph"
+#include "exahype2/fv/particles/ParticleUpdate.cpph"

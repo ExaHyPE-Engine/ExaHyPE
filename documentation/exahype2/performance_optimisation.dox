@@ -2,229 +2,76 @@
 
 @page page_exahype_performance_optimisation Performance optimisation
 
-<!-- Add this one for href links to subitems -->
 \tableofcontents
 
+ExaHyPE performance analysis combines the runner's decomposition statistics
+with a profile of the numerical kernels. @ref page_peano_performance_optimisation
+describes the grid and traversal metrics.
 
-This section discusses some ExaHyPE-specific performance optimisation steps.
-While ExaHyPE and its baseline, Peano, provide simplistic performance analysis
-features to spot some flaws, a proper performance optimisation has to be guided
-by external performance analysis tools.
-Furthermore, please read @ref page_peano_performance_optimisation "Peano's generic performance optimisation remarks" parallel to this
-page.
-All of the recommendations there apply for ExaHyPE, too.
+# Data access
 
+Generated patch data resides in rank-local flat pools. A traversal event names
+the pool slots for its cell, faces, vertices, and coarse-grid context, and the
+observer passes references to the action sets. Fusing consecutive numerical
+operations can still improve cache reuse and reduce repeated traversal and
+temporary-data traffic.
 
-The page consists of two big parts.
-A first one gives kind of a quick-n-dirty roadmap which defines a workflow how
-to search for flaws in your parallelisation.
-The second part of the page runs through various scalability issues on the
-different machine levels (core, node, cluster, gpus).
-The roadmap is close to trivial - likely everybody would follow these steps - but
-I reiterate it here, as it structures the discussion afterwards.
+Solver factories that expose `fuse_compute_kernels` combine compatible patch
+operations into one stateless update. The fused kernel must preserve the
+solver's time-step and data-dependency contracts.
 
+# Kernel cost
 
+Fluxes, eigenvalues, non-conservative products, sources, and Riemann solves
+should account for a substantial fraction of a compute-bound run. If they do,
+apply the vectorisation and accelerator guidance on
+@ref page_exahype_gpu. CPU and GPU variants use the same mathematical kernel
+contract.
 
+If memory movement or observer glue dominates, inspect patch size, temporary
+arrays, callback fusion, and the number of traversals per time step before
+tuning the kernel itself.
 
+# Traversal task balance
 
-## Single core optimisation
+`MPI Load Balance` describes the distribution of leaf cells. `Cells per Task`
+and `Thread Ceiling` describe the subtree decomposition on each rank. The
+phase report line `Utilisation` measures the realised use of those tasks.
 
-### The code is extremely bandwidth-bound and seems to move data forth and back all the time
+A geometrically balanced mesh can remain computationally imbalanced when only
+a few patches enter a limiter, carry many particles, or execute an expensive
+material model. A solver-specific profile or work counter identifies this
+case. Solver-created tasks and parallel kernels can distribute the expensive
+callback work beyond its traversal task.
 
-Most ExaHyPE solvers store their data on (call) stacks to localise all memory
-accesses. This implies that they move their data around a lot. This
-materialises in profiles similar to
+# Solver tasks
 
-~~~~~~~~~~~~~~~~~~~
-Top Hotspots
-Function                                                           Module           CPU Time  % of CPU Time(%)
------------------------------------------------------------------  --------------  ---------  ----------------
-applications::exahype2::exagrype::ncp                              peano4_bbhtest   559.299s             13.3%
-__memmove_avx_unaligned_erms                                       libc.so.6        529.383s             12.6%
-applications::exahype2::exagrype::source                           peano4_bbhtest   347.667s              8.3%
-__kmpc_set_lock                                                    libiomp5.so      340.473s              8.1%
-[Others]                                                           N/A             1916.907s             45.7%
-~~~~~~~~~~~~~~~~~~~
+Few large solver tasks create a long tail after most traversal work has
+finished. Increase their priority when they lie on the next time-step critical
+path, or divide their numerical work when the kernel supports independent
+subranges. Dividing work does not remove an algorithmic dependency that makes
+the expensive task unavailable until late in the sweep.
 
-where memory movements (__memmove_avx_unaligned_erms) end up high on the list.
-The patch data are mapped onto C++ data structures through a generator object
-that each solver attaches to its patch:
+Many small tasks create scheduling overhead. Increase task granularity or fuse
+compatible patch work while preserving incoming and outgoing dependencies.
+OpenMP profiles and targeted tarch instrumentation show whether ready work is
+available when threads idle.
 
-         self._patch.generator = peano4.datamodel.PatchToData(self._patch, "double")
+# Hybrid runs
 
-The default mapping streams the patches through Peano's serialised stacks, which
-is what causes the data to be copied forth and back. The main lever to reduce
-these copies is to fuse the compute kernels, so a patch is read, updated and
-written within a single stateless sweep instead of being reloaded for every
-sub-step. You enable this when you create the solver:
+MPI ranks exchange face and vertex state while interior subtree and solver
+tasks execute. A rank with little interior work cannot hide this exchange.
+Compare rank balance, spine replication, boundary waits, and solver-task load
+before changing the MPI and thread layout.
 
-         my_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
-             name="MySolver", patch_size=..., unknowns=..., auxiliary_variables=...,
-             time_step_relaxation=..., fuse_compute_kernels=True
-         )
+Processor affinity can reduce the thread count visible to a rank. Confirm the
+runtime thread report and avoid oversubscription when comparing layouts.
 
-Once the kernels are fused, you should also consult @ref page_peano_performance_optimisation "Peano's generic remarks on alignment",
-and you might want to change your kernel into a variant which optimises aggressively for vector registers (and can
-potentially even use GPUs). This topic is discussed below.
+# Adaptive runs
 
-
-
-
-
-### The PDE term routines (sources, ncp, fluxes, eigenvalues, ...) are extremely expensive
-
-In principle, that's what you want to see. If this is the case, then you should
-next follow the @ref page_exahype_gpu "recommendations for GPU parallelisation".
-These focus on GPU efficiency, but the optimisations also pay off significantly
-for CPUs.
-
-
-
-
-## Multithreading optimisation
-
-To assess the multithreading efficiency, follow the steps below:
-
-1. Check if your code scales on a single node and if the scalability is
-   stable, i.e. does not become worse once you add more and more cores. This might be
-   counter-intuitive if you are interested in large-scale applications - notably
-   as the number of cores on your machine is fixed, so you have limited freedom
-   there - but it is important to understand this behaviour prior to any
-   subsequent steps. Node scalability issues propagate through to all further
-   optimisation steps.
-
-2. Check if you use all cores for all setups at the point where your speedup
-   starts to stagnate. If you do not use all cores beyond the stagnation points
-   (or when the curve starts to flatten out), study the remarks below on tasking and
-   multicore kernels. Check that you have enough ready tasks and that these
-   tasks use all cores if you still suffer from underutilisation on a
-   node.
-
-
-### The trees aka subpartitions are imbalanced
-
-This effect is discussed in the @ref page_peano_performance_optimisation "generic performance optimisation".
-The discussion therein mentions to test various load balancing strategies.
-For ExaHyPE 2, there are specific knobs to tune once you are reasonably
-happy with the domain decomposition. Therefore, the generic Peano page
-is to be consulted first.
-
-
-### Few very expensive tasks introduce phases of limited concurrency
-
-This notably happens with multiphysics codes, where only very few limiter cells
-make up the majority of the runtime. You see them appear in a profile as single
-huge tasks.
-
-One fix for this flaw is to switch to an implementation for these expensive
-tasks which in turn can farm out over all cores. However, this is only the
-last resort, as it ***does not fix the algorithmic latency***. You fix the
-problem that the tasks arise a posteriori. Notably, this fix does not help if
-you have a low concurrency initially (few trees spawning cheap tasks) and
-would have threads at this point which happily could process the critical
-tasks. Before you try to make the tasks themselves faster, I therefore suggest
-to
-
-1. give the critical tasks a higher priority than the normal tasks through the
-   solver-specific task priority settings.
-
-2. recalibrate your load balancing such that the mesh fragments which produce
-   these massive tasks are very small and basically only do those guys.
-
-The second strategy is interesting: Basically, I recommend to tailor certain
-parallel partitions around the expensive tasks. We violate a geometric balancing
-and instead implicitly realise a real cost model. This means that we might even
-move the expensive tasks next to MPI boundaries, which is not problematic if a
-subpartition only contains a few of these tasks: It will then just run longer
-within its fork-join section.
-
-
-### Very high spin time and not enough trees for the all cores
-
-This topic is covered by
-@ref page_peano_performance_optimisation "Peano's section The code shows very high spin time".
-In ExaHyPE 2's context it means that you do not have enough trees to keep
-all cores busy, i.e. your mesh is too small or your subpartitions are too
-big.
-However, you might find out that decreasing the subpartitions actually
-increases the runtime.
-This is reasonable, as each subdomain requires a significant administrative
-overhead to keep all halo data consistent.
-If you are in such a "deadlock" (not enough subpartitions, but the subpartitions
-cannot be smaller), you have to switch to a solver variant with tasking support.
-
-
-
-### There is a lack of ready tasks
-
-The nicest task-based programming approach does not pay off if you don't
-produce enough tasks to keep every core busy. To find out how many
-tasks Peano produces, use a profiler or add problem-specific logging around
-the task production sites. With this information, we can directly see how many
-fork-join/bsp-type grid traversals per time step we encounter:
-
-@image html performance_optimisation_bsp.png
-
-In this example, we get an impression that the number of traversals always
-kicks off at 50+, but then slides down.
-So the individual traversals finish at different speed.
-The last 32 traversal tasks/sweeps then all finish at the same time.
-Once we examine the number of local tasks per thread
-
-@image html performance_optimisation_local-tasks.png
-
-we see that this varies widely. Yet, there rarely are more than 16 tasks
-in the local queues at any time.
-More interesting is the number of tasks in the global task queue:
-
-@image html performance_optimisation_global-tasks.png
-
-The tarch's tasking backend does track the number of ready tasks in the
-system. If tasking is enabled, you should have columns which
-show how many tasks are in the system over time. See the documentation of
-tarch::multicore for some further information.
-With up to 8,000 tasks per time step in the example above, we
-can conclude that there is always a healthy number of tasks available.
-
-
-If you do not see any pending tasks or no tasks at all, the individual
-subdomains are simply too small to find enough tasks.
-Therefore, the code might struggle to keep all cores busy.
-It cannot deploy enough ready work to idling tasks.
-There are a few things that you can try:
-
-- Solve a bigger problem.
-- Check if you can use fewer subdomains such that the individual subdomains
-  are bigger.
-- Work with more regular grids. They usually help you to generate more tasks.
-  So avoid steep AMR changes.
-
-
-### The code does not use all cores
-
-For the FD4 scheme and a lot of other compute kernels, we provide compute kernel
-implementations which can spread out over the whole node, i.e. are internally
-parallelised again.
-A typical solver supporting concurrent task kernels hosts several
-compute kernel calls besides the core routines. Below is a list for a
-Finite Volume solver with fused compute kernels:
-
- - _compute_kernel_call
- - _fused_compute_kernel_call
-
-These kernels can be reset to alternative implementations. In principle, you
-can alter them from outside or within a subclass by simple reassigning the
-underlying function invocation (the kernel is a plain C++ string). Some solvers
-such as the Finite Volume Rusanov solver however provide factory methods to
-construct kernels which might come in handy.
-
-Note that the fused variant is used if and only if we can be sure that a compute
-task does not require any synchronisity. It is used only if you have switched to
-stateless kernel updates before (see recommendations above). As a consequence,
-this is a fairly safe kernel to replace with a parallelised implementation, as
-you can be sure that no data races arise.
-
-Nothing stops you from picking an alternative implementation for _compute_kernel_call
-as well. Just validate that you do not introduce any data races.
+Dynamic AMR can change both the solver workload and the rank ownership. The
+runner reports balance and task metrics before and after each drain. Profile
+the AMR phase separately from time stepping when structure construction,
+migration, or repeated refinement levels dominate.
 
 */

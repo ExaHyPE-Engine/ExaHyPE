@@ -7,17 +7,20 @@
 
 #include "runner/RuntimeParameters.h"
 
+#include "exahype2/NonNegativeStatistics.h"
 #include "exahype2/Solver.h"
 #include "exahype2/RefinementControl.h"
 #include "exahype2/RefinementCriterionHelpers.h"
 #include "exahype2/PrecisionControl.h"
+{%- if SUBCELL_LIMITER %}
+#include "exahype2/dg/LimitingSolverState.h"
+{%- endif %}
 
 #include "peano4/Globals.h"
 
 #include "tarch/Assertions.h"
 #include "tarch/NonCriticalAssertions.h"
 #include "tarch/la/Vector.h"
-#include "tarch/multicore/BooleanSemaphore.h"
 
 #include "kernels/{{SOLVER_NAME}}/Quadrature.h"
 #include "kernels/{{SOLVER_NAME}}/DGMatrices.h"
@@ -28,19 +31,15 @@
 
 {{SOLVER_INCLUDES}}
 
-{% for item in NAMESPACE -%}
-namespace {{ item }} {
-{%- endfor %}
+namespace {{NAMESPACE | join("::")}} {
   class {{CLASSNAME}};
-{% for item in NAMESPACE -%}
-}
-{%- endfor %}
+} // namespace {{NAMESPACE | join("::")}}
 
-class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
+class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
   public:
 {% if USE_VARIABLE_SHORTCUTS is sameas True %}
     /**
-     * Enables shortcuts to access variables, e.g. Q[Shortcuts::{{VARIABLE_NAMES[0]}}] instead of Q[0].
+     * Names the variable indices, so Q[Shortcuts::{{VARIABLE_NAMES[0]}}] reads the first variable.
      */
     using Shortcuts = {{NAMESPACE | join("::")}}::VariableShortcuts{{SOLVER_NAME}};
 {% endif %}
@@ -59,7 +58,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
       Suspended
     };
 
-    static std::string toString(SolverState);
+    static std::string toString(const SolverState state);
 
     static constexpr int Order                      = {{ORDER}};
     static constexpr int NumberOfUnknowns           = {{NUMBER_OF_UNKNOWNS}};
@@ -67,7 +66,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     static constexpr double CFL                     = {{CFL_SAFETY_FACTOR}};
     static constexpr double PNPM                    = {{CFL_ADER}};
 
-    // User-defined solver constants
     {{SOLVER_CONSTANTS}}
 
 {% if USE_POINT_SOURCE %}
@@ -77,11 +75,12 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 {% endif %}
 
     {{CLASSNAME}}();
-    ~{{CLASSNAME}}();
+    {{CLASSNAME}}(const {{CLASSNAME}}& other) = delete;
+    {{CLASSNAME}}({{CLASSNAME}}&& other) = delete;
+    {{CLASSNAME}}& operator=(const {{CLASSNAME}}& other) = delete;
+    {{CLASSNAME}}& operator=({{CLASSNAME}}&& other) = delete;
+    ~{{CLASSNAME}}() override;
 
-    /**
-     * Flags the coordinate axes along which the domain is periodic.
-     */
     static std::bitset<DIMENSIONS> PeriodicBC;
 
     double getMinTimeStamp() const override final;
@@ -90,21 +89,12 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     double getMaxTimeStepSize() const override final;
 
     {% if ADAPTIVE_PRECISION_IMPLEMENTATION!="<none>" %}
-    /**
-     * Evaluate the precision criterion over a cell.
-     *
-     * @param Q             Vector of unknowns
-     * @param x             Centre of underlying cell
-     * @param h             Size of underlying cell
-     * @param t             Time
-     * @param currentState  State of the solver at time of calling
-     */
     virtual ::exahype2::PrecisionCommand precisionCriterion(
-      const {{SOLUTION_STORAGE_PRECISION}} * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<DIMENSIONS,double>&         x,
-      const tarch::la::Vector<DIMENSIONS,double>&         h,
-      double                                              t,
-      SolverState                                         currentState
+      const {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS Q, // [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<DIMENSIONS, double>&        x,
+      const tarch::la::Vector<DIMENSIONS, double>&        h,
+      const double                                        t,
+      const SolverState                                   currentState
     ) {% if ADAPTIVE_PRECISION_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final {% endif %};
     {% endif %}
 
@@ -122,9 +112,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     void startPlottingStep() override;
     void finishPlottingStep() override;
 
-    /**
-     * @return Observed sizes, not the admissible quantities
-     */
     double getMaxPatchSize() const override final;
     double getMinPatchSize() const override final;
     double getMaxCellSize() const override final;
@@ -132,18 +119,27 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
     int getNumberOfDoFs() const override final;
 
-    /**
-     * Update the global solver state, i.e. feed updated global quantities into
-     * the solver.
-     *
-     * @param timeStepSize Time step size to fold into the global extrema
-     * @param timeStamp    Time stamp to fold into the global extrema
-     * @param minCellSize  Smallest observed cell size
-     * @param maxCellSize  Largest observed cell size
-     */
-    void update(double timeStepSize, double timeStamp, double minCellSize, double maxCellSize);
+    void update(
+      const double timeStepSize,
+      const double timeStamp,
+      const double minCellSize,
+      const double maxCellSize,
+      const bool   hasHangingFaces
+    );
+
+    void reduceLocalUpdates();
 
     SolverState getSolverState() const;
+{%- if SUBCELL_LIMITER %}
+
+    ::exahype2::dg::LimitingSolverState getLimitingSolverState() const;
+
+    void markCellAsTroubled();
+
+    long getNumberOfTroubledCells() const;
+
+    bool isFinalSubcellSpreadSweep() const;
+{%- endif %}
 
     bool mayPlot() const override;
 
@@ -156,28 +152,49 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     {{ABSTRACT_SOLVER_USER_DECLARATIONS}}
 
   protected:
-    SolverState _solverState;
+    /** Stores one traversal's extrema until reduceLocalUpdates() reduces them. */
+    struct LocalUpdates {
+      double                            minTimeStamp{std::numeric_limits<double>::infinity()};
+      double                            maxTimeStamp{0.0};
+      double                            localMinTimeStamp{std::numeric_limits<double>::infinity()};
+      double                            localMaxTimeStamp{0.0};
+      double                            minCellH{std::numeric_limits<double>::infinity()};
+      double                            maxCellH{0.0};
+      ::exahype2::NonNegativeStatistics timeStepSize{};
+      bool                              hasHangingFaces{false};
+      bool                              empty{true};
+    };
 
-    double     _minTimeStamp;
-    double     _maxTimeStamp;
+    static thread_local LocalUpdates _localUpdates;
 
-    double     _minTimeStampThisTimeStep;
-    double     _maxTimeStampThisTimeStep;
+    SolverState _solverState{SolverState::GridConstruction};
+{%- if SUBCELL_LIMITER %}
 
-    double     _localMinTimeStampThisTimeStep;
-    double     _localMaxTimeStampThisTimeStep;
+    ::exahype2::dg::LimitingSweep _limitingSweep;
 
-    double     _minCellH;
-    double     _maxCellH;
+    std::atomic<long> _numberOfTroubledCellsThisTimeStep{0};
+{%- endif %}
 
-    double     _minCellHThisTimeStep;
-    double     _maxCellHThisTimeStep;
+    double _minTimeStamp{0.0};
+    double _maxTimeStamp{0.0};
 
-    double     _minTimeStepSize;
-    double     _maxTimeStepSize;
+    double _minTimeStampThisTimeStep{std::numeric_limits<double>::infinity()};
+    double _maxTimeStampThisTimeStep{0.0};
 
-    double     _minTimeStepSizeThisTimeStep;
-    double     _maxTimeStepSizeThisTimeStep;
+    double _localMinTimeStampThisTimeStep{std::numeric_limits<double>::infinity()};
+    double _localMaxTimeStampThisTimeStep{0.0};
 
-    tarch::multicore::BooleanSemaphore _semaphore;
+    double _minCellH{std::numeric_limits<double>::infinity()};
+    double _maxCellH{0.0};
+
+    double _minCellHThisTimeStep{std::numeric_limits<double>::infinity()};
+    double _maxCellHThisTimeStep{0.0};
+    /** Atomic: Every traversal task's reduceLocalUpdates() may raise the flag concurrently. */
+    std::atomic<bool> _hasHangingFacesThisTimeStep{false};
+
+    double _minTimeStepSize{std::numeric_limits<double>::infinity()};
+    double _maxTimeStepSize{0.0};
+
+    double _minTimeStepSizeThisTimeStep{std::numeric_limits<double>::infinity()};
+    double _maxTimeStepSizeThisTimeStep{0.0};
 };

@@ -2,22 +2,26 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "FileWriter.h"
+#include "tarch/plotter/FileWriter.h"
 
 namespace tarch::plotter {
   class VTUFileWriter;
 } // namespace tarch::plotter
 
-class tarch::plotter::VTUFileWriter final: public FileWriter {
+class tarch::plotter::VTUFileWriter final : public tarch::plotter::FileWriter {
 public:
-  VTUFileWriter(const std::string& outputDirectory, int numberOfSubdomains);
-  ~VTUFileWriter() override = default;
+  explicit VTUFileWriter(const std::string& outputDirectory);
+  VTUFileWriter(const VTUFileWriter&)            = delete;
+  VTUFileWriter(VTUFileWriter&&)                 = delete;
+  VTUFileWriter& operator=(const VTUFileWriter&) = delete;
+  VTUFileWriter& operator=(VTUFileWriter&&)      = delete;
+  ~VTUFileWriter() override                      = default;
 
-  bool writeToFile(const std::string& filename, double time) override;
+  bool writeToFile(const std::string& filename, const double time) override;
 
   std::string getFileExtension() const override;
 
 private:
-  void writeVTU(const std::string& filename);
-  void writePVTU(const std::string& filename);
+  void writeVTU(const std::string& filename) const;
+  void writePVTU(const std::string& filename) const;
 };

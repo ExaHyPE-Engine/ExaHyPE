@@ -4,8 +4,8 @@
 
 #include "runner/Engine.h"
 #include "runner/Format.h"
+#include "runner/GlobalStatistics.h"
 #include "runner/Instrumentation.h"
-#include "runner/LoadBalancer.h"
 #include "runner/PhaseNames.h"
 #include "runner/ReportBox.h"
 #include "runner/RuntimeParameters.h"
@@ -18,7 +18,6 @@
 namespace {
   using SolverList = std::vector<std::pair<std::string, std::vector<runner::SolverStatistic>>>;
 
-  // Widest label in the Time Step box; every row's value starts one column past it.
   std::size_t labelColumnWidth(const SolverList& solvers) {
     std::size_t width = std::max(runner::displayWidth("Time Step"), runner::displayWidth("Performance"));
     for (const auto& [name, statistics] : solvers) {
@@ -27,7 +26,7 @@ namespace {
     return width;
   }
 
-  std::string labelledRow(const std::string& label, const std::string& value, std::size_t labelWidth) {
+  std::string labelledRow(const std::string& label, const std::string& value, const std::size_t labelWidth) {
     std::ostringstream out;
     out << std::string(runner::BlockIndent, ' ') << std::left << std::setw(static_cast<int>(labelWidth)) << label
         << "  " << value;
@@ -54,71 +53,37 @@ namespace {
   }
 } // namespace
 
-runner::TimeLoop::TimeLoop(PhaseContext& context, int timeStepStep, int plotStep, DynamicAMR& dynamicAMR) :
+runner::TimeLoop::TimeLoop(
+  runner::PhaseContext& context,
+  const int             timeStepStep,
+  const int             plotStep,
+  runner::DynamicAMR&   dynamicAMR
+) :
   _context(context),
   _timeStepStep(timeStepStep),
   _plotStep(plotStep),
   _dynamicAMR(dynamicAMR) {}
 
-std::vector<std::string> runner::TimeLoop::widthSamples() const {
-  SolverList solvers;
-  if (_context.repositories.getSolverStatistics) {
-    solvers = _context.repositories.getSolverStatistics();
-  }
-  const auto labelWidth = labelColumnWidth(solvers);
-
-  std::vector<std::string> samples;
-  if (_dynamicAMR.isEnabled()) {
-    samples = _dynamicAMR.widthSamples();
-  }
-
-  // Widest Time Step form: the local-time-stepping range "min .. max" plus the terminal.
-  const double       sentinel = std::numeric_limits<double>::max();
-  std::ostringstream timeStep;
-  timeStep << Format::wallClock(9999.99) << " · t = " << Format::scientific(sentinel) << " .. "
-           << Format::scientific(sentinel) << " / " << Format::scientific(sentinel);
-  samples.push_back(labelledRow("Time Step", timeStep.str(), labelWidth));
-
-  for (const auto& [name, statistics] : solvers) {
-    samples.push_back(labelledRow(name, renderStatistics(statistics), labelWidth));
-  }
-
-  samples.push_back(
-    labelledRow("Performance", Format::rate(999.9e9, "cell") + " · " + Format::rate(999.9e9, "dof"), labelWidth)
-  );
-
-  // Progress row: full percent and the widest ETA the formatter emits.
-  samples.push_back(labelledRow("Progress", "100 %   ·   ETA " + Format::duration(100.0 * 24.0 * 3600.0), labelWidth));
-
-  return samples;
-}
-
-std::string runner::TimeLoop::formatETA(double fraction) const {
-  // The extrapolation covers the recurring work per unit of simulated time - time
-  // steps, plots and the dynamic AMR drains between them; grid construction and
-  // initialisation are one-off costs and stay outside. Both corrections serve that: the
-  // time-step share comes from _timeSteppingSeconds rather than the throughput measurement,
-  // which drops the warm-up step, and the drain share is measured from the loop's own start,
-  // because initialisation drains through the same phase into the same measurement.
+std::string runner::TimeLoop::formatETA(const double fraction) const {
   const auto drainSeconds = _context.measurements.dynamicAMR.getAccumulatedValue() - _dynamicAMRSecondsBeforeLoop;
   const auto elapsed      = _timeSteppingSeconds + _context.measurements.plot.getAccumulatedValue() + drainSeconds;
   if (elapsed <= 0.0 or fraction <= 0.0 or fraction >= 1.0) {
     return "";
   }
-  const double remaining = elapsed * (1.0 - fraction) / fraction;
-  if (remaining >= std::numeric_limits<double>::max() / 10.0) {
+  const double remainingSeconds = elapsed * (1.0 - fraction) / fraction;
+  if (remainingSeconds >= std::numeric_limits<double>::max() / 10.0) {
     return "";
   }
-  return Format::duration(remaining);
+  return runner::Format::duration(remainingSeconds);
 }
 
 void runner::TimeLoop::logTimeStep(
-  double        minTimeStamp,
-  double        maxTimeStamp,
-  double        terminalTime,
-  double        wallClockSeconds,
-  unsigned long completedSteps,
-  int           maxSteps
+  const double        minimumTimeStamp,
+  const double        maximumTimeStamp,
+  const double        terminalTime,
+  const double        wallClockSeconds,
+  const unsigned long completedSteps,
+  const int           maximumSteps
 ) {
   auto& box = _context.box;
   _dynamicAMR.reportPendingSweeps();
@@ -126,13 +91,13 @@ void runner::TimeLoop::logTimeStep(
 
   const bool timeBounded = terminalTime > 0.0 and terminalTime < std::numeric_limits<double>::max() / 10.0;
   double     fraction    = -1.0;
-  if (maxSteps > 0) {
-    fraction = std::clamp(static_cast<double>(completedSteps) / maxSteps, 0.0, 1.0);
+  if (maximumSteps > 0) {
+    fraction = std::clamp(static_cast<double>(completedSteps) / maximumSteps, 0.0, 1.0);
   } else if (timeBounded) {
-    // The minimum stamp is the time the whole domain has reached; it drives progress and completion.
-    fraction = std::clamp(minTimeStamp / terminalTime, 0.0, 1.0);
+    // The minimum stamp is the time the whole domain has reached.
+    fraction = std::clamp(minimumTimeStamp / terminalTime, 0.0, 1.0);
   }
-  const std::string eta = fraction > 0.0 ? formatETA(fraction) : "";
+  const std::string estimatedTimeRemaining = fraction > 0.0 ? formatETA(fraction) : "";
 
   const bool showPerformance = _context.measurements.timeStep.getNumberOfMeasurements() > 0 and wallClockSeconds > 0.0;
 
@@ -143,26 +108,25 @@ void runner::TimeLoop::logTimeStep(
   const auto labelWidth = labelColumnWidth(solvers);
 
   std::ostringstream timeStep;
-  timeStep << Format::wallClock(wallClockSeconds) << " · t = " << Format::scientific(minTimeStamp);
-  // With local time stepping the cells span a range; show it. Globally min == max, so nothing extra.
-  if (maxTimeStamp > minTimeStamp) {
-    timeStep << " .. " << Format::scientific(maxTimeStamp);
+  timeStep << runner::Format::wallClock(wallClockSeconds) << " · t = " << runner::Format::scientific(minimumTimeStamp);
+  // Local time stepping spans a range of stamps, global time stepping gives every cell one stamp.
+  if (maximumTimeStamp > minimumTimeStamp) {
+    timeStep << " .. " << runner::Format::scientific(maximumTimeStamp);
   }
-  timeStep << " / " << Format::scientific(terminalTime);
+  timeStep << " / " << runner::Format::scientific(terminalTime);
   box.line(labelledRow("Time Step", timeStep.str(), labelWidth));
 
   for (const auto& [name, statistics] : solvers) {
     box.line(labelledRow(name, renderStatistics(statistics), labelWidth));
   }
 
-  // Grid-wide throughput; skipped on the warm-up step, whose wall time is allocation-dominated.
   if (showPerformance) {
-    const auto leaves = static_cast<double>(loadBalancer().getStatistics().getGlobalNumberOfInnerUnrefinedCells());
+    const auto         leaves = static_cast<double>(runner::globalStatistics().getGlobalNumberOfInnerUnrefinedCells());
     std::ostringstream performance;
-    performance << Format::rate(leaves / wallClockSeconds, "cell");
+    performance << runner::Format::rate(leaves / wallClockSeconds, "cell");
     if (_context.repositories.getNumberOfDoFs) {
       performance << " · "
-                  << Format::rate(
+                  << runner::Format::rate(
                        static_cast<double>(_context.repositories.getNumberOfDoFs()) * leaves / wallClockSeconds,
                        "dof"
                      );
@@ -174,8 +138,8 @@ void runner::TimeLoop::logTimeStep(
     const int          percent = std::clamp(static_cast<int>(fraction * 100.0 + 0.5), 0, 100);
     std::ostringstream progress;
     progress << percent << " %";
-    if (not eta.empty()) {
-      progress << "   ·   ETA " << eta;
+    if (not estimatedTimeRemaining.empty()) {
+      progress << "   ·   ETA " << estimatedTimeRemaining;
     }
     box.line(labelledRow("Progress", progress.str(), labelWidth));
   }
@@ -183,7 +147,12 @@ void runner::TimeLoop::logTimeStep(
   box.rule();
 }
 
-void runner::TimeLoop::logPlot(int snapshot, int numberOfSnapshots, double timeStamp, double wallClockSeconds) {
+void runner::TimeLoop::logPlot(
+  const int    snapshot,
+  const int    numberOfSnapshots,
+  const double timeStamp,
+  const double wallClockSeconds
+) {
   std::ostringstream label;
   if (snapshot <= 0) {
     label << "Initial Plot";
@@ -193,15 +162,14 @@ void runner::TimeLoop::logPlot(int snapshot, int numberOfSnapshots, double timeS
       label << "/" << numberOfSnapshots;
     }
   }
-  // Plain line: keeps the rules' padding, but consecutive plots stack without a blank between them.
   _context.box.line(
-    std::string(BlockIndent, ' ') + label.str() + "  " + Format::wallClock(wallClockSeconds)
-    + " · t = " + Format::scientific(timeStamp)
+    std::string(runner::BlockIndent, ' ') + label.str() + "  " + runner::Format::wallClock(wallClockSeconds)
+    + " · t = " + runner::Format::scientific(timeStamp)
   );
 }
 
 void runner::TimeLoop::run() {
-  SCOREP_USER_REGION(PhaseName::TimeLoop, SCOREP_USER_REGION_TYPE_PHASE)
+  SCOREP_USER_REGION(runner::PhaseName::TimeLoop, SCOREP_USER_REGION_TYPE_PHASE)
 
   const auto& parameters   = _context.parameters;
   const auto& repositories = _context.repositories;
@@ -217,9 +185,10 @@ void runner::TimeLoop::run() {
   double        logNextTimeStep    = 0.0;
   unsigned long completedTimeSteps = 0;
   int           completedPlots     = 0;
-  unsigned long lastLoggedStep     = 0; // step already shown, so Stop does not log it again
+  // Tracks the last reported step so shutdown does not print it twice.
+  unsigned long lastLoggedStep     = 0;
   double        currentStepElapsed = 0.0;
-  double        lastStepElapsed    = 0.0; // wall time of the most recent completed step
+  double        lastStepElapsed    = 0.0;
   bool          justWroteSnapshot  = false;
   bool          timeStepInFlight   = false;
 
@@ -229,10 +198,9 @@ void runner::TimeLoop::run() {
   enum class Action { TimeStep, Plot, Stop };
 
   while (true) {
-    // A completed time step may have committed refine/coarsen events. Realise them on the
-    // dedicated DynamicAMR observer before the next plot or time step, so both always run
-    // on a settled topology. A run that is terminating on a noncritical assertion skips
-    // the regrid and dumps its final state on the grid it has.
+    // A completed time step may have committed refine or coarsen events, and the DynamicAMR
+    // observer realises them before the next plot or time step. A run that terminates on a
+    // non-critical assertion dumps its final state on the grid it has.
     if (_dynamicAMR.isEnabled() and _dynamicAMR.hasPendingMeshUpdates()
         and not tarch::hasNonCriticalAssertionBeenViolated()) {
       _dynamicAMR.run();
@@ -259,8 +227,8 @@ void runner::TimeLoop::run() {
 
     Action action;
     if (tarch::hasNonCriticalAssertionBeenViolated()) {
-      if (not _terminatedGracefully) {
-        _terminatedGracefully = true;
+      if (not _stoppedAfterNonCriticalAssertion) {
+        _stoppedAfterNonCriticalAssertion = true;
         logError("Non-critical assertion has been triggered in code. Dump final state and terminate.");
         action = Action::Plot;
       } else {
@@ -270,7 +238,7 @@ void runner::TimeLoop::run() {
                and static_cast<double>(completedTimeSteps) >= nextPlotAtStep and repositories.mayPlot()) {
       nextPlotAtStep += stepPlotInterval;
       if (nextPlotAtStep <= static_cast<double>(completedTimeSteps)) {
-        logWarning("Asked to plot more often than once per time step; postponing the next plot");
+        logWarning("Asked to plot more often than once per time step; postponing the next plot.");
         nextPlotAtStep = static_cast<double>(completedTimeSteps) + 1.0;
       }
       justWroteSnapshot = true;
@@ -278,20 +246,15 @@ void runner::TimeLoop::run() {
     } else if (not stepLimited and snapInterval > 0.0 and keepTimeStepping and completedPlots < snapshots - 1
                and (minStamp >= nextMinPlot or maxStamp >= nextMaxPlot) and repositories.mayPlot()) {
       // The final-state dump at termination completes the numbered snapshot count, so the
-      // interval trigger stops one short. Solvers advancing at different rates spread the
-      // stamps: minStamp belongs to the slowest solver, maxStamp to the fastest, and with
-      // subcycling or local time stepping a plot target can sit between the two for many
-      // sweeps. Without the bound the fastest stamp crosses surplus targets before the
-      // slowest one ends the run. The snapshot spacing follows the fastest solver; testing
-      // only the slowest stamp would space the snapshots evenly in terminal time, at the
-      // price of plotting nothing until the slowest solver reaches each target.
+      // interval trigger stops one short. minStamp belongs to the slowest solver and maxStamp
+      // to the fastest, so the snapshot spacing follows the fastest solver.
       nextMinPlot += snapInterval;
       nextMaxPlot += snapInterval;
       if (nextMinPlot < minStamp) {
-        logWarning("Asked to plot more often than the time step size allows; postponing the next plot");
+        logWarning("Asked to plot more often than the time step size allows; postponing the next plot.");
         nextMinPlot = minStamp + snapInterval;
       } else if (nextMaxPlot < maxStamp) {
-        logWarning("Asked to plot more often than the time step size allows; postponing the next plot");
+        logWarning("Asked to plot more often than the time step size allows; postponing the next plot.");
         nextMaxPlot = maxStamp + snapInterval;
       }
       nextMaxPlot       = std::max(nextMaxPlot, nextMinPlot);
@@ -301,10 +264,9 @@ void runner::TimeLoop::run() {
       justWroteSnapshot = false;
       action            = Action::TimeStep;
     } else if (timeStepInFlight and not repositories.mayPlot()) {
-      // Terminal reached mid logical step: finish it before stopping (a step spans several sweeps),
-      // regardless of whether plotting is enabled - otherwise we would stop in an inconsistent state.
-      // A plot sweep also clears mayPlot(), so only an actually in-flight time step warrants
-      // another sweep; otherwise a run ending on its final plot would compute one surplus step.
+      // A logical time step spans several sweeps, so a step that is in flight when the terminal
+      // time arrives runs to its end. A plot sweep also clears mayPlot(), so only an in-flight
+      // time step starts another sweep.
       action = Action::TimeStep;
     } else if (not justWroteSnapshot and (snapInterval > 0.0 or stepPlotInterval > 0.0)) {
       justWroteSnapshot = true;
@@ -317,8 +279,8 @@ void runner::TimeLoop::run() {
     }
 
     if (action == Action::Stop) {
-      // After a noncritical assertion we only dump the final state; no closing time-step summary.
-      if (not _terminatedGracefully and completedTimeSteps > 0 and completedTimeSteps != lastLoggedStep) {
+      // After a non-critical assertion we only dump the final state; no closing time-step summary.
+      if (not _stoppedAfterNonCriticalAssertion and completedTimeSteps > 0 and completedTimeSteps != lastLoggedStep) {
         logTimeStep(
           repositories.getMinTimeStamp(),
           repositories.getMaxTimeStamp(),
@@ -334,30 +296,29 @@ void runner::TimeLoop::run() {
     }
 
     if (action == Action::Plot) {
-      double dt = 0.0;
+      double elapsedSeconds = 0.0;
       {
-        SCOREP_USER_REGION(PhaseName::Plot, SCOREP_USER_REGION_TYPE_COMMON)
-        dt = engine.runStep(_plotStep);
+        SCOREP_USER_REGION(runner::PhaseName::Plot, SCOREP_USER_REGION_TYPE_COMMON)
+        elapsedSeconds = engine.runStep(_plotStep);
       }
-      measurements.plot.setValue(dt);
+      measurements.plot.setValue(elapsedSeconds);
       // The initial condition (plotted before any step ran) is not one of the numbered snapshots.
       if (completedTimeSteps == 0) {
-        logPlot(0, 0, repositories.getMinTimeStamp(), dt);
+        logPlot(0, 0, repositories.getMinTimeStamp(), elapsedSeconds);
       } else {
         ++completedPlots;
-        logPlot(completedPlots, snapshots, repositories.getMinTimeStamp(), dt);
+        logPlot(completedPlots, snapshots, repositories.getMinTimeStamp(), elapsedSeconds);
       }
       continue;
     }
 
-    // Action::TimeStep. A logical time step may span several sweeps; it is complete when mayPlot flips
-    // back to true.
-    double dt = 0.0;
+    // A logical time step is complete only when mayPlot becomes true after its final sweep.
+    double elapsedSeconds = 0.0;
     {
-      SCOREP_USER_REGION(PhaseName::TimeStep, SCOREP_USER_REGION_TYPE_COMMON)
-      dt = engine.runStep(_timeStepStep);
+      SCOREP_USER_REGION(runner::PhaseName::TimeStep, SCOREP_USER_REGION_TYPE_COMMON)
+      elapsedSeconds = engine.runStep(_timeStepStep);
     }
-    currentStepElapsed += dt;
+    currentStepElapsed += elapsedSeconds;
     timeStepInFlight = not repositories.mayPlot();
     if (repositories.mayPlot()) {
       _timeSteppingSeconds += currentStepElapsed;
@@ -368,8 +329,8 @@ void runner::TimeLoop::run() {
       currentStepElapsed = 0.0;
       ++completedTimeSteps;
 
-      // A step that tripped a noncritical assertion carries invalid data (e.g. dt from a zero
-      // eigenvalue); skip its report and let the next iteration dump the final state and terminate.
+      // A step that tripped a non-critical assertion carries invalid data, such as a time-step size
+      // from a zero eigenvalue; skip its report and let the next iteration dump the final state and terminate.
       if (not tarch::hasNonCriticalAssertionBeenViolated()
           and measurements.timeStep.getAccumulatedValue() >= logNextTimeStep) {
         logTimeStep(

@@ -123,8 +123,10 @@ function(peano_add_target)
   endif()
 
   target_link_libraries(${target} PRIVATE
-    ${peano_options_target}
     ${ARG_LINK_LIBRARIES}
+    # PeanoOptions follows linked libraries so its diagnostic flags take precedence
+    # over build-mode defaults.
+    ${peano_options_target}
   )
 
   target_compile_options(${target} PRIVATE ${ARG_COMPILE_OPTIONS})
@@ -159,7 +161,7 @@ function(peano_add_target)
   # PEANO_<MODE>_DEFINITIONS, PEANO_C_FLAGS_<MODE>, PEANO_CXX_FLAGS_<MODE> and
   # PEANO_Fortran_FLAGS_<MODE> are core-build cache variables. In a generated application
   # they are undefined and expand to nothing here; the application instead inherits the mode
-  # definitions and flags transitively from the linked Peano::PeanoRuntime<MODE><DIM>d
+  # definitions and flags transitively from the linked Peano::PeanoRuntime<MODE><DIM>D
   # target (a STATIC library, hence PUBLIC scope). These calls are therefore only
   # effective in the core build.
   target_compile_definitions(${target} ${variant_scope}
@@ -171,8 +173,8 @@ function(peano_add_target)
   # flags contain switches not all Fortran front-ends accept). HIP takes the host flags
   # verbatim (clang optimises host and device from a single -O). nvcc is split: the host
   # flags are forwarded via -Xcompiler, and the optimisation level is additionally forwarded
-  # to the device compiler via -Xptxas so kernels are optimised explicitly rather than relying
-  # on ptxas's implicit default. Debug instead uses -G, which forces device -O0 plus debug info.
+  # to the device compiler via -Xptxas, making the device optimisation level explicit.
+  # Debug uses -G, which forces device -O0 plus debug info.
   set(_peano_cuda_mode_flags "")
   foreach(_peano_flag ${PEANO_CXX_FLAGS_${mode_upper}})
     list(APPEND _peano_cuda_mode_flags "$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=${_peano_flag}>")
@@ -202,9 +204,8 @@ function(peano_add_target)
     )
   endif()
 
-  # The architecture is published once by peano_enable_*_language()
-  # (CMAKE_CUDA_ARCHITECTURES / CMAKE_HIP_ARCHITECTURES); reuse it here rather
-  # than re-deriving it from the arch string.
+  # GPU language setup publishes one architecture through CMAKE_CUDA_ARCHITECTURES or
+  # CMAKE_HIP_ARCHITECTURES; target properties must consume that single selection.
   if(gpu_backend STREQUAL "cuda" AND CMAKE_CUDA_COMPILER)
     set_target_properties(${target} PROPERTIES
       CUDA_SEPARABLE_COMPILATION OFF

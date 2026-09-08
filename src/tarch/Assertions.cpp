@@ -1,6 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "tarch/Assertions.h"
+#include "Assertions.h"
 
 #if PEANO_ASSERTIONS
 #include "tarch/Termination.h"
@@ -9,8 +9,12 @@ void tarch::triggerAssertion(const std::string& assertionMessage) { tarch::termi
 #endif
 
 namespace {
-  [[maybe_unused]] void
-  compileAssertionMacro(const int value, const int expected, const double otherValue, const char* const message) {
+  [[maybe_unused]] void compileAssertionMacro(
+    const int         value,
+    const int         expected,
+    const double      otherValue,
+    const char* const message
+  ) {
     assertion(value == expected);
     assertion(value == expected, value, expected, otherValue, message);
   }

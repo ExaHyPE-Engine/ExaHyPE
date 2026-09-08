@@ -1,6 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "Vector.h"
+#include "tarch/la/Vector.h"
 
 static_assert(sizeof(tarch::la::Vector<4, int>) == 16, "Vector<4,int> should stay 16 bytes");
 static_assert(alignof(tarch::la::Vector<4, int>) == 16, "Vector<4,int> should be 16-byte aligned");

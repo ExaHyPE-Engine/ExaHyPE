@@ -1,6 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "Vector.h"
+#include "tarch/la/Vector.h"
 
 #if defined(PEANO_WITH_GPU_BACKEND_SYCL)
 #include <sycl/sycl.hpp>

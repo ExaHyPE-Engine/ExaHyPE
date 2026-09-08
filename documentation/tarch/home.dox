@@ -9,15 +9,14 @@
 \tableofcontents
 
 
-- \subpage tarch_NoncriticalAssertions
+- \subpage tarch_NonCriticalAssertions
 - \subpage tarch_logging
 - \subpage tarch_tests
-- \subpage tarch_services
 - Input/output
   - \subpage tarch_plotting
   - \subpage documentation_tarch_visualisation
 - HPC
-  - \subpage page_tarch_multicore
+  - \subpage page_tarch_tasking
   - \subpage page_tarch_mpi
   - \subpage tarch_accelerator_SYCL
 

@@ -1,29 +1,21 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 
-import peano4.toolbox.particles
+import peano4.particles
 
 import jinja2
 
 
 class DiscontinuousGalerkinTracing(
-    peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_Sets
+    peano4.particles.UpdateParticle_MultiLevelInteraction_Sets
 ):
     """!
 
     Particle tracing over the DG solver.
 
-    The class mirrors FiniteVolumesTracing: it couples a tracer particle set to
-    the solver and projects the cell solution onto the tracer attributes. The
-    default argument list passes the polynomial order and the solver's quadrature
-    points, so the projection kernel can evaluate the DG polynomial right at the
-    particle position.
-
-    ## Update plug-in points
-
-    We only update cells which are marked with getHasUpdated(). For Runge-Kutta
-    type solvers, we assume that this flag is set by the computation of the final
-    linear combination of estimates.
+    The action set couples a tracer particle set to the solver and projects the
+    cell solution onto the tracer attributes. It updates only cells which are
+    marked with getHasUpdated().
     """
 
     def __init__(
@@ -34,21 +26,18 @@ class DiscontinuousGalerkinTracing(
         projection_kernel_arguments="""
         marker,
         {{ORDER}},
-        repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
-        {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
+        repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1D,
+        {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}},
         fineGridCell{{CURRENT_UNKNOWN_IDENTIFIER}}.data(),
-        *p
+        *particle
 """,
     ):
         """!
 
         Set up the tracing.
 
-        Setting up the tracing means that we couple the tracer particle set with
-        the solver and state which projection kernel writes solver data into the
-        tracer. The file exahype2/dg/Tracer.h provides a few pre-manufactured
-        routines. The kernel is a plain function call, so you have to ensure that
-        its argument list matches the data you want to dump.
+        The projection kernel is a plain function call, so its argument list has
+        to match the data the tracer stores.
 
         ## Arguments
 
@@ -72,12 +61,14 @@ class DiscontinuousGalerkinTracing(
         """
 
         self.tracerDict = {}
-        # Do not overwrite the dictionary of the superclass, as we need it.
+        # Do not overwrite the dictionary of the superclass.
         self.tracerDict["PARTICLE"] = particle_set.particle_model.name
         self.tracerDict["PARTICLES_CONTAINER"] = particle_set.name
         self.tracerDict["SOLVER_NAME"] = solver._name
         self.tracerDict["SOLVER_INSTANCE"] = solver.get_name_of_global_instance()
-        self.tracerDict["CURRENT_UNKNOWN_IDENTIFIER"] = solver.current_unknown_identifier()
+        self.tracerDict["CURRENT_UNKNOWN_IDENTIFIER"] = (
+            solver.current_unknown_identifier()
+        )
         self.tracerDict["ORDER"] = solver._basis.order
         self.tracerDict["NUMBER_OF_UNKNOWNS"] = solver.unknowns
         self.tracerDict["NUMBER_OF_AUXILIARY_VARIABLES"] = solver.auxiliary_variables
@@ -96,27 +87,39 @@ if (
     repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::GridInitialisation
   )
 ) {
-  for (auto* p: localParticles) {
+  const bool domainWrapsParticles = peano4::particles::domainHasPeriodicAxes();
+  for (auto* const particle : localParticles) {
+    // The wall vertex of a periodic axis holds particles from both walls, so
+    // the cell reads a particle through its periodic image.
+    const auto image = domainWrapsParticles
+      ? peano4::particles::periodicImageTowardsCell(particle->getX(), marker)
+      : particle->getX();
     if (
-      p->getMoveState()==globaldata::{{PARTICLE}}::MoveState::NotMovedYet and marker.isContained(p->getX())
+      particle->getMoveState() == globaldata::{{PARTICLE}}::MoveState::NotMovedYet
+      and marker.isContained(image)
     ) {
+      if (domainWrapsParticles) {
+        particle->setX(image);
+      }
+{% if PROJECTION_KERNEL %}
       {{PROJECTION_KERNEL}}(
         {{PROJECTION_KERNEL_ARGUMENTS}}
       );
+{% endif %}
 
-      p->setMoveState( globaldata::{{PARTICLE}}::MoveState::Moved );
+      particle->setMoveState(globaldata::{{PARTICLE}}::MoveState::Moved);
     }
   }
 }
 """
 
         touch_vertex_first_time_compute_kernel = """
-  for (auto* p: assignedParticles) {
-    p->setMoveState(globaldata::{{PARTICLE}}::MoveState::NotMovedYet);
+  for (auto* const particle : assignedParticles) {
+    particle->setMoveState(globaldata::{{PARTICLE}}::MoveState::NotMovedYet);
   }
 """
 
-        super(DiscontinuousGalerkinTracing,self).__init__(
+        super().__init__(
             particle_set,
             jinja2.Template(cell_compute_kernel).render(**self.tracerDict),
             jinja2.Template(touch_vertex_first_time_compute_kernel).render(
@@ -131,24 +134,21 @@ if (
         return False
 
     def get_includes(self):
-        result = jinja2.Template(
+        includes = jinja2.Template(
             """
-#include "tarch/multicore/Lock.h"
 #include "peano4/Loop.h"
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
 #include "repositories/SolverRepository.h"
 #include "exahype2/dg/Tracer.h"
+#include "peano4/particles/particles.h"
 """
         )
-        return (super(DiscontinuousGalerkinTracing,self).get_includes()
-            + "\n"
-            + result.render(**self.tracerDict)
-        )
+        return super().get_includes() + "\n" + includes.render(**self.tracerDict)
 
     def get_attributes(self):
         return (
-            super(DiscontinuousGalerkinTracing,self).get_attributes()
+            super().get_attributes()
             + """
 """
         )

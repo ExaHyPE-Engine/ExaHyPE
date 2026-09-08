@@ -1,5 +1,3 @@
-#pragma once
-
 namespace exahype2 {
   namespace fv {
     namespace particles {

@@ -2,7 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 from peano4.solversteps.ActionSet import ActionSet
 
-import peano4.toolbox.particles
+import peano4.particles
 
 import jinja2
 
@@ -10,16 +10,16 @@ import jinja2
 class DumpTracerIntoDatabase(peano4.solversteps.ActionSet):
     """!
 
-    Dump the tracer data into a csv database
+    Dump tracer data into a CSV database.
 
     This action set is to be added to your code if you want to dump tracer data
     into a database. By default, Peano supports csv files. The dumps are not
-    synchronised with normal IO: we keep track of the particles/tracers and dump
+    synchronised with normal I/O: we keep track of the particles/tracers and dump
     a new snapshot whenever a tracer has moved far enough or enough time has
     passed. Both thresholds are set via the deltas in the constructor.
 
-    This class uses the C++ class toolbox::particles::TrajectoryDatabase from the
-    particles toolbox to realise the actual storage.
+    This class uses the C++ class peano4::particles::TrajectoryDatabase from the
+    particles package to realise the actual storage.
     """
 
     def __init__(
@@ -36,8 +36,6 @@ class DumpTracerIntoDatabase(peano4.solversteps.ActionSet):
     ):
         """!
 
-        Constructor
-
         The database appends every recorded snapshot to its file straight away.
         The deltas below decide which snapshots are recorded: a new one is kept
         only once the position or time moved by more than the respective delta
@@ -45,14 +43,14 @@ class DumpTracerIntoDatabase(peano4.solversteps.ActionSet):
 
         position_delta_between_two_snapshots: Float
           Maps to the positionDelta argument of
-          toolbox::particles::TrajectoryDatabase::TrajectoryDatabase().
+          peano4::particles::TrajectoryDatabase::TrajectoryDatabase().
 
         time_delta_between_two_snapshots: Float
           Maps to the timeDelta argument of
-          toolbox::particles::TrajectoryDatabase::TrajectoryDatabase().
+          peano4::particles::TrajectoryDatabase::TrajectoryDatabase().
 
         use_relative_deltas: Boolean
-          See description of C++ class in toolbox::particles::TrajectoryDatabase.
+          See description of C++ class in peano4::particles::TrajectoryDatabase.
 
         initial_record_time: Float
           Time from which on the tracer starts to dump data to files.
@@ -60,7 +58,7 @@ class DumpTracerIntoDatabase(peano4.solversteps.ActionSet):
         last_record_time: Float
           Time at which the tracer stops dumping data to files.
         """
-        super(DumpTracerIntoDatabase, self).__init__(descend_invocation_order=1)
+        super().__init__(descend_invocation_order=1)
         self.d = {}
         self.d["PARTICLE"] = particle_set.particle_model.name
         self.d["PARTICLES_CONTAINER"] = particle_set.name
@@ -70,43 +68,43 @@ class DumpTracerIntoDatabase(peano4.solversteps.ActionSet):
         self.d["FILENAME"] = filename
         self.d["SOLVER_NAME"] = solver._name
         self.d["SOLVER_INSTANCE"] = solver.get_name_of_global_instance()
-        if use_relative_deltas:
-            self.d["USE_RELATIVE_DELTAS"] = "true"
-        else:
-            self.d["USE_RELATIVE_DELTAS"] = "false"
+        self.d["USE_RELATIVE_DELTAS"] = "true" if use_relative_deltas else "false"
 
         self.d["INI_RECORD"] = initial_record_time
         self.d["LAST_RECORD"] = last_record_time
 
     __Template_TouchCellLastTime = jinja2.Template(
         """
-if ( 
-  not marker.willBeRefined() 
-  and 
-  fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated() 
+if (
+  not marker.willBeRefined()
+  and
+  fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated()
   and
   repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep()
 ) {
-  double IniRecord={{INI_RECORD}};
-  double LastRecord={{LAST_RECORD}};
-  for (int i=0; i<TWO_POWER_D; i++) {
-    for (auto* p: fineGridVertices{{PARTICLES_CONTAINER}}(i) ) {
+  constexpr double InitialRecordTime = {{INI_RECORD}};
+  constexpr double LastRecordTime = {{LAST_RECORD}};
+  for (int vertexNumber = 0; vertexNumber < TWO_POWER_D; vertexNumber++) {
+    for (
+      const auto* const particle :
+      fineGridVertices{{PARTICLES_CONTAINER}}(vertexNumber)
+    ) {
       if (
-        p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local
+        particle->getParallelState() == globaldata::{{PARTICLE}}::ParallelState::Local
         and
-        marker.isContained( p->getX() )
+        marker.isContained(particle->getX())
         and
-        fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp()>=IniRecord
+        fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp() >= InitialRecordTime
         and
-        fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp()<=LastRecord
+        fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp() <= LastRecordTime
       ) {
-        _database.addParticleSnapshot( 
-          p->getNumber(0), 
-          p->getNumber(1),
+        _database.addParticleSnapshot(
+          particle->getNumber(0),
+          particle->getNumber(1),
           fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp(),
-          p->getX(),
-          p->getData().size(),
-          p->getData().data()
+          particle->getX(),
+          particle->getData().size(),
+          particle->getData().data()
         );
       }
     }
@@ -130,10 +128,15 @@ if (
     def get_constructor_body(self):
         template = jinja2.Template(
             """
-  _database.setOutputFileName( ::runner::RuntimeParameters::getInstance().getOutputPath() + "{{FILENAME}}" );
-  _database.setOutputPrecision( {{OUTPUT_PRECISION}} );
-  _database.setPositionDeltaBetweenTwoSnapshots( {{POSITION_DELTA}}, {{USE_RELATIVE_DELTAS}} );
-  _database.setTimeDeltaBetweenTwoSnapshots( {{TIME_DELTA}} );
+  _database.setOutputFileName(
+    ::runner::RuntimeParameters::getInstance().getOutputPath() + "{{FILENAME}}"
+  );
+  _database.setOutputPrecision({{OUTPUT_PRECISION}});
+  _database.setPositionDeltaBetweenTwoSnapshots(
+    {{POSITION_DELTA}},
+    {{USE_RELATIVE_DELTAS}}
+  );
+  _database.setTimeDeltaBetweenTwoSnapshots({{TIME_DELTA}});
 """
         )
         return template.render(**self.d)
@@ -141,7 +144,7 @@ if (
     def get_includes(self):
         result = jinja2.Template(
             """
-#include "toolbox/particles/TrajectoryDatabase.h"
+#include "peano4/particles/TrajectoryDatabase.h"
 #include "runner/RuntimeParameters.h"
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
@@ -152,14 +155,14 @@ if (
 
     def get_attributes(self):
         return """
-    static toolbox::particles::TrajectoryDatabase  _database;
+    static peano4::particles::TrajectoryDatabase _database;
 """
 
-    def get_static_initialisations(self, full_qualified_classname):
+    def get_static_initialisations(self, full_qualified_class_name):
         return (
             """
-toolbox::particles::TrajectoryDatabase  """
-            + full_qualified_classname
+peano4::particles::TrajectoryDatabase """
+            + full_qualified_class_name
             + """::_database;
 """
         )

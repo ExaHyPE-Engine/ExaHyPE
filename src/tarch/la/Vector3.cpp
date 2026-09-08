@@ -1,6 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "Vector.h"
+#include "tarch/la/Vector.h"
 
 static_assert(sizeof(tarch::la::Vector<3, int>) == 12, "Vector<3,int> should stay tightly packed");
 static_assert(alignof(tarch::la::Vector<3, int>) == alignof(int), "Vector<3,int> should use natural alignment");

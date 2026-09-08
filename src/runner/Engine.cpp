@@ -2,14 +2,14 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "Engine.h"
 
-#include "peano4/parallel/RunControl.h"
-#include "runner/Instrumentation.h"
-#include "runner/LoadBalancer.h"
+#include "peano4/topology/TopologyManager.h"
+#include "runner/GlobalStatistics.h"
 #include "runner/Orchestrator.h"
 #include "runner/Phase.h"
-#include "runner/PhaseNames.h"
+#include "runner/RunControl.h"
 #include "runner/RuntimeParameters.h"
 #include "tarch/FloatingPointExceptions.h"
+#include "tarch/Termination.h"
 #include "tarch/instrumentation/Watch.h"
 #include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
@@ -17,20 +17,6 @@
 #include <mpi.h>
 
 namespace {
-  /**
-   * Construction consumes the current global grid state. Master and workers
-   * therefore wait after posting the same reduction, which keeps collective
-   * ordering identical on every rank. Other phases leave the exchange in
-   * flight so the following traversal overlaps it.
-   */
-  void updateLoadBalancer(const runner::Step& step) {
-    auto& loadBalancerInstance = runner::loadBalancer();
-    loadBalancerInstance.update();
-    if (step.name == runner::StepName::CreateGrid or step.name == runner::StepName::LoadBalancing) {
-      loadBalancerInstance.synchroniseGlobalView();
-    }
-  }
-
   void recordStepTime(
     std::vector<std::pair<std::string, tarch::instrumentation::Measurement>>& stepTimes,
     const std::string&                                                        name,
@@ -45,22 +31,34 @@ namespace {
     stepTimes.emplace_back(name, tarch::instrumentation::Measurement());
     stepTimes.back().second.setValue(elapsedSeconds);
   }
+
+  void recordStepTaskSeconds(
+    std::vector<std::pair<std::string, double>>& stepTaskSeconds,
+    const std::string&                           name,
+    const double                                 taskSeconds
+  ) {
+    for (auto& [stepName, accumulated] : stepTaskSeconds) {
+      if (stepName == name) {
+        accumulated += taskSeconds;
+        return;
+      }
+    }
+    stepTaskSeconds.emplace_back(name, taskSeconds);
+  }
 } // namespace
 
 runner::Engine::Engine(
   tarch::la::Vector<DIMENSIONS, double> domainOffset,
   tarch::la::Vector<DIMENSIONS, double> domainSize,
   std::bitset<DIMENSIONS>               periodicBC,
-  RepositoryCallbacks                   callbacks,
-  std::vector<Step>                     steps
+  runner::RepositoryCallbacks           callbacks,
+  std::vector<runner::Step>             steps
 ) :
   _domainOffset(domainOffset),
   _domainSize(domainSize),
   _periodicBC(periodicBC),
   _callbacks(std::move(callbacks)),
-  _steps(std::move(steps)),
-  _measurements(),
-  _box() {}
+  _steps(std::move(steps)) {}
 
 const runner::Step& runner::Engine::findStep(const int programStep) const {
   for (const auto& step : _steps) {
@@ -68,52 +66,51 @@ const runner::Step& runner::Engine::findStep(const int programStep) const {
       return step;
     }
   }
-  throw std::runtime_error(
-    "runner::Engine: no step registered for Peano program step " + std::to_string(programStep) + "."
-  );
+  tarch::terminateWithError("No step registered for Peano program step " + std::to_string(programStep) + ".");
 }
 
 void runner::Engine::executeStepBody(const int programStep) const {
-  tarch::FloatingPointExceptions::ScopedTrap scopedTrap(__FILE__, __LINE__);
+  const tarch::FloatingPointExceptions::ScopedTrap scopedTrap(__FILE__, __LINE__);
   findStep(programStep).body();
 }
 
 /**
- * Measures the program-step broadcast, traversal, load-balancer update, and
- * post-step callback, including the collectives at both ends of the traversal.
+ * Broadcasts the step, executes it and reduces the global statistics. Only the
+ * global master calls this. Returns the wall time in seconds of the broadcast,
+ * the traversal, the reduction and the post-step callback.
  */
 double runner::Engine::runStep(const int programStep) {
   tarch::instrumentation::Watch watch("runner::Engine", "runStep", false, false);
   watch.start();
+  const auto taskSecondsBefore = peano4::topology::TopologyManager::getInstance().getAccumulatedTaskSeconds();
 
-  peano4::parallel::RunControl::getInstance().setNextProgramStep(programStep);
-  peano4::parallel::RunControl::getInstance().continueToRun();
+  runner::RunControl::getInstance().setNextProgramStep(programStep);
+  runner::RunControl::getInstance().continueToRun();
 
   executeStepBody(programStep);
 
-  {
-    // This post-sweep update has its own region because LoadBalancing names a grid traversal.
-    SCOREP_USER_REGION(PhaseName::LoadBalancerUpdate, SCOREP_USER_REGION_TYPE_COMMON)
-    updateLoadBalancer(findStep(programStep));
-  }
+  runner::globalStatistics().synchronise();
   if (_callbacks.afterStep) {
     _callbacks.afterStep();
   }
 
   watch.stop();
-  const auto elapsed = watch.getCalendarTime();
-  recordStepTime(_measurements.stepTimes, findStep(programStep).name, elapsed);
+  const auto  elapsed  = watch.getCalendarTime();
+  const auto& stepName = findStep(programStep).name;
+  recordStepTime(_measurements.stepTimes, stepName, elapsed);
+  recordStepTaskSeconds(
+    _measurements.stepTaskSeconds,
+    stepName,
+    peano4::topology::TopologyManager::getInstance().getAccumulatedTaskSeconds() - taskSecondsBefore
+  );
   return elapsed;
 }
 
 void runner::Engine::runWorker() const {
-  while (peano4::parallel::RunControl::getInstance().continueToRun()) {
-    const auto programStep = peano4::parallel::RunControl::getInstance().getCurrentProgramStep();
+  while (runner::RunControl::getInstance().continueToRun()) {
+    const auto programStep = runner::RunControl::getInstance().getCurrentProgramStep();
     executeStepBody(programStep);
-    {
-      SCOREP_USER_REGION(PhaseName::LoadBalancerUpdate, SCOREP_USER_REGION_TYPE_COMMON)
-      updateLoadBalancer(findStep(programStep));
-    }
+    runner::globalStatistics().synchronise();
     if (_callbacks.afterStep) {
       _callbacks.afterStep();
     }
@@ -149,8 +146,8 @@ void runner::Engine::assertConsistentStepRegistryAcrossRanks() const {
   tarch::mpi::allreduce(&localHash, &maxHash, 1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, communicator);
 
   if (minHash != maxHash) {
-    throw std::runtime_error(
-      "runner::Engine: the registered step set differs across MPI ranks. Every rank must register "
+    tarch::terminateWithError(
+      "The registered step set differs across MPI ranks. Every rank must register "
       "identical steps (same ids and names) so that a broadcast program step resolves everywhere."
     );
   }
@@ -164,22 +161,22 @@ int runner::Engine::run() {
     return EXIT_SUCCESS;
   }
 
-  PhaseContext context{
+  runner::PhaseContext context{
     *this,
     _box,
     _callbacks,
-    RuntimeParameters::getInstance(),
+    runner::RuntimeParameters::getInstance(),
     _measurements,
     _domainOffset,
     _domainSize,
     _periodicBC
   };
 
-  const bool terminatedGracefully = Orchestrator(_steps).run(context);
+  const bool stoppedAfterNonCriticalAssertion = runner::Orchestrator(_steps).run(context);
 
   // Workers wait inside continueToRun(), so the master broadcasts a final termination step.
-  peano4::parallel::RunControl::getInstance().setNextProgramStep(peano4::parallel::RunControl::Terminate);
-  peano4::parallel::RunControl::getInstance().continueToRun();
+  runner::RunControl::getInstance().setNextProgramStep(runner::RunControl::Terminate);
+  runner::RunControl::getInstance().continueToRun();
 
-  return terminatedGracefully ? EXIT_FAILURE : EXIT_SUCCESS;
+  return stoppedAfterNonCriticalAssertion ? EXIT_FAILURE : EXIT_SUCCESS;
 }

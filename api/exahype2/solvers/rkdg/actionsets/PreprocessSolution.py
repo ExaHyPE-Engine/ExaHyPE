@@ -1,4 +1,4 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and 
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 
 from .AbstractRungeKuttaDGActionSet import AbstractRungeKuttaDGActionSet
@@ -9,19 +9,11 @@ import jinja2
 
 
 class EmptyPreprocessSolution(AbstractRungeKuttaDGActionSet):
-  """
-  
-  PreprocessSolution differs from other action sets, as I only create it once. See 
-  FV.create_action_sets(). Once the instance does exist, you can tailor it. But you
-  can also completely overwrite it.
-  
-  """
   def __init__(self,solver):
     super(EmptyPreprocessSolution,self).__init__(solver)
-    # Is there for compatibility reasons
     self.guard               = "true"
     self.descend_invocation_order            = 2
-    
+
 
   def get_body_of_operation(self,operation_name):
     result = ""
@@ -34,60 +26,40 @@ class EmptyPreprocessSolution(AbstractRungeKuttaDGActionSet):
 
 class DoFWisePreprocessSolution(AbstractRungeKuttaDGActionSet):
   """
-  
-  PreprocessSolution differs from other action sets, as I only create it once. See 
-  FV.create_action_sets(). Once the instance does exist, you can tailor it. But you
-  can also completely overwrite it.
-  
-  The postprocessing plugs into touch cell last time. It is the last action set added
-  by the default implementation. Therefore, it is the first action set of which 
-  touchCellLastTime() is called. The reason why I plug into the leaving of the cell
-  is that some solvers may add further action sets to the solve. These action sets
-  typically plug into touchCellFirstTime() - and consequently their first time is
-  called after the postprocessing's first time. By making the postprocessing use
-  touchCellLastTime(), I ensure that any additional action set added by a subclass
-  can still precede the postprocessing.
-  
+  Runs a code snippet on every degree of freedom of a cell.
+
+  The snippet plugs into touchCellLastTime(), so an action set a subclass adds
+  to touchCellFirstTime() runs before it.
   """
   def __init__(self,solver):
     super(DoFWisePreprocessSolution,self).__init__(solver)
     self.guard               = "true"
     self._compute_kernel     = ""
-    self.descend_invocation_order            = 1 
+    self.descend_invocation_order            = 1
 
 
   def add_postprocessing_kernel(self, operation_per_point):
     """
-    
-    Add a code snippet which is applied to each and every point. You have the following
-    variables which are well-defined:
-    
-    - value: Is a pointer to the current finite volume's data
-    - x: A tarch::la::Vector over doubles
-    - marker.getH(): A tarch::la::Vector over doubles
-    
-    
-    operation_per_point: String
-      C/C++ code snippet
-    
+    Adds the C++ snippet `operation_per_point`, which runs on every degree of
+    freedom and reads its data through `values` and its position through `x`.
     """
     self._compute_kernel += """
-{    
+{
   {{COMPUTE_TIME_STEP_SIZE}}
   const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
-    
+
   if (
-    not marker.hasBeenRefined() 
-    and 
+    not marker.hasBeenRefined()
+    and
     {{PREDICATE}}
-  ) { 
-    
+  ) {
+
     constexpr int valuesPerDoF = {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     peano4::dForEach({{DG_ORDER}} + 1, [&](const tarch::la::Vector<DIMENSIONS, int>& index) {
       double* values   = fineGridCell{{UNKNOWN_IDENTIFIER}}.data()
         + peano4::dLinearised(index, {{DG_ORDER}}+1) * valuesPerDoF;
       auto    x        = ::exahype2::dg::getQuadraturePoint(
-        marker.getX(), marker.getH(), index, repositories::{{SOLVER_INSTANCE}}.DGOrder, repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d
+        marker.getX(), marker.getH(), index, repositories::{{SOLVER_INSTANCE}}.DGOrder, repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1D
       );
       """ + operation_per_point + """
     });
@@ -103,7 +75,6 @@ class DoFWisePreprocessSolution(AbstractRungeKuttaDGActionSet):
       self._solver.add_entries_to_text_replacement_dictionary(d)
       d[ "PREDICATE" ]           = jinja2.Template(self.guard, undefined=jinja2.DebugUndefined).render(**d)
       result = jinja2.Template(self._compute_kernel, undefined=jinja2.DebugUndefined).render(**d)
-      pass 
     return result
 
 
@@ -118,10 +89,6 @@ class DoFWisePreprocessSolution(AbstractRungeKuttaDGActionSet):
 
 
 class CellWisePreprocessSolution(AbstractRungeKuttaDGActionSet):
-  """
-  
-  
-  """
   def __init__(self,solver):
     super(CellWisePreprocessSolution,self).__init__(solver)
     self.guard                            = "true"
@@ -130,33 +97,21 @@ class CellWisePreprocessSolution(AbstractRungeKuttaDGActionSet):
 
   def add_postprocessing_kernel(self, operation_per_cell):
     """
-    
-    Add a code snippet which is applied to each and every point. You have the following
-    variables which are well-defined:
-    
-    - value: Is a pointer to the current finite volume's data
-    - x: A tarch::la::Vector over doubles
-    - marker.getH(): A tarch::la::Vector over doubles
-    
-    
-    operation_per_point: String
-      C/C++ code snippet
-    
+    Adds the C++ snippet `operation_per_cell`, which runs once per cell and
+    reads the cell's `timeStamp`.
     """
     self._compute_kernel += """
-{    
+{
   {{COMPUTE_TIME_STEP_SIZE}}
   const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
-    
-  if (
-    not marker.hasBeenRefined() 
-    and 
-    {{PREDICATE}}
-  ) { 
-    
-    """ + operation_per_cell + """
 
-  } 
+  if (
+    not marker.hasBeenRefined()
+    and
+    {{PREDICATE}}
+  ) {
+    """ + operation_per_cell + """
+  }
 }
 """
 
@@ -168,7 +123,6 @@ class CellWisePreprocessSolution(AbstractRungeKuttaDGActionSet):
       self._solver.add_entries_to_text_replacement_dictionary(d)
       d[ "PREDICATE" ]           = jinja2.Template(self.guard, undefined=jinja2.DebugUndefined).render(**d)
       result = jinja2.Template(self._compute_kernel, undefined=jinja2.DebugUndefined).render(**d)
-      pass 
     return result
 
 

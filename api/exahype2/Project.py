@@ -10,12 +10,6 @@ from peano4.Logger import log
 
 
 class Project(peano4.Project):
-    """Extend a Peano project with ExaHyPE solvers and algorithmic steps.
-
-    Domain, grid, output, and build configuration remain inherited from
-    ``peano4.Project``.
-    """
-
     def __init__(
         self,
         namespace,
@@ -56,10 +50,9 @@ class Project(peano4.Project):
         self._particle_variable_positions = [0]
 
     def set_plot_format(self, file_format):
-        """Set the default format for solver plotters without an explicit format.
+        """Sets the format of every solver plotter that carries no format of its own.
 
-        The command-line plot format overrides this value. ``None`` preserves
-        the current default.
+        ``None`` keeps the current default.
         """
         if file_format is not None:
             import peano4.plotter
@@ -67,12 +60,6 @@ class Project(peano4.Project):
             peano4.plotter.set_default_format(file_format)
 
     def _create_steps(self):
-        """Register the complete Peano and ExaHyPE step sequence.
-
-        The base call installs ``CreateGrid`` and ``LoadBalancing`` before this
-        method adds ``InitGrid``, ``PlotSolution``, ``TimeStep``, and
-        ``DynamicAMR``.
-        """
         super()._create_steps()
         self.init_grid = peano4.solversteps.Step("InitGrid", False)
         self.solversteps.add_step(self.init_grid)
@@ -84,12 +71,10 @@ class Project(peano4.Project):
         self.solversteps.add_step(self.dynamic_amr)
 
     def add_solver(self, solver):
-        """Register a solver and recognise repeated solver declarations.
+        """Appends a solver to the solver set.
 
-        Consecutive unique calls build one solver set. A generated project or
-        duplicate name starts a new declaration and clears the preceding
-        solvers' implementation files, so repeated configurations do not
-        accumulate variants.
+        A repeated solver name and a project that has already generated its code both start a
+        new solver set and delete the implementation files of the previous one.
         """
         redeclaration = self._solver_set_generated or any(
             existing._name == solver._name for existing in self._solvers
@@ -102,18 +87,11 @@ class Project(peano4.Project):
         self._solvers.append(solver)
 
     def remove_all_solvers(self):
-        """Remove all registered solvers and implementation files.
-
-        Use this explicit reset when a configuration contains no solver;
-        ``add_solver`` handles solver redeclarations automatically.
-        """
         self._solvers = []
         self.output.makefile.clear_user_files()
         self._solver_set_generated = False
 
     def __add_readme_entries(self):
-        """Add ExaHyPE package and solver metadata to the generated README."""
-
         self.output.readme.add_package_description(
             """
 
@@ -132,11 +110,7 @@ the ExaHyPE release paper:
          doi = {https://doi.org/10.1016/j.cpc.2020.107251},
          url = {https://www.sciencedirect.com/science/article/pii/S001046552030076X},
          author = {Anne Reinarz and Dominic E. Charrier and Michael Bader and Luke Bovard and Michael Dumbser and Kenneth Duru and Francesco Fambri and Alice-Agnes Gabriel and Jean-Matthieu Gallard and Sven K\"oppel and Lukas Krenz and Leonhard Rannabauer and Luciano Rezzolla and Philipp Samfass and Maurizio Tavelli and Tobias Weinzierl},
-         keywords = {Hyperbolic, PDE, ADER-DG, Finite volumes, AMR, MPI, TBB, MPI+X},
-         abstract = {ExaHyPE (An Exascale Hyperbolic PDE Engine) is a software engine for solving systems of first-order hyperbolic partial differential equations (PDEs). Hyperbolic PDEs are typically derived from the conservation laws of physics and are useful in a wide range of application areas. Applications powered by ExaHyPE can be run on a student's laptop, but are also able to exploit thousands of processor cores on state-of-the-art supercomputers. The engine is able to dynamically increase the accuracy of the simulation using adaptive mesh refinement where required. Due to the robustness and shock capturing abilities of ExaHyPE's numerical methods, users of the engine can simulate linear and non-linear hyperbolic PDEs with very high accuracy. Users can tailor the engine to their particular PDE by specifying evolved quantities, fluxes, and source terms. A complete simulation code for a new hyperbolic PDE can often be realised within a few hours - a task that, traditionally, can take weeks, months, often years for researchers starting from scratch. In this paper, we showcase ExaHyPE's workflow and capabilities through real-world scenarios from our two main application areas: seismology and astrophysics.
-           Program summary
-           Program title: ExaHyPE-Engine Program Files doi: http://dx.doi.org/10.17632/6sz8h6hnpz.1 Licensing provisions: BSD 3-clause Programming languages: C++, Python, Fortran Nature of Problem: The ExaHyPE PDE engine offers robust algorithms to solve linear and non-linear hyperbolic systems of PDEs written in first order form. The systems may contain both conservative and non-conservative terms. Solution method: ExaHyPE employs the discontinuous Galerkin (DG) method combined with explicit one-step ADER (arbitrary high-order derivative) time-stepping. An a-posteriori limiting approach is applied to the ADER-DG solution, whereby spurious solutions are discarded and recomputed with a robust, patch-based finite volume scheme. ExaHyPE uses dynamical adaptive mesh refinement to enhance the accuracy of the solution around shock waves, complex geometries, and interesting features.
-         }
+         keywords = {Hyperbolic, PDE, ADER-DG, Finite volumes, AMR, MPI, TBB, MPI+X}
        }
 """
         )
@@ -167,11 +141,8 @@ the ExaHyPE release paper:
                 if particle.name not in tracers:
                     tracers.append(particle.name)
 
-        # Coarsening is a consensus across the solvers that actually evaluate a refinement
-        # criterion. A solver that carries no criterion never submits an erase request, so
-        # counting it would veto every coarsening for good. That covers both auxiliary
-        # registrations such as limiting controllers and a solver left on the default
-        # empty criterion.
+        # A solver without a refinement criterion never submits an erase request, so only a
+        # solver that carries one counts towards the coarsening consensus.
         amr_participants = sum(
             1
             for solver in self._solvers
@@ -202,8 +173,6 @@ the ExaHyPE release paper:
         return result
 
     def __generate_solver_repository(self):
-        """Generate the solver repository for all registered solvers and tracers."""
-
         self.__set_solver_repository_dictionary()
 
         for solver in self._solvers:
@@ -246,12 +215,7 @@ the ExaHyPE release paper:
         return "-1" if value is None else str(value)
 
     def _configure_runner(self, peano_main):
-        """Add ExaHyPE hooks and repository callbacks to the generated main.
-
-        Every algorithmic step receives a start and a finish hook which open
-        and close the matching repository phase. The hooks become part of the
-        generated step bodies and therefore run on every rank.
-        """
+        """Gives every algorithmic step the start and finish hook of its repository phase."""
         project_namespace = "::" + "::".join(self.namespace)
         repository_namespace = project_namespace + "::repositories"
 
@@ -260,10 +224,7 @@ the ExaHyPE release paper:
         self.create_grid.runner_start_hook = construction_start
         self.create_grid.runner_finish_hook = construction_finish
 
-        # Grid initialisation may introduce static AMR, so initial splitting
-        # finishes before this traversal.
         self.init_grid.runner_start_hook = (
-            "::runner::loadBalancer().enable(false);\n"
             f"{repository_namespace}::startGridInitialisationStep();"
         )
         self.init_grid.runner_finish_hook = (
@@ -290,8 +251,7 @@ the ExaHyPE release paper:
 
         peano_main.additional_includes = (
             '#include "repositories/SolverRepository.h"\n'
-            '#include "exahype2/RefinementControlService.h"\n'
-            '#include "runner/LoadBalancer.h"'
+            '#include "exahype2/RefinementControlService.h"'
         )
 
         peano_main.additional_repository_callbacks = (
@@ -303,6 +263,8 @@ the ExaHyPE release paper:
             f"{repository_namespace}::mayPlot(); }};\n"
             "  result.hasPendingMeshUpdates   = []() { return "
             "::exahype2::RefinementControlService::getInstance().hasGridControlEvents(); };\n"
+            "  result.hasUndecidedRefinementCriterion = []() { return "
+            "::exahype2::RefinementControlService::getInstance().lastCriterionStepWasSuppressed(); };\n"
             f"  result.getMinTimeStamp         = []() {{ return "
             f"{repository_namespace}::getMinTimeStamp(); }};\n"
             f"  result.getMaxTimeStamp         = []() {{ return "
@@ -358,8 +320,7 @@ the ExaHyPE release paper:
         sort_descend_invocation_order_within_action_sets=-1,
         plot_descend_invocation_order_within_action_sets=65536,
     ):
-        del plot_descend_invocation_order_within_action_sets
-        particle = peano4.toolbox.particles.Particle(name)
+        particle = peano4.particles.Particle(name)
         if isinstance(particle_attributes, dict):
             self._particle_unknowns = sum(particle_attributes["unknowns"].values())
             self._particle_variable_names += list(
@@ -394,32 +355,27 @@ the ExaHyPE release paper:
         particle.add_attribute(particle_number)
 
         self.datamodel.add_global_object(particle)
-        particle_set = peano4.toolbox.particles.ParticleSet(particle)
+        particle_set = peano4.particles.ParticleSet(particle)
         self.datamodel.add_vertex(particle_set)
 
         self.plot_solution.use_vertex(particle_set)
         self.init_grid.use_vertex(particle_set)
         self.perform_time_step.use_vertex(particle_set)
         self.create_grid.use_vertex(particle_set)
-        self.load_balancing.use_vertex(particle_set)
 
         self.init_grid.add_action_set(
-            peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop(
-                particle_set
-            )
+            peano4.particles.UpdateParticleGridAssociation_LiftDrop(particle_set)
         )
 
         update_particle_association_action_set = (
-            peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop(
-                particle_set
-            )
+            peano4.particles.UpdateParticleGridAssociation_LiftDrop(particle_set)
         )
         update_particle_association_action_set.descend_invocation_order = (
             sort_descend_invocation_order_within_action_sets
         )
 
         update_particle_parallel_state_action_set = (
-            peano4.toolbox.particles.api.UpdateParallelState(particle_set)
+            peano4.particles.UpdateParallelState(particle_set)
         )
         update_particle_parallel_state_action_set.descend_invocation_order = (
             sort_descend_invocation_order_within_action_sets
@@ -443,7 +399,6 @@ the ExaHyPE release paper:
             self.namespace,
             ".",
             {
-                "NUMBER_OF_VARIABLES": len(self._particle_variable_names),
                 "VARIABLE_NAMES": self._particle_variable_names,
                 "VARIABLE_POSITIONS": self._particle_variable_positions,
                 "SOLVER_NAME": name,
@@ -456,46 +411,37 @@ the ExaHyPE release paper:
         )
 
     def add_action_set_to_timestepping(self, action_set):
-        """Add an action set to time stepping with its configured priority.
-
-        Use ``perform_time_step.min_priority()`` and ``max_priority()`` to
-        position it relative to existing action sets.
-        """
         self.perform_time_step.add_action_set(action_set)
 
     def add_action_set_to_plot_solution(self, action_set):
-        """Add an action set to plotting."""
         self.plot_solution.add_action_set(action_set)
 
     def add_action_set_to_initialisation(self, action_set):
         self.init_grid.add_action_set(action_set)
 
     def add_action_set_to_create_grid(self, action_set):
-        """Add an action set to every refining ``CreateGrid`` traversal."""
         self.create_grid.add_action_set(action_set)
 
-    def __add_solver_label_action_sets_to_load_balancing(self, solver):
-        """Add solver labels required by load-balancing traversals."""
-        if hasattr(solver, "_action_set_update_face_label"):
-            self.load_balancing.add_action_set(solver._action_set_update_face_label)
-        if hasattr(solver, "_action_set_update_cell_label"):
-            self.load_balancing.add_action_set(solver._action_set_update_cell_label)
-
     def generate_and_build(self):
-        """Generate solver data, action sets, repositories, and the main file.
+        for solver in self._solvers:
+            configuration_validator = getattr(
+                solver, "validate_project_configuration", None
+            )
+            if configuration_validator is not None:
+                configuration_validator(
+                    self._min_grid_levels,
+                    self._max_grid_levels,
+                )
 
-        The configured Peano project is generated and built once these ExaHyPE
-        components are in place.
-        """
-        # A generated solver set cannot accept incremental additions.
+        # Generating freezes the declared solver set: The next add_solver call starts a new one.
         self._solver_set_generated = True
 
         # Build settings such as the SIMD width affect generated solver code.
         self.output.makefile.parse_configuration_outcome()
         self._makefile_configured = True
 
-        # Regenerated action sets receive new observer identifiers, so every run
-        # starts from the user's project state and restores all injected collections.
+        # Regenerated action sets receive new observer identifiers, so the project state is
+        # copied here and put back in the finally block below.
         pre_generation_artefacts = list(self.output.artefacts)
         pre_generation_readme_entries = list(self.output.readme._entries)
         pre_generation_generated_files = (
@@ -525,7 +471,6 @@ the ExaHyPE release paper:
 
             solver_steps = (
                 self.create_grid,
-                self.load_balancing,
                 self.plot_solution,
                 self.perform_time_step,
                 self.init_grid,
@@ -541,7 +486,6 @@ the ExaHyPE release paper:
                     solver.add_use_data_statements_to_Peano4_solver_step(step)
 
                 solver.add_actions_to_create_grid(self.create_grid)
-                self.__add_solver_label_action_sets_to_load_balancing(solver)
 
                 solver.add_actions_to_init_grid(self.init_grid)
                 solver.add_actions_to_plot_solution(self.plot_solution)
@@ -588,11 +532,10 @@ the ExaHyPE release paper:
         self,
         step,
     ):
-        """Add solver and tracer data dependencies to a custom step.
+        """Adds the data of every solver and tracer to ``step``.
 
-        Register every solver and tracer before calling this method. This
-        method only modifies ``step``; the caller still registers it with the
-        project.
+        The caller registers every solver and tracer before this call, and registers ``step``
+        with the project afterwards.
         """
         for solver in self._solvers:
             solver.add_use_data_statements_to_Peano4_solver_step(step)

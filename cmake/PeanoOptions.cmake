@@ -3,13 +3,15 @@
 
 include_guard(GLOBAL)
 
-option(PEANO_WITH_MULTITHREADING "Build with multithreading (OpenMP) support" ON)
 option(PEANO_WITH_FPE "Build with floating-point exception traps" OFF)
 option(PEANO_WITH_HDF5 "Build with HDF5 support" ON)
 option(PEANO_WITH_NETCDF "Build with NetCDF support" ON)
 option(PEANO_WITH_ZLIB "Build with ZLIB compression support" ON)
-option(PEANO_WITH_LIBXSMM "Build with LIBXSMM support" OFF)
 option(PEANO_WITH_BOOST "Build with support for the Boost C++ libraries" ON)
+if(PEANO_WITH_FPE AND CMAKE_CXX_COMPILER_ID STREQUAL "NVHPC")
+  message(STATUS "Disabling floating-point exception traps because NVHPC can raise exceptions from unused SIMD lanes.")
+  set(PEANO_WITH_FPE OFF CACHE BOOL "Build with floating-point exception traps" FORCE)
+endif()
 
 set(PEANO_WITH_SANITIZER "none" CACHE STRING "Runtime sanitizer: none, address, undefined, address+undefined or thread")
 set_property(CACHE PEANO_WITH_SANITIZER PROPERTY STRINGS none address undefined address+undefined thread)
@@ -37,13 +39,10 @@ mark_as_advanced(SUPPORTED_DIMENSIONS)
 
 set(CMAKE_BUILD_TYPE "" CACHE INTERNAL "")
 set(SUPPORTED_BUILD_TYPES
-  Release Debug Trace Asserts
+  Release Debug Asserts
   CACHE STRING "Editable list of supported build types"
 )
 mark_as_advanced(SUPPORTED_BUILD_TYPES)
-
-set(MAX_SPACETREES_PER_RANK "1024" CACHE STRING "Maximum number of spacetrees per MPI rank")
-mark_as_advanced(MAX_SPACETREES_PER_RANK)
 
 function(peano_create_options_target)
   add_library(PeanoOptions INTERFACE)
@@ -54,7 +53,9 @@ function(peano_create_options_target)
   install(TARGETS PeanoOptions EXPORT ${PROJECT_NAME}Targets)
 
   target_compile_definitions(PeanoOptions INTERFACE
-    MAX_SPACETREES_PER_RANK=${MAX_SPACETREES_PER_RANK}
+    # Source-level spelling of the compiler's restrict qualifier. Hiding the
+    # qualifier behind this macro lets clang-format align declarations.
+    $<$<COMPILE_LANGUAGE:C,CXX,CUDA,HIP>:NOALIAS=__restrict__>
   )
 
   target_include_directories(PeanoOptions INTERFACE

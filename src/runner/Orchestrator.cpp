@@ -4,7 +4,6 @@
 
 #include "runner/Phase.h"
 #include "runner/ReportBox.h"
-#include "runner/TextLayout.h"
 #include "runner/phases/Configuration.h"
 #include "runner/phases/DynamicAMR.h"
 #include "runner/phases/FinalSummary.h"
@@ -12,32 +11,31 @@
 #include "runner/phases/GridInitialisation.h"
 #include "runner/phases/TimeLoop.h"
 
-runner::Orchestrator::Orchestrator(const std::vector<Step>& steps) {
+runner::Orchestrator::Orchestrator(const std::vector<runner::Step>& steps) {
   for (const auto& step : steps) {
-    if (step.name == StepName::CreateGrid) {
+    if (step.name == runner::StepName::CreateGrid) {
       _createGridStep = step.programStep;
-    } else if (step.name == StepName::LoadBalancing) {
-      _loadBalancingStep = step.programStep;
-    } else if (step.name == StepName::InitGrid) {
+    } else if (step.name == runner::StepName::InitGrid) {
       _initGridStep = step.programStep;
-    } else if (step.name == StepName::PlotSolution) {
+    } else if (step.name == runner::StepName::PlotSolution) {
       _plotStep = step.programStep;
-    } else if (step.name == StepName::TimeStep) {
+    } else if (step.name == runner::StepName::TimeStep) {
       _timeStepStep = step.programStep;
-    } else if (step.name == StepName::DynamicAMR) {
+    } else if (step.name == runner::StepName::DynamicAMR) {
       _dynamicAMRStep = step.programStep;
     }
   }
 }
 
-bool runner::Orchestrator::run(PhaseContext& context) {
-  Configuration      configuration(context);
-  GridConstruction   gridConstruction(context, _createGridStep, _loadBalancingStep);
-  DynamicAMR         dynamicAMR(context, _dynamicAMRStep);
-  GridInitialisation gridInitialisation(context, _initGridStep, dynamicAMR);
-  TimeLoop           timeLoop(context, _timeStepStep, _plotStep, dynamicAMR);
+/** Returns whether a non-critical assertion ended the run early. */
+bool runner::Orchestrator::run(runner::PhaseContext& context) {
+  runner::Configuration      configuration(context);
+  runner::GridConstruction   gridConstruction(context, _createGridStep);
+  runner::DynamicAMR         dynamicAMR(context, _dynamicAMRStep);
+  runner::GridInitialisation gridInitialisation(context, _initGridStep, dynamicAMR);
+  runner::TimeLoop           timeLoop(context, _timeStepStep, _plotStep, dynamicAMR);
 
-  std::vector<Phase*> phases;
+  std::vector<runner::Phase*> phases;
   phases.push_back(&configuration);
   if (_createGridStep >= 0) {
     phases.push_back(&gridConstruction);
@@ -49,31 +47,22 @@ bool runner::Orchestrator::run(PhaseContext& context) {
     phases.push_back(&timeLoop);
   }
 
-  // Size the box to the widest line any phase can produce, so its width is fixed before the first
-  // line is drawn and no line is ever truncated.
-  std::size_t width = 0;
-  for (const auto* phase : phases) {
-    for (const auto& sample : phase->widthSamples()) {
-      width = std::max(width, displayWidth(sample));
-    }
-  }
-  context.box.setWidth(static_cast<int>(width));
-
-  for (auto* phase : phases) {
+  for (auto* const phase : phases) {
     phase->run();
   }
 
-  const bool terminatedGracefully = (_timeStepStep >= 0) and timeLoop.terminatedGracefully();
-  if (not terminatedGracefully) {
-    FinalSummary(context).run();
+  const bool stoppedAfterNonCriticalAssertion = (_timeStepStep >= 0) and timeLoop.stoppedAfterNonCriticalAssertion();
+  if (not stoppedAfterNonCriticalAssertion) {
+    runner::FinalSummary(context).run();
   }
 
   context.box.rule();
   context.box.line(
-    terminatedGracefully ? "Run terminated gracefully after a noncritical assertion" : "Run terminated successfully"
+    stoppedAfterNonCriticalAssertion ? "Run terminated gracefully after a non-critical assertion"
+                                     : "Run terminated successfully"
   );
   context.box.line("Goodbye");
   context.box.rule();
 
-  return terminatedGracefully;
+  return stoppedAfterNonCriticalAssertion;
 }

@@ -5,7 +5,7 @@
 #include "InitialCondition.h"
 
 void applications::exahype2::exagrype::CCZ4Solver::initialCondition(
-  double* __restrict__ Q,
+  double* NOALIAS                              Q,
   const tarch::la::Vector<DIMENSIONS, double>& x,
   const tarch::la::Vector<DIMENSIONS, double>& h
 ) {
@@ -17,8 +17,8 @@ void applications::exahype2::exagrype::CCZ4Solver::initialCondition(
 }
 
 void applications::exahype2::exagrype::CCZ4Solver::boundaryConditions(
-  const double* __restrict__ Qinside,
-  double* __restrict__ Qoutside,
+  const double* NOALIAS                        Qinside,
+  double* NOALIAS                              Qoutside,
   const tarch::la::Vector<DIMENSIONS, double>& x,
   const tarch::la::Vector<DIMENSIONS, double>& h,
   double                                       t,
@@ -32,7 +32,7 @@ void applications::exahype2::exagrype::CCZ4Solver::boundaryConditions(
 }
 
 ::exahype2::RefinementCommand applications::exahype2::exagrype::CCZ4Solver::refinementCriterion(
-  const double* __restrict__ Q,
+  const double* NOALIAS                        Q,
   const tarch::la::Vector<DIMENSIONS, double>& x,
   const tarch::la::Vector<DIMENSIONS, double>& h,
   double                                       t
@@ -48,8 +48,8 @@ void applications::exahype2::exagrype::CCZ4Solver::analyticalSolution(
   const tarch::la::Vector<DIMENSIONS, double>& x,
   const double                                 t,
   const double                                 dt,
-  const double* __restrict__ Q,
-  double* __restrict__ solution
+  const double* NOALIAS                        Q,
+  double* NOALIAS                              solution
 ) {
   (void)dt;
   (void)Q;
