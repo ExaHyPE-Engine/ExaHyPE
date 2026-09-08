@@ -1,5 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
+#include "{{SOLVER_NAME}}.h"
 #include "CellErrorIntegral.h"
 
 #include "Quadrature.h"
@@ -38,9 +39,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::cellErrorIntegral(
   // Iterate over all quadrature points in the cell
   peano4::dForEach({{NUMBER_OF_DOF}}, [&](const tarch::la::Vector<DIMENSIONS, int>& index) {
 {% if DIMENSIONS==2 %}
-    const double weight = cellVolume * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[0]] * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[1]];
+    const double weight = cellVolume * (double) (Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[0]] * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[1]]);
 {% else %}
-    const double weight = cellVolume * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[0]] * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[1]] * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[2]];
+    const double weight = cellVolume * (double) (Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[0]] * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[1]] * Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::weights1[index[2]]);
 {% endif %}
 
     // Compute the exact solution
@@ -61,7 +62,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::cellErrorIntegral(
     // Increment the respective errors
     constexpr int MeasuredUnknowns[] = {{MEASURED_UNKNOWNS}};
     for (const int unknown : MeasuredUnknowns) {
-      const double error = std::abs(Q[linearisedIndex + unknown] - solution[unknown]);
+      const double error = std::abs((double) Q[linearisedIndex + unknown] - solution[unknown]);
       errors[0] += weight * error; // L1 norm
       errors[1] += weight * error * error; // L2 norm
       errors[2] = std::max(errors[2], error); // Linf norm

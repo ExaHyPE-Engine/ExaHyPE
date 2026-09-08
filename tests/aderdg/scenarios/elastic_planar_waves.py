@@ -61,13 +61,13 @@ class ElasticPlanarWaves(Scenario):
             if self._dimensions == 3
             else """
   // Stresses
-  Q[Shortcuts::sigma+0] = val_x*(lambda+2*mu)  + val_y*lambda;         //xx
-  Q[Shortcuts::sigma+1] = val_x*lambda         + val_y*(lambda+2*mu);  //yy
+  Q[Shortcuts::sigma+0] = static_cast<{{SOLUTION_STORAGE_PRECISION}}> (val_x*(lambda+2*mu)  + val_y*lambda);         //xx
+  Q[Shortcuts::sigma+1] = static_cast<{{SOLUTION_STORAGE_PRECISION}}> (val_x*lambda         + val_y*(lambda+2*mu));  //yy
   Q[Shortcuts::sigma+2] = 0; //xy
 
   // Velocities
-  Q[Shortcuts::v+0] = val_x*cp; //vx
-  Q[Shortcuts::v+1] = val_y*cp; //vy
+  Q[Shortcuts::v+0] = static_cast<{{SOLUTION_STORAGE_PRECISION}}> (val_x*cp); //vx
+  Q[Shortcuts::v+1] = static_cast<{{SOLUTION_STORAGE_PRECISION}}> (val_y*cp); //vy
 """
         )
 

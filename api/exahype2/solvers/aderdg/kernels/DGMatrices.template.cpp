@@ -4,6 +4,8 @@
 
 #include "tarch/accelerator/accelerator.h"
 
+#include "{{SOLVER_NAME}}.h"
+
 {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
 template <>
 void {{FULL_QUALIFIED_NAMESPACE}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initDGMatrices() {

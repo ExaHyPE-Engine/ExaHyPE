@@ -58,7 +58,8 @@ PrecisionType = {
     "std::bfloat16_t":  "std::bfloat16_t",
     "__bf16":           "__bf16",
     "bfloat":           "__bf16",
-    "bf16":             "__bf16"
+    "bf16":             "__bf16",
+    "boost":            "boost_float"
 }
 
 
@@ -1087,50 +1088,34 @@ class ADERDG(object):
         self._use_libxsmm = use_libxsmm
 
         if precision != False:
-            if precision not in PrecisionType.keys():
-                raise AssertionError(
-                    "The chosen precision is not valid. Valid choices are: "
-                    + ", ".join(PrecisionType.keys())
-                )
-            else:
-                self._predictor_computation_precisions      = [PrecisionType[precision]]
-                self._precompute_picard_precision           = PrecisionType[precision]
-                self._solution_persistent_storage_precision = PrecisionType[precision]
-                self._corrector_computation_precision       = PrecisionType[precision]
+            if precision in PrecisionType.keys():
+                precision = PrecisionType[precision]
+            self._predictor_computation_precisions      = [precision]
+            self._precompute_picard_precision           = precision
+            self._solution_persistent_storage_precision = precision
+            self._corrector_computation_precision       = precision
 
         if solution_persistent_storage_precision != False:
-            if solution_persistent_storage_precision not in PrecisionType.keys():
-                raise AssertionError(
-                    "The chosen precision is not valid. Valid choices are: "
-                    + ", ".join(PrecisionType.keys())
-                )
-            self._solution_persistent_storage_precision = PrecisionType[solution_persistent_storage_precision]
+            if solution_persistent_storage_precision in PrecisionType.keys():
+                solution_persistent_storage_precision = PrecisionType[solution_persistent_storage_precision]
+            self._solution_persistent_storage_precision = solution_persistent_storage_precision
 
         if corrector_computation_precision != False:
-            if corrector_computation_precision not in PrecisionType.keys():
-                raise AssertionError(
-                    "The chosen precision is not valid. Valid choices are: "
-                    + ", ".join(PrecisionType.keys())
-                )
-            self._corrector_computation_precision = PrecisionType[corrector_computation_precision]
+            if corrector_computation_precision in PrecisionType.keys():
+                corrector_computation_precision = PrecisionType[corrector_computation_precision]
+            self._corrector_computation_precision = corrector_computation_precision
 
         if precompute_picard_precision != False:
-            if precompute_picard_precision not in PrecisionType.keys():
-                raise AssertionError(
-                    "The chosen precision is not valid. Valid choices are: "
-                    + ", ".join(PrecisionType.keys())
-                )
-            self._precompute_picard_precision = PrecisionType[precompute_picard_precision]
+            if precompute_picard_precision in PrecisionType.keys():
+                precompute_picard_precision = PrecisionType[precompute_picard_precision]
+            self._precompute_picard_precision = precompute_picard_precision
 
         if predictor_computation_precisions != False:
             self._predictor_computation_precisions = []
             for prec in predictor_computation_precisions:
-                if prec not in PrecisionType.keys():
-                    raise AssertionError(
-                        "The chosen precision is not valid. Valid choices are: "
-                        + ", ".join(PrecisionType.keys())
-                    )
-                self._predictor_computation_precisions.append(PrecisionType[prec])
+                if prec in PrecisionType.keys():
+                    prec = PrecisionType[prec]
+                self._predictor_computation_precisions.append(prec)
 
         if len(self._predictor_computation_precisions) > 1:
             self._precision_criterion_implementation = precision_criterion_implementation

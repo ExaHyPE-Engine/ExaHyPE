@@ -75,7 +75,7 @@ public:
       _data = tarch::allocateMemory<DoFType>(Cardinality, tarch::MemoryLocation::Heap);
     }
 
-    std::memcpy(_data, other._data, Cardinality * sizeof(DoFType));
+    std::copy_n(other._data, Cardinality, _data);
     return *this;
   }
 

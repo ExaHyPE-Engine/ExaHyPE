@@ -101,7 +101,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<Size, NewScalarType> tarch::
 ) {
   tarch::la::Vector<Size, NewScalarType> result;
   for (int i = 0; i < Size; i++) {
-    result(i) = vector(i);
+    result(i) = static_cast<NewScalarType>(vector(i));
   }
   return result;
 }

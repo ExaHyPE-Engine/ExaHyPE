@@ -81,28 +81,28 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   }
 
   // Zero out the arrays which will contain the time-averaged space-time polynomials
-  std::memset(lFhi, 0.0, {{(DIMENSIONS*NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}} * sizeof(pCompType));
+  std::fill_n(lFhi, {{(DIMENSIONS*NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}}, 0);
 
 {% if USE_SOURCE %}
-  std::memset(lShi, 0.0, {{(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}} * sizeof(pCompType));
+  std::fill_n(lShi, {{(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}}, 0);
 {% endif %}
 
   // Will be used to store the operator for the contribution to the average sp-t polynomials
-  pCompType dtavFac = 1.0;
+  pCompType dtavFac = 1;
 
 {% if USE_POINT_SOURCE %}
   pCompType PSi[getPSiSize()] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
 
   traceEnter("Point source evaluation");
   { // 1.5: Compute point source contribution
-    std::memset(PSi, 0, {{(NUMBER_OF_DOF+1)*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}} * sizeof(pCompType));
+    sstd::fill_n(PSi, {{(NUMBER_OF_DOF+1)*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}}, 0);
 
     pCompType tn = 0;
     double x1[{{DIMENSIONS}}]; // Position
-    const pCompType ivolume = 1.0 / (cellSize[0] * cellSize[1]{{' * cellSize[2]' if DIMENSIONS==3}});
+    const pCompType ivolume = 1 / (cellSize[0] * cellSize[1]{{' * cellSize[2]' if DIMENSIONS==3}});
 
     pCompType forceVectorSource[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
-    std::memset(forceVectorSource, 0, {{NUMBER_OF_UNKNOWNS_PADDED}} * sizeof(pCompType));
+    std::fill_n(forceVectorSource, {{NUMBER_OF_UNKNOWNS_PADDED}}, 0);
 
     // Loop over all quadrature points
     for (int t = 0; t < {{NUMBER_OF_DOF+1}}; t++) { // Time loop
@@ -205,7 +205,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
     }
 
     for (int yz = 0; yz < {{NUMBER_OF_DOF_3D*NUMBER_OF_DOF}}; yz++) {
-      std::memset(tmpArray, 0, {{TMP_ARRAY_SIZE}} * sizeof(pCompType));
+      std::fill_n(tmpArray, {{TMP_ARRAY_SIZE}}, 0);
 
       UNROLL({{NUMBER_OF_DOF}})
       for (int it_2 = 0; it_2 < {{NUMBER_OF_DOF}}; it_2++) {
@@ -223,7 +223,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
 
     for (int z = 0; z < {{NUMBER_OF_DOF_3D}}; z++) {
       for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
-        std::memset(tmpArray, 0, {{TMP_ARRAY_SIZE}} * sizeof(pCompType));
+        std::fill_n(tmpArray, {{TMP_ARRAY_SIZE}}, 0);
 
         UNROLL({{NUMBER_OF_DOF}})
         for (int it_2 = 0; it_2 < {{NUMBER_OF_DOF}}; it_2++) {
@@ -250,7 +250,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
     }
 {% if DIMENSIONS==3 %}
     for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF}}; xy++) {
-      std::memset(tmpArray, 0, {{TMP_ARRAY_SIZE}} * sizeof(pCompType));
+      std::fill_n(tmpArray, {{TMP_ARRAY_SIZE}}, 0);
 
       UNROLL({{NUMBER_OF_DOF}})
       for (int it_2 = 0; it_2 < {{NUMBER_OF_DOF}}; it_2++) {
@@ -280,7 +280,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
 {% if USE_NCP %}
     // x-loop
     for (int yz = 0; yz < {{NUMBER_OF_DOF_3D*NUMBER_OF_DOF}}; yz++) {
-      std::memset(gradQ, 0, {{NUMBER_OF_DOF_3D*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}} * sizeof(pCompType));
+      std::fill_n(gradQ, {{NUMBER_OF_DOF_3D*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}}, 0);
 
       UNROLL({{NUMBER_OF_DOF}})
       for (int it_2 = 0; it_2 < {{NUMBER_OF_DOF}}; it_2++) {
@@ -295,7 +295,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
       } // it_2
 
       for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
-        pCompType tmpNcp[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {0.0};
+        pCompType tmpNcp[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {0};
 {% if STATELESS_NCP %}
         {{FULL_QUALIFIED_SOLVER_NAME}}::nonconservativeProduct(
 {% else %}
@@ -321,7 +321,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
     // y-loop
     for (int z = 0; z < {{NUMBER_OF_DOF_3D}}; z++) {
       for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
-        std::memset(gradQ, 0, {{NUMBER_OF_DOF_3D*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}} * sizeof(pCompType));
+        std::fill_n(gradQ, {{NUMBER_OF_DOF_3D*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}}, 0);
 
         UNROLL({{NUMBER_OF_DOF}})
         for (int it_2 = 0; it_2 < {{NUMBER_OF_DOF}}; it_2++) {
@@ -336,7 +336,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
         } // it_2
 
         for (int y = 0; y < {{NUMBER_OF_DOF}}; y++) {
-          pCompType tmpNcp[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {0.0};
+          pCompType tmpNcp[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {0};
 {% if STATELESS_NCP %}
           {{FULL_QUALIFIED_SOLVER_NAME}}::nonconservativeProduct(
 {% else %}
@@ -364,7 +364,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
 {% if DIMENSIONS==3 %}
     // z-loop
     for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF}}; xy++) {
-      std::memset(gradQ, 0, {{NUMBER_OF_DOF_3D*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}} * sizeof(pCompType));
+      std::fill_n(gradQ, {{NUMBER_OF_DOF_3D*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}}, 0);
 
       UNROLL({{NUMBER_OF_DOF}})
       for (int it_2 = 0; it_2 < {{NUMBER_OF_DOF}}; it_2++) {
@@ -379,7 +379,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
       } // it_2
 
       for (int z = 0; z < {{NUMBER_OF_DOF}}; z++) {
-        pCompType tmpNcp[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {0.0};
+        pCompType tmpNcp[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {0};
 {% if STATELESS_NCP %}
         {{FULL_QUALIFIED_SOLVER_NAME}}::nonconservativeProduct(
 {% else %}
@@ -500,7 +500,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
     }
 
     pCompType derPS_buffer[{{NUMBER_OF_DOF_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
-    std::memset(derPS_buffer, 0.0, {{NUMBER_OF_DOF_PADDED}} * sizeof(pCompType));
+    std::fill_n(derPS_buffer, {{NUMBER_OF_DOF_PADDED}}, 0);
     for (int it_1 = 0; it_1 < {{NUMBER_OF_DOF}}; it_1++) {
       SIMD(aligned(derPS_buffer,derPS:PEANO_WITH_ALIGNMENT))
       for (int it_2 = 0; it_2 < {{NUMBER_OF_DOF}}; it_2++) {
@@ -524,7 +524,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   // Add point source to the right hand side
   pCompType sumArray[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
   for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
-    std::memset(sumArray, 0, {{NUMBER_OF_UNKNOWNS_PADDED}} * sizeof(pCompType));
+    std::fill_n(sumArray, {{NUMBER_OF_UNKNOWNS_PADDED}}, 0);
     for (int n0 = 1; n0 < {{NUMBER_OF_DOF+1}}; n0++) {
       const pCompType coeff = Quadrature<pCompType>::weights1[n0 - 1] / {{DIMENSIONS}};
       SIMD(aligned(sumArray,PSi:PEANO_WITH_ALIGNMENT))
@@ -551,8 +551,8 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   //***********************
   traceEnter("Extrapolation");
   for(int i = 0; i < 2 * DIMENSIONS; i++) {
-    std::memset(lQhbnd[i], 0, {{NUMBER_OF_DATA*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}} * sizeof(pStoreType));
-    std::memset(lFhbnd[i], 0, {{NUMBER_OF_UNKNOWNS*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}} * sizeof(pStoreType));
+    std::fill_n(lQhbnd[i], {{NUMBER_OF_DATA*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}, 0);
+    std::fill_n(lFhbnd[i], {{NUMBER_OF_UNKNOWNS*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}, 0);
   }
 
   // x-direction: face 0 (left) and face 2(2D) / 3(3D) (right)
@@ -631,8 +631,8 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
   for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
     SIMD(aligned(lFhi{{',lShi' if USE_SOURCE else ''}}:PEANO_WITH_ALIGNMENT))
     for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
-        luh[xyz*{{NUMBER_OF_DATA}} + n] -= static_cast<cStoreType>(timeStepSize * //Quadrature<pCompType>::weights3[xyz] *
-            (
+        luh[xyz*{{NUMBER_OF_DATA}} + n] -= static_cast<cStoreType>(timeStepSize) * //Quadrature<pCompType>::weights3[xyz] *
+          static_cast<cStoreType>(
 {% if USE_FLUX or USE_NCP %}
                 lFhi[xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{0*NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF**DIMENSIONS}}] // x
               + lFhi[xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{1*NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF**DIMENSIONS}}] // y
@@ -643,7 +643,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral{{NAME_SU
 {% if USE_SOURCE %}
               {{'+' if USE_FLUX or USE_NCP }} lShi[xyz * {{NUMBER_OF_UNKNOWNS_PADDED}} + n]
 {% endif %}
-            ));
+            );
     }
   }
 

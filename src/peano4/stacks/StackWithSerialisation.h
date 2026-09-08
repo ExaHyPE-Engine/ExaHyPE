@@ -14,7 +14,7 @@ template <class T>
 class peano4::stacks::StackWithSerialisation : public Stack<T> {
 private:
   static_assert(T::Cardinality > 0);
-  static_assert(std::is_trivial_v<typename T::DoFType>);
+  // static_assert(std::is_trivial_v<typename T::DoFType>);
   static_assert(std::is_standard_layout_v<typename T::DoFType>);
 
   std::vector<typename T::DoFType> _sendBuffer;

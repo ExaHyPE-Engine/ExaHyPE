@@ -197,7 +197,7 @@ class PatchPlotter(BasePlotter):
 {% for name, count in DESCRIPTION.items() %}
           double {{name}}Values[{{count}}];
           for (int u=0; u<{{count}}; u++) {
-            {{name}}Values[u] = data[dofIndex + dataOffset + u];
+            {{name}}Values[u] = (double) data[dofIndex + dataOffset + u];
           }
           _{{name}}DataPlotter->plotVertexData(vertexIndices[counter], {{name}}Values, {{count}});
           dataOffset += {{count}};
@@ -205,7 +205,7 @@ class PatchPlotter(BasePlotter):
 {% else %}
           double values[{{UNKNOWNS}}];
           for (int u=0; u<{{UNKNOWNS}}; u++) {
-            values[u] = data[dofIndex + u];
+            values[u] = (double) data[dofIndex + u];
           }
           _vertexDataPlotter->plotVertexData(vertexIndices[counter], values, {{UNKNOWNS}});
 {% endif %}

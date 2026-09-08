@@ -52,12 +52,12 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
    * We compute the averages of the material parameters but
    * do not use them in the max eigenvalue calculation.
    */
-  std::memset(FL, 0, {{NUMBER_OF_UNKNOWNS * NUMBER_OF_DOF * NUMBER_OF_DOF_3D}} * sizeof(cCompType));
-  std::memset(FR, 0, {{NUMBER_OF_UNKNOWNS * NUMBER_OF_DOF * NUMBER_OF_DOF_3D}} * sizeof(cCompType));
+  std::fill_n(FL, {{NUMBER_OF_UNKNOWNS * NUMBER_OF_DOF * NUMBER_OF_DOF_3D}}, 0);
+  std::fill_n(FR, {{NUMBER_OF_UNKNOWNS * NUMBER_OF_DOF * NUMBER_OF_DOF_3D}}, 0);
 
   // Compute the average unkown and auxiliary variables from the left and the right
-  cCompType QavL[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {0.0};
-  cCompType QavR[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {0.0};
+  cCompType QavL[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {0};
+  cCompType QavR[{{NUMBER_OF_DATA_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {0};
 
   traceEnter("Average states");
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xy++) {
@@ -71,9 +71,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
 
   traceEnter("Max eigenvalue evaluation");
 {% if STATELESS_MAX_EIGENVALUE %}
-  cCompType smaxL = {{FULL_QUALIFIED_SOLVER_NAME}}::maxEigenvalue(
+  cCompType smaxL = static_cast<cCompType> ({{FULL_QUALIFIED_SOLVER_NAME}}::maxEigenvalue(
 {% else %}
-  cCompType smaxL = solver.maxEigenvalue(
+  cCompType smaxL = static_cast<cCompType> (solver.maxEigenvalue(
 {% endif %}
     &QavL[0],
     faceCentre,
@@ -81,11 +81,11 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
     timeStamp,
     timeStepSize,
     direction
-  );
+  ));
 {% if STATELESS_MAX_EIGENVALUE %}
-  cCompType smaxR = {{FULL_QUALIFIED_SOLVER_NAME}}::maxEigenvalue(
+  cCompType smaxR = static_cast<cCompType> ({{FULL_QUALIFIED_SOLVER_NAME}}::maxEigenvalue(
 {% else %}
-  cCompType smaxR = solver.maxEigenvalue(
+  cCompType smaxR = static_cast<cCompType> (solver.maxEigenvalue(
 {% endif %}
     &QavR[0],
     faceCentre,
@@ -93,9 +93,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
     timeStamp,
     timeStepSize,
     direction
-  );
+  ));
 
-  cCompType smax = std::fmax(smaxL, smaxR);
+  cCompType smax = fmax(smaxL, smaxR);
   traceLeave("Max eigenvalue evaluation");
 
 {% if USE_NCP or USE_MATERIAL_PARAMETERS or NUMBER_OF_AUXILIARY_VARIABLES > 0 %}
@@ -103,7 +103,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
 
   SIMD(aligned(Qavg,QavR,QavL:PEANO_WITH_ALIGNMENT))
   for (int n = 0; n < {{NUMBER_OF_DATA_PADDED}}; n++) {
-    Qavg[n] = 0.5 * (QavR[n] + QavL[n]);
+    Qavg[n] = (QavR[n] + QavL[n])/2;
   }
 {% endif %}
 
@@ -115,18 +115,18 @@ void {{FULL_QUALIFIED_NAMESPACE}}::riemannSolver(
 {% endif %}
 
 {% if USE_NCP %}
-  cCompType ncp[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {0.0};
+  cCompType ncp[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {0};
 {% endif %}
 
 {% if USE_FLUX %}
-  cCompType fluxValues[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {0.0};
+  cCompType fluxValues[{{NUMBER_OF_UNKNOWNS_PADDED}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT))) = {0};
 {% endif %}
 
   traceEnter("Flux and nonconservative product evaluation");
   for (int xy = 0; xy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; xy++) {
     SIMD(aligned(Qdiff:PEANO_WITH_ALIGNMENT))
     for (int n = 0 ; n < {{NUMBER_OF_UNKNOWNS}} ; n++) {
-      Qdiff[n] = 0.5 * (QR[xy * {{NUMBER_OF_DATA}} + n] - QL[xy * {{NUMBER_OF_DATA}} + n]);
+      Qdiff[n] = (QR[xy * {{NUMBER_OF_DATA}} + n] - QL[xy * {{NUMBER_OF_DATA}} + n])/2;
     }
 
 {% if USE_NCP %}

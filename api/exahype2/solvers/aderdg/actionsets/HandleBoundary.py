@@ -35,7 +35,7 @@ class HandleBoundary(AbstractADERDGActionSet):
 
 {% if USE_DIFFUSIVE_FLUX %}
     {{CORRECTOR_COMPUTATION_PRECISION}} gradQN[{{NUMBER_OF_UNKNOWNS}}];
-    {{CORRECTOR_COMPUTATION_PRECISION}} gradQ0[{{NUMBER_OF_UNKNOWNS}}] = {0.};
+    {{CORRECTOR_COMPUTATION_PRECISION}} gradQ0[{{NUMBER_OF_UNKNOWNS}}] = {0};
     {{CORRECTOR_COMPUTATION_PRECISION}}* gradQ[DIMENSIONS] = {
       gradQ0, gradQ0
 {% if DIMENSIONS==3 %}
@@ -51,7 +51,7 @@ class HandleBoundary(AbstractADERDGActionSet):
         int basis         = 1;
         for (int d = 0; d < DIMENSIONS; d++) {
           nodePosition(d)  = faceOffset(d);
-          nodePosition(d) += (d == normal) ? 0.0 : kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes[dof(d)] * marker.getH()(d);
+          nodePosition(d) += (d == normal) ? 0.0 : (double) kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes[dof(d)] * marker.getH()(d);
           dofSerialised += (d == normal) ? 0 : dof(d) * basis;
           basis *= (d == normal) ? 1 : ({{ORDER}} + 1);
         }

@@ -13,7 +13,7 @@ spack:
     - likwid@5.4.1
     - metis@5.1.0
     - parmetis@4.0.3
-    - boost@1.88.0 +filesystem +fiber +context
+    - boost@1.88.0 +mpi +exception +iostreams +math +serialization +filesystem +fiber +context
     - petsc@3.22.2 +mpi +memkind +metis +hwloc +openmp
     - hdf5@1.14.6 -fortran -java +threadsafe +mpi +shared +cxx +hl
     - netcdf-c@4.9.2 +mpi +shared

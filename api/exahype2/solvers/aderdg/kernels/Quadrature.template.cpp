@@ -4,6 +4,8 @@
 
 #include "tarch/accelerator/accelerator.h"
 
+#include "{{SOLVER_NAME}}.h"
+
 // Using {{POLYNOMIAL_TYPE}} quadrature
 
 {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}

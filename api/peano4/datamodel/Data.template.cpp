@@ -16,7 +16,7 @@ auto {{NAMESPACE | join("::")}}::{{CLASSNAME}}::data() -> DoFType* {
   if (_data == nullptr) {
     _data = tarch::allocateMemory<DoFType>(Cardinality, tarch::MemoryLocation::Heap);
     assertion(_data != nullptr);
-    std::memset(_data, 0, Cardinality * sizeof(DoFType));
+    std::fill_n(_data, Cardinality, 0);
   }
   return _data;
 }

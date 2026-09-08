@@ -4,20 +4,34 @@
 include_guard(GLOBAL)
 
 macro(peano_find_host_dependencies)
-  if(TARGET PeanoOptions)
-    find_package(MPI REQUIRED)
-    # Link the MPI imported target for every enabled core language (C and C++). The C
-    # variant is inert until a .c source is added, but keeps the two languages consistent.
-    target_link_libraries(PeanoOptions INTERFACE
-      MPI::MPI_CXX
-      $<TARGET_NAME_IF_EXISTS:MPI::MPI_C>
-    )
-    # Skip MPI's deprecated C++ bindings (mpicxx.h). We only use the C API,
-    # and on some OpenMPI/MPICH installs <mpi.h> auto-includes them, which
-    # triggers -Wcast-function-type warnings from inside the MPI headers.
-    target_compile_definitions(PeanoOptions INTERFACE OMPI_SKIP_MPICXX MPICH_SKIP_MPICXX)
-  else()
-    find_dependency(MPI REQUIRED)
+  # if(TARGET PeanoOptions)
+  #   find_package(MPI REQUIRED)
+  #   # Link the MPI imported target for every enabled core language (C and C++). The C
+  #   # variant is inert until a .c source is added, but keeps the two languages consistent.
+  #   target_link_libraries(PeanoOptions INTERFACE
+  #     MPI::MPI_CXX
+  #     $<TARGET_NAME_IF_EXISTS:MPI::MPI_C>
+  #   )
+  #   # Skip MPI's deprecated C++ bindings (mpicxx.h). We only use the C API,
+  #   # and on some OpenMPI/MPICH installs <mpi.h> auto-includes them, which
+  #   # triggers -Wcast-function-type warnings from inside the MPI headers.
+  #   target_compile_definitions(PeanoOptions INTERFACE OMPI_SKIP_MPICXX MPICH_SKIP_MPICXX)
+  # else()
+  #   find_dependency(MPI REQUIRED)
+  # endif()
+
+  if(PEANO_WITH_BOOST)
+    if(TARGET PeanoOptions)
+      find_package(Boost 1.80 COMPONENTS mpi serialization REQUIRED)
+      include_directories(${Boost_INCLUDE_DIRS})
+
+      target_link_libraries(PeanoOptions INTERFACE
+        ${Boost_LIBRARIES}
+      )
+    else()
+      # find_dependency doesn't work with Components
+      find_package(Boost 1.80 COMPONENTS mpi serialization REQUIRED)
+    endif()
   endif()
 
   if(PEANO_WITH_MULTITHREADING)

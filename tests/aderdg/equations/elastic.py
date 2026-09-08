@@ -14,8 +14,8 @@ class Elastic(Equation):
     def eigenvalues(self):
         return """
   return std::fmax(
-    std::abs(Q[Shortcuts::cp]),
-    std::abs(Q[Shortcuts::cs])
+    std::abs((double) Q[Shortcuts::cp]),
+    std::abs((double) Q[Shortcuts::cs])
   );
 """
 

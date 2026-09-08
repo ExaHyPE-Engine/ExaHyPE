@@ -173,11 +173,11 @@ class FacePlotter(BasePlotter):
 {% for name, count in DESCRIPTION.items() %}
         double {{name}}Values[{{count}}];
         for (int u=0; u<{{count}}; u++) {
-          {{name}}Values[u] = dataL[dofIndex + dataOffset + u];
+          {{name}}Values[u] = (double) dataL[dofIndex + dataOffset + u];
         }
         _{{name}}DataPlotterL->plotVertexData(vertexIndices[counter], {{name}}Values, {{count}});
         for (int u=0; u<{{count}}; u++) {
-          {{name}}Values[u] = dataR[dofIndex + dataOffset + u];
+          {{name}}Values[u] = (double) dataR[dofIndex + dataOffset + u];
         }
         _{{name}}DataPlotterR->plotVertexData(vertexIndices[counter], {{name}}Values, {{count}});
         dataOffset += {{count}};
@@ -185,11 +185,11 @@ class FacePlotter(BasePlotter):
 {% else %}
         double values[2*{{UNKNOWNS}}];
         for (int u=0; u<{{UNKNOWNS}}; u++) {
-          values[u] = dataL[dofIndex + u];
+          values[u] = (double) dataL[dofIndex + u];
         }
         _vertexDataPlotterL->plotVertexData(vertexIndices[counter], values, {{UNKNOWNS}});
         for (int u=0; u<{{UNKNOWNS}}; u++) {
-          values[u] = dataR[dofIndex + u];
+          values[u] = (double) dataR[dofIndex + u];
         }
         _vertexDataPlotterR->plotVertexData(vertexIndices[counter], values, {{UNKNOWNS}});
 {% endif %}

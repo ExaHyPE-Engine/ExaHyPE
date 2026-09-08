@@ -1,5 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
+#include "{{SOLVER_NAME}}.h"
 #include "AMRRoutines.h"
 
 #include "DGMatrices.h"
@@ -21,7 +22,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceUnknownsProlongation(
   const tarch::la::Vector<DIMENSIONS - 1, int>&            subfaceIndex
 ) {
 {% if DIMENSIONS==3 %}
-  double* tmpX = tarch::allocateMemory<double>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DATA}}, tarch::MemoryLocation::Heap);
+{{CORRECTOR_COMPUTATION_PRECISION}}* tmpX = tarch::allocateMemory<{{CORRECTOR_COMPUTATION_PRECISION}}>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DATA}}, tarch::MemoryLocation::Heap);
 {% endif %}
 
   {{CORRECTOR_COMPUTATION_PRECISION}}** projector = DGMatrices<{{CORRECTOR_COMPUTATION_PRECISION}}>::fineGridProjector1d;
@@ -65,7 +66,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceFluxRestriction(
   const tarch::la::Vector<DIMENSIONS - 1, int>&            subfaceIndex
 ) {
 {% if DIMENSIONS==3 %}
-  double* tmpX = tarch::allocateMemory<double>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DATA}}, tarch::MemoryLocation::Heap);
+  {{CORRECTOR_COMPUTATION_PRECISION}}* tmpX = tarch::allocateMemory<{{CORRECTOR_COMPUTATION_PRECISION}}>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DATA}}, tarch::MemoryLocation::Heap);
 {% endif %}
 
   {{CORRECTOR_COMPUTATION_PRECISION}}** restrictor = DGMatrices<{{CORRECTOR_COMPUTATION_PRECISION}}>::fineGridProjector1d_T_weighted;
@@ -95,9 +96,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::cellUnknownsProlongation(
 ) {
   {{SOLUTION_STORAGE_PRECISION}}** projector = DGMatrices<{{SOLUTION_STORAGE_PRECISION}}>::fineGridProjector1d;
 
-  double* tmpX = tarch::allocateMemory<double>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DATA}}, tarch::MemoryLocation::Heap);
+  {{CORRECTOR_COMPUTATION_PRECISION}}* tmpX = tarch::allocateMemory<{{CORRECTOR_COMPUTATION_PRECISION}}>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DATA}}, tarch::MemoryLocation::Heap);
 {% if DIMENSIONS==3 %}
-  double* tmpY = tarch::allocateMemory<double>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DATA}}, tarch::MemoryLocation::Heap);
+  {{CORRECTOR_COMPUTATION_PRECISION}}* tmpY = tarch::allocateMemory<{{CORRECTOR_COMPUTATION_PRECISION}}>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DATA}}, tarch::MemoryLocation::Heap);
 {% endif %}
 
   // Will overwrite tmpX, no need to set to 0.
@@ -133,9 +134,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::cellUnknownsRestriction(
   {{SOLUTION_STORAGE_PRECISION}}* NOALIAS             luhCoarse,
   const tarch::la::Vector<DIMENSIONS, int>&           subcellIndex
 ) {
-  double* tmpX = tarch::allocateMemory<double>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DATA}}, tarch::MemoryLocation::Heap);
+  {{CORRECTOR_COMPUTATION_PRECISION}}* tmpX = tarch::allocateMemory<{{CORRECTOR_COMPUTATION_PRECISION}}>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DATA}}, tarch::MemoryLocation::Heap);
 {% if DIMENSIONS==3 %}
-  double* tmpY = tarch::allocateMemory<double>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DATA}}, tarch::MemoryLocation::Heap);
+  {{CORRECTOR_COMPUTATION_PRECISION}}* tmpY = tarch::allocateMemory<{{CORRECTOR_COMPUTATION_PRECISION}}>({{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}} * {{NUMBER_OF_DATA}}, tarch::MemoryLocation::Heap);
 {% endif %}
 
   {{SOLUTION_STORAGE_PRECISION}}** restrictor = DGMatrices<{{SOLUTION_STORAGE_PRECISION}}>::fineGridProjector1d_T_weighted;

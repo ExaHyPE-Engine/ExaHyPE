@@ -4,26 +4,6 @@ import os
 import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 
 
-class FloatTypes:
-    def __init__(self, float_type):
-        if float_type == "float":
-            self.cpp = "float"
-        elif float_type == "double":
-            self.cpp = "double"
-        elif float_type == "long double":
-            self.cpp = "long double"
-        elif float_type == "_Float16":
-            self.cpp = "_Float16"
-        elif float_type == "std::float16_t":
-            self.cpp = "std::float16_t"
-        elif float_type == "__bf16":
-            self.cpp = "__bf16"
-        elif float_type == "std::bfloat16_t":
-            self.cpp = "std::bfloat16_t"
-        else:
-            raise Exception("Float type " + float_type + " not recognized")
-
-
 class PatchToData:
     def __init__(self, patch, float_type="double"):
         self.data = patch
@@ -33,7 +13,7 @@ class PatchToData:
         self.can_send = "true"
         self.can_receive = "true"
         self.includes = ""
-        self.float_type = FloatTypes(float_type)
+        self.float_type = float_type
         self.use_copy_for_exchange = "true"
 
     def __str__(self):
@@ -94,7 +74,7 @@ class PatchToData:
             "INCLUDES": self.includes,
             "DATA_ASSOCIATION": int(self.data.association),
             "MERGE_METHOD_DEFINITION": self.merge_method_definition,
-            "FLOAT_TYPE": self.float_type.cpp,
+            "FLOAT_TYPE": self.float_type,
             "USE_COPY_FOR_EXCHANGE": self.use_copy_for_exchange,
         }
         return d

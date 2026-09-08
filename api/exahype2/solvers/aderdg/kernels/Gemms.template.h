@@ -113,7 +113,7 @@ void {{gemm}}(const long double* A, const long double* B, long double* C);
   for (int it_1 = 0; it_1 < {{gemms.N}}; it_1++) {
     SIMD({{reset_aligned}})
     for (int it_3 = 0; it_3 < {{gemms.M}}; it_3++) {
-      {{C}}[{{C_shift}} + it_1 * {{gemms.LDC}} + it_3] = 0.0;
+      {{C}}[{{C_shift}} + it_1 * {{gemms.LDC}} + it_3] = 0;
     }
   }
 {% endif %}

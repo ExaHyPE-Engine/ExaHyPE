@@ -79,7 +79,9 @@ def _create_postprocessing_kernel_for_error_measurement(guard, time_step_size_ac
           double*                                       solution
         ) -> void {
           double Q[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}];
-          std::copy_n(Q_, {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}, Q);
+          for(int i=0; i<{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}; i++){
+            Q[i] = (double) Q_[i];
+          }
           repositories::{{SOLVER_INSTANCE}}.analyticalSolution(x, t, dt, Q, solution);
         },
         marker.getX(),

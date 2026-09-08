@@ -9,6 +9,7 @@ option(PEANO_WITH_HDF5 "Build with HDF5 support" ON)
 option(PEANO_WITH_NETCDF "Build with NetCDF support" ON)
 option(PEANO_WITH_ZLIB "Build with ZLIB compression support" ON)
 option(PEANO_WITH_LIBXSMM "Build with LIBXSMM support" OFF)
+option(PEANO_WITH_BOOST "Build with support for the Boost C++ libraries" ON)
 
 set(PEANO_WITH_SANITIZER "none" CACHE STRING "Runtime sanitizer: none, address, undefined, address+undefined or thread")
 set_property(CACHE PEANO_WITH_SANITIZER PROPERTY STRINGS none address undefined address+undefined thread)

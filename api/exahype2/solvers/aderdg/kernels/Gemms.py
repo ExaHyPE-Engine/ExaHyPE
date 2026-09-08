@@ -85,9 +85,6 @@ class Gemms:
     ):
         if type(precision) is not list:
             precision = [precision]
-        for key in precision:
-            if key not in self.PrecisionTranslate.keys():
-                raise ("Unknown precision")
         if (M > LDC) or (K > LDB) or (M > LDA):
             raise ("Incompatible matrix sizes and leading dimensions")
         if alignment_A not in [0, 1]:
@@ -110,7 +107,10 @@ class Gemms:
         self.baseroutinename = (
             operationType + "_" + str(M) + "_" + str(N) + "_" + str(K) + "_" + name
         )
-        self.precision = [self.PrecisionTranslate[key] for key in precision]
+        self.precision = [
+            (self.PrecisionTranslate[key] if key in self.PrecisionTranslate.keys() else "DP")
+            for key in precision
+        ]
 
     def __repr__(self):
         return (

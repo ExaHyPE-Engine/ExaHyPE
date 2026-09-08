@@ -1,5 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
+#include "{{SOLVER_NAME}}.h"
 #include "FaceIntegral.h"
 
 #include "DGMatrices.h"
@@ -19,16 +20,16 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceIntegral(
   const cCompType* const FCoeff = (orientation == 0 ? DGMatrices<cCompType>::FLCoeff : DGMatrices<cCompType>::FRCoeff);
 
 {% if IS_LINEAR %}
-  const cCompType scaling = inverseDxDirection;
+  const cCompType scaling = static_cast<cCompType> (inverseDxDirection);
 {% else %}
-  const cCompType scaling = (2.0 * orientation - 1.0) * inverseDxDirection;
+  const cCompType scaling = static_cast<cCompType> ((2 * orientation - 1) * inverseDxDirection);
 {% endif %}
 
   // lduh and lFhbnd use unpadded row strides, so no slice here is SIMD aligned.
   switch (direction) {
   case 0: // x-faces, left-right flux.
     for (int zy = 0; zy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; zy++) {
-      const cCompType scaledWeight = scaling * timeStepSize * Quadrature<cCompType>::weights2[zy];
+      const cCompType scaledWeight = scaling * static_cast<cCompType> (timeStepSize) * Quadrature<cCompType>::weights2[zy];
       for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
         SIMD()
         for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
@@ -41,7 +42,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceIntegral(
   case 1: // y-faces
     for (int z = 0; z < {{NUMBER_OF_DOF_3D}}; z++) {
       for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
-        const cCompType scaledWeight = scaling * timeStepSize * Quadrature<cCompType>::weights2[z * {{NUMBER_OF_DOF}} + x];
+        const cCompType scaledWeight = scaling * static_cast<cCompType> (timeStepSize) * Quadrature<cCompType>::weights2[z * {{NUMBER_OF_DOF}} + x];
         for (int y = 0; y < {{NUMBER_OF_DOF}}; y++) {
           SIMD()
           for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
@@ -54,7 +55,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceIntegral(
     break;
   case 2: // z-faces
     for (int yx = 0; yx < {{NUMBER_OF_DOF*NUMBER_OF_DOF}}; yx++) {
-      const cCompType scaledWeight = scaling * timeStepSize * Quadrature<cCompType>::weights2[yx];
+      const cCompType scaledWeight = scaling * static_cast<cCompType> (timeStepSize) * Quadrature<cCompType>::weights2[yx];
       for (int z = 0; z < {{NUMBER_OF_DOF}}; z++) {
         SIMD()
         for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {

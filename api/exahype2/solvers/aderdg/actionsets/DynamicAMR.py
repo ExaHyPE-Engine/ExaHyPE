@@ -47,7 +47,7 @@ class AdaptiveMeshFaceCoupling(AbstractADERDGActionSet):
 
     // Delete the elements on the side of the face that the Riemann fluxes will be merged onto.
     // Because of the merge operations this must be on the side on which the fine cells are.
-    std::fill_n(FOut, FluxElementsPerFace, 0.0);
+    std::fill_n(FOut, FluxElementsPerFace, 0);
   }
 """
 
@@ -414,7 +414,9 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
 #endif
 
     auto* QNew = fineGridCell{{UNKNOWN_IDENTIFIER}}.data();
-    std::copy_n(fineGridCell{{UNKNOWN_IDENTIFIER}}_old.data(), SpaceBasisSize * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}), QNew);
+    for(int i=0; i<SpaceBasisSize * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}); i++){
+      QNew[i] = fineGridCellADERDGSolverQ_old.data()[i];
+    }
 
     {{PREPROCESS_RECONSTRUCTED_PATCH}}
 
@@ -475,12 +477,12 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
     std::fill_n(
       fineGridCell{{UNKNOWN_IDENTIFIER}}.data(),
       std::remove_reference_t<decltype(fineGridCell{{UNKNOWN_IDENTIFIER}})>::Cardinality,
-      0.0
+      0
     );
     std::fill_n(
       fineGridCell{{UNKNOWN_IDENTIFIER}}_old.data(),
       std::remove_reference_t<decltype(fineGridCell{{UNKNOWN_IDENTIFIER}}_old)>::Cardinality,
-      0.0
+      0
     );
   }
 """

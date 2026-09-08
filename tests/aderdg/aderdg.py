@@ -1,20 +1,11 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 import argparse
-
 import exahype2
-
 import scenarios
 
-
-available_precisions = (
-    "float",
-    "double",
-    "fp32",
-    "fp64",
-    "fp16",
-    "bf16",
-)
+# typedef number<backends::cpp_bin_float<24, backends::digit_base_2, void, std::int16_t, -126, 127>, et_off>         cpp_bin_float_single;
+#boost::multiprecision::number<boost::multiprecision::cpp_bin_float<12, boost::multiprecision::backends::digit_base_2, void, std::int16_t>>
 
 scenario_factories = {
     "AdvectionLinear": scenarios.AdvectionLinear,
@@ -46,7 +37,7 @@ def parse_arguments():
     parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=4)
     parser.add_argument("-l", "--grid-levels", type=int, default=3)
     parser.add_argument(
-        "-pr", "--precision", choices=available_precisions, default="fp64"
+        "-pr", "--precision", default="fp64"
     )
     parser.add_argument(
         "-s", "--scenario", choices=scenario_factories.keys(), default=None
