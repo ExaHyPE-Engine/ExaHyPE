@@ -227,6 +227,56 @@ def f_wave_riemannsolver():
                     FR[unknown] -= fWaves[wave](unknown);
                 }
                 } 
+            
+           
             }  
+            /*********************************************************
+            * Max wave speed                                         *
+            * so it has to be returned. The Roe eigenvalues can      *
+            ********************************************************/
+            auto maxEval = [&](
+                const auto* const NOALIAS  Q,
+                const int normal
+            ){ 
+
+
+                const auto totalNumberDensity = Q[Shortcuts::O] + Q[Shortcuts::O2] + Q[Shortcuts::N2];
+                const auto gamma = (1.4 * (totalNumberDensity - Q[Shortcuts::O]) + 1.67 * Q[Shortcuts::O]) / totalNumberDensity;
+
+                const auto j = &Q[Shortcuts::j];
+                const auto E = Q[Shortcuts::E];
+                const auto rho = Q[Shortcuts::rho];
+                const auto height = Q[Shortcuts::height];
+                const auto Z = 0; 
+
+                const auto jDot = j[0]*j[0]+j[1]*j[1];
+
+                const auto pressure = (gamma-1) * (E - 0.5 * (1/rho) * jDot );
+                const auto u_n = Q[Shortcuts::j+normal]/rho;
+
+                            const auto radicand = gamma * (pressure/rho);
+                if (not (radicand > 0.0)) {
+                    ::tarch::triggerNonCriticalAssertion(
+                        __FILE__, __LINE__,
+                        "gamma * pressure / rho > 0",
+                        "radicand=" + std::to_string(radicand)
+                            + ", pressure=" + std::to_string(pressure)
+                            + ", rho="      + std::to_string(rho)
+                            + ", E="        + std::to_string(E)
+                            + ", height="   + std::to_string(height)
+                            + ", normal="   + std::to_string(normal)
+                    );
+                }
+            const auto c = std::sqrt(gamma * (pressure/rho));
+            double lambda = std::fmax(
+            std::abs(u_n-c), std::abs(u_n+c)
+            );
+            return lambda;
+
+            }; 
+
+            const auto smax = std::fmax(maxEval(QL, normal), maxEval(QR, normal));
+            return smax;
+
 
         """)
