@@ -7,18 +7,17 @@ import exahype2
 from atmosphereE import Atmosphere
 from exahype2.solvers.aderdg import Polynomials
 
-
+from f_wave import f_wave_riemannsolver
 stratified_atmosphere = Atmosphere()
 
 # size = [1_200e3, 180e3, 1_200e3]
 # size = [10e3, 10e3, 1]
 size = [1200e3, 220e3, 1]
 end_time = 10
-order = 5
 unknowns = {"rho": 1, "j": 2, "E": 1}
 aux_var = {"height": 1, "backgroundstate": 3, "O": 1, "O2": 1, "N2": 1, "T": 1, "viscosity": 1}
 use_limiting = True
-
+level = 4
 
 # restart_from = '/work_fast/go78vuz/EXAHYPE/mario_new_limiting/applications/gravity_waves/restart_3_1BC/patch/ADERDGSolver.vtkhdf'
 # restart_step = -61
@@ -51,8 +50,8 @@ project = exahype2.Project(
     periodic_bc=[False, False, False],
     min_end_time=end_time,
     max_end_time=end_time,
-    min_grid_levels=4,
-    max_grid_levels=4,
+    min_grid_levels=level,
+    max_grid_levels=level,
 )
 
 solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
@@ -70,15 +69,32 @@ solver.set_implementation(
     boundary_conditions        = stratified_atmosphere.boundary_conditions_1_3(),
     flux                       = stratified_atmosphere.flux(),
     max_eigenvalue             = stratified_atmosphere.eigenvalues(),
-    riemann_solver = stratified_atmosphere.fv_riemann_solver(),
+    riemann_solver = f_wave_riemannsolver(),
     source_term=stratified_atmosphere.source_with_TS(time_offset=restart_time),
 
 )
 solver.add_user_solver_includes('#include "tarch/reader/CSVReader.h"\n')
-solver.add_user_solver_includes('#include "tarch/reader/VTKHDFSampler.h"\n')
+# solver.add_user_solver_includes('#include "tarch/reader/VTKHDFSampler.h"\n')
 
 solver.add_solver_constants(Atmosphere.CSV_CONSTANTS)
 solver.add_solver_constants(Atmosphere.VISCOSITY_MODEL)
+
+R = 8.31446261815324  # ideal gas constant in J / (mol * K)
+GRAVITY = 9.81  # gravitational acceleration in m/s^2
+
+
+project.output.makefile.add_compile_definition(f"""GRAVITY={GRAVITY}""")
+project.output.makefile.add_compile_definition(f"""UNIVERSAL_GAS_CONSTANT={R}""")
+project.output.makefile.add_compile_definition(
+    f"""MOLAR_MASS_ATOMIC_OXYGEN=0.016"""
+)  # in kg/mol
+project.output.makefile.add_compile_definition(
+    f"""MOLAR_MASS_MOLECULAR_OXYGEN=0.032"""
+)  # in kg/mol
+project.output.makefile.add_compile_definition(
+    f"""MOLAR_MASS_NITROGEN=0.028"""
+)  # in kg/mol
+
 
 project.add_solver(solver)
 
