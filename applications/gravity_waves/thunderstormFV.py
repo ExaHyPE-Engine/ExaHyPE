@@ -70,7 +70,7 @@ solver.set_implementation(
     flux                       = stratified_atmosphere.flux(),
     max_eigenvalue             = stratified_atmosphere.eigenvalues(),
     riemann_solver = f_wave_riemannsolver(),
-    source_term=stratified_atmosphere.source_with_TS(time_offset=restart_time),
+    source_term=stratified_atmosphere.thunderstorm_source(time_offset=restart_time),
 
 )
 solver.add_user_solver_includes('#include "tarch/reader/CSVReader.h"\n')

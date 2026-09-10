@@ -656,6 +656,50 @@ class Atmosphere():
             """
                     )
 
+    def thunderstorm_source(self, time_offset): 
+        return (
+                    """
+                    // Time of the restart snapshot this run continues from; zero for a
+                    // run that starts from the analytical initial condition.
+                    static constexpr double timeOffset = """ + str(time_offset) + """;
+                    const double simulationTime = t + timeOffset;
+        
+                    std::fill_n(S, NumberOfUnknowns, 0);
+        
+                    //thunderstorm source
+        
+        
+                    // frequency
+                    static constexpr double omega = 0.011;   // in rad/s
+                    static constexpr double xZero = 450'000; // in m
+                    static constexpr double zZero = 12'000;  // in m
+                    static constexpr double tZero = 2'000;   // in s
+        
+                    static constexpr double kX = 0.00011; // in rad/m
+        
+                    static constexpr double sigmaXSq = 30'000 * 30'000; // in m
+                    static constexpr double sigmaZSq = 4'000 * 4'000;   // in m
+                    static constexpr double sigmaTSq = 600 * 600;       // in s
+        
+                    static constexpr double vZero = 0.33;          // forcing velocity amplitude [m/s]
+                    static constexpr double FZero = vZero * omega; // [m/s^2] -> max induced v_z = vZero
+                    const double exponentialXTerm = tarch::la::pow((x(0) - xZero), 2) / (2 * sigmaXSq);
+                    const double exponentialYTerm = tarch::la::pow((x(1) - zZero), 2) / (2 * sigmaZSq);
+                    const double exponentialTTerm = tarch::la::pow((simulationTime - tZero), 2) / (2 * sigmaTSq);
+                    //const double cosTerm          = std::cos(kX * x(0)) * std::cos(omega * simulationTime);
+        
+                    const double cosTerm = std::cos(kX * (x(0) - xZero))
+                             * std::cos(omega * (simulationTime - tZero));
+        
+                    // 0: rho, 2: rhov
+                    S[Shortcuts::j +1 ] += Q[Shortcuts::rho] * FZero * tarch::la::pow(tarch::la::E, -exponentialXTerm - exponentialYTerm - exponentialTTerm)
+                        * cosTerm;
+        
+        
+        
+        
+                    """
+                            )
 
     
     def source_with_TS(self, time_offset=0.0):
