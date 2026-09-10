@@ -14,7 +14,7 @@ stratified_atmosphere = Atmosphere()
 # size = [10e3, 10e3, 1]
 size = [1200e3, 220e3, 1]
 end_time = 10
-order = 5
+order = 3
 unknowns = {"rho": 1, "j": 2, "E": 1}
 aux_var = {"height": 1, "backgroundstate": 3, "O": 1, "O2": 1, "N2": 1, "T": 1, "viscosity": 1}
 use_limiting = True
@@ -37,7 +37,7 @@ restart_time = 3000
 # restart_step = -72
 # restart_time = 3000
 
-#restart_from = None
+restart_from = None
 
 if restart_from is None:
     initial_conditions = stratified_atmosphere.initial_conditions()
@@ -140,8 +140,58 @@ exahype2.solvers.aderdg.ErrorMeasurement(
 #     output_file_name="Error_Equilibrium",
 # )
 
+
 project.add_solver(solver)
 
+
+use_tracers = True 
+
+if use_tracers:
+    tracer_particles = project.add_tracer(name="Tracer", particle_attributes=13)
+
+    project.add_action_set_to_initialisation(
+        exahype2.tracer.InsertParticlesByCoordinates(
+            particle_set=tracer_particles,
+            coordinates=[
+              [450000, 12000, 0], 
+              [455000, 12000, 0], 
+              [460000, 12000, 0], 
+              [465000, 12000, 0], 
+              [470000, 12000, 0], 
+              [475000, 12000, 0], 
+              [445000, 12000, 0], 
+              [440000, 12000, 0], 
+              [435000, 12000, 0], 
+              [430000, 12000, 0], 
+              [425000, 12000, 0], 
+            ]
+        )
+    )
+
+    project.add_action_set_to_timestepping(
+        exahype2.tracer.DiscontinuousGalerkinTracing(
+            tracer_particles, solver,
+            project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle"
+        )
+    )
+
+    project.add_action_set_to_timestepping(
+        exahype2.tracer.DumpTracerIntoDatabase(
+            particle_set=tracer_particles, solver=solver,
+            filename="test_tracer",
+            time_delta_between_two_snapshots=1,
+            output_precision=10
+        )
+    )
+
+    solver._abstract_solver_user_declarations += "double QuadraturePoints1d[Order+1];"
+    # TODO: This is not good in many ways. A private variable member of the solver should not be hijacked like this!
+    solver._start_simulation_implementation += """
+    std::copy_n(
+      kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes,
+      (Order+1),
+      QuadraturePoints1d
+    );"""
 
 
 project.generate_and_build()
