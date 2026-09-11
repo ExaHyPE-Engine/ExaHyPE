@@ -8,13 +8,13 @@
 #include "peano4/datamanagement/CellMarker.h"
 
 namespace exahype2::dg {
-  template <typename Particle, int SourceIndex, int DestIndex>
+  template <typename Particle, int SourceIndex, int DestIndex, typename QStoreType>
   void projectValueOntoParticle(
     const peano4::datamanagement::CellMarker& marker,
     int                                       order,
-    const double* NOALIAS                     QuadratureNodes1D,
+    const QStoreType* NOALIAS                 QuadratureNodes1D,
     int                                       unknownsPerDoF,
-    const double* NOALIAS                     Q,
+    const QStoreType* NOALIAS                 Q,
     Particle&                                 particle
   );
 
@@ -22,7 +22,7 @@ namespace exahype2::dg {
   void projectAllValuesOntoParticle(
     const peano4::datamanagement::CellMarker& marker,
     int                                       order,
-    const double* NOALIAS                     QuadratureNodes1D,
+    const QStoreType* NOALIAS                 QuadratureNodes1D,
     int                                       unknownsPerDoF,
     const QStoreType* NOALIAS                 Q,
     Particle&                                 particle

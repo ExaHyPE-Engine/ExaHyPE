@@ -6,38 +6,20 @@ from exahype2.solvers.aderdg.ADERDG import Polynomials
 
 import Elastic
 
-min_level           = 3
-max_depth           = 0
-order               = 5
-precision           = "float"
-e_t                 = 2.0
-polynomials         = "legendre"
-use_tracers         = True
-
-size    = [ 9.0, 9.0, 9.0]  # thousand meters
-offset  = [-4.5, 0., -4.5]  # thousand meters
-
-unknowns            = {"v": 3, "sigma": 6}
-auxiliary_variables = {"rho":1, "cp": 1, "cs": 1}
-
-
 def parse_arguments():
   parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
   parser.add_argument("-h", "--help", action="store_true", help="show this help message and continue with project help")
-  parser.add_argument("-et", "--end-time", type=float, default=e_t)
-  parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=order)
+  parser.add_argument("-et", "--end-time", type=float, default=2.0)
+  parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=5)
   parser.add_argument("-l", "--grid-levels", type=int, default=None)
-  parser.add_argument("-lmin", "--min-grid-levels", type=int, default=min_level)
-  parser.add_argument("-lmax", "--max-grid-levels", type=int, default=min_level + max_depth)
+  parser.add_argument("-p", "--precision", type=str, default="float")
+  parser.add_argument("-lob", "--lobatto", type=bool, default=False, help="use Gauss-Lobatto quadrature nodes, otherwise defaults to Gauss-Legendre")
+  parser.add_argument("-ut", "--use-tracers", type=bool, default=True)
   args, _ = parser.parse_known_args()
-  if args.grid_levels is not None:
-      args.min_grid_levels = args.grid_levels
-      args.max_grid_levels = args.grid_levels
   if args.help:
     parser.print_help()
     print()
   return args
-
 
 args = parse_arguments()
 order = args.degrees_of_freedom
@@ -46,27 +28,28 @@ project = exahype2.Project(
   ["applications", "exahype2", "exaseis"],
   "Cartesian",
   dimensions=3,
-  offset=offset,
-  size=size,
+  offset=[-4.5, 0., -4.5],  # thousand meters
+  size=[ 9.0, 9.0, 9.0],  # thousand meters
   periodic_bc=[False, False, False],
   executable="ExaSeis",
   min_end_time=args.end_time,
   max_end_time=args.end_time,
-  min_grid_levels=args.min_grid_levels,
-  max_grid_levels=args.max_grid_levels,
+  min_grid_levels=args.grid_levels,
+  max_grid_levels=args.grid_levels,
 )
 if project.dimensions != 3:
   raise ValueError("The Cartesian ExaSeis application is three-dimensional.")
 
 theSolver=exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
   name="elastic",  order=order,
-  unknowns=unknowns, auxiliary_variables=auxiliary_variables,
+  unknowns={"v": 3, "sigma": 6},
+  auxiliary_variables={"rho":1, "cp": 1, "cs": 1},
   time_step_relaxation=0.9,
 )
 
 theSolver.add_kernel_optimisations(
-  is_linear=True, polynomials=(Polynomials.Gauss_Lobatto if polynomials=="lobatto" else Polynomials.Gauss_Legendre)
-  ,precision=precision
+  is_linear=True, polynomials=(exahype2.solvers.aderdg.ADERDG.Polynomials.Gauss_Lobatto if args.lobatto else exahype2.solvers.aderdg.ADERDG.Polynomials.Gauss_Legendre)
+  ,precision=args.precision
 )
 
 theSolver.set_implementation(
@@ -88,7 +71,7 @@ theSolver.add_user_solver_includes("""
 
 project.add_solver(theSolver)
 
-if use_tracers:
+if args.use_tracers:
     tracer_particles = project.add_tracer(name="Tracer", particle_attributes=12)
 
     project.add_action_set_to_initialisation(
@@ -105,26 +88,25 @@ if use_tracers:
     project.add_action_set_to_timestepping(
         exahype2.tracer.DiscontinuousGalerkinTracing(
             tracer_particles, theSolver,
-            project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle"
+            project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle",
+            projection_kernel_arguments="""
+        marker,
+        {{ORDER}},
+        kernels::{{SOLVER_NAME}}::Quadrature<"""+args.precision+""">::nodes,
+        {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}},
+        fineGridCell{{CURRENT_UNKNOWN_IDENTIFIER}}.data(),
+        *particle
+            """
         )
     )
 
     project.add_action_set_to_timestepping(
         exahype2.tracer.DumpTracerIntoDatabase(
             particle_set=tracer_particles, solver=theSolver,
-            filename="tracers/Cartesian_level_"+str(args.min_grid_levels)+"_order_"+str(order)+"_"+polynomials+"_precision_"+str(precision),
+            filename="LOH1",
             time_delta_between_two_snapshots=0.01,
             output_precision=10
         )
     )
-
-    theSolver._abstract_solver_user_declarations += "double QuadraturePoints1D[Order+1];"
-    # TODO: This is not good in many ways. A private variable member of the solver should not be hijacked like this!
-    theSolver._start_simulation_implementation += """
-    std::copy_n(
-      kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes,
-      (Order+1),
-      QuadraturePoints1D
-    );"""
 
 project.generate_and_build()

@@ -81,6 +81,25 @@ class Husavik(DynamicRuptureScenario):
 
     def domain_perturbations(self):
         return """
+  faultNormal   = 0;
+  faultPosition = _curvi->split(
+    faultNormal,
+    14.7,
+    [](tarch::la::Vector<DIMENSIONS, double> x) {
+      static tarch::reader::NetCDFFieldSampler<2> netcdfSampler(
+        {
+          {"perturbation", "husavik-fault.nc"}
+        },
+        {112.823, 111.706},
+        {-56.406, -1.106}
+      );
+      return -netcdfSampler.samplePiecewiseConstant(
+        "perturbation",
+        {x[2], x[1]}
+      );
+    }
+  );
+
   _curvi->applyPerturbation(
     1,
     [](tarch::la::Vector<DIMENSIONS, double> x) {
@@ -94,25 +113,6 @@ class Husavik(DynamicRuptureScenario):
       return netcdfSampler.samplePiecewiseConstant(
         "perturbation",
         {x[0], x[2]}
-      );
-    }
-  );
-
-  faultNormal   = 0;
-  faultPosition = _curvi->split(
-    faultNormal,
-    14.7,
-    [](tarch::la::Vector<DIMENSIONS, double> x) {
-      static tarch::reader::NetCDFFieldSampler<2> netcdfSampler(
-        {
-          {"perturbation", "husavik-fault.nc"}
-        },
-        {112.823, 111.706},
-        {-56.406, -1.106}
-      );
-      return netcdfSampler.samplePiecewiseConstant(
-        "perturbation",
-        {x[2], x[1]}
       );
     }
   );
