@@ -144,7 +144,7 @@ exahype2.solvers.aderdg.ErrorMeasurement(
 project.add_solver(solver)
 
 
-use_tracers = True 
+use_tracers = False 
 
 if use_tracers:
     tracer_particles = project.add_tracer(name="Tracer", particle_attributes=13)

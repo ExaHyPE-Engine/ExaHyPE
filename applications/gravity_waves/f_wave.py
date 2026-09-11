@@ -7,7 +7,7 @@ def f_wave_riemannsolver():
             * Flux and source preparation *
             ******************************/
 
-            double DENSITY_THRESHOLD=1E-9;
+            double DENSITY_THRESHOLD=1E-16;
 
 
             double fluxRight[NumberOfUnknowns] {0.0};

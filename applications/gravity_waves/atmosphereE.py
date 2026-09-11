@@ -682,7 +682,8 @@ class Atmosphere():
                     static constexpr double sigmaTSq = 600 * 600;       // in s
         
                     static constexpr double vZero = 0.33;          // forcing velocity amplitude [m/s]
-                    static constexpr double FZero = vZero * omega; // [m/s^2] -> max induced v_z = vZero
+                    //static constexpr double FZero = vZero * omega; // [m/s^2] -> max induced v_z = vZero
+                    static constexpr double FZero = 0.0117; // [m/s^2] -> max induced v_z = vZero
                     const double exponentialXTerm = tarch::la::pow((x(0) - xZero), 2) / (2 * sigmaXSq);
                     const double exponentialYTerm = tarch::la::pow((x(1) - zZero), 2) / (2 * sigmaZSq);
                     const double exponentialTTerm = tarch::la::pow((simulationTime - tZero), 2) / (2 * sigmaTSq);
@@ -745,7 +746,8 @@ class Atmosphere():
             static constexpr double sigmaTSq = 600 * 600;       // in s
 
             static constexpr double vZero = 0.33;          // forcing velocity amplitude [m/s]
-            static constexpr double FZero = vZero * omega; // [m/s^2] -> max induced v_z = vZero
+            //static constexpr double FZero = vZero * omega; // [m/s^2] -> max induced v_z = vZero
+            static constexpr double FZero = 0.0117; // [m/s^2] -> max induced v_z = vZero
             const double exponentialXTerm = tarch::la::pow((x(0) - xZero), 2) / (2 * sigmaXSq);
             const double exponentialYTerm = tarch::la::pow((x(1) - zZero), 2) / (2 * sigmaZSq);
             const double exponentialTTerm = tarch::la::pow((simulationTime - tZero), 2) / (2 * sigmaTSq);

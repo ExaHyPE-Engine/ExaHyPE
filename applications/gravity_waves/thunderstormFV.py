@@ -6,9 +6,11 @@ import exahype2
 
 from atmosphereE import Atmosphere
 from exahype2.solvers.aderdg import Polynomials
+from exahype2.solvers.fv.musclhancock import Limiter          # add near the top
 
 from f_wave import f_wave_riemannsolver
 stratified_atmosphere = Atmosphere()
+
 
 # size = [1_200e3, 180e3, 1_200e3]
 # size = [10e3, 10e3, 1]
@@ -60,8 +62,16 @@ solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
     time_step_relaxation = 0.5,
     unknowns             = unknowns,
     auxiliary_variables = aux_var
-    # auxiliary_variables  = {"grad": 8, "height": 1, "backgroundstate": 2},
 )
+
+
+# solver = exahype2.solvers.fv.musclhancock.GlobalAdaptiveTimeStep(   # test instead of gundunov FV
+#     name                 = "FVSolver",
+#     patch_size           = 12,
+#     time_step_relaxation = 0.5,
+#     unknowns             = unknowns,
+#     auxiliary_variables = aux_var
+# )
 
 
 solver.set_implementation(
@@ -71,6 +81,8 @@ solver.set_implementation(
     max_eigenvalue             = stratified_atmosphere.eigenvalues(),
     riemann_solver = f_wave_riemannsolver(),
     source_term=stratified_atmosphere.thunderstorm_source(time_offset=restart_time),
+    limiter             = Limiter.mclim,               # add this
+
 
 )
 solver.add_user_solver_includes('#include "tarch/reader/CSVReader.h"\n')
