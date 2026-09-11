@@ -11,7 +11,7 @@ template <typename QStoreType>
 QStoreType exahype2::dg::evaluatePolynomial(
   const peano4::datamanagement::CellMarker&    marker,
   int                                          order,
-  const double* NOALIAS                        QuadratureNodes1D,
+  const QStoreType* NOALIAS                    QuadratureNodes1D,
   int                                          unknownsPerDoF,
   const QStoreType* NOALIAS                    Q,
   const tarch::la::Vector<DIMENSIONS, double>& x,
@@ -48,7 +48,7 @@ template <typename QStoreType>
 QStoreType exahype2::dg::evaluatePolynomial(
   const peano4::datamanagement::FaceMarker&    marker,
   int                                          order,
-  const double* NOALIAS                        QuadratureNodes1D,
+  const QStoreType* NOALIAS                    QuadratureNodes1D,
   int                                          unknownsPerDoF,
   const QStoreType* NOALIAS                    Q,
   const tarch::la::Vector<DIMENSIONS, double>& x,

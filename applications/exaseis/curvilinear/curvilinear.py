@@ -1,9 +1,7 @@
 import argparse
-import os
-import sys
+import os, sys
 
 import exahype2
-from exahype2.solvers.aderdg.ADERDG import Polynomials
 
 import CurvilinearElastic
 
@@ -15,17 +13,6 @@ available_scenarios = {
     "Zugspitze": Scenario.Zugspitze()
 }
 
-scenario = "LOH1"
-precision = "fp64"
-use_tracers = True
-order = 5
-min_level = 3
-max_depth = 0
-
-scenario_string = scenario.lower()
-my_scenario = available_scenarios[scenario]
-
-
 def parse_arguments():
     parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
     parser.add_argument(
@@ -34,50 +21,37 @@ def parse_arguments():
         action="store_true",
         help="show this help message and continue with project help",
     )
-    parser.add_argument("-et", "--end-time", type=float, default=my_scenario.end_time)
-    parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=order)
+    parser.add_argument("-s", "--scenario", choices=available_scenarios.keys(), default="LOH1")
+    parser.add_argument("-et", "--end-time", type=float, default=None)
+    parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=5)
     parser.add_argument("-l", "--grid-levels", type=int, default=None)
-    parser.add_argument("-lmin", "--min-grid-levels", type=int, default=min_level)
-    parser.add_argument("-lmax", "--max-grid-levels", type=int, default=min_level + max_depth)
+    parser.add_argument("-p", "--precision", type=str, default="fp64")
+    parser.add_argument("-ut", "--use-tracers", type=bool, default=True)
     args, _ = parser.parse_known_args()
-    if args.grid_levels is not None:
-        args.min_grid_levels = args.grid_levels
-        args.max_grid_levels = args.grid_levels
     if args.help:
         parser.print_help()
         print()
     return args
 
-
 args = parse_arguments()
+my_scenario = available_scenarios[args.scenario]
 order = args.degrees_of_freedom
-
-unknowns = {"v": 3, "sigma": 6}
-auxiliary_variables = {
-    "rho": 1, "cp": 1, "cs": 1,
-    "jacobian": 1, "metric_derivative": 9,
-    "curve_grid": 3,
-}
-
-offset  = my_scenario.domain_offset
-size    = my_scenario.domain_size
-end_time = args.end_time
+end_time = my_scenario.end_time if args.end_time is None else args.end_time
 
 my_scenario.generate_required_files()
 
-filename = scenario+"_l"+str(args.min_grid_levels)+"_o"+str(order)+"_pr_"+precision
 project = exahype2.Project(
     ["applications", "exahype2", "exaseis"],
     "curvi",
     dimensions=3,
-    offset=offset,
-    size=size,
+    offset=my_scenario.domain_offset,
+    size=my_scenario.domain_size,
     periodic_bc=[False, False, False],
     executable="ExaSeis",
     min_end_time=end_time,
     max_end_time=end_time,
-    min_grid_levels=args.min_grid_levels,
-    max_grid_levels=args.max_grid_levels,
+    min_grid_levels=args.grid_levels,
+    max_grid_levels=args.grid_levels,
 )
 if project.dimensions != 3:
     raise ValueError("The curvilinear ExaSeis application is three-dimensional.")
@@ -85,16 +59,20 @@ if project.dimensions != 3:
 theSolver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
     name="ElasticSolver",
     order=order,
-    unknowns=unknowns,
-    auxiliary_variables=auxiliary_variables,
+    unknowns={"v": 3, "sigma": 6},
+    auxiliary_variables={
+      "rho": 1, "cp": 1, "cs": 1,
+      "jacobian": 1, "metric_derivative": 9,
+      "curve_grid": 3
+    },
     time_step_relaxation=0.9
 )
 
 theSolver.add_kernel_optimisations(
     is_linear=True,
-    polynomials=Polynomials.Gauss_Lobatto,
+    polynomials=exahype2.solvers.aderdg.ADERDG.Polynomials.Gauss_Lobatto,
     initialise_patches=True,
-    precision = precision
+    precision=args.precision
 )
 
 theSolver.set_implementation(
@@ -118,12 +96,12 @@ theSolver.add_user_solver_includes(CurvilinearElastic.userIncludes())
 
 project.add_solver(theSolver)
 
-if use_tracers:
+if args.use_tracers:
     project.add_action_set_to_timestepping(
       exahype2.tracer.CurviTracer(
         coordinates=my_scenario.tracer_coordinates,
         solver=theSolver,
-        filename=filename,
+        filename=args.scenario+"-o"+str(order)+"-"+str(args.precision),
         time_delta_between_two_snapshots=0.01,
         output_precision=10
     ))

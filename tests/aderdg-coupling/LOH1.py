@@ -1,26 +1,9 @@
+import os, sys
 import argparse
-import os
-import sys
-
 import exahype2
-
-from exahype2.solvers.aderdg.ADERDG import Polynomials
 
 sys.path.insert(0, os.path.abspath("../../applications/exaseis/cartesian"))
 import Elastic
-degrees_of_freedom = 6
-
-order = degrees_of_freedom - 1
-
-polynomials = "legendre"
-use_tracers = True
-
-offset = [-2.025, 0.0, -2.025]
-size = [12.15, 12.15, 12.15]
-
-unknowns            = {"v": 3, "sigma": 6}
-auxiliary_variables = {"rho":1, "cp": 1, "cs": 1}
-
 
 def parse_arguments():
   parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
@@ -31,33 +14,30 @@ def parse_arguments():
     help="show this help message and continue with project help",
   )
   parser.add_argument("-et", "--end-time", type=float, default=0.3)
+  parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=5)
   parser.add_argument("-l", "--grid-levels", type=int, default=None)
-  parser.add_argument("-lmin", "--min-grid-levels", type=int, default=2)
-  parser.add_argument("-lmax", "--max-grid-levels", type=int, default=2)
+  parser.add_argument("-ut", "--use-tracers", type=bool, default=True)
   args, _ = parser.parse_known_args()
-  if args.grid_levels is not None:
-      args.min_grid_levels = args.grid_levels
-      args.max_grid_levels = args.grid_levels
   if args.help:
     parser.print_help()
     print()
   return args
 
-
 args = parse_arguments()
+order = args.degrees_of_freedom
 
 project = exahype2.Project(
     ["tests", "exahype2", "aderdg"],
     "LOH1",
     executable="coupled_LOH1",
     dimensions=3,
-    size=size[0:3],
-    offset=offset[0:3],
+    offset=[-2.025, 0.0, -2.025],
+    size=[12.15, 12.15, 12.15],
     periodic_bc=[False, False, False],
     min_end_time=args.end_time,
     max_end_time=args.end_time,
-    min_grid_levels=args.min_grid_levels,
-    max_grid_levels=args.max_grid_levels,
+    min_grid_levels=args.grid_levels,
+    max_grid_levels=args.grid_levels,
 )
 
 if project.dimensions != 3:
@@ -69,25 +49,27 @@ if project.dimensions != 3:
 
 hpSolver=exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
   name="hpElastic",  order=order,
-  unknowns=unknowns, auxiliary_variables=auxiliary_variables,
+  unknowns={"v": 3, "sigma": 6},
+  auxiliary_variables={"rho":1, "cp": 1, "cs": 1},
   time_step_relaxation=0.9
 )
 
 hpSolver.add_kernel_optimisations(
-  precision = "fp64"
+  precision = "fp64", is_linear=True
 )
 
 lpSolver=exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
   name="lpElastic",  order=order,
-  unknowns=unknowns, auxiliary_variables=auxiliary_variables,
+  unknowns={"v": 3, "sigma": 6},
+  auxiliary_variables={"rho":1, "cp": 1, "cs": 1},
   time_step_relaxation=0.9
 )
 
 lpSolver.add_kernel_optimisations(
-  precision = "fp32"
+  precision = "fp32", is_linear=True
 )
 
-if use_tracers:
+if args.use_tracers:
   tracer_particles = project.add_tracer(name="Tracer", particle_attributes=12)
 
   project.add_action_set_to_initialisation(
@@ -128,10 +110,6 @@ for theSolver in [hpSolver, lpSolver]:
     init_point_source_location=Elastic.init_point_source()
   )
 
-  theSolver.add_kernel_optimisations(
-    is_linear=True, polynomials=(Polynomials.Gauss_Lobatto if polynomials=="lobatto" else Polynomials.Gauss_Legendre)
-  )
-
   theSolver.add_user_solver_includes("""
 #include "../../applications/exaseis/riemannSolvers/cartesianRoutines.h"
 #include "../../applications/exaseis/riemannSolvers/riemannsolverIsotropic.h"
@@ -139,30 +117,30 @@ for theSolver in [hpSolver, lpSolver]:
 
   project.add_solver(theSolver)
 
-  if use_tracers:
+  if args.use_tracers:
     project.add_action_set_to_timestepping(
         exahype2.tracer.DiscontinuousGalerkinTracing(
             tracer_particles, theSolver,
-            project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle"
+            project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle",
+            projection_kernel_arguments="""
+        marker,
+        {{ORDER}},
+        kernels::{{SOLVER_NAME}}::Quadrature<"""+theSolver._solution_persistent_storage_precision+""">::nodes,
+        {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}},
+        fineGridCell{{CURRENT_UNKNOWN_IDENTIFIER}}.data(),
+        *particle
+            """
         )
     )
 
     project.add_action_set_to_timestepping(
         exahype2.tracer.DumpTracerIntoDatabase(
             particle_set=tracer_particles, solver=theSolver,
-            filename="tracers/Cartesian_o"+str(order)+"_"+polynomials+theSolver.get_name_of_global_instance(),
+            filename="LOH1",
             time_delta_between_two_snapshots=0.01,
             output_precision=10
         )
     )
-
-    theSolver._abstract_solver_user_declarations += "double QuadraturePoints1D[Order+1];"
-    theSolver._start_simulation_implementation += """
-    std::copy_n(
-      kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes,
-      (Order+1),
-      QuadraturePoints1D
-    );"""
 
 # sys.path.insert(0, os.path.abspath("./coupling"))
 # from coupling import StaticCoupling
@@ -171,10 +149,10 @@ for theSolver in [hpSolver, lpSolver]:
 #   regularSolver   = hpSolver,
 #   limitingSolver  = lpSolver,
 #   limiting_criterion_implementation = """
-#   // return 
+#   // return
 #   return // 9x8x11
 #     x[0] > -2.025 && x[0] <  2.025 &&
-#                      x[1] <  3.600 &&  
+#                      x[1] <  3.600 &&
 #     x[2] > -2.025 && x[2] <= 2.925
 #   ;
 # """
