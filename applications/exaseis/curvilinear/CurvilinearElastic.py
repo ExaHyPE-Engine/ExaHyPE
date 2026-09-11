@@ -326,8 +326,6 @@ tarch::la::Vector<DIMENSIONS,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::
 def abstractDeclarations():
   return """
 public:
-  double QuadraturePoints1D[Order+1];
-
   tarch::la::Vector<DIMENSIONS,double> invertProjection(const tarch::la::Vector<DIMENSIONS,double> coordinates);
 
 protected:
@@ -336,12 +334,6 @@ protected:
 
 def init_grid_step_implementation(scenario_perturbations):
   return """
-  std::copy_n(
-    kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes,
-    (Order+1),
-    QuadraturePoints1D
-  );
-
   //setting minCellSize
   tarch::la::Vector<DIMENSIONS, double> minCellSize = DomainSize;
   const double minAdmissiblePatchSize = ::runner::RuntimeParameters::getInstance().getMinAdmissiblePatchSize(DomainSize);

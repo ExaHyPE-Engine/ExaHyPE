@@ -65,7 +65,7 @@ def boundary():
 
 def eigenvalue():
   return """
-  return std::max(std::abs(Q[Shortcuts::cp]), std::abs(Q[Shortcuts::cs]));
+  return (double) Q[Shortcuts::cp];
 """
 
 def flux():
