@@ -28,9 +28,11 @@ public:
   // inside private or protected member functions.
   void testApplyFiniteVolumeWithConstantReconstruction();
   void testApplyFiniteVolumeWithLimitedLinearReconstruction();
+  void testApplyFiniteVolumeWithWENOReconstruction();
   void testApplyFiniteVolumeWithCustomRiemannSolver();
   void testHandleBoundaryWithOneHaloLayer();
   void testHandleBoundaryWithTwoHaloLayers();
+  void testHandleBoundaryWithThreeHaloLayers();
 
   template <
     typename Reconstruction,

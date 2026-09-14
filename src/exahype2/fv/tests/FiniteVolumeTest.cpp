@@ -6,7 +6,9 @@
 #include "exahype2/fv/limiter/SlopeLimiter.h"
 #include "exahype2/fv/reconstruction/Constant.h"
 #include "exahype2/fv/reconstruction/LimitedLinear.h"
+#include "exahype2/fv/reconstruction/WENO.h"
 #include "exahype2/fv/timestepping/SingleStep.h"
+#include "exahype2/fv/weno/NonlinearWeights.h"
 #include "exahype2/Enumeration.h"
 
 namespace {
@@ -751,6 +753,126 @@ namespace {
     }
     return q;
   }
+
+  using WENOReconstruction = exahype2::fv::reconstruction::WENO<exahype2::fv::weno::JiangShu>;
+
+  // Reconstructs both faces of one volume from the exact cell averages of a
+  // sine of every unknown and returns the largest error against the point
+  // values at the faces. The window sits away from the extrema of every sine,
+  // where the nonlinear weights are known to lose accuracy.
+  template <int VolumesPerUnitLength>
+  double wenoFaceReconstructionError() {
+    constexpr int    NumberOfStates = 2 * WENOReconstruction::HaloSize + 1;
+    constexpr int    Centre         = WENOReconstruction::HaloSize;
+    constexpr double WindowCentre   = 0.3;
+    const double     h              = 1.0 / VolumesPerUnitLength;
+
+    std::vector<double> averages(NumberOfStates * NumberOfData);
+    const double*       states[NumberOfStates];
+    for (int volume = 0; volume < NumberOfStates; volume++) {
+      const double lower = WindowCentre + (volume - Centre - 0.5) * h;
+      for (int unknown = 0; unknown < NumberOfData; unknown++) {
+        const double phase = 0.7 * (unknown + 1);
+        averages[volume * NumberOfData + unknown] =
+          (std::cos(2.0 * std::numbers::pi_v<double> * lower + phase)
+           - std::cos(2.0 * std::numbers::pi_v<double> * (lower + h) + phase))
+          / (2.0 * std::numbers::pi_v<double> * h);
+      }
+      states[volume] = &averages[volume * NumberOfData];
+    }
+
+    double lowerFace[NumberOfData];
+    double upperFace[NumberOfData];
+    WENOReconstruction::reconstructFaceState<NumberOfData>(states, Centre, -1, lowerFace);
+    WENOReconstruction::reconstructFaceState<NumberOfData>(states, Centre, +1, upperFace);
+
+    double error = 0.0;
+    for (int unknown = 0; unknown < NumberOfData; unknown++) {
+      const double phase = 0.7 * (unknown + 1);
+      error              = std::max(
+        error,
+        std::abs(lowerFace[unknown] - std::sin(2.0 * std::numbers::pi_v<double> * (WindowCentre - 0.5 * h) + phase))
+      );
+      error = std::max(
+        error,
+        std::abs(upperFace[unknown] - std::sin(2.0 * std::numbers::pi_v<double> * (WindowCentre + 0.5 * h) + phase))
+      );
+    }
+    return error;
+  }
+
+  // Advances the smooth profile over a torus for a few steps and returns the
+  // total mass of the first unknown before and after.
+  template <typename Reconstruction, int VolumesPerAxis>
+  std::pair<double, double> periodicAdvectionMass() {
+    constexpr int HaloWidth = Reconstruction::HaloSize;
+
+    const int patchStorageSize = numberOfVolumesInPatch<VolumesPerAxis>() * NumberOfData;
+    const int faceStorageSize  = faceOverlapStorageSize<VolumesPerAxis, HaloWidth>();
+
+    std::vector<double> q(patchStorageSize);
+    for (int volume = 0; volume < numberOfVolumesInPatch<VolumesPerAxis>(); volume++) {
+      const double value = smoothProfile(volumeCentreOf<VolumesPerAxis>(volumeIndexOf<VolumesPerAxis>(volume)), 0.0);
+      for (int unknown = 0; unknown < NumberOfData; unknown++) {
+        q[volume * NumberOfData + unknown] = value;
+      }
+    }
+
+    double massBefore = 0.0;
+    for (int volume = 0; volume < numberOfVolumesInPatch<VolumesPerAxis>(); volume++) {
+      massBefore += q[volume * NumberOfData];
+    }
+
+    std::vector<double>              qNext(patchStorageSize, 0.0);
+    std::vector<std::vector<double>> faceInStorage(TWO_TIMES_D, std::vector<double>(faceStorageSize, 0.0));
+    std::vector<std::vector<double>> faceOutStorage(TWO_TIMES_D, std::vector<double>(faceStorageSize, 0.0));
+    const double*                    faceInputPatches[TWO_TIMES_D];
+    double*                          faceOutputPatches[TWO_TIMES_D];
+    for (int face = 0; face < TWO_TIMES_D; face++) {
+      faceInputPatches[face]  = faceInStorage[face].data();
+      faceOutputPatches[face] = faceOutStorage[face].data();
+    }
+
+    const tarch::la::Vector<DIMENSIONS, double> patchCentre(0.5);
+    const tarch::la::Vector<DIMENSIONS, double> patchExtent(1.0);
+    const double                                timeStepSize = 0.02 / 3.0;
+
+    for (int step = 0; step < 3; step++) {
+      fillHaloPeriodically<VolumesPerAxis, HaloWidth>(faceInStorage, q);
+      exahype2::fv::applyFiniteVolume<
+        Reconstruction,
+        exahype2::fv::timestepping::SingleStep,
+        TestSolver<NumberOfUnknowns>,
+        VolumesPerAxis,
+        NumberOfUnknowns,
+        NumberOfAuxiliaryVariables,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        double,
+        double>(
+        q.data(),
+        qNext.data(),
+        faceInputPatches,
+        faceOutputPatches,
+        patchCentre,
+        patchExtent,
+        step * timeStepSize,
+        timeStepSize
+      );
+      q.swap(qNext);
+    }
+
+    double massAfter = 0.0;
+    for (int volume = 0; volume < numberOfVolumesInPatch<VolumesPerAxis>(); volume++) {
+      massAfter += q[volume * NumberOfData];
+    }
+    return {massBefore, massAfter};
+  }
 } // namespace
 
 exahype2::fv::tests::FiniteVolumeTest::FiniteVolumeTest() :
@@ -769,6 +891,10 @@ void exahype2::fv::tests::FiniteVolumeTest::run() {
   testMethod(testSodShockTubeReachesStarStates);
   testMethod(testReconstructionHookReproducingDefaultChangesNothing);
   testMethod(testLimiterHookReproducingMinmodChangesNothing);
+  testMethod(testWENOPreservesUniformState);
+  testMethod(testWENOReconstructsSmoothProfileAtFifthOrder);
+  testMethod(testWENOAdvectionConvergesAtSecondOrder);
+  testMethod(testWENOPeriodicAdvectionConservesMass);
 }
 
 void exahype2::fv::tests::FiniteVolumeTest::testZeroTimeStepPreservesState() {
@@ -988,74 +1114,9 @@ void exahype2::fv::tests::FiniteVolumeTest::testLimitedLinearNcpAdvectionConverg
 
 /** Confirms periodic face fluxes conserve the patch's total mass. */
 void exahype2::fv::tests::FiniteVolumeTest::testPeriodicAdvectionConservesMass() {
-  using MinmodReconstruction   = exahype2::fv::reconstruction::LimitedLinear<exahype2::fv::limiter::Minmod>;
-  constexpr int VolumesPerAxis = 27;
-  constexpr int HaloWidth      = MinmodReconstruction::HaloSize;
+  using MinmodReconstruction = exahype2::fv::reconstruction::LimitedLinear<exahype2::fv::limiter::Minmod>;
 
-  const int patchStorageSize = numberOfVolumesInPatch<VolumesPerAxis>() * NumberOfData;
-  const int faceStorageSize  = faceOverlapStorageSize<VolumesPerAxis, HaloWidth>();
-
-  std::vector<double> q(patchStorageSize);
-  for (int volume = 0; volume < numberOfVolumesInPatch<VolumesPerAxis>(); volume++) {
-    const double value = smoothProfile(volumeCentreOf<VolumesPerAxis>(volumeIndexOf<VolumesPerAxis>(volume)), 0.0);
-    for (int unknown = 0; unknown < NumberOfData; unknown++) {
-      q[volume * NumberOfData + unknown] = value;
-    }
-  }
-
-  double massBefore = 0.0;
-  for (int volume = 0; volume < numberOfVolumesInPatch<VolumesPerAxis>(); volume++) {
-    massBefore += q[volume * NumberOfData];
-  }
-
-  std::vector<double>              qNext(patchStorageSize, 0.0);
-  std::vector<std::vector<double>> faceInStorage(TWO_TIMES_D, std::vector<double>(faceStorageSize, 0.0));
-  std::vector<std::vector<double>> faceOutStorage(TWO_TIMES_D, std::vector<double>(faceStorageSize, 0.0));
-  const double*                    faceInputPatches[TWO_TIMES_D];
-  double*                          faceOutputPatches[TWO_TIMES_D];
-  for (int face = 0; face < TWO_TIMES_D; face++) {
-    faceInputPatches[face]  = faceInStorage[face].data();
-    faceOutputPatches[face] = faceOutStorage[face].data();
-  }
-
-  const tarch::la::Vector<DIMENSIONS, double> patchCentre(0.5);
-  const tarch::la::Vector<DIMENSIONS, double> patchExtent(1.0);
-  const double                                timeStepSize = 0.02 / 3.0;
-
-  for (int step = 0; step < 3; step++) {
-    fillHaloPeriodically<VolumesPerAxis, HaloWidth>(faceInStorage, q);
-    exahype2::fv::applyFiniteVolume<
-      MinmodReconstruction,
-      exahype2::fv::timestepping::SingleStep,
-      TestSolver<NumberOfUnknowns>,
-      VolumesPerAxis,
-      NumberOfUnknowns,
-      NumberOfAuxiliaryVariables,
-      true,
-      false,
-      false,
-      false,
-      false,
-      false,
-      true,
-      double,
-      double>(
-      q.data(),
-      qNext.data(),
-      faceInputPatches,
-      faceOutputPatches,
-      patchCentre,
-      patchExtent,
-      step * timeStepSize,
-      timeStepSize
-    );
-    q.swap(qNext);
-  }
-
-  double massAfter = 0.0;
-  for (int volume = 0; volume < numberOfVolumesInPatch<VolumesPerAxis>(); volume++) {
-    massAfter += q[volume * NumberOfData];
-  }
+  const auto [massBefore, massAfter] = periodicAdvectionMass<MinmodReconstruction, 27>();
 
   validateWithParams2(std::abs(massAfter - massBefore) <= 1e-11 * std::abs(massBefore), massBefore, massAfter);
 }
@@ -1161,4 +1222,86 @@ void exahype2::fv::tests::FiniteVolumeTest::testLimiterHookReproducingMinmodChan
     maxDifference = std::max(maxDifference, std::abs(fromPolicy[entry] - fromHook[entry]));
   }
   validateNumericalEquals(maxDifference, 0.0);
+}
+
+void exahype2::fv::tests::FiniteVolumeTest::testWENOPreservesUniformState() {
+  const int patchStorageSize = numberOfVolumesInPatch<NumberOfVolumesPerAxis>() * NumberOfData;
+  const int faceStorageSize  = faceOverlapStorageSize<NumberOfVolumesPerAxis, WENOReconstruction::HaloSize>();
+
+  const double        uniformValue = 1.23;
+  std::vector<double> qIn(patchStorageSize, uniformValue);
+  std::vector<double> qOut(patchStorageSize, 0.0);
+
+  std::vector<std::vector<double>> faceInStorage(TWO_TIMES_D, std::vector<double>(faceStorageSize, uniformValue));
+  std::vector<std::vector<double>> faceOutStorage(TWO_TIMES_D, std::vector<double>(faceStorageSize, 0.0));
+  const double*                    faceInputPatches[TWO_TIMES_D];
+  double*                          faceOutputPatches[TWO_TIMES_D];
+  for (int face = 0; face < TWO_TIMES_D; face++) {
+    faceInputPatches[face]  = faceInStorage[face].data();
+    faceOutputPatches[face] = faceOutStorage[face].data();
+  }
+
+  const tarch::la::Vector<DIMENSIONS, double> patchCentre(0.5);
+  const tarch::la::Vector<DIMENSIONS, double> patchExtent(1.0);
+
+  const double returnedEigenvalue = exahype2::fv::applyFiniteVolume<
+    WENOReconstruction,
+    exahype2::fv::timestepping::SingleStep,
+    TestSolver<NumberOfUnknowns>,
+    NumberOfVolumesPerAxis,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    true,
+    true,
+    true,
+    false,
+    false,
+    false,
+    true,
+    double,
+    double>(qIn.data(), qOut.data(), faceInputPatches, faceOutputPatches, patchCentre, patchExtent, 0.0, 0.01);
+
+  // The source term is the only term that acts on a uniform state.
+  const double sourceUpdate = 0.01 * 0.05 * uniformValue;
+  for (int entry = 0; entry < patchStorageSize; entry++) {
+    validateNumericalEqualsWithParams1(qOut[entry], uniformValue + sourceUpdate, entry);
+  }
+  validateNumericalEquals(
+    returnedEigenvalue,
+    TestSolver<NumberOfUnknowns>::AdvectionSpeed + TestSolver<NumberOfUnknowns>::NcpAdvectionSpeed
+  );
+}
+
+/** Measures the order of the face reconstruction alone against exact point values. */
+void exahype2::fv::tests::FiniteVolumeTest::testWENOReconstructsSmoothProfileAtFifthOrder() {
+  const double coarseError = wenoFaceReconstructionError<9>();
+  const double fineError   = wenoFaceReconstructionError<27>();
+  const double order       = std::log(coarseError / fineError) / std::log(3.0);
+
+  validateWithParams3(order > 4.5, coarseError, fineError, order);
+}
+
+/**
+ * The Hancock predictor limits the scheme to second order in time, so the
+ * order under a fixed CFL number matches MUSCL-Hancock while the error itself
+ * stays below that of the unlimited linear reconstruction.
+ */
+void exahype2::fv::tests::FiniteVolumeTest::testWENOAdvectionConvergesAtSecondOrder() {
+  using SecondOrderReconstruction = exahype2::fv::reconstruction::LimitedLinear<exahype2::fv::limiter::Average>;
+  constexpr double EndTime        = 0.12;
+
+  const double coarseError = advectionError<WENOReconstruction, 9, false>(smoothProfile, 6, EndTime);
+  const double fineError   = advectionError<WENOReconstruction, 27, false>(smoothProfile, 18, EndTime);
+  const double order       = std::log(coarseError / fineError) / std::log(3.0);
+  const double linearError = advectionError<SecondOrderReconstruction, 27, false>(smoothProfile, 18, EndTime);
+
+  validateWithParams3(order > 1.7, coarseError, fineError, order);
+  validateWithParams2(fineError < linearError, fineError, linearError);
+}
+
+/** Confirms periodic face fluxes conserve the patch's total mass under WENO. */
+void exahype2::fv::tests::FiniteVolumeTest::testWENOPeriodicAdvectionConservesMass() {
+  const auto [massBefore, massAfter] = periodicAdvectionMass<WENOReconstruction, 27>();
+
+  validateWithParams2(std::abs(massAfter - massBefore) <= 1e-11 * std::abs(massBefore), massBefore, massAfter);
 }

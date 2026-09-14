@@ -27,4 +27,8 @@ private:
   void testSodShockTubeReachesStarStates();
   void testReconstructionHookReproducingDefaultChangesNothing();
   void testLimiterHookReproducingMinmodChangesNothing();
+  void testWENOPreservesUniformState();
+  void testWENOReconstructsSmoothProfileAtFifthOrder();
+  void testWENOAdvectionConvergesAtSecondOrder();
+  void testWENOPeriodicAdvectionConservesMass();
 };

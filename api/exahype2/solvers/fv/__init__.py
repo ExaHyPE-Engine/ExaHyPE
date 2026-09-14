@@ -7,3 +7,4 @@ from .PatchData import create_patch_and_halo
 
 import exahype2.solvers.fv.godunov
 import exahype2.solvers.fv.musclhancock
+import exahype2.solvers.fv.weno

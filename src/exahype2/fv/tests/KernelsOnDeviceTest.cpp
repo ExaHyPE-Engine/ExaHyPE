@@ -7,8 +7,10 @@
 #include "exahype2/fv/limiter/SlopeLimiter.h"
 #include "exahype2/fv/reconstruction/Constant.h"
 #include "exahype2/fv/reconstruction/LimitedLinear.h"
+#include "exahype2/fv/reconstruction/WENO.h"
 #include "exahype2/fv/tests/DeviceKernelFixtures.h"
 #include "exahype2/fv/timestepping/SingleStep.h"
+#include "exahype2/fv/weno/NonlinearWeights.h"
 #include "tarch/accelerator/ParallelFor.h"
 #include "tarch/accelerator/ParallelReduce.h"
 #include "tarch/accelerator/Reducer.h"
@@ -24,9 +26,11 @@ exahype2::fv::tests::KernelsOnDeviceTest::KernelsOnDeviceTest() :
 void exahype2::fv::tests::KernelsOnDeviceTest::run() {
   testMethod(testApplyFiniteVolumeWithConstantReconstruction);
   testMethod(testApplyFiniteVolumeWithLimitedLinearReconstruction);
+  testMethod(testApplyFiniteVolumeWithWENOReconstruction);
   testMethod(testApplyFiniteVolumeWithCustomRiemannSolver);
   testMethod(testHandleBoundaryWithOneHaloLayer);
   testMethod(testHandleBoundaryWithTwoHaloLayers);
+  testMethod(testHandleBoundaryWithThreeHaloLayers);
 }
 
 void exahype2::fv::tests::KernelsOnDeviceTest::validateBuffersMatch(
@@ -54,6 +58,16 @@ void exahype2::fv::tests::KernelsOnDeviceTest::testApplyFiniteVolumeWithLimitedL
     false>();
 }
 
+void exahype2::fv::tests::KernelsOnDeviceTest::testApplyFiniteVolumeWithWENOReconstruction() {
+  runApplyFiniteVolume<
+    exahype2::fv::reconstruction::WENO<exahype2::fv::weno::JiangShu>,
+    true,
+    true,
+    true,
+    false,
+    false>();
+}
+
 void exahype2::fv::tests::KernelsOnDeviceTest::testApplyFiniteVolumeWithCustomRiemannSolver() {
   runApplyFiniteVolume<exahype2::fv::reconstruction::Constant, true, false, false, false, true>();
 }
@@ -61,6 +75,8 @@ void exahype2::fv::tests::KernelsOnDeviceTest::testApplyFiniteVolumeWithCustomRi
 void exahype2::fv::tests::KernelsOnDeviceTest::testHandleBoundaryWithOneHaloLayer() { runHandleBoundary<1>(); }
 
 void exahype2::fv::tests::KernelsOnDeviceTest::testHandleBoundaryWithTwoHaloLayers() { runHandleBoundary<2>(); }
+
+void exahype2::fv::tests::KernelsOnDeviceTest::testHandleBoundaryWithThreeHaloLayers() { runHandleBoundary<3>(); }
 
 template <
   typename Reconstruction,

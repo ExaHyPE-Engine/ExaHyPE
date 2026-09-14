@@ -1,0 +1,22 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+TARGET_DECLARE
+template <typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::weno::JiangShu::weights(
+  const ComputePrecision* NOALIAS const idealWeights,
+  const ComputePrecision* NOALIAS const smoothnessIndicators,
+  ComputePrecision* NOALIAS const       nonlinearWeights
+) {
+  constexpr auto   Epsilon = static_cast<ComputePrecision>(1e-6);
+  ComputePrecision sum     = ComputePrecision(0);
+  for (int stencil = 0; stencil < NumberOfCandidateStencils; stencil++) {
+    const ComputePrecision regularised = Epsilon + smoothnessIndicators[stencil];
+    nonlinearWeights[stencil]          = idealWeights[stencil] / (regularised * regularised);
+    sum += nonlinearWeights[stencil];
+  }
+  for (int stencil = 0; stencil < NumberOfCandidateStencils; stencil++) {
+    nonlinearWeights[stencil] /= sum;
+  }
+}
+TARGET_DECLARE_END

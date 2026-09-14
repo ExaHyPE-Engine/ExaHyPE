@@ -121,18 +121,12 @@ namespace {
     using Default                        = DefaultSolver<NumberOfUnknowns, ComputePrecision>;
     using Custom                         = CustomSolver<NumberOfUnknowns, ComputePrecision>;
 
-    [[maybe_unused]] auto* neighbour =
-      &Reconstruction::neighbourAlongNormal<NumberOfVolumesPerAxis, NumberOfData, StoragePrecision>;
     [[maybe_unused]] auto* defaultEvolution =
       &Reconstruction::
         evolveFaceStates<Default, NumberOfUnknowns, NumberOfData, true, true, true, StoragePrecision, ComputePrecision>;
     [[maybe_unused]] auto* customEvolution =
       &Reconstruction::
         evolveFaceStates<Custom, NumberOfUnknowns, NumberOfData, true, true, true, StoragePrecision, ComputePrecision>;
-    [[maybe_unused]] auto* rusanov =
-      &Reconstruction::rusanovFaceFlux<Default, NumberOfUnknowns, true, ComputePrecision>;
-    [[maybe_unused]] auto* rusanovWithoutFlux =
-      &Reconstruction::rusanovFaceFlux<Default, NumberOfUnknowns, false, ComputePrecision>;
     [[maybe_unused]] auto* genericUpdate = &Reconstruction::accumulateFluxDivergence<
       Default,
       NumberOfVolumesPerAxis,

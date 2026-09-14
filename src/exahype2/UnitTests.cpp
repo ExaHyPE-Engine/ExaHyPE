@@ -22,6 +22,7 @@
 #include "exahype2/fv/tests/FiniteVolumeTest.h"
 #include "exahype2/fv/tests/HandleBoundaryTest.h"
 #include "exahype2/fv/tests/KernelsOnDeviceTest.h"
+#include "exahype2/fv/weno/tests/NonlinearWeightsTest.h"
 #include "exahype2/tests/CurviTest.h"
 #include "exahype2/tests/EnumerationTest.h"
 #include "exahype2/tests/NonNegativeReductionTest.h"
@@ -56,6 +57,7 @@ tarch::tests::TestCase* exahype2::getUnitTests() {
   result->addTestCase(new exahype2::fv::tests::FiniteVolumeTest());
   result->addTestCase(new exahype2::fv::tests::HandleBoundaryTest());
   result->addTestCase(new exahype2::fv::tests::KernelsOnDeviceTest());
+  result->addTestCase(new exahype2::fv::weno::tests::NonlinearWeightsTest());
   result->addTestCase(new exahype2::fv::limiter::tests::SlopeLimiterTest());
 
   result->addTestCase(new exahype2::tests::CurviTest());

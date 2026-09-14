@@ -73,7 +73,11 @@ set(SOURCES
   fv/limiter/SlopeLimiter.cpp
   fv/limiter/tests/SlopeLimiterTest.cpp
   fv/reconstruction/Constant.cpp
+  fv/reconstruction/InterfaceFluxes.cpp
   fv/reconstruction/LimitedLinear.cpp
+  fv/reconstruction/WENO.cpp
+  fv/weno/NonlinearWeights.cpp
+  fv/weno/tests/NonlinearWeightsTest.cpp
   fv/timestepping/SingleStep.cpp
   fv/particles/ParticleDomainBoundary.cpp
   fv/particles/ParticleForces.cpp

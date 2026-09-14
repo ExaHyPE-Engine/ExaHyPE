@@ -5,6 +5,7 @@
 #include "exahype2/fv/EigenvalueStatistics.h"
 #include "exahype2/fv/PatchUtils.h"
 #include "exahype2/fv/limiter/SlopeLimiter.h"
+#include "exahype2/fv/reconstruction/InterfaceFluxes.h"
 #include "peano4/Globals.h"
 #include "tarch/Assertions.h"
 #include "tarch/CompilerSpecificSettings.h"
@@ -63,17 +64,6 @@ struct exahype2::fv::reconstruction::LimitedLinear final {
     double&                                      maxEigenvalueAfterTimeStep
   );
 
-  template <int NumberOfVolumesPerAxis, int NumberOfData, typename StoragePrecision>
-  INLINE_METHOD GPU_CALLABLE_METHOD static const StoragePrecision* neighbourAlongNormal(
-    const StoragePrecision* NOALIAS const     inputPatch,
-    const StoragePrecision* NOALIAS const     faceInputPatches[TWO_TIMES_D],
-    const tarch::la::Vector<DIMENSIONS, int>& volumeIndex,
-    const int                                 centreOffset,
-    const int                                 strideAlongNormal,
-    const int                                 normal,
-    const int                                 offset
-  );
-
   template <
     typename Solver,
     int  NumberOfUnknowns,
@@ -94,18 +84,6 @@ struct exahype2::fv::reconstruction::LimitedLinear final {
     const double                                 timeStepSize,
     ComputePrecision* NOALIAS const              evolvedMinusState,
     ComputePrecision* NOALIAS const              evolvedPlusState
-  );
-
-  template <typename Solver, int NumberOfUnknowns, bool EvaluateFlux, typename ComputePrecision>
-  INLINE_METHOD GPU_CALLABLE_METHOD static ComputePrecision rusanovFaceFlux(
-    const ComputePrecision* NOALIAS const        leftState,
-    const ComputePrecision* NOALIAS const        rightState,
-    const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
-    const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
-    const int                                    normal,
-    const double                                 timeStamp,
-    const double                                 timeStepSize,
-    ComputePrecision* NOALIAS const              faceFlux
   );
 };
 TARGET_DECLARE_END
