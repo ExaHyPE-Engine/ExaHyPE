@@ -1,6 +1,6 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-"""Single-mode Rayleigh-Taylor instability with the WENO finite-volume solver.
+"""Single-mode Rayleigh-Taylor instability with a finite-volume solver.
 
 A heavy fluid rests on a light one under gravity, and a cosine perturbation of
 the interface seeds the instability. The pressure is hydrostatic, so the layers
@@ -25,6 +25,12 @@ def parse_arguments():
     parser.add_argument("-et", "--end-time", type=float, default=2.0)
     parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=16)
     parser.add_argument("-l", "--grid-levels", type=int, default=3)
+    parser.add_argument(
+        "-s",
+        "--solver",
+        choices=["godunov", "musclhancock", "weno"],
+        default="weno",
+    )
     args, _ = parser.parse_known_args()
     if args.help:
         parser.print_help()
@@ -70,7 +76,7 @@ boundary_conditions = """
 
 project = exahype2.Project(
     namespace=["tests", "exahype2", "fv"],
-    project_name="RayleighTaylorInstability",
+    project_name=f"RayleighTaylorInstability-{args.solver}",
     dimensions=2,
     size=[1.0, 2.0, 1.0],
     offset=[0.0, 0.0, 0.0],
@@ -81,7 +87,13 @@ project = exahype2.Project(
     max_grid_levels=args.grid_levels,
 )
 
-fv_solver = exahype2.solvers.fv.weno.GlobalAdaptiveTimeStep(
+solver_class = {
+    "godunov": exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep,
+    "musclhancock": exahype2.solvers.fv.musclhancock.GlobalAdaptiveTimeStep,
+    "weno": exahype2.solvers.fv.weno.GlobalAdaptiveTimeStep,
+}[args.solver]
+
+fv_solver = solver_class(
     name="FVSolver",
     patch_size=args.degrees_of_freedom,
     unknowns={"rho": 1, "rhoU": project.dimensions, "rhoE": 1},
@@ -95,6 +107,11 @@ fv_solver.set_implementation(
     max_eigenvalue=max_eigenvalue,
     flux=flux,
     source_term=source_term,
+    **(
+        {"limiter": exahype2.solvers.fv.musclhancock.Limiter.vanalbada}
+        if args.solver == "musclhancock"
+        else {}
+    ),
 )
 
 project.add_solver(fv_solver)
