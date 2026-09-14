@@ -65,9 +65,11 @@ set(SOURCES
   fv/Tracer.cpp
   fv/tests/ApplySplit1DRiemannToPatchTest.cpp
   fv/tests/CopyPatchTest.cpp
+  fv/tests/DeviceKernelFixtures.cpp
   fv/tests/EigenvalueStatisticsTest.cpp
   fv/tests/FiniteVolumeTest.cpp
   fv/tests/HandleBoundaryTest.cpp
+  fv/tests/KernelsOnDeviceTest.cpp
   fv/limiter/SlopeLimiter.cpp
   fv/limiter/tests/SlopeLimiterTest.cpp
   fv/reconstruction/Constant.cpp
@@ -82,6 +84,12 @@ set(SOURCES
   fv/particles/ParticleProjection.cpp
   fv/particles/ParticleUpdate.cpp
 )
+
+if(_peano_gpu_backend STREQUAL "cuda")
+  set_source_files_properties(fv/tests/KernelsOnDeviceTest.cpp PROPERTIES LANGUAGE CUDA)
+elseif(_peano_gpu_backend STREQUAL "hip")
+  set_source_files_properties(fv/tests/KernelsOnDeviceTest.cpp PROPERTIES LANGUAGE HIP)
+endif()
 
 install_peano_headers(
   PATTERNS ${HEADER_EXTENSIONS_TO_GLOB}
