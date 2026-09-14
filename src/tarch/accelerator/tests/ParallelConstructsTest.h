@@ -17,6 +17,7 @@ public:
   // The test bodies launch backend kernels via extended __device__ lambdas,
   // which nvcc forbids inside private/protected member functions, so these are
   // public.
+  void testParallelForOnHost();
   void testParallelFor();
   void testParallelForRangeMD2();
   void testParallelForRangeMD3();

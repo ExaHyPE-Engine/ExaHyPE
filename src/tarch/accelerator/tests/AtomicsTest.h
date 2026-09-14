@@ -14,8 +14,10 @@ public:
 
   void run() override;
 
+  // NVCC requires the enclosing function of an extended device lambda to be public.
+  void testConcurrentMaximumIsOrderIndependent();
+
 private:
   void testRaiseKeepsTheMaximum();
   void testLoadStoreRoundTrip();
-  void testConcurrentMaximumIsOrderIndependent();
 };

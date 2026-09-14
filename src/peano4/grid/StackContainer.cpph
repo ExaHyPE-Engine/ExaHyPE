@@ -102,7 +102,7 @@ void peano4::grid::StackContainer<StackType>::migratePoolSlots(
     _pool.reserve(std::max(entityCount, 2 * _pool.size()));
   }
   _pool.resize(entityCount);
-  tarch::parallelFor(
+  tarch::accelerator::parallelForOnHost(
     tarch::Range(static_cast<int>(stagedTargets.size())),
     [this, &stagedData, &stagedTargets](const int pairNumber) {
       _pool[stagedTargets[pairNumber]] = std::move(stagedData[pairNumber]);

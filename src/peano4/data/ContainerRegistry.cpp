@@ -16,7 +16,7 @@ namespace {
    */
   template <class Operation>
   void runContainerTasks(const std::vector<peano4::data::ManagedContainer*>& containers, const Operation& operation) {
-    tarch::parallelFor(tarch::Range(static_cast<int>(containers.size())), [&](const int containerNumber) {
+    tarch::accelerator::parallelForOnHost(tarch::Range(static_cast<int>(containers.size())), [&](const int containerNumber) {
       operation(containers[containerNumber]);
     });
   }
@@ -111,7 +111,7 @@ void peano4::data::ContainerRegistry::replicateInterfaceSlots(
   const int numberOfThreads = std::max(1, tarch::tasking::Runtime::getInstance().getNumberOfThreads());
   const int chunksPerContainer =
     std::max(1, (ReplicationChunksPerThread * numberOfThreads + numberOfContainers - 1) / numberOfContainers);
-  tarch::parallelFor(tarch::Range(numberOfContainers * chunksPerContainer), [&](const int itemNumber) {
+  tarch::accelerator::parallelForOnHost(tarch::Range(numberOfContainers * chunksPerContainer), [&](const int itemNumber) {
     _containers[itemNumber / chunksPerContainer]
       ->replicateInterfaceSlots(facePairs, vertexPairs, itemNumber % chunksPerContainer, chunksPerContainer);
   });

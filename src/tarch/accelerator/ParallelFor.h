@@ -18,21 +18,27 @@ namespace tarch {
   void parallelFor(const TeamRange& r, F f);
 } // namespace tarch
 
+#include "tarch/accelerator/ParallelForOnHost.cpph"
+
 #if defined(PEANO_WITH_GPU_BACKEND_KOKKOS)
 #include "tarch/accelerator/kokkos/Device.h"
 #include "tarch/accelerator/kokkos/ParallelFor.cpph"
 #elif defined(PEANO_WITH_GPU_BACKEND_CUDA)
+#if defined(__CUDACC__)
 #include "tarch/accelerator/cuda/Device.h"
 #include "tarch/accelerator/cuda/ErrorCheck.h"
 #include "tarch/accelerator/cuda/ParallelFor.cpph"
 
 #include <cuda_runtime.h>
+#endif
 #elif defined(PEANO_WITH_GPU_BACKEND_HIP)
+#if defined(__HIPCC__)
 #include "tarch/accelerator/hip/Device.h"
 #include "tarch/accelerator/hip/ErrorCheck.h"
 #include "tarch/accelerator/hip/ParallelFor.cpph"
 
 #include <hip/hip_runtime.h>
+#endif
 #elif defined(PEANO_WITH_GPU_BACKEND_SYCL)
 #include "tarch/accelerator/sycl/Device.h"
 #include "tarch/accelerator/sycl/ParallelFor.cpph"
@@ -44,6 +50,9 @@ namespace tarch {
 #include "tarch/accelerator/ParallelFor.cpph"
 #endif
 
+#if (!defined(PEANO_WITH_GPU_BACKEND_CUDA) || defined(__CUDACC__)) \
+  && (!defined(PEANO_WITH_GPU_BACKEND_HIP) || defined(__HIPCC__))
 namespace tarch {
   using accelerator::parallelFor;
 } // namespace tarch
+#endif

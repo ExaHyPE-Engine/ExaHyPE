@@ -25,10 +25,11 @@ namespace tarch {
 #include "tarch/accelerator/MemoryLocation.h"
 #include "tarch/accelerator/cuda/Device.h"
 #include "tarch/accelerator/cuda/ErrorCheck.h"
-#include "tarch/accelerator/cuda/ParallelReduce.cpph"
 
 #include <cub/cub.cuh>
 #include <cuda_runtime.h>
+
+#include "tarch/accelerator/cuda/ParallelReduce.cpph"
 #elif defined(PEANO_WITH_GPU_BACKEND_HIP)
 #include "tarch/accelerator/MemoryLocation.h"
 #include "tarch/accelerator/hip/Device.h"

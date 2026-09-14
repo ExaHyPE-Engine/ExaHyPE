@@ -16,6 +16,7 @@ tarch::accelerator::tests::ParallelConstructsTest::ParallelConstructsTest() :
   TestCase("tarch::accelerator::tests::ParallelConstructsTest") {}
 
 void tarch::accelerator::tests::ParallelConstructsTest::run() {
+  testMethod(testParallelForOnHost);
   testMethod(testParallelFor);
   testMethod(testParallelForRangeMD2);
   testMethod(testParallelForRangeMD3);
@@ -26,6 +27,19 @@ void tarch::accelerator::tests::ParallelConstructsTest::run() {
   testMethod(testParallelReduceRangeMD2);
   testMethod(testParallelReduceRangeMD3);
   testMethod(testParallelReduceTeam);
+}
+
+void tarch::accelerator::tests::ParallelConstructsTest::testParallelForOnHost() {
+  std::vector<double> hostValues(N, 0.0);
+  tarch::accelerator::parallelForOnHost(tarch::accelerator::Range(N), [&hostValues](const int i) {
+    hostValues[i] = static_cast<double>(2 * i);
+  });
+
+  bool correct = true;
+  for (int i = 0; i < N; ++i) {
+    correct = correct and (hostValues[i] == static_cast<double>(2 * i));
+  }
+  validate(correct);
 }
 
 void tarch::accelerator::tests::ParallelConstructsTest::testParallelFor() {
