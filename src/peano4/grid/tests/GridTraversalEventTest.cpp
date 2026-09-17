@@ -3,8 +3,8 @@
 #include "GridTraversalEventTest.h"
 
 #include "peano4/Globals.h"
-#include "peano4/datamanagement/CellMarker.h"
-#include "peano4/datamanagement/FaceMarker.h"
+#include "peano4/dataview/CellMarker.h"
+#include "peano4/dataview/FaceMarker.h"
 #include "peano4/grid/GridTraversalEvent.h"
 #include "tarch/la/Vector.h"
 

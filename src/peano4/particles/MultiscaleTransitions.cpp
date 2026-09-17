@@ -3,8 +3,8 @@
 #include "MultiscaleTransitions.h"
 
 #include "peano4/Loop.h"
-#include "peano4/datamanagement/CellMarker.h"
-#include "peano4/datamanagement/VertexMarker.h"
+#include "peano4/dataview/CellMarker.h"
+#include "peano4/dataview/VertexMarker.h"
 #include "tarch/Assertions.h"
 #include "tarch/instrumentation/Debug.h"
 
@@ -12,7 +12,7 @@
  * Returns the tolerance by which a cell's area grows before it owns the particles that
  * reside within it.
  */
-double peano4::particles::relativeSpatialOwnershipTolerance(const peano4::datamanagement::CellMarker& marker) {
+double peano4::particles::relativeSpatialOwnershipTolerance(const peano4::dataview::CellMarker& marker) {
   return internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE;
 }
 
@@ -20,7 +20,7 @@ peano4::particles::ParticleReassociationInstruction peano4::particles::liftParti
   const bool                                   isLocal,
   const double                                 searchRadius,
   const tarch::la::Vector<DIMENSIONS, double>& x,
-  const peano4::datamanagement::VertexMarker   marker
+  const peano4::dataview::VertexMarker         marker
 ) {
   const double tolerance =
     internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE;
@@ -31,7 +31,7 @@ peano4::particles::ParticleReassociationInstruction peano4::particles::liftParti
              and marker.isContainedInAdjacentCells(image, 0.5, tolerance)) {
     return ParticleReassociationInstructionKeep;
   } else if (marker.isParentCellLocal()
-             and peano4::datamanagement::CellMarker::isContained(
+             and peano4::dataview::CellMarker::isContained(
                image,
                marker.getInvokingParentCellsCentre(),
                marker.getH() * 3.0,
@@ -55,7 +55,7 @@ peano4::particles::ParticleReassociationInstruction peano4::particles::
     const bool                                   isLocal,
     const double                                 searchRadius,
     const tarch::la::Vector<DIMENSIONS, double>& x,
-    const peano4::datamanagement::CellMarker&    marker,
+    const peano4::dataview::CellMarker&          marker,
     const int                                    numberOfVertexWithinCell
   ) {
   if (not isLocal) {
@@ -76,7 +76,7 @@ peano4::particles::ParticleReassociationInstruction peano4::particles::
       return ParticleReassociationInstructionKeep;
     } else if (remainsOnSameLevel) {
       logDebug(
-        "reassign particle at " << x << " within cell " << marker.toString()
+        "Reassign particle at " << x << " within cell " << marker.toString()
                                 << " which had been associated with vertex " << currentAssociation << " but belongs to "
                                 << destAssociation
       );
@@ -85,7 +85,7 @@ peano4::particles::ParticleReassociationInstruction peano4::particles::
       return ParticleReassociationInstructionSieveGlobally;
     } else {
       logDebug(
-        "lift particle at " << x << " from cell " << marker.toString() << " as difference is " << (x - marker.getX())
+        "Lift particle at " << x << " from cell " << marker.toString() << " as difference is " << (x - marker.getX())
       );
 
       const std::bitset<DIMENSIONS> coarseDestAssociation =
@@ -102,7 +102,7 @@ peano4::particles::ParticleReassociationInstruction peano4::particles::
 bool peano4::particles::dropParticle(
   const double                                 searchRadius,
   const tarch::la::Vector<DIMENSIONS, double>& x,
-  const peano4::datamanagement::VertexMarker&  marker
+  const peano4::dataview::VertexMarker&        marker
 ) {
   const bool result = internal::fitsIntoLevel(searchRadius, marker)
     and marker.isContainedInAdjacentCells(
@@ -126,7 +126,7 @@ bool peano4::particles::dropParticle(
 bool peano4::particles::sieveParticle(
   const double                                 searchRadius,
   const tarch::la::Vector<DIMENSIONS, double>& x,
-  const peano4::datamanagement::VertexMarker&  marker
+  const peano4::dataview::VertexMarker&        marker
 ) {
   const bool belongsIntoNeighbouringCells = marker.isContainedInAdjacentCells(
     peano4::particles::periodicImageTowardsVertex(x, marker),
@@ -142,15 +142,15 @@ bool peano4::particles::sieveParticle(
 }
 
 bool peano4::particles::particleWillBeDroppedFurther(
-  const double                              searchRadius,
-  const peano4::datamanagement::CellMarker& marker
+  const double                        searchRadius,
+  const peano4::dataview::CellMarker& marker
 ) {
   return (marker.hasBeenRefined() or marker.willBeRefined()) and internal::fitsIntoLevel(searchRadius * 3.0, marker);
 }
 
 bool peano4::particles::particleWillBeDroppedFurther(
-  const double                                searchRadius,
-  const peano4::datamanagement::VertexMarker& marker
+  const double                          searchRadius,
+  const peano4::dataview::VertexMarker& marker
 ) {
   return (marker.hasBeenRefined() or marker.willBeRefined()) and internal::fitsIntoLevel(searchRadius * 3.0, marker);
 }

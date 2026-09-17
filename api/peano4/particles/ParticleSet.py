@@ -15,12 +15,12 @@ class AbstractParticleSetGenerator:
 
     def get_stack_container(self):
         particle_set_type = self._data.get_full_qualified_type()
-        return f"peano4::stacks::StackWithCustomSerialisation<{particle_set_type}>"
+        return f"::peano4::grid::Stack<{particle_set_type}>"
 
     def get_header_file_include(self):
         output_namespace = self._data.namespace[-1]
         return f"""
-#include "peano4/stacks/StackWithCustomSerialisation.h"
+#include "peano4/grid/Stack.h"
 #include "{output_namespace}/{self._data.name}.h"
 """
 

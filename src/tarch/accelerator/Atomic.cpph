@@ -1,48 +1,78 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+TARGET_DECLARE
 /**
- * Lowers the target atomically when the candidate value is smaller.
+ * Reads one value whose caller excludes concurrent access to the same address.
+ *
+ * The host uses a relaxed atomic load, while device backends use an ordinary
+ * load. This routine is not a synchronisation boundary.
+ */
+template <typename T>
+INLINE_METHOD GPU_CALLABLE_METHOD T tarch::accelerator::loadAtomic(const T& target) {
+  T result{};
+  COMPILE_IF_ON_HOST(result = std::atomic_ref<T>(const_cast<T&>(target)).load(std::memory_order_relaxed);)
+  COMPILE_IF_ON_DEVICE(result = target;)
+  return result;
+}
+
+/**
+ * Overwrites the target with relaxed memory ordering. Device backends use an
+ * ordinary store, so this routine is not a synchronisation boundary.
+ */
+template <typename T>
+INLINE_METHOD GPU_CALLABLE_METHOD void tarch::accelerator::storeAtomic(T& target, const T value) {
+  COMPILE_IF_ON_HOST(std::atomic_ref<T>(target).store(value, std::memory_order_relaxed);)
+  COMPILE_IF_ON_DEVICE(target = value;)
+}
+
+/**
+ * Raises the target to a larger value, keeping the maximum over concurrent
+ * writers so the result is independent of their order.
+ */
+template <typename T>
+INLINE_METHOD GPU_CALLABLE_METHOD void tarch::accelerator::updateAtomicMax(T& target, const T value) {
+#if defined(PEANO_WITH_GPU_BACKEND_KOKKOS)
+  Kokkos::atomic_max(&target, value);
+#elif defined(PEANO_WITH_GPU_BACKEND_SYCL)
+  sycl::
+    atomic_ref<T, sycl::memory_order::relaxed, sycl::memory_scope::device, sycl::access::address_space::global_space>
+      reference(target);
+  reference.fetch_max(value);
+#elif defined(PEANO_WITH_GPU_BACKEND_OMPT)
+#pragma omp atomic compare
+  if (target < value) {
+    target = value;
+  }
+#else
+  COMPILE_IF_ON_HOST(
+    std::atomic_ref<T> reference(target); T current = reference.load(std::memory_order_relaxed);
+    while (current < value and not reference.compare_exchange_weak(current, value, std::memory_order_relaxed)){}
+  )
+  COMPILE_IF_ON_DEVICE(atomicMax(&target, value);)
+#endif
+}
+TARGET_DECLARE_END
+
+/**
+ * Lowers the target when the candidate value is smaller.
  *
  * Relaxed ordering makes the numeric update atomic without ordering other
  * memory. Callers provide any additional ordering.
- *
- * @return The value stored after this update attempt.
  */
 template <typename T>
-INLINE_METHOD T tarch::accelerator::updateAtomicMin(T& target, const T value) {
+INLINE_METHOD void tarch::accelerator::updateAtomicMin(T& target, const T value) {
   std::atomic_ref<T> atomicTarget(target);
   auto               current = atomicTarget.load(std::memory_order_relaxed);
   while (value < current) {
     if (atomicTarget.compare_exchange_weak(current, value, std::memory_order_relaxed)) {
-      return value;
+      return;
     }
   }
-  return current;
 }
 
 /**
- * Raises the target atomically when the candidate value is larger.
- *
- * Relaxed ordering makes the numeric update atomic without ordering other
- * memory. Callers provide any additional ordering.
- *
- * @return The value stored after this update attempt.
- */
-template <typename T>
-INLINE_METHOD T tarch::accelerator::updateAtomicMax(T& target, const T value) {
-  std::atomic_ref<T> atomicTarget(target);
-  auto               current = atomicTarget.load(std::memory_order_relaxed);
-  while (value > current) {
-    if (atomicTarget.compare_exchange_weak(current, value, std::memory_order_relaxed)) {
-      return value;
-    }
-  }
-  return current;
-}
-
-/**
- * Increments the target atomically with relaxed memory ordering.
+ * Increments the target with relaxed memory ordering.
  *
  * @return The value stored after the increment.
  */
@@ -53,7 +83,7 @@ INLINE_METHOD T tarch::accelerator::incrementAtomic(T& target) {
 }
 
 /**
- * Adds the value atomically with relaxed memory ordering.
+ * Adds the value with relaxed memory ordering.
  *
  * @return The value stored after the addition.
  */
@@ -67,13 +97,4 @@ INLINE_METHOD T tarch::accelerator::addAtomic(T& target, const T value) {
       return updatedValue;
     }
   }
-}
-
-/**
- * Overwrites the target atomically with relaxed memory ordering.
- */
-template <typename T>
-INLINE_METHOD void tarch::accelerator::storeAtomic(T& target, const T value) {
-  std::atomic_ref<T> atomicTarget(target);
-  atomicTarget.store(value, std::memory_order_relaxed);
 }

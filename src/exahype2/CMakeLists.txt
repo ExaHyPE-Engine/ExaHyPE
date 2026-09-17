@@ -4,17 +4,10 @@
 file(GLOB_RECURSE HEADERS ${HEADER_EXTENSIONS_TO_GLOB})
 
 set(SOURCES
-  CellData.cpp
   Curvi.cpp
-  Enumeration.cpp
-  NonNegativeReduction.cpp
-  NonNegativeStatistics.cpp
   PrecisionControl.cpp
-  ProjectPatch.cpp
-  ReconstructPatch.cpp
   RefinementControl.cpp
   RefinementControlService.cpp
-  RefinementCriterionHelpers.cpp
   TimeStepping.cpp
   UnitTests.cpp
   tests/CurviTest.cpp
@@ -26,9 +19,6 @@ set(SOURCES
   tests/RefinementControlTest.cpp
   tests/RefinementCriterionHelpersTest.cpp
 
-  amr/AMRRoutines.cpp
-  amr/ChildDataStage.cpp
-  amr/MultiresolutionDetail.cpp
   amr/tests/ChildDataStageTest.cpp
   amr/tests/InterpolationTest.cpp
   amr/tests/MultiresolutionDetailTest.cpp
@@ -37,13 +27,8 @@ set(SOURCES
   dg/BoundaryConditions.cpp
   dg/CellIntegral.cpp
   dg/DGUtils.cpp
-  dg/EigenvalueStatistics.cpp
-  dg/Limiter.cpp
-  dg/LimiterStatus.cpp
   dg/LimitingSolverState.cpp
   dg/Riemann.cpp
-  dg/SubcellProjection.cpp
-  dg/Tracer.cpp
   dg/tests/CellIntegralTest.cpp
   dg/tests/DGUtilsTest.cpp
   dg/tests/EigenvalueStatisticsTest.cpp
@@ -56,10 +41,6 @@ set(SOURCES
   dg/rusanov/Rusanov.cpp
   dg/rusanov/tests/RiemannTest.cpp
 
-  fv/BoundaryConditions.cpp
-  fv/EigenvalueStatistics.cpp
-  fv/FiniteVolume.cpp
-  fv/HandleBoundary.cpp
   fv/PatchUtils.cpp
   fv/PostprocessingKernels.cpp
   fv/Tracer.cpp
@@ -68,19 +49,11 @@ set(SOURCES
   fv/tests/EigenvalueStatisticsTest.cpp
   fv/tests/FiniteVolumeTest.cpp
   fv/tests/HandleBoundaryTest.cpp
-  fv/limiter/SlopeLimiter.cpp
   fv/limiter/tests/SlopeLimiterTest.cpp
-  fv/reconstruction/Constant.cpp
-  fv/reconstruction/LimitedLinear.cpp
-  fv/timestepping/SingleStep.cpp
-  fv/particles/ParticleDomainBoundary.cpp
   fv/particles/ParticleForces.cpp
   fv/particles/ParticleHelper.cpp
-  fv/particles/ParticleIntegration.cpp
-  fv/particles/ParticleIntegrationHelper.cpp
   fv/particles/ParticleInterpolation.cpp
   fv/particles/ParticleProjection.cpp
-  fv/particles/ParticleUpdate.cpp
 )
 
 install_peano_headers(

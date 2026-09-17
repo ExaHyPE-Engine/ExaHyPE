@@ -11,31 +11,32 @@ configure_file(
 
 set(SOURCES
   Init.cpp
-  Loop.cpp
   UnitTests.cpp
 
   communication/CommunicationManager.cpp
   communication/tests/CommunicationManagerTest.cpp
 
   data/ContainerRegistry.cpp
-  data/RegisteredStackContainer.cpp
   data/tests/ContainerRegistryTest.cpp
+  data/tests/PooledRecordTest.cpp
   data/tests/RegisteredStackContainerTest.cpp
 
-  datamanagement/CellMarker.cpp
-  datamanagement/FaceMarker.cpp
-  datamanagement/VertexMarker.cpp
+  dataview/CellMarker.cpp
+  dataview/FaceMarker.cpp
+  dataview/VertexMarker.cpp
+  dataview/tests/CellMarkerTest.cpp
+  dataview/tests/EnumeratorTest.cpp
+  dataview/tests/FaceMarkerTest.cpp
+  dataview/tests/MetaDataRecordTest.cpp
+  dataview/tests/VertexMarkerTest.cpp
 
   grid/AutomatonState.cpp
-  grid/BoundaryDataAggregation.cpp
   grid/GridControlEvent.cpp
   grid/GridStatistics.cpp
   grid/GridTraversalEvent.cpp
-  grid/GridTraversalObserver.cpp
   grid/GridVertex.cpp
   grid/LatticeIndexMap.cpp
   grid/PeanoCurve.cpp
-  grid/StackContainer.cpp
   grid/StackTopology.cpp
   grid/tests/AutomatonStateTest.cpp
   grid/tests/BoundaryDataAggregationTest.cpp
@@ -44,12 +45,16 @@ set(SOURCES
   grid/tests/GridTraversalEventTest.cpp
   grid/tests/GridVertexTest.cpp
   grid/tests/LatticeIndexMapTest.cpp
+  grid/tests/SelfSerialisingRecord.cpp
+  grid/tests/SendReceiveContextTest.cpp
+  grid/tests/StackContainerTest.cpp
+  grid/tests/StackExchangeTest.cpp
+  grid/tests/StackTest.cpp
   grid/tests/StackTopologyTest.cpp
 
   particles/FileReader.cpp
   particles/MultiscaleTransitions.cpp
   particles/ParticleFactory.cpp
-  particles/ParticleSet.cpp
   particles/TrajectoryDatabase.cpp
   particles/internal.cpp
   particles/particles.cpp
@@ -66,16 +71,6 @@ set(SOURCES
   particles/tests/TestHelpers.cpp
   particles/tests/TestParticle.cpp
   particles/tests/TrajectoryDatabaseTest.cpp
-
-  stacks/IOMode.cpp
-  stacks/SendReceiveContext.cpp
-  stacks/Stack.cpp
-  stacks/StackWithCustomSerialisation.cpp
-  stacks/StackWithSerialisation.cpp
-  stacks/tests/StackTest.cpp
-  stacks/tests/TestDataOnHeap.cpp
-  stacks/tests/TestDataOnHeapWithContainer.cpp
-  stacks/tests/TestDataOnStack.cpp
 
   tests/LoopTest.cpp
 

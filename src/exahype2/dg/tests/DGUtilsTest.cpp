@@ -4,7 +4,7 @@
 
 #include "exahype2/dg/DGUtils.h"
 #include "exahype2/dg/tests/TestUtils.h"
-#include "peano4/datamanagement/CellMarker.h"
+#include "peano4/dataview/CellMarker.h"
 
 exahype2::dg::tests::DGUtilsTest::DGUtilsTest() :
   TestCase("exahype2::dg::tests::DGUtilsTest") {}
@@ -19,7 +19,7 @@ void exahype2::dg::tests::DGUtilsTest::run() {
 void exahype2::dg::tests::DGUtilsTest::testEvaluatePolynomialOrder1() {
   const int order = 1;
 
-  peano4::datamanagement::CellMarker cellMarker;
+  peano4::dataview::CellMarker cellMarker;
 
 #if DIMENSIONS == 2
   cellMarker.h                                      = {0.2, 0.2};
@@ -53,7 +53,7 @@ void exahype2::dg::tests::DGUtilsTest::testEvaluatePolynomialOrder1() {
 void exahype2::dg::tests::DGUtilsTest::testEvaluatePolynomialOrder2() {
   const int order = 2;
 
-  peano4::datamanagement::CellMarker cellMarker;
+  peano4::dataview::CellMarker cellMarker;
 
 #if DIMENSIONS == 2
   cellMarker.h                                      = {0.2, 0.2};

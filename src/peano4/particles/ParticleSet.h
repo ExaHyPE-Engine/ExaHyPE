@@ -72,7 +72,7 @@ public:
 
   static SieveParticles<T> cloneParticlesToBeSieved();
 
-  static ParticleList getParticlesToBeSievedIntoVertex(const peano4::datamanagement::VertexMarker& marker);
+  static ParticleList getParticlesToBeSievedIntoVertex(const peano4::dataview::VertexMarker& marker);
   static bool         hasParticlesToBeSievedIntoVertices();
 
   static int getNumberOfParticlesThatHaveBeSievedIntoVertices();

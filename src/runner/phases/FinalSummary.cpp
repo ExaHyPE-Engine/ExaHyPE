@@ -15,6 +15,9 @@ namespace {
     if (observerName == runner::StepName::CreateGrid) {
       return runner::PhaseName::GridConstruction;
     }
+    if (observerName == runner::StepName::AllocateMemory) {
+      return runner::PhaseName::AllocateMemory;
+    }
     if (observerName == runner::StepName::InitGrid) {
       return runner::PhaseName::GridInitialisation;
     }
@@ -29,6 +32,8 @@ namespace {
     }
     return observerName;
   }
+
+  bool traversesGrid(const std::string& observerName) { return observerName != runner::StepName::AllocateMemory; }
 
   std::string seconds(const double value) {
     std::ostringstream result;
@@ -45,9 +50,9 @@ void runner::FinalSummary::run() {
 
   const auto& measurements = _context.measurements;
 
-  // The rows follow the phase order of a run; steps outside this list keep their first-use order.
-  constexpr std::array<const char*, 5> StepOrder = {
+  constexpr std::array<const char*, 6> StepOrder = {
     runner::StepName::CreateGrid,
+    runner::StepName::AllocateMemory,
     runner::StepName::InitGrid,
     runner::StepName::PlotSolution,
     runner::StepName::DynamicAMR,
@@ -75,14 +80,17 @@ void runner::FinalSummary::run() {
 
   std::vector<std::pair<std::string, std::string>> entries;
   for (const auto& [name, measurement] : stepTimes) {
-    const auto         numberOfSweeps = measurement.getNumberOfMeasurements();
-    const auto         wallClock      = measurement.getAccumulatedValue();
+    const auto         wallClock = measurement.getAccumulatedValue();
     std::ostringstream value;
-    value << seconds(wallClock) << "  (" << numberOfSweeps << (numberOfSweeps == 1 ? " Sweep" : " Sweeps");
-    if (numberOfThreads > 1 and wallClock > 0.0) {
-      value << " · Cores " << runner::Format::percentage(100.0 * taskSecondsOf(name) / (numberOfThreads * wallClock));
+    value << seconds(wallClock);
+    if (traversesGrid(name)) {
+      const auto numberOfSweeps = measurement.getNumberOfMeasurements();
+      value << "  (" << numberOfSweeps << (numberOfSweeps == 1 ? " Sweep" : " Sweeps");
+      if (numberOfThreads > 1 and wallClock > 0.0) {
+        value << " · Cores " << runner::Format::percentage(100.0 * taskSecondsOf(name) / (numberOfThreads * wallClock));
+      }
+      value << ")";
     }
-    value << ")";
     entries.emplace_back("Total Time Spent in " + displayLabel(name), value.str());
   }
 

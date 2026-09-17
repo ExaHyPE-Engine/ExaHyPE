@@ -52,7 +52,6 @@ def create_patch_and_halo(
         interior.generator.can_send = "false"
 
     for halo in (halo_old, halo_new):
-        halo.generator.use_copy_for_exchange = "false"
-        halo.generator.merge_method_definition = "*this = std::move(neighbour);"
+        halo.generator.halo_layout = "overlapping_volumes"
 
     return solution, previous_solution, halo_old, halo_new

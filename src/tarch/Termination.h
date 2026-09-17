@@ -4,8 +4,8 @@
 
 namespace tarch {
   [[noreturn]] void terminateWithError(
-    const std::string_view     message,
-    const int                  errorCode = -1,
-    const std::source_location location  = std::source_location::current()
+    std::string_view     message,
+    int                  errorCode = -1,
+    std::source_location location  = std::source_location::current()
   );
 } // namespace tarch

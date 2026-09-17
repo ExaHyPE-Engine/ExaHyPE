@@ -3,10 +3,7 @@
 #pragma once
 
 #include "peano4/data/RegisteredStackContainer.h"
-
-#include "peano4/stacks/Stack.h"
-#include "peano4/stacks/StackWithSerialisation.h"
-#include "peano4/stacks/StackWithCustomSerialisation.h"
+#include "peano4/grid/Stack.h"
 
 {{VERTEX_DATA_CONTAINER_INCLUDES}}
 {{FACE_DATA_CONTAINER_INCLUDES}}
@@ -20,7 +17,7 @@ namespace {{ item }} {
 }
 {%- endfor %}
 
-class {{FULL_QUALIFIED_CLASSNAME}} {
+class {{FULL_QUALIFIED_CLASSNAME}} final {
 public:
 {% for container in VERTEX_DATA_CONTAINERS -%}
   static ::peano4::data::RegisteredStackContainer<{{container.stack}}> {{container.name}}StackContainer;

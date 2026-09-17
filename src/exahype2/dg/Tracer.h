@@ -5,27 +5,27 @@
 #include "DGUtils.h"
 
 #include "peano4/Globals.h"
-#include "peano4/datamanagement/CellMarker.h"
+#include "peano4/dataview/CellMarker.h"
 
 namespace exahype2::dg {
   template <typename Particle, int SourceIndex, int DestIndex, typename QStoreType>
   void projectValueOntoParticle(
-    const peano4::datamanagement::CellMarker& marker,
-    int                                       order,
-    const QStoreType* NOALIAS                 QuadratureNodes1D,
-    int                                       unknownsPerDoF,
-    const QStoreType* NOALIAS                 Q,
-    Particle&                                 particle
+    const peano4::dataview::CellMarker& marker,
+    int                                 order,
+    const QStoreType* NOALIAS           QuadratureNodes1D,
+    int                                 unknownsPerDoF,
+    const QStoreType* NOALIAS           Q,
+    Particle&                           particle
   );
 
   template <typename Particle, typename QStoreType>
   void projectAllValuesOntoParticle(
-    const peano4::datamanagement::CellMarker& marker,
-    int                                       order,
-    const QStoreType* NOALIAS                 QuadratureNodes1D,
-    int                                       unknownsPerDoF,
-    const QStoreType* NOALIAS                 Q,
-    Particle&                                 particle
+    const peano4::dataview::CellMarker& marker,
+    int                                 order,
+    const QStoreType* NOALIAS           QuadratureNodes1D,
+    int                                 unknownsPerDoF,
+    const QStoreType* NOALIAS           Q,
+    Particle&                           particle
   );
 } // namespace exahype2::dg
 

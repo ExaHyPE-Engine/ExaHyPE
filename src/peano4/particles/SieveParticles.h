@@ -2,8 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "peano4/dataview/VertexMarker.h"
 #include "peano4/particles/MultiscaleTransitions.h"
-#include "peano4/datamanagement/VertexMarker.h"
 #include "tarch/Termination.h"
 #include "tarch/instrumentation/Debug.h"
 #include "tarch/mpi/Collectives.h"
@@ -43,10 +43,10 @@ public:
   SieveParticles<T> cloneParticlesToBeSieved();
 
   ParticleList getParticlesToBeSievedIntoVertex(
-    const peano4::datamanagement::VertexMarker& marker,
-    bool                                        removeReturnedParticlesFromSet,
-    bool                                        onlyReturnParticlesThatWillBeLocal,
-    bool                                        lockMutex
+    const peano4::dataview::VertexMarker& marker,
+    bool                                  removeReturnedParticlesFromSet,
+    bool                                  onlyReturnParticlesThatWillBeLocal,
+    bool                                  lockMutex
   );
 
   bool hasParticlesToBeSievedIntoVertices() const;

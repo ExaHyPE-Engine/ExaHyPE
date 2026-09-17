@@ -3,7 +3,8 @@
 #pragma once
 
 #include "peano4/Globals.h"
-#include "peano4/stacks/Stack.h"
+#include "peano4/grid/Stack.h"
+#include "peano4/grid/StackExchange.h"
 #include "tarch/Assertions.h"
 #include "tarch/Termination.h"
 #include "tarch/mpi/AbstractCommunicationManager.h"

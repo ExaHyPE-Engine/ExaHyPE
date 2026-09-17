@@ -78,7 +78,7 @@ dictionary entries besides the ones manually handed over by the user.
       os.makedirs(directory + "/" + self.subdirectory, exist_ok=True)
 
     header_filename = directory + "/" + self.subdirectory + "/" + self.classname + Path(self.headerfile_template).suffix
-    cpp_filename    = directory + "/" + self.subdirectory + "/" + self.classname + Path(self.cppfile_template).suffix
-
     self.__generate_file(directory,protected_files,header_filename,self.headerfile_template)
-    self.__generate_file(directory,protected_files,cpp_filename   ,self.cppfile_template)
+    if self.cppfile_template is not None:
+      cpp_filename = directory + "/" + self.subdirectory + "/" + self.classname + Path(self.cppfile_template).suffix
+      self.__generate_file(directory,protected_files,cpp_filename,self.cppfile_template)

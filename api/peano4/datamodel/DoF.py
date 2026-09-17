@@ -66,9 +66,9 @@ class DoF(object):
         - The third one is the name that you want to use in the dof signatures
           for this argument.
 
-          It is the responsibility of the DoF subclass to ensure that the second
-          entry is properly used to initialise the store and load routines.
-          Most define an additional setter for property.
+          The DoF subclass initialises the store and load routines from the
+          second entry. Most subclasses define an additional setter for the
+          property.
 
         ## Attributes
 
@@ -110,9 +110,9 @@ class DoF(object):
         """What should the data type be called within the data repository."""
         result = ""
         if self.association == DoFAssociation.Vertex:
-            result += "::peano4::datamanagement::VertexEnumerator<"
+            result += "::peano4::dataview::VertexEnumerator<"
         elif self.association == DoFAssociation.Face:
-            result += "::peano4::datamanagement::FaceEnumerator<"
+            result += "::peano4::dataview::FaceEnumerator<"
         else:
             assert False, "Association was {}".format(self.association)
         result += self.get_full_qualified_type()

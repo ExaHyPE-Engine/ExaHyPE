@@ -25,4 +25,5 @@ private:
   void testSubtreeTaskReplicationNeedsEveryContainer();
   void testDetachedContainersAreNoLongerVisited();
   void testEveryOperationForwardsItsArgumentsUnchanged();
+  void testAllocatePayloadPoolsBindsEveryContainer();
 };

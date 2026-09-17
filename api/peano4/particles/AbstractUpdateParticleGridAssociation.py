@@ -99,7 +99,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
           particle->setCellH(marker.getH());
           peano4::particles::updateContainedInAdjacentCellProperty(marker, *particle);
           const auto parentVertexPosition =
-            peano4::datamanagement::reconstructXOfParentVertex(marker, parentVertex);
+            peano4::dataview::reconstructXOfParentVertex(marker, parentVertex);
           peano4::particles::assignmentchecks::detachParticleFromVertex(
             "{{PARTICLE}}",
             particle->getX(),
@@ -175,7 +175,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     );
     _numberOfLifts += fineGridVertex{{PARTICLES_CONTAINER}}.size();
     const auto parentVertexPosition =
-      peano4::datamanagement::reconstructXOfParentVertex(marker, parentVertexNumber);
+      peano4::dataview::reconstructXOfParentVertex(marker, parentVertexNumber);
     const auto parentCellSize = 3.0 * marker.getH();
     for (auto* const particle : fineGridVertex{{PARTICLES_CONTAINER}}) {
 #if PEANO_ASSERTIONS

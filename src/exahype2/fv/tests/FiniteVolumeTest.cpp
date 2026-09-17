@@ -2,16 +2,27 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "FiniteVolumeTest.h"
 
+#include "exahype2/Enumeration.h"
 #include "exahype2/fv/FiniteVolume.h"
 #include "exahype2/fv/limiter/SlopeLimiter.h"
+#include "exahype2/fv/particles/ParticleUpdate.h"
 #include "exahype2/fv/reconstruction/Constant.h"
 #include "exahype2/fv/reconstruction/LimitedLinear.h"
 #include "exahype2/fv/timestepping/SingleStep.h"
-#include "exahype2/Enumeration.h"
 
 namespace {
+  struct TestParticle final {
+    tarch::la::Vector<DIMENSIONS, double> getX() const { return x; }
+    void                                  setX(const tarch::la::Vector<DIMENSIONS, double>& position) { x = position; }
+    double                                getData(const int index) const { return data[index]; }
+    void                                  setData(const int index, const double value) { data[index] = value; }
+
+    tarch::la::Vector<DIMENSIONS, double> x{0.0};
+    std::array<double, 16>                data{};
+  };
+
   // Exposes every term the kernel can evaluate through a small PDE. The exact
-  // form does not matter: the kernel only calls the stateless functors, and the
+  // form does not matter: The kernel only calls the stateless functors, and the
   // invariant tests keep the extra terms off.
   template <int NumberOfUnknowns>
   struct TestSolver {
@@ -178,7 +189,7 @@ namespace {
   }
 
   // Profiles that only depend on the first coordinate solve the PDE the
-  // TestSolver induces exactly: the advection along the other directions
+  // TestSolver induces exactly: The advection along the other directions
   // leaves them invariant, so this travelling coordinate is an analytic
   // oracle. The speed is AdvectionSpeed for the flux alone and grows by
   // NcpAdvectionSpeed when the non-conservative product is active.
@@ -769,6 +780,7 @@ void exahype2::fv::tests::FiniteVolumeTest::run() {
   testMethod(testSodShockTubeReachesStarStates);
   testMethod(testReconstructionHookReproducingDefaultChangesNothing);
   testMethod(testLimiterHookReproducingMinmodChangesNothing);
+  testMethod(testParticleUpdateAdvancesWithExplicitEuler);
 }
 
 void exahype2::fv::tests::FiniteVolumeTest::testZeroTimeStepPreservesState() {
@@ -1064,8 +1076,8 @@ void exahype2::fv::tests::FiniteVolumeTest::testPeriodicAdvectionConservesMass()
 void exahype2::fv::tests::FiniteVolumeTest::testSodShockTubeReachesStarStates() {
   // The tube varies along the first axis alone, so a cubic patch repeats the
   // same profile once per transverse volume. Three dimensions therefore use
-  // fewer volumes per axis: enough to resolve the star plateaus the samples
-  // read, and wide enough that the shared step stays stable.
+  // fewer volumes per axis: Enough to resolve the star plateaus the samples
+  // read, and wide enough that the repeated step stays stable.
   constexpr int    VolumesPerAxis = DIMENSIONS == 2 ? 54 : 36;
   constexpr int    Steps          = 116;
   constexpr double TimeStepSize   = 0.00175;
@@ -1161,4 +1173,48 @@ void exahype2::fv::tests::FiniteVolumeTest::testLimiterHookReproducingMinmodChan
     maxDifference = std::max(maxDifference, std::abs(fromPolicy[entry] - fromHook[entry]));
   }
   validateNumericalEquals(maxDifference, 0.0);
+}
+
+void exahype2::fv::tests::FiniteVolumeTest::testParticleUpdateAdvancesWithExplicitEuler() {
+  const int  originalForceMethod         = exahype2::fv::particles::forces::_forceMethod;
+  const int  originalVoxelsPerAxis       = exahype2::fv::particles::interpolation::_voxelsPerAxis;
+  const int  originalUnknownsPerVoxel    = exahype2::fv::particles::interpolation::_unknownsPerVoxel;
+  const int  originalInterpolationMethod = exahype2::fv::particles::interpolation::_interpolationMethod;
+  const auto originalDomainOffset        = exahype2::fv::particles::utils::domainOffset;
+  const auto originalDomainSize          = exahype2::fv::particles::utils::domainSize;
+  const auto originalPeriodicity         = exahype2::fv::particles::utils::isPeriodic;
+
+  TestParticle particle;
+  particle.x       = tarch::la::Vector<DIMENSIONS, double>(0.25);
+  particle.data[3] = 2.0;
+
+  exahype2::fv::particles::forces::disableAllForces();
+  exahype2::fv::particles::interpolation::setGlobalInterpolationParameters(1, 1, 0);
+  exahype2::fv::particles::utils::setGlobalParameters(
+    tarch::la::Vector<DIMENSIONS, double>(0.0),
+    tarch::la::Vector<DIMENSIONS, double>(1.0),
+    tarch::la::Vector<DIMENSIONS, int>(1)
+  );
+
+  peano4::dataview::CellMarker marker{};
+  marker.centre              = tarch::la::Vector<DIMENSIONS, double>(0.5);
+  marker.h                   = tarch::la::Vector<DIMENSIONS, double>(1.0);
+  const double cellValues[1] = {0.0};
+
+  exahype2::fv::particles::updateParticleState<0>(particle, marker, cellValues, 0.1, 1);
+  for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
+    const double expectedPosition = dimension == 0 ? 0.45 : 0.25;
+    const double expectedVelocity = dimension == 0 ? 2.0 : 0.0;
+    validateNumericalEquals(particle.x(dimension), expectedPosition);
+    validateNumericalEquals(particle.data[3 + dimension], expectedVelocity);
+    validateNumericalEquals(particle.data[5 + dimension], 0.0);
+  }
+
+  exahype2::fv::particles::forces::setForceMethod(originalForceMethod);
+  exahype2::fv::particles::interpolation::setGlobalInterpolationParameters(
+    originalVoxelsPerAxis,
+    originalUnknownsPerVoxel,
+    originalInterpolationMethod
+  );
+  exahype2::fv::particles::utils::setGlobalParameters(originalDomainOffset, originalDomainSize, originalPeriodicity);
 }

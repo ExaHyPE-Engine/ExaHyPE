@@ -125,10 +125,6 @@ analytical_solution = """
   const double r = sqrt(pow(x0 - x_center, 2) + pow(y0 - y_center, 2));
   const double omega = sqrt(mu / (r * r * r));
 
-  // Compute velocity perpendicular to radius for circular orbit
-  const double vx0 = -omega * (y0 - y_center); // Perpendicular direction (tangential)
-  const double vy0 =  omega * (x0 - x_center);
-
   // Mass of orbiting body
   const double mass = 1.0;
 

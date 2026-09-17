@@ -185,7 +185,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() 
 
     def create_compute_time_step_size(self):
         return """
-    const auto timeStepSize =
+    [[maybe_unused]] const auto timeStepSize =
       repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize();
 """
 

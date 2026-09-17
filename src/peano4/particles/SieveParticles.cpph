@@ -165,10 +165,10 @@ bool peano4::particles::SieveParticles<T>::hasParticlesToBeSievedIntoVertices() 
 template <typename T>
 typename peano4::particles::SieveParticles<T>::ParticleList peano4::particles::SieveParticles<T>::
   getParticlesToBeSievedIntoVertex(
-    const peano4::datamanagement::VertexMarker& marker,
-    bool                                        removeReturnedParticlesFromSet,
-    bool                                        onlyReturnParticlesThatWillBeLocal,
-    bool                                        lockMutex
+    const peano4::dataview::VertexMarker& marker,
+    bool                                  removeReturnedParticlesFromSet,
+    bool                                  onlyReturnParticlesThatWillBeLocal,
+    bool                                  lockMutex
   ) {
   std::unique_lock<std::mutex> lock(_particlesToBeSievedMutex, std::defer_lock);
   if (removeReturnedParticlesFromSet and lockMutex) {
@@ -178,7 +178,8 @@ typename peano4::particles::SieveParticles<T>::ParticleList peano4::particles::S
   ParticleList selectedParticles;
   auto         particleIterator = _particlesThatHaveToBeSieved.begin();
   while (particleIterator != _particlesThatHaveToBeSieved.end()) {
-    const bool willBeLocal = peano4::particles::particleAssignedToVertexWillBeLocal((*particleIterator)->getX(), marker);
+    const bool willBeLocal =
+      peano4::particles::particleAssignedToVertexWillBeLocal((*particleIterator)->getX(), marker);
     if (::peano4::particles::sieveParticle(**particleIterator, marker)
         and (willBeLocal or not onlyReturnParticlesThatWillBeLocal)) {
       logDebug(

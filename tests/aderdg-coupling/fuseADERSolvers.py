@@ -86,8 +86,6 @@ def same_basis_postprocessing_kernel(condition, solver_name):
       """ + condition + """
     ) {
 
-      constexpr int fromPoints = {{ORDER}} + 1;
-
       constexpr int FluxElementsPerFace   = facedata::{{UNKNOWN_IDENTIFIER}}FluxEstimates::Cardinality / 2;
       constexpr int BasisElementsPerFace  = facedata::{{UNKNOWN_IDENTIFIER}}Estimates::Cardinality / 2;
 

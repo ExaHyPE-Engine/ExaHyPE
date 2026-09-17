@@ -46,7 +46,7 @@ class DoFWisePreprocessSolution(AbstractRungeKuttaDGActionSet):
     self._compute_kernel += """
 {
   {{COMPUTE_TIME_STEP_SIZE}}
-  const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+  [[maybe_unused]] const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
   if (
     not marker.hasBeenRefined()
@@ -103,7 +103,7 @@ class CellWisePreprocessSolution(AbstractRungeKuttaDGActionSet):
     self._compute_kernel += """
 {
   {{COMPUTE_TIME_STEP_SIZE}}
-  const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+  [[maybe_unused]] const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
   if (
     not marker.hasBeenRefined()

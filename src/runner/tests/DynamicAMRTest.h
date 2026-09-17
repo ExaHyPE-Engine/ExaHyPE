@@ -15,12 +15,8 @@ public:
   void run() override;
 
 private:
-  void testDescribeReportsExplicitUnchangedTransitions();
-  void testDescribeReportsGridTransitions();
-  void testDescribeReportsOneLinePerLoadCategory();
-  void testDescribeDropsTheInterRankLineOnOneRank();
-  void testDescribeReportsBalanceTransitions();
-  void testDescribeReportsTaskLoadAndUtilisation();
   void testDescribeReportsTheSweepCountAndWallClock();
+  void testDescribeReportsUtilisation();
+  void testDescribeAppendsTheGridTransition();
   void testADrainNeedsPendingMeshUpdates();
 };

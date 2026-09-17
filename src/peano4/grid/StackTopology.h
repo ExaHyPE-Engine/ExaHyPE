@@ -8,10 +8,8 @@ namespace peano4::grid {
   struct StackTopology;
 } // namespace peano4::grid
 
-struct peano4::grid::StackTopology {
-  enum class BaseStack : int { Call = 0, Input = 1, NumberOfStacks };
-
-  static constexpr int TotalNumberOfLocalExchangeStacks = static_cast<int>(BaseStack::NumberOfStacks);
+struct peano4::grid::StackTopology final {
+  enum class BaseStack : int { Call = 0, Input = 1 };
 
   static bool isInOutStack(const int stackNumber);
 };

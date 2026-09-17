@@ -36,8 +36,8 @@ std::string peano4::grid::GridTraversalEvent::toString() const {
   return out.str();
 }
 
-peano4::datamanagement::CellMarker peano4::grid::GridTraversalEvent::getCellMarker() const {
-  datamanagement::CellMarker marker;
+peano4::dataview::CellMarker peano4::grid::GridTraversalEvent::getCellMarker() const {
+  peano4::dataview::CellMarker marker;
 
   marker.level                            = level;
   marker.h                                = h;
@@ -50,16 +50,16 @@ peano4::datamanagement::CellMarker peano4::grid::GridTraversalEvent::getCellMark
     }
   };
 
-  setFlag(hasBeenRefined != 0, datamanagement::CellMarker::HasBeenRefined);
-  setFlag(willBeRefined != 0, datamanagement::CellMarker::WillBeRefined);
-  setFlag(isCellLocal != 0, datamanagement::CellMarker::IsLocal);
-  setFlag(isParentCellLocal != 0, datamanagement::CellMarker::IsParentLocal);
+  setFlag(hasBeenRefined != 0, peano4::dataview::CellMarker::HasBeenRefined);
+  setFlag(willBeRefined != 0, peano4::dataview::CellMarker::WillBeRefined);
+  setFlag(isCellLocal != 0, peano4::dataview::CellMarker::IsLocal);
+  setFlag(isParentCellLocal != 0, peano4::dataview::CellMarker::IsParentLocal);
 
   return marker;
 }
 
-peano4::datamanagement::FaceMarker peano4::grid::GridTraversalEvent::getFaceMarker() const {
-  peano4::datamanagement::FaceMarker marker{};
+peano4::dataview::FaceMarker peano4::grid::GridTraversalEvent::getFaceMarker() const {
+  peano4::dataview::FaceMarker marker{};
 
   marker.h                                = h;
   marker.cellCentre                       = x;

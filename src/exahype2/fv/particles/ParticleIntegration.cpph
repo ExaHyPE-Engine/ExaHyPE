@@ -44,10 +44,10 @@ INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::int
  */
 template <int... ParticleAttributeIndices, typename Particle>
 INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::integration::midpointIntegration(
-  Particle&                                 particle,
-  const peano4::datamanagement::CellMarker& cellMarker,
-  const double* NOALIAS const               cellValues,
-  const double                              timeStepSize
+  Particle&                           particle,
+  const peano4::dataview::CellMarker& cellMarker,
+  const double* NOALIAS const         cellValues,
+  const double                        timeStepSize
 ) {
   const auto currentState  = exahype2::fv::particles::utils::getParticleState(particle);
   auto       midpointState = exahype2::fv::particles::integration::updateMidpointStep(currentState, timeStepSize, 0.5);
@@ -77,10 +77,10 @@ INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::int
  */
 template <int... ParticleAttributeIndices, typename Particle>
 INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::integration::rk3Integration(
-  Particle&                                 particle,
-  const peano4::datamanagement::CellMarker& cellMarker,
-  const double* NOALIAS const               cellValues,
-  const double                              timeStepSize
+  Particle&                           particle,
+  const peano4::dataview::CellMarker& cellMarker,
+  const double* NOALIAS const         cellValues,
+  const double                        timeStepSize
 ) {
   const auto currentState = exahype2::fv::particles::utils::getParticleState(particle);
   const auto k1           = currentState;
@@ -131,10 +131,10 @@ INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::int
  */
 template <int... ParticleAttributeIndices, typename Particle>
 INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::integration::rk4Integration(
-  Particle&                                 particle,
-  const peano4::datamanagement::CellMarker& cellMarker,
-  const double* NOALIAS const               cellValues,
-  const double                              timeStepSize
+  Particle&                           particle,
+  const peano4::dataview::CellMarker& cellMarker,
+  const double* NOALIAS const         cellValues,
+  const double                        timeStepSize
 ) {
   const auto currentState = exahype2::fv::particles::utils::getParticleState(particle);
   const auto k1           = currentState;
@@ -193,10 +193,10 @@ INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::int
  */
 template <int... ParticleAttributeIndices, typename Particle>
 INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::integration::velocityVerletIntegration(
-  Particle&                                 particle,
-  const peano4::datamanagement::CellMarker& cellMarker,
-  const double* NOALIAS const               cellValues,
-  const double                              timeStepSize
+  Particle&                           particle,
+  const peano4::dataview::CellMarker& cellMarker,
+  const double* NOALIAS const         cellValues,
+  const double                        timeStepSize
 ) {
   const auto currentState = exahype2::fv::particles::utils::getParticleState(particle);
   exahype2::fv::particles::utils::ParticleState midpointState;
@@ -236,11 +236,11 @@ INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::int
  */
 template <int... ParticleAttributeIndices, typename Particle>
 INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::integration::applyIntegration(
-  Particle&                                 particle,
-  const peano4::datamanagement::CellMarker& cellMarker,
-  const double* NOALIAS const               cellValues,
-  const double                              timeStepSize,
-  const int                                 integrationMethod
+  Particle&                           particle,
+  const peano4::dataview::CellMarker& cellMarker,
+  const double* NOALIAS const         cellValues,
+  const double                        timeStepSize,
+  const int                           integrationMethod
 ) {
   auto newPosition = particle.getX();
 

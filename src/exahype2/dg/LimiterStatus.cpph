@@ -52,7 +52,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::LimiterStatus exahype2::dg::load
   const int* const faceStatus,
   const int        side
 ) {
-  return static_cast<exahype2::dg::LimiterStatus>(tarch::accelerator::atomicLoad(faceStatus + side));
+  return static_cast<exahype2::dg::LimiterStatus>(tarch::accelerator::loadAtomic(faceStatus[side]));
 }
 
 /**
@@ -64,7 +64,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::storeFaceStatus(
   const int           side,
   const LimiterStatus status
 ) {
-  tarch::accelerator::atomicStore(faceStatus + side, static_cast<int>(status));
+  tarch::accelerator::storeAtomic(faceStatus[side], static_cast<int>(status));
 }
 
 /**
@@ -76,6 +76,6 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::raiseFaceStatus(
   const int           side,
   const LimiterStatus status
 ) {
-  tarch::accelerator::atomicMaximum(faceStatus + side, static_cast<int>(status));
+  tarch::accelerator::updateAtomicMax(faceStatus[side], static_cast<int>(status));
 }
 TARGET_DECLARE_END

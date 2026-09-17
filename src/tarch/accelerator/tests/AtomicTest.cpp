@@ -3,10 +3,14 @@
 #include "AtomicTest.h"
 
 #include "tarch/accelerator/Atomic.h"
+#include "tarch/accelerator/ParallelFor.h"
+#include "tarch/accelerator/accelerator.h"
 
 namespace {
   constexpr int NumberOfThreads    = 8;
   constexpr int NumberOfIterations = 2048;
+  constexpr int NumberOfValues     = 64;
+  constexpr int DeviceId           = tarch::accelerator::Device::DefaultDevice;
 } // namespace
 
 tarch::accelerator::tests::AtomicTest::AtomicTest() :
@@ -15,17 +19,19 @@ tarch::accelerator::tests::AtomicTest::AtomicTest() :
 void tarch::accelerator::tests::AtomicTest::run() {
   testMethod(testSerialOperations);
   testMethod(testConcurrentOperations);
+  testMethod(testLoadStoreRoundTrip);
+  testMethod(testConcurrentMaximumIsOrderIndependent);
 }
 
 void tarch::accelerator::tests::AtomicTest::testSerialOperations() {
   int intValue = 10;
-  validateEquals(tarch::accelerator::updateAtomicMin(intValue, 3), 3);
+  tarch::accelerator::updateAtomicMin(intValue, 3);
   validateEquals(intValue, 3);
-  validateEquals(tarch::accelerator::updateAtomicMin(intValue, 7), 3);
+  tarch::accelerator::updateAtomicMin(intValue, 7);
   validateEquals(intValue, 3);
-  validateEquals(tarch::accelerator::updateAtomicMax(intValue, 12), 12);
+  tarch::accelerator::updateAtomicMax(intValue, 12);
   validateEquals(intValue, 12);
-  validateEquals(tarch::accelerator::updateAtomicMax(intValue, 5), 12);
+  tarch::accelerator::updateAtomicMax(intValue, 5);
   validateEquals(intValue, 12);
   validateEquals(tarch::accelerator::incrementAtomic(intValue), 13);
   validateEquals(intValue, 13);
@@ -35,9 +41,9 @@ void tarch::accelerator::tests::AtomicTest::testSerialOperations() {
   validateEquals(intValue, 2);
 
   double doubleValue = 4.0;
-  validateEquals(tarch::accelerator::updateAtomicMin(doubleValue, 2.5), 2.5);
+  tarch::accelerator::updateAtomicMin(doubleValue, 2.5);
   validateEquals(doubleValue, 2.5);
-  validateEquals(tarch::accelerator::updateAtomicMax(doubleValue, 5.25), 5.25);
+  tarch::accelerator::updateAtomicMax(doubleValue, 5.25);
   validateEquals(doubleValue, 5.25);
   validateEquals(tarch::accelerator::incrementAtomic(doubleValue), 6.25);
   validateEquals(doubleValue, 6.25);
@@ -45,7 +51,7 @@ void tarch::accelerator::tests::AtomicTest::testSerialOperations() {
   validateEquals(doubleValue, 7.75);
   tarch::accelerator::storeAtomic(doubleValue, -std::numeric_limits<double>::infinity());
   validateEquals(doubleValue, -std::numeric_limits<double>::infinity());
-  validateEquals(tarch::accelerator::updateAtomicMin(doubleValue, 1.0), -std::numeric_limits<double>::infinity());
+  tarch::accelerator::updateAtomicMin(doubleValue, 1.0);
   validateEquals(doubleValue, -std::numeric_limits<double>::infinity());
 }
 
@@ -88,4 +94,25 @@ void tarch::accelerator::tests::AtomicTest::testConcurrentOperations() {
   validateEquals(minDouble, 0.25);
   validateEquals(maxDouble, static_cast<double>(NumberOfUpdates - 1) + 0.25);
   validateEquals(doubleSum, static_cast<double>(NumberOfUpdates));
+}
+
+void tarch::accelerator::tests::AtomicTest::testLoadStoreRoundTrip() {
+  int value = 0;
+  tarch::accelerator::storeAtomic(value, 7);
+  validateEquals(tarch::accelerator::loadAtomic(value), 7);
+}
+
+void tarch::accelerator::tests::AtomicTest::testConcurrentMaximumIsOrderIndependent() {
+  int* const target = tarch::allocateMemory<int>(1, tarch::MemoryLocation::Device, DeviceId);
+
+  int hostMaximum = std::numeric_limits<int>::lowest();
+  tarch::copyTo(target, &hostMaximum, 1, tarch::MemoryLocation::Device, DeviceId);
+
+  tarch::parallelFor(tarch::Range(NumberOfValues), [=] GPU_CALLABLE_LAMBDA(const int value) {
+    tarch::accelerator::updateAtomicMax(*target, value);
+  });
+
+  tarch::copyFrom(target, &hostMaximum, 1, tarch::MemoryLocation::Device, DeviceId);
+  tarch::freeMemory(target, tarch::MemoryLocation::Device, DeviceId);
+  validateEquals(hostMaximum, NumberOfValues - 1);
 }

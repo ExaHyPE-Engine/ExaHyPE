@@ -54,7 +54,7 @@ tarch::la::Vector<DIMENSIONS, double> peano4::particles::periodicImageTowards(
  */
 tarch::la::Vector<DIMENSIONS, double> peano4::particles::periodicImageTowardsVertex(
   const tarch::la::Vector<DIMENSIONS, double>& x,
-  const peano4::datamanagement::VertexMarker&  marker
+  const peano4::dataview::VertexMarker&        marker
 ) {
   return peano4::particles::periodicImageTowards(x, marker.getX());
 }
@@ -66,7 +66,7 @@ tarch::la::Vector<DIMENSIONS, double> peano4::particles::periodicImageTowardsVer
  */
 tarch::la::Vector<DIMENSIONS, double> peano4::particles::periodicImageTowardsCell(
   const tarch::la::Vector<DIMENSIONS, double>& x,
-  const peano4::datamanagement::CellMarker&    marker
+  const peano4::dataview::CellMarker&          marker
 ) {
   return peano4::particles::periodicImageTowards(x, marker.getX());
 }
@@ -82,10 +82,10 @@ bool peano4::particles::domainHasPeriodicAxes() {
  */
 std::bitset<TWO_POWER_D> peano4::particles::getAdjacentCellsOwningParticle(
   const tarch::la::Vector<DIMENSIONS, double>& x,
-  const peano4::datamanagement::VertexMarker&  marker
+  const peano4::dataview::VertexMarker&        marker
 ) {
-  std::bitset<TWO_POWER_D>                    result = 0;
-  const auto                                  image  = peano4::particles::periodicImageTowardsVertex(x, marker);
+  std::bitset<TWO_POWER_D>                    result         = 0;
+  const auto                                  image          = peano4::particles::periodicImageTowardsVertex(x, marker);
   const tarch::la::Vector<DIMENSIONS, double> selectedVertex = marker.getX();
   const tarch::la::Vector<DIMENSIONS, double> h              = marker.getH();
   const double tolerance = peano4::particles::internal::relativeGrabOwnershipSpatialSortingTolerance(marker)
@@ -97,7 +97,7 @@ std::bitset<TWO_POWER_D> peano4::particles::getAdjacentCellsOwningParticle(
     for (int d = 0; d < DIMENSIONS; d++) {
       adjacentCellCentre(d) = selectedVertex(d) + (static_cast<double>(adjacentCell(d)) - 0.5) * h(d);
     }
-    result[kScalar] = peano4::datamanagement::CellMarker::isContained(image, adjacentCellCentre, h, tolerance);
+    result[kScalar] = peano4::dataview::CellMarker::isContained(image, adjacentCellCentre, h, tolerance);
   });
 
   return result;
@@ -105,7 +105,7 @@ std::bitset<TWO_POWER_D> peano4::particles::getAdjacentCellsOwningParticle(
 
 bool peano4::particles::particleAssignedToVertexWillBeLocal(
   const tarch::la::Vector<DIMENSIONS, double>& x,
-  const peano4::datamanagement::VertexMarker&  marker
+  const peano4::dataview::VertexMarker&        marker
 ) {
   const std::bitset<TWO_POWER_D> adjacentCellWhichHostsParticle =
     peano4::particles::getAdjacentCellsOwningParticle(x, marker);

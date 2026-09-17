@@ -28,5 +28,5 @@ private:
   void testTheContainerJoinsAndLeavesTheRegistry();
   void testAnElementTypeCanRefuseTaskReplication();
   void testClearReleasesThePool();
-  void testTaskSlotsFollowTheRankStride();
+  void testSentinelIsResetAfterPoolChanges();
 };

@@ -4,6 +4,7 @@
 
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
+#include "tarch/plotter/CellTypes.h"
 #include "tarch/plotter/VTUFileWriter.h"
 
 namespace {
@@ -40,6 +41,7 @@ void tarch::plotter::tests::VTUFileWriterTest::run() {
     testMethod(test3DSimpleHexahedron);
     testMethod(test2DParticlesWithData);
     testMethod(test3DCellData);
+    testMethod(testCellTypeMetadata);
 
     testMethod(testEmptyPlotter);
     testMethod(testMixedEmptySubdomains);
@@ -53,6 +55,17 @@ void tarch::plotter::tests::VTUFileWriterTest::run() {
     _error = true;
     std::cerr << "  " << exception.what() << std::endl;
   }
+}
+
+void tarch::plotter::tests::VTUFileWriterTest::testCellTypeMetadata() {
+  const auto* const triangle = tarch::plotter::lookupCellType(tarch::plotter::CellType::Triangle);
+  validate(triangle != nullptr);
+  validate(triangle->type == tarch::plotter::CellType::Triangle);
+  validateEquals(tarch::plotter::nodesOf(tarch::plotter::CellType::Triangle), 3);
+  validate(tarch::plotter::lookupCellType(static_cast<int>(triangle->type)) == triangle);
+  validate(tarch::plotter::lookupCellType(-1) == nullptr);
+  validate(tarch::plotter::xdmfTypeNeedsNodeCount(2));
+  validate(not tarch::plotter::xdmfTypeNeedsNodeCount(triangle->xdmf));
 }
 
 void tarch::plotter::tests::VTUFileWriterTest::test2DSimpleTriangle() {

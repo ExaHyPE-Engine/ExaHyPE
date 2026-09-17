@@ -5,18 +5,18 @@
 #include "exahype2/Enumeration.h"
 #include "exahype2/fv/VolumeIndex.h"
 #include "peano4/Loop.h"
-#include "peano4/datamanagement/FaceMarker.h"
+#include "peano4/dataview/FaceMarker.h"
 #include "tarch/Termination.h"
 
 void exahype2::dg::interpolateProjectedFacePolynomial(
-  const peano4::datamanagement::FaceMarker& marker,
-  int                                       order,
-  int                                       numberOfProjectedQuantities,
-  int                                       unknowns,
-  int                                       auxiliaryVariables,
-  const double* NOALIAS                     InterpolationMatrix1D,
-  const double* NOALIAS                     coarseGridFaceQ,
-  double* NOALIAS                           fineGridFaceQ
+  const peano4::dataview::FaceMarker& marker,
+  int                                 order,
+  int                                 numberOfProjectedQuantities,
+  int                                 unknowns,
+  int                                 auxiliaryVariables,
+  const double* NOALIAS               InterpolationMatrix1D,
+  const double* NOALIAS               coarseGridFaceQ,
+  double* NOALIAS                     fineGridFaceQ
 ) {
   const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
   const int stride = unknowns + auxiliaryVariables;
@@ -33,7 +33,7 @@ void exahype2::dg::interpolateProjectedFacePolynomial(
          leftRight < (coarseSideFace + 1) * numberOfProjectedQuantities;
          leftRight++) {
       shiftedFineGridDoF(normal) = leftRight;
-      const int fineOffset       =
+      const int fineOffset =
         exahype2::serialiseVoxelIndexInOverlap(shiftedFineGridDoF, order + 1, numberOfProjectedQuantities, normal)
         * stride;
       std::fill_n(fineGridFaceQ + fineOffset, stride, 0.0);
@@ -67,7 +67,7 @@ void exahype2::dg::interpolateProjectedFacePolynomial(
            leftRight++) {
         shiftedFineGridDoF(normal)   = leftRight;
         shiftedCoarseGridDoF(normal) = leftRight;
-        const int fineOffset         =
+        const int fineOffset =
           exahype2::serialiseVoxelIndexInOverlap(shiftedFineGridDoF, order + 1, numberOfProjectedQuantities, normal)
           * stride;
         const int coarseOffset =
@@ -158,8 +158,7 @@ void exahype2::dg::interpolateRiemannSolution(
       tarch::la::Vector<DIMENSIONS, int> shiftedRestrictedDoF = coarseGridDoF;
       shiftedRestrictedDoF(normal)                            = fineSideLayer;
       const int restrictedOffset =
-        exahype2::serialiseVoxelIndexInOverlap(shiftedRestrictedDoF, numberOfDofsPerAxis, 1, normal)
-        * projectionStride;
+        exahype2::serialiseVoxelIndexInOverlap(shiftedRestrictedDoF, numberOfDofsPerAxis, 1, normal) * projectionStride;
 
       for (int unknown = 0; unknown < unknowns; unknown++) {
         fineGridFaceRiemannSolution[fineOffset + unknown] += tensorProductWeight
@@ -202,10 +201,10 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
 
   // Project left/right
   for (int y = 0; y < order + 1; y++) {
-    const auto left           = fv::toVolumeIndex(1, y);
-    const auto right          = fv::toVolumeIndex(0, y);
-    const int  leftFaceOffset = exahype2::serialiseVoxelIndexInOverlap(left, order + 1, 1, 0) * stride;
-    const int rightFaceOffset = exahype2::serialiseVoxelIndexInOverlap(right, order + 1, 1, 0) * stride;
+    const auto left            = fv::toVolumeIndex(1, y);
+    const auto right           = fv::toVolumeIndex(0, y);
+    const int  leftFaceOffset  = exahype2::serialiseVoxelIndexInOverlap(left, order + 1, 1, 0) * stride;
+    const int  rightFaceOffset = exahype2::serialiseVoxelIndexInOverlap(right, order + 1, 1, 0) * stride;
     for (int unknown = 0; unknown < unknowns + auxiliaryVariables; unknown++) {
       faceQLeft[leftFaceOffset + unknown]   = 0.0;
       faceQRight[rightFaceOffset + unknown] = 0.0;
@@ -213,10 +212,10 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
   }
 
   for (int y = 0; y < order + 1; y++) {
-    const auto left           = fv::toVolumeIndex(1, y);
-    const auto right          = fv::toVolumeIndex(0, y);
-    const int  leftFaceOffset = exahype2::serialiseVoxelIndexInOverlap(left, order + 1, 1, 0) * stride;
-    const int rightFaceOffset = exahype2::serialiseVoxelIndexInOverlap(right, order + 1, 1, 0) * stride;
+    const auto left            = fv::toVolumeIndex(1, y);
+    const auto right           = fv::toVolumeIndex(0, y);
+    const int  leftFaceOffset  = exahype2::serialiseVoxelIndexInOverlap(left, order + 1, 1, 0) * stride;
+    const int  rightFaceOffset = exahype2::serialiseVoxelIndexInOverlap(right, order + 1, 1, 0) * stride;
     for (int x = 0; x < order + 1; x++) {
       const int cellOffset = peano4::dLinearised(fv::toVolumeIndex(x, y), order + 1) * stride;
       for (int unknown = 0; unknown < unknowns + auxiliaryVariables; unknown++) {
@@ -431,10 +430,10 @@ void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
     tarch::la::Vector<DIMENSIONS, int> bottomDoF = dof;
     tarch::la::Vector<DIMENSIONS, int> upperDoF  = dof;
 
-    leftDoF(0)   = 1;
-    rightDoF(0)  = 0;
-    bottomDoF(1) = 1;
-    upperDoF(1)  = 0;
+    leftDoF(0)                 = 1;
+    rightDoF(0)                = 0;
+    bottomDoF(1)               = 1;
+    upperDoF(1)                = 0;
     const int leftFaceOffset   = exahype2::serialiseVoxelIndexInOverlap(leftDoF, order + 1, 1, 0) * stride;
     const int rightFaceOffset  = exahype2::serialiseVoxelIndexInOverlap(rightDoF, order + 1, 1, 0) * stride;
     const int bottomFaceOffset = exahype2::serialiseVoxelIndexInOverlap(bottomDoF, order + 1, 1, 1) * stride;
@@ -489,12 +488,12 @@ void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
     tarch::la::Vector<DIMENSIONS, int> bottomDoF = dof;
     tarch::la::Vector<DIMENSIONS, int> upperDoF  = dof;
 
-    leftDoF(0)   = 1;
-    rightDoF(0)  = 0;
-    bottomDoF(1) = 1;
-    upperDoF(1)  = 0;
-    frontDoF(2)  = 1;
-    backDoF(2)   = 0;
+    leftDoF(0)                 = 1;
+    rightDoF(0)                = 0;
+    bottomDoF(1)               = 1;
+    upperDoF(1)                = 0;
+    frontDoF(2)                = 1;
+    backDoF(2)                 = 0;
     const int leftFaceOffset   = exahype2::serialiseVoxelIndexInOverlap(leftDoF, order + 1, 1, 0) * stride;
     const int rightFaceOffset  = exahype2::serialiseVoxelIndexInOverlap(rightDoF, order + 1, 1, 0) * stride;
     const int bottomFaceOffset = exahype2::serialiseVoxelIndexInOverlap(bottomDoF, order + 1, 1, 1) * stride;

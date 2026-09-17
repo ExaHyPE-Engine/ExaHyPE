@@ -2,55 +2,25 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "{{CLASSNAME}}.h"
 
-{{STATIC_ATTRIBUTE_DEFINITIONS}}
-
-{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}(){% if CONSTRUCTOR_INITIALISERS %}:
-  {{CONSTRUCTOR_INITIALISERS}}
-{% endif %}
-{}
-
-{{ATTRIBUTE_METHOD_DEFINITIONS}}
-
+{% set MARKER_TYPE = "::peano4::dataview::" + {1: "VertexMarker", 2: "FaceMarker", 3: "CellMarker"}[DATA_ASSOCIATION] -%}
 std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString() const {
   std::ostringstream out;
   out << std::boolalpha;
   out << "(";
-{% for attribute in ATTRIBUTE_TO_STRING_PAIRS %}
-  out << "{% if not loop.first %},{% endif %}{{attribute.name}}=" << {{attribute.expression}};
-{% endfor %}
+{%- for attribute in ATTRIBUTE_TO_STRING_PAIRS %}
+  out << "{{ "," if not loop.first else "" }}{{attribute.name}}=" << {{attribute.expression}};
+{%- endfor %}
   out << ")";
   return out.str();
 }
 
-{% if DATA_ASSOCIATION == 1 %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
-  [[maybe_unused]] ::peano4::stacks::SendReceiveContext           context,
-  [[maybe_unused]] const {{CLASSNAME}}&                           neighbour,
-  [[maybe_unused]] const ::peano4::datamanagement::VertexMarker&  marker,
-  [[maybe_unused]] int                                            treeId
+  [[maybe_unused]] const ::peano4::grid::SendReceiveContext context,
+  [[maybe_unused]] const {{CLASSNAME}}&                     neighbour,
+  [[maybe_unused]] const {{MARKER_TYPE}}&                   marker,
+  [[maybe_unused]] const int                                treeId
 ) {
-  {{MERGE_METHOD_DEFINITION}}
+{%- if MERGE_METHOD_DEFINITION %}
+{{MERGE_METHOD_DEFINITION}}
+{%- endif %}
 }
-{% endif %}
-
-{% if DATA_ASSOCIATION == 2 %}
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
-  [[maybe_unused]] ::peano4::stacks::SendReceiveContext         context,
-  [[maybe_unused]] const {{CLASSNAME}}&                         neighbour,
-  [[maybe_unused]] const ::peano4::datamanagement::FaceMarker&  marker,
-  [[maybe_unused]] int                                          treeId
-) {
-  {{MERGE_METHOD_DEFINITION}}
-}
-{% endif %}
-
-{% if DATA_ASSOCIATION == 3 %}
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
-  [[maybe_unused]] ::peano4::stacks::SendReceiveContext         context,
-  [[maybe_unused]] const {{CLASSNAME}}&                         neighbour,
-  [[maybe_unused]] const ::peano4::datamanagement::CellMarker&  marker,
-  [[maybe_unused]] int                                          treeId
-) {
-  {{MERGE_METHOD_DEFINITION}}
-}
-{% endif %}

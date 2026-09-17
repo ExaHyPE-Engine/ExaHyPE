@@ -30,12 +30,12 @@ def create_abstract_solver_declarations(
 
     {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
     static double maxEigenvalue(
-      const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const double* NOALIAS                        Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+      const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
       double                                       t,
       double                                       dt,
       int                                          normal,
-      Offloadable
+      [[maybe_unused]] Offloadable                 offloadable
     );
     {% endif %}
 
@@ -44,8 +44,8 @@ def create_abstract_solver_declarations(
      * the solution values Q. All parameters are in.
      */
     virtual double maxEigenvalue(
-      const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const double* NOALIAS                        Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+      const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
       double                                       t,
       double                                       dt,
       int                                          normal
@@ -53,91 +53,91 @@ def create_abstract_solver_declarations(
 
     {% if FLUX_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
     static void flux(
-      const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const double* NOALIAS                        Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+      const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
       double                                       t,
       double                                       dt,
       int                                          normal,
-      double * NOALIAS                        F, // F[{{NUMBER_OF_UNKNOWNS}}]
-      Offloadable
+      double* NOALIAS                              F, // F[{{NUMBER_OF_UNKNOWNS}}]
+      [[maybe_unused]] Offloadable                 offloadable
     );
     {% endif %}
 
     {% if FLUX_IMPLEMENTATION!="<none>" %}
     virtual void flux(
-      const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const double* NOALIAS                        Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+      const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
       double                                       t,
       double                                       dt,
       int                                          normal,
-      double * NOALIAS F // F[{{NUMBER_OF_UNKNOWNS}}]
+      double* NOALIAS                              F // F[{{NUMBER_OF_UNKNOWNS}}]
     ) {% if FLUX_IMPLEMENTATION=="<user-defined>" %}=0{% else %} final {% endif %};
     {% endif %}
 
     {% if NCP_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
     static void nonconservativeProduct(
-      const double * NOALIAS                  Q,    // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const double * NOALIAS                  deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const double* NOALIAS                        Q,    // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+      const double* NOALIAS                        deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+      const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
       double                                       t,
       double                                       dt,
       int                                          normal,
-      double * NOALIAS                        BTimesDeltaQ, // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
-      Offloadable
+      double* NOALIAS                              BTimesDeltaQ, // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
+      [[maybe_unused]] Offloadable                 offloadable
     );
     {% endif %}
 
     {% if NCP_IMPLEMENTATION!="<none>" %}
     virtual void nonconservativeProduct(
-      const double * NOALIAS                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const double * NOALIAS                  deltaQ, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const double* NOALIAS                        Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+      const double* NOALIAS                        deltaQ, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
       double                                       t,
       double                                       dt,
       int                                          normal,
-      double * NOALIAS BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
+      double* NOALIAS                              BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
     ) {% if NCP_IMPLEMENTATION=="<user-defined>" %}=0{% endif %};
     {% endif %}
 
     {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
     static void sourceTerm(
-      const double * NOALIAS Q,
-      const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
+      const double* NOALIAS                        Q,
+      const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
       double                                       t,
       double                                       dt,
-      double * NOALIAS S,
-      Offloadable
+      double* NOALIAS                              S,
+      [[maybe_unused]] Offloadable                 offloadable
     );
     {% endif %}
 
     {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
     virtual void sourceTerm(
-      const double * NOALIAS Q,
-      const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
+      const double* NOALIAS                        Q,
+      const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
       double                                       t,
       double                                       dt,
-      double * NOALIAS S
+      double* NOALIAS                              S
     ) {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
     {% endif %}
 
     {% if POINT_SOURCE_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
     void pointSource(
-      const double * NOALIAS Q,
-      const tarch::la::Vector<DIMENSIONS,double>&  x,
+      const double* NOALIAS                        Q,
+      const tarch::la::Vector<DIMENSIONS, double>& x,
       double                                       t,
       double                                       dt,
-      double * NOALIAS S,
-      Offloadable
+      double* NOALIAS                              S,
+      [[maybe_unused]] Offloadable                 offloadable
     );
     {% endif %}
 
     {% if POINT_SOURCE_IMPLEMENTATION!="<none>" %}
     virtual void pointSource(
-      const double * NOALIAS Q,
-      const tarch::la::Vector<DIMENSIONS,double>&  x,
+      const double* NOALIAS                        Q,
+      const tarch::la::Vector<DIMENSIONS, double>& x,
       double                                       t,
       double                                       dt,
-      double * NOALIAS S
+      double* NOALIAS                              S
     ) {% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
     {% endif %}
 """,
@@ -166,8 +166,8 @@ def create_abstract_solver_definitions(
         """
 {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and EIGENVALUES_IMPLEMENTATION!="<none>" %}
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
-  const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+  const double* NOALIAS                        Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+  const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
   double                                       t,
   double                                       dt,
   int                                          normal
@@ -178,12 +178,12 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 
 {% if FLUX_IMPLEMENTATION!="<none>" and FLUX_IMPLEMENTATION!="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
-  const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+  const double* NOALIAS                        Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+  const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
   double                                       t,
   double                                       dt,
   int                                          normal,
-  double * NOALIAS F // F[{{NUMBER_OF_UNKNOWNS}}]
+  double* NOALIAS                              F // F[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   {{FLUX_IMPLEMENTATION}}
 }
@@ -191,13 +191,13 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 
 {% if NCP_IMPLEMENTATION!="<none>" and NCP_IMPLEMENTATION!="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
-  const double * NOALIAS                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const double * NOALIAS                  deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+  const double* NOALIAS                        Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+  const double* NOALIAS                        deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
   double                                       t,
   double                                       dt,
   int                                          normal,
-  double * NOALIAS BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
+  double* NOALIAS                              BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   {{NCP_IMPLEMENTATION}}
 }
@@ -205,11 +205,11 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 
 {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
-  const double * NOALIAS                  Q,
-  const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
+  const double* NOALIAS                        Q,
+  const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
   double                                       t,
   double                                       dt,
-  double * NOALIAS                        S
+  double* NOALIAS                              S
 ) {
   {% if SOURCE_TERM_IMPLEMENTATION!="<empty>" %}
   {{SOURCE_TERM_IMPLEMENTATION}}
@@ -222,11 +222,11 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 {% if POINT_SOURCE_IMPLEMENTATION!="<user-defined>" and POINT_SOURCE_IMPLEMENTATION!="<none>" %}
 #error Point sources not yet implemented
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
-  const double * NOALIAS                  Q,
-  const tarch::la::Vector<DIMENSIONS,double>&  x,
+  const double* NOALIAS                        Q,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
   double                                       t,
   double                                       dt,
-  double * NOALIAS                        S
+  double* NOALIAS                              S
 ) {
   {% if POINT_SOURCE_IMPLEMENTATION!="<empty>" %}
   {{POINT_SOURCE_IMPLEMENTATION}}
@@ -238,12 +238,12 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
 
 {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
-      const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+  const double* NOALIAS                        Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+  const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
   double                                       t,
   double                                       dt,
   int                                          normal,
-  Offloadable
+  [[maybe_unused]] const Offloadable           offloadable
 ) {
   {{EIGENVALUES_IMPLEMENTATION}};
 }
@@ -251,13 +251,13 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 
 {% if FLUX_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
-      const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
-      double                                       t,
+  const double* NOALIAS                        Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+  const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
+  double                                       t,
   double                                       dt,
   int                                          normal,
-  double * NOALIAS                        F, // F[{{NUMBER_OF_UNKNOWNS}}]
-  Offloadable
+  double* NOALIAS                              F, // F[{{NUMBER_OF_UNKNOWNS}}]
+  [[maybe_unused]] const Offloadable           offloadable
 ) {
   {% if FLUX_IMPLEMENTATION=="<none>" %}
   abort();
@@ -269,14 +269,14 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 
 {% if NCP_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
-      const double * NOALIAS                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const double * NOALIAS                  deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
-      double                                       t,
+  const double* NOALIAS                        Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+  const double* NOALIAS                        deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
+  double                                       t,
   double                                       dt,
   int                                          normal,
-  double * NOALIAS                        BTimesDeltaQ, // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
-  Offloadable
+  double* NOALIAS                              BTimesDeltaQ, // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
+  [[maybe_unused]] const Offloadable           offloadable
 ) {
   {% if NCP_IMPLEMENTATION=="<none>" %}
   abort();
@@ -288,12 +288,12 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 
 {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
-      const double * NOALIAS Q,
-      const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
-      double                                       t,
-      double                                       dt,
-      double * NOALIAS S,
-      Offloadable
+  const double* NOALIAS                        Q,
+  const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
+  double                                       t,
+  double                                       dt,
+  double* NOALIAS                              S,
+  [[maybe_unused]] const Offloadable           offloadable
 ) {
   {% if SOURCE_TERM_IMPLEMENTATION=="<none>" %}
   abort();
@@ -305,14 +305,14 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 
 {% if POINT_SOURCE_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
-      const double * NOALIAS Q,
-      const tarch::la::Vector<DIMENSIONS,double>&  x,
-      double                                       t,
-      double                                       dt,
-      double * NOALIAS S,
-      Offloadable
+  const double* NOALIAS                        Q,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  double                                       t,
+  double                                       dt,
+  double* NOALIAS                              S,
+  [[maybe_unused]] const Offloadable           offloadable
 ) {
-  assertion(false, "point sources not implemented yet");
+  assertion(false, "Point sources are not implemented yet");
   {% if POINT_SOURCE_IMPLEMENTATION=="<none>" %}
   abort();
   {% else %}
@@ -347,22 +347,22 @@ def create_solver_declarations(
   public:
     {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
     virtual void sourceTerm(
-      const double * NOALIAS Q,
-      const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
+      const double* NOALIAS                        Q,
+      const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
       double                                       t,
       double                                       dt,
-      double * NOALIAS S
+      double* NOALIAS                              S
     ) override;
     {% endif %}
 
     {% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}
     #error point sources not defined yet
     virtual void pointSource(
-      const double * NOALIAS Q,
-      const tarch::la::Vector<DIMENSIONS,double>&  x,
+      const double* NOALIAS                        Q,
+      const tarch::la::Vector<DIMENSIONS, double>& x,
       double                                       t,
       double                                       dt,
-      double * NOALIAS S
+      double* NOALIAS                              S
     ) override;
     {% endif %}
 
@@ -375,8 +375,8 @@ def create_solver_declarations(
      *   about the maximum absolute eigenvalue.
      */
     virtual double maxEigenvalue(
-      const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const double* NOALIAS                        Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+      const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
       double                                       t,
       double                                       dt,
       int                                          normal
@@ -385,24 +385,24 @@ def create_solver_declarations(
 
     {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
     virtual void flux(
-      const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const double* NOALIAS                        Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+      const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
       double                                       t,
       double                                       dt,
       int                                          normal,
-      double * NOALIAS F // F[{{NUMBER_OF_UNKNOWNS}}]
+      double* NOALIAS                              F // F[{{NUMBER_OF_UNKNOWNS}}]
     ) override;
     {% endif %}
 
     {% if NCP_IMPLEMENTATION=="<user-defined>" %}
     virtual void nonconservativeProduct(
-      const double * NOALIAS                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const double * NOALIAS                  deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const double* NOALIAS                        Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+      const double* NOALIAS                        deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
       double                                       t,
       double                                       dt,
       int                                          normal,
-      double * NOALIAS                        BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
+      double* NOALIAS                              BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
     ) override;
     {% endif %}
 
@@ -413,12 +413,12 @@ def create_solver_declarations(
      * separates the two signatures.
      */
      static void sourceTerm(
-       const double * NOALIAS Q,
-       const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
+       const double* NOALIAS                        Q,
+       const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
        double                                       t,
        double                                       dt,
-       double * NOALIAS S,
-       Offloadable
+       double* NOALIAS                              S,
+       [[maybe_unused]] Offloadable                 offloadable
      );
     {% endif %}
 
@@ -430,13 +430,13 @@ def create_solver_declarations(
      */
      #error point sources not implemented yet
      static void pointSource(
-       const double * NOALIAS Q,
-       const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
-       const tarch::la::Vector<DIMENSIONS,double>&  volumeH,
+       const double* NOALIAS                        Q,
+       const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
+       const tarch::la::Vector<DIMENSIONS, double>& volumeH,
        double                                       t,
        double                                       dt,
-       double * NOALIAS S,
-       Offloadable
+       double* NOALIAS                              S,
+       [[maybe_unused]] Offloadable                 offloadable
      );
     {% endif %}
 
@@ -447,12 +447,12 @@ def create_solver_declarations(
      * separates the two signatures.
      */
     static double maxEigenvalue(
-      const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const double* NOALIAS                        Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+      const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
       double                                       t,
       double                                       dt,
       int                                          normal,
-      Offloadable
+      [[maybe_unused]] Offloadable                 offloadable
     );
     {% endif %}
 
@@ -463,13 +463,13 @@ def create_solver_declarations(
      * separates the two signatures.
      */
     static void flux(
-      const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+      const double* NOALIAS                        Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+      const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
       double                                       t,
       double                                       dt,
       int                                          normal,
-      double * NOALIAS                        F, // F[{{NUMBER_OF_UNKNOWNS}}]
-      Offloadable
+      double* NOALIAS                              F, // F[{{NUMBER_OF_UNKNOWNS}}]
+      [[maybe_unused]] Offloadable                 offloadable
     );
     {% endif %}
 
@@ -480,14 +480,14 @@ def create_solver_declarations(
      * separates the two signatures.
      */
     static void nonconservativeProduct(
-      const double * NOALIAS                  Q,       // Q[5+0],
-      const double * NOALIAS                  deltaQ,    // deltaQ[5+0]
-      const tarch::la::Vector<DIMENSIONS,double>&  x,
+      const double* NOALIAS                        Q,       // Q[5+0],
+      const double* NOALIAS                        deltaQ,    // deltaQ[5+0]
+      const tarch::la::Vector<DIMENSIONS, double>& x,
       double                                       t,
       double                                       dt,
       int                                          normal,
-      double * NOALIAS                        BTimesDeltaQ,     // BTimesDeltaQ[5]
-      Offloadable
+      double* NOALIAS                              BTimesDeltaQ,     // BTimesDeltaQ[5]
+      [[maybe_unused]] Offloadable                 offloadable
     );
     {% endif %}
 """,
@@ -515,8 +515,8 @@ def create_solver_definitions(
         """
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
-  const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+  const double* NOALIAS                        Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+  const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
   double                                       t,
   double                                       dt,
   int                                          normal
@@ -527,12 +527,12 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 
 {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
-  const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+  const double* NOALIAS                        Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+  const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
   double                                       t,
   double                                       dt,
   int                                          normal,
-  double * NOALIAS F // F[{{NUMBER_OF_UNKNOWNS}}]
+  double* NOALIAS                              F // F[{{NUMBER_OF_UNKNOWNS}}]
 )  {
   // @todo implement
 }
@@ -540,13 +540,13 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 
 {% if NCP_IMPLEMENTATION=="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
-  const double * NOALIAS                  Q,    // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const double * NOALIAS                  deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+  const double* NOALIAS                        Q,    // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+  const double* NOALIAS                        deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
   double                                       t,
   double                                       dt,
   int                                          normal,
-  double * NOALIAS                        BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
+  double* NOALIAS                              BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
 )  {
   // @todo implement
 }
@@ -554,11 +554,11 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
-  const double * NOALIAS                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
+  const double* NOALIAS                        Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
   double                                       t,
   double                                       dt,
-  double * NOALIAS                        S  // S[{{NUMBER_OF_UNKNOWNS}}]
+  double* NOALIAS                              S  // S[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   // @todo implement and set every entry of S
   for (int i=0; i<NumberOfUnknowns; i++) {
@@ -569,12 +569,12 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
-  const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+  const double* NOALIAS                        Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+  const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
   double                                       t,
   double                                       dt,
   int                                          normal,
-  Offloadable
+  [[maybe_unused]] const Offloadable           offloadable
 )  {
   // @todo implement
 }
@@ -582,13 +582,13 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 
 {% if FLUX_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
-  const double * NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+  const double* NOALIAS                        Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+  const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
   double                                       t,
   double                                       dt,
   int                                          normal,
-  double * NOALIAS F,
-  Offloadable
+  double* NOALIAS                              F,
+  [[maybe_unused]] const Offloadable           offloadable
 )  {
   // @todo implement
 }
@@ -596,14 +596,14 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 
 {% if NCP_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
-  const double * NOALIAS                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const double * NOALIAS                  deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
+  const double* NOALIAS                        Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+  const double* NOALIAS                        deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
   double                                       t,
   double                                       dt,
   int                                          normal,
-  double * NOALIAS                        BTimesDeltaQ,
-  Offloadable
+  double* NOALIAS                              BTimesDeltaQ,
+  [[maybe_unused]] const Offloadable           offloadable
 )  {
   // @todo implement
 }
@@ -611,12 +611,12 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
-  const double * NOALIAS Q,
-  const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
+  const double* NOALIAS                        Q,
+  const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
   double                                       t,
   double                                       dt,
-  double * NOALIAS S,
-  Offloadable
+  double* NOALIAS                              S,
+  [[maybe_unused]] const Offloadable           offloadable
 ) {
   // @todo implement
 }
@@ -625,12 +625,12 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 {% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
 #error point sources not implemented yet
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
-  const double * NOALIAS Q,
-  const tarch::la::Vector<DIMENSIONS,double>&  volumeCentre,
+  const double* NOALIAS                        Q,
+  const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
   double                                       t,
   double                                       dt,
-  double * NOALIAS S,
-  Offloadable
+  double* NOALIAS                              S,
+  [[maybe_unused]] const Offloadable           offloadable
 ) {
   // @todo implement
 }
@@ -646,37 +646,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
     d["POINT_SOURCE_IMPLEMENTATION"] = point_source_implementation
     d["STATELESS_PDE_TERMS"] = pde_terms_without_state
     return Template.render(**d)
-
-
-def get_face_merge_implementation(patch_overlap):
-    assert False, "@todo Remove: no caller"
-
-    d = {
-        "OVERLAP": patch_overlap.dim[0] / 2,
-        "DOFS_PER_AXIS": patch_overlap.dim[1],
-        "UNKNOWNS": patch_overlap.no_of_unknowns,
-    }
-    template = """
-  #if DIMENSIONS==2
-  constexpr int nodesPerFace = {DOFS_PER_AXIS};
-  #else
-  constexpr int nodesPerFace = {DOFS_PER_AXIS}*{DOFS_PER_AXIS};
-  #endif
-
-  constexpr int strideQ = {UNKNOWNS};
-
-  const int faceDimension = marker.getSelectedFaceNumber()%DIMENSIONS;
-  const int faceIndex = (marker.outerNormal()[faceDimension]>0.0 ? 1 : 0);
-
-  for(int i=0; i<nodesPerFace; i++){{
-    for(int j=0; j<strideQ ; j++){{
-      value[(2*i+faceIndex)*strideQ+j] = neighbour.data()[(2*i+faceIndex)*strideQ+j];
-    }}
-  }}
-
-"""
-
-    return template.format(**d)
 
 
 def create_start_time_step_implementation_for_fixed_time_stepping(
@@ -716,45 +685,45 @@ def create_volumetric_solver_call(polynomial_basis, solver_variant):
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       [&](
-        const double * NOALIAS                  Q,
-        const tarch::la::Vector<DIMENSIONS,double>&  x,
+        const double* NOALIAS                        Q,
+        const tarch::la::Vector<DIMENSIONS, double>& x,
         double                                       t,
         double                                       dt,
         int                                          normal,
-        double * NOALIAS                        F
+        double* NOALIAS                              F
       )->void {
         {% if FLUX_IMPLEMENTATION!="<none>" %}
         repositories::{{SOLVER_INSTANCE}}.flux(Q,x,t,dt,normal,F);
         {% endif %}
       }, //flux
       [&](
-          const double * NOALIAS                  Q,
-          const double * NOALIAS                  deltaQ,
-          const tarch::la::Vector<DIMENSIONS,double>&  faceCentre,
-          double                                       t,
-          double                                       dt,
-          int                                          normal,
-          double * NOALIAS                        F
-        ) -> void {
+        const double* NOALIAS                        Q,
+        const double* NOALIAS                        deltaQ,
+        const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
+        double                                       t,
+        double                                       dt,
+        int                                          normal,
+        double* NOALIAS                              F
+      ) -> void {
           {% if NCP_IMPLEMENTATION!="<none>" %}
           repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct(Q, deltaQ, faceCentre, t, dt, normal, F);
           {% endif %}
         }, //ncp
       [&](
-        const double * NOALIAS                  Q,
-        const tarch::la::Vector<DIMENSIONS,double>&  x,
+        const double* NOALIAS                        Q,
+        const tarch::la::Vector<DIMENSIONS, double>& x,
         double                                       t,
         double                                       dt,
-        double * NOALIAS                        S
+        double* NOALIAS                              S
       ) -> void {
         {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
         repositories::{{SOLVER_INSTANCE}}.sourceTerm(Q,x,t,dt,S);
         {% endif %}
       }, //source
       [&](
-        const double * NOALIAS                  Q,
-        const tarch::la::Vector<DIMENSIONS,double>&  cellCentre,
-        const tarch::la::Vector<DIMENSIONS,double>&  cellH,
+        const double* NOALIAS                        Q,
+        const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+        const tarch::la::Vector<DIMENSIONS, double>& cellH,
         double                                       t,
         double                                       dt
       ) -> std::vector<::exahype2::dg::PointSource> {

@@ -64,7 +64,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getTimeStepSize() const {
 
     def create_compute_time_step_size(self):
         return """
-    const auto timeStepSize =
+    [[maybe_unused]] const auto timeStepSize =
       repositories::{{SOLVER_INSTANCE}}.getTimeStepSize();
 """
 
@@ -99,9 +99,11 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getTimeStepSize() const {
     _timeStepSize = $normalised_time_step_size
       * _minVolumeHThisTimeStep / maxAdmissibleCellSize;
 """
-            return Template(template).substitute(
-                normalised_time_step_size=self._normalised_time_step_size
-            ).strip("\n")
+            return (
+                Template(template)
+                .substitute(normalised_time_step_size=self._normalised_time_step_size)
+                .strip("\n")
+            )
         if self._scheme is _FixedTimeSteppingScheme.ADERDG:
             template = """
     const auto maxAdmissiblePatchSize =
@@ -119,16 +121,20 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getTimeStepSize() const {
     _timeStepSize = $normalised_time_step_size
       * _minCellHThisTimeStep / maxAdmissiblePatchSize;
 """
-            return Template(template).substitute(
-                normalised_time_step_size=self._normalised_time_step_size
-            ).strip("\n")
+            return (
+                Template(template)
+                .substitute(normalised_time_step_size=self._normalised_time_step_size)
+                .strip("\n")
+            )
         template = """
     _timeStepSize = $normalised_time_step_size
       * _minCellHThisTimeStep / {{RK_ORDER}} / {{RK_ORDER}};
 """
-        return Template(template).substitute(
-            normalised_time_step_size=self._normalised_time_step_size
-        ).strip("\n")
+        return (
+            Template(template)
+            .substitute(normalised_time_step_size=self._normalised_time_step_size)
+            .strip("\n")
+        )
 
     def create_finish_time_step_implementation(self):
         template = """
@@ -147,7 +153,5 @@ $time_step_size_computation
   }
 """
         return Template(template).substitute(
-            time_step_size_computation=(
-                self._create_time_step_size_computation()
-            )
+            time_step_size_computation=(self._create_time_step_size_computation())
         )

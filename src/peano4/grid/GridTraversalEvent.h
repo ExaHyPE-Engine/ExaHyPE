@@ -3,8 +3,8 @@
 #pragma once
 
 #include "peano4/Globals.h"
-#include "peano4/datamanagement/CellMarker.h"
-#include "peano4/datamanagement/FaceMarker.h"
+#include "peano4/dataview/CellMarker.h"
+#include "peano4/dataview/FaceMarker.h"
 #include "tarch/la/Vector.h"
 
 namespace peano4::grid {
@@ -43,9 +43,10 @@ struct peano4::grid::GridTraversalEvent final {
   std::array<int, TWO_TIMES_D> faceDataTo{};
 
   /**
-   * Pool slots of the cell's entities, indexed by the cell-local entity
-   * number. Only the pool dialect fills them; the data fields above then
-   * carry classification sentinels and cell-local positions.
+   * Stores pool slots for the cell, its vertices, and its faces.
+   *
+   * The arrays use cell-local entity order. Pool traversal uses the data fields
+   * above for classification sentinels and cell-local positions.
    */
   int                          cellPoolIndex{-1};
   std::array<int, TWO_POWER_D> vertexPoolIndices{};
@@ -202,6 +203,9 @@ struct peano4::grid::GridTraversalEvent final {
   INLINE_METHOD int  getCellPoolIndex() const noexcept { return cellPoolIndex; }
   INLINE_METHOD void setCellPoolIndex(int poolIndex) noexcept { cellPoolIndex = poolIndex; }
 
+  INLINE_METHOD const std::array<int, TWO_POWER_D>& getVertexPoolIndices() const noexcept { return vertexPoolIndices; }
+  INLINE_METHOD const std::array<int, TWO_TIMES_D>& getFacePoolIndices() const noexcept { return facePoolIndices; }
+
   INLINE_METHOD int  getVertexPoolIndex(int position) const noexcept { return vertexPoolIndices[position]; }
   INLINE_METHOD void setVertexPoolIndex(int position, int poolIndex) noexcept {
     vertexPoolIndices[position] = poolIndex;
@@ -221,8 +225,8 @@ struct peano4::grid::GridTraversalEvent final {
     relativePositionToFather[axis] = position;
   }
 
-  datamanagement::CellMarker getCellMarker() const;
-  datamanagement::FaceMarker getFaceMarker() const;
+  peano4::dataview::CellMarker getCellMarker() const;
+  peano4::dataview::FaceMarker getFaceMarker() const;
 
   std::string toString() const;
 };

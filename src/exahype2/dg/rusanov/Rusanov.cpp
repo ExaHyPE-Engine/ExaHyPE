@@ -53,8 +53,8 @@ void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
     tarch::la::Vector<DIMENSIONS, int> leftDoF  = dof;
     tarch::la::Vector<DIMENSIONS, int> rightDoF = dof;
 
-    leftDoF(normal)  = 0;
-    rightDoF(normal) = 1;
+    leftDoF(normal)             = 0;
+    rightDoF(normal)            = 1;
     const int leftInputOffset   = exahype2::serialiseVoxelIndexInOverlap(leftDoF, order + 1, 1, normal) * inputStride;
     const int rightInputOffset  = exahype2::serialiseVoxelIndexInOverlap(rightDoF, order + 1, 1, normal) * inputStride;
     const int leftOutputOffset  = exahype2::serialiseVoxelIndexInOverlap(leftDoF, order + 1, 1, normal) * outputStride;
@@ -106,6 +106,10 @@ void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
   delete[] ncpValues;
 }
 
+/**
+ * Unavailable Rusanov variant for traces containing projected gradients.
+ * This overload always terminates; only solution-trace projection is supported.
+ */
 void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ_with_gradient_projection(
   [[maybe_unused]] ::exahype2::dg::Flux                         flux,
   [[maybe_unused]] ::exahype2::dg::NonConservativeProduct       nonConservativeProduct,

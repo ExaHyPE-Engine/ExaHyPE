@@ -1,7 +1,7 @@
 #include "TestHelpers.h"
 
+#include "peano4/dataview/VertexMarker.h"
 #include "peano4/particles/particles.h"
-#include "peano4/datamanagement/VertexMarker.h"
 
 #ifdef UseTestSpecificCompilerSettings
 #pragma optimize("", off)
@@ -12,14 +12,14 @@ peano4::particles::tests::TestHelpers::TestHelpers() :
 
 void peano4::particles::tests::TestHelpers::testParticleAssignedToVertexWillBeLocal() {
 #if DIMENSIONS == 2
-  peano4::datamanagement::VertexMarker markerAFromYellowRank;
-  peano4::datamanagement::VertexMarker markerBFromYellowRank;
-  peano4::datamanagement::VertexMarker markerCFromYellowRank;
-  peano4::datamanagement::VertexMarker markerDFromYellowRank;
-  peano4::datamanagement::VertexMarker markerAFromGreyRank;
-  peano4::datamanagement::VertexMarker markerBFromGreyRank;
-  peano4::datamanagement::VertexMarker markerCFromGreyRank;
-  peano4::datamanagement::VertexMarker markerDFromGreyRank;
+  peano4::dataview::VertexMarker markerAFromYellowRank;
+  peano4::dataview::VertexMarker markerBFromYellowRank;
+  peano4::dataview::VertexMarker markerCFromYellowRank;
+  peano4::dataview::VertexMarker markerDFromYellowRank;
+  peano4::dataview::VertexMarker markerAFromGreyRank;
+  peano4::dataview::VertexMarker markerBFromGreyRank;
+  peano4::dataview::VertexMarker markerCFromGreyRank;
+  peano4::dataview::VertexMarker markerDFromGreyRank;
 
   double meshSize = 1.0 / 3.0 / 3.0;
 

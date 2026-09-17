@@ -13,6 +13,7 @@ set(SOURCES
   GridSnapshot.cpp
   phases/Configuration.cpp
   phases/GridConstruction.cpp
+  phases/AllocateMemory.cpp
   phases/GridInitialisation.cpp
   phases/DynamicAMR.cpp
   phases/TimeLoop.cpp

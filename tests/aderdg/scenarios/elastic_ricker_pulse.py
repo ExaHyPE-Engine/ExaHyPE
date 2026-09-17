@@ -65,12 +65,7 @@ class ElasticRickerPulse(Scenario):
 
     def analytical_solution(self):
         return """
-  // Lamé parameters
-  constexpr auto mu     =  1;
-  constexpr auto lambda = -1;
-
   // Constant auxiliary parameters
-  constexpr auto rho  = 1;
   constexpr auto cp   = 1;
   constexpr auto cs   = 1;
 

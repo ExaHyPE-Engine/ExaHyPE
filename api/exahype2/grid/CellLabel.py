@@ -88,7 +88,7 @@ def create_cell_label(solver_name):
 
     result.merge_method_definition = """
   switch (context) {
-    case ::peano4::stacks::SendReceiveContext::InterRank:
+    case ::peano4::grid::SendReceiveContext::InterRank:
       assertion(false, "Cells are never subject to an inter-rank exchange");
       break;
     default:

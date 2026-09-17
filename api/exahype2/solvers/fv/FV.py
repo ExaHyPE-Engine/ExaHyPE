@@ -218,23 +218,12 @@ and additional AMR levels is configured by the executable at runtime.
         self._patch_overlap_old.generator.receive_and_merge_condition = "false"
         self._patch_overlap_old.generator.can_receive = "false"
         self._patch_overlap_old.generator.can_send = "false"
-        self._patch_overlap_old.generator.use_copy_for_exchange = "true"
-        self._patch_overlap_old.generator.merge_method_definition = (
-            exahype2.blockstructured.get_face_merge_implementation(
-                self._patch_overlap_old
-            )
-        )
 
         self._patch_overlap_new.generator.send_condition = "true"
         self._patch_overlap_new.generator.receive_and_merge_condition = "true"
         self._patch_overlap_new.generator.can_receive = self._load_face_data_default_guard()
         self._patch_overlap_new.generator.can_send = self._store_face_data_default_guard()
-        self._patch_overlap_new.generator.use_copy_for_exchange = "true"
-        self._patch_overlap_new.generator.merge_method_definition = (
-            exahype2.blockstructured.get_face_merge_implementation(
-                self._patch_overlap_new
-            )
-        )
+        self._patch_overlap_new.generator.halo_layout = "overlapping_volumes"
 
         self._patch.generator.includes += """
 #include "repositories/SolverRepository.h"
@@ -654,10 +643,12 @@ and additional AMR levels is configured by the executable at runtime.
                 True,
             )
         )
+        hasSolverDefinitions = bool(dictionary["SOLVER_USER_DEFINITIONS"].strip())
+        solverImplementationTemplate = cpp_file_template if hasSolverDefinitions else None
         generated_solver_files = (
             peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
                 header_file_template,
-                cpp_file_template,
+                solverImplementationTemplate,
                 self._name,
                 namespace,
                 ".",
@@ -671,7 +662,8 @@ and additional AMR levels is configured by the executable at runtime.
         output.makefile.add_h_file("Abstract" + self._name + ".h", generated=True)
         output.makefile.add_h_file(self._name + ".h", generated=True)
         output.makefile.add_cpp_file("Abstract" + self._name + ".cpp", generated=True)
-        output.makefile.add_cpp_file(self._name + ".cpp", generated=True)
+        if hasSolverDefinitions:
+            output.makefile.add_cpp_file(self._name + ".cpp", generated=True)
 
     def set_solver_constants(self, datastring):
         self._solver_constants = datastring
