@@ -58,18 +58,32 @@ void peano4::data::ContainerRegistry::detachContainer(const peano4::data::Manage
  * the rank to a single task.
  */
 bool peano4::data::ContainerRegistry::supportsSubtreeTaskReplication() const {
-  for (const auto* const container : _containers) {
-    if (not container->supportsSubtreeTaskReplication()) {
-      return false;
-    }
-  }
-  return true;
+  return std::all_of(_containers.begin(), _containers.end(), [](const peano4::data::ManagedContainer* const container) {
+    return container->supportsSubtreeTaskReplication();
+  });
 }
 
-void peano4::data::ContainerRegistry::initialiseSerialSlots() {
-  for (auto* const container : _containers) {
-    container->initialiseSerialSlot();
+bool peano4::data::ContainerRegistry::arePayloadPoolsLive() const { return _payloadPoolsLive; }
+
+/**
+ * Marks the pooled payload buffers live and binds every container's pooled
+ * storage. Values a record holds before its slot is bound move into the
+ * bound chunk.
+ */
+void peano4::data::ContainerRegistry::allocatePayloadPools() {
+  _payloadPoolsLive = true;
+  runContainerTasks(_containers, [](peano4::data::ManagedContainer* const container) { container->bindPool(); });
+}
+
+/**
+ * Returns the pool buffer bytes the registered containers' slots select.
+ */
+std::size_t peano4::data::ContainerRegistry::getPooledPayloadBytes() const {
+  std::size_t bytes = 0;
+  for (const auto* const container : _containers) {
+    bytes += container->getPooledPayloadBytes();
   }
+  return bytes;
 }
 
 void peano4::data::ContainerRegistry::resizePoolsForTree(
@@ -154,12 +168,5 @@ void peano4::data::ContainerRegistry::finishBoundaryExchange(
 ) {
   for (auto* const container : _containers) {
     container->finishBoundaryExchange(facePackLists, vertexPackLists, faceFrozenSlotBases, vertexFrozenSlotBases);
-  }
-}
-
-void peano4::data::ContainerRegistry::prepareLocalSlots(const int numberOfSlots) {
-  assertion(numberOfSlots > 0, numberOfSlots);
-  for (auto* const container : _containers) {
-    container->prepareLocalSlots(numberOfSlots);
   }
 }

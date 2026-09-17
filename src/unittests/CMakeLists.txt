@@ -76,5 +76,4 @@ foreach(mode IN LISTS SUPPORTED_BUILD_TYPES)
       ENVIRONMENT "OMP_NUM_THREADS=${threads_per_rank}"
     )
   endforeach()
-
 endforeach()

@@ -78,7 +78,7 @@ class VolumeWisePostprocessSolution(AbstractFVActionSet):
             """
 {
   {{COMPUTE_TIME_STEP_SIZE}}
-  const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+  [[maybe_unused]] const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
   if (
     not marker.hasBeenRefined()

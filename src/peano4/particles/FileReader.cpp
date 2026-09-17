@@ -2,73 +2,84 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "FileReader.h"
 
-#include "tarch/instrumentation/Error.h"
+#include "tarch/Assertions.h"
+#include "tarch/Termination.h"
 #include "tarch/instrumentation/Info.h"
 
+/**
+ * Appends the coordinates from @p filename and multiplies each value by @p scale.
+ * Each non-empty line contains exactly DIMENSIONS numeric values.
+ */
 void peano4::particles::FileReader::readDatFile(const std::string& filename, const double scale) {
-  std::fstream fin;
-
-  fin.open(filename, std::ios::in);
-  std::string line;
-
-  if (not fin) {
-    logError("Was not able to open file " << filename);
-    std::abort();
+  assertion(not filename.empty());
+  assertion(std::isfinite(scale), scale);
+  std::fstream input(filename, std::ios::in);
+  if (not input) {
+    tarch::terminateWithError("The particle coordinate file cannot be opened: " + filename);
   }
 
-  while (std::getline(fin, line)) {
+  std::string line;
+  int         lineNumber = 0;
+  while (std::getline(input, line)) {
+    lineNumber++;
+    if (line.find_first_not_of(" \t\r") == std::string::npos) {
+      continue;
+    }
     std::stringstream                     currentLine(line);
-    tarch::la::Vector<DIMENSIONS, double> newEntry;
-
-    int         entry = 0;
-    std::string token;
-    while (std::getline(currentLine, token, ' ') and entry < DIMENSIONS) {
-      if (token != "") {
-        newEntry(entry) = scale * std::atof(token.c_str());
-        entry++;
+    tarch::la::Vector<DIMENSIONS, double> newEntry{};
+    for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
+      if (not(currentLine >> newEntry(dimension))) {
+        tarch::terminateWithError("Particle coordinate line " + std::to_string(lineNumber) + " has too few values.");
       }
+      newEntry(dimension) *= scale;
+      assertion(std::isfinite(newEntry(dimension)), lineNumber, dimension, newEntry(dimension));
+    }
+    std::string trailingValue;
+    if (currentLine >> trailingValue) {
+      tarch::terminateWithError("Particle coordinate line " + std::to_string(lineNumber) + " has too many values.");
     }
     _data.push_back(newEntry);
   }
-
-  fin.close();
-
   logInfo("Read " << _data.size() << " particle positions from file " << filename);
 }
 
-void peano4::particles::FileReader::clear() { _data.clear(); }
-
 bool peano4::particles::FileReader::empty() const { return _data.empty(); }
 
-bool peano4::particles::FileReader::getNumberOfCoordinates() const { return _data.size(); }
-
+/**
+ * Returns coordinates inside the closed voxel centred at @p x with width @p h.
+ * With @p remove, returned coordinates are erased from storage.
+ */
 std::list<tarch::la::Vector<DIMENSIONS, double>> peano4::particles::FileReader::getParticlesWithinVoxel(
   const tarch::la::Vector<DIMENSIONS, double>& x,
   const tarch::la::Vector<DIMENSIONS, double>& h,
-  bool                                         remove
+  const bool                                   remove
 ) {
+  for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
+    assertion(std::isfinite(x(dimension)), dimension, x);
+    assertion(std::isfinite(h(dimension)), dimension, h);
+    assertion(h(dimension) > 0.0, dimension, h);
+  }
   std::list<tarch::la::Vector<DIMENSIONS, double>> result;
 
-  auto particle = _data.begin();
-  while (particle != _data.end()) {
+  auto particlePosition = _data.begin();
+  while (particlePosition != _data.end()) {
     bool overlaps = true;
-
-    for (int d = 0; d < DIMENSIONS; d++) {
-      overlaps = overlaps and tarch::la::smallerEquals(x(d) - h(d) / 2.0, (*particle)(d));
-      overlaps = overlaps and tarch::la::greaterEquals(x(d) + h(d) / 2.0, (*particle)(d));
+    for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
+      overlaps =
+        overlaps and tarch::la::smallerEquals(x(dimension) - h(dimension) / 2.0, (*particlePosition)(dimension));
+      overlaps =
+        overlaps and tarch::la::greaterEquals(x(dimension) + h(dimension) / 2.0, (*particlePosition)(dimension));
     }
-
     if (overlaps) {
-      result.push_back(*particle);
+      result.push_back(*particlePosition);
       if (remove) {
-        particle = _data.erase(particle);
+        particlePosition = _data.erase(particlePosition);
       } else {
-        particle++;
+        particlePosition++;
       }
     } else {
-      particle++;
+      particlePosition++;
     }
   }
-
   return result;
 }

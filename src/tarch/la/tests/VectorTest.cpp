@@ -8,6 +8,10 @@
 #include "tarch/la/VectorScalarOperations.h"
 #include "tarch/la/VectorVectorOperations.h"
 
+#if defined(PEANO_WITH_GPU_BACKEND_SYCL)
+#include <sycl/sycl.hpp>
+#endif
+
 tarch::la::tests::VectorTest::VectorTest() :
   TestCase("tarch::la::tests::VectorTest") {}
 
@@ -406,13 +410,31 @@ void tarch::la::tests::VectorTest::testVectorVectorOperations() {
 }
 
 void tarch::la::tests::VectorTest::testSpecialisedVectorLayouts() {
+  static_assert(std::is_trivially_copyable<Vector<1, int>>::value);
+  static_assert(std::is_trivially_copyable<Vector<2, int>>::value);
+  static_assert(std::is_trivially_copyable<Vector<1, double>>::value);
+  static_assert(std::is_trivially_copyable<Vector<2, double>>::value);
   static_assert(sizeof(Vector<2, int>) == 8);
   static_assert(alignof(Vector<2, int>) == 8);
+  static_assert(std::is_standard_layout<Vector<2, int>>::value);
+  static_assert(sizeof(Vector<2, double>) == 16);
   static_assert(sizeof(Vector<3, int>) == 12);
   static_assert(alignof(Vector<3, int>) == alignof(int));
+  static_assert(std::is_standard_layout<Vector<3, int>>::value);
+  static_assert(sizeof(Vector<3, double>) == 24);
   static_assert(sizeof(Vector<4, int>) == 16);
   static_assert(alignof(Vector<4, int>) == 16);
+  static_assert(std::is_standard_layout<Vector<4, int>>::value);
+  static_assert(sizeof(Vector<4, double>) == 32);
   static_assert(std::is_trivially_copyable<Vector<3, double>>::value);
+  static_assert(sizeof(VectorCompare<2>) == sizeof(double));
+
+#if defined(PEANO_WITH_GPU_BACKEND_SYCL)
+  static_assert(sycl::is_device_copyable<Vector<1, int>>::value);
+  static_assert(sycl::is_device_copyable<Vector<2, int>>::value);
+  static_assert(sycl::is_device_copyable<Vector<1, double>>::value);
+  static_assert(sycl::is_device_copyable<Vector<2, double>>::value);
+#endif
 
   const Vector<2, double> vector2 = {1.5, 2.5};
   validateEquals(vector2.size(), 2);

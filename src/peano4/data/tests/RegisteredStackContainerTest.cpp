@@ -4,8 +4,7 @@
 
 #include "peano4/data/ContainerRegistry.h"
 #include "peano4/data/RegisteredStackContainer.h"
-#include "peano4/stacks/Stack.h"
-#include "tarch/mpi/Rank.h"
+#include "peano4/grid/Stack.h"
 
 namespace {
   /**
@@ -15,7 +14,7 @@ namespace {
     int value{0};
   };
 
-  using StampedContainer = peano4::data::RegisteredStackContainer<peano4::stacks::Stack<StampedValue>>;
+  using StampedContainer = peano4::data::RegisteredStackContainer<peano4::grid::Stack<StampedValue>>;
 
   /** Element type of a container whose copies must not diverge, such as a particle set. */
   struct UnreplicatedValue {
@@ -24,7 +23,7 @@ namespace {
     int value{0};
   };
 
-  using UnreplicatedContainer = peano4::data::RegisteredStackContainer<peano4::stacks::Stack<UnreplicatedValue>>;
+  using UnreplicatedContainer = peano4::data::RegisteredStackContainer<peano4::grid::Stack<UnreplicatedValue>>;
 
   /** Container ids above anything a generated repository hands out. */
   constexpr int FirstTestContainerId = 4300000;
@@ -57,9 +56,9 @@ void peano4::data::tests::RegisteredStackContainerTest::testEachKindSizesAgainst
     faceContainer.resizePoolForTree(CellCount + round, FaceCount + round, VertexCount + round);
     vertexContainer.resizePoolForTree(CellCount + round, FaceCount + round, VertexCount + round);
 
-    validateEquals(cellContainer.getPoolSize(), CellCount + round);
-    validateEquals(faceContainer.getPoolSize(), FaceCount + round);
-    validateEquals(vertexContainer.getPoolSize(), VertexCount + round);
+    validateEquals(cellContainer.getPoolSize(), CellCount + round + 1);
+    validateEquals(faceContainer.getPoolSize(), FaceCount + round + 1);
+    validateEquals(vertexContainer.getPoolSize(), VertexCount + round + 1);
   }
 }
 
@@ -83,7 +82,7 @@ void peano4::data::tests::RegisteredStackContainerTest::testMigrationMovesTheDat
 
   container.migratePoolForTree(cellPairs, {}, {}, NumberOfSlots, 0, 0);
 
-  validateEquals(container.getPoolSize(), NumberOfSlots);
+  validateEquals(container.getPoolSize(), NumberOfSlots + 1);
   for (int slot = 0; slot < static_cast<int>(NumberOfSlots); slot++) {
     validateEquals(container.getPoolSlot(slot).value, 100 + static_cast<int>(NumberOfSlots) - 1 - slot);
   }
@@ -162,7 +161,7 @@ void peano4::data::tests::RegisteredStackContainerTest::testCellDataStaysOutOfTh
   cellContainer.packBoundarySlots(packLists, packLists);
   cellContainer.finishBoundaryExchange(packLists, packLists, {0}, {0});
 
-  validateEquals(cellContainer.getPoolSize(), NumberOfSlots);
+  validateEquals(cellContainer.getPoolSize(), NumberOfSlots + 1);
   for (int slot = 0; slot < static_cast<int>(NumberOfSlots); slot++) {
     validateEquals(cellContainer.getPoolSlot(slot).value, 400 + slot);
   }
@@ -179,7 +178,7 @@ void peano4::data::tests::RegisteredStackContainerTest::testTheContainerJoinsAnd
   {
     StampedContainer container(FirstTestContainerId + 7, peano4::data::ManagedContainerKind::VertexData);
     registry.resizePoolsForTree(0, 0, 9);
-    validateEquals(container.getPoolSize(), std::size_t(9));
+    validateEquals(container.getPoolSize(), std::size_t(10));
     validate(container.supportsSubtreeTaskReplication());
     validateEquals(container.getManagedContainerId(), FirstTestContainerId + 7);
   }
@@ -222,34 +221,34 @@ void peano4::data::tests::RegisteredStackContainerTest::testClearReleasesThePool
 
   constexpr std::size_t NumberOfSlots = 5;
   container.resizePoolForTree(0, NumberOfSlots, 0);
-  container.prepareLocalSlots(3);
   stampPool(container, 500);
 
   container.clear();
   validateEquals(container.getPoolSize(), std::size_t(0));
 
   container.resizePoolForTree(0, NumberOfSlots, 0);
-  validateEquals(container.getPoolSize(), NumberOfSlots);
+  validateEquals(container.getPoolSize(), NumberOfSlots + 1);
   stampPool(container, 600);
   validateEquals(container.getPoolSlot(0).value, 600);
 }
 
-void peano4::data::tests::RegisteredStackContainerTest::testTaskSlotsFollowTheRankStride() {
-  StampedContainer container(FirstTestContainerId + 11, peano4::data::ManagedContainerKind::VertexData);
-  container.initialiseSerialSlot();
-  container.prepareLocalSlots(3);
+/**
+ * A shrink can turn a live entity slot into the sentinel, and migration can
+ * leave values there. Both restore the sentinel's neutral value before an
+ * enumerator can expose it.
+ */
+void peano4::data::tests::RegisteredStackContainerTest::testSentinelIsResetAfterPoolChanges() {
+  StampedContainer container(FirstTestContainerId + 11, peano4::data::ManagedContainerKind::FaceData);
 
-  const auto  rank          = tarch::mpi::Rank::getInstance().getRank();
-  const auto  numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
-  const auto& serialStack   = container.getLocalExchangeStack(rank, 0);
-  const auto& firstTask     = container.getLocalExchangeStack(rank + numberOfRanks, 0);
-  const auto& secondTask    = container.getLocalExchangeStack(rank + 2 * numberOfRanks, 0);
-  validate(&serialStack != &firstTask);
-  validate(&serialStack != &secondTask);
-  validate(&firstTask != &secondTask);
-  validate(&serialStack == &container.getLocalExchangeStack(rank, 0));
+  container.resizePoolForTree(0, 3, 0);
+  container.getPoolSlot(2).value = 17;
+  container.resizePoolForTree(0, 2, 0);
+  validateEquals(container.getSentinelSlot(), 2);
+  validateEquals(container.getPoolSlot(container.getSentinelSlot()).value, 0);
 
-  container.clear();
+  container.getPoolSlot(container.getSentinelSlot()).value = 18;
+  container.migratePoolForTree({}, {}, {}, 0, 2, 0);
+  validateEquals(container.getPoolSlot(container.getSentinelSlot()).value, 0);
 }
 
 void peano4::data::tests::RegisteredStackContainerTest::run() {
@@ -261,5 +260,5 @@ void peano4::data::tests::RegisteredStackContainerTest::run() {
   testMethod(testTheContainerJoinsAndLeavesTheRegistry);
   testMethod(testAnElementTypeCanRefuseTaskReplication);
   testMethod(testClearReleasesThePool);
-  testMethod(testTaskSlotsFollowTheRankStride);
+  testMethod(testSentinelIsResetAfterPoolChanges);
 }

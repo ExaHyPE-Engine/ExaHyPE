@@ -7,7 +7,7 @@
  * Positions outside the cell are clamped to the closest volume.
  */
 tarch::la::Vector<DIMENSIONS, int> exahype2::fv::internal::mapParticleOntoVoxel(
-  const peano4::datamanagement::CellMarker&    marker,
+  const peano4::dataview::CellMarker&          marker,
   int                                          voxelsPerAxis,
   const tarch::la::Vector<DIMENSIONS, double>& particleX
 ) {
@@ -31,7 +31,7 @@ tarch::la::Vector<DIMENSIONS, int> exahype2::fv::internal::mapParticleOntoVoxel(
  * Each component is clamped to [0, voxelsPerAxis-2], so its upper neighbour exists.
  */
 tarch::la::Vector<DIMENSIONS, int> exahype2::fv::internal::mapBiasedParticleOntoVoxel(
-  const peano4::datamanagement::CellMarker&    marker,
+  const peano4::dataview::CellMarker&          marker,
   int                                          voxelsPerAxis,
   const tarch::la::Vector<DIMENSIONS, double>& particleX
 ) {

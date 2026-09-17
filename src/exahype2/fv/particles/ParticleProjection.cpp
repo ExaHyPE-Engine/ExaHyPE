@@ -3,7 +3,7 @@
 #include "ParticleProjection.h"
 
 void exahype2::fv::particles::projection::depositMass_PiecewiseConstant(
-  const peano4::datamanagement::CellMarker&    marker,
+  const peano4::dataview::CellMarker&          marker,
   int                                          voxelsPerAxis,
   int                                          unknownsPerVoxel,
   double* NOALIAS                              Q,

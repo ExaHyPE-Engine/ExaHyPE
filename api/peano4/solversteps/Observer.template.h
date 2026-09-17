@@ -21,14 +21,14 @@ namespace {{ item }} {
 }
 {%- endfor %}
 
-class {{NAMESPACE | join("::")}}::{{CLASSNAME}} final: public ::peano4::grid::GridTraversalObserver {
+class {{NAMESPACE | join("::")}}::{{CLASSNAME}} final : public ::peano4::grid::GridTraversalObserver {
 public:
   /** Tree id of the observer prototype. */
   static constexpr int TreePrototype = -1;
 
-  {{CLASSNAME}}(int treeId = TreePrototype);
+  explicit {{CLASSNAME}}(int treeId = TreePrototype);
 
-  GridTraversalObserver* clone(int treeId) override;
+  ::peano4::grid::GridTraversalObserver* clone(int treeId) override;
 
   std::vector<::peano4::grid::GridControlEvent> getGridControlEvents() const override;
 
@@ -47,19 +47,29 @@ public:
   void enterNode(const ::peano4::grid::GridTraversalEvent& event) override;
   void leaveNode(const ::peano4::grid::GridTraversalEvent& event) override;
 
-  void loadNodeData(const ::peano4::grid::GridTraversalEvent& event) override;
-  void storeNodeData(const ::peano4::grid::GridTraversalEvent& event) override;
-
   void receiveNodeData(
     ::peano4::grid::GridTraversalObserver::NodeData nodeData,
     int                                             position,
     int                                             fromStack,
-    ::peano4::stacks::SendReceiveContext            context,
+    ::peano4::grid::SendReceiveContext              context,
     const ::peano4::grid::GridTraversalEvent&       event
   ) override;
 
 private:
   const int _treeId;
+
+  /**
+   * Stores entity pool slots for one cell on the active root-to-cell path.
+   *
+   * The preceding entry supplies coarse-grid slots to callbacks.
+   */
+  struct PathEntry final {
+    std::array<int, TWO_POWER_D> vertexSlots{};
+    std::array<int, TWO_TIMES_D> faceSlots{};
+    std::array<int, 1>           cellSlot{};
+  };
+
+  std::vector<PathEntry> _activePath{};
 
   {{ATTRIBUTES}}
 };

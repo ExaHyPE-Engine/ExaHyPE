@@ -37,26 +37,42 @@ INLINE_METHOD bool peano4::data::RegisteredStackContainer<StackType>::supportsSu
 }
 
 template <class StackType>
-INLINE_METHOD void peano4::data::RegisteredStackContainer<StackType>::initialiseSerialSlot() {
-  peano4::grid::StackContainer<StackType>::initialiseSerialSlot();
-}
-
-template <class StackType>
 INLINE_METHOD void peano4::data::RegisteredStackContainer<StackType>::resizePoolForTree(
   const std::size_t cellCount,
   const std::size_t faceCount,
   const std::size_t vertexCount
 ) {
+  const bool bindPooledData = peano4::data::ContainerRegistry::getInstance().arePayloadPoolsLive();
   switch (_kind) {
   case peano4::data::ManagedContainerKind::CellData:
-    peano4::grid::StackContainer<StackType>::resizePool(cellCount);
+    peano4::grid::StackContainer<StackType>::resizePool(cellCount, bindPooledData);
     break;
   case peano4::data::ManagedContainerKind::FaceData:
-    peano4::grid::StackContainer<StackType>::resizePool(faceCount);
+    peano4::grid::StackContainer<StackType>::resizePool(faceCount, bindPooledData);
     break;
   case peano4::data::ManagedContainerKind::VertexData:
-    peano4::grid::StackContainer<StackType>::resizePool(vertexCount);
+    peano4::grid::StackContainer<StackType>::resizePool(vertexCount, bindPooledData);
     break;
+  }
+}
+
+template <class StackType>
+INLINE_METHOD void peano4::data::RegisteredStackContainer<StackType>::bindPool() {
+  peano4::grid::StackContainer<StackType>::bindPool();
+}
+
+/**
+ * Returns the bytes the pooled element type's chunks select for the current
+ * slots. A type without a memory pool reports zero.
+ */
+template <class StackType>
+INLINE_METHOD std::size_t peano4::data::RegisteredStackContainer<StackType>::getPooledPayloadBytes() const {
+  using ElementType = typename peano4::grid::StackContainer<StackType>::ElementType;
+  if constexpr (requires { typename ElementType::MemoryPool; }) {
+    return this->getPoolSize() * static_cast<std::size_t>(ElementType::MemoryPool::PaddedChunkSize)
+      * sizeof(typename ElementType::DoFType);
+  } else {
+    return 0;
   }
 }
 
@@ -69,15 +85,16 @@ INLINE_METHOD void peano4::data::RegisteredStackContainer<StackType>::migratePoo
   const std::size_t                       faceCount,
   const std::size_t                       vertexCount
 ) {
+  const bool bindPooledData = peano4::data::ContainerRegistry::getInstance().arePayloadPoolsLive();
   switch (_kind) {
   case peano4::data::ManagedContainerKind::CellData:
-    peano4::grid::StackContainer<StackType>::migratePoolSlots(cellSlotPairs, cellCount);
+    peano4::grid::StackContainer<StackType>::migratePoolSlots(cellSlotPairs, cellCount, bindPooledData);
     break;
   case peano4::data::ManagedContainerKind::FaceData:
-    peano4::grid::StackContainer<StackType>::migratePoolSlots(faceSlotPairs, faceCount);
+    peano4::grid::StackContainer<StackType>::migratePoolSlots(faceSlotPairs, faceCount, bindPooledData);
     break;
   case peano4::data::ManagedContainerKind::VertexData:
-    peano4::grid::StackContainer<StackType>::migratePoolSlots(vertexSlotPairs, vertexCount);
+    peano4::grid::StackContainer<StackType>::migratePoolSlots(vertexSlotPairs, vertexCount, bindPooledData);
     break;
   }
   // Repartitioned data received before the swap lands in its new slots now.
@@ -178,12 +195,6 @@ INLINE_METHOD void peano4::data::RegisteredStackContainer<StackType>::finishBoun
   case peano4::data::ManagedContainerKind::CellData:
     break;
   }
-}
-
-template <class StackType>
-INLINE_METHOD void peano4::data::RegisteredStackContainer<StackType>::prepareLocalSlots(const int numberOfSlots) {
-  assertion(numberOfSlots > 0, numberOfSlots);
-  this->growLocalSlots(numberOfSlots);
 }
 
 template <class StackType>

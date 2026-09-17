@@ -17,15 +17,20 @@ _STATUS_ENUM = "::exahype2::dg::LimiterStatus"
 
 
 class _CellLimiterStatus(Integer):
-    def get_public_declarations(self):
+    def get_method_declarations(self):
         return [
-            f"""  INLINE_METHOD {_STATUS_ENUM} get{self.accessor_name}() const {{
-    return static_cast<{_STATUS_ENUM}>({self.field_name});
-  }}""",
-            f"""  INLINE_METHOD void set{self.accessor_name}(const {_STATUS_ENUM} value) {{
-    {self.field_name} = static_cast<int>(value);
-  }}""",
+            f"  INLINE_METHOD {_STATUS_ENUM} get{self.accessor_name}() const;",
+            f"  INLINE_METHOD void set{self.accessor_name}({_STATUS_ENUM} value);",
         ]
+
+    def get_method_definitions(self, qualified_class_name):
+        return f"""INLINE_METHOD auto {qualified_class_name}::get{self.accessor_name}() const -> {_STATUS_ENUM} {{
+  return static_cast<{_STATUS_ENUM}>({self.field_name});
+}}
+
+INLINE_METHOD void {qualified_class_name}::set{self.accessor_name}(const {_STATUS_ENUM} value) {{
+  {self.field_name} = static_cast<int>(value);
+}}"""
 
     def get_to_string_expression(self):
         # The enum has no stream operator, so the label prints the numeric status.
@@ -40,29 +45,39 @@ class _FaceLimiterStatus(IntegerArray):
     def __init__(self, name):
         super().__init__(name, 2)
 
-    def get_public_declarations(self):
+    def get_method_declarations(self):
         vector_type = "tarch::la::Vector<2, int>"
         return [
-            f"""  INLINE_METHOD {vector_type} get{self.accessor_name}() const {{
-    return {self.field_name};
-  }}""",
-            f"""  INLINE_METHOD {_STATUS_ENUM} get{self.accessor_name}(const int side) const {{
-    return ::exahype2::dg::loadFaceStatus(&{self.field_name}(0), side);
-  }}""",
-            f"""  INLINE_METHOD void set{self.accessor_name}(const int side, const {_STATUS_ENUM} value) {{
-    ::exahype2::dg::storeFaceStatus(&{self.field_name}(0), side, value);
-  }}""",
-            f"""  INLINE_METHOD void raise{self.accessor_name}(const int side, const {_STATUS_ENUM} value) {{
-    ::exahype2::dg::raiseFaceStatus(&{self.field_name}(0), side, value);
-  }}""",
+            f"  INLINE_METHOD {vector_type} get{self.accessor_name}() const;",
+            f"  INLINE_METHOD {_STATUS_ENUM} get{self.accessor_name}(int side) const;",
+            f"  INLINE_METHOD void set{self.accessor_name}(int side, {_STATUS_ENUM} value);",
+            f"  INLINE_METHOD void raise{self.accessor_name}(int side, {_STATUS_ENUM} value);",
         ]
+
+    def get_method_definitions(self, qualified_class_name):
+        vector_type = "tarch::la::Vector<2, int>"
+        return f"""INLINE_METHOD {vector_type} {qualified_class_name}::get{self.accessor_name}() const {{
+  return {self.field_name};
+}}
+
+INLINE_METHOD {_STATUS_ENUM} {qualified_class_name}::get{self.accessor_name}(const int side) const {{
+  return ::exahype2::dg::loadFaceStatus(&{self.field_name}(0), side);
+}}
+
+INLINE_METHOD void {qualified_class_name}::set{self.accessor_name}(const int side, const {_STATUS_ENUM} value) {{
+  ::exahype2::dg::storeFaceStatus(&{self.field_name}(0), side, value);
+}}
+
+INLINE_METHOD void {qualified_class_name}::raise{self.accessor_name}(const int side, const {_STATUS_ENUM} value) {{
+  ::exahype2::dg::raiseFaceStatus(&{self.field_name}(0), side, value);
+}}"""
 
 
 _CELL_MERGE = """
   switch (context) {
-  case ::peano4::stacks::SendReceiveContext::InterRank:
-  case ::peano4::stacks::SendReceiveContext::IntraRank:
-  case ::peano4::stacks::SendReceiveContext::Consolidation:
+  case ::peano4::grid::SendReceiveContext::InterRank:
+  case ::peano4::grid::SendReceiveContext::IntraRank:
+  case ::peano4::grid::SendReceiveContext::Consolidation:
     assertion(false, "Cell labels are never merged.");
     break;
   }
@@ -137,8 +152,8 @@ def _vertex_extrema_merge(number_of_observables):
     """
     return f"""
   switch (context) {{
-  case ::peano4::stacks::SendReceiveContext::InterRank:
-  case ::peano4::stacks::SendReceiveContext::IntraRank:
+  case ::peano4::grid::SendReceiveContext::InterRank:
+  case ::peano4::grid::SendReceiveContext::IntraRank:
     for (int observable = 0; observable < {number_of_observables}; observable++) {{
       setDmpMinimum(
         observable,
@@ -154,7 +169,7 @@ def _vertex_extrema_merge(number_of_observables):
       );
     }}
     break;
-  case ::peano4::stacks::SendReceiveContext::Consolidation:
+  case ::peano4::grid::SendReceiveContext::Consolidation:
     assertion(false, "The rank rebuilds the vertex label with a copy, so its merge never sees a consolidation.");
     break;
   }}

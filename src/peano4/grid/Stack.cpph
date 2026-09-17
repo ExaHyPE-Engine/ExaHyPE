@@ -1,0 +1,168 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+template <class T>
+INLINE_METHOD peano4::grid::Stack<T>::View::View(std::size_t size, std::size_t baseElement, Stack<T>* stack) :
+  _size(size),
+  _baseElement(baseElement),
+  _stack(stack) {}
+
+template <class T>
+INLINE_METHOD T& peano4::grid::Stack<T>::View::get(std::size_t index) {
+  assertion(index < _size, index, _size);
+  return _stack->_data[_baseElement + index];
+}
+
+template <class T>
+INLINE_METHOD const T& peano4::grid::Stack<T>::View::get(std::size_t index) const {
+  assertion(index < _size, index, _size);
+  return _stack->_data[_baseElement + index];
+}
+
+template <class T>
+INLINE_METHOD peano4::grid::Stack<T>::Stack(Stack&& other) noexcept :
+  _data(std::move(other._data)),
+  _logicalSize(other._logicalSize) {
+  other._logicalSize = 0;
+}
+
+template <class T>
+INLINE_METHOD peano4::grid::Stack<T>& peano4::grid::Stack<T>::operator=(Stack&& other) noexcept {
+  if (this != &other) {
+    _data              = std::move(other._data);
+    _logicalSize       = other._logicalSize;
+    other._logicalSize = 0;
+  }
+  return *this;
+}
+
+template <class T>
+INLINE_METHOD std::size_t peano4::grid::Stack<T>::push(const T& element)
+  requires(std::is_copy_constructible_v<T> and std::is_copy_assignable_v<T>)
+{
+  if (_logicalSize < _data.size()) {
+    _data[_logicalSize] = element;
+  } else {
+    _data.push_back(element);
+  }
+  return _logicalSize++;
+}
+
+template <class T>
+INLINE_METHOD std::size_t peano4::grid::Stack<T>::push(T&& element) {
+  if (_logicalSize < _data.size()) {
+    // The slot keeps its object, so T::operator= has to replace the full state
+    // of that object, including an empty or invalid handle.
+    _data[_logicalSize] = std::move(element);
+  } else {
+    _data.push_back(std::move(element));
+  }
+  return _logicalSize++;
+}
+
+/**
+ * Removes and returns the top element while keeping its slot constructed.
+ */
+template <class T>
+INLINE_METHOD T peano4::grid::Stack<T>::pop() {
+  assertion(_logicalSize > 0);
+  auto topElement = std::move(_data[_logicalSize - 1]);
+  --_logicalSize;
+  return topElement;
+}
+
+/**
+ * Returns the element @p shift positions below the top. Zero selects the top.
+ */
+template <class T>
+INLINE_METHOD T& peano4::grid::Stack<T>::top(std::size_t shift) {
+  assertion(shift < _logicalSize, shift, _logicalSize);
+  return _data[_logicalSize - 1 - shift];
+}
+
+/**
+ * Returns the element @p shift positions below the top. Zero selects the top.
+ */
+template <class T>
+INLINE_METHOD const T& peano4::grid::Stack<T>::top(std::size_t shift) const {
+  assertion(shift < _logicalSize, shift, _logicalSize);
+  return _data[_logicalSize - 1 - shift];
+}
+
+template <class T>
+INLINE_METHOD T& peano4::grid::Stack<T>::operator[](std::size_t index) {
+  assertion(index < _logicalSize, index, _logicalSize);
+  return _data[index];
+}
+
+template <class T>
+INLINE_METHOD const T& peano4::grid::Stack<T>::operator[](std::size_t index) const {
+  assertion(index < _logicalSize, index, _logicalSize);
+  return _data[index];
+}
+
+/**
+ * Reserves the top @p numberOfElements slots and returns a view of them. A
+ * slot keeps its object, so a caller that fills the view has to assign a
+ * value whose assignment replaces the full state, including an empty or
+ * invalid handle.
+ */
+template <class T>
+INLINE_METHOD typename peano4::grid::Stack<T>::View peano4::grid::Stack<T>::pushBlock(std::size_t numberOfElements) {
+  assertion(numberOfElements <= std::numeric_limits<std::size_t>::max() - _logicalSize);
+  const auto base = _logicalSize;
+  resize(_logicalSize + numberOfElements);
+  return View(numberOfElements, base, this);
+}
+
+template <class T>
+INLINE_METHOD T* peano4::grid::Stack<T>::data() noexcept {
+  return _data.data();
+}
+
+template <class T>
+INLINE_METHOD const T* peano4::grid::Stack<T>::data() const noexcept {
+  return _data.data();
+}
+
+template <class T>
+INLINE_METHOD std::size_t peano4::grid::Stack<T>::size() const noexcept {
+  return _logicalSize;
+}
+
+template <class T>
+INLINE_METHOD bool peano4::grid::Stack<T>::empty() const noexcept {
+  return _logicalSize == 0;
+}
+
+/**
+ * Sets the number of slots in use. Growing constructs the missing slots and
+ * shrinking keeps the released ones, so the buffer only ever grows to the
+ * stack's high-water mark.
+ */
+template <class T>
+INLINE_METHOD void peano4::grid::Stack<T>::resize(std::size_t numberOfElements) {
+  if (_data.size() < numberOfElements) {
+    _data.resize(numberOfElements);
+  }
+  _logicalSize = numberOfElements;
+}
+
+/**
+ * Releases every slot and destroys its record. The vector retains its capacity
+ * so another resize can reuse the allocation.
+ */
+template <class T>
+INLINE_METHOD void peano4::grid::Stack<T>::clear() {
+  shallowClear();
+  _data.clear();
+}
+
+/**
+ * Releases every slot but keeps the elements constructed for reuse; their
+ * state survives until a later push() or view assignment replaces it.
+ */
+template <class T>
+INLINE_METHOD void peano4::grid::Stack<T>::shallowClear() {
+  _logicalSize = 0;
+}

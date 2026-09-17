@@ -9,12 +9,12 @@
  */
 template <typename Particle, int SourceIndex, int DestIndex, typename QStoreType>
 void exahype2::dg::projectValueOntoParticle(
-  const peano4::datamanagement::CellMarker& marker,
-  int                                       order,
-  const QStoreType* NOALIAS                 QuadratureNodes1D,
-  int                                       unknownsPerDoF,
-  const QStoreType* NOALIAS                 Q,
-  Particle&                                 particle
+  const peano4::dataview::CellMarker& marker,
+  int                                 order,
+  const QStoreType* NOALIAS           QuadratureNodes1D,
+  int                                 unknownsPerDoF,
+  const QStoreType* NOALIAS           Q,
+  Particle&                           particle
 ) {
   particle.setData(
     DestIndex,
@@ -38,12 +38,12 @@ void exahype2::dg::projectValueOntoParticle(
  */
 template <typename Particle, typename QStoreType>
 void exahype2::dg::projectAllValuesOntoParticle(
-  const peano4::datamanagement::CellMarker& marker,
-  int                                       order,
-  const QStoreType* NOALIAS                 QuadratureNodes1D,
-  int                                       unknownsPerDoF,
-  const QStoreType* NOALIAS                 Q,
-  Particle&                                 particle
+  const peano4::dataview::CellMarker& marker,
+  int                                 order,
+  const QStoreType* NOALIAS           QuadratureNodes1D,
+  int                                 unknownsPerDoF,
+  const QStoreType* NOALIAS           Q,
+  Particle&                           particle
 ) {
   for (int sourceAttribute = 0; sourceAttribute < unknownsPerDoF; sourceAttribute++) {
     const QStoreType interpolatedValue = ::exahype2::dg::evaluatePolynomial(

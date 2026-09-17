@@ -10,30 +10,12 @@
 #include "tarch/mpi/Rank.h"
 
 namespace {
-  enum SnapshotRowNumber {
-    GridLeaves,
-    GridVertices,
-    GridLevels,
-    MpiRanks,
-    MpiLoadBalance,
-    MpiSpineReplication,
-    OpenMpSubtreeTasks,
-    OpenMpCellsPerTask,
-    OpenMpThreadCeiling,
-    MemorySystem,
-    MemoryProcess,
-    MemoryGridVertices,
-    MemorySolverHeap,
-    MemoryTrackedData,
-    SnapshotRowCount
-  };
-
-  struct SnapshotRow {
+  struct RowLabel {
     const char* section{nullptr};
     const char* label{nullptr};
   };
 
-  constexpr std::array<SnapshotRow, SnapshotRowCount> SnapshotRows{{
+  constexpr std::array<RowLabel, runner::GridSnapshot::RowCount> RowLabels{{
     {"Grid", "Number of Leaves"},
     {"Grid", "Number of Vertices"},
     {"Grid", "Grid Levels"},
@@ -46,21 +28,26 @@ namespace {
     {"Memory", "System Memory"},
     {"Memory", "Process RSS"},
     {"Memory", "Grid Vertices"},
-    {"Memory", "Solver Heap"},
-    {"Memory", "Tracked Data"},
+    {"Memory", "Solver Pools"},
   }};
 
-  using SnapshotValues = std::array<std::string, SnapshotRowCount>;
+  std::string formatEntry(const runner::GridSnapshot::Entry& entry) {
+    return entry.detail.empty() ? entry.value : entry.value + "  (" + entry.detail + ")";
+  }
 
-  /** Renders the rows that carry a value; a row left empty stays out of the report. */
-  std::vector<std::string> renderSnapshotRows(const SnapshotValues& values) {
-    runner::Table report;
-    for (int rowNumber = 0; rowNumber < SnapshotRowCount; rowNumber++) {
-      if (not values[rowNumber].empty()) {
-        report.add(SnapshotRows[rowNumber].section, SnapshotRows[rowNumber].label, values[rowNumber]);
-      }
-    }
-    return report.render();
+  /** The memory rows stay in a transition report whether or not their value changed. */
+  constexpr bool staysInTransition(const int row) {
+    return row == runner::GridSnapshot::MemoryProcess or row == runner::GridSnapshot::MemorySolverHeap;
+  }
+
+  runner::GridSnapshot::Entry gridCellsEntry(
+    const std::uint64_t numberOfLeaves,
+    const std::uint64_t numberOfRefinedCells
+  ) {
+    constexpr auto MaximumCount = std::numeric_limits<std::uint64_t>::max();
+    const auto     numberOfCells =
+      numberOfRefinedCells > MaximumCount - numberOfLeaves ? MaximumCount : numberOfLeaves + numberOfRefinedCells;
+    return {runner::Format::grouped(numberOfLeaves), "Cells " + runner::Format::grouped(numberOfCells)};
   }
 } // namespace
 
@@ -88,17 +75,17 @@ std::uint64_t runner::boundedFullyRefinedLeaves(const int maximumLevel) {
  * and the sum saturates on overflow.
  */
 std::string runner::gridCellSummary(const std::uint64_t numberOfLeaves, const std::uint64_t numberOfRefinedCells) {
-  constexpr auto MaximumCount = std::numeric_limits<std::uint64_t>::max();
-  const auto     numberOfCells =
-    numberOfRefinedCells > MaximumCount - numberOfLeaves ? MaximumCount : numberOfLeaves + numberOfRefinedCells;
-  return runner::Format::grouped(numberOfLeaves) + "  (Cells " + runner::Format::grouped(numberOfCells) + ")";
+  return formatEntry(gridCellsEntry(numberOfLeaves, numberOfRefinedCells));
 }
 
-void runner::writeGridSnapshot(runner::ReportBox& box, const runner::RepositoryCallbacks& callbacks) {
-  const auto&    statistics           = runner::globalStatistics();
-  const auto     numberOfLeaves       = statistics.getGlobalNumberOfInnerUnrefinedCells();
-  const auto     numberOfRefinedCells = statistics.getGlobalNumberOfInnerRefinedCells();
-  SnapshotValues values;
+/**
+ * Reads the global grid statistics and the repository's memory counters into
+ * one snapshot. The MPI rows stay empty on a single rank.
+ */
+runner::GridSnapshot runner::collectGridSnapshot(const runner::RepositoryCallbacks& callbacks) {
+  const auto&          statistics = runner::globalStatistics();
+  runner::GridSnapshot snapshot;
+  auto&                entries = snapshot.entries;
 
   {
     const auto     numberOfVertices        = statistics.getGlobalNumberOfVertices();
@@ -108,15 +95,19 @@ void runner::writeGridSnapshot(runner::ReportBox& box, const runner::RepositoryC
               ? MaximumCount
               : numberOfVertices + numberOfHangingVertices;
 
-    std::ostringstream vertices;
-    vertices << runner::Format::grouped(numberOfAllVertices) << "  (Local " << runner::Format::grouped(numberOfVertices)
-             << " · Hanging " << runner::Format::grouped(numberOfHangingVertices) << ")";
-    std::ostringstream levels;
-    levels << statistics.getGlobalMinDepth() << " .. " << statistics.getGlobalMaxDepth();
-
-    values[GridLeaves]   = runner::gridCellSummary(numberOfLeaves, numberOfRefinedCells);
-    values[GridVertices] = vertices.str();
-    values[GridLevels]   = levels.str();
+    entries[GridSnapshot::GridLeaves] = gridCellsEntry(
+      statistics.getGlobalNumberOfInnerUnrefinedCells(),
+      statistics.getGlobalNumberOfInnerRefinedCells()
+    );
+    entries[GridSnapshot::GridVertices] = {
+      runner::Format::grouped(numberOfAllVertices),
+      "Local " + runner::Format::grouped(numberOfVertices) + " · Hanging "
+        + runner::Format::grouped(numberOfHangingVertices)
+    };
+    entries[GridSnapshot::GridLevels] = {
+      std::to_string(statistics.getGlobalMinDepth()) + " .. " + std::to_string(statistics.getGlobalMaxDepth()),
+      ""
+    };
   }
 
   {
@@ -124,78 +115,123 @@ void runner::writeGridSnapshot(runner::ReportBox& box, const runner::RepositoryC
 
     // A single rank owns everything it visits.
     if (numberOfRanks > 1) {
-      std::ostringstream interRankText;
-      interRankText << runner::Format::percentage(statistics.getGlobalInterRankBalance()) << "  ("
-                    << runner::Format::grouped(statistics.getGlobalMinRankLoad()) << " .. "
-                    << runner::Format::grouped(statistics.getGlobalMaxRankLoad()) << " Leaves/Rank)";
-      std::ostringstream replicationText;
-      replicationText << runner::Format::overheadPercentage(statistics.getGlobalReplicationOverhead()) << "  ("
-                      << runner::Format::grouped(statistics.getGlobalMinRankReplicatedCells()) << " .. "
-                      << runner::Format::grouped(statistics.getGlobalMaxRankReplicatedCells()) << " Spine Cells/Rank)";
-
-      values[MpiRanks]            = runner::Format::grouped(static_cast<std::uint64_t>(numberOfRanks));
-      values[MpiLoadBalance]      = interRankText.str();
-      values[MpiSpineReplication] = replicationText.str();
+      entries[GridSnapshot::MpiRanks]       = {runner::Format::grouped(static_cast<std::uint64_t>(numberOfRanks)), ""};
+      entries[GridSnapshot::MpiLoadBalance] = {
+        runner::Format::percentage(statistics.getGlobalInterRankBalance()),
+        runner::Format::grouped(statistics.getGlobalMinRankLoad()) + " .. "
+          + runner::Format::grouped(statistics.getGlobalMaxRankLoad()) + " Leaves/Rank"
+      };
+      entries[GridSnapshot::MpiSpineReplication] = {
+        runner::Format::overheadPercentage(statistics.getGlobalReplicationOverhead()),
+        runner::Format::grouped(statistics.getGlobalMinRankReplicatedCells()) + " .. "
+          + runner::Format::grouped(statistics.getGlobalMaxRankReplicatedCells()) + " Spine Cells/Rank"
+      };
     }
 
     // A rank traverses serially when it has one thread, when the grid is too
     // flat to decompose, or when a container cannot be split across tasks, and
     // then it owns no task at all.
-    const auto         numberOfSubtreeTasks = statistics.getGlobalNumberOfSubtreeTasks();
-    std::ostringstream subtreeTaskText;
-    std::ostringstream taskLoadText;
-    std::ostringstream threadCeilingText;
+    const auto numberOfSubtreeTasks = statistics.getGlobalNumberOfSubtreeTasks();
     if (numberOfSubtreeTasks == 0) {
-      subtreeTaskText << "None  (Ranks traverse serially)";
-      taskLoadText << "Not applicable";
-      threadCeilingText << "Not applicable";
+      entries[GridSnapshot::OpenMpSubtreeTasks]  = {"None", "Ranks traverse serially"};
+      entries[GridSnapshot::OpenMpCellsPerTask]  = {"Not applicable", ""};
+      entries[GridSnapshot::OpenMpThreadCeiling] = {"Not applicable", ""};
     } else {
-      subtreeTaskText << runner::Format::grouped(numberOfSubtreeTasks) << "  ("
-                      << runner::Format::grouped(statistics.getGlobalMinRankSubtreeTasks()) << " .. "
-                      << runner::Format::grouped(statistics.getGlobalMaxRankSubtreeTasks()) << " Tasks/Rank)";
-      taskLoadText << runner::Format::grouped(statistics.getGlobalMinSubtreeTaskCells()) << " .. "
-                   << runner::Format::grouped(statistics.getGlobalMaxSubtreeTaskCells()) << " Cells  (Mean "
-                   << runner::Format::grouped(statistics.getGlobalSubtreeTaskCells() / numberOfSubtreeTasks) << ")";
-      const auto threadCeiling   = statistics.getGlobalThreadCeiling();
-      const auto numberOfThreads = statistics.getGlobalNumberOfThreads();
-      threadCeilingText << runner::Format::grouped(threadCeiling) << " of " << runner::Format::grouped(numberOfThreads)
-                        << " Threads";
-      if (threadCeiling < numberOfThreads) {
-        threadCeilingText << "  (Largest Task " << runner::Format::grouped(statistics.getGlobalMaxSubtreeTaskCells())
-                          << " Cells)";
-      }
+      const auto threadCeiling                  = statistics.getGlobalThreadCeiling();
+      const auto numberOfThreads                = statistics.getGlobalNumberOfThreads();
+      entries[GridSnapshot::OpenMpSubtreeTasks] = {
+        runner::Format::grouped(numberOfSubtreeTasks),
+        runner::Format::grouped(statistics.getGlobalMinRankSubtreeTasks()) + " .. "
+          + runner::Format::grouped(statistics.getGlobalMaxRankSubtreeTasks()) + " Tasks/Rank"
+      };
+      entries[GridSnapshot::OpenMpCellsPerTask] = {
+        runner::Format::grouped(statistics.getGlobalMinSubtreeTaskCells()) + " .. "
+          + runner::Format::grouped(statistics.getGlobalMaxSubtreeTaskCells()) + " Cells",
+        "Mean " + runner::Format::grouped(statistics.getGlobalSubtreeTaskCells() / numberOfSubtreeTasks)
+      };
+      entries[GridSnapshot::OpenMpThreadCeiling] = {
+        runner::Format::grouped(threadCeiling) + " of " + runner::Format::grouped(numberOfThreads) + " Threads",
+        threadCeiling < numberOfThreads
+          ? "Largest Task " + runner::Format::grouped(statistics.getGlobalMaxSubtreeTaskCells()) + " Cells"
+          : ""
+      };
     }
-    values[OpenMpSubtreeTasks]  = subtreeTaskText.str();
-    values[OpenMpCellsPerTask]  = taskLoadText.str();
-    values[OpenMpThreadCeiling] = threadCeilingText.str();
   }
 
   {
     const auto bytesFrom = [](const std::function<std::size_t()>& callback) -> unsigned long long {
       return callback ? callback() : 0;
     };
-    const auto gridMemory      = statistics.getGlobalMemoryUsageInBytes();
-    const auto cellMemory      = bytesFrom(callbacks.getGlobalCellDataMemoryUsageInBytes);
-    const auto faceMemory      = bytesFrom(callbacks.getGlobalFaceDataMemoryUsageInBytes);
-    const auto vertexMemory    = bytesFrom(callbacks.getGlobalVertexDataMemoryUsageInBytes);
-    const auto dataTotal       = gridMemory + cellMemory + faceMemory + vertexMemory;
-    const auto residentSetSize = statistics.getGlobalProcessMemoryUsageInBytes();
+    const auto cellMemory   = bytesFrom(callbacks.getGlobalCellDataMemoryUsageInBytes);
+    const auto faceMemory   = bytesFrom(callbacks.getGlobalFaceDataMemoryUsageInBytes);
+    const auto vertexMemory = bytesFrom(callbacks.getGlobalVertexDataMemoryUsageInBytes);
 
-    const auto totalMemory = statistics.getGlobalTotalMemoryInBytes();
-    const auto freeMemory  = statistics.getGlobalFreeMemoryInBytes();
-
-    std::ostringstream systemMemory;
-    systemMemory << runner::Format::memory(totalMemory) << " RAM · " << runner::Format::memory(freeMemory) << " free";
-    values[MemorySystem]       = systemMemory.str();
-    values[MemoryProcess]      = runner::Format::memory(residentSetSize) + "  (Sum over Ranks)";
-    values[MemoryGridVertices] = runner::Format::memory(gridMemory) + "  (Estimated)";
-    values[MemorySolverHeap]   = "Cell " + runner::Format::memory(cellMemory) + " · Face "
-      + runner::Format::memory(faceMemory) + " · Vertex " + runner::Format::memory(vertexMemory);
-    values[MemoryTrackedData] = runner::Format::memory(dataTotal);
+    entries[GridSnapshot::MemorySystem] = {
+      runner::Format::memory(statistics.getGlobalFreeMemoryInBytes()) + " free",
+      runner::Format::memory(statistics.getGlobalTotalMemoryInBytes()) + " RAM"
+    };
+    entries[GridSnapshot::MemoryProcess] = {
+      runner::Format::memory(statistics.getGlobalProcessMemoryUsageInBytes()),
+      "Sum over Ranks"
+    };
+    entries[GridSnapshot::MemoryGridVertices] = {
+      runner::Format::memory(statistics.getGlobalMemoryUsageInBytes()),
+      "Estimated"
+    };
+    entries[GridSnapshot::MemorySolverHeap] = {
+      runner::Format::memory(cellMemory + faceMemory + vertexMemory),
+      "Cell " + runner::Format::memory(cellMemory) + " · Face " + runner::Format::memory(faceMemory) + " · Vertex "
+        + runner::Format::memory(vertexMemory)
+    };
   }
 
+  return snapshot;
+}
+
+/** Renders every row that carries a value under its section title. */
+std::vector<std::string> runner::describeGridSnapshot(const runner::GridSnapshot& snapshot) {
+  runner::Table report;
+  for (int row = 0; row < GridSnapshot::RowCount; row++) {
+    const auto& entry = snapshot.entries[row];
+    if (not entry.value.empty()) {
+      report.add(RowLabels[row].section, RowLabels[row].label, formatEntry(entry));
+    }
+  }
+  return report.render();
+}
+
+/**
+ * Renders the rows whose value changed between the two snapshots as
+ * "before → after" with the detail of @p after, and the memory rows in every
+ * case.
+ */
+std::vector<std::string> runner::describeGridTransition(
+  const runner::GridSnapshot& before,
+  const runner::GridSnapshot& after
+) {
+  runner::Table report;
+  for (int row = 0; row < GridSnapshot::RowCount; row++) {
+    const auto& entryAfter  = after.entries[row];
+    const auto& valueBefore = before.entries[row].value;
+    if (entryAfter.value.empty()) {
+      continue;
+    }
+    if (valueBefore != entryAfter.value) {
+      report.add(
+        RowLabels[row].section,
+        RowLabels[row].label,
+        formatEntry({valueBefore + " → " + entryAfter.value, entryAfter.detail})
+      );
+    } else if (staysInTransition(row)) {
+      report.add(RowLabels[row].section, RowLabels[row].label, formatEntry(entryAfter));
+    }
+  }
+  return report.render();
+}
+
+void runner::writeGridSnapshot(runner::ReportBox& box, const runner::RepositoryCallbacks& callbacks) {
   box.rule();
-  for (const auto& line : renderSnapshotRows(values)) {
+  for (const auto& line : runner::describeGridSnapshot(runner::collectGridSnapshot(callbacks))) {
     box.line(line);
   }
   box.rule();

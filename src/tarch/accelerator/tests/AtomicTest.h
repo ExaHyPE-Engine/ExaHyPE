@@ -22,4 +22,6 @@ public:
 private:
   void testSerialOperations();
   void testConcurrentOperations();
+  void testLoadStoreRoundTrip();
+  void testConcurrentMaximumIsOrderIndependent();
 };

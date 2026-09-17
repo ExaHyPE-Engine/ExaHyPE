@@ -2,11 +2,9 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 /**
- * Assigns the identifier used by aggregated boundary exchange.
+ * Creates a container with the exchange identifier @p containerId.
  *
- * Every rank constructs its containers in the same order. The identifier
- * therefore distinguishes one container's messages from every other
- * container's messages on all ranks.
+ * Every rank assigns these identifiers in the same order.
  */
 template <class StackType>
 peano4::grid::StackContainer<StackType>::StackContainer(const int containerId) :
@@ -15,52 +13,20 @@ peano4::grid::StackContainer<StackType>::StackContainer(const int containerId) :
 }
 
 template <class StackType>
-void peano4::grid::StackContainer<StackType>::initialiseSerialSlot() {
-  _firstLocalSlot  = tarch::mpi::Rank::getInstance().getRank();
-  _localSlotStride = tarch::mpi::Rank::getInstance().getNumberOfRanks();
-  if (_localSlotStacks.empty()) {
-    _localSlotStacks.emplace_back();
-  }
-}
-
-/**
- * Maps a tree id onto its local slot index. The serial slot exists from
- * initialiseSerialSlot() on and every further slot has to be grown through
- * growLocalSlots() before tasks access it, so this path never mutates the
- * storage.
- */
-template <class StackType>
-std::size_t peano4::grid::StackContainer<StackType>::localSlotIndex(const int treeId) const {
-  assertion(_firstLocalSlot >= 0, treeId, _containerId);
-  assertion(treeId >= _firstLocalSlot, treeId, _firstLocalSlot, _containerId);
-  assertion(
-    (treeId - _firstLocalSlot) % _localSlotStride == 0,
-    treeId,
-    _firstLocalSlot,
-    _localSlotStride,
-    _containerId
-  );
-  const auto slotIndex = static_cast<std::size_t>((treeId - _firstLocalSlot) / _localSlotStride);
-  assertion(slotIndex < _localSlotStacks.size(), slotIndex, _localSlotStacks.size(), _containerId);
-  return slotIndex;
+INLINE_METHOD int peano4::grid::StackContainer<StackType>::getContainerId() const {
+  return _containerId;
 }
 
 template <class StackType>
-typename peano4::grid::StackContainer<StackType>::Stack& peano4::grid::StackContainer<StackType>::getLocalExchangeStack(
-  const int treeId,
-  const int localStackId
-) {
-  assertion(localStackId >= 0);
-  assertion(localStackId < LocalStackCount);
-  return _localSlotStacks[localSlotIndex(treeId)][localStackId];
+INLINE_METHOD peano4::grid::BoundaryDataAggregation<StackType>& peano4::grid::StackContainer<
+  StackType>::getBoundaryDataAggregation() {
+  return _boundaryDataAggregation;
 }
 
 /**
  * Returns one element of the flat per-rank pool.
  *
- * The traversal topology maps tree entities to pool slots and writes those
- * slots into traversal events. Slot inheritance can therefore leave gaps and
- * makes the pool index distinct from the tree entity index.
+ * Traversal slot identifiers may contain gaps and differ from entity indices.
  */
 template <class StackType>
 INLINE_METHOD typename peano4::grid::StackContainer<StackType>::ElementType& peano4::grid::StackContainer<
@@ -69,14 +35,77 @@ INLINE_METHOD typename peano4::grid::StackContainer<StackType>::ElementType& pea
   return _pool[poolIndex];
 }
 
+/**
+ * Returns the first pool element for slot-based indexing.
+ */
+template <class StackType>
+INLINE_METHOD typename peano4::grid::StackContainer<StackType>::ElementType* peano4::grid::StackContainer<
+  StackType>::getPoolData() {
+  assertion(not _pool.empty(), _containerId);
+  return _pool.data();
+}
+
+/**
+ * Returns the slot used for positions without a rank-local entity.
+ */
+template <class StackType>
+INLINE_METHOD int peano4::grid::StackContainer<StackType>::getSentinelSlot() const {
+  assertion(not _pool.empty(), _containerId);
+  return static_cast<int>(_pool.size()) - 1;
+}
+
 template <class StackType>
 INLINE_METHOD std::size_t peano4::grid::StackContainer<StackType>::getPoolSize() const {
   return _pool.size();
 }
 
+/**
+ * Resizes the entity slots and appends a cleared sentinel.
+ *
+ * With @p bindPooledData the pooled element types are rebound after the
+ * resize; a caller that defers the payload allocation calls bindPool() later.
+ */
 template <class StackType>
-void peano4::grid::StackContainer<StackType>::resizePool(const std::size_t entityCount) {
-  _pool.resize(entityCount);
+void peano4::grid::StackContainer<StackType>::resizePool(const std::size_t entityCount, const bool bindPooledData) {
+  [[maybe_unused]] constexpr auto MaximumPoolSize = static_cast<std::size_t>(std::numeric_limits<int>::max());
+  assertion(entityCount < MaximumPoolSize, entityCount, MaximumPoolSize, _containerId);
+  _pool.resize(entityCount + 1);
+  if (bindPooledData) {
+    bindPooledStorage();
+  }
+  resetSentinel();
+  assertion(_pool.size() == entityCount + 1, _pool.size(), entityCount, _containerId);
+}
+
+/**
+ * Binds pooled element types to the chunks backing their slots.
+ */
+template <class StackType>
+void peano4::grid::StackContainer<StackType>::bindPool() {
+  bindPooledStorage();
+  resetSentinel();
+}
+
+template <class StackType>
+void peano4::grid::StackContainer<StackType>::bindPooledStorage() {
+  if constexpr (requires(std::vector<ElementType>& slots) { ElementType::bindPoolStorage(slots); }) {
+    ElementType::bindPoolStorage(_pool);
+  }
+}
+
+/**
+ * Clears the sentinel after an operation that may replace its slot.
+ */
+template <class StackType>
+void peano4::grid::StackContainer<StackType>::resetSentinel() {
+  if (_pool.empty()) {
+    return;
+  }
+  if constexpr (requires(ElementType& element) { element.clearValues(); }) {
+    _pool.back().clearValues();
+  } else {
+    _pool.back() = ElementType{};
+  }
 }
 
 /**
@@ -88,28 +117,49 @@ void peano4::grid::StackContainer<StackType>::resizePool(const std::size_t entit
 template <class StackType>
 void peano4::grid::StackContainer<StackType>::migratePoolSlots(
   const std::vector<std::pair<int, int>>& sourceAndTargetSlots,
-  const std::size_t                       entityCount
+  const std::size_t                       entityCount,
+  const bool                              bindPooledData
 ) {
+  [[maybe_unused]] constexpr auto MaximumPoolSize = static_cast<std::size_t>(std::numeric_limits<int>::max());
+  assertion(entityCount < MaximumPoolSize, entityCount, MaximumPoolSize, _containerId);
+  assertion(_pool.size() <= MaximumPoolSize, _pool.size(), MaximumPoolSize, _containerId);
+  assertion(sourceAndTargetSlots.size() <= MaximumPoolSize, sourceAndTargetSlots.size(), MaximumPoolSize, _containerId);
   std::vector<ElementType> stagedData;
   std::vector<int>         stagedTargets;
+  stagedData.reserve(sourceAndTargetSlots.size());
+  stagedTargets.reserve(sourceAndTargetSlots.size());
   for (const auto& [sourceSlot, targetSlot] : sourceAndTargetSlots) {
+    assertion(sourceSlot >= 0 and static_cast<std::size_t>(sourceSlot) < _pool.size(), sourceSlot, _pool.size());
+    assertion(targetSlot >= 0 and static_cast<std::size_t>(targetSlot) < entityCount, targetSlot, entityCount);
     if (sourceSlot != targetSlot) {
-      stagedData.push_back(std::move(_pool[sourceSlot]));
+      stagedData.push_back(_pool[sourceSlot]);
       stagedTargets.push_back(targetSlot);
     }
   }
-  if (entityCount > _pool.capacity()) {
-    _pool.reserve(std::max(entityCount, 2 * _pool.size()));
+  if (entityCount + 1 > _pool.capacity()) {
+    _pool.reserve(std::max(entityCount + 1, 2 * _pool.size()));
   }
-  _pool.resize(entityCount);
-  tarch::parallelFor(
-    tarch::Range(static_cast<int>(stagedTargets.size())),
-    [this, &stagedData, &stagedTargets](const int pairNumber) {
-      _pool[stagedTargets[pairNumber]] = std::move(stagedData[pairNumber]);
-    }
-  );
+  _pool.resize(entityCount + 1);
+  // Binding precedes assignment because a resize can invalidate pooled pointers.
+  if (bindPooledData) {
+    bindPooledStorage();
+  }
+  if (not stagedTargets.empty()) {
+    tarch::parallelFor(
+      tarch::Range(static_cast<int>(stagedTargets.size())),
+      [this, &stagedData, &stagedTargets](const int pairNumber) {
+        assertion(pairNumber >= 0 and static_cast<std::size_t>(pairNumber) < stagedTargets.size(), pairNumber);
+        _pool[stagedTargets[pairNumber]] = std::move(stagedData[pairNumber]);
+      }
+    );
+  }
+  resetSentinel();
+  assertion(_pool.size() == entityCount + 1, _pool.size(), entityCount, _containerId);
 }
 
+/**
+ * Replicates source slots into target slots and grows the pool when required.
+ */
 template <class StackType>
 void peano4::grid::StackContainer<StackType>::replicatePoolSlots(
   const std::vector<std::pair<int, int>>& sourceAndTargetSlots,
@@ -128,30 +178,11 @@ void peano4::grid::StackContainer<StackType>::replicatePoolSlots(
   }
 }
 
-template <class StackType>
-void peano4::grid::StackContainer<StackType>::growLocalSlots(const int numberOfSlots) {
-  while (_localSlotStacks.size() < static_cast<std::size_t>(numberOfSlots)) {
-    _localSlotStacks.emplace_back();
-  }
-}
-
-template <class StackType>
-std::size_t peano4::grid::StackContainer<StackType>::size() const {
-  std::size_t numberOfEntries = 0;
-  for (const auto& slotStacks : _localSlotStacks) {
-    for (const auto& stack : slotStacks) {
-      numberOfEntries += stack.size();
-    }
-  }
-  numberOfEntries += _pool.size();
-  return numberOfEntries;
-}
-
+/**
+ * Clears entity and boundary storage.
+ */
 template <class StackType>
 void peano4::grid::StackContainer<StackType>::clear() {
-  _localSlotStacks.clear();
   _pool.clear();
   _boundaryDataAggregation.clear();
-  _firstLocalSlot  = -1;
-  _localSlotStride = 1;
 }

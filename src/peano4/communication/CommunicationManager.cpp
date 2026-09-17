@@ -2,8 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "CommunicationManager.h"
 
-#include "peano4/grid/GridVertex.h"
-#include "peano4/grid/StackContainer.h"
 #include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
 
@@ -222,22 +220,3 @@ void peano4::communication::CommunicationManager::rebuildTopology(const std::vec
     _topologyVersion++;
   }
 }
-
-namespace {
-  /**
-   * The exchange routines are defined in the .cpph, so naming the specialisations here
-   * compiles them along with the library. Taking their address is an odr-use, so the
-   * compiler instantiates the body.
-   */
-  [[maybe_unused]] void instantiateTemplatesForCompileCheck() {
-    using PoolContainer = peano4::grid::StackContainer<peano4::stacks::Stack<peano4::grid::GridVertex>>;
-
-    // packPoolSlots calls postPayloadExchange, which is private and cannot be
-    // named here.
-    [[maybe_unused]] auto* packPools = &peano4::communication::CommunicationManager::packPoolSlots<PoolContainer>;
-    [[maybe_unused]] auto* finishPools =
-      &peano4::communication::CommunicationManager::finishPoolExchange<PoolContainer>;
-    [[maybe_unused]] auto* transferPools =
-      &peano4::communication::CommunicationManager::transferPoolSlots<PoolContainer>;
-  }
-} // namespace

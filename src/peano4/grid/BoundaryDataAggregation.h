@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "peano4/grid/StackExchange.h"
 #include "tarch/Assertions.h"
 
 namespace peano4::grid {
@@ -10,7 +11,7 @@ namespace peano4::grid {
 } // namespace peano4::grid
 
 /**
- * Buffers behind the aggregated boundary exchange of one data container.
+ * Stores aggregated boundary buffers for one data container.
  *
  * A rank pair swaps one payload buffer per container and sweep, and both ranks
  * derive the same entity order and payload length, so a receiver reads the
@@ -22,18 +23,19 @@ namespace peano4::grid {
 template <class StackType>
 class peano4::grid::BoundaryDataAggregation final {
 public:
-  using Stack = StackType;
+  using Stack       = StackType;
+  using ElementType = typename StackType::ElementType;
 
   /**
-   * Everything one rank pair exchanges in one sweep. transferComplete is set
-   * by the poller that completes the posted messages and read by the
-   * consumers of the received data.
+   * Stores both directions and protocol state for one rank pair and sweep.
    */
   struct RankExchange final {
-    Stack             outgoingPayload{};
-    Stack             incomingPayload{};
-    std::atomic<bool> transferComplete{false};
-    int               preparedGeneration{-1};
+    Stack                                       outgoingPayload{};
+    Stack                                       incomingPayload{};
+    peano4::grid::StackExchangeJob<ElementType> outgoingJob{};
+    peano4::grid::StackExchangeJob<ElementType> incomingJob{};
+    std::atomic<bool>                           transferComplete{false};
+    int                                         preparedGeneration{-1};
   };
 
   BoundaryDataAggregation()                                          = default;
@@ -44,11 +46,10 @@ public:
   ~BoundaryDataAggregation()                                         = default;
 
   /**
-   * Brings the rank records in line with the given sorted rank set. A version
-   * the records already describe returns immediately, and an unchanged rank
-   * set keeps the records, so a buffer keeps the capacity it grew to in
-   * earlier sweeps. The single pack pass of a sweep is the only caller, so no
-   * reader can overlap the rebuild.
+   * Rebuilds rank records for a changed topology version.
+   *
+   * An unchanged rank set preserves buffer capacity. Callers exclude
+   * overlapping access.
    */
   void rebuildRankTable(const int topologyVersion, const std::vector<int>& remoteRanks) {
     assertion(std::is_sorted(remoteRanks.begin(), remoteRanks.end()));
@@ -89,10 +90,7 @@ public:
   }
 
   /**
-   * Releases the records. The payload buffers own the element storage that was
-   * moved into them and the channels own persistent requests, so a container
-   * that clears itself at shutdown has to take them down while MPI is still up
-   * and before a leak check runs.
+   * Releases payload storage and request state before communication shuts down.
    */
   void clear() {
     _rankExchanges.clear();
@@ -107,9 +105,9 @@ private:
    */
   std::deque<RankExchange> _rankExchanges{};
 
-  /** Sorted, and running in lockstep with _rankExchanges. */
+  //! Stores sorted ranks aligned with _rankExchanges.
   std::vector<int> _remoteRanks{};
 
-  /** Topology version the records describe. */
+  //! Identifies the topology described by the rank records.
   int _topologyVersion{-1};
 };

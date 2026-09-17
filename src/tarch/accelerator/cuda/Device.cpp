@@ -6,7 +6,6 @@
 
 #include "tarch/Assertions.h"
 #include "tarch/accelerator/Device.h"
-#include "tarch/accelerator/MemoryAllocationCache.h"
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/accelerator/cuda/DevicePropertiesCache.h"
 #include "tarch/instrumentation/Debug.h"
@@ -55,8 +54,6 @@ void tarch::accelerator::Device::shutdown() {
     CHECK_CUDA_ERROR(cudaSetDevice(device));
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
   }
-
-  MemoryAllocationCache::getInstance().clear();
 
   for (int device = 0; device < numberOfDevices; device++) {
     CHECK_CUDA_ERROR(cudaSetDevice(device));

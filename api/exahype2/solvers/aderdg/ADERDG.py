@@ -238,31 +238,21 @@ class ADERDG(SubcellLimiting):
 
         # The left cell projects to the left half of the face and the right cell to the
         # right half, so the merge copies half a face.
-        self._rhs_estimates_projection.generator.merge_method_definition = (
-            get_face_overlap_merge_implementation(self._rhs_estimates_projection)
-        )
+        self._rhs_estimates_projection.generator.halo_layout = "projection_halves"
         self._rhs_estimates_projection.generator.includes += """
-#include "peano4/Loop.h"
 #include "repositories/SolverRepository.h"
 """
 
-        self._flux_estimates_projection.generator.merge_method_definition = (
-            get_face_overlap_merge_implementation(self._flux_estimates_projection)
-        )
+        self._flux_estimates_projection.generator.halo_layout = "projection_halves"
         self._flux_estimates_projection.generator.includes += """
-#include "peano4/Loop.h"
 #include "repositories/SolverRepository.h"
 """
-
-        self._rhs_estimates_projection.generator.use_copy_for_exchange = "true"
 
         # A child class overwrites the send and the receive condition.
         self._rhs_estimates_projection.generator.send_condition = "false"
         self._rhs_estimates_projection.generator.receive_and_merge_condition = "false"
         self._rhs_estimates_projection.generator.can_receive = self._load_face_data_default_guard()
         self._rhs_estimates_projection.generator.can_send = self._store_face_data_default_guard()
-
-        self._flux_estimates_projection.generator.use_copy_for_exchange = "true"
 
         self._flux_estimates_projection.generator.send_condition = "false"
         self._flux_estimates_projection.generator.receive_and_merge_condition = "false"
@@ -685,10 +675,12 @@ class ADERDG(SubcellLimiting):
                 True,
             )
         )
+        hasSolverDefinitions = bool(d["SOLVER_USER_DEFINITIONS"].strip())
+        solverImplementationTemplate = templatefile_prefix + ".template.cpp" if hasSolverDefinitions else None
         generated_solver_files = (
             peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
                 templatefile_prefix + ".template.h",
-                templatefile_prefix + ".template.cpp",
+                solverImplementationTemplate,
                 self._name,
                 namespace,
                 ".",
@@ -702,7 +694,8 @@ class ADERDG(SubcellLimiting):
         output.makefile.add_h_file("Abstract" + self._name + ".h", generated=True)
         output.makefile.add_h_file(self._name + ".h", generated=True)
         output.makefile.add_cpp_file("Abstract" + self._name + ".cpp", generated=True)
-        output.makefile.add_cpp_file(self._name + ".cpp", generated=True)
+        if hasSolverDefinitions:
+            output.makefile.add_cpp_file(self._name + ".cpp", generated=True)
 
         generate_kernels(solver=self, dictionary=d, output=output)
 
@@ -1173,24 +1166,3 @@ class ADERDG(SubcellLimiting):
         """Adds a plotter that writes the projected face estimates to ``<name>-face``."""
         self._face_plotter = peano4.plotter.FacePlotter
         self._face_plotter_guard = guard
-
-
-def get_face_overlap_merge_implementation(patch_overlap):
-    template = """
-  constexpr int SpaceFaceSize = Cardinality / 2;
-
-  auto* dst = this->data();
-  const auto* const src = neighbour.data();
-  assertion(dst);
-  assertion(src);
-
-  const int faceDimension = marker.getSelectedFaceNumber() % DIMENSIONS;
-  const int faceLR = (marker.outerNormal()[faceDimension] > 0.0 ? 0 : 1);
-
-  std::copy_n(
-    &src[(1 - faceLR) * SpaceFaceSize],
-    SpaceFaceSize,
-    &dst[(1 - faceLR) * SpaceFaceSize]
-  );
-"""
-    return template

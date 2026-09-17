@@ -15,6 +15,9 @@ class SolveRiemannProblem(AbstractLimiterActionSet):
     constexpr int FluxElementsPerFace2  = facedata::{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}FluxEstimates::Cardinality / 2;
     constexpr int BasisElementsPerFace2 = facedata::{{LIMITER_SOLVER_UNKNOWN_IDENTIFIER}}Estimates::Cardinality / 2;
 
+    constexpr int NumberOfVariables  = repositories::{{REGULAR_SOLVER_INSTANCE}}.NumberOfUnknowns;
+    constexpr int NumberOfParameters = repositories::{{REGULAR_SOLVER_INSTANCE}}.NumberOfAuxiliaryVariables;
+
     if(fineGridCell{{SOLVER_NAME}}CellLabel.getTroubledMarker()==celldata::{{SOLVER_NAME}}CellLabel::TroubledMarker::REGULAR){
       for(int d=0; d<DIMENSIONS; d++){
         if( fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getTroubledMarker()==facedata::{{SOLVER_NAME}}FaceLabel::TroubledMarker::TROUBLED ){

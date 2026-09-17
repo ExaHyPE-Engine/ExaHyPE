@@ -6,7 +6,6 @@
 
 #include "tarch/Assertions.h"
 #include "tarch/accelerator/Device.h"
-#include "tarch/accelerator/MemoryAllocationCache.h"
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/accelerator/hip/DevicePropertiesCache.h"
 #include "tarch/instrumentation/Debug.h"
@@ -53,8 +52,6 @@ void tarch::accelerator::Device::shutdown() {
     CHECK_HIP_ERROR(hipSetDevice(device));
     CHECK_HIP_ERROR(hipDeviceSynchronize());
   }
-
-  MemoryAllocationCache::getInstance().clear();
 
   for (int device = 0; device < numberOfDevices; device++) {
     CHECK_HIP_ERROR(hipSetDevice(device));

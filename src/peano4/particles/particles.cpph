@@ -42,10 +42,10 @@ Iterator peano4::particles::particleIsDuplicate(
  */
 template <typename Particle, typename ParticleSet>
 void peano4::particles::insertParticlesIntoCell(
-  const peano4::datamanagement::CellMarker&              marker,
-  const std::vector<Particle*>&                          newParticles,
-  peano4::datamanagement::VertexEnumerator<ParticleSet>& fineGridVertices,
-  int                                                    treeId
+  const peano4::dataview::CellMarker&              marker,
+  const std::vector<Particle*>&                    newParticles,
+  peano4::dataview::VertexEnumerator<ParticleSet>& fineGridVertices,
+  int                                              treeId
 ) {
   for (const auto& particle : newParticles) {
     peano4::particles::insertParticleIntoCell(marker, particle, fineGridVertices, treeId);
@@ -58,9 +58,9 @@ void peano4::particles::insertParticlesIntoCell(
  */
 template <typename Particle>
 void peano4::particles::updateContainedInAdjacentCellProperty(
-  const peano4::datamanagement::CellMarker& marker,
-  const std::bitset<DIMENSIONS>&            assignedVertex,
-  Particle&                                 particle
+  const peano4::dataview::CellMarker& marker,
+  const std::bitset<DIMENSIONS>&      assignedVertex,
+  Particle&                           particle
 ) {
   const tarch::la::Vector<DIMENSIONS, double> vertexPositionOfAssignedVertex = marker.getOffset()
     + tarch::la::multiplyComponents(tarch::la::Vector<DIMENSIONS, double>(assignedVertex), marker.getH());
@@ -69,8 +69,8 @@ void peano4::particles::updateContainedInAdjacentCellProperty(
 
 template <typename Particle>
 void peano4::particles::updateContainedInAdjacentCellProperty(
-  const peano4::datamanagement::VertexMarker& marker,
-  Particle&                                   particle
+  const peano4::dataview::VertexMarker& marker,
+  Particle&                             particle
 ) {
   particle.setContainedInAdjacentCell(peano4::particles::getAdjacentCellsOwningParticle(particle.getX(), marker));
 }
@@ -93,7 +93,7 @@ void peano4::particles::updateContainedInAdjacentCellProperty(
   peano4::dForEachCorner([&](const tarch::la::Vector<DIMENSIONS, int>& k, int kScalar) {
     const tarch::la::Vector<DIMENSIONS, double> adjacentCellCentre =
       x - 0.5 * h + tarch::la::multiplyComponents(tarch::la::convertScalar<double>(k), h);
-    result[kScalar] = peano4::datamanagement::CellMarker::isContained(
+    result[kScalar] = peano4::dataview::CellMarker::isContained(
       image,
       adjacentCellCentre,
       h,
@@ -113,10 +113,10 @@ void peano4::particles::updateContainedInAdjacentCellProperty(
  */
 template <typename Particle, typename ParticleSet>
 void peano4::particles::insertParticleIntoCell(
-  const peano4::datamanagement::CellMarker&              marker,
-  Particle*                                              newParticle,
-  peano4::datamanagement::VertexEnumerator<ParticleSet>& fineGridVertices,
-  int                                                    treeId
+  const peano4::dataview::CellMarker&              marker,
+  Particle*                                        newParticle,
+  peano4::dataview::VertexEnumerator<ParticleSet>& fineGridVertices,
+  int                                              treeId
 ) {
   std::bitset<DIMENSIONS> targetVertex;
   for (int d = 0; d < DIMENSIONS; d++) {

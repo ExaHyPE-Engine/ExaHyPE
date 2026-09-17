@@ -77,4 +77,21 @@ void exahype2::tests::RefinementCriterionHelpersTest::testRefineOnDetail() {
     refineOnDetail(patch.data(), NumberOfDofsPerAxis, Unknowns, Eps, CoarsenSafetyFactor, nullptr, density, pressure)
     == RefinementCommand::Refine
   );
+
+  const std::vector<float> singlePrecisionPatch(patch.begin(), patch.end());
+  const auto               singlePrecisionDensity  = [](const float* volume) { return volume[0]; };
+  const auto               singlePrecisionPressure = [](const float* volume) { return volume[2]; };
+  validateTrue(
+    refineOnDetail(
+      singlePrecisionPatch.data(),
+      NumberOfDofsPerAxis,
+      Unknowns,
+      Eps,
+      CoarsenSafetyFactor,
+      nullptr,
+      singlePrecisionDensity,
+      singlePrecisionPressure
+    )
+    == RefinementCommand::Refine
+  );
 }

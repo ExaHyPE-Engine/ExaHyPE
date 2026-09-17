@@ -108,8 +108,14 @@ class NavierStokes(Equation):
             """
   constexpr auto gamma = """
             + str(self._gamma)
-            + """;
-  constexpr auto gravity = 9.81;
+            + """;"""
+            + (
+                """
+  constexpr auto gravity = 9.81;"""
+                if self._use_gravity
+                else ""
+            )
+            + """
   constexpr auto q0 = """
             + str(self._q0)
             + """;
@@ -129,10 +135,14 @@ class NavierStokes(Equation):
   ){
     const auto j = &Q[Shortcuts::j];
     const auto E = Q[Shortcuts::E];
-    const auto rho = Q[Shortcuts::rho];
-    const auto height = """
-            + ("Q[Shortcuts::height]" if self._use_gravity else "0")
-            + """;
+    const auto rho = Q[Shortcuts::rho];"""
+            + (
+                """
+    const auto height = Q[Shortcuts::height];"""
+                if self._use_gravity
+                else ""
+            )
+            + """
     const auto Z = """
             + ("Q[Shortcuts::Z];" if self._use_advection else "0;")
             + self.evaluate_pressure()
@@ -176,21 +186,37 @@ class NavierStokes(Equation):
   const auto E = Q[Shortcuts::E];
   const auto Z = """
             + ("Q[Shortcuts::Z]" if self._use_advection else "0")
-            + """;
-  const auto height = """
-            + ("Q[Shortcuts::height]" if self._use_gravity else "0")
-            + """;
+            + """;"""
+            + (
+                """
+  const auto height = Q[Shortcuts::height];"""
+                if self._use_gravity
+                else ""
+            )
+            + """
   const auto backgroundPressure = """
             + ("Q[Shortcuts::backgroundstate+1]" if self._use_background_state else "0")
             + """;
-
-  constexpr auto gravity = 9.81;
+"""
+            + (
+                """
+  constexpr auto gravity = 9.81;"""
+                if self._use_gravity
+                else ""
+            )
+            + """
   constexpr auto gamma = """
             + str(self._gamma)
-            + """;
+            + """;"""
+            + (
+                """
   constexpr auto gasConstant = """
-            + str(self._gas_constant)
-            + """;
+                + str(self._gas_constant)
+                + """;"""
+                if self._use_gravity
+                else ""
+            )
+            + """
   constexpr auto cv = """
             + str(self._cv)
             + """;

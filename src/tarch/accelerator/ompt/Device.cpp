@@ -5,7 +5,6 @@
 #if defined(PEANO_WITH_GPU_BACKEND_OMPT)
 
 #include "tarch/Assertions.h"
-#include "tarch/accelerator/MemoryAllocationCache.h"
 #include "tarch/accelerator/accelerator.h"
 
 #include <omp.h>
@@ -21,7 +20,6 @@ bool tarch::accelerator::Device::init() {
 
 void tarch::accelerator::Device::shutdown() {
 #pragma omp taskwait
-  MemoryAllocationCache::getInstance().clear();
   numberOfDevices = 0;
 }
 

@@ -3,12 +3,12 @@
 #pragma once
 
 #include "exahype2/fv/particles/ParticleInterpolation.h"
-#include "peano4/datamanagement/CellMarker.h"
+#include "peano4/dataview/CellMarker.h"
 #include "tarch/la/Vector.h"
 
 namespace exahype2::fv::particles::projection {
   void depositMass_PiecewiseConstant(
-    const peano4::datamanagement::CellMarker&    marker,
+    const peano4::dataview::CellMarker&          marker,
     int                                          voxelsPerAxis,
     int                                          unknownsPerVoxel,
     double* NOALIAS                              Q,

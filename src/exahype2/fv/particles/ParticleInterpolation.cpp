@@ -17,7 +17,7 @@ void exahype2::fv::particles::interpolation::setGlobalInterpolationParameters(
 }
 
 tarch::la::Vector<DIMENSIONS, int> exahype2::fv::particles::interpolation::internal::mapParticleOntoVoxel(
-  const peano4::datamanagement::CellMarker&    marker,
+  const peano4::dataview::CellMarker&          marker,
   int                                          voxelsPerAxis,
   const tarch::la::Vector<DIMENSIONS, double>& particleX
 ) {
@@ -36,7 +36,7 @@ tarch::la::Vector<DIMENSIONS, int> exahype2::fv::particles::interpolation::inter
 }
 
 tarch::la::Vector<DIMENSIONS, int> exahype2::fv::particles::interpolation::internal::mapBiasedParticleOntoVoxel(
-  const peano4::datamanagement::CellMarker&    marker,
+  const peano4::dataview::CellMarker&          marker,
   int                                          voxelsPerAxis,
   const tarch::la::Vector<DIMENSIONS, double>& particleX
 ) {
@@ -55,7 +55,7 @@ tarch::la::Vector<DIMENSIONS, int> exahype2::fv::particles::interpolation::inter
 }
 
 double exahype2::fv::particles::interpolation::internal::projectValueOntoParticle_piecewiseConstant(
-  const peano4::datamanagement::CellMarker&    marker,
+  const peano4::dataview::CellMarker&          marker,
   int                                          voxelsPerAxis,
   int                                          unknownsPerVoxel,
   const double* NOALIAS                        Q,
@@ -69,7 +69,7 @@ double exahype2::fv::particles::interpolation::internal::projectValueOntoParticl
 }
 
 double exahype2::fv::particles::interpolation::internal::projectValueOntoParticle_piecewiseLinear(
-  const peano4::datamanagement::CellMarker&    marker,
+  const peano4::dataview::CellMarker&          marker,
   int                                          voxelsPerAxis,
   int                                          unknownsPerVoxel,
   const double* NOALIAS                        Q,

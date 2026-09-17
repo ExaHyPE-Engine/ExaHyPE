@@ -2,9 +2,9 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "peano4/datamanagement/CellMarker.h"
-#include "peano4/datamanagement/VertexEnumerator.h"
-#include "peano4/datamanagement/VertexMarker.h"
+#include "peano4/dataview/CellMarker.h"
+#include "peano4/dataview/VertexEnumerator.h"
+#include "peano4/dataview/VertexMarker.h"
 #include "tarch/la/Vector.h"
 
 namespace peano4::particles {
@@ -59,15 +59,15 @@ namespace peano4::particles {
   constexpr double GrabOwnershipSpatialSortingTolerance = 1.001;
 
   namespace internal {
-    double relativeReleaseOwnershipSpatialSortingTolerance(const ::peano4::datamanagement::VertexMarker& marker);
-    double relativeReleaseOwnershipSpatialSortingTolerance(const ::peano4::datamanagement::CellMarker& marker);
+    double relativeReleaseOwnershipSpatialSortingTolerance(const ::peano4::dataview::VertexMarker& marker);
+    double relativeReleaseOwnershipSpatialSortingTolerance(const ::peano4::dataview::CellMarker& marker);
     double relativeReleaseOwnershipSpatialSortingTolerance(const tarch::la::Vector<DIMENSIONS, double>& h);
-    double relativeGrabOwnershipSpatialSortingTolerance(const ::peano4::datamanagement::VertexMarker& marker);
-    double relativeGrabOwnershipSpatialSortingTolerance(const ::peano4::datamanagement::CellMarker& marker);
+    double relativeGrabOwnershipSpatialSortingTolerance(const ::peano4::dataview::VertexMarker& marker);
+    double relativeGrabOwnershipSpatialSortingTolerance(const ::peano4::dataview::CellMarker& marker);
     double relativeGrabOwnershipSpatialSortingTolerance(const tarch::la::Vector<DIMENSIONS, double>& h);
 
-    bool fitsIntoLevel(double searchRadius, const ::peano4::datamanagement::CellMarker& marker);
-    bool fitsIntoLevel(double searchRadius, const ::peano4::datamanagement::VertexMarker& marker);
+    bool fitsIntoLevel(double searchRadius, const ::peano4::dataview::CellMarker& marker);
+    bool fitsIntoLevel(double searchRadius, const ::peano4::dataview::VertexMarker& marker);
 
     /**
      * Find out which vertex should hold a particle.

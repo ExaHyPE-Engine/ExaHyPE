@@ -25,14 +25,32 @@ std::uint64_t {{FULL_QUALIFIED_CLASSNAME}}::_localVertexDataMemoryUsageInBytes =
 std::uint64_t {{FULL_QUALIFIED_CLASSNAME}}::_globalVertexDataMemoryUsageInBytes = 0;
 
 namespace {
+  /**
+   * Returns the heap bytes one container holds. A data type that keeps its
+   * values in a memory pool reports the pool's buffer; every other type carries
+   * its values in the records themselves.
+   */
+  template <class Data>
+  std::uint64_t payloadBytesOf(const std::size_t numberOfSlots) {
+    if constexpr (requires { Data::getMemoryPool(); }) {
+      return static_cast<std::uint64_t>(Data::getMemoryPool().allocatedBytes());
+    } else {
+      return static_cast<std::uint64_t>(numberOfSlots) * Data::Cardinality * sizeof(typename Data::DoFType);
+    }
+  }
+
+  template <class Data>
+  void releasePoolStorage() {
+    if constexpr (requires { Data::getMemoryPool(); }) {
+      Data::getMemoryPool().clear();
+    }
+  }
+
   constexpr int NumberOfDataMemoryWords = 3;
 
-  /**
-   * Holds the sums of the preceding sweep. hasPendingDataMemory says whether
-   * the global counters still have to read them.
-   */
+  //! Stores reduced totals from the preceding sweep until publication.
   std::array<std::uint64_t, NumberOfDataMemoryWords> reducedDataMemory{};
-  bool                                              hasPendingDataMemory = false;
+  bool                                              hasPendingDataMemory{false};
 } // namespace
 
 void {{FULL_QUALIFIED_CLASSNAME}}::shutdown() {
@@ -45,6 +63,15 @@ void {{FULL_QUALIFIED_CLASSNAME}}::shutdown() {
 {%- for container in CELL_DATA_CONTAINERS %}
   {{ container.name }}StackContainer.clear();
 {%- endfor %}
+{%- for container in VERTEX_DATA_CONTAINERS %}
+  releasePoolStorage<{{container.fq}}>();
+{%- endfor %}
+{%- for container in FACE_DATA_CONTAINERS %}
+  releasePoolStorage<{{container.fq}}>();
+{%- endfor %}
+{%- for container in CELL_DATA_CONTAINERS %}
+  releasePoolStorage<{{container.fq}}>();
+{%- endfor %}
 }
 
 void {{FULL_QUALIFIED_CLASSNAME}}::updateMemoryUsage() {
@@ -53,13 +80,13 @@ void {{FULL_QUALIFIED_CLASSNAME}}::updateMemoryUsage() {
   _localVertexDataMemoryUsageInBytes = 0;
 
 {%- for container in CELL_DATA_CONTAINERS %}
-  _localCellDataMemoryUsageInBytes += {{container.name}}StackContainer.size() * {{container.fq}}::Cardinality * sizeof({{container.fq}}::DoFType);
+  _localCellDataMemoryUsageInBytes += payloadBytesOf<{{container.fq}}>({{container.name}}StackContainer.getPoolSize());
 {%- endfor %}
 {%- for container in FACE_DATA_CONTAINERS %}
-  _localFaceDataMemoryUsageInBytes += {{container.name}}StackContainer.size() * {{container.fq}}::Cardinality * sizeof({{container.fq}}::DoFType);
+  _localFaceDataMemoryUsageInBytes += payloadBytesOf<{{container.fq}}>({{container.name}}StackContainer.getPoolSize());
 {%- endfor %}
 {%- for container in VERTEX_DATA_CONTAINERS %}
-  _localVertexDataMemoryUsageInBytes += {{container.name}}StackContainer.size() * {{container.fq}}::Cardinality * sizeof({{container.fq}}::DoFType);
+  _localVertexDataMemoryUsageInBytes += payloadBytesOf<{{container.fq}}>({{container.name}}StackContainer.getPoolSize());
 {%- endfor %}
 
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1) {

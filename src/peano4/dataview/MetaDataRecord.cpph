@@ -1,0 +1,26 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+template <class Record, class Marker>
+INLINE_METHOD bool peano4::dataview::MetaDataRecord<Record, Marker>::send(
+  const Marker&                                             marker,
+  [[maybe_unused]] const ::peano4::grid::SendReceiveContext context
+) const {
+  return static_cast<const Record&>(*this).sendCondition(marker);
+}
+
+template <class Record, class Marker>
+INLINE_METHOD bool peano4::dataview::MetaDataRecord<Record, Marker>::receiveAndMerge(
+  const Marker&                                             marker,
+  [[maybe_unused]] const ::peano4::grid::SendReceiveContext context
+) const {
+  return static_cast<const Record&>(*this).receiveAndMergeCondition(marker);
+}
+
+/**
+ * Returns true because metadata lives exactly as long as its grid entity.
+ */
+template <class Record, class Marker>
+INLINE_METHOD bool peano4::dataview::MetaDataRecord<Record, Marker>::load([[maybe_unused]] const Marker& marker) {
+  return true;
+}

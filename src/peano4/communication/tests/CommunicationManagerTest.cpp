@@ -5,7 +5,7 @@
 #include "peano4/communication/CommunicationManager.h"
 #include "peano4/data/RegisteredStackContainer.h"
 #include "peano4/grid/GridVertex.h"
-#include "peano4/stacks/Stack.h"
+#include "peano4/grid/Stack.h"
 #include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
 
@@ -219,7 +219,7 @@ void peano4::communication::tests::CommunicationManagerTest::testATransferReache
   auto&               manager = peano4::communication::CommunicationManager::getInstance();
   const int           ownRank = tarch::mpi::Rank::getInstance().getRank();
 
-  peano4::data::RegisteredStackContainer<peano4::stacks::Stack<peano4::grid::GridVertex>> container(
+  peano4::data::RegisteredStackContainer<peano4::grid::Stack<peano4::grid::GridVertex>> container(
     TransferContainerId,
     peano4::data::ManagedContainerKind::VertexData
   );

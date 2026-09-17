@@ -5,17 +5,17 @@ import os
 import peano4.output
 
 
-class ParticleToData(object):
+class ParticleToData:
     def __init__(self, data):
         self.data = data
 
     def get_stack_container(self):
-        return "::peano4::stacks::Stack< " + self.data.get_full_qualified_type() + " >"
+        return "::peano4::grid::Stack< " + self.data.get_full_qualified_type() + " >"
 
     def get_header_file_include(self):
         return (
             """
-#include "peano4/stacks/Stack.h"
+#include "peano4/grid/Stack.h"
 #include \""""
             + self.data.namespace[-1]
             + "/"
@@ -34,12 +34,18 @@ class ParticleToData(object):
             "ENUM_DECLARATIONS": "\n".join(
                 declaration
                 for declaration in (
-                    attribute.get_enum_declaration() for attribute in self.data.attributes
+                    attribute.get_enum_declaration()
+                    for attribute in self.data.attributes
                 )
                 if declaration is not None
             ),
             "ATTRIBUTES": "\n".join(
-                attribute.get_private_declaration() for attribute in layout_attributes
+                declaration
+                for declaration in (
+                    attribute.get_member_declaration()
+                    for attribute in layout_attributes
+                )
+                if declaration
             ),
             "ATTRIBUTE_TO_STRING_PAIRS": [
                 {
@@ -49,27 +55,20 @@ class ParticleToData(object):
                 for attribute in self.data.attributes
             ],
             "ATTRIBUTE_METHOD_DECLARATIONS": "\n".join(
-                "\n".join(attribute.get_public_declarations())
+                "\n".join(attribute.get_method_declarations())
                 for attribute in self.data.attributes
             ),
-            "ATTRIBUTE_METHOD_DEFINITIONS": "\n".join(
-                attribute.get_definitions(qualified_name)
+            "ATTRIBUTE_METHOD_DEFINITIONS": "\n\n".join(
+                attribute.get_method_definitions(qualified_name)
                 for attribute in self.data.attributes
-            ),
-            "CONSTRUCTOR_INITIALISERS": ",\n  ".join(
-                f"{attribute.field_name}({attribute.get_initialiser()})"
-                for attribute in layout_attributes
             ),
             "INCLUDES": self.data.includes,
         }
 
     def construct_output(self, output):
-        d = self._get_dictionary_for_output()
+        template_data = self._get_dictionary_for_output()
         output.makefile.add_cpp_file(
-            self.data.namespace[-1]
-            + "/"
-            + self.data.name
-            + ".cpp",
+            self.data.namespace[-1] + "/" + self.data.name + ".cpp",
             generated=True,
         )
         headerfile_template = (
@@ -78,12 +77,24 @@ class ParticleToData(object):
         cppfile_template = (
             os.path.dirname(os.path.realpath(__file__)) + "/Particle.template.cpp"
         )
+        cpphfile_template = (
+            os.path.dirname(os.path.realpath(__file__)) + "/Particle.template.cpph"
+        )
         generated_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
             headerfile_template,
             cppfile_template,
             self.data.name,
             self.data.namespace,
             self.data.namespace[-1],
-            d,
+            template_data,
         )
         output.add(generated_files)
+        output.add(
+            peano4.output.Jinja2TemplatedHeaderFile(
+                cpphfile_template,
+                self.data.name,
+                self.data.namespace,
+                self.data.namespace[-1],
+                template_data,
+            )
+        )

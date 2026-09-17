@@ -4,10 +4,10 @@
 
 #include "globaldata/{{PARTICLE_TYPE}}.h"
 
-#include <mpi.h>
-
-#include "peano4/datamanagement/VertexMarker.h"
-#include "peano4/stacks/Stack.h"
+#include "peano4/dataview/VertexMarker.h"
+#include "peano4/grid/SendReceiveContext.h"
+#include "peano4/grid/Stack.h"
+#include "peano4/grid/StackExchange.h"
 
 #include "peano4/particles/ParticleSet.h"
 
@@ -42,43 +42,34 @@ public:
   {{CLASSNAME}}({{CLASSNAME}}&& other) noexcept;
   {{CLASSNAME}}& operator=(const {{CLASSNAME}}& other);
   {{CLASSNAME}}& operator=({{CLASSNAME}}&& other) noexcept;
-
-  void clear();
-  void clone(const {{CLASSNAME}}& other);
-  {{CLASSNAME}} createExchangeView();
+  ~{{CLASSNAME}}() noexcept;
 
   void merge(
-    const peano4::stacks::SendReceiveContext context,
-    const {{CLASSNAME}}& neighbour,
-    const peano4::datamanagement::VertexMarker& marker,
-    const int treeId
+    peano4::grid::SendReceiveContext      context,
+    const {{CLASSNAME}}&                  neighbour,
+    const peano4::dataview::VertexMarker& marker,
+    int                                   treeId
   );
   void mergeWithParticle(
-    DoFType* const neighbourParticle,
-    const peano4::datamanagement::VertexMarker& marker,
-    const int treeId
-  );
-  void deleteParticlesForSlotRebuild(
-    const peano4::datamanagement::VertexMarker& marker,
-    const int treeId
+    DoFType*                              neighbourParticle,
+    const peano4::dataview::VertexMarker& marker,
+    int                                   treeId
   );
   bool send(
-    const peano4::datamanagement::VertexMarker& marker,
-    const peano4::stacks::SendReceiveContext context
+    const peano4::dataview::VertexMarker& marker,
+    peano4::grid::SendReceiveContext      context
   );
   bool receiveAndMerge(
-    const peano4::datamanagement::VertexMarker& marker,
-    const peano4::stacks::SendReceiveContext context
+    const peano4::dataview::VertexMarker& marker,
+    peano4::grid::SendReceiveContext      context
   );
 
-  static bool load(const peano4::datamanagement::VertexMarker& marker);
-  static bool store(const peano4::datamanagement::VertexMarker& marker);
+  static bool load(const peano4::dataview::VertexMarker& marker);
+  static bool store(const peano4::dataview::VertexMarker& marker);
 
   void particlesCanNotBeLiftedLocally();
   iterator particleCanNotBeLiftedLocally(iterator particle);
-  void particlesCanNotBeDroppedLocallySoRollOverForNextMeshSweep(DoFType* const particle);
-  void addParticle(DoFType* const particle);
-  void deleteParticles() noexcept;
+  void addParticle(DoFType* particle);
   iterator deleteParticle(iterator particle);
   void grabParticles({{CLASSNAME}}& sourceParticleSet);
   iterator grabParticle(iterator particle, {{CLASSNAME}}& sourceParticleSet);
@@ -94,20 +85,26 @@ public:
   std::string toString() const;
 
   static void startSend(
-    peano4::stacks::Stack<{{CLASSNAME}}>& stack,
-    const peano4::stacks::SendReceiveContext context,
-    const MPI_Comm communicator
+    peano4::grid::Stack<{{CLASSNAME}}>&            stack,
+    peano4::grid::StackExchangeJob<{{CLASSNAME}}>& job
   );
   static void startReceive(
-    peano4::stacks::Stack<{{CLASSNAME}}>& stack,
-    const peano4::stacks::SendReceiveContext context,
-    const MPI_Comm communicator,
-    const int numberOfElements
+    peano4::grid::Stack<{{CLASSNAME}}>&            stack,
+    peano4::grid::StackExchangeJob<{{CLASSNAME}}>& job,
+    int                                            numberOfElements
   );
-  static bool tryToFinishSendOrReceive(peano4::stacks::Stack<{{CLASSNAME}}>& stack);
-
-  ~{{CLASSNAME}}() noexcept;
+  static bool tryToFinishSendOrReceive(
+    peano4::grid::Stack<{{CLASSNAME}}>&            stack,
+    peano4::grid::StackExchangeJob<{{CLASSNAME}}>& job
+  );
 
 private:
+  void clone(const {{CLASSNAME}}& sourceParticleSet);
+  void deleteParticlesForSlotRebuild(
+    const peano4::dataview::VertexMarker& marker,
+    int                                   treeId
+  );
+  void deleteParticles() noexcept;
+
   Container _container{};
 };

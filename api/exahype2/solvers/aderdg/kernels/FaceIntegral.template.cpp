@@ -5,6 +5,7 @@
 #include "DGMatrices.h"
 #include "Quadrature.h"
 
+#include "tarch/Assertions.h"
 #include "tarch/CompilerSpecificSettings.h"
 
 template <typename SolutionType, typename cCompType>
@@ -24,7 +25,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceIntegral(
   const cCompType scaling = (2.0 * orientation - 1.0) * inverseDxDirection;
 {% endif %}
 
-  // lduh and lFhbnd use unpadded row strides, so no slice here is SIMD aligned.
+  // The rows of lduh and lFhbnd have unpadded strides, so no slice here is SIMD aligned.
   switch (direction) {
   case 0: // x-faces, left-right flux.
     for (int zy = 0; zy < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; zy++) {
@@ -63,6 +64,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::faceIntegral(
         }
       }
     }
+    break;
+  default:
+    assertion(false, direction);
     break;
   }
 }

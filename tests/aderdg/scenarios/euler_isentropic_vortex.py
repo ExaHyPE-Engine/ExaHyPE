@@ -29,7 +29,6 @@ class EulerIsentropicVortex(Scenario):
             """
   static constexpr auto epsilon = 5;
   static constexpr auto pi = std::numbers::pi;
-  static constexpr auto i_pi = 1./pi;
   static constexpr auto eos_gamma = 1.4;
 
   const auto r = tarch::la::norm2(x);
@@ -82,7 +81,6 @@ class EulerIsentropicVortex(Scenario):
 
   static constexpr auto epsilon = 5.0;
   static constexpr auto pi = std::numbers::pi;
-  static constexpr auto i_pi = 1./pi;
   static constexpr auto eos_gamma = 1.4;
 
   const auto r = tarch::la::norm2(pos);

@@ -2,17 +2,14 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "peano4/datamanagement/CellMarker.h"
 #include "peano4/Globals.h"
+#include "peano4/dataview/CellMarker.h"
 
 // #include <concepts>
 
 namespace peano4::particles {
   /**
-   * Leave the tracer particles where they are.
-   *
-   * Essentially, this is a complicated way to write down a
-   * ``not an operation''  (nope). The routine simply does nothing with
+   * Leaves the tracer particle where it is. The routine does nothing with
    * the particle passed.
    */
   template <typename Particle>
@@ -60,8 +57,8 @@ namespace peano4::particles {
    * have a field called velocity, others might not have such a field and
    * get their data from somewhere else.
    *
-   * The term policy is not uniquely determined in C++ and thus this name
-   * might not be optimal.
+   * The term policy carries no single meaning in C++, so this name says
+   * little on its own.
    *
    * ## Template argument
    *

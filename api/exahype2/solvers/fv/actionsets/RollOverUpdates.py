@@ -82,7 +82,11 @@ class RollOverUpdates(AbstractFVActionSet):
     if ({{CELL_METADATA_ACCESSOR}}.getHasUpdated() and {{CELL_GUARD}}) {
       assertion({{CELL_OLD_ACCESSOR}}.Cardinality == {{CELL_NEW_ACCESSOR}}.Cardinality, {{CELL_OLD_ACCESSOR}}.Cardinality, {{CELL_NEW_ACCESSOR}}.Cardinality);
       {{CELL_METADATA_ACCESSOR}}.setHasUpdated(false);
-      {{CELL_OLD_ACCESSOR}}.swap({{CELL_NEW_ACCESSOR}});
+      std::swap_ranges(
+        {{CELL_NEW_ACCESSOR}}.data(),
+        {{CELL_NEW_ACCESSOR}}.data() + {{CELL_NEW_ACCESSOR}}.Cardinality,
+        {{CELL_OLD_ACCESSOR}}.data()
+      );
     }
 """
     )

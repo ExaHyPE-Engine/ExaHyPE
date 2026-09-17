@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "peano4/datamanagement/FaceEnumerator.h"
+#include "peano4/dataview/FaceEnumerator.h"
 #include "tarch/instrumentation/Debug.h"
 #include "tarch/la/ScalarOperations.h"
 
@@ -12,7 +12,7 @@ namespace exahype2 {
      * Returns the smallest new time stamp stored on the faces of one cell.
      */
     template <typename FaceLabel>
-    double getMinTimeStampOfNeighbours(const peano4::datamanagement::FaceEnumerator<FaceLabel>& faceLabelEnumerator) {
+    double getMinTimeStampOfNeighbours(const peano4::dataview::FaceEnumerator<FaceLabel>& faceLabelEnumerator) {
       double result = std::numeric_limits<double>::max();
 
       for (int d = 0; d < DIMENSIONS; d++) {
@@ -30,8 +30,8 @@ namespace exahype2 {
    */
   template <typename CellLabel, typename FaceLabel>
   double getMinTimeStampOfNeighboursAhead(
-    const CellLabel&                                         cellLabel,
-    const peano4::datamanagement::FaceEnumerator<FaceLabel>& faceLabelEnumerator
+    const CellLabel&                                   cellLabel,
+    const peano4::dataview::FaceEnumerator<FaceLabel>& faceLabelEnumerator
   ) {
     double result      = std::numeric_limits<double>::max();
     bool   oneIsAhead  = false;
@@ -75,9 +75,9 @@ namespace exahype2 {
    */
   template <typename CellLabel, typename FaceLabel>
   bool runTimeStepOnCell(
-    const CellLabel&                                         cellLabel,
-    const peano4::datamanagement::FaceEnumerator<FaceLabel>& faceLabelEnumerator,
-    double                                                   globalMinTimeStamp
+    const CellLabel&                                   cellLabel,
+    const peano4::dataview::FaceEnumerator<FaceLabel>& faceLabelEnumerator,
+    double                                             globalMinTimeStamp
   ) {
     const double cellTimeStamp    = cellLabel.getTimeStamp();
     const double cellTimeStepSize = cellLabel.getTimeStepSize();
@@ -105,9 +105,9 @@ namespace exahype2 {
    */
   template <typename CellLabel, typename FaceLabel>
   double removeTimeStepAccumulationErrorsFromCell(
-    const CellLabel&                                         cellLabel,
-    const peano4::datamanagement::FaceEnumerator<FaceLabel>& faceLabelEnumerator,
-    double                                                   timeStepSize
+    const CellLabel&                                   cellLabel,
+    const peano4::dataview::FaceEnumerator<FaceLabel>& faceLabelEnumerator,
+    double                                             timeStepSize
   ) {
     const double Tolerance = 0.01;
     const double relativeTolerance =
@@ -135,7 +135,7 @@ namespace exahype2 {
       const double tweakedTimeStepSize = maxOfMatchingTimeStamps - cellLabel.getTimeStamp();
       assertion(tarch::la::greaterEquals(tweakedTimeStepSize, timeStepSize), tweakedTimeStepSize, timeStepSize);
       if (tweakedTimeStepSize > timeStepSize) {
-        logDebug("adopt local time step from " << timeStepSize << " to " << tweakedTimeStepSize);
+        logDebug("Adopt local time step from " << timeStepSize << " to " << tweakedTimeStepSize);
       }
       timeStepSize = tweakedTimeStepSize;
     }
