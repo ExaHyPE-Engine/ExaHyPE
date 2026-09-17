@@ -23,16 +23,22 @@ void peano4::communication::CommunicationManager::postPayloadExchange(Container&
 
   // Receives go out first, so a peer whose send is already posted matches a
   // waiting receive and parks no data as an unexpected message.
-  rankExchange.incomingPayload.startReceive(
-    peano4::stacks::SendReceiveContext::InterRank,
+  peano4::grid::startReceive(
+    rankExchange.incomingPayload,
+    rankExchange.incomingJob,
     remoteRank,
     payloadChannel.first,
     payloadChannel.second,
     numberOfElements
   );
 
-  rankExchange.outgoingPayload
-    .startSend(peano4::stacks::SendReceiveContext::InterRank, remoteRank, payloadChannel.first, payloadChannel.second);
+  peano4::grid::startSend(
+    rankExchange.outgoingPayload,
+    rankExchange.outgoingJob,
+    remoteRank,
+    payloadChannel.first,
+    payloadChannel.second
+  );
 
   // From here on the requests belong to the manager's poller; nothing else may
   // test them, as two threads must not touch one request. Consumers read the
@@ -40,8 +46,10 @@ void peano4::communication::CommunicationManager::postPayloadExchange(Container&
   getInstance().registerInFlightTransfer(
     remoteRank,
     [&rankExchange]() -> bool {
-      const bool sendFinished    = rankExchange.outgoingPayload.tryToFinishSendOrReceive();
-      const bool receiveFinished = rankExchange.incomingPayload.tryToFinishSendOrReceive();
+      const bool sendFinished =
+        peano4::grid::tryToFinishSendOrReceive(rankExchange.outgoingPayload, rankExchange.outgoingJob);
+      const bool receiveFinished =
+        peano4::grid::tryToFinishSendOrReceive(rankExchange.incomingPayload, rankExchange.incomingJob);
       return sendFinished and receiveFinished;
     },
     [&rankExchange]() { rankExchange.transferComplete.store(true, std::memory_order_release); }
@@ -87,8 +95,14 @@ void peano4::communication::CommunicationManager::packPoolSlots(
           remoteRank,
           packPosition
         );
-        // Assigning into the slot reuses its buffer.
-        destination.get(packPosition) = stackContainer.getPoolSlot(poolSlot);
+        if constexpr (requires(typename Container::ElementType& element) { element.referenceValuesOf(element); }) {
+          // A pooled entity's values are read straight out of its chunk, so
+          // packing a rank boundary neither allocates nor duplicates a patch.
+          destination.get(packPosition).referenceValuesOf(stackContainer.getPoolSlot(poolSlot));
+        } else {
+          // Assignment reuses storage already owned by the destination slot.
+          destination.get(packPosition) = stackContainer.getPoolSlot(poolSlot);
+        }
       }
     }
     postPayloadExchange(stackContainer, remoteRank);
@@ -109,35 +123,42 @@ void peano4::communication::CommunicationManager::transferPoolSlots(
   const std::map<int, std::vector<int>>&                        receiveSlotLists,
   std::vector<std::pair<int, typename Container::ElementType>>& pendingReceives
 ) {
-  using Stack = typename Container::Stack;
+  using ElementType = typename Container::ElementType;
+
+  //! Stores one direction's buffer and request.
+  struct Transfer final {
+    typename Container::Stack                   stack{};
+    peano4::grid::StackExchangeJob<ElementType> job{};
+  };
 
   const int  containerId = stackContainer.getContainerId();
   const auto payloadChannel =
     getInstance().getAggregatedBoundaryExchangeMetaInformation(containerId, AggregatedBoundaryMessage::Migration);
 
-  std::map<int, Stack> incomingStacks;
+  std::map<int, Transfer> incomingTransfers;
   for (const auto& [remoteRank, receiveSlots] : receiveSlotLists) {
     const int numberOfElements = toMessageElementCount(receiveSlots.size());
     if (numberOfElements == 0) {
       continue;
     }
-    auto& stack = incomingStacks[remoteRank];
-    stack.startReceive(
-      peano4::stacks::SendReceiveContext::InterRank,
+    auto& transfer = incomingTransfers[remoteRank];
+    peano4::grid::startReceive(
+      transfer.stack,
+      transfer.job,
       remoteRank,
       payloadChannel.first,
       payloadChannel.second,
       numberOfElements
     );
   }
-  std::map<int, Stack> outgoingStacks;
+  std::map<int, Transfer> outgoingTransfers;
   for (const auto& [remoteRank, sendSlots] : sendSlotLists) {
     const int numberOfElements = toMessageElementCount(sendSlots.size());
     if (numberOfElements == 0) {
       continue;
     }
-    auto& stack = outgoingStacks[remoteRank];
-    auto  block = stack.pushBlock(static_cast<std::size_t>(numberOfElements));
+    auto& transfer = outgoingTransfers[remoteRank];
+    auto  block    = transfer.stack.pushBlock(static_cast<std::size_t>(numberOfElements));
     for (std::size_t slotNumber = 0; slotNumber < static_cast<std::size_t>(numberOfElements); slotNumber++) {
       const int poolSlot = sendSlots[slotNumber];
       assertion(
@@ -149,12 +170,7 @@ void peano4::communication::CommunicationManager::transferPoolSlots(
       );
       block.get(slotNumber) = stackContainer.getPoolSlot(poolSlot);
     }
-    stack.startSend(
-      peano4::stacks::SendReceiveContext::InterRank,
-      remoteRank,
-      payloadChannel.first,
-      payloadChannel.second
-    );
+    peano4::grid::startSend(transfer.stack, transfer.job, remoteRank, payloadChannel.first, payloadChannel.second);
   }
 
   tarch::mpi::Diagnostics::getInstance().setDeadlockWarningTimeStamp();
@@ -165,14 +181,14 @@ void peano4::communication::CommunicationManager::transferPoolSlots(
   while (transfersPending) {
     transfersPending           = false;
     int firstUnfinishedPartner = -1;
-    for (auto& [remoteRank, stack] : incomingStacks) {
-      if (not stack.tryToFinishSendOrReceive()) {
+    for (auto& [remoteRank, transfer] : incomingTransfers) {
+      if (not peano4::grid::tryToFinishSendOrReceive(transfer.stack, transfer.job)) {
         transfersPending       = true;
         firstUnfinishedPartner = firstUnfinishedPartner < 0 ? remoteRank : firstUnfinishedPartner;
       }
     }
-    for (auto& [remoteRank, stack] : outgoingStacks) {
-      if (not stack.tryToFinishSendOrReceive()) {
+    for (auto& [remoteRank, transfer] : outgoingTransfers) {
+      if (not peano4::grid::tryToFinishSendOrReceive(transfer.stack, transfer.job)) {
         transfersPending       = true;
         firstUnfinishedPartner = firstUnfinishedPartner < 0 ? remoteRank : firstUnfinishedPartner;
       }
@@ -195,15 +211,18 @@ void peano4::communication::CommunicationManager::transferPoolSlots(
     }
   }
 
-  for (auto& [remoteRank, stack] : incomingStacks) {
+  for (auto& [remoteRank, transfer] : incomingTransfers) {
     const auto& receiveSlots     = receiveSlotLists.at(remoteRank);
     const int   numberOfElements = toMessageElementCount(receiveSlots.size());
     for (std::size_t slotNumber = 0; slotNumber < receiveSlots.size(); slotNumber++) {
       const int poolSlot = receiveSlots[slotNumber];
       assertion(poolSlot >= 0, poolSlot, remoteRank, slotNumber);
-      pendingReceives.emplace_back(poolSlot, std::move(stack.top(numberOfElements - 1 - static_cast<int>(slotNumber))));
+      pendingReceives.emplace_back(
+        poolSlot,
+        std::move(transfer.stack.top(numberOfElements - 1 - static_cast<int>(slotNumber)))
+      );
     }
-    stack.clear();
+    transfer.stack.clear();
   }
 }
 

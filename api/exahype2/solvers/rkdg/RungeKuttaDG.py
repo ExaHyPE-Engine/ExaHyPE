@@ -294,11 +294,7 @@ We use RK("""
         self._estimate_projection.generator.receive_and_merge_condition = "false"
         self._estimate_projection.generator.can_receive      = self._load_face_data_default_guard()
         self._estimate_projection.generator.can_send         = self._store_face_data_default_guard()
-        self._estimate_projection.generator.merge_method_definition = (
-            exahype2.blockstructured.get_face_merge_implementation(
-                self._estimate_projection
-            )
-        )
+        self._estimate_projection.generator.halo_layout      = "overlapping_volumes"
 
         self._old_solution_projection.generator.send_condition              = "false"
         self._old_solution_projection.generator.receive_and_merge_condition = "false"
@@ -771,10 +767,18 @@ We use RK("""
                 True,
             )
         )
+        hasSolverDefinitions = bool(
+            implementationDictionary["SOLVER_USER_DEFINITIONS"].strip()
+        ) or PDETerms.User_Defined_Implementation in (
+            implementationDictionary["REFINEMENT_CRITERION_IMPLEMENTATION"],
+            implementationDictionary["INITIAL_CONDITIONS_IMPLEMENTATION"],
+            implementationDictionary["BOUNDARY_CONDITIONS_IMPLEMENTATION"],
+        )
+        solverImplementationTemplate = templatefile_prefix + ".template.cpp" if hasSolverDefinitions else None
         generated_solver_files = (
             peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
                 templatefile_prefix + ".template.h",
-                templatefile_prefix + ".template.cpp",
+                solverImplementationTemplate,
                 self._name,
                 namespace,
                 ".",
@@ -788,7 +792,8 @@ We use RK("""
         output.makefile.add_h_file("Abstract" + self._name + ".h", generated=True)
         output.makefile.add_h_file(self._name + ".h", generated=True)
         output.makefile.add_cpp_file("Abstract" + self._name + ".cpp", generated=True)
-        output.makefile.add_cpp_file(self._name + ".cpp", generated=True)
+        if hasSolverDefinitions:
+            output.makefile.add_cpp_file(self._name + ".cpp", generated=True)
 
     def set_solver_constants(self, datastring):
         self._solver_constants = datastring

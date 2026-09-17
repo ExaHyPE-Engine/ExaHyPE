@@ -4,14 +4,31 @@
 
 #include "repositories/DataRepository.h"
 
+#include "peano4/grid/SendReceiveContext.h"
 #include "peano4/grid/StackTopology.h"
-#include "peano4/datamanagement/CellMarker.h"
-#include "peano4/datamanagement/FaceEnumerator.h"
-#include "peano4/datamanagement/FaceMarker.h"
-#include "peano4/datamanagement/VertexEnumerator.h"
-#include "peano4/datamanagement/VertexMarker.h"
+#include "peano4/dataview/CellMarker.h"
+#include "peano4/dataview/FaceEnumerator.h"
+#include "peano4/dataview/FaceMarker.h"
+#include "peano4/dataview/VertexEnumerator.h"
+#include "peano4/dataview/VertexMarker.h"
 
 #include "tarch/Assertions.h"
+
+namespace {
+  /**
+   * Blanks one pool slot. A pooled entity keeps its chunk and only loses its
+   * values; every other record is replaced.
+   */
+  template <typename Container>
+  inline void clearSlot(Container& container, const int slot) {
+    using ElementType = typename Container::ElementType;
+    if constexpr (requires(ElementType& element) { element.clearValues(); }) {
+      container.getPoolSlot(slot).clearValues();
+    } else {
+      container.getPoolSlot(slot) = ElementType{};
+    }
+  }
+} // namespace
 
 /**
  * @param treeId TreePrototype creates the prototype. The rank id names the spine
@@ -63,55 +80,34 @@ std::vector<::peano4::grid::GridControlEvent> {{FULL_QUALIFIED_CLASSNAME}}::getG
 }
 
 void {{FULL_QUALIFIED_CLASSNAME}}::beginTraversal(
-  const tarch::la::Vector<DIMENSIONS, double>& x,
-  const tarch::la::Vector<DIMENSIONS, double>& h
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
 ) {
 {%- for action_set in ACTIVE_ACTION_SETS %}
   {{ action_set.name }}.beginTraversal();
 {%- endfor %}
 
-  // Fill call stacks with dummies which represent level 0 such that we can call
-  // standard action routines on level 1 with parents. Without these dummies, a
-  // top(1) call raises an assertion.
-  const auto callStack = static_cast<int>(::peano4::grid::StackTopology::BaseStack::Call);
-
-{%- for cell in CELLS %}
-  auto dummyParent{{ cell.logical_type_name }}Block = repositories::DataRepository::{{ cell.logical_type_name }}StackContainer.getLocalExchangeStack(_treeId, callStack).pushBlock(1);
-  dummyParent{{ cell.logical_type_name }}Block.emplaceDefault(0);
-{%- endfor %}
-{%- for face in FACES %}
-  auto dummyParent{{ face.logical_type_name }}Block = repositories::DataRepository::{{ face.logical_type_name }}StackContainer.getLocalExchangeStack(_treeId, callStack).pushBlock(TWO_TIMES_D);
-  for (int faceIndex = 0; faceIndex < TWO_TIMES_D; faceIndex++) {
-    dummyParent{{ face.logical_type_name }}Block.emplaceDefault(faceIndex);
-  }
-{%- endfor %}
-{%- for vertex in VERTICES %}
-  auto dummyParent{{ vertex.logical_type_name }}Block = repositories::DataRepository::{{ vertex.logical_type_name }}StackContainer.getLocalExchangeStack(_treeId, callStack).pushBlock(TWO_POWER_D);
-  for (int vertexIndex = 0; vertexIndex < TWO_POWER_D; vertexIndex++) {
-    dummyParent{{ vertex.logical_type_name }}Block.emplaceDefault(vertexIndex);
-  }
-{%- endfor %}
+  // The root has no parent, so the path starts with an entry whose positions
+  // carry no entity. They resolve to the containers' sentinels, so an action
+  // set on level one sees the sentinels as its coarse grid.
+  _activePath.clear();
+  _activePath.reserve(32);
+  PathEntry rootParent;
+  rootParent.vertexSlots.fill(-1);
+  rootParent.faceSlots.fill(-1);
+  rootParent.cellSlot.fill(-1);
+  _activePath.push_back(rootParent);
 }
 
 void {{FULL_QUALIFIED_CLASSNAME}}::endTraversal(
-  const tarch::la::Vector<DIMENSIONS, double>& x,
-  const tarch::la::Vector<DIMENSIONS, double>& h
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
 ) {
 {%- for action_set in ACTIVE_ACTION_SETS %}
   {{ action_set.name }}.endTraversal();
 {%- endfor %}
 
-  const auto callStack = static_cast<int>(::peano4::grid::StackTopology::BaseStack::Call);
-
-{%- for cell in CELLS %}
-  repositories::DataRepository::{{ cell.logical_type_name }}StackContainer.getLocalExchangeStack(_treeId, callStack).popBlock(1);
-{%- endfor %}
-{%- for face in FACES %}
-  repositories::DataRepository::{{ face.logical_type_name }}StackContainer.getLocalExchangeStack(_treeId, callStack).popBlock(TWO_TIMES_D);
-{%- endfor %}
-{%- for vertex in VERTICES %}
-  repositories::DataRepository::{{ vertex.logical_type_name }}StackContainer.getLocalExchangeStack(_treeId, callStack).popBlock(TWO_POWER_D);
-{%- endfor %}
+  _activePath.clear();
 }
 
 void {{FULL_QUALIFIED_CLASSNAME}}::prepareTraversal() {
@@ -126,10 +122,464 @@ void {{FULL_QUALIFIED_CLASSNAME}}::unprepareTraversal() {
 {%- endfor %}
 }
 
-{% include "Observer_EnterNode.template.cpp" %}
-{% include "Observer_LeaveNode.template.cpp" %}
+void {{FULL_QUALIFIED_CLASSNAME}}::enterNode(const ::peano4::grid::GridTraversalEvent& event) {
+  // The cell joins the active path, so the entry below it is its parent.
+  PathEntry& fineGridSlots = _activePath.emplace_back();
+  fineGridSlots.vertexSlots = event.getVertexPoolIndices();
+  fineGridSlots.faceSlots   = event.getFacePoolIndices();
+  fineGridSlots.cellSlot[0] = event.getCellPoolIndex();
+  const PathEntry& coarseGridSlots = _activePath[_activePath.size() - 2];
 
-{% include "Observer_LoadNodeData.template.cpp" %}
-{% include "Observer_StoreNodeData.template.cpp" %}
+{%- for vertex in VERTICES %}
+  ::peano4::dataview::VertexEnumerator<{{ vertex.full_qualified_type }}> fineGrid{{ vertex.logical_type_name }}(
+    repositories::DataRepository::{{ vertex.logical_type_name }}StackContainer.getPoolData(),
+    fineGridSlots.vertexSlots.data(),
+    repositories::DataRepository::{{ vertex.logical_type_name }}StackContainer.getSentinelSlot()
+  );
+  ::peano4::dataview::VertexEnumerator<{{ vertex.full_qualified_type }}> coarseGrid{{ vertex.logical_type_name }}(
+    repositories::DataRepository::{{ vertex.logical_type_name }}StackContainer.getPoolData(),
+    coarseGridSlots.vertexSlots.data(),
+    repositories::DataRepository::{{ vertex.logical_type_name }}StackContainer.getSentinelSlot()
+  );
+{%- endfor %}
 
-{% include "Observer_ReceiveNodeData.template.cpp" %}
+{%- for face in FACES %}
+  ::peano4::dataview::FaceEnumerator<{{ face.full_qualified_type }}> fineGrid{{ face.logical_type_name }}(
+    repositories::DataRepository::{{ face.logical_type_name }}StackContainer.getPoolData(),
+    fineGridSlots.faceSlots.data(),
+    repositories::DataRepository::{{ face.logical_type_name }}StackContainer.getSentinelSlot()
+  );
+  ::peano4::dataview::FaceEnumerator<{{ face.full_qualified_type }}> coarseGrid{{ face.logical_type_name }}(
+    repositories::DataRepository::{{ face.logical_type_name }}StackContainer.getPoolData(),
+    coarseGridSlots.faceSlots.data(),
+    repositories::DataRepository::{{ face.logical_type_name }}StackContainer.getSentinelSlot()
+  );
+{%- endfor %}
+
+{%- for cell in CELLS %}
+  auto& fineGrid{{ cell.logical_type_name }} = repositories::DataRepository::{{ cell.logical_type_name }}StackContainer.getPoolSlot(
+    fineGridSlots.cellSlot[0] >= 0
+      ? fineGridSlots.cellSlot[0]
+      : repositories::DataRepository::{{ cell.logical_type_name }}StackContainer.getSentinelSlot()
+  );
+  auto& coarseGrid{{ cell.logical_type_name }} = repositories::DataRepository::{{ cell.logical_type_name }}StackContainer.getPoolSlot(
+    coarseGridSlots.cellSlot[0] >= 0
+      ? coarseGridSlots.cellSlot[0]
+      : repositories::DataRepository::{{ cell.logical_type_name }}StackContainer.getSentinelSlot()
+  );
+{%- endfor %}
+
+  // An entity whose data does not persist at this point of the grid hierarchy
+  // has to reach the action sets blank, exactly as a freshly created one does.
+  // A repeat touch keeps what the earlier toucher of this sweep left.
+{%- if VERTICES %}
+  {
+    auto guardMarker = ::peano4::dataview::VertexMarker(event);
+    for (int vertexNumber = 0; vertexNumber < TWO_POWER_D; vertexNumber++) {
+      const auto slot       = fineGridSlots.vertexSlots[vertexNumber];
+      const auto inputStack = event.getVertexDataFrom(vertexNumber);
+      const auto isCreated  = inputStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyGridEntity;
+      if (slot < 0 or (not isCreated and not ::peano4::grid::StackTopology::isInOutStack(inputStack))) {
+        continue;
+      }
+      guardMarker.select(event.getVertexDataTo(vertexNumber));
+{%- for vertex in VERTICES %}
+      if (isCreated or not {{ vertex.full_qualified_type }}::load(guardMarker)) {
+        clearSlot(repositories::DataRepository::{{ vertex.logical_type_name }}StackContainer, slot);
+      }
+{%- endfor %}
+    }
+  }
+{%- endif %}
+{%- if FACES %}
+  {
+    auto guardMarker = event.getFaceMarker();
+    for (int faceNumber = 0; faceNumber < TWO_TIMES_D; faceNumber++) {
+      const auto slot       = fineGridSlots.faceSlots[faceNumber];
+      const auto inputStack = event.getFaceDataFrom(faceNumber);
+      const auto isCreated  = inputStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyGridEntity;
+      if (slot < 0 or (not isCreated and not ::peano4::grid::StackTopology::isInOutStack(inputStack))) {
+        continue;
+      }
+      guardMarker.select(event.getFaceDataTo(faceNumber));
+{%- for face in FACES %}
+      if (isCreated or not {{ face.full_qualified_type }}::load(guardMarker)) {
+        clearSlot(repositories::DataRepository::{{ face.logical_type_name }}StackContainer, slot);
+      }
+{%- endfor %}
+    }
+  }
+{%- endif %}
+{%- if CELLS %}
+  {
+    const auto inputStack  = event.getCellData();
+    const auto isCreated   = inputStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyGridEntity;
+    const auto guardMarker = event.getCellMarker();
+    if (fineGridSlots.cellSlot[0] >= 0
+        and (isCreated or ::peano4::grid::StackTopology::isInOutStack(inputStack))) {
+{%- for cell in CELLS %}
+      if (isCreated or not {{ cell.full_qualified_type }}::load(guardMarker)) {
+        clearSlot(repositories::DataRepository::{{ cell.logical_type_name }}StackContainer, fineGridSlots.cellSlot[0]);
+      }
+{%- endfor %}
+    }
+  }
+{%- endif %}
+
+{%- if VERTICES %}
+  auto vertexMarker = ::peano4::dataview::VertexMarker(event);
+  for (int vertexNumber = 0; vertexNumber < TWO_POWER_D; vertexNumber++) {
+    const auto inVertexStack = event.getVertexDataFrom(vertexNumber);
+    const auto pick          = event.getVertexDataTo(vertexNumber);
+    vertexMarker.select(pick);
+
+    const auto isLocal = vertexMarker.isLocal();
+    if (not isLocal) {
+      continue;
+    }
+
+    const auto isCreateOrDestroy = inVertexStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyGridEntity;
+    const auto isHanging         = vertexMarker.isHanging();
+    const auto isInOut           = ::peano4::grid::StackTopology::isInOutStack(inVertexStack);
+
+    if (isCreateOrDestroy and not isHanging) {
+{%- for action_set in ACTIVE_ACTION_SETS %}
+      {{action_set.name}}.createVertex(vertexMarker,
+{%- for vertex in VERTICES %} fineGrid{{ vertex.logical_type_name }}(pick), {%- endfor %}
+{%- for vertex in VERTICES %} coarseGrid{{ vertex.logical_type_name }}, {%- endfor %}
+{%- for face in FACES %} coarseGrid{{ face.logical_type_name }}, {%- endfor %}
+{%- for cell in CELLS %} coarseGrid{{ cell.logical_type_name }}{{ "," if not loop.last else "" }} {%- endfor %}
+      );
+{%- endfor %}
+    }
+    if (isHanging and (isCreateOrDestroy or isInOut)) {
+{%- for action_set in ACTIVE_ACTION_SETS %}
+      {{action_set.name}}.touchHangingVertexFirstTime(vertexMarker,
+{%- for vertex in VERTICES %} fineGrid{{ vertex.logical_type_name }}(pick), {%- endfor %}
+{%- for vertex in VERTICES %} coarseGrid{{ vertex.logical_type_name }}, {%- endfor %}
+{%- for face in FACES %} coarseGrid{{ face.logical_type_name }}, {%- endfor %}
+{%- for cell in CELLS %} coarseGrid{{ cell.logical_type_name }}{{ "," if not loop.last else "" }} {%- endfor %}
+      );
+{%- endfor %}
+    } else if (isCreateOrDestroy or isInOut) {
+{%- for action_set in ACTIVE_ACTION_SETS %}
+      {{action_set.name}}.touchVertexFirstTime(vertexMarker,
+{%- for vertex in VERTICES %} fineGrid{{ vertex.logical_type_name }}(pick), {%- endfor %}
+{%- for vertex in VERTICES %} coarseGrid{{ vertex.logical_type_name }}, {%- endfor %}
+{%- for face in FACES %} coarseGrid{{ face.logical_type_name }}, {%- endfor %}
+{%- for cell in CELLS %} coarseGrid{{ cell.logical_type_name }}{{ "," if not loop.last else "" }} {%- endfor %}
+      );
+{%- endfor %}
+    }
+  }
+{%- endif %}
+
+{%- if FACES %}
+  auto faceMarker = event.getFaceMarker();
+  for (int faceNumber = 0; faceNumber < TWO_TIMES_D; faceNumber++) {
+    const auto inFaceStack = event.getFaceDataFrom(faceNumber);
+    const auto pick        = event.getFaceDataTo(faceNumber);
+    faceMarker.select(pick);
+
+    const auto isLocal = faceMarker.isLocal();
+    if (not isLocal) {
+      continue;
+    }
+
+    const auto isCreateOrDestroy = inFaceStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyGridEntity;
+    const auto isHanging         = faceMarker.isHanging();
+    const auto isInOut           = ::peano4::grid::StackTopology::isInOutStack(inFaceStack);
+
+    if (isCreateOrDestroy and not isHanging) {
+{%- for action_set in ACTIVE_ACTION_SETS %}
+      {{action_set.name}}.createFace(faceMarker,
+{%- for vertex in VERTICES %} fineGrid{{ vertex.logical_type_name }}, {%- endfor %}
+{%- for face in FACES %} fineGrid{{ face.logical_type_name }}(pick), {%- endfor %}
+{%- for vertex in VERTICES %} coarseGrid{{ vertex.logical_type_name }}, {%- endfor %}
+{%- for face in FACES %} coarseGrid{{ face.logical_type_name }}, {%- endfor %}
+{%- for cell in CELLS %} coarseGrid{{ cell.logical_type_name }}{{ "," if not loop.last else "" }} {%- endfor %}
+      );
+{%- endfor %}
+    }
+    if (isHanging and (isCreateOrDestroy or isInOut)) {
+{%- for action_set in ACTIVE_ACTION_SETS %}
+      {{action_set.name}}.touchHangingFaceFirstTime(faceMarker,
+{%- for vertex in VERTICES %} fineGrid{{ vertex.logical_type_name }}, {%- endfor %}
+{%- for face in FACES %} fineGrid{{ face.logical_type_name }}(pick), {%- endfor %}
+{%- for vertex in VERTICES %} coarseGrid{{ vertex.logical_type_name }}, {%- endfor %}
+{%- for face in FACES %} coarseGrid{{ face.logical_type_name }}, {%- endfor %}
+{%- for cell in CELLS %} coarseGrid{{ cell.logical_type_name }}{{ "," if not loop.last else "" }} {%- endfor %}
+      );
+{%- endfor %}
+    } else if (isCreateOrDestroy or isInOut) {
+{%- for action_set in ACTIVE_ACTION_SETS %}
+      {{action_set.name}}.touchFaceFirstTime(faceMarker,
+{%- for vertex in VERTICES %} fineGrid{{ vertex.logical_type_name }}, {%- endfor %}
+{%- for face in FACES %} fineGrid{{ face.logical_type_name }}(pick), {%- endfor %}
+{%- for vertex in VERTICES %} coarseGrid{{ vertex.logical_type_name }}, {%- endfor %}
+{%- for face in FACES %} coarseGrid{{ face.logical_type_name }}, {%- endfor %}
+{%- for cell in CELLS %} coarseGrid{{ cell.logical_type_name }}{{ "," if not loop.last else "" }} {%- endfor %}
+      );
+{%- endfor %}
+    }
+  }
+{%- endif %}
+
+{% if CELLS %}
+  const auto cellMarker = event.getCellMarker();
+  const auto cellIsLocal = cellMarker.isLocal();
+  if (cellIsLocal) {
+    const auto cellData          = event.getCellData();
+    const auto isCreateOrDestroy = cellData == ::peano4::grid::GridTraversalObserver::CreateOrDestroyGridEntity;
+    if (isCreateOrDestroy) {
+{%- for action_set in ACTIVE_ACTION_SETS %}
+      {{action_set.name}}.createCell(cellMarker,
+{%- for vertex in VERTICES %} fineGrid{{ vertex.logical_type_name }}, {%- endfor %}
+{%- for face in FACES %} fineGrid{{ face.logical_type_name }}, {%- endfor %}
+{%- for cell in CELLS %} fineGrid{{ cell.logical_type_name }}, {%- endfor %}
+{%- for vertex in VERTICES %} coarseGrid{{ vertex.logical_type_name }}, {%- endfor %}
+{%- for face in FACES %} coarseGrid{{ face.logical_type_name }}, {%- endfor %}
+{%- for cell in CELLS %} coarseGrid{{ cell.logical_type_name }}{{ "," if not loop.last else "" }} {%- endfor %}
+      );
+{%- endfor %}
+    }
+{%- for action_set in ACTIVE_ACTION_SETS %}
+    {{action_set.name}}.touchCellFirstTime(cellMarker,
+{%- for vertex in VERTICES %} fineGrid{{ vertex.logical_type_name }}, {%- endfor %}
+{%- for face in FACES %} fineGrid{{ face.logical_type_name }}, {%- endfor %}
+{%- for cell in CELLS %} fineGrid{{ cell.logical_type_name }}, {%- endfor %}
+{%- for vertex in VERTICES %} coarseGrid{{ vertex.logical_type_name }}, {%- endfor %}
+{%- for face in FACES %} coarseGrid{{ face.logical_type_name }}, {%- endfor %}
+{%- for cell in CELLS %} coarseGrid{{ cell.logical_type_name }}{{ "," if not loop.last else "" }} {%- endfor %}
+    );
+{%- endfor %}
+  }
+{%- endif %}
+}
+
+void {{FULL_QUALIFIED_CLASSNAME}}::leaveNode(const ::peano4::grid::GridTraversalEvent& event) {
+  const PathEntry& fineGridSlots   = _activePath.back();
+  const PathEntry& coarseGridSlots = _activePath[_activePath.size() - 2];
+
+{%- for vertex in VERTICES %}
+  ::peano4::dataview::VertexEnumerator<{{ vertex.full_qualified_type }}> fineGrid{{ vertex.logical_type_name }}(
+    repositories::DataRepository::{{ vertex.logical_type_name }}StackContainer.getPoolData(),
+    fineGridSlots.vertexSlots.data(),
+    repositories::DataRepository::{{ vertex.logical_type_name }}StackContainer.getSentinelSlot()
+  );
+  ::peano4::dataview::VertexEnumerator<{{ vertex.full_qualified_type }}> coarseGrid{{ vertex.logical_type_name }}(
+    repositories::DataRepository::{{ vertex.logical_type_name }}StackContainer.getPoolData(),
+    coarseGridSlots.vertexSlots.data(),
+    repositories::DataRepository::{{ vertex.logical_type_name }}StackContainer.getSentinelSlot()
+  );
+{%- endfor %}
+
+{%- for face in FACES %}
+  ::peano4::dataview::FaceEnumerator<{{ face.full_qualified_type }}> fineGrid{{ face.logical_type_name }}(
+    repositories::DataRepository::{{ face.logical_type_name }}StackContainer.getPoolData(),
+    fineGridSlots.faceSlots.data(),
+    repositories::DataRepository::{{ face.logical_type_name }}StackContainer.getSentinelSlot()
+  );
+  ::peano4::dataview::FaceEnumerator<{{ face.full_qualified_type }}> coarseGrid{{ face.logical_type_name }}(
+    repositories::DataRepository::{{ face.logical_type_name }}StackContainer.getPoolData(),
+    coarseGridSlots.faceSlots.data(),
+    repositories::DataRepository::{{ face.logical_type_name }}StackContainer.getSentinelSlot()
+  );
+{%- endfor %}
+
+{%- for cell in CELLS %}
+  auto& fineGrid{{ cell.logical_type_name }} = repositories::DataRepository::{{ cell.logical_type_name }}StackContainer.getPoolSlot(
+    fineGridSlots.cellSlot[0] >= 0
+      ? fineGridSlots.cellSlot[0]
+      : repositories::DataRepository::{{ cell.logical_type_name }}StackContainer.getSentinelSlot()
+  );
+  auto& coarseGrid{{ cell.logical_type_name }} = repositories::DataRepository::{{ cell.logical_type_name }}StackContainer.getPoolSlot(
+    coarseGridSlots.cellSlot[0] >= 0
+      ? coarseGridSlots.cellSlot[0]
+      : repositories::DataRepository::{{ cell.logical_type_name }}StackContainer.getSentinelSlot()
+  );
+{%- endfor %}
+
+{%- if CELLS %}
+  const auto cellMarker = event.getCellMarker();
+  const auto cellIsLocal = cellMarker.isLocal();
+  if (cellIsLocal) {
+{%- for action_set in ACTIVE_ACTION_SETS | reverse %}
+    {{action_set.name}}.touchCellLastTime(cellMarker,
+{%- for vertex in VERTICES %} fineGrid{{ vertex.logical_type_name }}, {%- endfor %}
+{%- for face in FACES %} fineGrid{{ face.logical_type_name }}, {%- endfor %}
+{%- for cell in CELLS %} fineGrid{{ cell.logical_type_name }}, {%- endfor %}
+{%- for vertex in VERTICES %} coarseGrid{{ vertex.logical_type_name }}, {%- endfor %}
+{%- for face in FACES %} coarseGrid{{ face.logical_type_name }}, {%- endfor %}
+{%- for cell in CELLS %} coarseGrid{{ cell.logical_type_name }}{{ "," if not loop.last else "" }} {%- endfor %}
+    );
+{%- endfor %}
+
+    const auto cellData = event.getCellData();
+    if (cellData == ::peano4::grid::GridTraversalObserver::CreateOrDestroyGridEntity) {
+{%- for action_set in ACTIVE_ACTION_SETS | reverse %}
+      {{action_set.name}}.destroyCell(cellMarker,
+{%- for vertex in VERTICES %} fineGrid{{ vertex.logical_type_name }}, {%- endfor %}
+{%- for face in FACES %} fineGrid{{ face.logical_type_name }}, {%- endfor %}
+{%- for cell in CELLS %} fineGrid{{ cell.logical_type_name }}, {%- endfor %}
+{%- for vertex in VERTICES %} coarseGrid{{ vertex.logical_type_name }}, {%- endfor %}
+{%- for face in FACES %} coarseGrid{{ face.logical_type_name }}, {%- endfor %}
+{%- for cell in CELLS %} coarseGrid{{ cell.logical_type_name }}{{ "," if not loop.last else "" }} {%- endfor %}
+      );
+{%- endfor %}
+    }
+  }
+{%- endif %}
+
+{%- if FACES %}
+  auto faceMarker = event.getFaceMarker();
+  for (int faceNumber = 0; faceNumber < TWO_TIMES_D; faceNumber++) {
+    const auto outFaceStack = event.getFaceDataTo(faceNumber);
+    const auto pick         = event.getFaceDataFrom(faceNumber);
+    faceMarker.select(pick);
+
+    const auto isLocal = faceMarker.isLocal();
+    if (not isLocal) {
+      continue;
+    }
+
+    const auto isCreateOrDestroy = outFaceStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyGridEntity;
+    const auto isHanging         = faceMarker.isHanging();
+    const auto isInOut           = ::peano4::grid::StackTopology::isInOutStack(outFaceStack);
+
+    if (isHanging and (isInOut or isCreateOrDestroy)) {
+{%- for action_set in ACTIVE_ACTION_SETS | reverse %}
+      {{action_set.name}}.touchHangingFaceLastTime(faceMarker,
+{%- for vertex in VERTICES %} fineGrid{{ vertex.logical_type_name }}, {%- endfor %}
+{%- for face in FACES %} fineGrid{{ face.logical_type_name }}(pick), {%- endfor %}
+{%- for vertex in VERTICES %} coarseGrid{{ vertex.logical_type_name }}, {%- endfor %}
+{%- for face in FACES %} coarseGrid{{ face.logical_type_name }}, {%- endfor %}
+{%- for cell in CELLS %} coarseGrid{{ cell.logical_type_name }}{{ "," if not loop.last else "" }} {%- endfor %}
+      );
+{%- endfor %}
+    } else if (isInOut or isCreateOrDestroy) {
+{%- for action_set in ACTIVE_ACTION_SETS | reverse %}
+      {{action_set.name}}.touchFaceLastTime(faceMarker,
+{%- for vertex in VERTICES %} fineGrid{{ vertex.logical_type_name }}, {%- endfor %}
+{%- for face in FACES %} fineGrid{{ face.logical_type_name }}(pick), {%- endfor %}
+{%- for vertex in VERTICES %} coarseGrid{{ vertex.logical_type_name }}, {%- endfor %}
+{%- for face in FACES %} coarseGrid{{ face.logical_type_name }}, {%- endfor %}
+{%- for cell in CELLS %} coarseGrid{{ cell.logical_type_name }}{{ "," if not loop.last else "" }} {%- endfor %}
+      );
+{%- endfor %}
+    }
+    if (isCreateOrDestroy and not isHanging) {
+{%- for action_set in ACTIVE_ACTION_SETS | reverse %}
+      {{action_set.name}}.destroyFace(faceMarker,
+{%- for vertex in VERTICES %} fineGrid{{ vertex.logical_type_name }}, {%- endfor %}
+{%- for face in FACES %} fineGrid{{ face.logical_type_name }}(pick), {%- endfor %}
+{%- for vertex in VERTICES %} coarseGrid{{ vertex.logical_type_name }}, {%- endfor %}
+{%- for face in FACES %} coarseGrid{{ face.logical_type_name }}, {%- endfor %}
+{%- for cell in CELLS %} coarseGrid{{ cell.logical_type_name }}{{ "," if not loop.last else "" }} {%- endfor %}
+      );
+{%- endfor %}
+    }
+  }
+{%- endif %}
+
+{%- if VERTICES %}
+  auto vertexMarker = ::peano4::dataview::VertexMarker(event);
+  for (int vertexNumber = 0; vertexNumber < TWO_POWER_D; vertexNumber++) {
+    const auto outVertexStack = event.getVertexDataTo(vertexNumber);
+    const auto pick           = event.getVertexDataFrom(vertexNumber);
+    vertexMarker.select(pick);
+
+    const auto isLocal = vertexMarker.isLocal();
+    if (not isLocal) {
+      continue;
+    }
+
+    const auto isCreateOrDestroy = outVertexStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyGridEntity;
+    const auto isHanging         = vertexMarker.isHanging();
+    const auto isInOut           = ::peano4::grid::StackTopology::isInOutStack(outVertexStack);
+
+    if (isHanging and (isCreateOrDestroy or isInOut)) {
+{%- for action_set in ACTIVE_ACTION_SETS | reverse %}
+      {{action_set.name}}.touchHangingVertexLastTime(vertexMarker,
+{%- for vertex in VERTICES %} fineGrid{{ vertex.logical_type_name }}(pick), {%- endfor %}
+{%- for vertex in VERTICES %} coarseGrid{{ vertex.logical_type_name }}, {%- endfor %}
+{%- for face in FACES %} coarseGrid{{ face.logical_type_name }}, {%- endfor %}
+{%- for cell in CELLS %} coarseGrid{{ cell.logical_type_name }}{{ "," if not loop.last else "" }} {%- endfor %}
+      );
+{%- endfor %}
+    } else if (isCreateOrDestroy or isInOut) {
+{%- for action_set in ACTIVE_ACTION_SETS | reverse %}
+      {{action_set.name}}.touchVertexLastTime(vertexMarker,
+{%- for vertex in VERTICES %} fineGrid{{ vertex.logical_type_name }}(pick), {%- endfor %}
+{%- for vertex in VERTICES %} coarseGrid{{ vertex.logical_type_name }}, {%- endfor %}
+{%- for face in FACES %} coarseGrid{{ face.logical_type_name }}, {%- endfor %}
+{%- for cell in CELLS %} coarseGrid{{ cell.logical_type_name }}{{ "," if not loop.last else "" }} {%- endfor %}
+      );
+{%- endfor %}
+    }
+    if (isCreateOrDestroy and not isHanging) {
+{%- for action_set in ACTIVE_ACTION_SETS | reverse %}
+      {{action_set.name}}.destroyVertex(vertexMarker,
+{%- for vertex in VERTICES %} fineGrid{{ vertex.logical_type_name }}(pick), {%- endfor %}
+{%- for vertex in VERTICES %} coarseGrid{{ vertex.logical_type_name }}, {%- endfor %}
+{%- for face in FACES %} coarseGrid{{ face.logical_type_name }}, {%- endfor %}
+{%- for cell in CELLS %} coarseGrid{{ cell.logical_type_name }}{{ "," if not loop.last else "" }} {%- endfor %}
+      );
+{%- endfor %}
+    }
+  }
+{%- endif %}
+
+  _activePath.pop_back();
+}
+
+void {{FULL_QUALIFIED_CLASSNAME}}::receiveNodeData(
+  ::peano4::grid::GridTraversalObserver::NodeData nodeData,
+  int                                             position,
+  int                                             fromStack,
+  ::peano4::grid::SendReceiveContext              context,
+  const ::peano4::grid::GridTraversalEvent&       event
+) {
+  using NodeData = ::peano4::grid::GridTraversalObserver::NodeData;
+
+  // The live pool slot of the subtree task merges the frozen copy that fromStack
+  // addresses, and the context says whether that copy comes from a partner task,
+  // from a neighbour rank, or rebuilds the entity slot in a consolidation. The
+  // frozen copy stays read-only, so the other partners read it afterwards.
+  switch (nodeData) {
+  case NodeData::Vertex:
+    {
+{%- if VERTICES %}
+      assertion(event.getVertexPoolIndex(position) >= 0);
+      auto marker = ::peano4::dataview::VertexMarker(event, position);
+{%- for vertex in VERTICES %}
+      {
+        auto&       data     = repositories::DataRepository::{{vertex.logical_type_name}}StackContainer.getPoolSlot(event.getVertexPoolIndex(position));
+        const auto& incoming = repositories::DataRepository::{{vertex.logical_type_name}}StackContainer.getPoolSlot(fromStack);
+        ::peano4::grid::applyIncomingCopy(data, context, marker, _treeId, incoming);
+      }
+{%- endfor %}
+{%- endif %}
+    }
+    break;
+  case NodeData::Face:
+    {
+{%- if FACES %}
+      assertion(event.getFacePoolIndex(position) >= 0);
+      auto marker = event.getFaceMarker();
+      marker.select(position);
+{%- for face in FACES %}
+      {
+        auto&       data     = repositories::DataRepository::{{face.logical_type_name}}StackContainer.getPoolSlot(event.getFacePoolIndex(position));
+        const auto& incoming = repositories::DataRepository::{{face.logical_type_name}}StackContainer.getPoolSlot(fromStack);
+        ::peano4::grid::applyIncomingCopy(data, context, marker, _treeId, incoming);
+      }
+{%- endfor %}
+{%- endif %}
+    }
+    break;
+  case NodeData::Cell:
+    assertion(false, "Cell data never travels between subtree tasks or ranks.");
+    break;
+  }
+}

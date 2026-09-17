@@ -59,10 +59,6 @@ void peano4::topology::TopologyManager::init(
   });
   communicationManager.start();
 
-  // The rank is known here, so every registered container anchors its serial
-  // slot now.
-  peano4::data::ContainerRegistry::getInstance().initialiseSerialSlots();
-
   _domainOffset = offset;
   _domainWidth  = width;
   _periodicBC   = periodicBC;
@@ -873,7 +869,6 @@ void peano4::topology::TopologyManager::runSweep(peano4::grid::GridTraversalObse
       _traversal->prepareTransitionTopology(*_tree, taskLevel, *regridOverrides);
     }
     _traversal->prepareParallelSweep(*_tree, taskLevel, not ranTransitionSweep);
-    containerRegistry.prepareLocalSlots(1 + _traversal->getNumberOfSubtreeTasks());
     _traversal->traverseWithPoolTasks(*_tree, observerClone, sweepKind, taskLevel, waitForRemoteData, regridOverrides);
     if (runsParallelSweeps) {
       // A rank-boundary entity several tasks touch consolidates into the

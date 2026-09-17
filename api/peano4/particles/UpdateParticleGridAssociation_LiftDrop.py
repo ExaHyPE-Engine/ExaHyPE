@@ -121,7 +121,7 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
                            << "."
         );
         const auto parentVertexPosition =
-          peano4::datamanagement::reconstructXOfParentVertex(marker, instruction);
+          peano4::dataview::reconstructXOfParentVertex(marker, instruction);
         const auto parentCellSize = 3.0 * marker.getH();
         particle->setCellH(parentCellSize);
         peano4::particles::updateContainedInAdjacentCellProperty(

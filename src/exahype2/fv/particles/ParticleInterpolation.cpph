@@ -3,12 +3,12 @@
 
 template <int... Indices, typename Particle>
 void exahype2::fv::particles::interpolation::projectValues_piecewiseConstant(
-  const peano4::datamanagement::CellMarker& marker,
-  int                                       voxelsPerAxis,
-  int                                       unknownsPerVoxel,
-  const double* NOALIAS                     Q,
-  Particle&                                 particle,
-  tarch::la::Vector<DIMENSIONS, double>     pos
+  const peano4::dataview::CellMarker&   marker,
+  int                                   voxelsPerAxis,
+  int                                   unknownsPerVoxel,
+  const double* NOALIAS                 Q,
+  Particle&                             particle,
+  tarch::la::Vector<DIMENSIONS, double> pos
 ) {
   [&]<std::size_t... I>(std::index_sequence<I...>) {
     (particle.setData(
@@ -28,12 +28,12 @@ void exahype2::fv::particles::interpolation::projectValues_piecewiseConstant(
 
 template <int... Indices, typename Particle>
 void exahype2::fv::particles::interpolation::projectValues_piecewiseLinear(
-  const peano4::datamanagement::CellMarker& marker,
-  int                                       voxelsPerAxis,
-  int                                       unknownsPerVoxel,
-  const double* NOALIAS                     Q,
-  Particle&                                 particle,
-  tarch::la::Vector<DIMENSIONS, double>     pos
+  const peano4::dataview::CellMarker&   marker,
+  int                                   voxelsPerAxis,
+  int                                   unknownsPerVoxel,
+  const double* NOALIAS                 Q,
+  Particle&                             particle,
+  tarch::la::Vector<DIMENSIONS, double> pos
 ) {
   [&]<std::size_t... I>(std::index_sequence<I...>) {
     (particle.setData(
@@ -47,10 +47,10 @@ void exahype2::fv::particles::interpolation::projectValues_piecewiseLinear(
 
 template <int... Indices, typename Particle>
 void exahype2::fv::particles::interpolation::applyInterpolation(
-  Particle&                                 particle,
-  tarch::la::Vector<DIMENSIONS, double>     pos,
-  const peano4::datamanagement::CellMarker& marker,
-  const double* NOALIAS                     Q
+  Particle&                             particle,
+  tarch::la::Vector<DIMENSIONS, double> pos,
+  const peano4::dataview::CellMarker&   marker,
+  const double* NOALIAS                 Q
 ) {
   switch (_interpolationMethod) {
   case 0:
@@ -90,7 +90,7 @@ void exahype2::fv::particles::interpolation::applyInterpolation(
 
 template <int... Indices, typename Particle>
 void exahype2::fv::particles::interpolation::handleMidpoints(
-  const peano4::datamanagement::CellMarker&    marker,
+  const peano4::dataview::CellMarker&          marker,
   const double* NOALIAS                        Q,
   Particle&                                    particle,
   const tarch::la::Vector<DIMENSIONS, double>& midpointPosition

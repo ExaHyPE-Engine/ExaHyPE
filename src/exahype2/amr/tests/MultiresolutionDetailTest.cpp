@@ -17,12 +17,9 @@ namespace {
 
   // Detail of a scalar (stride-1) patch via the identity indicator.
   double detailOf(const std::vector<double>& patch, int numberOfDofsPerAxis) {
-    return exahype2::amr::computeMultiresolutionDetail(
-      patch.data(),
-      numberOfDofsPerAxis,
-      1,
-      [](const double* v) { return v[0]; }
-    );
+    return exahype2::amr::computeMultiresolutionDetail(patch.data(), numberOfDofsPerAxis, 1, [](const double* v) {
+      return v[0];
+    });
   }
 
   // Per-axis centred node coordinate, matching the implementation.
@@ -49,6 +46,17 @@ void exahype2::amr::tests::MultiresolutionDetailTest::testConstantFieldHasZeroDe
   const int           numberOfDofsPerAxis = 4;
   std::vector<double> patch(numberOfVolumes(numberOfDofsPerAxis), 1.0);
   validateNumericalEquals(detailOf(patch, numberOfDofsPerAxis), 0.0);
+
+  const std::vector<float> singlePrecisionPatch(numberOfVolumes(numberOfDofsPerAxis), 1.0F);
+  validateNumericalEquals(
+    exahype2::amr::computeMultiresolutionDetail(
+      singlePrecisionPatch.data(),
+      numberOfDofsPerAxis,
+      1,
+      [](const float* value) { return value[0]; }
+    ),
+    0.0
+  );
 }
 
 void exahype2::amr::tests::MultiresolutionDetailTest::testAffineFieldHasZeroDetail() {
@@ -198,12 +206,10 @@ void exahype2::amr::tests::MultiresolutionDetailTest::testCustomNodesFitTheirOwn
     [](const double* value) { return value[0]; },
     NodesInUnitInterval
   );
-  const double detailWithVolumeCentres = exahype2::amr::computeMultiresolutionDetail(
-    patch.data(),
-    NumberOfNodesPerAxis,
-    1,
-    [](const double* value) { return value[0]; }
-  );
+  const double detailWithVolumeCentres =
+    exahype2::amr::computeMultiresolutionDetail(patch.data(), NumberOfNodesPerAxis, 1, [](const double* value) {
+      return value[0];
+    });
 
   validateNumericalEqualsWithEps(detailWithNodes, 0.0, 1e-12);
   validate(detailWithVolumeCentres > 1e-3);

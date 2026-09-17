@@ -335,7 +335,7 @@ Type:                   """ + self.__class__.__name__
     def add_actions_to_create_grid(self, step):
         pass
 
-    def add_actions_to_plot_solution(self, step, output_path):
+    def add_actions_to_plot_solution(self, step):
         pass
 
     # these actions are executed during each time step

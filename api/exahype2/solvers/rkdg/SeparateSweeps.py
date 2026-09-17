@@ -50,11 +50,11 @@ class SeparateSweeps(RungeKuttaDG):
       "({} and repositories::{}.getSolverState()=={}::SolverState::SolveRiemannProblemAndAddToVolumeIntegralOfStep{})".format(self._store_face_data_default_guard(),self.get_name_of_global_instance(),self._name,step) for step in range(0,self.number_of_Runge_Kutta_steps())
     ]
 
-    self._any_primary_sweep_of_a_Runge_Kutta_step_on_cell   = " or ".join( self._primary_sweeps_of_Runge_Kutta_step_on_cell )
-    self._any_secondary_sweep_of_a_Runge_Kutta_step_on_cell = " or ".join( self._secondary_sweeps_of_Runge_Kutta_step_on_cell )
+    self._any_primary_sweep_of_a_Runge_Kutta_step_on_cell   = "(" + " or ".join( self._primary_sweeps_of_Runge_Kutta_step_on_cell ) + ")"
+    self._any_secondary_sweep_of_a_Runge_Kutta_step_on_cell = "(" + " or ".join( self._secondary_sweeps_of_Runge_Kutta_step_on_cell ) + ")"
 
-    self._any_primary_sweep_of_a_Runge_Kutta_step_on_face   = " or ".join( self._primary_sweeps_of_Runge_Kutta_step_on_face )
-    self._any_secondary_sweep_of_a_Runge_Kutta_step_on_face = " or ".join( self._secondary_sweeps_of_Runge_Kutta_step_on_face )
+    self._any_primary_sweep_of_a_Runge_Kutta_step_on_face   = "(" + " or ".join( self._primary_sweeps_of_Runge_Kutta_step_on_face ) + ")"
+    self._any_secondary_sweep_of_a_Runge_Kutta_step_on_face = "(" + " or ".join( self._secondary_sweeps_of_Runge_Kutta_step_on_face ) + ")"
 
     super(SeparateSweeps, self).__init__(name,
                                          rk_order,

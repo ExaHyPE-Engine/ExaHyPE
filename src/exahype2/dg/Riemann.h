@@ -3,7 +3,7 @@
 #pragma once
 
 #include "peano4/Globals.h"
-#include "peano4/datamanagement/FaceMarker.h"
+#include "peano4/dataview/FaceMarker.h"
 #include "tarch/la/Vector.h"
 
 /**
@@ -121,14 +121,14 @@ namespace exahype2::dg {
    *   the solution and its gradient along the normal.
    */
   void interpolateProjectedFacePolynomial(
-    const peano4::datamanagement::FaceMarker& marker,
-    int                                       order,
-    int                                       numberOfProjectedQuantities,
-    int                                       unknowns,
-    int                                       auxiliaryVariables,
-    const double* NOALIAS                     InterpolationMatrix1D,
-    const double* NOALIAS                     coarseGridFaceQ,
-    double* NOALIAS                           fineGridFaceQ
+    const peano4::dataview::FaceMarker& marker,
+    int                                 order,
+    int                                 numberOfProjectedQuantities,
+    int                                 unknowns,
+    int                                 auxiliaryVariables,
+    const double* NOALIAS               InterpolationMatrix1D,
+    const double* NOALIAS               coarseGridFaceQ,
+    double* NOALIAS                     fineGridFaceQ
   );
 
   /**

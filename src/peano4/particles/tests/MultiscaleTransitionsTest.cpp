@@ -15,7 +15,7 @@ peano4::particles::tests::MultiscaleTransitionsTest::MultiscaleTransitionsTest()
 void peano4::particles::tests::MultiscaleTransitionsTest::testSievePredicate() {
 #if DIMENSIONS == 2
   const peano4::particles::tests::TestParticle particle({0.721487, 0.624479}, 0.0001);
-  peano4::datamanagement::VertexMarker          marker;
+  peano4::dataview::VertexMarker               marker;
 
   marker._cellCentre = {0.685185, 0.648148};
   marker._h          = {0.037037, 0.037037};
@@ -42,24 +42,24 @@ void peano4::particles::tests::MultiscaleTransitionsTest::testSievePredicate() {
 
 void peano4::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticleAssociatedWithVertex01() {
 #if DIMENSIONS == 2
-  peano4::datamanagement::VertexMarker marker;
+  peano4::dataview::VertexMarker marker;
 
   const double meshSize = 0.111111;
 
-  marker._cellCentre                      = {0.611111, 0.166667};
-  marker._h                               = {meshSize, meshSize};
-  marker._isHanging                       = 0;
-  marker._hasBeenRefined                  = 1 + 2 + 4 + 8;
-  marker._willBeRefined                   = 1 + 2 + 4 + 8;
-  marker._isParentVertexLocal             = 1 + 2 + 4 + 8;
-  marker._isParentCellLocal               = true;
-  marker.relativePositionWithinFatherCell = {0, 0};
+  marker._cellCentre                       = {0.611111, 0.166667};
+  marker._h                                = {meshSize, meshSize};
+  marker._isHanging                        = 0;
+  marker._hasBeenRefined                   = 1 + 2 + 4 + 8;
+  marker._willBeRefined                    = 1 + 2 + 4 + 8;
+  marker._isParentVertexLocal              = 1 + 2 + 4 + 8;
+  marker._isParentCellLocal                = true;
+  marker._relativePositionWithinFatherCell = {0, 0};
   marker._isAdjacentCellLocal.set();
 
-  const tarch::la::Vector<DIMENSIONS, double>          x            = {0.554725, 0.166678};
-  const double                                         searchRadius = 0.0185185;
+  const tarch::la::Vector<DIMENSIONS, double>         x            = {0.554725, 0.166678};
+  const double                                        searchRadius = 0.0185185;
   peano4::particles::ParticleReassociationInstruction liftInstruction;
-  bool                                                 drop;
+  bool                                                drop;
 
   // The bottom left vertex owns the particle.
   marker._select  = 0;
@@ -106,25 +106,25 @@ void peano4::particles::tests::MultiscaleTransitionsTest::run() {
 
 void peano4::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticleAssociatedWithVertex02() {
 #if DIMENSIONS == 2
-  peano4::datamanagement::VertexMarker marker;
+  peano4::dataview::VertexMarker marker;
 
   const double meshSize = 0.037037;
 
-  marker._cellCentre                      = {0.537037, 0.12963};
-  marker._h                               = {meshSize, meshSize};
-  marker._isHanging                       = 0;
-  marker._hasBeenRefined                  = 0;
-  marker._willBeRefined                   = 0;
-  marker._isParentVertexLocal             = 1 + 2 + 4 + 8;
-  marker._isParentCellLocal               = true;
-  marker.relativePositionWithinFatherCell = {2, 0};
-  marker._select                          = 2;
+  marker._cellCentre                       = {0.537037, 0.12963};
+  marker._h                                = {meshSize, meshSize};
+  marker._isHanging                        = 0;
+  marker._hasBeenRefined                   = 0;
+  marker._willBeRefined                    = 0;
+  marker._isParentVertexLocal              = 1 + 2 + 4 + 8;
+  marker._isParentCellLocal                = true;
+  marker._relativePositionWithinFatherCell = {2, 0};
+  marker._select                           = 2;
   marker._isAdjacentCellLocal.set();
 
-  const tarch::la::Vector<DIMENSIONS, double>          x            = {0.504975, 0.1667};
-  const double                                         searchRadius = 0.0185185;
+  const tarch::la::Vector<DIMENSIONS, double>         x            = {0.504975, 0.1667};
+  const double                                        searchRadius = 0.0185185;
   peano4::particles::ParticleReassociationInstruction liftInstruction;
-  bool                                                 drop;
+  bool                                                drop;
 
   // The top left vertex owns the particle, and the particle sits further left
   // and further up than that vertex, so the routine lifts it.
@@ -152,23 +152,23 @@ void peano4::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticle
 
 void peano4::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticleAssociatedWithVertex03() {
 #if DIMENSIONS == 2
-  peano4::datamanagement::VertexMarker marker;
+  peano4::dataview::VertexMarker marker;
 
   const double meshSize = 1.0 / 3.0 / 3.0;
 
-  marker._cellCentre                      = {0.5 * meshSize, 3.5 * meshSize};
-  marker._h                               = {meshSize, meshSize};
-  marker._isLocal                         = 0b1111;
-  marker._isHanging                       = 0b0000;
-  marker._hasBeenRefined                  = 0b0000;
-  marker._willBeRefined                   = 0b0000;
-  marker._isParentVertexLocal             = 0b1111;
-  marker._isParentCellLocal               = true;
-  marker.relativePositionWithinFatherCell = {0, 0};
-  marker._isAdjacentCellLocal             = 0b110110000;
+  marker._cellCentre                       = {0.5 * meshSize, 3.5 * meshSize};
+  marker._h                                = {meshSize, meshSize};
+  marker._isLocal                          = 0b1111;
+  marker._isHanging                        = 0b0000;
+  marker._hasBeenRefined                   = 0b0000;
+  marker._willBeRefined                    = 0b0000;
+  marker._isParentVertexLocal              = 0b1111;
+  marker._isParentCellLocal                = true;
+  marker._relativePositionWithinFatherCell = {0, 0};
+  marker._isAdjacentCellLocal              = 0b110110000;
 
-  double                                               searchRadius = 0.00555556;
-  const tarch::la::Vector<DIMENSIONS, double>          x            = {0.0555708, 0.322228};
+  double                                              searchRadius = 0.00555556;
+  const tarch::la::Vector<DIMENSIONS, double>         x            = {0.0555708, 0.322228};
   peano4::particles::ParticleReassociationInstruction liftInstruction;
 
   // Vertex 0 lifts the particle globally.
@@ -294,23 +294,23 @@ void peano4::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticle
 
 void peano4::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticleAssociatedWithVertex04() {
 #if DIMENSIONS == 2
-  peano4::datamanagement::VertexMarker marker;
+  peano4::dataview::VertexMarker marker;
 
   const double meshSize = 1.0 / 3.0;
 
-  marker._cellCentre                      = {0.166667, 0.5};
-  marker._h                               = {meshSize, meshSize};
-  marker._isHanging                       = 0;
-  marker._hasBeenRefined                  = 0;
-  marker._willBeRefined                   = 0;
-  marker._isParentVertexLocal             = 0b1011;
-  marker._isParentCellLocal               = true;
-  marker.relativePositionWithinFatherCell = {2, 0};
-  marker._select                          = 2;
-  marker._isAdjacentCellLocal             = 0b000100110;
+  marker._cellCentre                       = {0.166667, 0.5};
+  marker._h                                = {meshSize, meshSize};
+  marker._isHanging                        = 0;
+  marker._hasBeenRefined                   = 0;
+  marker._willBeRefined                    = 0;
+  marker._isParentVertexLocal              = 0b1011;
+  marker._isParentCellLocal                = true;
+  marker._relativePositionWithinFatherCell = {2, 0};
+  marker._select                           = 2;
+  marker._isAdjacentCellLocal              = 0b000100110;
 
-  const tarch::la::Vector<DIMENSIONS, double>          x = {4.99999996463071805231e-01, 5.00000003548028204570e-01};
-  const double                                         searchRadius = 0.15;
+  const tarch::la::Vector<DIMENSIONS, double>         x = {4.99999996463071805231e-01, 5.00000003548028204570e-01};
+  const double                                        searchRadius = 0.15;
   peano4::particles::ParticleReassociationInstruction liftInstruction;
 
   // Vertex 1 lifts the particle globally.

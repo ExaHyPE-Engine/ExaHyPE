@@ -6,8 +6,8 @@
 #include "exahype2/fv/PatchUtils.h"
 #include "peano4/Globals.h"
 #include "peano4/Loop.h"
-#include "peano4/datamanagement/CellMarker.h"
-#include "peano4/datamanagement/FaceMarker.h"
+#include "peano4/dataview/CellMarker.h"
+#include "peano4/dataview/FaceMarker.h"
 #include "peano4/grid/GridControlEvent.h"
 #include "tarch/Assertions.h"
 #include "tarch/la/ScalarOperations.h"
@@ -73,7 +73,7 @@ namespace exahype2::dg {
 
   template <typename QStoreType>
   QStoreType evaluatePolynomial(
-    const peano4::datamanagement::CellMarker&    marker,
+    const peano4::dataview::CellMarker&          marker,
     int                                          order,
     const QStoreType* NOALIAS                    QuadratureNodes1D,
     int                                          unknownsPerDoF,
@@ -84,7 +84,7 @@ namespace exahype2::dg {
 
   template <typename QStoreType>
   QStoreType evaluatePolynomial(
-    const peano4::datamanagement::FaceMarker&    marker,
+    const peano4::dataview::FaceMarker&          marker,
     int                                          order,
     const QStoreType* NOALIAS                    QuadratureNodes1D,
     int                                          unknownsPerDoF,

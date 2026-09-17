@@ -51,25 +51,25 @@ class SingleSweep(ADERDG):
         )
 
         send_condition = (
-            "(" + is_first_sweep + ") or " +
+            "((" + is_first_sweep + ") or " +
             "(" + solver_state + "==" + prediction_on_hanging + ") or " +
-            "(" + solver_state + "==" + plotting + " and " + min_time_stamp + "!=0.0 " +")"
+            "(" + solver_state + "==" + plotting + " and " + min_time_stamp + "!=0.0 " +"))"
         )
 
         send_condition_split_sweeps = (
-            "(" + is_first_sweep + ") or " +
-            "(" + solver_state + "==" + prediction_on_hanging + ")"
+            "((" + is_first_sweep + ") or " +
+            "(" + solver_state + "==" + prediction_on_hanging + "))"
         )
 
         receive_condition = (
-            "(" + solver_state + "==" + prediction_on_hanging + ") or" +
+            "((" + solver_state + "==" + prediction_on_hanging + ") or" +
             "(" + is_last_sweep + ") or " +
-            "(" + solver_state + "==" + plotting + " and " + min_time_stamp + "!=0.0 " +")"
+            "(" + solver_state + "==" + plotting + " and " + min_time_stamp + "!=0.0 " +"))"
         )
 
         receive_condition_split_sweeps = (
-            "(" + solver_state + "==" + prediction_on_hanging + ") or" +
-            "(" + is_last_sweep + ")"
+            "((" + solver_state + "==" + prediction_on_hanging + ") or" +
+            "(" + is_last_sweep + "))"
         )
 
         self._rhs_estimates_projection.generator.send_condition = send_condition if not self._split_sweeps else send_condition_split_sweeps
@@ -139,15 +139,6 @@ class SingleSweep(ADERDG):
             SingleSweep, self
         )._store_boundary_data_default_guard() + " and repositories::{}.isLastGridSweepOfTimeStep()".format(
             self.get_name_of_global_instance()
-        )
-
-    def _delete_face_data_default_guard(self):
-        return super(
-            SingleSweep, self
-        )._delete_face_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::PredictionOnHangingCells".format(
-            self.get_name_of_global_instance(), self._name
-        ) + " and (fineGridFace{}FaceLabel.getAboveHanging()[0] or fineGridFace{}FaceLabel.getAboveHanging()[1])".format(
-            self._name, self._name
         )
 
     def _restrict_face_data_default_guard(self):

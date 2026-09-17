@@ -8,6 +8,7 @@
 #include "runner/Phase.h"
 #include "runner/RunControl.h"
 #include "runner/RuntimeParameters.h"
+#include "runner/phases/AllocateMemory.h"
 #include "tarch/FloatingPointExceptions.h"
 #include "tarch/Termination.h"
 #include "tarch/instrumentation/Watch.h"
@@ -58,7 +59,11 @@ runner::Engine::Engine(
   _domainSize(domainSize),
   _periodicBC(periodicBC),
   _callbacks(std::move(callbacks)),
-  _steps(std::move(steps)) {}
+  _steps(std::move(steps)) {
+  _steps.push_back(runner::Step{AllocateMemoryProgramStep, runner::StepName::AllocateMemory, [this]() {
+                                  runner::AllocateMemory::executeOnEveryRank(_box);
+                                }});
+}
 
 const runner::Step& runner::Engine::findStep(const int programStep) const {
   for (const auto& step : _steps) {

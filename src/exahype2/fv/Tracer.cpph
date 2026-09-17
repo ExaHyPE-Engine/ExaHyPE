@@ -4,7 +4,7 @@
 /** Returns one attribute from the halo-free volume containing particleX. */
 template <typename DataType>
 DataType exahype2::fv::internal::projectValueOntoParticle_piecewiseConstant(
-  const peano4::datamanagement::CellMarker&    marker,
+  const peano4::dataview::CellMarker&          marker,
   int                                          voxelsPerAxis,
   int                                          unknownsPerVoxel,
   const DataType* NOALIAS                      Q,
@@ -25,7 +25,7 @@ DataType exahype2::fv::internal::projectValueOntoParticle_piecewiseConstant(
  */
 template <typename DataType>
 DataType exahype2::fv::internal::projectValueOntoParticle_piecewiseLinear(
-  const peano4::datamanagement::CellMarker&    marker,
+  const peano4::dataview::CellMarker&          marker,
   int                                          voxelsPerAxis,
   int                                          unknownsPerVoxel,
   const DataType* NOALIAS                      Q,
@@ -67,11 +67,11 @@ DataType exahype2::fv::internal::projectValueOntoParticle_piecewiseLinear(
 /** Maps the source attribute pack to particle data entries starting at zero. */
 template <typename DataType, int SourceIndex, int... SourceIndices, typename Particle>
 void exahype2::fv::projectValuesOntoParticle_piecewiseConstant(
-  const peano4::datamanagement::CellMarker& marker,
-  int                                       voxelsPerAxis,
-  int                                       unknownsPerVoxel,
-  const DataType* NOALIAS                   Q,
-  Particle&                                 particle
+  const peano4::dataview::CellMarker& marker,
+  int                                 voxelsPerAxis,
+  int                                 unknownsPerVoxel,
+  const DataType* NOALIAS             Q,
+  Particle&                           particle
 ) {
   internal::projectValuesOntoParticle_piecewiseConstant<DataType, Particle, SourceIndex, SourceIndices...>(
     marker,
@@ -86,11 +86,11 @@ void exahype2::fv::projectValuesOntoParticle_piecewiseConstant(
 /** Multilinearly maps the source attribute pack to particle data entries starting at zero. */
 template <typename DataType, int SourceIndex, int... SourceIndices, typename Particle>
 void exahype2::fv::projectValuesOntoParticle_piecewiseLinear(
-  const peano4::datamanagement::CellMarker& marker,
-  int                                       voxelsPerAxis,
-  int                                       unknownsPerVoxel,
-  const DataType* NOALIAS                   Q,
-  Particle&                                 particle
+  const peano4::dataview::CellMarker& marker,
+  int                                 voxelsPerAxis,
+  int                                 unknownsPerVoxel,
+  const DataType* NOALIAS             Q,
+  Particle&                           particle
 ) {
   internal::projectValuesOntoParticle_piecewiseLinear<DataType, Particle, SourceIndex, SourceIndices...>(
     marker,
@@ -105,12 +105,12 @@ void exahype2::fv::projectValuesOntoParticle_piecewiseLinear(
 /** Writes one piecewise-constant source attribute and recursively processes the remaining pack. */
 template <typename DataType, typename Particle, int SourceIndex, int... SourceIndices>
 void exahype2::fv::internal::projectValuesOntoParticle_piecewiseConstant(
-  const peano4::datamanagement::CellMarker& marker,
-  int                                       voxelsPerAxis,
-  int                                       unknownsPerVoxel,
-  const DataType* NOALIAS                   Q,
-  Particle&                                 particle,
-  int                                       destinationIndex
+  const peano4::dataview::CellMarker& marker,
+  int                                 voxelsPerAxis,
+  int                                 unknownsPerVoxel,
+  const DataType* NOALIAS             Q,
+  Particle&                           particle,
+  int                                 destinationIndex
 ) {
   particle.setData(
     destinationIndex,
@@ -138,12 +138,12 @@ void exahype2::fv::internal::projectValuesOntoParticle_piecewiseConstant(
 /** Writes one multilinear source attribute and recursively processes the remaining pack. */
 template <typename DataType, typename Particle, int SourceIndex, int... SourceIndices>
 void exahype2::fv::internal::projectValuesOntoParticle_piecewiseLinear(
-  const peano4::datamanagement::CellMarker& marker,
-  int                                       voxelsPerAxis,
-  int                                       unknownsPerVoxel,
-  const DataType* NOALIAS                   Q,
-  Particle&                                 particle,
-  int                                       destinationIndex
+  const peano4::dataview::CellMarker& marker,
+  int                                 voxelsPerAxis,
+  int                                 unknownsPerVoxel,
+  const DataType* NOALIAS             Q,
+  Particle&                           particle,
+  int                                 destinationIndex
 ) {
   particle.setData(
     destinationIndex,
@@ -171,11 +171,11 @@ void exahype2::fv::internal::projectValuesOntoParticle_piecewiseLinear(
 /** Maps SourceIndex from the containing volume to particle data entry DestIndex. */
 template <int SourceIndex, int DestIndex, typename Particle, typename DataType>
 void exahype2::fv::projectValueOntoParticle_piecewiseConstant(
-  const peano4::datamanagement::CellMarker& marker,
-  int                                       voxelsPerAxis,
-  int                                       unknownsPerVoxel,
-  const DataType* NOALIAS                   Q,
-  Particle&                                 particle
+  const peano4::dataview::CellMarker& marker,
+  int                                 voxelsPerAxis,
+  int                                 unknownsPerVoxel,
+  const DataType* NOALIAS             Q,
+  Particle&                           particle
 ) {
   particle.setData(
     DestIndex,
@@ -193,11 +193,11 @@ void exahype2::fv::projectValueOntoParticle_piecewiseConstant(
 /** Maps every volume attribute to the particle entry with the same index. */
 template <typename Particle, typename DataType>
 void exahype2::fv::projectAllValuesOntoParticle_piecewiseConstant(
-  const peano4::datamanagement::CellMarker& marker,
-  int                                       voxelsPerAxis,
-  int                                       unknownsPerVoxel,
-  const DataType* NOALIAS                   Q,
-  Particle&                                 particle
+  const peano4::dataview::CellMarker& marker,
+  int                                 voxelsPerAxis,
+  int                                 unknownsPerVoxel,
+  const DataType* NOALIAS             Q,
+  Particle&                           particle
 ) {
   for (int sourceAttribute = 0; sourceAttribute < unknownsPerVoxel; sourceAttribute++) {
     particle.setData(
@@ -217,11 +217,11 @@ void exahype2::fv::projectAllValuesOntoParticle_piecewiseConstant(
 /** Multilinearly maps SourceIndex to particle data entry DestIndex. */
 template <int SourceIndex, int DestIndex, typename Particle, typename DataType>
 void exahype2::fv::projectValueOntoParticle_piecewiseLinear(
-  const peano4::datamanagement::CellMarker& marker,
-  int                                       voxelsPerAxis,
-  int                                       unknownsPerVoxel,
-  const DataType* NOALIAS                   Q,
-  Particle&                                 particle
+  const peano4::dataview::CellMarker& marker,
+  int                                 voxelsPerAxis,
+  int                                 unknownsPerVoxel,
+  const DataType* NOALIAS             Q,
+  Particle&                           particle
 ) {
   particle.setData(
     DestIndex,
@@ -239,11 +239,11 @@ void exahype2::fv::projectValueOntoParticle_piecewiseLinear(
 /** Multilinearly maps every volume attribute to the particle entry with the same index. */
 template <typename Particle, typename DataType>
 void exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear(
-  const peano4::datamanagement::CellMarker& marker,
-  int                                       voxelsPerAxis,
-  int                                       unknownsPerVoxel,
-  const DataType* NOALIAS                   Q,
-  Particle&                                 particle
+  const peano4::dataview::CellMarker& marker,
+  int                                 voxelsPerAxis,
+  int                                 unknownsPerVoxel,
+  const DataType* NOALIAS             Q,
+  Particle&                           particle
 ) {
   for (int sourceAttribute = 0; sourceAttribute < unknownsPerVoxel; sourceAttribute++) {
     const DataType interpolatedValue = internal::projectValueOntoParticle_piecewiseLinear(
@@ -265,7 +265,7 @@ void exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear(
  */
 template <typename Particle, typename DataType>
 void exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear_explicit_Euler(
-  const peano4::datamanagement::CellMarker&              marker,
+  const peano4::dataview::CellMarker&                    marker,
   int                                                    voxelsPerAxis,
   int                                                    unknownsPerVoxel,
   const DataType* NOALIAS                                Q,
@@ -300,15 +300,15 @@ void exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear_explicit_Euler(
  */
 template <int SourceIndex, int... SourceIndices, typename Particle, typename DataType>
 void exahype2::fv::updateParticleState(
-  Particle&                                 particle,
-  double                                    timeStepSize,
-  const peano4::datamanagement::CellMarker& marker,
-  int                                       voxelsPerAxis,
-  int                                       unknownsPerVoxel,
-  const DataType* NOALIAS                   Q,
-  tarch::la::Vector<DIMENSIONS, double>     domainSize,
-  tarch::la::Vector<DIMENSIONS, double>     domainOffset,
-  tarch::la::Vector<DIMENSIONS, double>     periodicBoundaryConditions
+  Particle&                             particle,
+  double                                timeStepSize,
+  const peano4::dataview::CellMarker&   marker,
+  int                                   voxelsPerAxis,
+  int                                   unknownsPerVoxel,
+  const DataType* NOALIAS               Q,
+  tarch::la::Vector<DIMENSIONS, double> domainSize,
+  tarch::la::Vector<DIMENSIONS, double> domainOffset,
+  tarch::la::Vector<DIMENSIONS, double> periodicBoundaryConditions
 ) {
   projectValuesOntoParticle_piecewiseLinear<DataType, SourceIndex, SourceIndices...>(
     marker,

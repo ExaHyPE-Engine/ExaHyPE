@@ -27,4 +27,5 @@ private:
   void testSodShockTubeReachesStarStates();
   void testReconstructionHookReproducingDefaultChangesNothing();
   void testLimiterHookReproducingMinmodChangesNothing();
+  void testParticleUpdateAdvancesWithExplicitEuler();
 };

@@ -7,7 +7,6 @@
 #include "tarch/Assertions.h"
 #include "tarch/Termination.h"
 #include "tarch/accelerator/Device.h"
-#include "tarch/accelerator/MemoryAllocationCache.h"
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/instrumentation/Info.h"
 
@@ -59,7 +58,6 @@ void tarch::accelerator::Device::shutdown() {
   for (auto& queue : syclQueues) {
     queue.second.wait();
   }
-  MemoryAllocationCache::getInstance().clear();
   syclQueues.clear();
 }
 

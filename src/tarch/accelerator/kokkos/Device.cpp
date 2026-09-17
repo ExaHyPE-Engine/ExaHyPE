@@ -4,7 +4,6 @@
 
 #if defined(PEANO_WITH_GPU_BACKEND_KOKKOS)
 
-#include "tarch/accelerator/MemoryAllocationCache.h"
 #include "tarch/instrumentation/Debug.h"
 
 #include <Kokkos_Core.hpp>
@@ -18,12 +17,12 @@ bool tarch::accelerator::Device::init() {
   numberOfDevices = Kokkos::num_devices();
 
   logDebug("-----------------------------------------");
-  std::stringstream ss;
-  Kokkos::print_configuration(ss, true); // 'true' enables verbose details
+  std::stringstream configuration;
+  Kokkos::print_configuration(configuration, true);
 
   std::string line;
-  while (std::getline(ss, line)) {
-    if (!line.empty()) {
+  while (std::getline(configuration, line)) {
+    if (not line.empty()) {
       logDebug(line);
     }
   }
@@ -34,7 +33,6 @@ bool tarch::accelerator::Device::init() {
 
 void tarch::accelerator::Device::shutdown() {
   Kokkos::fence();
-  MemoryAllocationCache::getInstance().clear();
   Kokkos::finalize();
   numberOfDevices = 0;
 }

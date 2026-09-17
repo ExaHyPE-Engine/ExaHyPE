@@ -3,8 +3,7 @@
 #include "UnitTests.h"
 
 #include "tarch/accelerator/tests/AtomicTest.h"
-#include "tarch/accelerator/tests/AtomicsTest.h"
-#include "tarch/accelerator/tests/MemoryAllocationCacheTest.h"
+#include "tarch/accelerator/tests/ChunkedMemoryPoolTest.h"
 #include "tarch/accelerator/tests/MemoryAllocationTest.h"
 #if defined(PEANO_WITH_GPU_BACKEND_CUDA)
 #include "tarch/accelerator/cuda/tests/ReductionTest.h"
@@ -66,8 +65,7 @@ tarch::tests::TestCase* tarch::getUnitTests() {
   result->addTestCase(new tarch::mpi::tests::RequestGroupTest());
 
   result->addTestCase(new tarch::accelerator::tests::AtomicTest());
-  result->addTestCase(new tarch::accelerator::tests::AtomicsTest());
-  result->addTestCase(new tarch::accelerator::tests::MemoryAllocationCacheTest());
+  result->addTestCase(new tarch::accelerator::tests::ChunkedMemoryPoolTest());
   result->addTestCase(new tarch::accelerator::tests::MemoryAllocationTest());
   result->addTestCase(new tarch::accelerator::tests::ParallelConstructsTest());
 

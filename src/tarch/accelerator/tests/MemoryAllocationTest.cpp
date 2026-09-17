@@ -2,34 +2,36 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "MemoryAllocationTest.h"
 
-#include "tarch/accelerator/MemoryAllocationCache.h"
 #include "tarch/accelerator/MemoryBlocks.h"
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/tests/TestMacros.h"
 
 namespace {
-  constexpr int         DeviceId     = tarch::accelerator::Device::DefaultDevice;
-  constexpr std::size_t ElementCount = 4;
-  constexpr std::size_t ByteCount    = ElementCount * sizeof(int);
-  constexpr std::array<tarch::MemoryLocation, 3>
-    MemoryLocations{tarch::MemoryLocation::Heap, tarch::MemoryLocation::Device, tarch::MemoryLocation::Pinned};
+  constexpr int                                  DeviceId     = tarch::accelerator::Device::DefaultDevice;
+  constexpr std::size_t                          ElementCount = 4;
+  constexpr std::size_t                          ByteCount    = ElementCount * sizeof(int);
+  constexpr std::array<tarch::MemoryLocation, 3> MemoryLocations{
+    tarch::MemoryLocation::Heap,
+    tarch::MemoryLocation::Device,
+    tarch::MemoryLocation::Pinned
+  };
 } // namespace
 
-tarch::accelerator::tests::MemoryAllocationTest::MemoryAllocationTest():
+tarch::accelerator::tests::MemoryAllocationTest::MemoryAllocationTest() :
   TestCase("tarch::accelerator::tests::MemoryAllocationTest") {}
 
 void tarch::accelerator::tests::MemoryAllocationTest::run() {
   testMethod(testAllocateRawData);
   testMethod(testAllocateMemory);
+  testMethod(testZeroedHeapMemory);
   testMethod(testLocationSpecificAllocators);
   testMethod(testLocationSpecificCopyFunctions);
 }
 
 void tarch::accelerator::tests::MemoryAllocationTest::testAllocateRawData() {
-  MemoryAllocationCache::getInstance().clear();
   MemoryBlocks::getInstance().clear();
 
-  for (tarch::MemoryLocation location : MemoryLocations) {
+  for (const tarch::MemoryLocation location : MemoryLocations) {
     std::array<int, ElementCount> source{2, 4, 6, 8};
     std::array<int, ElementCount> target{0, 0, 0, 0};
 
@@ -54,15 +56,13 @@ void tarch::accelerator::tests::MemoryAllocationTest::testAllocateRawData() {
 #endif
   }
 
-  MemoryAllocationCache::getInstance().clear();
   MemoryBlocks::getInstance().clear();
 }
 
 void tarch::accelerator::tests::MemoryAllocationTest::testAllocateMemory() {
-  MemoryAllocationCache::getInstance().clear();
   MemoryBlocks::getInstance().clear();
 
-  for (tarch::MemoryLocation location : MemoryLocations) {
+  for (const tarch::MemoryLocation location : MemoryLocations) {
     std::array<int, ElementCount> source{11, 13, 17, 19};
     std::array<int, ElementCount> target{0, 0, 0, 0};
 
@@ -87,15 +87,30 @@ void tarch::accelerator::tests::MemoryAllocationTest::testAllocateMemory() {
 #endif
   }
 
-  MemoryAllocationCache::getInstance().clear();
   MemoryBlocks::getInstance().clear();
 }
 
+/**
+ * A zeroed heap buffer reads as zero, is aligned and keeps a written value.
+ */
+void tarch::accelerator::tests::MemoryAllocationTest::testZeroedHeapMemory() {
+  constexpr std::size_t BytesAcrossPages = 3 * 4096 + 40;
+  auto* const data = static_cast<unsigned char*>(tarch::accelerator::allocateZeroedHeapMemory(BytesAcrossPages));
+
+  validate(data != nullptr);
+  validateEquals(reinterpret_cast<std::uintptr_t>(data) % PEANO_WITH_ALIGNMENT, 0);
+  validate(std::all_of(data, data + BytesAcrossPages, [](const unsigned char byte) { return byte == 0; }));
+
+  data[BytesAcrossPages - 1] = 7;
+  validateEquals(data[BytesAcrossPages - 1], 7);
+
+  tarch::accelerator::freeZeroedHeapMemory(data, BytesAcrossPages);
+}
+
 void tarch::accelerator::tests::MemoryAllocationTest::testLocationSpecificAllocators() {
-  MemoryAllocationCache::getInstance().clear();
   MemoryBlocks::getInstance().clear();
 
-  for (tarch::MemoryLocation location : MemoryLocations) {
+  for (const tarch::MemoryLocation location : MemoryLocations) {
     void* data = nullptr;
 
     switch (location) {
@@ -129,15 +144,13 @@ void tarch::accelerator::tests::MemoryAllocationTest::testLocationSpecificAlloca
     validateWithParams1(allocationWorked, toString(location));
   }
 
-  MemoryAllocationCache::getInstance().clear();
   MemoryBlocks::getInstance().clear();
 }
 
 void tarch::accelerator::tests::MemoryAllocationTest::testLocationSpecificCopyFunctions() {
-  MemoryAllocationCache::getInstance().clear();
   MemoryBlocks::getInstance().clear();
 
-  for (tarch::MemoryLocation location : MemoryLocations) {
+  for (const tarch::MemoryLocation location : MemoryLocations) {
     std::array<int, ElementCount> source{5, 10, 15, 20};
     std::array<int, ElementCount> target{0, 0, 0, 0};
     void*                         data = nullptr;
@@ -181,6 +194,5 @@ void tarch::accelerator::tests::MemoryAllocationTest::testLocationSpecificCopyFu
     validateWithParams1(copiedCorrectly, toString(location));
   }
 
-  MemoryAllocationCache::getInstance().clear();
   MemoryBlocks::getInstance().clear();
 }

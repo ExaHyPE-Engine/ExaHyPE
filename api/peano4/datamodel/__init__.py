@@ -10,7 +10,6 @@ from .MetaDataAttribute import DoubleArray
 from .MetaDataAttribute import Enumeration
 from .MetaDataAttribute import Integer
 from .MetaDataAttribute import IntegerArray
-from .MetaDataAttribute import StaticUserDefinedType
 from .Model import Model
 from .Particle import Particle
 from .ModelToDataRepository import ModelToDataRepository

@@ -8,8 +8,6 @@
 #include "tarch/mpi/Request.h"
 #include "tarch/Termination.h"
 
-#include "peano4/stacks/StackWithCustomSerialisation.h"
-
 #include "peano4/particles/MultiscaleTransitions.h"
 #include "peano4/particles/assignmentchecks/TracingAPI.h"
 #include "peano4/particles/particles.h"
@@ -35,10 +33,11 @@ namespace {
 
 /** Consumes the incoming particle by storing it or deleting an irrelevant copy. */
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
-  DoFType* const neighbourParticle,
-  const peano4::datamanagement::VertexMarker& marker,
-  const int treeId
+  DoFType* const                        neighbourParticle,
+  const peano4::dataview::VertexMarker& marker,
+  const int                             treeId
 ) {
+  assertion(neighbourParticle != nullptr, marker.toString(), treeId);
   [[maybe_unused]] const auto ownershipTolerance =
     peano4::particles::ReleaseOwnershipSpatialSortingTolerance
     * tarch::la::max(marker.getH()) * tarch::la::NUMERICAL_ZERO_DIFFERENCE;
@@ -213,8 +212,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
  * record the removal of the deleted particles from the assignment history.
  */
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::deleteParticlesForSlotRebuild(
-  const peano4::datamanagement::VertexMarker& marker,
-  const int treeId
+  const peano4::dataview::VertexMarker& marker,
+  const int                             treeId
 ) {
   if (_container.empty()) {
     return;
@@ -257,11 +256,12 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::deleteParticlesForSlotRebuild(
 
 /** Merges a neighbour rank's or subtree task's particle-set copy. */
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
-  const peano4::stacks::SendReceiveContext context,
-  const {{CLASSNAME}}& neighbour,
-  const peano4::datamanagement::VertexMarker& marker,
-  const int treeId
+  const peano4::grid::SendReceiveContext  context,
+  const {{CLASSNAME}}&                    neighbour,
+  const peano4::dataview::VertexMarker&   marker,
+  const int                               treeId
 ) {
+  assertion(this != &neighbour, marker.toString(), treeId);
 #if PEANO_DEBUG
   assertion(
     tarch::la::equals(neighbour._debugX, _debugX),
@@ -279,7 +279,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
   );
 #endif
 
-  if (context == peano4::stacks::SendReceiveContext::Consolidation) {
+  if (context == peano4::grid::SendReceiveContext::Consolidation) {
     deleteParticlesForSlotRebuild(marker, treeId);
   }
 
@@ -296,35 +296,29 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
 }
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::send(
-  [[maybe_unused]] const peano4::datamanagement::VertexMarker& marker,
-  [[maybe_unused]] const peano4::stacks::SendReceiveContext context
+  [[maybe_unused]] const peano4::dataview::VertexMarker&  marker,
+  [[maybe_unused]] const peano4::grid::SendReceiveContext context
 ) {
   return true;
 }
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(
-  [[maybe_unused]] const peano4::datamanagement::VertexMarker& marker,
-  [[maybe_unused]] const peano4::stacks::SendReceiveContext context
+  [[maybe_unused]] const peano4::dataview::VertexMarker&  marker,
+  [[maybe_unused]] const peano4::grid::SendReceiveContext context
 ) {
   return true;
 }
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::load(
-  [[maybe_unused]] const peano4::datamanagement::VertexMarker& marker
+  [[maybe_unused]] const peano4::dataview::VertexMarker& marker
 ) {
   return true;
 }
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::store(
-  [[maybe_unused]] const peano4::datamanagement::VertexMarker& marker
+  [[maybe_unused]] const peano4::dataview::VertexMarker& marker
 ) {
   return true;
-}
-
-/** Returns a deep copy with independent particle storage. */
-{{NAMESPACE | join("::")}}::{{CLASSNAME}}
-{{NAMESPACE | join("::")}}::{{CLASSNAME}}::createExchangeView() {
-  return {{CLASSNAME}}(*this);
 }
 
 std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString() const {
@@ -397,11 +391,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::deleteParticles() noexcept {
   _container.clear();
 }
 
-/** Removes particle pointers after their ownership has moved to another set. */
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clear() {
-  _container.clear();
-}
-
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::iterator
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particleCanNotBeLiftedLocally(
   iterator particle
@@ -420,12 +409,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particlesCanNotBeLiftedLocally()
     _sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(particle);
   }
   _container.clear();
-}
-
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particlesCanNotBeDroppedLocallySoRollOverForNextMeshSweep(
-  DoFType* const particle
-) {
-  _sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(particle);
 }
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::const_iterator
@@ -449,11 +432,15 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particlesCanNotBeDroppedLocallyS
 }
 
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::size() const {
+  if (_container.size() > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
+    tarch::terminateWithError("A particle set exceeds the supported 32-bit element count.");
+  }
   return static_cast<int>(_container.size());
 }
 
 /** Takes ownership of the particle. */
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::addParticle(DoFType* const particle) {
+  assertion(particle != nullptr);
   assertion(
     particle->getParallelState() == DoFType::ParallelState::Local
       or particle->getParallelState() == DoFType::ParallelState::Virtual,
@@ -465,19 +452,21 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::addParticle(DoFType* const parti
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isValid() const {
   return std::ranges::all_of(_container, [](const auto* const particle) {
-    return particle->getParallelState() == DoFType::ParallelState::Local
-           or particle->getParallelState() == DoFType::ParallelState::Virtual;
+    return particle != nullptr
+           and (particle->getParallelState() == DoFType::ParallelState::Local
+                or particle->getParallelState() == DoFType::ParallelState::Virtual);
   });
 }
 
 /** Transfers every particle from the source set. */
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::grabParticles({{CLASSNAME}}& sourceParticleSet) {
+  assertion(this != &sourceParticleSet);
   _container.insert(
     _container.end(),
     sourceParticleSet.begin(),
     sourceParticleSet.end()
   );
-  sourceParticleSet.clear();
+  sourceParticleSet._container.clear();
 }
 
 /** Transfers the selected particle from the source set. */
@@ -486,6 +475,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::grabParticles({{CLASSNAME}}& sou
   iterator particle,
   {{CLASSNAME}}& sourceParticleSet
 ) {
+  assertion(this != &sourceParticleSet);
   assertion(
     (*particle)->getParallelState() == DoFType::ParallelState::Local
       or (*particle)->getParallelState() == DoFType::ParallelState::Virtual,
@@ -502,6 +492,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::grabParticles({{CLASSNAME}}& sou
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::deleteParticle(
   iterator particle
 ) {
+  assertion(*particle != nullptr);
   assertion(
     (*particle)->getParallelState() == DoFType::ParallelState::Local
       or (*particle)->getParallelState() == DoFType::ParallelState::Virtual,
@@ -512,29 +503,35 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::grabParticles({{CLASSNAME}}& sou
   return _container.erase(particle);
 }
 
+/**
+ * A particle set has no fixed size, so it ships in two messages. One carries a
+ * count per stack element, the other every element's particles as one flat
+ * payload. The exchange job holds both requests and both buffers.
+ */
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSend(
-  peano4::stacks::Stack<{{CLASSNAME}}>& stack,
-  [[maybe_unused]] const peano4::stacks::SendReceiveContext context,
-  const MPI_Comm communicator
+  peano4::grid::Stack<{{CLASSNAME}}>& stack,
+  peano4::grid::StackExchangeJob<{{CLASSNAME}}>& job
 ) {
-  auto& customStack =
-    static_cast<peano4::stacks::StackWithCustomSerialisation<{{CLASSNAME}}>&>(stack);
-  const auto numberOfElements = customStack.size();
-  const int mpiNumberOfElements = getMpiElementCount(numberOfElements);
-  if (numberOfElements > customStack.countBuffer.max_size()) {
+  static_assert(
+    std::is_trivially_copyable_v<DoFType>,
+    "Particle payload records have to be trivially copyable."
+  );
+  const auto numberOfElements    = stack.size();
+  const int  mpiNumberOfElements = getMpiElementCount(numberOfElements);
+  if (numberOfElements > job.countBuffer.max_size()) {
     tarch::terminateWithError("The particle count buffer cannot represent the stack.");
   }
 
-  customStack.countBuffer.assign(numberOfElements, 0);
-  customStack.dataBuffer.clear();
+  job.countBuffer.assign(numberOfElements, 0);
+  job.dataBuffer.clear();
 
   std::size_t totalNumberOfParticles{0};
   for (std::size_t elementIndex = 0; elementIndex < numberOfElements; ++elementIndex) {
     const auto& element = stack[elementIndex];
     const auto numberOfParticles = element._container.size();
-    customStack.countBuffer[elementIndex] = getMpiElementCount(numberOfParticles);
+    job.countBuffer[elementIndex] = getMpiElementCount(numberOfParticles);
 
-    if (numberOfParticles > customStack.dataBuffer.max_size() - totalNumberOfParticles) {
+    if (numberOfParticles > job.dataBuffer.max_size() - totalNumberOfParticles) {
       tarch::terminateWithError("The particle payload exceeds the serialisation buffer's capacity.");
     }
     totalNumberOfParticles += numberOfParticles;
@@ -547,120 +544,125 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSend(
   }
 
   const int numberOfPayloadBytes = getMpiByteCount<DoFType>(totalNumberOfParticles);
-  customStack.dataBuffer.reserve(totalNumberOfParticles);
+  job.dataBuffer.reserve(totalNumberOfParticles);
   for (std::size_t elementIndex = 0; elementIndex < numberOfElements; ++elementIndex) {
     for (const DoFType* const particle : stack[elementIndex]._container) {
-      customStack.dataBuffer.push_back(*particle);
+      job.dataBuffer.push_back(*particle);
     }
   }
 
   if (numberOfElements > 0) {
-    tarch::mpi::isend(
-      customStack.countBuffer.data(),
+    [[maybe_unused]] const int countResult = tarch::mpi::isend(
+      job.countBuffer.data(),
       mpiNumberOfElements,
       MPI_INT,
-      customStack.getActiveIORank(),
-      customStack.getActiveIOTag(),
-      communicator,
-      &customStack.mpiCountRequest
+      job.rank,
+      job.tag,
+      job.comm,
+      &job.requests[0]
     );
+    assertion(countResult == MPI_SUCCESS, job.rank, job.tag);
   }
   if (totalNumberOfParticles > 0) {
-    tarch::mpi::isend(
-      customStack.dataBuffer.data(),
+    [[maybe_unused]] const int payloadResult = tarch::mpi::isend(
+      job.dataBuffer.data(),
       numberOfPayloadBytes,
       MPI_BYTE,
-      customStack.getActiveIORank(),
-      customStack.getActiveIOTag(),
-      communicator,
-      &customStack.mpiDataRequest
+      job.rank,
+      job.tag,
+      job.comm,
+      &job.requests[1]
     );
+    assertion(payloadResult == MPI_SUCCESS, job.rank, job.tag);
   }
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startReceive(
-  peano4::stacks::Stack<{{CLASSNAME}}>& stack,
-  const peano4::stacks::SendReceiveContext context,
-  const MPI_Comm communicator,
+  peano4::grid::Stack<{{CLASSNAME}}>& stack,
+  peano4::grid::StackExchangeJob<{{CLASSNAME}}>& job,
   const int numberOfElements
 ) {
-  auto& customStack =
-    static_cast<peano4::stacks::StackWithCustomSerialisation<{{CLASSNAME}}>&>(stack);
+  static_assert(
+    std::is_trivially_copyable_v<DoFType>,
+    "Particle payload records have to be trivially copyable."
+  );
   if (numberOfElements < 0) {
     tarch::terminateWithError("The received particle-stack element count is negative.");
   }
   const auto numberOfElementsAsSize = static_cast<std::size_t>(numberOfElements);
-  if (numberOfElementsAsSize != customStack.size()) {
+  if (numberOfElementsAsSize != stack.size()) {
     tarch::terminateWithError("The received particle-stack element count does not match the destination stack.");
   }
-  if (numberOfElementsAsSize > customStack.countBuffer.max_size()) {
+  if (numberOfElementsAsSize > job.countBuffer.max_size()) {
     tarch::terminateWithError("The particle count buffer cannot represent the received stack.");
   }
 
-  customStack.mpiComm = communicator;
-  customStack.mpiContext = context;
-  customStack.countBuffer.assign(numberOfElementsAsSize, 0);
-  customStack.dataBuffer.clear();
+  job.countBuffer.assign(numberOfElementsAsSize, 0);
+  job.dataBuffer.clear();
   if (numberOfElements > 0) {
-    tarch::mpi::irecv(
-      customStack.countBuffer.data(),
+    [[maybe_unused]] const int result = tarch::mpi::irecv(
+      job.countBuffer.data(),
       numberOfElements,
       MPI_INT,
-      customStack.getActiveIORank(),
-      customStack.getActiveIOTag(),
-      communicator,
-      &customStack.mpiCountRequest
+      job.rank,
+      job.tag,
+      job.comm,
+      &job.requests[0]
     );
+    assertion(result == MPI_SUCCESS, job.rank, job.tag);
   }
 }
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::tryToFinishSendOrReceive(
-  peano4::stacks::Stack<{{CLASSNAME}}>& stack
+  peano4::grid::Stack<{{CLASSNAME}}>& stack,
+  peano4::grid::StackExchangeJob<{{CLASSNAME}}>& job
 ) {
-  auto& customStack =
-    static_cast<peano4::stacks::StackWithCustomSerialisation<{{CLASSNAME}}>&>(stack);
   bool allDone = true;
 
-  if (customStack.getIOMode() == peano4::stacks::IOMode::MPIReceive) {
-    if (customStack.mpiCountRequest != MPI_REQUEST_NULL) {
+  if (job.mode == peano4::grid::StackExchangeJob<{{CLASSNAME}}>::Mode::Receive) {
+    assertion(job.countBuffer.size() == stack.size(), job.countBuffer.size(), stack.size());
+    // The payload length follows from the counts, so its receive can only be
+    // posted once they have arrived.
+    if (job.requests[0] != MPI_REQUEST_NULL) {
       int communicationFinished = 0;
       [[maybe_unused]] const int result = tarch::mpi::test(
-        &customStack.mpiCountRequest,
+        &job.requests[0],
         &communicationFinished,
         MPI_STATUS_IGNORE
       );
       assertion(result == MPI_SUCCESS);
       if (communicationFinished != 0) {
-        customStack.mpiCountRequest = MPI_REQUEST_NULL;
+        job.requests[0] = MPI_REQUEST_NULL;
         std::size_t totalNumberOfParticles{0};
-        for (const int numberOfParticles : customStack.countBuffer) {
+        for (const int numberOfParticles : job.countBuffer) {
           if (numberOfParticles < 0) {
             tarch::terminateWithError("The received particle payload contains a negative element count.");
           }
           const auto numberOfParticlesAsSize = static_cast<std::size_t>(numberOfParticles);
-          if (numberOfParticlesAsSize > customStack.dataBuffer.max_size() - totalNumberOfParticles) {
+          if (numberOfParticlesAsSize > job.dataBuffer.max_size() - totalNumberOfParticles) {
             tarch::terminateWithError("The received particle payload exceeds the serialisation buffer's capacity.");
           }
           totalNumberOfParticles += numberOfParticlesAsSize;
         }
         const int numberOfPayloadBytes = getMpiByteCount<DoFType>(totalNumberOfParticles);
-        customStack.dataBuffer.resize(totalNumberOfParticles);
+        job.dataBuffer.resize(totalNumberOfParticles);
 
         if (totalNumberOfParticles > 0) {
-          tarch::mpi::irecv(
-            customStack.dataBuffer.data(),
+          [[maybe_unused]] const int result = tarch::mpi::irecv(
+            job.dataBuffer.data(),
             numberOfPayloadBytes,
             MPI_BYTE,
-            customStack.getActiveIORank(),
-            customStack.getActiveIOTag(),
-            customStack.mpiComm,
-            &customStack.mpiDataRequest
+            job.rank,
+            job.tag,
+            job.comm,
+            &job.requests[1]
           );
+          assertion(result == MPI_SUCCESS, job.rank, job.tag);
           allDone = false;
         } else {
-          for (std::size_t elementIndex = 0; elementIndex < customStack.size(); ++elementIndex) {
-            assertion(customStack.countBuffer[elementIndex] == 0, elementIndex);
-            customStack[elementIndex].deleteParticles();
+          for (std::size_t elementIndex = 0; elementIndex < stack.size(); ++elementIndex) {
+            assertion(job.countBuffer[elementIndex] == 0, elementIndex);
+            stack[elementIndex].deleteParticles();
           }
         }
       } else {
@@ -668,73 +670,61 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::tryToFinishSendOrReceive(
       }
     }
 
-    if (customStack.mpiDataRequest != MPI_REQUEST_NULL) {
+    if (job.requests[1] != MPI_REQUEST_NULL) {
       int communicationFinished = 0;
       [[maybe_unused]] const int result = tarch::mpi::test(
-        &customStack.mpiDataRequest,
+        &job.requests[1],
         &communicationFinished,
         MPI_STATUS_IGNORE
       );
       assertion(result == MPI_SUCCESS);
       if (communicationFinished != 0) {
-        customStack.mpiDataRequest = MPI_REQUEST_NULL;
-        const auto numberOfElements = customStack.size();
-        if (numberOfElements != customStack.countBuffer.size()) {
+        job.requests[1] = MPI_REQUEST_NULL;
+        const auto numberOfElements = stack.size();
+        if (numberOfElements != job.countBuffer.size()) {
           tarch::terminateWithError("The particle count buffer does not match the destination stack.");
         }
 
         std::size_t particleOffset = 0;
         for (std::size_t elementIndex = 0; elementIndex < numberOfElements; ++elementIndex) {
-          const int numberOfParticles = customStack.countBuffer[elementIndex];
+          const int numberOfParticles = job.countBuffer[elementIndex];
           if (numberOfParticles < 0) {
             tarch::terminateWithError("The received particle payload contains a negative element count.");
           }
-          auto& element = customStack[elementIndex];
+          auto& element = stack[elementIndex];
           element.deleteParticles();
           const auto numberOfParticlesAsSize = static_cast<std::size_t>(numberOfParticles);
-          if (numberOfParticlesAsSize > customStack.dataBuffer.size() - particleOffset) {
+          if (numberOfParticlesAsSize > job.dataBuffer.size() - particleOffset) {
             tarch::terminateWithError("The received particle counts exceed the payload buffer.");
           }
           element._container.reserve(numberOfParticlesAsSize);
           for (std::size_t particleIndex = 0; particleIndex < numberOfParticlesAsSize; ++particleIndex) {
-            element.addParticle(new DoFType(customStack.dataBuffer[particleOffset]));
+            element.addParticle(new DoFType(job.dataBuffer[particleOffset]));
             ++particleOffset;
           }
         }
-        if (particleOffset != customStack.dataBuffer.size()) {
+        if (particleOffset != job.dataBuffer.size()) {
           tarch::terminateWithError("The received particle counts do not consume the payload buffer.");
         }
       } else {
         allDone = false;
       }
     }
-  } else if (customStack.getIOMode() == peano4::stacks::IOMode::MPISend) {
-    if (customStack.mpiCountRequest != MPI_REQUEST_NULL) {
-      int communicationFinished = 0;
-      [[maybe_unused]] const int result = tarch::mpi::test(
-        &customStack.mpiCountRequest,
-        &communicationFinished,
-        MPI_STATUS_IGNORE
-      );
-      assertion(result == MPI_SUCCESS);
-      if (communicationFinished != 0) {
-        customStack.mpiCountRequest = MPI_REQUEST_NULL;
-      } else {
-        allDone = false;
-      }
-    }
-    if (customStack.mpiDataRequest != MPI_REQUEST_NULL) {
-      int communicationFinished = 0;
-      [[maybe_unused]] const int result = tarch::mpi::test(
-        &customStack.mpiDataRequest,
-        &communicationFinished,
-        MPI_STATUS_IGNORE
-      );
-      assertion(result == MPI_SUCCESS);
-      if (communicationFinished != 0) {
-        customStack.mpiDataRequest = MPI_REQUEST_NULL;
-      } else {
-        allDone = false;
+  } else {
+    for (auto& request : job.requests) {
+      if (request != MPI_REQUEST_NULL) {
+        int communicationFinished = 0;
+        [[maybe_unused]] const int result = tarch::mpi::test(
+          &request,
+          &communicationFinished,
+          MPI_STATUS_IGNORE
+        );
+        assertion(result == MPI_SUCCESS);
+        if (communicationFinished != 0) {
+          request = MPI_REQUEST_NULL;
+        } else {
+          allDone = false;
+        }
       }
     }
   }

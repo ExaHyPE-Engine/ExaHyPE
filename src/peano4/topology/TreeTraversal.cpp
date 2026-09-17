@@ -6,8 +6,8 @@
 #include "peano4/grid/GridTraversalEvent.h"
 #include "peano4/grid/GridTraversalObserver.h"
 #include "peano4/grid/PeanoCurve.h"
+#include "peano4/grid/SendReceiveContext.h"
 #include "peano4/grid/StackTopology.h"
-#include "peano4/stacks/SendReceiveContext.h"
 #include "peano4/topology/ChunkedTasks.h"
 #include "peano4/topology/Tree.h"
 #include "tarch/Termination.h"
@@ -463,12 +463,10 @@ void peano4::topology::TreeTraversal::replayEntries(
         runMerge(merges[nextMerge], observer);
         nextMerge++;
       }
-      observer.loadNodeData(entry.event);
       observer.enterNode(entry.event);
     } else {
       assertion(entry.numberOfMergesBefore == 0, entry.numberOfMergesBefore);
       observer.leaveNode(entry.event);
-      observer.storeNodeData(entry.event);
     }
   }
   assertion(nextMerge == merges.size(), nextMerge, merges.size());
@@ -481,12 +479,11 @@ void peano4::topology::TreeTraversal::runMerge(
   for (std::size_t sourceNumber = 0; sourceNumber < merge.sourceSlots.size(); sourceNumber++) {
     // A consolidation's first source overwrites the target slot. The type does
     // that overwrite in its own merge, so it can delete what the slot held.
-    auto context = peano4::stacks::SendReceiveContext::InterRank;
-    if (merge.rebuildsTargetSlot and sourceNumber == 0) {
-      context = peano4::stacks::SendReceiveContext::Consolidation;
-    } else if (sourceNumber < static_cast<std::size_t>(merge.numberOfPartnerSlots)) {
-      context = peano4::stacks::SendReceiveContext::IntraRank;
-    }
+    const auto context = merge.rebuildsTargetSlot and sourceNumber == 0
+      ? peano4::grid::SendReceiveContext::Consolidation
+      : sourceNumber < static_cast<std::size_t>(merge.numberOfPartnerSlots)
+      ? peano4::grid::SendReceiveContext::IntraRank
+      : peano4::grid::SendReceiveContext::InterRank;
     observer.receiveNodeData(
       merge.isVertex ? peano4::grid::GridTraversalObserver::NodeData::Vertex
                      : peano4::grid::GridTraversalObserver::NodeData::Face,
@@ -6018,8 +6015,8 @@ void peano4::topology::TreeTraversal::descendWithPools(
           pending.position,
           pending.sourceSlots[sourceNumber],
           sourceNumber < static_cast<std::size_t>(pending.numberOfPartnerSlots)
-            ? peano4::stacks::SendReceiveContext::IntraRank
-            : peano4::stacks::SendReceiveContext::InterRank,
+            ? peano4::grid::SendReceiveContext::IntraRank
+            : peano4::grid::SendReceiveContext::InterRank,
           enterNodeTraversalEvent
         );
       }
@@ -6059,7 +6056,6 @@ void peano4::topology::TreeTraversal::descendWithPools(
       );
     }
 
-    observer.loadNodeData(enterNodeTraversalEvent);
     observer.enterNode(enterNodeTraversalEvent);
     if (scope.entries != nullptr) {
       scope.entries->push_back({enterNodeTraversalEvent, numberOfRecordedMerges, true});
@@ -6126,7 +6122,6 @@ void peano4::topology::TreeTraversal::descendWithPools(
     leaveNodeTraversalEvent.setCellData(cellDataTo);
 
     observer.leaveNode(leaveNodeTraversalEvent);
-    observer.storeNodeData(leaveNodeTraversalEvent);
     if (scope.entries != nullptr) {
       scope.entries->push_back({leaveNodeTraversalEvent, 0, false});
     }

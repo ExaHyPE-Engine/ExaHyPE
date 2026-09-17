@@ -2,107 +2,49 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+{% set MARKER_NAME = {1: "VertexMarker", 2: "FaceMarker", 3: "CellMarker"}[DATA_ASSOCIATION] -%}
+{% set MARKER_TYPE = "::peano4::dataview::" + MARKER_NAME -%}
+#include "peano4/dataview/MetaDataRecord.h"
+#include "peano4/dataview/{{MARKER_NAME}}.h"
+#include "tarch/Assertions.h"
 #include "tarch/la/Vector.h"
 
-#include "peano4/datamanagement/CellMarker.h"
-#include "peano4/datamanagement/FaceMarker.h"
-#include "peano4/datamanagement/VertexMarker.h"
-#include "peano4/stacks/SendReceiveContext.h"
-
+{% if INCLUDES -%}
 {{INCLUDES}}
-
-{% for item in NAMESPACE -%}
-namespace {{ item }} {
-{%- endfor %}
+{% endif -%}
+namespace {{NAMESPACE | join("::")}} {
   struct {{CLASSNAME}};
-{% for item in NAMESPACE -%}
-}
-{%- endfor %}
+} // namespace {{NAMESPACE | join("::")}}
 
-struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
+struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} final :
+  public ::peano4::dataview::MetaDataRecord<{{NAMESPACE | join("::")}}::{{CLASSNAME}}, {{MARKER_TYPE}}> {
 public:
-  using DoFType = unsigned char;
-  static constexpr int Cardinality = 1;
+{%- if ENUM_DECLARATIONS %}
 {{ENUM_DECLARATIONS}}
-
-  {{CLASSNAME}}();
+{% endif %}
+  {{CLASSNAME}}() = default;
+  {{CLASSNAME}}(const {{CLASSNAME}}&) = default;
+  {{CLASSNAME}}({{CLASSNAME}}&&) noexcept = default;
+  {{CLASSNAME}}& operator=(const {{CLASSNAME}}&) = default;
+  {{CLASSNAME}}& operator=({{CLASSNAME}}&&) noexcept = default;
+  ~{{CLASSNAME}}() noexcept = default;
 
 {{ATTRIBUTE_METHOD_DECLARATIONS}}
 
   std::string toString() const;
-  INLINE_METHOD {{CLASSNAME}} createExchangeView() const {
-    return *this;
-  }
 
-{% if DATA_ASSOCIATION == 1 -%}
-  void merge(::peano4::stacks::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const ::peano4::datamanagement::VertexMarker& marker, int treeId);
-  INLINE_METHOD bool send(
-    [[maybe_unused]] const ::peano4::datamanagement::VertexMarker& marker,
-    [[maybe_unused]] ::peano4::stacks::SendReceiveContext          context
-  ) const {
-    return {{SEND_CONDITION}};
-  }
-  INLINE_METHOD bool receiveAndMerge(
-    [[maybe_unused]] const ::peano4::datamanagement::VertexMarker& marker,
-    [[maybe_unused]] ::peano4::stacks::SendReceiveContext          context
-  ) const {
-    return {{RECEIVE_AND_MERGE_CONDITION}};
-  }
-  INLINE_METHOD static bool load([[maybe_unused]] const ::peano4::datamanagement::VertexMarker& marker) {
-    return true;
-  }
-  INLINE_METHOD static bool store([[maybe_unused]] const ::peano4::datamanagement::VertexMarker& marker) {
-    return true;
-  }
-{% endif -%}
+  void merge(
+    ::peano4::grid::SendReceiveContext  context,
+    const {{CLASSNAME}}&                neighbour,
+    const {{MARKER_TYPE}}&              marker,
+    int                                 treeId
+  );
 
-{% if DATA_ASSOCIATION == 2 -%}
-  void merge(::peano4::stacks::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const ::peano4::datamanagement::FaceMarker& marker, int treeId);
-  INLINE_METHOD bool send(
-    [[maybe_unused]] const ::peano4::datamanagement::FaceMarker& marker,
-    [[maybe_unused]] ::peano4::stacks::SendReceiveContext        context
-  ) const {
-    return {{SEND_CONDITION}};
-  }
-  INLINE_METHOD bool receiveAndMerge(
-    [[maybe_unused]] const ::peano4::datamanagement::FaceMarker& marker,
-    [[maybe_unused]] ::peano4::stacks::SendReceiveContext        context
-  ) const {
-    return {{RECEIVE_AND_MERGE_CONDITION}};
-  }
-  INLINE_METHOD static bool load([[maybe_unused]] const ::peano4::datamanagement::FaceMarker& marker) {
-    return true;
-  }
-  INLINE_METHOD static bool store([[maybe_unused]] const ::peano4::datamanagement::FaceMarker& marker) {
-    return true;
-  }
-{% endif -%}
-
-{% if DATA_ASSOCIATION == 3 -%}
-  void merge(::peano4::stacks::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const ::peano4::datamanagement::CellMarker& marker, int treeId);
-  INLINE_METHOD bool send(
-    [[maybe_unused]] const ::peano4::datamanagement::CellMarker& marker,
-    [[maybe_unused]] ::peano4::stacks::SendReceiveContext        context
-  ) const {
-    return {{SEND_CONDITION}};
-  }
-  INLINE_METHOD bool receiveAndMerge(
-    [[maybe_unused]] const ::peano4::datamanagement::CellMarker& marker,
-    [[maybe_unused]] ::peano4::stacks::SendReceiveContext        context
-  ) const {
-    return {{RECEIVE_AND_MERGE_CONDITION}};
-  }
-  INLINE_METHOD static bool load([[maybe_unused]] const ::peano4::datamanagement::CellMarker& marker) {
-    return true;
-  }
-  INLINE_METHOD static bool store([[maybe_unused]] const ::peano4::datamanagement::CellMarker& marker) {
-    return true;
-  }
-{% endif -%}
-
-  ~{{CLASSNAME}}() noexcept = default;
+  INLINE_METHOD bool sendCondition(const {{MARKER_TYPE}}& marker) const;
+  INLINE_METHOD bool receiveAndMergeCondition(const {{MARKER_TYPE}}& marker) const;
 
 private:
 {{ATTRIBUTES}}
-{{STATIC_ATTRIBUTES}}
 };
+
+#include "{{NAMESPACE[-1]}}/{{CLASSNAME}}.cpph"

@@ -3,7 +3,7 @@
 #pragma once
 
 #include "tarch/CompilerSpecificSettings.h"
-#include "tarch/accelerator/Atomics.h"
+#include "tarch/accelerator/Atomic.h"
 #include "tarch/accelerator/accelerator.h"
 
 namespace exahype2::dg {

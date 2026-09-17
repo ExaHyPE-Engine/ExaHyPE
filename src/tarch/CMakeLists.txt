@@ -4,7 +4,6 @@
 file(GLOB_RECURSE HEADERS ${HEADER_EXTENSIONS_TO_GLOB})
 
 set(SOURCES
-  StdAfx.cpp
   Init.cpp
   MemoryUsage.cpp
   CompilerSpecificSettings.cpp
@@ -23,16 +22,12 @@ set(SOURCES
   database/GlobalTimeSeriesDatabase.cpp
   database/tests/GlobalTimeSeriesDatabaseTest.cpp
 
-  accelerator/Atomic.cpp
   accelerator/accelerator.cpp
-  accelerator/Atomics.cpp
   accelerator/Device.cpp
-  accelerator/MemoryAllocationCache.cpp
   accelerator/MemoryBlocks.cpp
   accelerator/MemoryLocation.cpp
   accelerator/tests/AtomicTest.cpp
-  accelerator/tests/AtomicsTest.cpp
-  accelerator/tests/MemoryAllocationCacheTest.cpp
+  accelerator/tests/ChunkedMemoryPoolTest.cpp
   accelerator/tests/MemoryAllocationTest.cpp
   accelerator/tests/ParallelConstructsTest.cpp
   accelerator/cuda/accelerator.cpp
@@ -53,24 +48,7 @@ set(SOURCES
   accelerator/sycl/Device.cpp
 
   la/ExactAccumulator.cpp
-  la/Matrix.cpp
-  la/Matrix2x2.cpp
-  la/Matrix3x3.cpp
-  la/Matrix4x4.cpp
-  la/MatrixMatrixOperations.cpp
-  la/MatrixOperations.cpp
-  la/MatrixScalarOperations.cpp
-  la/MatrixVectorOperations.cpp
   la/Scalar.cpp
-  la/ScalarOperations.cpp
-  la/Vector.cpp
-  la/Vector2.cpp
-  la/Vector3.cpp
-  la/Vector4.cpp
-  la/VectorCompare.cpp
-  la/VectorOperations.cpp
-  la/VectorScalarOperations.cpp
-  la/VectorVectorOperations.cpp
   la/tests/ExactAccumulatorTest.cpp
   la/tests/MatrixTest.cpp
   la/tests/MatrixVectorTest.cpp
@@ -111,7 +89,6 @@ set(SOURCES
 
   plotter/CellDataPlotter.cpp
   plotter/CellPlotter.cpp
-  plotter/CellTypes.cpp
   plotter/FileWriter.cpp
   plotter/HDF5FileWriter.cpp
   plotter/JSONTimeSeriesWriter.cpp
@@ -150,12 +127,12 @@ set(SOURCES
 if(_peano_gpu_backend STREQUAL "cuda")
   list(APPEND SOURCES accelerator/cuda/tests/ReductionTest.cpp)
   set_source_files_properties(accelerator/cuda/tests/ReductionTest.cpp PROPERTIES LANGUAGE CUDA)
-  set_source_files_properties(accelerator/tests/AtomicsTest.cpp PROPERTIES LANGUAGE CUDA)
+  set_source_files_properties(accelerator/tests/AtomicTest.cpp PROPERTIES LANGUAGE CUDA)
   set_source_files_properties(accelerator/tests/ParallelConstructsTest.cpp PROPERTIES LANGUAGE CUDA)
 elseif(_peano_gpu_backend STREQUAL "hip")
   list(APPEND SOURCES accelerator/hip/tests/ReductionTest.cpp)
   set_source_files_properties(accelerator/hip/tests/ReductionTest.cpp PROPERTIES LANGUAGE HIP)
-  set_source_files_properties(accelerator/tests/AtomicsTest.cpp PROPERTIES LANGUAGE HIP)
+  set_source_files_properties(accelerator/tests/AtomicTest.cpp PROPERTIES LANGUAGE HIP)
   set_source_files_properties(accelerator/tests/ParallelConstructsTest.cpp PROPERTIES LANGUAGE HIP)
 elseif(_peano_gpu_backend STREQUAL "sycl")
   list(APPEND SOURCES accelerator/sycl/tests/ReductionTest.cpp)

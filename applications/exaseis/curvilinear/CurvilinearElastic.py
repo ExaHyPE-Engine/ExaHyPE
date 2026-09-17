@@ -133,8 +133,13 @@ def boundary():
 
 def eigenvalue():
   return """
-  // Check for NaN in any of the velocities
-  assert(("Check for Nans in velocity", !(std::isnan(Q[Shortcuts::v + 0]) || std::isnan(Q[Shortcuts::v + 1]) || std::isnan(Q[Shortcuts::v + 2]))));
+  assertion(
+    not (std::isnan(Q[Shortcuts::v + 0]) or std::isnan(Q[Shortcuts::v + 1]) or std::isnan(Q[Shortcuts::v + 2])),
+    "Velocity must not be NaN",
+    Q[Shortcuts::v + 0],
+    Q[Shortcuts::v + 1],
+    Q[Shortcuts::v + 2]
+  );
 
   auto cp  = Q[Shortcuts::cp];
   auto cs  = Q[Shortcuts::cs];

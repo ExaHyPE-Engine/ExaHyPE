@@ -66,7 +66,7 @@ class UpdateParticle_MultiLevelInteraction_Sets(ActionSet):
     __Template_TouchVertexFirstTime = jinja2.Template(
         """
 {% if TOUCH_VERTEX_FIRST_COMPUTE_KERNEL is not none %}
-  auto& assignedParticles = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
+  [[maybe_unused]] auto& assignedParticles = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
   [[maybe_unused]] const int numberOfCoalescedAssignedParticles = -1;
 
   {{TOUCH_VERTEX_FIRST_COMPUTE_KERNEL}}
@@ -77,7 +77,7 @@ class UpdateParticle_MultiLevelInteraction_Sets(ActionSet):
     __Template_TouchVertexLastTime = jinja2.Template(
         """
 {% if TOUCH_VERTEX_LAST_COMPUTE_KERNEL is not none %}
-  auto& assignedParticles = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
+  [[maybe_unused]] auto& assignedParticles = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
   [[maybe_unused]] const int numberOfCoalescedAssignedParticles = -1;
 
   {{TOUCH_VERTEX_LAST_COMPUTE_KERNEL}}

@@ -40,7 +40,8 @@ function(peano_apply_flags)
     -Wunused-but-set-variable
     -Wformat=2
     -Wcast-qual
-    -Wdouble-promotion
+    # -Wdouble-promotion
+    -Werror
   )
   set(PEANO_CXX_WARNINGS
     ${PEANO_C_WARNINGS}
@@ -51,6 +52,7 @@ function(peano_apply_flags)
     -W
     -Wall
     -Wextra
+    -Werror
   )
 
   # CUDA routes host warnings through -Xcompiler because they do not reach nvcc or ptxas device
@@ -143,6 +145,13 @@ function(peano_apply_flags)
       $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang,IntelLLVM>:-fno-omit-frame-pointer>
       $<$<COMPILE_LANG_AND_ID:C,GNU,Clang,AppleClang,IntelLLVM>:-g>
       $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang,IntelLLVM>:-g>
+    )
+  endif()
+
+  if(NOT PEANO_WITH_SANITIZER STREQUAL "none" OR PEANO_WITH_FPE)
+    target_compile_options(PeanoOptions INTERFACE
+      $<$<COMPILE_LANG_AND_ID:C,Clang,AppleClang,IntelLLVM>:-Wno-pass-failed>
+      $<$<COMPILE_LANG_AND_ID:CXX,Clang,AppleClang,IntelLLVM>:-Wno-pass-failed>
     )
   endif()
 endfunction()

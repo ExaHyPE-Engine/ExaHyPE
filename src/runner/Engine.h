@@ -20,11 +20,12 @@ struct runner::Step {
 };
 
 struct runner::StepName {
-  static constexpr const char* CreateGrid   = "CreateGrid";
-  static constexpr const char* InitGrid     = "InitGrid";
-  static constexpr const char* PlotSolution = "PlotSolution";
-  static constexpr const char* TimeStep     = "TimeStep";
-  static constexpr const char* DynamicAMR   = "DynamicAMR";
+  static constexpr const char* CreateGrid     = "CreateGrid";
+  static constexpr const char* InitGrid       = "InitGrid";
+  static constexpr const char* PlotSolution   = "PlotSolution";
+  static constexpr const char* TimeStep       = "TimeStep";
+  static constexpr const char* DynamicAMR     = "DynamicAMR";
+  static constexpr const char* AllocateMemory = "AllocateMemory";
 };
 
 /**
@@ -34,6 +35,13 @@ struct runner::StepName {
  */
 class runner::Engine final {
 public:
+  /**
+   * Program step of the built-in memory allocation step. The value sits above
+   * every generated step, and the constructor registers the step on every
+   * rank.
+   */
+  static constexpr int AllocateMemoryProgramStep = 1073741824;
+
   Engine(
     tarch::la::Vector<DIMENSIONS, double> domainOffset,
     tarch::la::Vector<DIMENSIONS, double> domainSize,

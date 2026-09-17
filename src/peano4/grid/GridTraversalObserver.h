@@ -4,7 +4,7 @@
 
 #include "peano4/Globals.h"
 #include "peano4/grid/GridControlEvent.h"
-#include "peano4/stacks/SendReceiveContext.h"
+#include "peano4/grid/SendReceiveContext.h"
 #include "tarch/la/Vector.h"
 
 namespace peano4::grid {
@@ -13,11 +13,11 @@ namespace peano4::grid {
   struct GridTraversalEvent;
 } // namespace peano4::grid
 
-namespace peano4::datamanagement {
+namespace peano4::dataview {
   struct CellMarker;
   struct FaceMarker;
   struct VertexMarker;
-} // namespace peano4::datamanagement
+} // namespace peano4::dataview
 
 /**
  * Connects the rank traversal and its subtree tasks to application data.
@@ -45,12 +45,8 @@ public:
 
   enum class NodeData { Vertex, Face, Cell };
 
-  virtual void loadNodeData(const GridTraversalEvent& event) {};
-
-  virtual void enterNode(const GridTraversalEvent& event) = 0;
-  virtual void leaveNode(const GridTraversalEvent& event) = 0;
-
-  virtual void storeNodeData(const GridTraversalEvent& event) {};
+  virtual void enterNode(const GridTraversalEvent&) = 0;
+  virtual void leaveNode(const GridTraversalEvent&) = 0;
 
   /**
    * Creates an observer for one rank traversal or subtree task.
@@ -92,10 +88,10 @@ public:
    * live pool slot. Cell transfers ignore position.
    */
   virtual void receiveNodeData(
-    NodeData                   nodeData,
-    int                        position,
-    int                        fromStack,
-    stacks::SendReceiveContext context,
-    const GridTraversalEvent&  event
+    NodeData                         nodeData,
+    int                              position,
+    int                              fromStack,
+    peano4::grid::SendReceiveContext context,
+    const GridTraversalEvent&        event
   ) {};
 };

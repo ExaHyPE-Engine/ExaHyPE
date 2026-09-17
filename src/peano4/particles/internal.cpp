@@ -2,38 +2,50 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "internal.h"
 
-#include "peano4/datamanagement/VertexMarker.h"
-#include "peano4/datamanagement/CellMarker.h"
+#include "peano4/dataview/CellMarker.h"
+#include "peano4/dataview/VertexMarker.h"
 
-double peano4::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(const ::peano4::datamanagement::VertexMarker& marker) {
+double peano4::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(
+  const ::peano4::dataview::VertexMarker& marker
+) {
   return relativeReleaseOwnershipSpatialSortingTolerance(marker.getH());
 }
 
-double peano4::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(const ::peano4::datamanagement::CellMarker& marker) {
+double peano4::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(
+  const ::peano4::dataview::CellMarker& marker
+) {
   return relativeReleaseOwnershipSpatialSortingTolerance(marker.getH());
 }
 
-double peano4::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(const tarch::la::Vector< DIMENSIONS, double >& h) {
+double peano4::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(
+  const tarch::la::Vector<DIMENSIONS, double>& h
+) {
   return ReleaseOwnershipSpatialSortingTolerance * tarch::la::max(h);
 }
 
-double peano4::particles::internal::relativeGrabOwnershipSpatialSortingTolerance(const ::peano4::datamanagement::VertexMarker& marker) {
+double peano4::particles::internal::relativeGrabOwnershipSpatialSortingTolerance(
+  const ::peano4::dataview::VertexMarker& marker
+) {
   return relativeGrabOwnershipSpatialSortingTolerance(marker.getH());
 }
 
-double peano4::particles::internal::relativeGrabOwnershipSpatialSortingTolerance(const ::peano4::datamanagement::CellMarker& marker) {
+double peano4::particles::internal::relativeGrabOwnershipSpatialSortingTolerance(
+  const ::peano4::dataview::CellMarker& marker
+) {
   return relativeGrabOwnershipSpatialSortingTolerance(marker.getH());
 }
 
-double peano4::particles::internal::relativeGrabOwnershipSpatialSortingTolerance(const tarch::la::Vector< DIMENSIONS, double >& h) {
+double peano4::particles::internal::relativeGrabOwnershipSpatialSortingTolerance(
+  const tarch::la::Vector<DIMENSIONS, double>& h
+) {
   return GrabOwnershipSpatialSortingTolerance * tarch::la::max(h);
 }
 
-bool peano4::particles::internal::fitsIntoLevel(double searchRadius, const ::peano4::datamanagement::CellMarker& marker) {
+bool peano4::particles::internal::fitsIntoLevel(double searchRadius, const ::peano4::dataview::CellMarker& marker) {
   return tarch::la::greaterEquals(tarch::la::min(marker.getH()), 2.0 * searchRadius);
 }
 
-bool peano4::particles::internal::fitsIntoLevel(double searchRadius, const ::peano4::datamanagement::VertexMarker& marker) {
+bool peano4::particles::internal::fitsIntoLevel(double searchRadius, const ::peano4::dataview::VertexMarker& marker) {
   return tarch::la::greaterEquals(tarch::la::min(marker.getH()), 2.0 * searchRadius);
 }
 
@@ -49,11 +61,12 @@ bool peano4::particles::internal::fitsIntoLevel(double searchRadius, const ::pea
  *                   to_ulong() to convert it.
  */
 std::bitset<DIMENSIONS> peano4::particles::internal::getParticleAssociationWithinCell(
-  const tarch::la::Vector<DIMENSIONS, double>& x, const tarch::la::Vector<DIMENSIONS, double>& cellCentre
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre
 ) {
   std::bitset<DIMENSIONS> destAssociation;
 
-  // marker.getX() gives me the centre of the cell
+  // A particle on the centre plane belongs to the upper half along that axis.
   for (int d = 0; d < DIMENSIONS; d++) {
     destAssociation[d] = tarch::la::greaterEquals(x(d), cellCentre(d));
   }

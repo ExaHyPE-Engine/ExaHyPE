@@ -88,11 +88,11 @@ class ActionSet(object):
 
           outputfile.write( """
 #include "peano4/Globals.h"
-#include "peano4/datamanagement/VertexEnumerator.h"
-#include "peano4/datamanagement/VertexMarker.h"
-#include "peano4/datamanagement/FaceEnumerator.h"
-#include "peano4/datamanagement/FaceMarker.h"
-#include "peano4/datamanagement/CellMarker.h"
+#include "peano4/dataview/VertexEnumerator.h"
+#include "peano4/dataview/VertexMarker.h"
+#include "peano4/dataview/FaceEnumerator.h"
+#include "peano4/dataview/FaceMarker.h"
+#include "peano4/dataview/CellMarker.h"
 #include "peano4/grid/GridControlEvent.h"
 #include "tarch/la/Vector.h"
 """ )

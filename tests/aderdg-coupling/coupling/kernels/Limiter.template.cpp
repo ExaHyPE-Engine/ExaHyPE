@@ -9,7 +9,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::regularToLimiterFace(
   {{LIMITER_SOLVER_CORRECTION_PRECISION}}* Qto,
   int numVars){
 
-  constexpr int fromPoints  = {{REGULAR_SOLVER_ORDER}} + 1;
   constexpr int toPoints    = {{LIMITER_SOLVER_ORDER}} + 1;
 
 #if DIMENSIONS==3
@@ -19,6 +18,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::regularToLimiterFace(
 #endif
 
 {% if DIFF_ORDERS %}
+
+  constexpr int fromPoints  = {{REGULAR_SOLVER_ORDER}} + 1;
 
   constexpr {{REGULAR_SOLVER_CORRECTION_PRECISION}} proj[toPoints*fromPoints] = {
     {{PROJ_REGULAR_TO_LIMITER}}
@@ -64,7 +65,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::limiterToRegularFace(
   {{REGULAR_SOLVER_CORRECTION_PRECISION}}* Qto,
   int numVars){
 
-  constexpr int fromPoints  = {{LIMITER_SOLVER_ORDER}} + 1;
   constexpr int toPoints    = {{REGULAR_SOLVER_ORDER}} + 1;
 
 #if DIMENSIONS==3
@@ -74,6 +74,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::limiterToRegularFace(
 #endif
 
 {% if DIFF_ORDERS %}
+
+  constexpr int fromPoints  = {{LIMITER_SOLVER_ORDER}} + 1;
 
   constexpr {{LIMITER_SOLVER_CORRECTION_PRECISION}} proj[toPoints*fromPoints] = {
     {{PROJ_LIMITER_TO_REGULAR}}

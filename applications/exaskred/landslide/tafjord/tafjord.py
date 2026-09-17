@@ -138,9 +138,5 @@ project.constants.export_constexpr_with_type(
 )
 
 project.output.makefile.add_include_directory("../../../..")
-project.output.makefile.add_cpp_file("../../AugmentedState.cpp")
-project.output.makefile.add_cpp_file("../../Landslide.cpp")
-project.output.makefile.add_cpp_file("../../LandslideLimiting.cpp")
-project.output.makefile.add_cpp_file("../../WellBalancedRusanov.cpp")
 project.output.makefile.add_cpp_file("ADERDGSolver.cpp")
 project.generate_and_build()

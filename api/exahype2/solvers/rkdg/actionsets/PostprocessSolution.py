@@ -43,8 +43,8 @@ class DoFWisePostprocessSolution(AbstractRungeKuttaDGActionSet):
     touchCellLastTime() is called. It plugs into the leaving of the cell because some
     solvers may add further action sets to the solve. These action sets typically plug
     into touchCellFirstTime() - and consequently their first time is called after the
-    postprocessing's first time. Using touchCellLastTime() ensures that any additional
-    action set added by a subclass can still precede the postprocessing.
+    postprocessing's first time. Using touchCellLastTime() lets any additional
+    action set added by a subclass precede the postprocessing.
     """
 
     def __init__(self, solver):
@@ -73,7 +73,7 @@ class DoFWisePostprocessSolution(AbstractRungeKuttaDGActionSet):
             """
 {
   {{COMPUTE_TIME_STEP_SIZE}}
-  const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+  [[maybe_unused]] const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
   if (
     not marker.hasBeenRefined()
@@ -160,7 +160,7 @@ class CellWisePostprocessSolution(AbstractRungeKuttaDGActionSet):
             """
 {
   {{COMPUTE_TIME_STEP_SIZE}}
-  const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+  [[maybe_unused]] const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
   if (
     not marker.hasBeenRefined()

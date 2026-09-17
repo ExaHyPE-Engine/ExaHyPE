@@ -97,10 +97,12 @@ namespace tarch {
 #endif
 
     void* allocateHeapMemory(std::size_t sizeInBytes);
+    void* allocateZeroedHeapMemory(std::size_t sizeInBytes);
     void* allocateDeviceMemory(std::size_t sizeInBytes, int device);
     void* allocatePinnedMemory(std::size_t sizeInBytes, int device);
     void* allocateRawData(std::size_t sizeInBytes, MemoryLocation location, int device);
     void  freeHeapMemory(void* data);
+    void  freeZeroedHeapMemory(void* data, std::size_t sizeInBytes);
     void  freeDeviceMemory(void* data, int device);
     void  freePinnedMemory(void* data, int device);
     void  freeRawData(void* data, MemoryLocation location, int device);

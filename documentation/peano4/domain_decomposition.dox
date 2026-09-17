@@ -85,8 +85,8 @@ sweep can start while communication progresses; a boundary task waits before
 it merges those frozen copies.
 
 The generated merge callback distinguishes
-peano4::stacks::SendReceiveContext::InterRank from
-peano4::stacks::SendReceiveContext::IntraRank. Both contexts carry partner
+peano4::grid::SendReceiveContext::InterRank from
+peano4::grid::SendReceiveContext::IntraRank. Both contexts carry partner
 state from the preceding sweep. Cell data has neither exchange because each
 cell has one owner.
 

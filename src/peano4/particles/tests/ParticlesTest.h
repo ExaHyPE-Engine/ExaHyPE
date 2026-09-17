@@ -22,4 +22,6 @@ public:
 private:
   void testPeriodicImageTowards();
   void testApplyPeriodicBoundaryConditions();
+  void testParticleFactory();
+  void testParticleSetStatistics();
 };

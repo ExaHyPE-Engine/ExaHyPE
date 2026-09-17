@@ -11,11 +11,11 @@
  */
 template <int... ParticleAttributeIndices, typename Particle>
 INLINE_METHOD void exahype2::fv::particles::updateParticleState(
-  Particle&                                 particle,
-  const peano4::datamanagement::CellMarker& cellMarker,
-  const double* NOALIAS const               cellValues,
-  const double                              timeStepSize,
-  const int                                 integrationMethod
+  Particle&                           particle,
+  const peano4::dataview::CellMarker& cellMarker,
+  const double* NOALIAS const         cellValues,
+  const double                        timeStepSize,
+  const int                           integrationMethod
 ) {
   exahype2::fv::particles::utils::resetAcceleration(particle);
   exahype2::fv::particles::interpolation::applyInterpolation<ParticleAttributeIndices...>(
