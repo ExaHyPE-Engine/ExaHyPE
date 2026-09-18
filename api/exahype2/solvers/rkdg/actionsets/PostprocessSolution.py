@@ -85,7 +85,7 @@ class DoFWisePostprocessSolution(AbstractRungeKuttaDGActionSet):
       double* values   = fineGridCell{{UNKNOWN_IDENTIFIER}}.data()
         + peano4::dLinearised(index, {{DG_ORDER}}+1) * valuesPerDoF;
       auto    x        = ::exahype2::dg::getQuadraturePoint(
-        marker.getX(), marker.getH(), index, repositories::{{SOLVER_INSTANCE}}.DGOrder, repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1D
+        marker.getX(), marker.getH(), index, repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1D
       );
       """
             + operation_per_point

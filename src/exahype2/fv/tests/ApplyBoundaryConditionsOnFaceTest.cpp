@@ -1,9 +1,10 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "HandleBoundaryTest.h"
+#include "ApplyBoundaryConditionsOnFaceTest.h"
 
-#include "exahype2/fv/HandleBoundary.h"
 #include "exahype2/Enumeration.h"
+#include "exahype2/fv/ApplyBoundaryConditionsOnFace.h"
+#include "peano4/Constants.h"
 
 namespace {
   // Copies the inner state into the halo, the discrete equivalent of a
@@ -64,25 +65,25 @@ namespace {
   }
 } // namespace
 
-exahype2::fv::tests::HandleBoundaryTest::HandleBoundaryTest() :
-  tarch::tests::TestCase("exahype2::fv::tests::HandleBoundaryTest") {}
+exahype2::fv::tests::ApplyBoundaryConditionsOnFaceTest::ApplyBoundaryConditionsOnFaceTest() :
+  tarch::tests::TestCase("exahype2::fv::tests::ApplyBoundaryConditionsOnFaceTest") {}
 
-void exahype2::fv::tests::HandleBoundaryTest::run() {
+void exahype2::fv::tests::ApplyBoundaryConditionsOnFaceTest::run() {
   testMethod(testCopyPreservesUniformState);
   testMethod(testEachGhostLayerUsesMatchingInteriorLayer);
   testMethod(testEachOutsideVolumeIsWrittenOnce);
 }
 
-void exahype2::fv::tests::HandleBoundaryTest::testCopyPreservesUniformState() {
+void exahype2::fv::tests::ApplyBoundaryConditionsOnFaceTest::testCopyPreservesUniformState() {
   CopyBoundarySolver<NumberOfData>            solver;
   const tarch::la::Vector<DIMENSIONS, double> patchCentre(0.5);
   const tarch::la::Vector<DIMENSIONS, double> patchSize(1.0);
   const double                                uniformValue = 1.23;
 
-  for (int faceNumber = 0; faceNumber < TWO_TIMES_D; faceNumber++) {
+  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
     std::vector<double> faceValues(faceOverlapStorageSize(HaloSize), uniformValue);
 
-    exahype2::fv::handleBoundary<
+    exahype2::fv::applyBoundaryConditionsOnFace<
       CopyBoundarySolver<NumberOfData>,
       NumberOfVolumesPerAxis,
       HaloSize,
@@ -96,12 +97,12 @@ void exahype2::fv::tests::HandleBoundaryTest::testCopyPreservesUniformState() {
   }
 }
 
-void exahype2::fv::tests::HandleBoundaryTest::testEachGhostLayerUsesMatchingInteriorLayer() {
+void exahype2::fv::tests::ApplyBoundaryConditionsOnFaceTest::testEachGhostLayerUsesMatchingInteriorLayer() {
   CopyBoundarySolver<NumberOfData>            solver;
   const tarch::la::Vector<DIMENSIONS, double> patchCentre(0.5);
   const tarch::la::Vector<DIMENSIONS, double> patchSize(1.0);
 
-  for (int faceNumber = 0; faceNumber < TWO_TIMES_D; faceNumber++) {
+  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
     std::vector<double> faceValues(faceOverlapStorageSize(MusclHaloSize), -1.0);
     const int           normal = faceNumber % DIMENSIONS;
 
@@ -118,13 +119,9 @@ void exahype2::fv::tests::HandleBoundaryTest::testEachGhostLayerUsesMatchingInte
       }
 
       for (int layer = 0; layer < MusclHaloSize; layer++) {
-        overlapVolume(normal)   = faceNumber < DIMENSIONS ? MusclHaloSize + layer : MusclHaloSize - 1 - layer;
-        const auto insideVolume = exahype2::serialiseVoxelIndexInOverlap(
-          overlapVolume,
-          NumberOfVolumesPerAxis,
-          MusclHaloSize,
-          normal
-        );
+        overlapVolume(normal) = faceNumber < DIMENSIONS ? MusclHaloSize + layer : MusclHaloSize - 1 - layer;
+        const auto insideVolume =
+          exahype2::serialiseVoxelIndexInOverlap(overlapVolume, NumberOfVolumesPerAxis, MusclHaloSize, normal);
         for (int entry = 0; entry < NumberOfData; entry++) {
           faceValues[insideVolume * NumberOfData + entry] =
             static_cast<double>(100 * tangentialVolume + 10 * layer + entry);
@@ -132,7 +129,7 @@ void exahype2::fv::tests::HandleBoundaryTest::testEachGhostLayerUsesMatchingInte
       }
     }
 
-    exahype2::fv::handleBoundary<
+    exahype2::fv::applyBoundaryConditionsOnFace<
       CopyBoundarySolver<NumberOfData>,
       NumberOfVolumesPerAxis,
       MusclHaloSize,
@@ -153,13 +150,9 @@ void exahype2::fv::tests::HandleBoundaryTest::testEachGhostLayerUsesMatchingInte
       }
 
       for (int layer = 0; layer < MusclHaloSize; layer++) {
-        overlapVolume(normal)    = faceNumber < DIMENSIONS ? MusclHaloSize - 1 - layer : MusclHaloSize + layer;
-        const auto outsideVolume = exahype2::serialiseVoxelIndexInOverlap(
-          overlapVolume,
-          NumberOfVolumesPerAxis,
-          MusclHaloSize,
-          normal
-        );
+        overlapVolume(normal) = faceNumber < DIMENSIONS ? MusclHaloSize - 1 - layer : MusclHaloSize + layer;
+        const auto outsideVolume =
+          exahype2::serialiseVoxelIndexInOverlap(overlapVolume, NumberOfVolumesPerAxis, MusclHaloSize, normal);
         for (int entry = 0; entry < NumberOfData; entry++) {
           const auto expectedValue = static_cast<double>(100 * tangentialVolume + 10 * layer + entry);
           validateNumericalEquals(faceValues[outsideVolume * NumberOfData + entry], expectedValue);
@@ -169,17 +162,17 @@ void exahype2::fv::tests::HandleBoundaryTest::testEachGhostLayerUsesMatchingInte
   }
 }
 
-void exahype2::fv::tests::HandleBoundaryTest::testEachOutsideVolumeIsWrittenOnce() {
+void exahype2::fv::tests::ApplyBoundaryConditionsOnFaceTest::testEachOutsideVolumeIsWrittenOnce() {
   IncrementBoundarySolver<NumberOfData>       solver;
   const tarch::la::Vector<DIMENSIONS, double> patchCentre(0.5);
   const tarch::la::Vector<DIMENSIONS, double> patchSize(1.0);
 
   const int expectedWrittenEntries = HaloSize * numberOfTangentialVolumes() * NumberOfData;
 
-  for (int faceNumber = 0; faceNumber < TWO_TIMES_D; faceNumber++) {
+  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
     std::vector<double> faceValues(faceOverlapStorageSize(HaloSize), 0.0);
 
-    exahype2::fv::handleBoundary<
+    exahype2::fv::applyBoundaryConditionsOnFace<
       IncrementBoundarySolver<NumberOfData>,
       NumberOfVolumesPerAxis,
       HaloSize,
@@ -193,9 +186,7 @@ void exahype2::fv::tests::HandleBoundaryTest::testEachOutsideVolumeIsWrittenOnce
       if (entry > 0.5) {
         numberOfWrittenEntries++;
       }
-      if (entry > maximumEntry) {
-        maximumEntry = entry;
-      }
+      maximumEntry = std::max(entry, maximumEntry);
     }
 
     validateEquals(numberOfWrittenEntries, expectedWrittenEntries);

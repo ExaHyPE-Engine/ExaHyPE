@@ -27,10 +27,9 @@ class SWERadialDamBreak(Scenario):
 
     def initial_conditions(self):
         return """
-  // The number of cells will be odd, this computes half of the total -1
-  // e.g. 27 cells -> 13, 81 cells -> 40
-  // We then place the circle so that it's center is that many cells from
-  // the left domain boundary.
+  // The division halves the cell count per axis and rounds down.
+  // An odd cell count per axis holds the centre of the domain in the middle cell.
+  // The centre of the circle sits that many cells right of the left domain boundary.
   const int numberOfCells = DomainSize[0]/(2*h[0]);
 
   tarch::la::Vector<DIMENSIONS, double> damBreakCenter = {

@@ -5,12 +5,12 @@
 #include "tarch/tests/TestCase.h"
 
 namespace exahype2::fv::tests {
-  class HandleBoundaryTest;
+  class ApplyBoundaryConditionsOnFaceTest;
 } // namespace exahype2::fv::tests
 
-class exahype2::fv::tests::HandleBoundaryTest final : public tarch::tests::TestCase {
+class exahype2::fv::tests::ApplyBoundaryConditionsOnFaceTest final : public tarch::tests::TestCase {
 public:
-  HandleBoundaryTest();
+  ApplyBoundaryConditionsOnFaceTest();
 
   void run() override;
 

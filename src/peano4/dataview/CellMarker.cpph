@@ -23,11 +23,12 @@ INLINE_METHOD const tarch::la::Vector<DIMENSIONS, int>& peano4::dataview::CellMa
 }
 
 INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> peano4::dataview::CellMarker::getInvokingParentCellsCentre() const {
-  auto result = centre;
+  constexpr double ParentCentreOffset = 0.5 * (peano4::sfc::ActiveCurve::SubdivisionFactor - 1);
+  auto             result             = centre;
   for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
     assertion(relativePositionWithinFatherCell[dimension] >= 0, toString());
-    assertion(relativePositionWithinFatherCell[dimension] <= 2, toString());
-    result[dimension] += (1 - relativePositionWithinFatherCell[dimension]) * h[dimension];
+    assertion(relativePositionWithinFatherCell[dimension] < peano4::sfc::ActiveCurve::SubdivisionFactor, toString());
+    result[dimension] += (ParentCentreOffset - relativePositionWithinFatherCell[dimension]) * h[dimension];
   }
   return result;
 }

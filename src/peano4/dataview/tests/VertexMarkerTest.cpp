@@ -2,15 +2,17 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "VertexMarkerTest.h"
 
+#include "peano4/Constants.h"
 #include "peano4/dataview/VertexMarker.h"
 #include "peano4/grid/GridTraversalEvent.h"
+#include "peano4/sfc/ActiveCurve.h"
 #include "tarch/tests/TestMacros.h"
 
 namespace {
   peano4::grid::GridTraversalEvent createEvent() {
-    peano4::grid::GridTraversalEvent      event;
-    tarch::la::Vector<DIMENSIONS, double> centre(0.5);
-    tarch::la::Vector<DIMENSIONS, double> width(1.0 / 3.0);
+    peano4::grid::GridTraversalEvent            event;
+    const tarch::la::Vector<DIMENSIONS, double> centre(0.5);
+    const tarch::la::Vector<DIMENSIONS, double> width(1.0 / 3.0);
     event.setX(centre);
     event.setH(width);
     return event;
@@ -34,8 +36,8 @@ void peano4::dataview::tests::VertexMarkerTest::run() {
 void peano4::dataview::tests::VertexMarkerTest::testSelection() {
   auto marker = peano4::dataview::VertexMarker(createEvent());
   validateEquals(marker.getSelectedVertexNumber(), 0);
-  marker.select(TWO_POWER_D - 1);
-  validateEquals(marker.getSelectedVertexNumber(), TWO_POWER_D - 1);
+  marker.select(peano4::VerticesPerCell - 1);
+  validateEquals(marker.getSelectedVertexNumber(), peano4::VerticesPerCell - 1);
   validateEquals(peano4::dataview::VertexMarker(createEvent(), 1).getSelectedVertexNumber(), 1);
 }
 
@@ -47,7 +49,7 @@ void peano4::dataview::tests::VertexMarkerTest::testGeometry() {
     validateNumericalEquals(marker.getInvokingCellCentre()(d), 0.5);
     // Vertex 0 is the cell's low corner, the last one the high corner.
     validateNumericalEquals(marker.getX(0)(d), 0.5 - 1.0 / 6.0);
-    validateNumericalEquals(marker.getX(TWO_POWER_D - 1)(d), 0.5 + 1.0 / 6.0);
+    validateNumericalEquals(marker.getX(peano4::VerticesPerCell - 1)(d), 0.5 + 1.0 / 6.0);
     validateNumericalEquals(marker.getX()(d), 0.5 - 1.0 / 6.0);
   }
 }
@@ -91,8 +93,8 @@ void peano4::dataview::tests::VertexMarkerTest::testStateBits() {
 }
 
 void peano4::dataview::tests::VertexMarkerTest::testRelativePositionWithinFatherCell() {
-  auto                               event = createEvent();
-  tarch::la::Vector<DIMENSIONS, int> position(1);
+  auto                                     event = createEvent();
+  const tarch::la::Vector<DIMENSIONS, int> position(1);
   event.setRelativePositionToFather(position);
 
   const auto marker = peano4::dataview::VertexMarker(event);
@@ -105,14 +107,14 @@ void peano4::dataview::tests::VertexMarkerTest::testRelativePositionWithinFather
 }
 
 void peano4::dataview::tests::VertexMarkerTest::testCoincidesWithCoarseGridVertex() {
-  auto                               event = createEvent();
-  tarch::la::Vector<DIMENSIONS, int> cornerPosition(0);
+  auto                                     event = createEvent();
+  const tarch::la::Vector<DIMENSIONS, int> cornerPosition(0);
   event.setRelativePositionToFather(cornerPosition);
 
   auto marker = peano4::dataview::VertexMarker(event);
   validate(marker.coincidesWithCoarseGridVertex());
 
-  tarch::la::Vector<DIMENSIONS, int> innerPosition(1);
+  const tarch::la::Vector<DIMENSIONS, int> innerPosition(1);
   event.setRelativePositionToFather(innerPosition);
   marker = peano4::dataview::VertexMarker(event);
   validateFalse(marker.coincidesWithCoarseGridVertex());
@@ -123,7 +125,7 @@ void peano4::dataview::tests::VertexMarkerTest::testContainment() {
 
   // The selected vertex sits at the cell's low corner; its adjacent cells
   // reach one cell width in every direction.
-  tarch::la::Vector<DIMENSIONS, double> nearPoint(0.5 - 1.0 / 6.0 + 0.1);
+  const tarch::la::Vector<DIMENSIONS, double> nearPoint(0.5 - 1.0 / 6.0 + 0.1);
   validate(marker.isContainedInAdjacentCells(nearPoint));
   validate(marker.isContainedInAdjacentCellsByDimension(nearPoint, 0));
 
@@ -134,27 +136,27 @@ void peano4::dataview::tests::VertexMarkerTest::testContainment() {
   validate(marker.isContainedInAdjacentCells(farPoint, 2.0));
 
   validateEquals(marker.getRelativeAdjacentCell(nearPoint)(0), 1);
-  tarch::la::Vector<DIMENSIONS, double> belowPoint(0.5 - 1.0 / 6.0 - 0.1);
+  const tarch::la::Vector<DIMENSIONS, double> belowPoint(0.5 - 1.0 / 6.0 - 0.1);
   validateEquals(marker.getRelativeAdjacentCell(belowPoint)(0), 0);
 }
 
 void peano4::dataview::tests::VertexMarkerTest::testAdjacency() {
   auto event = createEvent();
   // Mark every adjacent cell of the 3^d neighbourhood as local.
-  for (int adjacentCell = 0; adjacentCell < THREE_POWER_D; adjacentCell++) {
+  for (int adjacentCell = 0; adjacentCell < peano4::CellsPerNeighbourhood; adjacentCell++) {
     event.setIsAdjacentCellLocal(adjacentCell, true);
   }
   auto marker = peano4::dataview::VertexMarker(event);
-  validateEquals(static_cast<int>(marker.areAdjacentCellsLocal().count()), TWO_POWER_D);
+  validateEquals(static_cast<int>(marker.areAdjacentCellsLocal().count()), peano4::CellsPerVertex);
 
-  event.setIsAdjacentCellLocal(0u);
+  event.setIsAdjacentCellLocal(0U);
   marker = peano4::dataview::VertexMarker(event);
   validateEquals(static_cast<int>(marker.areAdjacentCellsLocal().count()), 0);
 }
 
 void peano4::dataview::tests::VertexMarkerTest::testReconstructXOfParentVertex() {
-  auto                               event = createEvent();
-  tarch::la::Vector<DIMENSIONS, int> cornerPosition(0);
+  auto                                     event = createEvent();
+  const tarch::la::Vector<DIMENSIONS, int> cornerPosition(0);
   event.setRelativePositionToFather(cornerPosition);
 
   const auto marker = peano4::dataview::VertexMarker(event);
@@ -167,8 +169,11 @@ void peano4::dataview::tests::VertexMarkerTest::testReconstructXOfParentVertex()
   }
 
   const auto highCorner =
-    peano4::dataview::reconstructXOfParentVertex(marker, std::bitset<DIMENSIONS>((1u << DIMENSIONS) - 1u));
+    peano4::dataview::reconstructXOfParentVertex(marker, std::bitset<DIMENSIONS>((1U << DIMENSIONS) - 1U));
   for (int d = 0; d < DIMENSIONS; d++) {
-    validateNumericalEquals(highCorner(d), marker.getX()(d) + 1.0);
+    validateNumericalEquals(
+      highCorner(d),
+      marker.getX()(d) + peano4::sfc::ActiveCurve::SubdivisionFactor * marker.getH()(d)
+    );
   }
 }

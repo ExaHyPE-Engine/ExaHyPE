@@ -80,9 +80,11 @@ bool tarch::tasking::Runtime::init() {
 #ifdef __GLIBC__
   // Glibc grows each thread's arena through mprotect, and the kernel
   // serialises those calls across the threads of the first parallel sweep. A
-  // large top padding takes the arena growth out of that sweep.
+  // large top padding takes the arena growth out of that sweep. A sanitizer or
+  // a replaced allocator answers every mallopt() option with zero, and its
+  // arena has no top padding to set.
   if (mallopt(M_TOP_PAD, 128 * 1024 * 1024) == 0) {
-    logWarning("The allocator rejected the requested top padding.");
+    logDebug("The allocator rejected the requested top padding.");
   }
 #endif
   // A team thread that spins at a barrier takes the core that the master of

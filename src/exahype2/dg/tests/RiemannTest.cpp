@@ -3,36 +3,23 @@
 #include "RiemannTest.h"
 
 #include "exahype2/Enumeration.h"
+#include "exahype2/dg/AMRMatrices.h"
 #include "exahype2/dg/DGUtils.h"
 #include "exahype2/dg/Riemann.h"
 #include "exahype2/dg/tests/TestUtils.h"
+#include "peano4/Loop.h"
 #include "peano4/grid/GridTraversalEvent.h"
+#include "peano4/sfc/ActiveCurve.h"
 
 namespace {
-  // A two-point Gauss-Legendre basis on the unit interval. The matrices below match what
-  // exahype2.solvers.LagrangeBasisWithDiagonalMassMatrix generates for polynomial order one.
-  constexpr int    NodesPerAxis = 2;
-  constexpr double Node0        = 0.5 - 0.5 / 1.7320508075688772;
-  constexpr double Node1        = 0.5 + 0.5 / 1.7320508075688772;
+  // A two-point Gauss-Legendre basis on the unit interval for polynomial order one.
+  constexpr int    NodesPerAxis      = 2;
+  constexpr int    SubdivisionFactor = peano4::sfc::ActiveCurve::SubdivisionFactor;
+  constexpr double Nodes[NodesPerAxis]{0.5 - 0.5 / 1.7320508075688772, 0.5 + 0.5 / 1.7320508075688772};
 
-  double shapeFunction(const int node, const double x) {
-    return node == 0 ? (Node1 - x) / (Node1 - Node0) : (x - Node0) / (Node1 - Node0);
-  }
+  constexpr auto InterpolationMatrix = exahype2::dg::interpolationMatrix1D<NodesPerAxis>(Nodes);
 
-  std::array<double, 3 * NodesPerAxis * NodesPerAxis> interpolationMatrix() {
-    std::array<double, 3 * NodesPerAxis * NodesPerAxis> result{};
-    for (int block = 0; block < 3; block++) {
-      for (int fine = 0; fine < NodesPerAxis; fine++) {
-        const double fineNode = ((fine == 0 ? Node0 : Node1) + block) / 3.0;
-        for (int coarse = 0; coarse < NodesPerAxis; coarse++) {
-          result[block * NodesPerAxis * NodesPerAxis + fine * NodesPerAxis + coarse] = shapeFunction(coarse, fineNode);
-        }
-      }
-    }
-    return result;
-  }
-
-  double nodePosition(const int node) { return node == 0 ? Node0 : Node1; }
+  double nodePosition(const int node) { return Nodes[node]; }
 
   // An affine trace over the tangential axes of a face is representable in the order-one
   // basis, so the face transfers have to reproduce it exactly up to roundoff.
@@ -72,8 +59,6 @@ void exahype2::dg::tests::RiemannTest::testInterpolateProjectedFacePolynomialRep
   constexpr int FaceSize = NodesPerAxis * NodesPerAxis * 2 * Stride;
 #endif
 
-  const auto interpolation = interpolationMatrix();
-
   for (int faceNumber = 0; faceNumber < 2 * DIMENSIONS; faceNumber++) {
     const int normal     = faceNumber % DIMENSIONS;
     const int coarseSide = faceNumber < DIMENSIONS ? 0 : 1;
@@ -87,18 +72,18 @@ void exahype2::dg::tests::RiemannTest::testInterpolateProjectedFacePolynomialRep
         }
       }
       for (int side = 0; side < 2; side++) {
-        auto shiftedDoF    = dof;
-        shiftedDoF(normal) = side;
-        const int offset   = exahype2::serialiseVoxelIndexInOverlap(shiftedDoF, NodesPerAxis, 1, normal) * Stride;
-        coarseGridFaceQ[offset]     = affineTrace(position, normal) + side;
+        auto shiftedDoF         = dof;
+        shiftedDoF(normal)      = side;
+        const int offset        = exahype2::serialiseVoxelIndexInOverlap(shiftedDoF, NodesPerAxis, 1, normal) * Stride;
+        coarseGridFaceQ[offset] = affineTrace(position, normal) + side;
         coarseGridFaceQ[offset + 1] = 4.0 - side;
         coarseGridFaceQ[offset + 2] = -1.0;
       }
     });
 
     peano4::grid::GridTraversalEvent event;
-    peano4::dForEach(3, [&](const tarch::la::Vector<DIMENSIONS, int>& subCellIndex) {
-      if (subCellIndex(normal) != (faceNumber < DIMENSIONS ? 0 : 2)) {
+    peano4::dForEach(SubdivisionFactor, [&](const tarch::la::Vector<DIMENSIONS, int>& subCellIndex) {
+      if (subCellIndex(normal) != (faceNumber < DIMENSIONS ? 0 : SubdivisionFactor - 1)) {
         return;
       }
       event.setRelativePositionToFather(subCellIndex);
@@ -113,7 +98,7 @@ void exahype2::dg::tests::RiemannTest::testInterpolateProjectedFacePolynomialRep
         1,
         Unknowns,
         AuxiliaryVariables,
-        interpolation.data(),
+        InterpolationMatrix.data(),
         coarseGridFaceQ.data(),
         fineGridFaceQ.data()
       );
@@ -122,7 +107,7 @@ void exahype2::dg::tests::RiemannTest::testInterpolateProjectedFacePolynomialRep
         tarch::la::Vector<DIMENSIONS, double> position(0.0);
         for (int d = 0; d < DIMENSIONS; d++) {
           if (d != normal) {
-            position(d) = (nodePosition(dof(d)) + subCellIndex(d)) / 3.0;
+            position(d) = (nodePosition(dof(d)) + subCellIndex(d)) / SubdivisionFactor;
           }
         }
         for (int side = 0; side < 2; side++) {
@@ -169,8 +154,6 @@ void exahype2::dg::tests::RiemannTest::testInterpolateRiemannSolutionReproducesP
   constexpr int FluxFaceSize       = NodesPerFaceLayer * 2 * Unknowns;
   constexpr int ProjectionFaceSize = NodesPerFaceLayer * 2 * ProjectionStride;
 
-  const auto interpolation = interpolationMatrix();
-
   for (int faceNumber = 0; faceNumber < 2 * DIMENSIONS; faceNumber++) {
     const int    normal             = faceNumber % DIMENSIONS;
     const int    coarseSideLayer    = faceNumber < DIMENSIONS ? 0 : 1;
@@ -192,7 +175,8 @@ void exahype2::dg::tests::RiemannTest::testInterpolateRiemannSolutionReproducesP
       for (int side = 0; side < 2; side++) {
         auto shiftedDoF    = dof;
         shiftedDoF(normal) = side;
-        const int slot = exahype2::serialiseVoxelIndexInOverlap(shiftedDoF, NodesPerAxis, 1, normal);
+        const auto slot =
+          static_cast<std::size_t>(exahype2::serialiseVoxelIndexInOverlap(shiftedDoF, NodesPerAxis, 1, normal));
         coarseRiemannSolution[slot * Unknowns]        = side == coarseSideLayer ? affineTrace(position, normal) : 9.0;
         coarseRiemannSolution[slot * Unknowns + 1]    = side == coarseSideLayer ? 4.0 : 9.0;
         coarseProjection[slot * ProjectionStride]     = RestrictedTrace;
@@ -201,8 +185,8 @@ void exahype2::dg::tests::RiemannTest::testInterpolateRiemannSolutionReproducesP
       }
     });
 
-    peano4::dForEach(3, [&](const tarch::la::Vector<DIMENSIONS, int>& subCellIndex) {
-      if (subCellIndex(normal) != (faceNumber < DIMENSIONS ? 0 : 2)) {
+    peano4::dForEach(SubdivisionFactor, [&](const tarch::la::Vector<DIMENSIONS, int>& subCellIndex) {
+      if (subCellIndex(normal) != (faceNumber < DIMENSIONS ? 0 : SubdivisionFactor - 1)) {
         return;
       }
 
@@ -210,15 +194,15 @@ void exahype2::dg::tests::RiemannTest::testInterpolateRiemannSolutionReproducesP
       // of the first unknown, whose perturbation only the penalty can pick up.
       const int                              fineSideLayer = 1 - coarseSideLayer;
       std::array<double, ProjectionFaceSize> fineProjection{};
-      for (int node = 0; node < 2 * NodesPerFaceLayer; node++) {
+      for (std::size_t node = 0; node < 2 * static_cast<std::size_t>(NodesPerFaceLayer); node++) {
         fineProjection[node * ProjectionStride]     = RestrictedTrace;
         fineProjection[node * ProjectionStride + 1] = RestrictedTrace;
         fineProjection[node * ProjectionStride + 2] = -1.0;
       }
       tarch::la::Vector<DIMENSIONS, int> perturbedDoF(0);
       perturbedDoF(normal) = fineSideLayer;
-      const int perturbedSlot =
-        exahype2::serialiseVoxelIndexInOverlap(perturbedDoF, NodesPerAxis, 1, normal);
+      const auto perturbedSlot =
+        static_cast<std::size_t>(exahype2::serialiseVoxelIndexInOverlap(perturbedDoF, NodesPerAxis, 1, normal));
       fineProjection[perturbedSlot * ProjectionStride] += Perturbation;
 
       std::array<double, FluxFaceSize> fineRiemannSolution{};
@@ -230,7 +214,7 @@ void exahype2::dg::tests::RiemannTest::testInterpolateRiemannSolutionReproducesP
         Unknowns,
         AuxiliaryVariables,
         MaxEigenvalue,
-        interpolation.data(),
+        InterpolationMatrix.data(),
         coarseRiemannSolution.data(),
         coarseProjection.data(),
         fineProjection.data(),
@@ -241,13 +225,14 @@ void exahype2::dg::tests::RiemannTest::testInterpolateRiemannSolutionReproducesP
         tarch::la::Vector<DIMENSIONS, double> position(0.0);
         for (int d = 0; d < DIMENSIONS; d++) {
           if (d != normal) {
-            position(d) = (nodePosition(dof(d)) + subCellIndex(d)) / 3.0;
+            position(d) = (nodePosition(dof(d)) + subCellIndex(d)) / SubdivisionFactor;
           }
         }
         for (int side = 0; side < 2; side++) {
           auto shiftedDoF    = dof;
           shiftedDoF(normal) = side;
-          const int slot = exahype2::serialiseVoxelIndexInOverlap(shiftedDoF, NodesPerAxis, 1, normal);
+          const auto slot =
+            static_cast<std::size_t>(exahype2::serialiseVoxelIndexInOverlap(shiftedDoF, NodesPerAxis, 1, normal));
           if (side == coarseSideLayer) {
             // The coarse side's layer of the hanging face stays untouched.
             validateNumericalEqualsWithParams3(fineRiemannSolution[slot * Unknowns], 7.0, faceNumber, side, dof);
@@ -271,7 +256,7 @@ void exahype2::dg::tests::RiemannTest::testInterpolateRiemannSolutionReproducesP
 }
 
 /**
- * Project a constant order-3 solution onto the faces.
+ * Projects a constant order-3 solution onto the faces.
  */
 void exahype2::dg::tests::RiemannTest::testProjectVolumetricDataOntoFacesForConstantSolutionOrder3() {
   const int order        = 3;
@@ -407,7 +392,7 @@ void exahype2::dg::tests::RiemannTest::testProjectVolumetricDataOntoFacesForCons
 }
 
 /**
- * Project a constant solution onto the faces for the order-0 Euler setup.
+ * Projects a constant solution onto the faces for the order-0 Euler setup.
  */
 void exahype2::dg::tests::RiemannTest::testProjectVolumetricDataOntoFacesForConstantSolutionOrder0() {
   double QIn[]     = {0.1, 0.2, 0.3, 0.4, 0.5};

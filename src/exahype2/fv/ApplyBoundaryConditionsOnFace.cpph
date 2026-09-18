@@ -7,9 +7,6 @@ TARGET_DECLARE
  * condition. The inner half mirrors the adjacent patch and supplies the state
  * from which each outer layer is derived. Face indices below @c DIMENSIONS
  * select lower faces; the remaining indices select upper faces.
- *
- * The standalone finite-volume solver and the subcell limiter share this
- * routine so their boundary data follows the same overlap layout.
  */
 template <
   typename Solver,
@@ -18,7 +15,7 @@ template <
   int NumberOfUnknowns,
   int NumberOfAuxiliaryVariables,
   typename StoragePrecision>
-INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::handleBoundary(
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::applyBoundaryConditionsOnFace(
   Solver&                                      solver,
   const tarch::la::Vector<DIMENSIONS, double>& patchCentre,
   const tarch::la::Vector<DIMENSIONS, double>& patchSize,
@@ -67,7 +64,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::handleBoundary(
       insideVolume(normal)  = (faceNumber < DIMENSIONS) ? (HaloSize + layer) : (HaloSize - 1 - layer);
       outsideVolume(normal) = (faceNumber < DIMENSIONS) ? (HaloSize - 1 - layer) : (layer + HaloSize);
 
-      // Linearise a face-overlap volume: the normal axis holds 2 * HaloSize
+      // Linearise a face-overlap volume: The normal axis holds 2 * HaloSize
       // layers, every tangential axis holds NumberOfVolumesPerAxis layers.
       int insideVolumeSerialised  = 0;
       int outsideVolumeSerialised = 0;

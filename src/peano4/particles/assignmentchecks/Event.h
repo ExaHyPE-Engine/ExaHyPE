@@ -4,14 +4,12 @@
 
 #include "tarch/la/Vector.h"
 
-namespace peano4::particles::assignmentchecks::internal {
+namespace peano4::particles::assignmentchecks {
   /**
-   * Event
+   * Stores one event of the particle-grid association.
    *
-   * An event is any event related to the particle-grid association. That
-   * can be an assignmend or detaching to a vertex or sieve set, or
-   * particles being moved in space.
-   *
+   * An event assigns a particle to a vertex or to the sieve set, detaches it
+   * from a vertex, erases it, or moves it in space.
    */
   struct Event {
     enum class Type {
@@ -24,18 +22,15 @@ namespace peano4::particles::assignmentchecks::internal {
       ConsecutiveMoveWhileAssociatedToVertex
     };
 
-    Type                                  type;
-    bool                                  isLocal;
-    tarch::la::Vector<DIMENSIONS, double> vertexX;
-    tarch::la::Vector<DIMENSIONS, double> previousParticleX;
-    tarch::la::Vector<DIMENSIONS, double> vertexH;
-    int                                   treeId;
-    std::string                           trace;
-    int                                   meshSweepIndex;
+    Type                                  type{Type::NotFound};
+    bool                                  isLocal{false};
+    tarch::la::Vector<DIMENSIONS, double> vertexX{};
+    tarch::la::Vector<DIMENSIONS, double> previousParticleX{};
+    tarch::la::Vector<DIMENSIONS, double> vertexH{};
+    int                                   treeId{-1};
+    std::string                           trace{};
+    int                                   meshSweepIndex{-1};
 
-    /**
-     * Construct an event where you can specify all the fields.
-     */
     Event(
       Type                                         type_,
       bool                                         isLocal_,
@@ -47,10 +42,6 @@ namespace peano4::particles::assignmentchecks::internal {
       int                                          meshSweepIndex_
     );
 
-    /**
-     * Construct an event which identifies a vertex assignment or the
-     * removal from a vertex.
-     */
     Event(
       Type                                         type_,
       bool                                         isLocal_,
@@ -61,12 +52,6 @@ namespace peano4::particles::assignmentchecks::internal {
       const std::string&                           trace_
     );
 
-    /**
-     * Construct a move event
-     *
-     * This event should always be tied to an identifier in the global map
-     * which uses the new position as key.
-     */
     Event(
       Type                                         type_,
       const tarch::la::Vector<DIMENSIONS, double>& vertexX_,
@@ -76,18 +61,10 @@ namespace peano4::particles::assignmentchecks::internal {
       const std::string&                           trace_
     );
 
-    /**
-     * Construct an event that identifies the association to the sieve set
-     * or an erase.
-     */
     Event(Type type_, bool isLocal_, int treeId_, const std::string& trace_);
 
-    /**
-     * Construct an invalid event. Is used as return value if no data is
-     * found in the database.
-     */
     Event(Type type_);
 
-    std::string toString() const;
+    [[nodiscard]] std::string toString() const;
   };
-} // namespace peano4::particles::assignmentchecks::internal
+} // namespace peano4::particles::assignmentchecks

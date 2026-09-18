@@ -1,9 +1,9 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 from .AbstractADERDGActionSet import AbstractADERDGActionSet
-from ..kernels.DGMatrices import create_triadic_transfer_matrices
 
 from exahype2.solvers.LagrangeBasis import render_tensor_1
+from exahype2.solvers.MathUtils import MathUtils
 
 import jinja2
 import peano4.solversteps
@@ -27,30 +27,16 @@ class AdaptiveMeshFaceCoupling(AbstractADERDGActionSet):
         from exahype2.solvers.aderdg.ADERDG import Polynomials
 
         number_of_dofs_per_axis = solver._order + 1
-        prolongation, restriction = create_triadic_transfer_matrices(
-            (
-                "lobatto"
-                if solver._polynomials is Polynomials.Gauss_Lobatto
-                else "legendre"
-            ),
-            number_of_dofs_per_axis,
-        )
-        # The transfer kernels read both operators input-major: The prolongation
-        # by coarse node, the restriction by fine node.
-        self._prolongation_matrices = [
-            render_tensor_1([value for row in matrix for value in row])
-            for matrix in prolongation
-        ]
-        self._restriction_matrices = [
-            render_tensor_1(
-                [
-                    matrix[coarse][fine]
-                    for fine in range(number_of_dofs_per_axis)
-                    for coarse in range(number_of_dofs_per_axis)
-                ]
-            )
-            for matrix in restriction
-        ]
+        if solver._polynomials is Polynomials.Gauss_Lobatto:
+            weights, nodes = MathUtils.getGaussLobatto(number_of_dofs_per_axis)
+            nodes = nodes[::-1]
+        else:
+            weights, nodes = MathUtils.getGaussLegendre(number_of_dofs_per_axis)
+        # The transfer matrices follow from the nodes and weights of the basis,
+        # so the generated code derives them for the subdivision factor of the
+        # space-filling curve that the build selects.
+        self._quadrature_nodes = render_tensor_1(nodes)
+        self._quadrature_weights = render_tensor_1(weights)
 
         self._Template_TouchFaceFirstTime = """
   if ({{DELETE_GUARD}}) {
@@ -72,23 +58,18 @@ class AdaptiveMeshFaceCoupling(AbstractADERDGActionSet):
     const auto facePosition =
       marker.getSelectedFaceNumber() < DIMENSIONS ? 0 : 1;
 
-    constexpr int NumberOfDofsPerAxis  = {{ORDER}} + 1;
     constexpr int FluxElementsPerFace  = facedata::{{SOLVER_NAME}}QFluxEstimates::Cardinality / 2;
     constexpr int BasisElementsPerFace = facedata::{{SOLVER_NAME}}QEstimates::Cardinality / 2;
-    static constexpr double ProlongationMatrix1D[3][NumberOfDofsPerAxis * NumberOfDofsPerAxis] = {
-      {{PROLONGATION_MATRIX_0}},
-      {{PROLONGATION_MATRIX_1}},
-      {{PROLONGATION_MATRIX_2}}
-    };
 
     if (not marker.isInteriorFaceWithinPatch()) {
       // The fine cells supply one half of the face only, so the coarse neighbour's
       // estimates and fluxes fill the other half here.
-      const auto subfacePosition = marker.getRelativePositionWithinFatherFace();
+      const auto    subfacePosition = marker.getRelativePositionWithinFatherFace();
       const double* prolongationMatrixPerAxis[DIMENSIONS - 1];
       for (int tangentialAxis = 0; tangentialAxis < DIMENSIONS - 1; tangentialAxis++) {
         prolongationMatrixPerAxis[tangentialAxis] =
-          ProlongationMatrix1D[subfacePosition(tangentialAxis)];
+          ProlongationMatrix1D.data()
+          + subfacePosition(tangentialAxis) * EntriesPerTransferMatrix;
       }
       ::exahype2::amr::interpolateFaceFromCoarse(
         fineGridFace{{SOLVER_NAME}}QEstimates.data() + facePosition * BasisElementsPerFace,
@@ -123,7 +104,8 @@ class AdaptiveMeshFaceCoupling(AbstractADERDGActionSet):
 #if DIMENSIONS == 2
     const auto subfaceIndex = subfacePosition(0);
 #else
-    const auto subfaceIndex = subfacePosition(1) * 3 + subfacePosition(0);
+    const auto subfaceIndex =
+      subfacePosition(1) * peano4::sfc::ActiveCurve::SubdivisionFactor + subfacePosition(0);
 #endif
     _fluxRestrictionStage.stage(
       coarseGridFaces{{SOLVER_NAME}}QFluxEstimates(marker.getSelectedFaceNumber()).data()
@@ -137,24 +119,19 @@ class AdaptiveMeshFaceCoupling(AbstractADERDGActionSet):
 
         self._Template_TouchFaceLastTime = """
   if ({{RESTRICT_GUARD}}) {
-    constexpr int NumberOfDofsPerAxis = {{ORDER}} + 1;
     constexpr int FluxElementsPerFace = facedata::{{SOLVER_NAME}}QFluxEstimates::Cardinality / 2;
-    constexpr int NumberOfSubfaces = DIMENSIONS == 2 ? 3 : 9;
-    static constexpr double RestrictionMatrix1D[3][NumberOfDofsPerAxis * NumberOfDofsPerAxis] = {
-      {{RESTRICTION_MATRIX_0}},
-      {{RESTRICTION_MATRIX_1}},
-      {{RESTRICTION_MATRIX_2}}
-    };
+    constexpr int NumberOfSubfaces =
+      peano4::Power<peano4::sfc::ActiveCurve::SubdivisionFactor, DIMENSIONS - 1>;
 
     for (int faceSide = 0; faceSide < 2; faceSide++) {
       auto* const restrictedFluxHalf =
         fineGridFace{{SOLVER_NAME}}QFluxEstimates.data() + faceSide * FluxElementsPerFace;
       if (_fluxRestrictionStage.hasFrame(restrictedFluxHalf)) {
-        const double* restrictionMatrixPerInterval[3] = {
-          RestrictionMatrix1D[0],
-          RestrictionMatrix1D[1],
-          RestrictionMatrix1D[2]
-        };
+        const double* restrictionMatrixPerInterval[peano4::sfc::ActiveCurve::SubdivisionFactor];
+        for (int interval = 0; interval < peano4::sfc::ActiveCurve::SubdivisionFactor; interval++) {
+          restrictionMatrixPerInterval[interval] =
+            RestrictionMatrix1D.data() + interval * EntriesPerTransferMatrix;
+        }
         const {{CORRECTOR_COMPUTATION_PRECISION}}* stagedSubfaces[NumberOfSubfaces];
         for (int subface = 0; subface < NumberOfSubfaces; subface++) {
           stagedSubfaces[subface] = _fluxRestrictionStage.hasChild(restrictedFluxHalf, subface)
@@ -181,7 +158,7 @@ class AdaptiveMeshFaceCoupling(AbstractADERDGActionSet):
         self._Template_SolveRiemannProblemsOnHangingFaces = """
   if ({{SOLVE_GUARD}}) {
     auto hasHangingFace = false;
-    for (int faceNumber = 0; faceNumber < TWO_TIMES_D; faceNumber++) {
+    for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
       hasHangingFace = hasHangingFace
         or fineGridFaces{{SOLVER_NAME}}FaceLabel(faceNumber).getIsHanging();
     }
@@ -215,11 +192,11 @@ class AdaptiveMeshFaceCoupling(AbstractADERDGActionSet):
 
       // The persistent faces keep the estimates the previous sweep projected, so they
       // receive scratch targets; only the hanging faces' own halves are written.
-      alignas(PEANO_WITH_ALIGNMENT) {{CORRECTOR_COMPUTATION_PRECISION}} estimatesScratch[TWO_TIMES_D][BasisElementsPerFace];
-      alignas(PEANO_WITH_ALIGNMENT) {{CORRECTOR_COMPUTATION_PRECISION}} fluxesScratch[TWO_TIMES_D][FluxElementsPerFace];
-      {{CORRECTOR_COMPUTATION_PRECISION}}* stateEstimates[TWO_TIMES_D];
-      {{CORRECTOR_COMPUTATION_PRECISION}}* fluxEstimates[TWO_TIMES_D];
-      for (int faceNumber = 0; faceNumber < TWO_TIMES_D; faceNumber++) {
+      alignas(PEANO_WITH_ALIGNMENT) {{CORRECTOR_COMPUTATION_PRECISION}} estimatesScratch[peano4::FacesPerCell][BasisElementsPerFace];
+      alignas(PEANO_WITH_ALIGNMENT) {{CORRECTOR_COMPUTATION_PRECISION}} fluxesScratch[peano4::FacesPerCell][FluxElementsPerFace];
+      {{CORRECTOR_COMPUTATION_PRECISION}}* stateEstimates[peano4::FacesPerCell];
+      {{CORRECTOR_COMPUTATION_PRECISION}}* fluxEstimates[peano4::FacesPerCell];
+      for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
         const auto isHangingFace =
           fineGridFaces{{SOLVER_NAME}}FaceLabel(faceNumber).getIsHanging();
         const auto ownHalfEstimates =
@@ -248,7 +225,7 @@ class AdaptiveMeshFaceCoupling(AbstractADERDGActionSet):
       }
 
       {{COMPUTE_TIME_STEP_SIZE}}
-      for (int hangingFace = 0; hangingFace < TWO_TIMES_D; hangingFace++) {
+      for (int hangingFace = 0; hangingFace < peano4::FacesPerCell; hangingFace++) {
         if (fineGridFaces{{SOLVER_NAME}}FaceLabel(hangingFace).getIsHanging()) {
           auto* const leftFluxEstimates =
             fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(hangingFace).data();
@@ -292,8 +269,70 @@ class AdaptiveMeshFaceCoupling(AbstractADERDGActionSet):
             super().get_attributes()
             + f"""
     ::exahype2::amr::ChildDataStage<{self._solver._corrector_computation_precision}>
-      _fluxRestrictionStage{{DIMENSIONS == 2 ? 3 : 9, {values_per_subface}}};
+      _fluxRestrictionStage{{
+        peano4::Power<peano4::sfc::ActiveCurve::SubdivisionFactor, DIMENSIONS - 1>,
+        {values_per_subface}}};
 """
+        )
+
+    def get_static_initialisations(self, full_qualified_classname):
+        dictionary = {}
+        self._solver._init_dictionary_with_default_parameters(dictionary)
+        self._solver.add_entries_to_text_replacement_dictionary(dictionary)
+        dictionary["QUADRATURE_NODES_1D"] = self._quadrature_nodes
+        dictionary["QUADRATURE_WEIGHTS_1D"] = self._quadrature_weights
+        return (
+            super().get_static_initialisations(full_qualified_classname)
+            + jinja2.Template(
+                """
+namespace {
+  constexpr int NumberOfDofsPerAxis      = {{ORDER}} + 1;
+  constexpr int EntriesPerTransferMatrix = NumberOfDofsPerAxis * NumberOfDofsPerAxis;
+
+  constexpr double QuadratureNodes1D[NumberOfDofsPerAxis]   = {{QUADRATURE_NODES_1D}};
+  constexpr double QuadratureWeights1D[NumberOfDofsPerAxis] = {{QUADRATURE_WEIGHTS_1D}};
+
+  /**
+   * Returns the transfer matrices with the two node indices of every child
+   * block swapped, which is the layout the transfer routines read.
+   */
+  constexpr ::exahype2::dg::AMRMatrices1D<NumberOfDofsPerAxis> transposePerChild(
+    const ::exahype2::dg::AMRMatrices1D<NumberOfDofsPerAxis>& matrices
+  ) {
+    ::exahype2::dg::AMRMatrices1D<NumberOfDofsPerAxis> result{};
+    for (int child = 0; child < peano4::sfc::ActiveCurve::SubdivisionFactor; child++) {
+      for (int row = 0; row < NumberOfDofsPerAxis; row++) {
+        for (int column = 0; column < NumberOfDofsPerAxis; column++) {
+          result[(child * NumberOfDofsPerAxis + column) * NumberOfDofsPerAxis + row] =
+            matrices[(child * NumberOfDofsPerAxis + row) * NumberOfDofsPerAxis + column];
+        }
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Entry [child][coarse * NumberOfDofsPerAxis + fine] holds the coarse shape
+   * function coarse at the node fine of the child interval child.
+   */
+  constexpr auto ProlongationMatrix1D = transposePerChild(
+    ::exahype2::dg::interpolationMatrix1D<NumberOfDofsPerAxis>(QuadratureNodes1D)
+  );
+
+  /**
+   * Entry [child][fine * NumberOfDofsPerAxis + coarse] holds the mass-lumped
+   * projection of the node fine of the child interval child onto the coarse
+   * shape function coarse.
+   */
+  constexpr auto RestrictionMatrix1D = transposePerChild(
+    ::exahype2::dg::weightedRestrictionMatrix1D<NumberOfDofsPerAxis>(
+      QuadratureNodes1D,
+      QuadratureWeights1D
+    )
+  );
+} // namespace
+"""
+            ).render(**dictionary)
         )
 
     def get_body_of_operation(self, operation_name):
@@ -301,13 +340,6 @@ class AdaptiveMeshFaceCoupling(AbstractADERDGActionSet):
         dictionary = {}
         self._solver._init_dictionary_with_default_parameters(dictionary)
         self._solver.add_entries_to_text_replacement_dictionary(dictionary)
-        for interval in range(3):
-            dictionary[f"PROLONGATION_MATRIX_{interval}"] = self._prolongation_matrices[
-                interval
-            ]
-            dictionary[f"RESTRICTION_MATRIX_{interval}"] = self._restriction_matrices[
-                interval
-            ]
 
         if (
             operation_name
@@ -366,6 +398,8 @@ class AdaptiveMeshFaceCoupling(AbstractADERDGActionSet):
 #include "tarch/CompilerSpecificSettings.h"
 #include "exahype2/amr/AMRRoutines.h"
 #include "exahype2/amr/ChildDataStage.h"
+#include "exahype2/dg/AMRMatrices.h"
+#include "peano4/sfc/ActiveCurve.h"
 """
         )
 
@@ -417,18 +451,13 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
 
         self._Template_CreateCell = (
             """
-  constexpr int NumberOfDofsPerAxis = {{ORDER}} + 1;
   constexpr int NumberOfData = {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-  static constexpr double ProlongationMatrix1D[3][NumberOfDofsPerAxis * NumberOfDofsPerAxis] = {
-    {{PROLONGATION_MATRIX_0}},
-    {{PROLONGATION_MATRIX_1}},
-    {{PROLONGATION_MATRIX_2}}
-  };
 
   const double* prolongationMatrixPerAxis[DIMENSIONS];
   for (int axis = 0; axis < DIMENSIONS; axis++) {
     prolongationMatrixPerAxis[axis] =
-      ProlongationMatrix1D[marker.getRelativePositionWithinFatherCell()(axis)];
+      ProlongationMatrix1D.data()
+      + marker.getRelativePositionWithinFatherCell()(axis) * EntriesPerTransferMatrix;
   }
   ::exahype2::amr::applyTensorProductOrderInvariant(
     fineGridCell{{SOLVER_NAME}}Q.data(),
@@ -475,18 +504,15 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
 
         self._Template_DestroyCell = (
             """
-  constexpr int NumberOfDofsPerAxis = {{ORDER}} + 1;
   constexpr int NumberOfData = {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-  static constexpr double RestrictionMatrix1D[3][NumberOfDofsPerAxis * NumberOfDofsPerAxis] = {
-    {{RESTRICTION_MATRIX_0}},
-    {{RESTRICTION_MATRIX_1}},
-    {{RESTRICTION_MATRIX_2}}
-  };
 
   // The children of a coarsening parent restrict together once the whole
   // sibling set is staged, so the summation order cannot depend on the order
   // in which the traversal destroys them.
-  const auto childIndex = peano4::dLinearised(marker.getRelativePositionWithinFatherCell(), 3);
+  const auto childIndex = peano4::dLinearised(
+    marker.getRelativePositionWithinFatherCell(),
+    peano4::sfc::ActiveCurve::SubdivisionFactor
+  );
   const auto siblingSetComplete = _solutionRestrictionStage.stage(
     coarseGridCell{{SOLVER_NAME}}Q.data(),
     childIndex,
@@ -501,13 +527,13 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
     fineGridCell{{SOLVER_NAME}}Q_old.data()
   );
   if (siblingSetComplete) {
-    const double* restrictionMatrixPerInterval[3] = {
-      RestrictionMatrix1D[0],
-      RestrictionMatrix1D[1],
-      RestrictionMatrix1D[2]
-    };
-    const {{SOLUTION_STORAGE_PRECISION}}* stagedChildren[THREE_POWER_D];
-    for (int child = 0; child < THREE_POWER_D; child++) {
+    const double* restrictionMatrixPerInterval[peano4::sfc::ActiveCurve::SubdivisionFactor];
+    for (int interval = 0; interval < peano4::sfc::ActiveCurve::SubdivisionFactor; interval++) {
+      restrictionMatrixPerInterval[interval] =
+        RestrictionMatrix1D.data() + interval * EntriesPerTransferMatrix;
+    }
+    const {{SOLUTION_STORAGE_PRECISION}}* stagedChildren[peano4::sfc::ActiveCurve::ChildrenPerCell];
+    for (int child = 0; child < peano4::sfc::ActiveCurve::ChildrenPerCell; child++) {
       stagedChildren[child] =
         _solutionRestrictionStage.child(coarseGridCell{{SOLVER_NAME}}Q.data(), child);
     }
@@ -519,7 +545,7 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
       NumberOfData
     );
     _solutionRestrictionStage.discard(coarseGridCell{{SOLVER_NAME}}Q.data());
-    for (int child = 0; child < THREE_POWER_D; child++) {
+    for (int child = 0; child < peano4::sfc::ActiveCurve::ChildrenPerCell; child++) {
       stagedChildren[child] =
         _previousSolutionRestrictionStage.child(coarseGridCell{{SOLVER_NAME}}Q_old.data(), child);
     }
@@ -537,7 +563,7 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
   // projector runs once every committed grid-control event has been realised.
   // Flagging the parent's face halves here carries the pending re-derivation to
   // that point.
-  for (int faceNumber = 0; faceNumber < TWO_TIMES_D; faceNumber++) {
+  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
     const auto ownSide = faceNumber < DIMENSIONS ? 1 : 0;
     coarseGridFaces{{SOLVER_NAME}}FaceLabel(faceNumber).setRequiresDataTransfer(
       ownSide,
@@ -570,7 +596,7 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
   // so reconstructing the preceding prediction here would discard the accepted
   // finite-volume correction.
   if ({{PROJECT_GUARD}}) {
-    for (int faceNumber = 0; faceNumber < TWO_TIMES_D; faceNumber++) {
+    for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
       const auto ownSide = faceNumber < DIMENSIONS ? 1 : 0;
       if (not fineGridFaces{{SOLVER_NAME}}FaceLabel(faceNumber).getIsHanging()) {
         fineGridFaces{{SOLVER_NAME}}FaceLabel(faceNumber).setRequiresDataTransfer(
@@ -582,7 +608,7 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
   }
 {% else %}
   auto requiresProjection = marker.hasBeenRefined() and not marker.willBeRefined();
-  for (int faceNumber = 0; faceNumber < TWO_TIMES_D; faceNumber++) {
+  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
     const auto ownSide = faceNumber < DIMENSIONS ? 1 : 0;
     requiresProjection = requiresProjection
       or (not fineGridFaces{{SOLVER_NAME}}FaceLabel(faceNumber).getIsHanging()
@@ -616,7 +642,7 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
       fineGridCell{{UNKNOWN_IDENTIFIER}}_old.data();
     {{PREPROCESS_RECONSTRUCTED_PATCH}}
 
-    {{CORRECTOR_COMPUTATION_PRECISION}}* stateEstimates[TWO_TIMES_D] = {
+    {{CORRECTOR_COMPUTATION_PRECISION}}* stateEstimates[peano4::FacesPerCell] = {
       fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(0).data() + BasisElementsPerFace,
       fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(1).data() + BasisElementsPerFace,
 #if DIMENSIONS==3
@@ -629,7 +655,7 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
 #endif
     };
 
-    {{CORRECTOR_COMPUTATION_PRECISION}}* fluxEstimates[TWO_TIMES_D] = {
+    {{CORRECTOR_COMPUTATION_PRECISION}}* fluxEstimates[peano4::FacesPerCell] = {
       fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(0).data() + FluxElementsPerFace,
       fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(1).data() + FluxElementsPerFace,
 #if DIMENSIONS==3
@@ -644,7 +670,7 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
 
     {{SPACE_TIME_PREDICTOR_CALL}}
 
-    for (int faceNumber = 0; faceNumber < TWO_TIMES_D; faceNumber++) {
+    for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
       const auto ownSide = faceNumber < DIMENSIONS ? 1 : 0;
       if (not fineGridFaces{{SOLVER_NAME}}FaceLabel(faceNumber).getIsHanging()) {
         fineGridFaces{{SOLVER_NAME}}FaceLabel(faceNumber).setRequiresDataTransfer(
@@ -666,13 +692,6 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
         dictionary = {}
         self._solver._init_dictionary_with_default_parameters(dictionary)
         self._solver.add_entries_to_text_replacement_dictionary(dictionary)
-        for interval in range(3):
-            dictionary[f"PROLONGATION_MATRIX_{interval}"] = self._prolongation_matrices[
-                interval
-            ]
-            dictionary[f"RESTRICTION_MATRIX_{interval}"] = self._restriction_matrices[
-                interval
-            ]
         if (
             operation_name
             == peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_LAST_TIME
@@ -701,9 +720,9 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
             super().get_attributes()
             + f"""
     ::exahype2::amr::ChildDataStage<{self._solver._solution_persistent_storage_precision}>
-      _solutionRestrictionStage{{THREE_POWER_D, {values_per_child}}};
+      _solutionRestrictionStage{{peano4::sfc::ActiveCurve::ChildrenPerCell, {values_per_child}}};
     ::exahype2::amr::ChildDataStage<{self._solver._solution_persistent_storage_precision}>
-      _previousSolutionRestrictionStage{{THREE_POWER_D, {values_per_child}}};
+      _previousSolutionRestrictionStage{{peano4::sfc::ActiveCurve::ChildrenPerCell, {values_per_child}}};
 """
         )
 
@@ -715,6 +734,6 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
             super().get_includes()
             + """
 #include "exahype2/RefinementControlService.h"
-#include "peano4/Globals.h"
+#include "peano4/Constants.h"
 """
         )

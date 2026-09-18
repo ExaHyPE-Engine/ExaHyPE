@@ -44,7 +44,6 @@ fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
         mu="10.0",  # Central-gravity parameter G M.
         gravity_magnitude="1",  # Constant gravity magnitude in m/s².
         dynamic_viscosity="1",  # Fluid dynamic viscosity in Pa s.
-        fluid_density="1",  # Default fluid density in kg/m³.
     ):
         self.tracerDict = {
             "PARTICLE": particle_set.particle_model.name,
@@ -80,7 +79,6 @@ fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
             "MU": mu,
             "GRAVITY_MAGNITUDE": gravity_magnitude,
             "DYNAMIC_VISCOSITY": dynamic_viscosity,
-            "FLUID_DENSITY": fluid_density,
         }
         self.tracerDict["UPDATE_KERNEL_ARGUMENTS"] = (
             jinja2.Template(update_kernel_arguments).render(**self.tracerDict).strip()
@@ -145,8 +143,7 @@ fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
       {{FORCE_METHOD}},
       {{MU}},
       {{GRAVITY_MAGNITUDE}},
-      {{DYNAMIC_VISCOSITY}},
-      {{FLUID_DENSITY}}
+      {{DYNAMIC_VISCOSITY}}
     );
   }
 """

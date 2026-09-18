@@ -8,9 +8,9 @@
 
 namespace tarch::accelerator {
   template <typename Body>
-  inline void run_in_parallel_region(Body&& body) {
+  inline void runInParallelRegion(Body&& body) {
 #if defined(_OPENMP)
-#pragma omp parallel if (!omp_in_parallel())
+#pragma omp parallel default(none) shared(body) if (not omp_in_parallel())
     body();
 #else
     body();

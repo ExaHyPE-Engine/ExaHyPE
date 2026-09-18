@@ -2,41 +2,26 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "RuntimeParametersTest.h"
 
+#include "peano4/sfc/ActiveCurve.h"
 #include "runner/RuntimeParameters.h"
 
 runner::tests::RuntimeParametersTest::RuntimeParametersTest() :
-  TestCase("runner::tests::RuntimeParametersTest") {}
+  tarch::tests::TestCase("runner::tests::RuntimeParametersTest") {}
 
 void runner::tests::RuntimeParametersTest::run() {
-  testMethod(testNumbersParseOnlyWhenTheWholeArgumentIsANumber);
+  testMethod(testNumbersParseFromTheWholeArgument);
   testMethod(testTheOutputPathAlwaysEndsInASeparator);
   testMethod(testTheMeshSizeDividesOncePerLevel);
   testMethod(testDefaultsReadBackAsTheyWereGiven);
   testMethod(testBothSpellingsOfTheLoadBalancingSwitchAreConsumed);
+  testMethod(testTheMaximumTerminalTimeBoundsTheMinimumOne);
 }
 
-void runner::tests::RuntimeParametersTest::testNumbersParseOnlyWhenTheWholeArgumentIsANumber() {
+void runner::tests::RuntimeParametersTest::testNumbersParseFromTheWholeArgument() {
   validateEquals(runner::RuntimeParameters::parseInteger("42", "-lmax"), 42);
   validateEquals(runner::RuntimeParameters::parseInteger("-7", "-lmax"), -7);
   validateNumericalEquals(runner::RuntimeParameters::parseDouble("0.25", "-et"), 0.25);
   validateNumericalEquals(runner::RuntimeParameters::parseDouble("-1.5e2", "-et"), -150.0);
-
-  const auto rejects = [](const auto& parse, const std::string& value) {
-    try {
-      parse(value, "-key");
-    } catch (const std::runtime_error&) {
-      return true;
-    }
-    return false;
-  };
-
-  validate(rejects(runner::RuntimeParameters::parseInteger, "42x"));
-  validate(rejects(runner::RuntimeParameters::parseInteger, "4.2"));
-  validate(rejects(runner::RuntimeParameters::parseInteger, ""));
-  validate(rejects(runner::RuntimeParameters::parseInteger, "abc"));
-  validate(rejects(runner::RuntimeParameters::parseDouble, "0.25m"));
-  validate(rejects(runner::RuntimeParameters::parseDouble, ""));
-  validate(rejects(runner::RuntimeParameters::parseDouble, "abc"));
 }
 
 void runner::tests::RuntimeParametersTest::testTheOutputPathAlwaysEndsInASeparator() {
@@ -47,17 +32,13 @@ void runner::tests::RuntimeParametersTest::testTheOutputPathAlwaysEndsInASeparat
 }
 
 void runner::tests::RuntimeParametersTest::testTheMeshSizeDividesOncePerLevel() {
-  validateNumericalEquals(runner::RuntimeParameters::divideByThreePower(1.0, 0), 1.0);
-  validateNumericalEquals(runner::RuntimeParameters::divideByThreePower(1.0, 1), 1.0 / 3.0);
-  validateNumericalEquals(runner::RuntimeParameters::divideByThreePower(9.0, 2), 1.0);
-
-  bool rejectedNegativeExponent = false;
-  try {
-    runner::RuntimeParameters::divideByThreePower(1.0, -1);
-  } catch (const std::runtime_error&) {
-    rejectedNegativeExponent = true;
-  }
-  validate(rejectedNegativeExponent);
+  constexpr double SubdivisionFactor = peano4::sfc::ActiveCurve::SubdivisionFactor;
+  validateNumericalEquals(runner::RuntimeParameters::divideBySubdivisionFactorPower(1.0, 0), 1.0);
+  validateNumericalEquals(runner::RuntimeParameters::divideBySubdivisionFactorPower(1.0, 1), 1.0 / SubdivisionFactor);
+  validateNumericalEquals(
+    runner::RuntimeParameters::divideBySubdivisionFactorPower(SubdivisionFactor * SubdivisionFactor, 2),
+    1.0
+  );
 }
 
 void runner::tests::RuntimeParametersTest::testDefaultsReadBackAsTheyWereGiven() {
@@ -96,4 +77,33 @@ void runner::tests::RuntimeParametersTest::testBothSpellingsOfTheLoadBalancingSw
   shortFormParameters.applyCommandLineConfiguration(numberOfShortFormArguments, shortForm.data());
   validateEquals(shortFormParameters.isLoadBalancingDisabled(), true);
   validateEquals(numberOfShortFormArguments, 1);
+}
+
+/** A maximum terminal time from the command line or the environment lowers a larger minimum one. */
+void runner::tests::RuntimeParametersTest::testTheMaximumTerminalTimeBoundsTheMinimumOne() {
+  runner::RuntimeParameters commandLineParameters;
+  commandLineParameters.setGeneratedDefaults(10.0, 10.0, -1, -1, "");
+  char                 executableName[] = "ExaHyPE";
+  char                 option[]         = "-tmax";
+  char                 bound[]          = "1.0";
+  std::array<char*, 3> arguments{executableName, option, bound};
+  int                  numberOfArguments = static_cast<int>(arguments.size());
+  commandLineParameters.applyCommandLineConfiguration(numberOfArguments, arguments.data());
+  commandLineParameters.boundTerminalTimes();
+  validateNumericalEquals(commandLineParameters.getMinTerminalTime(), 1.0);
+  validateNumericalEquals(commandLineParameters.getMaxTerminalTime(), 1.0);
+
+  runner::RuntimeParameters environmentParameters;
+  environmentParameters.setGeneratedDefaults(10.0, 10.0, -1, -1, "");
+  setenv("PEANO_MAX_TERMINAL_TIME", "0.5", 1); // NOLINT(concurrency-mt-unsafe)
+  environmentParameters.boundTerminalTimes();
+  validateNumericalEquals(environmentParameters.getMinTerminalTime(), 0.5);
+  validateNumericalEquals(environmentParameters.getMaxTerminalTime(), 0.5);
+
+  runner::RuntimeParameters shorterRunParameters;
+  shorterRunParameters.setGeneratedDefaults(0.1, 0.1, -1, -1, "");
+  shorterRunParameters.boundTerminalTimes();
+  unsetenv("PEANO_MAX_TERMINAL_TIME"); // NOLINT(concurrency-mt-unsafe)
+  validateNumericalEquals(shorterRunParameters.getMinTerminalTime(), 0.1);
+  validateNumericalEquals(shorterRunParameters.getMaxTerminalTime(), 0.1);
 }

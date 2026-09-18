@@ -112,13 +112,15 @@ class DynamicAMR(AbstractLimiterActionSet):
   // The children of a coarsening parent restrict together once the whole
   // sibling set is staged, so the summation order cannot depend on the order
   // in which the traversal destroys them.
-  const auto childIndex = peano4::dLinearised(marker.getRelativePositionWithinFatherCell(), 3);
+  const auto childIndex = peano4::dLinearised(
+    marker.getRelativePositionWithinFatherCell(), peano4::sfc::ActiveCurve::SubdivisionFactor
+  );
   const auto siblingSetComplete =
     _subcellRestrictionStage.stage(coarseGridCell{{SOLVER_NAME}}Subcell.data(), childIndex, subcellSource);
   _subcellOldRestrictionStage.stage(coarseGridCell{{SOLVER_NAME}}SubcellOld.data(), childIndex, subcellOldSource);
   if (siblingSetComplete) {
-    const {{SOLUTION_STORAGE_PRECISION}}* stagedChildren[THREE_POWER_D];
-    for (int child = 0; child < THREE_POWER_D; child++) {
+    const {{SOLUTION_STORAGE_PRECISION}}* stagedChildren[peano4::sfc::ActiveCurve::ChildrenPerCell];
+    for (int child = 0; child < peano4::sfc::ActiveCurve::ChildrenPerCell; child++) {
       stagedChildren[child] = _subcellRestrictionStage.child(coarseGridCell{{SOLVER_NAME}}Subcell.data(), child);
     }
     ::exahype2::amr::restrictCellFromChildren(
@@ -128,7 +130,7 @@ class DynamicAMR(AbstractLimiterActionSet):
       NumberOfData
     );
     _subcellRestrictionStage.discard(coarseGridCell{{SOLVER_NAME}}Subcell.data());
-    for (int child = 0; child < THREE_POWER_D; child++) {
+    for (int child = 0; child < peano4::sfc::ActiveCurve::ChildrenPerCell; child++) {
       stagedChildren[child] = _subcellOldRestrictionStage.child(coarseGridCell{{SOLVER_NAME}}SubcellOld.data(), child);
     }
     ::exahype2::amr::restrictCellFromChildren(
@@ -206,9 +208,9 @@ class DynamicAMR(AbstractLimiterActionSet):
             super().get_attributes()
             + f"""
     ::exahype2::amr::ChildDataStage<{precision}>
-      _subcellRestrictionStage{{THREE_POWER_D, {values_per_child}}};
+      _subcellRestrictionStage{{peano4::sfc::ActiveCurve::ChildrenPerCell, {values_per_child}}};
     ::exahype2::amr::ChildDataStage<{precision}>
-      _subcellOldRestrictionStage{{THREE_POWER_D, {values_per_child}}};
+      _subcellOldRestrictionStage{{peano4::sfc::ActiveCurve::ChildrenPerCell, {values_per_child}}};
 """
         )
 
@@ -217,7 +219,8 @@ class DynamicAMR(AbstractLimiterActionSet):
             super().get_includes()
             + """
 #include "exahype2/dg/LimiterStatus.h"
-#include "peano4/Globals.h"
+#include "peano4/Constants.h"
+#include "peano4/sfc/ActiveCurve.h"
 #include "exahype2/amr/AMRRoutines.h"
 #include "exahype2/amr/ChildDataStage.h"
 """

@@ -55,22 +55,23 @@ class PatchPlotter(BasePlotter):
 
         if representation not in ("nodal", "cell"):
             raise ValueError(
-                "PatchPlotter representation must be 'nodal' or 'cell', got "
-                + str(representation)
+                'The representation must be "nodal" or "cell" and is "{}".'.format(
+                    representation
+                )
             )
         if any(dimension != patch.dim[0] for dimension in patch.dim):
-            raise ValueError("PatchPlotter requires the same patch extent in every dimension")
+            raise ValueError("The patch must span the same extent in every dimension.")
 
         if alternative_data_guard and representation != "nodal":
             raise ValueError(
-                "An alternative data source requires the nodal representation"
+                "An alternative data source requires the nodal representation."
             )
         if alternative_data_guard and (
             not alternative_data_access or alternative_data_dofs_per_axis <= 0
         ):
             raise ValueError(
                 "An alternative data source requires its data access and a "
-                "positive number of degrees of freedom per axis"
+                "positive number of degrees of freedom per axis."
             )
         self._dictionary["ALTERNATIVE_DATA_GUARD"] = alternative_data_guard
         self._dictionary["ALTERNATIVE_DATA_ACCESS"] = alternative_data_access
@@ -93,15 +94,21 @@ class PatchPlotter(BasePlotter):
 
         if representation == "nodal":
             if mapping is None or len(mapping) == 0:
-                raise ValueError("The nodal representation requires mapping coordinates")
+                raise ValueError(
+                    "The nodal representation requires mapping coordinates."
+                )
             mapping_2D = []
             mapping_3D = []
             for point_index, point in enumerate(mapping):
                 if len(point) < 2:
-                    raise ValueError("Each mapping point requires at least two coordinates")
+                    raise ValueError(
+                        "Each mapping point needs at least two coordinates."
+                    )
                 if point_index < degrees_of_freedom_per_axis**2:
                     mapping_2D.extend((point[0], point[1]))
-                mapping_3D.extend((point[0], point[1], point[2] if len(point) > 2 else 0.0))
+                mapping_3D.extend(
+                    (point[0], point[1], point[2] if len(point) > 2 else 0.0)
+                )
             self._dictionary["MAPPING_2D"] = (
                 "{" + ", ".join(str(value) for value in mapping_2D) + "}"
             )
@@ -113,7 +120,9 @@ class PatchPlotter(BasePlotter):
         return __name__.replace(".py", "").replace(".", "_")
 
     def get_body_of_operation(self, operation_name):
-        self._dictionary["ADDITIONAL_CELL_DATA_PLOTS"] = self.additional_cell_data_plots()
+        self._dictionary["ADDITIONAL_CELL_DATA_PLOTS"] = (
+            self.additional_cell_data_plots()
+        )
         if self._representation == "nodal":
             return self._get_body_of_operation_nodal(operation_name)
         return self._get_body_of_operation_cell(operation_name)
@@ -130,6 +139,9 @@ class PatchPlotter(BasePlotter):
 
   _cellPlotter.reset();
   _cellPlotter = _fileWriter->createCellPlotter(_pieceId);
+
+  _curvePositionPlotter.reset();
+  _curvePositionPlotter = _fileWriter->createCellDataPlotter(_pieceId, "CurvePosition", 1);
 
 {% if DESCRIPTION %}
 {% for name, count in DESCRIPTION.items() %}
@@ -174,6 +186,9 @@ class PatchPlotter(BasePlotter):
     const auto&                  patchSize       = marker.getH();
     const auto                   patchOffset     = marker.getX() - patchSize * 0.5;
     const auto                   refinementLevel = marker.level;
+    const auto                   curvePosition   = peano4::sfc::ActiveCurve::curveParameter(
+      tarch::la::divideComponents(marker.getX() - DomainOffset, DomainSize), refinementLevel
+    );
     std::array<int, TotalPoints> vertexIndices{};
     const auto* const            data = fineGridCell{{NAME}}.data();
 {% if ALTERNATIVE_DATA_GUARD %}
@@ -280,8 +295,9 @@ class PatchPlotter(BasePlotter):
           const int cellIndex = _cellPlotter->plotHexahedron(vertices.data());
 #endif
           _subdomainPlotter->plotCellData(cellIndex, tarch::mpi::Rank::getInstance().getRank());
-          _subtreeTaskPlotter->plotCellData(cellIndex, getSubtreeTask());
+          _subtreeTaskPlotter->plotCellData(cellIndex, getSubtreeId());
           _refinementLevelPlotter->plotCellData(cellIndex, refinementLevel);
+          _curvePositionPlotter->plotCellData(cellIndex, curvePosition);
 {% if ADDITIONAL_CELL_DATA_PLOTS %}
 {{ADDITIONAL_CELL_DATA_PLOTS}}
 {% endif %}
@@ -310,12 +326,16 @@ class PatchPlotter(BasePlotter):
   _cellPlotter.reset();
   _cellPlotter = _fileWriter->createCellPlotter(_pieceId);
 
+  _curvePositionPlotter.reset();
+  _curvePositionPlotter = _fileWriter->createCellDataPlotter(_pieceId, "CurvePosition", 1);
+
 {% if DESCRIPTION %}
 {% for name, count in DESCRIPTION.items() %}
   _{{name}}DataPlotter.reset();
   _{{name}}DataPlotter = _fileWriter->createCellDataPlotter(_pieceId, "{{name}}", {{count}});
 {% endfor %}
 {% else %}
+  _cellDataPlotter.reset();
   _cellDataPlotter = _fileWriter->createCellDataPlotter(_pieceId, "{{NAME}}", {{UNKNOWNS}});
 {% endif %}
 """,
@@ -344,6 +364,9 @@ class PatchPlotter(BasePlotter):
     const auto  patchOffset     = marker.getX() - patchSize * 0.5;
     const auto  refinementLevel = marker.level;
     const auto  cellSize        = patchSize / static_cast<double>({{DOFS_PER_AXIS}});
+    const auto  curvePosition   = peano4::sfc::ActiveCurve::curveParameter(
+      tarch::la::divideComponents(marker.getX() - DomainOffset, DomainSize), refinementLevel
+    );
 
     peano4::dForEach({{DOFS_PER_AXIS}}, [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
       tarch::la::Vector<DIMENSIONS, double> volumeAsDouble;
@@ -416,8 +439,9 @@ class PatchPlotter(BasePlotter):
 {% endif %}
 
       _subdomainPlotter->plotCellData(cellIndex, tarch::mpi::Rank::getInstance().getRank());
-      _subtreeTaskPlotter->plotCellData(cellIndex, getSubtreeTask());
+      _subtreeTaskPlotter->plotCellData(cellIndex, getSubtreeId());
       _refinementLevelPlotter->plotCellData(cellIndex, refinementLevel);
+      _curvePositionPlotter->plotCellData(cellIndex, curvePosition);
 {% if ADDITIONAL_CELL_DATA_PLOTS %}
 {{ADDITIONAL_CELL_DATA_PLOTS}}
 {% endif %}
@@ -429,20 +453,30 @@ class PatchPlotter(BasePlotter):
             ).render(**self._dictionary)
         return result
 
+    def get_includes(self):
+        return (
+            super().get_includes()
+            + """
+#include "Constants.h"
+#include "peano4/sfc/ActiveCurve.h"
+"""
+        )
+
     def get_attributes(self):
         if self._representation == "nodal":
             return (
                 super().get_attributes()
                 + jinja2.Template(
                     """
-  std::unique_ptr<tarch::plotter::FileWriter::CellPlotter>       _cellPlotter;
-  std::unique_ptr<tarch::plotter::FileWriter::VertexPlotter>     _vertexPlotter;
+  std::unique_ptr<tarch::plotter::FileWriter::CellPlotter>       _cellPlotter{};
+  std::unique_ptr<tarch::plotter::FileWriter::VertexPlotter>     _vertexPlotter{};
+  std::unique_ptr<tarch::plotter::FileWriter::CellDataPlotter>   _curvePositionPlotter{};
 {% if DESCRIPTION %}
 {% for name, count in DESCRIPTION.items() %}
-  std::unique_ptr<tarch::plotter::FileWriter::VertexDataPlotter> _{{name}}DataPlotter;
+  std::unique_ptr<tarch::plotter::FileWriter::VertexDataPlotter> _{{name}}DataPlotter{};
 {% endfor %}
 {% else %}
-  std::unique_ptr<tarch::plotter::FileWriter::VertexDataPlotter> _vertexDataPlotter;
+  std::unique_ptr<tarch::plotter::FileWriter::VertexDataPlotter> _vertexDataPlotter{};
 {% endif %}
 """,
                     trim_blocks=True,
@@ -453,14 +487,15 @@ class PatchPlotter(BasePlotter):
             super().get_attributes()
             + jinja2.Template(
                 """
-  std::unique_ptr<tarch::plotter::FileWriter::CellPlotter>     _cellPlotter;
-  std::unique_ptr<tarch::plotter::FileWriter::VertexPlotter>   _vertexPlotter;
+  std::unique_ptr<tarch::plotter::FileWriter::CellPlotter>     _cellPlotter{};
+  std::unique_ptr<tarch::plotter::FileWriter::VertexPlotter>   _vertexPlotter{};
+  std::unique_ptr<tarch::plotter::FileWriter::CellDataPlotter> _curvePositionPlotter{};
 {% if DESCRIPTION %}
 {% for name, count in DESCRIPTION.items() %}
-  std::unique_ptr<tarch::plotter::FileWriter::CellDataPlotter> _{{name}}DataPlotter;
+  std::unique_ptr<tarch::plotter::FileWriter::CellDataPlotter> _{{name}}DataPlotter{};
 {% endfor %}
 {% else %}
-  std::unique_ptr<tarch::plotter::FileWriter::CellDataPlotter> _cellDataPlotter;
+  std::unique_ptr<tarch::plotter::FileWriter::CellDataPlotter> _cellDataPlotter{};
 {% endif %}
 """,
                 trim_blocks=True,

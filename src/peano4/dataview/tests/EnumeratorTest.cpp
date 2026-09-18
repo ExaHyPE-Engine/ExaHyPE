@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "EnumeratorTest.h"
 
+#include "peano4/Constants.h"
 #include "peano4/dataview/FaceEnumerator.h"
 #include "peano4/dataview/VertexEnumerator.h"
 #include "tarch/tests/TestMacros.h"
@@ -30,13 +31,13 @@ void peano4::dataview::tests::EnumeratorTest::testVertexEnumeratorFollowsItsSlot
     pool[index].value = index;
   }
 
-  int slots[TWO_POWER_D];
-  for (int index = 0; index < TWO_POWER_D; index++) {
+  int slots[peano4::VerticesPerCell];
+  for (int index = 0; index < peano4::VerticesPerCell; index++) {
     slots[index] = 15 - 2 * index;
   }
 
   const peano4::dataview::VertexEnumerator<Item> enumerator(pool, slots, 15);
-  for (int index = 0; index < TWO_POWER_D; index++) {
+  for (int index = 0; index < peano4::VerticesPerCell; index++) {
     validateEquals(enumerator(index).value, 15 - 2 * index);
   }
 }
@@ -47,21 +48,21 @@ void peano4::dataview::tests::EnumeratorTest::testFaceEnumeratorFollowsItsSlots(
     pool[index].value = index;
   }
 
-  int slots[TWO_TIMES_D];
-  for (int index = 0; index < TWO_TIMES_D; index++) {
+  int slots[peano4::FacesPerCell];
+  for (int index = 0; index < peano4::FacesPerCell; index++) {
     slots[index] = 2 * index + 1;
   }
 
   const peano4::dataview::FaceEnumerator<Item> enumerator(pool, slots, 15);
-  for (int index = 0; index < TWO_TIMES_D; index++) {
+  for (int index = 0; index < peano4::FacesPerCell; index++) {
     validateEquals(enumerator(index).value, 2 * index + 1);
   }
 }
 
 void peano4::dataview::tests::EnumeratorTest::testEnumeratorWritesThrough() {
   Item pool[16];
-  int  slots[TWO_POWER_D];
-  for (int index = 0; index < TWO_POWER_D; index++) {
+  int  slots[peano4::VerticesPerCell];
+  for (int index = 0; index < peano4::VerticesPerCell; index++) {
     slots[index] = index + 3;
   }
 
@@ -77,17 +78,17 @@ void peano4::dataview::tests::EnumeratorTest::testPositionWithoutEntityReadsTheS
     pool[index].value = index;
   }
 
-  // A cell next to another rank has positions no local entity backs. Their
-  // slots are negative and every one of them resolves to the sentinel.
-  int slots[TWO_TIMES_D];
-  for (int index = 0; index < TWO_TIMES_D; index++) {
+  // A cell next to another rank has positions no local entity backs. The slot
+  // of such a position is negative.
+  int slots[peano4::FacesPerCell];
+  for (int index = 0; index < peano4::FacesPerCell; index++) {
     slots[index] = index == 0 ? 4 : -1;
   }
 
   const peano4::dataview::FaceEnumerator<Item> enumerator(pool, slots, 15);
 
   validateEquals(enumerator(0).value, 4);
-  for (int index = 1; index < TWO_TIMES_D; index++) {
+  for (int index = 1; index < peano4::FacesPerCell; index++) {
     validateEquals(enumerator(index).value, 15);
   }
 }

@@ -25,8 +25,8 @@ template <
 INLINE_METHOD GPU_CALLABLE_METHOD double exahype2::fv::timestepping::SingleStep::apply(
   const StoragePrecision* NOALIAS const        inputPatch,
   StoragePrecision* NOALIAS const              outputPatch,
-  const StoragePrecision* NOALIAS const        faceInputPatches[TWO_TIMES_D],
-  StoragePrecision* NOALIAS const              faceOutputPatches[TWO_TIMES_D],
+  const StoragePrecision* NOALIAS const        faceInputPatches[peano4::FacesPerCell],
+  StoragePrecision* NOALIAS const              faceOutputPatches[peano4::FacesPerCell],
   const tarch::la::Vector<DIMENSIONS, double>& patchCentre,
   const tarch::la::Vector<DIMENSIONS, double>& patchSize,
   const double                                 timeStamp,
@@ -53,7 +53,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD double exahype2::fv::timestepping::SingleStep:
     }
 
     const auto [volumeSize, volumeCentre] =
-      ::exahype2::fv::getVolumeSizeAndCentre<DIMENSIONS, NumberOfVolumesPerAxis>(patchCentre, patchSize, volumeIndex);
+      exahype2::fv::getVolumeSizeAndCentre<DIMENSIONS, NumberOfVolumesPerAxis>(patchCentre, patchSize, volumeIndex);
 
     int centreOffset = 0;
     int centreStride = NumberOfData;
@@ -151,7 +151,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD double exahype2::fv::timestepping::SingleStep:
       }
       UNROLL(DIMENSIONS)
       for (int normal = 0; normal < DIMENSIONS; normal++) {
-        ::exahype2::fv::accumulateMaxEigenvalue(
+        exahype2::fv::accumulateMaxEigenvalue(
           maxEigenvalueAfterTimeStep,
           Solver::maxEigenvalue(finalState, volumeCentre, volumeSize, timeStamp + timeStepSize, timeStepSize, normal)
         );

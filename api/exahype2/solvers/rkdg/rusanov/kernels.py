@@ -1,4 +1,4 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and 
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 import exahype2
 
@@ -8,15 +8,15 @@ from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFac
 def create_Riemann_solver_call(polynomial_basis,
                                face_projections: FaceProjections):
   """
-  number_of_face_projections: Integer
-    How many quantities are to be projected onto the face. If you pass in one,
-    this means that only the left and right values are projected onto the face.
-    If you pass in two, we store the values plus the projections of the
-    derivative along the normal per face.
+  Returns the C++ call of the Riemann solver.
+
+  face_projections: FaceProjections
+    Solution projects the left and the right value onto the face.
+    SolutionAndGradient adds the projection of the derivative along the normal.
   """
 
   if isinstance( polynomial_basis, exahype2.solvers.GaussLegendreBasis) and face_projections==FaceProjections.Solution:
-    return """solveRiemannProblem_pointwise_in_situ(
+    return """solveRiemannProblemPointwiseInSitu(
       [&](
         const double * NOALIAS                  Q,
         const tarch::la::Vector<DIMENSIONS,double>&  x,
@@ -67,7 +67,7 @@ def create_Riemann_solver_call(polynomial_basis,
     );
 """
   elif isinstance( polynomial_basis, exahype2.solvers.GaussLegendreBasis) and face_projections==FaceProjections.SolutionAndGradient:
-    return """solveRiemannProblem_pointwise_in_situ_with_gradient_projection(
+    return """solveRiemannProblemPointwiseInSituWithGradientProjection(
       [&](
         const double * NOALIAS                  Q,
         const tarch::la::Vector<DIMENSIONS,double>&  x,
@@ -91,7 +91,7 @@ def create_Riemann_solver_call(polynomial_basis,
         ) -> void {
           {% if NCP_IMPLEMENTATION!="<none>" %}
           repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct(Q, deltaQ, x, t, dt, normal, F);
-          {% endif %}          
+          {% endif %}
       }, //ncp
       [&](
           const double * NOALIAS                  Q,
@@ -118,5 +118,7 @@ def create_Riemann_solver_call(polynomial_basis,
     );
 """
   else:
-    assert False, "not implemented"
-    return "#not implemented"
+    raise NotImplementedError(
+      "The Riemann solver call supports a Gauss-Legendre basis with the Solution "
+      "or the SolutionAndGradient face projections only."
+    )

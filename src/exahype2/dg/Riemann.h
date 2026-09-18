@@ -2,19 +2,16 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "peano4/Globals.h"
 #include "peano4/dataview/FaceMarker.h"
 #include "tarch/la/Vector.h"
 
 /**
  * @page exahype2_dg_DG_AMR Discontinuous Galerkin adaptive mesh refinement
  *
- * The AMR management is distributed among two files: The present header file
- * hosts a couple of routines which realise the steps required for AMR. We
- * write what and how things are done in C++. The routines pair up with the
- * Python file exahype2.solvers.rkdg.actionsets.DynamicAMR. This Python file
- * orchestrates the AMR operations, i.e. it decides when things are done. Most
- * of the documentation for the whole AMR business is however collected here.
+ * The routines below realise the steps of adaptive mesh refinement for a
+ * discontinuous Galerkin discretisation. The Python file
+ * exahype2.solvers.rkdg.actionsets.DynamicAMR calls them and decides when each
+ * step runs.
  *
  * AMR for DG is a Riemann problem and can be illustrated in 1D.
  * Let there be two levels called coarse and fine as illustrated below:
@@ -82,71 +79,17 @@
  */
 
 namespace exahype2::dg {
-  /**
-   * ## Interpolation matrix
-   *
-   * Core ingredient to this routine is the interpolation matrix.
-   * It describes how to interpolate a 1D polynomial over the unit
-   * interval into the three subcell polynomials. Consequently,
-   * the matrix points to three matrices. One for the left, one
-   * for the middle, one for the right subcell.
-   *
-   * Each matrix accepts the order+1 values at the quadrature points
-   * as input, i.e. each matrix has order+1 columns. Each matrix
-   * returns the output for one quadrature point at the chosen
-   * subcell. So each matrix has order+1 rows.
-   *
-   * In the example above, we work with polynomials of order three.
-   * We hence have four quadrature points.
-   *
-   * @image html src/exahype2/dg/interpolation.png
-   *
-   * In the example above, the weights in c1, c2, c3 and c4 span a
-   * polynomial (blue). InterpolationMatrix1D points to
-   * @f$ 3 \cdot 4^2 @f$ entries. If we want to know the interpolated
-   * value for f31, we have to pick the third matrix (matrix index 2
-   * as we start counting at zero), then take the first row of this
-   * matrix, and multiply its four entries with c1, c2, c3, c4.
-   *
-   * All entries in all faces are enumerated lexicographically, i.e.
-   * from left to right, bottom-up, and always first along the x-axis,
-   * then y, then z.
-   *
-   * The routine writes only the half of the hanging face that belongs to
-   * the coarse neighbour; the other half carries the fine cell's own
-   * projection and stays untouched.
-   *
-   * @param numberOfProjectedQuantities This is one if we only project the
-   *   solution. It is two if we project the solution and the F-value or
-   *   the solution and its gradient along the normal.
-   */
   void interpolateProjectedFacePolynomial(
     const peano4::dataview::FaceMarker& marker,
     int                                 order,
     int                                 numberOfProjectedQuantities,
     int                                 unknowns,
     int                                 auxiliaryVariables,
-    const double* NOALIAS               InterpolationMatrix1D,
+    const double* NOALIAS               interpolationMatrix1D,
     const double* NOALIAS               coarseGridFaceQ,
     double* NOALIAS                     fineGridFaceQ
   );
 
-  /**
-   * Assembles the Riemann solution a fine cell consumes at a hanging face.
-   *
-   * The routine evaluates the coarse flux polynomial at the hanging face's
-   * nodes, adds the jump penalty
-   * 0.5 maxEigenvalue (restriction image - fine trace) with the face's
-   * orientation and writes the sum into the fine side's layer of the hanging
-   * face's Riemann solution. The coarse side's layer stays untouched, and
-   * the Riemann solution holds the plain flux without auxiliary variables.
-   *
-   * The caller solves the coarse face's Riemann problem before it touches an
-   * adjacent fine cell in the same sweep, and passes one maxEigenvalue for
-   * the whole coarse face. The caller runs in a cell event, so the routine
-   * identifies the hanging face through the face number and the cell's
-   * position within its father cell.
-   */
   void interpolateRiemannSolution(
     int                                       faceNumber,
     const tarch::la::Vector<DIMENSIONS, int>& positionWithinFatherCell,
@@ -154,79 +97,25 @@ namespace exahype2::dg {
     int                                       unknowns,
     int                                       auxiliaryVariables,
     double                                    maxEigenvalue,
-    const double* NOALIAS                     InterpolationMatrix1D,
+    const double* NOALIAS                     interpolationMatrix1D,
     const double* NOALIAS                     coarseGridFaceRiemannSolution,
     const double* NOALIAS                     coarseGridFaceProjection,
     const double* NOALIAS                     fineGridFaceProjection,
     double* NOALIAS                           fineGridFaceRiemannSolution
   );
 
-  /**
-   * Take polynomial within cell and project it onto the faces
-   *
-   * ## Ordering
-   *
-   *                           2 3
-   *                           0 1
-   *                     2 3 [ o o ] 2 3
-   *                     0 1 [ o o ] 0 1
-   *                           2 3
-   *                           0 1
-   *
-   * Each individual face is ordered lexicographically. So we go from left to
-   * right, and we always start closest to the origin of the coordinate system
-   * if we interpret the cell as the unit square.
-   *
-   * The sketch above illustrates the ordering of the four faces for a p=1
-   * discretisation where we have two dofs per direction per face per side.
-   *
-   * @param cellQ Pointer to cell data. The array has the size
-   *   @f$ unknowns \times (order+1)^d@f$.
-   *
-   * @param order Integer greater or equal to 0. The number of nodes in each
-   *   dimension is equal to order+1.
-   *
-   * @param BasisFunctionValuesLeft Array of size order+1 which clarifies (in 1D)
-   *   how to project the order+1 quadrature weights onto a value on the left
-   *   face. For Gauss Lobatto, this is a trivial array (you can read out the
-   *   value directly from the leftmost quadrature point), but for any other
-   *   basis, you need a linear combination of all the quadrature points in the
-   *   cell.
-   *
-   * @param faceQLeft Left unknowns. This array hosts @f$ 2 \times (order+1)^(d-1) * unknowns@f$
-   *   values, as it holds the (projected) values from the left side of the face
-   *   and those from the right. The ordering of these values is lexicographic,
-   *   i.e. the first unknowns entries are those at the bottom of the vertical
-   *   face from the left adjacent cell. The next unknowns entries are those
-   *   at the bottom of the face from the right adjacent cell. The next are then
-   *   again left, then right, then left and so on.
-   *   This function will fill the right values since the current cell is to the
-   *   right of its own left face.
-   *
-   * @param faceQBottom Bottom unknowns. See faceQLeft. Again, we order
-   *   lexicographically. This time, the first half of the entries are those
-   *   from the adjacent cell below. The remaining entries are the projections
-   *   from above.
-   */
   void projectVolumetricDataOntoFaces(
-    const double* NOALIAS       cellQ,
-    int                         order,
-    int                         unknowns,
-    int                         auxiliaryVariables,
-    const double* const NOALIAS BasisFunctionValuesLeft,
-    double* const NOALIAS       faceQLeft,
-    double* const NOALIAS       faceQRight,
-    double* const NOALIAS       faceQBottom,
-    double* const NOALIAS       faceQUp
+    const double* NOALIAS cellQ,
+    int                   order,
+    int                   unknowns,
+    int                   auxiliaryVariables,
+    const double* NOALIAS basisFunctionValuesLeft,
+    double* NOALIAS       faceQLeft,
+    double* NOALIAS       faceQRight,
+    double* NOALIAS       faceQBottom,
+    double* NOALIAS       faceQUp
   );
 
-  /**
-   * Set the whole solution projection on the face from left and right to zero
-   *
-   * @param numberOfProjectedQuantities Equals one if we project only the
-   *   solution to the face, it equals two if we project both the solution
-   *   and the gradient or the F-extrapolation, and so forth.
-   */
   void clearSolutionProjection(
     int             order,
     int             unknowns,
@@ -235,116 +124,73 @@ namespace exahype2::dg {
     double* NOALIAS faceQ
   );
 
-  /**
-   * 3D counterpart to other projectVolumetricDataOntoFaces() variant.
-   */
   void projectVolumetricDataOntoFaces(
-    const double* NOALIAS       cellQ,
-    int                         order,
-    int                         unknowns,
-    int                         auxiliaryVariables,
-    const double* const NOALIAS BasisFunctionValuesLeft,
-    double* const NOALIAS       faceQLeft,
-    double* const NOALIAS       faceQRight,
-    double* const NOALIAS       faceQBottom,
-    double* const NOALIAS       faceQUp,
-    double* const NOALIAS       faceQFront,
-    double* const NOALIAS       faceQBack
+    const double* NOALIAS cellQ,
+    int                   order,
+    int                   unknowns,
+    int                   auxiliaryVariables,
+    const double* NOALIAS basisFunctionValuesLeft,
+    double* NOALIAS       faceQLeft,
+    double* NOALIAS       faceQRight,
+    double* NOALIAS       faceQBottom,
+    double* NOALIAS       faceQUp,
+    double* NOALIAS       faceQFront,
+    double* NOALIAS       faceQBack
   );
 
   void projectVolumetricDataAndGradientOntoFaces(
-    const double* NOALIAS       cellQ,
-    int                         order,
-    int                         unknowns,
-    int                         auxiliaryVariables,
-    const double* const NOALIAS BasisFunctionValuesLeft,
-    double* const NOALIAS       faceQLeft,
-    double* const NOALIAS       faceQRight,
-    double* const NOALIAS       faceQBottom,
-    double* const NOALIAS       faceQUp
+    const double* NOALIAS cellQ,
+    int                   order,
+    int                   unknowns,
+    int                   auxiliaryVariables,
+    const double* NOALIAS basisFunctionValuesLeft,
+    double* NOALIAS       faceQLeft,
+    double* NOALIAS       faceQRight,
+    double* NOALIAS       faceQBottom,
+    double* NOALIAS       faceQUp
   );
 
-  /**
-   * 3D counterpart to other projectVolumetricDataOntoFaces() variant.
-   */
   void projectVolumetricDataAndGradientOntoFaces(
-    const double* NOALIAS       cellQ,
-    int                         order,
-    int                         unknowns,
-    int                         auxiliaryVariables,
-    const double* const NOALIAS BasisFunctionValuesLeft,
-    double* const NOALIAS       faceQLeft,
-    double* const NOALIAS       faceQRight,
-    double* const NOALIAS       faceQBottom,
-    double* const NOALIAS       faceQUp,
-    double* const NOALIAS       faceQFront,
-    double* const NOALIAS       faceQBack
+    const double* NOALIAS cellQ,
+    int                   order,
+    int                   unknowns,
+    int                   auxiliaryVariables,
+    const double* NOALIAS basisFunctionValuesLeft,
+    double* NOALIAS       faceQLeft,
+    double* NOALIAS       faceQRight,
+    double* NOALIAS       faceQBottom,
+    double* NOALIAS       faceQUp,
+    double* NOALIAS       faceQFront,
+    double* NOALIAS       faceQBack
   );
 
-  /**
-   * Given a numerical flux at the various faces, this computes and adds the Riemann
-   * integral of this flux to the nodes of a 2-dimensional cell.
-   *
-   * @param faceQLeft Numerical flux at each node along the left face. This is
-   *   typically computed by a Riemann solver such as a Rusanov solver. The same
-   *   holds for faceQRight, faceQBottom and faceQUp, which carry the fluxes of
-   *   the remaining three faces.
-   *
-   * @param cellSize Extent of the cell along each coordinate axis. It scales the
-   *   face integral against the cell volume.
-   *
-   * @param BasisFunctionValuesLeft Numerical value of the basis functions evaluated
-   *   at the left node in one dimension. It determines how strongly the value at the
-   *   boundary influences the value at a given node. The basis function values on the
-   *   right side are symmetric to those on the left side, so this array serves both.
-   *
-   * @param MassMatrixDiagonal1D Quadrature weight of each quadrature node in one
-   *   dimension.
-   *
-   * @param cellQ The current solution, expected to be the solution already updated
-   *   with local contributions (see Euler.h). The face integral is added to it.
-   *
-   * @see projectVolumetricDataOntoFaces()
-   */
-  void integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
-    const double* const NOALIAS         faceQLeft,
-    const double* const NOALIAS         faceQRight,
-    const double* const NOALIAS         faceQBottom,
-    const double* const NOALIAS         faceQUp,
+  void integrateOverRiemannSolutionsAndAddToVolumeGaussLegendre(
+    const double* NOALIAS               faceQLeft,
+    const double* NOALIAS               faceQRight,
+    const double* NOALIAS               faceQBottom,
+    const double* NOALIAS               faceQUp,
     int                                 order,
     int                                 unknowns,
-    const int                           auxiliaryVariables,
+    int                                 auxiliaryVariables,
     const tarch::la::Vector<2, double>& cellSize,
-    const double* const NOALIAS         BasisFunctionValuesLeft,
-    const double* NOALIAS               MassMatrixDiagonal1D,
+    const double* NOALIAS               basisFunctionValuesLeft,
+    const double* NOALIAS               massMatrixDiagonal1D,
     double* NOALIAS                     cellQ
   );
 
-  /**
-   * 3D counterpart of integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre()
-   *
-   * The routine relies on a left-handed coordinate system. So we have a cube
-   * with a left and a right face. Those are the faces 0 and 3
-   * (=0+DIMENSIONS). Their normal points along the x axis. Next, we have
-   * bottom and top face, as they have a normal along the y axis and y is the
-   * second coordinate axis. Finally, the front and the back face follow.
-   * They are the faces 2 and 2+DIMENSIONS=5. The front face comes first, as
-   * we work with a left-handed coordinate system, i.e. the normal points
-   * into the screen.
-   */
-  void integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
-    const double* const NOALIAS         faceQLeft,
-    const double* const NOALIAS         faceQRight,
-    const double* const NOALIAS         faceQBottom,
-    const double* const NOALIAS         faceQUp,
-    const double* const NOALIAS         faceQFront,
-    const double* const NOALIAS         faceQBack,
+  void integrateOverRiemannSolutionsAndAddToVolumeGaussLegendre(
+    const double* NOALIAS               faceQLeft,
+    const double* NOALIAS               faceQRight,
+    const double* NOALIAS               faceQBottom,
+    const double* NOALIAS               faceQUp,
+    const double* NOALIAS               faceQFront,
+    const double* NOALIAS               faceQBack,
     int                                 order,
     int                                 unknowns,
-    const int                           auxiliaryVariables,
+    int                                 auxiliaryVariables,
     const tarch::la::Vector<3, double>& cellSize,
-    const double* const NOALIAS         BasisFunctionValuesLeft,
-    const double* NOALIAS               MassMatrixDiagonal1D,
+    const double* NOALIAS               basisFunctionValuesLeft,
+    const double* NOALIAS               massMatrixDiagonal1D,
     double* NOALIAS                     cellQ
   );
 } // namespace exahype2::dg

@@ -81,7 +81,7 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
     );
 
     const auto maxPhysicalEigenvalue =
-      ::exahype2::dg::reduceMaxScaledEigenvalue_patchwise_functors(
+      ::exahype2::dg::reduceMaxScaledEigenvaluePatchwiseFunctors(
         cellData,
         {{ORDER}},
         {{NUMBER_OF_UNKNOWNS}},

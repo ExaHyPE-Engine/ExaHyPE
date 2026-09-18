@@ -11,8 +11,9 @@
 #include "exahype2/Solver.h"
 #include "exahype2/RefinementControl.h"
 #include "exahype2/RefinementCriterionHelpers.h"
+#include "exahype2/dg/AMRMatrices.h"
 
-#include "peano4/Globals.h"
+#include "peano4/Constants.h"
 
 #include "tarch/Assertions.h"
 #include "tarch/NonCriticalAssertions.h"
@@ -32,7 +33,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
   public:
   {% if USE_VARIABLE_SHORTCUTS is sameas True %}
   /**
-   * Names the variables: Q[Shortcuts::{{VARIABLE_NAMES[0]}}] is Q[0].
+   * Names the variable indices, so Q[Shortcuts::{{VARIABLE_NAMES[0]}}] reads the first variable.
    */
   using Shortcuts = {{NAMESPACE | join("::")}}::VariableShortcuts{{SOLVER_NAME}};
 {% endif %}
@@ -49,7 +50,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
       {%- endfor %}
     };
 
-    static std::string toString(const SolverState state);
+    static std::string toString(SolverState state);
 
     static constexpr int DGOrder = {{DG_ORDER}};
 
@@ -57,6 +58,11 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
     static constexpr int NumberOfAuxiliaryVariables = {{NUMBER_OF_AUXILIARY_VARIABLES}};
 
 {{BASIS_DECLARATIONS | indent(4,True) }}
+
+    static constexpr ::exahype2::dg::AMRMatrices1D<DGOrder + 1> InterpolationMatrix1D =
+      ::exahype2::dg::interpolationMatrix1D<DGOrder + 1>(QuadraturePoints1D);
+    static constexpr ::exahype2::dg::AMRMatrices1D<DGOrder + 1> RestrictionMatrix1D =
+      ::exahype2::dg::restrictionMatrix1D<DGOrder + 1>(QuadraturePoints1D);
 
     {{SOLVER_CONSTANTS}}
 
@@ -86,10 +92,10 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
      * @param t Time.
      */
     virtual ::exahype2::RefinementCommand refinementCriterion(
-      const double* const NOALIAS Q,
+      const double* NOALIAS Q,
       const tarch::la::Vector<DIMENSIONS, double>& x,
       const tarch::la::Vector<DIMENSIONS, double>& h,
-      const double t
+      double t
     ) {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
 
     /**
@@ -99,7 +105,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
      * @param h Size of the cell that holds the point.
      */
     virtual void initialCondition(
-      double* const NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      double* NOALIAS Q, // Q[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<DIMENSIONS, double>& x,
       const tarch::la::Vector<DIMENSIONS, double>& h
     ) {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
@@ -113,62 +119,30 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
      * Riemann solver reads both afterwards.
      */
     virtual void boundaryConditions(
-      const double* const NOALIAS Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      double* const NOALIAS Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const double* NOALIAS Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      double* NOALIAS Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<DIMENSIONS, double>& x,
-      const double t,
-      const int normal
+      double t,
+      int normal
     ) {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final{% endif %};
     {% endif %}
 
     void suspendSolversForOneGridSweep() override;
 
-    /**
-     * An override calls this base class operation.
-     */
     void startGridConstructionStep() override;
-
-    /**
-     * An override calls this base class operation.
-     */
     void finishGridConstructionStep() override;
 
-    /**
-     * An override calls this base class operation.
-     */
     void startGridInitialisationStep() override;
-
-    /**
-     * An override calls this base class operation.
-     */
     void finishGridInitialisationStep() override;
 
-    /**
-     * An override calls this base class operation.
-     */
     void startTimeStep() override;
 
-    /**
-     * The dedicated DynamicAMR observer realises the committed refine/erase events between
-     * time steps. Every Runge-Kutta exchange predicate keys on the solver state, so the AMR
-     * sweeps run under a state of their own and no step-bound face or cell exchange fires.
-     */
     void startDynamicMeshRefinementStep() override;
     void finishDynamicMeshRefinementStep() override;
 
-    /**
-     * An override calls this base class operation.
-     */
     void finishTimeStep() override;
 
-    /**
-     * An override calls this base class operation.
-     */
     void startPlottingStep() override;
-
-    /**
-     * An override calls this base class operation.
-     */
     void finishPlottingStep() override;
 
     double getMaxPatchSize() const override final;
@@ -178,21 +152,12 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
 
     int getNumberOfDoFs() const override final;
 
-    /**
-     * Adds one cell's time step size, time stamp and cell size to the extrema
-     * of the current traversal.
-     */
     void update(
-      const double timeStepSize,
-      const double timeStamp,
-      const double cellSize
+      double timeStepSize,
+      double timeStamp,
+      double cellSize
     );
 
-    /**
-     * Reduces the extrema the current traversal has accumulated through update()
-     * into the solver. Runs once per tree at traversal end, so the per-cell
-     * update writes thread-local data only.
-     */
     void reduceLocalUpdates();
 
     SolverState  getSolverState() const;
@@ -202,14 +167,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
     bool isFirstGridSweepOfTimeStep() const;
     bool isLastGridSweepOfTimeStep() const;
 
-    /**
-     * An override calls this base class operation.
-     */
     void startSimulation() override;
-
-    /**
-     * An override calls this base class operation.
-     */
     void finishSimulation() override;
 
     {% if STATELESS_PDE_TERMS %}
@@ -228,13 +186,13 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
     virtual bool cellCanUseStatelessPDETerms(
       const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
       const tarch::la::Vector<DIMENSIONS, double>& cellH,
-      const double timeStamp,
-      const double timeStepSize
+      double timeStamp,
+      double timeStepSize
     ) const;
 
   protected:
     /** Stores one traversal's extrema until reduceLocalUpdates() reduces them. */
-    struct LocalUpdates {
+    struct LocalUpdates final {
       double                            minTimeStamp{std::numeric_limits<double>::infinity()};
       double                            maxTimeStamp{0.0};
       double                            localMinTimeStamp{std::numeric_limits<double>::infinity()};
@@ -247,29 +205,29 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
 
     static thread_local LocalUpdates _localUpdates;
 
-    SolverState  _solverState;
-    SolverState  _solverStateBeforeDynamicMeshRefinement;
+    SolverState _solverState{SolverState::GridConstruction};
+    SolverState _solverStateBeforeDynamicMeshRefinement{SolverState::GridConstruction};
 
-    double _minTimeStamp;
-    double _maxTimeStamp;
+    double _minTimeStamp{0.0};
+    double _maxTimeStamp{0.0};
 
-    double _minTimeStampThisTimeStep;
-    double _maxTimeStampThisTimeStep;
+    double _minTimeStampThisTimeStep{std::numeric_limits<double>::infinity()};
+    double _maxTimeStampThisTimeStep{0.0};
 
-    double _localMinTimeStampThisTimeStep;
-    double _localMaxTimeStampThisTimeStep;
+    double _localMinTimeStampThisTimeStep{std::numeric_limits<double>::infinity()};
+    double _localMaxTimeStampThisTimeStep{0.0};
 
-    double _minCellH;
-    double _maxCellH;
+    double _minCellH{std::numeric_limits<double>::infinity()};
+    double _maxCellH{0.0};
 
-    double _minCellHThisTimeStep;
-    double _maxCellHThisTimeStep;
+    double _minCellHThisTimeStep{std::numeric_limits<double>::infinity()};
+    double _maxCellHThisTimeStep{0.0};
 
-    double _minTimeStepSize;
-    double _maxTimeStepSize;
+    double _minTimeStepSize{std::numeric_limits<double>::infinity()};
+    double _maxTimeStepSize{0.0};
 
-    double _minTimeStepSizeThisTimeStep;
-    double _maxTimeStepSizeThisTimeStep;
+    double _minTimeStepSizeThisTimeStep{std::numeric_limits<double>::infinity()};
+    double _maxTimeStepSizeThisTimeStep{0.0};
 
   {{ABSTRACT_SOLVER_USER_DECLARATIONS}}
 };

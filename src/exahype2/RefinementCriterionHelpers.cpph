@@ -2,19 +2,21 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 /**
- * Map a relative multiresolution detail to a refinement command.
+ * Maps a relative multiresolution detail to a refinement command.
  *
  * @param detail relative representation error from
  *   exahype2::amr::computeMultiresolutionDetail.
  * @param eps relative representation error tolerated before refinement.
  * @param coarsenSafetyFactor hysteresis ratio. Erasure requires a detail below
- *   eps/coarsenSafetyFactor. The default reflects the factor 3^(p+1) = 9 for an
- *   affine fit on Peano's triadic grid.
+ *   eps/coarsenSafetyFactor. The default is exahype2::DefaultCoarsenSafetyFactor.
  *
- * The RefinementCriterion action set applies the admissible patch-size limits.
+ * A caller applies the admissible patch-size limits to the returned command.
  */
-INLINE_METHOD exahype2::RefinementCommand
-exahype2::refinementCommandFromDetail(const double detail, const double eps, const double coarsenSafetyFactor) {
+INLINE_METHOD exahype2::RefinementCommand exahype2::refinementCommandFromDetail(
+  const double detail,
+  const double eps,
+  const double coarsenSafetyFactor
+) {
   if (detail > eps) {
     return exahype2::RefinementCommand::Refine;
   }
@@ -25,8 +27,8 @@ exahype2::refinementCommandFromDetail(const double detail, const double eps, con
 }
 
 /**
- * Compute the maximum patch detail over the supplied scalar indicators and
- * map it to a refinement command.
+ * Computes the maximum patch detail over the supplied scalar indicators and
+ * maps it to a refinement command.
  *
  * Q stores the whole patch in AoS layout. nodesInUnitInterval contains the
  * solver's one-dimensional node positions in [0,1]; equidistant finite-volume

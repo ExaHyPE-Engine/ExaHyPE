@@ -2,22 +2,21 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "peano4/Globals.h"
 #include "peano4/dataview/CellMarker.h"
-
-// #include <concepts>
 
 namespace peano4::particles::tests {
   class TestParticle;
 } // namespace peano4::particles::tests
 
-class peano4::particles::tests::TestParticle {
+/** Stands in for a generated particle in the tests of the particle helpers. */
+class peano4::particles::tests::TestParticle final {
 public:
   TestParticle(const tarch::la::Vector<DIMENSIONS, double>& x, double h);
 
-  tarch::la::Vector<DIMENSIONS, double> getX() const;
-  double                                getSearchRadius() const;
+  [[nodiscard]] tarch::la::Vector<DIMENSIONS, double> getX() const;
+  [[nodiscard]] double                                getSearchRadius() const;
 
-  tarch::la::Vector<DIMENSIONS, double> _x;
-  double                                _h;
+private:
+  tarch::la::Vector<DIMENSIONS, double> _x{};
+  double                                _h{0.0};
 };

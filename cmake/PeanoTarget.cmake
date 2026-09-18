@@ -171,7 +171,7 @@ function(peano_add_target)
   # Build-mode flags must reach every language so Fortran kernels and GPU kernels are
   # optimised/debugged like host code. Fortran uses its own -O/-g-only flag set (the C++
   # flags contain switches not all Fortran front-ends accept). HIP takes the host flags
-  # verbatim (clang optimises host and device from a single -O). nvcc is split: the host
+  # verbatim (clang optimises host and device from a single -O). nvcc is split: The host
   # flags are forwarded via -Xcompiler, and the optimisation level is additionally forwarded
   # to the device compiler via -Xptxas, making the device optimisation level explicit.
   # Debug uses -G, which forces device -O0 plus debug info.
@@ -204,7 +204,7 @@ function(peano_add_target)
     )
   endif()
 
-  # GPU language setup publishes one architecture through CMAKE_CUDA_ARCHITECTURES or
+  # GPU language setup sets one architecture in CMAKE_CUDA_ARCHITECTURES or
   # CMAKE_HIP_ARCHITECTURES; target properties must consume that single selection.
   if(gpu_backend STREQUAL "cuda" AND CMAKE_CUDA_COMPILER)
     set_target_properties(${target} PROPERTIES

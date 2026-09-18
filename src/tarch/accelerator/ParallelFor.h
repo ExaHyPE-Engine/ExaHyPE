@@ -7,16 +7,16 @@
 #include "tarch/accelerator/Range.h"
 #include "tarch/accelerator/accelerator.h"
 
-namespace tarch {
+namespace tarch::accelerator {
   template <typename F>
-  void parallelFor(const Range& r, F f);
+  void parallelFor(const Range& range, F body);
   template <typename F>
-  void parallelFor(const RangeMD<2>& r, F f);
+  void parallelFor(const RangeMD<2>& range, F body);
   template <typename F>
-  void parallelFor(const RangeMD<3>& r, F f);
+  void parallelFor(const RangeMD<3>& range, F body);
   template <typename F>
-  void parallelFor(const TeamRange& r, F f);
-} // namespace tarch
+  void parallelFor(const TeamRange& range, F body);
+} // namespace tarch::accelerator
 
 #if defined(PEANO_WITH_GPU_BACKEND_KOKKOS)
 #include "tarch/accelerator/kokkos/Device.h"
@@ -43,7 +43,3 @@ namespace tarch {
 #else
 #include "tarch/accelerator/ParallelFor.cpph"
 #endif
-
-namespace tarch {
-  using accelerator::parallelFor;
-} // namespace tarch

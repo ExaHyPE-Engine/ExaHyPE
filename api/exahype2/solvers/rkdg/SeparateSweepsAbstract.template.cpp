@@ -4,6 +4,7 @@
 
 #include "Constants.h"
 
+#include "peano4/Constants.h"
 #include "tarch/NonCriticalAssertions.h"
 #include "tarch/instrumentation/Debug.h"
 #include "tarch/instrumentation/Info.h"
@@ -14,24 +15,10 @@
 
 std::bitset<DIMENSIONS> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::PeriodicBC = {{NAMESPACE | join("::")}}::PeriodicBC;
 
-{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
-  {{BASIS_INITIALIZERS | indent(2,True) }}
-  _solverState(SolverState::GridConstruction),
-  _solverStateBeforeDynamicMeshRefinement(SolverState::GridConstruction),
-  _minTimeStamp(0.0),
-  _maxTimeStamp(0.0),
-  _minTimeStampThisTimeStep(std::numeric_limits<double>::infinity()),
-  _maxTimeStampThisTimeStep(0.0),
-  _localMinTimeStampThisTimeStep(std::numeric_limits<double>::infinity()),
-  _localMaxTimeStampThisTimeStep(0.0),
-  _minCellH(std::numeric_limits<double>::infinity()),
-  _maxCellH(0.0),
-  _minCellHThisTimeStep(std::numeric_limits<double>::infinity()),
-  _maxCellHThisTimeStep(0.0),
-  _minTimeStepSize(std::numeric_limits<double>::infinity()),
-  _maxTimeStepSize(0.0),
-  _minTimeStepSizeThisTimeStep(std::numeric_limits<double>::infinity()),
-  _maxTimeStepSizeThisTimeStep(0.0) {
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}()
+{%- if BASIS_INITIALIZERS | trim %}:
+{{ BASIS_INITIALIZERS | trim | trim(",") | indent(2, True) }}
+{%- endif %} {
   {{CONSTRUCTOR_IMPLEMENTATION}}
 }
 
@@ -46,7 +33,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinPatchSize() const {
 }
 
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getNumberOfDoFs() const {
-  return BasePowerExponent<DGOrder + 1, DIMENSIONS>::value * (NumberOfUnknowns + NumberOfAuxiliaryVariables);
+  return peano4::Power<DGOrder + 1, DIMENSIONS> * (NumberOfUnknowns + NumberOfAuxiliaryVariables);
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspendSolversForOneGridSweep() {
@@ -68,6 +55,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStamp() const {
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStamp() const {
+  // Only the minimum starts at infinity, so it says whether a cell has reported this time step.
   return _minTimeStampThisTimeStep != std::numeric_limits<double>::infinity()
     ? _maxTimeStampThisTimeStep
     : _maxTimeStamp;
@@ -80,6 +68,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStepSize() const {
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStepSize() const {
+  // Only the minimum starts at infinity, so it says whether a cell has reported this time step.
   return _minTimeStepSizeThisTimeStep != std::numeric_limits<double>::infinity()
     ? _maxTimeStepSizeThisTimeStep
     : _maxTimeStepSize;
@@ -87,6 +76,10 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStepSize() const {
 
 thread_local typename {{NAMESPACE | join("::")}}::{{CLASSNAME}}::LocalUpdates {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_localUpdates;
 
+/**
+ * Adds one cell's time step size, time stamp and cell size to the extrema of the current
+ * traversal.
+ */
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(
   const double timeStepSize,
   const double timeStamp,
@@ -128,6 +121,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(
   );
 }
 
+/**
+ * Reduces the extrema update() accumulated in this traversal into the solver. One call per
+ * tree at the end of a traversal keeps the per-cell update free of atomic operations.
+ */
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::reduceLocalUpdates() {
   if (_localUpdates.empty) {
     return;
@@ -159,10 +156,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::reduceLocalUpdates() {
 
 {% if REFINEMENT_CRITERION_IMPLEMENTATION!="<user-defined>" %}
 ::exahype2::RefinementCommand {{NAMESPACE | join("::")}}::{{CLASSNAME}}::refinementCriterion(
-  const double * NOALIAS Q,    // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+  const double* const NOALIAS                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<DIMENSIONS,double>&  x,
   const tarch::la::Vector<DIMENSIONS,double>&  h,
-  double                                       t
+  const double                                 t
 ) {
   {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<empty>" %}
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
@@ -176,7 +173,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::reduceLocalUpdates() {
 
 {% if INITIAL_CONDITIONS_IMPLEMENTATION!="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
-  double * NOALIAS                        Q,     // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  double* const NOALIAS                        Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<DIMENSIONS,double>&  x,
   const tarch::la::Vector<DIMENSIONS,double>&  h
 ) {
@@ -186,11 +183,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
 
 {% if BOUNDARY_CONDITIONS_IMPLEMENTATION!="<user-defined>" and BOUNDARY_CONDITIONS_IMPLEMENTATION!="<none>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
-  const double * NOALIAS                  Qinside,   // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  double * NOALIAS                        Qoutside,  // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const double* const NOALIAS                  Qinside,  // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  double* const NOALIAS                        Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<DIMENSIONS,double>&  x,
-  double                                       t,
-  int                                          normal
+  const double                                 t,
+  const int                                    normal
 ) {
   {% if BOUNDARY_CONDITIONS_IMPLEMENTATION!="<empty>" %}
   {{BOUNDARY_CONDITIONS_IMPLEMENTATION}}
@@ -198,23 +195,38 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
 }
 {% endif %}
 
+/**
+ * An override calls this base class operation.
+ */
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridConstructionStep() {
   assertion( _solverState == SolverState::GridConstruction );
 }
 
+/**
+ * An override calls this base class operation.
+ */
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridConstructionStep() {
 }
 
+/**
+ * An override calls this base class operation.
+ */
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridInitialisationStep() {
   _solverState = SolverState::GridInitialisation;
 }
 
+/**
+ * An override calls this base class operation.
+ */
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridInitialisationStep() {
   // From here on every completed sweep has sent a face-data batch, which the
   // following sweep's boundary exchange consumes.
   _hasStoredFaceData = true;
 }
 
+/**
+ * An override calls this base class operation.
+ */
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
   switch (_solverState) {
     case SolverState::GridConstruction:
@@ -269,6 +281,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
   }
 }
 
+/**
+ * An override calls this base class operation.
+ */
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
   if ( isLastGridSweepOfTimeStep() ) {
     // The upper half holds the negated maxima, so one minimum reduction yields both
@@ -359,14 +374,25 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
   {{FINISH_TIME_STEP_IMPLEMENTATION}}
 }
 
+/**
+ * An override calls this base class operation.
+ */
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep() {
-  assertion( mayPlot()  or ::tarch::hasNonCriticalAssertionBeenViolated() );
+  assertion( mayPlot() or ::tarch::hasNonCriticalAssertionBeenViolated() );
   _solverState = SolverState::Plotting;
 }
 
+/**
+ * An override calls this base class operation.
+ */
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishPlottingStep() {
 }
 
+/**
+ * The dedicated DynamicAMR observer realises the committed refine and erase events between
+ * time steps. Every Runge-Kutta exchange predicate keys on the solver state, so the AMR
+ * sweeps run under a state of their own and no step-bound face or cell exchange fires.
+ */
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startDynamicMeshRefinementStep() {
   ::exahype2::Solver::startDynamicMeshRefinementStep();
   _solverStateBeforeDynamicMeshRefinement = _solverState;
@@ -423,10 +449,16 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() cons
   return _solverState==SolverState::SolveRiemannProblemAndAddToVolumeIntegralOfStep{{RK_STEPS-1}};
 }
 
+/**
+ * An override calls this base class operation.
+ */
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {
   {{START_SIMULATION_IMPLEMENTATION}}
 }
 
+/**
+ * An override calls this base class operation.
+ */
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishSimulation() {
   {{FINISH_SIMULATION_IMPLEMENTATION}}
 }

@@ -13,7 +13,7 @@ set.
 
 The project configuration supplies a regular base level and a maximum level.
 Adaptivity is active when the maximum exceeds the base. Each additional level
-reduces the cell width by three.
+divides the cell width by the subdivision factor of the active curve.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 exahype2Project = exahype2.Project(

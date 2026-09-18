@@ -9,7 +9,7 @@ import peano4
 import jinja2
 
 
-class HandleBoundary(AbstractRungeKuttaDGActionSet):
+class ApplyBoundaryConditions(AbstractRungeKuttaDGActionSet):
     """
     Applies the boundary conditions along the faces flagged as boundary.
 
@@ -17,7 +17,7 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
     onto the faces, and the next sweep solves the Riemann problems there.
     """
 
-    TemplateHandleBoundary_Prologue = """
+    TemplateApplyBoundaryConditions_Prologue = """
   {% for PREDICATE_NO in range(0,PREDICATES|length) %}
   if (
     {{PREDICATES[PREDICATE_NO]}}
@@ -25,6 +25,10 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
     not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[marker.getSelectedFaceNumber()%DIMENSIONS]
     and
     not marker.hasBeenRefined()
+    and
+    not marker.hasCellBeenRefined()
+    and
+    not marker.willCellBeRefined()
     and
     fineGridFace{{SOLVER_NAME}}FaceLabel.getBoundary()
   ) {
@@ -40,7 +44,7 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
 
 """
 
-    TemplateHandleBoundary_KernelCalls = """
+    TemplateApplyBoundaryConditions_KernelCalls = """
     ::exahype2::dg::applyBoundaryConditions(
       [&](
         const double* const NOALIAS                  Qinside,
@@ -65,7 +69,7 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
     );
 """
 
-    TemplateHandleBoundary_Epilogue = """
+    TemplateApplyBoundaryConditions_Epilogue = """
 
     if (marker.getSelectedFaceNumber()<DIMENSIONS) {
       fineGridFace{{SOLVER_NAME}}FaceLabel.setUpdatedTimeStamp(0, fineGridFace{{SOLVER_NAME}}FaceLabel.getUpdatedTimeStamp(1) );
@@ -85,7 +89,7 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
         """
         `guard` is not evaluated; the predicates come from the guards property.
         """
-        super(HandleBoundary, self).__init__(solver)
+        super().__init__(solver)
         self.guards = []
         self._butcher_tableau = ButcherTableau(self._solver._rk_order)
 
@@ -114,18 +118,18 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
             operation_name
             == peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME
         ):
-            d = {}
-            self._solver._init_dictionary_with_default_parameters(d)
-            self._solver.add_entries_to_text_replacement_dictionary(d)
-            d["PREDICATES"] = self.guards
-            d["BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES"] = (
+            dictionary = {}
+            self._solver._init_dictionary_with_default_parameters(dictionary)
+            self._solver.add_entries_to_text_replacement_dictionary(dictionary)
+            dictionary["PREDICATES"] = self.guards
+            dictionary["BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES"] = (
                 self._butcher_tableau.time_step_sizes()
             )
             result = jinja2.Template(
-                self.TemplateHandleBoundary_Prologue
-                + self.TemplateHandleBoundary_KernelCalls
-                + self.TemplateHandleBoundary_Epilogue
-            ).render(**d)
+                self.TemplateApplyBoundaryConditions_Prologue
+                + self.TemplateApplyBoundaryConditions_KernelCalls
+                + self.TemplateApplyBoundaryConditions_Epilogue
+            ).render(**dictionary)
         return result
 
     def get_action_set_name(self):

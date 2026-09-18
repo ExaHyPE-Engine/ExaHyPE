@@ -22,7 +22,7 @@ namespace tarch::accelerator {
    */
   template <int D>
   struct RangeMD {
-    static_assert(D == 2 || D == 3, "RangeMD only supports D=2 or D=3");
+    static_assert(D == 2 or D == 3, "RangeMD only supports D=2 or D=3");
     int n[D];
 
     GPU_CALLABLE_METHOD constexpr RangeMD(int nx, int ny) :
@@ -37,8 +37,8 @@ namespace tarch::accelerator {
 
   /**
    * Outer hierarchical range: `n` independent teams (Kokkos teams / CUDA blocks /
-   * SYCL groups). Inside the lambda you call `tarch::parallelFor(team, ...)` or
-   * `tarch::parallelReduce(team, ...)` with an inner Range/RangeMD.
+   * SYCL groups). Inside the lambda you call `tarch::accelerator::parallelFor(team, ...)` or
+   * `tarch::accelerator::parallelReduce(team, ...)` with an inner Range/RangeMD.
    */
   struct TeamRange {
     int n;
@@ -46,9 +46,3 @@ namespace tarch::accelerator {
       n(n_) {}
   };
 } // namespace tarch::accelerator
-
-namespace tarch {
-  using accelerator::Range;
-  using accelerator::RangeMD;
-  using accelerator::TeamRange;
-} // namespace tarch

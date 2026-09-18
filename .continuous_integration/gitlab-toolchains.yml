@@ -16,7 +16,9 @@ GCC:
     FC: "gfortran"
     IMAGE_TAG: "${IMAGE_GCC}"
     PARALLEL_LAUNCH: "OMP_NUM_THREADS=${OMP_THREADS} mpirun --bind-to none -np ${MPI_RANKS}"
-    EXTRA_CONFIGURATION_OPTIONS: ""
+    EXTRA_CONFIGURATION_OPTIONS: "-DPEANO_WITH_SPACE_FILLING_CURVE=Hilbert"
+    MIN_GRID_LEVELS: "${MIN_GRID_LEVELS_HILBERT}"
+    MAX_GRID_LEVELS: "${MAX_GRID_LEVELS_HILBERT}"
   trigger:
     include:
       - .continuous_integration/gitlab-pipeline.yml
@@ -34,7 +36,9 @@ Intel:
     FC: "ifx"
     IMAGE_TAG: "${IMAGE_INTEL}"
     PARALLEL_LAUNCH: "OMP_NUM_THREADS=${OMP_THREADS} mpirun --bind-to none -np ${MPI_RANKS}"
-    EXTRA_CONFIGURATION_OPTIONS: ""
+    EXTRA_CONFIGURATION_OPTIONS: "-DPEANO_WITH_SPACE_FILLING_CURVE=Peano"
+    MIN_GRID_LEVELS: "${MIN_GRID_LEVELS_PEANO}"
+    MAX_GRID_LEVELS: "${MAX_GRID_LEVELS_PEANO}"
   trigger:
     include:
       - .continuous_integration/gitlab-pipeline.yml
@@ -61,7 +65,9 @@ LLVM:
     # sanitizer has already interposed, which segfaults inside MPI_Init_thread.
     APPTAINERENV_OMPI_MCA_memory: "^patcher"
     APPTAINERENV_UCX_TLS: "tcp,sm"
-    EXTRA_CONFIGURATION_OPTIONS: "-DPEANO_WITH_SANITIZER=address+undefined"
+    EXTRA_CONFIGURATION_OPTIONS: "-DPEANO_WITH_SPACE_FILLING_CURVE=Peano -DPEANO_WITH_SANITIZER=address+undefined"
+    MIN_GRID_LEVELS: "${MIN_GRID_LEVELS_PEANO}"
+    MAX_GRID_LEVELS: "${MAX_GRID_LEVELS_PEANO}"
   trigger:
     include:
       - .continuous_integration/gitlab-pipeline.yml
@@ -79,7 +85,9 @@ NVIDIA:
     FC: "nvfortran"
     IMAGE_TAG: "${IMAGE_NVIDIA}"
     PARALLEL_LAUNCH: "OMP_NUM_THREADS=${OMP_THREADS} mpirun --bind-to none -np ${MPI_RANKS}"
-    EXTRA_CONFIGURATION_OPTIONS: ""
+    EXTRA_CONFIGURATION_OPTIONS: "-DPEANO_WITH_SPACE_FILLING_CURVE=Peano"
+    MIN_GRID_LEVELS: "${MIN_GRID_LEVELS_PEANO}"
+    MAX_GRID_LEVELS: "${MAX_GRID_LEVELS_PEANO}"
   trigger:
     include:
       - .continuous_integration/gitlab-pipeline.yml
@@ -97,7 +105,9 @@ AMD:
     FC: "flang"
     IMAGE_TAG: "${IMAGE_AMD}"
     PARALLEL_LAUNCH: "OMP_NUM_THREADS=${OMP_THREADS} mpirun --bind-to none -np ${MPI_RANKS}"
-    EXTRA_CONFIGURATION_OPTIONS: ""
+    EXTRA_CONFIGURATION_OPTIONS: "-DPEANO_WITH_SPACE_FILLING_CURVE=Peano"
+    MIN_GRID_LEVELS: "${MIN_GRID_LEVELS_PEANO}"
+    MAX_GRID_LEVELS: "${MAX_GRID_LEVELS_PEANO}"
   trigger:
     include:
       - .continuous_integration/gitlab-pipeline.yml

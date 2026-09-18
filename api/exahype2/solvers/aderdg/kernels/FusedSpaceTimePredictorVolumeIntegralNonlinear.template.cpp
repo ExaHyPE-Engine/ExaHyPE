@@ -10,89 +10,65 @@
 
 #include "tarch/CompilerSpecificSettings.h"
 
-{% import 'Gemms.template.h' as m with context %}
+{%- import 'Gemms.template.h' as m with context %}
 
-{% for item in NAMESPACE -%}
-namespace {{ item }} {
-{%- endfor %}
-
-template <typename cStoreType, typename pCompType>
-double picardIteration(
-  {{FULL_QUALIFIED_SOLVER_NAME}}&               solver,
-  pCompType* NOALIAS                            lQi,
-  pCompType* NOALIAS                            rhs,
-  pCompType* NOALIAS                            lFi,
-  pCompType* NOALIAS                            lSi,
-  pCompType* NOALIAS                            gradQ,
-  pCompType* NOALIAS                            newLQiSlice,
-  const cStoreType* const NOALIAS               luh,
-  const tarch::la::Vector<DIMENSIONS, double>&  cellCentre,
-  const tarch::la::Vector<DIMENSIONS, double>&  cellSize,
-  const double                                  timeStamp,
-  const double                                  timeStepSize
-);
-
-{% for item in NAMESPACE -%}
-}
-{%- endfor %}
-
-template <typename cStoreType, typename pCompType, typename picardCompType, typename pStoreType>
+template <typename SolutionStorageType, typename PredictorComputationType, typename PicardComputationType, typename PredictorStorageType>
 int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   [[maybe_unused]] {{FULL_QUALIFIED_SOLVER_NAME}}&  solver,
-  pStoreType* const NOALIAS                         lQhbnd[TWO_TIMES_D],
-  pStoreType* const NOALIAS                         lFhbnd[TWO_TIMES_D],
-  cStoreType* const NOALIAS                         luh,
+  PredictorStorageType* const NOALIAS               lQhbnd[peano4::FacesPerCell],
+  PredictorStorageType* const NOALIAS               lFhbnd[peano4::FacesPerCell],
+  SolutionStorageType* const NOALIAS                luh,
   const tarch::la::Vector<DIMENSIONS, double>&      cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>&      cellSize,
   const double                                      timeStamp,
   const double                                      timeStepSize
 ) {
-  const pCompType predictorTimeStepSize = static_cast<pCompType>(timeStepSize);
-  static thread_local {{FULL_QUALIFIED_NAMESPACE}}::PredictorScratchBuffer{{NAME_SUFFIX}}<pCompType> predictorScratch;
-  static thread_local {{FULL_QUALIFIED_NAMESPACE}}::PredictorScratchBuffer{{NAME_SUFFIX}}<picardCompType> picardScratch;
-  static thread_local {{FULL_QUALIFIED_NAMESPACE}}::PredictorScratchBuffer{{NAME_SUFFIX}}<picardCompType> newLQiSliceScratch;
-  static thread_local {{FULL_QUALIFIED_NAMESPACE}}::PredictorScratchBuffer{{NAME_SUFFIX}}<pCompType> coeffVolumeScratch;
+  const PredictorComputationType predictorTimeStepSize = static_cast<PredictorComputationType>(timeStepSize);
+  static thread_local {{FULL_QUALIFIED_NAMESPACE}}::PredictorScratchBuffer{{NAME_SUFFIX}}<PredictorComputationType> predictorScratch;
+  static thread_local {{FULL_QUALIFIED_NAMESPACE}}::PredictorScratchBuffer{{NAME_SUFFIX}}<PicardComputationType> picardScratch;
+  static thread_local {{FULL_QUALIFIED_NAMESPACE}}::PredictorScratchBuffer{{NAME_SUFFIX}}<PicardComputationType> newLQiSliceScratch;
+  static thread_local {{FULL_QUALIFIED_NAMESPACE}}::PredictorScratchBuffer{{NAME_SUFFIX}}<PredictorComputationType> coeffVolumeScratch;
 
-  pCompType* memory = predictorScratch.get(getFusedSTPVISize() - getPicardSize());
+  PredictorComputationType* const memory = predictorScratch.get(getFusedSTPVISize() - getPicardSize());
 
-  pCompType* lQhi = memory;
+  PredictorComputationType* const lQhi = memory;
 {% if USE_FLUX %}
-  pCompType* lFhi = memory + getlQhiSize();
+  PredictorComputationType* const lFhi = memory + getlQhiSize();
 {% endif %}
 {% if USE_SOURCE or USE_DIFFUSIVE_SOURCE or USE_NCP %}
-  pCompType* lShi = memory + getlQhiSize() + getlFhiSize();
+  PredictorComputationType* const lShi = memory + getlQhiSize() + getlFhiSize();
 {% endif %}
 
-  picardCompType* picardMemory = picardScratch.get(getPicardSize());
+  PicardComputationType* const picardMemory = picardScratch.get(getPicardSize());
 
-  picardCompType* lQi = picardMemory;
-  picardCompType* rhs = picardMemory + getlQiSize();
+  PicardComputationType* const lQi = picardMemory;
+  PicardComputationType* const rhs = picardMemory + getlQiSize();
 
 {% if USE_FLUX %}
-  picardCompType* lFi = picardMemory + getlQiSize() + getRhsSize();
+  PicardComputationType* const lFi = picardMemory + getlQiSize() + getRhsSize();
 {% else %}
-  picardCompType* lFi = nullptr;
+  PicardComputationType* const lFi = nullptr;
 {% endif %}
 
 {% if USE_SOURCE or USE_DIFFUSIVE_SOURCE or USE_NCP %}
-  picardCompType* lSi = picardMemory + getlQiSize() + getRhsSize() + getlFiSize();
+  PicardComputationType* const lSi = picardMemory + getlQiSize() + getRhsSize() + getlFiSize();
 {% else %}
-  picardCompType* lSi = nullptr;
+  PicardComputationType* const lSi = nullptr;
 {% endif %}
 
 {% if USE_NCP or USE_DIFFUSIVE_FLUX or USE_DIFFUSIVE_SOURCE %}
-  picardCompType* gradQ = picardMemory + getlQiSize() + getRhsSize() + getlFiSize() + getlSiSize();
+  PicardComputationType* const gradQ = picardMemory + getlQiSize() + getRhsSize() + getlFiSize() + getlSiSize();
 {% else %}
-  picardCompType* gradQ = nullptr;
+  PicardComputationType* const gradQ = nullptr;
 {% endif %}
 
 {% if USE_FLUX %}
-  const tarch::la::Vector<DIMENSIONS, pCompType> invDx = convertScalar<pCompType>(invertEntries(cellSize));
+  const tarch::la::Vector<DIMENSIONS, PredictorComputationType> invDx = convertScalar<PredictorComputationType>(invertEntries(cellSize));
 {% endif %}
 
   for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
-    picardCompType* const localPredictorState = &lQi[{{NUMBER_OF_DATA_PADDED}} * xyz];
-    std::fill_n(localPredictorState, {{NUMBER_OF_DATA_PADDED}}, picardCompType(0.0));
+    PicardComputationType* const localPredictorState = &lQi[{{NUMBER_OF_DATA_PADDED}} * xyz];
+    std::fill_n(localPredictorState, {{NUMBER_OF_DATA_PADDED}}, PicardComputationType(0.0));
     std::copy_n(&luh[{{NUMBER_OF_DATA}} * xyz], {{NUMBER_OF_DATA}}, localPredictorState);
   }
   for (int t = 1; t < {{NUMBER_OF_DOF}}; t++) {
@@ -103,12 +79,12 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
     );
   }
 
-  picardCompType* newLQiSlice = newLQiSliceScratch.get({{NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}});
+  PicardComputationType* const newLQiSlice = newLQiSliceScratch.get({{NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}});
   int numberOfPicardIterations = 0;
   bool picardIterationDiverged = false;
   constexpr double PicardResidualTolerance = 1e-7;
   for (; numberOfPicardIterations < {{2*NUMBER_OF_DOF+1}}; numberOfPicardIterations++) {
-    const double squaredResidual = picardIteration<cStoreType, picardCompType>(
+    const double squaredResidual = picardIteration<SolutionStorageType, PicardComputationType>(
       solver,
       lQi,
       rhs,
@@ -133,14 +109,14 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
     }
   }
 
-  std::memset(lQhi, 0, {{(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_DATA_PADDED}} * sizeof(pCompType));
+  std::memset(lQhi, 0, {{(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_DATA_PADDED}} * sizeof(PredictorComputationType));
 
 {% if USE_FLUX %}
-  std::memset(lFhi, 0, {{DIMENSIONS*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}} * sizeof(pCompType));
+  std::memset(lFhi, 0, {{DIMENSIONS*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}} * sizeof(PredictorComputationType));
 {% endif %}
 
 {% if USE_NCP or USE_SOURCE or USE_DIFFUSIVE_SOURCE %}
-  std::memset(lShi, 0, {{(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}} * sizeof(pCompType));
+  std::memset(lShi, 0, {{(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED}} * sizeof(PredictorComputationType));
 {% endif %}
 
   for (int z = 0; z < {{NUMBER_OF_DOF_3D}}; z++) {
@@ -149,24 +125,24 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
         for (int t = 0; t < {{NUMBER_OF_DOF}}; t++) {
           SIMD(aligned(lQhi,lQi:PEANO_WITH_ALIGNMENT))
           for (int n = 0; n < {{NUMBER_OF_DATA_PADDED}}; n++) {
-            lQhi[((z * {{NUMBER_OF_DOF}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DATA_PADDED}} + n] += Quadrature<pCompType>::weights1[t]
+            lQhi[((z * {{NUMBER_OF_DOF}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DATA_PADDED}} + n] += Quadrature<PredictorComputationType>::weights1[t]
               * lQi[(((t * {{NUMBER_OF_DOF_3D}} + z) * {{NUMBER_OF_DOF}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DATA_PADDED}} + n];
           }
 {% if USE_FLUX %}
           SIMD(aligned(lFhi,lFi:PEANO_WITH_ALIGNMENT))
           for (int n = 0; n<{{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
-            lFhi[((z * {{NUMBER_OF_DOF}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{0*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)}}] += Quadrature<pCompType>::weights1[t]
+            lFhi[((z * {{NUMBER_OF_DOF}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{0*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)}}] += Quadrature<PredictorComputationType>::weights1[t]
               * lFi[(((t * {{NUMBER_OF_DOF_3D}} + z) * {{NUMBER_OF_DOF}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{0*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}}];
           }
           SIMD(aligned(lFhi,lFi:PEANO_WITH_ALIGNMENT))
           for (int n = 0; n<{{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
-            lFhi[((z * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DOF}} + y) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{1*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)}}] += Quadrature<pCompType>::weights1[t]
+            lFhi[((z * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DOF}} + y) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{1*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)}}] += Quadrature<PredictorComputationType>::weights1[t]
               * lFi[(((t * {{NUMBER_OF_DOF_3D}} + z) * {{NUMBER_OF_DOF}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{1*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}}];
           }
 {% if DIMENSIONS==3%}
           SIMD(aligned(lFhi,lFi:PEANO_WITH_ALIGNMENT))
           for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
-            lFhi[((y * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DOF}} + z) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{2*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)}}] += Quadrature<pCompType>::weights1[t]
+            lFhi[((y * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_DOF}} + z) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{2*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)}}] += Quadrature<PredictorComputationType>::weights1[t]
               * lFi[(((t * {{NUMBER_OF_DOF_3D}} + z) * {{NUMBER_OF_DOF}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n + {{2*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED}}];
           }
 {% endif %}
@@ -174,7 +150,7 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
 {% if USE_NCP or USE_SOURCE or USE_DIFFUSIVE_SOURCE %}
           SIMD(aligned(lShi,lSi:PEANO_WITH_ALIGNMENT))
           for (int n = 0; n < {{NUMBER_OF_UNKNOWNS_PADDED}}; n++) {
-            lShi[((z * {{NUMBER_OF_DOF}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] += Quadrature<pCompType>::weights1[t]
+            lShi[((z * {{NUMBER_OF_DOF}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n] += Quadrature<PredictorComputationType>::weights1[t]
               * lSi[(((t * {{NUMBER_OF_DOF_3D}} + z) * {{NUMBER_OF_DOF}} + y) * {{NUMBER_OF_DOF}} + x) * {{NUMBER_OF_UNKNOWNS_PADDED}} + n];
           }
 {% endif %}
@@ -184,24 +160,24 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
   }
 
   for (int i = 0; i < 2 *DIMENSIONS; i++) {
-    std::memset(lQhbnd[i], 0, {{NUMBER_OF_DATA*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}} * sizeof(pStoreType));
-    std::memset(lFhbnd[i], 0, {{NUMBER_OF_UNKNOWNS*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}} * sizeof(pStoreType));
+    std::memset(lQhbnd[i], 0, {{NUMBER_OF_DATA*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}} * sizeof(PredictorStorageType));
+    std::memset(lFhbnd[i], 0, {{NUMBER_OF_UNKNOWNS*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}} * sizeof(PredictorStorageType));
   }
 
   for (int yz = 0; yz < {{NUMBER_OF_DOF*NUMBER_OF_DOF_3D}}; yz++) {
     for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
       SIMD(aligned(lQhi:PEANO_WITH_ALIGNMENT))
       for (int n = 0; n < {{NUMBER_OF_DATA}}; n++) {
-        lQhbnd[0][n + {{NUMBER_OF_DATA}} * yz] += lQhi[n + {{NUMBER_OF_DATA_PADDED}} * (x + {{NUMBER_OF_DOF}} * yz)] * DGMatrices<pCompType>::FLCoeff[x];
-        lQhbnd[DIMENSIONS][n + {{NUMBER_OF_DATA}} * yz] += lQhi[n + {{NUMBER_OF_DATA_PADDED}} * (x + {{NUMBER_OF_DOF}} * yz)] * DGMatrices<pCompType>::FRCoeff[x];
+        lQhbnd[0][n + {{NUMBER_OF_DATA}} * yz] += lQhi[n + {{NUMBER_OF_DATA_PADDED}} * (x + {{NUMBER_OF_DOF}} * yz)] * DGMatrices<PredictorComputationType>::FLCoeff[x];
+        lQhbnd[DIMENSIONS][n + {{NUMBER_OF_DATA}} * yz] += lQhi[n + {{NUMBER_OF_DATA_PADDED}} * (x + {{NUMBER_OF_DOF}} * yz)] * DGMatrices<PredictorComputationType>::FRCoeff[x];
 {% if USE_FLUX %}
 {% if NUMBER_OF_DATA != NUMBER_OF_UNKNOWNS %}
       }
       SIMD(aligned(lFhi:PEANO_WITH_ALIGNMENT))
       for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
 {% endif %}
-        lFhbnd[0][n + {{NUMBER_OF_UNKNOWNS}} * yz] += lFhi[n + {{NUMBER_OF_UNKNOWNS_PADDED}} * (x + {{NUMBER_OF_DOF}} * yz)] * DGMatrices<pCompType>::FLCoeff[x];
-        lFhbnd[DIMENSIONS][n + {{NUMBER_OF_UNKNOWNS}} * yz] += lFhi[n + {{NUMBER_OF_UNKNOWNS_PADDED}} * (x + {{NUMBER_OF_DOF}} * yz)] * DGMatrices<pCompType>::FRCoeff[x];
+        lFhbnd[0][n + {{NUMBER_OF_UNKNOWNS}} * yz] += lFhi[n + {{NUMBER_OF_UNKNOWNS_PADDED}} * (x + {{NUMBER_OF_DOF}} * yz)] * DGMatrices<PredictorComputationType>::FLCoeff[x];
+        lFhbnd[DIMENSIONS][n + {{NUMBER_OF_UNKNOWNS}} * yz] += lFhi[n + {{NUMBER_OF_UNKNOWNS_PADDED}} * (x + {{NUMBER_OF_DOF}} * yz)] * DGMatrices<PredictorComputationType>::FRCoeff[x];
 {% endif %}
       }
     }
@@ -218,16 +194,16 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
 {% endif %}
       SIMD(aligned(lQhi:PEANO_WITH_ALIGNMENT))
       for (int n = 0; n < {{NUMBER_OF_DATA}}; n++) {
-        lQhbnd[1][n + {{NUMBER_OF_DATA}} * xz] += lQhi[n + {{NUMBER_OF_DATA_PADDED}} * (x + {{NUMBER_OF_DOF}} * (y + {{NUMBER_OF_DOF_3D}} * z))] * DGMatrices<pCompType>::FLCoeff[y];
-        lQhbnd[1 + DIMENSIONS][n + {{NUMBER_OF_DATA}} * xz] += lQhi[n + {{NUMBER_OF_DATA_PADDED}} * (x + {{NUMBER_OF_DOF}} * (y + {{NUMBER_OF_DOF_3D}} * z))] * DGMatrices<pCompType>::FRCoeff[y];
+        lQhbnd[1][n + {{NUMBER_OF_DATA}} * xz] += lQhi[n + {{NUMBER_OF_DATA_PADDED}} * (x + {{NUMBER_OF_DOF}} * (y + {{NUMBER_OF_DOF_3D}} * z))] * DGMatrices<PredictorComputationType>::FLCoeff[y];
+        lQhbnd[1 + DIMENSIONS][n + {{NUMBER_OF_DATA}} * xz] += lQhi[n + {{NUMBER_OF_DATA_PADDED}} * (x + {{NUMBER_OF_DOF}} * (y + {{NUMBER_OF_DOF_3D}} * z))] * DGMatrices<PredictorComputationType>::FRCoeff[y];
 {% if USE_FLUX %}
 {% if NUMBER_OF_DATA != NUMBER_OF_UNKNOWNS %}
       }
       SIMD(aligned(lFhi:PEANO_WITH_ALIGNMENT))
       for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
 {% endif %}
-        lFhbnd[1][n + {{NUMBER_OF_UNKNOWNS}} * xz] += lFhi[n + {{NUMBER_OF_UNKNOWNS_PADDED}} * (y + {{NUMBER_OF_DOF}} * xz) + {{1*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)}}] * DGMatrices<pCompType>::FLCoeff[y];
-        lFhbnd[1 + DIMENSIONS][n + {{NUMBER_OF_UNKNOWNS}} * xz] += lFhi[n + {{NUMBER_OF_UNKNOWNS_PADDED}} * (y + {{NUMBER_OF_DOF}} * xz) + {{1*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)}}] * DGMatrices<pCompType>::FRCoeff[y];
+        lFhbnd[1][n + {{NUMBER_OF_UNKNOWNS}} * xz] += lFhi[n + {{NUMBER_OF_UNKNOWNS_PADDED}} * (y + {{NUMBER_OF_DOF}} * xz) + {{1*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)}}] * DGMatrices<PredictorComputationType>::FLCoeff[y];
+        lFhbnd[1 + DIMENSIONS][n + {{NUMBER_OF_UNKNOWNS}} * xz] += lFhi[n + {{NUMBER_OF_UNKNOWNS_PADDED}} * (y + {{NUMBER_OF_DOF}} * xz) + {{1*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)}}] * DGMatrices<PredictorComputationType>::FRCoeff[y];
 {% endif %}
       }
     }
@@ -238,16 +214,16 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
     for (int z = 0; z < {{NUMBER_OF_DOF}}; z++) {
       SIMD(aligned(lQhi:PEANO_WITH_ALIGNMENT))
       for (int n = 0; n < {{NUMBER_OF_DATA}}; n++) {
-        lQhbnd[2][n + {{NUMBER_OF_DATA}} * xy] += lQhi[n + {{NUMBER_OF_DATA_PADDED}} * (xy + {{NUMBER_OF_DOF*NUMBER_OF_DOF}} * z)] * DGMatrices<pCompType>::FLCoeff[z];
-        lQhbnd[2 + DIMENSIONS][n + {{NUMBER_OF_DATA}} * xy] += lQhi[n + {{NUMBER_OF_DATA_PADDED}} * (xy + {{NUMBER_OF_DOF*NUMBER_OF_DOF}} * z)] * DGMatrices<pCompType>::FRCoeff[z];
+        lQhbnd[2][n + {{NUMBER_OF_DATA}} * xy] += lQhi[n + {{NUMBER_OF_DATA_PADDED}} * (xy + {{NUMBER_OF_DOF*NUMBER_OF_DOF}} * z)] * DGMatrices<PredictorComputationType>::FLCoeff[z];
+        lQhbnd[2 + DIMENSIONS][n + {{NUMBER_OF_DATA}} * xy] += lQhi[n + {{NUMBER_OF_DATA_PADDED}} * (xy + {{NUMBER_OF_DOF*NUMBER_OF_DOF}} * z)] * DGMatrices<PredictorComputationType>::FRCoeff[z];
 {% if USE_FLUX %}
 {% if NUMBER_OF_DATA != NUMBER_OF_UNKNOWNS %}
       }
       SIMD(aligned(lFhi:PEANO_WITH_ALIGNMENT))
       for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
 {% endif %}
-        lFhbnd[2][n + {{NUMBER_OF_UNKNOWNS}} * xy] += lFhi[n + {{NUMBER_OF_UNKNOWNS_PADDED}} * (z + {{NUMBER_OF_DOF}} * xy) + {{2*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)}}] * DGMatrices<pCompType>::FLCoeff[z];
-        lFhbnd[2 + DIMENSIONS][n + {{NUMBER_OF_UNKNOWNS}} * xy] += lFhi[n + {{NUMBER_OF_UNKNOWNS_PADDED}} * (z + {{NUMBER_OF_DOF}} * xy) + {{2*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)}}] * DGMatrices<pCompType>::FRCoeff[z];
+        lFhbnd[2][n + {{NUMBER_OF_UNKNOWNS}} * xy] += lFhi[n + {{NUMBER_OF_UNKNOWNS_PADDED}} * (z + {{NUMBER_OF_DOF}} * xy) + {{2*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)}}] * DGMatrices<PredictorComputationType>::FLCoeff[z];
+        lFhbnd[2 + DIMENSIONS][n + {{NUMBER_OF_UNKNOWNS}} * xy] += lFhi[n + {{NUMBER_OF_UNKNOWNS_PADDED}} * (z + {{NUMBER_OF_DOF}} * xy) + {{2*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)}}] * DGMatrices<PredictorComputationType>::FRCoeff[z];
 {% endif %}
       }
     }
@@ -256,37 +232,37 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
 
   // Kxi already contains one spatial quadrature factor; the matching
   // tensor-product factors in the remaining directions cancel.
-  pCompType* coeffVolume = coeffVolumeScratch.get({{NUMBER_OF_DOF_PADDED*NUMBER_OF_DOF}});
+  PredictorComputationType* const coeffVolume = coeffVolumeScratch.get({{NUMBER_OF_DOF_PADDED*NUMBER_OF_DOF}});
   for (int i = 0; i < {{NUMBER_OF_DOF}}; i++) {
     for (int j = 0; j < {{NUMBER_OF_DOF}}; j++) {
-      coeffVolume[i * {{NUMBER_OF_DOF_PADDED}} + j] = DGMatrices<pCompType>::Kxi_T[i * {{NUMBER_OF_DOF_PADDED}} + j] * predictorTimeStepSize * Quadrature<pCompType>::iweights1[i];
+      coeffVolume[i * {{NUMBER_OF_DOF_PADDED}} + j] = DGMatrices<PredictorComputationType>::KxiTransposed[i * {{NUMBER_OF_DOF_PADDED}} + j] * predictorTimeStepSize * Quadrature<PredictorComputationType>::iweights1[i];
     }
   }
 
 {% if USE_FLUX %}
   for (int j = 0; j < {{NUMBER_OF_DOF_3D}}; j++) {
     for (int i = 0; i < {{NUMBER_OF_DOF}}; i++) {
-      {{ m.gemm('lduh_x', 'lFhi', 'coeffVolume', 'luh',
+      {{ m.gemm('lduhX', 'lFhi', 'coeffVolume', 'luh',
         '(j*'~NUMBER_OF_DOF~'+i)*'~(NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF)~'+'~(0*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)),
         '0',
         '(j*'~NUMBER_OF_DOF~'+i)*'~(NUMBER_OF_DATA*NUMBER_OF_DOF),
-        true_B='coeffVolume',
-        true_alpha='invDx[0]') | indent(6) }}{##}
+        trueB='coeffVolume',
+        trueAlpha='invDx[0]') | indent(6) }}{##}
 
-      {{ m.gemm('lduh_y', 'lFhi', 'coeffVolume', 'luh',
+      {{ m.gemm('lduhY', 'lFhi', 'coeffVolume', 'luh',
         '(j*'~NUMBER_OF_DOF~'+i)*'~(NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF)~'+'~(1*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)),
         '0',
         '(j*'~(NUMBER_OF_DOF*NUMBER_OF_DOF)~'+i)*'~NUMBER_OF_DATA,
-        true_B='coeffVolume',
-        true_alpha='invDx[1]') | indent(6) }}{##}
+        trueB='coeffVolume',
+        trueAlpha='invDx[1]') | indent(6) }}{##}
 
 {% if DIMENSIONS==3 %}
-      {{ m.gemm('lduh_z', 'lFhi', 'coeffVolume', 'luh',
+      {{ m.gemm('lduhZ', 'lFhi', 'coeffVolume', 'luh',
         '(j*'~NUMBER_OF_DOF~'+i)*'~(NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF)~'+'~(2*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)),
         '0',
         '(j*'~NUMBER_OF_DOF~'+i)*'~NUMBER_OF_DATA,
-        true_B='coeffVolume',
-        true_alpha='invDx[2]') | indent(6) }}{##}
+        trueB='coeffVolume',
+        trueAlpha='invDx[2]') | indent(6) }}{##}
 {% endif %}
     }
   }
@@ -313,8 +289,8 @@ int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral(
 {% for PRECISION_NUM in range(0,PREDICTOR_COMPUTATION_PRECISIONS|length) %}
 template int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{PICARD_COMPUTATION_PRECISION}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
   {{FULL_QUALIFIED_SOLVER_NAME}}&                     solver,
-  {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS  lQhbnd[TWO_TIMES_D],
-  {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS  lFhbnd[TWO_TIMES_D],
+  {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS  lQhbnd[peano4::FacesPerCell],
+  {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS  lFhbnd[peano4::FacesPerCell],
   {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS       luh,
   const tarch::la::Vector<DIMENSIONS, double>&        cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>&        cellSize,
@@ -323,81 +299,81 @@ template int {{FULL_QUALIFIED_NAMESPACE}}::fusedSpaceTimePredictorVolumeIntegral
 );
 {% endfor %}
 
-template <typename cStoreType, typename pCompType>
+template <typename SolutionStorageType, typename PredictorComputationType>
 double {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
   [[maybe_unused]] {{FULL_QUALIFIED_SOLVER_NAME}}&  solver,
-  pCompType* NOALIAS                                lQi,
-  pCompType* NOALIAS                                rhs,
-  pCompType* NOALIAS                                lFi,
-  pCompType* NOALIAS                                lSi,
-  pCompType* NOALIAS                                gradQ,
-  pCompType* NOALIAS                                newLQiSlice,
-  const cStoreType* const NOALIAS                   luh,
+  PredictorComputationType* NOALIAS                 lQi,
+  PredictorComputationType* NOALIAS                 rhs,
+  PredictorComputationType* NOALIAS                 lFi,
+  PredictorComputationType* NOALIAS                 lSi,
+  PredictorComputationType* NOALIAS                 gradQ,
+  PredictorComputationType* NOALIAS                 newLQiSlice,
+  const SolutionStorageType* const NOALIAS          luh,
   const tarch::la::Vector<DIMENSIONS, double>&      cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>&      cellSize,
   const double                                      timeStamp,
   const double                                      timeStepSize
 ) {
 {% if USE_FLUX %}
-  const pCompType* Kxi = DGMatrices<pCompType>::Kxi;
+  const PredictorComputationType* const Kxi = DGMatrices<PredictorComputationType>::Kxi;
 {% endif %}
 
 {% if USE_FLUX or USE_NCP or USE_DIFFUSIVE_FLUX or USE_DIFFUSIVE_SOURCE %}
-  const tarch::la::Vector<DIMENSIONS, pCompType> invDx = convertScalar<pCompType>(invertEntries(cellSize));
+  const tarch::la::Vector<DIMENSIONS, PredictorComputationType> invDx = convertScalar<PredictorComputationType>(invertEntries(cellSize));
 {% endif %}
 
 {% if USE_FLUX %}
-  const pCompType dtByDx[DIMENSIONS] = { static_cast<pCompType>(timeStepSize) * invDx[0], static_cast<pCompType>(timeStepSize) * invDx[1]
+  const PredictorComputationType dtByDx[DIMENSIONS] = { static_cast<PredictorComputationType>(timeStepSize) * invDx[0], static_cast<PredictorComputationType>(timeStepSize) * invDx[1]
 {% if DIMENSIONS == 3 %}
-      , static_cast<pCompType>(timeStepSize) * invDx[2]
+      , static_cast<PredictorComputationType>(timeStepSize) * invDx[2]
 {% endif %}
   };
 {% endif %}
 
   for (int t = 0; t < {{NUMBER_OF_DOF}}; t++) {
 {% if USE_NCP or USE_DIFFUSIVE_FLUX or USE_DIFFUSIVE_SOURCE %}
-    std::memset(gradQ, 0, {{(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED*DIMENSIONS}} * sizeof(pCompType));
+    std::memset(gradQ, 0, {{(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_UNKNOWNS_PADDED*DIMENSIONS}} * sizeof(PredictorComputationType));
 
-    pCompType* dudx_T = DGMatrices<pCompType>::dudx_T;
+    const PredictorComputationType* const dudxTransposed = DGMatrices<PredictorComputationType>::dudxTransposed;
 
     for (int z = 0; z < {{NUMBER_OF_DOF_3D}}; z++) {
       for (int y = 0; y < {{NUMBER_OF_DOF}}; y++) {
-        {{ m.gemm('gradQ_x', 'lQi', 'dudx_T', 'gradQ',
+        {{ m.gemm('gradQX', 'lQi', 'dudxTransposed', 'gradQ',
           '((t*'~NUMBER_OF_DOF_3D~'+z)*'~NUMBER_OF_DOF~'+y)*'~NUMBER_OF_DOF*NUMBER_OF_DATA_PADDED,
           '0',
           '(z*'~NUMBER_OF_DOF~'+y)*'~NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF,
-          true_B='dudx_T',
-          true_alpha='invDx[0]') | indent(10) }}{##}
+          trueB='dudxTransposed',
+          trueAlpha='invDx[0]') | indent(10) }}{##}
       }
     }
 
     for (int z = 0; z < {{NUMBER_OF_DOF_3D}}; z++) {
       for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
-        {{ m.gemm('gradQ_y', 'lQi', 'dudx_T', 'gradQ',
+        {{ m.gemm('gradQY', 'lQi', 'dudxTransposed', 'gradQ',
           '((t*'~NUMBER_OF_DOF_3D~'+z)*'~NUMBER_OF_DOF*NUMBER_OF_DOF~'+x)*'~NUMBER_OF_DATA_PADDED,
           '0',
           '(z*'~NUMBER_OF_DOF*NUMBER_OF_DOF~'+x)*'~NUMBER_OF_UNKNOWNS_PADDED~'+'~NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS),
-          true_B='dudx_T',
-          true_alpha='invDx[1]') | indent(10) }}{##}
+          trueB='dudxTransposed',
+          trueAlpha='invDx[1]') | indent(10) }}{##}
       }
     }
 
 {% if DIMENSIONS==3 %}
     for (int y = 0; y < {{NUMBER_OF_DOF}}; y++) {
       for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
-        {{ m.gemm('gradQ_z', 'lQi', 'dudx_T', 'gradQ',
+        {{ m.gemm('gradQZ', 'lQi', 'dudxTransposed', 'gradQ',
           '((t*'~NUMBER_OF_DOF_3D*NUMBER_OF_DOF~'+y)*'~NUMBER_OF_DOF~'+x)*'~NUMBER_OF_DATA_PADDED,
           '0',
           '(y*'~NUMBER_OF_DOF~'+x)*'~NUMBER_OF_UNKNOWNS_PADDED~'+'~2*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS),
-          true_B='dudx_T',
-          true_alpha='invDx[2]') | indent(10) }}{##}
+          trueB='dudxTransposed',
+          trueAlpha='invDx[2]') | indent(10) }}{##}
       }
     }
 {% endif %}
 {% endif %}
 
 {% if USE_FLUX %}
-    pCompType* F[{{DIMENSIONS}}];
+    PredictorComputationType* F[{{DIMENSIONS}}];
 
     for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
 {% if DIMENSIONS==2 %}
@@ -415,12 +391,12 @@ double {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
       const tarch::la::Vector<DIMENSIONS, int> index = {xyz % {{NUMBER_OF_DOF}}, (xyz % {{NUMBER_OF_DOF**2}}) / {{NUMBER_OF_DOF}}, xyz / {{NUMBER_OF_DOF**2}}};
 {% endif %}
 
-      const double timePosition = timeStamp + Quadrature<pCompType>::nodes[t] * timeStepSize;
+      const double timePosition = timeStamp + Quadrature<PredictorComputationType>::nodes[t] * timeStepSize;
 
-      tarch::la::Vector<DIMENSIONS, double> nodePosition = ::exahype2::dg::getQuadraturePoint(cellCentre, cellSize, index, {{NUMBER_OF_DOF - 1}}, Quadrature<pCompType>::nodes);
+      const tarch::la::Vector<DIMENSIONS, double> nodePosition = ::exahype2::dg::getQuadraturePoint(cellCentre, cellSize, index, Quadrature<PredictorComputationType>::nodes);
 
 {% if USE_DIFFUSIVE_FLUX %}
-      const pCompType* gradQFlux[DIMENSIONS] = {
+      const PredictorComputationType* gradQFlux[DIMENSIONS] = {
         gradQ + {{NUMBER_OF_UNKNOWNS_PADDED}} * xyz,
         gradQ + {{NUMBER_OF_UNKNOWNS_PADDED}} * xyz + {{1*NUMBER_OF_UNKNOWNS_PADDED*(NUMBER_OF_DOF**DIMENSIONS)}}
 {% if DIMENSIONS==3 %}
@@ -432,7 +408,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
       // The predictor uses cell-local fluxes; neighbour penalties enter during correction.
       UNROLL(DIMENSIONS)
       for (int d = 0; d < DIMENSIONS; d++) {
-        std::fill_n(F[d], {{NUMBER_OF_UNKNOWNS_PADDED}}, pCompType(0.0));
+        std::fill_n(F[d], {{NUMBER_OF_UNKNOWNS_PADDED}}, PredictorComputationType(0.0));
 {% if STATELESS_FLUX %}
         {{FULL_QUALIFIED_SOLVER_NAME}}::flux(
 {% else %}
@@ -455,9 +431,9 @@ double {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
 
     // Temporal upwinding uses the corrected state from the preceding step as the initial state.
     for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
-      const pCompType weight = Quadrature<pCompType>::weights3[xyz] * DGMatrices<pCompType>::FLCoeff[t];
-      pCompType* const localRightHandSide = rhs + {{NUMBER_OF_UNKNOWNS_PADDED}} * (xyz + {{NUMBER_OF_DOF**DIMENSIONS}} * t);
-      std::fill_n(localRightHandSide, {{NUMBER_OF_UNKNOWNS_PADDED}}, pCompType(0.0));
+      const PredictorComputationType weight = Quadrature<PredictorComputationType>::weights3[xyz] * DGMatrices<PredictorComputationType>::FLCoeff[t];
+      PredictorComputationType* const localRightHandSide = rhs + {{NUMBER_OF_UNKNOWNS_PADDED}} * (xyz + {{NUMBER_OF_DOF**DIMENSIONS}} * t);
+      std::fill_n(localRightHandSide, {{NUMBER_OF_UNKNOWNS_PADDED}}, PredictorComputationType(0.0));
       SIMD()
       for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
         localRightHandSide[n] = weight * luh[n + {{NUMBER_OF_DATA}} * xyz];
@@ -468,35 +444,35 @@ double {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
     // Kxi and weights3 carry complementary tensor-product factors for each derivative.
     for (int z = 0; z < {{NUMBER_OF_DOF_3D}}; z++) {
       for (int y = 0; y < {{NUMBER_OF_DOF}}; y++) {
-        {{ m.gemm('rhs_x', 'lFi', 'coeffRhsX', 'rhs',
+        {{ m.gemm('rhsX', 'lFi', 'coeffRhsX', 'rhs',
           '((t*'~NUMBER_OF_DOF_3D~'+z)*'~NUMBER_OF_DOF~'+y)*'~NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF,
           '0',
           '((t*'~NUMBER_OF_DOF_3D~'+z)*'~NUMBER_OF_DOF~'+y)*'~NUMBER_OF_UNKNOWNS_PADDED*NUMBER_OF_DOF,
-          true_B='Kxi',
-          true_alpha='-Quadrature<pCompType>::weights3[t*'~NUMBER_OF_DOF*NUMBER_OF_DOF_3D~'+z*'~NUMBER_OF_DOF~'+y] * dtByDx[0]') | indent(10) }}{##}
+          trueB='Kxi',
+          trueAlpha='-Quadrature<PredictorComputationType>::weights3[t*'~NUMBER_OF_DOF*NUMBER_OF_DOF_3D~'+z*'~NUMBER_OF_DOF~'+y] * dtByDx[0]') | indent(10) }}{##}
       }
     }
 
     for (int z = 0; z < {{NUMBER_OF_DOF_3D}}; z++) {
       for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
-        {{ m.gemm('rhs_y', 'lFi', 'coeffRhsY', 'rhs',
+        {{ m.gemm('rhsY', 'lFi', 'coeffRhsY', 'rhs',
           '((t*'~NUMBER_OF_DOF_3D~'+z)*'~NUMBER_OF_DOF*NUMBER_OF_DOF~'+x)*'~NUMBER_OF_UNKNOWNS_PADDED~'+'~1*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED,
           '0',
           '((t*'~NUMBER_OF_DOF_3D~'+z)*'~NUMBER_OF_DOF*NUMBER_OF_DOF~'+x)*'~NUMBER_OF_UNKNOWNS_PADDED,
-          true_B='Kxi',
-          true_alpha='-Quadrature<pCompType>::weights3[t*'~NUMBER_OF_DOF*NUMBER_OF_DOF_3D~'+z*'~NUMBER_OF_DOF~'+x] * dtByDx[1]') | indent(10) }}{##}
+          trueB='Kxi',
+          trueAlpha='-Quadrature<PredictorComputationType>::weights3[t*'~NUMBER_OF_DOF*NUMBER_OF_DOF_3D~'+z*'~NUMBER_OF_DOF~'+x] * dtByDx[1]') | indent(10) }}{##}
       }
     }
 
 {% if DIMENSIONS==3 %}
     for (int y = 0; y < {{NUMBER_OF_DOF}}; y++) {
       for (int x = 0; x < {{NUMBER_OF_DOF}}; x++) {
-        {{ m.gemm('rhs_z', 'lFi','coeffRhsZ', 'rhs',
+        {{ m.gemm('rhsZ', 'lFi','coeffRhsZ', 'rhs',
           '((t*'~NUMBER_OF_DOF*NUMBER_OF_DOF~'+y)*'~NUMBER_OF_DOF~'+x)*'~NUMBER_OF_UNKNOWNS_PADDED~'+'~2*(NUMBER_OF_DOF**DIMENSIONS)*NUMBER_OF_DOF*NUMBER_OF_UNKNOWNS_PADDED,
           '0',
           '((t*'~NUMBER_OF_DOF*NUMBER_OF_DOF~'+y)*'~NUMBER_OF_DOF~'+x)*'~NUMBER_OF_UNKNOWNS_PADDED,
-          true_B='Kxi',
-          true_alpha='-Quadrature<pCompType>::weights3[t*'~NUMBER_OF_DOF*NUMBER_OF_DOF_3D~'+y*'~NUMBER_OF_DOF~'+x] * dtByDx[2]') | indent(10) }}{##}
+          trueB='Kxi',
+          trueAlpha='-Quadrature<PredictorComputationType>::weights3[t*'~NUMBER_OF_DOF*NUMBER_OF_DOF_3D~'+y*'~NUMBER_OF_DOF~'+x] * dtByDx[2]') | indent(10) }}{##}
       }
     }
 {% endif %}
@@ -504,18 +480,18 @@ double {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
 
 {% if USE_NCP or USE_SOURCE or USE_DIFFUSIVE_SOURCE %}
 {% if USE_NCP %}
-    pCompType nonconservativeProduct[{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+    PredictorComputationType nonconservativeProductTerm[{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
 {% endif %}
 {% if USE_SOURCE and USE_DIFFUSIVE_SOURCE %}
-    pCompType diffusiveSource[{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+    PredictorComputationType diffusiveSource[{{NUMBER_OF_UNKNOWNS}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
 {% endif %}
 {% if USE_NCP or USE_DIFFUSIVE_SOURCE %}
-    pCompType gradientForPDE[{{NUMBER_OF_UNKNOWNS*DIMENSIONS}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+    PredictorComputationType gradientForPDE[{{NUMBER_OF_UNKNOWNS*DIMENSIONS}}] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
 {% endif %}
 
     for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
-      pCompType* const localSource = lSi + (t * {{NUMBER_OF_DOF ** DIMENSIONS}} + xyz) * {{NUMBER_OF_UNKNOWNS_PADDED}};
-      std::fill_n(localSource, {{NUMBER_OF_UNKNOWNS_PADDED}}, pCompType(0.0));
+      PredictorComputationType* const localSource = lSi + (t * {{NUMBER_OF_DOF ** DIMENSIONS}} + xyz) * {{NUMBER_OF_UNKNOWNS_PADDED}};
+      std::fill_n(localSource, {{NUMBER_OF_UNKNOWNS_PADDED}}, PredictorComputationType(0.0));
 
 {% if USE_NCP or USE_SOURCE or USE_DIFFUSIVE_SOURCE %}
 {% if DIMENSIONS==2 %}
@@ -524,8 +500,8 @@ double {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
 {% if DIMENSIONS==3 %}
       const tarch::la::Vector<DIMENSIONS, int> index = {xyz % {{NUMBER_OF_DOF}}, (xyz % {{NUMBER_OF_DOF**2}}) / {{NUMBER_OF_DOF}}, xyz / {{NUMBER_OF_DOF**2}}};
 {% endif %}
-      const double timePosition = timeStamp + Quadrature<pCompType>::nodes[t] * timeStepSize;
-      tarch::la::Vector<DIMENSIONS, double> nodePosition = ::exahype2::dg::getQuadraturePoint(cellCentre, cellSize, index, {{NUMBER_OF_DOF - 1}}, Quadrature<pCompType>::nodes);
+      const double timePosition = timeStamp + Quadrature<PredictorComputationType>::nodes[t] * timeStepSize;
+      const tarch::la::Vector<DIMENSIONS, double> nodePosition = ::exahype2::dg::getQuadraturePoint(cellCentre, cellSize, index, Quadrature<PredictorComputationType>::nodes);
 {% endif %}
 
 {% if USE_NCP or USE_DIFFUSIVE_SOURCE %}
@@ -552,7 +528,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
 {% endif %}
 {% if USE_DIFFUSIVE_SOURCE %}
 {% if USE_SOURCE %}
-      std::fill_n(diffusiveSource, {{NUMBER_OF_UNKNOWNS}}, pCompType(0.0));
+      std::fill_n(diffusiveSource, {{NUMBER_OF_UNKNOWNS}}, PredictorComputationType(0.0));
 {% endif %}
 {% if STATELESS_DIFFUSIVE_SOURCE_TERM %}
       {{FULL_QUALIFIED_SOLVER_NAME}}::diffusiveSourceTerm(
@@ -583,7 +559,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
       UNROLL(DIMENSIONS)
       for (int d = 0; d < DIMENSIONS; d++) {
         // The predictor evaluates only the cell-local nonconservative product.
-        std::fill_n(nonconservativeProduct, {{NUMBER_OF_UNKNOWNS}}, pCompType(0.0));
+        std::fill_n(nonconservativeProductTerm, {{NUMBER_OF_UNKNOWNS}}, PredictorComputationType(0.0));
 {% if STATELESS_NCP %}
         {{FULL_QUALIFIED_SOLVER_NAME}}::nonconservativeProduct(
 {% else %}
@@ -596,17 +572,17 @@ double {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
           timePosition,
           timeStepSize,
           d,
-          nonconservativeProduct
+          nonconservativeProductTerm
         );
 
-        SIMD(aligned(nonconservativeProduct:PEANO_WITH_ALIGNMENT))
+        SIMD(aligned(nonconservativeProductTerm:PEANO_WITH_ALIGNMENT))
         for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
-          localSource[n] -= nonconservativeProduct[n];
+          localSource[n] -= nonconservativeProductTerm[n];
         }
       }
 {% endif %}
 
-      const pCompType updateSize = Quadrature<pCompType>::weights1[t] * Quadrature<pCompType>::weights3[xyz] * timeStepSize;
+      const PredictorComputationType updateSize = Quadrature<PredictorComputationType>::weights1[t] * Quadrature<PredictorComputationType>::weights3[xyz] * timeStepSize;
       SIMD(aligned(rhs:PEANO_WITH_ALIGNMENT))
       for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {
         rhs[n + (t * {{NUMBER_OF_DOF ** DIMENSIONS}} + xyz) * {{NUMBER_OF_UNKNOWNS_PADDED}}] += updateSize * localSource[n];
@@ -615,19 +591,19 @@ double {{FULL_QUALIFIED_NAMESPACE}}::picardIteration(
 {% endif %}
   }
 
-  // Multiplication by iK1_T integrates the right-hand side in time and forms the current Picard iterate.
-  const pCompType* iK1_T = DGMatrices<pCompType>::iK1_T;
+  // Multiplication by iK1Transposed integrates the right-hand side in time and forms the current Picard iterate.
+  const PredictorComputationType* const iK1Transposed = DGMatrices<PredictorComputationType>::iK1Transposed;
   // Strong discontinuities can make the local predictor diverge before limiter
-  // recomputation. The 1e20 bound admits well-scaled states and keeps every
+  // recomputation. The bound below admits well-scaled states and keeps every
   // squared double residual finite.
   constexpr double PicardDivergenceBound = 1e20;
-  constexpr auto NativePicardDivergenceBound = static_cast<pCompType>(PicardDivergenceBound);
+  constexpr auto NativePicardDivergenceBound = static_cast<PredictorComputationType>(PicardDivergenceBound);
   double squaredResidual = 0.0;
   for (int xyz = 0; xyz < {{NUMBER_OF_DOF**DIMENSIONS}}; xyz++) {
-    {{ m.gemm('lqi', 'rhs', 's_m_QSlice', 'newLQiSlice',
+    {{ m.gemm('lqi', 'rhs', 'qSliceBuffer', 'newLQiSlice',
       NUMBER_OF_UNKNOWNS_PADDED~'*xyz', '0', '0',
-      true_B='iK1_T',
-      true_alpha='Quadrature<pCompType>::iweights3[xyz]') | indent(6) }}{##}
+      trueB='iK1Transposed',
+      trueAlpha='Quadrature<PredictorComputationType>::iweights3[xyz]') | indent(6) }}{##}
 
     for (int t = 0; t < {{NUMBER_OF_DOF}}; t++) {
       for (int n = 0; n < {{NUMBER_OF_UNKNOWNS}}; n++) {

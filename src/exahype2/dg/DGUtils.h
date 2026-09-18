@@ -4,7 +4,6 @@
 
 #include "exahype2/dg/Functors.h"
 #include "exahype2/fv/PatchUtils.h"
-#include "peano4/Globals.h"
 #include "peano4/Loop.h"
 #include "peano4/dataview/CellMarker.h"
 #include "peano4/dataview/FaceMarker.h"
@@ -19,14 +18,7 @@ namespace exahype2::dg {
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     const tarch::la::Vector<DIMENSIONS, int>&    index,
-    int                                          polynomialOrder,
     const T* NOALIAS                             quadraturePoints
-  );
-
-  double getQuadratureWeight(
-    const tarch::la::Vector<3, double>& cellSize,
-    const tarch::la::Vector<3, int>&    index,
-    const double* NOALIAS               quadratureWeights
   );
 
   int getNodesPerCell(int nodesPerAxis);
@@ -35,47 +27,23 @@ namespace exahype2::dg {
 
   tarch::la::Vector<DIMENSIONS, int> getIndex(int node, tarch::la::Vector<DIMENSIONS, int> strides);
 
-  int cellIndexToHullIndex(
-    const tarch::la::Vector<DIMENSIONS, int>& indexCell,
-    const int                                 direction,
-    const int                                 orientation,
-    const int                                 nodesPerAxis
-  );
-
   void computeGradient(
-    const double* NOALIAS const QCell,
-    const double* NOALIAS const derivativeOperator,
-    const double                invDx,
-    const int                   nodesPerAxis,
-    const int                   strideQ,
-    const int                   scalarIndex,
-    double* NOALIAS             gradQ
+    const double* NOALIAS QCell,
+    const double* NOALIAS derivativeOperator,
+    double                invDx,
+    int                   nodesPerAxis,
+    int                   strideQ,
+    int                   scalarIndex,
+    double* NOALIAS       gradQ
   );
 
-  void subtractCell(
-    double* NOALIAS       QOut,
-    const double* NOALIAS Qsubstract,
-    const int             order,
-    const int             unknowns,
-    const int             auxiliaryVariables
-  );
-
-  std::string plotCell(const double* NOALIAS Q, const int order, const int unknowns, const int auxiliaryVariables);
-
-  std::string plotFace(
-    const double* NOALIAS Q,
-    const int             order,
-    const int             unknowns,
-    const int             auxiliaryVariables,
-    int                   normal,
-    int                   numberOfQuantitiesProjectedOntoFace
-  );
+  std::string plotCell(const double* NOALIAS Q, int order, int unknowns, int auxiliaryVariables);
 
   template <typename QStoreType>
   QStoreType evaluatePolynomial(
     const peano4::dataview::CellMarker&          marker,
     int                                          order,
-    const QStoreType* NOALIAS                    QuadratureNodes1D,
+    const QStoreType* NOALIAS                    quadratureNodes1D,
     int                                          unknownsPerDoF,
     const QStoreType* NOALIAS                    Q,
     const tarch::la::Vector<DIMENSIONS, double>& x,
@@ -86,7 +54,7 @@ namespace exahype2::dg {
   QStoreType evaluatePolynomial(
     const peano4::dataview::FaceMarker&          marker,
     int                                          order,
-    const QStoreType* NOALIAS                    QuadratureNodes1D,
+    const QStoreType* NOALIAS                    quadratureNodes1D,
     int                                          unknownsPerDoF,
     const QStoreType* NOALIAS                    Q,
     const tarch::la::Vector<DIMENSIONS, double>& x,
@@ -98,9 +66,9 @@ namespace exahype2::dg {
     int                   order,
     int                   numberOfProjectedQuantities,
     int                   normal,
-    int                   isRightFaceHalf,
-    const double* NOALIAS srcQ,
-    double* NOALIAS       destQ
+    bool                  isRightFaceHalf,
+    const double* NOALIAS sourceQ,
+    double* NOALIAS       destinationQ
   );
 } // namespace exahype2::dg
 

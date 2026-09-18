@@ -1,0 +1,14 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#pragma once
+
+#include "peano4/sfc/SpaceFillingCurve.h"
+#include "peano4/sfc/curves/@PEANO_WITH_SPACE_FILLING_CURVE@Grammar.h"
+
+namespace peano4::sfc {
+  /**
+   * Names the space-filling curve the grid traverses. CMake selects it through
+   * PEANO_WITH_SPACE_FILLING_CURVE.
+   */
+  using ActiveCurve = peano4::sfc::SpaceFillingCurve<peano4::sfc::@PEANO_WITH_SPACE_FILLING_CURVE@Grammar>;
+} // namespace peano4::sfc

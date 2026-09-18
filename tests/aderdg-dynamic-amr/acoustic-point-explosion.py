@@ -83,7 +83,7 @@ solver.set_implementation(
     Order + 1,
     NumberOfUnknowns + NumberOfAuxiliaryVariables,
     1.0e-2,
-    9.0,
+    ::exahype2::DefaultCoarsenSafetyFactor,
     kernels::ADERDGSolver::Quadrature<double>::nodes,
     [](const double* const values) { return 1.0 + values[Shortcuts::p]; },
     [](const double* const values) {
@@ -112,9 +112,11 @@ solver.set_implementation(
     forceVector[Shortcuts::u + d] = 0.0;
   }
 
-  constexpr double PeakTime   = 0.1;
-  constexpr double PulseWidth = 0.03;
-  forceVector[Shortcuts::p] = std::exp(-(t - PeakTime) * (t - PeakTime) / (2.0 * PulseWidth * PulseWidth));
+  constexpr double SourcePeakTime   = 0.1;
+  constexpr double SourcePulseWidth = 0.03;
+  forceVector[Shortcuts::p] = std::exp(
+    -(t - SourcePeakTime) * (t - SourcePeakTime) / (2.0 * SourcePulseWidth * SourcePulseWidth)
+  );
 """,
     init_point_source_location="""
   for (int d = 0; d < DIMENSIONS; d++) {

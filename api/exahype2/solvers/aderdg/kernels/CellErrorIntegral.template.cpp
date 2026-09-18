@@ -49,7 +49,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::cellErrorIntegral(
         cellCentre,
         cellSize,
         index,
-        {{NUMBER_OF_DOF}},
         Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes
       ),
       timeStamp,

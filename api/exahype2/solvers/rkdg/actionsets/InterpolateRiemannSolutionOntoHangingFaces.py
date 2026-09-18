@@ -40,7 +40,7 @@ class InterpolateRiemannSolutionOntoHangingFaces(AbstractRungeKuttaDGActionSet):
 
       const double timeStamp = timeStampOldSolution + {{BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES[PREDICATE_NO]}} * timeStepSize;
 
-      // Re-project the persistent linear combination onto the hanging faces: the
+      // Re-project the persistent linear combination onto the hanging faces: The
       // jump penalty needs the cell's own trace, and hanging faces hold no data
       // between grid sweeps. The persistent faces keep their primary-sweep
       // projection, so they receive scratch targets here.
@@ -84,15 +84,16 @@ class InterpolateRiemannSolutionOntoHangingFaces(AbstractRungeKuttaDGActionSet):
           const int normal = hangingFaceNumber % DIMENSIONS;
 
           // The penalty needs one eigenvalue for the whole coarse face, so its
-          // subface contributions cancel: every fine cell below the face derives
+          // subface contributions cancel: Every fine cell below the face derives
           // the same value from the coarse face's two trace layers. The parent
           // geometry is reconstructed from the fine cell's own marker, so the
           // reconstruction is exact and no neighbour coordinates are read.
           auto parentCellSize   = marker.getH();
           auto parentFaceOffset = marker.getX();
+          constexpr double ParentCentreOffset = 0.5 * (peano4::sfc::ActiveCurve::SubdivisionFactor - 1);
           for (int d = 0; d < DIMENSIONS; d++) {
-            parentCellSize(d) *= 3.0;
-            parentFaceOffset(d) += (1.0 - marker.getRelativePositionWithinFatherCell()(d)) * marker.getH()(d);
+            parentCellSize(d) *= peano4::sfc::ActiveCurve::SubdivisionFactor;
+            parentFaceOffset(d) += (ParentCentreOffset - marker.getRelativePositionWithinFatherCell()(d)) * marker.getH()(d);
             parentFaceOffset(d) -= 0.5 * parentCellSize(d);
           }
           if (hangingFaceNumber >= DIMENSIONS) {
@@ -130,7 +131,7 @@ class InterpolateRiemannSolutionOntoHangingFaces(AbstractRungeKuttaDGActionSet):
             {{NUMBER_OF_UNKNOWNS}},
             {{NUMBER_OF_AUXILIARY_VARIABLES}},
             maxEigenvalue,
-            repositories::{{SOLVER_INSTANCE}}.InterpolationMatrix1D,
+            repositories::{{SOLVER_INSTANCE}}.InterpolationMatrix1D.data(),
             coarseGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(hangingFaceNumber).data(),
             coarseFaceProjection,
             fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(hangingFaceNumber).data(),
@@ -151,7 +152,7 @@ class InterpolateRiemannSolutionOntoHangingFaces(AbstractRungeKuttaDGActionSet):
     @property
     def guards(self):
         if self._guards == []:
-            raise Exception("Guards are not initialised")
+            raise ValueError("The guards are not initialised.")
         return self._guards
 
     @guards.setter
@@ -160,8 +161,8 @@ class InterpolateRiemannSolutionOntoHangingFaces(AbstractRungeKuttaDGActionSet):
             new_guards != []
             and len(new_guards) != self._solver.number_of_Runge_Kutta_steps()
         ):
-            raise Exception(
-                "Expect one guard per Runge-Kutta step. There are {} steps, but the guards are {}".format(
+            raise ValueError(
+                "One guard per Runge-Kutta step is needed. There are {} steps and the guards are {}.".format(
                     self._solver.number_of_Runge_Kutta_steps(), new_guards
                 )
             )
@@ -193,5 +194,6 @@ class InterpolateRiemannSolutionOntoHangingFaces(AbstractRungeKuttaDGActionSet):
             + """
 #include "exahype2/dg/Riemann.h"
 #include "exahype2/Enumeration.h"
+#include "peano4/sfc/ActiveCurve.h"
 """
         )

@@ -4,7 +4,7 @@
 
 #include "repositories/DataRepository.h"
 
-#include "peano4/Globals.h"
+#include "peano4/Constants.h"
 #include "peano4/grid/GridControlEvent.h"
 #include "peano4/grid/GridTraversalEvent.h"
 #include "peano4/grid/GridTraversalObserver.h"
@@ -30,7 +30,7 @@ public:
 
   ::peano4::grid::GridTraversalObserver* clone(int treeId) override;
 
-  std::vector<::peano4::grid::GridControlEvent> getGridControlEvents() const override;
+  [[nodiscard]] std::vector<::peano4::grid::GridControlEvent> getGridControlEvents() const override;
 
   static void prepareTraversal();
   static void unprepareTraversal();
@@ -64,9 +64,9 @@ private:
    * The preceding entry supplies coarse-grid slots to callbacks.
    */
   struct PathEntry final {
-    std::array<int, TWO_POWER_D> vertexSlots{};
-    std::array<int, TWO_TIMES_D> faceSlots{};
-    std::array<int, 1>           cellSlot{};
+    std::array<int, peano4::VerticesPerCell> vertexSlots{};
+    std::array<int, peano4::FacesPerCell>    faceSlots{};
+    std::array<int, 1>                       cellSlot{};
   };
 
   std::vector<PathEntry> _activePath{};

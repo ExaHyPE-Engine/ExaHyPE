@@ -16,7 +16,7 @@
 #include "exahype2/dg/LimitingSolverState.h"
 {%- endif %}
 
-#include "peano4/Globals.h"
+#include "peano4/Constants.h"
 
 #include "tarch/Assertions.h"
 #include "tarch/NonCriticalAssertions.h"
@@ -58,7 +58,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
       Suspended
     };
 
-    static std::string toString(const SolverState state);
+    static std::string toString(SolverState state);
 
     static constexpr int Order                      = {{ORDER}};
     static constexpr int NumberOfUnknowns           = {{NUMBER_OF_UNKNOWNS}};
@@ -90,11 +90,11 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
 
     {% if ADAPTIVE_PRECISION_IMPLEMENTATION!="<none>" %}
     virtual ::exahype2::PrecisionCommand precisionCriterion(
-      const {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS Q, // [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{SOLUTION_STORAGE_PRECISION}}* NOALIAS       Q, // [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<DIMENSIONS, double>&        x,
       const tarch::la::Vector<DIMENSIONS, double>&        h,
-      const double                                        t,
-      const SolverState                                   currentState
+      double                                              t,
+      SolverState                                         currentState
     ) {% if ADAPTIVE_PRECISION_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final {% endif %};
     {% endif %}
 
@@ -120,11 +120,11 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
     int getNumberOfDoFs() const override final;
 
     void update(
-      const double timeStepSize,
-      const double timeStamp,
-      const double minCellSize,
-      const double maxCellSize,
-      const bool   hasHangingFaces
+      double timeStepSize,
+      double timeStamp,
+      double minCellSize,
+      double maxCellSize,
+      bool   hasHangingFaces
     );
 
     void reduceLocalUpdates();
@@ -153,7 +153,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
 
   protected:
     /** Stores one traversal's extrema until reduceLocalUpdates() reduces them. */
-    struct LocalUpdates {
+    struct LocalUpdates final {
       double                            minTimeStamp{std::numeric_limits<double>::infinity()};
       double                            maxTimeStamp{0.0};
       double                            localMinTimeStamp{std::numeric_limits<double>::infinity()};
@@ -189,7 +189,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
 
     double _minCellHThisTimeStep{std::numeric_limits<double>::infinity()};
     double _maxCellHThisTimeStep{0.0};
-    /** Atomic: Every traversal task's reduceLocalUpdates() may raise the flag concurrently. */
+    /** Every traversal task's reduceLocalUpdates() may raise the flag concurrently. */
     std::atomic<bool> _hasHangingFacesThisTimeStep{false};
 
     double _minTimeStepSize{std::numeric_limits<double>::infinity()};

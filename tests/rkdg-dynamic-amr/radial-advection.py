@@ -80,7 +80,7 @@ refinement_criterion = """
     DGOrder + 1,
     NumberOfUnknowns + NumberOfAuxiliaryVariables,
     1.0e-2,
-    9.0,
+    ::exahype2::DefaultCoarsenSafetyFactor,
     QuadraturePoints1D,
     [](const double* const values) { return 1.0 + values[Shortcuts::rho]; }
   );

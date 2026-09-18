@@ -6,6 +6,8 @@
 {%- if SUBCELL_LIMITER %}
 #include "exahype2/dg/LimiterStatus.h"
 {%- endif %}
+
+#include "peano4/Constants.h"
 #include "tarch/instrumentation/Debug.h"
 #include "tarch/instrumentation/Warning.h"
 #include "tarch/mpi/Collectives.h"
@@ -36,7 +38,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinPatchSize() const {
 }
 
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getNumberOfDoFs() const {
-  return BasePowerExponent<Order + 1, DIMENSIONS>::value * (NumberOfUnknowns + NumberOfAuxiliaryVariables);
+  return peano4::Power<Order + 1, DIMENSIONS> * (NumberOfUnknowns + NumberOfAuxiliaryVariables);
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinCellSize() const {
@@ -54,6 +56,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStamp() const {
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStamp() const {
+  // Only the minimum starts at infinity, so it says whether a cell has reported this time step.
   return _minTimeStampThisTimeStep != std::numeric_limits<double>::infinity()
     ? _maxTimeStampThisTimeStep
     : _maxTimeStamp;
@@ -66,6 +69,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStepSize() const {
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStepSize() const {
+  // Only the minimum starts at infinity, so it says whether a cell has reported this time step.
   return _minTimeStepSizeThisTimeStep != std::numeric_limits<double>::infinity()
     ? _maxTimeStepSizeThisTimeStep
     : _maxTimeStepSize;
@@ -203,13 +207,13 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFinalSubcellSpreadSweep() cons
 {%- endif %}
 
 {% if ADAPTIVE_PRECISION_IMPLEMENTATION!="<empty>" and ADAPTIVE_PRECISION_IMPLEMENTATION!="<user-defined>" and ADAPTIVE_PRECISION_IMPLEMENTATION!="<none>"%}
-    exahype2::PrecisionCommand {{NAMESPACE | join("::")}}::{{CLASSNAME}}::precisionCriterion(
-      const {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS Q, // [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<DIMENSIONS, double>&        x,
-      const tarch::la::Vector<DIMENSIONS, double>&        h,
-      const double                                        t,
-      const SolverState                                   currentState
-    ) {
+::exahype2::PrecisionCommand {{NAMESPACE | join("::")}}::{{CLASSNAME}}::precisionCriterion(
+  const {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS Q, // [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const tarch::la::Vector<DIMENSIONS, double>&        x,
+  const tarch::la::Vector<DIMENSIONS, double>&        h,
+  const double                                        t,
+  const SolverState                                   currentState
+) {
   {{ADAPTIVE_PRECISION_IMPLEMENTATION}}
 }
 {% endif %}

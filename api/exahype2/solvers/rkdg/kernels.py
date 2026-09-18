@@ -25,7 +25,7 @@ def create_abstract_solver_declarations(
         """
   public:
     {% if EIGENVALUES_IMPLEMENTATION=="<none>" or EIGENVALUES_IMPLEMENTATION=="<empty>" %}
-    #error Eigenvalue implementation cannot be none or empty
+    #error The eigenvalue implementation must not be <none> or <empty>.
     {% endif %}
 
     {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
@@ -220,7 +220,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 {% endif %}
 
 {% if POINT_SOURCE_IMPLEMENTATION!="<user-defined>" and POINT_SOURCE_IMPLEMENTATION!="<none>" %}
-#error Point sources not yet implemented
+#error A Runge-Kutta discontinuous Galerkin solver does not support point sources.
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
   const double* NOALIAS                        Q,
   const tarch::la::Vector<DIMENSIONS, double>& x,
@@ -356,7 +356,7 @@ def create_solver_declarations(
     {% endif %}
 
     {% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}
-    #error point sources not defined yet
+    #error A Runge-Kutta discontinuous Galerkin solver does not support point sources.
     virtual void pointSource(
       const double* NOALIAS                        Q,
       const tarch::la::Vector<DIMENSIONS, double>& x,
@@ -428,7 +428,7 @@ def create_solver_declarations(
      * virtual function of the same name with a static one, the additional enum
      * separates the two signatures.
      */
-     #error point sources not implemented yet
+    #error A Runge-Kutta discontinuous Galerkin solver does not support point sources.
      static void pointSource(
        const double* NOALIAS                        Q,
        const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
@@ -623,7 +623,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 {% endif %}
 
 {% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-#error point sources not implemented yet
+#error A Runge-Kutta discontinuous Galerkin solver does not support point sources.
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   const double* NOALIAS                        Q,
   const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
@@ -679,7 +679,7 @@ def create_volumetric_solver_call(polynomial_basis, solver_variant):
         isinstance(polynomial_basis, GaussLegendreBasis)
         and solver_variant == SolverVariant.WithVirtualFunctions
     ):
-        return """cellIntegral_patchwise_in_situ_GaussLegendre_functors(
+        return """cellIntegralPatchwiseInSituGaussLegendreFunctors(
       cellData,
       {{ORDER}},
       {{NUMBER_OF_UNKNOWNS}},
@@ -747,7 +747,7 @@ def create_volumetric_solver_call(polynomial_basis, solver_variant):
         isinstance(polynomial_basis, GaussLegendreBasis)
         and solver_variant == SolverVariant.Stateless
     ):
-        return """cellIntegral_patchwise_in_situ_GaussLegendre<{{SOLVER_NAME}},{{ORDER}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}}>(
+        return """cellIntegralPatchwiseInSituGaussLegendre<{{SOLVER_NAME}},{{ORDER}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}}>(
       cellData,
       {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }},          //useFlux
       {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }},           //useNCP
@@ -759,7 +759,7 @@ def create_volumetric_solver_call(polynomial_basis, solver_variant):
         isinstance(polynomial_basis, GaussLegendreBasis)
         and solver_variant == SolverVariant.Accelerator
     ):
-        return """cellIntegral_patchwise_in_situ_GaussLegendre<{{SOLVER_NAME}},{{ORDER}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}}>(
+        return """cellIntegralPatchwiseInSituGaussLegendre<{{SOLVER_NAME}},{{ORDER}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}}>(
       targetDevice,
       cellData,
       {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }},          //useFlux
@@ -774,7 +774,7 @@ def create_volumetric_solver_call(polynomial_basis, solver_variant):
 
 def create_add_solver_contributions_call(polynomial_basis):
     if isinstance(polynomial_basis, GaussLegendreBasis):
-        return """integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
+        return """integrateOverRiemannSolutionsAndAddToVolumeGaussLegendre(
     #if DIMENSIONS==2
       fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(0).data(), //left
       fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(2).data(), //right
@@ -798,12 +798,12 @@ def create_add_solver_contributions_call(polynomial_basis):
     );
 """
     else:
-        return "#error Not supported yet"
+        return "#error The kernel call supports a Gauss-Legendre basis only."
 
 
 def create_multiply_with_inverted_mass_matrix_call(polynomial_basis):
     if isinstance(polynomial_basis, GaussLegendreBasis):
-        return """multiplyWithInvertedMassMatrix_GaussLegendre(
+        return """multiplyWithInvertedMassMatrixGaussLegendre(
       cellData,
       {{ORDER}},
       {{NUMBER_OF_UNKNOWNS}},
@@ -812,4 +812,4 @@ def create_multiply_with_inverted_mass_matrix_call(polynomial_basis):
     );
 """
     else:
-        return "#error Not supported yet"
+        return "#error The kernel call supports a Gauss-Legendre basis only."

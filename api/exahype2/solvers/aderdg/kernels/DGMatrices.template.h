@@ -6,40 +6,37 @@
 namespace {{ item }} {
 {%- endfor %}
 
-// All matrices are stored as column major array, _T denote a transposed.
+// The matrices are stored in column major order. A Transposed suffix names the transpose of the
+// matrix that carries the same name without the suffix.
 template <typename T>
-class DGMatrices {
+class DGMatrices final {
 public:
   static void initDGMatrices();
   static void freeDGMatrices();
 
-  // Reference element stiffness matrix, Kxi[i*n+j] contains:
-  // sum_k quadWeight[k] * \partial_x phi_k(x_i)* phi_k(x_j),
-  // where phi are the lagrange-polynomials for the given quadrature points
+  // Reference element stiffness matrix. Kxi[i*n+j] holds
+  // sum_k quadratureWeight[k] * dphi_k(x_i)/dx * phi_k(x_j), where phi are the Lagrange polynomials
+  // of the quadrature points.
   inline static T* Kxi = nullptr;
-  inline static T* Kxi_T = nullptr; // Transpose of Kxi
+  inline static T* KxiTransposed = nullptr;
 
-  // Inverse of the difference between the element mass operator evaluated at x=1.0
-  // ( phi_i[x=1.0]*phi_k[x=1.0] and the reference element stiffness matrix
-  // used in nonlinear FSTPVI to integrate the predictor in time in each Picard iteration
-  // stems e.g. from (1.12) in DOI 10.1007/s10915-010-9426-6
-  inline static T* iK1_T = nullptr;
+  // Inverse of the difference between the element mass operator at x=1.0, phi_i(1.0)*phi_k(1.0),
+  // and the reference element stiffness matrix. Equation (1.12) of DOI 10.1007/s10915-010-9426-6
+  // defines the operator.
+  inline static T* iK1Transposed = nullptr;
 
-  // Contains the derivatives of the basis functions at the quadrature points
-  // i.e. dudx[i*n+j] contains the derivative of basis function i at quad point j
+  // Derivatives of the basis functions at the quadrature points. dudx[i*n+j] holds the derivative
+  // of basis function i at quadrature point j.
   inline static T* dudx = nullptr;
 
-  // Contains the derivatives at the quadrature points of the basis functions
-  // i.e. dudx_T[i*n+j] contains the derivative at quad point i of basis function j
-  // Therefore in order to compute the total derivative at quadpoint i, given values
-  // a_j at the different quadrature points requires sum_j{ a_j * dudx_T[i*n+j] }
-  inline static T* dudx_T = nullptr;
+  // dudxTransposed[i*n+j] holds the derivative at quadrature point i of basis function j, so the
+  // total derivative of the values a_j at quadrature point i is sum_j a_j * dudxTransposed[i*n+j].
+  inline static T* dudxTransposed = nullptr;
 
-  // Contains the coefficients for the projection of the basis polynomials to the "left"
-  // (i.e. negative) edge of the cell. Thus given a_i the values at the quadrature points
-  // x=x_i, then the value at x=0 would be sum_i{ a_i * FLCoeff[i] }
+  // Coefficients that project the basis polynomials onto the left face of the cell, so the values
+  // a_i at the quadrature points x_i give the value sum_i a_i * FLCoeff[i] at x=0.
   inline static T* FLCoeff = nullptr;
-  // Same thing, but on the positive edge of the cell (so x=1 for the example above)
+  // Coefficients that project the basis polynomials onto the right face of the cell at x=1.
   inline static T* FRCoeff = nullptr;
 };
 

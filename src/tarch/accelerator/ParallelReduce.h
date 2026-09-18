@@ -2,21 +2,22 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "tarch/Assertions.h"
 #include "tarch/accelerator/ParallelRegion.h"
 #include "tarch/accelerator/Range.h"
 #include "tarch/accelerator/Reducer.h"
 #include "tarch/accelerator/accelerator.h"
 
-namespace tarch {
+namespace tarch::accelerator {
   template <typename Reducer, typename F>
-  void parallelReduce(const Range& r, F f, Reducer red);
+  void parallelReduce(const Range& range, F body, Reducer reducer);
   template <typename Reducer, typename F>
-  void parallelReduce(const RangeMD<2>& r, F f, Reducer red);
+  void parallelReduce(const RangeMD<2>& range, F body, Reducer reducer);
   template <typename Reducer, typename F>
-  void parallelReduce(const RangeMD<3>& r, F f, Reducer red);
+  void parallelReduce(const RangeMD<3>& range, F body, Reducer reducer);
   template <typename Reducer, typename F>
-  void parallelReduce(const TeamRange& r, F f, Reducer red);
-} // namespace tarch
+  void parallelReduce(const TeamRange& range, F body, Reducer reducer);
+} // namespace tarch::accelerator
 
 #if defined(PEANO_WITH_GPU_BACKEND_KOKKOS)
 #include "tarch/accelerator/kokkos/Device.h"
@@ -48,7 +49,3 @@ namespace tarch {
 #else
 #include "tarch/accelerator/ParallelReduce.cpph"
 #endif
-
-namespace tarch {
-  using accelerator::parallelReduce;
-} // namespace tarch

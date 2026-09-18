@@ -47,7 +47,7 @@ class PeanoMain:
         constants = self.project.constants
         constants.add_include("#include <bitset>")
         constants.add_include('#include "tarch/la/Vector.h"')
-        constants.add_include('#include "peano4/Globals.h"')
+        constants.add_include('#include "peano4/Constants.h"')
 
         offset = (
             "{" + ", ".join(str(value) for value in self.project._domain_offset) + "}"

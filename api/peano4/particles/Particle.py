@@ -13,7 +13,7 @@ class Particle(peano4.datamodel.Particle):
         self.add_attribute(peano4.datamodel.Double("searchRadius"))
         self.add_attribute(peano4.datamodel.Integer("partid", initval="-1"))
         self.add_attribute(
-            peano4.datamodel.BooleanArray("containedInAdjacentCell", "TWO_POWER_D")
+            peano4.datamodel.BooleanArray("containedInAdjacentCell", "peano4::CellsPerVertex")
         )
         self.add_attribute(
             peano4.datamodel.Enumeration("parallelState", ["Local", "Virtual"])

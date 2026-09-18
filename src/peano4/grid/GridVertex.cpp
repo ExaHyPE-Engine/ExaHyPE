@@ -12,7 +12,7 @@ static_assert(
 );
 
 /** Returns whether the tree continues below every corner of one cell. */
-bool peano4::grid::GridVertex::areAllVerticesRefined(const peano4::grid::GridVertex vertices[TWO_POWER_D]) {
+bool peano4::grid::GridVertex::areAllVerticesRefined(const peano4::grid::GridVertex vertices[peano4::VerticesPerCell]) {
   return getRefinedVertices(vertices).all();
 }
 
@@ -20,11 +20,11 @@ bool peano4::grid::GridVertex::areAllVerticesRefined(const peano4::grid::GridVer
  * Returns one bit per vertex, set where the vertex is refined. A zero result
  * means the cell holding those vertices is a leaf.
  */
-std::bitset<TWO_POWER_D> peano4::grid::GridVertex::getRefinedVertices(
-  const peano4::grid::GridVertex vertices[TWO_POWER_D]
+std::bitset<peano4::VerticesPerCell> peano4::grid::GridVertex::getRefinedVertices(
+  const peano4::grid::GridVertex vertices[peano4::VerticesPerCell]
 ) {
-  std::bitset<TWO_POWER_D> refinedVertices;
-  for (int vertexNumber = 0; vertexNumber < TWO_POWER_D; vertexNumber++) {
+  std::bitset<peano4::VerticesPerCell> refinedVertices;
+  for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell; vertexNumber++) {
     refinedVertices.set(vertexNumber, vertices[vertexNumber].getState() == peano4::grid::GridVertex::State::Refined);
   }
   return refinedVertices;

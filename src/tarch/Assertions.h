@@ -11,6 +11,9 @@ namespace tarch {
   void triggerAssertion(const std::string& assertionMessage);
 } // namespace tarch
 
+#define TARCH_ASSERTION_STRINGIFY_IMPLEMENTATION(x) #x
+#define TARCH_ASSERTION_STRINGIFY(x) TARCH_ASSERTION_STRINGIFY_IMPLEMENTATION(x)
+
 /**
  * Quits the program with error code -1 when the expression evaluates to false and prints the file
  * name, the line, the expression and every value passed after the expression. An assertion states
@@ -18,12 +21,9 @@ namespace tarch {
  * branch prints the parameter names without their values, because operator<< runs on the host
  * only.
  */
-#define TARCH_ASSERTION_STRINGIFY_IMPLEMENTATION(x) #x
-#define TARCH_ASSERTION_STRINGIFY(x) TARCH_ASSERTION_STRINGIFY_IMPLEMENTATION(x)
-
 // clang-format off
 #define assertion(expr, ...) \
-  if (not(expr)) { \
+  if (not static_cast<bool>(expr)) { \
     COMPILE_IF_ON_HOST( \
       std::ostringstream assertionMessage; \
       assertionMessage << std::scientific << std::setprecision(20) << "Assertion in file " << __FILE__ << ", line " \

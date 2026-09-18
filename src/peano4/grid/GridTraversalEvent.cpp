@@ -2,6 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "GridTraversalEvent.h"
 
+#include "tarch/Assertions.h"
+
 static_assert(std::is_standard_layout_v<peano4::grid::GridTraversalEvent>);
 static_assert(std::is_trivially_copyable_v<peano4::grid::GridTraversalEvent>);
 
@@ -65,6 +67,8 @@ peano4::dataview::FaceMarker peano4::grid::GridTraversalEvent::getFaceMarker() c
   marker.cellCentre                       = x;
   marker.selectedFace                     = 0;
   marker.cellIsLocal                      = (isCellLocal != 0);
+  marker.cellHasBeenRefined               = (hasBeenRefined != 0);
+  marker.cellWillBeRefined                = (willBeRefined != 0);
   marker.relativePositionWithinFatherCell = relativePositionToFather;
 
   marker.isLocalMask   = isFaceLocal;
@@ -78,10 +82,11 @@ peano4::dataview::FaceMarker peano4::grid::GridTraversalEvent::getFaceMarker() c
     bool willRefine = false;
 
     const int normal = faceNumber % DIMENSIONS;
-    for (int i = 0; i < TWO_POWER_D; i++) {
+    for (int i = 0; i < peano4::VerticesPerCell; i++) {
       std::bitset<DIMENSIONS> studiedVertex(static_cast<unsigned long>(i));
       studiedVertex.set(normal, faceNumber >= DIMENSIONS);
       const int vertexNumber = static_cast<int>(studiedVertex.to_ulong());
+      assertion(vertexNumber >= 0 and vertexNumber < peano4::VerticesPerCell, vertexNumber, faceNumber);
       hasRefined |= bitTest8(hasBeenRefined, vertexNumber);
       willRefine |= bitTest8(willBeRefined, vertexNumber);
     }

@@ -38,44 +38,44 @@ public:
   void configure(int& argc, char** argv);
   void printUsage(const std::string& executableName) const;
 
-  tarch::reader::JSONReader* getConfigReader() const;
+  [[nodiscard]] tarch::reader::JSONReader* getConfigReader() const;
 
-  double getMPITimeoutWarning() const;
-  double getMPIDeadlockTimeout() const;
-  bool   isMPIRequestTrackingEnabled() const;
-  bool   isCommunicationThreadEnabled() const;
-  bool   isLoadBalancingDisabled() const;
-  int    getTargetDevice() const;
+  [[nodiscard]] double getMPITimeoutWarning() const;
+  [[nodiscard]] double getMPIDeadlockTimeout() const;
+  [[nodiscard]] bool   isMPIRequestTrackingEnabled() const;
+  [[nodiscard]] bool   isCommunicationThreadEnabled() const;
+  [[nodiscard]] bool   isLoadBalancingDisabled() const;
+  [[nodiscard]] int    getTargetDevice() const;
 
-  bool   isVerbose() const;
-  double getTimeStepLogInterval() const;
+  [[nodiscard]] bool   isVerbose() const;
+  [[nodiscard]] double getTimeStepLogInterval() const;
 
-  double getMinTerminalTime() const;
-  double getMaxTerminalTime() const;
-  int    getNumberOfTimeSteps() const;
-  double getFirstPlotTimeStamp() const;
-  int    getNumberOfSnapshots() const;
-  bool   getPlotDoublePrecision() const;
-  int    getGridLevels() const;
-  int    getMaxGridLevels() const;
+  [[nodiscard]] double getMinTerminalTime() const;
+  [[nodiscard]] double getMaxTerminalTime() const;
+  [[nodiscard]] int    getNumberOfTimeSteps() const;
+  [[nodiscard]] double getFirstPlotTimeStamp() const;
+  [[nodiscard]] int    getNumberOfSnapshots() const;
+  [[nodiscard]] bool   getPlotDoublePrecision() const;
+  [[nodiscard]] int    getGridLevels() const;
+  [[nodiscard]] int    getMaxGridLevels() const;
 
-  const std::string& getConfigFilePath() const;
-  const std::string& getOutputPath() const;
-  const std::string& getProjectName() const;
-  const std::string& getExecutableName() const;
+  [[nodiscard]] const std::string& getConfigFilePath() const;
+  [[nodiscard]] const std::string& getOutputPath() const;
+  [[nodiscard]] const std::string& getProjectName() const;
+  [[nodiscard]] const std::string& getExecutableName() const;
 
   static std::string formatDefault(double value);
   static std::string formatDefault(int value);
   static std::string formatDefault(const std::string& value);
   static std::string formatTerminalTime(double value);
-  static double      divideByThreePower(double value, int exponent);
+  static double      divideBySubdivisionFactorPower(double value, int exponent);
   static int         parseInteger(const std::string& value, const std::string& key);
   static double      parseDouble(const std::string& value, const std::string& key);
   static std::string normaliseOutputPath(const std::string& path);
 
-  double getMaxAdmissiblePatchSize(const tarch::la::Vector<DIMENSIONS, double>& domainSize) const;
-  double getMinAdmissiblePatchSize(const tarch::la::Vector<DIMENSIONS, double>& domainSize) const;
-  double getMaxAdmissibleCellSize(
+  [[nodiscard]] double getMaxAdmissiblePatchSize(const tarch::la::Vector<DIMENSIONS, double>& domainSize) const;
+  [[nodiscard]] double getMinAdmissiblePatchSize(const tarch::la::Vector<DIMENSIONS, double>& domainSize) const;
+  [[nodiscard]] double getMaxAdmissibleCellSize(
     const tarch::la::Vector<DIMENSIONS, double>& domainSize,
     int                                          cellsPerPatchPerAxis
   ) const;
@@ -84,7 +84,7 @@ private:
   friend class runner::tests::RuntimeParametersTest;
 
   /**
-   * Seconds one MPI wait may take before the run warns and before it aborts. No rank makes progress
+   * Seconds one MPI wait may take before a warning goes out and before the program aborts. No rank makes progress
    * on another rank's behalf, so a mismatched send, receive or collective waits forever. The option
    * --deadlockTimeout raises or disables the abort bound.
    */
@@ -117,13 +117,12 @@ private:
 
   std::unique_ptr<tarch::reader::JSONReader> _configReader{};
 
-  // The out-of-line constructor permits JSONReader to remain forward-declared:
-  // A constructor defined here would need the type to destroy _configReader on
-  // an exception.
+  // The out-of-line constructor permits JSONReader to remain forward-declared.
   RuntimeParameters();
 
   static std::string consumeValue(int& index, int argc, char** argv, const std::string& argument);
   void               normaliseGridLevels();
+  void               boundTerminalTimes();
   void               validateParameterRanges() const;
 
   void extractConfigFileFromCommandLine(int argc, char** argv);

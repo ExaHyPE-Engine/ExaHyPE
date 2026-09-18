@@ -13,23 +13,23 @@
  * non-conservative contribution has opposite signs on the two sides. The
  * characteristic speed is evaluated separately for both traces at each point.
  */
-void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
-  [[maybe_unused]] ::exahype2::dg::Flux                         flux,
-  [[maybe_unused]] ::exahype2::dg::NonConservativeProduct       nonConservativeProduct,
-  [[maybe_unused]] ::exahype2::dg::MaxEigenvalue                maxEigenvalue,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-  [[maybe_unused]] double                                       t,
-  [[maybe_unused]] double                                       dt,
-  [[maybe_unused]] int                                          order,
-  [[maybe_unused]] int                                          unknowns,
-  [[maybe_unused]] int                                          auxiliaryVariables,
-  [[maybe_unused]] int                                          faceNumber,
-  [[maybe_unused]] const double* NOALIAS                        quadraturePoints,
-  [[maybe_unused]] bool                                         evaluateFlux,
-  [[maybe_unused]] bool                                         evaluateNonconservativeProduct,
-  [[maybe_unused]] const double* NOALIAS                        projectedValues,
-  [[maybe_unused]] double* NOALIAS                              solution
+void exahype2::dg::rusanov::solveRiemannProblemPointwiseInSitu(
+  const ::exahype2::dg::Flux&                   flux,
+  const ::exahype2::dg::NonConservativeProduct& nonConservativeProduct,
+  const ::exahype2::dg::MaxEigenvalue&          maxEigenvalue,
+  const tarch::la::Vector<DIMENSIONS, double>&  faceCentre,
+  const tarch::la::Vector<DIMENSIONS, double>&  cellSize,
+  const double                                  t,
+  const double                                  dt,
+  const int                                     order,
+  const int                                     unknowns,
+  const int                                     auxiliaryVariables,
+  const int                                     faceNumber,
+  const double* NOALIAS                         quadraturePoints,
+  const bool                                    evaluateFlux,
+  const bool                                    evaluateNonconservativeProduct,
+  const double* NOALIAS                         projectedValues,
+  double* NOALIAS                               solution
 ) {
   const int                             normal       = faceNumber % DIMENSIONS;
   const int                             inputStride  = unknowns + auxiliaryVariables;
@@ -37,11 +37,11 @@ void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
   tarch::la::Vector<DIMENSIONS, double> faceOffset   = faceCentre - 0.5 * cellSize;
   faceOffset(normal) += 0.5 * cellSize(normal);
 
-  double* deltaQ          = new double[unknowns + auxiliaryVariables];
-  double* averageQ        = new double[unknowns + auxiliaryVariables];
-  double* fluxValuesLeft  = new double[unknowns];
-  double* fluxValuesRight = new double[unknowns];
-  double* ncpValues       = new double[unknowns];
+  auto* deltaQ          = new double[unknowns + auxiliaryVariables];
+  auto* averageQ        = new double[unknowns + auxiliaryVariables];
+  auto* fluxValuesLeft  = new double[unknowns];
+  auto* fluxValuesRight = new double[unknowns];
+  auto* ncpValues       = new double[unknowns];
 
   peano4::dForEachExclusive(order + 1, faceNumber % DIMENSIONS, 0, [&](const tarch::la::Vector<DIMENSIONS, int>& dof) {
     tarch::la::Vector<DIMENSIONS, double> quadraturePoint;
@@ -110,23 +110,23 @@ void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
  * Unavailable Rusanov variant for traces containing projected gradients.
  * This overload always terminates; only solution-trace projection is supported.
  */
-void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ_with_gradient_projection(
-  [[maybe_unused]] ::exahype2::dg::Flux                         flux,
-  [[maybe_unused]] ::exahype2::dg::NonConservativeProduct       nonConservativeProduct,
-  [[maybe_unused]] ::exahype2::dg::MaxEigenvalue                maxEigenvalue,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
-  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-  [[maybe_unused]] double                                       t,
-  [[maybe_unused]] double                                       dt,
-  [[maybe_unused]] int                                          order,
-  [[maybe_unused]] int                                          unknowns,
-  [[maybe_unused]] int                                          auxiliaryVariables,
-  [[maybe_unused]] int                                          faceNumber,
-  [[maybe_unused]] const double* NOALIAS                        quadraturePoints,
-  [[maybe_unused]] bool                                         evaluateFlux,
-  [[maybe_unused]] bool                                         evaluateNonconservativeProduct,
-  [[maybe_unused]] const double* NOALIAS                        projectedValues,
-  [[maybe_unused]] double* NOALIAS                              solution
+void exahype2::dg::rusanov::solveRiemannProblemPointwiseInSituWithGradientProjection(
+  [[maybe_unused]] const ::exahype2::dg::Flux&                   flux,
+  [[maybe_unused]] const ::exahype2::dg::NonConservativeProduct& nonConservativeProduct,
+  [[maybe_unused]] const ::exahype2::dg::MaxEigenvalue&          maxEigenvalue,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>&  faceCentre,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>&  cellSize,
+  [[maybe_unused]] const double                                  t,
+  [[maybe_unused]] const double                                  dt,
+  [[maybe_unused]] const int                                     order,
+  [[maybe_unused]] const int                                     unknowns,
+  [[maybe_unused]] const int                                     auxiliaryVariables,
+  [[maybe_unused]] const int                                     faceNumber,
+  [[maybe_unused]] const double* NOALIAS                         quadraturePoints,
+  [[maybe_unused]] const bool                                    evaluateFlux,
+  [[maybe_unused]] const bool                                    evaluateNonconservativeProduct,
+  [[maybe_unused]] const double* NOALIAS                         projectedValues,
+  [[maybe_unused]] double* NOALIAS                               solution
 ) {
   tarch::terminateWithError("The Rusanov solve with projected gradients is unavailable.");
 }

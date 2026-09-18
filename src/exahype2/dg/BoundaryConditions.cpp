@@ -4,7 +4,6 @@
 
 #include "exahype2/Enumeration.h"
 #include "exahype2/dg/DGUtils.h"
-#include "peano4/Globals.h"
 #include "peano4/Loop.h"
 
 /**
@@ -16,7 +15,7 @@
  * on [0, 1].
  */
 void exahype2::dg::applyBoundaryConditions(
-  std::function<void(
+  const std::function<void(
     const double* NOALIAS                        Qinside,
     double* NOALIAS                              Qoutside,
     const tarch::la::Vector<DIMENSIONS, double>& x,
@@ -26,12 +25,12 @@ void exahype2::dg::applyBoundaryConditions(
   )>                                           boundaryCondition,
   const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-  double                                       t,
-  double                                       dt,
-  int                                          order,
-  int                                          unknowns,
-  int                                          auxiliaryVariables,
-  int                                          faceNumber,
+  const double                                 t,
+  const double                                 dt,
+  const int                                    order,
+  const int                                    unknowns,
+  const int                                    auxiliaryVariables,
+  const int                                    faceNumber,
   const double* NOALIAS                        quadraturePoints,
   double* NOALIAS                              Q
 ) {

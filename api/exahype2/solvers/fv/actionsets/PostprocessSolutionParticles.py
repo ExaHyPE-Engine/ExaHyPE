@@ -41,7 +41,7 @@ class ParticleWisePostprocessSolution(AbstractFVActionSet):
   _timeStepSize = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize();
   _timeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
-  for (int vertexNumber = 0; vertexNumber < TWO_POWER_D; vertexNumber++) {
+  for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell; vertexNumber++) {
     for (auto* const particle : fineGridVertices{{PARTICLES_CONTAINER}}(vertexNumber)) {
       if (particle->getParallelState() == globaldata::{{PARTICLE}}::ParallelState::Local) {
         const auto particleNumber = std::make_pair(particle->getNumber(0), particle->getNumber(1));
@@ -76,7 +76,7 @@ class ParticleWisePostprocessSolution(AbstractFVActionSet):
 
   _activeParticles.clear();
 """
-            ).render(self.d)
+            ).render(**self.d)
 
         return ""
 

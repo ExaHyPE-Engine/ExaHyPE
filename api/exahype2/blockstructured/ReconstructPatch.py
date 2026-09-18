@@ -16,10 +16,8 @@ class ReconstructPatch(ActionSet):
         patch,
         patch_overlap,
         patch_reconstructed,
-        solver_name,
         precision,
         guard="true",
-        add_assertions_to_halo_exchange=True,
     ):
         super().__init__(descend_invocation_order=1)
 
@@ -70,8 +68,8 @@ class ReconstructPatch(ActionSet):
     const auto* const inputPatch = {CELL_ACCESSOR}.data();
     auto* const reconstructedPatch = {RECONSTRUCTED_ACCESSOR}.data();
 
-    {PRECISION}* faces[TWO_TIMES_D];
-    for (int faceNumber = 0; faceNumber < TWO_TIMES_D; ++faceNumber) {{
+    {PRECISION}* faces[peano4::FacesPerCell];
+    for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; ++faceNumber) {{
       faces[faceNumber] = {FACE_ACCESSOR}(faceNumber).data();
     }}
 

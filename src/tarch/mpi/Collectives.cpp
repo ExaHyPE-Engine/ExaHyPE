@@ -9,7 +9,7 @@
  * Every blocking collective is its non-blocking counterpart followed by the
  * watched wait of tarch::mpi::wait(), so a collective that never completes
  * warns and eventually aborts like a point-to-point message. Each collective
- * is created and completed inside one call: an unfinished collective makes an
+ * is created and completed inside one call: An unfinished collective makes an
  * MPI implementation run its collective progress engine inside every MPI call
  * of every thread for as long as it lives.
  */
@@ -28,7 +28,7 @@ namespace {
   int iallreduce(
     const void*          sendBuffer,
     void*                receiveBuffer,
-    int                  count,
+    const int            count,
     MPI_Datatype         datatype,
     MPI_Op               operation,
     MPI_Comm             communicator,
@@ -44,10 +44,10 @@ namespace {
   int ireduce(
     const void*          sendBuffer,
     void*                receiveBuffer,
-    int                  count,
+    const int            count,
     MPI_Datatype         datatype,
     MPI_Op               operation,
-    int                  root,
+    const int            root,
     MPI_Comm             communicator,
     MPI_Request*         request,
     std::source_location location = std::source_location::current()
@@ -60,10 +60,10 @@ namespace {
 
   int iallgather(
     const void*          sendBuffer,
-    int                  sendCount,
+    const int            sendCount,
     MPI_Datatype         sendDatatype,
     void*                receiveBuffer,
-    int                  receiveCount,
+    const int            receiveCount,
     MPI_Datatype         receiveDatatype,
     MPI_Comm             communicator,
     MPI_Request*         request,
@@ -86,7 +86,7 @@ namespace {
 
   int iallgatherv(
     const void*          sendBuffer,
-    int                  sendCount,
+    const int            sendCount,
     MPI_Datatype         sendDatatype,
     void*                receiveBuffer,
     const int*           receiveCounts,
@@ -114,10 +114,10 @@ namespace {
 
   int ialltoall(
     const void*          sendBuffer,
-    int                  sendCount,
+    const int            sendCount,
     MPI_Datatype         sendDatatype,
     void*                receiveBuffer,
-    int                  receiveCount,
+    const int            receiveCount,
     MPI_Datatype         receiveDatatype,
     MPI_Comm             communicator,
     MPI_Request*         request,
@@ -178,7 +178,7 @@ int tarch::mpi::barrier(MPI_Comm communicator, std::source_location location) {
 int tarch::mpi::allreduce(
   const void*          sendBuffer,
   void*                receiveBuffer,
-  int                  count,
+  const int            count,
   MPI_Datatype         datatype,
   MPI_Op               operation,
   MPI_Comm             communicator,
@@ -186,15 +186,16 @@ int tarch::mpi::allreduce(
 ) {
   MPI_Request request = MPI_REQUEST_NULL;
   iallreduce(sendBuffer, receiveBuffer, count, datatype, operation, communicator, &request, location);
-  return tarch::mpi::wait(&request, MPI_STATUS_IGNORE, location);
+  // tarch::mpi::wait() completes the request in its MPI_Test loop.
+  return tarch::mpi::wait(&request, MPI_STATUS_IGNORE, location); // NOLINT(clang-analyzer-optin.mpi.MPI-Checker)
 }
 
 int tarch::mpi::allgather(
   const void*          sendBuffer,
-  int                  sendCount,
+  const int            sendCount,
   MPI_Datatype         sendDatatype,
   void*                receiveBuffer,
-  int                  receiveCount,
+  const int            receiveCount,
   MPI_Datatype         receiveDatatype,
   MPI_Comm             communicator,
   std::source_location location
@@ -211,12 +212,13 @@ int tarch::mpi::allgather(
     &request,
     location
   );
-  return tarch::mpi::wait(&request, MPI_STATUS_IGNORE, location);
+  // tarch::mpi::wait() completes the request in its MPI_Test loop.
+  return tarch::mpi::wait(&request, MPI_STATUS_IGNORE, location); // NOLINT(clang-analyzer-optin.mpi.MPI-Checker)
 }
 
 int tarch::mpi::allgatherv(
   const void*          sendBuffer,
-  int                  sendCount,
+  const int            sendCount,
   MPI_Datatype         sendDatatype,
   void*                receiveBuffer,
   const int*           receiveCounts,
@@ -243,10 +245,10 @@ int tarch::mpi::allgatherv(
 
 int tarch::mpi::alltoall(
   const void*          sendBuffer,
-  int                  sendCount,
+  const int            sendCount,
   MPI_Datatype         sendDatatype,
   void*                receiveBuffer,
-  int                  receiveCount,
+  const int            receiveCount,
   MPI_Datatype         receiveDatatype,
   MPI_Comm             communicator,
   std::source_location location
@@ -263,7 +265,8 @@ int tarch::mpi::alltoall(
     &request,
     location
   );
-  return tarch::mpi::wait(&request, MPI_STATUS_IGNORE, location);
+  // tarch::mpi::wait() completes the request in its MPI_Test loop.
+  return tarch::mpi::wait(&request, MPI_STATUS_IGNORE, location); // NOLINT(clang-analyzer-optin.mpi.MPI-Checker)
 }
 
 int tarch::mpi::alltoallv(
@@ -298,22 +301,23 @@ int tarch::mpi::alltoallv(
 int tarch::mpi::reduce(
   const void*          sendBuffer,
   void*                receiveBuffer,
-  int                  count,
+  const int            count,
   MPI_Datatype         datatype,
   MPI_Op               operation,
-  int                  root,
+  const int            root,
   MPI_Comm             communicator,
   std::source_location location
 ) {
   MPI_Request request = MPI_REQUEST_NULL;
   ireduce(sendBuffer, receiveBuffer, count, datatype, operation, root, communicator, &request, location);
-  return tarch::mpi::wait(&request, MPI_STATUS_IGNORE, location);
+  // tarch::mpi::wait() completes the request in its MPI_Test loop.
+  return tarch::mpi::wait(&request, MPI_STATUS_IGNORE, location); // NOLINT(clang-analyzer-optin.mpi.MPI-Checker)
 }
 
 int tarch::mpi::scan(
   const void*          sendBuffer,
   void*                receiveBuffer,
-  int                  count,
+  const int            count,
   MPI_Datatype         datatype,
   MPI_Op               operation,
   MPI_Comm             communicator,

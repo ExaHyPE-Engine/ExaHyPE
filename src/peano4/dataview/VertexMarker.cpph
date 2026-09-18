@@ -3,7 +3,7 @@
 
 INLINE_METHOD void peano4::dataview::VertexMarker::validateVertexNumber(const int vertexNumber) {
   assertion(vertexNumber >= 0, vertexNumber);
-  assertion(vertexNumber < TWO_POWER_D, vertexNumber);
+  assertion(vertexNumber < peano4::VerticesPerCell, vertexNumber);
 }
 
 /**
@@ -27,8 +27,6 @@ INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> peano4::dataview::VertexMark
   const std::bitset<DIMENSIONS> vertexIndex = vertexNumber;
   for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
     result(dimension) -= 0.5 * _h(dimension);
-    // Testing the bit avoids converting the bitset proxy into a floating-point factor,
-    // which is unreliable once a compiler preserves exception semantics.
     if (vertexIndex[dimension]) {
       result(dimension) += _h(dimension);
     }
@@ -105,8 +103,7 @@ INLINE_METHOD bool peano4::dataview::VertexMarker::isParentVertexLocal(const int
 }
 
 /**
- * @return the vertex position from (0,1,2,3)^d within the 3x3 or 3x3x3 pattern
- *         the parent cell refines into.
+ * Returns the vertex position in the parent's pattern of children.
  *
  * @see coincidesWithCoarseGridVertex()
  */
@@ -129,12 +126,14 @@ INLINE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::dataview::VertexMarker:
 
 /**
  * Returns whether the selected vertex sits at the position of a vertex of the
- * next coarser level, which holds for the entries 0 and 3 along every axis.
+ * next coarser level, which holds for the relative positions 0 and
+ * SubdivisionFactor along every axis.
  */
 INLINE_METHOD bool peano4::dataview::VertexMarker::coincidesWithCoarseGridVertex() const {
   const auto relativePosition = getRelativePositionWithinFatherCell();
   for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
-    if (relativePosition(dimension) == 1 or relativePosition(dimension) == 2) {
+    if (relativePosition(dimension) != 0
+        and relativePosition(dimension) != peano4::sfc::ActiveCurve::SubdivisionFactor) {
       return false;
     }
   }
@@ -208,11 +207,12 @@ INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> peano4::dataview::VertexMark
 
 INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> peano4::dataview::VertexMarker::
   getInvokingParentCellsCentre() const {
-  auto result = _cellCentre;
+  constexpr double ParentCentreOffset = 0.5 * (peano4::sfc::ActiveCurve::SubdivisionFactor - 1);
+  auto             result             = _cellCentre;
   for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
     assertion(_relativePositionWithinFatherCell(dimension) >= 0, toString());
-    assertion(_relativePositionWithinFatherCell(dimension) <= 2, toString());
-    result(dimension) += (1 - _relativePositionWithinFatherCell(dimension)) * _h(dimension);
+    assertion(_relativePositionWithinFatherCell(dimension) < peano4::sfc::ActiveCurve::SubdivisionFactor, toString());
+    result(dimension) += (ParentCentreOffset - _relativePositionWithinFatherCell(dimension)) * _h(dimension);
   }
   return result;
 }

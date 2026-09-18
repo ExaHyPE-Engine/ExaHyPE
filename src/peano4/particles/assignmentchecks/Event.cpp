@@ -1,9 +1,13 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-
 #include "Event.h"
 
-peano4::particles::assignmentchecks::internal::Event::Event(
+#include "tarch/Assertions.h"
+
+/**
+ * Constructs an event from every field, the mesh sweep index included.
+ */
+peano4::particles::assignmentchecks::Event::Event(
   Type                                         type_,
   bool                                         isLocal_,
   const tarch::la::Vector<DIMENSIONS, double>& vertexX_,
@@ -22,7 +26,11 @@ peano4::particles::assignmentchecks::internal::Event::Event(
   trace(trace_),
   meshSweepIndex(meshSweepIndex_) {}
 
-peano4::particles::assignmentchecks::internal::Event::Event(
+/**
+ * Constructs an event that assigns a particle to a vertex or removes it from a
+ * vertex.
+ */
+peano4::particles::assignmentchecks::Event::Event(
   Type                                         type_,
   bool                                         isLocal_,
   const tarch::la::Vector<DIMENSIONS, double>& vertexX_,
@@ -41,12 +49,10 @@ peano4::particles::assignmentchecks::internal::Event::Event(
   assertion(type == Type::AssignToVertex or type == Type::DetachFromVertex);
 }
 
-peano4::particles::assignmentchecks::internal::Event::Event(
-  Type               type_,
-  bool               isLocal_,
-  int                treeId_,
-  const std::string& trace_
-) :
+/**
+ * Constructs an event that assigns a particle to the sieve set or erases it.
+ */
+peano4::particles::assignmentchecks::Event::Event(Type type_, bool isLocal_, int treeId_, const std::string& trace_) :
   type(type_),
   isLocal(isLocal_),
   vertexX(tarch::la::Vector<DIMENSIONS, double>(0.0)),
@@ -57,18 +63,24 @@ peano4::particles::assignmentchecks::internal::Event::Event(
   assertion(type == Type::AssignToSieveSet or type == Type::Erase);
 }
 
-peano4::particles::assignmentchecks::internal::Event::Event(Type type_) :
+/**
+ * Constructs an event of the type NotFound, which the database returns when it
+ * holds no history for a particle.
+ */
+peano4::particles::assignmentchecks::Event::Event(Type type_) :
   type(type_),
-  isLocal(false),
   vertexX(tarch::la::Vector<DIMENSIONS, double>(0.0)),
   previousParticleX(0.0),
   vertexH(tarch::la::Vector<DIMENSIONS, double>(0.0)),
-  treeId(-1),
   trace("no-trace") {
   assertion(type == Type::NotFound);
 }
 
-peano4::particles::assignmentchecks::internal::Event::Event(
+/**
+ * Constructs an event that moves a particle which stays at its vertex.
+ * previousParticleX_ holds the position from before the movement.
+ */
+peano4::particles::assignmentchecks::Event::Event(
   Type                                         type_,
   const tarch::la::Vector<DIMENSIONS, double>& vertexX_,
   const tarch::la::Vector<DIMENSIONS, double>& previousParticleX_,
@@ -86,7 +98,7 @@ peano4::particles::assignmentchecks::internal::Event::Event(
   assertion(type == Type::MoveWhileAssociatedToVertex);
 }
 
-std::string peano4::particles::assignmentchecks::internal::Event::toString() const {
+std::string peano4::particles::assignmentchecks::Event::toString() const {
   std::ostringstream msg;
 
   msg << "(";
@@ -118,7 +130,7 @@ std::string peano4::particles::assignmentchecks::internal::Event::toString() con
     msg << "consecutive-moved-while-associated-to-vertex"
         << "," << previousParticleX << "->x_new,tree=" << treeId << ",trace=" << trace;
     break;
-  };
+  }
   msg << ")";
 
   return msg.str();

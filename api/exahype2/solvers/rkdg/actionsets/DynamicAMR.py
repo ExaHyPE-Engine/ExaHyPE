@@ -52,7 +52,7 @@ class AdaptiveMeshFaceCoupling(AbstractRungeKuttaDGActionSet):
         _projectionRestrictionStage,
         fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.data() + facePosition,
         fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.data(),
-        repositories::{{SOLVER_INSTANCE}}.RestrictionMatrix1D,
+        repositories::{{SOLVER_INSTANCE}}.RestrictionMatrix1D.data(),
         repositories::{{SOLVER_INSTANCE}}.QuadratureWeights1D,
         marker.getSelectedFaceNumber() % DIMENSIONS,
         {{ORDER}} + 1,
@@ -97,7 +97,7 @@ class AdaptiveMeshFaceCoupling(AbstractRungeKuttaDGActionSet):
           _projectionRestrictionStage,
           fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.data() + facePosition,
           fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.data(),
-          repositories::{{SOLVER_INSTANCE}}.RestrictionMatrix1D,
+          repositories::{{SOLVER_INSTANCE}}.RestrictionMatrix1D.data(),
           repositories::{{SOLVER_INSTANCE}}.QuadratureWeights1D,
           marker.getSelectedFaceNumber() % DIMENSIONS,
           {{ORDER}} + 1,
@@ -155,7 +155,7 @@ class AdaptiveMeshFaceCoupling(AbstractRungeKuttaDGActionSet):
         self._solver.add_entries_to_text_replacement_dictionary(d)
         return f"""
     ::exahype2::amr::ChildDataStage<double> _projectionRestrictionStage{{
-      THREE_POWER_D / 3,
+      peano4::Power<peano4::sfc::ActiveCurve::SubdivisionFactor, DIMENSIONS - 1>,
       facedata::{d["UNKNOWN_IDENTIFIER"]}EstimateProjection::Cardinality / 2}};
 """
 
@@ -163,6 +163,8 @@ class AdaptiveMeshFaceCoupling(AbstractRungeKuttaDGActionSet):
         return (
             super(AdaptiveMeshFaceCoupling, self).get_includes()
             + """
+#include "peano4/Constants.h"
+#include "peano4/sfc/ActiveCurve.h"
 #include "exahype2/amr/AMRRoutines.h"
 #include "exahype2/amr/ChildDataStage.h"
 """
@@ -171,7 +173,7 @@ class AdaptiveMeshFaceCoupling(AbstractRungeKuttaDGActionSet):
     @property
     def guards(self):
         if self._guards == []:
-            raise Exception("Guards are not initialised")
+            raise ValueError("The guards are not initialised.")
         return self._guards
 
     @guards.setter
@@ -180,8 +182,8 @@ class AdaptiveMeshFaceCoupling(AbstractRungeKuttaDGActionSet):
             new_guards != []
             and len(new_guards) != self._solver.number_of_Runge_Kutta_steps()
         ):
-            raise Exception(
-                "Expect one guard per Runge-Kutta step. There are {} steps, but the guards are {}".format(
+            raise ValueError(
+                "One guard per Runge-Kutta step is needed. There are {} steps and the guards are {}.".format(
                     self._solver.number_of_Runge_Kutta_steps(), new_guards
                 )
             )
@@ -194,7 +196,7 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
     marker,
     coarseGridCell{{UNKNOWN_IDENTIFIER}}.data(),
     fineGridCell{{UNKNOWN_IDENTIFIER}}.data(),
-    repositories::{{SOLVER_INSTANCE}}.InterpolationMatrix1D,
+    repositories::{{SOLVER_INSTANCE}}.InterpolationMatrix1D.data(),
     {{DG_ORDER}} + 1,
     {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}
   );
@@ -234,20 +236,23 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
   // always completes on one rank: The load balancer refuses to place a rank
   // boundary inside a cell that has a leaf child, so a family that can coarsen
   // is never split. ~ChildDataStage catches a violation of that.
-  const int linearisedChildPosition = peano4::dLinearised(marker.getRelativePositionWithinFatherCell(), 3);
+  const int linearisedChildPosition = peano4::dLinearised(
+    marker.getRelativePositionWithinFatherCell(), peano4::sfc::ActiveCurve::SubdivisionFactor
+  );
   if (_cellRestrictionStage.stage(
         coarseGridCell{{UNKNOWN_IDENTIFIER}}.data(),
         linearisedChildPosition,
         fineGridCell{{UNKNOWN_IDENTIFIER}}.data()
       )) {
-    constexpr int NodesPerAxis = {{DG_ORDER}} + 1;
+    constexpr int NodesPerAxis      = {{DG_ORDER}} + 1;
+    constexpr int SubdivisionFactor = peano4::sfc::ActiveCurve::SubdivisionFactor;
     // The gathered reduction expects one matrix per child interval with entry
     // [fine * NodesPerAxis + coarse] that already carries the quadrature
     // weighting, while the solver stores the operator packed per interval as
     // [coarse][fine] with the weights separate.
-    double        weightedRestrictionMatrix[3][NodesPerAxis * NodesPerAxis];
-    const double* restrictionMatrixPerInterval[3];
-    for (int interval = 0; interval < 3; interval++) {
+    double        weightedRestrictionMatrix[SubdivisionFactor][NodesPerAxis * NodesPerAxis];
+    const double* restrictionMatrixPerInterval[SubdivisionFactor];
+    for (int interval = 0; interval < SubdivisionFactor; interval++) {
       restrictionMatrixPerInterval[interval] = weightedRestrictionMatrix[interval];
       for (int coarseNode = 0; coarseNode < NodesPerAxis; coarseNode++) {
         for (int fineNode = 0; fineNode < NodesPerAxis; fineNode++) {
@@ -259,8 +264,8 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
         }
       }
     }
-    const double* childValues[THREE_POWER_D];
-    for (int childIndex = 0; childIndex < THREE_POWER_D; childIndex++) {
+    const double* childValues[peano4::sfc::ActiveCurve::ChildrenPerCell];
+    for (int childIndex = 0; childIndex < peano4::sfc::ActiveCurve::ChildrenPerCell; childIndex++) {
       childValues[childIndex] = _cellRestrictionStage.child(coarseGridCell{{UNKNOWN_IDENTIFIER}}.data(), childIndex);
     }
     ::exahype2::amr::restrictCellFromChildren(
@@ -342,7 +347,7 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
             super(DynamicAMRTransfer, self).get_attributes()
             + f"""
     ::exahype2::amr::ChildDataStage<double> _cellRestrictionStage{{
-      THREE_POWER_D,
+      peano4::sfc::ActiveCurve::ChildrenPerCell,
       celldata::{d["UNKNOWN_IDENTIFIER"]}::Cardinality}};
 """
         )

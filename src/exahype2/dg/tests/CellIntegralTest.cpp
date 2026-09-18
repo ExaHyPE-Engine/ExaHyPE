@@ -9,6 +9,7 @@
 #include "exahype2/dg/Riemann.h"
 #include "exahype2/dg/rusanov/Rusanov.h"
 #include "exahype2/dg/tests/TestUtils.h"
+#include "peano4/Loop.h"
 
 exahype2::dg::tests::CellIntegralTest::CellIntegralTest() :
   TestCase("exahype2::dg::tests::CellIntegralTest"),
@@ -126,7 +127,7 @@ void exahype2::dg::tests::CellIntegralTest::runEulerOrder2OnStationarySetup() {
 
   ::exahype2::CellData cellData(QIn, x, cellSize, t, dt, QOut);
 
-  cellIntegral_patchwise_in_situ_GaussLegendre_functors(
+  cellIntegralPatchwiseInSituGaussLegendreFunctors(
     cellData,
     Order,
     Unknowns,
@@ -143,14 +144,14 @@ void exahype2::dg::tests::CellIntegralTest::runEulerOrder2OnStationarySetup() {
     nullptr, // source
     nullptr, // pointSources
     _orderTwoQuadraturePoints1D,
-    _orderTwoMassMatrixDiagonal1D, // massMatrixDiagonal
+    _orderTwoMassMatrixDiagonal1D,
     _orderTwoStiffnessOperator1D,
     _orderTwoDerivativeOperator1D,
     true,  // flux
     false, // ncp
     false, // source
-    false
-  ); // pointSources
+    false  // pointSources
+  );
 
   for (int dof = 0; dof < NumberOfDoFs; dof++) {
     validateNumericalEqualsWithParams2(
@@ -193,7 +194,7 @@ void exahype2::dg::tests::CellIntegralTest::runEulerOrder2OnStationarySetup() {
     QIn[dof * (Unknowns + AuxiliaryVariables) + 4] = 4.0;
   }
 
-  cellIntegral_patchwise_in_situ_GaussLegendre_functors(
+  cellIntegralPatchwiseInSituGaussLegendreFunctors(
     cellData,
     Order,
     Unknowns,
@@ -210,14 +211,14 @@ void exahype2::dg::tests::CellIntegralTest::runEulerOrder2OnStationarySetup() {
     nullptr, // source
     nullptr, // pointSources
     _orderTwoQuadraturePoints1D,
-    _orderTwoMassMatrixDiagonal1D, // massMatrixDiagonal
+    _orderTwoMassMatrixDiagonal1D,
     _orderTwoStiffnessOperator1D,
     _orderTwoDerivativeOperator1D,
     true,  // flux
     false, // ncp
     false, // source
-    false
-  ); // pointSources
+    false  // pointSources
+  );
 
   peano4::dForEach(Order + 1, [&](const tarch::la::Vector<DIMENSIONS, int>& dof) {
     const auto dofLinearised = peano4::dLinearised(dof, Order + 1);
@@ -293,7 +294,7 @@ void exahype2::dg::tests::CellIntegralTest::runEulerOrder4OnStationarySetup() {
 
   ::exahype2::CellData cellData(QIn, x, cellSize, t, dt, QOut);
 
-  cellIntegral_patchwise_in_situ_GaussLegendre_functors(
+  cellIntegralPatchwiseInSituGaussLegendreFunctors(
     cellData,
     Order,
     Unknowns,
@@ -310,14 +311,14 @@ void exahype2::dg::tests::CellIntegralTest::runEulerOrder4OnStationarySetup() {
     nullptr, // source
     nullptr, // pointSources
     _orderFourQuadraturePoints1D,
-    _orderFourMassMatrixDiagonal1D, // massMatrixDiagonal
+    _orderFourMassMatrixDiagonal1D,
     _orderFourStiffnessOperator1D,
     _orderFourDerivativeOperator1D,
     true,  // flux
     false, // ncp
     false, // source
-    false
-  ); // pointSources
+    false  // pointSources
+  );
 
   for (int dof = 0; dof < NumberOfDoFs; dof++) {
     validateNumericalEqualsWithParams2(
@@ -380,7 +381,7 @@ void exahype2::dg::tests::CellIntegralTest::runReduceMaxScaledEigenvalue() {
 
   ::exahype2::CellData cellData(QIn, x, cellSize, 0.0, 0.01, QOut);
 
-  const double maxPhysicalEigenvalue = reduceMaxScaledEigenvalue_patchwise_functors(
+  const double maxPhysicalEigenvalue = reduceMaxScaledEigenvaluePatchwiseFunctors(
     cellData,
     Order,
     Unknowns,

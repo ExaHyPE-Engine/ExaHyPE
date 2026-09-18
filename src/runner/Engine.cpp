@@ -51,13 +51,13 @@ namespace {
 runner::Engine::Engine(
   tarch::la::Vector<DIMENSIONS, double> domainOffset,
   tarch::la::Vector<DIMENSIONS, double> domainSize,
-  std::bitset<DIMENSIONS>               periodicBC,
+  std::bitset<DIMENSIONS>               periodicBoundaries,
   runner::RepositoryCallbacks           callbacks,
   std::vector<runner::Step>             steps
 ) :
   _domainOffset(domainOffset),
   _domainSize(domainSize),
-  _periodicBC(periodicBC),
+  _periodicBoundaries(periodicBoundaries),
   _callbacks(std::move(callbacks)),
   _steps(std::move(steps)) {
   _steps.push_back(runner::Step{AllocateMemoryProgramStep, runner::StepName::AllocateMemory, [this]() {
@@ -146,7 +146,7 @@ void runner::Engine::assertConsistentStepRegistryAcrossRanks() const {
 
   unsigned long long minHash      = 0;
   unsigned long long maxHash      = 0;
-  const auto         communicator = tarch::mpi::Rank::getInstance().getCommunicator();
+  const MPI_Comm     communicator = tarch::mpi::Rank::getInstance().getCommunicator();
   tarch::mpi::allreduce(&localHash, &minHash, 1, MPI_UNSIGNED_LONG_LONG, MPI_MIN, communicator);
   tarch::mpi::allreduce(&localHash, &maxHash, 1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, communicator);
 
@@ -174,7 +174,7 @@ int runner::Engine::run() {
     _measurements,
     _domainOffset,
     _domainSize,
-    _periodicBC
+    _periodicBoundaries
   };
 
   const bool stoppedAfterNonCriticalAssertion = runner::Orchestrator(_steps).run(context);

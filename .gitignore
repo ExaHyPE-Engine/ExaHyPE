@@ -52,8 +52,8 @@ doxygen-html/
 scorep*/
 
 # Unit test binaries
-UnitTests2D*
-UnitTests3D*
+UnitTests*2D*
+UnitTests*3D*
 src/unittests/UnitTests*
 
 # Submodules

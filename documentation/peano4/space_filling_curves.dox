@@ -1,0 +1,128 @@
+/**
+
+@page page_peano_space_filling_curves Space-filling curves
+
+\tableofcontents
+
+Peano traverses its spacetree along a space-filling curve. The curve decides in
+which order a refined cell's children are visited and which curve pattern each
+child continues with. Nothing else in the grid depends on it: the entity data
+live in slot-addressed pools, and a traversal detects the first and the last
+touch of a vertex or face by counting its touches against the number of
+adjacent cells. Any curve that is a depth-first visit of every child once
+therefore yields a correct traversal, and the curve is a compile-time choice
+of the library.
+
+# Turtle grammars
+
+Textbooks describe a space-filling curve as a grammar (Michael Bader,
+Space-Filling Curves, Springer 2013). The non-terminals are the patterns in
+which the curve can run through a cell. The terminals are turtle steps, the
+arrows between two consecutive children. A production replaces one
+non-terminal by a sequence of child non-terminals separated by turtle steps.
+The two-dimensional Hilbert curve reads
+
+    H -> A up H right H down B
+    A -> H right A up A left C
+    B -> C left B down B right H
+    C -> B down C left C up A
+
+and the Peano curve, with the axes ordered so that the curve runs along axis 0
+first, reads
+
+    P -> P right Q right P up R left S left R up P right Q right P
+    Q -> Q right P right Q down S left R left S down Q right P right Q
+    R -> R left S left R up P right Q right P up R left S left R
+    S -> S left R left S down Q right P right Q down S left R left S
+
+A grammar carries no coordinates. The position of a child within its parent
+follows from adding up the turtle steps that precede it.
+
+# The grammar as C++
+
+A curve is declared as a struct derived from peano4::sfc::Grammar. The base
+struct contributes the turtle alphabet and the production() builder, so the
+declaration reads like the textbook:
+
+@code
+struct peano4::sfc::HilbertGrammar final : peano4::sfc::Grammar {
+  static constexpr int SubdivisionFactor{2};
+
+  enum NonTerminal : std::uint8_t { H, A, B, C };
+
+  static constexpr NonTerminal StartSymbol{H};
+
+  static constexpr std::array Productions{
+    production(H, A, Up, H, Right, H, Down, B),
+    production(A, H, Right, A, Up, A, Left, C),
+    production(B, C, Left, B, Down, B, Right, H),
+    production(C, B, Down, C, Left, C, Up, A)
+  };
+};
+@endcode
+
+production() checks at compile time that children and steps alternate. Every
+grammar declares its productions for two and for three dimensions. The curves
+shipped with Peano are peano4::sfc::PeanoGrammar (the default, subdivision
+factor 3) and peano4::sfc::HilbertGrammar (subdivision factor 2, with Bader's
+twelve-symbol grammar in three dimensions).
+
+# Compiling the grammar into tables
+
+peano4::sfc::SpaceFillingCurve takes a grammar and derives the child-order
+table from it while the compiler instantiates the class. For every
+non-terminal, the turtle walk of its production yields the child positions and
+the production's right-hand side yields the child states. The derivation runs
+in constexpr functions, so the table is a constant of the program and a
+traversal reads it with one indexed load per refined cell.
+
+Three static assertions reject a faulty grammar before any code runs:
+
+- every production sits at the index of its left-hand side,
+- every production visits each of the SubdivisionFactor^d child cells once
+  with unit steps inside the cell,
+- the exit point of every child meets the entry point of its successor.
+
+The third check derives the entry and exit points of every non-terminal as
+the fixed point of the grammar's recursion: the entry point of a pattern is
+the entry point of its first child, scaled into that child's position. A
+mistyped child symbol in a production breaks this connection and fails the
+build.
+
+# The grid side
+
+peano4::grid::AutomatonState stores the curve state of a cell next to its
+level and geometry. peano4::grid::AutomatonState::refineState() reads the
+children of that state from the active curve and derives every child's
+geometry and curve state from its table entry. The traversals in
+peano4::topology::TreeTraversal and the rank partition in
+peano4::topology::Tree loop over the same child sequence. The active curve is
+the alias peano4::sfc::ActiveCurve, which CMake configures from
+PEANO_WITH_SPACE_FILLING_CURVE:
+
+    cmake .. -DPEANO_WITH_SPACE_FILLING_CURVE=Hilbert
+
+The subdivision factor of the active curve decides how many children a
+refined cell has along each axis. The grid, the block-structured interpolation
+and restriction, the particle lifts and drops and the generated solver code
+read peano4::sfc::ActiveCurve::SubdivisionFactor and
+peano4::sfc::ActiveCurve::ChildrenPerCell, so a Hilbert build bisects every
+cell and a Peano build splits it in three. The Discontinuous Galerkin solvers
+derive their interpolation and restriction matrices between a cell and its
+children in C++ (exahype2/dg/AMRMatrices.h) from the quadrature nodes and the
+subdivision factor, so the Python code generator holds no table that depends
+on the curve. The 3^d neighbourhood of a cell is a property of the lattice,
+not of the curve; peano4::CellsPerNeighbourhood names it.
+
+# Adding a curve
+
+Add a header under src/peano4/sfc/curves that holds the grammar and name its
+non-terminals as textbook readers know them. peano4::sfc::ActiveCurve builds
+both the header name and the struct name from the curve name and the suffix
+Grammar. Add the curve name to the PEANO_WITH_SPACE_FILLING_CURVE option in
+cmake/PeanoOptions.cmake and instantiate peano4::sfc::SpaceFillingCurve with
+the grammar in src/peano4/sfc/tests/SpaceFillingCurveTest.cpp. The static
+assertions of peano4::sfc::SpaceFillingCurve report a grammar that does not
+describe a continuous space-filling curve at compile time.
+
+*/

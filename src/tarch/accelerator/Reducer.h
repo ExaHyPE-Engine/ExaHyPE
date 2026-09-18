@@ -6,7 +6,7 @@
 
 namespace tarch::accelerator {
   /**
-   * Reducer wrappers for tarch::parallelReduce.
+   * Reducer wrappers for tarch::accelerator::parallelReduce.
    *
    * A reducer carries a reference to the user's accumulator variable plus the
    * reduction operation (max/min/sum). Each backend specialises how to express
@@ -45,9 +45,3 @@ namespace tarch::accelerator {
     static GPU_CALLABLE_METHOD constexpr T identity() { return T{0}; }
   };
 } // namespace tarch::accelerator
-
-namespace tarch {
-  using accelerator::Max;
-  using accelerator::Min;
-  using accelerator::Sum;
-} // namespace tarch

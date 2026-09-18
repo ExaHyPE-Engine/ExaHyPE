@@ -11,7 +11,6 @@ import peano4.output.TemplatedHeaderImplementationFilePair
 import peano4.output.Jinja2TemplatedHeaderFile
 import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 
-
 from exahype2.solvers.ButcherTableau import RungeKutta_steps
 
 from exahype2.solvers.PDETerms import PDETerms
@@ -69,7 +68,7 @@ class RungeKuttaDG(object):
         `auxiliary_variables` count entries per degree of freedom; only the
         unknowns follow a hyperbolic formulation.
         """
-        assert rk_order >= 1, "Runge-Kutta order has to be greater or equal to one"
+        assert rk_order >= 1, "The Runge-Kutta order must be at least one."
 
         self._name = name
         self._solver_number = 0
@@ -162,24 +161,19 @@ We use RK("""
 """
         )
 
-
     @property
     def user_action_set_includes(self):
         return self._user_action_set_includes
-
 
     @property
     def user_solver_includes(self):
         return self._user_solver_includes
 
-
     def add_user_action_set_includes(self, value):
         self._user_action_set_includes += value
 
-
     def add_user_solver_includes(self, value):
         self._user_solver_includes += value
-
 
     @abstractmethod
     def create_data_structures(self):
@@ -324,10 +318,8 @@ We use RK("""
         self._cell_label = exahype2.grid.create_cell_label(self._name)
         self._face_label = exahype2.grid.create_face_label(self._name)
 
-
     def _query_fine_grid_cell_in_action_set_if_it_holds_solution(self):
         return self._store_cell_data_default_guard()
-
 
     @abstractmethod
     def create_action_sets(self):
@@ -397,8 +389,8 @@ We use RK("""
         self._action_set_solve_volume_integral = (
             exahype2.solvers.rkdg.actionsets.SolveVolumeIntegral(self)
         )
-        self._action_set_handle_boundary = (
-            exahype2.solvers.rkdg.actionsets.HandleBoundary(
+        self._action_set_apply_boundary_conditions = (
+            exahype2.solvers.rkdg.actionsets.ApplyBoundaryConditions(
                 self, self._store_face_data_default_guard()
             )
         )
@@ -416,7 +408,7 @@ We use RK("""
             guard=self._store_cell_data_default_guard(),
             face_projections=self._face_projections,
         )
-        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = (
+        self._action_set_adaptive_mesh_face_coupling = (
             exahype2.solvers.rkdg.actionsets.AdaptiveMeshFaceCoupling(
                 solver=self, face_projections=self._face_projections
             )
@@ -446,7 +438,7 @@ We use RK("""
         self._action_set_linear_combination_of_estimates.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order + 2
         )
-        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.descend_invocation_order = (
+        self._action_set_adaptive_mesh_face_coupling.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order + 2
         )
         # UpdateCellLabel resets requiresCriterionEvaluation and UpdateFaceLabel zeroes the
@@ -461,7 +453,7 @@ We use RK("""
         self._action_set_solve_volume_integral.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order + 3
         )  # The two 3s could run in parallel
-        self._action_set_handle_boundary.descend_invocation_order = (
+        self._action_set_apply_boundary_conditions.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order + 2
         )
         self._action_set_solve_Riemann_problem.descend_invocation_order = (
@@ -491,7 +483,6 @@ We use RK("""
             self._baseline_action_set_descend_invocation_order
         )  # Touch cell last time, i.e. leave cell
 
-
     def _provide_cell_data_to_compute_kernels_default_guard(self):
         return (
                         "not marker.willBeRefined() "
@@ -502,7 +493,6 @@ We use RK("""
                         + "::SolverState::GridConstruction"
                 )
 
-
     def _provide_face_data_to_compute_kernels_default_guard(self):
         return (
                         "not marker.willBeRefined() "
@@ -512,7 +502,6 @@ We use RK("""
                         + self._name
                         + "::SolverState::GridConstruction"
                )
-
 
     def _store_cell_data_default_guard(self):
         """!
@@ -529,7 +518,6 @@ We use RK("""
             + self._name
             + "::SolverState::GridConstruction"
         )
-
 
     def _load_cell_data_default_guard(self):
         """!
@@ -552,7 +540,6 @@ We use RK("""
             + "::SolverState::GridInitialisation"
         )
 
-
     def _store_face_data_default_guard(self):
         """!
         Extend the guard via ands only.
@@ -568,7 +555,6 @@ We use RK("""
             + self._name
             + "::SolverState::GridConstruction"
         )
-
 
     def _load_face_data_default_guard(self):
         """!
@@ -595,14 +581,11 @@ We use RK("""
             + ".hasStoredFaceData()"
         )
 
-
     def _unknown_identifier(self):
         return self._name + "Q"
 
-
     def get_name_of_global_instance(self):
         return "instanceOf" + self._name
-
 
     def add_to_Peano4_datamodel(self, datamodel):
         log.debug("Polynomial basis")
@@ -620,7 +603,6 @@ We use RK("""
         datamodel.add_face(self._old_solution_projection)
         datamodel.add_face(self._Riemann_solution)
 
-
     def add_use_data_statements_to_Peano4_solver_step(self, step):
         step.use_cell(self._cell_label)
         step.use_cell(self._current_time_step)
@@ -631,12 +613,10 @@ We use RK("""
         step.use_face(self._old_solution_projection)
         step.use_face(self._Riemann_solution)
 
-
     def _get_default_includes(self):
         return """
 #include "tarch/la/Vector.h"
 
-#include "peano4/Globals.h"
 #include "peano4/Loop.h"
 
 #include "repositories/SolverRepository.h"
@@ -657,7 +637,6 @@ We use RK("""
         step.add_action_set(self._action_set_update_cell_label)
         step.add_action_set(self._action_set_AMR)
         step.add_action_set(self._action_set_postprocess_solution)
-
 
     def add_actions_to_create_grid(self, step):
         """
@@ -702,11 +681,11 @@ We use RK("""
         step.add_action_set(self._action_set_update_cell_label)
         step.add_action_set(self._action_set_linear_combination_of_estimates)
         step.add_action_set(
-            self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement
+            self._action_set_adaptive_mesh_face_coupling
         )
         step.add_action_set(self._action_set_project_linear_combination_onto_faces)
         step.add_action_set(self._action_set_solve_volume_integral)
-        step.add_action_set(self._action_set_handle_boundary)
+        step.add_action_set(self._action_set_apply_boundary_conditions)
         step.add_action_set(self._action_set_solve_Riemann_problem)
         step.add_action_set(self._action_set_interpolate_Riemann_solution_onto_hanging_faces)
         step.add_action_set(self._action_set_add_volume_and_face_solution)
@@ -733,7 +712,6 @@ We use RK("""
     @abstractmethod
     def add_entries_to_text_replacement_dictionary(self, d):
         pass
-
 
     def add_implementation_files_to_project(self, namespace, output, dimensions):
         """
@@ -970,9 +948,13 @@ We use RK("""
             self._initial_conditions_implementation = initial_conditions
 
         if refinement_criterion == exahype2.solvers.PDETerms.None_Implementation:
-            assert False, "Refinement criterion cannot be none."
+            raise ValueError(
+                "The refinement criterion must not be None_Implementation."
+            )
         if initial_conditions == exahype2.solvers.PDETerms.None_Implementation:
-            assert False, "Initial conditions cannot be none."
+            raise ValueError(
+                "The initial conditions must not be None_Implementation."
+            )
 
         if flux is not None:
             self._flux_implementation = flux
@@ -991,16 +973,13 @@ We use RK("""
         self.create_data_structures()
         self.create_action_sets()
 
-
     @property
     def postprocess_updated_cell_after_Runge_Kutta_step(self):
         return self._postprocess_updated_cell_after_Runge_Kutta_step
 
-
     @property
     def postprocess_updated_cell_after_final_linear_combination(self):
         return self._postprocess_updated_cell_after_final_linear_combination
-
 
     @postprocess_updated_cell_after_Runge_Kutta_step.setter
     def postprocess_updated_cell_after_Runge_Kutta_step(self, kernel):

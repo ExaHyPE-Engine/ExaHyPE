@@ -10,16 +10,12 @@ import jinja2
 class DumpTracerIntoDatabase(peano4.solversteps.ActionSet):
     """!
 
-    Dump tracer data into a CSV database.
+    Dumps tracer data into a CSV database.
 
-    This action set is to be added to your code if you want to dump tracer data
-    into a database. By default, Peano supports csv files. The dumps are not
-    synchronised with normal I/O: we keep track of the particles/tracers and dump
-    a new snapshot whenever a tracer has moved far enough or enough time has
-    passed. Both thresholds are set via the deltas in the constructor.
-
-    This class uses the C++ class peano4::particles::TrajectoryDatabase from the
-    particles package to realise the actual storage.
+    The dumps run independently of the plotter: the action set records a new
+    snapshot of a tracer once that tracer has moved further than the position
+    delta, or once more time than the time delta has passed. The constructor
+    takes both deltas. peano4::particles::TrajectoryDatabase holds the records.
     """
 
     def __init__(
@@ -84,7 +80,7 @@ if (
 ) {
   constexpr double InitialRecordTime = {{INI_RECORD}};
   constexpr double LastRecordTime = {{LAST_RECORD}};
-  for (int vertexNumber = 0; vertexNumber < TWO_POWER_D; vertexNumber++) {
+  for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell; vertexNumber++) {
     for (
       const auto* const particle :
       fineGridVertices{{PARTICLES_CONTAINER}}(vertexNumber)

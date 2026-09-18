@@ -13,7 +13,7 @@ class TPV5(DynamicRuptureScenario):
     """
 
     domain_offset   = [3.8, 0.0, 3.8] #centers the fault which is at 20.
-    domain_size     = [32.4, 32.4, 32.4] #leads to one cell outside of fault on each side (with 27 cells)
+    domain_size     = [32.4, 32.4, 32.4] #The domain size leaves one cell outside the fault on each side on a level-3 grid of the Peano curve.
 
     end_time = 10.0
 
