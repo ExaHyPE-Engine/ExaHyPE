@@ -37,6 +37,9 @@ set(SUPPORTED_DIMENSIONS
 )
 mark_as_advanced(SUPPORTED_DIMENSIONS)
 
+set(PEANO_WITH_SPACE_FILLING_CURVE "Peano" CACHE STRING "Space-filling curve of the grid traversal: Peano or Hilbert")
+set_property(CACHE PEANO_WITH_SPACE_FILLING_CURVE PROPERTY STRINGS Peano Hilbert)
+
 set(CMAKE_BUILD_TYPE "" CACHE INTERNAL "")
 set(SUPPORTED_BUILD_TYPES
   Release Debug Asserts

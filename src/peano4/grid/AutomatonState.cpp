@@ -2,8 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "AutomatonState.h"
 
-#include "peano4/Loop.h"
-#include "peano4/grid/PeanoCurve.h"
 #include "tarch/Assertions.h"
 
 static_assert(std::is_standard_layout_v<peano4::grid::AutomatonState>);
@@ -37,14 +35,7 @@ std::string peano4::grid::AutomatonState::toString() const {
   }
   out << "]";
 
-  out << ", EvenFlags=[";
-  for (int d = 0; d < DIMENSIONS; d++) {
-    if (d > 0) {
-      out << ",";
-    }
-    out << (getEvenFlag(d) ? "1" : "0");
-  }
-  out << "]";
+  out << ", CurveState=" << static_cast<int>(curveState);
 
   out << "}";
 
@@ -52,43 +43,30 @@ std::string peano4::grid::AutomatonState::toString() const {
 }
 
 /**
- * Derives the @f$ 3^d @f$ states on the next finer level from one state. A
- * child's slot in fineGridStates is its position within the parent, with the
- * first axis running fastest. The recursion visits the children along the
- * Peano space-filling curve, which gives each of them its entry and exit face.
+ * Derives the states of the children of a cell. A child's slot in
+ * fineGridStates is its position within the parent with the first axis
+ * running fastest. The active curve supplies every child's position and curve
+ * state.
  */
 void peano4::grid::AutomatonState::refineState(
   const peano4::grid::AutomatonState& coarseGrid,
-  peano4::grid::AutomatonState        fineGridStates[THREE_POWER_D],
-  tarch::la::Vector<DIMENSIONS, int>  fineGridStatesPosition,
-  int                                 axis
+  peano4::grid::AutomatonState        fineGridStates[peano4::sfc::ActiveCurve::ChildrenPerCell]
 ) {
-  if (axis == -1) {
-    int arrayIndex                   = peano4::dLinearised(fineGridStatesPosition, 3);
-    fineGridStates[arrayIndex]       = coarseGrid;
-    fineGridStates[arrayIndex].level = coarseGrid.level + 1;
-  } else {
-    assertion(axis >= 0);
-    assertion(axis < DIMENSIONS);
-
-    peano4::grid::AutomatonState firstCell  = coarseGrid;
-    peano4::grid::AutomatonState secondCell = coarseGrid;
-    peano4::grid::AutomatonState thirdCell  = coarseGrid;
-
-    firstCell.h[axis]            = coarseGrid.h[axis] / 3.0;
-    fineGridStatesPosition(axis) = 0;
-    firstCell.x[axis]            = coarseGrid.x[axis];
-    refineState(firstCell, fineGridStates, fineGridStatesPosition, axis - 1);
-
-    secondCell.flipEvenFlag(axis);
-    secondCell.h[axis]           = coarseGrid.h[axis] / 3.0;
-    fineGridStatesPosition(axis) = 1;
-    secondCell.x[axis]           = coarseGrid.x[axis] + coarseGrid.h[axis] / 3.0;
-    refineState(secondCell, fineGridStates, fineGridStatesPosition, axis - 1);
-
-    thirdCell.h[axis]            = coarseGrid.h[axis] / 3.0;
-    fineGridStatesPosition(axis) = 2;
-    thirdCell.x[axis]            = coarseGrid.x[axis] + 2.0 * coarseGrid.h[axis] / 3.0;
-    refineState(thirdCell, fineGridStates, fineGridStatesPosition, axis - 1);
+  assertion(coarseGrid.level >= 0, coarseGrid.toString());
+  constexpr int SubdivisionFactor = peano4::sfc::ActiveCurve::SubdivisionFactor;
+  for (const auto& child : peano4::sfc::ActiveCurve::children(coarseGrid.curveState)) {
+    assertion(
+      child.linearisedPosition < peano4::sfc::ActiveCurve::ChildrenPerCell,
+      static_cast<int>(child.linearisedPosition),
+      coarseGrid.toString()
+    );
+    auto& fineGridState      = fineGridStates[child.linearisedPosition];
+    fineGridState.level      = coarseGrid.level + 1;
+    fineGridState.curveState = child.state;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      assertion(coarseGrid.h(axis) > 0.0, coarseGrid.toString(), axis);
+      fineGridState.h(axis) = coarseGrid.h(axis) / SubdivisionFactor;
+      fineGridState.x(axis) = coarseGrid.x(axis) + child.position[axis] * coarseGrid.h(axis) / SubdivisionFactor;
+    }
   }
 }

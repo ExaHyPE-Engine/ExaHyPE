@@ -1,10 +1,8 @@
-// This file is part of the Peano project. For conditions of distribution and
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "DGUtils.h"
-
-#include "peano4/Globals.h"
+#include "exahype2/dg/DGUtils.h"
 #include "peano4/dataview/CellMarker.h"
 
 namespace exahype2::dg {
@@ -12,7 +10,7 @@ namespace exahype2::dg {
   void projectValueOntoParticle(
     const peano4::dataview::CellMarker& marker,
     int                                 order,
-    const QStoreType* NOALIAS           QuadratureNodes1D,
+    const QStoreType* NOALIAS           quadratureNodes1D,
     int                                 unknownsPerDoF,
     const QStoreType* NOALIAS           Q,
     Particle&                           particle
@@ -22,7 +20,7 @@ namespace exahype2::dg {
   void projectAllValuesOntoParticle(
     const peano4::dataview::CellMarker& marker,
     int                                 order,
-    const QStoreType* NOALIAS           QuadratureNodes1D,
+    const QStoreType* NOALIAS           quadratureNodes1D,
     int                                 unknownsPerDoF,
     const QStoreType* NOALIAS           Q,
     Particle&                           particle

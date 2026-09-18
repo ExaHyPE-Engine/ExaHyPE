@@ -2,18 +2,19 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "RuntimeParameters.h"
 
+#include "tarch/Termination.h"
 #include "tarch/reader/JSONReader.h"
 
 {% if HAS_RUNTIME_PARAMETERS %}
 namespace {
   std::string consumeValue(
     int&               index,
-    int                argc,
+    const int          argc,
     char**             argv,
     const std::string& argument
   ) {
     if (index + 1 >= argc) {
-      throw std::runtime_error("Missing value for " + argument + ".");
+      tarch::terminateWithError("Command line argument \"" + argument + "\" carries no value.");
     }
     ++index;
     return argv[index];
@@ -26,13 +27,13 @@ namespace {
 {% endif %}
 
 {% if HAS_BOOLEAN_RUNTIME_PARAMETERS %}
-  std::string formatDefault(bool value) {
+  std::string formatDefault(const bool value) {
     return value ? "true" : "false";
   }
 {% endif %}
 
   template <typename T>
-  std::string formatDefault(T value) {
+  std::string formatDefault(const T value) {
     std::ostringstream result;
     result << value;
     return result.str();
@@ -52,38 +53,32 @@ namespace {
 
 {% if HAS_DOUBLE_RUNTIME_PARAMETERS %}
   double parseDouble(const std::string& value, const std::string& key) {
-    try {
-      size_t       processed = 0;
-      const double result    = std::stod(value, &processed);
-      if (processed != value.size()) {
-        throw std::invalid_argument("trailing characters");
-      }
-      return result;
-    } catch (const std::exception&) {
-      throw std::runtime_error("Invalid numeric value for " + key + ": " + value);
+    const char* const end    = value.data() + value.size();
+    auto              result = 0.0;
+    const auto        parsed = std::from_chars(value.data(), end, result);
+    if (parsed.ec != std::errc{} or parsed.ptr != end) {
+      tarch::terminateWithError("Value \"" + value + "\" of runtime parameter \"" + key + "\" is not a floating point number.");
     }
+    return result;
   }
 {% endif %}
 
 {% if HAS_INTEGER_RUNTIME_PARAMETERS %}
   int parseInteger(const std::string& value, const std::string& key) {
-    try {
-      size_t    processed = 0;
-      const int result    = std::stoi(value, &processed);
-      if (processed != value.size()) {
-        throw std::invalid_argument("trailing characters");
-      }
-      return result;
-    } catch (const std::exception&) {
-      throw std::runtime_error("Invalid integer value for " + key + ": " + value);
+    const char* const end    = value.data() + value.size();
+    auto              result = 0;
+    const auto        parsed = std::from_chars(value.data(), end, result);
+    if (parsed.ec != std::errc{} or parsed.ptr != end) {
+      tarch::terminateWithError("Value \"" + value + "\" of runtime parameter \"" + key + "\" is not an integer.");
     }
+    return result;
   }
 {% endif %}
 
 {% if HAS_BOOLEAN_RUNTIME_PARAMETERS %}
   bool parseBoolean(std::string value, const std::string& key) {
-    std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) {
-      return static_cast<char>(std::tolower(c));
+    std::transform(value.begin(), value.end(), value.begin(), [](const unsigned char character) {
+      return static_cast<char>(std::tolower(character));
     });
 
     if (value == "true" or value == "1" or value == "yes" or value == "on") {
@@ -93,7 +88,7 @@ namespace {
       return false;
     }
 
-    throw std::runtime_error("Invalid boolean value for " + key + ": " + value);
+    tarch::terminateWithError("Value \"" + value + "\" of runtime parameter \"" + key + "\" is not a boolean.");
   }
 {% endif %}
 
@@ -148,13 +143,13 @@ namespace {
 ) {
   if (values.size() < {{ parameter.array_size }}) {
     std::ostringstream message;
-    message << "Runtime parameter \"{{ parameter.name }}\" must contain at least " << {{ parameter.array_size }} << " entries, but got " << values.size() << ".";
-    throw std::runtime_error(message.str());
+    message << "Runtime parameter \"{{ parameter.name }}\" needs at least {{ parameter.array_size }} entries and carries " << values.size() << ".";
+    tarch::terminateWithError(message.str());
   }
 
   auto result = defaultValue;
-  for (int d = 0; d < {{ parameter.array_size }}; ++d) {
-    result[d] = values[d];
+  for (int index = 0; index < {{ parameter.array_size }}; ++index) {
+    result[index] = values[index];
   }
   return result;
 }

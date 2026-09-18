@@ -3,7 +3,7 @@
 #include "RefinementControlService.h"
 
 #include "exahype2/RefinementControl.h"
-#include "peano4/Globals.h"
+#include "peano4/sfc/ActiveCurve.h"
 #include "tarch/Termination.h"
 #include "tarch/instrumentation/Debug.h"
 #include "tarch/mpi/Collectives.h"
@@ -36,14 +36,19 @@ namespace {
     std::int32_t   linearisedChildPosition{0};
   };
 
-  long long floorDivideByThree(const long long value) noexcept { return value >= 0 ? value / 3 : -((-value + 2) / 3); }
+  constexpr int SubdivisionFactor = peano4::sfc::ActiveCurve::SubdivisionFactor;
+  constexpr int ChildrenPerCell   = peano4::sfc::ActiveCurve::ChildrenPerCell;
+
+  long long floorDivideBySubdivisionFactor(const long long value) noexcept {
+    return value >= 0 ? value / SubdivisionFactor : -((-value + SubdivisionFactor - 1) / SubdivisionFactor);
+  }
 
   /**
-   * Maps a leaf-sized erase request onto its Peano parent cell.
+   * Maps a leaf-sized erase request onto its parent cell.
    *
-   * Dividing the requesting cell's lattice position by three names its parent and the child's
-   * slot within the parent's 3^d sibling group. The routine returns false for a request from
-   * the root cell, which has no parent.
+   * Dividing the requesting cell's lattice position by the subdivision factor names its parent
+   * and the child's slot within the parent's sibling group. The routine returns false for a
+   * request from the root cell, which has no parent.
    */
   bool createEraseParent(
     const peano4::grid::GridControlEvent& event,
@@ -60,13 +65,13 @@ namespace {
 
     for (int axis = 0; axis < DIMENSIONS; axis++) {
       const long long cellIndex           = event.latticeIndex(axis);
-      const long long parentIndex         = floorDivideByThree(cellIndex);
-      const int       childPositionOnAxis = static_cast<int>(cellIndex - 3 * parentIndex);
+      const long long parentIndex         = floorDivideBySubdivisionFactor(cellIndex);
+      const int       childPositionOnAxis = static_cast<int>(cellIndex - SubdivisionFactor * parentIndex);
 
       key.parentIndex[axis] = parentIndex;
 
       linearisedChildPosition += childPositionOnAxis * childStride;
-      childStride *= 3;
+      childStride *= SubdivisionFactor;
     }
 
     return true;
@@ -176,10 +181,9 @@ void exahype2::RefinementControlService::finishStep(
     _lastRealisedEvents               = eventsUsedByCompletedTraversal;
   }
 
-  const auto stepKind    = recordRealisedEvents ? StepKind::Realise
-       : suppressEventsIfUnchanged              ? StepKind::Criterion
-                                                : StepKind::Plain;
-  auto&      lastOutcome = _lastOutcomePerKind[static_cast<int>(stepKind)];
+  const StepKind criterionOrPlainKind = suppressEventsIfUnchanged ? StepKind::Criterion : StepKind::Plain;
+  const StepKind stepKind             = recordRealisedEvents ? StepKind::Realise : criterionOrPlainKind;
+  auto&          lastOutcome          = _lastOutcomePerKind[static_cast<int>(stepKind)];
 
   // An empty contribution names no cell and drops here.
   std::vector<RefinementControl::NewEvents> contributions;
@@ -225,8 +229,8 @@ void exahype2::RefinementControlService::finishStep(
  * Promotes patch-local erase requests to the parent cell they coarsen away.
  *
  * Every erase request a solver raises is mapped onto its Peano parent cell; a parent
- * survives only if every solver has requested the erase for the complete 3^d sibling
- * group. Incomplete groups are dropped.
+ * survives only if every solver has requested the erase for every child of that parent.
+ * Incomplete groups are dropped.
  */
 std::vector<peano4::grid::GridControlEvent> exahype2::RefinementControlService::finaliseCoarseningEvents(
   const std::vector<RawRequest>& requests
@@ -269,15 +273,15 @@ std::vector<peano4::grid::GridControlEvent> exahype2::RefinementControlService::
     int  numberOfVotingSolvers = 0;
     bool everySolverAgrees     = true;
     while (voteNumber < eraseVotes.size() and not(groupKey < eraseVotes[voteNumber].key)) {
-      const auto                 solverNumber = eraseVotes[voteNumber].solverNumber;
-      std::bitset<THREE_POWER_D> children;
+      const auto                   solverNumber = eraseVotes[voteNumber].solverNumber;
+      std::bitset<ChildrenPerCell> children;
       while (voteNumber < eraseVotes.size() and not(groupKey < eraseVotes[voteNumber].key)
              and eraseVotes[voteNumber].solverNumber == solverNumber) {
         children.set(eraseVotes[voteNumber].linearisedChildPosition);
         voteNumber++;
       }
       numberOfVotingSolvers++;
-      everySolverAgrees = everySolverAgrees and children.count() == THREE_POWER_D;
+      everySolverAgrees = everySolverAgrees and children.count() == ChildrenPerCell;
     }
     if (everySolverAgrees and numberOfVotingSolvers == _numberOfSolvers) {
       peano4::grid::GridControlEvent parentEvent;
@@ -440,7 +444,7 @@ bool exahype2::RefinementControlService::exchangeRawRequests(
 
   std::size_t totalRequestCount = 0;
   for (int rankIndex = 0; rankIndex < numberOfRanks; rankIndex++) {
-    std::size_t  readOffset = static_cast<std::size_t>(displacements[rankIndex]);
+    auto         readOffset = static_cast<std::size_t>(displacements[rankIndex]);
     std::int32_t numberOfRemovals{};
     std::int32_t numberOfAdditions{};
     std::memcpy(&numberOfRemovals, gatheredBlobs.data() + readOffset, sizeof(std::int32_t));
@@ -505,11 +509,12 @@ bool exahype2::RefinementControlService::exchangeRawRequests(
     shippedRequests = std::move(reconstructed);
     // Every rank reconstructs every rank's list, and the suppression, consensus
     // and redelivery decisions only agree while all of them are canonical.
-    assertion(std::is_sorted(shippedRequests.begin(), shippedRequests.end(), rawRequestPrecedes), rankIndex);
-    assertion(
-      std::adjacent_find(shippedRequests.begin(), shippedRequests.end(), rawRequestsMatch) == shippedRequests.end(),
-      rankIndex
-    );
+    [[maybe_unused]] const bool shippedRequestsAreSorted =
+      std::is_sorted(shippedRequests.begin(), shippedRequests.end(), rawRequestPrecedes);
+    [[maybe_unused]] const bool shippedRequestsAreUnique =
+      std::adjacent_find(shippedRequests.begin(), shippedRequests.end(), rawRequestsMatch) == shippedRequests.end();
+    assertion(shippedRequestsAreSorted, rankIndex);
+    assertion(shippedRequestsAreUnique, rankIndex);
     totalRequestCount += shippedRequests.size();
   }
 
@@ -572,7 +577,7 @@ bool exahype2::RefinementControlService::committedEventsAgreeAcrossRanks() const
   }
   unsigned long long minimumHash  = 0;
   unsigned long long maximumHash  = 0;
-  const auto         communicator = tarch::mpi::Rank::getInstance().getCommunicator();
+  const MPI_Comm     communicator = tarch::mpi::Rank::getInstance().getCommunicator();
   tarch::mpi::allreduce(&localHash, &minimumHash, 1, MPI_UNSIGNED_LONG_LONG, MPI_MIN, communicator);
   tarch::mpi::allreduce(&localHash, &maximumHash, 1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, communicator);
   return minimumHash == maximumHash;

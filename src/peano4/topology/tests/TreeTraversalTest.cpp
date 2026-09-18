@@ -2,16 +2,25 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "TreeTraversalTest.h"
 
-#include "peano4/Globals.h"
+#include "peano4/Constants.h"
 #include "peano4/grid/GridTraversalEvent.h"
 #include "peano4/grid/GridTraversalObserver.h"
 #include "peano4/grid/StackTopology.h"
+#include "peano4/sfc/ActiveCurve.h"
 #include "peano4/topology/Tree.h"
 #include "peano4/topology/TreeTraversal.h"
 #include "tarch/tasking/Runtime.h"
 
 namespace {
-  constexpr int Depth = 2;
+  constexpr int Depth             = 2;
+  constexpr int SubdivisionFactor = peano4::sfc::ActiveCurve::SubdivisionFactor;
+  constexpr int ChildrenPerCell   = peano4::sfc::ActiveCurve::ChildrenPerCell;
+
+  /** Lattice position of the vertex at the domain centre on the base depth. */
+  constexpr int CentreVertex = peano4::Power<SubdivisionFactor, Depth> / 2;
+
+  /** Lattice position of a vertex inside the first child of the root on the base depth. */
+  constexpr int VertexInsideFirstChild = peano4::Power<SubdivisionFactor, Depth - 1> / 2;
 
   /**
    * Records, per vertex pool slot, how often a sweep first-touches and
@@ -29,11 +38,11 @@ namespace {
       static_cast<void>(treeId);
       return new TouchRecordingObserver();
     }
-    std::vector<peano4::grid::GridControlEvent> getGridControlEvents() const override { return {}; }
-    void                                        beginTraversal(
-                                             const tarch::la::Vector<DIMENSIONS, double>& x,
-                                             const tarch::la::Vector<DIMENSIONS, double>& h
-                                           ) override {
+    [[nodiscard]] std::vector<peano4::grid::GridControlEvent> getGridControlEvents() const override { return {}; }
+    void                                                      beginTraversal(
+                                                           const tarch::la::Vector<DIMENSIONS, double>& x,
+                                                           const tarch::la::Vector<DIMENSIONS, double>& h
+                                                         ) override {
       static_cast<void>(x);
       static_cast<void>(h);
     }
@@ -45,7 +54,7 @@ namespace {
       static_cast<void>(h);
     }
     void enterNode(const peano4::grid::GridTraversalEvent& event) override {
-      for (int vertexNumber = 0; vertexNumber < TWO_POWER_D; vertexNumber++) {
+      for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell; vertexNumber++) {
         const auto dataFrom  = event.getVertexDataFrom(vertexNumber);
         const auto poolIndex = event.getVertexPoolIndex(vertexNumber);
         if (dataFrom == NoData) {
@@ -63,7 +72,7 @@ namespace {
       }
     }
     void leaveNode(const peano4::grid::GridTraversalEvent& event) override {
-      for (int vertexNumber = 0; vertexNumber < TWO_POWER_D; vertexNumber++) {
+      for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell; vertexNumber++) {
         const auto dataTo = event.getVertexDataTo(vertexNumber);
         if (dataTo != NoData and peano4::grid::StackTopology::isInOutStack(dataTo)) {
           lastTouchesOfSlot[event.getVertexPoolIndex(vertexNumber)]++;
@@ -89,11 +98,11 @@ namespace {
       static_cast<void>(treeId);
       return new SlotOrderObserver(_tree);
     }
-    std::vector<peano4::grid::GridControlEvent> getGridControlEvents() const override { return {}; }
-    void                                        beginTraversal(
-                                             const tarch::la::Vector<DIMENSIONS, double>& x,
-                                             const tarch::la::Vector<DIMENSIONS, double>& h
-                                           ) override {
+    [[nodiscard]] std::vector<peano4::grid::GridControlEvent> getGridControlEvents() const override { return {}; }
+    void                                                      beginTraversal(
+                                                           const tarch::la::Vector<DIMENSIONS, double>& x,
+                                                           const tarch::la::Vector<DIMENSIONS, double>& h
+                                                         ) override {
       static_cast<void>(x);
       static_cast<void>(h);
     }
@@ -113,7 +122,7 @@ namespace {
       if (event.getCellPoolIndex() != _tree.getCellAt(event.level, cellLattice)) {
         numberOfMismatches++;
       }
-      for (int vertexNumber = 0; vertexNumber < TWO_POWER_D; vertexNumber++) {
+      for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell; vertexNumber++) {
         auto cornerLattice = cellLattice;
         for (int axis = 0; axis < DIMENSIONS; axis++) {
           cornerLattice(axis) += (vertexNumber >> axis) & 1;
@@ -122,7 +131,7 @@ namespace {
           numberOfMismatches++;
         }
       }
-      for (int faceNumber = 0; faceNumber < TWO_TIMES_D; faceNumber++) {
+      for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
         const int normal      = faceNumber % DIMENSIONS;
         auto      faceLattice = cellLattice;
         if (faceNumber >= DIMENSIONS) {
@@ -163,8 +172,11 @@ void peano4::topology::tests::TreeTraversalTest::run() {
  * A vertex the rank does not hold moves no data at that root.
  */
 void peano4::topology::tests::TreeTraversalTest::testRemoteBlockRootsMoveTheVerticesTheRankHolds() {
-  constexpr int SpawnLevel    = 1;
-  constexpr int NumberOfRanks = 2;
+  constexpr int SpawnLevel = 1;
+  // One rank more than the subdivision factor never divides the spawn-block
+  // count, so no rank boundary falls on a block boundary and every rank holds
+  // part of a block another rank holds too.
+  constexpr int NumberOfRanks = peano4::sfc::ActiveCurve::SubdivisionFactor + 1;
 
   const tarch::la::Vector<DIMENSIONS, double>  offset(0.0);
   const tarch::la::Vector<DIMENSIONS, double>  width(1.0);
@@ -214,11 +226,12 @@ void peano4::topology::tests::TreeTraversalTest::testVerticesCountOnceAcrossRank
   const tarch::la::Vector<DIMENSIONS, double> offset(0.0);
   const tarch::la::Vector<DIMENSIONS, double> width(1.0);
 
-  // The flag at (4, ...) refines the cells with corners in [3, 4] per axis,
-  // whose 6^d children carry 7^d fine vertices; the 5^d interior ones are
-  // persistent and the ones on the rim of the region hang.
+  // The flag at the centre vertex refines the two cells per axis around it,
+  // whose children carry (2k+1)^d fine vertices for the subdivision factor k;
+  // the (2k-1)^d interior ones are persistent and the ones on the rim of the
+  // region hang.
   const peano4::topology::Tree::RefinementPlan emptyPlan;
-  const peano4::topology::Tree::RefinementPlan refinedPlan(1, {tarch::la::Vector<DIMENSIONS, int>(4)});
+  const peano4::topology::Tree::RefinementPlan refinedPlan(1, {tarch::la::Vector<DIMENSIONS, int>(CentreVertex)});
 
   int regularVertices      = 0;
   int fineInteriorVertices = 1;
@@ -231,8 +244,8 @@ void peano4::topology::tests::TreeTraversalTest::testVerticesCountOnceAcrossRank
     regularVertices += verticesOnLevel;
   }
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    fineInteriorVertices *= 5;
-    fineVertices *= 7;
+    fineInteriorVertices *= 2 * SubdivisionFactor - 1;
+    fineVertices *= 2 * SubdivisionFactor + 1;
   }
 
   for (const int numberOfRanks : {1, 2}) {
@@ -351,7 +364,7 @@ void peano4::topology::tests::TreeTraversalTest::testRootChildrenBecomeTasksAtSp
   traversal.prepareInterfaceTopology(tree, 0, false);
   traversal.prepareParallelSweep(tree, 0);
 
-  validateEquals(traversal.getNumberOfSubtreeTasks(), THREE_POWER_D);
+  validateEquals(traversal.getNumberOfSubtreeTasks(), peano4::sfc::ActiveCurve::ChildrenPerCell);
 }
 
 /**
@@ -390,7 +403,7 @@ void peano4::topology::tests::TreeTraversalTest::testSlotInheritanceAcrossRegrid
   const tarch::la::Vector<DIMENSIONS, double> width(1.0);
 
   peano4::topology::Tree::RefinementPlan refinedPlan;
-  refinedPlan.emplace_back().emplace_back(3);
+  refinedPlan.emplace_back().emplace_back(CentreVertex);
 
   peano4::topology::Tree oldTree(0, offset, width);
   oldTree.buildRegularGrid(Depth);
@@ -435,7 +448,7 @@ void peano4::topology::tests::TreeTraversalTest::testRegridTransitionClasses() {
   const tarch::la::Vector<DIMENSIONS, double> width(1.0);
 
   peano4::topology::Tree::RefinementPlan refinedPlan;
-  refinedPlan.emplace_back().emplace_back(3);
+  refinedPlan.emplace_back().emplace_back(CentreVertex);
 
   peano4::topology::Tree oldTree(0, offset, width);
   oldTree.buildRegularGrid(Depth);
@@ -465,7 +478,7 @@ void peano4::topology::tests::TreeTraversalTest::testRegridTransitionClasses() {
   const auto numberOfCreatedCells = static_cast<int>(unionTree.getNumberOfCells() - oldTree.getNumberOfCells());
   validateEquals(countFlags(refineTransition.overrides.cellCreate), numberOfCreatedCells);
   validateEquals(countFlags(refineTransition.overrides.cellDestroy), 0);
-  const auto flaggedVertexIndex = unionTree.getVertexAt(Depth, tarch::la::Vector<DIMENSIONS, int>(3));
+  const auto flaggedVertexIndex = unionTree.getVertexAt(Depth, tarch::la::Vector<DIMENSIONS, int>(CentreVertex));
   validate(flaggedVertexIndex >= 0);
   validateEquals(refineTransition.overrides.vertexRefinedBefore[flaggedVertexIndex], 0);
   validateEquals(refineTransition.overrides.vertexRefinedAfter[flaggedVertexIndex], 1);
@@ -500,7 +513,7 @@ void peano4::topology::tests::TreeTraversalTest::testTransitionTasksRootAtChangi
   const tarch::la::Vector<DIMENSIONS, double> width(1.0);
 
   peano4::topology::Tree::RefinementPlan refinedPlan;
-  refinedPlan.emplace_back().emplace_back(3);
+  refinedPlan.emplace_back().emplace_back(VertexInsideFirstChild);
 
   peano4::topology::Tree oldTree(0, offset, width);
   oldTree.buildRegularGrid(Depth);
@@ -516,11 +529,11 @@ void peano4::topology::tests::TreeTraversalTest::testTransitionTasksRootAtChangi
   peano4::topology::TreeTraversal newTraversal(0, offset, width);
   newTraversal.prepareRankTopology(newTree);
 
-  // Each of the 2^d cells around the flagged vertex roots a task beside the
-  // 3^d first-level tasks. A single thread splits no task.
+  // The cells around the flagged vertex lie in one first-level task, so every thread count above
+  // one splits that task and each of the cells roots a task. A single thread splits no task.
   const int expectedTasks = tarch::tasking::Runtime::getInstance().getNumberOfThreads() > 1
-    ? static_cast<int>(THREE_POWER_D) + static_cast<int>(TWO_POWER_D)
-    : static_cast<int>(THREE_POWER_D);
+    ? ChildrenPerCell + peano4::CellsPerVertex
+    : ChildrenPerCell;
 
   const auto refineTransition =
     oldTraversal.deriveRegridTransition(oldTree, unionTree, unionTraversal, newTree, newTraversal, refinedPlan, false);
@@ -544,14 +557,19 @@ void peano4::topology::tests::TreeTraversalTest::testTransitionTasksRootAtChangi
 void peano4::topology::tests::TreeTraversalTest::testShrunkInterfaceTopologyKeepsTheSurvivingSlots() {
   const tarch::la::Vector<DIMENSIONS, double> offset(0.0);
   const tarch::la::Vector<DIMENSIONS, double> width(1.0);
-  constexpr int                               SpawnLevel = 1;
+  // The spawn level holds more blocks than the pruned region touches, so the
+  // base depth follows the subdivision factor.
+  constexpr int PrunedDepth = SubdivisionFactor >= 3 ? Depth : Depth + 1;
+  constexpr int SpawnLevel  = PrunedDepth - 1;
 
   peano4::topology::Tree::RefinementPlan refinedPlan;
-  refinedPlan.emplace_back().emplace_back(3);
+  // One block of the spawn level spans SubdivisionFactor cells per axis of the
+  // base depth.
+  refinedPlan.emplace_back().emplace_back(SubdivisionFactor);
   const peano4::topology::Tree::RefinementPlan emptyPlan;
 
   peano4::topology::Tree tree(0, offset, width);
-  tree.buildRegularGrid(Depth, SpawnLevel, 1, refinedPlan);
+  tree.buildRegularGrid(PrunedDepth, SpawnLevel, 1, refinedPlan);
   peano4::topology::TreeTraversal traversal(0, offset, width);
   traversal.prepareRankTopology(tree);
   traversal.prepareInterfaceTopology(tree, SpawnLevel, false);
@@ -565,7 +583,7 @@ void peano4::topology::tests::TreeTraversalTest::testShrunkInterfaceTopologyKeep
 
   tree.adoptRefinementPlanTables(emptyPlan);
   const auto    pruneExtent         = tree.pruneRefinementDelta(refinedPlan);
-  constexpr int NumberOfPrunedCells = static_cast<int>(TWO_POWER_D) * static_cast<int>(THREE_POWER_D);
+  constexpr int NumberOfPrunedCells = peano4::CellsPerVertex * ChildrenPerCell;
   validateEquals(static_cast<int>(pruneExtent.deadCells.size()), NumberOfPrunedCells);
   validate(traversal.standingCutsMatchFreshSelection(tree, SpawnLevel));
 
@@ -574,7 +592,7 @@ void peano4::topology::tests::TreeTraversalTest::testShrunkInterfaceTopologyKeep
   // The flagged vertex lies on the corner the first 2^d spawn-level blocks
   // meet at, so their roots are the stale units.
   std::vector<int> expectedStaleUnits;
-  for (int blockNumber = 0; blockNumber < TWO_POWER_D; blockNumber++) {
+  for (int blockNumber = 0; blockNumber < peano4::CellsPerVertex; blockNumber++) {
     tarch::la::Vector<DIMENSIONS, int> blockLattice(0);
     for (int axis = 0; axis < DIMENSIONS; axis++) {
       blockLattice(axis) = (blockNumber >> axis) & 1;
@@ -610,7 +628,7 @@ void peano4::topology::tests::TreeTraversalTest::testTransferListsPairAcrossRank
   const tarch::la::Vector<DIMENSIONS, double> offset(0.0);
   const tarch::la::Vector<DIMENSIONS, double> width(1.0);
   // The flag at (1, ...) refines the cells of the first level-one cell on the
-  // Peano curve, so the leaves before the half-way split grow and the split
+  // curve, so the leaves before the half-way split grow and the split
   // moves to an earlier level-one cell.
   const peano4::topology::Tree::RefinementPlan emptyPlan;
   const peano4::topology::Tree::RefinementPlan refinedPlan(1, {tarch::la::Vector<DIMENSIONS, int>(1)});
@@ -702,9 +720,9 @@ void peano4::topology::tests::TreeTraversalTest::testInPlaceRegridRederivesTheRa
   const tarch::la::Vector<DIMENSIONS, double>  offset(0.0);
   const tarch::la::Vector<DIMENSIONS, double>  width(1.0);
   const peano4::topology::Tree::RefinementPlan emptyPlan;
-  // The flag at (4, ...) refines the cells around the domain centre, which
+  // The flag at the centre vertex refines the cells around it, which
   // both ranks of the two-rank partition touch.
-  const peano4::topology::Tree::RefinementPlan refinedPlan(1, {tarch::la::Vector<DIMENSIONS, int>(4)});
+  const peano4::topology::Tree::RefinementPlan refinedPlan(1, {tarch::la::Vector<DIMENSIONS, int>(CentreVertex)});
 
   const peano4::topology::Tree ownershipSource(0, offset, width);
   const auto ownershipPlan = ownershipSource.deriveBalancedBlockOwners(Depth, NumberOfRanks, emptyPlan);

@@ -17,23 +17,23 @@
  * @param auxiliaryVariables Number of entries of Q that the PDE leaves unchanged.
  * @param quadratureNodes Positions of the quadrature nodes along one axis of the reference cell.
  */
-void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
+void exahype2::dg::cellIntegralPatchwiseInSituGaussLegendreFunctors(
   ::exahype2::CellData<double, double>& cellData,
   const int                             order,
   const int                             unknowns,
   const int                             auxiliaryVariables,
-  Flux                                  flux,
-  NonConservativeProduct                nonconservativeProduct,
-  Source                                source,
-  [[maybe_unused]] PointSources         pointSources,
+  const Flux                            flux,
+  const NonConservativeProduct          nonconservativeProduct,
+  const Source                          source,
+  [[maybe_unused]] const PointSources&  pointSources,
   const double* NOALIAS                 quadratureNodes,
   const double* NOALIAS                 massMatrixDiagonal,
   const double* NOALIAS                 stiffnessMatrix,
   const double* NOALIAS                 derivativeOperator,
-  bool                                  evaluateFlux,
-  bool                                  evaluateNonconservativeProduct,
-  bool                                  evaluateSource,
-  [[maybe_unused]] bool                 evaluatePointSources
+  const bool                            evaluateFlux,
+  const bool                            evaluateNonconservativeProduct,
+  const bool                            evaluateSource,
+  [[maybe_unused]] const bool           evaluatePointSources
 ) {
   const int inputStride    = unknowns + auxiliaryVariables;
   const int outputStride   = unknowns;
@@ -65,11 +65,11 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
             tarch::la::Vector<DIMENSIONS, int> contributingNodeIndex = dof;
             contributingNodeIndex[dim]                               = i;
             const tarch::la::Vector<DIMENSIONS, double> position =
-              getQuadraturePoint(x, h, contributingNodeIndex, order, quadratureNodes);
+              getQuadraturePoint(x, h, contributingNodeIndex, quadratureNodes);
             const int contributingNodeSerialised = peano4::dLinearised(contributingNodeIndex, nodesPerAxis);
 
             flux(
-              &cellQin[contributingNodeSerialised * inputStride],
+              &cellQin[static_cast<std::ptrdiff_t>(contributingNodeSerialised * inputStride)],
               position,
               t,
               dt,
@@ -93,9 +93,9 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
       }
 
       if (evaluateSource) {
-        const tarch::la::Vector<DIMENSIONS, double> position = getQuadraturePoint(x, h, dof, order, quadratureNodes);
+        const tarch::la::Vector<DIMENSIONS, double> position = getQuadraturePoint(x, h, dof, quadratureNodes);
 
-        source(&cellQin[dofSerialised * inputStride], position, t, dt, sourceValues);
+        source(&cellQin[static_cast<std::ptrdiff_t>(dofSerialised * inputStride)], position, t, dt, sourceValues);
 
 #if DIMENSIONS == 2
         const double coeff = massMatrixDiagonal[dof(0)] * massMatrixDiagonal[dof(1)] * tarch::la::volume(h);
@@ -112,7 +112,7 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
       // @todo Point Source missing
 
       if (evaluateNonconservativeProduct) {
-        const tarch::la::Vector<DIMENSIONS, double> position = getQuadraturePoint(x, h, dof, order, quadratureNodes);
+        const tarch::la::Vector<DIMENSIONS, double> position = getQuadraturePoint(x, h, dof, quadratureNodes);
 
 #if DIMENSIONS == 2
         const double coeff = massMatrixDiagonal[dof(0)] * massMatrixDiagonal[dof(1)] * tarch::la::volume(h);
@@ -139,7 +139,7 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
           }
 
           nonconservativeProduct(
-            &cellQin[dofSerialised * inputStride],
+            &cellQin[static_cast<std::ptrdiff_t>(dofSerialised * inputStride)],
             gradientValues,
             position,
             t,
@@ -181,13 +181,13 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
  * @return The maximum physical (unscaled) eigenvalue over all cells, which the
  *   solver statistics report.
  */
-double exahype2::dg::reduceMaxScaledEigenvalue_patchwise_functors(
+double exahype2::dg::reduceMaxScaledEigenvaluePatchwiseFunctors(
   ::exahype2::CellData<double, double>& cellData,
   const int                             order,
   const int                             unknowns,
   const int                             auxiliaryVariables,
-  MaxEigenvalue                         maxEigenvalue,
-  const double* NOALIAS                 QuadratureNodes1D
+  const MaxEigenvalue                   maxEigenvalue,
+  const double* NOALIAS                 quadratureNodes1D
 ) {
   const int stride = unknowns + auxiliaryVariables;
 
@@ -201,8 +201,8 @@ double exahype2::dg::reduceMaxScaledEigenvalue_patchwise_functors(
       double    nodeEigenvalue = 0.0;
       for (int direction = 0; direction < DIMENSIONS; direction++) {
         const double directionalEigenvalue = maxEigenvalue(
-          cellData.QOut[cellIndex] + dofSerialised * stride,
-          getQuadraturePoint(cellData.cellCentre[cellIndex], cellData.cellSize[cellIndex], k, order, QuadratureNodes1D),
+          cellData.QOut[cellIndex] + static_cast<std::ptrdiff_t>(dofSerialised * stride),
+          getQuadraturePoint(cellData.cellCentre[cellIndex], cellData.cellSize[cellIndex], k, quadratureNodes1D),
           cellData.t,
           cellData.dt,
           direction
@@ -223,7 +223,10 @@ double exahype2::dg::reduceMaxScaledEigenvalue_patchwise_functors(
   return maxPhysicalEigenvalue;
 }
 
-void exahype2::dg::internal::copySolution(
+/**
+ * Copies the unknowns and auxiliary variables of one node from cellQin to cellQout.
+ */
+void exahype2::dg::copySolution(
   const double* NOALIAS                     cellQin,
   const int                                 order,
   const int                                 unknowns,
@@ -244,7 +247,7 @@ void exahype2::dg::internal::copySolution(
  * The input holds the flux, source and Riemann contributions in the weak image space. The
  * routine requires a diagonal mass matrix.
  */
-void exahype2::dg::multiplyWithInvertedMassMatrix_GaussLegendre(
+void exahype2::dg::multiplyWithInvertedMassMatrixGaussLegendre(
   ::exahype2::CellData<double, double>& cellData,
   const int                             order,
   const int                             unknowns,

@@ -8,8 +8,6 @@
 #include "tarch/Assertions.h"
 #include "tarch/mpi/Rank.h"
 
-#include "peano4/Globals.h"
-
 #include "Constants.h"
 
 {{SOLVER_INCLUDES}}
@@ -39,7 +37,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
       Suspended
     };
 
-    static std::string toString(const SolverState state);
+    static std::string toString(SolverState state);
 
     {{CLASSNAME}}();
     ~{{CLASSNAME}}();
@@ -92,34 +90,12 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
     void addTroubledCell();
     int getNumberOfTroubledCells() const;
 
-    /**
-     * Exists so the generated kernels compile. A call fails an assertion.
-     */
-    void mapDiscreteMaximumPrincipleObservables(double* const observables, const double* const Q) const {
-      assertion(false, "Discrete maximum principle observables are not mapped by this solver.");
-    }
-
-    /**
-     * Exists so the generated kernels compile. A call fails an assertion.
-     */
-    double getDiscreteMaximumPrincipleRelaxationParameter(
-      const double& specifiedRelaxationParameter,
-      const int&    observable,
-      const double& localMin,
-      const double& localMax,
-      const double& boundaryMinPerObservable,
-      const double& previousMax
-    ) const {
-      assertion(false, "The discrete maximum principle relaxation parameter is not defined by this solver.");
-      return 0.0;
-    }
-
 {% if ADMISSIBILITY_IMPLEMENTATION!="<none>" %}
     virtual bool isPhysicallyAdmissible(
         const {{REGULAR_SOLVER_STORAGE_PRECISION}}* const                         Q,
         const tarch::la::Vector<DIMENSIONS,double>& x,
         const tarch::la::Vector<DIMENSIONS,double>& h,
-        const double timeStamp) {% if ADMISSIBILITY_IMPLEMENTATION=="<user-defined>" %} = 0 {% else %} final {% endif %};
+        double timeStamp) {% if ADMISSIBILITY_IMPLEMENTATION=="<user-defined>" %} = 0 {% else %} final {% endif %};
 {% endif %}
 
   protected:

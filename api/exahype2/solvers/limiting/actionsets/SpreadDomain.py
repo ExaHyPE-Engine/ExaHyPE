@@ -95,7 +95,7 @@ class SpreadDomain(AbstractLimiterActionSet):
         // the user's boundary conditions derive them from the inner ones.
         if (not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[faceNumber % DIMENSIONS]
             and fineGridFaces{{SOLVER_NAME}}FaceLabel(faceNumber).getBoundary()) {
-          ::exahype2::fv::handleBoundary<
+          ::exahype2::fv::applyBoundaryConditionsOnFace<
             {{FULL_QUALIFIED_SOLVER_NAME}},
             NumberOfSubcellsPerAxis,
             {{HALO_WIDTH}},
@@ -186,7 +186,7 @@ class SpreadDomain(AbstractLimiterActionSet):
             + """
 #include "exahype2/dg/LimiterStatus.h"
 #include "exahype2/dg/SubcellProjection.h"
-#include "exahype2/fv/HandleBoundary.h"
+#include "exahype2/fv/ApplyBoundaryConditionsOnFace.h"
 #include "exahype2/ProjectPatch.h"
 """
         )

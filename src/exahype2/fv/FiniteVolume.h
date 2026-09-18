@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "peano4/Globals.h"
+#include "peano4/Constants.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/la/Vector.h"
@@ -11,7 +11,7 @@ TARGET_DECLARE
 namespace exahype2::fv {
   /**
    * A reconstruction scheme forms the states that meet at a volume interface
-   * and adds their flux divergence to the update. The scheme is stateless: all
+   * and adds their flux divergence to the update. The scheme is stateless: All
    * of its members are static, so a call needs no object and the kernel never
    * copies a scheme instance to a GPU device. @c HaloSize fixes how many
    * neighbour layers the stencil reads.
@@ -49,16 +49,16 @@ namespace exahype2::fv {
     typename StoragePrecision,
     typename ComputePrecision>
   INLINE_METHOD GPU_CALLABLE_METHOD double applyFiniteVolume(
-    const StoragePrecision* NOALIAS const        inputPatch,
-    StoragePrecision* NOALIAS const              outputPatch,
-    const StoragePrecision* NOALIAS const        faceInputPatches[TWO_TIMES_D],
-    StoragePrecision* NOALIAS const              faceOutputPatches[TWO_TIMES_D],
+    const StoragePrecision* NOALIAS              inputPatch,
+    StoragePrecision* NOALIAS                    outputPatch,
+    const StoragePrecision* NOALIAS const        faceInputPatches[peano4::FacesPerCell],
+    StoragePrecision* NOALIAS const              faceOutputPatches[peano4::FacesPerCell],
     const tarch::la::Vector<DIMENSIONS, double>& patchCentre,
     const tarch::la::Vector<DIMENSIONS, double>& patchSize,
-    const double                                 timeStamp,
-    const double                                 timeStepSize
+    double                                       timeStamp,
+    double                                       timeStepSize
   );
 } // namespace exahype2::fv
 TARGET_DECLARE_END
 
-#include "FiniteVolume.cpph"
+#include "exahype2/fv/FiniteVolume.cpph"

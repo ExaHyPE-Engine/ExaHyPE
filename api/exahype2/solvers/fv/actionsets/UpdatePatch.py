@@ -32,9 +32,9 @@ class UpdatePatch(AbstractFVActionSet):
 #endif
 
     {{PREPROCESS_RECONSTRUCTED_PATCH}}
-    const {{STORAGE_PRECISION}}* faceQIn[TWO_TIMES_D];
-    {{STORAGE_PRECISION}}* faceQOut[TWO_TIMES_D];
-    for (int faceNumber = 0; faceNumber < TWO_TIMES_D; faceNumber++) {
+    const {{STORAGE_PRECISION}}* faceQIn[peano4::FacesPerCell];
+    {{STORAGE_PRECISION}}* faceQOut[peano4::FacesPerCell];
+    for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
       faceQIn[faceNumber]  = {{OLD_FACE_ACCESSOR}}(faceNumber).data();
       faceQOut[faceNumber] = {{NEW_FACE_ACCESSOR}}(faceNumber).data();
       // A projection, a restriction from finer cells, the boundary treatment or

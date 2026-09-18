@@ -2,7 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 
 from .RefinementCriterion import RefinementCriterion
-from .HandleBoundary import HandleBoundary
+from .ApplyBoundaryConditions import ApplyBoundaryConditions
 from .InitialCondition import InitialCondition
 from .ProjectPatchOntoFaces import ProjectPatchOntoFaces
 from .RollOverUpdates import RollOverUpdates

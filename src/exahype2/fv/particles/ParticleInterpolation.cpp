@@ -2,40 +2,40 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "ParticleInterpolation.h"
 
-int exahype2::fv::particles::interpolation::_voxelsPerAxis       = 0;
-int exahype2::fv::particles::interpolation::_unknownsPerVoxel    = 0;
-int exahype2::fv::particles::interpolation::_interpolationMethod = 0;
+int exahype2::fv::particles::interpolation::globalVoxelsPerAxis       = 0;
+int exahype2::fv::particles::interpolation::globalUnknownsPerVoxel    = 0;
+int exahype2::fv::particles::interpolation::globalInterpolationMethod = 0;
 
 void exahype2::fv::particles::interpolation::setGlobalInterpolationParameters(
-  int voxelsPerAxis,
-  int unknownsPerVoxel,
-  int interpolationMethod
+  const int voxelsPerAxis,
+  const int unknownsPerVoxel,
+  const int interpolationMethod
 ) {
-  _voxelsPerAxis       = voxelsPerAxis;
-  _unknownsPerVoxel    = unknownsPerVoxel;
-  _interpolationMethod = interpolationMethod;
+  globalVoxelsPerAxis       = voxelsPerAxis;
+  globalUnknownsPerVoxel    = unknownsPerVoxel;
+  globalInterpolationMethod = interpolationMethod;
 }
 
-tarch::la::Vector<DIMENSIONS, int> exahype2::fv::particles::interpolation::internal::mapParticleOntoVoxel(
+tarch::la::Vector<DIMENSIONS, int> exahype2::fv::particles::interpolation::mapParticleOntoVoxel(
   const peano4::dataview::CellMarker&          marker,
   int                                          voxelsPerAxis,
   const tarch::la::Vector<DIMENSIONS, double>& particleX
 ) {
   tarch::la::Vector<DIMENSIONS, int> result;
-  assertion(voxelsPerAxis > 0);
+  assertion(voxelsPerAxis > 0, voxelsPerAxis);
 
-  const double cartesianMeshH = marker.getH()(0) / voxelsPerAxis;
+  const double volumeWidth = marker.getH()(0) / voxelsPerAxis;
 
-  for (int d = 0; d < DIMENSIONS; d++) {
-    const double positionWithinPatch = particleX(d) - marker.getOffset()(d);
-    result(d)                        = static_cast<int>(std::floor(positionWithinPatch / cartesianMeshH));
-    result(d)                        = std::max(0, std::min(result(d), voxelsPerAxis - 1));
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    const double positionWithinPatch = particleX(axis) - marker.getOffset()(axis);
+    result(axis)                     = static_cast<int>(std::floor(positionWithinPatch / volumeWidth));
+    result(axis)                     = std::max(0, std::min(result(axis), voxelsPerAxis - 1));
   }
 
   return result;
 }
 
-tarch::la::Vector<DIMENSIONS, int> exahype2::fv::particles::interpolation::internal::mapBiasedParticleOntoVoxel(
+tarch::la::Vector<DIMENSIONS, int> exahype2::fv::particles::interpolation::mapBiasedParticleOntoVoxel(
   const peano4::dataview::CellMarker&          marker,
   int                                          voxelsPerAxis,
   const tarch::la::Vector<DIMENSIONS, double>& particleX
@@ -43,18 +43,18 @@ tarch::la::Vector<DIMENSIONS, int> exahype2::fv::particles::interpolation::inter
   tarch::la::Vector<DIMENSIONS, int> result;
   assertion(voxelsPerAxis >= 2, marker, voxelsPerAxis, particleX);
 
-  const double cartesianMeshH = marker.getH()(0) / voxelsPerAxis;
+  const double volumeWidth = marker.getH()(0) / voxelsPerAxis;
 
-  for (int d = 0; d < DIMENSIONS; d++) {
-    const double biasedPositionWithinPatch = particleX(d) - marker.getOffset()(d) - cartesianMeshH / 2.0;
-    result(d)                              = static_cast<int>(std::floor(biasedPositionWithinPatch / cartesianMeshH));
-    result(d)                              = std::max(0, std::min(result(d), voxelsPerAxis - 2));
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    const double biasedPositionWithinPatch = particleX(axis) - marker.getOffset()(axis) - volumeWidth / 2.0;
+    result(axis)                           = static_cast<int>(std::floor(biasedPositionWithinPatch / volumeWidth));
+    result(axis)                           = std::max(0, std::min(result(axis), voxelsPerAxis - 2));
   }
 
   return result;
 }
 
-double exahype2::fv::particles::interpolation::internal::projectValueOntoParticle_piecewiseConstant(
+double exahype2::fv::particles::interpolation::projectValueOntoParticlePiecewiseConstant(
   const peano4::dataview::CellMarker&          marker,
   int                                          voxelsPerAxis,
   int                                          unknownsPerVoxel,
@@ -62,13 +62,14 @@ double exahype2::fv::particles::interpolation::internal::projectValueOntoParticl
   const tarch::la::Vector<DIMENSIONS, double>& particleX,
   int                                          unknown
 ) {
-  const tarch::la::Vector<DIMENSIONS, int> voxel      = mapParticleOntoVoxel(marker, voxelsPerAxis, particleX);
-  const int                                voxelIndex = peano4::dLinearised(voxel, voxelsPerAxis);
+  const tarch::la::Vector<DIMENSIONS, int> voxel =
+    exahype2::fv::particles::interpolation::mapParticleOntoVoxel(marker, voxelsPerAxis, particleX);
+  const int voxelIndex = peano4::dLinearised(voxel, voxelsPerAxis);
 
   return Q[voxelIndex * unknownsPerVoxel + unknown];
 }
 
-double exahype2::fv::particles::interpolation::internal::projectValueOntoParticle_piecewiseLinear(
+double exahype2::fv::particles::interpolation::projectValueOntoParticlePiecewiseLinear(
   const peano4::dataview::CellMarker&          marker,
   int                                          voxelsPerAxis,
   int                                          unknownsPerVoxel,
@@ -81,10 +82,10 @@ double exahype2::fv::particles::interpolation::internal::projectValueOntoParticl
 
   // The upper voxel of every axis pair has to lie within the patch.
   tarch::la::Vector<DIMENSIONS, int> lowerVoxel;
-  for (int d = 0; d < DIMENSIONS; d++) {
-    const double relativePosition = (particleX(d) - offset(d)) / volumeWidth;
-    lowerVoxel(d)                 = static_cast<int>(std::floor(relativePosition));
-    lowerVoxel(d)                 = std::max(0, std::min(lowerVoxel(d), voxelsPerAxis - 2));
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    const double relativePosition = (particleX(axis) - offset(axis)) / volumeWidth;
+    lowerVoxel(axis)              = static_cast<int>(std::floor(relativePosition));
+    lowerVoxel(axis)              = std::max(0, std::min(lowerVoxel(axis), voxelsPerAxis - 2));
   }
 
   double result     = 0.0;
@@ -93,8 +94,8 @@ double exahype2::fv::particles::interpolation::internal::projectValueOntoParticl
   peano4::dForEachCorner([&](const tarch::la::Vector<DIMENSIONS, int>& corner, int linearisedCorner) {
     const tarch::la::Vector<DIMENSIONS, int> currentVoxel = lowerVoxel + corner;
     bool                                     inside       = true;
-    for (int d = 0; d < DIMENSIONS; d++) {
-      if (currentVoxel(d) < 0 or currentVoxel(d) >= voxelsPerAxis) {
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      if (currentVoxel(axis) < 0 or currentVoxel(axis) >= voxelsPerAxis) {
         inside = false;
         break;
       }
@@ -104,13 +105,13 @@ double exahype2::fv::particles::interpolation::internal::projectValueOntoParticl
     }
 
     tarch::la::Vector<DIMENSIONS, double> voxelCentre;
-    for (int d = 0; d < DIMENSIONS; d++) {
-      voxelCentre(d) = offset(d) + volumeWidth * (currentVoxel(d) + 0.5);
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      voxelCentre(axis) = offset(axis) + volumeWidth * (currentVoxel(axis) + 0.5);
     }
 
     double weight = 1.0;
-    for (int d = 0; d < DIMENSIONS; d++) {
-      const double axisWeight = 1.0 - std::abs(particleX(d) - voxelCentre(d)) / volumeWidth;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      const double axisWeight = 1.0 - std::abs(particleX(axis) - voxelCentre(axis)) / volumeWidth;
       weight *= std::max(0.0, axisWeight);
     }
 

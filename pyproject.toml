@@ -59,6 +59,7 @@ compare-solution = "postprocessing.compare_solution:main"
 check-symmetry = "postprocessing.check_symmetry:main"
 check-error-norms = "postprocessing.check_error_norms:main"
 render-solution = "postprocessing.render_solution:main"
+render-curve = "postprocessing.render_curve:main"
 
 [build-system]
 requires = ["setuptools>=61.0"]

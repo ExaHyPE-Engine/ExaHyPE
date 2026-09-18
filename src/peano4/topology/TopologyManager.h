@@ -2,7 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "peano4/Globals.h"
 #include "peano4/grid/GridControlEvent.h"
 #include "peano4/grid/GridTraversalObserver.h"
 #include "peano4/topology/Tree.h"
@@ -37,7 +36,7 @@ public:
   void init(
     const tarch::la::Vector<DIMENSIONS, double>& offset,
     const tarch::la::Vector<DIMENSIONS, double>& width,
-    const std::bitset<DIMENSIONS>&               periodicBC = std::bitset<DIMENSIONS>()
+    const std::bitset<DIMENSIONS>&               periodicBoundaries = std::bitset<DIMENSIONS>()
   );
 
   void shutdown();
@@ -52,15 +51,15 @@ public:
 
   bool controlEventsChangePlan(const std::vector<peano4::grid::GridControlEvent>& gridControlEvents);
 
-  const peano4::grid::GridStatistics& getGridStatistics() const;
+  [[nodiscard]] const peano4::grid::GridStatistics& getGridStatistics() const;
 
-  peano4::topology::TreeTraversal::SubtreeTaskLoad getSubtreeTaskLoad() const;
+  [[nodiscard]] peano4::topology::TreeTraversal::SubtreeTaskLoad getSubtreeTaskLoad() const;
 
-  double getAccumulatedTaskSeconds() const;
+  [[nodiscard]] double getAccumulatedTaskSeconds() const;
 
-  const tarch::la::Vector<DIMENSIONS, double>& getDomainOffset() const;
-  const tarch::la::Vector<DIMENSIONS, double>& getDomainWidth() const;
-  const std::bitset<DIMENSIONS>&               getPeriodicBC() const;
+  [[nodiscard]] const tarch::la::Vector<DIMENSIONS, double>& getDomainOffset() const;
+  [[nodiscard]] const tarch::la::Vector<DIMENSIONS, double>& getDomainWidth() const;
+  [[nodiscard]] const std::bitset<DIMENSIONS>&               getPeriodicBoundaries() const;
 
   static int deriveSpawnLevel(int targetLevel, int numberOfRanks);
 
@@ -102,7 +101,7 @@ private:
 
   tarch::la::Vector<DIMENSIONS, double> _domainOffset{};
   tarch::la::Vector<DIMENSIONS, double> _domainWidth{};
-  std::bitset<DIMENSIONS>               _periodicBC{};
+  std::bitset<DIMENSIONS>               _periodicBoundaries{};
 
   std::unique_ptr<peano4::topology::Tree>          _tree{};
   std::unique_ptr<peano4::topology::TreeTraversal> _traversal{};
@@ -173,7 +172,7 @@ private:
   /** Keeps one rank-level observer clone per type across sweeps. */
   std::map<std::type_index, std::unique_ptr<peano4::grid::GridTraversalObserver>> _rankObserverOfType{};
 
-  int deriveSpawnLevel() const;
+  [[nodiscard]] int deriveSpawnLevel() const;
 
   peano4::grid::GridTraversalObserver& rankObserverClone(peano4::grid::GridTraversalObserver& observer);
 

@@ -184,8 +184,8 @@ namespace {
 } // namespace
 
 /**
- * Selects the device that tarch::parallelFor and tarch::parallelReduce target. Every host thread
- * holds its own selection, which starts at Device::DefaultDevice.
+ * Selects the device that tarch::accelerator::parallelFor and tarch::accelerator::parallelReduce
+ * target. Every host thread holds its own selection, which starts at Device::DefaultDevice.
  */
 void tarch::accelerator::setCurrentDevice(const int device) { currentDevice = device; }
 

@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "GridControlEvent.h"
 
+#include "peano4/sfc/ActiveCurve.h"
 #include "tarch/Assertions.h"
 
 static_assert(std::is_standard_layout_v<peano4::grid::GridControlEvent>);
@@ -25,9 +26,9 @@ static_assert(offsetof(peano4::grid::GridControlEvent, latticeIndex) > offsetof(
 /**
  * Names the cell a request was raised for.
  *
- * Cells sit on a triadic lattice anchored at the domain offset, so the level is how often
- * the cell count per axis divides by three, and rounding the cell's lower corner over the
- * cell width recovers its lattice position.
+ * Cells sit on a lattice anchored at the domain offset, so the level is how often the
+ * cell count per axis divides by the subdivision factor, and rounding the cell's lower
+ * corner over the cell width recovers its lattice position.
  */
 peano4::grid::GridControlEvent peano4::grid::GridControlEvent::forCell(
   const RefinementControl                      control,
@@ -42,10 +43,11 @@ peano4::grid::GridControlEvent peano4::grid::GridControlEvent::forCell(
   auto cellsPerAxis = std::llround(domainWidth(0) / cellH(0));
   assertion(cellsPerAxis >= 1, cellCentre, cellH, domainWidth);
 
-  std::int32_t level = 0;
+  constexpr int SubdivisionFactor = peano4::sfc::ActiveCurve::SubdivisionFactor;
+  std::int32_t  level             = 0;
   while (cellsPerAxis > 1) {
-    assertion(cellsPerAxis % 3 == 0, cellCentre, cellH, domainWidth);
-    cellsPerAxis /= 3;
+    assertion(cellsPerAxis % SubdivisionFactor == 0, cellCentre, cellH, domainWidth);
+    cellsPerAxis /= SubdivisionFactor;
     level++;
   }
   request.level = level;
@@ -104,7 +106,7 @@ std::string peano4::grid::GridControlEvent::toString() const {
 
   out << ", LatticeIndex=[";
   for (int d = 0; d < DIMENSIONS; ++d) {
-    if (d) {
+    if (d > 0) {
       out << ',';
     }
     out << latticeIndex[d];

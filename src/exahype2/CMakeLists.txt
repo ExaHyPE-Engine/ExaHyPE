@@ -18,6 +18,7 @@ set(SOURCES
   tests/RefinementControlServiceTest.cpp
   tests/RefinementControlTest.cpp
   tests/RefinementCriterionHelpersTest.cpp
+  tests/TimeSteppingTest.cpp
 
   amr/tests/ChildDataStageTest.cpp
   amr/tests/InterpolationTest.cpp
@@ -29,7 +30,9 @@ set(SOURCES
   dg/DGUtils.cpp
   dg/LimitingSolverState.cpp
   dg/Riemann.cpp
+  dg/tests/AMRMatricesTest.cpp
   dg/tests/CellIntegralTest.cpp
+  dg/tests/DGTracerTest.cpp
   dg/tests/DGUtilsTest.cpp
   dg/tests/EigenvalueStatisticsTest.cpp
   dg/tests/LimiterStatusTest.cpp
@@ -43,17 +46,15 @@ set(SOURCES
 
   fv/PatchUtils.cpp
   fv/PostprocessingKernels.cpp
-  fv/Tracer.cpp
+  fv/tests/ApplyBoundaryConditionsOnFaceTest.cpp
   fv/tests/ApplySplit1DRiemannToPatchTest.cpp
   fv/tests/CopyPatchTest.cpp
   fv/tests/EigenvalueStatisticsTest.cpp
   fv/tests/FiniteVolumeTest.cpp
-  fv/tests/HandleBoundaryTest.cpp
   fv/limiter/tests/SlopeLimiterTest.cpp
   fv/particles/ParticleForces.cpp
   fv/particles/ParticleHelper.cpp
   fv/particles/ParticleInterpolation.cpp
-  fv/particles/ParticleProjection.cpp
 )
 
 install_peano_headers(

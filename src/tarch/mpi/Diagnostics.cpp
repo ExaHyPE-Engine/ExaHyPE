@@ -20,7 +20,7 @@ tarch::mpi::Diagnostics tarch::mpi::Diagnostics::_singleton;
 
 tarch::mpi::Diagnostics& tarch::mpi::Diagnostics::getInstance() { return _singleton; }
 
-std::string tarch::mpi::MPIReturnValueToString(int result) {
+std::string tarch::mpi::mpiReturnValueToString(const int result) {
   std::ostringstream out;
 
   int                                    resultLength{0};
@@ -103,17 +103,17 @@ void tarch::mpi::checkReturnValue(const int result, const char* operation, const
 
   std::ostringstream message;
   message << operation << " failed at " << locationToString(location) << ": "
-          << tarch::mpi::MPIReturnValueToString(result);
+          << tarch::mpi::mpiReturnValueToString(result);
   tarch::terminateWithError(message.str(), result, location);
 }
 
 void tarch::mpi::Diagnostics::setTimeoutWarning(const double valueInSeconds) {
-  assertion(valueInSeconds >= 0.0);
+  assertion(valueInSeconds >= 0.0, valueInSeconds);
   _timeoutWarning = std::chrono::duration<double>(valueInSeconds);
 }
 
 void tarch::mpi::Diagnostics::setDeadlockTimeout(const double valueInSeconds) {
-  assertion(valueInSeconds >= 0.0);
+  assertion(valueInSeconds >= 0.0, valueInSeconds);
   _deadlockTimeout = std::chrono::duration<double>(valueInSeconds);
 }
 
@@ -190,10 +190,10 @@ void tarch::mpi::Diagnostics::writeTimeoutWarning(
 }
 
 /**
- * Terminates the application once the deadlock threshold has passed. The
- * termination goes through terminateWithError(), so every rank goes down, and
- * the message queues are dumped first so the report names what still sat in
- * them.
+ * Terminates the program once the deadlock threshold has passed. The
+ * termination calls terminateWithError(), so every rank stops, and
+ * plotMessageQueues() runs first so the report names the messages that are
+ * still in the queue.
  */
 void tarch::mpi::Diagnostics::triggerDeadlockTimeout(
   const std::string& className,
@@ -214,8 +214,8 @@ void tarch::mpi::Diagnostics::triggerDeadlockTimeout(
 }
 
 /**
- * Reports what is left in the incoming queue, so a timeout can name the
- * message that arrived while the code waited for a different one.
+ * Reports what is left in the incoming queue, so a timeout names the message
+ * that arrives while a rank waits for a different one.
  */
 void tarch::mpi::Diagnostics::plotMessageQueues() {
   int        flag = 0;
@@ -233,7 +233,7 @@ void tarch::mpi::Diagnostics::plotMessageQueues() {
 std::size_t tarch::mpi::Diagnostics::slotIndex(const MPI_Request* request, const std::size_t displacement) {
   // Fibonacci hashing over the pointer bits above the allocation granularity.
   const auto address = reinterpret_cast<std::uintptr_t>(request);
-  return (static_cast<std::size_t>(address >> 4) * 2654435761u + displacement) & (TableSize - 1u);
+  return (static_cast<std::size_t>(address >> 4) * 2654435761U + displacement) & (TableSize - 1U);
 }
 
 void tarch::mpi::Diagnostics::registerRequest(
@@ -251,14 +251,14 @@ void tarch::mpi::Diagnostics::registerRequest(
     Slot& slot = _slots[slotIndex(request, displacement)];
 
     std::uint32_t sequence = slot.sequence.load(std::memory_order_acquire);
-    if ((sequence % 2u) != 0u or slot.key.load(std::memory_order_acquire) != nullptr) {
+    if ((sequence % 2U) != 0U or slot.key.load(std::memory_order_acquire) != nullptr) {
       continue;
     }
-    if (not slot.sequence.compare_exchange_strong(sequence, sequence + 1u, std::memory_order_acq_rel)) {
+    if (not slot.sequence.compare_exchange_strong(sequence, sequence + 1U, std::memory_order_acq_rel)) {
       continue;
     }
     if (slot.key.load(std::memory_order_relaxed) != nullptr) {
-      slot.sequence.store(sequence + 2u, std::memory_order_release);
+      slot.sequence.store(sequence + 2U, std::memory_order_release);
       continue;
     }
 
@@ -268,7 +268,7 @@ void tarch::mpi::Diagnostics::registerRequest(
     slot.tag                  = tag;
     slot.waitingStarted       = false;
     slot.key.store(request, std::memory_order_release);
-    slot.sequence.store(sequence + 2u, std::memory_order_release);
+    slot.sequence.store(sequence + 2U, std::memory_order_release);
     _pendingCount.fetch_add(1, std::memory_order_release);
 
     std::size_t knownMaximum = _maxProbeDisplacement.load(std::memory_order_relaxed);
@@ -293,17 +293,17 @@ void tarch::mpi::Diagnostics::clearRequest(const MPI_Request* request) {
     }
 
     std::uint32_t sequence = slot.sequence.load(std::memory_order_acquire);
-    if ((sequence % 2u) != 0u
-        or not slot.sequence.compare_exchange_strong(sequence, sequence + 1u, std::memory_order_acq_rel)) {
+    if ((sequence % 2U) != 0U
+        or not slot.sequence.compare_exchange_strong(sequence, sequence + 1U, std::memory_order_acq_rel)) {
       continue;
     }
     if (slot.key.load(std::memory_order_relaxed) == request) {
       slot.key.store(nullptr, std::memory_order_release);
-      slot.sequence.store(sequence + 2u, std::memory_order_release);
+      slot.sequence.store(sequence + 2U, std::memory_order_release);
       _pendingCount.fetch_sub(1, std::memory_order_release);
       return;
     }
-    slot.sequence.store(sequence + 2u, std::memory_order_release);
+    slot.sequence.store(sequence + 2U, std::memory_order_release);
   }
 }
 
@@ -333,13 +333,13 @@ bool tarch::mpi::Diagnostics::reportRequest(
     }
 
     std::uint32_t sequence = slot.sequence.load(std::memory_order_acquire);
-    if ((sequence % 2u) != 0u
-        or not slot.sequence.compare_exchange_strong(sequence, sequence + 1u, std::memory_order_acq_rel)) {
+    if ((sequence % 2U) != 0U
+        or not slot.sequence.compare_exchange_strong(sequence, sequence + 1U, std::memory_order_acq_rel)) {
       // The completion is removing the entry, so there is nothing left to report.
       return true;
     }
     if (slot.key.load(std::memory_order_relaxed) != request) {
-      slot.sequence.store(sequence + 2u, std::memory_order_release);
+      slot.sequence.store(sequence + 2U, std::memory_order_release);
       continue;
     }
 
@@ -361,7 +361,7 @@ bool tarch::mpi::Diagnostics::reportRequest(
     const int                  partner         = slot.communicationPartner;
     const int                  tag             = slot.tag;
 
-    slot.sequence.store(sequence + 2u, std::memory_order_release);
+    slot.sequence.store(sequence + 2U, std::memory_order_release);
 
     if (warnNow) {
       logWarning(

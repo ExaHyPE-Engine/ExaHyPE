@@ -1,4 +1,4 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and 
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 
 from .AbstractLimiterActionSet import AbstractLimiterActionSet
@@ -27,11 +27,10 @@ class VerifyTroubledness(AbstractLimiterActionSet):
 
         int linearisedIndex = 0;
         peano4::dForEach({{ORDER}}+1, [&](const tarch::la::Vector<DIMENSIONS, int>& index) {
-          
           isUnTroubled &= repositories::{{SOLVER_INSTANCE}}.isPhysicallyAdmissible(
             luh + linearisedIndex,
             ::exahype2::dg::getQuadraturePoint(
-              marker.getX(), marker.getH(), index, repositories::{{REGULAR_SOLVER_INSTANCE}}.Order+1,
+              marker.getX(), marker.getH(), index,
               kernels::{{REGULAR_SOLVER_NAME}}::Quadrature<{{REGULAR_SOLVER_STORAGE_PRECISION}}>::nodes
             ),
             marker.getH(),
@@ -40,9 +39,7 @@ class VerifyTroubledness(AbstractLimiterActionSet):
 
           linearisedIndex += repositories::{{REGULAR_SOLVER_INSTANCE}}.NumberOfUnknowns + repositories::{{REGULAR_SOLVER_INSTANCE}}.NumberOfAuxiliaryVariables;
         });
-       
         {% endif %}
-
 
         if(!isUnTroubled){
           repositories::{{SOLVER_INSTANCE}}.addTroubledCell();
@@ -60,7 +57,7 @@ class VerifyTroubledness(AbstractLimiterActionSet):
   }
 
 """
-  
+
   def __init__(self, solver, guard, use_PAC=False):
     super(VerifyTroubledness,self).__init__(solver)
     self.guard = guard
@@ -77,7 +74,6 @@ class VerifyTroubledness(AbstractLimiterActionSet):
       d["USE_PAC"]              = self.use_PAC
 
       result = jinja2.Template(self.TemplateVerifyTroubledness).render(**d)
-      pass 
     return result
 
 

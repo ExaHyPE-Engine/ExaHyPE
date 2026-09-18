@@ -68,7 +68,7 @@ class RefinementCriterion(AbstractFVActionSet):
             == peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_LAST_TIME
         ):
             if self._solver._patch.dim[0] != self._solver._patch.dim[1]:
-                raise Exception("Error: Can only handle square patches.")
+                raise ValueError("The patch must be square.")
 
             dictionary = {}
             dictionary["CELL_LABEL_NAME"] = self._solver._cell_label.name
@@ -109,6 +109,8 @@ class RefinementCriterion(AbstractFVActionSet):
             + """
 #include "exahype2/RefinementControlService.h"
 #include "exahype2/fv/PatchUtils.h"
+#include "runner/RuntimeParameters.h"
+#include "peano4/sfc/ActiveCurve.h"
 #include "tarch/instrumentation/Debug.h"
 #include "Constants.h"
 """

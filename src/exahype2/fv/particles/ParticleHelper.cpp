@@ -1,26 +1,24 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "ParticleHelper.h"
-
-// ================================================================================================
-// Global Configuration Variables (for domain boundaries and periodicity)
-// ================================================================================================
 
 tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::utils::domainOffset;
 tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::utils::domainSize;
 tarch::la::Vector<DIMENSIONS, int>    exahype2::fv::particles::utils::isPeriodic;
 
 /**
- * Set global domain parameters shared by all particles.
+ * Overwrites the domain corner, the domain extent and the periodicity every particle reads.
  *
- * @param offset   Lower corner of the domain (domain origin)
- * @param size     Extent/length of the domain in each dimension
- * @param periodic Flags indicating whether each dimension is periodic (1) or not (0)
+ * @param offset Lower corner of the domain.
+ * @param size Extent of the domain along each axis.
+ * @param periodic Carries 1 for a periodic axis and 0 for a non-periodic one.
  */
 void exahype2::fv::particles::utils::setGlobalParameters(
   const tarch::la::Vector<DIMENSIONS, double>& offset,
   const tarch::la::Vector<DIMENSIONS, double>& size,
   const tarch::la::Vector<DIMENSIONS, int>&    periodic
 ) {
-  domainOffset = offset;
-  domainSize   = size;
-  isPeriodic   = periodic;
+  exahype2::fv::particles::utils::domainOffset = offset;
+  exahype2::fv::particles::utils::domainSize   = size;
+  exahype2::fv::particles::utils::isPeriodic   = periodic;
 }

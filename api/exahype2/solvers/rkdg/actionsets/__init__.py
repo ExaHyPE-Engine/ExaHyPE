@@ -9,7 +9,7 @@ from .ProjectLinearCombinationOfEstimatesOntoFaces import (
 )
 from .ComputeFinalLinearCombination import ComputeFinalLinearCombination
 from .SolveVolumeIntegral import SolveVolumeIntegral
-from .HandleBoundary import HandleBoundary
+from .ApplyBoundaryConditions import ApplyBoundaryConditions
 from .SolveRiemannProblem import SolveRiemannProblem
 from .InterpolateRiemannSolutionOntoHangingFaces import (
     InterpolateRiemannSolutionOntoHangingFaces,

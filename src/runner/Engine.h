@@ -45,7 +45,7 @@ public:
   Engine(
     tarch::la::Vector<DIMENSIONS, double> domainOffset,
     tarch::la::Vector<DIMENSIONS, double> domainSize,
-    std::bitset<DIMENSIONS>               periodicBC,
+    std::bitset<DIMENSIONS>               periodicBoundaries,
     runner::RepositoryCallbacks           callbacks,
     std::vector<runner::Step>             steps
   );
@@ -54,12 +54,12 @@ public:
 
   [[nodiscard]] double runStep(int programStep);
 
-  const runner::Step& findStep(int programStep) const;
+  [[nodiscard]] const runner::Step& findStep(int programStep) const;
 
 private:
   tarch::la::Vector<DIMENSIONS, double> _domainOffset;
   tarch::la::Vector<DIMENSIONS, double> _domainSize;
-  std::bitset<DIMENSIONS>               _periodicBC;
+  std::bitset<DIMENSIONS>               _periodicBoundaries;
   runner::RepositoryCallbacks           _callbacks;
   std::vector<runner::Step>             _steps;
   runner::MainMeasurements              _measurements;

@@ -2,7 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "peano4/Globals.h"
+#include "peano4/Constants.h"
+#include "peano4/sfc/ActiveCurve.h"
 #include "tarch/Assertions.h"
 #include "tarch/la/Vector.h"
 
@@ -26,6 +27,8 @@ struct peano4::dataview::FaceMarker final {
   int selectedFace{-1};
 
   bool cellIsLocal{false};
+  bool cellHasBeenRefined{false};
+  bool cellWillBeRefined{false};
 
   /**
    * Packed per-face state, where bit i belongs to face i in [0, 2*DIMENSIONS).
@@ -37,34 +40,38 @@ struct peano4::dataview::FaceMarker final {
 
   tarch::la::Vector<DIMENSIONS, int> relativePositionWithinFatherCell{};
 
-  INLINE_METHOD FaceMarker& select(int faceNumber);
-  INLINE_METHOD int         getSelectedFaceNumber() const;
+  INLINE_METHOD FaceMarker&       select(int faceNumber);
+  [[nodiscard]] INLINE_METHOD int getSelectedFaceNumber() const;
 
-  INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> getX(int faceNumber) const;
-  INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> getX() const;
+  [[nodiscard]] INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> getX(int faceNumber) const;
+  [[nodiscard]] INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> getX() const;
 
-  INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> normal(int faceNumber) const;
-  INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> normal() const;
-  INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> outerNormal(int faceNumber) const;
-  INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> outerNormal() const;
+  [[nodiscard]] INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> normal(int faceNumber) const;
+  [[nodiscard]] INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> normal() const;
+  [[nodiscard]] INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> outerNormal(int faceNumber) const;
+  [[nodiscard]] INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> outerNormal() const;
 
-  INLINE_METHOD const tarch::la::Vector<DIMENSIONS, double>& getH() const;
+  [[nodiscard]] INLINE_METHOD const tarch::la::Vector<DIMENSIONS, double>& getH() const;
 
-  INLINE_METHOD bool hasBeenRefined() const;
-  INLINE_METHOD bool hasBeenRefined(int faceNumber) const;
-  INLINE_METHOD bool willBeRefined() const;
-  INLINE_METHOD bool willBeRefined(int faceNumber) const;
-  INLINE_METHOD bool isLocal() const;
-  INLINE_METHOD bool isLocal(int faceNumber) const;
-  INLINE_METHOD bool isHanging() const;
-  INLINE_METHOD bool isHanging(int faceNumber) const;
+  [[nodiscard]] INLINE_METHOD bool hasBeenRefined() const;
+  [[nodiscard]] INLINE_METHOD bool hasBeenRefined(int faceNumber) const;
+  [[nodiscard]] INLINE_METHOD bool willBeRefined() const;
+  [[nodiscard]] INLINE_METHOD bool willBeRefined(int faceNumber) const;
+  [[nodiscard]] INLINE_METHOD bool hasCellBeenRefined() const;
+  [[nodiscard]] INLINE_METHOD bool willCellBeRefined() const;
+  [[nodiscard]] INLINE_METHOD bool isLocal() const;
+  [[nodiscard]] INLINE_METHOD bool isLocal(int faceNumber) const;
+  [[nodiscard]] INLINE_METHOD bool isHanging() const;
+  [[nodiscard]] INLINE_METHOD bool isHanging(int faceNumber) const;
 
-  INLINE_METHOD tarch::la::Vector<DIMENSIONS, int> getRelativePositionWithinFatherCell() const;
-  INLINE_METHOD tarch::la::Vector<DIMENSIONS, int> getRelativePositionWithinFatherCell(int faceNumber) const;
-  INLINE_METHOD tarch::la::Vector<DIMENSIONS - 1, int> getRelativePositionWithinFatherFace() const;
-  INLINE_METHOD bool                                   isInteriorFaceWithinPatch() const;
+  [[nodiscard]] INLINE_METHOD tarch::la::Vector<DIMENSIONS, int> getRelativePositionWithinFatherCell() const;
+  [[nodiscard]] INLINE_METHOD tarch::la::Vector<DIMENSIONS, int> getRelativePositionWithinFatherCell(
+    int faceNumber
+  ) const;
+  [[nodiscard]] INLINE_METHOD tarch::la::Vector<DIMENSIONS - 1, int> getRelativePositionWithinFatherFace() const;
+  [[nodiscard]] INLINE_METHOD bool                                   isInteriorFaceWithinPatch() const;
 
-  std::string toString() const;
+  [[nodiscard]] std::string toString() const;
 
 private:
   INLINE_METHOD static bool isSet(std::uint8_t mask, int faceNumber);

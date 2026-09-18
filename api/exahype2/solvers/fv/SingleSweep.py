@@ -59,7 +59,7 @@ class SingleSweep(FV):
         )
         if self._state_owner is not None:
             dynamic_amr = (
-                self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement
+                self._action_set_adaptive_mesh_face_coupling
             )
             dynamic_amr.d["INTERPOLATE_GUARD"] = (
                 self._provide_face_data_to_compute_kernels_default_guard()

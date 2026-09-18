@@ -3,236 +3,253 @@
 
 namespace tarch::accelerator {
   template <typename T>
-  __device__ __host__ inline T combine_op(Max<T>, T a, T b) {
-    return a > b ? a : b;
+  __device__ __host__ inline T combineOp([[maybe_unused]] Max<T> reducer, T left, T right) {
+    return left > right ? left : right;
   }
   template <typename T>
-  __device__ __host__ inline T combine_op(Min<T>, T a, T b) {
-    return a < b ? a : b;
+  __device__ __host__ inline T combineOp([[maybe_unused]] Min<T> reducer, T left, T right) {
+    return left < right ? left : right;
   }
   template <typename T>
-  __device__ __host__ inline T combine_op(Sum<T>, T a, T b) {
-    return a + b;
+  __device__ __host__ inline T combineOp([[maybe_unused]] Sum<T> reducer, T left, T right) {
+    return left + right;
   }
 
   template <typename Reducer, typename T>
-  __device__ inline T blockReduce(Reducer red, T localAcc) {
-    __shared__ T sdata[HipBlockSize];
-    const int    tid = threadIdx.x;
-    sdata[tid]       = localAcc;
+  __device__ inline T blockReduce(Reducer reducer, T localAcc) {
+    __shared__ T blockValues[HipBlockSize];
+    const int    threadIndex = threadIdx.x;
+    blockValues[threadIndex] = localAcc;
     __syncthreads();
-    for (int s = HipBlockSize / 2; s > 0; s >>= 1) {
-      if (tid < s) {
-        sdata[tid] = combine_op(red, sdata[tid], sdata[tid + s]);
+    for (int offset = HipBlockSize / 2; offset > 0; offset >>= 1) {
+      if (threadIndex < offset) {
+        blockValues[threadIndex] = combineOp(reducer, blockValues[threadIndex], blockValues[threadIndex + offset]);
       }
       __syncthreads();
     }
-    return sdata[0];
+    return blockValues[0];
   }
 
-  // `red` is unused in the body but must stay in the parameter list: It is the only
-  // deduced occurrence of Reducer (perBlockOut's type is a non-deduced context). It
-  // carries a host reference (red.target) that must never be dereferenced on device.
+  // `reducer` stays in the parameter list as the only deduced occurrence of Reducer, because
+  // perBlockOut's type is a non-deduced context. Its target member holds a host reference that the
+  // device code never dereferences.
   template <typename Reducer, typename F>
-  __global__ void team_reduce_kernel(F f, [[maybe_unused]] Reducer red, typename Reducer::value_type* perBlockOut) {
+  __global__ void teamReduceKernel(
+    F                             body,
+    [[maybe_unused]] Reducer      reducer,
+    typename Reducer::value_type* perBlockOut
+  ) {
     using T = typename Reducer::value_type;
-    __shared__ T sharedAcc;
+    __shared__ T blockAcc;
     if (threadIdx.x == 0) {
-      sharedAcc = Reducer::identity();
+      blockAcc = Reducer::identity();
     }
     __syncthreads();
 
-    f(static_cast<int>(blockIdx.x), HipTeam{}, sharedAcc);
+    body(static_cast<int>(blockIdx.x), HipTeam{}, blockAcc);
 
     __syncthreads();
     if (threadIdx.x == 0) {
-      perBlockOut[blockIdx.x] = sharedAcc;
+      perBlockOut[blockIdx.x] = blockAcc;
     }
   }
 
   template <typename Reducer, typename F>
-  __global__ void flat_reduce_kernel_1D(F f, Reducer red, int n, typename Reducer::value_type* perBlockOut) {
+  __global__ void flatReduceKernel1D(F body, Reducer reducer, int n, typename Reducer::value_type* perBlockOut) {
     using T            = typename Reducer::value_type;
     T         localAcc = Reducer::identity();
     const int idx      = blockIdx.x * blockDim.x + threadIdx.x;
     const int stride   = gridDim.x * blockDim.x;
     for (int i = idx; i < n; i += stride) {
-      f(i, localAcc);
+      body(i, localAcc);
     }
-    T blockResult = blockReduce(red, localAcc);
+    const T blockResult = blockReduce(reducer, localAcc);
     if (threadIdx.x == 0) {
       perBlockOut[blockIdx.x] = blockResult;
     }
   }
 
   template <typename T>
-  inline void hipcubReduce(Max<T>, const T* in, T* out, int n, hipStream_t stream) {
-    void*       tmp      = nullptr;
-    std::size_t tmpBytes = 0;
-    CHECK_HIP_ERROR(hipcub::DeviceReduce::Max(tmp, tmpBytes, in, out, n, stream));
-    CHECK_HIP_ERROR(hipMallocAsync(&tmp, tmpBytes, stream));
-    CHECK_HIP_ERROR(hipcub::DeviceReduce::Max(tmp, tmpBytes, in, out, n, stream));
-    CHECK_HIP_ERROR(hipFreeAsync(tmp, stream));
+  inline void hipcubReduce([[maybe_unused]] Max<T> reducer, const T* in, T* out, int n, hipStream_t stream) {
+    void*       scratch      = nullptr;
+    std::size_t scratchBytes = 0;
+    CHECK_HIP_ERROR(hipcub::DeviceReduce::Max(scratch, scratchBytes, in, out, n, stream));
+    CHECK_HIP_ERROR(hipMallocAsync(&scratch, scratchBytes, stream));
+    CHECK_HIP_ERROR(hipcub::DeviceReduce::Max(scratch, scratchBytes, in, out, n, stream));
+    CHECK_HIP_ERROR(hipFreeAsync(scratch, stream));
   }
   template <typename T>
-  inline void hipcubReduce(Min<T>, const T* in, T* out, int n, hipStream_t stream) {
-    void*       tmp      = nullptr;
-    std::size_t tmpBytes = 0;
-    CHECK_HIP_ERROR(hipcub::DeviceReduce::Min(tmp, tmpBytes, in, out, n, stream));
-    CHECK_HIP_ERROR(hipMallocAsync(&tmp, tmpBytes, stream));
-    CHECK_HIP_ERROR(hipcub::DeviceReduce::Min(tmp, tmpBytes, in, out, n, stream));
-    CHECK_HIP_ERROR(hipFreeAsync(tmp, stream));
+  inline void hipcubReduce([[maybe_unused]] Min<T> reducer, const T* in, T* out, int n, hipStream_t stream) {
+    void*       scratch      = nullptr;
+    std::size_t scratchBytes = 0;
+    CHECK_HIP_ERROR(hipcub::DeviceReduce::Min(scratch, scratchBytes, in, out, n, stream));
+    CHECK_HIP_ERROR(hipMallocAsync(&scratch, scratchBytes, stream));
+    CHECK_HIP_ERROR(hipcub::DeviceReduce::Min(scratch, scratchBytes, in, out, n, stream));
+    CHECK_HIP_ERROR(hipFreeAsync(scratch, stream));
   }
   template <typename T>
-  inline void hipcubReduce(Sum<T>, const T* in, T* out, int n, hipStream_t stream) {
-    void*       tmp      = nullptr;
-    std::size_t tmpBytes = 0;
-    CHECK_HIP_ERROR(hipcub::DeviceReduce::Sum(tmp, tmpBytes, in, out, n, stream));
-    CHECK_HIP_ERROR(hipMallocAsync(&tmp, tmpBytes, stream));
-    CHECK_HIP_ERROR(hipcub::DeviceReduce::Sum(tmp, tmpBytes, in, out, n, stream));
-    CHECK_HIP_ERROR(hipFreeAsync(tmp, stream));
+  inline void hipcubReduce([[maybe_unused]] Sum<T> reducer, const T* in, T* out, int n, hipStream_t stream) {
+    void*       scratch      = nullptr;
+    std::size_t scratchBytes = 0;
+    CHECK_HIP_ERROR(hipcub::DeviceReduce::Sum(scratch, scratchBytes, in, out, n, stream));
+    CHECK_HIP_ERROR(hipMallocAsync(&scratch, scratchBytes, stream));
+    CHECK_HIP_ERROR(hipcub::DeviceReduce::Sum(scratch, scratchBytes, in, out, n, stream));
+    CHECK_HIP_ERROR(hipFreeAsync(scratch, stream));
   }
 
   template <typename Reducer>
-  inline void finaliseReduction(Reducer red, typename Reducer::value_type* finalDev, hipStream_t stream) {
-    using T     = typename Reducer::value_type;
-    T finalHost = Reducer::identity();
-    CHECK_HIP_ERROR(hipMemcpyAsync(&finalHost, finalDev, sizeof(T), hipMemcpyDeviceToHost, stream));
+  inline void finaliseReduction(Reducer reducer, typename Reducer::value_type* deviceResult, hipStream_t stream) {
+    using T      = typename Reducer::value_type;
+    T hostResult = Reducer::identity();
+    CHECK_HIP_ERROR(hipMemcpyAsync(&hostResult, deviceResult, sizeof(T), hipMemcpyDeviceToHost, stream));
     CHECK_HIP_ERROR(hipStreamSynchronize(stream));
-    red.target = combine_op(red, red.target, finalHost);
+    reducer.target = combineOp(reducer, reducer.target, hostResult);
   }
 
   template <typename Reducer, typename F>
-  __device__ inline void parallelReduce(const HipTeam&, const Range& r, F f, Reducer red) {
+  __device__ inline void parallelReduce(
+    [[maybe_unused]] const HipTeam& team,
+    const Range&                    range,
+    F                               body,
+    Reducer                         reducer
+  ) {
     using T    = typename Reducer::value_type;
     T localAcc = Reducer::identity();
-    for (int i = threadIdx.x; i < r.n; i += blockDim.x) {
-      f(i, localAcc);
+    for (int i = threadIdx.x; i < range.n; i += blockDim.x) {
+      body(i, localAcc);
     }
-    T blockResult = blockReduce(red, localAcc);
+    const T blockResult = blockReduce(reducer, localAcc);
     if (threadIdx.x == 0) {
-      red.target = combine_op(red, red.target, blockResult);
+      reducer.target = combineOp(reducer, reducer.target, blockResult);
     }
   }
   template <typename Reducer, typename F>
-  __device__ inline void parallelReduce(const HipTeam&, const RangeMD<2>& r, F f, Reducer red) {
+  __device__ inline void parallelReduce(
+    [[maybe_unused]] const HipTeam& team,
+    const RangeMD<2>&               range,
+    F                               body,
+    Reducer                         reducer
+  ) {
     using T            = typename Reducer::value_type;
     T         localAcc = Reducer::identity();
-    const int total    = r.n[0] * r.n[1];
-    const int n1       = r.n[1];
+    const int total    = range.n[0] * range.n[1];
+    const int n1       = range.n[1];
     for (int idx = threadIdx.x; idx < total; idx += blockDim.x) {
       const int x = idx / n1;
       const int y = idx % n1;
-      f(x, y, localAcc);
+      body(x, y, localAcc);
     }
-    T blockResult = blockReduce(red, localAcc);
+    const T blockResult = blockReduce(reducer, localAcc);
     if (threadIdx.x == 0) {
-      red.target = combine_op(red, red.target, blockResult);
+      reducer.target = combineOp(reducer, reducer.target, blockResult);
     }
   }
   template <typename Reducer, typename F>
-  __device__ inline void parallelReduce(const HipTeam&, const RangeMD<3>& r, F f, Reducer red) {
+  __device__ inline void parallelReduce(
+    [[maybe_unused]] const HipTeam& team,
+    const RangeMD<3>&               range,
+    F                               body,
+    Reducer                         reducer
+  ) {
     using T            = typename Reducer::value_type;
     T         localAcc = Reducer::identity();
-    const int total    = r.n[0] * r.n[1] * r.n[2];
-    const int n1       = r.n[1];
-    const int n2       = r.n[2];
+    const int total    = range.n[0] * range.n[1] * range.n[2];
+    const int n1       = range.n[1];
+    const int n2       = range.n[2];
     for (int idx = threadIdx.x; idx < total; idx += blockDim.x) {
       const int x = idx / (n1 * n2);
       const int y = (idx / n2) % n1;
       const int z = idx % n2;
-      f(x, y, z, localAcc);
+      body(x, y, z, localAcc);
     }
-    T blockResult = blockReduce(red, localAcc);
+    const T blockResult = blockReduce(reducer, localAcc);
     if (threadIdx.x == 0) {
-      red.target = combine_op(red, red.target, blockResult);
+      reducer.target = combineOp(reducer, reducer.target, blockResult);
     }
   }
-} // namespace tarch::accelerator
 
-namespace tarch {
   template <typename Reducer, typename F>
-  inline void parallelReduce(const Range& r, F f, Reducer red) {
+  inline void parallelReduce(const Range& range, F body, Reducer reducer) {
     using T = typename Reducer::value_type;
-    if (r.n <= 0) {
+    if (range.n <= 0) {
       return;
     }
-    const int device = accelerator::getCurrentDevice();
+    const int device = tarch::accelerator::getCurrentDevice();
     CHECK_HIP_ERROR(hipSetDevice(device));
-    int blocks = (r.n + accelerator::HipBlockSize - 1) / accelerator::HipBlockSize;
+    int blocks = (range.n + tarch::accelerator::HipBlockSize - 1) / tarch::accelerator::HipBlockSize;
     blocks     = std::min(blocks, 65535);
 
-    T* perBlock = allocateMemory<T>(blocks, MemoryLocation::Device, device);
-    T* finalDev = allocateMemory<T>(1, MemoryLocation::Device, device);
+    T* perBlock     = allocateMemory<T>(blocks, MemoryLocation::Device, device);
+    T* deviceResult = allocateMemory<T>(1, MemoryLocation::Device, device);
 
-    accelerator::flat_reduce_kernel_1D<<<blocks, accelerator::HipBlockSize, 0, accelerator::deviceStreamGet()>>>(
-      f,
-      red,
-      r.n,
-      perBlock
-    );
-    accelerator::hipcubReduce(red, perBlock, finalDev, blocks, accelerator::deviceStreamGet());
-    accelerator::finaliseReduction(red, finalDev, accelerator::deviceStreamGet());
+    tarch::accelerator::
+      flatReduceKernel1D<<<blocks, tarch::accelerator::HipBlockSize, 0, tarch::accelerator::deviceStreamGet()>>>(
+        body,
+        reducer,
+        range.n,
+        perBlock
+      );
+    tarch::accelerator::hipcubReduce(reducer, perBlock, deviceResult, blocks, tarch::accelerator::deviceStreamGet());
+    tarch::accelerator::finaliseReduction(reducer, deviceResult, tarch::accelerator::deviceStreamGet());
 
-    // finaliseReduction has synchronised the stream, so the scratch buffers are
-    // safe to release. They are allocated on every call, so failing to free them
-    // leaks device memory each time step.
+    // finaliseReduction has synchronised the stream, so the scratch buffers are safe to release.
     freeMemory(perBlock, MemoryLocation::Device, device);
-    freeMemory(finalDev, MemoryLocation::Device, device);
+    freeMemory(deviceResult, MemoryLocation::Device, device);
   }
 
   template <typename Reducer, typename F>
-  inline void parallelReduce(const TeamRange& r, F f, Reducer red) {
+  inline void parallelReduce(const TeamRange& range, F body, Reducer reducer) {
     using T = typename Reducer::value_type;
-    if (r.n <= 0) {
+    if (range.n <= 0) {
       return;
     }
-    const int device = accelerator::getCurrentDevice();
+    const int device = tarch::accelerator::getCurrentDevice();
     CHECK_HIP_ERROR(hipSetDevice(device));
 
-    T* perBlock = allocateMemory<T>(r.n, MemoryLocation::Device, device);
-    T* finalDev = allocateMemory<T>(1, MemoryLocation::Device, device);
+    T* perBlock     = allocateMemory<T>(range.n, MemoryLocation::Device, device);
+    T* deviceResult = allocateMemory<T>(1, MemoryLocation::Device, device);
 
-    accelerator::team_reduce_kernel<<<r.n, accelerator::HipBlockSize, 0, accelerator::deviceStreamGet()>>>(
-      f,
-      red,
-      perBlock
-    );
-    accelerator::hipcubReduce(red, perBlock, finalDev, r.n, accelerator::deviceStreamGet());
-    accelerator::finaliseReduction(red, finalDev, accelerator::deviceStreamGet());
+    tarch::accelerator::
+      teamReduceKernel<<<range.n, tarch::accelerator::HipBlockSize, 0, tarch::accelerator::deviceStreamGet()>>>(
+        body,
+        reducer,
+        perBlock
+      );
+    tarch::accelerator::hipcubReduce(reducer, perBlock, deviceResult, range.n, tarch::accelerator::deviceStreamGet());
+    tarch::accelerator::finaliseReduction(reducer, deviceResult, tarch::accelerator::deviceStreamGet());
 
     freeMemory(perBlock, MemoryLocation::Device, device);
-    freeMemory(finalDev, MemoryLocation::Device, device);
+    freeMemory(deviceResult, MemoryLocation::Device, device);
   }
 
   template <typename Reducer, typename F>
-  inline void parallelReduce(const RangeMD<2>& r, F f, Reducer red) {
-    const int total = r.n[0] * r.n[1];
-    const int n1    = r.n[1];
+  inline void parallelReduce(const RangeMD<2>& range, F body, Reducer reducer) {
+    const int total = range.n[0] * range.n[1];
+    const int n1    = range.n[1];
     parallelReduce(
       Range(total),
       [=] __device__(int idx, typename Reducer::value_type& acc) {
         const int x = idx / n1;
         const int y = idx % n1;
-        f(x, y, acc);
+        body(x, y, acc);
       },
-      red
+      reducer
     );
   }
   template <typename Reducer, typename F>
-  inline void parallelReduce(const RangeMD<3>& r, F f, Reducer red) {
-    const int total = r.n[0] * r.n[1] * r.n[2];
-    const int n1    = r.n[1];
-    const int n2    = r.n[2];
+  inline void parallelReduce(const RangeMD<3>& range, F body, Reducer reducer) {
+    const int total = range.n[0] * range.n[1] * range.n[2];
+    const int n1    = range.n[1];
+    const int n2    = range.n[2];
     parallelReduce(
       Range(total),
       [=] __device__(int idx, typename Reducer::value_type& acc) {
         const int x = idx / (n1 * n2);
         const int y = (idx / n2) % n1;
         const int z = idx % n2;
-        f(x, y, z, acc);
+        body(x, y, z, acc);
       },
-      red
+      reducer
     );
   }
-} // namespace tarch
+} // namespace tarch::accelerator

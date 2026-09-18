@@ -52,7 +52,7 @@ INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::int
   const auto currentState  = exahype2::fv::particles::utils::getParticleState(particle);
   auto       midpointState = exahype2::fv::particles::integration::updateMidpointStep(currentState, timeStepSize, 0.5);
 
-  exahype2::fv::particles::interpolation::handleMidpoints<ParticleAttributeIndices...>(
+  exahype2::fv::particles::interpolation::interpolateMidpoints<ParticleAttributeIndices...>(
     cellMarker,
     cellValues,
     particle,
@@ -86,7 +86,7 @@ INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::int
   const auto k1           = currentState;
 
   auto k2 = exahype2::fv::particles::integration::updatePartialStep(k1, timeStepSize, 0.5);
-  exahype2::fv::particles::interpolation::handleMidpoints<ParticleAttributeIndices...>(
+  exahype2::fv::particles::interpolation::interpolateMidpoints<ParticleAttributeIndices...>(
     cellMarker,
     cellValues,
     particle,
@@ -97,7 +97,7 @@ INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::int
 
   auto k3 = exahype2::fv::particles::integration::updatePartialStepWithBase(currentState, k1, timeStepSize, -1.0);
   k3      = exahype2::fv::particles::integration::updatePartialStepWithBase(k3, k2, timeStepSize, 2.0);
-  exahype2::fv::particles::interpolation::handleMidpoints<ParticleAttributeIndices...>(
+  exahype2::fv::particles::interpolation::interpolateMidpoints<ParticleAttributeIndices...>(
     cellMarker,
     cellValues,
     particle,
@@ -140,7 +140,7 @@ INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::int
   const auto k1           = currentState;
 
   auto k2 = exahype2::fv::particles::integration::updatePartialStep(k1, timeStepSize, 0.5);
-  exahype2::fv::particles::interpolation::handleMidpoints<ParticleAttributeIndices...>(
+  exahype2::fv::particles::interpolation::interpolateMidpoints<ParticleAttributeIndices...>(
     cellMarker,
     cellValues,
     particle,
@@ -150,7 +150,7 @@ INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::int
   k2.acceleration = exahype2::fv::particles::utils::getAcceleration(particle);
 
   auto k3 = exahype2::fv::particles::integration::updatePartialStepWithBase(currentState, k2, timeStepSize, 0.5);
-  exahype2::fv::particles::interpolation::handleMidpoints<ParticleAttributeIndices...>(
+  exahype2::fv::particles::interpolation::interpolateMidpoints<ParticleAttributeIndices...>(
     cellMarker,
     cellValues,
     particle,
@@ -160,7 +160,7 @@ INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::int
   k3.acceleration = exahype2::fv::particles::utils::getAcceleration(particle);
 
   auto k4 = exahype2::fv::particles::integration::updatePartialStepWithBase(currentState, k3, timeStepSize, 1.0);
-  exahype2::fv::particles::interpolation::handleMidpoints<ParticleAttributeIndices...>(
+  exahype2::fv::particles::interpolation::interpolateMidpoints<ParticleAttributeIndices...>(
     cellMarker,
     cellValues,
     particle,
@@ -208,7 +208,7 @@ INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::int
       currentState.position(dimension) + timeStepSize * midpointState.velocity(dimension);
   }
 
-  exahype2::fv::particles::interpolation::handleMidpoints<ParticleAttributeIndices...>(
+  exahype2::fv::particles::interpolation::interpolateMidpoints<ParticleAttributeIndices...>(
     cellMarker,
     cellValues,
     particle,
@@ -247,9 +247,6 @@ INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::int
   switch (integrationMethod) {
   case 0:
     break;
-  case 1:
-    newPosition = exahype2::fv::particles::integration::explicitEulerIntegration(particle, timeStepSize);
-    break;
   case 2:
     newPosition = exahype2::fv::particles::integration::semiImplicitEulerIntegration(particle, timeStepSize);
     break;
@@ -285,6 +282,7 @@ INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::int
       timeStepSize
     );
     break;
+  case 1:
   default:
     newPosition = exahype2::fv::particles::integration::explicitEulerIntegration(particle, timeStepSize);
     break;

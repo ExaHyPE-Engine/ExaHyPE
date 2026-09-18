@@ -7,20 +7,14 @@ import re
 
 
 class MathUtils:
-    # ****************************************
-    # ****************************************
-    # ****** Matrix/Vector operations ********
-    # ****************************************
-    # ****************************************
-
     @staticmethod
     def matrixTranspose(M):
-        """Transpose a matrix M"""
+        """Returns the transpose of matrix M."""
         return [[M[j][i] for j in range(len(M))] for i in range(len(M[0]))]
 
     @staticmethod
     def matrixDot(A, B):
-        """A dot B"""
+        """Returns the product of matrices A and B."""
         return [
             [sum([A[n][k] * B[k][m] for k in range(len(B))]) for m in range(len(B[0]))]
             for n in range(len(A))
@@ -28,14 +22,14 @@ class MathUtils:
 
     @staticmethod
     def matrixInverse(M):
-        """M^-1"""
+        """Returns the inverse of matrix M."""
         return MathUtils.matrixInverse_Pivot(M)
 
     @staticmethod
     def matrixInverse_Pivot(M):
-        """Compute a matrix inverse using a pivot algorithm"""
+        """Returns the inverse of matrix M through Gauss elimination with row pivoting."""
         n = len(M)
-        # c = (M|Id)
+        # c holds the transpose of M beside the identity matrix.
         c = [[0.0 for _ in range(2 * n)] for _ in range(n)]
         for i in range(n):
             for j in range(n):
@@ -43,7 +37,7 @@ class MathUtils:
                 c[i][j + n] = 0.0
             c[i][i + n] = 1.0
 
-        # Forward elimination and row swapping (if necessary)
+        # Forward elimination; the row with the largest pivot moves up.
         for i in range(n):
             ml = i
             mlV = math.fabs(c[i][i])
@@ -57,7 +51,7 @@ class MathUtils:
                 c[i][k] = tmp
 
             if c[i][i] == 0.0:
-                raise ValueError("MatrixInverse: Matrix is singular")
+                raise ValueError("The matrix is singular.")
 
             piv = 1.0 / c[i][i]
             for k in range(0, 2 * n):
@@ -78,18 +72,14 @@ class MathUtils:
 
     @staticmethod
     def vectorPad(v, padSize):
-        """zero-pad a vector"""
+        """Returns vector v extended by padSize zeros."""
         if padSize <= 0:
             return v
         return v + [0.0 for _ in range(padSize)]
 
     @staticmethod
     def matrixPadAndFlatten_RowMajor(M, padSize):
-        """
-        a b c
-        d e f
-         => a b c 0 d e f 0
-        """
+        """Returns the rows of M, each extended by padSize zeros, as one flat list."""
         result = []
         for i in range(len(M)):
             result += MathUtils.vectorPad(M[i], padSize)
@@ -97,29 +87,20 @@ class MathUtils:
 
     @staticmethod
     def matrixPadAndFlatten_ColMajor(M, padSize):
-        """
-        a b c
-        d e f
-         => a d 0 b e 0 c f 0
-        """
+        """Returns the columns of M, each extended by padSize zeros, as one flat list."""
         return MathUtils.matrixPadAndFlatten_RowMajor(
             MathUtils.matrixTranspose(M), padSize
         )
 
-    # ****************************************
-    # ****************************************
-    # *********** Gauss-Legendre *************
-    # ****************************************
-    # ****************************************
     @staticmethod
     def getGaussLegendre(nDof):
-        """Return Gauss-Legendre weights, points"""
+        """Returns the Gauss-Legendre weights and points of nDof nodes."""
         if nDof < 1:
-            raise ValueError("order must be positive")
+            raise ValueError("nDof must be at least one.")
 
         maxOrder = 15
         if nDof > maxOrder + 1:
-            raise ValueError("order is currently limited to {}".format(maxOrder))
+            raise ValueError("nDof must not exceed {}.".format(maxOrder + 1))
 
         if nDof == 1:
             return [1.0], [0.5]
@@ -466,20 +447,15 @@ class MathUtils:
                 0.9947004674958249662980770867251663137131370358288225650256119524,
             ]
 
-    # ****************************************
-    # ****************************************
-    # *********** Gauss-Lobatto **************
-    # ****************************************
-    # ****************************************
     @staticmethod
     def getGaussLobatto(nDof):
-        """Return Gauss-Lobatto weights, points"""
+        """Returns the Gauss-Lobatto weights and points of nDof nodes."""
         if nDof < 1:
-            raise ValueError("order must be positive")
+            raise ValueError("nDof must be at least one.")
 
         maxOrder = 15
         if nDof > maxOrder + 1:
-            raise ValueError("order is currently limited to {}".format(maxOrder))
+            raise ValueError("nDof must not exceed {}.".format(maxOrder + 1))
 
         if nDof == 1:
             return [1.0], [0.5]
@@ -819,11 +795,6 @@ class MathUtils:
                 0.0,
             ]
 
-    # ****************************************
-    # ****************************************
-    # *************** ADERDG *****************
-    # ****************************************
-    # ****************************************
     @staticmethod
     def baseFunc1D(xi, xin, N):
         """
@@ -873,14 +844,13 @@ class MathUtils:
            xGPN:
               Gauss-Legendre nodes (N nodes).
            wGPN:
-              Gauss-Legendre weights  (N weights).
+              Gauss-Legendre weights (N weights).
            N:
               Number of nodal basis functions (=order+1).
         Returns:
-           K_xi:
+           Kxi:
               The (reference) element stiffness matrix.
         """
-        # init matrix with zero
         Kxi = [[0 for _ in range(N)] for _ in range(N)]
 
         for i in range(0, N):
@@ -898,16 +868,15 @@ class MathUtils:
         evaluated at point xi=1.0 and the element stiffness matrix.
 
         Args:
-           K_xi:
-              The (reference) element stiffness matrix for a approximation of
-              order N.
+           Kxi:
+              The (reference) element stiffness matrix.
            xGPN:
               Gauss-Legendre nodes (N nodes).
            N:
-              Order of approximation corresponding to N+1 nodal basis functions.
+              Number of nodal basis functions (=order+1).
         Returns:
            K1:
-              <unknown>
+              The mass operator at xi=1.0 minus the element stiffness matrix.
         """
         phi1, _ = MathUtils.baseFunc1D(1.0, xGPN, N)
         FRm = [[0 for _ in range(N)] for _ in range(N)]
@@ -928,14 +897,13 @@ class MathUtils:
            xGPN:
               Gauss-Legendre nodes (N nodes).
            wGPN:
-              N Gauss-Legendre weights (N weights).
+              Gauss-Legendre weights (N weights).
            N:
               Number of nodal basis functions (=order+1).
         Returns:
-           M_xi:
+           MM:
               The (reference) element mass matrix.
         """
-        # init matrix with zeros
         MM = [[0 for _ in range(N)] for _ in range(N)]
 
         for i in range(0, N):
@@ -949,19 +917,17 @@ class MathUtils:
     @staticmethod
     def assembleDiscreteDerivativeOperator(MM, Kxi):
         """
-        Computes some derivative values for debugging purposes.
+        Computes the discrete derivative operator MM^-1 * Kxi^T.
 
         Args:
            MM:
-              The (reference) element mass matrix for a approximation of
-              order N.
+              The (reference) element mass matrix.
            Kxi:
-              The (reference) element stiffness matrix for a approximation of
-              order N.
+              The (reference) element stiffness matrix.
 
         Returns:
            dudx:
-              Derivative values for debugging purposes.
+              The discrete derivative operator.
         """
         dudx = MathUtils.matrixDot(
             MathUtils.matrixInverse(MM), MathUtils.matrixTranspose(Kxi)
@@ -969,60 +935,27 @@ class MathUtils:
         return dudx
 
     @staticmethod
-    def assembleFineGridProjector1D(xGPN, j, N):
-        """
-        Transforms the degrees of freedom located on a coarse grid edge
-        nodes to degrees of freedoms located on nodes of a fine grid edge.
-        The difference in levels is 1.
-
-        Let us denote by P the 1D fine grid projector (=1D equidistantGridProjector). The fine grid DoF
-        are computed according to:
-
-        u^{fine;j}_i =  sum_{m} P^{j}_im u^{coarse}_m
-
-        Args:
-           xGPN:
-              Gauss-Legendre nodes (N nodes).
-           j:
-              Index of one the three subintervals: 0,1, or 2.
-           N:
-              Number of nodal basis functions (=order+1).
-        Returns:
-           equidistantGridProjector:
-              The corresponding degrees of freedom located at nodes of an equidistant grid over (0,1).
-        """
-        fineGridProjector1D = [[0 for _ in range(N)] for _ in range(N)]
-
-        for i in range(0, N):  # Eq. basis
-            phi_i, _ = MathUtils.baseFunc1D((xGPN[i] + j) / 3.0, xGPN, N)
-            for m in range(0, N):  # DG basis
-                fineGridProjector1D[m][i] = phi_i[m]
-        return fineGridProjector1D
-
-    @staticmethod
     def LagrangBasisPoly(x, order, i, xi=None):
         """
-        Returns the i-th Lagrange basis polynomial as symbolic expression.
-        Algorithm was obtained from https://wanglongqi.github.io/python/2014/03/24/implement-of-lagrange-polynomial/.
+        Returns the i-th Lagrange basis polynomial as a symbolic expression.
+        https://wanglongqi.github.io/python/2014/03/24/implement-of-lagrange-polynomial/
+        describes the algorithm.
 
-        Parameters
-        ----------
-        x: symbolic variable
-        Symbolic variable.
-        order : number
-        Order of the Lagrange basis polynomial.
-        xi : number
-        The node the basis polynomial should pass through
-        i : number
-        The node we are interested in.
-        Returns
-        -------
-        Li: symbolic expression
-        The i-th Lagrange basis polynomial as symbolic expression.
+        Args:
+           x:
+              The symbolic variable of the polynomial.
+           order:
+              Order of the Lagrange basis polynomial.
+           i:
+              Index of the node at which the polynomial takes the value one.
+           xi:
+              The order+1 quadrature nodes.
+        Returns:
+           Li:
+              The i-th Lagrange basis polynomial as a symbolic expression.
         """
-        if xi == None:
-            print("Please specify some quadrature nodes")
-            raise
+        if xi is None:
+            raise ValueError("LagrangBasisPoly needs the quadrature nodes xi.")
         index = list(range(order + 1))
         index.pop(i)
         symbolic_function = sympy.prod([(x - xi[j]) / (xi[i] - xi[j]) for j in index])
@@ -1030,6 +963,7 @@ class MathUtils:
 
     @staticmethod
     def assembleBasisFunction(quadNodes):
+        """Returns the C++ definitions of the Lagrange basis functions of quadNodes."""
         order = len(quadNodes) - 1
         mp2 = mp.mp.clone()
         mp2.dps = 64
@@ -1042,38 +976,33 @@ class MathUtils:
 
         for m in range(0, order + 1):
             s = sympy.symbols("s")
-            res += "\ndouble basisFunction_" + str(m) + "(const double& s) {\n"
+            res += "\ndouble basisFunction" + str(m) + "(const double& s) {\n"
             refphi = MathUtils.LagrangBasisPoly(s, order, m, x2)
 
             ret = "  return %s;" % sympy.simplify(refphi)
-            ret = re.sub(r"s\*\*([0-9]+)", r"pow(s,\1)", ret)
+            ret = re.sub(r"s\*\*([0-9]+)", r"std::pow(s, \1)", ret)
             res += ret + "\n}\n"
 
-        res += "\ndouble (*basisFunction[" + str(order + 1) + "])(const double& s){\n"
+        res += "\ndouble (*basisFunction[" + str(order + 1) + "])(const double& s) {\n"
         for m in range(0, order):
-            res += "  basisFunction_" + str(m) + ","
-        res += "  basisFunction_" + str(order) + "\n};\n"
+            res += "  basisFunction" + str(m) + ","
+        res += "  basisFunction" + str(order) + "\n};\n"
 
         return res
 
-    # ****************************************
-    # ****************************************
-    # *************** Limiter ****************
-    # ****************************************
-    # ****************************************
     @staticmethod
     def assembleQuadratureConversion(fromQ, toQ, N):
-        """Return base conversion matrix"""
+        """Returns the matrix that converts values from the fromQ nodes to the toQ nodes."""
         conversionMat = [[0.0 for _ in range(N)] for _ in range(N)]
         for i in range(0, N):
             phi, _ = MathUtils.baseFunc1D(toQ[i], fromQ, N)
             for j in range(0, N):
-                conversionMat[j][i] = phi[j]  # check order
+                conversionMat[j][i] = phi[j]
         return conversionMat
 
     @staticmethod
     def assembleDGToFV(nodes, weights, N, Nlim):
-        """Return conversion matrix from DG grid to FV grid"""
+        """Returns the matrix that converts the DG nodes into the Nlim finite volumes."""
         dg2fv = [[0.0 for _ in range(Nlim)] for _ in range(N)]
         dxi = 1.0 / float(Nlim)
         xLeft = 0.0
@@ -1089,7 +1018,7 @@ class MathUtils:
 
     @staticmethod
     def assembleFVToDG(dg2fv, weights, N, Nlim):
-        """Return conversion matrix from FV grid to DG grid"""
+        """Returns the matrix that converts the Nlim finite volumes into the DG nodes."""
         fv2dg = [[0.0 for _ in range(N)] for _ in range(Nlim)]
         lsqm = [[0.0 for _ in range(N + 1)] for _ in range(N + 1)]
         lsqrhs = [[0.0 for _ in range(Nlim)] for _ in range(N + 1)]

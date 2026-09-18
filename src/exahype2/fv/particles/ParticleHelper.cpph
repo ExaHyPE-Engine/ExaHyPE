@@ -1,193 +1,113 @@
-// ======================================================================================
-// Particle Attribute Layout (Important!)
-// ======================================================================================
-//
-// The following accessors assume a fixed ordering of particle attributes in the
-// underlying data array. This ordering comes from how the particle attributes
-// are declared in the Python configuration (particle_attributes_ in your setup).
-// For the tested problems (see tests/exahype2/fv) we currently use:
-//
-//   Index 0 : rho          (interpolated fluid density)
-//   Index 1 : fluid_u      (interpolated fluid velocity, x-component)
-//   Index 2 : fluid_v      (interpolated fluid velocity, y-component)
-//   Index 3 : fluid_w      (interpolated fluid velocity, z-component; only in 3D)
-//   Index 3,4 : u,v,w     (particle velocity components)
-//   Index 5,6 : a_x,a_y,a_z (particle acceleration components)
-//   Index 7 : m            (particle mass)
-//   Index 8 : d            (particle radius/diameter)
-//
-// ⚠️ If you change the order of particle_attributes_ or add/remove fields,
-// you *must* adapt the accessors below accordingly. For example, if you move
-// the mass or radius to another position, update `getMass/setMass` and
-// `getRadius/setRadius` to match the new index.
-//
-// ⚠️ If you are not using certain fields (e.g. buoyancy via rho, or explicit
-// particle mass), then the corresponding accessors can be ignored. They will
-// still compile but will return meaningless values unless you actually store
-// something in those indices.
-//
-// In summary: **attribute order and accessor logic must stay consistent**.
-// If you customize one, remember to adjust the other.
-//
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 
-namespace exahype2 {
-  namespace fv {
-    namespace particles {
-      namespace utils {
-        // ======================================================================================
-        // Particle Radius Accessors
-        // ======================================================================================
-        /**
-         * Get the radius of a particle from its internal storage.
-         * Assumes radius is stored at index 8.
-         */
-        template <typename Particle>
-        double getRadius(const Particle& p) {
-          return p.getData(8);
-        }
+template <typename Particle>
+double exahype2::fv::particles::utils::getRadius(const Particle& particle) {
+  return particle.getData(exahype2::fv::particles::utils::ParticleRadiusAttributeOffset);
+}
 
-        /**
-         * Set the radius of a particle in its internal storage.
-         */
-        template <typename Particle>
-        void setRadius(Particle& p, double radius) {
-          p.setData(8, radius);
-        }
-        // ======================================================================================
-        // Particle Mass Accessors
-        // ======================================================================================
-        /**
-         * Get the mass of a particle from its internal storage.
-         * Assumes mass is stored at index 7.
-         */
-        template <typename Particle>
-        double getMass(const Particle& p) {
-          return p.getData(7);
-        }
+template <typename Particle>
+void exahype2::fv::particles::utils::setRadius(Particle& particle, const double radius) {
+  assertion(radius >= 0.0, radius);
+  particle.setData(exahype2::fv::particles::utils::ParticleRadiusAttributeOffset, radius);
+}
 
-        template <typename Particle>
-        void setMass(Particle& p, double mass) {
-          p.setData(7, mass);
-        }
+template <typename Particle>
+double exahype2::fv::particles::utils::getMass(const Particle& particle) {
+  return particle.getData(exahype2::fv::particles::utils::ParticleMassAttributeOffset);
+}
 
-        // ======================================================================================
-        // Velocity Accessors
-        // ======================================================================================
+template <typename Particle>
+void exahype2::fv::particles::utils::setMass(Particle& particle, const double mass) {
+  assertion(mass >= 0.0, mass);
+  particle.setData(exahype2::fv::particles::utils::ParticleMassAttributeOffset, mass);
+}
 
-        /**
-         * Get the velocity vector from a particle's internal storage.
-         */
-        template <typename Particle>
-        tarch::la::Vector<DIMENSIONS, double> getVelocity(const Particle& p) {
-          tarch::la::Vector<DIMENSIONS, double> v;
-          for (int d = 0; d < DIMENSIONS; ++d)
-            v[d] = p.getData(3 + d); // velocity stored at index 3, 4, ...
-          return v;
-        }
+template <typename Particle>
+tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::utils::getVelocity(const Particle& particle) {
+  tarch::la::Vector<DIMENSIONS, double> velocity;
 
-        /**
-         * Set the velocity vector into the particle.
-         */
-        template <typename Particle>
-        void setVelocity(Particle& p, const tarch::la::Vector<DIMENSIONS, double>& v) {
-          for (int d = 0; d < DIMENSIONS; ++d)
-            p.setData(3 + d, v[d]);
-        }
-        // ======================================================================================
-        // Interpolated Rho Accessor
-        // ======================================================================================
+  for (int axis = 0; axis < DIMENSIONS; ++axis) {
+    velocity[axis] = particle.getData(exahype2::fv::particles::utils::ParticleVelocityAttributeOffset + axis);
+  }
 
-        /**
-         * Get the interpolated rho from a particle's internal storage.
-         */
-        template <typename Particle>
-        double getInterpolatedRho(const Particle& p) {
-          return p.getData(0);
-        }
+  return velocity;
+}
 
-        // ======================================================================================
-        // Acceleration Accessors
-        // ======================================================================================
+template <typename Particle>
+void exahype2::fv::particles::utils::setVelocity(
+  Particle&                                    particle,
+  const tarch::la::Vector<DIMENSIONS, double>& velocity
+) {
+  for (int axis = 0; axis < DIMENSIONS; ++axis) {
+    particle.setData(exahype2::fv::particles::utils::ParticleVelocityAttributeOffset + axis, velocity[axis]);
+  }
+}
 
-        /**
-         * Get the acceleration vector from the particle.
-         */
-        template <typename Particle>
-        tarch::la::Vector<DIMENSIONS, double> getAcceleration(const Particle& p) {
-          tarch::la::Vector<DIMENSIONS, double> a;
-          for (int d = 0; d < DIMENSIONS; ++d)
-            a[d] = p.getData(5 + d); // acceleration stored after velocity
-          return a;
-        }
+template <typename Particle>
+double exahype2::fv::particles::utils::getInterpolatedRho(const Particle& particle) {
+  return particle.getData(exahype2::fv::particles::utils::FluidDensityAttributeOffset);
+}
 
-        /**
-         * Set the acceleration vector into the particle.
-         */
-        template <typename Particle>
-        void setAcceleration(Particle& p, const tarch::la::Vector<DIMENSIONS, double>& a) {
-          for (int d = 0; d < DIMENSIONS; ++d)
-            p.setData(5 + d, a[d]);
-        }
+template <typename Particle>
+tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::utils::getAcceleration(const Particle& particle) {
+  tarch::la::Vector<DIMENSIONS, double> acceleration;
 
-        /**
-         * Reset acceleration to zero for all dimensions.
-         */
-        template <typename Particle>
-        void resetAcceleration(Particle& particle) {
-          tarch::la::Vector<DIMENSIONS, double> zeroAcceleration(0.0);
-          setAcceleration(particle, zeroAcceleration);
-        }
+  for (int axis = 0; axis < DIMENSIONS; ++axis) {
+    acceleration[axis] = particle.getData(exahype2::fv::particles::utils::ParticleAccelerationAttributeOffset + axis);
+  }
 
-        // ======================================================================================
-        // Particle Attributes and Physics
-        // ======================================================================================
+  return acceleration;
+}
 
-        /**
-         * Compute kinetic energy: (1/2) * m * v²
-         */
-        template <typename Particle>
-        inline double computeKineticEnergy(const Particle& p) {
-          const auto   v = getVelocity(p);
-          const double m = getMass(p);
-          return 0.5 * m * tarch::la::dot(v, v);
-        }
+template <typename Particle>
+void exahype2::fv::particles::utils::setAcceleration(
+  Particle&                                    particle,
+  const tarch::la::Vector<DIMENSIONS, double>& acceleration
+) {
+  for (int axis = 0; axis < DIMENSIONS; ++axis) {
+    particle.setData(exahype2::fv::particles::utils::ParticleAccelerationAttributeOffset + axis, acceleration[axis]);
+  }
+}
 
-        /**
-         * Compute momentum vector: m * v
-         */
-        template <typename Particle>
-        inline tarch::la::Vector<DIMENSIONS, double> computeMomentum(const Particle& p) {
-          const auto   v = getVelocity(p);
-          const double m = getMass(p);
-          return m * v;
-        }
+template <typename Particle>
+void exahype2::fv::particles::utils::resetAcceleration(Particle& particle) {
+  const tarch::la::Vector<DIMENSIONS, double> zeroAcceleration(0.0);
+  exahype2::fv::particles::utils::setAcceleration(particle, zeroAcceleration);
+}
 
-        // ======================================================================================
-        // Particle State (Full)
-        /// Extract or assign position, velocity, and acceleration
-        // ======================================================================================
+template <typename Particle>
+double exahype2::fv::particles::utils::computeKineticEnergy(const Particle& particle) {
+  const tarch::la::Vector<DIMENSIONS, double> velocity = exahype2::fv::particles::utils::getVelocity(particle);
+  const double                                mass     = exahype2::fv::particles::utils::getMass(particle);
+  return 0.5 * mass * tarch::la::dot(velocity, velocity);
+}
 
-        /**
-         * Retrieve full state (position, velocity, acceleration) of the particle.
-         */
-        template <typename Particle>
-        ParticleState getParticleState(const Particle& particle) {
-          ParticleState state;
-          state.position     = particle.getX();
-          state.velocity     = getVelocity(particle);
-          state.acceleration = getAcceleration(particle);
-          return state;
-        }
+template <typename Particle>
+tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::utils::computeMomentum(const Particle& particle) {
+  const tarch::la::Vector<DIMENSIONS, double> velocity = exahype2::fv::particles::utils::getVelocity(particle);
+  const double                                mass     = exahype2::fv::particles::utils::getMass(particle);
+  return mass * velocity;
+}
 
-        /**
-         * Set velocity and acceleration of a particle from a ParticleState.
-         */
-        template <typename Particle>
-        void setParticleState(Particle& particle, const ParticleState& state) {
-          setVelocity(particle, state.velocity);
-          setAcceleration(particle, state.acceleration);
-        }
-      } // namespace utils
-    } // namespace particles
-  } // namespace fv
-} // namespace exahype2
+template <typename Particle>
+exahype2::fv::particles::utils::ParticleState exahype2::fv::particles::utils::getParticleState(
+  const Particle& particle
+) {
+  exahype2::fv::particles::utils::ParticleState state;
+
+  state.position     = particle.getX();
+  state.velocity     = exahype2::fv::particles::utils::getVelocity(particle);
+  state.acceleration = exahype2::fv::particles::utils::getAcceleration(particle);
+
+  return state;
+}
+
+template <typename Particle>
+void exahype2::fv::particles::utils::setParticleState(
+  Particle&                                            particle,
+  const exahype2::fv::particles::utils::ParticleState& state
+) {
+  exahype2::fv::particles::utils::setVelocity(particle, state.velocity);
+  exahype2::fv::particles::utils::setAcceleration(particle, state.acceleration);
+}

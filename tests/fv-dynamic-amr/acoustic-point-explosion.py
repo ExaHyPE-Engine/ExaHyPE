@@ -81,7 +81,7 @@ refinement_criterion = """
     NumberOfFiniteVolumesPerAxisPerPatch,
     NumberOfUnknowns + NumberOfAuxiliaryVariables,
     5.0e-3,
-    9.0,
+    ::exahype2::DefaultCoarsenSafetyFactor,
     nullptr,
     [](const double* const values) { return 1.0 + values[Shortcuts::p]; },
     [](const double* const values) {

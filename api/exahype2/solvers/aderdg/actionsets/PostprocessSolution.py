@@ -112,11 +112,10 @@ class DoFWisePostprocessSolution(EmptyPostprocessSolution):
     peano4::dForEach({{ORDER}} + 1, [&](const tarch::la::Vector<DIMENSIONS, int>& index) {
       double* values   = fineGridCell{{UNKNOWN_IDENTIFIER}}.data()
         + peano4::dLinearised(index, {{ORDER}} + 1) * valuesPerDoF;
-      auto    x        =         ::exahype2::aderdg::getQuadraturePoint(
+      auto    x        = ::exahype2::dg::getQuadraturePoint(
         marker.getX(),
         marker.getH(),
         index,
-        repositories::{{SOLVER_INSTANCE}}.Order + 1,
         kernels::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes
       );
       """

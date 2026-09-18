@@ -8,10 +8,10 @@ namespace peano4::grid {
   /**
    * Identifies the source relationship of two entity copies.
    *
-   * - `InterRank`: merge() combines vertex or face copies received from two ranks.
-   * - `IntraRank`: merge() combines copies written by two subtree tasks on one rank.
-   * - `Consolidation`: applyIncomingCopy() rebuilds a rank-owned slot from task-local
-   *   copies before boundary packing.
+   * - `InterRank`: The merge() call combines vertex or face copies received from two ranks.
+   * - `IntraRank`: The merge() call combines copies written by two subtree tasks on one rank.
+   * - `Consolidation`: The applyIncomingCopy() call rebuilds a rank-owned slot from
+   *   task-local copies before boundary packing.
    *
    * A periodic entity within one rank uses one storage slot. A periodic entity on
    * a rank boundary uses `InterRank`.

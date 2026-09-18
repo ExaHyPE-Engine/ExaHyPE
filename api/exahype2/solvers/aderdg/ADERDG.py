@@ -290,13 +290,13 @@ class ADERDG(SubcellLimiting):
 
         # This action set couples the resolution transitions of a stable grid and changes
         # no topology.
-        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.aderdg.actionsets.AdaptiveMeshFaceCoupling(
+        self._action_set_adaptive_mesh_face_coupling = exahype2.solvers.aderdg.actionsets.AdaptiveMeshFaceCoupling(
             solver=self,
             interpolate_guard=self._interpolate_face_data_default_guard(),
             restrict_guard=self._restrict_face_data_default_guard(),
             solve_guard=self._store_cell_data_default_guard(),
         )
-        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.descend_invocation_order = 1
+        self._action_set_adaptive_mesh_face_coupling.descend_invocation_order = 1
 
         # This action set realises the topology changes and transfers the solution across
         # every created or destroyed resolution transition.
@@ -614,7 +614,7 @@ class ADERDG(SubcellLimiting):
     def add_actions_to_perform_time_step(self, step):
         step.add_action_set(self._action_set_update_face_label)
         step.add_action_set(self._action_set_update_cell_label)
-        step.add_action_set(self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement)
+        step.add_action_set(self._action_set_adaptive_mesh_face_coupling)
 
         step.add_action_set(self._action_set_correction)
         step.add_action_set(self._action_set_prediction)

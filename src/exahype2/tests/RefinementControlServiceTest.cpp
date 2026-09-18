@@ -4,25 +4,48 @@
 
 #include "exahype2/RefinementControl.h"
 #include "exahype2/RefinementControlService.h"
-#include "peano4/Globals.h"
+#include "peano4/Constants.h"
 #include "peano4/Loop.h"
 #include "peano4/grid/AutomatonState.h"
 #include "peano4/grid/GridControlEvent.h"
+#include "peano4/sfc/ActiveCurve.h"
 #include "peano4/topology/Tree.h"
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 
 namespace {
-  // A request names the cell it was raised for, so the domain carries 81 unit-sized cells
-  // per axis on level four and their parents on level three.
-  constexpr double TestDomainWidth = 81.0;
-  constexpr int    LeafLevel       = 4;
-  constexpr int    ParentLevel     = 3;
+  constexpr int SubdivisionFactor = peano4::sfc::ActiveCurve::SubdivisionFactor;
+  constexpr int ChildrenPerCell   = peano4::sfc::ActiveCurve::ChildrenPerCell;
 
-  constexpr int DeepestTestLevel = 7;
+  // A request names the cell it was raised for, so the tests need a domain whose lattice
+  // carries their unit-sized cells. The leaf level is the first whose cell count per axis
+  // covers every coordinate the tests use, and a sibling group's parent then sits one level
+  // above it.
+  constexpr int smallestLevelCovering(const int coordinates) {
+    int level        = 0;
+    int cellsPerAxis = 1;
+    while (cellsPerAxis < coordinates) {
+      cellsPerAxis *= SubdivisionFactor;
+      level++;
+    }
+    return level;
+  }
+
+  constexpr int    LeafLevel       = smallestLevelCovering(81);
+  constexpr int    ParentLevel     = LeafLevel - 1;
+  constexpr double TestDomainWidth = peano4::Power<SubdivisionFactor, LeafLevel>;
+
+  // Three levels beyond the leaf level, so the sweep keeps a margin over the meshes a run
+  // configures.
+  constexpr int DeepestTestLevel = LeafLevel + 3;
 
   tarch::la::Vector<DIMENSIONS, double> uniformVector(double value) {
     return tarch::la::Vector<DIMENSIONS, double>(value);
+  }
+
+  /** Returns the offset of the parent cell number parentNumber along every axis, in leaf cells. */
+  tarch::la::Vector<DIMENSIONS, double> parentCellOffset(int parentNumber) {
+    return uniformVector(static_cast<double>(parentNumber * SubdivisionFactor));
   }
 
   struct TestDomain {
@@ -60,18 +83,18 @@ namespace {
     return width;
   }
 
-  // Each axis carries its own index, a third of the level's cell count apart from its
-  // neighbour.
+  // Each axis carries its own index, the level's cell count divided by the subdivision
+  // factor apart from its neighbour.
   tarch::la::Vector<DIMENSIONS, int> sweepPosition(int index, int cellsPerAxisOnLevel) {
     tarch::la::Vector<DIMENSIONS, int> position;
     for (int axis = 0; axis < DIMENSIONS; axis++) {
-      position(axis) = (index + axis * (cellsPerAxisOnLevel / 3)) % cellsPerAxisOnLevel;
+      position(axis) = (index + axis * (cellsPerAxisOnLevel / SubdivisionFactor)) % cellsPerAxisOnLevel;
     }
     return position;
   }
 
-  // Descends to one cell along its lattice position read in base three, so the
-  // command carries the width and centre a traversal computes.
+  // Descends to one cell along its lattice position read in the base of the subdivision
+  // factor, so the command carries the width and centre a traversal computes.
   peano4::grid::AutomatonState descendToCell(
     const peano4::grid::AutomatonState&       rootState,
     int                                       targetLevel,
@@ -79,14 +102,15 @@ namespace {
   ) {
     auto state = rootState;
     for (int level = 1; level <= targetLevel; level++) {
-      peano4::grid::AutomatonState children[THREE_POWER_D];
+      peano4::grid::AutomatonState children[ChildrenPerCell];
       peano4::grid::AutomatonState::refineState(state, children);
 
       tarch::la::Vector<DIMENSIONS, int> childPosition;
       for (int axis = 0; axis < DIMENSIONS; axis++) {
-        childPosition(axis) = (latticeIndex(axis) / peano4::topology::cellsPerAxis(targetLevel - level)) % 3;
+        childPosition(axis) =
+          (latticeIndex(axis) / peano4::topology::cellsPerAxis(targetLevel - level)) % SubdivisionFactor;
       }
-      state = children[peano4::dLinearised(childPosition, 3)];
+      state = children[peano4::dLinearised(childPosition, SubdivisionFactor)];
     }
     return state;
   }
@@ -102,7 +126,7 @@ namespace {
   }
 
   // A promoted group names the parent cell one level above the erased leaves, at the
-  // lattice position the group's own position divided by three.
+  // lattice position the group's own position divided by the subdivision factor.
   bool isParentEraseEvent(const peano4::grid::GridControlEvent& event, int parentLatticePosition) {
     bool namesTheParent = event.getRefinementControl() == peano4::grid::GridControlEvent::RefinementControl::Erase
       and event.level == ParentLevel;
@@ -156,27 +180,17 @@ namespace {
     int                                          childEnd,
     int                                          skippedChild
   ) {
-    int child = 0;
-#if DIMENSIONS == 3
-    for (int k = 0; k < 3; k++) {
-#endif
-      for (int j = 0; j < 3; j++) {
-        for (int i = 0; i < 3; i++) {
-          tarch::la::Vector<DIMENSIONS, double> offset = parentOffset;
-          offset(0) += static_cast<double>(i);
-          offset(1) += static_cast<double>(j);
-#if DIMENSIONS == 3
-          offset(2) += static_cast<double>(k);
-#endif
-          if (child >= firstChild and child < childEnd and child != skippedChild) {
-            addEraseCommand(control, offset, child);
-          }
-          child++;
-        }
+    for (int child = 0; child < ChildrenPerCell; child++) {
+      tarch::la::Vector<DIMENSIONS, double> offset          = parentOffset;
+      int                                   remainingDigits = child;
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        offset(axis) += static_cast<double>(remainingDigits % SubdivisionFactor);
+        remainingDigits /= SubdivisionFactor;
       }
-#if DIMENSIONS == 3
+      if (child >= firstChild and child < childEnd and child != skippedChild) {
+        addEraseCommand(control, offset, child);
+      }
     }
-#endif
   }
 
   void addEraseSiblingGroup(
@@ -184,7 +198,7 @@ namespace {
     const tarch::la::Vector<DIMENSIONS, double>& parentOffset,
     int                                          skippedChild
   ) {
-    addEraseSiblingGroupChildRange(control, parentOffset, 0, THREE_POWER_D, skippedChild);
+    addEraseSiblingGroupChildRange(control, parentOffset, 0, ChildrenPerCell, skippedChild);
   }
 
   void commitCriterionStep(exahype2::RefinementControl& control) {
@@ -208,7 +222,7 @@ namespace {
 
   // addRefineCommand raises its command on rank 0 only, so only that rank holds a local
   // request before the gather hands the resulting event to everybody.
-  std::size_t numberOfLocalRefineRequests() { return tarch::mpi::Rank::getInstance().getRank() == 0 ? 1u : 0u; }
+  std::size_t numberOfLocalRefineRequests() { return tarch::mpi::Rank::getInstance().getRank() == 0 ? 1U : 0U; }
 } // namespace
 
 exahype2::tests::RefinementControlServiceTest::RefinementControlServiceTest() :
@@ -278,11 +292,11 @@ void exahype2::tests::RefinementControlServiceTest::testEraseOnlyBatchIsCommitte
   service.setDomain(uniformVector(0.0), uniformVector(TestDomainWidth));
 
   exahype2::RefinementControl control;
-  addEraseSiblingGroup(control, uniformVector(42.0), -1);
+  addEraseSiblingGroup(control, parentCellOffset(14), -1);
   commitCriterionStep(control);
 
   const auto events = service.getGridControlEvents();
-  validateEquals(events.size(), 1u);
+  validateEquals(events.size(), 1U);
   validateTrue(isParentEraseEvent(events[0], 14));
 
   drainRefinementControlService();
@@ -298,7 +312,7 @@ void exahype2::tests::RefinementControlServiceTest::testRefineCommandNamesTheReq
   commitCriterionStep(control);
 
   const auto events = service.getGridControlEvents();
-  validateEquals(events.size(), 1u);
+  validateEquals(events.size(), 1U);
   validateTrue(events[0].getRefinementControl() == peano4::grid::GridControlEvent::RefinementControl::Refine);
   validateEquals(events[0].level, LeafLevel);
   const auto expectedLatticeIndex = tarch::la::Vector<DIMENSIONS, int>(1);
@@ -382,7 +396,7 @@ void exahype2::tests::RefinementControlServiceTest::testCompleteEraseSiblingGrou
   commitCriterionStep(control);
 
   const auto events = service.getGridControlEvents();
-  validateEquals(events.size(), 2u);
+  validateEquals(events.size(), 2U);
   validateTrue(isParentEraseEvent(events[0], 0) or isParentEraseEvent(events[1], 0));
 
   drainRefinementControlService();
@@ -404,7 +418,7 @@ void exahype2::tests::RefinementControlServiceTest::testEraseSiblingGroupIsAncho
   commitCriterionStep(control);
 
   const auto events = service.getGridControlEvents();
-  validateEquals(events.size(), 2u);
+  validateEquals(events.size(), 2U);
   validateTrue(isParentEraseEvent(events[0], 0) or isParentEraseEvent(events[1], 0));
 
   drainRefinementControlService();
@@ -431,7 +445,7 @@ void exahype2::tests::RefinementControlServiceTest::testEraseSiblingGroupIsAncho
   commitCriterionStep(control);
 
   const auto events = service.getGridControlEvents();
-  validateEquals(events.size(), 2u);
+  validateEquals(events.size(), 2U);
   validateTrue(isParentEraseEvent(events[0], 0) or isParentEraseEvent(events[1], 0));
 
   drainRefinementControlService();
@@ -445,11 +459,11 @@ void exahype2::tests::RefinementControlServiceTest::testIncompleteEraseSiblingGr
 
   // The refine command proves the batch is processed.
   exahype2::RefinementControl control;
-  addEraseSiblingGroup(control, uniformVector(0.0), THREE_POWER_D / 2);
+  addEraseSiblingGroup(control, uniformVector(0.0), ChildrenPerCell / 2);
   addRefineCommand(control, uniformVector(56.0));
   commitCriterionStep(control);
 
-  validateEquals(service.getGridControlEvents().size(), 1u);
+  validateEquals(service.getGridControlEvents().size(), 1U);
   validateTrue(
     service.getGridControlEvents()[0].getRefinementControl()
     == peano4::grid::GridControlEvent::RefinementControl::Refine
@@ -463,7 +477,7 @@ void exahype2::tests::RefinementControlServiceTest::testShiftedEraseSiblingGroup
   auto& service = exahype2::RefinementControlService::getInstance();
   service.setDomain(uniformVector(0.0), uniformVector(TestDomainWidth));
 
-  // A full block of 3^d leaves that spreads over two parents fills neither of them.
+  // Neither parent receives a complete sibling group from the shifted children.
   exahype2::RefinementControl           control;
   tarch::la::Vector<DIMENSIONS, double> shiftedOrigin = uniformVector(0.0);
   shiftedOrigin(0)                                    = 1.0;
@@ -471,7 +485,7 @@ void exahype2::tests::RefinementControlServiceTest::testShiftedEraseSiblingGroup
   addRefineCommand(control, uniformVector(59.0));
   commitCriterionStep(control);
 
-  validateEquals(service.getGridControlEvents().size(), 1u);
+  validateEquals(service.getGridControlEvents().size(), 1U);
   validateTrue(
     service.getGridControlEvents()[0].getRefinementControl()
     == peano4::grid::GridControlEvent::RefinementControl::Refine
@@ -490,7 +504,7 @@ void exahype2::tests::RefinementControlServiceTest::testCommittedEventIsConsumed
   exahype2::RefinementControl control;
   addRefineCommand(control, uniformVector(10.0));
   commitCriterionStep(control);
-  validateEquals(service.getGridControlEvents().size(), 1u);
+  validateEquals(service.getGridControlEvents().size(), 1U);
 
   service.finishDynamicMeshRefinementStep();
   validateTrue(service.getGridControlEvents().empty());
@@ -514,7 +528,7 @@ void exahype2::tests::RefinementControlServiceTest::testEachBatchCarriesOnlyItsO
   exahype2::RefinementControl controlA;
   addRefineCommand(controlA, uniformVector(30.0));
   commitCriterionStep(controlA);
-  validateEquals(service.getGridControlEvents().size(), 1u);
+  validateEquals(service.getGridControlEvents().size(), 1U);
 
   // The next batch collects request B while the traversal realises A, so it carries B alone.
   exahype2::RefinementControl controlB;
@@ -523,7 +537,7 @@ void exahype2::tests::RefinementControlServiceTest::testEachBatchCarriesOnlyItsO
   service.finishDynamicMeshRefinementStep();
 
   const auto events = service.getGridControlEvents();
-  validateEquals(events.size(), 1u);
+  validateEquals(events.size(), 1U);
   const auto expectedLatticeIndex = tarch::la::Vector<DIMENSIONS, int>(36);
   validateTrue(events[0].latticeIndex == expectedLatticeIndex);
 
@@ -544,10 +558,10 @@ void exahype2::tests::RefinementControlServiceTest::testSiblingGroupNeedsEveryCh
 
   // The refine command keeps the batch from being suppressed.
   exahype2::RefinementControl incompleteControl;
-  addEraseSiblingGroupChildRange(incompleteControl, uniformVector(39.0), 0, THREE_POWER_D - 1, -1);
+  addEraseSiblingGroupChildRange(incompleteControl, parentCellOffset(13), 0, ChildrenPerCell - 1, -1);
   addRefineCommand(incompleteControl, uniformVector(62.0));
   commitCriterionStep(incompleteControl);
-  validateEquals(service.getGridControlEvents().size(), 1u);
+  validateEquals(service.getGridControlEvents().size(), 1U);
   validateTrue(
     service.getGridControlEvents()[0].getRefinementControl()
     == peano4::grid::GridControlEvent::RefinementControl::Refine
@@ -556,18 +570,18 @@ void exahype2::tests::RefinementControlServiceTest::testSiblingGroupNeedsEveryCh
   // The missing child votes on its own in the next batch, which leaves that batch's group
   // incomplete as well.
   exahype2::RefinementControl completingControl;
-  addEraseSiblingGroupChildRange(completingControl, uniformVector(39.0), THREE_POWER_D - 1, THREE_POWER_D, -1);
+  addEraseSiblingGroupChildRange(completingControl, parentCellOffset(13), ChildrenPerCell - 1, ChildrenPerCell, -1);
   service.merge(completingControl);
   service.finishDynamicMeshRefinementStep();
   validateTrue(service.getGridControlEvents().empty());
 
   exahype2::RefinementControl completeControl;
-  addEraseSiblingGroup(completeControl, uniformVector(39.0), -1);
+  addEraseSiblingGroup(completeControl, parentCellOffset(13), -1);
   service.merge(completeControl);
   service.finishDynamicMeshRefinementStep();
 
   const auto events = service.getGridControlEvents();
-  validateEquals(events.size(), 1u);
+  validateEquals(events.size(), 1U);
   validateTrue(isParentEraseEvent(events[0], 13));
 
   drainRefinementControlService();
@@ -582,7 +596,7 @@ void exahype2::tests::RefinementControlServiceTest::testUnchangedEventSetIsSuppr
     exahype2::RefinementControl control;
     addRefineCommand(control, uniformVector(20.0));
     commitCriterionStep(control);
-    validateEquals(service.getGridControlEvents().size(), 1u);
+    validateEquals(service.getGridControlEvents().size(), 1U);
   }
   drainRefinementControlService();
 
@@ -599,7 +613,7 @@ void exahype2::tests::RefinementControlServiceTest::testUnchangedEventSetIsSuppr
     exahype2::RefinementControl control;
     addRefineCommand(control, uniformVector(23.0));
     commitCriterionStep(control);
-    validateEquals(service.getGridControlEvents().size(), 1u);
+    validateEquals(service.getGridControlEvents().size(), 1U);
   }
 
   drainRefinementControlService();
@@ -615,31 +629,31 @@ void exahype2::tests::RefinementControlServiceTest::testRepeatedContributionsReu
   service.setDomain(uniformVector(0.0), uniformVector(TestDomainWidth));
 
   constexpr int ParentLatticePosition = 10;
-  const auto    parentOffset          = uniformVector(3.0 * ParentLatticePosition);
+  const auto    parentOffset          = parentCellOffset(ParentLatticePosition);
   for (int repetition = 0; repetition < 2; repetition++) {
     exahype2::RefinementControl control;
     addEraseSiblingGroup(control, parentOffset, -1);
     service.merge(control);
     service.finishStep();
-    validateEquals(service.getGridControlEvents().size(), 1u);
+    validateEquals(service.getGridControlEvents().size(), 1U);
     validateTrue(isParentEraseEvent(service.getGridControlEvents().front(), ParentLatticePosition));
   }
 
   {
     exahype2::RefinementControl firstHalf;
     exahype2::RefinementControl secondHalf;
-    addEraseSiblingGroupChildRange(firstHalf, parentOffset, 0, THREE_POWER_D / 2, -1);
-    addEraseSiblingGroupChildRange(secondHalf, parentOffset, THREE_POWER_D / 2, THREE_POWER_D, -1);
+    addEraseSiblingGroupChildRange(firstHalf, parentOffset, 0, ChildrenPerCell / 2, -1);
+    addEraseSiblingGroupChildRange(secondHalf, parentOffset, ChildrenPerCell / 2, ChildrenPerCell, -1);
     service.merge(firstHalf);
     service.merge(secondHalf);
     service.finishStep();
-    validateEquals(service.getGridControlEvents().size(), 1u);
+    validateEquals(service.getGridControlEvents().size(), 1U);
     validateTrue(isParentEraseEvent(service.getGridControlEvents().front(), ParentLatticePosition));
   }
 
   {
     exahype2::RefinementControl control;
-    addEraseSiblingGroup(control, parentOffset, THREE_POWER_D / 2);
+    addEraseSiblingGroup(control, parentOffset, ChildrenPerCell / 2);
     service.merge(control);
     service.finishStep();
     validateTrue(service.getGridControlEvents().empty());
@@ -663,7 +677,7 @@ void exahype2::tests::RefinementControlServiceTest::testARealisedSetWithoutSweep
     exahype2::RefinementControl control;
     addRefineCommand(control, uniformVector(26.0));
     commitCriterionStep(control);
-    validateEquals(service.getGridControlEvents().size(), 1u);
+    validateEquals(service.getGridControlEvents().size(), 1U);
   }
   service.realiseCommittedEventsWithoutSweep();
   validateTrue(service.getGridControlEvents().empty());
@@ -680,7 +694,7 @@ void exahype2::tests::RefinementControlServiceTest::testARealisedSetWithoutSweep
     exahype2::RefinementControl control;
     addRefineCommand(control, uniformVector(29.0));
     commitCriterionStep(control);
-    validateEquals(service.getGridControlEvents().size(), 1u);
+    validateEquals(service.getGridControlEvents().size(), 1U);
   }
 
   drainRefinementControlService();
@@ -721,7 +735,7 @@ void exahype2::tests::RefinementControlServiceTest::testARealisedSetWithoutSweep
     validateTrue(service.committedEventsAgreeAcrossRanks());
     const auto                               events = service.getGridControlEvents();
     const tarch::la::Vector<DIMENSIONS, int> expectedLatticeIndex(60);
-    validateEquals(events.size(), 1u);
+    validateEquals(events.size(), 1U);
     validateEquals(events.front().level, LeafLevel);
     validateTrue(events.front().latticeIndex == expectedLatticeIndex);
   }
@@ -739,13 +753,13 @@ void exahype2::tests::RefinementControlServiceTest::testComplementaryEraseSubset
   // complete group.
   exahype2::RefinementControl controlOfFirstSolver(0);
   exahype2::RefinementControl controlOfSecondSolver(1);
-  addEraseSiblingGroupChildRange(controlOfFirstSolver, uniformVector(30.0), 0, THREE_POWER_D / 2, -1);
-  addEraseSiblingGroupChildRange(controlOfSecondSolver, uniformVector(30.0), THREE_POWER_D / 2, THREE_POWER_D, -1);
+  addEraseSiblingGroupChildRange(controlOfFirstSolver, parentCellOffset(10), 0, ChildrenPerCell / 2, -1);
+  addEraseSiblingGroupChildRange(controlOfSecondSolver, parentCellOffset(10), ChildrenPerCell / 2, ChildrenPerCell, -1);
   addRefineCommand(controlOfFirstSolver, uniformVector(65.0));
   service.merge(controlOfFirstSolver);
   commitCriterionStep(controlOfSecondSolver);
 
-  validateEquals(service.getGridControlEvents().size(), 1u);
+  validateEquals(service.getGridControlEvents().size(), 1U);
   validateTrue(
     service.getGridControlEvents()[0].getRefinementControl()
     == peano4::grid::GridControlEvent::RefinementControl::Refine
@@ -765,14 +779,14 @@ void exahype2::tests::RefinementControlServiceTest::testEraseNeedsUnanimousSolve
   {
     exahype2::RefinementControl controlOfFirstSolver(0);
     exahype2::RefinementControl controlOfSecondSolver(1);
-    addEraseSiblingGroup(controlOfFirstSolver, uniformVector(33.0), -1);
-    addEraseSiblingGroup(controlOfSecondSolver, uniformVector(33.0), -1);
+    addEraseSiblingGroup(controlOfFirstSolver, parentCellOffset(11), -1);
+    addEraseSiblingGroup(controlOfSecondSolver, parentCellOffset(11), -1);
     addRefineCommand(controlOfFirstSolver, uniformVector(68.0));
     service.merge(controlOfFirstSolver);
     commitCriterionStep(controlOfSecondSolver);
 
     const auto events = service.getGridControlEvents();
-    validateEquals(events.size(), 2u);
+    validateEquals(events.size(), 2U);
     validateTrue(isParentEraseEvent(events[0], 11) or isParentEraseEvent(events[1], 11));
   }
   drainRefinementControlService();
@@ -780,11 +794,11 @@ void exahype2::tests::RefinementControlServiceTest::testEraseNeedsUnanimousSolve
   // A solver that submits no erase request vetoes the other solver's complete group.
   {
     exahype2::RefinementControl controlOfFirstSolver(0);
-    addEraseSiblingGroup(controlOfFirstSolver, uniformVector(36.0), -1);
+    addEraseSiblingGroup(controlOfFirstSolver, parentCellOffset(12), -1);
     addRefineCommand(controlOfFirstSolver, uniformVector(71.0));
     commitCriterionStep(controlOfFirstSolver);
 
-    validateEquals(service.getGridControlEvents().size(), 1u);
+    validateEquals(service.getGridControlEvents().size(), 1U);
     validateTrue(
       service.getGridControlEvents()[0].getRefinementControl()
       == peano4::grid::GridControlEvent::RefinementControl::Refine

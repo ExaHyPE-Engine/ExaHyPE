@@ -4,6 +4,7 @@
 
 #include "repositories/DataRepository.h"
 
+#include "peano4/Constants.h"
 #include "peano4/grid/SendReceiveContext.h"
 #include "peano4/grid/StackTopology.h"
 #include "peano4/dataview/CellMarker.h"
@@ -175,7 +176,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterNode(const ::peano4::grid::GridTraversal
 {%- if VERTICES %}
   {
     auto guardMarker = ::peano4::dataview::VertexMarker(event);
-    for (int vertexNumber = 0; vertexNumber < TWO_POWER_D; vertexNumber++) {
+    for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell; vertexNumber++) {
       const auto slot       = fineGridSlots.vertexSlots[vertexNumber];
       const auto inputStack = event.getVertexDataFrom(vertexNumber);
       const auto isCreated  = inputStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyGridEntity;
@@ -194,7 +195,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterNode(const ::peano4::grid::GridTraversal
 {%- if FACES %}
   {
     auto guardMarker = event.getFaceMarker();
-    for (int faceNumber = 0; faceNumber < TWO_TIMES_D; faceNumber++) {
+    for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
       const auto slot       = fineGridSlots.faceSlots[faceNumber];
       const auto inputStack = event.getFaceDataFrom(faceNumber);
       const auto isCreated  = inputStack == ::peano4::grid::GridTraversalObserver::CreateOrDestroyGridEntity;
@@ -228,7 +229,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterNode(const ::peano4::grid::GridTraversal
 
 {%- if VERTICES %}
   auto vertexMarker = ::peano4::dataview::VertexMarker(event);
-  for (int vertexNumber = 0; vertexNumber < TWO_POWER_D; vertexNumber++) {
+  for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell; vertexNumber++) {
     const auto inVertexStack = event.getVertexDataFrom(vertexNumber);
     const auto pick          = event.getVertexDataTo(vertexNumber);
     vertexMarker.select(pick);
@@ -276,7 +277,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterNode(const ::peano4::grid::GridTraversal
 
 {%- if FACES %}
   auto faceMarker = event.getFaceMarker();
-  for (int faceNumber = 0; faceNumber < TWO_TIMES_D; faceNumber++) {
+  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
     const auto inFaceStack = event.getFaceDataFrom(faceNumber);
     const auto pick        = event.getFaceDataTo(faceNumber);
     faceMarker.select(pick);
@@ -433,7 +434,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveNode(const ::peano4::grid::GridTraversal
 
 {%- if FACES %}
   auto faceMarker = event.getFaceMarker();
-  for (int faceNumber = 0; faceNumber < TWO_TIMES_D; faceNumber++) {
+  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
     const auto outFaceStack = event.getFaceDataTo(faceNumber);
     const auto pick         = event.getFaceDataFrom(faceNumber);
     faceMarker.select(pick);
@@ -484,7 +485,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveNode(const ::peano4::grid::GridTraversal
 
 {%- if VERTICES %}
   auto vertexMarker = ::peano4::dataview::VertexMarker(event);
-  for (int vertexNumber = 0; vertexNumber < TWO_POWER_D; vertexNumber++) {
+  for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell; vertexNumber++) {
     const auto outVertexStack = event.getVertexDataTo(vertexNumber);
     const auto pick           = event.getVertexDataFrom(vertexNumber);
     vertexMarker.select(pick);

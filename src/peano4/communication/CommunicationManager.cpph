@@ -85,13 +85,14 @@ void peano4::communication::CommunicationManager::packPoolSlots(
     // the untruncated size is still available.
     toMessageElementCount(packList.size());
     if (not packList.empty()) {
-      auto destination = rankExchange.outgoingPayload.pushBlock(packList.size());
+      auto                               destination = rankExchange.outgoingPayload.pushBlock(packList.size());
+      [[maybe_unused]] const std::size_t poolSize    = stackContainer.getPoolSize();
       for (std::size_t packPosition = 0; packPosition < packList.size(); packPosition++) {
         const int poolSlot = packList[packPosition];
         assertion(
-          poolSlot >= 0 and static_cast<std::size_t>(poolSlot) < stackContainer.getPoolSize(),
+          poolSlot >= 0 and static_cast<std::size_t>(poolSlot) < poolSize,
           poolSlot,
-          stackContainer.getPoolSize(),
+          poolSize,
           remoteRank,
           packPosition
         );
@@ -157,14 +158,15 @@ void peano4::communication::CommunicationManager::transferPoolSlots(
     if (numberOfElements == 0) {
       continue;
     }
-    auto& transfer = outgoingTransfers[remoteRank];
-    auto  block    = transfer.stack.pushBlock(static_cast<std::size_t>(numberOfElements));
+    auto&                              transfer = outgoingTransfers[remoteRank];
+    auto                               block    = transfer.stack.pushBlock(static_cast<std::size_t>(numberOfElements));
+    [[maybe_unused]] const std::size_t poolSize = stackContainer.getPoolSize();
     for (std::size_t slotNumber = 0; slotNumber < static_cast<std::size_t>(numberOfElements); slotNumber++) {
       const int poolSlot = sendSlots[slotNumber];
       assertion(
-        poolSlot >= 0 and static_cast<std::size_t>(poolSlot) < stackContainer.getPoolSize(),
+        poolSlot >= 0 and static_cast<std::size_t>(poolSlot) < poolSize,
         poolSlot,
-        stackContainer.getPoolSize(),
+        poolSize,
         remoteRank,
         slotNumber
       );
@@ -283,24 +285,16 @@ void peano4::communication::CommunicationManager::finishPoolExchange(
       }
     }
 
-    const auto& packList = packLists[rankNumber];
-    assertion(
-      rankExchange.incomingPayload.size() == packList.size(),
-      rankExchange.incomingPayload.size(),
-      packList.size(),
-      remoteRank
-    );
+    const auto&                        packList            = packLists[rankNumber];
+    [[maybe_unused]] const std::size_t incomingPayloadSize = rankExchange.incomingPayload.size();
+    [[maybe_unused]] const std::size_t packListSize        = packList.size();
+    assertion(incomingPayloadSize == packListSize, incomingPayloadSize, packListSize, remoteRank);
     assertion(frozenSlotBases[rankNumber] >= 0, frozenSlotBases[rankNumber], remoteRank);
+    [[maybe_unused]] const std::size_t poolSize    = stackContainer.getPoolSize();
+    [[maybe_unused]] constexpr auto    MaximumSlot = static_cast<std::size_t>(std::numeric_limits<int>::max());
     for (std::size_t packPosition = 0; packPosition < packList.size(); packPosition++) {
       const auto poolSlot = static_cast<std::size_t>(frozenSlotBases[rankNumber]) + packPosition;
-      assertion(
-        poolSlot < stackContainer.getPoolSize()
-          and poolSlot <= static_cast<std::size_t>(std::numeric_limits<int>::max()),
-        poolSlot,
-        stackContainer.getPoolSize(),
-        remoteRank,
-        packPosition
-      );
+      assertion(poolSlot < poolSize and poolSlot <= MaximumSlot, poolSlot, poolSize, remoteRank, packPosition);
       stackContainer.getPoolSlot(static_cast<int>(poolSlot)) = std::move(rankExchange.incomingPayload[packPosition]);
     }
   }

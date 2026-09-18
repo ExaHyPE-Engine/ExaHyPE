@@ -4,6 +4,8 @@
 
 #include "exahype2/RefinementControl.h"
 #include "peano4/grid/GridControlEvent.h"
+#include "tarch/CompilerSpecificSettings.h"
+#include "tarch/la/Vector.h"
 
 namespace exahype2 {
   class RefinementControlService;
@@ -17,37 +19,41 @@ namespace exahype2 {
  * collective carries only the removals and additions against the request list
  * each rank shipped last, and it requires the finish calls to run in lockstep
  * across the ranks. The service promotes an erase request to the patch's parent
- * cell only if the complete 3^d sibling group has requested coarsening.
+ * cell only if every child of that parent has requested coarsening.
  */
 class exahype2::RefinementControlService final {
 public:
-  RefinementControlService(const RefinementControlService&)            = delete;
-  RefinementControlService(RefinementControlService&&)                 = delete;
-  RefinementControlService& operator=(const RefinementControlService&) = delete;
-  RefinementControlService& operator=(RefinementControlService&&)      = delete;
-  ~RefinementControlService()                                          = default;
+  RefinementControlService(const RefinementControlService& copy)            = delete;
+  RefinementControlService(RefinementControlService&& move)                 = delete;
+  RefinementControlService& operator=(const RefinementControlService& copy) = delete;
+  RefinementControlService& operator=(RefinementControlService&& move)      = delete;
+  ~RefinementControlService()                                               = default;
 
   static RefinementControlService& getInstance();
 
   void shutdown();
 
-  std::vector<peano4::grid::GridControlEvent> getGridControlEvents() const;
+  [[nodiscard]] std::vector<peano4::grid::GridControlEvent> getGridControlEvents() const;
 
-  bool hasGridControlEvents() const;
+  [[nodiscard]] bool hasGridControlEvents() const;
 
-  bool hasRealisedTopologyChangesSinceLastTimeStep() const;
+  [[nodiscard]] bool hasRealisedTopologyChangesSinceLastTimeStep() const;
 
-  bool lastCriterionStepWasSuppressed() const;
+  [[nodiscard]] bool lastCriterionStepWasSuppressed() const;
 
-  bool committedEventsAgreeAcrossRanks() const;
+  [[nodiscard]] bool committedEventsAgreeAcrossRanks() const;
 
   void setDomain(
     const tarch::la::Vector<DIMENSIONS, double>& domainOffset,
     const tarch::la::Vector<DIMENSIONS, double>& domainWidth
   );
 
-  INLINE_METHOD const tarch::la::Vector<DIMENSIONS, double>& getDomainOffset() const noexcept { return _domainOffset; }
-  INLINE_METHOD const tarch::la::Vector<DIMENSIONS, double>& getDomainWidth() const noexcept { return _domainWidth; }
+  [[nodiscard]] INLINE_METHOD const tarch::la::Vector<DIMENSIONS, double>& getDomainOffset() const noexcept {
+    return _domainOffset;
+  }
+  [[nodiscard]] INLINE_METHOD const tarch::la::Vector<DIMENSIONS, double>& getDomainWidth() const noexcept {
+    return _domainWidth;
+  }
 
   void setNumberOfSolvers(int numberOfSolvers);
 
@@ -59,7 +65,7 @@ public:
 
   void realiseCommittedEventsWithoutSweep();
 
-  std::string toString() const;
+  [[nodiscard]] std::string toString() const;
 
   void merge(const RefinementControl& control);
 
@@ -144,7 +150,9 @@ private:
 
   void finishStep(bool suppressEventsIfUnchanged, bool recordRealisedEvents);
 
-  std::vector<peano4::grid::GridControlEvent> finaliseCoarseningEvents(const std::vector<RawRequest>& requests) const;
+  [[nodiscard]] std::vector<peano4::grid::GridControlEvent> finaliseCoarseningEvents(
+    const std::vector<RawRequest>& requests
+  ) const;
 
   bool exchangeRawRequests(std::vector<RawRequest>& requests, StepKind stepKind, bool localRequestsUnchanged);
 

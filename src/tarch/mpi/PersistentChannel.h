@@ -27,27 +27,20 @@ namespace tarch::mpi {
  */
 class tarch::mpi::PersistentChannel final {
 public:
-  PersistentChannel()                                    = default;
-  PersistentChannel(const PersistentChannel&)            = delete;
-  PersistentChannel& operator=(const PersistentChannel&) = delete;
+  PersistentChannel()                         = default;
+  PersistentChannel(const PersistentChannel&) = delete;
   PersistentChannel(PersistentChannel&& other) noexcept;
+  PersistentChannel& operator=(const PersistentChannel&) = delete;
   PersistentChannel& operator=(PersistentChannel&& other) noexcept;
   ~PersistentChannel();
 
-  void startSend(const void* buffer, const int byteCount, const int rank, const int tag, const MPI_Comm communicator);
-  void startReceive(void* buffer, const int byteCount, const int rank, const int tag, const MPI_Comm communicator);
+  void startSend(const void* buffer, int byteCount, int rank, int tag, MPI_Comm communicator);
+  void startReceive(void* buffer, int byteCount, int rank, int tag, MPI_Comm communicator);
 
   INLINE_METHOD MPI_Request* getRequest();
 
 private:
-  void start(
-    const void*    buffer,
-    const int      byteCount,
-    const int      rank,
-    const int      tag,
-    const MPI_Comm communicator,
-    const bool     outgoing
-  );
+  void start(const void* buffer, int byteCount, int rank, int tag, MPI_Comm communicator, bool outgoing);
   void freeRequest();
 
   MPI_Request _request{MPI_REQUEST_NULL};

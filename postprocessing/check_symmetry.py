@@ -8,9 +8,9 @@ format works: VTKHDF, HDF5/XDMF, NetCDF/UGRID or VTU. For every snapshot and
 every requested mirror the mesh is reflected about the symmetry centre and
 matched against itself cell by cell:
 
-  * Topology: every cell must have a mirror partner of the same size, so an
+  * Topology: Every cell must have a mirror partner of the same size, so an
     adaptive mesh must refine and coarsen symmetrically.
-  * Data: the field values of mirror partners must agree. Components of vector
+  * Data: The field values of mirror partners must agree. Components of vector
     fields normal to the mirror plane flip sign, an axis swap exchanges them, and
     tensor fields transform with the reflection on both indices.
 
@@ -89,8 +89,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--skip-fields",
         nargs="+",
-        default=["Subdomain"],
-        help="Fields to ignore (default: Subdomain, which depends on the domain decomposition)",
+        default=["Subdomain", "Subtree", "CurvePosition"],
+        help="Fields to ignore (default: Subdomain, Subtree and CurvePosition, which depend on "
+        "the domain decomposition and on the curve order)",
     )
     parser.add_argument(
         "--vector-fields",
@@ -224,7 +225,7 @@ def check_snapshot(
         np.column_stack([mirrored_centres, mirrored_sizes])
     )
 
-    # Geometry tolerance per pair: far above the float32 storage rounding of the
+    # Geometry tolerance per pair: Far above the float32 storage rounding of the
     # coordinates and far below the cell's own width, so a cell displaced by a
     # fraction of its size never passes, however small the cell.
     per_cell_tolerance = 1.0e-3 * sizes.min(axis=1)
@@ -248,7 +249,7 @@ def check_snapshot(
             values = mirror_values(values, mirror, kind)
         if centering == "cell":
             return values.reshape(len(centres), -1)
-        # Nodal data: bring each cell's nodes into a canonical order through the node
+        # Nodal data: Bring each cell's nodes into a canonical order through the node
         # offsets from the cell centre, quantised well below the node spacing.
         base = mirrored_centres if transformed else centres
         offsets = (

@@ -3,13 +3,14 @@
 #pragma once
 
 #include "exahype2/fv/PatchUtils.h"
-#include "peano4/Globals.h"
+#include "exahype2/fv/particles/ParticleHelper.h"
+#include "exahype2/fv/particles/ParticleInterpolation.h"
 #include "peano4/Loop.h"
 #include "peano4/dataview/CellMarker.h"
 
 namespace exahype2::fv {
-  template <int SourceIndex, int DestIndex, typename Particle, typename DataType>
-  void projectValueOntoParticle_piecewiseConstant(
+  template <int SourceIndex, int DestinationIndex, typename Particle, typename DataType>
+  void projectValueOntoParticlePiecewiseConstant(
     const peano4::dataview::CellMarker& marker,
     int                                 voxelsPerAxis,
     int                                 unknownsPerVoxel,
@@ -18,7 +19,7 @@ namespace exahype2::fv {
   );
 
   template <typename Particle, typename DataType>
-  void projectAllValuesOntoParticle_piecewiseConstant(
+  void projectAllValuesOntoParticlePiecewiseConstant(
     const peano4::dataview::CellMarker& marker,
     int                                 voxelsPerAxis,
     int                                 unknownsPerVoxel,
@@ -26,17 +27,8 @@ namespace exahype2::fv {
     Particle&                           particle
   );
 
-  template <int SourceIndex, int DestIndex, typename Particle, typename DataType>
-  void projectValueOntoParticle_piecewiseLinear(
-    const peano4::dataview::CellMarker& marker,
-    int                                 voxelsPerAxis,
-    int                                 unknownsPerVoxel,
-    const DataType* NOALIAS             Q,
-    Particle&                           particle
-  );
-
-  template <typename Particle, typename DataType>
-  void projectAllValuesOntoParticle_piecewiseLinear(
+  template <int SourceIndex, int DestinationIndex, typename Particle, typename DataType>
+  void projectValueOntoParticlePiecewiseLinear(
     const peano4::dataview::CellMarker& marker,
     int                                 voxelsPerAxis,
     int                                 unknownsPerVoxel,
@@ -45,19 +37,7 @@ namespace exahype2::fv {
   );
 
   template <typename Particle, typename DataType>
-  void projectAllValuesOntoParticle_piecewiseLinear_explicit_Euler(
-    const peano4::dataview::CellMarker&   marker,
-    int                                   voxelsPerAxis,
-    int                                   unknownsPerVoxel,
-    const DataType* NOALIAS               Q,
-    double                                timeStepSize,
-    tarch::la::Vector<DIMENSIONS, int>    indices,
-    tarch::la::Vector<DIMENSIONS, double> factors,
-    Particle&                             particle
-  );
-
-  template <typename DataType, int SourceIndex, int... SourceIndices, typename Particle>
-  void projectValuesOntoParticle_piecewiseConstant(
+  void projectAllValuesOntoParticlePiecewiseLinear(
     const peano4::dataview::CellMarker& marker,
     int                                 voxelsPerAxis,
     int                                 unknownsPerVoxel,
@@ -66,7 +46,16 @@ namespace exahype2::fv {
   );
 
   template <typename DataType, int SourceIndex, int... SourceIndices, typename Particle>
-  void projectValuesOntoParticle_piecewiseLinear(
+  void projectValuesOntoParticlePiecewiseConstant(
+    const peano4::dataview::CellMarker& marker,
+    int                                 voxelsPerAxis,
+    int                                 unknownsPerVoxel,
+    const DataType* NOALIAS             Q,
+    Particle&                           particle
+  );
+
+  template <typename DataType, int SourceIndex, int... SourceIndices, typename Particle>
+  void projectValuesOntoParticlePiecewiseLinear(
     const peano4::dataview::CellMarker& marker,
     int                                 voxelsPerAxis,
     int                                 unknownsPerVoxel,
@@ -98,66 +87,48 @@ namespace exahype2::fv {
     tarch::la::Vector<DIMENSIONS, double>  domainOffset
   );
 
-  namespace internal {
-    // A tracer stores density followed by one entry per axis for the fluid
-    // velocity, particle velocity, and acceleration.
-    inline constexpr int    ParticleVelocityAttributeOffset     = 1 + DIMENSIONS;
-    inline constexpr int    ParticleAccelerationAttributeOffset = 1 + 2 * DIMENSIONS;
-    inline constexpr double MaximumParticleSpeed                = 10.0;
-    inline constexpr double CollisionVelocityRetention          = 0.9;
+  inline constexpr double MaximumParticleSpeed       = 10.0;
+  inline constexpr double CollisionVelocityRetention = 0.9;
 
-    tarch::la::Vector<DIMENSIONS, int> mapParticleOntoVoxel(
-      const peano4::dataview::CellMarker&          marker,
-      int                                          voxelsPerAxis,
-      const tarch::la::Vector<DIMENSIONS, double>& particleX
-    );
+  template <typename DataType>
+  DataType interpolateValueAtPositionPiecewiseConstant(
+    const peano4::dataview::CellMarker&          marker,
+    int                                          voxelsPerAxis,
+    int                                          unknownsPerVoxel,
+    const DataType* NOALIAS                      Q,
+    const tarch::la::Vector<DIMENSIONS, double>& particleX,
+    int                                          unknown
+  );
 
-    tarch::la::Vector<DIMENSIONS, int> mapBiasedParticleOntoVoxel(
-      const peano4::dataview::CellMarker&          marker,
-      int                                          voxelsPerAxis,
-      const tarch::la::Vector<DIMENSIONS, double>& particleX
-    );
+  template <typename DataType>
+  DataType interpolateValueAtPositionPiecewiseLinear(
+    const peano4::dataview::CellMarker&          marker,
+    int                                          voxelsPerAxis,
+    int                                          unknownsPerVoxel,
+    const DataType* NOALIAS                      Q,
+    const tarch::la::Vector<DIMENSIONS, double>& particleX,
+    int                                          unknown
+  );
 
-    template <typename DataType>
-    DataType projectValueOntoParticle_piecewiseConstant(
-      const peano4::dataview::CellMarker&          marker,
-      int                                          voxelsPerAxis,
-      int                                          unknownsPerVoxel,
-      const DataType* NOALIAS                      Q,
-      const tarch::la::Vector<DIMENSIONS, double>& particleX,
-      int                                          unknown
-    );
+  template <typename DataType, typename Particle, int SourceIndex, int... SourceIndices>
+  void projectValuePackOntoParticlePiecewiseConstant(
+    const peano4::dataview::CellMarker& marker,
+    int                                 voxelsPerAxis,
+    int                                 unknownsPerVoxel,
+    const DataType* NOALIAS             Q,
+    Particle&                           particle,
+    int                                 destinationIndex
+  );
 
-    template <typename DataType>
-    DataType projectValueOntoParticle_piecewiseLinear(
-      const peano4::dataview::CellMarker&          marker,
-      int                                          voxelsPerAxis,
-      int                                          unknownsPerVoxel,
-      const DataType* NOALIAS                      Q,
-      const tarch::la::Vector<DIMENSIONS, double>& particleX,
-      int                                          unknown
-    );
-
-    template <typename DataType, typename Particle, int SourceIndex, int... SourceIndices>
-    void projectValuesOntoParticle_piecewiseConstant(
-      const peano4::dataview::CellMarker& marker,
-      int                                 voxelsPerAxis,
-      int                                 unknownsPerVoxel,
-      const DataType* NOALIAS             Q,
-      Particle&                           particle,
-      int                                 destinationIndex
-    );
-
-    template <typename DataType, typename Particle, int SourceIndex, int... SourceIndices>
-    void projectValuesOntoParticle_piecewiseLinear(
-      const peano4::dataview::CellMarker& marker,
-      int                                 voxelsPerAxis,
-      int                                 unknownsPerVoxel,
-      const DataType* NOALIAS             Q,
-      Particle&                           particle,
-      int                                 destinationIndex
-    );
-  } // namespace internal
+  template <typename DataType, typename Particle, int SourceIndex, int... SourceIndices>
+  void projectValuePackOntoParticlePiecewiseLinear(
+    const peano4::dataview::CellMarker& marker,
+    int                                 voxelsPerAxis,
+    int                                 unknownsPerVoxel,
+    const DataType* NOALIAS             Q,
+    Particle&                           particle,
+    int                                 destinationIndex
+  );
 } // namespace exahype2::fv
 
 #include "exahype2/fv/Tracer.cpph"

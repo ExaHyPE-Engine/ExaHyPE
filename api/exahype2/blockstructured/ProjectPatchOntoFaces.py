@@ -15,10 +15,8 @@ class ProjectPatchOntoFaces(ActionSet):
         self,
         patch,
         patch_overlap,
-        solver_name,
         precision,
         guard="true",
-        add_assertions=True,
     ):
         super().__init__(descend_invocation_order=1)
 
@@ -64,8 +62,8 @@ class ProjectPatchOntoFaces(ActionSet):
   if ({GUARD}) {{
     const auto* const inputPatch = {CELL_ACCESSOR}.data();
 
-    {PRECISION}* outputFaces[TWO_TIMES_D];
-    for (int faceNumber = 0; faceNumber < TWO_TIMES_D; ++faceNumber) {{
+    {PRECISION}* outputFaces[peano4::FacesPerCell];
+    for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; ++faceNumber) {{
       outputFaces[faceNumber] = {FACE_ACCESSOR}(faceNumber).data();
     }}
 

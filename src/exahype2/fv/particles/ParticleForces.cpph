@@ -1,6 +1,40 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+INLINE_METHOD exahype2::fv::particles::forces::ForceType exahype2::fv::particles::forces::operator|(
+  const ForceType left,
+  const ForceType right
+) {
+  return static_cast<ForceType>(static_cast<int>(left) | static_cast<int>(right));
+}
+
+INLINE_METHOD exahype2::fv::particles::forces::ForceType exahype2::fv::particles::forces::operator&(
+  const ForceType left,
+  const ForceType right
+) {
+  return static_cast<ForceType>(static_cast<int>(left) & static_cast<int>(right));
+}
+
+INLINE_METHOD exahype2::fv::particles::forces::ForceType& exahype2::fv::particles::forces::operator|=(
+  ForceType&      left,
+  const ForceType right
+) {
+  left = left | right;
+  return left;
+}
+
+INLINE_METHOD exahype2::fv::particles::forces::ForceType& exahype2::fv::particles::forces::operator&=(
+  ForceType&      left,
+  const ForceType right
+) {
+  left = left & right;
+  return left;
+}
+
+INLINE_METHOD bool exahype2::fv::particles::forces::isForceEnabled(const ForceType force) {
+  return (exahype2::fv::particles::forces::globalForceMethod & static_cast<int>(force)) == static_cast<int>(force);
+}
+
 template <typename Particle>
 tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::forces::computeCentralGravitationalForce(
   const tarch::la::Vector<DIMENSIONS, double>& particlePosition,
@@ -11,16 +45,17 @@ tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::forces::computeCe
 
   const tarch::la::Vector<DIMENSIONS, double>& domainSize = exahype2::fv::particles::utils::domainSize;
 
-  for (int d = 0; d < DIMENSIONS; ++d) {
-    distanceVector(d) = particlePosition(d) - domainSize(d) / 2.0;
+  for (int axis = 0; axis < DIMENSIONS; ++axis) {
+    distanceVector(axis) = particlePosition(axis) - domainSize(axis) / 2.0;
   }
 
-  const double distance       = tarch::la::norm2(distanceVector);
-  const double mass           = utils::getMass(particle);
-  const double forceMagnitude = mass * _mu / (distance * distance);
+  const double distance = tarch::la::norm2(distanceVector);
+  const double mass     = exahype2::fv::particles::utils::getMass(particle);
+  const double forceMagnitude =
+    mass * exahype2::fv::particles::forces::globalGravitationalParameter / (distance * distance);
 
-  for (int d = 0; d < DIMENSIONS; ++d) {
-    force(d) = -forceMagnitude * distanceVector(d) / distance;
+  for (int axis = 0; axis < DIMENSIONS; ++axis) {
+    force(axis) = -forceMagnitude * distanceVector(axis) / distance;
   }
 
   return force;
@@ -30,18 +65,18 @@ template <typename Particle>
 tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::forces::computeStokesDragForce(
   const Particle& particle
 ) {
-  const double radius = utils::getRadius(particle);
-  const double mass   = utils::getMass(particle);
+  const double radius = exahype2::fv::particles::utils::getRadius(particle);
+  const double mass   = exahype2::fv::particles::utils::getMass(particle);
 
-  // The fluid velocity occupies the particle data entries 1 to DIMENSIONS.
   tarch::la::Vector<DIMENSIONS, double> fluidVelocity;
-  for (int d = 0; d < DIMENSIONS; ++d) {
-    fluidVelocity(d) = particle.getData(1 + d);
+  for (int axis = 0; axis < DIMENSIONS; ++axis) {
+    fluidVelocity(axis) = particle.getData(exahype2::fv::particles::utils::FluidVelocityAttributeOffset + axis);
   }
 
   const tarch::la::Vector<DIMENSIONS, double> particleVelocity = exahype2::fv::particles::utils::getVelocity(particle);
 
-  const double relaxationTime = mass / (6.0 * M_PI * _dynamicViscosity * radius + 1e-12);
+  const double relaxationTime =
+    mass / (6.0 * M_PI * exahype2::fv::particles::forces::globalDynamicViscosity * radius + 1e-12);
 
   const tarch::la::Vector<DIMENSIONS, double> relativeVelocity = particleVelocity - fluidVelocity;
   const tarch::la::Vector<DIMENSIONS, double> dragForce        = -(mass / relaxationTime) * relativeVelocity;
@@ -51,32 +86,36 @@ tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::forces::computeSt
 
 template <typename Particle>
 tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::forces::computeBuoyancyForce(const Particle& particle) {
-  const double localFluidDensity = utils::getInterpolatedRho(particle);
-  const double radius            = utils::getRadius(particle);
+  const double localFluidDensity = exahype2::fv::particles::utils::getInterpolatedRho(particle);
+  const double radius            = exahype2::fv::particles::utils::getRadius(particle);
 
   // The particle displaces the volume of a sphere of this radius.
   const double volume            = (4.0 / 3.0) * M_PI * radius * radius * radius;
-  const double buoyancyMagnitude = localFluidDensity * volume * _gravityMagnitude;
+  const double buoyancyMagnitude = localFluidDensity * volume * exahype2::fv::particles::forces::globalGravityMagnitude;
 
+  // Buoyancy pushes along the last axis. This is y in 2D and z in 3D.
   tarch::la::Vector<DIMENSIONS, double> buoyancyForce(0.0);
-  buoyancyForce(1) = buoyancyMagnitude;
+  buoyancyForce(DIMENSIONS - 1) = buoyancyMagnitude;
 
   return buoyancyForce;
 }
 
 template <typename Particle>
 tarch::la::Vector<DIMENSIONS, double> exahype2::fv::particles::forces::computeGravityForce(const Particle& particle) {
-  const double mass = utils::getMass(particle);
+  const double mass = exahype2::fv::particles::utils::getMass(particle);
 
   // Gravity pulls along the last axis. This is y in 2D and z in 3D.
   tarch::la::Vector<DIMENSIONS, double> gravityForce(0.0);
-  gravityForce(DIMENSIONS - 1) = -mass * _gravityMagnitude;
+  gravityForce(DIMENSIONS - 1) = -mass * exahype2::fv::particles::forces::globalGravityMagnitude;
 
   return gravityForce;
 }
 
 template <typename Particle>
-void exahype2::fv::particles::forces::applyForces(Particle& particle, tarch::la::Vector<DIMENSIONS, double> pos) {
+void exahype2::fv::particles::forces::applyForces(
+  Particle&                                   particle,
+  const tarch::la::Vector<DIMENSIONS, double> particlePosition
+) {
   const double mass = exahype2::fv::particles::utils::getMass(particle);
 
   // A particle without mass moves as a tracer and carries no acceleration.
@@ -87,17 +126,17 @@ void exahype2::fv::particles::forces::applyForces(Particle& particle, tarch::la:
 
   tarch::la::Vector<DIMENSIONS, double> totalForce(0.0);
 
-  if (isForceEnabledInternal(ForceType::CentralGravity)) {
-    totalForce += computeCentralGravitationalForce(pos, particle);
+  if (exahype2::fv::particles::forces::isForceEnabled(exahype2::fv::particles::forces::ForceType::CentralGravity)) {
+    totalForce += exahype2::fv::particles::forces::computeCentralGravitationalForce(particlePosition, particle);
   }
-  if (isForceEnabledInternal(ForceType::Buoyancy)) {
-    totalForce += computeBuoyancyForce(particle);
+  if (exahype2::fv::particles::forces::isForceEnabled(exahype2::fv::particles::forces::ForceType::Buoyancy)) {
+    totalForce += exahype2::fv::particles::forces::computeBuoyancyForce(particle);
   }
-  if (isForceEnabledInternal(ForceType::Drag)) {
-    totalForce += computeStokesDragForce(particle);
+  if (exahype2::fv::particles::forces::isForceEnabled(exahype2::fv::particles::forces::ForceType::Drag)) {
+    totalForce += exahype2::fv::particles::forces::computeStokesDragForce(particle);
   }
-  if (isForceEnabledInternal(ForceType::ConstantGravity)) {
-    totalForce += computeGravityForce(particle);
+  if (exahype2::fv::particles::forces::isForceEnabled(exahype2::fv::particles::forces::ForceType::ConstantGravity)) {
+    totalForce += exahype2::fv::particles::forces::computeGravityForce(particle);
   }
 
   const tarch::la::Vector<DIMENSIONS, double> totalAcceleration = totalForce / mass;

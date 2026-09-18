@@ -6,6 +6,7 @@
 #include "peano4/data/ContainerRegistry.h"
 #include "peano4/grid/GridStatistics.h"
 #include "peano4/grid/GridTraversalObserver.h"
+#include "peano4/sfc/ActiveCurve.h"
 #include "tarch/Assertions.h"
 #include "tarch/Termination.h"
 #include "tarch/mpi/AbstractCommunicationManager.h"
@@ -51,7 +52,7 @@ peano4::topology::TopologyManager& peano4::topology::TopologyManager::getInstanc
 void peano4::topology::TopologyManager::init(
   const tarch::la::Vector<DIMENSIONS, double>& offset,
   const tarch::la::Vector<DIMENSIONS, double>& width,
-  const std::bitset<DIMENSIONS>&               periodicBC
+  const std::bitset<DIMENSIONS>&               periodicBoundaries
 ) {
   auto& communicationManager = tarch::mpi::AbstractCommunicationManager::getInstance();
   communicationManager.registerPoller([]() {
@@ -59,9 +60,9 @@ void peano4::topology::TopologyManager::init(
   });
   communicationManager.start();
 
-  _domainOffset = offset;
-  _domainWidth  = width;
-  _periodicBC   = periodicBC;
+  _domainOffset       = offset;
+  _domainWidth        = width;
+  _periodicBoundaries = periodicBoundaries;
 }
 
 /**
@@ -69,7 +70,9 @@ void peano4::topology::TopologyManager::init(
  * tree. Every rank calls this with the same target level, so the partition
  * follows from the rank count alone and needs no communication.
  */
-void peano4::topology::TopologyManager::scheduleRegularGridConstruction(int targetLevel) { _targetLevel = targetLevel; }
+void peano4::topology::TopologyManager::scheduleRegularGridConstruction(const int targetLevel) {
+  _targetLevel = targetLevel;
+}
 
 /**
  * Records that the solvers' data is initialised. A regrid then migrates the
@@ -158,7 +161,7 @@ std::unique_ptr<peano4::topology::Tree> peano4::topology::TopologyManager::acqui
     return spareTree;
   }
   const auto rank = tarch::mpi::Rank::getInstance().getRank();
-  return std::make_unique<peano4::topology::Tree>(rank, _domainOffset, _domainWidth, _periodicBC);
+  return std::make_unique<peano4::topology::Tree>(rank, _domainOffset, _domainWidth, _periodicBoundaries);
 }
 
 /** Returns a spare traversal to rebuild into, or a new one when no spare is left. */
@@ -883,8 +886,8 @@ void peano4::topology::TopologyManager::runSweep(peano4::grid::GridTraversalObse
       // entity slot the pack sends.
       if (sweepKind == peano4::topology::TreeTraversal::PoolSweepKind::Creational) {
         containerRegistry.replicateInterfaceSlots(
-          _traversal->getCreationalPublishFacePairs(),
-          _traversal->getCreationalPublishVertexPairs()
+          _traversal->getCreationalCopyToEntitySlotFacePairs(),
+          _traversal->getCreationalCopyToEntitySlotVertexPairs()
         );
       }
     }
@@ -1049,4 +1052,6 @@ const tarch::la::Vector<DIMENSIONS, double>& peano4::topology::TopologyManager::
   return _domainWidth;
 }
 
-const std::bitset<DIMENSIONS>& peano4::topology::TopologyManager::getPeriodicBC() const { return _periodicBC; }
+const std::bitset<DIMENSIONS>& peano4::topology::TopologyManager::getPeriodicBoundaries() const {
+  return _periodicBoundaries;
+}

@@ -19,7 +19,6 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
         self.d["NAME_SUFFIX"] = ""
 
         if self.d["IS_LINEAR"]:
-            # Size of the tmp array
             self.d["TMP_ARRAY_SIZE"] = max(
                 (
                     self.d["NUMBER_OF_DOF"] * self.d["NUMBER_OF_UNKNOWNS_PADDED"]
@@ -34,13 +33,12 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
             )
 
             if self.d["USE_POINT_SOURCE"]:
-                # Assembling the basis function for the point source
                 if self.d["POLYNOMIAL_TYPE"] == "legendre":
-                    QuadratureWeights, QuadratureNodes = MathUtils.getGaussLegendre(
+                    _, QuadratureNodes = MathUtils.getGaussLegendre(
                         self.d["NUMBER_OF_DOF"]
                     )
                 elif self.d["POLYNOMIAL_TYPE"] == "lobatto":
-                    QuadratureWeights, QuadratureNodes = MathUtils.getGaussLobatto(
+                    _, QuadratureNodes = MathUtils.getGaussLobatto(
                         self.d["NUMBER_OF_DOF"]
                     )
                 else:
@@ -54,9 +52,9 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
                     QuadratureNodes
                 )
 
-                d = deepcopy(self.d)
+                point_source_dictionary = deepcopy(self.d)
                 self.d["USE_POINT_SOURCE"] = False
-                d["NAME_SUFFIX"] = "WithPointSources"
+                point_source_dictionary["NAME_SUFFIX"] = "WithPointSources"
 
                 generated_kernels = (
                     peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
@@ -66,10 +64,10 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
                         + "FusedSpaceTimePredictorVolumeIntegralLinear.template.cpp",
                         classname=output_path
                         + "/FusedSpaceTimePredictorVolumeIntegral"
-                        + d["NAME_SUFFIX"],
+                        + point_source_dictionary["NAME_SUFFIX"],
                         namespace=namespace,
                         subdirectory=".",
-                        dictionary=d,
+                        dictionary=point_source_dictionary,
                         apply_iteratively=True,
                     )
                 )
@@ -77,18 +75,18 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
                 output.makefile.add_h_file(
                     output_path
                     + "/FusedSpaceTimePredictorVolumeIntegral"
-                    + d["NAME_SUFFIX"]
+                    + point_source_dictionary["NAME_SUFFIX"]
                     + ".h",
                     generated=True,
                 )
                 output.makefile.add_cpp_file(
                     output_path
                     + "/FusedSpaceTimePredictorVolumeIntegral"
-                    + d["NAME_SUFFIX"]
+                    + point_source_dictionary["NAME_SUFFIX"]
                     + ".cpp",
                     generated=True,
                 )
-                solver._user_action_set_includes += f'#include "{output_path}/FusedSpaceTimePredictorVolumeIntegral{d["NAME_SUFFIX"]}.h"\n'
+                solver._user_action_set_includes += f'#include "{output_path}/FusedSpaceTimePredictorVolumeIntegral{point_source_dictionary["NAME_SUFFIX"]}.h"\n'
 
         generated_kernels = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
             headfile_template=template_prefix
@@ -118,7 +116,7 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
         )
 
     def _build_gemms(self):
-        # GEMMS: M, N, K, LDA, LDB, LDC, alpha, beta, Align A, Align C, name
+        # Gemms takes M, N, K, LDA, LDB, LDC, alpha, beta, alignment_A, alignment_C and name.
         self.d["GEMMS"] = {}
         nDim = self.d["DIMENSIONS"]
         nDof = self.d["NUMBER_OF_DOF"]
@@ -133,7 +131,7 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
         # nonlinear predictor needs matrix multiplication specifications.
         if not self.d["IS_LINEAR"]:
             if self.d["USE_FLUX"]:
-                self.d["GEMMS"]["rhs_x"] = Gemms(
+                self.d["GEMMS"]["rhsX"] = Gemms(
                     nUnknownsPad,
                     nDof,
                     nDof,
@@ -144,9 +142,9 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
                     1,
                     1,
                     1,
-                    "rhs_x",
+                    "rhsX",
                 )
-                self.d["GEMMS"]["rhs_y"] = Gemms(
+                self.d["GEMMS"]["rhsY"] = Gemms(
                     nUnknownsPad,
                     nDof,
                     nDof,
@@ -157,10 +155,10 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
                     1,
                     1,
                     1,
-                    "rhs_y",
+                    "rhsY",
                 )
                 if self.d["DIMENSIONS"] >= 3:
-                    self.d["GEMMS"]["rhs_z"] = Gemms(
+                    self.d["GEMMS"]["rhsZ"] = Gemms(
                         nUnknownsPad,
                         nDof,
                         nDof,
@@ -171,9 +169,9 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
                         1,
                         1,
                         1,
-                        "rhs_z",
+                        "rhsZ",
                     )
-                self.d["GEMMS"]["lduh_x"] = Gemms(
+                self.d["GEMMS"]["lduhX"] = Gemms(
                     nUnknowns,
                     nDof,
                     nDof,
@@ -184,9 +182,9 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
                     1,
                     1,
                     1,
-                    "lduh_x",
+                    "lduhX",
                 )
-                self.d["GEMMS"]["lduh_y"] = Gemms(
+                self.d["GEMMS"]["lduhY"] = Gemms(
                     nUnknowns,
                     nDof,
                     nDof,
@@ -197,10 +195,10 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
                     1,
                     1,
                     1,
-                    "lduh_y",
+                    "lduhY",
                 )
                 if self.d["DIMENSIONS"] >= 3:
-                    self.d["GEMMS"]["lduh_z"] = Gemms(
+                    self.d["GEMMS"]["lduhZ"] = Gemms(
                         nUnknowns,
                         nDof,
                         nDof,
@@ -211,14 +209,14 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
                         1,
                         1,
                         1,
-                        "lduh_z",
+                        "lduhZ",
                     )
             if (
                 self.d["USE_NCP"]
                 or self.d["USE_DIFFUSIVE_FLUX"]
                 or self.d["USE_DIFFUSIVE_SOURCE"]
             ):
-                self.d["GEMMS"]["gradQ_x"] = Gemms(
+                self.d["GEMMS"]["gradQX"] = Gemms(
                     nUnknowns,
                     nDof,
                     nDof,
@@ -229,9 +227,9 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
                     1,
                     1,
                     1,
-                    "gradQ_x",
+                    "gradQX",
                 )
-                self.d["GEMMS"]["gradQ_y"] = Gemms(
+                self.d["GEMMS"]["gradQY"] = Gemms(
                     nUnknowns,
                     nDof,
                     nDof,
@@ -242,10 +240,10 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
                     1,
                     1,
                     1,
-                    "gradQ_y",
+                    "gradQY",
                 )
                 if self.d["DIMENSIONS"] >= 3:
-                    self.d["GEMMS"]["gradQ_z"] = Gemms(
+                    self.d["GEMMS"]["gradQZ"] = Gemms(
                         nUnknowns,
                         nDof,
                         nDof,
@@ -256,7 +254,7 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
                         1,
                         1,
                         1,
-                        "gradQ_z",
+                        "gradQZ",
                     )
 
             self.d["GEMMS"]["lqi"] = Gemms(
@@ -271,4 +269,4 @@ class FusedSpaceTimePredictorVolumeIntegral(object):
                 1,
                 1,
                 "lqi",
-            )  # beta, 0 => overwrite C
+            )  # beta is zero, so the product overwrites C

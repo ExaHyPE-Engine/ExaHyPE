@@ -4,8 +4,8 @@
 
 \tableofcontents
 
-In this tutorial we change the numerical scheme. Instead of ADER-DG we use
-a **Finite Volumes (FV)** solver - a robust, shock-capturing method that
+In this tutorial we change the numerical scheme from ADER-DG to
+a **Finite Volumes (FV)** solver - a shock-capturing method that
 copes well with the strong gradients of compressible flow. The configuration and
 implementation are provided as a worked example; read through them and then
 experiment. The notebook is `tutorials/03_euler/Euler.ipynb` with its
@@ -45,8 +45,9 @@ the formulae use \f$u\f$.
 The airfoil sits in a wide \f$120 \times 120\f$ channel. Where the mesh is refined
 is chosen at **run time**: we pass `-lmin 2 -lmax 4`, so the domain is covered by
 a coarse level-2 grid and ExaHyPE may refine down to level 4 around the airfoil.
-Each refinement splits a cell into \f$3 \times 3\f$, so level 4 is \f$3^2 = 9\f$
-times finer per direction than level 2. As with the refinement of Part 2,
+Each refinement splits a cell into \f$k \times k\f$ cells, with k the subdivision
+factor of the active curve (3 on the Peano curve, 2 on the Hilbert curve). Level 4
+is \f$k^2\f$ times finer per direction than level 2. As with the refinement of Part 2,
 the refined region here is **static** - a fixed band around the airfoil. We create
 a Godunov-type Finite Volumes solver named `FVSolver`:
 
@@ -71,7 +72,7 @@ a Godunov-type Finite Volumes solver named `FVSolver`:
 The parameter `patch_size` controls how many finite volumes are grouped into one
 patch that is updated together. With `patch_size = 8` each patch is an
 \f$8 \times 8\f$ block of cells. Alongside the usual PDE terms we register a
-**refinement criterion**: setting it to `User_Defined_Implementation` means we
+**refinement criterion**: The value `User_Defined_Implementation` means we
 write it ourselves in `FVSolver.cpp`, where it asks for `Refine` near the airfoil
 and `Keep` elsewhere - a static refined band that hugs the airfoil while
 the far field stays coarse.
@@ -125,8 +126,9 @@ The initial conditions should look like this:
 
 Plotting the `RefinementLevel` field shows the static mesh refinement: a fine
 level-4 band hugging the airfoil (and a short wake) against the coarse level-2
-far field, with a level-3 transition in between (the 3:1 balancing that ExaHyPE
-enforces between neighbouring resolutions):
+far field, with a level-3 transition in between (ExaHyPE keeps neighbouring
+resolutions one level apart, so their mesh widths differ by the subdivision
+factor of the active curve):
 
 @image html documentation/exahype2/tutorials/Euler_airfoil_refinement.png
 
@@ -147,6 +149,6 @@ compressed:
 
 In @ref page_exahype2_tutorials_limiting you will combine the two schemes: an
 a-posteriori limiter that runs the high-order ADER-DG scheme everywhere but falls
-back to robust Finite Volumes in the troubled cells around a shock.
+back to Finite Volumes in the troubled cells around a shock.
 
 */

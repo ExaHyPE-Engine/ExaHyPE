@@ -1,0 +1,22 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+INLINE_METHOD peano4::grid::GridVertex::State peano4::grid::GridVertex::getState() const noexcept {
+  return static_cast<State>(state);
+}
+
+INLINE_METHOD void peano4::grid::GridVertex::setState(const State value) noexcept {
+  state = static_cast<std::uint8_t>(value);
+}
+
+#if PEANO_DEBUG
+INLINE_METHOD const tarch::la::Vector<DIMENSIONS, double>& peano4::grid::GridVertex::getX() const noexcept { return x; }
+
+INLINE_METHOD void peano4::grid::GridVertex::setX(const tarch::la::Vector<DIMENSIONS, double>& value) noexcept {
+  x = value;
+}
+
+INLINE_METHOD double peano4::grid::GridVertex::getX(const int axis) const noexcept { return x[axis]; }
+
+INLINE_METHOD void peano4::grid::GridVertex::setX(const int axis, const double value) noexcept { x[axis] = value; }
+#endif

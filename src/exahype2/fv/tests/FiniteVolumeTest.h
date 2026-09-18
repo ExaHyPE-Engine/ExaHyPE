@@ -28,4 +28,5 @@ private:
   void testReconstructionHookReproducingDefaultChangesNothing();
   void testLimiterHookReproducingMinmodChangesNothing();
   void testParticleUpdateAdvancesWithExplicitEuler();
+  void testParticleAccessorsMatchAttributeOffsets();
 };

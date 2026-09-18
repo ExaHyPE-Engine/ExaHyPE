@@ -13,21 +13,13 @@ int tarch::mpi::Rank::_nextFreeTag     = 0;
 tarch::mpi::Rank tarch::mpi::Rank::_singleton;
 
 /**
- * Reserves a contiguous range of message tags.
+ * Reserves a contiguous range of message tags. The function and the counter it
+ * increments are static, and a caller reserves tags before the static log devices
+ * exist, so the reservation writes no log line.
  *
  * @param fullQualifiedMessageName Identifies the owner in assertions.
  * @param numberOfTags Number of consecutive tags to reserve.
  * @return First tag in the reserved range.
- *
- * ## Implementation details
- *
- * Many tags are booked before an application has set its log filters up, and
- * the routine is static just like the class's log devices, while C++ has no
- * mechanism to define which static entity is instantiated first. Reserving a
- * tag therefore must not depend on the log device being up. The underlying
- * issue is known as the static initialisation order problem:
- *
- *     https://isocpp.org/wiki/faq/ctors#static-init-order
  */
 int tarch::mpi::Rank::reserveFreeTag(const std::string& fullQualifiedMessageName, const int numberOfTags) {
   assertion(numberOfTags >= 1, fullQualifiedMessageName, numberOfTags);
@@ -42,22 +34,17 @@ int tarch::mpi::Rank::reserveFreeTag(const std::string& fullQualifiedMessageName
 bool tarch::mpi::Rank::isInitialised() const { return _initIsCalled; }
 
 /**
- * Shuts down the MPI environment as the last application operation.
- *
- * ## Rationale
- *
- * The MPI shutdown is an explicit call before the final return statement of
- * main, not part of the destructor. Compilers differ in when they destroy
- * static objects: Some do so before main returns, others after the return
- * statement, and in the latter case a destructor-based shutdown makes
- * Scalasca's instrumentation report an error.
+ * Shuts the MPI environment down and runs before the final return statement of
+ * main. Compilers differ in when they destroy a static object, so a shutdown from
+ * a destructor can run after main returns, where Scalasca's instrumentation
+ * reports an error.
  */
 void tarch::mpi::Rank::shutdown() {
   assertion(_rank != -1);
 
   const int errorCode = MPI_Finalize();
   if (errorCode != MPI_SUCCESS) {
-    logError(tarch::mpi::MPIReturnValueToString(errorCode));
+    logError(tarch::mpi::mpiReturnValueToString(errorCode));
   }
 
   _rank         = -1;
@@ -73,9 +60,9 @@ bool tarch::mpi::Rank::isGlobalMaster() const {
 }
 
 /**
- * Checks whether a tag is supported. This works after init() has been called;
- * before that, the check always passes. If the tag is not supported, we write a
- * warning and return false.
+ * Returns whether the highest reserved tag fits the upper bound MPI reports, and
+ * writes a warning when it does not. init() reads that bound, so the check passes
+ * before init() runs.
  */
 bool tarch::mpi::Rank::validateReservedTagsAreSupported() {
   const int highestReservedTag = _nextFreeTag - 1;
@@ -95,14 +82,9 @@ bool tarch::mpi::Rank::validateReservedTagsAreSupported() {
 int tarch::mpi::Rank::getProvidedThreadLevelSupport() const { return _providedThreadLevelSupport; }
 
 /**
- * Initialises the MPI environment and the program instance. argc and argv are
- * in/out parameters; MPI implementations may remove implementation-specific
- * arguments before returning.
- *
- * ## Upper tag bound
- *
- * MPI_Comm_get_attr hands the upper tag bound out through a pointer to a void
- * pointer, so the value is read from the pointer that comes back.
+ * Initialises the MPI environment and the program instance. argc and argv are in
+ * and out parameters, because an MPI implementation removes its own arguments
+ * before it returns.
  *
  * @return Whether initialisation succeeded.
  *
@@ -120,7 +102,7 @@ bool tarch::mpi::Rank::init(int* const argc, char*** const argv) {
   }
 
   if (mpiResult != MPI_SUCCESS) {
-    std::cerr << "init(int*,char***)\t Initialisation failed: " + tarch::mpi::MPIReturnValueToString(mpiResult)
+    std::cerr << "init(int*,char***)\t Initialisation failed: " + tarch::mpi::mpiReturnValueToString(mpiResult)
         + " (no logging available yet)"
               << std::endl;
     return false;
@@ -128,7 +110,7 @@ bool tarch::mpi::Rank::init(int* const argc, char*** const argv) {
 
   mpiResult = MPI_Comm_size(MPI_COMM_WORLD, &_numberOfRanks);
   if (mpiResult != MPI_SUCCESS) {
-    std::cerr << "init(int*,char***)\t Initialisation failed: " + tarch::mpi::MPIReturnValueToString(mpiResult)
+    std::cerr << "init(int*,char***)\t Initialisation failed: " + tarch::mpi::mpiReturnValueToString(mpiResult)
         + " (no logging available yet)"
               << std::endl;
     return false;
@@ -136,15 +118,17 @@ bool tarch::mpi::Rank::init(int* const argc, char*** const argv) {
 
   mpiResult = MPI_Comm_rank(MPI_COMM_WORLD, &_rank);
   if (mpiResult != MPI_SUCCESS) {
-    std::cerr << "init(int*,char***)\t Initialisation failed: " + tarch::mpi::MPIReturnValueToString(mpiResult)
+    std::cerr << "init(int*,char***)\t Initialisation failed: " + tarch::mpi::mpiReturnValueToString(mpiResult)
         + " (no logging available yet)"
               << std::endl;
     return false;
   }
 
+  // MPI_Comm_get_attr hands the upper tag bound out through a pointer to a void
+  // pointer, so the value is read from the pointer that comes back.
   int   attributeFound{0};
   void* rawMaximumTag{nullptr};
-  MPI_Comm_get_attr(MPI_COMM_WORLD, MPI_TAG_UB, &rawMaximumTag, &attributeFound);
+  MPI_Comm_get_attr(MPI_COMM_WORLD, MPI_TAG_UB, static_cast<void*>(&rawMaximumTag), &attributeFound);
   if (attributeFound != 0) {
     _maximumTagValue = *static_cast<int*>(rawMaximumTag);
   } else {
@@ -198,8 +182,8 @@ MPI_Comm tarch::mpi::Rank::getCommunicator() const {
 }
 
 /**
- * Tears the application down from any rank. MPI_Abort reaches every rank of the
- * job, and the explicit exit covers the case where MPI is not up (yet).
+ * Stops every rank of the job from any rank. MPI_Abort reaches every rank, and
+ * std::_Exit() stops this rank while MPI is not initialised.
  */
 void tarch::mpi::abort(const int errorCode) {
   std::cout.flush();

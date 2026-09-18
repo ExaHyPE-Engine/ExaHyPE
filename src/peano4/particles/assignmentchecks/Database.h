@@ -11,18 +11,18 @@
 #define ASSIGNMENT_CHECKS
 #endif
 
-namespace peano4::particles::assignmentchecks::internal {
+namespace peano4::particles::assignmentchecks {
   using ParticleEvents = std::vector<Event>;
 
   class Database;
-} // namespace peano4::particles::assignmentchecks::internal
+} // namespace peano4::particles::assignmentchecks
 
 /**
  * Stores the assignment history of every particle of one process, indexed by
  * particle and spacetree. Every method except getMeshSweepData() locks _mutex,
  * so several threads call the same object.
  */
-class peano4::particles::assignmentchecks::internal::Database final {
+class peano4::particles::assignmentchecks::Database final {
 public:
   static constexpr int AnyTree = -1;
 
@@ -34,28 +34,32 @@ public:
   Database& operator=(Database&&)      = delete;
   ~Database()                          = default;
 
-  void           setMaxParticleSnapshotsToKeepTrackOf(size_t maximumNumberOfSnapshots);
+  void           setMaxParticleSnapshotsToKeepTrackOf(std::size_t maximumNumberOfSnapshots);
   void           startMeshSweep(const std::string& meshSweepName);
   ParticleEvents getParticleHistory(const ParticleIdentifier& identifier) const;
   std::string    particleHistory(const ParticleIdentifier& identifier) const;
   std::string    lastMeshSweepSnapshot() const;
   int            getTotalParticleEntries(const ParticleIdentifier& identifier) const;
   int            getNumberOfSnapshots() const;
-  Event          addEvent(ParticleIdentifier identifier, Event& event);
-  void           replaceEvent(ParticleIdentifier identifier, Event& oldEvent, Event& newEvent);
-  void           shiftIdentifierVertexInd(
-              ParticleIdentifier&                       identifier,
-              tarch::la::Vector<DIMENSIONS, long long>& newVertexIndex,
-              const int                                 newVertexDepth
+  Event          addEvent(const ParticleIdentifier& identifier, Event& event);
+  void           replaceEvent(const ParticleIdentifier& identifier, const Event& oldEvent, Event& newEvent);
+  void           shiftIdentifierVertexIndex(
+              const ParticleIdentifier&                       identifier,
+              const tarch::la::Vector<DIMENSIONS, long long>& newVertexIndex,
+              int                                             newVertexDepth
             );
   std::string                 toString() const;
   void                        reset();
-  size_t                      getCurrentMeshSweepIndex() const;
+  std::size_t                 getCurrentMeshSweepIndex() const;
   int                         getNumberOfTracedParticles() const;
   std::vector<MeshSweepData>& getMeshSweepData();
   std::string                 sweepHistory() const;
   void                        eliminateExistingParticles();
-  Event getPreviousEvent(const ParticleEvents& particleHistory, int treeId, size_t numberOfFirstEventsToSkip = 0) const;
+  Event                       getPreviousEvent(
+                          const ParticleEvents& particleHistory,
+                          int                   treeId,
+                          std::size_t           numberOfFirstEventsToSkip = 0
+                        ) const;
 
 private:
   Database();
@@ -68,5 +72,5 @@ private:
   // The transparent comparison lets a lookup pass a key that is not a ParticleIdentifier.
   std::map<ParticleIdentifier, ParticleEvents, std::less<>> _data{};
 
-  size_t _maxParticleEventsToKeepTrackOf{8};
+  std::size_t _maxParticleEventsToKeepTrackOf{8};
 };

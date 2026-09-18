@@ -12,11 +12,11 @@ tarch::la::Vector<DIMENSIONS, double> peano4::particles::periodicImageTowards(
   const tarch::la::Vector<DIMENSIONS, double>& x,
   const tarch::la::Vector<DIMENSIONS, double>& referencePosition,
   const tarch::la::Vector<DIMENSIONS, double>& domainWidth,
-  const std::bitset<DIMENSIONS>&               periodicBC
+  const std::bitset<DIMENSIONS>&               periodicBoundaries
 ) {
   tarch::la::Vector<DIMENSIONS, double> image = x;
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    if (periodicBC[axis]) {
+    if (periodicBoundaries[axis]) {
       assertion(domainWidth(axis) > 0.0, domainWidth, axis);
       const double halfWidth = 0.5 * domainWidth(axis);
       if (image(axis) - referencePosition(axis) > halfWidth) {
@@ -35,14 +35,14 @@ tarch::la::Vector<DIMENSIONS, double> peano4::particles::periodicImageTowards(
   const tarch::la::Vector<DIMENSIONS, double>& referencePosition
 ) {
   const auto& topology = peano4::topology::TopologyManager::getInstance();
-  if (topology.getPeriodicBC().none()) {
+  if (topology.getPeriodicBoundaries().none()) {
     return x;
   }
   return peano4::particles::periodicImageTowards(
     x,
     referencePosition,
     topology.getDomainWidth(),
-    topology.getPeriodicBC()
+    topology.getPeriodicBoundaries()
   );
 }
 
@@ -73,23 +73,23 @@ tarch::la::Vector<DIMENSIONS, double> peano4::particles::periodicImageTowardsCel
 
 /** Returns whether the domain the topology holds has a periodic axis. */
 bool peano4::particles::domainHasPeriodicAxes() {
-  return peano4::topology::TopologyManager::getInstance().getPeriodicBC().any();
+  return peano4::topology::TopologyManager::getInstance().getPeriodicBoundaries().any();
 }
 
 /**
  * Returns the adjacent cells that claim the particle at x. The cells overlap by
  * the sorting tolerance, so more than one of them can claim the same particle.
  */
-std::bitset<TWO_POWER_D> peano4::particles::getAdjacentCellsOwningParticle(
+std::bitset<peano4::CellsPerVertex> peano4::particles::getAdjacentCellsOwningParticle(
   const tarch::la::Vector<DIMENSIONS, double>& x,
   const peano4::dataview::VertexMarker&        marker
 ) {
-  std::bitset<TWO_POWER_D>                    result         = 0;
+  std::bitset<peano4::CellsPerVertex>         result         = 0;
   const auto                                  image          = peano4::particles::periodicImageTowardsVertex(x, marker);
   const tarch::la::Vector<DIMENSIONS, double> selectedVertex = marker.getX();
   const tarch::la::Vector<DIMENSIONS, double> h              = marker.getH();
-  const double tolerance = peano4::particles::internal::relativeGrabOwnershipSpatialSortingTolerance(marker)
-    * tarch::la::NUMERICAL_ZERO_DIFFERENCE;
+  const double                                tolerance =
+    peano4::particles::relativeGrabOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE;
 
   peano4::dForEachCorner([&](const tarch::la::Vector<DIMENSIONS, int>& k, const int kScalar) {
     const tarch::la::Vector<DIMENSIONS, int> adjacentCell(k);
@@ -107,7 +107,7 @@ bool peano4::particles::particleAssignedToVertexWillBeLocal(
   const tarch::la::Vector<DIMENSIONS, double>& x,
   const peano4::dataview::VertexMarker&        marker
 ) {
-  const std::bitset<TWO_POWER_D> adjacentCellWhichHostsParticle =
+  const std::bitset<peano4::CellsPerVertex> adjacentCellWhichHostsParticle =
     peano4::particles::getAdjacentCellsOwningParticle(x, marker);
   return (adjacentCellWhichHostsParticle & marker.areAdjacentCellsLocal()).any();
 }
@@ -121,12 +121,12 @@ tarch::la::Vector<DIMENSIONS, double> peano4::particles::applyPeriodicBoundaryCo
   const tarch::la::Vector<DIMENSIONS, double>& x,
   const tarch::la::Vector<DIMENSIONS, double>  domainOffset,
   const tarch::la::Vector<DIMENSIONS, double>  domainSize,
-  const std::bitset<DIMENSIONS>                periodicBC
+  const std::bitset<DIMENSIONS>                periodicBoundaries
 ) {
   tarch::la::Vector<DIMENSIONS, double> result = x;
 
   for (int d = 0; d < DIMENSIONS; d++) {
-    if (periodicBC[d]) {
+    if (periodicBoundaries[d]) {
       if (tarch::la::smaller(result(d), domainOffset(d))) {
         result(d) += domainSize(d);
       }

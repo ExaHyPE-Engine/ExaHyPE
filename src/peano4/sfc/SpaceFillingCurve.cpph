@@ -1,0 +1,239 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+template <class CurveGrammar>
+INLINE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::sfc::SpaceFillingCurve<
+  CurveGrammar>::Child::positionWithinParent() const {
+  tarch::la::Vector<DIMENSIONS, int> result;
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    result(axis) = position[axis];
+  }
+  return result;
+}
+
+/**
+ * Returns the children of a cell in curve order for one curve state. The
+ * table behind it is a constant-initialised static.
+ */
+template <class CurveGrammar>
+INLINE_METHOD const typename peano4::sfc::SpaceFillingCurve<CurveGrammar>::ChildSequence& peano4::sfc::
+  SpaceFillingCurve<CurveGrammar>::children(const int state) {
+  static constexpr ChildOrder Table{deriveChildOrder()};
+  assertion(state >= 0 and state < NumberOfStates, state);
+  return Table[state];
+}
+
+/**
+ * Returns the parameter in [0, 1) at which the curve enters the cell of the
+ * given level that contains a point of the unit cube.
+ *
+ * The descent takes one step per level: The leading digit of every coordinate
+ * selects the child, the child's index in the curve order of the current state
+ * adds that index times the step's weight to the parameter, and the child's
+ * state continues the descent. A cell centre lies half a cell away from every
+ * child boundary, so the digit of a centre is exact for every level a double
+ * can resolve.
+ */
+template <class CurveGrammar>
+INLINE_METHOD double peano4::sfc::SpaceFillingCurve<CurveGrammar>::curveParameter(
+  const tarch::la::Vector<DIMENSIONS, double>& unitPoint,
+  const int                                    level
+) {
+  static constexpr SequenceIndices Indices{deriveSequenceIndices()};
+  auto                             point     = unitPoint;
+  int                              state     = RootState;
+  double                           parameter = 0.0;
+  double                           weight    = 1.0;
+  for (int step = 0; step < level; step++) {
+    weight /= ChildrenPerCell;
+    int linearisedPosition = 0;
+    int stride             = 1;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      const double scaled = point(axis) * SubdivisionFactor;
+      const int    digit  = std::clamp(static_cast<int>(std::floor(scaled)), 0, SubdivisionFactor - 1);
+      point(axis)         = scaled - digit;
+      linearisedPosition += digit * stride;
+      stride *= SubdivisionFactor;
+    }
+    const int index = Indices[state][linearisedPosition];
+    parameter += index * weight;
+    state = children(state)[index].state;
+  }
+  return parameter;
+}
+
+/**
+ * Derives the inverse of the child-order table: For every state, the index
+ * in curve order of the child at each linearised position.
+ */
+template <class CurveGrammar>
+constexpr typename peano4::sfc::SpaceFillingCurve<CurveGrammar>::SequenceIndices peano4::sfc::SpaceFillingCurve<
+  CurveGrammar>::deriveSequenceIndices() {
+  SequenceIndices result{};
+  const auto      order = deriveChildOrder();
+  for (int state = 0; state < NumberOfStates; state++) {
+    for (int index = 0; index < ChildrenPerCell; index++) {
+      result[state][order[state][index].linearisedPosition] = static_cast<std::uint8_t>(index);
+    }
+  }
+  return result;
+}
+
+/**
+ * Derives the child-order table from the productions: For every state, the
+ * turtle walk of its production gives the child positions, and the
+ * right-hand side gives the child states.
+ */
+template <class CurveGrammar>
+constexpr typename peano4::sfc::SpaceFillingCurve<CurveGrammar>::ChildOrder peano4::sfc::SpaceFillingCurve<
+  CurveGrammar>::deriveChildOrder() {
+  ChildOrder result{};
+  for (int state = 0; state < NumberOfStates; state++) {
+    const auto positions = positionsOf(state);
+    for (int child = 0; child < ChildrenPerCell; child++) {
+      int linearisedPosition = 0;
+      int stride             = 1;
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        linearisedPosition += positions[child][axis] * stride;
+        stride *= SubdivisionFactor;
+        result[state][child].position[axis] = static_cast<std::uint8_t>(positions[child][axis]);
+      }
+      result[state][child].linearisedPosition = static_cast<std::uint8_t>(linearisedPosition);
+      result[state][child].state = static_cast<std::uint8_t>(CurveGrammar::Productions[state].children[child]);
+    }
+  }
+  return result;
+}
+
+template <class CurveGrammar>
+constexpr bool peano4::sfc::SpaceFillingCurve<CurveGrammar>::productionsAreInSymbolOrder() {
+  for (int state = 0; state < NumberOfStates; state++) {
+    if (static_cast<int>(CurveGrammar::Productions[state].leftHandSide) != state) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Checks that every production's turtle walk stays within the dimensions and
+ * visits each of the SubdivisionFactor^DIMENSIONS child positions exactly
+ * once.
+ */
+template <class CurveGrammar>
+constexpr bool peano4::sfc::SpaceFillingCurve<CurveGrammar>::everyProductionTilesTheCell() {
+  for (int state = 0; state < NumberOfStates; state++) {
+    for (const auto step : CurveGrammar::Productions[state].steps) {
+      if (peano4::sfc::Grammar::axisOf(step) >= DIMENSIONS) {
+        return false;
+      }
+    }
+    std::array<bool, ChildrenPerCell> visited{};
+    for (const auto& position : positionsOf(state)) {
+      int linearisedPosition = 0;
+      int stride             = 1;
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        if (position[axis] >= SubdivisionFactor) {
+          return false;
+        }
+        linearisedPosition += position[axis] * stride;
+        stride *= SubdivisionFactor;
+      }
+      if (visited[linearisedPosition]) {
+        return false;
+      }
+      visited[linearisedPosition] = true;
+    }
+  }
+  return true;
+}
+
+/**
+ * Checks that the curve is continuous across child boundaries: Within every
+ * production, the exit point of a child coincides with the entry point of
+ * the next child. Points are measured in child widths.
+ */
+template <class CurveGrammar>
+constexpr bool peano4::sfc::SpaceFillingCurve<CurveGrammar>::childrenConnect() {
+  constexpr double ConnectionTolerance = 1e-9;
+  const auto       entryPoints         = limitPointsWithin(0);
+  const auto       exitPoints          = limitPointsWithin(ChildrenPerCell - 1);
+  for (int state = 0; state < NumberOfStates; state++) {
+    const auto& production = CurveGrammar::Productions[state];
+    const auto  positions  = positionsOf(state);
+    for (int child = 0; child + 1 < ChildrenPerCell; child++) {
+      const auto exitState  = static_cast<int>(production.children[child]);
+      const auto entryState = static_cast<int>(production.children[child + 1]);
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        const double exitPoint  = positions[child][axis] + exitPoints[exitState][axis];
+        const double entryPoint = positions[child + 1][axis] + entryPoints[entryState][axis];
+        const double difference = exitPoint > entryPoint ? exitPoint - entryPoint : entryPoint - exitPoint;
+        if (difference > ConnectionTolerance) {
+          return false;
+        }
+      }
+    }
+  }
+  return true;
+}
+
+/**
+ * Walks the turtle steps of one production and returns the child positions,
+ * shifted so the lowest visited corner is the origin.
+ */
+template <class CurveGrammar>
+constexpr std::array<
+  typename peano4::sfc::SpaceFillingCurve<CurveGrammar>::Position,
+  peano4::sfc::SpaceFillingCurve<CurveGrammar>::ChildrenPerCell>
+peano4::sfc::SpaceFillingCurve<CurveGrammar>::positionsOf(const int state) {
+  const auto&                           production = CurveGrammar::Productions[state];
+  std::array<Position, ChildrenPerCell> positions{};
+  Position                              minimum{};
+  for (int child = 1; child < ChildrenPerCell; child++) {
+    const auto step  = production.steps[child - 1];
+    positions[child] = positions[child - 1];
+    positions[child][peano4::sfc::Grammar::axisOf(step)] += peano4::sfc::Grammar::directionOf(step);
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      minimum[axis] = positions[child][axis] < minimum[axis] ? positions[child][axis] : minimum[axis];
+    }
+  }
+  for (auto& position : positions) {
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      position[axis] -= minimum[axis];
+    }
+  }
+  return positions;
+}
+
+/**
+ * Returns, for every state, the point in which the curve reaches the cell
+ * boundary within the given child when the recursion is followed to its
+ * limit, in units of the cell width. Child 0 yields the entry points, the
+ * last child the exit points. The point of a state is the point of that
+ * child's state scaled into the child's position, so the points are the
+ * fixed point of this contraction, reached by iteration.
+ */
+template <class CurveGrammar>
+constexpr std::array<
+  typename peano4::sfc::SpaceFillingCurve<CurveGrammar>::Point,
+  peano4::sfc::SpaceFillingCurve<CurveGrammar>::NumberOfStates>
+peano4::sfc::SpaceFillingCurve<CurveGrammar>::limitPointsWithin(const int child) {
+  constexpr int                        Iterations = 64;
+  std::array<Position, NumberOfStates> childPositions{};
+  std::array<int, NumberOfStates>      childStates{};
+  for (int state = 0; state < NumberOfStates; state++) {
+    childPositions[state] = positionsOf(state)[child];
+    childStates[state]    = static_cast<int>(CurveGrammar::Productions[state].children[child]);
+  }
+  std::array<Point, NumberOfStates> points{};
+  for (int iteration = 0; iteration < Iterations; iteration++) {
+    std::array<Point, NumberOfStates> next{};
+    for (int state = 0; state < NumberOfStates; state++) {
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        next[state][axis] = (childPositions[state][axis] + points[childStates[state]][axis]) / SubdivisionFactor;
+      }
+    }
+    points = next;
+  }
+  return points;
+}

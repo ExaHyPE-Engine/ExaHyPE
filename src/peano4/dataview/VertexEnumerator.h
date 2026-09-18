@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "peano4/Constants.h"
 #include "peano4/dataview/Enumerator.h"
 
 namespace peano4::dataview {
@@ -15,5 +16,5 @@ namespace peano4::dataview {
    * @see peano4::dataview::FaceEnumerator
    */
   template <class Vertex>
-  using VertexEnumerator = peano4::dataview::Enumerator<Vertex, TWO_POWER_D>;
+  using VertexEnumerator = peano4::dataview::Enumerator<Vertex, peano4::VerticesPerCell>;
 } // namespace peano4::dataview

@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "GridSnapshot.h"
 
+#include "peano4/sfc/ActiveCurve.h"
 #include "runner/Format.h"
 #include "runner/GlobalStatistics.h"
 #include "runner/ReportBox.h"
@@ -57,22 +58,23 @@ std::uint64_t runner::boundedFullyRefinedLeaves(const int maximumLevel) {
     tarch::terminateWithError("The maximum grid level has to be non-negative.");
   }
 
-  constexpr auto MaximumCount   = std::numeric_limits<std::uint64_t>::max();
-  auto           numberOfLeaves = std::uint64_t{1};
+  constexpr auto MaximumCount      = std::numeric_limits<std::uint64_t>::max();
+  constexpr auto SubdivisionFactor = static_cast<std::uint64_t>(peano4::sfc::ActiveCurve::SubdivisionFactor);
+  auto           numberOfLeaves    = std::uint64_t{1};
   for (int level = 0; level < maximumLevel; ++level) {
     for (int axis = 0; axis < DIMENSIONS; ++axis) {
-      if (numberOfLeaves > MaximumCount / 3) {
+      if (numberOfLeaves > MaximumCount / SubdivisionFactor) {
         return MaximumCount;
       }
-      numberOfLeaves *= 3;
+      numberOfLeaves *= SubdivisionFactor;
     }
   }
   return numberOfLeaves;
 }
 
 /**
- * Counts owned leaves and refined parents. Outer and halo cells are excluded,
- * and the sum saturates on overflow.
+ * Returns the number of leaves with the total number of cells as detail. The
+ * sum of the two counts saturates on overflow.
  */
 std::string runner::gridCellSummary(const std::uint64_t numberOfLeaves, const std::uint64_t numberOfRefinedCells) {
   return formatEntry(gridCellsEntry(numberOfLeaves, numberOfRefinedCells));

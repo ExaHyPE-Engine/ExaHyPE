@@ -9,6 +9,9 @@ from ..Labels import (
     reset_refined_face_status_snippet,
     vertex_dmp_extrema_merge_snippet,
 )
+from ..ProjectionMatrices import create_subcell_projection_matrices
+
+from exahype2.solvers.LagrangeBasis import render_tensor_1
 
 import jinja2
 import peano4.solversteps
@@ -25,8 +28,24 @@ class CorrectAndFlag(AbstractLimiterActionSet):
 #else
     constexpr int NumberOfNodes = ({{ORDER}} + 1) * ({{ORDER}} + 1) * ({{ORDER}} + 1);
 #endif
+    constexpr int NumberOfDofsPerAxis     = {{ORDER}} + 1;
+    constexpr int NumberOfSubcellsPerAxis = 2 * {{ORDER}} + 1;
+#if DIMENSIONS == 2
+    constexpr int NumberOfSubcells = NumberOfSubcellsPerAxis * NumberOfSubcellsPerAxis;
+#else
+    constexpr int NumberOfSubcells = NumberOfSubcellsPerAxis * NumberOfSubcellsPerAxis * NumberOfSubcellsPerAxis;
+#endif
     const auto* const candidate      = fineGridCell{{UNKNOWN_IDENTIFIER}}.data();
     using Shortcuts [[maybe_unused]] = {{FULL_QUALIFIED_SOLVER_NAME}}::Shortcuts;
+
+    // The subcell scheme starts from the subcell averages of an accepted
+    // candidate, so they pass the admissibility test and bound the time step
+    // like the nodes.
+    static constexpr {{SOLUTION_STORAGE_PRECISION}} DgToFvMatrix[] = {{DG_TO_FV_MATRIX}};
+    {{SOLUTION_STORAGE_PRECISION}} candidateSubcells[NumberOfSubcells * DataPerNode];
+    ::exahype2::dg::projectTensorProduct<DIMENSIONS, NumberOfDofsPerAxis, NumberOfSubcellsPerAxis, DataPerNode>(
+      candidate, candidateSubcells, DgToFvMatrix
+    );
 
     bool admissible = true;
     // A cell whose space-time predictor diverged holds no valid candidate, so it
@@ -46,14 +65,13 @@ class CorrectAndFlag(AbstractLimiterActionSet):
       [[maybe_unused]] const auto    h                          = marker.getH();
       {{PHYSICAL_ADMISSIBILITY_CRITERION}}
     };
-    if (not isPhysicallyAdmissible(candidate, NumberOfNodes)) {
+    if (not isPhysicallyAdmissible(candidate, NumberOfNodes)
+        or not isPhysicallyAdmissible(candidateSubcells, NumberOfSubcells)) {
       admissible = false;
     }
 {% endif %}
 {% if USES_DMP %}
-    constexpr int NumberOfObservables     = {{NUMBER_OF_DMP_OBSERVABLES}};
-    constexpr int NumberOfDofsPerAxis     = {{ORDER}} + 1;
-    constexpr int NumberOfSubcellsPerAxis = 2 * {{ORDER}} + 1;
+    constexpr int NumberOfObservables = {{NUMBER_OF_DMP_OBSERVABLES}};
 
     const auto mapStateToObservables = [](
       const {{SOLUTION_STORAGE_PRECISION}}* const Q,
@@ -133,6 +151,33 @@ class CorrectAndFlag(AbstractLimiterActionSet):
       );
       repositories::{{SOLVER_INSTANCE}}.setMaxEigenvalue(maxEigenvalues.maxPhysicalEigenvalue);
       repositories::{{SOLVER_INSTANCE}}.setMaxScaledEigenvalue(maxEigenvalues.maxScaledEigenvalue);
+
+      ::exahype2::dg::MaxEigenvalueStatistics subcellEigenvalues;
+      for (int subcell = 0; subcell < NumberOfSubcells; subcell++) {
+        tarch::la::Vector<DIMENSIONS, double> subcellSize;
+        tarch::la::Vector<DIMENSIONS, double> subcellCentre;
+        int                                   remainder = subcell;
+        for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
+          subcellSize(dimension)   = marker.getH()(dimension) / NumberOfSubcellsPerAxis;
+          subcellCentre(dimension) = marker.getX()(dimension) - 0.5 * marker.getH()(dimension)
+                                     + (remainder % NumberOfSubcellsPerAxis + 0.5) * subcellSize(dimension);
+          remainder /= NumberOfSubcellsPerAxis;
+        }
+        double subcellState[DataPerNode];
+        for (int entry = 0; entry < DataPerNode; entry++) {
+          subcellState[entry] = static_cast<double>(candidateSubcells[subcell * DataPerNode + entry]);
+        }
+        subcellEigenvalues.accumulate<DIMENSIONS>(
+          marker.getH(),
+          [&](const int normal) {
+            return {{FULL_QUALIFIED_SOLVER_NAME}}::maxEigenvalue(
+              subcellState, subcellCentre, subcellSize, timeStamp, timeStepSize, normal
+            );
+          }
+        );
+      }
+      repositories::{{SOLVER_INSTANCE}}.setMaxEigenvalue(subcellEigenvalues.maxPhysicalEigenvalue);
+      repositories::{{SOLVER_INSTANCE}}.setMaxScaledEigenvalue(subcellEigenvalues.maxScaledEigenvalue);
     }
 {% endif %}
     if (not admissible) {
@@ -199,6 +244,10 @@ class CorrectAndFlag(AbstractLimiterActionSet):
             self._solver._subcell_limiter_number_of_dmp_observables
         )
         dictionary["DMP_OBSERVABLES"] = self._rendered_dmp_observables(dictionary)
+        dg_to_fv, _ = create_subcell_projection_matrices(self._solver._basis)
+        dictionary["DG_TO_FV_MATRIX"] = render_tensor_1(
+            [value for row in dg_to_fv for value in row]
+        )
         if dictionary["USES_DMP"]:
             self._add_dmp_sampling_matrices_to_dictionary(dictionary)
             dictionary["CANDIDATE_EXTREMA_REDUCTION"] = (
@@ -301,10 +350,12 @@ class CorrectAndFlag(AbstractLimiterActionSet):
             + """
 #include "exahype2/dg/Limiter.h"
 #include "exahype2/dg/LimiterStatus.h"
+#include "exahype2/dg/SubcellProjection.h"
 """
         )
         if self._solver._compute_new_time_step_size.strip():
             includes += (
+                '#include "exahype2/dg/EigenvalueStatistics.h"\n'
                 '#include "kernels/' + self._solver._name + '/MaxScaledEigenvalue.h"\n'
             )
         return includes

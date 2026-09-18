@@ -7,100 +7,95 @@ namespace tarch::accelerator {
   struct OmptTeam {};
   using TeamHandle = OmptTeam;
 
-  // The inner team overloads execute inside the outer `target teams distribute`
-  // region (one team per outer index). They must be device-compilable, hence the
-  // declare-target wrapping, and they spread the inner iteration space across the
-  // team's threads with `parallel for`, restoring the intra-patch parallelism the
-  // old per-backend `collapse(DIMENSIONS+1)` kernels had.
-  // TODO: this nested `teams distribute` + `parallel for` offload should be
-  // compile/perf-validated on the target OMPT toolchain.
+  // The inner team overloads run inside the outer `target teams distribute` region,
+  // one team per outer index, so they carry the declare-target wrapping that makes
+  // them device-compilable. They spread the inner iteration space over the team's
+  // threads with `parallel for`.
   TARGET_DECLARE
   template <typename F>
-  inline void parallelFor(const OmptTeam&, const Range& r, F f) {
+  inline void parallelFor([[maybe_unused]] const OmptTeam& team, const Range& range, F body) {
 #pragma omp parallel for
-    for (int i = 0; i < r.n; ++i) {
-      f(i);
+    for (int i = 0; i < range.n; ++i) {
+      body(i);
     }
   }
 
   template <typename F>
-  inline void parallelFor(const OmptTeam&, const RangeMD<2>& r, F f) {
-#pragma omp parallel for collapse(2)
-    for (int x = 0; x < r.n[0]; ++x) {
-      for (int y = 0; y < r.n[1]; ++y) {
-        f(x, y);
+  inline void parallelFor([[maybe_unused]] const OmptTeam& team, const RangeMD<2>& range, F body) {
+#pragma omp                         parallel for collapse(2)
+    for (int x = 0; x < range.n[0]; ++x) {
+      for (int y = 0; y < range.n[1]; ++y) {
+        body(x, y);
       }
     }
   }
 
   template <typename F>
-  inline void parallelFor(const OmptTeam&, const RangeMD<3>& r, F f) {
-#pragma omp parallel for collapse(3)
-    for (int x = 0; x < r.n[0]; ++x) {
-      for (int y = 0; y < r.n[1]; ++y) {
-        for (int z = 0; z < r.n[2]; ++z) {
-          f(x, y, z);
+  inline void parallelFor([[maybe_unused]] const OmptTeam& team, const RangeMD<3>& range, F body) {
+#pragma omp                         parallel for collapse(3)
+    for (int x = 0; x < range.n[0]; ++x) {
+      for (int y = 0; y < range.n[1]; ++y) {
+        for (int z = 0; z < range.n[2]; ++z) {
+          body(x, y, z);
         }
       }
     }
   }
   TARGET_DECLARE_END
-} // namespace tarch::accelerator
 
-namespace tarch {
   template <typename F>
-  inline void parallelFor(const Range& r, F f) {
-    if (r.n <= 0) {
+  inline void parallelFor(const Range& range, F body) {
+    if (range.n <= 0) {
       return;
     }
-    const int device = accelerator::getCurrentDevice();
+    const int device = tarch::accelerator::getCurrentDevice();
 #pragma omp target teams distribute parallel for device(device)
-    for (int i = 0; i < r.n; ++i) {
-      f(i);
+    for (int i = 0; i < range.n; ++i) {
+      body(i);
     }
   }
 
   template <typename F>
-  inline void parallelFor(const RangeMD<2>& r, F f) {
-    if (r.n[0] <= 0 || r.n[1] <= 0) {
+  inline void parallelFor(const RangeMD<2>& range, F body) {
+    if (range.n[0] <= 0 or range.n[1] <= 0) {
       return;
     }
-    const int device = accelerator::getCurrentDevice();
+    const int device = tarch::accelerator::getCurrentDevice();
 #pragma omp target teams distribute parallel for collapse(2) device(device)
-    for (int x = 0; x < r.n[0]; ++x) {
-      for (int y = 0; y < r.n[1]; ++y) {
-        f(x, y);
+    for (int x = 0; x < range.n[0]; ++x) {
+      for (int y = 0; y < range.n[1]; ++y) {
+        body(x, y);
       }
     }
   }
 
   template <typename F>
-  inline void parallelFor(const RangeMD<3>& r, F f) {
-    if (r.n[0] <= 0 || r.n[1] <= 0 || r.n[2] <= 0) {
+  inline void parallelFor(const RangeMD<3>& range, F body) {
+    if (range.n[0] <= 0 or range.n[1] <= 0 or range.n[2] <= 0) {
       return;
     }
-    const int device = accelerator::getCurrentDevice();
+    const int device = tarch::accelerator::getCurrentDevice();
 #pragma omp target teams distribute parallel for collapse(3) device(device)
-    for (int x = 0; x < r.n[0]; ++x) {
-      for (int y = 0; y < r.n[1]; ++y) {
-        for (int z = 0; z < r.n[2]; ++z) {
-          f(x, y, z);
+    for (int x = 0; x < range.n[0]; ++x) {
+      for (int y = 0; y < range.n[1]; ++y) {
+        for (int z = 0; z < range.n[2]; ++z) {
+          body(x, y, z);
         }
       }
     }
   }
 
   template <typename F>
-  inline void parallelFor(const TeamRange& r, F f) {
-    if (r.n <= 0) {
+  inline void parallelFor(const TeamRange& range, F body) {
+    if (range.n <= 0) {
       return;
     }
-    const int device = accelerator::getCurrentDevice();
+    const int device = tarch::accelerator::getCurrentDevice();
 #pragma omp target teams distribute device(device)
-    for (int i = 0; i < r.n; ++i) {
-      f(i, accelerator::OmptTeam{});
+    for (int i = 0; i < range.n; ++i) {
+      body(i, tarch::accelerator::OmptTeam{});
     }
-  }
-} // namespace tarch
+                          }
+} // namespace tarch::accelerator
 
 #endif // defined(PEANO_WITH_GPU_BACKEND_OMPT)

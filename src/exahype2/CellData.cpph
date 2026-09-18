@@ -2,17 +2,17 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 namespace exahype2 {
-  template <typename inType, typename outType, int NumFaceTypes>
-  CellData<inType, outType, NumFaceTypes>::CellData(
-    inType* const                                QIn_,
+  template <typename InType, typename OutType, int NumFaceTypes>
+  CellData<InType, OutType, NumFaceTypes>::CellData(
+    InType* const                                QIn_,
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre_,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize_,
     double                                       t_,
     double                                       dt_,
-    outType* const                               QOut_,
+    OutType* const                               QOut_,
     tarch::MemoryLocation                        memoryLocation_,
     int                                          targetDevice_
-  ):
+  ) :
     CellData(1, memoryLocation_, targetDevice_) {
     QIn[0]        = QIn_;
     cellCentre[0] = cellCentre_;
@@ -22,18 +22,18 @@ namespace exahype2 {
     QOut[0]       = QOut_;
   }
 
-  template <typename inType, typename outType, int NumFaceTypes>
-  CellData<inType, outType, NumFaceTypes>::CellData(
-    inType* const                                QIn_,
-    inType* const                                faces_[NumFaceTypes][TWO_TIMES_D],
+  template <typename InType, typename OutType, int NumFaceTypes>
+  CellData<InType, OutType, NumFaceTypes>::CellData(
+    InType* const                                QIn_,
+    InType* const                                faces_[NumFaceTypes][peano4::FacesPerCell],
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre_,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize_,
     double                                       t_,
     double                                       dt_,
-    outType* const                               QOut_,
+    OutType* const                               QOut_,
     tarch::MemoryLocation                        memoryLocation_,
     int                                          targetDevice_
-  ):
+  ) :
     CellData(1, memoryLocation_, targetDevice_) {
     QIn[0]        = QIn_;
     cellCentre[0] = cellCentre_;
@@ -43,42 +43,52 @@ namespace exahype2 {
     QOut[0]       = QOut_;
 
     for (int type = 0; type < NumFaceTypes; ++type) {
-      for (int d = 0; d < TWO_TIMES_D; ++d) {
-        faces[type][d] = faces_[type][d];
+      for (int face = 0; face < peano4::FacesPerCell; ++face) {
+        faces[type][face] = faces_[type][face];
       }
     }
   }
 
-  template <typename inType, typename outType, int NumFaceTypes>
-  CellData<inType, outType, NumFaceTypes>::CellData(int numberOfCells_, tarch::MemoryLocation memoryLocation_, int targetDevice_):
+  template <typename InType, typename OutType, int NumFaceTypes>
+  CellData<InType, OutType, NumFaceTypes>::CellData(
+    int                   numberOfCells_,
+    tarch::MemoryLocation memoryLocation_,
+    int                   targetDevice_
+  ) :
     numberOfCells(numberOfCells_),
     memoryLocation(memoryLocation_),
     targetDevice(targetDevice_) {
-    QIn           = tarch::allocateMemory<inType*>(numberOfCells_, memoryLocation_, targetDevice_);
-    faces         = tarch::allocateMemory<inType* [NumFaceTypes][TWO_TIMES_D]>(numberOfCells_, memoryLocation_, targetDevice_);
-    cellCentre    = tarch::allocateMemory<tarch::la::Vector<DIMENSIONS, double>>(numberOfCells_, memoryLocation_, targetDevice_);
-    cellSize      = tarch::allocateMemory<tarch::la::Vector<DIMENSIONS, double>>(numberOfCells_, memoryLocation_, targetDevice_);
-    QOut          = tarch::allocateMemory<outType*>(numberOfCells_, memoryLocation_, targetDevice_);
-    maxEigenvalue = tarch::allocateMemory<outType>(numberOfCells_, memoryLocation_, targetDevice_);
+    QIn   = tarch::allocateMemory<InType*>(numberOfCells_, memoryLocation_, targetDevice_);
+    faces = tarch::allocateMemory<InType* [NumFaceTypes][peano4::FacesPerCell]>(
+      numberOfCells_,
+      memoryLocation_,
+      targetDevice_
+    );
+    cellCentre =
+      tarch::allocateMemory<tarch::la::Vector<DIMENSIONS, double>>(numberOfCells_, memoryLocation_, targetDevice_);
+    cellSize =
+      tarch::allocateMemory<tarch::la::Vector<DIMENSIONS, double>>(numberOfCells_, memoryLocation_, targetDevice_);
+    QOut          = tarch::allocateMemory<OutType*>(numberOfCells_, memoryLocation_, targetDevice_);
+    maxEigenvalue = tarch::allocateMemory<OutType>(numberOfCells_, memoryLocation_, targetDevice_);
   }
 
-  template <typename inType, typename outType, int NumFaceTypes>
-  CellData<inType, outType, NumFaceTypes>::~CellData() {
-    tarch::freeMemory(QIn, memoryLocation, targetDevice);
+  template <typename InType, typename OutType, int NumFaceTypes>
+  CellData<InType, OutType, NumFaceTypes>::~CellData() {
+    tarch::freeMemory(static_cast<void*>(QIn), memoryLocation, targetDevice);
     tarch::freeMemory(faces, memoryLocation, targetDevice);
     tarch::freeMemory(cellCentre, memoryLocation, targetDevice);
     tarch::freeMemory(cellSize, memoryLocation, targetDevice);
-    tarch::freeMemory(QOut, memoryLocation, targetDevice);
+    tarch::freeMemory(static_cast<void*>(QOut), memoryLocation, targetDevice);
     tarch::freeMemory(maxEigenvalue, memoryLocation, targetDevice);
   }
 
-  template <typename inType, typename outType, int NumFaceTypes>
-  std::string CellData<inType, outType, NumFaceTypes>::toString() const {
+  template <typename InType, typename OutType, int NumFaceTypes>
+  std::string CellData<InType, OutType, NumFaceTypes>::toString() const {
     std::ostringstream msg;
     msg << "[";
-    for (int i = 0; i < numberOfCells; i++) {
-      msg << "(x=" << cellCentre[i] << ",h=" << cellSize[i] << ",t=" << t << ",dt=" << dt
-          << ",lambda=" << maxEigenvalue[i] << ")";
+    for (int cell = 0; cell < numberOfCells; cell++) {
+      msg << "(x=" << cellCentre[cell] << ",h=" << cellSize[cell] << ",t=" << t << ",dt=" << dt
+          << ",lambda=" << maxEigenvalue[cell] << ")";
     }
     msg << "]";
     return msg.str();

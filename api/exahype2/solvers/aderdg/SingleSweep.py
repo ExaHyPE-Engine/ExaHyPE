@@ -118,7 +118,7 @@ class SingleSweep(ADERDG):
         # The hanging-face Riemann solve needs the coarse halves that the
         # hanging-face interpolation provides, and both run in the dedicated
         # prediction-on-hanging-cells sweep.
-        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement._solve_guard = (
+        self._action_set_adaptive_mesh_face_coupling._solve_guard = (
             self._store_cell_data_default_guard()
             + " and repositories::{}.getSolverState()=={}::SolverState::PredictionOnHangingCells".format(
                 self.get_name_of_global_instance(), self._name

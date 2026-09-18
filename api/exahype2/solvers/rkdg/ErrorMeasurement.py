@@ -63,9 +63,8 @@ class ErrorMeasurement(exahype2.solvers.ErrorMeasurement):
 def _create_postprocessing_kernel_for_error_measurement(guard, time_step_size_accessor):
     """!
 
-    Shared RKDG error-measurement kernel. Fixed and adaptive time stepping
-    differ only in `time_step_size_accessor` ("getTimeStepSize()" vs
-    "getAdmissibleTimeStepSize()").
+    Returns the RKDG error-measurement kernel. `time_step_size_accessor` names the solver
+    method the kernel calls to read the time step size.
     """
     return (
         """
@@ -102,7 +101,6 @@ def _create_postprocessing_kernel_for_error_measurement(guard, time_step_size_ac
             marker.getX(),
             marker.getH(),
             index,
-            {{DG_ORDER}}+1,
             repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1D
           ),
           fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp(),

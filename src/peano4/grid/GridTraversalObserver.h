@@ -2,22 +2,14 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "peano4/Globals.h"
 #include "peano4/grid/GridControlEvent.h"
 #include "peano4/grid/SendReceiveContext.h"
 #include "tarch/la/Vector.h"
 
 namespace peano4::grid {
   class GridTraversalObserver;
-  struct GridControlEvent;
   struct GridTraversalEvent;
 } // namespace peano4::grid
-
-namespace peano4::dataview {
-  struct CellMarker;
-  struct FaceMarker;
-  struct VertexMarker;
-} // namespace peano4::dataview
 
 /**
  * Connects the rank traversal and its subtree tasks to application data.
@@ -39,14 +31,14 @@ public:
 
   /**
    * Sentinel for an entity created on entry or destroyed on exit.
-   * Hanging status remains a separate marker property.
+   * Hanging status is a separate marker property.
    */
   static constexpr int CreateOrDestroyGridEntity = -2;
 
   enum class NodeData { Vertex, Face, Cell };
 
-  virtual void enterNode(const GridTraversalEvent&) = 0;
-  virtual void leaveNode(const GridTraversalEvent&) = 0;
+  virtual void enterNode(const GridTraversalEvent& event) = 0;
+  virtual void leaveNode(const GridTraversalEvent& event) = 0;
 
   /**
    * Creates an observer for one rank traversal or subtree task.
@@ -59,7 +51,7 @@ public:
    * Returns the dynamic-AMR cell requests for the next traversal.
    * Sequence order carries no precedence.
    */
-  virtual std::vector<GridControlEvent> getGridControlEvents() const = 0;
+  [[nodiscard]] virtual std::vector<GridControlEvent> getGridControlEvents() const = 0;
 
   /**
    * Starts one rank traversal or subtree task.
@@ -93,5 +85,5 @@ public:
     int                              fromStack,
     peano4::grid::SendReceiveContext context,
     const GridTraversalEvent&        event
-  ) {};
+  ) {}
 };

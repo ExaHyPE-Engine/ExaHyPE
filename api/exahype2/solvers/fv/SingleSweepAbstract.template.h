@@ -12,7 +12,7 @@
 #include "exahype2/RefinementControl.h"
 #include "exahype2/RefinementCriterionHelpers.h"
 
-#include "peano4/Globals.h"
+#include "peano4/Constants.h"
 
 #include "tarch/Assertions.h"
 #include "tarch/NonCriticalAssertions.h"
@@ -32,7 +32,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
   public:
 {% if USE_VARIABLE_SHORTCUTS is sameas True %}
     /**
-     * Names the variables: Q[Shortcuts::{{VARIABLE_NAMES[0]}}] is Q[0].
+     * Names the variable indices, so Q[Shortcuts::{{VARIABLE_NAMES[0]}}] reads the first variable.
      */
     using Shortcuts = {{NAMESPACE | join("::")}}::VariableShortcuts{{SOLVER_NAME}};
 {% endif %}
@@ -48,7 +48,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
       Suspended
     };
 
-    static std::string toString(const SolverState state);
+    static std::string toString(SolverState state);
 
     static constexpr int NumberOfFiniteVolumesPerAxisPerPatch = {{NUMBER_OF_VOLUMES_PER_AXIS}};
     static constexpr int NumberOfUnknowns                     = {{NUMBER_OF_UNKNOWNS}};
@@ -90,22 +90,17 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
     int getNumberOfDoFs() const override final;
 
     void update(
-      const double timeStepSize,
-      const double timeStamp,
-      const double minPatchSize,
-      const double maxPatchSize
+      double timeStepSize,
+      double timeStamp,
+      double minPatchSize,
+      double maxPatchSize
     );
     void updateTimeStampAndPatchSize(
-      const double timeStamp,
-      const double minPatchSize,
-      const double maxPatchSize
+      double timeStamp,
+      double minPatchSize,
+      double maxPatchSize
     );
 
-    /**
-     * Reduces the extrema the current traversal has accumulated through update()
-     * into the solver. Runs once per tree at traversal end, so the per-patch
-     * update writes thread-local data only.
-     */
     void reduceLocalUpdates();
 
     SolverState getSolverState() const;
@@ -124,7 +119,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
 
   protected:
     /** Stores one traversal's extrema until reduceLocalUpdates() reduces them. */
-    struct LocalUpdates {
+    struct LocalUpdates final {
       double                            minTimeStamp{std::numeric_limits<double>::infinity()};
       double                            maxTimeStamp{0.0};
       double                            localMinTimeStamp{std::numeric_limits<double>::infinity()};

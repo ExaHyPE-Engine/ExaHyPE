@@ -29,34 +29,13 @@ void tarch::accelerator::tests::ParallelConstructsTest::run() {
 }
 
 void tarch::accelerator::tests::ParallelConstructsTest::testParallelFor() {
-  double* data = tarch::allocateMemory<double>(N, tarch::MemoryLocation::Device, DeviceId);
+  auto* data = tarch::allocateMemory<double>(N, tarch::MemoryLocation::Device, DeviceId);
 
   std::array<double, N> host{};
   tarch::copyTo(data, host.data(), N, tarch::MemoryLocation::Device, DeviceId);
 
-  tarch::parallelFor(tarch::Range(N), [=] GPU_CALLABLE_LAMBDA(int i) { data[i] = static_cast<double>(2 * i); });
-
-  tarch::copyFrom(data, host.data(), N, tarch::MemoryLocation::Device, DeviceId);
-  tarch::freeMemory(data, tarch::MemoryLocation::Device, DeviceId);
-
-  bool correct = true;
-  for (int i = 0; i < N; ++i) {
-    correct = correct && (host[i] == static_cast<double>(2 * i));
-  }
-  validate(correct);
-}
-
-void tarch::accelerator::tests::ParallelConstructsTest::testParallelForRangeMD2() {
-  constexpr int Nx   = 8;
-  constexpr int Ny   = 8;
-  double*       data = tarch::allocateMemory<double>(N, tarch::MemoryLocation::Device, DeviceId);
-
-  std::array<double, N> host{};
-  tarch::copyTo(data, host.data(), N, tarch::MemoryLocation::Device, DeviceId);
-
-  tarch::parallelFor(tarch::RangeMD<2>(Nx, Ny), [=] GPU_CALLABLE_LAMBDA(int x, int y) {
-    const int i = x * Ny + y;
-    data[i]     = static_cast<double>(2 * i);
+  tarch::accelerator::parallelFor(tarch::accelerator::Range(N), [=] GPU_CALLABLE_LAMBDA(const int i) {
+    data[i] = static_cast<double>(2 * i);
   });
 
   tarch::copyFrom(data, host.data(), N, tarch::MemoryLocation::Device, DeviceId);
@@ -64,7 +43,33 @@ void tarch::accelerator::tests::ParallelConstructsTest::testParallelForRangeMD2(
 
   bool correct = true;
   for (int i = 0; i < N; ++i) {
-    correct = correct && (host[i] == static_cast<double>(2 * i));
+    correct = correct and (host[i] == static_cast<double>(2 * i));
+  }
+  validate(correct);
+}
+
+void tarch::accelerator::tests::ParallelConstructsTest::testParallelForRangeMD2() {
+  constexpr int Nx   = 8;
+  constexpr int Ny   = 8;
+  auto*         data = tarch::allocateMemory<double>(N, tarch::MemoryLocation::Device, DeviceId);
+
+  std::array<double, N> host{};
+  tarch::copyTo(data, host.data(), N, tarch::MemoryLocation::Device, DeviceId);
+
+  tarch::accelerator::parallelFor(
+    tarch::accelerator::RangeMD<2>(Nx, Ny),
+    [=] GPU_CALLABLE_LAMBDA(const int x, const int y) {
+      const int i = x * Ny + y;
+      data[i]     = static_cast<double>(2 * i);
+    }
+  );
+
+  tarch::copyFrom(data, host.data(), N, tarch::MemoryLocation::Device, DeviceId);
+  tarch::freeMemory(data, tarch::MemoryLocation::Device, DeviceId);
+
+  bool correct = true;
+  for (int i = 0; i < N; ++i) {
+    correct = correct and (host[i] == static_cast<double>(2 * i));
   }
   validate(correct);
 }
@@ -73,42 +78,17 @@ void tarch::accelerator::tests::ParallelConstructsTest::testParallelForRangeMD3(
   constexpr int Nx   = 4;
   constexpr int Ny   = 4;
   constexpr int Nz   = 4;
-  double*       data = tarch::allocateMemory<double>(N, tarch::MemoryLocation::Device, DeviceId);
+  auto*         data = tarch::allocateMemory<double>(N, tarch::MemoryLocation::Device, DeviceId);
 
   std::array<double, N> host{};
   tarch::copyTo(data, host.data(), N, tarch::MemoryLocation::Device, DeviceId);
 
-  tarch::parallelFor(tarch::RangeMD<3>(Nx, Ny, Nz), [=] GPU_CALLABLE_LAMBDA(int x, int y, int z) {
-    const int i = (x * Ny + y) * Nz + z;
-    data[i]     = static_cast<double>(2 * i);
-  });
-
-  tarch::copyFrom(data, host.data(), N, tarch::MemoryLocation::Device, DeviceId);
-  tarch::freeMemory(data, tarch::MemoryLocation::Device, DeviceId);
-
-  bool correct = true;
-  for (int i = 0; i < N; ++i) {
-    correct = correct && (host[i] == static_cast<double>(2 * i));
-  }
-  validate(correct);
-}
-
-void tarch::accelerator::tests::ParallelConstructsTest::testParallelForTeam() {
-  constexpr int NumTeams = 8;
-  constexpr int TeamSize = 8;
-  double*       data     = tarch::allocateMemory<double>(N, tarch::MemoryLocation::Device, DeviceId);
-
-  std::array<double, N> host{};
-  tarch::copyTo(data, host.data(), N, tarch::MemoryLocation::Device, DeviceId);
-
-  tarch::parallelFor(
-    tarch::TeamRange(NumTeams),
-    [=] GPU_CALLABLE_LAMBDA(int team, tarch::accelerator::TeamHandle teamHandle) {
-    tarch::parallelFor(teamHandle, tarch::Range(TeamSize), [=](int i) {
-      const int idx = team * TeamSize + i;
-      data[idx]     = static_cast<double>(2 * idx);
-    });
-  }
+  tarch::accelerator::parallelFor(
+    tarch::accelerator::RangeMD<3>(Nx, Ny, Nz),
+    [=] GPU_CALLABLE_LAMBDA(const int x, const int y, const int z) {
+      const int i = (x * Ny + y) * Nz + z;
+      data[i]     = static_cast<double>(2 * i);
+    }
   );
 
   tarch::copyFrom(data, host.data(), N, tarch::MemoryLocation::Device, DeviceId);
@@ -116,13 +96,41 @@ void tarch::accelerator::tests::ParallelConstructsTest::testParallelForTeam() {
 
   bool correct = true;
   for (int i = 0; i < N; ++i) {
-    correct = correct && (host[i] == static_cast<double>(2 * i));
+    correct = correct and (host[i] == static_cast<double>(2 * i));
+  }
+  validate(correct);
+}
+
+void tarch::accelerator::tests::ParallelConstructsTest::testParallelForTeam() {
+  constexpr int NumTeams = 8;
+  constexpr int TeamSize = 8;
+  auto*         data     = tarch::allocateMemory<double>(N, tarch::MemoryLocation::Device, DeviceId);
+
+  std::array<double, N> host{};
+  tarch::copyTo(data, host.data(), N, tarch::MemoryLocation::Device, DeviceId);
+
+  tarch::accelerator::parallelFor(
+    tarch::accelerator::TeamRange(NumTeams),
+    [=] GPU_CALLABLE_LAMBDA(const int team, const tarch::accelerator::TeamHandle teamHandle) {
+      tarch::accelerator::parallelFor(teamHandle, tarch::accelerator::Range(TeamSize), [=](const int i) {
+        const int idx = team * TeamSize + i;
+        data[idx]     = static_cast<double>(2 * idx);
+      });
+    }
+  );
+
+  tarch::copyFrom(data, host.data(), N, tarch::MemoryLocation::Device, DeviceId);
+  tarch::freeMemory(data, tarch::MemoryLocation::Device, DeviceId);
+
+  bool correct = true;
+  for (int i = 0; i < N; ++i) {
+    correct = correct and (host[i] == static_cast<double>(2 * i));
   }
   validate(correct);
 }
 
 void tarch::accelerator::tests::ParallelConstructsTest::testParallelReduceSum() {
-  double* data = tarch::allocateMemory<double>(N, tarch::MemoryLocation::Device, DeviceId);
+  auto* data = tarch::allocateMemory<double>(N, tarch::MemoryLocation::Device, DeviceId);
 
   std::array<double, N> host{};
   for (int i = 0; i < N; ++i) {
@@ -131,9 +139,11 @@ void tarch::accelerator::tests::ParallelConstructsTest::testParallelReduceSum() 
   tarch::copyTo(data, host.data(), N, tarch::MemoryLocation::Device, DeviceId);
 
   double result = 0.0;
-  tarch::parallelReduce(tarch::Range(N), [=] GPU_CALLABLE_LAMBDA(int i, double& acc) {
-    acc += data[i];
-  }, tarch::Sum<double>{result});
+  tarch::accelerator::parallelReduce(
+    tarch::accelerator::Range(N),
+    [=] GPU_CALLABLE_LAMBDA(const int i, double& acc) { acc += data[i]; },
+    tarch::accelerator::Sum<double>{result}
+  );
 
   tarch::freeMemory(data, tarch::MemoryLocation::Device, DeviceId);
   validateWithParams1(result == static_cast<double>(N), result);
@@ -142,7 +152,7 @@ void tarch::accelerator::tests::ParallelConstructsTest::testParallelReduceSum() 
 void tarch::accelerator::tests::ParallelConstructsTest::testParallelReduceRangeMD2() {
   constexpr int Nx   = 8;
   constexpr int Ny   = 8;
-  double*       data = tarch::allocateMemory<double>(N, tarch::MemoryLocation::Device, DeviceId);
+  auto*         data = tarch::allocateMemory<double>(N, tarch::MemoryLocation::Device, DeviceId);
 
   std::array<double, N> host{};
   for (int i = 0; i < N; ++i) {
@@ -151,9 +161,11 @@ void tarch::accelerator::tests::ParallelConstructsTest::testParallelReduceRangeM
   tarch::copyTo(data, host.data(), N, tarch::MemoryLocation::Device, DeviceId);
 
   double result = 0.0;
-  tarch::parallelReduce(tarch::RangeMD<2>(Nx, Ny), [=] GPU_CALLABLE_LAMBDA(int x, int y, double& acc) {
-    acc += data[x * Ny + y];
-  }, tarch::Sum<double>{result});
+  tarch::accelerator::parallelReduce(
+    tarch::accelerator::RangeMD<2>(Nx, Ny),
+    [=] GPU_CALLABLE_LAMBDA(const int x, const int y, double& acc) { acc += data[x * Ny + y]; },
+    tarch::accelerator::Sum<double>{result}
+  );
 
   tarch::freeMemory(data, tarch::MemoryLocation::Device, DeviceId);
   validateWithParams1(result == static_cast<double>(N), result);
@@ -163,7 +175,7 @@ void tarch::accelerator::tests::ParallelConstructsTest::testParallelReduceRangeM
   constexpr int Nx   = 4;
   constexpr int Ny   = 4;
   constexpr int Nz   = 4;
-  double*       data = tarch::allocateMemory<double>(N, tarch::MemoryLocation::Device, DeviceId);
+  auto*         data = tarch::allocateMemory<double>(N, tarch::MemoryLocation::Device, DeviceId);
 
   std::array<double, N> host{};
   for (int i = 0; i < N; ++i) {
@@ -172,9 +184,11 @@ void tarch::accelerator::tests::ParallelConstructsTest::testParallelReduceRangeM
   tarch::copyTo(data, host.data(), N, tarch::MemoryLocation::Device, DeviceId);
 
   double result = 0.0;
-  tarch::parallelReduce(tarch::RangeMD<3>(Nx, Ny, Nz), [=] GPU_CALLABLE_LAMBDA(int x, int y, int z, double& acc) {
-    acc += data[(x * Ny + y) * Nz + z];
-  }, tarch::Sum<double>{result});
+  tarch::accelerator::parallelReduce(
+    tarch::accelerator::RangeMD<3>(Nx, Ny, Nz),
+    [=] GPU_CALLABLE_LAMBDA(const int x, const int y, const int z, double& acc) { acc += data[(x * Ny + y) * Nz + z]; },
+    tarch::accelerator::Sum<double>{result}
+  );
 
   tarch::freeMemory(data, tarch::MemoryLocation::Device, DeviceId);
   validateWithParams1(result == static_cast<double>(N), result);
@@ -183,7 +197,7 @@ void tarch::accelerator::tests::ParallelConstructsTest::testParallelReduceRangeM
 void tarch::accelerator::tests::ParallelConstructsTest::testParallelReduceTeam() {
   constexpr int NumTeams = 8;
   constexpr int TeamSize = 8;
-  double*       data     = tarch::allocateMemory<double>(N, tarch::MemoryLocation::Device, DeviceId);
+  auto*         data     = tarch::allocateMemory<double>(N, tarch::MemoryLocation::Device, DeviceId);
 
   std::array<double, N> host{};
   for (int i = 0; i < N; ++i) {
@@ -192,15 +206,20 @@ void tarch::accelerator::tests::ParallelConstructsTest::testParallelReduceTeam()
   tarch::copyTo(data, host.data(), N, tarch::MemoryLocation::Device, DeviceId);
 
   double result = std::numeric_limits<double>::lowest();
-  tarch::parallelReduce(
-    tarch::TeamRange(NumTeams),
-    [=] GPU_CALLABLE_LAMBDA(int team, tarch::accelerator::TeamHandle teamHandle, double& outerAcc) {
-    tarch::parallelReduce(teamHandle, tarch::Range(TeamSize), [=](int i, double& acc) {
-      const double v = data[team * TeamSize + i];
-      acc            = (v > acc) ? v : acc;
-    }, tarch::Max<double>{outerAcc});
-  },
-    tarch::Max<double>{result}
+  tarch::accelerator::parallelReduce(
+    tarch::accelerator::TeamRange(NumTeams),
+    [=] GPU_CALLABLE_LAMBDA(const int team, const tarch::accelerator::TeamHandle teamHandle, double& outerAcc) {
+      tarch::accelerator::parallelReduce(
+        teamHandle,
+        tarch::accelerator::Range(TeamSize),
+        [=](const int i, double& acc) {
+          const double v = data[team * TeamSize + i];
+          acc            = (v > acc) ? v : acc;
+        },
+        tarch::accelerator::Max<double>{outerAcc}
+      );
+    },
+    tarch::accelerator::Max<double>{result}
   );
 
   tarch::freeMemory(data, tarch::MemoryLocation::Device, DeviceId);
@@ -208,7 +227,7 @@ void tarch::accelerator::tests::ParallelConstructsTest::testParallelReduceTeam()
 }
 
 void tarch::accelerator::tests::ParallelConstructsTest::testParallelReduceMin() {
-  double* data = tarch::allocateMemory<double>(N, tarch::MemoryLocation::Device, DeviceId);
+  auto* data = tarch::allocateMemory<double>(N, tarch::MemoryLocation::Device, DeviceId);
 
   std::array<double, N> host{};
   for (int i = 0; i < N; ++i) {
@@ -217,16 +236,18 @@ void tarch::accelerator::tests::ParallelConstructsTest::testParallelReduceMin() 
   tarch::copyTo(data, host.data(), N, tarch::MemoryLocation::Device, DeviceId);
 
   double result = std::numeric_limits<double>::max();
-  tarch::parallelReduce(tarch::Range(N), [=] GPU_CALLABLE_LAMBDA(int i, double& acc) {
-    acc = (data[i] < acc) ? data[i] : acc;
-  }, tarch::Min<double>{result});
+  tarch::accelerator::parallelReduce(
+    tarch::accelerator::Range(N),
+    [=] GPU_CALLABLE_LAMBDA(const int i, double& acc) { acc = (data[i] < acc) ? data[i] : acc; },
+    tarch::accelerator::Min<double>{result}
+  );
 
   tarch::freeMemory(data, tarch::MemoryLocation::Device, DeviceId);
   validateWithParams1(result == 1.0, result);
 }
 
 void tarch::accelerator::tests::ParallelConstructsTest::testParallelReduceMax() {
-  double* data = tarch::allocateMemory<double>(N, tarch::MemoryLocation::Device, DeviceId);
+  auto* data = tarch::allocateMemory<double>(N, tarch::MemoryLocation::Device, DeviceId);
 
   std::array<double, N> host{};
   for (int i = 0; i < N; ++i) {
@@ -235,9 +256,11 @@ void tarch::accelerator::tests::ParallelConstructsTest::testParallelReduceMax() 
   tarch::copyTo(data, host.data(), N, tarch::MemoryLocation::Device, DeviceId);
 
   double result = std::numeric_limits<double>::lowest();
-  tarch::parallelReduce(tarch::Range(N), [=] GPU_CALLABLE_LAMBDA(int i, double& acc) {
-    acc = (data[i] > acc) ? data[i] : acc;
-  }, tarch::Max<double>{result});
+  tarch::accelerator::parallelReduce(
+    tarch::accelerator::Range(N),
+    [=] GPU_CALLABLE_LAMBDA(const int i, double& acc) { acc = (data[i] > acc) ? data[i] : acc; },
+    tarch::accelerator::Max<double>{result}
+  );
 
   tarch::freeMemory(data, tarch::MemoryLocation::Device, DeviceId);
   validateWithParams1(result == static_cast<double>(N), result);

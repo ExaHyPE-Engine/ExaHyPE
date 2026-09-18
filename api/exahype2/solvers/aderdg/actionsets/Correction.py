@@ -8,7 +8,17 @@ import peano4.solversteps
 
 class Correction(AbstractADERDGActionSet):
     _Template_SolveRiemannProblem = """
-  if ({{FACE_GUARD}}) {
+  // The boundary face of a refined cell holds no estimates, because the boundary faces of
+  // the children carry them, and its vertices report no refinement when the refined vertex
+  // lies on the opposite side of the cell.
+  if (
+    ({{FACE_GUARD}})
+    and not (
+      fineGridFace{{SOLVER_NAME}}FaceLabel.getBoundary()
+      and not {{FULL_QUALIFIED_SOLVER_NAME}}::PeriodicBC[marker.getSelectedFaceNumber() % DIMENSIONS]
+      and (marker.hasCellBeenRefined() or marker.willCellBeRefined())
+    )
+  ) {
     const auto faceNumber = marker.getSelectedFaceNumber();
     const auto direction = faceNumber % DIMENSIONS;
     const auto isBoundary =

@@ -73,7 +73,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     # vertex hands out particles.
     _Template_Drop = jinja2.Template(
         """
-  for (int parentVertex = 0; parentVertex < TWO_POWER_D; parentVertex++) {
+  for (int parentVertex = 0; parentVertex < peano4::VerticesPerCell; parentVertex++) {
     if (marker.isParentVertexLocal(parentVertex)) {
       auto& parentParticles = coarseGridVertices{{PARTICLES_CONTAINER}}(parentVertex);
       auto particleIterator = parentParticles.begin();
@@ -100,13 +100,15 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
           peano4::particles::updateContainedInAdjacentCellProperty(marker, *particle);
           const auto parentVertexPosition =
             peano4::dataview::reconstructXOfParentVertex(marker, parentVertex);
+          const auto parentCellSize =
+            static_cast<double>(peano4::sfc::ActiveCurve::SubdivisionFactor) * marker.getH();
           peano4::particles::assignmentchecks::detachParticleFromVertex(
             "{{PARTICLE}}",
             particle->getX(),
             particleId,
             particleIsLocal,
             parentVertexPosition,
-            3.0 * marker.getH(),
+            parentCellSize,
             _treeId,
             "AbstractUpdateParticleGridAssociation::_Template_Drop"
           );
@@ -120,7 +122,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
             _treeId,
             "AbstractUpdateParticleGridAssociation::_Template_Drop",
             parentVertexPosition,
-            3.0 * marker.getH()
+            parentCellSize
           );
           assertion(
             fineGridVertex{{PARTICLES_CONTAINER}}.isValid(),
@@ -157,7 +159,9 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
         """
   std::bitset<DIMENSIONS> parentVertex;
   for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
-    parentVertex[dimension] = marker.getRelativePositionWithinFatherCell()(dimension) >= 2;
+    // The particle lifts to the nearer of the two parent vertices along the axis.
+    parentVertex[dimension] = 2 * marker.getRelativePositionWithinFatherCell()(dimension)
+                              > peano4::sfc::ActiveCurve::SubdivisionFactor;
   }
   const int parentVertexNumber = static_cast<int>(parentVertex.to_ulong());
 
@@ -176,7 +180,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     _numberOfLifts += fineGridVertex{{PARTICLES_CONTAINER}}.size();
     const auto parentVertexPosition =
       peano4::dataview::reconstructXOfParentVertex(marker, parentVertexNumber);
-    const auto parentCellSize = 3.0 * marker.getH();
+    const auto parentCellSize = static_cast<double>(peano4::sfc::ActiveCurve::SubdivisionFactor) * marker.getH();
     for (auto* const particle : fineGridVertex{{PARTICLES_CONTAINER}}) {
 #if PEANO_ASSERTIONS
       const int particleId = particle->getPartid();
@@ -264,8 +268,10 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     def get_includes(self):
         return jinja2.Template(
             """
+#include "peano4/Constants.h"
 #include "peano4/particles/MultiscaleTransitions.h"
 #include "peano4/particles/assignmentchecks/TracingAPI.h"
+#include "peano4/sfc/ActiveCurve.h"
 
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
