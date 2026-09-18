@@ -11,10 +11,14 @@ namespace peano4::particles::tests {
 class peano4::particles::tests::TestHelpers final : public tarch::tests::TestCase {
 public:
   TestHelpers();
+  TestHelpers(const TestHelpers&)            = delete;
+  TestHelpers(TestHelpers&&)                 = delete;
+  TestHelpers& operator=(const TestHelpers&) = delete;
+  TestHelpers& operator=(TestHelpers&&)      = delete;
+  ~TestHelpers() override                    = default;
 
   void run() override;
 
 private:
-  /** Checks that a particle a neighbour rank sends stays local on the vertex that receives it. */
   void testParticleAssignedToVertexWillBeLocal();
 };

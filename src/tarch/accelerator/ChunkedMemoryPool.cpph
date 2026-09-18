@@ -197,7 +197,7 @@ INLINE_METHOD std::size_t tarch::accelerator::ChunkedMemoryPool<T, N>::allocated
 }
 
 /**
- * Clears the chunks in [firstChunk, endChunk) through tarch::parallelFor.
+ * Clears the chunks in [firstChunk, endChunk) through tarch::accelerator::parallelFor.
  */
 template <typename T, int N>
 void tarch::accelerator::ChunkedMemoryPool<T, N>::clearChunks(
@@ -209,9 +209,12 @@ void tarch::accelerator::ChunkedMemoryPool<T, N>::clearChunks(
   constexpr auto        ElementsPerChunk = static_cast<std::size_t>(PaddedChunkSize);
   constexpr std::size_t BytesPerChunk    = ElementsPerChunk * sizeof(T);
   T* const              buffer           = _data;
-  tarch::parallelFor(tarch::Range(static_cast<int>(endChunk - firstChunk)), [buffer, firstChunk](const int chunk) {
-    std::memset(buffer + (firstChunk + static_cast<std::size_t>(chunk)) * ElementsPerChunk, 0, BytesPerChunk);
-  });
+  tarch::accelerator::parallelFor(
+    tarch::accelerator::Range(static_cast<int>(endChunk - firstChunk)),
+    [buffer, firstChunk](const int chunk) {
+      std::memset(buffer + (firstChunk + static_cast<std::size_t>(chunk)) * ElementsPerChunk, 0, BytesPerChunk);
+    }
+  );
 }
 
 /**
@@ -220,7 +223,7 @@ void tarch::accelerator::ChunkedMemoryPool<T, N>::clearChunks(
  * Resizing within capacity keeps chunk pointers valid and clears the chunks
  * that re-enter the live range. Reallocation invalidates the pointers and
  * grows the capacity geometrically. The retained chunks move through
- * tarch::parallelFor.
+ * tarch::accelerator::parallelFor.
  */
 template <typename T, int N>
 void tarch::accelerator::ChunkedMemoryPool<T, N>::resize(const std::size_t numberOfChunks) {
@@ -244,10 +247,13 @@ void tarch::accelerator::ChunkedMemoryPool<T, N>::resize(const std::size_t numbe
     constexpr auto        ElementsPerChunk = static_cast<std::size_t>(PaddedChunkSize);
     constexpr std::size_t BytesPerChunk    = ElementsPerChunk * sizeof(T);
     T* const              oldBuffer        = _data;
-    tarch::parallelFor(tarch::Range(static_cast<int>(_size)), [newBuffer, oldBuffer](const int chunk) {
-      const auto offset = static_cast<std::size_t>(chunk) * ElementsPerChunk;
-      std::memcpy(newBuffer + offset, oldBuffer + offset, BytesPerChunk);
-    });
+    tarch::accelerator::parallelFor(
+      tarch::accelerator::Range(static_cast<int>(_size)),
+      [newBuffer, oldBuffer](const int chunk) {
+        const auto offset = static_cast<std::size_t>(chunk) * ElementsPerChunk;
+        std::memcpy(newBuffer + offset, oldBuffer + offset, BytesPerChunk);
+      }
+    );
   }
   rawFree(_data, _capacity);
   _data          = newBuffer;

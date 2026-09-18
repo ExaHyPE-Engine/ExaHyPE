@@ -3,166 +3,166 @@
 
 namespace tarch::accelerator {
   template <typename T>
-  inline auto syclOp(Max<T> reducer) {
+  inline auto syclOp([[maybe_unused]] Max<T> reducer) {
     return ::sycl::maximum<T>{};
   }
   template <typename T>
-  inline auto syclOp(Min<T> reducer) {
+  inline auto syclOp([[maybe_unused]] Min<T> reducer) {
     return ::sycl::minimum<T>{};
   }
   template <typename T>
-  inline auto syclOp(Sum<T> reducer) {
+  inline auto syclOp([[maybe_unused]] Sum<T> reducer) {
     return ::sycl::plus<T>{};
   }
 
   template <typename T>
-  inline T combineOp(Max<T> reducer, T a, T b) {
-    return a > b ? a : b;
+  inline T combineOp([[maybe_unused]] Max<T> reducer, T left, T right) {
+    return left > right ? left : right;
   }
   template <typename T>
-  inline T combineOp(Min<T> reducer, T a, T b) {
-    return a < b ? a : b;
+  inline T combineOp([[maybe_unused]] Min<T> reducer, T left, T right) {
+    return left < right ? left : right;
   }
   template <typename T>
-  inline T combineOp(Sum<T> reducer, T a, T b) {
-    return a + b;
+  inline T combineOp([[maybe_unused]] Sum<T> reducer, T left, T right) {
+    return left + right;
   }
 
   template <typename Reducer, typename F>
-  inline void parallelReduce(const SyclTeam& team, const Range& r, F f, Reducer red) {
+  inline void parallelReduce(const SyclTeam& team, const Range& range, F body, Reducer reducer) {
     using T            = typename Reducer::value_type;
     T         localAcc = Reducer::identity();
     const int local    = static_cast<int>(team.item.get_local_id(0));
     const int stride   = static_cast<int>(team.item.get_local_range(0));
-    for (int i = local; i < r.n; i += stride) {
-      f(i, localAcc);
+    for (int i = local; i < range.n; i += stride) {
+      body(i, localAcc);
     }
-    T groupResult = ::sycl::reduce_over_group(team.item.get_group(), localAcc, syclOp(red));
+    const T groupResult = ::sycl::reduce_over_group(team.item.get_group(), localAcc, syclOp(reducer));
     if (local == 0) {
-      red.target = combineOp(red, red.target, groupResult);
+      reducer.target = combineOp(reducer, reducer.target, groupResult);
     }
   }
   template <typename Reducer, typename F>
-  inline void parallelReduce(const SyclTeam& team, const RangeMD<2>& r, F f, Reducer red) {
+  inline void parallelReduce(const SyclTeam& team, const RangeMD<2>& range, F body, Reducer reducer) {
     using T            = typename Reducer::value_type;
     T         localAcc = Reducer::identity();
-    const int total    = r.n[0] * r.n[1];
-    const int n1       = r.n[1];
+    const int total    = range.n[0] * range.n[1];
+    const int n1       = range.n[1];
     const int local    = static_cast<int>(team.item.get_local_id(0));
     const int stride   = static_cast<int>(team.item.get_local_range(0));
     for (int idx = local; idx < total; idx += stride) {
       const int x = idx / n1;
       const int y = idx % n1;
-      f(x, y, localAcc);
+      body(x, y, localAcc);
     }
-    T groupResult = ::sycl::reduce_over_group(team.item.get_group(), localAcc, syclOp(red));
+    const T groupResult = ::sycl::reduce_over_group(team.item.get_group(), localAcc, syclOp(reducer));
     if (local == 0) {
-      red.target = combineOp(red, red.target, groupResult);
+      reducer.target = combineOp(reducer, reducer.target, groupResult);
     }
   }
   template <typename Reducer, typename F>
-  inline void parallelReduce(const SyclTeam& team, const RangeMD<3>& r, F f, Reducer red) {
+  inline void parallelReduce(const SyclTeam& team, const RangeMD<3>& range, F body, Reducer reducer) {
     using T            = typename Reducer::value_type;
     T         localAcc = Reducer::identity();
-    const int total    = r.n[0] * r.n[1] * r.n[2];
-    const int n1       = r.n[1];
-    const int n2       = r.n[2];
+    const int total    = range.n[0] * range.n[1] * range.n[2];
+    const int n1       = range.n[1];
+    const int n2       = range.n[2];
     const int local    = static_cast<int>(team.item.get_local_id(0));
     const int stride   = static_cast<int>(team.item.get_local_range(0));
     for (int idx = local; idx < total; idx += stride) {
       const int x = idx / (n1 * n2);
       const int y = (idx / n2) % n1;
       const int z = idx % n2;
-      f(x, y, z, localAcc);
+      body(x, y, z, localAcc);
     }
-    T groupResult = ::sycl::reduce_over_group(team.item.get_group(), localAcc, syclOp(red));
+    const T groupResult = ::sycl::reduce_over_group(team.item.get_group(), localAcc, syclOp(reducer));
     if (local == 0) {
-      red.target = combineOp(red, red.target, groupResult);
+      reducer.target = combineOp(reducer, reducer.target, groupResult);
     }
   }
-} // namespace tarch::accelerator
 
-namespace tarch {
   template <typename Reducer, typename F>
-  inline void parallelReduce(const Range& r, F f, Reducer red) {
-    if (r.n <= 0) {
+  inline void parallelReduce(const Range& range, F body, Reducer reducer) {
+    if (range.n <= 0) {
       return;
     }
-    using T         = typename Reducer::value_type;
-    auto& q         = *static_cast<::sycl::queue*>(accelerator::getSYCLQueue(accelerator::getCurrentDevice()));
-    T     accInit   = red.target;
-    T*    devTarget = ::sycl::malloc_shared<T>(1, q);
-    *devTarget      = accInit;
-    q.submit(
-       [&](::sycl::handler& h) {
-         auto reduction = ::sycl::reduction(devTarget, accelerator::syclOp(red));
-         h.parallel_for(::sycl::range<1>(r.n), reduction, [=](::sycl::id<1> id, auto& acc) {
-           T threadLocal = Reducer::identity();
-           f(static_cast<int>(id[0]), threadLocal);
-           acc.combine(threadLocal);
-         });
-       }
-    ).wait();
-    red.target = *devTarget;
-    ::sycl::free(devTarget, q);
+    using T = typename Reducer::value_type;
+    auto& queue =
+      *static_cast<::sycl::queue*>(tarch::accelerator::getSYCLQueue(tarch::accelerator::getCurrentDevice()));
+    const T initialValue = reducer.target;
+    T*      devTarget    = ::sycl::malloc_shared<T>(1, queue);
+    *devTarget           = initialValue;
+    queue
+      .submit([&](::sycl::handler& handler) {
+        auto reduction = ::sycl::reduction(devTarget, tarch::accelerator::syclOp(reducer));
+        handler.parallel_for(::sycl::range<1>(range.n), reduction, [=](::sycl::id<1> id, auto& acc) {
+          T threadLocal = Reducer::identity();
+          body(static_cast<int>(id[0]), threadLocal);
+          acc.combine(threadLocal);
+        });
+      })
+      .wait();
+    reducer.target = *devTarget;
+    ::sycl::free(devTarget, queue);
   }
 
   template <typename Reducer, typename F>
-  inline void parallelReduce(const RangeMD<2>& r, F f, Reducer red) {
-    const int total = r.n[0] * r.n[1];
-    const int n1    = r.n[1];
+  inline void parallelReduce(const RangeMD<2>& range, F body, Reducer reducer) {
+    const int total = range.n[0] * range.n[1];
+    const int n1    = range.n[1];
     parallelReduce(
       Range(total),
       [=](int idx, typename Reducer::value_type& acc) {
         const int x = idx / n1;
         const int y = idx % n1;
-        f(x, y, acc);
+        body(x, y, acc);
       },
-      red
+      reducer
     );
   }
   template <typename Reducer, typename F>
-  inline void parallelReduce(const RangeMD<3>& r, F f, Reducer red) {
-    const int total = r.n[0] * r.n[1] * r.n[2];
-    const int n1    = r.n[1];
-    const int n2    = r.n[2];
+  inline void parallelReduce(const RangeMD<3>& range, F body, Reducer reducer) {
+    const int total = range.n[0] * range.n[1] * range.n[2];
+    const int n1    = range.n[1];
+    const int n2    = range.n[2];
     parallelReduce(
       Range(total),
       [=](int idx, typename Reducer::value_type& acc) {
         const int x = idx / (n1 * n2);
         const int y = (idx / n2) % n1;
         const int z = idx % n2;
-        f(x, y, z, acc);
+        body(x, y, z, acc);
       },
-      red
+      reducer
     );
   }
 
   template <typename Reducer, typename F>
-  inline void parallelReduce(const TeamRange& r, F f, Reducer red) {
-    if (r.n <= 0) {
+  inline void parallelReduce(const TeamRange& range, F body, Reducer reducer) {
+    if (range.n <= 0) {
       return;
     }
-    using T         = typename Reducer::value_type;
-    auto& q         = *static_cast<::sycl::queue*>(accelerator::getSYCLQueue(accelerator::getCurrentDevice()));
-    T     accInit   = red.target;
-    T*    devTarget = ::sycl::malloc_shared<T>(1, q);
-    *devTarget      = accInit;
-    ::sycl::nd_range<1> nd(
-      ::sycl::range<1>(r.n * accelerator::SyclLocalSize),
-      ::sycl::range<1>(accelerator::SyclLocalSize)
+    using T = typename Reducer::value_type;
+    auto& queue =
+      *static_cast<::sycl::queue*>(tarch::accelerator::getSYCLQueue(tarch::accelerator::getCurrentDevice()));
+    const T initialValue = reducer.target;
+    T*      devTarget    = ::sycl::malloc_shared<T>(1, queue);
+    *devTarget           = initialValue;
+    const ::sycl::nd_range<1> ndRange(
+      ::sycl::range<1>(range.n * tarch::accelerator::SyclLocalSize),
+      ::sycl::range<1>(tarch::accelerator::SyclLocalSize)
     );
-    q.submit(
-       [&](::sycl::handler& h) {
-         auto reduction = ::sycl::reduction(devTarget, accelerator::syclOp(red));
-         h.parallel_for(nd, reduction, [=](::sycl::nd_item<1> item, auto& acc) {
-           T threadLocal = Reducer::identity();
-           f(static_cast<int>(item.get_group(0)), accelerator::SyclTeam{item}, threadLocal);
-           acc.combine(threadLocal);
-         });
-       }
-    ).wait();
-    red.target = *devTarget;
-    ::sycl::free(devTarget, q);
+    queue
+      .submit([&](::sycl::handler& handler) {
+        auto reduction = ::sycl::reduction(devTarget, tarch::accelerator::syclOp(reducer));
+        handler.parallel_for(ndRange, reduction, [=](::sycl::nd_item<1> item, auto& acc) {
+          T threadLocal = Reducer::identity();
+          body(static_cast<int>(item.get_group(0)), tarch::accelerator::SyclTeam{item}, threadLocal);
+          acc.combine(threadLocal);
+        });
+      })
+      .wait();
+    reducer.target = *devTarget;
+    ::sycl::free(devTarget, queue);
   }
-} // namespace tarch
+} // namespace tarch::accelerator

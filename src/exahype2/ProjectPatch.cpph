@@ -6,12 +6,11 @@
  * Every face stores @c 2*Overlap layers along its normal. The lower boundary is
  * written to the upper half of the lower face, and the upper boundary to the
  * lower half of the upper face; the neighbour-owned halves remain untouched.
- * Repeated writes along the normal remain identical and keep the loop uniform.
  */
 template <int NumberOfDofsPerAxis, int Overlap, int NumberOfUnknowns, typename Precision>
 INLINE_METHOD void exahype2::projectPatch(
   const Precision* NOALIAS const inputPatch,
-  Precision* NOALIAS const       faces[TWO_TIMES_D]
+  Precision* NOALIAS const       faces[peano4::FacesPerCell]
 ) {
   int numberOfVolumes = NumberOfDofsPerAxis;
   for (int dimension = 1; dimension < DIMENSIONS; dimension++) {
@@ -33,27 +32,19 @@ INLINE_METHOD void exahype2::projectPatch(
         patchVolume(dimension)                           = layer;
         overlapVolume(dimension)                         = layer + Overlap;
         const int lowerPatchIndex                        = peano4::dLinearised(patchVolume, NumberOfDofsPerAxis);
-        const int lowerOverlapIndex                      = exahype2::serialiseVoxelIndexInOverlap(
-          overlapVolume,
-          NumberOfDofsPerAxis,
-          Overlap,
-          dimension
-        );
+        const int lowerOverlapIndex =
+          exahype2::serialiseVoxelIndexInOverlap(overlapVolume, NumberOfDofsPerAxis, Overlap, dimension);
         SIMD()
         for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
           faces[dimension][lowerOverlapIndex * NumberOfUnknowns + unknown] =
             inputPatch[lowerPatchIndex * NumberOfUnknowns + unknown];
         }
 
-        patchVolume(dimension)      = layer + NumberOfDofsPerAxis - Overlap;
-        overlapVolume(dimension)    = layer;
-        const int upperPatchIndex   = peano4::dLinearised(patchVolume, NumberOfDofsPerAxis);
-        const int upperOverlapIndex = exahype2::serialiseVoxelIndexInOverlap(
-          overlapVolume,
-          NumberOfDofsPerAxis,
-          Overlap,
-          dimension
-        );
+        patchVolume(dimension)    = layer + NumberOfDofsPerAxis - Overlap;
+        overlapVolume(dimension)  = layer;
+        const int upperPatchIndex = peano4::dLinearised(patchVolume, NumberOfDofsPerAxis);
+        const int upperOverlapIndex =
+          exahype2::serialiseVoxelIndexInOverlap(overlapVolume, NumberOfDofsPerAxis, Overlap, dimension);
         SIMD()
         for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
           faces[dimension + DIMENSIONS][upperOverlapIndex * NumberOfUnknowns + unknown] =

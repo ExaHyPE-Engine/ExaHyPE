@@ -31,7 +31,8 @@ RefinementCriterionTemplate = """
     refinementCriterion = ::exahype2::RefinementCommand::Refine;
   } else if ({{PREDICATE}} and fineGridCell{{CELL_LABEL_NAME}}.getHasUpdated()
              and (tarch::la::greater(tarch::la::max(marker.getH()), minAdmissiblePatchSize)
-                  or 3.0 * tarch::la::max(marker.getH()) <= maxAdmissiblePatchSize)) {
+                  or peano4::sfc::ActiveCurve::SubdivisionFactor * tarch::la::max(marker.getH())
+                       <= maxAdmissiblePatchSize)) {
     // A cell that can neither refine nor erase keeps its grid, so the criterion is not
     // evaluated there. The cell label carries the time of the solution the criterion
     // reads, because the solver's running minimum changes while other tasks update it.
@@ -52,11 +53,12 @@ RefinementCriterionTemplate = """
     {% endif %}
     if (refinementCriterion == ::exahype2::RefinementCommand::Refine
         and tarch::la::smallerEquals(tarch::la::max(marker.getH()), minAdmissiblePatchSize)) {
-      logDebug("Drop the refine instruction, as the mesh would become too small");
+      logDebug("The cell is at the minimum admissible patch size, so the refine command becomes Keep");
       refinementCriterion = ::exahype2::RefinementCommand::Keep;
     } else if (refinementCriterion == ::exahype2::RefinementCommand::Erase
-               and 3.0 * tarch::la::max(marker.getH()) > maxAdmissiblePatchSize) {
-      logDebug("Drop the erase instruction, as the mesh would become too coarse");
+               and peano4::sfc::ActiveCurve::SubdivisionFactor * tarch::la::max(marker.getH())
+                     > maxAdmissiblePatchSize) {
+      logDebug("The coarser cell would exceed the maximum admissible patch size, so the erase command becomes Keep");
       refinementCriterion = ::exahype2::RefinementCommand::Keep;
     }
   } else {

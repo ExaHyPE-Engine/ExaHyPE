@@ -6,6 +6,7 @@
 #include "peano4/Loop.h"
 #include "peano4/dataview/CellMarker.h"
 #include "peano4/dataview/FaceMarker.h"
+#include "peano4/sfc/ActiveCurve.h"
 #include "tarch/la/ExactAccumulator.h"
 
 /**
@@ -24,9 +25,9 @@ namespace exahype2::amr {
     const peano4::dataview::FaceMarker& marker,
     const T* NOALIAS                    coarseGridFaceValues,
     T* NOALIAS                          fineGridFaceValues,
-    const int                           side,
-    const int                           numberOfDofsPerAxis,
-    const int                           numberOfUnknownsPlusAuxiliaryVariables
+    int                                 side,
+    int                                 numberOfDofsPerAxis,
+    int                                 numberOfUnknownsPlusAuxiliaryVariables
   );
 
   template <typename T>
@@ -34,9 +35,9 @@ namespace exahype2::amr {
     const peano4::dataview::FaceMarker& marker,
     const T* NOALIAS                    coarseGridFaceValues,
     T* NOALIAS                          fineGridFaceValues,
-    const int                           side,
-    const int                           numberOfDofsPerAxis,
-    const int                           numberOfUnknownsPlusAuxiliaryVariables
+    int                                 side,
+    int                                 numberOfDofsPerAxis,
+    int                                 numberOfUnknownsPlusAuxiliaryVariables
   );
 
   template <typename T>
@@ -44,9 +45,9 @@ namespace exahype2::amr {
     const peano4::dataview::FaceMarker& marker,
     const T* NOALIAS                    coarseGridCellValues,
     T* NOALIAS                          fineGridFaceValues,
-    const int                           side,
-    const int                           numberOfDofsPerAxis,
-    const int                           numberOfUnknownsPlusAuxiliaryVariables
+    int                                 side,
+    int                                 numberOfDofsPerAxis,
+    int                                 numberOfUnknownsPlusAuxiliaryVariables
   );
 
   template <typename T>
@@ -54,9 +55,9 @@ namespace exahype2::amr {
     const peano4::dataview::FaceMarker& marker,
     T* NOALIAS                          coarseGridFaceValues,
     const T* NOALIAS                    fineGridFaceValues,
-    const int                           side,
-    const int                           numberOfDofsPerAxis,
-    const int                           numberOfUnknownsPlusAuxiliaryVariables
+    int                                 side,
+    int                                 numberOfDofsPerAxis,
+    int                                 numberOfUnknownsPlusAuxiliaryVariables
   );
 
   template <typename T>
@@ -65,9 +66,9 @@ namespace exahype2::amr {
     exahype2::amr::ChildDataStage<T>&   stage,
     const void*                         coarseFaceKey,
     const T* NOALIAS                    fineGridFaceValues,
-    const int                           side,
-    const int                           numberOfDofsPerAxis,
-    const int                           numberOfUnknownsPlusAuxiliaryVariables
+    int                                 side,
+    int                                 numberOfDofsPerAxis,
+    int                                 numberOfUnknownsPlusAuxiliaryVariables
   );
 
   template <typename T>
@@ -75,9 +76,9 @@ namespace exahype2::amr {
     exahype2::amr::ChildDataStage<T>& stage,
     const void*                       coarseFaceKey,
     T* NOALIAS                        coarseGridFaceValues,
-    const int                         normal,
-    const int                         numberOfDofsPerAxis,
-    const int                         numberOfUnknownsPlusAuxiliaryVariables
+    int                               normal,
+    int                               numberOfDofsPerAxis,
+    int                               numberOfUnknownsPlusAuxiliaryVariables
   );
 
   template <typename T>
@@ -87,9 +88,9 @@ namespace exahype2::amr {
     T* NOALIAS                        coarseGridFaceValues,
     const double* NOALIAS             restrictionMatrix1D,
     const double* NOALIAS             quadratureWeights1D,
-    const int                         normal,
-    const int                         numberOfDofsPerAxis,
-    const int                         numberOfUnknownsPlusAuxiliaryVariables
+    int                               normal,
+    int                               numberOfDofsPerAxis,
+    int                               numberOfUnknownsPlusAuxiliaryVariables
   );
 
   template <typename T>
@@ -97,8 +98,8 @@ namespace exahype2::amr {
     const peano4::dataview::CellMarker& marker,
     const T* NOALIAS                    coarseGridValues,
     T* NOALIAS                          fineGridValues,
-    const int                           numberOfDofsPerAxis,
-    const int                           numberOfUnknownsPlusAuxiliaryVariables
+    int                                 numberOfDofsPerAxis,
+    int                                 numberOfUnknownsPlusAuxiliaryVariables
   );
 
   template <typename T>
@@ -107,8 +108,8 @@ namespace exahype2::amr {
     const T* NOALIAS                    coarseGridValues,
     T* NOALIAS                          fineGridValues,
     const double* NOALIAS               interpolationMatrix1D,
-    const int                           numberOfDofsPerAxis,
-    const int                           numberOfUnknownsPlusAuxiliaryVariables
+    int                                 numberOfDofsPerAxis,
+    int                                 numberOfUnknownsPlusAuxiliaryVariables
   );
 
   template <typename T>
@@ -116,8 +117,8 @@ namespace exahype2::amr {
     const peano4::dataview::CellMarker& marker,
     T* NOALIAS                          coarseGridValues,
     const T* NOALIAS                    fineGridValues,
-    const int                           numberOfDofsPerAxis,
-    const int                           numberOfUnknownsPlusAuxiliaryVariables
+    int                                 numberOfDofsPerAxis,
+    int                                 numberOfUnknownsPlusAuxiliaryVariables
   );
 
   template <typename T>
@@ -127,8 +128,8 @@ namespace exahype2::amr {
     const T* NOALIAS                    fineGridValues,
     const double* NOALIAS               restrictionMatrix1D,
     const double* NOALIAS               quadratureWeights1D,
-    const int                           numberOfDofsPerAxis,
-    const int                           numberOfUnknownsPlusAuxiliaryVariables
+    int                                 numberOfDofsPerAxis,
+    int                                 numberOfUnknownsPlusAuxiliaryVariables
   );
 
   INLINE_METHOD double orderInvariantProduct(double firstFactor, double secondFactor, double thirdFactor);
@@ -138,9 +139,9 @@ namespace exahype2::amr {
     T* NOALIAS                   targetValues,
     const T* NOALIAS             sourceValues,
     const double* const* NOALIAS matrixPerAxis,
-    const int                    numberOfSourceDofsPerAxis,
-    const int                    numberOfTargetDofsPerAxis,
-    const int                    numberOfUnknownsPlusAuxiliaryVariables
+    int                          numberOfSourceDofsPerAxis,
+    int                          numberOfTargetDofsPerAxis,
+    int                          numberOfUnknownsPlusAuxiliaryVariables
   );
 
   template <typename T>
@@ -148,16 +149,16 @@ namespace exahype2::amr {
     T* NOALIAS                   coarseGridValues,
     const T* const* NOALIAS      childGridValues,
     const double* const* NOALIAS restrictionMatrixPerInterval,
-    const int                    numberOfDofsPerAxis,
-    const int                    numberOfUnknownsPlusAuxiliaryVariables
+    int                          numberOfDofsPerAxis,
+    int                          numberOfUnknownsPlusAuxiliaryVariables
   );
 
   template <typename T>
   INLINE_METHOD void restrictCellFromChildren(
     T* NOALIAS              coarseGridValues,
     const T* const* NOALIAS childGridValues,
-    const int               numberOfDofsPerAxis,
-    const int               numberOfUnknownsPlusAuxiliaryVariables
+    int                     numberOfDofsPerAxis,
+    int                     numberOfUnknownsPlusAuxiliaryVariables
   );
 
   template <typename T>
@@ -165,8 +166,8 @@ namespace exahype2::amr {
     T* NOALIAS                   fineFaceValues,
     const T* NOALIAS             coarseFaceValues,
     const double* const* NOALIAS prolongationMatrixPerAxis,
-    const int                    numberOfDofsPerAxis,
-    const int                    numberOfUnknownsPlusAuxiliaryVariables
+    int                          numberOfDofsPerAxis,
+    int                          numberOfUnknownsPlusAuxiliaryVariables
   );
 
   template <typename T>
@@ -174,8 +175,8 @@ namespace exahype2::amr {
     T* NOALIAS                   coarseFaceValues,
     const T* const* NOALIAS      childFaceValues,
     const double* const* NOALIAS restrictionMatrixPerInterval,
-    const int                    numberOfDofsPerAxis,
-    const int                    numberOfUnknownsPlusAuxiliaryVariables
+    int                          numberOfDofsPerAxis,
+    int                          numberOfUnknownsPlusAuxiliaryVariables
   );
 } // namespace exahype2::amr
 

@@ -5,7 +5,7 @@
 #include "peano4/grid/GridStatistics.h"
 #include "peano4/grid/GridVertex.h"
 
-peano4::grid::tests::GridStatisticsTest::GridStatisticsTest():
+peano4::grid::tests::GridStatisticsTest::GridStatisticsTest() :
   TestCase("peano4::grid::tests::GridStatisticsTest") {}
 
 void peano4::grid::tests::GridStatisticsTest::run() {
@@ -16,7 +16,7 @@ void peano4::grid::tests::GridStatisticsTest::run() {
 }
 
 void peano4::grid::tests::GridStatisticsTest::testStatistics() {
-  GridStatistics statistics;
+  peano4::grid::GridStatistics statistics;
 
   validateEquals(statistics.minDepth, std::numeric_limits<int>::max());
   validateEquals(statistics.maxDepth, 0);
@@ -58,12 +58,10 @@ void peano4::grid::tests::GridStatisticsTest::testStatistics() {
   for (int d = 0; d < DIMENSIONS; ++d) {
     validateTrue(std::fabs(statistics.minH[d] - 0.1 * (d + 1)) < 1e-12);
   }
-
-  // std::cout << statistics << std::endl;
 }
 
 void peano4::grid::tests::GridStatisticsTest::testClear() {
-  GridStatistics statistics;
+  peano4::grid::GridStatistics statistics;
 
   statistics.numberOfLocalUnrefinedCells  = 1;
   statistics.numberOfRemoteUnrefinedCells = 2;
@@ -97,85 +95,85 @@ void peano4::grid::tests::GridStatisticsTest::testClear() {
 }
 
 void peano4::grid::tests::GridStatisticsTest::testOperators() {
-  GridStatistics a, b;
+  peano4::grid::GridStatistics first;
+  peano4::grid::GridStatistics second;
 
-  a.minDepth                     = 3;
-  a.maxDepth                     = 5;
-  a.numberOfLocalUnrefinedCells  = 1;
-  a.numberOfRemoteUnrefinedCells = 2;
-  a.numberOfLocalRefinedCells    = 3;
-  a.numberOfRemoteRefinedCells   = 4;
-  a.numberOfVertices             = 10;
-  a.numberOfHangingVertices      = 20;
-  a.numberOfStationarySweeps     = 5;
-  a.setCoarseningHasBeenVetoed(true);
-  a.setRemovedEmptySubtree(false);
+  first.minDepth                     = 3;
+  first.maxDepth                     = 5;
+  first.numberOfLocalUnrefinedCells  = 1;
+  first.numberOfRemoteUnrefinedCells = 2;
+  first.numberOfLocalRefinedCells    = 3;
+  first.numberOfRemoteRefinedCells   = 4;
+  first.numberOfVertices             = 10;
+  first.numberOfHangingVertices      = 20;
+  first.numberOfStationarySweeps     = 5;
+  first.setCoarseningHasBeenVetoed(true);
+  first.setRemovedEmptySubtree(false);
   for (int d = 0; d < DIMENSIONS; ++d) {
-    a.minH[d] = 0.1 * (d + 2); // 0.2, 0.3, ...
+    first.minH[d] = 0.1 * (d + 2);
   }
 
-  b.minDepth                     = 2;
-  b.maxDepth                     = 8;
-  b.numberOfLocalUnrefinedCells  = 10;
-  b.numberOfRemoteUnrefinedCells = 20;
-  b.numberOfLocalRefinedCells    = 30;
-  b.numberOfRemoteRefinedCells   = 40;
-  b.numberOfVertices             = 100;
-  b.numberOfHangingVertices      = 200;
-  b.numberOfStationarySweeps     = 50;
-  b.setCoarseningHasBeenVetoed(false);
-  b.setRemovedEmptySubtree(true);
+  second.minDepth                     = 2;
+  second.maxDepth                     = 8;
+  second.numberOfLocalUnrefinedCells  = 10;
+  second.numberOfRemoteUnrefinedCells = 20;
+  second.numberOfLocalRefinedCells    = 30;
+  second.numberOfRemoteRefinedCells   = 40;
+  second.numberOfVertices             = 100;
+  second.numberOfHangingVertices      = 200;
+  second.numberOfStationarySweeps     = 50;
+  second.setCoarseningHasBeenVetoed(false);
+  second.setRemovedEmptySubtree(true);
   for (int d = 0; d < DIMENSIONS; ++d) {
-    b.minH[d] = 0.05 * (d + 1); // 0.05, 0.10, ...
+    second.minH[d] = 0.05 * (d + 1);
   }
 
-  GridStatistics c = a + b;
+  const peano4::grid::GridStatistics sum = first + second;
 
-  validateEquals(c.minDepth, 2);
-  validateEquals(c.maxDepth, 8);
-  validateEquals(c.numberOfLocalUnrefinedCells, 11);
-  validateEquals(c.numberOfRemoteUnrefinedCells, 22);
-  validateEquals(c.numberOfLocalRefinedCells, 33);
-  validateEquals(c.numberOfRemoteRefinedCells, 44);
-  validateEquals(c.numberOfVertices, 110);
-  validateEquals(c.numberOfHangingVertices, 220);
-  validateEquals(c.numberOfStationarySweeps, 5);
+  validateEquals(sum.minDepth, 2);
+  validateEquals(sum.maxDepth, 8);
+  validateEquals(sum.numberOfLocalUnrefinedCells, 11);
+  validateEquals(sum.numberOfRemoteUnrefinedCells, 22);
+  validateEquals(sum.numberOfLocalRefinedCells, 33);
+  validateEquals(sum.numberOfRemoteRefinedCells, 44);
+  validateEquals(sum.numberOfVertices, 110);
+  validateEquals(sum.numberOfHangingVertices, 220);
+  validateEquals(sum.numberOfStationarySweeps, 5);
 
-  // flags are OR'ed: a(vetoed=true, removed=false), b(vetoed=false, removed=true) => both true
-  validateEquals(c.getCoarseningHasBeenVetoed(), true);
-  validateEquals(c.getRemovedEmptySubtree(), true);
+  // The sum takes the or of each flag, so a flag one summand sets is set in the sum.
+  validateEquals(sum.getCoarseningHasBeenVetoed(), true);
+  validateEquals(sum.getRemovedEmptySubtree(), true);
 
-  // minH is element-wise min
   for (int d = 0; d < DIMENSIONS; ++d) {
-    const double exp = std::min(0.1 * (d + 2), 0.05 * (d + 1));
-    validateTrue(std::fabs(c.minH[d] - exp) < 1e-12);
+    const double expectedMinH = std::min(0.1 * (d + 2), 0.05 * (d + 1));
+    validateTrue(std::fabs(sum.minH[d] - expectedMinH) < 1e-12);
   }
 
-  GridStatistics e = a;
-  e += b;
-  validateEquals(e.minDepth, c.minDepth);
-  validateEquals(e.maxDepth, c.maxDepth);
-  validateEquals(e.numberOfLocalUnrefinedCells, c.numberOfLocalUnrefinedCells);
-  validateEquals(e.numberOfRemoteUnrefinedCells, c.numberOfRemoteUnrefinedCells);
-  validateEquals(e.numberOfLocalRefinedCells, c.numberOfLocalRefinedCells);
-  validateEquals(e.numberOfRemoteRefinedCells, c.numberOfRemoteRefinedCells);
-  validateEquals(e.numberOfVertices, c.numberOfVertices);
-  validateEquals(e.numberOfHangingVertices, c.numberOfHangingVertices);
-  validateEquals(e.numberOfStationarySweeps, c.numberOfStationarySweeps);
+  peano4::grid::GridStatistics accumulated = first;
+  accumulated += second;
+  validateEquals(accumulated.minDepth, sum.minDepth);
+  validateEquals(accumulated.maxDepth, sum.maxDepth);
+  validateEquals(accumulated.numberOfLocalUnrefinedCells, sum.numberOfLocalUnrefinedCells);
+  validateEquals(accumulated.numberOfRemoteUnrefinedCells, sum.numberOfRemoteUnrefinedCells);
+  validateEquals(accumulated.numberOfLocalRefinedCells, sum.numberOfLocalRefinedCells);
+  validateEquals(accumulated.numberOfRemoteRefinedCells, sum.numberOfRemoteRefinedCells);
+  validateEquals(accumulated.numberOfVertices, sum.numberOfVertices);
+  validateEquals(accumulated.numberOfHangingVertices, sum.numberOfHangingVertices);
+  validateEquals(accumulated.numberOfStationarySweeps, sum.numberOfStationarySweeps);
   for (int d = 0; d < DIMENSIONS; ++d) {
-    validateTrue(std::fabs(e.minH[d] - c.minH[d]) < 1e-12);
+    validateTrue(std::fabs(accumulated.minH[d] - sum.minH[d]) < 1e-12);
   }
-  validateEquals(e.getCoarseningHasBeenVetoed(), c.getCoarseningHasBeenVetoed());
-  validateEquals(e.getRemovedEmptySubtree(), c.getRemovedEmptySubtree());
+  validateEquals(accumulated.getCoarseningHasBeenVetoed(), sum.getCoarseningHasBeenVetoed());
+  validateEquals(accumulated.getRemovedEmptySubtree(), sum.getRemovedEmptySubtree());
 }
 
 void peano4::grid::tests::GridStatisticsTest::testMemoryUsage() {
-  GridStatistics statistics;
+  peano4::grid::GridStatistics statistics;
 
   validateEquals(statistics.getMemoryUsageInBytes(), 0);
 
   statistics.numberOfVertices = 10;
 
-  const std::size_t expectedBytes = 10 * sizeof(GridVertex);
+  const std::size_t expectedBytes = 10 * sizeof(peano4::grid::GridVertex);
   validateEquals(statistics.getMemoryUsageInBytes(), expectedBytes);
 }

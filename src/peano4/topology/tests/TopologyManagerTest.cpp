@@ -5,6 +5,7 @@
 #include "peano4/grid/GridControlEvent.h"
 #include "peano4/grid/GridTraversalEvent.h"
 #include "peano4/grid/GridTraversalObserver.h"
+#include "peano4/sfc/ActiveCurve.h"
 #include "peano4/topology/TopologyManager.h"
 #include "peano4/topology/Tree.h"
 #include "tarch/mpi/Collectives.h"
@@ -12,7 +13,7 @@
 
 namespace {
   std::int64_t ownershipUnitsOnLevel(const int level) {
-    std::int64_t ownershipUnits = THREE_POWER_D;
+    std::int64_t ownershipUnits = peano4::sfc::ActiveCurve::ChildrenPerCell;
     for (int axis = 0; axis < DIMENSIONS; axis++) {
       ownershipUnits *= peano4::topology::cellsPerAxis(level);
     }
@@ -26,11 +27,11 @@ namespace {
       static_cast<void>(treeId);
       return new EmptyObserver();
     }
-    std::vector<peano4::grid::GridControlEvent> getGridControlEvents() const override { return {}; }
-    void                                        beginTraversal(
-                                             const tarch::la::Vector<DIMENSIONS, double>& x,
-                                             const tarch::la::Vector<DIMENSIONS, double>& h
-                                           ) override {
+    [[nodiscard]] std::vector<peano4::grid::GridControlEvent> getGridControlEvents() const override { return {}; }
+    void                                                      beginTraversal(
+                                                           const tarch::la::Vector<DIMENSIONS, double>& x,
+                                                           const tarch::la::Vector<DIMENSIONS, double>& h
+                                                         ) override {
       static_cast<void>(x);
       static_cast<void>(h);
     }
@@ -95,7 +96,7 @@ void peano4::topology::tests::TopologyManagerTest::testRejectedControlEventsChan
     MPI_SUM,
     tarch::mpi::Rank::getInstance().getCommunicator()
   );
-  validateEquals(globalLeaves, THREE_POWER_D);
+  validateEquals(globalLeaves, peano4::sfc::ActiveCurve::ChildrenPerCell);
 
   validateFalse(manager.controlEventsChangePlan({}));
   validateFalse(manager.controlEventsChangePlan({eraseRoot}));
@@ -143,8 +144,22 @@ void peano4::topology::tests::TopologyManagerTest::testTheRegridRealisationCover
  * runs out of depth.
  */
 void peano4::topology::tests::TopologyManagerTest::testTheSpawnLevelOffersEnoughOwnershipUnits() {
+  const int unitsOnRootLevel  = static_cast<int>(ownershipUnitsOnLevel(0));
+  const int unitsOnLevelOne   = static_cast<int>(ownershipUnitsOnLevel(1));
+  const int unitsOnLevelTwo   = static_cast<int>(ownershipUnitsOnLevel(2));
+  const int unitsOnLevelThree = static_cast<int>(ownershipUnitsOnLevel(3));
+
   for (int targetLevel = 1; targetLevel <= 8; targetLevel++) {
-    for (const int numberOfRanks : {1, 2, 8, 81, 82, 729, 730, 6561}) {
+    // The rank counts sit right below and right above the ownership units of a level.
+    for (const int numberOfRanks :
+         {1,
+          2,
+          unitsOnRootLevel - 1,
+          unitsOnLevelOne,
+          unitsOnLevelOne + 1,
+          unitsOnLevelTwo,
+          unitsOnLevelTwo + 1,
+          unitsOnLevelThree}) {
       const auto spawnLevel         = peano4::topology::TopologyManager::deriveSpawnLevel(targetLevel, numberOfRanks);
       const bool coversEveryRank    = ownershipUnitsOnLevel(spawnLevel) >= numberOfRanks;
       const bool exhaustedGridDepth = spawnLevel == std::max(targetLevel - 1, 0);
@@ -179,10 +194,22 @@ void peano4::topology::tests::TopologyManagerTest::testShallowGridsUseTheRootSpa
 void peano4::topology::tests::TopologyManagerTest::testTheSpawnLevelGrowsWithTheRankCount() {
   constexpr int DeepEnough = 9;
 
+  const int unitsOnLevelOne   = static_cast<int>(ownershipUnitsOnLevel(1));
+  const int unitsOnLevelTwo   = static_cast<int>(ownershipUnitsOnLevel(2));
+  const int unitsOnLevelThree = static_cast<int>(ownershipUnitsOnLevel(3));
+
   int previousSpawnLevel = peano4::topology::TopologyManager::deriveSpawnLevel(DeepEnough, 1);
   validateEquals(previousSpawnLevel, 0);
 
-  for (const int numberOfRanks : {2, 81, 82, 729, 730, 6561, 6562}) {
+  // The rank counts sit on the ownership units of a level and one rank above them.
+  for (const int numberOfRanks :
+       {2,
+        unitsOnLevelOne,
+        unitsOnLevelOne + 1,
+        unitsOnLevelTwo,
+        unitsOnLevelTwo + 1,
+        unitsOnLevelThree,
+        unitsOnLevelThree + 1}) {
     const auto spawnLevel = peano4::topology::TopologyManager::deriveSpawnLevel(DeepEnough, numberOfRanks);
     validateWithParams2(spawnLevel >= previousSpawnLevel, spawnLevel, numberOfRanks);
     previousSpawnLevel = spawnLevel;
@@ -234,5 +261,5 @@ void peano4::topology::tests::TopologyManagerTest::testTheDomainAccessorsReturnT
     validateNumericalEquals(manager.getDomainOffset()(axis), 0.0);
     validateNumericalEquals(manager.getDomainWidth()(axis), 1.0);
   }
-  validate(manager.getPeriodicBC().none());
+  validate(manager.getPeriodicBoundaries().none());
 }

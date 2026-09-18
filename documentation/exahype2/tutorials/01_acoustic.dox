@@ -117,9 +117,11 @@ flags - no recompilation is needed to change the run:
     ./Acoustic -et 2.2 -ns 22 -l 3
 
 Here `-et` is the end time, `-ns` the number of snapshots, and `-l` the uniform
-mesh level: level \f$\ell\f$ covers the domain with \f$3^\ell\f$ cells per
-direction. `OMP_NUM_THREADS` runs the solver on four OpenMP threads. The notebook
-then renders the snapshots with an interactive time slider:
+mesh level: level \f$\ell\f$ covers the domain with \f$k^\ell\f$ cells per
+direction, with k the subdivision factor of the active curve (3 on the Peano
+curve, 2 on the Hilbert curve). `OMP_NUM_THREADS` runs the solver on four
+OpenMP threads. The notebook then renders the snapshots with an interactive
+time slider:
 
     from postprocessing import render_solution
     render_solution.show_solution("ADERDGSolver", field="p")
@@ -133,8 +135,7 @@ Drag the slider to watch the wave expand from the source and reflect off the wal
 
 # Experiment
 
-- Plot a velocity component instead of the pressure: pass `field="v"` to
-  `show_solution`.
+- Plot a velocity component: pass `field="v"` to `show_solution`.
 - Refine the mesh: raise `-l` to 4 and re-run (no rebuild needed).
 - Run a little longer: raise `-et` (and `-ns`) to follow the wave reflecting off
   the far walls.

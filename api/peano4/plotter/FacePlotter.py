@@ -122,7 +122,7 @@ class FacePlotter(BasePlotter):
     const int normalDimension = marker.getSelectedFaceNumber() % DIMENSIONS;
 
     auto faceSize = marker.getH();
-    const auto& faceOffset = marker.getX() - faceSize * 0.5;
+    const auto faceOffset = marker.getX() - faceSize * 0.5;
     faceSize[normalDimension] = 0.;
 
     // The tangential dimensions enumerate the axes other than the normal dimension.
@@ -229,9 +229,9 @@ class FacePlotter(BasePlotter):
         const int cellIndex = _cellPlotter->plotQuadrangle(vertices);
 #endif
 
-          _subdomainPlotter->plotCellData(cellIndex, tarch::mpi::Rank::getInstance().getRank());
-          _subtreeTaskPlotter->plotCellData(cellIndex, getSubtreeTask());
-          _refinementLevelPlotter->plotCellData(cellIndex, 0);
+        _subdomainPlotter->plotCellData(cellIndex, tarch::mpi::Rank::getInstance().getRank());
+        _subtreeTaskPlotter->plotCellData(cellIndex, getSubtreeId());
+        _refinementLevelPlotter->plotCellData(cellIndex, 0);
       }
 #if DIMENSIONS == 3
     }
@@ -247,17 +247,17 @@ class FacePlotter(BasePlotter):
             super().get_attributes()
             + jinja2.Template(
                 """
-  std::unique_ptr<tarch::plotter::FileWriter::CellPlotter> _cellPlotter;
-  std::unique_ptr<tarch::plotter::FileWriter::VertexPlotter> _vertexPlotter;
+  std::unique_ptr<tarch::plotter::FileWriter::CellPlotter> _cellPlotter{};
+  std::unique_ptr<tarch::plotter::FileWriter::VertexPlotter> _vertexPlotter{};
 
 {% if DESCRIPTION %}
 {% for name, count in DESCRIPTION.items() %}
-  std::unique_ptr<tarch::plotter::FileWriter::VertexDataPlotter> _{{name}}DataPlotterL;
-  std::unique_ptr<tarch::plotter::FileWriter::VertexDataPlotter> _{{name}}DataPlotterR;
+  std::unique_ptr<tarch::plotter::FileWriter::VertexDataPlotter> _{{name}}DataPlotterL{};
+  std::unique_ptr<tarch::plotter::FileWriter::VertexDataPlotter> _{{name}}DataPlotterR{};
 {% endfor %}
 {% else %}
-  std::unique_ptr<tarch::plotter::FileWriter::VertexDataPlotter> _vertexDataPlotterL;
-  std::unique_ptr<tarch::plotter::FileWriter::VertexDataPlotter> _vertexDataPlotterR;
+  std::unique_ptr<tarch::plotter::FileWriter::VertexDataPlotter> _vertexDataPlotterL{};
+  std::unique_ptr<tarch::plotter::FileWriter::VertexDataPlotter> _vertexDataPlotterR{};
 {% endif %}
 """
             ).render(**self.d)

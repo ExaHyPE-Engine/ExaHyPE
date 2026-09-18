@@ -41,7 +41,7 @@ tracing = exahype2.tracer.FiniteVolumesTracing(
   tracerParticles,
   solver,
   project_on_tracer_properties_kernel=
-    "::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear",
+    "::exahype2::fv::projectAllValuesOntoParticlePiecewiseLinear",
 )
 project.add_action_set_to_initialisation(tracing)
 project.add_action_set_to_timestepping(tracing)

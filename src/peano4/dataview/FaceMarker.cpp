@@ -18,6 +18,8 @@ std::string peano4::dataview::FaceMarker::toString() const {
   out << ",h=" << ::toString(h);
   out << ",selectedFace=" << selectedFace;
   out << ",cellIsLocal=" << cellIsLocal;
+  out << ",cellHasBeenRefined=" << cellHasBeenRefined;
+  out << ",cellWillBeRefined=" << cellWillBeRefined;
   out << ",isLocal=" << isLocal();
   out << ",hasBeenRefined=" << hasBeenRefined();
   out << ",willBeRefined=" << willBeRefined();

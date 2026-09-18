@@ -1,6 +1,6 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from .RungeKuttaDG  import RungeKuttaDG
+from .RungeKuttaDG import RungeKuttaDG
 
 
 class SeparateSweeps(RungeKuttaDG):
@@ -98,13 +98,13 @@ class SeparateSweeps(RungeKuttaDG):
     """
     super(SeparateSweeps, self).create_action_sets()
     self._action_set_linear_combination_of_estimates.guards                                  = self._primary_sweeps_of_Runge_Kutta_step_on_cell
-    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.guards = self._primary_sweeps_of_Runge_Kutta_step_on_face
+    self._action_set_adaptive_mesh_face_coupling.guards = self._primary_sweeps_of_Runge_Kutta_step_on_face
     self._action_set_project_linear_combination_onto_faces.guards                            = self._primary_sweeps_of_Runge_Kutta_step_on_cell
     self._action_set_solve_volume_integral.guards                                            = self._primary_sweeps_of_Runge_Kutta_step_on_cell
 
     self._action_set_add_volume_and_face_solution.guards = self._secondary_sweeps_of_Runge_Kutta_step_on_cell
     self._action_set_solve_Riemann_problem.guards        = self._secondary_sweeps_of_Runge_Kutta_step_on_face
     self._action_set_interpolate_Riemann_solution_onto_hanging_faces.guards = self._secondary_sweeps_of_Runge_Kutta_step_on_cell
-    self._action_set_handle_boundary.guards              = self._secondary_sweeps_of_Runge_Kutta_step_on_face
+    self._action_set_apply_boundary_conditions.guards    = self._secondary_sweeps_of_Runge_Kutta_step_on_face
 
     self._action_set_compute_final_linear_combination_and_project_solution_onto_faces.guard = self._store_cell_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::SolveRiemannProblemAndAddToVolumeIntegralOfStep{}".format(self.get_name_of_global_instance(),self._name,self.number_of_Runge_Kutta_steps()-1)

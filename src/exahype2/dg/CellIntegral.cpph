@@ -8,12 +8,12 @@
  * implemented by this kernel.
  */
 template <typename Solver, int order, int unknowns, int auxiliaryVariables>
-void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre(
+void exahype2::dg::cellIntegralPatchwiseInSituGaussLegendre(
   ::exahype2::CellData<double, double>& cellData,
-  bool                                  evaluateFlux,
-  bool                                  evaluateNonconservativeProduct,
-  bool                                  evaluateSource,
-  [[maybe_unused]] bool                 evaluatePointSources
+  const bool                            evaluateFlux,
+  const bool                            evaluateNonconservativeProduct,
+  const bool                            evaluateSource,
+  [[maybe_unused]] const bool           evaluatePointSources
 ) {
   const int inputStride  = unknowns + auxiliaryVariables;
   const int outputStride = unknowns;
@@ -45,11 +45,11 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre(
             tarch::la::Vector<DIMENSIONS, int> contributingNodeIndex = dof;
             contributingNodeIndex[dim]                               = i;
             const tarch::la::Vector<DIMENSIONS, double> position =
-              getQuadraturePoint(x, h, contributingNodeIndex, order, Solver::QuadraturePoints1D);
+              getQuadraturePoint(x, h, contributingNodeIndex, Solver::QuadraturePoints1D);
             const int contributingNodeSerialised = peano4::dLinearised(contributingNodeIndex, nodesPerAxis);
 
             Solver::flux(
-              &cellQin[contributingNodeSerialised * inputStride],
+              &cellQin[static_cast<std::ptrdiff_t>(contributingNodeSerialised) * inputStride],
               position,
               t,
               dt,
@@ -58,7 +58,9 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre(
               Solver::Offloadable::Yes
             );
 
-            // Coefficient within matrix is tensor product over dimensions, too
+            // The coefficient is a tensor product of the stiffness matrix along the derivative
+            // direction and the mass matrix along the other directions. The h-terms cancel
+            // along the derivative direction.
             double coeff = Solver::StiffnessOperator1D[i + dof(dim) * nodesPerAxis];
             for (int dd = 0; dd < DIMENSIONS; dd++) {
               coeff *= (dd == dim) ? 1.0 : Solver::MassMatrixDiagonal1D[dof(dd)] * h(dd);
@@ -73,10 +75,10 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre(
 
       if (evaluateSource) {
         const tarch::la::Vector<DIMENSIONS, double> position =
-          getQuadraturePoint(x, h, dof, order, Solver::QuadraturePoints1D);
+          getQuadraturePoint(x, h, dof, Solver::QuadraturePoints1D);
 
         Solver::sourceTerm(
-          &cellQin[dofSerialised * inputStride],
+          &cellQin[static_cast<std::ptrdiff_t>(dofSerialised) * inputStride],
           position,
           t,
           dt,
@@ -101,7 +103,7 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre(
 
       if (evaluateNonconservativeProduct) {
         const tarch::la::Vector<DIMENSIONS, double> position =
-          getQuadraturePoint(x, h, dof, order, Solver::QuadraturePoints1D);
+          getQuadraturePoint(x, h, dof, Solver::QuadraturePoints1D);
 
 #if DIMENSIONS == 2
         const double coeff =
@@ -129,7 +131,7 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre(
           }
 
           Solver::nonconservativeProduct(
-            &cellQin[dofSerialised * inputStride],
+            &cellQin[static_cast<std::ptrdiff_t>(dofSerialised) * inputStride],
             gradientValues,
             position,
             t,

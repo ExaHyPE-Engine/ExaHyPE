@@ -30,7 +30,7 @@ class Prediction(AbstractADERDGActionSet):
 
     {{PREPROCESS_RECONSTRUCTED_PATCH}}
 
-    {{CORRECTOR_COMPUTATION_PRECISION}}* stateEstimates[TWO_TIMES_D] = {
+    {{CORRECTOR_COMPUTATION_PRECISION}}* stateEstimates[peano4::FacesPerCell] = {
       fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(0).data() + BasisElementsPerFace,
       fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(1).data() + BasisElementsPerFace,
 #if DIMENSIONS==3
@@ -43,7 +43,7 @@ class Prediction(AbstractADERDGActionSet):
 #endif
     };
 
-    {{CORRECTOR_COMPUTATION_PRECISION}}* fluxEstimates[TWO_TIMES_D] = {
+    {{CORRECTOR_COMPUTATION_PRECISION}}* fluxEstimates[peano4::FacesPerCell] = {
       fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(0).data() + FluxElementsPerFace,
       fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(1).data() + FluxElementsPerFace,
 #if DIMENSIONS==3
@@ -82,7 +82,7 @@ class Prediction(AbstractADERDGActionSet):
 
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(timeStepSize);
     bool hasHangingFaces = false;
-    for (int faceNumber = 0; faceNumber < TWO_TIMES_D; faceNumber++) {
+    for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
       const auto& faceLabel =
         fineGridFaces{{SOLVER_NAME}}FaceLabel(faceNumber);
       hasHangingFaces =

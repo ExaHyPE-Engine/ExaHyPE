@@ -1,8 +1,7 @@
-// This file is part of the Peano project. For conditions of distribution and
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "peano4/Globals.h"
 #include "tarch/la/Vector.h"
 
 namespace exahype2::dg::tests {
@@ -43,104 +42,5 @@ namespace exahype2::dg::tests {
     double                                       dt,
     int                                          normal,
     double* NOALIAS                              F
-  );
-
-  void eulerSource(
-    const double* NOALIAS                        Q,
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    double                                       t,
-    double                                       dt,
-    double* NOALIAS                              S
-  );
-
-  double eulerEigenvalue(
-    const double* NOALIAS                        Q,
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    double                                       t,
-    double                                       dt,
-    int                                          normal
-  );
-
-  void eulerBoundaryConditions(
-    const double* NOALIAS                        Qinside,
-    double* NOALIAS                              Qoutside,
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    double                                       t,
-    double                                       dt,
-    int                                          normal
-  );
-
-  void eulerInitial(double* NOALIAS Q, int node = 0);
-
-  void elasticInitial(double* NOALIAS Q);
-
-  void elasticFlux(
-    const double* NOALIAS                        Q,
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    double                                       t,
-    double                                       dt,
-    int                                          normal,
-    double* NOALIAS                              F
-  );
-
-  void elasticSource(
-    const double* NOALIAS                        Q,
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    double                                       t,
-    double                                       dt,
-    double* NOALIAS                              S
-  );
-
-  double elasticEigenvalue(
-    const double* NOALIAS                        Q,
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    double                                       t,
-    double                                       dt,
-    int                                          normal
-  );
-
-  void elasticBoundaryConditions(
-    const double* NOALIAS                        Qinside,
-    double* NOALIAS                              Qoutside,
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    double                                       t,
-    double                                       dt,
-    int                                          normal
-  );
-
-  void elasticNonConservativeProduct(
-    const double* NOALIAS                        Q,
-    const double* NOALIAS                        deltaQ,
-    const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
-    double                                       t,
-    double                                       dt,
-    int                                          normal,
-    double* NOALIAS                              BgradQ
-  );
-
-  void testBoundaryConditions(
-    const double* NOALIAS                        Qinside,
-    double* NOALIAS                              Qoutside,
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    double                                       t,
-    double                                       dt,
-    int                                          normal
-  );
-
-  void secondTestBoundaryConditions(
-    const double* NOALIAS                        Qinside,
-    double* NOALIAS                              Qoutside,
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    double                                       t,
-    double                                       dt,
-    int                                          normal
-  );
-
-  double testEigenvalue(
-    const double* NOALIAS                        Q,
-    const tarch::la::Vector<DIMENSIONS, double>& x,
-    double                                       t,
-    double                                       dt,
-    int                                          normal
   );
 } // namespace exahype2::dg::tests

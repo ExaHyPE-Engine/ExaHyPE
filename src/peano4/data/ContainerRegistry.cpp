@@ -16,9 +16,10 @@ namespace {
    */
   template <class Operation>
   void runContainerTasks(const std::vector<peano4::data::ManagedContainer*>& containers, const Operation& operation) {
-    tarch::parallelFor(tarch::Range(static_cast<int>(containers.size())), [&](const int containerNumber) {
-      operation(containers[containerNumber]);
-    });
+    tarch::accelerator::parallelFor(
+      tarch::accelerator::Range(static_cast<int>(containers.size())),
+      [&](const int containerNumber) { operation(containers[containerNumber]); }
+    );
   }
 } // namespace
 
@@ -37,18 +38,18 @@ void peano4::data::ContainerRegistry::attachContainer(peano4::data::ManagedConta
     std::find_if(_containers.begin(), _containers.end(), [container](const peano4::data::ManagedContainer* registered) {
       return registered->getManagedContainerId() >= container->getManagedContainerId();
     });
-  assertion(
-    insertionPoint == _containers.end()
-      or (*insertionPoint)->getManagedContainerId() != container->getManagedContainerId(),
-    container->getManagedContainerId()
-  );
+  [[maybe_unused]] const bool containerIdIsUnused = insertionPoint == _containers.end()
+    or (*insertionPoint)->getManagedContainerId() != container->getManagedContainerId();
+  assertion(containerIdIsUnused, container->getManagedContainerId());
   _containers.insert(insertionPoint, container);
 }
 
 void peano4::data::ContainerRegistry::detachContainer(const peano4::data::ManagedContainer* const container) {
   assertion(container != nullptr);
   const auto entry = std::find(_containers.begin(), _containers.end(), container);
-  assertion(entry != _containers.end());
+
+  [[maybe_unused]] const bool containerIsRegistered = entry != _containers.end();
+  assertion(containerIsRegistered);
   _containers.erase(entry);
 }
 
@@ -125,10 +126,13 @@ void peano4::data::ContainerRegistry::replicateInterfaceSlots(
   const int numberOfThreads = std::max(1, tarch::tasking::Runtime::getInstance().getNumberOfThreads());
   const int chunksPerContainer =
     std::max(1, (ReplicationChunksPerThread * numberOfThreads + numberOfContainers - 1) / numberOfContainers);
-  tarch::parallelFor(tarch::Range(numberOfContainers * chunksPerContainer), [&](const int itemNumber) {
-    _containers[itemNumber / chunksPerContainer]
-      ->replicateInterfaceSlots(facePairs, vertexPairs, itemNumber % chunksPerContainer, chunksPerContainer);
-  });
+  tarch::accelerator::parallelFor(
+    tarch::accelerator::Range(numberOfContainers * chunksPerContainer),
+    [&](const int itemNumber) {
+      _containers[itemNumber / chunksPerContainer]
+        ->replicateInterfaceSlots(facePairs, vertexPairs, itemNumber % chunksPerContainer, chunksPerContainer);
+    }
+  );
 }
 
 void peano4::data::ContainerRegistry::packBoundarySlots(

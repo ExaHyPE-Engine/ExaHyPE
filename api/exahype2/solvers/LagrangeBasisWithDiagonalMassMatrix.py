@@ -7,7 +7,6 @@ from scipy.special import roots_sh_legendre
 from .LagrangeBasis import LagrangeBasis
 from .LagrangeBasis import render_tensor_1
 from .LagrangeBasis import render_tensor_2
-from .LagrangeBasis import render_tensor_3
 
 
 class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
@@ -16,13 +15,12 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
   Lagrange basis with a diagonal mass matrix.
 
   This abstract class is a factory for the vectors and matrices that we need
-  within DG solvers. Never use it directly, but always a subclass. As with all
-  basis classes, the most relevant routine for a user is
+  within DG solvers. A subclass supplies the quadrature. As with all basis
+  classes, the most relevant routine for a user is
   init_dictionary_with_default_parameters(), which fills a map with replacement
   rules, i.e. with the precomputed matrices and vectors. The class assumes that
   the mass matrix is diagonal. That holds exactly for Gauss-Legendre sampling
-  points only, yet it is also the right starting point if you want to work with
-  lumped matrices.
+  points, and it is the lumped approximation for the other node families.
 
   Further to the initialisation, some client classes read quadrature_points and
   quadrature_weights. The exahype2.solvers.rkdg.RungeKuttaDG solver for example
@@ -31,14 +29,16 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
   ## Generated vectors and matrices
 
   The documentation of the individual fields lives in class attributes of their
-  own. That way it shows up in the doxygen documentation and can be piped into
+  own. That way it shows up in the Doxygen documentation and can be piped into
   the generated C++ code.
 
   - QuadraturePoints1D
   - MassMatrixDiagonal1D
   - StiffnessOperator
-  - RestrictionMatrix1D
-  - InterpolationMatrix1D
+
+  The C++ routines in exahype2/dg/AMRMatrices.h derive the interpolation and
+  restriction matrices between a cell and its children from QuadraturePoints1D
+  and the subdivision factor of the grid.
 
   ## Realisation
 
@@ -66,7 +66,7 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
   quadrature points.
 
   As we work in a tensor product world, the 2D and 3D quadrature points can be
-  simply constructed by multiplying the respective coordinate system indices.
+  constructed by multiplying the respective coordinate system indices.
 """
 
   QuadratureWeights1DDocumentation = r"""
@@ -79,11 +79,11 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
   it.
 
   As we work in a tensor product world, the 2D and 3D weights can be
-  simply constructed by multiplying the respective coordinate system indices.
+  constructed by multiplying the respective coordinate system indices.
 """
 
   MassMatrix1DDocumentation = r"""
-  Computes the (reference) element mass matrix' diagonal. The mass matrix is defined
+  Computes the diagonal of the (reference) element mass matrix. The mass matrix is defined
   via
 
   @f$  \int _{(0,1)}(\phi _i, \phi _j) dx, i,j = 1 ... N > 0 @f$
@@ -97,7 +97,7 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
 
   This is a 1D mass matrix: if we have a polynomial of order p, we have
   @f$ (p+1)^d @f$ dofs in total per cell. The matrix has only the dimensions
-  @f$ (p+1) \times (p+1) @f$ so it effectively only models how the dofs along one
+  @f$ (p+1) \times (p+1) @f$ so it only models how the dofs along one
   horizontal or vertical line within the cell interact. This is sufficient
   if we know that we have a tensor product approach of the shape functions and a
   diagonal mass matrix.
@@ -164,24 +164,12 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
     integral. Furthermore, it is exact for a given Lagrange polynomial.
 """
 
-  InterpolationMatrix1DDocumentation = r"""
-    This is essentially a @f$ 3 \cdot (order+1)^d-1 @f$ matrix split up
-    into a three-dimensional tensor. The page about DG AMR in the file
-    exahype2/dg/Riemann.h documents its content.
-"""
-
-  RestrictionMatrix1DDocumentation = r"""
-    This is essentially a @f$ 3 \cdot (order+1)^d-1 @f$ matrix split up
-    into a three-dimensional tensor. The page about DG AMR in the file
-    exahype2/dg/Riemann.h documents its content.
-"""
-
   def __compute_mass_matrix_diagonal(self):
     r"""
 
     Reference mass matrix diagonal.
 
-    The description lives in the class documentation, as doxygen does not
+    The description lives in the class documentation, as Doxygen does not
     extract documentation from private routines in Python.
 
     """
@@ -192,8 +180,8 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
 
     Compute the (reference) element stiffness matrix for the configured polynomial order.
 
-    @see StiffnessOperator1DDocumentation which is also used to dump documentation
-      into generated C++ code.
+    @see StiffnessOperator1DDocumentation, the documentation the generated
+      C++ code carries for the matrix.
 
     """
     dofs_per_axis      = self.dofs_per_axis
@@ -207,80 +195,11 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
 
     return stiffness_matrix
 
-  def __compute_interpolation_matrix(self):
-    r"""
-
-    Compute the interpolation matrix.
-
-    The matrix prepares the halo layer data for the fine grid points at a
-    refinement boundary. It is a 1D mapping only, i.e. it serves the "surface"
-    of a 2D domain, and has a size of 3Dof \times Dof.
-    Its elements are \phi_j(x^f_i), i.e. the value of the coarse grid basis
-    functions at a fine grid point. In practice we multiply this matrix with the
-    vector of coarse grid weights (u^c_i):
-
-    \phi_j(x^f_i)*u^c_i=u^c(x^f_i)
-
-    u^c(x) is the original solution on the coarse grid, so the result is the
-    coarse solution evaluated at the fine grid positions.
-
-    We can also use the same matrix to interpolate along the normal direction.
-
-    """
-    if self._polynomial_order == 0:
-      return [[[1.0]],[[1.0]],[[1.0]]]
-    else:
-      dofs_per_axis     = self.dofs_per_axis
-      quadrature_points = self.quadrature_points
-      interp_matrix     = [ [[0.0 for _ in range(dofs_per_axis)] for _ in range(dofs_per_axis)] for _ in range(3) ]
-      fine_grid_points  = [0.0 for _ in range(3*dofs_per_axis)]
-      for index in range(dofs_per_axis):
-        fine_grid_points[index]                   = quadrature_points[index] / 3.0
-        fine_grid_points[index +   dofs_per_axis] = quadrature_points[index] / 3.0 + 1.0 / 3.0
-        fine_grid_points[index + 2*dofs_per_axis] = quadrature_points[index] / 3.0 + 2.0 / 3.0
-      for block in range(3):
-        for row in range(dofs_per_axis):
-          for col in range(dofs_per_axis):
-            interp_matrix[block][row][col] = self.value1D(fine_grid_points[row + block*dofs_per_axis],col)
-
-      return interp_matrix
-
-  def __compute_restriction_matrix(self):
-    r"""
-
-    Compute the restriction matrix.
-
-    The matrix prepares the halo layer data for the coarse cells at a refinement
-    boundary, and its formulation follows the interpolation scheme. It is a 1D
-    mapping only, i.e. it serves the "surface" of a 2D domain, and has a size of
-    Dof \times 3Dof.
-
-    We can also use the same matrix along the normal direction.
-
-    """
-    if self._polynomial_order == 0:
-      return [[[1.0/3.0]],[[1.0/3.0]],[[1.0/3.0]]]
-    else:
-      dofs_per_axis      = self.dofs_per_axis
-      quadrature_points  = self.quadrature_points
-      restriction_matrix = [ [[0.0 for _ in range(dofs_per_axis)] for _ in range(dofs_per_axis)] for _ in range(3) ]
-      fine_grid_points   = [0.0 for _ in range(3*dofs_per_axis)]
-      for index in range(dofs_per_axis):
-        fine_grid_points[index]                   = quadrature_points[index] / 3.0
-        fine_grid_points[index +   dofs_per_axis] = quadrature_points[index] / 3.0 + 1.0 / 3.0
-        fine_grid_points[index + 2*dofs_per_axis] = quadrature_points[index] / 3.0 + 2.0 / 3.0
-      for block in range(3):
-        for row in range(dofs_per_axis):
-          for col in range(dofs_per_axis):
-            restriction_matrix[block][row][col] = self.value1D(fine_grid_points[col + block*dofs_per_axis],row) / 3.0
-
-      return restriction_matrix
-
   def __compute_derivative_operator(self):
     r"""
 
-    @see DerivativeOperator1DDocumentation which is also used to dump documentation
-      into generated C++ code.
+    @see DerivativeOperator1DDocumentation, the documentation the generated
+      C++ code carries for the operator.
 
     """
     dofs_per_axis     = self.dofs_per_axis
@@ -299,7 +218,7 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
     Compute the value of every basis function at the left end of the interval.
 
     @see BasisFunctionValuesLeft1DDocumentation which defines what this routine
-      does and is also used to inject documentation into the generated C++ code.
+      does and is the documentation the generated C++ code carries for the values.
 
     """
     return [ self.value1D(0.0, number) for number in range(self.dofs_per_axis) ]
@@ -339,7 +258,9 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
 
       stiffness_operator = self._get_cached_basis_entry("stiffness_operator", self.__compute_stiffness_operator)
       if use_multidimensional_arrays:
-        stiffness_declaration = "static constexpr double StiffnessOperator1D[][] = {};".format(
+        stiffness_declaration = "static constexpr double StiffnessOperator1D[{}][{}] = {};".format(
+          self.dofs_per_axis,
+          self.dofs_per_axis,
           render_tensor_2(stiffness_operator,use_multidimensional_arrays)
         )
       else:
@@ -359,7 +280,9 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
 
       derivative_operator = self._get_cached_basis_entry("derivative_operator", self.__compute_derivative_operator)
       if use_multidimensional_arrays:
-        derivative_declaration = "static constexpr double DerivativeOperator1D[][] = {};".format(
+        derivative_declaration = "static constexpr double DerivativeOperator1D[{}][{}] = {};".format(
+          self.dofs_per_axis,
+          self.dofs_per_axis,
           render_tensor_2(derivative_operator,use_multidimensional_arrays)
         )
       else:
@@ -367,28 +290,6 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
           render_tensor_2(derivative_operator,use_multidimensional_arrays)
         )
       basis_declarations += self.__render_basis_declaration(self.DerivativeOperator1DDocumentation, derivative_declaration)
-
-      restriction_matrix = self._get_cached_basis_entry("restriction_matrix", self.__compute_restriction_matrix)
-      if use_multidimensional_arrays:
-        restriction_declaration = "static constexpr double RestrictionMatrix1D[][][] = {};".format(
-          render_tensor_3(restriction_matrix,use_multidimensional_arrays)
-        )
-      else:
-        restriction_declaration = "static constexpr double RestrictionMatrix1D[] = {};".format(
-          render_tensor_3(restriction_matrix,use_multidimensional_arrays)
-        )
-      basis_declarations += self.__render_basis_declaration(self.RestrictionMatrix1DDocumentation, restriction_declaration)
-
-      interpolation_matrix = self._get_cached_basis_entry("interpolation_matrix", self.__compute_interpolation_matrix)
-      if use_multidimensional_arrays:
-        interpolation_declaration = "static constexpr double InterpolationMatrix1D[][][] = {};".format(
-          render_tensor_3(interpolation_matrix,use_multidimensional_arrays)
-        )
-      else:
-        interpolation_declaration = "static constexpr double InterpolationMatrix1D[] = {};".format(
-          render_tensor_3(interpolation_matrix,use_multidimensional_arrays)
-        )
-      basis_declarations += self.__render_basis_declaration(self.InterpolationMatrix1DDocumentation, interpolation_declaration)
 
       self._cached_basis_declarations[use_multidimensional_arrays] = basis_declarations
 
@@ -398,12 +299,12 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
   @property
   @abstractmethod
   def quadrature_points(self):
-    assert False, "To be implemented by a subclass"
+    assert False, "A subclass implements this property."
 
   @property
   @abstractmethod
   def quadrature_weights(self):
-    assert False, "To be implemented by a subclass"
+    assert False, "A subclass implements this property."
 
   def value1D(self,x,number):
     r"""
@@ -415,17 +316,17 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
 
     """
     quadrature_points = self.quadrature_points
-    enumerator        = 1.0
+    numerator         = 1.0
     for i in range(0,self.dofs_per_axis):
       if i!=number:
-        enumerator  *= (x-quadrature_points[i])
+        numerator  *= (x-quadrature_points[i])
 
     denominator = 1.0
     for i in range(0,self.dofs_per_axis):
       if i!=number:
         denominator *= (quadrature_points[number]-quadrature_points[i])
 
-    return enumerator/denominator
+    return numerator/denominator
 
   def derivative1D(self,x,number):
     r"""
@@ -470,15 +371,15 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
 
     quadrature_points = self.quadrature_points
     result = 0.0
-    for l in range(0,self.dofs_per_axis):
-      if l!=number:
-        enumerator  = 1.0
-        denominator = 1.0/(quadrature_points[number]-quadrature_points[l])
+    for j in range(0,self.dofs_per_axis):
+      if j!=number:
+        numerator   = 1.0
+        denominator = 1.0/(quadrature_points[number]-quadrature_points[j])
         for m in range(0,self.dofs_per_axis):
-          if m!=number and m!=l:
-            enumerator  *= x-quadrature_points[m]
+          if m!=number and m!=j:
+            numerator   *= x-quadrature_points[m]
             denominator *= 1.0/(quadrature_points[number]-quadrature_points[m])
-        result += enumerator*denominator
+        result += numerator*denominator
     return result
 
 
@@ -488,9 +389,7 @@ class GaussLegendreBasis(LagrangeBasisWithDiagonalMassMatrix):
   Gauss-Legendre basis, which by construction yields diagonal mass matrices.
 
   The construction relies solely on SciPy, as only the numerical values are of
-  interest here and the standard SciPy accuracy is sufficient. Implementations
-  based on SymPy could exploit the special structure behind Gauss-Legendre, yet
-  sticking to a single Python package keeps the dependencies small.
+  interest here and the standard SciPy accuracy is sufficient.
 
   """
 
@@ -505,8 +404,8 @@ class GaussLegendreBasis(LagrangeBasisWithDiagonalMassMatrix):
     The roots of the shifted Legendre polynomial.
 
     They already live on the unit interval and need no rescaling.
-    roots_sh_legendre() takes the number of points rather than the polynomial
-    order, which is why it is called with the order plus one.
+    roots_sh_legendre() takes the number of points. This number equals the
+    polynomial order plus one.
 
     https://en.wikipedia.org/wiki/Legendre_polynomials#Shifted_Legendre_polynomials
 

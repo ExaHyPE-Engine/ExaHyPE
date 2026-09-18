@@ -110,6 +110,7 @@ class RefinementCriterion(AbstractADERDGActionSet):
             + """
 #include "exahype2/RefinementControlService.h"
 #include "runner/RuntimeParameters.h"
+#include "peano4/sfc/ActiveCurve.h"
 #include "tarch/instrumentation/Debug.h"
 #include "Constants.h"
 """

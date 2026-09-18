@@ -24,7 +24,6 @@ class InitialCondition(AbstractADERDGActionSet):
           marker.getX(),
           marker.getH(),
           index,
-          repositories::{{SOLVER_INSTANCE}}.Order + 1,
           kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes
         ),
         marker.getH()

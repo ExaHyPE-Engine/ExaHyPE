@@ -11,8 +11,8 @@ class TPV26(DynamicRuptureScenario):
     The description of the scenario can be found at: https://strike.scec.org/cvws/tpv26_27docs.html
     """
 
-    domain_offset   = [-1.6, 0.0,  -1.6] #for 81 cells, this leads to a "buffer" of three cells at the start and end around the fault
-    domain_size     = [43.2, 43.2, 43.2] #leads to a cell size of 0.5333... for 81 cells
+    domain_offset   = [-1.6, 0.0,  -1.6] #The domain offset puts a buffer of three cells before and after the fault on a level-4 grid of the Peano curve.
+    domain_size     = [43.2, 43.2, 43.2] #The domain size gives a cell width of 0.5333 on a level-4 grid of the Peano curve.
 
     end_time = 20.0
 

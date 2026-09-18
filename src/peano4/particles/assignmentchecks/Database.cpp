@@ -1,6 +1,5 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-
 #include "Database.h"
 
 #include "peano4/particles/assignmentchecks/Event.h"
@@ -8,22 +7,62 @@
 #include "tarch/instrumentation/Debug.h"
 #include "tarch/la/Vector.h"
 
+namespace {
+  /**
+   * Compares the key the map stores against the key the caller looks up. The
+   * comparison of ParticleIdentifier holds two keys equal that differ in their
+   * particle position, so a lookup can return an entry of another particle.
+   */
+  void assertStoredIdentifierMatches(
+    [[maybe_unused]] const peano4::particles::assignmentchecks::ParticleIdentifier& storedIdentifier,
+    [[maybe_unused]] const peano4::particles::assignmentchecks::ParticleIdentifier& identifier
+  ) {
+#if PEANO_DEBUG
+    assertion(
+      storedIdentifier.particleId == identifier.particleId,
+      "The stored particle id differs from the one of the key.",
+      storedIdentifier.toString(),
+      identifier.toString()
+    );
+    assertion(
+      storedIdentifier.treeId == identifier.treeId,
+      "The stored tree id differs from the one of the key.",
+      storedIdentifier.toString(),
+      identifier.toString()
+    );
+    for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
+      assertion(
+        storedIdentifier.vertexIndex(dimension) == identifier.vertexIndex(dimension),
+        "The stored vertex index differs from the one of the key.",
+        storedIdentifier.toString(),
+        identifier.toString()
+      );
+    }
+    assertion(
+      storedIdentifier.vertexDepth == identifier.vertexDepth,
+      "The stored vertex depth differs from the one of the key.",
+      storedIdentifier.toString(),
+      identifier.toString()
+    );
+#endif
+  }
+} // namespace
+
 /**
  * Returns the one assignment-history database for this process.
  */
-peano4::particles::assignmentchecks::internal::Database& peano4::particles::assignmentchecks::internal::Database::
-  getInstance() {
+peano4::particles::assignmentchecks::Database& peano4::particles::assignmentchecks::Database::getInstance() {
   static Database instance;
   return instance;
 }
 
-peano4::particles::assignmentchecks::internal::Database::Database() { _meshSweepData.emplace_back("initial"); }
+peano4::particles::assignmentchecks::Database::Database() { _meshSweepData.emplace_back("initial"); }
 
 /**
  * Sets the history limit applied independently to each particle.
  */
-void peano4::particles::assignmentchecks::internal::Database::setMaxParticleSnapshotsToKeepTrackOf(
-  size_t maximumNumberOfSnapshots
+void peano4::particles::assignmentchecks::Database::setMaxParticleSnapshotsToKeepTrackOf(
+  const std::size_t maximumNumberOfSnapshots
 ) {
   const std::unique_lock<std::shared_mutex> lock(_mutex);
   _maxParticleEventsToKeepTrackOf = maximumNumberOfSnapshots;
@@ -32,7 +71,7 @@ void peano4::particles::assignmentchecks::internal::Database::setMaxParticleSnap
 /**
  * Starts a mesh sweep and makes it the target for subsequently added events.
  */
-void peano4::particles::assignmentchecks::internal::Database::startMeshSweep(const std::string& meshSweepName) {
+void peano4::particles::assignmentchecks::Database::startMeshSweep(const std::string& meshSweepName) {
   logDebug("Finish the current mesh sweep and start " << meshSweepName);
 
   const std::unique_lock<std::shared_mutex> lock(_mutex);
@@ -44,7 +83,7 @@ void peano4::particles::assignmentchecks::internal::Database::startMeshSweep(con
 /**
  * Returns the number of mesh-sweep snapshots retained by the database.
  */
-int peano4::particles::assignmentchecks::internal::Database::getNumberOfSnapshots() const {
+int peano4::particles::assignmentchecks::Database::getNumberOfSnapshots() const {
   const std::shared_lock<std::shared_mutex> lock(_mutex);
   return static_cast<int>(_meshSweepData.size());
 }
@@ -53,17 +92,17 @@ int peano4::particles::assignmentchecks::internal::Database::getNumberOfSnapshot
  * Returns the mesh-sweep entries without locking _mutex, so no other method of
  * this object may run while the caller holds the reference.
  */
-std::vector<peano4::particles::assignmentchecks::internal::MeshSweepData>& peano4::particles::assignmentchecks::
-  internal::Database::getMeshSweepData() {
+std::vector<peano4::particles::assignmentchecks::MeshSweepData>& peano4::particles::assignmentchecks::Database::
+  getMeshSweepData() {
   return _meshSweepData;
 }
 
-size_t peano4::particles::assignmentchecks::internal::Database::getCurrentMeshSweepIndex() const {
+std::size_t peano4::particles::assignmentchecks::Database::getCurrentMeshSweepIndex() const {
   const std::shared_lock<std::shared_mutex> lock(_mutex);
-  return static_cast<size_t>(_currentMeshSweepIndex);
+  return static_cast<std::size_t>(_currentMeshSweepIndex);
 }
 
-int peano4::particles::assignmentchecks::internal::Database::getNumberOfTracedParticles() const {
+int peano4::particles::assignmentchecks::Database::getNumberOfTracedParticles() const {
   const std::shared_lock<std::shared_mutex> lock(_mutex);
   return static_cast<int>(_data.size());
 }
@@ -71,7 +110,7 @@ int peano4::particles::assignmentchecks::internal::Database::getNumberOfTracedPa
 /**
  * Clears all histories and recreates the initial mesh-sweep entry.
  */
-void peano4::particles::assignmentchecks::internal::Database::reset() {
+void peano4::particles::assignmentchecks::Database::reset() {
   const std::unique_lock<std::shared_mutex> lock(_mutex);
   logDebug("Resetting database");
 
@@ -86,50 +125,24 @@ void peano4::particles::assignmentchecks::internal::Database::reset() {
  * Returns a copy of the particle history. An unknown identifier yields one
  * Event::Type::NotFound entry.
  */
-peano4::particles::assignmentchecks::internal::ParticleEvents peano4::particles::assignmentchecks::internal::
-  Database::getParticleHistory(const ParticleIdentifier& identifier) const {
+peano4::particles::assignmentchecks::ParticleEvents peano4::particles::assignmentchecks::Database::getParticleHistory(
+  const ParticleIdentifier& identifier
+) const {
   const std::shared_lock<std::shared_mutex> lock(_mutex);
 
   auto search = _data.find(identifier);
 
   if (search == _data.end()) {
     ParticleEvents newEventHistory;
-    newEventHistory.push_back(Event(Event::Type::NotFound));
+    newEventHistory.emplace_back(Event::Type::NotFound);
     return newEventHistory;
   }
-#if PEANO_DEBUG
-  assertion(
-    search->first.particleId == identifier.particleId,
-    "Particle identifier ID not identical",
-    search->first.particleId,
-    identifier.particleId
-  );
-  assertion(
-    search->first.treeId == identifier.treeId,
-    "Particle treeId not identical",
-    search->first.treeId,
-    identifier.treeId
-  );
-  for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
-    assertion(
-      search->first.vertexInd(dimension) == identifier.vertexInd(dimension),
-      "Particle vertex index not identical",
-      search->first.vertexInd(dimension),
-      identifier.vertexInd(dimension)
-    );
-  }
-  assertion(
-    search->first.vertexDepth == identifier.vertexDepth,
-    "Particle depth not identical",
-    search->first.vertexDepth,
-    identifier.vertexDepth
-  );
-#endif
+  assertStoredIdentifierMatches(search->first, identifier);
 
   return search->second;
 }
 
-std::string peano4::particles::assignmentchecks::internal::Database::toString() const {
+std::string peano4::particles::assignmentchecks::Database::toString() const {
   const std::shared_lock<std::shared_mutex> lock(_mutex);
 
   std::ostringstream description;
@@ -160,49 +173,20 @@ std::string peano4::particles::assignmentchecks::internal::Database::toString() 
   return description.str();
 }
 
-int peano4::particles::assignmentchecks::internal::Database::getTotalParticleEntries(
-  const ParticleIdentifier& identifier
-) const {
+int peano4::particles::assignmentchecks::Database::getTotalParticleEntries(const ParticleIdentifier& identifier) const {
   const std::shared_lock<std::shared_mutex> lock(_mutex);
 
   auto search = _data.find(identifier);
 
   if (search != _data.end()) {
-#if PEANO_DEBUG
-    assertion(
-      search->first.particleId == identifier.particleId,
-      "Particle identifier ID not identical",
-      search->first.particleId,
-      identifier.particleId
-    );
-    assertion(
-      search->first.treeId == identifier.treeId,
-      "Particle treeId not identical",
-      search->first.treeId,
-      identifier.treeId
-    );
-    for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
-      assertion(
-        search->first.vertexInd(dimension) == identifier.vertexInd(dimension),
-        "Particle vertex index not identical",
-        search->first.vertexInd(dimension),
-        identifier.vertexInd(dimension)
-      );
-    }
-    assertion(
-      search->first.vertexDepth == identifier.vertexDepth,
-      "Particle depth not identical",
-      search->first.vertexDepth,
-      identifier.vertexDepth
-    );
-#endif
+    assertStoredIdentifierMatches(search->first, identifier);
 
     return static_cast<int>(search->second.size());
   }
   return 0;
 }
 
-std::string peano4::particles::assignmentchecks::internal::Database::lastMeshSweepSnapshot() const {
+std::string peano4::particles::assignmentchecks::Database::lastMeshSweepSnapshot() const {
   const std::shared_lock<std::shared_mutex> lock(_mutex);
 
   std::ostringstream description;
@@ -229,7 +213,7 @@ std::string peano4::particles::assignmentchecks::internal::Database::lastMeshSwe
   return description.str();
 }
 
-std::string peano4::particles::assignmentchecks::internal::Database::sweepHistory() const {
+std::string peano4::particles::assignmentchecks::Database::sweepHistory() const {
   const std::shared_lock<std::shared_mutex> lock(_mutex);
 
   std::ostringstream description;
@@ -243,9 +227,7 @@ std::string peano4::particles::assignmentchecks::internal::Database::sweepHistor
   return description.str();
 }
 
-std::string peano4::particles::assignmentchecks::internal::Database::particleHistory(
-  const ParticleIdentifier& identifier
-) const {
+std::string peano4::particles::assignmentchecks::Database::particleHistory(const ParticleIdentifier& identifier) const {
   const std::shared_lock<std::shared_mutex> lock(_mutex);
 
   std::ostringstream description;
@@ -253,34 +235,7 @@ std::string peano4::particles::assignmentchecks::internal::Database::particleHis
 
   auto search = _data.find(identifier);
   if (search != _data.end()) {
-#if PEANO_DEBUG
-    assertion(
-      search->first.particleId == identifier.particleId,
-      "Particle identifier ID not identical",
-      search->first.particleId,
-      identifier.particleId
-    );
-    assertion(
-      search->first.treeId == identifier.treeId,
-      "Particle treeId not identical",
-      search->first.treeId,
-      identifier.treeId
-    );
-    for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
-      assertion(
-        search->first.vertexInd(dimension) == identifier.vertexInd(dimension),
-        "Particle vertex index not identical",
-        search->first.vertexInd(dimension),
-        identifier.vertexInd(dimension)
-      );
-    }
-    assertion(
-      search->first.vertexDepth == identifier.vertexDepth,
-      "Particle depth not identical",
-      search->first.vertexDepth,
-      identifier.vertexDepth
-    );
-#endif
+    assertStoredIdentifierMatches(search->first, identifier);
 
     const ParticleEvents& history       = search->second;
     auto                  eventIterator = history.crbegin();
@@ -310,8 +265,10 @@ std::string peano4::particles::assignmentchecks::internal::Database::particleHis
  * When the history limit is reached, the newest retained event first becomes
  * the substitute for the discarded history.
  */
-peano4::particles::assignmentchecks::internal::Event peano4::particles::assignmentchecks::internal::Database::
-  addEvent(ParticleIdentifier identifier, Event& event) {
+peano4::particles::assignmentchecks::Event peano4::particles::assignmentchecks::Database::addEvent(
+  const ParticleIdentifier& identifier,
+  Event&                    event
+) {
   logDebug("Adding event for " << identifier.toString());
 
   const std::unique_lock<std::shared_mutex> lock(_mutex);
@@ -325,34 +282,7 @@ peano4::particles::assignmentchecks::internal::Event peano4::particles::assignme
     logDebug("Add a particle history for " << identifier.toString() << ", event: " << event.toString());
     return Event(Event::Type::NotFound);
   }
-#if PEANO_DEBUG
-  assertion(
-    search->first.particleId == identifier.particleId,
-    "Particle identifier ID not identical",
-    search->first.particleId,
-    identifier.particleId
-  );
-  assertion(
-    search->first.treeId == identifier.treeId,
-    "Particle treeId not identical",
-    search->first.treeId,
-    identifier.treeId
-  );
-  for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
-    assertion(
-      search->first.vertexInd(dimension) == identifier.vertexInd(dimension),
-      "Particle vertex index not identical",
-      search->first.vertexInd(dimension),
-      identifier.vertexInd(dimension)
-    );
-  }
-  assertion(
-    search->first.vertexDepth == identifier.vertexDepth,
-    "Particle depth not identical",
-    search->first.vertexDepth,
-    identifier.vertexDepth
-  );
-#endif
+  assertStoredIdentifierMatches(search->first, identifier);
 
   ParticleEvents& history = search->second;
 
@@ -361,12 +291,12 @@ peano4::particles::assignmentchecks::internal::Event peano4::particles::assignme
 
 #if PEANO_DEBUG
     if (lastEvent.type == Event::Type::NotFound) {
-      logDebug("Particle history should not contain an invalid event");
+      logDebug("The history of " << identifier.toString() << " holds an event of the type NotFound");
     }
 #endif
 
     static const std::string SubstitutionPrefix = "substitute-for-whole-trajectory/";
-    if (lastEvent.trace.compare(0, SubstitutionPrefix.length(), SubstitutionPrefix) != 0) {
+    if (not lastEvent.trace.starts_with(SubstitutionPrefix)) {
       lastEvent.trace = SubstitutionPrefix + lastEvent.trace;
     }
 
@@ -387,10 +317,10 @@ peano4::particles::assignmentchecks::internal::Event peano4::particles::assignme
  * Replaces a matching event and assigns the current mesh-sweep index to the
  * replacement.
  */
-void peano4::particles::assignmentchecks::internal::Database::replaceEvent(
-  ParticleIdentifier identifier,
-  Event&             oldEvent,
-  Event&             newEvent
+void peano4::particles::assignmentchecks::Database::replaceEvent(
+  const ParticleIdentifier& identifier,
+  const Event&              oldEvent,
+  Event&                    newEvent
 ) {
   const std::unique_lock<std::shared_mutex> lock(_mutex);
 
@@ -398,36 +328,10 @@ void peano4::particles::assignmentchecks::internal::Database::replaceEvent(
 
   auto search = _data.find(identifier);
 
-  assertion(search != _data.end(), "Trying to replace event of particle with no history");
+  [[maybe_unused]] const bool particleHasHistory = search != _data.end();
+  assertion(particleHasHistory, "The database holds no history for the particle.", identifier.toString());
 
-#if PEANO_DEBUG
-  assertion(
-    search->first.particleId == identifier.particleId,
-    "Particle identifier ID not identical",
-    search->first.particleId,
-    identifier.particleId
-  );
-  assertion(
-    search->first.treeId == identifier.treeId,
-    "Particle treeId not identical",
-    search->first.treeId,
-    identifier.treeId
-  );
-  for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
-    assertion(
-      search->first.vertexInd(dimension) == identifier.vertexInd(dimension),
-      "Particle vertex index not identical",
-      search->first.vertexInd(dimension),
-      identifier.vertexInd(dimension)
-    );
-  }
-  assertion(
-    search->first.vertexDepth == identifier.vertexDepth,
-    "Particle depth not identical",
-    search->first.vertexDepth,
-    identifier.vertexDepth
-  );
-#endif
+  assertStoredIdentifierMatches(search->first, identifier);
 
   ParticleEvents& history = search->second;
 
@@ -444,58 +348,32 @@ void peano4::particles::assignmentchecks::internal::Database::replaceEvent(
       return;
     }
   }
-  assertion(false, "Event to replace is not part of the particle history");
+  assertion(false, "The event to replace is not part of the particle history.", oldEvent.toString());
 }
 
 /**
  * Moves the history of the particle to the key that carries newVertexIndex and
  * newVertexDepth. A history under the target key is overwritten.
  */
-void peano4::particles::assignmentchecks::internal::Database::shiftIdentifierVertexInd(
-  ParticleIdentifier&                       identifier,
-  tarch::la::Vector<DIMENSIONS, long long>& newVertexIndex,
-  const int                                 newVertexDepth
+void peano4::particles::assignmentchecks::Database::shiftIdentifierVertexIndex(
+  const ParticleIdentifier&                       identifier,
+  const tarch::la::Vector<DIMENSIONS, long long>& newVertexIndex,
+  const int                                       newVertexDepth
 ) {
   const std::unique_lock<std::shared_mutex> lock(_mutex);
 
   auto search = _data.find(identifier);
 
-  assertion(search != _data.end(), "Particle not found through its identifier");
+  [[maybe_unused]] const bool particleHasHistory = search != _data.end();
+  assertion(particleHasHistory, "The database holds no history for the particle.", identifier.toString());
 
-#if PEANO_DEBUG
-  assertion(
-    search->first.particleId == identifier.particleId,
-    "Particle identifier ID not identical",
-    search->first.particleId,
-    identifier.particleId
-  );
-  assertion(
-    search->first.treeId == identifier.treeId,
-    "Particle treeId not identical",
-    search->first.treeId,
-    identifier.treeId
-  );
-  for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
-    assertion(
-      search->first.vertexInd(dimension) == identifier.vertexInd(dimension),
-      "Particle vertex index not identical",
-      search->first.vertexInd(dimension),
-      identifier.vertexInd(dimension)
-    );
-  }
-  assertion(
-    search->first.vertexDepth == identifier.vertexDepth,
-    "Particle depth not identical",
-    search->first.vertexDepth,
-    identifier.vertexDepth
-  );
-#endif
+  assertStoredIdentifierMatches(search->first, identifier);
 
   // The heterogeneous lookup may be fuzzy, so re-key the stored identifier.
   const ParticleIdentifier storedIdentifier = search->first;
   const ParticleEvents     history          = search->second;
 
-  logDebug("Shift particle identifier from " << storedIdentifier.vertexInd << " to " << newVertexIndex);
+  logDebug("Shift particle identifier from " << storedIdentifier.vertexIndex << " to " << newVertexIndex);
 
   _data.erase(storedIdentifier);
   const ParticleIdentifier newIdentifier(
@@ -513,15 +391,16 @@ void peano4::particles::assignmentchecks::internal::Database::shiftIdentifierVer
  * Deletes every particle whose newest event neither assigns it to a vertex nor
  * moves it along a vertex, and keeps every particle that a remote rank owns.
  */
-void peano4::particles::assignmentchecks::internal::Database::eliminateExistingParticles() {
+void peano4::particles::assignmentchecks::Database::eliminateExistingParticles() {
   const std::unique_lock<std::shared_mutex> lock(_mutex);
 
   for (auto particleIterator = _data.begin(); particleIterator != _data.end();) {
-    const internal::Event& lastEvent = particleIterator->second.back();
+    const peano4::particles::assignmentchecks::Event& lastEvent = particleIterator->second.back();
 
-    if (lastEvent.type == internal::Event::Type::AssignToVertex
-        or lastEvent.type == internal::Event::Type::ConsecutiveMoveWhileAssociatedToVertex
-        or lastEvent.type == internal::Event::Type::MoveWhileAssociatedToVertex or (not lastEvent.isLocal)) {
+    if (lastEvent.type == peano4::particles::assignmentchecks::Event::Type::AssignToVertex
+        or lastEvent.type == peano4::particles::assignmentchecks::Event::Type::ConsecutiveMoveWhileAssociatedToVertex
+        or lastEvent.type == peano4::particles::assignmentchecks::Event::Type::MoveWhileAssociatedToVertex
+        or (not lastEvent.isLocal)) {
       ++particleIterator;
     } else {
       particleIterator = _data.erase(particleIterator);
@@ -533,8 +412,11 @@ void peano4::particles::assignmentchecks::internal::Database::eliminateExistingP
  * Returns the newest event for the requested spacetree after skipping the
  * requested number of newest entries. AnyTree accepts the first candidate.
  */
-peano4::particles::assignmentchecks::internal::Event peano4::particles::assignmentchecks::internal::Database::
-  getPreviousEvent(const ParticleEvents& particleHistory, int treeId, size_t numberOfFirstEventsToSkip) const {
+peano4::particles::assignmentchecks::Event peano4::particles::assignmentchecks::Database::getPreviousEvent(
+  const ParticleEvents& particleHistory,
+  const int             treeId,
+  const std::size_t     numberOfFirstEventsToSkip
+) const {
   if (particleHistory.size() <= numberOfFirstEventsToSkip) {
     return Event(Event::Type::NotFound);
   }

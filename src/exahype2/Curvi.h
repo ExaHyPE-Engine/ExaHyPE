@@ -20,8 +20,8 @@ namespace exahype2 {
  *
  * Two operations define the curvilinear space:
  *
- * applyPerturbation() applies a perturbation to a given surface of the cartesian space. This can
- * for example be used to fit the boundary of the domain to a given edge, say the surface of a 3D
+ * applyPerturbation() applies a perturbation to a given surface of the cartesian space. This
+ * fits, for example, the boundary of the domain to a given edge, say the surface of a 3D
  * earthquake simulation to a mountain range's topography, or the side of a 2D simulation of the
  * pressure in a cylinder to the curve of said cylinder.
  *
@@ -49,7 +49,8 @@ namespace exahype2 {
  * A linear interpolation moves points only along its own direction and leaves every other
  * direction unchanged, so a transformation in another direction composes with the ones already
  * applied without breaking them. Modifying a second surface leaves the first surface where it is,
- * except for shifting the shared edge along the second surface's normal.
+ * except for shifting the edge the two surfaces meet along in the second surface's normal
+ * direction.
  *
  * ## Preconditions
  *
@@ -84,15 +85,15 @@ namespace exahype2 {
  * Perturbations can only be given to slices of the domain, be it surfaces via applyPerturbation()
  * or interior slices via split(), and those perturbations can only be orthogonal to the given
  * slice. One can shift the interior slice at (x=x0, y=:) such that it is at (x=x0+f(x,y), y=:) but
- * one cannot shift its y-position in the same perturbation; that would require a transfinite
- * interpolation instead of a linear one.
+ * one cannot shift its y-position in the same perturbation; the interpolation is linear, and
+ * such a shift would require a transfinite interpolation.
  *
  * Since the resulting mesh must be equivalent to that in cartesian space, perturbations that break
- * this equivalence are not admissible: two splits cannot cross, two splits very near one another
+ * this equivalence are not admissible: Two splits cannot cross, two splits very near one another
  * can end up superposed and make the middle section disappear, and stretching the space too far in
  * any given dimension degrades the quality of the resulting transformation.
  */
-class exahype2::Curvi {
+class exahype2::Curvi final {
 public:
   using Point        = tarch::la::Vector<DIMENSIONS, double>;
   using Mapping      = std::function<Point(Point)>;

@@ -1,146 +1,146 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-
 #include "TestHelpers.h"
 
 #include "peano4/particles/assignmentchecks/Database.h"
 #include "peano4/particles/assignmentchecks/TracingAPI.h"
 #include "peano4/particles/assignmentchecks/tests/TestParticle.h"
+#include "peano4/sfc/ActiveCurve.h"
 #include "tarch/instrumentation/Debug.h"
+#include "tarch/la/Vector.h"
+
+#if PEANO_DEBUG
+namespace {
+  /** Width of a vertex divided by the width of the same vertex one level finer. */
+  constexpr double MeshWidthRatio = peano4::sfc::ActiveCurve::SubdivisionFactor;
+
+  /**
+   * Returns the index of the vertex of size vertexH that covers position x. The
+   * first vertex sits at the origin, and vertexH is half the width of the
+   * square around a vertex.
+   */
+  int findVertexIndex(const double x, const double vertexH) {
+    return static_cast<int>(std::floor((x / (2.0 * vertexH)) + 0.5));
+  }
+
+  /**
+   * Returns the position of the vertex of size vertexH that covers x. The first
+   * vertex sits at the origin.
+   */
+  tarch::la::Vector<DIMENSIONS, double> findVertexX(
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    const tarch::la::Vector<DIMENSIONS, double>& vertexH
+  ) {
+    tarch::la::Vector<DIMENSIONS, double> vertexX;
+
+    for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
+      const int vertexIndex = findVertexIndex(x(dimension), vertexH(dimension));
+      vertexX(dimension)    = 2 * vertexIndex * vertexH(dimension);
+    }
+
+    return vertexX;
+  }
+
+  /**
+   * Returns true if particleX lies outside the square of two times vertexH
+   * around the vertex at vertexX and depth is above zero.
+   */
+  bool liftParticle(
+    const tarch::la::Vector<DIMENSIONS, double>& particleX,
+    const tarch::la::Vector<DIMENSIONS, double>& vertexX,
+    const tarch::la::Vector<DIMENSIONS, double>& vertexH,
+    const int                                    depth
+  ) {
+    if (depth == 0) {
+      return false;
+    }
+
+    const tarch::la::Vector<DIMENSIONS, double> distance = vertexX - particleX;
+
+    if (tarch::la::oneSmaller(distance, -1. * vertexH)) {
+      return true;
+    }
+    if (tarch::la::oneGreater(distance, vertexH)) {
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Returns true if particleX lies inside the square of the next finer vertex
+   * and depth stays below maxVertexDepth.
+   */
+  bool dropParticle(
+    const tarch::la::Vector<DIMENSIONS, double>& particleX,
+    const tarch::la::Vector<DIMENSIONS, double>& vertexH,
+    const int                                    depth,
+    const int                                    maxVertexDepth
+  ) {
+    if (depth == maxVertexDepth) {
+      return false;
+    }
+
+    const tarch::la::Vector<DIMENSIONS, double> newVertexH = vertexH / MeshWidthRatio;
+    const tarch::la::Vector<DIMENSIONS, double> vertexX    = findVertexX(particleX, newVertexH);
+
+    const tarch::la::Vector<DIMENSIONS, double> distance = vertexX - particleX;
+
+    return tarch::la::allSmaller(distance, newVertexH) and tarch::la::allGreater(distance, -1. * newVertexH);
+  }
+
+  /**
+   * Returns a virtual copy of original that is moved by boundary along every
+   * axis whose flag is true. The caller deletes the copy.
+   */
+  peano4::particles::assignmentchecks::tests::TestParticle* mirrorParticleAlongPeriodicBoundary(
+    peano4::particles::assignmentchecks::tests::TestParticle* original,
+    const bool                                                mirrorX,
+    const bool                                                mirrorY,
+    const bool                                                mirrorZ,
+    const tarch::la::Vector<DIMENSIONS, double>&              boundary
+  ) {
+    tarch::la::Vector<DIMENSIONS, double> virtualPartX = original->getX();
+
+    if (mirrorX) {
+      virtualPartX(0) += boundary(0);
+    }
+#if DIMENSIONS > 1
+    if (mirrorY) {
+      virtualPartX(1) += boundary(1);
+    }
+#endif
+#if DIMENSIONS > 2
+    if (mirrorZ) {
+      virtualPartX(2) += boundary(2);
+    }
+#endif
+
+    auto* mirrored = new peano4::particles::assignmentchecks::tests::TestParticle(
+      virtualPartX,
+      original->getPartid(),
+      false // virtual particle
+    );
+    mirrored->setVertexH(original->getVertexH());
+    mirrored->setDepth(original->getDepth());
+
+    return mirrored;
+  }
+} // namespace
+#endif
 
 peano4::particles::assignmentchecks::tests::TestHelpers::TestHelpers() :
   TestCase("peano4::particles::assignmentchecks::tests::TestHelpers") {}
-
-/**
- * Returns true if particleX lies outside the square of two times vertexH
- * around the vertex at vertexX and depth is above zero.
- */
-bool peano4::particles::assignmentchecks::tests::internal::liftParticle(
-  const tarch::la::Vector<DIMENSIONS, double> particleX,
-  const tarch::la::Vector<DIMENSIONS, double> vertexX,
-  const tarch::la::Vector<DIMENSIONS, double> vertexH,
-  const int                                   depth
-) {
-  if (depth == 0) {
-    return false;
-  }
-
-  const tarch::la::Vector<DIMENSIONS, double> distance = vertexX - particleX;
-
-  if (tarch::la::oneSmaller(distance, -1. * vertexH)) {
-    return true;
-  }
-  if (tarch::la::oneGreater(distance, vertexH)) {
-    return true;
-  }
-  return false;
-}
-
-/**
- * Returns true if particleX lies inside the square of the next finer vertex
- * and depth stays below maxVertexDepth.
- */
-bool peano4::particles::assignmentchecks::tests::internal::dropParticle(
-  const tarch::la::Vector<DIMENSIONS, double> particleX,
-  const tarch::la::Vector<DIMENSIONS, double> vertexH,
-  const int                                   depth,
-  const int                                   maxVertexDepth
-) {
-  if (depth == maxVertexDepth) {
-    return false;
-  }
-
-  const tarch::la::Vector<DIMENSIONS, double> newVertexH = vertexH / 3.;
-  const tarch::la::Vector<DIMENSIONS, double> vertexX    = findVertexX(particleX, newVertexH);
-
-  const tarch::la::Vector<DIMENSIONS, double> distance = vertexX - particleX;
-
-  if (tarch::la::allSmaller(distance, newVertexH) and tarch::la::allGreater(distance, -1. * newVertexH)) {
-    return true;
-  }
-  return false;
-}
-
-/**
- * Returns the index of the vertex of size vertexH that covers position x. The
- * first vertex sits at the origin.
- */
-int peano4::particles::assignmentchecks::tests::internal::findVertexInd(double x, double vertexH) {
-  // vertexH is half vertex square size. So multiply by 2 here.
-  int vertexInd = static_cast<int>(std::floor((x / (2. * vertexH)) + 0.5));
-
-  return vertexInd;
-}
-
-/**
- * Returns the position of the vertex of size vertexH that covers x. The first
- * vertex sits at the origin.
- */
-tarch::la::Vector<DIMENSIONS, double> peano4::particles::assignmentchecks::tests::internal::findVertexX(
-  const tarch::la::Vector<DIMENSIONS, double> x,
-  const tarch::la::Vector<DIMENSIONS, double> vertexH
-) {
-  tarch::la::Vector<DIMENSIONS, double> vertexX;
-
-  for (int i = 0; i < DIMENSIONS; i++) {
-    int vertexInd = internal::findVertexInd(x(i), vertexH(i));
-    vertexX(i)    = 2 * vertexInd * vertexH(i);
-  }
-
-  return vertexX;
-}
-
-/**
- * Returns a virtual copy of original that is moved by boundary along every
- * axis whose flag is true. The caller deletes the copy.
- */
-peano4::particles::assignmentchecks::tests::TestParticle* peano4::particles::assignmentchecks::tests::internal::
-  mirrorParticleAlongPeriodicBoundary(
-    peano4::particles::assignmentchecks::tests::TestParticle* original,
-    bool                                                       mirrorX,
-    bool                                                       mirrorY,
-    bool                                                       mirrorZ,
-    tarch::la::Vector<DIMENSIONS, double>                      boundary
-  ) {
-  tarch::la::Vector<DIMENSIONS, double> virtualPartX = original->getX();
-
-  if (mirrorX) {
-    virtualPartX(0) += boundary(0);
-  }
-#if DIMENSIONS > 1
-  if (mirrorY) {
-    virtualPartX(1) += boundary(1);
-  }
-#endif
-#if DIMENSIONS > 2
-  if (mirrorZ) {
-    virtualPartX(2) += boundary(2);
-  }
-#endif
-
-  TestParticle* mirrored = new TestParticle(
-    virtualPartX,
-    original->getPartid(),
-    false // virtual particle
-  );
-  mirrored->setVertexH(original->getVertexH());
-  mirrored->setDepth(original->getDepth());
-
-  return mirrored;
-}
 
 /**
  * Checks that two ParticleIdentifier objects of the same particle compare equal
  * and that the comparison orders them by their particle number.
  */
 void peano4::particles::assignmentchecks::tests::TestHelpers::testTruthTableSearchAndIdKeys() {
-  namespace ac = ::peano4::particles::assignmentchecks;
-
   tarch::la::Vector<DIMENSIONS, double> particleAX;
   tarch::la::Vector<DIMENSIONS, double> particleBX;
   tarch::la::Vector<DIMENSIONS, double> vertexX;
   tarch::la::Vector<DIMENSIONS, double> vertexH;
-  int                                   treeId = 1;
+  const int                             treeId = 1;
 
   for (int i = 0; i < DIMENSIONS; i++) {
     particleAX(i) = 1.;
@@ -149,10 +149,10 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testTruthTableSear
     vertexH(i)    = 1.;
   }
 
-  ac::internal::ParticleIdentifier firstA =
-    ac::internal::ParticleIdentifier("DummyParticle", particleAX, vertexX, vertexH, 1, treeId);
-  ac::internal::ParticleIdentifier firstB =
-    ac::internal::ParticleIdentifier("DummyParticle", particleBX, vertexX, vertexH, 2, treeId);
+  const peano4::particles::assignmentchecks::ParticleIdentifier firstA =
+    peano4::particles::assignmentchecks::ParticleIdentifier("DummyParticle", particleAX, vertexX, vertexH, 1, treeId);
+  const peano4::particles::assignmentchecks::ParticleIdentifier firstB =
+    peano4::particles::assignmentchecks::ParticleIdentifier("DummyParticle", particleBX, vertexX, vertexH, 2, treeId);
 
   logDebug(
     "firstA < firstB:" << (firstA < firstB) << "(1) firstA==firstB:" << (firstA == firstB) << "(0) firstA==firstA:"
@@ -164,10 +164,10 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testTruthTableSear
   assertion(not(firstB == firstA));
   assertion(not(firstB < firstA));
 
-  ac::internal::ParticleIdentifier secondA =
-    ac::internal::ParticleIdentifier("DummyParticle", particleAX, vertexX, vertexH, 1, treeId);
-  ac::internal::ParticleIdentifier secondB =
-    ac::internal::ParticleIdentifier("DummyParticle", particleBX, vertexX, vertexH, 2, treeId);
+  const peano4::particles::assignmentchecks::ParticleIdentifier secondA =
+    peano4::particles::assignmentchecks::ParticleIdentifier("DummyParticle", particleAX, vertexX, vertexH, 1, treeId);
+  const peano4::particles::assignmentchecks::ParticleIdentifier secondB =
+    peano4::particles::assignmentchecks::ParticleIdentifier("DummyParticle", particleBX, vertexX, vertexH, 2, treeId);
 
   logDebug(
     "secondA < secondB:" << (secondA < secondB) << "(1) secondA==secondB:" << (secondA == secondB)
@@ -202,15 +202,13 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testTruthTableSear
 }
 
 void peano4::particles::assignmentchecks::tests::TestHelpers::testAddingSweepsToDatabase() {
-  namespace ac = ::peano4::particles::assignmentchecks;
-
-  ac::internal::Database& eventDatabase = ac::internal::Database::getInstance();
+  auto& eventDatabase = peano4::particles::assignmentchecks::Database::getInstance();
   eventDatabase.reset();
-  ac::checkDatabaseIsEmpty();
+  peano4::particles::assignmentchecks::checkDatabaseIsEmpty();
 
   std::vector<std::string> meshSweepNames = {"initial", "alpha", "beta", "gamma", "delta"};
 
-  std::vector<std::string>::iterator sweep = meshSweepNames.begin();
+  auto sweep = meshSweepNames.begin();
   // Skip first, which gets automatically added to the database.
   sweep++;
 
@@ -219,17 +217,18 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testAddingSweepsTo
     sweep++;
   }
 
+  [[maybe_unused]] const auto numberOfMeshSweeps = eventDatabase.getMeshSweepData().size();
   assertion(
-    eventDatabase.getMeshSweepData().size() == meshSweepNames.size(),
-    "Wrong number of mesh sweeps in database",
-    eventDatabase.getMeshSweepData().size(),
+    numberOfMeshSweeps == meshSweepNames.size(),
+    "The database holds a different number of mesh sweeps.",
+    numberOfMeshSweeps,
     meshSweepNames.size(),
     eventDatabase.toString()
   );
 
   assertion(
     (eventDatabase.getCurrentMeshSweepIndex() + 1) == meshSweepNames.size(),
-    "Wrong count of mesh sweeps in database",
+    "The current mesh sweep of the database is not the last one of the test.",
     eventDatabase.getMeshSweepData().size(),
     meshSweepNames.size(),
     eventDatabase.toString()
@@ -239,26 +238,29 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testAddingSweepsTo
   sweep              = meshSweepNames.begin();
 
   while (sweep != meshSweepNames.end()) {
-    assertion(*sweep == databaseSweep->getName(), "Wrong Sweep Name", *sweep, databaseSweep->getName());
+    assertion(
+      *sweep == databaseSweep->getName(),
+      "The database holds another name for this mesh sweep.",
+      *sweep,
+      databaseSweep->getName()
+    );
     sweep++;
     databaseSweep++;
   }
 
   eventDatabase.reset();
-  ac::checkDatabaseIsEmpty();
+  peano4::particles::assignmentchecks::checkDatabaseIsEmpty();
 }
 
 void peano4::particles::assignmentchecks::tests::TestHelpers::testAddingParticleEvents() {
-  namespace ac = ::peano4::particles::assignmentchecks;
-
-  ac::internal::Database& eventDatabase = ac::internal::Database::getInstance();
+  auto& eventDatabase = peano4::particles::assignmentchecks::Database::getInstance();
   eventDatabase.reset();
-  ac::checkDatabaseIsEmpty();
+  peano4::particles::assignmentchecks::checkDatabaseIsEmpty();
   // The limit stays above the number of events that the loop below adds.
   eventDatabase.setMaxParticleSnapshotsToKeepTrackOf(100);
 
-  int                                   treeId  = 1;
-  bool                                  isLocal = true;
+  const int                             treeId  = 1;
+  const bool                            isLocal = true;
   tarch::la::Vector<DIMENSIONS, double> particleX;
   tarch::la::Vector<DIMENSIONS, double> vertexX;
   tarch::la::Vector<DIMENSIONS, double> vertexH;
@@ -267,13 +269,13 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testAddingParticle
 
   std::vector<std::string> meshSweepNames = {"alpha", "beta", "gamma", "delta"};
 
-  int                                numberOfParticles = 10;
-  std::vector<std::string>::iterator sweep             = meshSweepNames.begin();
+  const int numberOfParticles = 10;
+  auto      sweep             = meshSweepNames.begin();
   while (sweep != meshSweepNames.end()) {
-    ac::startMeshSweep(*sweep);
+    peano4::particles::assignmentchecks::startMeshSweep(*sweep);
 
     for (int p = 1; p < numberOfParticles + 1; p++) {
-      int particleId = p;
+      const int particleId = p;
 
       for (int i = 0; i < DIMENSIONS; i++) {
         particleX(i) = p;
@@ -281,12 +283,19 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testAddingParticle
         vertexH(i)   = p;
       }
 
-      ac::internal::ParticleIdentifier identifier =
-        ac::internal::ParticleIdentifier("DummyParticle", particleX, vertexX, vertexH, particleId, treeId);
+      const peano4::particles::assignmentchecks::ParticleIdentifier identifier =
+        peano4::particles::assignmentchecks::ParticleIdentifier(
+          "DummyParticle",
+          particleX,
+          vertexX,
+          vertexH,
+          particleId,
+          treeId
+        );
 
-      trace                           = "Assign/sweep:" + *sweep;
-      ac::internal::Event assignEvent = ac::internal::Event(
-        ac::internal::Event::Type::AssignToVertex,
+      trace                                                  = "Assign/sweep:" + *sweep;
+      peano4::particles::assignmentchecks::Event assignEvent = peano4::particles::assignmentchecks::Event(
+        peano4::particles::assignmentchecks::Event::Type::AssignToVertex,
         isLocal,
         vertexX,
         particleX,
@@ -297,9 +306,9 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testAddingParticle
 
       eventDatabase.addEvent(identifier, assignEvent);
 
-      trace                         = "Move/sweep:" + *sweep;
-      ac::internal::Event moveEvent = ac::internal::Event(
-        ac::internal::Event::Type::MoveWhileAssociatedToVertex,
+      trace                                                = "Move/sweep:" + *sweep;
+      peano4::particles::assignmentchecks::Event moveEvent = peano4::particles::assignmentchecks::Event(
+        peano4::particles::assignmentchecks::Event::Type::MoveWhileAssociatedToVertex,
         vertexX,
         particleX,
         vertexH,
@@ -308,13 +317,18 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testAddingParticle
       );
       eventDatabase.addEvent(identifier, moveEvent);
 
-      trace = "Sieve/sweep:" + *sweep;
-      ac::internal::Event sieveEvent =
-        ac::internal::Event(ac::internal::Event::Type::AssignToSieveSet, isLocal, treeId, trace);
+      trace                                                 = "Sieve/sweep:" + *sweep;
+      peano4::particles::assignmentchecks::Event sieveEvent = peano4::particles::assignmentchecks::Event(
+        peano4::particles::assignmentchecks::Event::Type::AssignToSieveSet,
+        isLocal,
+        treeId,
+        trace
+      );
       eventDatabase.addEvent(identifier, sieveEvent);
 
-      trace                            = "NotFound/sweep:" + *sweep;
-      ac::internal::Event invalidEvent = ac::internal::Event(ac::internal::Event::Type::NotFound);
+      trace = "NotFound/sweep:" + *sweep;
+      peano4::particles::assignmentchecks::Event invalidEvent =
+        peano4::particles::assignmentchecks::Event(peano4::particles::assignmentchecks::Event::Type::NotFound);
       eventDatabase.addEvent(identifier, invalidEvent);
     }
 
@@ -323,13 +337,13 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testAddingParticle
 
   assertion(
     eventDatabase.getNumberOfTracedParticles() == static_cast<int>(numberOfParticles),
-    "Wrong particle count in database",
+    "The database holds a different number of particles.",
     eventDatabase.getNumberOfTracedParticles(),
     numberOfParticles
   );
 
   for (int p = 1; p < numberOfParticles + 1; p++) {
-    int particleId = p;
+    const int particleId = p;
 
     for (int i = 0; i < DIMENSIONS; i++) {
       particleX(i) = p;
@@ -337,14 +351,21 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testAddingParticle
       vertexH(i)   = p;
     }
 
-    ac::internal::ParticleIdentifier identifier =
-      ac::internal::ParticleIdentifier("DummyParticle", particleX, vertexX, vertexH, particleId, treeId);
+    const peano4::particles::assignmentchecks::ParticleIdentifier identifier =
+      peano4::particles::assignmentchecks::ParticleIdentifier(
+        "DummyParticle",
+        particleX,
+        vertexX,
+        vertexH,
+        particleId,
+        treeId
+      );
 
-    [[maybe_unused]] size_t numberOfEntries = eventDatabase.getTotalParticleEntries(identifier);
+    [[maybe_unused]] const size_t numberOfEntries = eventDatabase.getTotalParticleEntries(identifier);
     // The loop adds four events per sweep.
     assertion(
       numberOfEntries == (meshSweepNames.size() * 4),
-      "Wrong number of entries for particle ",
+      "The database holds a different number of events for the particle.",
       p,
       numberOfEntries,
       meshSweepNames.size() * 4
@@ -354,15 +375,13 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testAddingParticle
   }
 
   eventDatabase.reset();
-  ac::checkDatabaseIsEmpty();
+  peano4::particles::assignmentchecks::checkDatabaseIsEmpty();
 }
 
 void peano4::particles::assignmentchecks::tests::TestHelpers::testRemovingParticleEvents() {
-  namespace ac = ::peano4::particles::assignmentchecks;
-
-  ac::internal::Database& eventDatabase = ac::internal::Database::getInstance();
+  auto& eventDatabase = peano4::particles::assignmentchecks::Database::getInstance();
   eventDatabase.reset();
-  ac::checkDatabaseIsEmpty();
+  peano4::particles::assignmentchecks::checkDatabaseIsEmpty();
   // The limit stays above the number of events that the loop below adds.
   eventDatabase.setMaxParticleSnapshotsToKeepTrackOf(20);
 
@@ -374,19 +393,19 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testRemovingPartic
 
   std::vector<std::string> meshSweepNames = {"alpha", "beta", "gamma", "delta", "foo", "bar", "baz", "boo"};
 
-  int                                numberOfParticles = 4;
-  std::vector<std::string>::iterator sweep             = meshSweepNames.begin();
+  const int numberOfParticles = 4;
+  auto      sweep             = meshSweepNames.begin();
 
   while (sweep != meshSweepNames.end()) {
-    ac::startMeshSweep(*sweep);
+    peano4::particles::assignmentchecks::startMeshSweep(*sweep);
 
-    // Make a tree for each particle. Each tree contains
-    // all particles, but only 1 particle is local.
+    // The loop builds one tree per particle. Every tree holds every particle
+    // and owns one of them.
     for (int treeId = 0; treeId < numberOfParticles; treeId++) {
       for (int p = 1; p < numberOfParticles + 1; p++) {
-        bool isLocal = (treeId == p - 1);
+        const bool isLocal = (treeId == p - 1);
 
-        int particleId = p;
+        const int particleId = p;
 
         for (int i = 0; i < DIMENSIONS; i++) {
           particleX(i) = p;
@@ -394,12 +413,19 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testRemovingPartic
           vertexH(i)   = p;
         }
 
-        ac::internal::ParticleIdentifier identifier =
-          ac::internal::ParticleIdentifier("DummyParticle", particleX, vertexX, vertexH, particleId, treeId);
+        const peano4::particles::assignmentchecks::ParticleIdentifier identifier =
+          peano4::particles::assignmentchecks::ParticleIdentifier(
+            "DummyParticle",
+            particleX,
+            vertexX,
+            vertexH,
+            particleId,
+            treeId
+          );
 
-        trace                           = "Assign/sweep:" + *sweep;
-        ac::internal::Event assignEvent = ac::internal::Event(
-          ac::internal::Event::Type::AssignToVertex,
+        trace                                                  = "Assign/sweep:" + *sweep;
+        peano4::particles::assignmentchecks::Event assignEvent = peano4::particles::assignmentchecks::Event(
+          peano4::particles::assignmentchecks::Event::Type::AssignToVertex,
           isLocal,
           vertexX,
           particleX,
@@ -410,9 +436,9 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testRemovingPartic
 
         eventDatabase.addEvent(identifier, assignEvent);
 
-        trace                         = "Move/sweep:" + *sweep;
-        ac::internal::Event moveEvent = ac::internal::Event(
-          ac::internal::Event::Type::MoveWhileAssociatedToVertex,
+        trace                                                = "Move/sweep:" + *sweep;
+        peano4::particles::assignmentchecks::Event moveEvent = peano4::particles::assignmentchecks::Event(
+          peano4::particles::assignmentchecks::Event::Type::MoveWhileAssociatedToVertex,
           vertexX,
           particleX,
           vertexH,
@@ -421,9 +447,13 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testRemovingPartic
         );
         eventDatabase.addEvent(identifier, moveEvent);
 
-        trace = "Sieve/sweep:" + *sweep;
-        ac::internal::Event sieveEvent =
-          ac::internal::Event(ac::internal::Event::Type::AssignToSieveSet, isLocal, treeId, trace);
+        trace                                                 = "Sieve/sweep:" + *sweep;
+        peano4::particles::assignmentchecks::Event sieveEvent = peano4::particles::assignmentchecks::Event(
+          peano4::particles::assignmentchecks::Event::Type::AssignToSieveSet,
+          isLocal,
+          treeId,
+          trace
+        );
         eventDatabase.addEvent(identifier, sieveEvent);
       }
     }
@@ -433,19 +463,19 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testRemovingPartic
 
   assertion(
     eventDatabase.getNumberOfTracedParticles() == numberOfParticles * numberOfParticles,
-    "Wrong particle count in database",
+    "The database holds a different number of particles.",
     eventDatabase.getNumberOfTracedParticles(),
     numberOfParticles * numberOfParticles
   );
 
   eventDatabase.reset();
-  ac::checkDatabaseIsEmpty();
+  peano4::particles::assignmentchecks::checkDatabaseIsEmpty();
 }
 
 void peano4::particles::assignmentchecks::tests::TestHelpers::testParticleMoveEvents() {
-  // Run without cleaning up database on-the-fly
+  // The first limit keeps every event, the second one deletes events during
+  // the run.
   testAddingParticleMovingEvents(100, 1000);
-  // Run with cleaning up database on-the-fly
   testAddingParticleMovingEvents(100, 16);
 }
 
@@ -458,17 +488,15 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testAddingParticle
   int numberOfSweeps,
   int numberOfEventsToKeep
 ) {
-  namespace ac = ::peano4::particles::assignmentchecks;
-
-  ac::internal::Database& eventDatabase = ac::internal::Database::getInstance();
+  auto& eventDatabase = peano4::particles::assignmentchecks::Database::getInstance();
   eventDatabase.reset();
-  ac::checkDatabaseIsEmpty();
+  peano4::particles::assignmentchecks::checkDatabaseIsEmpty();
   // The limit decides whether the database deletes events during the run.
   eventDatabase.setMaxParticleSnapshotsToKeepTrackOf(numberOfEventsToKeep);
 
-  int    particleId = 1;
-  int    treeId     = 1;
-  double dt         = 1.;
+  const int    particleId = 1;
+  const int    treeId     = 1;
+  const double dt         = 1.;
 
   tarch::la::Vector<DIMENSIONS, double> particleX;
   tarch::la::Vector<DIMENSIONS, double> vertexX;
@@ -485,19 +513,26 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testAddingParticle
   }
 
   for (int sweep = 0; sweep < numberOfSweeps; sweep++) {
-    std::string sweepName = "Sweep" + std::to_string(sweep);
-    ac::startMeshSweep(sweepName);
+    const std::string sweepName = "Sweep" + std::to_string(sweep);
+    peano4::particles::assignmentchecks::startMeshSweep(sweepName);
 
     for (int i = 0; i < DIMENSIONS; i++) {
       particleX(i) += dx(i) * dt;
     }
 
-    ac::internal::ParticleIdentifier identifier =
-      ac::internal::ParticleIdentifier("DummyParticle", particleX, vertexX, vertexH, particleId, treeId);
+    const peano4::particles::assignmentchecks::ParticleIdentifier identifier =
+      peano4::particles::assignmentchecks::ParticleIdentifier(
+        "DummyParticle",
+        particleX,
+        vertexX,
+        vertexH,
+        particleId,
+        treeId
+      );
 
-    std::string         trace     = "Move/sweep:" + std::to_string(sweep);
-    ac::internal::Event moveEvent = ac::internal::Event(
-      ac::internal::Event::Type::MoveWhileAssociatedToVertex,
+    const std::string                          trace     = "Move/sweep:" + std::to_string(sweep);
+    peano4::particles::assignmentchecks::Event moveEvent = peano4::particles::assignmentchecks::Event(
+      peano4::particles::assignmentchecks::Event::Type::MoveWhileAssociatedToVertex,
       vertexX,
       particleX,
       vertexH,
@@ -509,19 +544,26 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testAddingParticle
 
   assertion(
     eventDatabase.getNumberOfTracedParticles() == 1,
-    "Wrong particle count in database, should be 1",
+    "The database holds a different number of particles than the one this test adds.",
     eventDatabase.getNumberOfTracedParticles()
   );
 
-  ac::internal::ParticleIdentifier identifier =
-    ac::internal::ParticleIdentifier("DummyParticle", particleX, vertexX, vertexH, particleId, treeId);
+  const peano4::particles::assignmentchecks::ParticleIdentifier identifier =
+    peano4::particles::assignmentchecks::ParticleIdentifier(
+      "DummyParticle",
+      particleX,
+      vertexX,
+      vertexH,
+      particleId,
+      treeId
+    );
 
-  [[maybe_unused]] int numberOfEntries = eventDatabase.getTotalParticleEntries(identifier);
+  [[maybe_unused]] const int numberOfEntries = eventDatabase.getTotalParticleEntries(identifier);
   // The database replaces the past trajectory by its last event, so one of the
   // kept events carries that substitute.
   assertion(
     numberOfEntries == (numberOfSweeps % (numberOfEventsToKeep - 1)),
-    "Wrong number of entries for particle ",
+    "The database holds a different number of events for the particle.",
     numberOfEntries,
     numberOfSweeps,
     numberOfEventsToKeep,
@@ -532,30 +574,28 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testAddingParticle
   logDebug(eventDatabase.particleHistory(identifier));
 
   eventDatabase.reset();
-  ac::checkDatabaseIsEmpty();
+  peano4::particles::assignmentchecks::checkDatabaseIsEmpty();
 }
 
 void peano4::particles::assignmentchecks::tests::TestHelpers::testParticleWalkSameTreeLevel() {
 #if PEANO_DEBUG
 
-  namespace ac = peano4::particles::assignmentchecks;
-
-  ac::internal::Database& eventDatabase = ac::internal::Database::getInstance();
+  auto& eventDatabase = peano4::particles::assignmentchecks::Database::getInstance();
   eventDatabase.setMaxParticleSnapshotsToKeepTrackOf(100);
 
   // The name has to match the class name, as traceParticleMovements() derives it from the type.
-  std::string particleName = "TestParticle";
+  const std::string particleName = "TestParticle";
 
   tarch::la::Vector<DIMENSIONS, double> localPartX;
   // Displacement of the particle per step.
   tarch::la::Vector<DIMENSIONS, double> dx;
-  // Assume we have vertices of a single size.
+  // Every vertex of this test has the same size.
   tarch::la::Vector<DIMENSIONS, double> vertexH;
   tarch::la::Vector<DIMENSIONS, double> vertexX;
   tarch::la::Vector<DIMENSIONS, double> prevVertexX;
 
-  double defaultVertexH = 3.;
-  double dt             = 1.;
+  const double defaultVertexH = 3.;
+  const double dt             = 1.;
 
   for (int i = 0; i < DIMENSIONS; i++) {
     localPartX(i) = 51.5;
@@ -563,17 +603,18 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testParticleWalkSa
     vertexH(i)    = defaultVertexH;
   }
 
-  int particleId = 1;
-  int treeId     = 1;
+  const int particleId = 1;
+  const int treeId     = 1;
 
-  vertexX       = internal::findVertexX(localPartX, vertexH);
-  int vertexInd = internal::findVertexInd(localPartX(0), vertexH(0));
+  vertexX         = findVertexX(localPartX, vertexH);
+  int vertexIndex = findVertexIndex(localPartX(0), vertexH(0));
 
-  ac::tests::TestParticle               localPart         = ac::tests::TestParticle(localPartX, particleId, true);
-  std::vector<ac::tests::TestParticle*> assignedParticles = {&localPart};
+  peano4::particles::assignmentchecks::tests::TestParticle localPart =
+    peano4::particles::assignmentchecks::tests::TestParticle(localPartX, particleId, true);
+  const std::vector<peano4::particles::assignmentchecks::tests::TestParticle*> assignedParticles = {&localPart};
 
-  ac::startMeshSweep("InitUnitTest");
-  ac::assignParticleToVertex(
+  peano4::particles::assignmentchecks::startMeshSweep("InitUnitTest");
+  peano4::particles::assignmentchecks::assignParticleToVertex(
     particleName,
     localPartX,
     particleId,
@@ -590,11 +631,11 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testParticleWalkSa
 
   // The database keeps 16 sweeps and two of them are added already, so a loop
   // beyond 14 sweeps deletes entries before the end.
-  size_t maxSweeps = 14;
+  const size_t maxSweeps = 14;
   for (size_t sweep = 0; sweep < maxSweeps; sweep++) {
-    ac::startMeshSweep("MySweep" + std::to_string(sweep));
+    peano4::particles::assignmentchecks::startMeshSweep("MySweep" + std::to_string(sweep));
 
-    auto oldParticlePositions = ac::recordParticlePositions(assignedParticles);
+    auto oldParticlePositions = peano4::particles::assignmentchecks::recordParticlePositions(assignedParticles);
 
     double dtThisStep = dt;
     if (sweep > 8 and sweep < 12) {
@@ -604,22 +645,28 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testParticleWalkSa
     localPartX += dtThisStep * dx;
     localPart.setX(localPartX);
 
-    ac::traceParticleMovements(assignedParticles, oldParticlePositions, vertexX, vertexH, treeId);
+    peano4::particles::assignmentchecks::traceParticleMovements(
+      assignedParticles,
+      oldParticlePositions,
+      vertexX,
+      vertexH,
+      treeId
+    );
 
     logDebug("Moving particle to " << localPartX);
 
-    int prevVertexInd = vertexInd;
-    vertexInd         = internal::findVertexInd(localPartX(0), vertexH(0));
+    const int prevVertexIndex = vertexIndex;
+    vertexIndex               = findVertexIndex(localPartX(0), vertexH(0));
     for (int i = 0; i < DIMENSIONS; i++) {
       prevVertexX(i) = vertexX(i);
     }
-    vertexX = internal::findVertexX(localPartX, vertexH);
+    vertexX = findVertexX(localPartX, vertexH);
 
     logDebug("Checking vertex");
 
-    if (vertexInd != prevVertexInd) {
+    if (vertexIndex != prevVertexIndex) {
       logDebug("Detaching vertex");
-      ac::detachParticleFromVertex(
+      peano4::particles::assignmentchecks::detachParticleFromVertex(
         particleName,
         localPart.getX(),
         localPart.getPartid(),
@@ -631,7 +678,7 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testParticleWalkSa
       );
 
       logDebug("Attaching vertex");
-      ac::assignParticleToVertex(
+      peano4::particles::assignmentchecks::assignParticleToVertex(
         particleName,
         localPart.getX(),
         localPart.getPartid(),
@@ -652,25 +699,32 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testParticleWalkSa
 
   assertion(
     eventDatabase.getNumberOfTracedParticles() == 1,
-    "Wrong particle count in database",
+    "The database holds a different number of particles than the one this test adds.",
     eventDatabase.getNumberOfTracedParticles()
   );
 
   // The database registers one mesh sweep of its own at construction.
   assertion(
     eventDatabase.getCurrentMeshSweepIndex() == maxSweeps + 1,
-    "Wrong mesh sweep count in database",
+    "The database counts a different number of mesh sweeps.",
     eventDatabase.getCurrentMeshSweepIndex(),
     maxSweeps
   );
 
-  ac::internal::ParticleIdentifier identifier =
-    ac::internal::ParticleIdentifier("TestParticle", localPartX, vertexX, vertexH, particleId, treeId);
+  const peano4::particles::assignmentchecks::ParticleIdentifier identifier =
+    peano4::particles::assignmentchecks::ParticleIdentifier(
+      "TestParticle",
+      localPartX,
+      vertexX,
+      vertexH,
+      particleId,
+      treeId
+    );
 
-  // 8 is hardcoded here. Modify manually if you change test setup.
+  // The count of 8 follows from the sweeps and the vertex changes this test runs.
   assertion(
     eventDatabase.getTotalParticleEntries(identifier) == 8,
-    "Wrong number of snapshots stored for particle",
+    "The database holds a different number of events for the particle.",
     eventDatabase.getTotalParticleEntries(identifier),
     eventDatabase.particleHistory(identifier)
   );
@@ -683,20 +737,21 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testParticleWalkSa
 void peano4::particles::assignmentchecks::tests::TestHelpers::testParticleLiftDrop() {
 #if PEANO_DEBUG
 
-  namespace ac = peano4::particles::assignmentchecks;
-
-  ac::internal::Database& eventDatabase = ac::internal::Database::getInstance();
+  auto& eventDatabase = peano4::particles::assignmentchecks::Database::getInstance();
 
   // The name has to match the class name, as traceParticleMovements() derives it from the type.
-  std::string particleName = "TestParticle";
+  const std::string particleName = "TestParticle";
 
   tarch::la::Vector<DIMENSIONS, double> localPartX;
-  tarch::la::Vector<DIMENSIONS, double> vertexH, prevVertexH;
-  tarch::la::Vector<DIMENSIONS, double> vertexX, prevVertexX;
+  tarch::la::Vector<DIMENSIONS, double> vertexH;
+  tarch::la::Vector<DIMENSIONS, double> prevVertexH;
+  tarch::la::Vector<DIMENSIONS, double> vertexX;
+  tarch::la::Vector<DIMENSIONS, double> prevVertexX;
 
-  double defaultVertexH = 3.;
-  int    depth          = 3;
-  int    maxVertexDepth = 5;
+  const double defaultVertexH = 3.;
+  int          depth          = 3;
+  const int    maxVertexDepth = 5;
+  int          walkSteps      = 0;
 
   for (int i = 0; i < DIMENSIONS; i++) {
     localPartX(i) = 51.5;
@@ -704,14 +759,15 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testParticleLiftDr
     vertexX(i)    = 27.;
   }
 
-  int particleId = 1;
-  int treeId     = 1;
+  const int particleId = 1;
+  const int treeId     = 1;
 
-  ac::tests::TestParticle               localPart         = ac::tests::TestParticle(localPartX, particleId, true);
-  std::vector<ac::tests::TestParticle*> assignedParticles = {&localPart};
+  peano4::particles::assignmentchecks::tests::TestParticle localPart =
+    peano4::particles::assignmentchecks::tests::TestParticle(localPartX, particleId, true);
+  const std::vector<peano4::particles::assignmentchecks::tests::TestParticle*> assignedParticles = {&localPart};
 
-  ac::startMeshSweep("InitUnitTest");
-  ac::assignParticleToVertex(
+  peano4::particles::assignmentchecks::startMeshSweep("InitUnitTest");
+  peano4::particles::assignmentchecks::assignParticleToVertex(
     particleName,
     localPartX,
     particleId,
@@ -726,18 +782,19 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testParticleLiftDr
 
   logDebug("Initially assigning to H=" << vertexH << " X=" << vertexX << " depth=" << depth);
 
-  ac::startMeshSweep("Lifts");
+  peano4::particles::assignmentchecks::startMeshSweep("Lifts");
 
-  while (internal::liftParticle(localPartX, vertexX, vertexH, depth)) {
+  while (liftParticle(localPartX, vertexX, vertexH, depth)) {
     depth--;
     prevVertexH = vertexH;
     prevVertexX = vertexX;
-    vertexH *= 3.;
-    vertexX = internal::findVertexX(vertexX, vertexH);
+    vertexH *= MeshWidthRatio;
+    vertexX = findVertexX(vertexX, vertexH);
+    walkSteps++;
 
     logDebug("Lifting to H=" << vertexH << " X=" << vertexX << " depth=" << depth);
 
-    ac::detachParticleFromVertex(
+    peano4::particles::assignmentchecks::detachParticleFromVertex(
       particleName,
       localPart.getX(),
       localPart.getPartid(),
@@ -748,7 +805,7 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testParticleLiftDr
       "vertexDetachLift"
     );
 
-    ac::assignParticleToVertex(
+    peano4::particles::assignmentchecks::assignParticleToVertex(
       particleName,
       localPart.getX(),
       localPart.getPartid(),
@@ -762,18 +819,19 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testParticleLiftDr
     );
   }
 
-  ac::startMeshSweep("Drops");
+  peano4::particles::assignmentchecks::startMeshSweep("Drops");
 
-  while (internal::dropParticle(localPartX, vertexH, depth, maxVertexDepth)) {
+  while (dropParticle(localPartX, vertexH, depth, maxVertexDepth)) {
     depth++;
     prevVertexH = vertexH;
     prevVertexX = vertexX;
-    vertexH /= 3.;
-    vertexX = internal::findVertexX(localPartX, vertexH);
+    vertexH /= MeshWidthRatio;
+    vertexX = findVertexX(localPartX, vertexH);
+    walkSteps++;
 
     logDebug("Dropping to H=" << vertexH << " X=" << vertexX << " depth=" << depth);
 
-    ac::detachParticleFromVertex(
+    peano4::particles::assignmentchecks::detachParticleFromVertex(
       particleName,
       localPart.getX(),
       localPart.getPartid(),
@@ -784,7 +842,7 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testParticleLiftDr
       "vertexDetachDrop"
     );
 
-    ac::assignParticleToVertex(
+    peano4::particles::assignmentchecks::assignParticleToVertex(
       particleName,
       localPart.getX(),
       localPart.getPartid(),
@@ -800,17 +858,24 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testParticleLiftDr
 
   assertion(
     eventDatabase.getNumberOfTracedParticles() == 1,
-    "Wrong particle count in database",
+    "The database holds a different number of particles than the one this test adds.",
     eventDatabase.getNumberOfTracedParticles()
   );
 
-  ac::internal::ParticleIdentifier identifier =
-    ac::internal::ParticleIdentifier("TestParticle", localPartX, vertexX, vertexH, particleId, treeId);
+  const peano4::particles::assignmentchecks::ParticleIdentifier identifier =
+    peano4::particles::assignmentchecks::ParticleIdentifier(
+      "TestParticle",
+      localPartX,
+      vertexX,
+      vertexH,
+      particleId,
+      treeId
+    );
 
-  // 13 is hardcoded here. Modify manually if you change test setup.
+  // The initial assign plus one detach and one assign per lift and per drop.
   assertion(
-    eventDatabase.getTotalParticleEntries(identifier) == 13,
-    "Wrong number of snapshots stored for particle",
+    eventDatabase.getTotalParticleEntries(identifier) == 1 + 2 * walkSteps,
+    "The database holds a different number of events for the particle.",
     eventDatabase.getTotalParticleEntries(identifier),
     eventDatabase.particleHistory(identifier)
   );
@@ -825,23 +890,23 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testParticleLiftDr
 void peano4::particles::assignmentchecks::tests::TestHelpers::testParticleWalk() {
 #if PEANO_DEBUG
 
-  namespace ac = peano4::particles::assignmentchecks;
-
-  ac::internal::Database& eventDatabase = ac::internal::Database::getInstance();
+  auto& eventDatabase = peano4::particles::assignmentchecks::Database::getInstance();
 
   // The name has to match the class name, as traceParticleMovements() derives it from the type.
-  std::string particleName = "TestParticle";
+  const std::string particleName = "TestParticle";
 
   tarch::la::Vector<DIMENSIONS, double> localPartX;
   // Displacement of the particle per step.
   tarch::la::Vector<DIMENSIONS, double> dx;
-  tarch::la::Vector<DIMENSIONS, double> vertexH, prevVertexH;
-  tarch::la::Vector<DIMENSIONS, double> vertexX, prevVertexX;
+  tarch::la::Vector<DIMENSIONS, double> vertexH;
+  tarch::la::Vector<DIMENSIONS, double> prevVertexH;
+  tarch::la::Vector<DIMENSIONS, double> vertexX;
+  tarch::la::Vector<DIMENSIONS, double> prevVertexX;
 
-  double defaultVertexH = 3.;
-  double dt             = 0.01;
-  int    depth          = 4;
-  int    maxVertexDepth = 6;
+  const double defaultVertexH = 3.;
+  const double dt             = 0.01;
+  int          depth          = 4;
+  const int    maxVertexDepth = 6;
 
   for (int i = 0; i < DIMENSIONS; i++) {
     localPartX(i) = 51.5;
@@ -849,16 +914,17 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testParticleWalk()
     vertexH(i)    = defaultVertexH;
   }
 
-  int particleId = 1;
-  int treeId     = 1;
+  const int particleId = 1;
+  const int treeId     = 1;
 
-  vertexX = internal::findVertexX(localPartX, vertexH);
+  vertexX = findVertexX(localPartX, vertexH);
 
-  ac::tests::TestParticle               localPart         = ac::tests::TestParticle(localPartX, particleId, true);
-  std::vector<ac::tests::TestParticle*> assignedParticles = {&localPart};
+  peano4::particles::assignmentchecks::tests::TestParticle localPart =
+    peano4::particles::assignmentchecks::tests::TestParticle(localPartX, particleId, true);
+  const std::vector<peano4::particles::assignmentchecks::tests::TestParticle*> assignedParticles = {&localPart};
 
-  ac::startMeshSweep("InitUnitTest");
-  ac::assignParticleToVertex(
+  peano4::particles::assignmentchecks::startMeshSweep("InitUnitTest");
+  peano4::particles::assignmentchecks::assignParticleToVertex(
     particleName,
     localPartX,
     particleId,
@@ -872,38 +938,44 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testParticleWalk()
   );
 
   for (int sweep = 0; sweep < 1000; sweep++) {
-    ac::startMeshSweep("MySweep" + std::to_string(sweep));
+    peano4::particles::assignmentchecks::startMeshSweep("MySweep" + std::to_string(sweep));
 
-    auto oldParticlePositions = ac::recordParticlePositions(assignedParticles);
+    auto oldParticlePositions = peano4::particles::assignmentchecks::recordParticlePositions(assignedParticles);
 
     double dtThisStep = dt;
     if (sweep > 9 and sweep < 256) {
       dtThisStep *= 1e-2;
     }
 
-    double dxThisStep = dtThisStep * dx(0);
+    const double dxThisStep = dtThisStep * dx(0);
     // The checks accept a movement below the size of the vertex.
     assertion(dxThisStep <= vertexH(0));
 
     localPartX += dxThisStep;
     localPart.setX(localPartX);
 
-    ac::traceParticleMovements(assignedParticles, oldParticlePositions, vertexX, vertexH, treeId);
+    peano4::particles::assignmentchecks::traceParticleMovements(
+      assignedParticles,
+      oldParticlePositions,
+      vertexX,
+      vertexH,
+      treeId
+    );
 
     logDebug("Moving particle to " << localPartX);
 
     logDebug("Checking vertex H=" << vertexH << " X=" << vertexX);
 
-    while (internal::liftParticle(localPartX, vertexX, vertexH, depth)) {
+    while (liftParticle(localPartX, vertexX, vertexH, depth)) {
       depth--;
       prevVertexH = vertexH;
       prevVertexX = vertexX;
-      vertexH *= 3.;
-      vertexX = internal::findVertexX(localPartX, vertexH);
+      vertexH *= MeshWidthRatio;
+      vertexX = findVertexX(localPartX, vertexH);
 
       logDebug("Lifting to H=" << vertexH << " X=" << vertexX << " depth=" << depth);
 
-      ac::detachParticleFromVertex(
+      peano4::particles::assignmentchecks::detachParticleFromVertex(
         particleName,
         localPart.getX(),
         localPart.getPartid(),
@@ -914,7 +986,7 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testParticleWalk()
         "vertexDetachLift"
       );
 
-      ac::assignParticleToVertex(
+      peano4::particles::assignmentchecks::assignParticleToVertex(
         particleName,
         localPart.getX(),
         localPart.getPartid(),
@@ -928,16 +1000,16 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testParticleWalk()
       );
     }
 
-    while (internal::dropParticle(localPartX, vertexH, depth, maxVertexDepth)) {
+    while (dropParticle(localPartX, vertexH, depth, maxVertexDepth)) {
       depth++;
       prevVertexH = vertexH;
       prevVertexX = vertexX;
-      vertexH /= 3.;
-      vertexX = internal::findVertexX(localPartX, vertexH);
+      vertexH /= MeshWidthRatio;
+      vertexX = findVertexX(localPartX, vertexH);
 
       logDebug("Dropping to H=" << vertexH << " X=" << vertexX << " depth=" << depth);
 
-      ac::detachParticleFromVertex(
+      peano4::particles::assignmentchecks::detachParticleFromVertex(
         particleName,
         localPart.getX(),
         localPart.getPartid(),
@@ -948,7 +1020,7 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testParticleWalk()
         "vertexDetachDrop"
       );
 
-      ac::assignParticleToVertex(
+      peano4::particles::assignmentchecks::assignParticleToVertex(
         particleName,
         localPart.getX(),
         localPart.getPartid(),
@@ -973,13 +1045,11 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testParticleWalk()
 void peano4::particles::assignmentchecks::tests::TestHelpers::testPeriodicBoundaryConditions() {
 #if PEANO_DEBUG
 
-  namespace ac = peano4::particles::assignmentchecks;
-
-  ac::internal::Database& eventDatabase = ac::internal::Database::getInstance();
+  auto& eventDatabase = peano4::particles::assignmentchecks::Database::getInstance();
   eventDatabase.setMaxParticleSnapshotsToKeepTrackOf(1000);
 
   // The name has to match the class name, as traceParticleMovements() derives it from the type.
-  std::string particleName = "TestParticle";
+  const std::string particleName = "TestParticle";
 
   tarch::la::Vector<DIMENSIONS, double> initialLocalPartX;
   // Displacement of the particle per step.
@@ -988,13 +1058,15 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testPeriodicBounda
   tarch::la::Vector<DIMENSIONS, double> boundary;
   tarch::la::Vector<DIMENSIONS, double> zeroCorner;
 
-  tarch::la::Vector<DIMENSIONS, double> initialVertexH, prevVertexH;
-  tarch::la::Vector<DIMENSIONS, double> vertexX, prevVertexX;
+  tarch::la::Vector<DIMENSIONS, double> initialVertexH;
+  tarch::la::Vector<DIMENSIONS, double> prevVertexH;
+  tarch::la::Vector<DIMENSIONS, double> vertexX;
+  tarch::la::Vector<DIMENSIONS, double> prevVertexX;
 
-  double defaultVertexH = 3.;
-  double dt             = 1.;
-  int    depth          = 4;
-  int    maxVertexDepth = 5;
+  const double defaultVertexH = 3.;
+  const double dt             = 1.;
+  const int    depth          = 4;
+  const int    maxVertexDepth = 5;
 
   for (int i = 0; i < DIMENSIONS; i++) {
     initialLocalPartX(i) = 7.5;
@@ -1004,19 +1076,19 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testPeriodicBounda
     zeroCorner(i)        = 0.;
   }
 
-  int particleId = 1;
-  int treeId     = 1;
+  const int particleId = 1;
+  const int treeId     = 1;
 
-  ac::tests::TestParticle* localPart = new ac::tests::TestParticle(initialLocalPartX, particleId, true);
+  auto* localPart = new peano4::particles::assignmentchecks::tests::TestParticle(initialLocalPartX, particleId, true);
   localPart->setVertexH(initialVertexH);
   localPart->setDepth(depth);
 
-  std::vector<ac::tests::TestParticle*> particleSet = {localPart};
+  std::vector<peano4::particles::assignmentchecks::tests::TestParticle*> particleSet = {localPart};
 
-  vertexX = internal::findVertexX(localPart->getX(), localPart->getVertexH());
+  vertexX = findVertexX(localPart->getX(), localPart->getVertexH());
 
-  ac::startMeshSweep("InitUnitTest");
-  ac::assignParticleToVertex(
+  peano4::particles::assignmentchecks::startMeshSweep("InitUnitTest");
+  peano4::particles::assignmentchecks::assignParticleToVertex(
     particleName,
     localPart->getX(),
     localPart->getPartid(),
@@ -1030,34 +1102,40 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testPeriodicBounda
   );
 
   for (int sweep = 0; sweep < 50; sweep++) {
-    ac::startMeshSweep("MySweep" + std::to_string(sweep));
+    peano4::particles::assignmentchecks::startMeshSweep("MySweep" + std::to_string(sweep));
 
-    auto oldParticlePositions = ac::recordParticlePositions(particleSet);
+    auto oldParticlePositions = peano4::particles::assignmentchecks::recordParticlePositions(particleSet);
 
-    for (auto p : particleSet) {
+    for (auto* p : particleSet) {
       // The vertex that holds the particle has to be found before the move.
-      vertexX = internal::findVertexX(p->getX(), p->getVertexH());
+      vertexX = findVertexX(p->getX(), p->getVertexH());
 
       tarch::la::Vector<DIMENSIONS, double> partX = p->getX();
       partX += dt * dx;
       p->setX(partX);
 
-      ac::traceParticleMovements(particleSet, oldParticlePositions, vertexX, p->getVertexH(), treeId);
+      peano4::particles::assignmentchecks::traceParticleMovements(
+        particleSet,
+        oldParticlePositions,
+        vertexX,
+        p->getVertexH(),
+        treeId
+      );
 
       logDebug("Moving particle to " << partX);
 
       logDebug("Checking vertex H=" << p->getVertexH() << " X=" << vertexX);
 
-      while (internal::liftParticle(p->getX(), vertexX, p->getVertexH(), p->getDepth())) {
+      while (liftParticle(p->getX(), vertexX, p->getVertexH(), p->getDepth())) {
         p->setDepth(p->getDepth() - 1);
         prevVertexH = p->getVertexH();
         prevVertexX = vertexX;
-        p->setVertexH(p->getVertexH() * 3.);
-        vertexX = internal::findVertexX(p->getX(), p->getVertexH());
+        p->setVertexH(p->getVertexH() * MeshWidthRatio);
+        vertexX = findVertexX(p->getX(), p->getVertexH());
 
         logDebug("Lifting to H=" << p->getVertexH() << " X=" << vertexX << " depth=" << p->getDepth());
 
-        ac::detachParticleFromVertex(
+        peano4::particles::assignmentchecks::detachParticleFromVertex(
           particleName,
           p->getX(),
           p->getPartid(),
@@ -1068,7 +1146,7 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testPeriodicBounda
           "vertexDetach::Lift"
         );
 
-        ac::assignParticleToVertex(
+        peano4::particles::assignmentchecks::assignParticleToVertex(
           particleName,
           p->getX(),
           p->getPartid(),
@@ -1082,16 +1160,16 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testPeriodicBounda
         );
       }
 
-      while (internal::dropParticle(p->getX(), p->getVertexH(), p->getDepth(), maxVertexDepth)) {
+      while (dropParticle(p->getX(), p->getVertexH(), p->getDepth(), maxVertexDepth)) {
         p->setDepth(p->getDepth() + 1);
         prevVertexH = p->getVertexH();
         prevVertexX = vertexX;
-        p->setVertexH(p->getVertexH() / 3.);
-        vertexX = internal::findVertexX(p->getX(), p->getVertexH());
+        p->setVertexH(p->getVertexH() / MeshWidthRatio);
+        vertexX = findVertexX(p->getX(), p->getVertexH());
 
         logDebug("Dropping to H=" << p->getVertexH() << " X=" << vertexX << " depth=" << p->getDepth());
 
-        ac::detachParticleFromVertex(
+        peano4::particles::assignmentchecks::detachParticleFromVertex(
           particleName,
           p->getX(),
           p->getPartid(),
@@ -1102,7 +1180,7 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testPeriodicBounda
           "vertexDetach::Drop"
         );
 
-        ac::assignParticleToVertex(
+        peano4::particles::assignmentchecks::assignParticleToVertex(
           particleName,
           p->getX(),
           p->getPartid(),
@@ -1117,14 +1195,14 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testPeriodicBounda
       }
     } // Drift loop
 
-    for (auto p : particleSet) {
+    for (auto* p : particleSet) {
       // The particle travels diagonally, so one coordinate decides.
-      int vertexInd = internal::findVertexInd(p->getX()[0], p->getVertexH()[0]);
-      if (vertexInd == 0) {
+      const int vertexIndex = findVertexIndex(p->getX()[0], p->getVertexH()[0]);
+      if (vertexIndex == 0) {
         // The particle sits on the (0, 0, 0) boundary vertex and is replicated
         // across the boundary.
         tarch::la::Vector<DIMENSIONS, double> virtualPartX = p->getX() + boundary;
-        TestParticle*                         replica      = new TestParticle(
+        auto*                                 replica      = new TestParticle(
           virtualPartX,
           p->getPartid(),
           false // virtual particle
@@ -1137,9 +1215,9 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testPeriodicBounda
 
         // The virtual particle sits at the depth of the local particle, so it
         // keeps vertexH and takes a new vertexX.
-        vertexX = internal::findVertexX(replica->getX(), replica->getVertexH());
+        vertexX = findVertexX(replica->getX(), replica->getVertexH());
 
-        ac::assignParticleToVertex(
+        peano4::particles::assignmentchecks::assignParticleToVertex(
           particleName,
           replica->getX(),
           replica->getPartid(),
@@ -1159,12 +1237,12 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testPeriodicBounda
 
     // A particle that crosses the (0, 0, 0) boundary becomes virtual, and a
     // particle that crosses the far boundary becomes local.
-    for (auto p : particleSet) {
+    for (auto* p : particleSet) {
       if (p->isLocal()) {
         if (tarch::la::oneSmaller(p->getX(), zeroCorner)) {
-          vertexX = internal::findVertexX(p->getX(), p->getVertexH());
+          vertexX = findVertexX(p->getX(), p->getVertexH());
 
-          ac::detachParticleFromVertex(
+          peano4::particles::assignmentchecks::detachParticleFromVertex(
             particleName,
             p->getX(),
             p->getPartid(),
@@ -1175,7 +1253,7 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testPeriodicBounda
             "vertexDetach::LocalToVirtual"
           );
 
-          ac::assignParticleToVertex(
+          peano4::particles::assignmentchecks::assignParticleToVertex(
             particleName,
             p->getX(),
             p->getPartid(),
@@ -1192,8 +1270,8 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testPeriodicBounda
         }
       } else {
         if (tarch::la::oneSmaller(p->getX(), boundary)) {
-          vertexX = internal::findVertexX(p->getX(), p->getVertexH());
-          ac::detachParticleFromVertex(
+          vertexX = findVertexX(p->getX(), p->getVertexH());
+          peano4::particles::assignmentchecks::detachParticleFromVertex(
             particleName,
             p->getX(),
             p->getPartid(),
@@ -1204,7 +1282,7 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testPeriodicBounda
             "vertexDetach::VirtualToLocal"
           );
 
-          ac::assignParticleToVertex(
+          peano4::particles::assignmentchecks::assignParticleToVertex(
             particleName,
             p->getX(),
             p->getPartid(),
@@ -1225,11 +1303,11 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testPeriodicBounda
     auto p = particleSet.begin();
     while (p != particleSet.end()) {
       if (not(*p)->isLocal()) {
-        logDebug("erasing " << (*p)->getX());
+        logDebug("Erasing particle at " << (*p)->getX());
 
-        vertexX = internal::findVertexX((*p)->getX(), (*p)->getVertexH());
+        vertexX = findVertexX((*p)->getX(), (*p)->getVertexH());
 
-        ac::detachParticleFromVertex(
+        peano4::particles::assignmentchecks::detachParticleFromVertex(
           particleName,
           (*p)->getX(),
           (*p)->getPartid(),
@@ -1239,7 +1317,7 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testPeriodicBounda
           treeId,
           "vertexDetachErase"
         );
-        ac::eraseParticle(
+        peano4::particles::assignmentchecks::eraseParticle(
           particleName,
           (*p)->getX(),
           (*p)->getPartid(),
@@ -1259,7 +1337,7 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testPeriodicBounda
 
   logDebug(eventDatabase.toString());
 
-  for (auto p : particleSet) {
+  for (auto* p : particleSet) {
     delete p;
   }
   eventDatabase.reset();
@@ -1270,13 +1348,11 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testPeriodicBounda
 void peano4::particles::assignmentchecks::tests::TestHelpers::testPeriodicBoundaryConditionsCorner() {
 #if PEANO_DEBUG
 
-  namespace ac = peano4::particles::assignmentchecks;
-
-  ac::internal::Database& eventDatabase = ac::internal::Database::getInstance();
+  auto& eventDatabase = peano4::particles::assignmentchecks::Database::getInstance();
   eventDatabase.setMaxParticleSnapshotsToKeepTrackOf(1000);
 
   // The name has to match the class name, as traceParticleMovements() derives it from the type.
-  std::string particleName = "TestParticle";
+  const std::string particleName = "TestParticle";
 
   tarch::la::Vector<DIMENSIONS, double> initialLocalPartX;
   // Displacement of the particle per step.
@@ -1285,13 +1361,15 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testPeriodicBounda
   tarch::la::Vector<DIMENSIONS, double> boundary;
   tarch::la::Vector<DIMENSIONS, double> zeroCorner;
 
-  tarch::la::Vector<DIMENSIONS, double> initialVertexH, prevVertexH;
-  tarch::la::Vector<DIMENSIONS, double> vertexX, prevVertexX;
+  tarch::la::Vector<DIMENSIONS, double> initialVertexH;
+  tarch::la::Vector<DIMENSIONS, double> prevVertexH;
+  tarch::la::Vector<DIMENSIONS, double> vertexX;
+  tarch::la::Vector<DIMENSIONS, double> prevVertexX;
 
-  double defaultVertexH = 0.33333333;
-  double dt             = 1.;
-  int    depth          = 1;
-  int    maxVertexDepth = 2;
+  const double defaultVertexH = 0.33333333;
+  const double dt             = 1.;
+  const int    depth          = 1;
+  const int    maxVertexDepth = 2;
 
   for (int i = 0; i < DIMENSIONS; i++) {
     initialLocalPartX(i) = 0.01;
@@ -1301,19 +1379,19 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testPeriodicBounda
     zeroCorner(i)        = 0.;
   }
 
-  int particleId = 1;
-  int treeId     = 1;
+  const int particleId = 1;
+  const int treeId     = 1;
 
-  ac::tests::TestParticle* localPart = new ac::tests::TestParticle(initialLocalPartX, particleId, true);
+  auto* localPart = new peano4::particles::assignmentchecks::tests::TestParticle(initialLocalPartX, particleId, true);
   localPart->setVertexH(initialVertexH);
   localPart->setDepth(depth);
 
-  std::vector<ac::tests::TestParticle*> particleSet = {localPart};
+  std::vector<peano4::particles::assignmentchecks::tests::TestParticle*> particleSet = {localPart};
 
-  vertexX = internal::findVertexX(localPart->getX(), localPart->getVertexH());
+  vertexX = findVertexX(localPart->getX(), localPart->getVertexH());
 
-  ac::startMeshSweep("InitUnitTest");
-  ac::assignParticleToVertex(
+  peano4::particles::assignmentchecks::startMeshSweep("InitUnitTest");
+  peano4::particles::assignmentchecks::assignParticleToVertex(
     particleName,
     localPart->getX(),
     localPart->getPartid(),
@@ -1328,34 +1406,40 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testPeriodicBounda
   );
 
   for (int sweep = 0; sweep < 50; sweep++) {
-    ac::startMeshSweep("MySweep" + std::to_string(sweep));
+    peano4::particles::assignmentchecks::startMeshSweep("MySweep" + std::to_string(sweep));
 
-    auto oldParticlePositions = ac::recordParticlePositions(particleSet);
+    auto oldParticlePositions = peano4::particles::assignmentchecks::recordParticlePositions(particleSet);
 
-    for (auto p : particleSet) {
+    for (auto* p : particleSet) {
       // The vertex that holds the particle has to be found before the move.
-      vertexX = internal::findVertexX(p->getX(), p->getVertexH());
+      vertexX = findVertexX(p->getX(), p->getVertexH());
 
       tarch::la::Vector<DIMENSIONS, double> partX = p->getX();
       partX += dt * dx;
       p->setX(partX);
 
-      ac::traceParticleMovements(particleSet, oldParticlePositions, vertexX, p->getVertexH(), treeId);
+      peano4::particles::assignmentchecks::traceParticleMovements(
+        particleSet,
+        oldParticlePositions,
+        vertexX,
+        p->getVertexH(),
+        treeId
+      );
 
       logDebug("Moving particle to " << partX);
 
       logDebug("Checking vertex H=" << p->getVertexH() << " X=" << vertexX);
 
-      while (internal::liftParticle(p->getX(), vertexX, p->getVertexH(), p->getDepth())) {
+      while (liftParticle(p->getX(), vertexX, p->getVertexH(), p->getDepth())) {
         p->setDepth(p->getDepth() - 1);
         prevVertexH = p->getVertexH();
         prevVertexX = vertexX;
-        p->setVertexH(p->getVertexH() * 3.);
-        vertexX = internal::findVertexX(p->getX(), p->getVertexH());
+        p->setVertexH(p->getVertexH() * MeshWidthRatio);
+        vertexX = findVertexX(p->getX(), p->getVertexH());
 
         logDebug("Lifting to H=" << p->getVertexH() << " X=" << vertexX << " depth=" << p->getDepth());
 
-        ac::detachParticleFromVertex(
+        peano4::particles::assignmentchecks::detachParticleFromVertex(
           particleName,
           p->getX(),
           p->getPartid(),
@@ -1366,7 +1450,7 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testPeriodicBounda
           "vertexDetach::Lift"
         );
 
-        ac::assignParticleToVertex(
+        peano4::particles::assignmentchecks::assignParticleToVertex(
           particleName,
           p->getX(),
           p->getPartid(),
@@ -1380,16 +1464,16 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testPeriodicBounda
         );
       }
 
-      while (internal::dropParticle(p->getX(), p->getVertexH(), p->getDepth(), maxVertexDepth)) {
+      while (dropParticle(p->getX(), p->getVertexH(), p->getDepth(), maxVertexDepth)) {
         p->setDepth(p->getDepth() + 1);
         prevVertexH = p->getVertexH();
         prevVertexX = vertexX;
-        p->setVertexH(p->getVertexH() / 3.);
-        vertexX = internal::findVertexX(p->getX(), p->getVertexH());
+        p->setVertexH(p->getVertexH() / MeshWidthRatio);
+        vertexX = findVertexX(p->getX(), p->getVertexH());
 
         logDebug("Dropping to H=" << p->getVertexH() << " X=" << vertexX << " depth=" << p->getDepth());
 
-        ac::detachParticleFromVertex(
+        peano4::particles::assignmentchecks::detachParticleFromVertex(
           particleName,
           p->getX(),
           p->getPartid(),
@@ -1400,7 +1484,7 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testPeriodicBounda
           "vertexDetach::Drop"
         );
 
-        ac::assignParticleToVertex(
+        peano4::particles::assignmentchecks::assignParticleToVertex(
           particleName,
           p->getX(),
           p->getPartid(),
@@ -1415,57 +1499,57 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testPeriodicBounda
       }
     } // Drift loop
 
-    std::vector<ac::tests::TestParticle*> mirroredParticleSet;
+    std::vector<peano4::particles::assignmentchecks::tests::TestParticle*> mirroredParticleSet;
 
-    for (auto p : particleSet) {
+    for (auto* p : particleSet) {
       // The particle travels diagonally, so one coordinate decides.
-      int vertexInd = internal::findVertexInd(p->getX()[0], p->getVertexH()[0]);
-      if (vertexInd == 0) {
+      const int vertexIndex = findVertexIndex(p->getX()[0], p->getVertexH()[0]);
+      if (vertexIndex == 0) {
         // The particle sits on the (0, 0, 0) boundary vertex and is replicated
         // across the boundary.
         if (DIMENSIONS > 0) {
-          ac::tests::TestParticle* mirror1 =
-            internal::mirrorParticleAlongPeriodicBoundary(p, true, false, false, boundary);
+          peano4::particles::assignmentchecks::tests::TestParticle* mirror1 =
+            mirrorParticleAlongPeriodicBoundary(p, true, false, false, boundary);
           mirroredParticleSet.push_back(mirror1);
-          logDebug("Creating virtual particle at " << mirror1->getX(););
+          logDebug("Creating virtual particle at " << mirror1->getX());
         }
         if (DIMENSIONS > 1) {
-          ac::tests::TestParticle* mirror2 =
-            internal::mirrorParticleAlongPeriodicBoundary(p, true, true, false, boundary);
+          peano4::particles::assignmentchecks::tests::TestParticle* mirror2 =
+            mirrorParticleAlongPeriodicBoundary(p, true, true, false, boundary);
           mirroredParticleSet.push_back(mirror2);
-          logDebug("Creating virtual particle at " << mirror2->getX(););
-          ac::tests::TestParticle* mirror3 =
-            internal::mirrorParticleAlongPeriodicBoundary(p, false, true, false, boundary);
+          logDebug("Creating virtual particle at " << mirror2->getX());
+          peano4::particles::assignmentchecks::tests::TestParticle* mirror3 =
+            mirrorParticleAlongPeriodicBoundary(p, false, true, false, boundary);
           mirroredParticleSet.push_back(mirror3);
-          logDebug("Creating virtual particle at " << mirror3->getX(););
+          logDebug("Creating virtual particle at " << mirror3->getX());
         }
         if (DIMENSIONS > 2) {
-          ac::tests::TestParticle* mirror4 =
-            internal::mirrorParticleAlongPeriodicBoundary(p, true, true, true, boundary);
+          peano4::particles::assignmentchecks::tests::TestParticle* mirror4 =
+            mirrorParticleAlongPeriodicBoundary(p, true, true, true, boundary);
           mirroredParticleSet.push_back(mirror4);
-          logDebug("Creating virtual particle at " << mirror4->getX(););
-          ac::tests::TestParticle* mirror5 =
-            internal::mirrorParticleAlongPeriodicBoundary(p, false, true, true, boundary);
+          logDebug("Creating virtual particle at " << mirror4->getX());
+          peano4::particles::assignmentchecks::tests::TestParticle* mirror5 =
+            mirrorParticleAlongPeriodicBoundary(p, false, true, true, boundary);
           mirroredParticleSet.push_back(mirror5);
-          logDebug("Creating virtual particle at " << mirror5->getX(););
-          ac::tests::TestParticle* mirror6 =
-            internal::mirrorParticleAlongPeriodicBoundary(p, false, false, true, boundary);
+          logDebug("Creating virtual particle at " << mirror5->getX());
+          peano4::particles::assignmentchecks::tests::TestParticle* mirror6 =
+            mirrorParticleAlongPeriodicBoundary(p, false, false, true, boundary);
           mirroredParticleSet.push_back(mirror6);
-          logDebug("Creating virtual particle at " << mirror6->getX(););
-          ac::tests::TestParticle* mirror7 =
-            internal::mirrorParticleAlongPeriodicBoundary(p, true, false, true, boundary);
+          logDebug("Creating virtual particle at " << mirror6->getX());
+          peano4::particles::assignmentchecks::tests::TestParticle* mirror7 =
+            mirrorParticleAlongPeriodicBoundary(p, true, false, true, boundary);
           mirroredParticleSet.push_back(mirror7);
-          logDebug("Creating virtual particle at " << mirror7->getX(););
+          logDebug("Creating virtual particle at " << mirror7->getX());
         }
       }
     }
 
-    for (auto p : mirroredParticleSet) {
+    for (auto* p : mirroredParticleSet) {
       // The virtual particle sits at the depth of the local particle, so it
       // keeps vertexH and takes a new vertexX.
-      vertexX = internal::findVertexX(p->getX(), p->getVertexH());
+      vertexX = findVertexX(p->getX(), p->getVertexH());
 
-      ac::assignParticleToVertex(
+      peano4::particles::assignmentchecks::assignParticleToVertex(
         particleName,
         p->getX(),
         p->getPartid(),
@@ -1488,11 +1572,11 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testPeriodicBounda
     auto p = particleSet.begin();
     while (p != particleSet.end()) {
       if (not(*p)->isLocal()) {
-        logDebug("erasing " << (*p)->getX());
+        logDebug("Erasing particle at " << (*p)->getX());
 
-        vertexX = internal::findVertexX((*p)->getX(), (*p)->getVertexH());
+        vertexX = findVertexX((*p)->getX(), (*p)->getVertexH());
 
-        ac::detachParticleFromVertex(
+        peano4::particles::assignmentchecks::detachParticleFromVertex(
           particleName,
           (*p)->getX(),
           (*p)->getPartid(),
@@ -1502,7 +1586,7 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testPeriodicBounda
           treeId,
           "vertexDetachErase"
         );
-        ac::eraseParticle(
+        peano4::particles::assignmentchecks::eraseParticle(
           particleName,
           (*p)->getX(),
           (*p)->getPartid(),
@@ -1522,7 +1606,7 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testPeriodicBounda
 
   logDebug(eventDatabase.toString());
 
-  for (auto p : particleSet) {
+  for (auto* p : particleSet) {
     delete p;
   }
   eventDatabase.reset();
@@ -1533,23 +1617,23 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testPeriodicBounda
 void peano4::particles::assignmentchecks::tests::TestHelpers::testSieveSet() {
 #if PEANO_DEBUG
 
-  namespace ac = peano4::particles::assignmentchecks;
-
-  ac::internal::Database& eventDatabase = ac::internal::Database::getInstance();
+  auto& eventDatabase = peano4::particles::assignmentchecks::Database::getInstance();
   eventDatabase.setMaxParticleSnapshotsToKeepTrackOf(1000);
 
   // The name has to match the class name, as traceParticleMovements() derives it from the type.
-  std::string particleName = "TestParticle";
+  const std::string particleName = "TestParticle";
 
   tarch::la::Vector<DIMENSIONS, double> initialLocalPartX;
   // Displacement of the particle per step.
   tarch::la::Vector<DIMENSIONS, double> dx;
 
-  tarch::la::Vector<DIMENSIONS, double> vertexH, prevVertexH;
-  tarch::la::Vector<DIMENSIONS, double> vertexX, prevVertexX;
+  tarch::la::Vector<DIMENSIONS, double> vertexH;
+  tarch::la::Vector<DIMENSIONS, double> prevVertexH;
+  tarch::la::Vector<DIMENSIONS, double> vertexX;
+  tarch::la::Vector<DIMENSIONS, double> prevVertexX;
 
-  double defaultVertexH = 3.;
-  double dt             = 1.;
+  const double defaultVertexH = 3.;
+  const double dt             = 1.;
 
   for (int i = 0; i < DIMENSIONS; i++) {
     initialLocalPartX(i) = 7.5;
@@ -1557,19 +1641,19 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testSieveSet() {
     vertexH(i)           = defaultVertexH;
   }
 
-  int particleId = 1;
-  int treeId     = 1;
+  const int particleId = 1;
+  const int treeId     = 1;
 
-  ac::tests::TestParticle* localPart = new ac::tests::TestParticle(initialLocalPartX, particleId, true);
+  auto* localPart = new peano4::particles::assignmentchecks::tests::TestParticle(initialLocalPartX, particleId, true);
   localPart->setVertexH(vertexH);
   localPart->setDepth(1);
 
-  std::vector<ac::tests::TestParticle*> particleSet = {localPart};
+  const std::vector<peano4::particles::assignmentchecks::tests::TestParticle*> particleSet = {localPart};
 
-  vertexX = internal::findVertexX(localPart->getX(), localPart->getVertexH());
+  vertexX = findVertexX(localPart->getX(), localPart->getVertexH());
 
-  ac::startMeshSweep("InitUnitTest");
-  ac::assignParticleToVertex(
+  peano4::particles::assignmentchecks::startMeshSweep("InitUnitTest");
+  peano4::particles::assignmentchecks::assignParticleToVertex(
     particleName,
     localPart->getX(),
     localPart->getPartid(),
@@ -1583,28 +1667,34 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testSieveSet() {
     true
   );
 
-  size_t numberOfSweeps = 10;
+  const size_t numberOfSweeps = 10;
   for (size_t sweep = 0; sweep < numberOfSweeps; sweep++) {
-    ac::startMeshSweep("MySweep" + std::to_string(sweep));
+    peano4::particles::assignmentchecks::startMeshSweep("MySweep" + std::to_string(sweep));
 
-    auto oldParticlePositions = ac::recordParticlePositions(particleSet);
+    auto oldParticlePositions = peano4::particles::assignmentchecks::recordParticlePositions(particleSet);
 
-    for (auto p : particleSet) {
+    for (auto* p : particleSet) {
       // The vertex that holds the particle has to be found before the move.
-      vertexX = internal::findVertexX(p->getX(), p->getVertexH());
+      vertexX = findVertexX(p->getX(), p->getVertexH());
 
       tarch::la::Vector<DIMENSIONS, double> partX = p->getX();
       partX += dt * dx;
       p->setX(partX);
 
-      ac::traceParticleMovements(particleSet, oldParticlePositions, vertexX, p->getVertexH(), treeId);
+      peano4::particles::assignmentchecks::traceParticleMovements(
+        particleSet,
+        oldParticlePositions,
+        vertexX,
+        p->getVertexH(),
+        treeId
+      );
 
       logDebug("Moving particle to " << partX);
 
       prevVertexH = p->getVertexH();
       prevVertexX = vertexX;
 
-      ac::detachParticleFromVertex(
+      peano4::particles::assignmentchecks::detachParticleFromVertex(
         particleName,
         p->getX(),
         p->getPartid(),
@@ -1615,7 +1705,7 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testSieveSet() {
         "vertexDetach"
       );
 
-      ac::assignParticleToSieveSet(
+      peano4::particles::assignmentchecks::assignParticleToSieveSet(
         particleName,
         p->getX(),
         p->getPartid(),
@@ -1625,9 +1715,9 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testSieveSet() {
         treeId,
         "assignToSieveSet"
       );
-      vertexX = internal::findVertexX(p->getX(), p->getVertexH());
+      vertexX = findVertexX(p->getX(), p->getVertexH());
 
-      ac::assignParticleToVertex(
+      peano4::particles::assignmentchecks::assignParticleToVertex(
         particleName,
         p->getX(),
         p->getPartid(),
@@ -1644,24 +1734,25 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testSieveSet() {
 
   assertion(
     eventDatabase.getNumberOfTracedParticles() == 1,
-    "Wrong particle count in database",
+    "The database holds a different number of particles than the one this test adds.",
     eventDatabase.getNumberOfTracedParticles()
   );
 
-  ac::internal::ParticleIdentifier identifier = ac::internal::ParticleIdentifier(
-    "TestParticle",
-    localPart->getX(),
-    vertexX,
-    localPart->getVertexH(),
-    localPart->getPartid(),
-    treeId
-  );
+  peano4::particles::assignmentchecks::ParticleIdentifier identifier =
+    peano4::particles::assignmentchecks::ParticleIdentifier(
+      "TestParticle",
+      localPart->getX(),
+      vertexX,
+      localPart->getVertexH(),
+      localPart->getPartid(),
+      treeId
+    );
 
-  [[maybe_unused]] size_t numberOfEntries = eventDatabase.getTotalParticleEntries(identifier);
+  [[maybe_unused]] const size_t numberOfEntries = eventDatabase.getTotalParticleEntries(identifier);
   // The loop adds four events per sweep and one event comes from the start.
   assertion(
     numberOfEntries == (numberOfSweeps * 4 + 1),
-    "Wrong number of entries for particle ",
+    "The database holds a different number of events for the particle.",
     numberOfEntries,
     numberOfSweeps * 4 + 1,
     eventDatabase.particleHistory(identifier),
@@ -1672,7 +1763,7 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testSieveSet() {
 
   logDebug(eventDatabase.toString());
 
-  for (auto p : particleSet) {
+  for (auto* p : particleSet) {
     delete p;
   }
   eventDatabase.reset();
@@ -1683,13 +1774,11 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testSieveSet() {
 void peano4::particles::assignmentchecks::tests::TestHelpers::testRepeatedVirtualParticleCleanup() {
 #if PEANO_DEBUG
 
-  namespace ac = peano4::particles::assignmentchecks;
-
-  ac::internal::Database& eventDatabase = ac::internal::Database::getInstance();
+  auto& eventDatabase = peano4::particles::assignmentchecks::Database::getInstance();
   eventDatabase.reset();
   eventDatabase.setMaxParticleSnapshotsToKeepTrackOf(1000);
 
-  std::string particleName = "TestParticle";
+  const std::string particleName = "TestParticle";
 
   tarch::la::Vector<DIMENSIONS, double> particleX;
   tarch::la::Vector<DIMENSIONS, double> vertexX;
@@ -1701,12 +1790,12 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testRepeatedVirtua
     vertexH(i)   = 1.0 / 3.0;
   }
 
-  int particleId = 1;
-  int treeId     = 3;
+  const int particleId = 1;
+  const int treeId     = 3;
 
-  ac::startMeshSweep("DuplicateVirtualParticleCleanup");
+  peano4::particles::assignmentchecks::startMeshSweep("DuplicateVirtualParticleCleanup");
 
-  ac::assignParticleToVertex(
+  peano4::particles::assignmentchecks::assignParticleToVertex(
     particleName,
     particleX,
     particleId,
@@ -1719,7 +1808,7 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testRepeatedVirtua
     vertexH
   );
 
-  ac::detachParticleFromVertex(
+  peano4::particles::assignmentchecks::detachParticleFromVertex(
     particleName,
     particleX,
     particleId,
@@ -1729,9 +1818,18 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testRepeatedVirtua
     treeId,
     "firstVirtualDetach"
   );
-  ac::eraseParticle(particleName, particleX, particleId, false, vertexX, vertexH, treeId, "firstVirtualErase");
+  peano4::particles::assignmentchecks::eraseParticle(
+    particleName,
+    particleX,
+    particleId,
+    false,
+    vertexX,
+    vertexH,
+    treeId,
+    "firstVirtualErase"
+  );
 
-  ac::detachParticleFromVertex(
+  peano4::particles::assignmentchecks::detachParticleFromVertex(
     particleName,
     particleX,
     particleId,
@@ -1741,10 +1839,26 @@ void peano4::particles::assignmentchecks::tests::TestHelpers::testRepeatedVirtua
     treeId,
     "duplicateVirtualDetach"
   );
-  ac::eraseParticle(particleName, particleX, particleId, false, vertexX, vertexH, treeId, "duplicateVirtualErase");
+  peano4::particles::assignmentchecks::eraseParticle(
+    particleName,
+    particleX,
+    particleId,
+    false,
+    vertexX,
+    vertexH,
+    treeId,
+    "duplicateVirtualErase"
+  );
 
-  ac::internal::ParticleIdentifier identifier =
-    ac::internal::ParticleIdentifier(particleName, particleX, vertexX, vertexH, particleId, treeId);
+  const peano4::particles::assignmentchecks::ParticleIdentifier identifier =
+    peano4::particles::assignmentchecks::ParticleIdentifier(
+      particleName,
+      particleX,
+      vertexX,
+      vertexH,
+      particleId,
+      treeId
+    );
   assertion(eventDatabase.getTotalParticleEntries(identifier) == 5, eventDatabase.particleHistory(identifier));
 
   eventDatabase.reset();

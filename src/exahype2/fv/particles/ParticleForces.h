@@ -3,13 +3,12 @@
 #pragma once
 
 #include "exahype2/fv/particles/ParticleHelper.h"
-
-#include <tarch/la/Vector.h>
+#include "tarch/CompilerSpecificSettings.h"
+#include "tarch/la/Vector.h"
 
 namespace exahype2::fv::particles::forces {
   /**
-   * One bit per force, so a set of forces combines through the bitwise
-   * operators below.
+   * One bit per force, so a set of forces combines through the bitwise operators.
    */
   enum class ForceType : int {
     None            = 0,
@@ -19,35 +18,25 @@ namespace exahype2::fv::particles::forces {
     ConstantGravity = 1 << 3
   };
 
-  inline ForceType operator|(ForceType a, ForceType b) {
-    return static_cast<ForceType>(static_cast<int>(a) | static_cast<int>(b));
-  }
+  INLINE_METHOD ForceType operator|(ForceType left, ForceType right);
 
-  inline ForceType operator&(ForceType a, ForceType b) {
-    return static_cast<ForceType>(static_cast<int>(a) & static_cast<int>(b));
-  }
+  INLINE_METHOD ForceType operator&(ForceType left, ForceType right);
 
-  inline ForceType& operator|=(ForceType& a, ForceType b) {
-    a = a | b;
-    return a;
-  }
+  INLINE_METHOD ForceType& operator|=(ForceType& left, ForceType right);
 
-  inline ForceType& operator&=(ForceType& a, ForceType b) {
-    a = a & b;
-    return a;
-  }
+  INLINE_METHOD ForceType& operator&=(ForceType& left, ForceType right);
 
-  /** Bitmask of ForceType values. */
-  extern int _forceMethod;
+  /** Bitmask of ForceType values. setForceMethod() writes it. */
+  extern int globalForceMethod;
 
   /** Gravitational parameter G*M of the central body. */
-  extern double _mu;
+  extern double globalGravitationalParameter;
 
-  extern double _gravityMagnitude;
+  /** Magnitude of the acceleration the constant gravity and the buoyancy read. */
+  extern double globalGravityMagnitude;
 
-  extern double _dynamicViscosity;
-
-  extern double _fluidDensity;
+  /** Dynamic viscosity of the fluid the Stokes drag reads. */
+  extern double globalDynamicViscosity;
 
   void setForceMethod(ForceType forces);
 
@@ -57,28 +46,27 @@ namespace exahype2::fv::particles::forces {
 
   void disableForce(ForceType force);
 
-  bool isForceEnabled(ForceType force);
-
-  /** Reads _forceMethod without a call into the translation unit that defines it. */
-  inline bool isForceEnabledInternal(ForceType force) {
-    return (_forceMethod & static_cast<int>(force)) == static_cast<int>(force);
-  }
+  /** Returns true if globalForceMethod carries every bit of force. */
+  INLINE_METHOD bool isForceEnabled(ForceType force);
 
   void disableAllForces();
 
-  void setGravitationalParameter(double mu);
+  void setGravitationalParameter(double gravitationalParameter);
 
-  void setGravityMagnitude(double g);
+  void setGravityMagnitude(double gravityMagnitude);
 
-  void setDynamicViscosity(double viscosity);
+  void setDynamicViscosity(double dynamicViscosity);
 
-  void setDefaultFluidDensity(double density);
-
-  void setAllParameters(int forceMethod, double mu, double g, double viscosity, double density);
+  void setAllParameters(
+    int    forceMethod,
+    double gravitationalParameter,
+    double gravityMagnitude,
+    double dynamicViscosity
+  );
 
   /** Writes the sum of the enabled forces into the particle's acceleration entries. */
   template <typename Particle>
-  void applyForces(Particle& particle, tarch::la::Vector<DIMENSIONS, double> pos);
+  void applyForces(Particle& particle, tarch::la::Vector<DIMENSIONS, double> particlePosition);
 
   template <typename Particle>
   tarch::la::Vector<DIMENSIONS, double> computeCentralGravitationalForce(

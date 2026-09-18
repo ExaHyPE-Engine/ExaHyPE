@@ -2,7 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "peano4/Globals.h"
 #include "tarch/database/SnapshotDatabase.h"
 #include "tarch/la/Vector.h"
 

@@ -2,18 +2,19 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "PatchKernelsTest.h"
 
-#include "peano4/Loop.h"
 #include "exahype2/Enumeration.h"
 #include "exahype2/ProjectPatch.h"
 #include "exahype2/ReconstructPatch.h"
+#include "peano4/Constants.h"
+#include "peano4/Loop.h"
 
 namespace {
-  // Distinct value for one unknown of one patch volume, so a misrouted copy
-  // shows up as a mismatch.
+  // Returns a distinct value for one unknown of one patch volume, so a misrouted
+  // copy shows up as a mismatch.
   double patchValue(const int serialisedVolume, const int unknown) { return 1000.0 * serialisedVolume + unknown + 1; }
 
-  // Distinct value for one unknown of one face overlap voxel, kept apart from
-  // the patch values so a gather from the wrong source is visible.
+  // Returns a distinct value for one unknown of one face overlap voxel, kept
+  // apart from the patch values so a gather from the wrong source is visible.
   double faceValue(const int face, const int serialisedVoxel, const int unknown) {
     return -1.0 - (100.0 * face + 7.0 * serialisedVoxel + unknown);
   }
@@ -56,16 +57,19 @@ void exahype2::tests::PatchKernelsTest::testProjectPatchFillsFaces() {
   const int patchVolumes = numberOfPatchVolumes<NumberOfDofsPerAxis>();
   const int faceVoxels   = faceOverlapVoxels<NumberOfDofsPerAxis, Overlap>();
 
-  std::vector<double> patch(patchVolumes * NumberOfUnknowns);
+  std::vector<double> patch(static_cast<std::size_t>(patchVolumes * NumberOfUnknowns));
   for (int volume = 0; volume < patchVolumes; volume++) {
     for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
       patch[volume * NumberOfUnknowns + unknown] = patchValue(volume, unknown);
     }
   }
 
-  std::vector<std::vector<double>> faceStorage(TWO_TIMES_D, std::vector<double>(faceVoxels * NumberOfUnknowns, 0.0));
-  double*                          faces[TWO_TIMES_D];
-  for (int face = 0; face < TWO_TIMES_D; face++) {
+  std::vector<std::vector<double>> faceStorage(
+    peano4::FacesPerCell,
+    std::vector<double>(static_cast<std::size_t>(faceVoxels * NumberOfUnknowns), 0.0)
+  );
+  double* faces[peano4::FacesPerCell];
+  for (int face = 0; face < peano4::FacesPerCell; face++) {
     faces[face] = faceStorage[face].data();
   }
 
@@ -126,16 +130,19 @@ void exahype2::tests::PatchKernelsTest::testReconstructPatchGathersInteriorAndHa
     reconstructedVolumes *= ReconstructedPerAxis;
   }
 
-  std::vector<double> patch(patchVolumes * NumberOfUnknowns);
+  std::vector<double> patch(static_cast<std::size_t>(patchVolumes * NumberOfUnknowns));
   for (int volume = 0; volume < patchVolumes; volume++) {
     for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
       patch[volume * NumberOfUnknowns + unknown] = patchValue(volume, unknown);
     }
   }
 
-  std::vector<std::vector<double>> faceStorage(TWO_TIMES_D, std::vector<double>(faceVoxels * NumberOfUnknowns, 0.0));
-  double*                          faces[TWO_TIMES_D];
-  for (int face = 0; face < TWO_TIMES_D; face++) {
+  std::vector<std::vector<double>> faceStorage(
+    peano4::FacesPerCell,
+    std::vector<double>(static_cast<std::size_t>(faceVoxels * NumberOfUnknowns), 0.0)
+  );
+  double* faces[peano4::FacesPerCell];
+  for (int face = 0; face < peano4::FacesPerCell; face++) {
     for (int voxel = 0; voxel < faceVoxels; voxel++) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         faceStorage[face][voxel * NumberOfUnknowns + unknown] = faceValue(face, voxel, unknown);
@@ -144,7 +151,7 @@ void exahype2::tests::PatchKernelsTest::testReconstructPatchGathersInteriorAndHa
     faces[face] = faceStorage[face].data();
   }
 
-  std::vector<double> reconstructed(reconstructedVolumes * NumberOfUnknowns, 0.0);
+  std::vector<double> reconstructed(static_cast<std::size_t>(reconstructedVolumes * NumberOfUnknowns), 0.0);
   exahype2::reconstructPatch<NumberOfDofsPerAxis, Overlap, NumberOfUnknowns, double>(
     patch.data(),
     faces,
@@ -153,7 +160,7 @@ void exahype2::tests::PatchKernelsTest::testReconstructPatchGathersInteriorAndHa
 
   const tarch::la::Vector<DIMENSIONS, int> overlapShift(Overlap);
 
-  tarch::la::Vector<DIMENSIONS, int> patchRange(NumberOfDofsPerAxis);
+  const tarch::la::Vector<DIMENSIONS, int> patchRange(NumberOfDofsPerAxis);
   peano4::dForEach(patchRange, [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
     const int                                patchIndex          = peano4::dLinearised(volume, NumberOfDofsPerAxis);
     const tarch::la::Vector<DIMENSIONS, int> reconstructedVolume = volume + overlapShift;
@@ -167,7 +174,7 @@ void exahype2::tests::PatchKernelsTest::testReconstructPatchGathersInteriorAndHa
     }
   });
 
-  tarch::la::Vector<DIMENSIONS, int> reconstructedRange(ReconstructedPerAxis);
+  const tarch::la::Vector<DIMENSIONS, int> reconstructedRange(ReconstructedPerAxis);
   peano4::dForEach(reconstructedRange, [&](const tarch::la::Vector<DIMENSIONS, int>& haloVolume) {
     int haloDirections = 0;
     int normal         = -1;
@@ -194,8 +201,7 @@ void exahype2::tests::PatchKernelsTest::testReconstructPatchGathersInteriorAndHa
       overlapVoxel(normal) = haloVolume(normal) - NumberOfDofsPerAxis;
       face                 = normal + DIMENSIONS;
     }
-    const int overlapIndex =
-      exahype2::serialiseVoxelIndexInOverlap(overlapVoxel, NumberOfDofsPerAxis, Overlap, normal);
+    const int overlapIndex = exahype2::serialiseVoxelIndexInOverlap(overlapVoxel, NumberOfDofsPerAxis, Overlap, normal);
     for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
       validateNumericalEqualsWithParams2(
         reconstructed[reconstructedIndex * NumberOfUnknowns + unknown],

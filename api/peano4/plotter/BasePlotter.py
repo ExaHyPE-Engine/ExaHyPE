@@ -49,10 +49,10 @@ _AVAILABLE_FORMATS = None
 
 
 def set_default_format(file_format):
-    """Set the output format used by plotters without an explicit format."""
+    """Sets the output format used by plotters without an explicit format."""
     if file_format not in _FORMATS:
         raise ValueError(
-            "Unsupported plot file format: {} (choose one of {})".format(
+            'Plot file format "{}" is unknown. The known formats are {}.'.format(
                 file_format, ", ".join(sorted(_FORMATS))
             )
         )
@@ -61,23 +61,23 @@ def set_default_format(file_format):
 
 
 def get_default_format():
-    """Return the output format used by plotters without an explicit format."""
+    """Returns the output format used by plotters without an explicit format."""
     return _DEFAULT_FORMAT
 
 
 def set_available_formats(formats):
-    """Record the output formats enabled by the generated build."""
+    """Records the output formats enabled by the generated build."""
     global _AVAILABLE_FORMATS
     _AVAILABLE_FORMATS = set(formats)
 
 
 def _resolve_available_format(file_format):
-    """Return file_format if the build offers it, and VTU otherwise."""
+    """Returns file_format if the build offers it, and VTU otherwise."""
     if _AVAILABLE_FORMATS is None or file_format in _AVAILABLE_FORMATS:
         return file_format
     fallback_format = "vtu"
     log.warning(
-        "Plot format '%s' is unavailable in this build; falling back to '%s'",
+        "This build offers no plot format '%s', so the plotter writes '%s'.",
         file_format,
         fallback_format,
     )
@@ -85,7 +85,8 @@ def _resolve_available_format(file_format):
 
 
 class BasePlotter(ActionSet):
-    """! One file writer serves all trees of a plotter during a traversal, and it
+    """! One file writer serves all trees of a plotter during a traversal, and it.
+
     is recreated with the current number of local trees, since load balancing can
     change that number between snapshots.
 
@@ -126,10 +127,10 @@ class BasePlotter(ActionSet):
         self._set_output_format(file_format)
 
     def _set_output_format(self, file_format):
-        """Validate explicit formats and defer None to code generation."""
+        """Validates an explicit format and defers None to code generation."""
         if file_format is not None and file_format not in _FORMATS:
             raise ValueError(
-                "Unsupported plot file format: {} (choose one of {})".format(
+                'Plot file format "{}" is unknown. The known formats are {}.'.format(
                     file_format, ", ".join(sorted(_FORMATS))
                 )
             )
@@ -137,7 +138,7 @@ class BasePlotter(ActionSet):
         self._format_resolved = False
 
     def _ensure_format_resolved(self):
-        """Bind the selected writer types and includes once."""
+        """Binds the selected writer types and includes once."""
         if self._format_resolved:
             return
         resolved_format = self._file_format
@@ -150,10 +151,7 @@ class BasePlotter(ActionSet):
     def get_constructor_body(self):
         return """
   _treeNumber = treeNumber;
-  _pieceId    = -1;
-""".format(
-            **self.d
-        )
+"""
 
     def get_destructor_body(self):
         return ""
@@ -191,7 +189,7 @@ class BasePlotter(ActionSet):
 
   _timeSeriesWriter->writeSnapshotFile("{{FILENAME}}", _time, *_fileWriter);
   _timeSeriesWriter->writeTimeSeriesMetaFile(
-    runner::RuntimeParameters::getInstance().getOutputPath() + "{{OUTPUT_SUBFOLDER}}", "{{FILENAME}}"
+    ::runner::RuntimeParameters::getInstance().getOutputPath() + "{{OUTPUT_SUBFOLDER}}", "{{FILENAME}}"
   );
 """
         ).render(**self._dictionary)
@@ -232,26 +230,24 @@ class BasePlotter(ActionSet):
     def get_attributes(self):
         return (
             """
-  int _treeNumber;
-  int _pieceId;
+  int _treeNumber{-1};
+  int _pieceId{-1};
 
   static double                                            _time;
   static std::unique_ptr<tarch::plotter::FileWriter>       _fileWriter;
   static std::unique_ptr<tarch::plotter::TimeSeriesWriter> _timeSeriesWriter;
 
-  std::unique_ptr<tarch::plotter::FileWriter::CellDataPlotter> _subdomainPlotter;
-  std::unique_ptr<tarch::plotter::FileWriter::CellDataPlotter> _subtreeTaskPlotter;
-  std::unique_ptr<tarch::plotter::FileWriter::CellDataPlotter> _refinementLevelPlotter;
+  std::unique_ptr<tarch::plotter::FileWriter::CellDataPlotter> _subdomainPlotter{};
+  std::unique_ptr<tarch::plotter::FileWriter::CellDataPlotter> _subtreeTaskPlotter{};
+  std::unique_ptr<tarch::plotter::FileWriter::CellDataPlotter> _refinementLevelPlotter{};
 
   /**
-   * Returns the subtree task that emitted a cell: 0 is the rank's own spine
-   * traversal, k the k-th subtree task of the sweep. A tree id is the rank plus
-   * a multiple of the rank count, so the division removes that multiple.
+   * Returns the tree id of the subtree task that emitted a cell. A task's tree
+   * id is the rank plus a multiple of the rank count, so no two tasks of two
+   * ranks carry the same id. A cell whose Subtree equals its Subdomain comes
+   * from a sweep that did not decompose.
    */
-  INLINE_METHOD int getSubtreeTask() const {
-    return (_treeNumber - tarch::mpi::Rank::getInstance().getRank())
-           / tarch::mpi::Rank::getInstance().getNumberOfRanks();
-  }
+  INLINE_METHOD int getSubtreeId() const { return _treeNumber; }
 """
             + self.additional_cell_data_declarations()
         )

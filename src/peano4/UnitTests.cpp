@@ -28,6 +28,8 @@
 #include "peano4/particles/tests/ParticlesTest.h"
 #include "peano4/particles/tests/TestHelpers.h"
 #include "peano4/particles/tests/TrajectoryDatabaseTest.h"
+#include "peano4/sfc/tests/GrammarTest.h"
+#include "peano4/sfc/tests/SpaceFillingCurveTest.h"
 #include "peano4/tests/LoopTest.h"
 #include "peano4/topology/tests/ChunkedTasksTest.h"
 #include "peano4/topology/tests/TopologyManagerTest.h"
@@ -67,6 +69,9 @@ tarch::tests::TestCase* peano4::getUnitTests() {
   result->addTestCase(new peano4::particles::tests::TestHelpers());
   result->addTestCase(new peano4::particles::tests::TrajectoryDatabaseTest());
   result->addTestCase(new peano4::particles::assignmentchecks::tests::TestHelpers());
+
+  result->addTestCase(new peano4::sfc::tests::GrammarTest());
+  result->addTestCase(new peano4::sfc::tests::SpaceFillingCurveTest());
 
   result->addTestCase(new peano4::topology::tests::ChunkedTasksTest());
   result->addTestCase(new peano4::topology::tests::TopologyManagerTest());

@@ -84,15 +84,15 @@ if args.use_tracers:
   )
 
 from fuseADERSolvers import fuseADERSolvers
-fuseADERSolvers(hpSolver, lpSolver, """
-  ( marker.getX()[0] < DomainOffset[0] + 9.1*marker.getH()[0] and
-    marker.getX()[1] <                   8.1*marker.getH()[1] and
-    marker.getX()[2] < DomainOffset[2] + 11.1*marker.getH()[2])
-""", """
-  ( marker.getX()[0] > DomainOffset[0] + 8.9*marker.getH()[0] or
-    marker.getX()[1] >                   7.9*marker.getH()[1] or
-    marker.getX()[2] > DomainOffset[2] + 10.9*marker.getH()[2])
-"""
+
+# A cell boundary of the coarsest level is a cell boundary of every finer level.
+solver_interface_plane = (
+  "(DomainOffset[1] + DomainSize[1] - DomainSize[1]"
+  " / std::pow(peano4::sfc::ActiveCurve::SubdivisionFactor, ::runner::RuntimeParameters::getInstance().getGridLevels()))"
+)
+fuseADERSolvers(hpSolver, lpSolver,
+  "( marker.getX()[1] < " + solver_interface_plane + " + 0.1*marker.getH()[1] )",
+  "( marker.getX()[1] > " + solver_interface_plane + " - 0.1*marker.getH()[1] )"
 )
 
 
@@ -113,6 +113,8 @@ for theSolver in [hpSolver, lpSolver]:
   theSolver.add_user_solver_includes("""
 #include "../../applications/exaseis/riemannSolvers/cartesianRoutines.h"
 #include "../../applications/exaseis/riemannSolvers/riemannsolverIsotropic.h"
+#include "peano4/sfc/ActiveCurve.h"
+#include "runner/RuntimeParameters.h"
 """)
 
   project.add_solver(theSolver)
@@ -142,20 +144,4 @@ for theSolver in [hpSolver, lpSolver]:
         )
     )
 
-# sys.path.insert(0, os.path.abspath("./coupling"))
-# from coupling import StaticCoupling
-# limiter = StaticCoupling(
-#   name            = "limitingSolver",
-#   regularSolver   = hpSolver,
-#   limitingSolver  = lpSolver,
-#   limiting_criterion_implementation = """
-#   // return
-#   return // 9x8x11
-#     x[0] > -2.025 && x[0] <  2.025 &&
-#                      x[1] <  3.600 &&
-#     x[2] > -2.025 && x[2] <= 2.925
-#   ;
-# """
-# )
-# project.add_solver(limiter)
 project.generate_and_build()

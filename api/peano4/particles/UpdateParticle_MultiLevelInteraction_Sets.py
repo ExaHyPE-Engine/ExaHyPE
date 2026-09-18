@@ -10,18 +10,18 @@ class UpdateParticle_MultiLevelInteraction_Sets(ActionSet):
     """! Run particle interactions across cells and mesh levels.
 
     On descent, each cell appends the particles of its adjacent vertices to
-    the active list inherited from coarser levels.  The local list contains
+    the active list inherited from coarser levels. The local list contains
     the particles of the cell's adjacent vertices, and the aligned
     localParticleIsContainedInCell flags identify particles owned by this
-    cell.  The appended active ranges are removed again on ascent.
+    cell. The appended active ranges are removed again on ascent.
 
-    The pointer collections do not require contiguous particle storage.  The
-    coalesced-length vectors exposed to kernels consequently hold -1.  Select
+    The pointer collections do not require contiguous particle storage. The
+    coalesced-length vectors exposed to kernels consequently hold -1. Select
     active_particle_set to read a second particle species while updating the
     local species.
 
     Vertex kernels receive assignedParticles and
-    numberOfCoalescedAssignedParticles.  The cell kernel receives marker,
+    numberOfCoalescedAssignedParticles. The cell kernel receives marker,
     activeParticles, localParticles, localParticleIsContainedInCell,
     numberOfCoalescedActiveParticlesPerVertex, and
     numberOfCoalescedLocalParticlesPerVertex.
@@ -88,20 +88,20 @@ class UpdateParticle_MultiLevelInteraction_Sets(ActionSet):
     __Template_TouchCellFirstTime = jinja2.Template(
         """
   std::list<globaldata::{{LOCAL_PARTICLE}}*> localParticles;
-  std::vector<int>                           numberOfCoalescedLocalParticlesPerVertex(TWO_POWER_D, -1);
-  std::vector<int>                           numberOfCoalescedActiveParticlesPerVertex(TWO_POWER_D, -1);
+  std::vector<int>                           numberOfCoalescedLocalParticlesPerVertex(peano4::VerticesPerCell, -1);
+  std::vector<int>                           numberOfCoalescedActiveParticlesPerVertex(peano4::VerticesPerCell, -1);
   std::vector<bool>                          localParticleIsContainedInCell;
   [[maybe_unused]] const auto                ownershipTolerance =
     peano4::particles::GrabOwnershipSpatialSortingTolerance * tarch::la::max(marker.getH())
     * tarch::la::NUMERICAL_ZERO_DIFFERENCE;
 
-  for (int vertex = 0; vertex < TWO_POWER_D; vertex++) {
+  for (int vertex = 0; vertex < peano4::VerticesPerCell; vertex++) {
     for (auto* const particle : fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(vertex)) {
       _activeParticles.push_back(particle);
     }
     for (auto* const particle : fineGridVertices{{LOCAL_PARTICLES_CONTAINER}}(vertex)) {
-      std::bitset<TWO_POWER_D> adjacentCellMask{};
-      adjacentCellMask.set(TWO_POWER_D - vertex - 1);
+      std::bitset<peano4::CellsPerVertex> adjacentCellMask{};
+      adjacentCellMask.set(peano4::CellsPerVertex - vertex - 1);
       const bool isLocal = (adjacentCellMask & particle->getContainedInAdjacentCell()).any();
       assertion(
         isLocal
@@ -126,7 +126,7 @@ class UpdateParticle_MultiLevelInteraction_Sets(ActionSet):
   {{PARTICLE_PARTICLE_INTERACTION_KERNEL}}
 
   // Interaction kernels may move particles and invalidate their cached cell ownership.
-  for (int vertex = 0; vertex < TWO_POWER_D; vertex++) {
+  for (int vertex = 0; vertex < peano4::VerticesPerCell; vertex++) {
     const std::bitset<DIMENSIONS> assignedVertex(vertex);
     for (auto* const particle : fineGridVertices{{LOCAL_PARTICLES_CONTAINER}}(vertex)) {
       peano4::particles::updateContainedInAdjacentCellProperty(marker, assignedVertex, *particle);
@@ -138,7 +138,7 @@ class UpdateParticle_MultiLevelInteraction_Sets(ActionSet):
 
     __Template_TouchCellLastTime = jinja2.Template(
         """
-  for (int vertex = 0; vertex < TWO_POWER_D; vertex++) {
+  for (int vertex = 0; vertex < peano4::VerticesPerCell; vertex++) {
     _activeParticles.erase(
       std::prev(
         _activeParticles.end(),
@@ -184,6 +184,7 @@ class UpdateParticle_MultiLevelInteraction_Sets(ActionSet):
 {% if ACTIVE_PARTICLE != LOCAL_PARTICLE %}
 #include "globaldata/{{ACTIVE_PARTICLE}}.h"
 {% endif %}
+#include "peano4/Constants.h"
 #include "peano4/particles/particles.h"
 #include "vertexdata/{{LOCAL_PARTICLES_CONTAINER}}.h"
 {% if ACTIVE_PARTICLES_CONTAINER != LOCAL_PARTICLES_CONTAINER %}
@@ -197,6 +198,6 @@ class UpdateParticle_MultiLevelInteraction_Sets(ActionSet):
     def get_attributes(self):
         return jinja2.Template(
             """
-  std::list<globaldata::{{ACTIVE_PARTICLE}}*> _activeParticles;
+  std::list<globaldata::{{ACTIVE_PARTICLE}}*> _activeParticles{};
 """
         ).render(**self._dictionary)

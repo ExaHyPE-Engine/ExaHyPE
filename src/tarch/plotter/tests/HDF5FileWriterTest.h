@@ -9,6 +9,12 @@ namespace tarch::plotter::tests {
 } // namespace tarch::plotter::tests
 
 class tarch::plotter::tests::HDF5FileWriterTest final : public tarch::tests::TestCase {
+public:
+  HDF5FileWriterTest();
+  ~HDF5FileWriterTest() override = default;
+
+  void run() override;
+
 private:
   void test2DSimpleTriangle();
   void test2DParticlesWithData();
@@ -17,48 +23,32 @@ private:
   void testMultipleSubdomains();
 
   /**
-   * A 2-component field is a 2D vector: it must be written with 3 components (the
-   * z padded to zero) and labelled AttributeType="Vector", and a 9-component
-   * field as AttributeType="Tensor", so the field reads back as a real vector /
-   * tensor. See FileWriter::classifyField.
+   * A 2-component field is written with 3 components, the third one zero, and labelled
+   * AttributeType="Vector", and a 9-component field is labelled AttributeType="Tensor".
    */
   void testVectorAndTensorPadding();
 
   /**
-   * Regression test for the collective field-schema deadlock: only the global
-   * master contributes data while every other rank stays empty. The collective
-   * parallel write must not deadlock, which relies on the field schema being
-   * reduced globally so empty ranks join every dataset call.
+   * The collective write completes when only the global master contributes data and
+   * every other rank stays empty.
    */
   void testHeterogeneousRanks();
 
-  /**
-   * An untouched plotter must produce a valid empty file.
-   */
+  /** An untouched plotter writes a valid empty file. */
   void testEmptyPlotter();
 
-  /**
-   * The plotter must throw if data fields do not match the geometry size.
-   */
+  /** The plotter throws when a data field does not match the geometry size. */
   void testInconsistentDataSizeThrows();
 
   /**
-   * Checks that a data identifier containing a character that would corrupt the
-   * XML / HDF5 path / NetCDF name is rejected.
+   * The plotter rejects a data identifier that carries a character which would corrupt
+   * an XML attribute or an HDF5 path.
    */
   void testInvalidIdentifierThrows();
 
   /**
-   * Ranks hold different non-zero subdomain counts (master 3, the rest 2) - the
-   * real load-balanced distribution that the uniform/master-vs-empty MPI tests
-   * never exercised. The collective parallel write must not deadlock and the
-   * merged grid must carry the summed cell total.
+   * The collective write completes when the ranks hold different non-zero subdomain
+   * counts, and the merged grid carries the summed cell total.
    */
   void testUnevenSubdomainCounts();
-
-public:
-  HDF5FileWriterTest();
-  ~HDF5FileWriterTest() override = default;
-
-  void run() override;
 };

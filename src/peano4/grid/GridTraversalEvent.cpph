@@ -1,0 +1,422 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+INLINE_METHOD bool peano4::grid::GridTraversalEvent::bitTest8(const std::uint8_t mask, const int bitNumber) noexcept {
+  assertion(bitNumber >= 0 and bitNumber < 8, bitNumber);
+  return ((mask >> bitNumber) & 1U) != 0U;
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::bitSet8(
+  std::uint8_t& mask,
+  const int     bitNumber,
+  const bool    value
+) noexcept {
+  assertion(bitNumber >= 0 and bitNumber < 8, bitNumber);
+  const auto bit = static_cast<std::uint8_t>(1U << bitNumber);
+  mask           = value ? (mask | bit) : (mask & ~bit);
+}
+
+INLINE_METHOD bool peano4::grid::GridTraversalEvent::bitTest32(const std::uint32_t mask, const int bitNumber) noexcept {
+  assertion(bitNumber >= 0 and bitNumber < 32, bitNumber);
+  return ((mask >> bitNumber) & 1U) != 0U;
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::bitSet32(
+  std::uint32_t& mask,
+  const int      bitNumber,
+  const bool     value
+) noexcept {
+  assertion(bitNumber >= 0 and bitNumber < 32, bitNumber);
+  const auto bit = static_cast<std::uint32_t>(1U << bitNumber);
+  mask           = value ? (mask | bit) : (mask & ~bit);
+}
+
+INLINE_METHOD const tarch::la::Vector<DIMENSIONS, double>& peano4::grid::GridTraversalEvent::getX() const noexcept {
+  return x;
+}
+
+INLINE_METHOD const tarch::la::Vector<DIMENSIONS, double>& peano4::grid::GridTraversalEvent::getH() const noexcept {
+  return h;
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setX(const tarch::la::Vector<DIMENSIONS, double>& value) noexcept {
+  x = value;
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setH(const tarch::la::Vector<DIMENSIONS, double>& value) noexcept {
+  h = value;
+}
+
+INLINE_METHOD double peano4::grid::GridTraversalEvent::getX(const int axis) const noexcept { return x[axis]; }
+
+INLINE_METHOD double peano4::grid::GridTraversalEvent::getH(const int axis) const noexcept { return h[axis]; }
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setX(const int axis, const double value) noexcept {
+  x[axis] = value;
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setH(const int axis, const double value) noexcept {
+  h[axis] = value;
+}
+
+INLINE_METHOD std::uint8_t peano4::grid::GridTraversalEvent::getHasBeenRefined() const noexcept {
+  return hasBeenRefined;
+}
+
+INLINE_METHOD bool peano4::grid::GridTraversalEvent::getHasBeenRefined(const int vertexNumber) const noexcept {
+  return bitTest8(hasBeenRefined, vertexNumber);
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setHasBeenRefined(const std::uint8_t mask) noexcept {
+  hasBeenRefined = mask;
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setHasBeenRefined(
+  const int  vertexNumber,
+  const bool value
+) noexcept {
+  bitSet8(hasBeenRefined, vertexNumber, value);
+}
+
+INLINE_METHOD std::uint8_t peano4::grid::GridTraversalEvent::getWillBeRefined() const noexcept { return willBeRefined; }
+
+INLINE_METHOD bool peano4::grid::GridTraversalEvent::getWillBeRefined(const int vertexNumber) const noexcept {
+  return bitTest8(willBeRefined, vertexNumber);
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setWillBeRefined(const std::uint8_t mask) noexcept {
+  willBeRefined = mask;
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setWillBeRefined(
+  const int  vertexNumber,
+  const bool value
+) noexcept {
+  bitSet8(willBeRefined, vertexNumber, value);
+}
+
+INLINE_METHOD std::uint8_t peano4::grid::GridTraversalEvent::getIsVertexLocal() const noexcept { return isVertexLocal; }
+
+INLINE_METHOD bool peano4::grid::GridTraversalEvent::getIsVertexLocal(const int vertexNumber) const noexcept {
+  return bitTest8(isVertexLocal, vertexNumber);
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setIsVertexLocal(const std::uint8_t mask) noexcept {
+  isVertexLocal = mask;
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setIsVertexLocal(
+  const int  vertexNumber,
+  const bool value
+) noexcept {
+  bitSet8(isVertexLocal, vertexNumber, value);
+}
+
+INLINE_METHOD std::uint8_t peano4::grid::GridTraversalEvent::getIsVertexHanging() const noexcept {
+  return isVertexHanging;
+}
+
+INLINE_METHOD bool peano4::grid::GridTraversalEvent::getIsVertexHanging(const int vertexNumber) const noexcept {
+  return bitTest8(isVertexHanging, vertexNumber);
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setIsVertexHanging(const std::uint8_t mask) noexcept {
+  isVertexHanging = mask;
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setIsVertexHanging(
+  const int  vertexNumber,
+  const bool value
+) noexcept {
+  bitSet8(isVertexHanging, vertexNumber, value);
+}
+
+INLINE_METHOD std::uint8_t peano4::grid::GridTraversalEvent::getIsParentVertexLocal() const noexcept {
+  return isParentVertexLocal;
+}
+
+INLINE_METHOD bool peano4::grid::GridTraversalEvent::getIsParentVertexLocal(const int vertexNumber) const noexcept {
+  return bitTest8(isParentVertexLocal, vertexNumber);
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setIsParentVertexLocal(const std::uint8_t mask) noexcept {
+  isParentVertexLocal = mask;
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setIsParentVertexLocal(
+  const int  vertexNumber,
+  const bool value
+) noexcept {
+  bitSet8(isParentVertexLocal, vertexNumber, value);
+}
+
+INLINE_METHOD std::uint8_t peano4::grid::GridTraversalEvent::getIsVertexParentOfSubtree() const noexcept {
+  return isVertexParentOfSubtree;
+}
+
+INLINE_METHOD bool peano4::grid::GridTraversalEvent::getIsVertexParentOfSubtree(const int vertexNumber) const noexcept {
+  return bitTest8(isVertexParentOfSubtree, vertexNumber);
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setIsVertexParentOfSubtree(const std::uint8_t mask) noexcept {
+  isVertexParentOfSubtree = mask;
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setIsVertexParentOfSubtree(
+  const int  vertexNumber,
+  const bool value
+) noexcept {
+  bitSet8(isVertexParentOfSubtree, vertexNumber, value);
+}
+
+INLINE_METHOD std::uint8_t peano4::grid::GridTraversalEvent::
+  getIsVertexAdjacentToParallelDomainBoundary() const noexcept {
+  return isVertexAdjacentToParallelDomainBoundary;
+}
+
+INLINE_METHOD bool peano4::grid::GridTraversalEvent::getIsVertexAdjacentToParallelDomainBoundary(
+  const int vertexNumber
+) const noexcept {
+  return bitTest8(isVertexAdjacentToParallelDomainBoundary, vertexNumber);
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setIsVertexAdjacentToParallelDomainBoundary(
+  const std::uint8_t mask
+) noexcept {
+  isVertexAdjacentToParallelDomainBoundary = mask;
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setIsVertexAdjacentToParallelDomainBoundary(
+  const int  vertexNumber,
+  const bool value
+) noexcept {
+  bitSet8(isVertexAdjacentToParallelDomainBoundary, vertexNumber, value);
+}
+
+INLINE_METHOD std::uint8_t peano4::grid::GridTraversalEvent::getIsFaceLocal() const noexcept { return isFaceLocal; }
+
+INLINE_METHOD bool peano4::grid::GridTraversalEvent::getIsFaceLocal(const int faceNumber) const noexcept {
+  return bitTest8(isFaceLocal, faceNumber);
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setIsFaceLocal(const std::uint8_t mask) noexcept {
+  isFaceLocal = mask;
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setIsFaceLocal(const int faceNumber, const bool value) noexcept {
+  bitSet8(isFaceLocal, faceNumber, value);
+}
+
+INLINE_METHOD std::uint8_t peano4::grid::GridTraversalEvent::getIsFaceHanging() const noexcept { return isFaceHanging; }
+
+INLINE_METHOD bool peano4::grid::GridTraversalEvent::getIsFaceHanging(const int faceNumber) const noexcept {
+  return bitTest8(isFaceHanging, faceNumber);
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setIsFaceHanging(const std::uint8_t mask) noexcept {
+  isFaceHanging = mask;
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setIsFaceHanging(const int faceNumber, const bool value) noexcept {
+  bitSet8(isFaceHanging, faceNumber, value);
+}
+
+INLINE_METHOD std::uint8_t peano4::grid::GridTraversalEvent::
+  getIsFaceAdjacentToParallelDomainBoundary() const noexcept {
+  return isFaceAdjacentToParallelDomainBoundary;
+}
+
+INLINE_METHOD bool peano4::grid::GridTraversalEvent::getIsFaceAdjacentToParallelDomainBoundary(
+  const int faceNumber
+) const noexcept {
+  return bitTest8(isFaceAdjacentToParallelDomainBoundary, faceNumber);
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setIsFaceAdjacentToParallelDomainBoundary(
+  const int  faceNumber,
+  const bool value
+) noexcept {
+  bitSet8(isFaceAdjacentToParallelDomainBoundary, faceNumber, value);
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setIsFaceAdjacentToParallelDomainBoundary(
+  const std::uint8_t mask
+) noexcept {
+  isFaceAdjacentToParallelDomainBoundary = mask;
+}
+
+INLINE_METHOD bool peano4::grid::GridTraversalEvent::getIsCellLocal() const noexcept { return isCellLocal != 0; }
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setIsCellLocal(const bool value) noexcept {
+  isCellLocal = value ? 1U : 0U;
+}
+
+INLINE_METHOD bool peano4::grid::GridTraversalEvent::getIsParentCellLocal() const noexcept {
+  return isParentCellLocal != 0;
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setIsParentCellLocal(const bool value) noexcept {
+  isParentCellLocal = value ? 1U : 0U;
+}
+
+INLINE_METHOD std::uint32_t peano4::grid::GridTraversalEvent::getIsAdjacentCellLocal() const noexcept {
+  return isAdjacentCellLocal;
+}
+
+INLINE_METHOD bool peano4::grid::GridTraversalEvent::getIsAdjacentCellLocal(const int cellNumber) const noexcept {
+  return bitTest32(isAdjacentCellLocal, cellNumber);
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setIsAdjacentCellLocal(const std::uint32_t mask) noexcept {
+  isAdjacentCellLocal = mask;
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setIsAdjacentCellLocal(
+  const int  cellNumber,
+  const bool value
+) noexcept {
+  bitSet32(isAdjacentCellLocal, cellNumber, value);
+}
+
+INLINE_METHOD const std::array<int, peano4::VerticesPerCell>& peano4::grid::GridTraversalEvent::
+  getVertexDataFrom() const noexcept {
+  return vertexDataFrom;
+}
+
+INLINE_METHOD int peano4::grid::GridTraversalEvent::getVertexDataFrom(const int vertexNumber) const noexcept {
+  return vertexDataFrom[vertexNumber];
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setVertexDataFrom(
+  const std::array<int, peano4::VerticesPerCell>& indices
+) noexcept {
+  vertexDataFrom = indices;
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setVertexDataFrom(
+  const int vertexNumber,
+  const int index
+) noexcept {
+  vertexDataFrom[vertexNumber] = index;
+}
+
+INLINE_METHOD const std::array<int, peano4::VerticesPerCell>& peano4::grid::GridTraversalEvent::
+  getVertexDataTo() const noexcept {
+  return vertexDataTo;
+}
+
+INLINE_METHOD int peano4::grid::GridTraversalEvent::getVertexDataTo(const int vertexNumber) const noexcept {
+  return vertexDataTo[vertexNumber];
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setVertexDataTo(
+  const std::array<int, peano4::VerticesPerCell>& indices
+) noexcept {
+  vertexDataTo = indices;
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setVertexDataTo(const int vertexNumber, const int index) noexcept {
+  vertexDataTo[vertexNumber] = index;
+}
+
+INLINE_METHOD const std::array<int, peano4::FacesPerCell>& peano4::grid::GridTraversalEvent::
+  getFaceDataFrom() const noexcept {
+  return faceDataFrom;
+}
+
+INLINE_METHOD int peano4::grid::GridTraversalEvent::getFaceDataFrom(const int faceNumber) const noexcept {
+  return faceDataFrom[faceNumber];
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setFaceDataFrom(
+  const std::array<int, peano4::FacesPerCell>& indices
+) noexcept {
+  faceDataFrom = indices;
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setFaceDataFrom(const int faceNumber, const int index) noexcept {
+  faceDataFrom[faceNumber] = index;
+}
+
+INLINE_METHOD const std::array<int, peano4::FacesPerCell>& peano4::grid::GridTraversalEvent::
+  getFaceDataTo() const noexcept {
+  return faceDataTo;
+}
+
+INLINE_METHOD int peano4::grid::GridTraversalEvent::getFaceDataTo(const int faceNumber) const noexcept {
+  return faceDataTo[faceNumber];
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setFaceDataTo(
+  const std::array<int, peano4::FacesPerCell>& indices
+) noexcept {
+  faceDataTo = indices;
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setFaceDataTo(const int faceNumber, const int index) noexcept {
+  faceDataTo[faceNumber] = index;
+}
+
+INLINE_METHOD int peano4::grid::GridTraversalEvent::getCellData() const noexcept { return cellData; }
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setCellData(const int index) noexcept { cellData = index; }
+
+INLINE_METHOD int peano4::grid::GridTraversalEvent::getCellPoolIndex() const noexcept { return cellPoolIndex; }
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setCellPoolIndex(const int poolIndex) noexcept {
+  cellPoolIndex = poolIndex;
+}
+
+INLINE_METHOD const std::array<int, peano4::VerticesPerCell>& peano4::grid::GridTraversalEvent::
+  getVertexPoolIndices() const noexcept {
+  return vertexPoolIndices;
+}
+
+INLINE_METHOD const std::array<int, peano4::FacesPerCell>& peano4::grid::GridTraversalEvent::
+  getFacePoolIndices() const noexcept {
+  return facePoolIndices;
+}
+
+INLINE_METHOD int peano4::grid::GridTraversalEvent::getVertexPoolIndex(const int position) const noexcept {
+  return vertexPoolIndices[position];
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setVertexPoolIndex(
+  const int position,
+  const int poolIndex
+) noexcept {
+  vertexPoolIndices[position] = poolIndex;
+}
+
+INLINE_METHOD int peano4::grid::GridTraversalEvent::getFacePoolIndex(const int position) const noexcept {
+  return facePoolIndices[position];
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setFacePoolIndex(
+  const int position,
+  const int poolIndex
+) noexcept {
+  facePoolIndices[position] = poolIndex;
+}
+
+INLINE_METHOD const tarch::la::Vector<DIMENSIONS, int>& peano4::grid::GridTraversalEvent::
+  getRelativePositionToFather() const noexcept {
+  return relativePositionToFather;
+}
+
+INLINE_METHOD int peano4::grid::GridTraversalEvent::getRelativePositionToFather(const int axis) const noexcept {
+  return relativePositionToFather[axis];
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setRelativePositionToFather(
+  const tarch::la::Vector<DIMENSIONS, int>& position
+) noexcept {
+  relativePositionToFather = position;
+}
+
+INLINE_METHOD void peano4::grid::GridTraversalEvent::setRelativePositionToFather(
+  const int axis,
+  const int position
+) noexcept {
+  relativePositionToFather[axis] = position;
+}

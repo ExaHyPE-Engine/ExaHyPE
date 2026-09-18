@@ -11,12 +11,12 @@ namespace peano4::grid::tests {
 class peano4::grid::tests::AutomatonStateTest final : public tarch::tests::TestCase {
 public:
   AutomatonStateTest();
-  ~AutomatonStateTest() override final = default;
+  ~AutomatonStateTest() override = default;
 
-  void run() override final;
+  void run() override;
 
 private:
-  void testFlags();
+  void testCurveState();
   void testRefineState();
   void testSendAndReceiveInARing();
 };

@@ -108,7 +108,7 @@ void tarch::accelerator::tests::AtomicTest::testConcurrentMaximumIsOrderIndepend
   int hostMaximum = std::numeric_limits<int>::lowest();
   tarch::copyTo(target, &hostMaximum, 1, tarch::MemoryLocation::Device, DeviceId);
 
-  tarch::parallelFor(tarch::Range(NumberOfValues), [=] GPU_CALLABLE_LAMBDA(const int value) {
+  tarch::accelerator::parallelFor(tarch::accelerator::Range(NumberOfValues), [=] GPU_CALLABLE_LAMBDA(const int value) {
     tarch::accelerator::updateAtomicMax(*target, value);
   });
 

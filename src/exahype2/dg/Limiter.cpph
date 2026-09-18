@@ -256,8 +256,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::reduceProjectedObservableEx
  * that contains a hanging vertex.
  *
  * The hanging vertex position is its place in the father cell's vertex pattern,
- * from zero to three per axis. Each boundary coordinate selects the coarse
- * vertices on that side.
+ * from zero to the subdivision factor per axis. Each boundary coordinate selects
+ * the coarse vertices on that side.
  */
 template <int Dimensions>
 INLINE_METHOD GPU_CALLABLE_METHOD bool exahype2::dg::isCoarseVertexOnFacetOfHangingVertex(
@@ -268,7 +268,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD bool exahype2::dg::isCoarseVertexOnFacetOfHang
   assertion(coarseVertexNumber >= 0);
   assertion(coarseVertexNumber < (1 << Dimensions));
   constexpr int LowerBoundary  = 0;
-  constexpr int UpperBoundary  = 3;
+  constexpr int UpperBoundary  = peano4::sfc::ActiveCurve::SubdivisionFactor;
   bool          liesOnBoundary = false;
   for (int axis = 0; axis < Dimensions; axis++) {
     assertion(hangingVertexPosition(axis) >= LowerBoundary);

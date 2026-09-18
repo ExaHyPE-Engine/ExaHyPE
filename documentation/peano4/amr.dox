@@ -17,7 +17,8 @@ three fields:
 
 - `refinementControl` selects `Refine` or `Erase`.
 - `level` is the cell level counted from the root.
-- `latticeIndex` is the cell position on that level's triadic lattice.
+- `latticeIndex` is the cell position on that level's lattice, which holds
+  peano4::sfc::ActiveCurve::SubdivisionFactor cells per parent cell along each axis.
 
 peano4::grid::GridControlEvent::forCell() converts a cell centre and width into
 this exact lattice identity. Events are trivially copyable and can therefore
@@ -103,7 +104,7 @@ cell, face, and vertex pools whose ownership changes.
 
 Plan evaluation scales with the request count and performs lattice lookups
 without scanning the rank-local entity arrays. Regrid cost depends on the delta:
-an in-place path updates affected topology, while a fallback builds the required
+An in-place path updates affected topology, while a fallback builds the required
 views and migrates their pools.
 
 A criterion can request only a cell that exists. A feature that needs several

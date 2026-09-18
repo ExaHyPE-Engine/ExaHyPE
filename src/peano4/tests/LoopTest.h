@@ -9,6 +9,12 @@ namespace peano4::tests {
 } // namespace peano4::tests
 
 class peano4::tests::LoopTest final : public tarch::tests::TestCase {
+public:
+  LoopTest();
+  ~LoopTest() override = default;
+
+  void run() override;
+
 private:
   void testDForEachVisitsAllPointsInLinearOrder();
   void testDForEachWithPerAxisRange();
@@ -21,13 +27,4 @@ private:
   void testDCompareExclusive();
   void testDForEachCornerEnumeratesCornersInLinearisedOrder();
   void testDForEachStencilEnumeratesStencil();
-  void testZForEach3IsAHamiltonianPath();
-  void testGenericZForEachIsAHamiltonianPath();
-  void testGenericZForEachMatchesZForEach3();
-
-public:
-  LoopTest();
-  ~LoopTest() override = default;
-
-  void run() override;
 };

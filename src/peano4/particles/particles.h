@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "peano4/Constants.h"
 #include "peano4/Loop.h"
 #include "peano4/dataview/CellMarker.h"
 #include "peano4/dataview/VertexEnumerator.h"
@@ -21,7 +22,7 @@ namespace peano4::particles {
     const tarch::la::Vector<DIMENSIONS, double>& x,
     const tarch::la::Vector<DIMENSIONS, double>& referencePosition,
     const tarch::la::Vector<DIMENSIONS, double>& domainWidth,
-    const std::bitset<DIMENSIONS>&               periodicBC
+    const std::bitset<DIMENSIONS>&               periodicBoundaries
   );
 
   tarch::la::Vector<DIMENSIONS, double> periodicImageTowards(
@@ -41,7 +42,7 @@ namespace peano4::particles {
 
   bool domainHasPeriodicAxes();
 
-  std::bitset<TWO_POWER_D> getAdjacentCellsOwningParticle(
+  std::bitset<peano4::CellsPerVertex> getAdjacentCellsOwningParticle(
     const tarch::la::Vector<DIMENSIONS, double>& x,
     const peano4::dataview::VertexMarker&        marker
   );
@@ -88,7 +89,7 @@ namespace peano4::particles {
     const tarch::la::Vector<DIMENSIONS, double>& x,
     tarch::la::Vector<DIMENSIONS, double>        domainOffset,
     tarch::la::Vector<DIMENSIONS, double>        domainSize,
-    std::bitset<DIMENSIONS>                      periodicBC
+    std::bitset<DIMENSIONS>                      periodicBoundaries
   );
 } // namespace peano4::particles
 

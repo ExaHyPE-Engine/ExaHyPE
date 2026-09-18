@@ -8,7 +8,6 @@ import peano4.solversteps
 
 
 class RefinementCriterion(AbstractRungeKuttaDGActionSet):
-
     def __init__(
         self,
         solver,
@@ -19,9 +18,10 @@ class RefinementCriterion(AbstractRungeKuttaDGActionSet):
         skip_after_topology_change,
     ):
         """
-        `guard` is a C++ expression that decides per cell whether the criterion
-        runs. `implement_previous_refinement_instructions` decides whether the
-        action set reads the instructions from the RefinementControl database.
+        The guard is a C++ expression that decides per cell whether the criterion
+        runs. called_by_grid_construction selects the variant that evaluates the
+        criterion with a nullptr solution and t=0, and skip_after_topology_change
+        collects no request while a realised topology change is still fresh.
         """
         super(RefinementCriterion, self).__init__(solver)
         self._guard = guard
@@ -67,29 +67,31 @@ class RefinementCriterion(AbstractRungeKuttaDGActionSet):
             and operation_name
             == peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_LAST_TIME
         ):
-            d = {}
-            d["CELL_LABEL_NAME"] = self._solver._cell_label.name
-            d["CELL_ACCESSOR"] = "fineGridCell" + self._solver._current_time_step.name
+            dictionary = {}
+            dictionary["CELL_LABEL_NAME"] = self._solver._cell_label.name
+            dictionary["CELL_ACCESSOR"] = (
+                "fineGridCell" + self._solver._current_time_step.name
+            )
             # The first time step after a realised topology change still carries
-            # refinement markers on some cells, and which cells carry them depends
-            # on how many sweeps the mesh update needed, which varies with the
-            # decomposition. Collecting no requests during that step keeps the
-            # committed event set identical for every decomposition.
-            d["PREDICATE"] = (
+            # refinement markers on a set of cells that depends on the decomposition.
+            # Collecting no requests during that step keeps the committed event set
+            # identical for every decomposition.
+            dictionary["PREDICATE"] = (
                 "not marker.willBeRefined() and not marker.hasBeenRefined() and "
             )
             if self._skip_after_topology_change:
-                d["PREDICATE"] += (
+                dictionary["PREDICATE"] += (
                     "not ::exahype2::RefinementControlService::getInstance()"
                     ".hasRealisedTopologyChangesSinceLastTimeStep() and "
                 )
-            d["PREDICATE"] += self._guard
-            d["GRID_CONSTRUCTION"] = self._called_by_grid_construction
-            # A Runge-Kutta DG solver cannot yet offload its criterion to a free function.
-            d["STATELESS_REFINEMENT_CRITERION"] = False
-            self._solver._init_dictionary_with_default_parameters(d)
-            self._solver.add_entries_to_text_replacement_dictionary(d)
-            result = jinja2.Template(RefinementCriterionTemplate).render(**d)
+            dictionary["PREDICATE"] += self._guard
+            dictionary["GRID_CONSTRUCTION"] = self._called_by_grid_construction
+            # The refinement criterion of a Runge-Kutta DG solver reads the solver
+            # object, so the template calls the method and not a free function.
+            dictionary["STATELESS_REFINEMENT_CRITERION"] = False
+            self._solver._init_dictionary_with_default_parameters(dictionary)
+            self._solver.add_entries_to_text_replacement_dictionary(dictionary)
+            result = jinja2.Template(RefinementCriterionTemplate).render(**dictionary)
 
         return result
 
@@ -107,6 +109,7 @@ class RefinementCriterion(AbstractRungeKuttaDGActionSet):
             + """
 #include "exahype2/RefinementControlService.h"
 #include "runner/RuntimeParameters.h"
+#include "peano4/sfc/ActiveCurve.h"
 #include "tarch/instrumentation/Debug.h"
 #include "Constants.h"
 """

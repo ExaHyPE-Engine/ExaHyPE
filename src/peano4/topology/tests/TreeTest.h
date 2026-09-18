@@ -40,4 +40,5 @@ private:
   void testAPartitionSplittingALeafFamilyIsDetected();
   void testARankWithoutABlockMaterialisesNothingBelowTheSpawnLevel();
   void testAPartitionedBuildLinksEveryEntityOnce();
+  void testRefinementDeltaAppendsCellsOnTheOwningRankOnly();
 };

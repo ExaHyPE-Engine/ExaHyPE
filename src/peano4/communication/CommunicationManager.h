@@ -2,7 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "peano4/Globals.h"
 #include "peano4/grid/Stack.h"
 #include "peano4/grid/StackExchange.h"
 #include "tarch/Assertions.h"
@@ -47,20 +46,20 @@ public:
 
   void shutdown();
 
-  GridDataExchangeMetaInformation getAggregatedBoundaryExchangeMetaInformation(
-    const int                       containerId,
-    const AggregatedBoundaryMessage message
+  [[nodiscard]] GridDataExchangeMetaInformation getAggregatedBoundaryExchangeMetaInformation(
+    int                       containerId,
+    AggregatedBoundaryMessage message
   ) const;
 
   void beginSweep();
 
   void rebuildTopology(const std::vector<int>& sortedRemoteRanks);
 
-  int getTopologyVersion() const;
+  [[nodiscard]] int getTopologyVersion() const;
 
-  const std::vector<int>& getRemoteRanks() const;
+  [[nodiscard]] const std::vector<int>& getRemoteRanks() const;
 
-  bool haveTransfersCompleted() const;
+  [[nodiscard]] bool haveTransfersCompleted() const;
 
   bool pollInFlightTransfers();
 
@@ -88,7 +87,7 @@ private:
   /** Tracks one rank pair's posted messages for one container. */
   struct InFlightTransfer final {
     std::function<bool()> poll{};
-    std::function<void()> publishCompletion{};
+    std::function<void()> markTransferComplete{};
     int                   rankSlot{-1};
     InFlightTransfer*     next{nullptr};
   };
@@ -96,17 +95,17 @@ private:
   static peano4::communication::CommunicationManager _singleton;
 
   void registerInFlightTransfer(
-    const int             remoteRank,
+    int                   remoteRank,
     std::function<bool()> pollTransfer,
-    std::function<void()> publishCompletion
+    std::function<void()> markTransferComplete
   );
 
   template <class Container>
-  static void postPayloadExchange(Container& stackContainer, const int remoteRank);
+  static void postPayloadExchange(Container& stackContainer, int remoteRank);
 
-  int getRemoteRankSlot(const int remoteRank) const;
+  [[nodiscard]] int getRemoteRankSlot(int remoteRank) const;
 
-  static int toMessageElementCount(const std::size_t numberOfElements);
+  static int toMessageElementCount(std::size_t numberOfElements);
 
   /**
    * Carries the aggregated boundary exchange. Its tags address a container and

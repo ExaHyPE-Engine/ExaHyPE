@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "peano4/Globals.h"
+#include "peano4/sfc/ActiveCurve.h"
 #include "tarch/Assertions.h"
 #include "tarch/la/Vector.h"
 
@@ -34,19 +34,19 @@ struct peano4::dataview::CellMarker final {
 
   std::uint16_t flags{0};
 
-  INLINE_METHOD bool hasBeenRefined() const;
-  INLINE_METHOD bool willBeRefined() const;
-  INLINE_METHOD bool isLocal() const;
-  INLINE_METHOD bool isParentLocal() const;
+  [[nodiscard]] INLINE_METHOD bool hasBeenRefined() const;
+  [[nodiscard]] INLINE_METHOD bool willBeRefined() const;
+  [[nodiscard]] INLINE_METHOD bool isLocal() const;
+  [[nodiscard]] INLINE_METHOD bool isParentLocal() const;
 
-  INLINE_METHOD const tarch::la::Vector<DIMENSIONS, double>& getH() const;
-  INLINE_METHOD const tarch::la::Vector<DIMENSIONS, double>& getX() const;
-  INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> getOffset() const;
-  INLINE_METHOD const tarch::la::Vector<DIMENSIONS, int>& getRelativePositionWithinFatherCell() const;
+  [[nodiscard]] INLINE_METHOD const tarch::la::Vector<DIMENSIONS, double>& getH() const;
+  [[nodiscard]] INLINE_METHOD const tarch::la::Vector<DIMENSIONS, double>& getX() const;
+  [[nodiscard]] INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> getOffset() const;
+  [[nodiscard]] INLINE_METHOD const tarch::la::Vector<DIMENSIONS, int>& getRelativePositionWithinFatherCell() const;
 
-  INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> getInvokingParentCellsCentre() const;
+  [[nodiscard]] INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> getInvokingParentCellsCentre() const;
 
-  INLINE_METHOD bool isContained(
+  [[nodiscard]] INLINE_METHOD bool isContained(
     const tarch::la::Vector<DIMENSIONS, double>& position,
     double                                       tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE
   ) const;
@@ -58,12 +58,12 @@ struct peano4::dataview::CellMarker final {
     double                                       tolerance
   );
 
-  INLINE_METHOD bool overlaps(
+  [[nodiscard]] INLINE_METHOD bool overlaps(
     const tarch::la::Vector<DIMENSIONS, double>& regionOffset,
     const tarch::la::Vector<DIMENSIONS, double>& regionSize
   ) const;
 
-  std::string toString() const;
+  [[nodiscard]] std::string toString() const;
 };
 
 #include "peano4/dataview/CellMarker.cpph"

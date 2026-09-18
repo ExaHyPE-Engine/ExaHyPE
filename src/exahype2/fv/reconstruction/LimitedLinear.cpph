@@ -5,19 +5,17 @@ TARGET_DECLARE
 /**
  * Returns the neighbour @p offset volumes away from the current volume along
  * @p normal. It is an interior volume when it exists, otherwise the matching
- * layer of the halo the framework stored in the left or right face of the
- * patch. The overlap coordinate runs in the positive normal direction across
- * the interface: the left face keeps the neighbour layers below the patch, the
- * right face the neighbour layers above it. Adding @c HaloSize on the left, or
- * subtracting @c NumberOfVolumesPerAxis and adding @c HaloSize on the right,
- * maps the signed neighbour index onto that lexicographic layout.
+ * layer of the halo in the left or right face of the patch. The overlap
+ * coordinate runs in the positive normal direction across the interface: The
+ * left face keeps the neighbour layers below the patch, the right face the
+ * neighbour layers above it.
  */
 template <exahype2::fv::limiter::SlopeLimiter Limiter>
 template <int NumberOfVolumesPerAxis, int NumberOfData, typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD const StoragePrecision* exahype2::fv::reconstruction::LimitedLinear<Limiter>::
   neighbourAlongNormal(
     const StoragePrecision* NOALIAS const     inputPatch,
-    const StoragePrecision* NOALIAS const     faceInputPatches[TWO_TIMES_D],
+    const StoragePrecision* NOALIAS const     faceInputPatches[peano4::FacesPerCell],
     const tarch::la::Vector<DIMENSIONS, int>& volumeIndex,
     const int                                 centreOffset,
     const int                                 strideAlongNormal,
@@ -33,12 +31,12 @@ INLINE_METHOD GPU_CALLABLE_METHOD const StoragePrecision* exahype2::fv::reconstr
     overlapCell(normal) = neighbourIndexAlongNormal + HaloSize;
     const int overlapIndex =
       exahype2::serialiseVoxelIndexInOverlap(overlapCell, NumberOfVolumesPerAxis, HaloSize, normal);
-    return &faceInputPatches[normal][overlapIndex * NumberOfData];
+    return &faceInputPatches[normal][static_cast<std::ptrdiff_t>(overlapIndex * NumberOfData)];
   }
   overlapCell(normal) = neighbourIndexAlongNormal - NumberOfVolumesPerAxis + HaloSize;
   const int overlapIndex =
     exahype2::serialiseVoxelIndexInOverlap(overlapCell, NumberOfVolumesPerAxis, HaloSize, normal);
-  return &faceInputPatches[normal + DIMENSIONS][overlapIndex * NumberOfData];
+  return &faceInputPatches[normal + DIMENSIONS][static_cast<std::ptrdiff_t>(overlapIndex * NumberOfData)];
 }
 
 /**
@@ -53,13 +51,11 @@ INLINE_METHOD GPU_CALLABLE_METHOD const StoragePrecision* exahype2::fv::reconstr
  * extrapolation adds and subtracts half that difference; a solver that defines
  * a static @c reconstruct method replaces it, which lets a scenario keep a
  * physical quantity such as a hydrostatic pressure in balance across the two
- * boundaries. The auxiliary variables are extrapolated but not evolved in time.
- * The half-step uses the flux balance across this volume in direction
- * @p normal alone, minus the own-direction non-conservative product of the
- * volume state with the limited differences, plus the source term of the
- * volume state. Both boundaries therefore receive the same time increment,
- * and the stencil stays on the axis-aligned line, so the scheme never needs a
- * diagonal neighbour that the face exchange cannot supply.
+ * boundaries. The auxiliary variables are extrapolated and keep their value
+ * over the half-step. The half-step uses the flux balance across this volume in
+ * direction @p normal alone, minus the own-direction non-conservative product
+ * of the volume state with the limited differences, plus the source term of the
+ * volume state, so both boundaries receive the same time increment.
  */
 template <exahype2::fv::limiter::SlopeLimiter Limiter>
 template <
@@ -199,12 +195,12 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::LimitedLine
       }
     }
 
-    const ComputePrecision inverseSize = static_cast<ComputePrecision>(
+    const auto inverseSize = static_cast<ComputePrecision>(
       static_cast<GeometryPrecision>(1.0) / static_cast<GeometryPrecision>(volumeSize(normal))
     );
     SIMD()
     for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-      const ComputePrecision halfStep = static_cast<ComputePrecision>(
+      const auto halfStep = static_cast<ComputePrecision>(
         static_cast<GeometryPrecision>(0.5) * static_cast<GeometryPrecision>(timeStepSize)
         * static_cast<GeometryPrecision>(inverseSize) * static_cast<GeometryPrecision>(predictorUpdate[unknown])
       );
@@ -217,7 +213,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::LimitedLine
       Solver::sourceTerm(centreStateForCompute, volumeCentre, volumeSize, timeStamp, timeStepSize, sources);
       SIMD()
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-        const ComputePrecision sourceHalfStep = static_cast<ComputePrecision>(
+        const auto sourceHalfStep = static_cast<ComputePrecision>(
           static_cast<GeometryPrecision>(0.5) * static_cast<GeometryPrecision>(timeStepSize)
           * static_cast<GeometryPrecision>(sources[unknown])
         );
@@ -231,7 +227,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::LimitedLine
 /**
  * Returns the Rusanov flux across one interface into @p faceFlux, and the larger
  * of the two neighbouring maximum eigenvalues. This is the general two-state
- * form: the average of the two physical fluxes minus a diffusion proportional
+ * form: The average of the two physical fluxes minus a diffusion proportional
  * to the larger eigenvalue and the jump in the state. The two evolved states
  * meeting at the interface differ, so the cell-centred flux does not cancel
  * between the two faces the way it does in the first-order scheme.
@@ -253,7 +249,7 @@ exahype2::fv::reconstruction::LimitedLinear<Limiter>::rusanovFaceFlux(
     Solver::maxEigenvalue(leftState, faceCentre, volumeSize, timeStamp, timeStepSize, normal);
   const ComputePrecision rightMaxEigenvalue =
     Solver::maxEigenvalue(rightState, faceCentre, volumeSize, timeStamp, timeStepSize, normal);
-  ::exahype2::fv::accumulateMaxEigenvalue(maxEigenvalue, rightMaxEigenvalue);
+  exahype2::fv::accumulateMaxEigenvalue(maxEigenvalue, rightMaxEigenvalue);
 
   ComputePrecision leftFluxes[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
   ComputePrecision rightFluxes[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
@@ -284,8 +280,7 @@ exahype2::fv::reconstruction::LimitedLinear<Limiter>::rusanovFaceFlux(
  * the half-time volume state and their difference is the limited difference,
  * since the flux part of the half-step cancels in both. With zero slopes every
  * jump sits at the faces and the treatment degenerates to the splitting of
- * the first-order scheme. The reconstruction does not support a diffusive
- * source term.
+ * the first-order scheme.
  */
 template <exahype2::fv::limiter::SlopeLimiter Limiter>
 template <
@@ -303,7 +298,7 @@ template <
   typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::LimitedLinear<Limiter>::accumulateFluxDivergence(
   const StoragePrecision* NOALIAS const        inputPatch,
-  const StoragePrecision* NOALIAS const        faceInputPatches[TWO_TIMES_D],
+  const StoragePrecision* NOALIAS const        faceInputPatches[peano4::FacesPerCell],
   const tarch::la::Vector<DIMENSIONS, int>&    volumeIndex,
   const int                                    centreOffset,
   const StoragePrecision* NOALIAS const        centreState,
@@ -336,13 +331,9 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::LimitedLine
     leftVolumeIndex(normal) -= 1;
     rightVolumeIndex(normal) += 1;
     [[maybe_unused]] const auto [leftVolumeSize, leftVolumeCentre] =
-      ::exahype2::fv::getVolumeSizeAndCentre<DIMENSIONS, NumberOfVolumesPerAxis>(
-        patchCentre,
-        patchSize,
-        leftVolumeIndex
-      );
+      exahype2::fv::getVolumeSizeAndCentre<DIMENSIONS, NumberOfVolumesPerAxis>(patchCentre, patchSize, leftVolumeIndex);
     [[maybe_unused]] const auto [rightVolumeSize, rightVolumeCentre] =
-      ::exahype2::fv::getVolumeSizeAndCentre<DIMENSIONS, NumberOfVolumesPerAxis>(
+      exahype2::fv::getVolumeSizeAndCentre<DIMENSIONS, NumberOfVolumesPerAxis>(
         patchCentre,
         patchSize,
         rightVolumeIndex
@@ -448,11 +439,11 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::LimitedLine
     );
 
     auto leftFaceCentre(volumeCentre);
-    leftFaceCentre(normal) -= static_cast<double>(0.5) * volumeSize(normal);
+    leftFaceCentre(normal) -= 0.5 * volumeSize(normal);
     auto rightFaceCentre(volumeCentre);
-    rightFaceCentre(normal) += static_cast<double>(0.5) * volumeSize(normal);
+    rightFaceCentre(normal) += 0.5 * volumeSize(normal);
 
-    const ComputePrecision scale = static_cast<ComputePrecision>(
+    const auto scale = static_cast<ComputePrecision>(
       (static_cast<GeometryPrecision>(timeStepSize) * static_cast<GeometryPrecision>(NumberOfVolumesPerAxis))
       / static_cast<GeometryPrecision>(patchSize(normal))
     );
@@ -485,15 +476,11 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::LimitedLine
         leftGoingFluxRightFace,
         rightGoingFluxRightFace
       );
-      // A custom Riemann solver may be the only thing that knows the speed it
-      // resolved, since a solver offering one need not offer an eigenvalue as
-      // well, so its verdict enters the step observation here. The Rusanov
-      // branch below needs no such report: it has to evaluate the solver's own
-      // eigenvalue for its diffusion coefficient, and the caller then measures
-      // the step on the final state, at the time level the next step starts from.
+      // A solver that defines solveRiemannProblem need not define maxEigenvalue, so the wave
+      // speed the Riemann solver returns is the only eigenvalue this branch reads.
       if constexpr (EvaluateMaxEigenvalue) {
-        ::exahype2::fv::accumulateMaxEigenvalue(maxEigenvalueAfterTimeStep, maxWaveSpeedLeft);
-        ::exahype2::fv::accumulateMaxEigenvalue(maxEigenvalueAfterTimeStep, maxWaveSpeedRight);
+        exahype2::fv::accumulateMaxEigenvalue(maxEigenvalueAfterTimeStep, maxWaveSpeedLeft);
+        exahype2::fv::accumulateMaxEigenvalue(maxEigenvalueAfterTimeStep, maxWaveSpeedRight);
       }
 
       SIMD()
@@ -508,7 +495,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::LimitedLine
       // The finiteness check stays out of the vectorised loop, whose body must
       // be free of the diagnostics an assertion emits.
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-        assertion(std::isfinite(outputState[unknown]));
+        [[maybe_unused]] const bool outputStateIsFinite = std::isfinite(outputState[unknown]);
+        assertion(outputStateIsFinite, unknown, outputState[unknown]);
       }
     } else {
       ComputePrecision fluxLeftFace[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
@@ -622,7 +610,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::LimitedLine
       // The finiteness check stays out of the vectorised loop, whose body must
       // be free of the diagnostics an assertion emits.
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-        assertion(std::isfinite(outputState[unknown]));
+        [[maybe_unused]] const bool outputStateIsFinite = std::isfinite(outputState[unknown]);
+        assertion(outputStateIsFinite, unknown, outputState[unknown]);
       }
     }
   }

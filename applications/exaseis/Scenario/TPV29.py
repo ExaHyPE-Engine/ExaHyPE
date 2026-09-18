@@ -13,8 +13,8 @@ class TPV29(DynamicRuptureScenario):
     The description of the scenario can be found at: https://strike.scec.org/cvws/tpv29_30docs.html
     """
 
-    domain_offset   = [-3.4,  0.0, -3.4] #Ensures that the fault, which is at 20., is between two cells at 13/27th of the domain
-    domain_size     = [48.6, 48.6, 48.6] #leads to cs of 0.6 for 81 cells
+    domain_offset   = [-3.4,  0.0, -3.4] #The domain offset puts the fault at 20. on the cell boundary 13 cells into a level-3 grid of the Peano curve.
+    domain_size     = [48.6, 48.6, 48.6] #The domain size gives a cell width of 0.6 on a level-4 grid of the Peano curve.
 
     end_time = 20.0
 

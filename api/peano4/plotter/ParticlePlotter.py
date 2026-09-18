@@ -83,12 +83,12 @@ class ParticlePlotter(BasePlotter):
 
   // One sweep visits a vertex at a periodic wall once per wall. Only the visit at a
   // lower wall writes the vertex's particles, so every particle appears once.
-  const auto periodicBC = peano4::topology::TopologyManager::getInstance().getPeriodicBC();
-  if (periodicBC.any()) {
+  const auto periodicBoundaries = peano4::topology::TopologyManager::getInstance().getPeriodicBoundaries();
+  if (periodicBoundaries.any()) {
     const auto domainOffset = peano4::topology::TopologyManager::getInstance().getDomainOffset();
     const auto domainWidth  = peano4::topology::TopologyManager::getInstance().getDomainWidth();
     for (int d = 0; d < DIMENSIONS; d++) {
-      if (periodicBC[d] and tarch::la::equals(marker.getX()(d), domainOffset(d) + domainWidth(d))) {
+      if (periodicBoundaries[d] and tarch::la::equals(marker.getX()(d), domainOffset(d) + domainWidth(d))) {
         return;
       }
     }
@@ -100,7 +100,7 @@ class ParticlePlotter(BasePlotter):
       const int cellIndex = _cellPlotter->plotPoint(vertexIndex);
 
       _subdomainPlotter->plotCellData(cellIndex, tarch::mpi::Rank::getInstance().getRank());
-      _subtreeTaskPlotter->plotCellData(cellIndex, getSubtreeTask());
+      _subtreeTaskPlotter->plotCellData(cellIndex, getSubtreeId());
       _refinementLevelPlotter->plotCellData(cellIndex, 1);
 {% for name, components, expression in ATTRIBUTES %}
       _attributePlotter{{loop.index0}}->plotCellData(cellIndex, {{expression}});
@@ -116,8 +116,8 @@ class ParticlePlotter(BasePlotter):
         return (
             super().get_attributes()
             + """
-  std::unique_ptr<tarch::plotter::FileWriter::CellPlotter> _cellPlotter;
-  std::unique_ptr<tarch::plotter::FileWriter::VertexPlotter> _vertexPlotter;
+  std::unique_ptr<tarch::plotter::FileWriter::CellPlotter> _cellPlotter{};
+  std::unique_ptr<tarch::plotter::FileWriter::VertexPlotter> _vertexPlotter{};
 """
             + jinja2.Template(
                 """

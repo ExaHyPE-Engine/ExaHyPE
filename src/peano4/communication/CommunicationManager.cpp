@@ -32,11 +32,15 @@ peano4::communication::CommunicationManager& peano4::communication::Communicatio
  * communicator. Collective over all ranks.
  */
 void peano4::communication::CommunicationManager::init() {
-  int*      tagUpperBound  = nullptr;
-  int       attributeFound = 0;
-  const int attributeResult =
-    MPI_Comm_get_attr(tarch::mpi::Rank::getInstance().getCommunicator(), MPI_TAG_UB, &tagUpperBound, &attributeFound);
-  if (attributeResult != MPI_SUCCESS or not attributeFound or tagUpperBound == nullptr) {
+  int*      tagUpperBound   = nullptr;
+  int       attributeFound  = 0;
+  const int attributeResult = MPI_Comm_get_attr(
+    tarch::mpi::Rank::getInstance().getCommunicator(),
+    MPI_TAG_UB,
+    static_cast<void*>(&tagUpperBound),
+    &attributeFound
+  );
+  if (attributeResult != MPI_SUCCESS or attributeFound == 0 or tagUpperBound == nullptr) {
     tarch::terminateWithError("Could not determine MPI_TAG_UB for the global communicator.");
   }
 
@@ -161,13 +165,14 @@ bool peano4::communication::CommunicationManager::haveTransfersCompleted() const
 void peano4::communication::CommunicationManager::registerInFlightTransfer(
   const int             remoteRank,
   std::function<bool()> pollTransfer,
-  std::function<void()> publishCompletion
+  std::function<void()> markTransferComplete
 ) {
   const int rankSlot = getRemoteRankSlot(remoteRank);
   _outstandingTransfersPerRank[rankSlot].fetch_add(1, std::memory_order_relaxed);
 
-  auto* const transfer = new InFlightTransfer{std::move(pollTransfer), std::move(publishCompletion), rankSlot, nullptr};
-  transfer->next       = _newInFlightTransfers.load(std::memory_order_relaxed);
+  auto* const transfer =
+    new InFlightTransfer{std::move(pollTransfer), std::move(markTransferComplete), rankSlot, nullptr};
+  transfer->next = _newInFlightTransfers.load(std::memory_order_relaxed);
   while (not _newInFlightTransfers
                .compare_exchange_weak(transfer->next, transfer, std::memory_order_release, std::memory_order_relaxed)) {
   }
@@ -190,7 +195,7 @@ bool peano4::communication::CommunicationManager::pollInFlightTransfers() {
     if (transfer->poll()) {
       // The completion flag precedes the counter release, so an observer that
       // sees the counter reach zero finds every flag already set.
-      transfer->publishCompletion();
+      transfer->markTransferComplete();
       _outstandingTransfersPerRank[transfer->rankSlot].fetch_sub(1, std::memory_order_release);
       return true;
     }
@@ -208,10 +213,15 @@ bool peano4::communication::CommunicationManager::pollInFlightTransfers() {
  * replaced with the set, so this runs only while no transfer is in flight.
  */
 void peano4::communication::CommunicationManager::rebuildTopology(const std::vector<int>& sortedRemoteRanks) {
+#if PEANO_ASSERTIONS
   // getRemoteRankSlot resolves a rank through a binary search, so a repeated
   // entry would map two neighbours onto one counter.
-  assertion(std::is_sorted(sortedRemoteRanks.begin(), sortedRemoteRanks.end()));
-  assertion(std::adjacent_find(sortedRemoteRanks.begin(), sortedRemoteRanks.end()) == sortedRemoteRanks.end());
+  const bool ranksAreSorted = std::is_sorted(sortedRemoteRanks.begin(), sortedRemoteRanks.end());
+  const bool ranksAreUnique =
+    std::adjacent_find(sortedRemoteRanks.begin(), sortedRemoteRanks.end()) == sortedRemoteRanks.end();
+  assertion(ranksAreSorted);
+  assertion(ranksAreUnique);
+#endif
 
   if (_remoteRanks != sortedRemoteRanks) {
     assertion(haveTransfersCompleted(), "The topology may only be rebuilt while no transfer is in flight.");

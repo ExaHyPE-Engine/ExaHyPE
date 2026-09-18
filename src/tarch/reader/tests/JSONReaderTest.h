@@ -8,16 +8,18 @@ namespace tarch::reader::tests {
   class JSONReaderTest;
 } // namespace tarch::reader::tests
 
-class tarch::reader::tests::JSONReaderTest : public tarch::tests::TestCase {
-private:
-  void testReadPrimitivesAndArrays();
-  void testFailureModes();
-  void testUnusedKeys();
-
+class tarch::reader::tests::JSONReaderTest final : public tarch::tests::TestCase {
 public:
   JSONReaderTest();
-  ~JSONReaderTest() override = default;
+  JSONReaderTest(const JSONReaderTest&)            = delete;
+  JSONReaderTest(JSONReaderTest&&)                 = delete;
+  JSONReaderTest& operator=(const JSONReaderTest&) = delete;
+  JSONReaderTest& operator=(JSONReaderTest&&)      = delete;
+  ~JSONReaderTest() override                       = default;
 
   void run() override;
-  void setUp() {}
+
+private:
+  void testReadPrimitivesAndArrays();
+  void testUnusedKeys();
 };

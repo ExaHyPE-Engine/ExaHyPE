@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "GridVertexTest.h"
 
-#include "peano4/Globals.h"
+#include "peano4/Constants.h"
 #include "peano4/grid/GridVertex.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/mpi/Request.h"
@@ -42,7 +42,7 @@ void peano4::grid::tests::GridVertexTest::testState() {
 }
 
 void peano4::grid::tests::GridVertexTest::testRefinedVertices() {
-  peano4::grid::GridVertex vertices[TWO_POWER_D]{};
+  peano4::grid::GridVertex vertices[peano4::VerticesPerCell]{};
   validateTrue(not peano4::grid::GridVertex::areAllVerticesRefined(vertices));
   validateTrue(peano4::grid::GridVertex::getRefinedVertices(vertices).none());
 
@@ -50,16 +50,16 @@ void peano4::grid::tests::GridVertexTest::testRefinedVertices() {
     vertex.setState(peano4::grid::GridVertex::State::Refined);
   }
   validateTrue(peano4::grid::GridVertex::areAllVerticesRefined(vertices));
-  validateEquals(peano4::grid::GridVertex::getRefinedVertices(vertices).count(), TWO_POWER_D);
+  validateEquals(peano4::grid::GridVertex::getRefinedVertices(vertices).count(), peano4::VerticesPerCell);
 
   vertices[1].setState(peano4::grid::GridVertex::State::HangingVertex);
   validateTrue(not peano4::grid::GridVertex::areAllVerticesRefined(vertices));
   validateTrue(not peano4::grid::GridVertex::getRefinedVertices(vertices).test(1));
-  validateEquals(peano4::grid::GridVertex::getRefinedVertices(vertices).count(), TWO_POWER_D - 1);
+  validateEquals(peano4::grid::GridVertex::getRefinedVertices(vertices).count(), peano4::VerticesPerCell - 1);
 
   vertices[0].setState(peano4::grid::GridVertex::State::Unrefined);
   validateTrue(not peano4::grid::GridVertex::getRefinedVertices(vertices).test(0));
-  validateEquals(peano4::grid::GridVertex::getRefinedVertices(vertices).count(), TWO_POWER_D - 2);
+  validateEquals(peano4::grid::GridVertex::getRefinedVertices(vertices).count(), peano4::VerticesPerCell - 2);
 }
 
 /**

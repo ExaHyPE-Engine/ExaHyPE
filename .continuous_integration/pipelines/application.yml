@@ -3,10 +3,10 @@ ExaSkred Tsunami:
   parallel:
     matrix:
     - scenario: [artificial, chile, oscillating-lake, solitary-wave, three-mounds-channel, tohoku]
-      build_type: [Release, Debug]
+      build_type: [Release, Asserts, Debug]
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exaskred/tsunami/$scenario && PYTHONPATH=$CI_PROJECT_DIR/api python3 $scenario.py --build-mode $build_type"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exaskred/tsunami/$scenario && $PARALLEL_LAUNCH ./ExaSkred-Tsunami -ns 0 -lmin ${MIN_GRID_LEVELS} -lmax ${MIN_GRID_LEVELS}"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exaskred/tsunami/$scenario && $PARALLEL_LAUNCH ./ExaSkred-Tsunami -ns 0 -lmin ${MIN_GRID_LEVELS} -lmax ${MAX_GRID_LEVELS}"
   allow_failure: false
   extends:
     - .Tags
@@ -21,7 +21,7 @@ ExaSkred Meteotsunami:
   parallel:
     matrix:
     - scenario: [gulf-of-mexico, r1]
-      build_type: [Release, Debug]
+      build_type: [Release, Asserts, Debug]
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exaskred/meteotsunami/$scenario && PYTHONPATH=$CI_PROJECT_DIR/api python3 $scenario.py --build-mode $build_type"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exaskred/meteotsunami/$scenario && $PARALLEL_LAUNCH ./ExaSkred-Meteotsunami -ns 0 -lmin 3 -lmax 3"
@@ -39,7 +39,7 @@ ExaSkred Landslide:
   parallel:
     matrix:
     - scenario: [tafjord]
-      build_type: [Release, Debug]
+      build_type: [Release, Asserts, Debug]
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exaskred/landslide/$scenario && PYTHONPATH=$CI_PROJECT_DIR/api python3 $scenario.py --build-mode $build_type"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exaskred/landslide/$scenario && $PARALLEL_LAUNCH ./ExaSkred-Landslide -et 0.5 -ns 0 -l ${MIN_GRID_LEVELS}"
@@ -57,10 +57,10 @@ ExaSkred Coupled:
   parallel:
     matrix:
     - scenario: [impulse-wave, tafjord]
-      build_type: [Release, Debug]
+      build_type: [Release, Asserts, Debug]
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exaskred/coupled/$scenario && PYTHONPATH=$CI_PROJECT_DIR/api python3 $scenario.py --build-mode $build_type"
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exaskred/coupled/$scenario && $PARALLEL_LAUNCH ./ExaSkred-Coupled -ns 0 -lmin ${MIN_GRID_LEVELS} -lmax ${MIN_GRID_LEVELS}"
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exaskred/coupled/$scenario && $PARALLEL_LAUNCH ./ExaSkred-Coupled -ns 0 -lmin ${MIN_GRID_LEVELS} -lmax ${MAX_GRID_LEVELS}"
   allow_failure: false
   extends:
     - .Tags
@@ -75,7 +75,7 @@ ExaSeis:
   parallel:
     matrix:
     - scenario: [cartesian, curvilinear, dynamic-rupture, pml, pml-dynamic-rupture]
-      build_type: [Release, Debug]
+      build_type: [Release, Asserts, Debug]
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exaseis/$scenario && PYTHONPATH=$CI_PROJECT_DIR/api python3 $scenario.py --build-mode $build_type"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exaseis/$scenario && $PARALLEL_LAUNCH ./ExaSeis -ns 0 -l ${MIN_GRID_LEVELS} -et 0.1"
@@ -94,7 +94,7 @@ ExaGRyPE:
     matrix:
     - scenario: [gauge-wave]
       solver: [fv]
-      build_type: [Release, Debug]
+      build_type: [Release, Asserts, Debug]
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exagrype/$scenario && PYTHONPATH=$CI_PROJECT_DIR/api python3 $scenario.py --solver $solver --build-mode $build_type"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd applications/exagrype/$scenario && $PARALLEL_LAUNCH ./ExaGRyPE -ns 0 -l 1"

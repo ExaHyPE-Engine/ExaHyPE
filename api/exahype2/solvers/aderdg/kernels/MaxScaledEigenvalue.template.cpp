@@ -27,7 +27,6 @@
         cellCentre,
         cellSize,
         quadraturePointIndex,
-        NumberOfDofsPerAxis - 1,
         {{FULL_QUALIFIED_NAMESPACE}}::Quadrature<
           {{SOLUTION_STORAGE_PRECISION}}
         >::nodes

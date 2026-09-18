@@ -1,25 +1,31 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+/**
+ * Serialises the lexicographic index of one volume within a face overlap.
+ *
+ * @param overlap Overlap of one patch into the other. A halo of one cell
+ *   around each patch sets this parameter to 1.
+ */
 INLINE_METHOD GPU_CALLABLE_METHOD int exahype2::serialiseVoxelIndexInOverlap(
   const tarch::la::Vector<DIMENSIONS, int>& overlapCell,
-  int                                       numberOfDofsPerAxis,
-  int                                       overlap,
-  int                                       normal
+  const int                                 numberOfDofsPerAxis,
+  const int                                 overlap,
+  const int                                 normal
 ) {
   assertion(normal >= 0, overlapCell, numberOfDofsPerAxis, overlap, normal);
   assertion(normal < DIMENSIONS, overlapCell, numberOfDofsPerAxis, overlap, normal);
   int base   = 1;
   int result = 0;
-  for (int d = 0; d < DIMENSIONS; d++) {
-    result += overlapCell(d) * base;
-    if (d == normal) {
-      assertion(overlapCell(d) >= 0, overlapCell, numberOfDofsPerAxis, overlap, normal);
-      assertion(overlapCell(d) < 2 * overlap, overlapCell, numberOfDofsPerAxis, overlap, normal);
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    result += overlapCell(axis) * base;
+    if (axis == normal) {
+      assertion(overlapCell(axis) >= 0, overlapCell, numberOfDofsPerAxis, overlap, normal);
+      assertion(overlapCell(axis) < 2 * overlap, overlapCell, numberOfDofsPerAxis, overlap, normal);
       base *= overlap * 2;
     } else {
-      assertion(overlapCell(d) >= 0, overlapCell, numberOfDofsPerAxis, overlap, normal);
-      assertion(overlapCell(d) < numberOfDofsPerAxis, overlapCell, numberOfDofsPerAxis, overlap, normal);
+      assertion(overlapCell(axis) >= 0, overlapCell, numberOfDofsPerAxis, overlap, normal);
+      assertion(overlapCell(axis) < numberOfDofsPerAxis, overlapCell, numberOfDofsPerAxis, overlap, normal);
       base *= numberOfDofsPerAxis;
     }
   }

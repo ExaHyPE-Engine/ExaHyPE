@@ -1,0 +1,134 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+/**
+ * Evaluates the Lagrange polynomial through the nodes that equals one at the
+ * node with index basisFunction and zero at every other node. The numerator
+ * and the denominator each multiply their factors in node order.
+ */
+template <int NodesPerAxis>
+INLINE_METHOD constexpr double exahype2::dg::lagrangeBasisFunction1D(
+  const double* const nodes,
+  const int           basisFunction,
+  const double        x
+) {
+  double numerator = 1.0;
+  for (int node = 0; node < NodesPerAxis; node++) {
+    if (node != basisFunction) {
+      numerator *= x - nodes[node];
+    }
+  }
+  double denominator = 1.0;
+  for (int node = 0; node < NodesPerAxis; node++) {
+    if (node != basisFunction) {
+      denominator *= nodes[basisFunction] - nodes[node];
+    }
+  }
+  return numerator / denominator;
+}
+
+/**
+ * Returns the interpolation matrices: Entry [child][fine][coarse] is the
+ * coarse basis function with index coarse evaluated at the node with index
+ * fine of the child interval child, so a product with the coarse nodal values
+ * evaluates the coarse polynomial at the child's nodes. The nodes are given
+ * on the unit interval and symmetric about one half; the entries are made
+ * mirror symmetric to the last bit through averageMirrorPairs().
+ */
+template <int NodesPerAxis>
+INLINE_METHOD constexpr exahype2::dg::AMRMatrices1D<NodesPerAxis> exahype2::dg::interpolationMatrix1D(
+  const double* const nodes
+) {
+  constexpr int                             SubdivisionFactor = peano4::sfc::ActiveCurve::SubdivisionFactor;
+  exahype2::dg::AMRMatrices1D<NodesPerAxis> result{};
+  for (int child = 0; child < SubdivisionFactor; child++) {
+    for (int fine = 0; fine < NodesPerAxis; fine++) {
+      const double fineNode = nodes[fine] / SubdivisionFactor + static_cast<double>(child) / SubdivisionFactor;
+      for (int coarse = 0; coarse < NodesPerAxis; coarse++) {
+        result[(child * NodesPerAxis + fine) * NodesPerAxis + coarse] =
+          exahype2::dg::lagrangeBasisFunction1D<NodesPerAxis>(nodes, coarse, fineNode);
+      }
+    }
+  }
+  exahype2::dg::averageMirrorPairs<NodesPerAxis>(result);
+  return result;
+}
+
+/**
+ * Returns the restriction matrices: Entry [child][coarse][fine] is the
+ * interpolation entry [child][fine][coarse] divided by the subdivision
+ * factor, the width of a child interval. Scaled with the quadrature weights
+ * of the fine and the coarse node, the entries sum the child polynomials
+ * into the mass-lumped projection onto the coarse basis.
+ */
+template <int NodesPerAxis>
+INLINE_METHOD constexpr exahype2::dg::AMRMatrices1D<NodesPerAxis> exahype2::dg::restrictionMatrix1D(
+  const double* const nodes
+) {
+  constexpr int                             SubdivisionFactor = peano4::sfc::ActiveCurve::SubdivisionFactor;
+  const auto                                interpolation = exahype2::dg::interpolationMatrix1D<NodesPerAxis>(nodes);
+  exahype2::dg::AMRMatrices1D<NodesPerAxis> result{};
+  for (int child = 0; child < SubdivisionFactor; child++) {
+    for (int coarse = 0; coarse < NodesPerAxis; coarse++) {
+      for (int fine = 0; fine < NodesPerAxis; fine++) {
+        result[(child * NodesPerAxis + coarse) * NodesPerAxis + fine] =
+          interpolation[(child * NodesPerAxis + fine) * NodesPerAxis + coarse] / SubdivisionFactor;
+      }
+    }
+  }
+  exahype2::dg::averageMirrorPairs<NodesPerAxis>(result);
+  return result;
+}
+
+/**
+ * Returns the restriction matrices with the quadrature weights applied:
+ * Entry [child][coarse][fine] is the restriction entry multiplied by the
+ * weight of the fine node and divided by the weight of the coarse node. A
+ * product with the nodal values of all children yields the mass-lumped
+ * projection onto the coarse nodes. The weights are symmetric about the
+ * middle node; the entries are made mirror symmetric to the last bit.
+ */
+template <int NodesPerAxis>
+INLINE_METHOD constexpr exahype2::dg::AMRMatrices1D<NodesPerAxis> exahype2::dg::weightedRestrictionMatrix1D(
+  const double* const nodes,
+  const double* const weights
+) {
+  constexpr int SubdivisionFactor = peano4::sfc::ActiveCurve::SubdivisionFactor;
+  auto          result            = exahype2::dg::restrictionMatrix1D<NodesPerAxis>(nodes);
+  for (int child = 0; child < SubdivisionFactor; child++) {
+    for (int coarse = 0; coarse < NodesPerAxis; coarse++) {
+      for (int fine = 0; fine < NodesPerAxis; fine++) {
+        result[(child * NodesPerAxis + coarse) * NodesPerAxis + fine] *= weights[fine] / weights[coarse];
+      }
+    }
+  }
+  exahype2::dg::averageMirrorPairs<NodesPerAxis>(result);
+  return result;
+}
+
+/**
+ * Overwrites every entry [child][row][column] and its mirror image
+ * [SubdivisionFactor-1-child][NodesPerAxis-1-row][NodesPerAxis-1-column]
+ * with their average. A Lagrange basis on nodes symmetric about one half has
+ * mirror-symmetric transfer matrices. The products that evaluate the two
+ * images round apart, so the average makes mirrored data transfer to bitwise
+ * mirrored results.
+ */
+template <int NodesPerAxis>
+INLINE_METHOD constexpr void exahype2::dg::averageMirrorPairs(exahype2::dg::AMRMatrices1D<NodesPerAxis>& matrices) {
+  constexpr int SubdivisionFactor = peano4::sfc::ActiveCurve::SubdivisionFactor;
+  for (int child = 0; child < SubdivisionFactor; child++) {
+    for (int row = 0; row < NodesPerAxis; row++) {
+      for (int column = 0; column < NodesPerAxis; column++) {
+        const int index       = (child * NodesPerAxis + row) * NodesPerAxis + column;
+        const int mirrorIndex = ((SubdivisionFactor - 1 - child) * NodesPerAxis + NodesPerAxis - 1 - row) * NodesPerAxis
+          + NodesPerAxis - 1 - column;
+        if (index < mirrorIndex) {
+          const double average  = 0.5 * (matrices[index] + matrices[mirrorIndex]);
+          matrices[index]       = average;
+          matrices[mirrorIndex] = average;
+        }
+      }
+    }
+  }
+}

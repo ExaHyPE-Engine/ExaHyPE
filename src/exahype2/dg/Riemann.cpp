@@ -6,15 +6,30 @@
 #include "exahype2/fv/VolumeIndex.h"
 #include "peano4/Loop.h"
 #include "peano4/dataview/FaceMarker.h"
+#include "peano4/sfc/ActiveCurve.h"
 #include "tarch/Termination.h"
 
+/**
+ * Writes the half of a hanging face that the coarse neighbour supplies.
+ *
+ * Entry [child][fine][coarse] of interpolationMatrix1D evaluates the coarse
+ * one-dimensional shape function at the fine node of a child interval, and the
+ * tensor product over the tangential axes evaluates the coarse trace at the
+ * hanging face's nodes. The other half carries the fine cell's own projection and
+ * stays untouched.
+ *
+ * @image html src/exahype2/dg/interpolation.png
+ *
+ * @param numberOfProjectedQuantities One when only the solution reaches the face,
+ *   two when the solution and the F-value or the normal gradient reach it.
+ */
 void exahype2::dg::interpolateProjectedFacePolynomial(
   const peano4::dataview::FaceMarker& marker,
-  int                                 order,
-  int                                 numberOfProjectedQuantities,
-  int                                 unknowns,
-  int                                 auxiliaryVariables,
-  const double* NOALIAS               InterpolationMatrix1D,
+  const int                           order,
+  const int                           numberOfProjectedQuantities,
+  const int                           unknowns,
+  const int                           auxiliaryVariables,
+  const double* NOALIAS               interpolationMatrix1D,
   const double* NOALIAS               coarseGridFaceQ,
   double* NOALIAS                     fineGridFaceQ
 ) {
@@ -45,19 +60,20 @@ void exahype2::dg::interpolateProjectedFacePolynomial(
         if (d != normal) {
           const int subMatrix = marker.getRelativePositionWithinFatherCell()(d);
           assertion(subMatrix >= 0);
-          assertion(subMatrix <= 2);
+          assertion(subMatrix < peano4::sfc::ActiveCurve::SubdivisionFactor);
 
-          // InterpolationMatrix1D[b][fine][coarse] evaluates the coarse shape function at
+          // interpolationMatrix1D[b][fine][coarse] evaluates the coarse shape function at
           // the fine node of child interval b.
           const int linearisedMatrixIndex = subMatrix * numberOfDofsPerAxis * numberOfDofsPerAxis
             + fineGridDoF(d) * numberOfDofsPerAxis + coarseGridDoF(d);
           assertion(linearisedMatrixIndex >= 0);
           assertion(
-            linearisedMatrixIndex < 3 * numberOfDofsPerAxis * numberOfDofsPerAxis,
+            linearisedMatrixIndex
+              < peano4::sfc::ActiveCurve::SubdivisionFactor * numberOfDofsPerAxis * numberOfDofsPerAxis,
             linearisedMatrixIndex,
             numberOfDofsPerAxis
           );
-          tensorProductWeight *= InterpolationMatrix1D[linearisedMatrixIndex];
+          tensorProductWeight *= interpolationMatrix1D[linearisedMatrixIndex];
         }
       }
 
@@ -82,14 +98,24 @@ void exahype2::dg::interpolateProjectedFacePolynomial(
   });
 }
 
+/**
+ * Assembles the Riemann solution a fine cell consumes at a hanging face.
+ *
+ * The routine evaluates the coarse flux polynomial at the hanging face's nodes,
+ * adds the jump penalty 0.5 maxEigenvalue (restriction image - fine trace) with
+ * the face's orientation and writes the sum into the fine side's layer. The
+ * coarse side's layer stays untouched, and the Riemann solution holds the plain
+ * flux without auxiliary variables. The caller solves the coarse face's Riemann
+ * problem first and passes one maxEigenvalue for the whole coarse face.
+ */
 void exahype2::dg::interpolateRiemannSolution(
-  int                                       faceNumber,
+  const int                                 faceNumber,
   const tarch::la::Vector<DIMENSIONS, int>& positionWithinFatherCell,
-  int                                       order,
-  int                                       unknowns,
-  int                                       auxiliaryVariables,
-  double                                    maxEigenvalue,
-  const double* NOALIAS                     InterpolationMatrix1D,
+  const int                                 order,
+  const int                                 unknowns,
+  const int                                 auxiliaryVariables,
+  const double                              maxEigenvalue,
+  const double* NOALIAS                     interpolationMatrix1D,
   const double* NOALIAS                     coarseGridFaceRiemannSolution,
   const double* NOALIAS                     coarseGridFaceProjection,
   const double* NOALIAS                     fineGridFaceProjection,
@@ -133,19 +159,20 @@ void exahype2::dg::interpolateRiemannSolution(
         if (d != normal) {
           const int subMatrix = positionWithinFatherCell(d);
           assertion(subMatrix >= 0);
-          assertion(subMatrix <= 2);
+          assertion(subMatrix < peano4::sfc::ActiveCurve::SubdivisionFactor);
 
-          // InterpolationMatrix1D[b][fine][coarse] evaluates the coarse shape function at
+          // interpolationMatrix1D[b][fine][coarse] evaluates the coarse shape function at
           // the fine node of child interval b.
           const int linearisedMatrixIndex = subMatrix * numberOfDofsPerAxis * numberOfDofsPerAxis
             + fineGridDoF(d) * numberOfDofsPerAxis + coarseGridDoF(d);
           assertion(linearisedMatrixIndex >= 0);
           assertion(
-            linearisedMatrixIndex < 3 * numberOfDofsPerAxis * numberOfDofsPerAxis,
+            linearisedMatrixIndex
+              < peano4::sfc::ActiveCurve::SubdivisionFactor * numberOfDofsPerAxis * numberOfDofsPerAxis,
             linearisedMatrixIndex,
             numberOfDofsPerAxis
           );
-          tensorProductWeight *= InterpolationMatrix1D[linearisedMatrixIndex];
+          tensorProductWeight *= interpolationMatrix1D[linearisedMatrixIndex];
         }
       }
 
@@ -169,11 +196,17 @@ void exahype2::dg::interpolateRiemannSolution(
   });
 }
 
+/**
+ * Overwrites both halves of a face's solution projection with zeroes.
+ *
+ * @param numberOfProjectedQuantities One when only the solution reaches the face,
+ *   two when the solution and the gradient or the F-extrapolation reach it.
+ */
 void exahype2::dg::clearSolutionProjection(
-  int             order,
-  int             unknowns,
-  int             auxiliaryVariables,
-  int             numberOfProjectedQuantities,
+  const int       order,
+  const int       unknowns,
+  const int       auxiliaryVariables,
+  const int       numberOfProjectedQuantities,
   double* NOALIAS faceQ
 ) {
 #if DIMENSIONS == 2
@@ -185,12 +218,30 @@ void exahype2::dg::clearSolutionProjection(
   std::fill_n(faceQ, numberOfDoubles, 0.0);
 }
 
+/**
+ * Projects the cell polynomial onto the four faces of a two-dimensional cell.
+ *
+ * Each face array holds both sides in lexicographic order, and the cell writes
+ * the side it lies on. basisFunctionValuesLeft holds the order+1 basis function
+ * values at the left node of the reference interval, and the right face reads
+ * the same array in reverse.
+ *
+ * The sketch numbers the nodes of the four faces of a cell with two nodes per
+ * axis:
+ *
+ *                           2 3
+ *                           0 1
+ *                     2 3 [ o o ] 2 3
+ *                     0 1 [ o o ] 0 1
+ *                           2 3
+ *                           0 1
+ */
 void exahype2::dg::projectVolumetricDataOntoFaces(
   [[maybe_unused]] const double* NOALIAS       cellQ,
-  [[maybe_unused]] int                         order,
-  [[maybe_unused]] int                         unknowns,
-  [[maybe_unused]] int                         auxiliaryVariables,
-  [[maybe_unused]] const double* const NOALIAS BasisFunctionValuesLeft,
+  [[maybe_unused]] const int                   order,
+  [[maybe_unused]] const int                   unknowns,
+  [[maybe_unused]] const int                   auxiliaryVariables,
+  [[maybe_unused]] const double* const NOALIAS basisFunctionValuesLeft,
   [[maybe_unused]] double* const NOALIAS       faceQLeft,
   [[maybe_unused]] double* const NOALIAS       faceQRight,
   [[maybe_unused]] double* const NOALIAS       faceQBottom,
@@ -219,8 +270,8 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
     for (int x = 0; x < order + 1; x++) {
       const int cellOffset = peano4::dLinearised(fv::toVolumeIndex(x, y), order + 1) * stride;
       for (int unknown = 0; unknown < unknowns + auxiliaryVariables; unknown++) {
-        faceQLeft[leftFaceOffset + unknown] += BasisFunctionValuesLeft[x] * cellQ[cellOffset + unknown];
-        faceQRight[rightFaceOffset + unknown] += BasisFunctionValuesLeft[order - x] * cellQ[cellOffset + unknown];
+        faceQLeft[leftFaceOffset + unknown] += basisFunctionValuesLeft[x] * cellQ[cellOffset + unknown];
+        faceQRight[rightFaceOffset + unknown] += basisFunctionValuesLeft[order - x] * cellQ[cellOffset + unknown];
       }
     }
   }
@@ -245,20 +296,23 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
     for (int y = 0; y < order + 1; y++) {
       const int cellOffset = peano4::dLinearised(fv::toVolumeIndex(x, y), order + 1) * stride;
       for (int unknown = 0; unknown < unknowns + auxiliaryVariables; unknown++) {
-        faceQBottom[bottomFaceOffset + unknown] += BasisFunctionValuesLeft[y] * cellQ[cellOffset + unknown];
-        faceQUp[upFaceOffset + unknown] += BasisFunctionValuesLeft[order - y] * cellQ[cellOffset + unknown];
+        faceQBottom[bottomFaceOffset + unknown] += basisFunctionValuesLeft[y] * cellQ[cellOffset + unknown];
+        faceQUp[upFaceOffset + unknown] += basisFunctionValuesLeft[order - y] * cellQ[cellOffset + unknown];
       }
     }
   }
 #endif
 }
 
+/**
+ * Projects the cell polynomial onto the six faces of a three-dimensional cell.
+ */
 void exahype2::dg::projectVolumetricDataOntoFaces(
   [[maybe_unused]] const double* NOALIAS       cellQ,
-  [[maybe_unused]] int                         order,
-  [[maybe_unused]] int                         unknowns,
-  [[maybe_unused]] int                         auxiliaryVariables,
-  [[maybe_unused]] const double* const NOALIAS BasisFunctionValuesLeft,
+  [[maybe_unused]] const int                   order,
+  [[maybe_unused]] const int                   unknowns,
+  [[maybe_unused]] const int                   auxiliaryVariables,
+  [[maybe_unused]] const double* const NOALIAS basisFunctionValuesLeft,
   [[maybe_unused]] double* const NOALIAS       faceQLeft,
   [[maybe_unused]] double* const NOALIAS       faceQRight,
   [[maybe_unused]] double* const NOALIAS       faceQBottom,
@@ -292,8 +346,8 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
       for (int x = 0; x < order + 1; x++) {
         const int cellOffset = peano4::dLinearised(fv::toVolumeIndex(x, y, z), order + 1) * stride;
         for (int unknown = 0; unknown < unknowns + auxiliaryVariables; unknown++) {
-          faceQLeft[leftFaceOffset + unknown] += BasisFunctionValuesLeft[x] * cellQ[cellOffset + unknown];
-          faceQRight[rightFaceOffset + unknown] += BasisFunctionValuesLeft[order - x] * cellQ[cellOffset + unknown];
+          faceQLeft[leftFaceOffset + unknown] += basisFunctionValuesLeft[x] * cellQ[cellOffset + unknown];
+          faceQRight[rightFaceOffset + unknown] += basisFunctionValuesLeft[order - x] * cellQ[cellOffset + unknown];
         }
       }
     }
@@ -322,8 +376,8 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
       for (int y = 0; y < order + 1; y++) {
         const int cellOffset = peano4::dLinearised(fv::toVolumeIndex(x, y, z), order + 1) * stride;
         for (int unknown = 0; unknown < unknowns + auxiliaryVariables; unknown++) {
-          faceQBottom[bottomFaceOffset + unknown] += BasisFunctionValuesLeft[y] * cellQ[cellOffset + unknown];
-          faceQUp[upFaceOffset + unknown] += BasisFunctionValuesLeft[order - y] * cellQ[cellOffset + unknown];
+          faceQBottom[bottomFaceOffset + unknown] += basisFunctionValuesLeft[y] * cellQ[cellOffset + unknown];
+          faceQUp[upFaceOffset + unknown] += basisFunctionValuesLeft[order - y] * cellQ[cellOffset + unknown];
         }
       }
     }
@@ -352,8 +406,8 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
       for (int z = 0; z < order + 1; z++) {
         const int cellOffset = peano4::dLinearised(fv::toVolumeIndex(x, y, z), order + 1) * stride;
         for (int unknown = 0; unknown < unknowns + auxiliaryVariables; unknown++) {
-          faceQFront[frontFaceOffset + unknown] += BasisFunctionValuesLeft[z] * cellQ[cellOffset + unknown];
-          faceQBack[backFaceOffset + unknown] += BasisFunctionValuesLeft[order - z] * cellQ[cellOffset + unknown];
+          faceQFront[frontFaceOffset + unknown] += basisFunctionValuesLeft[z] * cellQ[cellOffset + unknown];
+          faceQBack[backFaceOffset + unknown] += basisFunctionValuesLeft[order - z] * cellQ[cellOffset + unknown];
         }
       }
     }
@@ -368,10 +422,10 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
  */
 void exahype2::dg::projectVolumetricDataAndGradientOntoFaces(
   [[maybe_unused]] const double* NOALIAS       cellQ,
-  [[maybe_unused]] int                         order,
-  [[maybe_unused]] int                         unknowns,
-  [[maybe_unused]] int                         auxiliaryVariables,
-  [[maybe_unused]] const double* const NOALIAS BasisFunctionValuesLeft,
+  [[maybe_unused]] const int                   order,
+  [[maybe_unused]] const int                   unknowns,
+  [[maybe_unused]] const int                   auxiliaryVariables,
+  [[maybe_unused]] const double* const NOALIAS basisFunctionValuesLeft,
   [[maybe_unused]] double* const NOALIAS       faceQLeft,
   [[maybe_unused]] double* const NOALIAS       faceQRight,
   [[maybe_unused]] double* const NOALIAS       faceQBottom,
@@ -387,10 +441,10 @@ void exahype2::dg::projectVolumetricDataAndGradientOntoFaces(
  */
 void exahype2::dg::projectVolumetricDataAndGradientOntoFaces(
   [[maybe_unused]] const double* NOALIAS       cellQ,
-  [[maybe_unused]] int                         order,
-  [[maybe_unused]] int                         unknowns,
-  [[maybe_unused]] int                         auxiliaryVariables,
-  [[maybe_unused]] const double* const NOALIAS BasisFunctionValuesLeft,
+  [[maybe_unused]] const int                   order,
+  [[maybe_unused]] const int                   unknowns,
+  [[maybe_unused]] const int                   auxiliaryVariables,
+  [[maybe_unused]] const double* const NOALIAS basisFunctionValuesLeft,
   [[maybe_unused]] double* const NOALIAS       faceQLeft,
   [[maybe_unused]] double* const NOALIAS       faceQRight,
   [[maybe_unused]] double* const NOALIAS       faceQBottom,
@@ -401,17 +455,27 @@ void exahype2::dg::projectVolumetricDataAndGradientOntoFaces(
   tarch::terminateWithError("DG volume-and-gradient face projection is unavailable in three dimensions.");
 }
 
-void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
+/**
+ * Adds the face integral of the Riemann solutions to the nodes of a
+ * two-dimensional cell.
+ *
+ * Each face array holds the numerical flux at every node of that face, and cellQ
+ * already carries the volume contributions. basisFunctionValuesLeft holds the
+ * basis function values at the left node of the reference interval, and the right
+ * face reads the same array in reverse. massMatrixDiagonal1D holds the quadrature
+ * weight of every node along one axis.
+ */
+void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolumeGaussLegendre(
   [[maybe_unused]] const double* const NOALIAS         faceQLeft,
   [[maybe_unused]] const double* const NOALIAS         faceQRight,
   [[maybe_unused]] const double* const NOALIAS         faceQBottom,
   [[maybe_unused]] const double* const NOALIAS         faceQUp,
-  [[maybe_unused]] int                                 order,
-  [[maybe_unused]] int                                 unknowns,
+  [[maybe_unused]] const int                           order,
+  [[maybe_unused]] const int                           unknowns,
   [[maybe_unused]] const int                           auxiliaryVariables,
   [[maybe_unused]] const tarch::la::Vector<2, double>& cellSize,
-  [[maybe_unused]] const double* const NOALIAS         BasisFunctionValuesLeft,
-  [[maybe_unused]] const double* NOALIAS               MassMatrixDiagonal1D,
+  [[maybe_unused]] const double* const NOALIAS         basisFunctionValuesLeft,
+  [[maybe_unused]] const double* NOALIAS               massMatrixDiagonal1D,
   [[maybe_unused]] double* NOALIAS                     cellQ
 ) {
 #if DIMENSIONS == 2
@@ -419,11 +483,11 @@ void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
 
   peano4::dForEach(order + 1, [&](const tarch::la::Vector<DIMENSIONS, int>& dof) {
     const int    cellOffset = peano4::dLinearised(dof, order + 1) * stride;
-    const double coeffLeft  = MassMatrixDiagonal1D[dof[1]] * BasisFunctionValuesLeft[dof[0]] * cellSize(1);
-    const double coeffRight = MassMatrixDiagonal1D[dof[1]] * BasisFunctionValuesLeft[order - dof[0]] * cellSize(1);
+    const double coeffLeft  = massMatrixDiagonal1D[dof[1]] * basisFunctionValuesLeft[dof[0]] * cellSize(1);
+    const double coeffRight = massMatrixDiagonal1D[dof[1]] * basisFunctionValuesLeft[order - dof[0]] * cellSize(1);
 
-    const double coeffBottom = MassMatrixDiagonal1D[dof[0]] * BasisFunctionValuesLeft[dof[1]] * cellSize(0);
-    const double coeffUp     = MassMatrixDiagonal1D[dof[0]] * BasisFunctionValuesLeft[order - dof[1]] * cellSize(0);
+    const double coeffBottom = massMatrixDiagonal1D[dof[0]] * basisFunctionValuesLeft[dof[1]] * cellSize(0);
+    const double coeffUp     = massMatrixDiagonal1D[dof[0]] * basisFunctionValuesLeft[order - dof[1]] * cellSize(0);
 
     tarch::la::Vector<DIMENSIONS, int> leftDoF   = dof;
     tarch::la::Vector<DIMENSIONS, int> rightDoF  = dof;
@@ -448,19 +512,27 @@ void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
 #endif
 }
 
-void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
+/**
+ * Adds the face integral of the Riemann solutions to the nodes of a
+ * three-dimensional cell.
+ *
+ * The face numbering follows a left-handed coordinate system: Faces 0 and 3
+ * carry a normal along the x axis, faces 1 and 4 along the y axis, and faces 2
+ * and 5 along the z axis, with the front face before the back face.
+ */
+void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolumeGaussLegendre(
   [[maybe_unused]] const double* const NOALIAS         faceQLeft,
   [[maybe_unused]] const double* const NOALIAS         faceQRight,
   [[maybe_unused]] const double* const NOALIAS         faceQBottom,
   [[maybe_unused]] const double* const NOALIAS         faceQUp,
   [[maybe_unused]] const double* const NOALIAS         faceQFront,
   [[maybe_unused]] const double* const NOALIAS         faceQBack,
-  [[maybe_unused]] int                                 order,
-  [[maybe_unused]] int                                 unknowns,
+  [[maybe_unused]] const int                           order,
+  [[maybe_unused]] const int                           unknowns,
   [[maybe_unused]] const int                           auxiliaryVariables,
   [[maybe_unused]] const tarch::la::Vector<3, double>& cellSize,
-  [[maybe_unused]] const double* const NOALIAS         BasisFunctionValuesLeft,
-  [[maybe_unused]] const double* NOALIAS               MassMatrixDiagonal1D,
+  [[maybe_unused]] const double* const NOALIAS         basisFunctionValuesLeft,
+  [[maybe_unused]] const double* NOALIAS               massMatrixDiagonal1D,
   [[maybe_unused]] double* NOALIAS                     cellQ
 ) {
 #if DIMENSIONS == 3
@@ -468,18 +540,18 @@ void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
 
   peano4::dForEach(order + 1, [&](const tarch::la::Vector<DIMENSIONS, int>& dof) {
     const int    cellOffset = peano4::dLinearised(dof, order + 1) * stride;
-    const double coeffLeft  = BasisFunctionValuesLeft[dof[0]] * MassMatrixDiagonal1D[dof[1]]
-      * MassMatrixDiagonal1D[dof[2]] * cellSize(1) * cellSize(2);
-    const double coeffRight = BasisFunctionValuesLeft[order - dof[0]] * MassMatrixDiagonal1D[dof[1]]
-      * MassMatrixDiagonal1D[dof[2]] * cellSize(1) * cellSize(2);
-    const double coeffBottom = MassMatrixDiagonal1D[dof[0]] * BasisFunctionValuesLeft[dof[1]]
-      * MassMatrixDiagonal1D[dof[2]] * cellSize(0) * cellSize(2);
-    const double coeffUp = MassMatrixDiagonal1D[dof[0]] * BasisFunctionValuesLeft[order - dof[1]]
-      * MassMatrixDiagonal1D[dof[2]] * cellSize(0) * cellSize(2);
-    const double coeffFront = MassMatrixDiagonal1D[dof[0]] * MassMatrixDiagonal1D[dof[1]]
-      * BasisFunctionValuesLeft[dof[2]] * cellSize(0) * cellSize(1);
-    const double coeffBack = MassMatrixDiagonal1D[dof[0]] * MassMatrixDiagonal1D[dof[1]]
-      * BasisFunctionValuesLeft[order - dof[2]] * cellSize(0) * cellSize(1);
+    const double coeffLeft  = basisFunctionValuesLeft[dof[0]] * massMatrixDiagonal1D[dof[1]]
+      * massMatrixDiagonal1D[dof[2]] * cellSize(1) * cellSize(2);
+    const double coeffRight = basisFunctionValuesLeft[order - dof[0]] * massMatrixDiagonal1D[dof[1]]
+      * massMatrixDiagonal1D[dof[2]] * cellSize(1) * cellSize(2);
+    const double coeffBottom = massMatrixDiagonal1D[dof[0]] * basisFunctionValuesLeft[dof[1]]
+      * massMatrixDiagonal1D[dof[2]] * cellSize(0) * cellSize(2);
+    const double coeffUp = massMatrixDiagonal1D[dof[0]] * basisFunctionValuesLeft[order - dof[1]]
+      * massMatrixDiagonal1D[dof[2]] * cellSize(0) * cellSize(2);
+    const double coeffFront = massMatrixDiagonal1D[dof[0]] * massMatrixDiagonal1D[dof[1]]
+      * basisFunctionValuesLeft[dof[2]] * cellSize(0) * cellSize(1);
+    const double coeffBack = massMatrixDiagonal1D[dof[0]] * massMatrixDiagonal1D[dof[1]]
+      * basisFunctionValuesLeft[order - dof[2]] * cellSize(0) * cellSize(1);
 
     tarch::la::Vector<DIMENSIONS, int> leftDoF   = dof;
     tarch::la::Vector<DIMENSIONS, int> rightDoF  = dof;

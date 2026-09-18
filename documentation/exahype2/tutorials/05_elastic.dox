@@ -105,9 +105,11 @@ off-centre should:
 
 @image html documentation/exahype2/tutorials/Elastic_slice.png
 
-@note The pictures in this part were produced at `-l 3` (a \f$27^3\f$-cell
-grid, a few-minutes run). The default level 2 shows the same physics, only
-coarser - raise the level in the run command if you want the same crispness.
+@note The pictures in this part were produced at `-l 3`, a grid of \f$k^3\f$
+cells per axis, with k the subdivision factor of the active curve (3 on the
+Peano curve, 2 on the Hilbert curve). That run takes a few minutes. The default
+level 2 shows the same physics, only coarser - raise the level in the run
+command if you want the same crispness.
 
 # A Taste of HPC
 

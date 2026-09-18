@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "GridSnapshotTest.h"
 
-#include "peano4/Globals.h"
+#include "peano4/sfc/ActiveCurve.h"
 #include "runner/Format.h"
 #include "runner/GridSnapshot.h"
 
@@ -18,35 +18,42 @@ void runner::tests::GridSnapshotTest::run() {
 }
 
 void runner::tests::GridSnapshotTest::testBoundedFullyRefinedLeavesGrowsPerLevel() {
+  constexpr auto ChildrenPerCell = static_cast<std::uint64_t>(peano4::sfc::ActiveCurve::ChildrenPerCell);
   validateEquals(runner::boundedFullyRefinedLeaves(0), std::uint64_t{1});
-  validateEquals(runner::boundedFullyRefinedLeaves(1), static_cast<std::uint64_t>(THREE_POWER_D));
-  validateEquals(
-    runner::boundedFullyRefinedLeaves(2),
-    static_cast<std::uint64_t>(THREE_POWER_D) * static_cast<std::uint64_t>(THREE_POWER_D)
-  );
+  validateEquals(runner::boundedFullyRefinedLeaves(1), ChildrenPerCell);
+  validateEquals(runner::boundedFullyRefinedLeaves(2), ChildrenPerCell * ChildrenPerCell);
 
-  auto expectedLevelTenLeaves = std::uint64_t{1};
-  for (int level = 0; level < 10; ++level) {
-    expectedLevelTenLeaves *= static_cast<std::uint64_t>(THREE_POWER_D);
+  // The count grows beyond the 32-bit range on some level and keeps its exact value there.
+  auto expectedLeaves = std::uint64_t{1};
+  int  level          = 0;
+  while (expectedLeaves <= static_cast<std::uint64_t>(std::numeric_limits<int>::max())) {
+    expectedLeaves *= ChildrenPerCell;
+    level++;
   }
-  validate(expectedLevelTenLeaves > static_cast<std::uint64_t>(std::numeric_limits<int>::max()));
-  validateEquals(runner::boundedFullyRefinedLeaves(10), expectedLevelTenLeaves);
+  validateEquals(runner::boundedFullyRefinedLeaves(level), expectedLeaves);
 }
 
 void runner::tests::GridSnapshotTest::testBoundedFullyRefinedLeavesHandlesLimits() {
-  constexpr int MaximumSupportedExponent = 40;
-  constexpr int MaximumExactLevel        = MaximumSupportedExponent / DIMENSIONS;
-  auto          maximumExactLeaves       = std::uint64_t{1};
-  for (int exponent = 0; exponent < DIMENSIONS * MaximumExactLevel; ++exponent) {
-    maximumExactLeaves *= 3;
+  constexpr auto SubdivisionFactor = static_cast<std::uint64_t>(peano4::sfc::ActiveCurve::SubdivisionFactor);
+  constexpr auto MaximumCount      = std::numeric_limits<std::uint64_t>::max();
+
+  // The largest power of the subdivision factor a 64-bit count holds.
+  auto maximumExactPower    = std::uint64_t{1};
+  int  maximumExactExponent = 0;
+  while (maximumExactPower <= MaximumCount / SubdivisionFactor) {
+    maximumExactPower *= SubdivisionFactor;
+    maximumExactExponent++;
   }
 
-  validateEquals(runner::boundedFullyRefinedLeaves(MaximumExactLevel), maximumExactLeaves);
-  validateEquals(runner::boundedFullyRefinedLeaves(MaximumExactLevel + 1), std::numeric_limits<std::uint64_t>::max());
-  validateEquals(
-    runner::boundedFullyRefinedLeaves(std::numeric_limits<int>::max()),
-    std::numeric_limits<std::uint64_t>::max()
-  );
+  const int maximumExactLevel  = maximumExactExponent / DIMENSIONS;
+  auto      maximumExactLeaves = std::uint64_t{1};
+  for (int exponent = 0; exponent < DIMENSIONS * maximumExactLevel; exponent++) {
+    maximumExactLeaves *= SubdivisionFactor;
+  }
+
+  validateEquals(runner::boundedFullyRefinedLeaves(maximumExactLevel), maximumExactLeaves);
+  validateEquals(runner::boundedFullyRefinedLeaves(maximumExactLevel + 1), MaximumCount);
+  validateEquals(runner::boundedFullyRefinedLeaves(std::numeric_limits<int>::max()), MaximumCount);
 }
 
 void runner::tests::GridSnapshotTest::testGridCellSummary() {

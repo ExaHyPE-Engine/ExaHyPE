@@ -20,9 +20,10 @@ public:
   void run() override;
 
 private:
-  void testNumbersParseOnlyWhenTheWholeArgumentIsANumber();
+  void testNumbersParseFromTheWholeArgument();
   void testTheOutputPathAlwaysEndsInASeparator();
   void testTheMeshSizeDividesOncePerLevel();
   void testDefaultsReadBackAsTheyWereGiven();
   void testBothSpellingsOfTheLoadBalancingSwitchAreConsumed();
+  void testTheMaximumTerminalTimeBoundsTheMinimumOne();
 };

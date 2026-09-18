@@ -2,8 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "AutomatonStateTest.h"
 
-#include "peano4/Globals.h"
 #include "peano4/grid/AutomatonState.h"
+#include "peano4/sfc/ActiveCurve.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/mpi/Request.h"
 
@@ -13,39 +13,18 @@ peano4::grid::tests::AutomatonStateTest::AutomatonStateTest() :
   TestCase("peano4::grid::tests::AutomatonStateTest") {}
 
 void peano4::grid::tests::AutomatonStateTest::run() {
-  testMethod(testFlags);
+  testMethod(testCurveState);
   testMethod(testRefineState);
   testMethod(testSendAndReceiveInARing);
 }
 
-void peano4::grid::tests::AutomatonStateTest::testFlags() {
-  peano4::grid::AutomatonState state;
-
-  for (int d = 0; d < DIMENSIONS; d++) {
-    state.setEvenFlag(d, false);
-    validateFalse(state.getEvenFlag(d));
-  }
-
-  // The even flags of all axes occupy one word.
-  for (int d = 0; d < DIMENSIONS; d++) {
-    const bool expectedEvenFlag = (d % 2) == 1;
-    state.setEvenFlag(d, expectedEvenFlag);
-    validateEquals(state.getEvenFlag(d), expectedEvenFlag);
-  }
-  for (int d = 0; d < DIMENSIONS; d++) {
-    const bool expectedEvenFlag = (d % 2) == 1;
-    validateEquals(state.getEvenFlag(d), expectedEvenFlag);
-  }
-
-  for (int d = 0; d < DIMENSIONS; d++) {
-    const bool flagBeforeFlip = state.getEvenFlag(d);
-    state.flipEvenFlag(d);
-    validateEquals(state.getEvenFlag(d), not flagBeforeFlip);
-  }
+void peano4::grid::tests::AutomatonStateTest::testCurveState() {
+  const peano4::grid::AutomatonState state;
+  validateEquals(state.curveState, peano4::sfc::ActiveCurve::RootState);
 
   const std::string description = state.toString();
   validateTrue(description.find("AutomatonState") != std::string::npos);
-  validateTrue(description.find("EvenFlags") != std::string::npos);
+  validateTrue(description.find("CurveState") != std::string::npos);
 }
 
 void peano4::grid::tests::AutomatonStateTest::testRefineState() {
@@ -56,24 +35,33 @@ void peano4::grid::tests::AutomatonStateTest::testRefineState() {
     coarseState.h(d) = 1.0;
   }
 
-  peano4::grid::AutomatonState fineStates[THREE_POWER_D];
+  constexpr int SubdivisionFactor = peano4::sfc::ActiveCurve::SubdivisionFactor;
+  constexpr int ChildrenPerCell   = peano4::sfc::ActiveCurve::ChildrenPerCell;
+
+  peano4::grid::AutomatonState fineStates[ChildrenPerCell];
   peano4::grid::AutomatonState::refineState(coarseState, fineStates);
 
-  for (int i = 0; i < THREE_POWER_D; i++) {
+  for (int i = 0; i < ChildrenPerCell; i++) {
     validateEquals(fineStates[i].level, coarseState.level + 1);
     for (int d = 0; d < DIMENSIONS; d++) {
-      validateNumericalEquals(fineStates[i].h(d), coarseState.h(d) / 3.0);
+      validateNumericalEquals(fineStates[i].h(d), coarseState.h(d) / SubdivisionFactor);
     }
   }
 
   // A child's array slot is its position within the parent, with the first axis running fastest.
-  for (int i = 0; i < THREE_POWER_D; i++) {
+  for (int i = 0; i < ChildrenPerCell; i++) {
     int remainingIndex = i;
     for (int d = 0; d < DIMENSIONS; d++) {
-      const double expectedPosition = coarseState.x(d) + (remainingIndex % 3) * coarseState.h(d) / 3.0;
-      remainingIndex /= 3;
+      const double expectedPosition =
+        coarseState.x(d) + (remainingIndex % SubdivisionFactor) * coarseState.h(d) / SubdivisionFactor;
+      remainingIndex /= SubdivisionFactor;
       validateNumericalEquals(fineStates[i].x(d), expectedPosition);
     }
+  }
+
+  // Every child carries the curve state its parent's production assigns to its position.
+  for (const auto& child : peano4::sfc::ActiveCurve::children(coarseState.curveState)) {
+    validateEqualsWithParams1(fineStates[child.linearisedPosition].curveState, child.state, child.linearisedPosition);
   }
 }
 
@@ -90,8 +78,8 @@ void peano4::grid::tests::AutomatonStateTest::testSendAndReceiveInARing() {
   for (int d = 0; d < DIMENSIONS; d++) {
     sentState.x(d) = 0.1 * (d + 1) + 0.001 * localRank;
     sentState.h(d) = 0.01 * (d + 2) + 0.0001 * localRank;
-    sentState.setEvenFlag(d, ((d + localRank) % 2) == 1);
   }
+  sentState.curveState = static_cast<std::uint8_t>(localRank % peano4::sfc::ActiveCurve::NumberOfStates);
 
   const int successor   = (localRank + 1) % numberOfRanks;
   const int predecessor = (localRank - 1 + numberOfRanks) % numberOfRanks;
@@ -114,11 +102,9 @@ void peano4::grid::tests::AutomatonStateTest::testSendAndReceiveInARing() {
 
   validateEquals(receivedState.level, 4 + predecessor);
   for (int d = 0; d < DIMENSIONS; d++) {
-    // The expected flag needs its own variable because validateEquals streams the expression, and the
-    // comparison would bind to the stream operator.
-    const bool expectedEvenFlag = ((d + predecessor) % 2) == 1;
     validateNumericalEquals(receivedState.x(d), 0.1 * (d + 1) + 0.001 * predecessor);
     validateNumericalEquals(receivedState.h(d), 0.01 * (d + 2) + 0.0001 * predecessor);
-    validateEquals(receivedState.getEvenFlag(d), expectedEvenFlag);
   }
+  const auto expectedCurveState = static_cast<std::uint8_t>(predecessor % peano4::sfc::ActiveCurve::NumberOfStates);
+  validateEquals(receivedState.curveState, expectedCurveState);
 }

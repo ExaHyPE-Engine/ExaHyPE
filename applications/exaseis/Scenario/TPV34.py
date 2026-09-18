@@ -17,7 +17,7 @@ class TPV34(DynamicRuptureScenario):
     """
 
     domain_offset   = [3.8,  0., 3.8] #centers the fault which is at 20.
-    domain_size     = [32.4, 32.4, 32.4] #leads to a cell size of 0.333 for 81 cells
+    domain_size     = [32.4, 32.4, 32.4] #The domain size gives a cell width of 0.333 on a level-4 grid of the Peano curve.
 
     end_time = 20.0
 

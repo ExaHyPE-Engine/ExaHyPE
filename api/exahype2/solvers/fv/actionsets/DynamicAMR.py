@@ -13,8 +13,9 @@ class AdaptiveMeshFaceCoupling(peano4.solversteps.ActionSet):
 
         patch_overlap = solver._patch_overlap_new
         if patch_overlap.dim[0] % 2 != 0:
-            raise Exception(
-                "Error: Patch associated to face has to have an even number of cells, as the overlap would not be symmetric otherwise."
+            raise ValueError(
+                "The patch of a face needs an even number of cells, so that its two "
+                "overlap halves have the same width."
             )
 
         face_label_name = solver._face_label.name
@@ -240,13 +241,15 @@ class AdaptiveMeshFaceCoupling(peano4.solversteps.ActionSet):
     def get_attributes(self):
         return f"""
     ::exahype2::amr::ChildDataStage<{self.d["STORAGE_PRECISION"]}> _haloRestrictionStageQNew{{
-      THREE_POWER_D / 3,
+      peano4::Power<peano4::sfc::ActiveCurve::SubdivisionFactor, DIMENSIONS - 1>,
       (DIMENSIONS == 3 ? {self.d["DOFS_PER_AXIS"]} * {self.d["DOFS_PER_AXIS"]} : {self.d["DOFS_PER_AXIS"]}) * {self.d["UNKNOWNS"]}}};
 """
 
     def get_includes(self):
         return """
+#include "peano4/Constants.h"
 #include "peano4/Loop.h"
+#include "peano4/sfc/ActiveCurve.h"
 #include "exahype2/amr/AMRRoutines.h"
 #include "exahype2/fv/PatchUtils.h"
 #include "exahype2/amr/ChildDataStage.h"
@@ -508,7 +511,9 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
   // set reduces the whole set onto the parent in one order-invariant pass. The
   // load balancer places no rank boundary inside a cell that has a leaf child,
   // so the set always completes on one rank.
-  const int linearisedChildPosition = peano4::dLinearised(marker.getRelativePositionWithinFatherCell(), 3);
+  const int linearisedChildPosition = peano4::dLinearised(
+    marker.getRelativePositionWithinFatherCell(), peano4::sfc::ActiveCurve::SubdivisionFactor
+  );
   _cellRestrictionStageQOld.stage(
     {{COARSE_GRID_CELL_Q_OLD_ACCESSOR}}.data(),
     linearisedChildPosition,
@@ -519,9 +524,9 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
         linearisedChildPosition,
         {{FINE_GRID_CELL_Q_NEW_ACCESSOR}}.data()
       )) {
-    const {{STORAGE_PRECISION}}* childValuesQNew[THREE_POWER_D];
-    const {{STORAGE_PRECISION}}* childValuesQOld[THREE_POWER_D];
-    for (int childIndex = 0; childIndex < THREE_POWER_D; childIndex++) {
+    const {{STORAGE_PRECISION}}* childValuesQNew[peano4::sfc::ActiveCurve::ChildrenPerCell];
+    const {{STORAGE_PRECISION}}* childValuesQOld[peano4::sfc::ActiveCurve::ChildrenPerCell];
+    for (int childIndex = 0; childIndex < peano4::sfc::ActiveCurve::ChildrenPerCell; childIndex++) {
       childValuesQNew[childIndex] = _cellRestrictionStageQNew.child({{COARSE_GRID_CELL_Q_NEW_ACCESSOR}}.data(), childIndex);
       childValuesQOld[childIndex] = _cellRestrictionStageQOld.child({{COARSE_GRID_CELL_Q_OLD_ACCESSOR}}.data(), childIndex);
     }
@@ -582,7 +587,7 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
         self.d["PROJECT_GUARD"] = solver._store_cell_data_default_guard()
         self._Template_ProjectPatchOntoFaces = """
   bool requiresProjection = marker.hasBeenRefined() and not marker.willBeRefined();
-  for (int face = 0; face < TWO_TIMES_D; face++) {
+  for (int face = 0; face < peano4::FacesPerCell; face++) {
     const int ownSide = face < DIMENSIONS ? 1 : 0;
     requiresProjection = requiresProjection
       or (not {{FINE_GRID_FACES_LABEL_ACCESSOR}}(face).getIsHanging()
@@ -591,8 +596,8 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
   if ({{PROJECT_GUARD}} and requiresProjection) {
     const auto* const QIn = {{FINE_GRID_CELL_Q_NEW_ACCESSOR}}.data();
 
-    {{STORAGE_PRECISION}}* facesOut[TWO_TIMES_D];
-    for (int face = 0; face < TWO_TIMES_D; face++) {
+    {{STORAGE_PRECISION}}* facesOut[peano4::FacesPerCell];
+    for (int face = 0; face < peano4::FacesPerCell; face++) {
       facesOut[face] = {{FINE_GRID_FACES_Q_NEW_ACCESSOR}}(face).data();
     }
 
@@ -609,7 +614,7 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
       {{FINE_GRID_FACES_LABEL_ACCESSOR}}(d + DIMENSIONS).setUpdated(0, true);
       {{FINE_GRID_FACES_LABEL_ACCESSOR}}(d + DIMENSIONS).setUpdatedTimeStamp(0, {{FINE_GRID_CELL_LABEL_ACCESSOR}}.getTimeStamp());
     }
-    for (int face = 0; face < TWO_TIMES_D; face++) {
+    for (int face = 0; face < peano4::FacesPerCell; face++) {
       const int ownSide = face < DIMENSIONS ? 1 : 0;
       if (not {{FINE_GRID_FACES_LABEL_ACCESSOR}}(face).getIsHanging()) {
         {{FINE_GRID_FACES_LABEL_ACCESSOR}}(face).setRequiresDataTransfer(ownSide, false);
@@ -644,13 +649,13 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
             super(DynamicAMRTransfer, self).get_attributes()
             + f"""
     ::exahype2::amr::ChildDataStage<{self.d["STORAGE_PRECISION"]}> _haloRestrictionStageQOld{{
-      THREE_POWER_D / 3,
+      peano4::Power<peano4::sfc::ActiveCurve::SubdivisionFactor, DIMENSIONS - 1>,
       (DIMENSIONS == 3 ? {self.d["DOFS_PER_AXIS"]} * {self.d["DOFS_PER_AXIS"]} : {self.d["DOFS_PER_AXIS"]}) * {self.d["UNKNOWNS"]}}};
     ::exahype2::amr::ChildDataStage<{self.d["STORAGE_PRECISION"]}> _cellRestrictionStageQNew{{
-      THREE_POWER_D,
+      peano4::sfc::ActiveCurve::ChildrenPerCell,
       (DIMENSIONS == 3 ? {self.d["DOFS_PER_AXIS"]} * {self.d["DOFS_PER_AXIS"]} * {self.d["DOFS_PER_AXIS"]} : {self.d["DOFS_PER_AXIS"]} * {self.d["DOFS_PER_AXIS"]}) * {self.d["UNKNOWNS"]}}};
     ::exahype2::amr::ChildDataStage<{self.d["STORAGE_PRECISION"]}> _cellRestrictionStageQOld{{
-      THREE_POWER_D,
+      peano4::sfc::ActiveCurve::ChildrenPerCell,
       (DIMENSIONS == 3 ? {self.d["DOFS_PER_AXIS"]} * {self.d["DOFS_PER_AXIS"]} * {self.d["DOFS_PER_AXIS"]} : {self.d["DOFS_PER_AXIS"]} * {self.d["DOFS_PER_AXIS"]}) * {self.d["UNKNOWNS"]}}};
 """
         )

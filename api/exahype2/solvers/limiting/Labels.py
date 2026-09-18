@@ -24,7 +24,7 @@ class _CellLimiterStatus(Integer):
         ]
 
     def get_method_definitions(self, qualified_class_name):
-        return f"""INLINE_METHOD auto {qualified_class_name}::get{self.accessor_name}() const -> {_STATUS_ENUM} {{
+        return f"""INLINE_METHOD {_STATUS_ENUM} {qualified_class_name}::get{self.accessor_name}() const {{
   return static_cast<{_STATUS_ENUM}>({self.field_name});
 }}
 
@@ -263,7 +263,7 @@ def cell_dmp_extrema_to_vertices_snippet(
     so the vertex does not depend on the traversal or the decomposition.
     """
     return f"""
-    for (int vertexNumber = 0; vertexNumber < TWO_POWER_D; vertexNumber++) {{
+    for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell; vertexNumber++) {{
       auto& vertexLabel = fineGridVertices{solver_name}VertexLabel(vertexNumber);
       for (int observable = 0; observable < {number_of_observables}; observable++) {{
         vertexLabel.setDmpMinimum(
@@ -293,7 +293,7 @@ def vertex_dmp_extrema_merge_snippet(
     the merged range covers every cell adjacent to a node of the cell.
     """
     return f"""
-    for (int vertexNumber = 0; vertexNumber < TWO_POWER_D; vertexNumber++) {{
+    for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell; vertexNumber++) {{
       const auto& vertexLabel = fineGridVertices{solver_name}VertexLabel(vertexNumber);
       for (int observable = 0; observable < {number_of_observables}; observable++) {{
         {minimum}[observable] = ::exahype2::dg::mergeDiscreteMaximumPrincipleMinimum(
@@ -320,7 +320,7 @@ def hanging_vertex_dmp_extrema_from_coarse_snippet(solver_name, number_of_observ
         reset_vertex_dmp_extrema_snippet(solver_name, number_of_observables)
         + f"""
     const auto hangingVertexPosition = marker.getRelativePositionWithinFatherCell();
-    for (int coarseVertexNumber = 0; coarseVertexNumber < TWO_POWER_D; coarseVertexNumber++) {{
+    for (int coarseVertexNumber = 0; coarseVertexNumber < peano4::VerticesPerCell; coarseVertexNumber++) {{
       if (::exahype2::dg::isCoarseVertexOnFacetOfHangingVertex(hangingVertexPosition, coarseVertexNumber)) {{
         const auto& coarseVertexLabel = coarseGridVertices{solver_name}VertexLabel(coarseVertexNumber);
         for (int observable = 0; observable < {number_of_observables}; observable++) {{
@@ -354,7 +354,7 @@ def hanging_vertex_dmp_extrema_reduce_snippet(solver_name, number_of_observables
     """
     return f"""
     const auto hangingVertexPosition = marker.getRelativePositionWithinFatherCell();
-    for (int coarseVertexNumber = 0; coarseVertexNumber < TWO_POWER_D; coarseVertexNumber++) {{
+    for (int coarseVertexNumber = 0; coarseVertexNumber < peano4::VerticesPerCell; coarseVertexNumber++) {{
       if (::exahype2::dg::isCoarseVertexOnFacetOfHangingVertex(hangingVertexPosition, coarseVertexNumber)) {{
         auto& coarseVertexLabel = coarseGridVertices{solver_name}VertexLabel(coarseVertexNumber);
         for (int observable = 0; observable < {number_of_observables}; observable++) {{

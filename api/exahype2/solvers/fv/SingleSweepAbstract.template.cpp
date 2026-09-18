@@ -3,6 +3,7 @@
 #include "{{CLASSNAME}}.h"
 
 #include "repositories/SolverRepository.h"
+#include "peano4/Constants.h"
 #include "tarch/NonCriticalAssertions.h"
 #include "tarch/accelerator/Atomic.h"
 #include "tarch/instrumentation/Debug.h"
@@ -23,7 +24,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspendSolversForOneGridSweep() 
 }
 
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getNumberOfDoFs() const {
-  return BasePowerExponent<NumberOfFiniteVolumesPerAxisPerPatch, DIMENSIONS>::value * (NumberOfUnknowns + NumberOfAuxiliaryVariables);
+  return peano4::Power<NumberOfFiniteVolumesPerAxisPerPatch, DIMENSIONS> * (NumberOfUnknowns + NumberOfAuxiliaryVariables);
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinPatchSize() const {
@@ -49,6 +50,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStamp() const {
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStamp() const {
+  // Only the minimum starts at infinity, so it says whether a patch has reported this time step.
   return _minTimeStampThisTimeStep != std::numeric_limits<double>::infinity()
     ? _maxTimeStampThisTimeStep
     : _maxTimeStamp;
@@ -61,6 +63,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStepSize() const {
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStepSize() const {
+  // Only the minimum starts at infinity, so it says whether a patch has reported this time step.
   return _minTimeStepSizeThisTimeStep != std::numeric_limits<double>::infinity()
     ? _maxTimeStepSizeThisTimeStep
     : _maxTimeStepSize;
@@ -69,7 +72,8 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStepSize() const {
 thread_local typename {{NAMESPACE | join("::")}}::{{CLASSNAME}}::LocalUpdates {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_localUpdates;
 
 /**
- * Accumulates a patch's time step, time stamp, and size extrema for the current solver step.
+ * Adds one patch's time step size, time stamp and patch size to the extrema of the current
+ * traversal.
  */
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(
   const double timeStepSize,
@@ -119,6 +123,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::updateTimeStampAndPatchSize(
   _localUpdates.empty      = false;
 }
 
+/**
+ * Reduces the extrema update() accumulated in this traversal into the solver. One call per
+ * tree at the end of a traversal keeps the per-patch update free of atomic operations.
+ */
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::reduceLocalUpdates() {
   if (_localUpdates.empty) {
     return;

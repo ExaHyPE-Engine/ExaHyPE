@@ -7,7 +7,7 @@ import peano4.solversteps
 import jinja2
 
 
-class HandleBoundary(AbstractFVActionSet):
+class ApplyBoundaryConditions(AbstractFVActionSet):
     """
     Periodic axes are read from the generated Constants.h.
 
@@ -16,19 +16,19 @@ class HandleBoundary(AbstractFVActionSet):
     destination that the sweep writes later.
     """
 
-    TemplateHandleBoundary_Prologue = """
+    TemplateApplyBoundaryConditions_Prologue = """
   if ({{PREDICATE}} and not marker.hasBeenRefined()) {
 """
 
-    TemplateHandleBoundary_KernelCalls = """
-    for (int faceNumber = 0; faceNumber < TWO_TIMES_D; faceNumber++) {
+    TemplateApplyBoundaryConditions_KernelCalls = """
+    for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
       if (
         not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[faceNumber % DIMENSIONS]
         and fineGridFaces{{SOLVER_NAME}}FaceLabel(faceNumber).getBoundary()
       ) {
         const auto insideEntry  = faceNumber < DIMENSIONS ? 1 : 0;
         const auto outsideEntry = 1 - insideEntry;
-        ::exahype2::fv::handleBoundary<
+        ::exahype2::fv::applyBoundaryConditionsOnFace<
           {{FULL_QUALIFIED_SOLVER_NAME}},
           {{NUMBER_OF_VOLUMES_PER_AXIS}},
           {{HALO_SIZE}},
@@ -44,7 +44,7 @@ class HandleBoundary(AbstractFVActionSet):
         );
 """
 
-    TemplateHandleBoundary_Epilogue = """
+    TemplateApplyBoundaryConditions_Epilogue = """
         const auto updatedTimeStamp =
           {{FACE_METADATA_ACCESSOR}}(faceNumber).getUpdatedTimeStamp(insideEntry);
         {{FACE_METADATA_ACCESSOR}}(faceNumber).setUpdatedTimeStamp(outsideEntry, updatedTimeStamp);
@@ -78,21 +78,21 @@ class HandleBoundary(AbstractFVActionSet):
             dictionary["FACE_METADATA_ACCESSOR"] = (
                 "fineGridFaces" + self._solver._face_label.name
             )
-            result = jinja2.Template(self.TemplateHandleBoundary_Prologue).render(
-                **dictionary
-            )
-            result += jinja2.Template(self.TemplateHandleBoundary_KernelCalls).render(
-                **dictionary
-            )
-            result += jinja2.Template(self.TemplateHandleBoundary_Epilogue).render(
-                **dictionary
-            )
+            result = jinja2.Template(
+                self.TemplateApplyBoundaryConditions_Prologue
+            ).render(**dictionary)
+            result += jinja2.Template(
+                self.TemplateApplyBoundaryConditions_KernelCalls
+            ).render(**dictionary)
+            result += jinja2.Template(
+                self.TemplateApplyBoundaryConditions_Epilogue
+            ).render(**dictionary)
         return result
 
     def get_includes(self):
         return (
             """
-#include "exahype2/fv/HandleBoundary.h"
+#include "exahype2/fv/ApplyBoundaryConditionsOnFace.h"
 """
             + super().get_includes()
         )

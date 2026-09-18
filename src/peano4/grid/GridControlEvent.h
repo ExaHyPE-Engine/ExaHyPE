@@ -11,9 +11,10 @@ namespace peano4::grid {
 /**
  * A request to refine or erase, named by the cell that raised it.
  *
- * Cells sit on a triadic lattice per level, so a level and a lattice position name a cell
- * exactly and the grid follows from integer arithmetic on them. Trivially copyable, so a
- * request travels between ranks as bytes.
+ * Cells sit on a lattice per level with peano4::sfc::ActiveCurve::SubdivisionFactor cells
+ * per parent cell along each axis, so a level and a lattice position name a cell exactly
+ * and the grid follows from integer arithmetic on them. Trivially copyable, so a request
+ * travels between ranks as bytes.
  */
 struct peano4::grid::GridControlEvent {
 public:
@@ -29,12 +30,8 @@ public:
 
   GridControlEvent() noexcept = default;
 
-  INLINE_METHOD RefinementControl getRefinementControl() const noexcept {
-    return static_cast<RefinementControl>(refinementControl);
-  }
-  INLINE_METHOD void setRefinementControl(RefinementControl value) noexcept {
-    refinementControl = static_cast<std::uint8_t>(value);
-  }
+  [[nodiscard]] INLINE_METHOD RefinementControl getRefinementControl() const noexcept;
+  INLINE_METHOD void                            setRefinementControl(RefinementControl value) noexcept;
 
   static GridControlEvent forCell(
     RefinementControl                            control,
@@ -44,10 +41,12 @@ public:
     const tarch::la::Vector<DIMENSIONS, double>& domainWidth
   );
 
-  std::string toString() const;
+  [[nodiscard]] std::string toString() const;
 
   bool operator<(const GridControlEvent& other) const noexcept;
   bool operator==(const GridControlEvent& other) const noexcept;
 };
 
-std::ostream& operator<<(std::ostream& os, const peano4::grid::GridControlEvent& event);
+std::ostream& operator<<(std::ostream& out, const peano4::grid::GridControlEvent& event);
+
+#include "peano4/grid/GridControlEvent.cpph"

@@ -3,6 +3,7 @@
 #include "FaceMarkerTest.h"
 
 #include "peano4/dataview/FaceMarker.h"
+#include "peano4/sfc/ActiveCurve.h"
 #include "tarch/tests/TestMacros.h"
 
 namespace {
@@ -79,10 +80,10 @@ void peano4::dataview::tests::FaceMarkerTest::testNormals() {
 void peano4::dataview::tests::FaceMarkerTest::testMasks() {
   auto marker = createMarker();
 
-  marker.hasBeenRefinedMask = 1u << 1;
-  marker.willBeRefinedMask  = 1u << 0;
-  marker.isLocalMask        = 1u << 1;
-  marker.isHangingMask      = 1u << 0;
+  marker.hasBeenRefinedMask = 1U << 1U;
+  marker.willBeRefinedMask  = 1U << 0U;
+  marker.isLocalMask        = 1U << 1U;
+  marker.isHangingMask      = 1U << 0U;
 
   validate(marker.hasBeenRefined(1));
   validateFalse(marker.hasBeenRefined(0));
@@ -93,6 +94,13 @@ void peano4::dataview::tests::FaceMarkerTest::testMasks() {
   validate(marker.isHanging(0));
   validateFalse(marker.isHanging(1));
 
+  // The cell state is independent of the per-face masks.
+  marker.cellHasBeenRefined = true;
+  marker.cellWillBeRefined  = false;
+  validate(marker.hasCellBeenRefined());
+  validateFalse(marker.willCellBeRefined());
+  validateFalse(marker.hasBeenRefined(0));
+
   marker.select(1);
   validate(marker.hasBeenRefined());
   validateFalse(marker.willBeRefined());
@@ -101,44 +109,52 @@ void peano4::dataview::tests::FaceMarkerTest::testMasks() {
 }
 
 void peano4::dataview::tests::FaceMarkerTest::testRelativePositions() {
-  auto marker = createMarker();
+  constexpr int SubdivisionFactor = peano4::sfc::ActiveCurve::SubdivisionFactor;
+  auto          marker            = createMarker();
   for (int d = 0; d < DIMENSIONS; d++) {
-    marker.relativePositionWithinFatherCell[d] = d == 0 ? 2 : 1;
+    marker.relativePositionWithinFatherCell[d] = d == 0 ? SubdivisionFactor - 1 : 1;
   }
 
   // The face on the positive side along an axis shifts the position entry of
   // that axis by one.
-  validateEquals(marker.getRelativePositionWithinFatherCell(0)(0), 2);
-  validateEquals(marker.getRelativePositionWithinFatherCell(DIMENSIONS)(0), 3);
+  validateEquals(marker.getRelativePositionWithinFatherCell(0)(0), SubdivisionFactor - 1);
+  validateEquals(marker.getRelativePositionWithinFatherCell(DIMENSIONS)(0), SubdivisionFactor);
 
   marker.select(0);
-  validateEquals(marker.getRelativePositionWithinFatherCell()(0), 2);
+  validateEquals(marker.getRelativePositionWithinFatherCell()(0), SubdivisionFactor - 1);
 
   // The father-face position drops the normal direction's entry.
   marker.select(0);
   validateEquals(marker.getRelativePositionWithinFatherFace()(0), 1);
   marker.select(1);
-  validateEquals(marker.getRelativePositionWithinFatherFace()(0), 2);
+  validateEquals(marker.getRelativePositionWithinFatherFace()(0), SubdivisionFactor - 1);
 }
 
 void peano4::dataview::tests::FaceMarkerTest::testInteriorFaceWithinPatch() {
-  auto marker = createMarker();
+  constexpr int SubdivisionFactor = peano4::sfc::ActiveCurve::SubdivisionFactor;
+  auto          marker            = createMarker();
 
-  // The middle subcell's faces are interior in every direction.
-  for (int d = 0; d < DIMENSIONS; d++) {
-    marker.relativePositionWithinFatherCell[d] = 1;
+  // Only the lower face of the first subcell and the upper face of the last
+  // subcell along an axis lie on the patch boundary.
+  for (int normal = 0; normal < DIMENSIONS; normal++) {
+    for (int position = 0; position < SubdivisionFactor; position++) {
+      for (int d = 0; d < DIMENSIONS; d++) {
+        marker.relativePositionWithinFatherCell[d] = d == normal ? position : 0;
+      }
+      const bool lowerFaceIsInterior = position > 0;
+      const bool upperFaceIsInterior = position < SubdivisionFactor - 1;
+      validateEqualsWithParams2(
+        marker.select(normal).isInteriorFaceWithinPatch(),
+        lowerFaceIsInterior,
+        normal,
+        position
+      );
+      validateEqualsWithParams2(
+        marker.select(normal + DIMENSIONS).isInteriorFaceWithinPatch(),
+        upperFaceIsInterior,
+        normal,
+        position
+      );
+    }
   }
-  validate(marker.select(0).isInteriorFaceWithinPatch());
-  validate(marker.select(DIMENSIONS).isInteriorFaceWithinPatch());
-
-  // On the left boundary subcell the left face lies on the patch boundary and
-  // the right face is interior.
-  marker.relativePositionWithinFatherCell[0] = 0;
-  validateFalse(marker.select(0).isInteriorFaceWithinPatch());
-  validate(marker.select(DIMENSIONS).isInteriorFaceWithinPatch());
-
-  // The right boundary subcell mirrors this.
-  marker.relativePositionWithinFatherCell[0] = 2;
-  validate(marker.select(0).isInteriorFaceWithinPatch());
-  validateFalse(marker.select(DIMENSIONS).isInteriorFaceWithinPatch());
 }

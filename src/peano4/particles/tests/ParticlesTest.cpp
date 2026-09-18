@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "ParticlesTest.h"
 
+#include "peano4/Constants.h"
 #include "peano4/particles/ParticleFactory.h"
 #include "peano4/particles/ParticleSet.h"
 #include "peano4/particles/particles.h"
@@ -21,7 +22,7 @@ namespace {
     void setData(const int index, const double value) { data[index] = value; }
     void setParallelState(const ParallelState state) { parallelState = state; }
 
-    const std::array<double, 2>& getData() const { return data; }
+    [[nodiscard]] const std::array<double, 2>& getData() const { return data; }
 
     tarch::la::Vector<DIMENSIONS, double> x{0.0};
     double                                searchRadius{0.0};
@@ -132,7 +133,7 @@ void peano4::particles::tests::ParticlesTest::testParticleFactory() {
   const tarch::la::Vector<DIMENSIONS, double> unitSize(1.0);
   auto                                        localParticles =
     peano4::particles::createEquallySpacedParticles<FactoryParticle>(0.5, unitCentre, unitSize, false);
-  validateEquals(localParticles.size(), static_cast<std::size_t>(TWO_POWER_D));
+  validateEquals(localParticles.size(), static_cast<std::size_t>(peano4::Power<2, DIMENSIONS>));
   for (auto* const localParticle : localParticles) {
     delete localParticle;
   }
@@ -145,7 +146,7 @@ void peano4::particles::tests::ParticlesTest::testParticleFactory() {
     unitSize,
     false
   );
-  validateEquals(alignedParticles.size(), static_cast<std::size_t>(TWO_POWER_D));
+  validateEquals(alignedParticles.size(), static_cast<std::size_t>(peano4::Power<2, DIMENSIONS>));
   for (auto* const alignedParticle : alignedParticles) {
     delete alignedParticle;
   }
@@ -166,15 +167,17 @@ void peano4::particles::tests::ParticlesTest::testParticleSetStatistics() {
   validateEquals(TestParticleSet::getNumberOfRemainingLocalParticles(), 7);
   validate(TestParticleSet::printParticleStateStatistics().find("#remaining=7") != std::string::npos);
 
-  TestParticleSet particleSet;
 #if PEANO_DEBUG
+  TestParticleSet                             particleSetWithDebugData;
   const tarch::la::Vector<DIMENSIONS, double> debugX(0.25);
   const tarch::la::Vector<DIMENSIONS, double> debugH(0.5);
-  particleSet.setDebugX(debugX);
-  particleSet.setDebugH(debugH);
-  validateEquals(particleSet.getDebugX(), debugX);
-  validateEquals(particleSet.getDebugH(), debugH);
+  particleSetWithDebugData.setDebugX(debugX);
+  particleSetWithDebugData.setDebugH(debugH);
+  validateEquals(particleSetWithDebugData.getDebugX(), debugX);
+  validateEquals(particleSetWithDebugData.getDebugH(), debugH);
 #endif
+
+  const TestParticleSet particleSet;
   validate(not particleSet.toString().empty());
 
   TestParticleSet::clearReassignmentStatistics();

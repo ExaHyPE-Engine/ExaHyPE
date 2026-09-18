@@ -62,10 +62,10 @@ void peano4::grid::tests::StackExchangeTest::testSendAndReceiveToSelf() {
   const int      localRank    = rank.getRank();
 
   {
-    peano4::grid::Stack<PlainRecord> sender;
-    peano4::grid::Stack<PlainRecord> receiver;
-    StackExchangeJob<PlainRecord>    sendJob;
-    StackExchangeJob<PlainRecord>    receiveJob;
+    peano4::grid::Stack<PlainRecord>            sender;
+    peano4::grid::Stack<PlainRecord>            receiver;
+    peano4::grid::StackExchangeJob<PlainRecord> sendJob;
+    peano4::grid::StackExchangeJob<PlainRecord> receiveJob;
 
     sender.resize(NumberOfElements);
     for (int element = 0; element < NumberOfElements; element++) {
@@ -74,8 +74,8 @@ void peano4::grid::tests::StackExchangeTest::testSendAndReceiveToSelf() {
       }
     }
 
-    startReceive(receiver, receiveJob, localRank, Tag, communicator, NumberOfElements);
-    startSend(sender, sendJob, localRank, Tag, communicator);
+    peano4::grid::startReceive(receiver, receiveJob, localRank, Tag, communicator, NumberOfElements);
+    peano4::grid::startSend(sender, sendJob, localRank, Tag, communicator);
     completeTransfer(sender, sendJob, receiver, receiveJob);
 
     validate(sender.empty());
@@ -88,18 +88,18 @@ void peano4::grid::tests::StackExchangeTest::testSendAndReceiveToSelf() {
   }
 
   {
-    peano4::grid::Stack<SelfSerialisingRecord> sender;
-    peano4::grid::Stack<SelfSerialisingRecord> receiver;
-    StackExchangeJob<SelfSerialisingRecord>    sendJob;
-    StackExchangeJob<SelfSerialisingRecord>    receiveJob;
+    peano4::grid::Stack<peano4::grid::tests::SelfSerialisingRecord>            sender;
+    peano4::grid::Stack<peano4::grid::tests::SelfSerialisingRecord>            receiver;
+    peano4::grid::StackExchangeJob<peano4::grid::tests::SelfSerialisingRecord> sendJob;
+    peano4::grid::StackExchangeJob<peano4::grid::tests::SelfSerialisingRecord> receiveJob;
 
     sender.resize(NumberOfElements);
     for (int element = 0; element < NumberOfElements; element++) {
-      sender[element] = SelfSerialisingRecord(ValuesPerRecord, element * 10);
+      sender[element] = peano4::grid::tests::SelfSerialisingRecord(ValuesPerRecord, element * 10);
     }
 
-    startReceive(receiver, receiveJob, localRank, Tag, communicator, NumberOfElements);
-    startSend(sender, sendJob, localRank, Tag, communicator);
+    peano4::grid::startReceive(receiver, receiveJob, localRank, Tag, communicator, NumberOfElements);
+    peano4::grid::startSend(sender, sendJob, localRank, Tag, communicator);
     completeTransfer(sender, sendJob, receiver, receiveJob);
 
     validate(sender.empty());
@@ -132,10 +132,10 @@ void peano4::grid::tests::StackExchangeTest::testSendAndReceiveInARing() {
   const int      predecessor   = (localRank - 1 + numberOfRanks) % numberOfRanks;
 
   {
-    peano4::grid::Stack<PlainRecord> sender;
-    peano4::grid::Stack<PlainRecord> receiver;
-    StackExchangeJob<PlainRecord>    sendJob;
-    StackExchangeJob<PlainRecord>    receiveJob;
+    peano4::grid::Stack<PlainRecord>            sender;
+    peano4::grid::Stack<PlainRecord>            receiver;
+    peano4::grid::StackExchangeJob<PlainRecord> sendJob;
+    peano4::grid::StackExchangeJob<PlainRecord> receiveJob;
 
     sender.resize(NumberOfElements);
     for (int element = 0; element < NumberOfElements; element++) {
@@ -145,11 +145,11 @@ void peano4::grid::tests::StackExchangeTest::testSendAndReceiveInARing() {
     }
 
     if (localRank % 2 == 0) {
-      startSend(sender, sendJob, successor, Tag, communicator);
-      startReceive(receiver, receiveJob, predecessor, Tag, communicator, NumberOfElements);
+      peano4::grid::startSend(sender, sendJob, successor, Tag, communicator);
+      peano4::grid::startReceive(receiver, receiveJob, predecessor, Tag, communicator, NumberOfElements);
     } else {
-      startReceive(receiver, receiveJob, predecessor, Tag, communicator, NumberOfElements);
-      startSend(sender, sendJob, successor, Tag, communicator);
+      peano4::grid::startReceive(receiver, receiveJob, predecessor, Tag, communicator, NumberOfElements);
+      peano4::grid::startSend(sender, sendJob, successor, Tag, communicator);
     }
     completeTransfer(sender, sendJob, receiver, receiveJob);
 
@@ -163,22 +163,22 @@ void peano4::grid::tests::StackExchangeTest::testSendAndReceiveInARing() {
   }
 
   {
-    peano4::grid::Stack<SelfSerialisingRecord> sender;
-    peano4::grid::Stack<SelfSerialisingRecord> receiver;
-    StackExchangeJob<SelfSerialisingRecord>    sendJob;
-    StackExchangeJob<SelfSerialisingRecord>    receiveJob;
+    peano4::grid::Stack<peano4::grid::tests::SelfSerialisingRecord>            sender;
+    peano4::grid::Stack<peano4::grid::tests::SelfSerialisingRecord>            receiver;
+    peano4::grid::StackExchangeJob<peano4::grid::tests::SelfSerialisingRecord> sendJob;
+    peano4::grid::StackExchangeJob<peano4::grid::tests::SelfSerialisingRecord> receiveJob;
 
     sender.resize(NumberOfElements);
     for (int element = 0; element < NumberOfElements; element++) {
-      sender[element] = SelfSerialisingRecord(ValuesPerRecord, localRank * 1000 + element * 10);
+      sender[element] = peano4::grid::tests::SelfSerialisingRecord(ValuesPerRecord, localRank * 1000 + element * 10);
     }
 
     if (localRank % 2 == 0) {
-      startSend(sender, sendJob, successor, Tag, communicator);
-      startReceive(receiver, receiveJob, predecessor, Tag, communicator, NumberOfElements);
+      peano4::grid::startSend(sender, sendJob, successor, Tag, communicator);
+      peano4::grid::startReceive(receiver, receiveJob, predecessor, Tag, communicator, NumberOfElements);
     } else {
-      startReceive(receiver, receiveJob, predecessor, Tag, communicator, NumberOfElements);
-      startSend(sender, sendJob, successor, Tag, communicator);
+      peano4::grid::startReceive(receiver, receiveJob, predecessor, Tag, communicator, NumberOfElements);
+      peano4::grid::startSend(sender, sendJob, successor, Tag, communicator);
     }
     completeTransfer(sender, sendJob, receiver, receiveJob);
 

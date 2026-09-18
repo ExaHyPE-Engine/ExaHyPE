@@ -72,10 +72,10 @@ class FV(object):
         self._action_set_initial_conditions = None
         self._action_set_AMR = None
         self._action_set_AMR_throughout_grid_construction = None
-        self._action_set_handle_boundary = None
+        self._action_set_apply_boundary_conditions = None
         self._action_set_project_patch_onto_faces = None
         self._action_set_roll_over_updates = None
-        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = None
+        self._action_set_adaptive_mesh_face_coupling = None
         self._action_set_dynamic_amr_transfer = None
         self._action_set_postprocess_solution = None
         self._action_set_preprocess_solution = None
@@ -150,7 +150,8 @@ We use a domain with offset ("""
             + ") and size ("
             + str(domain_size)
             + """). Peano 4 cuts this domain equidistantly
-and recursively into three parts along each coordinate axis. This yields a spacetree.
+and recursively into k parts along each coordinate axis, with k the subdivision factor
+of the active curve (3 on the Peano curve, 2 on the Hilbert curve). This yields a spacetree.
 
 ExaHyPE 2 embeds """
             + str(self._patch_size)
@@ -281,8 +282,8 @@ and additional AMR levels is configured by the executable at runtime.
             called_by_grid_construction=False,
             skip_after_topology_change=False,
         )
-        self._action_set_handle_boundary = (
-            exahype2.solvers.fv.actionsets.HandleBoundary(
+        self._action_set_apply_boundary_conditions = (
+            exahype2.solvers.fv.actionsets.ApplyBoundaryConditions(
                 self, self._store_cell_data_default_guard()
             )
         )
@@ -296,7 +297,7 @@ and additional AMR levels is configured by the executable at runtime.
                 self, self._store_face_data_default_guard(), self._store_cell_data_default_guard()
             )
         )
-        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.fv.actionsets.AdaptiveMeshFaceCoupling(
+        self._action_set_adaptive_mesh_face_coupling = exahype2.solvers.fv.actionsets.AdaptiveMeshFaceCoupling(
             solver=self,
         )
         self._action_set_dynamic_amr_transfer = exahype2.solvers.fv.actionsets.DynamicAMRTransfer(
@@ -324,7 +325,7 @@ and additional AMR levels is configured by the executable at runtime.
         self._action_set_AMR.descend_invocation_order = self._baseline_action_set_descend_invocation_order + 2
         self._action_set_AMR_throughout_grid_construction.descend_invocation_order = self._baseline_action_set_descend_invocation_order + 2
         self._action_set_AMR_throughout_dynamic_amr.descend_invocation_order = self._baseline_action_set_descend_invocation_order + 2
-        self._action_set_handle_boundary.descend_invocation_order = (
+        self._action_set_apply_boundary_conditions.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order + 1
         )
         self._action_set_project_patch_onto_faces.descend_invocation_order = (
@@ -333,7 +334,7 @@ and additional AMR levels is configured by the executable at runtime.
         self._action_set_roll_over_updates.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order
         )
-        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.descend_invocation_order = (
+        self._action_set_adaptive_mesh_face_coupling.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order + 1
         )
         self._action_set_dynamic_amr_transfer.descend_invocation_order = (
@@ -491,7 +492,7 @@ and additional AMR levels is configured by the executable at runtime.
         on the way up and restricts the face data the boundary conditions read.
         """
         step.add_action_set(self._action_set_preprocess_solution)
-        step.add_action_set(self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement)
+        step.add_action_set(self._action_set_adaptive_mesh_face_coupling)
         step.add_action_set(self._action_set_roll_over_updates)
         step.add_action_set(self._action_set_initial_conditions)
         step.add_action_set(self._action_set_project_patch_onto_faces)
@@ -576,11 +577,11 @@ and additional AMR levels is configured by the executable at runtime.
         The inter-grid transfer operators run before the boundary conditions.
         """
         step.add_action_set(self._action_set_preprocess_solution)
-        step.add_action_set(self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement)
+        step.add_action_set(self._action_set_adaptive_mesh_face_coupling)
         step.add_action_set(self._action_set_roll_over_updates)
         step.add_action_set(self._action_set_update_face_label)
         step.add_action_set(self._action_set_update_cell_label)
-        step.add_action_set(self._action_set_handle_boundary)
+        step.add_action_set(self._action_set_apply_boundary_conditions)
         step.add_action_set(self._action_set_update_patch)
         step.add_action_set(self._action_set_project_patch_onto_faces)
         step.add_action_set(self._action_set_AMR)

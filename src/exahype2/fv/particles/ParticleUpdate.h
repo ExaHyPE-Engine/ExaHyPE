@@ -16,9 +16,9 @@ namespace exahype2::fv::particles {
   INLINE_METHOD void updateParticleState(
     Particle&                           particle,
     const peano4::dataview::CellMarker& cellMarker,
-    const double* NOALIAS const         cellValues,
-    const double                        timeStepSize,
-    const int                           integrationMethod
+    const double* NOALIAS               cellValues,
+    double                              timeStepSize,
+    int                                 integrationMethod
   );
 } // namespace exahype2::fv::particles
 

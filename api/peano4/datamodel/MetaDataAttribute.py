@@ -147,11 +147,14 @@ class BooleanArray(Attribute):
     def storage_type(self):
         cardinality_aliases = {
             "DIMENSIONS": 3,
-            "TWO_POWER_D": 8,
+            "peano4::VerticesPerCell": 8,
+            "peano4::CellsPerVertex": 8,
         }
         try:
             cardinality = int(self.cardinality)
         except ValueError:
+            # A C++ expression has no value here, so an unlisted one falls back to
+            # the widest word the static_assert of the member declaration allows.
             cardinality = cardinality_aliases.get(self.cardinality, 64)
 
         if cardinality <= 8:

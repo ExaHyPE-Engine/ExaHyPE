@@ -3,7 +3,7 @@
 
 /** Returns one attribute from the halo-free volume containing particleX. */
 template <typename DataType>
-DataType exahype2::fv::internal::projectValueOntoParticle_piecewiseConstant(
+DataType exahype2::fv::interpolateValueAtPositionPiecewiseConstant(
   const peano4::dataview::CellMarker&          marker,
   int                                          voxelsPerAxis,
   int                                          unknownsPerVoxel,
@@ -12,7 +12,7 @@ DataType exahype2::fv::internal::projectValueOntoParticle_piecewiseConstant(
   int                                          unknown
 ) {
   const tarch::la::Vector<DIMENSIONS, int> voxel =
-    exahype2::fv::internal::mapParticleOntoVoxel(marker, voxelsPerAxis, particleX);
+    exahype2::fv::particles::interpolation::mapParticleOntoVoxel(marker, voxelsPerAxis, particleX);
 
   const int voxelIndex = peano4::dLinearised(voxel, voxelsPerAxis);
 
@@ -24,7 +24,7 @@ DataType exahype2::fv::internal::projectValueOntoParticle_piecewiseConstant(
  * Boundary points use the closest volume value along directions lacking a neighbour.
  */
 template <typename DataType>
-DataType exahype2::fv::internal::projectValueOntoParticle_piecewiseLinear(
+DataType exahype2::fv::interpolateValueAtPositionPiecewiseLinear(
   const peano4::dataview::CellMarker&          marker,
   int                                          voxelsPerAxis,
   int                                          unknownsPerVoxel,
@@ -32,12 +32,13 @@ DataType exahype2::fv::internal::projectValueOntoParticle_piecewiseLinear(
   const tarch::la::Vector<DIMENSIONS, double>& particleX,
   int                                          unknown
 ) {
-  const tarch::la::Vector<DIMENSIONS, int> biasedVoxel = mapBiasedParticleOntoVoxel(marker, voxelsPerAxis, particleX);
+  const tarch::la::Vector<DIMENSIONS, int> biasedVoxel =
+    exahype2::fv::particles::interpolation::mapBiasedParticleOntoVoxel(marker, voxelsPerAxis, particleX);
 
   const double volumeWidth = getVolumeLength(marker.getH(), voxelsPerAxis);
 
   double interpolatedValue = 0.0;
-  peano4::dForEachCorner([&](const tarch::la::Vector<DIMENSIONS, int>& corner, int /*linearisedCorner*/) {
+  peano4::dForEachCorner([&](const tarch::la::Vector<DIMENSIONS, int>& corner, [[maybe_unused]] int linearisedCorner) {
     const tarch::la::Vector<DIMENSIONS, int>    currentVoxel = biasedVoxel + corner;
     const tarch::la::Vector<DIMENSIONS, double> currentVoxelX =
       getVolumeCentre(marker.getX(), marker.getH(), voxelsPerAxis, currentVoxel);
@@ -54,7 +55,8 @@ DataType exahype2::fv::internal::projectValueOntoParticle_piecewiseLinear(
       } else {
         weight = 0.0;
       }
-      assertion(tarch::la::smallerEquals(weight, 1.0), weight, corner, relativeDistance);
+      [[maybe_unused]] const bool weightIsAtMostOne = tarch::la::smallerEquals(weight, 1.0);
+      assertion(weightIsAtMostOne, weight, corner, relativeDistance);
     }
     if (weight > 0.0) {
       interpolatedValue += weight * Q[currentVoxelIndex * unknownsPerVoxel + unknown];
@@ -66,14 +68,14 @@ DataType exahype2::fv::internal::projectValueOntoParticle_piecewiseLinear(
 
 /** Maps the source attribute pack to particle data entries starting at zero. */
 template <typename DataType, int SourceIndex, int... SourceIndices, typename Particle>
-void exahype2::fv::projectValuesOntoParticle_piecewiseConstant(
+void exahype2::fv::projectValuesOntoParticlePiecewiseConstant(
   const peano4::dataview::CellMarker& marker,
   int                                 voxelsPerAxis,
   int                                 unknownsPerVoxel,
   const DataType* NOALIAS             Q,
   Particle&                           particle
 ) {
-  internal::projectValuesOntoParticle_piecewiseConstant<DataType, Particle, SourceIndex, SourceIndices...>(
+  exahype2::fv::projectValuePackOntoParticlePiecewiseConstant<DataType, Particle, SourceIndex, SourceIndices...>(
     marker,
     voxelsPerAxis,
     unknownsPerVoxel,
@@ -85,14 +87,14 @@ void exahype2::fv::projectValuesOntoParticle_piecewiseConstant(
 
 /** Multilinearly maps the source attribute pack to particle data entries starting at zero. */
 template <typename DataType, int SourceIndex, int... SourceIndices, typename Particle>
-void exahype2::fv::projectValuesOntoParticle_piecewiseLinear(
+void exahype2::fv::projectValuesOntoParticlePiecewiseLinear(
   const peano4::dataview::CellMarker& marker,
   int                                 voxelsPerAxis,
   int                                 unknownsPerVoxel,
   const DataType* NOALIAS             Q,
   Particle&                           particle
 ) {
-  internal::projectValuesOntoParticle_piecewiseLinear<DataType, Particle, SourceIndex, SourceIndices...>(
+  exahype2::fv::projectValuePackOntoParticlePiecewiseLinear<DataType, Particle, SourceIndex, SourceIndices...>(
     marker,
     voxelsPerAxis,
     unknownsPerVoxel,
@@ -104,7 +106,7 @@ void exahype2::fv::projectValuesOntoParticle_piecewiseLinear(
 
 /** Writes one piecewise-constant source attribute and recursively processes the remaining pack. */
 template <typename DataType, typename Particle, int SourceIndex, int... SourceIndices>
-void exahype2::fv::internal::projectValuesOntoParticle_piecewiseConstant(
+void exahype2::fv::projectValuePackOntoParticlePiecewiseConstant(
   const peano4::dataview::CellMarker& marker,
   int                                 voxelsPerAxis,
   int                                 unknownsPerVoxel,
@@ -114,7 +116,7 @@ void exahype2::fv::internal::projectValuesOntoParticle_piecewiseConstant(
 ) {
   particle.setData(
     destinationIndex,
-    internal::projectValueOntoParticle_piecewiseConstant(
+    exahype2::fv::interpolateValueAtPositionPiecewiseConstant(
       marker,
       voxelsPerAxis,
       unknownsPerVoxel,
@@ -124,7 +126,7 @@ void exahype2::fv::internal::projectValuesOntoParticle_piecewiseConstant(
     )
   );
   if constexpr (sizeof...(SourceIndices) > 0) {
-    internal::projectValuesOntoParticle_piecewiseConstant<DataType, Particle, SourceIndices...>(
+    exahype2::fv::projectValuePackOntoParticlePiecewiseConstant<DataType, Particle, SourceIndices...>(
       marker,
       voxelsPerAxis,
       unknownsPerVoxel,
@@ -137,7 +139,7 @@ void exahype2::fv::internal::projectValuesOntoParticle_piecewiseConstant(
 
 /** Writes one multilinear source attribute and recursively processes the remaining pack. */
 template <typename DataType, typename Particle, int SourceIndex, int... SourceIndices>
-void exahype2::fv::internal::projectValuesOntoParticle_piecewiseLinear(
+void exahype2::fv::projectValuePackOntoParticlePiecewiseLinear(
   const peano4::dataview::CellMarker& marker,
   int                                 voxelsPerAxis,
   int                                 unknownsPerVoxel,
@@ -147,7 +149,7 @@ void exahype2::fv::internal::projectValuesOntoParticle_piecewiseLinear(
 ) {
   particle.setData(
     destinationIndex,
-    internal::projectValueOntoParticle_piecewiseLinear(
+    exahype2::fv::interpolateValueAtPositionPiecewiseLinear(
       marker,
       voxelsPerAxis,
       unknownsPerVoxel,
@@ -157,7 +159,7 @@ void exahype2::fv::internal::projectValuesOntoParticle_piecewiseLinear(
     )
   );
   if constexpr (sizeof...(SourceIndices) > 0) {
-    internal::projectValuesOntoParticle_piecewiseLinear<DataType, Particle, SourceIndices...>(
+    exahype2::fv::projectValuePackOntoParticlePiecewiseLinear<DataType, Particle, SourceIndices...>(
       marker,
       voxelsPerAxis,
       unknownsPerVoxel,
@@ -168,9 +170,9 @@ void exahype2::fv::internal::projectValuesOntoParticle_piecewiseLinear(
   }
 }
 
-/** Maps SourceIndex from the containing volume to particle data entry DestIndex. */
-template <int SourceIndex, int DestIndex, typename Particle, typename DataType>
-void exahype2::fv::projectValueOntoParticle_piecewiseConstant(
+/** Maps SourceIndex from the containing volume to particle data entry DestinationIndex. */
+template <int SourceIndex, int DestinationIndex, typename Particle, typename DataType>
+void exahype2::fv::projectValueOntoParticlePiecewiseConstant(
   const peano4::dataview::CellMarker& marker,
   int                                 voxelsPerAxis,
   int                                 unknownsPerVoxel,
@@ -178,8 +180,8 @@ void exahype2::fv::projectValueOntoParticle_piecewiseConstant(
   Particle&                           particle
 ) {
   particle.setData(
-    DestIndex,
-    internal::projectValueOntoParticle_piecewiseConstant(
+    DestinationIndex,
+    exahype2::fv::interpolateValueAtPositionPiecewiseConstant(
       marker,
       voxelsPerAxis,
       unknownsPerVoxel,
@@ -192,7 +194,7 @@ void exahype2::fv::projectValueOntoParticle_piecewiseConstant(
 
 /** Maps every volume attribute to the particle entry with the same index. */
 template <typename Particle, typename DataType>
-void exahype2::fv::projectAllValuesOntoParticle_piecewiseConstant(
+void exahype2::fv::projectAllValuesOntoParticlePiecewiseConstant(
   const peano4::dataview::CellMarker& marker,
   int                                 voxelsPerAxis,
   int                                 unknownsPerVoxel,
@@ -202,7 +204,7 @@ void exahype2::fv::projectAllValuesOntoParticle_piecewiseConstant(
   for (int sourceAttribute = 0; sourceAttribute < unknownsPerVoxel; sourceAttribute++) {
     particle.setData(
       sourceAttribute,
-      internal::projectValueOntoParticle_piecewiseConstant(
+      exahype2::fv::interpolateValueAtPositionPiecewiseConstant(
         marker,
         voxelsPerAxis,
         unknownsPerVoxel,
@@ -214,9 +216,9 @@ void exahype2::fv::projectAllValuesOntoParticle_piecewiseConstant(
   }
 }
 
-/** Multilinearly maps SourceIndex to particle data entry DestIndex. */
-template <int SourceIndex, int DestIndex, typename Particle, typename DataType>
-void exahype2::fv::projectValueOntoParticle_piecewiseLinear(
+/** Multilinearly maps SourceIndex to particle data entry DestinationIndex. */
+template <int SourceIndex, int DestinationIndex, typename Particle, typename DataType>
+void exahype2::fv::projectValueOntoParticlePiecewiseLinear(
   const peano4::dataview::CellMarker& marker,
   int                                 voxelsPerAxis,
   int                                 unknownsPerVoxel,
@@ -224,8 +226,8 @@ void exahype2::fv::projectValueOntoParticle_piecewiseLinear(
   Particle&                           particle
 ) {
   particle.setData(
-    DestIndex,
-    internal::projectValueOntoParticle_piecewiseLinear(
+    DestinationIndex,
+    exahype2::fv::interpolateValueAtPositionPiecewiseLinear(
       marker,
       voxelsPerAxis,
       unknownsPerVoxel,
@@ -238,7 +240,7 @@ void exahype2::fv::projectValueOntoParticle_piecewiseLinear(
 
 /** Multilinearly maps every volume attribute to the particle entry with the same index. */
 template <typename Particle, typename DataType>
-void exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear(
+void exahype2::fv::projectAllValuesOntoParticlePiecewiseLinear(
   const peano4::dataview::CellMarker& marker,
   int                                 voxelsPerAxis,
   int                                 unknownsPerVoxel,
@@ -246,7 +248,7 @@ void exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear(
   Particle&                           particle
 ) {
   for (int sourceAttribute = 0; sourceAttribute < unknownsPerVoxel; sourceAttribute++) {
-    const DataType interpolatedValue = internal::projectValueOntoParticle_piecewiseLinear(
+    const DataType interpolatedValue = exahype2::fv::interpolateValueAtPositionPiecewiseLinear(
       marker,
       voxelsPerAxis,
       unknownsPerVoxel,
@@ -255,36 +257,7 @@ void exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear(
       sourceAttribute
     );
 
-    assertion(interpolatedValue == interpolatedValue);
-    particle.setData(sourceAttribute, interpolatedValue);
-  }
-}
-
-/**
- * Multilinearly maps every volume attribute to the corresponding particle data index.
- */
-template <typename Particle, typename DataType>
-void exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear_explicit_Euler(
-  const peano4::dataview::CellMarker&                    marker,
-  int                                                    voxelsPerAxis,
-  int                                                    unknownsPerVoxel,
-  const DataType* NOALIAS                                Q,
-  [[maybe_unused]] double                                timeStepSize,
-  [[maybe_unused]] tarch::la::Vector<DIMENSIONS, int>    indices,
-  [[maybe_unused]] tarch::la::Vector<DIMENSIONS, double> factors,
-  Particle&                                              particle
-) {
-  for (int sourceAttribute = 0; sourceAttribute < unknownsPerVoxel; sourceAttribute++) {
-    const DataType interpolatedValue = internal::projectValueOntoParticle_piecewiseLinear(
-      marker,
-      voxelsPerAxis,
-      unknownsPerVoxel,
-      Q,
-      particle.getX(),
-      sourceAttribute
-    );
-
-    assertion(interpolatedValue == interpolatedValue);
+    assertion(interpolatedValue == interpolatedValue, interpolatedValue, sourceAttribute);
     particle.setData(sourceAttribute, interpolatedValue);
   }
 }
@@ -293,10 +266,8 @@ void exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear_explicit_Euler(
  * Interpolates selected attributes, applies gravity along the last coordinate axis,
  * advances the particle, and commits its position.
  *
- * Particle data entries beginning at ParticleVelocityAttributeOffset hold
- * velocity; entries beginning at ParticleAccelerationAttributeOffset hold
- * acceleration. The reflection at the domain boundary runs when one component
- * of periodicBoundaryConditions equals one.
+ * The reflection at the domain boundary runs when one component of
+ * periodicBoundaryConditions equals one.
  */
 template <int SourceIndex, int... SourceIndices, typename Particle, typename DataType>
 void exahype2::fv::updateParticleState(
@@ -310,7 +281,7 @@ void exahype2::fv::updateParticleState(
   tarch::la::Vector<DIMENSIONS, double> domainOffset,
   tarch::la::Vector<DIMENSIONS, double> periodicBoundaryConditions
 ) {
-  projectValuesOntoParticle_piecewiseLinear<DataType, SourceIndex, SourceIndices...>(
+  projectValuesOntoParticlePiecewiseLinear<DataType, SourceIndex, SourceIndices...>(
     marker,
     voxelsPerAxis,
     unknownsPerVoxel,
@@ -319,7 +290,10 @@ void exahype2::fv::updateParticleState(
   );
 
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    particle.setData(internal::ParticleAccelerationAttributeOffset + axis, axis == DIMENSIONS - 1 ? -9.81 : 0.0);
+    particle.setData(
+      exahype2::fv::particles::utils::ParticleAccelerationAttributeOffset + axis,
+      axis == DIMENSIONS - 1 ? -9.81 : 0.0
+    );
   }
 
   tarch::la::Vector<DIMENSIONS, double> newPosition = explicitEulerIntegration(particle, timeStepSize);
@@ -341,12 +315,13 @@ template <typename Particle>
 tarch::la::Vector<DIMENSIONS, double> exahype2::fv::explicitEulerIntegration(Particle& particle, double timeStepSize) {
   tarch::la::Vector<DIMENSIONS, double> newPosition;
   for (int axis = 0; axis < DIMENSIONS; ++axis) {
-    double       velocity     = particle.getData(internal::ParticleVelocityAttributeOffset + axis);
-    const double acceleration = particle.getData(internal::ParticleAccelerationAttributeOffset + axis);
+    double       velocity = particle.getData(exahype2::fv::particles::utils::ParticleVelocityAttributeOffset + axis);
+    const double acceleration =
+      particle.getData(exahype2::fv::particles::utils::ParticleAccelerationAttributeOffset + axis);
     velocity += acceleration * timeStepSize;
-    velocity = std::min(std::max(velocity, -internal::MaximumParticleSpeed), internal::MaximumParticleSpeed);
+    velocity = std::min(std::max(velocity, -exahype2::fv::MaximumParticleSpeed), exahype2::fv::MaximumParticleSpeed);
 
-    particle.setData(internal::ParticleVelocityAttributeOffset + axis, velocity);
+    particle.setData(exahype2::fv::particles::utils::ParticleVelocityAttributeOffset + axis, velocity);
 
     newPosition[axis] =
       particle.getX(axis) + velocity * timeStepSize + 0.5 * acceleration * timeStepSize * timeStepSize;
@@ -370,19 +345,19 @@ void exahype2::fv::reflectParticleAtDomainBoundary(
     const double lowerBound = domainOffset[axis];
     const double upperBound = domainOffset[axis] + domainSize[axis];
 
-    const double velocity = particle.getData(internal::ParticleVelocityAttributeOffset + axis);
+    const double velocity = particle.getData(exahype2::fv::particles::utils::ParticleVelocityAttributeOffset + axis);
 
     if (newPosition[axis] < lowerBound) {
       newPosition[axis] = lowerBound + (lowerBound - newPosition[axis]);
       particle.setData(
-        internal::ParticleVelocityAttributeOffset + axis,
-        -velocity * internal::CollisionVelocityRetention
+        exahype2::fv::particles::utils::ParticleVelocityAttributeOffset + axis,
+        -velocity * exahype2::fv::CollisionVelocityRetention
       );
     } else if (newPosition[axis] > upperBound) {
       newPosition[axis] = upperBound - (newPosition[axis] - upperBound);
       particle.setData(
-        internal::ParticleVelocityAttributeOffset + axis,
-        -velocity * internal::CollisionVelocityRetention
+        exahype2::fv::particles::utils::ParticleVelocityAttributeOffset + axis,
+        -velocity * exahype2::fv::CollisionVelocityRetention
       );
     }
   }

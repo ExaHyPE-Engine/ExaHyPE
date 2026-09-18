@@ -2,6 +2,9 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "JSONReader.h"
 
+#include "tarch/Assertions.h"
+#include "tarch/Termination.h"
+
 namespace {
   struct JSONValue;
   using JSONObject = std::unordered_map<std::string, JSONValue>;
@@ -11,16 +14,17 @@ namespace {
     std::variant<std::nullptr_t, bool, int, double, std::string, JSONArray, JSONObject> data;
   };
 
-  class Parser {
+  class Parser final {
   public:
-    explicit Parser(std::string input) :
-      _input(std::move(input)) {}
+    Parser(std::string input, std::string filepath) :
+      _input(std::move(input)),
+      _filepath(std::move(filepath)) {}
 
     JSONValue parse() {
       skipWhitespace();
       JSONValue result = parseValue();
       skipWhitespace();
-      if (!isAtEnd()) {
+      if (not isAtEnd()) {
         error("Unexpected trailing content");
       }
       return result;
@@ -28,40 +32,41 @@ namespace {
 
   private:
     const std::string _input;
-    std::size_t       _position = 0;
+    const std::string _filepath;
+    std::size_t       _position{0};
 
-    bool isAtEnd() const { return _position >= _input.size(); }
+    [[nodiscard]] bool isAtEnd() const { return _position >= _input.size(); }
 
-    char current() const { return isAtEnd() ? '\0' : _input[_position]; }
+    [[nodiscard]] char current() const { return isAtEnd() ? '\0' : _input[_position]; }
 
     char advance() { return isAtEnd() ? '\0' : _input[_position++]; }
 
     void skipWhitespace() {
-      while (!isAtEnd() && std::isspace(static_cast<unsigned char>(current()))) {
+      while (not isAtEnd() and std::isspace(static_cast<unsigned char>(current())) != 0) {
         ++_position;
       }
     }
 
-    [[noreturn]] void error(const std::string& message) const {
-      std::stringstream ss;
-      ss << message << " at position " << _position << ".";
-      throw std::runtime_error(ss.str());
+    [[noreturn]] void error(const std::string& reason) const {
+      std::stringstream message;
+      message << "Failed to parse JSON file \"" << _filepath << "\": " << reason << " at position " << _position << ".";
+      tarch::terminateWithError(message.str());
     }
 
-    void expect(char expected) {
+    void expect(const char expected) {
       if (advance() != expected) {
-        std::stringstream ss;
-        ss << "Expected '" << expected << "'";
-        error(ss.str());
+        std::stringstream message;
+        message << "Expected '" << expected << "'";
+        error(message.str());
       }
     }
 
     void consumeKeyword(const std::string& keyword) {
-      for (char ch : keyword) {
+      for (const char ch : keyword) {
         if (advance() != ch) {
-          std::stringstream ss;
-          ss << "Expected \"" << keyword << "\"";
-          error(ss.str());
+          std::stringstream message;
+          message << "Expected \"" << keyword << "\"";
+          error(message.str());
         }
       }
     }
@@ -85,7 +90,7 @@ namespace {
         consumeKeyword("null");
         return JSONValue{nullptr};
       default:
-        if (current() == '-' || std::isdigit(static_cast<unsigned char>(current()))) {
+        if (current() == '-' or std::isdigit(static_cast<unsigned char>(current())) != 0) {
           return parseNumber();
         }
         error("Unexpected token");
@@ -146,7 +151,7 @@ namespace {
       }
     }
 
-    static void appendUtf8(std::string& target, unsigned int codePoint) {
+    static void appendUtf8(std::string& target, const unsigned int codePoint) {
       if (codePoint <= 0x7F) {
         target.push_back(static_cast<char>(codePoint));
       } else if (codePoint <= 0x7FF) {
@@ -170,14 +175,14 @@ namespace {
       }
 
       const char ch = advance();
-      if (ch >= '0' && ch <= '9') {
+      if (ch >= '0' and ch <= '9') {
         return static_cast<unsigned int>(ch - '0');
       }
-      if (ch >= 'a' && ch <= 'f') {
-        return 10u + static_cast<unsigned int>(ch - 'a');
+      if (ch >= 'a' and ch <= 'f') {
+        return 10U + static_cast<unsigned int>(ch - 'a');
       }
-      if (ch >= 'A' && ch <= 'F') {
-        return 10u + static_cast<unsigned int>(ch - 'A');
+      if (ch >= 'A' and ch <= 'F') {
+        return 10U + static_cast<unsigned int>(ch - 'A');
       }
       error("Invalid unicode escape");
     }
@@ -186,7 +191,7 @@ namespace {
       expect('"');
 
       std::string result;
-      while (!isAtEnd()) {
+      while (not isAtEnd()) {
         const char ch = advance();
         if (ch == '"') {
           return result;
@@ -218,7 +223,7 @@ namespace {
             break;
           case 'u': {
             unsigned int codePoint = 0;
-            for (int i = 0; i < 4; ++i) {
+            for (int digit = 0; digit < 4; ++digit) {
               codePoint = (codePoint << 4) | parseHexDigit();
             }
             appendUtf8(result, codePoint);
@@ -242,14 +247,14 @@ namespace {
         advance();
       }
 
-      if (!std::isdigit(static_cast<unsigned char>(current()))) {
+      if (std::isdigit(static_cast<unsigned char>(current())) == 0) {
         error("Invalid number");
       }
 
       if (current() == '0') {
         advance();
       } else {
-        while (std::isdigit(static_cast<unsigned char>(current()))) {
+        while (std::isdigit(static_cast<unsigned char>(current())) != 0) {
           advance();
         }
       }
@@ -258,57 +263,55 @@ namespace {
       if (current() == '.') {
         isFloatingPoint = true;
         advance();
-        if (!std::isdigit(static_cast<unsigned char>(current()))) {
+        if (std::isdigit(static_cast<unsigned char>(current())) == 0) {
           error("Invalid number");
         }
-        while (std::isdigit(static_cast<unsigned char>(current()))) {
+        while (std::isdigit(static_cast<unsigned char>(current())) != 0) {
           advance();
         }
       }
 
-      if (current() == 'e' || current() == 'E') {
+      if (current() == 'e' or current() == 'E') {
         isFloatingPoint = true;
         advance();
-        if (current() == '+' || current() == '-') {
+        if (current() == '+' or current() == '-') {
           advance();
         }
-        if (!std::isdigit(static_cast<unsigned char>(current()))) {
+        if (std::isdigit(static_cast<unsigned char>(current())) == 0) {
           error("Invalid exponent");
         }
-        while (std::isdigit(static_cast<unsigned char>(current()))) {
+        while (std::isdigit(static_cast<unsigned char>(current())) != 0) {
           advance();
         }
       }
 
       const std::string token = _input.substr(start, _position - start);
+      const char* const end   = token.data() + token.size();
 
-      try {
-        if (isFloatingPoint) {
-          return JSONValue{std::stod(token)};
+      if (isFloatingPoint) {
+        auto       result = 0.0;
+        const auto parsed = std::from_chars(token.data(), end, result);
+        if (parsed.ec != std::errc{} or parsed.ptr != end) {
+          error("Failed to parse number");
         }
-        return JSONValue{std::stoi(token)};
-      } catch (const std::exception&) {
+        return JSONValue{result};
+      }
+
+      auto       result = 0;
+      const auto parsed = std::from_chars(token.data(), end, result);
+      if (parsed.ec != std::errc{} or parsed.ptr != end) {
         error("Failed to parse number");
       }
+      return JSONValue{result};
     }
   };
 
-  const JSONValue& getObjectValue(const JSONObject& object, const std::string& key) {
-    const auto entry = object.find(key);
-    if (entry == object.end()) {
-      std::stringstream ss;
-      ss << "JSON key \"" << key << "\" does not exist.";
-      throw std::runtime_error(ss.str());
-    }
-    return entry->second;
-  }
-
   template <typename T>
   const T& requireType(const JSONValue& value, const std::string& key, const char* expectedTypeName) {
-    if (!std::holds_alternative<T>(value.data)) {
-      std::stringstream ss;
-      ss << "JSON key \"" << key << "\" is not of type " << expectedTypeName << ".";
-      throw std::runtime_error(ss.str());
+    if (not std::holds_alternative<T>(value.data)) {
+      std::stringstream message;
+      message << "JSON key \"" << key << "\" is not of type " << expectedTypeName << ".";
+      tarch::terminateWithError(message.str());
     }
     return std::get<T>(value.data);
   }
@@ -320,11 +323,7 @@ namespace {
     while (start <= key.size()) {
       const std::size_t separator = key.find('.', start);
       const std::string part      = key.substr(start, separator - start);
-      if (part.empty()) {
-        std::stringstream ss;
-        ss << "JSON key \"" << key << "\" contains an empty path component.";
-        throw std::runtime_error(ss.str());
-      }
+      assertion(not part.empty(), key);
       result.push_back(part);
 
       if (separator == std::string::npos) {
@@ -336,35 +335,44 @@ namespace {
     return result;
   }
 
-  const JSONValue& getValue(const JSONObject& root, const std::string& key) {
+  /**
+   * Returns the value the dot-separated key names, or nullptr when a component is absent or when a
+   * component other than the last one holds no object.
+   */
+  const JSONValue* findValue(const JSONObject& root, const std::string& key) {
     const std::vector<std::string> path          = splitKey(key);
     const JSONObject*              currentObject = &root;
     const JSONValue*               currentValue  = nullptr;
 
-    for (std::size_t i = 0; i < path.size(); ++i) {
-      currentValue = &getObjectValue(*currentObject, path[i]);
+    for (std::size_t index = 0; index < path.size(); ++index) {
+      const auto entry = currentObject->find(path[index]);
+      if (entry == currentObject->end()) {
+        return nullptr;
+      }
+      currentValue = &entry->second;
 
-      if (i + 1 < path.size()) {
-        if (!std::holds_alternative<JSONObject>(currentValue->data)) {
-          std::stringstream ss;
-          ss << "JSON key \"" << key << "\" does not resolve to an object at component \"" << path[i] << "\".";
-          throw std::runtime_error(ss.str());
+      if (index + 1 < path.size()) {
+        if (not std::holds_alternative<JSONObject>(currentValue->data)) {
+          return nullptr;
         }
         currentObject = &std::get<JSONObject>(currentValue->data);
       }
     }
 
-    return *currentValue;
+    return currentValue;
   }
 
-  bool hasValue(const JSONObject& root, const std::string& key) {
-    try {
-      getValue(root, key);
-      return true;
-    } catch (const std::runtime_error&) {
-      return false;
+  const JSONValue& getValue(const JSONObject& root, const std::string& key) {
+    const JSONValue* const value = findValue(root, key);
+    if (value == nullptr) {
+      std::stringstream message;
+      message << "JSON key \"" << key << "\" does not exist.";
+      tarch::terminateWithError(message.str());
     }
+    return *value;
   }
+
+  bool hasValue(const JSONObject& root, const std::string& key) { return findValue(root, key) != nullptr; }
 } // namespace
 
 struct tarch::reader::JSONReader::Impl {
@@ -376,47 +384,41 @@ struct tarch::reader::JSONReader::Impl {
 tarch::reader::JSONReader::JSONReader(const std::string& filepath) :
   _impl(std::make_unique<Impl>()) {
   std::ifstream input(filepath.c_str());
-  if (!input.is_open()) {
-    std::stringstream ss;
-    ss << "Could not open JSON file at \"" << filepath << "\".";
-    throw std::runtime_error(ss.str());
+  if (not input.is_open()) {
+    std::stringstream message;
+    message << "Could not open JSON file at \"" << filepath << "\".";
+    tarch::terminateWithError(message.str());
   }
 
   std::stringstream buffer;
   buffer << input.rdbuf();
 
-  try {
-    JSONValue document = Parser(buffer.str()).parse();
-    if (!std::holds_alternative<JSONObject>(document.data)) {
-      std::stringstream ss;
-      ss << "JSON file \"" << filepath << "\" must contain a top-level object.";
-      throw std::runtime_error(ss.str());
-    }
-    _impl->root = std::get<JSONObject>(std::move(document.data));
-  } catch (const std::runtime_error& exception) {
-    std::stringstream ss;
-    ss << "Failed to parse JSON file \"" << filepath << "\": " << exception.what();
-    throw std::runtime_error(ss.str());
+  JSONValue document = Parser(buffer.str(), filepath).parse();
+  if (not std::holds_alternative<JSONObject>(document.data)) {
+    std::stringstream message;
+    message << "JSON file \"" << filepath << "\" must contain a top-level object.";
+    tarch::terminateWithError(message.str());
   }
+  _impl->root = std::get<JSONObject>(std::move(document.data));
 }
 
-tarch::reader::JSONReader::~JSONReader() {}
+tarch::reader::JSONReader::~JSONReader() = default;
 
 bool tarch::reader::JSONReader::hasKey(const std::string& key) const { return hasValue(_impl->root, key); }
 
 void tarch::reader::JSONReader::markRead(const std::string& key) const {
-  // Top-level component only, to match getUnusedKeys().
+  // getUnusedKeys() lists top-level keys, so the insert records the top-level component only.
   _impl->used.insert(key.substr(0, key.find('.')));
 }
 
 std::vector<std::string> tarch::reader::JSONReader::getUnusedKeys() const {
   std::vector<std::string> result;
   for (const auto& entry : _impl->root) {
-    if (_impl->used.count(entry.first) == 0) {
+    if (not _impl->used.contains(entry.first)) {
       result.push_back(entry.first);
     }
   }
-  // sort for a stable diagnostic order
+  // The root map iterates in an unspecified order, so the sort makes the result reproducible.
   std::sort(result.begin(), result.end());
   return result;
 }
@@ -449,21 +451,21 @@ std::string tarch::reader::JSONReader::getString(const std::string& key, const s
   return hasKey(key) ? getString(key) : fallback;
 }
 
-int tarch::reader::JSONReader::getInteger(const std::string& key, int fallback) const {
+int tarch::reader::JSONReader::getInteger(const std::string& key, const int fallback) const {
   return hasKey(key) ? getInteger(key) : fallback;
 }
 
-double tarch::reader::JSONReader::getDouble(const std::string& key, double fallback) const {
+double tarch::reader::JSONReader::getDouble(const std::string& key, const double fallback) const {
   return hasKey(key) ? getDouble(key) : fallback;
 }
 
-bool tarch::reader::JSONReader::getBoolean(const std::string& key, bool fallback) const {
+bool tarch::reader::JSONReader::getBoolean(const std::string& key, const bool fallback) const {
   return hasKey(key) ? getBoolean(key) : fallback;
 }
 
 std::vector<std::string> tarch::reader::JSONReader::getStringArray(const std::string& key) const {
   markRead(key);
-  const JSONArray&         source = requireType<JSONArray>(getValue(_impl->root, key), key, "array");
+  const auto&              source = requireType<JSONArray>(getValue(_impl->root, key), key, "array");
   std::vector<std::string> result;
   result.reserve(source.size());
   for (const JSONValue& entry : source) {
@@ -474,7 +476,7 @@ std::vector<std::string> tarch::reader::JSONReader::getStringArray(const std::st
 
 std::vector<int> tarch::reader::JSONReader::getIntegerArray(const std::string& key) const {
   markRead(key);
-  const JSONArray& source = requireType<JSONArray>(getValue(_impl->root, key), key, "array");
+  const auto&      source = requireType<JSONArray>(getValue(_impl->root, key), key, "array");
   std::vector<int> result;
   result.reserve(source.size());
   for (const JSONValue& entry : source) {
@@ -485,7 +487,7 @@ std::vector<int> tarch::reader::JSONReader::getIntegerArray(const std::string& k
 
 std::vector<double> tarch::reader::JSONReader::getDoubleArray(const std::string& key) const {
   markRead(key);
-  const JSONArray&    source = requireType<JSONArray>(getValue(_impl->root, key), key, "array");
+  const auto&         source = requireType<JSONArray>(getValue(_impl->root, key), key, "array");
   std::vector<double> result;
   result.reserve(source.size());
   for (const JSONValue& entry : source) {
@@ -494,9 +496,9 @@ std::vector<double> tarch::reader::JSONReader::getDoubleArray(const std::string&
     } else if (std::holds_alternative<double>(entry.data)) {
       result.push_back(std::get<double>(entry.data));
     } else {
-      std::stringstream ss;
-      ss << "JSON key \"" << key << "\" contains a non-numeric array element.";
-      throw std::runtime_error(ss.str());
+      std::stringstream message;
+      message << "JSON key \"" << key << "\" contains a non-numeric array element.";
+      tarch::terminateWithError(message.str());
     }
   }
   return result;
@@ -504,7 +506,7 @@ std::vector<double> tarch::reader::JSONReader::getDoubleArray(const std::string&
 
 std::vector<bool> tarch::reader::JSONReader::getBooleanArray(const std::string& key) const {
   markRead(key);
-  const JSONArray&  source = requireType<JSONArray>(getValue(_impl->root, key), key, "array");
+  const auto&       source = requireType<JSONArray>(getValue(_impl->root, key), key, "array");
   std::vector<bool> result;
   result.reserve(source.size());
   for (const JSONValue& entry : source) {

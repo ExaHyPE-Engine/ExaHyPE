@@ -2,8 +2,10 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "RiemannTest.h"
 
-#include "exahype2/dg/rusanov/Rusanov.h"
 #include "exahype2/Enumeration.h"
+#include "exahype2/dg/rusanov/Rusanov.h"
+#include "peano4/Loop.h"
+#include "tarch/la/Vector.h"
 
 namespace {
   constexpr int    Order              = 1;
@@ -17,12 +19,12 @@ namespace {
 
   exahype2::dg::Flux linearFlux() {
     return [](
-             [[maybe_unused]] const double* NOALIAS                        Q,
+             const double* NOALIAS                                         Q,
              [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
              [[maybe_unused]] double                                       t,
              [[maybe_unused]] double                                       dt,
              [[maybe_unused]] int                                          normal,
-             [[maybe_unused]] double* NOALIAS                              F
+             double* NOALIAS                                               F
            ) { F[0] = FluxFactor * Q[0]; };
   }
 
@@ -45,15 +47,15 @@ namespace {
   int solveOneFace(const double* projectedValues, double* solution) {
     const double quadraturePoints[2] = {0.5 - 0.5 / std::sqrt(3.0), 0.5 + 0.5 / std::sqrt(3.0)};
 
-    tarch::la::Vector<DIMENSIONS, double> cellSize(1.0);
-    tarch::la::Vector<DIMENSIONS, double> faceCentre(0.5);
+    const tarch::la::Vector<DIMENSIONS, double> cellSize(1.0);
+    tarch::la::Vector<DIMENSIONS, double>       faceCentre(0.5);
     faceCentre(FaceNumber % DIMENSIONS) = 0.0;
 
     for (int entry = 0; entry < BufferEntries; entry++) {
       solution[entry] = Unwritten;
     }
 
-    exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
+    exahype2::dg::rusanov::solveRiemannProblemPointwiseInSitu(
       linearFlux(),
       exahype2::dg::NonConservativeProduct(),
       constantEigenvalue(),
@@ -121,7 +123,7 @@ void exahype2::dg::rusanov::tests::RiemannTest::testSolveRiemannProblemAddsJumpT
     tarch::la::Vector<DIMENSIONS, int> rightDoF = dof;
     rightDoF(normal)                            = 1;
     projectedValues
-      [exahype2::serialiseVoxelIndexInOverlap(rightDoF, Order + 1, 1, normal)
+      [static_cast<std::size_t>(exahype2::serialiseVoxelIndexInOverlap(rightDoF, Order + 1, 1, normal))
        * (Unknowns + AuxiliaryVariables)] = rightState;
   });
 

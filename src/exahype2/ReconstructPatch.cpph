@@ -11,7 +11,7 @@
 template <int NumberOfDofsPerAxis, int Overlap, int NumberOfUnknowns, typename Precision>
 INLINE_METHOD void exahype2::reconstructPatch(
   const Precision* NOALIAS const inputPatch,
-  Precision* NOALIAS const       faces[TWO_TIMES_D],
+  Precision* NOALIAS const       faces[peano4::FacesPerCell],
   Precision* NOALIAS const       reconstructedPatch
 ) {
   const tarch::la::Vector<DIMENSIONS, int> overlapShift(Overlap);
@@ -44,12 +44,8 @@ INLINE_METHOD void exahype2::reconstructPatch(
         tarch::la::Vector<DIMENSIONS, int> reconstructedHalo = volumeIndex + overlapShift;
         overlapVolume(dimension)                             = layer;
         reconstructedHalo(dimension)                         = layer;
-        const int lowerOverlapIndex                          = exahype2::serialiseVoxelIndexInOverlap(
-          overlapVolume,
-          NumberOfDofsPerAxis,
-          Overlap,
-          dimension
-        );
+        const int lowerOverlapIndex =
+          exahype2::serialiseVoxelIndexInOverlap(overlapVolume, NumberOfDofsPerAxis, Overlap, dimension);
         const int lowerHaloIndex = peano4::dLinearised(reconstructedHalo, NumberOfDofsPerAxis + 2 * Overlap);
         SIMD()
         for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
@@ -59,12 +55,8 @@ INLINE_METHOD void exahype2::reconstructPatch(
 
         overlapVolume(dimension)     = layer + Overlap;
         reconstructedHalo(dimension) = layer + NumberOfDofsPerAxis + Overlap;
-        const int upperOverlapIndex  = exahype2::serialiseVoxelIndexInOverlap(
-          overlapVolume,
-          NumberOfDofsPerAxis,
-          Overlap,
-          dimension
-        );
+        const int upperOverlapIndex =
+          exahype2::serialiseVoxelIndexInOverlap(overlapVolume, NumberOfDofsPerAxis, Overlap, dimension);
         const int upperHaloIndex = peano4::dLinearised(reconstructedHalo, NumberOfDofsPerAxis + 2 * Overlap);
         SIMD()
         for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {

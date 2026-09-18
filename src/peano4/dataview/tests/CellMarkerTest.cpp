@@ -3,6 +3,7 @@
 #include "CellMarkerTest.h"
 
 #include "peano4/dataview/CellMarker.h"
+#include "peano4/sfc/ActiveCurve.h"
 #include "tarch/tests/TestMacros.h"
 
 namespace {
@@ -62,7 +63,7 @@ void peano4::dataview::tests::CellMarkerTest::testGeometry() {
 void peano4::dataview::tests::CellMarkerTest::testIsContained() {
   const auto marker = createMarker();
 
-  tarch::la::Vector<DIMENSIONS, double> inside(0.5);
+  const tarch::la::Vector<DIMENSIONS, double> inside(0.5);
   validate(marker.isContained(inside));
 
   tarch::la::Vector<DIMENSIONS, double> outside(0.5);
@@ -81,11 +82,11 @@ void peano4::dataview::tests::CellMarkerTest::testIsContained() {
 void peano4::dataview::tests::CellMarkerTest::testOverlaps() {
   const auto marker = createMarker();
 
-  tarch::la::Vector<DIMENSIONS, double> offset(0.0);
-  tarch::la::Vector<DIMENSIONS, double> size(1.0);
+  const tarch::la::Vector<DIMENSIONS, double> offset(0.0);
+  const tarch::la::Vector<DIMENSIONS, double> size(1.0);
   validate(marker.overlaps(offset, size));
 
-  tarch::la::Vector<DIMENSIONS, double> disjointOffset(2.0);
+  const tarch::la::Vector<DIMENSIONS, double> disjointOffset(2.0);
   validateFalse(marker.overlaps(disjointOffset, size));
 
   // A box that only touches the cell face still overlaps.
@@ -95,19 +96,24 @@ void peano4::dataview::tests::CellMarkerTest::testOverlaps() {
 }
 
 void peano4::dataview::tests::CellMarkerTest::testInvokingParentCellsCentre() {
-  auto marker = createMarker();
+  constexpr int SubdivisionFactor = peano4::sfc::ActiveCurve::SubdivisionFactor;
+  auto          marker            = createMarker();
 
+  // The parent's centre lies half the parent width, i.e. half the subdivision
+  // factor in child widths, above the first child's lower corner.
+  const double parentHalfWidth = 0.5 * SubdivisionFactor * marker.h[0];
+  const double childHalfWidth  = 0.5 * marker.h[0];
   for (int d = 0; d < DIMENSIONS; d++) {
     marker.relativePositionWithinFatherCell[d] = 1;
   }
   marker.relativePositionWithinFatherCell[0] = 0;
 
   const auto parentCentre = marker.getInvokingParentCellsCentre();
-  validateNumericalEquals(parentCentre(0), 0.5 + 1.0 / 3.0);
+  validateNumericalEquals(parentCentre(0), 0.5 - childHalfWidth + parentHalfWidth);
   for (int d = 1; d < DIMENSIONS; d++) {
-    validateNumericalEquals(parentCentre(d), 0.5);
+    validateNumericalEquals(parentCentre(d), 0.5 - childHalfWidth - marker.h[d] + parentHalfWidth);
   }
 
-  marker.relativePositionWithinFatherCell[0] = 2;
-  validateNumericalEquals(marker.getInvokingParentCellsCentre()(0), 0.5 - 1.0 / 3.0);
+  marker.relativePositionWithinFatherCell[0] = SubdivisionFactor - 1;
+  validateNumericalEquals(marker.getInvokingParentCellsCentre()(0), 0.5 + childHalfWidth - parentHalfWidth);
 }

@@ -8,7 +8,7 @@
  */
 INLINE_METHOD peano4::dataview::FaceMarker& peano4::dataview::FaceMarker::select(const int faceNumber) {
   assertion(faceNumber >= 0, faceNumber);
-  assertion(faceNumber < TWO_TIMES_D, faceNumber);
+  assertion(faceNumber < peano4::FacesPerCell, faceNumber);
   selectedFace = faceNumber;
   return *this;
 }
@@ -28,7 +28,7 @@ INLINE_METHOD int peano4::dataview::FaceMarker::getSelectedFaceNumber() const { 
  */
 INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> peano4::dataview::FaceMarker::getX(const int faceNumber) const {
   assertion(faceNumber >= 0, faceNumber);
-  assertion(faceNumber < TWO_TIMES_D, faceNumber);
+  assertion(faceNumber < peano4::FacesPerCell, faceNumber);
   auto       result          = cellCentre;
   const auto normalDimension = faceNumber % DIMENSIONS;
   result(normalDimension) += faceNumber >= DIMENSIONS ? h(normalDimension) / 2.0 : -h(normalDimension) / 2.0;
@@ -56,7 +56,7 @@ INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> peano4::dataview::FaceMarker
  */
 INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> peano4::dataview::FaceMarker::normal(const int faceNumber) const {
   assertion(faceNumber >= 0, faceNumber);
-  assertion(faceNumber < TWO_TIMES_D, faceNumber);
+  assertion(faceNumber < peano4::FacesPerCell, faceNumber);
   auto       result          = tarch::la::Vector<DIMENSIONS, double>{0.0};
   const auto normalDimension = faceNumber % DIMENSIONS;
   result(normalDimension)    = faceNumber < DIMENSIONS ? -h(normalDimension) : h(normalDimension);
@@ -91,9 +91,9 @@ INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> peano4::dataview::FaceMarker
 INLINE_METHOD const tarch::la::Vector<DIMENSIONS, double>& peano4::dataview::FaceMarker::getH() const { return h; }
 
 /**
- * Returns whether face faceNumber holds a refined vertex. A refined vertex
- * refines every adjacent cell, so such a face lies between two refined
- * cells and is not hanging.
+ * Returns whether the selected face holds a refined vertex. A refined vertex
+ * refines every adjacent cell, so such a face lies between two refined cells
+ * and is not hanging.
  */
 INLINE_METHOD bool peano4::dataview::FaceMarker::hasBeenRefined() const { return hasBeenRefined(selectedFace); }
 
@@ -106,6 +106,16 @@ INLINE_METHOD bool peano4::dataview::FaceMarker::willBeRefined() const { return 
 INLINE_METHOD bool peano4::dataview::FaceMarker::willBeRefined(const int faceNumber) const {
   return isSet(willBeRefinedMask, faceNumber);
 }
+
+/**
+ * Returns whether the cell of the marker has been refined. A face of such a
+ * cell holds no data of its own, because the faces of the children carry it,
+ * and a face without a refined vertex does not report this through
+ * hasBeenRefined().
+ */
+INLINE_METHOD bool peano4::dataview::FaceMarker::hasCellBeenRefined() const { return cellHasBeenRefined; }
+
+INLINE_METHOD bool peano4::dataview::FaceMarker::willCellBeRefined() const { return cellWillBeRefined; }
 
 INLINE_METHOD bool peano4::dataview::FaceMarker::isLocal() const { return isLocal(selectedFace); }
 
@@ -120,11 +130,7 @@ INLINE_METHOD bool peano4::dataview::FaceMarker::isHanging(const int faceNumber)
 }
 
 /**
- * Returns the relative position of face faceNumber within the father cell:
- * The cell's position with the entry along the face normal raised by one
- * for a face on the positive side, so the result is from
- * (0,1,2,3) x (0,1,2) x (0,1,2), (0,1,2) x (0,1,2,3) x (0,1,2) or
- * (0,1,2) x (0,1,2) x (0,1,2,3).
+ * Returns the face position in the parent's pattern of children.
  */
 INLINE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::dataview::FaceMarker::
   getRelativePositionWithinFatherCell() const {
@@ -135,7 +141,7 @@ INLINE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::dataview::FaceMarker::g
   const int faceNumber
 ) const {
   assertion(faceNumber >= 0, faceNumber);
-  assertion(faceNumber < TWO_TIMES_D, faceNumber);
+  assertion(faceNumber < peano4::FacesPerCell, faceNumber);
   auto       result          = relativePositionWithinFatherCell;
   const auto normalDimension = faceNumber % DIMENSIONS;
   result(normalDimension) += faceNumber >= DIMENSIONS ? 1 : 0;
@@ -143,17 +149,14 @@ INLINE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::dataview::FaceMarker::g
 }
 
 /**
- * Returns the relative position of a subface within its father face, an
- * entry of (0,1,2)^(DIMENSIONS-1): The entries of the father-cell position
- * along every axis except the face normal. In 2D a normal of 0 returns
- * pos[1] and a normal of 1 returns pos[0]; in 3D a normal of 0 returns
- * (pos[1], pos[2]), a normal of 1 returns (pos[0], pos[2]) and a normal of
- * 2 returns (pos[0], pos[1]).
+ * Returns the position of the selected face within its father face: The
+ * entries of the father-cell position along every axis except the axis of the
+ * face normal, in ascending order of the axis.
  */
 INLINE_METHOD tarch::la::Vector<DIMENSIONS - 1, int> peano4::dataview::FaceMarker::
   getRelativePositionWithinFatherFace() const {
   assertion(getSelectedFaceNumber() >= 0, getSelectedFaceNumber());
-  assertion(getSelectedFaceNumber() < TWO_TIMES_D, getSelectedFaceNumber());
+  assertion(getSelectedFaceNumber() < peano4::FacesPerCell, getSelectedFaceNumber());
   const auto normalDimension = getSelectedFaceNumber() % DIMENSIONS;
   auto       result          = tarch::la::Vector<DIMENSIONS - 1, int>{};
   int        faceDimension   = 0;
@@ -167,21 +170,19 @@ INLINE_METHOD tarch::la::Vector<DIMENSIONS - 1, int> peano4::dataview::FaceMarke
 }
 
 /**
- * Returns whether the selected face lies inside the 3x3 or 3x3x3 patch of
- * the father cell: On subcell 1 along the normal, on the positive side of
- * subcell 0 or on the negative side of subcell 2.
+ * Identifies faces between two children of the same refined cell.
  */
 INLINE_METHOD bool peano4::dataview::FaceMarker::isInteriorFaceWithinPatch() const {
   assertion(getSelectedFaceNumber() >= 0, getSelectedFaceNumber());
-  assertion(getSelectedFaceNumber() < TWO_TIMES_D, getSelectedFaceNumber());
+  assertion(getSelectedFaceNumber() < peano4::FacesPerCell, getSelectedFaceNumber());
   const auto normalDimension = getSelectedFaceNumber() % DIMENSIONS;
   const auto isLowerFace     = getSelectedFaceNumber() < DIMENSIONS;
-  const auto position        = relativePositionWithinFatherCell(normalDimension);
-  return position == 1 or position == (isLowerFace ? 2 : 0);
+  const auto facePosition    = relativePositionWithinFatherCell(normalDimension) + (isLowerFace ? 0 : 1);
+  return facePosition > 0 and facePosition < peano4::sfc::ActiveCurve::SubdivisionFactor;
 }
 
 INLINE_METHOD bool peano4::dataview::FaceMarker::isSet(const std::uint8_t mask, const int faceNumber) {
   assertion(faceNumber >= 0, faceNumber);
-  assertion(faceNumber < TWO_TIMES_D, faceNumber);
-  return ((mask >> faceNumber) & 1u) != 0;
+  assertion(faceNumber < peano4::FacesPerCell, faceNumber);
+  return ((mask >> faceNumber) & 1U) != 0;
 }

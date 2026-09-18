@@ -35,9 +35,10 @@ namespace {
 
   bool traversesGrid(const std::string& observerName) { return observerName != runner::StepName::AllocateMemory; }
 
+  /** Formats a duration in seconds with four decimals. */
   std::string seconds(const double value) {
     std::ostringstream result;
-    result << std::fixed << std::setprecision(2) << value << " s";
+    result << std::fixed << std::setprecision(4) << value << " s";
     return result.str();
   }
 } // namespace

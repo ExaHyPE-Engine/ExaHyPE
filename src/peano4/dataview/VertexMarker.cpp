@@ -30,7 +30,7 @@ tarch::la::Vector<DIMENSIONS, double> peano4::dataview::reconstructXOfParentVert
     )
     + tarch::la::multiplyComponents(
            tarch::la::Vector<DIMENSIONS, double>(parentVertexPositionWithinParentCell),
-           3.0 * marker.getH()
+           static_cast<double>(peano4::sfc::ActiveCurve::SubdivisionFactor) * marker.getH()
     );
 }
 
@@ -77,14 +77,15 @@ std::string peano4::dataview::VertexMarker::toString() const {
  * domain, so a vertex with non-local adjacent cells need not be adjacent to a
  * parallel domain boundary.
  */
-std::bitset<TWO_POWER_D> peano4::dataview::VertexMarker::areAdjacentCellsLocal() const {
-  auto                                     result             = std::bitset<TWO_POWER_D>{};
+std::bitset<peano4::CellsPerVertex> peano4::dataview::VertexMarker::areAdjacentCellsLocal() const {
+  auto                                     result             = std::bitset<peano4::CellsPerVertex>{};
   const std::bitset<DIMENSIONS>            selectedVertexBits = _select;
   const tarch::la::Vector<DIMENSIONS, int> selectedVertex(selectedVertexBits);
   peano4::dForEachCorner(
     [&](const tarch::la::Vector<DIMENSIONS, int>& adjacentCellOffset, const int adjacentCellNumber) {
       const auto positionInPatch = selectedVertex + adjacentCellOffset;
-      result[adjacentCellNumber] = _isAdjacentCellLocal[peano4::dLinearised(positionInPatch, 3)];
+      result[adjacentCellNumber] =
+        _isAdjacentCellLocal[peano4::dLinearised(positionInPatch, peano4::NeighbourhoodWidth)];
     }
   );
   return result;

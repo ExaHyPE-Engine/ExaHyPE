@@ -22,10 +22,8 @@ class ProjectPatchOntoFaces(exahype2.blockstructured.ProjectPatchOntoFaces):
         super().__init__(
             patch=solver._patch,
             patch_overlap=solver._patch_overlap_new,
-            solver_name=solver._name,
             precision=solver._storage_precision,
             guard="not marker.hasBeenRefined() and " + guard,
-            add_assertions=True,
         )
 
         self._face_metadata_accessor = "fineGridFaces" + solver._face_label.name
