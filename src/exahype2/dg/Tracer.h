@@ -4,6 +4,8 @@
 
 #include "exahype2/dg/DGUtils.h"
 #include "peano4/dataview/CellMarker.h"
+#include "tarch/Assertions.h"
+#include "tarch/CompilerSpecificSettings.h"
 
 namespace exahype2::dg {
   template <typename Particle, int SourceIndex, int DestIndex, typename QStoreType>

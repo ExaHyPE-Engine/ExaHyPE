@@ -107,8 +107,8 @@ class PatchToData:
             }
             return """
   const auto serialisePatchIndex = [](
-    const ::tarch::la::Vector<DIMENSIONS, int>&  overlapCell,
-    const int                                    normalDimension
+    const tarch::la::Vector<DIMENSIONS, int>& overlapCell,
+    const int                                 normalDimension
   ) {{
     int stride         = 1;
     int serialisedCell = 0;
@@ -134,7 +134,7 @@ class PatchToData:
     {DOFS_PER_AXIS},
     normalDimension,
     0,
-    [&](const ::tarch::la::Vector<DIMENSIONS, int>& tangentialCell) {{
+    [&](const tarch::la::Vector<DIMENSIONS, int>& tangentialCell) {{
       for (int overlapIndex = 0; overlapIndex < {OVERLAP}; overlapIndex++) {{
         auto overlapCell = tangentialCell;
         overlapCell(normalDimension) +=

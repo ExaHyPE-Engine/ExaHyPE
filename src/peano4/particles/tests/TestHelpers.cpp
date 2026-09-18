@@ -11,7 +11,7 @@
 
 namespace {
 #if DIMENSIONS == 2
-  constexpr double        MeshSize         = 1.0 / peano4::Power<peano4::sfc::ActiveCurve::SubdivisionFactor, 2>;
+  constexpr double        MeshSize         = 1.0 / peano4::power(peano4::sfc::ActiveCurve::SubdivisionFactor, 2);
   constexpr std::uint32_t AllAdjacentCells = (1U << peano4::CellsPerNeighbourhood) - 1U;
 
   /**

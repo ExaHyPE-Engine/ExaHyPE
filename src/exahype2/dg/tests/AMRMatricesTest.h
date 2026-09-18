@@ -26,5 +26,6 @@ private:
   void testWeightedRestrictionPreservesConstants();
   void testMatricesAreMirrorSymmetricToTheLastBit();
   void testAverageMirrorPairsKeepsSymmetricEntries();
+  void testTransposePerChildSwapsTheNodeIndices();
   void testOrderZeroMatrices();
 };

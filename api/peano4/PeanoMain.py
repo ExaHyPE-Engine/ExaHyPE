@@ -59,7 +59,9 @@ class PeanoMain:
         constants.export_const_with_type(
             "DomainSize", size, "tarch::la::Vector<DIMENSIONS, double>"
         )
-        constants.export_boolean_sequence("PeriodicBC", self.project._periodic_bc)
+        constants.export_boolean_sequence(
+            "PeriodicBoundaries", self.project._periodic_bc
+        )
 
     def _configure_template_dictionary(self):
         if self.project._domain_offset is None or self.project._domain_size is None:

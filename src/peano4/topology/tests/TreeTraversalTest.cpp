@@ -17,10 +17,10 @@ namespace {
   constexpr int ChildrenPerCell   = peano4::sfc::ActiveCurve::ChildrenPerCell;
 
   /** Lattice position of the vertex at the domain centre on the base depth. */
-  constexpr int CentreVertex = peano4::Power<SubdivisionFactor, Depth> / 2;
+  constexpr int CentreVertex = peano4::power(SubdivisionFactor, Depth) / 2;
 
   /** Lattice position of a vertex inside the first child of the root on the base depth. */
-  constexpr int VertexInsideFirstChild = peano4::Power<SubdivisionFactor, Depth - 1> / 2;
+  constexpr int VertexInsideFirstChild = peano4::power(SubdivisionFactor, Depth - 1) / 2;
 
   /**
    * Records, per vertex pool slot, how often a sweep first-touches and

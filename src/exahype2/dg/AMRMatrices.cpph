@@ -56,10 +56,10 @@ INLINE_METHOD constexpr exahype2::dg::AMRMatrices1D<NodesPerAxis> exahype2::dg::
 
 /**
  * Returns the restriction matrices: Entry [child][coarse][fine] is the
- * interpolation entry [child][fine][coarse] divided by the subdivision
- * factor, the width of a child interval. Scaled with the quadrature weights
- * of the fine and the coarse node, the entries sum the child polynomials
- * into the mass-lumped projection onto the coarse basis.
+ * interpolation entry [child][fine][coarse] divided by the subdivision factor,
+ * which is the reciprocal of the width of a child interval. Scaled with the
+ * quadrature weights of the fine and the coarse node, the entries sum the child
+ * polynomials into the mass-lumped projection onto the coarse basis.
  */
 template <int NodesPerAxis>
 INLINE_METHOD constexpr exahype2::dg::AMRMatrices1D<NodesPerAxis> exahype2::dg::restrictionMatrix1D(
@@ -131,4 +131,26 @@ INLINE_METHOD constexpr void exahype2::dg::averageMirrorPairs(exahype2::dg::AMRM
       }
     }
   }
+}
+
+/**
+ * Returns the matrices with the two node indices of every child block
+ * swapped: Entry [child][column][row] of the result is entry
+ * [child][row][column] of the argument.
+ */
+template <int NodesPerAxis>
+INLINE_METHOD constexpr exahype2::dg::AMRMatrices1D<NodesPerAxis> exahype2::dg::transposePerChild(
+  const exahype2::dg::AMRMatrices1D<NodesPerAxis>& matrices
+) {
+  constexpr int                             SubdivisionFactor = peano4::sfc::ActiveCurve::SubdivisionFactor;
+  exahype2::dg::AMRMatrices1D<NodesPerAxis> result{};
+  for (int child = 0; child < SubdivisionFactor; child++) {
+    for (int row = 0; row < NodesPerAxis; row++) {
+      for (int column = 0; column < NodesPerAxis; column++) {
+        result[(child * NodesPerAxis + column) * NodesPerAxis + row] =
+          matrices[(child * NodesPerAxis + row) * NodesPerAxis + column];
+      }
+    }
+  }
+  return result;
 }

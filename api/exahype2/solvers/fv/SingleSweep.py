@@ -58,9 +58,7 @@ class SingleSweep(FV):
             self._baseline_action_set_descend_invocation_order + 2
         )
         if self._state_owner is not None:
-            dynamic_amr = (
-                self._action_set_adaptive_mesh_face_coupling
-            )
+            dynamic_amr = self._action_set_adaptive_mesh_face_coupling
             dynamic_amr.d["INTERPOLATE_GUARD"] = (
                 self._provide_face_data_to_compute_kernels_default_guard()
                 + " and "
@@ -122,7 +120,7 @@ class SingleSweep(FV):
             self._store_face_data_default_guard()
             + " and not repositories::"
             + self.get_name_of_global_instance()
-            + ".PeriodicBC[marker.getSelectedFaceNumber() % DIMENSIONS]"
+            + ".PeriodicBoundaries[marker.getSelectedFaceNumber() % DIMENSIONS]"
             + " and not marker.hasBeenRefined() and fineGridFace"
             + self._face_label.name
             + ".getBoundary()"

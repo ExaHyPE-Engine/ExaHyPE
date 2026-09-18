@@ -64,7 +64,7 @@ fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
             "DOMAIN_OFFSET": "{"
             + ", ".join(map(str, project._domain_offset[: project._dimensions]))
             + "}",
-            "PERIODIC_BC": "{"
+            "PERIODIC_BOUNDARIES": "{"
             + ", ".join(
                 [
                     "1" if is_periodic else "0"
@@ -127,7 +127,7 @@ fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
   ::exahype2::fv::particles::utils::setGlobalParameters(
     {{DOMAIN_OFFSET}},
     {{DOMAIN_SIZE}},
-    {{PERIODIC_BC}}
+    {{PERIODIC_BOUNDARIES}}
   );
 
   if ({{INTERPOLATION_SCHEME}} != 0) {

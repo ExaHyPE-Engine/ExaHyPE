@@ -133,7 +133,7 @@ void peano4::particles::tests::ParticlesTest::testParticleFactory() {
   const tarch::la::Vector<DIMENSIONS, double> unitSize(1.0);
   auto                                        localParticles =
     peano4::particles::createEquallySpacedParticles<FactoryParticle>(0.5, unitCentre, unitSize, false);
-  validateEquals(localParticles.size(), static_cast<std::size_t>(peano4::Power<2, DIMENSIONS>));
+  validateEquals(localParticles.size(), static_cast<std::size_t>(peano4::power(2, DIMENSIONS)));
   for (auto* const localParticle : localParticles) {
     delete localParticle;
   }
@@ -146,7 +146,7 @@ void peano4::particles::tests::ParticlesTest::testParticleFactory() {
     unitSize,
     false
   );
-  validateEquals(alignedParticles.size(), static_cast<std::size_t>(peano4::Power<2, DIMENSIONS>));
+  validateEquals(alignedParticles.size(), static_cast<std::size_t>(peano4::power(2, DIMENSIONS)));
   for (auto* const alignedParticle : alignedParticles) {
     delete alignedParticle;
   }

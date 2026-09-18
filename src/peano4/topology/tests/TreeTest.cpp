@@ -14,7 +14,7 @@ namespace {
   constexpr int ChildrenPerCell   = peano4::sfc::ActiveCurve::ChildrenPerCell;
 
   /** Cells per axis on the base depth. */
-  constexpr int CellsPerAxis = peano4::Power<SubdivisionFactor, Depth>;
+  constexpr int CellsPerAxis = peano4::power(SubdivisionFactor, Depth);
 
   /** Lattice position of the cell the refinement-plan tests request from, clear of the walls. */
   constexpr int RequestedCell = CellsPerAxis / 2;
@@ -59,9 +59,9 @@ void peano4::topology::tests::TreeTest::run() {
 void peano4::topology::tests::TreeTest::testRefinementDeltaAppendsCellsOnTheOwningRankOnly() {
   constexpr int SpawnLevel               = SubdivisionFactor >= 3 ? 1 : 2;
   constexpr int DeltaDepth               = SpawnLevel + 2;
-  constexpr int BlocksPerAxis            = peano4::Power<SubdivisionFactor, SpawnLevel>;
-  constexpr int NumberOfRanks            = peano4::Power<BlocksPerAxis, DIMENSIONS>;
-  constexpr int CellsPerAxisOnDeltaDepth = peano4::Power<SubdivisionFactor, DeltaDepth>;
+  constexpr int BlocksPerAxis            = peano4::power(SubdivisionFactor, SpawnLevel);
+  constexpr int NumberOfRanks            = peano4::power(BlocksPerAxis, DIMENSIONS);
+  constexpr int CellsPerAxisOnDeltaDepth = peano4::power(SubdivisionFactor, DeltaDepth);
 
   const tarch::la::Vector<DIMENSIONS, double>  offset(0.0);
   const tarch::la::Vector<DIMENSIONS, double>  width(1.0);
@@ -932,7 +932,7 @@ void peano4::topology::tests::TreeTest::testRefinementPlanRoundKeepsLevelsWithou
   // unrefined cell between them, so the base depth follows the subdivision
   // factor.
   constexpr int RoundDepth          = SubdivisionFactor >= 3 ? Depth : Depth + 1;
-  constexpr int RoundCellsPerAxis   = peano4::Power<SubdivisionFactor, RoundDepth>;
+  constexpr int RoundCellsPerAxis   = peano4::power(SubdivisionFactor, RoundDepth);
   constexpr int CoarseFlag          = RoundCellsPerAxis / 2;
   constexpr int FineFlag            = SubdivisionFactor * CoarseFlag;
   constexpr int RequestedCellOfBand = RoundCellsPerAxis - 2;
@@ -1004,11 +1004,11 @@ void peano4::topology::tests::TreeTest::testRefinementPlanEraseKeepsFlagsBetween
   // The flagged block, the cells it refines and one unrefined ring around them
   // stay inside the lattice, so the base depth follows the subdivision factor.
   constexpr int  EraseDepth              = SubdivisionFactor >= 3 ? Depth : Depth + 1;
-  constexpr int  EraseCellsPerAxis       = peano4::Power<SubdivisionFactor, EraseDepth>;
+  constexpr int  EraseCellsPerAxis       = peano4::power(SubdivisionFactor, EraseDepth);
   constexpr int  FlaggedVerticesPerAxis  = peano4::NeighbourhoodWidth + 1;
   constexpr int  FirstFlaggedCoordinate  = EraseCellsPerAxis / 2 - 1;
   constexpr int  CentreCellOfBlock       = FirstFlaggedCoordinate + 1;
-  constexpr auto NumberOfFlaggedVertices = static_cast<std::size_t>(peano4::Power<FlaggedVerticesPerAxis, DIMENSIONS>);
+  constexpr auto NumberOfFlaggedVertices = static_cast<std::size_t>(peano4::power(FlaggedVerticesPerAxis, DIMENSIONS));
 
   peano4::topology::Tree tree(
     TreeId,

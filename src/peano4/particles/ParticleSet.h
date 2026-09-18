@@ -19,17 +19,17 @@ namespace peano4::particles {
 template <typename T>
 class peano4::particles::ParticleSet {
 public:
-  typedef T             DoFType;
-  typedef std::list<T*> ParticleList;
+  using DoFType      = T;
+  using ParticleList = std::list<T*>;
 
 #if PEANO_DEBUG
-  void                                  setDebugX(const tarch::la::Vector<DIMENSIONS, double>& data);
-  void                                  setDebugH(const tarch::la::Vector<DIMENSIONS, double>& data);
-  tarch::la::Vector<DIMENSIONS, double> getDebugX() const;
-  tarch::la::Vector<DIMENSIONS, double> getDebugH() const;
+  void                                                setDebugX(const tarch::la::Vector<DIMENSIONS, double>& data);
+  void                                                setDebugH(const tarch::la::Vector<DIMENSIONS, double>& data);
+  [[nodiscard]] tarch::la::Vector<DIMENSIONS, double> getDebugX() const;
+  [[nodiscard]] tarch::la::Vector<DIMENSIONS, double> getDebugH() const;
 #endif
 
-  std::string toString(bool addBrackets = true) const;
+  [[nodiscard]] std::string toString(bool addBrackets = true) const;
 
   static void clearReassignmentStatistics();
 
@@ -65,9 +65,9 @@ public:
   static bool registeredAnyResorting();
 
   static void finishedTraversal(
-    const tarch::la::Vector<DIMENSIONS, double> domainOffset,
-    const tarch::la::Vector<DIMENSIONS, double> domainSize,
-    const std::bitset<DIMENSIONS>               periodicBC
+    tarch::la::Vector<DIMENSIONS, double> domainOffset,
+    tarch::la::Vector<DIMENSIONS, double> domainSize,
+    std::bitset<DIMENSIONS>               periodicBoundaries
   );
 
   static SieveParticles<T> cloneParticlesToBeSieved();

@@ -21,9 +21,8 @@ namespace peano4::particles {
 template <typename T>
 class peano4::particles::SieveParticles final {
 public:
-  typedef T DoFType;
-
-  typedef std::list<T*> ParticleList;
+  using DoFType      = T;
+  using ParticleList = std::list<T*>;
 
   SieveParticles() = default;
 
@@ -33,9 +32,9 @@ public:
   void deleteParticles();
 
   void exchangeSieveListsGlobally(
-    const tarch::la::Vector<DIMENSIONS, double> domainOffset,
-    const tarch::la::Vector<DIMENSIONS, double> domainSize,
-    const std::bitset<DIMENSIONS>               periodicBC
+    tarch::la::Vector<DIMENSIONS, double> domainOffset,
+    tarch::la::Vector<DIMENSIONS, double> domainSize,
+    std::bitset<DIMENSIONS>               periodicBoundaries
   );
 
   void addParticleThatCanNotBeLiftedWithinItsTree(T* particle);
@@ -49,11 +48,11 @@ public:
     bool                                  lockMutex
   );
 
-  bool hasParticlesToBeSievedIntoVertices() const;
+  [[nodiscard]] bool hasParticlesToBeSievedIntoVertices() const;
 
-  int getNumberOfParticlesThatHaveBeSievedIntoVertices() const;
+  [[nodiscard]] int getNumberOfParticlesThatHaveBeSievedIntoVertices() const;
 
-  std::string toString() const;
+  [[nodiscard]] std::string toString() const;
 
 private:
   static void deleteParticles(ParticleList& list);

@@ -1,6 +1,7 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 from .AbstractRungeKuttaDGActionSet import AbstractRungeKuttaDGActionSet
+from .UpdateSolution import UpdateSolution
 
 from exahype2.solvers.ButcherTableau import ButcherTableau
 
@@ -10,19 +11,9 @@ import jinja2
 
 class InterpolateRiemannSolutionOntoHangingFaces(AbstractRungeKuttaDGActionSet):
     """
-    Assemble the Riemann solutions a fine cell consumes at its hanging faces.
+    Solves the Riemann problems at hanging faces.
 
-    A resolution transition conserves only if both sides integrate the same
-    numerical flux. The coarse face solves its Riemann problem from its own
-    trace and the restriction of the fine traces, and that happens at its first
-    touch, before any adjacent fine cell of the same secondary sweep runs.
-    Every fine cell with hanging faces therefore consumes that flux. This
-    action set evaluates the coarse flux polynomial at each hanging face's
-    nodes and adds the jump penalty against the cell's own trace, which
-    stabilises the transition without disturbing the flux integral.
-    AddVolumeAndFaceSolution then integrates the same flux as the coarse
-    neighbour. Mass is conserved per Runge-Kutta stage; nonconservative
-    products carry the coarse side's sign convention across the transition.
+    Hanging faces store no data between grid sweeps.
     """
 
     TemplateInterpolate = """
@@ -35,108 +26,94 @@ class InterpolateRiemannSolutionOntoHangingFaces(AbstractRungeKuttaDGActionSet):
     if (hasHangingFace) {
       const double timeStampOldSolution = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
-      // The snippet below declares and sets double timeStepSize.
-      {{COMPUTE_TIME_STEP_SIZE}}
+      const double timeStepSize = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize();
 
       const double timeStamp = timeStampOldSolution + {{BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES[PREDICATE_NO]}} * timeStepSize;
 
-      // Re-project the persistent linear combination onto the hanging faces: The
-      // jump penalty needs the cell's own trace, and hanging faces hold no data
-      // between grid sweeps. The persistent faces keep their primary-sweep
-      // projection, so they receive scratch targets here.
       double scratchProjection[2 * DIMENSIONS][facedata::{{UNKNOWN_IDENTIFIER}}EstimateProjection::Cardinality];
       double* projectionTargets[2 * DIMENSIONS];
       for (int face = 0; face < 2 * DIMENSIONS; face++) {
         projectionTargets[face] = fineGridFaces{{FACE_LABEL}}(face).getIsHanging()
           ? fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(face).data()
           : scratchProjection[face];
+        projectionTargets[face] += face < DIMENSIONS
+          ? facedata::{{UNKNOWN_IDENTIFIER}}EstimateProjection::Cardinality / 2
+          : 0;
       }
-      #if DIMENSIONS==2
-      ::exahype2::dg::projectVolumetricDataOntoFaces(
+      ::exahype2::dg::extrapolateStateToFaces<
+        {{DG_ORDER}} + 1, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}
+      >(
+        projectionTargets,
         fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.data(),
-        {{ORDER}},
-        {{NUMBER_OF_UNKNOWNS}},
-        {{NUMBER_OF_AUXILIARY_VARIABLES}},
-        repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1D,
-        projectionTargets[0], // Left
-        projectionTargets[2], // Right
-        projectionTargets[1], // Down
-        projectionTargets[3]  // Up
+        kernels::{{SOLVER_NAME}}::DGMatrices::BasisFunctionValuesLeft1D,
+        kernels::{{SOLVER_NAME}}::DGMatrices::BasisFunctionValuesRight1D
       );
-      #else
-      ::exahype2::dg::projectVolumetricDataOntoFaces(
-        fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.data(),
-        {{ORDER}},
-        {{NUMBER_OF_UNKNOWNS}},
-        {{NUMBER_OF_AUXILIARY_VARIABLES}},
-        repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1D,
-        projectionTargets[0], // Left
-        projectionTargets[3], // Right
-        projectionTargets[1], // Down
-        projectionTargets[4], // Up
-        projectionTargets[2], // Front
-        projectionTargets[5]  // Back
-      );
-      #endif
+
+      constexpr int NumberOfDofsPerAxis = {{DG_ORDER}} + 1;
+      constexpr int StateElementsPerFace =
+        facedata::{{UNKNOWN_IDENTIFIER}}EstimateProjection::Cardinality / 2;
+      constexpr int FluxElementsPerFace =
+        facedata::{{UNKNOWN_IDENTIFIER}}RiemannSolution::Cardinality / 2;
 
       for (int hangingFaceNumber = 0; hangingFaceNumber < 2 * DIMENSIONS; hangingFaceNumber++) {
         if (fineGridFaces{{FACE_LABEL}}(hangingFaceNumber).getIsHanging()) {
-          const int normal = hangingFaceNumber % DIMENSIONS;
+          const int direction  = hangingFaceNumber % DIMENSIONS;
+          const int coarseSide = hangingFaceNumber < DIMENSIONS ? 0 : 1;
 
-          // The penalty needs one eigenvalue for the whole coarse face, so its
-          // subface contributions cancel: Every fine cell below the face derives
-          // the same value from the coarse face's two trace layers. The parent
-          // geometry is reconstructed from the fine cell's own marker, so the
-          // reconstruction is exact and no neighbour coordinates are read.
-          auto parentCellSize   = marker.getH();
-          auto parentFaceOffset = marker.getX();
-          constexpr double ParentCentreOffset = 0.5 * (peano4::sfc::ActiveCurve::SubdivisionFactor - 1);
-          for (int d = 0; d < DIMENSIONS; d++) {
-            parentCellSize(d) *= peano4::sfc::ActiveCurve::SubdivisionFactor;
-            parentFaceOffset(d) += (ParentCentreOffset - marker.getRelativePositionWithinFatherCell()(d)) * marker.getH()(d);
-            parentFaceOffset(d) -= 0.5 * parentCellSize(d);
-          }
-          if (hangingFaceNumber >= DIMENSIONS) {
-            parentFaceOffset(normal) += parentCellSize(normal);
-          }
-
-          double maxEigenvalue = 0.0;
-          constexpr int ProjectionStride = {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-          const double* NOALIAS coarseFaceProjection =
-            coarseGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(hangingFaceNumber).data();
-          peano4::dForEachExclusive({{ORDER}} + 1, normal, 0, [&](const tarch::la::Vector<DIMENSIONS, int>& dof) {
-            tarch::la::Vector<DIMENSIONS, double> x = parentFaceOffset;
-            for (int d = 0; d < DIMENSIONS; d++) {
-              if (d != normal) {
-                x(d) += repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1D[dof(d)] * parentCellSize(d);
-              }
+          // Face nodes follow the tangential axes in ascending order.
+          const double* prolongationMatrixPerAxis[DIMENSIONS - 1];
+          int tangentialAxis = 0;
+          for (int axis = 0; axis < DIMENSIONS; axis++) {
+            if (axis != direction) {
+              prolongationMatrixPerAxis[tangentialAxis] =
+                kernels::{{SOLVER_NAME}}::DGMatrices::ProlongationMatrix1D
+                + marker.getRelativePositionWithinFatherCell()(axis) * NumberOfDofsPerAxis * NumberOfDofsPerAxis;
+              tangentialAxis++;
             }
-            for (int layer = 0; layer < 2; layer++) {
-              auto shiftedDoF    = dof;
-              shiftedDoF(normal) = layer;
-              const int offset =
-                ::exahype2::serialiseVoxelIndexInOverlap(shiftedDoF, {{ORDER}} + 1, 1, normal)
-                * ProjectionStride;
-              maxEigenvalue = std::fmax(
-                maxEigenvalue,
-                repositories::{{SOLVER_INSTANCE}}.maxEigenvalue(coarseFaceProjection + offset, x, timeStamp, timeStepSize, normal)
-              );
-            }
-          });
-
-          ::exahype2::dg::interpolateRiemannSolution(
-            hangingFaceNumber,
-            marker.getRelativePositionWithinFatherCell(),
-            {{ORDER}},
-            {{NUMBER_OF_UNKNOWNS}},
-            {{NUMBER_OF_AUXILIARY_VARIABLES}},
-            maxEigenvalue,
-            repositories::{{SOLVER_INSTANCE}}.InterpolationMatrix1D.data(),
-            coarseGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(hangingFaceNumber).data(),
-            coarseFaceProjection,
-            fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(hangingFaceNumber).data(),
-            fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(hangingFaceNumber).data()
+          }
+          assertion(tangentialAxis == DIMENSIONS - 1, tangentialAxis);
+          ::exahype2::amr::interpolateFaceFromCoarse(
+            fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(hangingFaceNumber).data()
+              + coarseSide * StateElementsPerFace,
+            coarseGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(hangingFaceNumber).data()
+              + coarseSide * StateElementsPerFace,
+            prolongationMatrixPerAxis,
+            NumberOfDofsPerAxis,
+            {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}
           );
+
+          auto faceCentre = marker.getX();
+          faceCentre(direction) += (hangingFaceNumber < DIMENSIONS ? -0.5 : 0.5)
+            * marker.getH()(direction);
+
+          const double* leftStateEstimates =
+            fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(hangingFaceNumber).data();
+          const double* rightStateEstimates = leftStateEstimates + StateElementsPerFace;
+          double* leftFluxEstimates =
+            fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(hangingFaceNumber).data();
+          double* rightFluxEstimates = leftFluxEstimates + FluxElementsPerFace;
+
+          for (int side = 0; side < 2; side++) {
+            ::exahype2::dg::evaluateFluxOnFace<
+              {{FULL_QUALIFIED_SOLVER_NAME}}, {{DG_ORDER}} + 1,
+              {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}},
+              {% if FLUX_IMPLEMENTATION!="<none>" %}true{% else %}false{% endif %},
+              {{ "true" if USE_DIFFUSIVE_FLUX else "false" }}
+            >(
+              leftFluxEstimates + side * FluxElementsPerFace,
+              leftStateEstimates,
+              rightStateEstimates,
+              side,
+              kernels::{{SOLVER_NAME}}::Quadrature::QuadraturePoints1D,
+              faceCentre,
+              marker.getH(),
+              timeStamp,
+              timeStepSize,
+              direction
+            );
+          }
+
+          {{RIEMANN_SOLVER_CALL}}
         }
       }
     }
@@ -179,9 +156,17 @@ class InterpolateRiemannSolutionOntoHangingFaces(AbstractRungeKuttaDGActionSet):
             self._solver.add_entries_to_text_replacement_dictionary(d)
             d["PREDICATES"] = self.guards
             d["BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES"] = (
-                self._butcher_tableau.time_step_sizes()
+                self._butcher_tableau.time_step_sizes()[-1:]
+                + self._butcher_tableau.time_step_sizes()[:-1]
             )
             d["FACE_LABEL"] = self._solver._face_label.name
+            d["FACE_IS_BOUNDARY"] = (
+                f"fineGridFaces{self._solver._name}FaceLabel(hangingFaceNumber).getBoundary()"
+            )
+            d["FACE_NUMBER"] = "hangingFaceNumber"
+            d["RIEMANN_SOLVER_CALL"] = jinja2.Template(
+                UpdateSolution._RIEMANN_SOLVER_CALL
+            ).render(**d)
             result = jinja2.Template(self.TemplateInterpolate).render(**d)
         return result
 
@@ -192,8 +177,8 @@ class InterpolateRiemannSolutionOntoHangingFaces(AbstractRungeKuttaDGActionSet):
         return (
             super(InterpolateRiemannSolutionOntoHangingFaces, self).get_includes()
             + """
+#include "exahype2/amr/AMRRoutines.h"
+#include "exahype2/dg/BoundaryExtrapolation.h"
 #include "exahype2/dg/Riemann.h"
-#include "exahype2/Enumeration.h"
-#include "peano4/sfc/ActiveCurve.h"
 """
         )

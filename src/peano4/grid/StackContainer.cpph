@@ -145,7 +145,7 @@ void peano4::grid::StackContainer<StackType>::migratePoolSlots(
     bindPooledStorage();
   }
   if (not stagedTargets.empty()) {
-    tarch::accelerator::parallelFor(
+    tarch::accelerator::parallelForOnHost(
       tarch::accelerator::Range(static_cast<int>(stagedTargets.size())),
       [this, &stagedData, &stagedTargets](const int pairNumber) {
         assertion(pairNumber >= 0 and static_cast<std::size_t>(pairNumber) < stagedTargets.size(), pairNumber);

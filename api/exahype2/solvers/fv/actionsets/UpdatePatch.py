@@ -43,7 +43,7 @@ class UpdatePatch(AbstractFVActionSet):
       const auto&                 faceLabel    = {{FACE_METADATA_ACCESSOR}}(faceNumber);
       [[maybe_unused]] const int  ownSide      = faceNumber < DIMENSIONS ? 1 : 0;
       [[maybe_unused]] const bool isDomainWall = faceLabel.getBoundary()
-        and not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[faceNumber % DIMENSIONS];
+        and not repositories::{{SOLVER_INSTANCE}}.PeriodicBoundaries[faceNumber % DIMENSIONS];
       assertion(
         faceLabel.getIsHanging() or not faceLabel.getRequiresDataTransfer(ownSide),
         marker.toString(),

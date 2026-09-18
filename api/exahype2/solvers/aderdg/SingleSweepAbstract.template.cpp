@@ -15,7 +15,7 @@
 #include "tarch/accelerator/Atomic.h"
 #include "tarch/NonCriticalAssertions.h"
 
-std::bitset<DIMENSIONS> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::PeriodicBC = {{NAMESPACE | join("::")}}::PeriodicBC;
+std::bitset<DIMENSIONS> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::PeriodicBoundaries = {{NAMESPACE | join("::")}}::PeriodicBoundaries;
 
 {% if USE_POINT_SOURCE %}
 double                  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::pointSourceLocation[NumberOfPointSources][DIMENSIONS]{};
@@ -38,7 +38,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinPatchSize() const {
 }
 
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getNumberOfDoFs() const {
-  return peano4::Power<Order + 1, DIMENSIONS> * (NumberOfUnknowns + NumberOfAuxiliaryVariables);
+  return peano4::power(Order + 1, DIMENSIONS) * (NumberOfUnknowns + NumberOfAuxiliaryVariables);
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinCellSize() const {

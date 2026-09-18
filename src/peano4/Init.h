@@ -8,7 +8,7 @@ namespace peano4 {
   void init(
     const tarch::la::Vector<DIMENSIONS, double>& offset,
     const tarch::la::Vector<DIMENSIONS, double>& width,
-    const std::bitset<DIMENSIONS>&               periodicBC = 0
+    const std::bitset<DIMENSIONS>&               periodicBoundaries = 0
   );
 
   void shutdown();

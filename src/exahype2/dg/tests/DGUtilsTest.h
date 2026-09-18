@@ -20,10 +20,8 @@ public:
   void run() override;
 
 private:
-  void testGetIndex();
-  void testComputeGradientOnConstantSolution();
+  void testGetQuadraturePointMapsTheReferenceNode();
   void testEvaluatePolynomialOrder1();
   void testEvaluatePolynomialOrder2();
-  void testEvaluatePolynomialOnFace();
-  void testGetQuadraturePoint();
+  void testEvaluatePolynomialOnAFace();
 };

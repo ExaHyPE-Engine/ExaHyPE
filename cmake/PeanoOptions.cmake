@@ -9,7 +9,7 @@ option(PEANO_WITH_NETCDF "Build with NetCDF support" ON)
 option(PEANO_WITH_ZLIB "Build with ZLIB compression support" ON)
 
 if(PEANO_WITH_FPE AND CMAKE_CXX_COMPILER_ID STREQUAL "NVHPC")
-  message(STATUS "Disabling floating-point exception traps because NVHPC can raise exceptions from unused SIMD lanes.")
+  message(STATUS "Disabling floating-point exception traps because NVHPC divides before the branch that guards the divisor resolves.")
   set(PEANO_WITH_FPE OFF CACHE BOOL "Build with floating-point exception traps" FORCE)
 endif()
 

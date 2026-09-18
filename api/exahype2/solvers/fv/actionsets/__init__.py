@@ -11,6 +11,4 @@ from .DynamicAMR import DynamicAMRTransfer
 from .PostprocessSolution import EmptyPostprocessSolution
 from .PostprocessSolution import VolumeWisePostprocessSolution
 from .PostprocessSolutionParticles import ParticleWisePostprocessSolution
-from .PreprocessSolution import EmptyPreprocessSolution
-from .PreprocessSolution import VolumeWisePreprocessSolution
 from .UpdatePatch import UpdatePatch

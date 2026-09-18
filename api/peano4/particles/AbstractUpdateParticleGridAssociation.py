@@ -300,6 +300,6 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
         """Advances the sieve exchange after all rank-local traversals finish."""
         return jinja2.Template(
             """
-  vertexdata::{{PARTICLES_CONTAINER}}::finishedTraversal(DomainOffset, DomainSize, PeriodicBC);
+  vertexdata::{{PARTICLES_CONTAINER}}::finishedTraversal(DomainOffset, DomainSize, PeriodicBoundaries);
 """
         ).render(**self.d)

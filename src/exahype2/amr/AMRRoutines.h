@@ -3,10 +3,13 @@
 #pragma once
 
 #include "exahype2/amr/ChildDataStage.h"
+#include "peano4/Constants.h"
 #include "peano4/Loop.h"
 #include "peano4/dataview/CellMarker.h"
 #include "peano4/dataview/FaceMarker.h"
 #include "peano4/sfc/ActiveCurve.h"
+#include "tarch/Assertions.h"
+#include "tarch/CompilerSpecificSettings.h"
 #include "tarch/la/ExactAccumulator.h"
 
 /**

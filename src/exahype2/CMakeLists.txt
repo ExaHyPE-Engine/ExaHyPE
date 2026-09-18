@@ -25,24 +25,26 @@ set(SOURCES
   amr/tests/MultiresolutionDetailTest.cpp
   amr/tests/RestrictionTest.cpp
 
-  dg/BoundaryConditions.cpp
-  dg/CellIntegral.cpp
-  dg/DGUtils.cpp
   dg/LimitingSolverState.cpp
-  dg/Riemann.cpp
   dg/tests/AMRMatricesTest.cpp
-  dg/tests/CellIntegralTest.cpp
+  dg/tests/BoundaryConditionsTest.cpp
+  dg/tests/BoundaryExtrapolationTest.cpp
   dg/tests/DGTracerTest.cpp
   dg/tests/DGUtilsTest.cpp
+  dg/tests/DeviceKernelFixtures.cpp
   dg/tests/EigenvalueStatisticsTest.cpp
+  dg/tests/FaceIntegralTest.cpp
+  dg/tests/GradientTest.cpp
+  dg/tests/KernelsOnDeviceTest.cpp
   dg/tests/LimiterStatusTest.cpp
   dg/tests/LimiterTest.cpp
   dg/tests/LimitingSolverStateTest.cpp
+  dg/tests/OperatorAlongAxisTest.cpp
   dg/tests/RiemannTest.cpp
   dg/tests/SubcellProjectionTest.cpp
-  dg/tests/TestUtils.cpp
-  dg/rusanov/Rusanov.cpp
-  dg/rusanov/tests/RiemannTest.cpp
+  dg/rk/tests/KernelsOnDeviceTest.cpp
+  dg/rk/tests/LinearCombinationTest.cpp
+  dg/rk/tests/VolumeIntegralTest.cpp
 
   fv/PatchUtils.cpp
   fv/PostprocessingKernels.cpp
@@ -56,6 +58,14 @@ set(SOURCES
   fv/particles/ParticleHelper.cpp
   fv/particles/ParticleInterpolation.cpp
 )
+
+if(_peano_gpu_backend STREQUAL "cuda")
+  set_source_files_properties(dg/tests/KernelsOnDeviceTest.cpp PROPERTIES LANGUAGE CUDA)
+  set_source_files_properties(dg/rk/tests/KernelsOnDeviceTest.cpp PROPERTIES LANGUAGE CUDA)
+elseif(_peano_gpu_backend STREQUAL "hip")
+  set_source_files_properties(dg/tests/KernelsOnDeviceTest.cpp PROPERTIES LANGUAGE HIP)
+  set_source_files_properties(dg/rk/tests/KernelsOnDeviceTest.cpp PROPERTIES LANGUAGE HIP)
+endif()
 
 install_peano_headers(
   PATTERNS ${HEADER_EXTENSIONS_TO_GLOB}

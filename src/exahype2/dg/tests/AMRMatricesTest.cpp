@@ -40,7 +40,7 @@ namespace {
 } // namespace
 
 exahype2::dg::tests::AMRMatricesTest::AMRMatricesTest() :
-  TestCase("exahype2::dg::tests::AMRMatricesTest") {}
+  tarch::tests::TestCase("exahype2::dg::tests::AMRMatricesTest") {}
 
 void exahype2::dg::tests::AMRMatricesTest::run() {
   testMethod(testLagrangeBasisFunctionIsCardinal);
@@ -49,6 +49,7 @@ void exahype2::dg::tests::AMRMatricesTest::run() {
   testMethod(testWeightedRestrictionPreservesConstants);
   testMethod(testMatricesAreMirrorSymmetricToTheLastBit);
   testMethod(testAverageMirrorPairsKeepsSymmetricEntries);
+  testMethod(testTransposePerChildSwapsTheNodeIndices);
   testMethod(testOrderZeroMatrices);
 }
 
@@ -149,6 +150,24 @@ void exahype2::dg::tests::AMRMatricesTest::testAverageMirrorPairsKeepsSymmetricE
   exahype2::dg::averageMirrorPairs<NodesPerAxis>(perturbed);
   validateEquals(perturbed[index(0, 0, 0)], 2.0);
   validateEquals(perturbed[index(SubdivisionFactor - 1, NodesPerAxis - 1, NodesPerAxis - 1)], 2.0);
+}
+
+void exahype2::dg::tests::AMRMatricesTest::testTransposePerChildSwapsTheNodeIndices() {
+  const auto transposed = exahype2::dg::transposePerChild<NodesPerAxis>(WeightedRestriction);
+  for (int child = 0; child < SubdivisionFactor; child++) {
+    for (int row = 0; row < NodesPerAxis; row++) {
+      for (int column = 0; column < NodesPerAxis; column++) {
+        validateEqualsWithParams3(
+          transposed[index(child, column, row)],
+          WeightedRestriction[index(child, row, column)],
+          child,
+          row,
+          column
+        );
+      }
+    }
+  }
+  validate(exahype2::dg::transposePerChild<NodesPerAxis>(transposed) == WeightedRestriction);
 }
 
 void exahype2::dg::tests::AMRMatricesTest::testOrderZeroMatrices() {

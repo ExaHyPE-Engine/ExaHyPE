@@ -3,16 +3,16 @@
 
 template <class Record, class Marker>
 INLINE_METHOD bool peano4::dataview::MetaDataRecord<Record, Marker>::send(
-  const Marker&                                             marker,
-  [[maybe_unused]] const ::peano4::grid::SendReceiveContext context
+  const Marker&                                           marker,
+  [[maybe_unused]] const peano4::grid::SendReceiveContext context
 ) const {
   return static_cast<const Record&>(*this).sendCondition(marker);
 }
 
 template <class Record, class Marker>
 INLINE_METHOD bool peano4::dataview::MetaDataRecord<Record, Marker>::receiveAndMerge(
-  const Marker&                                             marker,
-  [[maybe_unused]] const ::peano4::grid::SendReceiveContext context
+  const Marker&                                           marker,
+  [[maybe_unused]] const peano4::grid::SendReceiveContext context
 ) const {
   return static_cast<const Record&>(*this).receiveAndMergeCondition(marker);
 }

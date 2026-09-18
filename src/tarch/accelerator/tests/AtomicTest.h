@@ -19,9 +19,13 @@ public:
 
   void run() override;
 
+  // The test bodies launch extended __device__ lambdas, which nvcc forbids
+  // inside private or protected member functions.
+  void testConcurrentMaximumIsOrderIndependent();
+  void testConcurrentFloatingPointMaximumIsOrderIndependent();
+
 private:
   void testSerialOperations();
   void testConcurrentOperations();
   void testLoadStoreRoundTrip();
-  void testConcurrentMaximumIsOrderIndependent();
 };

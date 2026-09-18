@@ -15,14 +15,14 @@ class InitialCondition(AbstractRungeKuttaDGActionSet):
       repositories::{{SOLVER_INSTANCE}}.initialCondition(
         fineGridCell{{UNKNOWN_IDENTIFIER}}.data() + linearisedIndex,
         ::exahype2::dg::getQuadraturePoint(
-          marker.getX(), marker.getH(), index, repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1D
+          marker.getX(), marker.getH(), index, kernels::{{SOLVER_NAME}}::Quadrature::QuadraturePoints1D
         ),
         marker.getH()
       );
       linearisedIndex += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     });
 
-    // Tracing and similar postprocessing run only for a cell that has been updated
+    // The refinement criterion evaluates only a cell whose label reports an update.
     fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
   }
 """

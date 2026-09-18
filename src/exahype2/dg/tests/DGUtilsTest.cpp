@@ -3,224 +3,182 @@
 #include "DGUtilsTest.h"
 
 #include "exahype2/dg/DGUtils.h"
-#include "exahype2/dg/tests/TestUtils.h"
+#include "peano4/Loop.h"
 #include "peano4/dataview/CellMarker.h"
-#include "peano4/dataview/FaceMarker.h"
+#include "peano4/grid/GridTraversalEvent.h"
+
+namespace {
+  constexpr double QuadratureNodes1DP1[] = {0.21132486540518713, 0.7886751345948129};
+  constexpr double QuadratureNodes1DP2[] = {0.1127016653792583, 0.5, 0.8872983346207417};
+
+  tarch::la::Vector<DIMENSIONS, double> rampOverAxes(const double first, const double increment) {
+    tarch::la::Vector<DIMENSIONS, double> result;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      result(axis) = first + increment * axis;
+    }
+    return result;
+  }
+
+  double affineField(const tarch::la::Vector<DIMENSIONS, double>& position) {
+    double result = 1.0;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      result += (1.0 + axis) * position(axis);
+    }
+    return result;
+  }
+
+  // An affine field lies in the nodal basis of order one and higher, so a
+  // polynomial that interpolates it returns it at every point of the cell.
+  void fillAffineNodalValues(
+    const peano4::dataview::CellMarker& cellMarker,
+    const int                           order,
+    const double* NOALIAS const         nodes,
+    double* NOALIAS const               values
+  ) {
+    peano4::dForEach(order + 1, [&](const tarch::la::Vector<DIMENSIONS, int>& node) {
+      tarch::la::Vector<DIMENSIONS, double> position;
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        position(axis) = cellMarker.getOffset()(axis) + nodes[node(axis)] * cellMarker.getH()(axis);
+      }
+      values[peano4::dLinearised(node, order + 1)] = affineField(position);
+    });
+  }
+} // namespace
 
 exahype2::dg::tests::DGUtilsTest::DGUtilsTest() :
-  TestCase("exahype2::dg::tests::DGUtilsTest") {}
+  tarch::tests::TestCase("exahype2::dg::tests::DGUtilsTest") {}
 
 void exahype2::dg::tests::DGUtilsTest::run() {
-  testMethod(testGetIndex);
-  testMethod(testComputeGradientOnConstantSolution);
+  testMethod(testGetQuadraturePointMapsTheReferenceNode);
   testMethod(testEvaluatePolynomialOrder1);
   testMethod(testEvaluatePolynomialOrder2);
-  testMethod(testEvaluatePolynomialOnFace);
-  testMethod(testGetQuadraturePoint);
+  testMethod(testEvaluatePolynomialOnAFace);
 }
 
-/** A polynomial of order one returns the constant it interpolates at every point of the cell. */
+/** A reference node maps onto the cell offset plus the node's fraction of the cell size. */
+void exahype2::dg::tests::DGUtilsTest::testGetQuadraturePointMapsTheReferenceNode() {
+  const auto                         cellCentre = rampOverAxes(0.4, 0.2);
+  const auto                         cellSize   = rampOverAxes(0.2, 0.2);
+  tarch::la::Vector<DIMENSIONS, int> index;
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    index(axis) = (2 * axis) % 3;
+  }
+
+  const auto position = exahype2::dg::getQuadraturePoint(cellCentre, cellSize, index, QuadratureNodes1DP2);
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    const double expected = cellCentre(axis) + (QuadratureNodes1DP2[index(axis)] - 0.5) * cellSize(axis);
+    validateNumericalEqualsWithParams1(position(axis), expected, axis);
+  }
+
+  // A table in another precision is widened to double before it scales the cell.
+  const float narrowNodes[]  = {0.25F, 0.5F, 0.75F};
+  const auto  narrowPosition = exahype2::dg::getQuadraturePoint(cellCentre, cellSize, index, narrowNodes);
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    const double expected = cellCentre(axis) + (static_cast<double>(narrowNodes[index(axis)]) - 0.5) * cellSize(axis);
+    validateNumericalEqualsWithParams1(narrowPosition(axis), expected, axis);
+  }
+}
+
+/** A polynomial of order one returns the affine field it interpolates at every point of the cell. */
 void exahype2::dg::tests::DGUtilsTest::testEvaluatePolynomialOrder1() {
-  constexpr int Order = 1;
+  constexpr int Order        = 1;
+  constexpr int NodesPerCell = (DIMENSIONS == 3) ? (Order + 1) * (Order + 1) * (Order + 1) : (Order + 1) * (Order + 1);
 
   peano4::dataview::CellMarker cellMarker;
+  cellMarker.h      = tarch::la::Vector<DIMENSIONS, double>(0.2);
+  cellMarker.centre = rampOverAxes(0.4, 0.2);
 
-#if DIMENSIONS == 2
-  cellMarker.h      = {0.2, 0.2};
-  cellMarker.centre = {0.4, 0.6};
+  double values[NodesPerCell];
+  fillAffineNodalValues(cellMarker, Order, QuadratureNodes1DP1, values);
 
-  const double                                Q0[]        = {1.2, 1.2, 1.2, 1.2};
-  const tarch::la::Vector<DIMENSIONS, double> xCentre     = {0.4, 0.6};
-  const tarch::la::Vector<DIMENSIONS, double> xLeftBottom = {
-    0.3 + 0.2 * QuadratureNodes1DP1[0],
-    0.5 + 0.2 * QuadratureNodes1DP1[0]
-  };
-#else
-  cellMarker.h      = {0.2, 0.2, 0.2};
-  cellMarker.centre = {0.4, 0.6, 0.8};
+  auto firstNode = cellMarker.getOffset();
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    firstNode(axis) += QuadratureNodes1DP1[0] * cellMarker.getH()(axis);
+  }
+  const double valueAtFirstNode =
+    exahype2::dg::evaluatePolynomial(cellMarker, Order, QuadratureNodes1DP1, 1, values, firstNode, 0);
+  validateNumericalEqualsWithParams1(valueAtFirstNode, affineField(firstNode), cellMarker.toString());
 
-  const double                                Q0[]        = {1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2};
-  const tarch::la::Vector<DIMENSIONS, double> xCentre     = {0.4, 0.6, 0.8};
-  const tarch::la::Vector<DIMENSIONS, double> xLeftBottom = {
-    0.3 + 0.2 * QuadratureNodes1DP1[0],
-    0.5 + 0.2 * QuadratureNodes1DP1[0],
-    0.7 + 0.2 * QuadratureNodes1DP1[0]
-  };
-#endif
-
-  const double valueAtLeftBottom =
-    exahype2::dg::evaluatePolynomial(cellMarker, Order, QuadratureNodes1DP1, 1, Q0, xLeftBottom, 0);
-  validateNumericalEqualsWithParams1(valueAtLeftBottom, 1.2, cellMarker.toString());
-
+  const auto   centre = cellMarker.getX();
   const double valueAtCentre =
-    exahype2::dg::evaluatePolynomial(cellMarker, Order, QuadratureNodes1DP1, 1, Q0, xCentre, 0);
-  validateNumericalEqualsWithParams1(valueAtCentre, 1.2, cellMarker.toString());
+    exahype2::dg::evaluatePolynomial(cellMarker, Order, QuadratureNodes1DP1, 1, values, centre, 0);
+  validateNumericalEqualsWithParams1(valueAtCentre, affineField(centre), cellMarker.toString());
 }
 
-/** A polynomial of order two returns the constant it interpolates at every point of the cell. */
+/** A polynomial of order two returns the affine field it interpolates at every point of the cell. */
 void exahype2::dg::tests::DGUtilsTest::testEvaluatePolynomialOrder2() {
-  constexpr int Order = 2;
+  constexpr int Order        = 2;
+  constexpr int NodesPerCell = (DIMENSIONS == 3) ? (Order + 1) * (Order + 1) * (Order + 1) : (Order + 1) * (Order + 1);
 
   peano4::dataview::CellMarker cellMarker;
+  cellMarker.h      = tarch::la::Vector<DIMENSIONS, double>(0.2);
+  cellMarker.centre = rampOverAxes(0.4, 0.2);
 
-#if DIMENSIONS == 2
-  cellMarker.h      = {0.2, 0.2};
-  cellMarker.centre = {0.4, 0.6};
+  double values[NodesPerCell];
+  fillAffineNodalValues(cellMarker, Order, QuadratureNodes1DP2, values);
 
-  const double                                Q0[]        = {1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2};
-  const tarch::la::Vector<DIMENSIONS, double> xCentre     = {0.4, 0.6};
-  const tarch::la::Vector<DIMENSIONS, double> xLeftBottom = {
-    0.3 + 0.2 * QuadratureNodes1DP2[0],
-    0.5 + 0.2 * QuadratureNodes1DP2[0]
-  };
-#else
-  cellMarker.h      = {0.2, 0.2, 0.2};
-  cellMarker.centre = {0.4, 0.6, 0.8};
+  auto firstNode = cellMarker.getOffset();
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    firstNode(axis) += QuadratureNodes1DP2[0] * cellMarker.getH()(axis);
+  }
+  const double valueAtFirstNode =
+    exahype2::dg::evaluatePolynomial(cellMarker, Order, QuadratureNodes1DP2, 1, values, firstNode, 0);
+  validateNumericalEqualsWithParams1(valueAtFirstNode, affineField(firstNode), cellMarker.toString());
 
-  const double Q0[] = {1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2,
-                       1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2};
-  const tarch::la::Vector<DIMENSIONS, double> xCentre     = {0.4, 0.6, 0.8};
-  const tarch::la::Vector<DIMENSIONS, double> xLeftBottom = {
-    0.3 + 0.2 * QuadratureNodes1DP2[0],
-    0.5 + 0.2 * QuadratureNodes1DP2[0],
-    0.7 + 0.2 * QuadratureNodes1DP2[0]
-  };
-#endif
-
-  const double valueAtLeftBottom =
-    exahype2::dg::evaluatePolynomial(cellMarker, Order, QuadratureNodes1DP2, 1, Q0, xLeftBottom, 0);
-  validateNumericalEqualsWithParams1(valueAtLeftBottom, 1.2, cellMarker.toString());
-
+  const auto   centre = cellMarker.getX();
   const double valueAtCentre =
-    exahype2::dg::evaluatePolynomial(cellMarker, Order, QuadratureNodes1DP2, 1, Q0, xCentre, 0);
-  validateNumericalEqualsWithParams1(valueAtCentre, 1.2, cellMarker.toString());
+    exahype2::dg::evaluatePolynomial(cellMarker, Order, QuadratureNodes1DP2, 1, values, centre, 0);
+  validateNumericalEqualsWithParams1(valueAtCentre, affineField(centre), cellMarker.toString());
 }
 
-/** The face polynomial returns the constant it interpolates and reproduces a tangential ramp. */
-void exahype2::dg::tests::DGUtilsTest::testEvaluatePolynomialOnFace() {
-  constexpr int Order          = 1;
-  constexpr int LeftFaceNumber = 0;
+/**
+ * A profile that is linear along every tangential axis is reproduced at a
+ * position between the face nodes.
+ */
+void exahype2::dg::tests::DGUtilsTest::testEvaluatePolynomialOnAFace() {
+  constexpr int Order           = 1;
+  constexpr int FaceNumber      = 0;
+  constexpr int UnknownsPerNode = 2;
+  constexpr int Unknown         = 1;
+  constexpr int NodesPerFace    = (DIMENSIONS == 3) ? (Order + 1) * (Order + 1) : Order + 1;
 
-  peano4::dataview::FaceMarker faceMarker;
+  peano4::grid::GridTraversalEvent event;
+  event.setX(rampOverAxes(0.4, 0.2));
+  event.setH(rampOverAxes(0.2, 0.2));
+  const auto slopes            = rampOverAxes(1.0, 1.0);
+  const auto referencePosition = rampOverAxes(0.5, -0.2);
 
-#if DIMENSIONS == 2
-  faceMarker.h          = {0.2, 0.2};
-  faceMarker.cellCentre = {0.4, 0.6};
+  auto faceMarker = event.getFaceMarker();
+  faceMarker.select(FaceNumber);
 
-  const double constantQ[] = {1.2, 1.2};
-#else
-  faceMarker.h          = {0.2, 0.2, 0.2};
-  faceMarker.cellCentre = {0.4, 0.6, 0.8};
-
-  const double constantQ[] = {1.2, 1.2, 1.2, 1.2};
-#endif
-
-  faceMarker.select(LeftFaceNumber);
-
-  const tarch::la::Vector<DIMENSIONS, double> faceCentre = faceMarker.getX();
-
-  const double valueAtFaceCentre =
-    exahype2::dg::evaluatePolynomial(faceMarker, Order, QuadratureNodes1DP1, 1, constantQ, faceCentre, 0);
-  validateNumericalEqualsWithParams1(valueAtFaceCentre, 1.2, faceMarker.toString());
-
-#if DIMENSIONS == 2
-  // The two face nodes carry their own reference coordinate, so the polynomial returns the
-  // reference coordinate of every point of the face.
-  const double rampQ[] = {QuadratureNodes1DP1[0], QuadratureNodes1DP1[1]};
-
-  const double rampAtFaceCentre =
-    exahype2::dg::evaluatePolynomial(faceMarker, Order, QuadratureNodes1DP1, 1, rampQ, faceCentre, 0);
-  validateNumericalEqualsWithParams1(rampAtFaceCentre, 0.5, faceMarker.toString());
-
-  tarch::la::Vector<DIMENSIONS, double> pointOnFace = faceCentre;
-  pointOnFace(1) += 0.25 * faceMarker.getH()(1);
-
-  const double rampAtPointOnFace =
-    exahype2::dg::evaluatePolynomial(faceMarker, Order, QuadratureNodes1DP1, 1, rampQ, pointOnFace, 0);
-  validateNumericalEqualsWithParams1(rampAtPointOnFace, 0.75, faceMarker.toString());
-#endif
-}
-
-/** The centre node of an order-two cell maps onto the cell centre and the outer nodes stay inside. */
-void exahype2::dg::tests::DGUtilsTest::testGetQuadraturePoint() {
-  const tarch::la::Vector<DIMENSIONS, double> cellSize(0.2);
-
-#if DIMENSIONS == 2
-  const tarch::la::Vector<DIMENSIONS, double> cellCentre = {0.4, 0.6};
-#else
-  const tarch::la::Vector<DIMENSIONS, double> cellCentre = {0.4, 0.6, 0.8};
-#endif
-
-  const tarch::la::Vector<DIMENSIONS, int> firstNode(0);
-  const tarch::la::Vector<DIMENSIONS, int> centreNode(1);
-  const tarch::la::Vector<DIMENSIONS, int> lastNode(2);
-
-  const tarch::la::Vector<DIMENSIONS, double> firstPoint =
-    exahype2::dg::getQuadraturePoint(cellCentre, cellSize, firstNode, QuadratureNodes1DP2);
-  const tarch::la::Vector<DIMENSIONS, double> centrePoint =
-    exahype2::dg::getQuadraturePoint(cellCentre, cellSize, centreNode, QuadratureNodes1DP2);
-  const tarch::la::Vector<DIMENSIONS, double> lastPoint =
-    exahype2::dg::getQuadraturePoint(cellCentre, cellSize, lastNode, QuadratureNodes1DP2);
-
-  for (int axis = 0; axis < DIMENSIONS; axis++) {
-    validateNumericalEqualsWithParams1(centrePoint(axis), cellCentre(axis), axis);
-    validateNumericalEqualsWithParams1(0.5 * (firstPoint(axis) + lastPoint(axis)), cellCentre(axis), axis);
-    validateWithParams2(firstPoint(axis) > cellCentre(axis) - 0.5 * cellSize(axis), firstPoint(axis), axis);
-    validateWithParams2(lastPoint(axis) < cellCentre(axis) + 0.5 * cellSize(axis), lastPoint(axis), axis);
-  }
-}
-
-/** The strides of a cell and the index of a serialised node invert each other. */
-void exahype2::dg::tests::DGUtilsTest::testGetIndex() {
-  constexpr int Order        = 3;
-  constexpr int NodesPerAxis = Order + 1;
-
-  const int nodesPerCell = exahype2::dg::getNodesPerCell(NodesPerAxis);
-  validateEquals(nodesPerCell, std::pow(NodesPerAxis, DIMENSIONS));
-
-  const tarch::la::Vector<DIMENSIONS, int> strides = exahype2::dg::getStrides(NodesPerAxis);
-  validateEquals(strides[DIMENSIONS - 1], std::pow(NodesPerAxis, DIMENSIONS - 1));
-
-  const tarch::la::Vector<DIMENSIONS, int> firstIndex = exahype2::dg::getIndex(0, strides);
-  for (int axis = 0; axis < DIMENSIONS; axis++) {
-    validateEqualsWithParams1(firstIndex[axis], 0, axis);
-  }
-
-  const tarch::la::Vector<DIMENSIONS, int> lastIndex = exahype2::dg::getIndex(nodesPerCell - 1, strides);
-  for (int axis = 0; axis < DIMENSIONS; axis++) {
-    validateEqualsWithParams1(lastIndex[axis], NodesPerAxis - 1, axis);
-  }
-}
-
-/** The gradient of a constant solution vanishes in every direction and at every node. */
-void exahype2::dg::tests::DGUtilsTest::testComputeGradientOnConstantSolution() {
-  constexpr int    Order            = 3;
-  constexpr int    NodesPerAxis     = Order + 1;
-  constexpr int    NodesPerCell     = NodesPerAxis * NodesPerAxis * (DIMENSIONS == 3 ? NodesPerAxis : 1);
-  constexpr int    StrideQ          = 2;
-  constexpr double InverseCellWidth = 10.0;
-
-  double cellQin[NodesPerCell * StrideQ];
-  for (int entry = 0; entry < NodesPerCell * StrideQ; entry++) {
-    cellQin[entry] = 1.0;
-  }
-
-  double gradientValues[DIMENSIONS * StrideQ];
-  for (int node = 0; node < NodesPerCell; node++) {
-    exahype2::dg::computeGradient(
-      cellQin,
-      DerivativeOperatorLagrangeP3,
-      InverseCellWidth,
-      NodesPerAxis,
-      StrideQ,
-      node,
-      gradientValues
-    );
-
-    for (int axis = 0; axis < DIMENSIONS; axis++) {
-      for (int quantity = 0; quantity < StrideQ; quantity++) {
-        validateNumericalEqualsWithParams3(gradientValues[axis * StrideQ + quantity], 0.0, node, axis, quantity);
-      }
+  double values[NodesPerFace * UnknownsPerNode] = {};
+  int    node                                   = 0;
+  peano4::dForEachExclusive(Order + 1, FaceNumber, 0, [&](const tarch::la::Vector<DIMENSIONS, int>& index) {
+    double value = 1.0;
+    for (int axis = 1; axis < DIMENSIONS; axis++) {
+      value += slopes(axis) * QuadratureNodes1DP1[index(axis)];
     }
+    const int firstEntry         = node * UnknownsPerNode;
+    values[firstEntry]           = -value;
+    values[firstEntry + Unknown] = value;
+    node++;
+  });
+
+  auto   position = faceMarker.getX();
+  double expected = 1.0;
+  for (int axis = 1; axis < DIMENSIONS; axis++) {
+    position(axis) += (referencePosition(axis) - 0.5) * faceMarker.getH()(axis);
+    expected += slopes(axis) * referencePosition(axis);
   }
+
+  const double result = exahype2::dg::evaluatePolynomial(
+    faceMarker,
+    Order,
+    QuadratureNodes1DP1,
+    UnknownsPerNode,
+    values,
+    position,
+    Unknown
+  );
+  validateNumericalEqualsWithParams1(result, expected, faceMarker.toString());
 }

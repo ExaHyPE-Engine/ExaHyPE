@@ -268,7 +268,7 @@ void exahype2::fv::validatePatch(
                     << ", haloSize=" << haloSize << ", entry=" << entry
                     << ", numberOfVolumesPerAxisInPatch=" << numberOfVolumesPerAxisInPatch
                     << ", patchIndex=" << patchIndex << ", unknown=" << quantity << ", location=" << location;
-            ::tarch::triggerNonCriticalAssertion(
+            tarch::triggerNonCriticalAssertion(
               __FILE__,
               __LINE__,
               "std::isfinite(Q[entry]) and dataValid",

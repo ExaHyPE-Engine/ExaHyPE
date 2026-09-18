@@ -276,7 +276,7 @@ the ExaHyPE release paper:
             f"  result.getConfigurationSummary = []() {{ return "
             f"{repository_namespace}::getConfigurationSummary(); }};\n"
             "  result.getCopyrightBanner      = []() { return "
-            '::std::string("ExaHyPE 2 (C) www.exahype.org"); };'
+            'std::string("ExaHyPE 2 (C) www.exahype.org"); };'
         )
 
     def _init_main_template_dictionary(self, peano_main):

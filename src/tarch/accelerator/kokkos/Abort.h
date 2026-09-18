@@ -10,8 +10,8 @@
 
 namespace tarch::accelerator {
   inline KOKKOS_FUNCTION void abort(const char* message) {
-    COMPILE_IF_ON_DEVICE(::Kokkos::abort(message);)
-    COMPILE_IF_ON_HOST(::Kokkos::abort(message);)
+    COMPILE_IF_ON_DEVICE(Kokkos::abort(message);)
+    COMPILE_IF_ON_HOST(Kokkos::abort(message);)
   }
 } // namespace tarch::accelerator
 

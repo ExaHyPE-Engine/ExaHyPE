@@ -1,0 +1,60 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+TARGET_DECLARE
+/**
+ * Applies a strided one-dimensional operator to a tensor slice.
+ * The caller shifts each pointer to the slice's first entry.
+ * Scaling factors multiply each source value in argument order before the operator weight.
+ */
+template <
+  int  NumberOfEntries,
+  int  NumberOfTargetNodes,
+  int  NumberOfSourceNodes,
+  int  ValueStride,
+  int  OperatorStride,
+  int  ResultStride,
+  bool OverwriteResult,
+  typename ResultPrecision,
+  typename ComputePrecision,
+  typename... Scalings>
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::applyOperatorAlongAxis(
+  ResultPrecision* NOALIAS const        result,
+  const ComputePrecision* NOALIAS const values,
+  const ComputePrecision* NOALIAS const operatorMatrix,
+  const Scalings... scalings
+) {
+  using AccumulatePrecision = std::common_type_t<ResultPrecision, ComputePrecision>;
+
+  for (int targetNode = 0; targetNode < NumberOfTargetNodes; targetNode++) {
+    ResultPrecision* NOALIAS const resultNode = result + targetNode * ResultStride;
+
+    AccumulatePrecision accumulator[NumberOfEntries];
+    SIMD()
+    for (int entry = 0; entry < NumberOfEntries; entry++) {
+      if constexpr (OverwriteResult) {
+        accumulator[entry] = static_cast<AccumulatePrecision>(0);
+      } else {
+        accumulator[entry] = static_cast<AccumulatePrecision>(resultNode[entry]);
+      }
+    }
+
+    for (int sourceNode = 0; sourceNode < NumberOfSourceNodes; sourceNode++) {
+      const ComputePrecision* NOALIAS const sourceValues   = values + sourceNode * ValueStride;
+      const ComputePrecision                operatorWeight = operatorMatrix[targetNode * OperatorStride + sourceNode];
+      SIMD()
+      for (int entry = 0; entry < NumberOfEntries; entry++) {
+        accumulator[entry] = accumulator[entry]
+          + static_cast<AccumulatePrecision>(
+                               (sourceValues[entry] * ... * static_cast<ComputePrecision>(scalings)) * operatorWeight
+          );
+      }
+    }
+
+    SIMD()
+    for (int entry = 0; entry < NumberOfEntries; entry++) {
+      resultNode[entry] = static_cast<ResultPrecision>(accumulator[entry]);
+    }
+  }
+}
+TARGET_DECLARE_END

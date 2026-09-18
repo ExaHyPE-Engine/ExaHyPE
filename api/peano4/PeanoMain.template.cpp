@@ -76,7 +76,7 @@ namespace {
     };
 
     result.printApplicationHelp      = ::{{ project_namespace }}::RuntimeParameters::printUsage;
-    result.loadApplicationParameters = [](::tarch::reader::JSONReader* const reader, int& argc, char** const argv) {
+    result.loadApplicationParameters = [](tarch::reader::JSONReader* const reader, int& argc, char** const argv) {
       ::{{ project_namespace }}::RuntimeParameters::load(reader, argc, argv);
     };
 {% if ADDITIONAL_REPOSITORY_CALLBACKS %}
@@ -92,7 +92,7 @@ int main(int argc, char** argv) {
   return ::runner::launch(
     ::{{ project_namespace }}::DomainOffset,
     ::{{ project_namespace }}::DomainSize,
-    ::{{ project_namespace }}::PeriodicBC,
+    ::{{ project_namespace }}::PeriodicBoundaries,
     createRepositoryCallbacks(),
     createSteps(),
     argc,

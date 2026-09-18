@@ -512,7 +512,7 @@ namespace {
     std::fflush(stderr);
   }
 
-  __attribute__((force_align_arg_pointer)) void terminateAfterFloatingPointSignal() noexcept {
+  ALIGN_STACK_ON_ENTRY void terminateAfterFloatingPointSignal() noexcept {
     try {
       reportFloatingPointEvent(trappedEvent);
     } catch (...) {

@@ -35,10 +35,17 @@ INLINE_METHOD GPU_CALLABLE_METHOD void tarch::accelerator::updateAtomicMax(T& ta
 #if defined(PEANO_WITH_GPU_BACKEND_KOKKOS)
   Kokkos::atomic_max(&target, value);
 #elif defined(PEANO_WITH_GPU_BACKEND_SYCL)
-  sycl::
-    atomic_ref<T, sycl::memory_order::relaxed, sycl::memory_scope::device, sycl::access::address_space::global_space>
-      reference(target);
-  reference.fetch_max(value);
+  const ::sycl::atomic_ref<T, ::sycl::memory_order::relaxed, ::sycl::memory_scope::device> reference(target);
+  if constexpr (std::is_integral_v<T>) {
+    reference.fetch_max(value);
+  } else {
+    // AdaptiveCpp implements fetch_max on a floating-point type through an atomic load with a
+    // run-time memory order, which a device backend rejects without optimisation, so the maximum
+    // runs through compare-and-exchange from a plain read.
+    T current = target;
+    while (current < value and not reference.compare_exchange_weak(current, value)) {
+    }
+  }
 #elif defined(PEANO_WITH_GPU_BACKEND_OMPT)
 #pragma omp atomic compare
   if (target < value) {
@@ -46,11 +53,44 @@ INLINE_METHOD GPU_CALLABLE_METHOD void tarch::accelerator::updateAtomicMax(T& ta
   }
 #else
   COMPILE_IF_ON_HOST(
-    std::atomic_ref<T> reference(target); T current = reference.load(std::memory_order_relaxed);
+    const std::atomic_ref<T> reference(target); T current = reference.load(std::memory_order_relaxed);
     while (current < value and not reference.compare_exchange_weak(current, value, std::memory_order_relaxed)){}
   )
-  COMPILE_IF_ON_DEVICE(atomicMax(&target, value);)
+  COMPILE_IF_ON_DEVICE(
+    if constexpr (std::is_integral_v<T>) { atomicMax(&target, value); } else {
+      tarch::accelerator::updateAtomicMaxThroughCompareAndSwap(target, value);
+    }
+  )
 #endif
+}
+
+/**
+ * Raises a floating-point target on a CUDA or HIP device through
+ * compare-and-swap on its bit pattern, as both offer atomicMax for integers
+ * only. The routine compiles to nothing on the host.
+ */
+template <typename T>
+INLINE_METHOD GPU_CALLABLE_METHOD void tarch::accelerator::updateAtomicMaxThroughCompareAndSwap(
+  [[maybe_unused]] T&      target,
+  [[maybe_unused]] const T value
+) {
+  COMPILE_IF_ON_DEVICE(
+    using Bits           = typename tarch::accelerator::UnsignedOfWidth<sizeof(T)>::Type;
+    Bits* const address  = reinterpret_cast<Bits*>(&target);
+    Bits        observed = *address;
+    Bits        assumed  = observed;
+    do {
+      assumed = observed;
+      T current;
+      std::memcpy(&current, &assumed, sizeof(T));
+      if (not(current < value)) {
+        return;
+      }
+      Bits candidate;
+      std::memcpy(&candidate, &value, sizeof(T));
+      observed = atomicCAS(address, assumed, candidate);
+    } while (assumed != observed);
+  )
 }
 TARGET_DECLARE_END
 
@@ -62,8 +102,8 @@ TARGET_DECLARE_END
  */
 template <typename T>
 INLINE_METHOD void tarch::accelerator::updateAtomicMin(T& target, const T value) {
-  std::atomic_ref<T> atomicTarget(target);
-  auto               current = atomicTarget.load(std::memory_order_relaxed);
+  const std::atomic_ref<T> atomicTarget(target);
+  auto                     current = atomicTarget.load(std::memory_order_relaxed);
   while (value < current) {
     if (atomicTarget.compare_exchange_weak(current, value, std::memory_order_relaxed)) {
       return;
@@ -78,7 +118,7 @@ INLINE_METHOD void tarch::accelerator::updateAtomicMin(T& target, const T value)
  */
 template <typename T>
 INLINE_METHOD T tarch::accelerator::incrementAtomic(T& target) {
-  std::atomic_ref<T> atomicTarget(target);
+  const std::atomic_ref<T> atomicTarget(target);
   return atomicTarget.fetch_add(1, std::memory_order_relaxed) + 1;
 }
 
@@ -89,8 +129,8 @@ INLINE_METHOD T tarch::accelerator::incrementAtomic(T& target) {
  */
 template <typename T>
 INLINE_METHOD T tarch::accelerator::addAtomic(T& target, const T value) {
-  std::atomic_ref<T> atomicTarget(target);
-  auto               current = atomicTarget.load(std::memory_order_relaxed);
+  const std::atomic_ref<T> atomicTarget(target);
+  auto                     current = atomicTarget.load(std::memory_order_relaxed);
   while (true) {
     const auto updatedValue = current + value;
     if (atomicTarget.compare_exchange_weak(current, updatedValue, std::memory_order_relaxed)) {
