@@ -124,7 +124,7 @@ namespace {
 
   std::uint64_t bitPattern(const double value) { return std::bit_cast<std::uint64_t>(value); }
 
-  constexpr int NumberOfSubfaces = peano4::Power<SubdivisionFactor, DIMENSIONS - 1>;
+  constexpr int NumberOfSubfaces = peano4::power(SubdivisionFactor, DIMENSIONS - 1);
 
   /**
    * Returns one face-node index independently of the routines under test.
@@ -814,30 +814,38 @@ void exahype2::amr::tests::RestrictionTest::testInterpolateFaceFromCoarse() {
     }
   }
 #else
-  const double* prolongationMatrixPerAxis[2] = {prolongation.data(), prolongation.data() + Stride};
-  std::array<double, static_cast<std::size_t>(NodesPerFace * Unknowns)> fine{};
-  exahype2::amr::interpolateFaceFromCoarse(
-    fine.data(),
-    coarse.data(),
-    prolongationMatrixPerAxis,
-    NodesPerAxis,
-    Unknowns
-  );
-  for (int fineOuter = 0; fineOuter < NodesPerAxis; fineOuter++) {
-    for (int fineInner = 0; fineInner < NodesPerAxis; fineInner++) {
-      const double innerPosition = nodePosition(fineInner) / SubdivisionFactor;
-      const double outerPosition = (nodePosition(fineOuter) + 1.0) / SubdivisionFactor;
-      for (int u = 0; u < Unknowns; u++) {
-        validateNumericalEquals(
-          fine[(fineOuter * NodesPerAxis + fineInner) * Unknowns + u],
-          1.0 + u + 2.0 * innerPosition + 3.0 * outerPosition
-        );
+  for (int subfaceOuter = 0; subfaceOuter < SubdivisionFactor; subfaceOuter++) {
+    for (int subfaceInner = 0; subfaceInner < SubdivisionFactor; subfaceInner++) {
+      const double* subfaceMatrixPerAxis[2] = {
+        prolongation.data() + static_cast<std::ptrdiff_t>(subfaceInner * Stride),
+        prolongation.data() + static_cast<std::ptrdiff_t>(subfaceOuter * Stride)
+      };
+      std::array<double, static_cast<std::size_t>(NodesPerFace * Unknowns)> subface{};
+      exahype2::amr::interpolateFaceFromCoarse(
+        subface.data(),
+        coarse.data(),
+        subfaceMatrixPerAxis,
+        NodesPerAxis,
+        Unknowns
+      );
+      for (int fineOuter = 0; fineOuter < NodesPerAxis; fineOuter++) {
+        for (int fineInner = 0; fineInner < NodesPerAxis; fineInner++) {
+          const double innerPosition = (nodePosition(fineInner) + subfaceInner) / SubdivisionFactor;
+          const double outerPosition = (nodePosition(fineOuter) + subfaceOuter) / SubdivisionFactor;
+          for (int u = 0; u < Unknowns; u++) {
+            validateNumericalEquals(
+              subface[(fineOuter * NodesPerAxis + fineInner) * Unknowns + u],
+              1.0 + u + 2.0 * innerPosition + 3.0 * outerPosition
+            );
+          }
+        }
       }
     }
   }
 
   // Swapping the tangential axes of the coarse half and the per-axis operators
   // interpolates the transposed subface to the bitwise transposed values.
+  const double* prolongationMatrixPerAxis[2] = {prolongation.data(), prolongation.data() + Stride};
   std::array<double, static_cast<std::size_t>(NodesPerFace * Unknowns)> randomCoarse{};
   std::array<double, static_cast<std::size_t>(NodesPerFace * Unknowns)> transposedCoarse{};
   for (int outer = 0; outer < NodesPerAxis; outer++) {
@@ -932,9 +940,8 @@ void exahype2::amr::tests::RestrictionTest::testRestrictFaceFromChildren() {
     validateEquals(bitPattern(coarseWithAbsentChild[i]), bitPattern(coarseWithZeroChild[i]));
   }
 
-#if DIMENSIONS == 2
-  // Mirroring the subfaces along the tangential axis mirrors the coarse half to
-  // the last bit.
+  // Reversing the subfaces and the nodes along every tangential axis mirrors the
+  // coarse half to the last bit.
   std::vector<std::vector<double>> mirroredSubfaces(NumberOfSubfaces);
   std::vector<const double*>       mirroredPointers(NumberOfSubfaces);
   for (int subface = 0; subface < NumberOfSubfaces; subface++) {
@@ -973,7 +980,6 @@ void exahype2::amr::tests::RestrictionTest::testRestrictFaceFromChildren() {
       );
     }
   }
-#endif
 }
 
 void exahype2::amr::tests::RestrictionTest::testRestrictCellWithMatrixReproducesPolynomials() {

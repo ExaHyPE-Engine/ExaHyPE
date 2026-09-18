@@ -2,133 +2,149 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 namespace tarch::accelerator {
-  template <typename T>
-  inline void combine([[maybe_unused]] Max<T> reducer, T& acc, T value) {
-    acc = (value > acc) ? value : acc;
-  }
-  template <typename T>
-  inline void combine([[maybe_unused]] Min<T> reducer, T& acc, T value) {
-    acc = (value < acc) ? value : acc;
-  }
-  template <typename T>
-  inline void combine([[maybe_unused]] Sum<T> reducer, T& acc, T value) {
-    acc = acc + value;
-  }
-
-  template <typename Reducer, typename F>
-  inline void parallelReduce([[maybe_unused]] const CpuTeam& team, const Range& range, F body, Reducer reducer) {
-    using T = typename Reducer::value_type;
+  template <typename Reducer, typename Functor>
+  inline void parallelReduce(
+    [[maybe_unused]] const CpuTeam& team,
+    const Range&                    range,
+    const Functor                   functor,
+    const Reducer                   reducer
+  ) {
     assertion(range.n >= 0, range.n);
-    T local = Reducer::identity();
+    typename Reducer::ValueType teamAccumulator = Reducer::identity();
     for (int i = 0; i < range.n; ++i) {
-      body(i, local);
+      functor(i, teamAccumulator);
     }
-    tarch::accelerator::combine(reducer, reducer.target, local);
+    reducer.target = Reducer::combine(reducer.target, teamAccumulator);
   }
-  template <typename Reducer, typename F>
-  inline void parallelReduce([[maybe_unused]] const CpuTeam& team, const RangeMD<2>& range, F body, Reducer reducer) {
-    using T = typename Reducer::value_type;
+  template <typename Reducer, typename Functor>
+  inline void parallelReduce(
+    [[maybe_unused]] const CpuTeam& team,
+    const RangeMD<2>&               range,
+    const Functor                   functor,
+    const Reducer                   reducer
+  ) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
-    T local = Reducer::identity();
+    typename Reducer::ValueType teamAccumulator = Reducer::identity();
     for (int x = 0; x < range.n[0]; ++x) {
       for (int y = 0; y < range.n[1]; ++y) {
-        body(x, y, local);
+        functor(x, y, teamAccumulator);
       }
     }
-    tarch::accelerator::combine(reducer, reducer.target, local);
+    reducer.target = Reducer::combine(reducer.target, teamAccumulator);
   }
-  template <typename Reducer, typename F>
-  inline void parallelReduce([[maybe_unused]] const CpuTeam& team, const RangeMD<3>& range, F body, Reducer reducer) {
-    using T = typename Reducer::value_type;
+  template <typename Reducer, typename Functor>
+  inline void parallelReduce(
+    [[maybe_unused]] const CpuTeam& team,
+    const RangeMD<3>&               range,
+    const Functor                   functor,
+    const Reducer                   reducer
+  ) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
     assertion(range.n[2] >= 0, range.n[2]);
-    T local = Reducer::identity();
+    typename Reducer::ValueType teamAccumulator = Reducer::identity();
     for (int x = 0; x < range.n[0]; ++x) {
       for (int y = 0; y < range.n[1]; ++y) {
         for (int z = 0; z < range.n[2]; ++z) {
-          body(x, y, z, local);
+          functor(x, y, z, teamAccumulator);
         }
       }
     }
-    tarch::accelerator::combine(reducer, reducer.target, local);
+    reducer.target = Reducer::combine(reducer.target, teamAccumulator);
   }
 
-  template <typename Reducer, typename F>
-  inline void parallelReduce(const Range& range, F body, Reducer reducer) {
-    using T = typename Reducer::value_type;
+  // The partial values merge in thread order, so the result depends on the thread count alone.
+  template <typename Reducer, typename Functor>
+  inline void parallelReduce(const Range& range, const Functor functor, const Reducer reducer) {
     assertion(range.n >= 0, range.n);
-    tarch::accelerator::runInParallelRegion([&]() {
-      T local = Reducer::identity();
+    using ValueType = typename Reducer::ValueType;
+    std::vector<ValueType> partials(static_cast<std::size_t>(omp_get_max_threads()), Reducer::identity());
+#pragma omp parallel default(none) shared(range, functor, partials) if (not omp_in_parallel())
+    {
+      ValueType partial = Reducer::identity();
 #pragma omp for schedule(static) nowait
       for (int i = 0; i < range.n; ++i) {
-        body(i, local);
+        functor(i, partial);
       }
-#pragma omp critical(tarch_parallelReduce_merge)
-      {
-        tarch::accelerator::combine(reducer, reducer.target, local);
-      }
-    });
+      partials[static_cast<std::size_t>(omp_get_thread_num())] = partial;
+    }
+    ValueType accumulator = Reducer::identity();
+    for (const ValueType& partial : partials) {
+      accumulator = Reducer::combine(accumulator, partial);
+    }
+    reducer.target = Reducer::combine(reducer.target, accumulator);
   }
 
-  template <typename Reducer, typename F>
-  inline void parallelReduce(const RangeMD<2>& range, F body, Reducer reducer) {
-    using T = typename Reducer::value_type;
+  template <typename Reducer, typename Functor>
+  inline void parallelReduce(const RangeMD<2>& range, const Functor functor, const Reducer reducer) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
-    tarch::accelerator::runInParallelRegion([&]() {
-      T local = Reducer::identity();
+    using ValueType = typename Reducer::ValueType;
+    std::vector<ValueType> partials(static_cast<std::size_t>(omp_get_max_threads()), Reducer::identity());
+#pragma omp parallel default(none) shared(range, functor, partials) if (not omp_in_parallel())
+    {
+      ValueType partial = Reducer::identity();
 #pragma omp for collapse(2) schedule(static) nowait
       for (int x = 0; x < range.n[0]; ++x) {
         for (int y = 0; y < range.n[1]; ++y) {
-          body(x, y, local);
+          functor(x, y, partial);
         }
       }
-#pragma omp critical(tarch_parallelReduce_merge)
-      {
-        tarch::accelerator::combine(reducer, reducer.target, local);
-      }
-    });
+      partials[static_cast<std::size_t>(omp_get_thread_num())] = partial;
+    }
+    ValueType accumulator = Reducer::identity();
+    for (const ValueType& partial : partials) {
+      accumulator = Reducer::combine(accumulator, partial);
+    }
+    reducer.target = Reducer::combine(reducer.target, accumulator);
   }
 
-  template <typename Reducer, typename F>
-  inline void parallelReduce(const RangeMD<3>& range, F body, Reducer reducer) {
-    using T = typename Reducer::value_type;
+  template <typename Reducer, typename Functor>
+  inline void parallelReduce(const RangeMD<3>& range, const Functor functor, const Reducer reducer) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
     assertion(range.n[2] >= 0, range.n[2]);
-    tarch::accelerator::runInParallelRegion([&]() {
-      T local = Reducer::identity();
+    using ValueType = typename Reducer::ValueType;
+    std::vector<ValueType> partials(static_cast<std::size_t>(omp_get_max_threads()), Reducer::identity());
+#pragma omp parallel default(none) shared(range, functor, partials) if (not omp_in_parallel())
+    {
+      ValueType partial = Reducer::identity();
 #pragma omp for collapse(3) schedule(static) nowait
       for (int x = 0; x < range.n[0]; ++x) {
         for (int y = 0; y < range.n[1]; ++y) {
           for (int z = 0; z < range.n[2]; ++z) {
-            body(x, y, z, local);
+            functor(x, y, z, partial);
           }
         }
       }
-#pragma omp critical(tarch_parallelReduce_merge)
-      {
-        tarch::accelerator::combine(reducer, reducer.target, local);
-      }
-    });
+      partials[static_cast<std::size_t>(omp_get_thread_num())] = partial;
+    }
+    ValueType accumulator = Reducer::identity();
+    for (const ValueType& partial : partials) {
+      accumulator = Reducer::combine(accumulator, partial);
+    }
+    reducer.target = Reducer::combine(reducer.target, accumulator);
   }
 
-  template <typename Reducer, typename F>
-  inline void parallelReduce(const TeamRange& range, F body, Reducer reducer) {
-    using T = typename Reducer::value_type;
+  template <typename Reducer, typename Functor>
+  inline void parallelReduce(const TeamRange& range, const Functor functor, const Reducer reducer) {
     assertion(range.n >= 0, range.n);
-    tarch::accelerator::runInParallelRegion([&]() {
-      T local = Reducer::identity();
+    using ValueType = typename Reducer::ValueType;
+    std::vector<ValueType> partials(static_cast<std::size_t>(omp_get_max_threads()), Reducer::identity());
+#pragma omp parallel default(none) shared(range, functor, partials) if (not omp_in_parallel())
+    {
+      ValueType partial = Reducer::identity();
 #pragma omp for schedule(static) nowait
       for (int i = 0; i < range.n; ++i) {
-        body(i, tarch::accelerator::CpuTeam{}, local);
+        functor(i, tarch::accelerator::CpuTeam{}, partial);
       }
-#pragma omp critical(tarch_parallelReduce_merge)
-      {
-        tarch::accelerator::combine(reducer, reducer.target, local);
-      }
-    });
+      partials[static_cast<std::size_t>(omp_get_thread_num())] = partial;
+    }
+    ValueType accumulator = Reducer::identity();
+    for (const ValueType& partial : partials) {
+      accumulator = Reducer::combine(accumulator, partial);
+    }
+    reducer.target = Reducer::combine(reducer.target, accumulator);
   }
 } // namespace tarch::accelerator

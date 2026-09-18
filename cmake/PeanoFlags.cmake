@@ -63,10 +63,11 @@ function(peano_apply_flags)
   endforeach()
 
   list(APPEND PEANO_CUDA_WARNINGS
-    -Wreorder                          # Diagnose device member initialisation order.
+    -Wreorder # Diagnose device member initialisation order.
     -Wdefault-stream-launch
     -Wext-lambda-captures-this
-    -Xptxas=--warn-on-spills           # Diagnose device register spills.
+    -Xptxas=--warn-on-spills # Diagnose device register spills.
+    -Xcompiler=-Wno-overlength-strings
   )
 
   target_compile_options(PeanoOptions INTERFACE
@@ -83,6 +84,10 @@ function(peano_apply_flags)
     $<$<COMPILE_LANG_AND_ID:C,NVHPC,PGI>:-Kieee>
     $<$<COMPILE_LANG_AND_ID:CXX,NVHPC,PGI>:-Kieee>
     $<$<COMPILE_LANG_AND_ID:Fortran,NVHPC,PGI>:-Kieee>
+    # NVHPC's automatic inlining drops stores of the kernels that stage a narrower storage
+    # precision through the compute precision.
+    $<$<COMPILE_LANG_AND_ID:C,NVHPC,PGI>:-Mnoautoinline>
+    $<$<COMPILE_LANG_AND_ID:CXX,NVHPC,PGI>:-Mnoautoinline>
     # IntelLLVM precise semantics preserve exact grid arithmetic and the symmetry of
     # interpolation and restriction. Explicit contraction confines fused operations to
     # individual expressions and supports FENV_ACCESS.
@@ -145,6 +150,19 @@ function(peano_apply_flags)
       $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang,IntelLLVM>:-fno-omit-frame-pointer>
       $<$<COMPILE_LANG_AND_ID:C,GNU,Clang,AppleClang,IntelLLVM>:-g>
       $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang,IntelLLVM>:-g>
+    )
+  endif()
+
+  target_compile_options(PeanoOptions INTERFACE
+    $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-Wno-free-nonheap-object>
+    $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-Wno-array-bounds>
+    $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-Wno-null-dereference>
+  )
+
+  if(PEANO_WITH_GPU_ARCH MATCHES "^sm_")
+    target_compile_options(PeanoOptions INTERFACE
+      $<$<COMPILE_LANG_AND_ID:C,Clang,AppleClang,IntelLLVM>:-Wno-unknown-cuda-version>
+      $<$<COMPILE_LANG_AND_ID:CXX,Clang,AppleClang,IntelLLVM>:-Wno-unknown-cuda-version>
     )
   endif()
 

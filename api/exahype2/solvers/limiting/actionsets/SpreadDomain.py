@@ -93,7 +93,7 @@ class SpreadDomain(AbstractLimiterActionSet):
       for (int faceNumber = 0; faceNumber < 2 * DIMENSIONS; faceNumber++) {
         // A boundary face has no neighbour to deliver the outer halo layers, so
         // the user's boundary conditions derive them from the inner ones.
-        if (not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[faceNumber % DIMENSIONS]
+        if (not repositories::{{SOLVER_INSTANCE}}.PeriodicBoundaries[faceNumber % DIMENSIONS]
             and fineGridFaces{{SOLVER_NAME}}FaceLabel(faceNumber).getBoundary()) {
           ::exahype2::fv::applyBoundaryConditionsOnFace<
             {{FULL_QUALIFIED_SOLVER_NAME}},

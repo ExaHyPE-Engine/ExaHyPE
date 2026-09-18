@@ -10,6 +10,6 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::accumulateMaxEigenvalue(
   const auto candidate = static_cast<Maximum>(eigenvalue);
   assertion(std::isfinite(maximum) and maximum >= Maximum{0}, maximum, candidate);
   assertion(std::isfinite(candidate) and candidate >= Maximum{0}, maximum, candidate);
-  maximum = ::exahype2::NonNegativeReduction::maximum(maximum, candidate);
+  maximum = exahype2::NonNegativeReduction::maximum(maximum, candidate);
 }
 TARGET_DECLARE_END

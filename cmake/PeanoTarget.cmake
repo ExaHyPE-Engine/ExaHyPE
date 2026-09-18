@@ -99,16 +99,20 @@ function(peano_add_target)
 
   target_sources(${target} PRIVATE ${target_sources})
 
-  if(NOT CMAKE_DISABLE_PRECOMPILE_HEADERS
-     AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "NVHPC")
-    target_precompile_headers(${target} PRIVATE "<tarch/StdAfx.h>")
+  if(gpu_backend STREQUAL "kokkos" OR gpu_backend STREQUAL "sycl" OR gpu_backend STREQUAL "ompt")
+    set(supports_precompiled_headers FALSE)
+  elseif(CMAKE_DISABLE_PRECOMPILE_HEADERS OR CMAKE_CXX_COMPILER_ID STREQUAL "NVHPC")
+    set(supports_precompiled_headers FALSE)
+  else()
+    set(supports_precompiled_headers TRUE)
+  endif()
 
+  if(supports_precompiled_headers)
+    target_precompile_headers(${target} PRIVATE "<tarch/StdAfx.h>")
     target_compile_options(${target} PRIVATE
       "$<$<COMPILE_LANG_AND_ID:CUDA,NVIDIA>:SHELL:-include tarch/StdAfx.h>"
     )
   else()
-    # StdAfx.h owns the standard-library includes. Force-include it textually
-    # when PCH is disabled or unsupported so source-file semantics stay equal.
     target_compile_options(${target} PRIVATE
       "$<$<COMPILE_LANGUAGE:C,CXX,CUDA,HIP>:SHELL:-include tarch/StdAfx.h>"
     )

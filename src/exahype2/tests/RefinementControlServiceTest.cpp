@@ -33,7 +33,7 @@ namespace {
 
   constexpr int    LeafLevel       = smallestLevelCovering(81);
   constexpr int    ParentLevel     = LeafLevel - 1;
-  constexpr double TestDomainWidth = peano4::Power<SubdivisionFactor, LeafLevel>;
+  constexpr double TestDomainWidth = peano4::power(SubdivisionFactor, LeafLevel);
 
   // Three levels beyond the leaf level, so the sweep keeps a margin over the meshes a run
   // configures.

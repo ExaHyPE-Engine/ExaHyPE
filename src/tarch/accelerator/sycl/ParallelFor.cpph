@@ -2,43 +2,41 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 namespace tarch::accelerator {
-  template <typename F>
-  inline void parallelFor(const SyclTeam& team, const Range& range, F body) {
-    const int local  = static_cast<int>(team.item.get_local_id(0));
-    const int stride = static_cast<int>(team.item.get_local_range(0));
-    for (int i = local; i < range.n; i += stride) {
-      body(i);
+  template <typename Functor>
+  inline void parallelFor(const SyclTeam& team, const Range& range, const Functor functor) {
+    const int localIndex = static_cast<int>(team.item.get_local_id(0));
+    const int localSize  = static_cast<int>(team.item.get_local_range(0));
+    for (int i = localIndex; i < range.n; i += localSize) {
+      functor(i);
     }
   }
-  template <typename F>
-  inline void parallelFor(const SyclTeam& team, const RangeMD<2>& range, F body) {
-    const int total  = range.n[0] * range.n[1];
-    const int n1     = range.n[1];
-    const int local  = static_cast<int>(team.item.get_local_id(0));
-    const int stride = static_cast<int>(team.item.get_local_range(0));
-    for (int idx = local; idx < total; idx += stride) {
-      const int x = idx / n1;
-      const int y = idx % n1;
-      body(x, y);
+  template <typename Functor>
+  inline void parallelFor(const SyclTeam& team, const RangeMD<2>& range, const Functor functor) {
+    const int numberOfItems = range.n[0] * range.n[1];
+    const int extentY       = range.n[1];
+    const int localIndex    = static_cast<int>(team.item.get_local_id(0));
+    const int localSize     = static_cast<int>(team.item.get_local_range(0));
+    for (int index = localIndex; index < numberOfItems; index += localSize) {
+      functor(index / extentY, index % extentY);
     }
   }
-  template <typename F>
-  inline void parallelFor(const SyclTeam& team, const RangeMD<3>& range, F body) {
-    const int total  = range.n[0] * range.n[1] * range.n[2];
-    const int n1     = range.n[1];
-    const int n2     = range.n[2];
-    const int local  = static_cast<int>(team.item.get_local_id(0));
-    const int stride = static_cast<int>(team.item.get_local_range(0));
-    for (int idx = local; idx < total; idx += stride) {
-      const int x = idx / (n1 * n2);
-      const int y = (idx / n2) % n1;
-      const int z = idx % n2;
-      body(x, y, z);
+  template <typename Functor>
+  inline void parallelFor(const SyclTeam& team, const RangeMD<3>& range, const Functor functor) {
+    const int numberOfItems = range.n[0] * range.n[1] * range.n[2];
+    const int extentY       = range.n[1];
+    const int extentZ       = range.n[2];
+    const int localIndex    = static_cast<int>(team.item.get_local_id(0));
+    const int localSize     = static_cast<int>(team.item.get_local_range(0));
+    for (int index = localIndex; index < numberOfItems; index += localSize) {
+      functor(index / (extentY * extentZ), (index / extentZ) % extentY, index % extentZ);
     }
   }
 
-  template <typename F>
-  inline void parallelFor(const Range& range, F body) {
+  inline void teamBarrier(const SyclTeam& team) { ::sycl::group_barrier(team.item.get_group()); }
+
+  template <typename Functor>
+  inline void parallelFor(const Range& range, const Functor functor) {
+    assertion(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;
     }
@@ -46,13 +44,17 @@ namespace tarch::accelerator {
       *static_cast<::sycl::queue*>(tarch::accelerator::getSYCLQueue(tarch::accelerator::getCurrentDevice()));
     queue
       .submit([&](::sycl::handler& handler) {
-        handler.parallel_for(::sycl::range<1>(range.n), [=](::sycl::id<1> id) { body(static_cast<int>(id[0])); });
+        handler.parallel_for(::sycl::range<1>(range.n), [=](const ::sycl::id<1> itemId) {
+          functor(static_cast<int>(itemId[0]));
+        });
       })
       .wait();
   }
 
-  template <typename F>
-  inline void parallelFor(const RangeMD<2>& range, F body) {
+  template <typename Functor>
+  inline void parallelFor(const RangeMD<2>& range, const Functor functor) {
+    assertion(range.n[0] >= 0, range.n[0]);
+    assertion(range.n[1] >= 0, range.n[1]);
     if (range.n[0] <= 0 or range.n[1] <= 0) {
       return;
     }
@@ -60,15 +62,18 @@ namespace tarch::accelerator {
       *static_cast<::sycl::queue*>(tarch::accelerator::getSYCLQueue(tarch::accelerator::getCurrentDevice()));
     queue
       .submit([&](::sycl::handler& handler) {
-        handler.parallel_for(::sycl::range<2>(range.n[0], range.n[1]), [=](::sycl::id<2> id) {
-          body(static_cast<int>(id[0]), static_cast<int>(id[1]));
+        handler.parallel_for(::sycl::range<2>(range.n[0], range.n[1]), [=](const ::sycl::id<2> itemId) {
+          functor(static_cast<int>(itemId[0]), static_cast<int>(itemId[1]));
         });
       })
       .wait();
   }
 
-  template <typename F>
-  inline void parallelFor(const RangeMD<3>& range, F body) {
+  template <typename Functor>
+  inline void parallelFor(const RangeMD<3>& range, const Functor functor) {
+    assertion(range.n[0] >= 0, range.n[0]);
+    assertion(range.n[1] >= 0, range.n[1]);
+    assertion(range.n[2] >= 0, range.n[2]);
     if (range.n[0] <= 0 or range.n[1] <= 0 or range.n[2] <= 0) {
       return;
     }
@@ -76,28 +81,29 @@ namespace tarch::accelerator {
       *static_cast<::sycl::queue*>(tarch::accelerator::getSYCLQueue(tarch::accelerator::getCurrentDevice()));
     queue
       .submit([&](::sycl::handler& handler) {
-        handler.parallel_for(::sycl::range<3>(range.n[0], range.n[1], range.n[2]), [=](::sycl::id<3> id) {
-          body(static_cast<int>(id[0]), static_cast<int>(id[1]), static_cast<int>(id[2]));
+        handler.parallel_for(::sycl::range<3>(range.n[0], range.n[1], range.n[2]), [=](const ::sycl::id<3> itemId) {
+          functor(static_cast<int>(itemId[0]), static_cast<int>(itemId[1]), static_cast<int>(itemId[2]));
         });
       })
       .wait();
   }
 
-  template <typename F>
-  inline void parallelFor(const TeamRange& range, F body) {
+  template <typename Functor>
+  inline void parallelFor(const TeamRange& range, const Functor functor) {
+    assertion(range.n >= 0, range.n);
     if (range.n <= 0) {
       return;
     }
     auto& queue =
       *static_cast<::sycl::queue*>(tarch::accelerator::getSYCLQueue(tarch::accelerator::getCurrentDevice()));
-    const ::sycl::nd_range<1> ndRange(
+    const ::sycl::nd_range<1> groupedRange(
       ::sycl::range<1>(range.n * tarch::accelerator::SyclLocalSize),
       ::sycl::range<1>(tarch::accelerator::SyclLocalSize)
     );
     queue
       .submit([&](::sycl::handler& handler) {
-        handler.parallel_for(ndRange, [=](::sycl::nd_item<1> item) {
-          body(static_cast<int>(item.get_group(0)), tarch::accelerator::SyclTeam{item});
+        handler.parallel_for(groupedRange, [=](const ::sycl::nd_item<1> item) {
+          functor(static_cast<int>(item.get_group(0)), tarch::accelerator::SyclTeam{item});
         });
       })
       .wait();

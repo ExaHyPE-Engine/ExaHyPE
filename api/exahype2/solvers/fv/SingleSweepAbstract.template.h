@@ -63,7 +63,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
     {{CLASSNAME}}& operator=({{CLASSNAME}}&& other) = delete;
     ~{{CLASSNAME}}() override;
 
-    static std::bitset<DIMENSIONS> PeriodicBC;
+    static std::bitset<DIMENSIONS> PeriodicBoundaries;
 
     double getMinTimeStamp() const override final;
     double getMaxTimeStamp() const override final;

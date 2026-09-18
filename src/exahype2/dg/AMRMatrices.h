@@ -35,6 +35,9 @@ namespace exahype2::dg {
 
   template <int NodesPerAxis>
   INLINE_METHOD constexpr void averageMirrorPairs(AMRMatrices1D<NodesPerAxis>& matrices);
+
+  template <int NodesPerAxis>
+  INLINE_METHOD constexpr AMRMatrices1D<NodesPerAxis> transposePerChild(const AMRMatrices1D<NodesPerAxis>& matrices);
 } // namespace exahype2::dg
 
 #include "exahype2/dg/AMRMatrices.cpph"

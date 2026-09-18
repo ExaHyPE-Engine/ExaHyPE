@@ -258,7 +258,7 @@ void tarch::accelerator::tests::ChunkedMemoryPoolTest::testParallelDisjointFill(
   Pool          pool;
   pool.resize(NumberOfChunks);
 
-  tarch::accelerator::parallelFor(tarch::accelerator::Range(NumberOfChunks), [&pool](const int slot) {
+  tarch::accelerator::parallelForOnHost(tarch::accelerator::Range(NumberOfChunks), [&pool](const int slot) {
     fillChunk(pool, static_cast<Pool::SlotIndex>(slot), 2.0 * slot);
   });
 

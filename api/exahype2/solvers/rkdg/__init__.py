@@ -1,13 +1,10 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 
-import exahype2.solvers.rkdg.rusanov
+from .RungeKuttaDG import Polynomials
 
-from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import (
-    FaceProjections,
-)
-from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import (
-    compute_number_of_face_projection_quantities,
-)
+from .SingleSweep import SingleSweep
+from .GlobalAdaptiveTimeStep import GlobalAdaptiveTimeStep
+from .GlobalFixedTimeStep import GlobalFixedTimeStep
 
 from .ErrorMeasurement import ErrorMeasurement

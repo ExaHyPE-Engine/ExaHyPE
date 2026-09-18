@@ -30,6 +30,16 @@ struct peano4::sfc::Grammar {
     NonTerminal leftHandSide,
     Symbols... symbols
   );
+
+  template <std::size_t Position, class NonTerminal, int NumberOfChildren>
+  static constexpr void placeSymbols(peano4::sfc::Production<NonTerminal, NumberOfChildren>& result);
+
+  template <std::size_t Position, class NonTerminal, int NumberOfChildren, class Symbol, class... Symbols>
+  static constexpr void placeSymbols(
+    peano4::sfc::Production<NonTerminal, NumberOfChildren>& result,
+    Symbol                                                  symbol,
+    Symbols... symbols
+  );
 };
 
 /**

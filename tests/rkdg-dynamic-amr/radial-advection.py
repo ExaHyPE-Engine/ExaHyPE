@@ -14,7 +14,7 @@ def parse_arguments():
         help="Show this help message and continue with project help.",
     )
     parser.add_argument("-et", "--end-time", type=float, default=0.4)
-    parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=4)
+    parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=5)
     parser.add_argument("-l", "--grid-levels", type=int, default=None)
     parser.add_argument("-lmin", "--min-grid-levels", type=int, default=2)
     parser.add_argument("-lmax", "--max-grid-levels", type=int, default=4)
@@ -64,10 +64,9 @@ boundary_conditions = """
   }
 """
 
-# The spatially varying radial velocity requires evaluation at faceCentre.
 flux = """
   const tarch::la::Vector<DIMENSIONS, double> centre(1.0);
-  const tarch::la::Vector<DIMENSIONS, double> radialOffset = faceCentre - centre;
+  const tarch::la::Vector<DIMENSIONS, double> radialOffset = x - centre;
   const double radius = tarch::la::norm2(radialOffset);
   F[Shortcuts::rho] = (radius > 0.0 ? radialOffset(normal) / radius : 0.0) * Q[Shortcuts::rho];
 """
@@ -81,15 +80,15 @@ refinement_criterion = """
     NumberOfUnknowns + NumberOfAuxiliaryVariables,
     1.0e-2,
     ::exahype2::DefaultCoarsenSafetyFactor,
-    QuadraturePoints1D,
+    kernels::RKDGSolver::Quadrature::QuadraturePoints1D,
     [](const double* const values) { return 1.0 + values[Shortcuts::rho]; }
   );
 """
 
-solver = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep(
+solver = exahype2.solvers.rkdg.GlobalAdaptiveTimeStep(
     name="RKDGSolver",
     rk_order=2,
-    polynomials=exahype2.solvers.GaussLegendreBasis(args.degrees_of_freedom),
+    dg_order=args.degrees_of_freedom - 1,
     time_step_relaxation=0.9,
     unknowns={"rho": 1},
     auxiliary_variables=0,
@@ -99,7 +98,7 @@ solver.set_implementation(
     initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
     refinement_criterion=refinement_criterion,
-    eigenvalues="return 1.0;",
+    max_eigenvalue="return 1.0;",
     flux=flux,
 )
 

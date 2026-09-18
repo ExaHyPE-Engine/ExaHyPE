@@ -60,3 +60,13 @@
 #else
 #define UNROLL(numberOfIterations) /* No operation. */
 #endif
+
+#if defined(__has_attribute)
+#if __has_attribute(force_align_arg_pointer)
+#define ALIGN_STACK_ON_ENTRY __attribute__((force_align_arg_pointer))
+#endif
+#endif
+
+#if not defined(ALIGN_STACK_ON_ENTRY)
+#define ALIGN_STACK_ON_ENTRY
+#endif

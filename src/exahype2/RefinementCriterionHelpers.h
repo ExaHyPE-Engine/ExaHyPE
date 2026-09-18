@@ -4,7 +4,9 @@
 
 #include "exahype2/RefinementControl.h"
 #include "exahype2/amr/MultiresolutionDetail.h"
+#include "peano4/Constants.h"
 #include "peano4/sfc/ActiveCurve.h"
+#include "tarch/CompilerSpecificSettings.h"
 
 namespace exahype2 {
   /**
@@ -12,7 +14,7 @@ namespace exahype2 {
    * criterion: The detail of an affine fit shrinks by this factor from one
    * level to the next.
    */
-  constexpr double DefaultCoarsenSafetyFactor{peano4::Power<peano4::sfc::ActiveCurve::SubdivisionFactor, 2>};
+  constexpr double DefaultCoarsenSafetyFactor{peano4::power(peano4::sfc::ActiveCurve::SubdivisionFactor, 2)};
 
   INLINE_METHOD RefinementCommand refinementCommandFromDetail(
     double detail,

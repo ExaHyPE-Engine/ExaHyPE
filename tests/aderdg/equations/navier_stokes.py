@@ -130,7 +130,7 @@ class NavierStokes(Equation):
             + """;
 
   auto maxEval = [&](
-    const {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS Q,
+    const auto* const NOALIAS Q,
     const int normal
   ){
     const auto j = &Q[Shortcuts::j];
@@ -156,7 +156,7 @@ class NavierStokes(Equation):
   };
 
   auto diffusiveEval = [&](
-    const {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS Q,
+    const auto* const NOALIAS Q,
     const int normal
   ){
     double smaxDiffusive = molecularDiffusionCoeff;
@@ -174,8 +174,15 @@ class NavierStokes(Equation):
         return (
             self.eigenvalue_functions()
             + """
+    // The ADER-DG solver takes the order factor from PNPM, the RKDG solver
+    // from the Cockburn-Shu bound of the Runge-Kutta order.
+    {% if CFL_ADER is defined %}
+    constexpr double orderFactor = PNPM;
+    {% else %}
+    constexpr double orderFactor = 1.0 / (2.0 * RKOrder - 1.0);
+    {% endif %}
     return maxEval(Q, normal)
-      + diffusiveEval(Q, normal)*2/(h[normal]*PNPM);
+      + diffusiveEval(Q, normal)*2/(h[normal]*orderFactor);
 """
         )
 
@@ -399,19 +406,25 @@ class NavierStokes(Equation):
         return (
             """
   constexpr int strideQ = NumberOfUnknowns + NumberOfAuxiliaryVariables;
-  {{CORRECTOR_COMPUTATION_PRECISION}} QavL[strideQ] __attribute__((aligned(16))) = {0};
-  {{CORRECTOR_COMPUTATION_PRECISION}} QavR[strideQ] __attribute__((aligned(16))) = {0};
+  using FaceValue = std::remove_cvref_t<decltype(QL[0])>;
+  FaceValue QavL[strideQ] __attribute__((aligned(16))) = {0};
+  FaceValue QavR[strideQ] __attribute__((aligned(16))) = {0};
 
 #if DIMENSIONS==3
-      constexpr int faceSize = (Order+1)*(Order+1);
+      constexpr int faceSize = (DGOrder+1)*(DGOrder+1);
 #else
-      constexpr int faceSize = (Order+1);
+      constexpr int faceSize = (DGOrder+1);
 #endif
 
+  {% if CFL_ADER is defined %}
+  const auto* const faceWeights = kernels::{{SOLVER_NAME}}::Quadrature<FaceValue>::weights2;
+  {% else %}
+  const auto* const faceWeights = kernels::{{SOLVER_NAME}}::Quadrature::QuadratureWeightsOnFace;
+  {% endif %}
   for (int xy = 0; xy < faceSize; xy++) {
     for (int n = 0; n < strideQ; n++) {
-      QavL[n] += kernels::{{SOLVER_NAME}}::Quadrature<{{CORRECTOR_COMPUTATION_PRECISION}}>::weights2[xy] * QL[xy * strideQ + n];
-      QavR[n] += kernels::{{SOLVER_NAME}}::Quadrature<{{CORRECTOR_COMPUTATION_PRECISION}}>::weights2[xy] * QR[xy * strideQ + n];
+      QavL[n] += faceWeights[xy] * QL[xy * strideQ + n];
+      QavR[n] += faceWeights[xy] * QR[xy * strideQ + n];
     }
   }
 
@@ -424,7 +437,7 @@ class NavierStokes(Equation):
     maxEval(&QavR[0], direction)
   );
 
-  const auto factor = 2 * (2 * Order + 1) / (h[direction] * std::sqrt(0.5 * std::numbers::pi));
+  const auto factor = 2 * (2 * DGOrder + 1) / (h[direction] * std::sqrt(0.5 * std::numbers::pi));
   smax += factor*std::fmax(
     diffusiveEval(&QavL[0], direction), diffusiveEval(&QavR[0], direction)
   );

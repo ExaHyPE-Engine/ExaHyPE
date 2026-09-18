@@ -18,15 +18,7 @@ void exahype2::dg::projectValueOntoParticle(
 ) {
   particle.setData(
     DestIndex,
-    ::exahype2::dg::evaluatePolynomial(
-      marker,
-      order,
-      quadratureNodes1D,
-      unknownsPerDoF,
-      Q,
-      particle.getX(),
-      SourceIndex
-    )
+    exahype2::dg::evaluatePolynomial(marker, order, quadratureNodes1D, unknownsPerDoF, Q, particle.getX(), SourceIndex)
   );
 }
 
@@ -48,7 +40,7 @@ void exahype2::dg::projectAllValuesOntoParticle(
   assertion(unknownsPerDoF > 0, unknownsPerDoF);
 
   for (int sourceAttribute = 0; sourceAttribute < unknownsPerDoF; sourceAttribute++) {
-    const QStoreType interpolatedValue = ::exahype2::dg::evaluatePolynomial(
+    const QStoreType interpolatedValue = exahype2::dg::evaluatePolynomial(
       marker,
       order,
       quadratureNodes1D,

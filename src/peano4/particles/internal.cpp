@@ -6,13 +6,13 @@
 #include "peano4/dataview/VertexMarker.h"
 
 double peano4::particles::relativeReleaseOwnershipSpatialSortingTolerance(
-  const ::peano4::dataview::VertexMarker& marker
+  const peano4::dataview::VertexMarker& marker
 ) {
   return peano4::particles::relativeReleaseOwnershipSpatialSortingTolerance(marker.getH());
 }
 
 double peano4::particles::relativeReleaseOwnershipSpatialSortingTolerance(
-  const ::peano4::dataview::CellMarker& marker
+  const peano4::dataview::CellMarker& marker
 ) {
   return peano4::particles::relativeReleaseOwnershipSpatialSortingTolerance(marker.getH());
 }
@@ -23,11 +23,11 @@ double peano4::particles::relativeReleaseOwnershipSpatialSortingTolerance(
   return peano4::particles::ReleaseOwnershipSpatialSortingTolerance * tarch::la::max(h);
 }
 
-double peano4::particles::relativeGrabOwnershipSpatialSortingTolerance(const ::peano4::dataview::VertexMarker& marker) {
+double peano4::particles::relativeGrabOwnershipSpatialSortingTolerance(const peano4::dataview::VertexMarker& marker) {
   return peano4::particles::relativeGrabOwnershipSpatialSortingTolerance(marker.getH());
 }
 
-double peano4::particles::relativeGrabOwnershipSpatialSortingTolerance(const ::peano4::dataview::CellMarker& marker) {
+double peano4::particles::relativeGrabOwnershipSpatialSortingTolerance(const peano4::dataview::CellMarker& marker) {
   return peano4::particles::relativeGrabOwnershipSpatialSortingTolerance(marker.getH());
 }
 
@@ -40,11 +40,11 @@ double peano4::particles::relativeGrabOwnershipSpatialSortingTolerance(const tar
  * of the marker's level, which holds when twice the radius is at most the
  * smallest cell width.
  */
-bool peano4::particles::fitsIntoLevel(const double searchRadius, const ::peano4::dataview::CellMarker& marker) {
+bool peano4::particles::fitsIntoLevel(const double searchRadius, const peano4::dataview::CellMarker& marker) {
   return tarch::la::greaterEquals(tarch::la::min(marker.getH()), 2.0 * searchRadius);
 }
 
-bool peano4::particles::fitsIntoLevel(const double searchRadius, const ::peano4::dataview::VertexMarker& marker) {
+bool peano4::particles::fitsIntoLevel(const double searchRadius, const peano4::dataview::VertexMarker& marker) {
   return tarch::la::greaterEquals(tarch::la::min(marker.getH()), 2.0 * searchRadius);
 }
 

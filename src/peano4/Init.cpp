@@ -8,10 +8,10 @@
 void peano4::init(
   const tarch::la::Vector<DIMENSIONS, double>& offset,
   const tarch::la::Vector<DIMENSIONS, double>& width,
-  const std::bitset<DIMENSIONS>&               periodicBC
+  const std::bitset<DIMENSIONS>&               periodicBoundaries
 ) {
   peano4::communication::CommunicationManager::getInstance().init();
-  peano4::topology::TopologyManager::getInstance().init(offset, width, periodicBC);
+  peano4::topology::TopologyManager::getInstance().init(offset, width, periodicBoundaries);
 }
 
 void peano4::shutdown() {

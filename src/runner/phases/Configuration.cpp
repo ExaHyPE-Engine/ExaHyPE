@@ -127,12 +127,12 @@ runner::Configuration::Configuration(runner::PhaseContext& context) :
   constexpr char     AxisNames[]         = "xyz";
   bool               hasPeriodicBoundary = false;
   for (int dimension = 0; dimension < DIMENSIONS; ++dimension) {
-    if (_context.periodicBC[dimension]) {
+    if (_context.periodicBoundaries[dimension]) {
       periodic << (hasPeriodicBoundary ? ", " : "") << AxisNames[dimension];
       hasPeriodicBoundary = true;
     }
   }
-  const auto         periodicBoundaries = periodic.str();
+  const auto         periodicAxes = periodic.str();
   std::ostringstream gridLevels;
   gridLevels << parameters.getGridLevels() << " .. " << parameters.getMaxGridLevels();
   std::ostringstream meshSize;
@@ -140,7 +140,7 @@ runner::Configuration::Configuration(runner::PhaseContext& context) :
            << runner::Format::number(parameters.getMaxAdmissiblePatchSize(_context.domainSize));
 
   report.add("Domain & Grid", "Domain", domain.str());
-  report.add("Domain & Grid", "Periodic Boundaries", periodicBoundaries.empty() ? "none" : periodicBoundaries);
+  report.add("Domain & Grid", "Periodic Boundaries", periodicAxes.empty() ? "none" : periodicAxes);
   report.add("Domain & Grid", "Grid Levels (min .. max)", gridLevels.str());
   report.add("Domain & Grid", "Admissible Patch Size (min .. max)", meshSize.str());
 

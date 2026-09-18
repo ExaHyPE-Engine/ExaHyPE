@@ -41,7 +41,7 @@ class RefinementCriterion(AbstractADERDGActionSet):
 """
         else:
             return """
-    return std::vector<::peano4::grid::GridControlEvent>();
+    return std::vector<peano4::grid::GridControlEvent>();
 """
 
     def get_body_of_operation(self, operation_name):

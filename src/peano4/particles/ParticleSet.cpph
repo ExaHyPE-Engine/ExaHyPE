@@ -423,9 +423,9 @@ template <typename T>
 void peano4::particles::ParticleSet<T>::finishedTraversal(
   const tarch::la::Vector<DIMENSIONS, double> domainOffset,
   const tarch::la::Vector<DIMENSIONS, double> domainSize,
-  const std::bitset<DIMENSIONS>               periodicBC
+  const std::bitset<DIMENSIONS>               periodicBoundaries
 ) {
-  _sieveParticles.exchangeSieveListsGlobally(domainOffset, domainSize, periodicBC);
+  _sieveParticles.exchangeSieveListsGlobally(domainOffset, domainSize, periodicBoundaries);
 }
 
 /** Returns a deep copy of the particles that await sieving. */

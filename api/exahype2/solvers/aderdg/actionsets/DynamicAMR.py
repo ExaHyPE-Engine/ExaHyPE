@@ -121,7 +121,7 @@ class AdaptiveMeshFaceCoupling(AbstractADERDGActionSet):
   if ({{RESTRICT_GUARD}}) {
     constexpr int FluxElementsPerFace = facedata::{{SOLVER_NAME}}QFluxEstimates::Cardinality / 2;
     constexpr int NumberOfSubfaces =
-      peano4::Power<peano4::sfc::ActiveCurve::SubdivisionFactor, DIMENSIONS - 1>;
+      peano4::power(peano4::sfc::ActiveCurve::SubdivisionFactor, DIMENSIONS - 1);
 
     for (int faceSide = 0; faceSide < 2; faceSide++) {
       auto* const restrictedFluxHalf =
@@ -270,7 +270,7 @@ class AdaptiveMeshFaceCoupling(AbstractADERDGActionSet):
             + f"""
     ::exahype2::amr::ChildDataStage<{self._solver._corrector_computation_precision}>
       _fluxRestrictionStage{{
-        peano4::Power<peano4::sfc::ActiveCurve::SubdivisionFactor, DIMENSIONS - 1>,
+        peano4::power(peano4::sfc::ActiveCurve::SubdivisionFactor, DIMENSIONS - 1),
         {values_per_subface}}};
 """
         )
@@ -293,29 +293,10 @@ namespace {
   constexpr double QuadratureWeights1D[NumberOfDofsPerAxis] = {{QUADRATURE_WEIGHTS_1D}};
 
   /**
-   * Returns the transfer matrices with the two node indices of every child
-   * block swapped, which is the layout the transfer routines read.
-   */
-  constexpr ::exahype2::dg::AMRMatrices1D<NumberOfDofsPerAxis> transposePerChild(
-    const ::exahype2::dg::AMRMatrices1D<NumberOfDofsPerAxis>& matrices
-  ) {
-    ::exahype2::dg::AMRMatrices1D<NumberOfDofsPerAxis> result{};
-    for (int child = 0; child < peano4::sfc::ActiveCurve::SubdivisionFactor; child++) {
-      for (int row = 0; row < NumberOfDofsPerAxis; row++) {
-        for (int column = 0; column < NumberOfDofsPerAxis; column++) {
-          result[(child * NumberOfDofsPerAxis + column) * NumberOfDofsPerAxis + row] =
-            matrices[(child * NumberOfDofsPerAxis + row) * NumberOfDofsPerAxis + column];
-        }
-      }
-    }
-    return result;
-  }
-
-  /**
    * Entry [child][coarse * NumberOfDofsPerAxis + fine] holds the coarse shape
    * function coarse at the node fine of the child interval child.
    */
-  constexpr auto ProlongationMatrix1D = transposePerChild(
+  constexpr auto ProlongationMatrix1D = ::exahype2::dg::transposePerChild<NumberOfDofsPerAxis>(
     ::exahype2::dg::interpolationMatrix1D<NumberOfDofsPerAxis>(QuadratureNodes1D)
   );
 
@@ -324,7 +305,7 @@ namespace {
    * projection of the node fine of the child interval child onto the coarse
    * shape function coarse.
    */
-  constexpr auto RestrictionMatrix1D = transposePerChild(
+  constexpr auto RestrictionMatrix1D = ::exahype2::dg::transposePerChild<NumberOfDofsPerAxis>(
     ::exahype2::dg::weightedRestrictionMatrix1D<NumberOfDofsPerAxis>(
       QuadratureNodes1D,
       QuadratureWeights1D

@@ -21,7 +21,7 @@ struct runner::PhaseContext {
   runner::MainMeasurements&             measurements;
   tarch::la::Vector<DIMENSIONS, double> domainOffset;
   tarch::la::Vector<DIMENSIONS, double> domainSize;
-  std::bitset<DIMENSIONS>               periodicBC;
+  std::bitset<DIMENSIONS>               periodicBoundaries;
 };
 
 class runner::Phase {

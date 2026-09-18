@@ -209,7 +209,7 @@ void tarch::accelerator::ChunkedMemoryPool<T, N>::clearChunks(
   constexpr auto        ElementsPerChunk = static_cast<std::size_t>(PaddedChunkSize);
   constexpr std::size_t BytesPerChunk    = ElementsPerChunk * sizeof(T);
   T* const              buffer           = _data;
-  tarch::accelerator::parallelFor(
+  tarch::accelerator::parallelForOnHost(
     tarch::accelerator::Range(static_cast<int>(endChunk - firstChunk)),
     [buffer, firstChunk](const int chunk) {
       std::memset(buffer + (firstChunk + static_cast<std::size_t>(chunk)) * ElementsPerChunk, 0, BytesPerChunk);
@@ -247,7 +247,7 @@ void tarch::accelerator::ChunkedMemoryPool<T, N>::resize(const std::size_t numbe
     constexpr auto        ElementsPerChunk = static_cast<std::size_t>(PaddedChunkSize);
     constexpr std::size_t BytesPerChunk    = ElementsPerChunk * sizeof(T);
     T* const              oldBuffer        = _data;
-    tarch::accelerator::parallelFor(
+    tarch::accelerator::parallelForOnHost(
       tarch::accelerator::Range(static_cast<int>(_size)),
       [newBuffer, oldBuffer](const int chunk) {
         const auto offset = static_cast<std::size_t>(chunk) * ElementsPerChunk;

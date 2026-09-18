@@ -2,27 +2,29 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "tarch/Assertions.h"
+#include "tarch/CompilerSpecificSettings.h"
+#include "tarch/accelerator/accelerator.h"
 #include "tarch/la/Vector.h"
 
+TARGET_DECLARE
 namespace exahype2::dg {
-  void applyBoundaryConditions(
-    std::function<void(
-      const double* NOALIAS                        Qinside,
-      double* NOALIAS                              Qoutside,
-      const tarch::la::Vector<DIMENSIONS, double>& x,
-      double                                       t,
-      double                                       dt,
-      int                                          normal
-    )>                                           boundaryCondition,
+  template <
+    typename Solver,
+    int NumberOfDofsPerAxis,
+    int NumberOfUnknowns,
+    int NumberOfAuxiliaryVariables,
+    typename StoragePrecision,
+    typename ComputePrecision>
+  INLINE_METHOD GPU_CALLABLE_METHOD void applyBoundaryConditions(
+    StoragePrecision* NOALIAS                    faceState,
+    const ComputePrecision* NOALIAS              quadratureNodes,
     const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-    double                                       t,
-    double                                       dt,
-    int                                          order,
-    int                                          unknowns,
-    int                                          auxiliaryVariables,
-    int                                          faceNumber,
-    const double* NOALIAS                        quadraturePoints,
-    double* NOALIAS                              Q
+    double                                       timeStamp,
+    int                                          faceNumber
   );
 } // namespace exahype2::dg
+TARGET_DECLARE_END
+
+#include "exahype2/dg/BoundaryConditions.cpph"
