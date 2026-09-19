@@ -1,6 +1,7 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+TARGET_DECLARE
 /**
  * Maps a relative multiresolution detail to a refinement command.
  *
@@ -12,11 +13,13 @@
  *
  * A caller applies the admissible patch-size limits to the returned command.
  */
-INLINE_METHOD exahype2::RefinementCommand exahype2::refinementCommandFromDetail(
+INLINE_METHOD GPU_CALLABLE_METHOD exahype2::RefinementCommand exahype2::refinementCommandFromDetail(
   const double detail,
   const double eps,
   const double coarsenSafetyFactor
 ) {
+  assertion(eps > 0.0, eps);
+  assertion(coarsenSafetyFactor > 0.0, coarsenSafetyFactor);
   if (detail > eps) {
     return exahype2::RefinementCommand::Refine;
   }
@@ -25,14 +28,15 @@ INLINE_METHOD exahype2::RefinementCommand exahype2::refinementCommandFromDetail(
   }
   return exahype2::RefinementCommand::Keep;
 }
+TARGET_DECLARE_END
 
 /**
  * Computes the maximum patch detail over the supplied scalar indicators and
  * maps it to a refinement command.
  *
- * Q stores the whole patch in AoS layout. nodesInUnitInterval contains the
- * solver's one-dimensional node positions in [0,1]; equidistant finite-volume
- * centres use nullptr. A null Q during grid construction returns Keep.
+ * Q stores the whole patch in AoS layout, and nodesInUnitInterval contains the
+ * solver's one-dimensional node positions in [0,1], or nullptr for equidistant
+ * finite-volume centres. A null Q during grid construction returns Keep.
  */
 template <typename Value, typename... Indicators>
 INLINE_METHOD exahype2::RefinementCommand exahype2::refineOnDetail(

@@ -27,10 +27,9 @@ fWave = r"""
 
   /********************
    * State extraction *
-   *******************/ 
+   *******************/
 
-  // left state
-  const auto rhoL                   = QL[Shortcuts::rho];
+  const auto rhoL                  = QL[Shortcuts::rho];
   const auto sqrtRhoL               = sqrt(rhoL);
   const auto uL                     = QL[Shortcuts::rhoU + 0] / rhoL;
   const auto vL                     = QL[Shortcuts::rhoU + 1] / rhoL;
@@ -47,7 +46,6 @@ fWave = r"""
   assertion(EL > 0, EL);
   assertion(pL > 0, pL);
 
-  // right state
   const auto rhoR                   = QR[Shortcuts::rho];
   const auto sqrtRhoR               = sqrt(rhoR);
   const auto uR                     = QR[Shortcuts::rhoU + 0] / rhoR;
@@ -78,7 +76,7 @@ fWave = r"""
                           (pL + EL) / sqrtRhoL
                         ) * iSumSqrtRho;
 
-  tarch::la::Vector<DIMENSIONS, double> roeAveragedVelocities(0.0); 
+  tarch::la::Vector<DIMENSIONS, double> roeAveragedVelocities(0.0);
   roeAveragedVelocities(0)    = (sqrtRhoL * uL + sqrtRhoR * uR) * iSumSqrtRho;
   roeAveragedVelocities(1)    = (sqrtRhoL * vL + sqrtRhoR * vR) * iSumSqrtRho;
   #if DIMENSIONS == 3
@@ -91,18 +89,15 @@ fWave = r"""
    * Roe Eigenvalues from LeVeque Chapter 18.8, Equation 18.47 *
    ************************************************************/
 
-  // in x-direction, these are uRoe - speedOfSoundRoe, DIMENSIONS x uRoe, and uRoe + speedOfSoundRoe
+  // In x-direction, these are uRoe - speedOfSoundRoe, DIMENSIONS x uRoe, and uRoe + speedOfSoundRoe
   tarch::la::Vector<NumberOfUnknowns, double> roeEigenvalues(0.0);
 
-  // first eigenvalue is left uRoe - speedOfSoundRoe
   roeEigenvalues(0) = roeAveragedVelocities(normal) - speedOfSoundRoe;
 
-  // DIMENSIONS x uRoe
   for (int eigenvalue = 1; eigenvalue <= DIMENSIONS; eigenvalue++) {
     roeEigenvalues(eigenvalue) = roeAveragedVelocities(normal);
   }
 
-  // last eigenvalue is right uRoe + speedOfSoundRoe
   roeEigenvalues(DIMENSIONS + 1) = roeAveragedVelocities(normal) + speedOfSoundRoe;
 
   /***********************************************
@@ -125,28 +120,28 @@ fWave = r"""
 
   const int transverse = normal == 0 ? 1 : 0;
 
-  // first right Eigenvector
+  // First right eigenvector
   tarch::la::Vector<NumberOfUnknowns, double> r1(0.0);
   r1(0)               = 1.0;
   r1(1 + normal)      = roeAveragedVelocities(normal) - speedOfSoundRoe;
   r1(1 + transverse)  = roeAveragedVelocities(transverse);
   r1(3)               = HRoe - roeAveragedVelocities(normal) * speedOfSoundRoe;
 
-  // second right Eigenvector
+  // Second right eigenvector
   tarch::la::Vector<NumberOfUnknowns, double> r2(0.0);
   r2(0)               = 0.0;
   r2(1 + normal)      = 0.0;
   r2(1 + transverse)  = 1.0;
   r2(3)               = roeAveragedVelocities(transverse);
 
-  // third right Eigenvector
+  // Third right eigenvector
   tarch::la::Vector<NumberOfUnknowns, double> r3(0.0);
   r3(0) = 1.0;
   r3(1) = roeAveragedVelocities(0);
   r3(2) = roeAveragedVelocities(1);
   r3(3) = qSquared;
 
-  // fourth right Eigenvector
+  // Fourth right eigenvector
   tarch::la::Vector<NumberOfUnknowns, double> r4(0.0);
   r4(0)               = 1.0;
   r4(1 + normal)      = roeAveragedVelocities(normal) + speedOfSoundRoe;
@@ -156,7 +151,7 @@ fWave = r"""
   /***************************************************
    * Beta values following Bale et al. Equation 1.14 *
    **************************************************/
-  // inverted Eigenvectors taken from https://github.com/clawpack/riemann/blob/master/src/rpn2_euler_4wave.f90
+  // Inverted eigenvectors taken from https://github.com/clawpack/riemann/blob/master/src/rpn2_euler_4wave.f90
 
   // @todo figure out for 3D
   tarch::la::Vector<NumberOfUnknowns, double> beta(0.0);
@@ -192,12 +187,10 @@ fWave = r"""
   for (int wave = 0; wave < NumberOfUnknowns; ++wave) {
     const auto eigenvalue = roeEigenvalues(wave);
     if (eigenvalue < 0.0) {
-      // left going wave
       for (int unknown = 0; unknown < NumberOfUnknowns; ++unknown) {
         FL[unknown] += fWaves[wave](unknown);
       }
     } else {
-      // right going wave
       for (int unknown = 0; unknown < NumberOfUnknowns; ++unknown) {
         FR[unknown] -= fWaves[wave](unknown);
       }

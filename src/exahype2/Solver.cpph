@@ -1,0 +1,38 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+INLINE_METHOD void exahype2::Solver::LocalUpdates::addTimeStep(const double timeStepSize) {
+  const auto observation = exahype2::NonNegativeStatistics{timeStepSize, timeStepSize};
+  if (not observation.hasPhysicalValues()) {
+    tarch::triggerNonCriticalAssertion(
+      __FILE__,
+      __LINE__,
+      "The observed time step size is finite and non-negative.",
+      "Time step size bits=" + std::to_string(observation.invalidObservationBitsOrIdentity())
+    );
+  }
+  timeStepSizeStatistics = exahype2::NonNegativeStatistics::accumulate(timeStepSizeStatistics, timeStepSize);
+  empty                  = false;
+}
+
+INLINE_METHOD void exahype2::Solver::LocalUpdates::addTimeStamp(const double timeStamp) {
+  assertion(std::isfinite(timeStamp) and timeStamp >= 0.0, timeStamp);
+  minTimeStamp = std::min(minTimeStamp, timeStamp);
+  maxTimeStamp = std::max(maxTimeStamp, timeStamp);
+  assertion(tarch::la::smallerEquals(minTimeStamp, maxTimeStamp), minTimeStamp, maxTimeStamp, timeStamp);
+  empty = false;
+}
+
+INLINE_METHOD void exahype2::Solver::LocalUpdates::addMeshWidths(const double minimum, const double maximum) {
+  assertion(std::isfinite(minimum) and minimum > 0.0, minimum, maximum);
+  assertion(std::isfinite(maximum) and maximum >= minimum, minimum, maximum);
+  minMeshWidth = std::min(minMeshWidth, minimum);
+  maxMeshWidth = std::max(maxMeshWidth, maximum);
+  empty        = false;
+}
+
+/**
+ * Returns whether a completed sweep has stored face data, so the next sweep may receive. Grid
+ * initialisation sets the flag once its first storing sweep has finished.
+ */
+INLINE_METHOD bool exahype2::Solver::hasStoredFaceData() const { return _hasStoredFaceData; }

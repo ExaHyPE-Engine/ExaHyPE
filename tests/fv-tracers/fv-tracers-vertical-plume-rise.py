@@ -1,27 +1,12 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 import argparse
+from pathlib import Path
 
 import exahype2
 
 """
 This is a particle tracing convergence test for linear plume rise.
-
-This simulation implements a linear velocity field v = (0, ay) where particles experience
-exponential vertical acceleration, designed to test the convergence properties of different
-interpolation and integration schemes. In this one-way coupling setup, particles are advected
-through the analytical velocity field, allowing for precise comparison between numerical and
-analytical solutions.
-
-The linear plume rise provides an ideal test case because:
-
-- It has a known analytical solution: y(t) = y₀ * e^(at)
-- It tests interpolation accuracy in a simple gradient field
-- It validates integration scheme performance under exponential growth
-- Particles maintain constant x-position while rising exponentially in y
-
-Particles are initialised along a vertical line and their trajectories are compared
-against the analytical solution to measure interpolation and integration errors.
 """
 
 
@@ -30,16 +15,9 @@ def generate_particles_on_vertical_line(
 ):
     """
     Generates a .dat file with particles uniformly spaced along a vertical line at x = x_fixed.
-
-    Parameters:
-        file_path (str): Path to save the .dat file.
-        num_particles (int): Number of particles to generate.
-        x_fixed (float): Fixed x-coordinate for all particles.
-        y_min (float): Minimum y-coordinate.
-        y_max (float): Maximum y-coordinate.
     """
     if num_particles < 2:
-        y_values = [0.5]  # Fallback: single particle at center
+        y_values = [0.5]
     else:
         step = (y_max - y_min) / (num_particles - 1)
         y_values = [round(y_min + i * step, 4) for i in range(num_particles)]
@@ -54,23 +32,18 @@ def generate_particles_on_vertical_line(
 
 
 interpolation_methods = {
-    "None": 0,  # No interpolation (use raw values)
-    "Constant": 1,  # Piecewise constant interpolation (nearest neighbor)
-    "Linear": 2,  # Piecewise linear interpolation (more accurate)
+    "None": 0,
+    "Constant": 1,
+    "Linear": 2,
 }
 integration_schemes = {
-    "Static": 0,  # No integration (static particles)
-    "Euler": 1,  # Explicit Euler method (simple but less accurate)
-    "SemiEuler": 2,  # Semi-implicit Euler method (better stability)
-    "Verlet": 3,  # Velocity Verlet algorithm (good for orbital mechanics)
-    "Midpoint": 4,  # Midpoint method (2nd order Runge-Kutta)
-    "RK3": 5,  # 3rd order Runge-Kutta method (high accuracy)
-    "RK4": 6,  # 4th order Runge-Kutta method (higher accuracy)
-}
-gravity_models = {
-    "None": 0,  # No gravity (straight-line motion)
-    "Central": 1,  # Central gravitational force (1/r²) from a fixed point
-    "Custom": 2,  # User-defined gravitational field
+    "Static": 0,
+    "Euler": 1,
+    "SemiEuler": 2,
+    "Verlet": 3,
+    "Midpoint": 4,
+    "RK3": 5,
+    "RK4": 6,
 }
 
 
@@ -93,9 +66,6 @@ def parse_arguments():
         "--integration",
         choices=integration_schemes.keys(),
         default="SemiEuler",
-    )
-    parser.add_argument(
-        "-grav", "--gravity", choices=gravity_models.keys(), default="Central"
     )
     parser.add_argument("-et", "--end-time", type=float, default=1.0)
     parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=16)
@@ -149,42 +119,43 @@ max_eigenvalue = """
 
 analytical_solution = """
   // Analytical solution for linear plume rise with exponential velocity growth in y-direction
-  constexpr double a = 0.5; // Velocity gradient coefficient
+  constexpr double VelocityGradient = 0.5;
 
   // Initial particle position (x0, y0)
   const double x0 = particle->getData(1); // x doesn't change
-  const double y0 = particle->getData(2); // Used to reconstruct y(t) analytically
+  const double y0 = particle->getData(2); // The analytical y(t) grows from y0
 
   // Time-dependent solution
-  solution[0] = x0;                       // x(t) = x0 (no x motion)
-  solution[1] = y0 * exp(a * t);          // y(t) = y0 * e^(a t)
+  solution[0] = x0;                                                // x(t) = x0 (no x motion)
+  solution[1] = y0 * exp(VelocityGradient * t);                    // y(t)
 
   // Fluid velocity field at particle position
-  solution[3] = 0.0;                      // fluid_u (x-direction)
-  solution[4] = a * solution[1];          // fluid_v = a * y
+  solution[3] = 0.0;                                               // fluid_u (x-direction)
+  solution[4] = VelocityGradient * solution[1];                    // fluid_v
 
   // Particle velocity (matches fluid)
-  solution[5] = 0.0;                      // u = dx/dt
-  solution[6] = a * solution[1];          // v = dy/dt
+  solution[5] = 0.0;                                               // u = dx/dt
+  solution[6] = VelocityGradient * solution[1];                    // v = dy/dt
 
   // Particle acceleration
-  solution[7] = 0.0;                      // a_x
-  solution[8] = a * a * solution[1];      // a_y = d^2y/dt^2 = a^2 * y(t)
+  solution[7] = 0.0;                                               // a_x
+  solution[8] = VelocityGradient * VelocityGradient * solution[1]; // a_y = d^2y/dt^2
 
   solution[2] = 1.0; // rho
   solution[9] = 1.0; // mass
 """
 
-fv_solver = exahype2.solvers.fv.godunov.GlobalFixedTimeStep(
+fv_solver = exahype2.fv.Solver(
     name="FVSolver",
     patch_size=args.degrees_of_freedom,
     unknowns={"rho": 1, "rhoU": 2, "rhoE": 1},
     auxiliary_variables=0,
-    normalised_time_step_size=0.01 / (args.degrees_of_freedom**0.5),
+    time_stepping=exahype2.TimeStepping.Fixed(0.01 / (args.degrees_of_freedom**0.5)),
+    scheme=exahype2.fv.Godunov(),
 )
 
-fv_solver.set_implementation(
-    initial_conditions=initial_conditions,
+fv_solver.set_pde_terms(
+    initial_condition=initial_conditions,
     boundary_conditions=boundary_conditions,
     max_eigenvalue=max_eigenvalue,
     flux=flux,
@@ -196,7 +167,7 @@ tracer_attributes = {
     "unknowns": {
         "rho": 1,
         "init_x": 1,
-        "init_y": 1,  # Interpolated fluid velocity
+        "init_y": 1,
         "u": 1,
         "v": 1,  # Particle's own velocity
         "a_x": 1,
@@ -205,14 +176,14 @@ tracer_attributes = {
     }
 }
 
-tracer_particles = fv_solver.add_tracer(
-    name="Tracers", particle_attributes=tracer_attributes
+tracer_particles = project.add_tracer(
+    name="Tracers", particle_attributes=tracer_attributes, solver=fv_solver
 )
 
 generate_particles_on_vertical_line(
     "InitTracers.dat", num_particles=1000, x_fixed=1.5, y_min=0.1, y_max=0.7
 )
-init_tracers = exahype2.tracer.InsertParticlesFromFile(
+init_tracers = exahype2.particles.InsertParticlesFromFile(
     particle_set=tracer_particles,
     filename="InitTracers.dat",
     scale_factor=1.0,
@@ -222,27 +193,19 @@ init_tracers = exahype2.tracer.InsertParticlesFromFile(
 init_tracers.descend_invocation_order = 0
 project.add_action_set_to_initialisation(init_tracers)
 
-tracing_action_set = exahype2.tracer.FiniteVolumesTracingWithForce(
+fv_solver.trace(
     tracer_particles,
-    fv_solver,
-    project,
-    integration_scheme=integration_schemes[args.integration],
-    interpolation_scheme=interpolation_methods[args.interpolation],
+    forces=exahype2.particles.Forces(
+        integration_scheme=integration_schemes[args.integration],
+        interpolation_scheme=interpolation_methods[args.interpolation],
+    ),
+    initialisation=False,
 )
 
-tracing_action_set.descend_invocation_order = (
-    fv_solver._action_set_update_patch.descend_invocation_order + 1
-)
-
-project.add_action_set_to_timestepping(tracing_action_set)
-
-from pathlib import Path
-
-error_measurement = exahype2.solvers.fv.ErrorMeasurementParticles(
-    fv_solver,
-    error_measurement_implementation=analytical_solution,
-    output_file_name="Error_" + Path(__file__).name,
-    particle_set=tracer_particles,
+fv_solver.set_pde_terms(particle_analytical_solution=analytical_solution)
+fv_solver.measure_particle_error(
+    tracer_particles,
+    file="Error_" + Path(__file__).name,
     descend_invocation_order=65536,  # After all other action sets
 )
 

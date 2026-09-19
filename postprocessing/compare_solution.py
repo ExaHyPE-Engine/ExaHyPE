@@ -1,30 +1,5 @@
-#!/usr/bin/env python3
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-"""Compare two solution outputs field by field and report the first mismatch.
-
-Both inputs are read through the :mod:`solution_io` readers, so any plotter output
-format works (VTKHDF, HDF5/XDMF, NetCDF/UGRID or VTU) and the two inputs need not
-even be in the same format. The comparison is numeric (with tolerances) rather
-than byte-for-byte, so float32 storage, compression, attribute order or a
-reversed space-filling-curve ordering do not register as differences:
-
-  * Structure: snapshot count, time stamps, spatial dimension, point and cell
-    counts, the set of field names and their component counts.
-  * Geometry: point coordinates and cell connectivity.
-  * Data: every field's values.
-
-Pass ``--unordered`` when the two outputs enumerate the same mesh in a different
-order (common across formats or runs). Then each cell is reduced to a signature,
-its vertex coordinates plus its cell-field values and the node-field values at its
-vertices with the vertices brought into a canonical order, and cells are paired
-by a nearest-neighbour query on (centre, size) before their signatures are
-compared. The comparison is invariant to cell and point ordering, to the local
-vertex order within each cell, and to duplicated patch-boundary vertices.
-
-Exit status: 0 if the solutions match, 1 on the first mismatch, 2 if an input
-cannot be read or compared.
-"""
 
 from __future__ import annotations
 
@@ -162,7 +137,7 @@ def compare_snapshots(
     if left.num_cells != right.num_cells:
         return f"Snapshot {index} cell count differs: {left.num_cells} != {right.num_cells}."
 
-    # Select the comparison scope first: only the selected fields have to exist and agree on
+    # Select the comparison scope first: Only the selected fields have to exist and agree on
     # both sides. A skipped field present on one side only (e.g. a decomposition-dependent
     # Subdomain marker) or an unselected extra field under --field is no mismatch.
     left_fields, right_fields = set(left.variables), set(right.variables)
@@ -238,8 +213,8 @@ def _compare_unordered(
 ) -> str | None:
     # One signature per cell (vertex coordinates + cell-field values + node-field values at the
     # cell's vertices, with the vertices in canonical order). Cells are paired by a
-    # nearest-neighbour query on (centre, size): distinct cells are separated by at least one
-    # cell width, far above any storage rounding, so the pairing is robust at every mesh scale
+    # nearest-neighbour query on (centre, size): Distinct cells are separated by at least one
+    # cell width, far above any storage rounding, so the pairing holds at every mesh scale
     # where a sorted-signature comparison would misalign rows on rounding noise.
     left_signatures, left_keys = _cell_signatures(left, selected)
     right_signatures, right_keys = _cell_signatures(right, selected)
@@ -278,7 +253,7 @@ def _cell_signatures(
     count = cells.shape[0]
     nodes_per_cell = cells.shape[1]
 
-    # Per-vertex features: coordinates plus the node-field values at the vertex. Cell-centred
+    # Per-vertex features: Coordinates plus the node-field values at the vertex. Cell-centred
     # values join the signature after the vertex block.
     corners = np.asarray(snapshot.points, dtype=float)[cells]
     vertex_parts = [corners]
@@ -292,7 +267,7 @@ def _cell_signatures(
             vertex_parts.append(values[cells].reshape(count, nodes_per_cell, -1))
     vertex_features = np.concatenate(vertex_parts, axis=2)
 
-    # Canonicalise the local vertex order: sorting each cell's vertex rows makes the signature
+    # Canonicalise the local vertex order: Sorting each cell's vertex rows makes the signature
     # invariant under rotated or reflected connectivity of the same cell. Vertices of one cell
     # that differ do so by a full cell extent in some axis, while the same coordinate can carry
     # rounding noise from different writers, so the sort keys are the coordinates quantised to

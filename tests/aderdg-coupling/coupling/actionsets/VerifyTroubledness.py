@@ -1,20 +1,15 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
+from exahype2.actionsets import ActionSet
 
 from .AbstractLimiterActionSet import AbstractLimiterActionSet
-from exahype2.solvers.PDETerms import PDETerms
 
-import peano4.solversteps
-import jinja2
-
-from .kernels import check_troubledness
 
 class VerifyTroubledness(AbstractLimiterActionSet):
-  TemplateVerifyTroubledness = """
+    """Marks a cell whose solution fails the admissibility criterion as troubled."""
 
+    TemplateVerifyTroubledness = """
     if ( {{PREDICATE}} ) {
-
-
         const double timeStamp     = fineGridCell{{REGULAR_SOLVER_NAME}}CellLabel.getTimeStamp();
         const double timeStepSize  = fineGridCell{{REGULAR_SOLVER_NAME}}CellLabel.getTimeStepSize();
 
@@ -22,11 +17,9 @@ class VerifyTroubledness(AbstractLimiterActionSet):
 
         auto* luh = fineGridCell{{REGULAR_SOLVER_UNKNOWN_IDENTIFIER}}.data();
 
-
-        {% if USE_PAC %}
-
+        {% if USE_ADMISSIBILITY_CRITERION %}
         int linearisedIndex = 0;
-        peano4::dForEach({{ORDER}}+1, [&](const tarch::la::Vector<DIMENSIONS, int>& index) {
+        peano4::dForEach({{ORDER}} + 1, [&](const tarch::la::Vector<DIMENSIONS, int>& index) {
           isUnTroubled &= repositories::{{SOLVER_INSTANCE}}.isPhysicallyAdmissible(
             luh + linearisedIndex,
             ::exahype2::dg::getQuadraturePoint(
@@ -34,17 +27,17 @@ class VerifyTroubledness(AbstractLimiterActionSet):
               kernels::{{REGULAR_SOLVER_NAME}}::Quadrature<{{REGULAR_SOLVER_STORAGE_PRECISION}}>::QuadraturePoints1D
             ),
             marker.getH(),
-            timeStamp+timeStepSize
+            timeStamp + timeStepSize
           );
 
           linearisedIndex += repositories::{{REGULAR_SOLVER_INSTANCE}}.NumberOfUnknowns + repositories::{{REGULAR_SOLVER_INSTANCE}}.NumberOfAuxiliaryVariables;
         });
         {% endif %}
 
-        if(!isUnTroubled){
+        if (not isUnTroubled) {
           repositories::{{SOLVER_INSTANCE}}.addTroubledCell();
           fineGridCell{{SOLVER_NAME}}CellLabel.setTroubledMarker(celldata::{{SOLVER_NAME}}CellLabel::TroubledMarker::TROUBLED);
-          for(int d=0; d<2*DIMENSIONS; d++){
+          for (int d = 0; d < 2 * DIMENSIONS; d++) {
             fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setTroubledMarker(facedata::{{SOLVER_NAME}}FaceLabel::TroubledMarker::TROUBLED);
           }
         }
@@ -53,37 +46,28 @@ class VerifyTroubledness(AbstractLimiterActionSet):
         fineGridCell{{LIMITER_SOLVER_NAME}}CellLabel.setTimeStepSize(timeStepSize);
 
         fineGridCell{{LIMITER_SOLVER_NAME}}CellLabel.setHasUpdated(true);
-
-  }
-
+    }
 """
 
-  def __init__(self, solver, guard, use_PAC=False):
-    super(VerifyTroubledness,self).__init__(solver)
-    self.guard = guard
+    def __init__(self, solver, guard, use_admissibility_criterion=False):
+        super(VerifyTroubledness, self).__init__(solver, guard)
+        self.use_admissibility_criterion = use_admissibility_criterion
 
-    self.use_PAC                    = use_PAC
+    def operation_body(self, operation_name):
+        result = ""
+        if operation_name == ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
+            result = self.render(
+                self.TemplateVerifyTroubledness,
+                USE_ADMISSIBILITY_CRITERION=self.use_admissibility_criterion,
+            )
+        return result
 
-  def get_body_of_operation(self,operation_name):
-    result = ""
-    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
-      d = {}
-      self._solver._init_dictionary_with_default_parameters(d)
-      self._solver.add_entries_to_text_replacement_dictionary(d)
-      d["PREDICATE" ]           = self.guard
-      d["USE_PAC"]              = self.use_PAC
+    @property
+    def name(self):
+        return __name__.replace(".py", "").replace(".", "_")
 
-      result = jinja2.Template(self.TemplateVerifyTroubledness).render(**d)
-    return result
-
-
-  def get_action_set_name(self):
-    return __name__.replace(".py", "").replace(".", "_")
-
-  def get_includes(self):
-      return ( super(VerifyTroubledness, self).get_includes() + """
-#include "kernels/"""
-            + self._solver._regular_solver._name
-            + """/Quadrature.h"
-#include "exahype2/dg/DGUtils.h"
-  """)
+    def includes(self):
+        return super().includes() + [
+            "exahype2/dg/DGUtils.h",
+            "kernels/{}/Quadrature.h".format(self._solver.regular_solver.name),
+        ]

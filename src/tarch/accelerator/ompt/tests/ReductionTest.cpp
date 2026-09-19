@@ -10,7 +10,7 @@ namespace {
   constexpr int ElementCount = 1024;
 } // namespace
 
-tarch::accelerator::ompt::tests::ReductionTest::ReductionTest():
+tarch::accelerator::ompt::tests::ReductionTest::ReductionTest() :
   TestCase("tarch::accelerator::ompt::tests::ReductionTest") {}
 
 void tarch::accelerator::ompt::tests::ReductionTest::run() { testMethod(testParallelReduction); }

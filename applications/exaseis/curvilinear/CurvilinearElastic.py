@@ -1,3 +1,5 @@
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
 def initial(pointwise_initial_conditions):
     return (
         """
@@ -40,23 +42,20 @@ def initial(pointwise_initial_conditions):
   constexpr int nDof    = DGOrder + 1;
   constexpr int strideQ = (NumberOfUnknowns+NumberOfAuxiliaryVariables);
 
-  // x-loop
   for (int yz = 0; yz < nDof*nDof; yz++) {
     UNROLL(nDof)
     for (int row = 0; row < nDof; row++) {
       UNROLL(nDof)
       for (int column = 0; column < nDof; column++) {
-        // x derivatives
         for (int axis = 0; axis < DIMENSIONS; axis++) {
           Q[yz*nDof*strideQ + column*strideQ + Shortcuts::metric_derivative + axis] +=
             Q[yz*nDof*strideQ + row*strideQ + Shortcuts::curve_grid + axis]
             * invDx[0] * kernels::ElasticSolver::DGMatrices<{{SOLUTION_STORAGE_PRECISION}}>::DerivativeOperator1D[column*nDof + row];
         }
       }
-    } // row
-  } // yz
+    }
+  }
 
-  // y-loop
   for (int z = 0; z < nDof; z++) {
     for (int x = 0; x < nDof; x++) {
       UNROLL(nDof)
@@ -67,13 +66,12 @@ def initial(pointwise_initial_conditions):
             Q[z*nDof*nDof*strideQ + x*strideQ + column*nDof*strideQ + Shortcuts::metric_derivative + DIMENSIONS + axis] +=
               Q[z*nDof*nDof*strideQ + x*strideQ + row*nDof*strideQ + Shortcuts::curve_grid + axis]
               * invDx[1] * kernels::ElasticSolver::DGMatrices<{{SOLUTION_STORAGE_PRECISION}}>::DerivativeOperator1D[column*nDof + row];
-          } // axis
-        } // column
-      } // row
-    } // x
-  } // z
+          }
+        }
+      }
+    }
+  }
 
-  // z-loop
   for (int xy = 0; xy < nDof*nDof; xy++) {
     UNROLL(nDof)
     for (int row = 0; row < nDof; row++) {
@@ -83,10 +81,10 @@ def initial(pointwise_initial_conditions):
           Q[xy*strideQ + column*nDof*nDof*strideQ + Shortcuts::metric_derivative + 2*DIMENSIONS + axis] +=
             Q[xy*strideQ + row*nDof*nDof*strideQ + Shortcuts::curve_grid + axis]
             * invDx[2] * kernels::ElasticSolver::DGMatrices<{{SOLUTION_STORAGE_PRECISION}}>::DerivativeOperator1D[column*nDof + row];
-        } // axis
-      } // column
-    } // row
-  } // xy
+        }
+      }
+    }
+  }
 
   linearisedIndex = 0;
   peano4::dForEach(DGOrder + 1, [&](const tarch::la::Vector<DIMENSIONS, int>& index) {
@@ -311,19 +309,14 @@ def riemann_solver():
 
 
 def userIncludes():
-    return """
-#include <memory>
-
-#include "../riemannSolvers/curvilinearRoutines.h"
-#include "../riemannSolvers/riemannsolverIsotropic.h"
-
-#include "exahype2/Curvi.h"
-#include "exahype2/dg/DGUtils.h"
-
-#include "peano4/sfc/ActiveCurve.h"
-
-#include "tarch/reader/NetCDFFieldSampler.h"
-"""
+    return [
+        "../riemannSolvers/curvilinearRoutines.h",
+        "../riemannSolvers/riemannsolverIsotropic.h",
+        "exahype2/Curvi.h",
+        "exahype2/dg/DGUtils.h",
+        "peano4/sfc/ActiveCurve.h",
+        "tarch/reader/NetCDFFieldSampler.h",
+    ]
 
 
 def abstractUserDefinitions():
@@ -349,8 +342,7 @@ protected:
 
 
 def init_grid_step_implementation(scenario_perturbations):
-    return (
-        """
+    return """
   // Width of a cell on the finest grid level.
   tarch::la::Vector<DIMENSIONS, double> minCellSize = DomainSize;
   const double minAdmissiblePatchSize = ::runner::RuntimeParameters::getInstance().getMinAdmissiblePatchSize(DomainSize);
@@ -367,6 +359,4 @@ def init_grid_step_implementation(scenario_perturbations):
     minCellSize
   );
 
-"""
-        + scenario_perturbations
-    )
+""" + scenario_perturbations

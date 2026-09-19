@@ -40,8 +40,10 @@ namespace {
       nextWarning = now + diagnostics.getTimeoutWarning();
     }
 
-    if (diagnostics.getDeadlockTimeout() > std::chrono::seconds(0)
-        and now - startedWaiting >= diagnostics.getDeadlockTimeout()) {
+    if (
+      diagnostics.getDeadlockTimeout() > std::chrono::seconds(0)
+      and now - startedWaiting >= diagnostics.getDeadlockTimeout()
+    ) {
       std::ostringstream message;
       message << operation << " at " << location.file_name() << ":" << location.line()
               << " deadlocked while waiting for MPI request after " << diagnostics.getDeadlockTimeout().count()

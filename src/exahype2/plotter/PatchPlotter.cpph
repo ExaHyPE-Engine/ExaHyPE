@@ -1,0 +1,204 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+/**
+ * Claims the piece of one tree, lets the caller create its cell fields and creates the plotters
+ * of the node fields. The file keeps the fields in the order of the creation calls, so the
+ * caller's fields precede the curve position. Each node field starts where the one before it ends.
+ */
+template <typename CreateCellDataPlotters>
+INLINE_METHOD void exahype2::plotter::NodalPatchPlotter::open(
+  Snapshot&                     snapshot,
+  const int                     treeId,
+  const std::vector<DataField>& fields,
+  CreateCellDataPlotters        createCellDataPlotters
+) {
+  _piece.open(snapshot, treeId, tarch::plotter::FileWriter::VertexMerging::Distinct);
+  createCellDataPlotters();
+  _curvePositionPlotter = _piece.createCellDataPlotter("CurvePosition", 1);
+
+  _fields.clear();
+  int offset = 0;
+  for (const auto& field : fields) {
+    _fields.push_back({_piece.createVertexDataPlotter(field.name, field.components), field.components, offset});
+    offset += field.components;
+  }
+}
+
+/**
+ * Claims the piece of one tree, lets the caller create its cell fields and creates the plotters
+ * of the cell fields. The file keeps the fields in the order of the creation calls, so the
+ * caller's fields precede the curve position. Each cell field starts where the one before it ends.
+ */
+template <typename CreateCellDataPlotters>
+INLINE_METHOD void exahype2::plotter::CellPatchPlotter::open(
+  Snapshot&                     snapshot,
+  const int                     treeId,
+  const std::vector<DataField>& fields,
+  CreateCellDataPlotters        createCellDataPlotters
+) {
+  _piece.open(snapshot, treeId, tarch::plotter::FileWriter::VertexMerging::Merged);
+  createCellDataPlotters();
+  _curvePositionPlotter = _piece.createCellDataPlotter("CurvePosition", 1);
+
+  _fields.clear();
+  int offset = 0;
+  for (const auto& field : fields) {
+    _fields.push_back({_piece.createCellDataPlotter(field.name, field.components), field.components, offset});
+    offset += field.components;
+  }
+}
+
+/**
+ * Plots one cell of a patch whose values sit on the nodes. The node values reach the plot
+ * points one to one, unless the caller hands over an alternative patch: Then every plot point
+ * reads the value of the nearest degree of freedom of that patch.
+ */
+template <
+  int PointsPerAxis,
+  int UnknownsPerPoint,
+  int AlternativePointsPerAxis,
+  typename Precision,
+  typename CellDataPlots>
+INLINE_METHOD void exahype2::plotter::NodalPatchPlotter::plotCell(
+  const peano4::dataview::CellMarker&          marker,
+  const tarch::la::Vector<DIMENSIONS, double>& domainOffset,
+  const tarch::la::Vector<DIMENSIONS, double>& domainSize,
+  const std::array<double, PointsPerAxis>&     mappingAlongAxis,
+  const Precision* const                       patch,
+  const bool                                   useAlternativePatch,
+  const std::type_identity_t<Precision>* const alternativePatch,
+  CellDataPlots                                cellDataPlots
+) {
+  static_assert(PointsPerAxis > 0);
+  static_assert(UnknownsPerPoint > 0);
+  static_assert(AlternativePointsPerAxis > 0);
+  assertion(_piece.isOpen());
+  assertion(patch != nullptr);
+  assertion(not useAlternativePatch or alternativePatch != nullptr);
+  for ([[maybe_unused]] const auto& field : _fields) {
+    assertion(field.offset + field.components <= UnknownsPerPoint, field.offset, field.components, UnknownsPerPoint);
+  }
+
+  constexpr int TotalPoints =
+    DIMENSIONS == 2 ? PointsPerAxis * PointsPerAxis : PointsPerAxis * PointsPerAxis * PointsPerAxis;
+
+  const auto& patchSize       = marker.getH();
+  const auto  patchOffset     = marker.getX() - patchSize * 0.5;
+  const auto  refinementLevel = marker.level;
+  const auto  curvePosition   = peano4::sfc::ActiveCurve::curveParameter(
+    tarch::la::divideComponents(marker.getX() - domainOffset, domainSize),
+    refinementLevel
+  );
+
+  const auto alternativePatchOffset = [&](const tarch::la::Vector<DIMENSIONS, int>& point) {
+    int index  = 0;
+    int stride = 1;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      const int indexAlongAxis = std::clamp(
+        static_cast<int>(mappingAlongAxis[point(axis)] * AlternativePointsPerAxis),
+        0,
+        AlternativePointsPerAxis - 1
+      );
+      index += indexAlongAxis * stride;
+      stride *= AlternativePointsPerAxis;
+    }
+    return index * UnknownsPerPoint;
+  };
+
+  std::array<int, TotalPoints> vertexIndices{};
+
+  peano4::dForEach(PointsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& point) {
+    const int pointIndex = peano4::dLinearised(point, PointsPerAxis);
+
+    tarch::la::Vector<DIMENSIONS, double> position;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      position(axis) = patchOffset(axis) + patchSize(axis) * mappingAlongAxis[point(axis)];
+    }
+    vertexIndices[pointIndex] = _piece.plotVertex(position);
+
+    const Precision* const pointData =
+      useAlternativePatch ? alternativePatch + alternativePatchOffset(point) : patch + pointIndex * UnknownsPerPoint;
+    for (const auto& field : _fields) {
+      field.plotter->plotVertexData(vertexIndices[pointIndex], pointData + field.offset, field.components);
+    }
+  });
+
+  peano4::dForEach(PointsPerAxis - 1, [&](const tarch::la::Vector<DIMENSIONS, int>& cell) {
+    const int firstVertex = peano4::dLinearised(cell, PointsPerAxis);
+
+    std::array<int, peano4::VerticesPerCell> vertices{};
+    for (int corner = 0; corner < peano4::VerticesPerCell; corner++) {
+      int offset = 0;
+      int stride = 1;
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        offset += CellCorners[corner][axis] * stride;
+        stride *= PointsPerAxis;
+      }
+      vertices[corner] = vertexIndices[firstVertex + offset];
+    }
+
+    const int cellIndex = _piece.plotCell(vertices);
+    _piece.plotCellMarkers(cellIndex, refinementLevel);
+    _curvePositionPlotter->plotCellData(cellIndex, curvePosition);
+    cellDataPlots(cellIndex);
+  });
+}
+
+/**
+ * Plots one cell of a patch whose values sit on the finite volumes.
+ */
+template <int VolumesPerAxis, int UnknownsPerVolume, typename Precision, typename CellDataPlots>
+INLINE_METHOD void exahype2::plotter::CellPatchPlotter::plotCell(
+  const peano4::dataview::CellMarker&          marker,
+  const tarch::la::Vector<DIMENSIONS, double>& domainOffset,
+  const tarch::la::Vector<DIMENSIONS, double>& domainSize,
+  const Precision* const                       patch,
+  CellDataPlots                                cellDataPlots
+) {
+  static_assert(VolumesPerAxis > 0);
+  static_assert(UnknownsPerVolume > 0);
+  assertion(_piece.isOpen());
+  assertion(patch != nullptr);
+  for ([[maybe_unused]] const auto& field : _fields) {
+    assertion(field.offset + field.components <= UnknownsPerVolume, field.offset, field.components, UnknownsPerVolume);
+  }
+
+  const auto& patchSize       = marker.getH();
+  const auto  patchOffset     = marker.getX() - patchSize * 0.5;
+  const auto  refinementLevel = marker.level;
+  const auto  volumeSize      = patchSize / static_cast<double>(VolumesPerAxis);
+  const auto  curvePosition   = peano4::sfc::ActiveCurve::curveParameter(
+    tarch::la::divideComponents(marker.getX() - domainOffset, domainSize),
+    refinementLevel
+  );
+
+  peano4::dForEach(VolumesPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
+    tarch::la::Vector<DIMENSIONS, double> volumeAsDouble;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      volumeAsDouble(axis) = static_cast<double>(volume(axis));
+    }
+    const auto volumeOffset = patchOffset + tarch::la::multiplyComponents(volumeAsDouble, volumeSize);
+
+    std::array<int, peano4::VerticesPerCell> vertices{};
+    for (int corner = 0; corner < peano4::VerticesPerCell; corner++) {
+      auto cornerPosition = volumeOffset;
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        if (CellCorners[corner][axis] == 1) {
+          cornerPosition(axis) = volumeOffset(axis) + volumeSize(axis);
+        }
+      }
+      vertices[corner] = _piece.plotVertex(cornerPosition);
+    }
+
+    const int cellIndex = _piece.plotCell(vertices);
+    _piece.plotCellMarkers(cellIndex, refinementLevel);
+    _curvePositionPlotter->plotCellData(cellIndex, curvePosition);
+
+    const Precision* const volumeData = patch + peano4::dLinearised(volume, VolumesPerAxis) * UnknownsPerVolume;
+    for (const auto& field : _fields) {
+      field.plotter->plotCellData(cellIndex, volumeData + field.offset, field.components);
+    }
+    cellDataPlots(cellIndex);
+  });
+}

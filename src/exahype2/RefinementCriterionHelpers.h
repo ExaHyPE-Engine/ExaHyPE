@@ -6,8 +6,11 @@
 #include "exahype2/amr/MultiresolutionDetail.h"
 #include "peano4/Constants.h"
 #include "peano4/sfc/ActiveCurve.h"
+#include "tarch/Assertions.h"
 #include "tarch/CompilerSpecificSettings.h"
+#include "tarch/accelerator/accelerator.h"
 
+TARGET_DECLARE
 namespace exahype2 {
   /**
    * Hysteresis ratio between the refine and the erase threshold of the detail
@@ -16,12 +19,15 @@ namespace exahype2 {
    */
   constexpr double DefaultCoarsenSafetyFactor{peano4::power(peano4::sfc::ActiveCurve::SubdivisionFactor, 2)};
 
-  INLINE_METHOD RefinementCommand refinementCommandFromDetail(
+  INLINE_METHOD GPU_CALLABLE_METHOD RefinementCommand refinementCommandFromDetail(
     double detail,
     double eps                 = 1.0e-2,
     double coarsenSafetyFactor = exahype2::DefaultCoarsenSafetyFactor
   );
+} // namespace exahype2
+TARGET_DECLARE_END
 
+namespace exahype2 {
   template <typename Value, typename... Indicators>
   INLINE_METHOD RefinementCommand refineOnDetail(
     const Value*  Q,

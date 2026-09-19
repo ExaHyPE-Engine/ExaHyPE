@@ -1,0 +1,197 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+template <typename Element>
+INLINE_METHOD peano4::dataview::FaceEnumerator<Element> exahype2::dg::rk::tests::makeFaceEnumerator(
+  Element* const pool
+) {
+  int slots[peano4::FacesPerCell];
+  for (int face = 0; face < peano4::FacesPerCell; face++) {
+    slots[face] = face;
+  }
+  return peano4::dataview::FaceEnumerator<Element>(pool, slots, 0);
+}
+
+template <typename SolverType>
+INLINE_METHOD void exahype2::dg::rk::tests::enterGridInitialisation(SolverType& solver) {
+  Quadrature::initialise();
+  DGMatrices::initialise();
+  StageTerms::reset();
+  solver.startGridInitialisationStep();
+}
+
+template <typename SolverType>
+INLINE_METHOD void exahype2::dg::rk::tests::enterTimeStepping(SolverType& solver) {
+  enterGridInitialisation(solver);
+  solver.finishGridInitialisationStep();
+  solver.startTimeStep();
+}
+
+template <typename SolverType>
+INLINE_METHOD void exahype2::dg::rk::tests::advanceOneSweep(SolverType& solver) {
+  solver.update(ReportedTimeStepSize, 0.0, makeCellSize()(0));
+  if constexpr (SolverType::UsesAdaptiveTimeStepping) {
+    solver.setMaxEigenvalue(MaxEigenvalue);
+    solver.setMaxScaledEigenvalue(MaxEigenvalue);
+  }
+  solver.reduceLocalUpdates();
+  solver.finishTimeStep();
+  solver.startTimeStep();
+}
+
+INLINE_METHOD void exahype2::dg::rk::tests::StageTerms::flux(
+  const double* const                                           state,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  const double                                                  timeStamp,
+  [[maybe_unused]] const double                                 timeStepSize,
+  const int                                                     direction,
+  double* const                                                 fluxValues
+) {
+  for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+    fluxValues[unknown] = (1.0 + direction) * state[unknown] + timeStamp;
+  }
+}
+
+INLINE_METHOD double exahype2::dg::rk::tests::StageTerms::maxEigenvalue(
+  [[maybe_unused]] const double* const                          state,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 timeStamp,
+  [[maybe_unused]] const double                                 timeStepSize,
+  [[maybe_unused]] const int                                    direction
+) {
+  return MaxEigenvalue;
+}
+
+INLINE_METHOD void exahype2::dg::rk::tests::StageTerms::boundaryConditions(
+  const double* const                                           inside,
+  double* const                                                 outside,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+  [[maybe_unused]] const double                                 timeStamp,
+  [[maybe_unused]] const int                                    direction
+) {
+  for (int value = 0; value < NumberOfData; value++) {
+    outside[value] = 2.0 * inside[value];
+  }
+}
+
+INLINE_METHOD void exahype2::dg::rk::tests::StageTerms::riemannSolver(
+  double* const                                                 leftFlux,
+  double* const                                                 rightFlux,
+  const double* const                                           leftState,
+  const double* const                                           rightState,
+  const double                                                  timeStamp,
+  [[maybe_unused]] const double                                 timeStepSize,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
+  [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const int                                                     direction,
+  const bool                                                    isBoundary,
+  const int                                                     faceNumber
+) {
+  riemannSolverCalls++;
+  riemannSolverFaceNumber = faceNumber;
+  riemannSolverDirection  = direction;
+  riemannSolverBoundary   = isBoundary;
+  riemannSolverTimeStamp  = timeStamp;
+
+  for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
+    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+      leftFlux[faceNode * NumberOfUnknowns + unknown]  = leftState[faceNode * NumberOfData + unknown];
+      rightFlux[faceNode * NumberOfUnknowns + unknown] = rightState[faceNode * NumberOfData + unknown];
+    }
+  }
+}
+
+INLINE_METHOD void exahype2::dg::rk::tests::StageTerms::reset() {
+  riemannSolverCalls      = 0;
+  riemannSolverFaceNumber = -1;
+  riemannSolverDirection  = -1;
+  riemannSolverBoundary   = false;
+  riemannSolverTimeStamp  = 0.0;
+  PeriodicBoundaries.reset();
+}
+
+INLINE_METHOD double exahype2::dg::rk::tests::CellLabel::getTimeStamp() const { return _timeStamp; }
+
+INLINE_METHOD void exahype2::dg::rk::tests::CellLabel::setTimeStamp(const double value) { _timeStamp = value; }
+
+INLINE_METHOD double exahype2::dg::rk::tests::CellLabel::getTimeStepSize() const { return _timeStepSize; }
+
+INLINE_METHOD void exahype2::dg::rk::tests::CellLabel::setTimeStepSize(const double value) { _timeStepSize = value; }
+
+INLINE_METHOD bool exahype2::dg::rk::tests::CellLabel::getHasUpdated() const { return _hasUpdated; }
+
+INLINE_METHOD void exahype2::dg::rk::tests::CellLabel::setHasUpdated(const bool value) { _hasUpdated = value; }
+
+INLINE_METHOD bool exahype2::dg::rk::tests::CellLabel::getRequiresCriterionEvaluation() const {
+  return _requiresCriterionEvaluation;
+}
+
+INLINE_METHOD void exahype2::dg::rk::tests::CellLabel::setRequiresCriterionEvaluation(const bool value) {
+  _requiresCriterionEvaluation = value;
+}
+
+INLINE_METHOD double exahype2::dg::rk::tests::FaceLabel::getUpdatedTimeStamp(const int side) const {
+  return _updatedTimeStamp[side];
+}
+
+INLINE_METHOD void exahype2::dg::rk::tests::FaceLabel::setUpdatedTimeStamp(const int side, const double value) {
+  _updatedTimeStamp[side] = value;
+}
+
+INLINE_METHOD double exahype2::dg::rk::tests::FaceLabel::getNewTimeStamp(const int side) const {
+  return _newTimeStamp[side];
+}
+
+INLINE_METHOD void exahype2::dg::rk::tests::FaceLabel::setNewTimeStamp(const int side, const double value) {
+  _newTimeStamp[side] = value;
+}
+
+INLINE_METHOD double exahype2::dg::rk::tests::FaceLabel::getOldTimeStamp(const int side) const {
+  return _oldTimeStamp[side];
+}
+
+INLINE_METHOD void exahype2::dg::rk::tests::FaceLabel::setOldTimeStamp(const int side, const double value) {
+  _oldTimeStamp[side] = value;
+}
+
+INLINE_METHOD bool exahype2::dg::rk::tests::FaceLabel::getUpdated(const int side) const { return _updated[side]; }
+
+INLINE_METHOD void exahype2::dg::rk::tests::FaceLabel::setUpdated(const int side, const bool value) {
+  _updated[side] = value;
+}
+
+INLINE_METHOD bool exahype2::dg::rk::tests::FaceLabel::getRequiresDataTransfer(const int side) const {
+  return _requiresDataTransfer[side];
+}
+
+INLINE_METHOD void exahype2::dg::rk::tests::FaceLabel::setRequiresDataTransfer(const int side, const bool value) {
+  _requiresDataTransfer[side] = value;
+}
+
+INLINE_METHOD bool exahype2::dg::rk::tests::FaceLabel::getBoundary() const { return _boundary; }
+
+INLINE_METHOD void exahype2::dg::rk::tests::FaceLabel::setBoundary(const bool value) { _boundary = value; }
+
+INLINE_METHOD bool exahype2::dg::rk::tests::FaceLabel::getIsHanging() const { return _isHanging; }
+
+INLINE_METHOD void exahype2::dg::rk::tests::FaceLabel::setIsHanging(const bool value) { _isHanging = value; }
+
+template <int Values>
+INLINE_METHOD double* exahype2::dg::rk::tests::ValuePatch<Values>::data() {
+  return _values;
+}
+
+template <int Values>
+INLINE_METHOD const double* exahype2::dg::rk::tests::ValuePatch<Values>::data() const {
+  return _values;
+}
+
+template <int Values>
+INLINE_METHOD void exahype2::dg::rk::tests::ValuePatch<Values>::fill(const double value) {
+  for (int entry = 0; entry < Values; entry++) {
+    _values[entry] = value;
+  }
+}

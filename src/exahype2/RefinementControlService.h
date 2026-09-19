@@ -18,8 +18,7 @@ namespace exahype2 {
  * rank holds the same request set and derives the same refinement plan. The
  * collective carries only the removals and additions against the request list
  * each rank shipped last, and it requires the finish calls to run in lockstep
- * across the ranks. The service promotes an erase request to the patch's parent
- * cell only if every child of that parent has requested coarsening.
+ * across the ranks.
  */
 class exahype2::RefinementControlService final {
 public:
@@ -65,6 +64,8 @@ public:
 
   void realiseCommittedEventsWithoutSweep();
 
+  void realisePlanRejectedEvents();
+
   [[nodiscard]] std::string toString() const;
 
   void merge(const RefinementControl& control);
@@ -108,8 +109,8 @@ private:
 
   /**
    * Stores requests for the next mesh traversal in canonical form: Coarsening promoted
-   * to the parent cell, then sorted and deduplicated. finishStep() is the only writer, and it
-   * runs between traversals, so traversals can read this set without a lock.
+   * to the parent cell, then sorted and deduplicated. Writers run between traversals only, so
+   * traversals read this set without a lock.
    */
   std::vector<peano4::grid::GridControlEvent> _committedEvents;
 
@@ -136,7 +137,6 @@ private:
 
   tarch::la::Vector<DIMENSIONS, double> _domainOffset{};
 
-  /** A zero width would make the level recovery of a request divide by zero. */
   tarch::la::Vector<DIMENSIONS, double> _domainWidth{tarch::la::Vector<DIMENSIONS, double>(1.0)};
 
   int _numberOfSolvers{1};

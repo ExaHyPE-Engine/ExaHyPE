@@ -3,21 +3,20 @@
 #include "idx.h"
 #include "riemannsolverRoutines.h"
 
-namespace applications::exahype2::exaseis{
+namespace applications::exahype2::exaseis {
 
   template <class Shortcuts, typename T, int basisSize, int numberOfVariables, int numberOfData, int surface = 2>
   void riemannSolverIsotropic(
-    T*             FL,
-    T*             FR,
-    const T* const QL,
-    const T* const QR,
+    T*                            FL,
+    T*                            FR,
+    const T* const                QL,
+    const T* const                QR,
     [[maybe_unused]] const double t, // kept for signature parity with riemannSolverDynamicRupture
-    const double   dt,
-    const int      direction,
-    bool           isBoundaryFace,
-    int            faceIndex
+    const double                  dt,
+    const int                     direction,
+    bool                          isBoundaryFace,
+    int                           faceIndex
   ) {
-
     kernels::idx3 idx_QLR(basisSize, basisSize, numberOfData);
     kernels::idx3 idx_FLR(basisSize, basisSize, numberOfVariables);
 
@@ -28,7 +27,6 @@ namespace applications::exahype2::exaseis{
 
     for (int i = 0; i < basisSize; i++) {
       for (int j = 0; j < basisSize; j++) {
-
         const T* Q_p = QR + idx_QLR(i, j, 0);
         const T* Q_m = QL + idx_QLR(i, j, 0);
 
@@ -181,16 +179,19 @@ namespace applications::exahype2::exaseis{
         F_p[Shortcuts::v + 2] = norm_p / rho_p * FRz;
         F_m[Shortcuts::v + 2] = norm_m / rho_m * FLz;
 
-        F_m[Shortcuts::sigma + 0] = norm_m * ((2 * mu_m + lam_m) * n_m[0] * FL_x + lam_m * n_m[1] * FL_y + lam_m * n_m[2] * FL_z);
-        F_m[Shortcuts::sigma + 1] = norm_m * ((2 * mu_m + lam_m) * n_m[1] * FL_y + lam_m * n_m[0] * FL_x + lam_m * n_m[2] * FL_z);
-        F_m[Shortcuts::sigma + 2] = norm_m * ((2 * mu_m + lam_m) * n_m[2] * FL_z + lam_m * n_m[0] * FL_x + lam_m * n_m[1] * FL_y);
+        F_m[Shortcuts::sigma + 0] =
+          norm_m * ((2 * mu_m + lam_m) * n_m[0] * FL_x + lam_m * n_m[1] * FL_y + lam_m * n_m[2] * FL_z);
+        F_m[Shortcuts::sigma + 1] =
+          norm_m * ((2 * mu_m + lam_m) * n_m[1] * FL_y + lam_m * n_m[0] * FL_x + lam_m * n_m[2] * FL_z);
+        F_m[Shortcuts::sigma + 2] =
+          norm_m * ((2 * mu_m + lam_m) * n_m[2] * FL_z + lam_m * n_m[0] * FL_x + lam_m * n_m[1] * FL_y);
 
-        F_p[Shortcuts::sigma + 0] = -norm_p
-                           * ((2 * mu_p + lam_p) * n_p[0] * FR_x + lam_p * n_p[1] * FR_y + lam_p * n_p[2] * FR_z);
-        F_p[Shortcuts::sigma + 1] = -norm_p
-                           * ((2 * mu_p + lam_p) * n_p[1] * FR_y + lam_p * n_p[0] * FR_x + lam_p * n_p[2] * FR_z);
-        F_p[Shortcuts::sigma + 2] = -norm_p
-                           * ((2 * mu_p + lam_p) * n_p[2] * FR_z + lam_p * n_p[0] * FR_x + lam_p * n_p[1] * FR_y);
+        F_p[Shortcuts::sigma + 0] =
+          -norm_p * ((2 * mu_p + lam_p) * n_p[0] * FR_x + lam_p * n_p[1] * FR_y + lam_p * n_p[2] * FR_z);
+        F_p[Shortcuts::sigma + 1] =
+          -norm_p * ((2 * mu_p + lam_p) * n_p[1] * FR_y + lam_p * n_p[0] * FR_x + lam_p * n_p[2] * FR_z);
+        F_p[Shortcuts::sigma + 2] =
+          -norm_p * ((2 * mu_p + lam_p) * n_p[2] * FR_z + lam_p * n_p[0] * FR_x + lam_p * n_p[1] * FR_y);
 
         F_m[Shortcuts::sigma + 3] = norm_m * mu_m * (n_m[1] * FL_x + n_m[0] * FL_y);
         F_m[Shortcuts::sigma + 4] = norm_m * mu_m * (n_m[2] * FL_x + n_m[0] * FL_z);
@@ -203,4 +204,4 @@ namespace applications::exahype2::exaseis{
     }
   }
 
-} // namespace
+} // namespace applications::exahype2::exaseis

@@ -1,0 +1,23 @@
+Python:
+  stage: Python
+  needs: []
+  script:
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_BASE} python3 -m compileall -f ./
+  allow_failure: false
+  extends:
+    - .Tags
+    - .Variables
+    - .RunOnAnyBranch
+    - .BeforeScript
+
+# Postprocessing:
+#   stage: Python
+#   needs: []
+#   script:
+#     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_GCC} bash <<< "python3 -m venv --system-site-packages .venv && . .venv/bin/activate && pip install --quiet -r requirements.txt && python3 -m unittest discover -s postprocessing/tests -t ."
+#   allow_failure: false
+#   extends:
+#     - .Tags
+#     - .Variables
+#     - .RunOnAnyBranch
+#     - .BeforeScript

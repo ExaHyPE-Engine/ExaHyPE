@@ -47,12 +47,10 @@ INLINE_METHOD bool peano4::dataview::CellMarker::isContained(
   const double                                 tolerance
 ) {
   for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
-    if (not tarch::la::greaterEquals(position(dimension), cellCentre(dimension) - cellSize(dimension) / 2.0, tolerance)
-        or not tarch::la::smallerEquals(
-          position(dimension),
-          cellCentre(dimension) + cellSize(dimension) / 2.0,
-          tolerance
-        )) {
+    if (
+      not tarch::la::greaterEquals(position(dimension), cellCentre(dimension) - cellSize(dimension) / 2.0, tolerance)
+      or not tarch::la::smallerEquals(position(dimension), cellCentre(dimension) + cellSize(dimension) / 2.0, tolerance)
+    ) {
       return false;
     }
   }
@@ -64,11 +62,13 @@ INLINE_METHOD bool peano4::dataview::CellMarker::overlaps(
   const tarch::la::Vector<DIMENSIONS, double>& regionSize
 ) const {
   for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
-    if (not tarch::la::smallerEquals(
-          centre(dimension) - h(dimension) / 2.0,
-          regionOffset(dimension) + regionSize(dimension)
-        )
-        or not tarch::la::greaterEquals(centre(dimension) + h(dimension) / 2.0, regionOffset(dimension))) {
+    if (
+      not tarch::la::smallerEquals(
+        centre(dimension) - h(dimension) / 2.0,
+        regionOffset(dimension) + regionSize(dimension)
+      )
+      or not tarch::la::greaterEquals(centre(dimension) + h(dimension) / 2.0, regionOffset(dimension))
+    ) {
       return false;
     }
   }

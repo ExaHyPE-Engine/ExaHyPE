@@ -8,7 +8,7 @@ namespace peano4::grid::tests {
   class GridStatisticsTest;
 } // namespace peano4::grid::tests
 
-class peano4::grid::tests::GridStatisticsTest final: public tarch::tests::TestCase {
+class peano4::grid::tests::GridStatisticsTest final : public tarch::tests::TestCase {
 private:
   void testStatistics();
   void testClear();

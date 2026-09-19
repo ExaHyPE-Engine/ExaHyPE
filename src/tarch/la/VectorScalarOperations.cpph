@@ -214,8 +214,11 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, Scalar> tarch::la::operat
   const Vector<3, Scalar>& vector,
   const Scalar&            scalar
 ) {
-  return tarch::la::makeVector<
-    Scalar>(vector._values[0] / scalar, vector._values[1] / scalar, vector._values[2] / scalar);
+  return tarch::la::makeVector<Scalar>(
+    vector._values[0] / scalar,
+    vector._values[1] / scalar,
+    vector._values[2] / scalar
+  );
 }
 
 template <typename Scalar>
@@ -264,8 +267,11 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, Scalar> tarch::la::operat
   const Vector<3, Scalar>& vector,
   const Scalar&            scalar
 ) {
-  return tarch::la::makeVector<
-    Scalar>(vector._values[0] * scalar, vector._values[1] * scalar, vector._values[2] * scalar);
+  return tarch::la::makeVector<Scalar>(
+    vector._values[0] * scalar,
+    vector._values[1] * scalar,
+    vector._values[2] * scalar
+  );
 }
 
 template <typename Scalar>
@@ -318,8 +324,11 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, Scalar> tarch::la::operat
   const Vector<3, Scalar>& vector,
   const Scalar&            scalar
 ) {
-  return tarch::la::makeVector<
-    Scalar>(vector._values[0] + scalar, vector._values[1] + scalar, vector._values[2] + scalar);
+  return tarch::la::makeVector<Scalar>(
+    vector._values[0] + scalar,
+    vector._values[1] + scalar,
+    vector._values[2] + scalar
+  );
 }
 
 template <typename Scalar>
@@ -360,8 +369,11 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, Scalar> tarch::la::operat
   const Vector<3, Scalar>& vector,
   const Scalar&            scalar
 ) {
-  return tarch::la::makeVector<
-    Scalar>(vector._values[0] - scalar, vector._values[1] - scalar, vector._values[2] - scalar);
+  return tarch::la::makeVector<Scalar>(
+    vector._values[0] - scalar,
+    vector._values[1] - scalar,
+    vector._values[2] - scalar
+  );
 }
 
 template <typename Scalar>
@@ -378,8 +390,11 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar> tarch::la::operat
 }
 
 template <int Size, typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  equals(const Vector<Size, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::equals(
+  const Vector<Size, Scalar>& lhs,
+  const Scalar&               cmp,
+  const Scalar                tolerance
+) {
 #ifdef CompilerICC
   bool result = true;
   for (int i = 0; i < Size; i++) {
@@ -399,28 +414,40 @@ INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  equals(const Vector<2, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::equals(
+  const Vector<2, Scalar>& lhs,
+  const Scalar&            cmp,
+  const Scalar             tolerance
+) {
   return la::abs(lhs._values[0] - cmp) <= tolerance && la::abs(lhs._values[1] - cmp) <= tolerance;
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  equals(const Vector<3, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::equals(
+  const Vector<3, Scalar>& lhs,
+  const Scalar&            cmp,
+  const Scalar             tolerance
+) {
   return la::abs(lhs._values[0] - cmp) <= tolerance && la::abs(lhs._values[1] - cmp) <= tolerance
-         && la::abs(lhs._values[2] - cmp) <= tolerance;
+    && la::abs(lhs._values[2] - cmp) <= tolerance;
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  equals(const Vector<4, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::equals(
+  const Vector<4, Scalar>& lhs,
+  const Scalar&            cmp,
+  const Scalar             tolerance
+) {
   return la::abs(lhs._values[0] - cmp) <= tolerance && la::abs(lhs._values[1] - cmp) <= tolerance
-         && la::abs(lhs._values[2] - cmp) <= tolerance && la::abs(lhs._values[3] - cmp) <= tolerance;
+    && la::abs(lhs._values[2] - cmp) <= tolerance && la::abs(lhs._values[3] - cmp) <= tolerance;
 }
 
 template <int Size, typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  oneEquals(const Vector<Size, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::oneEquals(
+  const Vector<Size, Scalar>& lhs,
+  const Scalar&               cmp,
+  const Scalar                tolerance
+) {
 #ifdef CompilerICC
   bool result = false;
   for (int i = 0; i < Size; i++) {
@@ -440,28 +467,40 @@ INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  oneEquals(const Vector<2, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::oneEquals(
+  const Vector<2, Scalar>& lhs,
+  const Scalar&            cmp,
+  const Scalar             tolerance
+) {
   return la::abs(lhs._values[0] - cmp) <= tolerance || la::abs(lhs._values[1] - cmp) <= tolerance;
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  oneEquals(const Vector<3, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::oneEquals(
+  const Vector<3, Scalar>& lhs,
+  const Scalar&            cmp,
+  const Scalar             tolerance
+) {
   return la::abs(lhs._values[0] - cmp) <= tolerance || la::abs(lhs._values[1] - cmp) <= tolerance
-         || la::abs(lhs._values[2] - cmp) <= tolerance;
+    || la::abs(lhs._values[2] - cmp) <= tolerance;
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  oneEquals(const Vector<4, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::oneEquals(
+  const Vector<4, Scalar>& lhs,
+  const Scalar&            cmp,
+  const Scalar             tolerance
+) {
   return la::abs(lhs._values[0] - cmp) <= tolerance || la::abs(lhs._values[1] - cmp) <= tolerance
-         || la::abs(lhs._values[2] - cmp) <= tolerance || la::abs(lhs._values[3] - cmp) <= tolerance;
+    || la::abs(lhs._values[2] - cmp) <= tolerance || la::abs(lhs._values[3] - cmp) <= tolerance;
 }
 
 template <int Size, typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  oneGreater(const Vector<Size, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::oneGreater(
+  const Vector<Size, Scalar>& lhs,
+  const Scalar&               cmp,
+  const Scalar                tolerance
+) {
 #ifdef CompilerICC
   bool result = false;
   for (int i = 0; i < Size; i++) {
@@ -481,27 +520,39 @@ INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  oneGreater(const Vector<2, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::oneGreater(
+  const Vector<2, Scalar>& lhs,
+  const Scalar&            cmp,
+  const Scalar             tolerance
+) {
   return lhs._values[0] - cmp > tolerance || lhs._values[1] - cmp > tolerance;
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  oneGreater(const Vector<3, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::oneGreater(
+  const Vector<3, Scalar>& lhs,
+  const Scalar&            cmp,
+  const Scalar             tolerance
+) {
   return lhs._values[0] - cmp > tolerance || lhs._values[1] - cmp > tolerance || lhs._values[2] - cmp > tolerance;
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  oneGreater(const Vector<4, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::oneGreater(
+  const Vector<4, Scalar>& lhs,
+  const Scalar&            cmp,
+  const Scalar             tolerance
+) {
   return lhs._values[0] - cmp > tolerance || lhs._values[1] - cmp > tolerance || lhs._values[2] - cmp > tolerance
-         || lhs._values[3] - cmp > tolerance;
+    || lhs._values[3] - cmp > tolerance;
 }
 
 template <int Size, typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  oneGreaterEquals(const Vector<Size, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::oneGreaterEquals(
+  const Vector<Size, Scalar>& lhs,
+  const Scalar&               cmp,
+  const Scalar                tolerance
+) {
 #ifdef CompilerICC
   bool result = false;
   for (int i = 0; i < Size; i++) {
@@ -521,27 +572,39 @@ INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  oneGreaterEquals(const Vector<2, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::oneGreaterEquals(
+  const Vector<2, Scalar>& lhs,
+  const Scalar&            cmp,
+  const Scalar             tolerance
+) {
   return lhs._values[0] - cmp >= -tolerance || lhs._values[1] - cmp >= -tolerance;
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  oneGreaterEquals(const Vector<3, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::oneGreaterEquals(
+  const Vector<3, Scalar>& lhs,
+  const Scalar&            cmp,
+  const Scalar             tolerance
+) {
   return lhs._values[0] - cmp >= -tolerance || lhs._values[1] - cmp >= -tolerance || lhs._values[2] - cmp >= -tolerance;
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  oneGreaterEquals(const Vector<4, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::oneGreaterEquals(
+  const Vector<4, Scalar>& lhs,
+  const Scalar&            cmp,
+  const Scalar             tolerance
+) {
   return lhs._values[0] - cmp >= -tolerance || lhs._values[1] - cmp >= -tolerance || lhs._values[2] - cmp >= -tolerance
-         || lhs._values[3] - cmp >= -tolerance;
+    || lhs._values[3] - cmp >= -tolerance;
 }
 
 template <int Size, typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  oneSmaller(const Vector<Size, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::oneSmaller(
+  const Vector<Size, Scalar>& lhs,
+  const Scalar&               cmp,
+  const Scalar                tolerance
+) {
 #ifdef CompilerICC
   bool result = false;
   for (int i = 0; i < Size; i++) {
@@ -561,27 +624,39 @@ INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  oneSmaller(const Vector<2, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::oneSmaller(
+  const Vector<2, Scalar>& lhs,
+  const Scalar&            cmp,
+  const Scalar             tolerance
+) {
   return lhs._values[0] - cmp < tolerance || lhs._values[1] - cmp < tolerance;
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  oneSmaller(const Vector<3, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::oneSmaller(
+  const Vector<3, Scalar>& lhs,
+  const Scalar&            cmp,
+  const Scalar             tolerance
+) {
   return lhs._values[0] - cmp < tolerance || lhs._values[1] - cmp < tolerance || lhs._values[2] - cmp < tolerance;
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  oneSmaller(const Vector<4, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::oneSmaller(
+  const Vector<4, Scalar>& lhs,
+  const Scalar&            cmp,
+  const Scalar             tolerance
+) {
   return lhs._values[0] - cmp < tolerance || lhs._values[1] - cmp < tolerance || lhs._values[2] - cmp < tolerance
-         || lhs._values[3] - cmp < tolerance;
+    || lhs._values[3] - cmp < tolerance;
 }
 
 template <int Size, typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  oneSmallerEquals(const Vector<Size, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::oneSmallerEquals(
+  const Vector<Size, Scalar>& lhs,
+  const Scalar&               cmp,
+  const Scalar                tolerance
+) {
 #ifdef CompilerICC
   bool result = false;
   for (int i = 0; i < Size; i++) {
@@ -601,27 +676,39 @@ INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  oneSmallerEquals(const Vector<2, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::oneSmallerEquals(
+  const Vector<2, Scalar>& lhs,
+  const Scalar&            cmp,
+  const Scalar             tolerance
+) {
   return lhs._values[0] - cmp <= -tolerance || lhs._values[1] - cmp <= -tolerance;
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  oneSmallerEquals(const Vector<3, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::oneSmallerEquals(
+  const Vector<3, Scalar>& lhs,
+  const Scalar&            cmp,
+  const Scalar             tolerance
+) {
   return lhs._values[0] - cmp <= -tolerance || lhs._values[1] - cmp <= -tolerance || lhs._values[2] - cmp <= -tolerance;
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  oneSmallerEquals(const Vector<4, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::oneSmallerEquals(
+  const Vector<4, Scalar>& lhs,
+  const Scalar&            cmp,
+  const Scalar             tolerance
+) {
   return lhs._values[0] - cmp <= -tolerance || lhs._values[1] - cmp <= -tolerance || lhs._values[2] - cmp <= -tolerance
-         || lhs._values[3] - cmp <= -tolerance;
+    || lhs._values[3] - cmp <= -tolerance;
 }
 
 template <int Size, typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  allGreater(const Vector<Size, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::allGreater(
+  const Vector<Size, Scalar>& lhs,
+  const Scalar&               cmp,
+  const Scalar                tolerance
+) {
   bool result = true;
   for (int i = 0; i < Size; i++) {
     result = result && greater(lhs(i), cmp, tolerance);
@@ -630,28 +717,40 @@ INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  allGreater(const Vector<2, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::allGreater(
+  const Vector<2, Scalar>& lhs,
+  const Scalar&            cmp,
+  const Scalar             tolerance
+) {
   return greater(lhs._values[0], cmp, tolerance) && greater(lhs._values[1], cmp, tolerance);
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  allGreater(const Vector<3, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::allGreater(
+  const Vector<3, Scalar>& lhs,
+  const Scalar&            cmp,
+  const Scalar             tolerance
+) {
   return greater(lhs._values[0], cmp, tolerance) && greater(lhs._values[1], cmp, tolerance)
-         && greater(lhs._values[2], cmp, tolerance);
+    && greater(lhs._values[2], cmp, tolerance);
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  allGreater(const Vector<4, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::allGreater(
+  const Vector<4, Scalar>& lhs,
+  const Scalar&            cmp,
+  const Scalar             tolerance
+) {
   return greater(lhs._values[0], cmp, tolerance) && greater(lhs._values[1], cmp, tolerance)
-         && greater(lhs._values[2], cmp, tolerance) && greater(lhs._values[3], cmp, tolerance);
+    && greater(lhs._values[2], cmp, tolerance) && greater(lhs._values[3], cmp, tolerance);
 }
 
 template <int Size, typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  allGreaterEquals(const Vector<Size, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::allGreaterEquals(
+  const Vector<Size, Scalar>& lhs,
+  const Scalar&               cmp,
+  const Scalar                tolerance
+) {
   bool result = true;
   for (int i = 0; i < Size; i++) {
     result = result && greaterEquals(lhs(i), cmp, tolerance);
@@ -660,28 +759,40 @@ INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  allGreaterEquals(const Vector<2, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::allGreaterEquals(
+  const Vector<2, Scalar>& lhs,
+  const Scalar&            cmp,
+  const Scalar             tolerance
+) {
   return greaterEquals(lhs._values[0], cmp, tolerance) && greaterEquals(lhs._values[1], cmp, tolerance);
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  allGreaterEquals(const Vector<3, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::allGreaterEquals(
+  const Vector<3, Scalar>& lhs,
+  const Scalar&            cmp,
+  const Scalar             tolerance
+) {
   return greaterEquals(lhs._values[0], cmp, tolerance) && greaterEquals(lhs._values[1], cmp, tolerance)
-         && greaterEquals(lhs._values[2], cmp, tolerance);
+    && greaterEquals(lhs._values[2], cmp, tolerance);
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  allGreaterEquals(const Vector<4, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::allGreaterEquals(
+  const Vector<4, Scalar>& lhs,
+  const Scalar&            cmp,
+  const Scalar             tolerance
+) {
   return greaterEquals(lhs._values[0], cmp, tolerance) && greaterEquals(lhs._values[1], cmp, tolerance)
-         && greaterEquals(lhs._values[2], cmp, tolerance) && greaterEquals(lhs._values[3], cmp, tolerance);
+    && greaterEquals(lhs._values[2], cmp, tolerance) && greaterEquals(lhs._values[3], cmp, tolerance);
 }
 
 template <int Size, typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  allSmaller(const Vector<Size, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::allSmaller(
+  const Vector<Size, Scalar>& lhs,
+  const Scalar&               cmp,
+  const Scalar                tolerance
+) {
   bool result = true;
   for (int i = 0; i < Size; i++) {
     result = result && smaller(lhs(i), cmp, tolerance);
@@ -690,28 +801,40 @@ INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  allSmaller(const Vector<2, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::allSmaller(
+  const Vector<2, Scalar>& lhs,
+  const Scalar&            cmp,
+  const Scalar             tolerance
+) {
   return smaller(lhs._values[0], cmp, tolerance) && smaller(lhs._values[1], cmp, tolerance);
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  allSmaller(const Vector<3, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::allSmaller(
+  const Vector<3, Scalar>& lhs,
+  const Scalar&            cmp,
+  const Scalar             tolerance
+) {
   return smaller(lhs._values[0], cmp, tolerance) && smaller(lhs._values[1], cmp, tolerance)
-         && smaller(lhs._values[2], cmp, tolerance);
+    && smaller(lhs._values[2], cmp, tolerance);
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  allSmaller(const Vector<4, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::allSmaller(
+  const Vector<4, Scalar>& lhs,
+  const Scalar&            cmp,
+  const Scalar             tolerance
+) {
   return smaller(lhs._values[0], cmp, tolerance) && smaller(lhs._values[1], cmp, tolerance)
-         && smaller(lhs._values[2], cmp, tolerance) && smaller(lhs._values[3], cmp, tolerance);
+    && smaller(lhs._values[2], cmp, tolerance) && smaller(lhs._values[3], cmp, tolerance);
 }
 
 template <int Size, typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  allSmallerEquals(const Vector<Size, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::allSmallerEquals(
+  const Vector<Size, Scalar>& lhs,
+  const Scalar&               cmp,
+  const Scalar                tolerance
+) {
   bool result = true;
   for (int i = 0; i < Size; i++) {
     result = result && smallerEquals(lhs(i), cmp, tolerance);
@@ -720,21 +843,30 @@ INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  allSmallerEquals(const Vector<2, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::allSmallerEquals(
+  const Vector<2, Scalar>& lhs,
+  const Scalar&            cmp,
+  const Scalar             tolerance
+) {
   return smallerEquals(lhs._values[0], cmp, tolerance) && smallerEquals(lhs._values[1], cmp, tolerance);
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  allSmallerEquals(const Vector<3, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::allSmallerEquals(
+  const Vector<3, Scalar>& lhs,
+  const Scalar&            cmp,
+  const Scalar             tolerance
+) {
   return smallerEquals(lhs._values[0], cmp, tolerance) && smallerEquals(lhs._values[1], cmp, tolerance)
-         && smallerEquals(lhs._values[2], cmp, tolerance);
+    && smallerEquals(lhs._values[2], cmp, tolerance);
 }
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::
-  allSmallerEquals(const Vector<4, Scalar>& lhs, const Scalar& cmp, const Scalar tolerance) {
+INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::allSmallerEquals(
+  const Vector<4, Scalar>& lhs,
+  const Scalar&            cmp,
+  const Scalar             tolerance
+) {
   return smallerEquals(lhs._values[0], cmp, tolerance) && smallerEquals(lhs._values[1], cmp, tolerance)
-         && smallerEquals(lhs._values[2], cmp, tolerance) && smallerEquals(lhs._values[3], cmp, tolerance);
+    && smallerEquals(lhs._values[2], cmp, tolerance) && smallerEquals(lhs._values[3], cmp, tolerance);
 }

@@ -32,11 +32,6 @@ namespace {
     0.0
   };
 
-  struct WaterLayer {
-    static constexpr int h  = 0;
-    static constexpr int hu = 1;
-  };
-
   double reservoirTerrain(const tarch::la::Vector<DIMENSIONS, double>& position) {
     return std::max(20.0 - position[0], 1.0);
   }
@@ -216,10 +211,10 @@ bool applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
   const int                                                     numberOfStates,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
   const tarch::la::Vector<DIMENSIONS, double>&                  h
-) const {
+) {
   using SlideLayer = ::applications::exahype2::exaskred::coupled::SlideLayer<Shortcuts>;
   if (not ::applications::exahype2::exaskred::landslide::
-        isAdmissibleGranularLayerCell<WaterLayer, NumberOfUnknowns, NumberOfAuxiliaryVariables>(
+        isAdmissibleGranularLayerCell<Shortcuts, NumberOfUnknowns, NumberOfAuxiliaryVariables>(
           Q,
           numberOfStates,
           h,
@@ -254,7 +249,7 @@ bool applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
 void applications::exahype2::exaskred::ADERDGSolver::mapDmpObservables(
   double* const NOALIAS       observables,
   const double* const NOALIAS Q
-) const {
+) {
   for (int observable = 0; observable < NumberOfDMPObservables; observable++) {
     observables[observable] = Q[observable];
   }
@@ -266,7 +261,7 @@ void applications::exahype2::exaskred::ADERDGSolver::mapDmpObservables(
 double applications::exahype2::exaskred::ADERDGSolver::dmpRelaxationParameter(
   const int    observable,
   const double specifiedRelaxationParameter
-) const {
+) {
   if (observable < 3) {
     return std::max(specifiedRelaxationParameter, waterDmpRelaxation);
   }

@@ -18,9 +18,7 @@ INLINE_METHOD double exahype2::Curvi::split(int normal, double position, Perturb
 /**
  * @return The curvilinear position of the cartesian point x.
  */
-INLINE_METHOD exahype2::Curvi::Point exahype2::Curvi::operator()(const Point& x) const {
-  return _positionFunction(x);
-}
+INLINE_METHOD exahype2::Curvi::Point exahype2::Curvi::operator()(const Point& x) const { return _positionFunction(x); }
 
 /**
  * @return The cartesian point which operator() maps onto the curvilinear point x.

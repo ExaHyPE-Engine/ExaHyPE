@@ -4,6 +4,7 @@
 
 #include "peano4/communication/tests/CommunicationManagerTest.h"
 #include "peano4/data/tests/ContainerRegistryTest.h"
+#include "peano4/data/tests/MemoryUsageTest.h"
 #include "peano4/data/tests/PooledRecordTest.h"
 #include "peano4/data/tests/RegisteredStackContainerTest.h"
 #include "peano4/dataview/tests/CellMarkerTest.h"
@@ -61,6 +62,7 @@ tarch::tests::TestCase* peano4::getUnitTests() {
 
   result->addTestCase(new peano4::communication::tests::CommunicationManagerTest());
   result->addTestCase(new peano4::data::tests::ContainerRegistryTest());
+  result->addTestCase(new peano4::data::tests::MemoryUsageTest());
   result->addTestCase(new peano4::data::tests::PooledRecordTest());
   result->addTestCase(new peano4::data::tests::RegisteredStackContainerTest());
 

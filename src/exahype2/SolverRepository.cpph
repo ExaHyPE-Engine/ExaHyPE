@@ -1,0 +1,159 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+template <typename... Solvers>
+exahype2::SolverRepository<Solvers...>::SolverRepository(Solvers&... solvers) :
+  _solvers{solvers...} {}
+
+template <typename... Solvers>
+template <typename Operation>
+INLINE_METHOD void exahype2::SolverRepository<Solvers...>::forEachSolver(const Operation& operation) {
+  std::apply([&operation](Solvers&... solvers) { (operation(solvers), ...); }, _solvers);
+}
+
+template <typename... Solvers>
+template <typename Operation>
+INLINE_METHOD void exahype2::SolverRepository<Solvers...>::forEachSolver(const Operation& operation) const {
+  std::apply([&operation](const Solvers&... solvers) { (operation(solvers), ...); }, _solvers);
+}
+
+template <typename... Solvers>
+INLINE_METHOD double exahype2::SolverRepository<Solvers...>::getMinTimeStamp() const {
+  double result = std::numeric_limits<double>::max();
+  forEachSolver([&result](const auto& solver) { result = std::min(result, solver.getMinTimeStamp()); });
+  return result;
+}
+
+template <typename... Solvers>
+INLINE_METHOD double exahype2::SolverRepository<Solvers...>::getMaxTimeStamp() const {
+  double result = 0.0;
+  forEachSolver([&result](const auto& solver) { result = std::max(result, solver.getMaxTimeStamp()); });
+  return result;
+}
+
+/**
+ * A time step size that is not finite and non-negative survives the reduction, so one such
+ * solver makes the result invalid.
+ */
+template <typename... Solvers>
+INLINE_METHOD double exahype2::SolverRepository<Solvers...>::getMinTimeStepSize() const {
+  double result = std::numeric_limits<double>::max();
+  forEachSolver([&result](const auto& solver) {
+    result = exahype2::NonNegativeReduction::minimum(result, solver.getMinTimeStepSize());
+  });
+  return result;
+}
+
+template <typename... Solvers>
+INLINE_METHOD double exahype2::SolverRepository<Solvers...>::getMaxTimeStepSize() const {
+  double result = 0.0;
+  forEachSolver([&result](const auto& solver) {
+    result = exahype2::NonNegativeReduction::maximum(result, solver.getMaxTimeStepSize());
+  });
+  return result;
+}
+
+template <typename... Solvers>
+INLINE_METHOD int exahype2::SolverRepository<Solvers...>::getNumberOfDoFs() const {
+  int result = 0;
+  forEachSolver([&result](const auto& solver) {
+    const auto numberOfDoFs = solver.getNumberOfDoFs();
+    assertion(numberOfDoFs >= 0, numberOfDoFs);
+    result += numberOfDoFs;
+  });
+  return result;
+}
+
+/**
+ * A plot writes the solution of every solver, so one solver in the middle of its time step
+ * postpones it.
+ */
+template <typename... Solvers>
+INLINE_METHOD bool exahype2::SolverRepository<Solvers...>::mayPlot() const {
+  bool result = true;
+  forEachSolver([&result](const auto& solver) { result = result and solver.mayPlot(); });
+  return result;
+}
+
+/**
+ * The sweeps of the solvers interleave, so the first grid sweep of one solver's time step is a
+ * first grid sweep of the project.
+ */
+template <typename... Solvers>
+INLINE_METHOD bool exahype2::SolverRepository<Solvers...>::isFirstGridSweepOfTimeStep() const {
+  bool result = false;
+  forEachSolver([&result](const auto& solver) { result = result or solver.isFirstGridSweepOfTimeStep(); });
+  return result;
+}
+
+template <typename... Solvers>
+INLINE_METHOD bool exahype2::SolverRepository<Solvers...>::isLastGridSweepOfTimeStep() const {
+  bool result = false;
+  forEachSolver([&result](const auto& solver) { result = result or solver.isLastGridSweepOfTimeStep(); });
+  return result;
+}
+
+template <typename... Solvers>
+INLINE_METHOD void exahype2::SolverRepository<Solvers...>::startGridConstructionStep() {
+  forEachSolver([](auto& solver) { solver.startGridConstructionStep(); });
+}
+
+template <typename... Solvers>
+INLINE_METHOD void exahype2::SolverRepository<Solvers...>::finishGridConstructionStep() {
+  forEachSolver([](auto& solver) { solver.finishGridConstructionStep(); });
+}
+
+template <typename... Solvers>
+INLINE_METHOD void exahype2::SolverRepository<Solvers...>::startGridInitialisationStep() {
+  forEachSolver([](auto& solver) { solver.startGridInitialisationStep(); });
+}
+
+template <typename... Solvers>
+INLINE_METHOD void exahype2::SolverRepository<Solvers...>::finishGridInitialisationStep() {
+  forEachSolver([](auto& solver) { solver.finishGridInitialisationStep(); });
+}
+
+template <typename... Solvers>
+INLINE_METHOD void exahype2::SolverRepository<Solvers...>::startDynamicMeshRefinementStep() {
+  forEachSolver([](auto& solver) { solver.startDynamicMeshRefinementStep(); });
+}
+
+template <typename... Solvers>
+INLINE_METHOD void exahype2::SolverRepository<Solvers...>::finishDynamicMeshRefinementStep() {
+  forEachSolver([](auto& solver) { solver.finishDynamicMeshRefinementStep(); });
+}
+
+template <typename... Solvers>
+INLINE_METHOD void exahype2::SolverRepository<Solvers...>::startTimeStep() {
+  forEachSolver([](auto& solver) { solver.startTimeStep(); });
+}
+
+template <typename... Solvers>
+INLINE_METHOD void exahype2::SolverRepository<Solvers...>::finishTimeStep() {
+  forEachSolver([](auto& solver) { solver.finishTimeStep(); });
+}
+
+template <typename... Solvers>
+INLINE_METHOD void exahype2::SolverRepository<Solvers...>::startPlottingStep() {
+  forEachSolver([](auto& solver) { solver.startPlottingStep(); });
+}
+
+template <typename... Solvers>
+INLINE_METHOD void exahype2::SolverRepository<Solvers...>::finishPlottingStep() {
+  forEachSolver([](auto& solver) { solver.finishPlottingStep(); });
+}
+
+template <typename... Solvers>
+INLINE_METHOD void exahype2::SolverRepository<Solvers...>::suspendSolversForOneGridSweep() {
+  forEachSolver([](auto& solver) { solver.suspendSolversForOneGridSweep(); });
+}
+
+template <typename... Solvers>
+INLINE_METHOD void exahype2::SolverRepository<Solvers...>::startSimulation() {
+  forEachSolver([](auto& solver) { solver.startSimulation(); });
+}
+
+template <typename... Solvers>
+INLINE_METHOD void exahype2::SolverRepository<Solvers...>::finishSimulation() {
+  forEachSolver([](auto& solver) { solver.finishSimulation(); });
+}

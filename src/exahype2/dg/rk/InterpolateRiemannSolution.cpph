@@ -1,0 +1,168 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+/**
+ * Solves the Riemann problems of the hanging faces of one cell.
+ *
+ * A hanging face holds no data between two grid sweeps, so the cell writes both traces of the
+ * face itself and solves the problem before the next stage overwrites the coarse trace. The
+ * argument relativeStageTimeStepSize is the fraction of the time step the stage starts at.
+ */
+template <
+  typename SolverType,
+  bool IsLinear,
+  bool UseRiemannSolver,
+  bool EvaluateFlux,
+  bool EvaluateDiffusiveFlux,
+  bool EvaluateNonconservativeProduct,
+  typename Quadrature,
+  typename DGMatrices,
+  typename ButcherTableau,
+  typename CellLabel,
+  typename FaceLabel,
+  typename FaceStateRecord,
+  typename FaceFluxRecord,
+  typename StoragePrecision>
+INLINE_METHOD void exahype2::dg::rk::interpolateRiemannSolution(
+  const peano4::dataview::CellMarker&                      marker,
+  const CellLabel&                                         cellLabel,
+  const peano4::dataview::FaceEnumerator<FaceLabel>&       faceLabels,
+  const peano4::dataview::FaceEnumerator<FaceStateRecord>& fineGridFaceStates,
+  const peano4::dataview::FaceEnumerator<FaceStateRecord>& coarseGridFaceStates,
+  const peano4::dataview::FaceEnumerator<FaceFluxRecord>&  fineGridFaceFluxes,
+  const StoragePrecision* const                            cellState,
+  const StoragePrecision* const                            rightHandSideEstimates,
+  const int                                                rungeKuttaStage,
+  const double                                             relativeStageTimeStepSize
+) {
+  constexpr int NumberOfDofsPerAxis  = SolverType::DGOrder + 1;
+  constexpr int NumberOfData         = SolverType::NumberOfUnknowns + SolverType::NumberOfAuxiliaryVariables;
+  constexpr int NodesPerCell         = exahype2::dg::NodesPerCell<NumberOfDofsPerAxis>;
+  constexpr int NodesPerFace         = exahype2::dg::NodesPerFace<NumberOfDofsPerAxis>;
+  constexpr int StateElementsPerFace = NodesPerFace * NumberOfData;
+  constexpr int FluxElementsPerFace  = NodesPerFace * SolverType::NumberOfUnknowns;
+
+  assertion(cellState != nullptr);
+  assertion(rightHandSideEstimates != nullptr);
+  assertion(
+    rungeKuttaStage >= 0 and rungeKuttaStage < SolverType::NumberOfRungeKuttaStages,
+    rungeKuttaStage,
+    marker.toString()
+  );
+  assertion(relativeStageTimeStepSize >= 0.0 and relativeStageTimeStepSize <= 1.0, relativeStageTimeStepSize);
+
+  bool hasHangingFace = false;
+  for (int face = 0; face < peano4::FacesPerCell; face++) {
+    hasHangingFace = hasHangingFace or faceLabels(face).getIsHanging();
+  }
+  if (hasHangingFace) {
+    const double timeStampOldSolution = cellLabel.getTimeStamp();
+
+    const double timeStepSize = cellLabel.getTimeStepSize();
+    assertion(std::isfinite(timeStepSize) and timeStepSize >= 0.0, timeStepSize, marker.toString());
+
+    const double timeStamp = timeStampOldSolution + relativeStageTimeStepSize * timeStepSize;
+
+    StoragePrecision* const stageState =
+      exahype2::dg::rk::stageScratch<NodesPerCell * NumberOfData, StoragePrecision>();
+    exahype2::dg::rk::linearCombinationOfEstimates<
+      SolverType::NumberOfRungeKuttaStages,
+      NumberOfDofsPerAxis,
+      SolverType::NumberOfUnknowns,
+      SolverType::NumberOfAuxiliaryVariables>(
+      rungeKuttaStage,
+      cellState,
+      rightHandSideEstimates,
+      stageState,
+      ButcherTableau::ButcherMatrix
+    );
+
+    StoragePrecision  scratchProjection[peano4::FacesPerCell][2 * StateElementsPerFace];
+    StoragePrecision* projectionTargets[peano4::FacesPerCell];
+    for (int face = 0; face < peano4::FacesPerCell; face++) {
+      projectionTargets[face] =
+        faceLabels(face).getIsHanging() ? fineGridFaceStates(face).data() : scratchProjection[face];
+      projectionTargets[face] += face < DIMENSIONS ? StateElementsPerFace : 0;
+    }
+    exahype2::dg::extrapolateStateToFaces<
+      NumberOfDofsPerAxis,
+      SolverType::NumberOfUnknowns,
+      SolverType::NumberOfAuxiliaryVariables>(
+      projectionTargets,
+      stageState,
+      DGMatrices::BasisFunctionValuesLeft1D,
+      DGMatrices::BasisFunctionValuesRight1D
+    );
+
+    for (int hangingFaceNumber = 0; hangingFaceNumber < peano4::FacesPerCell; hangingFaceNumber++) {
+      if (faceLabels(hangingFaceNumber).getIsHanging()) {
+        const int direction  = hangingFaceNumber % DIMENSIONS;
+        const int coarseSide = hangingFaceNumber < DIMENSIONS ? 0 : 1;
+
+        // Face nodes follow the tangential axes in ascending order.
+        const double* prolongationMatrixPerAxis[DIMENSIONS - 1];
+        int           tangentialAxis = 0;
+        for (int axis = 0; axis < DIMENSIONS; axis++) {
+          if (axis != direction) {
+            prolongationMatrixPerAxis[tangentialAxis] = DGMatrices::ProlongationMatrix1D
+              + marker.getRelativePositionWithinFatherCell()(axis) * NumberOfDofsPerAxis * NumberOfDofsPerAxis;
+            tangentialAxis++;
+          }
+        }
+        assertion(tangentialAxis == DIMENSIONS - 1, tangentialAxis);
+        exahype2::amr::interpolateFaceFromCoarse(
+          fineGridFaceStates(hangingFaceNumber).data() + coarseSide * StateElementsPerFace,
+          coarseGridFaceStates(hangingFaceNumber).data() + coarseSide * StateElementsPerFace,
+          prolongationMatrixPerAxis,
+          NumberOfDofsPerAxis,
+          SolverType::NumberOfUnknowns + SolverType::NumberOfAuxiliaryVariables
+        );
+
+        auto faceCentre = marker.getX();
+        faceCentre(direction) += (hangingFaceNumber < DIMENSIONS ? -0.5 : 0.5) * marker.getH()(direction);
+
+        const StoragePrecision* const leftStateEstimates  = fineGridFaceStates(hangingFaceNumber).data();
+        const StoragePrecision* const rightStateEstimates = leftStateEstimates + StateElementsPerFace;
+        StoragePrecision* const       leftFluxEstimates   = fineGridFaceFluxes(hangingFaceNumber).data();
+        StoragePrecision* const       rightFluxEstimates  = leftFluxEstimates + FluxElementsPerFace;
+
+        for (int side = 0; side < 2; side++) {
+          exahype2::dg::evaluateFluxOnFace<
+            SolverType,
+            NumberOfDofsPerAxis,
+            SolverType::NumberOfUnknowns,
+            SolverType::NumberOfAuxiliaryVariables,
+            EvaluateFlux,
+            EvaluateDiffusiveFlux>(
+            leftFluxEstimates + side * FluxElementsPerFace,
+            leftStateEstimates,
+            rightStateEstimates,
+            side,
+            Quadrature::QuadraturePoints1D,
+            faceCentre,
+            marker.getH(),
+            timeStamp,
+            timeStepSize,
+            direction
+          );
+        }
+
+        exahype2::dg::rk::
+          solveFaceRiemannProblem<SolverType, IsLinear, UseRiemannSolver, EvaluateFlux, EvaluateNonconservativeProduct>(
+            leftFluxEstimates,
+            rightFluxEstimates,
+            leftStateEstimates,
+            rightStateEstimates,
+            Quadrature::QuadratureWeightsOnFace,
+            faceCentre,
+            marker.getH(),
+            timeStamp,
+            timeStepSize,
+            direction,
+            faceLabels(hangingFaceNumber).getBoundary() and not SolverType::PeriodicBoundaries[direction],
+            hangingFaceNumber
+          );
+      }
+    }
+  }
+}

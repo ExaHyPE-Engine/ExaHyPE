@@ -11,6 +11,11 @@ namespace exahype2::dg::tests {
 class exahype2::dg::tests::LimitingSolverStateTest final : public tarch::tests::TestCase {
 public:
   LimitingSolverStateTest();
+  LimitingSolverStateTest(const LimitingSolverStateTest&)            = delete;
+  LimitingSolverStateTest(LimitingSolverStateTest&&)                 = delete;
+  LimitingSolverStateTest& operator=(const LimitingSolverStateTest&) = delete;
+  LimitingSolverStateTest& operator=(LimitingSolverStateTest&&)      = delete;
+  ~LimitingSolverStateTest() override                                = default;
 
   void run() override;
 

@@ -25,7 +25,7 @@ struct exahype2::fv::reconstruction::Constant final {
   static constexpr int HaloSize = 1;
 
   template <
-    typename Solver,
+    typename SolverType,
     int  NumberOfVolumesPerAxis,
     int  NumberOfUnknowns,
     int  NumberOfAuxiliaryVariables,

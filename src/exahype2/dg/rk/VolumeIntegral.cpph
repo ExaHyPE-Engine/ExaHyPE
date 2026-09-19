@@ -8,7 +8,7 @@ TARGET_DECLARE
  * Nonlinear fluxes use the weak form.
  */
 template <
-  typename Solver,
+  typename SolverType,
   int  NumberOfDofsPerAxis,
   int  NumberOfUnknowns,
   int  NumberOfAuxiliaryVariables,
@@ -117,7 +117,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::rk::volumeIntegral(
             for (int axis = 0; axis < DIMENSIONS; axis++) {
               nodeGradients[axis] = nodalGradients + axis * GradientEntriesPerAxis + cellNode * NumberOfData;
             }
-            Solver::flux(
+            SolverType::flux(
               nodeStateForCompute(cellNode),
               nodeGradients,
               exahype2::dg::getQuadraturePoint(cellCentre, cellSize, nodeIndex, quadratureNodes),
@@ -128,7 +128,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::rk::volumeIntegral(
               fluxValues + normalIndex * NumberOfUnknowns
             );
           } else {
-            Solver::flux(
+            SolverType::flux(
               nodeStateForCompute(cellNode),
               exahype2::dg::getQuadraturePoint(cellCentre, cellSize, nodeIndex, quadratureNodes),
               cellSize,
@@ -203,7 +203,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::rk::volumeIntegral(
           }
 
           ComputePrecision nonconservativeProduct[NumberOfUnknowns];
-          Solver::nonconservativeProduct(
+          SolverType::nonconservativeProduct(
             nodeStateForCompute(cellNode),
             gradients + normalIndex * NumberOfData,
             exahype2::dg::getQuadraturePoint(cellCentre, cellSize, nodeIndex, quadratureNodes),
@@ -236,7 +236,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::rk::volumeIntegral(
       }
 
       ComputePrecision sourceValues[NumberOfUnknowns];
-      Solver::sourceTerm(
+      SolverType::sourceTerm(
         nodeStateForCompute(cellNode),
         exahype2::dg::getQuadraturePoint(cellCentre, cellSize, nodeIndex, quadratureNodes),
         cellSize,

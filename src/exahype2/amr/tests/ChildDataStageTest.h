@@ -11,7 +11,11 @@ namespace exahype2::amr::tests {
 class exahype2::amr::tests::ChildDataStageTest final : public tarch::tests::TestCase {
 public:
   ChildDataStageTest();
-  ~ChildDataStageTest() override = default;
+  ChildDataStageTest(const ChildDataStageTest&)            = delete;
+  ChildDataStageTest(ChildDataStageTest&&)                 = delete;
+  ChildDataStageTest& operator=(const ChildDataStageTest&) = delete;
+  ChildDataStageTest& operator=(ChildDataStageTest&&)      = delete;
+  ~ChildDataStageTest() override                           = default;
 
   void run() override;
 

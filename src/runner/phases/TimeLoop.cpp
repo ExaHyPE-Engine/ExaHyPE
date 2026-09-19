@@ -201,8 +201,10 @@ void runner::TimeLoop::run() {
     // A completed time step may have committed refine or coarsen events, and the DynamicAMR
     // observer realises them before the next plot or time step. A run that terminates on a
     // non-critical assertion dumps its final state on the grid it has.
-    if (_dynamicAMR.isEnabled() and _dynamicAMR.hasPendingMeshUpdates()
-        and not tarch::hasNonCriticalAssertionBeenViolated()) {
+    if (
+      _dynamicAMR.isEnabled() and _dynamicAMR.hasPendingMeshUpdates()
+      and not tarch::hasNonCriticalAssertionBeenViolated()
+    ) {
       _dynamicAMR.run();
     }
 
@@ -234,8 +236,10 @@ void runner::TimeLoop::run() {
       } else {
         action = Action::Stop;
       }
-    } else if (stepLimited and stepPlotInterval > 0.0 and keepTimeStepping and firstPlotTimeReached
-               and static_cast<double>(completedTimeSteps) >= nextPlotAtStep and repositories.mayPlot()) {
+    } else if (
+      stepLimited and stepPlotInterval > 0.0 and keepTimeStepping and firstPlotTimeReached
+      and static_cast<double>(completedTimeSteps) >= nextPlotAtStep and repositories.mayPlot()
+    ) {
       nextPlotAtStep += stepPlotInterval;
       if (nextPlotAtStep <= static_cast<double>(completedTimeSteps)) {
         logWarning("Asked to plot more often than once per time step; postponing the next plot.");
@@ -243,8 +247,10 @@ void runner::TimeLoop::run() {
       }
       justWroteSnapshot = true;
       action            = Action::Plot;
-    } else if (not stepLimited and snapInterval > 0.0 and keepTimeStepping and completedPlots < snapshots - 1
-               and (minStamp >= nextMinPlot or maxStamp >= nextMaxPlot) and repositories.mayPlot()) {
+    } else if (
+      not stepLimited and snapInterval > 0.0 and keepTimeStepping and completedPlots < snapshots - 1
+      and (minStamp >= nextMinPlot or maxStamp >= nextMaxPlot) and repositories.mayPlot()
+    ) {
       // The final-state dump at termination completes the numbered snapshot count, so the
       // interval trigger stops one short. minStamp belongs to the slowest solver and maxStamp
       // to the fastest, so the snapshot spacing follows the fastest solver.
@@ -331,8 +337,10 @@ void runner::TimeLoop::run() {
 
       // A step that tripped a non-critical assertion carries invalid data, such as a time-step size
       // from a zero eigenvalue; skip its report and let the next iteration dump the final state and terminate.
-      if (not tarch::hasNonCriticalAssertionBeenViolated()
-          and measurements.timeStep.getAccumulatedValue() >= logNextTimeStep) {
+      if (
+        not tarch::hasNonCriticalAssertionBeenViolated()
+        and measurements.timeStep.getAccumulatedValue() >= logNextTimeStep
+      ) {
         logTimeStep(
           repositories.getMinTimeStamp(),
           repositories.getMaxTimeStamp(),

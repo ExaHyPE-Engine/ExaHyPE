@@ -7,15 +7,8 @@
 namespace tarch::accelerator {
   TARGET_DECLARE
   inline GPU_CALLABLE_METHOD void abort(const char* message) {
-    COMPILE_IF_ON_DEVICE(
-      printf("%s", message);
-      __builtin_trap();
-    )
-    COMPILE_IF_ON_HOST(
-      std::fputs(message, stderr);
-      std::fflush(stderr);
-      std::_Exit(EXIT_FAILURE);
-    )
+    COMPILE_IF_ON_DEVICE(printf("%s", message); __builtin_trap();)
+    COMPILE_IF_ON_HOST(std::fputs(message, stderr); std::fflush(stderr); std::_Exit(EXIT_FAILURE);)
   }
   TARGET_DECLARE_END
 } // namespace tarch::accelerator

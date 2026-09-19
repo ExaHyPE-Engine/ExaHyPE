@@ -23,7 +23,9 @@ set(SOURCES
   communication/tests/CommunicationManagerTest.cpp
 
   data/ContainerRegistry.cpp
+  data/MemoryUsage.cpp
   data/tests/ContainerRegistryTest.cpp
+  data/tests/MemoryUsageTest.cpp
   data/tests/PooledRecordTest.cpp
   data/tests/RegisteredStackContainerTest.cpp
 

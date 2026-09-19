@@ -36,6 +36,7 @@ Checks: >
   -modernize-use-trailing-return-type,
   -performance-avoid-endl,
   -performance-enum-size,
+  -portability-avoid-pragma-once,
   -portability-restrict-system-includes,
   -readability-convert-member-functions-to-static,
   -readability-else-after-return,

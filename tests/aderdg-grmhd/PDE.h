@@ -17,8 +17,7 @@ namespace GRMHD {
     // Computes the inverse of a 3x3 matrix and returns its determinant
     inline double matrixInverse3x3(double M[][3], double iM[][3]) {
       double det = M[0][0] * M[1][1] * M[2][2] - M[0][0] * M[1][2] * M[2][1] - M[1][0] * M[0][1] * M[2][2]
-                   + M[1][0] * M[0][2] * M[2][1] + M[2][0] * M[0][1] * M[1][2]
-                   - M[2][0] * M[0][2] * M[1][1]; // ComputeDet(M,3)
+        + M[1][0] * M[0][2] * M[2][1] + M[2][0] * M[0][1] * M[1][2] - M[2][0] * M[0][2] * M[1][1]; // ComputeDet(M,3)
 
       iM[0][0] = (M[1][1] * M[2][2] - M[1][2] * M[2][1]) / det;
       iM[0][1] = (M[0][2] * M[2][1] - M[0][1] * M[2][2]) / det;
@@ -51,8 +50,8 @@ namespace GRMHD {
       // ! This is the CONS2PRIM strategy adopted by Del Zanna et al. (2007) A&A, 473, 11-30
       // ! and it corresponds to their choice 3 in Section 3.2
       [[maybe_unused]] constexpr double tolerance = 1e-10;
-      constexpr double third     = 1. / 3.;
-      constexpr double i27       = 1. / 27.;
+      constexpr double                  third     = 1. / 3.;
+      constexpr double                  i27       = 1. / 27.;
 
       double v2  = x;
       double rho = d * sqrt(1. - v2);
@@ -278,7 +277,7 @@ namespace GRMHD {
     // formulation in primitive form
     inline void PDECons2Prim(const double* Q, double* V) {
       // PARAMETERS
-      constexpr double gamma     = 4.0 / 3.0;
+      constexpr double gamma = 4.0 / 3.0;
 
       [[maybe_unused]] constexpr double igamma      = 1.0 / gamma;
       [[maybe_unused]] constexpr int    NSTOV_kappa = 100;

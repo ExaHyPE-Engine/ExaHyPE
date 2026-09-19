@@ -30,7 +30,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD double exahype2::dg::ader::evaluateLagrangeBas
  * on the quadrature points of the step.
  */
 template <
-  typename Solver,
+  typename SolverType,
   int NumberOfDofsPerAxis,
   int NumberOfUnknowns,
   int NumberOfAuxiliaryVariables,
@@ -95,7 +95,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::evaluatePointSources(
 
       for (int entry = 0; entry < numberOfPointSources; entry++) {
         const int pointSource = pointSourceIndices[entry];
-        Solver::pointSource(
+        SolverType::pointSource(
           cellState + cellNode * CellLayout::NumberOfData,
           nodePosition,
           static_cast<double>(timePosition),

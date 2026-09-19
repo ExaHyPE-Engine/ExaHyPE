@@ -16,30 +16,30 @@ namespace exahype2::dg::ader::tests {
   class DeviceBasisTables;
 } // namespace exahype2::dg::ader::tests
 
+TARGET_DECLARE
 /**
  * Sizes and coefficients of the predictor device tests.
  */
-TARGET_DECLARE
 struct exahype2::dg::ader::tests::DeviceKernelSetup final {
-  static constexpr int    DofsPerAxis             = 3;
-  static constexpr int    Unknowns                = 2;
-  static constexpr int    AuxiliaryVariables      = 1;
-  static constexpr int    NumberOfCells           = 8;
-  static constexpr int    NumberOfPointSources    = 2;
-  static constexpr double TimeStamp               = 0.75;
-  static constexpr double TimeStepSize            = 0.01;
-  static constexpr double PicardTolerance         = 1.0e-10;
-  static constexpr double FluxSpeed               = 0.5;
-  static constexpr double DiffusionSpeed          = 0.05;
-  static constexpr double ProductSpeed            = 0.25;
-  static constexpr double SourceStrength          = 0.5;
-  static constexpr double DiffusiveSourceStrength = 0.1;
+  static constexpr int    DofsPerAxis                = 3;
+  static constexpr int    NumberOfUnknowns           = 2;
+  static constexpr int    NumberOfAuxiliaryVariables = 1;
+  static constexpr int    NumberOfCells              = 8;
+  static constexpr int    NumberOfPointSources       = 2;
+  static constexpr double TimeStamp                  = 0.75;
+  static constexpr double TimeStepSize               = 0.01;
+  static constexpr double PicardTolerance            = 1.0e-10;
+  static constexpr double FluxSpeed                  = 0.5;
+  static constexpr double DiffusionSpeed             = 0.05;
+  static constexpr double ProductSpeed               = 0.25;
+  static constexpr double SourceStrength             = 0.5;
+  static constexpr double DiffusiveSourceStrength    = 0.1;
 
-  using CellLayout = exahype2::dg::ader::Layout<DofsPerAxis, Unknowns, AuxiliaryVariables>;
+  using CellLayout = exahype2::dg::ader::Layout<DofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables>;
 
   static constexpr int CellStateCardinality     = CellLayout::NodesPerCell * CellLayout::NumberOfData;
   static constexpr int FaceStateCardinality     = CellLayout::NodesPerFace * CellLayout::NumberOfData;
-  static constexpr int FaceFluxCardinality      = CellLayout::NodesPerFace * Unknowns;
+  static constexpr int FaceFluxCardinality      = CellLayout::NodesPerFace * NumberOfUnknowns;
   static constexpr int AllCellStatesCardinality = NumberOfCells * CellStateCardinality;
   static constexpr int AllFaceStatesCardinality = NumberOfCells * peano4::FacesPerCell * FaceStateCardinality;
   static constexpr int AllFaceFluxesCardinality = NumberOfCells * peano4::FacesPerCell * FaceFluxCardinality;

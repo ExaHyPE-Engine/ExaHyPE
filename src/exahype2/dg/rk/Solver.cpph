@@ -1,0 +1,709 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+thread_local exahype2::Solver::LocalUpdates exahype2::dg::rk::
+  Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::_localUpdates;
+
+/**
+ * The argument timeStepFactor is the CFL relaxation of an adaptive solver or the normalised
+ * time step size of a fixed one.
+ */
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+exahype2::dg::rk::Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::Solver(
+  const double timeStepFactor
+) :
+  Solver(timeStepFactor, std::bool_constant<UsesAdaptiveTimeStepping>{}) {}
+
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+exahype2::dg::rk::Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::Solver(
+  const double                          timeStepFactor,
+  [[maybe_unused]] const std::true_type adaptive
+) :
+  TimeStepping(exahype2::AdaptiveTimeStepping::Stability::ScaledEigenvalue),
+  _timeStepFactor{timeStepFactor} {}
+
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+exahype2::dg::rk::Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::Solver(
+  const double                           timeStepFactor,
+  [[maybe_unused]] const std::false_type fixed
+) :
+  _timeStepFactor{timeStepFactor} {}
+
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+std::string exahype2::dg::rk::Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::
+  toString(const SolverState state) {
+  switch (state) {
+  case SolverState::GridConstruction:
+    return "grid-construction";
+  case SolverState::GridInitialisation:
+    return "grid-initialisation";
+  case SolverState::Suspended:
+    return "suspended";
+  case SolverState::Plotting:
+    return "plotting";
+  case SolverState::PlottingAfterGridInitialisation:
+    return "plotting-after-grid-initialisation";
+  case SolverState::TimeStepAfterGridInitialisation:
+    return "time-step-after-grid-initialisation";
+  case SolverState::DynamicMeshRefinement:
+    return "dynamic-mesh-refinement";
+  case SolverState::RungeKuttaStep:
+    return "runge-kutta-step";
+  }
+  return "<undef>";
+}
+
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+void exahype2::dg::rk::Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::
+  startGridConstructionStep() {
+  assertion(_solverState == SolverState::GridConstruction);
+}
+
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+void exahype2::dg::rk::Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::
+  finishGridConstructionStep() {}
+
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+void exahype2::dg::rk::Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::
+  startGridInitialisationStep() {
+  _solverState = SolverState::GridInitialisation;
+}
+
+/**
+ * From here on every completed sweep has sent a face-data batch, which the following sweep's
+ * boundary exchange consumes.
+ */
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+void exahype2::dg::rk::Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::
+  finishGridInitialisationStep() {
+  this->_hasStoredFaceData = true;
+}
+
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+void exahype2::dg::rk::Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::
+  suspendSolversForOneGridSweep() {
+  _solverState = SolverState::Suspended;
+}
+
+/**
+ * Every rank selects the same sequence of refinement and solver sweeps, so the decision reduces
+ * the mesh-width extrema and the refinement flag over all ranks.
+ */
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+void exahype2::dg::rk::Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::
+  decideOnDynamicMeshRefinementSweeps() {
+  const double localCellSizeExtrema[3] = {
+    this->_minMeshWidthThisTimeStep,
+    -this->_maxMeshWidthThisTimeStep,
+    this->_meshRefinementRanSinceLastTimeStep ? -1.0 : 0.0
+  };
+  double globalCellSizeExtrema[3] = {0.0, 0.0, 0.0};
+  tarch::mpi::allreduce(
+    localCellSizeExtrema,
+    globalCellSizeExtrema,
+    3,
+    MPI_DOUBLE,
+    MPI_MIN,
+    tarch::mpi::Rank::getInstance().getCommunicator()
+  );
+  _usesDynamicMeshRefinementSweeps =
+    globalCellSizeExtrema[0] < -globalCellSizeExtrema[1] or globalCellSizeExtrema[2] < 0.0;
+}
+
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+void exahype2::dg::rk::Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::
+  scheduleStage(const int stage) {
+  assertion(stage >= 0 and stage < NumberOfRungeKuttaStages, stage);
+  _rkStageAfterDynamicMeshRefinement = stage;
+  if (_usesDynamicMeshRefinementSweeps) {
+    _solverState = SolverState::DynamicMeshRefinement;
+  } else {
+    _solverState = SolverState::RungeKuttaStep;
+    _rkStage     = stage;
+  }
+}
+
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+void exahype2::dg::rk::Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::
+  startTimeStep() {
+  _previousStageTimeStepSize = this->getMinTimeStepSize();
+  decideOnDynamicMeshRefinementSweeps();
+
+  switch (_solverState) {
+  case SolverState::GridConstruction:
+    _solverState = SolverState::GridInitialisation;
+    break;
+  case SolverState::GridInitialisation:
+    _solverState = SolverState::TimeStepAfterGridInitialisation;
+    break;
+  case SolverState::Suspended:
+  case SolverState::Plotting:
+    scheduleStage(0);
+    break;
+  case SolverState::PlottingAfterGridInitialisation:
+    _solverState = SolverState::TimeStepAfterGridInitialisation;
+    break;
+  case SolverState::TimeStepAfterGridInitialisation:
+    scheduleStage(NumberOfRungeKuttaStages > 1 ? 1 : 0);
+    break;
+  case SolverState::RungeKuttaStep:
+    scheduleStage((_rkStage + 1) % NumberOfRungeKuttaStages);
+    break;
+  case SolverState::DynamicMeshRefinement:
+    _solverState = SolverState::RungeKuttaStep;
+    _rkStage     = _rkStageAfterDynamicMeshRefinement;
+    break;
+  }
+
+  this->_meshRefinementRanSinceLastTimeStep = false;
+
+  if (isFirstGridSweepOfTimeStep() or _solverState == SolverState::TimeStepAfterGridInitialisation) {
+    if constexpr (UsesAdaptiveTimeStepping) {
+      if (isFirstGridSweepOfTimeStep()) {
+        this->startAdaptiveTimeStep();
+      }
+    }
+    this->resetTimeStepStatistics();
+  }
+}
+
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+void exahype2::dg::rk::Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::
+  finishTimeStep() {
+  if (isLastGridSweepOfTimeStep()) {
+    this->reduceTimeStepStatisticsAcrossRanks();
+    this->commitTimeStepStatistics();
+    closeTimeStep();
+  }
+}
+
+/**
+ * Derives the time step size of the next time step from the reduced statistics.
+ */
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+void exahype2::dg::rk::Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::
+  closeTimeStep() {
+  if constexpr (UsesAdaptiveTimeStepping) {
+    this->reduceMaxEigenvaluesAcrossRanks();
+    const auto terminalTime = this->minTerminalTime();
+    if (this->hasPositiveStabilityEigenvalue() and this->_minTimeStampThisTimeStep < terminalTime) {
+      const auto       waveSpeedDamping    = 1.0 / this->_maxScaledEigenvalueThisTimeStep;
+      constexpr double CockburnShuDamping  = 1.0 / (2.0 * RKOrder - 1.0);
+      constexpr double MeshDamping         = DGOrder == 0 ? 1.0 : 1.0 / (DGOrder * DGOrder);
+      const auto       timeStepSizeFromCFL = _timeStepFactor * waveSpeedDamping * CockburnShuDamping * MeshDamping;
+      this->proposeAdmissibleTimeStepSize(timeStepSizeFromCFL, terminalTime);
+    }
+  } else {
+    this->setFixedTimeStepSize(_timeStepFactor * this->_minMeshWidthThisTimeStep / RKOrder / RKOrder);
+  }
+}
+
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+void exahype2::dg::rk::Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::
+  startPlottingStep() {
+  assertion(mayPlot() or tarch::hasNonCriticalAssertionBeenViolated());
+  _solverState = _solverState == SolverState::GridInitialisation ? SolverState::PlottingAfterGridInitialisation
+                                                                 : SolverState::Plotting;
+}
+
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+void exahype2::dg::rk::Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::
+  finishPlottingStep() {}
+
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+double exahype2::dg::rk::Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::
+  getMaxPatchSize() const {
+  return this->getMaxCellSize();
+}
+
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+double exahype2::dg::rk::Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::
+  getMinPatchSize() const {
+  return this->getMinCellSize();
+}
+
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+int exahype2::dg::rk::Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::
+  getNumberOfDoFs() const {
+  return peano4::power(DGOrder + 1, DIMENSIONS) * (NumberOfUnknowns + NumberOfAuxiliaryVariables);
+}
+
+/**
+ * A plot is consistent after the last Runge-Kutta stage, or while the solver sits in a state
+ * that leaves the solution untouched.
+ */
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+bool exahype2::dg::rk::Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::
+  mayPlot() const {
+  return isLastGridSweepOfTimeStep() or _solverState == SolverState::GridInitialisation
+    or _solverState == SolverState::PlottingAfterGridInitialisation or _solverState == SolverState::Plotting;
+}
+
+/**
+ * Adds one cell's time step size, time stamp and cell size to the extrema of the current
+ * traversal.
+ */
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+INLINE_METHOD void exahype2::dg::rk::
+  Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::update(
+    const double timeStepSize,
+    const double timeStamp,
+    const double cellSize
+  ) {
+  _localUpdates.addTimeStep(timeStepSize);
+  _localUpdates.addTimeStamp(timeStamp);
+  _localUpdates.addMeshWidths(cellSize, cellSize);
+}
+
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+INLINE_METHOD void exahype2::dg::rk::
+  Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::reduceLocalUpdates() {
+  this->mergeLocalUpdates(_localUpdates);
+}
+
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+INLINE_METHOD typename exahype2::dg::rk::
+  Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::SolverState
+  exahype2::dg::rk::Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::
+    getSolverState() const {
+  return _solverState;
+}
+
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+INLINE_METHOD bool exahype2::dg::rk::
+  Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::isRungeKuttaStage(
+    const int stage
+  ) const {
+  return _solverState == SolverState::RungeKuttaStep and _rkStage == stage;
+}
+
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+INLINE_METHOD bool exahype2::dg::rk::
+  Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::
+    isFirstGridSweepOfTimeStep() const {
+  return isRungeKuttaStage(0);
+}
+
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+INLINE_METHOD bool exahype2::dg::rk::
+  Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::
+    isLastGridSweepOfTimeStep() const {
+  return isRungeKuttaStage(NumberOfRungeKuttaStages - 1);
+}
+
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+INLINE_METHOD bool exahype2::dg::rk::
+  Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::
+    isGridInitialisationSweep() const {
+  return _solverState == SolverState::GridInitialisation;
+}
+
+/**
+ * The plot of a solution the stages have advanced; a plot right after the grid initialisation
+ * holds its own state.
+ */
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+INLINE_METHOD bool exahype2::dg::rk::
+  Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::isPlottingSweep() const {
+  return _solverState == SolverState::Plotting;
+}
+
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+INLINE_METHOD bool exahype2::dg::rk::
+  Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::isRungeKuttaSweep() const {
+  return _solverState == SolverState::RungeKuttaStep;
+}
+
+/**
+ * The sweep that follows the grid initialisation and takes the place of the first stage.
+ */
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+INLINE_METHOD bool exahype2::dg::rk::
+  Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::
+    isTimeStepAfterGridInitialisationSweep() const {
+  return _solverState == SolverState::TimeStepAfterGridInitialisation;
+}
+
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+INLINE_METHOD bool exahype2::dg::rk::
+  Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::
+    isDynamicMeshRefinementSweep() const {
+  return _solverState == SolverState::DynamicMeshRefinement;
+}
+
+/**
+ * Returns the Runge-Kutta stage, or -1 outside a Runge-Kutta sweep.
+ */
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+INLINE_METHOD int exahype2::dg::rk::
+  Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::getRkStage() const {
+  return _solverState == SolverState::RungeKuttaStep ? _rkStage : -1;
+}
+
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+INLINE_METHOD int exahype2::dg::rk::
+  Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::
+    getRkStageAfterDynamicMeshRefinement() const {
+  return _rkStageAfterDynamicMeshRefinement;
+}
+
+/**
+ * Returns the projected stage's time step size before cells start the next stage.
+ */
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+INLINE_METHOD double exahype2::dg::rk::
+  Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::
+    getPreviousStageTimeStepSize() const {
+  return _previousStageTimeStepSize;
+}
+
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+INLINE_METHOD bool exahype2::dg::rk::
+  Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::
+    usesDynamicMeshRefinementSweeps() const {
+  return _usesDynamicMeshRefinementSweeps;
+}
+
+/**
+ * A cell that will be refined passes its nodes on to its children, and the grid construction
+ * sweeps carry no nodes at all.
+ */
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+INLINE_METHOD bool exahype2::dg::rk::
+  Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::storesCellData(
+    const peano4::dataview::CellMarker& marker
+  ) const {
+  return not marker.willBeRefined() and _solverState != SolverState::GridConstruction;
+}
+
+/**
+ * The initial condition writes the first nodes, so the sweeps up to and including the grid
+ * initialisation read none.
+ */
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+INLINE_METHOD bool exahype2::dg::rk::
+  Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::loadsCellData(
+    const peano4::dataview::CellMarker& marker
+  ) const {
+  return not marker.hasBeenRefined() and _solverState != SolverState::GridConstruction
+    and _solverState != SolverState::GridInitialisation;
+}
+
+/**
+ * The faces of a cell that will be refined hand their traces to the faces of the children.
+ */
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+INLINE_METHOD bool exahype2::dg::rk::
+  Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::storesFaceData(
+    const peano4::dataview::FaceMarker& marker
+  ) const {
+  return not marker.willBeRefined() and _solverState != SolverState::GridConstruction;
+}
+
+/**
+ * A face reads its trace once a preceding sweep has written one, which hasStoredFaceData()
+ * reports.
+ */
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+INLINE_METHOD bool exahype2::dg::rk::
+  Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::loadsFaceData(
+    const peano4::dataview::FaceMarker& marker
+  ) const {
+  return not marker.hasBeenRefined() and _solverState != SolverState::GridConstruction and this->hasStoredFaceData();
+}
+
+template <
+  typename Derived,
+  int DgOrder,
+  int RkOrder,
+  int RkStages,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping>
+INLINE_METHOD bool exahype2::dg::rk::
+  Solver<Derived, DgOrder, RkOrder, RkStages, Unknowns, AuxiliaryVariables, TimeStepping>::providesCellDataToKernels(
+    const peano4::dataview::CellMarker& marker
+  ) const {
+  return storesCellData(marker);
+}

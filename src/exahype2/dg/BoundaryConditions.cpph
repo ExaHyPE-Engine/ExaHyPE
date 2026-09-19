@@ -7,7 +7,7 @@ TARGET_DECLARE
  * Face halves follow the negative and positive sides of the normal axis.
  */
 template <
-  typename Solver,
+  typename SolverType,
   int NumberOfDofsPerAxis,
   int NumberOfUnknowns,
   int NumberOfAuxiliaryVariables,
@@ -54,7 +54,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::applyBoundaryConditions(
     const int outsideOffset = (outsideSide * NodesPerFace + faceNode) * NumberOfData;
 
     if constexpr (std::is_same_v<StoragePrecision, ComputePrecision>) {
-      Solver::boundaryConditions(
+      SolverType::boundaryConditions(
         faceState + insideOffset,
         faceState + outsideOffset,
         nodePosition,
@@ -66,7 +66,14 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::applyBoundaryConditions(
       for (int value = 0; value < NumberOfData; value++) {
         insideStateBuffer[value] = static_cast<ComputePrecision>(faceState[insideOffset + value]);
       }
-      Solver::boundaryConditions(insideStateBuffer, outsideStateBuffer, nodePosition, cellSize, timeStamp, direction);
+      SolverType::boundaryConditions(
+        insideStateBuffer,
+        outsideStateBuffer,
+        nodePosition,
+        cellSize,
+        timeStamp,
+        direction
+      );
       for (int value = 0; value < NumberOfData; value++) {
         faceState[outsideOffset + value] = static_cast<StoragePrecision>(outsideStateBuffer[value]);
       }

@@ -6,10 +6,6 @@ import exahype2
 
 """
 This is a particle tracing simulation for volcanic plume rise using the Euler equations.
-
-In this one-way coupling setup, the fluid field (volcanic plume) affects the particles' motion,
-but the particles do not influence the fluid dynamics. The simulation models the rise of hot,
-buoyant volcanic material through cooler ambient air.
 """
 
 
@@ -25,16 +21,6 @@ def generate_particles_in_plume(
 ):
     """
     Generates a .dat file with particles on a uniform grid inside a rectangular plume.
-
-    Parameters:
-        file_path (str): Path to save the .dat file.
-        num_x (int): Number of points along x (>=1).
-        num_y (int): Number of points along y (>=1).
-        x_min (float): Minimum x of the plume.
-        x_max (float): Maximum x of the plume.
-        y_min (float): Minimum y of the plume.
-        y_max (float): Maximum y of the plume.
-        round_decimals (int): Decimal places for rounding/printing.
     """
     if num_x < 1 or num_y < 1:
         raise ValueError("num_x and num_y must be >= 1")
@@ -65,18 +51,18 @@ def generate_particles_in_plume(
 
 
 interpolation_methods = {
-    "None": 0,  # No interpolation (use raw values)
-    "Constant": 1,  # Piecewise constant interpolation (nearest neighbor)
-    "Linear": 2,  # Piecewise linear interpolation (more accurate)
+    "None": 0,
+    "Constant": 1,
+    "Linear": 2,
 }
 integration_schemes = {
-    "Static": 0,  # No integration (static particles)
-    "Euler": 1,  # Explicit Euler method (simple but less accurate)
-    "SemiEuler": 2,  # Semi-implicit Euler method (better stability)
-    "Verlet": 3,  # Velocity Verlet algorithm (good for orbital mechanics)
-    "Midpoint": 4,  # Midpoint method (2nd order Runge-Kutta)
-    "RK3": 5,  # 3rd order Runge-Kutta method (high accuracy)
-    "RK4": 6,  # 4th order Runge-Kutta method (higher accuracy)
+    "Static": 0,
+    "Euler": 1,
+    "SemiEuler": 2,
+    "Verlet": 3,
+    "Midpoint": 4,
+    "RK3": 5,
+    "RK4": 6,
 }
 
 
@@ -123,52 +109,49 @@ project = exahype2.Project(
 )
 
 initial_conditions = """
-  // Parameters for volcanic plume simulation using defined constants
-  const double plume_center_x = DomainSize[0] * 0.5;
-  const double plume_width = DomainSize[0] * 0.1;
-  const double plume_base_y = DomainSize[1] * 0.1;
-  const double plume_top_y = DomainSize[1] * 0.3;
+  const double plumeCentreX = DomainSize[0] * 0.5;
+  const double plumeWidth   = DomainSize[0] * 0.1;
+  const double plumeBaseY   = DomainSize[1] * 0.1;
+  const double plumeTopY    = DomainSize[1] * 0.3;
 
-  // Identify if x is in the plume region
-  bool in_plume_column =
-      (x(0) >= plume_center_x - plume_width / 2.0) &&
-      (x(0) <= plume_center_x + plume_width / 2.0);
+  const bool inPlumeColumn =
+      (x(0) >= plumeCentreX - plumeWidth / 2.0) and
+      (x(0) <= plumeCentreX + plumeWidth / 2.0);
 
-  bool in_plume = in_plume_column &&
-                  (x(1) >= plume_base_y) &&
-                  (x(1) <= plume_top_y);
+  const bool inPlume = inPlumeColumn and
+                       (x(1) >= plumeBaseY) and
+                       (x(1) <= plumeTopY);
 
   // Compute piecewise hydrostatic pressure
-  double p_local = 0.0;
+  double localPressure = 0.0;
 
-  if (in_plume_column) {
-    if (x(1) >= plume_top_y) {
-    // Above plume -> full cold column
-    p_local = P0 + GRAVITY * (DomainSize[1] - x(1)) * RHO_AMBIENT;
-    } else if (x(1) < plume_base_y) {
+  if (inPlumeColumn) {
+    if (x(1) >= plumeTopY) {
+      // Above plume -> full cold column
+      localPressure = P0 + GRAVITY * (DomainSize[1] - x(1)) * RHO_AMBIENT;
+    } else if (x(1) < plumeBaseY) {
       // Below plume -> lighter column above
-      p_local = P0 +
-              GRAVITY * (DomainSize[1] - plume_top_y) * RHO_AMBIENT + // Cold part above plume
-              GRAVITY * (plume_top_y - plume_base_y) * RHO_HOT +      // Plume region
-              GRAVITY * (plume_base_y - x(1)) * RHO_AMBIENT;          // Local segment below plume
+      localPressure = P0 +
+              GRAVITY * (DomainSize[1] - plumeTopY) * RHO_AMBIENT + // Cold part above plume
+              GRAVITY * (plumeTopY - plumeBaseY) * RHO_HOT +        // Plume region
+              GRAVITY * (plumeBaseY - x(1)) * RHO_AMBIENT;          // Local segment below plume
     } else {
       // Inside plume -> partial light column
-      p_local = P0 +
-              GRAVITY * (DomainSize[1] - plume_top_y) * RHO_AMBIENT + // Cold part above plume
-              GRAVITY * (plume_top_y - x(1)) * RHO_HOT;               // Current plume slice
+      localPressure = P0 +
+              GRAVITY * (DomainSize[1] - plumeTopY) * RHO_AMBIENT + // Cold part above plume
+              GRAVITY * (plumeTopY - x(1)) * RHO_HOT;               // Current plume slice
     }
   } else {
     // Outside plume column -> pure cold fluid
-    p_local = P0 + GRAVITY * (DomainSize[1] - x(1)) * RHO_AMBIENT;
+    localPressure = P0 + GRAVITY * (DomainSize[1] - x(1)) * RHO_AMBIENT;
   }
 
-  // Energy from pressure
-  double e_local = p_local / (GAMMA - 1.0);
+  const double localEnergy = localPressure / (GAMMA - 1.0);
 
-  Q[0] = in_plume ? RHO_HOT : RHO_AMBIENT;  // density
-  Q[1] = 0.0;                               // rho*u
-  Q[2] = 0.0;                               // rho*v
-  Q[3] = e_local;                           // total energy
+  Q[0] = inPlume ? RHO_HOT : RHO_AMBIENT;  // density
+  Q[1] = 0.0;                              // rho*u
+  Q[2] = 0.0;                              // rho*v
+  Q[3] = localEnergy;                      // total energy
 """
 
 boundary_conditions = """
@@ -184,7 +167,7 @@ boundary_conditions = """
     Qoutside[1] = Qinside[1];
     Qoutside[2] = -Qinside[2];
     Qoutside[3] = Qinside[3];
-  } else if (x(0) <= DomainOffset[0] + 0.001 || x(0) >= DomainSize[0] - 0.001) {
+  } else if (x(0) <= DomainOffset[0] + 0.001 or x(0) >= DomainSize[0] - 0.001) {
     // Left and right boundaries (outflow - zero gradient)
     Qoutside[0] = Qinside[0];
     Qoutside[1] = Qinside[1];
@@ -211,9 +194,7 @@ max_eigenvalue = r"""
   auto result = std::fmax(0.0, std::fabs(u_n - speedOfSound));
   result = std::fmax(result, std::fabs(u_n + speedOfSound));
   return result;
-""".format(
-    compute_primitive_variables=compute_primitive_variables
-)
+""".format(compute_primitive_variables=compute_primitive_variables)
 
 flux = r"""
   {compute_primitive_variables}
@@ -226,9 +207,7 @@ flux = r"""
   F[Shortcuts::rhoU + normal] += p;
 
   F[Shortcuts::rhoE] = (Q[Shortcuts::rhoE] + p) * u_n;
-""".format(
-    compute_primitive_variables=compute_primitive_variables
-)
+""".format(compute_primitive_variables=compute_primitive_variables)
 
 source_term = """
   S[0] = 0.0;
@@ -237,20 +216,21 @@ source_term = """
   S[3] = -GRAVITY * Q[2];
 """
 
-fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
+fv_solver = exahype2.fv.Solver(
     name="FVSolver",
     patch_size=args.degrees_of_freedom,
     unknowns={"rho": 1, "rhoU": 1, "rhoV": 1, "rhoE": 1},
     auxiliary_variables=0,
-    time_step_relaxation=0.4,
+    time_stepping=exahype2.TimeStepping.Adaptive(0.4),
+    scheme=exahype2.fv.Godunov(),
 )
 
-fv_solver.set_implementation(
-    initial_conditions=initial_conditions,
+fv_solver.set_pde_terms(
+    initial_condition=initial_conditions,
     boundary_conditions=boundary_conditions,
     max_eigenvalue=max_eigenvalue,
     flux=flux,
-    source_term=source_term,
+    source=source_term,
 )
 
 project.add_solver(fv_solver)
@@ -268,8 +248,8 @@ tracer_attributes = {
     }
 }
 
-tracer_particles = fv_solver.add_tracer(
-    name="Tracers", particle_attributes=tracer_attributes
+tracer_particles = project.add_tracer(
+    name="Tracers", particle_attributes=tracer_attributes, solver=fv_solver
 )
 
 generate_particles_in_plume(
@@ -281,7 +261,7 @@ generate_particles_in_plume(
     y_min=0.11,
     y_max=0.29,
 )
-init_tracers = exahype2.tracer.InsertParticlesFromFile(
+init_tracers = exahype2.particles.InsertParticlesFromFile(
     particle_set=tracer_particles,
     filename="InitTracers.dat",
     scale_factor=1.0,
@@ -290,20 +270,13 @@ init_tracers = exahype2.tracer.InsertParticlesFromFile(
 init_tracers.descend_invocation_order = 0
 project.add_action_set_to_initialisation(init_tracers)
 
-tracing_action_set = exahype2.tracer.FiniteVolumesTracingWithForce(
+fv_solver.trace(
     tracer_particles,
-    fv_solver,
-    project,
-    integration_scheme=integration_schemes[args.integration],
-    interpolation_scheme=interpolation_methods[args.interpolation],
+    forces=exahype2.particles.Forces(
+        integration_scheme=integration_schemes[args.integration],
+        interpolation_scheme=interpolation_methods[args.interpolation],
+    ),
 )
-
-tracing_action_set.descend_invocation_order = (
-    fv_solver._action_set_update_patch.descend_invocation_order + 1
-)
-
-project.add_action_set_to_timestepping(tracing_action_set)
-project.add_action_set_to_initialisation(tracing_action_set)
 
 project.output.makefile.add_compile_definition("GAMMA=1.4")
 project.output.makefile.add_compile_definition("GRAVITY=2.0")

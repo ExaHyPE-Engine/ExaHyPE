@@ -1,14 +1,5 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-"""Isothermal hydrostatic-atmosphere well-balancedness scenario.
-
-The exponential density and pressure profiles form a steady state. The
-reconstruction follows Käppeli and Mishra, doi:10.1051/0004-6361/201527815.
-Its face energy uses the first-order hydrostatic pressure because the
-second-order pressure perturbation is unstable here. The tenuous upper
-atmosphere also requires a positivity-preserving update; floating-point traps
-expose negative pressure through the sound-speed evaluation.
-"""
 import argparse
 
 import exahype2
@@ -56,9 +47,9 @@ initial_conditions = """
 """
 
 boundary_conditions = """
-  // Face numbers 1 and 3 are the lower and upper boundaries.
-  if (normal == 1 or normal == 3) {
-    const auto verticalDisplacement = normal == 3 ? h(1) : -h(1);
+  if (normal == 1) {
+    const bool isUpperBoundary = x(1) > DomainOffset(1) + 0.5 * DomainSize(1);
+    const auto verticalDisplacement = isUpperBoundary ? h(1) : -h(1);
     const auto scaleHeight =
       GAS_CONSTANT * TEMPERATURE / GRAVITY / MEAN_MOLECULAR_MASS;
     const auto exponentialDistribution = tarch::la::pow(
@@ -98,11 +89,11 @@ boundary_conditions = """
     Qoutside[Shortcuts::rhoU + 2] = depthVelocity * densityOutside;
 #endif
 
-    if (normal == 1) {
+    if (isUpperBoundary) {
+      Qoutside[Shortcuts::rhoU + 1] = verticalVelocity * densityOutside;
+    } else {
       // The lower wall prevents atmosphere leaving through the surface.
       Qoutside[Shortcuts::rhoU + 1] = -verticalVelocity * densityOutside;
-    } else {
-      Qoutside[Shortcuts::rhoU + 1] = verticalVelocity * densityOutside;
     }
   } else {
     for (int unknown = 0; unknown < NumberOfUnknowns; ++unknown) {
@@ -206,9 +197,7 @@ calculate_pressure_perturbations = (
 """
 )
 
-limiter = (
-    calculate_pressure_perturbations
-    + """
+limiter = calculate_pressure_perturbations + """
   {{COMPUTE_PRECISION}} rightDifference;
   {{COMPUTE_PRECISION}} leftDifference;
   if (unknown == 3 and normal == 1) {
@@ -236,13 +225,9 @@ limiter = (
     ? rightDifference
     : leftDifference;
 """
-)
 
-# The Riemann problem must see the hydrostatically reconstructed face states.
-reconstruction = (
-    calculate_pressure
-    + compute_usq
-    + """
+# The Riemann solver reads the hydrostatically reconstructed face states.
+reconstruction = calculate_pressure + compute_usq + """
   constexpr int ShortcutRho = 0;
   constexpr int ShortcutE = DIMENSIONS + 1;
 
@@ -253,7 +238,7 @@ reconstruction = (
 
     const {{COMPUTE_PRECISION}} density = Q[ShortcutRho];
 
-    // Eq. 16 Käppeli and Mishra: the first-order hydrostatic pressure at either
+    // Eq. 16 Käppeli and Mishra: The first-order hydrostatic pressure at either
     // boundary. The second-order pressure-perturbation slope is unstable for
     // this scenario, so the reconstruction keeps the exact hydrostatic value.
     const auto pressureLeftBoundary =
@@ -274,7 +259,6 @@ reconstruction = (
     computeVelocitySquared(extrapolatedMinus, velocitySquaredLeftBoundary);
     computeVelocitySquared(extrapolatedPlus, velocitySquaredRightBoundary);
 
-    // Convert the reconstructed pressure back to energy.
     reconstructedMinus =
       pressureLeftBoundary / (GAMMA - 1.0)
       + 0.5 * extrapolatedMinus[ShortcutRho]
@@ -288,7 +272,6 @@ reconstruction = (
     reconstructedPlus  = Q[unknown] + 0.5 * limitedDifferences[unknown];
   }
 """
-)
 
 project = exahype2.Project(
     namespace=["tests", "exahype2", "fv"],
@@ -303,26 +286,26 @@ project = exahype2.Project(
     max_grid_levels=args.grid_levels,
 )
 
-fv_solver = exahype2.solvers.fv.musclhancock.GlobalAdaptiveTimeStep(
+fv_solver = exahype2.fv.Solver(
     name="FVSolver",
     patch_size=args.degrees_of_freedom,
     unknowns={"rho": 1, "rhoU": project.dimensions, "rhoE": 1},
     auxiliary_variables=0,
-    time_step_relaxation=0.5,
-    reconstruction=reconstruction,
+    time_stepping=exahype2.TimeStepping.Adaptive(0.5),
+    scheme=exahype2.fv.MusclHancock(),
 )
 
 # The f-wave face solver includes gravity. MUSCL-Hancock also needs the
-# cell-centred source update; a Godunov variant must omit it to avoid applying
-# gravity twice.
-fv_solver.set_implementation(
-    initial_conditions=initial_conditions,
+# cell-centred source update.
+fv_solver.set_pde_terms(
+    initial_condition=initial_conditions,
     boundary_conditions=boundary_conditions,
     max_eigenvalue=max_eigenvalue,
     flux=flux,
-    limiter=limiter,
+    limited_difference=limiter,
+    reconstruction=reconstruction,
     riemann_solver=fWave,
-    source_term=source_term,
+    source=source_term,
 )
 
 project.add_solver(fv_solver)

@@ -202,8 +202,8 @@ def dmp_observables(gamma):
 
 def subcell_scheme(limiter_solver_name):
     if limiter_solver_name == "muscl-hancock":
-        return exahype2.solvers.fv.musclhancock.subcell_scheme()
-    return exahype2.solvers.fv.godunov.subcell_scheme()
+        return exahype2.fv.MusclHancock()
+    return exahype2.fv.Godunov()
 
 
 def add_limiter(
@@ -217,21 +217,19 @@ def add_limiter(
 ):
     scheme = subcell_scheme(limiter_solver_name)
     if limiter_mode == "all-accepted":
-        solver.add_subcell_limiter(
-            limiter_solver=scheme,
-            physical_admissibility_criterion="return true;",
-        )
+        solver.set_pde_terms(physical_admissibility="return true;")
+        solver.add_subcell_limiter(scheme)
     elif limiter_mode == "all-limited":
-        solver.add_subcell_limiter(
-            limiter_solver=scheme,
-            physical_admissibility_criterion="return false;",
-        )
+        solver.set_pde_terms(physical_admissibility="return false;")
+        solver.add_subcell_limiter(scheme)
     else:
+        solver.set_pde_terms(
+            physical_admissibility=physical_admissibility_criterion,
+            dmp_observables=observable_mapping,
+        )
         solver.add_subcell_limiter(
-            limiter_solver=scheme,
+            scheme,
             number_of_dmp_observables=dimensions + 2,
             dmp_relaxation_parameter=1.0e-4,
             dmp_differences_scaling=differences_scaling,
-            physical_admissibility_criterion=physical_admissibility_criterion,
-            dmp_observables=observable_mapping,
         )

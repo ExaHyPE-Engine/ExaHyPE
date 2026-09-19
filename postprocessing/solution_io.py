@@ -1,19 +1,5 @@
-#!/usr/bin/env python3
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-"""Solution-file readers shared by the postprocessing scripts.
-
-Every ExaHyPE 2 / Peano 4 plotter output format is read into one common model:
-
-  * VTKHDF        a single growing ``<solver>.vtkhdf`` (the default format)
-  * HDF5 / XDMF   a ``<solver>.xmf`` temporal index plus per-step ``.h5``
-  * NetCDF UGRID  a ``<solver>.nc.series`` index plus per-step ``.nc``
-  * VTU           a ``<solver>.pvd`` collection, per-step ``.pvtu`` and per-rank ``.vtu``
-
-The entry points are :class:`MeshSnapshot` (the common model), :class:`SolutionSource`
-(open a file/index or discover a solver's output, then load snapshots lazily) and
-:func:`load_snapshot_ref`. Both render_solution and compare_solution build on these.
-"""
 
 from __future__ import annotations
 
@@ -26,7 +12,6 @@ import re
 import xml.etree.ElementTree as ET
 
 import numpy as np
-
 
 # --------------------------------------------------------------------------- #
 # XDMF topology tables
@@ -100,7 +85,7 @@ def _squeeze_field(values: np.ndarray) -> np.ndarray:
 
 
 def _pack_cells(cell_list: list[np.ndarray]) -> object:
-    """An ``(Ncells, k)`` array when all cells share a corner count, else a list."""
+    """An ``(Ncells, k)`` array when every cell has the same corner count, else a list."""
     if not cell_list:
         return np.empty((0, 0), dtype=np.int64)
     widths = {len(cell) for cell in cell_list}
@@ -222,7 +207,7 @@ def _cells_from_offsets(
 ) -> object:
     """Turn a flat connectivity stream plus its (num_cells + 1) offsets into cells.
 
-    Cells that all share a corner count are reshaped in one go.
+    Cells that all have the same corner count are reshaped in one go.
     """
     if num_cells == 0:
         return np.empty((0, 0), dtype=np.int64)
@@ -341,8 +326,8 @@ def _decode_xdmf_topology(topology: np.ndarray) -> object:
     if flat.size == 0:
         return np.empty((0, 0), dtype=np.int64)
 
-    # Fast path: when every cell is the same fixed-arity element the stream has a
-    # constant stride and reshapes in one go, instead of a Python loop over (up to
+    # Fast path: When every cell is the same fixed-arity element the stream has a
+    # constant stride and reshapes in one go, without a Python loop over (up to
     # millions of) cells.
     first = int(flat[0])
     if first in XDMF_NODE_COUNTS:
@@ -522,7 +507,7 @@ def _netcdf_fields(
         elif long_name is not None:
             scalars[name] = name  # writer-declared scalar, kept under its own name
         else:
-            # No metadata (a foreign/legacy NetCDF): fall back to the name-suffix heuristic.
+            # No metadata (a foreign/legacy NetCDF): Fall back to the name-suffix heuristic.
             match = _COMPONENT_SUFFIX.match(name)
             if match and match.group(1):
                 components.setdefault(match.group(1), {})[int(match.group(2))] = name
@@ -908,8 +893,8 @@ def _candidate_directories(directory: str | Path | None) -> list[Path]:
     else:
         cwd = Path(".")
         roots = [cwd, Path("output")] + sorted(cwd.glob("*.output"))
-        # The output directory can be named anything (e.g. solutions/, not just <project>.output),
-        # so also look one level down: every immediate sub-directory and its patch/face/particle.
+        # The output directory can be named anything (e.g. solutions/ or <project>.output),
+        # so also look one level down: Every immediate sub-directory and its patch/face/particle.
         roots += [
             child
             for child in sorted(cwd.iterdir())

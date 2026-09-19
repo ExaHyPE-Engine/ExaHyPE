@@ -17,8 +17,11 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<2, Scalar> tarch::la::floor(
 
 template <typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, Scalar> tarch::la::floor(const Vector<3, Scalar>& vector) {
-  return tarch::la::makeVector<
-    Scalar>(std::floor(vector._values[0]), std::floor(vector._values[1]), std::floor(vector._values[2]));
+  return tarch::la::makeVector<Scalar>(
+    std::floor(vector._values[0]),
+    std::floor(vector._values[1]),
+    std::floor(vector._values[2])
+  );
 }
 
 template <typename Scalar>
@@ -53,22 +56,22 @@ INLINE_METHOD GPU_CALLABLE_METHOD int tarch::la::count(const Vector<Size, Scalar
 template <typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD int tarch::la::count(const Vector<2, Scalar>& vector, const Scalar& value) {
   return static_cast<int>(tarch::la::equals(vector._values[0], value))
-         + static_cast<int>(tarch::la::equals(vector._values[1], value));
+    + static_cast<int>(tarch::la::equals(vector._values[1], value));
 }
 
 template <typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD int tarch::la::count(const Vector<3, Scalar>& vector, const Scalar& value) {
   return static_cast<int>(tarch::la::equals(vector._values[0], value))
-         + static_cast<int>(tarch::la::equals(vector._values[1], value))
-         + static_cast<int>(tarch::la::equals(vector._values[2], value));
+    + static_cast<int>(tarch::la::equals(vector._values[1], value))
+    + static_cast<int>(tarch::la::equals(vector._values[2], value));
 }
 
 template <typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD int tarch::la::count(const Vector<4, Scalar>& vector, const Scalar& value) {
   return static_cast<int>(tarch::la::equals(vector._values[0], value))
-         + static_cast<int>(tarch::la::equals(vector._values[1], value))
-         + static_cast<int>(tarch::la::equals(vector._values[2], value))
-         + static_cast<int>(tarch::la::equals(vector._values[3], value));
+    + static_cast<int>(tarch::la::equals(vector._values[1], value))
+    + static_cast<int>(tarch::la::equals(vector._values[2], value))
+    + static_cast<int>(tarch::la::equals(vector._values[3], value));
 }
 
 template <int Size, typename Scalar>
@@ -88,14 +91,14 @@ INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::allEntriesAreTheSame(const Vec
 template <typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::allEntriesAreTheSame(const Vector<3, Scalar>& vector) {
   return tarch::la::equals(vector._values[0], vector._values[1])
-         && tarch::la::equals(vector._values[0], vector._values[2]);
+    && tarch::la::equals(vector._values[0], vector._values[2]);
 }
 
 template <typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::allEntriesAreTheSame(const Vector<4, Scalar>& vector) {
   return tarch::la::equals(vector._values[0], vector._values[1])
-         && tarch::la::equals(vector._values[0], vector._values[2])
-         && tarch::la::equals(vector._values[0], vector._values[3]);
+    && tarch::la::equals(vector._values[0], vector._values[2])
+    && tarch::la::equals(vector._values[0], vector._values[3]);
 }
 
 template <int Size, typename Scalar>
@@ -120,7 +123,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD int tarch::la::isEntryNan(const Vector<3, Scal
 template <typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD int tarch::la::isEntryNan(const Vector<4, Scalar>& vector) {
   return std::isnan(vector._values[0]) || std::isnan(vector._values[1]) || std::isnan(vector._values[2])
-         || std::isnan(vector._values[3]);
+    || std::isnan(vector._values[3]);
 }
 
 template <int Size, typename Scalar>
@@ -145,7 +148,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD int tarch::la::isEntryFinite(const Vector<3, S
 template <typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD int tarch::la::isEntryFinite(const Vector<4, Scalar>& vector) {
   return std::isfinite(vector._values[0]) && std::isfinite(vector._values[1]) && std::isfinite(vector._values[2])
-         && std::isfinite(vector._values[3]);
+    && std::isfinite(vector._values[3]);
 }
 
 template <int Size, typename Scalar>
@@ -170,7 +173,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::contains(const Vector<3, Scala
 template <typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD bool tarch::la::contains(const Vector<4, Scalar>& vector, const Scalar& value) {
   return vector._values[0] == value || vector._values[1] == value || vector._values[2] == value
-         || vector._values[3] == value;
+    || vector._values[3] == value;
 }
 
 template <int Size, typename Scalar>
@@ -212,8 +215,12 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar> tarch::la::invert
   assertion(vector._values[1] != 0.0, ::toString(vector));
   assertion(vector._values[2] != 0.0, ::toString(vector));
   assertion(vector._values[3] != 0.0, ::toString(vector));
-  return tarch::la::makeVector<
-    Scalar>(1.0 / vector._values[0], 1.0 / vector._values[1], 1.0 / vector._values[2], 1.0 / vector._values[3]);
+  return tarch::la::makeVector<Scalar>(
+    1.0 / vector._values[0],
+    1.0 / vector._values[1],
+    1.0 / vector._values[2],
+    1.0 / vector._values[3]
+  );
 }
 
 template <int Size, typename Scalar>
@@ -238,7 +245,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD Scalar tarch::la::norm1(const Vector<3, Scalar
 template <typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD Scalar tarch::la::norm1(const Vector<4, Scalar>& vector) {
   return tarch::la::abs(vector._values[0]) + tarch::la::abs(vector._values[1]) + tarch::la::abs(vector._values[2])
-         + tarch::la::abs(vector._values[3]);
+    + tarch::la::abs(vector._values[3]);
 }
 
 template <int Size, typename Scalar>
@@ -258,13 +265,13 @@ INLINE_METHOD GPU_CALLABLE_METHOD Scalar tarch::la::norm2Squared(const Vector<2,
 template <typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD Scalar tarch::la::norm2Squared(const Vector<3, Scalar>& vector) {
   return vector._values[0] * vector._values[0] + vector._values[1] * vector._values[1]
-         + vector._values[2] * vector._values[2];
+    + vector._values[2] * vector._values[2];
 }
 
 template <typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD Scalar tarch::la::norm2Squared(const Vector<4, Scalar>& vector) {
   return vector._values[0] * vector._values[0] + vector._values[1] * vector._values[1]
-         + vector._values[2] * vector._values[2] + vector._values[3] * vector._values[3];
+    + vector._values[2] * vector._values[2] + vector._values[3] * vector._values[3];
 }
 
 template <int Size, typename Scalar>
@@ -317,8 +324,11 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<2, Scalar> tarch::la::abs(co
 
 template <typename Scalar>
 INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, Scalar> tarch::la::abs(const Vector<3, Scalar>& vector) {
-  return tarch::la::makeVector<
-    Scalar>(tarch::la::abs(vector._values[0]), tarch::la::abs(vector._values[1]), tarch::la::abs(vector._values[2]));
+  return tarch::la::makeVector<Scalar>(
+    tarch::la::abs(vector._values[0]),
+    tarch::la::abs(vector._values[1]),
+    tarch::la::abs(vector._values[2])
+  );
 }
 
 template <typename Scalar>

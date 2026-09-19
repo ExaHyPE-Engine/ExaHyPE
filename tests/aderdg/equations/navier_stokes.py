@@ -3,8 +3,6 @@
 
 from .equation import Equation
 
-from exahype2.solvers.PDETerms import PDETerms
-
 
 class NavierStokes(Equation):
     def __init__(
@@ -46,9 +44,9 @@ class NavierStokes(Equation):
         self._use_gravity = use_gravity
         self._use_viscosity = use_viscosity
 
-        self._gamma = gamma  # ratio of specific heats
-        self._cv = cv  # heat capacity at constant volume
-        self._gas_constant = gas_constant  # specific gas constant of a fluid
+        self._gamma = gamma  # Ratio of specific heats
+        self._cv = cv  # Heat capacity at constant volume
+        self._gas_constant = gas_constant  # Specific gas constant of a fluid
         self._reference_viscosity = reference_viscosity
         self._Pr = Pr  # Prandtl number
         self._molecular_diffusion_coeff = molecular_diffusion_coeff
@@ -171,12 +169,10 @@ class NavierStokes(Equation):
         )
 
     def eigenvalues(self):
-        return (
-            self.eigenvalue_functions()
-            + """
+        return self.eigenvalue_functions() + """
     // The ADER-DG solver takes the order factor from PNPM, the RKDG solver
     // from the Cockburn-Shu bound of the Runge-Kutta order.
-    {% if CFL_ADER is defined %}
+    {% if FAMILY == "ader" %}
     constexpr double orderFactor = PNPM;
     {% else %}
     constexpr double orderFactor = 1.0 / (2.0 * RKOrder - 1.0);
@@ -184,7 +180,6 @@ class NavierStokes(Equation):
     return maxEval(Q, normal)
       + diffusiveEval(Q, normal)*2/(h[normal]*orderFactor);
 """
-        )
 
     def flux(self):
         flux_init = (
@@ -217,9 +212,7 @@ class NavierStokes(Equation):
             + """;"""
             + (
                 """
-  constexpr auto gasConstant = """
-                + str(self._gas_constant)
-                + """;"""
+  constexpr auto gasConstant = """ + str(self._gas_constant) + """;"""
                 if self._use_gravity
                 else ""
             )
@@ -376,7 +369,7 @@ class NavierStokes(Equation):
 
     def source(self):
         if not (self._use_gravity or self._use_background_state):
-            return PDETerms.None_Implementation
+            return None
         return (
             """
   std::fill_n(S, NumberOfUnknowns, 0);

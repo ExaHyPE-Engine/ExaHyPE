@@ -16,17 +16,12 @@ observer passes references to the action sets. Fusing consecutive numerical
 operations can still improve cache reuse and reduce repeated traversal and
 temporary-data traffic.
 
-Solver factories that expose `fuse_compute_kernels` combine compatible patch
-operations into one stateless update. The fused kernel must preserve the
-solver's time-step and data-dependency contracts.
-
 # Kernel cost
 
 Fluxes, eigenvalues, non-conservative products, sources, and Riemann solves
 should account for a substantial fraction of a compute-bound run. If they do,
 apply the vectorisation and accelerator guidance on
-@ref page_exahype_gpu. CPU and GPU variants use the same mathematical kernel
-contract.
+@ref page_exahype_gpu. The CPU and the GPU evaluate the same kernel.
 
 If memory movement or observer glue dominates, inspect patch size, temporary
 arrays, callback fusion, and the number of traversals per time step before

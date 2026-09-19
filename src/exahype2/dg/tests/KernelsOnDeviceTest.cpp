@@ -88,12 +88,13 @@ void exahype2::dg::tests::KernelsOnDeviceTest::testExtrapolateStateToFaces() {
           + (face < DIMENSIONS ? Setup::FaceSideStateCardinality : 0);
       }
       const int cellStateOffset = cell * Setup::CellStateCardinality;
-      exahype2::dg::extrapolateStateToFaces<Setup::DofsPerAxis, Setup::Unknowns, Setup::AuxiliaryVariables>(
-        cellFaces,
-        onDeviceCellStates + cellStateOffset,
-        onDeviceLeftFaceCoefficients,
-        onDeviceRightFaceCoefficients
-      );
+      exahype2::dg::
+        extrapolateStateToFaces<Setup::DofsPerAxis, Setup::NumberOfUnknowns, Setup::NumberOfAuxiliaryVariables>(
+          cellFaces,
+          onDeviceCellStates + cellStateOffset,
+          onDeviceLeftFaceCoefficients,
+          onDeviceRightFaceCoefficients
+        );
     }
   );
 
@@ -109,12 +110,13 @@ void exahype2::dg::tests::KernelsOnDeviceTest::testExtrapolateStateToFaces() {
         + (face < DIMENSIONS ? Setup::FaceSideStateCardinality : 0);
     }
     const int cellStateOffset = cell * Setup::CellStateCardinality;
-    exahype2::dg::extrapolateStateToFaces<Setup::DofsPerAxis, Setup::Unknowns, Setup::AuxiliaryVariables>(
-      cellFaces,
-      cellStates.data() + cellStateOffset,
-      operators.leftFaceCoefficients.data(),
-      operators.rightFaceCoefficients.data()
-    );
+    exahype2::dg::
+      extrapolateStateToFaces<Setup::DofsPerAxis, Setup::NumberOfUnknowns, Setup::NumberOfAuxiliaryVariables>(
+        cellFaces,
+        cellStates.data() + cellStateOffset,
+        operators.leftFaceCoefficients.data(),
+        operators.rightFaceCoefficients.data()
+      );
   }
 
   validateBuffersMatch(deviceResult, hostResult, "faceStates");
@@ -159,8 +161,8 @@ void exahype2::dg::tests::KernelsOnDeviceTest::testExtrapolateFluxToFaces() {
       exahype2::dg::extrapolateFluxToFaces<
         exahype2::dg::tests::StubSolver,
         Setup::DofsPerAxis,
-        Setup::Unknowns,
-        Setup::AuxiliaryVariables,
+        Setup::NumberOfUnknowns,
+        Setup::NumberOfAuxiliaryVariables,
         true,
         true>(
         cellFaces,
@@ -193,8 +195,8 @@ void exahype2::dg::tests::KernelsOnDeviceTest::testExtrapolateFluxToFaces() {
     exahype2::dg::extrapolateFluxToFaces<
       exahype2::dg::tests::StubSolver,
       Setup::DofsPerAxis,
-      Setup::Unknowns,
-      Setup::AuxiliaryVariables,
+      Setup::NumberOfUnknowns,
+      Setup::NumberOfAuxiliaryVariables,
       true,
       true>(
       cellFaces,
@@ -252,8 +254,8 @@ void exahype2::dg::tests::KernelsOnDeviceTest::testEvaluateFluxOnFace() {
       exahype2::dg::evaluateFluxOnFace<
         exahype2::dg::tests::StubSolver,
         Setup::DofsPerAxis,
-        Setup::Unknowns,
-        Setup::AuxiliaryVariables,
+        Setup::NumberOfUnknowns,
+        Setup::NumberOfAuxiliaryVariables,
         true,
         true>(
         faceFlux + sideFluxOffset,
@@ -285,8 +287,8 @@ void exahype2::dg::tests::KernelsOnDeviceTest::testEvaluateFluxOnFace() {
       exahype2::dg::evaluateFluxOnFace<
         exahype2::dg::tests::StubSolver,
         Setup::DofsPerAxis,
-        Setup::Unknowns,
-        Setup::AuxiliaryVariables,
+        Setup::NumberOfUnknowns,
+        Setup::NumberOfAuxiliaryVariables,
         true,
         true>(
         faceFlux + sideFluxOffset,
@@ -335,8 +337,8 @@ void exahype2::dg::tests::KernelsOnDeviceTest::testApplyBoundaryConditions() {
       exahype2::dg::applyBoundaryConditions<
         exahype2::dg::tests::StubSolver,
         Setup::DofsPerAxis,
-        Setup::Unknowns,
-        Setup::AuxiliaryVariables>(
+        Setup::NumberOfUnknowns,
+        Setup::NumberOfAuxiliaryVariables>(
         onDeviceFaceStates + onDeviceFaceIndices[face] * Setup::FaceStateCardinality,
         onDeviceQuadratureNodes,
         exahype2::dg::tests::faceCentreOf(cell, faceNumber, onDeviceCellCentres, onDeviceCellSizes),
@@ -358,8 +360,8 @@ void exahype2::dg::tests::KernelsOnDeviceTest::testApplyBoundaryConditions() {
     exahype2::dg::applyBoundaryConditions<
       exahype2::dg::tests::StubSolver,
       Setup::DofsPerAxis,
-      Setup::Unknowns,
-      Setup::AuxiliaryVariables>(
+      Setup::NumberOfUnknowns,
+      Setup::NumberOfAuxiliaryVariables>(
       hostResult.data() + geometry.workFaceIndices[face] * Setup::FaceStateCardinality,
       operators.quadratureNodes.data(),
       exahype2::dg::tests::faceCentreOf(cell, faceNumber, geometry.cellCentres.data(), geometry.cellSizes.data()),
@@ -407,8 +409,8 @@ void exahype2::dg::tests::KernelsOnDeviceTest::testSolveRiemannProblem() {
       exahype2::dg::solveRiemannProblem<
         exahype2::dg::tests::StubSolver,
         Setup::DofsPerAxis,
-        Setup::Unknowns,
-        Setup::AuxiliaryVariables,
+        Setup::NumberOfUnknowns,
+        Setup::NumberOfAuxiliaryVariables,
         true>(
         faceFlux,
         faceFlux + Setup::FaceSideFluxCardinality,
@@ -437,8 +439,8 @@ void exahype2::dg::tests::KernelsOnDeviceTest::testSolveRiemannProblem() {
     exahype2::dg::solveRiemannProblem<
       exahype2::dg::tests::StubSolver,
       Setup::DofsPerAxis,
-      Setup::Unknowns,
-      Setup::AuxiliaryVariables,
+      Setup::NumberOfUnknowns,
+      Setup::NumberOfAuxiliaryVariables,
       true>(
       faceFlux,
       faceFlux + Setup::FaceSideFluxCardinality,
@@ -490,8 +492,8 @@ void exahype2::dg::tests::KernelsOnDeviceTest::testSolveLinearRiemannProblem() {
       exahype2::dg::solveLinearRiemannProblem<
         exahype2::dg::tests::StubSolver,
         Setup::DofsPerAxis,
-        Setup::Unknowns,
-        Setup::AuxiliaryVariables,
+        Setup::NumberOfUnknowns,
+        Setup::NumberOfAuxiliaryVariables,
         true,
         true,
         true>(
@@ -522,8 +524,8 @@ void exahype2::dg::tests::KernelsOnDeviceTest::testSolveLinearRiemannProblem() {
     exahype2::dg::solveLinearRiemannProblem<
       exahype2::dg::tests::StubSolver,
       Setup::DofsPerAxis,
-      Setup::Unknowns,
-      Setup::AuxiliaryVariables,
+      Setup::NumberOfUnknowns,
+      Setup::NumberOfAuxiliaryVariables,
       true,
       true,
       true>(
@@ -582,7 +584,7 @@ void exahype2::dg::tests::KernelsOnDeviceTest::testAddFaceIntegral() {
         const auto* const lowerFaceFlux = onDeviceFaceFluxes
           + onDeviceFaceIndices[cell * peano4::FacesPerCell + direction] * Setup::FaceFluxCardinality
           + Setup::FaceSideFluxCardinality;
-        exahype2::dg::addFaceIntegral<Setup::DofsPerAxis, Setup::Unknowns, false, double, double>(
+        exahype2::dg::addFaceIntegral<Setup::DofsPerAxis, Setup::NumberOfUnknowns, false, double, double>(
           cellUpdate,
           lowerFaceFlux,
           onDeviceFaceQuadratureWeights,
@@ -597,7 +599,7 @@ void exahype2::dg::tests::KernelsOnDeviceTest::testAddFaceIntegral() {
 
         const auto* const upperFaceFlux = onDeviceFaceFluxes
           + onDeviceFaceIndices[cell * peano4::FacesPerCell + direction + DIMENSIONS] * Setup::FaceFluxCardinality;
-        exahype2::dg::addFaceIntegral<Setup::DofsPerAxis, Setup::Unknowns, false, double, double>(
+        exahype2::dg::addFaceIntegral<Setup::DofsPerAxis, Setup::NumberOfUnknowns, false, double, double>(
           cellUpdate,
           upperFaceFlux,
           onDeviceFaceQuadratureWeights,
@@ -627,7 +629,7 @@ void exahype2::dg::tests::KernelsOnDeviceTest::testAddFaceIntegral() {
       const auto* const lowerFaceFlux = faceFluxes.data()
         + geometry.faceIndices[cell * peano4::FacesPerCell + direction] * Setup::FaceFluxCardinality
         + Setup::FaceSideFluxCardinality;
-      exahype2::dg::addFaceIntegral<Setup::DofsPerAxis, Setup::Unknowns, false, double, double>(
+      exahype2::dg::addFaceIntegral<Setup::DofsPerAxis, Setup::NumberOfUnknowns, false, double, double>(
         cellUpdate,
         lowerFaceFlux,
         operators.faceQuadratureWeights.data(),
@@ -642,7 +644,7 @@ void exahype2::dg::tests::KernelsOnDeviceTest::testAddFaceIntegral() {
 
       const auto* const upperFaceFlux = faceFluxes.data()
         + geometry.faceIndices[cell * peano4::FacesPerCell + direction + DIMENSIONS] * Setup::FaceFluxCardinality;
-      exahype2::dg::addFaceIntegral<Setup::DofsPerAxis, Setup::Unknowns, false, double, double>(
+      exahype2::dg::addFaceIntegral<Setup::DofsPerAxis, Setup::NumberOfUnknowns, false, double, double>(
         cellUpdate,
         upperFaceFlux,
         operators.faceQuadratureWeights.data(),
@@ -684,10 +686,10 @@ void exahype2::dg::tests::KernelsOnDeviceTest::testReduceMaxEigenvalues() {
       maximum                    = MaxEigenvalueReduction::combine(
         maximum,
         exahype2::dg::reduceMaxEigenvalues<
-                             exahype2::dg::tests::StubSolver,
-                             Setup::DofsPerAxis,
-                             Setup::Unknowns,
-                             Setup::AuxiliaryVariables>(
+          exahype2::dg::tests::StubSolver,
+          Setup::DofsPerAxis,
+          Setup::NumberOfUnknowns,
+          Setup::NumberOfAuxiliaryVariables>(
           onDeviceCellStates + cellStateOffset,
           onDeviceQuadratureNodes,
           tarch::la::Vector<DIMENSIONS, double>(onDeviceCellCentres + coordinateOffset),
@@ -707,10 +709,10 @@ void exahype2::dg::tests::KernelsOnDeviceTest::testReduceMaxEigenvalues() {
     hostResult                 = MaxEigenvalueReduction::combine(
       hostResult,
       exahype2::dg::reduceMaxEigenvalues<
-                        exahype2::dg::tests::StubSolver,
-                        Setup::DofsPerAxis,
-                        Setup::Unknowns,
-                        Setup::AuxiliaryVariables>(
+        exahype2::dg::tests::StubSolver,
+        Setup::DofsPerAxis,
+        Setup::NumberOfUnknowns,
+        Setup::NumberOfAuxiliaryVariables>(
         cellStates.data() + cellStateOffset,
         operators.quadratureNodes.data(),
         tarch::la::Vector<DIMENSIONS, double>(geometry.cellCentres.data() + coordinateOffset),

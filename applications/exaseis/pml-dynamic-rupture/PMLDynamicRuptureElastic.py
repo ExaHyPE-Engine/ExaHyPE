@@ -1,3 +1,5 @@
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
 def algebraic_source():
     return """
   // From ExaSeis' "phd" tag (PMLSlipWeakening.cpp, line 468); the Zenodo release omits this term.
@@ -8,14 +10,10 @@ def algebraic_source():
 
 
 def userIncludes():
-    return """
-#define _TOP 1
-
-#include "DynamicRuptureParameters.h"
-#include "../riemannSolvers/riemannsolverPMLDynamicRupture.h"
-
-#include "exahype2/Curvi.h"
-#include "exahype2/dg/DGUtils.h"
-
-#include "tarch/reader/NetCDFFieldSampler.h"
-"""
+    return [
+        "DynamicRuptureParameters.h",
+        "../riemannSolvers/riemannsolverPMLDynamicRupture.h",
+        "exahype2/Curvi.h",
+        "exahype2/dg/DGUtils.h",
+        "tarch/reader/NetCDFFieldSampler.h",
+    ]

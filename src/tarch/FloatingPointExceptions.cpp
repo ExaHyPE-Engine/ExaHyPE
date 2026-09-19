@@ -254,12 +254,14 @@ namespace {
 
     const auto previousSeparator = value.rfind(':', lastSeparator - 1);
     int        possibleLine      = 0;
-    if (previousSeparator != std::string::npos
-        and parseNonNegativeInteger(
-          std::string_view(value).substr(previousSeparator + 1, lastSeparator - previousSeparator - 1),
-          possibleLine
-        )
-        and possibleLine > 0) {
+    if (
+      previousSeparator != std::string::npos
+      and parseNonNegativeInteger(
+        std::string_view(value).substr(previousSeparator + 1, lastSeparator - previousSeparator - 1),
+        possibleLine
+      )
+      and possibleLine > 0
+    ) {
       sourceFile = value.substr(0, previousSeparator);
       sourceLine = possibleLine;
     } else if (lastNumber > 0) {
@@ -413,8 +415,10 @@ namespace {
     ProcessMapping faultMapping{};
     if (findProcessMapping(event.instructionAddress, faultMapping) and faultMapping.objectFile.empty()) {
       ProcessMapping returnAddressMapping{};
-      if (event.stackReturnAddress > 0 and findProcessMapping(event.stackReturnAddress, returnAddressMapping)
-          and returnAddressMapping.executable) {
+      if (
+        event.stackReturnAddress > 0 and findProcessMapping(event.stackReturnAddress, returnAddressMapping)
+        and returnAddressMapping.executable
+      ) {
         callers.push_back(event.stackReturnAddress - 1);
       }
     }

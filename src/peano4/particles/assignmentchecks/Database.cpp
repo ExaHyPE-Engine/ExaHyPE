@@ -336,8 +336,10 @@ void peano4::particles::assignmentchecks::Database::replaceEvent(
   ParticleEvents& history = search->second;
 
   for (auto eventIterator = history.begin(); eventIterator != history.end(); eventIterator++) {
-    if ((eventIterator->meshSweepIndex == oldEvent.meshSweepIndex) and (eventIterator->type == oldEvent.type)
-        and (eventIterator->treeId == oldEvent.treeId) and (eventIterator->isLocal == oldEvent.isLocal)) {
+    if (
+      (eventIterator->meshSweepIndex == oldEvent.meshSweepIndex) and (eventIterator->type == oldEvent.type)
+      and (eventIterator->treeId == oldEvent.treeId) and (eventIterator->isLocal == oldEvent.isLocal)
+    ) {
       eventIterator->type           = newEvent.type;
       eventIterator->isLocal        = newEvent.isLocal;
       eventIterator->vertexX        = newEvent.vertexX;
@@ -397,10 +399,12 @@ void peano4::particles::assignmentchecks::Database::eliminateExistingParticles()
   for (auto particleIterator = _data.begin(); particleIterator != _data.end();) {
     const peano4::particles::assignmentchecks::Event& lastEvent = particleIterator->second.back();
 
-    if (lastEvent.type == peano4::particles::assignmentchecks::Event::Type::AssignToVertex
-        or lastEvent.type == peano4::particles::assignmentchecks::Event::Type::ConsecutiveMoveWhileAssociatedToVertex
-        or lastEvent.type == peano4::particles::assignmentchecks::Event::Type::MoveWhileAssociatedToVertex
-        or (not lastEvent.isLocal)) {
+    if (
+      lastEvent.type == peano4::particles::assignmentchecks::Event::Type::AssignToVertex
+      or lastEvent.type == peano4::particles::assignmentchecks::Event::Type::ConsecutiveMoveWhileAssociatedToVertex
+      or lastEvent.type == peano4::particles::assignmentchecks::Event::Type::MoveWhileAssociatedToVertex
+      or (not lastEvent.isLocal)
+    ) {
       ++particleIterator;
     } else {
       particleIterator = _data.erase(particleIterator);

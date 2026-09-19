@@ -2,12 +2,13 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "RiemannTest.h"
 
+#include "exahype2/dg/DGUtils.h"
 #include "exahype2/dg/Riemann.h"
 
 namespace {
   constexpr int NumberOfDofsPerAxis = 2;
   constexpr int NumberOfUnknowns    = 2;
-  constexpr int NodesPerFace = (DIMENSIONS == 3) ? NumberOfDofsPerAxis * NumberOfDofsPerAxis : NumberOfDofsPerAxis;
+  constexpr int FaceNodes           = exahype2::dg::NodesPerFace<NumberOfDofsPerAxis>;
 
   // Reports the first entry of the state as the wave speed, so a test can steer
   // the eigenvalue of each side from the data it hands in.
@@ -100,9 +101,9 @@ namespace {
   };
 
   // Weights that sum to one, so a uniform state averages to itself.
-  void fillNormalisedWeights(double (&faceQuadratureWeights)[NodesPerFace]) {
-    for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
-      faceQuadratureWeights[faceNode] = 1.0 / NodesPerFace;
+  void fillNormalisedWeights(double (&faceQuadratureWeights)[FaceNodes]) {
+    for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
+      faceQuadratureWeights[faceNode] = 1.0 / FaceNodes;
     }
   }
 } // namespace
@@ -125,14 +126,14 @@ void exahype2::dg::tests::RiemannTest::testEqualStatesAverageTheTwoFluxes() {
   constexpr int NumberOfAuxiliaryVariables = 0;
   constexpr int NumberOfData               = NumberOfUnknowns + NumberOfAuxiliaryVariables;
 
-  double faceQuadratureWeights[NodesPerFace];
+  double faceQuadratureWeights[FaceNodes];
   fillNormalisedWeights(faceQuadratureWeights);
 
-  double leftFlux[NodesPerFace * NumberOfUnknowns];
-  double rightFlux[NodesPerFace * NumberOfUnknowns];
-  double leftState[NodesPerFace * NumberOfData];
-  double rightState[NodesPerFace * NumberOfData];
-  for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
+  double leftFlux[FaceNodes * NumberOfUnknowns];
+  double rightFlux[FaceNodes * NumberOfUnknowns];
+  double leftState[FaceNodes * NumberOfData];
+  double rightState[FaceNodes * NumberOfData];
+  for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
     for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
       leftFlux[faceNode * NumberOfUnknowns + unknown]  = 1.0 + unknown;
       rightFlux[faceNode * NumberOfUnknowns + unknown] = 3.0 + unknown;
@@ -154,7 +155,7 @@ void exahype2::dg::tests::RiemannTest::testEqualStatesAverageTheTwoFluxes() {
     false,
     double>(leftFlux, rightFlux, leftState, rightState, faceQuadratureWeights, faceCentre, cellSize, 0.0, 1.0, 0);
 
-  for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
+  for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
     for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
       validateNumericalEquals(leftFlux[faceNode * NumberOfUnknowns + unknown], 2.0 + unknown);
       validateNumericalEquals(rightFlux[faceNode * NumberOfUnknowns + unknown], 2.0 + unknown);
@@ -166,14 +167,14 @@ void exahype2::dg::tests::RiemannTest::testJumpTermScalesWithTheLargerWaveSpeed(
   constexpr int NumberOfAuxiliaryVariables = 0;
   constexpr int NumberOfData               = NumberOfUnknowns + NumberOfAuxiliaryVariables;
 
-  double faceQuadratureWeights[NodesPerFace];
+  double faceQuadratureWeights[FaceNodes];
   fillNormalisedWeights(faceQuadratureWeights);
 
-  double leftFlux[NodesPerFace * NumberOfUnknowns]  = {};
-  double rightFlux[NodesPerFace * NumberOfUnknowns] = {};
-  double leftState[NodesPerFace * NumberOfData];
-  double rightState[NodesPerFace * NumberOfData];
-  for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
+  double leftFlux[FaceNodes * NumberOfUnknowns]  = {};
+  double rightFlux[FaceNodes * NumberOfUnknowns] = {};
+  double leftState[FaceNodes * NumberOfData];
+  double rightState[FaceNodes * NumberOfData];
+  for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
     const int firstEntry       = faceNode * NumberOfData;
     leftState[firstEntry]      = 3.0;
     leftState[firstEntry + 1]  = 1.0;
@@ -194,7 +195,7 @@ void exahype2::dg::tests::RiemannTest::testJumpTermScalesWithTheLargerWaveSpeed(
 
   // The right side averages to 5, the left one to 3, so the larger speed wins.
   constexpr double ExpectedMaxEigenvalue = 5.0;
-  for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
+  for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
     const int firstEntry = faceNode * NumberOfUnknowns;
     validateNumericalEquals(leftFlux[firstEntry], 0.5 * ExpectedMaxEigenvalue * (3.0 - 5.0));
     validateNumericalEquals(leftFlux[firstEntry + 1], 0.5 * ExpectedMaxEigenvalue * (1.0 - 4.0));
@@ -205,14 +206,14 @@ void exahype2::dg::tests::RiemannTest::testBothSidesSeeTheSameFluxWithoutANoncon
   constexpr int NumberOfAuxiliaryVariables = 1;
   constexpr int NumberOfData               = NumberOfUnknowns + NumberOfAuxiliaryVariables;
 
-  double faceQuadratureWeights[NodesPerFace];
+  double faceQuadratureWeights[FaceNodes];
   fillNormalisedWeights(faceQuadratureWeights);
 
-  double leftFlux[NodesPerFace * NumberOfUnknowns];
-  double rightFlux[NodesPerFace * NumberOfUnknowns];
-  double leftState[NodesPerFace * NumberOfData];
-  double rightState[NodesPerFace * NumberOfData];
-  for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
+  double leftFlux[FaceNodes * NumberOfUnknowns];
+  double rightFlux[FaceNodes * NumberOfUnknowns];
+  double leftState[FaceNodes * NumberOfData];
+  double rightState[FaceNodes * NumberOfData];
+  for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
     for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
       leftFlux[faceNode * NumberOfUnknowns + unknown]  = 0.5 * faceNode + unknown;
       rightFlux[faceNode * NumberOfUnknowns + unknown] = 1.5 * faceNode - unknown;
@@ -234,7 +235,7 @@ void exahype2::dg::tests::RiemannTest::testBothSidesSeeTheSameFluxWithoutANoncon
     false,
     double>(leftFlux, rightFlux, leftState, rightState, faceQuadratureWeights, faceCentre, cellSize, 0.0, 1.0, 0);
 
-  for (int entry = 0; entry < NodesPerFace * NumberOfUnknowns; entry++) {
+  for (int entry = 0; entry < FaceNodes * NumberOfUnknowns; entry++) {
     validateNumericalEquals(leftFlux[entry], rightFlux[entry]);
   }
 }
@@ -243,14 +244,14 @@ void exahype2::dg::tests::RiemannTest::testNonconservativeProductSplitsTheTwoSid
   constexpr int NumberOfAuxiliaryVariables = 0;
   constexpr int NumberOfData               = NumberOfUnknowns + NumberOfAuxiliaryVariables;
 
-  double faceQuadratureWeights[NodesPerFace];
+  double faceQuadratureWeights[FaceNodes];
   fillNormalisedWeights(faceQuadratureWeights);
 
-  double leftFlux[NodesPerFace * NumberOfUnknowns]  = {};
-  double rightFlux[NodesPerFace * NumberOfUnknowns] = {};
-  double leftState[NodesPerFace * NumberOfData];
-  double rightState[NodesPerFace * NumberOfData];
-  for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
+  double leftFlux[FaceNodes * NumberOfUnknowns]  = {};
+  double rightFlux[FaceNodes * NumberOfUnknowns] = {};
+  double leftState[FaceNodes * NumberOfData];
+  double rightState[FaceNodes * NumberOfData];
+  for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
     for (int value = 0; value < NumberOfData; value++) {
       leftState[faceNode * NumberOfData + value]  = 1.0;
       rightState[faceNode * NumberOfData + value] = 1.0 + value;
@@ -270,7 +271,7 @@ void exahype2::dg::tests::RiemannTest::testNonconservativeProductSplitsTheTwoSid
 
   // The stub returns the state jump, which the kernel adds on one side and
   // subtracts on the other, so the two sides differ by exactly that jump.
-  for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
+  for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
     for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
       const double stateJump =
         rightState[faceNode * NumberOfData + unknown] - leftState[faceNode * NumberOfData + unknown];
@@ -290,14 +291,14 @@ void exahype2::dg::tests::RiemannTest::testNonconservativeProductReadsTheAuxilia
   constexpr int NumberOfAuxiliaryVariables = 1;
   constexpr int NumberOfData               = NumberOfUnknowns + NumberOfAuxiliaryVariables;
 
-  double faceQuadratureWeights[NodesPerFace];
+  double faceQuadratureWeights[FaceNodes];
   fillNormalisedWeights(faceQuadratureWeights);
 
-  double leftFlux[NodesPerFace * NumberOfUnknowns]  = {};
-  double rightFlux[NodesPerFace * NumberOfUnknowns] = {};
-  double leftState[NodesPerFace * NumberOfData];
-  double rightState[NodesPerFace * NumberOfData];
-  for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
+  double leftFlux[FaceNodes * NumberOfUnknowns]  = {};
+  double rightFlux[FaceNodes * NumberOfUnknowns] = {};
+  double leftState[FaceNodes * NumberOfData];
+  double rightState[FaceNodes * NumberOfData];
+  for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
     const int firstEntry = faceNode * NumberOfData;
     // The unknowns carry no jump, so only the auxiliary variable can reach the flux.
     for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
@@ -319,7 +320,7 @@ void exahype2::dg::tests::RiemannTest::testNonconservativeProductReadsTheAuxilia
     true,
     double>(leftFlux, rightFlux, leftState, rightState, faceQuadratureWeights, faceCentre, cellSize, 0.0, 1.0, 0);
 
-  for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
+  for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
     const double auxiliaryJump =
       rightState[faceNode * NumberOfData + NumberOfUnknowns] - leftState[faceNode * NumberOfData + NumberOfUnknowns];
     for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
@@ -344,19 +345,19 @@ void exahype2::dg::tests::RiemannTest::testLinearFormBuildsTheFluxFromTheStateJu
   constexpr int NumberOfAuxiliaryVariables = 0;
   constexpr int NumberOfData               = NumberOfUnknowns + NumberOfAuxiliaryVariables;
 
-  double faceQuadratureWeights[NodesPerFace];
+  double faceQuadratureWeights[FaceNodes];
   fillNormalisedWeights(faceQuadratureWeights);
 
   // Nonzero incoming values prove the linear form starts from a clean slate.
-  double leftFlux[NodesPerFace * NumberOfUnknowns];
-  double rightFlux[NodesPerFace * NumberOfUnknowns];
-  double leftState[NodesPerFace * NumberOfData];
-  double rightState[NodesPerFace * NumberOfData];
-  for (int entry = 0; entry < NodesPerFace * NumberOfUnknowns; entry++) {
+  double leftFlux[FaceNodes * NumberOfUnknowns];
+  double rightFlux[FaceNodes * NumberOfUnknowns];
+  double leftState[FaceNodes * NumberOfData];
+  double rightState[FaceNodes * NumberOfData];
+  for (int entry = 0; entry < FaceNodes * NumberOfUnknowns; entry++) {
     leftFlux[entry]  = 9.0;
     rightFlux[entry] = -9.0;
   }
-  for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
+  for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
     for (int value = 0; value < NumberOfData; value++) {
       leftState[faceNode * NumberOfData + value]  = 1.0;
       rightState[faceNode * NumberOfData + value] = 3.0;
@@ -381,7 +382,7 @@ void exahype2::dg::tests::RiemannTest::testLinearFormBuildsTheFluxFromTheStateJu
   constexpr double ExpectedFlux          = 1.0;
   constexpr double ExpectedMaxEigenvalue = 3.0;
   constexpr double ExpectedHalfStateJump = 1.0;
-  for (int entry = 0; entry < NodesPerFace * NumberOfUnknowns; entry++) {
+  for (int entry = 0; entry < FaceNodes * NumberOfUnknowns; entry++) {
     validateNumericalEquals(leftFlux[entry], ExpectedFlux - ExpectedMaxEigenvalue * ExpectedHalfStateJump);
     validateNumericalEquals(rightFlux[entry], ExpectedFlux + ExpectedMaxEigenvalue * ExpectedHalfStateJump);
   }
@@ -391,14 +392,14 @@ void exahype2::dg::tests::RiemannTest::testLinearFormAddsTheNonconservativeProdu
   constexpr int NumberOfAuxiliaryVariables = 0;
   constexpr int NumberOfData               = NumberOfUnknowns + NumberOfAuxiliaryVariables;
 
-  double faceQuadratureWeights[NodesPerFace];
+  double faceQuadratureWeights[FaceNodes];
   fillNormalisedWeights(faceQuadratureWeights);
 
-  double leftFlux[NodesPerFace * NumberOfUnknowns]  = {};
-  double rightFlux[NodesPerFace * NumberOfUnknowns] = {};
-  double leftState[NodesPerFace * NumberOfData];
-  double rightState[NodesPerFace * NumberOfData];
-  for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
+  double leftFlux[FaceNodes * NumberOfUnknowns]  = {};
+  double rightFlux[FaceNodes * NumberOfUnknowns] = {};
+  double leftState[FaceNodes * NumberOfData];
+  double rightState[FaceNodes * NumberOfData];
+  for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
     for (int value = 0; value < NumberOfData; value++) {
       leftState[faceNode * NumberOfData + value]  = 1.0;
       rightState[faceNode * NumberOfData + value] = 3.0;
@@ -423,7 +424,7 @@ void exahype2::dg::tests::RiemannTest::testLinearFormAddsTheNonconservativeProdu
   constexpr double ExpectedCentralFlux   = 2.0;
   constexpr double ExpectedMaxEigenvalue = 3.0;
   constexpr double ExpectedHalfStateJump = 1.0;
-  for (int entry = 0; entry < NodesPerFace * NumberOfUnknowns; entry++) {
+  for (int entry = 0; entry < FaceNodes * NumberOfUnknowns; entry++) {
     validateNumericalEquals(leftFlux[entry], ExpectedCentralFlux - ExpectedMaxEigenvalue * ExpectedHalfStateJump);
     validateNumericalEquals(rightFlux[entry], ExpectedCentralFlux + ExpectedMaxEigenvalue * ExpectedHalfStateJump);
   }
@@ -433,14 +434,14 @@ void exahype2::dg::tests::RiemannTest::testLinearFormAppliesTheMaterialParameter
   constexpr int NumberOfAuxiliaryVariables = 0;
   constexpr int NumberOfData               = NumberOfUnknowns + NumberOfAuxiliaryVariables;
 
-  double faceQuadratureWeights[NodesPerFace];
+  double faceQuadratureWeights[FaceNodes];
   fillNormalisedWeights(faceQuadratureWeights);
 
-  double leftFlux[NodesPerFace * NumberOfUnknowns]  = {};
-  double rightFlux[NodesPerFace * NumberOfUnknowns] = {};
-  double leftState[NodesPerFace * NumberOfData];
-  double rightState[NodesPerFace * NumberOfData];
-  for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
+  double leftFlux[FaceNodes * NumberOfUnknowns]  = {};
+  double rightFlux[FaceNodes * NumberOfUnknowns] = {};
+  double leftState[FaceNodes * NumberOfData];
+  double rightState[FaceNodes * NumberOfData];
+  for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
     for (int value = 0; value < NumberOfData; value++) {
       leftState[faceNode * NumberOfData + value]  = 1.0;
       rightState[faceNode * NumberOfData + value] = 3.0;
@@ -464,7 +465,7 @@ void exahype2::dg::tests::RiemannTest::testLinearFormAppliesTheMaterialParameter
   constexpr double ExpectedCentralFlux   = 2.0;
   constexpr double ExpectedMaxEigenvalue = 3.0;
   constexpr double ExpectedHalfStateJump = 1.0;
-  for (int entry = 0; entry < NodesPerFace * NumberOfUnknowns; entry++) {
+  for (int entry = 0; entry < FaceNodes * NumberOfUnknowns; entry++) {
     validateNumericalEquals(leftFlux[entry], ExpectedCentralFlux - ExpectedMaxEigenvalue * ExpectedHalfStateJump);
     validateNumericalEquals(rightFlux[entry], ExpectedCentralFlux + ExpectedMaxEigenvalue * ExpectedHalfStateJump);
   }

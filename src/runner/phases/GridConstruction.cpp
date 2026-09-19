@@ -62,8 +62,8 @@ void runner::GridConstruction::logRow(
 
   const auto numberOfRanks = tarch::mpi::Rank::getInstance().getNumberOfRanks();
   const auto balance       = maximumRankLoad > 0 and numberOfRanks > 1
-          ? static_cast<double>(numberOfLeaves) / (numberOfRanks * static_cast<double>(maximumRankLoad)) * 100.0
-          : 100.0;
+    ? static_cast<double>(numberOfLeaves) / (numberOfRanks * static_cast<double>(maximumRankLoad)) * 100.0
+    : 100.0;
   const auto load = runner::Format::grouped(minimumRankLoad) + " .. " + runner::Format::grouped(maximumRankLoad);
 
   _context.box.line(row(

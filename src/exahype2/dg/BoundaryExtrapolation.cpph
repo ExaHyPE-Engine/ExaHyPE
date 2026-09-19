@@ -103,7 +103,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::extrapolateStateToFaces(
  * Diffusive fluxes read the cell polynomial's gradient along every axis.
  */
 template <
-  typename Solver,
+  typename SolverType,
   int  NumberOfDofsPerAxis,
   int  NumberOfUnknowns,
   int  NumberOfAuxiliaryVariables,
@@ -174,7 +174,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::extrapolateFluxToFaces(
       for (int direction = 0; direction < DIMENSIONS; direction++) {
         ComputePrecision flux[NumberOfUnknowns] = {};
         if constexpr (EvaluateDiffusiveFlux) {
-          Solver::flux(
+          SolverType::flux(
             nodeState,
             nodeGradients,
             exahype2::dg::getQuadraturePoint(cellCentre, cellSize, nodeIndex, quadratureNodes),
@@ -185,7 +185,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::extrapolateFluxToFaces(
             flux
           );
         } else {
-          Solver::flux(
+          SolverType::flux(
             nodeState,
             exahype2::dg::getQuadraturePoint(cellCentre, cellSize, nodeIndex, quadratureNodes),
             cellSize,
@@ -234,7 +234,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::extrapolateFluxToFaces(
  * Tangential derivatives are zero.
  */
 template <
-  typename Solver,
+  typename SolverType,
   int  NumberOfDofsPerAxis,
   int  NumberOfUnknowns,
   int  NumberOfAuxiliaryVariables,
@@ -313,9 +313,9 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::evaluateFluxOnFace(
             / cellSize(direction)
           );
         }
-        Solver::flux(nodeState, nodeGradients, nodePosition, cellSize, timeStamp, timeStepSize, direction, flux);
+        SolverType::flux(nodeState, nodeGradients, nodePosition, cellSize, timeStamp, timeStepSize, direction, flux);
       } else {
-        Solver::flux(nodeState, nodePosition, cellSize, timeStamp, timeStepSize, direction, flux);
+        SolverType::flux(nodeState, nodePosition, cellSize, timeStamp, timeStepSize, direction, flux);
       }
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         faceFlux[faceNode * NumberOfUnknowns + unknown] = static_cast<StoragePrecision>(flux[unknown]);

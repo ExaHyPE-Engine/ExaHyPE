@@ -103,21 +103,21 @@ project = exahype2.Project(
     max_grid_levels=args.grid_levels,
 )
 
-fv_solver = exahype2.solvers.fv.musclhancock.GlobalAdaptiveTimeStep(
+fv_solver = exahype2.fv.Solver(
     name="SWESolver",
     patch_size=args.degrees_of_freedom,
     unknowns={"h": 1, "v": 2, "b": 1},
     auxiliary_variables=0,
-    time_step_relaxation=0.4,
+    time_stepping=exahype2.TimeStepping.Adaptive(0.4),
+    scheme=exahype2.fv.MusclHancock(limiter=exahype2.fv.Limiter.minmod),
 )
 
-fv_solver.set_implementation(
-    initial_conditions=initial_conditions,
+fv_solver.set_pde_terms(
+    initial_condition=initial_conditions,
     boundary_conditions=boundary_conditions,
     flux=flux,
     ncp=ncp,
     max_eigenvalue=max_eigenvalue,
-    limiter=exahype2.solvers.fv.musclhancock.Limiter.minmod,
 )
 
 project.add_solver(fv_solver)

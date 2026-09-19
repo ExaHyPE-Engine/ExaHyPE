@@ -24,7 +24,6 @@ dist/
 .venv/
 venv/
 .env
-.formatting_python_env/
 .pytest_cache/
 .mypy_cache/
 .ipynb_checkpoints

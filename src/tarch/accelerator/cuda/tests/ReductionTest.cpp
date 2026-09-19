@@ -34,7 +34,7 @@ __global__ static void reduceSum(const int* input, int count, int* result) {
   }
 }
 
-tarch::accelerator::cuda::tests::ReductionTest::ReductionTest():
+tarch::accelerator::cuda::tests::ReductionTest::ReductionTest() :
   TestCase("tarch::accelerator::cuda::tests::ReductionTest") {}
 
 void tarch::accelerator::cuda::tests::ReductionTest::run() { testMethod(testParallelReduction); }
@@ -53,7 +53,9 @@ void tarch::accelerator::cuda::tests::ReductionTest::testParallelReduction() {
   const int numberOfBlocks = (ElementCount + ThreadsPerBlock - 1) / ThreadsPerBlock;
   CHECK_CUDA_ERROR(cudaSetDevice(DeviceId));
   reduceSum<<<numberOfBlocks, ThreadsPerBlock, 0, tarch::accelerator::deviceStreamGet()>>>(
-    deviceInput, ElementCount, deviceResult
+    deviceInput,
+    ElementCount,
+    deviceResult
   );
   CHECK_CUDA_ERROR(cudaStreamSynchronize(tarch::accelerator::deviceStreamGet()));
 

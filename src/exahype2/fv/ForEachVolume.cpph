@@ -1,0 +1,33 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+TARGET_DECLARE
+/**
+ * Calls functor(value, x, h, weight, index) for every finite volume of a patch in linearised
+ * order. The value pointer addresses the volume's first entry, x is the volume centre, h the
+ * volume size, weight the volume's measure and index its linearised position in the patch.
+ */
+template <int VolumesPerAxis, int Values, typename Precision, typename Functor>
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::forEachVolume(
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  Precision* const                             values,
+  Functor&&                                    functor
+) {
+  static_assert(VolumesPerAxis > 0 and Values > 0);
+  assertion(values != nullptr);
+
+  const auto volumeSize = exahype2::fv::getVolumeSize(cellSize, VolumesPerAxis);
+  double     weight     = 1.0;
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    assertion(volumeSize(axis) > 0.0, volumeSize, axis);
+    weight *= volumeSize(axis);
+  }
+
+  peano4::dForEach(VolumesPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
+    const int  index        = peano4::dLinearised(volume, VolumesPerAxis);
+    const auto volumeCentre = exahype2::fv::getVolumeCentre(cellCentre, cellSize, VolumesPerAxis, volume);
+    functor(values + index * Values, volumeCentre, volumeSize, weight, index);
+  });
+}
+TARGET_DECLARE_END

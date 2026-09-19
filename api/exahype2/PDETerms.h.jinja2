@@ -1,0 +1,13 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#pragma once
+
+#include "{{SOLVER_NAME}}.h"
+
+#include "exahype2/SolverConcepts.h"
+
+{{SOLVER_CONCEPT_ASSERTION}}
+{%- if SOLVER_PDE_TERM_ASSERTIONS %}
+
+{{SOLVER_PDE_TERM_ASSERTIONS}}
+{%- endif %}

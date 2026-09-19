@@ -574,8 +574,10 @@ INLINE_METHOD int peano4::topology::Tree::getNumberOfLocalAdjacentCellsOfFace(
   if (_periodicBoundaries[normal]) {
     neighbourLattice(normal) = (neighbourLattice(normal) + cellsPerAxisOnLevel) % cellsPerAxisOnLevel;
   }
-  if (neighbourLattice(normal) >= 0 and neighbourLattice(normal) < cellsPerAxisOnLevel
-      and cellExistsInPlan(cell.level, neighbourLattice) and getOwnerOfCellAt(cell.level, neighbourLattice) == _id) {
+  if (
+    neighbourLattice(normal) >= 0 and neighbourLattice(normal) < cellsPerAxisOnLevel
+    and cellExistsInPlan(cell.level, neighbourLattice) and getOwnerOfCellAt(cell.level, neighbourLattice) == _id
+  ) {
     numberOfLocalAdjacentCells++;
   }
   return numberOfLocalAdjacentCells;

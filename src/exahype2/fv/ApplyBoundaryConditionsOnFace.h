@@ -10,14 +10,14 @@
 TARGET_DECLARE
 namespace exahype2::fv {
   template <
-    typename Solver,
+    typename SolverType,
     int NumberOfVolumesPerAxis,
     int HaloSize,
     int NumberOfUnknowns,
     int NumberOfAuxiliaryVariables,
     typename StoragePrecision>
   INLINE_METHOD GPU_CALLABLE_METHOD void applyBoundaryConditionsOnFace(
-    Solver&                                      solver,
+    SolverType&                                  solver,
     const tarch::la::Vector<DIMENSIONS, double>& patchCentre,
     const tarch::la::Vector<DIMENSIONS, double>& patchSize,
     double                                       timeStamp,

@@ -34,7 +34,7 @@ __global__ static void reduceSum(const int* input, int count, int* result) {
   }
 }
 
-tarch::accelerator::hip::tests::ReductionTest::ReductionTest():
+tarch::accelerator::hip::tests::ReductionTest::ReductionTest() :
   TestCase("tarch::accelerator::hip::tests::ReductionTest") {}
 
 void tarch::accelerator::hip::tests::ReductionTest::run() { testMethod(testParallelReduction); }
@@ -53,7 +53,9 @@ void tarch::accelerator::hip::tests::ReductionTest::testParallelReduction() {
   const int numberOfBlocks = (ElementCount + ThreadsPerBlock - 1) / ThreadsPerBlock;
   CHECK_HIP_ERROR(hipSetDevice(DeviceId));
   reduceSum<<<numberOfBlocks, ThreadsPerBlock, 0, tarch::accelerator::deviceStreamGet()>>>(
-    deviceInput, ElementCount, deviceResult
+    deviceInput,
+    ElementCount,
+    deviceResult
   );
   CHECK_HIP_ERROR(hipStreamSynchronize(tarch::accelerator::deviceStreamGet()));
 

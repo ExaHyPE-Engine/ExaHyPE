@@ -24,12 +24,10 @@ namespace {
   }
 
   /**
-   * Gradient of the travelling pressure disturbance that drives the wave.
+   * Returns the gradient of the travelling pressure disturbance that drives the wave.
    *
    * The disturbance is a sine of one period, damped in two steps, moving along the
-   * first axis at a fixed speed. The momentum equation reads the field through this
-   * gradient alone, so the pressure itself is never formed, and the field does not
-   * vary across the channel. The step envelope is constant between its two levels
+   * first axis at a fixed speed. The step envelope is constant between its two levels
    * and contributes nothing to the derivative away from the point where it jumps.
    */
   tarch::la::Vector<DIMENSIONS, double> atmosphericPressureGradient(
@@ -157,10 +155,7 @@ void applications::exahype2::exaskred::ADERDGSolver::nonconservativeProduct(
 }
 
 /**
- * Rotation, bed drag and the atmospheric pressure gradient.
- *
- * The pressure gradient is what makes this a meteotsunami: A disturbance travelling
- * near the shallow-water wave speed keeps feeding the wave it rides on.
+ * Writes the rotation, the bed drag and the atmospheric pressure gradient into S.
  */
 void applications::exahype2::exaskred::ADERDGSolver::sourceTerm(
   const double* const NOALIAS                                   Q,
@@ -226,18 +221,16 @@ double applications::exahype2::exaskred::ADERDGSolver::solveRiemannProblem(
  * A cell is troubled where the water is shallow enough that the polynomial stops
  * describing a body of water.
  *
- * The channel carries a long smooth wave over fifty metres of water, but the raster
- * also holds ground that rises a hundred metres above the surface, so the domain has
- * a coast. The dry threshold is metres: A thinner film keeps a finite momentum, and its velocity grows until
- * the admissible step underflows. Cells over ground shallower than the coastal depth
- * go on the subcell scheme before they ever dry.
+ * The dry threshold is metres: A thinner film keeps a finite momentum, and its velocity
+ * grows until the admissible step underflows. Cells over ground shallower than the
+ * coastal depth go on the subcell scheme before they ever dry.
  */
 bool applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
   const double* const NOALIAS                                   Q,
   const int                                                     numberOfStates,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
-) const {
+) {
   const double minimumWaterHeight = RuntimeParameters::getMinimumWaterHeight();
   if (numberOfStates == 1) {
     return ::applications::exahype2::exaskred::limiting::
@@ -253,7 +246,7 @@ bool applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
 void applications::exahype2::exaskred::ADERDGSolver::mapDmpObservables(
   double* const NOALIAS       observables,
   const double* const NOALIAS Q
-) const {
+) {
   for (int observable = 0; observable < NumberOfDMPObservables; observable++) {
     observables[observable] = Q[observable];
   }

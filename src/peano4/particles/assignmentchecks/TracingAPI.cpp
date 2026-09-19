@@ -255,8 +255,10 @@ void peano4::particles::assignmentchecks::moveParticle(
     database.particleHistory(identifier)
   );
 
-  if ((previousEvent.type == peano4::particles::assignmentchecks::Event::Type::MoveWhileAssociatedToVertex)
-      or (previousEvent.type == peano4::particles::assignmentchecks::Event::Type::ConsecutiveMoveWhileAssociatedToVertex)) {
+  if (
+    (previousEvent.type == peano4::particles::assignmentchecks::Event::Type::MoveWhileAssociatedToVertex)
+    or (previousEvent.type == peano4::particles::assignmentchecks::Event::Type::ConsecutiveMoveWhileAssociatedToVertex)
+  ) {
     peano4::particles::assignmentchecks::Event newEvent = peano4::particles::assignmentchecks::Event(
       peano4::particles::assignmentchecks::Event::Type::ConsecutiveMoveWhileAssociatedToVertex,
       previousEvent.isLocal,

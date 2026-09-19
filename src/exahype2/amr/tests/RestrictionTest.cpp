@@ -195,7 +195,7 @@ void exahype2::amr::tests::RestrictionTest::testOrderInvariantProduct() {
 }
 
 void exahype2::amr::tests::RestrictionTest::testRestrictCellFromChildrenReproducesRamp() {
-  // Unknowns == DIMENSIONS lets each axis carry a distinct linear ramp.
+  // NumberOfUnknowns == DIMENSIONS lets each axis carry a distinct linear ramp.
   constexpr int NumberOfUnknowns    = DIMENSIONS;
   constexpr int NumberOfDofsPerAxis = 7;
 
@@ -233,7 +233,7 @@ void exahype2::amr::tests::RestrictionTest::testRestrictCellFromChildrenReproduc
 }
 
 void exahype2::amr::tests::RestrictionTest::testRestrictCellFromChildrenWithMatrixReproducesPolynomials() {
-  constexpr int Unknowns = 2;
+  constexpr int NumberOfUnknowns = 2;
 
   int nodesPerCell = 1;
   for (int d = 0; d < DIMENSIONS; d++) {
@@ -248,13 +248,13 @@ void exahype2::amr::tests::RestrictionTest::testRestrictCellFromChildrenWithMatr
       restriction.data() + static_cast<std::ptrdiff_t>(interval) * NodesPerAxis * NodesPerAxis;
   }
 
-  std::vector<double> coarse(static_cast<std::size_t>(nodesPerCell) * Unknowns, 0.0);
+  std::vector<double> coarse(static_cast<std::size_t>(nodesPerCell) * NumberOfUnknowns, 0.0);
   peano4::dForEach(NodesPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& node) {
     tarch::la::Vector<DIMENSIONS, double> x;
     for (int d = 0; d < DIMENSIONS; d++) {
       x(d) = nodePosition(node(d));
     }
-    const int index   = peano4::dLinearised(node, NodesPerAxis) * Unknowns;
+    const int index   = peano4::dLinearised(node, NodesPerAxis) * NumberOfUnknowns;
     coarse[index]     = affineField(x);
     coarse[index + 1] = 4.0;
   });
@@ -265,25 +265,25 @@ void exahype2::amr::tests::RestrictionTest::testRestrictCellFromChildrenWithMatr
   peano4::dForEach(SubdivisionFactor, [&](const tarch::la::Vector<DIMENSIONS, int>& child) {
     event.setRelativePositionToFather(child);
     auto& fine = children[peano4::dLinearised(child, SubdivisionFactor)];
-    fine.resize(static_cast<std::size_t>(nodesPerCell) * Unknowns);
+    fine.resize(static_cast<std::size_t>(nodesPerCell) * NumberOfUnknowns);
     exahype2::amr::interpolateCell(
       event.getCellMarker(),
       coarse.data(),
       fine.data(),
       interpolation.data(),
       NodesPerAxis,
-      Unknowns
+      NumberOfUnknowns
     );
     childPointers[peano4::dLinearised(child, SubdivisionFactor)] = fine.data();
   });
 
-  std::vector<double> restricted(static_cast<std::size_t>(nodesPerCell) * Unknowns, 0.0);
+  std::vector<double> restricted(static_cast<std::size_t>(nodesPerCell) * NumberOfUnknowns, 0.0);
   exahype2::amr::restrictCellFromChildren(
     restricted.data(),
     childPointers.data(),
     restrictionMatrixPerInterval.data(),
     NodesPerAxis,
-    Unknowns
+    NumberOfUnknowns
   );
 
   for (std::size_t i = 0; i < coarse.size(); i++) {
@@ -292,7 +292,7 @@ void exahype2::amr::tests::RestrictionTest::testRestrictCellFromChildrenWithMatr
 }
 
 void exahype2::amr::tests::RestrictionTest::testRestrictCellFromChildrenIsSymmetryEquivariant() {
-  constexpr int Unknowns = 2;
+  constexpr int NumberOfUnknowns = 2;
 
   int nodesPerCell = 1;
   for (int d = 0; d < DIMENSIONS; d++) {
@@ -326,14 +326,14 @@ void exahype2::amr::tests::RestrictionTest::testRestrictCellFromChildrenIsSymmet
     std::vector<const double*>       childPointers(ChildrenPerCell);
     std::vector<const double*>       mirroredChildPointers(ChildrenPerCell);
     for (int child = 0; child < ChildrenPerCell; child++) {
-      children[child].resize(static_cast<std::size_t>(nodesPerCell) * Unknowns);
-      mirroredChildren[child].resize(static_cast<std::size_t>(nodesPerCell) * Unknowns);
+      children[child].resize(static_cast<std::size_t>(nodesPerCell) * NumberOfUnknowns);
+      mirroredChildren[child].resize(static_cast<std::size_t>(nodesPerCell) * NumberOfUnknowns);
     }
     peano4::dForEach(SubdivisionFactor, [&](const tarch::la::Vector<DIMENSIONS, int>& child) {
       peano4::dForEach(NodesPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& node) {
-        const auto sourceIndex = peano4::dLinearised(node, NodesPerAxis) * Unknowns;
-        const auto targetIndex = peano4::dLinearised(transform(node, NodesPerAxis), NodesPerAxis) * Unknowns;
-        for (int u = 0; u < Unknowns; u++) {
+        const auto sourceIndex = peano4::dLinearised(node, NodesPerAxis) * NumberOfUnknowns;
+        const auto targetIndex = peano4::dLinearised(transform(node, NodesPerAxis), NodesPerAxis) * NumberOfUnknowns;
+        for (int u = 0; u < NumberOfUnknowns; u++) {
           const auto value = pseudoRandomValue(
             peano4::dLinearised(child, SubdivisionFactor),
             peano4::dLinearised(node, NodesPerAxis),
@@ -352,19 +352,19 @@ void exahype2::amr::tests::RestrictionTest::testRestrictCellFromChildrenIsSymmet
 
     // The averaging and the mass-lumped restriction both have to map mirrored
     // children onto the bitwise mirrored coarse cell.
-    std::vector<double> coarse(static_cast<std::size_t>(nodesPerCell) * Unknowns, 0.0);
-    std::vector<double> mirroredCoarse(static_cast<std::size_t>(nodesPerCell) * Unknowns, 0.0);
-    exahype2::amr::restrictCellFromChildren(coarse.data(), childPointers.data(), NodesPerAxis, Unknowns);
+    std::vector<double> coarse(static_cast<std::size_t>(nodesPerCell) * NumberOfUnknowns, 0.0);
+    std::vector<double> mirroredCoarse(static_cast<std::size_t>(nodesPerCell) * NumberOfUnknowns, 0.0);
+    exahype2::amr::restrictCellFromChildren(coarse.data(), childPointers.data(), NodesPerAxis, NumberOfUnknowns);
     exahype2::amr::restrictCellFromChildren(
       mirroredCoarse.data(),
       mirroredChildPointers.data(),
       NodesPerAxis,
-      Unknowns
+      NumberOfUnknowns
     );
     peano4::dForEach(NodesPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& node) {
-      const auto sourceIndex = peano4::dLinearised(node, NodesPerAxis) * Unknowns;
-      const auto targetIndex = peano4::dLinearised(transform(node, NodesPerAxis), NodesPerAxis) * Unknowns;
-      for (int u = 0; u < Unknowns; u++) {
+      const auto sourceIndex = peano4::dLinearised(node, NodesPerAxis) * NumberOfUnknowns;
+      const auto targetIndex = peano4::dLinearised(transform(node, NodesPerAxis), NodesPerAxis) * NumberOfUnknowns;
+      for (int u = 0; u < NumberOfUnknowns; u++) {
         validateEquals(bitPattern(mirroredCoarse[targetIndex + u]), bitPattern(coarse[sourceIndex + u]));
       }
     });
@@ -376,19 +376,19 @@ void exahype2::amr::tests::RestrictionTest::testRestrictCellFromChildrenIsSymmet
       childPointers.data(),
       restrictionMatrixPerInterval.data(),
       NodesPerAxis,
-      Unknowns
+      NumberOfUnknowns
     );
     exahype2::amr::restrictCellFromChildren(
       mirroredCoarse.data(),
       mirroredChildPointers.data(),
       restrictionMatrixPerInterval.data(),
       NodesPerAxis,
-      Unknowns
+      NumberOfUnknowns
     );
     peano4::dForEach(NodesPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& node) {
-      const auto sourceIndex = peano4::dLinearised(node, NodesPerAxis) * Unknowns;
-      const auto targetIndex = peano4::dLinearised(transform(node, NodesPerAxis), NodesPerAxis) * Unknowns;
-      for (int u = 0; u < Unknowns; u++) {
+      const auto sourceIndex = peano4::dLinearised(node, NodesPerAxis) * NumberOfUnknowns;
+      const auto targetIndex = peano4::dLinearised(transform(node, NodesPerAxis), NodesPerAxis) * NumberOfUnknowns;
+      for (int u = 0; u < NumberOfUnknowns; u++) {
         validateEquals(bitPattern(mirroredCoarse[targetIndex + u]), bitPattern(coarse[sourceIndex + u]));
       }
     });
@@ -648,14 +648,14 @@ void exahype2::amr::tests::RestrictionTest::testGatheredHaloRestrictionRunsInSin
 }
 
 void exahype2::amr::tests::RestrictionTest::testApplyTensorProductOrderInvariant() {
-  constexpr int Unknowns = 2;
+  constexpr int NumberOfUnknowns = 2;
 
   int nodesPerCell = 1;
   for (int d = 0; d < DIMENSIONS; d++) {
     nodesPerCell *= NodesPerAxis;
   }
 
-  std::vector<double> source(static_cast<std::size_t>(nodesPerCell) * Unknowns);
+  std::vector<double> source(static_cast<std::size_t>(nodesPerCell) * NumberOfUnknowns);
   for (std::size_t i = 0; i < source.size(); i++) {
     source[i] = pseudoRandomValue(0, static_cast<int>(i), 1);
   }
@@ -676,7 +676,7 @@ void exahype2::amr::tests::RestrictionTest::testApplyTensorProductOrderInvariant
     identityPerAxis,
     NodesPerAxis,
     NodesPerAxis,
-    Unknowns
+    NumberOfUnknowns
   );
   for (std::size_t i = 0; i < source.size(); i++) {
     validateEquals(bitPattern(target[i]), bitPattern(source[i]));
@@ -694,9 +694,9 @@ void exahype2::amr::tests::RestrictionTest::testApplyTensorProductOrderInvariant
     auto swapped = node;
     swapped(0)   = node(1);
     swapped(1)   = node(0);
-    for (int u = 0; u < Unknowns; u++) {
-      swappedSource[peano4::dLinearised(swapped, NodesPerAxis) * Unknowns + u] =
-        source[peano4::dLinearised(node, NodesPerAxis) * Unknowns + u];
+    for (int u = 0; u < NumberOfUnknowns; u++) {
+      swappedSource[peano4::dLinearised(swapped, NodesPerAxis) * NumberOfUnknowns + u] =
+        source[peano4::dLinearised(node, NodesPerAxis) * NumberOfUnknowns + u];
     }
   });
   std::vector<double> swappedTarget(source.size(), -1.0);
@@ -706,7 +706,7 @@ void exahype2::amr::tests::RestrictionTest::testApplyTensorProductOrderInvariant
     matrixPerAxis,
     NodesPerAxis,
     NodesPerAxis,
-    Unknowns
+    NumberOfUnknowns
   );
   exahype2::amr::applyTensorProductOrderInvariant(
     swappedTarget.data(),
@@ -714,24 +714,24 @@ void exahype2::amr::tests::RestrictionTest::testApplyTensorProductOrderInvariant
     matrixPerAxis,
     NodesPerAxis,
     NodesPerAxis,
-    Unknowns
+    NumberOfUnknowns
   );
   peano4::dForEach(NodesPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& node) {
     auto swapped = node;
     swapped(0)   = node(1);
     swapped(1)   = node(0);
-    for (int u = 0; u < Unknowns; u++) {
+    for (int u = 0; u < NumberOfUnknowns; u++) {
       validateEquals(
-        bitPattern(swappedTarget[peano4::dLinearised(swapped, NodesPerAxis) * Unknowns + u]),
-        bitPattern(target[peano4::dLinearised(node, NodesPerAxis) * Unknowns + u])
+        bitPattern(swappedTarget[peano4::dLinearised(swapped, NodesPerAxis) * NumberOfUnknowns + u]),
+        bitPattern(target[peano4::dLinearised(node, NodesPerAxis) * NumberOfUnknowns + u])
       );
     }
   });
 }
 
 void exahype2::amr::tests::RestrictionTest::testInterpolateFaceFromCoarse() {
-  constexpr int Unknowns = 2;
-  constexpr int Stride   = NodesPerAxis * NodesPerAxis;
+  constexpr int NumberOfUnknowns = 2;
+  constexpr int Stride           = NodesPerAxis * NodesPerAxis;
 #if DIMENSIONS == 2
   constexpr int NodesPerFace = NodesPerAxis;
 #else
@@ -742,13 +742,13 @@ void exahype2::amr::tests::RestrictionTest::testInterpolateFaceFromCoarse() {
 
   // An affine tangential field lies in the order-one basis, so every subface
   // reproduces it at its own node positions up to roundoff.
-  std::array<double, static_cast<std::size_t>(NodesPerFace * Unknowns)> coarse{};
+  std::array<double, static_cast<std::size_t>(NodesPerFace * NumberOfUnknowns)> coarse{};
   for (int node = 0; node < NodesPerFace; node++) {
-    for (int u = 0; u < Unknowns; u++) {
+    for (int u = 0; u < NumberOfUnknowns; u++) {
 #if DIMENSIONS == 2
-      coarse[node * Unknowns + u] = 1.0 + u + 2.0 * nodePosition(node);
+      coarse[node * NumberOfUnknowns + u] = 1.0 + u + 2.0 * nodePosition(node);
 #else
-      coarse[node * Unknowns + u] =
+      coarse[node * NumberOfUnknowns + u] =
         1.0 + u + 2.0 * nodePosition(node % NodesPerAxis) + 3.0 * nodePosition(node / NodesPerAxis);
 #endif
     }
@@ -757,30 +757,30 @@ void exahype2::amr::tests::RestrictionTest::testInterpolateFaceFromCoarse() {
 #if DIMENSIONS == 2
   for (int subface = 0; subface < SubdivisionFactor; subface++) {
     const double* prolongationMatrixPerAxis[1] = {prolongation.data() + static_cast<std::ptrdiff_t>(subface * Stride)};
-    std::array<double, static_cast<std::size_t>(NodesPerFace * Unknowns)> fine{};
+    std::array<double, static_cast<std::size_t>(NodesPerFace * NumberOfUnknowns)> fine{};
     exahype2::amr::interpolateFaceFromCoarse(
       fine.data(),
       coarse.data(),
       prolongationMatrixPerAxis,
       NodesPerAxis,
-      Unknowns
+      NumberOfUnknowns
     );
     for (int node = 0; node < NodesPerFace; node++) {
       const double finePosition = (nodePosition(node) + subface) / SubdivisionFactor;
-      for (int u = 0; u < Unknowns; u++) {
-        validateNumericalEquals(fine[node * Unknowns + u], 1.0 + u + 2.0 * finePosition);
+      for (int u = 0; u < NumberOfUnknowns; u++) {
+        validateNumericalEquals(fine[node * NumberOfUnknowns + u], 1.0 + u + 2.0 * finePosition);
       }
     }
   }
 
   // Mirroring the coarse half along the tangential axis interpolates the
   // opposite subface to the bitwise mirrored values.
-  std::array<double, static_cast<std::size_t>(NodesPerFace * Unknowns)> randomCoarse{};
-  std::array<double, static_cast<std::size_t>(NodesPerFace * Unknowns)> mirroredCoarse{};
+  std::array<double, static_cast<std::size_t>(NodesPerFace * NumberOfUnknowns)> randomCoarse{};
+  std::array<double, static_cast<std::size_t>(NodesPerFace * NumberOfUnknowns)> mirroredCoarse{};
   for (int node = 0; node < NodesPerFace; node++) {
-    for (int u = 0; u < Unknowns; u++) {
-      randomCoarse[node * Unknowns + u]                        = pseudoRandomValue(0, node, u);
-      mirroredCoarse[(NodesPerFace - 1 - node) * Unknowns + u] = pseudoRandomValue(0, node, u);
+    for (int u = 0; u < NumberOfUnknowns; u++) {
+      randomCoarse[node * NumberOfUnknowns + u]                        = pseudoRandomValue(0, node, u);
+      mirroredCoarse[(NodesPerFace - 1 - node) * NumberOfUnknowns + u] = pseudoRandomValue(0, node, u);
     }
   }
   for (int subface = 0; subface < SubdivisionFactor; subface++) {
@@ -788,27 +788,27 @@ void exahype2::amr::tests::RestrictionTest::testInterpolateFaceFromCoarse() {
     const double* mirroredMatrixPerAxis[1]     = {
       prolongation.data() + static_cast<std::ptrdiff_t>((SubdivisionFactor - 1 - subface) * Stride)
     };
-    std::array<double, static_cast<std::size_t>(NodesPerFace * Unknowns)> fine{};
-    std::array<double, static_cast<std::size_t>(NodesPerFace * Unknowns)> mirroredFine{};
+    std::array<double, static_cast<std::size_t>(NodesPerFace * NumberOfUnknowns)> fine{};
+    std::array<double, static_cast<std::size_t>(NodesPerFace * NumberOfUnknowns)> mirroredFine{};
     exahype2::amr::interpolateFaceFromCoarse(
       fine.data(),
       randomCoarse.data(),
       prolongationMatrixPerAxis,
       NodesPerAxis,
-      Unknowns
+      NumberOfUnknowns
     );
     exahype2::amr::interpolateFaceFromCoarse(
       mirroredFine.data(),
       mirroredCoarse.data(),
       mirroredMatrixPerAxis,
       NodesPerAxis,
-      Unknowns
+      NumberOfUnknowns
     );
     for (int node = 0; node < NodesPerFace; node++) {
-      for (int u = 0; u < Unknowns; u++) {
+      for (int u = 0; u < NumberOfUnknowns; u++) {
         validateEquals(
-          bitPattern(mirroredFine[(NodesPerFace - 1 - node) * Unknowns + u]),
-          bitPattern(fine[node * Unknowns + u])
+          bitPattern(mirroredFine[(NodesPerFace - 1 - node) * NumberOfUnknowns + u]),
+          bitPattern(fine[node * NumberOfUnknowns + u])
         );
       }
     }
@@ -820,21 +820,21 @@ void exahype2::amr::tests::RestrictionTest::testInterpolateFaceFromCoarse() {
         prolongation.data() + static_cast<std::ptrdiff_t>(subfaceInner * Stride),
         prolongation.data() + static_cast<std::ptrdiff_t>(subfaceOuter * Stride)
       };
-      std::array<double, static_cast<std::size_t>(NodesPerFace * Unknowns)> subface{};
+      std::array<double, static_cast<std::size_t>(NodesPerFace * NumberOfUnknowns)> subface{};
       exahype2::amr::interpolateFaceFromCoarse(
         subface.data(),
         coarse.data(),
         subfaceMatrixPerAxis,
         NodesPerAxis,
-        Unknowns
+        NumberOfUnknowns
       );
       for (int fineOuter = 0; fineOuter < NodesPerAxis; fineOuter++) {
         for (int fineInner = 0; fineInner < NodesPerAxis; fineInner++) {
           const double innerPosition = (nodePosition(fineInner) + subfaceInner) / SubdivisionFactor;
           const double outerPosition = (nodePosition(fineOuter) + subfaceOuter) / SubdivisionFactor;
-          for (int u = 0; u < Unknowns; u++) {
+          for (int u = 0; u < NumberOfUnknowns; u++) {
             validateNumericalEquals(
-              subface[(fineOuter * NodesPerAxis + fineInner) * Unknowns + u],
+              subface[(fineOuter * NodesPerAxis + fineInner) * NumberOfUnknowns + u],
               1.0 + u + 2.0 * innerPosition + 3.0 * outerPosition
             );
           }
@@ -846,41 +846,41 @@ void exahype2::amr::tests::RestrictionTest::testInterpolateFaceFromCoarse() {
   // Swapping the tangential axes of the coarse half and the per-axis operators
   // interpolates the transposed subface to the bitwise transposed values.
   const double* prolongationMatrixPerAxis[2] = {prolongation.data(), prolongation.data() + Stride};
-  std::array<double, static_cast<std::size_t>(NodesPerFace * Unknowns)> randomCoarse{};
-  std::array<double, static_cast<std::size_t>(NodesPerFace * Unknowns)> transposedCoarse{};
+  std::array<double, static_cast<std::size_t>(NodesPerFace * NumberOfUnknowns)> randomCoarse{};
+  std::array<double, static_cast<std::size_t>(NodesPerFace * NumberOfUnknowns)> transposedCoarse{};
   for (int outer = 0; outer < NodesPerAxis; outer++) {
     for (int inner = 0; inner < NodesPerAxis; inner++) {
-      for (int u = 0; u < Unknowns; u++) {
-        randomCoarse[(outer * NodesPerAxis + inner) * Unknowns + u] =
+      for (int u = 0; u < NumberOfUnknowns; u++) {
+        randomCoarse[(outer * NodesPerAxis + inner) * NumberOfUnknowns + u] =
           pseudoRandomValue(1, outer * NodesPerAxis + inner, u);
-        transposedCoarse[(inner * NodesPerAxis + outer) * Unknowns + u] =
+        transposedCoarse[(inner * NodesPerAxis + outer) * NumberOfUnknowns + u] =
           pseudoRandomValue(1, outer * NodesPerAxis + inner, u);
       }
     }
   }
   const double* swappedMatrixPerAxis[2] = {prolongation.data() + Stride, prolongation.data()};
-  std::array<double, static_cast<std::size_t>(NodesPerFace * Unknowns)> randomFine{};
-  std::array<double, static_cast<std::size_t>(NodesPerFace * Unknowns)> transposedFine{};
+  std::array<double, static_cast<std::size_t>(NodesPerFace * NumberOfUnknowns)> randomFine{};
+  std::array<double, static_cast<std::size_t>(NodesPerFace * NumberOfUnknowns)> transposedFine{};
   exahype2::amr::interpolateFaceFromCoarse(
     randomFine.data(),
     randomCoarse.data(),
     prolongationMatrixPerAxis,
     NodesPerAxis,
-    Unknowns
+    NumberOfUnknowns
   );
   exahype2::amr::interpolateFaceFromCoarse(
     transposedFine.data(),
     transposedCoarse.data(),
     swappedMatrixPerAxis,
     NodesPerAxis,
-    Unknowns
+    NumberOfUnknowns
   );
   for (int fineOuter = 0; fineOuter < NodesPerAxis; fineOuter++) {
     for (int fineInner = 0; fineInner < NodesPerAxis; fineInner++) {
-      for (int u = 0; u < Unknowns; u++) {
+      for (int u = 0; u < NumberOfUnknowns; u++) {
         validateEquals(
-          bitPattern(transposedFine[(fineInner * NodesPerAxis + fineOuter) * Unknowns + u]),
-          bitPattern(randomFine[(fineOuter * NodesPerAxis + fineInner) * Unknowns + u])
+          bitPattern(transposedFine[(fineInner * NodesPerAxis + fineOuter) * NumberOfUnknowns + u]),
+          bitPattern(randomFine[(fineOuter * NodesPerAxis + fineInner) * NumberOfUnknowns + u])
         );
       }
     }
@@ -889,7 +889,7 @@ void exahype2::amr::tests::RestrictionTest::testInterpolateFaceFromCoarse() {
 }
 
 void exahype2::amr::tests::RestrictionTest::testRestrictFaceFromChildren() {
-  constexpr int Unknowns = 2;
+  constexpr int NumberOfUnknowns = 2;
 #if DIMENSIONS == 2
   constexpr int NodesPerFace = NodesPerAxis;
 #else
@@ -906,19 +906,19 @@ void exahype2::amr::tests::RestrictionTest::testRestrictFaceFromChildren() {
   std::vector<std::vector<double>> subfaces(NumberOfSubfaces);
   std::vector<const double*>       subfacePointers(NumberOfSubfaces);
   for (int subface = 0; subface < NumberOfSubfaces; subface++) {
-    subfaces[subface].resize(static_cast<std::size_t>(NodesPerFace) * Unknowns);
+    subfaces[subface].resize(static_cast<std::size_t>(NodesPerFace) * NumberOfUnknowns);
     for (int node = 0; node < NodesPerFace; node++) {
-      for (int u = 0; u < Unknowns; u++) {
-        subfaces[subface][node * Unknowns + u] = pseudoRandomValue(subface, node, u);
+      for (int u = 0; u < NumberOfUnknowns; u++) {
+        subfaces[subface][node * NumberOfUnknowns + u] = pseudoRandomValue(subface, node, u);
       }
     }
     subfacePointers[subface] = subfaces[subface].data();
   }
 
   // An absent subface contributes exactly what a zero-valued one contributes.
-  std::vector<double> zeroValues(static_cast<std::size_t>(NodesPerFace) * Unknowns, 0.0);
-  std::vector<double> coarseWithZeroChild(static_cast<std::size_t>(NodesPerFace) * Unknowns, -1.0);
-  std::vector<double> coarseWithAbsentChild(static_cast<std::size_t>(NodesPerFace) * Unknowns, -1.0);
+  std::vector<double> zeroValues(static_cast<std::size_t>(NodesPerFace) * NumberOfUnknowns, 0.0);
+  std::vector<double> coarseWithZeroChild(static_cast<std::size_t>(NodesPerFace) * NumberOfUnknowns, -1.0);
+  std::vector<double> coarseWithAbsentChild(static_cast<std::size_t>(NodesPerFace) * NumberOfUnknowns, -1.0);
   auto                pointers = subfacePointers;
   pointers[1]                  = zeroValues.data();
   exahype2::amr::restrictFaceFromChildren(
@@ -926,7 +926,7 @@ void exahype2::amr::tests::RestrictionTest::testRestrictFaceFromChildren() {
     pointers.data(),
     restrictionMatrixPerInterval.data(),
     NodesPerAxis,
-    Unknowns
+    NumberOfUnknowns
   );
   pointers[1] = nullptr;
   exahype2::amr::restrictFaceFromChildren(
@@ -934,7 +934,7 @@ void exahype2::amr::tests::RestrictionTest::testRestrictFaceFromChildren() {
     pointers.data(),
     restrictionMatrixPerInterval.data(),
     NodesPerAxis,
-    Unknowns
+    NumberOfUnknowns
   );
   for (std::size_t i = 0; i < coarseWithZeroChild.size(); i++) {
     validateEquals(bitPattern(coarseWithAbsentChild[i]), bitPattern(coarseWithZeroChild[i]));
@@ -945,45 +945,45 @@ void exahype2::amr::tests::RestrictionTest::testRestrictFaceFromChildren() {
   std::vector<std::vector<double>> mirroredSubfaces(NumberOfSubfaces);
   std::vector<const double*>       mirroredPointers(NumberOfSubfaces);
   for (int subface = 0; subface < NumberOfSubfaces; subface++) {
-    mirroredSubfaces[subface].resize(static_cast<std::size_t>(NodesPerFace) * Unknowns);
+    mirroredSubfaces[subface].resize(static_cast<std::size_t>(NodesPerFace) * NumberOfUnknowns);
   }
   for (int subface = 0; subface < NumberOfSubfaces; subface++) {
     for (int node = 0; node < NodesPerFace; node++) {
-      for (int u = 0; u < Unknowns; u++) {
-        mirroredSubfaces[NumberOfSubfaces - 1 - subface][(NodesPerFace - 1 - node) * Unknowns + u] =
-          subfaces[subface][node * Unknowns + u];
+      for (int u = 0; u < NumberOfUnknowns; u++) {
+        mirroredSubfaces[NumberOfSubfaces - 1 - subface][(NodesPerFace - 1 - node) * NumberOfUnknowns + u] =
+          subfaces[subface][node * NumberOfUnknowns + u];
       }
     }
     mirroredPointers[subface] = mirroredSubfaces[subface].data();
   }
-  std::vector<double> coarse(static_cast<std::size_t>(NodesPerFace) * Unknowns, -1.0);
-  std::vector<double> mirroredCoarse(static_cast<std::size_t>(NodesPerFace) * Unknowns, -1.0);
+  std::vector<double> coarse(static_cast<std::size_t>(NodesPerFace) * NumberOfUnknowns, -1.0);
+  std::vector<double> mirroredCoarse(static_cast<std::size_t>(NodesPerFace) * NumberOfUnknowns, -1.0);
   exahype2::amr::restrictFaceFromChildren(
     coarse.data(),
     subfacePointers.data(),
     restrictionMatrixPerInterval.data(),
     NodesPerAxis,
-    Unknowns
+    NumberOfUnknowns
   );
   exahype2::amr::restrictFaceFromChildren(
     mirroredCoarse.data(),
     mirroredPointers.data(),
     restrictionMatrixPerInterval.data(),
     NodesPerAxis,
-    Unknowns
+    NumberOfUnknowns
   );
   for (int node = 0; node < NodesPerFace; node++) {
-    for (int u = 0; u < Unknowns; u++) {
+    for (int u = 0; u < NumberOfUnknowns; u++) {
       validateEquals(
-        bitPattern(mirroredCoarse[(NodesPerFace - 1 - node) * Unknowns + u]),
-        bitPattern(coarse[node * Unknowns + u])
+        bitPattern(mirroredCoarse[(NodesPerFace - 1 - node) * NumberOfUnknowns + u]),
+        bitPattern(coarse[node * NumberOfUnknowns + u])
       );
     }
   }
 }
 
 void exahype2::amr::tests::RestrictionTest::testRestrictCellWithMatrixReproducesPolynomials() {
-  constexpr int Unknowns = 2;
+  constexpr int NumberOfUnknowns = 2;
 
   int nodesPerCell = 1;
   for (int d = 0; d < DIMENSIONS; d++) {
@@ -993,13 +993,13 @@ void exahype2::amr::tests::RestrictionTest::testRestrictCellWithMatrixReproduces
   const auto interpolation = interpolationMatrix();
   const auto restriction   = restrictionMatrix();
 
-  std::vector<double> coarse(static_cast<std::size_t>(nodesPerCell) * Unknowns, 0.0);
+  std::vector<double> coarse(static_cast<std::size_t>(nodesPerCell) * NumberOfUnknowns, 0.0);
   peano4::dForEach(NodesPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& node) {
     tarch::la::Vector<DIMENSIONS, double> x;
     for (int d = 0; d < DIMENSIONS; d++) {
       x(d) = nodePosition(node(d));
     }
-    const int index   = peano4::dLinearised(node, NodesPerAxis) * Unknowns;
+    const int index   = peano4::dLinearised(node, NodesPerAxis) * NumberOfUnknowns;
     coarse[index]     = affineField(x);
     coarse[index + 1] = 4.0;
   });
@@ -1007,19 +1007,19 @@ void exahype2::amr::tests::RestrictionTest::testRestrictCellWithMatrixReproduces
   // The interpolate-then-restrict round trip over all children is the identity for every
   // field the coarse basis represents.
   peano4::grid::GridTraversalEvent event;
-  std::vector<double>              restricted(static_cast<std::size_t>(nodesPerCell) * Unknowns, 0.0);
+  std::vector<double>              restricted(static_cast<std::size_t>(nodesPerCell) * NumberOfUnknowns, 0.0);
   peano4::dForEach(SubdivisionFactor, [&](const tarch::la::Vector<DIMENSIONS, int>& child) {
     event.setRelativePositionToFather(child);
     const auto cellMarker = event.getCellMarker();
 
-    std::vector<double> fine(static_cast<std::size_t>(nodesPerCell) * Unknowns, 0.0);
+    std::vector<double> fine(static_cast<std::size_t>(nodesPerCell) * NumberOfUnknowns, 0.0);
     exahype2::amr::interpolateCell(
       cellMarker,
       coarse.data(),
       fine.data(),
       interpolation.data(),
       NodesPerAxis,
-      Unknowns
+      NumberOfUnknowns
     );
 
     peano4::dForEach(NodesPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& node) {
@@ -1027,7 +1027,7 @@ void exahype2::amr::tests::RestrictionTest::testRestrictCellWithMatrixReproduces
       for (int d = 0; d < DIMENSIONS; d++) {
         x(d) = (nodePosition(node(d)) + child(d)) / SubdivisionFactor;
       }
-      const int index = peano4::dLinearised(node, NodesPerAxis) * Unknowns;
+      const int index = peano4::dLinearised(node, NodesPerAxis) * NumberOfUnknowns;
       validateNumericalEqualsWithEps(fine[index], affineField(x), 1e-12);
       validateNumericalEqualsWithEps(fine[index + 1], 4.0, 1e-12);
     });
@@ -1039,7 +1039,7 @@ void exahype2::amr::tests::RestrictionTest::testRestrictCellWithMatrixReproduces
       restriction.data(),
       QuadratureWeights.data(),
       NodesPerAxis,
-      Unknowns
+      NumberOfUnknowns
     );
   });
 
@@ -1049,7 +1049,7 @@ void exahype2::amr::tests::RestrictionTest::testRestrictCellWithMatrixReproduces
 }
 
 void exahype2::amr::tests::RestrictionTest::testRestrictHaloLayer() {
-  // Unknowns == DIMENSIONS lets each axis carry a distinct linear ramp.
+  // NumberOfUnknowns == DIMENSIONS lets each axis carry a distinct linear ramp.
   constexpr int NumberOfUnknowns    = DIMENSIONS;
   constexpr int NumberOfDofsPerAxis = 7;
 
@@ -1139,7 +1139,7 @@ void exahype2::amr::tests::RestrictionTest::testRestrictHaloLayer() {
 }
 
 void exahype2::amr::tests::RestrictionTest::testRestrictCell() {
-  // Unknowns == DIMENSIONS lets each axis carry a distinct linear ramp.
+  // NumberOfUnknowns == DIMENSIONS lets each axis carry a distinct linear ramp.
   constexpr int NumberOfUnknowns    = DIMENSIONS;
   constexpr int NumberOfDofsPerAxis = 7;
 

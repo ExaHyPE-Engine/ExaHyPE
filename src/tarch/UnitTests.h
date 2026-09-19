@@ -9,4 +9,4 @@ namespace tarch {
    * Please destroy after usage
    */
   tarch::tests::TestCase* getUnitTests();
-}
+} // namespace tarch

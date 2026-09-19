@@ -106,7 +106,7 @@ namespace tarch::accelerator {
 #pragma omp target teams distribute device(device)
     for (int i = 0; i < range.n; ++i) {
       alignas(PEANO_WITH_ALIGNMENT) unsigned char teamScratch[TeamScratchBytes];
-#pragma omp parallel default(none) shared(functor, i, teamScratch)
+#pragma omp                         parallel default(none) shared(functor, i, teamScratch)
       {
         functor(i, tarch::accelerator::OmptTeam{teamScratch});
       }

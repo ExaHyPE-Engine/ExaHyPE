@@ -3,6 +3,7 @@
 #include "BoundaryExtrapolationTest.h"
 
 #include "exahype2/dg/BoundaryExtrapolation.h"
+#include "exahype2/dg/DGUtils.h"
 #include "peano4/Constants.h"
 
 namespace {
@@ -10,9 +11,8 @@ namespace {
   constexpr int NumberOfUnknowns           = 2;
   constexpr int NumberOfAuxiliaryVariables = 1;
   constexpr int NumberOfData               = NumberOfUnknowns + NumberOfAuxiliaryVariables;
-  constexpr int NodesPerAxisIn3D           = (DIMENSIONS > 2) ? NumberOfDofsPerAxis : 1;
-  constexpr int NodesPerFace               = NumberOfDofsPerAxis * NodesPerAxisIn3D;
-  constexpr int NodesPerCell               = NodesPerFace * NumberOfDofsPerAxis;
+  constexpr int FaceNodes                  = exahype2::dg::NodesPerFace<NumberOfDofsPerAxis>;
+  constexpr int CellNodes                  = exahype2::dg::NodesPerCell<NumberOfDofsPerAxis>;
   constexpr int PaddedNodeStride           = NumberOfData + 2;
 
   struct FluxSolver final {
@@ -54,8 +54,8 @@ namespace {
   };
 
   struct FaceBuffers final {
-    double state[peano4::FacesPerCell][NodesPerFace * NumberOfData]{};
-    double flux[peano4::FacesPerCell][NodesPerFace * NumberOfUnknowns]{};
+    double state[peano4::FacesPerCell][FaceNodes * NumberOfData]{};
+    double flux[peano4::FacesPerCell][FaceNodes * NumberOfUnknowns]{};
   };
 
   // The entry (i, j) of the stub derivative operator differs for every pair,
@@ -137,10 +137,10 @@ void exahype2::dg::tests::BoundaryExtrapolationTest::run() {
 void exahype2::dg::tests::BoundaryExtrapolationTest::testFaceBuffersAreClearedBeforeTheProjection() {
   FaceBuffers buffers;
   for (int face = 0; face < peano4::FacesPerCell; face++) {
-    for (int entry = 0; entry < NodesPerFace * NumberOfData; entry++) {
+    for (int entry = 0; entry < FaceNodes * NumberOfData; entry++) {
       buffers.state[face][entry] = 9.0;
     }
-    for (int entry = 0; entry < NodesPerFace * NumberOfUnknowns; entry++) {
+    for (int entry = 0; entry < FaceNodes * NumberOfUnknowns; entry++) {
       buffers.flux[face][entry] = 9.0;
     }
   }
@@ -149,9 +149,9 @@ void exahype2::dg::tests::BoundaryExtrapolationTest::testFaceBuffersAreClearedBe
   double* flux[peano4::FacesPerCell];
   collectPointers(buffers, state, flux);
 
-  const double                                cellState[NodesPerCell * NumberOfData] = {};
-  const double                                coefficients[NumberOfDofsPerAxis]      = {};
-  const double                                quadratureNodes[NumberOfDofsPerAxis]   = {};
+  const double                                cellState[CellNodes * NumberOfData]  = {};
+  const double                                coefficients[NumberOfDofsPerAxis]    = {};
+  const double                                quadratureNodes[NumberOfDofsPerAxis] = {};
   const tarch::la::Vector<DIMENSIONS, double> cellCentre(0.0);
   const tarch::la::Vector<DIMENSIONS, double> cellSize(1.0);
 
@@ -177,10 +177,10 @@ void exahype2::dg::tests::BoundaryExtrapolationTest::testFaceBuffersAreClearedBe
     );
 
   for (int face = 0; face < peano4::FacesPerCell; face++) {
-    for (int entry = 0; entry < NodesPerFace * NumberOfData; entry++) {
+    for (int entry = 0; entry < FaceNodes * NumberOfData; entry++) {
       validateNumericalEquals(buffers.state[face][entry], 0.0);
     }
-    for (int entry = 0; entry < NodesPerFace * NumberOfUnknowns; entry++) {
+    for (int entry = 0; entry < FaceNodes * NumberOfUnknowns; entry++) {
       validateNumericalEquals(buffers.flux[face][entry], 0.0);
     }
   }
@@ -192,8 +192,8 @@ void exahype2::dg::tests::BoundaryExtrapolationTest::testAConstantStateReachesEv
   double*     flux[peano4::FacesPerCell];
   collectPointers(buffers, state, flux);
 
-  double cellState[NodesPerCell * NumberOfData] = {};
-  for (int cellNode = 0; cellNode < NodesPerCell; cellNode++) {
+  double cellState[CellNodes * NumberOfData] = {};
+  for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
     for (int value = 0; value < NumberOfData; value++) {
       cellState[cellNode * NumberOfData + value] = 1.0 + value;
     }
@@ -219,7 +219,7 @@ void exahype2::dg::tests::BoundaryExtrapolationTest::testAConstantStateReachesEv
     );
 
   for (int direction = 0; direction < DIMENSIONS; direction++) {
-    for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
+    for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
       for (int value = 0; value < NumberOfData; value++) {
         validateNumericalEquals(state[direction][faceNode * NumberOfData + value], (1.0 + value) * leftSum);
         validateNumericalEquals(
@@ -239,15 +239,15 @@ void exahype2::dg::tests::BoundaryExtrapolationTest::testEachFaceNodeSeesOnlyIts
     rightCoefficients[index] = 0.0;
   }
 
-  for (int markedCellNode = 0; markedCellNode < NodesPerCell; markedCellNode++) {
+  for (int markedCellNode = 0; markedCellNode < CellNodes; markedCellNode++) {
     FaceBuffers buffers;
     double*     state[peano4::FacesPerCell];
     double*     flux[peano4::FacesPerCell];
     collectPointers(buffers, state, flux);
 
-    double    cellState[NodesPerCell * NumberOfData] = {};
-    const int markedEntry                            = markedCellNode * NumberOfData;
-    cellState[markedEntry]                           = 1.0;
+    double    cellState[CellNodes * NumberOfData] = {};
+    const int markedEntry                         = markedCellNode * NumberOfData;
+    cellState[markedEntry]                        = 1.0;
 
     exahype2::dg::
       extrapolateStateToFaces<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables, double, double>(
@@ -258,7 +258,7 @@ void exahype2::dg::tests::BoundaryExtrapolationTest::testEachFaceNodeSeesOnlyIts
       );
 
     for (int direction = 0; direction < DIMENSIONS; direction++) {
-      for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
+      for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
         double expected = 0.0;
         for (int normalIndex = 0; normalIndex < NumberOfDofsPerAxis; normalIndex++) {
           if (cellNodeOf(direction, faceNode, normalIndex) == markedCellNode) {
@@ -278,8 +278,8 @@ void exahype2::dg::tests::BoundaryExtrapolationTest::testTheTwoEndsUseTheirOwnCo
   double*     flux[peano4::FacesPerCell];
   collectPointers(buffers, state, flux);
 
-  double cellState[NodesPerCell * NumberOfData];
-  for (int entry = 0; entry < NodesPerCell * NumberOfData; entry++) {
+  double cellState[CellNodes * NumberOfData];
+  for (int entry = 0; entry < CellNodes * NumberOfData; entry++) {
     cellState[entry] = 1.0 + 0.5 * entry;
   }
 
@@ -301,7 +301,7 @@ void exahype2::dg::tests::BoundaryExtrapolationTest::testTheTwoEndsUseTheirOwnCo
   // The upper coefficients are three times the lower ones, so the upper face
   // carries three times the value of the lower one.
   for (int direction = 0; direction < DIMENSIONS; direction++) {
-    for (int entry = 0; entry < NodesPerFace * NumberOfData; entry++) {
+    for (int entry = 0; entry < FaceNodes * NumberOfData; entry++) {
       validateNumericalEquals(state[direction + DIMENSIONS][entry], 3.0 * state[direction][entry]);
     }
   }
@@ -313,8 +313,8 @@ void exahype2::dg::tests::BoundaryExtrapolationTest::testFluxIsEvaluatedAtCellNo
     coefficients[index] = 1.0 + index;
   }
 
-  double cellState[NodesPerCell * NumberOfData] = {};
-  for (int cellNode = 0; cellNode < NodesPerCell; cellNode++) {
+  double cellState[CellNodes * NumberOfData] = {};
+  for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
     for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
       cellState[cellNode * NumberOfData + unknown] = 1.0 + cellNode + 0.25 * unknown;
     }
@@ -343,7 +343,7 @@ void exahype2::dg::tests::BoundaryExtrapolationTest::testFluxIsEvaluatedAtCellNo
     );
 
   for (int direction = 0; direction < DIMENSIONS; direction++) {
-    for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
+    for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         double expected = 0.0;
         for (int normalIndex = 0; normalIndex < NumberOfDofsPerAxis; normalIndex++) {
@@ -363,7 +363,7 @@ void exahype2::dg::tests::BoundaryExtrapolationTest::testASystemWithoutFluxLeave
   double*     flux[peano4::FacesPerCell];
   collectPointers(buffers, state, flux);
 
-  double cellState[NodesPerCell * NumberOfData] = {};
+  double cellState[CellNodes * NumberOfData] = {};
   double coefficients[NumberOfDofsPerAxis];
   double quadratureNodes[NumberOfDofsPerAxis] = {};
   for (int index = 0; index < NumberOfDofsPerAxis; index++) {
@@ -387,7 +387,7 @@ void exahype2::dg::tests::BoundaryExtrapolationTest::testASystemWithoutFluxLeave
     );
 
   for (int face = 0; face < peano4::FacesPerCell; face++) {
-    for (int entry = 0; entry < NodesPerFace * NumberOfUnknowns; entry++) {
+    for (int entry = 0; entry < FaceNodes * NumberOfUnknowns; entry++) {
       validateNumericalEquals(flux[face][entry], 0.0);
     }
   }
@@ -398,9 +398,9 @@ void exahype2::dg::tests::BoundaryExtrapolationTest::testFluxOnAFaceComesFromThe
   const tarch::la::Vector<DIMENSIONS, double> faceCentre(0.5);
   const tarch::la::Vector<DIMENSIONS, double> cellSize(1.0);
 
-  double leftState[NodesPerFace * NumberOfData];
-  double rightState[NodesPerFace * NumberOfData];
-  for (int entry = 0; entry < NodesPerFace * NumberOfData; entry++) {
+  double leftState[FaceNodes * NumberOfData];
+  double rightState[FaceNodes * NumberOfData];
+  for (int entry = 0; entry < FaceNodes * NumberOfData; entry++) {
     leftState[entry]  = 1.0 + 0.5 * entry;
     rightState[entry] = -2.0 + 0.25 * entry;
   }
@@ -408,8 +408,8 @@ void exahype2::dg::tests::BoundaryExtrapolationTest::testFluxOnAFaceComesFromThe
   for (int direction = 0; direction < DIMENSIONS; direction++) {
     for (int side = 0; side < 2; side++) {
       const double* const faceState = side == 0 ? leftState : rightState;
-      double              faceFlux[NodesPerFace * NumberOfUnknowns];
-      for (int entry = 0; entry < NodesPerFace * NumberOfUnknowns; entry++) {
+      double              faceFlux[FaceNodes * NumberOfUnknowns];
+      for (int entry = 0; entry < FaceNodes * NumberOfUnknowns; entry++) {
         faceFlux[entry] = 9.0;
       }
 
@@ -429,7 +429,7 @@ void exahype2::dg::tests::BoundaryExtrapolationTest::testFluxOnAFaceComesFromThe
 
       // The accumulating stub starts from a cleared flux, so every node holds the
       // stub's multiple of the state of the selected side.
-      for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
+      for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
         for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
           validateNumericalEqualsWithParams3(
             faceFlux[faceNode * NumberOfUnknowns + unknown],
@@ -454,7 +454,7 @@ void exahype2::dg::tests::BoundaryExtrapolationTest::testFluxOnAFaceComesFromThe
           0.0,
           direction
         );
-      for (int entry = 0; entry < NodesPerFace * NumberOfUnknowns; entry++) {
+      for (int entry = 0; entry < FaceNodes * NumberOfUnknowns; entry++) {
         validateNumericalEquals(faceFlux[entry], 0.0);
       }
     }
@@ -469,9 +469,9 @@ void exahype2::dg::tests::BoundaryExtrapolationTest::testDiffusiveFluxOnAFaceRea
     cellSize(axis) = 0.5 + 0.25 * axis;
   }
 
-  double leftState[NodesPerFace * NumberOfData];
-  double rightState[NodesPerFace * NumberOfData];
-  for (int entry = 0; entry < NodesPerFace * NumberOfData; entry++) {
+  double leftState[FaceNodes * NumberOfData];
+  double rightState[FaceNodes * NumberOfData];
+  for (int entry = 0; entry < FaceNodes * NumberOfData; entry++) {
     leftState[entry]  = 1.0 + 0.5 * entry;
     rightState[entry] = 4.0 - 0.25 * entry;
   }
@@ -480,7 +480,7 @@ void exahype2::dg::tests::BoundaryExtrapolationTest::testDiffusiveFluxOnAFaceRea
   // the jump over the cell extent along the normal axis.
   for (int direction = 0; direction < DIMENSIONS; direction++) {
     for (int side = 0; side < 2; side++) {
-      double faceFlux[NodesPerFace * NumberOfUnknowns] = {};
+      double faceFlux[FaceNodes * NumberOfUnknowns] = {};
       exahype2::dg::evaluateFluxOnFace<
         DiffusiveFluxSolver,
         NumberOfDofsPerAxis,
@@ -488,7 +488,7 @@ void exahype2::dg::tests::BoundaryExtrapolationTest::testDiffusiveFluxOnAFaceRea
         NumberOfAuxiliaryVariables,
         true,
         true>(faceFlux, leftState, rightState, side, quadratureNodes, faceCentre, cellSize, 0.0, 0.0, direction);
-      for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
+      for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
         for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
           const int    entry    = faceNode * NumberOfData + unknown;
           const double expected = (direction + 1.0) * (rightState[entry] - leftState[entry]) / cellSize(direction);
@@ -518,16 +518,16 @@ void exahype2::dg::tests::BoundaryExtrapolationTest::testDiffusiveFluxIsExtrapol
     cellSize(axis) = 0.5 + 0.25 * axis;
   }
 
-  double cellState[NodesPerCell * NumberOfData];
-  for (int entry = 0; entry < NodesPerCell * NumberOfData; entry++) {
+  double cellState[CellNodes * NumberOfData];
+  for (int entry = 0; entry < CellNodes * NumberOfData; entry++) {
     cellState[entry] = 1.0 + 0.5 * entry - 0.01 * entry * entry;
   }
 
   // The reference gradient applies the operator line by line, so the kernel's
   // block layout is checked against a direct evaluation.
-  double gradients[DIMENSIONS][NodesPerCell * NumberOfData] = {};
+  double gradients[DIMENSIONS][CellNodes * NumberOfData] = {};
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    for (int line = 0; line < NodesPerFace; line++) {
+    for (int line = 0; line < FaceNodes; line++) {
       for (int targetIndex = 0; targetIndex < NumberOfDofsPerAxis; targetIndex++) {
         const int targetNode = cellNodeOf(axis, line, targetIndex);
         for (int sourceIndex = 0; sourceIndex < NumberOfDofsPerAxis; sourceIndex++) {
@@ -566,7 +566,7 @@ void exahype2::dg::tests::BoundaryExtrapolationTest::testDiffusiveFluxIsExtrapol
   );
 
   for (int direction = 0; direction < DIMENSIONS; direction++) {
-    for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
+    for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         double expected = 0.0;
         for (int normalIndex = 0; normalIndex < NumberOfDofsPerAxis; normalIndex++) {
@@ -599,8 +599,8 @@ void exahype2::dg::tests::BoundaryExtrapolationTest::testDiffusiveFluxIsExtrapol
 void exahype2::dg::tests::BoundaryExtrapolationTest::testAPaddedNodeStrideProjectsOnlyTheEntries() {
   // The lanes behind the entries of a node carry a value that would dominate every face if the
   // projection read them.
-  double field[NodesPerCell * PaddedNodeStride];
-  for (int cellNode = 0; cellNode < NodesPerCell; cellNode++) {
+  double field[CellNodes * PaddedNodeStride];
+  for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
     for (int lane = 0; lane < PaddedNodeStride; lane++) {
       field[cellNode * PaddedNodeStride + lane] = (lane < NumberOfData) ? (1.0 + cellNode + 0.25 * lane) : 1000.0;
     }
@@ -612,9 +612,9 @@ void exahype2::dg::tests::BoundaryExtrapolationTest::testAPaddedNodeStrideProjec
   }
 
   for (int direction = 0; direction < DIMENSIONS; direction++) {
-    double lowerFace[NodesPerFace * NumberOfData];
-    double upperFace[NodesPerFace * NumberOfData];
-    for (int entry = 0; entry < NodesPerFace * NumberOfData; entry++) {
+    double lowerFace[FaceNodes * NumberOfData];
+    double upperFace[FaceNodes * NumberOfData];
+    for (int entry = 0; entry < FaceNodes * NumberOfData; entry++) {
       lowerFace[entry] = 9.0;
       upperFace[entry] = 9.0;
     }
@@ -629,7 +629,7 @@ void exahype2::dg::tests::BoundaryExtrapolationTest::testAPaddedNodeStrideProjec
         direction
       );
 
-    for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
+    for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
       for (int entry = 0; entry < NumberOfData; entry++) {
         double expected = 0.0;
         for (int normalIndex = 0; normalIndex < NumberOfDofsPerAxis; normalIndex++) {
@@ -656,8 +656,8 @@ void exahype2::dg::tests::BoundaryExtrapolationTest::testAPaddedNodeStrideProjec
 }
 
 void exahype2::dg::tests::BoundaryExtrapolationTest::testTheLowerAndUpperFaceUseTheirOwnCoefficients() {
-  double field[NodesPerCell * NumberOfData];
-  for (int entry = 0; entry < NodesPerCell * NumberOfData; entry++) {
+  double field[CellNodes * NumberOfData];
+  for (int entry = 0; entry < CellNodes * NumberOfData; entry++) {
     field[entry] = 1.0 + 0.5 * entry;
   }
 
@@ -669,8 +669,8 @@ void exahype2::dg::tests::BoundaryExtrapolationTest::testTheLowerAndUpperFaceUse
   }
 
   for (int direction = 0; direction < DIMENSIONS; direction++) {
-    double lowerFace[NodesPerFace * NumberOfData] = {};
-    double upperFace[NodesPerFace * NumberOfData] = {};
+    double lowerFace[FaceNodes * NumberOfData] = {};
+    double upperFace[FaceNodes * NumberOfData] = {};
 
     exahype2::dg::
       extrapolateNodalFieldToFacePair<NumberOfDofsPerAxis, NumberOfData, NumberOfData, double, double, double>(
@@ -682,7 +682,7 @@ void exahype2::dg::tests::BoundaryExtrapolationTest::testTheLowerAndUpperFaceUse
         direction
       );
 
-    for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
+    for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
       for (int entry = 0; entry < NumberOfData; entry++) {
         double expectedLower = 0.0;
         double expectedUpper = 0.0;
@@ -714,8 +714,8 @@ void exahype2::dg::tests::BoundaryExtrapolationTest::testTheLowerAndUpperFaceUse
 void exahype2::dg::tests::BoundaryExtrapolationTest::testTheFaceNodesRunWithTheLowestTangentialAxisFastest() {
   // Every cell node carries its own value, and a coefficient vector that holds one at a single index
   // hands the value of that node's line position to the face node.
-  double field[NodesPerCell * NumberOfData];
-  for (int cellNode = 0; cellNode < NodesPerCell; cellNode++) {
+  double field[CellNodes * NumberOfData];
+  for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
     for (int entry = 0; entry < NumberOfData; entry++) {
       field[cellNode * NumberOfData + entry] = 1.0 + cellNode + 0.125 * entry;
     }
@@ -728,8 +728,8 @@ void exahype2::dg::tests::BoundaryExtrapolationTest::testTheFaceNodesRunWithTheL
       leftCoefficients[markedIndex]                            = 1.0;
       rightCoefficients[NumberOfDofsPerAxis - 1 - markedIndex] = 1.0;
 
-      double lowerFace[NodesPerFace * NumberOfData] = {};
-      double upperFace[NodesPerFace * NumberOfData] = {};
+      double lowerFace[FaceNodes * NumberOfData] = {};
+      double upperFace[FaceNodes * NumberOfData] = {};
 
       exahype2::dg::
         extrapolateNodalFieldToFacePair<NumberOfDofsPerAxis, NumberOfData, NumberOfData, double, double, double>(
@@ -741,7 +741,7 @@ void exahype2::dg::tests::BoundaryExtrapolationTest::testTheFaceNodesRunWithTheL
           direction
         );
 
-      for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
+      for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
         const int lowerCellNode = cellNodeInAxisOrder(direction, faceNode, markedIndex);
         const int upperCellNode = cellNodeInAxisOrder(direction, faceNode, NumberOfDofsPerAxis - 1 - markedIndex);
         for (int entry = 0; entry < NumberOfData; entry++) {
@@ -787,8 +787,8 @@ void exahype2::dg::tests::BoundaryExtrapolationTest::testAFieldOfFloatAccumulate
   }
 
   for (int direction = 0; direction < DIMENSIONS; direction++) {
-    float field[NodesPerCell * NumberOfData];
-    for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
+    float field[CellNodes * NumberOfData];
+    for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
       for (int normalIndex = 0; normalIndex < NumberOfDofsPerAxis; normalIndex++) {
         const int  cellNode = cellNodeInAxisOrder(direction, faceNode, normalIndex);
         const auto value    = static_cast<float>((normalIndex == 0) ? LargeValue : SmallValue);
@@ -798,8 +798,8 @@ void exahype2::dg::tests::BoundaryExtrapolationTest::testAFieldOfFloatAccumulate
       }
     }
 
-    double lowerFace[NodesPerFace * NumberOfData] = {};
-    double upperFace[NodesPerFace * NumberOfData] = {};
+    double lowerFace[FaceNodes * NumberOfData] = {};
+    double upperFace[FaceNodes * NumberOfData] = {};
 
     exahype2::dg::
       extrapolateNodalFieldToFacePair<NumberOfDofsPerAxis, NumberOfData, NumberOfData, float, double, double>(
@@ -811,7 +811,7 @@ void exahype2::dg::tests::BoundaryExtrapolationTest::testAFieldOfFloatAccumulate
         direction
       );
 
-    for (int entry = 0; entry < NodesPerFace * NumberOfData; entry++) {
+    for (int entry = 0; entry < FaceNodes * NumberOfData; entry++) {
       validateNumericalEqualsWithParams2(lowerFace[entry], expectedLower, direction, entry);
       validateNumericalEqualsWithParams2(upperFace[entry], expectedUpper, direction, entry);
     }

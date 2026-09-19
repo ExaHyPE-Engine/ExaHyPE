@@ -14,8 +14,11 @@ namespace {
  * One atomic writer prevents concurrent failure paths from interleaving diagnostics or racing the abort; later
  * callers yield until the process ends.
  */
-[[noreturn]] void
-tarch::terminateWithError(const std::string_view message, const int errorCode, const std::source_location location) {
+[[noreturn]] void tarch::terminateWithError(
+  const std::string_view     message,
+  const int                  errorCode,
+  const std::source_location location
+) {
   static std::atomic<TerminationOutputState> outputState{TerminationOutputState::Pending};
   auto                                       expectedState = TerminationOutputState::Pending;
   if (outputState.compare_exchange_strong(expectedState, TerminationOutputState::Writing)) {

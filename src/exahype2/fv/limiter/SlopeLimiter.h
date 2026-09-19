@@ -8,9 +8,7 @@
 namespace exahype2::fv::limiter {
   /**
    * A slope limiter maps the neighbourhood of one volume onto the limited
-   * difference of one unknown, which drives the linear reconstruction. It is
-   * stateless with static members only, so the kernel dispatches to it without
-   * moving an object onto a GPU device.
+   * difference of one unknown, which drives the linear reconstruction.
    */
   template <typename Limiter>
   concept SlopeLimiter = std::is_empty_v<Limiter>;
@@ -48,8 +46,8 @@ struct exahype2::fv::limiter::Average final {
 };
 
 /**
- * Minmod, the most diffusive second-order limiter: the smaller-magnitude of the
- * two one-sided differences when they share a sign, zero otherwise.
+ * Minmod, the most diffusive second-order limiter: The one-sided difference of smaller
+ * magnitude when both differences have the same sign, zero otherwise.
  */
 struct exahype2::fv::limiter::Minmod final {
   template <typename ComputePrecision>

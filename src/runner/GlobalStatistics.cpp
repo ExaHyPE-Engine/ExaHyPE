@@ -192,8 +192,9 @@ void runner::GlobalStatistics::synchronise() {
 
   const auto isNodeMaster = tarch::mpi::Rank::getInstance().isNodeMaster();
   const auto now          = std::chrono::steady_clock::now();
-  if (_lastMemorySample == std::chrono::steady_clock::time_point{}
-      or now - _lastMemorySample >= MemorySamplingInterval) {
+  if (
+    _lastMemorySample == std::chrono::steady_clock::time_point{} or now - _lastMemorySample >= MemorySamplingInterval
+  ) {
     _lastMemorySample               = now;
     _localProcessMemoryUsageInBytes = tarch::getMemoryUsageInBytes();
     _localTotalMemoryInBytes        = isNodeMaster ? tarch::getTotalMemoryInBytes() : 0;

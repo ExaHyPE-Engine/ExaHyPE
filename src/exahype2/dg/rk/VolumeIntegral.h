@@ -13,7 +13,7 @@
 TARGET_DECLARE
 namespace exahype2::dg::rk {
   template <
-    typename Solver,
+    typename SolverType,
     int  NumberOfDofsPerAxis,
     int  NumberOfUnknowns,
     int  NumberOfAuxiliaryVariables,

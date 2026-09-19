@@ -12,7 +12,7 @@ namespace {
   constexpr int ElementCount = 1024;
 } // namespace
 
-tarch::accelerator::kokkos::tests::ReductionTest::ReductionTest():
+tarch::accelerator::kokkos::tests::ReductionTest::ReductionTest() :
   TestCase("tarch::accelerator::kokkos::tests::ReductionTest") {}
 
 void tarch::accelerator::kokkos::tests::ReductionTest::run() { testMethod(testParallelReduction); }

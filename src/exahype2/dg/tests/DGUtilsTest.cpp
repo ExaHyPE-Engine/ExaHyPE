@@ -49,10 +49,24 @@ exahype2::dg::tests::DGUtilsTest::DGUtilsTest() :
   tarch::tests::TestCase("exahype2::dg::tests::DGUtilsTest") {}
 
 void exahype2::dg::tests::DGUtilsTest::run() {
+  testMethod(testNodeCountsFollowTheNumberOfNodesPerAxis);
   testMethod(testGetQuadraturePointMapsTheReferenceNode);
   testMethod(testEvaluatePolynomialOrder1);
   testMethod(testEvaluatePolynomialOrder2);
   testMethod(testEvaluatePolynomialOnAFace);
+}
+
+/** A cell holds one node per combination of the nodes along the axes, and a face one per tangential combination. */
+void exahype2::dg::tests::DGUtilsTest::testNodeCountsFollowTheNumberOfNodesPerAxis() {
+  constexpr int NumberOfDofsPerAxis = 3;
+
+  int nodesInCell = 0;
+  peano4::dForEach(NumberOfDofsPerAxis, [&]([[maybe_unused]] const tarch::la::Vector<DIMENSIONS, int>& node) {
+    nodesInCell++;
+  });
+
+  validateEquals(exahype2::dg::NodesPerCell<NumberOfDofsPerAxis>, nodesInCell);
+  validateEquals(exahype2::dg::NodesPerFace<NumberOfDofsPerAxis>, nodesInCell / NumberOfDofsPerAxis);
 }
 
 /** A reference node maps onto the cell offset plus the node's fraction of the cell size. */

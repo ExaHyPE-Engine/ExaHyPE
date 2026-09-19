@@ -1,13 +1,5 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-"""Package discovery for the build.
-
-All project metadata lives in pyproject.toml; this file only declares which
-packages ship, because they come from two source roots:
-
-  * the Python API under api/ (kept dynamic via find_packages), and
-  * the postprocessing helpers at the repository root.
-"""
 import os
 
 from setuptools import find_packages, setup
@@ -34,7 +26,11 @@ def _data_files(package):
     patterns = []
     for directory, subdirectories, filenames in os.walk(base):
         relative = os.path.relpath(directory, base)
-        dotted = package if relative == "." else package + "." + relative.replace(os.sep, ".")
+        dotted = (
+            package
+            if relative == "."
+            else package + "." + relative.replace(os.sep, ".")
+        )
         subdirectories[:] = [
             name for name in subdirectories if dotted + "." + name not in package_names
         ]

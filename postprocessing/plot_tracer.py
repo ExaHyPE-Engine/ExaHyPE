@@ -8,7 +8,7 @@ def PlotTracer(argv=None):
 
     Plots one variable of one tracer over time.
 
-    The input is a CSV trajectory database of the exahype2.tracer action sets.
+    The input is a CSV trajectory database of the exahype2.particles tracer action sets.
 
     @param argv Argument list to parse. Defaults to sys.argv[1:].
     """

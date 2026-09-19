@@ -8,7 +8,10 @@
 #include "peano4/Loop.h"
 #include "peano4/grid/AutomatonState.h"
 #include "peano4/grid/GridControlEvent.h"
+#include "peano4/grid/GridTraversalEvent.h"
+#include "peano4/grid/GridTraversalObserver.h"
 #include "peano4/sfc/ActiveCurve.h"
+#include "peano4/topology/TopologyManager.h"
 #include "peano4/topology/Tree.h"
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
@@ -35,8 +38,6 @@ namespace {
   constexpr int    ParentLevel     = LeafLevel - 1;
   constexpr double TestDomainWidth = peano4::power(SubdivisionFactor, LeafLevel);
 
-  // Three levels beyond the leaf level, so the sweep keeps a margin over the meshes a run
-  // configures.
   constexpr int DeepestTestLevel = LeafLevel + 3;
 
   tarch::la::Vector<DIMENSIONS, double> uniformVector(double value) {
@@ -143,8 +144,7 @@ namespace {
     const tarch::la::Vector<DIMENSIONS, double>& offset,
     int                                          siblingIndex
   ) {
-    if (siblingIndex % tarch::mpi::Rank::getInstance().getNumberOfRanks()
-        != tarch::mpi::Rank::getInstance().getRank()) {
+    if (siblingIndex % tarch::mpi::Rank::getInstance().getNumberOfRanks() != tarch::mpi::Rank::getInstance().getRank()) {
       return;
     }
     control.addCommand(offset + 0.5 * uniformVector(1.0), uniformVector(1.0), exahype2::RefinementCommand::Erase);
@@ -166,8 +166,7 @@ namespace {
     const tarch::la::Vector<DIMENSIONS, double>& offset,
     int                                          raiserNumber
   ) {
-    if (raiserNumber % tarch::mpi::Rank::getInstance().getNumberOfRanks()
-        != tarch::mpi::Rank::getInstance().getRank()) {
+    if (raiserNumber % tarch::mpi::Rank::getInstance().getNumberOfRanks() != tarch::mpi::Rank::getInstance().getRank()) {
       return;
     }
     control.addCommand(offset + 0.5 * uniformVector(1.0), uniformVector(1.0), exahype2::RefinementCommand::Refine);
@@ -223,6 +222,35 @@ namespace {
   // addRefineCommand raises its command on rank 0 only, so only that rank holds a local
   // request before the gather hands the resulting event to everybody.
   std::size_t numberOfLocalRefineRequests() { return tarch::mpi::Rank::getInstance().getRank() == 0 ? 1U : 0U; }
+
+  /** Observes a sweep without data and raises no request. */
+  class EmptyObserver final : public peano4::grid::GridTraversalObserver {
+  public:
+    peano4::grid::GridTraversalObserver* clone([[maybe_unused]] const int treeId) override {
+      return new EmptyObserver();
+    }
+    [[nodiscard]] std::vector<peano4::grid::GridControlEvent> getGridControlEvents() const override { return {}; }
+    void                                                      beginTraversal(
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
+    ) override {}
+    void endTraversal(
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h
+    ) override {}
+    void enterNode([[maybe_unused]] const peano4::grid::GridTraversalEvent& event) override {}
+    void leaveNode([[maybe_unused]] const peano4::grid::GridTraversalEvent& event) override {}
+  };
+
+  // A domain as wide as the subdivision factor names its unit cells on level one, so the
+  // requests of a test match the leaves of the standing level-one grid.
+  void standLevelOneGrid() {
+    auto& manager = peano4::topology::TopologyManager::getInstance();
+    manager.scheduleRegularGridConstruction(1);
+    EmptyObserver observer;
+    manager.traverse(observer);
+    exahype2::RefinementControlService::getInstance().setDomain(uniformVector(0.0), uniformVector(SubdivisionFactor));
+  }
 } // namespace
 
 exahype2::tests::RefinementControlServiceTest::RefinementControlServiceTest() :
@@ -243,6 +271,8 @@ void exahype2::tests::RefinementControlServiceTest::run() {
   testMethod(testRepeatedContributionsReuseTheCommittedSet);
   testMethod(testARealisedSetWithoutSweepSuppressesItsRepetition);
   testMethod(testARealisedSetWithoutSweepKeepsTheShippedLists);
+  testMethod(testAPlanChangingSetSurvivesTheRejectionCheck);
+  testMethod(testAPlanRejectedSetIsRealisedWithoutSweep);
   testMethod(testEraseOnlyBatchIsCommitted);
   testMethod(testComplementaryEraseSubsetsOfTwoSolversAreDiscarded);
   testMethod(testEraseNeedsUnanimousSolverConsent);
@@ -274,8 +304,10 @@ void exahype2::tests::RefinementControlServiceTest::testTheDeltaExchangeTracksEv
       const auto expectedLatticeIndex = tarch::la::Vector<DIMENSIONS, int>(cell);
       int        numberOfMatches      = 0;
       for (const auto& event : events) {
-        if (event.getRefinementControl() == peano4::grid::GridControlEvent::RefinementControl::Refine
-            and event.level == LeafLevel and event.latticeIndex == expectedLatticeIndex) {
+        if (
+          event.getRefinementControl() == peano4::grid::GridControlEvent::RefinementControl::Refine
+          and event.level == LeafLevel and event.latticeIndex == expectedLatticeIndex
+        ) {
           numberOfMatches++;
         }
       }
@@ -425,8 +457,10 @@ void exahype2::tests::RefinementControlServiceTest::testEraseSiblingGroupIsAncho
   service.setDomain(uniformVector(0.0), uniformVector(TestDomainWidth));
 }
 
-// A command names its cell against its own axis's component of the domain offset, and the
-// offsets here differ by more than half a cell from axis to axis.
+/**
+ * A command names its cell against its own axis's component of the domain offset, and the
+ * offsets here differ by more than half a cell from axis to axis.
+ */
 void exahype2::tests::RefinementControlServiceTest::testEraseSiblingGroupIsAnchoredPerAxis() {
   drainRefinementControlService();
   auto& service = exahype2::RefinementControlService::getInstance();
@@ -743,6 +777,52 @@ void exahype2::tests::RefinementControlServiceTest::testARealisedSetWithoutSweep
   drainRefinementControlService();
 }
 
+/**
+ * Checks that the rejection check keeps a committed set that refines a leaf of the standing grid
+ * and leaves an empty set alone.
+ */
+void exahype2::tests::RefinementControlServiceTest::testAPlanChangingSetSurvivesTheRejectionCheck() {
+  drainRefinementControlService();
+  standLevelOneGrid();
+  auto& service = exahype2::RefinementControlService::getInstance();
+  service.finishRefinementCriterionStep();
+
+  service.realisePlanRejectedEvents();
+  validateTrue(service.getGridControlEvents().empty());
+
+  exahype2::RefinementControl control;
+  addRefineCommand(control, uniformVector(1.0));
+  commitCriterionStep(control);
+  validateEquals(service.getGridControlEvents().size(), 1U);
+  service.realisePlanRejectedEvents();
+  validateEquals(service.getGridControlEvents().size(), 1U);
+  validateFalse(service.hasRealisedTopologyChangesSinceLastTimeStep());
+
+  drainRefinementControlService();
+  service.setDomain(uniformVector(0.0), uniformVector(TestDomainWidth));
+}
+
+/**
+ * Checks that the rejection check realises a committed erase of the root of the standing grid
+ * without a sweep, because the plan keeps the regular base grid.
+ */
+void exahype2::tests::RefinementControlServiceTest::testAPlanRejectedSetIsRealisedWithoutSweep() {
+  drainRefinementControlService();
+  standLevelOneGrid();
+  auto& service = exahype2::RefinementControlService::getInstance();
+
+  exahype2::RefinementControl control;
+  addEraseSiblingGroup(control, uniformVector(0.0), -1);
+  commitCriterionStep(control);
+  validateEquals(service.getGridControlEvents().size(), 1U);
+  service.realisePlanRejectedEvents();
+  validateTrue(service.getGridControlEvents().empty());
+  validateFalse(service.hasRealisedTopologyChangesSinceLastTimeStep());
+
+  drainRefinementControlService();
+  service.setDomain(uniformVector(0.0), uniformVector(TestDomainWidth));
+}
+
 void exahype2::tests::RefinementControlServiceTest::testComplementaryEraseSubsetsOfTwoSolversAreDiscarded() {
   drainRefinementControlService();
   auto& service = exahype2::RefinementControlService::getInstance();
@@ -809,7 +889,6 @@ void exahype2::tests::RefinementControlServiceTest::testEraseNeedsUnanimousSolve
   service.setNumberOfSolvers(1);
 }
 
-// The offsets belong to this test alone, so no committed set matches one realised earlier.
 void exahype2::tests::RefinementControlServiceTest::testReportTracksEveryStageOfARequest() {
   drainRefinementControlService();
   auto& service = exahype2::RefinementControlService::getInstance();

@@ -30,10 +30,10 @@ bool tutorials::exahype2::limiting::ADERDGSolver::isPhysicallyAdmissible(
   const int                                    numberOfStates,
   const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
   const tarch::la::Vector<DIMENSIONS, double>& cellSize
-) const {
+) {
   constexpr int NumberOfData = NumberOfUnknowns + NumberOfAuxiliaryVariables;
 
-  // Q holds numberOfStates consecutive states: every node of a candidate
+  // Q holds numberOfStates consecutive states: Every node of a candidate
   // polynomial, or a single state when one finite-volume value is checked.
   const double* state = Q;
   for (int stateNumber = 0; stateNumber < numberOfStates; ++stateNumber, state += NumberOfData) {
@@ -60,7 +60,7 @@ bool tutorials::exahype2::limiting::ADERDGSolver::isPhysicallyAdmissible(
 void tutorials::exahype2::limiting::ADERDGSolver::mapDmpObservables(
   double* const NOALIAS       observables,
   const double* const NOALIAS Q
-) const {
+) {
   static_assert(
     NumberOfDMPObservables == Pressure + 1,
     "The mapping fills the density, one velocity component per axis and the pressure."

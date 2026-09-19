@@ -11,6 +11,11 @@ namespace exahype2::fv::tests {
 class exahype2::fv::tests::ApplyBoundaryConditionsOnFaceTest final : public tarch::tests::TestCase {
 public:
   ApplyBoundaryConditionsOnFaceTest();
+  ApplyBoundaryConditionsOnFaceTest(const ApplyBoundaryConditionsOnFaceTest&)            = delete;
+  ApplyBoundaryConditionsOnFaceTest(ApplyBoundaryConditionsOnFaceTest&&)                 = delete;
+  ApplyBoundaryConditionsOnFaceTest& operator=(const ApplyBoundaryConditionsOnFaceTest&) = delete;
+  ApplyBoundaryConditionsOnFaceTest& operator=(ApplyBoundaryConditionsOnFaceTest&&)      = delete;
+  ~ApplyBoundaryConditionsOnFaceTest() override                                          = default;
 
   void run() override;
 

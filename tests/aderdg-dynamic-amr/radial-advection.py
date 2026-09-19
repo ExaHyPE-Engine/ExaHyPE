@@ -85,16 +85,16 @@ refinement_criterion = """
   );
 """
 
-solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
+solver = exahype2.dg.ader.Solver(
     name="ADERDGSolver",
     order=(args.degrees_of_freedom - 1),
-    time_step_relaxation=0.9,
     unknowns={"rho": 1},
     auxiliary_variables=0,
+    time_stepping=exahype2.TimeStepping.Adaptive(0.9),
 )
 
-solver.set_implementation(
-    initial_conditions=initial_conditions,
+solver.set_pde_terms(
+    initial_condition=initial_conditions,
     boundary_conditions=boundary_conditions,
     refinement_criterion=refinement_criterion,
     max_eigenvalue="return 1.0;",

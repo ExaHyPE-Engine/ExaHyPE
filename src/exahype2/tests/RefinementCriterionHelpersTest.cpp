@@ -40,7 +40,7 @@ void exahype2::tests::RefinementCriterionHelpersTest::testRefinementCommandFromD
 
 void exahype2::tests::RefinementCriterionHelpersTest::testRefineOnDetail() {
   constexpr int    NumberOfDofsPerAxis = 4;
-  constexpr int    Unknowns            = 3;
+  constexpr int    NumberOfUnknowns    = 3;
   constexpr double Eps                 = 1.0e-2;
   constexpr double CoarsenSafetyFactor = 9.0;
 
@@ -48,7 +48,7 @@ void exahype2::tests::RefinementCriterionHelpersTest::testRefineOnDetail() {
   for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
     numberOfVolumes *= NumberOfDofsPerAxis;
   }
-  std::vector<double> patch(static_cast<std::size_t>(numberOfVolumes) * Unknowns, 0.0);
+  std::vector<double> patch(static_cast<std::size_t>(numberOfVolumes) * NumberOfUnknowns, 0.0);
 
   const auto density  = [](const double* volume) { return volume[0]; };
   const auto pressure = [](const double* volume) { return volume[2]; };
@@ -57,36 +57,68 @@ void exahype2::tests::RefinementCriterionHelpersTest::testRefineOnDetail() {
   // pointer carries the patch's type, as a solver's own buffer does.
   const double* const noSolution = nullptr;
   validateTrue(
-    exahype2::refineOnDetail(noSolution, NumberOfDofsPerAxis, Unknowns, Eps, CoarsenSafetyFactor, nullptr, density)
+    exahype2::refineOnDetail(
+      noSolution,
+      NumberOfDofsPerAxis,
+      NumberOfUnknowns,
+      Eps,
+      CoarsenSafetyFactor,
+      nullptr,
+      density
+    )
     == exahype2::RefinementCommand::Keep
   );
 
   // An affine field is fit exactly, so a smooth patch coarsens.
   peano4::dForEach(NumberOfDofsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
-    const int index  = peano4::dLinearised(volume, NumberOfDofsPerAxis) * Unknowns;
+    const int index  = peano4::dLinearised(volume, NumberOfDofsPerAxis) * NumberOfUnknowns;
     patch[index]     = 1.0 + 0.25 * volume(0) - 0.5 * volume(1);
     patch[index + 1] = -3.0;
     patch[index + 2] = 2.0;
   });
   validateTrue(
-    exahype2::
-      refineOnDetail(patch.data(), NumberOfDofsPerAxis, Unknowns, Eps, CoarsenSafetyFactor, nullptr, density, pressure)
+    exahype2::refineOnDetail(
+      patch.data(),
+      NumberOfDofsPerAxis,
+      NumberOfUnknowns,
+      Eps,
+      CoarsenSafetyFactor,
+      nullptr,
+      density,
+      pressure
+    )
     == exahype2::RefinementCommand::Erase
   );
 
   // A kink in one monitored unknown refines even when the other stays smooth. The stride and
   // the indicator offset pick the right value out of the AoS layout.
   peano4::dForEach(NumberOfDofsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
-    const int index  = peano4::dLinearised(volume, NumberOfDofsPerAxis) * Unknowns;
+    const int index  = peano4::dLinearised(volume, NumberOfDofsPerAxis) * NumberOfUnknowns;
     patch[index + 2] = volume(0) < NumberOfDofsPerAxis / 2 ? 2.0 : 20.0;
   });
   validateTrue(
-    exahype2::refineOnDetail(patch.data(), NumberOfDofsPerAxis, Unknowns, Eps, CoarsenSafetyFactor, nullptr, density)
+    exahype2::refineOnDetail(
+      patch.data(),
+      NumberOfDofsPerAxis,
+      NumberOfUnknowns,
+      Eps,
+      CoarsenSafetyFactor,
+      nullptr,
+      density
+    )
     == exahype2::RefinementCommand::Erase
   );
   validateTrue(
-    exahype2::
-      refineOnDetail(patch.data(), NumberOfDofsPerAxis, Unknowns, Eps, CoarsenSafetyFactor, nullptr, density, pressure)
+    exahype2::refineOnDetail(
+      patch.data(),
+      NumberOfDofsPerAxis,
+      NumberOfUnknowns,
+      Eps,
+      CoarsenSafetyFactor,
+      nullptr,
+      density,
+      pressure
+    )
     == exahype2::RefinementCommand::Refine
   );
 
@@ -97,7 +129,7 @@ void exahype2::tests::RefinementCriterionHelpersTest::testRefineOnDetail() {
     exahype2::refineOnDetail(
       singlePrecisionPatch.data(),
       NumberOfDofsPerAxis,
-      Unknowns,
+      NumberOfUnknowns,
       Eps,
       CoarsenSafetyFactor,
       nullptr,

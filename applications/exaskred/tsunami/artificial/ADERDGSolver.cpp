@@ -166,7 +166,7 @@ bool applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
   const int                                    numberOfStates,
   const tarch::la::Vector<DIMENSIONS, double>& x,
   const tarch::la::Vector<DIMENSIONS, double>& h
-) const {
+) {
   (void)x;
   (void)h;
 

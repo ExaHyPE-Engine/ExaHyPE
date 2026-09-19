@@ -29,9 +29,9 @@ namespace {
     }
     [[nodiscard]] std::vector<peano4::grid::GridControlEvent> getGridControlEvents() const override { return {}; }
     void                                                      beginTraversal(
-                                                           const tarch::la::Vector<DIMENSIONS, double>& x,
-                                                           const tarch::la::Vector<DIMENSIONS, double>& h
-                                                         ) override {
+      const tarch::la::Vector<DIMENSIONS, double>& x,
+      const tarch::la::Vector<DIMENSIONS, double>& h
+    ) override {
       static_cast<void>(x);
       static_cast<void>(h);
     }
