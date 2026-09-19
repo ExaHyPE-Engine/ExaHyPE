@@ -16,7 +16,7 @@ def parse_arguments():
   parser.add_argument("-et", "--end-time", type=float, default=0.3)
   parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=5)
   parser.add_argument("-l", "--grid-levels", type=int, default=None)
-  parser.add_argument("-ut", "--use-tracers", type=bool, default=True)
+  parser.add_argument("-ut", "--use-tracers", action=argparse.BooleanOptionalAction, default=True)
   args, _ = parser.parse_known_args()
   if args.help:
     parser.print_help()
@@ -123,22 +123,14 @@ for theSolver in [hpSolver, lpSolver]:
     project.add_action_set_to_timestepping(
         exahype2.tracer.DiscontinuousGalerkinTracing(
             tracer_particles, theSolver,
-            project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle",
-            projection_kernel_arguments="""
-        marker,
-        {{ORDER}},
-        kernels::{{SOLVER_NAME}}::Quadrature<"""+theSolver._solution_persistent_storage_precision+""">::nodes,
-        {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}},
-        fineGridCell{{CURRENT_UNKNOWN_IDENTIFIER}}.data(),
-        *particle
-            """
+            project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle"
         )
     )
 
     project.add_action_set_to_timestepping(
         exahype2.tracer.DumpTracerIntoDatabase(
             particle_set=tracer_particles, solver=theSolver,
-            filename="LOH1",
+            filename="LOH1-" + theSolver._name,
             time_delta_between_two_snapshots=0.01,
             output_precision=10
         )

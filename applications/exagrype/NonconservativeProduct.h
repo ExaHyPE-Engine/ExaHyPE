@@ -2,16 +2,19 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "Constants.h"
+
+#include "tarch/Assertions.h"
 #include "tarch/accelerator/accelerator.h"
 
 namespace applications::exahype2::exagrype {
-  template <class Shortcuts, int NumberOfUnknowns>
-  static inline GPU_CALLABLE_METHOD void ncp(
-    double*             BgradQ,
-    const double* const Q,
-    const double* const deltaQ,
-    int                 normal
+  template <class Shortcuts>
+  INLINE_METHOD GPU_CALLABLE_METHOD void nonconservativeProduct(
+    const double* NOALIAS Q,
+    const double* NOALIAS deltaQ,
+    int                   normal,
+    double* NOALIAS       BTimesDeltaQ
   );
 } // namespace applications::exahype2::exagrype
 
-#include "NonconservativeProduct.cpph"
+#include "applications/exagrype/NonconservativeProduct.cpph"

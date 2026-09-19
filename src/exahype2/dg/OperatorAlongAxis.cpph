@@ -3,9 +3,8 @@
 
 TARGET_DECLARE
 /**
- * Applies a strided one-dimensional operator to a tensor slice.
- * The caller shifts each pointer to the slice's first entry.
- * Scaling factors multiply each source value in argument order before the operator weight.
+ * Contracts one axis of a tensor slice with a one-dimensional operator; the scaling factors
+ * multiply each source value in argument order.
  */
 template <
   int  NumberOfEntries,

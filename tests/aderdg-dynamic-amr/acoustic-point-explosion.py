@@ -80,11 +80,11 @@ solver.set_implementation(
   }
   return ::exahype2::refineOnDetail(
     Q,
-    Order + 1,
+    DGOrder + 1,
     NumberOfUnknowns + NumberOfAuxiliaryVariables,
     1.0e-2,
     ::exahype2::DefaultCoarsenSafetyFactor,
-    kernels::ADERDGSolver::Quadrature<double>::nodes,
+    kernels::ADERDGSolver::Quadrature<double>::QuadraturePoints1D,
     [](const double* const values) { return 1.0 + values[Shortcuts::p]; },
     [](const double* const values) {
       double velocitySquared = 0.0;

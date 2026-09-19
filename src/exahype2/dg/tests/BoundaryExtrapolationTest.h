@@ -29,4 +29,8 @@ private:
   void testFluxOnAFaceComesFromTheFaceState();
   void testDiffusiveFluxOnAFaceReadsTheJumpAlongTheNormal();
   void testDiffusiveFluxIsExtrapolatedWithTheNodalGradients();
+  void testAPaddedNodeStrideProjectsOnlyTheEntries();
+  void testTheLowerAndUpperFaceUseTheirOwnCoefficients();
+  void testTheFaceNodesRunWithTheLowestTangentialAxisFastest();
+  void testAFieldOfFloatAccumulatesTheFacesInDouble();
 };

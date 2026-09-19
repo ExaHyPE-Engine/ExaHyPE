@@ -7,6 +7,7 @@ there, and projected back. Both projections are separable, so one matrix per axi
 drives ``exahype2::dg::projectTensorProduct``. ``MathUtils`` supplies the
 averaging and conservation-constrained least-squares matrices.
 """
+from exahype2.solvers.LagrangeBasisWithDiagonalMassMatrix import GaussLobattoBasis
 from exahype2.solvers.MathUtils import MathUtils
 
 
@@ -18,8 +19,8 @@ def create_subcell_projection_matrices(basis):
     mean. Each is stored row by input degree of freedom, the layout
     ``projectTensorProduct`` reads: ``dg_to_fv`` by DG node, ``fv_to_dg`` by subcell.
     """
-    nodes = basis.quadrature_points(render=False)
-    weights = basis.quadrature_weights(render=False)
+    nodes = basis.quadrature_points
+    weights = basis.quadrature_weights
     number_of_nodes = len(nodes)
     number_of_subcells = 2 * number_of_nodes - 1
     dg_to_fv = MathUtils.assembleDGToFV(
@@ -47,11 +48,13 @@ def create_dmp_sampling_matrices(basis):
     averages exposes boundary and subcell-scale extrema to the admissibility test.
     Both matrices use the input-node-major layout read by the tensor projection.
     """
-    nodes = basis.quadrature_points(render=False)
-    weights = basis.quadrature_weights(render=False)
+    nodes = basis.quadrature_points
+    weights = basis.quadrature_weights
     number_of_nodes = len(nodes)
     number_of_subcells = 2 * number_of_nodes - 1
-    _, lobatto_nodes = MathUtils.getGaussLobatto(number_of_nodes)
+    lobatto_nodes = [
+        float(node) for node in GaussLobattoBasis(number_of_nodes).quadrature_points
+    ]
     dg_to_lobatto = MathUtils.assembleQuadratureConversion(
         nodes,
         lobatto_nodes,

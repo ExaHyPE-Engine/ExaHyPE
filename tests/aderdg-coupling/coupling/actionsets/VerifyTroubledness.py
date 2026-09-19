@@ -31,7 +31,7 @@ class VerifyTroubledness(AbstractLimiterActionSet):
             luh + linearisedIndex,
             ::exahype2::dg::getQuadraturePoint(
               marker.getX(), marker.getH(), index,
-              kernels::{{REGULAR_SOLVER_NAME}}::Quadrature<{{REGULAR_SOLVER_STORAGE_PRECISION}}>::nodes
+              kernels::{{REGULAR_SOLVER_NAME}}::Quadrature<{{REGULAR_SOLVER_STORAGE_PRECISION}}>::QuadraturePoints1D
             ),
             marker.getH(),
             timeStamp+timeStepSize

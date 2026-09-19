@@ -3,9 +3,17 @@
 
 ExaGRyPE is the ExaHyPE 2 application for numerical relativity experiments
 based on the first-order CCZ4 formulation of Einstein's equations. It
-provides application setups, kernels, and solver glue for scenarios such as
-the gauge-wave test while sharing common CCZ4 operators across different
-solver configurations.
+provides the gauge-wave application with finite-volume, ADER-DG and Runge-Kutta DG solvers.
+The solver families call the same CCZ4 operators.
+
+The driver in @c gauge-wave accepts @c --solver with @c fv, @c aderdg or @c rkdg.
+The option @c --degrees-of-freedom sets the number of nodes per axis, and
+@c --grid-levels sets a regular grid's refinement level.
+This command generates and builds a third-order Runge-Kutta scheme with cubic spatial polynomials:
+@code
+python3 gauge-wave.py --solver rkdg --degrees-of-freedom 4 --grid-levels 2
+@endcode
+The environment variable @c PEANO_BUILD_DIR selects the CMake library build.
 
 The unknowns are grouped as
 @code
@@ -42,14 +50,16 @@ The entries represent:
 - `grad_beta`: the first derivatives of the shift,
   @f$B_{ij} = \partial_i \beta^j@f$, stored as
   @f$(xx,xy,xz,yx,yy,yz,zx,zy,zz)@f$.
-- `grad_gamma_tilde`: the first derivatives of the conformal metric,
-  @f$D_{kij} = \partial_k \tilde{\gamma}_{ij}@f$, grouped by derivative
-  direction:
+- `grad_gamma_tilde`: half the first derivatives of the conformal metric,
+  @f$D_{kij} = \tfrac{1}{2} \partial_k \tilde{\gamma}_{ij}@f$, grouped by
+  derivative direction:
   @f$x:(xx,xy,xz,yy,yz,zz)@f$,
   @f$y:(xx,xy,xz,yy,yz,zz)@f$,
   @f$z:(xx,xy,xz,yy,yz,zz)@f$.
 - @f$K@f$: trace of the extrinsic curvature.
-- @f$\phi@f$: conformal factor.
+- @f$\phi@f$: conformal factor
+  @f$\phi = (\det \gamma_{ij})^{-1/6}@f$, so that
+  @f$\tilde{\gamma}_{ij} = \phi^2 \gamma_{ij}@f$ has unit determinant.
 - `grad_phi`: the first derivatives of the conformal factor,
   @f$P_i = \partial_i \phi@f$, stored as @f$(x,y,z)@f$.
 

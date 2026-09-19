@@ -6,7 +6,7 @@ import importlib
 from .PDETerms import PDETerms
 from .FixedTimeSteppingCodeSnippets import FixedTimeSteppingCodeSnippets
 from .AdaptiveTimeSteppingCodeSnippets import AdaptiveTimeSteppingCodeSnippets
-from .LagrangeBasisWithDiagonalMassMatrix import GaussLegendreBasis
+from .LagrangeBasisWithDiagonalMassMatrix import GaussLegendreBasis, GaussLobattoBasis
 from .MathUtils import MathUtils
 from .ErrorMeasurement import ErrorMeasurement
 
@@ -22,6 +22,7 @@ __all__ = list(_LAZY_MODULES.keys()) + [
     "FixedTimeSteppingCodeSnippets",
     "AdaptiveTimeSteppingCodeSnippets",
     "GaussLegendreBasis",
+    "GaussLobattoBasis",
     "MathUtils",
     "ErrorMeasurement",
 ]

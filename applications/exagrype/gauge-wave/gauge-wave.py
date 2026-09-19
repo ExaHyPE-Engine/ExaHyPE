@@ -15,7 +15,6 @@ float_parameters = {
     "K3": 0.5,
     "Eta": 1.0,
     "F": 0.75,
-    "g": 0.0,
     "Xi": 1.0,
     "E": 1.0,
     "C": 1.0,
@@ -24,13 +23,10 @@ float_parameters = {
     "Sk": 0.0,
     "Bs": 0.0,
     "K0": 0.0,
-    "domain_r": domain_size / 2,
-    "KOSigma": 8.0,
 }
 
 int_parameters = {
     "LapseType": 0,
-    "tp_grid_setup": 0,
 }
 
 constants = {
@@ -39,15 +35,22 @@ constants = {
 }
 
 max_eigenvalue = """
-  return ::applications::exahype2::exagrype::maxEigenvalue<Shortcuts>(Q, normal % DIMENSIONS);
+  return ::applications::exahype2::exagrype::maxEigenvalue<Shortcuts>(Q, normal);
 """
 
 nonconservative_product = """
-  ::applications::exahype2::exagrype::ncp<Shortcuts, NumberOfUnknowns>(BTimesDeltaQ, Q, deltaQ, normal);
+  ::applications::exahype2::exagrype::nonconservativeProduct<Shortcuts>(Q, deltaQ, normal, BTimesDeltaQ);
 """
 
 source_term = """
-  ::applications::exahype2::exagrype::source<Shortcuts>(S, Q, t, x);
+  ::applications::exahype2::exagrype::sourceTerm<Shortcuts>(Q, S);
+"""
+
+solver_includes = """
+#include "applications/exagrype/EnforceCCZ4Constraints.h"
+#include "applications/exagrype/MaxEigenvalue.h"
+#include "applications/exagrype/NonconservativeProduct.h"
+#include "applications/exagrype/SourceTerm.h"
 """
 
 
@@ -60,7 +63,7 @@ def parse_arguments():
         help="show this help message and continue with project help",
     )
     parser.add_argument("-et", "--end-time", type=float, default=0.5)
-    parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=9)
+    parser.add_argument("--degrees-of-freedom", type=int, default=9)
     parser.add_argument("-l", "--grid-levels", type=int, default=None)
     parser.add_argument("-lmin", "--min-grid-levels", type=int, default=1)
     parser.add_argument("-lmax", "--max-grid-levels", type=int, default=1)
@@ -123,13 +126,11 @@ if args.solver == "fv":
         time_step_relaxation=0.1,
     )
     solver.postprocess_updated_patch = """
-  {
-    int index = 0;
-    for (int i = 0; i < {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}}; i++) {
-      applications::exahype2::exagrype::enforceCCZ4constraints(QOut + index);
-      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    }
-  }
+  ::applications::exahype2::exagrype::enforceCCZ4Constraints<::applications::exahype2::exagrype::CCZ4Solver::Shortcuts>(
+    QOut,
+    {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}},
+    {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}
+  );
 """
 elif args.solver == "aderdg":
     solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
@@ -140,34 +141,28 @@ elif args.solver == "aderdg":
         time_step_relaxation=0.1,
     )
     solver.postprocess_updated_patch = """
-  {
-    int index = 0;
-    for (int i = 0; i < {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}}; i++) {
-      applications::exahype2::exagrype::enforceCCZ4constraints(QNew + index);
-      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    }
-  }
+  ::applications::exahype2::exagrype::enforceCCZ4Constraints<::applications::exahype2::exagrype::CCZ4Solver::Shortcuts>(
+    QNew,
+    {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF}} * {{NUMBER_OF_DOF_3D}},
+    {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}
+  );
 """
-elif args.solver == "rkdg":
+else:
     solver = exahype2.solvers.rkdg.GlobalAdaptiveTimeStep(
         name="CCZ4Solver",
-        rk_order=max(1, min(args.degrees_of_freedom - 1, 4)),
+        rk_order=min(args.degrees_of_freedom - 1, 4),
         dg_order=args.degrees_of_freedom - 1,
         unknowns=unknowns,
         auxiliary_variables=0,
         time_step_relaxation=0.1,
     )
     solver.postprocess_updated_cell_after_final_linear_combination = """
-  {
-    int index = 0;
-    for (int i = 0; i < {{NUMBER_OF_DOFS_PER_CELL}}; i++) {
-      applications::exahype2::exagrype::enforceCCZ4constraints(newQ + index);
-      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    }
-  }
+  ::applications::exahype2::exagrype::enforceCCZ4Constraints<::applications::exahype2::exagrype::CCZ4Solver::Shortcuts>(
+    newQ,
+    {{NUMBER_OF_DOFS_PER_CELL}},
+    {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}
+  );
 """
-else:
-    raise ValueError(f"Unknown solver family: {args.solver}")
 
 solver.set_implementation(
     initial_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
@@ -193,7 +188,7 @@ elif args.solver == "aderdg":
         output_file_name="Error_GaugeWave_ADERDG",
         time_delta_between_snapshots=args.end_time / 100.0,
     )
-elif args.solver == "rkdg":
+else:
     exahype2.solvers.rkdg.ErrorMeasurement(
         solver,
         error_measurement_implementation=exahype2.solvers.PDETerms.User_Defined_Implementation,
@@ -201,22 +196,15 @@ elif args.solver == "rkdg":
         time_delta_between_snapshots=args.end_time / 100.0,
     )
 
-solver.add_user_solver_includes(
-    """
-#include "InitialCondition.h"
-#include "../EnforceCCZ4Constraints.h"
-#include "../MaxEigenvalue.h"
-#include "../NonconservativeProduct.h"
-#include "../SourceTerm.h"
-"""
-)
+solver.add_user_solver_includes(solver_includes)
 
 project.add_solver(solver)
 
-for const_name, const_info in constants.items():
-    const_val, const_type = const_info
-    project.constants.export_constexpr_with_type(const_name, str(const_val), const_type)
+for const_name, (const_value, const_type) in constants.items():
+    project.constants.export_constexpr_with_type(
+        const_name, str(const_value), const_type
+    )
 
+project.output.makefile.add_include_directory("../../..")
 project.output.makefile.add_cpp_file("CCZ4Solver.cpp")
-project.output.makefile.add_cpp_file("InitialCondition.cpp")
 project.generate_and_build()

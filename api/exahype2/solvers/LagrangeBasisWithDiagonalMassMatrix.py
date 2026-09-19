@@ -2,9 +2,15 @@
 # use, please see the copyright notice at www.peano-framework.org
 
 from abc import abstractmethod
-from scipy.special import roots_sh_legendre
+
+import mpmath as mp
+from sympy.integrals.quadrature import gauss_legendre, gauss_lobatto
 
 from .LagrangeBasis import LagrangeBasis
+
+PREC_DIGITS = 256
+mp.dps = PREC_DIGITS
+mp.pretty = False
 
 
 class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
@@ -47,6 +53,15 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
   Reversing the array gives the values at x=1 for symmetric node sets.
 """
 
+  BasisFunctionValuesRight1DDocumentation = r"""
+  Stores each Lagrange polynomial's value at x=1.
+"""
+
+  InversePicardOperator1DDocumentation = r"""
+  Stores the inverse of @f$ \phi_i(1) \phi_j(1) - K_{ij} @f$, the temporal operator of the
+  ADER-DG predictor, packed row major.
+"""
+
   DerivativeOperator1DDocumentation = r"""
   Maps nodal polynomial values to their derivatives on the unit interval.
 """
@@ -80,6 +95,19 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
   def __compute_basis_function_values_left(self):
     return [ self.value1D(0.0, number) for number in range(self.dofs_per_axis) ]
 
+  def __compute_basis_function_values_right(self):
+    return [ self.value1D(1.0, number) for number in range(self.dofs_per_axis) ]
+
+  def __compute_inverse_picard_operator(self):
+    dofs_per_axis = self.dofs_per_axis
+    values_right  = self.basis_function_values_right
+    stiffness     = self.stiffness_operator
+    picard_operator = mp.matrix(dofs_per_axis, dofs_per_axis)
+    for row in range(dofs_per_axis):
+      for col in range(dofs_per_axis):
+        picard_operator[row, col] = values_right[row] * values_right[col] - stiffness[row][col]
+    return mp.inverse(picard_operator).tolist()
+
   def _get_cached_basis_entry(self, key, compute):
     if key not in self._cached_basis_entries:
       self._cached_basis_entries[key] = compute()
@@ -100,6 +128,14 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
   @property
   def derivative_operator(self):
     return self._get_cached_basis_entry("derivative_operator", self.__compute_derivative_operator)
+
+  @property
+  def basis_function_values_right(self):
+    return self._get_cached_basis_entry("basis_function_values_right", self.__compute_basis_function_values_right)
+
+  @property
+  def inverse_picard_operator(self):
+    return self._get_cached_basis_entry("inverse_picard_operator", self.__compute_inverse_picard_operator)
 
   def init_dictionary_with_default_parameters(self,dictionary):
     dictionary["ORDER"] = self.order
@@ -145,19 +181,55 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
     return result
 
 
-class GaussLegendreBasis(LagrangeBasisWithDiagonalMassMatrix):
-  """Computes a Gauss-Legendre basis with a diagonal mass matrix."""
+class MultiprecisionLagrangeBasis(LagrangeBasisWithDiagonalMassMatrix):
+  """Computes the quadrature of the unit interval with 256 digits and sorts its points."""
 
-  def __init__(self,polynomial_order):
-    super(GaussLegendreBasis,self).__init__(polynomial_order)
-    self._quadrature_points, self._quadrature_weights = roots_sh_legendre(self._polynomial_order+1)
+  def __init__(self, number_of_points):
+    super().__init__(number_of_points - 1)
+    (
+      self.__quadrature_points,
+      self.__quadrature_weights,
+    ) = self._compute_quadrature_points_and_weights(number_of_points)
+
+  @abstractmethod
+  def _compute_quadrature_points_and_weights(self, number_of_points):
+    """Computes quadrature points and weights over the unit interval."""
+    raise NotImplementedError
+
+  def _transform_and_sort_points_and_weights(self, quadrature_points, quadrature_weights):
+    """Maps quadrature data from [-1, 1] to [0, 1] and sorts it by ascending point."""
+    points_and_weights = []
+    for point, weight in zip(quadrature_points, quadrature_weights):
+      transformed_point  = (mp.mpf(point) + mp.mpf(1.0)) / mp.mpf(2.0)
+      transformed_weight = mp.mpf(weight) / mp.mpf(2.0)
+      points_and_weights.append((transformed_point, transformed_weight))
+
+    sorted_points_and_weights = sorted(points_and_weights)
+    sorted_points, sorted_weights = zip(*sorted_points_and_weights)
+    return list(sorted_points), list(sorted_weights)
 
   @property
   def quadrature_points(self):
-    """Returns the shifted Legendre roots on the unit interval."""
-    return self._quadrature_points
+    return self.__quadrature_points
 
   @property
   def quadrature_weights(self):
-    """Returns the Gauss-Legendre weights scaled to the unit interval."""
-    return self._quadrature_weights
+    return self.__quadrature_weights
+
+
+class GaussLegendreBasis(MultiprecisionLagrangeBasis):
+  def _compute_quadrature_points_and_weights(self, number_of_points):
+    quadrature_points, quadrature_weights = gauss_legendre(number_of_points, PREC_DIGITS)
+    return self._transform_and_sort_points_and_weights(quadrature_points, quadrature_weights)
+
+  def __str__(self):
+    return "GaussLegendreBasis"
+
+
+class GaussLobattoBasis(MultiprecisionLagrangeBasis):
+  def _compute_quadrature_points_and_weights(self, number_of_points):
+    quadrature_points, quadrature_weights = gauss_lobatto(number_of_points, PREC_DIGITS)
+    return self._transform_and_sort_points_and_weights(quadrature_points, quadrature_weights)
+
+  def __str__(self):
+    return "GaussLobattoBasis"

@@ -102,8 +102,15 @@ namespace tarch::accelerator {
     );
     queue
       .submit([&](::sycl::handler& handler) {
+        const ::sycl::local_accessor<std::uint64_t, 1> scratch(
+          ::sycl::range<1>(tarch::accelerator::SyclTeamScratchBytes / sizeof(std::uint64_t)),
+          handler
+        );
         handler.parallel_for(groupedRange, [=](const ::sycl::nd_item<1> item) {
-          functor(static_cast<int>(item.get_group(0)), tarch::accelerator::SyclTeam{item});
+          functor(
+            static_cast<int>(item.get_group(0)),
+            tarch::accelerator::SyclTeam{item, reinterpret_cast<unsigned char*>(&scratch[0])}
+          );
         });
       })
       .wait();

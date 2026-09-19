@@ -311,8 +311,8 @@ Type:                   """ + self.__class__.__name__
         kernels.Limiter(d).generate_kernels(
             kernels_namespace, output,
             kernels_templates_prefix, kernels_output_path,
-            regular_solver_quadpoints = self._regular_solver._basis.quadrature_points(render=False),
-            limiter_solver_quadpoints = self._limiter_solver._basis.quadrature_points(render=False)
+            regular_solver_quadpoints = [float(point) for point in self._regular_solver._basis.quadrature_points],
+            limiter_solver_quadpoints = [float(point) for point in self._limiter_solver._basis.quadrature_points]
         )
 
     """

@@ -236,7 +236,7 @@ void applications::exahype2::exaskred::ADERDGSolver::riemannSolver(
       return g;
     };
   ::applications::exahype2::exaskred::riemann::
-    wellBalancedRusanov<Shortcuts, Shortcuts::b, NumberOfUnknowns, NumberOfAuxiliaryVariables, Order>(
+    wellBalancedRusanov<Shortcuts, Shortcuts::b, NumberOfUnknowns, NumberOfAuxiliaryVariables, DGOrder>(
       QL,
       QR,
       x,

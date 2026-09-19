@@ -60,12 +60,16 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
 
     static std::string toString(SolverState state);
 
-    static constexpr int Order                      = {{ORDER}};
-    static constexpr int DGOrder                    = Order;
+    static constexpr int DGOrder                    = {{ORDER}};
     static constexpr int NumberOfUnknowns           = {{NUMBER_OF_UNKNOWNS}};
     static constexpr int NumberOfAuxiliaryVariables = {{NUMBER_OF_AUXILIARY_VARIABLES}};
     static constexpr double CFL                     = {{CFL_SAFETY_FACTOR}};
     static constexpr double PNPM                    = {{CFL_ADER}};
+    /**
+     * The Picard iteration of the predictor stops once the Euclidean distance between two
+     * iterates falls below this value.
+     */
+    static constexpr double PicardResidualTolerance = {{PICARD_RESIDUAL_TOLERANCE}};
 
     {{SOLVER_CONSTANTS}}
 

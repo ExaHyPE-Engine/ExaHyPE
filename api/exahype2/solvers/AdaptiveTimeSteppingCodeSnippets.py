@@ -192,9 +192,11 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() 
     def create_compute_new_time_step_size(self):
         if self._scheme is _AdaptiveTimeSteppingScheme.ADERDG:
             return """
-    const auto eigenvalueStatistics = kernels::{{SOLVER_NAME}}::reduceMaxEigenvalues(
-      repositories::{{SOLVER_INSTANCE}},
+    const auto eigenvalueStatistics = ::exahype2::dg::reduceMaxEigenvalues<
+      {{FULL_QUALIFIED_SOLVER_NAME}}, {{DG_ORDER}} + 1, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}
+    >(
       QNew,
+      kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::QuadraturePoints1D,
       marker.getX(),
       marker.getH(),
       timeStamp,

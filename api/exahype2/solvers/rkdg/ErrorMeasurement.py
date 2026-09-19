@@ -87,9 +87,9 @@ def _create_postprocessing_kernel_for_error_measurement(guard, time_step_size_ac
 
       peano4::dForEach({{DG_ORDER}} + 1, [&](const tarch::la::Vector<DIMENSIONS, int>& index) {
 #if DIMENSIONS==2
-        const double weight = cellVolume * kernels::{{SOLVER_NAME}}::Quadrature::QuadratureWeights1D[index[0]] * kernels::{{SOLVER_NAME}}::Quadrature::QuadratureWeights1D[index[1]];
+        const double weight = cellVolume * kernels::{{SOLVER_NAME}}::Quadrature<double>::QuadratureWeights1D[index[0]] * kernels::{{SOLVER_NAME}}::Quadrature<double>::QuadratureWeights1D[index[1]];
 #else
-        const double weight = cellVolume * kernels::{{SOLVER_NAME}}::Quadrature::QuadratureWeights1D[index[0]] * kernels::{{SOLVER_NAME}}::Quadrature::QuadratureWeights1D[index[1]] * kernels::{{SOLVER_NAME}}::Quadrature::QuadratureWeights1D[index[2]];
+        const double weight = cellVolume * kernels::{{SOLVER_NAME}}::Quadrature<double>::QuadratureWeights1D[index[0]] * kernels::{{SOLVER_NAME}}::Quadrature<double>::QuadratureWeights1D[index[1]] * kernels::{{SOLVER_NAME}}::Quadrature<double>::QuadratureWeights1D[index[2]];
 #endif
 
         repositories::{{SOLVER_INSTANCE}}.analyticalSolution(
@@ -97,7 +97,7 @@ def _create_postprocessing_kernel_for_error_measurement(guard, time_step_size_ac
             marker.getX(),
             marker.getH(),
             index,
-            kernels::{{SOLVER_NAME}}::Quadrature::QuadraturePoints1D
+            kernels::{{SOLVER_NAME}}::Quadrature<double>::QuadraturePoints1D
           ),
           fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp(),
           repositories::{{SOLVER_INSTANCE}}."""

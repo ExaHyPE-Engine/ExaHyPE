@@ -2,18 +2,14 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "Constants.h"
+
+#include "tarch/Assertions.h"
 #include "tarch/accelerator/accelerator.h"
-#include "tarch/la/Scalar.h"
-#include "tarch/la/Vector.h"
 
 namespace applications::exahype2::exagrype {
   template <class Shortcuts>
-  static inline GPU_CALLABLE_METHOD void source(
-    double*                                      S,
-    const double* const                          Q,
-    double                                       t,
-    const tarch::la::Vector<DIMENSIONS, double>& x
-  );
+  INLINE_METHOD GPU_CALLABLE_METHOD void sourceTerm(const double* NOALIAS Q, double* NOALIAS S);
 } // namespace applications::exahype2::exagrype
 
-#include "SourceTerm.cpph"
+#include "applications/exagrype/SourceTerm.cpph"

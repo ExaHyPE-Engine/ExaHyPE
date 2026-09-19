@@ -111,14 +111,6 @@ if args.use_probes:
             probe_particles,
             aderdg_solver,
             project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle",
-            projection_kernel_arguments="""
-        marker,
-        {{ORDER}},
-        kernels::{{SOLVER_NAME}}::Quadrature<double>::nodes,
-        {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}},
-        fineGridCell{{CURRENT_UNKNOWN_IDENTIFIER}}.data(),
-        *particle
-            """
         )
     )
 

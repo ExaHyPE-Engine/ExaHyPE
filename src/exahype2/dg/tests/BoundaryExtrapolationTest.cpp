@@ -10,9 +10,10 @@ namespace {
   constexpr int NumberOfUnknowns           = 2;
   constexpr int NumberOfAuxiliaryVariables = 1;
   constexpr int NumberOfData               = NumberOfUnknowns + NumberOfAuxiliaryVariables;
-  constexpr int NodesPerAxisIn3D           = (DIMENSIONS == 3) ? NumberOfDofsPerAxis : 1;
+  constexpr int NodesPerAxisIn3D           = (DIMENSIONS > 2) ? NumberOfDofsPerAxis : 1;
   constexpr int NodesPerFace               = NumberOfDofsPerAxis * NodesPerAxisIn3D;
   constexpr int NodesPerCell               = NodesPerFace * NumberOfDofsPerAxis;
+  constexpr int PaddedNodeStride           = NumberOfData + 2;
 
   struct FluxSolver final {
     static void flux(
@@ -92,6 +93,26 @@ namespace {
     return ((faceNode / lowerAxesStride) * NumberOfDofsPerAxis + normalIndex) * lowerAxesStride
       + faceNode % lowerAxesStride;
   }
+
+  // The lowest tangential axis of the face node runs fastest.
+  int cellNodeInAxisOrder(const int direction, const int faceNode, const int normalIndex) {
+    tarch::la::Vector<DIMENSIONS, int> nodeIndex(0);
+    nodeIndex(direction) = normalIndex;
+    int remainder        = faceNode;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      if (axis != direction) {
+        nodeIndex(axis) = remainder % NumberOfDofsPerAxis;
+        remainder /= NumberOfDofsPerAxis;
+      }
+    }
+    int cellNode = 0;
+    int stride   = 1;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      cellNode += nodeIndex(axis) * stride;
+      stride *= NumberOfDofsPerAxis;
+    }
+    return cellNode;
+  }
 } // namespace
 
 exahype2::dg::tests::BoundaryExtrapolationTest::BoundaryExtrapolationTest() :
@@ -107,6 +128,10 @@ void exahype2::dg::tests::BoundaryExtrapolationTest::run() {
   testMethod(testFluxOnAFaceComesFromTheFaceState);
   testMethod(testDiffusiveFluxOnAFaceReadsTheJumpAlongTheNormal);
   testMethod(testDiffusiveFluxIsExtrapolatedWithTheNodalGradients);
+  testMethod(testAPaddedNodeStrideProjectsOnlyTheEntries);
+  testMethod(testTheLowerAndUpperFaceUseTheirOwnCoefficients);
+  testMethod(testTheFaceNodesRunWithTheLowestTangentialAxisFastest);
+  testMethod(testAFieldOfFloatAccumulatesTheFacesInDouble);
 }
 
 void exahype2::dg::tests::BoundaryExtrapolationTest::testFaceBuffersAreClearedBeforeTheProjection() {
@@ -567,6 +592,228 @@ void exahype2::dg::tests::BoundaryExtrapolationTest::testDiffusiveFluxIsExtrapol
           unknown
         );
       }
+    }
+  }
+}
+
+void exahype2::dg::tests::BoundaryExtrapolationTest::testAPaddedNodeStrideProjectsOnlyTheEntries() {
+  // The lanes behind the entries of a node carry a value that would dominate every face if the
+  // projection read them.
+  double field[NodesPerCell * PaddedNodeStride];
+  for (int cellNode = 0; cellNode < NodesPerCell; cellNode++) {
+    for (int lane = 0; lane < PaddedNodeStride; lane++) {
+      field[cellNode * PaddedNodeStride + lane] = (lane < NumberOfData) ? (1.0 + cellNode + 0.25 * lane) : 1000.0;
+    }
+  }
+
+  double coefficients[NumberOfDofsPerAxis];
+  for (int index = 0; index < NumberOfDofsPerAxis; index++) {
+    coefficients[index] = 1.0;
+  }
+
+  for (int direction = 0; direction < DIMENSIONS; direction++) {
+    double lowerFace[NodesPerFace * NumberOfData];
+    double upperFace[NodesPerFace * NumberOfData];
+    for (int entry = 0; entry < NodesPerFace * NumberOfData; entry++) {
+      lowerFace[entry] = 9.0;
+      upperFace[entry] = 9.0;
+    }
+
+    exahype2::dg::
+      extrapolateNodalFieldToFacePair<NumberOfDofsPerAxis, NumberOfData, PaddedNodeStride, double, double, double>(
+        lowerFace,
+        upperFace,
+        field,
+        coefficients,
+        coefficients,
+        direction
+      );
+
+    for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
+      for (int entry = 0; entry < NumberOfData; entry++) {
+        double expected = 0.0;
+        for (int normalIndex = 0; normalIndex < NumberOfDofsPerAxis; normalIndex++) {
+          const int cellNode = cellNodeInAxisOrder(direction, faceNode, normalIndex);
+          expected += field[cellNode * PaddedNodeStride + entry];
+        }
+        validateNumericalEqualsWithParams3(
+          lowerFace[faceNode * NumberOfData + entry],
+          expected,
+          direction,
+          faceNode,
+          entry
+        );
+        validateNumericalEqualsWithParams3(
+          upperFace[faceNode * NumberOfData + entry],
+          expected,
+          direction,
+          faceNode,
+          entry
+        );
+      }
+    }
+  }
+}
+
+void exahype2::dg::tests::BoundaryExtrapolationTest::testTheLowerAndUpperFaceUseTheirOwnCoefficients() {
+  double field[NodesPerCell * NumberOfData];
+  for (int entry = 0; entry < NodesPerCell * NumberOfData; entry++) {
+    field[entry] = 1.0 + 0.5 * entry;
+  }
+
+  double leftCoefficients[NumberOfDofsPerAxis];
+  double rightCoefficients[NumberOfDofsPerAxis];
+  for (int index = 0; index < NumberOfDofsPerAxis; index++) {
+    leftCoefficients[index]  = 1.0 + index;
+    rightCoefficients[index] = 0.5 - 0.25 * index;
+  }
+
+  for (int direction = 0; direction < DIMENSIONS; direction++) {
+    double lowerFace[NodesPerFace * NumberOfData] = {};
+    double upperFace[NodesPerFace * NumberOfData] = {};
+
+    exahype2::dg::
+      extrapolateNodalFieldToFacePair<NumberOfDofsPerAxis, NumberOfData, NumberOfData, double, double, double>(
+        lowerFace,
+        upperFace,
+        field,
+        leftCoefficients,
+        rightCoefficients,
+        direction
+      );
+
+    for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
+      for (int entry = 0; entry < NumberOfData; entry++) {
+        double expectedLower = 0.0;
+        double expectedUpper = 0.0;
+        for (int normalIndex = 0; normalIndex < NumberOfDofsPerAxis; normalIndex++) {
+          const int    cellNode = cellNodeInAxisOrder(direction, faceNode, normalIndex);
+          const double value    = field[cellNode * NumberOfData + entry];
+          expectedLower += value * leftCoefficients[normalIndex];
+          expectedUpper += value * rightCoefficients[normalIndex];
+        }
+        validateNumericalEqualsWithParams3(
+          lowerFace[faceNode * NumberOfData + entry],
+          expectedLower,
+          direction,
+          faceNode,
+          entry
+        );
+        validateNumericalEqualsWithParams3(
+          upperFace[faceNode * NumberOfData + entry],
+          expectedUpper,
+          direction,
+          faceNode,
+          entry
+        );
+      }
+    }
+  }
+}
+
+void exahype2::dg::tests::BoundaryExtrapolationTest::testTheFaceNodesRunWithTheLowestTangentialAxisFastest() {
+  // Every cell node carries its own value, and a coefficient vector that holds one at a single index
+  // hands the value of that node's line position to the face node.
+  double field[NodesPerCell * NumberOfData];
+  for (int cellNode = 0; cellNode < NodesPerCell; cellNode++) {
+    for (int entry = 0; entry < NumberOfData; entry++) {
+      field[cellNode * NumberOfData + entry] = 1.0 + cellNode + 0.125 * entry;
+    }
+  }
+
+  for (int direction = 0; direction < DIMENSIONS; direction++) {
+    for (int markedIndex = 0; markedIndex < NumberOfDofsPerAxis; markedIndex++) {
+      double leftCoefficients[NumberOfDofsPerAxis]             = {};
+      double rightCoefficients[NumberOfDofsPerAxis]            = {};
+      leftCoefficients[markedIndex]                            = 1.0;
+      rightCoefficients[NumberOfDofsPerAxis - 1 - markedIndex] = 1.0;
+
+      double lowerFace[NodesPerFace * NumberOfData] = {};
+      double upperFace[NodesPerFace * NumberOfData] = {};
+
+      exahype2::dg::
+        extrapolateNodalFieldToFacePair<NumberOfDofsPerAxis, NumberOfData, NumberOfData, double, double, double>(
+          lowerFace,
+          upperFace,
+          field,
+          leftCoefficients,
+          rightCoefficients,
+          direction
+        );
+
+      for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
+        const int lowerCellNode = cellNodeInAxisOrder(direction, faceNode, markedIndex);
+        const int upperCellNode = cellNodeInAxisOrder(direction, faceNode, NumberOfDofsPerAxis - 1 - markedIndex);
+        for (int entry = 0; entry < NumberOfData; entry++) {
+          validateNumericalEqualsWithParams3(
+            lowerFace[faceNode * NumberOfData + entry],
+            field[lowerCellNode * NumberOfData + entry],
+            direction,
+            markedIndex,
+            faceNode
+          );
+          validateNumericalEqualsWithParams3(
+            upperFace[faceNode * NumberOfData + entry],
+            field[upperCellNode * NumberOfData + entry],
+            direction,
+            markedIndex,
+            faceNode
+          );
+        }
+      }
+    }
+  }
+}
+
+void exahype2::dg::tests::BoundaryExtrapolationTest::testAFieldOfFloatAccumulatesTheFacesInDouble() {
+  // The small value is half the distance between the large value and its float neighbour, so a sum
+  // taken in float drops it and a sum taken in double keeps it.
+  constexpr double LargeValue = 1024.0;
+  constexpr double SmallValue = 0.00006103515625;
+
+  double leftCoefficients[NumberOfDofsPerAxis];
+  double rightCoefficients[NumberOfDofsPerAxis];
+  for (int index = 0; index < NumberOfDofsPerAxis; index++) {
+    leftCoefficients[index]  = 1.0;
+    rightCoefficients[index] = (index + 1 < NumberOfDofsPerAxis) ? 1.0 : 0.0;
+  }
+
+  double expectedLower = 0.0;
+  double expectedUpper = 0.0;
+  for (int normalIndex = 0; normalIndex < NumberOfDofsPerAxis; normalIndex++) {
+    const double value = (normalIndex == 0) ? LargeValue : SmallValue;
+    expectedLower += value * leftCoefficients[normalIndex];
+    expectedUpper += value * rightCoefficients[normalIndex];
+  }
+
+  for (int direction = 0; direction < DIMENSIONS; direction++) {
+    float field[NodesPerCell * NumberOfData];
+    for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
+      for (int normalIndex = 0; normalIndex < NumberOfDofsPerAxis; normalIndex++) {
+        const int  cellNode = cellNodeInAxisOrder(direction, faceNode, normalIndex);
+        const auto value    = static_cast<float>((normalIndex == 0) ? LargeValue : SmallValue);
+        for (int entry = 0; entry < NumberOfData; entry++) {
+          field[cellNode * NumberOfData + entry] = value;
+        }
+      }
+    }
+
+    double lowerFace[NodesPerFace * NumberOfData] = {};
+    double upperFace[NodesPerFace * NumberOfData] = {};
+
+    exahype2::dg::
+      extrapolateNodalFieldToFacePair<NumberOfDofsPerAxis, NumberOfData, NumberOfData, float, double, double>(
+        lowerFace,
+        upperFace,
+        field,
+        leftCoefficients,
+        rightCoefficients,
+        direction
+      );
+
+    for (int entry = 0; entry < NodesPerFace * NumberOfData; entry++) {
+      validateNumericalEqualsWithParams2(lowerFace[entry], expectedLower, direction, entry);
+      validateNumericalEqualsWithParams2(upperFace[entry], expectedUpper, direction, entry);
     }
   }
 }

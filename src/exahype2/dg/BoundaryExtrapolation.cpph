@@ -3,6 +3,65 @@
 
 TARGET_DECLARE
 /**
+ * Writes the values of a nodal polynomial at the two ends of one axis into the two faces of that
+ * axis. Every node holds NumberOfEntries values NodeStride apart, and inside a face the lowest
+ * tangential axis runs fastest.
+ */
+template <
+  int NumberOfDofsPerAxis,
+  int NumberOfEntries,
+  int NodeStride,
+  typename FieldPrecision,
+  typename FacePrecision,
+  typename CoefficientPrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::extrapolateNodalFieldToFacePair(
+  FacePrecision* NOALIAS const              lowerFace,
+  FacePrecision* NOALIAS const              upperFace,
+  const FieldPrecision* NOALIAS const       field,
+  const CoefficientPrecision* NOALIAS const leftFaceCoefficients,
+  const CoefficientPrecision* NOALIAS const rightFaceCoefficients,
+  const int                                 direction
+) {
+  static_assert(NodeStride >= NumberOfEntries, "A node holds every entry.");
+
+  constexpr int NodesPerAxisIn3D = (DIMENSIONS == 3) ? NumberOfDofsPerAxis : 1;
+  constexpr int NodesPerFace     = NumberOfDofsPerAxis * NodesPerAxisIn3D;
+
+  using AccumulatePrecision = std::common_type_t<FieldPrecision, FacePrecision, CoefficientPrecision>;
+
+  assertion(direction >= 0 and direction < DIMENSIONS, direction);
+
+  int lowerAxesStride = 1;
+  for (int axis = 0; axis < direction; axis++) {
+    lowerAxesStride *= NumberOfDofsPerAxis;
+  }
+
+  for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
+    const int lowerAxesIndex  = faceNode % lowerAxesStride;
+    const int higherAxesIndex = faceNode / lowerAxesStride;
+
+    AccumulatePrecision lowerValues[NumberOfEntries] = {};
+    AccumulatePrecision upperValues[NumberOfEntries] = {};
+
+    for (int normalIndex = 0; normalIndex < NumberOfDofsPerAxis; normalIndex++) {
+      const int cellNode = (higherAxesIndex * NumberOfDofsPerAxis + normalIndex) * lowerAxesStride + lowerAxesIndex;
+      SIMD()
+      for (int entry = 0; entry < NumberOfEntries; entry++) {
+        const auto nodeValue = static_cast<AccumulatePrecision>(field[entry + NodeStride * cellNode]);
+        lowerValues[entry] += nodeValue * static_cast<AccumulatePrecision>(leftFaceCoefficients[normalIndex]);
+        upperValues[entry] += nodeValue * static_cast<AccumulatePrecision>(rightFaceCoefficients[normalIndex]);
+      }
+    }
+
+    SIMD()
+    for (int entry = 0; entry < NumberOfEntries; entry++) {
+      lowerFace[entry + NumberOfEntries * faceNode] = static_cast<FacePrecision>(lowerValues[entry]);
+      upperFace[entry + NumberOfEntries * faceNode] = static_cast<FacePrecision>(upperValues[entry]);
+    }
+  }
+}
+
+/**
  * Overwrites face states with the cell polynomial's boundary values.
  * Face buffers hold lower faces before upper faces, with the lowest tangential axis running fastest.
  */
@@ -18,43 +77,24 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::extrapolateStateToFaces(
   const ComputePrecision* NOALIAS const leftFaceCoefficients,
   const ComputePrecision* NOALIAS const rightFaceCoefficients
 ) {
-  constexpr int NumberOfData     = NumberOfUnknowns + NumberOfAuxiliaryVariables;
-  constexpr int NodesPerAxisIn3D = (DIMENSIONS == 3) ? NumberOfDofsPerAxis : 1;
-  constexpr int NodesPerFace     = NumberOfDofsPerAxis * NodesPerAxisIn3D;
-
-  using AccumulatePrecision = std::common_type_t<StoragePrecision, ComputePrecision>;
+  constexpr int NumberOfData = NumberOfUnknowns + NumberOfAuxiliaryVariables;
 
   UNROLL(DIMENSIONS)
   for (int direction = 0; direction < DIMENSIONS; direction++) {
-    int lowerAxesStride = 1;
-    for (int axis = 0; axis < direction; axis++) {
-      lowerAxesStride *= NumberOfDofsPerAxis;
-    }
-
-    for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
-      const int lowerAxesIndex  = faceNode % lowerAxesStride;
-      const int higherAxesIndex = faceNode / lowerAxesStride;
-
-      AccumulatePrecision leftState[NumberOfData]  = {};
-      AccumulatePrecision rightState[NumberOfData] = {};
-
-      for (int normalIndex = 0; normalIndex < NumberOfDofsPerAxis; normalIndex++) {
-        const int cellNode = (higherAxesIndex * NumberOfDofsPerAxis + normalIndex) * lowerAxesStride + lowerAxesIndex;
-        SIMD()
-        for (int value = 0; value < NumberOfData; value++) {
-          const auto nodeValue = static_cast<AccumulatePrecision>(cellState[value + NumberOfData * cellNode]);
-          leftState[value] += nodeValue * static_cast<AccumulatePrecision>(leftFaceCoefficients[normalIndex]);
-          rightState[value] += nodeValue * static_cast<AccumulatePrecision>(rightFaceCoefficients[normalIndex]);
-        }
-      }
-
-      SIMD()
-      for (int value = 0; value < NumberOfData; value++) {
-        faceState[direction][value + NumberOfData * faceNode] = static_cast<StoragePrecision>(leftState[value]);
-        faceState[direction + DIMENSIONS][value + NumberOfData * faceNode] =
-          static_cast<StoragePrecision>(rightState[value]);
-      }
-    }
+    exahype2::dg::extrapolateNodalFieldToFacePair<
+      NumberOfDofsPerAxis,
+      NumberOfData,
+      NumberOfData,
+      StoragePrecision,
+      StoragePrecision,
+      ComputePrecision>(
+      faceState[direction],
+      faceState[direction + DIMENSIONS],
+      cellState,
+      leftFaceCoefficients,
+      rightFaceCoefficients,
+      direction
+    );
   }
 }
 
@@ -91,8 +131,6 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::extrapolateFluxToFaces(
   constexpr int NodesPerCell           = NodesPerFace * NumberOfDofsPerAxis;
   constexpr int AxisStride             = NumberOfUnknowns * NodesPerCell;
   constexpr int GradientEntriesPerAxis = NodesPerCell * NumberOfData;
-
-  using AccumulatePrecision = std::common_type_t<StoragePrecision, ComputePrecision>;
 
   if constexpr (EvaluateFlux) {
     [[maybe_unused]] ComputePrecision nodalGradients[EvaluateDiffusiveFlux ? DIMENSIONS * GradientEntriesPerAxis : 1];
@@ -166,36 +204,20 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::extrapolateFluxToFaces(
 
     UNROLL(DIMENSIONS)
     for (int direction = 0; direction < DIMENSIONS; direction++) {
-      int lowerAxesStride = 1;
-      for (int axis = 0; axis < direction; axis++) {
-        lowerAxesStride *= NumberOfDofsPerAxis;
-      }
-
-      for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
-        const int lowerAxesIndex  = faceNode % lowerAxesStride;
-        const int higherAxesIndex = faceNode / lowerAxesStride;
-
-        AccumulatePrecision leftFlux[NumberOfUnknowns]  = {};
-        AccumulatePrecision rightFlux[NumberOfUnknowns] = {};
-
-        for (int normalIndex = 0; normalIndex < NumberOfDofsPerAxis; normalIndex++) {
-          const int cellNode = (higherAxesIndex * NumberOfDofsPerAxis + normalIndex) * lowerAxesStride + lowerAxesIndex;
-          const int entry    = NumberOfUnknowns * cellNode + direction * AxisStride;
-          SIMD()
-          for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-            const auto nodeFlux = static_cast<AccumulatePrecision>(cellFlux[unknown + entry]);
-            leftFlux[unknown] += nodeFlux * static_cast<AccumulatePrecision>(leftFaceCoefficients[normalIndex]);
-            rightFlux[unknown] += nodeFlux * static_cast<AccumulatePrecision>(rightFaceCoefficients[normalIndex]);
-          }
-        }
-
-        SIMD()
-        for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-          faceFlux[direction][unknown + NumberOfUnknowns * faceNode] = static_cast<StoragePrecision>(leftFlux[unknown]);
-          faceFlux[direction + DIMENSIONS][unknown + NumberOfUnknowns * faceNode] =
-            static_cast<StoragePrecision>(rightFlux[unknown]);
-        }
-      }
+      exahype2::dg::extrapolateNodalFieldToFacePair<
+        NumberOfDofsPerAxis,
+        NumberOfUnknowns,
+        NumberOfUnknowns,
+        ComputePrecision,
+        StoragePrecision,
+        ComputePrecision>(
+        faceFlux[direction],
+        faceFlux[direction + DIMENSIONS],
+        cellFlux + direction * AxisStride,
+        leftFaceCoefficients,
+        rightFaceCoefficients,
+        direction
+      );
     }
   } else {
     for (int face = 0; face < peano4::FacesPerCell; face++) {

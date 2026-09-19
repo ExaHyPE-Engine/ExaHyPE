@@ -38,7 +38,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinPatchSize() const {
 }
 
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getNumberOfDoFs() const {
-  return peano4::power(Order + 1, DIMENSIONS) * (NumberOfUnknowns + NumberOfAuxiliaryVariables);
+  return peano4::power(DGOrder + 1, DIMENSIONS) * (NumberOfUnknowns + NumberOfAuxiliaryVariables);
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinCellSize() const {
@@ -289,9 +289,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
     // A suspended solver returns before the start-of-step implementation runs, so its
     // eigenvalues survive the sweep it sits out.
   case SolverState::Suspended:
-{% if USE_SEPARATE_SWEEPS is sameas True %}
-    _solverState = SolverState::InitialPrediction;
-{% else %}
     // Resuming on an adaptive mesh still owes the prediction-on-hanging-cells sweep, so
     // this picks the same successor as a plot does.
     _solverState = (_minTimeStamp == 0)
@@ -299,12 +296,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
       : ((_hasHangingFacesThisTimeStep or _meshRefinementRanSinceLastTimeStep)
         ? SolverState::PredictionOnHangingCells
         : SolverState::TimeStep);
-{% endif %}
     return;
   case SolverState::Plotting:
-{% if USE_SEPARATE_SWEEPS is sameas True %}
-    _solverState = SolverState::InitialPrediction;
-{% else %}
     // Plots run between a time-step sweep and its prediction-on-hanging-cells
     // sweep, so on an adaptive mesh that sweep still has to follow the plot.
     _solverState = (_minTimeStamp == 0)
@@ -312,7 +305,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
       : ((_hasHangingFacesThisTimeStep or _meshRefinementRanSinceLastTimeStep)
         ? SolverState::PredictionOnHangingCells
         : SolverState::TimeStep);
-{% endif %}
     break;
   case SolverState::InitialPrediction:
     _solverState = (_hasHangingFacesThisTimeStep or _meshRefinementRanSinceLastTimeStep)
@@ -323,13 +315,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep() {
     _solverState = SolverState::TimeStep;
     break;
   case SolverState::TimeStep:
-{% if USE_SEPARATE_SWEEPS is sameas True %}
-    _solverState = SolverState::InitialPrediction;
-{% else %}
     _solverState = (_hasHangingFacesThisTimeStep or _meshRefinementRanSinceLastTimeStep)
       ? SolverState::PredictionOnHangingCells
       : SolverState::TimeStep;
-{% endif %}
     break;
   }
 {%- endif %}
@@ -539,15 +527,11 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() con
 {%- if SUBCELL_LIMITER %}
   return ::exahype2::dg::isFirstSweepOfTimeStep(_limitingSweep);
 {%- else %}
-{% if USE_SEPARATE_SWEEPS is sameas True %}
-  return _solverState == SolverState::InitialPrediction;
-{% else %}
   return (
     _solverState == SolverState::TimeStep
     or
     _solverState == SolverState::InitialPrediction
   );
-{% endif %}
 {%- endif %}
 }
 
@@ -566,9 +550,9 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() cons
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {
-{% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
-  kernels::{{SOLVER_NAME}}::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initQuadratureNodesAndWeights();
-  kernels::{{SOLVER_NAME}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initDGMatrices();
+{% for precision in TABLE_PRECISIONS %}
+  kernels::{{SOLVER_NAME}}::Quadrature<{{precision}}>::initialise();
+  kernels::{{SOLVER_NAME}}::DGMatrices<{{precision}}>::initialise();
 {% endfor %}
 
   {{START_SIMULATION_IMPLEMENTATION}}
@@ -577,9 +561,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishSimulation() {
   {{FINISH_SIMULATION_IMPLEMENTATION}}
 
-{% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
-  kernels::{{SOLVER_NAME}}::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::freeQuadratureNodesAndWeights();
-  kernels::{{SOLVER_NAME}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::freeDGMatrices();
+{% for precision in TABLE_PRECISIONS %}
+  kernels::{{SOLVER_NAME}}::Quadrature<{{precision}}>::deallocate();
+  kernels::{{SOLVER_NAME}}::DGMatrices<{{precision}}>::deallocate();
 {% endfor %}
 }
 

@@ -14,6 +14,22 @@ TARGET_DECLARE
 namespace exahype2::dg {
   template <
     int NumberOfDofsPerAxis,
+    int NumberOfEntries,
+    int NodeStride,
+    typename FieldPrecision,
+    typename FacePrecision,
+    typename CoefficientPrecision>
+  INLINE_METHOD GPU_CALLABLE_METHOD void extrapolateNodalFieldToFacePair(
+    FacePrecision* NOALIAS              lowerFace,
+    FacePrecision* NOALIAS              upperFace,
+    const FieldPrecision* NOALIAS       field,
+    const CoefficientPrecision* NOALIAS leftFaceCoefficients,
+    const CoefficientPrecision* NOALIAS rightFaceCoefficients,
+    int                                 direction
+  );
+
+  template <
+    int NumberOfDofsPerAxis,
     int NumberOfUnknowns,
     int NumberOfAuxiliaryVariables,
     typename StoragePrecision,
