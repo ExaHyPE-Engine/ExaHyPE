@@ -12,12 +12,11 @@ import math
 
 class NavierStokesTaylorGreenVortex(Scenario):
     """
-    Originally described in doi.org/10.1098/rspa.1937.0036, the Taylor-Green Vortex.
+    The Taylor-Green Vortex, first described in doi.org/10.1098/rspa.1937.0036.
 
-    is a scenario for the incompressible Navier-Stokes equations essentially describing
-    rotating segments with constant density.
-
-    As the scenario has a known analytical solution it is commonly used as a benchmark.
+    The analytical solution of the incompressible Navier-Stokes equations
+    describes rotating segments of constant density whose amplitude decays with
+    the reference viscosity.
     """
 
     _dimensions = 2

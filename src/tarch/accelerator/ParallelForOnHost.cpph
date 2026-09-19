@@ -1,0 +1,48 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+namespace tarch::accelerator {
+  /**
+   * Runs functor over the range on the host threads in every accelerator
+   * backend.
+   *
+   * Inside an enclosing parallel region a worksharing loop would bind to an
+   * inactive nested region and run serially, so the loop then becomes tasks the
+   * enclosing team executes.
+   */
+  template <typename Functor>
+  inline void parallelForOnHost(const Range& range, const Functor functor) {
+    assertion(range.n >= 0, range.n);
+#if defined(_OPENMP)
+    if (omp_in_parallel()) {
+      constexpr int TasksPerThread = 4;
+      const int     numberOfTasks  = std::max(1, std::min(range.n, TasksPerThread * omp_get_num_threads()));
+#if defined(PEANO_OPENMP_TASKLOOP_SUPPORTED)
+      const auto numberOfItems = static_cast<unsigned long>(range.n);
+#pragma omp taskloop default(none) num_tasks(numberOfTasks) firstprivate(numberOfItems) shared(functor)
+      for (unsigned long i = 0; i < numberOfItems; ++i) {
+        functor(static_cast<int>(i));
+      }
+#else
+      tarch::accelerator::reportMissingTaskloopSupportOnce();
+      for (int taskNumber = 0; taskNumber < numberOfTasks; taskNumber++) {
+        const int begin = static_cast<int>(static_cast<std::int64_t>(range.n) * taskNumber / numberOfTasks);
+        const int end   = static_cast<int>(static_cast<std::int64_t>(range.n) * (taskNumber + 1) / numberOfTasks);
+#pragma omp task firstprivate(begin, end) shared(functor)
+        for (int i = begin; i < end; i++) {
+          functor(i);
+        }
+      }
+#pragma omp taskwait
+#endif
+      return;
+    }
+#endif
+    tarch::accelerator::runInParallelRegion([&]() {
+#pragma omp for schedule(static)
+      for (int i = 0; i < range.n; ++i) {
+        functor(i);
+      }
+    });
+  }
+} // namespace tarch::accelerator

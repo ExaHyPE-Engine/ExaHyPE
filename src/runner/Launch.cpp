@@ -35,8 +35,8 @@ namespace {
 int runner::launch(
   const tarch::la::Vector<DIMENSIONS, double>& domainOffset,
   const tarch::la::Vector<DIMENSIONS, double>& domainSize,
-  const std::bitset<DIMENSIONS>&               periodicBC,
-  runner::RepositoryCallbacks                  callbacks,
+  const std::bitset<DIMENSIONS>&               periodicBoundaries,
+  const runner::RepositoryCallbacks&           callbacks,
   std::vector<runner::Step>                    steps,
   int&                                         argc,
   char**                                       argv
@@ -55,8 +55,8 @@ int runner::launch(
   parameters.configure(argc, argv);
 
   // The runtime and application parsers use one reader, whose usage tracking identifies keys neither consumes.
-  const auto configReader         = parameters.getConfigReader();
-  const auto applicationParserRan = static_cast<bool>(callbacks.loadApplicationParameters);
+  auto* const configReader         = parameters.getConfigReader();
+  const auto  applicationParserRan = static_cast<bool>(callbacks.loadApplicationParameters);
   if (applicationParserRan) {
     callbacks.loadApplicationParameters(configReader, argc, argv);
   }
@@ -146,7 +146,7 @@ int runner::launch(
   tarch::mpi::barrier(tarch::mpi::Rank::getInstance().getCommunicator());
   tarch::instrumentation::Log::setOutputFile(outputDirectory + parameters.getExecutableName() + ".log");
 
-  peano4::init(domainOffset, domainSize, periodicBC);
+  peano4::init(domainOffset, domainSize, periodicBoundaries);
 
   // Every rank schedules the same plan, so the first grid sweep builds the
   // complete base grid with each rank owning its contiguous curve segment.
@@ -156,10 +156,10 @@ int runner::launch(
     callbacks.startSimulation();
   }
 
-  runner::Engine engine(domainOffset, domainSize, periodicBC, callbacks, std::move(steps));
+  runner::Engine engine(domainOffset, domainSize, periodicBoundaries, callbacks, std::move(steps));
 
   int returnCode = EXIT_SUCCESS;
-#pragma omp parallel
+#pragma omp parallel default(none) shared(engine, returnCode)
   {
     // Every worker arms its own trap: The traversal tasks run on all threads, and the
     // floating-point environment is a per-thread state.

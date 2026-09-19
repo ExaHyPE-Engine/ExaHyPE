@@ -27,15 +27,15 @@ namespace peano4::particles {
    */
   constexpr double GrabOwnershipSpatialSortingTolerance = 1.001;
 
-  double relativeReleaseOwnershipSpatialSortingTolerance(const ::peano4::dataview::VertexMarker& marker);
-  double relativeReleaseOwnershipSpatialSortingTolerance(const ::peano4::dataview::CellMarker& marker);
+  double relativeReleaseOwnershipSpatialSortingTolerance(const peano4::dataview::VertexMarker& marker);
+  double relativeReleaseOwnershipSpatialSortingTolerance(const peano4::dataview::CellMarker& marker);
   double relativeReleaseOwnershipSpatialSortingTolerance(const tarch::la::Vector<DIMENSIONS, double>& h);
-  double relativeGrabOwnershipSpatialSortingTolerance(const ::peano4::dataview::VertexMarker& marker);
-  double relativeGrabOwnershipSpatialSortingTolerance(const ::peano4::dataview::CellMarker& marker);
+  double relativeGrabOwnershipSpatialSortingTolerance(const peano4::dataview::VertexMarker& marker);
+  double relativeGrabOwnershipSpatialSortingTolerance(const peano4::dataview::CellMarker& marker);
   double relativeGrabOwnershipSpatialSortingTolerance(const tarch::la::Vector<DIMENSIONS, double>& h);
 
-  bool fitsIntoLevel(double searchRadius, const ::peano4::dataview::CellMarker& marker);
-  bool fitsIntoLevel(double searchRadius, const ::peano4::dataview::VertexMarker& marker);
+  bool fitsIntoLevel(double searchRadius, const peano4::dataview::CellMarker& marker);
+  bool fitsIntoLevel(double searchRadius, const peano4::dataview::VertexMarker& marker);
 
   std::bitset<DIMENSIONS> getParticleAssociationWithinCell(
     const tarch::la::Vector<DIMENSIONS, double>& x,

@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
   return runner::launch(
     DomainOffset,
     DomainSize,
-    PeriodicBC,
+    PeriodicBoundaries,
     createRepositoryCallbacks(),
     createSteps(),
     argc,

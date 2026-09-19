@@ -32,7 +32,7 @@ public:
   static constexpr std::string_view Name{CurveGrammar::Name};
 
   static constexpr int SubdivisionFactor{CurveGrammar::SubdivisionFactor};
-  static constexpr int ChildrenPerCell{peano4::Power<SubdivisionFactor, DIMENSIONS>};
+  static constexpr int ChildrenPerCell{peano4::power(SubdivisionFactor, DIMENSIONS)};
   static constexpr int NumberOfStates{static_cast<int>(CurveGrammar::Productions.size())};
 
   static constexpr std::uint8_t RootState{static_cast<std::uint8_t>(CurveGrammar::StartSymbol)};

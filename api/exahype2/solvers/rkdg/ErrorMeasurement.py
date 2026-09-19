@@ -7,8 +7,8 @@ from exahype2.solvers.ErrorMeasurement import (
 
 from exahype2.solvers.PDETerms import PDETerms
 
-from exahype2.solvers.rkdg.rusanov.GlobalFixedTimeStep import GlobalFixedTimeStep
-from exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep import GlobalAdaptiveTimeStep
+from exahype2.solvers.rkdg.GlobalFixedTimeStep import GlobalFixedTimeStep
+from exahype2.solvers.rkdg.GlobalAdaptiveTimeStep import GlobalAdaptiveTimeStep
 
 from exahype2.solvers.rkdg.actionsets import (
     EmptyPostprocessSolution,
@@ -37,7 +37,7 @@ class ErrorMeasurement(exahype2.solvers.ErrorMeasurement):
             guard="_solverState == SolverState::GridInitialisation or isLastGridSweepOfTimeStep()"
         )
 
-        if solver._action_set_postprocess_solution == None or isinstance(
+        if solver._action_set_postprocess_solution is None or isinstance(
             solver._action_set_postprocess_solution, EmptyPostprocessSolution
         ):
             solver._action_set_postprocess_solution = CellWisePostprocessSolution(
@@ -56,8 +56,6 @@ class ErrorMeasurement(exahype2.solvers.ErrorMeasurement):
                     solver._provide_cell_data_to_compute_kernels_default_guard()
                 )
             )
-
-        # solver._action_set_postprocess_solution.descend_invocation_order = 3
 
 
 def _create_postprocessing_kernel_for_error_measurement(guard, time_step_size_accessor):
@@ -87,21 +85,19 @@ def _create_postprocessing_kernel_for_error_measurement(guard, time_step_size_ac
       double solution[{{NUMBER_OF_UNKNOWNS}}];
       int linearisedIndex = 0;
 
-      // Iterate over all quadrature points in the cell
       peano4::dForEach({{DG_ORDER}} + 1, [&](const tarch::la::Vector<DIMENSIONS, int>& index) {
 #if DIMENSIONS==2
-        double weight = cellVolume * repositories::{{SOLVER_INSTANCE}}.QuadratureWeights1D[index[0]] * repositories::{{SOLVER_INSTANCE}}.QuadratureWeights1D[index[1]];
+        const double weight = cellVolume * kernels::{{SOLVER_NAME}}::Quadrature::QuadratureWeights1D[index[0]] * kernels::{{SOLVER_NAME}}::Quadrature::QuadratureWeights1D[index[1]];
 #else
-        double weight = cellVolume * repositories::{{SOLVER_INSTANCE}}.QuadratureWeights1D[index[0]] * repositories::{{SOLVER_INSTANCE}}.QuadratureWeights1D[index[1]] * repositories::{{SOLVER_INSTANCE}}.QuadratureWeights1D[index[2]];
+        const double weight = cellVolume * kernels::{{SOLVER_NAME}}::Quadrature::QuadratureWeights1D[index[0]] * kernels::{{SOLVER_NAME}}::Quadrature::QuadratureWeights1D[index[1]] * kernels::{{SOLVER_NAME}}::Quadrature::QuadratureWeights1D[index[2]];
 #endif
 
-        // Compute the exact solution
         repositories::{{SOLVER_INSTANCE}}.analyticalSolution(
           ::exahype2::dg::getQuadraturePoint(
             marker.getX(),
             marker.getH(),
             index,
-            repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1D
+            kernels::{{SOLVER_NAME}}::Quadrature::QuadraturePoints1D
           ),
           fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp(),
           repositories::{{SOLVER_INSTANCE}}."""
@@ -111,7 +107,6 @@ def _create_postprocessing_kernel_for_error_measurement(guard, time_step_size_ac
           solution
         );
 
-        // Increment the respective errors
         constexpr int MeasuredUnknowns[] = {{MEASURED_UNKNOWNS}};
         for (const int unknown : MeasuredUnknowns) {
           const double error = std::abs(fineGridCell{{UNKNOWN_IDENTIFIER}}.data()[linearisedIndex + unknown] - solution[unknown]);

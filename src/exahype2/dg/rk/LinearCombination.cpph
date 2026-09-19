@@ -1,0 +1,57 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+TARGET_DECLARE
+/**
+ * Combines the cell state with the selected tableau row or final weights.
+ * Only estimates with nonzero weights must be initialised.
+ * The input and output state buffers may alias.
+ */
+template <
+  int NumberOfRungeKuttaSteps,
+  int NumberOfDofsPerAxis,
+  int NumberOfUnknowns,
+  int NumberOfAuxiliaryVariables,
+  typename StoragePrecision,
+  typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::rk::linearCombinationOfEstimates(
+  const int                             rungeKuttaStep,
+  const StoragePrecision*               cellState,
+  const StoragePrecision* NOALIAS const rightHandSideEstimates,
+  StoragePrecision*                     stageState,
+  const ComputePrecision* NOALIAS const coefficients
+) {
+  constexpr int NumberOfData     = NumberOfUnknowns + NumberOfAuxiliaryVariables;
+  constexpr int NodesPerAxisIn3D = (DIMENSIONS == 3) ? NumberOfDofsPerAxis : 1;
+  constexpr int NodesPerCell     = NumberOfDofsPerAxis * NumberOfDofsPerAxis * NodesPerAxisIn3D;
+
+  assertion(rungeKuttaStep >= 0 and rungeKuttaStep <= NumberOfRungeKuttaSteps, rungeKuttaStep);
+
+  using AccumulatePrecision = std::common_type_t<StoragePrecision, ComputePrecision>;
+
+  const ComputePrecision* NOALIAS weights =
+    rungeKuttaStep == NumberOfRungeKuttaSteps ? coefficients : coefficients + rungeKuttaStep * NumberOfRungeKuttaSteps;
+
+  for (int cellNode = 0; cellNode < NodesPerCell; cellNode++) {
+    SIMD()
+    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+      const int stateEntry = cellNode * NumberOfData + unknown;
+      auto      value      = static_cast<AccumulatePrecision>(cellState[stateEntry]);
+      for (int estimate = 0; estimate < NumberOfRungeKuttaSteps; estimate++) {
+        if (weights[estimate] != static_cast<ComputePrecision>(0)) {
+          value +=
+            static_cast<AccumulatePrecision>(weights[estimate])
+            * static_cast<AccumulatePrecision>(
+              rightHandSideEstimates[estimate * NodesPerCell * NumberOfUnknowns + cellNode * NumberOfUnknowns + unknown]
+            );
+        }
+      }
+      stageState[stateEntry] = static_cast<StoragePrecision>(value);
+    }
+    for (int auxiliaryVariable = 0; auxiliaryVariable < NumberOfAuxiliaryVariables; auxiliaryVariable++) {
+      const int stateEntry   = cellNode * NumberOfData + NumberOfUnknowns + auxiliaryVariable;
+      stageState[stateEntry] = cellState[stateEntry];
+    }
+  }
+}
+TARGET_DECLARE_END

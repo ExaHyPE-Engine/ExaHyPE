@@ -30,20 +30,17 @@ class StaticCoupling(object):
         self._regular_solver = regularSolver
         self._limiter_solver = limitingSolver
 
-        """
-        A child class fills these with the declaration and the definition of the mandatory
-        and the optional functions.
-        """
+        # A child class fills these with the declaration and the definition of the
+        # mandatory and the optional functions.
         self._solver_user_declarations  = ""
         self._solver_user_definitions   = ""
 
         self.user_action_set_includes   = ""
         self.user_solver_includes       = ""
 
-        """
-        A child class fills these with the code the solver runs at the start and at the end of a
-        time step. The code sets a time-step variable and advances the time stamp of the solver.
-        """
+        # A child class fills these with the code the solver runs at the start and at the
+        # end of a time step. The code sets a time-step variable and advances the time
+        # stamp of the solver.
         self._start_time_step_implementation = ""
         self._finish_time_step_implementation = ""
         self._print_time_step_implementation = ""
@@ -114,14 +111,11 @@ class StaticCoupling(object):
               + " and " + "repositories::" + self.get_name_of_global_instance() + ".isFirstGridSweepOfTimeStep()"),
         )
 
-        """
-        The troubledness check runs in the initialisation after the regular solver has
-          computed its initial condition.
-        The copy and the conversion between the regular and the limiter representation run
-          before the first grid traversal reads them, so either at the beginning of the first
-          grid traversal or at the end of the second one. Both a regular-to-limiter cell and
-          a limiter-to-regular cell then hold both versions and project both to their faces.
-        """
+        # The troubledness check runs in the initialisation, after the regular solver
+        # has computed its initial condition. The copy between the regular and the
+        # limiter representation runs before the first grid traversal reads it, so a
+        # cell that changes its marker holds both versions and projects both to its
+        # faces.
         self._action_set_check_troubledness.descend_invocation_order = 1000
         self._action_set_copy_face_data.descend_invocation_order = 10
 
@@ -129,7 +123,7 @@ class StaticCoupling(object):
             " and fineGridCell" + self._name + "CellLabel.getTroubledMarker()==celldata::" + self._name + "CellLabel::TroubledMarker::REGULAR"
         )
 
-        self._regular_solver._action_set_correction.cell_guard += (
+        self._regular_solver._action_set_correction._cell_guard += (
             " and fineGridCell" + self._name + "CellLabel.getTroubledMarker()==celldata::" + self._name + "CellLabel::TroubledMarker::REGULAR"
         )
 
@@ -137,11 +131,11 @@ class StaticCoupling(object):
             " and fineGridCell" + self._name + "CellLabel.getTroubledMarker()==celldata::" + self._name + "CellLabel::TroubledMarker::TROUBLED"
         )
 
-        self._limiter_solver._action_set_correction.cell_guard += (
+        self._limiter_solver._action_set_correction._cell_guard += (
             " and fineGridCell" + self._name + "CellLabel.getTroubledMarker()==celldata::" + self._name + "CellLabel::TroubledMarker::TROUBLED"
         )
 
-        self._limiter_solver._action_set_correction.face_guard += (
+        self._limiter_solver._action_set_correction._face_guard += (
             " and fineGridFace" + self._name + "FaceLabel.getTroubledMarker()>=facedata::" + self._name + "FaceLabel::TroubledMarker::LIMITER_TO_REGULAR"
         )
 
@@ -236,7 +230,7 @@ class StaticCoupling(object):
             self._store_face_data_default_guard()
             + " and not repositories::"
             + self.get_name_of_global_instance()
-            + ".PeriodicBC[marker.getSelectedFaceNumber()%DIMENSIONS]"
+            + ".PeriodicBoundaries[marker.getSelectedFaceNumber()%DIMENSIONS]"
             + " and not marker.hasBeenRefined() and fineGridFace"
             + self._name
             + "FaceLabel.getBoundary()"
@@ -299,7 +293,6 @@ Type:                   """ + self.__class__.__name__
     def add_actions_to_plot_solution(self, step):
         pass
 
-    # these actions are executed during each time step
     def add_actions_to_perform_time_step(self, step):
         step.add_action_set(self._action_set_copy_face_data)
 

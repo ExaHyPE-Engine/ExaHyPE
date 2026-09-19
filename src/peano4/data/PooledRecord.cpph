@@ -83,7 +83,7 @@ void peano4::data::PooledRecord<Record, DoF, Cardinality2D, Cardinality3D>::bind
   const auto firstSlotToBind = pool.rawData() == previousBuffer ? std::min(previousSize, slots.size()) : std::size_t{0};
 
   if (firstSlotToBind < slots.size()) {
-    tarch::accelerator::parallelFor(
+    tarch::accelerator::parallelForOnHost(
       tarch::accelerator::Range(static_cast<int>(slots.size() - firstSlotToBind)),
       [&slots, &pool, firstNewSlot, firstSlotToBind](const int index) {
         const auto     slot     = firstSlotToBind + static_cast<std::size_t>(index);

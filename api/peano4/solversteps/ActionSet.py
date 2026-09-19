@@ -38,7 +38,7 @@ class ActionSet(object):
 
     The cartoon above illustrates these three layers: Users or Peano
     extensions build up logical program steps (left top). They are
-    basically containers with a unique name. Each step holds an arbitrary
+    containers with a unique name. Each step holds an arbitrary
     number of ActionSets. They are, first of all, mappings where each
     logical action is potentially tied to a C++ code snippet. When
     the Peano project is generated, each action set is translated into
@@ -71,7 +71,7 @@ class ActionSet(object):
     of get_constructor_body() for details on the tree id.
 
     If you want to realise BSP-like programming, then you typically
-    realise the data sharing via the copy constructor. The
+    hand every thread its own copy of the data through the copy constructor. The
     attributes of the action set then are all thread-local, i.e.
     there's no need to be afraid of memory races. The join in turn
     should be done within OPERATION_END_TRAVERSAL. Here, you'll need a
@@ -128,7 +128,7 @@ class ActionSet(object):
         return "// @todo Should be overwritten\n"
 
     def get_body_of_getGridControlEvents(self):
-        return "return std::vector< ::peano4::grid::GridControlEvent >();\n"
+        return "return std::vector<peano4::grid::GridControlEvent>();\n"
 
     def get_body_of_prepareTraversal(self):
         return "\n"
@@ -203,8 +203,8 @@ class ActionSet(object):
 
         Return attributes as copied and pasted into the generated class.
 
-        Please note that action sets are not persistent, i.e. there is one
-        object creation per grid sweep per tree.
+        An action set is not persistent: The traversal creates one object per
+        grid sweep per tree.
 
         """
         return ""

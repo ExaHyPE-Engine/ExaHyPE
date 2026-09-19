@@ -23,7 +23,7 @@ class ApplyBoundaryConditions(AbstractFVActionSet):
     TemplateApplyBoundaryConditions_KernelCalls = """
     for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
       if (
-        not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[faceNumber % DIMENSIONS]
+        not repositories::{{SOLVER_INSTANCE}}.PeriodicBoundaries[faceNumber % DIMENSIONS]
         and fineGridFaces{{SOLVER_NAME}}FaceLabel(faceNumber).getBoundary()
       ) {
         const auto insideEntry  = faceNumber < DIMENSIONS ? 1 : 0;

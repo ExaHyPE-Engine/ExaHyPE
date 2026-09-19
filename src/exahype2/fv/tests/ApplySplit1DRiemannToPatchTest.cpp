@@ -23,8 +23,8 @@ void exahype2::fv::tests::ApplySplit1DRiemannToPatchTest::testSplitTraversalMatc
   constexpr double TimeStepSize               = 0.1;
   const tarch::la::Vector<DIMENSIONS, double> volumeSize = {0.01, 0.01};
 
-  double* leftNumericalFlux  = ::tarch::allocateMemory<double>(NumberOfUnknowns, tarch::MemoryLocation::Heap);
-  double* rightNumericalFlux = ::tarch::allocateMemory<double>(NumberOfUnknowns, tarch::MemoryLocation::Heap);
+  double* leftNumericalFlux  = tarch::allocateMemory<double>(NumberOfUnknowns, tarch::MemoryLocation::Heap);
+  double* rightNumericalFlux = tarch::allocateMemory<double>(NumberOfUnknowns, tarch::MemoryLocation::Heap);
   leftNumericalFlux[0]       = 1.0;
   leftNumericalFlux[1]       = 2.0;
   leftNumericalFlux[2]       = 3.0;
@@ -204,6 +204,6 @@ void exahype2::fv::tests::ApplySplit1DRiemannToPatchTest::testSplitTraversalMatc
   delete[] initialValues;
   delete[] splitUpdate;
   delete[] splitUpdateWithGroupedNormals;
-  ::tarch::freeMemory(leftNumericalFlux, ::tarch::MemoryLocation::Heap);
-  ::tarch::freeMemory(rightNumericalFlux, ::tarch::MemoryLocation::Heap);
+  tarch::freeMemory(leftNumericalFlux, tarch::MemoryLocation::Heap);
+  tarch::freeMemory(rightNumericalFlux, tarch::MemoryLocation::Heap);
 }

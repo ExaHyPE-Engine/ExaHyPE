@@ -214,7 +214,7 @@ class AdaptiveMeshFaceCoupling(peano4.solversteps.ActionSet):
         return ""
 
     def get_body_of_getGridControlEvents(self):
-        return "  return std::vector< ::peano4::grid::GridControlEvent >();\n"
+        return "  return std::vector<peano4::grid::GridControlEvent>();\n"
 
     def user_should_modify_template(self):
         return False
@@ -241,7 +241,7 @@ class AdaptiveMeshFaceCoupling(peano4.solversteps.ActionSet):
     def get_attributes(self):
         return f"""
     ::exahype2::amr::ChildDataStage<{self.d["STORAGE_PRECISION"]}> _haloRestrictionStageQNew{{
-      peano4::Power<peano4::sfc::ActiveCurve::SubdivisionFactor, DIMENSIONS - 1>,
+      peano4::power(peano4::sfc::ActiveCurve::SubdivisionFactor, DIMENSIONS - 1),
       (DIMENSIONS == 3 ? {self.d["DOFS_PER_AXIS"]} * {self.d["DOFS_PER_AXIS"]} : {self.d["DOFS_PER_AXIS"]}) * {self.d["UNKNOWNS"]}}};
 """
 
@@ -649,7 +649,7 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
             super(DynamicAMRTransfer, self).get_attributes()
             + f"""
     ::exahype2::amr::ChildDataStage<{self.d["STORAGE_PRECISION"]}> _haloRestrictionStageQOld{{
-      peano4::Power<peano4::sfc::ActiveCurve::SubdivisionFactor, DIMENSIONS - 1>,
+      peano4::power(peano4::sfc::ActiveCurve::SubdivisionFactor, DIMENSIONS - 1),
       (DIMENSIONS == 3 ? {self.d["DOFS_PER_AXIS"]} * {self.d["DOFS_PER_AXIS"]} : {self.d["DOFS_PER_AXIS"]}) * {self.d["UNKNOWNS"]}}};
     ::exahype2::amr::ChildDataStage<{self.d["STORAGE_PRECISION"]}> _cellRestrictionStageQNew{{
       peano4::sfc::ActiveCurve::ChildrenPerCell,

@@ -1,0 +1,69 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+TARGET_DECLARE
+/**
+ * Subtracts the face flux contribution from the cell update.
+ * Orientation is zero at the lower face and one at the upper face.
+ * Linear fluxes include the outward normal.
+ */
+template <
+  int  NumberOfDofsPerAxis,
+  int  NumberOfUnknowns,
+  bool IsLinear,
+  typename StoragePrecision,
+  typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::addFaceIntegral(
+  StoragePrecision* NOALIAS const       cellUpdate,
+  const ComputePrecision* NOALIAS const faceFlux,
+  const ComputePrecision* NOALIAS const faceQuadratureWeights,
+  const ComputePrecision* NOALIAS const inverseCellQuadratureWeights,
+  const ComputePrecision* NOALIAS const leftFaceCoefficients,
+  const ComputePrecision* NOALIAS const rightFaceCoefficients,
+  const int                             direction,
+  const int                             orientation,
+  const double                          inverseCellSizeAlongNormal,
+  const double                          timeStepSize
+) {
+  constexpr int NodesPerFace = (DIMENSIONS == 3) ? NumberOfDofsPerAxis * NumberOfDofsPerAxis : NumberOfDofsPerAxis;
+
+  assertion(direction >= 0 and direction < DIMENSIONS, direction);
+  assertion(orientation == 0 or orientation == 1, orientation);
+  assertion(inverseCellSizeAlongNormal > 0.0, inverseCellSizeAlongNormal);
+
+  int lowerAxesStride = 1;
+  for (int dimension = 0; dimension < direction; dimension++) {
+    lowerAxesStride *= NumberOfDofsPerAxis;
+  }
+
+  const ComputePrecision* NOALIAS const faceCoefficients =
+    (orientation == 0) ? leftFaceCoefficients : rightFaceCoefficients;
+  const ComputePrecision scaling = IsLinear
+    ? static_cast<ComputePrecision>(inverseCellSizeAlongNormal)
+    : static_cast<ComputePrecision>((2.0 * orientation - 1.0) * inverseCellSizeAlongNormal);
+
+  using WeightPrecision = std::common_type_t<ComputePrecision, double>;
+  using UpdatePrecision = std::common_type_t<StoragePrecision, ComputePrecision>;
+
+  for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
+    const auto scaledWeight = static_cast<ComputePrecision>(
+      static_cast<WeightPrecision>(scaling) * static_cast<WeightPrecision>(timeStepSize)
+      * static_cast<WeightPrecision>(faceQuadratureWeights[faceNode])
+    );
+    const int lowerAxesIndex  = faceNode % lowerAxesStride;
+    const int higherAxesIndex = faceNode / lowerAxesStride;
+    for (int normalIndex = 0; normalIndex < NumberOfDofsPerAxis; normalIndex++) {
+      const int cellNode = (higherAxesIndex * NumberOfDofsPerAxis + normalIndex) * lowerAxesStride + lowerAxesIndex;
+      SIMD()
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        const ComputePrecision contribution = inverseCellQuadratureWeights[cellNode] * scaledWeight
+          * faceCoefficients[normalIndex] * faceFlux[faceNode * NumberOfUnknowns + unknown];
+        cellUpdate[cellNode * NumberOfUnknowns + unknown] = static_cast<StoragePrecision>(
+          static_cast<UpdatePrecision>(cellUpdate[cellNode * NumberOfUnknowns + unknown])
+          - static_cast<UpdatePrecision>(contribution)
+        );
+      }
+    }
+  }
+}
+TARGET_DECLARE_END

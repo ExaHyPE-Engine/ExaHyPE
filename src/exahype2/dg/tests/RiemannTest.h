@@ -11,12 +11,21 @@ namespace exahype2::dg::tests {
 class exahype2::dg::tests::RiemannTest final : public tarch::tests::TestCase {
 public:
   RiemannTest();
+  RiemannTest(const RiemannTest&)            = delete;
+  RiemannTest(RiemannTest&&)                 = delete;
+  RiemannTest& operator=(const RiemannTest&) = delete;
+  RiemannTest& operator=(RiemannTest&&)      = delete;
+  ~RiemannTest() override                    = default;
 
   void run() override;
 
 private:
-  void testProjectVolumetricDataOntoFacesForConstantSolutionOrder3();
-  void testProjectVolumetricDataOntoFacesForConstantSolutionOrder0();
-  void testInterpolateProjectedFacePolynomialReproducesPolynomials();
-  void testInterpolateRiemannSolutionReproducesPolynomials();
+  void testEqualStatesAverageTheTwoFluxes();
+  void testJumpTermScalesWithTheLargerWaveSpeed();
+  void testBothSidesSeeTheSameFluxWithoutANonconservativeProduct();
+  void testNonconservativeProductSplitsTheTwoSides();
+  void testNonconservativeProductReadsTheAuxiliaryJump();
+  void testLinearFormBuildsTheFluxFromTheStateJump();
+  void testLinearFormAddsTheNonconservativeProduct();
+  void testLinearFormAppliesTheMaterialParameterMatrix();
 };

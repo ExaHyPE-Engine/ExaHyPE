@@ -295,7 +295,7 @@ INLINE_METHOD void exahype2::amr::restrictHaloLayer(
 
   constexpr int SubdivisionFactor = peano4::sfc::ActiveCurve::SubdivisionFactor;
   // A coarse face volume averages its SubdivisionFactor^(d-1) covering fine volumes.
-  constexpr T Scale = static_cast<T>(1.0 / peano4::Power<SubdivisionFactor, DIMENSIONS - 1>);
+  constexpr T Scale = static_cast<T>(1.0 / peano4::power(SubdivisionFactor, DIMENSIONS - 1));
 #if DIMENSIONS == 3
   for (int j = 0; j < numberOfDofsPerAxis; j++) {
     const int jPos =
@@ -435,7 +435,7 @@ INLINE_METHOD void exahype2::amr::restrictHaloLayerFromStagedSubfaces(
   const int     side              = stage.frameTag(coarseFaceKey);
   constexpr int SubdivisionFactor = peano4::sfc::ActiveCurve::SubdivisionFactor;
   // A coarse face volume averages its SubdivisionFactor^(d-1) covering fine volumes.
-  constexpr double RestrictionScale = 1.0 / peano4::Power<SubdivisionFactor, DIMENSIONS - 1>;
+  constexpr double RestrictionScale = 1.0 / peano4::power(SubdivisionFactor, DIMENSIONS - 1);
 
   tarch::la::ExactAccumulator accumulator;
 #if DIMENSIONS == 3

@@ -61,6 +61,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
     static std::string toString(SolverState state);
 
     static constexpr int Order                      = {{ORDER}};
+    static constexpr int DGOrder                    = Order;
     static constexpr int NumberOfUnknowns           = {{NUMBER_OF_UNKNOWNS}};
     static constexpr int NumberOfAuxiliaryVariables = {{NUMBER_OF_AUXILIARY_VARIABLES}};
     static constexpr double CFL                     = {{CFL_SAFETY_FACTOR}};
@@ -81,7 +82,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
     {{CLASSNAME}}& operator=({{CLASSNAME}}&& other) = delete;
     ~{{CLASSNAME}}() override;
 
-    static std::bitset<DIMENSIONS> PeriodicBC;
+    static std::bitset<DIMENSIONS> PeriodicBoundaries;
 
     double getMinTimeStamp() const override final;
     double getMaxTimeStamp() const override final;

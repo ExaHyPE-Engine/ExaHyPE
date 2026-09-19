@@ -8,11 +8,11 @@
 
 namespace tarch::accelerator {
   /**
-   * Opaque team handle for a SYCL work item. The reference stays valid for the enclosing kernel
-   * invocation, so a nested call may capture this handle by value.
+   * Opaque team handle for a SYCL work item. The item stays valid for the enclosing kernel
+   * invocation, so a nested call may copy this handle by value.
    */
-  struct SyclTeam {
-    // The global qualifier avoids collision with tarch::accelerator::sycl.
+  struct SyclTeam final {
+    // The namespace tarch::accelerator::sycl exists, so an unqualified sycl here names that one.
     const ::sycl::nd_item<1>& item;
   };
   using TeamHandle = SyclTeam;

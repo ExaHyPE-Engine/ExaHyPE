@@ -16,10 +16,12 @@ namespace tarch::accelerator {
   void        deviceStreamSet(hipStream_t stream);
   hipStream_t deviceStreamGet();
 
-  struct HipTeam {};
+  // HipTeam carries no state: The team overloads read threadIdx and blockDim directly.
+  struct HipTeam final {};
   using TeamHandle = HipTeam;
 
-  inline constexpr int HipBlockSize = 256;
+  inline constexpr int HipBlockSize         = 256;
+  inline constexpr int HipMaxNumberOfBlocks = 65535;
 } // namespace tarch::accelerator
 
 #endif

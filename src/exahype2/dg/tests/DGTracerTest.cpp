@@ -3,7 +3,6 @@
 #include "DGTracerTest.h"
 
 #include "exahype2/dg/Tracer.h"
-#include "exahype2/dg/tests/TestUtils.h"
 #include "peano4/Loop.h"
 #include "peano4/dataview/CellMarker.h"
 
@@ -12,6 +11,8 @@ namespace {
   constexpr int NodesPerAxis         = Order + 1;
   constexpr int NodesPerCell         = NodesPerAxis * NodesPerAxis * (DIMENSIONS == 3 ? NodesPerAxis : 1);
   constexpr int MaxParticleAttribute = 4;
+
+  constexpr double QuadratureNodes1DP1[] = {0.21132486540518713, 0.7886751345948129};
 
   /**
    * Holds the position a projection reads and the attributes it writes.
@@ -31,26 +32,26 @@ namespace {
     }
   };
 
+  tarch::la::Vector<DIMENSIONS, double> rampOverAxes(const double first, const double increment) {
+    tarch::la::Vector<DIMENSIONS, double> result;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      result(axis) = first + increment * axis;
+    }
+    return result;
+  }
+
   /** Returns a cell marker of width 0.2 whose centre lies away from the origin. */
   peano4::dataview::CellMarker createCellMarker() {
     peano4::dataview::CellMarker marker;
-    marker.h = tarch::la::Vector<DIMENSIONS, double>(0.2);
-#if DIMENSIONS == 2
-    marker.centre = {0.4, 0.6};
-#else
-    marker.centre = {0.4, 0.6, 0.8};
-#endif
+    marker.h      = tarch::la::Vector<DIMENSIONS, double>(0.2);
+    marker.centre = rampOverAxes(0.4, 0.2);
     return marker;
   }
 
   /** Returns a particle that sits inside the cell of createCellMarker() and off its nodes. */
   TracerParticle createParticle() {
     TracerParticle particle;
-#if DIMENSIONS == 2
-    particle.x = {0.45, 0.62};
-#else
-    particle.x = {0.45, 0.62, 0.83};
-#endif
+    particle.x = rampOverAxes(0.45, 0.21);
     return particle;
   }
 
@@ -65,14 +66,14 @@ namespace {
       const int linearisedDoF = peano4::dLinearised(dof, NodesPerAxis);
       for (int axis = 0; axis < DIMENSIONS; axis++) {
         Q[linearisedDoF * DIMENSIONS + axis] =
-          cellMarker.getOffset()(axis) + exahype2::dg::tests::QuadratureNodes1DP1[dof(axis)] * cellMarker.getH()(axis);
+          cellMarker.getOffset()(axis) + QuadratureNodes1DP1[dof(axis)] * cellMarker.getH()(axis);
       }
     });
   }
 } // namespace
 
 exahype2::dg::tests::DGTracerTest::DGTracerTest() :
-  TestCase("exahype2::dg::tests::DGTracerTest") {}
+  tarch::tests::TestCase("exahype2::dg::tests::DGTracerTest") {}
 
 void exahype2::dg::tests::DGTracerTest::run() {
   testMethod(testProjectValueOntoParticle);

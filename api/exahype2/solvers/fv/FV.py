@@ -78,7 +78,6 @@ class FV(object):
         self._action_set_adaptive_mesh_face_coupling = None
         self._action_set_dynamic_amr_transfer = None
         self._action_set_postprocess_solution = None
-        self._action_set_preprocess_solution = None
 
         self._compute_time_step_size = "#error Not yet defined"
         self._compute_new_time_step_size = "#error Not yet defined"
@@ -240,9 +239,8 @@ and additional AMR levels is configured by the executable at runtime.
     def create_action_sets(self):
         """!
         Only the last call matters, so a subclass calls this version first and
-        then alters the action sets it needs. The preprocessing and
-        postprocessing action sets survive the call and keep what a user set on
-        them.
+        then alters the action sets it needs. The postprocessing action set
+        survives the call and keeps what a user set on it.
         """
         self._action_set_initial_conditions = (
             exahype2.solvers.fv.actionsets.InitialCondition(
@@ -304,14 +302,9 @@ and additional AMR levels is configured by the executable at runtime.
             solver=self,
         )
 
-        # Preserve user-configured hooks when action sets are recreated.
         if self._action_set_postprocess_solution is None:
             self._action_set_postprocess_solution = (
                 exahype2.solvers.fv.actionsets.EmptyPostprocessSolution(self)
-            )
-        if self._action_set_preprocess_solution is None:
-            self._action_set_preprocess_solution = (
-                exahype2.solvers.fv.actionsets.EmptyPreprocessSolution(self)
             )
 
         self._action_set_update_face_label = exahype2.grid.UpdateFaceLabel(self._name)
@@ -341,9 +334,6 @@ and additional AMR levels is configured by the executable at runtime.
             self._baseline_action_set_descend_invocation_order + 1
         )
         self._action_set_postprocess_solution.descend_invocation_order = (
-            self._baseline_action_set_descend_invocation_order
-        )
-        self._action_set_preprocess_solution.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order
         )
 
@@ -491,7 +481,6 @@ and additional AMR levels is configured by the executable at runtime.
         while it ascends. The refinement action set comes first, so it runs last
         on the way up and restricts the face data the boundary conditions read.
         """
-        step.add_action_set(self._action_set_preprocess_solution)
         step.add_action_set(self._action_set_adaptive_mesh_face_coupling)
         step.add_action_set(self._action_set_roll_over_updates)
         step.add_action_set(self._action_set_initial_conditions)
@@ -576,7 +565,6 @@ and additional AMR levels is configured by the executable at runtime.
         """!
         The inter-grid transfer operators run before the boundary conditions.
         """
-        step.add_action_set(self._action_set_preprocess_solution)
         step.add_action_set(self._action_set_adaptive_mesh_face_coupling)
         step.add_action_set(self._action_set_roll_over_updates)
         step.add_action_set(self._action_set_update_face_label)

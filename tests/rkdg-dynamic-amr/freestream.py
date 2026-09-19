@@ -14,7 +14,7 @@ def parse_arguments():
         help="Show this help message and continue with project help.",
     )
     parser.add_argument("-et", "--end-time", type=float, default=3.0)
-    parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=4)
+    parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=5)
     parser.add_argument("-l", "--grid-levels", type=int, default=None)
     parser.add_argument("-lmin", "--min-grid-levels", type=int, default=2)
     parser.add_argument("-lmax", "--max-grid-levels", type=int, default=4)
@@ -93,20 +93,22 @@ flux = """
   F[Shortcuts::u + normal] = Q[Shortcuts::p];
 """
 
-solver = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep(
+solver = exahype2.solvers.rkdg.GlobalAdaptiveTimeStep(
     name="RKDGSolver",
     rk_order=2,
-    polynomials=exahype2.solvers.GaussLegendreBasis(args.degrees_of_freedom),
+    dg_order=args.degrees_of_freedom - 1,
     time_step_relaxation=0.9,
     unknowns={"p": 1, "u": project.dimensions},
     auxiliary_variables=0,
 )
 
+solver.add_kernel_optimisations(is_linear=True)
+
 solver.set_implementation(
     initial_conditions=initial_conditions,
     boundary_conditions=boundary_conditions,
     refinement_criterion=refinement_criterion,
-    eigenvalues="return 1.0;",
+    max_eigenvalue="return 1.0;",
     flux=flux,
 )
 

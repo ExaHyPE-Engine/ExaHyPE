@@ -250,6 +250,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::reduceProjectedObservableEx
     }
   }
 }
+TARGET_DECLARE_END
 
 /**
  * Returns whether a coarse vertex lies on every father-cell boundary facet
@@ -260,7 +261,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::reduceProjectedObservableEx
  * the coarse vertices on that side.
  */
 template <int Dimensions>
-INLINE_METHOD GPU_CALLABLE_METHOD bool exahype2::dg::isCoarseVertexOnFacetOfHangingVertex(
+INLINE_METHOD bool exahype2::dg::isCoarseVertexOnFacetOfHangingVertex(
   const tarch::la::Vector<Dimensions, int>& hangingVertexPosition,
   const int                                 coarseVertexNumber
 ) {
@@ -286,5 +287,3 @@ INLINE_METHOD GPU_CALLABLE_METHOD bool exahype2::dg::isCoarseVertexOnFacetOfHang
   assertion(liesOnBoundary);
   return true;
 }
-
-TARGET_DECLARE_END

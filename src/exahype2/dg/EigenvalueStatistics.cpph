@@ -1,20 +1,81 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+TARGET_DECLARE
+/**
+ * Updates the maximum wave speed.
+ * Updates the maximum sum of wave speeds divided by cell extents.
+ */
 template <int Dimensions, typename EigenvalueEvaluator>
-INLINE_METHOD void exahype2::dg::MaxEigenvalueStatistics::accumulate(
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::MaxEigenvalueStatistics::accumulate(
   const tarch::la::Vector<Dimensions, double>& cellSize,
   EigenvalueEvaluator&&                        evaluateEigenvalue
 ) {
   double scaledEigenvalue = 0.0;
   for (int dimension = 0; dimension < Dimensions; dimension++) {
-    assertion(std::isfinite(cellSize(dimension)) and cellSize(dimension) > 0.0, cellSize, dimension);
-    const auto physicalEigenvalue = static_cast<double>(evaluateEigenvalue(dimension));
-    assertion(std::isfinite(physicalEigenvalue) and physicalEigenvalue >= 0.0, physicalEigenvalue, dimension);
-    maxPhysicalEigenvalue = ::exahype2::NonNegativeReduction::maximum(maxPhysicalEigenvalue, physicalEigenvalue);
-    const auto scaledEigenvalueContribution = physicalEigenvalue / cellSize(dimension);
-    scaledEigenvalue = ::exahype2::NonNegativeReduction::sum(scaledEigenvalue, scaledEigenvalueContribution);
+    const double                extent         = cellSize(dimension);
+    [[maybe_unused]] const bool extentIsFinite = std::isfinite(extent);
+    assertion(extentIsFinite and extent > 0.0, cellSize, dimension);
+    const auto                  physicalEigenvalue         = static_cast<double>(evaluateEigenvalue(dimension));
+    [[maybe_unused]] const bool physicalEigenvalueIsFinite = std::isfinite(physicalEigenvalue);
+    assertion(physicalEigenvalueIsFinite and physicalEigenvalue >= 0.0, physicalEigenvalue, dimension);
+    maxPhysicalEigenvalue = exahype2::NonNegativeReduction::maximum(maxPhysicalEigenvalue, physicalEigenvalue);
+    const auto scaledEigenvalueContribution = physicalEigenvalue / extent;
+    scaledEigenvalue = exahype2::NonNegativeReduction::sum(scaledEigenvalue, scaledEigenvalueContribution);
   }
-  assertion(std::isfinite(scaledEigenvalue) and scaledEigenvalue >= 0.0, scaledEigenvalue, cellSize);
-  maxScaledEigenvalue = ::exahype2::NonNegativeReduction::maximum(maxScaledEigenvalue, scaledEigenvalue);
+  [[maybe_unused]] const bool scaledEigenvalueIsFinite = std::isfinite(scaledEigenvalue);
+  assertion(scaledEigenvalueIsFinite and scaledEigenvalue >= 0.0, scaledEigenvalue, cellSize);
+  maxScaledEigenvalue = exahype2::NonNegativeReduction::maximum(maxScaledEigenvalue, scaledEigenvalue);
 }
+
+/**
+ * Returns the physical and scaled wave-speed maxima over the cell's quadrature nodes.
+ */
+template <
+  typename Solver,
+  int NumberOfDofsPerAxis,
+  int NumberOfUnknowns,
+  int NumberOfAuxiliaryVariables,
+  typename StoragePrecision,
+  typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::MaxEigenvalueStatistics exahype2::dg::reduceMaxEigenvalues(
+  const StoragePrecision* NOALIAS const        cellState,
+  const ComputePrecision* NOALIAS const        quadratureNodes,
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const double                                 timeStamp,
+  const double                                 timeStepSize
+) {
+  constexpr int NumberOfData = NumberOfUnknowns + NumberOfAuxiliaryVariables;
+  constexpr int NodesPerCell = (DIMENSIONS == 3) ? NumberOfDofsPerAxis * NumberOfDofsPerAxis * NumberOfDofsPerAxis
+                                                 : NumberOfDofsPerAxis * NumberOfDofsPerAxis;
+  MaxEigenvalueStatistics result;
+
+  [[maybe_unused]] ComputePrecision nodeStateBuffer[NumberOfData];
+
+  for (int cellNode = 0; cellNode < NodesPerCell; cellNode++) {
+    tarch::la::Vector<DIMENSIONS, int> nodeIndex;
+    int                                remainder = cellNode;
+    for (int direction = 0; direction < DIMENSIONS; direction++) {
+      nodeIndex(direction) = remainder % NumberOfDofsPerAxis;
+      remainder /= NumberOfDofsPerAxis;
+    }
+    const auto nodePosition = exahype2::dg::getQuadraturePoint(cellCentre, cellSize, nodeIndex, quadratureNodes);
+
+    const ComputePrecision* NOALIAS nodeState = nullptr;
+    if constexpr (std::is_same_v<StoragePrecision, ComputePrecision>) {
+      nodeState = cellState + cellNode * NumberOfData;
+    } else {
+      for (int value = 0; value < NumberOfData; value++) {
+        nodeStateBuffer[value] = static_cast<ComputePrecision>(cellState[cellNode * NumberOfData + value]);
+      }
+      nodeState = nodeStateBuffer;
+    }
+
+    result.accumulate(cellSize, [&](const int direction) {
+      return Solver::maxEigenvalue(nodeState, nodePosition, cellSize, timeStamp, timeStepSize, direction);
+    });
+  }
+  return result;
+}
+TARGET_DECLARE_END

@@ -7,7 +7,7 @@
 #include "tarch/accelerator/accelerator.h"
 
 namespace {
-  constexpr int NumberOfThreads    = 8;
+  constexpr int NumberOfWorkers    = 8;
   constexpr int NumberOfIterations = 2048;
   constexpr int NumberOfValues     = 64;
   constexpr int DeviceId           = tarch::accelerator::Device::DefaultDevice;
@@ -21,6 +21,7 @@ void tarch::accelerator::tests::AtomicTest::run() {
   testMethod(testConcurrentOperations);
   testMethod(testLoadStoreRoundTrip);
   testMethod(testConcurrentMaximumIsOrderIndependent);
+  testMethod(testConcurrentFloatingPointMaximumIsOrderIndependent);
 }
 
 void tarch::accelerator::tests::AtomicTest::testSerialOperations() {
@@ -56,7 +57,7 @@ void tarch::accelerator::tests::AtomicTest::testSerialOperations() {
 }
 
 void tarch::accelerator::tests::AtomicTest::testConcurrentOperations() {
-  constexpr int NumberOfUpdates = NumberOfThreads * NumberOfIterations;
+  constexpr int NumberOfUpdates = NumberOfWorkers * NumberOfIterations;
 
   int    minInt     = std::numeric_limits<int>::max();
   int    maxInt     = std::numeric_limits<int>::min();
@@ -66,26 +67,19 @@ void tarch::accelerator::tests::AtomicTest::testConcurrentOperations() {
   double maxDouble  = -std::numeric_limits<double>::max();
   double doubleSum  = 0.0;
 
-  std::vector<std::thread> threads;
-  threads.reserve(NumberOfThreads);
-  for (int threadIndex = 0; threadIndex < NumberOfThreads; ++threadIndex) {
-    threads.emplace_back([&, threadIndex]() {
-      for (int iteration = 0; iteration < NumberOfIterations; ++iteration) {
-        const int    value       = threadIndex * NumberOfIterations + iteration;
-        const double doubleValue = static_cast<double>(value) + 0.25;
-        tarch::accelerator::updateAtomicMin(minInt, value);
-        tarch::accelerator::updateAtomicMax(maxInt, value);
-        tarch::accelerator::incrementAtomic(intCounter);
-        tarch::accelerator::addAtomic(intSum, 1);
-        tarch::accelerator::updateAtomicMin(minDouble, doubleValue);
-        tarch::accelerator::updateAtomicMax(maxDouble, doubleValue);
-        tarch::accelerator::addAtomic(doubleSum, 1.0);
-      }
-    });
-  }
-  for (auto& workerThread : threads) {
-    workerThread.join();
-  }
+  tarch::accelerator::parallelForOnHost(tarch::accelerator::Range(NumberOfWorkers), [&](const int worker) {
+    for (int iteration = 0; iteration < NumberOfIterations; ++iteration) {
+      const int    value       = worker * NumberOfIterations + iteration;
+      const double doubleValue = static_cast<double>(value) + 0.25;
+      tarch::accelerator::updateAtomicMin(minInt, value);
+      tarch::accelerator::updateAtomicMax(maxInt, value);
+      tarch::accelerator::incrementAtomic(intCounter);
+      tarch::accelerator::addAtomic(intSum, 1);
+      tarch::accelerator::updateAtomicMin(minDouble, doubleValue);
+      tarch::accelerator::updateAtomicMax(maxDouble, doubleValue);
+      tarch::accelerator::addAtomic(doubleSum, 1.0);
+    }
+  });
 
   validateEquals(minInt, 0);
   validateEquals(maxInt, NumberOfUpdates - 1);
@@ -103,7 +97,7 @@ void tarch::accelerator::tests::AtomicTest::testLoadStoreRoundTrip() {
 }
 
 void tarch::accelerator::tests::AtomicTest::testConcurrentMaximumIsOrderIndependent() {
-  int* const target = tarch::allocateMemory<int>(1, tarch::MemoryLocation::Device, DeviceId);
+  auto* const target = tarch::allocateMemory<int>(1, tarch::MemoryLocation::Device, DeviceId);
 
   int hostMaximum = std::numeric_limits<int>::lowest();
   tarch::copyTo(target, &hostMaximum, 1, tarch::MemoryLocation::Device, DeviceId);
@@ -115,4 +109,23 @@ void tarch::accelerator::tests::AtomicTest::testConcurrentMaximumIsOrderIndepend
   tarch::copyFrom(target, &hostMaximum, 1, tarch::MemoryLocation::Device, DeviceId);
   tarch::freeMemory(target, tarch::MemoryLocation::Device, DeviceId);
   validateEquals(hostMaximum, NumberOfValues - 1);
+}
+
+/**
+ * Raises one double from every entry of the range. On a device this reaches the compare-and-swap
+ * branch of updateAtomicMax.
+ */
+void tarch::accelerator::tests::AtomicTest::testConcurrentFloatingPointMaximumIsOrderIndependent() {
+  auto* const target = tarch::allocateMemory<double>(1, tarch::MemoryLocation::Device, DeviceId);
+
+  double hostMaximum = std::numeric_limits<double>::lowest();
+  tarch::copyTo(target, &hostMaximum, 1, tarch::MemoryLocation::Device, DeviceId);
+
+  tarch::accelerator::parallelFor(tarch::accelerator::Range(NumberOfValues), [=] GPU_CALLABLE_LAMBDA(const int value) {
+    tarch::accelerator::updateAtomicMax(*target, 0.5 * static_cast<double>(value));
+  });
+
+  tarch::copyFrom(target, &hostMaximum, 1, tarch::MemoryLocation::Device, DeviceId);
+  tarch::freeMemory(target, tarch::MemoryLocation::Device, DeviceId);
+  validateEquals(hostMaximum, 0.5 * static_cast<double>(NumberOfValues - 1));
 }

@@ -11,7 +11,7 @@
 #include "tarch/mpi/Collectives.h"
 #include "tarch/mpi/Rank.h"
 
-std::bitset<DIMENSIONS> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::PeriodicBC = {{NAMESPACE | join("::")}}::PeriodicBC;
+std::bitset<DIMENSIONS> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::PeriodicBoundaries = {{NAMESPACE | join("::")}}::PeriodicBoundaries;
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}() {
   {{CONSTRUCTOR_IMPLEMENTATION}}
@@ -24,7 +24,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspendSolversForOneGridSweep() 
 }
 
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getNumberOfDoFs() const {
-  return peano4::Power<NumberOfFiniteVolumesPerAxisPerPatch, DIMENSIONS> * (NumberOfUnknowns + NumberOfAuxiliaryVariables);
+  return peano4::power(NumberOfFiniteVolumesPerAxisPerPatch, DIMENSIONS) * (NumberOfUnknowns + NumberOfAuxiliaryVariables);
 }
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinPatchSize() const {

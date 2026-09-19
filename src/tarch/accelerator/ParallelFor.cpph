@@ -2,90 +2,61 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 namespace tarch::accelerator {
-  template <typename F>
-  inline void parallelFor([[maybe_unused]] const CpuTeam& team, const Range& range, F body) {
+  template <typename Functor>
+  inline void parallelFor([[maybe_unused]] const CpuTeam& team, const Range& range, const Functor functor) {
     assertion(range.n >= 0, range.n);
     for (int i = 0; i < range.n; ++i) {
-      body(i);
+      functor(i);
     }
   }
-  template <typename F>
-  inline void parallelFor([[maybe_unused]] const CpuTeam& team, const RangeMD<2>& range, F body) {
+  template <typename Functor>
+  inline void parallelFor([[maybe_unused]] const CpuTeam& team, const RangeMD<2>& range, const Functor functor) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
     for (int x = 0; x < range.n[0]; ++x) {
       for (int y = 0; y < range.n[1]; ++y) {
-        body(x, y);
+        functor(x, y);
       }
     }
   }
-  template <typename F>
-  inline void parallelFor([[maybe_unused]] const CpuTeam& team, const RangeMD<3>& range, F body) {
+  template <typename Functor>
+  inline void parallelFor([[maybe_unused]] const CpuTeam& team, const RangeMD<3>& range, const Functor functor) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
     assertion(range.n[2] >= 0, range.n[2]);
     for (int x = 0; x < range.n[0]; ++x) {
       for (int y = 0; y < range.n[1]; ++y) {
         for (int z = 0; z < range.n[2]; ++z) {
-          body(x, y, z);
+          functor(x, y, z);
         }
       }
     }
   }
 
-  template <typename F>
-  inline void parallelFor(const Range& range, F body) {
-    assertion(range.n >= 0, range.n);
-#if defined(_OPENMP)
-    if (omp_in_parallel()) {
-      // A worksharing loop inside an enclosing parallel region binds to an inactive nested region
-      // and runs serially. The range therefore becomes tasks that the enclosing team executes.
-      const int numberOfTasks = std::max(1, std::min(range.n, 4 * omp_get_num_threads()));
-#if defined(PEANO_OPENMP_TASKLOOP_SUPPORTED)
-      const auto numberOfItems = static_cast<unsigned long>(range.n);
-#pragma omp taskloop default(none) num_tasks(numberOfTasks) firstprivate(numberOfItems) shared(body)
-      for (unsigned long i = 0; i < numberOfItems; ++i) {
-        body(static_cast<int>(i));
-      }
-#else
-      tarch::accelerator::reportMissingTaskloopSupportOnce();
-      for (int taskNumber = 0; taskNumber < numberOfTasks; taskNumber++) {
-        const int begin = static_cast<int>(static_cast<std::int64_t>(range.n) * taskNumber / numberOfTasks);
-        const int end   = static_cast<int>(static_cast<std::int64_t>(range.n) * (taskNumber + 1) / numberOfTasks);
-#pragma omp task firstprivate(begin, end) shared(body)
-        for (int i = begin; i < end; i++) {
-          body(i);
-        }
-      }
-#pragma omp taskwait
-#endif
-      return;
-    }
-#endif
-    tarch::accelerator::runInParallelRegion([&]() {
-#pragma omp for schedule(static)
-      for (int i = 0; i < range.n; ++i) {
-        body(i);
-      }
-    });
+  // A team runs its range serially on the host, so the barrier does nothing.
+  inline void teamBarrier([[maybe_unused]] const CpuTeam& team) {}
+
+  template <typename Functor>
+  inline void parallelFor(const Range& range, const Functor functor) {
+    tarch::accelerator::parallelForOnHost(range, functor);
   }
 
-  template <typename F>
-  inline void parallelFor(const RangeMD<2>& range, F body) {
+  template <typename Functor>
+  inline void parallelFor(const RangeMD<2>& range, const Functor functor) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
     tarch::accelerator::runInParallelRegion([&]() {
 #pragma omp for collapse(2) schedule(static)
       for (int x = 0; x < range.n[0]; ++x) {
         for (int y = 0; y < range.n[1]; ++y) {
-          body(x, y);
+          functor(x, y);
         }
       }
     });
   }
 
-  template <typename F>
-  inline void parallelFor(const RangeMD<3>& range, F body) {
+  template <typename Functor>
+  inline void parallelFor(const RangeMD<3>& range, const Functor functor) {
     assertion(range.n[0] >= 0, range.n[0]);
     assertion(range.n[1] >= 0, range.n[1]);
     assertion(range.n[2] >= 0, range.n[2]);
@@ -94,20 +65,22 @@ namespace tarch::accelerator {
       for (int x = 0; x < range.n[0]; ++x) {
         for (int y = 0; y < range.n[1]; ++y) {
           for (int z = 0; z < range.n[2]; ++z) {
-            body(x, y, z);
+            functor(x, y, z);
           }
         }
       }
     });
   }
 
-  template <typename F>
-  inline void parallelFor(const TeamRange& range, F body) {
+  // The host threads run across the teams only: The CpuTeam overloads above run a team's
+  // range serially.
+  template <typename Functor>
+  inline void parallelFor(const TeamRange& range, const Functor functor) {
     assertion(range.n >= 0, range.n);
     tarch::accelerator::runInParallelRegion([&]() {
 #pragma omp for schedule(static)
       for (int i = 0; i < range.n; ++i) {
-        body(i, tarch::accelerator::CpuTeam{});
+        functor(i, tarch::accelerator::CpuTeam{});
       }
     });
   }

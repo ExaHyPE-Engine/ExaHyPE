@@ -15,7 +15,7 @@ class Correction(AbstractADERDGActionSet):
     ({{FACE_GUARD}})
     and not (
       fineGridFace{{SOLVER_NAME}}FaceLabel.getBoundary()
-      and not {{FULL_QUALIFIED_SOLVER_NAME}}::PeriodicBC[marker.getSelectedFaceNumber() % DIMENSIONS]
+      and not {{FULL_QUALIFIED_SOLVER_NAME}}::PeriodicBoundaries[marker.getSelectedFaceNumber() % DIMENSIONS]
       and (marker.hasCellBeenRefined() or marker.willCellBeRefined())
     )
   ) {
@@ -23,7 +23,7 @@ class Correction(AbstractADERDGActionSet):
     const auto direction = faceNumber % DIMENSIONS;
     const auto isBoundary =
       fineGridFace{{SOLVER_NAME}}FaceLabel.getBoundary()
-      and not {{FULL_QUALIFIED_SOLVER_NAME}}::PeriodicBC[direction];
+      and not {{FULL_QUALIFIED_SOLVER_NAME}}::PeriodicBoundaries[direction];
     const auto interiorFacePosition = faceNumber < DIMENSIONS ? 1 : 0;
     const auto timeStamp = isBoundary
       ? fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(interiorFacePosition)

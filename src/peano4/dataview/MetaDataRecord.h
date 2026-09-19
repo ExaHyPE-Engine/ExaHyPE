@@ -22,8 +22,8 @@ public:
 
   static constexpr int Cardinality = 1;
 
-  INLINE_METHOD bool send(const Marker& marker, ::peano4::grid::SendReceiveContext context) const;
-  INLINE_METHOD bool receiveAndMerge(const Marker& marker, ::peano4::grid::SendReceiveContext context) const;
+  INLINE_METHOD bool send(const Marker& marker, peano4::grid::SendReceiveContext context) const;
+  INLINE_METHOD bool receiveAndMerge(const Marker& marker, peano4::grid::SendReceiveContext context) const;
 
   INLINE_METHOD static bool load(const Marker& marker);
 };

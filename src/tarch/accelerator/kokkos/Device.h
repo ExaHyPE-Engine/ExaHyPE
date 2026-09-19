@@ -4,17 +4,17 @@
 
 #if defined(PEANO_WITH_GPU_BACKEND_KOKKOS)
 
-#include <Kokkos_Core.hpp> // to define the team
+#include <Kokkos_Core.hpp>
 #include <Kokkos_Macros.hpp>
 
 namespace tarch::accelerator {
-  // Opaque team handle wrapping a Kokkos team member. The reference points to
-  // the team member parameter of the enclosing KOKKOS_LAMBDA — its lifetime
-  // covers the entire outer-lambda body, so any nested call that captures
-  // KokkosTeam by value remains valid.
-  struct KokkosTeam {
-    using member_type = Kokkos::TeamPolicy<Kokkos::DefaultExecutionSpace>::member_type;
-    const member_type& m;
+  /**
+   * Opaque team handle that binds the team member of the enclosing Kokkos lambda. That member
+   * lives for the whole body of the lambda, so a nested call may copy this handle by value.
+   */
+  struct KokkosTeam final {
+    using MemberType = Kokkos::TeamPolicy<Kokkos::DefaultExecutionSpace>::member_type;
+    const MemberType& member;
   };
   using TeamHandle = KokkosTeam;
 } // namespace tarch::accelerator

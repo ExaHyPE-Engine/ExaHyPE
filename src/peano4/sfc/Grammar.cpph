@@ -15,23 +15,36 @@ INLINE_METHOD constexpr int peano4::sfc::Grammar::directionOf(const Step step) {
  */
 template <class NonTerminal, class... Symbols>
 constexpr peano4::sfc::Production<NonTerminal, (sizeof...(Symbols) + 1) / 2> peano4::sfc::Grammar::production(
-  NonTerminal leftHandSide,
+  const NonTerminal leftHandSide,
   Symbols... symbols
 ) {
   static_assert(sizeof...(Symbols) % 2 == 1, "A right-hand side alternates children and steps and ends with a child.");
   peano4::sfc::Production<NonTerminal, (sizeof...(Symbols) + 1) / 2> result{leftHandSide, {}, {}};
-  const auto place = [&result](const auto position, const auto symbol) {
-    constexpr std::size_t Position = decltype(position)::value;
-    if constexpr (Position % 2 == 0) {
-      static_assert(std::is_same_v<decltype(symbol), const NonTerminal>, "Even positions hold child non-terminals.");
-      result.children[Position / 2] = symbol;
-    } else {
-      static_assert(std::is_same_v<decltype(symbol), const Step>, "Odd positions hold turtle steps.");
-      result.steps[Position / 2] = symbol;
-    }
-  };
-  [&place, symbols...]<std::size_t... Positions>(std::index_sequence<Positions...> positions) {
-    (place(std::integral_constant<std::size_t, Positions>{}, symbols), ...);
-  }(std::index_sequence_for<Symbols...>{});
+  peano4::sfc::Grammar::placeSymbols<0>(result, symbols...);
   return result;
+}
+
+template <std::size_t Position, class NonTerminal, int NumberOfChildren>
+constexpr void peano4::sfc::Grammar::placeSymbols(
+  [[maybe_unused]] peano4::sfc::Production<NonTerminal, NumberOfChildren>& result
+) {}
+
+/**
+ * Writes the symbol at Position into the child array or the step array of the
+ * production and recurses over the remaining symbols.
+ */
+template <std::size_t Position, class NonTerminal, int NumberOfChildren, class Symbol, class... Symbols>
+constexpr void peano4::sfc::Grammar::placeSymbols(
+  peano4::sfc::Production<NonTerminal, NumberOfChildren>& result,
+  const Symbol                                            symbol,
+  Symbols... symbols
+) {
+  if constexpr (Position % 2 == 0) {
+    static_assert(std::is_same_v<Symbol, NonTerminal>, "Even positions hold child non-terminals.");
+    result.children[Position / 2] = symbol;
+  } else {
+    static_assert(std::is_same_v<Symbol, peano4::sfc::Grammar::Step>, "Odd positions hold turtle steps.");
+    result.steps[Position / 2] = symbol;
+  }
+  peano4::sfc::Grammar::placeSymbols<Position + 1>(result, symbols...);
 }

@@ -23,7 +23,7 @@ class UserActionSet(ActionSet):
 
 
   def get_body_of_getGridControlEvents(self):
-    return "// @todo Please implement\nreturn std::vector< ::peano4::grid::GridControlEvent >();\n"
+    return "// @todo Please implement\nreturn std::vector<peano4::grid::GridControlEvent>();\n"
 
 
   def get_body_of_operation(self,operation_name):

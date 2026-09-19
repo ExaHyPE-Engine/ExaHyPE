@@ -47,10 +47,10 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
     auto* const particle = *particleIterator;
     // A particle that left the domain through a periodic wall re-enters at
     // the opposite wall before the lift reads its position.
-    if (PeriodicBC.any()) {
-      particle->setX(
-        peano4::particles::applyPeriodicBoundaryConditions(particle->getX(), DomainOffset, DomainSize, PeriodicBC)
-      );
+    if (PeriodicBoundaries.any()) {
+      particle->setX(peano4::particles::applyPeriodicBoundaryConditions(
+        particle->getX(), DomainOffset, DomainSize, PeriodicBoundaries
+      ));
     }
     const auto instruction = peano4::particles::liftParticleAssociatedWithVertex(*particle, marker);
 

@@ -66,7 +66,7 @@ def parse_arguments():
     parser.add_argument("-lmax", "--max-grid-levels", type=int, default=1)
     parser.add_argument(
         "--solver",
-        choices=["fv", "aderdg"],
+        choices=["fv", "aderdg", "rkdg"],
         default="aderdg",
         help="Pick solver family.",
     )
@@ -148,6 +148,24 @@ elif args.solver == "aderdg":
     }
   }
 """
+elif args.solver == "rkdg":
+    solver = exahype2.solvers.rkdg.GlobalAdaptiveTimeStep(
+        name="CCZ4Solver",
+        rk_order=max(1, min(args.degrees_of_freedom - 1, 4)),
+        dg_order=args.degrees_of_freedom - 1,
+        unknowns=unknowns,
+        auxiliary_variables=0,
+        time_step_relaxation=0.1,
+    )
+    solver.postprocess_updated_cell_after_final_linear_combination = """
+  {
+    int index = 0;
+    for (int i = 0; i < {{NUMBER_OF_DOFS_PER_CELL}}; i++) {
+      applications::exahype2::exagrype::enforceCCZ4constraints(newQ + index);
+      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    }
+  }
+"""
 else:
     raise ValueError(f"Unknown solver family: {args.solver}")
 
@@ -173,6 +191,13 @@ elif args.solver == "aderdg":
         solver,
         error_measurement_implementation=exahype2.solvers.PDETerms.User_Defined_Implementation,
         output_file_name="Error_GaugeWave_ADERDG",
+        time_delta_between_snapshots=args.end_time / 100.0,
+    )
+elif args.solver == "rkdg":
+    exahype2.solvers.rkdg.ErrorMeasurement(
+        solver,
+        error_measurement_implementation=exahype2.solvers.PDETerms.User_Defined_Implementation,
+        output_file_name="Error_GaugeWave_RKDG",
         time_delta_between_snapshots=args.end_time / 100.0,
     )
 
