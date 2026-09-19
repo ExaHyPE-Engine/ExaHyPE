@@ -213,8 +213,10 @@ bool tarch::plotter::FileWriter::hasSchemaOrGeometry(const SubdomainBuffers& buf
 }
 
 bool tarch::plotter::FileWriter::hasPayload(const SubdomainBuffers& buffers) {
-  if (not buffers.pointsXYZ.empty() or not buffers.connectivity.empty() or not buffers.offsets.empty()
-      or not buffers.types.empty()) {
+  if (
+    not buffers.pointsXYZ.empty() or not buffers.connectivity.empty() or not buffers.offsets.empty()
+    or not buffers.types.empty()
+  ) {
     return true;
   }
 
@@ -266,26 +268,34 @@ void tarch::plotter::FileWriter::validateSubdomainsForWriting(const SubdomainBuf
       previousOffset = offset;
     }
 
-    if (not subdomain.offsets.empty()
-        and static_cast<std::size_t>(subdomain.offsets.back()) != subdomain.connectivity.size()) {
+    if (
+      not subdomain.offsets.empty()
+      and static_cast<std::size_t>(subdomain.offsets.back()) != subdomain.connectivity.size()
+    ) {
       throw std::runtime_error("Last cell offset does not match connectivity buffer size.");
     }
 
-    if (subdomain.pointFields.size() != reference.pointFields.size()
-        or subdomain.cellFields.size() != reference.cellFields.size()) {
+    if (
+      subdomain.pointFields.size() != reference.pointFields.size()
+      or subdomain.cellFields.size() != reference.cellFields.size()
+    ) {
       throw std::runtime_error("Inconsistent data field counts across subdomains.");
     }
 
     for (std::size_t field = 0; field < reference.pointFields.size(); field++) {
-      if (subdomain.pointFields[field].name != reference.pointFields[field].name
-          or subdomain.pointFields[field].components != reference.pointFields[field].components) {
+      if (
+        subdomain.pointFields[field].name != reference.pointFields[field].name
+        or subdomain.pointFields[field].components != reference.pointFields[field].components
+      ) {
         throw std::runtime_error("Mismatch in point data field '" + reference.pointFields[field].name + "'.");
       }
     }
 
     for (std::size_t field = 0; field < reference.cellFields.size(); field++) {
-      if (subdomain.cellFields[field].name != reference.cellFields[field].name
-          or subdomain.cellFields[field].components != reference.cellFields[field].components) {
+      if (
+        subdomain.cellFields[field].name != reference.cellFields[field].name
+        or subdomain.cellFields[field].components != reference.cellFields[field].components
+      ) {
         throw std::runtime_error("Mismatch in cell data field '" + reference.cellFields[field].name + "'.");
       }
     }

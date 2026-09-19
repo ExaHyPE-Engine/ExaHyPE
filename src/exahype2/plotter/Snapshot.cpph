@@ -1,0 +1,20 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+/**
+ * Creates the time-series writer of the series on the first snapshot and a file writer for the
+ * traversal that follows.
+ */
+template <typename FileWriterType, typename TimeSeriesWriterType>
+INLINE_METHOD void exahype2::plotter::Snapshot::openFile(const std::string& outputDirectory, const double timeStamp) {
+  assertion(std::isfinite(timeStamp), timeStamp);
+
+  if (_timeSeriesWriter == nullptr) {
+    _timeSeriesWriter = std::make_unique<TimeSeriesWriterType>();
+  }
+
+  _fileWriter.reset();
+  _fileWriter = std::make_unique<FileWriterType>(outputDirectory);
+
+  _time = timeStamp;
+}

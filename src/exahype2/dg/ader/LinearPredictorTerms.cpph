@@ -8,7 +8,7 @@ TARGET_DECLARE
  * throughout the Taylor expansion.
  */
 template <
-  typename Solver,
+  typename SolverType,
   int NumberOfDofsPerAxis,
   int NumberOfUnknowns,
   int NumberOfAuxiliaryVariables,
@@ -27,7 +27,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::evaluateLinearFlux(
   for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
     UNROLL(DIMENSIONS)
     for (int axis = 0; axis < DIMENSIONS; axis++) {
-      Solver::flux(
+      SolverType::flux(
         state + cellNode * CellLayout::PaddedNumberOfData,
         cellCentre,
         cellSize,
@@ -45,7 +45,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::evaluateLinearFlux(
  * along one axis couples one line of nodes, so the line buffer holds one differentiated line.
  */
 template <
-  typename Solver,
+  typename SolverType,
   int NumberOfDofsPerAxis,
   int NumberOfUnknowns,
   int NumberOfAuxiliaryVariables,
@@ -78,7 +78,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::addNonconservativePro
       for (int unknown = 0; unknown < FluxStride; unknown++) {
         productValues[unknown] = static_cast<ComputePrecision>(0);
       }
-      Solver::nonconservativeProduct(
+      SolverType::nonconservativeProduct(
         state + cellNode * StateStride,
         stateGradient + lineNode * FluxStride,
         cellCentre,
@@ -153,7 +153,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::addNonconservativePro
  * Multiplies the flux of every node and axis by the material parameter matrix of the solver.
  */
 template <
-  typename Solver,
+  typename SolverType,
   int NumberOfDofsPerAxis,
   int NumberOfUnknowns,
   int NumberOfAuxiliaryVariables,
@@ -172,7 +172,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::applyMaterialParamete
   for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
     UNROLL(DIMENSIONS)
     for (int axis = 0; axis < DIMENSIONS; axis++) {
-      Solver::multiplyMaterialParameterMatrix(
+      SolverType::multiplyMaterialParameterMatrix(
         state + cellNode * CellLayout::PaddedNumberOfData,
         cellCentre,
         cellSize,
@@ -189,7 +189,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::applyMaterialParamete
  * Adds the source of a linear system at every node into the zeroed source buffer.
  */
 template <
-  typename Solver,
+  typename SolverType,
   int NumberOfDofsPerAxis,
   int NumberOfUnknowns,
   int NumberOfAuxiliaryVariables,
@@ -205,7 +205,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::evaluateLinearSource(
   using CellLayout = Layout<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables>;
 
   for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
-    Solver::sourceTerm(
+    SolverType::sourceTerm(
       state + cellNode * CellLayout::PaddedNumberOfData,
       cellCentre,
       cellSize,

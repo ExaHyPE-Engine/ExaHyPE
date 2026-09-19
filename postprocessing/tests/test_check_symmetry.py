@@ -1,6 +1,5 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-"""Tests for check_symmetry: per-field transformation kinds under mirror reflections."""
 
 import unittest
 
@@ -47,7 +46,7 @@ class CheckSymmetryTest(unittest.TestCase):
         self.assertEqual(field_kind("t", 9, [], ["t"], []), "tensor")
 
     def test_packed_state_vector_is_not_mirrored_as_a_vector(self):
-        # A packed [rho, rhoU_x, rhoU_y, rhoE] state, identical in both cells: symmetric as
+        # A packed [rho, rhoU_x, rhoU_y, rhoE] state, identical in both cells: Symmetric as
         # per-component scalars. Vector semantics would negate the density component.
         packed = [[1.0, 0.0, 0.0, 2.5], [1.0, 0.0, 0.0, 2.5]]
         self.assertIsNone(self.check(make_two_cell_snapshot({"packed": packed})))
@@ -81,7 +80,7 @@ class CheckSymmetryTest(unittest.TestCase):
 
     def test_tiny_cells_displaced_by_half_a_cell_are_not_symmetric(self):
         # Two cells of width 1e-6 whose mirror partners sit half a cell width
-        # off: the geometry test works from the cell's own size, so the
+        # off: The geometry test works from the cell's own size, so the
         # displacement is detected however small the cells are.
         width = 1.0e-6
         shift = 0.5 * width

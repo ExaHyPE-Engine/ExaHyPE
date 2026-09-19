@@ -1,7 +1,6 @@
 Build:
   stage: Build
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} python3 -m compileall -f ./
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "mkdir build && cd build && CC=${CC} CXX=${CXX} cmake .. -GNinja ${CONFIGURATION_OPTIONS} ${EXTRA_CONFIGURATION_OPTIONS} -DCMAKE_INSTALL_PREFIX=../install"
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build && ninja && ctest --output-on-failure --timeout 600 && ninja install"
   artifacts:
@@ -26,17 +25,3 @@ Build:
     - .Variables
     - .RunOnAnyBranch
     - .BeforeScript
-
-# ClangTidy:
-#   stage: Test
-#   needs: [Build]
-#   rules:
-#     - if: '$CXX == "clang++"'
-#   script:
-#     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd build && ninja ClangTidy"
-#   allow_failure: false
-#   extends:
-#     - .Tags
-#     - .Variables
-#     - .RunOnAnyBranch
-#     - .BeforeScript

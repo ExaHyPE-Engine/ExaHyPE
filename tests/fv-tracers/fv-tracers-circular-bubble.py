@@ -6,10 +6,6 @@ import exahype2
 
 """
 This is a particle tracing simulation for circular bubble dynamics using the Euler equations.
-
-In this one-way coupling setup, the fluid field (circular pressure bubble) affects the particles' motion,
-but the particles do not influence the fluid dynamics. The simulation models particle transport
-through a circular high-pressure region.
 """
 
 
@@ -19,12 +15,6 @@ def generate_random_particles(
     """
     Generates a .dat file with random x- and y-positions,
     rounding positions to two decimal places.
-
-    Parameters:
-    file_path (str): Path to save the .dat file.
-    num_particles (int): Number of particles to generate.
-    domain_min (float): Minimum bound of the domain.
-    domain_max (float): Maximum bound of the domain.
     """
     particles = []
     import random
@@ -46,18 +36,18 @@ def generate_random_particles(
 
 
 interpolation_methods = {
-    "None": 0,  # No interpolation (use raw values)
-    "Constant": 1,  # Piecewise constant interpolation (nearest neighbor)
-    "Linear": 2,  # Piecewise linear interpolation (more accurate)
+    "None": 0,
+    "Constant": 1,
+    "Linear": 2,
 }
 integration_schemes = {
-    "Static": 0,  # No integration (static particles)
-    "Euler": 1,  # Explicit Euler method (simple but less accurate)
-    "SemiEuler": 2,  # Semi-implicit Euler method (better stability)
-    "Verlet": 3,  # Velocity Verlet algorithm (good for orbital mechanics)
-    "Midpoint": 4,  # Midpoint method (2nd order Runge-Kutta)
-    "RK3": 5,  # 3rd order Runge-Kutta method (high accuracy)
-    "RK4": 6,  # 4th order Runge-Kutta method (higher accuracy)
+    "Static": 0,
+    "Euler": 1,
+    "SemiEuler": 2,
+    "Verlet": 3,
+    "Midpoint": 4,
+    "RK3": 5,
+    "RK4": 6,
 }
 
 
@@ -110,7 +100,6 @@ initial_conditions = """
   Q[Shortcuts::rho]  = 1.0;
   Q[Shortcuts::rhoU] = 0.0;
   Q[Shortcuts::rhoV] = 0.0;
-  // Circular bubble centered at (0.5, 0.5) with radius 0.2
   Q[Shortcuts::rhoE] = ((std::sqrt(std::pow(0.5 - x(0), 2) + std::pow(0.5 - x(1), 2)) < 0.2) ? (1.1) : (1.0));
 """
 
@@ -140,9 +129,7 @@ max_eigenvalue = r"""
   auto result = std::fmax(0.0, std::fabs(u_n - speedOfSound));
   result = std::fmax(result, std::fabs(u_n + speedOfSound));
   return result;
-""".format(
-    compute_primitive_variables=compute_primitive_variables
-)
+""".format(compute_primitive_variables=compute_primitive_variables)
 
 flux = r"""
   {compute_primitive_variables}
@@ -155,20 +142,19 @@ flux = r"""
   F[Shortcuts::rhoU + normal] += p;
 
   F[Shortcuts::rhoE] = (Q[Shortcuts::rhoE] + p) * u_n;
-""".format(
-    compute_primitive_variables=compute_primitive_variables
-)
+""".format(compute_primitive_variables=compute_primitive_variables)
 
-fv_solver = exahype2.solvers.fv.godunov.GlobalFixedTimeStep(
+fv_solver = exahype2.fv.Solver(
     name="FVSolver",
     patch_size=args.degrees_of_freedom,
     unknowns={"rho": 1, "rhoU": 1, "rhoV": 1, "rhoE": 1},
     auxiliary_variables=0,
-    normalised_time_step_size=0.00064 / (args.degrees_of_freedom**0.5),
+    time_stepping=exahype2.TimeStepping.Fixed(0.00064 / (args.degrees_of_freedom**0.5)),
+    scheme=exahype2.fv.Godunov(),
 )
 
-fv_solver.set_implementation(
-    initial_conditions=initial_conditions,
+fv_solver.set_pde_terms(
+    initial_condition=initial_conditions,
     boundary_conditions=boundary_conditions,
     max_eigenvalue=max_eigenvalue,
     flux=flux,
@@ -189,14 +175,14 @@ tracer_attributes = {
     }
 }
 
-tracer_particles = fv_solver.add_tracer(
-    name="Tracers", particle_attributes=tracer_attributes
+tracer_particles = project.add_tracer(
+    name="Tracers", particle_attributes=tracer_attributes, solver=fv_solver
 )
 
 generate_random_particles(
     "InitTracers.dat", num_particles=100, domain_min=0.1, domain_max=0.9
 )
-init_tracers = exahype2.tracer.InsertParticlesFromFile(
+init_tracers = exahype2.particles.InsertParticlesFromFile(
     particle_set=tracer_particles,
     filename="InitTracers.dat",
     scale_factor=1.0,
@@ -205,20 +191,13 @@ init_tracers = exahype2.tracer.InsertParticlesFromFile(
 init_tracers.descend_invocation_order = 0
 project.add_action_set_to_initialisation(init_tracers)
 
-tracing_action_set = exahype2.tracer.FiniteVolumesTracingWithForce(
+fv_solver.trace(
     tracer_particles,
-    fv_solver,
-    project,
-    integration_scheme=integration_schemes[args.integration],
-    interpolation_scheme=interpolation_methods[args.interpolation],
+    forces=exahype2.particles.Forces(
+        integration_scheme=integration_schemes[args.integration],
+        interpolation_scheme=interpolation_methods[args.interpolation],
+    ),
 )
-
-tracing_action_set.descend_invocation_order = (
-    fv_solver._action_set_update_patch.descend_invocation_order + 1
-)
-
-project.add_action_set_to_timestepping(tracing_action_set)
-project.add_action_set_to_initialisation(tracing_action_set)
 
 project.output.makefile.add_compile_definition("GAMMA=1.4")
 project.generate_and_build()

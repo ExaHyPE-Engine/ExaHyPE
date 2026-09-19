@@ -24,8 +24,7 @@ private:
 public:
   INLINE_METHOD GPU_CALLABLE_METHOD Matrix();
   INLINE_METHOD GPU_CALLABLE_METHOD Matrix(const Scalar& value);
-  INLINE_METHOD GPU_CALLABLE_METHOD
-  Matrix(std::initializer_list<Scalar> values);
+  INLINE_METHOD GPU_CALLABLE_METHOD Matrix(std::initializer_list<Scalar> values);
 
   INLINE_METHOD GPU_CALLABLE_METHOD int           rows() const;
   INLINE_METHOD GPU_CALLABLE_METHOD int           cols() const;

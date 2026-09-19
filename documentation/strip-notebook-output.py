@@ -16,6 +16,7 @@ Enable once per clone, from the repository root:
 
     git config filter.nbstripout.clean "python3 documentation/strip-notebook-output.py"
 """
+
 import json
 import sys
 
@@ -24,7 +25,9 @@ _CELL_METADATA_TO_DROP = ("execution", "ExecuteTime", "collapsed", "scrolled")
 
 
 def strip(notebook):
-    notebook.get("metadata", {}).pop("widgets", None)  # large, run-specific widget state
+    notebook.get("metadata", {}).pop(
+        "widgets", None
+    )  # large, run-specific widget state
     for cell in notebook.get("cells", []):
         metadata = cell.get("metadata", {})
         for key in _CELL_METADATA_TO_DROP:
@@ -54,7 +57,9 @@ def main(argv):
     try:
         notebook = json.loads(data)
     except json.JSONDecodeError:
-        sys.stdout.write(data)  # not a JSON notebook (e.g. an LFS pointer); pass through
+        sys.stdout.write(
+            data
+        )  # not a JSON notebook (e.g. an LFS pointer); pass through
         return 0
     sys.stdout.write(dumps(strip(notebook)))
     return 0

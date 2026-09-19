@@ -1,0 +1,40 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#include "RuntimeParameters.h"
+
+#include "runner/ParameterTable.h"
+
+TARGET_DECLARE
+{{NAMESPACE | join("::")}}::RuntimeParameters::Storage {{NAMESPACE | join("::")}}::RuntimeParameters::_storage;
+TARGET_DECLARE_END
+
+::runner::ParameterTable {{NAMESPACE | join("::")}}::RuntimeParameters::parameterTable(
+  [[maybe_unused]] Storage& storage
+) {
+  ::runner::ParameterTable result;
+{%- for parameter in RUNTIME_PARAMETERS %}
+{%- if parameter.is_array %}
+  result.addArray("{{ parameter.name }}", storage.{{ parameter.name }}.data(), {{ parameter.array_size }});
+{%- else %}
+  result.add("{{ parameter.name }}", &storage.{{ parameter.name }});
+{%- endif %}
+{%- endfor %}
+  return result;
+}
+
+void {{NAMESPACE | join("::")}}::RuntimeParameters::printUsage() {
+  Storage defaults{};
+  parameterTable(defaults).printUsage();
+}
+
+void {{NAMESPACE | join("::")}}::RuntimeParameters::load(tarch::reader::JSONReader* const reader) {
+  parameterTable(_storage).load(reader);
+}
+
+void {{NAMESPACE | join("::")}}::RuntimeParameters::load(
+  tarch::reader::JSONReader* const reader,
+  int&                             argc,
+  char** const                     argv
+) {
+  parameterTable(_storage).load(reader, argc, argv);
+}

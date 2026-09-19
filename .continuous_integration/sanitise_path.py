@@ -1,6 +1,5 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-"""Replace checkout-dependent paths in installed configuration files."""
 
 import os
 import re
@@ -19,7 +18,9 @@ def iterate_lines(filename):
 def found_path(line, start_string, end_string, replacement_path):
     # The lookahead pins the end string to a path boundary, so a directory whose
     # name merely starts with the end string cannot truncate the match early.
-    pattern = re.compile(rf"{re.escape(start_string)}/.*?{re.escape(end_string)}(?=[/;\"\s]|$)")
+    pattern = re.compile(
+        rf"{re.escape(start_string)}/.*?{re.escape(end_string)}(?=[/;\"\s]|$)"
+    )
     match = pattern.search(line)
     if match:
         # Searching only the suffix prevents replacement text from matching again.

@@ -72,7 +72,10 @@ namespace tarch::accelerator {
     const Custom<Op> reducer
   ) {
     using ValueType = typename Op::ValueType;
-    static_assert(sizeof(ValueType) * MaxThreadsPerTeam <= TeamScratchBytes, "The custom value exceeds the team scratch.");
+    static_assert(
+      sizeof(ValueType) * MaxThreadsPerTeam <= TeamScratchBytes,
+      "The custom value exceeds the team scratch."
+    );
     ValueType partial = Custom<Op>::identity();
 #pragma omp for nowait
     for (int i = 0; i < range.n; ++i) {
@@ -161,7 +164,10 @@ namespace tarch::accelerator {
     const Custom<Op>  reducer
   ) {
     using ValueType = typename Op::ValueType;
-    static_assert(sizeof(ValueType) * MaxThreadsPerTeam <= TeamScratchBytes, "The custom value exceeds the team scratch.");
+    static_assert(
+      sizeof(ValueType) * MaxThreadsPerTeam <= TeamScratchBytes,
+      "The custom value exceeds the team scratch."
+    );
     ValueType partial = Custom<Op>::identity();
 #pragma omp for collapse(2) nowait
     for (int x = 0; x < range.n[0]; ++x) {
@@ -258,7 +264,10 @@ namespace tarch::accelerator {
     const Custom<Op>  reducer
   ) {
     using ValueType = typename Op::ValueType;
-    static_assert(sizeof(ValueType) * MaxThreadsPerTeam <= TeamScratchBytes, "The custom value exceeds the team scratch.");
+    static_assert(
+      sizeof(ValueType) * MaxThreadsPerTeam <= TeamScratchBytes,
+      "The custom value exceeds the team scratch."
+    );
     ValueType partial = Custom<Op>::identity();
 #pragma omp for collapse(3) nowait
     for (int x = 0; x < range.n[0]; ++x) {
@@ -411,7 +420,9 @@ namespace tarch::accelerator {
     const int extentY = range.n[1];
     parallelReduce(
       Range(range.n[0] * range.n[1]),
-      [=](const int index, typename Op::ValueType& accumulator) { functor(index / extentY, index % extentY, accumulator); },
+      [=](const int index, typename Op::ValueType& accumulator) {
+        functor(index / extentY, index % extentY, accumulator);
+      },
       reducer
     );
   }
@@ -505,9 +516,9 @@ namespace tarch::accelerator {
     const int device      = tarch::accelerator::getCurrentDevice();
 #pragma omp target teams distribute reduction(max : accumulator) device(device)
     for (int i = 0; i < range.n; ++i) {
-      T teamAccumulator = Max<T>::identity();
+      T                                           teamAccumulator = Max<T>::identity();
       alignas(PEANO_WITH_ALIGNMENT) unsigned char teamScratch[TeamScratchBytes];
-#pragma omp parallel default(none) shared(functor, i, teamAccumulator, teamScratch)
+#pragma omp                         parallel default(none) shared(functor, i, teamAccumulator, teamScratch)
       {
         functor(i, tarch::accelerator::OmptTeam{teamScratch}, teamAccumulator);
       }
@@ -525,9 +536,9 @@ namespace tarch::accelerator {
     const int device      = tarch::accelerator::getCurrentDevice();
 #pragma omp target teams distribute reduction(min : accumulator) device(device)
     for (int i = 0; i < range.n; ++i) {
-      T teamAccumulator = Min<T>::identity();
+      T                                           teamAccumulator = Min<T>::identity();
       alignas(PEANO_WITH_ALIGNMENT) unsigned char teamScratch[TeamScratchBytes];
-#pragma omp parallel default(none) shared(functor, i, teamAccumulator, teamScratch)
+#pragma omp                         parallel default(none) shared(functor, i, teamAccumulator, teamScratch)
       {
         functor(i, tarch::accelerator::OmptTeam{teamScratch}, teamAccumulator);
       }
@@ -545,9 +556,9 @@ namespace tarch::accelerator {
     const int device      = tarch::accelerator::getCurrentDevice();
 #pragma omp target teams distribute reduction(+ : accumulator) device(device)
     for (int i = 0; i < range.n; ++i) {
-      T teamAccumulator = Sum<T>::identity();
+      T                                           teamAccumulator = Sum<T>::identity();
       alignas(PEANO_WITH_ALIGNMENT) unsigned char teamScratch[TeamScratchBytes];
-#pragma omp parallel default(none) shared(functor, i, teamAccumulator, teamScratch)
+#pragma omp                         parallel default(none) shared(functor, i, teamAccumulator, teamScratch)
       {
         functor(i, tarch::accelerator::OmptTeam{teamScratch}, teamAccumulator);
       }
@@ -566,9 +577,9 @@ namespace tarch::accelerator {
     ValueType* const teamResults = tarch::allocateMemory<ValueType>(range.n, tarch::MemoryLocation::Device, device);
 #pragma omp target teams distribute device(device) is_device_ptr(teamResults)
     for (int i = 0; i < range.n; ++i) {
-      ValueType teamAccumulator = Custom<Op>::identity();
+      ValueType                                   teamAccumulator = Custom<Op>::identity();
       alignas(PEANO_WITH_ALIGNMENT) unsigned char teamScratch[TeamScratchBytes];
-#pragma omp parallel default(none) shared(functor, i, teamAccumulator, teamScratch)
+#pragma omp                         parallel default(none) shared(functor, i, teamAccumulator, teamScratch)
       {
         functor(i, tarch::accelerator::OmptTeam{teamScratch}, teamAccumulator);
       }

@@ -36,7 +36,7 @@ Multilevel interactions compare a local particle with the active coarse-level
 particles. When the active particle is coarser, the same callback also applies
 the reverse interaction: the coarse traversal cannot discover the fine
 particle from its own active set. The implementation is
-peano4.particles.UpdateParticle_MultiLevelInteraction_Sets.
+exahype2.particles.UpdateParticleMultiLevelInteractionSets.
 
 Particle storage is described on @ref page_peano4_particles_realisation.
 

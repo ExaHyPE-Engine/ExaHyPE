@@ -1,6 +1,7 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+TARGET_DECLARE
 /**
  * Copies patch boundary layers into the cell-owned halves of the face overlaps.
  * Every face stores @c 2*Overlap layers along its normal. The lower boundary is
@@ -8,43 +9,49 @@
  * lower half of the upper face; the neighbour-owned halves remain untouched.
  */
 template <int NumberOfDofsPerAxis, int Overlap, int NumberOfUnknowns, typename Precision>
-INLINE_METHOD void exahype2::projectPatch(
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::projectPatch(
   const Precision* NOALIAS const inputPatch,
   Precision* NOALIAS const       faces[peano4::FacesPerCell]
 ) {
-  int numberOfVolumes = NumberOfDofsPerAxis;
-  for (int dimension = 1; dimension < DIMENSIONS; dimension++) {
-    numberOfVolumes *= NumberOfDofsPerAxis;
+  static_assert(Overlap > 0 and Overlap <= NumberOfDofsPerAxis);
+  assertion(inputPatch != nullptr);
+  for (int face = 0; face < peano4::FacesPerCell; face++) {
+    assertion(faces[face] != nullptr, face);
   }
 
-  for (int linearVolume = 0; linearVolume < numberOfVolumes; linearVolume++) {
-    tarch::la::Vector<DIMENSIONS, int> volumeIndex;
-    int                                remainder = linearVolume;
+  int numberOfDofs = NumberOfDofsPerAxis;
+  for (int dimension = 1; dimension < DIMENSIONS; dimension++) {
+    numberOfDofs *= NumberOfDofsPerAxis;
+  }
+
+  for (int linearDof = 0; linearDof < numberOfDofs; linearDof++) {
+    tarch::la::Vector<DIMENSIONS, int> dofIndex;
+    int                                remainder = linearDof;
     for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
-      volumeIndex(dimension) = remainder % NumberOfDofsPerAxis;
+      dofIndex(dimension) = remainder % NumberOfDofsPerAxis;
       remainder /= NumberOfDofsPerAxis;
     }
 
     for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
       for (int layer = 0; layer < Overlap; layer++) {
-        tarch::la::Vector<DIMENSIONS, int> patchVolume   = volumeIndex;
-        tarch::la::Vector<DIMENSIONS, int> overlapVolume = volumeIndex;
-        patchVolume(dimension)                           = layer;
-        overlapVolume(dimension)                         = layer + Overlap;
-        const int lowerPatchIndex                        = peano4::dLinearised(patchVolume, NumberOfDofsPerAxis);
+        tarch::la::Vector<DIMENSIONS, int> patchDof   = dofIndex;
+        tarch::la::Vector<DIMENSIONS, int> overlapDof = dofIndex;
+        patchDof(dimension)                           = layer;
+        overlapDof(dimension)                         = layer + Overlap;
+        const int lowerPatchIndex                     = peano4::dLinearised(patchDof, NumberOfDofsPerAxis);
         const int lowerOverlapIndex =
-          exahype2::serialiseVoxelIndexInOverlap(overlapVolume, NumberOfDofsPerAxis, Overlap, dimension);
+          exahype2::serialiseVoxelIndexInOverlap(overlapDof, NumberOfDofsPerAxis, Overlap, dimension);
         SIMD()
         for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
           faces[dimension][lowerOverlapIndex * NumberOfUnknowns + unknown] =
             inputPatch[lowerPatchIndex * NumberOfUnknowns + unknown];
         }
 
-        patchVolume(dimension)    = layer + NumberOfDofsPerAxis - Overlap;
-        overlapVolume(dimension)  = layer;
-        const int upperPatchIndex = peano4::dLinearised(patchVolume, NumberOfDofsPerAxis);
+        patchDof(dimension)       = layer + NumberOfDofsPerAxis - Overlap;
+        overlapDof(dimension)     = layer;
+        const int upperPatchIndex = peano4::dLinearised(patchDof, NumberOfDofsPerAxis);
         const int upperOverlapIndex =
-          exahype2::serialiseVoxelIndexInOverlap(overlapVolume, NumberOfDofsPerAxis, Overlap, dimension);
+          exahype2::serialiseVoxelIndexInOverlap(overlapDof, NumberOfDofsPerAxis, Overlap, dimension);
         SIMD()
         for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
           faces[dimension + DIMENSIONS][upperOverlapIndex * NumberOfUnknowns + unknown] =
@@ -54,3 +61,4 @@ INLINE_METHOD void exahype2::projectPatch(
     }
   }
 }
+TARGET_DECLARE_END

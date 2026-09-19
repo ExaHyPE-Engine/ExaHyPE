@@ -29,19 +29,10 @@ args = parse_arguments()
 
 initial_conditions = """
   /**
-   * With plain DG, Rusanov, and without an additional limiter, we cannot solve
-   * discontinuous initial conditions. At the moment, most of the scenarios
-   * are physically meaningless. The only setup that should work
-   * out-of-the-box is the Gaussian, as it is infinitely smooth. Having said
-   * this, the Gaussian still can run into problems if it is too steep: If the
-   * polynomial order and mesh resolution are too low, the Gaussian continues
-   * to look like a discontinuous initial condition and thus introduces
-   * problems. Therefore, we scale its diameter with the maximum cell width. In
-   * a real setup, we should also take the polynomial order into account.
+   * We scale the Gaussian's diameter with the maximum cell width, so it does not
+   * look like a discontinuous initial condition on a coarse mesh.
    */
 
-  // Manual offset to make the wave originate slightly to the left of the center
-  // --- helps to detect if wave is moving to the left or right.
 #if DIMENSIONS == 2
   const tarch::la::Vector<DIMENSIONS, double> circleCentre = {0.5, 0.3};
 #else
@@ -85,16 +76,17 @@ project = exahype2.Project(
     max_grid_levels=args.grid_levels,
 )
 
-fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
+fv_solver = exahype2.fv.Solver(
     name="FVSolver",
     patch_size=args.degrees_of_freedom,
     unknowns={"rho": 1, "rhoU": project.dimensions, "rhoE": 1},
     auxiliary_variables=0,
-    time_step_relaxation=0.5,
+    time_stepping=exahype2.TimeStepping.Adaptive(0.5),
+    scheme=exahype2.fv.Godunov(),
 )
 
-fv_solver.set_implementation(
-    initial_conditions=initial_conditions,
+fv_solver.set_pde_terms(
+    initial_condition=initial_conditions,
     boundary_conditions=boundary_conditions,
     max_eigenvalue=max_eigenvalue,
     flux=flux,

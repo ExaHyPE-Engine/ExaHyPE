@@ -59,36 +59,38 @@ time, snapshot count and grid resolution are supplied at run time (see below).
 Next we choose the numerical scheme - an ADER-DG solver of polynomial order 5,
 named `ADERDGSolver`:
 
-    aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
+    aderdg_solver = exahype2.dg.ader.Solver(
         name                 = "ADERDGSolver",
         order                = 5,
-        time_step_relaxation = 0.9,
         unknowns             = {"p": 1, "v": 2},
         auxiliary_variables  = {},
+        time_stepping        = exahype2.TimeStepping.Adaptive(0.9),
+        linear               = True,
+        point_sources        = 1,
     )
 
 The name determines the generated C++ class *and* the output file prefix, so we
 reuse it when visualising. The unknowns are given as a dictionary so we can
 address them by name in C++ (`v` has multiplicity two for the two velocity
-components). The `time_step_relaxation` of 0.9 is the usual safety factor on
-the stable time-step size.
+components). The factor 0.9 of the adaptive time stepping is the usual safety
+factor on the stable time-step size. Because the system is linear, `linear`
+switches on the optimised linear ADER-DG kernels, and `point_sources` counts the
+sources we inject.
 
 We declare which PDE terms we implement - the flux, the maximum eigenvalue, and
 the initial and boundary conditions - and register the **point source** through
-the dedicated point-source API (`number_of_point_sources`, `point_source`,
-`init_point_source_location`). Because the system is linear we switch on the
-optimised linear ADER-DG kernels, which the point-source API also requires:
+the terms `point_source` and `point_source_locations`. The value `True` means we
+write a term ourselves in the implementation file:
 
-    aderdg_solver.set_implementation(
-        initial_conditions         = exahype2.solvers.PDETerms.User_Defined_Implementation,
-        boundary_conditions        = exahype2.solvers.PDETerms.User_Defined_Implementation,
-        flux                       = exahype2.solvers.PDETerms.User_Defined_Implementation,
-        max_eigenvalue             = exahype2.solvers.PDETerms.User_Defined_Implementation,
-        number_of_point_sources    = 1,
-        point_source               = exahype2.solvers.PDETerms.User_Defined_Implementation,
-        init_point_source_location = exahype2.solvers.PDETerms.User_Defined_Implementation,
+    aderdg_solver.set_pde_terms(
+        initial_condition      = True,
+        boundary_conditions    = True,
+        flux                   = True,
+        max_eigenvalue         = True,
+        point_source           = True,
+        point_source_locations = True,
     )
-    aderdg_solver.add_kernel_optimisations(is_linear=True)
+
     my_project.add_solver(aderdg_solver)
 
 Finally we register our implementation file and generate and compile the solver:

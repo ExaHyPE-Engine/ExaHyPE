@@ -13,15 +13,20 @@ namespace {
   using Setup            = exahype2::dg::ader::tests::DeviceKernelSetup;
   using NonlinearScratch = exahype2::dg::ader::NonlinearPredictorScratch<
     Setup::DofsPerAxis,
-    Setup::Unknowns,
-    Setup::AuxiliaryVariables,
+    Setup::NumberOfUnknowns,
+    Setup::NumberOfAuxiliaryVariables,
     true,
     true,
     true,
     true,
     true>;
-  using LinearScratch = exahype2::dg::ader::
-    LinearPredictorScratch<Setup::DofsPerAxis, Setup::Unknowns, Setup::AuxiliaryVariables, true, true, true>;
+  using LinearScratch = exahype2::dg::ader::LinearPredictorScratch<
+    Setup::DofsPerAxis,
+    Setup::NumberOfUnknowns,
+    Setup::NumberOfAuxiliaryVariables,
+    true,
+    true,
+    true>;
 
   TARGET_DECLARE
   /**
@@ -201,19 +206,19 @@ void exahype2::dg::ader::tests::KernelsOnDeviceTest::testNonlinearSpaceTimePredi
       const int                                   timeAveragedOffset = cell * NonlinearScratch::TimeAveragedSize;
       const int                                   picardOffset       = cell * NonlinearScratch::PicardSize;
       onDeviceSweeps[cell]                                           = exahype2::dg::ader::spaceTimePredictor<
-                                                  exahype2::dg::ader::tests::StubSolver,
-                                                  Setup::DofsPerAxis,
-                                                  Setup::Unknowns,
-                                                  Setup::AuxiliaryVariables,
-                                                  true,
-                                                  true,
-                                                  true,
-                                                  true,
-                                                  true,
-                                                  double,
-                                                  double,
-                                                  double,
-                                                  double>(
+        exahype2::dg::ader::tests::StubSolver,
+        Setup::DofsPerAxis,
+        Setup::NumberOfUnknowns,
+        Setup::NumberOfAuxiliaryVariables,
+        true,
+        true,
+        true,
+        true,
+        true,
+        double,
+        double,
+        double,
+        double>(
         faceState,
         faceFlux,
         onDeviceCellStates + stateOffset,
@@ -256,19 +261,19 @@ void exahype2::dg::ader::tests::KernelsOnDeviceTest::testNonlinearSpaceTimePredi
     const int                                   timeAveragedOffset = cell * NonlinearScratch::TimeAveragedSize;
     const int                                   picardOffset       = cell * NonlinearScratch::PicardSize;
     const int                                   hostSweeps         = exahype2::dg::ader::spaceTimePredictor<
-                                                exahype2::dg::ader::tests::StubSolver,
-                                                Setup::DofsPerAxis,
-                                                Setup::Unknowns,
-                                                Setup::AuxiliaryVariables,
-                                                true,
-                                                true,
-                                                true,
-                                                true,
-                                                true,
-                                                double,
-                                                double,
-                                                double,
-                                                double>(
+      exahype2::dg::ader::tests::StubSolver,
+      Setup::DofsPerAxis,
+      Setup::NumberOfUnknowns,
+      Setup::NumberOfAuxiliaryVariables,
+      true,
+      true,
+      true,
+      true,
+      true,
+      double,
+      double,
+      double,
+      double>(
       faceState,
       faceFlux,
       hostCellStates.data() + stateOffset,
@@ -338,8 +343,8 @@ void exahype2::dg::ader::tests::KernelsOnDeviceTest::testLinearSpaceTimePredicto
       exahype2::dg::ader::linearSpaceTimePredictor<
         exahype2::dg::ader::tests::StubSolver,
         Setup::DofsPerAxis,
-        Setup::Unknowns,
-        Setup::AuxiliaryVariables,
+        Setup::NumberOfUnknowns,
+        Setup::NumberOfAuxiliaryVariables,
         true,
         true,
         true,
@@ -395,8 +400,8 @@ void exahype2::dg::ader::tests::KernelsOnDeviceTest::testLinearSpaceTimePredicto
     exahype2::dg::ader::linearSpaceTimePredictor<
       exahype2::dg::ader::tests::StubSolver,
       Setup::DofsPerAxis,
-      Setup::Unknowns,
-      Setup::AuxiliaryVariables,
+      Setup::NumberOfUnknowns,
+      Setup::NumberOfAuxiliaryVariables,
       true,
       true,
       true,

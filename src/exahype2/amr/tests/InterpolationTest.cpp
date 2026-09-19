@@ -19,7 +19,9 @@ void exahype2::amr::tests::InterpolationTest::run() {
   testMethod(testInterpolateHaloLayerFromCoarseCell);
   testMethod(testInterpolateCell);
   testMethod(testInterpolateHaloLayerWithTangentialSlopeIsBitExactUnderReflection);
+#if DIMENSIONS == 3
   testMethod(testInterpolateHaloLayerWithTangentialSlopeIsBitExactUnderTangentialSwap);
+#endif
   testMethod(testInterpolateHaloLayerWithTangentialSlopePreservesFreeStream);
   testMethod(testInterpolateHaloLayerWithTangentialSlopeIsLinearExact);
 }
@@ -435,7 +437,7 @@ void exahype2::amr::tests::InterpolationTest::testInterpolateHaloLayerWithTangen
 }
 
 void exahype2::amr::tests::InterpolationTest::testInterpolateHaloLayer() {
-  // Unknowns == DIMENSIONS lets each axis carry a distinct linear ramp.
+  // NumberOfUnknowns == DIMENSIONS lets each axis carry a distinct linear ramp.
   constexpr int NumberOfUnknowns    = DIMENSIONS;
   constexpr int NumberOfDofsPerAxis = 7;
 
@@ -524,7 +526,7 @@ void exahype2::amr::tests::InterpolationTest::testInterpolateHaloLayer() {
 }
 
 void exahype2::amr::tests::InterpolationTest::testInterpolateHaloLayerFromCoarseCell() {
-  // Unknowns == DIMENSIONS lets each axis carry a distinct linear ramp.
+  // NumberOfUnknowns == DIMENSIONS lets each axis carry a distinct linear ramp.
   constexpr int NumberOfUnknowns = DIMENSIONS;
 
   // The coarse source layer along the normal depends on side only when the
@@ -618,7 +620,7 @@ void exahype2::amr::tests::InterpolationTest::testInterpolateHaloLayerFromCoarse
 }
 
 void exahype2::amr::tests::InterpolationTest::testInterpolateCell() {
-  // Unknowns == DIMENSIONS lets each axis carry a distinct linear ramp.
+  // NumberOfUnknowns == DIMENSIONS lets each axis carry a distinct linear ramp.
   constexpr int NumberOfUnknowns    = DIMENSIONS;
   constexpr int NumberOfDofsPerAxis = 7;
 

@@ -20,6 +20,7 @@ public:
   void run() override;
 
 private:
+  void testNodeCountsFollowTheNumberOfNodesPerAxis();
   void testGetQuadraturePointMapsTheReferenceNode();
   void testEvaluatePolynomialOrder1();
   void testEvaluatePolynomialOrder2();

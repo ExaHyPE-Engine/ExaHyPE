@@ -1,0 +1,93 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+/**
+ * Samples the solver's initial condition at the centre of every subcell of a cell.
+ */
+template <typename SolverType, typename Value>
+INLINE_METHOD void exahype2::dg::limiting::initialiseSubcells(
+  const peano4::dataview::CellMarker& marker,
+  Value* const                        subcellSolution
+) {
+  using Layout = exahype2::dg::limiting::SubcellLayout<SolverType>;
+
+  assertion(subcellSolution != nullptr);
+  peano4::dForEach(Layout::NumberOfSubcellsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& subcell) {
+    const auto index = peano4::dLinearised(subcell, Layout::NumberOfSubcellsPerAxis) * Layout::NumberOfData;
+    SolverType::initialCondition(
+      subcellSolution + index,
+      exahype2::fv::getVolumeCentre(marker.getX(), marker.getH(), Layout::NumberOfSubcellsPerAxis, subcell),
+      exahype2::fv::getVolumeSize(marker.getH(), Layout::NumberOfSubcellsPerAxis)
+    );
+  });
+}
+
+/**
+ * Samples the initial condition on the subgrid and marks a cell whose nodal interpolant leaves the
+ * range of the sampled subcells as troubled.
+ *
+ * The nodal interpolant of a discontinuous initial state oscillates before the first candidate is
+ * tested, so such a cell starts on the subcell scheme.
+ */
+template <typename SolverType, int NumberOfObservables, bool UsesRelaxationTerm, typename Value, typename CellLabel>
+INLINE_METHOD void exahype2::dg::limiting::initialiseSubcells(
+  const peano4::dataview::CellMarker& marker,
+  CellLabel&                          cellLabel,
+  const Value* const                  nodalSolution,
+  Value* const                        subcellSolution,
+  const Value* const                  dgToLobattoMatrix,
+  const Value* const                  dgToSubcellMatrix,
+  const Value                         relaxationParameter,
+  const Value                         differencesScaling
+) {
+  static_assert(NumberOfObservables > 0, "The discrete maximum principle needs at least one observable.");
+  assertion(nodalSolution != nullptr);
+  exahype2::dg::limiting::initialiseSubcells<SolverType>(marker, subcellSolution);
+
+  using Layout = exahype2::dg::limiting::SubcellLayout<SolverType>;
+
+  const auto mapStateToObservables = [](const Value* const state, Value* const observables) {
+    SolverType::mapDmpObservables(observables, state);
+  };
+
+  Value sampledMinimum[NumberOfObservables];
+  Value sampledMaximum[NumberOfObservables];
+  std::fill_n(sampledMinimum, NumberOfObservables, std::numeric_limits<Value>::infinity());
+  std::fill_n(sampledMaximum, NumberOfObservables, -std::numeric_limits<Value>::infinity());
+  exahype2::dg::reduceObservableExtrema<NumberOfObservables>(
+    sampledMinimum,
+    sampledMaximum,
+    subcellSolution,
+    Layout::NumberOfSubcells,
+    Layout::NumberOfData,
+    mapStateToObservables
+  );
+
+  Value interpolantMinimum[NumberOfObservables];
+  Value interpolantMaximum[NumberOfObservables];
+  exahype2::dg::limiting::reduceSampledObservableExtrema<
+    NumberOfObservables,
+    Layout::NumberOfDofsPerAxis,
+    Layout::NumberOfSubcellsPerAxis,
+    Layout::NumberOfData>(
+    interpolantMinimum,
+    interpolantMaximum,
+    nodalSolution,
+    dgToLobattoMatrix,
+    dgToSubcellMatrix,
+    mapStateToObservables
+  );
+
+  const bool interpolantInRange =
+    exahype2::dg::limiting::satisfiesRelaxedMaximumPrinciple<SolverType, NumberOfObservables, UsesRelaxationTerm>(
+      interpolantMinimum,
+      interpolantMaximum,
+      sampledMinimum,
+      sampledMaximum,
+      relaxationParameter,
+      differencesScaling
+    );
+  if (not interpolantInRange) {
+    cellLabel.setWasTroubledInPreviousStep(true);
+  }
+}

@@ -396,13 +396,13 @@ INLINE_METHOD void exahype2::amr::stageHaloLayerForGatheredRestriction(
  * over all staged subfaces through an exact accumulator and scales once, so
  * mirrored subface sets restrict to bitwise mirrored halves whatever the
  * staging order. A subface another rank holds is absent and contributes
- * nothing. The frame is discarded afterwards.
+ * nothing, and the frame is discarded afterwards.
  */
 template <typename T>
 INLINE_METHOD void exahype2::amr::restrictHaloLayerFromStagedSubfaces(
   exahype2::amr::ChildDataStage<T>& stage,
-  const void*                       coarseFaceKey,
-  T* NOALIAS                        coarseGridFaceValues,
+  const void* const                 coarseFaceKey,
+  T* NOALIAS const                  coarseGridFaceValues,
   const int                         normal,
   const int                         numberOfDofsPerAxis,
   const int                         numberOfUnknownsPlusAuxiliaryVariables
@@ -491,15 +491,15 @@ INLINE_METHOD void exahype2::amr::restrictHaloLayerFromStagedSubfaces(
  * by the subdivision factor; each fine node carries its quadrature weight divided by the coarse
  * node's weight, which makes the sum the mass-lumped L2 projection of the fine
  * trace. The matrices and weights must be mirror symmetric to the last bit for
- * mirrored subface sets to restrict to bitwise mirrored halves. A subface
+ * mirrored subface sets to restrict to bitwise mirrored halves; a subface
  * another rank holds is absent and contributes nothing, and the frame is
  * discarded afterwards.
  */
 template <typename T>
 INLINE_METHOD void exahype2::amr::restrictHaloLayerFromStagedSubfaces(
   exahype2::amr::ChildDataStage<T>& stage,
-  const void*                       coarseFaceKey,
-  T* NOALIAS                        coarseGridFaceValues,
+  const void* const                 coarseFaceKey,
+  T* NOALIAS const                  coarseGridFaceValues,
   const double* NOALIAS             restrictionMatrix1D,
   const double* NOALIAS             quadratureWeights1D,
   const int                         normal,
@@ -605,30 +605,19 @@ INLINE_METHOD void exahype2::amr::interpolateCell(
   const int                           numberOfUnknownsPlusAuxiliaryVariables
 ) {
   constexpr int SubdivisionFactor = peano4::sfc::ActiveCurve::SubdivisionFactor;
-#if DIMENSIONS == 3
-  for (int z = 0; z < numberOfDofsPerAxis; z++) {
-    const auto zPos = numberOfDofsPerAxis * numberOfDofsPerAxis
-      * ((z + numberOfDofsPerAxis * marker.getRelativePositionWithinFatherCell()[2]) / SubdivisionFactor);
-#else
-  {
-    const int z    = 0;
-    const int zPos = 0;
-#endif
-    for (int y = 0; y < numberOfDofsPerAxis; y++) {
-      const auto yPos = numberOfDofsPerAxis
-        * ((y + numberOfDofsPerAxis * marker.getRelativePositionWithinFatherCell()[1]) / SubdivisionFactor);
-      for (int x = 0; x < numberOfDofsPerAxis; x++) {
-        const auto xPos =
-          (x + numberOfDofsPerAxis * marker.getRelativePositionWithinFatherCell()[0]) / SubdivisionFactor;
-        for (int unknown = 0; unknown < numberOfUnknownsPlusAuxiliaryVariables; unknown++) {
-          fineGridValues
-            [(z * numberOfDofsPerAxis * numberOfDofsPerAxis + y * numberOfDofsPerAxis + x)
-               * numberOfUnknownsPlusAuxiliaryVariables
-             + unknown] = coarseGridValues[(zPos + yPos + xPos) * numberOfUnknownsPlusAuxiliaryVariables + unknown];
-        }
-      }
+  const auto    subcellIndex      = marker.getRelativePositionWithinFatherCell();
+  peano4::dForEach(numberOfDofsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& fineNode) {
+    tarch::la::Vector<DIMENSIONS, int> coarseNode;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      coarseNode(axis) = (fineNode(axis) + numberOfDofsPerAxis * subcellIndex(axis)) / SubdivisionFactor;
     }
-  }
+    const int fineIndex = peano4::dLinearised(fineNode, numberOfDofsPerAxis) * numberOfUnknownsPlusAuxiliaryVariables;
+    const int coarseIndex =
+      peano4::dLinearised(coarseNode, numberOfDofsPerAxis) * numberOfUnknownsPlusAuxiliaryVariables;
+    for (int unknown = 0; unknown < numberOfUnknownsPlusAuxiliaryVariables; unknown++) {
+      fineGridValues[fineIndex + unknown] = coarseGridValues[coarseIndex + unknown];
+    }
+  });
 }
 
 /**
@@ -764,6 +753,7 @@ INLINE_METHOD void exahype2::amr::restrictCell(
   });
 }
 
+TARGET_DECLARE
 /**
  * Multiplies three factors in ascending value order.
  *
@@ -771,7 +761,7 @@ INLINE_METHOD void exahype2::amr::restrictCell(
  * tensor-product weight; multiplying them in a value-canonical order keeps the
  * rounded product identical for every permutation.
  */
-INLINE_METHOD double exahype2::amr::orderInvariantProduct(
+INLINE_METHOD GPU_CALLABLE_METHOD double exahype2::amr::orderInvariantProduct(
   const double firstFactor,
   const double secondFactor,
   const double thirdFactor
@@ -790,16 +780,17 @@ INLINE_METHOD double exahype2::amr::orderInvariantProduct(
   }
   return (low * middle) * high;
 }
+TARGET_DECLARE_END
 
 /**
  * Applies a separable operator through symmetry-invariant sums.
  *
- * Every target degree of freedom contracts the whole source patch against the
+ * Every target degree of freedom sums the whole source patch weighted by the
  * tensor product of the per-axis matrix entries, with entry
  * matrixPerAxis[axis][source * numberOfTargetDofsPerAxis + target]. The per-axis
  * factors combine through a value-canonical product and the terms sum through
  * an exact accumulator, so a reflection or axis swap of the patch maps the
- * computation onto itself term by term. The matrices must be mirror symmetric to
+ * computation onto itself term by term, and the matrices must be mirror symmetric to
  * the last bit for mirrored data to yield the bitwise mirrored result.
  */
 template <typename T>
@@ -845,7 +836,7 @@ INLINE_METHOD void exahype2::amr::applyTensorProductOrderInvariant(
  * node then sums the weighted contributions of every fine node of every child
  * through an exact accumulator, so the result does not depend on the order in
  * which the traversal destroyed the children, and mirrored sibling sets
- * restrict to bitwise mirrored coarse cells. The per-interval matrices hold
+ * restrict to bitwise mirrored coarse cells; the per-interval matrices hold
  * the weighted restriction operator with entry [fine * numberOfDofsPerAxis +
  * coarse] and must be mirror symmetric to the last bit.
  */
@@ -894,8 +885,8 @@ INLINE_METHOD void exahype2::amr::restrictCellFromChildren(
  * The caller collects all destroyed children, indexed by their linearised
  * position within the father, and hands them over in one call. Every coarse
  * volume averages the fine volumes covering it, which reach across child
- * boundaries when the patch size is no multiple of the subdivision factor. An
- * exact accumulator adds the fine values and applies the scale once at the end,
+ * boundaries when the patch size is no multiple of the subdivision factor, and
+ * an exact accumulator adds the fine values and applies the scale once at the end,
  * so the result does not depend on the order in which the traversal destroyed
  * the children, and mirrored sibling sets restrict to bitwise mirrored coarse
  * cells.
@@ -942,10 +933,10 @@ INLINE_METHOD void exahype2::amr::restrictCellFromChildren(
  *
  * The caller selects, per tangential axis, the prolongation operator of the
  * subface's interval within the father face, with entry
- * [coarse * numberOfDofsPerAxis + fine]. Every fine node contracts the whole
- * coarse face half, the per-axis factors combine through a commutative product
+ * [coarse * numberOfDofsPerAxis + fine]. Every fine node sums the whole coarse
+ * face half, the per-axis factors combine through a commutative product
  * and the terms sum through an exact accumulator, so mirrored coarse faces
- * interpolate to bitwise mirrored subfaces. The matrices must be mirror
+ * interpolate to bitwise mirrored subfaces, and the matrices must be mirror
  * symmetric to the last bit for that to hold.
  */
 template <typename T>
@@ -1004,7 +995,7 @@ INLINE_METHOD void exahype2::amr::interpolateFaceFromCoarse(
  * once the sweep leaves the face. Every coarse node sums the weighted
  * contributions of every fine node of every present subface through an exact
  * accumulator, and a null child stands for a subface another tree holds and
- * contributes nothing. The per-interval matrices use entry
+ * contributes nothing, and the per-interval matrices use entry
  * [fine * numberOfDofsPerAxis + coarse] and must be mirror symmetric to the last
  * bit.
  */

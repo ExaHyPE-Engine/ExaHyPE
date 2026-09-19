@@ -7,7 +7,7 @@
 #include "tarch/la/MatrixVectorOperations.h"
 #include "tarch/la/Vector.h"
 
-tarch::la::tests::MatrixVectorTest::MatrixVectorTest():
+tarch::la::tests::MatrixVectorTest::MatrixVectorTest() :
   TestCase("tarch::la::tests::MatrixVectorTest") {}
 
 void tarch::la::tests::MatrixVectorTest::run() {

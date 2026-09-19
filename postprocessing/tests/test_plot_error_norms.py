@@ -8,7 +8,6 @@ import unittest
 from postprocessing.check_error_norms import COLUMNS
 from postprocessing.plot_error_norms import SERIES_STYLES, _load_csv
 
-
 DATABASE = [
     "t, l1-error, l2-error, linf-error\n",
     "6.000000e-01, 6.0e-14, 5.0e-15, 1.3e-15\n",

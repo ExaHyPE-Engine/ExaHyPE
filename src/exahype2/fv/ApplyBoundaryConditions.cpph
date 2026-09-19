@@ -1,0 +1,50 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+/**
+ * Fills the outer halo of every face of one cell that carries the domain boundary. A periodic
+ * axis keeps the halo the neighbour sends.
+ */
+template <
+  int HaloSize,
+  typename StoragePrecision,
+  typename SolverType,
+  typename FaceLabelEnumerator,
+  typename FaceDataEnumerator>
+INLINE_METHOD void exahype2::fv::applyBoundaryConditions(
+  const peano4::dataview::CellMarker& marker,
+  SolverType&                         solver,
+  const FaceLabelEnumerator&          faceLabels,
+  const FaceDataEnumerator&           faceData
+) {
+  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+    auto& faceLabel = faceLabels(faceNumber);
+    if (not solver.PeriodicBoundaries[faceNumber % DIMENSIONS] and faceLabel.getBoundary()) {
+      const auto insideEntry  = faceNumber < DIMENSIONS ? 1 : 0;
+      const auto outsideEntry = 1 - insideEntry;
+      exahype2::fv::applyBoundaryConditionsOnFace<
+        SolverType,
+        SolverType::NumberOfFiniteVolumesPerAxisPerPatch,
+        HaloSize,
+        SolverType::NumberOfUnknowns,
+        SolverType::NumberOfAuxiliaryVariables,
+        StoragePrecision>(
+        solver,
+        marker.getX(),
+        marker.getH(),
+        faceLabel.getOldTimeStamp(insideEntry),
+        faceNumber,
+        faceData(faceNumber).data()
+      );
+
+      const auto updatedTimeStamp = faceLabel.getUpdatedTimeStamp(insideEntry);
+      faceLabel.setUpdatedTimeStamp(outsideEntry, updatedTimeStamp);
+
+      const auto newTimeStamp = faceLabel.getNewTimeStamp(insideEntry);
+      faceLabel.setNewTimeStamp(outsideEntry, newTimeStamp);
+
+      const auto oldTimeStamp = faceLabel.getOldTimeStamp(insideEntry);
+      faceLabel.setOldTimeStamp(outsideEntry, oldTimeStamp);
+    }
+  }
+}

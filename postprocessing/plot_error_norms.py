@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 
@@ -16,7 +15,6 @@ from matplotlib.backend_bases import register_backend
 from matplotlib.backends.backend_pgf import FigureCanvasPgf
 from matplotlib.ticker import AutoMinorLocator, LogLocator, NullFormatter
 import matplotlib.pyplot as plt
-
 
 register_backend("pgf", FigureCanvasPgf)
 

@@ -52,8 +52,10 @@ void peano4::particles::SieveParticles<T>::exchangeSieveListsGlobally(
   std::size_t      numberOfGlobalParticles = 0;
   for (int rankIndex = 0; rankIndex < numberOfRanks; rankIndex++) {
     const std::size_t rankParticleBytes = static_cast<std::size_t>(particlesPerRank[rankIndex]) * sizeof(T);
-    if (rankParticleBytes > static_cast<std::size_t>(std::numeric_limits<int>::max())
-        or numberOfBytes > static_cast<std::size_t>(std::numeric_limits<int>::max()) - rankParticleBytes) {
+    if (
+      rankParticleBytes > static_cast<std::size_t>(std::numeric_limits<int>::max())
+      or numberOfBytes > static_cast<std::size_t>(std::numeric_limits<int>::max()) - rankParticleBytes
+    ) {
       tarch::terminateWithError("The global particle sieve exceeds the MPI byte-count range.");
     }
     displacements[rankIndex] = static_cast<int>(numberOfBytes);
@@ -185,8 +187,10 @@ typename peano4::particles::SieveParticles<T>::ParticleList peano4::particles::S
   while (particleIterator != _particlesThatHaveToBeSieved.end()) {
     const bool willBeLocal =
       peano4::particles::particleAssignedToVertexWillBeLocal((*particleIterator)->getX(), marker);
-    if (peano4::particles::sieveParticle(**particleIterator, marker)
-        and (willBeLocal or not onlyReturnParticlesThatWillBeLocal)) {
+    if (
+      peano4::particles::sieveParticle(**particleIterator, marker)
+      and (willBeLocal or not onlyReturnParticlesThatWillBeLocal)
+    ) {
       logDebug(
         "Drop particle " << (*particleIterator)->toString() << " from global sieve list into vertex "
                          << marker.toString()

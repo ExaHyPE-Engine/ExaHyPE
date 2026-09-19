@@ -17,8 +17,10 @@ INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::landsli
     QOut[i] = QIn[i];
   }
 
-  if (not std::isfinite(static_cast<double>(QIn[Shortcuts::h]))
-      or QIn[Shortcuts::h] <= static_cast<T>(physics.dryHeightThreshold)) {
+  if (
+    not std::isfinite(static_cast<double>(QIn[Shortcuts::h]))
+    or QIn[Shortcuts::h] <= static_cast<T>(physics.dryHeightThreshold)
+  ) {
     QOut[Shortcuts::h]      = T{};
     QOut[Shortcuts::hu]     = T{};
     QOut[Shortcuts::hu + 1] = T{};
@@ -72,11 +74,13 @@ INLINE_METHOD GPU_CALLABLE_METHOD double applications::exahype2::exaskred::lands
   const applications::exahype2::exaskred::landslide::Physics& physics,
   const bool                                                  submerged
 ) {
-  if (not submerged or not std::isfinite(static_cast<double>(Q[Shortcuts::h]))
-      or not std::isfinite(static_cast<double>(Q[Shortcuts::hu]))
-      or not std::isfinite(static_cast<double>(Q[Shortcuts::hu + 1]))
-      or Q[Shortcuts::h] <= static_cast<T>(physics.dryHeightThreshold) or physics.slideDensity <= 0.0
-      or physics.waterFrictionDragCoefficient <= 0.0) {
+  if (
+    not submerged or not std::isfinite(static_cast<double>(Q[Shortcuts::h]))
+    or not std::isfinite(static_cast<double>(Q[Shortcuts::hu]))
+    or not std::isfinite(static_cast<double>(Q[Shortcuts::hu + 1]))
+    or Q[Shortcuts::h] <= static_cast<T>(physics.dryHeightThreshold) or physics.slideDensity <= 0.0
+    or physics.waterFrictionDragCoefficient <= 0.0
+  ) {
     return 0.0;
   }
 
@@ -117,10 +121,11 @@ INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::landsli
     F[i] = T{};
   }
 
-  if (not std::isfinite(static_cast<double>(Q[Shortcuts::h]))
-      or not std::isfinite(static_cast<double>(Q[Shortcuts::hu]))
-      or not std::isfinite(static_cast<double>(Q[Shortcuts::hu + 1]))
-      or Q[Shortcuts::h] <= static_cast<T>(physics.dryHeightThreshold)) {
+  if (
+    not std::isfinite(static_cast<double>(Q[Shortcuts::h])) or not std::isfinite(static_cast<double>(Q[Shortcuts::hu]))
+    or not std::isfinite(static_cast<double>(Q[Shortcuts::hu + 1]))
+    or Q[Shortcuts::h] <= static_cast<T>(physics.dryHeightThreshold)
+  ) {
     return;
   }
 
@@ -158,10 +163,11 @@ INLINE_METHOD GPU_CALLABLE_METHOD double applications::exahype2::exaskred::lands
   const applications::exahype2::exaskred::landslide::Physics&   physics,
   const double                                                  gravity
 ) {
-  if (not std::isfinite(static_cast<double>(Q[Shortcuts::h]))
-      or not std::isfinite(static_cast<double>(Q[Shortcuts::hu]))
-      or not std::isfinite(static_cast<double>(Q[Shortcuts::hu + 1]))
-      or Q[Shortcuts::h] <= static_cast<T>(physics.dryHeightThreshold)) {
+  if (
+    not std::isfinite(static_cast<double>(Q[Shortcuts::h])) or not std::isfinite(static_cast<double>(Q[Shortcuts::hu]))
+    or not std::isfinite(static_cast<double>(Q[Shortcuts::hu + 1]))
+    or Q[Shortcuts::h] <= static_cast<T>(physics.dryHeightThreshold)
+  ) {
     return 0.0;
   }
 
@@ -206,10 +212,11 @@ INLINE_METHOD GPU_CALLABLE_METHOD double applications::exahype2::exaskred::lands
 ) {
   const double fluxSpeed = fluxEigenvalue<Shortcuts>(Q, x, h, t, dt, normal, physics, gravity);
 
-  if (not std::isfinite(static_cast<double>(Q[Shortcuts::h]))
-      or not std::isfinite(static_cast<double>(Q[Shortcuts::hu]))
-      or not std::isfinite(static_cast<double>(Q[Shortcuts::hu + 1]))
-      or Q[Shortcuts::h] <= static_cast<T>(physics.dryHeightThreshold)) {
+  if (
+    not std::isfinite(static_cast<double>(Q[Shortcuts::h])) or not std::isfinite(static_cast<double>(Q[Shortcuts::hu]))
+    or not std::isfinite(static_cast<double>(Q[Shortcuts::hu + 1]))
+    or Q[Shortcuts::h] <= static_cast<T>(physics.dryHeightThreshold)
+  ) {
     return fluxSpeed;
   }
 
@@ -271,9 +278,11 @@ INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::landsli
     BTimesDeltaQ[i] = T{};
   }
 
-  if (not std::isfinite(static_cast<double>(Q[Shortcuts::h]))
-      or not std::isfinite(static_cast<double>(deltaQ[Shortcuts::z]))
-      or Q[Shortcuts::h] <= static_cast<T>(physics.dryHeightThreshold)) {
+  if (
+    not std::isfinite(static_cast<double>(Q[Shortcuts::h]))
+    or not std::isfinite(static_cast<double>(deltaQ[Shortcuts::z]))
+    or Q[Shortcuts::h] <= static_cast<T>(physics.dryHeightThreshold)
+  ) {
     return;
   }
 
@@ -332,10 +341,11 @@ INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::landsli
     S[i] = T{};
   }
 
-  if (not std::isfinite(static_cast<double>(Q[Shortcuts::h]))
-      or not std::isfinite(static_cast<double>(Q[Shortcuts::hu]))
-      or not std::isfinite(static_cast<double>(Q[Shortcuts::hu + 1]))
-      or Q[Shortcuts::h] <= static_cast<T>(physics.dryHeightThreshold)) {
+  if (
+    not std::isfinite(static_cast<double>(Q[Shortcuts::h])) or not std::isfinite(static_cast<double>(Q[Shortcuts::hu]))
+    or not std::isfinite(static_cast<double>(Q[Shortcuts::hu + 1]))
+    or Q[Shortcuts::h] <= static_cast<T>(physics.dryHeightThreshold)
+  ) {
     return;
   }
 
@@ -353,8 +363,10 @@ INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::landsli
       + momentumSquared * static_cast<T>(physics.inverseTurbulentFrictionLength) / (Q[Shortcuts::h] * Q[Shortcuts::h]);
 
     T resistanceMagnitude = static_cast<T>(gravity) * friction;
-    if (submerged and physics.slideDensity > 0.0
-        and (physics.waterFrictionDragCoefficient > 0.0 or physics.waterPressureDragCoefficient > 0.0)) {
+    if (
+      submerged and physics.slideDensity > 0.0
+      and (physics.waterFrictionDragCoefficient > 0.0 or physics.waterPressureDragCoefficient > 0.0)
+    ) {
       const T densityRatio      = static_cast<T>(physics.waterDensity / physics.slideDensity);
       const T invSlideHeight    = static_cast<T>(1.0) / Q[Shortcuts::h];
       const T velocity0         = Q[Shortcuts::hu] * invSlideHeight;

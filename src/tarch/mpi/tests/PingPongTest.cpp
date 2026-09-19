@@ -208,7 +208,7 @@ void tarch::mpi::tests::PingPongTest::testMultithreadedPingPongWithBlockingSends
   const int        numberOfThreads = tarch::tasking::Runtime::getInstance().getNumberOfThreads();
   const int        baseTag         = tarch::mpi::Rank::reserveFreeTag(
     "tarch::mpi::tests::PingPongTest::"
-                   "testMultithreadedPingPongWithBlockingSendsAndReceives",
+    "testMultithreadedPingPongWithBlockingSendsAndReceives",
     numberOfThreads
   );
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() >= 2 and tarch::mpi::Rank::getInstance().getRank() == 0) {
@@ -230,7 +230,7 @@ void tarch::mpi::tests::PingPongTest::testMultithreadedPingPongWithNonblockingSe
   const int        numberOfThreads = tarch::tasking::Runtime::getInstance().getNumberOfThreads();
   const int        baseTag         = tarch::mpi::Rank::reserveFreeTag(
     "tarch::mpi::tests::PingPongTest::"
-                   "testMultithreadedPingPongWithNonblockingSendsAndReceives",
+    "testMultithreadedPingPongWithNonblockingSendsAndReceives",
     numberOfThreads
   );
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() >= 2 and tarch::mpi::Rank::getInstance().getRank() == 0) {

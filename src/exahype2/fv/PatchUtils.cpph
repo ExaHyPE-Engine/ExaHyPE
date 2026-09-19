@@ -2,7 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 TARGET_DECLARE
-
 template <int Dimensions, int NumberOfVolumesPerAxisInPatch>
 INLINE_METHOD GPU_CALLABLE_METHOD exahype2::fv::VolumeSizeAndCentre<Dimensions> exahype2::fv::getVolumeSizeAndCentre(
   const tarch::la::Vector<Dimensions, double>& x,
@@ -23,7 +22,6 @@ INLINE_METHOD GPU_CALLABLE_METHOD exahype2::fv::VolumeSizeAndCentre<Dimensions> 
 
   constexpr double InverseVolumesPerAxis = 1.0 / NumberOfVolumesPerAxisInPatch;
 
-  UNROLL(Dimensions)
   for (int axis = 0; axis < Dimensions; axis++) {
     const double volumeSize = cellSizeData[axis] * InverseVolumesPerAxis;
     volumeSizeData[axis]    = volumeSize;
@@ -58,7 +56,6 @@ INLINE_METHOD GPU_CALLABLE_METHOD
 
   constexpr double InverseVolumesPerAxis = 1.0 / NumberOfVolumesPerAxisInPatch;
 
-  UNROLL(Dimensions)
   for (int axis = 0; axis < Dimensions; axis++) {
     const double volumeSize = cellSizeData[axis] * InverseVolumesPerAxis;
     faceSizeData[axis]      = volumeSize;
@@ -181,19 +178,22 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<3, double> exahype2::fv::get
   return faceCentre;
 }
 
-TARGET_DECLARE_END
-
 /** Copies either the lower or upper half of an array-of-structures face overlap. */
 template <typename T>
-void exahype2::fv::copyHalfOfHalo(
-  int              unknownsPlusAuxiliaryVariables,
-  int              numberOfVolumesPerAxisInPatch,
-  int              haloSize,
-  int              normal,
-  bool             isRightLayer,
-  const T* NOALIAS sourceQ,
-  T* NOALIAS       destinationQ
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::copyHalfOfHalo(
+  const int              unknownsPlusAuxiliaryVariables,
+  const int              numberOfVolumesPerAxisInPatch,
+  const int              haloSize,
+  const int              normal,
+  const bool             isRightLayer,
+  const T* NOALIAS const sourceQ,
+  T* NOALIAS const       destinationQ
 ) {
+  assertion(unknownsPlusAuxiliaryVariables > 0, unknownsPlusAuxiliaryVariables);
+  assertion(haloSize > 0 and haloSize <= numberOfVolumesPerAxisInPatch, haloSize, numberOfVolumesPerAxisInPatch);
+  assertion(normal >= 0 and normal < DIMENSIONS, normal);
+  assertion(sourceQ != nullptr);
+  assertion(destinationQ != nullptr);
   peano4::dForEachExclusive(
     numberOfVolumesPerAxisInPatch,
     normal,
@@ -213,14 +213,15 @@ void exahype2::fv::copyHalfOfHalo(
     }
   );
 }
+TARGET_DECLARE_END
 
 /**
  * Validates every interior and face-connected halo value of an array-of-structures patch.
  *
  * Diagonal halo entries are skipped because dimension-split halo exchange does not
  * initialise them. minValues and maxValues, when non-null, contain one bound per
- * unknown or auxiliary variable. The routine only reads Q and is thread-safe when
- * its data and bound arrays are not mutated concurrently.
+ * unknown or auxiliary variable, and the routine reads Q and the bounds without
+ * writing either, so concurrent callers may pass the same arrays.
  */
 template <typename T>
 void exahype2::fv::validatePatch(

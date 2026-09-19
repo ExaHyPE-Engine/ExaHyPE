@@ -2,45 +2,57 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "exahype2/NonNegativeStatistics.h"
+#include "tarch/Assertions.h"
+#include "tarch/CompilerSpecificSettings.h"
+#include "tarch/NonCriticalAssertions.h"
+#include "tarch/la/ScalarOperations.h"
+
 namespace exahype2 {
   class Solver;
 } // namespace exahype2
 
+/**
+ * Holds the time stamps, time step sizes and mesh widths of a solver, merges the extrema of
+ * the traversal tasks and reduces them over the ranks.
+ */
 class exahype2::Solver {
 public:
   /**
-   * This is a "fake" enum, i.e. we do not use it to distinguish different
-   * variants. Instead, we use it as a fix that allows us to "overload"
-   * operations:
-   *
-   * In C++ you cannot overload w.r.t. static. We however need functions which
-   * exist twice in ExaHyPE 2: Once as standard (virtual) member functions and
-   * once as a static version which can be offloaded to a GPU as it does not
-   * have a state. Both function variants, in theory, have the same signature
-   * but if they had, a compiler could not distinguish them. This enum marks
-   * the GPU version.
-   *
-   * If you create a solver without GPU support, this enum will not be used.
-   * It is however always created. Once you write a GPU version and then compile
-   * without GPU support, you will thus still be able to have all your GPU
-   * function variants, and you don't have to work with ifdefs.
+   * Holds the extrema one traversal task collects until mergeLocalUpdates() moves them into the
+   * solver. The time step statistics keep an invalid observation once one arrived.
    */
-  enum class Offloadable { Yes };
+  struct LocalUpdates final {
+    double                minTimeStamp{std::numeric_limits<double>::infinity()};
+    double                maxTimeStamp{0.0};
+    double                minMeshWidth{std::numeric_limits<double>::infinity()};
+    double                maxMeshWidth{0.0};
+    NonNegativeStatistics timeStepSizeStatistics{};
+    bool                  hasHangingFaces{false};
+    bool                  empty{true};
 
-  Solver()          = default;
-  virtual ~Solver() = default;
+    INLINE_METHOD void addTimeStep(double timeStepSize);
+    INLINE_METHOD void addTimeStamp(double timeStamp);
+    INLINE_METHOD void addMeshWidths(double minimum, double maximum);
+  };
 
-  // Solvers live as one instance per repository and are always handled through this base,
-  // so copying one would slice it.
+  Solver()                         = default;
   Solver(const Solver&)            = delete;
   Solver(Solver&&)                 = delete;
   Solver& operator=(const Solver&) = delete;
   Solver& operator=(Solver&&)      = delete;
+  virtual ~Solver()                = default;
 
-  virtual double getMinTimeStamp() const    = 0;
-  virtual double getMaxTimeStamp() const    = 0;
-  virtual double getMinTimeStepSize() const = 0;
-  virtual double getMaxTimeStepSize() const = 0;
+  [[nodiscard]] virtual double getMinTimeStamp() const;
+  [[nodiscard]] virtual double getMaxTimeStamp() const;
+  [[nodiscard]] virtual double getMinTimeStepSize() const;
+  [[nodiscard]] virtual double getMaxTimeStepSize() const;
+  [[nodiscard]] virtual double getMinCellSize() const;
+  [[nodiscard]] virtual double getMaxCellSize() const;
+
+  [[nodiscard]] INLINE_METHOD bool hasStoredFaceData() const;
+
+  void mergeLocalUpdates(LocalUpdates& localUpdates);
 
   virtual void startGridConstructionStep()  = 0;
   virtual void finishGridConstructionStep() = 0;
@@ -53,49 +65,57 @@ public:
   virtual void startTimeStep()  = 0;
   virtual void finishTimeStep() = 0;
 
-  /**
-   * This pair brackets every sweep of a dynamic mesh refinement step. The base
-   * implementation records that mesh refinement ran, so a solver's next
-   * startTimeStep() can react to a changed grid and reset the flag. A solver
-   * that keeps further state per refinement step overrides these operations
-   * and calls the base version.
-   */
-  virtual void startDynamicMeshRefinementStep() { _meshRefinementRanSinceLastTimeStep = true; }
-  virtual void finishDynamicMeshRefinementStep() {}
+  virtual void startDynamicMeshRefinementStep();
+  virtual void finishDynamicMeshRefinementStep();
 
   virtual void startPlottingStep()  = 0;
   virtual void finishPlottingStep() = 0;
 
-  virtual double getMaxPatchSize() const = 0;
-  virtual double getMinPatchSize() const = 0;
-  virtual double getMaxCellSize() const  = 0;
-  virtual double getMinCellSize() const  = 0;
+  [[nodiscard]] virtual double getMaxPatchSize() const = 0;
+  [[nodiscard]] virtual double getMinPatchSize() const = 0;
 
-  virtual int getNumberOfDoFs() const = 0;
+  [[nodiscard]] virtual int getNumberOfDoFs() const = 0;
 
   /**
-   * Not all solvers allow you to plot after each grid sweep. If a
-   * solver needs multiple steps, it might want to veto that you
-   * plot intermediate data.
+   * Returns whether a plot between the sweeps of this solver reads a consistent solution.
    */
-  virtual bool mayPlot() const = 0;
+  [[nodiscard]] virtual bool mayPlot() const = 0;
 
   virtual void startSimulation()  = 0;
   virtual void finishSimulation() = 0;
 
-  /**
-   * Has a completed sweep stored face data yet?
-   *
-   * The boundary exchange consumes each sweep's sent batch at the start of the
-   * following sweep, so a sweep may only receive once an earlier sweep has sent.
-   * A guard keyed on the solver state alone cannot express that, because the
-   * state stays at initialisation across the whole initialise-drain loop whose
-   * every sweep sends. Initialisation sets the flag once its first storing sweep
-   * has finished.
-   */
-  bool hasStoredFaceData() const { return _hasStoredFaceData; }
-
 protected:
-  bool _meshRefinementRanSinceLastTimeStep = false;
-  bool _hasStoredFaceData                  = false;
+  void resetTimeStepStatistics();
+
+  void reduceTimeStepStatisticsAcrossRanks();
+
+  void commitTimeStepStatistics();
+
+  double _minTimeStamp{0.0};
+  double _maxTimeStamp{0.0};
+
+  double _minTimeStampThisTimeStep{std::numeric_limits<double>::infinity()};
+  double _maxTimeStampThisTimeStep{0.0};
+
+  double _minMeshWidth{std::numeric_limits<double>::infinity()};
+  double _maxMeshWidth{0.0};
+
+  double _minMeshWidthThisTimeStep{std::numeric_limits<double>::infinity()};
+  double _maxMeshWidthThisTimeStep{0.0};
+
+  double _minTimeStepSize{std::numeric_limits<double>::infinity()};
+  double _maxTimeStepSize{0.0};
+
+  double _minTimeStepSizeThisTimeStep{std::numeric_limits<double>::infinity()};
+  double _maxTimeStepSizeThisTimeStep{0.0};
+
+  /**
+   * Every traversal task's mergeLocalUpdates() may raise the flag concurrently.
+   */
+  std::atomic<bool> _hasHangingFacesThisTimeStep{false};
+
+  bool _meshRefinementRanSinceLastTimeStep{false};
+  bool _hasStoredFaceData{false};
 };
+
+#include "exahype2/Solver.cpph"

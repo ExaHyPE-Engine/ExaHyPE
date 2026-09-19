@@ -105,7 +105,6 @@ include(PeanoHostDependencies)
 include(PeanoOptions)
 include(PeanoFlags)
 include(PeanoDetectCPUArch)
-include(PeanoClangTidy)
 include(PeanoOpenMPFeatures)
 
 peano_create_options_target()
@@ -125,8 +124,6 @@ if(NOT _peano_gpu_backend STREQUAL "no")
 endif()
 
 add_subdirectory(src)
-
-peano_add_clang_tidy_targets()
 
 include(CMakePackageConfigHelpers)
 

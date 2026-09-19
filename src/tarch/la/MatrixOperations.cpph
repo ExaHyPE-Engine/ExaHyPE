@@ -190,9 +190,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<2, Scalar> tarch::la::row(
   int                         whichRow
 ) {
   const Scalar* values = matrix.data();
-  return whichRow == 0
-           ? tarch::la::Vector<2, Scalar>{values[0], values[1]}
-           : tarch::la::Vector<2, Scalar>{values[2], values[3]};
+  return whichRow == 0 ? tarch::la::Vector<2, Scalar>{values[0], values[1]}
+                       : tarch::la::Vector<2, Scalar>{values[2], values[3]};
 }
 
 template <typename Scalar>
@@ -251,8 +250,12 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar> tarch::la::col(
   int                         whichColumn
 ) {
   const Scalar* values = matrix.data();
-  return tarch::la::
-    Vector<4, Scalar>{values[whichColumn], values[4 + whichColumn], values[8 + whichColumn], values[12 + whichColumn]};
+  return tarch::la::Vector<4, Scalar>{
+    values[whichColumn],
+    values[4 + whichColumn],
+    values[8 + whichColumn],
+    values[12 + whichColumn]
+  };
 }
 
 template <int Rows, int Cols, typename Scalar>
@@ -281,10 +284,17 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<3, 3, Scalar> tarch::la::tra
   const tarch::la::Matrix<3, 3, Scalar>& matrix
 ) {
   const Scalar* values = matrix.data();
-  return tarch::la::Matrix<
-    3,
-    3,
-    Scalar>{values[0], values[3], values[6], values[1], values[4], values[7], values[2], values[5], values[8]};
+  return tarch::la::Matrix<3, 3, Scalar>{
+    values[0],
+    values[3],
+    values[6],
+    values[1],
+    values[4],
+    values[7],
+    values[2],
+    values[5],
+    values[8]
+  };
 }
 
 template <typename Scalar>

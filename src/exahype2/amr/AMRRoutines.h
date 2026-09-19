@@ -10,7 +10,18 @@
 #include "peano4/sfc/ActiveCurve.h"
 #include "tarch/Assertions.h"
 #include "tarch/CompilerSpecificSettings.h"
+#include "tarch/accelerator/accelerator.h"
 #include "tarch/la/ExactAccumulator.h"
+
+TARGET_DECLARE
+namespace exahype2::amr {
+  INLINE_METHOD GPU_CALLABLE_METHOD double orderInvariantProduct(
+    double firstFactor,
+    double secondFactor,
+    double thirdFactor
+  );
+} // namespace exahype2::amr
+TARGET_DECLARE_END
 
 /**
  * Interpolation and restriction for block-structured patch data.
@@ -134,8 +145,6 @@ namespace exahype2::amr {
     int                                 numberOfDofsPerAxis,
     int                                 numberOfUnknownsPlusAuxiliaryVariables
   );
-
-  INLINE_METHOD double orderInvariantProduct(double firstFactor, double secondFactor, double thirdFactor);
 
   template <typename T>
   INLINE_METHOD void applyTensorProductOrderInvariant(

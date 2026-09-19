@@ -4,6 +4,7 @@
 
 #include "exahype2/RefinementControl.h"
 #include "peano4/sfc/ActiveCurve.h"
+#include "peano4/topology/TopologyManager.h"
 #include "tarch/Termination.h"
 #include "tarch/instrumentation/Debug.h"
 #include "tarch/mpi/Collectives.h"
@@ -150,15 +151,27 @@ void exahype2::RefinementControlService::finishRefinementCriterionStep() {
 void exahype2::RefinementControlService::finishDynamicMeshRefinementStep() { finishStep(true, true); }
 
 /**
- * Records the committed set as realised and drops it. A caller uses it for a
- * committed set the refinement plan rejects, so no traversal runs for it and
- * the topology stays as it is. Every rank holds the same committed set, so
- * the record stays rank-uniform.
+ * Records the committed set as realised and drops it. Every rank holds the same committed
+ * set, so the record stays rank-uniform.
  */
 void exahype2::RefinementControlService::realiseCommittedEventsWithoutSweep() {
   assertion(not _committedEvents.empty());
   _lastRealisedEvents = std::move(_committedEvents);
   _committedEvents.clear();
+}
+
+/**
+ * Records a committed event set the refinement plan rejects as realised, so no
+ * mesh-refinement sweep runs for it. Every rank holds the same committed set and evaluates
+ * the same plan, so every rank drops the same set.
+ */
+void exahype2::RefinementControlService::realisePlanRejectedEvents() {
+  if (
+    hasGridControlEvents()
+    and not peano4::topology::TopologyManager::getInstance().controlEventsChangePlan(getGridControlEvents())
+  ) {
+    realiseCommittedEventsWithoutSweep();
+  }
 }
 
 /**
@@ -185,7 +198,6 @@ void exahype2::RefinementControlService::finishStep(
   const StepKind stepKind             = recordRealisedEvents ? StepKind::Realise : criterionOrPlainKind;
   auto&          lastOutcome          = _lastOutcomePerKind[static_cast<int>(stepKind)];
 
-  // An empty contribution names no cell and drops here.
   std::vector<RefinementControl::NewEvents> contributions;
   for (auto& threadContributions : _contributionsPerThread) {
     for (auto& contribution : threadContributions) {
@@ -308,7 +320,6 @@ bool exahype2::RefinementControlService::rawRequestPrecedes(const RawRequest& le
   return left.solverNumber < right.solverNumber;
 }
 
-/** Returns whether two raw requests carry the same content. */
 bool exahype2::RefinementControlService::rawRequestsMatch(const RawRequest& left, const RawRequest& right) {
   return not rawRequestPrecedes(left, right) and not rawRequestPrecedes(right, left);
 }
@@ -552,9 +563,7 @@ bool exahype2::RefinementControlService::hasGridControlEvents() const { return n
 
 /**
  * Returns whether every rank holds the same committed event set. One hash of
- * the set reduces over the ranks to its minimum and its maximum, so the check
- * costs one collective per call and serves an assertion at the start of a
- * sweep.
+ * the set reduces over the ranks to its minimum and its maximum.
  */
 bool exahype2::RefinementControlService::committedEventsAgreeAcrossRanks() const {
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() <= 1) {
@@ -615,6 +624,9 @@ void exahype2::RefinementControlService::setDomain(
   const tarch::la::Vector<DIMENSIONS, double>& domainOffset,
   const tarch::la::Vector<DIMENSIONS, double>& domainWidth
 ) {
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    assertion(std::isfinite(domainWidth(axis)) and domainWidth(axis) > 0.0, axis, domainWidth(axis));
+  }
   _domainOffset = domainOffset;
   _domainWidth  = domainWidth;
 }

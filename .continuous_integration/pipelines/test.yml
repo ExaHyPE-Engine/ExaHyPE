@@ -1,7 +1,10 @@
-Postprocessing:
+API:
   stage: Test
+  parallel:
+    matrix:
+    - test: [import_layers, all_pde_terms]
   script:
-    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "python3 -m unittest discover -s postprocessing/tests -t ."
+    - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "mkdir -p api-tests/$test && cd api-tests/$test && PYTHONPATH=$CI_PROJECT_DIR/api python3 $CI_PROJECT_DIR/api/exahype2/tests/$test.py"
   allow_failure: false
   extends:
     - .Tags

@@ -39,14 +39,17 @@ INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::coupled
     QOut[i] = QIn[i];
   }
 
-  if (not std::isfinite(static_cast<double>(QIn[Shortcuts::h]))
-      or QIn[Shortcuts::h] <= static_cast<T>(minimumWaterHeight)) {
+  if (
+    not std::isfinite(static_cast<double>(QIn[Shortcuts::h])) or QIn[Shortcuts::h] <= static_cast<T>(minimumWaterHeight)
+  ) {
     QOut[Shortcuts::h]      = T{};
     QOut[Shortcuts::hu]     = T{};
     QOut[Shortcuts::hu + 1] = T{};
   }
-  if (not std::isfinite(static_cast<double>(QIn[Shortcuts::lsh]))
-      or QIn[Shortcuts::lsh] <= static_cast<T>(physics.dryHeightThreshold)) {
+  if (
+    not std::isfinite(static_cast<double>(QIn[Shortcuts::lsh]))
+    or QIn[Shortcuts::lsh] <= static_cast<T>(physics.dryHeightThreshold)
+  ) {
     QOut[Shortcuts::lsh]      = T{};
     QOut[Shortcuts::lshu]     = T{};
     QOut[Shortcuts::lshu + 1] = T{};
@@ -178,10 +181,12 @@ INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::coupled
     BTimesDeltaQ[i] = T{};
   }
 
-  if (std::isfinite(static_cast<double>(Q[Shortcuts::h])) and std::isfinite(static_cast<double>(deltaQ[Shortcuts::h]))
-      and std::isfinite(static_cast<double>(deltaQ[Shortcuts::z]))
-      and std::isfinite(static_cast<double>(deltaQ[Shortcuts::lsh]))
-      and Q[Shortcuts::h] > static_cast<T>(minimumWaterHeight)) {
+  if (
+    std::isfinite(static_cast<double>(Q[Shortcuts::h])) and std::isfinite(static_cast<double>(deltaQ[Shortcuts::h]))
+    and std::isfinite(static_cast<double>(deltaQ[Shortcuts::z]))
+    and std::isfinite(static_cast<double>(deltaQ[Shortcuts::lsh]))
+    and Q[Shortcuts::h] > static_cast<T>(minimumWaterHeight)
+  ) {
     BTimesDeltaQ[Shortcuts::hu + normal] = static_cast<T>(physics.gravity) * Q[Shortcuts::h]
       * (deltaQ[Shortcuts::h] + deltaQ[Shortcuts::z] + deltaQ[Shortcuts::lsh]);
   }

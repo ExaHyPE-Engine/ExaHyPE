@@ -47,7 +47,6 @@ public:
   static void updateLiftDropStatistics(
     int numberOfLiftsInThisTree,
     int numberOfDropsInThisTree,
-    int numberOfReassignmentsInThisTree,
     int numberOfLiftsIntoSieveSetInThisTree,
     int numberOfDropsFromSieveSetInThisTree,
     int numberOfDropsIntoHorizontalTreeDecomposition
@@ -85,7 +84,6 @@ protected:
   // Reassignment counters accumulated by updateLiftDropStatistics().
   static int _numberOfLifts;
   static int _numberOfDrops;
-  static int _numberOfReassignments;
   static int _numberOfLiftsIntoSieveSet;
   static int _numberOfDropsFromSieveSet;
   static int _numberOfDropsIntoHorizontalTreeDecomposition;

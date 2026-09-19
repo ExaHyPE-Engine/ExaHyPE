@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "VolumeIntegralTest.h"
 
+#include "exahype2/dg/DGUtils.h"
 #include "exahype2/dg/rk/VolumeIntegral.h"
 
 namespace {
@@ -9,10 +10,9 @@ namespace {
   constexpr int    NumberOfUnknowns           = 2;
   constexpr int    NumberOfAuxiliaryVariables = 1;
   constexpr int    NumberOfData               = NumberOfUnknowns + NumberOfAuxiliaryVariables;
-  constexpr int    NodesPerCell = (DIMENSIONS == 3) ? NumberOfDofsPerAxis * NumberOfDofsPerAxis * NumberOfDofsPerAxis
-                                                    : NumberOfDofsPerAxis * NumberOfDofsPerAxis;
-  constexpr double TimeStamp    = 0.5;
-  constexpr double TimeStepSize = 0.125;
+  constexpr int    CellNodes                  = exahype2::dg::NodesPerCell<NumberOfDofsPerAxis>;
+  constexpr double TimeStamp                  = 0.5;
+  constexpr double TimeStepSize               = 0.125;
 
   // Gauss-Legendre nodes and weights of three points on the unit interval.
   const double QuadratureNodes[NumberOfDofsPerAxis] = {0.5 * (1.0 - std::sqrt(0.6)), 0.5, 0.5 * (1.0 + std::sqrt(0.6))};
@@ -173,14 +173,14 @@ void exahype2::dg::rk::tests::VolumeIntegralTest::testWeakFormOfAConstantFluxLif
   const auto                                  cellSize  = makeCellSize();
   const tarch::la::Vector<DIMENSIONS, double> cellCentre(1.0);
 
-  double cellState[NodesPerCell * NumberOfData];
-  for (int cellNode = 0; cellNode < NodesPerCell; cellNode++) {
+  double cellState[CellNodes * NumberOfData];
+  for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
     for (int value = 0; value < NumberOfData; value++) {
       cellState[cellNode * NumberOfData + value] = 2.0 + value;
     }
   }
-  double cellUpdate[NodesPerCell * NumberOfUnknowns];
-  for (int entry = 0; entry < NodesPerCell * NumberOfUnknowns; entry++) {
+  double cellUpdate[CellNodes * NumberOfUnknowns];
+  for (int entry = 0; entry < CellNodes * NumberOfUnknowns; entry++) {
     cellUpdate[entry] = 9.0;
   }
 
@@ -209,7 +209,7 @@ void exahype2::dg::rk::tests::VolumeIntegralTest::testWeakFormOfAConstantFluxLif
   // The weak form integrates a constant flux against the basis derivative, which
   // leaves the difference of the basis function at the two ends of the axis,
   // divided by the node's quadrature weight and the cell extent.
-  for (int cellNode = 0; cellNode < NodesPerCell; cellNode++) {
+  for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
     const auto nodeIndex = nodeIndexOf(cellNode);
     for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
       double expected = 0.0;
@@ -237,14 +237,14 @@ void exahype2::dg::rk::tests::VolumeIntegralTest::testLinearFormDifferentiatesTh
   const tarch::la::Vector<DIMENSIONS, double> cellCentre(1.0);
 
   // The state grows linearly along the first axis and is constant along the others.
-  double cellState[NodesPerCell * NumberOfData];
-  for (int cellNode = 0; cellNode < NodesPerCell; cellNode++) {
+  double cellState[CellNodes * NumberOfData];
+  for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
     const double reference = QuadratureNodes[nodeIndexOf(cellNode)(0)];
     for (int value = 0; value < NumberOfData; value++) {
       cellState[cellNode * NumberOfData + value] = 1.0 + value + Slope * reference;
     }
   }
-  double cellUpdate[NodesPerCell * NumberOfUnknowns] = {};
+  double cellUpdate[CellNodes * NumberOfUnknowns] = {};
 
   exahype2::dg::rk::volumeIntegral<
     StubSolver,
@@ -272,7 +272,7 @@ void exahype2::dg::rk::tests::VolumeIntegralTest::testLinearFormDifferentiatesTh
   // the flux along the first axis varies, with the physical slope of the state
   // being the reference slope over the cell extent.
   const double expected = -TimeStepSize * Slope / cellSize(0);
-  for (int entry = 0; entry < NodesPerCell * NumberOfUnknowns; entry++) {
+  for (int entry = 0; entry < CellNodes * NumberOfUnknowns; entry++) {
     validateNumericalEqualsWithParams1(cellUpdate[entry], expected, entry);
   }
 }
@@ -282,12 +282,12 @@ void exahype2::dg::rk::tests::VolumeIntegralTest::testSourceTermIsScaledByTheTim
   const auto                                  cellSize  = makeCellSize();
   const tarch::la::Vector<DIMENSIONS, double> cellCentre(1.0);
 
-  double cellState[NodesPerCell * NumberOfData];
-  for (int entry = 0; entry < NodesPerCell * NumberOfData; entry++) {
+  double cellState[CellNodes * NumberOfData];
+  for (int entry = 0; entry < CellNodes * NumberOfData; entry++) {
     cellState[entry] = 0.5 + 0.25 * entry;
   }
-  double cellUpdate[NodesPerCell * NumberOfUnknowns];
-  for (int entry = 0; entry < NodesPerCell * NumberOfUnknowns; entry++) {
+  double cellUpdate[CellNodes * NumberOfUnknowns];
+  for (int entry = 0; entry < CellNodes * NumberOfUnknowns; entry++) {
     cellUpdate[entry] = 9.0;
   }
 
@@ -314,7 +314,7 @@ void exahype2::dg::rk::tests::VolumeIntegralTest::testSourceTermIsScaledByTheTim
   );
 
   // Without a flux the update starts from zero, so it holds the source alone.
-  for (int cellNode = 0; cellNode < NodesPerCell; cellNode++) {
+  for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
     for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
       const double expected = TimeStepSize * (1.0 + unknown) * cellState[cellNode * NumberOfData + unknown];
       validateNumericalEqualsWithParams2(
@@ -335,14 +335,14 @@ void exahype2::dg::rk::tests::VolumeIntegralTest::testNonconservativeProductSees
   const tarch::la::Vector<DIMENSIONS, double> cellCentre(1.0);
 
   // The state grows linearly along the last axis and is constant along the others.
-  double cellState[NodesPerCell * NumberOfData];
-  for (int cellNode = 0; cellNode < NodesPerCell; cellNode++) {
+  double cellState[CellNodes * NumberOfData];
+  for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
     const double reference = QuadratureNodes[nodeIndexOf(cellNode)(DIMENSIONS - 1)];
     for (int value = 0; value < NumberOfData; value++) {
       cellState[cellNode * NumberOfData + value] = 1.0 + value + Slope * reference;
     }
   }
-  double cellUpdate[NodesPerCell * NumberOfUnknowns] = {};
+  double cellUpdate[CellNodes * NumberOfUnknowns] = {};
 
   exahype2::dg::rk::volumeIntegral<
     StubSolver,
@@ -369,7 +369,7 @@ void exahype2::dg::rk::tests::VolumeIntegralTest::testNonconservativeProductSees
   // The stub returns the gradient, which is the physical slope along the last
   // axis and zero along the others, and the kernel subtracts it times the time step.
   const double expected = -TimeStepSize * Slope / cellSize(DIMENSIONS - 1);
-  for (int entry = 0; entry < NodesPerCell * NumberOfUnknowns; entry++) {
+  for (int entry = 0; entry < CellNodes * NumberOfUnknowns; entry++) {
     validateNumericalEqualsWithParams1(cellUpdate[entry], expected, entry);
   }
 }
@@ -382,14 +382,14 @@ void exahype2::dg::rk::tests::VolumeIntegralTest::testDiffusiveFluxSeesTheNodalG
   const tarch::la::Vector<DIMENSIONS, double> cellCentre(1.0);
 
   // The state grows linearly along the last axis and is constant along the others.
-  double cellState[NodesPerCell * NumberOfData];
-  for (int cellNode = 0; cellNode < NodesPerCell; cellNode++) {
+  double cellState[CellNodes * NumberOfData];
+  for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
     const double reference = QuadratureNodes[nodeIndexOf(cellNode)(DIMENSIONS - 1)];
     for (int value = 0; value < NumberOfData; value++) {
       cellState[cellNode * NumberOfData + value] = 1.0 + value + Slope * reference;
     }
   }
-  double cellUpdate[NodesPerCell * NumberOfUnknowns] = {};
+  double cellUpdate[CellNodes * NumberOfUnknowns] = {};
 
   exahype2::dg::rk::volumeIntegral<
     DiffusiveStubSolver,
@@ -417,7 +417,7 @@ void exahype2::dg::rk::tests::VolumeIntegralTest::testDiffusiveFluxSeesTheNodalG
   // same constant flux along every axis, and the weak form lifts the basis
   // endpoints of every axis with it.
   const double flux = DIMENSIONS * Slope / cellSize(DIMENSIONS - 1);
-  for (int cellNode = 0; cellNode < NodesPerCell; cellNode++) {
+  for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
     const auto nodeIndex = nodeIndexOf(cellNode);
     for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
       double expected = 0.0;

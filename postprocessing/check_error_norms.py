@@ -1,9 +1,5 @@
-#!/usr/bin/env python3
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-"""Exit status: 0 if the worst value stays within the threshold, 1 if it does
-not, 2 if the database cannot be read.
-"""
 
 from __future__ import annotations
 
@@ -11,7 +7,6 @@ import argparse
 import csv
 import math
 import sys
-
 
 COLUMNS = ("t", "l1-error", "l2-error", "linf-error")
 DEFAULT_COLUMN = "linf-error"

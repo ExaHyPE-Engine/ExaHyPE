@@ -157,9 +157,9 @@ void peano4::particles::tests::ParticlesTest::testParticleSetStatistics() {
 
   TestParticleSet::clearReassignmentStatistics();
   validate(not TestParticleSet::registeredAnyResorting());
-  TestParticleSet::updateLiftDropStatistics(1, 2, 3, 4, 5, 6);
+  TestParticleSet::updateLiftDropStatistics(1, 2, 3, 4, 5);
   validate(TestParticleSet::registeredAnyResorting());
-  validateEquals(TestParticleSet::getNumberOfDropsIntoHorizontalTreeDecomposition(), 6);
+  validateEquals(TestParticleSet::getNumberOfDropsIntoHorizontalTreeDecomposition(), 5);
   validate(TestParticleSet::printReassignmentStatistics().find("#lifts=1") != std::string::npos);
 
   TestParticleSet::clearParticleStateStatistics();

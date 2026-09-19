@@ -13,7 +13,6 @@ from postprocessing.check_error_norms import (
     worst_measurement,
 )
 
-
 HEADER = ["t", "l1-error", "l2-error", "linf-error"]
 ROWS = [
     ["0.000000e+00", "0.000000e+00", "0.000000e+00", "0.000000e+00"],

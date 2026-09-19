@@ -51,21 +51,18 @@ if project.dimensions != 2:
         f"for {project.dimensions}D."
     )
 
-solver = exahype2.solvers.rkdg.GlobalAdaptiveTimeStep(
+solver = exahype2.dg.rk.Solver(
     name="RKDGSolver",
     rk_order=2,
     dg_order=order,
-    time_step_relaxation=0.8,
     unknowns=4,
     auxiliary_variables=0,
+    time_stepping=exahype2.TimeStepping.Adaptive(0.8),
+    basis=exahype2.dg.GaussLegendre,
 )
 
-solver.add_kernel_optimisations(
-    polynomials=exahype2.solvers.rkdg.Polynomials.Gauss_Legendre,
-)
-
-solver.set_implementation(
-    initial_conditions="""
+solver.set_pde_terms(
+    initial_condition="""
   const double r = std::sqrt((x[0] - 0.5) * (x[0] - 0.5) + (x[1] - 0.5) * (x[1] - 0.5));
   Q[0] = 1.;
   Q[1] = 0.;

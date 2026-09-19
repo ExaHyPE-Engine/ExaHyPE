@@ -4,6 +4,7 @@ from .Scenario import Scenario
 
 import os
 
+
 class LOH1(Scenario):
     """
      Part of a series of benchmarks by the SeISmic MOdeling Web INterfacE (Sismowine)
@@ -15,15 +16,21 @@ class LOH1(Scenario):
     The description of the scenario can be found at: https://sismowine.org/model/WP2_LOH1.pdf
     """
 
-    domain_offset   = [-2.025, 0.0, -2.025]
-    domain_size     = [12.15, 12.15, 12.15]
+    domain_offset = [-2.025, 0.0, -2.025]
+    domain_size = [12.15, 12.15, 12.15]
 
     end_time = 10.0
 
     tracer_coordinates = [
-        [0.000, 0., 0.693], [0.000, 0., 5.543], [0.000, 0., 10.392],
-        [0.490, 0., 0.490], [3.919, 0., 3.919], [7.348, 0., 7.3480],
-        [0.577, 0., 0.384], [4.612, 0., 3.075], [8.647, 0., 5.7640]
+        [0.000, 0.0, 0.693],
+        [0.000, 0.0, 5.543],
+        [0.000, 0.0, 10.392],
+        [0.490, 0.0, 0.490],
+        [3.919, 0.0, 3.919],
+        [7.348, 0.0, 7.3480],
+        [0.577, 0.0, 0.384],
+        [4.612, 0.0, 3.075],
+        [8.647, 0.0, 5.7640],
     ]
 
     def domain_perturbations(self):
@@ -67,6 +74,7 @@ class LOH1(Scenario):
     forceVector[i] = forceVector[i] / jacobian;
   }
 """
+
     def init_point_source(self):
         return """
   tarch::la::Vector<DIMENSIONS, double> ps = _curvi->invertProjection({0., 2., 0.});

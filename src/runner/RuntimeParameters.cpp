@@ -99,8 +99,8 @@ void runner::RuntimeParameters::printUsage(const std::string& executableName) co
   );
   addOption(
     "-tmax, --maxTerminalTime <t>",
-    "Maximum terminal time; it lowers a larger minimum terminal time (default: "
-      + formatTerminalTime(_maxTerminalTime) + ")."
+    "Maximum terminal time; it lowers a larger minimum terminal time (default: " + formatTerminalTime(_maxTerminalTime)
+      + ")."
   );
   addOption(
     "-fpt, --firstPlotTimeStamp <t>",

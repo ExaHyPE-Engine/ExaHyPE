@@ -1,0 +1,54 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+/**
+ * Copies every local particle of the cell's vertices into the map under its number. The
+ * particle container replaces objects while it updates the grid association, so the map holds
+ * copies.
+ */
+template <typename Particle, typename Vertices>
+INLINE_METHOD void exahype2::collectLocalParticles(
+  const Vertices&                          fineGridVertices,
+  std::map<std::pair<int, int>, Particle>& particles
+) {
+  for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell; vertexNumber++) {
+    for (auto* const particle : fineGridVertices(vertexNumber)) {
+      assertion(particle != nullptr);
+      if (particle->getParallelState() == Particle::ParallelState::Local) {
+        particles.insert_or_assign(std::make_pair(particle->getNumber(0), particle->getNumber(1)), *particle);
+      }
+    }
+  }
+}
+
+/**
+ * Adds the position error of every collected particle to the measurement. The functor
+ * exactSolution receives the particle, the time stamp, the time step size and a buffer of
+ * SolutionSize entries whose first DIMENSIONS entries are the exact position.
+ */
+template <int SolutionSize, typename Particle, typename ExactSolution>
+INLINE_METHOD void exahype2::accumulateParticlePositionErrors(
+  std::map<std::pair<int, int>, Particle>& particles,
+  const double                             timeStamp,
+  const double                             timeStepSize,
+  ExactSolution&&                          exactSolution,
+  ErrorMeasurement&                        measurement
+) {
+  static_assert(SolutionSize >= DIMENSIONS);
+  constexpr int PositionEntries[DIMENSIONS] = {
+    0,
+    1,
+#if DIMENSIONS == 3
+    2,
+#endif
+  };
+  for (auto& entry : particles) {
+    auto* const particle = &entry.second;
+    double      solution[SolutionSize]{};
+    exactSolution(particle, timeStamp, timeStepSize, solution);
+    const auto position = particle->getX();
+    double     errors[ErrorMeasurement::NumberOfNorms]{};
+    accumulateError(PositionEntries, position.data(), solution, 1.0, errors);
+    measurement.add(errors);
+  }
+}

@@ -10,7 +10,7 @@ TARGET_DECLARE
  * iteration diverged and the cell holds no valid candidate.
  */
 template <
-  typename Solver,
+  typename SolverType,
   int  NumberOfDofsPerAxis,
   int  NumberOfUnknowns,
   int  NumberOfAuxiliaryVariables,
@@ -89,7 +89,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD int exahype2::dg::ader::spaceTimePredictor(
 
       if constexpr (EvaluateFlux) {
         evaluateSpaceTimeFlux<
-          Solver,
+          SolverType,
           NumberOfDofsPerAxis,
           NumberOfUnknowns,
           NumberOfAuxiliaryVariables,
@@ -134,7 +134,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD int exahype2::dg::ader::spaceTimePredictor(
 
       if constexpr (Scratch::AccumulatesSource) {
         evaluateSpaceTimeSource<
-          Solver,
+          SolverType,
           NumberOfDofsPerAxis,
           NumberOfUnknowns,
           NumberOfAuxiliaryVariables,
@@ -271,7 +271,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD int exahype2::dg::ader::spaceTimePredictor(
  * lists the numberOfPointSources point sources inside the cell.
  */
 template <
-  typename Solver,
+  typename SolverType,
   int  NumberOfDofsPerAxis,
   int  NumberOfUnknowns,
   int  NumberOfAuxiliaryVariables,
@@ -335,7 +335,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::linearSpaceTimePredic
 
   if constexpr (EvaluatePointSources) {
     evaluatePointSources<
-      Solver,
+      SolverType,
       NumberOfDofsPerAxis,
       NumberOfUnknowns,
       NumberOfAuxiliaryVariables,
@@ -379,14 +379,12 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::linearSpaceTimePredic
       ComputePrecision>(flux, source);
 
     if constexpr (EvaluateFlux) {
-      evaluateLinearFlux<Solver, NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables, ComputePrecision>(
-        flux,
-        state,
-        cellCentre,
-        cellSize,
-        timeStamp,
-        timeStepSize
-      );
+      evaluateLinearFlux<
+        SolverType,
+        NumberOfDofsPerAxis,
+        NumberOfUnknowns,
+        NumberOfAuxiliaryVariables,
+        ComputePrecision>(flux, state, cellCentre, cellSize, timeStamp, timeStepSize);
       differentiateFluxInPlace<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables, ComputePrecision>(
         flux,
         tables.derivativeOperator,
@@ -396,7 +394,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::linearSpaceTimePredic
 
     if constexpr (EvaluateNonconservativeProduct) {
       addNonconservativeProduct<
-        Solver,
+        SolverType,
         NumberOfDofsPerAxis,
         NumberOfUnknowns,
         NumberOfAuxiliaryVariables,
@@ -415,7 +413,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::linearSpaceTimePredic
 
     if constexpr (EvaluateMaterialParameters) {
       applyMaterialParameterMatrix<
-        Solver,
+        SolverType,
         NumberOfDofsPerAxis,
         NumberOfUnknowns,
         NumberOfAuxiliaryVariables,
@@ -423,14 +421,12 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::linearSpaceTimePredic
     }
 
     if constexpr (EvaluateSource) {
-      evaluateLinearSource<Solver, NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables, ComputePrecision>(
-        source,
-        state,
-        cellCentre,
-        cellSize,
-        timeStamp,
-        timeStepSize
-      );
+      evaluateLinearSource<
+        SolverType,
+        NumberOfDofsPerAxis,
+        NumberOfUnknowns,
+        NumberOfAuxiliaryVariables,
+        ComputePrecision>(source, state, cellCentre, cellSize, timeStamp, timeStepSize);
     }
 
     accumulateTimeAveragedTerms<

@@ -11,7 +11,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::tests::StubSolver::fl
   const int                                                     direction,
   double* NOALIAS const                                         values
 ) {
-  for (int unknown = 0; unknown < DeviceKernelSetup::Unknowns; unknown++) {
+  for (int unknown = 0; unknown < DeviceKernelSetup::NumberOfUnknowns; unknown++) {
     values[unknown] = DeviceKernelSetup::FluxSpeed * (1.0 + direction) * state[unknown] + 0.01 * position(0);
   }
 }
@@ -26,7 +26,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::tests::StubSolver::fl
   const int                                                     direction,
   double* NOALIAS const                                         values
 ) {
-  for (int unknown = 0; unknown < DeviceKernelSetup::Unknowns; unknown++) {
+  for (int unknown = 0; unknown < DeviceKernelSetup::NumberOfUnknowns; unknown++) {
     values[unknown] = DeviceKernelSetup::FluxSpeed * (1.0 + direction) * state[unknown] + 0.01 * position(0)
       + DeviceKernelSetup::DiffusionSpeed * stateGradients[direction][unknown];
   }
@@ -42,7 +42,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::tests::StubSolver::no
   const int                                                     direction,
   double* NOALIAS const                                         values
 ) {
-  for (int unknown = 0; unknown < DeviceKernelSetup::Unknowns; unknown++) {
+  for (int unknown = 0; unknown < DeviceKernelSetup::NumberOfUnknowns; unknown++) {
     values[unknown] =
       DeviceKernelSetup::ProductSpeed * (1.0 + direction) * stateGradient[unknown] + 0.01 * state[unknown];
   }
@@ -56,7 +56,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::tests::StubSolver::so
   [[maybe_unused]] const double                                 timeStepSize,
   double* NOALIAS const                                         values
 ) {
-  for (int unknown = 0; unknown < DeviceKernelSetup::Unknowns; unknown++) {
+  for (int unknown = 0; unknown < DeviceKernelSetup::NumberOfUnknowns; unknown++) {
     values[unknown] = DeviceKernelSetup::SourceStrength + 0.1 * state[unknown] - 0.01 * position(0);
   }
 }
@@ -70,10 +70,10 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::tests::StubSolver::di
   [[maybe_unused]] const double                                 timeStepSize,
   double* NOALIAS const                                         values
 ) {
-  for (int unknown = 0; unknown < DeviceKernelSetup::Unknowns; unknown++) {
+  for (int unknown = 0; unknown < DeviceKernelSetup::NumberOfUnknowns; unknown++) {
     double sumOverAxes = 0.0;
     for (int axis = 0; axis < DIMENSIONS; axis++) {
-      sumOverAxes += stateGradient[axis * DeviceKernelSetup::Unknowns + unknown];
+      sumOverAxes += stateGradient[axis * DeviceKernelSetup::NumberOfUnknowns + unknown];
     }
     values[unknown] = DeviceKernelSetup::DiffusiveSourceStrength * sumOverAxes;
   }
@@ -91,7 +91,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::tests::StubSolver::mu
   const int                                                     direction,
   double* NOALIAS const                                         values
 ) {
-  for (int unknown = 0; unknown < DeviceKernelSetup::Unknowns; unknown++) {
+  for (int unknown = 0; unknown < DeviceKernelSetup::NumberOfUnknowns; unknown++) {
     values[unknown] *= 1.0 + 0.25 * state[0] + 0.125 * direction;
   }
 }
@@ -104,7 +104,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::tests::StubSolver::po
   double* NOALIAS const                        forceVector,
   const int                                    pointSource
 ) {
-  for (int unknown = 0; unknown < DeviceKernelSetup::Unknowns; unknown++) {
+  for (int unknown = 0; unknown < DeviceKernelSetup::NumberOfUnknowns; unknown++) {
     forceVector[unknown] = 1.0 + unknown + pointSource + timeStamp + state[unknown];
   }
 }

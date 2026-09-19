@@ -1,0 +1,43 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#pragma once
+
+#include "tarch/accelerator/accelerator.h"
+#include "tarch/la/Vector.h"
+
+namespace runner {
+  class ParameterTable;
+} // namespace runner
+
+namespace tarch::reader {
+  class JSONReader;
+} // namespace tarch::reader
+
+namespace {{NAMESPACE | join("::")}} {
+  struct RuntimeParameters;
+} // namespace {{NAMESPACE | join("::")}}
+
+struct {{NAMESPACE | join("::")}}::RuntimeParameters final {
+  struct Storage final {
+{%- for parameter in RUNTIME_PARAMETERS %}
+    {{ parameter.cpp_type }} {{ parameter.name }} = {{ parameter.default_value }};
+{%- endfor %}
+  };
+
+  static void load(tarch::reader::JSONReader* reader);
+  static void load(tarch::reader::JSONReader* reader, int& argc, char** argv);
+  static void printUsage();
+{%- for parameter in RUNTIME_PARAMETERS %}
+
+  static INLINE_METHOD GPU_CALLABLE_METHOD {{ parameter.return_type }} {{ parameter.accessor_name }}() {
+    return _storage.{{ parameter.name }};
+  }
+{%- endfor %}
+
+private:
+  static ::runner::ParameterTable parameterTable(Storage& storage);
+
+  TARGET_DECLARE
+  static Storage _storage;
+  TARGET_DECLARE_END
+};

@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "DGTracerTest.h"
 
+#include "exahype2/dg/DGUtils.h"
 #include "exahype2/dg/Tracer.h"
 #include "peano4/Loop.h"
 #include "peano4/dataview/CellMarker.h"
@@ -9,7 +10,7 @@
 namespace {
   constexpr int Order                = 1;
   constexpr int NodesPerAxis         = Order + 1;
-  constexpr int NodesPerCell         = NodesPerAxis * NodesPerAxis * (DIMENSIONS == 3 ? NodesPerAxis : 1);
+  constexpr int CellNodes            = exahype2::dg::NodesPerCell<NodesPerAxis>;
   constexpr int MaxParticleAttribute = 4;
 
   constexpr double QuadratureNodes1DP1[] = {0.21132486540518713, 0.7886751345948129};
@@ -58,7 +59,7 @@ namespace {
   /**
    * Writes the coordinates of every quadrature node into that node's DIMENSIONS attributes.
    *
-   * Q holds NodesPerCell nodes with DIMENSIONS values each, so the polynomial over Q maps
+   * Q holds CellNodes nodes with DIMENSIONS values each, so the polynomial over Q maps
    * a point of the cell onto its own coordinates.
    */
   void fillNodeCoordinates(const peano4::dataview::CellMarker& cellMarker, double* NOALIAS const Q) {
@@ -85,7 +86,7 @@ void exahype2::dg::tests::DGTracerTest::testProjectValueOntoParticle() {
   const peano4::dataview::CellMarker cellMarker = createCellMarker();
   TracerParticle                     particle   = createParticle();
 
-  double Q[NodesPerCell * DIMENSIONS];
+  double Q[CellNodes * DIMENSIONS];
   fillNodeCoordinates(cellMarker, Q);
 
   exahype2::dg::projectValueOntoParticle<TracerParticle, 1, 0>(
@@ -106,7 +107,7 @@ void exahype2::dg::tests::DGTracerTest::testProjectAllValuesOntoParticle() {
   const peano4::dataview::CellMarker cellMarker = createCellMarker();
   TracerParticle                     particle   = createParticle();
 
-  double Q[NodesPerCell * DIMENSIONS];
+  double Q[CellNodes * DIMENSIONS];
   fillNodeCoordinates(cellMarker, Q);
 
   exahype2::dg::projectAllValuesOntoParticle(cellMarker, Order, QuadratureNodes1DP1, DIMENSIONS, Q, particle);

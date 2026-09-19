@@ -29,8 +29,8 @@ args = parse_arguments()
 
 initial_conditions = """
   Q[Shortcuts::rho]      = 1.0;
-  Q[Shortcuts::rhoU + 0] = 0.0; // Flow in x-direction
-  Q[Shortcuts::rhoU + 1] = 0.0; // No vertical velocity
+  Q[Shortcuts::rhoU + 0] = 0.0;
+  Q[Shortcuts::rhoU + 1] = 0.0;
 #if DIMENSIONS == 3
   Q[Shortcuts::rhoU + 2] = 0.0;
 #endif
@@ -67,20 +67,20 @@ project = exahype2.Project(
     max_grid_levels=args.grid_levels,
 )
 
-fv_solver = exahype2.solvers.fv.musclhancock.GlobalAdaptiveTimeStep(
+fv_solver = exahype2.fv.Solver(
     name="FVSolver",
     patch_size=args.degrees_of_freedom,
     unknowns={"rho": 1, "rhoU": project.dimensions, "rhoE": 1},
     auxiliary_variables=0,
-    time_step_relaxation=0.5,
+    time_stepping=exahype2.TimeStepping.Adaptive(0.5),
+    scheme=exahype2.fv.MusclHancock(limiter=exahype2.fv.Limiter.minmod),
 )
 
-fv_solver.set_implementation(
-    initial_conditions=initial_conditions,
+fv_solver.set_pde_terms(
+    initial_condition=initial_conditions,
     boundary_conditions=boundary_conditions,
     max_eigenvalue=max_eigenvalue,
     flux=flux,
-    limiter=exahype2.solvers.fv.musclhancock.Limiter.minmod,
 )
 
 project.add_solver(fv_solver)

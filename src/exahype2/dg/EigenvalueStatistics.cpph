@@ -32,7 +32,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::MaxEigenvalueStatistics::ac
  * Returns the physical and scaled wave-speed maxima over the cell's quadrature nodes.
  */
 template <
-  typename Solver,
+  typename SolverType,
   int NumberOfDofsPerAxis,
   int NumberOfUnknowns,
   int NumberOfAuxiliaryVariables,
@@ -73,7 +73,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD exahype2::dg::MaxEigenvalueStatistics exahype2
     }
 
     result.accumulate(cellSize, [&](const int direction) {
-      return Solver::maxEigenvalue(nodeState, nodePosition, cellSize, timeStamp, timeStepSize, direction);
+      return SolverType::maxEigenvalue(nodeState, nodePosition, cellSize, timeStamp, timeStepSize, direction);
     });
   }
   return result;

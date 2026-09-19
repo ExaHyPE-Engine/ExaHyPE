@@ -11,7 +11,7 @@ TARGET_DECLARE
 template <
   exahype2::fv::ReconstructionScheme Reconstruction,
   exahype2::fv::TimeSteppingScheme   TimeStepping,
-  typename Solver,
+  typename SolverType,
   int  NumberOfVolumesPerAxis,
   int  NumberOfUnknowns,
   int  NumberOfAuxiliaryVariables,
@@ -36,7 +36,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD double exahype2::fv::applyFiniteVolume(
 ) {
   return TimeStepping::template apply<
     Reconstruction,
-    Solver,
+    SolverType,
     NumberOfVolumesPerAxis,
     NumberOfUnknowns,
     NumberOfAuxiliaryVariables,

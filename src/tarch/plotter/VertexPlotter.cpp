@@ -60,8 +60,10 @@ int tarch::plotter::FileWriter::VertexPlotter::plotVertex(const tarch::la::Vecto
     constexpr double MinimumQuantisedCoordinate = static_cast<double>(std::numeric_limits<std::int64_t>::lowest());
     constexpr double MaximumQuantisedCoordinate = -MinimumQuantisedCoordinate;
     const auto       scaledCoordinate           = coordinate * InverseTolerance;
-    if (not std::isfinite(scaledCoordinate) or scaledCoordinate < MinimumQuantisedCoordinate
-        or scaledCoordinate >= MaximumQuantisedCoordinate) {
+    if (
+      not std::isfinite(scaledCoordinate) or scaledCoordinate < MinimumQuantisedCoordinate
+      or scaledCoordinate >= MaximumQuantisedCoordinate
+    ) {
       tarch::terminateWithError("A plot vertex coordinate exceeds the quantised key range.");
     }
     return static_cast<std::int64_t>(std::llround(scaledCoordinate));

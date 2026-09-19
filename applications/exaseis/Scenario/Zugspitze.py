@@ -4,6 +4,7 @@ from .Scenario import Scenario
 
 import os
 
+
 class Zugspitze(Scenario):
     """
     Benchmark representing a rectangular area of 80x80km around the Zugspitze.
@@ -15,15 +16,19 @@ class Zugspitze(Scenario):
     (available at https://doi.org/10.1016/j.cma.2021.114386)
     """
 
-    domain_offset   = [4358.459, 0.0, 2661.23]
-    domain_size     = [80.85, 80.85, 80.85]
+    domain_offset = [4358.459, 0.0, 2661.23]
+    domain_size = [80.85, 80.85, 80.85]
 
     end_time = 30.0
 
     tracer_coordinates = [
-        [4370.0, 0.0, 2675.0], [4395.0, 0.0, 2700.0], [4405.0, 0.0, 2670.0],
-        [4405.0, 0.0, 2710.0], [4375.0, 0.0, 2708.0], [4424.756, 0.0, 2675.783],
-        [4424.756,  11.320, 2675.783]
+        [4370.0, 0.0, 2675.0],
+        [4395.0, 0.0, 2700.0],
+        [4405.0, 0.0, 2670.0],
+        [4405.0, 0.0, 2710.0],
+        [4375.0, 0.0, 2708.0],
+        [4424.756, 0.0, 2675.783],
+        [4424.756, 11.320, 2675.783],
     ]
 
     def domain_perturbations(self):
@@ -53,8 +58,8 @@ class Zugspitze(Scenario):
         Q[Shortcuts::cs ] = 3.464;
 """
 
-    #TODO: is this point source correct?
-    #it is in the scenario of ExaHyPE1 but also does not use certain parameters
+    # TODO: is this point source correct?
+    # it is in the scenario of ExaHyPE1 but also does not use certain parameters
     # and is a 1-to-1 copy of LOH1
     def point_source(self):
         return """
@@ -75,6 +80,7 @@ class Zugspitze(Scenario):
     forceVector[i] = forceVector[i] / jacobian;
   }
 """
+
     def init_point_source(self):
         return """
   tarch::la::Vector<DIMENSIONS, double> ps = _curvi->invertProjection({
@@ -89,15 +95,20 @@ class Zugspitze(Scenario):
 """
 
     def generate_required_files(self):
-        #using a symlink instead of a copy as the file is quite large
-        source = os.path.dirname(os.path.realpath(__file__))+"/specs/Zugspitze/zugspitze_25m_4345_100_2650_100.nc"
+        # using a symlink instead of a copy as the file is quite large
+        source = (
+            os.path.dirname(os.path.realpath(__file__))
+            + "/specs/Zugspitze/zugspitze_25m_4345_100_2650_100.nc"
+        )
         target = "zugspitze_25m_4345_100_2650_100.nc"
 
         # os.symlink happily creates a dangling link, so check the topography is actually there.
         # Otherwise the run only fails much later, inside the NetCDF reader.
         if not os.path.exists(source):
             raise FileNotFoundError(
-                "The Zugspitze topography " + source + " is missing, so the scenario cannot be built."
+                "The Zugspitze topography "
+                + source
+                + " is missing, so the scenario cannot be built."
             )
 
         try:

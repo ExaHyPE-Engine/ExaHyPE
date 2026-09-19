@@ -11,6 +11,11 @@ namespace exahype2::fv::tests {
 class exahype2::fv::tests::FiniteVolumeTest final : public tarch::tests::TestCase {
 public:
   FiniteVolumeTest();
+  FiniteVolumeTest(const FiniteVolumeTest&)            = delete;
+  FiniteVolumeTest(FiniteVolumeTest&&)                 = delete;
+  FiniteVolumeTest& operator=(const FiniteVolumeTest&) = delete;
+  FiniteVolumeTest& operator=(FiniteVolumeTest&&)      = delete;
+  ~FiniteVolumeTest() override                         = default;
 
   void run() override;
 
@@ -18,11 +23,13 @@ private:
   void testZeroTimeStepPreservesState();
   void testUniformStateIsPreserved();
   void testLimitedLinearPreservesUniformState();
+  void testLimitedLinearIntegratesTimeDependentAdvection();
   void testLimitedLinearAverageConvergesAtSecondOrder();
   void testConstantConvergesAtFirstOrder();
   void testLimitedLinearMinmodKeepsStepInBounds();
   void testLimitedLinearZeroSlopesMatchConstant();
   void testLimitedLinearNcpAdvectionConvergesAtSecondOrder();
+  void testLimitedLinearCustomRiemannIncludesVolumeNonconservativeProduct();
   void testPeriodicAdvectionConservesMass();
   void testSodShockTubeReachesStarStates();
   void testReconstructionHookReproducingDefaultChangesNothing();

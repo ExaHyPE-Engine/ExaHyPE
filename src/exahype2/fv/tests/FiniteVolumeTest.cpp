@@ -22,9 +22,6 @@ namespace {
     std::array<double, 16>                data{};
   };
 
-  // Exposes every term the kernel can evaluate through a small PDE. The exact
-  // form does not matter: The kernel only calls the stateless functors, and the
-  // invariant tests keep the extra terms off.
   template <int NumberOfUnknowns>
   struct TestSolver {
     static constexpr double AdvectionSpeed    = 0.7;
@@ -84,9 +81,7 @@ namespace {
       [[maybe_unused]] const double                                 timeStepSize,
       [[maybe_unused]] const int                                    normal
     ) {
-      // The eigenvalue covers the joint advection of the flux and the
-      // non-conservative product, so the Rusanov diffusion stays sufficient
-      // whichever terms a test enables.
+      // The wave speed bounds the combined conservative and non-conservative advection.
       return AdvectionSpeed + NcpAdvectionSpeed;
     }
 
@@ -139,6 +134,65 @@ namespace {
   constexpr int NumberOfAuxiliaryVariables = 0;
   constexpr int NumberOfData               = NumberOfUnknowns + NumberOfAuxiliaryVariables;
 
+  struct TimeDependentAdvectionSolver final : TestSolver<NumberOfUnknowns> {
+    template <typename ComputePrecision>
+    static void flux(
+      const ComputePrecision* NOALIAS const                         state,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
+      const double                                                  timeStamp,
+      [[maybe_unused]] const double                                 timeStepSize,
+      const int                                                     normal,
+      ComputePrecision* NOALIAS const                               fluxes
+    ) {
+      const auto speed = static_cast<ComputePrecision>(normal == 0 ? 1.0 + timeStamp : 0.0);
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        fluxes[unknown] = speed * state[unknown];
+      }
+    }
+
+    template <typename ComputePrecision>
+    static double maxEigenvalue(
+      [[maybe_unused]] const ComputePrecision* NOALIAS const        state,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
+      const double                                                  timeStamp,
+      [[maybe_unused]] const double                                 timeStepSize,
+      const int                                                     normal
+    ) {
+      return normal == 0 ? 1.0 + timeStamp : 0.0;
+    }
+  };
+
+  struct NonconservativeAdvectionSolver final : TestSolver<NumberOfUnknowns> {
+    template <typename ComputePrecision>
+    static double solveRiemannProblem(
+      const ComputePrecision* NOALIAS const                         leftState,
+      const ComputePrecision* NOALIAS const                         rightState,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
+      [[maybe_unused]] const double                                 timeStamp,
+      [[maybe_unused]] const double                                 timeStepSize,
+      [[maybe_unused]] const int                                    normal,
+      ComputePrecision* NOALIAS const                               leftGoingFlux,
+      ComputePrecision* NOALIAS const                               rightGoingFlux
+    ) {
+      constexpr double WaveSpeed =
+        TestSolver<NumberOfUnknowns>::AdvectionSpeed + TestSolver<NumberOfUnknowns>::NcpAdvectionSpeed;
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        const auto stateJump   = rightState[unknown] - leftState[unknown];
+        const auto centralFlux = static_cast<ComputePrecision>(0.5 * TestSolver<NumberOfUnknowns>::AdvectionSpeed)
+          * (leftState[unknown] + rightState[unknown]);
+        const auto diffusion = static_cast<ComputePrecision>(0.5 * WaveSpeed) * stateJump;
+        const auto nonconservativeProduct =
+          static_cast<ComputePrecision>(0.5 * TestSolver<NumberOfUnknowns>::NcpAdvectionSpeed) * stateJump;
+        leftGoingFlux[unknown]  = centralFlux - diffusion + nonconservativeProduct;
+        rightGoingFlux[unknown] = centralFlux - diffusion - nonconservativeProduct;
+      }
+      return WaveSpeed;
+    }
+  };
+
   template <int VolumesPerAxis>
   constexpr int numberOfVolumesInPatch() {
     int product = 1;
@@ -148,8 +202,6 @@ namespace {
     return product;
   }
 
-  // A face's halo overlap holds 2 * HaloWidth layers along the normal and
-  // VolumesPerAxis layers along every other axis.
   template <int VolumesPerAxis, int HaloWidth>
   constexpr int faceOverlapStorageSize() {
     int cells = 2 * HaloWidth;
@@ -169,8 +221,7 @@ namespace {
     return volumeIndex;
   }
 
-  // The patch spans the unit cube, so the centre of a volume follows from its
-  // index alone. Indices outside the patch give the centres of halo volumes.
+  // The patch spans the unit cube. Halo indices can lie outside it.
   template <int VolumesPerAxis>
   tarch::la::Vector<DIMENSIONS, double> volumeCentreOf(const tarch::la::Vector<DIMENSIONS, int>& volumeIndex) {
     tarch::la::Vector<DIMENSIONS, double> centre;
@@ -189,11 +240,7 @@ namespace {
     return linear;
   }
 
-  // Profiles that only depend on the first coordinate solve the PDE the
-  // TestSolver induces exactly: The advection along the other directions
-  // leaves them invariant, so this travelling coordinate is an analytic
-  // oracle. The speed is AdvectionSpeed for the flux alone and grows by
-  // NcpAdvectionSpeed when the non-conservative product is active.
+  // The profiles vary only along the first coordinate.
   double travellingCoordinate(
     const tarch::la::Vector<DIMENSIONS, double>& position,
     const double                                 time,
@@ -221,9 +268,6 @@ namespace {
     return 1.5 + 0.25 * std::sin(2.0 * std::numbers::pi_v<double> * travellingCoordinate(position, time, jointSpeed));
   }
 
-  // Enumerates every overlap voxel of every face and hands the functor the
-  // index of the volume the voxel mirrors, the face number, and the serialised
-  // position inside that face's overlap storage.
   template <int VolumesPerAxis, int HaloWidth, typename Functor>
   void forEachOverlapVoxel(Functor functor) {
     for (int normal = 0; normal < DIMENSIONS; normal++) {
@@ -255,8 +299,6 @@ namespace {
     }
   }
 
-  // Fills every overlap voxel of every face from the exact profile at the given
-  // time, which acts as an exact boundary condition around the patch.
   template <int VolumesPerAxis, int HaloWidth, typename Profile>
   void fillHaloFromProfile(std::vector<std::vector<double>>& faceInStorage, const Profile profile, const double time) {
     forEachOverlapVoxel<VolumesPerAxis, HaloWidth>(
@@ -271,8 +313,6 @@ namespace {
     );
   }
 
-  // Fills every overlap voxel by wrapping its volume index around the patch, so
-  // the patch behaves as a torus and every face flux has a matching partner.
   template <int VolumesPerAxis, int HaloWidth>
   void fillHaloPeriodically(std::vector<std::vector<double>>& faceInStorage, const std::vector<double>& q) {
     forEachOverlapVoxel<VolumesPerAxis, HaloWidth>(
@@ -290,12 +330,14 @@ namespace {
     );
   }
 
-  // Advances the profile with the requested reconstruction over the given
-  // number of time steps, feeding exact halo data before every step, and
-  // returns the patch state at the final time.
-  template <typename Reconstruction, int VolumesPerAxis, bool EvaluateNonconservativeProduct, typename Profile>
+  template <
+    typename Reconstruction,
+    int  VolumesPerAxis,
+    bool EvaluateNonconservativeProduct,
+    typename Profile,
+    typename SolverType        = TestSolver<NumberOfUnknowns>,
+    bool EvaluateCustomRiemann = false>
   std::vector<double> advectProfile(const Profile profile, const int numberOfTimeSteps, const double timeStepSize) {
-    using Solver                   = TestSolver<NumberOfUnknowns>;
     constexpr int HaloWidth        = Reconstruction::HaloSize;
     const int     patchStorageSize = numberOfVolumesInPatch<VolumesPerAxis>() * NumberOfData;
     const int     faceStorageSize  = faceOverlapStorageSize<VolumesPerAxis, HaloWidth>();
@@ -327,7 +369,7 @@ namespace {
       exahype2::fv::applyFiniteVolume<
         Reconstruction,
         exahype2::fv::timestepping::SingleStep,
-        Solver,
+        SolverType,
         VolumesPerAxis,
         NumberOfUnknowns,
         NumberOfAuxiliaryVariables,
@@ -335,7 +377,7 @@ namespace {
         EvaluateNonconservativeProduct,
         false,
         false,
-        false,
+        EvaluateCustomRiemann,
         false,
         true,
         double,
@@ -372,9 +414,7 @@ namespace {
     return errorSum / numberOfVolumesInPatch<VolumesPerAxis>();
   }
 
-  // Returns the deterministic state of one logical volume, defined for halo
-  // indices outside the patch as well, so halo layouts of different widths can
-  // be filled with the same neighbour values.
+  // Halo widths use the same field at corresponding volume indices.
   double logicalState(const tarch::la::Vector<DIMENSIONS, int>& volumeIndex, const int unknown) {
     double phase = 0.7 * (unknown + 1);
     for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
@@ -383,11 +423,8 @@ namespace {
     return 1.0 + 0.25 * std::sin(phase);
   }
 
-  // Advances the same logical field with the first-order scheme and with the
-  // limited reconstruction under zero slopes, then returns the largest
-  // difference over the patch and the reported eigenvalues. A vanishing result
-  // means zero slopes degenerate to the first-order splitting, including the
-  // non-conservative product.
+  // A vanishing result means zero slopes degenerate to the first-order
+  // splitting, including the non-conservative product.
   template <bool EvaluateFlux, bool EvaluateNonconservativeProduct>
   double zeroSlopeVersusConstantMaxDifference() {
     using Solver               = TestSolver<NumberOfUnknowns>;
@@ -511,9 +548,6 @@ namespace {
     return maxDifference;
   }
 
-  // Reproduces the default boundary extrapolation in a solver's reconstruct
-  // method, so the reconstruction hook must leave every result unchanged. Any
-  // deviation means the kernel wired the hook wrongly.
   struct MimickingReconstructionSolver final : TestSolver<NumberOfUnknowns> {
     template <typename ComputePrecision>
     static void reconstruct(
@@ -533,9 +567,6 @@ namespace {
     }
   };
 
-  // Reproduces the Minmod policy in a solver's limitedDifference method, so the
-  // limiter hook must leave every result identical to the plain Minmod
-  // reconstruction. Any deviation means the kernel wired the hook wrongly.
   struct MimickingMinmodSolver final : TestSolver<NumberOfUnknowns> {
     template <typename ComputePrecision>
     static ComputePrecision limitedDifference(
@@ -554,10 +585,7 @@ namespace {
     }
   };
 
-  // Advances the logical field with the given solver over the requested number
-  // of time steps, wrapping the halo around the patch, and returns the final
-  // patch state.
-  template <typename Solver, int VolumesPerAxis>
+  template <typename SolverType, int VolumesPerAxis>
   std::vector<double> advanceLogicalField(const int numberOfTimeSteps, const double timeStepSize) {
     using SecondOrderReconstruction = exahype2::fv::reconstruction::LimitedLinear<exahype2::fv::limiter::Minmod>;
     constexpr int HaloWidth         = SecondOrderReconstruction::HaloSize;
@@ -605,7 +633,7 @@ namespace {
       exahype2::fv::applyFiniteVolume<
         SecondOrderReconstruction,
         exahype2::fv::timestepping::SingleStep,
-        Solver,
+        SolverType,
         VolumesPerAxis,
         NumberOfUnknowns,
         NumberOfAuxiliaryVariables,
@@ -634,9 +662,8 @@ namespace {
 
   constexpr int SodUnknowns = DIMENSIONS + 2;
 
-  // Evaluates the Euler terms of the Sod shock tube along the first axis. The
-  // momenta occupy the slots after the density and the energy sits last, so the
-  // layout follows the dimensions of the build.
+  // The momenta occupy the slots after the density and the energy sits last, so
+  // the layout follows the dimensions of the build.
   struct SodSolver final {
     static constexpr double Gamma = 1.4;
 
@@ -694,10 +721,9 @@ namespace {
     state[DIMENSIONS + 1] = (left ? 1.0 : 0.1) / (SodSolver::Gamma - 1.0);
   }
 
-  // Advances the Sod tube with the Minmod limiter. The first-axis halo carries
-  // the untouched far field and the other halos copy the nearest interior
-  // volume, which is exact while the waves stay inside the patch and the
-  // solution does not vary along those axes.
+  // The first-axis halo carries the untouched far field and the other halos copy
+  // the nearest interior volume, which is exact while the waves stay inside the
+  // patch and the solution does not vary along those axes.
   template <int VolumesPerAxis>
   std::vector<double> advanceSodTube(const int numberOfTimeSteps, const double timeStepSize) {
     using MinmodReconstruction = exahype2::fv::reconstruction::LimitedLinear<exahype2::fv::limiter::Minmod>;
@@ -787,11 +813,13 @@ void exahype2::fv::tests::FiniteVolumeTest::run() {
   testMethod(testZeroTimeStepPreservesState);
   testMethod(testUniformStateIsPreserved);
   testMethod(testLimitedLinearPreservesUniformState);
+  testMethod(testLimitedLinearIntegratesTimeDependentAdvection);
   testMethod(testLimitedLinearAverageConvergesAtSecondOrder);
   testMethod(testConstantConvergesAtFirstOrder);
   testMethod(testLimitedLinearMinmodKeepsStepInBounds);
   testMethod(testLimitedLinearZeroSlopesMatchConstant);
   testMethod(testLimitedLinearNcpAdvectionConvergesAtSecondOrder);
+  testMethod(testLimitedLinearCustomRiemannIncludesVolumeNonconservativeProduct);
   testMethod(testPeriodicAdvectionConservesMass);
   testMethod(testSodShockTubeReachesStarStates);
   testMethod(testReconstructionHookReproducingDefaultChangesNothing);
@@ -800,6 +828,7 @@ void exahype2::fv::tests::FiniteVolumeTest::run() {
   testMethod(testParticleAccessorsMatchAttributeOffsets);
 }
 
+/** Checks that a time step of size zero leaves the patch unchanged. */
 void exahype2::fv::tests::FiniteVolumeTest::testZeroTimeStepPreservesState() {
   const int           patchStorageSize = numberOfVolumesInPatch<NumberOfVolumesPerAxis>() * NumberOfData;
   std::vector<double> qIn(patchStorageSize);
@@ -848,6 +877,7 @@ void exahype2::fv::tests::FiniteVolumeTest::testZeroTimeStepPreservesState() {
   }
 }
 
+/** Checks that the finite-volume update keeps a uniform state uniform. */
 void exahype2::fv::tests::FiniteVolumeTest::testUniformStateIsPreserved() {
   const int           patchStorageSize = numberOfVolumesInPatch<NumberOfVolumesPerAxis>() * NumberOfData;
   const double        uniformValue     = 1.23;
@@ -898,6 +928,7 @@ void exahype2::fv::tests::FiniteVolumeTest::testUniformStateIsPreserved() {
   );
 }
 
+/** Checks that the limited linear reconstruction keeps a uniform state uniform. */
 void exahype2::fv::tests::FiniteVolumeTest::testLimitedLinearPreservesUniformState() {
   using UniformReconstruction = exahype2::fv::reconstruction::LimitedLinear<exahype2::fv::limiter::VanAlbada>;
   const int patchStorageSize  = numberOfVolumesInPatch<NumberOfVolumesPerAxis>() * NumberOfData;
@@ -946,6 +977,29 @@ void exahype2::fv::tests::FiniteVolumeTest::testLimitedLinearPreservesUniformSta
     returnedEigenvalue,
     TestSolver<NumberOfUnknowns>::AdvectionSpeed + TestSolver<NumberOfUnknowns>::NcpAdvectionSpeed
   );
+}
+
+/** Checks the exact displacement of a linear profile under time-dependent advection. */
+void exahype2::fv::tests::FiniteVolumeTest::testLimitedLinearIntegratesTimeDependentAdvection() {
+  using Reconstruction          = exahype2::fv::reconstruction::LimitedLinear<exahype2::fv::limiter::Average>;
+  constexpr double TimeStepSize = 0.01;
+  const auto       profile      = [](const tarch::la::Vector<DIMENSIONS, double>& position, const double time) {
+    return 1.5 + position(0) - time - 0.5 * time * time;
+  };
+  const auto solution =
+    advectProfile<Reconstruction, NumberOfVolumesPerAxis, false, decltype(profile), TimeDependentAdvectionSolver>(
+      profile,
+      1,
+      TimeStepSize
+    );
+
+  for (int volume = 0; volume < numberOfVolumesInPatch<NumberOfVolumesPerAxis>(); volume++) {
+    const auto   centre   = volumeCentreOf<NumberOfVolumesPerAxis>(volumeIndexOf<NumberOfVolumesPerAxis>(volume));
+    const double expected = profile(centre, TimeStepSize);
+    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+      validateNumericalEqualsWithParams2(solution[volume * NumberOfData + unknown], expected, volume, unknown);
+    }
+  }
 }
 
 /** Measures the limited-linear order against an analytic smooth-advection solution. */
@@ -1017,6 +1071,30 @@ void exahype2::fv::tests::FiniteVolumeTest::testLimitedLinearNcpAdvectionConverg
   const double order       = std::log(coarseError / fineError) / std::log(3.0);
 
   validateWithParams3(order > 1.7, coarseError, fineError, order);
+}
+
+/** Checks that a custom Riemann solver retains non-conservative advection inside each volume. */
+void exahype2::fv::tests::FiniteVolumeTest::testLimitedLinearCustomRiemannIncludesVolumeNonconservativeProduct() {
+  using Reconstruction          = exahype2::fv::reconstruction::LimitedLinear<exahype2::fv::limiter::Average>;
+  constexpr double TimeStepSize = 0.01;
+  const auto       profile      = [](const tarch::la::Vector<DIMENSIONS, double>& position, const double time) {
+    return 1.5 + position(0)
+      - (TestSolver<NumberOfUnknowns>::AdvectionSpeed + TestSolver<NumberOfUnknowns>::NcpAdvectionSpeed) * time;
+  };
+  const auto solution =
+    advectProfile<Reconstruction, NumberOfVolumesPerAxis, true, decltype(profile), NonconservativeAdvectionSolver, true>(
+      profile,
+      1,
+      TimeStepSize
+    );
+
+  for (int volume = 0; volume < numberOfVolumesInPatch<NumberOfVolumesPerAxis>(); volume++) {
+    const auto   centre   = volumeCentreOf<NumberOfVolumesPerAxis>(volumeIndexOf<NumberOfVolumesPerAxis>(volume));
+    const double expected = profile(centre, TimeStepSize);
+    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+      validateNumericalEqualsWithParams2(solution[volume * NumberOfData + unknown], expected, volume, unknown);
+    }
+  }
 }
 
 /** Confirms periodic face fluxes conserve the patch's total mass. */
@@ -1095,10 +1173,6 @@ void exahype2::fv::tests::FiniteVolumeTest::testPeriodicAdvectionConservesMass()
 
 /** Confirms the shock-capturing path reaches the Sod tube's known star-region states. */
 void exahype2::fv::tests::FiniteVolumeTest::testSodShockTubeReachesStarStates() {
-  // The tube varies along the first axis alone, so a cubic patch repeats the
-  // same profile once per transverse volume. Three dimensions therefore use
-  // fewer volumes per axis: Enough to resolve the star plateaus the samples
-  // read, and wide enough that the repeated step stays stable.
   constexpr int    VolumesPerAxis = DIMENSIONS == 2 ? 54 : 36;
   constexpr int    Steps          = 116;
   constexpr double TimeStepSize   = 0.00175;
@@ -1121,15 +1195,12 @@ void exahype2::fv::tests::FiniteVolumeTest::testSodShockTubeReachesStarStates() 
   constexpr double StarDensityLeft  = 0.42632;
   constexpr double StarDensityRight = 0.26557;
 
-  // A sample is a coordinate, so it names the plateau it reads and follows
-  // whichever resolution is in force. The first axis runs fastest, so its
-  // volumes lead the patch.
+  // The first axis runs fastest, so its volumes lead the patch.
   const auto volumeAt = [](const double position) { return static_cast<int>(position * VolumesPerAxis); };
   const auto probe    = [&q](const int volumeAlongFirstAxis, const int unknown) {
     return q[volumeAlongFirstAxis * SodUnknowns + unknown];
   };
-  // The left plateau lies between the rarefaction tail and the contact. Both
-  // of its ends smear, so the samples sit in the middle.
+  // The left plateau lies between the rarefaction tail and the contact.
   for (const double position : {0.54, 0.58}) {
     validateWithParams2(
       std::abs(probe(volumeAt(position), 0) - StarDensityLeft) < 0.03,

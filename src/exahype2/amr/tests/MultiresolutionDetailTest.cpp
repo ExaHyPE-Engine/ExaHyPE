@@ -219,28 +219,32 @@ void exahype2::amr::tests::MultiresolutionDetailTest::testStridedPatchWithIndica
   // An AoS patch with several unknowns per volume: The indicator selects one of them, and
   // the other unknowns never influence the detail.
   constexpr int NumberOfDofsPerAxis = 4;
-  constexpr int Unknowns            = 3;
+  constexpr int NumberOfUnknowns    = 3;
 
   int numberOfVolumes = 1;
   for (int d = 0; d < DIMENSIONS; d++) {
     numberOfVolumes *= NumberOfDofsPerAxis;
   }
-  std::vector<double> patch(static_cast<std::size_t>(numberOfVolumes) * Unknowns, 0.0);
+  std::vector<double> patch(static_cast<std::size_t>(numberOfVolumes) * NumberOfUnknowns, 0.0);
   peano4::dForEach(NumberOfDofsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
-    const int index  = peano4::dLinearised(volume, NumberOfDofsPerAxis) * Unknowns;
+    const int index  = peano4::dLinearised(volume, NumberOfDofsPerAxis) * NumberOfUnknowns;
     patch[index]     = volume(0) < NumberOfDofsPerAxis / 2 ? -5.0 : 5.0;
     patch[index + 1] = 2.0 + 0.5 * volume(0) + 0.25 * volume(1);
     patch[index + 2] = 1000.0 * volume(0) * volume(0);
   });
 
-  const double smoothDetail =
-    exahype2::amr::computeMultiresolutionDetail(patch.data(), NumberOfDofsPerAxis, Unknowns, [](const double* volume) {
-      return volume[1];
-    });
-  const double stepDetail =
-    exahype2::amr::computeMultiresolutionDetail(patch.data(), NumberOfDofsPerAxis, Unknowns, [](const double* volume) {
-      return volume[0];
-    });
+  const double smoothDetail = exahype2::amr::computeMultiresolutionDetail(
+    patch.data(),
+    NumberOfDofsPerAxis,
+    NumberOfUnknowns,
+    [](const double* volume) { return volume[1]; }
+  );
+  const double stepDetail = exahype2::amr::computeMultiresolutionDetail(
+    patch.data(),
+    NumberOfDofsPerAxis,
+    NumberOfUnknowns,
+    [](const double* volume) { return volume[0]; }
+  );
 
   validateNumericalEqualsWithEps(smoothDetail, 0.0, 1e-12);
   validate(stepDetail > 1e-1);

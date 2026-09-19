@@ -69,10 +69,7 @@ class NavierStokesABCFlow(Scenario):
         )
 
     def initial_conditions(self):
-        return (
-            """
+        return """
     double t = 0.;
     auto solution = Q;
-"""
-            + self.analytical_solution()
-        )
+""" + self.analytical_solution()

@@ -39,7 +39,7 @@ initial_conditions = """
 #endif
 
   const double pressure = Pressure0 + (Q[Shortcuts::rho] * U0) * (1.0 / 4.0) * (std::cos(2.0 * x(0)) + std::cos(2.0 * x(1)));
-  // Total energy: internal energy + kinetic energy
+  // Total energy: Internal energy plus kinetic energy.
   Q[Shortcuts::rhoE] = pressure / (GAMMA - 1.0) + 0.5  * (Q[Shortcuts::rhoU + 0] * Q[Shortcuts::rhoU + 0] + Q[Shortcuts::rhoU + 1] * Q[Shortcuts::rhoU + 1]);
 """
 
@@ -51,24 +51,21 @@ analytical_solution = """
   const double C = 100.0 / GAMMA;
 
   // Time decay factors for velocity and pressure
-  const double expVelocityFactor = std::exp(-2.0 * Viscosity * t); // Time decay factor for velocity
-  const double expPressureFactor = std::exp(-4.0 * Viscosity * t); // Time decay factor for pressure
+  const double expVelocityFactor = std::exp(-2.0 * Viscosity * t);
+  const double expPressureFactor = std::exp(-4.0 * Viscosity * t);
 
-  // Set the initial conditions for the Taylor-Green vortex
-  solution[Shortcuts::rho] = 1.0; // Constant density
+  solution[Shortcuts::rho] = 1.0;
 
-  // Velocity components with time decay
   solution[Shortcuts::rhoU + 0] = expVelocityFactor * std::sin(x(0)) * std::cos(x(1));
   solution[Shortcuts::rhoU + 1] = -expVelocityFactor * std::cos(x(0)) * std::sin(x(1));
 #if DIMENSIONS == 3
   solution[Shortcuts::rhoU + 2] = 0.0;
 #endif
 
-  // Pressure with time decay and the given formula
   double pressure = expPressureFactor * (std::cos(2.0 * x(0)) + std::cos(2.0 * x(1)))*(1.0 / 4.0) + C;
 
-  // Total energy: internal energy + kinetic energy
-  solution[Shortcuts::rhoE] = pressure / (GAMMA - 1.0) + 0.5 * (Q[Shortcuts::rhoU + 0] * Q[Shortcuts::rhoU + 0] + Q[Shortcuts::rhoU + 1] * Q[Shortcuts::rhoU + 1]);
+  // Total energy: Internal energy plus kinetic energy.
+  solution[Shortcuts::rhoE] = pressure / (GAMMA - 1.0) + 0.5 * (solution[Shortcuts::rhoU + 0] * solution[Shortcuts::rhoU + 0] + solution[Shortcuts::rhoU + 1] * solution[Shortcuts::rhoU + 1]);
 """
 
 project = exahype2.Project(
@@ -84,28 +81,24 @@ project = exahype2.Project(
     max_grid_levels=args.grid_levels,
 )
 
-fv_solver = exahype2.solvers.fv.musclhancock.GlobalAdaptiveTimeStep(
+fv_solver = exahype2.fv.Solver(
     name="FVSolver",
     patch_size=args.degrees_of_freedom,
     unknowns={"rho": 1, "rhoU": project.dimensions, "rhoE": 1},
     auxiliary_variables=0,
-    time_step_relaxation=0.5,
+    time_stepping=exahype2.TimeStepping.Adaptive(0.5),
+    scheme=exahype2.fv.MusclHancock(limiter=exahype2.fv.Limiter.vanalbada),
 )
 
-fv_solver.set_implementation(
-    initial_conditions=initial_conditions,
+fv_solver.set_pde_terms(
+    initial_condition=initial_conditions,
     boundary_conditions=boundary_conditions,
     max_eigenvalue=max_eigenvalue,
     flux=flux,
-    limiter=exahype2.solvers.fv.musclhancock.Limiter.vanalbada,
+    analytical_solution=analytical_solution,
 )
 
-exahype2.solvers.fv.ErrorMeasurement(
-    fv_solver,
-    error_measurement_implementation=analytical_solution,
-    output_file_name="Error",
-    time_delta_between_snapshots=args.end_time / 100.0,
-)
+fv_solver.measure_error(file="Error", every=args.end_time / 100.0)
 
 project.add_solver(fv_solver)
 

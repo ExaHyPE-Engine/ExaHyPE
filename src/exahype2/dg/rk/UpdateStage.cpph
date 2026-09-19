@@ -1,0 +1,535 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+TARGET_DECLARE
+/**
+ * Writes the flux of both sides of one face into leftFlux and rightFlux.
+ */
+template <
+  typename SolverType,
+  bool IsLinear,
+  bool UseRiemannSolver,
+  bool EvaluateFlux,
+  bool EvaluateNonconservativeProduct,
+  typename StoragePrecision,
+  typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::rk::solveFaceRiemannProblem(
+  StoragePrecision* const                      leftFlux,
+  StoragePrecision* const                      rightFlux,
+  const StoragePrecision* const                leftState,
+  const StoragePrecision* const                rightState,
+  const ComputePrecision* const                faceQuadratureWeights,
+  const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const double                                 timeStamp,
+  const double                                 timeStepSize,
+  const int                                    direction,
+  const bool                                   faceIsBoundary,
+  const int                                    faceNumber
+) {
+  constexpr int NumberOfDofsPerAxis = SolverType::DGOrder + 1;
+
+  assertion(leftFlux != nullptr);
+  assertion(rightFlux != nullptr);
+  assertion(leftState != nullptr);
+  assertion(rightState != nullptr);
+  assertion(faceQuadratureWeights != nullptr);
+  assertion(direction >= 0 and direction < DIMENSIONS, direction);
+  assertion(faceNumber >= 0 and faceNumber < 2 * DIMENSIONS, faceNumber);
+  assertion(faceNumber % DIMENSIONS == direction, faceNumber, direction);
+
+  if constexpr (UseRiemannSolver) {
+    SolverType::riemannSolver(
+      leftFlux,
+      rightFlux,
+      leftState,
+      rightState,
+      timeStamp,
+      timeStepSize,
+      faceCentre,
+      cellSize,
+      direction,
+      faceIsBoundary,
+      faceNumber
+    );
+  } else if constexpr (IsLinear) {
+    exahype2::dg::solveLinearRiemannProblem<
+      SolverType,
+      NumberOfDofsPerAxis,
+      SolverType::NumberOfUnknowns,
+      SolverType::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      false>(
+      leftFlux,
+      rightFlux,
+      leftState,
+      rightState,
+      faceQuadratureWeights,
+      faceCentre,
+      cellSize,
+      timeStamp,
+      timeStepSize,
+      direction
+    );
+  } else {
+    exahype2::dg::solveRiemannProblem<
+      SolverType,
+      NumberOfDofsPerAxis,
+      SolverType::NumberOfUnknowns,
+      SolverType::NumberOfAuxiliaryVariables,
+      EvaluateNonconservativeProduct>(
+      leftFlux,
+      rightFlux,
+      leftState,
+      rightState,
+      faceQuadratureWeights,
+      faceCentre,
+      cellSize,
+      timeStamp,
+      timeStepSize,
+      direction
+    );
+  }
+}
+TARGET_DECLARE_END
+
+/**
+ * Fills the exterior trace of a boundary face, evaluates the flux there, copies the time
+ * stamps of the interior face half onto the exterior one and solves the Riemann problem.
+ * A periodic domain face reaches the Riemann solver as an interior face.
+ */
+template <
+  typename SolverType,
+  bool IsLinear,
+  bool UseRiemannSolver,
+  bool EvaluateFlux,
+  bool EvaluateDiffusiveFlux,
+  bool EvaluateNonconservativeProduct,
+  typename Quadrature,
+  typename FaceLabel,
+  typename StoragePrecision>
+INLINE_METHOD void exahype2::dg::rk::applyBoundaryConditionsAndSolveRiemannProblem(
+  const peano4::dataview::FaceMarker& marker,
+  const SolverType&                   solver,
+  FaceLabel&                          faceLabel,
+  StoragePrecision* const             faceState,
+  StoragePrecision* const             faceFlux
+) {
+  constexpr int NumberOfDofsPerAxis  = SolverType::DGOrder + 1;
+  constexpr int NumberOfData         = SolverType::NumberOfUnknowns + SolverType::NumberOfAuxiliaryVariables;
+  constexpr int NodesPerFace         = exahype2::dg::NodesPerFace<NumberOfDofsPerAxis>;
+  constexpr int StateElementsPerFace = NodesPerFace * NumberOfData;
+  constexpr int FluxElementsPerFace  = NodesPerFace * SolverType::NumberOfUnknowns;
+
+  const int    insideSide   = marker.getSelectedFaceNumber() < DIMENSIONS ? 1 : 0;
+  const double timeStamp    = faceLabel.getUpdatedTimeStamp(insideSide);
+  const double timeStepSize = solver.getPreviousStageTimeStepSize();
+  assertion(std::isfinite(timeStamp) and timeStamp >= 0.0, timeStamp);
+  assertion(std::isfinite(timeStepSize) and timeStepSize >= 0.0, timeStepSize);
+
+  assertion(faceState != nullptr);
+  assertion(faceFlux != nullptr);
+
+  const StoragePrecision* const leftStateEstimates  = faceState;
+  const StoragePrecision* const rightStateEstimates = leftStateEstimates + StateElementsPerFace;
+  StoragePrecision* const       leftFluxEstimates   = faceFlux;
+  StoragePrecision* const       rightFluxEstimates  = leftFluxEstimates + FluxElementsPerFace;
+  const int                     direction           = marker.getSelectedFaceNumber() % DIMENSIONS;
+  const auto&                   faceCentre          = marker.getX();
+  const bool                    isBoundary = faceLabel.getBoundary() and not SolverType::PeriodicBoundaries[direction];
+
+  // A refined cell's boundary face holds no estimates even when its vertices are unrefined.
+  if (isBoundary and (marker.hasCellBeenRefined() or marker.willCellBeRefined())) {
+    return;
+  }
+
+  if (isBoundary and not marker.hasBeenRefined()) {
+    exahype2::dg::applyBoundaryConditions<
+      SolverType,
+      NumberOfDofsPerAxis,
+      SolverType::NumberOfUnknowns,
+      SolverType::NumberOfAuxiliaryVariables>(
+      faceState,
+      Quadrature::QuadraturePoints1D,
+      faceCentre,
+      marker.getH(),
+      timeStamp,
+      marker.getSelectedFaceNumber()
+    );
+    const int outsideSide = marker.getSelectedFaceNumber() < DIMENSIONS ? 0 : 1;
+    exahype2::dg::evaluateFluxOnFace<
+      SolverType,
+      NumberOfDofsPerAxis,
+      SolverType::NumberOfUnknowns,
+      SolverType::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateDiffusiveFlux>(
+      leftFluxEstimates + outsideSide * FluxElementsPerFace,
+      leftStateEstimates,
+      rightStateEstimates,
+      outsideSide,
+      Quadrature::QuadraturePoints1D,
+      faceCentre,
+      marker.getH(),
+      timeStamp,
+      timeStepSize,
+      direction
+    );
+    if (marker.getSelectedFaceNumber() < DIMENSIONS) {
+      faceLabel.setUpdatedTimeStamp(0, faceLabel.getUpdatedTimeStamp(1));
+      faceLabel.setNewTimeStamp(0, faceLabel.getNewTimeStamp(1));
+      faceLabel.setOldTimeStamp(0, faceLabel.getOldTimeStamp(1));
+    } else {
+      faceLabel.setUpdatedTimeStamp(1, faceLabel.getUpdatedTimeStamp(0));
+      faceLabel.setNewTimeStamp(1, faceLabel.getNewTimeStamp(0));
+      faceLabel.setOldTimeStamp(1, faceLabel.getOldTimeStamp(0));
+    }
+  }
+
+  exahype2::dg::rk::
+    solveFaceRiemannProblem<SolverType, IsLinear, UseRiemannSolver, EvaluateFlux, EvaluateNonconservativeProduct>(
+      leftFluxEstimates,
+      rightFluxEstimates,
+      leftStateEstimates,
+      rightStateEstimates,
+      Quadrature::QuadratureWeightsOnFace,
+      faceCentre,
+      marker.getH(),
+      timeStamp,
+      timeStepSize,
+      direction,
+      isBoundary,
+      marker.getSelectedFaceNumber()
+    );
+}
+
+/**
+ * Moves the time stamps of every updated face half one time step on.
+ */
+template <typename SolverType, typename FaceLabel>
+INLINE_METHOD void exahype2::dg::rk::rollOverFaceTimeStamps(const SolverType& solver, FaceLabel& faceLabel) {
+  if (solver.isFirstGridSweepOfTimeStep()) {
+    for (int leftRight = 0; leftRight < 2; leftRight++) {
+      if (faceLabel.getUpdated(leftRight)) {
+        faceLabel.setOldTimeStamp(leftRight, faceLabel.getNewTimeStamp(leftRight));
+        faceLabel.setNewTimeStamp(leftRight, faceLabel.getUpdatedTimeStamp(leftRight));
+      }
+    }
+  }
+}
+
+/**
+ * Extrapolates the stage state and its flux onto the faces of the cell and stamps the face
+ * halves the cell has written.
+ */
+template <
+  typename SolverType,
+  bool EvaluateFlux,
+  bool EvaluateDiffusiveFlux,
+  typename Quadrature,
+  typename DGMatrices,
+  typename CellLabel,
+  typename FaceLabel,
+  typename FaceStateRecord,
+  typename FaceFluxRecord,
+  typename StoragePrecision>
+INLINE_METHOD void exahype2::dg::rk::projectStageOntoFaces(
+  const peano4::dataview::CellMarker&                      marker,
+  const CellLabel&                                         cellLabel,
+  const peano4::dataview::FaceEnumerator<FaceLabel>&       faceLabels,
+  const peano4::dataview::FaceEnumerator<FaceStateRecord>& faceStates,
+  const peano4::dataview::FaceEnumerator<FaceFluxRecord>&  faceFluxes,
+  const StoragePrecision* const                            stageState,
+  const double                                             stageTimeStamp
+) {
+  constexpr int NumberOfDofsPerAxis          = SolverType::DGOrder + 1;
+  constexpr int NumberOfData                 = SolverType::NumberOfUnknowns + SolverType::NumberOfAuxiliaryVariables;
+  constexpr int NodesPerFace                 = exahype2::dg::NodesPerFace<NumberOfDofsPerAxis>;
+  constexpr int StateElementsPerFace         = NodesPerFace * NumberOfData;
+  constexpr int ProjectedFluxElementsPerFace = NodesPerFace * SolverType::NumberOfUnknowns;
+
+  assertion(stageState != nullptr);
+  assertion(std::isfinite(stageTimeStamp) and stageTimeStamp >= 0.0, stageTimeStamp, marker.toString());
+
+  StoragePrecision* faceState[peano4::FacesPerCell];
+  for (int face = 0; face < peano4::FacesPerCell; face++) {
+    faceState[face] = faceStates(face).data() + (face < DIMENSIONS ? StateElementsPerFace : 0);
+  }
+  exahype2::dg::
+    extrapolateStateToFaces<NumberOfDofsPerAxis, SolverType::NumberOfUnknowns, SolverType::NumberOfAuxiliaryVariables>(
+      faceState,
+      stageState,
+      DGMatrices::BasisFunctionValuesLeft1D,
+      DGMatrices::BasisFunctionValuesRight1D
+    );
+
+  StoragePrecision* projectedFaceFlux[peano4::FacesPerCell];
+  for (int face = 0; face < peano4::FacesPerCell; face++) {
+    projectedFaceFlux[face] = faceFluxes(face).data() + (face < DIMENSIONS ? ProjectedFluxElementsPerFace : 0);
+  }
+  exahype2::dg::extrapolateFluxToFaces<
+    SolverType,
+    NumberOfDofsPerAxis,
+    SolverType::NumberOfUnknowns,
+    SolverType::NumberOfAuxiliaryVariables,
+    EvaluateFlux,
+    EvaluateDiffusiveFlux>(
+    projectedFaceFlux,
+    stageState,
+    DGMatrices::BasisFunctionValuesLeft1D,
+    DGMatrices::BasisFunctionValuesRight1D,
+    Quadrature::QuadraturePoints1D,
+    DGMatrices::DerivativeOperator1D,
+    marker.getX(),
+    marker.getH(),
+    stageTimeStamp,
+    cellLabel.getTimeStepSize()
+  );
+  for (int direction = 0; direction < DIMENSIONS; direction++) {
+    faceLabels(direction).setUpdated(1, true);
+    faceLabels(direction + DIMENSIONS).setUpdated(0, true);
+    faceLabels(direction).setUpdatedTimeStamp(1, stageTimeStamp);
+    faceLabels(direction + DIMENSIONS).setUpdatedTimeStamp(0, stageTimeStamp);
+    faceLabels(direction).setRequiresDataTransfer(1, false);
+    faceLabels(direction + DIMENSIONS).setRequiresDataTransfer(0, false);
+  }
+}
+
+/**
+ * Advances one cell by one Runge-Kutta stage.
+ */
+template <
+  typename SolverType,
+  bool IsLinear,
+  bool EvaluateFlux,
+  bool EvaluateDiffusiveFlux,
+  bool EvaluateSource,
+  bool EvaluateNonconservativeProduct,
+  typename Quadrature,
+  typename DGMatrices,
+  typename ButcherTableau,
+  typename CellLabel,
+  typename FaceLabel,
+  typename FaceStateRecord,
+  typename FaceFluxRecord,
+  typename StoragePrecision,
+  typename PostprocessStage,
+  typename PostprocessTimeStep>
+INLINE_METHOD void exahype2::dg::rk::updateStage(
+  const peano4::dataview::CellMarker&                      marker,
+  SolverType&                                              solver,
+  CellLabel&                                               cellLabel,
+  const peano4::dataview::FaceEnumerator<FaceLabel>&       faceLabels,
+  const peano4::dataview::FaceEnumerator<FaceStateRecord>& faceStates,
+  const peano4::dataview::FaceEnumerator<FaceFluxRecord>&  faceFluxes,
+  StoragePrecision* const                                  cellState,
+  StoragePrecision* const                                  rightHandSideEstimates,
+  PostprocessStage&&                                       postprocessStage,
+  PostprocessTimeStep&&                                    postprocessTimeStep
+) {
+  using FluxPrecision = std::remove_pointer_t<decltype(faceFluxes(0).data())>;
+
+  constexpr int NumberOfDofsPerAxis = SolverType::DGOrder + 1;
+  constexpr int NumberOfStages      = SolverType::NumberOfRungeKuttaStages;
+  constexpr int NumberOfData        = SolverType::NumberOfUnknowns + SolverType::NumberOfAuxiliaryVariables;
+  constexpr int NodesPerCell        = exahype2::dg::NodesPerCell<NumberOfDofsPerAxis>;
+  constexpr int NodesPerFace        = exahype2::dg::NodesPerFace<NumberOfDofsPerAxis>;
+  constexpr int FluxElementsPerFace = NodesPerFace * SolverType::NumberOfUnknowns;
+
+  assertion(cellState != nullptr);
+  assertion(rightHandSideEstimates != nullptr);
+
+  StoragePrecision* const stageState = exahype2::dg::rk::stageScratch<NodesPerCell * NumberOfData, StoragePrecision>();
+
+  const int stage = solver.getRkStage();
+  assertion(stage < NumberOfStages, stage);
+  if (stage >= 0) {
+    const int previousStage     = (stage + NumberOfStages - 1) % NumberOfStages;
+    double    stageTimeStepSize = cellLabel.getTimeStepSize();
+    assertion(std::isfinite(stageTimeStepSize) and stageTimeStepSize >= 0.0, stageTimeStepSize, marker.toString());
+
+    StoragePrecision* const previousRhs =
+      rightHandSideEstimates + previousStage * NodesPerCell * SolverType::NumberOfUnknowns;
+
+    const FluxPrecision* faceFluxEstimates[peano4::FacesPerCell];
+    for (int direction = 0; direction < DIMENSIONS; direction++) {
+      faceFluxEstimates[direction]              = faceFluxes(direction).data() + FluxElementsPerFace;
+      faceFluxEstimates[direction + DIMENSIONS] = faceFluxes(direction + DIMENSIONS).data();
+    }
+    exahype2::dg::
+      addFaceIntegrals<NumberOfDofsPerAxis, SolverType::NumberOfUnknowns, SolverType::NumberOfUnknowns, IsLinear>(
+        previousRhs,
+        faceFluxEstimates,
+        Quadrature::QuadratureWeightsOnFace,
+        Quadrature::InverseQuadratureWeightsInCell,
+        DGMatrices::BasisFunctionValuesLeft1D,
+        DGMatrices::BasisFunctionValuesRight1D,
+        marker.getH(),
+        stageTimeStepSize
+      );
+    postprocessStage(cellState, previousRhs);
+
+    if (solver.isFirstGridSweepOfTimeStep()) {
+      const double previousTimeStepSize = stageTimeStepSize;
+      exahype2::dg::rk::linearCombinationOfEstimates<
+        NumberOfStages,
+        NumberOfDofsPerAxis,
+        SolverType::NumberOfUnknowns,
+        SolverType::NumberOfAuxiliaryVariables>(
+        NumberOfStages,
+        cellState,
+        rightHandSideEstimates,
+        cellState,
+        ButcherTableau::FinalEstimateWeights
+      );
+
+      const double            timeStamp = cellLabel.getTimeStamp();
+      StoragePrecision* const newQ      = cellState;
+
+      postprocessTimeStep(newQ, timeStamp);
+
+      if constexpr (SolverType::UsesAdaptiveTimeStepping) {
+        const auto eigenvalues = exahype2::dg::reduceMaxEigenvalues<
+          SolverType,
+          NumberOfDofsPerAxis,
+          SolverType::NumberOfUnknowns,
+          SolverType::NumberOfAuxiliaryVariables>(
+          newQ,
+          Quadrature::QuadraturePoints1D,
+          marker.getX(),
+          marker.getH(),
+          timeStamp + previousTimeStepSize,
+          previousTimeStepSize
+        );
+        solver.setMaxEigenvalue(eigenvalues.maxPhysicalEigenvalue);
+        solver.setMaxScaledEigenvalue(eigenvalues.maxScaledEigenvalue);
+      }
+      const double newTimeStepSize = solver.getTimeStepSize();
+
+      cellLabel.setTimeStamp(timeStamp + previousTimeStepSize);
+      cellLabel.setTimeStepSize(newTimeStepSize);
+      cellLabel.setHasUpdated(true);
+      solver.update(newTimeStepSize, timeStamp + previousTimeStepSize, marker.getH()(0));
+      stageTimeStepSize = newTimeStepSize;
+    }
+
+    exahype2::dg::rk::linearCombinationOfEstimates<
+      NumberOfStages,
+      NumberOfDofsPerAxis,
+      SolverType::NumberOfUnknowns,
+      SolverType::NumberOfAuxiliaryVariables>(
+      stage,
+      cellState,
+      rightHandSideEstimates,
+      stageState,
+      ButcherTableau::ButcherMatrix
+    );
+
+    const double stageTimeStamp =
+      cellLabel.getTimeStamp() + ButcherTableau::RelativeTimeStepSizes[stage] * stageTimeStepSize;
+    StoragePrecision* const stageRhs = rightHandSideEstimates + stage * NodesPerCell * SolverType::NumberOfUnknowns;
+    exahype2::dg::rk::volumeIntegral<
+      SolverType,
+      NumberOfDofsPerAxis,
+      SolverType::NumberOfUnknowns,
+      SolverType::NumberOfAuxiliaryVariables,
+      IsLinear,
+      EvaluateFlux,
+      EvaluateDiffusiveFlux,
+      EvaluateSource,
+      EvaluateNonconservativeProduct>(
+      stageState,
+      stageRhs,
+      Quadrature::QuadraturePoints1D,
+      DGMatrices::MassMatrixDiagonal1D,
+      DGMatrices::StiffnessOperator1D,
+      DGMatrices::DerivativeOperator1D,
+      marker.getX(),
+      marker.getH(),
+      stageTimeStamp,
+      stageTimeStepSize
+    );
+    exahype2::dg::rk::projectStageOntoFaces<SolverType, EvaluateFlux, EvaluateDiffusiveFlux, Quadrature, DGMatrices>(
+      marker,
+      cellLabel,
+      faceLabels,
+      faceStates,
+      faceFluxes,
+      stageState,
+      stageTimeStamp
+    );
+  }
+
+  if (solver.getSolverState() == SolverType::SolverState::TimeStepAfterGridInitialisation) {
+    // Grid initialisation supplies no completed stage to combine.
+    const double timeStepSize = solver.getTimeStepSize();
+    assertion(std::isfinite(timeStepSize) and timeStepSize >= 0.0, timeStepSize, marker.toString());
+
+    exahype2::dg::rk::linearCombinationOfEstimates<
+      NumberOfStages,
+      NumberOfDofsPerAxis,
+      SolverType::NumberOfUnknowns,
+      SolverType::NumberOfAuxiliaryVariables>(
+      0,
+      cellState,
+      rightHandSideEstimates,
+      stageState,
+      ButcherTableau::ButcherMatrix
+    );
+
+    const double stageTimeStamp = cellLabel.getTimeStamp() + ButcherTableau::RelativeTimeStepSizes[0] * timeStepSize;
+
+    StoragePrecision* const stageRhs = rightHandSideEstimates;
+    exahype2::dg::rk::volumeIntegral<
+      SolverType,
+      NumberOfDofsPerAxis,
+      SolverType::NumberOfUnknowns,
+      SolverType::NumberOfAuxiliaryVariables,
+      IsLinear,
+      EvaluateFlux,
+      EvaluateDiffusiveFlux,
+      EvaluateSource,
+      EvaluateNonconservativeProduct>(
+      stageState,
+      stageRhs,
+      Quadrature::QuadraturePoints1D,
+      DGMatrices::MassMatrixDiagonal1D,
+      DGMatrices::StiffnessOperator1D,
+      DGMatrices::DerivativeOperator1D,
+      marker.getX(),
+      marker.getH(),
+      stageTimeStamp,
+      timeStepSize
+    );
+
+    if constexpr (SolverType::UsesAdaptiveTimeStepping) {
+      const auto eigenvalues = exahype2::dg::reduceMaxEigenvalues<
+        SolverType,
+        NumberOfDofsPerAxis,
+        SolverType::NumberOfUnknowns,
+        SolverType::NumberOfAuxiliaryVariables>(
+        cellState,
+        Quadrature::QuadraturePoints1D,
+        marker.getX(),
+        marker.getH(),
+        stageTimeStamp,
+        timeStepSize
+      );
+      solver.setMaxEigenvalue(eigenvalues.maxPhysicalEigenvalue);
+      solver.setMaxScaledEigenvalue(eigenvalues.maxScaledEigenvalue);
+    }
+
+    cellLabel.setTimeStepSize(timeStepSize);
+    solver.update(timeStepSize, cellLabel.getTimeStamp(), marker.getH()(0));
+    exahype2::dg::rk::projectStageOntoFaces<SolverType, EvaluateFlux, EvaluateDiffusiveFlux, Quadrature, DGMatrices>(
+      marker,
+      cellLabel,
+      faceLabels,
+      faceStates,
+      faceFluxes,
+      stageState,
+      stageTimeStamp
+    );
+  }
+}

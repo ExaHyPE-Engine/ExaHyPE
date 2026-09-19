@@ -8,9 +8,14 @@ namespace exahype2::fv::tests {
   class CopyPatchTest;
 } // namespace exahype2::fv::tests
 
-class exahype2::fv::tests::CopyPatchTest : public tarch::tests::TestCase {
+class exahype2::fv::tests::CopyPatchTest final : public tarch::tests::TestCase {
 public:
   CopyPatchTest();
+  CopyPatchTest(const CopyPatchTest&)            = delete;
+  CopyPatchTest(CopyPatchTest&&)                 = delete;
+  CopyPatchTest& operator=(const CopyPatchTest&) = delete;
+  CopyPatchTest& operator=(CopyPatchTest&&)      = delete;
+  ~CopyPatchTest() override                      = default;
 
   void run() override;
 

@@ -17,12 +17,12 @@ and **contact discontinuities**. The notebook is
 A high-order ADER-DG scheme is accurate where the flow is smooth, but it
 overshoots and undershoots near discontinuities (Gibbs oscillations). Those
 oscillations can drive the density or pressure negative and crash the run. The
-**a-posteriori limiter** keeps the scheme both accurate and robust:
+**a-posteriori limiter** keeps the scheme both accurate and stable:
 
 - after each time step every cell is checked against a discrete maximum
   principle (DMP) and a user-supplied *physical admissibility criterion*;
 - a cell that fails - a *troubled* cell - is rolled back and recomputed with a
-  robust Finite Volumes scheme on a subgrid of `2 * order + 1` volumes;
+  non-oscillatory Finite Volumes scheme on a subgrid of `2 * order + 1` volumes;
 - everywhere else the high-order ADER-DG solution is kept.
 
 # The Equations
@@ -38,23 +38,26 @@ implementation files.
 The domain is the box \f$[-1, 1]^2\f$. The bottom-left quadrant starts with
 \f$\rho = 0.125,\ p = 0.1\f$ and the rest of the box with \f$\rho = 1,\ p = 1\f$,
 both at rest. The outer state never changes during the run, so the boundaries are
-Dirichlet conditions that simply hold that initial outer state.
+Dirichlet conditions that hold that initial outer state.
 
-Limiting is a feature of a discontinuous Galerkin solver rather than a solver of
-its own. We create the high-order `ADERDGSolver` and switch its limiter on with
+Limiting is a feature of the discontinuous Galerkin solver. We create the
+high-order `ADERDGSolver` and switch its limiter on with
 `add_subcell_limiter`. The subcell scheme a troubled cell falls back on evaluates
-the same flux and eigenvalue as the high-order scheme:
+the same flux and eigenvalue as the high-order scheme, and the terms
+`dmp_observables` and `physical_admissibility` hold the two tests:
 
-    aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
+    aderdg_solver = exahype2.dg.ader.Solver(
         name = "ADERDGSolver", order = 5, ...
     )
+    aderdg_solver.set_pde_terms(
+        dmp_observables        = True,
+        physical_admissibility = True,
+    )
     aderdg_solver.add_subcell_limiter(
-        limiter_solver                   = exahype2.solvers.fv.godunov.subcell_scheme(),
-        number_of_dmp_observables        = 4,
-        dmp_relaxation_parameter         = 0.01,
-        dmp_differences_scaling          = 0.03,
-        dmp_observables                  = exahype2.solvers.PDETerms.User_Defined_Implementation,
-        physical_admissibility_criterion = exahype2.solvers.PDETerms.User_Defined_Implementation,
+        exahype2.fv.Godunov(),
+        number_of_dmp_observables = 4,
+        dmp_relaxation_parameter  = 0.01,
+        dmp_differences_scaling   = 0.03,
     )
 
 A cell is recomputed when either test rejects its candidate. The discrete maximum
@@ -124,8 +127,8 @@ seconds, and the non-zero exit status makes the run cell raise. The dumped
 snapshot is worth plotting: its densities and energies are many orders of
 magnitude away from anything physical, and both signs appear where only positive
 values are meaningful. That is the whole point of a-posteriori limiting: for
-problems with shocks, a high-order scheme on its own is not robust, and the
-limiter is what makes it usable.
+problems with shocks, a high-order scheme on its own produces unphysical states,
+and the limiter is what makes it usable.
 
 # Experiment
 

@@ -1,0 +1,344 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+TARGET_DECLARE
+/**
+ * Overwrites both flux halves with the numerical flux of the face estimates.
+ */
+template <
+  typename SolverType,
+  int  NumberOfDofsPerAxis,
+  int  NumberOfUnknowns,
+  int  NumberOfAuxiliaryVariables,
+  bool IsLinear,
+  bool UseRiemannSolverTerm,
+  bool EvaluateFlux,
+  bool EvaluateNonconservativeProduct,
+  bool EvaluateMaterialParameters,
+  typename StoragePrecision,
+  typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::solveRiemannProblemOnEstimates(
+  StoragePrecision* NOALIAS const              leftFluxEstimates,
+  StoragePrecision* NOALIAS const              rightFluxEstimates,
+  const StoragePrecision* NOALIAS const        leftStateEstimates,
+  const StoragePrecision* NOALIAS const        rightStateEstimates,
+  const ComputePrecision* NOALIAS const        faceQuadratureWeights,
+  const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const double                                 timeStamp,
+  const double                                 timeStepSize,
+  const int                                    direction,
+  const bool                                   isBoundary,
+  const int                                    faceNumber
+) {
+  assertion(leftFluxEstimates != nullptr);
+  assertion(rightFluxEstimates != nullptr);
+  assertion(leftStateEstimates != nullptr);
+  assertion(rightStateEstimates != nullptr);
+  assertion(faceQuadratureWeights != nullptr);
+  assertion(direction >= 0 and direction < DIMENSIONS, direction);
+  assertion(faceNumber >= 0 and faceNumber < peano4::FacesPerCell, faceNumber);
+  assertion(faceNumber % DIMENSIONS == direction, faceNumber, direction);
+
+  if constexpr (UseRiemannSolverTerm) {
+    SolverType::riemannSolver(
+      leftFluxEstimates,
+      rightFluxEstimates,
+      leftStateEstimates,
+      rightStateEstimates,
+      timeStamp,
+      timeStepSize,
+      faceCentre,
+      cellSize,
+      direction,
+      isBoundary,
+      faceNumber
+    );
+  } else if constexpr (IsLinear) {
+    exahype2::dg::solveLinearRiemannProblem<
+      SolverType,
+      NumberOfDofsPerAxis,
+      NumberOfUnknowns,
+      NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateMaterialParameters>(
+      leftFluxEstimates,
+      rightFluxEstimates,
+      leftStateEstimates,
+      rightStateEstimates,
+      faceQuadratureWeights,
+      faceCentre,
+      cellSize,
+      timeStamp,
+      timeStepSize,
+      direction
+    );
+  } else {
+    exahype2::dg::solveRiemannProblem<
+      SolverType,
+      NumberOfDofsPerAxis,
+      NumberOfUnknowns,
+      NumberOfAuxiliaryVariables,
+      EvaluateNonconservativeProduct>(
+      leftFluxEstimates,
+      rightFluxEstimates,
+      leftStateEstimates,
+      rightStateEstimates,
+      faceQuadratureWeights,
+      faceCentre,
+      cellSize,
+      timeStamp,
+      timeStepSize,
+      direction
+    );
+  }
+}
+TARGET_DECLARE_END
+
+/**
+ * Solves the Riemann problem of one face and writes the numerical flux into both face halves.
+ *
+ * A face on the domain boundary receives the boundary state and its flux first. A hanging face
+ * takes the later of the inner stamp of the coarse face it hangs on and its own outer stamp.
+ */
+template <
+  typename SolverType,
+  int  NumberOfDofsPerAxis,
+  int  NumberOfUnknowns,
+  int  NumberOfAuxiliaryVariables,
+  bool IsLinear,
+  bool HangingFace,
+  bool UseRiemannSolverTerm,
+  bool EvaluateFlux,
+  bool EvaluateDiffusiveFlux,
+  bool EvaluateNonconservativeProduct,
+  bool EvaluateMaterialParameters,
+  typename StoragePrecision,
+  typename ComputePrecision,
+  typename FaceLabel,
+  typename FaceLabelEnumerator>
+INLINE_METHOD void exahype2::dg::ader::solveRiemannProblemOnFace(
+  const peano4::dataview::FaceMarker& marker,
+  FaceLabel&                          faceLabel,
+  const FaceLabelEnumerator&          coarseFaceLabels,
+  StoragePrecision* NOALIAS           faceState,
+  StoragePrecision* NOALIAS           faceFlux,
+  const ComputePrecision* NOALIAS     quadraturePoints,
+  const ComputePrecision* NOALIAS     faceQuadratureWeights,
+  const double                        timeStepSize
+) {
+  using CellLayout = exahype2::dg::ader::Layout<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables>;
+
+  constexpr int StateElementsPerFace = CellLayout::NodesPerFace * CellLayout::NumberOfData;
+  constexpr int FluxElementsPerFace  = CellLayout::NodesPerFace * NumberOfUnknowns;
+
+  assertion(faceState != nullptr);
+  assertion(faceFlux != nullptr);
+  assertion(quadraturePoints != nullptr);
+  assertion(faceQuadratureWeights != nullptr);
+  assertion(timeStepSize >= 0.0, timeStepSize, marker.toString());
+
+  const int faceNumber = marker.getSelectedFaceNumber();
+  assertion(faceNumber >= 0 and faceNumber < peano4::FacesPerCell, faceNumber, marker.toString());
+  const int direction = faceNumber % DIMENSIONS;
+
+  const bool isBoundary = faceLabel.getBoundary() and not SolverType::PeriodicBoundaries[direction];
+
+  // A refined cell's boundary face holds no estimates even when its vertices are unrefined.
+  if (isBoundary and (marker.hasCellBeenRefined() or marker.willCellBeRefined())) {
+    return;
+  }
+
+  const int    interiorFacePosition = faceNumber < DIMENSIONS ? 1 : 0;
+  const double timeStamp            = [&]() {
+    if (isBoundary) {
+      return faceLabel.getNewTimeStamp(interiorFacePosition);
+    }
+    if constexpr (HangingFace) {
+      return std::max(
+        coarseFaceLabels(faceNumber).getNewTimeStamp(interiorFacePosition),
+        faceLabel.getNewTimeStamp(1 - interiorFacePosition)
+      );
+    } else {
+      return std::max(faceLabel.getNewTimeStamp(0), faceLabel.getNewTimeStamp(1));
+    }
+  }();
+
+  auto* const leftFluxEstimates   = faceFlux;
+  auto* const rightFluxEstimates  = faceFlux + FluxElementsPerFace;
+  auto* const leftStateEstimates  = faceState;
+  auto* const rightStateEstimates = faceState + StateElementsPerFace;
+  const auto& faceCentre          = marker.getX();
+
+  if (isBoundary) {
+    exahype2::dg::
+      applyBoundaryConditions<SolverType, NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables>(
+        leftStateEstimates,
+        quadraturePoints,
+        faceCentre,
+        marker.getH(),
+        timeStamp,
+        faceNumber
+      );
+    const int outsideSide = 1 - interiorFacePosition;
+    exahype2::dg::evaluateFluxOnFace<
+      SolverType,
+      NumberOfDofsPerAxis,
+      NumberOfUnknowns,
+      NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateDiffusiveFlux>(
+      leftFluxEstimates + outsideSide * FluxElementsPerFace,
+      leftStateEstimates,
+      rightStateEstimates,
+      outsideSide,
+      quadraturePoints,
+      faceCentre,
+      marker.getH(),
+      timeStamp,
+      timeStepSize,
+      direction
+    );
+  }
+
+  exahype2::dg::ader::solveRiemannProblemOnEstimates<
+    SolverType,
+    NumberOfDofsPerAxis,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    IsLinear,
+    UseRiemannSolverTerm,
+    EvaluateFlux,
+    EvaluateNonconservativeProduct,
+    EvaluateMaterialParameters>(
+    leftFluxEstimates,
+    rightFluxEstimates,
+    leftStateEstimates,
+    rightStateEstimates,
+    faceQuadratureWeights,
+    faceCentre,
+    marker.getH(),
+    timeStamp,
+    timeStepSize,
+    direction,
+    isBoundary,
+    faceNumber
+  );
+
+  if constexpr (not HangingFace) {
+    faceLabel.setUpdated(0, true);
+    faceLabel.setUpdated(1, true);
+  }
+}
+
+template <typename FaceLabel, typename FaceLabelEnumerator>
+INLINE_METHOD void exahype2::dg::ader::mergeHangingFaceTimeStamps(
+  const peano4::dataview::FaceMarker& marker,
+  FaceLabel&                          faceLabel,
+  const FaceLabelEnumerator&          coarseFaceLabels
+) {
+  const int faceNumber = marker.getSelectedFaceNumber();
+  assertion(faceNumber >= 0 and faceNumber < peano4::FacesPerCell, faceNumber, marker.toString());
+  const auto& coarseFaceLabel = coarseFaceLabels(faceNumber);
+
+  for (int side = 0; side < 2; side++) {
+    faceLabel.setNewTimeStamp(side, std::max(coarseFaceLabel.getNewTimeStamp(side), faceLabel.getNewTimeStamp(side)));
+  }
+  for (int side = 0; side < 2; side++) {
+    faceLabel.setOldTimeStamp(side, std::max(coarseFaceLabel.getOldTimeStamp(side), faceLabel.getOldTimeStamp(side)));
+  }
+}
+
+/**
+ * Adds the face integrals of one cell to its state and commits the time step.
+ *
+ * The caller's postprocessCell runs on the committed state before the eigenvalues are reported at
+ * the updated time stamp, so the reported wave speeds belong to the state the next predictor reads.
+ */
+template <
+  typename SolverType,
+  int  NumberOfDofsPerAxis,
+  int  NumberOfUnknowns,
+  int  NumberOfAuxiliaryVariables,
+  bool IsLinear,
+  bool ReportEigenvalues,
+  typename StoragePrecision,
+  typename ComputePrecision,
+  typename CellLabel,
+  typename FaceLabelEnumerator,
+  typename FaceFluxEnumerator,
+  typename Postprocessing>
+INLINE_METHOD void exahype2::dg::ader::correct(
+  const peano4::dataview::CellMarker& marker,
+  SolverType&                         solver,
+  CellLabel&                          cellLabel,
+  const FaceLabelEnumerator&          faceLabels,
+  const FaceFluxEnumerator&           faceFluxes,
+  StoragePrecision* NOALIAS           cellState,
+  const ComputePrecision* NOALIAS     faceQuadratureWeights,
+  const ComputePrecision* NOALIAS     inverseCellQuadratureWeights,
+  const ComputePrecision* NOALIAS     leftFaceCoefficients,
+  const ComputePrecision* NOALIAS     rightFaceCoefficients,
+  const StoragePrecision* NOALIAS     stateQuadraturePoints,
+  Postprocessing&&                    postprocessCell
+) {
+  using CellLayout = exahype2::dg::ader::Layout<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables>;
+
+  constexpr int FluxElementsPerFace = CellLayout::NodesPerFace * NumberOfUnknowns;
+  static_assert(
+    std::remove_reference_t<decltype(faceFluxes(0))>::Cardinality == 2 * FluxElementsPerFace,
+    "A face holds the flux estimates of the two cells that meet on it."
+  );
+
+  assertion(cellState != nullptr);
+  assertion(stateQuadraturePoints != nullptr);
+
+  const double timeStamp    = cellLabel.getTimeStamp();
+  const double timeStepSize = cellLabel.getTimeStepSize();
+  assertion(std::isfinite(timeStamp) and timeStamp >= 0.0, timeStamp, marker.toString());
+  assertion(std::isfinite(timeStepSize) and timeStepSize >= 0.0, timeStepSize, marker.toString());
+  const double updatedTimeStamp = timeStamp + timeStepSize;
+  assertion(std::isfinite(updatedTimeStamp), updatedTimeStamp, marker.toString());
+
+  // Hanging-face Riemann data resides on the side that sent it.
+  const ComputePrecision* faceFluxEstimates[peano4::FacesPerCell];
+  for (int direction = 0; direction < DIMENSIONS; direction++) {
+    faceFluxEstimates[direction] =
+      faceFluxes(direction).data() + (faceLabels(direction).getAboveHanging(0) ? 0 : FluxElementsPerFace);
+    faceFluxEstimates[direction + DIMENSIONS] = faceFluxes(direction + DIMENSIONS).data()
+      + (faceLabels(direction + DIMENSIONS).getAboveHanging(1) ? FluxElementsPerFace : 0);
+  }
+  exahype2::dg::addFaceIntegrals<NumberOfDofsPerAxis, NumberOfUnknowns, CellLayout::NumberOfData, IsLinear>(
+    cellState,
+    faceFluxEstimates,
+    faceQuadratureWeights,
+    inverseCellQuadratureWeights,
+    leftFaceCoefficients,
+    rightFaceCoefficients,
+    marker.getH(),
+    timeStepSize
+  );
+
+  postprocessCell();
+
+  if constexpr (ReportEigenvalues) {
+    const auto eigenvalueStatistics =
+      exahype2::dg::reduceMaxEigenvalues<SolverType, NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables>(
+        cellState,
+        stateQuadraturePoints,
+        marker.getX(),
+        marker.getH(),
+        updatedTimeStamp,
+        timeStepSize
+      );
+
+    solver.setMaxEigenvalue(eigenvalueStatistics.maxPhysicalEigenvalue);
+    solver.setMaxScaledEigenvalue(eigenvalueStatistics.maxScaledEigenvalue);
+  }
+
+  cellLabel.setTimeStamp(updatedTimeStamp);
+  cellLabel.setHasUpdated(true);
+
+  solver.update(timeStepSize, updatedTimeStamp, tarch::la::min(marker.getH()), tarch::la::max(marker.getH()), false);
+}

@@ -14,7 +14,7 @@ namespace exahype2::dg {
   struct MaxEigenvalueStatistics;
 
   template <
-    typename Solver,
+    typename SolverType,
     int NumberOfDofsPerAxis,
     int NumberOfUnknowns,
     int NumberOfAuxiliaryVariables,

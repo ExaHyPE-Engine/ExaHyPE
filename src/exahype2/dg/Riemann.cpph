@@ -8,7 +8,7 @@ TARGET_DECLARE
  * Nonconservative contributions enter the two fluxes with opposite signs.
  */
 template <
-  typename Solver,
+  typename SolverType,
   int  NumberOfDofsPerAxis,
   int  NumberOfUnknowns,
   int  NumberOfAuxiliaryVariables,
@@ -54,10 +54,10 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::solveRiemannProblem(
   }
 
   const auto leftMaxEigenvalue = static_cast<ComputePrecision>(
-    Solver::maxEigenvalue(averageLeftState, faceCentre, cellSize, timeStamp, timeStepSize, direction)
+    SolverType::maxEigenvalue(averageLeftState, faceCentre, cellSize, timeStamp, timeStepSize, direction)
   );
   const auto rightMaxEigenvalue = static_cast<ComputePrecision>(
-    Solver::maxEigenvalue(averageRightState, faceCentre, cellSize, timeStamp, timeStepSize, direction)
+    SolverType::maxEigenvalue(averageRightState, faceCentre, cellSize, timeStamp, timeStepSize, direction)
   );
   const ComputePrecision maxEigenvalue = std::fmax(leftMaxEigenvalue, rightMaxEigenvalue);
 
@@ -111,7 +111,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::solveRiemannProblem(
       for (int unknown = 0; unknown < PaddedNumberOfUnknowns; unknown++) {
         productValues[unknown] = static_cast<ComputePrecision>(0);
       }
-      Solver::nonconservativeProduct(
+      SolverType::nonconservativeProduct(
         averageState,
         stateJump,
         faceCentre,
@@ -142,7 +142,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::solveRiemannProblem(
  * EvaluateMaterialParameters applies the solver's material matrix to each term.
  */
 template <
-  typename Solver,
+  typename SolverType,
   int  NumberOfDofsPerAxis,
   int  NumberOfUnknowns,
   int  NumberOfAuxiliaryVariables,
@@ -186,10 +186,10 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::solveLinearRiemannProblem(
   }
 
   const auto leftMaxEigenvalue = static_cast<ComputePrecision>(
-    Solver::maxEigenvalue(averageLeftState, faceCentre, cellSize, timeStamp, timeStepSize, direction)
+    SolverType::maxEigenvalue(averageLeftState, faceCentre, cellSize, timeStamp, timeStepSize, direction)
   );
   const auto rightMaxEigenvalue = static_cast<ComputePrecision>(
-    Solver::maxEigenvalue(averageRightState, faceCentre, cellSize, timeStamp, timeStepSize, direction)
+    SolverType::maxEigenvalue(averageRightState, faceCentre, cellSize, timeStamp, timeStepSize, direction)
   );
   const ComputePrecision maxEigenvalue = std::fmax(leftMaxEigenvalue, rightMaxEigenvalue);
 
@@ -225,7 +225,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::solveLinearRiemannProblem(
       for (int unknown = 0; unknown < PaddedNumberOfUnknowns; unknown++) {
         productValues[unknown] = static_cast<ComputePrecision>(0);
       }
-      Solver::nonconservativeProduct(
+      SolverType::nonconservativeProduct(
         averageState,
         halfStateJump,
         faceCentre,
@@ -236,7 +236,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::solveLinearRiemannProblem(
         productValues
       );
       if constexpr (EvaluateMaterialParameters) {
-        Solver::multiplyMaterialParameterMatrix(
+        SolverType::multiplyMaterialParameterMatrix(
           averageState,
           faceCentre,
           cellSize,
@@ -257,9 +257,9 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::solveLinearRiemannProblem(
       for (int unknown = 0; unknown < PaddedNumberOfUnknowns; unknown++) {
         fluxValues[unknown] = static_cast<ComputePrecision>(0);
       }
-      Solver::flux(halfStateJump, faceCentre, cellSize, timeStamp, timeStepSize, direction, fluxValues);
+      SolverType::flux(halfStateJump, faceCentre, cellSize, timeStamp, timeStepSize, direction, fluxValues);
       if constexpr (EvaluateMaterialParameters) {
-        Solver::multiplyMaterialParameterMatrix(
+        SolverType::multiplyMaterialParameterMatrix(
           averageState,
           faceCentre,
           cellSize,

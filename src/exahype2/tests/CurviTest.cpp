@@ -104,10 +104,9 @@ void exahype2::tests::CurviTest::testCreateBlock() {
 }
 
 /**
- * A face perturbation which varies along a direction that an earlier transformation has already
- * stretched. The forward map has to sample the perturbation in the same space as the inverse map,
- * so the round trip has to reproduce the point it started from. A perturbation read from a file of
- * measured topography has this shape, while a constant one cannot expose the difference.
+ * A face perturbation varying along a direction that an earlier transformation has already
+ * stretched, so the round trip reproduces the point it started from only when the forward and the
+ * inverse map sample the perturbation in the same space.
  */
 void exahype2::tests::CurviTest::testTransverselyVaryingPerturbation() {
   const tarch::la::Vector<DIMENSIONS, double> domainOffset = {0., 0., 0.};
@@ -193,7 +192,7 @@ void exahype2::tests::CurviTest::testLowerFacePerturbation() {
         };
         const tarch::la::Vector<DIMENSIONS, double> curvilinearPoint = curvi(pointPos);
 
-        // The lower face sits at Lift and the remaining extent is shared out evenly
+        // The lower face sits at Lift, and the elements divide the remaining extent evenly
         const double stretchedCellSize = (domainSize[0] - Lift) / numElements;
         validateNumericalEquals(curvilinearPoint[0], (domainOffset[0] + Lift + i * stretchedCellSize));
 

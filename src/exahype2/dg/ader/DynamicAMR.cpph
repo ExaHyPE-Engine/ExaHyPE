@@ -1,0 +1,433 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+/**
+ * Interpolates only the coarse neighbour's half of a hanging face.
+ * The fine cells project their estimates onto the other half.
+ */
+template <typename SolverType, typename T>
+INLINE_METHOD void exahype2::dg::ader::interpolateHangingFace(
+  const peano4::dataview::FaceMarker& marker,
+  const double* NOALIAS               prolongationMatrix1D,
+  const T* NOALIAS                    coarseFaceState,
+  T* NOALIAS                          fineFaceState,
+  const T* NOALIAS                    coarseFaceFlux,
+  T* NOALIAS                          fineFaceFlux
+) {
+  using CellLayout =
+    Layout<SolverType::DGOrder + 1, SolverType::NumberOfUnknowns, SolverType::NumberOfAuxiliaryVariables>;
+
+  constexpr int NumberOfDofsPerAxis  = SolverType::DGOrder + 1;
+  constexpr int StateElementsPerFace = CellLayout::NodesPerFace * CellLayout::NumberOfData;
+  constexpr int FluxElementsPerFace  = CellLayout::NodesPerFace * SolverType::NumberOfUnknowns;
+
+  assertion(prolongationMatrix1D != nullptr);
+  assertion(coarseFaceState != nullptr);
+  assertion(fineFaceState != nullptr);
+  assertion(coarseFaceFlux != nullptr);
+  assertion(fineFaceFlux != nullptr);
+
+  const int facePosition = marker.getSelectedFaceNumber() < DIMENSIONS ? 0 : 1;
+
+  exahype2::amr::interpolateFaceFromCoarseFace(
+    marker,
+    coarseFaceState + facePosition * StateElementsPerFace,
+    fineFaceState + facePosition * StateElementsPerFace,
+    facePosition,
+    exahype2::dg::FaceProlongation<T>(prolongationMatrix1D, NumberOfDofsPerAxis, CellLayout::NumberOfData)
+  );
+  exahype2::amr::interpolateFaceFromCoarseFace(
+    marker,
+    coarseFaceFlux + facePosition * FluxElementsPerFace,
+    fineFaceFlux + facePosition * FluxElementsPerFace,
+    facePosition,
+    exahype2::dg::FaceProlongation<T>(prolongationMatrix1D, NumberOfDofsPerAxis, SolverType::NumberOfUnknowns)
+  );
+}
+
+/**
+ * Stages the subface's coarse-side flux in the coarse face's opposite half.
+ * The coarse cell reads that half after restriction.
+ */
+template <typename SolverType, typename T>
+INLINE_METHOD void exahype2::dg::ader::stageHangingFaceFlux(
+  const peano4::dataview::FaceMarker& marker,
+  exahype2::amr::ChildDataStage<T>&   stage,
+  const T* NOALIAS                    coarseFaceFlux,
+  const T* NOALIAS                    fineFaceFlux
+) {
+  using CellLayout =
+    Layout<SolverType::DGOrder + 1, SolverType::NumberOfUnknowns, SolverType::NumberOfAuxiliaryVariables>;
+
+  constexpr int FluxElementsPerFace = CellLayout::NodesPerFace * SolverType::NumberOfUnknowns;
+
+  assertion(coarseFaceFlux != nullptr);
+  assertion(fineFaceFlux != nullptr);
+
+  const int facePosition = marker.getSelectedFaceNumber() < DIMENSIONS ? 0 : 1;
+  exahype2::amr::stageSubfaceForRestriction(
+    marker,
+    stage,
+    coarseFaceFlux + (1 - facePosition) * FluxElementsPerFace,
+    fineFaceFlux + facePosition * FluxElementsPerFace
+  );
+}
+
+/**
+ * Reduces the flux estimates staged below either half of this face.
+ */
+template <typename SolverType, typename T>
+INLINE_METHOD void exahype2::dg::ader::restrictFaceFluxHalves(
+  exahype2::amr::ChildDataStage<T>& stage,
+  const double* NOALIAS             restrictionMatrix1D,
+  T* NOALIAS                        fineFaceFlux
+) {
+  using CellLayout =
+    Layout<SolverType::DGOrder + 1, SolverType::NumberOfUnknowns, SolverType::NumberOfAuxiliaryVariables>;
+
+  constexpr int NumberOfDofsPerAxis = SolverType::DGOrder + 1;
+  constexpr int FluxElementsPerFace = CellLayout::NodesPerFace * SolverType::NumberOfUnknowns;
+
+  assertion(restrictionMatrix1D != nullptr);
+  assertion(fineFaceFlux != nullptr);
+
+  for (int faceSide = 0; faceSide < 2; faceSide++) {
+    T* const restrictedFluxHalf = fineFaceFlux + faceSide * FluxElementsPerFace;
+    exahype2::amr::restrictFaceFromStagedSubfaces(
+      stage,
+      restrictedFluxHalf,
+      restrictedFluxHalf,
+      exahype2::dg::FaceRestriction<T>(restrictionMatrix1D, NumberOfDofsPerAxis, SolverType::NumberOfUnknowns)
+    );
+  }
+}
+
+/**
+ * Rebuilds hanging-face traces from the predictor's initial state.
+ * A hanging face holds no valid fine-side trace between sweeps.
+ * Persistent faces retain their preceding estimates.
+ */
+template <
+  typename SolverType,
+  bool IsLinear,
+  bool EvaluateFlux,
+  bool EvaluateNonconservativeProduct,
+  bool EvaluateSource,
+  bool EvaluateDiffusiveFlux,
+  bool EvaluateDiffusiveSource,
+  bool EvaluateMaterialParameters,
+  bool EvaluatePointSources,
+  typename ComputePrecision,
+  typename PicardPrecision,
+  typename StoragePrecision,
+  typename CellLabel,
+  typename FaceLabelEnumerator,
+  typename FaceStateEnumerator,
+  typename FaceFluxEnumerator,
+  typename RiemannSolve>
+INLINE_METHOD void exahype2::dg::ader::solveRiemannProblemsOnHangingFaces(
+  const peano4::dataview::CellMarker&  marker,
+  CellLabel&                           cellLabel,
+  const FaceLabelEnumerator&           faceLabels,
+  const FaceStateEnumerator&           faceStates,
+  const FaceFluxEnumerator&            faceFluxes,
+  const StoragePrecision* NOALIAS      previousCellState,
+  const BasisTables<ComputePrecision>& tables,
+  const BasisTables<PicardPrecision>&  picardTables,
+  const double                         timeStepSize,
+  RiemannSolve&&                       solveRiemannProblem
+) {
+  using CellLayout =
+    Layout<SolverType::DGOrder + 1, SolverType::NumberOfUnknowns, SolverType::NumberOfAuxiliaryVariables>;
+  using FacePrecision = std::remove_pointer_t<decltype(faceStates(0).data())>;
+
+  constexpr int NumberOfDofsPerAxis  = SolverType::DGOrder + 1;
+  constexpr int StateElementsPerFace = CellLayout::NodesPerFace * CellLayout::NumberOfData;
+  constexpr int FluxElementsPerFace  = CellLayout::NodesPerFace * SolverType::NumberOfUnknowns;
+  constexpr int CellElements         = CellLayout::NodesPerCell * CellLayout::NumberOfData;
+
+  assertion(previousCellState != nullptr);
+  assertion(std::isfinite(timeStepSize) and timeStepSize >= 0.0, timeStepSize, marker.toString());
+
+  bool hasHangingFace = false;
+  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+    hasHangingFace = hasHangingFace or faceLabels(faceNumber).getIsHanging();
+  }
+  if (not hasHangingFace) {
+    return;
+  }
+
+  // The predictor requires an aligned cell buffer.
+  alignas(PEANO_WITH_ALIGNMENT) StoragePrecision cellStateScratch[CellElements];
+  std::copy_n(previousCellState, CellElements, cellStateScratch);
+
+  alignas(PEANO_WITH_ALIGNMENT) FacePrecision stateScratch[peano4::FacesPerCell][StateElementsPerFace];
+  alignas(PEANO_WITH_ALIGNMENT) FacePrecision fluxScratch[peano4::FacesPerCell][FluxElementsPerFace];
+  FacePrecision*                              stateEstimates[peano4::FacesPerCell];
+  FacePrecision*                              fluxEstimates[peano4::FacesPerCell];
+  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+    const bool isHangingFace = faceLabels(faceNumber).getIsHanging();
+    const int  ownStateHalf  = faceNumber < DIMENSIONS ? StateElementsPerFace : 0;
+    const int  ownFluxHalf   = faceNumber < DIMENSIONS ? FluxElementsPerFace : 0;
+    stateEstimates[faceNumber] =
+      isHangingFace ? faceStates(faceNumber).data() + ownStateHalf : stateScratch[faceNumber];
+    fluxEstimates[faceNumber] = isHangingFace ? faceFluxes(faceNumber).data() + ownFluxHalf : fluxScratch[faceNumber];
+  }
+
+  [[maybe_unused]] const int numberOfPicardIterations = exahype2::dg::ader::runSpaceTimePredictor<
+    SolverType,
+    NumberOfDofsPerAxis,
+    SolverType::NumberOfUnknowns,
+    SolverType::NumberOfAuxiliaryVariables,
+    IsLinear,
+    EvaluateFlux,
+    EvaluateNonconservativeProduct,
+    EvaluateSource,
+    EvaluateDiffusiveFlux,
+    EvaluateDiffusiveSource,
+    EvaluateMaterialParameters,
+    EvaluatePointSources>(
+    marker,
+    stateEstimates,
+    fluxEstimates,
+    cellStateScratch,
+    tables,
+    picardTables,
+    cellLabel.getTimeStamp(),
+    cellLabel.getTimeStepSize()
+  );
+  if constexpr (not IsLinear) {
+    if constexpr (SolverType::UsesSubcellLimiter) {
+      cellLabel.setPredictorDiverged(numberOfPicardIterations < 0);
+    } else if (numberOfPicardIterations < 0) {
+      tarch::terminateWithError(
+        "The space-time predictor diverged in " + marker.toString()
+        + ". Configure a subcell limiter so failing cells are recomputed."
+      );
+    }
+  }
+
+  for (int hangingFace = 0; hangingFace < peano4::FacesPerCell; hangingFace++) {
+    if (not faceLabels(hangingFace).getIsHanging()) {
+      continue;
+    }
+    FacePrecision* const leftFluxEstimates  = faceFluxes(hangingFace).data();
+    FacePrecision* const leftStateEstimates = faceStates(hangingFace).data();
+    const int            direction          = hangingFace % DIMENSIONS;
+
+    tarch::la::Vector<DIMENSIONS, double> faceCentre = marker.getX();
+    faceCentre(direction) += (hangingFace < DIMENSIONS ? -0.5 : 0.5) * marker.getH()(direction);
+
+    solveRiemannProblem(
+      leftFluxEstimates,
+      leftFluxEstimates + FluxElementsPerFace,
+      leftStateEstimates,
+      leftStateEstimates + StateElementsPerFace,
+      faceCentre,
+      cellLabel.getTimeStamp(),
+      timeStepSize,
+      direction,
+      faceLabels(hangingFace).getBoundary() and not SolverType::PeriodicBoundaries[direction],
+      hangingFace
+    );
+  }
+}
+
+/**
+ * Prolongs the predictor's initial state alongside the current state.
+ * An unlimited solver rebuilds the child's prediction from that initial state.
+ * A limited solver predicts from its accepted state in the next sweep.
+ */
+template <typename SolverType, typename T, typename CellLabel>
+INLINE_METHOD void exahype2::dg::ader::createCell(
+  const peano4::dataview::CellMarker& marker,
+  const double* NOALIAS               prolongationMatrix1D,
+  const T* NOALIAS                    coarseCellState,
+  T* NOALIAS                          fineCellState,
+  const T* NOALIAS                    coarsePreviousCellState,
+  T* NOALIAS                          finePreviousCellState,
+  const CellLabel&                    coarseCellLabel,
+  CellLabel&                          fineCellLabel
+) {
+  using CellLayout =
+    Layout<SolverType::DGOrder + 1, SolverType::NumberOfUnknowns, SolverType::NumberOfAuxiliaryVariables>;
+
+  constexpr int NumberOfDofsPerAxis = SolverType::DGOrder + 1;
+
+  assertion(coarseCellState != nullptr);
+  assertion(fineCellState != nullptr);
+  assertion(coarsePreviousCellState != nullptr);
+  assertion(finePreviousCellState != nullptr);
+
+  const exahype2::dg::CellProlongation<T> prolongCell(
+    prolongationMatrix1D,
+    NumberOfDofsPerAxis,
+    CellLayout::NumberOfData
+  );
+  exahype2::amr::prolongCellIntoChild(marker, coarseCellState, fineCellState, prolongCell);
+  exahype2::amr::prolongCellIntoChild(marker, coarsePreviousCellState, finePreviousCellState, prolongCell);
+
+  exahype2::amr::copyCellLabelIntoChild(coarseCellLabel, fineCellLabel);
+}
+
+/**
+ * Restricts both cell buffers before the parent rebuilds its prediction.
+ * Face transfer flags preserve this request after the parent's coarsening marker expires.
+ */
+template <typename SolverType, typename T, typename CellLabel, typename FaceLabelEnumerator>
+INLINE_METHOD void exahype2::dg::ader::destroyCell(
+  const peano4::dataview::CellMarker& marker,
+  exahype2::amr::ChildDataStage<T>&   cellStateStage,
+  exahype2::amr::ChildDataStage<T>&   previousCellStateStage,
+  const double* NOALIAS               restrictionMatrix1D,
+  T* NOALIAS                          coarseCellState,
+  const T* NOALIAS                    fineCellState,
+  T* NOALIAS                          coarsePreviousCellState,
+  const T* NOALIAS                    finePreviousCellState,
+  const FaceLabelEnumerator&          coarseFaceLabels,
+  CellLabel&                          coarseCellLabel,
+  const CellLabel&                    fineCellLabel
+) {
+  using CellLayout =
+    Layout<SolverType::DGOrder + 1, SolverType::NumberOfUnknowns, SolverType::NumberOfAuxiliaryVariables>;
+
+  constexpr int NumberOfDofsPerAxis = SolverType::DGOrder + 1;
+
+  assertion(coarseCellState != nullptr);
+  assertion(fineCellState != nullptr);
+  assertion(coarsePreviousCellState != nullptr);
+  assertion(finePreviousCellState != nullptr);
+
+  const exahype2::dg::CellRestriction<T> restrictCell(
+    restrictionMatrix1D,
+    NumberOfDofsPerAxis,
+    CellLayout::NumberOfData
+  );
+  const bool siblingSetComplete =
+    exahype2::amr::stageChildForRestriction(marker, cellStateStage, coarseCellState, fineCellState);
+  exahype2::amr::stageChildForRestriction(
+    marker,
+    previousCellStateStage,
+    coarsePreviousCellState,
+    finePreviousCellState
+  );
+  if (siblingSetComplete) {
+    exahype2::amr::restrictStagedChildrenIntoCell(cellStateStage, coarseCellState, restrictCell);
+    exahype2::amr::restrictStagedChildrenIntoCell(previousCellStateStage, coarsePreviousCellState, restrictCell);
+  }
+
+  exahype2::amr::requestDataTransferOnOwnSides(coarseFaceLabels);
+  exahype2::amr::copyCellTimeStampsFromChild(coarseCellLabel, fineCellLabel);
+}
+
+/**
+ * Releases transfer flags while the live buffer holds the limiter's accepted state.
+ * The next prediction sweep rebuilds the face estimates.
+ */
+template <typename CellLabel, typename FaceLabelEnumerator>
+INLINE_METHOD void exahype2::dg::ader::releaseFacesAfterSubcellTransfer(
+  const FaceLabelEnumerator& faceLabels,
+  CellLabel&                 cellLabel
+) {
+  exahype2::amr::releaseDataTransferOnOwnSides(faceLabels);
+  cellLabel.setRequiresCriterionEvaluation(false);
+}
+
+/**
+ * Rebuilds the prediction from its initial state after the mesh transfer.
+ * Pending grid control events defer the prediction until the topology settles.
+ */
+template <
+  typename SolverType,
+  bool IsLinear,
+  bool EvaluateFlux,
+  bool EvaluateNonconservativeProduct,
+  bool EvaluateSource,
+  bool EvaluateDiffusiveFlux,
+  bool EvaluateDiffusiveSource,
+  bool EvaluateMaterialParameters,
+  bool EvaluatePointSources,
+  typename ComputePrecision,
+  typename PicardPrecision,
+  typename StoragePrecision,
+  typename CellLabel,
+  typename FaceLabelEnumerator,
+  typename FaceStateEnumerator,
+  typename FaceFluxEnumerator>
+INLINE_METHOD void exahype2::dg::ader::rederivePrediction(
+  const peano4::dataview::CellMarker&  marker,
+  CellLabel&                           cellLabel,
+  const FaceLabelEnumerator&           faceLabels,
+  const FaceStateEnumerator&           faceStates,
+  const FaceFluxEnumerator&            faceFluxes,
+  StoragePrecision* NOALIAS            cellState,
+  const StoragePrecision* NOALIAS      previousCellState,
+  const BasisTables<ComputePrecision>& tables,
+  const BasisTables<PicardPrecision>&  picardTables
+) {
+  using CellLayout =
+    Layout<SolverType::DGOrder + 1, SolverType::NumberOfUnknowns, SolverType::NumberOfAuxiliaryVariables>;
+  using FacePrecision = std::remove_pointer_t<decltype(faceStates(0).data())>;
+
+  constexpr int NumberOfDofsPerAxis  = SolverType::DGOrder + 1;
+  constexpr int StateElementsPerFace = CellLayout::NodesPerFace * CellLayout::NumberOfData;
+  constexpr int FluxElementsPerFace  = CellLayout::NodesPerFace * SolverType::NumberOfUnknowns;
+  constexpr int CellElements         = CellLayout::NodesPerCell * CellLayout::NumberOfData;
+
+  assertion(cellState != nullptr);
+  assertion(previousCellState != nullptr);
+
+  const bool awaitsTransfer = exahype2::amr::awaitsDataTransfer(marker, faceLabels);
+  if (
+    awaitsTransfer and not exahype2::RefinementControlService::getInstance().hasGridControlEvents()
+    and cellLabel.getTimeStepSize() > 0.0
+  ) {
+    std::copy_n(previousCellState, CellElements, cellState);
+
+    FacePrecision* stateEstimates[peano4::FacesPerCell];
+    FacePrecision* fluxEstimates[peano4::FacesPerCell];
+    for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+      const int ownStateHalf     = faceNumber < DIMENSIONS ? StateElementsPerFace : 0;
+      const int ownFluxHalf      = faceNumber < DIMENSIONS ? FluxElementsPerFace : 0;
+      stateEstimates[faceNumber] = faceStates(faceNumber).data() + ownStateHalf;
+      fluxEstimates[faceNumber]  = faceFluxes(faceNumber).data() + ownFluxHalf;
+    }
+
+    [[maybe_unused]] const int numberOfPicardIterations = exahype2::dg::ader::runSpaceTimePredictor<
+      SolverType,
+      NumberOfDofsPerAxis,
+      SolverType::NumberOfUnknowns,
+      SolverType::NumberOfAuxiliaryVariables,
+      IsLinear,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateDiffusiveFlux,
+      EvaluateDiffusiveSource,
+      EvaluateMaterialParameters,
+      EvaluatePointSources>(
+      marker,
+      stateEstimates,
+      fluxEstimates,
+      cellState,
+      tables,
+      picardTables,
+      cellLabel.getTimeStamp(),
+      cellLabel.getTimeStepSize()
+    );
+    if constexpr (not IsLinear) {
+      if constexpr (SolverType::UsesSubcellLimiter) {
+        cellLabel.setPredictorDiverged(numberOfPicardIterations < 0);
+      } else if (numberOfPicardIterations < 0) {
+        tarch::terminateWithError(
+          "The space-time predictor diverged in " + marker.toString()
+          + ". Configure a subcell limiter so failing cells are recomputed."
+        );
+      }
+    }
+
+    exahype2::amr::releaseDataTransferOnOwnSides(faceLabels);
+  }
+
+  cellLabel.setRequiresCriterionEvaluation(false);
+}

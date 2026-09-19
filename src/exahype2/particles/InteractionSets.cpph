@@ -1,0 +1,89 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+/**
+ * Appends the particles of the vertices of the cell of marker to activeParticles and to
+ * localParticles, and appends one flag per local particle that says whether this cell owns it.
+ * Returns the number of particles appended to activeParticles, which the caller removes again
+ * once the cell is done. Inside a subtree task, activeParticles holds only the particles of the
+ * cells from the task root down.
+ */
+template <typename ActiveParticle, typename LocalParticle, typename ActiveVertices, typename LocalVertices>
+INLINE_METHOD int exahype2::particles::collectParticlesOfCell(
+  const peano4::dataview::CellMarker& marker,
+  const ActiveVertices&               fineGridVerticesActiveParticles,
+  const LocalVertices&                fineGridVerticesLocalParticles,
+  std::list<ActiveParticle*>&         activeParticles,
+  std::list<LocalParticle*>&          localParticles,
+  std::vector<bool>&                  localParticleIsContainedInCell
+) {
+  [[maybe_unused]] const auto ownershipTolerance = peano4::particles::GrabOwnershipSpatialSortingTolerance
+    * tarch::la::max(marker.getH()) * tarch::la::NUMERICAL_ZERO_DIFFERENCE;
+
+  assertion(
+    localParticles.size() == localParticleIsContainedInCell.size(),
+    localParticles.size(),
+    localParticleIsContainedInCell.size()
+  );
+
+  int numberOfActiveParticles = 0;
+  for (int vertex = 0; vertex < peano4::VerticesPerCell; vertex++) {
+    for (auto* const particle : fineGridVerticesActiveParticles(vertex)) {
+      activeParticles.push_back(particle);
+      numberOfActiveParticles++;
+    }
+    for (auto* const particle : fineGridVerticesLocalParticles(vertex)) {
+      std::bitset<peano4::CellsPerVertex> adjacentCellMask{};
+      adjacentCellMask.set(peano4::CellsPerVertex - vertex - 1);
+      const bool isLocal = (adjacentCellMask & particle->getContainedInAdjacentCell()).any();
+      assertion(
+        isLocal
+          == marker
+               .isContained(peano4::particles::periodicImageTowardsCell(particle->getX(), marker), ownershipTolerance),
+        isLocal,
+        marker.isContained(peano4::particles::periodicImageTowardsCell(particle->getX(), marker), ownershipTolerance),
+        marker.toString(),
+        particle->toString(),
+        vertex,
+        adjacentCellMask
+      );
+      localParticleIsContainedInCell.push_back(isLocal);
+      localParticles.push_back(particle);
+    }
+  }
+  return numberOfActiveParticles;
+}
+
+/**
+ * Recomputes for every particle of the vertices of the cell of marker which of the cells around
+ * its vertex contain it. A caller runs this after a kernel has moved particles.
+ */
+template <typename LocalVertices>
+INLINE_METHOD void exahype2::particles::updateContainedInAdjacentCellOfLocalParticles(
+  const peano4::dataview::CellMarker& marker,
+  const LocalVertices&                fineGridVerticesLocalParticles
+) {
+  for (int vertex = 0; vertex < peano4::VerticesPerCell; vertex++) {
+    const std::bitset<DIMENSIONS> assignedVertex(vertex);
+    for (auto* const particle : fineGridVerticesLocalParticles(vertex)) {
+      peano4::particles::updateContainedInAdjacentCellProperty(marker, assignedVertex, *particle);
+    }
+  }
+}
+
+/**
+ * Removes the numberOfActiveParticles particles that collectParticlesOfCell appended from the
+ * tail of activeParticles, so the list holds again what it held before the cell added its own.
+ */
+template <typename ActiveParticle>
+INLINE_METHOD void exahype2::particles::releaseParticlesOfCell(
+  const int                   numberOfActiveParticles,
+  std::list<ActiveParticle*>& activeParticles
+) {
+  assertion(
+    numberOfActiveParticles >= 0 and numberOfActiveParticles <= static_cast<int>(activeParticles.size()),
+    numberOfActiveParticles,
+    activeParticles.size()
+  );
+  activeParticles.erase(std::prev(activeParticles.end(), numberOfActiveParticles), activeParticles.end());
+}

@@ -38,7 +38,7 @@ initial_conditions = """
 
   const tarch::la::Vector<DIMENSIONS, double> momenta(1.0 * Q[Shortcuts::rho]);
 
-  // Should lead to a constant pressure over the domain given the initial conditions
+  // The energy keeps the pressure constant over the domain.
   Q[Shortcuts::rhoE] = PRESSURE / (GAMMA - 1.0) + 0.5 * (momenta * momenta) / Q[Shortcuts::rho];
 """
 
@@ -46,8 +46,6 @@ analytical_solution = """
   // The initial condition is transported without deformation in a periodic
   // domain [-.5, +.5], i.e. the value at a given point is the value at the
   // position x - v*t but accounting for periodicity.
-  // Therefore we find the point x - v*t, and then shift this by instances
-  // of 1.0 until we find the point within the domain.
 #if DIMENSIONS == 2
   tarch::la::Vector<DIMENSIONS, double> pos = { (x[0] - t) + (int)(t + .5 - x[0]),
                                                 (x[1] - t) + (int)(t + .5 - x[1]) };
@@ -66,7 +64,7 @@ analytical_solution = """
 
   const tarch::la::Vector<DIMENSIONS, double> momenta(1.0 * solution[Shortcuts::rho]);
 
-  // Should lead to a constant p over the domain given the initial conditions
+  // The energy keeps the pressure constant over the domain.
   solution[Shortcuts::rhoE] = PRESSURE / (GAMMA - 1.0) + 0.5 * (momenta * momenta) / solution[Shortcuts::rho];
 """
 
@@ -83,27 +81,24 @@ project = exahype2.Project(
     max_grid_levels=args.grid_levels,
 )
 
-fv_solver = exahype2.solvers.fv.musclhancock.GlobalAdaptiveTimeStep(
+fv_solver = exahype2.fv.Solver(
     name="MUSCLHancockSolver",
     patch_size=args.degrees_of_freedom,
     unknowns={"rho": 1, "rhoU": project.dimensions, "rhoE": 1},
     auxiliary_variables=0,
-    time_step_relaxation=0.5,
+    time_stepping=exahype2.TimeStepping.Adaptive(0.5),
+    scheme=exahype2.fv.MusclHancock(limiter=exahype2.fv.Limiter.minmod),
 )
 
-fv_solver.set_implementation(
-    initial_conditions=initial_conditions,
+fv_solver.set_pde_terms(
+    initial_condition=initial_conditions,
+    boundary_conditions=True,
     flux=flux,
     max_eigenvalue=max_eigenvalue,
-    limiter=exahype2.solvers.fv.musclhancock.Limiter.minmod,
+    analytical_solution=analytical_solution,
 )
 
-exahype2.solvers.fv.ErrorMeasurement(
-    fv_solver,
-    error_measurement_implementation=analytical_solution,
-    output_file_name="Error",
-    time_delta_between_snapshots=args.end_time / 100.0,
-)
+fv_solver.measure_error(file="Error", every=args.end_time / 100.0)
 
 project.add_solver(fv_solver)
 

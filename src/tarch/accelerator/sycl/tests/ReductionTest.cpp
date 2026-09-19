@@ -13,7 +13,7 @@ namespace {
   constexpr int ElementCount = 1024;
 } // namespace
 
-tarch::accelerator::sycl::tests::ReductionTest::ReductionTest():
+tarch::accelerator::sycl::tests::ReductionTest::ReductionTest() :
   TestCase("tarch::accelerator::sycl::tests::ReductionTest") {}
 
 void tarch::accelerator::sycl::tests::ReductionTest::run() { testMethod(testParallelReduction); }

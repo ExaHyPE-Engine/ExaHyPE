@@ -66,18 +66,6 @@ function(peano_add_target)
   set(install_as_library FALSE)
   set(install_as_executable FALSE)
 
-  foreach(source IN LISTS ARG_SOURCES ARG_GENERATED_SOURCES)
-    get_filename_component(source_extension "${source}" EXT)
-    if(source_extension MATCHES "^\\.(c|cc|cpp|cxx)$")
-      if(IS_ABSOLUTE "${source}")
-        set(clang_tidy_source "${source}")
-      else()
-        get_filename_component(clang_tidy_source "${CMAKE_CURRENT_SOURCE_DIR}/${source}" ABSOLUTE)
-      endif()
-      set_property(GLOBAL APPEND PROPERTY PEANO_CLANG_TIDY_SOURCES "${clang_tidy_source}")
-    endif()
-  endforeach()
-
   _peano_resolve_gpu_backend(gpu_backend)
 
   if(target_type STREQUAL "LIBRARY" OR target_type STREQUAL "STATIC_LIBRARY")
@@ -101,7 +89,9 @@ function(peano_add_target)
 
   if(gpu_backend STREQUAL "kokkos" OR gpu_backend STREQUAL "sycl" OR gpu_backend STREQUAL "ompt")
     set(supports_precompiled_headers FALSE)
-  elseif(CMAKE_DISABLE_PRECOMPILE_HEADERS OR CMAKE_CXX_COMPILER_ID STREQUAL "NVHPC")
+  elseif(CMAKE_DISABLE_PRECOMPILE_HEADERS
+    OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU"
+    OR CMAKE_CXX_COMPILER_ID STREQUAL "NVHPC")
     set(supports_precompiled_headers FALSE)
   else()
     set(supports_precompiled_headers TRUE)

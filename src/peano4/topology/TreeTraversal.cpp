@@ -983,8 +983,10 @@ void peano4::topology::TreeTraversal::deriveRankBoundary(const peano4::topology:
         isInsideDomain         = isInsideDomain and coordinate >= 0 and coordinate < blocksPerAxis;
         neighbourLattice(axis) = coordinate;
       }
-      if (isInsideDomain
-          and (tree.isSplitBlockAt(neighbourLattice) or tree.getOwnerOfCellAt(spawnLevel, neighbourLattice) != owner)) {
+      if (
+        isInsideDomain
+        and (tree.isSplitBlockAt(neighbourLattice) or tree.getOwnerOfCellAt(spawnLevel, neighbourLattice) != owner)
+      ) {
         blockTouchesBoundary[blockNumber] = 1;
       }
     }
@@ -1055,8 +1057,8 @@ void peano4::topology::TreeTraversal::deriveRankBoundary(const peano4::topology:
             // The cell around a local cell's vertex lies in a local or a ring
             // block, so its owner reads from the structure.
             const auto adjacentCellIndex = tree.getCellAt(cell.level, adjacentCellLattice);
-            const auto owner             = adjacentCellIndex >= 0 ? tree.getCell(adjacentCellIndex).ownerTreeId
-                                                                  : tree.getOwnerOfCellAt(cell.level, adjacentCellLattice);
+            const auto owner = adjacentCellIndex >= 0 ? tree.getCell(adjacentCellIndex).ownerTreeId
+                                                      : tree.getOwnerOfCellAt(cell.level, adjacentCellLattice);
             if (owner == _id or owner < 0) {
               continue;
             }
@@ -1559,8 +1561,10 @@ std::vector<int> peano4::topology::TreeTraversal::extendInterfaceTopologyForAppe
           continue;
         }
         const auto adjacentCellIndex = tree.getCellAt(firstEntityRecord.level, adjacentCellLattice);
-        if (adjacentCellIndex >= 0 and adjacentCellIndex < deltaExtent.firstAppendedCell
-            and tree.getCell(adjacentCellIndex).ownerTreeId == _id) {
+        if (
+          adjacentCellIndex >= 0 and adjacentCellIndex < deltaExtent.firstAppendedCell
+          and tree.getCell(adjacentCellIndex).ownerTreeId == _id
+        ) {
           addAdjacentCells(adjacentCellsOfUnit, numberOfUnits, unitOfCell[adjacentCellIndex], 1);
         }
       }
@@ -2002,8 +2006,10 @@ std::vector<int> peano4::topology::TreeTraversal::rederiveInterfaceTopologyForPa
       }
       const auto& freshTouchSlots = freshTouchSlotArrays[freshNumber];
       const auto& oldTouchSlots   = oldTouchSlotArrays[oldNumber];
-      if (numberOfTouches(freshTouchSlots) != numberOfTouches(oldTouchSlots)
-          or not holdsEveryTouchOf(freshTouchSlots, oldTouchSlots)) {
+      if (
+        numberOfTouches(freshTouchSlots) != numberOfTouches(oldTouchSlots)
+        or not holdsEveryTouchOf(freshTouchSlots, oldTouchSlots)
+      ) {
         markEveryUnitOf(freshTouchSlots);
         markEveryUnitOf(oldTouchSlots);
       }
@@ -2527,8 +2533,10 @@ void peano4::topology::TreeTraversal::deriveBlockRoots(
       }
       if (childCell.ownerTreeId == _id) {
         weight.numberOfCells++;
-        if (regridOverrides != nullptr
-            and (regridOverrides->cellCreate[childCellIndex] != 0 or regridOverrides->cellDestroy[childCellIndex] != 0)) {
+        if (
+          regridOverrides != nullptr
+          and (regridOverrides->cellCreate[childCellIndex] != 0 or regridOverrides->cellDestroy[childCellIndex] != 0)
+        ) {
           weight.numberOfChangingCells++;
         }
       }
@@ -2564,8 +2572,10 @@ void peano4::topology::TreeTraversal::deriveBlockRoots(
     }
     for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell; vertexNumber++) {
       const auto vertexIndex = cell.vertexIndices[vertexNumber];
-      if (tree.getVertex(vertexIndex).getState() == peano4::grid::GridVertex::State::HangingVertex
-          or regridOverrides->vertexCreate[vertexIndex] != 0 or regridOverrides->vertexDestroy[vertexIndex] != 0) {
+      if (
+        tree.getVertex(vertexIndex).getState() == peano4::grid::GridVertex::State::HangingVertex
+        or regridOverrides->vertexCreate[vertexIndex] != 0 or regridOverrides->vertexDestroy[vertexIndex] != 0
+      ) {
         return false;
       }
     }
@@ -2588,8 +2598,10 @@ void peano4::topology::TreeTraversal::deriveBlockRoots(
     for (int childPosition = 0; childPosition < ChildrenPerCell; childPosition++) {
       const auto  childCellIndex = tree.getChild(cellIndex, childPosition);
       const auto& childCell      = tree.getCell(childCellIndex);
-      if (not tree.isRefined(childCellIndex)
-          or (childCell.level >= tree.getSpawnLevel() and not tree.subtreeTouchesRank(childCellIndex, _id))) {
+      if (
+        not tree.isRefined(childCellIndex)
+        or (childCell.level >= tree.getSpawnLevel() and not tree.subtreeTouchesRank(childCellIndex, _id))
+      ) {
         continue;
       }
       if (childCell.ownerTreeId == _id and cellCanRootATask(childCellIndex)) {
@@ -2684,8 +2696,10 @@ void peano4::topology::TreeTraversal::deriveBlockRoots(
       taskPlan.weight.numberOfChangingCells -= candidate.weight.numberOfChangingCells;
       taskPlan.candidates.erase(taskPlan.candidates.begin() + candidateNumber);
       _cellIsDirectTask[candidate.rootCell] = 1;
-      if (taskPlan.candidates.size() == 1
-          and taskPlan.candidates.front().weight.numberOfCells >= taskPlan.weight.numberOfCells) {
+      if (
+        taskPlan.candidates.size() == 1
+        and taskPlan.candidates.front().weight.numberOfCells >= taskPlan.weight.numberOfCells
+      ) {
         collectCutsOf(taskPlan.candidates.front().rootCell, taskPlan.weight.numberOfCells, taskPlan.candidates);
       }
 
@@ -2829,8 +2843,10 @@ void peano4::topology::TreeTraversal::deriveBlockRoots(
       int taskToSplit      = -1;
       int candidateToSplit = -1;
       for (int taskNumber = 0; taskNumber < static_cast<int>(taskPlans.size()); taskNumber++) {
-        if (taskPlans[taskNumber].weight.numberOfChangingCells <= targetChangingCells
-            or (taskToSplit >= 0 and taskPlans[taskNumber].weight.numberOfChangingCells <= taskPlans[taskToSplit].weight.numberOfChangingCells)) {
+        if (
+          taskPlans[taskNumber].weight.numberOfChangingCells <= targetChangingCells
+          or (taskToSplit >= 0 and taskPlans[taskNumber].weight.numberOfChangingCells <= taskPlans[taskToSplit].weight.numberOfChangingCells)
+        ) {
           continue;
         }
         const auto candidateNumber = bestCandidateOf(taskNumber, true);
@@ -2923,8 +2939,10 @@ void peano4::topology::TreeTraversal::deriveInterfaceMembership(const peano4::to
     if (derivesInChunks) {
       const std::atomic_ref<int> atomicEntry(entry);
       int                        expected = NoUnitEntry;
-      if (not atomicEntry.compare_exchange_strong(expected, entryOfUnit(unit), std::memory_order_relaxed)
-          and expected > NoUnitEntry and expected != entryOfUnit(unit)) {
+      if (
+        not atomicEntry.compare_exchange_strong(expected, entryOfUnit(unit), std::memory_order_relaxed)
+        and expected > NoUnitEntry and expected != entryOfUnit(unit)
+      ) {
         atomicEntry.store(CandidateMarkEntry, std::memory_order_relaxed);
       }
     } else if (entry == NoUnitEntry) {
@@ -3290,9 +3308,11 @@ peano4::topology::TreeTraversal::RegridTransition peano4::topology::TreeTraversa
       const int normal   = faceNumber % DIMENSIONS;
       const int faceSide = faceNumber < DIMENSIONS ? 0 : 1;
       for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell; vertexNumber++) {
-        if (((vertexNumber >> normal) & 1) == faceSide
-            and tree.getVertex(cell.vertexIndices[vertexNumber]).getState()
-              != peano4::grid::GridVertex::State::HangingVertex) {
+        if (
+          ((vertexNumber >> normal) & 1) == faceSide
+          and tree.getVertex(cell.vertexIndices[vertexNumber]).getState()
+            != peano4::grid::GridVertex::State::HangingVertex
+        ) {
           return false;
         }
       }
@@ -3521,9 +3541,10 @@ peano4::topology::TreeTraversal::RegridTransition peano4::topology::TreeTraversa
             }
             const auto targetVertexIndex =
               targetTree.getVertexAt(cell.level, vertexLatticeOfCorner(sourceTree, cell, vertexNumber));
-            if (targetVertexIndex < 0
-                or targetTree.getVertex(targetVertexIndex).getState()
-                  == peano4::grid::GridVertex::State::HangingVertex) {
+            if (
+              targetVertexIndex < 0
+              or targetTree.getVertex(targetVertexIndex).getState() == peano4::grid::GridVertex::State::HangingVertex
+            ) {
               continue;
             }
             const auto sourceSlot = sourceTraversal._rankTopology.vertexSlotOfTreeVertex[vertexIndex];
@@ -3824,9 +3845,11 @@ peano4::topology::TreeTraversal::RegridTransition peano4::topology::TreeTraversa
         const int normal   = faceNumber % DIMENSIONS;
         const int faceSide = faceNumber < DIMENSIONS ? 0 : 1;
         for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell; vertexNumber++) {
-          if (((vertexNumber >> normal) & 1) == faceSide
-              and tree.getVertex(cell.vertexIndices[vertexNumber]).getState()
-                != peano4::grid::GridVertex::State::HangingVertex) {
+          if (
+            ((vertexNumber >> normal) & 1) == faceSide
+            and tree.getVertex(cell.vertexIndices[vertexNumber]).getState()
+              != peano4::grid::GridVertex::State::HangingVertex
+          ) {
             return true;
           }
         }
@@ -3973,8 +3996,10 @@ peano4::topology::TreeTraversal::RegridTransition peano4::topology::TreeTraversa
         const int faceSide          = faceNumber < DIMENSIONS ? 0 : 1;
         bool      facePersistsInNew = false;
         for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell; vertexNumber++) {
-          if (((vertexNumber >> normal) & 1) == faceSide
-              and newTree.isVertexPersistentInPlan(cell.level, vertexLatticeOfCorner(tree, cell, vertexNumber))) {
+          if (
+            ((vertexNumber >> normal) & 1) == faceSide
+            and newTree.isVertexPersistentInPlan(cell.level, vertexLatticeOfCorner(tree, cell, vertexNumber))
+          ) {
             facePersistsInNew = true;
           }
         }
@@ -4014,9 +4039,10 @@ peano4::topology::TreeTraversal::RegridTransition peano4::topology::TreeTraversa
         vertexVisited[vertexIndex] = 1;
         const auto vertexLattice   = vertexLatticeOfCorner(unionTree, cell, vertexNumber);
         const bool keepsStructure  = cellKeepsStructure(cell, unionVertexNearChange);
-        if (keepsStructure
-              ? unionTree.getVertex(vertexIndex).getState() == peano4::grid::GridVertex::State::HangingVertex
-              : not newTree.isVertexPersistentInPlan(cell.level, vertexLattice)) {
+        if (
+          keepsStructure ? unionTree.getVertex(vertexIndex).getState() == peano4::grid::GridVertex::State::HangingVertex
+                         : not newTree.isVertexPersistentInPlan(cell.level, vertexLattice)
+        ) {
           continue;
         }
         std::array<int, peano4::CellsPerVertex> newOwners{};
@@ -4044,10 +4070,12 @@ peano4::topology::TreeTraversal::RegridTransition peano4::topology::TreeTraversa
         }
         for (int adjacencyEntry = 0; adjacencyEntry < peano4::CellsPerVertex; adjacencyEntry++) {
           const auto toucher = newOwners[adjacencyEntry];
-          if (toucher < 0 or sourceRank < 0
-              or std::find(unionOwners.begin(), unionOwners.end(), toucher) != unionOwners.end()
-              or std::find(newOwners.begin(), newOwners.begin() + adjacencyEntry, toucher)
-                != newOwners.begin() + adjacencyEntry) {
+          if (
+            toucher < 0 or sourceRank < 0
+            or std::find(unionOwners.begin(), unionOwners.end(), toucher) != unionOwners.end()
+            or std::find(newOwners.begin(), newOwners.begin() + adjacencyEntry, toucher)
+              != newOwners.begin() + adjacencyEntry
+          ) {
             continue;
           }
           if (sourceRank == _id and toucher != _id) {
@@ -4069,8 +4097,10 @@ peano4::topology::TreeTraversal::RegridTransition peano4::topology::TreeTraversa
         const bool keepsStructure    = cellKeepsStructure(cell, unionVertexNearChange);
         bool       facePersistsInNew = keepsStructure and faceHasPersistentVertex(unionTree, cell, faceNumber);
         for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell and not keepsStructure; vertexNumber++) {
-          if (((vertexNumber >> normal) & 1) == faceSide
-              and newTree.isVertexPersistentInPlan(cell.level, vertexLatticeOfCorner(unionTree, cell, vertexNumber))) {
+          if (
+            ((vertexNumber >> normal) & 1) == faceSide
+            and newTree.isVertexPersistentInPlan(cell.level, vertexLatticeOfCorner(unionTree, cell, vertexNumber))
+          ) {
             facePersistsInNew = true;
           }
         }
@@ -4131,8 +4161,10 @@ peano4::topology::TreeTraversal::RegridTransition peano4::topology::TreeTraversa
         const int sourceRank = unionOwners[0] >= 0 ? unionOwners[0] : unionOwners[1];
         for (int side = 0; side < 2; side++) {
           const auto toucher = newOwners[side];
-          if (toucher < 0 or sourceRank < 0 or toucher == unionOwners[0] or toucher == unionOwners[1]
-              or (side == 1 and toucher == newOwners[0])) {
+          if (
+            toucher < 0 or sourceRank < 0 or toucher == unionOwners[0] or toucher == unionOwners[1]
+            or (side == 1 and toucher == newOwners[0])
+          ) {
             continue;
           }
           if (sourceRank == _id and toucher != _id) {
@@ -4172,8 +4204,10 @@ peano4::topology::TreeTraversal::RegridTransition peano4::topology::TreeTraversa
         newVertexVisited[vertexIndex] = 1;
         const auto vertexLattice      = vertexLatticeOfCorner(newTree, cell, vertexNumber);
         const bool keepsStructure     = cellKeepsStructure(cell, newVertexNearChange);
-        if (keepsStructure ? newTree.getVertex(vertexIndex).getState() == peano4::grid::GridVertex::State::HangingVertex
-                           : not newTree.isVertexPersistentInPlan(cell.level, vertexLattice)) {
+        if (
+          keepsStructure ? newTree.getVertex(vertexIndex).getState() == peano4::grid::GridVertex::State::HangingVertex
+                         : not newTree.isVertexPersistentInPlan(cell.level, vertexLattice)
+        ) {
           continue;
         }
         std::array<int, peano4::CellsPerVertex> newOwners{};
@@ -4201,10 +4235,12 @@ peano4::topology::TreeTraversal::RegridTransition peano4::topology::TreeTraversa
         }
         for (int adjacencyEntry = 0; adjacencyEntry < peano4::CellsPerVertex; adjacencyEntry++) {
           const auto toucher = newOwners[adjacencyEntry];
-          if (toucher < 0 or sourceRank < 0
-              or std::find(unionOwners.begin(), unionOwners.end(), toucher) != unionOwners.end()
-              or std::find(newOwners.begin(), newOwners.begin() + adjacencyEntry, toucher)
-                != newOwners.begin() + adjacencyEntry) {
+          if (
+            toucher < 0 or sourceRank < 0
+            or std::find(unionOwners.begin(), unionOwners.end(), toucher) != unionOwners.end()
+            or std::find(newOwners.begin(), newOwners.begin() + adjacencyEntry, toucher)
+              != newOwners.begin() + adjacencyEntry
+          ) {
             continue;
           }
           if (toucher == _id and sourceRank != _id) {
@@ -4226,8 +4262,10 @@ peano4::topology::TreeTraversal::RegridTransition peano4::topology::TreeTraversa
         const bool keepsStructure    = cellKeepsStructure(cell, newVertexNearChange);
         bool       facePersistsInNew = keepsStructure and faceHasPersistentVertex(newTree, cell, faceNumber);
         for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell and not keepsStructure; vertexNumber++) {
-          if (((vertexNumber >> normal) & 1) == faceSide
-              and newTree.isVertexPersistentInPlan(cell.level, vertexLatticeOfCorner(newTree, cell, vertexNumber))) {
+          if (
+            ((vertexNumber >> normal) & 1) == faceSide
+            and newTree.isVertexPersistentInPlan(cell.level, vertexLatticeOfCorner(newTree, cell, vertexNumber))
+          ) {
             facePersistsInNew = true;
           }
         }
@@ -4279,8 +4317,10 @@ peano4::topology::TreeTraversal::RegridTransition peano4::topology::TreeTraversa
         const int sourceRank = unionOwners[0] >= 0 ? unionOwners[0] : unionOwners[1];
         for (int side = 0; side < 2; side++) {
           const auto toucher = newOwners[side];
-          if (toucher < 0 or sourceRank < 0 or toucher == unionOwners[0] or toucher == unionOwners[1]
-              or (side == 1 and toucher == newOwners[0])) {
+          if (
+            toucher < 0 or sourceRank < 0 or toucher == unionOwners[0] or toucher == unionOwners[1]
+            or (side == 1 and toucher == newOwners[0])
+          ) {
             continue;
           }
           if (toucher == _id and sourceRank != _id) {
@@ -5489,8 +5529,10 @@ void peano4::topology::TreeTraversal::descendWithPools(
       continue;
     }
     if (scope.writesEntitySlotsDirectly) {
-      if (scope.directTaskRoot >= 0 and cellIndex == tree.getCell(scope.directTaskRoot).parent
-          and childCellIndex != scope.directTaskRoot) {
+      if (
+        scope.directTaskRoot >= 0 and cellIndex == tree.getCell(scope.directTaskRoot).parent
+        and childCellIndex != scope.directTaskRoot
+      ) {
         continue;
       }
       if (_cellIsDirectTask[childCellIndex] != 0 and childCellIndex != scope.directTaskRoot) {
@@ -5558,8 +5600,10 @@ void peano4::topology::TreeTraversal::descendWithPools(
     const auto regridRefinementMask = [&](const std::vector<char>& refinedFlags) {
       std::uint8_t mask = 0;
       for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell; vertexNumber++) {
-        if (fineGridVertices[vertexNumber].getState() != peano4::grid::GridVertex::State::HangingVertex
-            and refinedFlags[childCell.vertexIndices[vertexNumber]] != 0) {
+        if (
+          fineGridVertices[vertexNumber].getState() != peano4::grid::GridVertex::State::HangingVertex
+          and refinedFlags[childCell.vertexIndices[vertexNumber]] != 0
+        ) {
           mask |= static_cast<std::uint8_t>(1U << vertexNumber);
         }
       }
@@ -5848,8 +5892,10 @@ void peano4::topology::TreeTraversal::descendWithPools(
       const int  faceSide      = faceNumber < DIMENSIONS ? 0 : 1;
       bool       faceIsHanging = true;
       for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell; vertexNumber++) {
-        if (((vertexNumber >> normal) & 1) == faceSide
-            and fineGridVertices[vertexNumber].getState() != peano4::grid::GridVertex::State::HangingVertex) {
+        if (
+          ((vertexNumber >> normal) & 1) == faceSide
+          and fineGridVertices[vertexNumber].getState() != peano4::grid::GridVertex::State::HangingVertex
+        ) {
           faceIsHanging = false;
         }
       }

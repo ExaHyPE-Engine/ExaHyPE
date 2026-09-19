@@ -1,0 +1,43 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+/**
+ * Copies the outer volume layers of one patch into the half of every adjacent face overlap that
+ * this cell owns, and stamps those halves with the time of the patch. The projection derives
+ * each of these halves, so their transfer flag goes down.
+ */
+template <
+  int NumberOfDofsPerAxis,
+  int Overlap,
+  int NumberOfUnknowns,
+  typename Precision,
+  typename FaceLabelEnumerator,
+  typename FaceDataEnumerator>
+INLINE_METHOD void exahype2::fv::projectPatchOntoFaces(
+  const FaceLabelEnumerator& faceLabels,
+  const Precision* const     patch,
+  const FaceDataEnumerator&  faceData,
+  const double               timeStamp
+) {
+  assertion(patch != nullptr);
+
+  Precision* outputFaces[peano4::FacesPerCell];
+  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+    outputFaces[faceNumber] = faceData(faceNumber).data();
+  }
+
+  exahype2::projectPatch<NumberOfDofsPerAxis, Overlap, NumberOfUnknowns, Precision>(patch, outputFaces);
+
+  for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
+    auto& lowerFaceLabel = faceLabels(dimension);
+    auto& upperFaceLabel = faceLabels(dimension + DIMENSIONS);
+
+    lowerFaceLabel.setUpdated(1, true);
+    lowerFaceLabel.setUpdatedTimeStamp(1, timeStamp);
+    upperFaceLabel.setUpdated(0, true);
+    upperFaceLabel.setUpdatedTimeStamp(0, timeStamp);
+
+    lowerFaceLabel.setRequiresDataTransfer(1, false);
+    upperFaceLabel.setRequiresDataTransfer(0, false);
+  }
+}

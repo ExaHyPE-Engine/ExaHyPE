@@ -1,0 +1,22 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#pragma once
+
+#include "Abstract{{CLASSNAME}}.h"
+
+namespace {{NAMESPACE | join("::")}} {
+  class {{CLASSNAME}};
+} // namespace {{NAMESPACE | join("::")}}
+
+class {{NAMESPACE | join("::")}}::{{CLASSNAME}} final : public {{NAMESPACE | join("::")}}::Abstract{{CLASSNAME}} {
+public:
+  TARGET_DECLARE
+{%- if SOLVER_PDE_TERM_DECLARATIONS %}
+  {{SOLVER_PDE_TERM_DECLARATIONS | indent(2)}}
+{%- endif %}
+{%- if SOLVER_USER_DECLARATIONS.strip() %}
+
+  {{SOLVER_USER_DECLARATIONS.strip()}}
+{%- endif %}
+  TARGET_DECLARE_END
+};

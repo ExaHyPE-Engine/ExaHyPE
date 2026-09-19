@@ -10,9 +10,6 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
-#if not defined(__NVCOMPILER)
-#include <bit>
-#endif
 #include <bitset>
 #include <cassert>
 #include <cctype>

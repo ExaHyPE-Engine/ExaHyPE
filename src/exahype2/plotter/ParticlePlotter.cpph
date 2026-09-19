@@ -1,0 +1,64 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+/**
+ * Returns whether the vertex sits on an upper wall of a periodic domain.
+ */
+INLINE_METHOD bool exahype2::plotter::isAtUpperPeriodicBoundary(
+  const peano4::dataview::VertexMarker&        marker,
+  const std::bitset<DIMENSIONS>&               periodicBoundaries,
+  const tarch::la::Vector<DIMENSIONS, double>& domainOffset,
+  const tarch::la::Vector<DIMENSIONS, double>& domainWidth
+) {
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    if (periodicBoundaries[axis] and tarch::la::equals(marker.getX()(axis), domainOffset(axis) + domainWidth(axis))) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Returns the plotter of the attribute at this position in the list the plotter opened with.
+ */
+INLINE_METHOD tarch::plotter::FileWriter::CellDataPlotter& exahype2::plotter::ParticlePlotter::getAttributePlotter(
+  const int index
+) {
+  assertion(index >= 0, index);
+  assertion(index < static_cast<int>(_attributePlotters.size()), index, _attributePlotters.size());
+  assertion(_attributePlotters[index]);
+  return *_attributePlotters[index];
+}
+
+/**
+ * Plots the local particles of one vertex and lets the caller write their attributes. The visit
+ * at an upper periodic wall skips the vertex, so every particle appears once.
+ */
+template <typename ParticleSet, typename AttributePlots>
+INLINE_METHOD void exahype2::plotter::ParticlePlotter::plotParticles(
+  const peano4::dataview::VertexMarker&        marker,
+  ParticleSet&                                 particles,
+  const tarch::la::Vector<DIMENSIONS, double>& domainOffset,
+  const tarch::la::Vector<DIMENSIONS, double>& domainWidth,
+  const std::bitset<DIMENSIONS>&               periodicBoundaries,
+  AttributePlots                               attributePlots
+) {
+  assertion(_piece.isOpen());
+
+  if (periodicBoundaries.any() and isAtUpperPeriodicBoundary(marker, periodicBoundaries, domainOffset, domainWidth)) {
+    return;
+  }
+
+  using Particle                           = typename ParticleSet::DoFType;
+  constexpr int RefinementLevelOfParticles = 1;
+
+  for (auto* const particle : particles) {
+    if (particle->getParallelState() == Particle::ParallelState::Local) {
+      const int vertexIndex = _piece.plotVertex(particle->getX());
+      const int cellIndex   = _piece.plotPoint(vertexIndex);
+
+      _piece.plotCellMarkers(cellIndex, RefinementLevelOfParticles);
+      attributePlots(cellIndex, particle);
+    }
+  }
+}

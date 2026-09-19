@@ -1,0 +1,94 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#pragma once
+
+#include "exahype2/Solver.h"
+
+#include "tarch/la/Vector.h"
+#include "tarch/Assertions.h"
+#include "tarch/mpi/Rank.h"
+
+{% for include in SOLVER_INCLUDES %}#include "{{include}}"
+{% endfor %}
+namespace {{NAMESPACE | join("::")}} {
+  class {{CLASSNAME}};
+} // namespace {{NAMESPACE | join("::")}}
+
+/**
+ * A subclass that overrides one of the start or finish routines calls the implementation of this
+ * class, which maintains _solverState and reduces the counter of troubled cells.
+ */
+class {{NAMESPACE | join("::")}}::{{CLASSNAME}} : public ::exahype2::Solver {
+  public:
+    enum class SolverState {
+      GridConstruction,
+      GridInitialisation,
+      TimeStepping,
+      Plotting,
+      PlottingAfterGridInitialisation,
+      Suspended
+    };
+
+    static std::string toString(SolverState state);
+
+    {{CLASSNAME}}();
+    {{CLASSNAME}}(const {{CLASSNAME}}& other) = delete;
+    {{CLASSNAME}}({{CLASSNAME}}&& other) = delete;
+    {{CLASSNAME}}& operator=(const {{CLASSNAME}}& other) = delete;
+    {{CLASSNAME}}& operator=({{CLASSNAME}}&& other) = delete;
+    ~{{CLASSNAME}}() override = default;
+
+    SolverState getSolverState() const;
+
+    double getMinTimeStamp() const override final;
+    double getMaxTimeStamp() const override final;
+    double getMinTimeStepSize() const override final;
+    double getMaxTimeStepSize() const override final;
+
+    double getMaxPatchSize() const override final;
+    double getMinPatchSize() const override final;
+    double getMaxCellSize() const override final;
+    double getMinCellSize() const override final;
+
+    int getNumberOfDoFs() const override final;
+
+    void startGridConstructionStep() override;
+    void finishGridConstructionStep() override;
+
+    void startGridInitialisationStep() override;
+    void finishGridInitialisationStep() override;
+
+    void suspendSolversForOneGridSweep() override;
+
+    void startTimeStep() override;
+    void finishTimeStep() override;
+
+    void startPlottingStep() override;
+    void finishPlottingStep() override;
+
+    bool mayPlot() const override;
+
+    bool isFirstGridSweepOfTimeStep() const;
+    bool isLastGridSweepOfTimeStep() const;
+
+    void startSimulation() override;
+    void finishSimulation() override;
+
+    void addTroubledCell();
+    int getNumberOfTroubledCells() const;
+
+  {% if not ADMISSIBILITY_IS_USER_DEFINED %}
+    static bool isPhysicallyAdmissible(
+        const {{REGULAR_SOLVER_STORAGE_PRECISION}}* const                         Q,
+        const tarch::la::Vector<DIMENSIONS,double>& x,
+        const tarch::la::Vector<DIMENSIONS,double>& h,
+        double timeStamp);
+  {% endif %}
+
+  protected:
+    SolverState _solverState{SolverState::GridConstruction};
+
+    int _totalNumberOfTroubledCells{0};
+
+  {{SOLVER_USER_DECLARATIONS}}
+};

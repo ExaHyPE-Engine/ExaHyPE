@@ -61,20 +61,20 @@ project = exahype2.Project(
     max_grid_levels=args.grid_levels,
 )
 
-fv_solver = exahype2.solvers.fv.musclhancock.GlobalFixedTimeStep(
+fv_solver = exahype2.fv.Solver(
     name="MUSCLHancockSolver",
     patch_size=args.degrees_of_freedom,
     unknowns={"rho": 1, "rhoU": project.dimensions, "rhoE": 1},
     auxiliary_variables=0,
-    normalised_time_step_size=0.0001,
+    time_stepping=exahype2.TimeStepping.Fixed(0.0001),
+    scheme=exahype2.fv.MusclHancock(limiter=exahype2.fv.Limiter.vanalbada),
 )
 
-fv_solver.set_implementation(
-    initial_conditions=initial_conditions,
+fv_solver.set_pde_terms(
+    initial_condition=initial_conditions,
     boundary_conditions=boundary_conditions,
     flux=flux,
     max_eigenvalue=max_eigenvalue,
-    limiter=exahype2.solvers.fv.musclhancock.Limiter.vanalbada,
 )
 
 project.add_solver(fv_solver)

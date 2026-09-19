@@ -1,6 +1,5 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-"""Tests for compare_solution: field selection scope and order-invariant cell signatures."""
 
 import unittest
 
@@ -126,7 +125,7 @@ class CompareSolutionTest(unittest.TestCase):
         self.assertIsNotNone(self.compare(left, right, unordered=True))
 
     def test_rotated_connectivity_matches_unordered_at_tiny_scale(self):
-        # Cells far smaller than any fixed rounding quantum: the canonical vertex order and
+        # Cells far smaller than any fixed rounding quantum: The canonical vertex order and
         # the location matching must work from the cell size, not from an absolute scale.
         width = 1.0e-10
         points = [[0.0, 0.0], [width, 0.0], [width, width], [0.0, width]]
@@ -136,7 +135,7 @@ class CompareSolutionTest(unittest.TestCase):
         self.assertIsNone(self.compare(left, right, unordered=True))
 
     def test_rotated_connectivity_matches_unordered_for_anisotropic_cell(self):
-        # A 1 x 0.1 cell: the canonical vertex order quantises each axis by the
+        # A 1 x 0.1 cell: The canonical vertex order quantises each axis by the
         # cell's own extent along that axis; a single per-cell quantum would
         # collapse the thin axis and falsely reject rotated connectivity.
         points = [[0.0, 0.0], [1.0, 0.0], [1.0, 0.1], [0.0, 0.1]]
@@ -166,8 +165,8 @@ class CompareSolutionTest(unittest.TestCase):
         )
         self.assertIsNone(self.compare(left, right, unordered=True))
 
-    def test_rounding_noise_on_a_shared_coordinate_matches_unordered(self):
-        # Two vertices of a quad share a coordinate analytically, but different writers can
+    def test_rounding_noise_on_a_coincident_coordinate_matches_unordered(self):
+        # Two vertices of a quad carry the same coordinate analytically, but different writers
         # store it with one-ulp differences. The tie in the canonical sort must not break on
         # that noise, or the same cell compares against a permuted vertex list.
         base = 0.888888888888888888

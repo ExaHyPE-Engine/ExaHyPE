@@ -11,7 +11,11 @@ namespace exahype2::amr::tests {
 class exahype2::amr::tests::RestrictionTest final : public tarch::tests::TestCase {
 public:
   RestrictionTest();
-  ~RestrictionTest() override = default;
+  RestrictionTest(const RestrictionTest&)            = delete;
+  RestrictionTest(RestrictionTest&&)                 = delete;
+  RestrictionTest& operator=(const RestrictionTest&) = delete;
+  RestrictionTest& operator=(RestrictionTest&&)      = delete;
+  ~RestrictionTest() override                        = default;
 
   void run() override;
 

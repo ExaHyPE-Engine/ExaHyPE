@@ -54,15 +54,13 @@ namespace exahype2::dg {
     const Value*      samplingMatrix,
     ObservableMapping mapStateToObservables
   );
-} // namespace exahype2::dg
-TARGET_DECLARE_END
 
-namespace exahype2::dg {
   template <int Dimensions>
-  INLINE_METHOD bool isCoarseVertexOnFacetOfHangingVertex(
+  INLINE_METHOD GPU_CALLABLE_METHOD bool isCoarseVertexOnFacetOfHangingVertex(
     const tarch::la::Vector<Dimensions, int>& hangingVertexPosition,
     int                                       coarseVertexNumber
   );
 } // namespace exahype2::dg
+TARGET_DECLARE_END
 
 #include "exahype2/dg/Limiter.cpph"

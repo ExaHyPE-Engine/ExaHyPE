@@ -43,19 +43,21 @@ project = exahype2.Project(
     max_grid_levels=args.max_grid_levels,
 )
 
-solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
+solver = exahype2.dg.ader.Solver(
     name="ADERDGSolver",
     order=(args.degrees_of_freedom - 1),
-    time_step_relaxation=0.9,
     unknowns={"p": 1, "u": project.dimensions},
     auxiliary_variables=0,
+    time_stepping=exahype2.TimeStepping.Adaptive(0.9),
+    linear=True,
+    point_sources=1,
 )
 
 # The off-centre Gaussian source lies on the domain diagonal, so rigid-wall
 # reflections preserve permutation symmetry. The detail criterion tracks the
 # radiated ring.
-solver.set_implementation(
-    initial_conditions="""
+solver.set_pde_terms(
+    initial_condition="""
   Q[Shortcuts::p] = 0.0;
   for (int d = 0; d < DIMENSIONS; d++) {
     Q[Shortcuts::u + d] = 0.0;
@@ -105,7 +107,6 @@ solver.set_implementation(
   }
   F[Shortcuts::u + normal] = (1.0 / RHO) * Q[Shortcuts::p];
 """,
-    number_of_point_sources=1,
     point_source="""
   forceVector[Shortcuts::p] = 0.0;
   for (int d = 0; d < DIMENSIONS; d++) {
@@ -118,13 +119,12 @@ solver.set_implementation(
     -(t - SourcePeakTime) * (t - SourcePeakTime) / (2.0 * SourcePulseWidth * SourcePulseWidth)
   );
 """,
-    init_point_source_location="""
+    point_source_locations="""
   for (int d = 0; d < DIMENSIONS; d++) {
     location[0][d] = -0.7;
   }
 """,
 )
-solver.add_kernel_optimisations(is_linear=True)
 
 project.add_solver(solver)
 

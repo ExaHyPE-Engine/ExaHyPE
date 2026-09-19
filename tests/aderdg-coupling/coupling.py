@@ -1,3 +1,5 @@
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
 import argparse
 import os
 import sys
@@ -40,9 +42,14 @@ def parse_arguments():
         default=0,
         help="Polynomial type, 0 is Gauss-Legendre, 1 is Gauss-Lobatto",
     )
-    parser.add_argument("-pr", "--precision", choices=available_precisions, default="fp64")
     parser.add_argument(
-        "-s", "--scenario", choices=scenario_factories.keys(), default="SWERadialDamBreak"
+        "-pr", "--precision", choices=available_precisions, default="fp64"
+    )
+    parser.add_argument(
+        "-s",
+        "--scenario",
+        choices=scenario_factories.keys(),
+        default="SWERadialDamBreak",
     )
     args, _ = parser.parse_known_args()
     if args.help:
@@ -56,11 +63,7 @@ scenario = scenario_factories[args.scenario]()
 order = args.degrees_of_freedom - 1
 end_time = scenario._end_time if args.end_time is None else args.end_time
 
-polynomials = (
-    exahype2.solvers.aderdg.Polynomials.Gauss_Legendre
-    if args.polynomials == 0
-    else exahype2.solvers.aderdg.Polynomials.Gauss_Lobatto
-)
+basis = exahype2.dg.GaussLegendre if args.polynomials == 0 else exahype2.dg.GaussLobatto
 
 project = exahype2.Project(
     ["tests", "exahype2", "aderdg"],
@@ -82,22 +85,19 @@ if project.dimensions != scenario._dimensions:
         f"was configured for {project.dimensions}D."
     )
 
-solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
+solver = exahype2.dg.ader.Solver(
     name=scenario.__class__.__name__,
     order=order,
-    time_step_relaxation=0.9,
     unknowns=scenario._equation.num_unknowns,
     auxiliary_variables=scenario._equation.num_auxiliary_variables,
-)
-
-solver.add_kernel_optimisations(
-    polynomials=polynomials,
-    is_linear=scenario._equation.is_linear,
+    time_stepping=exahype2.TimeStepping.Adaptive(0.9),
+    basis=basis,
+    linear=scenario._equation.is_linear,
     precision=args.precision,
 )
 
-solver.set_implementation(
-    initial_conditions=scenario.initial_conditions(),
+solver.set_pde_terms(
+    initial_condition=scenario.initial_conditions(),
     boundary_conditions=scenario.boundary_conditions(),
     max_eigenvalue=scenario._equation.eigenvalues(),
     flux=scenario._equation.flux(),
@@ -105,32 +105,28 @@ solver.set_implementation(
     riemann_solver=scenario._equation.riemann_solver(),
 )
 
-if scenario.analytical_solution() != exahype2.solvers.PDETerms.None_Implementation:
-    exahype2.solvers.aderdg.ErrorMeasurement(
-        solver,
-        error_measurement_implementation=scenario.analytical_solution(),
-        output_file_name="Error_" + scenario.__class__.__name__,
-        time_delta_between_snapshots=scenario._end_time / 100.0,
+if scenario.analytical_solution() is not None:
+    solver.set_pde_terms(analytical_solution=scenario.analytical_solution())
+    solver.measure_error(
+        file="Error_" + scenario.__class__.__name__,
+        every=scenario._end_time / 100.0,
     )
 
 project.add_solver(solver)
 
-solver2 = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
+solver2 = exahype2.dg.ader.Solver(
     name=scenario.__class__.__name__ + "2",
     order=order,
-    time_step_relaxation=0.9,
     unknowns=scenario._equation.num_unknowns,
     auxiliary_variables=scenario._equation.num_auxiliary_variables,
-)
-
-solver2.add_kernel_optimisations(
-    polynomials=polynomials,
-    is_linear=scenario._equation.is_linear,
+    time_stepping=exahype2.TimeStepping.Adaptive(0.9),
+    basis=basis,
+    linear=scenario._equation.is_linear,
     precision="fp32",
 )
 
-solver2.set_implementation(
-    initial_conditions=scenario.initial_conditions(),
+solver2.set_pde_terms(
+    initial_condition=scenario.initial_conditions(),
     boundary_conditions=scenario.boundary_conditions(),
     max_eigenvalue=scenario._equation.eigenvalues(),
     flux=scenario._equation.flux(),
@@ -138,23 +134,21 @@ solver2.set_implementation(
     riemann_solver=scenario._equation.riemann_solver(),
 )
 
-if scenario.analytical_solution() != exahype2.solvers.PDETerms.None_Implementation:
-    exahype2.solvers.aderdg.ErrorMeasurement(
-        solver2,
-        error_measurement_implementation=scenario.analytical_solution(),
-        output_file_name="Error_" + scenario.__class__.__name__,
-        time_delta_between_snapshots=scenario._end_time / 100.0,
+if scenario.analytical_solution() is not None:
+    solver2.set_pde_terms(analytical_solution=scenario.analytical_solution())
+    solver2.measure_error(
+        file="Error2_" + scenario.__class__.__name__,
+        every=scenario._end_time / 100.0,
     )
 
 project.add_solver(solver2)
 
-sys.path.insert(0, os.path.abspath("./coupling"))
 from coupling import StaticCoupling
 
 limiter = StaticCoupling(
     name="limitingSolver",
-    regularSolver=solver,
-    limitingSolver=solver2,
+    regular_solver=solver,
+    limiting_solver=solver2,
     limiting_criterion_implementation="""
   return x[0]<=0.0;
 """,

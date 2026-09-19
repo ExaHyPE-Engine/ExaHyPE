@@ -53,20 +53,20 @@ unknowns are a velocity of multiplicity 3 and a stress of multiplicity 6:
         periodic_bc  = [False, False, False],
     )
 
-    aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
+    aderdg_solver = exahype2.dg.ader.Solver(
         name                 = "ADERDGSolver",
         order                = 4,
-        time_step_relaxation = 0.9,
         unknowns             = {"v": 3, "sigma": 6},
         auxiliary_variables  = {},
+        time_stepping        = exahype2.TimeStepping.Adaptive(0.9),
+        linear               = True,
     )
-    aderdg_solver.set_implementation(
-        initial_conditions  = exahype2.solvers.PDETerms.User_Defined_Implementation,
-        boundary_conditions = exahype2.solvers.PDETerms.User_Defined_Implementation,
-        flux                = exahype2.solvers.PDETerms.User_Defined_Implementation,
-        max_eigenvalue      = exahype2.solvers.PDETerms.User_Defined_Implementation,
+    aderdg_solver.set_pde_terms(
+        initial_condition   = True,
+        boundary_conditions = True,
+        flux                = True,
+        max_eigenvalue      = True,
     )
-    aderdg_solver.add_kernel_optimisations(is_linear=True)
     my_project.add_solver(aderdg_solver)
 
 # The Implementation File

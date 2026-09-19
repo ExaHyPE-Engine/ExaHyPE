@@ -141,8 +141,10 @@ INLINE_METHOD std::vector<Particle*> peano4::particles::createParticlesAlignedWi
     if (tarch::la::smaller(leftPosition, voxelCentre(dimension) - 0.5 * voxelSize(dimension))) {
       ++leftParticleNumber;
     }
-    if (tarch::la::greaterEquals(rightPosition, voxelCentre(dimension) + 0.5 * voxelSize(dimension))
-        or tarch::la::greaterEquals(rightPosition, domainOffset(dimension) + domainSize(dimension))) {
+    if (
+      tarch::la::greaterEquals(rightPosition, voxelCentre(dimension) + 0.5 * voxelSize(dimension))
+      or tarch::la::greaterEquals(rightPosition, domainOffset(dimension) + domainSize(dimension))
+    ) {
       --rightParticleNumber;
     }
 

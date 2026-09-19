@@ -11,6 +11,11 @@ namespace exahype2::dg::tests {
 class exahype2::dg::tests::SubcellProjectionTest final : public tarch::tests::TestCase {
 public:
   SubcellProjectionTest();
+  SubcellProjectionTest(const SubcellProjectionTest&)            = delete;
+  SubcellProjectionTest(SubcellProjectionTest&&)                 = delete;
+  SubcellProjectionTest& operator=(const SubcellProjectionTest&) = delete;
+  SubcellProjectionTest& operator=(SubcellProjectionTest&&)      = delete;
+  ~SubcellProjectionTest() override                              = default;
 
   void run() override;
 

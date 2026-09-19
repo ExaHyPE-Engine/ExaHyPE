@@ -1,0 +1,58 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+/**
+ * Creates the particles of particleData whose position the cell of marker owns.
+ *
+ * particleData holds DIMENSIONS coordinates followed by UnknownsPerParticle values per
+ * particle, and particleAlreadyInserted carries one flag per particle which this routine raises
+ * once the particle enters a cell.
+ */
+template <typename Particle, int UnknownsPerParticle, typename Vertices>
+INLINE_METHOD void exahype2::particles::insertParticlesByCoordinatesAndData(
+  const peano4::dataview::CellMarker&          marker,
+  const std::vector<double>&                   particleData,
+  std::vector<bool>&                           particleAlreadyInserted,
+  const tarch::la::Vector<DIMENSIONS, double>& domainOffset,
+  Vertices&                                    fineGridVertices,
+  const int                                    treeId,
+  int&                                         particleNumberOnThisTree
+) {
+  static_assert(UnknownsPerParticle >= 0);
+  constexpr int ValuesPerParticle = UnknownsPerParticle + DIMENSIONS;
+
+  const std::size_t numberOfParticles = particleData.size() / ValuesPerParticle;
+  assertion(particleData.size() % ValuesPerParticle == 0, particleData.size(), ValuesPerParticle);
+  assertion(particleAlreadyInserted.size() == numberOfParticles, particleAlreadyInserted.size(), numberOfParticles);
+
+  for (std::size_t particleIndex = 0; particleIndex < numberOfParticles; ++particleIndex) {
+    if (particleAlreadyInserted[particleIndex]) {
+      continue;
+    }
+
+    tarch::la::Vector<DIMENSIONS, double> position;
+    for (int dimension = 0; dimension < DIMENSIONS; ++dimension) {
+      position(dimension) = particleData[particleIndex * ValuesPerParticle + dimension];
+    }
+
+    if (exahype2::particles::ownsCoordinate(marker, position, domainOffset)) {
+      std::vector<double> initialData;
+      initialData.reserve(UnknownsPerParticle);
+      for (int attributeIndex = DIMENSIONS; attributeIndex < ValuesPerParticle; ++attributeIndex) {
+        initialData.push_back(particleData[particleIndex * ValuesPerParticle + attributeIndex]);
+      }
+
+      auto* const newParticle = new Particle();
+      peano4::particles::initWithData(*newParticle, position, 0.0, initialData);
+
+      newParticle->setNumber(0, treeId);
+      newParticle->setNumber(1, particleNumberOnThisTree);
+
+      ++particleNumberOnThisTree;
+
+      peano4::particles::insertParticleIntoCell(marker, newParticle, fineGridVertices, treeId);
+
+      particleAlreadyInserted[particleIndex] = true;
+    }
+  }
+}

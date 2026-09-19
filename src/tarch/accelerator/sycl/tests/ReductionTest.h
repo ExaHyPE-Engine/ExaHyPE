@@ -8,7 +8,7 @@ namespace tarch::accelerator::sycl::tests {
   class ReductionTest;
 } // namespace tarch::accelerator::sycl::tests
 
-class tarch::accelerator::sycl::tests::ReductionTest final: public tarch::tests::TestCase {
+class tarch::accelerator::sycl::tests::ReductionTest final : public tarch::tests::TestCase {
 private:
   void testParallelReduction();
 

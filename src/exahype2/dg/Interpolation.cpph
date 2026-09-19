@@ -1,0 +1,127 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+template <typename T>
+INLINE_METHOD exahype2::dg::FaceProlongation<T>::FaceProlongation(
+  const double* const prolongationMatrix1D,
+  const int           numberOfDofsPerAxis,
+  const int           numberOfValuesPerNode
+) :
+  _prolongationMatrix1D(prolongationMatrix1D),
+  _numberOfDofsPerAxis(numberOfDofsPerAxis),
+  _numberOfValuesPerNode(numberOfValuesPerNode) {
+  assertion(prolongationMatrix1D != nullptr);
+  assertion(numberOfDofsPerAxis > 0, numberOfDofsPerAxis);
+  assertion(numberOfValuesPerNode > 0, numberOfValuesPerNode);
+}
+
+template <typename T>
+INLINE_METHOD void exahype2::dg::FaceProlongation<T>::operator()(
+  const peano4::dataview::FaceMarker& marker,
+  const T* NOALIAS const              coarseFaceValues,
+  T* NOALIAS const                    fineFaceValues,
+  [[maybe_unused]] const int          side
+) const {
+  assertion(coarseFaceValues != nullptr);
+  assertion(fineFaceValues != nullptr);
+
+  const int  entriesPerTransferMatrix = _numberOfDofsPerAxis * _numberOfDofsPerAxis;
+  const auto subfacePosition          = marker.getRelativePositionWithinFatherFace();
+
+  const double* prolongationMatrixPerAxis[DIMENSIONS - 1];
+  for (int tangentialAxis = 0; tangentialAxis < DIMENSIONS - 1; tangentialAxis++) {
+    assertion(
+      subfacePosition(tangentialAxis) >= 0
+        and subfacePosition(tangentialAxis) < peano4::sfc::ActiveCurve::SubdivisionFactor,
+      subfacePosition,
+      marker.toString()
+    );
+    prolongationMatrixPerAxis[tangentialAxis] =
+      _prolongationMatrix1D + subfacePosition(tangentialAxis) * entriesPerTransferMatrix;
+  }
+  exahype2::amr::interpolateFaceFromCoarse(
+    fineFaceValues,
+    coarseFaceValues,
+    prolongationMatrixPerAxis,
+    _numberOfDofsPerAxis,
+    _numberOfValuesPerNode
+  );
+}
+
+template <typename T>
+INLINE_METHOD exahype2::dg::CellProlongation<T>::CellProlongation(
+  const double* const prolongationMatrix1D,
+  const int           numberOfDofsPerAxis,
+  const int           numberOfValuesPerNode
+) :
+  _prolongationMatrix1D(prolongationMatrix1D),
+  _numberOfDofsPerAxis(numberOfDofsPerAxis),
+  _numberOfValuesPerNode(numberOfValuesPerNode) {
+  assertion(prolongationMatrix1D != nullptr);
+  assertion(numberOfDofsPerAxis > 0, numberOfDofsPerAxis);
+  assertion(numberOfValuesPerNode > 0, numberOfValuesPerNode);
+}
+
+template <typename T>
+INLINE_METHOD void exahype2::dg::CellProlongation<T>::operator()(
+  const peano4::dataview::CellMarker& marker,
+  const T* NOALIAS const              coarseGridValues,
+  T* NOALIAS const                    fineGridValues
+) const {
+  assertion(coarseGridValues != nullptr);
+  assertion(fineGridValues != nullptr);
+
+  const int entriesPerTransferMatrix = _numberOfDofsPerAxis * _numberOfDofsPerAxis;
+
+  const double* prolongationMatrixPerAxis[DIMENSIONS];
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    const int childPosition = marker.getRelativePositionWithinFatherCell()(axis);
+    assertion(
+      childPosition >= 0 and childPosition < peano4::sfc::ActiveCurve::SubdivisionFactor,
+      childPosition,
+      marker.toString()
+    );
+    prolongationMatrixPerAxis[axis] = _prolongationMatrix1D + childPosition * entriesPerTransferMatrix;
+  }
+  exahype2::amr::applyTensorProductOrderInvariant(
+    fineGridValues,
+    coarseGridValues,
+    prolongationMatrixPerAxis,
+    _numberOfDofsPerAxis,
+    _numberOfDofsPerAxis,
+    _numberOfValuesPerNode
+  );
+}
+
+template <typename T>
+INLINE_METHOD exahype2::dg::NodalCellInterpolation<T>::NodalCellInterpolation(
+  const double* const interpolationMatrix1D,
+  const int           numberOfDofsPerAxis,
+  const int           numberOfValuesPerNode
+) :
+  _interpolationMatrix1D(interpolationMatrix1D),
+  _numberOfDofsPerAxis(numberOfDofsPerAxis),
+  _numberOfValuesPerNode(numberOfValuesPerNode) {
+  assertion(interpolationMatrix1D != nullptr);
+  assertion(numberOfDofsPerAxis > 0, numberOfDofsPerAxis);
+  assertion(numberOfValuesPerNode > 0, numberOfValuesPerNode);
+}
+
+template <typename T>
+INLINE_METHOD void exahype2::dg::NodalCellInterpolation<T>::operator()(
+  const peano4::dataview::CellMarker& marker,
+  const T* NOALIAS const              coarseGridValues,
+  T* NOALIAS const                    fineGridValues
+) const {
+  assertion(coarseGridValues != nullptr);
+  assertion(fineGridValues != nullptr);
+
+  exahype2::amr::interpolateCell(
+    marker,
+    coarseGridValues,
+    fineGridValues,
+    _interpolationMatrix1D,
+    _numberOfDofsPerAxis,
+    _numberOfValuesPerNode
+  );
+}

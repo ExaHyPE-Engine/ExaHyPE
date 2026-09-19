@@ -14,7 +14,6 @@ namespace exahype2::fv {
   struct VolumeSizeAndCentre;
 
   TARGET_DECLARE
-
   template <int Dimensions, int NumberOfVolumesPerAxisInPatch>
   static INLINE_METHOD GPU_CALLABLE_METHOD VolumeSizeAndCentre<Dimensions> getVolumeSizeAndCentre(
     const tarch::la::Vector<Dimensions, double>& x,
@@ -85,6 +84,16 @@ namespace exahype2::fv {
     const tarch::la::Vector<3, int>&    index
   );
 
+  template <typename T>
+  INLINE_METHOD GPU_CALLABLE_METHOD void copyHalfOfHalo(
+    int              unknownsPlusAuxiliaryVariables,
+    int              numberOfVolumesPerAxisInPatch,
+    int              haloSize,
+    int              normal,
+    bool             isRightLayer,
+    const T* NOALIAS sourceQ,
+    T* NOALIAS       destinationQ
+  );
   TARGET_DECLARE_END
 
   double getVolumeLength(const tarch::la::Vector<2, double>& h, int numberOfVolumesPerAxisInPatch);
@@ -114,17 +123,6 @@ namespace exahype2::fv {
     int              numberOfVolumesPerAxisInPatch,
     int              haloSize,
     bool             prettyPrint = false
-  );
-
-  template <typename T>
-  void copyHalfOfHalo(
-    int              unknownsPlusAuxiliaryVariables,
-    int              numberOfVolumesPerAxisInPatch,
-    int              haloSize, // The halo size equals the overlap of the face data.
-    int              normal,
-    bool             isRightLayer,
-    const T* NOALIAS sourceQ,
-    T* NOALIAS       destinationQ
   );
 } // namespace exahype2::fv
 

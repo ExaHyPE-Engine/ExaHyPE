@@ -37,6 +37,4 @@ std::string tarch::reader::CSVReader::getRow(const int rowIndex) const {
   return csvLines.at(rowIndex);
 }
 
-int tarch::reader::CSVReader::getNumberOfRows() const {
-  return numberOfRows;
-}
+int tarch::reader::CSVReader::getNumberOfRows() const { return numberOfRows; }
