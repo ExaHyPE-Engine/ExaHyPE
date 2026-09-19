@@ -144,7 +144,7 @@ class CurviTracer(ActionSet):
           data[unknown] = ::exahype2::dg::evaluatePolynomial(
               marker,
               {{ORDER}},
-              kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_PRECISION}}>::nodes,
+              kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_PRECISION}}>::QuadraturePoints1D,
               UnknownsPerDoF,
               fineGridCell{{SOLVER_NAME}}Q.data(),
               _coordinates[i],
@@ -223,7 +223,7 @@ class CurviTracer(ActionSet):
             ::exahype2::dg::evaluatePolynomial(
               marker,
               {{ORDER}},
-              kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_PRECISION}}>::nodes,
+              kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_PRECISION}}>::QuadraturePoints1D,
               UnknownsPerDoF,
               fineGridFace{{SOLVER_NAME}}QEstimates.data() + BasisElementsPerFace,
               _faultCoordinates[i],
@@ -232,7 +232,7 @@ class CurviTracer(ActionSet):
             ::exahype2::dg::evaluatePolynomial(
               marker,
               {{ORDER}},
-              kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_PRECISION}}>::nodes,
+              kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_PRECISION}}>::QuadraturePoints1D,
               UnknownsPerDoF,
               fineGridFace{{SOLVER_NAME}}QEstimates.data(),
               _faultCoordinates[i],
@@ -246,7 +246,7 @@ class CurviTracer(ActionSet):
           data[unknown] = (double) (::exahype2::dg::evaluatePolynomial(
               marker,
               {{ORDER}},
-              kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_PRECISION}}>::nodes,
+              kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_PRECISION}}>::QuadraturePoints1D,
               UnknownsPerDoF,
               fineGridFace{{SOLVER_NAME}}QEstimates.data() + BasisElementsPerFace,
               _faultCoordinates[i],
@@ -254,7 +254,7 @@ class CurviTracer(ActionSet):
             ) - ::exahype2::dg::evaluatePolynomial(
               marker,
               {{ORDER}},
-              kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_PRECISION}}>::nodes,
+              kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_PRECISION}}>::QuadraturePoints1D,
               UnknownsPerDoF,
               fineGridFace{{SOLVER_NAME}}QEstimates.data(),
               _faultCoordinates[i],
@@ -266,7 +266,7 @@ class CurviTracer(ActionSet):
           data[unknown] = (double) (::exahype2::dg::evaluatePolynomial(
               marker,
               {{ORDER}},
-              kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_PRECISION}}>::nodes,
+              kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_PRECISION}}>::QuadraturePoints1D,
               UnknownsPerDoF,
               fineGridFace{{SOLVER_NAME}}QEstimates.data() + BasisElementsPerFace,
               _faultCoordinates[i],
@@ -274,7 +274,7 @@ class CurviTracer(ActionSet):
             ) - ::exahype2::dg::evaluatePolynomial(
               marker,
               {{ORDER}},
-              kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_PRECISION}}>::nodes,
+              kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_PRECISION}}>::QuadraturePoints1D,
               UnknownsPerDoF,
               fineGridFace{{SOLVER_NAME}}QEstimates.data(),
               _faultCoordinates[i],

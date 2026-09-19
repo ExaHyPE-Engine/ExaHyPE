@@ -4,6 +4,12 @@ import jinja2
 
 
 class SolverDeclarations:
+    """
+    Declares the PDE terms of the solver class. Every term is a static member, so the kernels
+    reach it through the solver type; a term the user implements is declared here and defined
+    in the user's translation unit.
+    """
+
     def __init__(self, dictionary):
         self._dictionary = dictionary
 
@@ -23,7 +29,16 @@ class SolverDeclarations:
     }
     {% endif %}
 
-    {% if BOUNDARY_CONDITIONS_IMPLEMENTATION!="<user-defined>" and BOUNDARY_CONDITIONS_IMPLEMENTATION!="<none>" %}
+    {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
+    static void boundaryConditions(
+      const {{CORRECTOR_COMPUTATION_PRECISION}}* NOALIAS Qinside, // [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      {{CORRECTOR_COMPUTATION_PRECISION}}* NOALIAS Qoutside, // [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<DIMENSIONS, double>& x,
+      const tarch::la::Vector<DIMENSIONS, double>& h,
+      double t,
+      int normal
+    );
+    {% elif BOUNDARY_CONDITIONS_IMPLEMENTATION!="<none>" %}
     static INLINE_METHOD GPU_CALLABLE_METHOD
     void boundaryConditions(
       [[maybe_unused]] const {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS Qinside, // [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -56,7 +71,16 @@ class SolverDeclarations:
     {% endif %}
 
     {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
-    {% if MAX_EIGENVALUE_IMPLEMENTATION!="<user-defined>" and MAX_EIGENVALUE_IMPLEMENTATION!="<none>" %}
+    {% if MAX_EIGENVALUE_IMPLEMENTATION=="<user-defined>" %}
+    static double maxEigenvalue(
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS Q, // [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<DIMENSIONS, double>& x,
+      const tarch::la::Vector<DIMENSIONS, double>& h,
+      double t,
+      double dt,
+      int normal
+    );
+    {% elif MAX_EIGENVALUE_IMPLEMENTATION!="<none>" %}
     static INLINE_METHOD GPU_CALLABLE_METHOD
     double maxEigenvalue(
       [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS Q, // [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -74,7 +98,20 @@ class SolverDeclarations:
     }
     {% endif %}
 
-    {% if FLUX_IMPLEMENTATION!="<user-defined>" and FLUX_IMPLEMENTATION!="<none>" %}
+    {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
+    static void flux(
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS Q, // [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
+{% if USE_DIFFUSIVE_FLUX %}
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS deltaQ[DIMENSIONS], // [DIMENSIONS][{{NUMBER_OF_UNKNOWNS}}]
+{% endif %}
+      const tarch::la::Vector<DIMENSIONS, double>& x,
+      const tarch::la::Vector<DIMENSIONS, double>& h,
+      double t,
+      double dt,
+      int normal,
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS F // [{{NUMBER_OF_UNKNOWNS}}]
+    );
+    {% elif FLUX_IMPLEMENTATION!="<none>" %}
     static INLINE_METHOD GPU_CALLABLE_METHOD
     void flux(
       [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS Q, // [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -90,11 +127,26 @@ class SolverDeclarations:
     ) {
       {% if FLUX_IMPLEMENTATION!="<empty>" %}
       {{FLUX_IMPLEMENTATION}}
+      {% else %}
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        F[unknown] = 0.0;
+      }
       {% endif %}
     }
     {% endif %}
 
-    {% if NCP_IMPLEMENTATION!="<user-defined>" and NCP_IMPLEMENTATION!="<none>" %}
+    {% if NCP_IMPLEMENTATION=="<user-defined>" %}
+    static void nonconservativeProduct(
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS Q, // [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS deltaQ, // [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<DIMENSIONS, double>& x,
+      const tarch::la::Vector<DIMENSIONS, double>& h,
+      double t,
+      double dt,
+      int normal,
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS BTimesDeltaQ // [{{NUMBER_OF_UNKNOWNS}}]
+    );
+    {% elif NCP_IMPLEMENTATION!="<none>" %}
     static INLINE_METHOD GPU_CALLABLE_METHOD
     void nonconservativeProduct(
       [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS Q, // [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -108,11 +160,24 @@ class SolverDeclarations:
     ) {
       {% if NCP_IMPLEMENTATION!="<empty>" %}
       {{NCP_IMPLEMENTATION}}
+      {% else %}
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        BTimesDeltaQ[unknown] = 0.0;
+      }
       {% endif %}
     }
     {% endif %}
 
-    {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>" %}
+    {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
+    static void sourceTerm(
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS Q, // [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<DIMENSIONS, double>& x,
+      const tarch::la::Vector<DIMENSIONS, double>& h,
+      double t,
+      double dt,
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS S // [{{NUMBER_OF_UNKNOWNS}}]
+    );
+    {% elif SOURCE_TERM_IMPLEMENTATION!="<none>" %}
     static INLINE_METHOD GPU_CALLABLE_METHOD
     void sourceTerm(
       [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS Q, // [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -124,11 +189,25 @@ class SolverDeclarations:
     ) {
       {% if SOURCE_TERM_IMPLEMENTATION!="<empty>" %}
       {{SOURCE_TERM_IMPLEMENTATION}}
+      {% else %}
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        S[unknown] = 0.0;
+      }
       {% endif %}
     }
     {% endif %}
 
-    {% if DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION!="<none>" %}
+    {% if DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
+    static void diffusiveSourceTerm(
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS Q, // [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS deltaQ, // [{{DIMENSIONS}} * {{NUMBER_OF_UNKNOWNS}}]
+      const tarch::la::Vector<DIMENSIONS, double>& x,
+      const tarch::la::Vector<DIMENSIONS, double>& h,
+      double t,
+      double dt,
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS S // [{{NUMBER_OF_UNKNOWNS}}]
+    );
+    {% elif DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION!="<none>" %}
     static INLINE_METHOD GPU_CALLABLE_METHOD
     void diffusiveSourceTerm(
       [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS Q, // [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -141,11 +220,25 @@ class SolverDeclarations:
     ) {
       {% if DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION!="<empty>" %}
       {{DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION}}
+      {% else %}
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        S[unknown] = 0.0;
+      }
       {% endif %}
     }
     {% endif %}
 
-    {% if MATERIAL_PARAM_IMPLEMENTATION!="<user-defined>" and MATERIAL_PARAM_IMPLEMENTATION!="<none>" %}
+    {% if MATERIAL_PARAM_IMPLEMENTATION=="<user-defined>" %}
+    static void multiplyMaterialParameterMatrix(
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS Q,
+      const tarch::la::Vector<DIMENSIONS, double>& x,
+      const tarch::la::Vector<DIMENSIONS, double>& h,
+      double t,
+      double dt,
+      int normal,
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS rhs
+    );
+    {% elif MATERIAL_PARAM_IMPLEMENTATION!="<none>" %}
     static INLINE_METHOD GPU_CALLABLE_METHOD
     void multiplyMaterialParameterMatrix(
       [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS Q,
@@ -162,15 +255,24 @@ class SolverDeclarations:
     }
     {% endif %}
 
-    {% if POINT_SOURCES_IMPLEMENTATION!="<user-defined>" and POINT_SOURCES_IMPLEMENTATION!="<none>" %}
+    {% if POINT_SOURCES_IMPLEMENTATION=="<user-defined>" %}
+    static void pointSource(
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS Q,
+      const double* x,
+      double t,
+      double dt,
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS forceVector,
+      int n
+    );
+    {% elif POINT_SOURCES_IMPLEMENTATION!="<none>" %}
     static INLINE_METHOD GPU_CALLABLE_METHOD
     void pointSource(
       [[maybe_unused]] const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS Q,
       [[maybe_unused]] const double* const x,
       [[maybe_unused]] const double t,
       [[maybe_unused]] const double dt,
-      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS forceVector,
-      const int n
+      [[maybe_unused]] {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS forceVector,
+      [[maybe_unused]] const int n
     ) {
       {% if POINT_SOURCES_IMPLEMENTATION!="<empty>" %}
       {{POINT_SOURCES_IMPLEMENTATION}}
@@ -178,7 +280,21 @@ class SolverDeclarations:
     }
     {% endif %}
 
-    {% if RIEMANN_SOLVER_IMPLEMENTATION!="<user-defined>" and RIEMANN_SOLVER_IMPLEMENTATION!="<none>" %}
+    {% if RIEMANN_SOLVER_IMPLEMENTATION=="<user-defined>" %}
+    static void riemannSolver(
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS FL, // [{{NUMBER_OF_UNKNOWNS}}]
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS FR, // [{{NUMBER_OF_UNKNOWNS}}]
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS QL, // [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* NOALIAS QR, // [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      double t,
+      double dt,
+      const tarch::la::Vector<DIMENSIONS, double>& x,
+      const tarch::la::Vector<DIMENSIONS, double>& h,
+      int direction,
+      bool isBoundaryFace,
+      int faceIndex
+    );
+    {% elif RIEMANN_SOLVER_IMPLEMENTATION!="<none>" %}
     static INLINE_METHOD GPU_CALLABLE_METHOD
     void riemannSolver(
       [[maybe_unused]] {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS FL, // [{{NUMBER_OF_UNKNOWNS}}]
@@ -253,7 +369,11 @@ class SolverDeclarations:
     ) const;
     {% endif %}
 
-    {% if INIT_POINT_SOURCES_IMPLEMENTATION!="<user-defined>" and INIT_POINT_SOURCES_IMPLEMENTATION!="<none>" %}
+    {% if INIT_POINT_SOURCES_IMPLEMENTATION=="<user-defined>" %}
+    void initPointSourceLocations(
+      double location[NumberOfPointSources][DIMENSIONS]
+    ) override final;
+    {% elif INIT_POINT_SOURCES_IMPLEMENTATION!="<none>" %}
     INLINE_METHOD void initPointSourceLocations(
       [[maybe_unused]] double location[NumberOfPointSources][DIMENSIONS]
     ) override final {
@@ -271,132 +391,12 @@ class SolverDeclarations:
     ) override final;
     {% endif %}
 
-    {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" and BOUNDARY_CONDITIONS_IMPLEMENTATION!="<none>" %}
-    void boundaryConditions(
-      const {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS Qinside, // [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      {{CORRECTOR_COMPUTATION_PRECISION}}* const NOALIAS Qoutside, // [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<DIMENSIONS, double>& x,
-      const tarch::la::Vector<DIMENSIONS, double>& h,
-      const double t,
-      const int normal
-    ) override final;
-    {% endif %}
-
     {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" and REFINEMENT_CRITERION_IMPLEMENTATION!="<none>" %}
     ::exahype2::RefinementCommand refinementCriterion(
       const {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS Q, // [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<DIMENSIONS, double>& x,
       const tarch::la::Vector<DIMENSIONS, double>& h,
       const double t
-    ) override final;
-    {% endif %}
-
-    {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
-    {% if MAX_EIGENVALUE_IMPLEMENTATION=="<user-defined>" and MAX_EIGENVALUE_IMPLEMENTATION!="<none>" %}
-    {% if SUBCELL_LIMITER %}static {% endif %}double maxEigenvalue(
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS Q, // [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<DIMENSIONS, double>& x,
-      const tarch::la::Vector<DIMENSIONS, double>& h,
-      const double t,
-      const double dt,
-      const int normal
-    ){% if not SUBCELL_LIMITER %} override final{% endif %};
-    {% endif %}
-
-    {% if FLUX_IMPLEMENTATION=="<user-defined>" and FLUX_IMPLEMENTATION!="<none>" %}
-    {% if SUBCELL_LIMITER %}static {% endif %}void flux(
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS Q, // [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
-{% if USE_DIFFUSIVE_FLUX %}
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS deltaQ[DIMENSIONS], // [DIMENSIONS][{{NUMBER_OF_UNKNOWNS}}]
-{% endif %}
-      const tarch::la::Vector<DIMENSIONS, double>& x,
-      const tarch::la::Vector<DIMENSIONS, double>& h,
-      const double t,
-      const double dt,
-      const int normal,
-      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS F // [{{NUMBER_OF_UNKNOWNS}}]
-    ){% if not SUBCELL_LIMITER %} override final{% endif %};
-    {% endif %}
-
-    {% if NCP_IMPLEMENTATION=="<user-defined>" and NCP_IMPLEMENTATION!="<none>" %}
-    {% if SUBCELL_LIMITER %}static {% endif %}void nonconservativeProduct(
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS Q, // [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS deltaQ, // [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<DIMENSIONS, double>& x,
-      const tarch::la::Vector<DIMENSIONS, double>& h,
-      const double t,
-      const double dt,
-      const int normal,
-      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS BTimesDeltaQ // [{{NUMBER_OF_UNKNOWNS}}]
-    ){% if not SUBCELL_LIMITER %} override final{% endif %};
-    {% endif %}
-
-    {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>" %}
-    {% if SUBCELL_LIMITER %}static {% endif %}void sourceTerm(
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS Q, // [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<DIMENSIONS, double>& x,
-      const tarch::la::Vector<DIMENSIONS, double>& h,
-      const double t,
-      const double dt,
-      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS S // [{{NUMBER_OF_UNKNOWNS}}]
-    ){% if not SUBCELL_LIMITER %} override final{% endif %};
-    {% endif %}
-
-    {% if DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION=="<user-defined>" and DIFFUSIVE_SOURCE_TERM_IMPLEMENTATION!="<none>" %}
-    {% if SUBCELL_LIMITER %}static {% endif %}void diffusiveSourceTerm(
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS Q, // [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS deltaQ, // [{{DIMENSIONS}} * {{NUMBER_OF_UNKNOWNS}}]
-      const tarch::la::Vector<DIMENSIONS, double>& x,
-      const tarch::la::Vector<DIMENSIONS, double>& h,
-      const double t,
-      const double dt,
-      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS S // [{{NUMBER_OF_UNKNOWNS}}]
-    ){% if not SUBCELL_LIMITER %} override final{% endif %};
-    {% endif %}
-
-    {% if MATERIAL_PARAM_IMPLEMENTATION=="<user-defined>" and MATERIAL_PARAM_IMPLEMENTATION!="<none>" %}
-    void multiplyMaterialParameterMatrix(
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS Q,
-      const tarch::la::Vector<DIMENSIONS, double>& x,
-      const tarch::la::Vector<DIMENSIONS, double>& h,
-      const double t,
-      const double dt,
-      const int normal,
-      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS rhs
-    ) override final;
-    {% endif %}
-
-    {% if POINT_SOURCES_IMPLEMENTATION=="<user-defined>" and POINT_SOURCES_IMPLEMENTATION!="<none>" %}
-    void pointSource(
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS Q,
-      const double* const x,
-      const double t,
-      const double dt,
-      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS forceVector,
-      const int n
-    ) override final;
-    {% endif %}
-
-    {% if RIEMANN_SOLVER_IMPLEMENTATION=="<user-defined>" and RIEMANN_SOLVER_IMPLEMENTATION!="<none>" %}
-    void riemannSolver(
-      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS FL, // [{{NUMBER_OF_UNKNOWNS}}]
-      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS FR, // [{{NUMBER_OF_UNKNOWNS}}]
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS QL, // [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const NOALIAS QR, // [{{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const double t,
-      const double dt,
-      const tarch::la::Vector<DIMENSIONS, double>& x,
-      const tarch::la::Vector<DIMENSIONS, double>& h,
-      const int direction,
-      const bool isBoundaryFace,
-      const int faceIndex
-    ) override final;
-    {% endif %}
-    {% endfor %}
-
-    {% if INIT_POINT_SOURCES_IMPLEMENTATION=="<user-defined>" and INIT_POINT_SOURCES_IMPLEMENTATION!="<none>" %}
-    void initPointSourceLocations(
-      double location[NumberOfPointSources][DIMENSIONS]
     ) override final;
     {% endif %}
 """,

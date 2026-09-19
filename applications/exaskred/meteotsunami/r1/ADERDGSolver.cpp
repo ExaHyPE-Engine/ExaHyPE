@@ -159,7 +159,7 @@ void applications::exahype2::exaskred::ADERDGSolver::nonconservativeProduct(
 /**
  * Rotation, bed drag and the atmospheric pressure gradient.
  *
- * The pressure gradient is what makes this a meteotsunami: a disturbance travelling
+ * The pressure gradient is what makes this a meteotsunami: A disturbance travelling
  * near the shallow-water wave speed keeps feeding the wave it rides on.
  */
 void applications::exahype2::exaskred::ADERDGSolver::sourceTerm(
@@ -228,8 +228,7 @@ double applications::exahype2::exaskred::ADERDGSolver::solveRiemannProblem(
  *
  * The channel carries a long smooth wave over fifty metres of water, but the raster
  * also holds ground that rises a hundred metres above the surface, so the domain has
- * a coast. The dry threshold is metres rather than the millimetres a purely wet basin
- * could afford: a thinner film keeps a finite momentum, and its velocity grows until
+ * a coast. The dry threshold is metres: A thinner film keeps a finite momentum, and its velocity grows until
  * the admissible step underflows. Cells over ground shallower than the coastal depth
  * go on the subcell scheme before they ever dry.
  */
@@ -298,7 +297,7 @@ void applications::exahype2::exaskred::ADERDGSolver::riemannSolver(
     };
 
   ::applications::exahype2::exaskred::riemann::
-    wellBalancedRusanov<Shortcuts, Shortcuts::b, NumberOfUnknowns, NumberOfAuxiliaryVariables, Order>(
+    wellBalancedRusanov<Shortcuts, Shortcuts::b, NumberOfUnknowns, NumberOfAuxiliaryVariables, DGOrder>(
       QL,
       QR,
       x,

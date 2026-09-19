@@ -2,8 +2,6 @@ import argparse
 
 import exahype2
 
-from exahype2.solvers.aderdg.ADERDG import Polynomials
-
 import Elastic
 
 def parse_arguments():
@@ -13,8 +11,8 @@ def parse_arguments():
   parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=5)
   parser.add_argument("-l", "--grid-levels", type=int, default=None)
   parser.add_argument("-p", "--precision", type=str, default="float")
-  parser.add_argument("-lob", "--lobatto", type=bool, default=False, help="use Gauss-Lobatto quadrature nodes, otherwise defaults to Gauss-Legendre")
-  parser.add_argument("-ut", "--use-tracers", type=bool, default=True)
+  parser.add_argument("-lob", "--lobatto", action="store_true", help="use Gauss-Lobatto quadrature nodes, otherwise defaults to Gauss-Legendre")
+  parser.add_argument("-ut", "--use-tracers", action=argparse.BooleanOptionalAction, default=True)
   args, _ = parser.parse_known_args()
   if args.help:
     parser.print_help()
@@ -88,15 +86,7 @@ if args.use_tracers:
     project.add_action_set_to_timestepping(
         exahype2.tracer.DiscontinuousGalerkinTracing(
             tracer_particles, theSolver,
-            project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle",
-            projection_kernel_arguments="""
-        marker,
-        {{ORDER}},
-        kernels::{{SOLVER_NAME}}::Quadrature<"""+args.precision+""">::nodes,
-        {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}},
-        fineGridCell{{CURRENT_UNKNOWN_IDENTIFIER}}.data(),
-        *particle
-            """
+            project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle"
         )
     )
 

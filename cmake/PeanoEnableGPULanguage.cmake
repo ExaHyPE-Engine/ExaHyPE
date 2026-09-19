@@ -27,8 +27,8 @@ macro(peano_enable_cuda_language)
   message(STATUS "Using CUDA_ARCH=${_peano_cuda_arch}")
 
   set(CMAKE_CUDA_HOST_COMPILER "${CMAKE_CXX_COMPILER}")
-  enable_language(CUDA)
   set(CMAKE_CUDA_ARCHITECTURES "${_peano_cuda_arch}" CACHE STRING "" FORCE)
+  enable_language(CUDA)
 endmacro()
 
 macro(peano_enable_hip_language)
@@ -37,9 +37,8 @@ macro(peano_enable_hip_language)
 
   set(HIP_PLATFORM "amd" CACHE STRING "" FORCE)
   set(CMAKE_HIP_PLATFORM "amd" CACHE STRING "" FORCE)
-  set(CMAKE_HIP_HOST_COMPILER "${CMAKE_CXX_COMPILER}")
-  enable_language(HIP)
   set(CMAKE_HIP_ARCHITECTURES "${_peano_hip_arch}" CACHE STRING "" FORCE)
+  enable_language(HIP)
 endmacro()
 
 macro(peano_enable_gpu_language)

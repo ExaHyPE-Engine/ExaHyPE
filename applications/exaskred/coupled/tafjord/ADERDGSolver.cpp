@@ -88,7 +88,7 @@ void applications::exahype2::exaskred::ADERDGSolver::boundaryConditions(
   }
 }
 
-// The fine mesh follows the action: cells carrying slide material or a
+// The fine mesh follows the action: Cells carrying slide material or a
 // disturbed water surface refine, calm fjord and bare mountainside coarsen.
 ::exahype2::RefinementCommand applications::exahype2::exaskred::ADERDGSolver::refinementCriterion(
   const double* const NOALIAS                                   Q,
@@ -100,8 +100,9 @@ void applications::exahype2::exaskred::ADERDGSolver::boundaryConditions(
     return ::exahype2::RefinementCommand::Keep;
   }
 
-  constexpr int NumberOfNodes = DIMENSIONS == 2 ? (Order + 1) * (Order + 1) : (Order + 1) * (Order + 1) * (Order + 1);
-  constexpr int DataPerNode   = NumberOfUnknowns + NumberOfAuxiliaryVariables;
+  constexpr int NumberOfNodes =
+    DIMENSIONS == 2 ? (DGOrder + 1) * (DGOrder + 1) : (DGOrder + 1) * (DGOrder + 1) * (DGOrder + 1);
+  constexpr int    DataPerNode                 = NumberOfUnknowns + NumberOfAuxiliaryVariables;
   constexpr double SurfaceDisturbanceTolerance = 0.5;
   for (int node = 0; node < NumberOfNodes; node++) {
     const double* const nodeState = Q + node * DataPerNode;
@@ -206,7 +207,7 @@ void applications::exahype2::exaskred::ADERDGSolver::riemannSolver(
   [[maybe_unused]] const int                   faceIndex
 ) {
   ::applications::exahype2::exaskred::coupled::
-    riemannSolver<Shortcuts, NumberOfUnknowns, NumberOfAuxiliaryVariables, Order>(
+    riemannSolver<Shortcuts, NumberOfUnknowns, NumberOfAuxiliaryVariables, DGOrder>(
       QL,
       QR,
       x,
@@ -290,7 +291,7 @@ void applications::exahype2::exaskred::ADERDGSolver::mapDmpObservables(
   }
 }
 
-// The water observables relax against a decimetre floor: fjord waves reach
+// The water observables relax against a decimetre floor: Fjord waves reach
 // metres, so the millimetre-scale admissibility threshold would flag every
 // wave cell.
 double applications::exahype2::exaskred::ADERDGSolver::dmpRelaxationParameter(

@@ -449,9 +449,9 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::usesDynamicMeshRefinementSweeps(
  * An override calls this base class operation.
  */
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {
-  kernels::{{SOLVER_NAME}}::Quadrature::initQuadratureNodesAndWeights();
-  kernels::{{SOLVER_NAME}}::DGMatrices::initDGMatrices();
-  kernels::{{SOLVER_NAME}}::ButcherTableau::initButcherTableau();
+  kernels::{{SOLVER_NAME}}::Quadrature<double>::initialise();
+  kernels::{{SOLVER_NAME}}::DGMatrices<double>::initialise();
+  kernels::{{SOLVER_NAME}}::ButcherTableau<double>::initialise();
 
   {{START_SIMULATION_IMPLEMENTATION}}
 }
@@ -462,9 +462,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishSimulation() {
   {{FINISH_SIMULATION_IMPLEMENTATION}}
 
-  kernels::{{SOLVER_NAME}}::Quadrature::freeQuadratureNodesAndWeights();
-  kernels::{{SOLVER_NAME}}::DGMatrices::freeDGMatrices();
-  kernels::{{SOLVER_NAME}}::ButcherTableau::freeButcherTableau();
+  kernels::{{SOLVER_NAME}}::Quadrature<double>::deallocate();
+  kernels::{{SOLVER_NAME}}::DGMatrices<double>::deallocate();
+  kernels::{{SOLVER_NAME}}::ButcherTableau<double>::deallocate();
 }
 
 {{ABSTRACT_SOLVER_USER_DEFINITIONS}}

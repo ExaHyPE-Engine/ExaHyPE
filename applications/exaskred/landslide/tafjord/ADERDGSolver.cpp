@@ -165,7 +165,7 @@ void applications::exahype2::exaskred::ADERDGSolver::riemannSolver(
   [[maybe_unused]] const bool                  isBoundaryFace,
   [[maybe_unused]] const int                   faceIndex
 ) {
-  constexpr int NumberOfFaceNodes = Order + 1;
+  constexpr int NumberOfFaceNodes = DGOrder + 1;
   constexpr int NumberOfData      = NumberOfUnknowns + NumberOfAuxiliaryVariables;
   double        sanitisedQL[NumberOfFaceNodes * NumberOfData];
   double        sanitisedQR[NumberOfFaceNodes * NumberOfData];
@@ -209,7 +209,7 @@ void applications::exahype2::exaskred::ADERDGSolver::riemannSolver(
     );
   };
   ::applications::exahype2::exaskred::riemann::
-    wellBalancedRusanov<Shortcuts, Shortcuts::z, NumberOfUnknowns, NumberOfAuxiliaryVariables, Order>(
+    wellBalancedRusanov<Shortcuts, Shortcuts::z, NumberOfUnknowns, NumberOfAuxiliaryVariables, DGOrder>(
       sanitisedQL,
       sanitisedQR,
       x,

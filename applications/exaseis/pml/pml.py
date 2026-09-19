@@ -29,7 +29,7 @@ def parse_arguments():
     parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=5)
     parser.add_argument("-l", "--grid-levels", type=int, default=None)
     parser.add_argument("-p", "--precision", type=str, default="fp64")
-    parser.add_argument("-ut", "--use-tracers", type=bool, default=True)
+    parser.add_argument("-ut", "--use-tracers", action=argparse.BooleanOptionalAction, default=True)
     args, _ = parser.parse_known_args()
     if args.help:
         parser.print_help()

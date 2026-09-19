@@ -39,7 +39,7 @@ class UpdateSolution(AbstractRungeKuttaDGActionSet):
       {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}
     >(
       fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.data(),
-      kernels::{{SOLVER_NAME}}::Quadrature::QuadraturePoints1D,
+      kernels::{{SOLVER_NAME}}::Quadrature<double>::QuadraturePoints1D,
       faceCentre, marker.getH(), timeStamp,
       marker.getSelectedFaceNumber()
     );
@@ -52,7 +52,7 @@ class UpdateSolution(AbstractRungeKuttaDGActionSet):
     >(
       leftFluxEstimates + outsideSide * FluxElementsPerFace,
       leftStateEstimates, rightStateEstimates, outsideSide,
-      kernels::{{SOLVER_NAME}}::Quadrature::QuadraturePoints1D,
+      kernels::{{SOLVER_NAME}}::Quadrature<double>::QuadraturePoints1D,
       faceCentre, marker.getH(), timeStamp, timeStepSize, direction
     );
     if (marker.getSelectedFaceNumber()<DIMENSIONS) {
@@ -123,7 +123,7 @@ if (stage>=0) {
       fineGridCell{{UNKNOWN_IDENTIFIER}}.data(),
       fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.data(),
       fineGridCell{{UNKNOWN_IDENTIFIER}}.data(),
-      kernels::{{SOLVER_NAME}}::ButcherTableau::FinalEstimateWeights
+      kernels::{{SOLVER_NAME}}::ButcherTableau<double>::FinalEstimateWeights
     );
 
     const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
@@ -136,7 +136,7 @@ if (stage>=0) {
       {{FULL_QUALIFIED_SOLVER_NAME}}, {{DG_ORDER}}+1,
       {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}
     >(
-      newQ, kernels::{{SOLVER_NAME}}::Quadrature::QuadraturePoints1D,
+      newQ, kernels::{{SOLVER_NAME}}::Quadrature<double>::QuadraturePoints1D,
       marker.getX(), marker.getH(), timeStamp + previousTimeStepSize, previousTimeStepSize
     );
     const double maxPhysicalEigenvalue = eigenvalues.maxPhysicalEigenvalue;
@@ -159,11 +159,11 @@ if (stage>=0) {
     stage, fineGridCell{{UNKNOWN_IDENTIFIER}}.data(),
     fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.data(),
     fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.data(),
-    kernels::{{SOLVER_NAME}}::ButcherTableau::ButcherMatrix
+    kernels::{{SOLVER_NAME}}::ButcherTableau<double>::ButcherMatrix
   );
 
   const double stageTimeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp()
-    + kernels::{{SOLVER_NAME}}::ButcherTableau::RelativeTimeStepSizes[stage] * stageTimeStepSize;
+    + kernels::{{SOLVER_NAME}}::ButcherTableau<double>::RelativeTimeStepSizes[stage] * stageTimeStepSize;
   double* stageRhs = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.data()
     + stage * {{NUMBER_OF_DOFS_PER_CELL}} * {{NUMBER_OF_UNKNOWNS}};
   ::exahype2::dg::rk::volumeIntegral<
@@ -176,10 +176,10 @@ if (stage>=0) {
     {% if NCP_IMPLEMENTATION!="<none>" %}true{% else %}false{% endif %}
   >(
     fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.data(), stageRhs,
-    kernels::{{SOLVER_NAME}}::Quadrature::QuadraturePoints1D,
-    kernels::{{SOLVER_NAME}}::DGMatrices::MassMatrixDiagonal1D,
-    kernels::{{SOLVER_NAME}}::DGMatrices::StiffnessOperator1D,
-    kernels::{{SOLVER_NAME}}::DGMatrices::DerivativeOperator1D,
+    kernels::{{SOLVER_NAME}}::Quadrature<double>::QuadraturePoints1D,
+    kernels::{{SOLVER_NAME}}::DGMatrices<double>::MassMatrixDiagonal1D,
+    kernels::{{SOLVER_NAME}}::DGMatrices<double>::StiffnessOperator1D,
+    kernels::{{SOLVER_NAME}}::DGMatrices<double>::DerivativeOperator1D,
     marker.getX(), marker.getH(), stageTimeStamp, stageTimeStepSize
   );
   {{PROJECT_STAGE_ONTO_FACES}}
@@ -194,11 +194,11 @@ if (repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverS
     0, fineGridCell{{UNKNOWN_IDENTIFIER}}.data(),
     fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.data(),
     fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.data(),
-    kernels::{{SOLVER_NAME}}::ButcherTableau::ButcherMatrix
+    kernels::{{SOLVER_NAME}}::ButcherTableau<double>::ButcherMatrix
   );
 
   const double stageTimeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp()
-    + kernels::{{SOLVER_NAME}}::ButcherTableau::RelativeTimeStepSizes[0] * timeStepSize;
+    + kernels::{{SOLVER_NAME}}::ButcherTableau<double>::RelativeTimeStepSizes[0] * timeStepSize;
 
   double* stageRhs = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.data();
   ::exahype2::dg::rk::volumeIntegral<
@@ -211,10 +211,10 @@ if (repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverS
     {% if NCP_IMPLEMENTATION!="<none>" %}true{% else %}false{% endif %}
   >(
     fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.data(), stageRhs,
-    kernels::{{SOLVER_NAME}}::Quadrature::QuadraturePoints1D,
-    kernels::{{SOLVER_NAME}}::DGMatrices::MassMatrixDiagonal1D,
-    kernels::{{SOLVER_NAME}}::DGMatrices::StiffnessOperator1D,
-    kernels::{{SOLVER_NAME}}::DGMatrices::DerivativeOperator1D,
+    kernels::{{SOLVER_NAME}}::Quadrature<double>::QuadraturePoints1D,
+    kernels::{{SOLVER_NAME}}::DGMatrices<double>::MassMatrixDiagonal1D,
+    kernels::{{SOLVER_NAME}}::DGMatrices<double>::StiffnessOperator1D,
+    kernels::{{SOLVER_NAME}}::DGMatrices<double>::DerivativeOperator1D,
     marker.getX(), marker.getH(), stageTimeStamp, timeStepSize
   );
 
@@ -224,7 +224,7 @@ if (repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverS
     {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}
   >(
     fineGridCell{{UNKNOWN_IDENTIFIER}}.data(),
-    kernels::{{SOLVER_NAME}}::Quadrature::QuadraturePoints1D,
+    kernels::{{SOLVER_NAME}}::Quadrature<double>::QuadraturePoints1D,
     marker.getX(),
     marker.getH(),
     stageTimeStamp,
@@ -257,8 +257,8 @@ if (repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverS
   >(
     faceState,
     fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.data(),
-    kernels::{{SOLVER_NAME}}::DGMatrices::BasisFunctionValuesLeft1D,
-    kernels::{{SOLVER_NAME}}::DGMatrices::BasisFunctionValuesRight1D
+    kernels::{{SOLVER_NAME}}::DGMatrices<double>::BasisFunctionValuesLeft1D,
+    kernels::{{SOLVER_NAME}}::DGMatrices<double>::BasisFunctionValuesRight1D
   );
 
   double* projectedFaceFlux[peano4::FacesPerCell];
@@ -276,10 +276,10 @@ if (repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverS
   >(
     projectedFaceFlux,
     fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.data(),
-    kernels::{{SOLVER_NAME}}::DGMatrices::BasisFunctionValuesLeft1D,
-    kernels::{{SOLVER_NAME}}::DGMatrices::BasisFunctionValuesRight1D,
-    kernels::{{SOLVER_NAME}}::Quadrature::QuadraturePoints1D,
-    kernels::{{SOLVER_NAME}}::DGMatrices::DerivativeOperator1D,
+    kernels::{{SOLVER_NAME}}::DGMatrices<double>::BasisFunctionValuesLeft1D,
+    kernels::{{SOLVER_NAME}}::DGMatrices<double>::BasisFunctionValuesRight1D,
+    kernels::{{SOLVER_NAME}}::Quadrature<double>::QuadraturePoints1D,
+    kernels::{{SOLVER_NAME}}::DGMatrices<double>::DerivativeOperator1D,
     marker.getX(), marker.getH(), stageTimeStamp,
     fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize()
   );
@@ -320,7 +320,7 @@ if (repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverS
       rightFluxEstimates,
       leftStateEstimates,
       rightStateEstimates,
-      kernels::{{SOLVER_NAME}}::Quadrature::QuadratureWeightsOnFace,
+      kernels::{{SOLVER_NAME}}::Quadrature<double>::QuadratureWeightsOnFace,
       faceCentre,
       marker.getH(),
       timeStamp,
@@ -337,7 +337,7 @@ if (repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverS
       rightFluxEstimates,
       leftStateEstimates,
       rightStateEstimates,
-      kernels::{{SOLVER_NAME}}::Quadrature::QuadratureWeightsOnFace,
+      kernels::{{SOLVER_NAME}}::Quadrature<double>::QuadratureWeightsOnFace,
       faceCentre,
       marker.getH(),
       timeStamp,
@@ -353,10 +353,10 @@ if (repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverS
       {{"true" if IS_LINEAR else "false"}}>(
       updatedState,
       faceFluxEstimates,
-      kernels::{{SOLVER_NAME}}::Quadrature::QuadratureWeightsOnFace,
-      kernels::{{SOLVER_NAME}}::Quadrature::InverseQuadratureWeightsInCell,
-      kernels::{{SOLVER_NAME}}::DGMatrices::BasisFunctionValuesLeft1D,
-      kernels::{{SOLVER_NAME}}::DGMatrices::BasisFunctionValuesRight1D,
+      kernels::{{SOLVER_NAME}}::Quadrature<double>::QuadratureWeightsOnFace,
+      kernels::{{SOLVER_NAME}}::Quadrature<double>::InverseQuadratureWeightsInCell,
+      kernels::{{SOLVER_NAME}}::DGMatrices<double>::BasisFunctionValuesLeft1D,
+      kernels::{{SOLVER_NAME}}::DGMatrices<double>::BasisFunctionValuesRight1D,
       direction,
       faceOrientation,
       1.0 / marker.getH()[direction],

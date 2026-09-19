@@ -1,7 +1,7 @@
 def initial(pointwise_initial_conditions):
     return (
         """
-  std::fill_n(Q, (NumberOfAuxiliaryVariables + NumberOfUnknowns) * (Order + 1) * (Order + 1) * (Order + 1), 0);
+  std::fill_n(Q, (NumberOfAuxiliaryVariables + NumberOfUnknowns) * (DGOrder + 1) * (DGOrder + 1) * (DGOrder + 1), 0);
 
   tarch::la::Vector<DIMENSIONS, double> center = (*_curvi)(x);
 
@@ -15,13 +15,13 @@ def initial(pointwise_initial_conditions):
   };
 
   int linearisedIndex = 0;
-  peano4::dForEach(Order + 1, [&](const tarch::la::Vector<DIMENSIONS, int>& index) {
+  peano4::dForEach(DGOrder + 1, [&](const tarch::la::Vector<DIMENSIONS, int>& index) {
     tarch::la::Vector<DIMENSIONS, double> curviPos = (*_curvi)(
       ::exahype2::dg::getQuadraturePoint(
         x,
         h,
         index,
-        kernels::ElasticSolver::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes
+        kernels::ElasticSolver::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::QuadraturePoints1D
       )
     );
     Q[linearisedIndex+Shortcuts::curve_grid + 0] = curviPos[0];
@@ -37,8 +37,7 @@ def initial(pointwise_initial_conditions):
 
   const tarch::la::Vector<DIMENSIONS, {{SOLUTION_STORAGE_PRECISION}}> invDx = convertScalar<{{SOLUTION_STORAGE_PRECISION}}>(invertEntries(h));
 
-  constexpr int nDof    = Order+1;
-  constexpr int nDofPad = {{NUMBER_OF_DOF_PADDED}};
+  constexpr int nDof    = DGOrder + 1;
   constexpr int strideQ = (NumberOfUnknowns+NumberOfAuxiliaryVariables);
 
   // x-loop
@@ -51,7 +50,7 @@ def initial(pointwise_initial_conditions):
         for (int axis = 0; axis < DIMENSIONS; axis++) {
           Q[yz*nDof*strideQ + column*strideQ + Shortcuts::metric_derivative + axis] +=
             Q[yz*nDof*strideQ + row*strideQ + Shortcuts::curve_grid + axis]
-            * invDx[0] * kernels::ElasticSolver::DGMatrices<{{SOLUTION_STORAGE_PRECISION}}>::dudxTransposed[column*nDofPad + row];
+            * invDx[0] * kernels::ElasticSolver::DGMatrices<{{SOLUTION_STORAGE_PRECISION}}>::DerivativeOperator1D[column*nDof + row];
         }
       }
     } // row
@@ -67,7 +66,7 @@ def initial(pointwise_initial_conditions):
           for (int axis = 0; axis < DIMENSIONS; axis++) {
             Q[z*nDof*nDof*strideQ + x*strideQ + column*nDof*strideQ + Shortcuts::metric_derivative + DIMENSIONS + axis] +=
               Q[z*nDof*nDof*strideQ + x*strideQ + row*nDof*strideQ + Shortcuts::curve_grid + axis]
-              * invDx[1] * kernels::ElasticSolver::DGMatrices<{{SOLUTION_STORAGE_PRECISION}}>::dudxTransposed[column*nDofPad + row];
+              * invDx[1] * kernels::ElasticSolver::DGMatrices<{{SOLUTION_STORAGE_PRECISION}}>::DerivativeOperator1D[column*nDof + row];
           } // axis
         } // column
       } // row
@@ -83,14 +82,14 @@ def initial(pointwise_initial_conditions):
         for (int axis = 0; axis < DIMENSIONS; axis++) {
           Q[xy*strideQ + column*nDof*nDof*strideQ + Shortcuts::metric_derivative + 2*DIMENSIONS + axis] +=
             Q[xy*strideQ + row*nDof*nDof*strideQ + Shortcuts::curve_grid + axis]
-            * invDx[2] * kernels::ElasticSolver::DGMatrices<{{SOLUTION_STORAGE_PRECISION}}>::dudxTransposed[column*nDofPad + row];
+            * invDx[2] * kernels::ElasticSolver::DGMatrices<{{SOLUTION_STORAGE_PRECISION}}>::DerivativeOperator1D[column*nDof + row];
         } // axis
       } // column
     } // row
   } // xy
 
   linearisedIndex = 0;
-  peano4::dForEach(Order + 1, [&](const tarch::la::Vector<DIMENSIONS, int>& index) {
+  peano4::dForEach(DGOrder + 1, [&](const tarch::la::Vector<DIMENSIONS, int>& index) {
     auto curveXDerivativeQ = Q[linearisedIndex+Shortcuts::metric_derivative+0];
     auto curveYDerivativeQ = Q[linearisedIndex+Shortcuts::metric_derivative+1];
     auto curveZDerivativeQ = Q[linearisedIndex+Shortcuts::metric_derivative+2];
@@ -305,7 +304,7 @@ def refinement_criterion():
 
 def riemann_solver():
     return """
-  applications::exahype2::exaseis::riemannSolverIsotropic<VariableShortcuts{{SOLVER_NAME}}, {{CORRECTOR_COMPUTATION_PRECISION}}, Order + 1, NumberOfUnknowns, (NumberOfUnknowns + NumberOfAuxiliaryVariables), 1>(
+  applications::exahype2::exaseis::riemannSolverIsotropic<VariableShortcuts{{SOLVER_NAME}}, {{CORRECTOR_COMPUTATION_PRECISION}}, DGOrder + 1, NumberOfUnknowns, (NumberOfUnknowns + NumberOfAuxiliaryVariables), 1>(
     FL, FR, QL, QR, t, dt, direction, isBoundaryFace, faceIndex
   );
 """

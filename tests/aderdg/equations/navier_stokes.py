@@ -416,11 +416,7 @@ class NavierStokes(Equation):
       constexpr int faceSize = (DGOrder+1);
 #endif
 
-  {% if CFL_ADER is defined %}
-  const auto* const faceWeights = kernels::{{SOLVER_NAME}}::Quadrature<FaceValue>::weights2;
-  {% else %}
-  const auto* const faceWeights = kernels::{{SOLVER_NAME}}::Quadrature::QuadratureWeightsOnFace;
-  {% endif %}
+  const auto* const faceWeights = kernels::{{SOLVER_NAME}}::Quadrature<FaceValue>::QuadratureWeightsOnFace;
   for (int xy = 0; xy < faceSize; xy++) {
     for (int n = 0; n < strideQ; n++) {
       QavL[n] += faceWeights[xy] * QL[xy * strideQ + n];

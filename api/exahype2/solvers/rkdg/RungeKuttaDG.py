@@ -17,7 +17,7 @@ from .GenerateKernels import generate_kernels
 
 from exahype2.solvers.ButcherTableau import RungeKutta_steps
 from exahype2.solvers.PDETerms import PDETerms
-from exahype2.solvers.rkdg.LagrangeBasis import GaussLegendreBasis, GaussLobattoBasis
+from exahype2.solvers.LagrangeBasisWithDiagonalMassMatrix import GaussLegendreBasis, GaussLobattoBasis
 
 from exahype2.VariableShortcuts import VariableShortcuts
 

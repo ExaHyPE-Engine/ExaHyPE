@@ -143,7 +143,10 @@ def _create_postprocessing_kernel_for_error_measurement(guard, time_step_size_ac
         );
       } else {
 {% endif %}
-      kernels::{{SOLVER_NAME}}::cellErrorIntegral(
+      constexpr int MeasuredUnknowns[] = {{MEASURED_UNKNOWNS}};
+      ::exahype2::dg::ader::accumulateCellError<
+        {{DG_ORDER}} + 1, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}
+      >(
         [&](
           const tarch::la::Vector<DIMENSIONS, double>& position,
           const double                                 evaluationTimeStamp,
@@ -165,13 +168,16 @@ def _create_postprocessing_kernel_for_error_measurement(guard, time_step_size_ac
             analyticalSolution
           );
         },
+        fineGridCell{{UNKNOWN_IDENTIFIER}}_old.data(),
+        kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::QuadraturePoints1D,
+        kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::QuadratureWeights1D,
+        MeasuredUnknowns,
         marker.getX(),
         marker.getH(),
         fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp(),
         repositories::{{SOLVER_INSTANCE}}."""
         + time_step_size_accessor
         + """,
-        fineGridCell{{UNKNOWN_IDENTIFIER}}_old.data(),
         errors
       );
 {% if SUBCELL_LIMITER %}

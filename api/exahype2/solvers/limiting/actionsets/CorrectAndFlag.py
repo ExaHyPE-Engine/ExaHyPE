@@ -141,9 +141,11 @@ class CorrectAndFlag(AbstractLimiterActionSet):
         and fineGridCell{{SOLVER_NAME}}CellLabel.getPreviousLimiterStatus() == ::exahype2::dg::LimiterStatus::Regular) {
       const double timeStamp      = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
       const double timeStepSize   = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize();
-      const auto   maxEigenvalues = kernels::{{SOLVER_NAME}}::reduceMaxEigenvalues(
-        repositories::{{SOLVER_INSTANCE}},
+      const auto   maxEigenvalues = ::exahype2::dg::reduceMaxEigenvalues<
+        {{FULL_QUALIFIED_SOLVER_NAME}}, {{DG_ORDER}} + 1, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}
+      >(
         candidate,
+        kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::QuadraturePoints1D,
         marker.getX(),
         marker.getH(),
         timeStamp,
@@ -354,8 +356,5 @@ class CorrectAndFlag(AbstractLimiterActionSet):
 """
         )
         if self._solver._compute_new_time_step_size.strip():
-            includes += (
-                '#include "exahype2/dg/EigenvalueStatistics.h"\n'
-                '#include "kernels/' + self._solver._name + '/MaxScaledEigenvalue.h"\n'
-            )
+            includes += '#include "exahype2/dg/EigenvalueStatistics.h"\n'
         return includes

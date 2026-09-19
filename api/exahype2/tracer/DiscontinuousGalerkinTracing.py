@@ -26,7 +26,7 @@ class DiscontinuousGalerkinTracing(
         projection_kernel_arguments="""
         marker,
         {{ORDER}},
-        repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1D,
+        kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_PRECISION}}>::QuadraturePoints1D,
         {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}},
         fineGridCell{{CURRENT_UNKNOWN_IDENTIFIER}}.data(),
         *particle
@@ -54,10 +54,7 @@ class DiscontinuousGalerkinTracing(
          trajectory of a tracer already encodes all information.
 
         projection_kernel_arguments: String
-         Argument list handed to the projection kernel. The default passes the
-         cell marker, the polynomial order, the solver's quadrature points, the
-         number of data entries per degree of freedom, the cell data and the
-         particle.
+         Argument list handed to the projection kernel.
         """
 
         self.tracerDict = {}
@@ -70,6 +67,7 @@ class DiscontinuousGalerkinTracing(
             solver.current_unknown_identifier()
         )
         self.tracerDict["ORDER"] = solver._basis.order
+        self.tracerDict["SOLUTION_PRECISION"] = solver._solution_persistent_storage_precision
         self.tracerDict["NUMBER_OF_UNKNOWNS"] = solver.unknowns
         self.tracerDict["NUMBER_OF_AUXILIARY_VARIABLES"] = solver.auxiliary_variables
         self.tracerDict["PROJECTION_KERNEL"] = project_on_tracer_properties_kernel

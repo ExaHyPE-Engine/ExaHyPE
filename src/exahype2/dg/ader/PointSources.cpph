@@ -1,0 +1,32 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+TARGET_DECLARE
+/**
+ * Writes the indices of the point sources inside the closed cell into pointSourceIndices and
+ * returns their count. A source on a face of two cells counts for both cells.
+ */
+template <int NumberOfPointSources>
+INLINE_METHOD GPU_CALLABLE_METHOD int exahype2::dg::ader::selectPointSources(
+  int (&pointSourceIndices)[NumberOfPointSources],
+  const double* NOALIAS const                  pointSourceLocations,
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize
+) {
+  int count = 0;
+  for (int pointSource = 0; pointSource < NumberOfPointSources; pointSource++) {
+    const double* const location = pointSourceLocations + pointSource * DIMENSIONS;
+    bool                isInside = true;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      assertion(cellSize(axis) > 0.0, cellSize, axis);
+      isInside = isInside and cellCentre(axis) - 0.5 * cellSize(axis) <= location[axis]
+        and location[axis] <= cellCentre(axis) + 0.5 * cellSize(axis);
+    }
+    if (isInside) {
+      pointSourceIndices[count] = pointSource;
+      count++;
+    }
+  }
+  return count;
+}
+TARGET_DECLARE_END

@@ -14,12 +14,7 @@ class SingleSweep(ADERDG):
         order,
         unknowns,
         auxiliary_variables,
-        split_sweeps=False,
     ):
-        # With split sweeps the predictor and the corrector run on separate
-        # traversals of the domain; the limiter needs them.
-        self._split_sweeps = split_sweeps
-
         super(SingleSweep, self).__init__(
             name=name,
             order=order,
@@ -56,27 +51,17 @@ class SingleSweep(ADERDG):
             "(" + solver_state + "==" + plotting + " and " + min_time_stamp + "!=0.0 " +"))"
         )
 
-        send_condition_split_sweeps = (
-            "((" + is_first_sweep + ") or " +
-            "(" + solver_state + "==" + prediction_on_hanging + "))"
-        )
-
         receive_condition = (
             "((" + solver_state + "==" + prediction_on_hanging + ") or" +
             "(" + is_last_sweep + ") or " +
             "(" + solver_state + "==" + plotting + " and " + min_time_stamp + "!=0.0 " +"))"
         )
 
-        receive_condition_split_sweeps = (
-            "((" + solver_state + "==" + prediction_on_hanging + ") or" +
-            "(" + is_last_sweep + "))"
-        )
+        self._rhs_estimates_projection.generator.send_condition = send_condition
+        self._rhs_estimates_projection.generator.receive_and_merge_condition = receive_condition
 
-        self._rhs_estimates_projection.generator.send_condition = send_condition if not self._split_sweeps else send_condition_split_sweeps
-        self._rhs_estimates_projection.generator.receive_and_merge_condition = receive_condition if not self._split_sweeps else receive_condition_split_sweeps
-
-        self._flux_estimates_projection.generator.send_condition = send_condition if not self._split_sweeps else send_condition_split_sweeps
-        self._flux_estimates_projection.generator.receive_and_merge_condition = receive_condition if not self._split_sweeps else receive_condition_split_sweeps
+        self._flux_estimates_projection.generator.send_condition = send_condition
+        self._flux_estimates_projection.generator.receive_and_merge_condition = receive_condition
 
         self._configure_subcell_limiter_exchange()
 
@@ -154,10 +139,6 @@ class SingleSweep(ADERDG):
         )._interpolate_face_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::PredictionOnHangingCells".format(
             self.get_name_of_global_instance(), self._name
         )
-
-    def _init_dictionary_with_default_parameters(self, d):
-        super(SingleSweep, self)._init_dictionary_with_default_parameters(d)
-        d["USE_SEPARATE_SWEEPS"] = self._split_sweeps
 
     def _refresh_solver_user_code(self, replacement_dictionary=None):
         if replacement_dictionary is None:
