@@ -45,8 +45,8 @@ class InterpolateRiemannSolutionOntoHangingFaces(AbstractRungeKuttaDGActionSet):
       >(
         projectionTargets,
         fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.data(),
-        kernels::{{SOLVER_NAME}}::DGMatrices::BasisFunctionValuesLeft1D,
-        kernels::{{SOLVER_NAME}}::DGMatrices::BasisFunctionValuesRight1D
+        kernels::{{SOLVER_NAME}}::DGMatrices<double>::BasisFunctionValuesLeft1D,
+        kernels::{{SOLVER_NAME}}::DGMatrices<double>::BasisFunctionValuesRight1D
       );
 
       constexpr int NumberOfDofsPerAxis = {{DG_ORDER}} + 1;
@@ -66,7 +66,7 @@ class InterpolateRiemannSolutionOntoHangingFaces(AbstractRungeKuttaDGActionSet):
           for (int axis = 0; axis < DIMENSIONS; axis++) {
             if (axis != direction) {
               prolongationMatrixPerAxis[tangentialAxis] =
-                kernels::{{SOLVER_NAME}}::DGMatrices::ProlongationMatrix1D
+                kernels::{{SOLVER_NAME}}::DGMatrices<double>::ProlongationMatrix1D
                 + marker.getRelativePositionWithinFatherCell()(axis) * NumberOfDofsPerAxis * NumberOfDofsPerAxis;
               tangentialAxis++;
             }
@@ -104,7 +104,7 @@ class InterpolateRiemannSolutionOntoHangingFaces(AbstractRungeKuttaDGActionSet):
               leftStateEstimates,
               rightStateEstimates,
               side,
-              kernels::{{SOLVER_NAME}}::Quadrature::QuadraturePoints1D,
+              kernels::{{SOLVER_NAME}}::Quadrature<double>::QuadraturePoints1D,
               faceCentre,
               marker.getH(),
               timeStamp,

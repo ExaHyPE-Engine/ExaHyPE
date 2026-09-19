@@ -36,7 +36,7 @@ _TemplateStageHangingFaceTrace = """
       const double* restrictionMatrixPerInterval[peano4::sfc::ActiveCurve::SubdivisionFactor];
       for (int interval = 0; interval < peano4::sfc::ActiveCurve::SubdivisionFactor; interval++) {
         restrictionMatrixPerInterval[interval] =
-          kernels::{{SOLVER_NAME}}::DGMatrices::WeightedRestrictionMatrix1D + interval * NodesPerAxis * NodesPerAxis;
+          kernels::{{SOLVER_NAME}}::DGMatrices<double>::WeightedRestrictionMatrix1D + interval * NodesPerAxis * NodesPerAxis;
       }
       ::exahype2::amr::restrictFaceFromChildren(
         restrictedCoarseHalf,
@@ -84,7 +84,7 @@ _TemplateStageHangingFaceTrace = """
         coarseLeftTrace,
         coarseLeftTrace + EntriesPerFaceSide,
         restrictedSide,
-        kernels::{{SOLVER_NAME}}::Quadrature::QuadraturePoints1D,
+        kernels::{{SOLVER_NAME}}::Quadrature<double>::QuadraturePoints1D,
         coarseFaceCentre,
         coarseCellSize,
         coarseGridFaces{{FACE_LABEL}}(marker.getSelectedFaceNumber()).getUpdatedTimeStamp(restrictedSide),
@@ -224,7 +224,7 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
     marker,
     coarseGridCell{{UNKNOWN_IDENTIFIER}}.data(),
     fineGridCell{{UNKNOWN_IDENTIFIER}}.data(),
-    kernels::{{SOLVER_NAME}}::DGMatrices::InterpolationMatrix1D,
+    kernels::{{SOLVER_NAME}}::DGMatrices<double>::InterpolationMatrix1D,
     {{DG_ORDER}} + 1,
     {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}
   );
@@ -238,7 +238,7 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
           + stage * {{NUMBER_OF_DOFS_PER_CELL}} * {{NUMBER_OF_UNKNOWNS}},
         fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.data()
           + stage * {{NUMBER_OF_DOFS_PER_CELL}} * {{NUMBER_OF_UNKNOWNS}},
-        kernels::{{SOLVER_NAME}}::DGMatrices::InterpolationMatrix1D,
+        kernels::{{SOLVER_NAME}}::DGMatrices<double>::InterpolationMatrix1D,
         {{DG_ORDER}} + 1,
         {{NUMBER_OF_UNKNOWNS}}
       );
@@ -247,7 +247,7 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
       marker,
       coarseGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.data(),
       fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.data(),
-      kernels::{{SOLVER_NAME}}::DGMatrices::InterpolationMatrix1D,
+      kernels::{{SOLVER_NAME}}::DGMatrices<double>::InterpolationMatrix1D,
       {{DG_ORDER}} + 1,
       {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}}
     );
@@ -285,7 +285,7 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
         != {{SOLVER_NAME}}::SolverState::GridInitialisation) {
     const double timeStepSize = fineGridCell{{CELL_LABEL_NAME}}.getTimeStepSize();
     const double stageTimeStamp = fineGridCell{{CELL_LABEL_NAME}}.getTimeStamp()
-      + kernels::{{SOLVER_NAME}}::ButcherTableau::RelativeTimeStepSizes[stage] * timeStepSize;
+      + kernels::{{SOLVER_NAME}}::ButcherTableau<double>::RelativeTimeStepSizes[stage] * timeStepSize;
     if (requiresDataTransfer) {
       double* stageRhs = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.data()
         + stage * {{NUMBER_OF_DOFS_PER_CELL}} * {{NUMBER_OF_UNKNOWNS}};
@@ -299,10 +299,10 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
         {% if NCP_IMPLEMENTATION!="<none>" %}true{% else %}false{% endif %}
       >(
         fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.data(), stageRhs,
-        kernels::{{SOLVER_NAME}}::Quadrature::QuadraturePoints1D,
-        kernels::{{SOLVER_NAME}}::DGMatrices::MassMatrixDiagonal1D,
-        kernels::{{SOLVER_NAME}}::DGMatrices::StiffnessOperator1D,
-        kernels::{{SOLVER_NAME}}::DGMatrices::DerivativeOperator1D,
+        kernels::{{SOLVER_NAME}}::Quadrature<double>::QuadraturePoints1D,
+        kernels::{{SOLVER_NAME}}::DGMatrices<double>::MassMatrixDiagonal1D,
+        kernels::{{SOLVER_NAME}}::DGMatrices<double>::StiffnessOperator1D,
+        kernels::{{SOLVER_NAME}}::DGMatrices<double>::DerivativeOperator1D,
         marker.getX(), marker.getH(), stageTimeStamp, timeStepSize
       );
     }
@@ -338,7 +338,7 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
   const double* restrictionMatrixPerInterval[peano4::sfc::ActiveCurve::SubdivisionFactor];
   for (int interval = 0; interval < peano4::sfc::ActiveCurve::SubdivisionFactor; interval++) {
     restrictionMatrixPerInterval[interval] =
-      kernels::{{SOLVER_NAME}}::DGMatrices::WeightedRestrictionMatrix1D + interval * NodesPerAxis * NodesPerAxis;
+      kernels::{{SOLVER_NAME}}::DGMatrices<double>::WeightedRestrictionMatrix1D + interval * NodesPerAxis * NodesPerAxis;
   }
   const double* childValues[peano4::sfc::ActiveCurve::ChildrenPerCell];
 

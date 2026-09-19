@@ -45,6 +45,19 @@ set(SOURCES
   dg/rk/tests/KernelsOnDeviceTest.cpp
   dg/rk/tests/LinearCombinationTest.cpp
   dg/rk/tests/VolumeIntegralTest.cpp
+  dg/ader/tests/CauchyKovalewskiTest.cpp
+  dg/ader/tests/CellErrorIntegralTest.cpp
+  dg/ader/tests/DeviceKernelFixtures.cpp
+  dg/ader/tests/KernelsOnDeviceTest.cpp
+  dg/ader/tests/LinearPredictorTermsTest.cpp
+  dg/ader/tests/PicardIterationTest.cpp
+  dg/ader/tests/PointSourceContributionTest.cpp
+  dg/ader/tests/PointSourcesTest.cpp
+  dg/ader/tests/PredictorScratchTest.cpp
+  dg/ader/tests/SpaceTimePredictorTest.cpp
+  dg/ader/tests/SpaceTimeTermsTest.cpp
+  dg/ader/tests/TimeAveragingTest.cpp
+  dg/ader/tests/VolumeIntegralTest.cpp
 
   fv/PatchUtils.cpp
   fv/PostprocessingKernels.cpp
@@ -62,9 +75,11 @@ set(SOURCES
 if(_peano_gpu_backend STREQUAL "cuda")
   set_source_files_properties(dg/tests/KernelsOnDeviceTest.cpp PROPERTIES LANGUAGE CUDA)
   set_source_files_properties(dg/rk/tests/KernelsOnDeviceTest.cpp PROPERTIES LANGUAGE CUDA)
+  set_source_files_properties(dg/ader/tests/KernelsOnDeviceTest.cpp PROPERTIES LANGUAGE CUDA)
 elseif(_peano_gpu_backend STREQUAL "hip")
   set_source_files_properties(dg/tests/KernelsOnDeviceTest.cpp PROPERTIES LANGUAGE HIP)
   set_source_files_properties(dg/rk/tests/KernelsOnDeviceTest.cpp PROPERTIES LANGUAGE HIP)
+  set_source_files_properties(dg/ader/tests/KernelsOnDeviceTest.cpp PROPERTIES LANGUAGE HIP)
 endif()
 
 install_peano_headers(

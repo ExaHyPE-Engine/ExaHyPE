@@ -256,7 +256,7 @@ void applications::exahype2::exaskred::ADERDGSolver::nonconservativeProduct(
  * Rotation, bed drag and the atmospheric pressure gradient.
  *
  * The basin spans thirteen degrees of latitude, so the Coriolis parameter follows
- * the latitude of the point rather than a single value for the whole domain.
+ * the latitude of the point.
  */
 void applications::exahype2::exaskred::ADERDGSolver::sourceTerm(
   const double* const NOALIAS                                   Q,
@@ -343,8 +343,8 @@ bool applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
   }
 
   // A boundary condition is not a solution of the equations, and beyond the survey
-  // the bed is a constant continuation of its rim rather than a measured one. Both
-  // stand on the robust scheme.
+  // the bed continues its rim at a constant depth. Both stand on the well-balanced
+  // Rusanov scheme.
   const auto rasterOffset = RuntimeParameters::getBathymetryOffset();
   const auto rasterSize   = RuntimeParameters::getBathymetrySize();
   for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
@@ -409,7 +409,7 @@ void applications::exahype2::exaskred::ADERDGSolver::riemannSolver(
     };
 
   ::applications::exahype2::exaskred::riemann::
-    wellBalancedRusanov<Shortcuts, Shortcuts::b, NumberOfUnknowns, NumberOfAuxiliaryVariables, Order>(
+    wellBalancedRusanov<Shortcuts, Shortcuts::b, NumberOfUnknowns, NumberOfAuxiliaryVariables, DGOrder>(
       QL,
       QR,
       x,

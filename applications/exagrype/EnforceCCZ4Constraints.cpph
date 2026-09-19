@@ -1,12 +1,36 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
-namespace applications::exahype2::exagrype {
-  static inline GPU_CALLABLE_METHOD void enforceCCZ4constraints(double* luh) {
-    double       g_cov[3][3] = {{luh[0], luh[1], luh[2]}, {luh[1], luh[3], luh[4]}, {luh[2], luh[4], luh[5]}};
-    const double det         = luh[0] * luh[3] * luh[5] - luh[0] * luh[4] * luh[4] - luh[1] * luh[1] * luh[5]
-                       + 2 * luh[1] * luh[2] * luh[4] - luh[2] * luh[2] * luh[3];
+/**
+ * Normalises each node's conformal metric and removes the traces of A_tilde and D_kij.
+ * The conformal metric must be positive definite.
+ * Clamps the lapse and conformal factor to positive values.
+ */
+template <class Shortcuts>
+INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exagrype::enforceCCZ4Constraints(
+  double* const NOALIAS Q,
+  const int             numberOfDofs,
+  const int             strideBetweenDofs
+) {
+  assertion(Q != nullptr);
+  assertion(numberOfDofs >= 0, numberOfDofs);
+  assertion(strideBetweenDofs >= Shortcuts::grad_phi + 3, strideBetweenDofs);
+  for (int dof = 0; dof < numberOfDofs; dof++) {
+    double* const NOALIAS luh = Q + dof * strideBetweenDofs;
 
+    double g_cov[3][3] = {
+      {luh[Shortcuts::gamma_tilde + 0], luh[Shortcuts::gamma_tilde + 1], luh[Shortcuts::gamma_tilde + 2]},
+      {luh[Shortcuts::gamma_tilde + 1], luh[Shortcuts::gamma_tilde + 3], luh[Shortcuts::gamma_tilde + 4]},
+      {luh[Shortcuts::gamma_tilde + 2], luh[Shortcuts::gamma_tilde + 4], luh[Shortcuts::gamma_tilde + 5]}
+    };
+    const double det =
+      luh[Shortcuts::gamma_tilde + 0] * luh[Shortcuts::gamma_tilde + 3] * luh[Shortcuts::gamma_tilde + 5]
+      - luh[Shortcuts::gamma_tilde + 0] * luh[Shortcuts::gamma_tilde + 4] * luh[Shortcuts::gamma_tilde + 4]
+      - luh[Shortcuts::gamma_tilde + 1] * luh[Shortcuts::gamma_tilde + 1] * luh[Shortcuts::gamma_tilde + 5]
+      + 2 * luh[Shortcuts::gamma_tilde + 1] * luh[Shortcuts::gamma_tilde + 2] * luh[Shortcuts::gamma_tilde + 4]
+      - luh[Shortcuts::gamma_tilde + 2] * luh[Shortcuts::gamma_tilde + 2] * luh[Shortcuts::gamma_tilde + 3];
+
+    assertion(std::isfinite(det) and det > 0.0, det);
     const double phisq = 1. / std::cbrt(det);
     for (int i = 0; i < 3; i++) {
       for (int j = 0; j < 3; j++) {
@@ -15,9 +39,10 @@ namespace applications::exahype2::exagrype {
     }
 
     const double det2 = g_cov[0][0] * g_cov[1][1] * g_cov[2][2] - g_cov[0][0] * g_cov[1][2] * g_cov[2][1]
-                        - g_cov[1][0] * g_cov[0][1] * g_cov[2][2] + g_cov[1][0] * g_cov[0][2] * g_cov[2][1]
-                        + g_cov[2][0] * g_cov[0][1] * g_cov[1][2] - g_cov[2][0] * g_cov[0][2] * g_cov[1][1];
+      - g_cov[1][0] * g_cov[0][1] * g_cov[2][2] + g_cov[1][0] * g_cov[0][2] * g_cov[2][1]
+      + g_cov[2][0] * g_cov[0][1] * g_cov[1][2] - g_cov[2][0] * g_cov[0][2] * g_cov[1][1];
 
+    assertion(std::isfinite(det2) and det2 > 0.0, det2);
     const double invdet        = 1. / det2;
     const double g_contr[3][3] = {
       {(g_cov[1][1] * g_cov[2][2] - g_cov[1][2] * g_cov[2][1]) * invdet,
@@ -30,7 +55,12 @@ namespace applications::exahype2::exagrype {
        -(g_cov[0][0] * g_cov[2][1] - g_cov[0][1] * g_cov[2][0]) * invdet,
        (g_cov[0][0] * g_cov[1][1] - g_cov[0][1] * g_cov[1][0]) * invdet}
     };
-    double aEx[3][3] = {{luh[6], luh[7], luh[8]}, {luh[7], luh[9], luh[10]}, {luh[8], luh[10], luh[11]}};
+
+    double aEx[3][3] = {
+      {luh[Shortcuts::A_tilde + 0], luh[Shortcuts::A_tilde + 1], luh[Shortcuts::A_tilde + 2]},
+      {luh[Shortcuts::A_tilde + 1], luh[Shortcuts::A_tilde + 3], luh[Shortcuts::A_tilde + 4]},
+      {luh[Shortcuts::A_tilde + 2], luh[Shortcuts::A_tilde + 4], luh[Shortcuts::A_tilde + 5]}
+    };
 
     double traceA = 0;
     for (int i = 0; i < 3; i++) {
@@ -45,37 +75,51 @@ namespace applications::exahype2::exagrype {
       }
     }
 
-    luh[0] = g_cov[0][0];
-    luh[1] = g_cov[0][1];
-    luh[2] = g_cov[0][2];
-    luh[3] = g_cov[1][1];
-    luh[4] = g_cov[1][2];
-    luh[5] = g_cov[2][2];
+    luh[Shortcuts::gamma_tilde + 0] = g_cov[0][0];
+    luh[Shortcuts::gamma_tilde + 1] = g_cov[0][1];
+    luh[Shortcuts::gamma_tilde + 2] = g_cov[0][2];
+    luh[Shortcuts::gamma_tilde + 3] = g_cov[1][1];
+    luh[Shortcuts::gamma_tilde + 4] = g_cov[1][2];
+    luh[Shortcuts::gamma_tilde + 5] = g_cov[2][2];
 
-    luh[6]  = aEx[0][0];
-    luh[7]  = aEx[0][1];
-    luh[8]  = aEx[0][2];
-    luh[9]  = aEx[1][1];
-    luh[10] = aEx[1][2];
-    luh[11] = aEx[2][2];
+    luh[Shortcuts::A_tilde + 0] = aEx[0][0];
+    luh[Shortcuts::A_tilde + 1] = aEx[0][1];
+    luh[Shortcuts::A_tilde + 2] = aEx[0][2];
+    luh[Shortcuts::A_tilde + 3] = aEx[1][1];
+    luh[Shortcuts::A_tilde + 4] = aEx[1][2];
+    luh[Shortcuts::A_tilde + 5] = aEx[2][2];
 
-    // new constraints: a minimum for phi(chi) and alpha
-    luh[16] = std::fmax(1e-16, luh[16]);
-    luh[54] = std::fmax(1e-16, luh[54]);
-
-    //
-    // As suggested by our PRD referee, we also enforce the algebraic constraint that results from the first spatial
-    // derivative of the constraint det \tilde{\gamma}_ij = 0, which leads to
-    //
-    // \tilde{\gamma}^{ij} D_kij = 0
-    //
-    // and is thus a condition of trace-freeness on all submatrices D_kij for k=1,2,3.
-    //
+    luh[Shortcuts::alpha] = std::fmax(1e-16, luh[Shortcuts::alpha]);
+    luh[Shortcuts::phi]   = std::fmax(1e-16, luh[Shortcuts::phi]);
 
     double dd[3][3][3] = {
-      {{luh[35], luh[36], luh[37]}, {luh[36], luh[38], luh[39]}, {luh[37], luh[39], luh[40]}},
-      {{luh[41], luh[42], luh[43]}, {luh[42], luh[44], luh[45]}, {luh[43], luh[45], luh[46]}},
-      {{luh[47], luh[48], luh[49]}, {luh[48], luh[50], luh[51]}, {luh[49], luh[51], luh[52]}}
+      {{luh[Shortcuts::grad_gamma_tilde + 0],
+        luh[Shortcuts::grad_gamma_tilde + 1],
+        luh[Shortcuts::grad_gamma_tilde + 2]},
+       {luh[Shortcuts::grad_gamma_tilde + 1],
+        luh[Shortcuts::grad_gamma_tilde + 3],
+        luh[Shortcuts::grad_gamma_tilde + 4]},
+       {luh[Shortcuts::grad_gamma_tilde + 2],
+        luh[Shortcuts::grad_gamma_tilde + 4],
+        luh[Shortcuts::grad_gamma_tilde + 5]}},
+      {{luh[Shortcuts::grad_gamma_tilde + 6],
+        luh[Shortcuts::grad_gamma_tilde + 7],
+        luh[Shortcuts::grad_gamma_tilde + 8]},
+       {luh[Shortcuts::grad_gamma_tilde + 7],
+        luh[Shortcuts::grad_gamma_tilde + 9],
+        luh[Shortcuts::grad_gamma_tilde + 10]},
+       {luh[Shortcuts::grad_gamma_tilde + 8],
+        luh[Shortcuts::grad_gamma_tilde + 10],
+        luh[Shortcuts::grad_gamma_tilde + 11]}},
+      {{luh[Shortcuts::grad_gamma_tilde + 12],
+        luh[Shortcuts::grad_gamma_tilde + 13],
+        luh[Shortcuts::grad_gamma_tilde + 14]},
+       {luh[Shortcuts::grad_gamma_tilde + 13],
+        luh[Shortcuts::grad_gamma_tilde + 15],
+        luh[Shortcuts::grad_gamma_tilde + 16]},
+       {luh[Shortcuts::grad_gamma_tilde + 14],
+        luh[Shortcuts::grad_gamma_tilde + 16],
+        luh[Shortcuts::grad_gamma_tilde + 17]}}
     };
 
     for (int l = 0; l < 3; l++) {
@@ -93,25 +137,25 @@ namespace applications::exahype2::exagrype {
       }
     }
 
-    luh[35] = dd[0][0][0];
-    luh[36] = dd[0][0][1];
-    luh[37] = dd[0][0][2];
-    luh[38] = dd[0][1][1];
-    luh[39] = dd[0][1][2];
-    luh[40] = dd[0][2][2];
+    luh[Shortcuts::grad_gamma_tilde + 0] = dd[0][0][0];
+    luh[Shortcuts::grad_gamma_tilde + 1] = dd[0][0][1];
+    luh[Shortcuts::grad_gamma_tilde + 2] = dd[0][0][2];
+    luh[Shortcuts::grad_gamma_tilde + 3] = dd[0][1][1];
+    luh[Shortcuts::grad_gamma_tilde + 4] = dd[0][1][2];
+    luh[Shortcuts::grad_gamma_tilde + 5] = dd[0][2][2];
 
-    luh[41] = dd[1][0][0];
-    luh[42] = dd[1][0][1];
-    luh[43] = dd[1][0][2];
-    luh[44] = dd[1][1][1];
-    luh[45] = dd[1][1][2];
-    luh[46] = dd[1][2][2];
+    luh[Shortcuts::grad_gamma_tilde + 6]  = dd[1][0][0];
+    luh[Shortcuts::grad_gamma_tilde + 7]  = dd[1][0][1];
+    luh[Shortcuts::grad_gamma_tilde + 8]  = dd[1][0][2];
+    luh[Shortcuts::grad_gamma_tilde + 9]  = dd[1][1][1];
+    luh[Shortcuts::grad_gamma_tilde + 10] = dd[1][1][2];
+    luh[Shortcuts::grad_gamma_tilde + 11] = dd[1][2][2];
 
-    luh[47] = dd[2][0][0];
-    luh[48] = dd[2][0][1];
-    luh[49] = dd[2][0][2];
-    luh[50] = dd[2][1][1];
-    luh[51] = dd[2][1][2];
-    luh[52] = dd[2][2][2];
+    luh[Shortcuts::grad_gamma_tilde + 12] = dd[2][0][0];
+    luh[Shortcuts::grad_gamma_tilde + 13] = dd[2][0][1];
+    luh[Shortcuts::grad_gamma_tilde + 14] = dd[2][0][2];
+    luh[Shortcuts::grad_gamma_tilde + 15] = dd[2][1][1];
+    luh[Shortcuts::grad_gamma_tilde + 16] = dd[2][1][2];
+    luh[Shortcuts::grad_gamma_tilde + 17] = dd[2][2][2];
   }
-} // namespace applications::exahype2::exagrype
+}

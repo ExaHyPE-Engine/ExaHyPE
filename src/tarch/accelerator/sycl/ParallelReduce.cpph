@@ -160,9 +160,17 @@ namespace tarch::accelerator {
     queue
       .submit([&](::sycl::handler& handler) {
         auto reduction = ::sycl::reduction(deviceTarget, tarch::accelerator::syclOp(reducer));
+        const ::sycl::local_accessor<std::uint64_t, 1> scratch(
+          ::sycl::range<1>(tarch::accelerator::SyclTeamScratchBytes / sizeof(std::uint64_t)),
+          handler
+        );
         handler.parallel_for(groupedRange, reduction, [=](const ::sycl::nd_item<1> item, auto& accumulator) {
           ValueType threadAccumulator = Reducer::identity();
-          functor(static_cast<int>(item.get_group(0)), tarch::accelerator::SyclTeam{item}, threadAccumulator);
+          functor(
+            static_cast<int>(item.get_group(0)),
+            tarch::accelerator::SyclTeam{item, reinterpret_cast<unsigned char*>(&scratch[0])},
+            threadAccumulator
+          );
           accumulator.combine(threadAccumulator);
         });
       })
@@ -181,16 +189,37 @@ INLINE_METHOD GPU_CALLABLE_METHOD typename Reducer::ValueType tarch::accelerator
   return ::sycl::reduce_over_group(team.item.get_group(), value, tarch::accelerator::syclOp(reducer));
 }
 
+/**
+ * Combines the values of all work items through the team scratch, since SYCL's group algorithms
+ * take arithmetic types only.
+ */
 template <typename Op>
 INLINE_METHOD GPU_CALLABLE_METHOD typename Op::ValueType tarch::accelerator::reduceTeamValue(
   const tarch::accelerator::SyclTeam&                   team,
   const typename Op::ValueType                          value,
   [[maybe_unused]] const tarch::accelerator::Custom<Op> reducer
 ) {
-  typename Op::ValueType result    = Op::identity();
-  const auto             localSize = team.item.get_local_range(0);
-  for (std::size_t source = 0; source < localSize; source++) {
-    result = Op::combine(result, ::sycl::group_broadcast(team.item.get_group(), value, source));
+  using ValueType = typename Op::ValueType;
+  static_assert(
+    sizeof(ValueType) * tarch::accelerator::SyclLocalSize <= tarch::accelerator::SyclTeamScratchBytes,
+    "The custom value exceeds the team scratch."
+  );
+  static_assert(alignof(ValueType) <= alignof(std::uint64_t), "The team scratch aligns to eight bytes.");
+  ValueType* const partials   = reinterpret_cast<ValueType*>(team.scratch);
+  const auto       group      = team.item.get_group();
+  const int        localIndex = static_cast<int>(team.item.get_local_id(0));
+  const int        localSize  = static_cast<int>(team.item.get_local_range(0));
+  partials[localIndex]        = value;
+  ::sycl::group_barrier(group);
+  if (localIndex == 0) {
+    ValueType teamValue = Op::identity();
+    for (int source = 0; source < localSize; source++) {
+      teamValue = Op::combine(teamValue, partials[source]);
+    }
+    partials[0] = teamValue;
   }
+  ::sycl::group_barrier(group);
+  const ValueType result = partials[0];
+  ::sycl::group_barrier(group);
   return result;
 }

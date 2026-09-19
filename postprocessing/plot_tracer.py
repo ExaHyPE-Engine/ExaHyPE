@@ -6,13 +6,9 @@ import csv, argparse, sys
 def PlotTracer(argv=None):
     """!
 
-    Plot one variable of one tracer over time.
+    Plots one variable of one tracer over time.
 
-    Reads a CSV trajectory database as written by the action sets in this folder, selects a single
-    tracer, and either shows the resulting plot or writes it to a file.
-
-    matplotlib is imported lazily, so that merely importing exahype2.tracer - which every solver
-    build script does - does not require matplotlib to be installed.
+    The input is a CSV trajectory database of the exahype2.tracer action sets.
 
     @param argv Argument list to parse. Defaults to sys.argv[1:].
     """
@@ -47,7 +43,7 @@ def PlotTracer(argv=None):
             continue
     if csvData is None:
         raise SystemExit(
-            "none of {} exists, please make sure that the file is in the specified location".format(
+            "None of {} exists, please check the file location".format(
                 " or ".join(candidates)
             )
         )

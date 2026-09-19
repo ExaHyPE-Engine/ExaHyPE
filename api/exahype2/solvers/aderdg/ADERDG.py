@@ -14,11 +14,10 @@ import exahype2.grid
 import exahype2.solvers.aderdg.actionsets
 
 from .GenerateKernels import generate_kernels
-
-from exahype2.AlignmentHelper import AlignmentHelper
+from .KernelCalls import add_kernel_calls_to_dictionary
 
 from exahype2.solvers.PDETerms import PDETerms
-from exahype2.solvers.aderdg.LagrangeBasis import GaussLegendreBasis, GaussLobattoBasis
+from exahype2.solvers.LagrangeBasisWithDiagonalMassMatrix import GaussLegendreBasis, GaussLobattoBasis
 from exahype2.solvers.limiting.SubcellLimiting import SubcellLimiting
 
 from exahype2.VariableShortcuts import VariableShortcuts
@@ -72,7 +71,6 @@ class ADERDG(SubcellLimiting):
 
         self._dimensions    = 2
         self._namespace     = ""
-        self._simd_width    = 1
         self._solver_template_file_class_name = None
         self._templatefile_prefix = os.path.dirname(os.path.realpath(__file__)) + "/"
 
@@ -86,6 +84,7 @@ class ADERDG(SubcellLimiting):
         self._corrector_computation_precision       = PrecisionType["double"]
         self._solution_persistent_storage_precision = PrecisionType["double"]
         self._precompute_picard_precision           = PrecisionType["double"]
+        self._picard_residual_tolerance             = 1e-7
         self._use_half_precision                    = False
 
         self._additional_precisions = None
@@ -98,10 +97,6 @@ class ADERDG(SubcellLimiting):
         # A child class sets these to advance the time stepping.
         self._compute_time_step_size = "#error Not yet defined"
         self._compute_new_time_step_size = "#error Not yet defined"
-
-        self._space_time_predictor_call = "#error Not yet defined"
-        self._riemann_solver_call = "#error Not yet defined"
-        self._face_integral_call = "#error Not yet defined"
 
         self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
         self._boundary_conditions_implementation  = PDETerms.User_Defined_Implementation
@@ -117,20 +112,7 @@ class ADERDG(SubcellLimiting):
         self._precision_criterion_implementation  = PDETerms.None_Implementation
         self._riemann_solver_implementation       = PDETerms.None_Implementation
         self._number_of_point_sources             = 0
-
-        self._use_stateless_initial_conditions = False
-        self._use_stateless_boundary_conditions = False
-        self._use_stateless_refinement_criterion = False
-        self._use_stateless_flux = False
-        self._use_stateless_ncp = False
-        self._use_stateless_max_eigenvalue = False
-        self._use_stateless_riemann_solver = False
-        self._use_stateless_source_term = False
-        self._use_stateless_diffusive_source_term = False
-        self._use_stateless_point_source = False
-        self._use_stateless_init_point_sources = False
-        self._use_stateless_material_parameters = False
-        self._use_diffusive_flux = False
+        self._use_diffusive_flux                  = False
 
         self._abstract_solver_user_declarations = ""
         self._abstract_solver_user_definitions = ""
@@ -570,10 +552,11 @@ class ADERDG(SubcellLimiting):
         self._init_dictionary_with_default_parameters(d)
         self.add_entries_to_text_replacement_dictionary(d)
 
+        quadrature_points = [float(point) for point in self._basis.quadrature_points]
         mapping = []
-        for z in self._basis.quadrature_points():
-            for y in self._basis.quadrature_points():
-                for x in self._basis.quadrature_points():
+        for z in quadrature_points:
+            for y in quadrature_points:
+                for x in quadrature_points:
                     mapping.append((x, y, z))
 
         plotter = self._plotter(
@@ -627,7 +610,6 @@ class ADERDG(SubcellLimiting):
     def add_implementation_files_to_project(self, namespace, output, dimensions):
         self._dimensions = dimensions
         self._namespace = namespace
-        self._simd_width = int(output.makefile.d["SIMDLEN"])
 
         if (not self._is_linear) and (
             self._material_param_implementation != PDETerms.None_Implementation
@@ -773,6 +755,7 @@ class ADERDG(SubcellLimiting):
         d["UNKNOWN_IDENTIFIER"] = self._unknown_identifier()
 
         d["ORDER"]              = self._order
+        d["DG_ORDER"]           = self._order
         d["NUMBER_OF_DOF"]      = self._order + 1
         d["NUMBER_OF_DOF_3D"] = 1 if self._dimensions == 2 else d["NUMBER_OF_DOF"]
         d["NUMBER_OF_UNKNOWNS"]             = self._variable_shortcuts.unknowns
@@ -782,14 +765,9 @@ class ADERDG(SubcellLimiting):
         )
         d["NUMBER_OF_DATA"]                 = self._variable_shortcuts.unknowns + self._variable_shortcuts.auxiliary_variables
 
-        alignment_helper                          = AlignmentHelper(self._simd_width)
-        d["NUMBER_OF_DOF_PADDED"]                 = alignment_helper.get_size_with_padding(self._order + 1)
-        d["NUMBER_OF_UNKNOWNS_PADDED"]            = alignment_helper.get_size_with_padding(self._variable_shortcuts.unknowns)
-        d["NUMBER_OF_AUXILIARY_VARIABLES_PADDED"] = alignment_helper.get_size_with_padding(self._variable_shortcuts.auxiliary_variables)
-        d["NUMBER_OF_DATA_PADDED"]                = alignment_helper.get_size_with_padding(self._variable_shortcuts.unknowns + self._variable_shortcuts.auxiliary_variables)
-
         d["CFL_SAFETY_FACTOR"]  = self._cflSafetyFactor
         d["CFL_ADER"]           = self._cflAder[self._order]
+        d["PICARD_RESIDUAL_TOLERANCE"] = self._picard_residual_tolerance
 
         d["SUBCELL_LIMITER"]    = self.subcell_limiter_is_enabled
         d["SUBCELL_RIEMANN_SOLVER_IMPLEMENTATION"] = (
@@ -849,6 +827,10 @@ class ADERDG(SubcellLimiting):
             d["COMPUTATION_PRECISIONS"].append(self._solution_persistent_storage_precision)
         d["NUMBER_OF_PREDICTOR_PRECISIONS"] = len(d["PREDICTOR_COMPUTATION_PRECISIONS"])
         d["NUMBER_OF_PRECISIONS"] = len(d["COMPUTATION_PRECISIONS"])
+        # The mesh transfer operators read double tables whatever the solver computes in.
+        d["TABLE_PRECISIONS"] = d["COMPUTATION_PRECISIONS"][:]
+        if "double" not in d["TABLE_PRECISIONS"]:
+            d["TABLE_PRECISIONS"].append("double")
 
         d["SOLVER_CONSTANTS"] = self._solver_constants
         d["SOLVER_INCLUDES"]  = self.get_user_solver_includes()
@@ -926,43 +908,7 @@ class ADERDG(SubcellLimiting):
         d["USE_POINT_SOURCE"]         = self._point_sources_implementation != PDETerms.None_Implementation
         d["USE_DIFFUSIVE_FLUX"]       = self._use_diffusive_flux
 
-        d["STATELESS_INITIAL_CONDITIONS"] = self._use_stateless_initial_conditions
-        d["STATELESS_BOUNDARY_CONDITIONS"] = self._use_stateless_boundary_conditions
-        d["STATELESS_REFINEMENT_CRITERION"] = self._use_stateless_refinement_criterion
-        # The subcell scheme's kernels reach every PDE term through the solver
-        # type, so a limited solver's user-defined terms are static members and
-        # every call site uses the stateless form.
-        def stateless_or_static_member(stateless, implementation):
-            return stateless or (
-                self.subcell_limiter_is_enabled
-                and implementation == PDETerms.User_Defined_Implementation
-            )
-        d["STATELESS_FLUX"] = stateless_or_static_member(
-            self._use_stateless_flux, self._flux_implementation
-        )
-        d["STATELESS_NCP"] = stateless_or_static_member(
-            self._use_stateless_ncp, self._ncp_implementation
-        )
-        d["STATELESS_MAX_EIGENVALUE"] = stateless_or_static_member(
-            self._use_stateless_max_eigenvalue, self._max_eigenvalue_implementation
-        )
-        d["STATELESS_RIEMANN_SOLVER"] = self._use_stateless_riemann_solver
-        d["STATELESS_SOURCE_TERM"] = stateless_or_static_member(
-            self._use_stateless_source_term, self._source_term_implementation
-        )
-        d["STATELESS_DIFFUSIVE_SOURCE_TERM"] = stateless_or_static_member(
-            self._use_stateless_diffusive_source_term,
-            self._diffusive_source_term_implementation,
-        )
-        d["STATELESS_POINT_SOURCE"] = self._use_stateless_point_source
-        d["STATELESS_INIT_POINT_SOURCES"] = self._use_stateless_init_point_sources
-        d["STATELESS_MATERIAL_PARAMETERS"] = self._use_stateless_material_parameters
-
-        d["SPACE_TIME_PREDICTOR_CALL"] = jinja2.Template(self._space_time_predictor_call, undefined=jinja2.DebugUndefined).render(**d)
-        d["RIEMANN_SOLVER_CALL"] = jinja2.Template(self._riemann_solver_call, undefined=jinja2.DebugUndefined).render(**d)
-        d["FACE_INTEGRAL_CALL"] = jinja2.Template(self._face_integral_call, undefined=jinja2.DebugUndefined).render(**d)
-
-        d["QUADRATURE_POINTS"]      = ", ".join(self._basis.quadrature_points())
+        add_kernel_calls_to_dictionary(d)
 
     @staticmethod
     def _validate_diffusive_configuration(
@@ -1006,53 +952,33 @@ class ADERDG(SubcellLimiting):
         )
         if initial_conditions is not None:
             self._initial_conditions_implementation = initial_conditions
-            if initial_conditions is not PDETerms.User_Defined_Implementation:
-                self._use_stateless_initial_conditions = True
 
         if refinement_criterion is not None:
             self._refinement_criterion_implementation = refinement_criterion
-            if refinement_criterion is not PDETerms.User_Defined_Implementation:
-                self._use_stateless_refinement_criterion = True
 
         if boundary_conditions is not None:
             self._boundary_conditions_implementation = boundary_conditions
-            if boundary_conditions is not PDETerms.User_Defined_Implementation:
-                self._use_stateless_boundary_conditions = True
 
         if flux is not None:
             self._flux_implementation = flux
-            if flux is not PDETerms.User_Defined_Implementation:
-                self._use_stateless_flux = True
 
         if ncp is not None:
             self._ncp_implementation = ncp
-            if ncp is not PDETerms.User_Defined_Implementation:
-                self._use_stateless_ncp = True
 
         if max_eigenvalue is not None:
             self._max_eigenvalue_implementation = max_eigenvalue
-            if max_eigenvalue is not PDETerms.User_Defined_Implementation:
-                self._use_stateless_max_eigenvalue = True
 
         if riemann_solver is not None:
             self._riemann_solver_implementation = riemann_solver
-            if riemann_solver is not PDETerms.User_Defined_Implementation:
-                self._use_stateless_riemann_solver = True
 
         if source_term is not None:
             self._source_term_implementation = source_term
-            if source_term is not PDETerms.User_Defined_Implementation:
-                self._use_stateless_source_term = True
 
         if diffusive_source_term is not None:
             self._diffusive_source_term_implementation = diffusive_source_term
-            if diffusive_source_term is not PDETerms.User_Defined_Implementation:
-                self._use_stateless_diffusive_source_term = True
 
         if material_parameters is not None:
             self._material_param_implementation = material_parameters
-            if material_parameters is not PDETerms.User_Defined_Implementation:
-                self._use_stateless_material_parameters = True
 
         assert(type(number_of_point_sources) == int)
         assert(number_of_point_sources >= 0)
@@ -1061,13 +987,9 @@ class ADERDG(SubcellLimiting):
         if number_of_point_sources > 0:
             if point_source is not None:
                 self._point_sources_implementation = point_source
-                if point_source is not PDETerms.User_Defined_Implementation:
-                    self._use_stateless_point_source = True
 
             if init_point_source_location is not None:
                 self._init_point_sources_implementation = init_point_source_location
-                if init_point_source_location is not PDETerms.User_Defined_Implementation:
-                    self._use_stateless_init_point_sources = True
 
         if use_diffusive_flux is not None:
             self._use_diffusive_flux = use_diffusive_flux
@@ -1085,7 +1007,8 @@ class ADERDG(SubcellLimiting):
         solution_persistent_storage_precision = False,
         precompute_picard_precision           = False,
         precision_criterion_implementation    = PDETerms.User_Defined_Implementation,
-        initialise_patches                    = False
+        initialise_patches                    = False,
+        picard_residual_tolerance             = 1e-7,
     ):
         self._validate_diffusive_configuration(
             is_linear,
@@ -1158,6 +1081,8 @@ class ADERDG(SubcellLimiting):
             self._precision_criterion_implementation = precision_criterion_implementation
 
         self._initialise_patches = initialise_patches
+        assert picard_residual_tolerance > 0.0
+        self._picard_residual_tolerance = picard_residual_tolerance
 
         self.create_data_structures()
         self.create_action_sets()

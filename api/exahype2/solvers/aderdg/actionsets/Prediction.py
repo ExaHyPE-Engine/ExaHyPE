@@ -12,16 +12,11 @@ class Prediction(AbstractADERDGActionSet):
     const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
     {{COMPUTE_TIME_STEP_SIZE}}
 
-#if DIMENSIONS == 2
-    constexpr int SpaceBasisSize = ({{ORDER}} + 1) * ({{ORDER}} + 1);
-#else
-    constexpr int SpaceBasisSize = ({{ORDER}} + 1) * ({{ORDER}} + 1) * ({{ORDER}} + 1);
-#endif
+    constexpr int SpaceBasisSize = {{NUMBER_OF_DOF * NUMBER_OF_DOF * NUMBER_OF_DOF_3D}};
+    constexpr int BasisElementsPerFace = facedata::{{SOLVER_NAME}}QEstimates::Cardinality / 2;
+    constexpr int FluxElementsPerFace  = facedata::{{SOLVER_NAME}}QFluxEstimates::Cardinality / 2;
 
-    constexpr int BasisElementsPerFace  = facedata::{{SOLVER_NAME}}QEstimates::Cardinality / 2;
-    constexpr int FluxElementsPerFace   = facedata::{{SOLVER_NAME}}QFluxEstimates::Cardinality / 2;
-
-    auto* const updatedState = fineGridCell{{UNKNOWN_IDENTIFIER}}.data();
+    auto* const updatedState  = fineGridCell{{UNKNOWN_IDENTIFIER}}.data();
     auto* const previousState = fineGridCell{{UNKNOWN_IDENTIFIER}}_old.data();
 
     // User preprocessing kernels use the established QNew and QOld names.
@@ -30,31 +25,16 @@ class Prediction(AbstractADERDGActionSet):
 
     {{PREPROCESS_RECONSTRUCTED_PATCH}}
 
-    {{CORRECTOR_COMPUTATION_PRECISION}}* stateEstimates[peano4::FacesPerCell] = {
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(0).data() + BasisElementsPerFace,
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(1).data() + BasisElementsPerFace,
-#if DIMENSIONS==3
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(2).data() + BasisElementsPerFace,
-#endif
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(0 + DIMENSIONS).data(),
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(1 + DIMENSIONS).data(),
-#if DIMENSIONS==3
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(2 + DIMENSIONS).data()
-#endif
-    };
-
-    {{CORRECTOR_COMPUTATION_PRECISION}}* fluxEstimates[peano4::FacesPerCell] = {
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(0).data() + FluxElementsPerFace,
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(1).data() + FluxElementsPerFace,
-#if DIMENSIONS==3
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(2).data() + FluxElementsPerFace,
-#endif
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(0 + DIMENSIONS).data(),
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(1 + DIMENSIONS).data(),
-#if DIMENSIONS==3
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(2 + DIMENSIONS).data()
-#endif
-    };
+    {{CORRECTOR_COMPUTATION_PRECISION}}* stateEstimates[peano4::FacesPerCell];
+    {{CORRECTOR_COMPUTATION_PRECISION}}* fluxEstimates[peano4::FacesPerCell];
+    for (int face = 0; face < peano4::FacesPerCell; face++) {
+      // The lower faces of this cell hold its estimates in their upper half.
+      const int ownHalf = face < DIMENSIONS ? 1 : 0;
+      stateEstimates[face] =
+        fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(face).data() + ownHalf * BasisElementsPerFace;
+      fluxEstimates[face] =
+        fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(face).data() + ownHalf * FluxElementsPerFace;
+    }
 
     // This copy decides which buffer a plotter reads: In fused ADER-DG the
     // correction writes the accepted state into Q earlier in this traversal, so
@@ -104,7 +84,6 @@ class Prediction(AbstractADERDGActionSet):
     def __init__(self, solver, guard):
         super(Prediction, self).__init__(solver)
         self.guard = guard
-        self.multiple_precisions = len(solver._predictor_computation_precisions) > 1
 
     def _add_action_set_entries_to_dictionary(self, dictionary):
         dictionary["GUARD"] = self.guard

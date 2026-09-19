@@ -189,8 +189,8 @@ def fuseADERSolvers(solver1, solver2, cond_1, cond_2):
     solver1._compute_time_step_size = compute_time_step_size
     solver2._compute_time_step_size = compute_time_step_size
 
-    aderSolver1QuadPoints = solver1._basis.quadrature_points(render=False)
-    aderSolver2QuadPoints = solver2._basis.quadrature_points(render=False)
+    aderSolver1QuadPoints = [float(point) for point in solver1._basis.quadrature_points]
+    aderSolver2QuadPoints = [float(point) for point in solver2._basis.quadrature_points]
 
     if(aderSolver1QuadPoints!=aderSolver2QuadPoints):
       proj1 = flatten(compute_projector_to_point_set(aderSolver1QuadPoints, aderSolver2QuadPoints))

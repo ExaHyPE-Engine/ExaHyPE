@@ -45,116 +45,31 @@ class Correction(AbstractADERDGActionSet):
 
     {{COMPUTE_TIME_STEP_SIZE}}
 
-    constexpr std::size_t FluxElementsPerFace =
-      facedata::{{SOLVER_NAME}}QFluxEstimates::Cardinality / 2;
-    constexpr std::size_t StateElementsPerFace =
-      facedata::{{SOLVER_NAME}}QEstimates::Cardinality / 2;
-    constexpr std::size_t NumberOfUnknowns = {{NUMBER_OF_UNKNOWNS}};
-    constexpr std::size_t NumberOfValues =
-      NumberOfUnknowns + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    constexpr int NumberOfDofsPerAxis = {{ORDER}} + 1;
-    auto* const leftFluxEstimates =
-      fineGridFace{{SOLVER_NAME}}QFluxEstimates.data();
-    auto* const rightFluxEstimates = leftFluxEstimates + FluxElementsPerFace;
-    auto* const leftStateEstimates = fineGridFace{{SOLVER_NAME}}QEstimates.data();
+    constexpr int FluxElementsPerFace  = facedata::{{SOLVER_NAME}}QFluxEstimates::Cardinality / 2;
+    constexpr int StateElementsPerFace = facedata::{{SOLVER_NAME}}QEstimates::Cardinality / 2;
+    auto* const leftFluxEstimates   = fineGridFace{{SOLVER_NAME}}QFluxEstimates.data();
+    auto* const rightFluxEstimates  = leftFluxEstimates + FluxElementsPerFace;
+    auto* const leftStateEstimates  = fineGridFace{{SOLVER_NAME}}QEstimates.data();
     auto* const rightStateEstimates = leftStateEstimates + StateElementsPerFace;
     const auto& faceCentre = marker.getX();
 
     if (isBoundary) {
-      const auto isNegativeBoundary = faceNumber < DIMENSIONS;
-      const auto* const insideStateEstimates =
-        isNegativeBoundary ? rightStateEstimates : leftStateEstimates;
-      auto* const outsideStateEstimates =
-        isNegativeBoundary ? leftStateEstimates : rightStateEstimates;
-      auto* const outsideFluxEstimates =
-        isNegativeBoundary ? leftFluxEstimates : rightFluxEstimates;
-
-{% if USE_FLUX and USE_DIFFUSIVE_FLUX %}
-      const auto inverseNormalCellSize = 1.0 / marker.getH()(direction);
-{% endif %}
-
-      peano4::dForEachExclusive(
-        NumberOfDofsPerAxis,
-        direction,
-        0,
-        [&](const tarch::la::Vector<DIMENSIONS, int>& degreeOfFreedom) {
-          auto nodePosition = faceCentre - 0.5 * marker.getH();
-          nodePosition(direction) = faceCentre(direction);
-
-          std::size_t serialisedDegreeOfFreedom = 0;
-          std::size_t stride = 1;
-          for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
-            if (dimension != direction) {
-              nodePosition(dimension) +=
-                kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes[
-                  degreeOfFreedom(dimension)
-                ]
-                * marker.getH()(dimension);
-              serialisedDegreeOfFreedom +=
-                static_cast<std::size_t>(degreeOfFreedom(dimension)) * stride;
-              stride *= static_cast<std::size_t>(NumberOfDofsPerAxis);
-            }
-          }
-
-          const auto dataOffset = serialisedDegreeOfFreedom * NumberOfValues;
-          const auto fluxOffset = serialisedDegreeOfFreedom * NumberOfUnknowns;
-
-{% if STATELESS_BOUNDARY_CONDITIONS %}
-          {{FULL_QUALIFIED_SOLVER_NAME}}::boundaryConditions(
-{% else %}
-          repositories::{{SOLVER_INSTANCE}}.boundaryConditions(
-{% endif %}
-            insideStateEstimates + dataOffset,
-            outsideStateEstimates + dataOffset,
-            nodePosition,
-            marker.getH(),
-            timeStamp,
-            direction
-          );
-
-{% if USE_FLUX %}
-{% if USE_DIFFUSIVE_FLUX %}
-          {{CORRECTOR_COMPUTATION_PRECISION}} normalStateGradient[NumberOfUnknowns]{};
-          const {{CORRECTOR_COMPUTATION_PRECISION}} zeroStateGradient[NumberOfUnknowns]{};
-          const {{CORRECTOR_COMPUTATION_PRECISION}}* stateGradients[DIMENSIONS]{
-            zeroStateGradient,
-            zeroStateGradient,
-#if DIMENSIONS == 3
-            zeroStateGradient
-#endif
-          };
-          stateGradients[direction] = normalStateGradient;
-          for (std::size_t unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-            normalStateGradient[unknown] =
-              (rightStateEstimates[dataOffset + unknown]
-               - leftStateEstimates[dataOffset + unknown])
-              * inverseNormalCellSize;
-          }
-{% endif %}
-{% if STATELESS_FLUX %}
-          {{FULL_QUALIFIED_SOLVER_NAME}}::flux(
-{% else %}
-          repositories::{{SOLVER_INSTANCE}}.flux(
-{% endif %}
-            outsideStateEstimates + dataOffset,
-{% if USE_DIFFUSIVE_FLUX %}
-            stateGradients,
-{% endif %}
-            nodePosition,
-            marker.getH(),
-            timeStamp,
-            timeStepSize,
-            direction,
-            outsideFluxEstimates + fluxOffset
-          );
-{% else %}
-          std::fill_n(
-            outsideFluxEstimates + fluxOffset,
-            NumberOfUnknowns,
-            0.0
-          );
-{% endif %}
-        }
+      ::exahype2::dg::applyBoundaryConditions<
+        {{FULL_QUALIFIED_SOLVER_NAME}}, {{DG_ORDER}} + 1, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}
+      >(
+        leftStateEstimates,
+        kernels::{{SOLVER_NAME}}::Quadrature<{{CORRECTOR_COMPUTATION_PRECISION}}>::QuadraturePoints1D,
+        faceCentre, marker.getH(), timeStamp, faceNumber
+      );
+      const int outsideSide = 1 - interiorFacePosition;
+      ::exahype2::dg::evaluateFluxOnFace<
+        {{FULL_QUALIFIED_SOLVER_NAME}}, {{DG_ORDER}} + 1, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}},
+        {{"true" if USE_FLUX else "false"}}, {{"true" if USE_DIFFUSIVE_FLUX else "false"}}
+      >(
+        leftFluxEstimates + outsideSide * FluxElementsPerFace,
+        leftStateEstimates, rightStateEstimates, outsideSide,
+        kernels::{{SOLVER_NAME}}::Quadrature<{{CORRECTOR_COMPUTATION_PRECISION}}>::QuadraturePoints1D,
+        faceCentre, marker.getH(), timeStamp, timeStepSize, direction
       );
     }
 
@@ -209,23 +124,18 @@ class Correction(AbstractADERDGActionSet):
       fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize();
 
     auto* const committedState = fineGridCell{{UNKNOWN_IDENTIFIER}}.data();
-    constexpr std::size_t FluxElementsPerFace =
-      facedata::{{SOLVER_NAME}}QFluxEstimates::Cardinality / 2;
+    constexpr int FluxElementsPerFace = facedata::{{SOLVER_NAME}}QFluxEstimates::Cardinality / 2;
     constexpr int NodesPerCell = {{NUMBER_OF_DOF*NUMBER_OF_DOF*NUMBER_OF_DOF_3D}};
-    constexpr int SpaceBasisSize = NodesPerCell * {{NUMBER_OF_DATA}};
+    constexpr int UpdateSize   = NodesPerCell * {{NUMBER_OF_UNKNOWNS}};
 
     // Each direction's two faces accumulate into a direction buffer, and the
     // buffers combine through a commutative pairwise sum, so two mirror-image
     // cells commit bitwise mirrored states.
-    {{SOLUTION_STORAGE_PRECISION}} directionUpdates[DIMENSIONS][SpaceBasisSize];
+    {{SOLUTION_STORAGE_PRECISION}} directionUpdates[DIMENSIONS][UpdateSize];
     // Hanging-face Riemann data resides on the side that sent it.
     for (int direction = 0; direction < DIMENSIONS; direction++) {
       auto* const updatedState = directionUpdates[direction];
-      std::fill_n(
-        updatedState,
-        SpaceBasisSize,
-        static_cast<{{SOLUTION_STORAGE_PRECISION}}>(0)
-      );
+      std::fill_n(updatedState, UpdateSize, static_cast<{{SOLUTION_STORAGE_PRECISION}}>(0));
       {
         auto* const faceFluxEstimates =
           fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(direction).data()
@@ -251,14 +161,14 @@ class Correction(AbstractADERDGActionSet):
     }
     for (int node = 0; node < NodesPerCell; node++) {
       for (int unknown = 0; unknown < {{NUMBER_OF_UNKNOWNS}}; unknown++) {
-        const auto entry = node * {{NUMBER_OF_DATA}} + unknown;
+        const auto update = node * {{NUMBER_OF_UNKNOWNS}} + unknown;
 #if DIMENSIONS == 2
-        committedState[entry] +=
-          directionUpdates[0][entry] + directionUpdates[1][entry];
+        committedState[node * {{NUMBER_OF_DATA}} + unknown] +=
+          directionUpdates[0][update] + directionUpdates[1][update];
 #else
-        committedState[entry] +=
-          directionUpdates[0][entry] + directionUpdates[1][entry]
-          + directionUpdates[2][entry];
+        committedState[node * {{NUMBER_OF_DATA}} + unknown] +=
+          directionUpdates[0][update] + directionUpdates[1][update]
+          + directionUpdates[2][update];
 #endif
       }
     }

@@ -53,7 +53,7 @@
 #endif
 #endif
 
-// nvcc warns when a host and device template runs a host-only lambda or constexpr helper on the host.
+// The CUDA compiler nvcc warns when a host and device template runs a host-only lambda or constexpr helper on the host.
 #if defined(__CUDACC__) and not defined(__clang__)
 #pragma nv_diag_suppress 20011
 #pragma nv_diag_suppress 20013
@@ -71,6 +71,9 @@
 #if defined(PEANO_WITH_GPU_BACKEND_KOKKOS)
 #define COMPILE_IF_ON_DEVICE(CODE) KOKKOS_IF_ON_DEVICE(CODE)
 #define COMPILE_IF_ON_HOST(CODE) KOKKOS_IF_ON_HOST(CODE)
+#elif defined(PEANO_WITH_GPU_BACKEND_SYCL) and defined(ACPP_UNIVERSAL_TARGET)
+#define COMPILE_IF_ON_DEVICE(CODE) __acpp_if_target_device(CODE)
+#define COMPILE_IF_ON_HOST(CODE) __acpp_if_target_host(CODE)
 #else
 #if defined(__CUDA_ARCH__) or defined(__HIP_DEVICE_COMPILE__) or defined(__SPIR__) or defined(__SPIRV__) \
   or defined(__SYCL_DEVICE_ONLY__) or defined(__NVPTX__) or defined(__AMDGCN__)

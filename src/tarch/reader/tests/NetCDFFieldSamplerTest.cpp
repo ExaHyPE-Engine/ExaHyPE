@@ -9,6 +9,20 @@
 #include <netcdf.h>
 
 namespace {
+  /**
+   * Returns a new fixture path in the test directory. The file name contains an identifier that
+   * each process computes once, so two ranks never create the same file.
+   */
+  std::filesystem::path fixturePath(const std::string& stem) {
+    static const std::string testRunIdentifier =
+      std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) + "-"
+      + std::to_string(std::random_device{}());
+    static std::atomic<int> counter = 0;
+
+    return tarch::tests::getWritableTestDirectory()
+      / std::filesystem::path(stem + "-" + testRunIdentifier + "-" + std::to_string(counter++) + ".nc");
+  }
+
   std::string writeTempNetCDFFile(
     const std::string&         stem,
     const std::vector<double>& xValues,
@@ -18,15 +32,7 @@ namespace {
     const std::string&         xKey     = "x",
     const std::string&         yKey     = "y"
   ) {
-    // The file name carries a per-run identifier, so two processes that write into the test
-    // directory at the same time do not overwrite each other's fixture.
-    static const std::string testRunIdentifier =
-      std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) + "-"
-      + std::to_string(std::random_device{}());
-    static std::atomic<int> counter = 0;
-
-    const std::filesystem::path path = tarch::tests::getWritableTestDirectory()
-      / std::filesystem::path(stem + "-" + testRunIdentifier + "-" + std::to_string(counter++) + ".nc");
+    const std::filesystem::path path = fixturePath(stem);
 
     auto check = [&](const int status, const std::string& operation) {
       if (status != NC_NOERR) {
@@ -75,11 +81,7 @@ namespace {
     const std::vector<double>& fieldValues,
     const std::string&         valueKey = "value"
   ) {
-    static std::atomic<int> counter = 0;
-
-    const std::filesystem::path path = tarch::tests::getWritableTestDirectory()
-      / std::filesystem::path(stem + "-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count())
-                              + "-" + std::to_string(counter++) + ".nc");
+    const std::filesystem::path path = fixturePath(stem);
 
     auto check = [&](const int status, const std::string& operation) {
       if (status != NC_NOERR) {

@@ -1,0 +1,63 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+/**
+ * Overwrites errors with the L1 norm, the squared L2 norm and the maximum norm of the difference
+ * between the cell state and the exact solution over the measured unknowns. evaluateExactSolution
+ * receives a node position, the time stamp, the time step size, the state at the node and the
+ * buffer it writes the exact state into.
+ */
+template <
+  int NumberOfDofsPerAxis,
+  int NumberOfUnknowns,
+  int NumberOfAuxiliaryVariables,
+  int NumberOfMeasuredUnknowns,
+  typename StoragePrecision,
+  typename ExactSolution>
+INLINE_METHOD void exahype2::dg::ader::accumulateCellError(
+  ExactSolution&&                       evaluateExactSolution,
+  const StoragePrecision* NOALIAS const cellState,
+  const StoragePrecision* NOALIAS const quadraturePoints,
+  const StoragePrecision* NOALIAS const quadratureWeights,
+  const int (&measuredUnknowns)[NumberOfMeasuredUnknowns],
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const double                                 timeStamp,
+  const double                                 timeStepSize,
+  double (&errors)[3]
+) {
+  constexpr int NumberOfData = NumberOfUnknowns + NumberOfAuxiliaryVariables;
+
+  errors[0] = 0.0;
+  errors[1] = 0.0;
+  errors[2] = 0.0;
+
+  double cellVolume = 1.0;
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    assertion(cellSize(axis) > 0.0, cellSize, axis);
+    cellVolume *= cellSize(axis);
+  }
+
+  double exactSolution[NumberOfUnknowns];
+  int    linearisedIndex = 0;
+
+  peano4::dForEach(NumberOfDofsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& nodeIndex) {
+    double weight = cellVolume;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      weight *= static_cast<double>(quadratureWeights[nodeIndex(axis)]);
+    }
+
+    const auto nodePosition = exahype2::dg::getQuadraturePoint(cellCentre, cellSize, nodeIndex, quadraturePoints);
+    evaluateExactSolution(nodePosition, timeStamp, timeStepSize, cellState + linearisedIndex, exactSolution);
+
+    for (const int unknown : measuredUnknowns) {
+      assertion(unknown >= 0 and unknown < NumberOfUnknowns, unknown);
+      const double error = std::abs(static_cast<double>(cellState[linearisedIndex + unknown]) - exactSolution[unknown]);
+      errors[0] += weight * error;
+      errors[1] += weight * error * error;
+      errors[2] = std::max(errors[2], error);
+    }
+
+    linearisedIndex += NumberOfData;
+  });
+}

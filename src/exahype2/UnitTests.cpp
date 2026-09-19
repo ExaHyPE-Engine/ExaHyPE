@@ -6,6 +6,18 @@
 #include "exahype2/amr/tests/InterpolationTest.h"
 #include "exahype2/amr/tests/MultiresolutionDetailTest.h"
 #include "exahype2/amr/tests/RestrictionTest.h"
+#include "exahype2/dg/ader/tests/CauchyKovalewskiTest.h"
+#include "exahype2/dg/ader/tests/CellErrorIntegralTest.h"
+#include "exahype2/dg/ader/tests/KernelsOnDeviceTest.h"
+#include "exahype2/dg/ader/tests/LinearPredictorTermsTest.h"
+#include "exahype2/dg/ader/tests/PicardIterationTest.h"
+#include "exahype2/dg/ader/tests/PointSourceContributionTest.h"
+#include "exahype2/dg/ader/tests/PointSourcesTest.h"
+#include "exahype2/dg/ader/tests/PredictorScratchTest.h"
+#include "exahype2/dg/ader/tests/SpaceTimePredictorTest.h"
+#include "exahype2/dg/ader/tests/SpaceTimeTermsTest.h"
+#include "exahype2/dg/ader/tests/TimeAveragingTest.h"
+#include "exahype2/dg/ader/tests/VolumeIntegralTest.h"
 #include "exahype2/dg/rk/tests/KernelsOnDeviceTest.h"
 #include "exahype2/dg/rk/tests/LinearCombinationTest.h"
 #include "exahype2/dg/rk/tests/VolumeIntegralTest.h"
@@ -68,6 +80,19 @@ tarch::tests::TestCase* exahype2::getUnitTests() {
   result->addTestCase(new exahype2::dg::rk::tests::KernelsOnDeviceTest());
   result->addTestCase(new exahype2::dg::rk::tests::LinearCombinationTest());
   result->addTestCase(new exahype2::dg::rk::tests::VolumeIntegralTest());
+
+  result->addTestCase(new exahype2::dg::ader::tests::CauchyKovalewskiTest());
+  result->addTestCase(new exahype2::dg::ader::tests::CellErrorIntegralTest());
+  result->addTestCase(new exahype2::dg::ader::tests::KernelsOnDeviceTest());
+  result->addTestCase(new exahype2::dg::ader::tests::LinearPredictorTermsTest());
+  result->addTestCase(new exahype2::dg::ader::tests::PicardIterationTest());
+  result->addTestCase(new exahype2::dg::ader::tests::PointSourceContributionTest());
+  result->addTestCase(new exahype2::dg::ader::tests::PointSourcesTest());
+  result->addTestCase(new exahype2::dg::ader::tests::PredictorScratchTest());
+  result->addTestCase(new exahype2::dg::ader::tests::SpaceTimePredictorTest());
+  result->addTestCase(new exahype2::dg::ader::tests::SpaceTimeTermsTest());
+  result->addTestCase(new exahype2::dg::ader::tests::TimeAveragingTest());
+  result->addTestCase(new exahype2::dg::ader::tests::VolumeIntegralTest());
 
   result->addTestCase(new exahype2::fv::tests::CopyPatchTest());
   result->addTestCase(new exahype2::fv::tests::ApplySplit1DRiemannToPatchTest());

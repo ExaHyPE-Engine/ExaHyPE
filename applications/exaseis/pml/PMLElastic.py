@@ -25,14 +25,14 @@ def initial():
   double offset_y = x[1] - h[1] * 0.5;
   double offset_z = x[2] - h[2] * 0.5;
 
-  kernels::idx4 idx(Order + 1, Order + 1, Order + 1, NumberOfUnknowns + NumberOfAuxiliaryVariables);
+  kernels::idx4 idx(DGOrder + 1, DGOrder + 1, DGOrder + 1, NumberOfUnknowns + NumberOfAuxiliaryVariables);
 
-  for (int k = 0; k < Order + 1; k++) {
-    double computational_z = (offset_z + h[2] * kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes[k]);
-    for (int j = 0; j < Order + 1; j++) {
-      double computational_y = (offset_y + h[1] * kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes[j]);
-      for (int i = 0; i < Order + 1; i++) {
-        double computational_x = (offset_x + h[0] * kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes[i]);
+  for (int k = 0; k < DGOrder + 1; k++) {
+    double computational_z = (offset_z + h[2] * kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::QuadraturePoints1D[k]);
+    for (int j = 0; j < DGOrder + 1; j++) {
+      double computational_y = (offset_y + h[1] * kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::QuadraturePoints1D[j]);
+      for (int i = 0; i < DGOrder + 1; i++) {
+        double computational_x = (offset_x + h[0] * kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::QuadraturePoints1D[i]);
 
         if (_TOP != 0) { //  No PML on surface
           if (computational_x < dmp_pml_left_x) {
@@ -221,30 +221,30 @@ def algebraic_source():
   auto alpha_y = (pml_alpha_const + pml_alpha_scalar * dmp_pml_y);
   auto alpha_z = (pml_alpha_const + pml_alpha_scalar * dmp_pml_z);
 
-  S[Shortcuts::v + 0] = rho_inv * (Q[Shortcuts::pml + 9*0 + 0] + Q[Shortcuts::pml + 9*1 + 0] + Q[Shortcuts::pml + 9*2 + 0]);
-  S[Shortcuts::v + 1] = rho_inv * (Q[Shortcuts::pml + 9*0 + 1] + Q[Shortcuts::pml + 9*1 + 1] + Q[Shortcuts::pml + 9*2 + 1]);
-  S[Shortcuts::v + 2] = rho_inv * (Q[Shortcuts::pml + 9*0 + 2] + Q[Shortcuts::pml + 9*1 + 2] + Q[Shortcuts::pml + 9*2 + 2]);
+  S[Shortcuts::v + 0] = -rho_inv * (Q[Shortcuts::pml + 9*0 + 0] + Q[Shortcuts::pml + 9*1 + 0] + Q[Shortcuts::pml + 9*2 + 0]);
+  S[Shortcuts::v + 1] = -rho_inv * (Q[Shortcuts::pml + 9*0 + 1] + Q[Shortcuts::pml + 9*1 + 1] + Q[Shortcuts::pml + 9*2 + 1]);
+  S[Shortcuts::v + 2] = -rho_inv * (Q[Shortcuts::pml + 9*0 + 2] + Q[Shortcuts::pml + 9*1 + 2] + Q[Shortcuts::pml + 9*2 + 2]);
 
-  S[Shortcuts:: sigma + 0] =  (2 * mu + lambda) * Q[Shortcuts::pml + 9*0 + 3] + lambda * (Q[Shortcuts::pml + 9*0 + 4] + Q[Shortcuts::pml + 9*0 + 5])
+  S[Shortcuts::sigma + 0] = -((2 * mu + lambda) * Q[Shortcuts::pml + 9*0 + 3] + lambda * (Q[Shortcuts::pml + 9*0 + 4] + Q[Shortcuts::pml + 9*0 + 5])
                             + (2 * mu + lambda) * Q[Shortcuts::pml + 9*1 + 3] + lambda * (Q[Shortcuts::pml + 9*1 + 4] + Q[Shortcuts::pml + 9*1 + 5])
-                            + (2 * mu + lambda) * Q[Shortcuts::pml + 9*2 + 3] + lambda * (Q[Shortcuts::pml + 9*2 + 4] + Q[Shortcuts::pml + 9*2 + 5]);
+                            + (2 * mu + lambda) * Q[Shortcuts::pml + 9*2 + 3] + lambda * (Q[Shortcuts::pml + 9*2 + 4] + Q[Shortcuts::pml + 9*2 + 5]));
 
-  S[Shortcuts:: sigma + 1] =  (2 * mu + lambda) * Q[Shortcuts::pml + 9*0 + 4] + lambda * (Q[Shortcuts::pml + 9*0 + 3] + Q[Shortcuts::pml + 9*0 + 5])
+  S[Shortcuts::sigma + 1] = -((2 * mu + lambda) * Q[Shortcuts::pml + 9*0 + 4] + lambda * (Q[Shortcuts::pml + 9*0 + 3] + Q[Shortcuts::pml + 9*0 + 5])
                             + (2 * mu + lambda) * Q[Shortcuts::pml + 9*1 + 4] + lambda * (Q[Shortcuts::pml + 9*1 + 3] + Q[Shortcuts::pml + 9*1 + 5])
-                            + (2 * mu + lambda) * Q[Shortcuts::pml + 9*2 + 4] + lambda * (Q[Shortcuts::pml + 9*2 + 3] + Q[Shortcuts::pml + 9*2 + 5]);
+                            + (2 * mu + lambda) * Q[Shortcuts::pml + 9*2 + 4] + lambda * (Q[Shortcuts::pml + 9*2 + 3] + Q[Shortcuts::pml + 9*2 + 5]));
 
-  S[Shortcuts:: sigma + 2] =  (2 * mu + lambda) * Q[Shortcuts::pml + 9*0 + 5] + lambda * (Q[Shortcuts::pml + 9*0 + 3] + Q[Shortcuts::pml + 9*0 + 4])
+  S[Shortcuts::sigma + 2] = -((2 * mu + lambda) * Q[Shortcuts::pml + 9*0 + 5] + lambda * (Q[Shortcuts::pml + 9*0 + 3] + Q[Shortcuts::pml + 9*0 + 4])
                             + (2 * mu + lambda) * Q[Shortcuts::pml + 9*1 + 5] + lambda * (Q[Shortcuts::pml + 9*1 + 3] + Q[Shortcuts::pml + 9*1 + 4])
-                            + (2 * mu + lambda) * Q[Shortcuts::pml + 9*2 + 5] + lambda * (Q[Shortcuts::pml + 9*2 + 3] + Q[Shortcuts::pml + 9*2 + 4]);
+                            + (2 * mu + lambda) * Q[Shortcuts::pml + 9*2 + 5] + lambda * (Q[Shortcuts::pml + 9*2 + 3] + Q[Shortcuts::pml + 9*2 + 4]));
 
-  S[Shortcuts:: sigma + 3] = mu * (Q[Shortcuts::pml + 9*0 + 6] + Q[Shortcuts::pml + 9*1 + 6] + Q[Shortcuts::pml + 9*2 + 6]);
-  S[Shortcuts:: sigma + 4] = mu * (Q[Shortcuts::pml + 9*0 + 7] + Q[Shortcuts::pml + 9*1 + 7] + Q[Shortcuts::pml + 9*2 + 7]);
-  S[Shortcuts:: sigma + 5] = mu * (Q[Shortcuts::pml + 9*0 + 8] + Q[Shortcuts::pml + 9*1 + 8] + Q[Shortcuts::pml + 9*2 + 8]);
+  S[Shortcuts::sigma + 3] = -mu * (Q[Shortcuts::pml + 9*0 + 6] + Q[Shortcuts::pml + 9*1 + 6] + Q[Shortcuts::pml + 9*2 + 6]);
+  S[Shortcuts::sigma + 4] = -mu * (Q[Shortcuts::pml + 9*0 + 7] + Q[Shortcuts::pml + 9*1 + 7] + Q[Shortcuts::pml + 9*2 + 7]);
+  S[Shortcuts::sigma + 5] = -mu * (Q[Shortcuts::pml + 9*0 + 8] + Q[Shortcuts::pml + 9*1 + 8] + Q[Shortcuts::pml + 9*2 + 8]);
 
   for (int j = 0; j < 9; j++) {
-    S[Shortcuts::pml + 9*0 + j] = (dmp_pml_x + alpha_x) * Q[Shortcuts::pml + 9*0 + j];
-    S[Shortcuts::pml + 9*1 + j] = (dmp_pml_y + alpha_y) * Q[Shortcuts::pml + 9*1 + j];
-    S[Shortcuts::pml + 9*2 + j] = (dmp_pml_z + alpha_z) * Q[Shortcuts::pml + 9*2 + j];
+    S[Shortcuts::pml + 9*0 + j] = -(dmp_pml_x + alpha_x) * Q[Shortcuts::pml + 9*0 + j];
+    S[Shortcuts::pml + 9*1 + j] = -(dmp_pml_y + alpha_y) * Q[Shortcuts::pml + 9*1 + j];
+    S[Shortcuts::pml + 9*2 + j] = -(dmp_pml_z + alpha_z) * Q[Shortcuts::pml + 9*2 + j];
   }
 """
 
@@ -274,7 +274,7 @@ def multiplyMaterialParameterMatrix():
 
 def riemann_solver():
   return """
-  applications::exahype2::exaseis::riemannSolverPML<VariableShortcuts{{SOLVER_NAME}}, {{CORRECTOR_COMPUTATION_PRECISION}}, Order, NumberOfUnknowns, NumberOfAuxiliaryVariables, 1>(
+  applications::exahype2::exaseis::riemannSolverPML<VariableShortcuts{{SOLVER_NAME}}, {{CORRECTOR_COMPUTATION_PRECISION}}, DGOrder, NumberOfUnknowns, NumberOfAuxiliaryVariables, 1>(
     FL, FR, QL, QR, dt, direction, isBoundaryFace, faceIndex
   );
 """

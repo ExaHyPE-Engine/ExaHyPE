@@ -2,9 +2,6 @@
 # use, please see the copyright notice at www.peano-framework.org
 from .AbstractADERDGActionSet import AbstractADERDGActionSet
 
-from exahype2.solvers.LagrangeBasis import render_tensor_1
-from exahype2.solvers.MathUtils import MathUtils
-
 import jinja2
 import peano4.solversteps
 
@@ -23,20 +20,6 @@ class AdaptiveMeshFaceCoupling(AbstractADERDGActionSet):
         self._interpolate_guard = interpolate_guard
         self._restrict_guard = restrict_guard
         self._solve_guard = solve_guard
-
-        from exahype2.solvers.aderdg.ADERDG import Polynomials
-
-        number_of_dofs_per_axis = solver._order + 1
-        if solver._polynomials is Polynomials.Gauss_Lobatto:
-            weights, nodes = MathUtils.getGaussLobatto(number_of_dofs_per_axis)
-            nodes = nodes[::-1]
-        else:
-            weights, nodes = MathUtils.getGaussLegendre(number_of_dofs_per_axis)
-        # The transfer matrices follow from the nodes and weights of the basis,
-        # so the generated code derives them for the subdivision factor of the
-        # space-filling curve that the build selects.
-        self._quadrature_nodes = render_tensor_1(nodes)
-        self._quadrature_weights = render_tensor_1(weights)
 
         self._Template_TouchFaceFirstTime = """
   if ({{DELETE_GUARD}}) {
@@ -68,7 +51,7 @@ class AdaptiveMeshFaceCoupling(AbstractADERDGActionSet):
       const double* prolongationMatrixPerAxis[DIMENSIONS - 1];
       for (int tangentialAxis = 0; tangentialAxis < DIMENSIONS - 1; tangentialAxis++) {
         prolongationMatrixPerAxis[tangentialAxis] =
-          ProlongationMatrix1D.data()
+          kernels::{{SOLVER_NAME}}::DGMatrices<double>::ProlongationMatrix1D
           + subfacePosition(tangentialAxis) * EntriesPerTransferMatrix;
       }
       ::exahype2::amr::interpolateFaceFromCoarse(
@@ -130,7 +113,7 @@ class AdaptiveMeshFaceCoupling(AbstractADERDGActionSet):
         const double* restrictionMatrixPerInterval[peano4::sfc::ActiveCurve::SubdivisionFactor];
         for (int interval = 0; interval < peano4::sfc::ActiveCurve::SubdivisionFactor; interval++) {
           restrictionMatrixPerInterval[interval] =
-            RestrictionMatrix1D.data() + interval * EntriesPerTransferMatrix;
+            kernels::{{SOLVER_NAME}}::DGMatrices<double>::WeightedRestrictionMatrix1D + interval * EntriesPerTransferMatrix;
         }
         const {{CORRECTOR_COMPUTATION_PRECISION}}* stagedSubfaces[NumberOfSubfaces];
         for (int subface = 0; subface < NumberOfSubfaces; subface++) {
@@ -236,8 +219,8 @@ class AdaptiveMeshFaceCoupling(AbstractADERDGActionSet):
           auto* const rightStateEstimates =
             leftStateEstimates + BasisElementsPerFace;
           const auto direction = hangingFace % DIMENSIONS;
-          const auto faceNumber = hangingFace;
-          const auto isBoundary =
+          [[maybe_unused]] const auto faceNumber = hangingFace;
+          [[maybe_unused]] const auto isBoundary =
             fineGridFaces{{SOLVER_NAME}}FaceLabel(hangingFace).getBoundary();
           auto faceCentre = marker.getX();
           faceCentre(direction) +=
@@ -279,8 +262,6 @@ class AdaptiveMeshFaceCoupling(AbstractADERDGActionSet):
         dictionary = {}
         self._solver._init_dictionary_with_default_parameters(dictionary)
         self._solver.add_entries_to_text_replacement_dictionary(dictionary)
-        dictionary["QUADRATURE_NODES_1D"] = self._quadrature_nodes
-        dictionary["QUADRATURE_WEIGHTS_1D"] = self._quadrature_weights
         return (
             super().get_static_initialisations(full_qualified_classname)
             + jinja2.Template(
@@ -288,29 +269,6 @@ class AdaptiveMeshFaceCoupling(AbstractADERDGActionSet):
 namespace {
   constexpr int NumberOfDofsPerAxis      = {{ORDER}} + 1;
   constexpr int EntriesPerTransferMatrix = NumberOfDofsPerAxis * NumberOfDofsPerAxis;
-
-  constexpr double QuadratureNodes1D[NumberOfDofsPerAxis]   = {{QUADRATURE_NODES_1D}};
-  constexpr double QuadratureWeights1D[NumberOfDofsPerAxis] = {{QUADRATURE_WEIGHTS_1D}};
-
-  /**
-   * Entry [child][coarse * NumberOfDofsPerAxis + fine] holds the coarse shape
-   * function coarse at the node fine of the child interval child.
-   */
-  constexpr auto ProlongationMatrix1D = ::exahype2::dg::transposePerChild<NumberOfDofsPerAxis>(
-    ::exahype2::dg::interpolationMatrix1D<NumberOfDofsPerAxis>(QuadratureNodes1D)
-  );
-
-  /**
-   * Entry [child][fine * NumberOfDofsPerAxis + coarse] holds the mass-lumped
-   * projection of the node fine of the child interval child onto the coarse
-   * shape function coarse.
-   */
-  constexpr auto RestrictionMatrix1D = ::exahype2::dg::transposePerChild<NumberOfDofsPerAxis>(
-    ::exahype2::dg::weightedRestrictionMatrix1D<NumberOfDofsPerAxis>(
-      QuadratureNodes1D,
-      QuadratureWeights1D
-    )
-  );
 } // namespace
 """
             ).render(**dictionary)
@@ -379,7 +337,6 @@ namespace {
 #include "tarch/CompilerSpecificSettings.h"
 #include "exahype2/amr/AMRRoutines.h"
 #include "exahype2/amr/ChildDataStage.h"
-#include "exahype2/dg/AMRMatrices.h"
 #include "peano4/sfc/ActiveCurve.h"
 """
         )
@@ -437,7 +394,7 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
   const double* prolongationMatrixPerAxis[DIMENSIONS];
   for (int axis = 0; axis < DIMENSIONS; axis++) {
     prolongationMatrixPerAxis[axis] =
-      ProlongationMatrix1D.data()
+      kernels::{{SOLVER_NAME}}::DGMatrices<double>::ProlongationMatrix1D
       + marker.getRelativePositionWithinFatherCell()(axis) * EntriesPerTransferMatrix;
   }
   ::exahype2::amr::applyTensorProductOrderInvariant(
@@ -511,7 +468,7 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
     const double* restrictionMatrixPerInterval[peano4::sfc::ActiveCurve::SubdivisionFactor];
     for (int interval = 0; interval < peano4::sfc::ActiveCurve::SubdivisionFactor; interval++) {
       restrictionMatrixPerInterval[interval] =
-        RestrictionMatrix1D.data() + interval * EntriesPerTransferMatrix;
+        kernels::{{SOLVER_NAME}}::DGMatrices<double>::WeightedRestrictionMatrix1D + interval * EntriesPerTransferMatrix;
     }
     const {{SOLUTION_STORAGE_PRECISION}}* stagedChildren[peano4::sfc::ActiveCurve::ChildrenPerCell];
     for (int child = 0; child < peano4::sfc::ActiveCurve::ChildrenPerCell; child++) {

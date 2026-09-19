@@ -90,6 +90,7 @@ class RefinementCriterion(AbstractADERDGActionSet):
                 )
             dictionary["PREDICATE"] += self._guard
             dictionary["GRID_CONSTRUCTION"] = self._called_by_grid_construction
+            dictionary["STATELESS_REFINEMENT_CRITERION"] = False
             self._solver._init_dictionary_with_default_parameters(dictionary)
             self._solver.add_entries_to_text_replacement_dictionary(dictionary)
             result = jinja2.Template(RefinementCriterionTemplate).render(**dictionary)

@@ -2,14 +2,14 @@ def algebraic_source():
   return """
   std::fill_n(S, NumberOfAuxiliaryVariables, 0);
 
-  S[Shortcuts::u+0] = -Q[Shortcuts::v+0];
-  S[Shortcuts::u+1] = -Q[Shortcuts::v+1];
-  S[Shortcuts::u+2] = -Q[Shortcuts::v+2];
+  S[Shortcuts::u+0] = Q[Shortcuts::v+0];
+  S[Shortcuts::u+1] = Q[Shortcuts::v+1];
+  S[Shortcuts::u+2] = Q[Shortcuts::v+2];
 """
 
 def riemann_solver():
   return """
-  applications::exahype2::exaseis::riemannSolverDynamicRupture<VariableShortcuts{{SOLVER_NAME}}, {{CORRECTOR_COMPUTATION_PRECISION}}, (Order+1), NumberOfUnknowns, (NumberOfUnknowns+NumberOfAuxiliaryVariables), 1>(
+  applications::exahype2::exaseis::riemannSolverDynamicRupture<VariableShortcuts{{SOLVER_NAME}}, {{CORRECTOR_COMPUTATION_PRECISION}}, (DGOrder + 1), NumberOfUnknowns, (NumberOfUnknowns+NumberOfAuxiliaryVariables), 1>(
     FL, FR, QL, QR, t, dt, x, h, direction, isBoundaryFace, faceIndex, faultNormal, faultPosition
   );
 """
