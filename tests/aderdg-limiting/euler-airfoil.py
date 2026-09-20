@@ -142,51 +142,41 @@ static_geometry_admissibility = euler.physical_admissibility(
     gamma,
     "numberOfStates == 1 or values[Shortcuts::volumeFraction] >= 1.0 - 1.0e-12",
 )
-if arguments.limiter_solver == "muscl-hancock":
-    limiter_solver_class = exahype2.solvers.fv.musclhancock.GlobalAdaptiveTimeStep
-    limiter_scheme = exahype2.solvers.fv.musclhancock.subcell_scheme(
-        riemann_solver=limiter_riemann_solver
-    )
-else:
-    limiter_solver_class = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep
-    limiter_scheme = exahype2.solvers.fv.godunov.subcell_scheme(
-        riemann_solver=limiter_riemann_solver
-    )
+limiter_scheme = euler.subcell_scheme(arguments.limiter_solver)
 
 if arguments.limiter_mode == "fv":
-    limiter_solver = limiter_solver_class(
+    limiter_solver = exahype2.fv.Solver(
         name="FVSolver",
         patch_size=limiter_patch_size,
         unknowns=unknowns,
         auxiliary_variables=auxiliary_variables,
-        time_step_relaxation=0.5,
+        time_stepping=exahype2.TimeStepping.Adaptive(0.5),
+        scheme=limiter_scheme,
     )
-    limiter_solver.set_implementation(
+    limiter_solver.set_pde_terms(
         flux=flux,
         max_eigenvalue=max_eigenvalue,
         riemann_solver=limiter_riemann_solver,
-        initial_conditions=initial_conditions,
+        initial_condition=initial_conditions,
         boundary_conditions=boundary_conditions,
         refinement_criterion=refinement_criterion,
     )
     project.add_solver(limiter_solver)
 else:
-    solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
+    solver = exahype2.dg.ader.Solver(
         name="ADERDGSolver",
         order=order,
         unknowns=unknowns,
         auxiliary_variables=auxiliary_variables,
-        time_step_relaxation=0.5,
+        time_stepping=exahype2.TimeStepping.Adaptive(0.5),
+        basis=exahype2.dg.GaussLobatto,
     )
-    solver.set_implementation(
+    solver.set_pde_terms(
         flux=flux,
         max_eigenvalue=max_eigenvalue,
-        initial_conditions=initial_conditions,
+        initial_condition=initial_conditions,
         boundary_conditions=boundary_conditions,
         refinement_criterion=refinement_criterion,
-    )
-    solver.add_kernel_optimisations(
-        polynomials=exahype2.solvers.aderdg.ADERDG.Polynomials.Gauss_Lobatto
     )
     if arguments.limiter_mode == "all-accepted":
         admissibility_criterion = "return true;"
@@ -196,10 +186,11 @@ else:
         )
     else:
         admissibility_criterion = static_geometry_admissibility
-    solver.add_subcell_limiter(
-        limiter_solver=limiter_scheme,
-        physical_admissibility_criterion=admissibility_criterion,
+    solver.set_pde_terms(
+        subcell_riemann_solver=limiter_riemann_solver,
+        physical_admissibility=admissibility_criterion,
     )
+    solver.add_subcell_limiter(limiter_scheme)
     project.add_solver(solver)
 
 project.generate_and_build()

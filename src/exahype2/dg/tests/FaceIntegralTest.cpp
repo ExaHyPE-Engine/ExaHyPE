@@ -2,17 +2,18 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "FaceIntegralTest.h"
 
+#include "exahype2/dg/DGUtils.h"
 #include "exahype2/dg/FaceIntegral.h"
 
 namespace {
   constexpr int NumberOfDofsPerAxis = 3;
   constexpr int NumberOfUnknowns    = 2;
-  constexpr int NodesPerFace = (DIMENSIONS == 3) ? NumberOfDofsPerAxis * NumberOfDofsPerAxis : NumberOfDofsPerAxis;
-  constexpr int NodesPerCell = NodesPerFace * NumberOfDofsPerAxis;
+  constexpr int FaceNodes           = exahype2::dg::NodesPerFace<NumberOfDofsPerAxis>;
+  constexpr int CellNodes           = exahype2::dg::NodesPerCell<NumberOfDofsPerAxis>;
 
   struct Tables final {
-    double faceQuadratureWeights[NodesPerFace]{};
-    double inverseCellQuadratureWeights[NodesPerCell]{};
+    double faceQuadratureWeights[FaceNodes]{};
+    double inverseCellQuadratureWeights[CellNodes]{};
     double leftFaceCoefficients[NumberOfDofsPerAxis]{};
     double rightFaceCoefficients[NumberOfDofsPerAxis]{};
   };
@@ -20,10 +21,10 @@ namespace {
   // Distinct, non-symmetric entries, so an index mix-up cannot cancel out.
   Tables makeTables() {
     Tables tables;
-    for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
+    for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
       tables.faceQuadratureWeights[faceNode] = 0.25 + 0.125 * faceNode;
     }
-    for (int cellNode = 0; cellNode < NodesPerCell; cellNode++) {
+    for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
       tables.inverseCellQuadratureWeights[cellNode] = 1.0 + 0.5 * cellNode;
     }
     for (int index = 0; index < NumberOfDofsPerAxis; index++) {
@@ -58,13 +59,13 @@ void exahype2::dg::tests::FaceIntegralTest::run() {
 }
 
 void exahype2::dg::tests::FaceIntegralTest::testZeroFluxLeavesUpdateUntouched() {
-  const Tables tables                                    = makeTables();
-  const double faceFlux[NodesPerFace * NumberOfUnknowns] = {};
+  const Tables tables                                 = makeTables();
+  const double faceFlux[FaceNodes * NumberOfUnknowns] = {};
 
   for (int direction = 0; direction < DIMENSIONS; direction++) {
     for (int orientation = 0; orientation < 2; orientation++) {
-      double cellUpdate[NodesPerCell * NumberOfUnknowns];
-      for (int entry = 0; entry < NodesPerCell * NumberOfUnknowns; entry++) {
+      double cellUpdate[CellNodes * NumberOfUnknowns];
+      for (int entry = 0; entry < CellNodes * NumberOfUnknowns; entry++) {
         cellUpdate[entry] = 1.0 + entry;
       }
 
@@ -81,7 +82,7 @@ void exahype2::dg::tests::FaceIntegralTest::testZeroFluxLeavesUpdateUntouched() 
         0.5
       );
 
-      for (int entry = 0; entry < NodesPerCell * NumberOfUnknowns; entry++) {
+      for (int entry = 0; entry < CellNodes * NumberOfUnknowns; entry++) {
         validateNumericalEquals(cellUpdate[entry], 1.0 + entry);
       }
     }
@@ -90,19 +91,19 @@ void exahype2::dg::tests::FaceIntegralTest::testZeroFluxLeavesUpdateUntouched() 
 
 void exahype2::dg::tests::FaceIntegralTest::testEachCellNodeReceivesItsOwnFaceNode() {
   Tables tables = makeTables();
-  for (int cellNode = 0; cellNode < NodesPerCell; cellNode++) {
+  for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
     tables.inverseCellQuadratureWeights[cellNode] = 1.0;
   }
 
   for (int direction = 0; direction < DIMENSIONS; direction++) {
     // Only one face node carries a flux, so the cell nodes that pick it up are
     // exactly the ones the lifting is supposed to reach.
-    for (int markedFaceNode = 0; markedFaceNode < NodesPerFace; markedFaceNode++) {
-      double    faceFlux[NodesPerFace * NumberOfUnknowns] = {};
-      const int markedEntry                               = markedFaceNode * NumberOfUnknowns;
-      faceFlux[markedEntry]                               = 1.0;
+    for (int markedFaceNode = 0; markedFaceNode < FaceNodes; markedFaceNode++) {
+      double    faceFlux[FaceNodes * NumberOfUnknowns] = {};
+      const int markedEntry                            = markedFaceNode * NumberOfUnknowns;
+      faceFlux[markedEntry]                            = 1.0;
 
-      double cellUpdate[NodesPerCell * NumberOfUnknowns] = {};
+      double cellUpdate[CellNodes * NumberOfUnknowns] = {};
 
       exahype2::dg::addFaceIntegral<NumberOfDofsPerAxis, NumberOfUnknowns, true, double, double>(
         cellUpdate,
@@ -129,7 +130,7 @@ void exahype2::dg::tests::FaceIntegralTest::testEachCellNodeReceivesItsOwnFaceNo
       }
 
       double sumOfUpdates = 0.0;
-      for (int entry = 0; entry < NodesPerCell * NumberOfUnknowns; entry++) {
+      for (int entry = 0; entry < CellNodes * NumberOfUnknowns; entry++) {
         sumOfUpdates += cellUpdate[entry];
       }
       validateNumericalEquals(sumOfUpdates, expectedSum);
@@ -149,14 +150,14 @@ void exahype2::dg::tests::FaceIntegralTest::testUpdateStridesByTheUnknowns() {
   constexpr double GuardValue   = 7.0;
 
   const Tables tables = makeTables();
-  double       faceFlux[NodesPerFace * NumberOfUnknowns];
-  for (int entry = 0; entry < NodesPerFace * NumberOfUnknowns; entry++) {
+  double       faceFlux[FaceNodes * NumberOfUnknowns];
+  for (int entry = 0; entry < FaceNodes * NumberOfUnknowns; entry++) {
     faceFlux[entry] = 1.0 + entry;
   }
 
-  double cellUpdate[NodesPerCell * NumberOfUnknowns + GuardEntries] = {};
+  double cellUpdate[CellNodes * NumberOfUnknowns + GuardEntries] = {};
   for (int entry = 0; entry < GuardEntries; entry++) {
-    cellUpdate[NodesPerCell * NumberOfUnknowns + entry] = GuardValue;
+    cellUpdate[CellNodes * NumberOfUnknowns + entry] = GuardValue;
   }
 
   exahype2::dg::addFaceIntegral<NumberOfDofsPerAxis, NumberOfUnknowns, false, double, double>(
@@ -173,7 +174,7 @@ void exahype2::dg::tests::FaceIntegralTest::testUpdateStridesByTheUnknowns() {
   );
 
   constexpr double Scaling = 2.0 * Orientation - 1.0;
-  for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
+  for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
     for (int normalIndex = 0; normalIndex < NumberOfDofsPerAxis; normalIndex++) {
       const int cellNode = cellNodeOf(Direction, faceNode, normalIndex);
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
@@ -191,7 +192,7 @@ void exahype2::dg::tests::FaceIntegralTest::testUpdateStridesByTheUnknowns() {
   }
 
   for (int entry = 0; entry < GuardEntries; entry++) {
-    validateNumericalEqualsWithParams1(cellUpdate[NodesPerCell * NumberOfUnknowns + entry], GuardValue, entry);
+    validateNumericalEqualsWithParams1(cellUpdate[CellNodes * NumberOfUnknowns + entry], GuardValue, entry);
   }
 }
 
@@ -203,16 +204,16 @@ void exahype2::dg::tests::FaceIntegralTest::testOrientationFlipsSignOnlyForTheNo
     tables.rightFaceCoefficients[index] = tables.leftFaceCoefficients[index];
   }
 
-  double faceFlux[NodesPerFace * NumberOfUnknowns];
-  for (int entry = 0; entry < NodesPerFace * NumberOfUnknowns; entry++) {
+  double faceFlux[FaceNodes * NumberOfUnknowns];
+  for (int entry = 0; entry < FaceNodes * NumberOfUnknowns; entry++) {
     faceFlux[entry] = 1.0 + entry;
   }
 
   for (int direction = 0; direction < DIMENSIONS; direction++) {
-    double nonlinearLowerFace[NodesPerCell * NumberOfUnknowns] = {};
-    double nonlinearUpperFace[NodesPerCell * NumberOfUnknowns] = {};
-    double linearLowerFace[NodesPerCell * NumberOfUnknowns]    = {};
-    double linearUpperFace[NodesPerCell * NumberOfUnknowns]    = {};
+    double nonlinearLowerFace[CellNodes * NumberOfUnknowns] = {};
+    double nonlinearUpperFace[CellNodes * NumberOfUnknowns] = {};
+    double linearLowerFace[CellNodes * NumberOfUnknowns]    = {};
+    double linearUpperFace[CellNodes * NumberOfUnknowns]    = {};
 
     for (int orientation = 0; orientation < 2; orientation++) {
       exahype2::dg::addFaceIntegral<NumberOfDofsPerAxis, NumberOfUnknowns, false, double, double>(
@@ -241,7 +242,7 @@ void exahype2::dg::tests::FaceIntegralTest::testOrientationFlipsSignOnlyForTheNo
       );
     }
 
-    for (int entry = 0; entry < NodesPerCell * NumberOfUnknowns; entry++) {
+    for (int entry = 0; entry < CellNodes * NumberOfUnknowns; entry++) {
       validateNumericalEquals(nonlinearLowerFace[entry], -nonlinearUpperFace[entry]);
       validateNumericalEquals(linearLowerFace[entry], linearUpperFace[entry]);
       validateNumericalEquals(linearUpperFace[entry], nonlinearUpperFace[entry]);
@@ -256,12 +257,12 @@ void exahype2::dg::tests::FaceIntegralTest::testWeightsAndCoefficientsEnterAsAPr
   constexpr double TimeStepSize    = 0.25;
 
   const Tables tables = makeTables();
-  double       faceFlux[NodesPerFace * NumberOfUnknowns];
-  for (int entry = 0; entry < NodesPerFace * NumberOfUnknowns; entry++) {
+  double       faceFlux[FaceNodes * NumberOfUnknowns];
+  for (int entry = 0; entry < FaceNodes * NumberOfUnknowns; entry++) {
     faceFlux[entry] = 0.5 + 0.25 * entry;
   }
 
-  double cellUpdate[NodesPerCell * NumberOfUnknowns] = {};
+  double cellUpdate[CellNodes * NumberOfUnknowns] = {};
 
   exahype2::dg::addFaceIntegral<NumberOfDofsPerAxis, NumberOfUnknowns, false, double, double>(
     cellUpdate,
@@ -277,7 +278,7 @@ void exahype2::dg::tests::FaceIntegralTest::testWeightsAndCoefficientsEnterAsAPr
   );
 
   const double scaling = (2.0 * Orientation - 1.0) * InverseCellSize;
-  for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
+  for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
     const double scaledWeight = scaling * TimeStepSize * tables.faceQuadratureWeights[faceNode];
     for (int normalIndex = 0; normalIndex < NumberOfDofsPerAxis; normalIndex++) {
       const int cellNode = cellNodeOf(Direction, faceNode, normalIndex);

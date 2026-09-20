@@ -77,7 +77,7 @@ boundary_conditions = """
 refinement_criterion = """
   auto result = ::exahype2::RefinementCommand::Keep;
 
-  // The refined disc is centred on the domain corner: with periodic boundary
+  // The refined disc is centred on the domain corner: With periodic boundary
   // conditions it overlaps every wrap, so the refinement has to mirror onto
   // the far sides of each axis; with reflective boundaries the same disc
   // stays confined to the corner and serves as the control.
@@ -118,9 +118,7 @@ max_eigenvalue = r"""
   auto result = std::fmax(0.0, std::fabs(u_n - speedOfSound));
   result = std::fmax(result, std::fabs(u_n + speedOfSound));
   return result;
-""".format(
-    compute_primitive_variables=compute_primitive_variables
-)
+""".format(compute_primitive_variables=compute_primitive_variables)
 
 flux = r"""
   {compute_primitive_variables}
@@ -136,29 +134,26 @@ flux = r"""
   F[Shortcuts::rhoU + normal] += p;
 
   F[Shortcuts::rhoE] = (Q[Shortcuts::rhoE] + p) * u_n;
-""".format(
-    compute_primitive_variables=compute_primitive_variables
-)
+""".format(compute_primitive_variables=compute_primitive_variables)
 
-fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
+fv_solver = exahype2.fv.Solver(
     name="FVSolver",
     patch_size=args.degrees_of_freedom,
     unknowns={"rho": 1, "rhoU": project.dimensions, "rhoE": 1},
     auxiliary_variables=0,
-    time_step_relaxation=0.5,
+    time_stepping=exahype2.TimeStepping.Adaptive(0.5),
+    scheme=exahype2.fv.Godunov(),
+    precision=args.precision,
 )
 
-fv_solver.set_implementation(
-    initial_conditions=initial_conditions,
+fv_solver.set_pde_terms(
+    initial_condition=initial_conditions,
     boundary_conditions=boundary_conditions,
     refinement_criterion=refinement_criterion,
     max_eigenvalue=max_eigenvalue,
     flux=flux,
 )
 
-fv_solver.set_solver_precisions(
-    storage_precision=args.precision, compute_precision=args.precision
-)
 project.add_solver(fv_solver)
 
 project.output.makefile.add_compile_definition("GAMMA=1.4")

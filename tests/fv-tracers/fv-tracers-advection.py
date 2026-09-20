@@ -58,16 +58,18 @@ boundary_conditions = """
   }
 """
 
-fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
+fv_solver = exahype2.fv.Solver(
     name="FVSolver",
     patch_size=args.degrees_of_freedom,
     unknowns={"v": project.dimensions},
     auxiliary_variables=0,
-    time_step_relaxation=0.5,
+    time_stepping=exahype2.TimeStepping.Adaptive(0.5),
+    scheme=exahype2.fv.Godunov(),
+    precision=args.precision,
 )
 
-fv_solver.set_implementation(
-    initial_conditions=initial_conditions,
+fv_solver.set_pde_terms(
+    initial_condition=initial_conditions,
     boundary_conditions=boundary_conditions,
     flux="""
   for (int i = 0; i < NumberOfUnknowns; i++) {
@@ -76,10 +78,6 @@ fv_solver.set_implementation(
   F[normal] = Q[normal];
 """,
     max_eigenvalue="return 1.0;",
-)
-
-fv_solver.set_solver_precisions(
-    storage_precision=args.precision, compute_precision=args.precision
 )
 
 project.add_solver(fv_solver)
@@ -116,23 +114,18 @@ tracers = project.add_tracer(
     },
 )
 
-init_tracers = exahype2.tracer.InsertParticlesByCoordinates(
+init_tracers = exahype2.particles.InsertTracersByCoordinates(
     particle_set=tracers,
     coordinates=[[0.25, 0.5, 0.5], [0.5, 0.5, 0.5], [0.75, 0.5, 0.5]],
 )
 
-init_tracers.descend_invocation_order = 0  # TODO: Why?
-project.add_action_set_to_initialisation(
-    init_tracers
-)  # TODO: Is there not an easier way to expose the API to the user?
+init_tracers.descend_invocation_order = 0
+project.add_action_set_to_initialisation(init_tracers)
 
-# TODO: Why do we need this? Why not just fv_solver.addTracers(...)
-# TODO: Don't make the API too hard to understand for the user!
-tracing_action_set = exahype2.tracer.FiniteVolumesTracing(
+fv_solver.trace(
     tracers,
-    fv_solver,
-    project_on_tracer_properties_kernel="::exahype2::fv::updateParticleState<0, 1, 2>",
-    projection_kernel_arguments=""" // TODO: Also way too complicated!
+    kernel="::exahype2::fv::updateParticleState<0, 1, 2>",
+    arguments="""
   *particle,
   fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
   marker,
@@ -143,13 +136,7 @@ tracing_action_set = exahype2.tracer.FiniteVolumesTracing(
   {0,0,0},
   {1,0,0}
 """,
+    time_steps=False,
 )
-tracing_action_set.descend_invocation_order = (
-    fv_solver._action_set_update_patch.descend_invocation_order
-    + 1  # TODO: Why does the user need to do this advanced setting?
-)
-# TODO: This is all too complicated!
-project.add_action_set_to_initialisation(tracing_action_set)
-# project.add_action_set_to_timestepping(tracing_action_set)
 
 project.generate_and_build()

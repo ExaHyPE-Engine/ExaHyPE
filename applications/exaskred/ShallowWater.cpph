@@ -76,8 +76,10 @@ INLINE_METHOD GPU_CALLABLE_METHOD T applications::exahype2::exaskred::shallowwat
   (void)t;
   (void)dt;
 
-  if (not std::isfinite(Q[Shortcuts::h]) or not std::isfinite(Q[Shortcuts::hu + normal])
-      or Q[Shortcuts::h] <= static_cast<T>(minimumWaterHeight)) {
+  if (
+    not std::isfinite(Q[Shortcuts::h]) or not std::isfinite(Q[Shortcuts::hu + normal])
+    or Q[Shortcuts::h] <= static_cast<T>(minimumWaterHeight)
+  ) {
     return T{};
   }
 
@@ -111,8 +113,10 @@ INLINE_METHOD GPU_CALLABLE_METHOD void applications::exahype2::exaskred::shallow
   for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
     BTimesDeltaQ[unknown] = T{};
   }
-  if (not std::isfinite(Q[Shortcuts::h]) or not std::isfinite(deltaQ[Shortcuts::h])
-      or not std::isfinite(deltaQ[Shortcuts::b]) or Q[Shortcuts::h] <= static_cast<T>(minimumWaterHeight)) {
+  if (
+    not std::isfinite(Q[Shortcuts::h]) or not std::isfinite(deltaQ[Shortcuts::h])
+    or not std::isfinite(deltaQ[Shortcuts::b]) or Q[Shortcuts::h] <= static_cast<T>(minimumWaterHeight)
+  ) {
     return;
   }
 

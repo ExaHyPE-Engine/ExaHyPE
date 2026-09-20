@@ -1,0 +1,50 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#pragma once
+
+{% set marker_name = {1: "VertexMarker", 2: "FaceMarker", 3: "CellMarker"}[DATA_ASSOCIATION] -%}
+{% set marker_type = "::peano4::dataview::" + marker_name -%}
+#include "peano4/dataview/MetaDataRecord.h"
+#include "peano4/dataview/{{marker_name}}.h"
+#include "tarch/Assertions.h"
+#include "tarch/la/Vector.h"
+{%- for include in INCLUDES %}
+#include "{{include}}"
+{%- endfor %}
+
+namespace {{NAMESPACE | join("::")}} {
+  struct {{CLASSNAME}};
+} // namespace {{NAMESPACE | join("::")}}
+
+struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} final
+  : public ::peano4::dataview::MetaDataRecord<{{NAMESPACE | join("::")}}::{{CLASSNAME}}, {{marker_type}}> {
+public:
+{%- if ENUM_DECLARATIONS %}
+  {{ENUM_DECLARATIONS | indent(2)}}
+{% endif %}
+  {{CLASSNAME}}()                                    = default;
+  {{CLASSNAME}}(const {{CLASSNAME}}&)                = default;
+  {{CLASSNAME}}({{CLASSNAME}}&&) noexcept            = default;
+  {{CLASSNAME}}& operator=(const {{CLASSNAME}}&)     = default;
+  {{CLASSNAME}}& operator=({{CLASSNAME}}&&) noexcept = default;
+  ~{{CLASSNAME}}() noexcept                          = default;
+
+  {{ATTRIBUTE_METHOD_DECLARATIONS | indent(2)}}
+
+  std::string toString() const;
+
+  void merge(
+    ::peano4::grid::SendReceiveContext context,
+    const {{CLASSNAME}}&               neighbour,
+    const {{marker_type}}&             marker,
+    int                                treeId
+  );
+
+  INLINE_METHOD bool sendCondition(const {{marker_type}}& marker) const;
+  INLINE_METHOD bool receiveAndMergeCondition(const {{marker_type}}& marker) const;
+
+private:
+  {{ATTRIBUTES | indent(2)}}
+};
+
+#include "{{NAMESPACE[-1]}}/{{CLASSNAME}}.cpph"

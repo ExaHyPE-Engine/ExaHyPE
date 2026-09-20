@@ -1,0 +1,43 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+/**
+ * Creates one particle per position the reader removes and returns for the cell of marker.
+ *
+ * StoreInitialPosition writes the position into the data entries that initialPositionIndex
+ * names, one per axis. A caller that passes one reader to several trees holds a lock around
+ * this call.
+ */
+template <typename Particle, bool StoreInitialPosition, typename FileReader, typename Vertices>
+INLINE_METHOD void exahype2::particles::insertParticlesFromFile(
+  const peano4::dataview::CellMarker& marker,
+  FileReader&                         fileReader,
+  Vertices&                           fineGridVertices,
+  const int                           treeId,
+  int&                                particleNumberOnThisTree,
+  [[maybe_unused]] const int* const   initialPositionIndex
+) {
+  assertion(particleNumberOnThisTree >= 0, particleNumberOnThisTree);
+
+  const std::list<tarch::la::Vector<DIMENSIONS, double>> coordinates =
+    fileReader.getParticlesWithinVoxel(marker.getX(), marker.getH(), true);
+
+  for (const auto& position : coordinates) {
+    auto* const newParticle = new Particle();
+
+    newParticle->setNumber(0, treeId);
+    newParticle->setNumber(1, particleNumberOnThisTree);
+    particleNumberOnThisTree++;
+
+    peano4::particles::init(*newParticle, position, 0.0);
+
+    if constexpr (StoreInitialPosition) {
+      assertion(initialPositionIndex != nullptr);
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        newParticle->setData(initialPositionIndex[axis], position(axis));
+      }
+    }
+
+    peano4::particles::insertParticleIntoCell(marker, newParticle, fineGridVertices, treeId);
+  }
+}

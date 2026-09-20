@@ -43,7 +43,18 @@ struct peano4::sfc::HilbertGrammar final : peano4::sfc::Grammar {
 #elif DIMENSIONS == 3
   // The case of each letter carries the axis sign the class comment describes.
   enum NonTerminal : std::uint8_t {
-    xyz, xYZ, yzx, yZX, zxy, zXY, XyZ, XYz, YzX, YZx, ZxY, ZXy // NOLINT(readability-identifier-naming)
+    xyz,
+    xYZ,
+    yzx,
+    yZX,
+    zxy,
+    zXY,
+    XyZ,
+    XYz,
+    YzX,
+    YZx,
+    ZxY,
+    ZXy // NOLINT(readability-identifier-naming)
   };
 
   static constexpr NonTerminal StartSymbol{xyz};

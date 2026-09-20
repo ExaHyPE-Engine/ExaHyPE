@@ -1,0 +1,13 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#include "{{CLASSNAME}}.h"
+{%- if SOLVER_PDE_TERM_DEFINITIONS %}
+
+#include "tarch/Termination.h"
+
+{{SOLVER_PDE_TERM_DEFINITIONS}}
+{%- endif %}
+{%- if SOLVER_USER_DEFINITIONS.strip() %}
+
+{{SOLVER_USER_DEFINITIONS.strip()}}
+{%- endif %}

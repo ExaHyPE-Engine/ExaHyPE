@@ -54,7 +54,7 @@ project = exahype2.Project(
 if project.dimensions != 2:
     raise ValueError("The coupled Tafjord application is two-dimensional.")
 
-aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
+aderdg_solver = exahype2.dg.ader.Solver(
     name="ADERDGSolver",
     order=dg_order,
     unknowns={
@@ -65,32 +65,31 @@ aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
         "z": 1,
     },
     auxiliary_variables=0,
-    time_step_relaxation=0.20,
+    time_stepping=exahype2.TimeStepping.Adaptive(0.20),
+    basis=exahype2.dg.GaussLegendre,
+    linear=False,
 )
-aderdg_solver.set_implementation(
-    initial_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
-    boundary_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
-    refinement_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation,
-    flux=exahype2.solvers.PDETerms.User_Defined_Implementation,
-    max_eigenvalue=exahype2.solvers.PDETerms.User_Defined_Implementation,
-    ncp=exahype2.solvers.PDETerms.User_Defined_Implementation,
-    diffusive_source_term=exahype2.solvers.PDETerms.User_Defined_Implementation,
-    riemann_solver=exahype2.solvers.PDETerms.User_Defined_Implementation,
+aderdg_solver.set_pde_terms(
+    initial_condition=True,
+    boundary_conditions=True,
+    refinement_criterion=True,
+    flux=True,
+    max_eigenvalue=True,
+    ncp=True,
+    diffusive_source=True,
+    riemann_solver=True,
 )
-aderdg_solver.add_kernel_optimisations(
-    is_linear=False,
-    polynomials=exahype2.solvers.aderdg.Polynomials.Gauss_Legendre,
+aderdg_solver.set_pde_terms(
+    subcell_riemann_solver=True,
+    dmp_observables=True,
+    dmp_relaxation_parameter=True,
+    physical_admissibility=True,
 )
 aderdg_solver.add_subcell_limiter(
-    limiter_solver=exahype2.solvers.fv.godunov.subcell_scheme(
-        riemann_solver=exahype2.solvers.PDETerms.User_Defined_Implementation
-    ),
+    exahype2.fv.Godunov(),
     number_of_dmp_observables=6,
     dmp_relaxation_parameter=0.0,
     dmp_differences_scaling=1.0e-3,
-    dmp_observables=exahype2.solvers.PDETerms.User_Defined_Implementation,
-    dmp_relaxation_parameter_implementation=exahype2.solvers.PDETerms.User_Defined_Implementation,
-    physical_admissibility_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation,
 )
 
 project.add_solver(aderdg_solver)
@@ -114,31 +113,19 @@ for name, kind, value in (
 ):
     project.add_runtime_parameter(name, kind, value)
 
-project.constants.export_constexpr_with_type("g", str(9.81), "double")
-project.constants.export_constexpr_with_type("rhoSlide", str(1100.0), "double")
-project.constants.export_constexpr_with_type("rhoWater", str(1025.0), "double")
-project.constants.export_constexpr_with_type("phi", str(25.0), "double")
-project.constants.export_constexpr_with_type(
-    "invXi", str(1.0 / args.friction), "double"
-)
-project.constants.export_constexpr_with_type(
-    "waterFrictionDragCoefficient", str(0.01), "double"
-)
-project.constants.export_constexpr_with_type(
-    "waterPressureDragCoefficient", str(1.0), "double"
-)
-project.constants.export_constexpr_with_type("hThresholdSlide", str(3.0e-1), "double")
-project.constants.export_constexpr_with_type("hThresholdWater", str(0.5), "double")
-project.constants.export_constexpr_with_type("waterDmpRelaxation", str(0.1), "double")
-project.constants.export_constexpr_with_type(
-    "maxFrictionStiffnessRatio", str(2.0 * args.degrees_of_freedom), "double"
-)
-project.constants.export_constexpr_with_type(
-    "maxHeightCurvatureRatio", str(0.3), "double"
-)
-project.constants.export_constexpr_with_type(
-    "mu", str(math.tan(math.pi / 180.0 * 25.0)), "double"
-)
+project.add_constant("g", 9.81)
+project.add_constant("rhoSlide", 1100.0)
+project.add_constant("rhoWater", 1025.0)
+project.add_constant("phi", 25.0)
+project.add_constant("invXi", 1.0 / args.friction)
+project.add_constant("waterFrictionDragCoefficient", 0.01)
+project.add_constant("waterPressureDragCoefficient", 1.0)
+project.add_constant("hThresholdSlide", 3.0e-1)
+project.add_constant("hThresholdWater", 0.5)
+project.add_constant("waterDmpRelaxation", 0.1)
+project.add_constant("maxFrictionStiffnessRatio", 2.0 * args.degrees_of_freedom)
+project.add_constant("maxHeightCurvatureRatio", 0.3)
+project.add_constant("mu", math.tan(math.pi / 180.0 * 25.0))
 
 project.output.makefile.add_include_directory("../../../..")
 project.output.makefile.add_cpp_file("ADERDGSolver.cpp")

@@ -40,30 +40,24 @@ class SWERestingLake(Scenario):
     def _initial_conditions(self, Q):
         d = {"VARIABLE": Q}
         return {
-            "bilinear": jinja2.Template(
-                """
+            "bilinear": jinja2.Template("""
     {{VARIABLE}}[Shortcuts::hv+0]  = 0;
     {{VARIABLE}}[Shortcuts::hv+1]  = 0;
     {{VARIABLE}}[Shortcuts::b]    = 1 - std::abs(x[0]) - std::abs(x[Shortcuts::hv+0]);
     {{VARIABLE}}[Shortcuts::h]    = 2 - {{VARIABLE}}[Shortcuts::b];
-"""
-            ).render(**d),
-            "sinusoidal": jinja2.Template(
-                """
+""").render(**d),
+            "sinusoidal": jinja2.Template("""
     {{VARIABLE}}[Shortcuts::hv+0]  = 0;
     {{VARIABLE}}[Shortcuts::hv+1]  = 0;
     {{VARIABLE}}[Shortcuts::b]    = sin( 2*M_PI * (x[0]+x[Shortcuts::hv+0]) );
     {{VARIABLE}}[Shortcuts::h]    = 2 - {{VARIABLE}}[Shortcuts::b];
-"""
-            ).render(**d),
-            "constant": jinja2.Template(
-                """
+""").render(**d),
+            "constant": jinja2.Template("""
     {{VARIABLE}}[Shortcuts::hv+0]  = 0;
     {{VARIABLE}}[Shortcuts::hv+1]  = 0;
     {{VARIABLE}}[Shortcuts::b]    = 1;
     {{VARIABLE}}[Shortcuts::h]    = 2 - {{VARIABLE}}[Shortcuts::b];
-"""
-            ).render(**d),
+""").render(**d),
         }
 
     def initial_conditions(self):

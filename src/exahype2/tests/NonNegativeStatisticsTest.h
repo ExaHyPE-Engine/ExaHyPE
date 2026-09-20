@@ -11,6 +11,11 @@ namespace exahype2::tests {
 class exahype2::tests::NonNegativeStatisticsTest final : public tarch::tests::TestCase {
 public:
   NonNegativeStatisticsTest();
+  NonNegativeStatisticsTest(const NonNegativeStatisticsTest&)            = delete;
+  NonNegativeStatisticsTest(NonNegativeStatisticsTest&&)                 = delete;
+  NonNegativeStatisticsTest& operator=(const NonNegativeStatisticsTest&) = delete;
+  NonNegativeStatisticsTest& operator=(NonNegativeStatisticsTest&&)      = delete;
+  ~NonNegativeStatisticsTest() override                                  = default;
 
   void run() override;
 
@@ -18,5 +23,6 @@ private:
   void testDefaultStatisticsHoldNoObservation();
   void testPhysicalObservationsTrackMinimumAndMaximum();
   void testAnInvalidObservationReplacesTheRangeAndSticks();
+  void testTheNonPhysicalExtremumCarriesTheInvalidObservation();
   void testInvalidObservationBitsSurviveARoundTrip();
 };

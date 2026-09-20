@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "peano4/Constants.h"
 #include "peano4/Loop.h"
 #include "peano4/dataview/CellMarker.h"
 #include "peano4/dataview/FaceMarker.h"
@@ -23,6 +24,15 @@ namespace exahype2::dg {
 TARGET_DECLARE_END
 
 namespace exahype2::dg {
+  /**
+   * The number of nodes one side of a face carries.
+   */
+  template <int NumberOfDofsPerAxis>
+  constexpr int NodesPerFace = peano4::power(NumberOfDofsPerAxis, DIMENSIONS - 1);
+
+  template <int NumberOfDofsPerAxis>
+  constexpr int NodesPerCell = peano4::power(NumberOfDofsPerAxis, DIMENSIONS);
+
   template <typename StoragePrecision>
   INLINE_METHOD StoragePrecision evaluatePolynomial(
     const peano4::dataview::CellMarker&          marker,

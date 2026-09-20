@@ -5,9 +5,8 @@
 #include "exahype2/NonNegativeStatistics.h"
 
 namespace {
-  // A NaN is an invalid observation too, but every ordered comparison against one
-  // raises the invalid-operation exception, and the test runner arms that trap. The
-  // negative and the infinity below reach the same branch without raising anything.
+  // Every ordered comparison against a NaN raises the invalid-operation exception, which the
+  // test runner traps, so the tests observe a negative and an infinite value.
   constexpr double NegativeObservation = -1.25;
   constexpr double InfiniteObservation = std::numeric_limits<double>::infinity();
 
@@ -21,6 +20,7 @@ void exahype2::tests::NonNegativeStatisticsTest::run() {
   testMethod(testDefaultStatisticsHoldNoObservation);
   testMethod(testPhysicalObservationsTrackMinimumAndMaximum);
   testMethod(testAnInvalidObservationReplacesTheRangeAndSticks);
+  testMethod(testTheNonPhysicalExtremumCarriesTheInvalidObservation);
   testMethod(testInvalidObservationBitsSurviveARoundTrip);
 }
 
@@ -56,8 +56,6 @@ void exahype2::tests::NonNegativeStatisticsTest::testAnInvalidObservationReplace
     validateEquals(bits(statistics.maximum), bits(invalidObservation));
     validateEquals(statistics.invalidObservationBitsOrIdentity(), bits(invalidObservation));
 
-    // Later physical observations must not wash the invalid one out, or a rank
-    // would report a healthy range for a step that produced a broken value.
     statistics = exahype2::NonNegativeStatistics::accumulate(statistics, 2.0);
     statistics = exahype2::NonNegativeStatistics::accumulate(statistics, 0.5);
     validateEquals(bits(statistics.minimum), bits(invalidObservation));
@@ -70,10 +68,18 @@ void exahype2::tests::NonNegativeStatisticsTest::testAnInvalidObservationReplace
   }
 }
 
+void exahype2::tests::NonNegativeStatisticsTest::testTheNonPhysicalExtremumCarriesTheInvalidObservation() {
+  const exahype2::NonNegativeStatistics infiniteMaximum{0.5, InfiniteObservation};
+  validateEquals(infiniteMaximum.hasInvalidObservation(), true);
+  validateEquals(infiniteMaximum.invalidObservationBitsOrIdentity(), bits(InfiniteObservation));
+
+  const exahype2::NonNegativeStatistics negativeMinimum{NegativeObservation, 0.5};
+  validateEquals(negativeMinimum.hasInvalidObservation(), true);
+  validateEquals(negativeMinimum.invalidObservationBitsOrIdentity(), bits(NegativeObservation));
+}
+
 void exahype2::tests::NonNegativeStatisticsTest::testInvalidObservationBitsSurviveARoundTrip() {
-  // The reduction sends the invalid observation across ranks as a bit pattern, so
-  // the pattern that comes back has to rebuild the very same value. A NaN pattern
-  // is compared bitwise here and never enters a comparison.
+  // The NaN pattern is compared bitwise and never enters a comparison.
   constexpr std::uint64_t QuietNaNBits = 0x7ff8000000000042;
   for (const auto invalidObservationBits : {QuietNaNBits, bits(NegativeObservation), bits(InfiniteObservation)}) {
     const auto restored = exahype2::NonNegativeStatistics::fromInvalidObservationBits(invalidObservationBits);

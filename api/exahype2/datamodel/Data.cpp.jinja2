@@ -1,0 +1,44 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#include "{{CLASSNAME}}.h"
+
+#include "tarch/Assertions.h"
+{%- set marker_name = "VertexMarker" if DATA_ASSOCIATION == 1 else ("FaceMarker" if DATA_ASSOCIATION == 2 else "CellMarker") %}
+{%- macro conjunction(first, second) -%}
+{%- if first|trim == "false" or second|trim == "false" -%}
+false
+{%- elif first|trim == "true" and second|trim == "true" -%}
+true
+{%- elif first|trim == "true" -%}
+{{ second }}
+{%- elif second|trim == "true" -%}
+{{ first }}
+{%- else -%}
+({{ first }}) and ({{ second }})
+{%- endif -%}
+{%- endmacro %}
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::send(
+  [[maybe_unused]] const ::peano4::dataview::{{marker_name}}& marker,
+  [[maybe_unused]] const ::peano4::grid::SendReceiveContext   context
+) const {
+  return {{ conjunction(CAN_SEND, SEND_CONDITION) }};
+}
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(
+  [[maybe_unused]] const ::peano4::dataview::{{marker_name}}& marker,
+  [[maybe_unused]] const ::peano4::grid::SendReceiveContext   context
+) const {
+  return {{ conjunction(CAN_RECEIVE, RECEIVE_AND_MERGE_CONDITION) }};
+}
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
+  [[maybe_unused]] const ::peano4::grid::SendReceiveContext   context,
+  [[maybe_unused]] const {{CLASSNAME}}&                       neighbour,
+  [[maybe_unused]] const ::peano4::dataview::{{marker_name}}& marker,
+  [[maybe_unused]] const int                                  treeId
+) {
+{%- if MERGE_METHOD_DEFINITION %}
+  {{MERGE_METHOD_DEFINITION | indent(2)}}
+{%- endif %}
+}

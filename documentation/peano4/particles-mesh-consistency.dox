@@ -5,8 +5,8 @@
 \tableofcontents
 
 A position or search-radius update can invalidate a particle's vertex and
-level association. The update action sets under
-peano4.particles.AbstractUpdateParticleGridAssociation restore the
+level association. The action set
+exahype2.particles.UpdateParticleGridAssociationLiftDrop restores the
 association over subsequent mesh sweeps.
 
 # Sorting sequence

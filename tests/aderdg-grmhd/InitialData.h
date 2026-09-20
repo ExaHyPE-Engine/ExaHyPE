@@ -153,7 +153,7 @@ namespace GRMHD {
         // df  = 2.0 * (1.0 + ng)*(1.0 + (1.0 + ng)*tt)*(1.0 - 2.0/r + urr**2) - 2.0*ng*urr**2/tt*(1.0 + (1.0 +
         // ng)*tt)**2
         double df = 2.0 * (1.0 + ng) * (1.0 + (1.0 + ng) * tt) * (1.0 - 2.0 / r + urr * urr)
-                    - 2.0 * ng * urr * urr / tt * (1.0 + (1.0 + ng) * tt) * (1.0 + (1.0 + ng) * tt);
+          - 2.0 * ng * urr * urr / tt * (1.0 + (1.0 + ng) * tt) * (1.0 + (1.0 + ng) * tt);
         double dt = -f / df;
         if (std::abs(dt) < 1.e-10) {
           break;

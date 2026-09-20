@@ -11,9 +11,7 @@ double peano4::particles::relativeReleaseOwnershipSpatialSortingTolerance(
   return peano4::particles::relativeReleaseOwnershipSpatialSortingTolerance(marker.getH());
 }
 
-double peano4::particles::relativeReleaseOwnershipSpatialSortingTolerance(
-  const peano4::dataview::CellMarker& marker
-) {
+double peano4::particles::relativeReleaseOwnershipSpatialSortingTolerance(const peano4::dataview::CellMarker& marker) {
   return peano4::particles::relativeReleaseOwnershipSpatialSortingTolerance(marker.getH());
 }
 

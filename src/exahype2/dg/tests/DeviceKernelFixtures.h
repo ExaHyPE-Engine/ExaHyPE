@@ -28,25 +28,25 @@ namespace exahype2::dg::tests {
   TARGET_DECLARE_END
 } // namespace exahype2::dg::tests
 
+TARGET_DECLARE
 /**
  * Sizes of the cells, faces and stages the device kernel tests run with.
  */
-TARGET_DECLARE
 struct exahype2::dg::tests::DeviceKernelSetup final {
   static constexpr int    RungeKuttaSteps              = 3;
   static constexpr int    RungeKuttaStep               = 1;
   static constexpr int    DofsPerAxis                  = 3;
-  static constexpr int    Unknowns                     = 2;
-  static constexpr int    AuxiliaryVariables           = 1;
-  static constexpr int    Data                         = Unknowns + AuxiliaryVariables;
+  static constexpr int    NumberOfUnknowns             = 2;
+  static constexpr int    NumberOfAuxiliaryVariables   = 1;
+  static constexpr int    NumberOfData                 = NumberOfUnknowns + NumberOfAuxiliaryVariables;
   static constexpr int    NodesPerFace                 = DofsPerAxis * ((DIMENSIONS == 3) ? DofsPerAxis : 1);
   static constexpr int    NodesPerCell                 = NodesPerFace * DofsPerAxis;
-  static constexpr int    CellStateCardinality         = NodesPerCell * Data;
-  static constexpr int    StageCardinality             = NodesPerCell * Unknowns;
+  static constexpr int    CellStateCardinality         = NodesPerCell * NumberOfData;
+  static constexpr int    StageCardinality             = NodesPerCell * NumberOfUnknowns;
   static constexpr int    RightHandSideCardinality     = RungeKuttaSteps * StageCardinality;
   static constexpr int    RungeKuttaStepOffset         = RungeKuttaStep * StageCardinality;
-  static constexpr int    FaceSideStateCardinality     = NodesPerFace * Data;
-  static constexpr int    FaceSideFluxCardinality      = NodesPerFace * Unknowns;
+  static constexpr int    FaceSideStateCardinality     = NodesPerFace * NumberOfData;
+  static constexpr int    FaceSideFluxCardinality      = NodesPerFace * NumberOfUnknowns;
   static constexpr int    FaceStateCardinality         = 2 * FaceSideStateCardinality;
   static constexpr int    FaceFluxCardinality          = 2 * FaceSideFluxCardinality;
   static constexpr int    NumberOfCells                = 8;
@@ -188,11 +188,11 @@ struct exahype2::dg::tests::KernelOperators final {
 };
 
 /**
- * A chain of cells along the first axis. Two neighbours along that axis hold
- * the same face, which is the arrangement in which a parallel dispatch could
- * produce a write conflict, and the faces along the other axes belong to one
- * cell each. The work list holds every unique face once, with one owning cell
- * and the face number under which that cell sees it.
+ * A chain of cells along the first axis, where two neighbours hold the same
+ * face and a parallel dispatch could write it twice while the faces along the
+ * other axes belong to one cell each, together with a work list that holds
+ * every unique face once with one owning cell and the face number under which
+ * that cell sees it.
  */
 struct exahype2::dg::tests::CellChain final {
   std::vector<double>        cellCentres = std::vector<double>(DeviceKernelSetup::CoordinateCardinality);

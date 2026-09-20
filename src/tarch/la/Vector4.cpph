@@ -2,15 +2,15 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar>::Vector():
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar>::Vector() :
   _values{} {}
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar>::Vector(const Scalar* values):
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar>::Vector(const Scalar* values) :
   _values{values[0], values[1], values[2], values[3]} {}
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar>::Vector(std::initializer_list<Scalar> values):
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar>::Vector(std::initializer_list<Scalar> values) :
   _values{} {
   auto p = values.begin();
   if (p != values.end()) {
@@ -31,7 +31,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar>::Vector(std::init
 }
 
 template <typename Scalar>
-INLINE_METHOD tarch::la::Vector<4, Scalar>::Vector(const std::bitset<4>& values):
+INLINE_METHOD tarch::la::Vector<4, Scalar>::Vector(const std::bitset<4>& values) :
   _values{
     values[0] ? Scalar(1) : Scalar(0),
     values[1] ? Scalar(1) : Scalar(0),
@@ -40,7 +40,7 @@ INLINE_METHOD tarch::la::Vector<4, Scalar>::Vector(const std::bitset<4>& values)
   } {}
 
 template <typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar>::Vector(const Scalar& initialValue):
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<4, Scalar>::Vector(const Scalar& initialValue) :
   _values{initialValue, initialValue, initialValue, initialValue} {}
 
 template <typename Scalar>

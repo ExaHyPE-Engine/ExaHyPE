@@ -1,0 +1,97 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+TARGET_DECLARE
+/**
+ * Adds the weighted absolute error of every measured unknown to the L1 slot, its weighted
+ * square to the L2 slot and takes the maximum into the Linf slot of errors.
+ */
+template <int NumberOfMeasuredUnknowns, typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::accumulateError(
+  const int (&measuredUnknowns)[NumberOfMeasuredUnknowns],
+  const Precision* const value,
+  const double* const    exactSolution,
+  const double           weight,
+  double (&errors)[ErrorMeasurement::NumberOfNorms]
+) {
+  assertion(value != nullptr);
+  assertion(exactSolution != nullptr);
+  assertion(weight >= 0.0, weight);
+  for (const int unknown : measuredUnknowns) {
+    assertion(unknown >= 0, unknown);
+    const double error = std::abs(static_cast<double>(value[unknown]) - exactSolution[unknown]);
+    errors[0] += weight * error;
+    errors[1] += weight * error * error;
+    errors[2] = std::max(errors[2], error);
+  }
+}
+
+/**
+ * Adds the weighted error of one degree of freedom against the analytical solution of SolverType
+ * at x to errors. The analytical solution reads every value of the degree of freedom in double
+ * precision.
+ */
+template <
+  typename SolverType,
+  int NumberOfUnknowns,
+  int NumberOfAuxiliaryVariables,
+  int NumberOfMeasuredUnknowns,
+  typename Precision>
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::accumulateSolutionError(
+  const int (&measuredUnknowns)[NumberOfMeasuredUnknowns],
+  const Precision* const                       value,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const double                                 timeStamp,
+  const double                                 timeStepSize,
+  const double                                 weight,
+  double (&errors)[ErrorMeasurement::NumberOfNorms]
+) {
+  static_assert(NumberOfUnknowns > 0);
+  static_assert(NumberOfAuxiliaryVariables >= 0);
+  assertion(value != nullptr);
+  assertion(timeStepSize >= 0.0, timeStepSize);
+  for ([[maybe_unused]] const int unknown : measuredUnknowns) {
+    assertion(unknown < NumberOfUnknowns, unknown, NumberOfUnknowns);
+  }
+
+  double state[NumberOfUnknowns + NumberOfAuxiliaryVariables];
+  for (int entry = 0; entry < NumberOfUnknowns + NumberOfAuxiliaryVariables; entry++) {
+    state[entry] = static_cast<double>(value[entry]);
+  }
+  double solution[NumberOfUnknowns];
+  SolverType::analyticalSolution(x, timeStamp, timeStepSize, state, solution);
+  accumulateError(measuredUnknowns, value, solution, weight, errors);
+}
+TARGET_DECLARE_END
+
+/**
+ * Adds the error of one degree of freedom to the measurement on its own, so a cell reports every
+ * degree of freedom separately.
+ */
+template <
+  typename SolverType,
+  int NumberOfUnknowns,
+  int NumberOfAuxiliaryVariables,
+  int NumberOfMeasuredUnknowns,
+  typename Precision>
+INLINE_METHOD void exahype2::accumulateAndRecordSolutionError(
+  const int (&measuredUnknowns)[NumberOfMeasuredUnknowns],
+  const Precision* const                       value,
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const double                                 timeStamp,
+  const double                                 timeStepSize,
+  const double                                 weight,
+  ErrorMeasurement&                            measurement
+) {
+  double errors[ErrorMeasurement::NumberOfNorms]{};
+  accumulateSolutionError<SolverType, NumberOfUnknowns, NumberOfAuxiliaryVariables>(
+    measuredUnknowns,
+    value,
+    x,
+    timeStamp,
+    timeStepSize,
+    weight,
+    errors
+  );
+  measurement.add(errors);
+}

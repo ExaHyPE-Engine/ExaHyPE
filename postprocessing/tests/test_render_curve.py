@@ -1,6 +1,5 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-"""Tests for render_curve: Cell polygons, patch grouping along the curve, label colours and the image."""
 
 from pathlib import Path
 import tempfile

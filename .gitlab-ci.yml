@@ -1,7 +1,9 @@
 # Define the stages we have overall.
+# Python compiles the Python sources and runs the postprocessing tests once, without a compiler.
 # Compiler is where we build and test the actual code against different compilers.
 stages:
-  - Compiler
+  - Python
+  - Toolchain
 
 workflow:
   rules:
@@ -22,7 +24,9 @@ workflow:
 default:
   interruptible: true
 
-# We define a job within the Compiler stage.
-# We use the include statement so that this job does everything in the .yml file linked below.
+# The templates define the tags, variables, scripts and rules the jobs extend.
+# gitlab-toolchain.yml defines one job per compiler, gitlab-python.yml the jobs without a compiler.
 include:
-  - .continuous_integration/gitlab-toolchains.yml
+  - local: .continuous_integration/templates/*.yml
+  - local: .continuous_integration/gitlab-python.yml
+  - local: .continuous_integration/gitlab-toolchain.yml

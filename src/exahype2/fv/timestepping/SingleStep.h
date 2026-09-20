@@ -24,7 +24,7 @@ struct exahype2::fv::timestepping::SingleStep final {
 
   template <
     typename Reconstruction,
-    typename Solver,
+    typename SolverType,
     int  NumberOfVolumesPerAxis,
     int  NumberOfUnknowns,
     int  NumberOfAuxiliaryVariables,

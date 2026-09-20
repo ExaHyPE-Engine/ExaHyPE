@@ -1,0 +1,25 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#pragma once
+
+namespace {{NAMESPACE | join("::")}} {
+  class VariableShortcuts{{SOLVER_NAME}};
+} // namespace {{NAMESPACE | join("::")}}
+
+TARGET_DECLARE
+/**
+ * Positions of fields in the vector of unknowns.
+ */
+class {{NAMESPACE | join("::")}}::VariableShortcuts{{SOLVER_NAME}} final {
+public:
+  static constexpr int NumberOfDistinctVariables = {{VARIABLE_NAMES | length}};
+
+  static constexpr int Q[NumberOfDistinctVariables + 1] = { {{VARIABLE_POSITIONS | join(", ")}} };
+{% for variable_name in VARIABLE_NAMES %}
+  static constexpr int {{variable_name}} = {{VARIABLE_POSITIONS[loop.index0]}};
+{%- endfor %}
+
+  constexpr int operator[](const int index) const noexcept { return Q[index]; }
+  constexpr int operator()(const int index) const noexcept { return Q[index]; }
+};
+TARGET_DECLARE_END

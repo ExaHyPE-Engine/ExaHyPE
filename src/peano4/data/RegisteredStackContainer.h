@@ -38,13 +38,13 @@ public:
   INLINE_METHOD void bindPool() override;
   INLINE_METHOD std::size_t getPooledPayloadBytes() const override;
   INLINE_METHOD void        migratePoolForTree(
-           const std::vector<std::pair<int, int>>& cellSlotPairs,
-           const std::vector<std::pair<int, int>>& faceSlotPairs,
-           const std::vector<std::pair<int, int>>& vertexSlotPairs,
-           std::size_t                             cellCount,
-           std::size_t                             faceCount,
-           std::size_t                             vertexCount
-         ) override;
+    const std::vector<std::pair<int, int>>& cellSlotPairs,
+    const std::vector<std::pair<int, int>>& faceSlotPairs,
+    const std::vector<std::pair<int, int>>& vertexSlotPairs,
+    std::size_t                             cellCount,
+    std::size_t                             faceCount,
+    std::size_t                             vertexCount
+  ) override;
   INLINE_METHOD void replicateInterfaceSlots(
     const std::vector<std::pair<int, int>>& facePairs,
     const std::vector<std::pair<int, int>>& vertexPairs,

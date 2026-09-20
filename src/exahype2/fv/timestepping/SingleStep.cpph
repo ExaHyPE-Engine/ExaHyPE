@@ -9,7 +9,7 @@ TARGET_DECLARE
  */
 template <
   typename Reconstruction,
-  typename Solver,
+  typename SolverType,
   int  NumberOfVolumesPerAxis,
   int  NumberOfUnknowns,
   int  NumberOfAuxiliaryVariables,
@@ -98,7 +98,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD double exahype2::fv::timestepping::SingleStep:
         centreStateForCompute = centreStateComputeBuffer;
       }
       ComputePrecision sources[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
-      Solver::sourceTerm(centreStateForCompute, volumeCentre, volumeSize, timeStamp, timeStepSize, sources);
+      SolverType::sourceTerm(centreStateForCompute, volumeCentre, volumeSize, timeStamp, timeStepSize, sources);
       SIMD(aligned(sources : PEANO_WITH_ALIGNMENT))
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         outputState[unknown] = static_cast<StoragePrecision>(
@@ -109,7 +109,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD double exahype2::fv::timestepping::SingleStep:
     }
 
     Reconstruction::template accumulateFluxDivergence<
-      Solver,
+      SolverType,
       NumberOfVolumesPerAxis,
       NumberOfUnknowns,
       NumberOfAuxiliaryVariables,
@@ -153,7 +153,14 @@ INLINE_METHOD GPU_CALLABLE_METHOD double exahype2::fv::timestepping::SingleStep:
       for (int normal = 0; normal < DIMENSIONS; normal++) {
         exahype2::fv::accumulateMaxEigenvalue(
           maxEigenvalueAfterTimeStep,
-          Solver::maxEigenvalue(finalState, volumeCentre, volumeSize, timeStamp + timeStepSize, timeStepSize, normal)
+          SolverType::maxEigenvalue(
+            finalState,
+            volumeCentre,
+            volumeSize,
+            timeStamp + timeStepSize,
+            timeStepSize,
+            normal
+          )
         );
       }
     }

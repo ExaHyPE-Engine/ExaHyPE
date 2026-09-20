@@ -342,7 +342,7 @@ Anything in here is rendered exactly as written. Keywords and all.
 Inline "code snippets" can be done like so:
 
 \verbatim
-`import peano4`
+`import exahype2`
 \endverbatim
 
 ## TeX

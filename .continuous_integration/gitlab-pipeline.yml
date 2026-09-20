@@ -1,13 +1,6 @@
 include:
-  - .continuous_integration/templates/tags.yml
-  - .continuous_integration/templates/variables.yml
-  - .continuous_integration/templates/before-script.yml
-  - .continuous_integration/templates/run-rules.yml
-  - .continuous_integration/pipelines/common.yml
-  - .continuous_integration/pipelines/build.yml
-  - .continuous_integration/pipelines/test.yml
-  - .continuous_integration/pipelines/tutorial.yml
-  - .continuous_integration/pipelines/application.yml
+  - local: .continuous_integration/templates/*.yml
+  - local: .continuous_integration/pipelines/*.yml
 
 stages:
   - Build

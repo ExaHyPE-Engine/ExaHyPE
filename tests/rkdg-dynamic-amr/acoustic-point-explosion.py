@@ -43,22 +43,21 @@ project = exahype2.Project(
     max_grid_levels=args.max_grid_levels,
 )
 
-solver = exahype2.solvers.rkdg.GlobalAdaptiveTimeStep(
+solver = exahype2.dg.rk.Solver(
     name="RKDGSolver",
     rk_order=2,
     dg_order=args.degrees_of_freedom - 1,
-    time_step_relaxation=0.9,
     unknowns={"p": 1, "u": project.dimensions},
     auxiliary_variables=0,
+    time_stepping=exahype2.TimeStepping.Adaptive(0.9),
+    linear=True,
 )
-
-solver.add_kernel_optimisations(is_linear=True)
 
 # Placing the source on the domain diagonal preserves axis-permutation symmetry
 # in the solution and refinement pattern. Unit offsets keep the detail
 # indicators well scaled at the ambient state.
-solver.set_implementation(
-    initial_conditions="""
+solver.set_pde_terms(
+    initial_condition="""
   const tarch::la::Vector<DIMENSIONS, double> sourceCentre(-0.7);
   const double distanceSquared = tarch::la::norm2Squared(x - sourceCentre);
   constexpr double Sigma = 0.1;

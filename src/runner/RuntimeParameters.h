@@ -72,6 +72,7 @@ public:
   static int         parseInteger(const std::string& value, const std::string& key);
   static double      parseDouble(const std::string& value, const std::string& key);
   static std::string normaliseOutputPath(const std::string& path);
+  static std::string consumeValue(int& index, int argc, char** argv, const std::string& argument);
 
   [[nodiscard]] double getMaxAdmissiblePatchSize(const tarch::la::Vector<DIMENSIONS, double>& domainSize) const;
   [[nodiscard]] double getMinAdmissiblePatchSize(const tarch::la::Vector<DIMENSIONS, double>& domainSize) const;
@@ -84,9 +85,8 @@ private:
   friend class runner::tests::RuntimeParametersTest;
 
   /**
-   * Seconds one MPI wait may take before a warning goes out and before the program aborts. No rank makes progress
-   * on another rank's behalf, so a mismatched send, receive or collective waits forever. The option
-   * --deadlockTimeout raises or disables the abort bound.
+   * Seconds one MPI wait may take before a warning goes out and before the program aborts. The
+   * option --deadlockTimeout sets or disables the abort bound.
    */
   double _mpiTimeoutWarning{120.0};
   double _mpiDeadlockTimeout{600.0};
@@ -120,10 +120,9 @@ private:
   // The out-of-line constructor permits JSONReader to remain forward-declared.
   RuntimeParameters();
 
-  static std::string consumeValue(int& index, int argc, char** argv, const std::string& argument);
-  void               normaliseGridLevels();
-  void               boundTerminalTimes();
-  void               validateParameterRanges() const;
+  void normaliseGridLevels();
+  void boundTerminalTimes();
+  void validateParameterRanges() const;
 
   void extractConfigFileFromCommandLine(int argc, char** argv);
   void readJsonConfiguration();

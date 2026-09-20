@@ -34,6 +34,8 @@ private:
   void testRepeatedContributionsReuseTheCommittedSet();
   void testARealisedSetWithoutSweepSuppressesItsRepetition();
   void testARealisedSetWithoutSweepKeepsTheShippedLists();
+  void testAPlanChangingSetSurvivesTheRejectionCheck();
+  void testAPlanRejectedSetIsRealisedWithoutSweep();
   void testEraseOnlyBatchIsCommitted();
   void testComplementaryEraseSubsetsOfTwoSolversAreDiscarded();
   void testEraseNeedsUnanimousSolverConsent();

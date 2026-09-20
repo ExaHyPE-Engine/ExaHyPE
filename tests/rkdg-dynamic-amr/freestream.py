@@ -93,36 +93,31 @@ flux = """
   F[Shortcuts::u + normal] = Q[Shortcuts::p];
 """
 
-solver = exahype2.solvers.rkdg.GlobalAdaptiveTimeStep(
+solver = exahype2.dg.rk.Solver(
     name="RKDGSolver",
     rk_order=2,
     dg_order=args.degrees_of_freedom - 1,
-    time_step_relaxation=0.9,
     unknowns={"p": 1, "u": project.dimensions},
     auxiliary_variables=0,
+    time_stepping=exahype2.TimeStepping.Adaptive(0.9),
+    linear=True,
 )
 
-solver.add_kernel_optimisations(is_linear=True)
-
-solver.set_implementation(
-    initial_conditions=initial_conditions,
+solver.set_pde_terms(
+    initial_condition=initial_conditions,
     boundary_conditions=boundary_conditions,
     refinement_criterion=refinement_criterion,
     max_eigenvalue="return 1.0;",
     flux=flux,
-)
-
-exahype2.solvers.rkdg.ErrorMeasurement(
-    solver,
-    error_measurement_implementation="""
+    analytical_solution="""
   solution[Shortcuts::p] = 1.0;
   for (int d = 0; d < DIMENSIONS; d++) {
     solution[Shortcuts::u + d] = 0.0;
   }
 """,
-    output_file_name="Error",
-    time_delta_between_snapshots=args.end_time / 10.0,
 )
+
+solver.measure_error(file="Error", every=args.end_time / 10.0)
 
 project.add_solver(solver)
 project.generate_and_build()

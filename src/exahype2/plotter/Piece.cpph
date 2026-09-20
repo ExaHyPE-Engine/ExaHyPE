@@ -1,0 +1,64 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+INLINE_METHOD bool exahype2::plotter::Piece::isOpen() const { return _fileWriter != nullptr; }
+
+/**
+ * Plots one vertex and returns the index under which the data plotters address it.
+ */
+INLINE_METHOD int exahype2::plotter::Piece::plotVertex(const tarch::la::Vector<DIMENSIONS, double>& position) {
+  assertion(_vertexPlotter);
+  return _vertexPlotter->plotVertex(position);
+}
+
+/**
+ * Plots one point on a vertex and returns its cell index.
+ */
+INLINE_METHOD int exahype2::plotter::Piece::plotPoint(const int vertexIndex) {
+  assertion(_cellPlotter);
+  assertion(vertexIndex >= 0, vertexIndex);
+  return _cellPlotter->plotPoint(vertexIndex);
+}
+
+/**
+ * Plots the quadrangle or hexahedron spanned by the corners and returns its cell index.
+ */
+INLINE_METHOD int exahype2::plotter::Piece::plotCell(const std::array<int, peano4::VerticesPerCell>& vertexIndices) {
+  assertion(_cellPlotter);
+#if DIMENSIONS == 2
+  return _cellPlotter->plotQuadrangle(vertexIndices.data());
+#else
+  return _cellPlotter->plotHexahedron(vertexIndices.data());
+#endif
+}
+
+/**
+ * Plots the line or quadrangle spanned by the corners of a face element and returns its cell
+ * index.
+ */
+INLINE_METHOD int exahype2::plotter::Piece::plotCellOnFace(
+  const std::array<int, peano4::VerticesPerCell / 2>& vertexIndices
+) {
+  assertion(_cellPlotter);
+#if DIMENSIONS == 2
+  return _cellPlotter->plotLine(vertexIndices.data());
+#else
+  return _cellPlotter->plotQuadrangle(vertexIndices.data());
+#endif
+}
+
+/**
+ * Writes the rank, the tree and the level of one plotted cell. A tree id is the rank plus a
+ * multiple of the rank count, so no two trees of two ranks carry the same id, and a cell whose
+ * Subtree equals its Subdomain comes from a sweep that did not decompose.
+ */
+INLINE_METHOD void exahype2::plotter::Piece::plotCellMarkers(const int cellIndex, const int level) {
+  assertion(_subdomainPlotter);
+  assertion(_subtreeTaskPlotter);
+  assertion(_refinementLevelPlotter);
+  assertion(cellIndex >= 0, cellIndex);
+
+  _subdomainPlotter->plotCellData(cellIndex, tarch::mpi::Rank::getInstance().getRank());
+  _subtreeTaskPlotter->plotCellData(cellIndex, _treeId);
+  _refinementLevelPlotter->plotCellData(cellIndex, level);
+}

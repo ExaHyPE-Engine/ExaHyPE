@@ -293,8 +293,10 @@ void tarch::mpi::Diagnostics::clearRequest(const MPI_Request* request) {
     }
 
     std::uint32_t sequence = slot.sequence.load(std::memory_order_acquire);
-    if ((sequence % 2U) != 0U
-        or not slot.sequence.compare_exchange_strong(sequence, sequence + 1U, std::memory_order_acq_rel)) {
+    if (
+      (sequence % 2U) != 0U
+      or not slot.sequence.compare_exchange_strong(sequence, sequence + 1U, std::memory_order_acq_rel)
+    ) {
       continue;
     }
     if (slot.key.load(std::memory_order_relaxed) == request) {
@@ -320,8 +322,10 @@ bool tarch::mpi::Diagnostics::reportRequest(
   const char*                 waitOperation,
   const std::source_location& waitLocation
 ) {
-  if (request == nullptr or not _requestTrackingEnabled or not useTimeoutChecks()
-      or _pendingCount.load(std::memory_order_acquire) == 0) {
+  if (
+    request == nullptr or not _requestTrackingEnabled or not useTimeoutChecks()
+    or _pendingCount.load(std::memory_order_acquire) == 0
+  ) {
     return false;
   }
 
@@ -333,8 +337,10 @@ bool tarch::mpi::Diagnostics::reportRequest(
     }
 
     std::uint32_t sequence = slot.sequence.load(std::memory_order_acquire);
-    if ((sequence % 2U) != 0U
-        or not slot.sequence.compare_exchange_strong(sequence, sequence + 1U, std::memory_order_acq_rel)) {
+    if (
+      (sequence % 2U) != 0U
+      or not slot.sequence.compare_exchange_strong(sequence, sequence + 1U, std::memory_order_acq_rel)
+    ) {
       // The completion is removing the entry, so there is nothing left to report.
       return true;
     }

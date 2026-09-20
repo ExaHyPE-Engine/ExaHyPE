@@ -46,7 +46,7 @@ INLINE_METHOD typename exahype2::amr::ChildDataStage<T>::Frame* exahype2::amr::C
  * Copies one child's values into the frame of its coarse entity.
  *
  * The caller identifies the coarse entity by a stable address, typically its
- * patch storage. Destroyed sibling sets nest along the depth-first traversal,
+ * patch storage, and destroyed sibling sets nest along the depth-first traversal,
  * so the frame is searched from the innermost end. Returns true when this call
  * completes the sibling set.
  */

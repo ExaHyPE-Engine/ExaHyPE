@@ -61,28 +61,29 @@ a Godunov-type Finite Volumes solver named `FVSolver`:
         periodic_bc  = [False, False],
     )
 
-    fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
+    fv_solver = exahype2.fv.Solver(
         name                 = "FVSolver",
         patch_size           = 8,
-        time_step_relaxation = 0.5,
         unknowns             = {"rho": 1, "j": 2, "E": 1},
         auxiliary_variables  = {},
+        time_stepping        = exahype2.TimeStepping.Adaptive(0.5),
+        scheme               = exahype2.fv.Godunov(),
     )
 
 The parameter `patch_size` controls how many finite volumes are grouped into one
 patch that is updated together. With `patch_size = 8` each patch is an
 \f$8 \times 8\f$ block of cells. Alongside the usual PDE terms we register a
-**refinement criterion**: The value `User_Defined_Implementation` means we
+**refinement criterion**: The value `True` means we
 write it ourselves in `FVSolver.cpp`, where it asks for `Refine` near the airfoil
 and `Keep` elsewhere - a static refined band that hugs the airfoil while
 the far field stays coarse.
 
-    fv_solver.set_implementation(
-        initial_conditions   = exahype2.solvers.PDETerms.User_Defined_Implementation,
-        boundary_conditions  = exahype2.solvers.PDETerms.User_Defined_Implementation,
-        refinement_criterion = exahype2.solvers.PDETerms.User_Defined_Implementation,
-        flux                 = exahype2.solvers.PDETerms.User_Defined_Implementation,
-        max_eigenvalue       = exahype2.solvers.PDETerms.User_Defined_Implementation,
+    fv_solver.set_pde_terms(
+        initial_condition    = True,
+        boundary_conditions  = True,
+        refinement_criterion = True,
+        flux                 = True,
+        max_eigenvalue       = True,
     )
     my_project.add_solver(fv_solver)
 

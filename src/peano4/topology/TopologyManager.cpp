@@ -263,8 +263,10 @@ void peano4::topology::TopologyManager::buildTree(
 
   // Deriving the interface topology before the first sweep sizes the pools
   // once, shadow slots included, so no later replication reallocates them.
-  if (tarch::tasking::Runtime::getInstance().getNumberOfThreads() > 1 and _tree->getDepth() > 0
-      and containerRegistry.supportsSubtreeTaskReplication()) {
+  if (
+    tarch::tasking::Runtime::getInstance().getNumberOfThreads() > 1 and _tree->getDepth() > 0
+    and containerRegistry.supportsSubtreeTaskReplication()
+  ) {
     _traversal->prepareInterfaceTopology(*_tree, spawnLevel);
   }
   if (resizePools) {
@@ -372,8 +374,10 @@ void peano4::topology::TopologyManager::runSweep(peano4::grid::GridTraversalObse
       _traversal->getVertexSlotSpaceSize() + _traversal->getNumberOfVertexRankFrozenSlots()
         + _traversal->getNumberOfVertexShadowSlots()
     );
-    if (tarch::tasking::Runtime::getInstance().getNumberOfThreads() > 1 and _tree->getDepth() > 0
-        and containerRegistry.supportsSubtreeTaskReplication()) {
+    if (
+      tarch::tasking::Runtime::getInstance().getNumberOfThreads() > 1 and _tree->getDepth() > 0
+      and containerRegistry.supportsSubtreeTaskReplication()
+    ) {
       containerRegistry.replicateInterfaceSlots(
         _traversal->getInterfaceSeedFacePairs(),
         _traversal->getInterfaceSeedVertexPairs()
@@ -489,8 +493,10 @@ void peano4::topology::TopologyManager::runSweep(peano4::grid::GridTraversalObse
         // before the build and every rank computes the identical table without
         // communication. A false _dynamicLoadBalancing value skips the
         // derivation, and the buildNewTree() lambda then reads currentOwners.
-        if (numberOfRanks > 1 and not _blockOwners.empty()
-            and (_dynamicLoadBalancing or standingPartitionSplitsLeafFamily)) {
+        if (
+          numberOfRanks > 1 and not _blockOwners.empty()
+          and (_dynamicLoadBalancing or standingPartitionSplitsLeafFamily)
+        ) {
           balancedOwners = newTree->deriveBalancedBlockOwners(_targetLevel, numberOfRanks, updatedPlan);
           if (balancedOwners == _blockOwners) {
             balancedOwners.clear();
@@ -806,8 +812,10 @@ void peano4::topology::TopologyManager::runSweep(peano4::grid::GridTraversalObse
   const bool sourceHasTaskSlots = tarch::tasking::Runtime::getInstance().getNumberOfThreads() > 1
     and _tree->getDepth() > 0 and containerRegistry.supportsSubtreeTaskReplication();
   const bool sourceBoundaryExchangeConsumed = _skipStandingBoundaryFinish;
-  if (transitionPrepared and sourceHasTaskSlots and _traversal->getNumberOfReplayTasks() > 0
-      and not taskInterfaceDataMerged) {
+  if (
+    transitionPrepared and sourceHasTaskSlots and _traversal->getNumberOfReplayTasks() > 0
+    and not taskInterfaceDataMerged
+  ) {
     std::function<void()> waitForRemoteData;
     if (not _traversal->getNeighbourRanks().empty() and not sourceBoundaryExchangeConsumed) {
       waitForRemoteData = finishBoundaryReceives;
@@ -858,8 +866,10 @@ void peano4::topology::TopologyManager::runSweep(peano4::grid::GridTraversalObse
   const bool skipStandingBoundaryFinish = _skipStandingBoundaryFinish;
   _skipStandingBoundaryFinish           = false;
   std::function<void()> waitForRemoteData;
-  if (exchangesWithNeighbourRanks and sweepKind == peano4::topology::TreeTraversal::PoolSweepKind::Standing
-      and not skipStandingBoundaryFinish) {
+  if (
+    exchangesWithNeighbourRanks and sweepKind == peano4::topology::TreeTraversal::PoolSweepKind::Standing
+    and not skipStandingBoundaryFinish
+  ) {
     waitForRemoteData = finishBoundaryReceives;
   }
 

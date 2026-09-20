@@ -44,8 +44,12 @@ void tarch::accelerator::copyToDeviceMemory(void* target, const void* source, st
   );
 }
 
-void tarch::accelerator::
-  copyToPinnedMemory(void* target, const void* source, std::size_t sizeInBytes, [[maybe_unused]] int device) {
+void tarch::accelerator::copyToPinnedMemory(
+  void*                target,
+  const void*          source,
+  std::size_t          sizeInBytes,
+  [[maybe_unused]] int device
+) {
   std::memcpy(target, source, sizeInBytes);
 }
 
@@ -63,8 +67,12 @@ void tarch::accelerator::copyFromDeviceMemory(const void* source, void* target, 
   );
 }
 
-void tarch::accelerator::
-  copyFromPinnedMemory(const void* source, void* target, std::size_t sizeInBytes, [[maybe_unused]] int device) {
+void tarch::accelerator::copyFromPinnedMemory(
+  const void*          source,
+  void*                target,
+  std::size_t          sizeInBytes,
+  [[maybe_unused]] int device
+) {
   std::memcpy(target, source, sizeInBytes);
 }
 

@@ -9,7 +9,7 @@ TARGET_DECLARE
  * physical flux cancels between the two faces of the Rusanov path.
  */
 template <
-  typename Solver,
+  typename SolverType,
   int  NumberOfVolumesPerAxis,
   int  NumberOfUnknowns,
   int  NumberOfAuxiliaryVariables,
@@ -88,7 +88,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::Constant::a
     }
 
     ComputePrecision diffusiveSources[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
-    Solver::diffusiveSourceTerm(
+    SolverType::diffusiveSourceTerm(
       centreStateForCompute,
       stateGradient,
       volumeCentre,
@@ -197,7 +197,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::Constant::a
       ComputePrecision leftGoingFluxRightFace[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
       ComputePrecision rightGoingFluxRightFace[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
 
-      const ComputePrecision maxWaveSpeedLeft = Solver::solveRiemannProblem(
+      const ComputePrecision maxWaveSpeedLeft = SolverType::solveRiemannProblem(
         leftState,
         centreStateForCompute,
         leftFaceCentre,
@@ -208,7 +208,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::Constant::a
         leftGoingFluxLeftFace,
         rightGoingFluxLeftFace
       );
-      const ComputePrecision maxWaveSpeedRight = Solver::solveRiemannProblem(
+      const ComputePrecision maxWaveSpeedRight = SolverType::solveRiemannProblem(
         centreStateForCompute,
         rightState,
         rightFaceCentre,
@@ -249,8 +249,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::Constant::a
       ComputePrecision leftFluxes[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
       ComputePrecision rightFluxes[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
       if constexpr (EvaluateFlux) {
-        Solver::flux(leftState, leftVolumeCentre, volumeSize, timeStamp, timeStepSize, normal, leftFluxes);
-        Solver::flux(rightState, rightVolumeCentre, volumeSize, timeStamp, timeStepSize, normal, rightFluxes);
+        SolverType::flux(leftState, leftVolumeCentre, volumeSize, timeStamp, timeStepSize, normal, leftFluxes);
+        SolverType::flux(rightState, rightVolumeCentre, volumeSize, timeStamp, timeStepSize, normal, rightFluxes);
       }
 
       ComputePrecision centreNonconservativeProduct[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
@@ -272,7 +272,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::Constant::a
           centreStateJump[unknown] = rightState[unknown] - centreStateForCompute[unknown];
           leftStateJump[unknown]   = centreStateForCompute[unknown] - leftState[unknown];
         }
-        Solver::nonconservativeProduct(
+        SolverType::nonconservativeProduct(
           centreAverageState,
           centreStateJump,
           volumeCentre,
@@ -282,7 +282,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::Constant::a
           normal,
           centreNonconservativeProduct
         );
-        Solver::nonconservativeProduct(
+        SolverType::nonconservativeProduct(
           leftAverageState,
           leftStateJump,
           leftVolumeCentre,
@@ -295,11 +295,11 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::Constant::a
       }
 
       ComputePrecision leftMaxEigenvalue =
-        Solver::maxEigenvalue(leftState, leftVolumeCentre, volumeSize, timeStamp, timeStepSize, normal);
+        SolverType::maxEigenvalue(leftState, leftVolumeCentre, volumeSize, timeStamp, timeStepSize, normal);
       ComputePrecision rightMaxEigenvalue =
-        Solver::maxEigenvalue(rightState, rightVolumeCentre, volumeSize, timeStamp, timeStepSize, normal);
+        SolverType::maxEigenvalue(rightState, rightVolumeCentre, volumeSize, timeStamp, timeStepSize, normal);
       const ComputePrecision centreMaxEigenvalue =
-        Solver::maxEigenvalue(centreStateForCompute, volumeCentre, volumeSize, timeStamp, timeStepSize, normal);
+        SolverType::maxEigenvalue(centreStateForCompute, volumeCentre, volumeSize, timeStamp, timeStepSize, normal);
       exahype2::fv::accumulateMaxEigenvalue(leftMaxEigenvalue, centreMaxEigenvalue);
       exahype2::fv::accumulateMaxEigenvalue(rightMaxEigenvalue, centreMaxEigenvalue);
 

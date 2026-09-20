@@ -4,22 +4,42 @@
 
 #include "exahype2/amr/tests/ChildDataStageTest.h"
 #include "exahype2/amr/tests/InterpolationTest.h"
+#include "exahype2/amr/tests/LevelJumpEventsTest.h"
 #include "exahype2/amr/tests/MultiresolutionDetailTest.h"
 #include "exahype2/amr/tests/RestrictionTest.h"
 #include "exahype2/dg/ader/tests/CauchyKovalewskiTest.h"
-#include "exahype2/dg/ader/tests/CellErrorIntegralTest.h"
+#include "exahype2/dg/ader/tests/CorrectTest.h"
+#include "exahype2/dg/ader/tests/DynamicAMRTest.h"
 #include "exahype2/dg/ader/tests/KernelsOnDeviceTest.h"
 #include "exahype2/dg/ader/tests/LinearPredictorTermsTest.h"
 #include "exahype2/dg/ader/tests/PicardIterationTest.h"
 #include "exahype2/dg/ader/tests/PointSourceContributionTest.h"
 #include "exahype2/dg/ader/tests/PointSourcesTest.h"
+#include "exahype2/dg/ader/tests/PredictTest.h"
 #include "exahype2/dg/ader/tests/PredictorScratchTest.h"
+#include "exahype2/dg/ader/tests/SolverTest.h"
 #include "exahype2/dg/ader/tests/SpaceTimePredictorTest.h"
 #include "exahype2/dg/ader/tests/SpaceTimeTermsTest.h"
 #include "exahype2/dg/ader/tests/TimeAveragingTest.h"
 #include "exahype2/dg/ader/tests/VolumeIntegralTest.h"
+#include "exahype2/dg/limiting/tests/AdmissibilityTest.h"
+#include "exahype2/dg/limiting/tests/CorrectAndFlagTest.h"
+#include "exahype2/dg/limiting/tests/DynamicAMRTest.h"
+#include "exahype2/dg/limiting/tests/FaceStatusTest.h"
+#include "exahype2/dg/limiting/tests/ForEachSubcellTest.h"
+#include "exahype2/dg/limiting/tests/InitialiseSubcellsTest.h"
+#include "exahype2/dg/limiting/tests/PredictSubcellsTest.h"
+#include "exahype2/dg/limiting/tests/RecomputeSubcellsTest.h"
+#include "exahype2/dg/limiting/tests/SpreadDomainTest.h"
+#include "exahype2/dg/limiting/tests/SubcellLayoutTest.h"
+#include "exahype2/dg/limiting/tests/VertexExtremaTest.h"
+#include "exahype2/dg/rk/tests/DynamicAMRTest.h"
+#include "exahype2/dg/rk/tests/InterpolateRiemannSolutionTest.h"
 #include "exahype2/dg/rk/tests/KernelsOnDeviceTest.h"
 #include "exahype2/dg/rk/tests/LinearCombinationTest.h"
+#include "exahype2/dg/rk/tests/SolverTest.h"
+#include "exahype2/dg/rk/tests/StageScratchTest.h"
+#include "exahype2/dg/rk/tests/UpdateStageTest.h"
 #include "exahype2/dg/rk/tests/VolumeIntegralTest.h"
 #include "exahype2/dg/tests/AMRMatricesTest.h"
 #include "exahype2/dg/tests/BoundaryConditionsTest.h"
@@ -28,6 +48,7 @@
 #include "exahype2/dg/tests/DGUtilsTest.h"
 #include "exahype2/dg/tests/EigenvalueStatisticsTest.h"
 #include "exahype2/dg/tests/FaceIntegralTest.h"
+#include "exahype2/dg/tests/ForEachNodeTest.h"
 #include "exahype2/dg/tests/GradientTest.h"
 #include "exahype2/dg/tests/KernelsOnDeviceTest.h"
 #include "exahype2/dg/tests/LimiterStatusTest.h"
@@ -36,21 +57,51 @@
 #include "exahype2/dg/tests/OperatorAlongAxisTest.h"
 #include "exahype2/dg/tests/RiemannTest.h"
 #include "exahype2/dg/tests/SubcellProjectionTest.h"
+#include "exahype2/dg/tests/TransferKernelsTest.h"
 #include "exahype2/fv/limiter/tests/SlopeLimiterTest.h"
 #include "exahype2/fv/tests/ApplyBoundaryConditionsOnFaceTest.h"
+#include "exahype2/fv/tests/ApplyBoundaryConditionsTest.h"
 #include "exahype2/fv/tests/ApplySplit1DRiemannToPatchTest.h"
 #include "exahype2/fv/tests/CopyPatchTest.h"
+#include "exahype2/fv/tests/DynamicAMRTest.h"
 #include "exahype2/fv/tests/EigenvalueStatisticsTest.h"
 #include "exahype2/fv/tests/FiniteVolumeTest.h"
+#include "exahype2/fv/tests/ForEachVolumeTest.h"
+#include "exahype2/fv/tests/ProjectPatchOntoFacesTest.h"
+#include "exahype2/fv/tests/RollOverUpdatesTest.h"
+#include "exahype2/fv/tests/SolverTest.h"
+#include "exahype2/fv/tests/UpdatePatchTest.h"
+#include "exahype2/particles/tests/CoordinateOwnershipTest.h"
+#include "exahype2/particles/tests/CurviTracerTest.h"
+#include "exahype2/particles/tests/GridAssociationTest.h"
+#include "exahype2/particles/tests/InsertParticlesByCoordinatesAndDataTest.h"
+#include "exahype2/particles/tests/InsertParticlesByCoordinatesTest.h"
+#include "exahype2/particles/tests/InsertParticlesFromFileTest.h"
+#include "exahype2/particles/tests/InteractionSetsTest.h"
+#include "exahype2/particles/tests/ParallelStateTest.h"
+#include "exahype2/particles/tests/TrajectoryRecordingTest.h"
+#include "exahype2/plotter/tests/FacePlotterTest.h"
+#include "exahype2/plotter/tests/ParticlePlotterTest.h"
+#include "exahype2/plotter/tests/PatchPlotterTest.h"
+#include "exahype2/plotter/tests/PieceTest.h"
+#include "exahype2/plotter/tests/SnapshotTest.h"
+#include "exahype2/tests/AdaptiveTimeSteppingTest.h"
 #include "exahype2/tests/CurviTest.h"
 #include "exahype2/tests/EnumerationTest.h"
+#include "exahype2/tests/ErrorMeasurementTest.h"
+#include "exahype2/tests/FaceMergesTest.h"
+#include "exahype2/tests/FixedTimeSteppingTest.h"
 #include "exahype2/tests/NonNegativeReductionTest.h"
 #include "exahype2/tests/NonNegativeStatisticsTest.h"
-#include "exahype2/tests/PatchKernelsTest.h"
+#include "exahype2/tests/ParticleErrorMeasurementTest.h"
+#include "exahype2/tests/ProjectPatchTest.h"
 #include "exahype2/tests/RefinementControlServiceTest.h"
 #include "exahype2/tests/RefinementControlTest.h"
 #include "exahype2/tests/RefinementCriterionHelpersTest.h"
-#include "exahype2/tests/TimeSteppingTest.h"
+#include "exahype2/tests/SolverConceptsTest.h"
+#include "exahype2/tests/SolverRepositoryTest.h"
+#include "exahype2/tests/SolverTest.h"
+#include "exahype2/tests/TracingTest.h"
 #include "tarch/tests/TreeTestCaseCollection.h"
 
 tarch::tests::TestCase* exahype2::getUnitTests() {
@@ -58,6 +109,7 @@ tarch::tests::TestCase* exahype2::getUnitTests() {
 
   result->addTestCase(new exahype2::amr::tests::ChildDataStageTest());
   result->addTestCase(new exahype2::amr::tests::InterpolationTest());
+  result->addTestCase(new exahype2::amr::tests::LevelJumpEventsTest());
   result->addTestCase(new exahype2::amr::tests::MultiresolutionDetailTest());
   result->addTestCase(new exahype2::amr::tests::RestrictionTest());
 
@@ -68,6 +120,7 @@ tarch::tests::TestCase* exahype2::getUnitTests() {
   result->addTestCase(new exahype2::dg::tests::DGUtilsTest());
   result->addTestCase(new exahype2::dg::tests::EigenvalueStatisticsTest());
   result->addTestCase(new exahype2::dg::tests::FaceIntegralTest());
+  result->addTestCase(new exahype2::dg::tests::ForEachNodeTest());
   result->addTestCase(new exahype2::dg::tests::GradientTest());
   result->addTestCase(new exahype2::dg::tests::KernelsOnDeviceTest());
   result->addTestCase(new exahype2::dg::tests::LimiterStatusTest());
@@ -76,40 +129,92 @@ tarch::tests::TestCase* exahype2::getUnitTests() {
   result->addTestCase(new exahype2::dg::tests::OperatorAlongAxisTest());
   result->addTestCase(new exahype2::dg::tests::RiemannTest());
   result->addTestCase(new exahype2::dg::tests::SubcellProjectionTest());
+  result->addTestCase(new exahype2::dg::tests::TransferKernelsTest());
 
+  result->addTestCase(new exahype2::dg::rk::tests::DynamicAMRTest());
+  result->addTestCase(new exahype2::dg::rk::tests::InterpolateRiemannSolutionTest());
   result->addTestCase(new exahype2::dg::rk::tests::KernelsOnDeviceTest());
   result->addTestCase(new exahype2::dg::rk::tests::LinearCombinationTest());
+  result->addTestCase(new exahype2::dg::rk::tests::StageScratchTest());
+  result->addTestCase(new exahype2::dg::rk::tests::SolverTest());
+  result->addTestCase(new exahype2::dg::rk::tests::UpdateStageTest());
   result->addTestCase(new exahype2::dg::rk::tests::VolumeIntegralTest());
 
   result->addTestCase(new exahype2::dg::ader::tests::CauchyKovalewskiTest());
-  result->addTestCase(new exahype2::dg::ader::tests::CellErrorIntegralTest());
+  result->addTestCase(new exahype2::dg::ader::tests::CorrectTest());
+  result->addTestCase(new exahype2::dg::ader::tests::DynamicAMRTest());
   result->addTestCase(new exahype2::dg::ader::tests::KernelsOnDeviceTest());
   result->addTestCase(new exahype2::dg::ader::tests::LinearPredictorTermsTest());
   result->addTestCase(new exahype2::dg::ader::tests::PicardIterationTest());
   result->addTestCase(new exahype2::dg::ader::tests::PointSourceContributionTest());
   result->addTestCase(new exahype2::dg::ader::tests::PointSourcesTest());
+  result->addTestCase(new exahype2::dg::ader::tests::PredictTest());
   result->addTestCase(new exahype2::dg::ader::tests::PredictorScratchTest());
+  result->addTestCase(new exahype2::dg::ader::tests::SolverTest());
   result->addTestCase(new exahype2::dg::ader::tests::SpaceTimePredictorTest());
   result->addTestCase(new exahype2::dg::ader::tests::SpaceTimeTermsTest());
   result->addTestCase(new exahype2::dg::ader::tests::TimeAveragingTest());
   result->addTestCase(new exahype2::dg::ader::tests::VolumeIntegralTest());
 
+  result->addTestCase(new exahype2::dg::limiting::tests::AdmissibilityTest());
+  result->addTestCase(new exahype2::dg::limiting::tests::CorrectAndFlagTest());
+  result->addTestCase(new exahype2::dg::limiting::tests::DynamicAMRTest());
+  result->addTestCase(new exahype2::dg::limiting::tests::FaceStatusTest());
+  result->addTestCase(new exahype2::dg::limiting::tests::ForEachSubcellTest());
+  result->addTestCase(new exahype2::dg::limiting::tests::InitialiseSubcellsTest());
+  result->addTestCase(new exahype2::dg::limiting::tests::PredictSubcellsTest());
+  result->addTestCase(new exahype2::dg::limiting::tests::RecomputeSubcellsTest());
+  result->addTestCase(new exahype2::dg::limiting::tests::SpreadDomainTest());
+  result->addTestCase(new exahype2::dg::limiting::tests::SubcellLayoutTest());
+  result->addTestCase(new exahype2::dg::limiting::tests::VertexExtremaTest());
+
   result->addTestCase(new exahype2::fv::tests::CopyPatchTest());
   result->addTestCase(new exahype2::fv::tests::ApplySplit1DRiemannToPatchTest());
   result->addTestCase(new exahype2::fv::tests::EigenvalueStatisticsTest());
   result->addTestCase(new exahype2::fv::tests::FiniteVolumeTest());
+  result->addTestCase(new exahype2::fv::tests::ForEachVolumeTest());
+  result->addTestCase(new exahype2::fv::tests::DynamicAMRTest());
+  result->addTestCase(new exahype2::fv::tests::SolverTest());
   result->addTestCase(new exahype2::fv::tests::ApplyBoundaryConditionsOnFaceTest());
+  result->addTestCase(new exahype2::fv::tests::ApplyBoundaryConditionsTest());
+  result->addTestCase(new exahype2::fv::tests::ProjectPatchOntoFacesTest());
+  result->addTestCase(new exahype2::fv::tests::RollOverUpdatesTest());
+  result->addTestCase(new exahype2::fv::tests::UpdatePatchTest());
   result->addTestCase(new exahype2::fv::limiter::tests::SlopeLimiterTest());
 
+  result->addTestCase(new exahype2::particles::tests::CoordinateOwnershipTest());
+  result->addTestCase(new exahype2::particles::tests::CurviTracerTest());
+  result->addTestCase(new exahype2::particles::tests::GridAssociationTest());
+  result->addTestCase(new exahype2::particles::tests::InsertParticlesByCoordinatesAndDataTest());
+  result->addTestCase(new exahype2::particles::tests::InsertParticlesByCoordinatesTest());
+  result->addTestCase(new exahype2::particles::tests::InsertParticlesFromFileTest());
+  result->addTestCase(new exahype2::particles::tests::InteractionSetsTest());
+  result->addTestCase(new exahype2::particles::tests::ParallelStateTest());
+  result->addTestCase(new exahype2::particles::tests::TrajectoryRecordingTest());
+
+  result->addTestCase(new exahype2::plotter::tests::FacePlotterTest());
+  result->addTestCase(new exahype2::plotter::tests::ParticlePlotterTest());
+  result->addTestCase(new exahype2::plotter::tests::PatchPlotterTest());
+  result->addTestCase(new exahype2::plotter::tests::PieceTest());
+  result->addTestCase(new exahype2::plotter::tests::SnapshotTest());
+
+  result->addTestCase(new exahype2::tests::AdaptiveTimeSteppingTest());
   result->addTestCase(new exahype2::tests::CurviTest());
   result->addTestCase(new exahype2::tests::EnumerationTest());
+  result->addTestCase(new exahype2::tests::ErrorMeasurementTest());
+  result->addTestCase(new exahype2::tests::FaceMergesTest());
+  result->addTestCase(new exahype2::tests::FixedTimeSteppingTest());
   result->addTestCase(new exahype2::tests::NonNegativeReductionTest());
   result->addTestCase(new exahype2::tests::NonNegativeStatisticsTest());
-  result->addTestCase(new exahype2::tests::PatchKernelsTest());
+  result->addTestCase(new exahype2::tests::ParticleErrorMeasurementTest());
+  result->addTestCase(new exahype2::tests::ProjectPatchTest());
   result->addTestCase(new exahype2::tests::RefinementControlServiceTest());
   result->addTestCase(new exahype2::tests::RefinementControlTest());
   result->addTestCase(new exahype2::tests::RefinementCriterionHelpersTest());
-  result->addTestCase(new exahype2::tests::TimeSteppingTest());
+  result->addTestCase(new exahype2::tests::SolverConceptsTest());
+  result->addTestCase(new exahype2::tests::SolverRepositoryTest());
+  result->addTestCase(new exahype2::tests::SolverTest());
+  result->addTestCase(new exahype2::tests::TracingTest());
 
   return result;
 }

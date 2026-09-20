@@ -1,16 +1,5 @@
-#!/usr/bin/env python3
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-"""Unified renderer for ExaHyPE 2 / Peano 4 plotter output.
-
-Two front-ends share the readers and the renderer:
-
-  * a batch command line that writes image files for a single snapshot or a
-    whole time series (see ``--help``), and
-  * notebook viewers :func:`show_solution` (2D) and :func:`show_solution_3D`
-    (axis-aligned slices through a cube), each with a time slider, a field
-    selector and play/stop.
-"""
 
 from __future__ import annotations
 
@@ -52,15 +41,15 @@ HOUSEKEEPING_FIELDS = ("Subdomain", "RefinementLevel")
 LARGE_MESH = 250_000
 
 # Figure layout (image axes + colour-bar axes as left/bottom/width/height
-# fractions) shared by every render path so a frame looks identical whoever drew
-# it. Explicit rectangles instead of tight_layout keep this reproducible.
+# fractions) that every render path applies so a frame looks identical whoever
+# drew it. Explicit rectangles keep this reproducible.
 IMAGE_RECT = (0.04, 0.06, 0.74, 0.88)
 CBAR_RECT = (0.80, 0.06, 0.03, 0.88)
 LABELLED_IMAGE_RECT = (0.10, 0.09, 0.72, 0.84)
 LABELLED_CBAR_RECT = (0.85, 0.09, 0.03, 0.84)
 
-# The common mesh model and the per-format readers live in solution_io, shared with
-# compare_solution. The dual import makes this work both as a package
+# The common mesh model and the per-format readers live in solution_io, which
+# compare_solution also imports. The dual import makes this work both as a package
 # (postprocessing.solution_io) and when the script is run directly from the
 # postprocessing/ directory (solution_io as a sibling module).
 try:
@@ -135,11 +124,11 @@ def ordered_field_options(variables: list[str]) -> list[str]:
     return regular + housekeeping
 
 
-def _autoscale(values: np.ndarray, robust: bool) -> tuple[float, float]:
+def _autoscale(values: np.ndarray, clip_outliers: bool) -> tuple[float, float]:
     finite = values[np.isfinite(values)]
     if finite.size == 0:
         return (0.0, 1.0)
-    if robust:
+    if clip_outliers:
         low, high = (float(value) for value in np.percentile(finite, [2.0, 98.0]))
     else:
         low, high = float(finite.min()), float(finite.max())
@@ -242,7 +231,7 @@ def _build_polygons(
         ordered = _order_polygons(cell_points[:, :, keep])
         return list(ordered), np.asarray(colours, dtype=float)
 
-    # Ragged mesh (cells differ in corner count): fall back to the per-cell path.
+    # Ragged mesh (cells differ in corner count): Fall back to the per-cell path.
     polygons: list[np.ndarray] = []
     colours_list: list[float] = []
     for index, nodes in enumerate(cells):
@@ -319,7 +308,7 @@ def render_field_figure(
     component: int | None = None,
     cmap: str = "viridis",
     clim: tuple[float, float] | None = None,
-    robust: bool = False,
+    clip_outliers: bool = False,
     show_edges: bool = True,
     slice_axis: str | None = None,
     slice_position: float | None = None,
@@ -332,7 +321,7 @@ def render_field_figure(
 ):
     """Render one field of one snapshot onto a fresh figure and return it."""
     values = cell_scalar(snapshot, field, component)
-    vmin, vmax = clim if clim is not None else _autoscale(values, robust)
+    vmin, vmax = clim if clim is not None else _autoscale(values, clip_outliers)
     keep_axes, drop_axis = _projection(snapshot.points, slice_axis)
 
     figure = _new_figure(figsize, dpi)
@@ -451,7 +440,7 @@ def render_slice_figure(
     if clim is not None:
         vmin, vmax = clim
     else:
-        vmin, vmax = _autoscale(values, robust=False)
+        vmin, vmax = _autoscale(values, clip_outliers=False)
     figure = _new_figure(figsize, dpi)
     axes = figure.add_axes([0.10, 0.10, 0.74, 0.82])
     interpolation = "nearest" if np.isnan(image).any() else "bicubic"
@@ -501,7 +490,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--vmin", type=float, help="Lower colour limit")
     parser.add_argument("--vmax", type=float, help="Upper colour limit")
     parser.add_argument(
-        "--robust", action="store_true", help="Clip colours to the 2-98th percentile"
+        "--clip-outliers",
+        action="store_true",
+        help="Clip colours to the 2-98th percentile",
     )
     parser.add_argument("--dpi", type=int, default=300, help="DPI for raster outputs")
     parser.add_argument(
@@ -574,7 +565,7 @@ def main(argv: list[str] | None = None) -> None:
         "component": args.component,
         "cmap": args.colormap,
         "clim": clim,
-        "robust": args.robust,
+        "clip_outliers": args.clip_outliers,
         "show_edges": args.show_edges,
         "slice_axis": args.slice_axis,
         "slice_position": args.slice_position,
@@ -619,7 +610,7 @@ def _render_and_save(snapshot: MeshSnapshot, index: int, options: dict) -> Path:
         component=options["component"],
         cmap=options["cmap"],
         clim=options["clim"],
-        robust=options["robust"],
+        clip_outliers=options["clip_outliers"],
         show_edges=options["show_edges"],
         slice_axis=options["slice_axis"],
         slice_position=options["slice_position"],
@@ -807,12 +798,12 @@ def show_solution(
     width: int = 900,
     normalise: str = "frame",
     clim: tuple[float, float] | None = None,
-    robust: bool = False,
+    clip_outliers: bool = False,
 ):
     """Interactive viewer with time, frame and field selectors plus play/stop.
 
     ``normalise="global"`` holds the colour scale fixed across time;
-    ``robust=True`` or ``clim=(lo, hi)`` tames outliers. Outside a notebook the
+    ``clip_outliers=True`` or ``clim=(lo, hi)`` tames outliers. Outside a notebook the
     last frame is rendered and returned as PNG bytes.
     """
     import asyncio
@@ -851,7 +842,7 @@ def show_solution(
             "field": name,
             "cmap": cmap,
             "clim": clim_for(name),
-            "robust": robust,
+            "clip_outliers": clip_outliers,
             "show_edges": show_edges,
             "labelled": False,
             "figsize": (width / 100.0, width / 130.0),
@@ -1263,7 +1254,7 @@ def show_solution_3D(
 
 
 # --------------------------------------------------------------------------- #
-# Shared helpers
+# Helpers
 # --------------------------------------------------------------------------- #
 def _as_source(solver_name, directory) -> SolutionSource:
     return SolutionSource.locate(solver_name, directory)

@@ -10,10 +10,10 @@ double tests::exahype2::fortran::FVSolver::maxEigenvalue(
   const double                                 dt,
   const int                                    normal
 ) {
-  static constexpr double g = 9.81;
-  const double            u = Q[0] > 1e-5 ? Q[1 + normal] / Q[0] : 0.0;
-  const double            c = Q[0] > 1e-5 ? std::sqrt(g * Q[0]) : 0.0;
-  return std::max(std::abs(u - c), std::abs(u + c));
+  static constexpr double Gravity    = 9.81;
+  const double            velocity   = Q[0] > 1e-5 ? Q[1 + normal] / Q[0] : 0.0;
+  const double            soundSpeed = Q[0] > 1e-5 ? std::sqrt(Gravity * Q[0]) : 0.0;
+  return std::max(std::abs(velocity - soundSpeed), std::abs(velocity + soundSpeed));
 }
 
 extern "C" {
@@ -37,7 +37,7 @@ double tests::exahype2::fortran::FVSolver::solveRiemannProblem(
   double* const NOALIAS                        FL,
   double* const NOALIAS                        FR
 ) {
-  // The Fortran solver returns the Clawpack fluctuations: the left-going
+  // The Fortran solver returns the Clawpack fluctuations: The left-going
   // fluctuation A^-dQ into FL and the right-going fluctuation A^+dQ into FR (for
   // h, hu, hv). The Godunov kernel updates the left cell by -dt/h * FL and the
   // right cell by +dt/h * FR, whereas wave propagation requires the right cell

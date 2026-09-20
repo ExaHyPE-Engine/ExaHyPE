@@ -1,0 +1,108 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+/**
+ * Returns an enumerator over the faces of one cell, with face number zero at the first entry of
+ * faces.
+ */
+template <typename Element>
+INLINE_METHOD peano4::dataview::FaceEnumerator<Element> exahype2::fv::tests::enumerateFaces(
+  std::array<Element, peano4::FacesPerCell>& faces
+) {
+  std::array<int, peano4::FacesPerCell> slots{};
+  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+    slots[faceNumber] = faceNumber;
+  }
+  return peano4::dataview::FaceEnumerator<Element>(faces.data(), slots.data(), 0);
+}
+
+INLINE_METHOD double exahype2::fv::tests::CellLabel::getTimeStamp() const { return _timeStamp; }
+
+INLINE_METHOD void exahype2::fv::tests::CellLabel::setTimeStamp(const double value) { _timeStamp = value; }
+
+INLINE_METHOD double exahype2::fv::tests::CellLabel::getTimeStepSize() const { return _timeStepSize; }
+
+INLINE_METHOD void exahype2::fv::tests::CellLabel::setTimeStepSize(const double value) { _timeStepSize = value; }
+
+INLINE_METHOD bool exahype2::fv::tests::CellLabel::getHasUpdated() const { return _hasUpdated; }
+
+INLINE_METHOD void exahype2::fv::tests::CellLabel::setHasUpdated(const bool value) { _hasUpdated = value; }
+
+INLINE_METHOD bool exahype2::fv::tests::CellLabel::getRequiresCriterionEvaluation() const {
+  return _requiresCriterionEvaluation;
+}
+
+INLINE_METHOD void exahype2::fv::tests::CellLabel::setRequiresCriterionEvaluation(const bool value) {
+  _requiresCriterionEvaluation = value;
+}
+
+INLINE_METHOD bool exahype2::fv::tests::FaceLabel::getBoundary() const { return _boundary; }
+
+INLINE_METHOD void exahype2::fv::tests::FaceLabel::setBoundary(const bool value) { _boundary = value; }
+
+INLINE_METHOD bool exahype2::fv::tests::FaceLabel::getIsHanging() const { return _isHanging; }
+
+INLINE_METHOD void exahype2::fv::tests::FaceLabel::setIsHanging(const bool value) { _isHanging = value; }
+
+INLINE_METHOD bool exahype2::fv::tests::FaceLabel::getAboveHanging(const int half) const { return _aboveHanging[half]; }
+
+INLINE_METHOD void exahype2::fv::tests::FaceLabel::setAboveHanging(const int half, const bool value) {
+  _aboveHanging[half] = value;
+}
+
+INLINE_METHOD bool exahype2::fv::tests::FaceLabel::getUpdated(const int half) const { return _updated[half]; }
+
+INLINE_METHOD void exahype2::fv::tests::FaceLabel::setUpdated(const int half, const bool value) {
+  _updated[half] = value;
+}
+
+INLINE_METHOD bool exahype2::fv::tests::FaceLabel::getRequiresDataTransfer(const int half) const {
+  return _requiresDataTransfer[half];
+}
+
+INLINE_METHOD void exahype2::fv::tests::FaceLabel::setRequiresDataTransfer(const int half, const bool value) {
+  _requiresDataTransfer[half] = value;
+}
+
+INLINE_METHOD double exahype2::fv::tests::FaceLabel::getUpdatedTimeStamp(const int half) const {
+  return _updatedTimeStamp[half];
+}
+
+INLINE_METHOD void exahype2::fv::tests::FaceLabel::setUpdatedTimeStamp(const int half, const double value) {
+  _updatedTimeStamp[half] = value;
+}
+
+INLINE_METHOD double exahype2::fv::tests::FaceLabel::getNewTimeStamp(const int half) const {
+  return _newTimeStamp[half];
+}
+
+INLINE_METHOD void exahype2::fv::tests::FaceLabel::setNewTimeStamp(const int half, const double value) {
+  _newTimeStamp[half] = value;
+}
+
+INLINE_METHOD double exahype2::fv::tests::FaceLabel::getOldTimeStamp(const int half) const {
+  return _oldTimeStamp[half];
+}
+
+INLINE_METHOD void exahype2::fv::tests::FaceLabel::setOldTimeStamp(const int half, const double value) {
+  _oldTimeStamp[half] = value;
+}
+
+INLINE_METHOD std::string exahype2::fv::tests::FaceLabel::toString() const {
+  return std::string("(boundary=") + (_boundary ? "true" : "false") + ")";
+}
+
+template <int Values>
+INLINE_METHOD double* exahype2::fv::tests::Patch<Values>::data() {
+  return _values.data();
+}
+
+template <int Values>
+INLINE_METHOD const double* exahype2::fv::tests::Patch<Values>::data() const {
+  return _values.data();
+}
+
+template <int Values>
+INLINE_METHOD void exahype2::fv::tests::Patch<Values>::fill(const double value) {
+  _values.fill(value);
+}

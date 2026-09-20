@@ -80,8 +80,9 @@ namespace {
     for (int column = 0; column < NumberOfDofsPerAxis; column++) {
       int pivotRow = column;
       for (int row = column + 1; row < NumberOfDofsPerAxis; row++) {
-        if (std::fabs(work[row * NumberOfDofsPerAxis + column])
-            > std::fabs(work[pivotRow * NumberOfDofsPerAxis + column])) {
+        if (
+          std::fabs(work[row * NumberOfDofsPerAxis + column]) > std::fabs(work[pivotRow * NumberOfDofsPerAxis + column])
+        ) {
           pivotRow = row;
         }
       }

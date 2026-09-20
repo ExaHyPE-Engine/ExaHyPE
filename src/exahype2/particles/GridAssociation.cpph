@@ -1,0 +1,367 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+INLINE_METHOD void exahype2::particles::LiftDropStatistics::clear() {
+  numberOfLifts                                = 0;
+  numberOfDrops                                = 0;
+  numberOfLiftsIntoSieveSet                    = 0;
+  numberOfDropsFromSieveSet                    = 0;
+  numberOfDropsIntoHorizontalTreeDecomposition = 0;
+}
+
+/** Adds the counters of this tree to the reassignment statistics of the particle container. */
+template <typename ParticleSet>
+INLINE_METHOD void exahype2::particles::LiftDropStatistics::record() const {
+  ParticleSet::updateLiftDropStatistics(
+    numberOfLifts,
+    numberOfDrops,
+    numberOfLiftsIntoSieveSet,
+    numberOfDropsFromSieveSet,
+    numberOfDropsIntoHorizontalTreeDecomposition
+  );
+}
+
+/**
+ * Moves every particle of the parent vertices of marker that fits the level of marker into
+ * fineGridVertexParticles. At a vertex that is the parent of a subtree, a particle that drops
+ * further moves to the sieve set.
+ */
+template <typename ParticleSet, typename ParentVertices>
+INLINE_METHOD void exahype2::particles::dropParticles(
+  const peano4::dataview::VertexMarker& marker,
+  ParticleSet&                          fineGridVertexParticles,
+  const ParentVertices&                 coarseGridVertexParticles,
+  const std::string&                    particleName,
+  const int                             treeId,
+  LiftDropStatistics&                   statistics
+) {
+  using Particle = typename ParticleSet::DoFType;
+
+  for (int parentVertex = 0; parentVertex < peano4::VerticesPerCell; parentVertex++) {
+    if (marker.isParentVertexLocal(parentVertex)) {
+      auto& parentParticles  = coarseGridVertexParticles(parentVertex);
+      auto  particleIterator = parentParticles.begin();
+      while (particleIterator != parentParticles.end()) {
+        auto* const particle = *particleIterator;
+#if PEANO_ASSERTIONS
+        const int particleId = particle->getPartid();
+#else
+        const int particleId = -1;
+#endif
+        const bool particleIsLocal       = particle->getParallelState() == Particle::ParallelState::Local;
+        const bool particleFitsFineLevel = peano4::particles::dropParticle(*particle, marker);
+
+        if (
+          particleFitsFineLevel and marker.isParentOfSubtree()
+          and peano4::particles::particleWillBeDroppedFurther(*particle, marker)
+        ) {
+          ++statistics.numberOfDropsIntoHorizontalTreeDecomposition;
+          particleIterator = parentParticles.particleCanNotBeLiftedLocally(particleIterator);
+        } else if (particleFitsFineLevel) {
+          ++statistics.numberOfDrops;
+          particle->setCellH(marker.getH());
+          peano4::particles::updateContainedInAdjacentCellProperty(marker, *particle);
+          const auto parentVertexPosition = peano4::dataview::reconstructXOfParentVertex(marker, parentVertex);
+          const auto parentCellSize = static_cast<double>(peano4::sfc::ActiveCurve::SubdivisionFactor) * marker.getH();
+          peano4::particles::assignmentchecks::detachParticleFromVertex(
+            particleName,
+            particle->getX(),
+            particleId,
+            particleIsLocal,
+            parentVertexPosition,
+            parentCellSize,
+            treeId,
+            "exahype2::particles::dropParticles"
+          );
+          peano4::particles::assignmentchecks::assignParticleToVertex(
+            particleName,
+            particle->getX(),
+            particleId,
+            particleIsLocal,
+            marker.getX(),
+            marker.getH(),
+            treeId,
+            "exahype2::particles::dropParticles",
+            parentVertexPosition,
+            parentCellSize
+          );
+          assertion(
+            fineGridVertexParticles.isValid(),
+            fineGridVertexParticles.toString(),
+            parentParticles.toString(),
+            treeId
+          );
+          assertion(parentParticles.isValid(), fineGridVertexParticles.toString(), parentParticles.toString(), treeId);
+          logDebug(
+            "Drop particle " << particle->toString() << " from " << parentParticles.toString() << " into "
+                             << marker.toString()
+          );
+          particleIterator = fineGridVertexParticles.grabParticle(particleIterator, parentParticles);
+        } else {
+          ++particleIterator;
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Merges every particle of the sieve set that belongs to the vertex of marker into
+ * fineGridVertexParticles.
+ */
+template <typename ParticleSet>
+INLINE_METHOD void exahype2::particles::sieveParticlesIntoVertex(
+  const peano4::dataview::VertexMarker& marker,
+  ParticleSet&                          fineGridVertexParticles,
+  const int                             treeId,
+  LiftDropStatistics&                   statistics
+) {
+  if (ParticleSet::hasParticlesToBeSievedIntoVertices()) {
+    const auto sievedParticles = ParticleSet::getParticlesToBeSievedIntoVertex(marker);
+
+    for (auto* const newParticle : sievedParticles) {
+      ++statistics.numberOfDropsFromSieveSet;
+      fineGridVertexParticles.mergeWithParticle(newParticle, marker, treeId);
+    }
+
+    assertion(fineGridVertexParticles.isValid(), fineGridVertexParticles.toString());
+  }
+}
+
+/**
+ * Moves every local particle of fineGridVertexParticles that does not fit into the level of
+ * marker or lies outside the cells around its vertex to the nearest local vertex of the parent
+ * cell that contains it, and to the sieve set otherwise. A virtual particle and every other local
+ * particle keep the vertex and update their cell ownership.
+ */
+template <typename ParticleSet, typename ParentVertices>
+INLINE_METHOD void exahype2::particles::liftOrReassignParticles(
+  const peano4::dataview::VertexMarker&        marker,
+  ParticleSet&                                 fineGridVertexParticles,
+  const ParentVertices&                        coarseGridVertexParticles,
+  const tarch::la::Vector<DIMENSIONS, double>& domainOffset,
+  const tarch::la::Vector<DIMENSIONS, double>& domainSize,
+  const std::bitset<DIMENSIONS>&               periodicBoundaries,
+  const std::string&                           particleName,
+  const int                                    treeId,
+  LiftDropStatistics&                          statistics
+) {
+  using Particle = typename ParticleSet::DoFType;
+
+  auto particleIterator = fineGridVertexParticles.begin();
+  while (particleIterator != fineGridVertexParticles.end()) {
+    auto* const particle = *particleIterator;
+    if (periodicBoundaries.any()) {
+      particle->setX(
+        peano4::particles::applyPeriodicBoundaryConditions(
+          particle->getX(),
+          domainOffset,
+          domainSize,
+          periodicBoundaries
+        )
+      );
+    }
+    const auto instruction = peano4::particles::liftParticleAssociatedWithVertex(*particle, marker);
+
+#if PEANO_ASSERTIONS
+    const int particleId = particle->getPartid();
+#else
+    const int particleId = -1;
+#endif
+    const bool particleIsLocal = particle->getParallelState() == Particle::ParallelState::Local;
+
+    switch (instruction) {
+    case peano4::particles::ParticleReassociationInstructionKeep:
+      peano4::particles::updateContainedInAdjacentCellProperty(marker, *particle);
+      ++particleIterator;
+      break;
+
+    case peano4::particles::ParticleReassociationInstructionSieveGlobally:
+      ++statistics.numberOfLiftsIntoSieveSet;
+      logDebug(
+        "Lift particle " << particle->toString() << " globally from " << marker.toString() << " on tree " << treeId
+                         << "."
+      );
+      peano4::particles::assignmentchecks::detachParticleFromVertex(
+        particleName,
+        particle->getX(),
+        particleId,
+        particleIsLocal,
+        marker.getX(),
+        marker.getH(),
+        treeId,
+        "exahype2::particles::liftOrReassignParticles"
+      );
+      peano4::particles::assignmentchecks::assignParticleToSieveSet(
+        particleName,
+        particle->getX(),
+        particleId,
+        particleIsLocal,
+        marker.getX(),
+        marker.getH(),
+        treeId,
+        "exahype2::particles::liftOrReassignParticles"
+      );
+      particleIterator = fineGridVertexParticles.particleCanNotBeLiftedLocally(particleIterator);
+      assertion(fineGridVertexParticles.isValid(), fineGridVertexParticles.toString());
+      break;
+
+    case 0:
+    case 1:
+    case 2:
+    case 3:
+#if DIMENSIONS == 3
+    case 4:
+    case 5:
+    case 6:
+    case 7:
+#endif
+    {
+      ++statistics.numberOfLifts;
+      logDebug(
+        "Lift particle " << particle->toString() << " from " << marker.toString() << " to coarse vertex " << instruction
+                         << " in " << coarseGridVertexParticles(instruction).toString() << "."
+      );
+      const auto parentVertexPosition = peano4::dataview::reconstructXOfParentVertex(marker, instruction);
+      const auto parentCellSize = static_cast<double>(peano4::sfc::ActiveCurve::SubdivisionFactor) * marker.getH();
+      particle->setCellH(parentCellSize);
+      peano4::particles::updateContainedInAdjacentCellProperty(parentVertexPosition, parentCellSize, *particle);
+      peano4::particles::assignmentchecks::detachParticleFromVertex(
+        particleName,
+        particle->getX(),
+        particleId,
+        particleIsLocal,
+        marker.getX(),
+        marker.getH(),
+        treeId,
+        "exahype2::particles::liftOrReassignParticles"
+      );
+      peano4::particles::assignmentchecks::assignParticleToVertex(
+        particleName,
+        particle->getX(),
+        particleId,
+        particleIsLocal,
+        parentVertexPosition,
+        parentCellSize,
+        treeId,
+        "exahype2::particles::liftOrReassignParticles",
+        marker.getX(),
+        marker.getH()
+      );
+      particleIterator = coarseGridVertexParticles(instruction).grabParticle(particleIterator, fineGridVertexParticles);
+      assertion(
+        fineGridVertexParticles.isValid(),
+        fineGridVertexParticles.toString(),
+        coarseGridVertexParticles(instruction).toString()
+      );
+      assertion(
+        coarseGridVertexParticles(instruction).isValid(),
+        fineGridVertexParticles.toString(),
+        coarseGridVertexParticles(instruction).toString()
+      );
+      break;
+    }
+
+    default:
+      tarch::terminateWithError("Unsupported particle reassociation instruction.");
+    }
+  }
+}
+
+/**
+ * Moves every particle of fineGridVertexParticles to the parent vertex nearest to the vertex of
+ * marker along every axis. A remote parent vertex cannot take them, so they enter the sieve set
+ * and the next traversal assigns them.
+ */
+template <typename ParticleSet, typename ParentVertices>
+INLINE_METHOD void exahype2::particles::liftAllParticles(
+  const peano4::dataview::VertexMarker& marker,
+  ParticleSet&                          fineGridVertexParticles,
+  const ParentVertices&                 coarseGridVertexParticles,
+  const std::string&                    particleName,
+  const int                             treeId,
+  LiftDropStatistics&                   statistics
+) {
+  using Particle = typename ParticleSet::DoFType;
+
+  std::bitset<DIMENSIONS> parentVertex;
+  for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
+    parentVertex[dimension] =
+      2 * marker.getRelativePositionWithinFatherCell()(dimension) > peano4::sfc::ActiveCurve::SubdivisionFactor;
+  }
+  const int parentVertexNumber = static_cast<int>(parentVertex.to_ulong());
+
+  if (marker.isParentVertexLocal(parentVertexNumber)) {
+    auto& parentParticles = coarseGridVertexParticles(parentVertexNumber);
+    assertion(parentParticles.isValid(), parentParticles.toString(), fineGridVertexParticles.toString());
+    assertion(fineGridVertexParticles.isValid(), parentParticles.toString(), fineGridVertexParticles.toString());
+    statistics.numberOfLifts += fineGridVertexParticles.size();
+    const auto parentVertexPosition = peano4::dataview::reconstructXOfParentVertex(marker, parentVertexNumber);
+    const auto parentCellSize       = static_cast<double>(peano4::sfc::ActiveCurve::SubdivisionFactor) * marker.getH();
+    for (auto* const particle : fineGridVertexParticles) {
+#if PEANO_ASSERTIONS
+      const int particleId = particle->getPartid();
+#else
+      const int particleId = -1;
+#endif
+      const bool particleIsLocal = particle->getParallelState() == Particle::ParallelState::Local;
+      particle->setCellH(parentCellSize);
+      peano4::particles::updateContainedInAdjacentCellProperty(parentVertexPosition, parentCellSize, *particle);
+      peano4::particles::assignmentchecks::detachParticleFromVertex(
+        particleName,
+        particle->getX(),
+        particleId,
+        particleIsLocal,
+        marker.getX(),
+        marker.getH(),
+        treeId,
+        "exahype2::particles::liftAllParticles (parent vertex is local)"
+      );
+      peano4::particles::assignmentchecks::assignParticleToVertex(
+        particleName,
+        particle->getX(),
+        particleId,
+        particleIsLocal,
+        parentVertexPosition,
+        parentCellSize,
+        treeId,
+        "exahype2::particles::liftAllParticles (parent vertex is local)",
+        marker.getX(),
+        marker.getH()
+      );
+    }
+    parentParticles.grabParticles(fineGridVertexParticles);
+  } else {
+    statistics.numberOfLiftsIntoSieveSet += fineGridVertexParticles.size();
+    for (const auto* const particle : fineGridVertexParticles) {
+#if PEANO_ASSERTIONS
+      const int particleId = particle->getPartid();
+#else
+      const int particleId = -1;
+#endif
+      const bool particleIsLocal = particle->getParallelState() == Particle::ParallelState::Local;
+      peano4::particles::assignmentchecks::detachParticleFromVertex(
+        particleName,
+        particle->getX(),
+        particleId,
+        particleIsLocal,
+        marker.getX(),
+        marker.getH(),
+        treeId,
+        "exahype2::particles::liftAllParticles"
+      );
+      peano4::particles::assignmentchecks::assignParticleToSieveSet(
+        particleName,
+        particle->getX(),
+        particleId,
+        particleIsLocal,
+        marker.getX(),
+        marker.getH(),
+        treeId,
+        "exahype2::particles::liftAllParticles"
+      );
+    }
+    fineGridVertexParticles.particlesCanNotBeLiftedLocally();
+    assertion(fineGridVertexParticles.isValid(), fineGridVertexParticles.toString());
+  }
+}

@@ -121,7 +121,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::computeSpaceTimeGradi
  * leaves zeros in the others.
  */
 template <
-  typename Solver,
+  typename SolverType,
   int  NumberOfDofsPerAxis,
   int  NumberOfUnknowns,
   int  NumberOfAuxiliaryVariables,
@@ -177,9 +177,9 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::evaluateSpaceTimeFlux
         flux[unknown] = static_cast<ComputePrecision>(0);
       }
       if constexpr (EvaluateDiffusiveFlux) {
-        Solver::flux(nodeState, nodeGradients, nodePosition, cellSize, timePosition, timeStepSize, axis, flux);
+        SolverType::flux(nodeState, nodeGradients, nodePosition, cellSize, timePosition, timeStepSize, axis, flux);
       } else {
-        Solver::flux(nodeState, nodePosition, cellSize, timePosition, timeStepSize, axis, flux);
+        SolverType::flux(nodeState, nodePosition, cellSize, timePosition, timeStepSize, axis, flux);
       }
     }
   }
@@ -191,7 +191,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::evaluateSpaceTimeFlux
  * product enter one buffer.
  */
 template <
-  typename Solver,
+  typename SolverType,
   int  NumberOfDofsPerAxis,
   int  NumberOfUnknowns,
   int  NumberOfAuxiliaryVariables,
@@ -262,14 +262,14 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::evaluateSpaceTimeSour
     }
 
     if constexpr (EvaluateSource) {
-      Solver::sourceTerm(nodeState, nodePosition, cellSize, timePosition, timeStepSize, localSource);
+      SolverType::sourceTerm(nodeState, nodePosition, cellSize, timePosition, timeStepSize, localSource);
     }
 
     if constexpr (EvaluateDiffusiveSource and EvaluateSource) {
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         diffusiveSourceValues[unknown] = static_cast<ComputePrecision>(0);
       }
-      Solver::diffusiveSourceTerm(
+      SolverType::diffusiveSourceTerm(
         nodeState,
         nodeGradient,
         nodePosition,
@@ -283,7 +283,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::evaluateSpaceTimeSour
         localSource[unknown] += diffusiveSourceValues[unknown];
       }
     } else if constexpr (EvaluateDiffusiveSource) {
-      Solver::diffusiveSourceTerm(
+      SolverType::diffusiveSourceTerm(
         nodeState,
         nodeGradient,
         nodePosition,
@@ -300,7 +300,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::evaluateSpaceTimeSour
         for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
           productValues[unknown] = static_cast<ComputePrecision>(0);
         }
-        Solver::nonconservativeProduct(
+        SolverType::nonconservativeProduct(
           nodeState,
           stateGradient + SourceStride * cellNode + axis * GradientAxisStride,
           nodePosition,

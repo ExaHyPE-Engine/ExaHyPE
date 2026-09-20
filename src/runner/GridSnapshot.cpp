@@ -94,8 +94,8 @@ runner::GridSnapshot runner::collectGridSnapshot(const runner::RepositoryCallbac
     const auto     numberOfHangingVertices = statistics.getGlobalNumberOfHangingVertices();
     constexpr auto MaximumCount            = std::numeric_limits<std::uint64_t>::max();
     const auto     numberOfAllVertices     = numberOfHangingVertices > MaximumCount - numberOfVertices
-              ? MaximumCount
-              : numberOfVertices + numberOfHangingVertices;
+      ? MaximumCount
+      : numberOfVertices + numberOfHangingVertices;
 
     entries[GridSnapshot::GridLeaves] = gridCellsEntry(
       statistics.getGlobalNumberOfInnerUnrefinedCells(),

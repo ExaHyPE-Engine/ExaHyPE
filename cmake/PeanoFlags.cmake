@@ -8,15 +8,15 @@ set(PEANO_ASSERTS_DEFINITIONS -DPEANO_ASSERTIONS=1 -DPEANO_DEBUG=0          CACH
 set(PEANO_DEBUG_DEFINITIONS   -DPEANO_ASSERTIONS=1 -DPEANO_DEBUG=1          CACHE INTERNAL "" FORCE)
 
 set(PEANO_C_FLAGS_RELEASE       -O3 -fomit-frame-pointer    CACHE INTERNAL "")
-set(PEANO_C_FLAGS_ASSERTS       -g -O3                      CACHE INTERNAL "")
+set(PEANO_C_FLAGS_ASSERTS       -g -O2                      CACHE INTERNAL "")
 set(PEANO_C_FLAGS_DEBUG         -g -O0                      CACHE INTERNAL "")
 
 set(PEANO_CXX_FLAGS_RELEASE     -O3 -fomit-frame-pointer    CACHE INTERNAL "")
-set(PEANO_CXX_FLAGS_ASSERTS     -g -O3                      CACHE INTERNAL "")
+set(PEANO_CXX_FLAGS_ASSERTS     -g -O2                      CACHE INTERNAL "")
 set(PEANO_CXX_FLAGS_DEBUG       -g -O0                      CACHE INTERNAL "")
 
 set(PEANO_Fortran_FLAGS_RELEASE -O3                         CACHE INTERNAL "")
-set(PEANO_Fortran_FLAGS_ASSERTS -g -O3                      CACHE INTERNAL "")
+set(PEANO_Fortran_FLAGS_ASSERTS -g -O2                      CACHE INTERNAL "")
 set(PEANO_Fortran_FLAGS_DEBUG   -g -O0                      CACHE INTERNAL "")
 
 set(PEANO_EXTRA_C_FLAGS       "" CACHE STRING "Extra C flags (semicolon-separated)")
@@ -95,6 +95,10 @@ function(peano_apply_flags)
     $<$<COMPILE_LANG_AND_ID:C,IntelLLVM>:-ffp-contract=on>
     $<$<COMPILE_LANG_AND_ID:CXX,IntelLLVM>:-ffp-model=precise>
     $<$<COMPILE_LANG_AND_ID:CXX,IntelLLVM>:-ffp-contract=on>
+    # GCC fuses operations across statements by default, so two code paths of one kernel
+    # round differently.
+    $<$<COMPILE_LANG_AND_ID:C,GNU>:-ffp-contract=on>
+    $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-ffp-contract=on>
   )
 
   target_compile_options(PeanoOptions INTERFACE

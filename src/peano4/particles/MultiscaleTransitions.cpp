@@ -35,20 +35,25 @@ peano4::particles::ParticleReassociationInstruction peano4::particles::liftParti
   const auto image = peano4::particles::periodicImageTowardsVertex(x, marker);
   if (not isLocal) {
     return ParticleReassociationInstructionKeep;
-  } else if (peano4::particles::fitsIntoLevel(searchRadius, marker)
-             and marker.isContainedInAdjacentCells(image, 0.5, tolerance)) {
+  } else if (
+    peano4::particles::fitsIntoLevel(searchRadius, marker) and marker.isContainedInAdjacentCells(image, 0.5, tolerance)
+  ) {
     return ParticleReassociationInstructionKeep;
-  } else if (marker.isParentCellLocal()
-             and peano4::dataview::CellMarker::isContained(
-               image,
-               marker.getInvokingParentCellsCentre(),
-               marker.getH() * MeshWidthRatio,
-               tolerance
-             )) {
+  } else if (
+    marker.isParentCellLocal()
+    and peano4::dataview::CellMarker::isContained(
+      image,
+      marker.getInvokingParentCellsCentre(),
+      marker.getH() * MeshWidthRatio,
+      tolerance
+    )
+  ) {
     const std::bitset<DIMENSIONS> target =
       peano4::particles::getParticleAssociationWithinCell(image, marker.getInvokingParentCellsCentre());
-    if (marker.isParentVertexLocal(target.to_ulong())
-        and peano4::particles::particleAssignedToVertexWillBeLocal(image, marker)) {
+    if (
+      marker.isParentVertexLocal(target.to_ulong())
+      and peano4::particles::particleAssignedToVertexWillBeLocal(image, marker)
+    ) {
       return target.to_ulong();
     } else {
       return ParticleReassociationInstructionSieveGlobally;

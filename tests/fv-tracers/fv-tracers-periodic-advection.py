@@ -56,16 +56,18 @@ boundary_conditions = """
   }
 """
 
-fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
+fv_solver = exahype2.fv.Solver(
     name="FVSolver",
     patch_size=args.degrees_of_freedom,
     unknowns={"v": project.dimensions},
     auxiliary_variables=0,
-    time_step_relaxation=0.5,
+    time_stepping=exahype2.TimeStepping.Adaptive(0.5),
+    scheme=exahype2.fv.Godunov(),
+    precision=args.precision,
 )
 
-fv_solver.set_implementation(
-    initial_conditions=initial_conditions,
+fv_solver.set_pde_terms(
+    initial_condition=initial_conditions,
     boundary_conditions=boundary_conditions,
     flux="""
   for (int i = 0; i < NumberOfUnknowns; i++) {
@@ -76,13 +78,9 @@ fv_solver.set_implementation(
     max_eigenvalue="return 1.0;",
 )
 
-fv_solver.set_solver_precisions(
-    storage_precision=args.precision, compute_precision=args.precision
-)
-
 project.add_solver(fv_solver)
 
-tracers = fv_solver.add_tracer(
+tracers = project.add_tracer(
     name="Tracers",
     particle_attributes={
         "unknowns": {
@@ -96,9 +94,10 @@ tracers = fv_solver.add_tracer(
             "d": 1,
         }
     },
+    solver=fv_solver,
 )
 
-init_tracers = exahype2.tracer.InsertParticlesByCoordinates(
+init_tracers = exahype2.particles.InsertTracersByCoordinates(
     particle_set=tracers,
     coordinates=[[0.9, 0.5, 0.0], [0.5, 0.9, 0.0], [0.7, 0.8, 0.0]],
 )
@@ -107,19 +106,14 @@ project.add_action_set_to_initialisation(init_tracers)
 
 # The fluid velocity becomes the tracer velocity and an explicit Euler step
 # moves the tracer with it; no force acts on the tracer.
-tracing_action_set = exahype2.tracer.FiniteVolumesTracingWithForce(
+fv_solver.trace(
     tracers,
-    fv_solver,
-    project,
-    interpolation_scheme=2,
-    integration_scheme=1,
-    force_method=0,
-    fields_to_interpolate="3,4",
+    forces=exahype2.particles.Forces(
+        interpolation_scheme=2,
+        integration_scheme=1,
+        force_method=0,
+        fields_to_interpolate="3,4",
+    ),
 )
-tracing_action_set.descend_invocation_order = (
-    fv_solver._action_set_update_patch.descend_invocation_order + 1
-)
-project.add_action_set_to_timestepping(tracing_action_set)
-project.add_action_set_to_initialisation(tracing_action_set)
 
 project.generate_and_build()

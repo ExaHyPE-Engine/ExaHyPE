@@ -44,10 +44,10 @@ public:
   Event          addEvent(const ParticleIdentifier& identifier, Event& event);
   void           replaceEvent(const ParticleIdentifier& identifier, const Event& oldEvent, Event& newEvent);
   void           shiftIdentifierVertexIndex(
-              const ParticleIdentifier&                       identifier,
-              const tarch::la::Vector<DIMENSIONS, long long>& newVertexIndex,
-              int                                             newVertexDepth
-            );
+    const ParticleIdentifier&                       identifier,
+    const tarch::la::Vector<DIMENSIONS, long long>& newVertexIndex,
+    int                                             newVertexDepth
+  );
   std::string                 toString() const;
   void                        reset();
   std::size_t                 getCurrentMeshSweepIndex() const;
@@ -56,10 +56,10 @@ public:
   std::string                 sweepHistory() const;
   void                        eliminateExistingParticles();
   Event                       getPreviousEvent(
-                          const ParticleEvents& particleHistory,
-                          int                   treeId,
-                          std::size_t           numberOfFirstEventsToSkip = 0
-                        ) const;
+    const ParticleEvents& particleHistory,
+    int                   treeId,
+    std::size_t           numberOfFirstEventsToSkip = 0
+  ) const;
 
 private:
   Database();

@@ -19,22 +19,16 @@ namespace exahype2::fv::reconstruction {
 
 TARGET_DECLARE
 /**
- * Piecewise-linear reconstruction with a slope limiter, which yields the
- * second-order MUSCL-Hancock scheme: Each volume carries a limited slope in
- * every coordinate direction, the boundary-extrapolated values are evolved by
- * half a time step with the flux balance along that direction alone, and the
- * two evolved states that meet at an interface feed the Riemann solver. The
- * half-step uses only the direction it belongs to, so the stencil stays on the
- * axis-aligned five-point line and never needs the diagonal halo, which the
- * face exchange does not provide. The @c Limiter policy maps the neighbourhood
- * of a volume onto the limited difference of each unknown.
+ * Evolves limited boundary states by half a time step before solving face Riemann problems.
+ * Each predictor uses one coordinate direction because face exchange omits diagonal halo values.
+ * The Limiter policy computes each unknown's limited difference from neighbouring volumes.
  */
 template <exahype2::fv::limiter::SlopeLimiter Limiter>
 struct exahype2::fv::reconstruction::LimitedLinear final {
   static constexpr int HaloSize = 2;
 
   template <
-    typename Solver,
+    typename SolverType,
     int  NumberOfVolumesPerAxis,
     int  NumberOfUnknowns,
     int  NumberOfAuxiliaryVariables,
@@ -74,7 +68,7 @@ struct exahype2::fv::reconstruction::LimitedLinear final {
   );
 
   template <
-    typename Solver,
+    typename SolverType,
     int  NumberOfUnknowns,
     int  NumberOfData,
     bool EvaluateFlux,
@@ -95,7 +89,7 @@ struct exahype2::fv::reconstruction::LimitedLinear final {
     ComputePrecision* NOALIAS                    evolvedPlusState
   );
 
-  template <typename Solver, int NumberOfUnknowns, bool EvaluateFlux, typename ComputePrecision>
+  template <typename SolverType, int NumberOfUnknowns, bool EvaluateFlux, typename ComputePrecision>
   INLINE_METHOD GPU_CALLABLE_METHOD static ComputePrecision rusanovFaceFlux(
     const ComputePrecision* NOALIAS              leftState,
     const ComputePrecision* NOALIAS              rightState,

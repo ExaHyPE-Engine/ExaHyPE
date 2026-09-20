@@ -1,0 +1,40 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#pragma once
+{% for include in INCLUDES %}
+#include "{{ include }}"
+{%- endfor %}
+
+namespace {{ NAMESPACE | join("::") }} {
+  class {{ CLASSNAME }};
+} // namespace {{ NAMESPACE | join("::") }}
+
+class {{ FULL_QUALIFIED_NAMESPACE }}::{{ CLASSNAME }} final {
+public:
+  {{ CLASSNAME }}(int treeId);
+  {{ CLASSNAME }}(const {{ CLASSNAME }}& other)            = delete;
+  {{ CLASSNAME }}({{ CLASSNAME }}&& other)                 = delete;
+  {{ CLASSNAME }}& operator=(const {{ CLASSNAME }}& other) = delete;
+  {{ CLASSNAME }}& operator=({{ CLASSNAME }}&& other)      = delete;
+  ~{{ CLASSNAME }}();
+
+  std::vector<peano4::grid::GridControlEvent> getGridControlEvents() const;
+  static void                                 prepareTraversal();
+  static void                                 unprepareTraversal();
+{%- for operation in OPERATIONS %}
+{% if operation.parameters %}
+  {{ operation.returns }} {{ operation.name }}(
+{%- for parameter in operation.parameters %}
+    {{ parameter.type }} {{ parameter.name }}{{ "," if not loop.last }}
+{%- endfor %}
+  );
+{%- else %}
+  {{ operation.returns }} {{ operation.name }}();
+{%- endif %}
+{%- endfor %}
+{%- if ATTRIBUTES %}
+
+private:
+  {{ ATTRIBUTES | indent(2) }}
+{%- endif %}
+};

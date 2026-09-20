@@ -1,0 +1,41 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+/**
+ * Adds one snapshot of every local particle the cell of marker owns to the database.
+ *
+ * A time stamp outside the closed window between initialRecordTime and lastRecordTime records
+ * nothing.
+ */
+template <typename Particle, typename Vertices, typename Database>
+INLINE_METHOD void exahype2::particles::recordParticleSnapshots(
+  const peano4::dataview::CellMarker&          marker,
+  const Vertices&                              fineGridVertices,
+  const tarch::la::Vector<DIMENSIONS, double>& domainOffset,
+  const double                                 timeStamp,
+  const double                                 initialRecordTime,
+  const double                                 lastRecordTime,
+  Database&                                    database
+) {
+  assertion(initialRecordTime <= lastRecordTime, initialRecordTime, lastRecordTime);
+
+  for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell; vertexNumber++) {
+    for (const Particle* const particle : fineGridVertices(vertexNumber)) {
+      assertion(particle != nullptr, vertexNumber);
+      if (
+        particle->getParallelState() == Particle::ParallelState::Local
+        and exahype2::particles::ownsCoordinate(marker, particle->getX(), domainOffset)
+        and timeStamp >= initialRecordTime and timeStamp <= lastRecordTime
+      ) {
+        database.addParticleSnapshot(
+          particle->getNumber(0),
+          particle->getNumber(1),
+          timeStamp,
+          particle->getX(),
+          particle->getData().size(),
+          particle->getData().data()
+        );
+      }
+    }
+  }
+}

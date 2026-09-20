@@ -6,7 +6,6 @@
 #include "tarch/la/Scalar.h"
 
 TARGET_DECLARE
-
 namespace tarch::la {
   INLINE_METHOD GPU_CALLABLE_METHOD double abs(double value);
 
@@ -60,5 +59,4 @@ namespace tarch::la {
 } // namespace tarch::la
 
 #include "tarch/la/ScalarOperations.cpph"
-
 TARGET_DECLARE_END

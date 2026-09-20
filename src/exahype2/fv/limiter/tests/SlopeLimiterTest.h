@@ -11,6 +11,11 @@ namespace exahype2::fv::limiter::tests {
 class exahype2::fv::limiter::tests::SlopeLimiterTest final : public tarch::tests::TestCase {
 public:
   SlopeLimiterTest();
+  SlopeLimiterTest(const SlopeLimiterTest&)            = delete;
+  SlopeLimiterTest(SlopeLimiterTest&&)                 = delete;
+  SlopeLimiterTest& operator=(const SlopeLimiterTest&) = delete;
+  SlopeLimiterTest& operator=(SlopeLimiterTest&&)      = delete;
+  ~SlopeLimiterTest() override                         = default;
 
   void run() override;
 

@@ -11,6 +11,11 @@ namespace exahype2::fv::tests {
 class exahype2::fv::tests::ApplySplit1DRiemannToPatchTest final : public tarch::tests::TestCase {
 public:
   ApplySplit1DRiemannToPatchTest();
+  ApplySplit1DRiemannToPatchTest(const ApplySplit1DRiemannToPatchTest&)            = delete;
+  ApplySplit1DRiemannToPatchTest(ApplySplit1DRiemannToPatchTest&&)                 = delete;
+  ApplySplit1DRiemannToPatchTest& operator=(const ApplySplit1DRiemannToPatchTest&) = delete;
+  ApplySplit1DRiemannToPatchTest& operator=(ApplySplit1DRiemannToPatchTest&&)      = delete;
+  ~ApplySplit1DRiemannToPatchTest() override                                       = default;
 
   void run() override;
 

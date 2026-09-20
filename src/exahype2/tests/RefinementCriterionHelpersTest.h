@@ -11,6 +11,11 @@ namespace exahype2::tests {
 class exahype2::tests::RefinementCriterionHelpersTest final : public tarch::tests::TestCase {
 public:
   RefinementCriterionHelpersTest();
+  RefinementCriterionHelpersTest(const RefinementCriterionHelpersTest&)            = delete;
+  RefinementCriterionHelpersTest(RefinementCriterionHelpersTest&&)                 = delete;
+  RefinementCriterionHelpersTest& operator=(const RefinementCriterionHelpersTest&) = delete;
+  RefinementCriterionHelpersTest& operator=(RefinementCriterionHelpersTest&&)      = delete;
+  ~RefinementCriterionHelpersTest() override                                       = default;
 
   void run() override;
 

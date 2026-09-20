@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "GradientTest.h"
 
+#include "exahype2/dg/DGUtils.h"
 #include "exahype2/dg/Gradient.h"
 
 namespace {
@@ -9,9 +10,8 @@ namespace {
   constexpr int NumberOfUnknowns           = 2;
   constexpr int NumberOfAuxiliaryVariables = 1;
   constexpr int NumberOfData               = NumberOfUnknowns + NumberOfAuxiliaryVariables;
-  constexpr int NodesPerCell   = (DIMENSIONS == 3) ? NumberOfDofsPerAxis * NumberOfDofsPerAxis * NumberOfDofsPerAxis
-                                                   : NumberOfDofsPerAxis * NumberOfDofsPerAxis;
-  constexpr int EntriesPerAxis = NodesPerCell * NumberOfData;
+  constexpr int CellNodes                  = exahype2::dg::NodesPerCell<NumberOfDofsPerAxis>;
+  constexpr int EntriesPerAxis             = CellNodes * NumberOfData;
 
   // Gauss-Legendre nodes of three points on the unit interval.
   const double QuadratureNodes[NumberOfDofsPerAxis] = {0.5 * (1.0 - std::sqrt(0.6)), 0.5, 0.5 * (1.0 + std::sqrt(0.6))};
@@ -81,8 +81,8 @@ void exahype2::dg::tests::GradientTest::testGradientOfALinearPolynomialIsItsSlop
   const auto               cellSize           = makeCellSize();
 
   // Every value grows with its own slope along every axis.
-  double cellState[NodesPerCell * NumberOfData];
-  for (int cellNode = 0; cellNode < NodesPerCell; cellNode++) {
+  double cellState[CellNodes * NumberOfData];
+  for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
     const auto nodeIndex = nodeIndexOf(cellNode);
     for (int value = 0; value < NumberOfData; value++) {
       double entry = 1.0 + value;
@@ -104,7 +104,7 @@ void exahype2::dg::tests::GradientTest::testGradientOfALinearPolynomialIsItsSlop
 
   // The reference slope over the cell extent is the physical slope.
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    for (int cellNode = 0; cellNode < NodesPerCell; cellNode++) {
+    for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
       for (int value = 0; value < NumberOfData; value++) {
         const double expected = (2.0 + value + axis) / cellSize(axis);
         validateNumericalEqualsWithParams3(
@@ -124,8 +124,8 @@ void exahype2::dg::tests::GradientTest::testEachBlockHoldsTheDerivativeAlongItsO
   const auto               cellSize           = makeCellSize();
 
   for (int varyingAxis = 0; varyingAxis < DIMENSIONS; varyingAxis++) {
-    double cellState[NodesPerCell * NumberOfData];
-    for (int cellNode = 0; cellNode < NodesPerCell; cellNode++) {
+    double cellState[CellNodes * NumberOfData];
+    for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
       const double reference = QuadratureNodes[nodeIndexOf(cellNode)(varyingAxis)];
       for (int value = 0; value < NumberOfData; value++) {
         cellState[cellNode * NumberOfData + value] = 3.0 * reference * reference;
@@ -142,7 +142,7 @@ void exahype2::dg::tests::GradientTest::testEachBlockHoldsTheDerivativeAlongItsO
       );
 
     for (int axis = 0; axis < DIMENSIONS; axis++) {
-      for (int cellNode = 0; cellNode < NodesPerCell; cellNode++) {
+      for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
         const double reference = QuadratureNodes[nodeIndexOf(cellNode)(varyingAxis)];
         const double expected  = axis == varyingAxis ? 6.0 * reference / cellSize(axis) : 0.0;
         for (int value = 0; value < NumberOfData; value++) {
@@ -163,8 +163,8 @@ void exahype2::dg::tests::GradientTest::testNarrowStorageIsDifferentiatedInTheCo
   const DerivativeOperator derivativeOperator = makeDerivativeOperator();
   const auto               cellSize           = makeCellSize();
 
-  float cellState[NodesPerCell * NumberOfData];
-  for (int cellNode = 0; cellNode < NodesPerCell; cellNode++) {
+  float cellState[CellNodes * NumberOfData];
+  for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
     const double reference = QuadratureNodes[nodeIndexOf(cellNode)(0)];
     for (int value = 0; value < NumberOfData; value++) {
       cellState[cellNode * NumberOfData + value] = static_cast<float>(0.5 + 2.0 * reference);
@@ -185,7 +185,7 @@ void exahype2::dg::tests::GradientTest::testNarrowStorageIsDifferentiatedInTheCo
   constexpr double Tolerance = 1.0e-5;
   for (int axis = 0; axis < DIMENSIONS; axis++) {
     const double expected = (axis == 0) ? 2.0 / cellSize(0) : 0.0;
-    for (int cellNode = 0; cellNode < NodesPerCell; cellNode++) {
+    for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
       for (int value = 0; value < NumberOfData; value++) {
         const double slope = gradients[axis * EntriesPerAxis + cellNode * NumberOfData + value];
         validateWithParams3(std::abs(slope - expected) < Tolerance, slope, axis, cellNode);

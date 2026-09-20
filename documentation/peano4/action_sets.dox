@@ -6,7 +6,7 @@
 
 Action sets attach application behaviour to the events emitted by
 peano4::topology::TreeTraversal. The Python class
-peano4.solversteps.ActionSet provides one body for each generated callback,
+exahype2.actionsets.ActionSet provides one body for each generated callback,
 and an observer invokes its action sets in their configured order.
 
 # Traversal lifecycle

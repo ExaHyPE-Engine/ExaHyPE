@@ -9,7 +9,7 @@ INLINE_METHOD tarch::la::Matrix<Rows, Cols, Scalar> tarch::la::buildMatrix(const
 }
 
 template <int Rows, int Cols, typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Cols, Scalar>::Matrix():
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Matrix<Rows, Cols, Scalar>::Matrix() :
   _values() {}
 
 template <int Rows, int Cols, typename Scalar>

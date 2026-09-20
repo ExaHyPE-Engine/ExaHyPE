@@ -218,9 +218,10 @@ INLINE_METHOD GPU_CALLABLE_METHOD double exahype2::dg::ader::solvePicardSystem(
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         const auto newValue      = updatedTimeSlice[unknown + NodeStride * timeNode];
         const auto previousValue = stateNode[unknown];
-        if (not std::isfinite(newValue) or newValue < -DivergenceBound or newValue > DivergenceBound
-            or not std::isfinite(previousValue) or previousValue < -DivergenceBound
-            or previousValue > DivergenceBound) {
+        if (
+          not std::isfinite(newValue) or newValue < -DivergenceBound or newValue > DivergenceBound
+          or not std::isfinite(previousValue) or previousValue < -DivergenceBound or previousValue > DivergenceBound
+        ) {
           return std::numeric_limits<double>::infinity();
         }
         const double difference = static_cast<double>(newValue) - static_cast<double>(previousValue);

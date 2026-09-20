@@ -93,37 +93,34 @@ if project.dimensions != scenario._dimensions:
         f"was configured for {project.dimensions}D."
     )
 
-solver = exahype2.solvers.rkdg.GlobalAdaptiveTimeStep(
+equation = scenario._equation
+solver = exahype2.dg.rk.Solver(
     name="RKDGSolver",
     rk_order=order,
     dg_order=order,
-    time_step_relaxation=0.9,
-    unknowns=scenario._equation.num_unknowns,
-    auxiliary_variables=scenario._equation.num_auxiliary_variables,
+    unknowns=equation.num_unknowns,
+    auxiliary_variables=equation.num_auxiliary_variables,
+    time_stepping=exahype2.TimeStepping.Adaptive(0.9),
+    basis=exahype2.dg.GaussLegendre,
+    linear=equation.is_linear,
 )
 
-solver.add_kernel_optimisations(
-    is_linear=scenario._equation.is_linear,
-    polynomials=exahype2.solvers.rkdg.Polynomials.Gauss_Legendre,
-)
-
-solver.set_implementation(
-    initial_conditions=scenario.initial_conditions(),
+solver.set_pde_terms(
+    initial_condition=scenario.initial_conditions(),
     boundary_conditions=scenario.boundary_conditions(),
-    max_eigenvalue=scenario._equation.eigenvalues(),
-    flux=scenario._equation.flux(),
-    use_diffusive_flux=scenario._equation.use_diffusive_flux,
-    ncp=scenario._equation.ncp(),
-    source_term=scenario._equation.source(),
-    riemann_solver=scenario._equation.riemann_solver(),
+    max_eigenvalue=equation.eigenvalues(),
+    flux=None if equation.use_diffusive_flux else equation.flux(),
+    diffusive_flux=equation.flux() if equation.use_diffusive_flux else None,
+    ncp=equation.ncp(),
+    source=equation.source(),
+    riemann_solver=equation.riemann_solver(),
 )
 
-if scenario.analytical_solution() != exahype2.solvers.PDETerms.None_Implementation:
-    exahype2.solvers.rkdg.ErrorMeasurement(
-        solver,
-        error_measurement_implementation=scenario.analytical_solution(),
-        output_file_name="Error_" + scenario.__class__.__name__,
-        time_delta_between_snapshots=scenario._end_time / 100.0,
+if scenario.analytical_solution() is not None:
+    solver.set_pde_terms(analytical_solution=scenario.analytical_solution())
+    solver.measure_error(
+        file="Error_" + scenario.__class__.__name__,
+        every=scenario._end_time / 100.0,
     )
 
 project.add_solver(solver)

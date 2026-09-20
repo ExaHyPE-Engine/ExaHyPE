@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "EigenvalueStatisticsTest.h"
 
+#include "exahype2/dg/DGUtils.h"
 #include "exahype2/dg/EigenvalueStatistics.h"
 
 namespace {
@@ -9,8 +10,7 @@ namespace {
   constexpr int NumberOfUnknowns           = 1;
   constexpr int NumberOfAuxiliaryVariables = 1;
   constexpr int NumberOfData               = NumberOfUnknowns + NumberOfAuxiliaryVariables;
-  constexpr int NodesPerCell = (DIMENSIONS == 3) ? NumberOfDofsPerAxis * NumberOfDofsPerAxis * NumberOfDofsPerAxis
-                                                 : NumberOfDofsPerAxis * NumberOfDofsPerAxis;
+  constexpr int CellNodes                  = exahype2::dg::NodesPerCell<NumberOfDofsPerAxis>;
 
   // Reports the first unknown plus the axis number plus a quarter of the first
   // coordinate, so the state, the direction and the node position all leave a
@@ -48,9 +48,9 @@ void exahype2::dg::tests::EigenvalueStatisticsTest::testReduceMaxEigenvaluesOver
     cellSize(axis) = 2.0 * (1 << axis);
   }
 
-  double cellState[NodesPerCell * NumberOfData];
-  float  narrowCellState[NodesPerCell * NumberOfData];
-  for (int cellNode = 0; cellNode < NodesPerCell; cellNode++) {
+  double cellState[CellNodes * NumberOfData];
+  float  narrowCellState[CellNodes * NumberOfData];
+  for (int cellNode = 0; cellNode < CellNodes; cellNode++) {
     const int firstEntry            = cellNode * NumberOfData;
     cellState[firstEntry]           = 0.5 * cellNode;
     cellState[firstEntry + 1]       = 100.0;
@@ -80,7 +80,7 @@ void exahype2::dg::tests::EigenvalueStatisticsTest::testReduceMaxEigenvaluesOver
   // The last node carries the largest state and the largest first coordinate,
   // so both maxima come from that node, with every axis scaled by its own extent.
   const double lastPosition   = cellCentre(0) - 0.5 * cellSize(0) + quadratureNodes[1] * cellSize(0);
-  const double lastState      = 0.5 * (NodesPerCell - 1);
+  const double lastState      = 0.5 * (CellNodes - 1);
   double       expectedScaled = 0.0;
   for (int direction = 0; direction < DIMENSIONS; direction++) {
     expectedScaled += (lastState + direction + 0.25 * lastPosition) / cellSize(direction);

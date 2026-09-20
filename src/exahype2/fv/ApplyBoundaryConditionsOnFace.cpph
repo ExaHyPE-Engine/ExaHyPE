@@ -9,14 +9,14 @@ TARGET_DECLARE
  * select lower faces; the remaining indices select upper faces.
  */
 template <
-  typename Solver,
+  typename SolverType,
   int NumberOfVolumesPerAxis,
   int HaloSize,
   int NumberOfUnknowns,
   int NumberOfAuxiliaryVariables,
   typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::applyBoundaryConditionsOnFace(
-  Solver&                                      solver,
+  SolverType&                                  solver,
   const tarch::la::Vector<DIMENSIONS, double>& patchCentre,
   const tarch::la::Vector<DIMENSIONS, double>& patchSize,
   const double                                 timeStamp,

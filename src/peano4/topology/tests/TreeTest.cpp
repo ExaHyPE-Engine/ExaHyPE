@@ -1138,8 +1138,10 @@ void peano4::topology::tests::TreeTest::testAppendedDeltaMatchesADirectBuild() {
   validate(dilatedPlan[0].size() > plan[0].size());
   peano4::topology::Tree::RefinementPlan addedFlags(1);
   for (const auto& flaggedVertex : dilatedPlan[0]) {
-    if (peano4::topology::Tree::latticeKeyPrecedes(plan[0][0], flaggedVertex)
-        or peano4::topology::Tree::latticeKeyPrecedes(flaggedVertex, plan[0][0])) {
+    if (
+      peano4::topology::Tree::latticeKeyPrecedes(plan[0][0], flaggedVertex)
+      or peano4::topology::Tree::latticeKeyPrecedes(flaggedVertex, plan[0][0])
+    ) {
       addedFlags[0].push_back(flaggedVertex);
     }
   }

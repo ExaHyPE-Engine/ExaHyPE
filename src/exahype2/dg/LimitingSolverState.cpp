@@ -7,14 +7,11 @@
 /**
  * Advances the a-posteriori limiting pipeline by one grid sweep.
  *
- * A time step predicts, then corrects and flags. If no cell is troubled the
- * step ends after the corrector, so a smooth run costs two sweeps. If a cell is
- * troubled the finite-volume domain is grown ring by ring, one sweep and one
- * face-status exchange per ring, before the troubled cells are recomputed on
- * their subgrid. Growing the domain in exactly @p numberOfSpreadRings sweeps,
- * each with its own exchange, is what makes the recomputed domain identical for
- * any partition: the ring count is a property of the subcell stencil, never of
- * the decomposition.
+ * A time step predicts, then corrects and flags, and ends there when no cell is troubled, so a
+ * smooth run costs two sweeps. A troubled cell grows the finite-volume domain ring by ring, one
+ * sweep and one face-status exchange per ring, before the troubled cells are recomputed on their
+ * subgrid; the ring count is a property of the subcell stencil and not of the decomposition, so
+ * every partition recomputes the same domain.
  *
  * @p decision carries the two branch flags, both reduced across ranks before
  * the transition so every rank walks the same path.
@@ -62,9 +59,8 @@ bool exahype2::dg::isFirstSweepOfTimeStep(const exahype2::dg::LimitingSweep swee
 
 /**
  * Returns whether a sweep closes a time step. A step closes either at the
- * corrector or after the subcell recompute. The corrector only closes the step
- * if this sweep flagged no troubled cell, which is why the reduced decision is
- * needed here.
+ * corrector or after the subcell recompute, and the corrector closes it only
+ * when the reduced decision reports no troubled cell.
  */
 bool exahype2::dg::isLastSweepOfTimeStep(
   const exahype2::dg::LimitingSweep          sweep,

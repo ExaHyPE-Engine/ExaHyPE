@@ -11,9 +11,7 @@ TARGET_DECLARE
 namespace exahype2::fv {
   /**
    * A reconstruction scheme forms the states that meet at a volume interface
-   * and adds their flux divergence to the update. The scheme is stateless: All
-   * of its members are static, so a call needs no object and the kernel never
-   * copies a scheme instance to a GPU device. @c HaloSize fixes how many
+   * and adds their flux divergence to the update. @c HaloSize fixes how many
    * neighbour layers the stencil reads.
    */
   template <typename ReconstructionPolicy>
@@ -22,9 +20,7 @@ namespace exahype2::fv {
   };
 
   /**
-   * A time-stepping scheme advances a finite-volume patch by one time step. It
-   * is stateless in the same sense as a ReconstructionScheme, so the kernel
-   * dispatches to it without moving an object onto the device.
+   * A time-stepping scheme advances a finite-volume patch by one time step.
    * @c NumberOfStages reports how many spatial evaluations one step performs.
    */
   template <typename TimeSteppingPolicy>
@@ -35,7 +31,7 @@ namespace exahype2::fv {
   template <
     ReconstructionScheme Reconstruction,
     TimeSteppingScheme   TimeStepping,
-    typename Solver,
+    typename SolverType,
     int  NumberOfVolumesPerAxis,
     int  NumberOfUnknowns,
     int  NumberOfAuxiliaryVariables,

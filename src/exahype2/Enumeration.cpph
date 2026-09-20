@@ -1,6 +1,7 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+TARGET_DECLARE
 /**
  * Serialises the lexicographic index of one volume within a face overlap.
  *
@@ -31,3 +32,4 @@ INLINE_METHOD GPU_CALLABLE_METHOD int exahype2::serialiseVoxelIndexInOverlap(
   }
   return result;
 }
+TARGET_DECLARE_END

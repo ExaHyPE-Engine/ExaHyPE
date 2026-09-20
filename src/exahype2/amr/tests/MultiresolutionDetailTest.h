@@ -22,7 +22,11 @@ namespace exahype2::amr::tests {
 class exahype2::amr::tests::MultiresolutionDetailTest final : public tarch::tests::TestCase {
 public:
   MultiresolutionDetailTest();
-  ~MultiresolutionDetailTest() override = default;
+  MultiresolutionDetailTest(const MultiresolutionDetailTest&)            = delete;
+  MultiresolutionDetailTest(MultiresolutionDetailTest&&)                 = delete;
+  MultiresolutionDetailTest& operator=(const MultiresolutionDetailTest&) = delete;
+  MultiresolutionDetailTest& operator=(MultiresolutionDetailTest&&)      = delete;
+  ~MultiresolutionDetailTest() override                                  = default;
 
   void run() override;
 

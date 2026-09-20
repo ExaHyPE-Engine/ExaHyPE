@@ -1,0 +1,57 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+/**
+ * Copies the halo layers of the face that the neighbour owns, the half on the far side of
+ * the face, so the merged face does not depend on the order in which the receives arrive.
+ */
+template <int DofsPerAxis, int Overlap, int NumberOfUnknowns, typename Precision>
+INLINE_METHOD void exahype2::mergeOverlappingVolumes(
+  const peano4::dataview::FaceMarker& marker,
+  Precision* const                    destination,
+  const Precision* const              source
+) {
+  static_assert(DofsPerAxis > 0);
+  static_assert(Overlap > 0);
+  static_assert(NumberOfUnknowns > 0);
+  assertion(destination != nullptr);
+  assertion(source != nullptr);
+
+  const int  normal        = marker.getSelectedFaceNumber() % DIMENSIONS;
+  const bool copyUpperHalf = marker.outerNormal()(normal) > 0.0;
+  peano4::dForEachExclusive(DofsPerAxis, normal, 0, [&](const tarch::la::Vector<DIMENSIONS, int>& tangentialCell) {
+    for (int layer = 0; layer < Overlap; layer++) {
+      auto overlapCell = tangentialCell;
+      overlapCell(normal) += copyUpperHalf ? layer + Overlap : layer;
+      const int firstValue =
+        exahype2::serialiseVoxelIndexInOverlap(overlapCell, DofsPerAxis, Overlap, normal) * NumberOfUnknowns;
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        assertion(source[firstValue + unknown] == source[firstValue + unknown], marker.toString(), firstValue, unknown);
+        destination[firstValue + unknown] = source[firstValue + unknown];
+      }
+    }
+  });
+}
+
+/**
+ * Copies the half of the face projection that the neighbour wrote.
+ */
+template <int Cardinality, typename Precision>
+INLINE_METHOD void exahype2::mergeProjectionHalves(
+  const peano4::dataview::FaceMarker& marker,
+  Precision* const                    destination,
+  const Precision* const              source
+) {
+  static_assert(Cardinality % 2 == 0, "Projection data holds two equal face halves.");
+  constexpr int FaceSideCardinality = Cardinality / 2;
+  assertion(destination != nullptr);
+  assertion(source != nullptr);
+
+  const int normal        = marker.getSelectedFaceNumber() % DIMENSIONS;
+  const int neighbourSide = marker.outerNormal()(normal) > 0.0 ? 1 : 0;
+  std::copy_n(
+    &source[neighbourSide * FaceSideCardinality],
+    FaceSideCardinality,
+    &destination[neighbourSide * FaceSideCardinality]
+  );
+}

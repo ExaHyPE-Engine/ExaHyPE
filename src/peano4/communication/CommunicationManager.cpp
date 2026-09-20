@@ -58,8 +58,9 @@ void peano4::communication::CommunicationManager::init() {
   _maximumAggregatedContainerId =
     static_cast<int>((static_cast<std::int64_t>(minimumTagUpperBound) + 1) / AggregatedBoundaryMessagesPerContainer);
 
-  if (MPI_Comm_dup(tarch::mpi::Rank::getInstance().getCommunicator(), &_aggregatedBoundaryDataCommunicator)
-      != MPI_SUCCESS) {
+  if (
+    MPI_Comm_dup(tarch::mpi::Rank::getInstance().getCommunicator(), &_aggregatedBoundaryDataCommunicator) != MPI_SUCCESS
+  ) {
     tarch::terminateWithError("Could not create the communicator for the aggregated boundary exchange.");
   }
 }

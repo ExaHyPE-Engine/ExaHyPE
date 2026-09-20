@@ -1,0 +1,291 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
+thread_local exahype2::Solver::LocalUpdates
+  exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::_localUpdates;
+
+/**
+ * timeStepFactor is the CFL relaxation of an adaptive solver or the normalised time step size
+ * of a fixed one.
+ */
+template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
+exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::Solver(
+  const double timeStepFactor
+) :
+  Solver(timeStepFactor, std::bool_constant<UsesAdaptiveTimeStepping>{}) {}
+
+template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
+exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::Solver(
+  const double                          timeStepFactor,
+  [[maybe_unused]] const std::true_type adaptive
+) :
+  TimeStepping(exahype2::AdaptiveTimeStepping::Stability::PhysicalEigenvalue),
+  _timeStepFactor{timeStepFactor} {}
+
+template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
+exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::Solver(
+  const double                           timeStepFactor,
+  [[maybe_unused]] const std::false_type fixed
+) :
+  _timeStepFactor{timeStepFactor} {}
+
+template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
+std::string exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::toString(
+  const SolverState state
+) {
+  switch (state) {
+  case SolverState::GridConstruction:
+    return "GridConstruction";
+  case SolverState::GridInitialisation:
+    return "GridInitialisation";
+  case SolverState::TimeStep:
+    return "TimeStep";
+  case SolverState::Plotting:
+    return "Plotting";
+  case SolverState::Suspended:
+    return "Suspended";
+  }
+  return "<undef>";
+}
+
+template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
+void exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::startGridConstructionStep() {
+  assertion(_solverState == SolverState::GridConstruction);
+}
+
+template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
+void exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::
+  finishGridConstructionStep() {}
+
+/**
+ * Initialisation re-enters after every completed mesh update of its initialise-drain loop, so
+ * the state may already sit at GridInitialisation.
+ */
+template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
+void exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::
+  startGridInitialisationStep() {
+  assertion(_solverState == SolverState::GridConstruction or _solverState == SolverState::GridInitialisation);
+  _solverState = SolverState::GridInitialisation;
+}
+
+/**
+ * From here on every completed sweep has sent a face-data batch, which the following sweep's
+ * boundary exchange consumes.
+ */
+template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
+void exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::
+  finishGridInitialisationStep() {
+  this->_hasStoredFaceData = true;
+}
+
+template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
+void exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::
+  suspendSolversForOneGridSweep() {
+  _solverState = SolverState::Suspended;
+}
+
+/**
+ * A suspended solver resumes without resetting the per-time-step accumulators, so it keeps
+ * its eigenvalue and time step sizes.
+ */
+template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
+void exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::startTimeStep() {
+  if (_solverState == SolverState::Suspended) {
+    _solverState = SolverState::TimeStep;
+    return;
+  }
+  _solverState                              = SolverState::TimeStep;
+  this->_meshRefinementRanSinceLastTimeStep = false;
+  if constexpr (UsesAdaptiveTimeStepping) {
+    this->startAdaptiveTimeStep();
+  }
+  this->resetTimeStepStatistics();
+}
+
+template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
+void exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::finishTimeStep() {
+  if (isLastGridSweepOfTimeStep()) {
+    this->reduceTimeStepStatisticsAcrossRanks();
+    closeTimeStep();
+    this->commitTimeStepStatistics();
+  }
+}
+
+/**
+ * Derives the time step size of the next time step from the reduced statistics: The CFL
+ * condition of an adaptive solver, the normalised fraction of the admissible mesh width of a
+ * fixed one.
+ */
+template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
+void exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::closeTimeStep() {
+  if constexpr (UsesAdaptiveTimeStepping) {
+    this->reduceMaxEigenvaluesAcrossRanks();
+    const auto terminalTime = this->minTerminalTime();
+    if (this->hasPositiveStabilityEigenvalue() and this->_minTimeStampThisTimeStep < terminalTime) {
+      const auto timeStepSizeFromCFL =
+        _timeStepFactor * this->_minMeshWidthThisTimeStep / (DIMENSIONS * this->_maxEigenvalueThisTimeStep);
+      this->proposeAdmissibleTimeStepSize(timeStepSizeFromCFL, terminalTime);
+    }
+  } else {
+    const auto maxAdmissibleCellSize = maxAdmissibleMeshWidth();
+    assertion(std::isfinite(maxAdmissibleCellSize) and maxAdmissibleCellSize > 0.0, maxAdmissibleCellSize);
+    assertion(
+      std::isfinite(this->_minMeshWidthThisTimeStep) and this->_minMeshWidthThisTimeStep > 0.0,
+      this->_minMeshWidthThisTimeStep
+    );
+    this->setFixedTimeStepSize(_timeStepFactor * this->_minMeshWidthThisTimeStep / maxAdmissibleCellSize);
+  }
+}
+
+template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
+void exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::startPlottingStep() {
+  assertion(mayPlot() or tarch::hasNonCriticalAssertionBeenViolated());
+  _solverState = SolverState::Plotting;
+}
+
+template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
+void exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::finishPlottingStep() {}
+
+template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
+double exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::getMaxPatchSize() const {
+  return this->getMaxCellSize() * NumberOfFiniteVolumesPerAxisPerPatch;
+}
+
+template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
+double exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::getMinPatchSize() const {
+  return this->getMinCellSize() * NumberOfFiniteVolumesPerAxisPerPatch;
+}
+
+template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
+int exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::getNumberOfDoFs() const {
+  return peano4::power(NumberOfFiniteVolumesPerAxisPerPatch, DIMENSIONS)
+    * (NumberOfUnknowns + NumberOfAuxiliaryVariables);
+}
+
+/**
+ * The solver remains in TimeStep between time steps, so plotting is valid there.
+ */
+template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
+bool exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::mayPlot() const {
+  return _solverState == SolverState::GridInitialisation or isLastGridSweepOfTimeStep();
+}
+
+/**
+ * Adds one patch's time step size, time stamp and patch size to the extrema of the current
+ * traversal.
+ */
+template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
+INLINE_METHOD void exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::update(
+  const double timeStepSize,
+  const double timeStamp,
+  const double minPatchSize,
+  const double maxPatchSize
+) {
+  _localUpdates.addTimeStep(timeStepSize);
+  updateTimeStampAndPatchSize(timeStamp, minPatchSize, maxPatchSize);
+}
+
+/**
+ * A cell that skips its update this sweep still names its stamp and extent, so the global
+ * statistics cover every cell of the mesh.
+ */
+template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
+INLINE_METHOD void exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::
+  updateTimeStampAndPatchSize(const double timeStamp, const double minPatchSize, const double maxPatchSize) {
+  _localUpdates.addTimeStamp(timeStamp);
+  _localUpdates.addMeshWidths(
+    minPatchSize / NumberOfFiniteVolumesPerAxisPerPatch,
+    maxPatchSize / NumberOfFiniteVolumesPerAxisPerPatch
+  );
+}
+
+/**
+ * One call per tree at the end of a traversal keeps the per-patch update free of atomic
+ * operations.
+ */
+template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
+INLINE_METHOD void exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::
+  reduceLocalUpdates() {
+  this->mergeLocalUpdates(_localUpdates);
+}
+
+template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
+INLINE_METHOD typename exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::SolverState
+exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::getSolverState() const {
+  return _solverState;
+}
+
+template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
+INLINE_METHOD bool exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::
+  isFirstGridSweepOfTimeStep() const {
+  return _solverState == SolverState::TimeStep;
+}
+
+template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
+INLINE_METHOD bool exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::
+  isLastGridSweepOfTimeStep() const {
+  return _solverState == SolverState::TimeStep;
+}
+
+template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
+INLINE_METHOD bool exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::
+  isGridInitialisationSweep() const {
+  return _solverState == SolverState::GridInitialisation;
+}
+
+template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
+INLINE_METHOD bool exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::
+  isTimeStepSweep() const {
+  return _solverState == SolverState::TimeStep;
+}
+
+/**
+ * A cell that will be refined passes its patch on to its children, and the grid construction
+ * sweeps carry no patch at all.
+ */
+template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
+INLINE_METHOD bool exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::storesCellData(
+  const peano4::dataview::CellMarker& marker
+) const {
+  return not marker.willBeRefined() and _solverState != SolverState::GridConstruction;
+}
+
+/**
+ * The initial condition writes the first patch, so the sweeps up to and including the grid
+ * initialisation read none.
+ */
+template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
+INLINE_METHOD bool exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::loadsCellData(
+  const peano4::dataview::CellMarker& marker
+) const {
+  return not marker.hasBeenRefined() and _solverState != SolverState::GridConstruction
+    and _solverState != SolverState::GridInitialisation;
+}
+
+/**
+ * The faces of a cell that will be refined hand their halo to the faces of the children.
+ */
+template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
+INLINE_METHOD bool exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::storesFaceData(
+  const peano4::dataview::FaceMarker& marker
+) const {
+  return not marker.willBeRefined() and _solverState != SolverState::GridConstruction;
+}
+
+/**
+ * A face reads its halo once a preceding sweep has written one, which hasStoredFaceData()
+ * reports.
+ */
+template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
+INLINE_METHOD bool exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::loadsFaceData(
+  const peano4::dataview::FaceMarker& marker
+) const {
+  return not marker.hasBeenRefined() and _solverState != SolverState::GridConstruction and this->hasStoredFaceData();
+}
+
+template <typename Derived, int PatchSize, int Unknowns, int AuxiliaryVariables, typename TimeStepping>
+INLINE_METHOD bool exahype2::fv::Solver<Derived, PatchSize, Unknowns, AuxiliaryVariables, TimeStepping>::
+  providesCellDataToKernels(const peano4::dataview::CellMarker& marker) const {
+  return storesCellData(marker);
+}

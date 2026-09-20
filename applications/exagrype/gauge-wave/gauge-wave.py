@@ -46,12 +46,12 @@ source_term = """
   ::applications::exahype2::exagrype::sourceTerm<Shortcuts>(Q, S);
 """
 
-solver_includes = """
-#include "applications/exagrype/EnforceCCZ4Constraints.h"
-#include "applications/exagrype/MaxEigenvalue.h"
-#include "applications/exagrype/NonconservativeProduct.h"
-#include "applications/exagrype/SourceTerm.h"
-"""
+solver_includes = [
+    "applications/exagrype/EnforceCCZ4Constraints.h",
+    "applications/exagrype/MaxEigenvalue.h",
+    "applications/exagrype/NonconservativeProduct.h",
+    "applications/exagrype/SourceTerm.h",
+]
 
 
 def parse_arguments():
@@ -118,12 +118,13 @@ unknowns = {
 }
 
 if args.solver == "fv":
-    solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
+    solver = exahype2.fv.Solver(
         name="CCZ4Solver",
         patch_size=args.degrees_of_freedom,
         unknowns=unknowns,
         auxiliary_variables=0,
-        time_step_relaxation=0.1,
+        time_stepping=exahype2.TimeStepping.Adaptive(0.1),
+        scheme=exahype2.fv.Godunov(),
     )
     solver.postprocess_updated_patch = """
   ::applications::exahype2::exagrype::enforceCCZ4Constraints<::applications::exahype2::exagrype::CCZ4Solver::Shortcuts>(
@@ -133,12 +134,12 @@ if args.solver == "fv":
   );
 """
 elif args.solver == "aderdg":
-    solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
+    solver = exahype2.dg.ader.Solver(
         name="CCZ4Solver",
         order=args.degrees_of_freedom - 1,
         unknowns=unknowns,
         auxiliary_variables=0,
-        time_step_relaxation=0.1,
+        time_stepping=exahype2.TimeStepping.Adaptive(0.1),
     )
     solver.postprocess_updated_patch = """
   ::applications::exahype2::exagrype::enforceCCZ4Constraints<::applications::exahype2::exagrype::CCZ4Solver::Shortcuts>(
@@ -148,13 +149,13 @@ elif args.solver == "aderdg":
   );
 """
 else:
-    solver = exahype2.solvers.rkdg.GlobalAdaptiveTimeStep(
+    solver = exahype2.dg.rk.Solver(
         name="CCZ4Solver",
         rk_order=min(args.degrees_of_freedom - 1, 4),
         dg_order=args.degrees_of_freedom - 1,
         unknowns=unknowns,
         auxiliary_variables=0,
-        time_step_relaxation=0.1,
+        time_stepping=exahype2.TimeStepping.Adaptive(0.1),
     )
     solver.postprocess_updated_cell_after_final_linear_combination = """
   ::applications::exahype2::exagrype::enforceCCZ4Constraints<::applications::exahype2::exagrype::CCZ4Solver::Shortcuts>(
@@ -164,46 +165,29 @@ else:
   );
 """
 
-solver.set_implementation(
-    initial_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
-    boundary_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
-    refinement_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation,
+solver.set_pde_terms(
+    initial_condition=True,
+    boundary_conditions=True,
+    refinement_criterion=True,
     ncp=nonconservative_product,
-    source_term=source_term,
+    source=source_term,
     max_eigenvalue=max_eigenvalue,
-    flux=exahype2.solvers.PDETerms.None_Implementation,
+    analytical_solution=True,
 )
 
 if args.solver == "fv":
-    exahype2.solvers.fv.ErrorMeasurement(
-        solver,
-        error_measurement_implementation=exahype2.solvers.PDETerms.User_Defined_Implementation,
-        output_file_name="Error_GaugeWave_FV",
-        time_delta_between_snapshots=args.end_time / 100.0,
-    )
+    solver.measure_error(file="Error_GaugeWave_FV", every=args.end_time / 100.0)
 elif args.solver == "aderdg":
-    exahype2.solvers.aderdg.ErrorMeasurement(
-        solver,
-        error_measurement_implementation=exahype2.solvers.PDETerms.User_Defined_Implementation,
-        output_file_name="Error_GaugeWave_ADERDG",
-        time_delta_between_snapshots=args.end_time / 100.0,
-    )
+    solver.measure_error(file="Error_GaugeWave_ADERDG", every=args.end_time / 100.0)
 else:
-    exahype2.solvers.rkdg.ErrorMeasurement(
-        solver,
-        error_measurement_implementation=exahype2.solvers.PDETerms.User_Defined_Implementation,
-        output_file_name="Error_GaugeWave_RKDG",
-        time_delta_between_snapshots=args.end_time / 100.0,
-    )
+    solver.measure_error(file="Error_GaugeWave_RKDG", every=args.end_time / 100.0)
 
-solver.add_user_solver_includes(solver_includes)
+solver.add_includes(*solver_includes)
 
 project.add_solver(solver)
 
 for const_name, (const_value, const_type) in constants.items():
-    project.constants.export_constexpr_with_type(
-        const_name, str(const_value), const_type
-    )
+    project.add_constant(const_name, const_value, const_type)
 
 project.output.makefile.add_include_directory("../../..")
 project.output.makefile.add_cpp_file("CCZ4Solver.cpp")

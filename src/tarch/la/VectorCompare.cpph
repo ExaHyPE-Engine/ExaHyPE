@@ -2,11 +2,13 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 template <int N>
-INLINE_METHOD tarch::la::VectorCompare<N>::VectorCompare(double accuracy):
+INLINE_METHOD tarch::la::VectorCompare<N>::VectorCompare(double accuracy) :
   _accuracy(accuracy) {}
 
 template <int N>
-INLINE_METHOD bool tarch::la::VectorCompare<
-  N>::operator()(const Vector<N, double>& left, const Vector<N, double>& right) const {
+INLINE_METHOD bool tarch::la::VectorCompare<N>::operator()(
+  const Vector<N, double>& left,
+  const Vector<N, double>& right
+) const {
   return firstGreater(right, left, _accuracy);
 }

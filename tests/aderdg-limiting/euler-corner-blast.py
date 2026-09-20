@@ -59,17 +59,17 @@ refinement_criterion = """
     : ::exahype2::RefinementCommand::Keep;
 """
 
-solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
+solver = exahype2.dg.ader.Solver(
     name="ADERDGSolver",
     order=order,
     unknowns=unknowns,
     auxiliary_variables=0,
-    time_step_relaxation=0.5,
+    time_stepping=exahype2.TimeStepping.Adaptive(0.5),
 )
-solver.set_implementation(
+solver.set_pde_terms(
     flux=euler.flux(gamma),
     max_eigenvalue=euler.max_eigenvalue(gamma),
-    initial_conditions=initial_conditions,
+    initial_condition=initial_conditions,
     boundary_conditions=boundary_conditions,
     refinement_criterion=refinement_criterion,
 )

@@ -132,8 +132,9 @@ INLINE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::dataview::VertexMarker:
 INLINE_METHOD bool peano4::dataview::VertexMarker::coincidesWithCoarseGridVertex() const {
   const auto relativePosition = getRelativePositionWithinFatherCell();
   for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
-    if (relativePosition(dimension) != 0
-        and relativePosition(dimension) != peano4::sfc::ActiveCurve::SubdivisionFactor) {
+    if (
+      relativePosition(dimension) != 0 and relativePosition(dimension) != peano4::sfc::ActiveCurve::SubdivisionFactor
+    ) {
       return false;
     }
   }

@@ -56,8 +56,8 @@ void exahype2::dg::rk::tests::KernelsOnDeviceTest::testLinearCombinationOfEstima
       exahype2::dg::rk::linearCombinationOfEstimates<
         Setup::RungeKuttaSteps,
         Setup::DofsPerAxis,
-        Setup::Unknowns,
-        Setup::AuxiliaryVariables>(
+        Setup::NumberOfUnknowns,
+        Setup::NumberOfAuxiliaryVariables>(
         Setup::RungeKuttaStep,
         onDeviceCellStates + cellStateOffset,
         onDeviceRightHandSideEstimates + rightHandSideOffset,
@@ -77,8 +77,8 @@ void exahype2::dg::rk::tests::KernelsOnDeviceTest::testLinearCombinationOfEstima
     exahype2::dg::rk::linearCombinationOfEstimates<
       Setup::RungeKuttaSteps,
       Setup::DofsPerAxis,
-      Setup::Unknowns,
-      Setup::AuxiliaryVariables>(
+      Setup::NumberOfUnknowns,
+      Setup::NumberOfAuxiliaryVariables>(
       Setup::RungeKuttaStep,
       cellStates.data() + cellStateOffset,
       rightHandSideEstimates.data() + rightHandSideOffset,
@@ -132,8 +132,8 @@ void exahype2::dg::rk::tests::KernelsOnDeviceTest::runVolumeIntegral() {
       exahype2::dg::rk::volumeIntegral<
         exahype2::dg::tests::StubSolver,
         Setup::DofsPerAxis,
-        Setup::Unknowns,
-        Setup::AuxiliaryVariables,
+        Setup::NumberOfUnknowns,
+        Setup::NumberOfAuxiliaryVariables,
         false,
         true,
         DiffusiveFlux,
@@ -164,8 +164,8 @@ void exahype2::dg::rk::tests::KernelsOnDeviceTest::runVolumeIntegral() {
     exahype2::dg::rk::volumeIntegral<
       exahype2::dg::tests::StubSolver,
       Setup::DofsPerAxis,
-      Setup::Unknowns,
-      Setup::AuxiliaryVariables,
+      Setup::NumberOfUnknowns,
+      Setup::NumberOfAuxiliaryVariables,
       false,
       true,
       DiffusiveFlux,

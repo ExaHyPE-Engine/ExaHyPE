@@ -66,4 +66,73 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::addFaceIntegral(
     }
   }
 }
+
+/**
+ * Subtracts the flux integrals over all faces of one cell from the unknowns of cellValues, which
+ * hold NumberOfValuesPerNode values per node. The two faces of an axis accumulate into one buffer
+ * per axis before the buffers add up, so two mirror-image cells receive bitwise mirrored updates.
+ */
+template <
+  int  NumberOfDofsPerAxis,
+  int  NumberOfUnknowns,
+  int  NumberOfValuesPerNode,
+  bool IsLinear,
+  typename StoragePrecision,
+  typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::addFaceIntegrals(
+  StoragePrecision* NOALIAS const              cellValues,
+  const ComputePrecision* const                faceFluxes[peano4::FacesPerCell],
+  const ComputePrecision* NOALIAS const        faceQuadratureWeights,
+  const ComputePrecision* NOALIAS const        inverseCellQuadratureWeights,
+  const ComputePrecision* NOALIAS const        leftFaceCoefficients,
+  const ComputePrecision* NOALIAS const        rightFaceCoefficients,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const double                                 timeStepSize
+) {
+  constexpr int NodesPerCell = peano4::power(NumberOfDofsPerAxis, DIMENSIONS);
+  constexpr int UpdateSize   = NodesPerCell * NumberOfUnknowns;
+  static_assert(NumberOfUnknowns > 0 and NumberOfValuesPerNode >= NumberOfUnknowns);
+
+  assertion(cellValues != nullptr);
+  assertion(faceQuadratureWeights != nullptr);
+  assertion(inverseCellQuadratureWeights != nullptr);
+  assertion(leftFaceCoefficients != nullptr);
+  assertion(rightFaceCoefficients != nullptr);
+  assertion(timeStepSize >= 0.0, timeStepSize);
+
+  StoragePrecision directionUpdates[DIMENSIONS][UpdateSize];
+  for (int direction = 0; direction < DIMENSIONS; direction++) {
+    assertion(cellSize(direction) > 0.0, cellSize, direction);
+    for (int update = 0; update < UpdateSize; update++) {
+      directionUpdates[direction][update] = static_cast<StoragePrecision>(0);
+    }
+    for (int orientation = 0; orientation < 2; orientation++) {
+      assertion(faceFluxes[direction + orientation * DIMENSIONS] != nullptr, direction, orientation);
+      exahype2::dg::addFaceIntegral<NumberOfDofsPerAxis, NumberOfUnknowns, IsLinear>(
+        directionUpdates[direction],
+        faceFluxes[direction + orientation * DIMENSIONS],
+        faceQuadratureWeights,
+        inverseCellQuadratureWeights,
+        leftFaceCoefficients,
+        rightFaceCoefficients,
+        direction,
+        orientation,
+        1.0 / cellSize(direction),
+        timeStepSize
+      );
+    }
+  }
+
+  for (int node = 0; node < NodesPerCell; node++) {
+    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+      const int update = node * NumberOfUnknowns + unknown;
+#if DIMENSIONS == 2
+      cellValues[node * NumberOfValuesPerNode + unknown] += directionUpdates[0][update] + directionUpdates[1][update];
+#else
+      cellValues[node * NumberOfValuesPerNode + unknown] +=
+        directionUpdates[0][update] + directionUpdates[1][update] + directionUpdates[2][update];
+#endif
+    }
+  }
+}
 TARGET_DECLARE_END

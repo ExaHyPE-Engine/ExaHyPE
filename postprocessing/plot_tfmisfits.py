@@ -141,7 +141,7 @@ def PlotTimeFrequencyMisfits(argv=None):
 
     Plots the time-frequency misfits of one variable between two tracer files.
 
-    The inputs are CSV trajectory databases of the exahype2.tracer action sets.
+    The inputs are CSV trajectory databases of the exahype2.particles tracer action sets.
 
     @param argv Argument list to parse. Defaults to sys.argv[1:].
     """

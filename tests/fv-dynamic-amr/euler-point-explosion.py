@@ -82,17 +82,13 @@ flux = """
   }}
   F[Shortcuts::rhoU + normal] += pressure;
   F[Shortcuts::rhoE] = (Q[Shortcuts::rhoE] + pressure) * normalVelocity;
-""".format(
-    primitives=primitives
-)
+""".format(primitives=primitives)
 
 max_eigenvalue = """
   {primitives}
   const double soundSpeed = std::sqrt(GAMMA * pressure * inverseDensity);
   return std::max(std::abs(normalVelocity - soundSpeed), std::abs(normalVelocity + soundSpeed));
-""".format(
-    primitives=primitives
-)
+""".format(primitives=primitives)
 
 # Density and pressure preserve the blast's symmetries while detecting its
 # fronts.
@@ -119,16 +115,17 @@ refinement_criterion = """
   );
 """
 
-fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
+fv_solver = exahype2.fv.Solver(
     name="FVSolver",
     patch_size=args.degrees_of_freedom,
     unknowns={"rho": 1, "rhoU": project.dimensions, "rhoE": 1},
     auxiliary_variables=0,
-    time_step_relaxation=0.8,
+    time_stepping=exahype2.TimeStepping.Adaptive(0.8),
+    scheme=exahype2.fv.Godunov(),
 )
 
-fv_solver.set_implementation(
-    initial_conditions=initial_conditions,
+fv_solver.set_pde_terms(
+    initial_condition=initial_conditions,
     boundary_conditions=boundary_conditions,
     refinement_criterion=refinement_criterion,
     flux=flux,

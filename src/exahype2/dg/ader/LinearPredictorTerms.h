@@ -11,7 +11,7 @@
 TARGET_DECLARE
 namespace exahype2::dg::ader {
   template <
-    typename Solver,
+    typename SolverType,
     int NumberOfDofsPerAxis,
     int NumberOfUnknowns,
     int NumberOfAuxiliaryVariables,
@@ -26,7 +26,7 @@ namespace exahype2::dg::ader {
   );
 
   template <
-    typename Solver,
+    typename SolverType,
     int NumberOfDofsPerAxis,
     int NumberOfUnknowns,
     int NumberOfAuxiliaryVariables,
@@ -44,7 +44,7 @@ namespace exahype2::dg::ader {
   );
 
   template <
-    typename Solver,
+    typename SolverType,
     int NumberOfDofsPerAxis,
     int NumberOfUnknowns,
     int NumberOfAuxiliaryVariables,
@@ -59,7 +59,7 @@ namespace exahype2::dg::ader {
   );
 
   template <
-    typename Solver,
+    typename SolverType,
     int NumberOfDofsPerAxis,
     int NumberOfUnknowns,
     int NumberOfAuxiliaryVariables,

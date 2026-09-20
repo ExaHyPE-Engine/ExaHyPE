@@ -8,7 +8,7 @@ namespace tarch::accelerator::hip::tests {
   class ReductionTest;
 } // namespace tarch::accelerator::hip::tests
 
-class tarch::accelerator::hip::tests::ReductionTest final: public tarch::tests::TestCase {
+class tarch::accelerator::hip::tests::ReductionTest final : public tarch::tests::TestCase {
 private:
   void testParallelReduction();
 
