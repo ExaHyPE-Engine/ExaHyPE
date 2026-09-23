@@ -1,0 +1,41 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#include "StepRepository.h"
+
+#include "runner/RunControl.h"
+
+std::string {{ FULL_QUALIFIED_NAMESPACE }}::{{ CLASSNAME }}::toString(Steps value) {
+  switch (value) {
+  case Steps::Undef:
+    return "Undef";
+{%- for step in STEPS %}
+  case Steps::{{ step.name }}:
+    return "{{ step.name }}";
+{%- endfor %}
+  }
+  return "<undef>";
+}
+
+int {{ FULL_QUALIFIED_NAMESPACE }}::{{ CLASSNAME }}::toProgramStep(Steps value) {
+  switch (value) {
+  case Steps::Undef:
+    return ::runner::RunControl::UndefProgramStep;
+{%- for step in STEPS %}
+  case Steps::{{ step.name }}:
+    return {{ step.number }};
+{%- endfor %}
+  }
+  return ::runner::RunControl::Terminate;
+}
+
+{{ FULL_QUALIFIED_NAMESPACE }}::{{ CLASSNAME }}::Steps {{ FULL_QUALIFIED_NAMESPACE }}::{{ CLASSNAME }}::toStepEnum(
+  int value
+) {
+  switch (value) {
+{%- for step in STEPS %}
+  case {{ step.number }}:
+    return Steps::{{ step.name }};
+{%- endfor %}
+  }
+  return Steps::Undef;
+}

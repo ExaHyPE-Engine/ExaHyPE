@@ -2,16 +2,18 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "Tree.h"
 
-#include "peano4/Loop.h"
 #include "peano4/grid/AutomatonState.h"
 #include "peano4/grid/GridControlEvent.h"
-#include "peano4/grid/PeanoCurve.h"
+#include "peano4/sfc/ActiveCurve.h"
 #include "peano4/topology/ChunkedTasks.h"
 #include "tarch/Termination.h"
 #include "tarch/tasking/FunctorTask.h"
 #include "tarch/tasking/TaskGraph.h"
 
 namespace {
+  constexpr int SubdivisionFactor = peano4::sfc::ActiveCurve::SubdivisionFactor;
+  constexpr int ChildrenPerCell   = peano4::sfc::ActiveCurve::ChildrenPerCell;
+
   /** Returns the containing coarse-lattice position by rounding towards minus infinity. */
   int floorDivide(const int value, const int divisor) noexcept {
     return value >= 0 ? value / divisor : -((-value + divisor - 1) / divisor);
@@ -27,12 +29,12 @@ namespace {
     const tarch::la::Vector<DIMENSIONS, int>& cellLattice,
     const int                                 vertexNumber,
     const int                                 cellsPerAxisOnLevel,
-    const std::bitset<DIMENSIONS>&            periodicBC
+    const std::bitset<DIMENSIONS>&            periodicBoundaries
   ) {
     tarch::la::Vector<DIMENSIONS, int> cornerLattice(0);
     for (int axis = 0; axis < DIMENSIONS; axis++) {
       const int coordinate = cellLattice(axis) + ((vertexNumber >> axis) & 1);
-      cornerLattice(axis)  = (periodicBC[axis] and coordinate == cellsPerAxisOnLevel) ? 0 : coordinate;
+      cornerLattice(axis)  = (periodicBoundaries[axis] and coordinate == cellsPerAxisOnLevel) ? 0 : coordinate;
     }
     return cornerLattice;
   }
@@ -52,12 +54,12 @@ namespace {
     const tarch::la::Vector<DIMENSIONS, int>& vertexLattice,
     const int                                 adjacencyEntry,
     const int                                 cellsPerAxisOnLevel,
-    const std::bitset<DIMENSIONS>&            periodicBC
+    const std::bitset<DIMENSIONS>&            periodicBoundaries
   ) {
     AdjacentCell adjacentCell;
     for (int axis = 0; axis < DIMENSIONS; axis++) {
       int coordinate = vertexLattice(axis) - 1 + ((adjacencyEntry >> axis) & 1);
-      if (periodicBC[axis]) {
+      if (periodicBoundaries[axis]) {
         coordinate = (coordinate + cellsPerAxisOnLevel) % cellsPerAxisOnLevel;
       }
       adjacentCell.isInsideDomain =
@@ -71,22 +73,23 @@ namespace {
    * Returns whether any coarse vertex the given vertex lies between satisfies
    * the predicate.
    *
-   * A fine coordinate divisible by three sits on one coarse vertex; every other
-   * coordinate lies between two, so a vertex has up to 2^d governing vertices.
+   * A fine coordinate divisible by the subdivision factor sits on one coarse
+   * vertex; every other coordinate lies between two, so a vertex has up to 2^d
+   * governing vertices.
    */
   template <typename Predicate>
   bool anyGoverningVertexSatisfies(
     const tarch::la::Vector<DIMENSIONS, int>& vertexLattice,
     const int                                 coarseCellsPerAxis,
-    const std::bitset<DIMENSIONS>&            periodicBC,
+    const std::bitset<DIMENSIONS>&            periodicBoundaries,
     const Predicate&                          satisfies
   ) {
     int numberOfCandidates[DIMENSIONS];
     int candidateCoordinates[DIMENSIONS][2];
     int numberOfCombinations = 1;
     for (int axis = 0; axis < DIMENSIONS; axis++) {
-      const int quotient            = vertexLattice(axis) / 3;
-      const int remainder           = vertexLattice(axis) % 3;
+      const int quotient            = vertexLattice(axis) / SubdivisionFactor;
+      const int remainder           = vertexLattice(axis) % SubdivisionFactor;
       candidateCoordinates[axis][0] = quotient;
       candidateCoordinates[axis][1] = quotient + 1;
       numberOfCandidates[axis]      = remainder == 0 ? 1 : 2;
@@ -98,7 +101,7 @@ namespace {
       for (int axis = 0; axis < DIMENSIONS; axis++) {
         coarseVertexLattice(axis) = candidateCoordinates[axis][remainingCombination % numberOfCandidates[axis]];
         remainingCombination /= numberOfCandidates[axis];
-        if (periodicBC[axis] and coarseVertexLattice(axis) == coarseCellsPerAxis) {
+        if (periodicBoundaries[axis] and coarseVertexLattice(axis) == coarseCellsPerAxis) {
           coarseVertexLattice(axis) = 0;
         }
       }
@@ -120,11 +123,12 @@ namespace {
   bool everyAdjacentCellExists(
     const tarch::la::Vector<DIMENSIONS, int>& vertexLattice,
     const int                                 cellsPerAxisOnLevel,
-    const std::bitset<DIMENSIONS>&            periodicBC,
+    const std::bitset<DIMENSIONS>&            periodicBoundaries,
     const CellExists&                         cellExists
   ) {
-    for (int adjacencyEntry = 0; adjacencyEntry < TWO_POWER_D; adjacencyEntry++) {
-      const auto adjacentCell = adjacentCellOfVertex(vertexLattice, adjacencyEntry, cellsPerAxisOnLevel, periodicBC);
+    for (int adjacencyEntry = 0; adjacencyEntry < peano4::CellsPerVertex; adjacencyEntry++) {
+      const auto adjacentCell =
+        adjacentCellOfVertex(vertexLattice, adjacencyEntry, cellsPerAxisOnLevel, periodicBoundaries);
       if (adjacentCell.isInsideDomain and not cellExists(adjacentCell.lattice)) {
         return false;
       }
@@ -137,12 +141,12 @@ peano4::topology::Tree::Tree(
   const int                                    treeId,
   const tarch::la::Vector<DIMENSIONS, double>& domainOffset,
   const tarch::la::Vector<DIMENSIONS, double>& domainWidth,
-  const std::bitset<DIMENSIONS>&               periodicBC
+  const std::bitset<DIMENSIONS>&               periodicBoundaries
 ) :
   _id(treeId),
   _domainOffset(domainOffset),
   _domainWidth(domainWidth),
-  _periodicBC(periodicBC) {}
+  _periodicBoundaries(periodicBoundaries) {}
 
 /**
  * Validates that every plan level fits the tree's lattice keys.
@@ -157,24 +161,23 @@ int peano4::topology::Tree::validateAndGetMaximumLevel(const int depth, const Re
 
   const int              maximumLevel             = depth + static_cast<int>(refinementPlan.size());
   constexpr std::int64_t MaximumLatticeCoordinate = (std::int64_t{1} << LatticeKeyBitsPerAxis) - 1;
-  constexpr int          RefinementFactor         = 3;
   std::int64_t           cellsPerAxisOnMaximumLevel{1};
   for (int level = 0; level < maximumLevel; level++) {
-    if (cellsPerAxisOnMaximumLevel > MaximumLatticeCoordinate / RefinementFactor) {
+    if (cellsPerAxisOnMaximumLevel > MaximumLatticeCoordinate / SubdivisionFactor) {
       tarch::terminateWithError("The grid depth exceeds the lattice key range.");
     }
-    cellsPerAxisOnMaximumLevel *= RefinementFactor;
+    cellsPerAxisOnMaximumLevel *= SubdivisionFactor;
   }
   return maximumLevel;
 }
 
 /**
  * Builds the regular grid of the given depth, refined further where the plan
- * flags vertices. A dense level reads a level-local cell index as a base-3^d
- * number whose digits are the linearised child positions from the root down,
- * so every size and link follows in closed form and the levels fill in
- * parallel. The levels beyond the base depth hold one contiguous 3^d cell
- * block per refined cell of the level above and answer through their lattice
+ * flags vertices. A dense level reads a level-local cell index as a number in
+ * base ChildrenPerCell whose digits are the linearised child positions from the
+ * root down, so every size and link follows in closed form and the levels fill
+ * in parallel. The levels beyond the base depth hold one contiguous block of
+ * ChildrenPerCell cells per refined cell of the level above and answer through their lattice
  * maps; with several ranks the topology nodes give every cell its owner, and a
  * partitioned rank materialises its owned spawn blocks plus one ring of
  * neighbours below the spawn level.
@@ -220,10 +223,11 @@ void peano4::topology::Tree::buildRegularGrid(
       derivedOwnershipPlan = deriveBalancedBlockOwners(depth, numberOfRanks, refinementPlan);
     }
     const auto& ownershipPlan = ownersOfBlocks == nullptr ? derivedOwnershipPlan : *ownersOfBlocks;
-    if (ownershipPlan.size() < OwnershipPlanHeaderSize or ownershipPlan[0] != OwnershipPlanMarker
-        or ownershipPlan[1] < 1
-        or ownershipPlan.size()
-          != OwnershipPlanHeaderSize + static_cast<std::size_t>(ownershipPlan[1]) * TopologyNodeStride) {
+    if (
+      ownershipPlan.size() < OwnershipPlanHeaderSize or ownershipPlan[0] != OwnershipPlanMarker or ownershipPlan[1] < 1
+      or ownershipPlan.size()
+        != OwnershipPlanHeaderSize + static_cast<std::size_t>(ownershipPlan[1]) * TopologyNodeStride
+    ) {
       tarch::terminateWithError("The rank ownership plan is invalid.");
     }
     const auto numberOfTopologyNodes = ownershipPlan[1];
@@ -234,7 +238,7 @@ void peano4::topology::Tree::buildRegularGrid(
       const auto lastOwner     = ownershipPlan[planOffset + 1];
       const auto childrenBlock = ownershipPlan[planOffset + 2];
       const bool childrenAreValid =
-        childrenBlock == -1 or (childrenBlock > nodeIndex and childrenBlock <= numberOfTopologyNodes - THREE_POWER_D);
+        childrenBlock == -1 or (childrenBlock > nodeIndex and childrenBlock <= numberOfTopologyNodes - ChildrenPerCell);
       if (firstOwner < 0 or firstOwner > lastOwner or lastOwner >= numberOfRanks or not childrenAreValid) {
         tarch::terminateWithError("The rank ownership plan is invalid.");
       }
@@ -262,18 +266,14 @@ void peano4::topology::Tree::buildRegularGrid(
       if (not blockIsOwned) {
         continue;
       }
-      int neighbourhoodSize = 1;
-      for (int axis = 0; axis < DIMENSIONS; axis++) {
-        neighbourhoodSize *= 3;
-      }
-      for (int neighbourNumber = 0; neighbourNumber < neighbourhoodSize; neighbourNumber++) {
+      for (int neighbourNumber = 0; neighbourNumber < peano4::CellsPerNeighbourhood; neighbourNumber++) {
         tarch::la::Vector<DIMENSIONS, int> neighbourLattice(0);
         int                                remainingNeighbour = neighbourNumber;
         bool                               isInsideDomain     = true;
         for (int axis = 0; axis < DIMENSIONS; axis++) {
-          int coordinate = blockLattice(axis) + remainingNeighbour % 3 - 1;
-          remainingNeighbour /= 3;
-          if (_periodicBC[axis]) {
+          int coordinate = blockLattice(axis) + remainingNeighbour % peano4::NeighbourhoodWidth - 1;
+          remainingNeighbour /= peano4::NeighbourhoodWidth;
+          if (_periodicBoundaries[axis]) {
             coordinate = (coordinate + blocksPerAxis) % blocksPerAxis;
           }
           isInsideDomain         = isInsideDomain and coordinate >= 0 and coordinate < blocksPerAxis;
@@ -297,7 +297,7 @@ void peano4::topology::Tree::buildRegularGrid(
       for (int axis = 0; axis < DIMENSIONS; axis++) {
         assertion(
           flaggedVertex(axis) >= 0 and flaggedVertex(axis) <= cellsPerAxisOnPlanLevel
-            and (not _periodicBC[axis] or flaggedVertex(axis) < cellsPerAxisOnPlanLevel),
+            and (not _periodicBoundaries[axis] or flaggedVertex(axis) < cellsPerAxisOnPlanLevel),
           planLevel,
           axis,
           flaggedVertex(axis),
@@ -346,8 +346,10 @@ void peano4::topology::Tree::buildRegularGrid(
     numberOfVertices += verticesOnLevel;
     numberOfFaces += DIMENSIONS * facesPerNormal;
 
-    if (numberOfCells > std::numeric_limits<int>::max() or numberOfVertices > std::numeric_limits<int>::max()
-        or numberOfFaces > std::numeric_limits<int>::max()) {
+    if (
+      numberOfCells > std::numeric_limits<int>::max() or numberOfVertices > std::numeric_limits<int>::max()
+      or numberOfFaces > std::numeric_limits<int>::max()
+    ) {
       tarch::terminateWithError(
         "A regular grid of depth " + std::to_string(depth) + " exceeds the tree's 32-bit index range."
       );
@@ -367,7 +369,7 @@ void peano4::topology::Tree::buildRegularGrid(
   const auto buildInterleaveTable = [this](const int level, const int digits) {
     int entriesPerAxis = 1;
     for (int digit = 0; digit < digits; digit++) {
-      entriesPerAxis *= 3;
+      entriesPerAxis *= SubdivisionFactor;
     }
     auto& indexOfCoordinate = _levelLocalIndexOfCoordinate[level];
     indexOfCoordinate.assign(static_cast<std::size_t>(DIMENSIONS) * entriesPerAxis, 0);
@@ -378,13 +380,13 @@ void peano4::topology::Tree::buildRegularGrid(
         int digitWeight         = axisStride;
         int remainingCoordinate = coordinate;
         for (int digit = 0; digit < digits; digit++) {
-          levelLocalIndex += (remainingCoordinate % 3) * digitWeight;
-          remainingCoordinate /= 3;
-          digitWeight *= THREE_POWER_D;
+          levelLocalIndex += (remainingCoordinate % SubdivisionFactor) * digitWeight;
+          remainingCoordinate /= SubdivisionFactor;
+          digitWeight *= ChildrenPerCell;
         }
         indexOfCoordinate[static_cast<std::size_t>(axis) * entriesPerAxis + coordinate] = levelLocalIndex;
       }
-      axisStride *= 3;
+      axisStride *= SubdivisionFactor;
     }
   };
   for (int level = 0; level <= wholeLevelsUpTo; level++) {
@@ -410,28 +412,29 @@ void peano4::topology::Tree::buildRegularGrid(
       for (int levelLocalIndex = begin; levelLocalIndex < end; levelLocalIndex++) {
         auto& cell         = _cells[cellLevelOffset + levelLocalIndex];
         cell.level         = level;
-        cell.parent        = level > 0 ? parentLevelOffset + levelLocalIndex / THREE_POWER_D : -1;
-        cell.childrenBlock = isFinestStoredLevel ? -1 : childLevelOffset + levelLocalIndex * THREE_POWER_D;
+        cell.parent        = level > 0 ? parentLevelOffset + levelLocalIndex / ChildrenPerCell : -1;
+        cell.childrenBlock = isFinestStoredLevel ? -1 : childLevelOffset + levelLocalIndex * ChildrenPerCell;
 
         tarch::la::Vector<DIMENSIONS, int> latticeIndex(0);
         int                                remainingDigits = levelLocalIndex;
         int                                axisStride      = 1;
         for (int digit = 0; digit < level; digit++) {
-          int childPositionLinearised = remainingDigits % THREE_POWER_D;
-          remainingDigits /= THREE_POWER_D;
+          int childPositionLinearised = remainingDigits % ChildrenPerCell;
+          remainingDigits /= ChildrenPerCell;
           for (int axis = 0; axis < DIMENSIONS; axis++) {
-            latticeIndex(axis) += (childPositionLinearised % 3) * axisStride;
-            childPositionLinearised /= 3;
+            latticeIndex(axis) += (childPositionLinearised % SubdivisionFactor) * axisStride;
+            childPositionLinearised /= SubdivisionFactor;
           }
-          axisStride *= 3;
+          axisStride *= SubdivisionFactor;
         }
         cell.latticeIndex = latticeIndex;
         cell.ownerTreeId  = getOwnerOfCellAt(level, latticeIndex);
 
-        for (int vertexNumber = 0; vertexNumber < TWO_POWER_D; vertexNumber++) {
-          const auto cornerLattice = cornerLatticeOfCell(latticeIndex, vertexNumber, cellsPerAxisOnLevel, _periodicBC);
-          int        rowMajorIndex = 0;
-          int        rowStride     = 1;
+        for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell; vertexNumber++) {
+          const auto cornerLattice =
+            cornerLatticeOfCell(latticeIndex, vertexNumber, cellsPerAxisOnLevel, _periodicBoundaries);
+          int rowMajorIndex = 0;
+          int rowStride     = 1;
           for (int axis = 0; axis < DIMENSIONS; axis++) {
             rowMajorIndex += cornerLattice(axis) * rowStride;
             rowStride *= verticesPerAxis;
@@ -439,10 +442,10 @@ void peano4::topology::Tree::buildRegularGrid(
           cell.vertexIndices[vertexNumber] = vertexLevelOffset + rowMajorIndex;
         }
 
-        for (int faceNumber = 0; faceNumber < TWO_TIMES_D; faceNumber++) {
+        for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
           const int normal          = faceNumber % DIMENSIONS;
           int       planeCoordinate = latticeIndex(normal) + (faceNumber >= DIMENSIONS ? 1 : 0);
-          if (_periodicBC[normal] and planeCoordinate == cellsPerAxisOnLevel) {
+          if (_periodicBoundaries[normal] and planeCoordinate == cellsPerAxisOnLevel) {
             planeCoordinate = 0;
           }
           int rowMajorIndex = 0;
@@ -523,8 +526,10 @@ void peano4::topology::Tree::buildRegularGrid(
       numberOfCells += numberOfBlocks * cellsPerBlock;
       numberOfVertices += numberOfBlocks * verticesPerBlock;
       numberOfFaces += DIMENSIONS * numberOfBlocks * facesPerNormalPerBlock;
-      if (numberOfCells > std::numeric_limits<int>::max() or numberOfVertices > std::numeric_limits<int>::max()
-          or numberOfFaces > std::numeric_limits<int>::max()) {
+      if (
+        numberOfCells > std::numeric_limits<int>::max() or numberOfVertices > std::numeric_limits<int>::max()
+        or numberOfFaces > std::numeric_limits<int>::max()
+      ) {
         tarch::terminateWithError(
           "A regular grid of depth " + std::to_string(depth) + " exceeds the tree's 32-bit index range."
         );
@@ -540,7 +545,7 @@ void peano4::topology::Tree::buildRegularGrid(
     for (int cellIndex = firstSpawnCell; cellIndex < spawnCellEnd; cellIndex++) {
       const int blockSlot = _blockSlotOfSpawnCell[cellIndex - firstSpawnCell];
       if (blockSlot >= 0) {
-        _cells[cellIndex].childrenBlock = _cellLevelOffsets[wholeLevelsUpTo + 1] + blockSlot * THREE_POWER_D;
+        _cells[cellIndex].childrenBlock = _cellLevelOffsets[wholeLevelsUpTo + 1] + blockSlot * ChildrenPerCell;
       }
     }
 
@@ -584,22 +589,22 @@ void peano4::topology::Tree::buildRegularGrid(
             int                                remainingDigits = blockLocalIndex;
             int                                axisStride      = 1;
             for (int digit = 0; digit < digits; digit++) {
-              int childPositionLinearised = remainingDigits % THREE_POWER_D;
-              remainingDigits /= THREE_POWER_D;
+              int childPositionLinearised = remainingDigits % ChildrenPerCell;
+              remainingDigits /= ChildrenPerCell;
               for (int axis = 0; axis < DIMENSIONS; axis++) {
-                blockLocalLattice(axis) += (childPositionLinearised % 3) * axisStride;
-                childPositionLinearised /= 3;
+                blockLocalLattice(axis) += (childPositionLinearised % SubdivisionFactor) * axisStride;
+                childPositionLinearised /= SubdivisionFactor;
               }
-              axisStride *= 3;
+              axisStride *= SubdivisionFactor;
             }
             for (int axis = 0; axis < DIMENSIONS; axis++) {
               cell.latticeIndex(axis) = blockLattice(axis) * cellsPerAxisOfBlock + blockLocalLattice(axis);
             }
             cell.parent = digits == 1
               ? firstSpawnCell + interleavedIndexOf(wholeLevelsUpTo, blockLattice)
-              : parentLevelOffset + blockSlot * (cellsPerBlock / THREE_POWER_D) + blockLocalIndex / THREE_POWER_D;
+              : parentLevelOffset + blockSlot * (cellsPerBlock / ChildrenPerCell) + blockLocalIndex / ChildrenPerCell;
             cell.childrenBlock =
-              isFinestLevel ? -1 : childLevelOffset + (blockSlot * cellsPerBlock + blockLocalIndex) * THREE_POWER_D;
+              isFinestLevel ? -1 : childLevelOffset + (blockSlot * cellsPerBlock + blockLocalIndex) * ChildrenPerCell;
             cell.ownerTreeId = getOwnerOfCellAt(level, cell.latticeIndex);
 
             // A cell away from the block's boundary owns every corner and side
@@ -612,14 +617,14 @@ void peano4::topology::Tree::buildRegularGrid(
                 or blockLocalLattice(axis) == cellsPerAxisOfBlock - 1;
             }
             if (touchesBlockBoundary) {
-              for (int vertexNumber = 0; vertexNumber < TWO_POWER_D; vertexNumber++) {
+              for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell; vertexNumber++) {
                 cell.vertexIndices[vertexNumber] = getVertexAt(
                   level,
-                  cornerLatticeOfCell(cell.latticeIndex, vertexNumber, cellsPerAxisOnLevel, _periodicBC)
+                  cornerLatticeOfCell(cell.latticeIndex, vertexNumber, cellsPerAxisOnLevel, _periodicBoundaries)
                 );
                 assertion(cell.vertexIndices[vertexNumber] >= 0, level, levelLocalIndex, vertexNumber);
               }
-              for (int faceNumber = 0; faceNumber < TWO_TIMES_D; faceNumber++) {
+              for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
                 const int normal      = faceNumber % DIMENSIONS;
                 auto      faceLattice = cell.latticeIndex;
                 if (faceNumber >= DIMENSIONS) {
@@ -629,7 +634,7 @@ void peano4::topology::Tree::buildRegularGrid(
                 assertion(cell.faceIndices[faceNumber] >= 0, level, levelLocalIndex, faceNumber);
               }
             } else {
-              for (int vertexNumber = 0; vertexNumber < TWO_POWER_D; vertexNumber++) {
+              for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell; vertexNumber++) {
                 int rowMajorIndex = 0;
                 int rowStride     = 1;
                 for (int axis = 0; axis < DIMENSIONS; axis++) {
@@ -638,7 +643,7 @@ void peano4::topology::Tree::buildRegularGrid(
                 }
                 cell.vertexIndices[vertexNumber] = vertexLevelOffset + blockSlot * verticesPerBlock + rowMajorIndex;
               }
-              for (int faceNumber = 0; faceNumber < TWO_TIMES_D; faceNumber++) {
+              for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
                 const int normal        = faceNumber % DIMENSIONS;
                 int       rowMajorIndex = 0;
                 int       rowStride     = 1;
@@ -650,12 +655,11 @@ void peano4::topology::Tree::buildRegularGrid(
                 cell.faceIndices[faceNumber] = faceLevelOffset
                   + (normal * numberOfBlocksOnLevel + blockSlot) * facesPerNormalPerBlock + rowMajorIndex;
               }
-              assertion(
-                cell.vertexIndices[0]
-                  == getVertexAt(level, cornerLatticeOfCell(cell.latticeIndex, 0, cellsPerAxisOnLevel, _periodicBC)),
-                level,
-                levelLocalIndex
-              );
+#if PEANO_ASSERTIONS
+              const auto firstCornerLattice =
+                cornerLatticeOfCell(cell.latticeIndex, 0, cellsPerAxisOnLevel, _periodicBoundaries);
+              assertion(cell.vertexIndices[0] == getVertexAt(level, firstCornerLattice), level, levelLocalIndex);
+#endif
               assertion(cell.faceIndices[0] == getFaceAt(level, 0, cell.latticeIndex), level, levelLocalIndex);
             }
           }
@@ -692,7 +696,7 @@ void peano4::topology::Tree::buildRegularGrid(
             // its lattice coordinate wraps onto the lower wall.
             for (int axis = 0; axis < DIMENSIONS; axis++) {
               const int wrappedCoordinate =
-                (_periodicBC[axis] and vertexLattice(axis) == cellsPerAxisOnLevel) ? 0 : vertexLattice(axis);
+                (_periodicBoundaries[axis] and vertexLattice(axis) == cellsPerAxisOnLevel) ? 0 : vertexLattice(axis);
               vertex.setX(axis, _domainOffset(axis) + wrappedCoordinate * _domainWidth(axis) / cellsPerAxisOnLevel);
             }
 #endif
@@ -724,9 +728,9 @@ void peano4::topology::Tree::buildRegularGrid(
   {
     const int cellsPerAxisOnBaseDepth = getCellsPerAxisOfLevel(depth);
     for (const auto& flaggedVertex : refinementPlan[0]) {
-      for (int adjacencyEntry = 0; adjacencyEntry < TWO_POWER_D; adjacencyEntry++) {
+      for (int adjacencyEntry = 0; adjacencyEntry < peano4::CellsPerVertex; adjacencyEntry++) {
         const auto adjacentCell =
-          adjacentCellOfVertex(flaggedVertex, adjacencyEntry, cellsPerAxisOnBaseDepth, _periodicBC);
+          adjacentCellOfVertex(flaggedVertex, adjacencyEntry, cellsPerAxisOnBaseDepth, _periodicBoundaries);
         if (adjacentCell.isInsideDomain and isLocalBlockOfCell(depth, adjacentCell.lattice)) {
           refinedCells.push_back(getCellAt(depth, adjacentCell.lattice));
         }
@@ -747,25 +751,26 @@ void peano4::topology::Tree::buildRegularGrid(
     auto& cellIndexOfLattice   = _sparseCellIndexOfLattice[sparseLevelIndex];
     auto& vertexIndexOfLattice = _sparseVertexIndexOfLattice[sparseLevelIndex];
     auto& faceIndexOfLattice   = _sparseFaceIndexOfLattice[sparseLevelIndex];
-    // A refined cell contributes a 3^d block of children, whose corners span a
-    // 4^d vertex lattice and whose sides span 4 * 3^(d-1) faces per normal.
-    // Two adjacent parents hold the vertices and faces between them once, so
-    // these counts bound the table sizes from above.
+    // A refined cell contributes one block of children, whose corners span a
+    // (k+1)^d vertex lattice and whose sides span (k+1) * k^(d-1) faces per
+    // normal, k being the subdivision factor. Two adjacent parents hold the
+    // vertices and faces between them once, so these counts bound the table
+    // sizes from above.
     int verticesPerRefinedCell       = 1;
-    int facesPerNormalPerRefinedCell = 4;
+    int facesPerNormalPerRefinedCell = SubdivisionFactor + 1;
     for (int axis = 0; axis < DIMENSIONS; axis++) {
-      verticesPerRefinedCell *= 4;
+      verticesPerRefinedCell *= SubdivisionFactor + 1;
       if (axis > 0) {
-        facesPerNormalPerRefinedCell *= 3;
+        facesPerNormalPerRefinedCell *= SubdivisionFactor;
       }
     }
-    cellIndexOfLattice.reserve(refinedCells.size() * THREE_POWER_D);
+    cellIndexOfLattice.reserve(refinedCells.size() * ChildrenPerCell);
     vertexIndexOfLattice.reserve(refinedCells.size() * verticesPerRefinedCell);
     for (auto& faceMap : faceIndexOfLattice) {
       faceMap.reserve(refinedCells.size() * facesPerNormalPerRefinedCell);
     }
 
-    _cells.resize(_cells.size() + refinedCells.size() * THREE_POWER_D);
+    _cells.resize(_cells.size() + refinedCells.size() * ChildrenPerCell);
     // Every child cell's content is a closed-form function of its parent, so
     // the structs fill in parallel.
     peano4::topology::runChunkedTasks(
@@ -774,17 +779,18 @@ void peano4::topology::Tree::buildRegularGrid(
         static_cast<void>(chunkNumber);
         for (int parentNumber = begin; parentNumber < end; parentNumber++) {
           const int parentCellIndex             = refinedCells[parentNumber];
-          const int childrenBlock               = firstCellOnLevel + parentNumber * THREE_POWER_D;
+          const int childrenBlock               = firstCellOnLevel + parentNumber * ChildrenPerCell;
           _cells[parentCellIndex].childrenBlock = childrenBlock;
-          for (int childPositionLinearised = 0; childPositionLinearised < THREE_POWER_D; childPositionLinearised++) {
+          for (int childPositionLinearised = 0; childPositionLinearised < ChildrenPerCell; childPositionLinearised++) {
             auto& cell          = _cells[childrenBlock + childPositionLinearised];
             cell.level          = level;
             cell.parent         = parentCellIndex;
             cell.childrenBlock  = -1;
             int remainingDigits = childPositionLinearised;
             for (int axis = 0; axis < DIMENSIONS; axis++) {
-              cell.latticeIndex(axis) = _cells[parentCellIndex].latticeIndex(axis) * 3 + remainingDigits % 3;
-              remainingDigits /= 3;
+              cell.latticeIndex(axis) =
+                _cells[parentCellIndex].latticeIndex(axis) * SubdivisionFactor + remainingDigits % SubdivisionFactor;
+              remainingDigits /= SubdivisionFactor;
             }
             cell.ownerTreeId = getOwnerOfCellAt(level, cell.latticeIndex);
           }
@@ -818,9 +824,9 @@ void peano4::topology::Tree::buildRegularGrid(
                                        &latticeOfNewVertex]() {
         for (int cellIndex = firstCellOnLevel; cellIndex < static_cast<int>(_cells.size()); cellIndex++) {
           auto& cell = _cells[cellIndex];
-          for (int vertexNumber = 0; vertexNumber < TWO_POWER_D; vertexNumber++) {
+          for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell; vertexNumber++) {
             const auto vertexLattice =
-              cornerLatticeOfCell(cell.latticeIndex, vertexNumber, cellsPerAxisOnLevel, _periodicBC);
+              cornerLatticeOfCell(cell.latticeIndex, vertexNumber, cellsPerAxisOnLevel, _periodicBoundaries);
             const auto [vertexIndex, isNewVertex] = vertexIndexOfLattice.insert(
               serialiseLatticeKey(vertexLattice),
               firstVertexOnLevel + static_cast<int>(latticeOfNewVertex.size())
@@ -840,13 +846,13 @@ void peano4::topology::Tree::buildRegularGrid(
         [this, firstCellOnLevel, cellsPerAxisOnLevel, &faceIndexOfLattice, &numberOfFaces]() {
           for (int cellIndex = firstCellOnLevel; cellIndex < static_cast<int>(_cells.size()); cellIndex++) {
             auto& cell = _cells[cellIndex];
-            for (int faceNumber = 0; faceNumber < TWO_TIMES_D; faceNumber++) {
+            for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
               const int normal      = faceNumber % DIMENSIONS;
               auto      faceLattice = cell.latticeIndex;
               if (faceNumber >= DIMENSIONS) {
                 faceLattice(normal) += 1;
               }
-              if (_periodicBC[normal] and faceLattice(normal) == cellsPerAxisOnLevel) {
+              if (_periodicBoundaries[normal] and faceLattice(normal) == cellsPerAxisOnLevel) {
                 faceLattice(normal) = 0;
               }
               const auto [faceIndex, isNewFace] =
@@ -870,7 +876,7 @@ void peano4::topology::Tree::buildRegularGrid(
       return everyAdjacentCellExists(
         vertexLattice,
         cellsPerAxisOnLevel,
-        _periodicBC,
+        _periodicBoundaries,
         [&](const tarch::la::Vector<DIMENSIONS, int>& cellLattice) { return cellExistsInPlan(level, cellLattice); }
       );
     };
@@ -931,7 +937,7 @@ void peano4::topology::Tree::buildRegularGrid(
       std::vector<int> refinedCellsOnLevel;
       for (int cellIndex = firstCellOnLevel; cellIndex < static_cast<int>(_cells.size()); cellIndex++) {
         const auto& cell = _cells[cellIndex];
-        for (int vertexNumber = 0; vertexNumber < TWO_POWER_D; vertexNumber++) {
+        for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell; vertexNumber++) {
           if (_vertices[cell.vertexIndices[vertexNumber]].getState() == peano4::grid::GridVertex::State::Refined) {
             refinedCellsOnLevel.push_back(cellIndex);
             break;
@@ -941,9 +947,11 @@ void peano4::topology::Tree::buildRegularGrid(
       refinedCells = std::move(refinedCellsOnLevel);
     }
 
-    if (static_cast<std::int64_t>(_cells.size()) > std::numeric_limits<int>::max()
-        or static_cast<std::int64_t>(_vertices.size()) > std::numeric_limits<int>::max()
-        or numberOfFaces > std::numeric_limits<int>::max()) {
+    if (
+      static_cast<std::int64_t>(_cells.size()) > std::numeric_limits<int>::max()
+      or static_cast<std::int64_t>(_vertices.size()) > std::numeric_limits<int>::max()
+      or numberOfFaces > std::numeric_limits<int>::max()
+    ) {
       tarch::terminateWithError(
         "An adaptive grid over depth " + std::to_string(depth) + " exceeds the tree's 32-bit index range."
       );
@@ -964,7 +972,7 @@ void peano4::topology::Tree::buildRegularGrid(
  */
 std::vector<peano4::grid::LatticeIndexMap> peano4::topology::Tree::deriveRefinedCellKeyTables(
   const int                      depth,
-  const std::bitset<DIMENSIONS>& periodicBC,
+  const std::bitset<DIMENSIONS>& periodicBoundaries,
   const RefinementPlan&          refinementPlan
 ) {
   std::vector<peano4::grid::LatticeIndexMap> refinedCellKeyTables(refinementPlan.size());
@@ -981,10 +989,13 @@ std::vector<peano4::grid::LatticeIndexMap> peano4::topology::Tree::deriveRefined
   }
   const auto hasFlaggedCorner =
     [&](const int level, const int cellsPerAxisOnLevel, const tarch::la::Vector<DIMENSIONS, int>& cellLattice) {
-      for (int vertexNumber = 0; vertexNumber < TWO_POWER_D; vertexNumber++) {
-        const auto cornerLattice = cornerLatticeOfCell(cellLattice, vertexNumber, cellsPerAxisOnLevel, periodicBC);
-        if (flaggedVertexKeys[level - depth].find(serialiseLatticeKey(cornerLattice))
-            != peano4::grid::LatticeIndexMap::NoEntry) {
+      for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell; vertexNumber++) {
+        const auto cornerLattice =
+          cornerLatticeOfCell(cellLattice, vertexNumber, cellsPerAxisOnLevel, periodicBoundaries);
+        if (
+          flaggedVertexKeys[level - depth].find(serialiseLatticeKey(cornerLattice))
+          != peano4::grid::LatticeIndexMap::NoEntry
+        ) {
           return true;
         }
       }
@@ -993,14 +1004,15 @@ std::vector<peano4::grid::LatticeIndexMap> peano4::topology::Tree::deriveRefined
 
   const int cellsPerAxisOnBaseDepth = peano4::topology::cellsPerAxis(depth);
   auto&     refinedOnBaseDepth      = refinedCellKeyTables[0];
-  refinedOnBaseDepth.reserve(refinementPlan[0].size() * TWO_POWER_D);
+  refinedOnBaseDepth.reserve(refinementPlan[0].size() * peano4::CellsPerVertex);
   std::vector<tarch::la::Vector<DIMENSIONS, int>> refinedOnCoarserLevel;
   for (const auto& flaggedVertex : refinementPlan[0]) {
-    for (int adjacencyEntry = 0; adjacencyEntry < TWO_POWER_D; adjacencyEntry++) {
+    for (int adjacencyEntry = 0; adjacencyEntry < peano4::CellsPerVertex; adjacencyEntry++) {
       const auto adjacentCell =
-        adjacentCellOfVertex(flaggedVertex, adjacencyEntry, cellsPerAxisOnBaseDepth, periodicBC);
-      if (adjacentCell.isInsideDomain
-          and refinedOnBaseDepth.insert(serialiseLatticeKey(adjacentCell.lattice), 0).second) {
+        adjacentCellOfVertex(flaggedVertex, adjacencyEntry, cellsPerAxisOnBaseDepth, periodicBoundaries);
+      if (
+        adjacentCell.isInsideDomain and refinedOnBaseDepth.insert(serialiseLatticeKey(adjacentCell.lattice), 0).second
+      ) {
         refinedOnCoarserLevel.push_back(adjacentCell.lattice);
       }
     }
@@ -1009,15 +1021,15 @@ std::vector<peano4::grid::LatticeIndexMap> peano4::topology::Tree::deriveRefined
   for (std::size_t planLevel = 1; planLevel < refinementPlan.size(); planLevel++) {
     const int level               = depth + static_cast<int>(planLevel);
     const int cellsPerAxisOnLevel = peano4::topology::cellsPerAxis(level);
-    refinedCellKeyTables[planLevel].reserve(refinedOnCoarserLevel.size() * THREE_POWER_D);
+    refinedCellKeyTables[planLevel].reserve(refinedOnCoarserLevel.size() * ChildrenPerCell);
     std::vector<tarch::la::Vector<DIMENSIONS, int>> refinedOnLevel;
     for (const auto& parentLattice : refinedOnCoarserLevel) {
-      for (int childPositionLinearised = 0; childPositionLinearised < THREE_POWER_D; childPositionLinearised++) {
+      for (int childPositionLinearised = 0; childPositionLinearised < ChildrenPerCell; childPositionLinearised++) {
         tarch::la::Vector<DIMENSIONS, int> childLattice(0);
         int                                remainingDigits = childPositionLinearised;
         for (int axis = 0; axis < DIMENSIONS; axis++) {
-          childLattice(axis) = parentLattice(axis) * 3 + remainingDigits % 3;
-          remainingDigits /= 3;
+          childLattice(axis) = parentLattice(axis) * SubdivisionFactor + remainingDigits % SubdivisionFactor;
+          remainingDigits /= SubdivisionFactor;
         }
         if (hasFlaggedCorner(level, cellsPerAxisOnLevel, childLattice)) {
           refinedCellKeyTables[planLevel].insert(serialiseLatticeKey(childLattice), 0);
@@ -1031,7 +1043,7 @@ std::vector<peano4::grid::LatticeIndexMap> peano4::topology::Tree::deriveRefined
 }
 
 void peano4::topology::Tree::derivePlanRefinedCellKeys(const RefinementPlan& refinementPlan) {
-  _planRefinedCellKeys = deriveRefinedCellKeyTables(_depth, _periodicBC, refinementPlan);
+  _planRefinedCellKeys = deriveRefinedCellKeyTables(_depth, _periodicBoundaries, refinementPlan);
 }
 
 /**
@@ -1071,7 +1083,7 @@ peano4::topology::Tree::PruneExtent peano4::topology::Tree::pruneRefinementDelta
   const auto pruneSubtreeOf = [this, &pruneExtent](const auto& recurse, const int cellIndex) -> void {
     const auto childrenBlock = _cells[cellIndex].childrenBlock;
     assertion(childrenBlock >= 0, cellIndex);
-    for (int childPositionLinearised = 0; childPositionLinearised < THREE_POWER_D; childPositionLinearised++) {
+    for (int childPositionLinearised = 0; childPositionLinearised < ChildrenPerCell; childPositionLinearised++) {
       const auto childCellIndex = childrenBlock + childPositionLinearised;
       auto&      child          = _cells[childCellIndex];
       if (child.childrenBlock >= 0) {
@@ -1102,14 +1114,17 @@ peano4::topology::Tree::PruneExtent peano4::topology::Tree::pruneRefinementDelta
     const int level               = _depth + planLevel;
     const int cellsPerAxisOnLevel = getCellsPerAxisOfLevel(level);
     for (const auto& removedFlag : removedFlags[planLevel]) {
-      for (int adjacencyEntry = 0; adjacencyEntry < TWO_POWER_D; adjacencyEntry++) {
-        const auto adjacentCell = adjacentCellOfVertex(removedFlag, adjacencyEntry, cellsPerAxisOnLevel, _periodicBC);
+      for (int adjacencyEntry = 0; adjacencyEntry < peano4::CellsPerVertex; adjacencyEntry++) {
+        const auto adjacentCell =
+          adjacentCellOfVertex(removedFlag, adjacencyEntry, cellsPerAxisOnLevel, _periodicBoundaries);
         if (not adjacentCell.isInsideDomain) {
           continue;
         }
         const auto cellIndex = getCellAt(level, adjacentCell.lattice);
-        if (cellIndex >= 0 and _cells[cellIndex].level >= 0 and _cells[cellIndex].childrenBlock >= 0
-            and not isCellRefinedInPlan(level, adjacentCell.lattice)) {
+        if (
+          cellIndex >= 0 and _cells[cellIndex].level >= 0 and _cells[cellIndex].childrenBlock >= 0
+          and not isCellRefinedInPlan(level, adjacentCell.lattice)
+        ) {
           pruneSubtreeOf(pruneSubtreeOf, cellIndex);
         }
       }
@@ -1120,21 +1135,25 @@ peano4::topology::Tree::PruneExtent peano4::topology::Tree::pruneRefinementDelta
       }
       // The removed flag governed the fine vertices around it, and the pruned
       // cells covered the fine vertices on the region's hull, so the whole
-      // 7^d window one flag reaches reclassifies.
+      // window of fine vertices one flag reaches reclassifies: The fine
+      // vertices of the adjacent cells, k on either side of the flag along
+      // every axis for the subdivision factor k.
       if (level + 1 < static_cast<int>(_cellsPerAxisOfLevel.size())) {
-        const int fineCellsPerAxis        = getCellsPerAxisOfLevel(level + 1);
-        int       numberOfWindowPositions = 1;
+        constexpr int WindowWidth             = 2 * SubdivisionFactor + 1;
+        const int     fineCellsPerAxis        = getCellsPerAxisOfLevel(level + 1);
+        int           numberOfWindowPositions = 1;
         for (int axis = 0; axis < DIMENSIONS; axis++) {
-          numberOfWindowPositions *= 7;
+          numberOfWindowPositions *= WindowWidth;
         }
         for (int positionNumber = 0; positionNumber < numberOfWindowPositions; positionNumber++) {
           tarch::la::Vector<DIMENSIONS, int> fineLattice(0);
           int                                remainingIndex = positionNumber;
           bool                               isValid        = true;
           for (int axis = 0; axis < DIMENSIONS; axis++) {
-            int fineCoordinate = 3 * removedFlag(axis) + remainingIndex % 7 - 3;
-            remainingIndex /= 7;
-            if (_periodicBC[axis]) {
+            int fineCoordinate =
+              SubdivisionFactor * removedFlag(axis) + remainingIndex % WindowWidth - SubdivisionFactor;
+            remainingIndex /= WindowWidth;
+            if (_periodicBoundaries[axis]) {
               fineCoordinate = (fineCoordinate + fineCellsPerAxis) % fineCellsPerAxis;
             }
             isValid           = isValid and fineCoordinate >= 0 and fineCoordinate <= fineCellsPerAxis;
@@ -1251,10 +1270,10 @@ void peano4::topology::Tree::buildPlanQueryTablesFrom(
                                   const int                                 cellsPerAxisOnLevel,
                                   const tarch::la::Vector<DIMENSIONS, int>& cellLattice
                                 ) {
-    for (int vertexNumber = 0; vertexNumber < TWO_POWER_D; vertexNumber++) {
-      const auto cornerLattice = cornerLatticeOfCell(cellLattice, vertexNumber, cellsPerAxisOnLevel, _periodicBC);
-      if (_buildFlagKeys[planLevel].find(serialiseLatticeKey(cornerLattice))
-          != peano4::grid::LatticeIndexMap::NoEntry) {
+    for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell; vertexNumber++) {
+      const auto cornerLattice =
+        cornerLatticeOfCell(cellLattice, vertexNumber, cellsPerAxisOnLevel, _periodicBoundaries);
+      if (_buildFlagKeys[planLevel].find(serialiseLatticeKey(cornerLattice)) != peano4::grid::LatticeIndexMap::NoEntry) {
         return true;
       }
     }
@@ -1267,18 +1286,18 @@ void peano4::topology::Tree::buildPlanQueryTablesFrom(
       }
       tarch::la::Vector<DIMENSIONS, int> parentLattice(0);
       for (int axis = 0; axis < DIMENSIONS; axis++) {
-        parentLattice(axis) = cellLattice(axis) / 3;
+        parentLattice(axis) = cellLattice(axis) / SubdivisionFactor;
       }
       return _planRefinedCellKeys[planLevel - 1].find(serialiseLatticeKey(parentLattice))
         != peano4::grid::LatticeIndexMap::NoEntry;
     };
   const auto forEachChild = [](const tarch::la::Vector<DIMENSIONS, int>& parentLattice, const auto& visit) {
-    for (int childPositionLinearised = 0; childPositionLinearised < THREE_POWER_D; childPositionLinearised++) {
+    for (int childPositionLinearised = 0; childPositionLinearised < ChildrenPerCell; childPositionLinearised++) {
       tarch::la::Vector<DIMENSIONS, int> childLattice(0);
       int                                remainingDigits = childPositionLinearised;
       for (int axis = 0; axis < DIMENSIONS; axis++) {
-        childLattice(axis) = parentLattice(axis) * 3 + remainingDigits % 3;
-        remainingDigits /= 3;
+        childLattice(axis) = parentLattice(axis) * SubdivisionFactor + remainingDigits % SubdivisionFactor;
+        remainingDigits /= SubdivisionFactor;
       }
       visit(childLattice);
     }
@@ -1302,10 +1321,13 @@ void peano4::topology::Tree::buildPlanQueryTablesFrom(
     }
     // A cell that lost its last flagged corner leaves.
     for (const auto& removedFlag : flagsOfLevel(removedFlags, planLevel)) {
-      for (int adjacencyEntry = 0; adjacencyEntry < TWO_POWER_D; adjacencyEntry++) {
-        const auto adjacentCell = adjacentCellOfVertex(removedFlag, adjacencyEntry, cellsPerAxisOnLevel, _periodicBC);
-        if (adjacentCell.isInsideDomain and not hasFlaggedCorner(planLevel, cellsPerAxisOnLevel, adjacentCell.lattice)
-            and refinedCellKeys.erase(serialiseLatticeKey(adjacentCell.lattice))) {
+      for (int adjacencyEntry = 0; adjacencyEntry < peano4::CellsPerVertex; adjacencyEntry++) {
+        const auto adjacentCell =
+          adjacentCellOfVertex(removedFlag, adjacencyEntry, cellsPerAxisOnLevel, _periodicBoundaries);
+        if (
+          adjacentCell.isInsideDomain and not hasFlaggedCorner(planLevel, cellsPerAxisOnLevel, adjacentCell.lattice)
+          and refinedCellKeys.erase(serialiseLatticeKey(adjacentCell.lattice))
+        ) {
           unrefinedOnLevel.push_back(adjacentCell.lattice);
         }
       }
@@ -1314,18 +1336,23 @@ void peano4::topology::Tree::buildPlanQueryTablesFrom(
     // refinement enter.
     for (const auto& parentLattice : refinedOnCoarserLevel) {
       forEachChild(parentLattice, [&](const tarch::la::Vector<DIMENSIONS, int>& childLattice) {
-        if (hasFlaggedCorner(planLevel, cellsPerAxisOnLevel, childLattice)
-            and refinedCellKeys.insert(serialiseLatticeKey(childLattice), 0).second) {
+        if (
+          hasFlaggedCorner(planLevel, cellsPerAxisOnLevel, childLattice)
+          and refinedCellKeys.insert(serialiseLatticeKey(childLattice), 0).second
+        ) {
           refinedOnLevel.push_back(childLattice);
         }
       });
     }
     // A cell with an added flagged corner below a refined parent enters.
     for (const auto& addedFlag : flagsOfLevel(addedFlags, planLevel)) {
-      for (int adjacencyEntry = 0; adjacencyEntry < TWO_POWER_D; adjacencyEntry++) {
-        const auto adjacentCell = adjacentCellOfVertex(addedFlag, adjacencyEntry, cellsPerAxisOnLevel, _periodicBC);
-        if (adjacentCell.isInsideDomain and parentIsRefined(planLevel, adjacentCell.lattice)
-            and refinedCellKeys.insert(serialiseLatticeKey(adjacentCell.lattice), 0).second) {
+      for (int adjacencyEntry = 0; adjacencyEntry < peano4::CellsPerVertex; adjacencyEntry++) {
+        const auto adjacentCell =
+          adjacentCellOfVertex(addedFlag, adjacencyEntry, cellsPerAxisOnLevel, _periodicBoundaries);
+        if (
+          adjacentCell.isInsideDomain and parentIsRefined(planLevel, adjacentCell.lattice)
+          and refinedCellKeys.insert(serialiseLatticeKey(adjacentCell.lattice), 0).second
+        ) {
           refinedOnLevel.push_back(adjacentCell.lattice);
         }
       }
@@ -1355,14 +1382,15 @@ void peano4::topology::Tree::validatePlanQueryTables(const RefinementPlan& refin
       refinementPlan[planLevel].size()
     );
     for (const auto& flaggedVertex : refinementPlan[planLevel]) {
+      const auto flaggedVertexKey = serialiseLatticeKey(flaggedVertex);
       assertion(
-        _buildFlagKeys[planLevel].find(serialiseLatticeKey(flaggedVertex)) != peano4::grid::LatticeIndexMap::NoEntry,
+        _buildFlagKeys[planLevel].find(flaggedVertexKey) != peano4::grid::LatticeIndexMap::NoEntry,
         planLevel,
         flaggedVertex
       );
     }
   }
-  const auto freshRefinedCellKeys = deriveRefinedCellKeyTables(_depth, _periodicBC, refinementPlan);
+  const auto freshRefinedCellKeys = deriveRefinedCellKeyTables(_depth, _periodicBoundaries, refinementPlan);
   assertion(
     _planRefinedCellKeys.size() == freshRefinedCellKeys.size(),
     _planRefinedCellKeys.size(),
@@ -1424,8 +1452,8 @@ void peano4::topology::Tree::prepareAsPlanQueryView(const int depth, const int m
 
 /**
  * Realises a refinement delta on the standing structure by appending: Every
- * cell the union plan refines beyond the current structure gains its 3^d
- * children at the end of the entity arrays, their corners and sides join the
+ * cell the union plan refines beyond the current structure gains its
+ * ChildrenPerCell children at the end of the entity arrays, their corners and sides join the
  * lattice maps, and the vertex states around the additions reclassify under
  * the union plan. Nothing moves and nothing disappears, so every existing
  * entity keeps its index. The plan-query tables stay on the plan the structure
@@ -1486,15 +1514,15 @@ peano4::topology::Tree::RefinementDeltaExtent peano4::topology::Tree::appendRefi
 
     const int childrenBlock               = static_cast<int>(_cells.size());
     _cells[parentCellIndex].childrenBlock = childrenBlock;
-    for (int childPositionLinearised = 0; childPositionLinearised < THREE_POWER_D; childPositionLinearised++) {
+    for (int childPositionLinearised = 0; childPositionLinearised < ChildrenPerCell; childPositionLinearised++) {
       peano4::topology::TreeCell cell;
       cell.level          = childLevel;
       cell.parent         = parentCellIndex;
       cell.childrenBlock  = -1;
       int remainingDigits = childPositionLinearised;
       for (int axis = 0; axis < DIMENSIONS; axis++) {
-        cell.latticeIndex(axis) = parentLattice(axis) * 3 + remainingDigits % 3;
-        remainingDigits /= 3;
+        cell.latticeIndex(axis) = parentLattice(axis) * SubdivisionFactor + remainingDigits % SubdivisionFactor;
+        remainingDigits /= SubdivisionFactor;
       }
       cell.ownerTreeId = getOwnerOfCellAt(childLevel, cell.latticeIndex);
       cellIndexOfLattice.insert(serialiseLatticeKey(cell.latticeIndex), childrenBlock + childPositionLinearised);
@@ -1502,11 +1530,11 @@ peano4::topology::Tree::RefinementDeltaExtent peano4::topology::Tree::appendRefi
       _cells.push_back(cell);
     }
 
-    for (int childPositionLinearised = 0; childPositionLinearised < THREE_POWER_D; childPositionLinearised++) {
+    for (int childPositionLinearised = 0; childPositionLinearised < ChildrenPerCell; childPositionLinearised++) {
       auto& cell = _cells[childrenBlock + childPositionLinearised];
-      for (int vertexNumber = 0; vertexNumber < TWO_POWER_D; vertexNumber++) {
+      for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell; vertexNumber++) {
         const auto vertexLattice =
-          cornerLatticeOfCell(cell.latticeIndex, vertexNumber, cellsPerAxisOnLevel, _periodicBC);
+          cornerLatticeOfCell(cell.latticeIndex, vertexNumber, cellsPerAxisOnLevel, _periodicBoundaries);
         const auto [vertexIndex, isNewVertex] =
           vertexIndexOfLattice.insert(serialiseLatticeKey(vertexLattice), static_cast<int>(_vertices.size()));
         if (isNewVertex) {
@@ -1524,13 +1552,13 @@ peano4::topology::Tree::RefinementDeltaExtent peano4::topology::Tree::appendRefi
         }
         cell.vertexIndices[vertexNumber] = vertexIndex;
       }
-      for (int faceNumber = 0; faceNumber < TWO_TIMES_D; faceNumber++) {
+      for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
         const int normal      = faceNumber % DIMENSIONS;
         auto      faceLattice = cell.latticeIndex;
         if (faceNumber >= DIMENSIONS) {
           faceLattice(normal) += 1;
         }
-        if (_periodicBC[normal] and faceLattice(normal) == cellsPerAxisOnLevel) {
+        if (_periodicBoundaries[normal] and faceLattice(normal) == cellsPerAxisOnLevel) {
           faceLattice(normal) = 0;
         }
         const auto [faceIndex, isNewFace] =
@@ -1553,8 +1581,9 @@ peano4::topology::Tree::RefinementDeltaExtent peano4::topology::Tree::appendRefi
     std::vector<int> cellsToRefine;
     if (planLevel < static_cast<int>(addedFlags.size())) {
       for (const auto& addedFlag : addedFlags[planLevel]) {
-        for (int adjacencyEntry = 0; adjacencyEntry < TWO_POWER_D; adjacencyEntry++) {
-          const auto adjacentCell = adjacentCellOfVertex(addedFlag, adjacencyEntry, cellsPerAxisOnLevel, _periodicBC);
+        for (int adjacencyEntry = 0; adjacencyEntry < peano4::CellsPerVertex; adjacencyEntry++) {
+          const auto adjacentCell =
+            adjacentCellOfVertex(addedFlag, adjacencyEntry, cellsPerAxisOnLevel, _periodicBoundaries);
           if (not adjacentCell.isInsideDomain or not isLocalBlockOfCell(level, adjacentCell.lattice)) {
             continue;
           }
@@ -1564,22 +1593,26 @@ peano4::topology::Tree::RefinementDeltaExtent peano4::topology::Tree::appendRefi
           }
         }
         // A flag reclassifies its own vertex and the fine vertices it
-        // governs, whose hanging state depended on it.
+        // governs, whose hanging state depended on it: The fine vertices
+        // strictly inside the adjacent cells, k-1 on either side of the flag
+        // along every axis for the subdivision factor k.
         reclassifyVertexAt(level, addedFlag);
         if (level + 1 <= maxLevel) {
-          const int fineCellsPerAxis          = getCellsPerAxisOfLevel(level + 1);
-          int       numberOfGovernedPositions = 1;
+          constexpr int GovernedWidth             = 2 * SubdivisionFactor - 1;
+          const int     fineCellsPerAxis          = getCellsPerAxisOfLevel(level + 1);
+          int           numberOfGovernedPositions = 1;
           for (int axis = 0; axis < DIMENSIONS; axis++) {
-            numberOfGovernedPositions *= 5;
+            numberOfGovernedPositions *= GovernedWidth;
           }
           for (int positionNumber = 0; positionNumber < numberOfGovernedPositions; positionNumber++) {
             tarch::la::Vector<DIMENSIONS, int> fineLattice(0);
             int                                remainingIndex = positionNumber;
             bool                               isValid        = true;
             for (int axis = 0; axis < DIMENSIONS; axis++) {
-              int fineCoordinate = 3 * addedFlag(axis) + remainingIndex % 5 - 2;
-              remainingIndex /= 5;
-              if (_periodicBC[axis]) {
+              int fineCoordinate =
+                SubdivisionFactor * addedFlag(axis) + remainingIndex % GovernedWidth - (SubdivisionFactor - 1);
+              remainingIndex /= GovernedWidth;
+              if (_periodicBoundaries[axis]) {
                 fineCoordinate = (fineCoordinate + fineCellsPerAxis) % fineCellsPerAxis;
               }
               isValid           = isValid and fineCoordinate >= 0 and fineCoordinate <= fineCellsPerAxis;
@@ -1594,9 +1627,13 @@ peano4::topology::Tree::RefinementDeltaExtent peano4::topology::Tree::appendRefi
     }
     for (const auto createdCellIndex : createdCellsOnLevel) {
       bool hasFlaggedCorner = false;
-      for (int vertexNumber = 0; vertexNumber < TWO_POWER_D; vertexNumber++) {
-        const auto cornerLattice =
-          cornerLatticeOfCell(_cells[createdCellIndex].latticeIndex, vertexNumber, cellsPerAxisOnLevel, _periodicBC);
+      for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell; vertexNumber++) {
+        const auto cornerLattice = cornerLatticeOfCell(
+          _cells[createdCellIndex].latticeIndex,
+          vertexNumber,
+          cellsPerAxisOnLevel,
+          _periodicBoundaries
+        );
         hasFlaggedCorner = hasFlaggedCorner or unionPlanView.isVertexRefinedInPlan(level, cornerLattice);
       }
       if (hasFlaggedCorner) {
@@ -1630,7 +1667,7 @@ bool peano4::topology::Tree::cellExistsInPlan(
   }
   tarch::la::Vector<DIMENSIONS, int> parentLattice(0);
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    parentLattice(axis) = cellLattice(axis) / 3;
+    parentLattice(axis) = cellLattice(axis) / SubdivisionFactor;
   }
   return isCellRefinedInPlan(level - 1, parentLattice);
 }
@@ -1668,7 +1705,7 @@ bool peano4::topology::Tree::isVertexPersistentInPlan(
   return everyAdjacentCellExists(
     vertexLattice,
     peano4::topology::cellsPerAxis(level),
-    _periodicBC,
+    _periodicBoundaries,
     [&](const tarch::la::Vector<DIMENSIONS, int>& cellLattice) { return cellExistsInPlan(level, cellLattice); }
   );
 }
@@ -1689,7 +1726,7 @@ bool peano4::topology::Tree::hasRefinedGoverningVertex(
   return anyGoverningVertexSatisfies(
     vertexLattice,
     peano4::topology::cellsPerAxis(level - 1),
-    _periodicBC,
+    _periodicBoundaries,
     [&](const tarch::la::Vector<DIMENSIONS, int>& coarseVertexLattice) {
       return isVertexRefinedInPlan(level - 1, coarseVertexLattice);
     }
@@ -1716,8 +1753,9 @@ void peano4::topology::Tree::deriveSurroundedVertices() const {
     const int cellsPerAxisOnLevel = getCellsPerAxisOfLevel(level);
 
     const auto forEachAdjacentCell = [&](const tarch::la::Vector<DIMENSIONS, int>& vertexLattice, const auto& visit) {
-      for (int adjacencyEntry = 0; adjacencyEntry < TWO_POWER_D; adjacencyEntry++) {
-        const auto adjacentCell = adjacentCellOfVertex(vertexLattice, adjacencyEntry, cellsPerAxisOnLevel, _periodicBC);
+      for (int adjacencyEntry = 0; adjacencyEntry < peano4::CellsPerVertex; adjacencyEntry++) {
+        const auto adjacentCell =
+          adjacentCellOfVertex(vertexLattice, adjacencyEntry, cellsPerAxisOnLevel, _periodicBoundaries);
         if (adjacentCell.isInsideDomain) {
           visit(adjacentCell.lattice);
         }
@@ -1729,13 +1767,13 @@ void peano4::topology::Tree::deriveSurroundedVertices() const {
     // flag has an unrefined neighbour.
     const auto&               refinedCellKeys = _planRefinedCellKeys[planLevel];
     std::vector<std::int64_t> candidateVertexKeys;
-    candidateVertexKeys.reserve(refinedCellKeys.size() * TWO_POWER_D);
+    candidateVertexKeys.reserve(refinedCellKeys.size() * peano4::VerticesPerCell);
     refinedCellKeys.forEachEntry([&](const std::int64_t refinedCellKey, const int unusedValue) {
       static_cast<void>(unusedValue);
       const auto cellLattice = deserialiseLatticeKey(refinedCellKey);
-      for (int vertexNumber = 0; vertexNumber < TWO_POWER_D; vertexNumber++) {
+      for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell; vertexNumber++) {
         candidateVertexKeys.push_back(
-          serialiseLatticeKey(cornerLatticeOfCell(cellLattice, vertexNumber, cellsPerAxisOnLevel, _periodicBC))
+          serialiseLatticeKey(cornerLatticeOfCell(cellLattice, vertexNumber, cellsPerAxisOnLevel, _periodicBoundaries))
         );
       }
     });
@@ -1844,7 +1882,7 @@ bool peano4::topology::Tree::updateRefinementPlan(
 
   const auto vertexLatticeOfCorner =
     [this](const int level, const tarch::la::Vector<DIMENSIONS, int>& cellLattice, const int vertexNumber) {
-      return cornerLatticeOfCell(cellLattice, vertexNumber, peano4::topology::cellsPerAxis(level), _periodicBC);
+      return cornerLatticeOfCell(cellLattice, vertexNumber, peano4::topology::cellsPerAxis(level), _periodicBoundaries);
     };
 
   bool changed = false;
@@ -1874,7 +1912,7 @@ bool peano4::topology::Tree::updateRefinementPlan(
         // request beside the wrap covers the same ring as one in the interior.
         int lowestCandidate  = floorDivide(event.latticeIndex(axis) - 1, cellsPerBandCell);
         int highestCandidate = floorDivide(event.latticeIndex(axis) + 1, cellsPerBandCell);
-        if (not _periodicBC[axis]) {
+        if (not _periodicBoundaries[axis]) {
           lowestCandidate  = std::max(lowestCandidate, 0);
           highestCandidate = std::min(highestCandidate, cellsPerAxisOnLevel - 1);
         }
@@ -1888,7 +1926,7 @@ bool peano4::topology::Tree::updateRefinementPlan(
         int                                remainingIndex = candidate;
         for (int axis = 0; axis < DIMENSIONS; axis++) {
           int coordinate = firstCell(axis) + remainingIndex % numberOfCellsPerAxis(axis);
-          if (_periodicBC[axis]) {
+          if (_periodicBoundaries[axis]) {
             coordinate = (coordinate % cellsPerAxisOnLevel + cellsPerAxisOnLevel) % cellsPerAxisOnLevel;
           }
           cellLattice(axis) = coordinate;
@@ -1900,7 +1938,7 @@ bool peano4::topology::Tree::updateRefinementPlan(
         if (hasEraseEvents) {
           refiningCells[level - _depth].insert(serialiseLatticeKey(cellLattice));
         }
-        for (int vertexNumber = 0; vertexNumber < TWO_POWER_D; vertexNumber++) {
+        for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell; vertexNumber++) {
           const auto cornerLattice = vertexLatticeOfCorner(level, cellLattice, vertexNumber);
           if (not isVertexRefinedInPlan(level, cornerLattice) and hasRefinedGoverningVertex(level, cornerLattice)) {
             changed = flagVertex(level, cornerLattice) or changed;
@@ -1959,9 +1997,10 @@ bool peano4::topology::Tree::updateRefinementPlan(
       std::unordered_set<std::int64_t> candidateKeysOnLevel;
       for (const auto erasingCellKey : erasingCells[planLevel]) {
         const auto cellLattice = deserialiseLatticeKey(erasingCellKey);
-        for (int vertexNumber = 0; vertexNumber < TWO_POWER_D; vertexNumber++) {
-          const auto vertexKey =
-            serialiseLatticeKey(cornerLatticeOfCell(cellLattice, vertexNumber, cellsPerAxisOnLevel, _periodicBC));
+        for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell; vertexNumber++) {
+          const auto vertexKey = serialiseLatticeKey(
+            cornerLatticeOfCell(cellLattice, vertexNumber, cellsPerAxisOnLevel, _periodicBoundaries)
+          );
           if (isFlagged(level, vertexKey) and candidateKeysOnLevel.insert(vertexKey).second) {
             candidates.push_back({level, vertexKey});
           }
@@ -1984,29 +2023,36 @@ bool peano4::topology::Tree::updateRefinementPlan(
           const auto vertexLattice       = deserialiseLatticeKey(candidates[candidateNumber].vertexKey);
 
           // The veto: Refined structure one level finer still needs this
-          // vertex while any flagged vertex sits within two fine cells of it.
+          // vertex while a flagged vertex sits in the fine neighbourhood it
+          // governs.
           bool       vetoed          = false;
           const auto finerPlanLevel  = static_cast<std::size_t>(level - _depth) + 1;
           const bool finerLevelFlags = finerPlanLevel < numberOfFlagLevels
             and ((finerPlanLevel < _buildFlagKeys.size() and _buildFlagKeys[finerPlanLevel].size() > 0)
                  or not addedKeys[finerPlanLevel].empty());
           if (finerLevelFlags) {
+            // The flags strictly inside the adjacent cells, k-1 fine cells on
+            // either side of the vertex along every axis for the subdivision
+            // factor k.
+            constexpr int                      GovernedWidth = 2 * SubdivisionFactor - 1;
             tarch::la::Vector<DIMENSIONS, int> fineNeighbourhoodLattice(0);
             int                                numberOfPositions = 1;
             for (int axis = 0; axis < DIMENSIONS; axis++) {
-              numberOfPositions *= 5;
+              numberOfPositions *= GovernedWidth;
             }
             for (int positionNumber = 0; positionNumber < numberOfPositions and not vetoed; positionNumber++) {
               int  remainingIndex = positionNumber;
               bool isValid        = true;
               for (int axis = 0; axis < DIMENSIONS; axis++) {
-                int fineCoordinate = 3 * vertexLattice(axis) + remainingIndex % 5 - 2;
-                remainingIndex /= 5;
-                if (_periodicBC[axis]) {
-                  const int fineCellsPerAxis = 3 * cellsPerAxisOnLevel;
+                int fineCoordinate =
+                  SubdivisionFactor * vertexLattice(axis) + remainingIndex % GovernedWidth - (SubdivisionFactor - 1);
+                remainingIndex /= GovernedWidth;
+                if (_periodicBoundaries[axis]) {
+                  const int fineCellsPerAxis = SubdivisionFactor * cellsPerAxisOnLevel;
                   fineCoordinate             = (fineCoordinate + fineCellsPerAxis) % fineCellsPerAxis;
                 } else {
-                  isValid = isValid and fineCoordinate >= 0 and fineCoordinate <= 3 * cellsPerAxisOnLevel;
+                  isValid =
+                    isValid and fineCoordinate >= 0 and fineCoordinate <= SubdivisionFactor * cellsPerAxisOnLevel;
                 }
                 fineNeighbourhoodLattice(axis) = fineCoordinate;
               }
@@ -2018,9 +2064,10 @@ bool peano4::topology::Tree::updateRefinementPlan(
           }
 
           bool everyNeighbourCellErases = true;
-          for (int adjacencyEntry = 0; adjacencyEntry < TWO_POWER_D and everyNeighbourCellErases; adjacencyEntry++) {
+          for (int adjacencyEntry = 0; adjacencyEntry < peano4::CellsPerVertex and everyNeighbourCellErases;
+               adjacencyEntry++) {
             const auto adjacentCell =
-              adjacentCellOfVertex(vertexLattice, adjacencyEntry, cellsPerAxisOnLevel, _periodicBC);
+              adjacentCellOfVertex(vertexLattice, adjacencyEntry, cellsPerAxisOnLevel, _periodicBoundaries);
             if (not adjacentCell.isInsideDomain or not cellExistsInPlan(level, adjacentCell.lattice)) {
               continue;
             }
@@ -2046,9 +2093,10 @@ bool peano4::topology::Tree::updateRefinementPlan(
       const int  cellsPerAxisOnLevel = peano4::topology::cellsPerAxis(level);
       auto&      removedKeys         = removedKeysPerLevel[level - _depth];
       const auto cellKeepsAFlag      = [&](const tarch::la::Vector<DIMENSIONS, int>& cellLattice) {
-        for (int vertexNumber = 0; vertexNumber < TWO_POWER_D; vertexNumber++) {
-          const auto cornerKey =
-            serialiseLatticeKey(cornerLatticeOfCell(cellLattice, vertexNumber, cellsPerAxisOnLevel, _periodicBC));
+        for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell; vertexNumber++) {
+          const auto cornerKey = serialiseLatticeKey(
+            cornerLatticeOfCell(cellLattice, vertexNumber, cellsPerAxisOnLevel, _periodicBoundaries)
+          );
           if (isFlagged(level, cornerKey) and not removedKeys.contains(cornerKey)) {
             return true;
           }
@@ -2061,10 +2109,10 @@ bool peano4::topology::Tree::updateRefinementPlan(
         for (auto removedKey = removedKeys.begin(); removedKey != removedKeys.end();) {
           const auto vertexLattice                = deserialiseLatticeKey(*removedKey);
           bool       everyNeighbourCellKeepsAFlag = true;
-          for (int adjacencyEntry = 0; adjacencyEntry < TWO_POWER_D and everyNeighbourCellKeepsAFlag;
+          for (int adjacencyEntry = 0; adjacencyEntry < peano4::CellsPerVertex and everyNeighbourCellKeepsAFlag;
                adjacencyEntry++) {
             const auto adjacentCell =
-              adjacentCellOfVertex(vertexLattice, adjacencyEntry, cellsPerAxisOnLevel, _periodicBC);
+              adjacentCellOfVertex(vertexLattice, adjacencyEntry, cellsPerAxisOnLevel, _periodicBoundaries);
             if (adjacentCell.isInsideDomain and cellExistsInPlan(level, adjacentCell.lattice)) {
               everyNeighbourCellKeepsAFlag = cellKeepsAFlag(adjacentCell.lattice);
             }
@@ -2186,11 +2234,13 @@ peano4::topology::Tree::PlanLeafWeights peano4::topology::Tree::derivePlanLeafWe
   const int cellsPerAxisOnBaseDepth = peano4::topology::cellsPerAxis(depth);
   if (not refinementPlan.empty()) {
     for (const auto& flaggedVertex : refinementPlan[0]) {
-      for (int adjacencyEntry = 0; adjacencyEntry < TWO_POWER_D; adjacencyEntry++) {
+      for (int adjacencyEntry = 0; adjacencyEntry < peano4::CellsPerVertex; adjacencyEntry++) {
         const auto adjacentCell =
-          adjacentCellOfVertex(flaggedVertex, adjacencyEntry, cellsPerAxisOnBaseDepth, _periodicBC);
-        if (adjacentCell.isInsideDomain
-            and refinedCellKeys[depth].insert(serialiseLatticeKey(adjacentCell.lattice), 0).second) {
+          adjacentCellOfVertex(flaggedVertex, adjacencyEntry, cellsPerAxisOnBaseDepth, _periodicBoundaries);
+        if (
+          adjacentCell.isInsideDomain
+          and refinedCellKeys[depth].insert(serialiseLatticeKey(adjacentCell.lattice), 0).second
+        ) {
           refinedCells[depth].push_back(adjacentCell.lattice);
         }
       }
@@ -2201,16 +2251,17 @@ peano4::topology::Tree::PlanLeafWeights peano4::topology::Tree::derivePlanLeafWe
     const int   cellsPerAxisOnLevel = peano4::topology::cellsPerAxis(level);
     const auto& flagsOnLevel        = flaggedVertexKeys[level - depth];
     for (const auto& parentLattice : refinedCells[level - 1]) {
-      for (int childPositionLinearised = 0; childPositionLinearised < THREE_POWER_D; childPositionLinearised++) {
+      for (int childPositionLinearised = 0; childPositionLinearised < ChildrenPerCell; childPositionLinearised++) {
         tarch::la::Vector<DIMENSIONS, int> childLattice(0);
         int                                remainingDigits = childPositionLinearised;
         for (int axis = 0; axis < DIMENSIONS; axis++) {
-          childLattice(axis) = parentLattice(axis) * 3 + remainingDigits % 3;
-          remainingDigits /= 3;
+          childLattice(axis) = parentLattice(axis) * SubdivisionFactor + remainingDigits % SubdivisionFactor;
+          remainingDigits /= SubdivisionFactor;
         }
         bool childIsRefined = false;
-        for (int vertexNumber = 0; vertexNumber < TWO_POWER_D and not childIsRefined; vertexNumber++) {
-          const auto vertexLattice = cornerLatticeOfCell(childLattice, vertexNumber, cellsPerAxisOnLevel, _periodicBC);
+        for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell and not childIsRefined; vertexNumber++) {
+          const auto vertexLattice =
+            cornerLatticeOfCell(childLattice, vertexNumber, cellsPerAxisOnLevel, _periodicBoundaries);
           childIsRefined =
             flagsOnLevel.find(serialiseLatticeKey(vertexLattice)) != peano4::grid::LatticeIndexMap::NoEntry;
         }
@@ -2226,14 +2277,14 @@ peano4::topology::Tree::PlanLeafWeights peano4::topology::Tree::derivePlanLeafWe
   adaptiveLeafDeltas.resize(maximumLevel + 1);
   for (int level = depth; level < maximumLevel; level++) {
     for (const auto& refinedCell : refinedCells[level]) {
-      adaptiveLeafDeltas[level][serialiseLatticeKey(refinedCell)] += THREE_POWER_D - 1;
+      adaptiveLeafDeltas[level][serialiseLatticeKey(refinedCell)] += ChildrenPerCell - 1;
     }
   }
   for (int level = maximumLevel; level > 0; level--) {
     for (const auto& [cellKey, leafDelta] : adaptiveLeafDeltas[level]) {
       auto parentLattice = deserialiseLatticeKey(cellKey);
       for (int axis = 0; axis < DIMENSIONS; axis++) {
-        parentLattice(axis) /= 3;
+        parentLattice(axis) /= SubdivisionFactor;
       }
       adaptiveLeafDeltas[level - 1][serialiseLatticeKey(parentLattice)] += leafDelta;
     }
@@ -2242,10 +2293,10 @@ peano4::topology::Tree::PlanLeafWeights peano4::topology::Tree::derivePlanLeafWe
   auto& regularLeafWeights = weights.regularLeafWeights;
   regularLeafWeights.assign(depth + 1, 1);
   for (int level = depth - 1; level >= 0; level--) {
-    if (regularLeafWeights[level + 1] > std::numeric_limits<int>::max() / THREE_POWER_D) {
+    if (regularLeafWeights[level + 1] > std::numeric_limits<int>::max() / ChildrenPerCell) {
       tarch::terminateWithError("The refinement plan exceeds the tree's 32-bit index range.");
     }
-    regularLeafWeights[level] = regularLeafWeights[level + 1] * THREE_POWER_D;
+    regularLeafWeights[level] = regularLeafWeights[level + 1] * ChildrenPerCell;
   }
   return weights;
 }
@@ -2279,9 +2330,10 @@ std::vector<std::int64_t> peano4::topology::Tree::deriveRankLoads(
   assertion(numberOfRanks >= 1, numberOfRanks);
   constexpr int OwnershipPlanHeaderSize = 2;
   constexpr int TopologyNodeStride      = 3;
-  if (ownershipPlan.size() < OwnershipPlanHeaderSize or ownershipPlan[0] != OwnershipPlanMarker or ownershipPlan[1] < 1
-      or ownershipPlan.size()
-        != OwnershipPlanHeaderSize + static_cast<std::size_t>(ownershipPlan[1]) * TopologyNodeStride) {
+  if (
+    ownershipPlan.size() < OwnershipPlanHeaderSize or ownershipPlan[0] != OwnershipPlanMarker or ownershipPlan[1] < 1
+    or ownershipPlan.size() != OwnershipPlanHeaderSize + static_cast<std::size_t>(ownershipPlan[1]) * TopologyNodeStride
+  ) {
     tarch::terminateWithError("The rank ownership plan is invalid.");
   }
   const int  numberOfTopologyNodes = ownershipPlan[1];
@@ -2289,11 +2341,11 @@ std::vector<std::int64_t> peano4::topology::Tree::deriveRankLoads(
 
   std::vector<std::int64_t> loads(numberOfRanks, 0);
   const auto                accumulate = [&](
-                            const auto&                               recurse,
-                            const int                                 nodeIndex,
-                            const int                                 level,
-                            const tarch::la::Vector<DIMENSIONS, int>& latticeIndex
-                          ) -> void {
+                                           const auto&                               recurse,
+                                           const int                                 nodeIndex,
+                                           const int                                 level,
+                                           const tarch::la::Vector<DIMENSIONS, int>& latticeIndex
+                                         ) -> void {
     const auto planOffset    = OwnershipPlanHeaderSize + nodeIndex * TopologyNodeStride;
     const int  firstOwner    = ownershipPlan[planOffset];
     const int  lastOwner     = ownershipPlan[planOffset + 1];
@@ -2309,15 +2361,15 @@ std::vector<std::int64_t> peano4::topology::Tree::deriveRankLoads(
       loads[firstOwner] += leafWeight;
       return;
     }
-    if (childrenBlock <= nodeIndex or childrenBlock > numberOfTopologyNodes - THREE_POWER_D) {
+    if (childrenBlock <= nodeIndex or childrenBlock > numberOfTopologyNodes - ChildrenPerCell) {
       tarch::terminateWithError("The rank ownership plan is invalid.");
     }
-    for (int childPositionLinearised = 0; childPositionLinearised < THREE_POWER_D; childPositionLinearised++) {
+    for (int childPositionLinearised = 0; childPositionLinearised < ChildrenPerCell; childPositionLinearised++) {
       tarch::la::Vector<DIMENSIONS, int> childLattice(0);
       int                                remainingDigits = childPositionLinearised;
       for (int axis = 0; axis < DIMENSIONS; axis++) {
-        childLattice(axis) = latticeIndex(axis) * 3 + remainingDigits % 3;
-        remainingDigits /= 3;
+        childLattice(axis) = latticeIndex(axis) * SubdivisionFactor + remainingDigits % SubdivisionFactor;
+        remainingDigits /= SubdivisionFactor;
       }
       recurse(recurse, childrenBlock + childPositionLinearised, level + 1, childLattice);
     }
@@ -2340,9 +2392,10 @@ bool peano4::topology::Tree::ownershipPlanSplitsCellWithLeafChild(
 ) const {
   constexpr int OwnershipPlanHeaderSize = 2;
   constexpr int TopologyNodeStride      = 3;
-  if (ownershipPlan.size() < OwnershipPlanHeaderSize or ownershipPlan[0] != OwnershipPlanMarker or ownershipPlan[1] < 1
-      or ownershipPlan.size()
-        != OwnershipPlanHeaderSize + static_cast<std::size_t>(ownershipPlan[1]) * TopologyNodeStride) {
+  if (
+    ownershipPlan.size() < OwnershipPlanHeaderSize or ownershipPlan[0] != OwnershipPlanMarker or ownershipPlan[1] < 1
+    or ownershipPlan.size() != OwnershipPlanHeaderSize + static_cast<std::size_t>(ownershipPlan[1]) * TopologyNodeStride
+  ) {
     tarch::terminateWithError("The rank ownership plan is invalid.");
   }
   const int  numberOfTopologyNodes = ownershipPlan[1];
@@ -2361,18 +2414,20 @@ bool peano4::topology::Tree::ownershipPlanSplitsCellWithLeafChild(
     if (firstOwner == lastOwner) {
       return false;
     }
-    if (childrenBlock <= nodeIndex or childrenBlock > numberOfTopologyNodes - THREE_POWER_D) {
+    if (childrenBlock <= nodeIndex or childrenBlock > numberOfTopologyNodes - ChildrenPerCell) {
       tarch::terminateWithError("The rank ownership plan is invalid.");
     }
-    for (int childPositionLinearised = 0; childPositionLinearised < THREE_POWER_D; childPositionLinearised++) {
+    for (int childPositionLinearised = 0; childPositionLinearised < ChildrenPerCell; childPositionLinearised++) {
       tarch::la::Vector<DIMENSIONS, int> childLattice(0);
       int                                remainingDigits = childPositionLinearised;
       for (int axis = 0; axis < DIMENSIONS; axis++) {
-        childLattice(axis) = latticeIndex(axis) * 3 + remainingDigits % 3;
-        remainingDigits /= 3;
+        childLattice(axis) = latticeIndex(axis) * SubdivisionFactor + remainingDigits % SubdivisionFactor;
+        remainingDigits /= SubdivisionFactor;
       }
-      if ((level + 1 >= depth and level > spawnLevel and planLeafWeights.leafWeightOf(level + 1, childLattice) == 1)
-          or recurse(recurse, childrenBlock + childPositionLinearised, level + 1, childLattice)) {
+      if (
+        (level + 1 >= depth and level > spawnLevel and planLeafWeights.leafWeightOf(level + 1, childLattice) == 1)
+        or recurse(recurse, childrenBlock + childPositionLinearised, level + 1, childLattice)
+      ) {
         return true;
       }
     }
@@ -2391,13 +2446,13 @@ int peano4::topology::Tree::deriveSpawnLevel(const int targetLevel, const int nu
   constexpr auto MaximumOwnershipUnits        = std::numeric_limits<std::int64_t>::max();
   constexpr int  MinimumOwnershipUnitsPerRank = 16;
   const auto     ownershipUnitsOnLevel        = [](const int level) {
-    const auto cellsPerAxis   = static_cast<std::int64_t>(peano4::topology::cellsPerAxis(level));
-    auto       ownershipUnits = static_cast<std::int64_t>(THREE_POWER_D);
+    const auto cellsPerAxisOnLevel = static_cast<std::int64_t>(peano4::topology::cellsPerAxis(level));
+    auto       ownershipUnits      = static_cast<std::int64_t>(ChildrenPerCell);
     for (int axis = 0; axis < DIMENSIONS; axis++) {
-      if (ownershipUnits > MaximumOwnershipUnits / cellsPerAxis) {
+      if (ownershipUnits > MaximumOwnershipUnits / cellsPerAxisOnLevel) {
         return MaximumOwnershipUnits;
       }
-      ownershipUnits *= cellsPerAxis;
+      ownershipUnits *= cellsPerAxisOnLevel;
     }
     return ownershipUnits;
   };
@@ -2411,7 +2466,7 @@ int peano4::topology::Tree::deriveSpawnLevel(const int targetLevel, const int nu
 }
 
 /**
- * Derives contiguous Peano-curve intervals over weighted adaptive leaves. The
+ * Derives contiguous space-filling-curve intervals over weighted adaptive leaves. The
  * partition descends through cells whose children are all refined, while a
  * cell with any leaf child below the spawn level remains indivisible to
  * preserve transition faces and coarsening families. Topology nodes store
@@ -2441,7 +2496,7 @@ std::vector<int> peano4::topology::Tree::deriveBalancedBlockOwners(
   }
   const auto numberOfActiveRanks = static_cast<int>(std::min<std::int64_t>(numberOfRanks, totalWeight));
 
-  // The rank boundaries live in leaf-count space along the Peano curve. One
+  // The rank boundaries live in leaf-count space along the space-filling curve. One
   // walk over the curve places every boundary at the nearest side of the
   // indivisible unit its ideal split falls into.
   std::vector<std::int64_t> rankBoundaries(numberOfActiveRanks + 1, 0);
@@ -2482,12 +2537,12 @@ std::vector<int> peano4::topology::Tree::deriveBalancedBlockOwners(
         return false;
       }
       const auto& childFlags = refinedCellKeys[level + 1];
-      for (int childPositionLinearised = 0; childPositionLinearised < THREE_POWER_D; childPositionLinearised++) {
+      for (int childPositionLinearised = 0; childPositionLinearised < ChildrenPerCell; childPositionLinearised++) {
         tarch::la::Vector<DIMENSIONS, int> childLattice(0);
         int                                remainingDigits = childPositionLinearised;
         for (int axis = 0; axis < DIMENSIONS; axis++) {
-          childLattice(axis) = latticeIndex(axis) * 3 + remainingDigits % 3;
-          remainingDigits /= 3;
+          childLattice(axis) = latticeIndex(axis) * SubdivisionFactor + remainingDigits % SubdivisionFactor;
+          remainingDigits /= SubdivisionFactor;
         }
         if (childFlags.find(serialiseLatticeKey(childLattice)) == peano4::grid::LatticeIndexMap::NoEntry) {
           return false;
@@ -2510,13 +2565,16 @@ std::vector<int> peano4::topology::Tree::deriveBalancedBlockOwners(
         placeBoundariesWithinUnit(subtreeWeight);
         return;
       }
-      peano4::grid::AutomatonState fineGridStates[THREE_POWER_D];
+      peano4::grid::AutomatonState fineGridStates[ChildrenPerCell];
       peano4::grid::AutomatonState::refineState(state, fineGridStates);
-      const auto loopDirection = peano4::grid::PeanoCurve::getLoopDirection(state);
-      peano4::zForEach3(loopDirection, [&](const tarch::la::Vector<DIMENSIONS, int>& childPosition) {
-        const auto childPositionLinearised = peano4::dLinearised(childPosition, 3);
-        recurse(recurse, fineGridStates[childPositionLinearised], level + 1, latticeIndex * 3 + childPosition);
-      });
+      for (const auto& child : peano4::sfc::ActiveCurve::children(state.curveState)) {
+        recurse(
+          recurse,
+          fineGridStates[child.linearisedPosition],
+          level + 1,
+          latticeIndex * SubdivisionFactor + child.positionWithinParent()
+        );
+      }
     };
     walkUnits(walkUnits, rootState, 0, rootLattice);
     assertion(leafPrefix == totalWeight, leafPrefix, totalWeight);
@@ -2528,7 +2586,7 @@ std::vector<int> peano4::topology::Tree::deriveBalancedBlockOwners(
   };
 
   std::vector<peano4::topology::TopologyNode> topologyNodes(1);
-  const auto                                  materialiseOwnership = [&](
+  const auto materialiseOwnership = [&](
                                       const auto&                               recurse,
                                       const peano4::grid::AutomatonState&       state,
                                       const int                                 level,
@@ -2543,32 +2601,30 @@ std::vector<int> peano4::topology::Tree::deriveBalancedBlockOwners(
       return;
     }
     assertion(level < maximumLevel, level, maximumLevel);
-    if (topologyNodes.size() > static_cast<std::size_t>(std::numeric_limits<int>::max() - THREE_POWER_D)) {
+    if (topologyNodes.size() > static_cast<std::size_t>(std::numeric_limits<int>::max() - ChildrenPerCell)) {
       tarch::terminateWithError("The rank ownership plan exceeds the tree's index range.");
     }
     const auto childrenBlock                  = static_cast<int>(topologyNodes.size());
     topologyNodes[topologyNode].childrenBlock = childrenBlock;
-    topologyNodes.resize(topologyNodes.size() + THREE_POWER_D);
+    topologyNodes.resize(topologyNodes.size() + ChildrenPerCell);
 
-    peano4::grid::AutomatonState fineGridStates[THREE_POWER_D];
+    peano4::grid::AutomatonState fineGridStates[ChildrenPerCell];
     peano4::grid::AutomatonState::refineState(state, fineGridStates);
-    auto       nextLeaf      = firstLeaf;
-    const auto loopDirection = peano4::grid::PeanoCurve::getLoopDirection(state);
-    peano4::zForEach3(loopDirection, [&](const tarch::la::Vector<DIMENSIONS, int>& childPosition) {
-      const auto childPositionLinearised = peano4::dLinearised(childPosition, 3);
-      const auto childLattice            = latticeIndex * 3 + childPosition;
-      const auto childWeight             = leafWeightOf(level + 1, childLattice);
+    auto nextLeaf = firstLeaf;
+    for (const auto& child : peano4::sfc::ActiveCurve::children(state.curveState)) {
+      const auto childLattice = latticeIndex * SubdivisionFactor + child.positionWithinParent();
+      const auto childWeight  = leafWeightOf(level + 1, childLattice);
       recurse(
         recurse,
-        fineGridStates[childPositionLinearised],
+        fineGridStates[child.linearisedPosition],
         level + 1,
         childLattice,
         nextLeaf,
         childWeight,
-        childrenBlock + childPositionLinearised
+        childrenBlock + child.linearisedPosition
       );
       nextLeaf += childWeight;
-    });
+    }
     assertion(nextLeaf == firstLeaf + numberOfLeavesInSubtree, nextLeaf, firstLeaf, numberOfLeavesInSubtree);
   };
 

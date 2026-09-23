@@ -6,7 +6,7 @@
 
 Action sets attach application behaviour to the events emitted by
 peano4::topology::TreeTraversal. The Python class
-peano4.solversteps.ActionSet provides one body for each generated callback,
+exahype2.actionsets.ActionSet provides one body for each generated callback,
 and an observer invokes its action sets in their configured order.
 
 # Traversal lifecycle
@@ -57,9 +57,9 @@ Entity records do not carry their geometric or ownership context. Generated
 callbacks receive a marker that derives this information from the traversal
 event:
 
-- peano4::datamanagement::VertexMarker
-- peano4::datamanagement::FaceMarker
-- peano4::datamanagement::CellMarker
+- peano4::dataview::VertexMarker
+- peano4::dataview::FaceMarker
+- peano4::dataview::CellMarker
 
 Markers provide coordinates, mesh width, selection within the adjacent entity
 set, hanging state, refinement state, and local ownership. Debug coordinates
@@ -68,8 +68,9 @@ application interface.
 
 Generated observers translate the event's pool slots into references to the
 cell, face, and vertex data used by an action set. Interface transfers call
-the generated merge routines with peano4::stacks::SendReceiveContext::InterRank
-or peano4::stacks::SendReceiveContext::IntraRank.
+the generated merge routines with peano4::grid::SendReceiveContext::InterRank,
+peano4::grid::SendReceiveContext::IntraRank or
+peano4::grid::SendReceiveContext::Consolidation.
 
 # Coarse-grid data
 

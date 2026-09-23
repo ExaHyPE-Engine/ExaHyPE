@@ -1,0 +1,182 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+/**
+ * Advances one patch by one time step. The wave speeds come from the final state after the
+ * caller's postprocessing. A cell the solver does not advance in this sweep only adds its time
+ * stamp and its mesh width to the statistics of the solver.
+ */
+template <
+  exahype2::fv::ReconstructionScheme Reconstruction,
+  exahype2::fv::TimeSteppingScheme   TimeStepping,
+  bool                               EvaluateFlux,
+  bool                               EvaluateNonconservativeProduct,
+  bool                               EvaluateSource,
+  bool                               EvaluateDiffusiveSource,
+  bool                               EvaluateCustomRiemann,
+  bool                               EvaluateMaxEigenvalue,
+  bool                               EvaluateMaxEigenvalueOfFinalState,
+  typename ComputePrecision,
+  typename SolverType,
+  typename CellLabel,
+  typename FaceLabelEnumerator,
+  typename StoragePrecision,
+  typename FaceInputEnumerator,
+  typename FaceOutputEnumerator,
+  typename Postprocess>
+INLINE_METHOD void exahype2::fv::updatePatch(
+  const peano4::dataview::CellMarker& marker,
+  SolverType&                         solver,
+  CellLabel&                          cellLabel,
+  const FaceLabelEnumerator&          faceLabels,
+  StoragePrecision* const             inputPatch,
+  StoragePrecision* const             outputPatch,
+  const FaceInputEnumerator&          faceInput,
+  const FaceOutputEnumerator&         faceOutput,
+  const Postprocess                   postprocess
+) {
+  assertion(inputPatch != nullptr);
+  assertion(outputPatch != nullptr);
+  if (solver.getSolverState() == SolverType::SolverState::TimeStep) {
+    const auto timeStamp        = cellLabel.getTimeStamp();
+    const auto timeStepSize     = solver.getTimeStepSize();
+    const auto updatedTimeStamp = timeStamp + timeStepSize;
+
+    assertion(std::isfinite(timeStamp) and timeStamp >= 0.0, timeStamp, timeStepSize);
+    assertion(std::isfinite(timeStepSize) and timeStepSize >= 0.0, timeStamp, timeStepSize);
+    assertion(std::isfinite(updatedTimeStamp), timeStamp, timeStepSize);
+
+#if PEANO_DEBUG
+    exahype2::fv::validatePatch(
+      inputPatch,
+      SolverType::NumberOfUnknowns,
+      SolverType::NumberOfAuxiliaryVariables,
+      SolverType::NumberOfFiniteVolumesPerAxisPerPatch,
+      0,
+      std::string(__FILE__) + "(" + std::to_string(__LINE__) + ")"
+    );
+#endif
+
+    const StoragePrecision* faceQIn[peano4::FacesPerCell];
+    StoragePrecision*       faceQOut[peano4::FacesPerCell];
+    for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+      faceQIn[faceNumber]  = faceInput(faceNumber).data();
+      faceQOut[faceNumber] = faceOutput(faceNumber).data();
+      assertion(faceQIn[faceNumber] != nullptr, faceNumber);
+      assertion(faceQOut[faceNumber] != nullptr, faceNumber);
+      // A projection, a restriction from finer cells, the boundary treatment or the periodic
+      // exchange fills each half of the halo and takes that half's transfer flag down.
+      const auto&                 faceLabel = faceLabels(faceNumber);
+      [[maybe_unused]] const int  ownSide   = faceNumber < DIMENSIONS ? 1 : 0;
+      [[maybe_unused]] const bool isDomainWall =
+        faceLabel.getBoundary() and not solver.PeriodicBoundaries[faceNumber % DIMENSIONS];
+      assertion(
+        faceLabel.getIsHanging() or not faceLabel.getRequiresDataTransfer(ownSide),
+        marker.toString(),
+        faceLabel.toString(),
+        faceNumber,
+        timeStamp
+      );
+      assertion(
+        faceLabel.getIsHanging() or isDomainWall or faceLabel.getAboveHanging(1 - ownSide)
+          or not faceLabel.getRequiresDataTransfer(1 - ownSide),
+        marker.toString(),
+        faceLabel.toString(),
+        faceNumber,
+        timeStamp
+      );
+    }
+
+    [[maybe_unused]] auto maxEigenvalue = exahype2::fv::applyFiniteVolume<
+      Reconstruction,
+      TimeStepping,
+      SolverType,
+      SolverType::NumberOfFiniteVolumesPerAxisPerPatch,
+      SolverType::NumberOfUnknowns,
+      SolverType::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateDiffusiveSource,
+      EvaluateCustomRiemann,
+      EvaluateMaxEigenvalue,
+      false,
+      StoragePrecision,
+      ComputePrecision>(
+      inputPatch,
+      outputPatch,
+      faceQIn,
+      faceQOut,
+      marker.getX(),
+      marker.getH(),
+      timeStamp,
+      timeStepSize
+    );
+
+    postprocess(outputPatch, timeStamp, timeStepSize);
+
+    if constexpr (EvaluateMaxEigenvalueOfFinalState) {
+      constexpr int NumberOfVolumesPerAxis = SolverType::NumberOfFiniteVolumesPerAxisPerPatch;
+      constexpr int NumberOfData           = SolverType::NumberOfUnknowns + SolverType::NumberOfAuxiliaryVariables;
+      peano4::dForEach(NumberOfVolumesPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& volumeIndex) {
+        const auto [volumeSize, volumeCentre] =
+          exahype2::fv::getVolumeSizeAndCentre<DIMENSIONS, NumberOfVolumesPerAxis>(
+            marker.getX(),
+            marker.getH(),
+            volumeIndex
+          );
+        const StoragePrecision* const state =
+          outputPatch + peano4::dLinearised(volumeIndex, NumberOfVolumesPerAxis) * NumberOfData;
+        alignas(PEANO_WITH_ALIGNMENT) ComputePrecision finalState[NumberOfData];
+        for (int value = 0; value < NumberOfData; value++) {
+          finalState[value] = static_cast<ComputePrecision>(state[value]);
+        }
+        for (int normal = 0; normal < DIMENSIONS; normal++) {
+          exahype2::fv::accumulateMaxEigenvalue(
+            maxEigenvalue,
+            SolverType::maxEigenvalue(finalState, volumeCentre, volumeSize, updatedTimeStamp, timeStepSize, normal)
+          );
+        }
+      });
+    }
+
+#if PEANO_DEBUG
+    exahype2::fv::validatePatch(
+      outputPatch,
+      SolverType::NumberOfUnknowns,
+      SolverType::NumberOfAuxiliaryVariables,
+      SolverType::NumberOfFiniteVolumesPerAxisPerPatch,
+      0,
+      std::string(__FILE__) + "(" + std::to_string(__LINE__) + ")"
+    );
+#endif
+
+    if constexpr (SolverType::UsesAdaptiveTimeStepping) {
+      solver.setMaxEigenvalue(maxEigenvalue);
+    }
+    const auto newTimeStepSize = solver.getTimeStepSize();
+
+    cellLabel.setHasUpdated(true);
+    cellLabel.setTimeStepSize(newTimeStepSize);
+    solver.update(timeStepSize, updatedTimeStamp, tarch::la::min(marker.getH()), tarch::la::max(marker.getH()));
+    cellLabel.setTimeStamp(updatedTimeStamp);
+
+    for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
+      auto& lowerFaceLabel = faceLabels(dimension);
+      auto& upperFaceLabel = faceLabels(dimension + DIMENSIONS);
+
+      lowerFaceLabel.setUpdated(1, true);
+      lowerFaceLabel.setUpdatedTimeStamp(1, updatedTimeStamp);
+      upperFaceLabel.setUpdated(0, true);
+      upperFaceLabel.setUpdatedTimeStamp(0, updatedTimeStamp);
+    }
+  } else {
+    const auto                  timeStamp    = cellLabel.getTimeStamp();
+    [[maybe_unused]] const auto timeStepSize = cellLabel.getTimeStepSize();
+
+    assertion(tarch::la::greaterEquals(timeStepSize, 0.0), timeStepSize, timeStamp);
+    assertion(tarch::la::greaterEquals(timeStamp, 0.0), timeStepSize, timeStamp);
+
+    solver.updateTimeStampAndPatchSize(timeStamp, tarch::la::min(marker.getH()), tarch::la::max(marker.getH()));
+  }
+}

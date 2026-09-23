@@ -1,0 +1,219 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+INLINE_METHOD void peano4::dataview::VertexMarker::validateVertexNumber(const int vertexNumber) {
+  assertion(vertexNumber >= 0, vertexNumber);
+  assertion(vertexNumber < peano4::VerticesPerCell, vertexNumber);
+}
+
+/**
+ * Selects the vertex the marker refers to and returns the marker.
+ */
+INLINE_METHOD peano4::dataview::VertexMarker& peano4::dataview::VertexMarker::select(const int vertexNumber) {
+  validateVertexNumber(vertexNumber);
+  _select = vertexNumber;
+  return *this;
+}
+
+INLINE_METHOD int peano4::dataview::VertexMarker::getSelectedVertexNumber() const { return _select; }
+
+/**
+ * Returns the position of vertex vertexNumber, where the enumeration starts at
+ * the bottom left vertex and runs along the first Cartesian axis first.
+ */
+INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> peano4::dataview::VertexMarker::getX(const int vertexNumber) const {
+  validateVertexNumber(vertexNumber);
+  auto                          result      = _cellCentre;
+  const std::bitset<DIMENSIONS> vertexIndex = vertexNumber;
+  for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
+    result(dimension) -= 0.5 * _h(dimension);
+    if (vertexIndex[dimension]) {
+      result(dimension) += _h(dimension);
+    }
+  }
+  return result;
+}
+
+INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> peano4::dataview::VertexMarker::getX() const {
+  return getX(_select);
+}
+
+INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> peano4::dataview::VertexMarker::getH() const { return _h; }
+
+INLINE_METHOD bool peano4::dataview::VertexMarker::isParentOfSubtree(const int vertexNumber) const {
+  validateVertexNumber(vertexNumber);
+  return _isParentOfSubtree[vertexNumber];
+}
+
+INLINE_METHOD bool peano4::dataview::VertexMarker::isParentOfSubtree() const { return isParentOfSubtree(_select); }
+
+INLINE_METHOD bool peano4::dataview::VertexMarker::hasBeenRefined() const { return hasBeenRefined(_select); }
+
+INLINE_METHOD bool peano4::dataview::VertexMarker::hasBeenRefined(const int vertexNumber) const {
+  validateVertexNumber(vertexNumber);
+  return _hasBeenRefined[vertexNumber];
+}
+
+INLINE_METHOD bool peano4::dataview::VertexMarker::willBeRefined() const { return willBeRefined(_select); }
+
+INLINE_METHOD bool peano4::dataview::VertexMarker::willBeRefined(const int vertexNumber) const {
+  validateVertexNumber(vertexNumber);
+  return _willBeRefined[vertexNumber];
+}
+
+INLINE_METHOD bool peano4::dataview::VertexMarker::isLocal() const { return isLocal(_select); }
+
+INLINE_METHOD bool peano4::dataview::VertexMarker::isLocal(const int vertexNumber) const {
+  validateVertexNumber(vertexNumber);
+  return _isLocal[vertexNumber];
+}
+
+INLINE_METHOD bool peano4::dataview::VertexMarker::isHanging() const { return isHanging(_select); }
+
+INLINE_METHOD bool peano4::dataview::VertexMarker::isHanging(const int vertexNumber) const {
+  validateVertexNumber(vertexNumber);
+  return _isHanging[vertexNumber];
+}
+
+INLINE_METHOD bool peano4::dataview::VertexMarker::isAdjacentToParallelDomainBoundary() const {
+  return isAdjacentToParallelDomainBoundary(_select);
+}
+
+/**
+ * Returns whether vertex vertexNumber of the invoking cell is adjacent to a
+ * parallel domain boundary.
+ */
+INLINE_METHOD bool peano4::dataview::VertexMarker::isAdjacentToParallelDomainBoundary(const int vertexNumber) const {
+  validateVertexNumber(vertexNumber);
+  return _isAdjacentToParallelDomainBoundary[vertexNumber];
+}
+
+INLINE_METHOD bool peano4::dataview::VertexMarker::isParentCellLocal() const { return _isParentCellLocal; }
+
+/**
+ * Returns whether parent vertex vertexNumber of the invoking cell is local.
+ * The @f$ 2^d @f$ parent vertices are the ones of the cell the traversal
+ * stepped down from.
+ *
+ * @see isParentCellLocal()
+ */
+INLINE_METHOD bool peano4::dataview::VertexMarker::isParentVertexLocal(const int vertexNumber) const {
+  validateVertexNumber(vertexNumber);
+  return _isParentVertexLocal[vertexNumber];
+}
+
+/**
+ * Returns the vertex position in the parent's pattern of children.
+ *
+ * @see coincidesWithCoarseGridVertex()
+ */
+INLINE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::dataview::VertexMarker::
+  getRelativePositionWithinFatherCell() const {
+  return getRelativePositionWithinFatherCell(_select);
+}
+
+INLINE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::dataview::VertexMarker::getRelativePositionWithinFatherCell(
+  const int vertexNumber
+) const {
+  validateVertexNumber(vertexNumber);
+  auto                          result      = _relativePositionWithinFatherCell;
+  const std::bitset<DIMENSIONS> vertexIndex = vertexNumber;
+  for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
+    result(dimension) += vertexIndex[dimension] ? 1 : 0;
+  }
+  return result;
+}
+
+/**
+ * Returns whether the selected vertex sits at the position of a vertex of the
+ * next coarser level, which holds for the relative positions 0 and
+ * SubdivisionFactor along every axis.
+ */
+INLINE_METHOD bool peano4::dataview::VertexMarker::coincidesWithCoarseGridVertex() const {
+  const auto relativePosition = getRelativePositionWithinFatherCell();
+  for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
+    if (
+      relativePosition(dimension) != 0 and relativePosition(dimension) != peano4::sfc::ActiveCurve::SubdivisionFactor
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Returns whether position lies in the cells adjacent to the selected vertex,
+ * which scaleAdjacentCells shrinks or grows. A point on a face of one of those
+ * cubes counts as inside, and tolerance widens them further.
+ */
+INLINE_METHOD bool peano4::dataview::VertexMarker::isContainedInAdjacentCells(
+  const tarch::la::Vector<DIMENSIONS, double>& position,
+  const double                                 scaleAdjacentCells,
+  const double                                 tolerance
+) const {
+  const auto selectedVertex = getX();
+  for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
+    const auto distance = std::abs(position(dimension) - selectedVertex(dimension));
+    const auto reach    = scaleAdjacentCells * _h(dimension);
+    if (distance > reach + tolerance) {
+      return false;
+    }
+  }
+  return true;
+}
+
+INLINE_METHOD bool peano4::dataview::VertexMarker::isContainedInAdjacentCellsByDimension(
+  const tarch::la::Vector<DIMENSIONS, double>& position,
+  const int                                    dimension,
+  const double                                 scaleAdjacentCells,
+  const double                                 tolerance
+) const {
+  assertion(dimension >= 0, dimension);
+  assertion(dimension < DIMENSIONS, dimension);
+  const auto distance = std::abs(position(dimension) - getX()(dimension));
+  const auto reach    = scaleAdjacentCells * _h(dimension);
+  return distance <= reach + tolerance;
+}
+
+/**
+ * Returns which of the @f$ 2^d @f$ cells around the selected vertex holds
+ * position. The cells are enumerated lexicographically around the vertex:
+ *
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * 2 | 3
+ * --+--
+ * 0 | 1
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * The plus marks the vertex, so a position in cell 1 returns (1,0) and a
+ * position in cell 3 returns (1,1).
+ */
+INLINE_METHOD tarch::la::Vector<DIMENSIONS, int> peano4::dataview::VertexMarker::getRelativeAdjacentCell(
+  const tarch::la::Vector<DIMENSIONS, double>& position
+) const {
+  auto       result         = tarch::la::Vector<DIMENSIONS, int>{};
+  const auto selectedVertex = getX();
+  for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
+    result(dimension) = position(dimension) <= selectedVertex(dimension) ? 0 : 1;
+  }
+  return result;
+}
+
+/**
+ * Returns the centre of the cell this marker was constructed from.
+ */
+INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> peano4::dataview::VertexMarker::getInvokingCellCentre() const {
+  return _cellCentre;
+}
+
+INLINE_METHOD tarch::la::Vector<DIMENSIONS, double> peano4::dataview::VertexMarker::
+  getInvokingParentCellsCentre() const {
+  constexpr double ParentCentreOffset = 0.5 * (peano4::sfc::ActiveCurve::SubdivisionFactor - 1);
+  auto             result             = _cellCentre;
+  for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
+    assertion(_relativePositionWithinFatherCell(dimension) >= 0, toString());
+    assertion(_relativePositionWithinFatherCell(dimension) < peano4::sfc::ActiveCurve::SubdivisionFactor, toString());
+    result(dimension) += (ParentCentreOffset - _relativePositionWithinFatherCell(dimension)) * _h(dimension);
+  }
+  return result;
+}

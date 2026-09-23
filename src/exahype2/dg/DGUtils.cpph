@@ -1,39 +1,69 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
+
+TARGET_DECLARE
+/**
+ * Maps a tensor-product reference node from [0, 1]^DIMENSIONS into a cell.
+ *
+ * quadraturePoints holds one reference coordinate per node along an axis. The caller keeps
+ * every component of index below that number of nodes.
+ */
+template <typename QuadraturePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<DIMENSIONS, double> exahype2::dg::getQuadraturePoint(
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const tarch::la::Vector<DIMENSIONS, int>&    index,
+  const QuadraturePrecision* NOALIAS           quadraturePoints
+) {
+  tarch::la::Vector<DIMENSIONS, double> referencePosition;
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    assertion(index(axis) >= 0, index);
+    assertion(cellSize(axis) > 0.0, cellSize);
+    referencePosition(axis) = static_cast<double>(quadraturePoints[index(axis)]);
+  }
+  return tarch::la::multiplyComponents(referencePosition, cellSize) + cellCentre - 0.5 * cellSize;
+}
+TARGET_DECLARE_END
+
 /**
  * Evaluates one component of the nodal DG polynomial inside a cell.
  *
- * Q uses an array-of-structures layout with unknownsPerDoF consecutive values
- * per tensor-product node. QuadratureNodes1D contains order+1 reference
- * coordinates on [0, 1].
+ * values holds unknownsPerNode consecutive entries per tensor-product node,
+ * and quadratureNodes holds order+1 reference coordinates on [0, 1].
  */
-template <typename QStoreType>
-QStoreType exahype2::dg::evaluatePolynomial(
-  const peano4::datamanagement::CellMarker&    marker,
-  int                                          order,
-  const QStoreType* NOALIAS                    QuadratureNodes1D,
-  int                                          unknownsPerDoF,
-  const QStoreType* NOALIAS                    Q,
-  const tarch::la::Vector<DIMENSIONS, double>& x,
-  int                                          unknown
+template <typename StoragePrecision>
+INLINE_METHOD StoragePrecision exahype2::dg::evaluatePolynomial(
+  const peano4::dataview::CellMarker&          marker,
+  const int                                    order,
+  const StoragePrecision* NOALIAS              quadratureNodes,
+  const int                                    unknownsPerNode,
+  const StoragePrecision* NOALIAS              values,
+  const tarch::la::Vector<DIMENSIONS, double>& position,
+  const int                                    unknown
 ) {
-  QStoreType interpolatedValue = 0.0;
-  peano4::dForEach(order + 1, [&](const tarch::la::Vector<DIMENSIONS, int>& currentDoF) {
+  assertion(order >= 0, order);
+  assertion(unknown >= 0 and unknown < unknownsPerNode, unknown, unknownsPerNode);
+
+  StoragePrecision interpolatedValue = 0.0;
+  peano4::dForEach(order + 1, [&](const tarch::la::Vector<DIMENSIONS, int>& node) {
     double denominator = 1.0;
     double numerator   = 1.0;
     for (int axis = 0; axis < DIMENSIONS; axis++) {
       for (int quadratureNode = 0; quadratureNode < order + 1; quadratureNode++) {
-        if (quadratureNode != currentDoF(axis)) {
-          const double referenceNodeDistance = QuadratureNodes1D[currentDoF(axis)] - QuadratureNodes1D[quadratureNode];
+        if (quadratureNode != node(axis)) {
+          const double referenceNodeDistance = quadratureNodes[node(axis)] - quadratureNodes[quadratureNode];
           const double distanceToQuadraturePoint =
-            x(axis) - (QuadratureNodes1D[quadratureNode] * marker.getH()(axis) + marker.getOffset()(axis));
+            position(axis) - (quadratureNodes[quadratureNode] * marker.getH()(axis) + marker.getOffset()(axis));
           denominator *= referenceNodeDistance * marker.getH()(axis);
           numerator *= distanceToQuadraturePoint;
         }
       }
     }
-    const int linearisedDoF = peano4::dLinearised(currentDoF, order + 1);
-    interpolatedValue += numerator / denominator * Q[linearisedDoF * unknownsPerDoF + unknown];
+
+    assertion(denominator != 0.0, denominator);
+
+    const int linearisedNode = peano4::dLinearised(node, order + 1);
+    interpolatedValue += numerator / denominator * values[linearisedNode * unknownsPerNode + unknown];
   });
   return interpolatedValue;
 }
@@ -41,72 +71,53 @@ QStoreType exahype2::dg::evaluatePolynomial(
 /**
  * Evaluates one component of the nodal DG polynomial on a face.
  *
- * Q contains (order+1)^(DIMENSIONS-1) array-of-structures entries. The face
- * normal is omitted from the tensor-product interpolation.
+ * values holds (order+1)^(DIMENSIONS-1) nodes of unknownsPerNode consecutive
+ * entries each, with the lowest tangential axis running fastest, and the
+ * tensor product skips the face normal.
  */
-template <typename QStoreType>
-QStoreType exahype2::dg::evaluatePolynomial(
-  const peano4::datamanagement::FaceMarker&    marker,
-  int                                          order,
-  const QStoreType* NOALIAS                    QuadratureNodes1D,
-  int                                          unknownsPerDoF,
-  const QStoreType* NOALIAS                    Q,
-  const tarch::la::Vector<DIMENSIONS, double>& x,
-  int                                          unknown
+template <typename StoragePrecision>
+INLINE_METHOD StoragePrecision exahype2::dg::evaluatePolynomial(
+  const peano4::dataview::FaceMarker&          marker,
+  const int                                    order,
+  const StoragePrecision* NOALIAS              quadratureNodes,
+  const int                                    unknownsPerNode,
+  const StoragePrecision* NOALIAS              values,
+  const tarch::la::Vector<DIMENSIONS, double>& position,
+  const int                                    unknown
 ) {
+  assertion(order >= 0, order);
+  assertion(unknown >= 0 and unknown < unknownsPerNode, unknown, unknownsPerNode);
+
   const int normal = marker.getSelectedFaceNumber() % DIMENSIONS;
 
-  const tarch::la::Vector<DIMENSIONS, double> referencePosition = {
-    (x[0] - marker.getX()[0]) / (marker.getH()[0]) + 0.5,
-    (x[1] - marker.getX()[1]) / (marker.getH()[1]) + 0.5,
-#if DIMENSIONS == 3
-    (x[2] - marker.getX()[2]) / (marker.getH()[2]) + 0.5,
-#endif
-  };
+  tarch::la::Vector<DIMENSIONS, double> referencePosition;
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    referencePosition(axis) = (position(axis) - marker.getX()(axis)) / marker.getH()(axis) + 0.5;
+  }
 
-  int linearisedDoF = 0;
-
-  QStoreType interpolatedValue = 0.0;
-  peano4::dForEachExclusive(order + 1, normal, 0, [&](const tarch::la::Vector<DIMENSIONS, int>& currentDoF) {
+  int              linearisedNode    = 0;
+  StoragePrecision interpolatedValue = 0.0;
+  peano4::dForEachExclusive(order + 1, normal, 0, [&](const tarch::la::Vector<DIMENSIONS, int>& node) {
     double denominator = 1.0;
     double numerator   = 1.0;
     for (int axis = 0; axis < DIMENSIONS; axis++) {
       if (axis == normal) {
         continue;
       }
-
       for (int quadratureNode = 0; quadratureNode < order + 1; quadratureNode++) {
-        if (quadratureNode != currentDoF(axis)) {
-          const double referenceNodeDistance = QuadratureNodes1D[currentDoF(axis)] - QuadratureNodes1D[quadratureNode];
-          const double distanceToQuadraturePoint = referencePosition(axis) - QuadratureNodes1D[quadratureNode];
+        if (quadratureNode != node(axis)) {
+          const double referenceNodeDistance     = quadratureNodes[node(axis)] - quadratureNodes[quadratureNode];
+          const double distanceToQuadraturePoint = referencePosition(axis) - quadratureNodes[quadratureNode];
           denominator *= referenceNodeDistance;
           numerator *= distanceToQuadraturePoint;
         }
       }
     }
 
-    interpolatedValue += numerator / denominator * Q[linearisedDoF + unknown];
-    linearisedDoF += unknownsPerDoF;
+    assertion(denominator != 0.0, denominator);
+
+    interpolatedValue += numerator / denominator * values[linearisedNode + unknown];
+    linearisedNode += unknownsPerNode;
   });
   return interpolatedValue;
-}
-
-/** Maps a tensor-product reference node from [0, 1]^DIMENSIONS into a cell. */
-template <typename T>
-tarch::la::Vector<DIMENSIONS, double> exahype2::dg::getQuadraturePoint(
-  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-  const tarch::la::Vector<DIMENSIONS, int>&    index,
-  [[maybe_unused]] int                         polynomialOrder,
-  const T* NOALIAS                             quadraturePoints
-) {
-  tarch::la::Vector<DIMENSIONS, double> referencePosition;
-
-  referencePosition(0) = quadraturePoints[index(0)];
-  referencePosition(1) = quadraturePoints[index(1)];
-#if DIMENSIONS == 3
-  referencePosition(2) = quadraturePoints[index(2)];
-#endif
-
-  return tarch::la::multiplyComponents(referencePosition, cellSize) + cellCentre - 0.5 * cellSize;
 }

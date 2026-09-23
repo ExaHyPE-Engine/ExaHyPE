@@ -1,0 +1,227 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+TARGET_DECLARE
+/**
+ * Returns the Lagrange basis function of one node evaluated at a position of the reference
+ * interval.
+ */
+template <int NumberOfDofsPerAxis, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD double exahype2::dg::ader::evaluateLagrangeBasis(
+  const ComputePrecision* NOALIAS const quadraturePoints,
+  const int                             index,
+  const double                          position
+) {
+  assertion(index >= 0 and index < NumberOfDofsPerAxis, index);
+  double value = 1.0;
+  for (int node = 0; node < NumberOfDofsPerAxis; node++) {
+    if (node != index) {
+      value *= (position - static_cast<double>(quadraturePoints[node]))
+        / (static_cast<double>(quadraturePoints[index]) - static_cast<double>(quadraturePoints[node]));
+    }
+  }
+  return value;
+}
+
+/**
+ * Overwrites pointSourceValues with the force of every listed point source at every node, spread
+ * over the cell by the basis functions at the source and divided by the node's quadrature weight
+ * and the cell volume. Time sample zero sits at the start of the time step, the following samples
+ * on the quadrature points of the step.
+ */
+template <
+  typename SolverType,
+  int NumberOfDofsPerAxis,
+  int NumberOfUnknowns,
+  int NumberOfAuxiliaryVariables,
+  typename StoragePrecision,
+  typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::evaluatePointSources(
+  ComputePrecision* NOALIAS const                        pointSourceValues,
+  const StoragePrecision* NOALIAS const                  cellState,
+  const int* NOALIAS const                               pointSourceIndices,
+  const int                                              numberOfPointSources,
+  const double* NOALIAS const                            pointSourceLocations,
+  const ComputePrecision* NOALIAS const                  quadraturePoints,
+  const ComputePrecision* NOALIAS const                  inverseCellQuadratureWeights,
+  const tarch::la::Vector<DIMENSIONS, ComputePrecision>& inverseCellSize,
+  const tarch::la::Vector<DIMENSIONS, double>&           cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>&           cellSize,
+  const double                                           timeStamp,
+  const double                                           timeStepSize
+) {
+  using CellLayout          = Layout<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables>;
+  constexpr int ForceStride = CellLayout::PaddedNumberOfUnknowns;
+
+  using TimePrecision = std::common_type_t<ComputePrecision, double>;
+
+  assertion(numberOfPointSources >= 0, numberOfPointSources);
+
+  for (int entry = 0; entry < (NumberOfDofsPerAxis + 1) * CellLayout::NodesPerCell * ForceStride; entry++) {
+    pointSourceValues[entry] = static_cast<ComputePrecision>(0);
+  }
+
+  double cellVolume = 1.0;
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    assertion(cellSize(axis) > 0.0, cellSize, axis);
+    cellVolume *= cellSize(axis);
+  }
+  const auto inverseCellVolume = static_cast<ComputePrecision>(1.0 / cellVolume);
+
+  ComputePrecision forceVector[ForceStride] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+  for (int unknown = 0; unknown < ForceStride; unknown++) {
+    forceVector[unknown] = static_cast<ComputePrecision>(0);
+  }
+
+  for (int timeSample = 0; timeSample < NumberOfDofsPerAxis + 1; timeSample++) {
+    const auto timePosition = static_cast<ComputePrecision>(
+      (timeSample == 0)
+        ? static_cast<TimePrecision>(timeStamp)
+        : static_cast<TimePrecision>(timeStepSize) * static_cast<TimePrecision>(quadraturePoints[timeSample - 1])
+          + static_cast<TimePrecision>(timeStamp)
+    );
+
+    for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+      const auto index = spatialNodeIndex<NumberOfDofsPerAxis>(cellNode);
+
+      double nodePosition[DIMENSIONS];
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        nodePosition[axis] = static_cast<double>(
+          static_cast<TimePrecision>(cellCentre(axis))
+          + static_cast<TimePrecision>(cellSize(axis))
+            * (static_cast<TimePrecision>(quadraturePoints[index(axis)]) - static_cast<TimePrecision>(0.5))
+        );
+      }
+
+      for (int entry = 0; entry < numberOfPointSources; entry++) {
+        const int pointSource = pointSourceIndices[entry];
+        SolverType::pointSource(
+          cellState + cellNode * CellLayout::NumberOfData,
+          nodePosition,
+          static_cast<double>(timePosition),
+          timeStepSize,
+          forceVector,
+          pointSource
+        );
+
+        const double* const location = pointSourceLocations + pointSource * DIMENSIONS;
+        double              spread   = 1.0;
+        for (int axis = 0; axis < DIMENSIONS; axis++) {
+          spread *= evaluateLagrangeBasis<NumberOfDofsPerAxis, ComputePrecision>(
+            quadraturePoints,
+            index(axis),
+            (location[axis] - cellCentre(axis)) * static_cast<double>(inverseCellSize(axis)) + 0.5
+          );
+        }
+        const auto update = static_cast<ComputePrecision>(
+          static_cast<TimePrecision>(spread) * static_cast<TimePrecision>(inverseCellQuadratureWeights[cellNode])
+          * static_cast<TimePrecision>(inverseCellVolume)
+        );
+
+        SIMD(aligned(forceVector : PEANO_WITH_ALIGNMENT))
+        for (int unknown = 0; unknown < ForceStride; unknown++) {
+          pointSourceValues[(timeSample * CellLayout::NodesPerCell + cellNode) * ForceStride + unknown] +=
+            update * forceVector[unknown];
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Adds the temporal quadrature of the point sources over the time step to the unknowns of the
+ * zeroth Taylor coefficient.
+ */
+template <int NumberOfDofsPerAxis, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::addPointSourcesToPredictor(
+  ComputePrecision* NOALIAS const       state,
+  const ComputePrecision* NOALIAS const pointSourceValues,
+  const ComputePrecision* NOALIAS const quadratureWeights,
+  const double                          timeStepSize
+) {
+  using CellLayout          = Layout<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables>;
+  constexpr int ForceStride = CellLayout::PaddedNumberOfUnknowns;
+
+  using TimePrecision = std::common_type_t<ComputePrecision, double>;
+
+  for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+    for (int timeNode = 0; timeNode < NumberOfDofsPerAxis; timeNode++) {
+      const int sample = ((timeNode + 1) * CellLayout::NodesPerCell + cellNode) * ForceStride;
+      SIMD()
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        const int entry = cellNode * CellLayout::PaddedNumberOfData + unknown;
+        state[entry]    = static_cast<ComputePrecision>(
+          static_cast<TimePrecision>(state[entry])
+          + static_cast<TimePrecision>(timeStepSize) * static_cast<TimePrecision>(quadratureWeights[timeNode])
+            * static_cast<TimePrecision>(pointSourceValues[sample + unknown])
+        );
+      }
+    }
+  }
+}
+
+/**
+ * Adds the point source samples, weighted by the temporal derivative coefficients, to the unknowns
+ * of the Taylor coefficient under construction.
+ */
+template <int NumberOfDofsPerAxis, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::addPointSourceDerivativeToState(
+  ComputePrecision* NOALIAS const       state,
+  const ComputePrecision* NOALIAS const pointSourceValues,
+  const ComputePrecision* NOALIAS const derivativeCoefficients
+) {
+  using CellLayout          = Layout<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables>;
+  constexpr int ForceStride = CellLayout::PaddedNumberOfUnknowns;
+
+  for (int timeNode = 0; timeNode < NumberOfDofsPerAxis; timeNode++) {
+    for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+      const int sample = (timeNode * CellLayout::NodesPerCell + cellNode) * ForceStride;
+      SIMD()
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        state[cellNode * CellLayout::PaddedNumberOfData + unknown] +=
+          derivativeCoefficients[timeNode] * pointSourceValues[sample + unknown];
+      }
+    }
+  }
+}
+
+/**
+ * Adds the temporal quadrature of the point sources, divided by the number of axes, to the
+ * time-averaged flux of every axis.
+ */
+template <int NumberOfDofsPerAxis, int NumberOfUnknowns, int NumberOfAuxiliaryVariables, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::addPointSourcesToTimeAveragedFlux(
+  ComputePrecision* NOALIAS const       timeAveragedFlux,
+  const ComputePrecision* NOALIAS const pointSourceValues,
+  const ComputePrecision* NOALIAS const quadratureWeights
+) {
+  using CellLayout          = Layout<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables>;
+  constexpr int ForceStride = CellLayout::PaddedNumberOfUnknowns;
+  constexpr int AxisStride  = CellLayout::NodesPerCell * ForceStride;
+
+  ComputePrecision timeAverage[ForceStride] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+
+  for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+    for (int unknown = 0; unknown < ForceStride; unknown++) {
+      timeAverage[unknown] = static_cast<ComputePrecision>(0);
+    }
+    for (int timeSample = 1; timeSample < NumberOfDofsPerAxis + 1; timeSample++) {
+      const ComputePrecision weight = quadratureWeights[timeSample - 1] / static_cast<ComputePrecision>(DIMENSIONS);
+      const int              sample = (timeSample * CellLayout::NodesPerCell + cellNode) * ForceStride;
+      SIMD(aligned(timeAverage : PEANO_WITH_ALIGNMENT))
+      for (int unknown = 0; unknown < ForceStride; unknown++) {
+        timeAverage[unknown] += weight * pointSourceValues[sample + unknown];
+      }
+    }
+    SIMD(aligned(timeAverage : PEANO_WITH_ALIGNMENT))
+    for (int unknown = 0; unknown < ForceStride; unknown++) {
+      const int entry = cellNode * ForceStride + unknown;
+      timeAveragedFlux[entry] += timeAverage[unknown];
+      timeAveragedFlux[entry + AxisStride] += timeAverage[unknown];
+      if constexpr (DIMENSIONS == 3) {
+        timeAveragedFlux[entry + 2 * AxisStride] += timeAverage[unknown];
+      }
+    }
+  }
+}
+TARGET_DECLARE_END

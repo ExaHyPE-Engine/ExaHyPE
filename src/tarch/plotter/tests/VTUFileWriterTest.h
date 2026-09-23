@@ -14,6 +14,7 @@ private:
   void test3DSimpleHexahedron();
   void test2DParticlesWithData();
   void test3DCellData();
+  void testCellTypeMetadata();
 
   /**
    * An untouched plotter produces a valid empty VTU file.
@@ -51,7 +52,7 @@ private:
 
   /**
    * A data identifier with a character that would corrupt the XML is rejected up
-   * front (shared FileWriter::validateIdentifier).
+   * front by FileWriter::validateIdentifier.
    */
   void testInvalidIdentifierThrows();
 

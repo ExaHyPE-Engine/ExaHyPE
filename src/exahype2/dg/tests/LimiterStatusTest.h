@@ -11,6 +11,11 @@ namespace exahype2::dg::tests {
 class exahype2::dg::tests::LimiterStatusTest final : public tarch::tests::TestCase {
 public:
   LimiterStatusTest();
+  LimiterStatusTest(const LimiterStatusTest&)            = delete;
+  LimiterStatusTest(LimiterStatusTest&&)                 = delete;
+  LimiterStatusTest& operator=(const LimiterStatusTest&) = delete;
+  LimiterStatusTest& operator=(LimiterStatusTest&&)      = delete;
+  ~LimiterStatusTest() override                          = default;
 
   void run() override;
 

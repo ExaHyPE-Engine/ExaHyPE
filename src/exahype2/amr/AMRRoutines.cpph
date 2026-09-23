@@ -6,12 +6,12 @@
  */
 template <typename T>
 INLINE_METHOD void exahype2::amr::interpolateHaloLayer(
-  const peano4::datamanagement::FaceMarker& marker,
-  const T* NOALIAS                          coarseGridFaceValues,
-  T* NOALIAS                                fineGridFaceValues,
-  const int                                 side,
-  const int                                 numberOfDofsPerAxis,
-  const int                                 numberOfUnknownsPlusAuxiliaryVariables
+  const peano4::dataview::FaceMarker& marker,
+  const T* NOALIAS                    coarseGridFaceValues,
+  T* NOALIAS                          fineGridFaceValues,
+  const int                           side,
+  const int                           numberOfDofsPerAxis,
+  const int                           numberOfUnknownsPlusAuxiliaryVariables
 ) {
   const auto normal = marker.getSelectedFaceNumber() % DIMENSIONS;
 
@@ -40,16 +40,19 @@ INLINE_METHOD void exahype2::amr::interpolateHaloLayer(
     break;
   }
 
+  constexpr int SubdivisionFactor = peano4::sfc::ActiveCurve::SubdivisionFactor;
 #if DIMENSIONS == 3
   for (int j = 0; j < numberOfDofsPerAxis; j++) {
-    int jPos = jStride * ((j + numberOfDofsPerAxis * marker.getRelativePositionWithinFatherFace()[1]) / 3);
+    const int jPos =
+      jStride * ((j + numberOfDofsPerAxis * marker.getRelativePositionWithinFatherFace()[1]) / SubdivisionFactor);
 #else
   const int j    = 0;
   const int jPos = 0;
   {
 #endif
     for (int i = 0; i < numberOfDofsPerAxis; i++) {
-      const auto iPos = iStride * ((i + numberOfDofsPerAxis * marker.getRelativePositionWithinFatherFace()[0]) / 3);
+      const auto iPos =
+        iStride * ((i + numberOfDofsPerAxis * marker.getRelativePositionWithinFatherFace()[0]) / SubdivisionFactor);
 
       for (int unknown = 0; unknown < numberOfUnknownsPlusAuxiliaryVariables; unknown++) {
         fineGridFaceValues
@@ -63,18 +66,19 @@ INLINE_METHOD void exahype2::amr::interpolateHaloLayer(
 /**
  * Prolongs a coarse halo layer and corrects it along the axes in the plane of the face.
  *
- * Per coarse volume c_j and such an axis, the three fine sub-volumes become c_j - d,
- * c_j and c_j + d with d = (c_{j+1} - c_{j-1})/6 in the interior and d = (c_{j+1} - c_j)/3
- * or d = (c_j - c_{j-1})/3 at a patch end, where only one neighbour exists.
+ * Per coarse volume c_j and such an axis, fine sub-volume s becomes
+ * c_j + (s - (k-1)/2) d, with k the subdivision factor, d = (c_{j+1} - c_{j-1})/(2k) in
+ * the interior and d = (c_{j+1} - c_j)/k or d = (c_j - c_{j-1})/k at a patch end, where
+ * only one neighbour exists.
  */
 template <typename T>
 INLINE_METHOD void exahype2::amr::interpolateHaloLayerWithTangentialSlope(
-  const peano4::datamanagement::FaceMarker& marker,
-  const T* NOALIAS                          coarseGridFaceValues,
-  T* NOALIAS                                fineGridFaceValues,
-  const int                                 side,
-  const int                                 numberOfDofsPerAxis,
-  const int                                 numberOfUnknownsPlusAuxiliaryVariables
+  const peano4::dataview::FaceMarker& marker,
+  const T* NOALIAS                    coarseGridFaceValues,
+  T* NOALIAS                          fineGridFaceValues,
+  const int                           side,
+  const int                           numberOfDofsPerAxis,
+  const int                           numberOfUnknownsPlusAuxiliaryVariables
 ) {
   static_assert(std::is_floating_point_v<T>, "The tangential slope requires a floating-point type.");
 
@@ -114,9 +118,13 @@ INLINE_METHOD void exahype2::amr::interpolateHaloLayerWithTangentialSlope(
     break;
   }
 
+  constexpr int SubdivisionFactor = peano4::sfc::ActiveCurve::SubdivisionFactor;
+  // The sub-volume offsets from the coarse volume's centre are symmetric about zero.
+  constexpr T SubVolumeCentre = static_cast<T>(0.5 * (SubdivisionFactor - 1));
+
   // Returns the slope at the coarse volume, scaled to the fine-volume offset of one
-  // third of the coarse spacing. The divisor 3*(right-left) covers the central
-  // difference in the interior and the one-sided difference at a patch end.
+  // sub-volume of the coarse spacing. The divisor SubdivisionFactor*(right-left) covers
+  // the central difference in the interior and the one-sided difference at a patch end.
   const auto slopeAt =
     [&](const int coarseVolume, const int volumeStride, const int baseOffset, const int unknown) -> T {
     const int left  = (coarseVolume - 1 >= 0) ? coarseVolume - 1 : coarseVolume;
@@ -127,14 +135,14 @@ INLINE_METHOD void exahype2::amr::interpolateHaloLayerWithTangentialSlope(
     return (coarseGridFaceValues[(baseOffset + right * volumeStride) * numberOfUnknownsPlusAuxiliaryVariables + unknown]
             - coarseGridFaceValues
               [(baseOffset + left * volumeStride) * numberOfUnknownsPlusAuxiliaryVariables + unknown])
-      / static_cast<T>(3 * (right - left));
+      / static_cast<T>(SubdivisionFactor * (right - left));
   };
 
 #if DIMENSIONS == 3
   for (int j = 0; j < numberOfDofsPerAxis; j++) {
     const int jGlobal      = j + numberOfDofsPerAxis * marker.getRelativePositionWithinFatherFace()[1];
-    const int jCell        = jGlobal / 3;
-    const int jSubPosition = jGlobal % 3;
+    const int jCell        = jGlobal / SubdivisionFactor;
+    const int jSubPosition = jGlobal % SubdivisionFactor;
 #else
   const int j     = 0;
   const int jCell = 0;
@@ -142,8 +150,8 @@ INLINE_METHOD void exahype2::amr::interpolateHaloLayerWithTangentialSlope(
 #endif
     for (int i = 0; i < numberOfDofsPerAxis; i++) {
       const int iGlobal      = i + numberOfDofsPerAxis * marker.getRelativePositionWithinFatherFace()[0];
-      const int iCell        = iGlobal / 3;
-      const int iSubPosition = iGlobal % 3;
+      const int iCell        = iGlobal / SubdivisionFactor;
+      const int iSubPosition = iGlobal % SubdivisionFactor;
 
       for (int unknown = 0; unknown < numberOfUnknownsPlusAuxiliaryVariables; unknown++) {
         const T iSlope = slopeAt(iCell, iStride, side * sideStride + jCell * jStride, unknown);
@@ -151,11 +159,11 @@ INLINE_METHOD void exahype2::amr::interpolateHaloLayerWithTangentialSlope(
         const T jSlope = slopeAt(jCell, jStride, side * sideStride + iCell * iStride, unknown);
         // Each axis term rounds on its own before the commutative sum, so a diagonal
         // axis swap of the face commutes bitwise with the correction.
-        const T iTerm      = static_cast<T>(iSubPosition - 1) * iSlope;
-        const T jTerm      = static_cast<T>(jSubPosition - 1) * jSlope;
+        const T iTerm      = (static_cast<T>(iSubPosition) - SubVolumeCentre) * iSlope;
+        const T jTerm      = (static_cast<T>(jSubPosition) - SubVolumeCentre) * jSlope;
         const T correction = iTerm + jTerm;
 #else
-        const T correction = static_cast<T>(iSubPosition - 1) * iSlope;
+        const T correction = (static_cast<T>(iSubPosition) - SubVolumeCentre) * iSlope;
 #endif
         fineGridFaceValues
           [(side * sideStride + i * iStride + j * jStride) * numberOfUnknownsPlusAuxiliaryVariables + unknown] +=
@@ -167,12 +175,12 @@ INLINE_METHOD void exahype2::amr::interpolateHaloLayerWithTangentialSlope(
 
 template <typename T>
 INLINE_METHOD void exahype2::amr::interpolateHaloLayerFromCoarseCell(
-  const peano4::datamanagement::FaceMarker& marker,
-  const T* NOALIAS                          coarseGridCellValues,
-  T* NOALIAS                                fineGridFaceValues,
-  const int                                 side,
-  const int                                 numberOfDofsPerAxis,
-  const int                                 numberOfUnknownsPlusAuxiliaryVariables
+  const peano4::dataview::FaceMarker& marker,
+  const T* NOALIAS                    coarseGridCellValues,
+  T* NOALIAS                          fineGridFaceValues,
+  const int                           side,
+  const int                           numberOfDofsPerAxis,
+  const int                           numberOfUnknownsPlusAuxiliaryVariables
 ) {
   const auto normal = marker.getSelectedFaceNumber() % DIMENSIONS;
 
@@ -214,13 +222,14 @@ INLINE_METHOD void exahype2::amr::interpolateHaloLayerFromCoarseCell(
     // left halo (side 0) the last layer of the preceding sub-cell. The exclusive
     // traversal pins volumePos[normal] to 0, so the side term supplies the whole
     // normal dependence.
+    constexpr int                      SubdivisionFactor = peano4::sfc::ActiveCurve::SubdivisionFactor;
     tarch::la::Vector<DIMENSIONS, int> coarseVolume;
     for (int axis = 0; axis < DIMENSIONS; axis++) {
-      coarseVolume[axis] =
-        (volumePos[axis] + numberOfDofsPerAxis * marker.getRelativePositionWithinFatherCell()[axis]) / 3;
+      coarseVolume[axis] = (volumePos[axis] + numberOfDofsPerAxis * marker.getRelativePositionWithinFatherCell()[axis])
+        / SubdivisionFactor;
     }
     coarseVolume[normal] =
-      (numberOfDofsPerAxis * marker.getRelativePositionWithinFatherCell()[normal] - (1 - side)) / 3;
+      (numberOfDofsPerAxis * marker.getRelativePositionWithinFatherCell()[normal] - (1 - side)) / SubdivisionFactor;
 
     const auto coarseGridPos = coarseVolume[0] + numberOfDofsPerAxis * coarseVolume[1]
 #if DIMENSIONS == 3
@@ -249,14 +258,14 @@ INLINE_METHOD void exahype2::amr::interpolateHaloLayerFromCoarseCell(
  */
 template <typename T>
 INLINE_METHOD void exahype2::amr::restrictHaloLayer(
-  const peano4::datamanagement::FaceMarker& marker,
-  T* NOALIAS                                coarseGridFaceValues,
-  const T* NOALIAS                          fineGridFaceValues,
-  const int                                 side,
-  const int                                 numberOfDofsPerAxis,
-  const int                                 numberOfUnknownsPlusAuxiliaryVariables
+  const peano4::dataview::FaceMarker& marker,
+  T* NOALIAS                          coarseGridFaceValues,
+  const T* NOALIAS                    fineGridFaceValues,
+  const int                           side,
+  const int                           numberOfDofsPerAxis,
+  const int                           numberOfUnknownsPlusAuxiliaryVariables
 ) {
-  static_assert(std::is_floating_point_v<T>, "Averaging restriction requires a floating-point type");
+  static_assert(std::is_floating_point_v<T>, "Averaging restriction requires a floating-point type.");
   const auto normal = marker.getSelectedFaceNumber() % DIMENSIONS;
 
   int iStride    = 0;
@@ -284,18 +293,21 @@ INLINE_METHOD void exahype2::amr::restrictHaloLayer(
     break;
   }
 
+  constexpr int SubdivisionFactor = peano4::sfc::ActiveCurve::SubdivisionFactor;
+  // A coarse face volume averages its SubdivisionFactor^(d-1) covering fine volumes.
+  constexpr T Scale = static_cast<T>(1.0 / peano4::power(SubdivisionFactor, DIMENSIONS - 1));
 #if DIMENSIONS == 3
-  constexpr T Scale = 1. / 9.;
   for (int j = 0; j < numberOfDofsPerAxis; j++) {
-    int jPos = jStride * ((j + numberOfDofsPerAxis * marker.getRelativePositionWithinFatherFace()[1]) / 3);
+    const int jPos =
+      jStride * ((j + numberOfDofsPerAxis * marker.getRelativePositionWithinFatherFace()[1]) / SubdivisionFactor);
 #else
-  constexpr T Scale = 1. / 3.;
-  const int   j     = 0;
-  const int   jPos  = 0;
+  const int j    = 0;
+  const int jPos = 0;
   {
 #endif
     for (int i = 0; i < numberOfDofsPerAxis; i++) {
-      const auto iPos = iStride * ((i + numberOfDofsPerAxis * marker.getRelativePositionWithinFatherFace()[0]) / 3);
+      const auto iPos =
+        iStride * ((i + numberOfDofsPerAxis * marker.getRelativePositionWithinFatherFace()[0]) / SubdivisionFactor);
 
       for (int unknown = 0; unknown < numberOfUnknownsPlusAuxiliaryVariables; unknown++) {
         coarseGridFaceValues[(side * sideStride + iPos + jPos) * numberOfUnknownsPlusAuxiliaryVariables + unknown] +=
@@ -318,13 +330,13 @@ INLINE_METHOD void exahype2::amr::restrictHaloLayer(
  */
 template <typename T>
 INLINE_METHOD void exahype2::amr::stageHaloLayerForGatheredRestriction(
-  const peano4::datamanagement::FaceMarker&    marker,
-  exahype2::amr::ChildDataStage<T>& stage,
-  const void*                                  coarseFaceKey,
-  const T* NOALIAS                             fineGridFaceValues,
-  const int                                    side,
-  const int                                    numberOfDofsPerAxis,
-  const int                                    numberOfUnknownsPlusAuxiliaryVariables
+  const peano4::dataview::FaceMarker& marker,
+  exahype2::amr::ChildDataStage<T>&   stage,
+  const void*                         coarseFaceKey,
+  const T* NOALIAS                    fineGridFaceValues,
+  const int                           side,
+  const int                           numberOfDofsPerAxis,
+  const int                           numberOfUnknownsPlusAuxiliaryVariables
 ) {
   const auto normal = marker.getSelectedFaceNumber() % DIMENSIONS;
 
@@ -354,8 +366,8 @@ INLINE_METHOD void exahype2::amr::stageHaloLayerForGatheredRestriction(
   }
 
 #if DIMENSIONS == 3
-  const int subfaceIndex =
-    marker.getRelativePositionWithinFatherFace()[0] + 3 * marker.getRelativePositionWithinFatherFace()[1];
+  const int subfaceIndex = marker.getRelativePositionWithinFatherFace()[0]
+    + peano4::sfc::ActiveCurve::SubdivisionFactor * marker.getRelativePositionWithinFatherFace()[1];
 #else
   const int subfaceIndex = marker.getRelativePositionWithinFatherFace()[0];
 #endif
@@ -384,13 +396,13 @@ INLINE_METHOD void exahype2::amr::stageHaloLayerForGatheredRestriction(
  * over all staged subfaces through an exact accumulator and scales once, so
  * mirrored subface sets restrict to bitwise mirrored halves whatever the
  * staging order. A subface another rank holds is absent and contributes
- * nothing. The frame is discarded afterwards.
+ * nothing, and the frame is discarded afterwards.
  */
 template <typename T>
 INLINE_METHOD void exahype2::amr::restrictHaloLayerFromStagedSubfaces(
   exahype2::amr::ChildDataStage<T>& stage,
-  const void*                       coarseFaceKey,
-  T* NOALIAS                        coarseGridFaceValues,
+  const void* const                 coarseFaceKey,
+  T* NOALIAS const                  coarseGridFaceValues,
   const int                         normal,
   const int                         numberOfDofsPerAxis,
   const int                         numberOfUnknownsPlusAuxiliaryVariables
@@ -420,12 +432,10 @@ INLINE_METHOD void exahype2::amr::restrictHaloLayerFromStagedSubfaces(
     break;
   }
 
-  const int side = stage.frameTag(coarseFaceKey);
-#if DIMENSIONS == 3
-  constexpr double RestrictionScale = 1.0 / 9.0;
-#else
-  constexpr double RestrictionScale = 1.0 / 3.0;
-#endif
+  const int     side              = stage.frameTag(coarseFaceKey);
+  constexpr int SubdivisionFactor = peano4::sfc::ActiveCurve::SubdivisionFactor;
+  // A coarse face volume averages its SubdivisionFactor^(d-1) covering fine volumes.
+  constexpr double RestrictionScale = 1.0 / peano4::power(SubdivisionFactor, DIMENSIONS - 1);
 
   tarch::la::ExactAccumulator accumulator;
 #if DIMENSIONS == 3
@@ -438,8 +448,8 @@ INLINE_METHOD void exahype2::amr::restrictHaloLayerFromStagedSubfaces(
       for (int unknown = 0; unknown < numberOfUnknownsPlusAuxiliaryVariables; unknown++) {
         accumulator.clear();
 #if DIMENSIONS == 3
-        for (int offsetJ = 0; offsetJ < 3; offsetJ++) {
-          const int globalJ  = 3 * coarseJ + offsetJ;
+        for (int offsetJ = 0; offsetJ < SubdivisionFactor; offsetJ++) {
+          const int globalJ  = SubdivisionFactor * coarseJ + offsetJ;
           const int subfaceJ = globalJ / numberOfDofsPerAxis;
           const int fineJ    = globalJ % numberOfDofsPerAxis;
 #else
@@ -447,11 +457,11 @@ INLINE_METHOD void exahype2::amr::restrictHaloLayerFromStagedSubfaces(
         const int fineJ    = 0;
         {
 #endif
-          for (int offsetI = 0; offsetI < 3; offsetI++) {
-            const int globalI      = 3 * coarseI + offsetI;
+          for (int offsetI = 0; offsetI < SubdivisionFactor; offsetI++) {
+            const int globalI      = SubdivisionFactor * coarseI + offsetI;
             const int subfaceI     = globalI / numberOfDofsPerAxis;
             const int fineI        = globalI % numberOfDofsPerAxis;
-            const int subfaceIndex = subfaceJ * 3 + subfaceI;
+            const int subfaceIndex = subfaceJ * SubdivisionFactor + subfaceI;
             if (not stage.hasChild(coarseFaceKey, subfaceIndex)) {
               continue;
             }
@@ -478,23 +488,23 @@ INLINE_METHOD void exahype2::amr::restrictHaloLayerFromStagedSubfaces(
  *
  * Entry [b * n * n + coarse * n + fine] of restrictionMatrix1D is the coarse
  * one-dimensional shape function at the fine node of child interval b, divided
- * by three; each fine node carries its quadrature weight divided by the coarse
+ * by the subdivision factor; each fine node carries its quadrature weight divided by the coarse
  * node's weight, which makes the sum the mass-lumped L2 projection of the fine
  * trace. The matrices and weights must be mirror symmetric to the last bit for
- * mirrored subface sets to restrict to bitwise mirrored halves. A subface
+ * mirrored subface sets to restrict to bitwise mirrored halves; a subface
  * another rank holds is absent and contributes nothing, and the frame is
  * discarded afterwards.
  */
 template <typename T>
 INLINE_METHOD void exahype2::amr::restrictHaloLayerFromStagedSubfaces(
   exahype2::amr::ChildDataStage<T>& stage,
-  const void*                                  coarseFaceKey,
-  T* NOALIAS                                   coarseGridFaceValues,
-  const double* NOALIAS                        restrictionMatrix1D,
-  const double* NOALIAS                        quadratureWeights1D,
-  const int                                    normal,
-  const int                                    numberOfDofsPerAxis,
-  const int                                    numberOfUnknownsPlusAuxiliaryVariables
+  const void* const                 coarseFaceKey,
+  T* NOALIAS const                  coarseGridFaceValues,
+  const double* NOALIAS             restrictionMatrix1D,
+  const double* NOALIAS             quadratureWeights1D,
+  const int                         normal,
+  const int                         numberOfDofsPerAxis,
+  const int                         numberOfUnknownsPlusAuxiliaryVariables
 ) {
   int iStride    = 0;
   int jStride    = 0;
@@ -521,8 +531,9 @@ INLINE_METHOD void exahype2::amr::restrictHaloLayerFromStagedSubfaces(
     break;
   }
 
-  const int side                       = stage.frameTag(coarseFaceKey);
-  const int numberOfEntriesPerInterval = numberOfDofsPerAxis * numberOfDofsPerAxis;
+  const int     side                       = stage.frameTag(coarseFaceKey);
+  const int     numberOfEntriesPerInterval = numberOfDofsPerAxis * numberOfDofsPerAxis;
+  constexpr int SubdivisionFactor          = peano4::sfc::ActiveCurve::SubdivisionFactor;
 
   tarch::la::ExactAccumulator accumulator;
 #if DIMENSIONS == 3
@@ -535,13 +546,13 @@ INLINE_METHOD void exahype2::amr::restrictHaloLayerFromStagedSubfaces(
       for (int unknown = 0; unknown < numberOfUnknownsPlusAuxiliaryVariables; unknown++) {
         accumulator.clear();
 #if DIMENSIONS == 3
-        for (int subfaceJ = 0; subfaceJ < 3; subfaceJ++) {
+        for (int subfaceJ = 0; subfaceJ < SubdivisionFactor; subfaceJ++) {
 #else
         const int subfaceJ = 0;
         {
 #endif
-          for (int subfaceI = 0; subfaceI < 3; subfaceI++) {
-            const int subfaceIndex = subfaceJ * 3 + subfaceI;
+          for (int subfaceI = 0; subfaceI < SubdivisionFactor; subfaceI++) {
+            const int subfaceIndex = subfaceJ * SubdivisionFactor + subfaceI;
             if (not stage.hasChild(coarseFaceKey, subfaceIndex)) {
               continue;
             }
@@ -587,54 +598,45 @@ INLINE_METHOD void exahype2::amr::restrictHaloLayerFromStagedSubfaces(
 
 template <typename T>
 INLINE_METHOD void exahype2::amr::interpolateCell(
-  const peano4::datamanagement::CellMarker& marker,
-  const T* NOALIAS                          coarseGridValues,
-  T* NOALIAS                                fineGridValues,
-  const int                                 numberOfDofsPerAxis,
-  const int                                 numberOfUnknownsPlusAuxiliaryVariables
+  const peano4::dataview::CellMarker& marker,
+  const T* NOALIAS                    coarseGridValues,
+  T* NOALIAS                          fineGridValues,
+  const int                           numberOfDofsPerAxis,
+  const int                           numberOfUnknownsPlusAuxiliaryVariables
 ) {
-#if DIMENSIONS == 3
-  for (int z = 0; z < numberOfDofsPerAxis; z++) {
-    const auto zPos = numberOfDofsPerAxis * numberOfDofsPerAxis
-      * ((z + numberOfDofsPerAxis * marker.getRelativePositionWithinFatherCell()[2]) / 3);
-#else
-  {
-    const int z    = 0;
-    const int zPos = 0;
-#endif
-    for (int y = 0; y < numberOfDofsPerAxis; y++) {
-      const auto yPos =
-        numberOfDofsPerAxis * ((y + numberOfDofsPerAxis * marker.getRelativePositionWithinFatherCell()[1]) / 3);
-      for (int x = 0; x < numberOfDofsPerAxis; x++) {
-        const auto xPos = (x + numberOfDofsPerAxis * marker.getRelativePositionWithinFatherCell()[0]) / 3;
-        for (int unknown = 0; unknown < numberOfUnknownsPlusAuxiliaryVariables; unknown++) {
-          fineGridValues
-            [(z * numberOfDofsPerAxis * numberOfDofsPerAxis + y * numberOfDofsPerAxis + x)
-               * numberOfUnknownsPlusAuxiliaryVariables
-             + unknown] = coarseGridValues[(zPos + yPos + xPos) * numberOfUnknownsPlusAuxiliaryVariables + unknown];
-        }
-      }
+  constexpr int SubdivisionFactor = peano4::sfc::ActiveCurve::SubdivisionFactor;
+  const auto    subcellIndex      = marker.getRelativePositionWithinFatherCell();
+  peano4::dForEach(numberOfDofsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& fineNode) {
+    tarch::la::Vector<DIMENSIONS, int> coarseNode;
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      coarseNode(axis) = (fineNode(axis) + numberOfDofsPerAxis * subcellIndex(axis)) / SubdivisionFactor;
     }
-  }
+    const int fineIndex = peano4::dLinearised(fineNode, numberOfDofsPerAxis) * numberOfUnknownsPlusAuxiliaryVariables;
+    const int coarseIndex =
+      peano4::dLinearised(coarseNode, numberOfDofsPerAxis) * numberOfUnknownsPlusAuxiliaryVariables;
+    for (int unknown = 0; unknown < numberOfUnknownsPlusAuxiliaryVariables; unknown++) {
+      fineGridValues[fineIndex + unknown] = coarseGridValues[coarseIndex + unknown];
+    }
+  });
 }
 
 /**
  * Interpolates nodal cell data with a matrix-based operator.
  *
  * Entry [b * n * n + fine * n + coarse] of interpolationMatrix1D is the coarse
- * one-dimensional shape function at the fine node of child interval b of the triadic
+ * one-dimensional shape function at the fine node of child interval b of the
  * subdivision. The multidimensional evaluation is the tensor product of the per-axis
  * entries, so every polynomial the coarse basis represents is reproduced exactly on
  * the child.
  */
 template <typename T>
 INLINE_METHOD void exahype2::amr::interpolateCell(
-  const peano4::datamanagement::CellMarker& marker,
-  const T* NOALIAS                          coarseGridValues,
-  T* NOALIAS                                fineGridValues,
-  const double* NOALIAS                     interpolationMatrix1D,
-  const int                                 numberOfDofsPerAxis,
-  const int                                 numberOfUnknownsPlusAuxiliaryVariables
+  const peano4::dataview::CellMarker& marker,
+  const T* NOALIAS                    coarseGridValues,
+  T* NOALIAS                          fineGridValues,
+  const double* NOALIAS               interpolationMatrix1D,
+  const int                           numberOfDofsPerAxis,
+  const int                           numberOfUnknownsPlusAuxiliaryVariables
 ) {
   const auto subcellIndex = marker.getRelativePositionWithinFatherCell();
   peano4::dForEach(numberOfDofsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& fineNode) {
@@ -670,29 +672,31 @@ INLINE_METHOD void exahype2::amr::interpolateCell(
  */
 template <typename T>
 INLINE_METHOD void exahype2::amr::restrictCell(
-  const peano4::datamanagement::CellMarker& marker,
-  T* NOALIAS                                coarseGridValues,
-  const T* NOALIAS                          fineGridValues,
-  const int                                 numberOfDofsPerAxis,
-  const int                                 numberOfUnknownsPlusAuxiliaryVariables
+  const peano4::dataview::CellMarker& marker,
+  T* NOALIAS                          coarseGridValues,
+  const T* NOALIAS                    fineGridValues,
+  const int                           numberOfDofsPerAxis,
+  const int                           numberOfUnknownsPlusAuxiliaryVariables
 ) {
-  static_assert(std::is_floating_point_v<T>, "Averaging restriction requires a floating-point type");
+  static_assert(std::is_floating_point_v<T>, "Averaging restriction requires a floating-point type.");
+  constexpr int SubdivisionFactor = peano4::sfc::ActiveCurve::SubdivisionFactor;
+  // A coarse volume averages the fine volumes of all children of the cell.
+  constexpr T Scale = static_cast<T>(1.0 / peano4::sfc::ActiveCurve::ChildrenPerCell);
 #if DIMENSIONS == 3
-  constexpr T Scale = 1. / 27.;
   for (int z = 0; z < numberOfDofsPerAxis; z++) {
     const auto zPos = numberOfDofsPerAxis * numberOfDofsPerAxis
-      * ((z + numberOfDofsPerAxis * marker.getRelativePositionWithinFatherCell()[2]) / 3);
+      * ((z + numberOfDofsPerAxis * marker.getRelativePositionWithinFatherCell()[2]) / SubdivisionFactor);
 #else
-  constexpr T Scale = 1. / 9.;
   {
     const int z    = 0;
     const int zPos = 0;
 #endif
     for (int y = 0; y < numberOfDofsPerAxis; y++) {
-      const auto yPos =
-        numberOfDofsPerAxis * ((y + numberOfDofsPerAxis * marker.getRelativePositionWithinFatherCell()[1]) / 3);
+      const auto yPos = numberOfDofsPerAxis
+        * ((y + numberOfDofsPerAxis * marker.getRelativePositionWithinFatherCell()[1]) / SubdivisionFactor);
       for (int x = 0; x < numberOfDofsPerAxis; x++) {
-        const auto xPos = (x + numberOfDofsPerAxis * marker.getRelativePositionWithinFatherCell()[0]) / 3;
+        const auto xPos =
+          (x + numberOfDofsPerAxis * marker.getRelativePositionWithinFatherCell()[0]) / SubdivisionFactor;
         for (int unknown = 0; unknown < numberOfUnknownsPlusAuxiliaryVariables; unknown++) {
           coarseGridValues[(zPos + yPos + xPos) * numberOfUnknownsPlusAuxiliaryVariables + unknown] += Scale
             * fineGridValues[(z * numberOfDofsPerAxis * numberOfDofsPerAxis + y * numberOfDofsPerAxis + x)
@@ -709,21 +713,22 @@ INLINE_METHOD void exahype2::amr::restrictCell(
  *
  * Entry [b * n * n + coarse * n + fine] of restrictionMatrix1D is the coarse
  * one-dimensional shape function at the fine node of child interval b, divided by
- * three; each fine node carries its quadrature weight divided by the coarse node's
- * weight, which makes the sum over all 3^d children the mass-lumped L2 projection.
+ * the subdivision factor; each fine node carries its quadrature weight divided by the
+ * coarse node's weight, which makes the sum over all children of the cell the
+ * mass-lumped L2 projection.
  * The coarse cell must contain all zeroes before its first child restricts into it.
  */
 template <typename T>
 INLINE_METHOD void exahype2::amr::restrictCell(
-  const peano4::datamanagement::CellMarker& marker,
-  T* NOALIAS                                coarseGridValues,
-  const T* NOALIAS                          fineGridValues,
-  const double* NOALIAS                     restrictionMatrix1D,
-  const double* NOALIAS                     quadratureWeights1D,
-  const int                                 numberOfDofsPerAxis,
-  const int                                 numberOfUnknownsPlusAuxiliaryVariables
+  const peano4::dataview::CellMarker& marker,
+  T* NOALIAS                          coarseGridValues,
+  const T* NOALIAS                    fineGridValues,
+  const double* NOALIAS               restrictionMatrix1D,
+  const double* NOALIAS               quadratureWeights1D,
+  const int                           numberOfDofsPerAxis,
+  const int                           numberOfUnknownsPlusAuxiliaryVariables
 ) {
-  static_assert(std::is_floating_point_v<T>, "The mass-lumped projection requires a floating-point type");
+  static_assert(std::is_floating_point_v<T>, "The mass-lumped projection requires a floating-point type.");
   const auto subcellIndex = marker.getRelativePositionWithinFatherCell();
   peano4::dForEach(numberOfDofsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& coarseNode) {
     const int coarseIndex =
@@ -748,6 +753,7 @@ INLINE_METHOD void exahype2::amr::restrictCell(
   });
 }
 
+TARGET_DECLARE
 /**
  * Multiplies three factors in ascending value order.
  *
@@ -755,10 +761,10 @@ INLINE_METHOD void exahype2::amr::restrictCell(
  * tensor-product weight; multiplying them in a value-canonical order keeps the
  * rounded product identical for every permutation.
  */
-INLINE_METHOD double exahype2::amr::orderInvariantProduct(
-  double firstFactor,
-  double secondFactor,
-  double thirdFactor
+INLINE_METHOD GPU_CALLABLE_METHOD double exahype2::amr::orderInvariantProduct(
+  const double firstFactor,
+  const double secondFactor,
+  const double thirdFactor
 ) {
   auto low    = firstFactor;
   auto middle = secondFactor;
@@ -774,16 +780,17 @@ INLINE_METHOD double exahype2::amr::orderInvariantProduct(
   }
   return (low * middle) * high;
 }
+TARGET_DECLARE_END
 
 /**
  * Applies a separable operator through symmetry-invariant sums.
  *
- * Every target degree of freedom contracts the whole source patch against the
+ * Every target degree of freedom sums the whole source patch weighted by the
  * tensor product of the per-axis matrix entries, with entry
  * matrixPerAxis[axis][source * numberOfTargetDofsPerAxis + target]. The per-axis
  * factors combine through a value-canonical product and the terms sum through
  * an exact accumulator, so a reflection or axis swap of the patch maps the
- * computation onto itself term by term. The matrices must be mirror symmetric to
+ * computation onto itself term by term, and the matrices must be mirror symmetric to
  * the last bit for mirrored data to yield the bitwise mirrored result.
  */
 template <typename T>
@@ -824,12 +831,12 @@ INLINE_METHOD void exahype2::amr::applyTensorProductOrderInvariant(
 /**
  * Restricts a complete sibling set onto the coarse cell with a mass-lumped operator.
  *
- * The caller collects all 3^d destroyed children, indexed by their linearised
+ * The caller collects all destroyed children, indexed by their linearised
  * position within the father, and hands them over in one call. Every coarse
  * node then sums the weighted contributions of every fine node of every child
  * through an exact accumulator, so the result does not depend on the order in
  * which the traversal destroyed the children, and mirrored sibling sets
- * restrict to bitwise mirrored coarse cells. The per-interval matrices hold
+ * restrict to bitwise mirrored coarse cells; the per-interval matrices hold
  * the weighted restriction operator with entry [fine * numberOfDofsPerAxis +
  * coarse] and must be mirror symmetric to the last bit.
  */
@@ -841,14 +848,15 @@ INLINE_METHOD void exahype2::amr::restrictCellFromChildren(
   const int                    numberOfDofsPerAxis,
   const int                    numberOfUnknownsPlusAuxiliaryVariables
 ) {
+  constexpr int               SubdivisionFactor = peano4::sfc::ActiveCurve::SubdivisionFactor;
   tarch::la::ExactAccumulator accumulator;
   peano4::dForEach(numberOfDofsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& coarseNode) {
     const int coarseIndex =
       peano4::dLinearised(coarseNode, numberOfDofsPerAxis) * numberOfUnknownsPlusAuxiliaryVariables;
     for (int unknown = 0; unknown < numberOfUnknownsPlusAuxiliaryVariables; unknown++) {
       accumulator.clear();
-      peano4::dForEach(3, [&](const tarch::la::Vector<DIMENSIONS, int>& childPosition) {
-        const auto* const childValues = childGridValues[peano4::dLinearised(childPosition, 3)];
+      peano4::dForEach(SubdivisionFactor, [&](const tarch::la::Vector<DIMENSIONS, int>& childPosition) {
+        const auto* const childValues = childGridValues[peano4::dLinearised(childPosition, SubdivisionFactor)];
         peano4::dForEach(numberOfDofsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& fineNode) {
 #if DIMENSIONS == 2
           const double weight =
@@ -874,13 +882,14 @@ INLINE_METHOD void exahype2::amr::restrictCellFromChildren(
 /**
  * Restricts a complete sibling set onto the coarse cell by averaging.
  *
- * The caller collects all 3^d destroyed children, indexed by their linearised
+ * The caller collects all destroyed children, indexed by their linearised
  * position within the father, and hands them over in one call. Every coarse
- * volume averages its 3^d covering fine volumes, which reach across child
- * boundaries when the patch size is no multiple of three. An exact accumulator
- * adds the fine values and applies the scale once at the end, so the result does
- * not depend on the order in which the traversal destroyed the children, and
- * mirrored sibling sets restrict to bitwise mirrored coarse cells.
+ * volume averages the fine volumes covering it, which reach across child
+ * boundaries when the patch size is no multiple of the subdivision factor, and
+ * an exact accumulator adds the fine values and applies the scale once at the end,
+ * so the result does not depend on the order in which the traversal destroyed
+ * the children, and mirrored sibling sets restrict to bitwise mirrored coarse
+ * cells.
  */
 template <typename T>
 INLINE_METHOD void exahype2::amr::restrictCellFromChildren(
@@ -889,26 +898,23 @@ INLINE_METHOD void exahype2::amr::restrictCellFromChildren(
   const int               numberOfDofsPerAxis,
   const int               numberOfUnknownsPlusAuxiliaryVariables
 ) {
-#if DIMENSIONS == 2
-  constexpr double RestrictionScale = 1.0 / 9.0;
-#else
-  constexpr double RestrictionScale = 1.0 / 27.0;
-#endif
+  constexpr int               SubdivisionFactor = peano4::sfc::ActiveCurve::SubdivisionFactor;
+  constexpr double            RestrictionScale  = 1.0 / peano4::sfc::ActiveCurve::ChildrenPerCell;
   tarch::la::ExactAccumulator accumulator;
   peano4::dForEach(numberOfDofsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& coarseVolume) {
     const int coarseIndex =
       peano4::dLinearised(coarseVolume, numberOfDofsPerAxis) * numberOfUnknownsPlusAuxiliaryVariables;
     for (int unknown = 0; unknown < numberOfUnknownsPlusAuxiliaryVariables; unknown++) {
       accumulator.clear();
-      peano4::dForEach(3, [&](const tarch::la::Vector<DIMENSIONS, int>& fineOffset) {
+      peano4::dForEach(SubdivisionFactor, [&](const tarch::la::Vector<DIMENSIONS, int>& fineOffset) {
         tarch::la::Vector<DIMENSIONS, int> childPosition;
         tarch::la::Vector<DIMENSIONS, int> fineVolume;
         for (int axis = 0; axis < DIMENSIONS; axis++) {
-          const int globalFineVolume = 3 * coarseVolume(axis) + fineOffset(axis);
+          const int globalFineVolume = SubdivisionFactor * coarseVolume(axis) + fineOffset(axis);
           childPosition(axis)        = globalFineVolume / numberOfDofsPerAxis;
           fineVolume(axis)           = globalFineVolume % numberOfDofsPerAxis;
         }
-        const auto* const childValues = childGridValues[peano4::dLinearised(childPosition, 3)];
+        const auto* const childValues = childGridValues[peano4::dLinearised(childPosition, SubdivisionFactor)];
         accumulator.add(
           static_cast<double>(
             childValues
@@ -927,10 +933,10 @@ INLINE_METHOD void exahype2::amr::restrictCellFromChildren(
  *
  * The caller selects, per tangential axis, the prolongation operator of the
  * subface's interval within the father face, with entry
- * [coarse * numberOfDofsPerAxis + fine]. Every fine node contracts the whole
- * coarse face half, the per-axis factors combine through a commutative product
+ * [coarse * numberOfDofsPerAxis + fine]. Every fine node sums the whole coarse
+ * face half, the per-axis factors combine through a commutative product
  * and the terms sum through an exact accumulator, so mirrored coarse faces
- * interpolate to bitwise mirrored subfaces. The matrices must be mirror
+ * interpolate to bitwise mirrored subfaces, and the matrices must be mirror
  * symmetric to the last bit for that to hold.
  */
 template <typename T>
@@ -989,7 +995,7 @@ INLINE_METHOD void exahype2::amr::interpolateFaceFromCoarse(
  * once the sweep leaves the face. Every coarse node sums the weighted
  * contributions of every fine node of every present subface through an exact
  * accumulator, and a null child stands for a subface another tree holds and
- * contributes nothing. The per-interval matrices use entry
+ * contributes nothing, and the per-interval matrices use entry
  * [fine * numberOfDofsPerAxis + coarse] and must be mirror symmetric to the last
  * bit.
  */
@@ -1001,12 +1007,13 @@ INLINE_METHOD void exahype2::amr::restrictFaceFromChildren(
   const int                    numberOfDofsPerAxis,
   const int                    numberOfUnknownsPlusAuxiliaryVariables
 ) {
+  constexpr int               SubdivisionFactor = peano4::sfc::ActiveCurve::SubdivisionFactor;
   tarch::la::ExactAccumulator accumulator;
 #if DIMENSIONS == 2
   for (int coarseNode = 0; coarseNode < numberOfDofsPerAxis; coarseNode++) {
     for (int unknown = 0; unknown < numberOfUnknownsPlusAuxiliaryVariables; unknown++) {
       accumulator.clear();
-      for (int subface = 0; subface < 3; subface++) {
+      for (int subface = 0; subface < SubdivisionFactor; subface++) {
         if (childFaceValues[subface] == nullptr) {
           continue;
         }
@@ -1028,9 +1035,9 @@ INLINE_METHOD void exahype2::amr::restrictFaceFromChildren(
         (coarseOuter * numberOfDofsPerAxis + coarseInner) * numberOfUnknownsPlusAuxiliaryVariables;
       for (int unknown = 0; unknown < numberOfUnknownsPlusAuxiliaryVariables; unknown++) {
         accumulator.clear();
-        for (int subfaceOuter = 0; subfaceOuter < 3; subfaceOuter++) {
-          for (int subfaceInner = 0; subfaceInner < 3; subfaceInner++) {
-            const auto* const subfaceValues = childFaceValues[subfaceOuter * 3 + subfaceInner];
+        for (int subfaceOuter = 0; subfaceOuter < SubdivisionFactor; subfaceOuter++) {
+          for (int subfaceInner = 0; subfaceInner < SubdivisionFactor; subfaceInner++) {
+            const auto* const subfaceValues = childFaceValues[subfaceOuter * SubdivisionFactor + subfaceInner];
             if (subfaceValues == nullptr) {
               continue;
             }

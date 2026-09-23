@@ -1,0 +1,138 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+TARGET_DECLARE
+/**
+ * Subtracts the face flux contribution from the cell update.
+ * Orientation is zero at the lower face and one at the upper face.
+ * Linear fluxes include the outward normal.
+ */
+template <
+  int  NumberOfDofsPerAxis,
+  int  NumberOfUnknowns,
+  bool IsLinear,
+  typename StoragePrecision,
+  typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::addFaceIntegral(
+  StoragePrecision* NOALIAS const       cellUpdate,
+  const ComputePrecision* NOALIAS const faceFlux,
+  const ComputePrecision* NOALIAS const faceQuadratureWeights,
+  const ComputePrecision* NOALIAS const inverseCellQuadratureWeights,
+  const ComputePrecision* NOALIAS const leftFaceCoefficients,
+  const ComputePrecision* NOALIAS const rightFaceCoefficients,
+  const int                             direction,
+  const int                             orientation,
+  const double                          inverseCellSizeAlongNormal,
+  const double                          timeStepSize
+) {
+  constexpr int NodesPerFace = (DIMENSIONS == 3) ? NumberOfDofsPerAxis * NumberOfDofsPerAxis : NumberOfDofsPerAxis;
+
+  assertion(direction >= 0 and direction < DIMENSIONS, direction);
+  assertion(orientation == 0 or orientation == 1, orientation);
+  assertion(inverseCellSizeAlongNormal > 0.0, inverseCellSizeAlongNormal);
+
+  int lowerAxesStride = 1;
+  for (int dimension = 0; dimension < direction; dimension++) {
+    lowerAxesStride *= NumberOfDofsPerAxis;
+  }
+
+  const ComputePrecision* NOALIAS const faceCoefficients =
+    (orientation == 0) ? leftFaceCoefficients : rightFaceCoefficients;
+  const ComputePrecision scaling = IsLinear
+    ? static_cast<ComputePrecision>(inverseCellSizeAlongNormal)
+    : static_cast<ComputePrecision>((2.0 * orientation - 1.0) * inverseCellSizeAlongNormal);
+
+  using WeightPrecision = std::common_type_t<ComputePrecision, double>;
+  using UpdatePrecision = std::common_type_t<StoragePrecision, ComputePrecision>;
+
+  for (int faceNode = 0; faceNode < NodesPerFace; faceNode++) {
+    const auto scaledWeight = static_cast<ComputePrecision>(
+      static_cast<WeightPrecision>(scaling) * static_cast<WeightPrecision>(timeStepSize)
+      * static_cast<WeightPrecision>(faceQuadratureWeights[faceNode])
+    );
+    const int lowerAxesIndex  = faceNode % lowerAxesStride;
+    const int higherAxesIndex = faceNode / lowerAxesStride;
+    for (int normalIndex = 0; normalIndex < NumberOfDofsPerAxis; normalIndex++) {
+      const int cellNode = (higherAxesIndex * NumberOfDofsPerAxis + normalIndex) * lowerAxesStride + lowerAxesIndex;
+      SIMD()
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        const ComputePrecision contribution = inverseCellQuadratureWeights[cellNode] * scaledWeight
+          * faceCoefficients[normalIndex] * faceFlux[faceNode * NumberOfUnknowns + unknown];
+        cellUpdate[cellNode * NumberOfUnknowns + unknown] = static_cast<StoragePrecision>(
+          static_cast<UpdatePrecision>(cellUpdate[cellNode * NumberOfUnknowns + unknown])
+          - static_cast<UpdatePrecision>(contribution)
+        );
+      }
+    }
+  }
+}
+
+/**
+ * Subtracts the flux integrals over all faces of one cell from the unknowns of cellValues, which
+ * hold NumberOfValuesPerNode values per node. The two faces of an axis accumulate into one buffer
+ * per axis before the buffers add up, so two mirror-image cells receive bitwise mirrored updates.
+ */
+template <
+  int  NumberOfDofsPerAxis,
+  int  NumberOfUnknowns,
+  int  NumberOfValuesPerNode,
+  bool IsLinear,
+  typename StoragePrecision,
+  typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::addFaceIntegrals(
+  StoragePrecision* NOALIAS const              cellValues,
+  const ComputePrecision* const                faceFluxes[peano4::FacesPerCell],
+  const ComputePrecision* NOALIAS const        faceQuadratureWeights,
+  const ComputePrecision* NOALIAS const        inverseCellQuadratureWeights,
+  const ComputePrecision* NOALIAS const        leftFaceCoefficients,
+  const ComputePrecision* NOALIAS const        rightFaceCoefficients,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const double                                 timeStepSize
+) {
+  constexpr int NodesPerCell = peano4::power(NumberOfDofsPerAxis, DIMENSIONS);
+  constexpr int UpdateSize   = NodesPerCell * NumberOfUnknowns;
+  static_assert(NumberOfUnknowns > 0 and NumberOfValuesPerNode >= NumberOfUnknowns);
+
+  assertion(cellValues != nullptr);
+  assertion(faceQuadratureWeights != nullptr);
+  assertion(inverseCellQuadratureWeights != nullptr);
+  assertion(leftFaceCoefficients != nullptr);
+  assertion(rightFaceCoefficients != nullptr);
+  assertion(timeStepSize >= 0.0, timeStepSize);
+
+  StoragePrecision directionUpdates[DIMENSIONS][UpdateSize];
+  for (int direction = 0; direction < DIMENSIONS; direction++) {
+    assertion(cellSize(direction) > 0.0, cellSize, direction);
+    for (int update = 0; update < UpdateSize; update++) {
+      directionUpdates[direction][update] = static_cast<StoragePrecision>(0);
+    }
+    for (int orientation = 0; orientation < 2; orientation++) {
+      assertion(faceFluxes[direction + orientation * DIMENSIONS] != nullptr, direction, orientation);
+      exahype2::dg::addFaceIntegral<NumberOfDofsPerAxis, NumberOfUnknowns, IsLinear>(
+        directionUpdates[direction],
+        faceFluxes[direction + orientation * DIMENSIONS],
+        faceQuadratureWeights,
+        inverseCellQuadratureWeights,
+        leftFaceCoefficients,
+        rightFaceCoefficients,
+        direction,
+        orientation,
+        1.0 / cellSize(direction),
+        timeStepSize
+      );
+    }
+  }
+
+  for (int node = 0; node < NodesPerCell; node++) {
+    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+      const int update = node * NumberOfUnknowns + unknown;
+#if DIMENSIONS == 2
+      cellValues[node * NumberOfValuesPerNode + unknown] += directionUpdates[0][update] + directionUpdates[1][update];
+#else
+      cellValues[node * NumberOfValuesPerNode + unknown] +=
+        directionUpdates[0][update] + directionUpdates[1][update] + directionUpdates[2][update];
+#endif
+    }
+  }
+}
+TARGET_DECLARE_END

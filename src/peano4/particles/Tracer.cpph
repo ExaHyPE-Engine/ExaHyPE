@@ -1,7 +1,0 @@
-// This file is part of the Peano project. For conditions of distribution and
-// use, please see the copyright notice at www.peano-framework.org
-
-template <typename Particle>
-void peano4::particles::explicitEuler(Particle& particle, double timeStepSize) {
-  particle.x() += timeStepSize * particle.v();
-}

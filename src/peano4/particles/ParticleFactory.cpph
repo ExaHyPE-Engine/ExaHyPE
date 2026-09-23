@@ -77,8 +77,9 @@ INLINE_METHOD std::vector<Particle*> peano4::particles::createEquallySpacedParti
   assertion(continuousParticlesPerAxis >= 0.0, continuousParticlesPerAxis, particlesPerAxis, voxelSize(0), spacing);
   assertion(continuousParticlesPerAxis <= 1.0, continuousParticlesPerAxis, particlesPerAxis, voxelSize(0), spacing);
 
-  const auto layoutWidth = particlesPerAxis * spacing;
-  assertion(tarch::la::smallerEquals(layoutWidth, voxelSize(0)));
+  const auto                  layoutWidth         = particlesPerAxis * spacing;
+  [[maybe_unused]] const bool layoutFitsIntoVoxel = tarch::la::smallerEquals(layoutWidth, voxelSize(0));
+  assertion(layoutFitsIntoVoxel, layoutWidth, voxelSize(0));
 
   if (particlesPerAxis > 0) {
     const auto particleSpacing = voxelSize(0) / particlesPerAxis;
@@ -140,8 +141,10 @@ INLINE_METHOD std::vector<Particle*> peano4::particles::createParticlesAlignedWi
     if (tarch::la::smaller(leftPosition, voxelCentre(dimension) - 0.5 * voxelSize(dimension))) {
       ++leftParticleNumber;
     }
-    if (tarch::la::greaterEquals(rightPosition, voxelCentre(dimension) + 0.5 * voxelSize(dimension))
-        or tarch::la::greaterEquals(rightPosition, domainOffset(dimension) + domainSize(dimension))) {
+    if (
+      tarch::la::greaterEquals(rightPosition, voxelCentre(dimension) + 0.5 * voxelSize(dimension))
+      or tarch::la::greaterEquals(rightPosition, domainOffset(dimension) + domainSize(dimension))
+    ) {
       --rightParticleNumber;
     }
 

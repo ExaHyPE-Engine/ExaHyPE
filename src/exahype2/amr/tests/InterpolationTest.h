@@ -11,7 +11,11 @@ namespace exahype2::amr::tests {
 class exahype2::amr::tests::InterpolationTest final : public tarch::tests::TestCase {
 public:
   InterpolationTest();
-  ~InterpolationTest() override = default;
+  InterpolationTest(const InterpolationTest&)            = delete;
+  InterpolationTest(InterpolationTest&&)                 = delete;
+  InterpolationTest& operator=(const InterpolationTest&) = delete;
+  InterpolationTest& operator=(InterpolationTest&&)      = delete;
+  ~InterpolationTest() override                          = default;
 
   void run() override;
 

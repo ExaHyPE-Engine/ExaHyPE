@@ -6,7 +6,7 @@
 #include "tarch/la/Scalar.h"
 #include "tarch/la/ScalarOperations.h"
 
-tarch::instrumentation::Measurement::Measurement(const double& accuracy):
+tarch::instrumentation::Measurement::Measurement(const double& accuracy) :
   _accuracy(accuracy),
   _accumulatedValue(0.0),
   _lastValue(0.0),
@@ -55,8 +55,8 @@ double tarch::instrumentation::Measurement::getStandardDeviation() const {
     assertion((_accumulatedValue) == (0.0), _accumulatedValue, 0.0);
     return 0.0;
   } else {
-    const double variance = _accumulatedSquares / static_cast<double>(_numberOfMeasurements)
-                            - getAverageValue() * getAverageValue();
+    const double variance =
+      _accumulatedSquares / static_cast<double>(_numberOfMeasurements) - getAverageValue() * getAverageValue();
     return std::sqrt(std::max(0.0, variance));
   }
 }
@@ -80,8 +80,8 @@ void tarch::instrumentation::Measurement::setValue(const double& value) {
     const double averageValue            = getAverageValue();
     const double averageValueOfNextStep  = getAverageValueOfNextStep(value);
     const double differenceDueToNewValue = tarch::la::smallerEquals(averageValue, 1.0)
-                                             ? std::abs(averageValueOfNextStep - averageValue)
-                                             : std::abs(averageValueOfNextStep / averageValue - 1.0);
+      ? std::abs(averageValueOfNextStep - averageValue)
+      : std::abs(averageValueOfNextStep / averageValue - 1.0);
     _isAccurateValue                     = _numberOfMeasurements > 0 && differenceDueToNewValue < _accuracy;
   }
 

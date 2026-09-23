@@ -16,9 +16,10 @@ namespace {
    */
   template <class Operation>
   void runContainerTasks(const std::vector<peano4::data::ManagedContainer*>& containers, const Operation& operation) {
-    tarch::accelerator::parallelForOnHost(tarch::Range(static_cast<int>(containers.size())), [&](const int containerNumber) {
-      operation(containers[containerNumber]);
-    });
+    tarch::accelerator::parallelForOnHost(
+      tarch::accelerator::Range(static_cast<int>(containers.size())),
+      [&](const int containerNumber) { operation(containers[containerNumber]); }
+    );
   }
 } // namespace
 
@@ -37,18 +38,18 @@ void peano4::data::ContainerRegistry::attachContainer(peano4::data::ManagedConta
     std::find_if(_containers.begin(), _containers.end(), [container](const peano4::data::ManagedContainer* registered) {
       return registered->getManagedContainerId() >= container->getManagedContainerId();
     });
-  assertion(
-    insertionPoint == _containers.end()
-      or (*insertionPoint)->getManagedContainerId() != container->getManagedContainerId(),
-    container->getManagedContainerId()
-  );
+  [[maybe_unused]] const bool containerIdIsUnused = insertionPoint == _containers.end()
+    or (*insertionPoint)->getManagedContainerId() != container->getManagedContainerId();
+  assertion(containerIdIsUnused, container->getManagedContainerId());
   _containers.insert(insertionPoint, container);
 }
 
 void peano4::data::ContainerRegistry::detachContainer(const peano4::data::ManagedContainer* const container) {
   assertion(container != nullptr);
   const auto entry = std::find(_containers.begin(), _containers.end(), container);
-  assertion(entry != _containers.end());
+
+  [[maybe_unused]] const bool containerIsRegistered = entry != _containers.end();
+  assertion(containerIsRegistered);
   _containers.erase(entry);
 }
 
@@ -58,18 +59,32 @@ void peano4::data::ContainerRegistry::detachContainer(const peano4::data::Manage
  * the rank to a single task.
  */
 bool peano4::data::ContainerRegistry::supportsSubtreeTaskReplication() const {
-  for (const auto* const container : _containers) {
-    if (not container->supportsSubtreeTaskReplication()) {
-      return false;
-    }
-  }
-  return true;
+  return std::all_of(_containers.begin(), _containers.end(), [](const peano4::data::ManagedContainer* const container) {
+    return container->supportsSubtreeTaskReplication();
+  });
 }
 
-void peano4::data::ContainerRegistry::initialiseSerialSlots() {
-  for (auto* const container : _containers) {
-    container->initialiseSerialSlot();
+bool peano4::data::ContainerRegistry::arePayloadPoolsLive() const { return _payloadPoolsLive; }
+
+/**
+ * Marks the pooled payload buffers live and binds every container's pooled
+ * storage. Values a record holds before its slot is bound move into the
+ * bound chunk.
+ */
+void peano4::data::ContainerRegistry::allocatePayloadPools() {
+  _payloadPoolsLive = true;
+  runContainerTasks(_containers, [](peano4::data::ManagedContainer* const container) { container->bindPool(); });
+}
+
+/**
+ * Returns the pool buffer bytes the registered containers' slots select.
+ */
+std::size_t peano4::data::ContainerRegistry::getPooledPayloadBytes() const {
+  std::size_t bytes = 0;
+  for (const auto* const container : _containers) {
+    bytes += container->getPooledPayloadBytes();
   }
+  return bytes;
 }
 
 void peano4::data::ContainerRegistry::resizePoolsForTree(
@@ -111,10 +126,13 @@ void peano4::data::ContainerRegistry::replicateInterfaceSlots(
   const int numberOfThreads = std::max(1, tarch::tasking::Runtime::getInstance().getNumberOfThreads());
   const int chunksPerContainer =
     std::max(1, (ReplicationChunksPerThread * numberOfThreads + numberOfContainers - 1) / numberOfContainers);
-  tarch::accelerator::parallelForOnHost(tarch::Range(numberOfContainers * chunksPerContainer), [&](const int itemNumber) {
-    _containers[itemNumber / chunksPerContainer]
-      ->replicateInterfaceSlots(facePairs, vertexPairs, itemNumber % chunksPerContainer, chunksPerContainer);
-  });
+  tarch::accelerator::parallelForOnHost(
+    tarch::accelerator::Range(numberOfContainers * chunksPerContainer),
+    [&](const int itemNumber) {
+      _containers[itemNumber / chunksPerContainer]
+        ->replicateInterfaceSlots(facePairs, vertexPairs, itemNumber % chunksPerContainer, chunksPerContainer);
+    }
+  );
 }
 
 void peano4::data::ContainerRegistry::packBoundarySlots(
@@ -154,12 +172,5 @@ void peano4::data::ContainerRegistry::finishBoundaryExchange(
 ) {
   for (auto* const container : _containers) {
     container->finishBoundaryExchange(facePackLists, vertexPackLists, faceFrozenSlotBases, vertexFrozenSlotBases);
-  }
-}
-
-void peano4::data::ContainerRegistry::prepareLocalSlots(const int numberOfSlots) {
-  assertion(numberOfSlots > 0, numberOfSlots);
-  for (auto* const container : _containers) {
-    container->prepareLocalSlots(numberOfSlots);
   }
 }

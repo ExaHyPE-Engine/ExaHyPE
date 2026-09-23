@@ -11,6 +11,11 @@ namespace exahype2::tests {
 class exahype2::tests::RefinementControlTest final : public tarch::tests::TestCase {
 public:
   RefinementControlTest();
+  RefinementControlTest(const RefinementControlTest&)            = delete;
+  RefinementControlTest(RefinementControlTest&&)                 = delete;
+  RefinementControlTest& operator=(const RefinementControlTest&) = delete;
+  RefinementControlTest& operator=(RefinementControlTest&&)      = delete;
+  ~RefinementControlTest() override                              = default;
 
   void run() override;
 

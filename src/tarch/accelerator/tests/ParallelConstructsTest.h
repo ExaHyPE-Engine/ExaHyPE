@@ -4,33 +4,40 @@
 
 #include "tarch/tests/TestCase.h"
 
-namespace tarch {
-  namespace accelerator {
-    namespace tests {
-      class ParallelConstructsTest;
-    } // namespace tests
-  } // namespace accelerator
-} // namespace tarch
+namespace tarch::accelerator::tests {
+  class ParallelConstructsTest;
+} // namespace tarch::accelerator::tests
 
 class tarch::accelerator::tests::ParallelConstructsTest final : public tarch::tests::TestCase {
 public:
-  // The test bodies launch backend kernels via extended __device__ lambdas,
-  // which nvcc forbids inside private/protected member functions, so these are
-  // public.
+  ParallelConstructsTest();
+  ParallelConstructsTest(const ParallelConstructsTest&)            = delete;
+  ParallelConstructsTest(ParallelConstructsTest&&)                 = delete;
+  ParallelConstructsTest& operator=(const ParallelConstructsTest&) = delete;
+  ParallelConstructsTest& operator=(ParallelConstructsTest&&)      = delete;
+  ~ParallelConstructsTest() override                               = default;
+
+  void run() override;
+
+  // The test bodies launch extended __device__ lambdas, which nvcc forbids
+  // inside private or protected member functions.
   void testParallelForOnHost();
   void testParallelFor();
   void testParallelForRangeMD2();
   void testParallelForRangeMD3();
   void testParallelForTeam();
+  void testParallelForTeamRangeMD2();
+  void testParallelForTeamRangeMD3();
+  void testTeamBarrier();
   void testParallelReduceSum();
   void testParallelReduceMin();
   void testParallelReduceMax();
   void testParallelReduceRangeMD2();
   void testParallelReduceRangeMD3();
   void testParallelReduceTeam();
-
-  ParallelConstructsTest();
-  ~ParallelConstructsTest() override = default;
-
-  void run() override;
+  void testParallelReduceTeamSum();
+  void testParallelReduceTeamRangeMD2();
+  void testParallelReduceTeamRangeMD3();
+  void testParallelReduceCustom();
+  void testParallelReduceCustomRange();
 };

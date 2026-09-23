@@ -1,11 +1,10 @@
-
-
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
 def initial():
-  return """
-  // Initialisation of PML parameters
-  auto dmp_pml_width_x = pml_cell_width * h[0];
-  auto dmp_pml_width_y = pml_cell_width * h[1];
-  auto dmp_pml_width_z = pml_cell_width * h[2];
+    return """
+  auto dmp_pml_width_x = PmlCellWidth * h[0];
+  auto dmp_pml_width_y = PmlCellWidth * h[1];
+  auto dmp_pml_width_z = PmlCellWidth * h[2];
 
   auto dmp_pml_right_x = DomainOffset[0] + DomainSize[0] - dmp_pml_width_x;
   auto dmp_pml_right_y = DomainOffset[1] + DomainSize[1] - dmp_pml_width_y;
@@ -15,68 +14,69 @@ def initial():
   auto dmp_pml_left_y = DomainOffset[1] + dmp_pml_width_y;
   auto dmp_pml_left_z = DomainOffset[2] + dmp_pml_width_z;
 
-  constexpr double amplitude_nominator = 6.0;
+  constexpr double AmplitudeNumerator = 6.0;
 
-  auto dmp_amplitude_x = (pml_power + 1) * amplitude_nominator / (2 * dmp_pml_width_x) * log(1 / pml_rel_error);
-  auto dmp_amplitude_y = (pml_power + 1) * amplitude_nominator / (2 * dmp_pml_width_y) * log(1 / pml_rel_error);
-  auto dmp_amplitude_z = (pml_power + 1) * amplitude_nominator / (2 * dmp_pml_width_z) * log(1 / pml_rel_error);
+  auto dmp_amplitude_x = (PmlPower + 1) * AmplitudeNumerator / (2 * dmp_pml_width_x) * log(1 / PmlRelativeError);
+  auto dmp_amplitude_y = (PmlPower + 1) * AmplitudeNumerator / (2 * dmp_pml_width_y) * log(1 / PmlRelativeError);
+  auto dmp_amplitude_z = (PmlPower + 1) * AmplitudeNumerator / (2 * dmp_pml_width_z) * log(1 / PmlRelativeError);
 
   double offset_x = x[0] - h[0] * 0.5;
   double offset_y = x[1] - h[1] * 0.5;
   double offset_z = x[2] - h[2] * 0.5;
 
-  kernels::idx4 idx(Order + 1, Order + 1, Order + 1, NumberOfUnknowns + NumberOfAuxiliaryVariables);
+  kernels::idx4 idx(DGOrder + 1, DGOrder + 1, DGOrder + 1, NumberOfUnknowns + NumberOfAuxiliaryVariables);
 
-  for (int k = 0; k < Order + 1; k++) {
-    double computational_z = (offset_z + h[2] * kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes[k]);
-    for (int j = 0; j < Order + 1; j++) {
-      double computational_y = (offset_y + h[1] * kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes[j]);
-      for (int i = 0; i < Order + 1; i++) {
-        double computational_x = (offset_x + h[0] * kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::nodes[i]);
+  for (int k = 0; k < DGOrder + 1; k++) {
+    double computational_z = (offset_z + h[2] * kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::QuadraturePoints1D[k]);
+    for (int j = 0; j < DGOrder + 1; j++) {
+      double computational_y = (offset_y + h[1] * kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::QuadraturePoints1D[j]);
+      for (int i = 0; i < DGOrder + 1; i++) {
+        double computational_x = (offset_x + h[0] * kernels::{{SOLVER_NAME}}::Quadrature<{{SOLUTION_STORAGE_PRECISION}}>::QuadraturePoints1D[i]);
 
-        if (_TOP != 0) { //  No PML on surface
+        if (PmlTop != 0) { // No PML on surface
           if (computational_x < dmp_pml_left_x) {
             Q[idx(
               k, j, i, Shortcuts::dmp_pml + 0
-            )] = dmp_amplitude_x * pow((dmp_pml_left_x - computational_x) / dmp_pml_width_x, pml_power);
+            )] = dmp_amplitude_x * pow((dmp_pml_left_x - computational_x) / dmp_pml_width_x, PmlPower);
           }
         }
-        if (_TOP != 1) { //  No PML on surface
+        if (PmlTop != 1) { // No PML on surface
           if (computational_y <= dmp_pml_left_y) {
             Q[idx(
               k, j, i, Shortcuts::dmp_pml + 1
-            )] = dmp_amplitude_y * pow((dmp_pml_left_y - computational_y) / dmp_pml_width_y, pml_power);
+            )] = dmp_amplitude_y * pow((dmp_pml_left_y - computational_y) / dmp_pml_width_y, PmlPower);
           }
         }
-        if (_TOP != 2) { //  No PML on surface
+        if (PmlTop != 2) { // No PML on surface
           if (computational_z <= dmp_pml_left_z) {
             Q[idx(
               k, j, i, Shortcuts::dmp_pml + 2
-            )] = dmp_amplitude_z * pow((dmp_pml_left_z - computational_z) / dmp_pml_width_z, pml_power);
+            )] = dmp_amplitude_z * pow((dmp_pml_left_z - computational_z) / dmp_pml_width_z, PmlPower);
           }
         }
         if (computational_x >= dmp_pml_right_x) {
           Q[idx(
             k, j, i, Shortcuts::dmp_pml + 0
-          )] = dmp_amplitude_x * pow((computational_x - dmp_pml_right_x) / dmp_pml_width_x, pml_power);
+          )] = dmp_amplitude_x * pow((computational_x - dmp_pml_right_x) / dmp_pml_width_x, PmlPower);
         }
         if (computational_y >= dmp_pml_right_y) {
           Q[idx(
             k, j, i, Shortcuts::dmp_pml + 1
-          )] = dmp_amplitude_y * pow((computational_y - dmp_pml_right_y) / dmp_pml_width_y, pml_power);
+          )] = dmp_amplitude_y * pow((computational_y - dmp_pml_right_y) / dmp_pml_width_y, PmlPower);
         }
         if (computational_z >= dmp_pml_right_z) {
           Q[idx(
             k, j, i, Shortcuts::dmp_pml + 2
-          )] = dmp_amplitude_z * pow((computational_z - dmp_pml_right_z) / dmp_pml_width_z, pml_power);
+          )] = dmp_amplitude_z * pow((computational_z - dmp_pml_right_z) / dmp_pml_width_z, PmlPower);
         }
       }
     }
   }
 """
 
+
 def flux():
-  return """
+    return """
   auto sigma_xx = Q[Shortcuts::sigma + 0];
   auto sigma_yy = Q[Shortcuts::sigma + 1];
   auto sigma_zz = Q[Shortcuts::sigma + 2];
@@ -125,8 +125,9 @@ def flux():
   }
 """
 
+
 def ncp():
-  return """
+    return """
   auto        rho     = Q[Shortcuts::rho];
   auto        cp      = Q[Shortcuts::cp];
   auto        cs      = Q[Shortcuts::cs];
@@ -203,8 +204,9 @@ def ncp():
   }
 """
 
+
 def algebraic_source():
-  return """
+    return """
   auto rho = Q[Shortcuts::rho];
   auto cp  = Q[Shortcuts::cp];
   auto cs  = Q[Shortcuts::cs];
@@ -217,39 +219,40 @@ def algebraic_source():
   auto lambda  = rho * cp * cp - 2 * mu;
   auto rho_inv = 1 / rho;
 
-  auto alpha_x = (pml_alpha_const + pml_alpha_scalar * dmp_pml_x);
-  auto alpha_y = (pml_alpha_const + pml_alpha_scalar * dmp_pml_y);
-  auto alpha_z = (pml_alpha_const + pml_alpha_scalar * dmp_pml_z);
+  auto alpha_x = (PmlAlphaConstant + PmlAlphaScalar * dmp_pml_x);
+  auto alpha_y = (PmlAlphaConstant + PmlAlphaScalar * dmp_pml_y);
+  auto alpha_z = (PmlAlphaConstant + PmlAlphaScalar * dmp_pml_z);
 
-  S[Shortcuts::v + 0] = rho_inv * (Q[Shortcuts::pml + 9*0 + 0] + Q[Shortcuts::pml + 9*1 + 0] + Q[Shortcuts::pml + 9*2 + 0]);
-  S[Shortcuts::v + 1] = rho_inv * (Q[Shortcuts::pml + 9*0 + 1] + Q[Shortcuts::pml + 9*1 + 1] + Q[Shortcuts::pml + 9*2 + 1]);
-  S[Shortcuts::v + 2] = rho_inv * (Q[Shortcuts::pml + 9*0 + 2] + Q[Shortcuts::pml + 9*1 + 2] + Q[Shortcuts::pml + 9*2 + 2]);
+  S[Shortcuts::v + 0] = -rho_inv * (Q[Shortcuts::pml + 9*0 + 0] + Q[Shortcuts::pml + 9*1 + 0] + Q[Shortcuts::pml + 9*2 + 0]);
+  S[Shortcuts::v + 1] = -rho_inv * (Q[Shortcuts::pml + 9*0 + 1] + Q[Shortcuts::pml + 9*1 + 1] + Q[Shortcuts::pml + 9*2 + 1]);
+  S[Shortcuts::v + 2] = -rho_inv * (Q[Shortcuts::pml + 9*0 + 2] + Q[Shortcuts::pml + 9*1 + 2] + Q[Shortcuts::pml + 9*2 + 2]);
 
-  S[Shortcuts:: sigma + 0] =  (2 * mu + lambda) * Q[Shortcuts::pml + 9*0 + 3] + lambda * (Q[Shortcuts::pml + 9*0 + 4] + Q[Shortcuts::pml + 9*0 + 5])
+  S[Shortcuts::sigma + 0] = -((2 * mu + lambda) * Q[Shortcuts::pml + 9*0 + 3] + lambda * (Q[Shortcuts::pml + 9*0 + 4] + Q[Shortcuts::pml + 9*0 + 5])
                             + (2 * mu + lambda) * Q[Shortcuts::pml + 9*1 + 3] + lambda * (Q[Shortcuts::pml + 9*1 + 4] + Q[Shortcuts::pml + 9*1 + 5])
-                            + (2 * mu + lambda) * Q[Shortcuts::pml + 9*2 + 3] + lambda * (Q[Shortcuts::pml + 9*2 + 4] + Q[Shortcuts::pml + 9*2 + 5]);
+                            + (2 * mu + lambda) * Q[Shortcuts::pml + 9*2 + 3] + lambda * (Q[Shortcuts::pml + 9*2 + 4] + Q[Shortcuts::pml + 9*2 + 5]));
 
-  S[Shortcuts:: sigma + 1] =  (2 * mu + lambda) * Q[Shortcuts::pml + 9*0 + 4] + lambda * (Q[Shortcuts::pml + 9*0 + 3] + Q[Shortcuts::pml + 9*0 + 5])
+  S[Shortcuts::sigma + 1] = -((2 * mu + lambda) * Q[Shortcuts::pml + 9*0 + 4] + lambda * (Q[Shortcuts::pml + 9*0 + 3] + Q[Shortcuts::pml + 9*0 + 5])
                             + (2 * mu + lambda) * Q[Shortcuts::pml + 9*1 + 4] + lambda * (Q[Shortcuts::pml + 9*1 + 3] + Q[Shortcuts::pml + 9*1 + 5])
-                            + (2 * mu + lambda) * Q[Shortcuts::pml + 9*2 + 4] + lambda * (Q[Shortcuts::pml + 9*2 + 3] + Q[Shortcuts::pml + 9*2 + 5]);
+                            + (2 * mu + lambda) * Q[Shortcuts::pml + 9*2 + 4] + lambda * (Q[Shortcuts::pml + 9*2 + 3] + Q[Shortcuts::pml + 9*2 + 5]));
 
-  S[Shortcuts:: sigma + 2] =  (2 * mu + lambda) * Q[Shortcuts::pml + 9*0 + 5] + lambda * (Q[Shortcuts::pml + 9*0 + 3] + Q[Shortcuts::pml + 9*0 + 4])
+  S[Shortcuts::sigma + 2] = -((2 * mu + lambda) * Q[Shortcuts::pml + 9*0 + 5] + lambda * (Q[Shortcuts::pml + 9*0 + 3] + Q[Shortcuts::pml + 9*0 + 4])
                             + (2 * mu + lambda) * Q[Shortcuts::pml + 9*1 + 5] + lambda * (Q[Shortcuts::pml + 9*1 + 3] + Q[Shortcuts::pml + 9*1 + 4])
-                            + (2 * mu + lambda) * Q[Shortcuts::pml + 9*2 + 5] + lambda * (Q[Shortcuts::pml + 9*2 + 3] + Q[Shortcuts::pml + 9*2 + 4]);
+                            + (2 * mu + lambda) * Q[Shortcuts::pml + 9*2 + 5] + lambda * (Q[Shortcuts::pml + 9*2 + 3] + Q[Shortcuts::pml + 9*2 + 4]));
 
-  S[Shortcuts:: sigma + 3] = mu * (Q[Shortcuts::pml + 9*0 + 6] + Q[Shortcuts::pml + 9*1 + 6] + Q[Shortcuts::pml + 9*2 + 6]);
-  S[Shortcuts:: sigma + 4] = mu * (Q[Shortcuts::pml + 9*0 + 7] + Q[Shortcuts::pml + 9*1 + 7] + Q[Shortcuts::pml + 9*2 + 7]);
-  S[Shortcuts:: sigma + 5] = mu * (Q[Shortcuts::pml + 9*0 + 8] + Q[Shortcuts::pml + 9*1 + 8] + Q[Shortcuts::pml + 9*2 + 8]);
+  S[Shortcuts::sigma + 3] = -mu * (Q[Shortcuts::pml + 9*0 + 6] + Q[Shortcuts::pml + 9*1 + 6] + Q[Shortcuts::pml + 9*2 + 6]);
+  S[Shortcuts::sigma + 4] = -mu * (Q[Shortcuts::pml + 9*0 + 7] + Q[Shortcuts::pml + 9*1 + 7] + Q[Shortcuts::pml + 9*2 + 7]);
+  S[Shortcuts::sigma + 5] = -mu * (Q[Shortcuts::pml + 9*0 + 8] + Q[Shortcuts::pml + 9*1 + 8] + Q[Shortcuts::pml + 9*2 + 8]);
 
   for (int j = 0; j < 9; j++) {
-    S[Shortcuts::pml + 9*0 + j] = (dmp_pml_x + alpha_x) * Q[Shortcuts::pml + 9*0 + j];
-    S[Shortcuts::pml + 9*1 + j] = (dmp_pml_y + alpha_y) * Q[Shortcuts::pml + 9*1 + j];
-    S[Shortcuts::pml + 9*2 + j] = (dmp_pml_z + alpha_z) * Q[Shortcuts::pml + 9*2 + j];
+    S[Shortcuts::pml + 9*0 + j] = -(dmp_pml_x + alpha_x) * Q[Shortcuts::pml + 9*0 + j];
+    S[Shortcuts::pml + 9*1 + j] = -(dmp_pml_y + alpha_y) * Q[Shortcuts::pml + 9*1 + j];
+    S[Shortcuts::pml + 9*2 + j] = -(dmp_pml_z + alpha_z) * Q[Shortcuts::pml + 9*2 + j];
   }
 """
 
+
 def multiplyMaterialParameterMatrix():
-  return """
+    return """
   auto rho = Q[Shortcuts::rho];
   auto jacobian = Q[Shortcuts::jacobian];
 
@@ -259,44 +262,41 @@ def multiplyMaterialParameterMatrix():
   auto dmp_pml_y = Q[Shortcuts::dmp_pml + 1];
   auto dmp_pml_z = Q[Shortcuts::dmp_pml + 2];
 
-  // Rhs uses the same formula regardless of dimension, hence no switch necessary
-
   rhs[Shortcuts::v + 0] = rho_inv * rhs[Shortcuts::v + 0];
   rhs[Shortcuts::v + 1] = rho_inv * rhs[Shortcuts::v + 1];
   rhs[Shortcuts::v + 2] = rho_inv * rhs[Shortcuts::v + 2];
 
   for (int j = 0; j < 3; j++) {
-    rhs[Shortcuts::pml + 9*0 + j] = dmp_pml_x / jacobian * rhs[Shortcuts::pml + 9+0 + j];
+    rhs[Shortcuts::pml + 9*0 + j] = dmp_pml_x / jacobian * rhs[Shortcuts::pml + 9*0 + j];
     rhs[Shortcuts::pml + 9*1 + j] = dmp_pml_y / jacobian * rhs[Shortcuts::pml + 9*1 + j];
     rhs[Shortcuts::pml + 9*2 + j] = dmp_pml_z / jacobian * rhs[Shortcuts::pml + 9*2 + j];
   }
 """
 
+
 def riemann_solver():
-  return """
-  applications::exahype2::exaseis::riemannSolverPML<VariableShortcuts{{SOLVER_NAME}}, {{CORRECTOR_COMPUTATION_PRECISION}}, Order, NumberOfUnknowns, NumberOfAuxiliaryVariables, 1>(
+    return """
+  applications::exahype2::exaseis::riemannSolverPML<VariableShortcuts{{SOLVER_NAME}}, {{CORRECTOR_COMPUTATION_PRECISION}}, DGOrder, NumberOfUnknowns, NumberOfAuxiliaryVariables, 1>(
     FL, FR, QL, QR, dt, direction, isBoundaryFace, faceIndex
   );
 """
 
+
 def userIncludes():
-  return """
-#define _TOP 1
+    return [
+        "../riemannSolvers/riemannsolverPML.h",
+        "exahype2/Curvi.h",
+        "exahype2/dg/DGUtils.h",
+        "tarch/reader/NetCDFFieldSampler.h",
+    ]
 
-#include "../riemannSolvers/riemannsolverPML.h"
-
-#include "exahype2/Curvi.h"
-#include "exahype2/dg/DGUtils.h"
-
-#include "tarch/reader/NetCDFFieldSampler.h"
-"""
 
 def abstractDeclarations():
-  return """
+    return """
 protected:
-  static constexpr int     pml_cell_width    = 1;
-  static constexpr double  pml_alpha_const   = 1.5;
-  static constexpr double  pml_alpha_scalar  = 0.0;
-  static constexpr double  pml_rel_error     = 0.001;
-  static constexpr int     pml_power         = 1;
+  static constexpr int     PmlCellWidth     = 1;
+  static constexpr double  PmlAlphaConstant = 1.5;
+  static constexpr double  PmlAlphaScalar   = 0.0;
+  static constexpr double  PmlRelativeError = 0.001;
+  static constexpr int     PmlPower         = 1;
 """

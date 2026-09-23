@@ -40,12 +40,10 @@ exahype2::dg::mergeDiscreteMaximumPrincipleMaximum(const Value left, const Value
  * Rounds an observable extremum to a coarser floating-point grid.
  *
  * Two mirror-image cells hold bitwise-mirrored states, yet their extrema pass
- * through tensor-product sums whose summation order differs, so the results
- * can differ in the last bits. A verdict taken at the admissibility margin
- * would then flip in one cell and not in its mirror image, and that one-sided
- * flip seeds a lasting asymmetry. Rounding to twelve fewer mantissa bits
- * removes this noise while staying orders of magnitude below any physical
- * relaxation margin.
+ * through tensor-product sums whose summation order differs, so a verdict taken
+ * at the admissibility margin can flip in one cell and not in its mirror image
+ * and seed a lasting asymmetry. Rounding to twelve fewer mantissa bits removes
+ * this noise and stays orders of magnitude below any physical relaxation margin.
  */
 template <typename Value>
 INLINE_METHOD GPU_CALLABLE_METHOD Value exahype2::dg::quantiseObservableExtremum(const Value extremum) {
@@ -256,8 +254,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::reduceProjectedObservableEx
  * that contains a hanging vertex.
  *
  * The hanging vertex position is its place in the father cell's vertex pattern,
- * from zero to three per axis. Each boundary coordinate selects the coarse
- * vertices on that side.
+ * from zero to the subdivision factor per axis. Each boundary coordinate selects
+ * the coarse vertices on that side.
  */
 template <int Dimensions>
 INLINE_METHOD GPU_CALLABLE_METHOD bool exahype2::dg::isCoarseVertexOnFacetOfHangingVertex(
@@ -268,7 +266,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD bool exahype2::dg::isCoarseVertexOnFacetOfHang
   assertion(coarseVertexNumber >= 0);
   assertion(coarseVertexNumber < (1 << Dimensions));
   constexpr int LowerBoundary  = 0;
-  constexpr int UpperBoundary  = 3;
+  constexpr int UpperBoundary  = peano4::sfc::ActiveCurve::SubdivisionFactor;
   bool          liesOnBoundary = false;
   for (int axis = 0; axis < Dimensions; axis++) {
     assertion(hangingVertexPosition(axis) >= LowerBoundary);
@@ -286,5 +284,4 @@ INLINE_METHOD GPU_CALLABLE_METHOD bool exahype2::dg::isCoarseVertexOnFacetOfHang
   assertion(liesOnBoundary);
   return true;
 }
-
 TARGET_DECLARE_END

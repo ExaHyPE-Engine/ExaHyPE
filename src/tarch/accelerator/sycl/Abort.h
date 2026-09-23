@@ -5,16 +5,9 @@
 #if defined(PEANO_WITH_GPU_BACKEND_SYCL)
 
 namespace tarch::accelerator {
-  inline void abort(const char* message) {
-    COMPILE_IF_ON_DEVICE(
-      printf("%s", message);
-      __builtin_trap();
-    )
-    COMPILE_IF_ON_HOST(
-      std::fputs(message, stderr);
-      std::fflush(stderr);
-      std::_Exit(EXIT_FAILURE);
-    )
+  inline GPU_CALLABLE_METHOD void abort(const char* message) {
+    COMPILE_IF_ON_DEVICE(__acpp_if_target_sscp(__acpp_sscp_print(message);) __builtin_trap();)
+    COMPILE_IF_ON_HOST(std::fputs(message, stderr); std::fflush(stderr); std::_Exit(EXIT_FAILURE);)
   }
 } // namespace tarch::accelerator
 

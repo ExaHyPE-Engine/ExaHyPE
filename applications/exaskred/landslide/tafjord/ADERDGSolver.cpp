@@ -150,7 +150,7 @@ void applications::exahype2::exaskred::ADERDGSolver::diffusiveSourceTerm(
     NumberOfAuxiliaryVariables>(Q, deltaQ, x, h, t, dt, LandslidePhysics, S);
 }
 
-// Both Riemann solvers see sanitised states, so a wet-dry front never feeds
+// Both Riemann solvers read sanitised states, so a wet-dry front never feeds
 // stale momenta of formally dry nodes into the dissipation or the jump terms.
 void applications::exahype2::exaskred::ADERDGSolver::riemannSolver(
   double* const NOALIAS                        FL,
@@ -165,7 +165,7 @@ void applications::exahype2::exaskred::ADERDGSolver::riemannSolver(
   [[maybe_unused]] const bool                  isBoundaryFace,
   [[maybe_unused]] const int                   faceIndex
 ) {
-  constexpr int NumberOfFaceNodes = Order + 1;
+  constexpr int NumberOfFaceNodes = DGOrder + 1;
   constexpr int NumberOfData      = NumberOfUnknowns + NumberOfAuxiliaryVariables;
   double        sanitisedQL[NumberOfFaceNodes * NumberOfData];
   double        sanitisedQR[NumberOfFaceNodes * NumberOfData];
@@ -209,7 +209,7 @@ void applications::exahype2::exaskred::ADERDGSolver::riemannSolver(
     );
   };
   ::applications::exahype2::exaskred::riemann::
-    wellBalancedRusanov<Shortcuts, Shortcuts::z, NumberOfUnknowns, NumberOfAuxiliaryVariables, Order>(
+    wellBalancedRusanov<Shortcuts, Shortcuts::z, NumberOfUnknowns, NumberOfAuxiliaryVariables, DGOrder>(
       sanitisedQL,
       sanitisedQR,
       x,
@@ -269,7 +269,7 @@ bool applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
   const int                                                     numberOfStates,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
   const tarch::la::Vector<DIMENSIONS, double>&                  h
-) const {
+) {
   if (not ::applications::exahype2::exaskred::landslide::
         isAdmissibleGranularLayerCell<Shortcuts, NumberOfUnknowns, NumberOfAuxiliaryVariables>(
           Q,
@@ -296,14 +296,14 @@ bool applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
 void applications::exahype2::exaskred::ADERDGSolver::mapDmpObservables(
   double* const NOALIAS       observables,
   const double* const NOALIAS Q
-) const {
+) {
   ::applications::exahype2::exaskred::landslide::mapGranularLayerDmpObservables<Shortcuts>(observables, Q);
 }
 
 double applications::exahype2::exaskred::ADERDGSolver::dmpRelaxationParameter(
   const int    observable,
   const double specifiedRelaxationParameter
-) const {
+) {
   return ::applications::exahype2::exaskred::landslide::granularLayerDmpRelaxationParameter(
     observable,
     specifiedRelaxationParameter,

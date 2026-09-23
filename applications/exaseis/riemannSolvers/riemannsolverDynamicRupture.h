@@ -3,28 +3,30 @@
 // #include "riemannsolverPML.h"
 #include "dynamicRupture.h"
 
-namespace applications::exahype2::exaseis{
+namespace applications::exahype2::exaseis {
 
   template <class Shortcuts, typename T, int basisSize, int numberOfVariables, int numberOfData, int surface = 2>
   bool riemannSolverDynamicRupture(
-    T* FL, T* FR,
-    const T* const QL, const T* const QR,
-    const double t, const double dt,
+    T*                                           FL,
+    T*                                           FR,
+    const T* const                               QL,
+    const T* const                               QR,
+    const double                                 t,
+    const double                                 dt,
     const tarch::la::Vector<DIMENSIONS, double>& facePos,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-    const int direction,
-    bool isBoundaryFace,
-    int faceIndex,
-    int faultNormal,
-    double faultPosition
-  ){
-
+    const int                                    direction,
+    bool                                         isBoundaryFace,
+    int                                          faceIndex,
+    int                                          faultNormal,
+    double                                       faultPosition
+  ) {
     kernels::idx3 idx_QLR(basisSize, basisSize, numberOfData);
     kernels::idx3 idx_FLR(basisSize, basisSize, numberOfVariables);
 
     // Checking whether the face is on a fault
-    bool is_fault = (direction == faultNormal)
-      && std::abs(facePos[faultNormal]-faultPosition)< 0.5*cellSize[faultNormal];
+    bool is_fault =
+      (direction == faultNormal) && std::abs(facePos[faultNormal] - faultPosition) < 0.5 * cellSize[faultNormal];
 
     T FLn, FLm, FLl, FRn, FRm, FRl;
     T FLx, FLy, FLz, FRx, FRy, FRz;
@@ -33,7 +35,6 @@ namespace applications::exahype2::exaseis{
 
     for (int i = 0; i < basisSize; i++) {
       for (int j = 0; j < basisSize; j++) {
-
         const T* Q_p = QR + idx_QLR(i, j, 0);
         const T* Q_m = QL + idx_QLR(i, j, 0);
 
@@ -94,85 +95,113 @@ namespace applications::exahype2::exaseis{
         T vn_hat_m, vm_hat_m, vl_hat_m;
         T Tn_hat_m, Tm_hat_m, Tl_hat_m;
 
-        if(is_fault){
+        if (is_fault) {
+          T Sn_m, Sm_m, Sl_m, Sn_p, Sm_p, Sl_p;
+          T Sx_m, Sy_m, Sz_m, Sx_p, Sy_p, Sz_p;
 
-          T Sn_m,Sm_m,Sl_m,Sn_p,Sm_p,Sl_p;
-          T Sx_m,Sy_m,Sz_m,Sx_p,Sy_p,Sz_p;
+          Sx_p = QR[idx_QLR(i, j, Shortcuts::u + 0)];
+          Sy_p = QR[idx_QLR(i, j, Shortcuts::u + 1)];
+          Sz_p = QR[idx_QLR(i, j, Shortcuts::u + 2)];
 
-          Sx_p = QR[idx_QLR(i,j,Shortcuts::u + 0)];
-          Sy_p = QR[idx_QLR(i,j,Shortcuts::u + 1)];
-          Sz_p = QR[idx_QLR(i,j,Shortcuts::u + 2)];
-
-          Sx_m = QL[idx_QLR(i,j,Shortcuts::u + 0)];
-          Sy_m = QL[idx_QLR(i,j,Shortcuts::u + 1)];
-          Sz_m = QL[idx_QLR(i,j,Shortcuts::u + 2)];
+          Sx_m = QL[idx_QLR(i, j, Shortcuts::u + 0)];
+          Sy_m = QL[idx_QLR(i, j, Shortcuts::u + 1)];
+          Sz_m = QL[idx_QLR(i, j, Shortcuts::u + 2)];
 
           // tarch::la::Vector<3,double> coords;
           double coords[3] = {
-            (double) QL[idx_QLR(i,j,Shortcuts::curve_grid + 0 )],
-            (double) QL[idx_QLR(i,j,Shortcuts::curve_grid + 1 )],
-            (double) QL[idx_QLR(i,j,Shortcuts::curve_grid + 2 )]
+            (double)QL[idx_QLR(i, j, Shortcuts::curve_grid + 0)],
+            (double)QL[idx_QLR(i, j, Shortcuts::curve_grid + 1)],
+            (double)QL[idx_QLR(i, j, Shortcuts::curve_grid + 2)]
           };
 
           rotateIntoOrthogonalBasis(n_m, m_m, l_m, Sx_m, Sy_m, Sz_m, Sn_m, Sm_m, Sl_m);
           rotateIntoOrthogonalBasis(n_p, m_p, l_p, Sx_p, Sy_p, Sz_p, Sn_p, Sm_p, Sl_p);
 
-          T S =  std::sqrt((Sl_p- Sl_m)*(Sl_p- Sl_m)+(Sm_p- Sm_m)*(Sm_p- Sm_m));
+          T S = std::sqrt((Sl_p - Sl_m) * (Sl_p - Sl_m) + (Sm_p - Sm_m) * (Sm_p - Sm_m));
 
           slipWeakeningFriction(
-            vn_p,vn_m, Tn_p,Tn_m, zp_p , zp_m, vn_hat_p , vn_hat_m, Tn_hat_p,Tn_hat_m, vm_p,vm_m,
-            Tm_p,Tm_m, zs_p,zs_m, vm_hat_p, vm_hat_m, Tm_hat_p,Tm_hat_m, vl_p,vl_m,Tl_p,Tl_m, zs_p,
-            zs_m, vl_hat_p , vl_hat_m, Tl_hat_p,Tl_hat_m, l_p, m_p, n_p,
+            vn_p,
+            vn_m,
+            Tn_p,
+            Tn_m,
+            zp_p,
+            zp_m,
+            vn_hat_p,
+            vn_hat_m,
+            Tn_hat_p,
+            Tn_hat_m,
+            vm_p,
+            vm_m,
+            Tm_p,
+            Tm_m,
+            zs_p,
+            zs_m,
+            vm_hat_p,
+            vm_hat_m,
+            Tm_hat_p,
+            Tm_hat_m,
+            vl_p,
+            vl_m,
+            Tl_p,
+            Tl_m,
+            zs_p,
+            zs_m,
+            vl_hat_p,
+            vl_hat_m,
+            Tl_hat_p,
+            Tl_hat_m,
+            l_p,
+            m_p,
+            n_p,
             coords,
-            S, t
+            S,
+            t
           );
 
-        }
-        else if (isBoundaryFace) {
+        } else if (isBoundaryFace) {
           // 0 absorbing 1 free surface
           T r = faceIndex == surface ? 1 : 0;
 
           riemannSolverBoundary(
             faceIndex,
             r,
-            vn_m, vm_m, vl_m,
-            Tn_m, Tm_m, Tl_m,
-            zp_m, zs_m,
-            vn_hat_m, vm_hat_m, vl_hat_m,
-            Tn_hat_m, Tm_hat_m, Tl_hat_m
+            vn_m,
+            vm_m,
+            vl_m,
+            Tn_m,
+            Tm_m,
+            Tl_m,
+            zp_m,
+            zs_m,
+            vn_hat_m,
+            vm_hat_m,
+            vl_hat_m,
+            Tn_hat_m,
+            Tm_hat_m,
+            Tl_hat_m
           );
           riemannSolverBoundary(
             faceIndex,
             r,
-            vn_p, vm_p, vl_p,
-            Tn_p, Tm_p, Tl_p,
-            zp_p, zs_p,
-            vn_hat_p, vm_hat_p, vl_hat_p,
-            Tn_hat_p, Tm_hat_p, Tl_hat_p
+            vn_p,
+            vm_p,
+            vl_p,
+            Tn_p,
+            Tm_p,
+            Tl_p,
+            zp_p,
+            zs_p,
+            vn_hat_p,
+            vm_hat_p,
+            vl_hat_p,
+            Tn_hat_p,
+            Tm_hat_p,
+            Tl_hat_p
           );
-        }
-        else {
-          riemannSolverNodal(
-            vn_p, vn_m,
-            Tn_p, Tn_m,
-            zp_p , zp_m,
-            vn_hat_p, vn_hat_m,
-            Tn_hat_p, Tn_hat_m
-          );
-          riemannSolverNodal(
-            vm_p, vm_m,
-            Tm_p, Tm_m,
-            zs_p , zs_m,
-            vm_hat_p , vm_hat_m,
-            Tm_hat_p, Tm_hat_m
-          );
-          riemannSolverNodal(
-            vl_p, vl_m,
-            Tl_p, Tl_m,
-            zs_p, zs_m,
-            vl_hat_p, vl_hat_m,
-            Tl_hat_p, Tl_hat_m
-          );
+        } else {
+          riemannSolverNodal(vn_p, vn_m, Tn_p, Tn_m, zp_p, zp_m, vn_hat_p, vn_hat_m, Tn_hat_p, Tn_hat_m);
+          riemannSolverNodal(vm_p, vm_m, Tm_p, Tm_m, zs_p, zs_m, vm_hat_p, vm_hat_m, Tm_hat_p, Tm_hat_m);
+          riemannSolverNodal(vl_p, vl_m, Tl_p, Tl_m, zs_p, zs_m, vl_hat_p, vl_hat_m, Tl_hat_p, Tl_hat_m);
         }
 
         // generate fluctuations in the local basis coordinates: n, m, l
@@ -184,23 +213,23 @@ namespace applications::exahype2::exaseis{
         computeFluctuationsRight(zs_p, Tm_p, Tm_hat_p, vm_p, vm_hat_p, FRm);
         computeFluctuationsRight(zs_p, Tl_p, Tl_hat_p, vl_p, vl_hat_p, FRl);
 
-        //Consider acoustic boundary
-        FL_n = FLn/zp_m;
-        if(zs_m > 0){
-          FL_m = FLm/zs_m;
-          FL_l = FLl/zs_m;
-        }else{
-          FL_m=0;
-          FL_l=0;
+        // Consider acoustic boundary
+        FL_n = FLn / zp_m;
+        if (zs_m > 0) {
+          FL_m = FLm / zs_m;
+          FL_l = FLl / zs_m;
+        } else {
+          FL_m = 0;
+          FL_l = 0;
         }
 
-        FR_n = FRn/zp_p;
-        if(zs_p > 0){
-          FR_m = FRm/zs_p;
-          FR_l = FRl/zs_p;
-        }else{
-          FR_m=0;
-          FR_l=0;
+        FR_n = FRn / zp_p;
+        if (zs_p > 0) {
+          FR_m = FRm / zs_p;
+          FR_l = FRl / zs_p;
+        } else {
+          FR_m = 0;
+          FR_l = 0;
         }
 
         // rotate back to the physical coordinates x, y, z
@@ -221,21 +250,27 @@ namespace applications::exahype2::exaseis{
         F_p[Shortcuts::v + 2] = norm_p / rho_p * FRz;
         F_m[Shortcuts::v + 2] = norm_m / rho_m * FLz;
 
-        F_m[Shortcuts::sigma + 0] =  norm_m*((2*mu_m+lam_m)*n_m[0]*FL_x+lam_m*n_m[1]*FL_y+lam_m*n_m[2]*FL_z);
-        F_m[Shortcuts::sigma + 1] =  norm_m*((2*mu_m+lam_m)*n_m[1]*FL_y+lam_m*n_m[0]*FL_x+lam_m*n_m[2]*FL_z);
-        F_m[Shortcuts::sigma + 2] =  norm_m*((2*mu_m+lam_m)*n_m[2]*FL_z+lam_m*n_m[0]*FL_x+lam_m*n_m[1]*FL_y);
+        F_m[Shortcuts::sigma + 0] =
+          norm_m * ((2 * mu_m + lam_m) * n_m[0] * FL_x + lam_m * n_m[1] * FL_y + lam_m * n_m[2] * FL_z);
+        F_m[Shortcuts::sigma + 1] =
+          norm_m * ((2 * mu_m + lam_m) * n_m[1] * FL_y + lam_m * n_m[0] * FL_x + lam_m * n_m[2] * FL_z);
+        F_m[Shortcuts::sigma + 2] =
+          norm_m * ((2 * mu_m + lam_m) * n_m[2] * FL_z + lam_m * n_m[0] * FL_x + lam_m * n_m[1] * FL_y);
 
-        F_p[Shortcuts::sigma + 0] = -norm_p*((2*mu_p+lam_p)*n_p[0]*FR_x+lam_p*n_p[1]*FR_y+lam_p*n_p[2]*FR_z);
-        F_p[Shortcuts::sigma + 1] = -norm_p*((2*mu_p+lam_p)*n_p[1]*FR_y+lam_p*n_p[0]*FR_x+lam_p*n_p[2]*FR_z);
-        F_p[Shortcuts::sigma + 2] = -norm_p*((2*mu_p+lam_p)*n_p[2]*FR_z+lam_p*n_p[0]*FR_x+lam_p*n_p[1]*FR_y);
+        F_p[Shortcuts::sigma + 0] =
+          -norm_p * ((2 * mu_p + lam_p) * n_p[0] * FR_x + lam_p * n_p[1] * FR_y + lam_p * n_p[2] * FR_z);
+        F_p[Shortcuts::sigma + 1] =
+          -norm_p * ((2 * mu_p + lam_p) * n_p[1] * FR_y + lam_p * n_p[0] * FR_x + lam_p * n_p[2] * FR_z);
+        F_p[Shortcuts::sigma + 2] =
+          -norm_p * ((2 * mu_p + lam_p) * n_p[2] * FR_z + lam_p * n_p[0] * FR_x + lam_p * n_p[1] * FR_y);
 
-        F_m[Shortcuts::sigma + 3] =  norm_m*mu_m*(n_m[1]*FL_x + n_m[0]*FL_y);
-        F_m[Shortcuts::sigma + 4] =  norm_m*mu_m*(n_m[2]*FL_x + n_m[0]*FL_z);
-        F_m[Shortcuts::sigma + 5] =  norm_m*mu_m*(n_m[2]*FL_y + n_m[1]*FL_z);
+        F_m[Shortcuts::sigma + 3] = norm_m * mu_m * (n_m[1] * FL_x + n_m[0] * FL_y);
+        F_m[Shortcuts::sigma + 4] = norm_m * mu_m * (n_m[2] * FL_x + n_m[0] * FL_z);
+        F_m[Shortcuts::sigma + 5] = norm_m * mu_m * (n_m[2] * FL_y + n_m[1] * FL_z);
 
-        F_p[Shortcuts::sigma + 3] = -norm_p*mu_p*(n_p[1]*FR_x + n_p[0]*FR_y);
-        F_p[Shortcuts::sigma + 4] = -norm_p*mu_p*(n_p[2]*FR_x + n_p[0]*FR_z);
-        F_p[Shortcuts::sigma + 5] = -norm_p*mu_p*(n_p[2]*FR_y + n_p[1]*FR_z);
+        F_p[Shortcuts::sigma + 3] = -norm_p * mu_p * (n_p[1] * FR_x + n_p[0] * FR_y);
+        F_p[Shortcuts::sigma + 4] = -norm_p * mu_p * (n_p[2] * FR_x + n_p[0] * FR_z);
+        F_p[Shortcuts::sigma + 5] = -norm_p * mu_p * (n_p[2] * FR_y + n_p[1] * FR_z);
 
         F_m[Shortcuts::u + 0] = 0;
         F_m[Shortcuts::u + 1] = 0;
@@ -244,11 +279,10 @@ namespace applications::exahype2::exaseis{
         F_p[Shortcuts::u + 0] = 0;
         F_p[Shortcuts::u + 1] = 0;
         F_p[Shortcuts::u + 2] = 0;
-
       }
     }
 
     return is_fault;
   }
 
-}
+} // namespace applications::exahype2::exaseis

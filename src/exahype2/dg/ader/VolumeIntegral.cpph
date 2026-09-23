@@ -1,0 +1,191 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+TARGET_DECLARE
+/**
+ * Overwrites the volume coefficients with the stiffness operator scaled by the time step size and
+ * the reciprocal quadrature weight of its row.
+ */
+template <int NumberOfDofsPerAxis, typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::buildVolumeCoefficients(
+  ComputePrecision* NOALIAS const       volumeCoefficients,
+  const ComputePrecision* NOALIAS const stiffnessOperator,
+  const ComputePrecision* NOALIAS const inverseQuadratureWeights,
+  const double                          timeStepSize
+) {
+  const auto scaledTimeStepSize = static_cast<ComputePrecision>(timeStepSize);
+  for (int row = 0; row < NumberOfDofsPerAxis; row++) {
+    for (int column = 0; column < NumberOfDofsPerAxis; column++) {
+      volumeCoefficients[row * NumberOfDofsPerAxis + column] =
+        stiffnessOperator[row * NumberOfDofsPerAxis + column] * scaledTimeStepSize * inverseQuadratureWeights[row];
+    }
+  }
+}
+
+/**
+ * Adds the weak divergence of the time-averaged flux to the cell state, one contraction per axis
+ * with the volume coefficients.
+ */
+template <
+  int NumberOfDofsPerAxis,
+  int NumberOfUnknowns,
+  int NumberOfAuxiliaryVariables,
+  typename StoragePrecision,
+  typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::addFluxVolumeIntegral(
+  StoragePrecision* NOALIAS const                        cellState,
+  const ComputePrecision* NOALIAS const                  timeAveragedFlux,
+  const ComputePrecision* NOALIAS const                  volumeCoefficients,
+  const tarch::la::Vector<DIMENSIONS, ComputePrecision>& inverseCellSize
+) {
+  using CellLayout          = Layout<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables>;
+  constexpr int FluxStride  = CellLayout::PaddedNumberOfUnknowns;
+  constexpr int StateStride = CellLayout::NumberOfData;
+  constexpr int AxisStride  = FluxStride * CellLayout::NodesPerCell;
+
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    assertion(inverseCellSize(axis) > 0.0, inverseCellSize, axis);
+  }
+
+  for (int z = 0; z < CellLayout::NodesPerAxisIn3D; z++) {
+    for (int y = 0; y < NumberOfDofsPerAxis; y++) {
+      const int firstNode = (z * NumberOfDofsPerAxis + y) * NumberOfDofsPerAxis;
+      exahype2::dg::applyOperatorAlongAxis<
+        NumberOfUnknowns,
+        NumberOfDofsPerAxis,
+        NumberOfDofsPerAxis,
+        FluxStride,
+        NumberOfDofsPerAxis,
+        StateStride,
+        false,
+        StoragePrecision,
+        ComputePrecision>(
+        cellState + firstNode * StateStride,
+        timeAveragedFlux + firstNode * FluxStride,
+        volumeCoefficients,
+        inverseCellSize(0)
+      );
+    }
+  }
+
+  for (int z = 0; z < CellLayout::NodesPerAxisIn3D; z++) {
+    for (int x = 0; x < NumberOfDofsPerAxis; x++) {
+      const int firstNode = z * NumberOfDofsPerAxis * NumberOfDofsPerAxis + x;
+      exahype2::dg::applyOperatorAlongAxis<
+        NumberOfUnknowns,
+        NumberOfDofsPerAxis,
+        NumberOfDofsPerAxis,
+        FluxStride * NumberOfDofsPerAxis,
+        NumberOfDofsPerAxis,
+        StateStride * NumberOfDofsPerAxis,
+        false,
+        StoragePrecision,
+        ComputePrecision>(
+        cellState + firstNode * StateStride,
+        timeAveragedFlux + firstNode * FluxStride + AxisStride,
+        volumeCoefficients,
+        inverseCellSize(1)
+      );
+    }
+  }
+
+  if constexpr (DIMENSIONS == 3) {
+    for (int y = 0; y < NumberOfDofsPerAxis; y++) {
+      for (int x = 0; x < NumberOfDofsPerAxis; x++) {
+        const int firstNode = y * NumberOfDofsPerAxis + x;
+        exahype2::dg::applyOperatorAlongAxis<
+          NumberOfUnknowns,
+          NumberOfDofsPerAxis,
+          NumberOfDofsPerAxis,
+          FluxStride * NumberOfDofsPerAxis * NumberOfDofsPerAxis,
+          NumberOfDofsPerAxis,
+          StateStride * NumberOfDofsPerAxis * NumberOfDofsPerAxis,
+          false,
+          StoragePrecision,
+          ComputePrecision>(
+          cellState + firstNode * StateStride,
+          timeAveragedFlux + firstNode * FluxStride + 2 * AxisStride,
+          volumeCoefficients,
+          inverseCellSize(DIMENSIONS - 1)
+        );
+      }
+    }
+  }
+}
+
+/**
+ * Adds the time-averaged source scaled by the time step size to the cell state.
+ */
+template <
+  int NumberOfDofsPerAxis,
+  int NumberOfUnknowns,
+  int NumberOfAuxiliaryVariables,
+  typename StoragePrecision,
+  typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::addSourceVolumeIntegral(
+  StoragePrecision* NOALIAS const       cellState,
+  const ComputePrecision* NOALIAS const timeAveragedSource,
+  const double                          timeStepSize
+) {
+  using CellLayout      = Layout<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables>;
+  using UpdatePrecision = std::common_type_t<StoragePrecision, ComputePrecision>;
+
+  const auto scaledTimeStepSize = static_cast<ComputePrecision>(timeStepSize);
+  for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+    SIMD()
+    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+      const ComputePrecision contribution =
+        scaledTimeStepSize * timeAveragedSource[cellNode * CellLayout::PaddedNumberOfUnknowns + unknown];
+      cellState[cellNode * CellLayout::NumberOfData + unknown] = static_cast<StoragePrecision>(
+        static_cast<UpdatePrecision>(cellState[cellNode * CellLayout::NumberOfData + unknown])
+        + static_cast<UpdatePrecision>(contribution)
+      );
+    }
+  }
+}
+
+/**
+ * Adds the time-averaged source and subtracts the time-averaged flux divergence, both times the
+ * time step.
+ */
+template <
+  int  NumberOfDofsPerAxis,
+  int  NumberOfUnknowns,
+  int  NumberOfAuxiliaryVariables,
+  bool AccumulatesFlux,
+  bool EvaluateSource,
+  typename StoragePrecision,
+  typename ComputePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::subtractTimeAveragedVolumeIntegral(
+  StoragePrecision* NOALIAS const                        cellState,
+  [[maybe_unused]] const ComputePrecision* NOALIAS const timeAveragedFlux,
+  [[maybe_unused]] const ComputePrecision* NOALIAS const timeAveragedSource,
+  const double                                           timeStepSize
+) {
+  using CellLayout            = Layout<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables>;
+  constexpr int UnknownStride = CellLayout::PaddedNumberOfUnknowns;
+  constexpr int AxisStride    = UnknownStride * CellLayout::NodesPerCell;
+
+  using UpdatePrecision = std::common_type_t<ComputePrecision, double>;
+
+  for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+    SIMD()
+    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+      const int entry  = cellNode * UnknownStride + unknown;
+      auto      update = static_cast<ComputePrecision>(0);
+      if constexpr (AccumulatesFlux) {
+        update = timeAveragedFlux[entry] + timeAveragedFlux[entry + AxisStride];
+        if constexpr (DIMENSIONS == 3) {
+          update += timeAveragedFlux[entry + 2 * AxisStride];
+        }
+      }
+      if constexpr (EvaluateSource) {
+        update -= timeAveragedSource[entry];
+      }
+      cellState[cellNode * CellLayout::NumberOfData + unknown] -= static_cast<StoragePrecision>(
+        static_cast<UpdatePrecision>(timeStepSize) * static_cast<UpdatePrecision>(update)
+      );
+    }
+  }
+}
+TARGET_DECLARE_END

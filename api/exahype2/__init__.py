@@ -1,18 +1,23 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-
 import importlib
 
 _LAZY_MODULES = {
-    "blockstructured": "exahype2.blockstructured",
-    "tracer": "exahype2.tracer",
-    "grid": "exahype2.grid",
-    "solvers": "exahype2.solvers",
+    "actionsets": "exahype2.actionsets",
+    "codegen": "exahype2.codegen",
+    "datamodel": "exahype2.datamodel",
+    "dg": "exahype2.dg",
+    "fv": "exahype2.fv",
+    "particles": "exahype2.particles",
+    "plotter": "exahype2.plotter",
 }
 
 _LAZY_ATTRIBUTES = {
-    "Project": (".Project", "Project"),
-    "VariableShortcuts": (".VariableShortcuts", "VariableShortcuts"),
+    "log": (".log", "log"),
+    "Main": (".main", "Main"),
+    "Precision": (".precision", "Precision"),
+    "Project": (".project", "Project"),
+    "TimeStepping": (".time_stepping", "TimeStepping"),
 }
 
 __all__ = list(_LAZY_MODULES.keys()) + list(_LAZY_ATTRIBUTES.keys())

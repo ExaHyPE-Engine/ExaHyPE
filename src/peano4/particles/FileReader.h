@@ -2,67 +2,25 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "peano4/Globals.h"
-#include "peano4/datamanagement/CellMarker.h"
+#include "tarch/la/Vector.h"
 
 namespace peano4::particles {
   class FileReader;
 } // namespace peano4::particles
 
-/**
- * A file reader
- * TODO: Move class to tarch/readers as a proper general ".dat" reader.
- *
- * The file reader realises one big table
- */
-class peano4::particles::FileReader {
-  public:
-    /**
-     * Read DAT file
-     *
-     * A dat file is a simple text file where we have one particle description per line. Each
-     * line holds exactly DIMENSIONS double values.
-     */
-    void readDatFile( const std::string& filename, const double scale );
+/** Stores particle coordinates read from a whitespace-separated text file. */
+class peano4::particles::FileReader final {
+public:
+  void readDatFile(const std::string& filename, double scale);
 
-    /**
-     * Take particles from database which fall into given voxel
-     *
-     * <h2> Overlapping vs. non-overlapping domain decomposition </h2>
-     *
-     * In an SPMD environment, it is convenient to make each rank maintain its
-     * own input database. As a consequence, ranks have redundant particles and
-     * we will have to clean up eventually. To mirror this behaviour in the
-     * multithreaded context, we can remove particles whenever we assign them
-     * to an inner vertex, but we should also hand them out redundantly for
-     * boundary vertices.
-     *
-     * @param x      Center of voxel. If you use this within
-     *   touchVertexFirstTime(), you can use the vertex position, i.e. the x()
-     *   operation of the marker. If you use this function within a cell event,
-     *   you can use x() as well, as it returns the centre.
-     * @param h      Size of voxel. If you use this function within a cell
-     *   event, just pass in h(). If you use it within a vertex event, you
-     *   should scale h with 0.5.
-     * @param remove Remove a particle form the internal database if it is a
-     *   match. In most cases, removing the particles immediately speeds up
-     *   things, even though we then have a lot of (uneccessary) locks.
-     *
-     * @see peano4::datamanagement::CellMarker::x()
-     * @see peano4::datamanagement::VertexMarker::x()
-     */
-    std::list< tarch::la::Vector<DIMENSIONS,double> > getParticlesWithinVoxel(
-      const tarch::la::Vector<DIMENSIONS,double>&  x,
-      const tarch::la::Vector<DIMENSIONS,double>&  h,
-      bool remove
-    );
+  std::list<tarch::la::Vector<DIMENSIONS, double>> getParticlesWithinVoxel(
+    const tarch::la::Vector<DIMENSIONS, double>& x,
+    const tarch::la::Vector<DIMENSIONS, double>& h,
+    bool                                         remove
+  );
 
-    void clear();
+  bool empty() const;
 
-    bool empty() const;
-
-    bool getNumberOfCoordinates() const;
-
-  private:
-    std::list< tarch::la::Vector<DIMENSIONS,double> >  _data;
+private:
+  std::list<tarch::la::Vector<DIMENSIONS, double>> _data{};
 };

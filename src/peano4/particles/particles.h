@@ -2,12 +2,13 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "peano4/Constants.h"
+#include "peano4/Loop.h"
+#include "peano4/dataview/CellMarker.h"
+#include "peano4/dataview/VertexEnumerator.h"
+#include "peano4/dataview/VertexMarker.h"
 #include "peano4/particles/assignmentchecks/TracingAPI.h"
 #include "peano4/particles/internal.h"
-#include "peano4/Loop.h"
-#include "peano4/datamanagement/CellMarker.h"
-#include "peano4/datamanagement/VertexEnumerator.h"
-#include "peano4/datamanagement/VertexMarker.h"
 #include "tarch/instrumentation/Debug.h"
 #include "tarch/la/Vector.h"
 #include "tarch/la/VectorVectorOperations.h"
@@ -21,7 +22,7 @@ namespace peano4::particles {
     const tarch::la::Vector<DIMENSIONS, double>& x,
     const tarch::la::Vector<DIMENSIONS, double>& referencePosition,
     const tarch::la::Vector<DIMENSIONS, double>& domainWidth,
-    const std::bitset<DIMENSIONS>&               periodicBC
+    const std::bitset<DIMENSIONS>&               periodicBoundaries
   );
 
   tarch::la::Vector<DIMENSIONS, double> periodicImageTowards(
@@ -31,46 +32,46 @@ namespace peano4::particles {
 
   tarch::la::Vector<DIMENSIONS, double> periodicImageTowardsVertex(
     const tarch::la::Vector<DIMENSIONS, double>& x,
-    const peano4::datamanagement::VertexMarker&  marker
+    const peano4::dataview::VertexMarker&        marker
   );
 
   tarch::la::Vector<DIMENSIONS, double> periodicImageTowardsCell(
     const tarch::la::Vector<DIMENSIONS, double>& x,
-    const peano4::datamanagement::CellMarker&    marker
+    const peano4::dataview::CellMarker&          marker
   );
 
   bool domainHasPeriodicAxes();
 
-  std::bitset<TWO_POWER_D> getAdjacentCellsOwningParticle(
+  std::bitset<peano4::CellsPerVertex> getAdjacentCellsOwningParticle(
     const tarch::la::Vector<DIMENSIONS, double>& x,
-    const peano4::datamanagement::VertexMarker&  marker
+    const peano4::dataview::VertexMarker&        marker
   );
 
   template <typename Particle, typename ParticleSet>
   void insertParticlesIntoCell(
-    const peano4::datamanagement::CellMarker&              marker,
-    const std::vector<Particle*>&                          newParticles,
-    peano4::datamanagement::VertexEnumerator<ParticleSet>& fineGridVertices,
-    int                                                    treeId
+    const peano4::dataview::CellMarker&              marker,
+    const std::vector<Particle*>&                    newParticles,
+    peano4::dataview::VertexEnumerator<ParticleSet>& fineGridVertices,
+    int                                              treeId
   );
 
   template <typename Particle, typename ParticleSet>
   void insertParticleIntoCell(
-    const peano4::datamanagement::CellMarker&              marker,
-    Particle*                                              newParticle,
-    peano4::datamanagement::VertexEnumerator<ParticleSet>& fineGridVertices,
-    int                                                    treeId
+    const peano4::dataview::CellMarker&              marker,
+    Particle*                                        newParticle,
+    peano4::dataview::VertexEnumerator<ParticleSet>& fineGridVertices,
+    int                                              treeId
   );
 
   template <typename Particle>
   void updateContainedInAdjacentCellProperty(
-    const peano4::datamanagement::CellMarker& marker,
-    const std::bitset<DIMENSIONS>&            assignedVertex,
-    Particle&                                 particle
+    const peano4::dataview::CellMarker& marker,
+    const std::bitset<DIMENSIONS>&      assignedVertex,
+    Particle&                           particle
   );
 
   template <typename Particle>
-  void updateContainedInAdjacentCellProperty(const peano4::datamanagement::VertexMarker& marker, Particle& particle);
+  void updateContainedInAdjacentCellProperty(const peano4::dataview::VertexMarker& marker, Particle& particle);
 
   template <typename Particle>
   void updateContainedInAdjacentCellProperty(
@@ -81,14 +82,14 @@ namespace peano4::particles {
 
   bool particleAssignedToVertexWillBeLocal(
     const tarch::la::Vector<DIMENSIONS, double>& x,
-    const peano4::datamanagement::VertexMarker&  marker
+    const peano4::dataview::VertexMarker&        marker
   );
 
   tarch::la::Vector<DIMENSIONS, double> applyPeriodicBoundaryConditions(
     const tarch::la::Vector<DIMENSIONS, double>& x,
     tarch::la::Vector<DIMENSIONS, double>        domainOffset,
     tarch::la::Vector<DIMENSIONS, double>        domainSize,
-    std::bitset<DIMENSIONS>                      periodicBC
+    std::bitset<DIMENSIONS>                      periodicBoundaries
   );
 } // namespace peano4::particles
 

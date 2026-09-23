@@ -5,6 +5,11 @@
 #include "exahype2/amr/AMRRoutines.h"
 #include "peano4/Loop.h"
 #include "peano4/grid/GridTraversalEvent.h"
+#include "peano4/sfc/ActiveCurve.h"
+
+namespace {
+  constexpr int SubdivisionFactor = peano4::sfc::ActiveCurve::SubdivisionFactor;
+} // namespace
 
 exahype2::amr::tests::InterpolationTest::InterpolationTest() :
   TestCase("exahype2::amr::tests::InterpolationTest") {}
@@ -14,7 +19,9 @@ void exahype2::amr::tests::InterpolationTest::run() {
   testMethod(testInterpolateHaloLayerFromCoarseCell);
   testMethod(testInterpolateCell);
   testMethod(testInterpolateHaloLayerWithTangentialSlopeIsBitExactUnderReflection);
+#if DIMENSIONS == 3
   testMethod(testInterpolateHaloLayerWithTangentialSlopeIsBitExactUnderTangentialSwap);
+#endif
   testMethod(testInterpolateHaloLayerWithTangentialSlopePreservesFreeStream);
   testMethod(testInterpolateHaloLayerWithTangentialSlopeIsLinearExact);
 }
@@ -78,7 +85,7 @@ void exahype2::amr::tests::InterpolationTest::testInterpolateHaloLayerWithTangen
             tarch::la::Vector<DIMENSIONS, int> mirroredVolume = volume;
             mirroredVolume(mirroredAxis)                      = NumberOfDofsPerAxis - 1 - volume(mirroredAxis);
             for (int u = 0; u < NumberOfUnknowns; u++) {
-              // One evaluation feeds both arrays: a compiler may lower two calls on the same
+              // One evaluation feeds both arrays: A compiler may lower two calls on the same
               // arguments through different code paths whose transcendentals round apart, and
               // the reflection check requires bit-identical mirrored input by construction.
               const double value                                               = profile(volume, u);
@@ -89,12 +96,12 @@ void exahype2::amr::tests::InterpolationTest::testInterpolateHaloLayerWithTangen
         );
 
         peano4::grid::GridTraversalEvent event;
-        peano4::dForEach(3, [&](const tarch::la::Vector<DIMENSIONS, int>& subCellIndex) {
-          if (subCellIndex(normal) != 2 * side) {
+        peano4::dForEach(SubdivisionFactor, [&](const tarch::la::Vector<DIMENSIONS, int>& subCellIndex) {
+          if (subCellIndex(normal) != (SubdivisionFactor - 1) * side) {
             return;
           }
           tarch::la::Vector<DIMENSIONS, int> mirroredSubCellIndex = subCellIndex;
-          mirroredSubCellIndex(mirroredAxis)                      = 2 - subCellIndex(mirroredAxis);
+          mirroredSubCellIndex(mirroredAxis)                      = SubdivisionFactor - 1 - subCellIndex(mirroredAxis);
 
           event.setRelativePositionToFather(subCellIndex);
           auto faceMarker = event.getFaceMarker();
@@ -148,10 +155,8 @@ void exahype2::amr::tests::InterpolationTest::testInterpolateHaloLayerWithTangen
 
 /**
  * Swapping the two tangential axes of a face commutes bitwise with the interpolation.
- * The two per-axis correction terms are rounded separately before their commutative
- * sum, and this test pins that a fused product cannot re-enter and round the two swap
- * orders apart. Two dimensions have a single tangential axis, so the test only runs
- * in three.
+ * Two dimensions have a single tangential axis, so this test runs in three dimensions
+ * only.
  */
 void exahype2::amr::tests::InterpolationTest::
   testInterpolateHaloLayerWithTangentialSlopeIsBitExactUnderTangentialSwap() {
@@ -208,16 +213,16 @@ void exahype2::amr::tests::InterpolationTest::
           for (int u = 0; u < NumberOfUnknowns; u++) {
             // One evaluation feeds both arrays, so the swapped input equals the swap of the
             // original input to the bit.
-            const double value = profile(volume, u);
-            coarseGridFaceValues[serialiseIndex(volume) + u] = value;
+            const double value                                                          = profile(volume, u);
+            coarseGridFaceValues[serialiseIndex(volume) + u]                            = value;
             swappedCoarseGridFaceValues[serialiseIndex(swapTangentialAxes(volume)) + u] = value;
           }
         }
       );
 
       peano4::grid::GridTraversalEvent event;
-      peano4::dForEach(3, [&](const tarch::la::Vector<DIMENSIONS, int>& subCellIndex) {
-        if (subCellIndex(normal) != 2 * side) {
+      peano4::dForEach(SubdivisionFactor, [&](const tarch::la::Vector<DIMENSIONS, int>& subCellIndex) {
+        if (subCellIndex(normal) != (SubdivisionFactor - 1) * side) {
           return;
         }
         event.setRelativePositionToFather(subCellIndex);
@@ -303,8 +308,8 @@ void exahype2::amr::tests::InterpolationTest::testInterpolateHaloLayerWithTangen
 
     for (int side = 0; side < 2; side++) {
       peano4::grid::GridTraversalEvent event;
-      peano4::dForEach(3, [&](const tarch::la::Vector<DIMENSIONS, int>& subCellIndex) {
-        if (subCellIndex(normal) != 2 * side) {
+      peano4::dForEach(SubdivisionFactor, [&](const tarch::la::Vector<DIMENSIONS, int>& subCellIndex) {
+        if (subCellIndex(normal) != (SubdivisionFactor - 1) * side) {
           return;
         }
         event.setRelativePositionToFather(subCellIndex);
@@ -376,32 +381,32 @@ void exahype2::amr::tests::InterpolationTest::testInterpolateHaloLayerWithTangen
         continue;
       }
 
-      constexpr int side = 0;
+      constexpr int Side = 0;
       std::fill_n(coarseGridFaceValues, FaceSize, 0.);
       peano4::dForEachExclusive(
         NumberOfDofsPerAxis,
         normal,
-        side,
+        Side,
         [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
           coarseGridFaceValues[serialiseIndex(volume)] = Slope * volume(tangentialAxis) + Intercept;
         }
       );
 
-      // The three sub-patch positions cover the interior central difference as well
-      // as the one-sided difference at both patch ends, so every fine volume must
+      // The sub-patch positions cover the interior central difference as well as
+      // the one-sided difference at both patch ends, so every fine volume must
       // reproduce the linear profile.
-      for (int subPatch = 0; subPatch < 3; subPatch++) {
+      for (int subPatch = 0; subPatch < SubdivisionFactor; subPatch++) {
         peano4::grid::GridTraversalEvent event;
         event.setRelativePositionToFather(tarch::la::Vector<DIMENSIONS, int>(subPatch));
         auto faceMarker = event.getFaceMarker();
-        faceMarker.select(normal + side * DIMENSIONS);
+        faceMarker.select(normal + Side * DIMENSIONS);
 
         std::fill_n(fineGridFaceValues, FaceSize, 0.);
         exahype2::amr::interpolateHaloLayerWithTangentialSlope(
           faceMarker,
           coarseGridFaceValues,
           fineGridFaceValues,
-          side,
+          Side,
           NumberOfDofsPerAxis,
           NumberOfUnknowns
         );
@@ -409,12 +414,13 @@ void exahype2::amr::tests::InterpolationTest::testInterpolateHaloLayerWithTangen
         peano4::dForEachExclusive(
           NumberOfDofsPerAxis,
           normal,
-          side,
+          Side,
           [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
             const int    globalIndex = volume(tangentialAxis) + NumberOfDofsPerAxis * subPatch;
-            const int    coarseCell  = globalIndex / 3;
-            const int    position    = globalIndex % 3;
-            const double expected    = Slope * coarseCell + Intercept + Slope * (position - 1) / 3.0;
+            const int    coarseCell  = globalIndex / SubdivisionFactor;
+            const int    position    = globalIndex % SubdivisionFactor;
+            const double expected =
+              Slope * coarseCell + Intercept + Slope * (position - 0.5 * (SubdivisionFactor - 1)) / SubdivisionFactor;
             validateNumericalEqualsWithParams4(
               fineGridFaceValues[serialiseIndex(volume)],
               expected,
@@ -431,7 +437,7 @@ void exahype2::amr::tests::InterpolationTest::testInterpolateHaloLayerWithTangen
 }
 
 void exahype2::amr::tests::InterpolationTest::testInterpolateHaloLayer() {
-  // Unknowns == DIMENSIONS lets each axis carry a distinct linear ramp.
+  // NumberOfUnknowns == DIMENSIONS lets each axis carry a distinct linear ramp.
   constexpr int NumberOfUnknowns    = DIMENSIONS;
   constexpr int NumberOfDofsPerAxis = 7;
 
@@ -473,7 +479,7 @@ void exahype2::amr::tests::InterpolationTest::testInterpolateHaloLayer() {
       );
 
       peano4::grid::GridTraversalEvent event;
-      peano4::dForEach(3, [&](const tarch::la::Vector<DIMENSIONS, int>& subCellIndex) {
+      peano4::dForEach(SubdivisionFactor, [&](const tarch::la::Vector<DIMENSIONS, int>& subCellIndex) {
         event.setRelativePositionToFather(subCellIndex);
         auto faceMarker = event.getFaceMarker();
         faceMarker.select(normal + side * DIMENSIONS);
@@ -508,7 +514,7 @@ void exahype2::amr::tests::InterpolationTest::testInterpolateHaloLayer() {
               const auto index = serialiseIndex(volume);
               for (int u = 0; u < NumberOfUnknowns; u++) {
                 const auto expectedValue =
-                  (u == normal ? side : (NumberOfDofsPerAxis * subCellIndex[u] + volume[u]) / 3);
+                  (u == normal ? side : (NumberOfDofsPerAxis * subCellIndex[u] + volume[u]) / SubdivisionFactor);
                 validateNumericalEquals(fineGridFaceValues[index + u], expectedValue);
               }
             }
@@ -520,13 +526,13 @@ void exahype2::amr::tests::InterpolationTest::testInterpolateHaloLayer() {
 }
 
 void exahype2::amr::tests::InterpolationTest::testInterpolateHaloLayerFromCoarseCell() {
-  // Unknowns == DIMENSIONS lets each axis carry a distinct linear ramp.
+  // NumberOfUnknowns == DIMENSIONS lets each axis carry a distinct linear ramp.
   constexpr int NumberOfUnknowns = DIMENSIONS;
 
-  // A size divisible by 3 (6, not 7) is needed: the coarse source layer along the
-  // normal depends on side only when 3 divides the patch size, so a non-divisible
-  // size would leave that side dependence untested.
-  for (const auto numberOfDofsPerAxis : {6, 7}) {
+  // The coarse source layer along the normal depends on side only when the
+  // subdivision factor divides the patch size, so one divisible size is needed
+  // to exercise that side dependence and one non-divisible size covers the rest.
+  for (const auto numberOfDofsPerAxis : {2 * SubdivisionFactor, 2 * SubdivisionFactor + 1}) {
 #if DIMENSIONS == 2
     const int faceSize = 2 * NumberOfUnknowns * numberOfDofsPerAxis;
     const int cellSize = NumberOfUnknowns * numberOfDofsPerAxis * numberOfDofsPerAxis;
@@ -561,7 +567,7 @@ void exahype2::amr::tests::InterpolationTest::testInterpolateHaloLayerFromCoarse
 
       for (int side = 0; side < 2; side++) {
         peano4::grid::GridTraversalEvent event;
-        peano4::dForEach(3, [&](const tarch::la::Vector<DIMENSIONS, int>& subCellIndex) {
+        peano4::dForEach(SubdivisionFactor, [&](const tarch::la::Vector<DIMENSIONS, int>& subCellIndex) {
           event.setRelativePositionToFather(subCellIndex);
           auto faceMarker = event.getFaceMarker();
           faceMarker.select(normal + side * DIMENSIONS);
@@ -588,8 +594,8 @@ void exahype2::amr::tests::InterpolationTest::testInterpolateHaloLayerFromCoarse
                 }
               }
             );
-            // With value==position the expected value equals the coarse source
-            // index (side dependent along the normal, see the routine).
+            // Each coarse value equals its own position, so the expected value equals
+            // the coarse source index, which depends on side along the normal.
             const auto subCellPositionAlongNormal = faceMarker.getRelativePositionWithinFatherCell()[normal];
             peano4::dForEachExclusive(
               numberOfDofsPerAxis,
@@ -599,8 +605,9 @@ void exahype2::amr::tests::InterpolationTest::testInterpolateHaloLayerFromCoarse
                 const auto index = serialiseFaceIndex(volume);
                 for (int u = 0; u < NumberOfUnknowns; u++) {
                   const auto expectedValue = (u == normal)
-                    ? (numberOfDofsPerAxis * subCellPositionAlongNormal - (1 - side)) / 3
-                    : (numberOfDofsPerAxis * faceMarker.getRelativePositionWithinFatherCell()[u] + volume[u]) / 3;
+                    ? (numberOfDofsPerAxis * subCellPositionAlongNormal - (1 - side)) / SubdivisionFactor
+                    : (numberOfDofsPerAxis * faceMarker.getRelativePositionWithinFatherCell()[u] + volume[u])
+                      / SubdivisionFactor;
                   validateNumericalEquals(fineGridFaceValues[index + u], expectedValue);
                 }
               }
@@ -613,7 +620,7 @@ void exahype2::amr::tests::InterpolationTest::testInterpolateHaloLayerFromCoarse
 }
 
 void exahype2::amr::tests::InterpolationTest::testInterpolateCell() {
-  // Unknowns == DIMENSIONS lets each axis carry a distinct linear ramp.
+  // NumberOfUnknowns == DIMENSIONS lets each axis carry a distinct linear ramp.
   constexpr int NumberOfUnknowns    = DIMENSIONS;
   constexpr int NumberOfDofsPerAxis = 7;
 
@@ -633,7 +640,7 @@ void exahype2::amr::tests::InterpolationTest::testInterpolateCell() {
   });
 
   peano4::grid::GridTraversalEvent event;
-  peano4::dForEach(3, [&](const tarch::la::Vector<DIMENSIONS, int>& subCellIndex) {
+  peano4::dForEach(SubdivisionFactor, [&](const tarch::la::Vector<DIMENSIONS, int>& subCellIndex) {
     event.setRelativePositionToFather(subCellIndex);
     const auto cellMarker = event.getCellMarker();
 
@@ -648,9 +655,11 @@ void exahype2::amr::tests::InterpolationTest::testInterpolateCell() {
     peano4::dForEach(NumberOfDofsPerAxis, [&](const tarch::la::Vector<DIMENSIONS, int>& volume) {
       const auto index = NumberOfUnknowns * peano4::dLinearised(volume, NumberOfDofsPerAxis);
       for (int u = 0; u < NumberOfUnknowns; u++) {
+        // interpolateCell copies the coarse volume that contains the fine volume, so the division truncates.
+        const int coarseVolumeCoordinate = (NumberOfDofsPerAxis * subCellIndex[u] + volume[u]) / SubdivisionFactor;
         validateNumericalEqualsWithParams4(
           fineGridCellValues[index + u],
-          (NumberOfDofsPerAxis * subCellIndex[u] + volume[u]) / 3,
+          static_cast<double>(coarseVolumeCoordinate),
           subCellIndex,
           index,
           volume,

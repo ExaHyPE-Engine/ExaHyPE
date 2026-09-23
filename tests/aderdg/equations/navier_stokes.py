@@ -3,8 +3,6 @@
 
 from .equation import Equation
 
-from exahype2.solvers.PDETerms import PDETerms
-
 
 class NavierStokes(Equation):
     def __init__(
@@ -46,9 +44,9 @@ class NavierStokes(Equation):
         self._use_gravity = use_gravity
         self._use_viscosity = use_viscosity
 
-        self._gamma = gamma  # ratio of specific heats
-        self._cv = cv  # heat capacity at constant volume
-        self._gas_constant = gas_constant  # specific gas constant of a fluid
+        self._gamma = gamma  # Ratio of specific heats
+        self._cv = cv  # Heat capacity at constant volume
+        self._gas_constant = gas_constant  # Specific gas constant of a fluid
         self._reference_viscosity = reference_viscosity
         self._Pr = Pr  # Prandtl number
         self._molecular_diffusion_coeff = molecular_diffusion_coeff
@@ -108,8 +106,14 @@ class NavierStokes(Equation):
             """
   constexpr auto gamma = """
             + str(self._gamma)
-            + """;
-  constexpr auto gravity = 9.81;
+            + """;"""
+            + (
+                """
+  constexpr auto gravity = 9.81;"""
+                if self._use_gravity
+                else ""
+            )
+            + """
   constexpr auto q0 = """
             + str(self._q0)
             + """;
@@ -124,15 +128,19 @@ class NavierStokes(Equation):
             + """;
 
   auto maxEval = [&](
-    const {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS Q,
+    const auto* const NOALIAS Q,
     const int normal
   ){
     const auto j = &Q[Shortcuts::j];
     const auto E = Q[Shortcuts::E];
-    const auto rho = Q[Shortcuts::rho];
-    const auto height = """
-            + ("Q[Shortcuts::height]" if self._use_gravity else "0")
-            + """;
+    const auto rho = Q[Shortcuts::rho];"""
+            + (
+                """
+    const auto height = Q[Shortcuts::height];"""
+                if self._use_gravity
+                else ""
+            )
+            + """
     const auto Z = """
             + ("Q[Shortcuts::Z];" if self._use_advection else "0;")
             + self.evaluate_pressure()
@@ -146,7 +154,7 @@ class NavierStokes(Equation):
   };
 
   auto diffusiveEval = [&](
-    const {{SOLUTION_STORAGE_PRECISION}}* const NOALIAS Q,
+    const auto* const NOALIAS Q,
     const int normal
   ){
     double smaxDiffusive = molecularDiffusionCoeff;
@@ -161,13 +169,17 @@ class NavierStokes(Equation):
         )
 
     def eigenvalues(self):
-        return (
-            self.eigenvalue_functions()
-            + """
+        return self.eigenvalue_functions() + """
+    // The ADER-DG solver takes the order factor from PNPM, the RKDG solver
+    // from the Cockburn-Shu bound of the Runge-Kutta order.
+    {% if FAMILY == "ader" %}
+    constexpr double orderFactor = PNPM;
+    {% else %}
+    constexpr double orderFactor = 1.0 / (2.0 * RKOrder - 1.0);
+    {% endif %}
     return maxEval(Q, normal)
-      + diffusiveEval(Q, normal)*2/(h[normal]*PNPM);
+      + diffusiveEval(Q, normal)*2/(h[normal]*orderFactor);
 """
-        )
 
     def flux(self):
         flux_init = (
@@ -176,21 +188,35 @@ class NavierStokes(Equation):
   const auto E = Q[Shortcuts::E];
   const auto Z = """
             + ("Q[Shortcuts::Z]" if self._use_advection else "0")
-            + """;
-  const auto height = """
-            + ("Q[Shortcuts::height]" if self._use_gravity else "0")
-            + """;
+            + """;"""
+            + (
+                """
+  const auto height = Q[Shortcuts::height];"""
+                if self._use_gravity
+                else ""
+            )
+            + """
   const auto backgroundPressure = """
             + ("Q[Shortcuts::backgroundstate+1]" if self._use_background_state else "0")
             + """;
-
-  constexpr auto gravity = 9.81;
+"""
+            + (
+                """
+  constexpr auto gravity = 9.81;"""
+                if self._use_gravity
+                else ""
+            )
+            + """
   constexpr auto gamma = """
             + str(self._gamma)
-            + """;
-  constexpr auto gasConstant = """
-            + str(self._gas_constant)
-            + """;
+            + """;"""
+            + (
+                """
+  constexpr auto gasConstant = """ + str(self._gas_constant) + """;"""
+                if self._use_gravity
+                else ""
+            )
+            + """
   constexpr auto cv = """
             + str(self._cv)
             + """;
@@ -343,7 +369,7 @@ class NavierStokes(Equation):
 
     def source(self):
         if not (self._use_gravity or self._use_background_state):
-            return PDETerms.None_Implementation
+            return None
         return (
             """
   std::fill_n(S, NumberOfUnknowns, 0);
@@ -373,19 +399,21 @@ class NavierStokes(Equation):
         return (
             """
   constexpr int strideQ = NumberOfUnknowns + NumberOfAuxiliaryVariables;
-  {{CORRECTOR_COMPUTATION_PRECISION}} QavL[strideQ] __attribute__((aligned(16))) = {0};
-  {{CORRECTOR_COMPUTATION_PRECISION}} QavR[strideQ] __attribute__((aligned(16))) = {0};
+  using FaceValue = std::remove_cvref_t<decltype(QL[0])>;
+  FaceValue QavL[strideQ] __attribute__((aligned(16))) = {0};
+  FaceValue QavR[strideQ] __attribute__((aligned(16))) = {0};
 
 #if DIMENSIONS==3
-      constexpr int faceSize = (Order+1)*(Order+1);
+      constexpr int faceSize = (DGOrder+1)*(DGOrder+1);
 #else
-      constexpr int faceSize = (Order+1);
+      constexpr int faceSize = (DGOrder+1);
 #endif
 
+  const auto* const faceWeights = kernels::{{SOLVER_NAME}}::Quadrature<FaceValue>::QuadratureWeightsOnFace;
   for (int xy = 0; xy < faceSize; xy++) {
     for (int n = 0; n < strideQ; n++) {
-      QavL[n] += kernels::{{SOLVER_NAME}}::Quadrature<{{CORRECTOR_COMPUTATION_PRECISION}}>::weights2[xy] * QL[xy * strideQ + n];
-      QavR[n] += kernels::{{SOLVER_NAME}}::Quadrature<{{CORRECTOR_COMPUTATION_PRECISION}}>::weights2[xy] * QR[xy * strideQ + n];
+      QavL[n] += faceWeights[xy] * QL[xy * strideQ + n];
+      QavR[n] += faceWeights[xy] * QR[xy * strideQ + n];
     }
   }
 
@@ -398,7 +426,7 @@ class NavierStokes(Equation):
     maxEval(&QavR[0], direction)
   );
 
-  const auto factor = 2 * (2 * Order + 1) / (h[direction] * std::sqrt(0.5 * std::numbers::pi));
+  const auto factor = 2 * (2 * DGOrder + 1) / (h[direction] * std::sqrt(0.5 * std::numbers::pi));
   smax += factor*std::fmax(
     diffusiveEval(&QavL[0], direction), diffusiveEval(&QavR[0], direction)
   );

@@ -1,46 +1,27 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 import argparse
+from pathlib import Path
 
 import exahype2
 
 """
 This is a convergence test for time integration methods in particle tracing using orbital mechanics.
-
-This simulation implements the classical one-body problem (particle orbiting a fixed central mass)
-to systematically test the convergence properties and accuracy of different time integration schemes.
-The orbital motion provides an ideal test case because:
-
-- It has a known analytical solution for circular orbits
-- It tests integration stability over long time periods
-- Orbital energy and angular momentum should be conserved
-- Integration errors accumulate and are easily measurable
-
-The particle experiences central gravitational force F = GMm/r² and is initialised with exact
-circular orbital conditions. By comparing numerical trajectories against the analytical solution,
-this test quantifies:
-
-- Order of accuracy for different integration schemes (Euler, RK, Verlet)
-- Long-term stability and energy conservation
-- Phase error accumulation in periodic motion
-
-This convergence study validates the temporal discretisation accuracy of the particle
-tracing framework for gravitational dynamics.
 """
 
 interpolation_methods = {
-    "None": 0,  # No interpolation (use raw values)
-    "Constant": 1,  # Piecewise constant interpolation (nearest neighbor)
-    "Linear": 2,  # Piecewise linear interpolation (more accurate)
+    "None": 0,
+    "Constant": 1,
+    "Linear": 2,
 }
 integration_schemes = {
-    "Static": 0,  # No integration (static particles)
-    "Euler": 1,  # Explicit Euler method (simple but less accurate)
-    "SemiEuler": 2,  # Semi-implicit Euler method (better stability)
-    "Verlet": 3,  # Velocity Verlet algorithm (good for orbital mechanics)
-    "Midpoint": 4,  # Midpoint method (2nd order Runge-Kutta)
-    "RK3": 5,  # 3rd order Runge-Kutta method (high accuracy)
-    "RK4": 6,  # 4th order Runge-Kutta method (higher accuracy)
+    "Static": 0,
+    "Euler": 1,
+    "SemiEuler": 2,
+    "Verlet": 3,
+    "Midpoint": 4,
+    "RK3": 5,
+    "RK4": 6,
 }
 
 
@@ -110,42 +91,32 @@ max_eigenvalue = """
 
 analytical_solution = """
   // Analytical solution for one-body problem with fixed central mass (circular orbit)
-  // System parameters
-  constexpr double mu = 10.0; // Gravitational parameter (G*M)
+  constexpr double GravitationalParameter = 10.0; // G*M
 
-  // Fixed central body position (Domain center)
-  constexpr double x_center = 1.5;
-  constexpr double y_center = 1.5;
+  constexpr double CentreX = 1.5;
+  constexpr double CentreY = 1.5;
 
-  // Initial position of orbiting body
-  constexpr double x0 = 2.0;
-  constexpr double y0 = 2.0;
+  constexpr double StartX = 2.0;
+  constexpr double StartY = 2.0;
 
-  // Initial velocity of orbiting body (circular orbit)
-  const double r = sqrt(pow(x0 - x_center, 2) + pow(y0 - y_center, 2));
-  const double omega = sqrt(mu / (r * r * r));
+  const double r = sqrt(pow(StartX - CentreX, 2) + pow(StartY - CentreY, 2));
+  const double omega = sqrt(GravitationalParameter / (r * r * r));
 
-  // Compute velocity perpendicular to radius for circular orbit
-  const double vx0 = -omega * (y0 - y_center); // Perpendicular direction (tangential)
-  const double vy0 =  omega * (x0 - x_center);
-
-  // Mass of orbiting body
   const double mass = 1.0;
 
-  // Time-dependent angle
-  const double angle = atan2(y0 - y_center, x0 - x_center) + omega * t;
+  const double angle = atan2(StartY - CentreY, StartX - CentreX) + omega * t;
 
   // Position
-  solution[0] = x_center + r * cos(angle); // x
-  solution[1] = y_center + r * sin(angle); // y
+  solution[0] = CentreX + r * cos(angle); // x
+  solution[1] = CentreY + r * sin(angle); // y
 
   // Velocity (perpendicular to radius)
   solution[5] = -r * omega * sin(angle); // vx
   solution[6] =  r * omega * cos(angle); // vy
 
   // Acceleration (central)
-  solution[7] = -mu / (r * r * r) * (solution[0] - x_center); // ax
-  solution[8] = -mu / (r * r * r) * (solution[1] - y_center); // ay
+  solution[7] = -GravitationalParameter / (r * r * r) * (solution[0] - CentreX); // ax
+  solution[8] = -GravitationalParameter / (r * r * r) * (solution[1] - CentreY); // ay
 
   // Other fields
   solution[2] = 0.0;  // rho (density)
@@ -154,16 +125,17 @@ analytical_solution = """
   solution[9] = mass; // m (mass)
 """
 
-fv_solver = exahype2.solvers.fv.godunov.GlobalFixedTimeStep(
+fv_solver = exahype2.fv.Solver(
     name="FVSolver",
     patch_size=args.degrees_of_freedom,
     unknowns=2,
     auxiliary_variables=0,
-    normalised_time_step_size=0.0025 / (args.degrees_of_freedom**0.5),
+    time_stepping=exahype2.TimeStepping.Fixed(0.0025 / (args.degrees_of_freedom**0.5)),
+    scheme=exahype2.fv.Godunov(),
 )
 
-fv_solver.set_implementation(
-    initial_conditions=initial_conditions,
+fv_solver.set_pde_terms(
+    initial_condition=initial_conditions,
     boundary_conditions=boundary_conditions,
     max_eigenvalue=max_eigenvalue,
     flux=flux,
@@ -184,11 +156,11 @@ tracer_attributes = {
     }
 }
 
-tracer_particles = fv_solver.add_tracer(
-    name="Tracers", particle_attributes=tracer_attributes
+tracer_particles = project.add_tracer(
+    name="Tracers", particle_attributes=tracer_attributes, solver=fv_solver
 )
 
-init_tracers = exahype2.tracer.InsertParticlesByCoordinatesAndData(
+init_tracers = exahype2.particles.InsertParticlesByCoordinatesAndData(
     particle_set=tracer_particles,
     unknowns_per_particle=len(tracer_attributes["unknowns"]),
     initial_data="""
@@ -199,29 +171,19 @@ init_tracers = exahype2.tracer.InsertParticlesByCoordinatesAndData(
 init_tracers.descend_invocation_order = 0
 project.add_action_set_to_initialisation(init_tracers)
 
-tracing_action_set = exahype2.tracer.FiniteVolumesTracingWithForce(
+fv_solver.trace(
     tracer_particles,
-    fv_solver,
-    project,
-    integration_scheme=integration_schemes[args.integration],
-    force_method="1",  # Central gravitational force towards the center of the domain
-    interpolation_scheme=interpolation_methods[args.interpolation],
+    forces=exahype2.particles.Forces(
+        integration_scheme=integration_schemes[args.integration],
+        force_method="1",  # Central gravitational force towards the centre of the domain
+        interpolation_scheme=interpolation_methods[args.interpolation],
+    ),
 )
 
-tracing_action_set.descend_invocation_order = (
-    fv_solver._action_set_update_patch.descend_invocation_order + 1
-)
-
-project.add_action_set_to_timestepping(tracing_action_set)
-project.add_action_set_to_initialisation(tracing_action_set)
-
-from pathlib import Path
-
-error_measurement = exahype2.solvers.fv.ErrorMeasurementParticles(
-    fv_solver,
-    error_measurement_implementation=analytical_solution,
-    output_file_name="Error_" + Path(__file__).name,
-    particle_set=tracer_particles,
+fv_solver.set_pde_terms(particle_analytical_solution=analytical_solution)
+fv_solver.measure_particle_error(
+    tracer_particles,
+    file="Error_" + Path(__file__).name,
     descend_invocation_order=65536,  # After all other action sets
 )
 

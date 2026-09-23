@@ -33,11 +33,13 @@ class Exahype2(CMakePackage, CudaPackage):
     depends_on("python")
     depends_on("py-pip")
 
-    depends_on('gsl@2.8')
+    depends_on("gsl@2.8")
 
     depends_on("mpi")
 
-    depends_on("hdf5@1.14.6 -fortran -java +threadsafe +mpi +shared +cxx +hl", when="+hdf5")
+    depends_on(
+        "hdf5@1.14.6 -fortran -java +threadsafe +mpi +shared +cxx +hl", when="+hdf5"
+    )
 
     depends_on("netcdf-c@4.9.2 +shared +mpi", when="+netcdf")
     depends_on("netcdf-cxx4@4.3.1 +shared +pic", when="+netcdf")
@@ -75,21 +77,35 @@ class Exahype2(CMakePackage, CudaPackage):
     def install(self, spec, prefix):
         super(Exahype2, self).install(spec, prefix)
 
-        python_exe = Executable(spec['python'].command.path)
+        python_exe = Executable(spec["python"].command.path)
 
-        requirements_path = join_path(self.stage.source_path, 'requirements.txt')
+        requirements_path = join_path(self.stage.source_path, "requirements.txt")
         if os.path.exists(requirements_path):
-            python_exe('-m', 'pip', 'install', '--prefix=' + prefix, '-r', requirements_path)
+            python_exe(
+                "-m", "pip", "install", "--prefix=" + prefix, "-r", requirements_path
+            )
 
     def setup_run_environment(self, env):
         env.set("PEANO_SRC_ROOT_DIR", self.spec.prefix)
         env.set("PEANO_BUILD_DIR", self.spec.prefix)
         env.set("PEANO_CMAKE_BUILD_DIR", self.spec.prefix)  # alias for PEANO_BUILD_DIR
         env.prepend_path("PYTHONPATH", self.spec.prefix + "/api")
-        env.prepend_path("PYTHONPATH", join_path(self.spec.prefix, "lib", "python" + str(self.spec["python"].version.up_to(2)), "site-packages"))
+        env.prepend_path(
+            "PYTHONPATH",
+            join_path(
+                self.spec.prefix,
+                "lib",
+                "python" + str(self.spec["python"].version.up_to(2)),
+                "site-packages",
+            ),
+        )
         # The JupyterLab server reads its frontend extensions and kernels from the
         # directories on JUPYTER_PATH and JUPYTER_CONFIG_PATH, so both point into
         # the package prefix that install() pip-installs them into.
         env.prepend_path("PATH", join_path(self.spec.prefix, "bin"))
-        env.prepend_path("JUPYTER_PATH", join_path(self.spec.prefix, "share", "jupyter"))
-        env.prepend_path("JUPYTER_CONFIG_PATH", join_path(self.spec.prefix, "etc", "jupyter"))
+        env.prepend_path(
+            "JUPYTER_PATH", join_path(self.spec.prefix, "share", "jupyter")
+        )
+        env.prepend_path(
+            "JUPYTER_CONFIG_PATH", join_path(self.spec.prefix, "etc", "jupyter")
+        )

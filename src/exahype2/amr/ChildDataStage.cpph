@@ -10,15 +10,16 @@ exahype2::amr::ChildDataStage<T>::ChildDataStage(const int numberOfChildren, con
 }
 
 /**
- * A sibling set that started to stage has to complete within the same grid
- * sweep, so a frame that is still in flight when the stage dies marks a
- * destroyed sibling set whose restriction never ran.
+ * A sibling set that starts to stage completes within the same grid sweep, so
+ * an open frame at this point marks a destroyed sibling set whose restriction
+ * never ran.
  */
 // The injected class name after the template argument list keeps the destructor name in the scope
 // ISO C++ looks it up in.
 template <typename T>
 exahype2::amr::ChildDataStage<T>::ChildDataStage::~ChildDataStage() {
-  assertion(_frames.empty());
+  [[maybe_unused]] const bool framesAreEmpty = _frames.empty();
+  assertion(framesAreEmpty);
 }
 
 /** Returns the frame of a coarse entity, or nullptr while none is open. */
@@ -45,7 +46,7 @@ INLINE_METHOD typename exahype2::amr::ChildDataStage<T>::Frame* exahype2::amr::C
  * Copies one child's values into the frame of its coarse entity.
  *
  * The caller identifies the coarse entity by a stable address, typically its
- * patch storage. Destroyed sibling sets nest along the depth-first traversal,
+ * patch storage, and destroyed sibling sets nest along the depth-first traversal,
  * so the frame is searched from the innermost end. Returns true when this call
  * completes the sibling set.
  */
@@ -63,8 +64,9 @@ INLINE_METHOD bool exahype2::amr::ChildDataStage<T>::stage(
     frame->key = coarseEntityKey;
     frame->values.resize(static_cast<std::size_t>(_numberOfChildren) * _valuesPerChild);
   }
-  assertion((frame->filledChildren & (std::uint64_t{1} << childIndex)) == 0);
-  frame->filledChildren |= std::uint64_t{1} << childIndex;
+  const auto childBit = std::uint64_t{1} << static_cast<unsigned>(childIndex);
+  assertion((frame->filledChildren & childBit) == 0);
+  frame->filledChildren |= childBit;
   std::copy_n(
     childValues,
     _valuesPerChild,
@@ -96,8 +98,9 @@ INLINE_METHOD T* exahype2::amr::ChildDataStage<T>::claim(
     frame->values.resize(static_cast<std::size_t>(_numberOfChildren) * _valuesPerChild);
   }
   assertion(frame->tag == frameTag);
-  assertion((frame->filledChildren & (std::uint64_t{1} << childIndex)) == 0);
-  frame->filledChildren |= std::uint64_t{1} << childIndex;
+  const auto childBit = std::uint64_t{1} << static_cast<unsigned>(childIndex);
+  assertion((frame->filledChildren & childBit) == 0);
+  frame->filledChildren |= childBit;
   return frame->values.data() + static_cast<std::size_t>(childIndex) * _valuesPerChild;
 }
 

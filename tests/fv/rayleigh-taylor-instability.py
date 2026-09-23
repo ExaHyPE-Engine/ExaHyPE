@@ -87,31 +87,27 @@ project = exahype2.Project(
     max_grid_levels=args.grid_levels,
 )
 
-solver_class = {
-    "godunov": exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep,
-    "musclhancock": exahype2.solvers.fv.musclhancock.GlobalAdaptiveTimeStep,
-    "weno": exahype2.solvers.fv.weno.GlobalAdaptiveTimeStep,
+scheme = {
+    "godunov": exahype2.fv.Godunov(),
+    "musclhancock": exahype2.fv.MusclHancock(limiter=exahype2.fv.Limiter.vanalbada),
+    "weno": exahype2.fv.Weno(),
 }[args.solver]
 
-fv_solver = solver_class(
+fv_solver = exahype2.fv.Solver(
     name="FVSolver",
     patch_size=args.degrees_of_freedom,
     unknowns={"rho": 1, "rhoU": project.dimensions, "rhoE": 1},
     auxiliary_variables=0,
-    time_step_relaxation=0.5,
+    time_stepping=exahype2.TimeStepping.Adaptive(0.5),
+    scheme=scheme,
 )
 
-fv_solver.set_implementation(
-    initial_conditions=initial_conditions,
+fv_solver.set_pde_terms(
+    initial_condition=initial_conditions,
     boundary_conditions=boundary_conditions,
     max_eigenvalue=max_eigenvalue,
     flux=flux,
-    source_term=source_term,
-    **(
-        {"limiter": exahype2.solvers.fv.musclhancock.Limiter.vanalbada}
-        if args.solver == "musclhancock"
-        else {}
-    ),
+    source=source_term,
 )
 
 project.add_solver(fv_solver)

@@ -4,6 +4,7 @@
 
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
+#include "tarch/plotter/CellTypes.h"
 #include "tarch/plotter/VTUFileWriter.h"
 
 namespace {
@@ -15,8 +16,8 @@ namespace {
       throw std::runtime_error("Test failed: Output file was not created: " + filepath);
     }
 
-    std::ifstream     stream(filepath, std::ios::binary);
-    std::stringstream buffer;
+    const std::ifstream stream(filepath, std::ios::binary);
+    std::stringstream   buffer;
     buffer << stream.rdbuf();
     const std::string content = buffer.str();
 
@@ -40,6 +41,7 @@ void tarch::plotter::tests::VTUFileWriterTest::run() {
     testMethod(test3DSimpleHexahedron);
     testMethod(test2DParticlesWithData);
     testMethod(test3DCellData);
+    testMethod(testCellTypeMetadata);
 
     testMethod(testEmptyPlotter);
     testMethod(testMixedEmptySubdomains);
@@ -53,6 +55,16 @@ void tarch::plotter::tests::VTUFileWriterTest::run() {
     _error = true;
     std::cerr << "  " << exception.what() << std::endl;
   }
+}
+
+void tarch::plotter::tests::VTUFileWriterTest::testCellTypeMetadata() {
+  const auto* const triangle = tarch::plotter::lookupCellType(tarch::plotter::CellType::Triangle);
+  validate(triangle == tarch::plotter::lookupCellType(static_cast<int>(tarch::plotter::CellType::Triangle)));
+  validate(tarch::plotter::lookupCellType(-1) == nullptr);
+  validate(triangle->type == tarch::plotter::CellType::Triangle);
+  validateEquals(tarch::plotter::nodesOf(tarch::plotter::CellType::Triangle), 3);
+  validate(tarch::plotter::xdmfTypeNeedsNodeCount(2));
+  validate(not tarch::plotter::xdmfTypeNeedsNodeCount(triangle->xdmf));
 }
 
 void tarch::plotter::tests::VTUFileWriterTest::test2DSimpleTriangle() {
@@ -80,7 +92,7 @@ void tarch::plotter::tests::VTUFileWriterTest::test2DSimpleTriangle() {
   const std::string vtuPath =
     (tarch::tests::getWritableTestDirectory() / (filename + "-rank-" + std::to_string(rank) + ".vtu")).string();
 
-  validateFileContent(vtuPath, "<Piece NumberOfPoints=\"3\" NumberOfCells=\"1\">");
+  validateFileContent(vtuPath, R"(<Piece NumberOfPoints="3" NumberOfCells="1">)");
   validateFileContent(vtuPath, "Name=\"types\"");
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
@@ -120,7 +132,7 @@ void tarch::plotter::tests::VTUFileWriterTest::test3DSimpleHexahedron() {
   const std::string vtuPath =
     (tarch::tests::getWritableTestDirectory() / (filename + "-rank-" + std::to_string(rank) + ".vtu")).string();
 
-  validateFileContent(vtuPath, "<Piece NumberOfPoints=\"8\" NumberOfCells=\"1\">");
+  validateFileContent(vtuPath, R"(<Piece NumberOfPoints="8" NumberOfCells="1">)");
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     const std::string pvtuPath = (tarch::tests::getWritableTestDirectory() / (filename + ".pvtu")).string();
@@ -159,9 +171,9 @@ void tarch::plotter::tests::VTUFileWriterTest::test2DParticlesWithData() {
 
   validateFileContent(vtuPath, "<PointData>");
   validateFileContent(vtuPath, "Name=\"Mass\"");
-  validateFileContent(vtuPath, "Name=\"Velocity\" NumberOfComponents=\"3\"");
-  validateFileContent(vtuPath, "Name=\"Velocity2D\" NumberOfComponents=\"3\"");
-  validateFileContent(vtuPath, "<Piece NumberOfPoints=\"5\" NumberOfCells=\"0\">");
+  validateFileContent(vtuPath, R"(Name="Velocity" NumberOfComponents="3")");
+  validateFileContent(vtuPath, R"(Name="Velocity2D" NumberOfComponents="3")");
+  validateFileContent(vtuPath, R"(<Piece NumberOfPoints="5" NumberOfCells="0">)");
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     const std::string pvtuPath = (tarch::tests::getWritableTestDirectory() / (filename + ".pvtu")).string();
@@ -311,8 +323,8 @@ void tarch::plotter::tests::VTUFileWriterTest::testMultipleNonEmptySubdomains() 
   const std::string vtuPath =
     (tarch::tests::getWritableTestDirectory() / (filename + "-rank-" + std::to_string(rank) + ".vtu")).string();
 
-  validateFileContent(vtuPath, "<Piece NumberOfPoints=\"3\" NumberOfCells=\"1\">");
-  validateFileContent(vtuPath, "<Piece NumberOfPoints=\"4\" NumberOfCells=\"1\">");
+  validateFileContent(vtuPath, R"(<Piece NumberOfPoints="3" NumberOfCells="1">)");
+  validateFileContent(vtuPath, R"(<Piece NumberOfPoints="4" NumberOfCells="1">)");
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     const std::string pvtuPath = (tarch::tests::getWritableTestDirectory() / (filename + ".pvtu")).string();
@@ -419,8 +431,8 @@ void tarch::plotter::tests::VTUFileWriterTest::testUnevenSubdomainCounts() {
   const std::string vtuPath =
     (tarch::tests::getWritableTestDirectory() / (filename + "-rank-" + std::to_string(rank) + ".vtu")).string();
 
-  std::ifstream     stream(vtuPath);
-  std::stringstream buffer;
+  const std::ifstream stream(vtuPath);
+  std::stringstream   buffer;
   buffer << stream.rdbuf();
   const std::string content        = buffer.str();
   int               numberOfPieces = 0;

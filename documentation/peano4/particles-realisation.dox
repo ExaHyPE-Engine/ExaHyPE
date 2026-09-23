@@ -8,7 +8,7 @@
 
 @page page_peano4_particles_realisation_particle_lift_flavours Particle-set storage
 
-The generator peano4.particles.ParticleSet selects the C++ container
+The generator exahype2.particles.ParticleSet selects the C++ container
 used by a generated particle set. Every set stores pointers to particles and
 inherits the common peano4::particles::ParticleSet lifecycle.
 
@@ -38,11 +38,11 @@ The generated `load()` and `store()` predicates select whether a vertex's
 particle set participates in a traversal event. `send()` and
 `receiveAndMerge()` implement the data-type-specific boundary policy.
 
-Particle sets declare that they do not support subtree-task replication. A step
-using them traverses each rank serially, so
-peano4::stacks::SendReceiveContext::IntraRank is invalid for their generated
-merge routine. Rank-boundary exchange uses
-peano4::stacks::SendReceiveContext::InterRank.
+Particle sets are replicated per subtree task. Their generated merge routine
+handles a partner task's copy with peano4::grid::SendReceiveContext::IntraRank
+and a neighbour rank's copy with peano4::grid::SendReceiveContext::InterRank;
+a peano4::grid::SendReceiveContext::Consolidation deletes the set's particles
+before the merge rebuilds the rank's copy from the tasks' copies.
 
 peano4::communication::CommunicationManager transports the registered
 container payload. The container serialisation creates independent incoming

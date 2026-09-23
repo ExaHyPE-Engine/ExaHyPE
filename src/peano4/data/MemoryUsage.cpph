@@ -1,0 +1,22 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+/**
+ * Returns the heap bytes one container holds. A data type that keeps its values in a memory
+ * pool reports the pool's buffer; every other type carries its values in the records.
+ */
+template <class Data>
+INLINE_METHOD std::uint64_t peano4::data::payloadBytesOf(const std::size_t numberOfSlots) {
+  if constexpr (requires { Data::getMemoryPool(); }) {
+    return static_cast<std::uint64_t>(Data::getMemoryPool().allocatedBytes());
+  } else {
+    return static_cast<std::uint64_t>(numberOfSlots) * Data::Cardinality * sizeof(typename Data::DoFType);
+  }
+}
+
+template <class Data>
+INLINE_METHOD void peano4::data::releasePoolStorage() {
+  if constexpr (requires { Data::getMemoryPool(); }) {
+    Data::getMemoryPool().clear();
+  }
+}

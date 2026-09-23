@@ -6,6 +6,7 @@
 #include "peano4/data/ContainerRegistry.h"
 #include "peano4/grid/GridStatistics.h"
 #include "peano4/grid/GridTraversalObserver.h"
+#include "peano4/sfc/ActiveCurve.h"
 #include "tarch/Assertions.h"
 #include "tarch/Termination.h"
 #include "tarch/mpi/AbstractCommunicationManager.h"
@@ -51,7 +52,7 @@ peano4::topology::TopologyManager& peano4::topology::TopologyManager::getInstanc
 void peano4::topology::TopologyManager::init(
   const tarch::la::Vector<DIMENSIONS, double>& offset,
   const tarch::la::Vector<DIMENSIONS, double>& width,
-  const std::bitset<DIMENSIONS>&               periodicBC
+  const std::bitset<DIMENSIONS>&               periodicBoundaries
 ) {
   auto& communicationManager = tarch::mpi::AbstractCommunicationManager::getInstance();
   communicationManager.registerPoller([]() {
@@ -59,13 +60,9 @@ void peano4::topology::TopologyManager::init(
   });
   communicationManager.start();
 
-  // The rank is known here, so every registered container anchors its serial
-  // slot now.
-  peano4::data::ContainerRegistry::getInstance().initialiseSerialSlots();
-
-  _domainOffset = offset;
-  _domainWidth  = width;
-  _periodicBC   = periodicBC;
+  _domainOffset       = offset;
+  _domainWidth        = width;
+  _periodicBoundaries = periodicBoundaries;
 }
 
 /**
@@ -73,7 +70,9 @@ void peano4::topology::TopologyManager::init(
  * tree. Every rank calls this with the same target level, so the partition
  * follows from the rank count alone and needs no communication.
  */
-void peano4::topology::TopologyManager::scheduleRegularGridConstruction(int targetLevel) { _targetLevel = targetLevel; }
+void peano4::topology::TopologyManager::scheduleRegularGridConstruction(const int targetLevel) {
+  _targetLevel = targetLevel;
+}
 
 /**
  * Records that the solvers' data is initialised. A regrid then migrates the
@@ -162,7 +161,7 @@ std::unique_ptr<peano4::topology::Tree> peano4::topology::TopologyManager::acqui
     return spareTree;
   }
   const auto rank = tarch::mpi::Rank::getInstance().getRank();
-  return std::make_unique<peano4::topology::Tree>(rank, _domainOffset, _domainWidth, _periodicBC);
+  return std::make_unique<peano4::topology::Tree>(rank, _domainOffset, _domainWidth, _periodicBoundaries);
 }
 
 /** Returns a spare traversal to rebuild into, or a new one when no spare is left. */
@@ -264,8 +263,10 @@ void peano4::topology::TopologyManager::buildTree(
 
   // Deriving the interface topology before the first sweep sizes the pools
   // once, shadow slots included, so no later replication reallocates them.
-  if (tarch::tasking::Runtime::getInstance().getNumberOfThreads() > 1 and _tree->getDepth() > 0
-      and containerRegistry.supportsSubtreeTaskReplication()) {
+  if (
+    tarch::tasking::Runtime::getInstance().getNumberOfThreads() > 1 and _tree->getDepth() > 0
+    and containerRegistry.supportsSubtreeTaskReplication()
+  ) {
     _traversal->prepareInterfaceTopology(*_tree, spawnLevel);
   }
   if (resizePools) {
@@ -373,8 +374,10 @@ void peano4::topology::TopologyManager::runSweep(peano4::grid::GridTraversalObse
       _traversal->getVertexSlotSpaceSize() + _traversal->getNumberOfVertexRankFrozenSlots()
         + _traversal->getNumberOfVertexShadowSlots()
     );
-    if (tarch::tasking::Runtime::getInstance().getNumberOfThreads() > 1 and _tree->getDepth() > 0
-        and containerRegistry.supportsSubtreeTaskReplication()) {
+    if (
+      tarch::tasking::Runtime::getInstance().getNumberOfThreads() > 1 and _tree->getDepth() > 0
+      and containerRegistry.supportsSubtreeTaskReplication()
+    ) {
       containerRegistry.replicateInterfaceSlots(
         _traversal->getInterfaceSeedFacePairs(),
         _traversal->getInterfaceSeedVertexPairs()
@@ -490,8 +493,10 @@ void peano4::topology::TopologyManager::runSweep(peano4::grid::GridTraversalObse
         // before the build and every rank computes the identical table without
         // communication. A false _dynamicLoadBalancing value skips the
         // derivation, and the buildNewTree() lambda then reads currentOwners.
-        if (numberOfRanks > 1 and not _blockOwners.empty()
-            and (_dynamicLoadBalancing or standingPartitionSplitsLeafFamily)) {
+        if (
+          numberOfRanks > 1 and not _blockOwners.empty()
+          and (_dynamicLoadBalancing or standingPartitionSplitsLeafFamily)
+        ) {
           balancedOwners = newTree->deriveBalancedBlockOwners(_targetLevel, numberOfRanks, updatedPlan);
           if (balancedOwners == _blockOwners) {
             balancedOwners.clear();
@@ -807,8 +812,10 @@ void peano4::topology::TopologyManager::runSweep(peano4::grid::GridTraversalObse
   const bool sourceHasTaskSlots = tarch::tasking::Runtime::getInstance().getNumberOfThreads() > 1
     and _tree->getDepth() > 0 and containerRegistry.supportsSubtreeTaskReplication();
   const bool sourceBoundaryExchangeConsumed = _skipStandingBoundaryFinish;
-  if (transitionPrepared and sourceHasTaskSlots and _traversal->getNumberOfReplayTasks() > 0
-      and not taskInterfaceDataMerged) {
+  if (
+    transitionPrepared and sourceHasTaskSlots and _traversal->getNumberOfReplayTasks() > 0
+    and not taskInterfaceDataMerged
+  ) {
     std::function<void()> waitForRemoteData;
     if (not _traversal->getNeighbourRanks().empty() and not sourceBoundaryExchangeConsumed) {
       waitForRemoteData = finishBoundaryReceives;
@@ -859,8 +866,10 @@ void peano4::topology::TopologyManager::runSweep(peano4::grid::GridTraversalObse
   const bool skipStandingBoundaryFinish = _skipStandingBoundaryFinish;
   _skipStandingBoundaryFinish           = false;
   std::function<void()> waitForRemoteData;
-  if (exchangesWithNeighbourRanks and sweepKind == peano4::topology::TreeTraversal::PoolSweepKind::Standing
-      and not skipStandingBoundaryFinish) {
+  if (
+    exchangesWithNeighbourRanks and sweepKind == peano4::topology::TreeTraversal::PoolSweepKind::Standing
+    and not skipStandingBoundaryFinish
+  ) {
     waitForRemoteData = finishBoundaryReceives;
   }
 
@@ -873,7 +882,6 @@ void peano4::topology::TopologyManager::runSweep(peano4::grid::GridTraversalObse
       _traversal->prepareTransitionTopology(*_tree, taskLevel, *regridOverrides);
     }
     _traversal->prepareParallelSweep(*_tree, taskLevel, not ranTransitionSweep);
-    containerRegistry.prepareLocalSlots(1 + _traversal->getNumberOfSubtreeTasks());
     _traversal->traverseWithPoolTasks(*_tree, observerClone, sweepKind, taskLevel, waitForRemoteData, regridOverrides);
     if (runsParallelSweeps) {
       // A rank-boundary entity several tasks touch consolidates into the
@@ -888,8 +896,8 @@ void peano4::topology::TopologyManager::runSweep(peano4::grid::GridTraversalObse
       // entity slot the pack sends.
       if (sweepKind == peano4::topology::TreeTraversal::PoolSweepKind::Creational) {
         containerRegistry.replicateInterfaceSlots(
-          _traversal->getCreationalPublishFacePairs(),
-          _traversal->getCreationalPublishVertexPairs()
+          _traversal->getCreationalCopyToEntitySlotFacePairs(),
+          _traversal->getCreationalCopyToEntitySlotVertexPairs()
         );
       }
     }
@@ -1054,4 +1062,6 @@ const tarch::la::Vector<DIMENSIONS, double>& peano4::topology::TopologyManager::
   return _domainWidth;
 }
 
-const std::bitset<DIMENSIONS>& peano4::topology::TopologyManager::getPeriodicBC() const { return _periodicBC; }
+const std::bitset<DIMENSIONS>& peano4::topology::TopologyManager::getPeriodicBoundaries() const {
+  return _periodicBoundaries;
+}

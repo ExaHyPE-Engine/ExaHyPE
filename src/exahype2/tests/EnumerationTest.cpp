@@ -27,8 +27,8 @@ void exahype2::tests::EnumerationTest::testSerialiseVoxelIndexInOverlap() {
         std::set<int> visited;
         peano4::dForEach(range, [&](const tarch::la::Vector<DIMENSIONS, int>& overlapCell) {
           const auto index = exahype2::serialiseVoxelIndexInOverlap(overlapCell, numberOfDofsPerAxis, overlap, normal);
-          int expected = 0;
-          int base     = 1;
+          int        expected = 0;
+          int        base     = 1;
           for (int d = 0; d < DIMENSIONS; d++) {
             expected += overlapCell(d) * base;
             base *= range(d);

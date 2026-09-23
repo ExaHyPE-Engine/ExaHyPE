@@ -3,7 +3,7 @@
 #include "KernelsOnDeviceTest.h"
 
 #include "exahype2/fv/FiniteVolume.h"
-#include "exahype2/fv/HandleBoundary.h"
+#include "exahype2/fv/ApplyBoundaryConditionsOnFace.h"
 #include "exahype2/fv/limiter/SlopeLimiter.h"
 #include "exahype2/fv/reconstruction/Constant.h"
 #include "exahype2/fv/reconstruction/LimitedLinear.h"
@@ -28,9 +28,9 @@ void exahype2::fv::tests::KernelsOnDeviceTest::run() {
   testMethod(testApplyFiniteVolumeWithLimitedLinearReconstruction);
   testMethod(testApplyFiniteVolumeWithWENOReconstruction);
   testMethod(testApplyFiniteVolumeWithCustomRiemannSolver);
-  testMethod(testHandleBoundaryWithOneHaloLayer);
-  testMethod(testHandleBoundaryWithTwoHaloLayers);
-  testMethod(testHandleBoundaryWithThreeHaloLayers);
+  testMethod(testApplyBoundaryConditionsOnFaceWithOneHaloLayer);
+  testMethod(testApplyBoundaryConditionsOnFaceWithTwoHaloLayers);
+  testMethod(testApplyBoundaryConditionsOnFaceWithThreeHaloLayers);
 }
 
 void exahype2::fv::tests::KernelsOnDeviceTest::validateBuffersMatch(
@@ -72,11 +72,11 @@ void exahype2::fv::tests::KernelsOnDeviceTest::testApplyFiniteVolumeWithCustomRi
   runApplyFiniteVolume<exahype2::fv::reconstruction::Constant, true, false, false, false, true>();
 }
 
-void exahype2::fv::tests::KernelsOnDeviceTest::testHandleBoundaryWithOneHaloLayer() { runHandleBoundary<1>(); }
+void exahype2::fv::tests::KernelsOnDeviceTest::testApplyBoundaryConditionsOnFaceWithOneHaloLayer() { runApplyBoundaryConditionsOnFace<1>(); }
 
-void exahype2::fv::tests::KernelsOnDeviceTest::testHandleBoundaryWithTwoHaloLayers() { runHandleBoundary<2>(); }
+void exahype2::fv::tests::KernelsOnDeviceTest::testApplyBoundaryConditionsOnFaceWithTwoHaloLayers() { runApplyBoundaryConditionsOnFace<2>(); }
 
-void exahype2::fv::tests::KernelsOnDeviceTest::testHandleBoundaryWithThreeHaloLayers() { runHandleBoundary<3>(); }
+void exahype2::fv::tests::KernelsOnDeviceTest::testApplyBoundaryConditionsOnFaceWithThreeHaloLayers() { runApplyBoundaryConditionsOnFace<3>(); }
 
 template <
   typename Reconstruction,
@@ -114,13 +114,13 @@ void exahype2::fv::tests::KernelsOnDeviceTest::runApplyFiniteVolume() {
   // A patch writes the half of each of its faces that lies on its own side, so
   // the two patches at a face never touch the same entries.
   double deviceMaxEigenvalue = 0.0;
-  tarch::parallelReduce(
-    tarch::Range(Setup::NumberOfPatches),
+  tarch::accelerator::parallelReduce(
+    tarch::accelerator::Range(Setup::NumberOfPatches),
     [=] GPU_CALLABLE_LAMBDA(const int patch, double& maximum) {
-      const double* faceInputPatches[TWO_TIMES_D];
-      double*       faceOutputPatches[TWO_TIMES_D];
-      for (int face = 0; face < TWO_TIMES_D; face++) {
-        const std::uint64_t faceOffset = onDeviceFaceIndices[patch * TWO_TIMES_D + face] * FaceCardinality;
+      const double* faceInputPatches[peano4::FacesPerCell];
+      double*       faceOutputPatches[peano4::FacesPerCell];
+      for (int face = 0; face < peano4::FacesPerCell; face++) {
+        const std::uint64_t faceOffset = onDeviceFaceIndices[patch * peano4::FacesPerCell + face] * FaceCardinality;
         faceInputPatches[face]         = onDeviceFaceInputs + faceOffset;
         faceOutputPatches[face]        = onDeviceFaceOutputs + faceOffset;
       }
@@ -153,7 +153,7 @@ void exahype2::fv::tests::KernelsOnDeviceTest::runApplyFiniteVolume() {
       );
       maximum = (maxEigenvalue > maximum) ? maxEigenvalue : maximum;
     },
-    tarch::Max<double>{deviceMaxEigenvalue}
+    tarch::accelerator::Max<double>{deviceMaxEigenvalue}
   );
 
   std::vector<double> deviceOutputPatchesResult(outputPatches.size());
@@ -165,10 +165,10 @@ void exahype2::fv::tests::KernelsOnDeviceTest::runApplyFiniteVolume() {
   std::vector<double> hostFaceOutputs   = faceOutputs;
   double              hostMaxEigenvalue = 0.0;
   for (int patch = 0; patch < Setup::NumberOfPatches; patch++) {
-    const double* faceInputPatches[TWO_TIMES_D];
-    double*       faceOutputPatches[TWO_TIMES_D];
-    for (int face = 0; face < TWO_TIMES_D; face++) {
-      const std::uint64_t faceOffset = geometry.faceIndices[patch * TWO_TIMES_D + face] * FaceCardinality;
+    const double* faceInputPatches[peano4::FacesPerCell];
+    double*       faceOutputPatches[peano4::FacesPerCell];
+    for (int face = 0; face < peano4::FacesPerCell; face++) {
+      const std::uint64_t faceOffset = geometry.faceIndices[patch * peano4::FacesPerCell + face] * FaceCardinality;
       faceInputPatches[face]         = faceInputs.data() + faceOffset;
       faceOutputPatches[face]        = hostFaceOutputs.data() + faceOffset;
     }
@@ -211,7 +211,7 @@ void exahype2::fv::tests::KernelsOnDeviceTest::runApplyFiniteVolume() {
 }
 
 template <int HaloSize>
-void exahype2::fv::tests::KernelsOnDeviceTest::runHandleBoundary() {
+void exahype2::fv::tests::KernelsOnDeviceTest::runApplyBoundaryConditionsOnFace() {
   constexpr int FaceCardinality = Setup::faceOverlapCardinality(HaloSize);
 
   const exahype2::fv::tests::PatchChain geometry;
@@ -231,14 +231,14 @@ void exahype2::fv::tests::KernelsOnDeviceTest::runHandleBoundary() {
   const std::uint64_t* const onDevicePatchIndices = devicePatchIndices.data();
   const double* const        onDevicePatchCentres = devicePatchCentres.data();
   const double* const        onDevicePatchSizes   = devicePatchSizes.data();
-  tarch::parallelFor(
-    tarch::Range(geometry.numberOfWorkFaces()),
+  tarch::accelerator::parallelFor(
+    tarch::accelerator::Range(geometry.numberOfWorkFaces()),
     [=] GPU_CALLABLE_LAMBDA(const int face) {
       exahype2::fv::tests::StubSolver solver;
       const int                       faceNumber       = onDeviceFaceNumbers[face];
       const int                       patch            = onDevicePatchIndices[face];
       const int                       coordinateOffset = patch * DIMENSIONS;
-      exahype2::fv::handleBoundary<
+      exahype2::fv::applyBoundaryConditionsOnFace<
         exahype2::fv::tests::StubSolver,
         Setup::VolumesPerAxis,
         HaloSize,
@@ -264,7 +264,7 @@ void exahype2::fv::tests::KernelsOnDeviceTest::runHandleBoundary() {
     const int                       faceNumber       = geometry.workFaceNumbers[face];
     const int                       patch            = geometry.workPatchIndices[face];
     const int                       coordinateOffset = patch * DIMENSIONS;
-    exahype2::fv::handleBoundary<
+    exahype2::fv::applyBoundaryConditionsOnFace<
       exahype2::fv::tests::StubSolver,
       Setup::VolumesPerAxis,
       HaloSize,

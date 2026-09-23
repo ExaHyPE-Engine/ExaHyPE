@@ -1,37 +1,35 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and 
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
+import jinja2
+
+from exahype2.actionsets import ActionSet
 
 
-from peano4.solversteps.ActionSet import ActionSet
+class AbstractLimiterActionSet(ActionSet):
+    """The base of the action sets that a static coupling adds to a grid sweep."""
 
+    def __init__(self, solver, guard):
+        """``solver`` is the coupling that creates this action set and ``guard`` the
+        condition under which the emitted C++ runs."""
+        super(AbstractLimiterActionSet, self).__init__()
+        self._solver = solver
+        self.guard = guard
 
+    @property
+    def name(self):
+        return __name__.replace(".py", "").replace(".", "_")
 
-class AbstractLimiterActionSet( ActionSet ):
-  def __init__(self,solver):
-    """
-   
-    solver: Ader-DG
-      Reference to creating class 
-   
-    """
-    self._solver = solver
-    pass
-  
-  
-  def get_action_set_name(self):
-    """
-     
-     You should replicate this function in each subclass, so you get 
-     meaningful action set names (otherwise, it will be 
-     AbstractFVActionSet0,1,2,...).
-     
-    """
-    return __name__.replace(".py", "").replace(".", "_")
+    def is_user_template(self):
+        return False
 
+    def render(self, template, **entries):
+        """Renders a Jinja2 template against the coupling's dictionary and ``entries``."""
+        dictionary = dict(self._solver.dictionary)
+        dictionary["PREDICATE"] = self.guard
+        dictionary.update(entries)
+        return jinja2.Template(template, undefined=jinja2.DebugUndefined).render(
+            **dictionary
+        )
 
-  def user_should_modify_template(self):
-    return False
-
-#TODO: duplicate DGUtils into aderdg?
-  def get_includes(self):
-    return self._solver._get_default_includes() + self._solver.get_user_action_set_includes()
+    def includes(self):
+        return self._solver.action_set_includes()

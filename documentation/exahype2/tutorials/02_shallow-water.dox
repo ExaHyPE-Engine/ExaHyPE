@@ -43,18 +43,20 @@ The notebook sets up a \f$2 \times 2\f$ box with non-periodic boundaries (the
 flow runs into walls), an ADER-DG solver of order 3 named `ADERDGSolver`, and
 declares the PDE terms it will use:
 
-    aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
+    aderdg_solver = exahype2.dg.ader.Solver(
         name                 = "ADERDGSolver",
         order                = 3,
-        time_step_relaxation = 0.9,
         unknowns             = {"h": 1, "hu": 2, "b": 1},
         auxiliary_variables  = {},
+        time_stepping        = exahype2.TimeStepping.Adaptive(0.9),
     )
-    aderdg_solver.set_implementation(
-        flux                 = exahype2.solvers.PDETerms.User_Defined_Implementation,
-        ncp                  = exahype2.solvers.PDETerms.User_Defined_Implementation,
-        refinement_criterion = exahype2.solvers.PDETerms.User_Defined_Implementation,
-        max_eigenvalue       = exahype2.solvers.PDETerms.User_Defined_Implementation,
+    aderdg_solver.set_pde_terms(
+        initial_condition    = True,
+        boundary_conditions  = True,
+        flux                 = True,
+        ncp                  = True,
+        refinement_criterion = True,
+        max_eigenvalue       = True,
     )
 
 The project builds even with the stubs in place, so run the build cell once, then
@@ -244,7 +246,7 @@ Initial conditions (radial bump in the bed):
       Q[Shortcuts::hu + 0] = 0.0;
       Q[Shortcuts::hu + 1] = 0.0;
       Q[Shortcuts::h]      = 1.0;
-      Q[Shortcuts::b]      = (::tarch::la::norm2(cellCentre) < 0.5 ? 0.1 : 0.0);
+      Q[Shortcuts::b]      = (tarch::la::norm2(cellCentre) < 0.5 ? 0.1 : 0.0);
     }
 
 Flux (pressure term removed - it lives in the NCP):
@@ -300,7 +302,7 @@ Refinement criterion (a fixed, finely resolved disc over the bump):
       const tarch::la::Vector<DIMENSIONS, double>& cellSize,
       const double                                 time
     ) {
-      return (::tarch::la::norm2(cellCentre) < 0.3
+      return (tarch::la::norm2(cellCentre) < 0.3
         ? ::exahype2::RefinementCommand::Refine
         : ::exahype2::RefinementCommand::Keep);
     }

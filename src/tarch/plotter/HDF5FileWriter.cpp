@@ -317,12 +317,12 @@ bool tarch::plotter::HDF5FileWriter::writeToFile(const std::string& filename, [[
   const bool  writeDouble     = getDoublePrecisionOutput();
   const hid_t realStorageType = writeDouble ? H5T_NATIVE_DOUBLE : H5T_NATIVE_FLOAT;
   const auto  writeRealChunk  = [&](
-                                const hid_t                dataset,
-                                const int                  numberOfDimensions,
-                                const hsize_t* const       dimensions,
-                                const hsize_t* const       offset,
-                                const std::vector<double>& buffer
-                              ) {
+                                  const hid_t                dataset,
+                                  const int                  numberOfDimensions,
+                                  const hsize_t* const       dimensions,
+                                  const hsize_t* const       offset,
+                                  const std::vector<double>& buffer
+                                ) {
     if (writeDouble) {
       writeDatasetChunk(dataset, numberOfDimensions, dimensions, offset, buffer.data(), H5T_NATIVE_DOUBLE);
     } else {

@@ -15,7 +15,7 @@ TARGET_DECLARE
 template <int HaloSize, int NumberOfVolumesPerAxis, int NumberOfData, typename StoragePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD const StoragePrecision* exahype2::fv::reconstruction::neighbourAlongNormal(
   const StoragePrecision* NOALIAS const     inputPatch,
-  const StoragePrecision* NOALIAS const     faceInputPatches[TWO_TIMES_D],
+  const StoragePrecision* NOALIAS const     faceInputPatches[peano4::FacesPerCell],
   const tarch::la::Vector<DIMENSIONS, int>& volumeIndex,
   const int                                 centreOffset,
   const int                                 strideAlongNormal,
@@ -31,12 +31,12 @@ INLINE_METHOD GPU_CALLABLE_METHOD const StoragePrecision* exahype2::fv::reconstr
     overlapCell(normal) = neighbourIndexAlongNormal + HaloSize;
     const int overlapIndex =
       exahype2::serialiseVoxelIndexInOverlap(overlapCell, NumberOfVolumesPerAxis, HaloSize, normal);
-    return &faceInputPatches[normal][overlapIndex * NumberOfData];
+    return &faceInputPatches[normal][static_cast<std::ptrdiff_t>(overlapIndex * NumberOfData)];
   }
   overlapCell(normal) = neighbourIndexAlongNormal - NumberOfVolumesPerAxis + HaloSize;
   const int overlapIndex =
     exahype2::serialiseVoxelIndexInOverlap(overlapCell, NumberOfVolumesPerAxis, HaloSize, normal);
-  return &faceInputPatches[normal + DIMENSIONS][overlapIndex * NumberOfData];
+  return &faceInputPatches[normal + DIMENSIONS][static_cast<std::ptrdiff_t>(overlapIndex * NumberOfData)];
 }
 
 /**
@@ -47,7 +47,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD const StoragePrecision* exahype2::fv::reconstr
  * states meeting at the interface differ, so the cell-centred flux does not
  * cancel between the two faces the way it does in the first-order scheme.
  */
-template <typename Solver, int NumberOfUnknowns, bool EvaluateFlux, typename ComputePrecision>
+template <typename SolverType, int NumberOfUnknowns, bool EvaluateFlux, typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision exahype2::fv::reconstruction::rusanovFaceFlux(
   const ComputePrecision* NOALIAS const        leftState,
   const ComputePrecision* NOALIAS const        rightState,
@@ -59,16 +59,16 @@ INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision exahype2::fv::reconstruction:
   ComputePrecision* NOALIAS const              faceFlux
 ) {
   ComputePrecision maxEigenvalue =
-    Solver::maxEigenvalue(leftState, faceCentre, volumeSize, timeStamp, timeStepSize, normal);
+    SolverType::maxEigenvalue(leftState, faceCentre, volumeSize, timeStamp, timeStepSize, normal);
   const ComputePrecision rightMaxEigenvalue =
-    Solver::maxEigenvalue(rightState, faceCentre, volumeSize, timeStamp, timeStepSize, normal);
-  ::exahype2::fv::accumulateMaxEigenvalue(maxEigenvalue, rightMaxEigenvalue);
+    SolverType::maxEigenvalue(rightState, faceCentre, volumeSize, timeStamp, timeStepSize, normal);
+  exahype2::fv::accumulateMaxEigenvalue(maxEigenvalue, rightMaxEigenvalue);
 
   ComputePrecision leftFluxes[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
   ComputePrecision rightFluxes[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
   if constexpr (EvaluateFlux) {
-    Solver::flux(leftState, faceCentre, volumeSize, timeStamp, timeStepSize, normal, leftFluxes);
-    Solver::flux(rightState, faceCentre, volumeSize, timeStamp, timeStepSize, normal, rightFluxes);
+    SolverType::flux(leftState, faceCentre, volumeSize, timeStamp, timeStepSize, normal, leftFluxes);
+    SolverType::flux(rightState, faceCentre, volumeSize, timeStamp, timeStepSize, normal, rightFluxes);
   }
 
   for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
@@ -93,7 +93,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision exahype2::fv::reconstruction:
  * first-order scheme.
  */
 template <
-  typename Solver,
+  typename SolverType,
   int  NumberOfVolumesPerAxis,
   int  NumberOfUnknowns,
   int  NumberOfData,
@@ -120,15 +120,42 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::accumulateF
   using GeometryPrecision    = decltype(ComputePrecision{} * double{});
   using StateUpdatePrecision = decltype(StoragePrecision{} + ComputePrecision{});
 
-  auto leftFaceCentre(volumeCentre);
-  leftFaceCentre(normal) -= static_cast<double>(0.5) * volumeSize(normal);
-  auto rightFaceCentre(volumeCentre);
-  rightFaceCentre(normal) += static_cast<double>(0.5) * volumeSize(normal);
+  assertion(std::isfinite(timeStamp) and timeStamp >= 0.0, timeStamp);
+  assertion(std::isfinite(timeStepSize) and timeStepSize >= 0.0, timeStepSize);
+  const double halfTimeStamp = timeStamp + 0.5 * timeStepSize;
+  assertion(std::isfinite(halfTimeStamp), timeStamp, timeStepSize);
 
-  const ComputePrecision scale = static_cast<ComputePrecision>(
+  auto leftFaceCentre(volumeCentre);
+  leftFaceCentre(normal) -= 0.5 * volumeSize(normal);
+  auto rightFaceCentre(volumeCentre);
+  rightFaceCentre(normal) += 0.5 * volumeSize(normal);
+
+  const auto scale = static_cast<ComputePrecision>(
     (static_cast<GeometryPrecision>(timeStepSize) * static_cast<GeometryPrecision>(NumberOfVolumesPerAxis))
     / static_cast<GeometryPrecision>(patchSize(normal))
   );
+
+  [[maybe_unused]] ComputePrecision volumeNonconservativeProduct[NumberOfUnknowns]
+    __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+  if constexpr (EvaluateNonconservativeProduct) {
+    ComputePrecision averageState[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+    ComputePrecision stateJump[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
+    SIMD()
+    for (int unknown = 0; unknown < NumberOfData; unknown++) {
+      averageState[unknown] = static_cast<ComputePrecision>(0.5) * (centreMinus[unknown] + centrePlus[unknown]);
+      stateJump[unknown]    = centrePlus[unknown] - centreMinus[unknown];
+    }
+    SolverType::nonconservativeProduct(
+      averageState,
+      stateJump,
+      volumeCentre,
+      volumeSize,
+      halfTimeStamp,
+      timeStepSize,
+      normal,
+      volumeNonconservativeProduct
+    );
+  }
 
   if constexpr (EvaluateCustomRiemann) {
     ComputePrecision leftGoingFluxLeftFace[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
@@ -136,23 +163,23 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::accumulateF
     ComputePrecision leftGoingFluxRightFace[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
     ComputePrecision rightGoingFluxRightFace[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
 
-    const ComputePrecision maxWaveSpeedLeft = Solver::solveRiemannProblem(
+    const ComputePrecision maxWaveSpeedLeft = SolverType::solveRiemannProblem(
       leftNeighbourPlus,
       centreMinus,
       leftFaceCentre,
       volumeSize,
-      timeStamp,
+      halfTimeStamp,
       timeStepSize,
       normal,
       leftGoingFluxLeftFace,
       rightGoingFluxLeftFace
     );
-    const ComputePrecision maxWaveSpeedRight = Solver::solveRiemannProblem(
+    const ComputePrecision maxWaveSpeedRight = SolverType::solveRiemannProblem(
       centrePlus,
       rightNeighbourMinus,
       rightFaceCentre,
       volumeSize,
-      timeStamp,
+      halfTimeStamp,
       timeStepSize,
       normal,
       leftGoingFluxRightFace,
@@ -165,8 +192,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::accumulateF
     // eigenvalue for its diffusion coefficient, and the caller then measures
     // the step on the final state, at the time level the next step starts from.
     if constexpr (EvaluateMaxEigenvalue) {
-      ::exahype2::fv::accumulateMaxEigenvalue(maxEigenvalueAfterTimeStep, maxWaveSpeedLeft);
-      ::exahype2::fv::accumulateMaxEigenvalue(maxEigenvalueAfterTimeStep, maxWaveSpeedRight);
+      exahype2::fv::accumulateMaxEigenvalue(maxEigenvalueAfterTimeStep, maxWaveSpeedLeft);
+      exahype2::fv::accumulateMaxEigenvalue(maxEigenvalueAfterTimeStep, maxWaveSpeedRight);
     }
 
     SIMD()
@@ -177,32 +204,38 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::accumulateF
         static_cast<StateUpdatePrecision>(outputState[unknown])
         + static_cast<StateUpdatePrecision>(scale * (fluxFromLeftInterface - fluxToRightInterface))
       );
+      if constexpr (EvaluateNonconservativeProduct) {
+        outputState[unknown] = static_cast<StoragePrecision>(
+          static_cast<StateUpdatePrecision>(outputState[unknown])
+          - static_cast<StateUpdatePrecision>(scale * volumeNonconservativeProduct[unknown])
+        );
+      }
     }
-    // The finiteness check stays out of the vectorised loop, whose body must
-    // be free of the diagnostics an assertion emits.
+    // Assertion diagnostics cannot run inside a vectorised loop.
     for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-      assertion(std::isfinite(outputState[unknown]));
+      [[maybe_unused]] const bool outputStateIsFinite = std::isfinite(outputState[unknown]);
+      assertion(outputStateIsFinite, unknown, outputState[unknown]);
     }
   } else {
     ComputePrecision fluxLeftFace[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
     ComputePrecision fluxRightFace[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
-    rusanovFaceFlux<Solver, NumberOfUnknowns, EvaluateFlux>(
+    rusanovFaceFlux<SolverType, NumberOfUnknowns, EvaluateFlux>(
       leftNeighbourPlus,
       centreMinus,
       leftFaceCentre,
       volumeSize,
       normal,
-      timeStamp,
+      halfTimeStamp,
       timeStepSize,
       fluxLeftFace
     );
-    rusanovFaceFlux<Solver, NumberOfUnknowns, EvaluateFlux>(
+    rusanovFaceFlux<SolverType, NumberOfUnknowns, EvaluateFlux>(
       centrePlus,
       rightNeighbourMinus,
       rightFaceCentre,
       volumeSize,
       normal,
-      timeStamp,
+      halfTimeStamp,
       timeStepSize,
       fluxRightFace
     );
@@ -220,12 +253,12 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::accumulateF
           static_cast<ComputePrecision>(0.5) * (leftNeighbourPlus[unknown] + centreMinus[unknown]);
         stateJump[unknown] = centreMinus[unknown] - leftNeighbourPlus[unknown];
       }
-      Solver::nonconservativeProduct(
+      SolverType::nonconservativeProduct(
         averageState,
         stateJump,
         leftFaceCentre,
         volumeSize,
-        timeStamp,
+        halfTimeStamp,
         timeStepSize,
         normal,
         nonconservativeProduct
@@ -242,12 +275,12 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::accumulateF
           static_cast<ComputePrecision>(0.5) * (centrePlus[unknown] + rightNeighbourMinus[unknown]);
         stateJump[unknown] = rightNeighbourMinus[unknown] - centrePlus[unknown];
       }
-      Solver::nonconservativeProduct(
+      SolverType::nonconservativeProduct(
         averageState,
         stateJump,
         rightFaceCentre,
         volumeSize,
-        timeStamp,
+        halfTimeStamp,
         timeStepSize,
         normal,
         nonconservativeProduct
@@ -259,23 +292,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::accumulateF
       }
 
       SIMD()
-      for (int unknown = 0; unknown < NumberOfData; unknown++) {
-        averageState[unknown] = static_cast<ComputePrecision>(0.5) * (centreMinus[unknown] + centrePlus[unknown]);
-        stateJump[unknown]    = centrePlus[unknown] - centreMinus[unknown];
-      }
-      Solver::nonconservativeProduct(
-        averageState,
-        stateJump,
-        volumeCentre,
-        volumeSize,
-        timeStamp,
-        timeStepSize,
-        normal,
-        nonconservativeProduct
-      );
-      SIMD()
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-        accumulatedNonconservativeProduct[unknown] += nonconservativeProduct[unknown];
+        accumulatedNonconservativeProduct[unknown] += volumeNonconservativeProduct[unknown];
       }
     }
 
@@ -292,10 +310,10 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::accumulateF
         );
       }
     }
-    // The finiteness check stays out of the vectorised loop, whose body must
-    // be free of the diagnostics an assertion emits.
+    // Assertion diagnostics cannot run inside a vectorised loop.
     for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-      assertion(std::isfinite(outputState[unknown]));
+      [[maybe_unused]] const bool outputStateIsFinite = std::isfinite(outputState[unknown]);
+      assertion(outputStateIsFinite, unknown, outputState[unknown]);
     }
   }
 }

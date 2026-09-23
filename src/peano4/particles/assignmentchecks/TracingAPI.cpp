@@ -1,20 +1,19 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-
 #include "TracingAPI.h"
 
-#include "peano4/particles/assignmentchecks/Database.h" // Defines ASSIGNMENT_CHECKS and the namespace internal
+#include "peano4/particles/assignmentchecks/Database.h" // Defines ASSIGNMENT_CHECKS
 #include "tarch/instrumentation/Error.h"
 #include "tarch/instrumentation/Info.h"
 
 #if defined(ASSIGNMENT_CHECKS)
 
 std::string peano4::particles::assignmentchecks::sweepHistory() {
-  return internal::Database::getInstance().sweepHistory();
+  return peano4::particles::assignmentchecks::Database::getInstance().sweepHistory();
 }
 
 void peano4::particles::assignmentchecks::startMeshSweep(const std::string& meshSweepName) {
-  internal::Database& database = internal::Database::getInstance();
+  auto& database = peano4::particles::assignmentchecks::Database::getInstance();
   database.startMeshSweep(meshSweepName);
 }
 
@@ -32,15 +31,23 @@ void peano4::particles::assignmentchecks::eraseParticle(
   int                                          treeId,
   const std::string&                           trace
 ) {
-  internal::Database& database = internal::Database::getInstance();
+  auto& database = peano4::particles::assignmentchecks::Database::getInstance();
 
-  auto identifier = internal::ParticleIdentifier(particleName, particleX, vertexX, vertexH, particleId, treeId);
+  auto identifier = peano4::particles::assignmentchecks::ParticleIdentifier(
+    particleName,
+    particleX,
+    vertexX,
+    vertexH,
+    particleId,
+    treeId
+  );
 
-  internal::Event event(internal::Event::Type::Erase, isLocal, treeId, trace);
-  internal::Event previousEvent = database.addEvent(identifier, event);
+  peano4::particles::assignmentchecks::Event
+    event(peano4::particles::assignmentchecks::Event::Type::Erase, isLocal, treeId, trace);
+  const peano4::particles::assignmentchecks::Event previousEvent = database.addEvent(identifier, event);
 
   assertion(
-    previousEvent.type == internal::Event::Type::DetachFromVertex,
+    previousEvent.type == peano4::particles::assignmentchecks::Event::Type::DetachFromVertex,
     identifier.toString(),
     event.toString(),
     previousEvent.toString(),
@@ -71,40 +78,67 @@ void peano4::particles::assignmentchecks::assignParticleToVertex(
   bool                                         particleIsNew,
   bool                                         reassignmentOnSameTreeDepthAllowed
 ) {
-  constexpr bool      CheckNewParticles = false;
-  internal::Database& database          = internal::Database::getInstance();
+  constexpr bool CheckNewParticles = false;
+  auto&          database          = peano4::particles::assignmentchecks::Database::getInstance();
 
-  auto vertexIndNew   = internal::ParticleIdentifier::getVertexInd(vertexX, vertexH);
-  int  vertexDepthNew = internal::ParticleIdentifier::getVertexDepth(vertexX, vertexH);
-  auto vertexIndOld   = internal::ParticleIdentifier::getVertexInd(prevVertexX, prevVertexH);
-  int  vertexDepthOld = internal::ParticleIdentifier::getVertexDepth(prevVertexX, prevVertexH);
+  const auto vertexIndexNew = peano4::particles::assignmentchecks::ParticleIdentifier::getVertexIndex(vertexX, vertexH);
+  const int  vertexDepthNew = peano4::particles::assignmentchecks::ParticleIdentifier::getVertexDepth(vertexX, vertexH);
+  const auto vertexIndexOld =
+    peano4::particles::assignmentchecks::ParticleIdentifier::getVertexIndex(prevVertexX, prevVertexH);
+  const int vertexDepthOld =
+    peano4::particles::assignmentchecks::ParticleIdentifier::getVertexDepth(prevVertexX, prevVertexH);
 
-  internal::ParticleIdentifier identifier =
-    internal::ParticleIdentifier(particleName, particleX, vertexIndOld, vertexDepthOld, particleId, treeId);
+  peano4::particles::assignmentchecks::ParticleIdentifier identifier =
+    peano4::particles::assignmentchecks::ParticleIdentifier(
+      particleName,
+      particleX,
+      vertexIndexOld,
+      vertexDepthOld,
+      particleId,
+      treeId
+    );
   if (particleIsNew) {
-    identifier =
-      internal::ParticleIdentifier(particleName, particleX, vertexIndNew, vertexDepthOld, particleId, treeId);
+    identifier = peano4::particles::assignmentchecks::ParticleIdentifier(
+      particleName,
+      particleX,
+      vertexIndexNew,
+      vertexDepthOld,
+      particleId,
+      treeId
+    );
   }
 
-  internal::Event event(internal::Event::Type::AssignToVertex, isLocal, vertexX, particleX, vertexH, treeId, trace);
+  peano4::particles::assignmentchecks::Event event(
+    peano4::particles::assignmentchecks::Event::Type::AssignToVertex,
+    isLocal,
+    vertexX,
+    particleX,
+    vertexH,
+    treeId,
+    trace
+  );
 
-  internal::Event previousEvent = database.addEvent(identifier, event);
+  const peano4::particles::assignmentchecks::Event previousEvent = database.addEvent(identifier, event);
 
   if (not(particleIsNew and (not CheckNewParticles))) {
-    [[maybe_unused]] const bool isDropping = previousEvent.type == internal::Event::Type::DetachFromVertex
+    [[maybe_unused]] const bool isDropping =
+      previousEvent.type == peano4::particles::assignmentchecks::Event::Type::DetachFromVertex
       and tarch::la::allGreater(previousEvent.vertexH, vertexH);
-    [[maybe_unused]] const bool isLifting = previousEvent.type == internal::Event::Type::DetachFromVertex
+    [[maybe_unused]] const bool isLifting =
+      previousEvent.type == peano4::particles::assignmentchecks::Event::Type::DetachFromVertex
       and tarch::la::allSmaller(previousEvent.vertexH, vertexH);
-    [[maybe_unused]] const bool isDroppingFromSieveSet = previousEvent.type == internal::Event::Type::AssignToSieveSet;
-    [[maybe_unused]] const bool isDetached             = reassignmentOnSameTreeDepthAllowed
-                  ? (previousEvent.type == internal::Event::Type::DetachFromVertex)
-                  : (previousEvent.type == internal::Event::Type::DetachFromVertex and not previousEvent.isLocal);
+    [[maybe_unused]] const bool isDroppingFromSieveSet =
+      previousEvent.type == peano4::particles::assignmentchecks::Event::Type::AssignToSieveSet;
+    [[maybe_unused]] const bool isDetached = reassignmentOnSameTreeDepthAllowed
+      ? (previousEvent.type == peano4::particles::assignmentchecks::Event::Type::DetachFromVertex)
+      : (previousEvent.type == peano4::particles::assignmentchecks::Event::Type::DetachFromVertex
+         and not previousEvent.isLocal);
 
     if (isLocal) {
       assertion(
-        (previousEvent.type == internal::Event::Type::NotFound) or (previousEvent.type == internal::Event::Type::Erase)
-          or isDroppingFromSieveSet or (isLifting and previousEvent.isLocal) or (isDropping and previousEvent.isLocal)
-          or (isDetached),
+        (previousEvent.type == peano4::particles::assignmentchecks::Event::Type::NotFound)
+          or (previousEvent.type == peano4::particles::assignmentchecks::Event::Type::Erase) or isDroppingFromSieveSet
+          or (isLifting and previousEvent.isLocal) or (isDropping and previousEvent.isLocal) or (isDetached),
         identifier.toString(),
         event.toString(),
         previousEvent.toString(),
@@ -115,9 +149,10 @@ void peano4::particles::assignmentchecks::assignParticleToVertex(
       );
     } else {
       assertion(
-        (previousEvent.type == internal::Event::Type::NotFound) or (previousEvent.type == internal::Event::Type::Erase)
-          or isDroppingFromSieveSet or (isDropping and not previousEvent.isLocal)
-          or (previousEvent.type == internal::Event::Type::DetachFromVertex and previousEvent.isLocal),
+        (previousEvent.type == peano4::particles::assignmentchecks::Event::Type::NotFound)
+          or (previousEvent.type == peano4::particles::assignmentchecks::Event::Type::Erase) or isDroppingFromSieveSet
+          or (isDropping and not previousEvent.isLocal)
+          or (previousEvent.type == peano4::particles::assignmentchecks::Event::Type::DetachFromVertex and previousEvent.isLocal),
         identifier.toString(),
         event.toString(),
         previousEvent.toString(),
@@ -132,7 +167,7 @@ void peano4::particles::assignmentchecks::assignParticleToVertex(
   bool shift = false;
 
   for (int i = 0; i < DIMENSIONS; i++) {
-    if (vertexIndNew(i) != vertexIndOld(i)) {
+    if (vertexIndexNew(i) != vertexIndexOld(i)) {
       shift = true;
       break;
     }
@@ -143,7 +178,7 @@ void peano4::particles::assignmentchecks::assignParticleToVertex(
   }
 
   if (shift) {
-    database.shiftIdentifierVertexInd(identifier, vertexIndNew, vertexDepthNew);
+    database.shiftIdentifierVertexIndex(identifier, vertexIndexNew, vertexDepthNew);
   }
 }
 
@@ -163,12 +198,13 @@ void peano4::particles::assignmentchecks::moveParticle(
   int                                          treeId,
   const std::string&                           trace
 ) {
-  internal::Database& database = internal::Database::getInstance();
+  auto& database = peano4::particles::assignmentchecks::Database::getInstance();
 
-  [[maybe_unused]] tarch::la::Vector dx = tarch::la::abs(oldParticleX - newParticleX);
+  [[maybe_unused]] const auto dx                        = tarch::la::abs(oldParticleX - newParticleX);
+  [[maybe_unused]] const bool particleStaysInVertexCell = tarch::la::allSmaller(dx, tarch::la::max(vertexH));
   assertion(
-    tarch::la::allSmaller(dx, tarch::la::max(vertexH)),
-    "particle moved more than vertex size",
+    particleStaysInVertexCell,
+    "The particle moved further than the width of its vertex.",
     oldParticleX,
     newParticleX,
     dx,
@@ -176,44 +212,55 @@ void peano4::particles::assignmentchecks::moveParticle(
   );
 
   // The key of the history holds the position from before the movement.
-  internal::ParticleIdentifier identifier =
-    internal::ParticleIdentifier(particleName, oldParticleX, vertexX, vertexH, particleId, treeId);
+  const peano4::particles::assignmentchecks::ParticleIdentifier identifier =
+    peano4::particles::assignmentchecks::ParticleIdentifier(
+      particleName,
+      oldParticleX,
+      vertexX,
+      vertexH,
+      particleId,
+      treeId
+    );
 
-  internal::ParticleEvents history = database.getParticleHistory(identifier);
-  assertion(history.size() > 0);
+  const peano4::particles::assignmentchecks::ParticleEvents history = database.getParticleHistory(identifier);
+  assertion(not history.empty());
 
-  internal::Event previousEvent = database.getPreviousEvent(history, treeId);
+  const peano4::particles::assignmentchecks::Event previousEvent = database.getPreviousEvent(history, treeId);
 
   assertion(
-    previousEvent.type == internal::Event::Type::AssignToVertex
-      or previousEvent.type == internal::Event::Type::MoveWhileAssociatedToVertex
-      or previousEvent.type == internal::Event::Type::ConsecutiveMoveWhileAssociatedToVertex,
-    "Invalid previous event type",
+    previousEvent.type == peano4::particles::assignmentchecks::Event::Type::AssignToVertex
+      or previousEvent.type == peano4::particles::assignmentchecks::Event::Type::MoveWhileAssociatedToVertex
+      or previousEvent.type == peano4::particles::assignmentchecks::Event::Type::ConsecutiveMoveWhileAssociatedToVertex,
+    "The previous event neither assigns the particle to a vertex nor moves it.",
     previousEvent.toString(),
     database.particleHistory(identifier)
   );
 
+  [[maybe_unused]] const bool vertexHOfPreviousEventMatches = tarch::la::equals(previousEvent.vertexH, vertexH);
   assertion(
-    tarch::la::equals(previousEvent.vertexH, vertexH),
-    "Vertices not the same",
+    vertexHOfPreviousEventMatches,
+    "The vertex width of the previous event differs from vertexH.",
     previousEvent.vertexH,
     vertexH,
     treeId,
     database.particleHistory(identifier)
   );
+  [[maybe_unused]] const bool vertexXOfPreviousEventMatches = tarch::la::equals(previousEvent.vertexX, vertexX);
   assertion(
-    tarch::la::equals(previousEvent.vertexX, vertexX),
-    "Vertices not the same",
+    vertexXOfPreviousEventMatches,
+    "The vertex position of the previous event differs from vertexX.",
     previousEvent.vertexX,
     vertexX,
     treeId,
     database.particleHistory(identifier)
   );
 
-  if ((previousEvent.type == internal::Event::Type::MoveWhileAssociatedToVertex)
-      or (previousEvent.type == internal::Event::Type::ConsecutiveMoveWhileAssociatedToVertex)) {
-    internal::Event newEvent = internal::Event(
-      internal::Event::Type::ConsecutiveMoveWhileAssociatedToVertex,
+  if (
+    (previousEvent.type == peano4::particles::assignmentchecks::Event::Type::MoveWhileAssociatedToVertex)
+    or (previousEvent.type == peano4::particles::assignmentchecks::Event::Type::ConsecutiveMoveWhileAssociatedToVertex)
+  ) {
+    peano4::particles::assignmentchecks::Event newEvent = peano4::particles::assignmentchecks::Event(
+      peano4::particles::assignmentchecks::Event::Type::ConsecutiveMoveWhileAssociatedToVertex,
       previousEvent.isLocal,
       vertexX,
       previousEvent.previousParticleX,
@@ -223,18 +270,18 @@ void peano4::particles::assignmentchecks::moveParticle(
       -1 // replaceEvent() overwrites the mesh sweep index
     );
 
-    if (previousEvent.type == internal::Event::Type::MoveWhileAssociatedToVertex) {
+    if (previousEvent.type == peano4::particles::assignmentchecks::Event::Type::MoveWhileAssociatedToVertex) {
       std::ostringstream pastTrace;
-      pastTrace << "Consecutive Move starting at x=[" << ::toString(previousEvent.previousParticleX) << "] at sweep "
+      pastTrace << "Consecutive move starting at x=[" << ::toString(previousEvent.previousParticleX) << "] at sweep "
                 << database.getMeshSweepData().at(previousEvent.meshSweepIndex).getName()
-                << " | old trace: " << previousEvent.trace << " | new trace: " + trace;
+                << " | old trace: " << previousEvent.trace << " | new trace: " << trace;
       newEvent.trace = pastTrace.str();
     }
 
     database.replaceEvent(identifier, previousEvent, newEvent);
   } else {
-    internal::Event newEvent = internal::Event(
-      internal::Event::Type::MoveWhileAssociatedToVertex,
+    peano4::particles::assignmentchecks::Event newEvent = peano4::particles::assignmentchecks::Event(
+      peano4::particles::assignmentchecks::Event::Type::MoveWhileAssociatedToVertex,
       vertexX,
       oldParticleX,
       vertexH,
@@ -261,20 +308,36 @@ void peano4::particles::assignmentchecks::detachParticleFromVertex(
   int                                          treeId,
   const std::string&                           trace
 ) {
-  internal::Database& database = internal::Database::getInstance();
+  auto& database = peano4::particles::assignmentchecks::Database::getInstance();
 
-  internal::ParticleIdentifier identifier =
-    internal::ParticleIdentifier(particleName, particleX, vertexX, vertexH, particleId, treeId);
+  const peano4::particles::assignmentchecks::ParticleIdentifier identifier =
+    peano4::particles::assignmentchecks::ParticleIdentifier(
+      particleName,
+      particleX,
+      vertexX,
+      vertexH,
+      particleId,
+      treeId
+    );
 
-  internal::Event event(internal::Event::Type::DetachFromVertex, isLocal, vertexX, particleX, vertexH, treeId, trace);
+  peano4::particles::assignmentchecks::Event event(
+    peano4::particles::assignmentchecks::Event::Type::DetachFromVertex,
+    isLocal,
+    vertexX,
+    particleX,
+    vertexH,
+    treeId,
+    trace
+  );
 
-  internal::Event previousEvent = database.addEvent(identifier, event);
+  const peano4::particles::assignmentchecks::Event previousEvent = database.addEvent(identifier, event);
 
-  const bool particleWasAssignedToVertex = previousEvent.type == internal::Event::Type::AssignToVertex
-    or previousEvent.type == internal::Event::Type::MoveWhileAssociatedToVertex
-    or previousEvent.type == internal::Event::Type::ConsecutiveMoveWhileAssociatedToVertex;
-  const bool repeatedVirtualParticleCleanup =
-    not isLocal and previousEvent.type == internal::Event::Type::Erase and not previousEvent.isLocal;
+  const bool particleWasAssignedToVertex =
+    previousEvent.type == peano4::particles::assignmentchecks::Event::Type::AssignToVertex
+    or previousEvent.type == peano4::particles::assignmentchecks::Event::Type::MoveWhileAssociatedToVertex
+    or previousEvent.type == peano4::particles::assignmentchecks::Event::Type::ConsecutiveMoveWhileAssociatedToVertex;
+  const bool repeatedVirtualParticleCleanup = not isLocal
+    and previousEvent.type == peano4::particles::assignmentchecks::Event::Type::Erase and not previousEvent.isLocal;
 
   assertion(
     particleWasAssignedToVertex or repeatedVirtualParticleCleanup,
@@ -286,8 +349,10 @@ void peano4::particles::assignmentchecks::detachParticleFromVertex(
     trace,
     database.toString()
   );
+  [[maybe_unused]] const bool vertexXOfPreviousEventMatches =
+    repeatedVirtualParticleCleanup or tarch::la::equals(previousEvent.vertexX, vertexX);
   assertion(
-    repeatedVirtualParticleCleanup or tarch::la::equals(previousEvent.vertexX, vertexX),
+    vertexXOfPreviousEventMatches,
     identifier.toString(),
     event.toString(),
     previousEvent.toString(),
@@ -296,8 +361,10 @@ void peano4::particles::assignmentchecks::detachParticleFromVertex(
     trace,
     database.particleHistory(identifier)
   );
+  [[maybe_unused]] const bool vertexHOfPreviousEventMatches =
+    repeatedVirtualParticleCleanup or tarch::la::equals(previousEvent.vertexH, vertexH);
   assertion(
-    repeatedVirtualParticleCleanup or tarch::la::equals(previousEvent.vertexH, vertexH),
+    vertexHOfPreviousEventMatches,
     identifier.toString(),
     event.toString(),
     previousEvent.toString(),
@@ -321,17 +388,29 @@ void peano4::particles::assignmentchecks::assignParticleToSieveSet(
   int                                          treeId,
   const std::string&                           trace
 ) {
-  internal::Database& database = internal::Database::getInstance();
+  auto& database = peano4::particles::assignmentchecks::Database::getInstance();
 
-  internal::ParticleIdentifier identifier =
-    internal::ParticleIdentifier(particleName, particleX, vertexX, vertexH, particleId, treeId);
+  const peano4::particles::assignmentchecks::ParticleIdentifier identifier =
+    peano4::particles::assignmentchecks::ParticleIdentifier(
+      particleName,
+      particleX,
+      vertexX,
+      vertexH,
+      particleId,
+      treeId
+    );
 
-  internal::Event event{internal::Event::Type::AssignToSieveSet, isLocal, treeId, trace};
+  peano4::particles::assignmentchecks::Event event{
+    peano4::particles::assignmentchecks::Event::Type::AssignToSieveSet,
+    isLocal,
+    treeId,
+    trace
+  };
 
-  internal::Event previousEvent = database.addEvent(identifier, event);
+  const peano4::particles::assignmentchecks::Event previousEvent = database.addEvent(identifier, event);
 
   assertion(
-    previousEvent.type == internal::Event::Type::DetachFromVertex,
+    previousEvent.type == peano4::particles::assignmentchecks::Event::Type::DetachFromVertex,
     identifier.toString(),
     event.toString(),
     previousEvent.toString(),
@@ -345,7 +424,7 @@ void peano4::particles::assignmentchecks::assignParticleToSieveSet(
  * database keeps the particles that the mesh has lost.
  */
 void peano4::particles::assignmentchecks::eliminateExistingParticles() {
-  internal::Database& database = internal::Database::getInstance();
+  auto& database = peano4::particles::assignmentchecks::Database::getInstance();
   database.eliminateExistingParticles();
 }
 
@@ -355,10 +434,10 @@ void peano4::particles::assignmentchecks::eliminateExistingParticles() {
  * log names the particles that the mesh has lost.
  */
 void peano4::particles::assignmentchecks::checkDatabaseIsEmpty() {
-  internal::Database& database = internal::Database::getInstance();
+  auto& database = peano4::particles::assignmentchecks::Database::getInstance();
 
   if (database.getNumberOfSnapshots() != 1) {
-    logInfo("database still holds " << database.getNumberOfSnapshots() << " snapshots");
+    logInfo("The database still holds " << database.getNumberOfSnapshots() << " snapshots");
     logError(database.toString());
   }
 }

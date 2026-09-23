@@ -52,13 +52,20 @@ dynamic = ["readme", "dependencies"]
 "Homepage" = "http://www.peano-framework.org"
 
 [project.scripts]
-format = "postprocessing.format:main"
+apply-black = "postprocessing.apply_black:main"
+apply-clang-format = "postprocessing.apply_clang_format:main"
+apply-clang-tidy = "postprocessing.apply_clang_tidy:main"
+check-dead-code = "postprocessing.check_dead_code:main"
+check-imports = "postprocessing.check_imports:main"
+check-includes = "postprocessing.check_includes:main"
+check-python-lint = "postprocessing.check_python_lint:main"
 plot-probe-data = "postprocessing.plot_probe_data:main"
 plot-error-norms = "postprocessing.plot_error_norms:main"
 compare-solution = "postprocessing.compare_solution:main"
 check-symmetry = "postprocessing.check_symmetry:main"
 check-error-norms = "postprocessing.check_error_norms:main"
 render-solution = "postprocessing.render_solution:main"
+render-curve = "postprocessing.render_curve:main"
 
 [build-system]
 requires = ["setuptools>=61.0"]
@@ -67,3 +74,8 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.dynamic]
 readme = { file = ["README.md"], content-type = "text/markdown" }
 dependencies = { file = ["requirements.txt"] }
+
+[tool.ruff.lint.isort]
+known-first-party = ["exahype2", "postprocessing"]
+force-single-line = true
+lines-between-types = 1

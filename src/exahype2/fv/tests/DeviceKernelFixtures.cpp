@@ -36,7 +36,7 @@ exahype2::fv::tests::PatchChain::PatchChain() {
 
   int nextFaceIndex = DeviceKernelSetup::NumberOfPatches + 1;
   for (int patch = 0; patch < DeviceKernelSetup::NumberOfPatches; patch++) {
-    const int firstFace                 = patch * TWO_TIMES_D;
+    const int firstFace                 = patch * peano4::FacesPerCell;
     faceIndices[firstFace]              = patch;
     faceIndices[firstFace + DIMENSIONS] = patch + 1;
     for (int axis = 1; axis < DIMENSIONS; axis++) {
@@ -48,8 +48,8 @@ exahype2::fv::tests::PatchChain::PatchChain() {
 
   std::vector<bool> alreadyListed(numberOfUniqueFaces, false);
   for (int patch = 0; patch < DeviceKernelSetup::NumberOfPatches; patch++) {
-    for (int faceNumber = 0; faceNumber < TWO_TIMES_D; faceNumber++) {
-      const std::uint64_t faceIndex = faceIndices[patch * TWO_TIMES_D + faceNumber];
+    for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
+      const std::uint64_t faceIndex = faceIndices[patch * peano4::FacesPerCell + faceNumber];
       if (not alreadyListed[faceIndex]) {
         alreadyListed[faceIndex] = true;
         workFaceIndices.push_back(faceIndex);

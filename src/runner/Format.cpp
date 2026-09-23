@@ -47,7 +47,7 @@ std::string runner::Format::overheadPercentageWidthSample() {
 
 std::string runner::Format::wallClock(double seconds) {
   std::ostringstream result;
-  result << "(" << std::fixed << std::setprecision(2) << seconds << " s)";
+  result << "(" << std::fixed << std::setprecision(4) << seconds << " s)";
   return result.str();
 }
 

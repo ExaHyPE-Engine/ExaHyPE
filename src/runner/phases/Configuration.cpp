@@ -3,6 +3,7 @@
 #include "Configuration.h"
 
 #include "peano4/Version.h"
+#include "peano4/sfc/ActiveCurve.h"
 #include "runner/Format.h"
 #include "runner/ReportBox.h"
 #include "runner/RuntimeParameters.h"
@@ -19,8 +20,9 @@ namespace {
    * environment variable reports the library's own default.
    */
   std::string mpiTransport() {
-    const auto* const pointToPointLayer = std::getenv("OMPI_MCA_pml");
-    const auto* const byteTransport     = std::getenv("OMPI_MCA_btl");
+    // The report runs once at start-up before the tasking runtime creates any thread.
+    const auto* const pointToPointLayer = std::getenv("OMPI_MCA_pml"); // NOLINT(concurrency-mt-unsafe)
+    const auto* const byteTransport     = std::getenv("OMPI_MCA_btl"); // NOLINT(concurrency-mt-unsafe)
     if (pointToPointLayer == nullptr and byteTransport == nullptr) {
       return "library default";
     }
@@ -43,6 +45,29 @@ namespace {
     }
     return runner::Format::memory(space.capacity) + " total · " + runner::Format::memory(space.available) + " free";
   }
+
+  /** Names the GPU backend the build selected and, when there is one, the devices it found. */
+  std::string gpuBackendLabel() {
+#if defined(PEANO_WITH_GPU_BACKEND_SYCL)
+    const std::string backend = "SYCL";
+#elif defined(PEANO_WITH_GPU_BACKEND_HIP)
+    const std::string backend = "HIP";
+#elif defined(PEANO_WITH_GPU_BACKEND_CUDA)
+    const std::string backend = "CUDA";
+#elif defined(PEANO_WITH_GPU_BACKEND_KOKKOS)
+    const std::string backend = "Kokkos";
+#elif defined(PEANO_WITH_GPU_BACKEND_OMPT)
+    const std::string backend = "OMPT";
+#else
+    const std::string backend = "none";
+#endif
+#if defined(PEANO_WITH_GPU_BACKEND)
+    const auto numberOfDevices = tarch::accelerator::Device::getInstance().getNumberOfDevices();
+    return backend + ", " + runner::Format::number(numberOfDevices) + (numberOfDevices == 1 ? " Device" : " Devices");
+#else
+    return backend;
+#endif
+  }
 } // namespace
 
 runner::Configuration::Configuration(runner::PhaseContext& context) :
@@ -59,6 +84,12 @@ runner::Configuration::Configuration(runner::PhaseContext& context) :
   }
 
   report.add("Build", "Dimensions", runner::Format::number(DIMENSIONS));
+  report.add(
+    "Build",
+    "Space-Filling Curve",
+    std::string(peano4::sfc::ActiveCurve::Name) + " ("
+      + runner::Format::number(peano4::sfc::ActiveCurve::SubdivisionFactor) + " Children per Axis)"
+  );
   const auto& rank          = tarch::mpi::Rank::getInstance();
   const auto  numberOfRanks = rank.getNumberOfRanks();
   const auto  numberOfNodes = rank.getNumberOfNodes();
@@ -74,25 +105,7 @@ runner::Configuration::Configuration(runner::PhaseContext& context) :
   report.add("Build", "CPU Features", runner::Format::number(tarch::detectCPUFeatures()));
   report.add("Build", "Stack Size", runner::Format::number(tarch::detectStackSizeLimit()));
 
-  std::string gpuBackend = "none";
-#if defined(PEANO_WITH_GPU_BACKEND)
-#if defined(PEANO_WITH_GPU_BACKEND_SYCL)
-  gpuBackend = "SYCL";
-#elif defined(PEANO_WITH_GPU_BACKEND_HIP)
-  gpuBackend = "HIP";
-#elif defined(PEANO_WITH_GPU_BACKEND_CUDA)
-  gpuBackend = "CUDA";
-#elif defined(PEANO_WITH_GPU_BACKEND_KOKKOS)
-  gpuBackend = "Kokkos";
-#elif defined(PEANO_WITH_GPU_BACKEND_OMPT)
-  gpuBackend = "OMPT";
-#endif
-  if (gpuBackend != "none") {
-    const auto numberOfDevices = tarch::accelerator::Device::getInstance().getNumberOfDevices();
-    gpuBackend += ", " + runner::Format::number(numberOfDevices) + (numberOfDevices == 1 ? " Device" : " Devices");
-  }
-#endif
-  report.add("Build", "GPU Backend", gpuBackend);
+  report.add("Build", "GPU Backend", gpuBackendLabel());
 
   report.add(
     "Build",
@@ -114,12 +127,12 @@ runner::Configuration::Configuration(runner::PhaseContext& context) :
   constexpr char     AxisNames[]         = "xyz";
   bool               hasPeriodicBoundary = false;
   for (int dimension = 0; dimension < DIMENSIONS; ++dimension) {
-    if (_context.periodicBC[dimension]) {
+    if (_context.periodicBoundaries[dimension]) {
       periodic << (hasPeriodicBoundary ? ", " : "") << AxisNames[dimension];
       hasPeriodicBoundary = true;
     }
   }
-  const auto         periodicBoundaries = periodic.str();
+  const auto         periodicAxes = periodic.str();
   std::ostringstream gridLevels;
   gridLevels << parameters.getGridLevels() << " .. " << parameters.getMaxGridLevels();
   std::ostringstream meshSize;
@@ -127,7 +140,7 @@ runner::Configuration::Configuration(runner::PhaseContext& context) :
            << runner::Format::number(parameters.getMaxAdmissiblePatchSize(_context.domainSize));
 
   report.add("Domain & Grid", "Domain", domain.str());
-  report.add("Domain & Grid", "Periodic Boundaries", periodicBoundaries.empty() ? "none" : periodicBoundaries);
+  report.add("Domain & Grid", "Periodic Boundaries", periodicAxes.empty() ? "none" : periodicAxes);
   report.add("Domain & Grid", "Grid Levels (min .. max)", gridLevels.str());
   report.add("Domain & Grid", "Admissible Patch Size (min .. max)", meshSize.str());
 
@@ -166,7 +179,7 @@ runner::Configuration::Configuration(runner::PhaseContext& context) :
     }
   }
 
-  _banners.push_back("Peano 4 (C) www.peano-framework.org");
+  _banners.emplace_back("Peano 4 (C) www.peano-framework.org");
   if (callbacks.getCopyrightBanner) {
     _banners.push_back(callbacks.getCopyrightBanner());
   }

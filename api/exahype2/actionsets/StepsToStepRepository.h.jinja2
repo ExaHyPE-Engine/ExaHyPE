@@ -1,0 +1,20 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#pragma once
+
+namespace {{ NAMESPACE | join("::") }} {
+  class {{ CLASSNAME }};
+{%- for step in STEPS %}
+  class {{ step.name }};
+{%- endfor %}
+} // namespace {{ NAMESPACE | join("::") }}
+
+class {{ FULL_QUALIFIED_NAMESPACE }}::{{ CLASSNAME }} final {
+public:
+  enum class Steps { Undef{% for step in STEPS %}, {{ step.name }}{% endfor %} };
+
+  static std::string toString(Steps value);
+
+  static int   toProgramStep(Steps value);
+  static Steps toStepEnum(int value);
+};

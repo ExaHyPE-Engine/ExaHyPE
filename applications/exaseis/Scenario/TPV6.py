@@ -2,6 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 from .DynamicRuptureScenario import DynamicRuptureScenario
 
+
 class TPV6(DynamicRuptureScenario):
     """
     Part of a series of benchmarks by the Statewide California Earthquake Center (SCEC)
@@ -12,23 +13,25 @@ class TPV6(DynamicRuptureScenario):
     The description of the scenario can be found at: https://strike.scec.org/cvws/tpv6docs.html
     """
 
-    domain_offset   = [3.8, 0.0, 3.8] #centers the fault which is at 20.
-    domain_size     = [32.4, 32.4, 32.4] #leads to one cell outside of fault on each side (with 27 cells)
+    domain_offset = [3.8, 0.0, 3.8]  # centers the fault which is at 20.
+    domain_size = [
+        32.4,
+        32.4,
+        32.4,
+    ]  # The domain size leaves one cell outside the fault on each side on a level-3 grid of the Peano curve.
 
     end_time = 10.0
 
-    tracer_coordinates = [
-
-    ]
+    tracer_coordinates = []
 
     fault_coordinates = [
-          # Surface
-          [20., 0.0,  8.0],
-          [20., 0.0, 20.0],
-          [20., 0.0, 32.0],
-          # Underground
-          [20., 7.5,  8.0],
-          [20., 7.5, 32.0]
+        # Surface
+        [20.0, 0.0, 8.0],
+        [20.0, 0.0, 20.0],
+        [20.0, 0.0, 32.0],
+        # Underground
+        [20.0, 7.5, 8.0],
+        [20.0, 7.5, 32.0],
     ]
 
     def domain_perturbations(self):
@@ -58,7 +61,7 @@ class TPV6(DynamicRuptureScenario):
 """
 
     dynamicRuptureDictionary = {
-    "initialStresses": """
+        "initialStresses": """
       sxx = -120;
       syy = 0;
       szz = 0;
@@ -66,20 +69,20 @@ class TPV6(DynamicRuptureScenario):
       sxz = 70;
       syz = 0;
     """,
-      "n_yz": """
+        "n_yz": """
       if ((6.0 <= x[1]) && (x[1] <= 9.0) && (18.5 <= x[2]) && (x[2] <= 21.5)) {
          return 11.6;
       }
       return 0.0;""",
-      "cohesion": "return 0;",
-      "forced_rupture_time": "return 9999999;",
-      "d_c": "return 0.4;",
-  #constant parameters
-      "mu_d": 0.525,
-      "mu_s": 0.677,
-      "t0_rupture": 0.5,
-      "f_cy": 0,
-      "f_wy": 15,
-      "f_cz": 20,
-      "f_wz": 15
+        "cohesion": "return 0;",
+        "forced_rupture_time": "return 9999999;",
+        "d_c": "return 0.4;",
+        # constant parameters
+        "mu_d": 0.525,
+        "mu_s": 0.677,
+        "t0_rupture": 0.5,
+        "f_cy": 0,
+        "f_wy": 15,
+        "f_cz": 20,
+        "f_wz": 15,
     }

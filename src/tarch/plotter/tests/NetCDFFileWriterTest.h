@@ -9,6 +9,12 @@ namespace tarch::plotter::tests {
 } // namespace tarch::plotter::tests
 
 class tarch::plotter::tests::NetCDFFileWriterTest final : public tarch::tests::TestCase {
+public:
+  NetCDFFileWriterTest();
+  ~NetCDFFileWriterTest() override = default;
+
+  void run() override;
+
 private:
   void test2DSimpleTriangle();
   void test2DQuadWithData();
@@ -16,44 +22,28 @@ private:
   void testMultipleSubdomains2DWithData();
 
   /**
-   * Regression test for the collective field-schema deadlock: only the global
-   * master contributes data while every other rank stays empty. The collective
-   * parallel write must not deadlock, which relies on the field schema being
-   * reduced globally so empty ranks join every variable call.
+   * The collective write completes when only the global master contributes data and
+   * every other rank stays empty.
    */
   void testHeterogeneousRanks();
 
   /**
-   * Ranks hold different non-zero subdomain counts (master 3, the rest 2) - the
-   * real load-balanced distribution. The pre-fix writer issued one collective
-   * nc_put_var* per local subdomain, so unequal counts mismatched the collective
-   * call count across ranks and deadlocked; the merge-once writer issues one
-   * collective write per variable. The old MPI tests only used uniform counts or
-   * master-vs-empty, so they never caught this.
+   * The collective write completes when the ranks hold different non-zero subdomain
+   * counts, because the writer issues one collective write per variable.
    */
   void testUnevenSubdomainCounts();
 
   void testEmptyPlotter();
 
-  /**
-   * The plotter must throw or fail safe if data does not match the geometry count.
-   */
+  /** The plotter throws when a data field does not match the geometry count. */
   void testInconsistentDataSizeThrows();
 
-  /**
-   * Checks that the writer throws if we try to plot unsupported cell types (e.g. lines).
-   */
+  /** The writer throws when a cell type it does not support, such as a line, is plotted. */
   void testUnsupportedCellType();
 
   /**
-   * A data identifier with a character that would corrupt the NetCDF name / HDF5
-   * path is rejected up front (shared FileWriter::validateIdentifier).
+   * The writer rejects a data identifier that carries a character which would corrupt
+   * a NetCDF name or an HDF5 path.
    */
   void testInvalidIdentifierThrows();
-
-public:
-  NetCDFFileWriterTest();
-  ~NetCDFFileWriterTest() override = default;
-
-  void run() override;
 };

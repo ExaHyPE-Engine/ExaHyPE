@@ -13,10 +13,17 @@ scenario_factories = {
     "AdvectionLinear": scenarios.AdvectionLinear,
     "AcousticPlanarWaves": lambda: scenarios.AcousticPlanarWaves(dimensions=2),
     "ElasticPlanarWaves": lambda: scenarios.ElasticPlanarWaves(dimensions=2),
+    "ElasticRickerPulse": scenarios.ElasticRickerPulse,
     "EulerGaussianBell": scenarios.EulerGaussianBell,
+    "EulerGaussianBell3D": scenarios.EulerGaussianBell3D,
     "EulerIsentropicVortex": scenarios.EulerIsentropicVortex,
-    # "SWERadialDamBreak": scenarios.SWERadialDamBreak(),
+    "SWERadialDamBreak": scenarios.SWERadialDamBreak,
     "SWERestingLake": scenarios.SWERestingLake,
+    "SWESteadyVortex": scenarios.SWESteadyVortex,
+    "NavierStokesCosineBubble": scenarios.NavierStokesCosineBubble,
+    "NavierStokesTwoBubbles": scenarios.NavierStokesTwoBubbles,
+    "NavierStokesTaylorGreen": scenarios.NavierStokesTaylorGreenVortex,
+    "NavierStokesABCFlow": scenarios.NavierStokesABCFlow,
 }
 
 
@@ -26,12 +33,14 @@ def parse_arguments():
         "-h",
         "--help",
         action="store_true",
-        help="show this help message and continue with project help",
+        help="Show this help message and continue with project help.",
     )
     parser.add_argument("-et", "--end-time", type=float, default=None)
     parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=3)
     parser.add_argument("-l", "--grid-levels", type=int, default=3)
-    parser.add_argument("-s", "--scenario", choices=scenario_factories.keys(), default=None)
+    parser.add_argument(
+        "-s", "--scenario", choices=scenario_factories.keys(), default=None
+    )
     args, _ = parser.parse_known_args()
     if args.help:
         parser.print_help()
@@ -57,7 +66,6 @@ elif args.scenario is None:
         except KeyError:
             continue
         else:
-            # User has specified a valid scenario
             break
 else:
     scenario_name = args.scenario
@@ -85,22 +93,35 @@ if project.dimensions != scenario._dimensions:
         f"was configured for {project.dimensions}D."
     )
 
-solver = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep(
+equation = scenario._equation
+solver = exahype2.dg.rk.Solver(
     name="RKDGSolver",
     rk_order=order,
-    polynomials=exahype2.solvers.GaussLegendreBasis(4),
-    time_step_relaxation=0.9,
-    unknowns=scenario._equation.num_unknowns,
-    auxiliary_variables=scenario._equation.num_auxiliary_variables,
+    dg_order=order,
+    unknowns=equation.num_unknowns,
+    auxiliary_variables=equation.num_auxiliary_variables,
+    time_stepping=exahype2.TimeStepping.Adaptive(0.9),
+    basis=exahype2.dg.GaussLegendre,
+    linear=equation.is_linear,
 )
 
-solver.set_implementation(
-    initial_conditions=scenario.initial_conditions(),
+solver.set_pde_terms(
+    initial_condition=scenario.initial_conditions(),
     boundary_conditions=scenario.boundary_conditions(),
-    eigenvalues=scenario._equation.eigenvalues(),
-    flux=scenario._equation.flux(),
-    ncp=scenario._equation.ncp(),
+    max_eigenvalue=equation.eigenvalues(),
+    flux=None if equation.use_diffusive_flux else equation.flux(),
+    diffusive_flux=equation.flux() if equation.use_diffusive_flux else None,
+    ncp=equation.ncp(),
+    source=equation.source(),
+    riemann_solver=equation.riemann_solver(),
 )
+
+if scenario.analytical_solution() is not None:
+    solver.set_pde_terms(analytical_solution=scenario.analytical_solution())
+    solver.measure_error(
+        file="Error_" + scenario.__class__.__name__,
+        every=scenario._end_time / 100.0,
+    )
 
 project.add_solver(solver)
 

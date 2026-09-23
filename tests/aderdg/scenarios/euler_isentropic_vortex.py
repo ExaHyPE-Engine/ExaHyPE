@@ -29,7 +29,6 @@ class EulerIsentropicVortex(Scenario):
             """
   static constexpr auto epsilon = 5;
   static constexpr auto pi = std::numbers::pi;
-  static constexpr auto i_pi = 1./pi;
   static constexpr auto eos_gamma = 1.4;
 
   const auto r = tarch::la::norm2(x);
@@ -49,11 +48,10 @@ class EulerIsentropicVortex(Scenario):
             + str(self._velocity)
             + """;
 
-	Q[Shortcuts::rho] = rho_inf + drho; // fluid density
-	Q[Shortcuts::v+0] = Q[Shortcuts::rho] * (u_inf + du); // momentum
-	Q[Shortcuts::v+1] = Q[Shortcuts::rho] * (v_inf + dv);
-	// total energy = internal energy + kinetic energy
-	Q[Shortcuts::E] = (p_inf + dp) / (eos_gamma-1) + 0.5*Q[Shortcuts::rho] * ((u_inf+du)*(u_inf+du)+(v_inf+dv)*(v_inf+dv));
+  Q[Shortcuts::rho] = rho_inf + drho;
+  Q[Shortcuts::v+0] = Q[Shortcuts::rho] * (u_inf + du);
+  Q[Shortcuts::v+1] = Q[Shortcuts::rho] * (v_inf + dv);
+  Q[Shortcuts::E] = (p_inf + dp) / (eos_gamma-1) + 0.5*Q[Shortcuts::rho] * ((u_inf+du)*(u_inf+du)+(v_inf+dv)*(v_inf+dv));
 """
         )
 
@@ -61,11 +59,9 @@ class EulerIsentropicVortex(Scenario):
         return (
             """
   /*
-    The initial condition is transported without deformation in a periodic
-    domain [-5., +5.], i.e. the value at a given point is the value at the
-    position x - v*t but accounting for periodicity.
-    Therefore we find the point x - v*t, and then shift this by instances
-    of 10.0 until we find the point within the domain.
+    The initial condition travels through the periodic domain [-5, 5] without
+    deformation, so the solution at x is the initial value at x - v*t. That
+    position wraps by 10 when it leaves the domain.
   */
   constexpr auto rho_inf = 1.;
   constexpr auto p_inf = 1.;
@@ -82,7 +78,6 @@ class EulerIsentropicVortex(Scenario):
 
   static constexpr auto epsilon = 5.0;
   static constexpr auto pi = std::numbers::pi;
-  static constexpr auto i_pi = 1./pi;
   static constexpr auto eos_gamma = 1.4;
 
   const auto r = tarch::la::norm2(pos);
@@ -93,10 +88,9 @@ class EulerIsentropicVortex(Scenario):
   const auto drho = pow(1. + dTemp, 1. / (eos_gamma - 1.)) - 1.;
   const auto dp = pow(1. + dTemp, eos_gamma / (eos_gamma - 1.)) - 1.;
 
-	solution[Shortcuts::rho] = rho_inf + drho; // fluid density
-	solution[Shortcuts::v+0] = solution[Shortcuts::rho] * (u_inf + du); // momentum
-	solution[Shortcuts::v+1] = solution[Shortcuts::rho] * (v_inf + dv);
-	// total energy = internal energy + kinetic energy
-	solution[Shortcuts::E] = (p_inf + dp) / (eos_gamma-1) + 0.5*solution[Shortcuts::rho] * ((u_inf+du)*(u_inf+du)+(v_inf+dv)*(v_inf+dv));
+  solution[Shortcuts::rho] = rho_inf + drho;
+  solution[Shortcuts::v+0] = solution[Shortcuts::rho] * (u_inf + du);
+  solution[Shortcuts::v+1] = solution[Shortcuts::rho] * (v_inf + dv);
+  solution[Shortcuts::E] = (p_inf + dp) / (eos_gamma-1) + 0.5*solution[Shortcuts::rho] * ((u_inf+du)*(u_inf+du)+(v_inf+dv)*(v_inf+dv));
 """
         )

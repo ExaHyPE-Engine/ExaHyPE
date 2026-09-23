@@ -1,55 +1,56 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-
 #include "ParticleIdentifier.h"
 
-peano4::particles::assignmentchecks::internal::ParticleIdentifier::ParticleIdentifier(
-  const std::string&                           particleName__,
-  const tarch::la::Vector<DIMENSIONS, double>& particleX__,
+#include "tarch/Assertions.h"
+
+peano4::particles::assignmentchecks::ParticleIdentifier::ParticleIdentifier(
+  const std::string&                           particleName,
+  const tarch::la::Vector<DIMENSIONS, double>& particleX,
   const tarch::la::Vector<DIMENSIONS, double>& vertexX,
   const tarch::la::Vector<DIMENSIONS, double>& vertexH,
-  const int                                    particleId__,
-  const int                                    treeId__
+  const int                                    particleId,
+  const int                                    treeId
 ) :
-  particleName(particleName__),
-  particleX(particleX__),
-  vertexInd(getVertexInd(vertexX, vertexH)),
+  particleName(particleName),
+  particleX(particleX),
+  vertexIndex(getVertexIndex(vertexX, vertexH)),
   vertexDepth(getVertexDepth(vertexX, vertexH)),
-  particleId(particleId__),
-  treeId(treeId__) {}
+  particleId(particleId),
+  treeId(treeId) {}
 
-peano4::particles::assignmentchecks::internal::ParticleIdentifier::ParticleIdentifier(
-  const std::string&                              particleName__,
-  const tarch::la::Vector<DIMENSIONS, double>&    particleX__,
-  const tarch::la::Vector<DIMENSIONS, long long>& vertexInd__,
-  const int                                       vertexDepth__,
-  const int                                       particleId__,
-  const int                                       treeId__
+peano4::particles::assignmentchecks::ParticleIdentifier::ParticleIdentifier(
+  const std::string&                              particleName,
+  const tarch::la::Vector<DIMENSIONS, double>&    particleX,
+  const tarch::la::Vector<DIMENSIONS, long long>& vertexIndex,
+  const int                                       vertexDepth,
+  const int                                       particleId,
+  const int                                       treeId
 ) :
-  particleName(particleName__),
-  particleX(particleX__),
-  vertexInd(vertexInd__),
-  vertexDepth(vertexDepth__),
-  particleId(particleId__),
-  treeId(treeId__) {}
+  particleName(particleName),
+  particleX(particleX),
+  vertexIndex(vertexIndex),
+  vertexDepth(vertexDepth),
+  particleId(particleId),
+  treeId(treeId) {}
 
 /**
  * Returns the index of the vertex at position vertexX with size vertexH. The
  * quotient of the two is rounded to twelve significant digits.
  */
-tarch::la::Vector<DIMENSIONS, long long> peano4::particles::assignmentchecks::internal::ParticleIdentifier::
-  getVertexInd(
-    const tarch::la::Vector<DIMENSIONS, double>& vertexX,
-    const tarch::la::Vector<DIMENSIONS, double>& vertexH
-  ) {
-  tarch::la::Vector<DIMENSIONS, long long> ind;
+tarch::la::Vector<DIMENSIONS, long long> peano4::particles::assignmentchecks::ParticleIdentifier::getVertexIndex(
+  const tarch::la::Vector<DIMENSIONS, double>& vertexX,
+  const tarch::la::Vector<DIMENSIONS, double>& vertexH
+) {
+  tarch::la::Vector<DIMENSIONS, long long> index;
 
-  for (size_t i = 0; i < DIMENSIONS; i++) {
-    const double index = std::round(vertexX(i) / vertexH(i) * 1e12) * 1e-12;
-    ind(i)             = static_cast<long long>(index);
+  for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
+    assertion(vertexH(dimension) > 0.0, vertexX, vertexH);
+    const double roundedQuotient = std::round(vertexX(dimension) / vertexH(dimension) * 1e12) * 1e-12;
+    index(dimension)             = static_cast<long long>(roundedQuotient);
   }
 
-  return ind;
+  return index;
 }
 
 /**
@@ -57,23 +58,21 @@ tarch::la::Vector<DIMENSIONS, long long> peano4::particles::assignmentchecks::in
  * constant of this function, and an assertion fires when vertexX lies outside
  * that domain.
  */
-int peano4::particles::assignmentchecks::internal::ParticleIdentifier::getVertexDepth(
+int peano4::particles::assignmentchecks::ParticleIdentifier::getVertexDepth(
   const tarch::la::Vector<DIMENSIONS, double>& vertexX,
   const tarch::la::Vector<DIMENSIONS, double>& vertexH
 ) {
-  constexpr double              BoxSize = 243.;
+  constexpr double              BoxSize = 243.0;
   [[maybe_unused]] const double maxX    = tarch::la::normMax(vertexX);
-  assertion(maxX < BoxSize, maxX, BoxSize, "Hardcoded boxsize too small.");
-  const double maxH   = tarch::la::normMax(vertexH);
-  const int    result = static_cast<int>(BoxSize / maxH);
-  return result;
+  assertion(maxX < BoxSize, "The vertex lies outside the box this routine assumes.", maxX, BoxSize);
+  const double maxH = tarch::la::normMax(vertexH);
+  assertion(maxH > 0.0, vertexH);
+  return static_cast<int>(BoxSize / maxH);
 }
 
-bool peano4::particles::assignmentchecks::internal::ParticleIdentifier::numericalEquals(
-  const ParticleIdentifier& rhs
-) const {
-  for (size_t i = 0; i < DIMENSIONS; i++) {
-    if (vertexInd(i) != rhs.vertexInd(i)) {
+bool peano4::particles::assignmentchecks::ParticleIdentifier::numericalEquals(const ParticleIdentifier& rhs) const {
+  for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
+    if (vertexIndex(dimension) != rhs.vertexIndex(dimension)) {
       return false;
     }
   }
@@ -83,12 +82,11 @@ bool peano4::particles::assignmentchecks::internal::ParticleIdentifier::numerica
 }
 
 /**
- * Returns true if this identifier orders before rhs. The comparison runs to
- * the last member, as an equality check in between ends it too early.
+ * Returns whether this identifier orders before rhs. The comparison runs over
+ * the particle name, the particle id, the tree id, the vertex index and the
+ * vertex depth, in this order.
  */
-bool peano4::particles::assignmentchecks::internal::ParticleIdentifier::numericalSmaller(
-  const ParticleIdentifier& rhs
-) const {
+bool peano4::particles::assignmentchecks::ParticleIdentifier::numericalSmaller(const ParticleIdentifier& rhs) const {
   if (*this == rhs) {
     return false;
   }
@@ -115,10 +113,10 @@ bool peano4::particles::assignmentchecks::internal::ParticleIdentifier::numerica
   }
 
   for (int d = 0; d < DIMENSIONS; d++) {
-    if (vertexInd(d) < rhs.vertexInd(d)) {
+    if (vertexIndex(d) < rhs.vertexIndex(d)) {
       return true;
     }
-    if (vertexInd(d) > rhs.vertexInd(d)) {
+    if (vertexIndex(d) > rhs.vertexIndex(d)) {
       return false;
     }
   }
@@ -133,30 +131,30 @@ bool peano4::particles::assignmentchecks::internal::ParticleIdentifier::numerica
   return false;
 }
 
-std::string peano4::particles::assignmentchecks::internal::ParticleIdentifier::toString() const {
-  std::stringstream sstr;
-  sstr << "(" << particleName << ",Id=" << particleId << ",VertexInd=" << ::toString(vertexInd)
-       << ",VertexDepth=" << vertexDepth << ",treeId=" << treeId << ",particleX=" << ::toString(particleX) << ")";
+std::string peano4::particles::assignmentchecks::ParticleIdentifier::toString() const {
+  std::ostringstream out;
+  out << "(" << particleName << ",Id=" << particleId << ",VertexIndex=" << ::toString(vertexIndex)
+      << ",VertexDepth=" << vertexDepth << ",treeId=" << treeId << ",particleX=" << ::toString(particleX) << ")";
 
-  return sstr.str();
+  return out.str();
 }
 
-bool peano4::particles::assignmentchecks::internal::ParticleIdentifier::operator<(
-  const peano4::particles::assignmentchecks::internal::ParticleIdentifier& rhs
+bool peano4::particles::assignmentchecks::ParticleIdentifier::operator<(
+  const peano4::particles::assignmentchecks::ParticleIdentifier& rhs
 ) const {
   return numericalSmaller(rhs);
 }
 
 bool operator==(
-  const peano4::particles::assignmentchecks::internal::ParticleIdentifier& lhs,
-  const peano4::particles::assignmentchecks::internal::ParticleIdentifier& rhs
+  const peano4::particles::assignmentchecks::ParticleIdentifier& lhs,
+  const peano4::particles::assignmentchecks::ParticleIdentifier& rhs
 ) {
   return lhs.numericalEquals(rhs);
 }
 
 bool operator!=(
-  const peano4::particles::assignmentchecks::internal::ParticleIdentifier& lhs,
-  const peano4::particles::assignmentchecks::internal::ParticleIdentifier& rhs
+  const peano4::particles::assignmentchecks::ParticleIdentifier& lhs,
+  const peano4::particles::assignmentchecks::ParticleIdentifier& rhs
 ) {
   return not lhs.numericalEquals(rhs);
 }

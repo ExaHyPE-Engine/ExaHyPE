@@ -24,7 +24,7 @@ TARGET_DECLARE
  */
 template <exahype2::fv::limiter::SlopeLimiter Limiter>
 template <
-  typename Solver,
+  typename SolverType,
   int  NumberOfUnknowns,
   int  NumberOfData,
   bool EvaluateFlux,
@@ -56,7 +56,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::LimitedLine
 
   ComputePrecision limitedDifferences[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
   if constexpr (requires {
-                  Solver::limitedDifference(
+                  SolverType::limitedDifference(
                     leftStateForCompute,
                     centreStateForCompute,
                     rightStateForCompute,
@@ -67,7 +67,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::LimitedLine
                   );
                 }) {
     for (int unknown = 0; unknown < NumberOfData; unknown++) {
-      limitedDifferences[unknown] = Solver::limitedDifference(
+      limitedDifferences[unknown] = SolverType::limitedDifference(
         leftStateForCompute,
         centreStateForCompute,
         rightStateForCompute,
@@ -87,7 +87,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::LimitedLine
   }
 
   if constexpr (requires {
-                  Solver::reconstruct(
+                  SolverType::reconstruct(
                     leftStateForCompute,
                     centreStateForCompute,
                     rightStateForCompute,
@@ -101,7 +101,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::LimitedLine
                   );
                 }) {
     for (int unknown = 0; unknown < NumberOfData; unknown++) {
-      Solver::reconstruct(
+      SolverType::reconstruct(
         leftStateForCompute,
         centreStateForCompute,
         rightStateForCompute,
@@ -134,8 +134,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::LimitedLine
     if constexpr (EvaluateFlux) {
       ComputePrecision minusFlux[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
       ComputePrecision plusFlux[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
-      Solver::flux(evolvedMinusState, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, minusFlux);
-      Solver::flux(evolvedPlusState, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, plusFlux);
+      SolverType::flux(evolvedMinusState, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, minusFlux);
+      SolverType::flux(evolvedPlusState, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, plusFlux);
       SIMD()
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         predictorUpdate[unknown] += minusFlux[unknown] - plusFlux[unknown];
@@ -144,7 +144,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::LimitedLine
 
     if constexpr (EvaluateNonconservativeProduct) {
       ComputePrecision predictorNonconservativeProduct[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
-      Solver::nonconservativeProduct(
+      SolverType::nonconservativeProduct(
         centreStateForCompute,
         limitedDifferences,
         volumeCentre,
@@ -175,7 +175,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::LimitedLine
 
     if constexpr (EvaluateSource) {
       ComputePrecision sources[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
-      Solver::sourceTerm(centreStateForCompute, volumeCentre, volumeSize, timeStamp, timeStepSize, sources);
+      SolverType::sourceTerm(centreStateForCompute, volumeCentre, volumeSize, timeStamp, timeStepSize, sources);
       SIMD()
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         const ComputePrecision sourceHalfStep = static_cast<ComputePrecision>(
@@ -206,7 +206,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::LimitedLine
  */
 template <exahype2::fv::limiter::SlopeLimiter Limiter>
 template <
-  typename Solver,
+  typename SolverType,
   int  NumberOfVolumesPerAxis,
   int  NumberOfUnknowns,
   int  NumberOfAuxiliaryVariables,
@@ -220,7 +220,7 @@ template <
   typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::LimitedLinear<Limiter>::accumulateFluxDivergence(
   const StoragePrecision* NOALIAS const        inputPatch,
-  const StoragePrecision* NOALIAS const        faceInputPatches[TWO_TIMES_D],
+  const StoragePrecision* NOALIAS const        faceInputPatches[peano4::FacesPerCell],
   const tarch::la::Vector<DIMENSIONS, int>&    volumeIndex,
   const int                                    centreOffset,
   const StoragePrecision* NOALIAS const        centreState,
@@ -251,19 +251,19 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::LimitedLine
     leftVolumeIndex(normal) -= 1;
     rightVolumeIndex(normal) += 1;
     [[maybe_unused]] const auto [leftVolumeSize, leftVolumeCentre] =
-      ::exahype2::fv::getVolumeSizeAndCentre<DIMENSIONS, NumberOfVolumesPerAxis>(
+      exahype2::fv::getVolumeSizeAndCentre<DIMENSIONS, NumberOfVolumesPerAxis>(
         patchCentre,
         patchSize,
         leftVolumeIndex
       );
     [[maybe_unused]] const auto [rightVolumeSize, rightVolumeCentre] =
-      ::exahype2::fv::getVolumeSizeAndCentre<DIMENSIONS, NumberOfVolumesPerAxis>(
+      exahype2::fv::getVolumeSizeAndCentre<DIMENSIONS, NumberOfVolumesPerAxis>(
         patchCentre,
         patchSize,
         rightVolumeIndex
       );
 
-    const StoragePrecision* NOALIAS const leftLeftState = ::exahype2::fv::reconstruction::neighbourAlongNormal<HaloSize, NumberOfVolumesPerAxis, NumberOfData>(
+    const StoragePrecision* NOALIAS const leftLeftState = exahype2::fv::reconstruction::neighbourAlongNormal<HaloSize, NumberOfVolumesPerAxis, NumberOfData>(
       inputPatch,
       faceInputPatches,
       volumeIndex,
@@ -272,7 +272,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::LimitedLine
       normal,
       -2
     );
-    const StoragePrecision* NOALIAS const leftState = ::exahype2::fv::reconstruction::neighbourAlongNormal<HaloSize, NumberOfVolumesPerAxis, NumberOfData>(
+    const StoragePrecision* NOALIAS const leftState = exahype2::fv::reconstruction::neighbourAlongNormal<HaloSize, NumberOfVolumesPerAxis, NumberOfData>(
       inputPatch,
       faceInputPatches,
       volumeIndex,
@@ -281,7 +281,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::LimitedLine
       normal,
       -1
     );
-    const StoragePrecision* NOALIAS const rightState = ::exahype2::fv::reconstruction::neighbourAlongNormal<HaloSize, NumberOfVolumesPerAxis, NumberOfData>(
+    const StoragePrecision* NOALIAS const rightState = exahype2::fv::reconstruction::neighbourAlongNormal<HaloSize, NumberOfVolumesPerAxis, NumberOfData>(
       inputPatch,
       faceInputPatches,
       volumeIndex,
@@ -290,7 +290,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::LimitedLine
       normal,
       1
     );
-    const StoragePrecision* NOALIAS const rightRightState = ::exahype2::fv::reconstruction::neighbourAlongNormal<HaloSize, NumberOfVolumesPerAxis, NumberOfData>(
+    const StoragePrecision* NOALIAS const rightRightState = exahype2::fv::reconstruction::neighbourAlongNormal<HaloSize, NumberOfVolumesPerAxis, NumberOfData>(
       inputPatch,
       faceInputPatches,
       volumeIndex,
@@ -308,7 +308,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::LimitedLine
     [[maybe_unused]] ComputePrecision rightNeighbourPlus[NumberOfData] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
 
     evolveFaceStates<
-      Solver,
+      SolverType,
       NumberOfUnknowns,
       NumberOfData,
       EvaluateFlux,
@@ -326,7 +326,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::LimitedLine
       leftNeighbourPlus
     );
     evolveFaceStates<
-      Solver,
+      SolverType,
       NumberOfUnknowns,
       NumberOfData,
       EvaluateFlux,
@@ -344,7 +344,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::LimitedLine
       centrePlus
     );
     evolveFaceStates<
-      Solver,
+      SolverType,
       NumberOfUnknowns,
       NumberOfData,
       EvaluateFlux,
@@ -362,8 +362,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::LimitedLine
       rightNeighbourPlus
     );
 
-    ::exahype2::fv::reconstruction::accumulateFluxDivergenceFromFaceStates<
-      Solver,
+    exahype2::fv::reconstruction::accumulateFluxDivergenceFromFaceStates<
+      SolverType,
       NumberOfVolumesPerAxis,
       NumberOfUnknowns,
       NumberOfData,

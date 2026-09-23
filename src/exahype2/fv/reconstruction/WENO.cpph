@@ -74,7 +74,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::WENO<Weight
  */
 template <exahype2::fv::weno::NonlinearWeighting Weighting>
 template <
-  typename Solver,
+  typename SolverType,
   int  NumberOfUnknowns,
   int  NumberOfData,
   bool EvaluateFlux,
@@ -103,8 +103,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::WENO<Weight
     if constexpr (EvaluateFlux) {
       ComputePrecision minusFlux[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
       ComputePrecision plusFlux[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
-      Solver::flux(minusState, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, minusFlux);
-      Solver::flux(plusState, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, plusFlux);
+      SolverType::flux(minusState, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, minusFlux);
+      SolverType::flux(plusState, volumeCentre, volumeSize, timeStamp, timeStepSize, normal, plusFlux);
       SIMD()
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         predictorUpdate[unknown] += minusFlux[unknown] - plusFlux[unknown];
@@ -118,7 +118,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::WENO<Weight
         stateJump[unknown] = plusState[unknown] - minusState[unknown];
       }
       ComputePrecision predictorNonconservativeProduct[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
-      Solver::nonconservativeProduct(
+      SolverType::nonconservativeProduct(
         centreState,
         stateJump,
         volumeCentre,
@@ -149,7 +149,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::WENO<Weight
 
     if constexpr (EvaluateSource) {
       ComputePrecision sources[NumberOfUnknowns] __attribute__((aligned(PEANO_WITH_ALIGNMENT)));
-      Solver::sourceTerm(centreState, volumeCentre, volumeSize, timeStamp, timeStepSize, sources);
+      SolverType::sourceTerm(centreState, volumeCentre, volumeSize, timeStamp, timeStepSize, sources);
       SIMD()
       for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
         const ComputePrecision sourceHalfStep = static_cast<ComputePrecision>(
@@ -172,7 +172,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::WENO<Weight
  */
 template <exahype2::fv::weno::NonlinearWeighting Weighting>
 template <
-  typename Solver,
+  typename SolverType,
   int  NumberOfVolumesPerAxis,
   int  NumberOfUnknowns,
   int  NumberOfAuxiliaryVariables,
@@ -186,7 +186,7 @@ template <
   typename ComputePrecision>
 INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::WENO<Weighting>::accumulateFluxDivergence(
   const StoragePrecision* NOALIAS const        inputPatch,
-  const StoragePrecision* NOALIAS const        faceInputPatches[TWO_TIMES_D],
+  const StoragePrecision* NOALIAS const        faceInputPatches[peano4::FacesPerCell],
   const tarch::la::Vector<DIMENSIONS, int>&    volumeIndex,
   const int                                    centreOffset,
   const StoragePrecision* NOALIAS const        centreState,
@@ -218,13 +218,13 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::WENO<Weight
     leftVolumeIndex(normal) -= 1;
     rightVolumeIndex(normal) += 1;
     [[maybe_unused]] const auto [leftVolumeSize, leftVolumeCentre] =
-      ::exahype2::fv::getVolumeSizeAndCentre<DIMENSIONS, NumberOfVolumesPerAxis>(
+      exahype2::fv::getVolumeSizeAndCentre<DIMENSIONS, NumberOfVolumesPerAxis>(
         patchCentre,
         patchSize,
         leftVolumeIndex
       );
     [[maybe_unused]] const auto [rightVolumeSize, rightVolumeCentre] =
-      ::exahype2::fv::getVolumeSizeAndCentre<DIMENSIONS, NumberOfVolumesPerAxis>(
+      exahype2::fv::getVolumeSizeAndCentre<DIMENSIONS, NumberOfVolumesPerAxis>(
         patchCentre,
         patchSize,
         rightVolumeIndex
@@ -235,7 +235,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::WENO<Weight
     for (int offset = -HaloSize; offset <= HaloSize; offset++) {
       states[offset + HaloSize] = offset == 0
         ? centreState
-        : ::exahype2::fv::reconstruction::neighbourAlongNormal<HaloSize, NumberOfVolumesPerAxis, NumberOfData>(
+        : exahype2::fv::reconstruction::neighbourAlongNormal<HaloSize, NumberOfVolumesPerAxis, NumberOfData>(
             inputPatch,
             faceInputPatches,
             volumeIndex,
@@ -269,7 +269,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::WENO<Weight
     reconstructFaceState<NumberOfData>(states, Right, +1, rightNeighbourPlus);
 
     evolveFaceStates<
-      Solver,
+      SolverType,
       NumberOfUnknowns,
       NumberOfData,
       EvaluateFlux,
@@ -285,7 +285,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::WENO<Weight
       leftNeighbourPlus
     );
     evolveFaceStates<
-      Solver,
+      SolverType,
       NumberOfUnknowns,
       NumberOfData,
       EvaluateFlux,
@@ -301,7 +301,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::WENO<Weight
       centrePlus
     );
     evolveFaceStates<
-      Solver,
+      SolverType,
       NumberOfUnknowns,
       NumberOfData,
       EvaluateFlux,
@@ -317,8 +317,8 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::fv::reconstruction::WENO<Weight
       rightNeighbourPlus
     );
 
-    ::exahype2::fv::reconstruction::accumulateFluxDivergenceFromFaceStates<
-      Solver,
+    exahype2::fv::reconstruction::accumulateFluxDivergenceFromFaceStates<
+      SolverType,
       NumberOfVolumesPerAxis,
       NumberOfUnknowns,
       NumberOfData,

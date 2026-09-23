@@ -1,0 +1,52 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#pragma once
+{% for item in SOLVERS %}
+#include "{{ item[0] }}.h"
+#include "PDETerms{{ item[0] }}.h"
+{%- endfor %}
+
+#include "exahype2/RefinementControl.h"
+#include "runner/RepositoryCallbacks.h"
+
+namespace {{ NAMESPACE | join("::") }} {
+{%- for item in SOLVERS %}
+  extern {{ item[0] }} {{ item[1] }};
+{%- endfor %}
+
+  double getMinTimeStamp();
+  double getMaxTimeStamp();
+  double getMinTimeStepSize();
+  double getMaxTimeStepSize();
+
+  void startGridConstructionStep();
+  void startGridInitialisationStep();
+  void startDynamicMeshRefinementStep();
+
+  void startTimeStep();
+  void startPlottingStep();
+
+  void finishGridConstructionStep();
+  void finishGridInitialisationStep();
+  void finishDynamicMeshRefinementStep();
+
+  void finishTimeStep();
+  void finishPlottingStep();
+
+  void startSimulation();
+  void finishSimulation();
+
+  bool mayPlot();
+
+  bool isFirstGridSweepOfTimeStep();
+  bool isLastGridSweepOfTimeStep();
+
+  void suspendSolversForOneGridSweep();
+
+  int getNumberOfDoFs();
+
+  ::runner::SolverStatistics getSolverStatistics();
+  ::runner::SolverStatistics getParticleStatistics();
+
+  ::runner::ConfigurationSummary getConfigurationSummary();
+} // namespace {{ NAMESPACE | join("::") }}

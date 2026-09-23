@@ -11,6 +11,11 @@ namespace exahype2::tests {
 class exahype2::tests::NonNegativeReductionTest final : public tarch::tests::TestCase {
 public:
   NonNegativeReductionTest();
+  NonNegativeReductionTest(const NonNegativeReductionTest&)            = delete;
+  NonNegativeReductionTest(NonNegativeReductionTest&&)                 = delete;
+  NonNegativeReductionTest& operator=(const NonNegativeReductionTest&) = delete;
+  NonNegativeReductionTest& operator=(NonNegativeReductionTest&&)      = delete;
+  ~NonNegativeReductionTest() override                                 = default;
 
   void run() override;
 

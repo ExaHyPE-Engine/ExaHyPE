@@ -58,8 +58,7 @@ namespace applications::exahype2::exaskred::riemann {
       }
 
       const T phiMin = uDiff + static_cast<T>(2.0) * (std::sqrt(g * hMin) - std::sqrt(g * hMax));
-      const T phiMax = uDiff
-        + (hMax - hMin) * (std::sqrt(static_cast<T>(0.5) * g * (hMax + hMin) / (hMax * hMin)));
+      const T phiMax = uDiff + (hMax - hMin) * (std::sqrt(static_cast<T>(0.5) * g * (hMax + hMin) / (hMax * hMin)));
 
       if (phiMin > T{}) {
         return RiemannStructure::RarefactionRarefaction;
@@ -95,9 +94,12 @@ namespace applications::exahype2::exaskred::riemann {
         modifiedMatrix[0][component] = rightHandSide[0];
         modifiedMatrix[1][component] = rightHandSide[1];
         modifiedMatrix[2][component] = rightHandSide[2];
-        determinantOne   = modifiedMatrix[0][0] * (modifiedMatrix[1][1] * modifiedMatrix[2][2] - modifiedMatrix[1][2] * modifiedMatrix[2][1]);
-        determinantTwo   = modifiedMatrix[0][1] * (modifiedMatrix[1][0] * modifiedMatrix[2][2] - modifiedMatrix[1][2] * modifiedMatrix[2][0]);
-        determinantThree = modifiedMatrix[0][2] * (modifiedMatrix[1][0] * modifiedMatrix[2][1] - modifiedMatrix[1][1] * modifiedMatrix[2][0]);
+        determinantOne               = modifiedMatrix[0][0]
+          * (modifiedMatrix[1][1] * modifiedMatrix[2][2] - modifiedMatrix[1][2] * modifiedMatrix[2][1]);
+        determinantTwo = modifiedMatrix[0][1]
+          * (modifiedMatrix[1][0] * modifiedMatrix[2][2] - modifiedMatrix[1][2] * modifiedMatrix[2][0]);
+        determinantThree = modifiedMatrix[0][2]
+          * (modifiedMatrix[1][0] * modifiedMatrix[2][1] - modifiedMatrix[1][1] * modifiedMatrix[2][0]);
         solution[component] = (determinantOne - determinantTwo + determinantThree) / determinant;
       }
     }
@@ -123,15 +125,14 @@ namespace applications::exahype2::exaskred::riemann {
 
       // A dry-state Riemann problem contains only a single rarefaction and its middle-state height is zero.
       if (hLeft <= hThreshold or hRight <= hThreshold) {
-        hMiddle         = 0;
-        middleSpeeds[0] = uRight + uLeft - static_cast<T>(2.0) * std::sqrt(g * hRight)
-          + static_cast<T>(2.0) * std::sqrt(g * hLeft);
+        hMiddle = 0;
+        middleSpeeds[0] =
+          uRight + uLeft - static_cast<T>(2.0) * std::sqrt(g * hRight) + static_cast<T>(2.0) * std::sqrt(g * hLeft);
         middleSpeeds[1] = middleSpeeds[0];
         return 0;
       }
 
-      const T phiMax = uDiff
-        + (hMax - hMin) * (std::sqrt(static_cast<T>(0.5) * g * (hMax + hMin) / (hMax * hMin)));
+      const T phiMax = uDiff + (hMax - hMin) * (std::sqrt(static_cast<T>(0.5) * g * (hMax + hMin) / (hMax * hMin)));
 
       T hZero             = 0;
       T gLeft             = 0;
@@ -143,8 +144,10 @@ namespace applications::exahype2::exaskred::riemann {
       if (riemannStructure == RiemannStructure::RarefactionRarefaction) {
         hMiddle = std::max(T{}, uLeft - uRight + static_cast<T>(2.0) * (std::sqrt(g * hLeft) + std::sqrt(g * hRight)));
         hMiddle = static_cast<T>(1.0) / (static_cast<T>(16.0) * g) * hMiddle * hMiddle;
-        middleSpeeds[0] = uLeft + static_cast<T>(2.0) * std::sqrt(g * hLeft) - static_cast<T>(3.0) * std::sqrt(g * hMiddle);
-        middleSpeeds[1] = uRight - static_cast<T>(2.0) * std::sqrt(g * hRight) + static_cast<T>(3.0) * std::sqrt(g * hMiddle);
+        middleSpeeds[0] =
+          uLeft + static_cast<T>(2.0) * std::sqrt(g * hLeft) - static_cast<T>(3.0) * std::sqrt(g * hMiddle);
+        middleSpeeds[1] =
+          uRight - static_cast<T>(2.0) * std::sqrt(g * hRight) + static_cast<T>(3.0) * std::sqrt(g * hMiddle);
         return hMiddle;
       } else if (riemannStructure == RiemannStructure::ShockShock) {
         /*
@@ -200,14 +203,16 @@ namespace applications::exahype2::exaskred::riemann {
           hZero = std::pow((std::sqrt(hZero) - phiZero / slope), 2);
         }
         hMiddle = hZero;
-        const T uOneMiddle = uLeft
-          - (hMiddle - hLeft) * std::sqrt((static_cast<T>(0.5) * g) * (T{1} / hMiddle + T{1} / hLeft));
-        const T uTwoMiddle = uRight
-          + (hMiddle - hRight) * std::sqrt((static_cast<T>(0.5) * g) * (T{1} / hMiddle + T{1} / hRight));
+        const T uOneMiddle =
+          uLeft - (hMiddle - hLeft) * std::sqrt((static_cast<T>(0.5) * g) * (T{1} / hMiddle + T{1} / hLeft));
+        const T uTwoMiddle =
+          uRight + (hMiddle - hRight) * std::sqrt((static_cast<T>(0.5) * g) * (T{1} / hMiddle + T{1} / hRight));
         middleSpeeds[0] = uOneMiddle - std::sqrt(g * hMiddle);
         middleSpeeds[1] = uTwoMiddle + std::sqrt(g * hMiddle);
         return hMiddle;
-      } else if (riemannStructure == RiemannStructure::ShockRarefaction or riemannStructure == RiemannStructure::RarefactionShock) {
+      } else if (
+        riemannStructure == RiemannStructure::ShockRarefaction or riemannStructure == RiemannStructure::RarefactionShock
+      ) {
         /*
          * Compute middle state h_m
          * => Solve non-linear scalar equation by Newton's method
@@ -251,10 +256,12 @@ namespace applications::exahype2::exaskred::riemann {
         hMiddle = hZero;
 
         if (hLeft > hRight) {
-          middleSpeeds[0] = uLeft + static_cast<T>(2.0) * std::sqrt(g * hLeft) - static_cast<T>(3.0) * std::sqrt(g * hMiddle);
+          middleSpeeds[0] =
+            uLeft + static_cast<T>(2.0) * std::sqrt(g * hLeft) - static_cast<T>(3.0) * std::sqrt(g * hMiddle);
           middleSpeeds[1] = uLeft + static_cast<T>(2.0) * std::sqrt(g * hLeft) - std::sqrt(g * hMiddle);
         } else {
-          middleSpeeds[1] = uRight - static_cast<T>(2.0) * std::sqrt(g * hRight) + static_cast<T>(3.0) * std::sqrt(g * hMiddle);
+          middleSpeeds[1] =
+            uRight - static_cast<T>(2.0) * std::sqrt(g * hRight) + static_cast<T>(3.0) * std::sqrt(g * hMiddle);
           middleSpeeds[0] = uRight - static_cast<T>(2.0) * std::sqrt(g * hRight) + std::sqrt(g * hMiddle);
         }
         return hMiddle;
@@ -418,7 +425,8 @@ namespace applications::exahype2::exaskred::riemann {
       eigenValues[0] = extEinfeldtSpeeds[0];
       eigenValues[2] = extEinfeldtSpeeds[1];
 
-      // The first and third eigenvector follow the characteristic fields of the two-dimensional shallow water equations.
+      // The first and third eigenvector follow the characteristic fields of the two-dimensional shallow water
+      // equations.
       T eigenVectors[3][3];
       eigenVectors[0][0] = 1;
       eigenVectors[0][2] = 1;
@@ -433,18 +441,27 @@ namespace applications::exahype2::exaskred::riemann {
       // (\cite[ch. 6.7.2]{George2006}, \cite[ch. 5.1]{George2008}). The middle
       // height must exceed the dry threshold so the depth stays non-negative.
       bool strongRarefaction = false;
-      if ((riemannStructure == RiemannStructure::ShockRarefaction or riemannStructure == RiemannStructure::RarefactionShock
-           or riemannStructure == RiemannStructure::RarefactionRarefaction)
-          and hMiddle > hThreshold) {
+      if (
+        (riemannStructure == RiemannStructure::ShockRarefaction
+         or riemannStructure == RiemannStructure::RarefactionShock
+         or riemannStructure == RiemannStructure::RarefactionRarefaction)
+        and hMiddle > hThreshold
+      ) {
         // The GeoClaw implementation supplies these barriers; the literature gives no explicit bounds.
         T rareBarrier[2] = {static_cast<T>(0.5), static_cast<T>(0.9)};
 
         // A transsonic rarefaction in either wave family lowers the barrier.
-        if ((riemannStructure == RiemannStructure::RarefactionShock or riemannStructure == RiemannStructure::RarefactionRarefaction)
-            and eigenValues[0] * lambdaStarHStarMinus < T{}) {
+        if (
+          (riemannStructure == RiemannStructure::RarefactionShock
+           or riemannStructure == RiemannStructure::RarefactionRarefaction)
+          and eigenValues[0] * lambdaStarHStarMinus < T{}
+        ) {
           rareBarrier[0] = static_cast<T>(0.2);
-        } else if ((riemannStructure == RiemannStructure::ShockRarefaction or riemannStructure == RiemannStructure::RarefactionRarefaction)
-                   and eigenValues[2] * lambdaStarHStarPlus < T{}) {
+        } else if (
+          (riemannStructure == RiemannStructure::ShockRarefaction
+           or riemannStructure == RiemannStructure::RarefactionRarefaction)
+          and eigenValues[2] * lambdaStarHStarPlus < T{}
+        ) {
           rareBarrier[0] = static_cast<T>(0.2);
         }
 
@@ -457,8 +474,10 @@ namespace applications::exahype2::exaskred::riemann {
         T maxRareFactionSize = std::max(rareFactionSize[0], rareFactionSize[1]);
 
         // A rarefaction between the barriers is strong and sets the corrector wave's eigenvalue.
-        if (maxRareFactionSize > rareBarrier[0] * (eigenValues[2] - eigenValues[0])
-            and maxRareFactionSize < rareBarrier[1] * (eigenValues[2] - eigenValues[0])) {
+        if (
+          maxRareFactionSize > rareBarrier[0] * (eigenValues[2] - eigenValues[0])
+          and maxRareFactionSize < rareBarrier[1] * (eigenValues[2] - eigenValues[0])
+        ) {
           strongRarefaction = true;
           if (rareFactionSize[0] > rareFactionSize[1]) {
             eigenValues[1] = lambdaStarHStarMinus;
@@ -561,7 +580,9 @@ namespace applications::exahype2::exaskred::riemann {
           steadyStateWave[0] = (bRight - bLeft) * g * hBar / eigenvalueAvgBar;
         }
 
-        if (eigenValues[0] < -static_cast<T>(ZeroTolerance) and eigenValues[2] > static_cast<T>(ZeroTolerance)) { // Subsonic
+        if (
+          eigenValues[0] < -static_cast<T>(ZeroTolerance) and eigenValues[2] > static_cast<T>(ZeroTolerance)
+        ) { // Subsonic
           steadyStateWave[0] =
             std::min(steadyStateWave[0], hLLMiddleHeight * (eigenValues[2] - eigenValues[0]) / eigenValues[2]);
           steadyStateWave[0] =

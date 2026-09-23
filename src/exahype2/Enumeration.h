@@ -2,17 +2,13 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "peano4/Globals.h"
+#include "tarch/Assertions.h"
+#include "tarch/CompilerSpecificSettings.h"
+#include "tarch/accelerator/accelerator.h"
 #include "tarch/la/Vector.h"
 
+TARGET_DECLARE
 namespace exahype2 {
-  /**
-   * The volumes or elements within an overlap are always enumerated
-   * lexicographically. This routine serialises this index.
-   *
-   * @param overlap Overlap of one patch into the other. A halo of one cell
-   *   around each patch sets this parameter to 1.
-   */
   INLINE_METHOD GPU_CALLABLE_METHOD int serialiseVoxelIndexInOverlap(
     const tarch::la::Vector<DIMENSIONS, int>& overlapCell,
     int                                       numberOfDofsPerAxis,
@@ -20,5 +16,6 @@ namespace exahype2 {
     int                                       normal
   );
 } // namespace exahype2
+TARGET_DECLARE_END
 
 #include "exahype2/Enumeration.cpph"

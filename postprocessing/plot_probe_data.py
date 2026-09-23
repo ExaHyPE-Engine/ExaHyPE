@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 
@@ -18,7 +17,6 @@ from matplotlib.backend_bases import register_backend
 from matplotlib.backends.backend_pgf import FigureCanvasPgf
 from matplotlib.ticker import AutoMinorLocator
 import matplotlib.pyplot as plt
-
 
 register_backend("pgf", FigureCanvasPgf)
 
@@ -342,8 +340,8 @@ def _write_outputs(
         figure.savefig(pgf_path, bbox_inches="tight")
     except Exception as exc:
         raise SystemExit(
-            "ERROR: Failed to write PGF output. Ensure a TeX-compatible Matplotlib PGF "
-            f"setup is available. Original error: {exc}"
+            "ERROR: Failed to write PGF output. The Matplotlib PGF backend needs a TeX "
+            f"installation. Original error: {exc}"
         ) from exc
 
     print(f"Wrote PGF: {pgf_path.resolve()}")

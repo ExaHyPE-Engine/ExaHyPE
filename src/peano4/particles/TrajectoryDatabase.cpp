@@ -147,8 +147,10 @@ peano4::particles::TrajectoryDatabase::AddSnapshotAction peano4::particles::Traj
   if (tarch::la::equals(newest.timestamp, timestamp)) {
     return AddSnapshotAction::Ignore;
   }
-  if (_deltasAreRelative and _maxPositionDelta >= DeltaCutoffThreshold
-      and positionDelta / _maxPositionDelta >= _positionDelta) {
+  if (
+    _deltasAreRelative and _maxPositionDelta >= DeltaCutoffThreshold
+    and positionDelta / _maxPositionDelta >= _positionDelta
+  ) {
     return AddSnapshotAction::Append;
   }
   if (not _deltasAreRelative and positionDelta >= _positionDelta) {

@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "peano4/Globals.h"
+#include "peano4/Constants.h"
 #include "peano4/grid/AutomatonState.h"
 #include "peano4/grid/GridStatistics.h"
 #include "peano4/grid/GridTraversalEvent.h"
@@ -16,7 +16,7 @@ namespace peano4::topology {
 } // namespace peano4::topology
 
 /**
- * Traverses a Tree in Peano curve order and emits grid traversal events
+ * Traverses a Tree along the active space-filling curve and emits grid traversal events
  * to the observer interface. A scope per subtree task lets disjoint tasks run
  * concurrently, each on its own traversal state.
  */
@@ -37,17 +37,17 @@ public:
    * states drive the events' refinement masks.
    */
   struct RegridOverrides {
-    std::vector<char> cellCreate;
-    std::vector<char> cellDestroy;
-    std::vector<char> faceCreate;
-    std::vector<char> faceDestroy;
-    std::vector<char> vertexCreate;
-    std::vector<char> vertexDestroy;
-    std::vector<char> vertexRefinedBefore;
-    std::vector<char> vertexRefinedAfter;
+    std::vector<char> cellCreate{};
+    std::vector<char> cellDestroy{};
+    std::vector<char> faceCreate{};
+    std::vector<char> faceDestroy{};
+    std::vector<char> vertexCreate{};
+    std::vector<char> vertexDestroy{};
+    std::vector<char> vertexRefinedBefore{};
+    std::vector<char> vertexRefinedAfter{};
     /** Marks frozen vertex and face slots that already hold migrated remote data. */
-    std::vector<char> vertexFrozenSlotValid;
-    std::vector<char> faceFrozenSlotValid;
+    std::vector<char> vertexFrozenSlotValid{};
+    std::vector<char> faceFrozenSlotValid{};
   };
 
   /**
@@ -55,20 +55,20 @@ public:
    * regrid. In-place paths leave the migration-pair sets empty.
    */
   struct RegridTransition {
-    RegridOverrides                  overrides;
-    std::vector<std::pair<int, int>> oldToUnionCellPairs;
-    std::vector<std::pair<int, int>> oldToUnionFacePairs;
-    std::vector<std::pair<int, int>> oldToUnionVertexPairs;
-    std::vector<std::pair<int, int>> unionToNewCellPairs;
-    std::vector<std::pair<int, int>> unionToNewFacePairs;
-    std::vector<std::pair<int, int>> unionToNewVertexPairs;
+    RegridOverrides                  overrides{};
+    std::vector<std::pair<int, int>> oldToUnionCellPairs{};
+    std::vector<std::pair<int, int>> oldToUnionFacePairs{};
+    std::vector<std::pair<int, int>> oldToUnionVertexPairs{};
+    std::vector<std::pair<int, int>> unionToNewCellPairs{};
+    std::vector<std::pair<int, int>> unionToNewFacePairs{};
+    std::vector<std::pair<int, int>> unionToNewVertexPairs{};
     /** Orders repartitioned slots per remote rank by level, normal, and lattice key. */
-    std::map<int, std::vector<int>> sendCellSlots;
-    std::map<int, std::vector<int>> receiveCellSlots;
-    std::map<int, std::vector<int>> sendFaceSlots;
-    std::map<int, std::vector<int>> receiveFaceSlots;
-    std::map<int, std::vector<int>> sendVertexSlots;
-    std::map<int, std::vector<int>> receiveVertexSlots;
+    std::map<int, std::vector<int>> sendCellSlots{};
+    std::map<int, std::vector<int>> receiveCellSlots{};
+    std::map<int, std::vector<int>> sendFaceSlots{};
+    std::map<int, std::vector<int>> receiveFaceSlots{};
+    std::map<int, std::vector<int>> sendVertexSlots{};
+    std::map<int, std::vector<int>> receiveVertexSlots{};
   };
 
   TreeTraversal(
@@ -102,8 +102,8 @@ public:
    * frozen slot.
    */
   struct RankBoundaryRelocation {
-    std::vector<std::pair<int, int>> vertexPairs;
-    std::vector<std::pair<int, int>> facePairs;
+    std::vector<std::pair<int, int>> vertexPairs{};
+    std::vector<std::pair<int, int>> facePairs{};
   };
 
   RankBoundaryRelocation extendRankTopologyForAppendedEntities(
@@ -210,8 +210,8 @@ public:
 
   const std::vector<std::pair<int, int>>& getInterfaceCopyToFrozenVertexPairs() const;
   const std::vector<std::pair<int, int>>& getInterfaceCopyToFrozenFacePairs() const;
-  const std::vector<std::pair<int, int>>& getCreationalPublishVertexPairs() const;
-  const std::vector<std::pair<int, int>>& getCreationalPublishFacePairs() const;
+  const std::vector<std::pair<int, int>>& getCreationalCopyToEntitySlotVertexPairs() const;
+  const std::vector<std::pair<int, int>>& getCreationalCopyToEntitySlotFacePairs() const;
   const std::vector<std::pair<int, int>>& getInterfaceFlushVertexPairs() const;
   const std::vector<std::pair<int, int>>& getInterfaceFlushFacePairs() const;
   const std::vector<std::pair<int, int>>& getInterfaceSeedVertexPairs() const;
@@ -253,7 +253,7 @@ private:
     peano4::grid::GridTraversalEvent event{};
     int                              position{0};
     bool                             isVertex{true};
-    std::vector<int>                 sourceSlots;
+    std::vector<int>                 sourceSlots{};
     /** Counts source slots belonging to partner subtree tasks. */
     int numberOfPartnerSlots{0};
     /**
@@ -275,12 +275,12 @@ private:
     bool                             isEnter{true};
   };
   struct EventRecording {
-    std::vector<ReplayEntry>              entries;
-    std::vector<InterfaceMergeDescriptor> remoteMerges;
+    std::vector<ReplayEntry>              entries{};
+    std::vector<InterfaceMergeDescriptor> remoteMerges{};
     peano4::grid::GridStatistics          statistics{};
     bool                                  recorded{false};
   };
-  EventRecording _eventRecording;
+  EventRecording _eventRecording{};
 
   /**
    * Stores one subtree's entry buffer with its interface merges and root
@@ -288,10 +288,10 @@ private:
    * receives have landed in the frozen slots its merges read.
    */
   struct SubtreeReplayTask {
-    std::vector<ReplayEntry>              entries;
+    std::vector<ReplayEntry>              entries{};
     tarch::la::Vector<DIMENSIONS, double> x{0.0};
     tarch::la::Vector<DIMENSIONS, double> h{0.0};
-    std::vector<InterfaceMergeDescriptor> interfaceMerges;
+    std::vector<InterfaceMergeDescriptor> interfaceMerges{};
     /** Lets a partial rerecord replace exactly this task's contribution. */
     peano4::grid::GridStatistics statistics{};
     bool                         touchesRankBoundary{false};
@@ -305,17 +305,17 @@ private:
    * both sides derive the same sequence from independently numbered views.
    */
   struct RankTopology {
-    std::vector<int>              neighbourRanks;
-    std::vector<std::vector<int>> vertexPackLists;
-    std::vector<std::vector<int>> facePackLists;
-    std::vector<int>              vertexFrozenSlotBases;
-    std::vector<int>              faceFrozenSlotBases;
+    std::vector<int>              neighbourRanks{};
+    std::vector<std::vector<int>> vertexPackLists{};
+    std::vector<std::vector<int>> facePackLists{};
+    std::vector<int>              vertexFrozenSlotBases{};
+    std::vector<int>              faceFrozenSlotBases{};
     /** Lists remote frozen slots per rank-boundary entity in rank order. */
-    std::vector<std::pair<int, std::vector<int>>> remoteVertexPartners;
-    std::vector<std::pair<int, std::vector<int>>> remoteFacePartners;
-    std::vector<int>                              cellSlotOfTreeCell;
-    std::vector<int>                              vertexSlotOfTreeVertex;
-    std::vector<int>                              faceSlotOfTreeFace;
+    std::vector<std::pair<int, std::vector<int>>> remoteVertexPartners{};
+    std::vector<std::pair<int, std::vector<int>>> remoteFacePartners{};
+    std::vector<int>                              cellSlotOfTreeCell{};
+    std::vector<int>                              vertexSlotOfTreeVertex{};
+    std::vector<int>                              faceSlotOfTreeFace{};
     int                                           numberOfLocalCellSlots{0};
     int                                           numberOfLocalVertexSlots{0};
     int                                           numberOfLocalFaceSlots{0};
@@ -338,7 +338,7 @@ private:
     bool slotsInherited{false};
     bool derived{false};
   };
-  RankTopology _rankTopology;
+  RankTopology _rankTopology{};
 
   /**
    * Stores the parity-independent slot layout of the interface entities. Every subtree
@@ -360,22 +360,22 @@ private:
     std::uint8_t      numberOfAdjacentCells{0};
   };
   struct InterfaceTopology {
-    std::vector<int>                                    vertexInterfaceOfSlot;
-    std::vector<int>                                    faceInterfaceOfSlot;
-    std::vector<std::array<TaskTouchSlot, TWO_POWER_D>> vertexInterfaceTouchSlots;
-    std::vector<std::array<TaskTouchSlot, 2>>           faceInterfaceTouchSlots;
-    std::vector<std::pair<int, int>>                    copyToFrozenVertexPairs;
-    std::vector<std::pair<int, int>>                    copyToFrozenFacePairs;
-    std::vector<std::pair<int, int>>                    creationalPublishVertexPairs;
-    std::vector<std::pair<int, int>>                    creationalPublishFacePairs;
+    std::vector<int>                                               vertexInterfaceOfSlot{};
+    std::vector<int>                                               faceInterfaceOfSlot{};
+    std::vector<std::array<TaskTouchSlot, peano4::CellsPerVertex>> vertexInterfaceTouchSlots{};
+    std::vector<std::array<TaskTouchSlot, 2>>                      faceInterfaceTouchSlots{};
+    std::vector<std::pair<int, int>>                               copyToFrozenVertexPairs{};
+    std::vector<std::pair<int, int>>                               copyToFrozenFacePairs{};
+    std::vector<std::pair<int, int>>                               creationalCopyToEntitySlotVertexPairs{};
+    std::vector<std::pair<int, int>>                               creationalCopyToEntitySlotFacePairs{};
     /** Maps each first toucher's live slot to its entity slot for the pre-regrid flush. */
-    std::vector<std::pair<int, int>> flushVertexPairs;
-    std::vector<std::pair<int, int>> flushFacePairs;
+    std::vector<std::pair<int, int>> flushVertexPairs{};
+    std::vector<std::pair<int, int>> flushFacePairs{};
     /** Maps each entity slot to every toucher's live slot for post-regrid seeding. */
-    std::vector<std::pair<int, int>> seedVertexPairs;
-    std::vector<std::pair<int, int>> seedFacePairs;
+    std::vector<std::pair<int, int>> seedVertexPairs{};
+    std::vector<std::pair<int, int>> seedFacePairs{};
     /** Identifies the subtree-task unit emitting each cell's events. */
-    std::vector<int> unitOfCell;
+    std::vector<int> unitOfCell{};
     int              numberOfVertexShadowSlots{0};
     int              numberOfFaceShadowSlots{0};
     int              numberOfVertexTouchCounters{0};
@@ -383,7 +383,7 @@ private:
     bool             splitHeavyBlocks{false};
     bool             derived{false};
   };
-  InterfaceTopology _interfaceTopology;
+  InterfaceTopology _interfaceTopology{};
 
   /**
    * Stores a parallel event recording: Every subtree
@@ -395,19 +395,19 @@ private:
    * after the sweep, so the pack always sends the entity slot.
    */
   struct ParallelRecording {
-    std::vector<SubtreeReplayTask> subtreeTasks;
+    std::vector<SubtreeReplayTask> subtreeTasks{};
     /** Task numbers sorted by falling entry count; a replay spawns them in this order. */
-    std::vector<int>                      replayOrder;
-    std::vector<ReplayEntry>              masterEntries;
-    std::vector<InterfaceMergeDescriptor> masterMerges;
-    std::vector<InterfaceMergeDescriptor> consolidations;
+    std::vector<int>                      replayOrder{};
+    std::vector<ReplayEntry>              masterEntries{};
+    std::vector<InterfaceMergeDescriptor> masterMerges{};
+    std::vector<InterfaceMergeDescriptor> consolidations{};
     peano4::grid::GridStatistics          statistics{};
     /** Lets a partial rerecord retain the master's grid-count contribution. */
     peano4::grid::GridStatistics masterStatistics{};
     bool                         derived{false};
     bool                         replaysEntries{false};
   };
-  ParallelRecording _parallelRecording;
+  ParallelRecording _parallelRecording{};
 
   /**
    * Stores the merge recipe of every rank-boundary entity a transition sweep
@@ -415,14 +415,14 @@ private:
    * The migration hop afterwards deletes the boundary's exchange channel, so a
    * merge that has not run by then loses its data.
    */
-  std::vector<InterfaceMergeDescriptor> _transitionRankBoundaryMerges;
+  std::vector<InterfaceMergeDescriptor> _transitionRankBoundaryMerges{};
 
   /**
    * Stores the root of one subtree task, derived once by a structure-only descent and
-   * reused by every sweep. The unit is the task's first cell index. A direct
-   * task descends from the parent of that cell, so its descent emits the cell
-   * itself. A task stops at every deeper block root it meets, which is another
-   * task's root.
+   * reused by every sweep. The unit is the task's first cell index, and a direct
+   * task descends from that cell's parent so its descent emits the cell itself.
+   * A task stops at every deeper block root it meets, which is another task's
+   * root.
    */
   struct SubtreeTask {
     peano4::grid::AutomatonState rootState{};
@@ -432,13 +432,13 @@ private:
     bool                         touchesRankBoundary{false};
   };
   struct SubtreeDecomposition {
-    std::vector<SubtreeTask> tasks;
+    std::vector<SubtreeTask> tasks{};
     bool                     derived{false};
   };
-  SubtreeDecomposition _subtreeDecomposition;
+  SubtreeDecomposition _subtreeDecomposition{};
 
   /** Limits the next rerecord to tasks invalidated by an in-place regrid. */
-  std::vector<int> _staleRerecordUnits;
+  std::vector<int> _staleRerecordUnits{};
 
   bool _partialRerecordPending{false};
 
@@ -447,13 +447,13 @@ private:
    * the flush list only after the post-transition seeding has filled the new
    * live copies, since a flush of an unseeded copy would clear its entity.
    */
-  std::vector<std::pair<int, int>> _pendingFlushVertexPairs;
-  std::vector<std::pair<int, int>> _pendingFlushFacePairs;
+  std::vector<std::pair<int, int>> _pendingFlushVertexPairs{};
+  std::vector<std::pair<int, int>> _pendingFlushFacePairs{};
 
   /** Stores the standing decomposition while a transition uses its own. */
-  std::vector<char>    _snapshotCellIsBlockRoot;
-  std::vector<char>    _snapshotCellIsDirectTask;
-  SubtreeDecomposition _snapshotSubtreeDecomposition;
+  std::vector<char>    _snapshotCellIsBlockRoot{};
+  std::vector<char>    _snapshotCellIsDirectTask{};
+  SubtreeDecomposition _snapshotSubtreeDecomposition{};
 
   SubtreeTaskLoad _subtreeTaskLoad{};
 
@@ -467,14 +467,14 @@ private:
    * one subtree task. descendWithPools() reads this table for every cell it
    * enters, so the table stores one byte per cell.
    */
-  std::vector<char> _cellIsBlockRoot;
+  std::vector<char> _cellIsBlockRoot{};
 
   /**
-   * Marks cells that emit the first event of a task. This is used only when the
-   * spawn level is zero: The root has no parent from which a regular block
+   * Marks cells that emit the first event of a task. The table fills only when
+   * the spawn level is zero: The root has no parent from which a regular block
    * task could be collected, so each local child becomes a direct task.
    */
-  std::vector<char> _cellIsDirectTask;
+  std::vector<char> _cellIsDirectTask{};
 
   /**
    * Records the first touch of a rank-boundary interface entity by one unit. The seeds
@@ -544,7 +544,7 @@ private:
     const peano4::topology::Tree&        tree,
     const peano4::grid::AutomatonState&  state,
     int                                  cellIndex,
-    peano4::grid::GridVertex             coarseGridVertices[TWO_POWER_D],
+    peano4::grid::GridVertex             coarseGridVertices[peano4::VerticesPerCell],
     peano4::grid::GridTraversalObserver& observer,
     TraversalScope&                      scope
   ) const;
@@ -581,7 +581,7 @@ private:
 
   /** Stores persistent observer clones by observer type and task position. */
   mutable std::map<std::type_index, std::vector<std::unique_ptr<peano4::grid::GridTraversalObserver>>>
-    _taskObserversOfType;
+    _taskObserversOfType{};
 
   void deriveBlockRoots(
     const peano4::topology::Tree& tree,

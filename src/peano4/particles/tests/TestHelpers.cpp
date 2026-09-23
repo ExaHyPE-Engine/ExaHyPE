@@ -1,246 +1,89 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "TestHelpers.h"
 
+#include "peano4/Constants.h"
+#include "peano4/dataview/VertexMarker.h"
+#include "peano4/grid/GridTraversalEvent.h"
 #include "peano4/particles/particles.h"
-#include "peano4/datamanagement/VertexMarker.h"
+#include "peano4/sfc/ActiveCurve.h"
+#include "tarch/la/Vector.h"
 
-#ifdef UseTestSpecificCompilerSettings
-#pragma optimize("", off)
+namespace {
+#if DIMENSIONS == 2
+  constexpr double        MeshSize         = 1.0 / peano4::power(peano4::sfc::ActiveCurve::SubdivisionFactor, 2);
+  constexpr std::uint32_t AllAdjacentCells = (1U << peano4::CellsPerNeighbourhood) - 1U;
+
+  /**
+   * Returns the marker of one vertex as seen from the cell around cellCentre,
+   * with the given masks of local vertices and local adjacent cells.
+   */
+  peano4::dataview::VertexMarker vertexMarker(
+    const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+    const int                                    selectedVertex,
+    const std::uint8_t                           localVertices,
+    const std::uint32_t                          localAdjacentCells
+  ) {
+    peano4::grid::GridTraversalEvent event;
+    event.setX(cellCentre);
+    event.setH(tarch::la::Vector<DIMENSIONS, double>(MeshSize));
+    event.setIsVertexLocal(localVertices);
+    event.setIsAdjacentCellLocal(localAdjacentCells);
+    return peano4::dataview::VertexMarker(event, selectedVertex);
+  }
 #endif
+} // namespace
 
 peano4::particles::tests::TestHelpers::TestHelpers() :
   TestCase("peano4::particles::tests::TestHelpers") {}
 
-void peano4::particles::tests::TestHelpers::testParticleAssignedToVertexWillBeLocal() {
-#if DIMENSIONS == 2
-  peano4::datamanagement::VertexMarker markerAFromYellowRank;
-  peano4::datamanagement::VertexMarker markerBFromYellowRank;
-  peano4::datamanagement::VertexMarker markerCFromYellowRank;
-  peano4::datamanagement::VertexMarker markerDFromYellowRank;
-  peano4::datamanagement::VertexMarker markerAFromGreyRank;
-  peano4::datamanagement::VertexMarker markerBFromGreyRank;
-  peano4::datamanagement::VertexMarker markerCFromGreyRank;
-  peano4::datamanagement::VertexMarker markerDFromGreyRank;
-
-  double meshSize = 1.0 / 3.0 / 3.0;
-
-  // The particle sits above the vertex the marker selects.
-  markerAFromYellowRank._cellCentre          = {meshSize * 4.5, meshSize * 5.5};
-  markerAFromYellowRank._h                   = {meshSize, meshSize};
-  markerAFromYellowRank._isLocal             = 0b0010;
-  markerAFromYellowRank._isHanging           = 0;
-  markerAFromYellowRank._select              = 1;
-  markerAFromYellowRank._hasBeenRefined      = 0;
-  markerAFromYellowRank._willBeRefined       = 0;
-  markerAFromYellowRank._isAdjacentCellLocal = 0b111000100;
-
-  markerBFromYellowRank._cellCentre          = {meshSize * 5.5, meshSize * 5.5};
-  markerBFromYellowRank._h                   = {meshSize, meshSize};
-  markerBFromYellowRank._isLocal             = 0b0011;
-  markerBFromYellowRank._isHanging           = 0;
-  markerBFromYellowRank._select              = 0;
-  markerBFromYellowRank._hasBeenRefined      = 0;
-  markerBFromYellowRank._willBeRefined       = 0;
-  markerBFromYellowRank._isAdjacentCellLocal = 0b111000010;
-
-  markerCFromYellowRank._cellCentre          = {meshSize * 4.5, meshSize * 4.5};
-  markerCFromYellowRank._h                   = {meshSize, meshSize};
-  markerCFromYellowRank._isLocal             = 0b1011;
-  markerCFromYellowRank._isHanging           = 0;
-  markerCFromYellowRank._select              = 3;
-  markerCFromYellowRank._hasBeenRefined      = 0;
-  markerCFromYellowRank._willBeRefined       = 0;
-  markerCFromYellowRank._isAdjacentCellLocal = 0b000100111;
-
-  markerDFromYellowRank._cellCentre          = {meshSize * 5.5, meshSize * 4.5};
-  markerDFromYellowRank._h                   = {meshSize, meshSize};
-  markerDFromYellowRank._isLocal             = 0b1111;
-  markerDFromYellowRank._isHanging           = 0;
-  markerDFromYellowRank._select              = 2;
-  markerDFromYellowRank._hasBeenRefined      = 0;
-  markerDFromYellowRank._willBeRefined       = 0;
-  markerDFromYellowRank._isAdjacentCellLocal = 0b000010011;
-
-  markerAFromGreyRank = markerAFromYellowRank;
-  markerAFromGreyRank._isAdjacentCellLocal.flip();
-  markerAFromGreyRank._isLocal = 0b1111;
-  markerBFromGreyRank          = markerBFromYellowRank;
-  markerBFromGreyRank._isAdjacentCellLocal.flip();
-  markerBFromGreyRank._isLocal = 0b1111;
-  markerCFromGreyRank          = markerCFromYellowRank;
-  markerCFromGreyRank._isAdjacentCellLocal.flip();
-  markerCFromGreyRank._isLocal = 0b1111;
-  markerDFromGreyRank          = markerDFromYellowRank;
-  markerDFromGreyRank._isAdjacentCellLocal.flip();
-  markerDFromGreyRank._isLocal = 0b1101;
-
-  tarch::la::Vector<DIMENSIONS, double> x1 = {0.545015, 0.5};
-  tarch::la::Vector<DIMENSIONS, double> x2 = {0.554996, 0.5};
-
-  validateWithParams3(
-    not peano4::particles::particleAssignedToVertexWillBeLocal(x1, markerAFromYellowRank),
-    x1,
-    markerAFromYellowRank.toString(),
-    markerAFromYellowRank.getX()
-  );
-  validateWithParams3(
-    not peano4::particles::particleAssignedToVertexWillBeLocal(x2, markerAFromYellowRank),
-    x2,
-    markerAFromYellowRank.toString(),
-    markerAFromYellowRank.getX()
-  );
-
-  validateWithParams3(
-    not peano4::particles::particleAssignedToVertexWillBeLocal(x1, markerBFromYellowRank),
-    x1,
-    markerBFromYellowRank.toString(),
-    markerBFromYellowRank.getX()
-  );
-  validateWithParams3(
-    not peano4::particles::particleAssignedToVertexWillBeLocal(x2, markerBFromYellowRank),
-    x2,
-    markerBFromYellowRank.toString(),
-    markerBFromYellowRank.getX()
-  );
-
-  validateWithParams3(
-    not peano4::particles::particleAssignedToVertexWillBeLocal(x1, markerCFromYellowRank),
-    x1,
-    markerCFromYellowRank.toString(),
-    markerCFromYellowRank.getX()
-  );
-  validateWithParams3(
-    not peano4::particles::particleAssignedToVertexWillBeLocal(x2, markerCFromYellowRank),
-    x2,
-    markerCFromYellowRank.toString(),
-    markerCFromYellowRank.getX()
-  );
-
-  validateWithParams3(
-    not peano4::particles::particleAssignedToVertexWillBeLocal(x1, markerDFromYellowRank),
-    x1,
-    markerDFromYellowRank.toString(),
-    markerDFromYellowRank.getX()
-  );
-  validateWithParams3(
-    not peano4::particles::particleAssignedToVertexWillBeLocal(x2, markerDFromYellowRank),
-    x2,
-    markerDFromYellowRank.toString(),
-    markerDFromYellowRank.getX()
-  );
-
-  validateWithParams3(
-    peano4::particles::particleAssignedToVertexWillBeLocal(x1, markerAFromGreyRank),
-    x1,
-    markerAFromGreyRank.toString(),
-    markerAFromGreyRank.getX()
-  );
-  validateWithParams3(
-    peano4::particles::particleAssignedToVertexWillBeLocal(x2, markerAFromGreyRank),
-    x2,
-    markerAFromGreyRank.toString(),
-    markerAFromGreyRank.getX()
-  );
-
-  validateWithParams3(
-    peano4::particles::particleAssignedToVertexWillBeLocal(x1, markerBFromGreyRank),
-    x1,
-    markerBFromGreyRank.toString(),
-    markerBFromGreyRank.getX()
-  );
-  validateWithParams3(
-    peano4::particles::particleAssignedToVertexWillBeLocal(x2, markerBFromGreyRank),
-    x2,
-    markerBFromGreyRank.toString(),
-    markerBFromGreyRank.getX()
-  );
-
-  validateWithParams3(
-    peano4::particles::particleAssignedToVertexWillBeLocal(x1, markerCFromGreyRank),
-    x1,
-    markerCFromGreyRank.toString(),
-    markerCFromGreyRank.getX()
-  );
-  validateWithParams3(
-    peano4::particles::particleAssignedToVertexWillBeLocal(x2, markerCFromGreyRank),
-    x2,
-    markerCFromGreyRank.toString(),
-    markerCFromGreyRank.getX()
-  );
-
-  validateWithParams3(
-    peano4::particles::particleAssignedToVertexWillBeLocal(x1, markerDFromGreyRank),
-    x1,
-    markerDFromGreyRank.toString(),
-    markerDFromGreyRank.getX()
-  );
-  validateWithParams3(
-    peano4::particles::particleAssignedToVertexWillBeLocal(x2, markerDFromGreyRank),
-    x2,
-    markerDFromGreyRank.toString(),
-    markerDFromGreyRank.getX()
-  );
-
-  markerCFromYellowRank._select = 1;
-  markerCFromGreyRank._select   = 1;
-  markerDFromYellowRank._select = 0;
-  markerDFromGreyRank._select   = 0;
-
-  validateWithParams3(
-    not peano4::particles::particleAssignedToVertexWillBeLocal(x1, markerCFromYellowRank),
-    x1,
-    markerCFromYellowRank.toString(),
-    markerCFromYellowRank.getX()
-  );
-  validateWithParams3(
-    not peano4::particles::particleAssignedToVertexWillBeLocal(x2, markerCFromYellowRank),
-    x2,
-    markerCFromYellowRank.toString(),
-    markerCFromYellowRank.getX()
-  );
-
-  validateWithParams3(
-    not peano4::particles::particleAssignedToVertexWillBeLocal(x1, markerDFromYellowRank),
-    x1,
-    markerDFromYellowRank.toString(),
-    markerDFromYellowRank.getX()
-  );
-  validateWithParams3(
-    not peano4::particles::particleAssignedToVertexWillBeLocal(x2, markerDFromYellowRank),
-    x2,
-    markerDFromYellowRank.toString(),
-    markerDFromYellowRank.getX()
-  );
-
-  validateWithParams3(
-    peano4::particles::particleAssignedToVertexWillBeLocal(x1, markerCFromGreyRank),
-    x1,
-    markerCFromGreyRank.toString(),
-    markerCFromGreyRank.getX()
-  );
-  validateWithParams3(
-    peano4::particles::particleAssignedToVertexWillBeLocal(x2, markerCFromGreyRank),
-    x2,
-    markerCFromGreyRank.toString(),
-    markerCFromGreyRank.getX()
-  );
-
-  validateWithParams3(
-    peano4::particles::particleAssignedToVertexWillBeLocal(x1, markerDFromGreyRank),
-    x1,
-    markerDFromGreyRank.toString(),
-    markerDFromGreyRank.getX()
-  );
-  validateWithParams3(
-    peano4::particles::particleAssignedToVertexWillBeLocal(x2, markerDFromGreyRank),
-    x2,
-    markerDFromGreyRank.toString(),
-    markerDFromGreyRank.getX()
-  );
-#endif
-}
-
 void peano4::particles::tests::TestHelpers::run() { testMethod(testParticleAssignedToVertexWillBeLocal); }
 
-#ifdef UseTestSpecificCompilerSettings
-#pragma optimize("", on)
+/**
+ * Two ranks meet along the cell column right of x = 5 * MeshSize. A particle in
+ * the cell below and left of the vertex (5 * MeshSize, 5 * MeshSize) has to count
+ * as local on the rank that owns that cell and as remote on the other rank, from
+ * the viewpoint of every cell around the vertex and for the vertex below as well.
+ */
+void peano4::particles::tests::TestHelpers::testParticleAssignedToVertexWillBeLocal() {
+#if DIMENSIONS == 2
+  struct View {
+    tarch::la::Vector<DIMENSIONS, double> cellCentre;
+    int                                   selectedVertex;
+    std::uint8_t                          localVertices;
+    std::uint32_t                         localAdjacentCells;
+  };
+  const View views[] = {
+    {{MeshSize * 4.5, MeshSize * 5.5}, 1, 0b0010, 0b111000100},
+    {{MeshSize * 5.5, MeshSize * 5.5}, 0, 0b0011, 0b111000010},
+    {{MeshSize * 4.5, MeshSize * 4.5}, 3, 0b1011, 0b000100111},
+    {{MeshSize * 5.5, MeshSize * 4.5}, 2, 0b1111, 0b000010011},
+    {{MeshSize * 4.5, MeshSize * 4.5}, 1, 0b1011, 0b000100111},
+    {{MeshSize * 5.5, MeshSize * 4.5}, 0, 0b1111, 0b000010011},
+  };
+  // Both particles sit in the cell below and left of the vertex, close to its right face.
+  const tarch::la::Vector<DIMENSIONS, double> particles[] = {
+    {4.905135 * MeshSize, 4.5 * MeshSize},
+    {4.994964 * MeshSize, 4.5 * MeshSize}
+  };
+
+  for (const auto& view : views) {
+    const auto remoteRank =
+      vertexMarker(view.cellCentre, view.selectedVertex, view.localVertices, view.localAdjacentCells);
+    const auto owningRank =
+      vertexMarker(view.cellCentre, view.selectedVertex, 0b1111, ~view.localAdjacentCells & AllAdjacentCells);
+    for (const auto& particle : particles) {
+      validateWithParams2(
+        not peano4::particles::particleAssignedToVertexWillBeLocal(particle, remoteRank),
+        particle,
+        remoteRank.toString()
+      );
+      validateWithParams2(
+        peano4::particles::particleAssignedToVertexWillBeLocal(particle, owningRank),
+        particle,
+        owningRank.toString()
+      );
+    }
+  }
 #endif
+}

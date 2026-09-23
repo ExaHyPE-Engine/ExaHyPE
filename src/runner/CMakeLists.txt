@@ -5,6 +5,7 @@ file(GLOB_RECURSE HEADERS ${HEADER_EXTENSIONS_TO_GLOB})
 
 set(SOURCES
   RunControl.cpp
+  ParameterTable.cpp
   RuntimeParameters.cpp
   GlobalStatistics.cpp
   Format.cpp
@@ -13,6 +14,7 @@ set(SOURCES
   GridSnapshot.cpp
   phases/Configuration.cpp
   phases/GridConstruction.cpp
+  phases/AllocateMemory.cpp
   phases/GridInitialisation.cpp
   phases/DynamicAMR.cpp
   phases/TimeLoop.cpp
@@ -24,8 +26,10 @@ set(SOURCES
   tests/DynamicAMRTest.cpp
   tests/FormatTest.cpp
   tests/GridSnapshotTest.cpp
+  tests/ParameterTableTest.cpp
   tests/RunControlTest.cpp
   tests/RuntimeParametersTest.cpp
+  tests/SolverStatisticsTest.cpp
   tests/TableTest.cpp
   tests/TextLayoutTest.cpp
 )

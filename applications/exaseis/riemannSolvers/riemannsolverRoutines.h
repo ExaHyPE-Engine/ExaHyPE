@@ -1,24 +1,24 @@
 #pragma once
 
-namespace applications::exahype2::exaseis{
+namespace applications::exahype2::exaseis {
 
   template <class Shortcuts, typename T>
-  inline void computeParameters(const T*Q, T& rho, T& cp, T& cs, T& mu, T& lam){
+  inline void computeParameters(const T* Q, T& rho, T& cp, T& cs, T& mu, T& lam) {
     rho = Q[Shortcuts::rho];
-    cp  = Q[Shortcuts::cp ];
-    cs  = Q[Shortcuts::cs ];
+    cp  = Q[Shortcuts::cp];
+    cs  = Q[Shortcuts::cs];
     mu  = cs * cs * rho;
-    lam = rho* cp * cp - 2 * mu;
+    lam = rho * cp * cp - 2 * mu;
   }
 
   template <class Shortcuts, typename T>
   inline void computeTractions(const T* Q, const T* n, T& Tx, T& Ty, T& Tz) {
-    T    sigma_xx = Q[Shortcuts::sigma + 0];
-    T    sigma_yy = Q[Shortcuts::sigma + 1];
-    T    sigma_zz = Q[Shortcuts::sigma + 2];
-    T    sigma_xy = Q[Shortcuts::sigma + 3];
-    T    sigma_xz = Q[Shortcuts::sigma + 4];
-    T    sigma_yz = Q[Shortcuts::sigma + 5];
+    T sigma_xx = Q[Shortcuts::sigma + 0];
+    T sigma_yy = Q[Shortcuts::sigma + 1];
+    T sigma_zz = Q[Shortcuts::sigma + 2];
+    T sigma_xy = Q[Shortcuts::sigma + 3];
+    T sigma_xz = Q[Shortcuts::sigma + 4];
+    T sigma_yz = Q[Shortcuts::sigma + 5];
 
     Tx = n[0] * sigma_xx + n[1] * sigma_xy + n[2] * sigma_xz;
     Ty = n[0] * sigma_xy + n[1] * sigma_yy + n[2] * sigma_yz;
@@ -34,7 +34,7 @@ namespace applications::exahype2::exaseis{
 
   // Transformation routines
   // Gram Schmidt orthonormalization
-  template<typename T>
+  template <typename T>
   inline void GramSchmidt(T* y, T* z) {
     T a_yz = y[0] * z[0] + y[1] * z[1] + y[2] * z[2];
 
@@ -49,9 +49,8 @@ namespace applications::exahype2::exaseis{
     }
   }
 
-  template<typename T>
+  template <typename T>
   inline void createLocalBasis(T* n, T* m, T* l) {
-
 #if DIMENSIONS == 2
     l[0] = 0;
     l[1] = 0;
@@ -68,8 +67,10 @@ namespace applications::exahype2::exaseis{
     m[1] = 1;
     m[2] = 0;
 
-    diff_norm1 = std::sqrt(pow((double) (n[0] - m[0]), 2) + pow((double) (n[1] - m[1]), 2) + pow((double) (n[2] - m[2]), 2));
-    diff_norm2 = std::sqrt(pow((double) (n[0] + m[0]), 2) + pow((double) (n[1] + m[1]), 2) + pow((double) (n[2] + m[2]), 2));
+    diff_norm1 =
+      std::sqrt(pow((double)(n[0] - m[0]), 2) + pow((double)(n[1] - m[1]), 2) + pow((double)(n[2] - m[2]), 2));
+    diff_norm2 =
+      std::sqrt(pow((double)(n[0] + m[0]), 2) + pow((double)(n[1] + m[1]), 2) + pow((double)(n[2] + m[2]), 2));
 
     if (diff_norm1 >= tol && diff_norm2 >= tol) {
       GramSchmidt(n, m);
@@ -86,7 +87,7 @@ namespace applications::exahype2::exaseis{
 #endif
   }
 
-  template<typename T>
+  template <typename T>
   inline void riemannSolverNodal(
     T  v_p,
     T  v_m,
@@ -99,12 +100,10 @@ namespace applications::exahype2::exaseis{
     T& sigma_hat_p,
     T& sigma_hat_m
   ) {
-
     T p = z_p * v_p + sigma_p;
     T q = z_m * v_m - sigma_m;
 
     if (z_p > 0 && z_m > 0) {
-
       T eta = (z_p * z_m) / (z_p + z_m);
       T phi = eta * (p / z_p - q / z_m);
 
@@ -134,7 +133,7 @@ namespace applications::exahype2::exaseis{
     }
   }
 
-  template<typename T>
+  template <typename T>
   inline void riemannSolverBC0(T v, T sigma, T z, T r, T& v_hat, T& sigma_hat) {
     T p = (z * v + sigma) / 2;
     if (z > 0) {
@@ -146,7 +145,7 @@ namespace applications::exahype2::exaseis{
     }
   }
 
-  template<typename T>
+  template <typename T>
   inline void riemannSolverBCn(T v, T sigma, T z, T r, T& v_hat, T& sigma_hat) {
     T q = (z * v - sigma) / 2;
     if (z > 0) {
@@ -158,58 +157,63 @@ namespace applications::exahype2::exaseis{
     }
   }
 
-  template<typename T>
+  template <typename T>
   inline void riemannSolverBoundary(
     int faceIndex,
-    T r,
-    T vn, T vm, T vl,
-    T Tn, T Tm, T Tl,
-    T zp, T zs,
-    T& vn_hat, T& vm_hat, T& vl_hat,
-    T& Tn_hat, T& Tm_hat, T& Tl_hat
-  ){
+    T   r,
+    T   vn,
+    T   vm,
+    T   vl,
+    T   Tn,
+    T   Tm,
+    T   Tl,
+    T   zp,
+    T   zs,
+    T&  vn_hat,
+    T&  vm_hat,
+    T&  vl_hat,
+    T&  Tn_hat,
+    T&  Tm_hat,
+    T&  Tl_hat
+  ) {
     // if (faceIndex % 2  == 0) { //left face
-    if (faceIndex < DIMENSIONS) { //left face
+    if (faceIndex < DIMENSIONS) { // left face
       riemannSolverBC0(vn, Tn, zp, r, vn_hat, Tn_hat);
       riemannSolverBC0(vm, Tm, zs, r, vm_hat, Tm_hat);
       riemannSolverBC0(vl, Tl, zs, r, vl_hat, Tl_hat);
     }
 
     // if (faceIndex % 2 == 1) { //right face
-    else { //right face
+    else { // right face
       riemannSolverBCn(vn, Tn, zp, r, vn_hat, Tn_hat);
       riemannSolverBCn(vm, Tm, zs, r, vm_hat, Tm_hat);
       riemannSolverBCn(vl, Tl, zs, r, vl_hat, Tl_hat);
     }
   }
 
-  template<typename T>
-  inline void rotateIntoOrthogonalBasis(
-    T* n, T* m, T* l, T Tx, T Ty, T Tz, T& Tn, T& Tm, T& Tl
-  ) {
+  template <typename T>
+  inline void rotateIntoOrthogonalBasis(T* n, T* m, T* l, T Tx, T Ty, T Tz, T& Tn, T& Tm, T& Tl) {
     Tn = Tx * n[0] + Ty * n[1] + Tz * n[2];
     Tm = Tx * m[0] + Ty * m[1] + Tz * m[2];
     Tl = Tx * l[0] + Ty * l[1] + Tz * l[2];
   }
 
-  template<typename T>
-  inline void rotateIntoPhysicalBasis(
-    T* n, T* m, T* l, T Fn, T Fm, T Fl, T& Fx, T& Fy, T& Fz
-  ) {
+  template <typename T>
+  inline void rotateIntoPhysicalBasis(T* n, T* m, T* l, T Fn, T Fm, T Fl, T& Fx, T& Fy, T& Fz) {
     Fx = n[0] * Fn + m[0] * Fm + l[0] * Fl;
     Fy = n[1] * Fn + m[1] * Fm + l[1] * Fl;
     Fz = n[2] * Fn + m[2] * Fm + l[2] * Fl;
   }
 
   // Solver
-  template<typename T>
+  template <typename T>
   inline void computeFluctuationsLeft(T z, T myT, T T_hat, T v, T v_hat, T& F) {
     F = (z * (v - v_hat) + (myT - T_hat)) / 2;
   }
 
-  template<typename T>
+  template <typename T>
   inline void computeFluctuationsRight(T z, T myT, T T_hat, T v, T v_hat, T& F) {
     F = (z * (v - v_hat) - (myT - T_hat)) / 2;
   }
 
-} // namespace
+} // namespace applications::exahype2::exaseis

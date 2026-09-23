@@ -6,48 +6,54 @@
 
 namespace tarch::accelerator {
   /**
-   * Reducer wrappers for tarch::parallelReduce.
+   * Reducers for tarch::accelerator::parallelReduce.
    *
-   * A reducer carries a reference to the user's accumulator variable plus the
-   * reduction operation (max/min/sum). Each backend specialises how to express
-   * the operation: OMP `reduction(...)` clause, Kokkos::Max/Min/Sum, sycl::reduction,
-   * shmem-reduce + cub::DeviceReduce, etc.
-   *
-   * The reducer's value_type is what the inner lambda receives as a thread-local
-   * accumulator parameter, e.g.
-   *   parallelReduce(range, [=](int i, double& localMax){...}, Max<double>{result});
-   *
-   * Identity values are exposed so backends that need to seed thread-local
-   * accumulators can do so consistently.
+   * A reducer binds a reference to the caller's target variable, and every backend merges its
+   * reduction result into that target. identity() seeds every thread-local accumulator and
+   * combine() merges two accumulators in the order a backend chooses.
    */
-
   template <typename T>
-  struct Max {
-    using value_type = T;
+  struct Max final {
+    using ValueType = T;
     T& target;
 
     static GPU_CALLABLE_METHOD constexpr T identity() { return std::numeric_limits<T>::lowest(); }
+    static GPU_CALLABLE_METHOD constexpr T combine(const T left, const T right) { return right > left ? right : left; }
   };
 
   template <typename T>
-  struct Min {
-    using value_type = T;
+  struct Min final {
+    using ValueType = T;
     T& target;
 
     static GPU_CALLABLE_METHOD constexpr T identity() { return std::numeric_limits<T>::max(); }
+    static GPU_CALLABLE_METHOD constexpr T combine(const T left, const T right) { return right < left ? right : left; }
   };
 
   template <typename T>
-  struct Sum {
-    using value_type = T;
+  struct Sum final {
+    using ValueType = T;
     T& target;
 
     static GPU_CALLABLE_METHOD constexpr T identity() { return T{0}; }
+    static GPU_CALLABLE_METHOD constexpr T combine(const T left, const T right) { return left + right; }
+  };
+
+  /**
+   * Reducer for a caller-defined operation, such as a componentwise maximum over a struct of
+   * several quantities. Op provides the type ValueType and the static methods identity() and
+   * combine(ValueType, ValueType), both marked GPU_CALLABLE_METHOD. Op::combine has to be
+   * associative and commutative, and ValueType has to be trivially copyable, as the GPU backends
+   * copy it through block memory and device buffers.
+   */
+  template <typename Op>
+  struct Custom final {
+    using ValueType = typename Op::ValueType;
+    ValueType& target;
+
+    static GPU_CALLABLE_METHOD ValueType identity() { return Op::identity(); }
+    static GPU_CALLABLE_METHOD ValueType combine(const ValueType left, const ValueType right) {
+      return Op::combine(left, right);
+    }
   };
 } // namespace tarch::accelerator
-
-namespace tarch {
-  using accelerator::Max;
-  using accelerator::Min;
-  using accelerator::Sum;
-} // namespace tarch

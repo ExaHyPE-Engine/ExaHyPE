@@ -1,0 +1,38 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+/**
+ * The wall vertex of a periodic axis holds particles from both walls, so the cell reads such a
+ * particle through its periodic image and moves the particle onto that image first.
+ */
+template <typename Particle, typename Projection>
+INLINE_METHOD void exahype2::moveParticlesThroughCell(
+  const peano4::dataview::CellMarker&          marker,
+  const std::list<Particle*>&                  particles,
+  const tarch::la::Vector<DIMENSIONS, double>& domainWidth,
+  const std::bitset<DIMENSIONS>&               periodicBoundaries,
+  Projection&&                                 project
+) {
+  const bool domainWrapsParticles = periodicBoundaries.any();
+  for (auto* const particle : particles) {
+    assertion(particle != nullptr);
+    const auto image = domainWrapsParticles
+      ? peano4::particles::periodicImageTowards(particle->getX(), marker.getX(), domainWidth, periodicBoundaries)
+      : particle->getX();
+    if (particle->getMoveState() == Particle::MoveState::NotMovedYet and marker.isContained(image)) {
+      if (domainWrapsParticles) {
+        particle->setX(image);
+      }
+      project(particle);
+      particle->setMoveState(Particle::MoveState::Moved);
+    }
+  }
+}
+
+template <typename Particles>
+INLINE_METHOD void exahype2::markParticlesAsNotMoved(Particles& particles) {
+  for (auto* const particle : particles) {
+    assertion(particle != nullptr);
+    particle->setMoveState(std::remove_pointer_t<decltype(particle)>::MoveState::NotMovedYet);
+  }
+}

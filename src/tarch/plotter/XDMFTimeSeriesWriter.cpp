@@ -25,8 +25,10 @@ namespace {
     const std::size_t gridOpen   = content.find("<Grid");
     const std::size_t openTagEnd = gridOpen == std::string::npos ? std::string::npos : content.find('>', gridOpen);
     const std::size_t gridClose  = content.rfind("</Grid>");
-    if (gridOpen == std::string::npos or openTagEnd == std::string::npos or gridClose == std::string::npos
-        or gridClose <= openTagEnd) {
+    if (
+      gridOpen == std::string::npos or openTagEnd == std::string::npos or gridClose == std::string::npos
+      or gridClose <= openTagEnd
+    ) {
       tarch::terminateWithError("Per-step XDMF file '" + perStepFile.string() + "' has no <Grid> element to inline.");
     }
     return content.substr(openTagEnd + 1, gridClose - (openTagEnd + 1));

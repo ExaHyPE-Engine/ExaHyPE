@@ -66,18 +66,6 @@ function(peano_add_target)
   set(install_as_library FALSE)
   set(install_as_executable FALSE)
 
-  foreach(source IN LISTS ARG_SOURCES ARG_GENERATED_SOURCES)
-    get_filename_component(source_extension "${source}" EXT)
-    if(source_extension MATCHES "^\\.(c|cc|cpp|cxx)$")
-      if(IS_ABSOLUTE "${source}")
-        set(clang_tidy_source "${source}")
-      else()
-        get_filename_component(clang_tidy_source "${CMAKE_CURRENT_SOURCE_DIR}/${source}" ABSOLUTE)
-      endif()
-      set_property(GLOBAL APPEND PROPERTY PEANO_CLANG_TIDY_SOURCES "${clang_tidy_source}")
-    endif()
-  endforeach()
-
   _peano_resolve_gpu_backend(gpu_backend)
 
   if(target_type STREQUAL "LIBRARY" OR target_type STREQUAL "STATIC_LIBRARY")
@@ -99,16 +87,22 @@ function(peano_add_target)
 
   target_sources(${target} PRIVATE ${target_sources})
 
-  if(NOT CMAKE_DISABLE_PRECOMPILE_HEADERS
-     AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "NVHPC")
-    target_precompile_headers(${target} PRIVATE "<tarch/StdAfx.h>")
+  if(gpu_backend STREQUAL "kokkos" OR gpu_backend STREQUAL "sycl" OR gpu_backend STREQUAL "ompt")
+    set(supports_precompiled_headers FALSE)
+  elseif(CMAKE_DISABLE_PRECOMPILE_HEADERS
+    OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU"
+    OR CMAKE_CXX_COMPILER_ID STREQUAL "NVHPC")
+    set(supports_precompiled_headers FALSE)
+  else()
+    set(supports_precompiled_headers TRUE)
+  endif()
 
+  if(supports_precompiled_headers)
+    target_precompile_headers(${target} PRIVATE "<tarch/StdAfx.h>")
     target_compile_options(${target} PRIVATE
       "$<$<COMPILE_LANG_AND_ID:CUDA,NVIDIA>:SHELL:-include tarch/StdAfx.h>"
     )
   else()
-    # StdAfx.h owns the standard-library includes. Force-include it textually
-    # when PCH is disabled or unsupported so source-file semantics stay equal.
     target_compile_options(${target} PRIVATE
       "$<$<COMPILE_LANGUAGE:C,CXX,CUDA,HIP>:SHELL:-include tarch/StdAfx.h>"
     )
@@ -171,7 +165,7 @@ function(peano_add_target)
   # Build-mode flags must reach every language so Fortran kernels and GPU kernels are
   # optimised/debugged like host code. Fortran uses its own -O/-g-only flag set (the C++
   # flags contain switches not all Fortran front-ends accept). HIP takes the host flags
-  # verbatim (clang optimises host and device from a single -O). nvcc is split: the host
+  # verbatim (clang optimises host and device from a single -O). nvcc is split: The host
   # flags are forwarded via -Xcompiler, and the optimisation level is additionally forwarded
   # to the device compiler via -Xptxas, making the device optimisation level explicit.
   # Debug uses -G, which forces device -O0 plus debug info.
@@ -204,7 +198,7 @@ function(peano_add_target)
     )
   endif()
 
-  # GPU language setup publishes one architecture through CMAKE_CUDA_ARCHITECTURES or
+  # GPU language setup sets one architecture in CMAKE_CUDA_ARCHITECTURES or
   # CMAKE_HIP_ARCHITECTURES; target properties must consume that single selection.
   if(gpu_backend STREQUAL "cuda" AND CMAKE_CUDA_COMPILER)
     set_target_properties(${target} PROPERTIES

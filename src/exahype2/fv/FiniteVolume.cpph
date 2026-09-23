@@ -11,7 +11,7 @@ TARGET_DECLARE
 template <
   exahype2::fv::ReconstructionScheme Reconstruction,
   exahype2::fv::TimeSteppingScheme   TimeStepping,
-  typename Solver,
+  typename SolverType,
   int  NumberOfVolumesPerAxis,
   int  NumberOfUnknowns,
   int  NumberOfAuxiliaryVariables,
@@ -27,8 +27,8 @@ template <
 INLINE_METHOD GPU_CALLABLE_METHOD double exahype2::fv::applyFiniteVolume(
   const StoragePrecision* NOALIAS const        inputPatch,
   StoragePrecision* NOALIAS const              outputPatch,
-  const StoragePrecision* NOALIAS const        faceInputPatches[TWO_TIMES_D],
-  StoragePrecision* NOALIAS const              faceOutputPatches[TWO_TIMES_D],
+  const StoragePrecision* NOALIAS const        faceInputPatches[peano4::FacesPerCell],
+  StoragePrecision* NOALIAS const              faceOutputPatches[peano4::FacesPerCell],
   const tarch::la::Vector<DIMENSIONS, double>& patchCentre,
   const tarch::la::Vector<DIMENSIONS, double>& patchSize,
   const double                                 timeStamp,
@@ -36,7 +36,7 @@ INLINE_METHOD GPU_CALLABLE_METHOD double exahype2::fv::applyFiniteVolume(
 ) {
   return TimeStepping::template apply<
     Reconstruction,
-    Solver,
+    SolverType,
     NumberOfVolumesPerAxis,
     NumberOfUnknowns,
     NumberOfAuxiliaryVariables,

@@ -1,7 +1,5 @@
-
-
 def initial():
-  return """
+    return """
 
   //stresses
   Q[Shortcuts::sigma+0] = 0; //xx
@@ -29,7 +27,7 @@ def initial():
 
 
 def boundary():
-  return """
+    return """
   switch(normal){
     case 0:
       Qoutside[Shortcuts::sigma+0] = 0; //xx
@@ -63,13 +61,15 @@ def boundary():
   Qoutside[Shortcuts::cs]   = Qinside[Shortcuts::cs];
 """
 
+
 def eigenvalue():
-  return """
-  return (double) Q[Shortcuts::cp];
+    return """
+  return static_cast<double>(Q[Shortcuts::cp]);
 """
 
+
 def flux():
-  return """
+    return """
   //Lamé parameters
   auto mu(Q[Shortcuts::rho] * Q[Shortcuts::cs] * Q[Shortcuts::cs]); //rho*cs^2
   auto lambda(Q[Shortcuts::rho] * Q[Shortcuts::cp] * Q[Shortcuts::cp] - 2 * mu); //rho*cp^2 - 2 mu
@@ -111,8 +111,9 @@ def flux():
   }
 """
 
+
 def refinement_criterion():
-  return """
+    return """
   auto result = ::exahype2::RefinementCommand::Keep;
 
   tarch::la::Vector<DIMENSIONS, double> sourceLocation = {
@@ -132,8 +133,9 @@ def refinement_criterion():
   return result;
 """
 
+
 def point_source():
-  return """
+    return """
   for (int i = 0; i < NumberOfUnknowns; i++) {
     forceVector[i] = 0;
   }
@@ -144,16 +146,19 @@ def point_source():
 
   forceVector[Shortcuts::sigma+4] = f; //sigma_xy
 """
+
+
 def init_point_source():
-  return """
+    return """
   location[0][0] = 0;
   location[0][1] = 2;
   location[0][2] = 0;
 """
 
+
 def riemann_solver():
-  return """
-  applications::exahype2::exaseis::riemannSolverIsotropic<VariableShortcuts{{SOLVER_NAME}}, {{CORRECTOR_COMPUTATION_PRECISION}}, Order+1, NumberOfUnknowns, NumberOfUnknowns+NumberOfAuxiliaryVariables, 1>(
+    return """
+  applications::exahype2::exaseis::riemannSolverIsotropic<VariableShortcuts{{SOLVER_NAME}}, {{CORRECTOR_COMPUTATION_PRECISION}}, DGOrder + 1, NumberOfUnknowns, NumberOfUnknowns+NumberOfAuxiliaryVariables, 1>(
     FL, FR, QL, QR, t, dt, direction, isBoundaryFace, faceIndex
   );
 """

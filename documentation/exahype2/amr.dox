@@ -13,7 +13,7 @@ set.
 
 The project configuration supplies a regular base level and a maximum level.
 Adaptivity is active when the maximum exceeds the base. Each additional level
-reduces the cell width by three.
+divides the cell width by the subdivision factor of the active curve.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 exahype2Project = exahype2.Project(
@@ -23,12 +23,12 @@ exahype2Project = exahype2.Project(
 )
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The solver installs its criterion through `set_implementation()`:
+The solver installs its criterion through `set_pde_terms()`:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-solver.set_implementation(
+solver.set_pde_terms(
   ...,
-  refinement_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation,
+  refinement_criterion=True,
 )
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

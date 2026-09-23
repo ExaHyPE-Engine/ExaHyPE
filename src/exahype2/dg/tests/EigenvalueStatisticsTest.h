@@ -11,10 +11,16 @@ namespace exahype2::dg::tests {
 class exahype2::dg::tests::EigenvalueStatisticsTest final : public tarch::tests::TestCase {
 public:
   EigenvalueStatisticsTest();
+  EigenvalueStatisticsTest(const EigenvalueStatisticsTest&)            = delete;
+  EigenvalueStatisticsTest(EigenvalueStatisticsTest&&)                 = delete;
+  EigenvalueStatisticsTest& operator=(const EigenvalueStatisticsTest&) = delete;
+  EigenvalueStatisticsTest& operator=(EigenvalueStatisticsTest&&)      = delete;
+  ~EigenvalueStatisticsTest() override                                 = default;
 
   void run() override;
 
 private:
   void testAnisotropicAccumulation();
   void testInvalidEigenvalueAccumulation();
+  void testReduceMaxEigenvaluesOverTheCellNodes();
 };

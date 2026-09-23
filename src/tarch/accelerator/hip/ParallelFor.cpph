@@ -2,94 +2,104 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 namespace tarch::accelerator {
-  template <typename F>
-  __global__ void flat_kernel_1D(F f, int n) {
-    const int idx    = blockIdx.x * blockDim.x + threadIdx.x;
-    const int stride = gridDim.x * blockDim.x;
-    for (int i = idx; i < n; i += stride) {
-      f(i);
+  template <typename Functor>
+  __global__ void flatKernel1D(const Functor functor, const int numberOfItems) {
+    const int firstIndex = blockIdx.x * blockDim.x + threadIdx.x;
+    const int stride     = gridDim.x * blockDim.x;
+    for (int i = firstIndex; i < numberOfItems; i += stride) {
+      functor(i);
     }
   }
 
-  template <typename F>
-  __global__ void team_kernel(F f) {
-    f(static_cast<int>(blockIdx.x), HipTeam{});
+  template <typename Functor>
+  __global__ void teamKernel(const Functor functor) {
+    functor(static_cast<int>(blockIdx.x), HipTeam{});
   }
 
-  template <typename F>
-  __device__ inline void parallelFor(const HipTeam&, const Range& r, F f) {
-    for (int i = threadIdx.x; i < r.n; i += blockDim.x) {
-      f(i);
+  template <typename Functor>
+  __device__ inline void parallelFor([[maybe_unused]] const HipTeam& team, const Range& range, const Functor functor) {
+    for (int i = threadIdx.x; i < range.n; i += blockDim.x) {
+      functor(i);
     }
   }
-  template <typename F>
-  __device__ inline void parallelFor(const HipTeam&, const RangeMD<2>& r, F f) {
-    const int total = r.n[0] * r.n[1];
-    const int n1    = r.n[1];
-    for (int idx = threadIdx.x; idx < total; idx += blockDim.x) {
-      const int x = idx / n1;
-      const int y = idx % n1;
-      f(x, y);
+  template <typename Functor>
+  __device__ inline void parallelFor(
+    [[maybe_unused]] const HipTeam& team,
+    const RangeMD<2>&               range,
+    const Functor                   functor
+  ) {
+    const int numberOfItems = range.n[0] * range.n[1];
+    const int extentY       = range.n[1];
+    for (int index = threadIdx.x; index < numberOfItems; index += blockDim.x) {
+      functor(index / extentY, index % extentY);
     }
   }
-  template <typename F>
-  __device__ inline void parallelFor(const HipTeam&, const RangeMD<3>& r, F f) {
-    const int total = r.n[0] * r.n[1] * r.n[2];
-    const int n1    = r.n[1];
-    const int n2    = r.n[2];
-    for (int idx = threadIdx.x; idx < total; idx += blockDim.x) {
-      const int x = idx / (n1 * n2);
-      const int y = (idx / n2) % n1;
-      const int z = idx % n2;
-      f(x, y, z);
+  template <typename Functor>
+  __device__ inline void parallelFor(
+    [[maybe_unused]] const HipTeam& team,
+    const RangeMD<3>&               range,
+    const Functor                   functor
+  ) {
+    const int numberOfItems = range.n[0] * range.n[1] * range.n[2];
+    const int extentY       = range.n[1];
+    const int extentZ       = range.n[2];
+    for (int index = threadIdx.x; index < numberOfItems; index += blockDim.x) {
+      functor(index / (extentY * extentZ), (index / extentZ) % extentY, index % extentZ);
     }
+  }
+
+  __device__ inline void teamBarrier([[maybe_unused]] const HipTeam& team) { __syncthreads(); }
+
+  template <typename Functor>
+  inline void parallelFor(const Range& range, const Functor functor) {
+    assertion(range.n >= 0, range.n);
+    if (range.n <= 0) {
+      return;
+    }
+    CHECK_HIP_ERROR(hipSetDevice(tarch::accelerator::getCurrentDevice()));
+    const int numberOfBlocks = std::min(
+      (range.n + tarch::accelerator::HipBlockSize - 1) / tarch::accelerator::HipBlockSize,
+      tarch::accelerator::HipMaxNumberOfBlocks
+    );
+    tarch::accelerator::
+      flatKernel1D<<<numberOfBlocks, tarch::accelerator::HipBlockSize, 0, tarch::accelerator::deviceStreamGet()>>>(
+        functor,
+        range.n
+      );
+    CHECK_HIP_ERROR(hipStreamSynchronize(tarch::accelerator::deviceStreamGet()));
+  }
+
+  template <typename Functor>
+  inline void parallelFor(const RangeMD<2>& range, const Functor functor) {
+    assertion(range.n[0] >= 0, range.n[0]);
+    assertion(range.n[1] >= 0, range.n[1]);
+    const int extentY = range.n[1];
+    tarch::accelerator::parallelFor(Range(range.n[0] * range.n[1]), [=] __device__(const int index) {
+      functor(index / extentY, index % extentY);
+    });
+  }
+
+  template <typename Functor>
+  inline void parallelFor(const RangeMD<3>& range, const Functor functor) {
+    assertion(range.n[0] >= 0, range.n[0]);
+    assertion(range.n[1] >= 0, range.n[1]);
+    assertion(range.n[2] >= 0, range.n[2]);
+    const int extentY = range.n[1];
+    const int extentZ = range.n[2];
+    tarch::accelerator::parallelFor(Range(range.n[0] * range.n[1] * range.n[2]), [=] __device__(const int index) {
+      functor(index / (extentY * extentZ), (index / extentZ) % extentY, index % extentZ);
+    });
+  }
+
+  template <typename Functor>
+  inline void parallelFor(const TeamRange& range, const Functor functor) {
+    assertion(range.n >= 0, range.n);
+    if (range.n <= 0) {
+      return;
+    }
+    CHECK_HIP_ERROR(hipSetDevice(tarch::accelerator::getCurrentDevice()));
+    tarch::accelerator::
+      teamKernel<<<range.n, tarch::accelerator::HipBlockSize, 0, tarch::accelerator::deviceStreamGet()>>>(functor);
+    CHECK_HIP_ERROR(hipStreamSynchronize(tarch::accelerator::deviceStreamGet()));
   }
 } // namespace tarch::accelerator
-
-namespace tarch {
-  template <typename F>
-  inline void parallelFor(const Range& r, F f) {
-    if (r.n <= 0) {
-      return;
-    }
-    CHECK_HIP_ERROR(hipSetDevice(accelerator::getCurrentDevice()));
-    int blocks = (r.n + accelerator::HipBlockSize - 1) / accelerator::HipBlockSize;
-    blocks     = std::min(blocks, 65535);
-    accelerator::flat_kernel_1D<<<blocks, accelerator::HipBlockSize, 0, accelerator::deviceStreamGet()>>>(f, r.n);
-    CHECK_HIP_ERROR(hipStreamSynchronize(accelerator::deviceStreamGet()));
-  }
-
-  template <typename F>
-  inline void parallelFor(const RangeMD<2>& r, F f) {
-    const int total = r.n[0] * r.n[1];
-    const int n1    = r.n[1];
-    parallelFor(Range(total), [=] __device__(int idx) {
-      const int x = idx / n1;
-      const int y = idx % n1;
-      f(x, y);
-    });
-  }
-
-  template <typename F>
-  inline void parallelFor(const RangeMD<3>& r, F f) {
-    const int total = r.n[0] * r.n[1] * r.n[2];
-    const int n1    = r.n[1];
-    const int n2    = r.n[2];
-    parallelFor(Range(total), [=] __device__(int idx) {
-      const int x = idx / (n1 * n2);
-      const int y = (idx / n2) % n1;
-      const int z = idx % n2;
-      f(x, y, z);
-    });
-  }
-
-  template <typename F>
-  inline void parallelFor(const TeamRange& r, F f) {
-    if (r.n <= 0) {
-      return;
-    }
-    CHECK_HIP_ERROR(hipSetDevice(accelerator::getCurrentDevice()));
-    accelerator::team_kernel<<<r.n, accelerator::HipBlockSize, 0, accelerator::deviceStreamGet()>>>(f);
-    CHECK_HIP_ERROR(hipStreamSynchronize(accelerator::deviceStreamGet()));
-  }
-} // namespace tarch

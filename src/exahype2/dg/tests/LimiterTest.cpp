@@ -3,6 +3,7 @@
 #include "LimiterTest.h"
 
 #include "exahype2/dg/Limiter.h"
+#include "peano4/sfc/ActiveCurve.h"
 
 exahype2::dg::tests::LimiterTest::LimiterTest() :
   tarch::tests::TestCase("exahype2::dg::tests::LimiterTest") {}
@@ -17,19 +18,21 @@ void exahype2::dg::tests::LimiterTest::run() {
 }
 
 void exahype2::dg::tests::LimiterTest::testHangingVertexFacet() {
+  constexpr int UpperBoundary = peano4::sfc::ActiveCurve::SubdivisionFactor;
+
   const tarch::la::Vector<2, int> onLeftFace = {0, 1};
   validate(exahype2::dg::isCoarseVertexOnFacetOfHangingVertex(onLeftFace, 0));
   validate(not exahype2::dg::isCoarseVertexOnFacetOfHangingVertex(onLeftFace, 1));
   validate(exahype2::dg::isCoarseVertexOnFacetOfHangingVertex(onLeftFace, 2));
   validate(not exahype2::dg::isCoarseVertexOnFacetOfHangingVertex(onLeftFace, 3));
 
-  const tarch::la::Vector<2, int> onCorner = {3, 3};
+  const tarch::la::Vector<2, int> onCorner = {UpperBoundary, UpperBoundary};
   validate(not exahype2::dg::isCoarseVertexOnFacetOfHangingVertex(onCorner, 0));
   validate(not exahype2::dg::isCoarseVertexOnFacetOfHangingVertex(onCorner, 1));
   validate(not exahype2::dg::isCoarseVertexOnFacetOfHangingVertex(onCorner, 2));
   validate(exahype2::dg::isCoarseVertexOnFacetOfHangingVertex(onCorner, 3));
 
-  const tarch::la::Vector<3, int> onEdge = {2, 0, 3};
+  const tarch::la::Vector<3, int> onEdge = {1, 0, UpperBoundary};
   for (int coarseVertexNumber = 0; coarseVertexNumber < 8; coarseVertexNumber++) {
     const bool onEdgeVertices = coarseVertexNumber == 4 or coarseVertexNumber == 5;
     validateEquals(exahype2::dg::isCoarseVertexOnFacetOfHangingVertex(onEdge, coarseVertexNumber), onEdgeVertices);

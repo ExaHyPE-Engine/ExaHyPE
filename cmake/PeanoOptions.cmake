@@ -9,7 +9,7 @@ option(PEANO_WITH_NETCDF "Build with NetCDF support" ON)
 option(PEANO_WITH_ZLIB "Build with ZLIB compression support" ON)
 
 if(PEANO_WITH_FPE AND CMAKE_CXX_COMPILER_ID STREQUAL "NVHPC")
-  message(STATUS "Disabling floating-point exception traps because NVHPC can raise exceptions from unused SIMD lanes.")
+  message(STATUS "Disabling floating-point exception traps because NVHPC divides before the branch that guards the divisor resolves.")
   set(PEANO_WITH_FPE OFF CACHE BOOL "Build with floating-point exception traps" FORCE)
 endif()
 
@@ -36,6 +36,9 @@ set(SUPPORTED_DIMENSIONS
   CACHE STRING "Editable list of supported dimensions"
 )
 mark_as_advanced(SUPPORTED_DIMENSIONS)
+
+set(PEANO_WITH_SPACE_FILLING_CURVE "Peano" CACHE STRING "Space-filling curve of the grid traversal: Peano or Hilbert")
+set_property(CACHE PEANO_WITH_SPACE_FILLING_CURVE PROPERTY STRINGS Peano Hilbert)
 
 set(CMAKE_BUILD_TYPE "" CACHE INTERNAL "")
 set(SUPPORTED_BUILD_TYPES

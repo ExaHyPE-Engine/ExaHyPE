@@ -2,6 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "RuntimeParameters.h"
 
+#include "peano4/sfc/ActiveCurve.h"
+#include "tarch/Assertions.h"
 #include "tarch/Termination.h"
 #include "tarch/reader/JSONReader.h"
 
@@ -29,40 +31,38 @@ std::string runner::RuntimeParameters::formatTerminalTime(const double value) {
   return value < std::numeric_limits<double>::max() / 10.0 ? formatDefault(value) : "unbounded";
 }
 
-double runner::RuntimeParameters::divideByThreePower(double value, const int exponent) {
-  if (exponent < 0) {
-    throw std::runtime_error("Grid levels must not be negative.");
-  }
+/**
+ * Divides a length by the subdivision factor of the active curve once per level, so the
+ * result is the width of a cell exponent levels below a cell of the given width.
+ */
+double runner::RuntimeParameters::divideBySubdivisionFactorPower(double value, const int exponent) {
+  assertion(exponent >= 0, exponent);
   for (int level = 0; level < exponent; ++level) {
-    value /= 3.0;
+    value /= peano4::sfc::ActiveCurve::SubdivisionFactor;
   }
   return value;
 }
 
 int runner::RuntimeParameters::parseInteger(const std::string& value, const std::string& key) {
-  try {
-    auto       processed = std::size_t{0};
-    const auto result    = std::stoi(value, &processed);
-    if (processed != value.size()) {
-      throw std::invalid_argument("Trailing characters");
-    }
-    return result;
-  } catch (const std::exception&) {
-    throw std::runtime_error("Invalid integer value for " + key + ": " + value);
+  const char* const end    = value.data() + value.size();
+  auto              result = 0;
+  const auto        parsed = std::from_chars(value.data(), end, result);
+  if (parsed.ec != std::errc{} or parsed.ptr != end) {
+    tarch::terminateWithError("Value \"" + value + "\" of runtime parameter \"" + key + "\" is not an integer.");
   }
+  return result;
 }
 
 double runner::RuntimeParameters::parseDouble(const std::string& value, const std::string& key) {
-  try {
-    auto       processed = std::size_t{0};
-    const auto result    = std::stod(value, &processed);
-    if (processed != value.size()) {
-      throw std::invalid_argument("Trailing characters");
-    }
-    return result;
-  } catch (const std::exception&) {
-    throw std::runtime_error("Invalid numeric value for " + key + ": " + value);
+  const char* const end    = value.data() + value.size();
+  auto              result = 0.0;
+  const auto        parsed = std::from_chars(value.data(), end, result);
+  if (parsed.ec != std::errc{} or parsed.ptr != end) {
+    tarch::terminateWithError(
+      "Value \"" + value + "\" of runtime parameter \"" + key + "\" is not a floating point number."
+    );
   }
+  return result;
 }
 
 std::string runner::RuntimeParameters::normaliseOutputPath(const std::string& path) {
@@ -79,7 +79,7 @@ std::string runner::RuntimeParameters::consumeValue(
   const std::string& argument
 ) {
   if (index + 1 >= argc) {
-    throw std::runtime_error("Missing value for " + argument + ".");
+    tarch::terminateWithError("Command line argument \"" + argument + "\" carries no value.");
   }
   ++index;
   return argv[index];
@@ -99,7 +99,8 @@ void runner::RuntimeParameters::printUsage(const std::string& executableName) co
   );
   addOption(
     "-tmax, --maxTerminalTime <t>",
-    "Maximum terminal time (default: " + formatTerminalTime(_maxTerminalTime) + ")."
+    "Maximum terminal time; it lowers a larger minimum terminal time (default: " + formatTerminalTime(_maxTerminalTime)
+      + ")."
   );
   addOption(
     "-fpt, --firstPlotTimeStamp <t>",
@@ -167,6 +168,7 @@ void runner::RuntimeParameters::printUsage(const std::string& executableName) co
   for (const auto& [argument, description] : options) {
     std::cout << "  " << argument << std::string(argumentColumnWidth - argument.size() + 2, ' ') << description << "\n";
   }
+  std::cout << "\nThe environment variable PEANO_MAX_TERMINAL_TIME bounds the maximum terminal time.\n";
 }
 
 void runner::RuntimeParameters::normaliseGridLevels() {
@@ -177,48 +179,57 @@ void runner::RuntimeParameters::normaliseGridLevels() {
   }
 
   if (_gridLevels < 1) {
-    throw std::runtime_error("Grid levels must be at least one.");
+    tarch::terminateWithError("Grid levels must be at least one.");
   }
   if (_maxGridLevels < 1) {
-    throw std::runtime_error("Maximum grid levels must be at least one.");
+    tarch::terminateWithError("Maximum grid levels must be at least one.");
   }
   if (_maxGridLevels < _gridLevels) {
-    throw std::runtime_error("Maximum grid levels must be greater than or equal to the coarsest grid level.");
+    tarch::terminateWithError("Maximum grid levels must be greater than or equal to the coarsest grid level.");
   }
+}
+
+/**
+ * Lowers the maximum terminal time to the environment variable PEANO_MAX_TERMINAL_TIME when it is
+ * set, and the minimum terminal time to the maximum one, so a run never advances beyond the bound.
+ */
+void runner::RuntimeParameters::boundTerminalTimes() {
+  const char* const environmentBound = std::getenv("PEANO_MAX_TERMINAL_TIME"); // NOLINT(concurrency-mt-unsafe)
+  if (environmentBound != nullptr) {
+    _maxTerminalTime = std::min(_maxTerminalTime, parseDouble(environmentBound, "PEANO_MAX_TERMINAL_TIME"));
+  }
+  _minTerminalTime = std::min(_minTerminalTime, _maxTerminalTime);
 }
 
 void runner::RuntimeParameters::validateParameterRanges() const {
   if (not std::isfinite(_minTerminalTime) or _minTerminalTime < 0.0) {
-    throw std::runtime_error(
+    tarch::terminateWithError(
       "Terminal time must be finite and non-negative (got " + formatDefault(_minTerminalTime) + ")."
     );
   }
   if (not std::isfinite(_maxTerminalTime)) {
-    throw std::runtime_error("Maximum terminal time must be finite.");
-  }
-  if (_maxTerminalTime < _minTerminalTime) {
-    throw std::runtime_error("Maximum terminal time must be greater than or equal to the minimum terminal time.");
+    tarch::terminateWithError("Maximum terminal time must be finite.");
   }
   if (not std::isfinite(_firstPlotTimeStamp) or _firstPlotTimeStamp < 0.0) {
-    throw std::runtime_error(
+    tarch::terminateWithError(
       "First plot time stamp must be finite and non-negative (got " + formatDefault(_firstPlotTimeStamp) + ")."
     );
   }
   if (not std::isfinite(_timeStepLogInterval) or _timeStepLogInterval <= 0.0) {
-    throw std::runtime_error(
+    tarch::terminateWithError(
       "Time-step log interval must be finite and positive (got " + formatDefault(_timeStepLogInterval) + " s)."
     );
   }
   if (_targetDevice < 0) {
-    throw std::runtime_error("Target device id must not be negative (got " + formatDefault(_targetDevice) + ").");
+    tarch::terminateWithError("Target device id must not be negative (got " + formatDefault(_targetDevice) + ").");
   }
   if (not std::isfinite(_mpiTimeoutWarning) or _mpiTimeoutWarning < 0.0) {
-    throw std::runtime_error(
+    tarch::terminateWithError(
       "MPI timeout warning must be finite and non-negative (got " + formatDefault(_mpiTimeoutWarning) + " s)."
     );
   }
   if (not std::isfinite(_mpiDeadlockTimeout) or _mpiDeadlockTimeout < 0.0) {
-    throw std::runtime_error(
+    tarch::terminateWithError(
       "MPI deadlock timeout must be finite and non-negative (got " + formatDefault(_mpiDeadlockTimeout) + " s)."
     );
   }
@@ -391,27 +402,24 @@ void runner::RuntimeParameters::setGeneratedDefaults(
 }
 
 void runner::RuntimeParameters::configure(int& argc, char** argv) {
-  try {
-    if (argc > 0) {
-      _executableName = std::filesystem::path(argv[0]).filename().string();
-    }
-
-    extractConfigFileFromCommandLine(argc, argv);
-
-    if (_configFilePath.empty() and std::filesystem::exists("./config.json")) {
-      _configFilePath = "./config.json";
-    }
-
-    readJsonConfiguration();
-    applyCommandLineConfiguration(argc, argv);
-    normaliseGridLevels();
-    validateParameterRanges();
-  } catch (const std::exception& exception) {
-    tarch::terminateWithError(exception.what());
+  if (argc > 0) {
+    _executableName = std::filesystem::path(argv[0]).filename().string();
   }
+
+  extractConfigFileFromCommandLine(argc, argv);
+
+  if (_configFilePath.empty() and std::filesystem::exists("./config.json")) {
+    _configFilePath = "./config.json";
+  }
+
+  readJsonConfiguration();
+  applyCommandLineConfiguration(argc, argv);
+  normaliseGridLevels();
+  boundTerminalTimes();
+  validateParameterRanges();
 }
 
-/** Returns the reader used by both runtime and application parsers, or nullptr when no configuration file is active. */
+/** Returns the reader of the JSON configuration file, or nullptr when no configuration file is read. */
 tarch::reader::JSONReader* runner::RuntimeParameters::getConfigReader() const { return _configReader.get(); }
 
 double runner::RuntimeParameters::getMPITimeoutWarning() const { return _mpiTimeoutWarning; }
@@ -419,8 +427,7 @@ double runner::RuntimeParameters::getMPIDeadlockTimeout() const { return _mpiDea
 
 /**
  * Returns whether to record the origin, partner and tag of every non-blocking request. The record
- * costs one table entry per request, so only a run that set --timeoutWarning or --deadlockTimeout
- * itself writes it.
+ * costs one table entry per request, so --timeoutWarning or --deadlockTimeout switches it on.
  */
 bool runner::RuntimeParameters::isMPIRequestTrackingEnabled() const { return _mpiTimeoutConfigured; }
 bool runner::RuntimeParameters::isCommunicationThreadEnabled() const { return _communicationThread; }
@@ -456,21 +463,19 @@ double runner::RuntimeParameters::getMaxAdmissiblePatchSize(
   const tarch::la::Vector<DIMENSIONS, double>& domainSize
 ) const {
   // The tolerance absorbs round-off, and the longest edge avoids over-refining rectangular domains.
-  return divideByThreePower(1.1 * tarch::la::max(domainSize), _gridLevels);
+  return divideBySubdivisionFactorPower(1.1 * tarch::la::max(domainSize), _gridLevels);
 }
 
 double runner::RuntimeParameters::getMinAdmissiblePatchSize(
   const tarch::la::Vector<DIMENSIONS, double>& domainSize
 ) const {
-  return divideByThreePower(1.1 * tarch::la::max(domainSize), _maxGridLevels);
+  return divideBySubdivisionFactorPower(1.1 * tarch::la::max(domainSize), _maxGridLevels);
 }
 
 double runner::RuntimeParameters::getMaxAdmissibleCellSize(
   const tarch::la::Vector<DIMENSIONS, double>& domainSize,
   const int                                    cellsPerPatchPerAxis
 ) const {
-  if (cellsPerPatchPerAxis <= 0) {
-    throw std::runtime_error("The number of cells per patch per axis must be positive.");
-  }
+  assertion(cellsPerPatchPerAxis > 0, cellsPerPatchPerAxis);
   return getMaxAdmissiblePatchSize(domainSize) / cellsPerPatchPerAxis;
 }

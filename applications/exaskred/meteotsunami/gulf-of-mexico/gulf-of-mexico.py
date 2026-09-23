@@ -48,32 +48,33 @@ project = exahype2.Project(
 if project.dimensions != 2:
     raise ValueError("The Gulf of Mexico meteotsunami application is two-dimensional.")
 
-aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
+aderdg_solver = exahype2.dg.ader.Solver(
     name="ADERDGSolver",
     order=max(1, args.degrees_of_freedom - 1),
     unknowns={"h": 1, "hu": project.dimensions, "b": 1},
     auxiliary_variables=0,
-    time_step_relaxation=0.6,
+    time_stepping=exahype2.TimeStepping.Adaptive(0.6),
 )
-aderdg_solver.set_implementation(
-    initial_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
-    boundary_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
-    refinement_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation,
-    flux=exahype2.solvers.PDETerms.User_Defined_Implementation,
-    max_eigenvalue=exahype2.solvers.PDETerms.User_Defined_Implementation,
-    ncp=exahype2.solvers.PDETerms.User_Defined_Implementation,
-    source_term=exahype2.solvers.PDETerms.User_Defined_Implementation,
-    riemann_solver=exahype2.solvers.PDETerms.User_Defined_Implementation,
+aderdg_solver.set_pde_terms(
+    initial_condition=True,
+    boundary_conditions=True,
+    refinement_criterion=True,
+    flux=True,
+    max_eigenvalue=True,
+    ncp=True,
+    source=True,
+    riemann_solver=True,
+)
+aderdg_solver.set_pde_terms(
+    subcell_riemann_solver=True,
+    dmp_observables=True,
+    physical_admissibility=True,
 )
 aderdg_solver.add_subcell_limiter(
-    limiter_solver=exahype2.solvers.fv.godunov.subcell_scheme(
-        riemann_solver=exahype2.solvers.PDETerms.User_Defined_Implementation
-    ),
+    exahype2.fv.Godunov(),
     number_of_dmp_observables=4,
     dmp_relaxation_parameter=1.0e-2,
     dmp_differences_scaling=1.0e-3,
-    dmp_observables=exahype2.solvers.PDETerms.User_Defined_Implementation,
-    physical_admissibility_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation,
 )
 project.add_solver(aderdg_solver)
 
@@ -107,14 +108,10 @@ for name, kind, value in (
 ):
     project.add_runtime_parameter(name, kind, value)
 
-project.constants.export_constexpr_with_type("g", str(9.81), "double")
+project.add_constant("g", 9.81)
 
 project.output.makefile.add_include_directory("../../../..")
 project.output.makefile.add_cpp_file("../../AlbersEqualArea.cpp")
-project.output.makefile.add_cpp_file("../../AugmentedState.cpp")
 project.output.makefile.add_cpp_file("../../Forcing.cpp")
-project.output.makefile.add_cpp_file("../../Limiting.cpp")
-project.output.makefile.add_cpp_file("../../ShallowWater.cpp")
-project.output.makefile.add_cpp_file("../../WellBalancedRusanov.cpp")
 project.output.makefile.add_cpp_file("ADERDGSolver.cpp")
 project.generate_and_build()

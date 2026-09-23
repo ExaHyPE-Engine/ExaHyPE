@@ -32,11 +32,6 @@ namespace {
     0.0,
     0.0
   };
-
-  struct WaterLayer {
-    static constexpr int h  = 0;
-    static constexpr int hu = 1;
-  };
 } // namespace
 
 void applications::exahype2::exaskred::ADERDGSolver::initialCondition(
@@ -88,8 +83,8 @@ void applications::exahype2::exaskred::ADERDGSolver::boundaryConditions(
   }
 }
 
-// The fine mesh follows the action: cells carrying slide material or a
-// disturbed water surface refine, calm fjord and bare mountainside coarsen.
+// Cells carrying slide material or a disturbed water surface refine; calm fjord
+// and bare mountainside coarsen.
 ::exahype2::RefinementCommand applications::exahype2::exaskred::ADERDGSolver::refinementCriterion(
   const double* const NOALIAS                                   Q,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
@@ -100,8 +95,9 @@ void applications::exahype2::exaskred::ADERDGSolver::boundaryConditions(
     return ::exahype2::RefinementCommand::Keep;
   }
 
-  constexpr int NumberOfNodes = DIMENSIONS == 2 ? (Order + 1) * (Order + 1) : (Order + 1) * (Order + 1) * (Order + 1);
-  constexpr int DataPerNode   = NumberOfUnknowns + NumberOfAuxiliaryVariables;
+  constexpr int NumberOfNodes =
+    DIMENSIONS == 2 ? (DGOrder + 1) * (DGOrder + 1) : (DGOrder + 1) * (DGOrder + 1) * (DGOrder + 1);
+  constexpr int    DataPerNode                 = NumberOfUnknowns + NumberOfAuxiliaryVariables;
   constexpr double SurfaceDisturbanceTolerance = 0.5;
   for (int node = 0; node < NumberOfNodes; node++) {
     const double* const nodeState = Q + node * DataPerNode;
@@ -206,7 +202,7 @@ void applications::exahype2::exaskred::ADERDGSolver::riemannSolver(
   [[maybe_unused]] const int                   faceIndex
 ) {
   ::applications::exahype2::exaskred::coupled::
-    riemannSolver<Shortcuts, NumberOfUnknowns, NumberOfAuxiliaryVariables, Order>(
+    riemannSolver<Shortcuts, NumberOfUnknowns, NumberOfAuxiliaryVariables, DGOrder>(
       QL,
       QR,
       x,
@@ -246,10 +242,10 @@ bool applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
   const int                                                     numberOfStates,
   [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
   const tarch::la::Vector<DIMENSIONS, double>&                  h
-) const {
+) {
   using SlideLayer = ::applications::exahype2::exaskred::coupled::SlideLayer<Shortcuts>;
   if (not ::applications::exahype2::exaskred::landslide::
-        isAdmissibleGranularLayerCell<WaterLayer, NumberOfUnknowns, NumberOfAuxiliaryVariables>(
+        isAdmissibleGranularLayerCell<Shortcuts, NumberOfUnknowns, NumberOfAuxiliaryVariables>(
           Q,
           numberOfStates,
           h,
@@ -284,19 +280,19 @@ bool applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
 void applications::exahype2::exaskred::ADERDGSolver::mapDmpObservables(
   double* const NOALIAS       observables,
   const double* const NOALIAS Q
-) const {
+) {
   for (int observable = 0; observable < NumberOfDMPObservables; observable++) {
     observables[observable] = Q[observable];
   }
 }
 
-// The water observables relax against a decimetre floor: fjord waves reach
+// The water observables relax against a decimetre floor: Fjord waves reach
 // metres, so the millimetre-scale admissibility threshold would flag every
 // wave cell.
 double applications::exahype2::exaskred::ADERDGSolver::dmpRelaxationParameter(
   const int    observable,
   const double specifiedRelaxationParameter
-) const {
+) {
   if (observable < 3) {
     return std::max(specifiedRelaxationParameter, waterDmpRelaxation);
   }

@@ -18,9 +18,8 @@ std::string peano4::particles::assignmentchecks::pruneTypeName() {
 }
 
 template <typename ParticleContainer>
-std::vector<peano4::particles::assignmentchecks::ParticlePosition> peano4::particles::assignmentchecks::recordParticlePositions(
-  const ParticleContainer& container
-) {
+std::vector<peano4::particles::assignmentchecks::ParticlePosition> peano4::particles::assignmentchecks::
+  recordParticlePositions(const ParticleContainer& container) {
   std::vector<peano4::particles::assignmentchecks::ParticlePosition> result(container.size());
 
 #ifdef ASSIGNMENT_CHECKS
@@ -51,20 +50,22 @@ void peano4::particles::assignmentchecks::traceParticleMovements(
 ) {
 #ifdef ASSIGNMENT_CHECKS
 
-  assertion((container.size()) == (recordedPositions.size()), container.size(), recordedPositions.size());
+  [[maybe_unused]] const auto numberOfParticles         = container.size();
+  [[maybe_unused]] const auto numberOfRecordedPositions = recordedPositions.size();
+  assertion(numberOfParticles == numberOfRecordedPositions, numberOfParticles, numberOfRecordedPositions);
 
-  typename ParticleContainer::const_iterator    pParticle         = container.begin();
-  std::vector<ParticlePosition>::const_iterator pRecordedPosition = recordedPositions.begin();
+  auto particleIterator         = container.begin();
+  auto recordedPositionIterator = recordedPositions.begin();
 
-  using Particle = typename std::remove_pointer<typename ParticleContainer::value_type>::type;
+  using Particle = std::remove_pointer_t<typename ParticleContainer::value_type>;
 
-  while (pParticle != container.end()) {
-    if ((*pParticle)->getParallelState() == Particle::ParallelState::Local) {
+  while (particleIterator != container.end()) {
+    if ((*particleIterator)->getParallelState() == Particle::ParallelState::Local) {
       peano4::particles::assignmentchecks::moveParticle(
         peano4::particles::assignmentchecks::pruneTypeName<Particle>(),
-        *pRecordedPosition,
-        (*pParticle)->getX(),
-        (*pParticle)->getPartid(),
+        *recordedPositionIterator,
+        (*particleIterator)->getX(),
+        (*particleIterator)->getPartid(),
         vertexX,
         vertexH,
         treeId,
@@ -72,8 +73,8 @@ void peano4::particles::assignmentchecks::traceParticleMovements(
       );
     }
 
-    pParticle++;
-    pRecordedPosition++;
+    particleIterator++;
+    recordedPositionIterator++;
   }
 #endif
 }

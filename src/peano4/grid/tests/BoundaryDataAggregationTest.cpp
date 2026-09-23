@@ -3,10 +3,10 @@
 #include "BoundaryDataAggregationTest.h"
 
 #include "peano4/grid/BoundaryDataAggregation.h"
-#include "peano4/stacks/Stack.h"
+#include "peano4/grid/Stack.h"
 
 namespace {
-  using Aggregation = peano4::grid::BoundaryDataAggregation<peano4::stacks::Stack<double>>;
+  using Aggregation = peano4::grid::BoundaryDataAggregation<peano4::grid::Stack<double>>;
 } // namespace
 
 peano4::grid::tests::BoundaryDataAggregationTest::BoundaryDataAggregationTest() :

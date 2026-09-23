@@ -2,7 +2,38 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "ParticlesTest.h"
 
+#include "peano4/Constants.h"
+#include "peano4/particles/ParticleFactory.h"
+#include "peano4/particles/ParticleSet.h"
 #include "peano4/particles/particles.h"
+#include "peano4/particles/tests/TestParticle.h"
+
+namespace {
+  struct FactoryParticle final {
+    enum class ParallelState { Local, Virtual };
+
+#if PEANO_DEBUG
+    void setDebugX(const tarch::la::Vector<DIMENSIONS, double>& position) { debugX = position; }
+    void setDebugH(const double cellSize) { debugH = cellSize; }
+#endif
+
+    void setX(const tarch::la::Vector<DIMENSIONS, double>& position) { x = position; }
+    void setSearchRadius(const double radius) { searchRadius = radius; }
+    void setData(const int index, const double value) { data[index] = value; }
+    void setParallelState(const ParallelState state) { parallelState = state; }
+
+    [[nodiscard]] const std::array<double, 2>& getData() const { return data; }
+
+    tarch::la::Vector<DIMENSIONS, double> x{0.0};
+    double                                searchRadius{0.0};
+    std::array<double, 2>                 data{};
+    ParallelState                         parallelState{ParallelState::Local};
+#if PEANO_DEBUG
+    tarch::la::Vector<DIMENSIONS, double> debugX{0.0};
+    double                                debugH{0.0};
+#endif
+  };
+} // namespace
 
 peano4::particles::tests::ParticlesTest::ParticlesTest() :
   TestCase("peano4::particles::tests::ParticlesTest") {}
@@ -10,6 +41,8 @@ peano4::particles::tests::ParticlesTest::ParticlesTest() :
 void peano4::particles::tests::ParticlesTest::run() {
   testMethod(testPeriodicImageTowards);
   testMethod(testApplyPeriodicBoundaryConditions);
+  testMethod(testParticleFactory);
+  testMethod(testParticleSetStatistics);
 }
 
 /** The image of a position lies within half the domain width of the reference on every periodic axis. */
@@ -42,8 +75,7 @@ void peano4::particles::tests::ParticlesTest::testPeriodicImageTowards() {
   validateNumericalEquals(nearReference(0), 0.1);
 
   const tarch::la::Vector<DIMENSIONS, double> centre(1.0);
-  const auto                                  halfWidthAway =
-    peano4::particles::periodicImageTowards(centre, lowerWall, domainWidth, firstAxisPeriodic);
+  const auto halfWidthAway = peano4::particles::periodicImageTowards(centre, lowerWall, domainWidth, firstAxisPeriodic);
   validateNumericalEquals(halfWidthAway(0), 1.0);
 
   // The test driver initialises a domain without a periodic axis.
@@ -51,7 +83,7 @@ void peano4::particles::tests::ParticlesTest::testPeriodicImageTowards() {
   const auto withinTheDomain = peano4::particles::periodicImageTowards(nearUpperWall, lowerWall);
   validateNumericalEquals(withinTheDomain(0), 1.9);
 
-  peano4::datamanagement::CellMarker cell{};
+  peano4::dataview::CellMarker cell{};
   cell.h                 = tarch::la::Vector<DIMENSIONS, double>(0.5);
   cell.centre            = tarch::la::Vector<DIMENSIONS, double>(0.25);
   const auto towardsCell = peano4::particles::periodicImageTowardsCell(nearUpperWall, cell);
@@ -85,4 +117,69 @@ void peano4::particles::tests::ParticlesTest::testApplyPeriodicBoundaryCondition
     firstAxisPeriodic
   );
   validateNumericalEquals(inside(0), 0.5);
+}
+
+void peano4::particles::tests::ParticlesTest::testParticleFactory() {
+  FactoryParticle                             particle;
+  const tarch::la::Vector<DIMENSIONS, double> position(0.25);
+  peano4::particles::initWithData(particle, position, 0.5, {1.0});
+  validateEquals(particle.x, position);
+  validateNumericalEquals(particle.searchRadius, 0.5);
+  validateNumericalEquals(particle.data[0], 1.0);
+  validateNumericalEquals(particle.data[1], 0.0);
+  validate(particle.parallelState == FactoryParticle::ParallelState::Virtual);
+
+  const tarch::la::Vector<DIMENSIONS, double> unitCentre(0.5);
+  const tarch::la::Vector<DIMENSIONS, double> unitSize(1.0);
+  auto                                        localParticles =
+    peano4::particles::createEquallySpacedParticles<FactoryParticle>(0.5, unitCentre, unitSize, false);
+  validateEquals(localParticles.size(), static_cast<std::size_t>(peano4::power(2, DIMENSIONS)));
+  for (auto* const localParticle : localParticles) {
+    delete localParticle;
+  }
+
+  auto alignedParticles = peano4::particles::createParticlesAlignedWithGlobalCartesianMesh<FactoryParticle>(
+    0.5,
+    unitCentre,
+    unitSize,
+    tarch::la::Vector<DIMENSIONS, double>(0.0),
+    unitSize,
+    false
+  );
+  validateEquals(alignedParticles.size(), static_cast<std::size_t>(peano4::power(2, DIMENSIONS)));
+  for (auto* const alignedParticle : alignedParticles) {
+    delete alignedParticle;
+  }
+}
+
+void peano4::particles::tests::ParticlesTest::testParticleSetStatistics() {
+  using TestParticleSet = peano4::particles::ParticleSet<peano4::particles::tests::TestParticle>;
+
+  TestParticleSet::clearReassignmentStatistics();
+  validate(not TestParticleSet::registeredAnyResorting());
+  TestParticleSet::updateLiftDropStatistics(1, 2, 3, 4, 5);
+  validate(TestParticleSet::registeredAnyResorting());
+  validateEquals(TestParticleSet::getNumberOfDropsIntoHorizontalTreeDecomposition(), 5);
+  validate(TestParticleSet::printReassignmentStatistics().find("#lifts=1") != std::string::npos);
+
+  TestParticleSet::clearParticleStateStatistics();
+  TestParticleSet::updateNumberOfLocalAndExpiredParticles(7, 2, 1, {{3, 4}, {3, 5}});
+  validateEquals(TestParticleSet::getNumberOfRemainingLocalParticles(), 7);
+  validate(TestParticleSet::printParticleStateStatistics().find("#remaining=7") != std::string::npos);
+
+#if PEANO_DEBUG
+  TestParticleSet                             particleSetWithDebugData;
+  const tarch::la::Vector<DIMENSIONS, double> debugX(0.25);
+  const tarch::la::Vector<DIMENSIONS, double> debugH(0.5);
+  particleSetWithDebugData.setDebugX(debugX);
+  particleSetWithDebugData.setDebugH(debugH);
+  validateEquals(particleSetWithDebugData.getDebugX(), debugX);
+  validateEquals(particleSetWithDebugData.getDebugH(), debugH);
+#endif
+
+  const TestParticleSet particleSet;
+  validate(not particleSet.toString().empty());
+
+  TestParticleSet::clearReassignmentStatistics();
+  TestParticleSet::clearParticleStateStatistics();
 }

@@ -1,0 +1,132 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+/**
+ * Resets the limiter state of a coarsening parent before its children restrict into it.
+ */
+template <typename CellLabel>
+INLINE_METHOD void exahype2::dg::limiting::resetCoarseningParentLabel(
+  const peano4::dataview::CellMarker& marker,
+  CellLabel&                          cellLabel
+) {
+  if (marker.hasBeenRefined() and not marker.willBeRefined()) {
+    cellLabel.setLimiterStatus(exahype2::dg::LimiterStatus::Regular);
+    cellLabel.setPreviousLimiterStatus(exahype2::dg::LimiterStatus::Regular);
+    cellLabel.setWasTroubledInPreviousStep(false);
+    cellLabel.setPredictorDiverged(false);
+  }
+}
+
+/**
+ * Fills the subgrid of a created child and copies the limiter state of its parent.
+ *
+ * A child of a parent on the subcell scheme takes the averages of the parent's subgrid, and a
+ * child of a parent on the Galerkin scheme the projection of its own nodal solution.
+ */
+template <typename SolverType, typename Value, typename CellLabel>
+INLINE_METHOD void exahype2::dg::limiting::createCell(
+  const peano4::dataview::CellMarker& marker,
+  const double* NOALIAS const         dgToSubcellMatrix,
+  const Value* NOALIAS const          coarseSubcellSolution,
+  Value* NOALIAS const                fineSubcellSolution,
+  const Value* NOALIAS const          fineNodalSolution,
+  const CellLabel&                    coarseCellLabel,
+  CellLabel&                          fineCellLabel
+) {
+  using Layout = exahype2::dg::limiting::SubcellLayout<SolverType>;
+
+  assertion(dgToSubcellMatrix != nullptr);
+  assertion(coarseSubcellSolution != nullptr);
+  assertion(fineSubcellSolution != nullptr);
+  assertion(fineNodalSolution != nullptr);
+
+  if (exahype2::dg::runsSubcellScheme(coarseCellLabel.getLimiterStatus())) {
+    const exahype2::amr::CellAveragingInterpolation<Value> prolongSubcells(
+      Layout::NumberOfSubcellsPerAxis,
+      Layout::NumberOfData
+    );
+    exahype2::amr::prolongCellIntoChild(marker, coarseSubcellSolution, fineSubcellSolution, prolongSubcells);
+  } else {
+    const double* dgToSubcellMatrixPerAxis[DIMENSIONS];
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      dgToSubcellMatrixPerAxis[axis] = dgToSubcellMatrix;
+    }
+    exahype2::amr::applyTensorProductOrderInvariant(
+      fineSubcellSolution,
+      fineNodalSolution,
+      dgToSubcellMatrixPerAxis,
+      Layout::NumberOfDofsPerAxis,
+      Layout::NumberOfSubcellsPerAxis,
+      Layout::NumberOfData
+    );
+  }
+
+  fineCellLabel.setLimiterStatus(coarseCellLabel.getLimiterStatus());
+  fineCellLabel.setPreviousLimiterStatus(coarseCellLabel.getPreviousLimiterStatus());
+  fineCellLabel.setWasTroubledInPreviousStep(coarseCellLabel.getWasTroubledInPreviousStep());
+  fineCellLabel.setPredictorDiverged(coarseCellLabel.getPredictorDiverged());
+}
+
+/**
+ * Restricts the subgrid of a destroyed child onto its parent and merges its limiter state.
+ *
+ * A coarsening parent can combine children on either scheme. A child on the Galerkin scheme is
+ * about to be destroyed, so its subgrid takes the projection of its nodal solution first.
+ */
+template <typename SolverType, typename Value, typename CellLabel>
+INLINE_METHOD void exahype2::dg::limiting::destroyCell(
+  const peano4::dataview::CellMarker&   marker,
+  exahype2::amr::ChildDataStage<Value>& subcellStage,
+  const double* NOALIAS const           dgToSubcellMatrix,
+  Value* NOALIAS const                  coarseSubcellSolution,
+  Value* NOALIAS const                  fineSubcellSolution,
+  const Value* NOALIAS const            fineNodalSolution,
+  CellLabel&                            coarseCellLabel,
+  const CellLabel&                      fineCellLabel
+) {
+  using Layout = exahype2::dg::limiting::SubcellLayout<SolverType>;
+
+  assertion(dgToSubcellMatrix != nullptr);
+  assertion(coarseSubcellSolution != nullptr);
+  assertion(fineSubcellSolution != nullptr);
+  assertion(fineNodalSolution != nullptr);
+
+  if (not exahype2::dg::runsSubcellScheme(fineCellLabel.getLimiterStatus())) {
+    const double* dgToSubcellMatrixPerAxis[DIMENSIONS];
+    for (int axis = 0; axis < DIMENSIONS; axis++) {
+      dgToSubcellMatrixPerAxis[axis] = dgToSubcellMatrix;
+    }
+    exahype2::amr::applyTensorProductOrderInvariant(
+      fineSubcellSolution,
+      fineNodalSolution,
+      dgToSubcellMatrixPerAxis,
+      Layout::NumberOfDofsPerAxis,
+      Layout::NumberOfSubcellsPerAxis,
+      Layout::NumberOfData
+    );
+  }
+
+  const exahype2::amr::CellAveragingRestriction<Value> restrictSubcells(
+    Layout::NumberOfSubcellsPerAxis,
+    Layout::NumberOfData
+  );
+  const bool siblingSetComplete =
+    exahype2::amr::stageChildForRestriction(marker, subcellStage, coarseSubcellSolution, fineSubcellSolution);
+  if (siblingSetComplete) {
+    exahype2::amr::restrictStagedChildrenIntoCell(subcellStage, coarseSubcellSolution, restrictSubcells);
+  }
+
+  coarseCellLabel.setLimiterStatus(
+    exahype2::dg::mergeLimiterStatus(coarseCellLabel.getLimiterStatus(), fineCellLabel.getLimiterStatus())
+  );
+  coarseCellLabel.setPreviousLimiterStatus(
+    exahype2::dg::mergeLimiterStatus(
+      coarseCellLabel.getPreviousLimiterStatus(),
+      fineCellLabel.getPreviousLimiterStatus()
+    )
+  );
+  coarseCellLabel.setWasTroubledInPreviousStep(
+    coarseCellLabel.getWasTroubledInPreviousStep() or fineCellLabel.getWasTroubledInPreviousStep()
+  );
+  coarseCellLabel.setPredictorDiverged(coarseCellLabel.getPredictorDiverged() or fineCellLabel.getPredictorDiverged());
+}

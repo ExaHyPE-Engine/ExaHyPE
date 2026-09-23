@@ -8,7 +8,7 @@ namespace tarch::accelerator::cuda::tests {
   class ReductionTest;
 } // namespace tarch::accelerator::cuda::tests
 
-class tarch::accelerator::cuda::tests::ReductionTest final: public tarch::tests::TestCase {
+class tarch::accelerator::cuda::tests::ReductionTest final : public tarch::tests::TestCase {
 private:
   void testParallelReduction();
 

@@ -4,14 +4,17 @@
 
 #include "exahype2/RefinementControl.h"
 #include "exahype2/RefinementControlService.h"
-#include "peano4/Globals.h"
+#include "peano4/Constants.h"
+#include "peano4/sfc/ActiveCurve.h"
 
 namespace {
   // A command names the cell it was raised for, so the coordinates have to be a cell of
-  // the lattice: 81 cells of width 0.1 per axis, and 0.45 is the centre of cell four.
-  constexpr double TestDomainWidth = 8.1;
-  constexpr double TestCellWidth   = 0.1;
-  constexpr double TestCellCentre  = 0.45;
+  // the lattice: A level-four grid of cells of width 0.1 per axis, and 0.45 is the centre
+  // of cell four.
+  constexpr int    TestCellsPerAxis = peano4::power(peano4::sfc::ActiveCurve::SubdivisionFactor, 4);
+  constexpr double TestCellWidth    = 0.1;
+  constexpr double TestDomainWidth  = TestCellsPerAxis * TestCellWidth;
+  constexpr double TestCellCentre   = 0.45;
 
   tarch::la::Vector<DIMENSIONS, double> uniformVector(double value) {
     return tarch::la::Vector<DIMENSIONS, double>(value);

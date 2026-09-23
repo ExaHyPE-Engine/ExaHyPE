@@ -51,8 +51,8 @@ void runner::tests::FormatTest::testPercentageAndScientificAndRate() {
 }
 
 void runner::tests::FormatTest::testWallClockAndMemory() {
-  validateEquals(runner::Format::wallClock(0.05), std::string("(0.05 s)"));
-  validateEquals(runner::Format::wallClock(1.5), std::string("(1.50 s)"));
+  validateEquals(runner::Format::wallClock(0.05), std::string("(0.0500 s)"));
+  validateEquals(runner::Format::wallClock(1.5), std::string("(1.5000 s)"));
   // chooseMemoryUsageFormat: < 1 MiB reports KiB, < 1 GiB reports MiB.
   validateEquals(runner::Format::memory(1024ull), std::string("1.00 KiB"));
   validateEquals(runner::Format::memory(3ull * 1024ull * 1024ull), std::string("3.00 MiB"));

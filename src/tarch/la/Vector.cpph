@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 template <int Size, typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<Size, Scalar>::Vector():
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<Size, Scalar>::Vector() :
   _values{} {}
 
 template <int Size, typename Scalar>
@@ -31,7 +31,7 @@ INLINE_METHOD tarch::la::Vector<Size, Scalar>::Vector(const std::bitset<Size>& v
 }
 
 template <int Size, typename Scalar>
-INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<Size, Scalar>::Vector(const Scalar& initialValue):
+INLINE_METHOD GPU_CALLABLE_METHOD tarch::la::Vector<Size, Scalar>::Vector(const Scalar& initialValue) :
   _values() {
   for (int i = 0; i < Size; i++) {
     _values[i] = initialValue;

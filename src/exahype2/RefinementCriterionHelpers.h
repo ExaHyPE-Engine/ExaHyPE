@@ -4,19 +4,38 @@
 
 #include "exahype2/RefinementControl.h"
 #include "exahype2/amr/MultiresolutionDetail.h"
+#include "peano4/Constants.h"
+#include "peano4/sfc/ActiveCurve.h"
+#include "tarch/Assertions.h"
+#include "tarch/CompilerSpecificSettings.h"
+#include "tarch/accelerator/accelerator.h"
+
+TARGET_DECLARE
+namespace exahype2 {
+  /**
+   * Hysteresis ratio between the refine and the erase threshold of the detail
+   * criterion: The detail of an affine fit shrinks by this factor from one
+   * level to the next.
+   */
+  constexpr double DefaultCoarsenSafetyFactor{peano4::power(peano4::sfc::ActiveCurve::SubdivisionFactor, 2)};
+
+  INLINE_METHOD GPU_CALLABLE_METHOD RefinementCommand refinementCommandFromDetail(
+    double detail,
+    double eps                 = 1.0e-2,
+    double coarsenSafetyFactor = exahype2::DefaultCoarsenSafetyFactor
+  );
+} // namespace exahype2
+TARGET_DECLARE_END
 
 namespace exahype2 {
-  INLINE_METHOD RefinementCommand
-  refinementCommandFromDetail(const double detail, const double eps = 1.0e-2, const double coarsenSafetyFactor = 9.0);
-
   template <typename Value, typename... Indicators>
   INLINE_METHOD RefinementCommand refineOnDetail(
-    const Value* const  Q,
-    const int           numberOfDofsPerAxis,
-    const int           numberOfUnknownsPlusAuxiliaryVariables,
-    const double        eps,
-    const double        coarsenSafetyFactor,
-    const double* const nodesInUnitInterval,
+    const Value*  Q,
+    int           numberOfDofsPerAxis,
+    int           numberOfUnknownsPlusAuxiliaryVariables,
+    double        eps,
+    double        coarsenSafetyFactor,
+    const double* nodesInUnitInterval,
     const Indicators&... indicators
   );
 } // namespace exahype2

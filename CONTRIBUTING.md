@@ -121,8 +121,13 @@ Make sure to contribute your changes to the documentation.
 
 ## Styleguides
 
-Format your changes by using
+Format and check the repository from its root directory with
 
 ```
-python3 postprocessing/format.py
+python3 -m postprocessing.apply_clang_format
+python3 -m postprocessing.apply_black
+python3 -m postprocessing.check_includes
+python3 -m postprocessing.check_imports
 ```
+
+The scripts need the tools from `requirements.txt`; `--help` lists the options of each script.

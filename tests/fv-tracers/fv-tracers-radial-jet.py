@@ -1,25 +1,12 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 import argparse
+from pathlib import Path
 
 import exahype2
 
 """
 This is a particle tracing convergence test for radial jet flow.
-
-This simulation implements a radial jet velocity field v = r/r² emanating from a central point,
-designed to test the convergence properties of different interpolation schemes. In this one-way
-coupling setup, particles are advected through the analytical velocity field, allowing for
-precise comparison between numerical and analytical solutions.
-
-The radial jet provides an ideal test case because:
-
-- It has a known analytical solution for particle trajectories
-- It tests interpolation accuracy across varying field gradients
-- It validates integration scheme performance in divergent flow fields
-
-Particles are initialised radially around the jet center and their trajectories are compared
-against the analytical solution to measure interpolation and integration errors.
 """
 
 
@@ -33,22 +20,13 @@ def generate_radial_particles(
     center_y=1.5,
 ):
     """
-    Generates a .dat file with particles arranged radially from the domain center.
-
-    Parameters:
-        file_path (str): Path to save the .dat file.
-        num_rays (int): Number of angular directions (rays).
-        particles_per_ray (int): Number of particles along each ray.
-        r_min (float): Minimum distance from center (to avoid singularity).
-        r_max (float): Maximum distance from center.
-        center_x (float): X-coordinate of the radial center.
-        center_y (float): Y-coordinate of the radial center.
+    Generates a .dat file with particles arranged radially from the domain centre.
     """
     import math
 
     with open(file_path, "w") as file:
         for i in range(num_rays):
-            theta = 2 * math.pi * i / num_rays  # Equally spaced angles
+            theta = 2 * math.pi * i / num_rays
             for j in range(particles_per_ray):
                 r = r_min + j * (r_max - r_min) / (particles_per_ray - 1)
                 x = center_x + r * math.cos(theta)
@@ -57,23 +35,23 @@ def generate_radial_particles(
 
     total = num_rays * particles_per_ray
     print(
-        f"Generated {total} radial particles in a 3x3 domain centered at ({center_x},{center_y}) and saved to {file_path}"
+        f"Generated {total} radial particles in a 3x3 domain centred at ({center_x},{center_y}) and saved to {file_path}"
     )
 
 
 interpolation_methods = {
-    "None": 0,  # No interpolation (use raw values)
-    "Constant": 1,  # Piecewise constant interpolation (nearest neighbor)
-    "Linear": 2,  # Piecewise linear interpolation (more accurate)
+    "None": 0,
+    "Constant": 1,
+    "Linear": 2,
 }
 integration_schemes = {
-    "Static": 0,  # No integration (static particles)
-    "Euler": 1,  # Explicit Euler method (simple but less accurate)
-    "SemiEuler": 2,  # Semi-implicit Euler method (better stability)
-    "Verlet": 3,  # Velocity Verlet algorithm (good for orbital mechanics)
-    "Midpoint": 4,  # Midpoint method (2nd order Runge-Kutta)
-    "RK3": 5,  # 3rd order Runge-Kutta method (high accuracy)
-    "RK4": 6,  # 4th order Runge-Kutta method (higher accuracy)
+    "Static": 0,
+    "Euler": 1,
+    "SemiEuler": 2,
+    "Verlet": 3,
+    "Midpoint": 4,
+    "RK3": 5,
+    "RK4": 6,
 }
 
 
@@ -121,8 +99,8 @@ project = exahype2.Project(
 
 initial_conditions = """
   constexpr double Epsilon = 1e-3;
-  const double x0 = 1.5; // Jet center x
-  const double y0 = 1.5; // Jet center y
+  const double x0 = 1.5; // Jet centre x
+  const double y0 = 1.5; // Jet centre y
   const double dx = x(0) - x0;
   const double dy = x(1) - y0;
   const double r2 = dx * dx + dy * dy + Epsilon * Epsilon;
@@ -130,7 +108,7 @@ initial_conditions = """
   Q[0] = 1.0;        // rho
   Q[1] = dx / r2;    // rho * u
   Q[2] = dy / r2;    // rho * v
-  Q[3] = 1.0;        // rho * e (just constant baseline)
+  Q[3] = 1.0;        // rho * e (constant baseline)
 """
 
 boundary_conditions = """
@@ -155,11 +133,11 @@ analytical_solution = """
   // Analytical solution for radial jet with velocity field v = (x/r^2, y/r^2)
   constexpr double Epsilon = 1e-3;
 
-  // Jet center
+  // Jet centre
   const double x_c = 1.5;
   const double y_c = 1.5;
 
-  // Initial position relative to center
+  // Initial position relative to centre
   const double dx0 = particle->getData(1) - x_c;
   const double dy0 = particle->getData(2) - y_c;
 
@@ -191,16 +169,17 @@ analytical_solution = """
   solution[9] = 1.0; // mass
 """
 
-fv_solver = exahype2.solvers.fv.godunov.GlobalFixedTimeStep(
+fv_solver = exahype2.fv.Solver(
     name="FVSolver",
     patch_size=args.degrees_of_freedom,
     unknowns={"rho": 1, "u": 1, "v": 1, "e": 1},
     auxiliary_variables=0,
-    normalised_time_step_size=0.0025 / (args.degrees_of_freedom**0.5),
+    time_stepping=exahype2.TimeStepping.Fixed(0.0025 / (args.degrees_of_freedom**0.5)),
+    scheme=exahype2.fv.Godunov(),
 )
 
-fv_solver.set_implementation(
-    initial_conditions=initial_conditions,
+fv_solver.set_pde_terms(
+    initial_condition=initial_conditions,
     boundary_conditions=boundary_conditions,
     max_eigenvalue=max_eigenvalue,
     flux=flux,
@@ -221,14 +200,14 @@ tracer_attributes = {
     }
 }
 
-tracer_particles = fv_solver.add_tracer(
-    name="Tracers", particle_attributes=tracer_attributes
+tracer_particles = project.add_tracer(
+    name="Tracers", particle_attributes=tracer_attributes, solver=fv_solver
 )
 
 generate_radial_particles(
     "InitTracers.dat", num_rays=36, particles_per_ray=5, r_min=0.1, r_max=0.5
 )
-init_action_set = exahype2.tracer.InsertParticlesFromFile(
+init_action_set = exahype2.particles.InsertParticlesFromFile(
     particle_set=tracer_particles,
     filename="InitTracers.dat",
     scale_factor=1.0,
@@ -238,29 +217,21 @@ init_action_set = exahype2.tracer.InsertParticlesFromFile(
 init_action_set.descend_invocation_order = 0
 project.add_action_set_to_initialisation(init_action_set)
 
-tracing_action_set = exahype2.tracer.FiniteVolumesTracingWithForce(
+fv_solver.trace(
     tracer_particles,
-    fv_solver,
-    project,
-    integration_scheme=integration_schemes[args.integration],
-    interpolation_scheme=interpolation_methods[args.interpolation],
-    force_method=0,
-    fields_to_interpolate="0,3,4",
+    forces=exahype2.particles.Forces(
+        integration_scheme=integration_schemes[args.integration],
+        interpolation_scheme=interpolation_methods[args.interpolation],
+        force_method=0,
+        fields_to_interpolate="0,3,4",
+    ),
+    initialisation=False,
 )
 
-tracing_action_set.descend_invocation_order = (
-    fv_solver._action_set_update_patch.descend_invocation_order + 1
-)
-
-project.add_action_set_to_timestepping(tracing_action_set)
-
-from pathlib import Path
-
-error_measurement = exahype2.solvers.fv.ErrorMeasurementParticles(
-    fv_solver,
-    error_measurement_implementation=analytical_solution,
-    output_file_name="Error_" + Path(__file__).name,
-    particle_set=tracer_particles,
+fv_solver.set_pde_terms(particle_analytical_solution=analytical_solution)
+fv_solver.measure_particle_error(
+    tracer_particles,
+    file="Error_" + Path(__file__).name,
     descend_invocation_order=65536,  # After all other action sets
 )
 

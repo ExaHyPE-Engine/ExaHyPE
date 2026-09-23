@@ -28,25 +28,37 @@ void tarch::accelerator::freePinnedMemory(void* data, [[maybe_unused]] int devic
   Kokkos::kokkos_free<Kokkos::SharedHostPinnedSpace>(data);
 }
 
-void tarch::accelerator::
-  copyToDeviceMemory(void* target, const void* source, std::size_t sizeInBytes, [[maybe_unused]] int device) {
+void tarch::accelerator::copyToDeviceMemory(
+  void*                target,
+  const void*          source,
+  std::size_t          sizeInBytes,
+  [[maybe_unused]] int device
+) {
   using SrcViewType = Kokkos::View<const unsigned char*, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
   SrcViewType srcView(static_cast<const unsigned char*>(source), sizeInBytes);
 
-  using DstViewType = Kokkos::
-    View<unsigned char*, Kokkos::DefaultExecutionSpace::memory_space, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
+  using DstViewType =
+    Kokkos::View<unsigned char*, Kokkos::DefaultExecutionSpace::memory_space, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
   DstViewType dstView(static_cast<unsigned char*>(target), sizeInBytes);
 
   Kokkos::deep_copy(dstView, srcView);
 }
 
-void tarch::accelerator::
-  copyToPinnedMemory(void* target, const void* source, std::size_t sizeInBytes, [[maybe_unused]] int device) {
+void tarch::accelerator::copyToPinnedMemory(
+  void*                target,
+  const void*          source,
+  std::size_t          sizeInBytes,
+  [[maybe_unused]] int device
+) {
   std::memcpy(target, source, sizeInBytes);
 }
 
-void tarch::accelerator::
-  copyFromDeviceMemory(const void* source, void* target, std::size_t sizeInBytes, [[maybe_unused]] int device) {
+void tarch::accelerator::copyFromDeviceMemory(
+  const void*          source,
+  void*                target,
+  std::size_t          sizeInBytes,
+  [[maybe_unused]] int device
+) {
   using SrcViewType = Kokkos::
     View<const unsigned char*, Kokkos::DefaultExecutionSpace::memory_space, Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
   SrcViewType srcView(static_cast<const unsigned char*>(source), sizeInBytes);
@@ -57,8 +69,12 @@ void tarch::accelerator::
   Kokkos::deep_copy(dstView, srcView);
 }
 
-void tarch::accelerator::
-  copyFromPinnedMemory(const void* source, void* target, std::size_t sizeInBytes, [[maybe_unused]] int device) {
+void tarch::accelerator::copyFromPinnedMemory(
+  const void*          source,
+  void*                target,
+  std::size_t          sizeInBytes,
+  [[maybe_unused]] int device
+) {
   std::memcpy(target, source, sizeInBytes);
 }
 

@@ -2,9 +2,9 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "GridTraversalEventTest.h"
 
-#include "peano4/Globals.h"
-#include "peano4/datamanagement/CellMarker.h"
-#include "peano4/datamanagement/FaceMarker.h"
+#include "peano4/Constants.h"
+#include "peano4/dataview/CellMarker.h"
+#include "peano4/dataview/FaceMarker.h"
 #include "peano4/grid/GridTraversalEvent.h"
 #include "tarch/la/Vector.h"
 
@@ -39,15 +39,15 @@ void peano4::grid::tests::GridTraversalEventTest::testDefaults() {
   validateEquals(static_cast<int>(event.getIsFaceAdjacentToParallelDomainBoundary()), 0);
   validateFalse(event.getIsCellLocal());
   validateFalse(event.getIsParentCellLocal());
-  validateEquals(event.getIsAdjacentCellLocal(), 0u);
+  validateEquals(event.getIsAdjacentCellLocal(), 0U);
   validateEquals(event.getCellData(), -1);
   validateEquals(event.getCellPoolIndex(), -1);
-  for (int vertexNumber = 0; vertexNumber < TWO_POWER_D; vertexNumber++) {
+  for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell; vertexNumber++) {
     validateEqualsWithParams1(event.getVertexDataFrom(vertexNumber), 0, vertexNumber);
     validateEqualsWithParams1(event.getVertexDataTo(vertexNumber), 0, vertexNumber);
     validateEqualsWithParams1(event.getVertexPoolIndex(vertexNumber), 0, vertexNumber);
   }
-  for (int faceNumber = 0; faceNumber < TWO_TIMES_D; faceNumber++) {
+  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
     validateEqualsWithParams1(event.getFaceDataFrom(faceNumber), 0, faceNumber);
     validateEqualsWithParams1(event.getFaceDataTo(faceNumber), 0, faceNumber);
     validateEqualsWithParams1(event.getFacePoolIndex(faceNumber), 0, faceNumber);
@@ -69,12 +69,12 @@ void peano4::grid::tests::GridTraversalEventTest::testBitHelpers() {
 
   std::uint32_t mask32 = 0;
   peano4::grid::GridTraversalEvent::bitSet32(mask32, 31, true);
-  validateEquals(mask32, 1u << 31);
+  validateEquals(mask32, 1U << 31);
   validateTrue(peano4::grid::GridTraversalEvent::bitTest32(mask32, 31));
   validateFalse(peano4::grid::GridTraversalEvent::bitTest32(mask32, 0));
   peano4::grid::GridTraversalEvent::bitSet32(mask32, 0, true);
   peano4::grid::GridTraversalEvent::bitSet32(mask32, 31, false);
-  validateEquals(mask32, 1u);
+  validateEquals(mask32, 1U);
 }
 
 void peano4::grid::tests::GridTraversalEventTest::testGeometry() {
@@ -104,7 +104,7 @@ void peano4::grid::tests::GridTraversalEventTest::testGeometry() {
 }
 
 void peano4::grid::tests::GridTraversalEventTest::testVertexMasks() {
-  constexpr int                    AllVertices = (1 << TWO_POWER_D) - 1;
+  constexpr int                    AllVertices = (1 << peano4::VerticesPerCell) - 1;
   peano4::grid::GridTraversalEvent event{};
 
   event.setHasBeenRefined(static_cast<std::uint8_t>(AllVertices));
@@ -132,11 +132,11 @@ void peano4::grid::tests::GridTraversalEventTest::testVertexMasks() {
   event.setIsVertexHanging(0, false);
   validateEquals(static_cast<int>(event.getIsVertexHanging()), 0);
 
-  event.setIsParentVertexLocal(TWO_POWER_D - 1, true);
-  validateTrue(event.getIsParentVertexLocal(TWO_POWER_D - 1));
-  validateEquals(static_cast<int>(event.getIsParentVertexLocal()), 1 << (TWO_POWER_D - 1));
+  event.setIsParentVertexLocal(peano4::VerticesPerCell - 1, true);
+  validateTrue(event.getIsParentVertexLocal(peano4::VerticesPerCell - 1));
+  validateEquals(static_cast<int>(event.getIsParentVertexLocal()), 1 << (peano4::VerticesPerCell - 1));
   event.setIsParentVertexLocal(static_cast<std::uint8_t>(0));
-  validateFalse(event.getIsParentVertexLocal(TWO_POWER_D - 1));
+  validateFalse(event.getIsParentVertexLocal(peano4::VerticesPerCell - 1));
 
   event.setIsVertexParentOfSubtree(static_cast<std::uint8_t>(3));
   validateTrue(event.getIsVertexParentOfSubtree(0));
@@ -159,7 +159,7 @@ void peano4::grid::tests::GridTraversalEventTest::testVertexMasks() {
 }
 
 void peano4::grid::tests::GridTraversalEventTest::testFaceMasks() {
-  constexpr int                    AllFaces = (1 << TWO_TIMES_D) - 1;
+  constexpr int                    AllFaces = (1 << peano4::FacesPerCell) - 1;
   peano4::grid::GridTraversalEvent event{};
 
   event.setIsFaceLocal(static_cast<std::uint8_t>(AllFaces));
@@ -169,11 +169,11 @@ void peano4::grid::tests::GridTraversalEventTest::testFaceMasks() {
   validateTrue(event.getIsFaceLocal(0));
   validateEquals(static_cast<int>(event.getIsFaceLocal()), AllFaces - (1 << DIMENSIONS));
 
-  event.setIsFaceHanging(TWO_TIMES_D - 1, true);
-  validateTrue(event.getIsFaceHanging(TWO_TIMES_D - 1));
-  validateEquals(static_cast<int>(event.getIsFaceHanging()), 1 << (TWO_TIMES_D - 1));
+  event.setIsFaceHanging(peano4::FacesPerCell - 1, true);
+  validateTrue(event.getIsFaceHanging(peano4::FacesPerCell - 1));
+  validateEquals(static_cast<int>(event.getIsFaceHanging()), 1 << (peano4::FacesPerCell - 1));
   event.setIsFaceHanging(static_cast<std::uint8_t>(0));
-  validateFalse(event.getIsFaceHanging(TWO_TIMES_D - 1));
+  validateFalse(event.getIsFaceHanging(peano4::FacesPerCell - 1));
 
   event.setIsFaceAdjacentToParallelDomainBoundary(1, true);
   validateTrue(event.getIsFaceAdjacentToParallelDomainBoundary(1));
@@ -186,7 +186,7 @@ void peano4::grid::tests::GridTraversalEventTest::testFaceMasks() {
 }
 
 void peano4::grid::tests::GridTraversalEventTest::testCellFlags() {
-  constexpr int                    LastAdjacentCell = THREE_POWER_D - 1;
+  constexpr int                    LastAdjacentCell = peano4::CellsPerNeighbourhood - 1;
   peano4::grid::GridTraversalEvent event{};
 
   event.setIsCellLocal(true);
@@ -216,12 +216,12 @@ void peano4::grid::tests::GridTraversalEventTest::testDataIndices() {
   event.setCellPoolIndex(17);
   validateEquals(event.getCellPoolIndex(), 17);
 
-  std::array<int, TWO_POWER_D> vertexData{};
-  std::array<int, TWO_TIMES_D> faceData{};
-  for (int vertexNumber = 0; vertexNumber < TWO_POWER_D; vertexNumber++) {
+  std::array<int, peano4::VerticesPerCell> vertexData{};
+  std::array<int, peano4::FacesPerCell>    faceData{};
+  for (int vertexNumber = 0; vertexNumber < peano4::VerticesPerCell; vertexNumber++) {
     vertexData[vertexNumber] = 10 + vertexNumber;
   }
-  for (int faceNumber = 0; faceNumber < TWO_TIMES_D; faceNumber++) {
+  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
     faceData[faceNumber] = 20 + faceNumber;
   }
   event.setVertexDataFrom(vertexData);
@@ -246,11 +246,11 @@ void peano4::grid::tests::GridTraversalEventTest::testDataIndices() {
   validateEquals(event.getFaceDataTo(1), -6);
   validateEquals(event.getFaceDataTo(0), 20);
 
-  event.setVertexPoolIndex(TWO_POWER_D - 1, 40);
-  event.setFacePoolIndex(TWO_TIMES_D - 1, 41);
-  validateEquals(event.getVertexPoolIndex(TWO_POWER_D - 1), 40);
+  event.setVertexPoolIndex(peano4::VerticesPerCell - 1, 40);
+  event.setFacePoolIndex(peano4::FacesPerCell - 1, 41);
+  validateEquals(event.getVertexPoolIndex(peano4::VerticesPerCell - 1), 40);
   validateEquals(event.getVertexPoolIndex(0), 0);
-  validateEquals(event.getFacePoolIndex(TWO_TIMES_D - 1), 41);
+  validateEquals(event.getFacePoolIndex(peano4::FacesPerCell - 1), 41);
   validateEquals(event.getFacePoolIndex(0), 0);
 }
 
@@ -289,7 +289,7 @@ void peano4::grid::tests::GridTraversalEventTest::testCellMarkerCarriesTheCellFl
   validateFalse(marker.isParentLocal());
 
   event.setHasBeenRefined(0, false);
-  event.setWillBeRefined(TWO_POWER_D - 1, true);
+  event.setWillBeRefined(peano4::VerticesPerCell - 1, true);
   event.setIsParentCellLocal(true);
   const auto refiningMarker = event.getCellMarker();
   validateFalse(refiningMarker.hasBeenRefined());
@@ -310,7 +310,7 @@ void peano4::grid::tests::GridTraversalEventTest::testFaceMarkerCarriesTheFaceAn
 
   auto marker = event.getFaceMarker();
   validateTrue(marker.cellIsLocal);
-  for (int faceNumber = 0; faceNumber < TWO_TIMES_D; faceNumber++) {
+  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
     const bool holdsVertexZero = faceNumber < DIMENSIONS;
     const bool isLocalFace     = faceNumber == 1;
     const bool isHangingFace   = faceNumber == DIMENSIONS;
@@ -327,9 +327,9 @@ void peano4::grid::tests::GridTraversalEventTest::testFaceMarkerCarriesTheFaceAn
 
   // The last vertex alone will be refined, so only the faces with a positive
   // normal hold a refined vertex.
-  event.setWillBeRefined(TWO_POWER_D - 1, true);
+  event.setWillBeRefined(peano4::VerticesPerCell - 1, true);
   const auto refiningMarker = event.getFaceMarker();
-  for (int faceNumber = 0; faceNumber < TWO_TIMES_D; faceNumber++) {
+  for (int faceNumber = 0; faceNumber < peano4::FacesPerCell; faceNumber++) {
     const bool holdsLastVertex = faceNumber >= DIMENSIONS;
     validateEqualsWithParams1(refiningMarker.willBeRefined(faceNumber), holdsLastVertex, faceNumber);
   }

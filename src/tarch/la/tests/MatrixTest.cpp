@@ -7,7 +7,7 @@
 #include "tarch/la/MatrixOperations.h"
 #include "tarch/la/MatrixScalarOperations.h"
 
-tarch::la::tests::MatrixTest::MatrixTest():
+tarch::la::tests::MatrixTest::MatrixTest() :
   TestCase("tarch::la::tests::MatrixTest") {}
 
 void tarch::la::tests::MatrixTest::run() {
@@ -77,7 +77,7 @@ void tarch::la::tests::MatrixTest::testMatrixMatrixOperations() {
   Matrix<2, 3, int> matrixA(1);
   Matrix<2, 3, int> matrixB(2);
   validate(matrixA == matrixA);
-  validate(!(matrixA == matrixB));
+  validate(not(matrixA == matrixB));
 
   // Test equalsReturnIndex
   Matrix<2, 3, double> matrix1(1);
@@ -120,6 +120,21 @@ void tarch::la::tests::MatrixTest::testTransposedMatrix() {
 }
 
 void tarch::la::tests::MatrixTest::testSpecialisedMatrixLayouts() {
+  static_assert(sizeof(Matrix<1, 1, int>) == sizeof(int));
+  static_assert(std::is_trivially_copyable<Matrix<1, 1, int>>::value);
+  static_assert(sizeof(Matrix<2, 2, int>) == 16);
+  static_assert(alignof(Matrix<2, 2, int>) == 8);
+  static_assert(std::is_standard_layout<Matrix<2, 2, int>>::value);
+  static_assert(std::is_trivially_copyable<Matrix<2, 2, int>>::value);
+  static_assert(sizeof(Matrix<3, 3, int>) == 48);
+  static_assert(alignof(Matrix<3, 3, int>) == 16);
+  static_assert(std::is_standard_layout<Matrix<3, 3, int>>::value);
+  static_assert(std::is_trivially_copyable<Matrix<3, 3, int>>::value);
+  static_assert(sizeof(Matrix<4, 4, int>) == 64);
+  static_assert(alignof(Matrix<4, 4, int>) == 16);
+  static_assert(std::is_standard_layout<Matrix<4, 4, int>>::value);
+  static_assert(std::is_trivially_copyable<Matrix<4, 4, int>>::value);
+
   Matrix<2, 2, int> matrix2 = {1, 2, 3, 4};
   validateEquals(matrix2.rows(), 2);
   validateEquals(matrix2.cols(), 2);
@@ -216,7 +231,7 @@ void tarch::la::tests::MatrixTest::testAdditionalMatrixOperations() {
   validateEquals(minus3(2, 2), 8);
   validateEquals(component3(1, 1), 25);
   validate(equals(lhs3, lhs3));
-  validate(!(lhs3 == rhs3));
+  validate(not(lhs3 == rhs3));
 
   Matrix<4, 4, int> matrix4Specialised = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
   auto              diagonal4          = diag(matrix4Specialised);
@@ -239,20 +254,18 @@ void tarch::la::tests::MatrixTest::testAdditionalMatrixOperations() {
   Matrix<2, 2, int> matrix2 = {1, 2, 3, 4};
   Matrix<3, 3, int> matrix3 = {1, 2, 3, 4, 5, 6, 7, 8, 9};
   Matrix<4, 4, int> matrix4 = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
-  validate(!matrix2.toPrettyString().empty());
-  validate(!matrix2.toString().empty());
-  validate(!matrix3.toPrettyString().empty());
-  validate(!matrix4.toPrettyString().empty());
+  validate(not matrix2.toPrettyString().empty());
+  validate(not matrix2.toString().empty());
+  validate(not matrix3.toPrettyString().empty());
+  validate(not matrix4.toPrettyString().empty());
 
   auto converted3 = Matrix<3, 3, int>{1, 2, 3, 4, 5, 6, 7, 8, 9}.convertScalar<double>();
   auto converted4 = Matrix<4, 4, int>{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}.convertScalar<double>();
   validateEquals(converted3(2, 1), 8.0);
   validateEquals(converted4(3, 3), 1.0);
 
-  Matrix<5, 5, double> generic5 = {
-    1.0,  2.0,  3.0,  4.0,  5.0,  6.0,  7.0,  8.0,  9.0,  10.0, 11.0, 12.0, 13.0,
-    14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0, 25.0
-  };
+  Matrix<5, 5, double> generic5 = {1.0,  2.0,  3.0,  4.0,  5.0,  6.0,  7.0,  8.0,  9.0,  10.0, 11.0, 12.0, 13.0,
+                                   14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0, 25.0};
   validateEquals(sum(generic5), 325.0);
   validateNumericalEquals(frobeniusNorm(generic5), std::sqrt(5525.0));
   validateEquals(elementMax(generic5), 25.0);
@@ -277,20 +290,17 @@ void tarch::la::tests::MatrixTest::testAdditionalMatrixOperations() {
   validateEquals(generic5Scaled(0, 0), 0.5);
   validateEquals(generic5Scaled(4, 4), 12.5);
 
-  Matrix<5, 5, double> genericInv = invertEntries(
-    Matrix<5, 5, double>{
-      1.0,   2.0,    4.0,    5.0,    10.0,   20.0,   25.0,    50.0,    100.0,   125.0,   200.0,   250.0,   400.0,
-      500.0, 1000.0, 2000.0, 2500.0, 4000.0, 5000.0, 10000.0, 20000.0, 25000.0, 40000.0, 50000.0, 100000.0
-    }
-  );
+  Matrix<5, 5, double> genericInv =
+    invertEntries(Matrix<5, 5, double>{1.0,    2.0,     4.0,     5.0,     10.0,    20.0,    25.0,    50.0,   100.0,
+                                       125.0,  200.0,   250.0,   400.0,   500.0,   1000.0,  2000.0,  2500.0, 4000.0,
+                                       5000.0, 10000.0, 20000.0, 25000.0, 40000.0, 50000.0, 100000.0});
   validateNumericalEquals(genericInv(0, 0), 1.0);
   validateNumericalEquals(genericInv(0, 1), 0.5);
   validateNumericalEquals(genericInv(4, 4), 0.00001);
 
-  Matrix<6, 4, int> rectangular = {
-    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24
-  };
-  auto rectangularTranspose = transpose(rectangular);
+  Matrix<6, 4, int> rectangular          = {1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12,
+                                            13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24};
+  auto              rectangularTranspose = transpose(rectangular);
   validateEquals(rectangularTranspose(0, 5), 21);
   validateEquals(rectangularTranspose(3, 0), 4);
 }

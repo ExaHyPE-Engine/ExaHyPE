@@ -17,4 +17,6 @@ private:
   void testBoundedFullyRefinedLeavesGrowsPerLevel();
   void testBoundedFullyRefinedLeavesHandlesLimits();
   void testGridCellSummary();
+  void testDescribeGridSnapshotRendersFilledRows();
+  void testDescribeGridTransitionRendersChangedAndMemoryRows();
 };

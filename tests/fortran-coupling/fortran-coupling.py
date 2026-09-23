@@ -27,10 +27,10 @@ args = parse_arguments()
 
 initial_conditions = """
   const double r = std::sqrt(x(0) * x(0) + x(1) * x(1));
-  Q[0] = r < 0.5 ? 2.0 : 1.0; // water depth h
-  Q[1] = 0.0;                 // momentum h * u
-  Q[2] = 0.0;                 // momentum h * v
-  Q[3] = 0.0;                 // flat bathymetry b
+  Q[0] = r < 0.5 ? 2.0 : 1.0; // Water depth h
+  Q[1] = 0.0;                 // Momentum h * u
+  Q[2] = 0.0;                 // Momentum h * v
+  Q[3] = 0.0;                 // Flat bathymetry b
 """
 
 boundary_conditions = """
@@ -53,22 +53,23 @@ project = exahype2.Project(
     max_grid_levels=args.grid_levels,
 )
 
-fv_solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
+fv_solver = exahype2.fv.Solver(
     name="FVSolver",
     patch_size=args.degrees_of_freedom,
     unknowns={"h": 1, "hu": 2, "b": 1},
     auxiliary_variables=0,
-    time_step_relaxation=0.5,
+    time_stepping=exahype2.TimeStepping.Adaptive(0.5),
+    scheme=exahype2.fv.Godunov(),
 )
-fv_solver.set_implementation(
-    initial_conditions=initial_conditions,
+fv_solver.set_pde_terms(
+    initial_condition=initial_conditions,
     boundary_conditions=boundary_conditions,
-    max_eigenvalue=exahype2.solvers.PDETerms.User_Defined_Implementation,
-    riemann_solver=exahype2.solvers.PDETerms.User_Defined_Implementation,
+    max_eigenvalue=True,
+    riemann_solver=True,
 )
 project.add_solver(fv_solver)
 
 project.output.makefile.add_cpp_file("FVSolver.cpp")
-project.output.makefile.add_Fortran_file("rpn2_geoclaw.f90")
+project.output.makefile.add_fortran_file("rpn2_geoclaw.f90")
 
 project.generate_and_build()

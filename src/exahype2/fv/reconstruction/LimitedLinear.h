@@ -6,7 +6,7 @@
 #include "exahype2/fv/PatchUtils.h"
 #include "exahype2/fv/limiter/SlopeLimiter.h"
 #include "exahype2/fv/reconstruction/InterfaceFluxes.h"
-#include "peano4/Globals.h"
+#include "peano4/Constants.h"
 #include "tarch/Assertions.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/accelerator.h"
@@ -36,7 +36,7 @@ struct exahype2::fv::reconstruction::LimitedLinear final {
   static constexpr int HaloSize = 2;
 
   template <
-    typename Solver,
+    typename SolverType,
     int  NumberOfVolumesPerAxis,
     int  NumberOfUnknowns,
     int  NumberOfAuxiliaryVariables,
@@ -50,7 +50,7 @@ struct exahype2::fv::reconstruction::LimitedLinear final {
     typename ComputePrecision>
   INLINE_METHOD GPU_CALLABLE_METHOD static void accumulateFluxDivergence(
     const StoragePrecision* NOALIAS const        inputPatch,
-    const StoragePrecision* NOALIAS const        faceInputPatches[TWO_TIMES_D],
+    const StoragePrecision* NOALIAS const        faceInputPatches[peano4::FacesPerCell],
     const tarch::la::Vector<DIMENSIONS, int>&    volumeIndex,
     const int                                    centreOffset,
     const StoragePrecision* NOALIAS const        centreState,
@@ -65,7 +65,7 @@ struct exahype2::fv::reconstruction::LimitedLinear final {
   );
 
   template <
-    typename Solver,
+    typename SolverType,
     int  NumberOfUnknowns,
     int  NumberOfData,
     bool EvaluateFlux,

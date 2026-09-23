@@ -5,6 +5,7 @@ find_package(OpenMP REQUIRED)
 set(OMPT_FOUND "${OpenMP_FOUND}")
 
 if(TARGET PeanoOptions)
+  set(OFFLOADING_FLAGS "")
   if(NOT DEFINED PEANO_WITH_GPU_ARCH OR "${PEANO_WITH_GPU_ARCH}" STREQUAL "none")
     message(FATAL_ERROR "PEANO_WITH_GPU_ARCH must be set to one of: sm_<cc>, gfx<arch>, spir64")
   endif()
@@ -19,11 +20,9 @@ if(TARGET PeanoOptions)
     endif()
 
   elseif(${CMAKE_CXX_COMPILER_ID} MATCHES "GNU")
-    if(PEANO_WITH_GPU_VENDOR STREQUAL "nvidia")
-      set(OFFLOADING_FLAGS -foffload=nvptx-none)
-    elseif(PEANO_WITH_GPU_VENDOR STREQUAL "amd")
-      set(OFFLOADING_FLAGS -foffload=amdgcn-amdhsa)
-    endif()
+    message(FATAL_ERROR
+      "PEANO_WITH_GPU_BACKEND=ompt does not support the GNU compiler; use Clang, NVHPC or Intel."
+    )
 
   elseif(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
     if(PEANO_WITH_GPU_VENDOR STREQUAL "nvidia")
@@ -37,11 +36,17 @@ if(TARGET PeanoOptions)
     endif()
   endif()
 
-  if(OFFLOADING_FLAGS)
-    target_link_libraries(PeanoOptions INTERFACE OpenMP::OpenMP_CXX)
-    target_compile_options(PeanoOptions INTERFACE $<$<COMPILE_LANGUAGE:CXX>:${OFFLOADING_FLAGS}>)
-    target_link_options(PeanoOptions INTERFACE ${OFFLOADING_FLAGS} ${OpenMP_CXX_FLAGS})
-    message(STATUS "Using OMPT offloading flags: ${OFFLOADING_FLAGS}")
-    target_compile_definitions(PeanoOptions INTERFACE PEANO_WITH_GPU_BACKEND_OMPT PEANO_WITH_GPU_BACKEND)
+  if(NOT OFFLOADING_FLAGS)
+    message(FATAL_ERROR
+      "PEANO_WITH_GPU_BACKEND=ompt cannot offload with ${CMAKE_CXX_COMPILER_ID} to "
+      "PEANO_WITH_GPU_ARCH=${PEANO_WITH_GPU_ARCH}. Offload is supported for Clang with sm_*, gfx* "
+      "or spir64, for NVHPC with sm_*, and for Intel with spir64."
+    )
   endif()
+
+  target_link_libraries(PeanoOptions INTERFACE OpenMP::OpenMP_CXX)
+  target_compile_options(PeanoOptions INTERFACE $<$<COMPILE_LANGUAGE:CXX>:${OFFLOADING_FLAGS}>)
+  target_link_options(PeanoOptions INTERFACE ${OFFLOADING_FLAGS} ${OpenMP_CXX_FLAGS})
+  message(STATUS "Using OMPT offloading flags: ${OFFLOADING_FLAGS}")
+  target_compile_definitions(PeanoOptions INTERFACE PEANO_WITH_GPU_BACKEND_OMPT PEANO_WITH_GPU_BACKEND)
 endif()

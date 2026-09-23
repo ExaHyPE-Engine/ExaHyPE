@@ -81,71 +81,41 @@ for (int i=0; i<10; i++){
 }
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-If in doubt, you can use the automatic formatting tool described below, but it is crucial
-that you only format files which you had modified already, i.e. no formatting random files
-in the repo.
+The formatting and analysis scripts described below apply these conventions to every
+source file of the repository.
 
 
-Code Formatting
-===============
+Code Formatting and Static Analysis
+===================================
 
-Recently (2023) a code formatting script has been added to incrementally add consistent
-formatting throughout the project. Under the hood, it uses ``clang-format`` for C++ code,
-and ``black`` for Python code.
-
-Since the idea is to incrementally add consistent formatting throughout, the code script
-is set up to only format files that have been modified on your local branch to the main
-branch, ``p4``. Ideally, the formatting script should be run on your local branch before
-you submit a merge request.
-
-The usage is straightforward. The script can be found in ``postprocessing/format.py``.
-To format all files that differ from files on the main ``p4`` branch, simply run
+The package ``postprocessing`` holds one script per tool. Each script walks every source
+file below the repository root and skips build directories, generated code and virtual
+environments. Run them from the repository root, after ``pip install -r requirements.txt``
+installed the tools:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-python3 postprocessing/format.py
+python3 -m postprocessing.apply_clang_format
+python3 -m postprocessing.apply_black
+python3 -m postprocessing.apply_clang_tidy --build-directory build
+python3 -m postprocessing.check_includes
+python3 -m postprocessing.check_imports
+python3 -m postprocessing.check_python_lint
+python3 -m postprocessing.check_dead_code
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If you want to compare your local branch to a different branch than ``p4``, you can
-specify that using the ``-b`` or ``--branch`` flag, e.g.
+- ``apply_clang_format`` formats the C and C++ files with ``.clang-format``.
+- ``apply_black`` formats the Python files.
+- ``apply_clang_tidy`` runs ``.clang-tidy`` on the translation units of the compilation
+  database of a CMake build and on the headers they include; ``--fix`` applies the fixes.
+- ``check_includes`` checks the include conventions of the C and C++ files and, with a
+  compilation database, reports unused and indirect includes.
+- ``check_imports`` checks the order of the Python imports, reports unused imports and
+  imports every module of a package in a fresh interpreter.
+- ``check_python_lint`` reports syntax errors, undefined names and unused variables.
+- ``check_dead_code`` reports unused functions, classes and variables.
 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-python3 postprocessing/format.py --branch branch-I-want-to-merge-into
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Note that the format script detects potential files which might need formatting using
-git, therefore only files tracked by the git versioning will be considered.
-
-If you prefer to run the formatting script on individual files only, you can specify
-them using the ``--files`` flag:
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-python3 postprocessing/format.py --files myfile1.py myCppFile.cpp myCppHeaderFile.h
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The ``--files`` flag doesn't check whether the files you provide are traced by git, and
-will try to format any files you provide. This can be used for instance to run the
-formatter on generated files.
-
-
-
-<div style="color:Black ; background-color: #cfc ; padding: 10px; border: 1px solid green;">
-Our formatting scripts works only within a virtual environment. To create such
-an environment, follow the following steps:
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-sudo apt install python3-venv
-rm -rf .formatting_python_env
-python3 -m venv .formatting_python_env
-source .formatting_python_env/bin/activate
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-We install the Python environments, remove old formatting tools, create a new
-environment within the Peano directory and finally activate this environment.
-From hereon, future steps should only require the very last step.
-</div>
-
-As with other parts of the code, the @ref page_faq_home might contain further
-helpful instructions.
+With ``--check``, the formatting scripts list the files they would change and change
+none. A script exits with status one when it reports a finding.
 
 
 

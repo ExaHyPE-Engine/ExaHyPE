@@ -5,7 +5,7 @@
 #include "exahype2/Enumeration.h"
 #include "exahype2/fv/EigenvalueStatistics.h"
 #include "exahype2/fv/PatchUtils.h"
-#include "peano4/Globals.h"
+#include "peano4/Constants.h"
 #include "tarch/Assertions.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/accelerator.h"
@@ -16,7 +16,7 @@ namespace exahype2::fv::reconstruction {
   template <int HaloSize, int NumberOfVolumesPerAxis, int NumberOfData, typename StoragePrecision>
   INLINE_METHOD GPU_CALLABLE_METHOD const StoragePrecision* neighbourAlongNormal(
     const StoragePrecision* NOALIAS const     inputPatch,
-    const StoragePrecision* NOALIAS const     faceInputPatches[TWO_TIMES_D],
+    const StoragePrecision* NOALIAS const     faceInputPatches[peano4::FacesPerCell],
     const tarch::la::Vector<DIMENSIONS, int>& volumeIndex,
     int                                       centreOffset,
     int                                       strideAlongNormal,
@@ -24,7 +24,7 @@ namespace exahype2::fv::reconstruction {
     int                                       offset
   );
 
-  template <typename Solver, int NumberOfUnknowns, bool EvaluateFlux, typename ComputePrecision>
+  template <typename SolverType, int NumberOfUnknowns, bool EvaluateFlux, typename ComputePrecision>
   INLINE_METHOD GPU_CALLABLE_METHOD ComputePrecision rusanovFaceFlux(
     const ComputePrecision* NOALIAS const        leftState,
     const ComputePrecision* NOALIAS const        rightState,
@@ -37,7 +37,7 @@ namespace exahype2::fv::reconstruction {
   );
 
   template <
-    typename Solver,
+    typename SolverType,
     int  NumberOfVolumesPerAxis,
     int  NumberOfUnknowns,
     int  NumberOfData,

@@ -2,58 +2,61 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "internal.h"
 
-#include "peano4/datamanagement/VertexMarker.h"
-#include "peano4/datamanagement/CellMarker.h"
+#include "peano4/dataview/CellMarker.h"
+#include "peano4/dataview/VertexMarker.h"
 
-double peano4::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(const ::peano4::datamanagement::VertexMarker& marker) {
-  return relativeReleaseOwnershipSpatialSortingTolerance(marker.getH());
+double peano4::particles::relativeReleaseOwnershipSpatialSortingTolerance(
+  const peano4::dataview::VertexMarker& marker
+) {
+  return peano4::particles::relativeReleaseOwnershipSpatialSortingTolerance(marker.getH());
 }
 
-double peano4::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(const ::peano4::datamanagement::CellMarker& marker) {
-  return relativeReleaseOwnershipSpatialSortingTolerance(marker.getH());
+double peano4::particles::relativeReleaseOwnershipSpatialSortingTolerance(const peano4::dataview::CellMarker& marker) {
+  return peano4::particles::relativeReleaseOwnershipSpatialSortingTolerance(marker.getH());
 }
 
-double peano4::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(const tarch::la::Vector< DIMENSIONS, double >& h) {
-  return ReleaseOwnershipSpatialSortingTolerance * tarch::la::max(h);
+double peano4::particles::relativeReleaseOwnershipSpatialSortingTolerance(
+  const tarch::la::Vector<DIMENSIONS, double>& h
+) {
+  return peano4::particles::ReleaseOwnershipSpatialSortingTolerance * tarch::la::max(h);
 }
 
-double peano4::particles::internal::relativeGrabOwnershipSpatialSortingTolerance(const ::peano4::datamanagement::VertexMarker& marker) {
-  return relativeGrabOwnershipSpatialSortingTolerance(marker.getH());
+double peano4::particles::relativeGrabOwnershipSpatialSortingTolerance(const peano4::dataview::VertexMarker& marker) {
+  return peano4::particles::relativeGrabOwnershipSpatialSortingTolerance(marker.getH());
 }
 
-double peano4::particles::internal::relativeGrabOwnershipSpatialSortingTolerance(const ::peano4::datamanagement::CellMarker& marker) {
-  return relativeGrabOwnershipSpatialSortingTolerance(marker.getH());
+double peano4::particles::relativeGrabOwnershipSpatialSortingTolerance(const peano4::dataview::CellMarker& marker) {
+  return peano4::particles::relativeGrabOwnershipSpatialSortingTolerance(marker.getH());
 }
 
-double peano4::particles::internal::relativeGrabOwnershipSpatialSortingTolerance(const tarch::la::Vector< DIMENSIONS, double >& h) {
-  return GrabOwnershipSpatialSortingTolerance * tarch::la::max(h);
+double peano4::particles::relativeGrabOwnershipSpatialSortingTolerance(const tarch::la::Vector<DIMENSIONS, double>& h) {
+  return peano4::particles::GrabOwnershipSpatialSortingTolerance * tarch::la::max(h);
 }
 
-bool peano4::particles::internal::fitsIntoLevel(double searchRadius, const ::peano4::datamanagement::CellMarker& marker) {
+/**
+ * Returns whether a particle with the given search radius fits into the cells
+ * of the marker's level, which holds when twice the radius is at most the
+ * smallest cell width.
+ */
+bool peano4::particles::fitsIntoLevel(const double searchRadius, const peano4::dataview::CellMarker& marker) {
   return tarch::la::greaterEquals(tarch::la::min(marker.getH()), 2.0 * searchRadius);
 }
 
-bool peano4::particles::internal::fitsIntoLevel(double searchRadius, const ::peano4::datamanagement::VertexMarker& marker) {
+bool peano4::particles::fitsIntoLevel(const double searchRadius, const peano4::dataview::VertexMarker& marker) {
   return tarch::la::greaterEquals(tarch::la::min(marker.getH()), 2.0 * searchRadius);
 }
 
 /**
- * Find out which vertex should hold a particle.
- *
- * @param x          Position of the particle of interest.
- * @param cellCentre Centre of the cell, as returned by CellMarker::getX().
- * @return           Number of the vertex within that cell to which the
- *                   particle should be assigned. The result identifies
- *                   the vertex in z-order, i.e. 00 is the left bottom
- *                   vertex, 10 the right bottom one, and so forth. Use
- *                   to_ulong() to convert it.
+ * Returns the vertex of the cell around cellCentre that holds a particle at x.
+ * The result carries one bit per axis, and bit d is set when the particle lies
+ * at or beyond the cell centre along axis d.
  */
-std::bitset<DIMENSIONS> peano4::particles::internal::getParticleAssociationWithinCell(
-  const tarch::la::Vector<DIMENSIONS, double>& x, const tarch::la::Vector<DIMENSIONS, double>& cellCentre
+std::bitset<DIMENSIONS> peano4::particles::getParticleAssociationWithinCell(
+  const tarch::la::Vector<DIMENSIONS, double>& x,
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre
 ) {
   std::bitset<DIMENSIONS> destAssociation;
 
-  // marker.getX() gives me the centre of the cell
   for (int d = 0; d < DIMENSIONS; d++) {
     destAssociation[d] = tarch::la::greaterEquals(x(d), cellCentre(d));
   }

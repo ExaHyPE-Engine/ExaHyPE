@@ -8,7 +8,7 @@ namespace tarch::reader::tests {
   class NetCDFFileReaderTest;
 } // namespace tarch::reader::tests
 
-class tarch::reader::tests::NetCDFFileReaderTest: public tarch::tests::TestCase {
+class tarch::reader::tests::NetCDFFileReaderTest : public tarch::tests::TestCase {
 private:
   void testOpenReadAndClose();
   void testMissingFileFails();

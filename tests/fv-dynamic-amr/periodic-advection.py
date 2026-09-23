@@ -55,7 +55,7 @@ refinement_criterion = """
     NumberOfFiniteVolumesPerAxisPerPatch,
     NumberOfUnknowns + NumberOfAuxiliaryVariables,
     1.0e-2,
-    9.0,
+    ::exahype2::DefaultCoarsenSafetyFactor,
     nullptr,
     [](const double* const values) { return 1.0 + values[Shortcuts::q]; }
   );
@@ -65,16 +65,18 @@ flux = """
   F[Shortcuts::q] = Q[Shortcuts::q];
 """
 
-solver = exahype2.solvers.fv.godunov.GlobalAdaptiveTimeStep(
+solver = exahype2.fv.Solver(
     name="FVSolver",
     patch_size=args.degrees_of_freedom,
     unknowns={"q": 1},
     auxiliary_variables=0,
-    time_step_relaxation=0.8,
+    time_stepping=exahype2.TimeStepping.Adaptive(0.8),
+    scheme=exahype2.fv.Godunov(),
 )
 
-solver.set_implementation(
-    initial_conditions=initial_conditions,
+solver.set_pde_terms(
+    initial_condition=initial_conditions,
+    boundary_conditions=True,
     refinement_criterion=refinement_criterion,
     max_eigenvalue="return 1.0;",
     flux=flux,

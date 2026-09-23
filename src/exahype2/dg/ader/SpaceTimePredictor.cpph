@@ -1,0 +1,516 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+TARGET_DECLARE
+/**
+ * Runs the space-time predictor of a nonlinear system on one cell: The Picard iteration solves
+ * the local Cauchy problem, the time averages project onto the faces and the volume integral of
+ * the time-averaged flux and source is added to the cell state. The scratch blocks have the
+ * extents of NonlinearPredictorScratch. Returns the number of Picard sweeps, or -1 when the
+ * iteration diverged and the cell holds no valid candidate.
+ */
+template <
+  typename SolverType,
+  int  NumberOfDofsPerAxis,
+  int  NumberOfUnknowns,
+  int  NumberOfAuxiliaryVariables,
+  bool EvaluateFlux,
+  bool EvaluateNonconservativeProduct,
+  bool EvaluateSource,
+  bool EvaluateDiffusiveFlux,
+  bool EvaluateDiffusiveSource,
+  typename StoragePrecision,
+  typename ComputePrecision,
+  typename PicardPrecision,
+  typename FacePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD int exahype2::dg::ader::spaceTimePredictor(
+  FacePrecision* const NOALIAS                 faceState[peano4::FacesPerCell],
+  FacePrecision* const NOALIAS                 faceFlux[peano4::FacesPerCell],
+  StoragePrecision* NOALIAS const              cellState,
+  ComputePrecision* NOALIAS const              timeAveragedScratch,
+  PicardPrecision* NOALIAS const               picardScratch,
+  const BasisTables<ComputePrecision>&         tables,
+  const BasisTables<PicardPrecision>&          picardTables,
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const double                                 timeStamp,
+  const double                                 timeStepSize,
+  const double                                 picardTolerance
+) {
+  using Scratch = NonlinearPredictorScratch<
+    NumberOfDofsPerAxis,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    EvaluateFlux,
+    EvaluateNonconservativeProduct,
+    EvaluateSource,
+    EvaluateDiffusiveFlux,
+    EvaluateDiffusiveSource>;
+  using CellLayout = typename Scratch::CellLayout;
+
+  constexpr int MaximumNumberOfSweeps = 2 * NumberOfDofsPerAxis + 1;
+
+  assertion(timeStepSize >= 0.0, timeStepSize);
+  assertion(picardTolerance > 0.0, picardTolerance);
+
+  PicardPrecision* NOALIAS const  spaceTimeState     = picardScratch + Scratch::SpaceTimeStateOffset;
+  PicardPrecision* NOALIAS const  rightHandSide      = picardScratch + Scratch::RightHandSideOffset;
+  PicardPrecision* NOALIAS const  spaceTimeFlux      = picardScratch + Scratch::SpaceTimeFluxOffset;
+  PicardPrecision* NOALIAS const  spaceTimeSource    = picardScratch + Scratch::SpaceTimeSourceOffset;
+  PicardPrecision* NOALIAS const  stateGradient      = picardScratch + Scratch::StateGradientOffset;
+  PicardPrecision* NOALIAS const  updatedTimeSlice   = picardScratch + Scratch::UpdatedTimeSliceOffset;
+  ComputePrecision* NOALIAS const timeAveragedState  = timeAveragedScratch + Scratch::TimeAveragedStateOffset;
+  ComputePrecision* NOALIAS const timeAveragedFlux   = timeAveragedScratch + Scratch::TimeAveragedFluxOffset;
+  ComputePrecision* NOALIAS const timeAveragedSource = timeAveragedScratch + Scratch::TimeAveragedSourceOffset;
+  ComputePrecision* NOALIAS const volumeCoefficients = timeAveragedScratch + Scratch::VolumeCoefficientsOffset;
+
+  const auto picardInverseCellSize = tarch::la::convertScalar<PicardPrecision>(tarch::la::invertEntries(cellSize));
+
+  initialisePredictorState<
+    NumberOfDofsPerAxis,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    StoragePrecision,
+    PicardPrecision>(spaceTimeState, cellState);
+
+  int  numberOfSweeps = 0;
+  bool diverged       = false;
+  for (; numberOfSweeps < MaximumNumberOfSweeps; numberOfSweeps++) {
+    for (int timeNode = 0; timeNode < NumberOfDofsPerAxis; timeNode++) {
+      if constexpr (Scratch::NeedsStateGradient) {
+        computeSpaceTimeGradient<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables, PicardPrecision>(
+          stateGradient,
+          spaceTimeState,
+          picardTables.derivativeOperator,
+          picardInverseCellSize,
+          timeNode
+        );
+      }
+
+      if constexpr (EvaluateFlux) {
+        evaluateSpaceTimeFlux<
+          SolverType,
+          NumberOfDofsPerAxis,
+          NumberOfUnknowns,
+          NumberOfAuxiliaryVariables,
+          EvaluateDiffusiveFlux,
+          PicardPrecision>(
+          spaceTimeFlux,
+          spaceTimeState,
+          stateGradient,
+          picardTables.quadraturePoints,
+          cellCentre,
+          cellSize,
+          timeStamp,
+          timeStepSize,
+          timeNode
+        );
+      }
+
+      initialisePicardRightHandSide<
+        NumberOfDofsPerAxis,
+        NumberOfUnknowns,
+        NumberOfAuxiliaryVariables,
+        StoragePrecision,
+        PicardPrecision>(
+        rightHandSide,
+        cellState,
+        picardTables.cellQuadratureWeights,
+        picardTables.leftFaceCoefficients,
+        timeNode
+      );
+
+      if constexpr (EvaluateFlux) {
+        subtractFluxDivergence<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables, PicardPrecision>(
+          rightHandSide,
+          spaceTimeFlux,
+          picardTables.stiffnessOperatorTransposed,
+          picardTables.cellQuadratureWeights,
+          picardInverseCellSize,
+          timeStepSize,
+          timeNode
+        );
+      }
+
+      if constexpr (Scratch::AccumulatesSource) {
+        evaluateSpaceTimeSource<
+          SolverType,
+          NumberOfDofsPerAxis,
+          NumberOfUnknowns,
+          NumberOfAuxiliaryVariables,
+          EvaluateNonconservativeProduct,
+          EvaluateSource,
+          EvaluateDiffusiveSource,
+          PicardPrecision>(
+          spaceTimeSource,
+          rightHandSide,
+          spaceTimeState,
+          stateGradient,
+          picardTables.quadraturePoints,
+          picardTables.quadratureWeights,
+          picardTables.cellQuadratureWeights,
+          cellCentre,
+          cellSize,
+          timeStamp,
+          timeStepSize,
+          timeNode
+        );
+      }
+    }
+
+    const double squaredResidual =
+      solvePicardSystem<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables, PicardPrecision>(
+        spaceTimeState,
+        updatedTimeSlice,
+        rightHandSide,
+        picardTables.inversePicardOperator,
+        picardTables.inverseCellQuadratureWeights
+      );
+
+    if (not std::isfinite(squaredResidual)) {
+      diverged = true;
+      break;
+    }
+    if (squaredResidual < picardTolerance * picardTolerance) {
+      break;
+    }
+  }
+
+  averagePredictorOverTime<
+    NumberOfDofsPerAxis,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    EvaluateFlux,
+    Scratch::AccumulatesSource,
+    ComputePrecision,
+    PicardPrecision>(
+    timeAveragedState,
+    timeAveragedFlux,
+    timeAveragedSource,
+    spaceTimeState,
+    spaceTimeFlux,
+    spaceTimeSource,
+    tables.quadratureWeights
+  );
+
+  UNROLL(DIMENSIONS)
+  for (int direction = 0; direction < DIMENSIONS; direction++) {
+    exahype2::dg::extrapolateNodalFieldToFacePair<
+      NumberOfDofsPerAxis,
+      CellLayout::NumberOfData,
+      CellLayout::PaddedNumberOfData,
+      ComputePrecision,
+      FacePrecision,
+      ComputePrecision>(
+      faceState[direction],
+      faceState[direction + DIMENSIONS],
+      timeAveragedState,
+      tables.leftFaceCoefficients,
+      tables.rightFaceCoefficients,
+      direction
+    );
+    if constexpr (EvaluateFlux) {
+      exahype2::dg::extrapolateNodalFieldToFacePair<
+        NumberOfDofsPerAxis,
+        NumberOfUnknowns,
+        CellLayout::PaddedNumberOfUnknowns,
+        ComputePrecision,
+        FacePrecision,
+        ComputePrecision>(
+        faceFlux[direction],
+        faceFlux[direction + DIMENSIONS],
+        timeAveragedFlux + direction * CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell,
+        tables.leftFaceCoefficients,
+        tables.rightFaceCoefficients,
+        direction
+      );
+    } else {
+      for (int entry = 0; entry < CellLayout::NodesPerFace * NumberOfUnknowns; entry++) {
+        faceFlux[direction][entry]              = static_cast<FacePrecision>(0);
+        faceFlux[direction + DIMENSIONS][entry] = static_cast<FacePrecision>(0);
+      }
+    }
+  }
+
+  if constexpr (EvaluateFlux) {
+    const auto inverseCellSize = tarch::la::convertScalar<ComputePrecision>(tarch::la::invertEntries(cellSize));
+    buildVolumeCoefficients<NumberOfDofsPerAxis, ComputePrecision>(
+      volumeCoefficients,
+      tables.stiffnessOperator,
+      tables.inverseQuadratureWeights,
+      timeStepSize
+    );
+    addFluxVolumeIntegral<
+      NumberOfDofsPerAxis,
+      NumberOfUnknowns,
+      NumberOfAuxiliaryVariables,
+      StoragePrecision,
+      ComputePrecision>(cellState, timeAveragedFlux, volumeCoefficients, inverseCellSize);
+  }
+
+  if constexpr (Scratch::AccumulatesSource) {
+    addSourceVolumeIntegral<
+      NumberOfDofsPerAxis,
+      NumberOfUnknowns,
+      NumberOfAuxiliaryVariables,
+      StoragePrecision,
+      ComputePrecision>(cellState, timeAveragedSource, timeStepSize);
+  }
+
+  if (diverged) {
+    return -1;
+  }
+  return std::min(numberOfSweeps + 1, MaximumNumberOfSweeps);
+}
+
+/**
+ * Runs the space-time predictor of a linear system on one cell: The Cauchy-Kovalewski recursion
+ * builds the Taylor coefficients of the state one at a time and integrates them over the time
+ * step, the time averages project onto the faces and the volume integral is subtracted from the
+ * cell state. The scratch block has the extent of LinearPredictorScratch. pointSourceIndices
+ * lists the numberOfPointSources point sources inside the cell.
+ */
+template <
+  typename SolverType,
+  int  NumberOfDofsPerAxis,
+  int  NumberOfUnknowns,
+  int  NumberOfAuxiliaryVariables,
+  bool EvaluateFlux,
+  bool EvaluateNonconservativeProduct,
+  bool EvaluateSource,
+  bool EvaluateMaterialParameters,
+  bool EvaluatePointSources,
+  typename StoragePrecision,
+  typename ComputePrecision,
+  typename FacePrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::linearSpaceTimePredictor(
+  FacePrecision* const NOALIAS                 faceState[peano4::FacesPerCell],
+  FacePrecision* const NOALIAS                 faceFlux[peano4::FacesPerCell],
+  StoragePrecision* NOALIAS const              cellState,
+  ComputePrecision* NOALIAS const              scratch,
+  [[maybe_unused]] const int* NOALIAS const    pointSourceIndices,
+  [[maybe_unused]] const int                   numberOfPointSources,
+  [[maybe_unused]] const double* NOALIAS const pointSourceLocations,
+  const BasisTables<ComputePrecision>&         tables,
+  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+  const double                                 timeStamp,
+  const double                                 timeStepSize
+) {
+  using Scratch = LinearPredictorScratch<
+    NumberOfDofsPerAxis,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    EvaluateNonconservativeProduct,
+    EvaluateSource,
+    EvaluatePointSources>;
+  using CellLayout = typename Scratch::CellLayout;
+
+  assertion(timeStepSize >= 0.0, timeStepSize);
+
+  ComputePrecision* NOALIAS const state              = scratch + Scratch::StateOffset;
+  ComputePrecision* NOALIAS const timeAveragedState  = scratch + Scratch::TimeAveragedStateOffset;
+  ComputePrecision* NOALIAS const flux               = scratch + Scratch::FluxOffset;
+  ComputePrecision* NOALIAS const timeAveragedFlux   = scratch + Scratch::TimeAveragedFluxOffset;
+  ComputePrecision* NOALIAS const source             = scratch + Scratch::SourceOffset;
+  ComputePrecision* NOALIAS const timeAveragedSource = scratch + Scratch::TimeAveragedSourceOffset;
+  ComputePrecision* NOALIAS const stateGradient      = scratch + Scratch::StateGradientOffset;
+  ComputePrecision* NOALIAS const pointSourceValues  = scratch + Scratch::PointSourceOffset;
+
+  const auto inverseCellSize = tarch::la::convertScalar<ComputePrecision>(tarch::la::invertEntries(cellSize));
+
+  initialiseLinearPredictorState<
+    NumberOfDofsPerAxis,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    StoragePrecision,
+    ComputePrecision>(state, cellState);
+
+  for (int entry = 0; entry < Scratch::TimeAveragedFluxSize; entry++) {
+    timeAveragedFlux[entry] = static_cast<ComputePrecision>(0);
+  }
+  for (int entry = 0; entry < Scratch::TimeAveragedSourceSize; entry++) {
+    timeAveragedSource[entry] = static_cast<ComputePrecision>(0);
+  }
+
+  if constexpr (EvaluatePointSources) {
+    evaluatePointSources<
+      SolverType,
+      NumberOfDofsPerAxis,
+      NumberOfUnknowns,
+      NumberOfAuxiliaryVariables,
+      StoragePrecision,
+      ComputePrecision>(
+      pointSourceValues,
+      cellState,
+      pointSourceIndices,
+      numberOfPointSources,
+      pointSourceLocations,
+      tables.quadraturePoints,
+      tables.inverseCellQuadratureWeights,
+      inverseCellSize,
+      cellCentre,
+      cellSize,
+      timeStamp,
+      timeStepSize
+    );
+    addPointSourcesToPredictor<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables, ComputePrecision>(
+      state,
+      pointSourceValues,
+      tables.quadratureWeights,
+      timeStepSize
+    );
+  }
+
+  seedTimeAveragedState<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables, ComputePrecision>(
+    timeAveragedState,
+    state
+  );
+
+  // The coefficient of the ith Taylor term enters the time average with dt^i / (i + 1)!.
+  auto timeAverageFactor = static_cast<ComputePrecision>(1.0);
+
+  for (int derivative = 0; derivative < NumberOfDofsPerAxis; derivative++) {
+    clearTaylorTerms<
+      NumberOfDofsPerAxis,
+      NumberOfUnknowns,
+      NumberOfAuxiliaryVariables,
+      EvaluateSource,
+      ComputePrecision>(flux, source);
+
+    if constexpr (EvaluateFlux) {
+      evaluateLinearFlux<
+        SolverType,
+        NumberOfDofsPerAxis,
+        NumberOfUnknowns,
+        NumberOfAuxiliaryVariables,
+        ComputePrecision>(flux, state, cellCentre, cellSize, timeStamp, timeStepSize);
+      differentiateFluxInPlace<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables, ComputePrecision>(
+        flux,
+        tables.derivativeOperator,
+        inverseCellSize
+      );
+    }
+
+    if constexpr (EvaluateNonconservativeProduct) {
+      addNonconservativeProduct<
+        SolverType,
+        NumberOfDofsPerAxis,
+        NumberOfUnknowns,
+        NumberOfAuxiliaryVariables,
+        ComputePrecision>(
+        flux,
+        stateGradient,
+        state,
+        tables.derivativeOperator,
+        inverseCellSize,
+        cellCentre,
+        cellSize,
+        timeStamp,
+        timeStepSize
+      );
+    }
+
+    if constexpr (EvaluateMaterialParameters) {
+      applyMaterialParameterMatrix<
+        SolverType,
+        NumberOfDofsPerAxis,
+        NumberOfUnknowns,
+        NumberOfAuxiliaryVariables,
+        ComputePrecision>(flux, state, cellCentre, cellSize, timeStamp, timeStepSize);
+    }
+
+    if constexpr (EvaluateSource) {
+      evaluateLinearSource<
+        SolverType,
+        NumberOfDofsPerAxis,
+        NumberOfUnknowns,
+        NumberOfAuxiliaryVariables,
+        ComputePrecision>(source, state, cellCentre, cellSize, timeStamp, timeStepSize);
+    }
+
+    accumulateTimeAveragedTerms<
+      NumberOfDofsPerAxis,
+      NumberOfUnknowns,
+      NumberOfAuxiliaryVariables,
+      EvaluateSource,
+      ComputePrecision>(timeAveragedFlux, timeAveragedSource, flux, source, timeAverageFactor);
+
+    if (derivative == NumberOfDofsPerAxis - 1) {
+      break;
+    }
+
+    advanceTimeDerivative<
+      NumberOfDofsPerAxis,
+      NumberOfUnknowns,
+      NumberOfAuxiliaryVariables,
+      EvaluateSource,
+      ComputePrecision>(state, flux, source);
+
+    if constexpr (EvaluatePointSources) {
+      addPointSourceDerivativeToState<
+        NumberOfDofsPerAxis,
+        NumberOfUnknowns,
+        NumberOfAuxiliaryVariables,
+        ComputePrecision>(state, pointSourceValues, tables.leftFaceCoefficients);
+    }
+
+    timeAverageFactor *= static_cast<ComputePrecision>(timeStepSize / (derivative + 2));
+
+    accumulateTimeAveragedState<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables, ComputePrecision>(
+      timeAveragedState,
+      state,
+      timeAverageFactor
+    );
+  }
+
+  if constexpr (EvaluatePointSources) {
+    addPointSourcesToTimeAveragedFlux<
+      NumberOfDofsPerAxis,
+      NumberOfUnknowns,
+      NumberOfAuxiliaryVariables,
+      ComputePrecision>(timeAveragedFlux, pointSourceValues, tables.quadratureWeights);
+  }
+
+  UNROLL(DIMENSIONS)
+  for (int direction = 0; direction < DIMENSIONS; direction++) {
+    exahype2::dg::extrapolateNodalFieldToFacePair<
+      NumberOfDofsPerAxis,
+      CellLayout::NumberOfData,
+      CellLayout::PaddedNumberOfData,
+      ComputePrecision,
+      FacePrecision,
+      ComputePrecision>(
+      faceState[direction],
+      faceState[direction + DIMENSIONS],
+      timeAveragedState,
+      tables.leftFaceCoefficients,
+      tables.rightFaceCoefficients,
+      direction
+    );
+    exahype2::dg::extrapolateNodalFieldToFacePair<
+      NumberOfDofsPerAxis,
+      NumberOfUnknowns,
+      CellLayout::PaddedNumberOfUnknowns,
+      ComputePrecision,
+      FacePrecision,
+      ComputePrecision>(
+      faceFlux[direction],
+      faceFlux[direction + DIMENSIONS],
+      timeAveragedFlux + direction * CellLayout::PaddedNumberOfUnknowns * CellLayout::NodesPerCell,
+      tables.leftFaceCoefficients,
+      tables.rightFaceCoefficients,
+      direction
+    );
+  }
+
+  subtractTimeAveragedVolumeIntegral<
+    NumberOfDofsPerAxis,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    EvaluateFlux or EvaluateNonconservativeProduct,
+    EvaluateSource,
+    StoragePrecision,
+    ComputePrecision>(cellState, timeAveragedFlux, timeAveragedSource, timeStepSize);
+}
+TARGET_DECLARE_END

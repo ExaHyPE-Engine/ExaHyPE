@@ -45,8 +45,7 @@ namespace {
     std::size_t last = value.size();
     while (
       last > 0
-      and (value[last - 1] == ' ' or value[last - 1] == '\t' or value[last - 1] == '\n' or value[last - 1] == '\r')
-    ) {
+      and (value[last - 1] == ' ' or value[last - 1] == '\t' or value[last - 1] == '\n' or value[last - 1] == '\r')) {
       last--;
     }
     return value.substr(0, last);

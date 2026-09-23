@@ -67,8 +67,6 @@ namespace {
       int                             numberOfLocalSlots{-1};
     };
 
-    void initialiseSerialSlot() override { record(); }
-
     void resizePoolForTree(
       const std::size_t cellCount,
       const std::size_t faceCount,
@@ -79,6 +77,17 @@ namespace {
       _arguments.resizeVertexCount = vertexCount;
       record();
     }
+
+    void bindPool() override {
+      _boundPool = true;
+      record();
+    }
+
+    std::size_t getPooledPayloadBytes() const override { return _pooledPayloadBytes; }
+
+    bool hasBoundPool() const { return _boundPool; }
+
+    void setPooledPayloadBytes(const std::size_t bytes) { _pooledPayloadBytes = bytes; }
 
     void migratePoolForTree(
       const std::vector<std::pair<int, int>>& cellSlotPairs,
@@ -158,11 +167,6 @@ namespace {
       record();
     }
 
-    void prepareLocalSlots(const int numberOfSlots) override {
-      _arguments.numberOfLocalSlots = numberOfSlots;
-      record();
-    }
-
     int                      getNumberOfCalls() const { return _numberOfCalls.load(std::memory_order_relaxed); }
     const RecordedArguments& getArguments() const { return _arguments; }
 
@@ -174,6 +178,8 @@ namespace {
     std::atomic<int>  _numberOfCalls{0};
     RecordedArguments _arguments{};
     std::mutex        _replicationMutex{};
+    bool              _boundPool{false};
+    std::size_t       _pooledPayloadBytes{0};
 
     void record() {
       _numberOfCalls.fetch_add(1, std::memory_order_relaxed);
@@ -187,17 +193,15 @@ namespace {
   /** Runs every registry operation once, in the order a sweep drives them. */
   void runEveryRegistryOperation() {
     auto& registry = peano4::data::ContainerRegistry::getInstance();
-    registry.initialiseSerialSlots();
     registry.resizePoolsForTree(1, 1, 1);
     registry.migratePoolsForTree({}, {}, {}, 1, 1, 1);
     registry.replicateInterfaceSlots({}, {});
     registry.packBoundarySlots({}, {});
     registry.transferPoolsForTree({}, {}, {}, {}, {}, {});
     registry.finishBoundaryExchange({}, {}, {}, {});
-    registry.prepareLocalSlots(1);
   }
 
-  constexpr int NumberOfRegistryOperations = 8;
+  constexpr int NumberOfRegistryOperations = 6;
 } // namespace
 
 peano4::data::tests::ContainerRegistryTest::ContainerRegistryTest() :
@@ -215,7 +219,7 @@ void peano4::data::tests::ContainerRegistryTest::testContainersAreVisitedInConta
     RecordingContainer firstContainer(4200000, true, visitOrder, visitCursor);
     RecordingContainer secondContainer(4200001, true, visitOrder, visitCursor);
 
-    peano4::data::ContainerRegistry::getInstance().prepareLocalSlots(1);
+    peano4::data::ContainerRegistry::getInstance().packBoundarySlots({}, {});
   }
 
   const std::vector<int> expectedOrder{4200000, 4200001, 4200002};
@@ -275,12 +279,12 @@ void peano4::data::tests::ContainerRegistryTest::testDetachedContainersAreNoLong
 
   {
     RecordingContainer temporaryContainer(4200031, true, visitOrder, visitCursor);
-    peano4::data::ContainerRegistry::getInstance().prepareLocalSlots(1);
+    peano4::data::ContainerRegistry::getInstance().packBoundarySlots({}, {});
     validateEquals(temporaryContainer.getNumberOfCalls(), 1);
   }
 
   visitCursor.store(0);
-  peano4::data::ContainerRegistry::getInstance().prepareLocalSlots(1);
+  peano4::data::ContainerRegistry::getInstance().packBoundarySlots({}, {});
   validateEquals(visitCursor.load(), 1);
   validateEquals(visitOrder[0], 4200030);
 }
@@ -302,7 +306,6 @@ void peano4::data::tests::ContainerRegistryTest::testEveryOperationForwardsItsAr
   registry.packBoundarySlots({{71}}, {{72}});
   registry.transferPoolsForTree({{1, {101}}}, {{2, {102}}}, {{3, {103}}}, {{4, {104}}}, {{5, {105}}}, {{6, {106}}});
   registry.finishBoundaryExchange({{81}}, {{82}}, {83}, {84});
-  registry.prepareLocalSlots(9);
 
   const auto& arguments = container.getArguments();
 
@@ -339,8 +342,27 @@ void peano4::data::tests::ContainerRegistryTest::testEveryOperationForwardsItsAr
   validateEquals(arguments.finishedVertexLists[0][0], 82);
   validateEquals(arguments.faceFrozenSlotBases[0], 83);
   validateEquals(arguments.vertexFrozenSlotBases[0], 84);
+}
 
-  validateEquals(arguments.numberOfLocalSlots, 9);
+/**
+ * allocatePayloadPools() marks the pools live and binds every registered
+ * container; getPooledPayloadBytes() sums the containers' demands.
+ */
+void peano4::data::tests::ContainerRegistryTest::testAllocatePayloadPoolsBindsEveryContainer() {
+  auto&            registry = peano4::data::ContainerRegistry::getInstance();
+  std::vector<int> visitOrder(2, -1);
+  std::atomic<int> visitCursor{0};
+
+  RecordingContainer firstContainer(4200050, true, visitOrder, visitCursor);
+  RecordingContainer secondContainer(4200051, true, visitOrder, visitCursor);
+  firstContainer.setPooledPayloadBytes(1000);
+  secondContainer.setPooledPayloadBytes(24);
+
+  validateEquals(registry.getPooledPayloadBytes(), std::size_t{1024});
+  registry.allocatePayloadPools();
+  validate(registry.arePayloadPoolsLive());
+  validate(firstContainer.hasBoundPool());
+  validate(secondContainer.hasBoundPool());
 }
 
 void peano4::data::tests::ContainerRegistryTest::run() {
@@ -349,4 +371,5 @@ void peano4::data::tests::ContainerRegistryTest::run() {
   testMethod(testSubtreeTaskReplicationNeedsEveryContainer);
   testMethod(testDetachedContainersAreNoLongerVisited);
   testMethod(testEveryOperationForwardsItsArgumentsUnchanged);
+  testMethod(testAllocatePayloadPoolsBindsEveryContainer);
 }

@@ -20,16 +20,19 @@ public:
   virtual ~ManagedContainer()                          = default;
 
   /** Returns the small number that addresses this container in the exchange tags. */
-  virtual int getManagedContainerId() const = 0;
+  [[nodiscard]] virtual int getManagedContainerId() const = 0;
 
   /** Returns whether the element type may be replicated into one copy per subtree task. */
-  virtual bool supportsSubtreeTaskReplication() const = 0;
-
-  /** Anchors the slot the serial traversal and the master write, once the rank is known. */
-  virtual void initialiseSerialSlot() = 0;
+  [[nodiscard]] virtual bool supportsSubtreeTaskReplication() const = 0;
 
   /** Sizes the pool to the entity count of this container's kind. */
   virtual void resizePoolForTree(std::size_t cellCount, std::size_t faceCount, std::size_t vertexCount) = 0;
+
+  /** Binds pooled element storage to the container's slots. */
+  virtual void bindPool() = 0;
+
+  /** Returns the pool buffer bytes the container's slots select. */
+  [[nodiscard]] virtual std::size_t getPooledPayloadBytes() const = 0;
 
   /** Moves every surviving entity's data to the slot it holds in the new structure. */
   virtual void migratePoolForTree(
@@ -76,9 +79,6 @@ public:
     const std::vector<int>&              faceFrozenSlotBases,
     const std::vector<int>&              vertexFrozenSlotBases
   ) = 0;
-
-  /** Grows the per-task call blocks to the number of walk units the sweep spawns. */
-  virtual void prepareLocalSlots(int numberOfSlots) = 0;
 };
 
 /**
@@ -101,9 +101,12 @@ public:
   void attachContainer(peano4::data::ManagedContainer* container);
   void detachContainer(const peano4::data::ManagedContainer* container);
 
-  bool supportsSubtreeTaskReplication() const;
+  [[nodiscard]] bool supportsSubtreeTaskReplication() const;
 
-  void initialiseSerialSlots();
+  [[nodiscard]] bool        arePayloadPoolsLive() const;
+  void                      allocatePayloadPools();
+  [[nodiscard]] std::size_t getPooledPayloadBytes() const;
+
   void resizePoolsForTree(std::size_t cellCount, std::size_t faceCount, std::size_t vertexCount);
   void migratePoolsForTree(
     const std::vector<std::pair<int, int>>& cellSlotPairs,
@@ -135,11 +138,17 @@ public:
     const std::vector<int>&              faceFrozenSlotBases,
     const std::vector<int>&              vertexFrozenSlotBases
   );
-  void prepareLocalSlots(int numberOfSlots);
 
 private:
   ContainerRegistry() = default;
 
   /** Registered containers, ascending by container id. */
   std::vector<peano4::data::ManagedContainer*> _containers{};
+
+  /**
+   * Records whether the pooled payload buffers exist. Pool resizes before
+   * allocatePayloadPools() size the slot vectors only, so the grid builds
+   * without payload memory; every later resize binds directly.
+   */
+  bool _payloadPoolsLive{false};
 };

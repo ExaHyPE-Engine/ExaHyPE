@@ -1,0 +1,94 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+/**
+ * Plots the points of one face and connects the neighbouring points to plot cells.
+ */
+template <int PointsPerAxis, int UnknownsPerPoint, typename Precision>
+INLINE_METHOD void exahype2::plotter::FacePlotter::plotFace(
+  const peano4::dataview::FaceMarker&      marker,
+  const std::array<double, PointsPerAxis>& mappingAlongAxis,
+  const Precision* const                   face
+) {
+  static_assert(PointsPerAxis > 0);
+  static_assert(UnknownsPerPoint > 0);
+  assertion(_piece.isOpen());
+  assertion(face != nullptr);
+  for ([[maybe_unused]] const auto& field : _fields) {
+    assertion(field.offset + field.components <= UnknownsPerPoint, field.offset, field.components, UnknownsPerPoint);
+  }
+
+  constexpr int TotalPoints   = DIMENSIONS == 2 ? PointsPerAxis : PointsPerAxis * PointsPerAxis;
+  constexpr int ValuesPerSide = TotalPoints * UnknownsPerPoint;
+  constexpr int CellsPerAxis  = PointsPerAxis - 1;
+  constexpr int TotalCells    = DIMENSIONS == 2 ? CellsPerAxis : CellsPerAxis * CellsPerAxis;
+
+  const int normalAxis = marker.getSelectedFaceNumber() % DIMENSIONS;
+
+  // The points of a face sit on the lower corner of the cell along the normal axis, where the
+  // plot of the neighbouring cell puts its own trace of the face.
+  const auto faceOffset = marker.getX() - marker.getH() * 0.5;
+
+  auto faceSize        = marker.getH();
+  faceSize(normalAxis) = 0.0;
+
+  std::array<int, DIMENSIONS - 1> tangentialAxes{};
+  int                             tangentialAxisCount = 0;
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    if (axis != normalAxis) {
+      tangentialAxes[tangentialAxisCount] = axis;
+      tangentialAxisCount++;
+    }
+  }
+
+  const Precision* const leftData  = face;
+  const Precision* const rightData = face + ValuesPerSide;
+
+  std::array<int, TotalPoints> vertexIndices{};
+
+  for (int pointIndex = 0; pointIndex < TotalPoints; pointIndex++) {
+    tarch::la::Vector<DIMENSIONS, double> position;
+    position(normalAxis) = faceOffset(normalAxis);
+
+    int indexAlongTangentialAxes = pointIndex;
+    for (const int axis : tangentialAxes) {
+      position(axis) = faceOffset(axis) + faceSize(axis) * mappingAlongAxis[indexAlongTangentialAxes % PointsPerAxis];
+      indexAlongTangentialAxes /= PointsPerAxis;
+    }
+    vertexIndices[pointIndex] = _piece.plotVertex(position);
+
+    const int unknownOffset = pointIndex * UnknownsPerPoint;
+    for (const auto& field : _fields) {
+      field.leftPlotter
+        ->plotVertexData(vertexIndices[pointIndex], leftData + unknownOffset + field.offset, field.components);
+      field.rightPlotter
+        ->plotVertexData(vertexIndices[pointIndex], rightData + unknownOffset + field.offset, field.components);
+    }
+  }
+
+  constexpr int RefinementLevelOfFaces = 0;
+  for (int cell = 0; cell < TotalCells; cell++) {
+    int firstVertex        = 0;
+    int stride             = 1;
+    int indexAlongCellAxes = cell;
+    for (int tangential = 0; tangential < DIMENSIONS - 1; tangential++) {
+      firstVertex += (indexAlongCellAxes % CellsPerAxis) * stride;
+      indexAlongCellAxes /= CellsPerAxis;
+      stride *= PointsPerAxis;
+    }
+
+    std::array<int, peano4::VerticesPerCell / 2> vertices{};
+    for (int corner = 0; corner < peano4::VerticesPerCell / 2; corner++) {
+      int offset       = 0;
+      int cornerStride = 1;
+      for (int tangential = 0; tangential < DIMENSIONS - 1; tangential++) {
+        offset += CellCorners[corner][tangential] * cornerStride;
+        cornerStride *= PointsPerAxis;
+      }
+      vertices[corner] = vertexIndices[firstVertex + offset];
+    }
+
+    const int cellIndex = _piece.plotCellOnFace(vertices);
+    _piece.plotCellMarkers(cellIndex, RefinementLevelOfFaces);
+  }
+}

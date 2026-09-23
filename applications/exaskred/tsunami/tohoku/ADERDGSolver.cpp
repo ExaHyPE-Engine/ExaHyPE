@@ -211,7 +211,7 @@ bool applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
   const int                                    numberOfStates,
   const tarch::la::Vector<DIMENSIONS, double>& x,
   const tarch::la::Vector<DIMENSIONS, double>& h
-) const {
+) {
   if (numberOfStates == 1) {
     return ::applications::exahype2::exaskred::limiting::
       isAdmissibleState<Shortcuts, NumberOfUnknowns, NumberOfAuxiliaryVariables>(Q, 0.0);
@@ -224,8 +224,10 @@ bool applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
   }
   const auto statistics = ::applications::exahype2::exaskred::limiting::
     collectCellStatistics<Shortcuts, NumberOfUnknowns, NumberOfAuxiliaryVariables>(Q, numberOfStates);
-  if (not statistics.finite or statistics.minHeight <= hThreshold
-      or statistics.maxBathymetry > -limiterBathymetryThreshold) {
+  if (
+    not statistics.finite or statistics.minHeight <= hThreshold
+    or statistics.maxBathymetry > -limiterBathymetryThreshold
+  ) {
     return false;
   }
   const double freeSurfaceSpan = statistics.maxFreeSurface - statistics.minFreeSurface;
@@ -245,9 +247,11 @@ bool applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
     and x(0) - 0.5 * h(0) <= displacementPosition(0) + displacementOffset(0) + displacementSize(0)
     and x(1) + 0.5 * h(1) >= displacementPosition(1) + displacementOffset(1)
     and x(1) - 0.5 * h(1) <= displacementPosition(1) + displacementOffset(1) + displacementSize(1);
-  if (overlapsDisplacement
-      and std::max(std::abs(statistics.minFreeSurface), std::abs(statistics.maxFreeSurface))
-        > limiterRelativeSourceFreeSurfaceAmplitude * localDepthScale) {
+  if (
+    overlapsDisplacement
+    and std::max(std::abs(statistics.minFreeSurface), std::abs(statistics.maxFreeSurface))
+      > limiterRelativeSourceFreeSurfaceAmplitude * localDepthScale
+  ) {
     return false;
   }
   return true;
@@ -256,7 +260,7 @@ bool applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
 void applications::exahype2::exaskred::ADERDGSolver::mapDmpObservables(
   double* const NOALIAS       observables,
   const double* const NOALIAS Q
-) const {
+) {
   for (int observable = 0; observable < NumberOfDMPObservables; observable++) {
     observables[observable] = Q[observable];
   }
@@ -291,7 +295,7 @@ void applications::exahype2::exaskred::ADERDGSolver::riemannSolver(
       return g;
     };
   ::applications::exahype2::exaskred::riemann::
-    wellBalancedRusanov<Shortcuts, Shortcuts::b, NumberOfUnknowns, NumberOfAuxiliaryVariables, Order>(
+    wellBalancedRusanov<Shortcuts, Shortcuts::b, NumberOfUnknowns, NumberOfAuxiliaryVariables, DGOrder>(
       QL,
       QR,
       x,

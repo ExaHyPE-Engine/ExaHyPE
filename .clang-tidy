@@ -36,6 +36,7 @@ Checks: >
   -modernize-use-trailing-return-type,
   -performance-avoid-endl,
   -performance-enum-size,
+  -portability-avoid-pragma-once,
   -portability-restrict-system-includes,
   -readability-convert-member-functions-to-static,
   -readability-else-after-return,
@@ -45,6 +46,7 @@ Checks: >
   -readability-magic-numbers,
   -readability-make-member-function-const,
   -readability-math-missing-parentheses,
+  -readability-redundant-member-init,
   -readability-suspicious-call-argument
 # TODO: Promote bug-finding families to errors (clang-analyzer-*, bugprone-*, concurrency-*, mpi-*, openmp-*).
 WarningsAsErrors: ''

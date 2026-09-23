@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "peano4/Globals.h"
+#include "peano4/Constants.h"
 #include "tarch/CompilerSpecificSettings.h"
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/la/Vector.h"
@@ -33,7 +33,7 @@ struct exahype2::fv::tests::DeviceKernelSetup final {
   static constexpr int    NumberOfPatches       = 8;
   static constexpr int    AllPatchesCardinality = NumberOfPatches * PatchCardinality;
   static constexpr int    CoordinateCardinality = NumberOfPatches * DIMENSIONS;
-  static constexpr int    FaceSlotCardinality   = NumberOfPatches * TWO_TIMES_D;
+  static constexpr int    FaceSlotCardinality   = NumberOfPatches * peano4::FacesPerCell;
   static constexpr double TimeStamp             = 0.75;
   static constexpr double TimeStepSize          = 0.0125;
 

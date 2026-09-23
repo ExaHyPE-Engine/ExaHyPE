@@ -1,4 +1,4 @@
-Acoustic:
+01 Acoustic:
   stage: Tutorial
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tutorials/01_acoustic && PYTHONPATH=$CI_PROJECT_DIR/api ipython AcousticWaves.ipynb"
@@ -11,7 +11,7 @@ Acoustic:
   needs:
     - job: Build
 
-SWE:
+02 Shallow Water:
   stage: Tutorial
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tutorials/02_shallow-water && PYTHONPATH=$CI_PROJECT_DIR/api ipython ShallowWater.ipynb"
@@ -24,7 +24,7 @@ SWE:
   needs:
     - job: Build
 
-Euler:
+03 Euler:
   stage: Tutorial
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tutorials/03_euler && PYTHONPATH=$CI_PROJECT_DIR/api ipython Euler.ipynb"
@@ -37,7 +37,7 @@ Euler:
   needs:
     - job: Build
 
-Limiting:
+04 Limiting:
   stage: Tutorial
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tutorials/04_limiting && PYTHONPATH=$CI_PROJECT_DIR/api ipython EulerShock.ipynb"
@@ -50,7 +50,7 @@ Limiting:
   needs:
     - job: Build
 
-Elastic:
+05 Elastic:
   stage: Tutorial
   script:
     - apptainer exec -e --bind "$APPTAINER_BINDDIR" $APPTAINER_IMAGEDIR/${IMAGE_TAG} bash <<< "cd tutorials/05_elastic && PYTHONPATH=$CI_PROJECT_DIR/api ipython ElasticWaves.ipynb"

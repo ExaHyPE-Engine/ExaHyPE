@@ -10,17 +10,21 @@ write their histories to CSV files.
 
 # Adding a tracer
 
-The project creates a generated particle type:
+The project creates a generated particle type with four data entries per
+particle:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-tracerParticles = project.add_tracer(name="MyTracer")
+tracerParticles = project.add_tracer(name="MyTracer", particle_attributes=4)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The argument `solver` hands the tracers to one solver: Its sweeps sort them
+after its own action sets, its plots write them, and its statistics count them.
 
 An insertion action set adds initial coordinates during grid initialisation:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 project.add_action_set_to_initialisation(
-  exahype2.tracer.InsertParticlesByCoordinates(
+  exahype2.particles.InsertTracersByCoordinates(
     particle_set=tracerParticles,
     coordinates=[[x0, y0], [x1, y1]],
   )
@@ -37,29 +41,26 @@ A tracing action set samples the solution at each particle. A finite-volume
 configuration can use:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-tracing = exahype2.tracer.FiniteVolumesTracing(
+solver.trace(
   tracerParticles,
-  solver,
-  project_on_tracer_properties_kernel=
-    "::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear",
+  kernel="::exahype2::fv::projectAllValuesOntoParticlePiecewiseLinear",
 )
-project.add_action_set_to_initialisation(tracing)
-project.add_action_set_to_timestepping(tracing)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Initialisation populates tracer fields before the first plot or database
-record. Time-stepping updates them with the evolving solution. DG solvers use
-the projection routines under `exahype2/dg/Tracer.h`; finite-volume and
-finite-difference solvers use `exahype2/fv/Tracer.h`.
+The solver adds the tracing to its initialisation sweep, which populates the tracer fields
+before the first plot or database record, and to its time step; the arguments
+`initialisation` and `time_steps` of `solver.trace` select these sweeps. DG solvers use
+the projection routines under `exahype2/dg/Tracer.h`; finite-volume solvers use
+`exahype2/fv/Tracer.h`.
 
 # Writing trajectories
 
-exahype2.tracer.DumpTracerIntoDatabase collects particle samples and writes
+exahype2.particles.DumpTracerIntoDatabase collects particle samples and writes
 rank-local CSV snapshots below the runtime output path:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 project.add_action_set_to_timestepping(
-  exahype2.tracer.DumpTracerIntoDatabase(
+  exahype2.particles.DumpTracerIntoDatabase(
     particle_set=tracerParticles,
     solver=solver,
     filename="Tracer",
@@ -71,8 +72,8 @@ project.add_action_set_to_timestepping(
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Each row contains the stable particle number, time stamp, coordinates, and
-tracked values. The particle number combines the originating rank with a
-rank-local counter, so insertion requires no global numbering collective. A
+tracked values. The particle number combines the spacetree number with a
+tree-local counter, so insertion requires no global numbering collective. A
 particle keeps this identity after it migrates.
 
 An MPI run appends each rank's records to `<filename>-rank-<rank>.csv`; a
@@ -83,7 +84,7 @@ particle number and time stamp.
 
 The projection kernel can update the particle position as well as its sampled
 properties. A custom kernel is supplied through
-`project_on_tracer_properties_kernel`; `projection_kernel_arguments` adds
+the `kernel` argument of `solver.trace`; `arguments` adds
 solver values such as a cell time-step size when required.
 
 The tracing kernels update only `Local` records and use `MoveState` to prevent
@@ -94,10 +95,11 @@ sweeps, rank-boundary transfer, and sieve redistribution.
 
 # Parallel behaviour
 
-Tracer particle containers make particle-bearing traversal steps serial within
-each rank. MPI rank-boundary exchange maintains local and virtual copies with
-one sweep of lag. The solver's non-particle steps can still use the ordinary
-subtree-task decomposition.
+Particle-bearing traversal steps run in the subtree tasks of a rank like every
+other step: A task's copy of a vertex holds the particles of the task's own
+cells, a neighbouring task's copy carries them as halo copies, and a lift out of
+the task's top level goes through the sieve set. MPI rank-boundary exchange
+maintains local and virtual copies with one sweep of lag.
 
 The generic boundary exchange aliases wrapped periodic vertices but does not
 mirror particle coordinates. The sieve applies periodic wrapping to particles

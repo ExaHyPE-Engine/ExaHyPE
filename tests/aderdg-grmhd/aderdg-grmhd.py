@@ -8,10 +8,6 @@ from numpy import pi
 
 from GRMHD import max_eigenvalue, flux, ncp
 
-# available_precisions = {
-#     "bf16", "fp16", "fp32", "fp64"
-# }
-
 available_scenarios = ["AlfvenWave", "MichelSphericalAccretion"]
 
 
@@ -26,7 +22,6 @@ def parse_arguments():
     parser.add_argument("-et", "--end-time", type=float, default=None)
     parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=6)
     parser.add_argument("-l", "--grid-levels", type=int, default=1)
-    # parser.add_argument("-pr", "--precision", default="fp64", choices=available_precisions)
     parser.add_argument(
         "-s", "--scenario", choices=available_scenarios, default="AlfvenWave"
     )
@@ -40,8 +35,6 @@ def parse_arguments():
 args = parse_arguments()
 
 order = args.degrees_of_freedom - 1
-
-polynomials = exahype2.solvers.aderdg.Polynomials.Gauss_Legendre
 
 if args.scenario == "MichelSphericalAccretion":
     dimensions = 3
@@ -113,10 +106,9 @@ if project.dimensions != dimensions:
         f"for {project.dimensions}D."
     )
 
-solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
+solver = exahype2.dg.ader.Solver(
     name="ADERDGSolver",
     order=order,
-    time_step_relaxation=0.9,
     unknowns={
         "rho": 1,
         "vel": 3,
@@ -127,40 +119,26 @@ solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
         "shift": 3,
         "gij": 6,
     },
-    auxiliary_variables=0,  # TODO: true?
+    auxiliary_variables=0,
+    time_stepping=exahype2.TimeStepping.Adaptive(0.9),
+    basis=exahype2.dg.GaussLegendre,
+    linear=False,
 )
 
-solver.add_kernel_optimisations(
-    polynomials=polynomials,
-    is_linear=False,
-    # precision=args.precision
-)
-
-solver.set_implementation(
-    initial_conditions=initial,
+solver.set_pde_terms(
+    initial_condition=initial,
     boundary_conditions=boundary_condition,
     max_eigenvalue=max_eigenvalue,
     flux=flux,
     ncp=ncp,
+    analytical_solution=analytical_solution,
 )
 
-solver.add_user_solver_includes(
-    """
-#include "InitialData.h"
-#include "PDE.h"
-"""
-)
+solver.add_includes("InitialData.h", "PDE.h")
 
-exahype2.solvers.aderdg.ErrorMeasurement(
-    solver,
-    error_measurement_implementation=analytical_solution,
-    output_file_name="Error_"
-    + args.scenario
-    + "_md_"
-    + str(args.grid_levels)
-    + "_o_"
-    + str(order),
-    time_delta_between_snapshots=end_time / 100.0,
+solver.measure_error(
+    file="Error_" + args.scenario + "_md_" + str(args.grid_levels) + "_o_" + str(order),
+    every=end_time / 100.0,
 )
 
 project.add_solver(solver)

@@ -1,0 +1,291 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+template <class Record, typename DoF, int Cardinality2D, int Cardinality3D>
+peano4::data::PooledRecord<Record, DoF, Cardinality2D, Cardinality3D>::PooledRecord(const PooledRecord& other) {
+  adoptValuesOf(other);
+}
+
+/**
+ * Transfers the source pointer and its ownership state without moving values.
+ */
+template <class Record, typename DoF, int Cardinality2D, int Cardinality3D>
+peano4::data::PooledRecord<Record, DoF, Cardinality2D, Cardinality3D>::PooledRecord(PooledRecord&& other) noexcept :
+  _data(std::exchange(other._data, nullptr)),
+  _ownsStorage(std::exchange(other._ownsStorage, false)),
+  _isPoolSlot(std::exchange(other._isPoolSlot, false)),
+  _isBlank(std::exchange(other._isBlank, true)) {}
+
+template <class Record, typename DoF, int Cardinality2D, int Cardinality3D>
+peano4::data::PooledRecord<Record, DoF, Cardinality2D, Cardinality3D>& peano4::data::
+  PooledRecord<Record, DoF, Cardinality2D, Cardinality3D>::operator=(const PooledRecord& other) {
+  if (this != &other) {
+    adoptValuesOf(other);
+  }
+  return *this;
+}
+
+/**
+ * Moves private storage into an empty record and otherwise copies the values
+ * into existing storage.
+ */
+template <class Record, typename DoF, int Cardinality2D, int Cardinality3D>
+peano4::data::PooledRecord<Record, DoF, Cardinality2D, Cardinality3D>& peano4::data::
+  PooledRecord<Record, DoF, Cardinality2D, Cardinality3D>::operator=(PooledRecord&& other) noexcept {
+  if (this != &other) {
+    if (other._ownsStorage and not _ownsStorage and _data == nullptr) {
+      _data              = std::exchange(other._data, nullptr);
+      _ownsStorage       = true;
+      _isPoolSlot        = false;
+      _isBlank           = std::exchange(other._isBlank, true);
+      other._ownsStorage = false;
+    } else {
+      adoptValuesOf(other);
+    }
+  }
+  return *this;
+}
+
+template <class Record, typename DoF, int Cardinality2D, int Cardinality3D>
+peano4::data::PooledRecord<Record, DoF, Cardinality2D, Cardinality3D>::PooledRecord::~PooledRecord() noexcept {
+  releaseOwnStorage();
+}
+
+/**
+ * Returns the process-local memory pool of the derived type.
+ */
+template <class Record, typename DoF, int Cardinality2D, int Cardinality3D>
+typename peano4::data::PooledRecord<Record, DoF, Cardinality2D, Cardinality3D>::MemoryPool& peano4::data::
+  PooledRecord<Record, DoF, Cardinality2D, Cardinality3D>::getMemoryPool() {
+  static MemoryPool pool;
+  return pool;
+}
+
+/**
+ * Binds one pool chunk to each slot and preserves retained values.
+ */
+template <class Record, typename DoF, int Cardinality2D, int Cardinality3D>
+void peano4::data::PooledRecord<Record, DoF, Cardinality2D, Cardinality3D>::bindPoolStorage(
+  std::vector<Record>& slots
+) {
+  constexpr auto MaximumNumberOfSlots = static_cast<std::size_t>(std::numeric_limits<int>::max());
+  if (slots.size() > MaximumNumberOfSlots) {
+    tarch::terminateWithError("A data pool exceeds the supported 32-bit parallel range.");
+  }
+  auto&                pool           = getMemoryPool();
+  const DoFType* const previousBuffer = pool.rawData();
+  const std::size_t    previousSize   = pool.size();
+  const auto           firstNewSlot   = std::min(previousSize, slots.size());
+
+  pool.resize(slots.size());
+
+  // Existing bindings remain valid while the pool retains its buffer address.
+  const auto firstSlotToBind = pool.rawData() == previousBuffer ? std::min(previousSize, slots.size()) : std::size_t{0};
+
+  if (firstSlotToBind < slots.size()) {
+    tarch::accelerator::parallelForOnHost(
+      tarch::accelerator::Range(static_cast<int>(slots.size() - firstSlotToBind)),
+      [&slots, &pool, firstNewSlot, firstSlotToBind](const int index) {
+        const auto     slot     = firstSlotToBind + static_cast<std::size_t>(index);
+        PooledRecord&  record   = slots[slot];
+        DoFType* const chunk    = pool.chunk(static_cast<MemoryPool::SlotIndex>(slot));
+        const auto     wasBlank = record._isBlank;
+        // A record filled before its slot was bound moves its values into the
+        // chunk. A chunk that enters the pool's live range reads as zero.
+        const bool keepOwnValues = record._ownsStorage and not record._isBlank;
+        if (keepOwnValues) {
+          std::memcpy(chunk, record._data, BytesPerRecord);
+        }
+        record.releaseOwnStorage();
+        record._data       = chunk;
+        record._isPoolSlot = true;
+        record._isBlank    = not keepOwnValues and (slot >= firstNewSlot or wasBlank);
+      }
+    );
+  }
+}
+
+/**
+ * Returns writable values and allocates cleared private storage on first use.
+ *
+ * The caller can write through the returned pointer, so the record stops
+ * counting as blank.
+ */
+template <class Record, typename DoF, int Cardinality2D, int Cardinality3D>
+INLINE_METHOD typename peano4::data::PooledRecord<Record, DoF, Cardinality2D, Cardinality3D>::DoFType* peano4::data::
+  PooledRecord<Record, DoF, Cardinality2D, Cardinality3D>::data() {
+  if (_data == nullptr) {
+    _data        = tarch::allocateMemory<DoFType>(Cardinality, tarch::MemoryLocation::Heap);
+    _ownsStorage = true;
+    std::memset(_data, 0, BytesPerRecord);
+  }
+  // Four records fit into one cache line, so an unconditional store would
+  // invalidate that line on every access.
+  if (_isBlank) {
+    _isBlank = false;
+  }
+  return _data;
+}
+
+/**
+ * Returns read-only values from existing storage.
+ */
+template <class Record, typename DoF, int Cardinality2D, int Cardinality3D>
+INLINE_METHOD const typename peano4::data::PooledRecord<Record, DoF, Cardinality2D, Cardinality3D>::DoFType* peano4::
+  data::PooledRecord<Record, DoF, Cardinality2D, Cardinality3D>::data() const noexcept {
+  assertion(_data != nullptr);
+  return _data;
+}
+
+/**
+ * References another record's values without ownership or copying.
+ */
+template <class Record, typename DoF, int Cardinality2D, int Cardinality3D>
+INLINE_METHOD void peano4::data::PooledRecord<Record, DoF, Cardinality2D, Cardinality3D>::referenceValuesOf(
+  const PooledRecord& other
+) noexcept {
+  assertion(this != &other);
+  releaseOwnStorage();
+  _data       = other._data;
+  _isPoolSlot = false;
+  if (_isBlank != other._isBlank) {
+    _isBlank = other._isBlank;
+  }
+}
+
+/**
+ * Clears the values without releasing their storage. A blank record returns
+ * without touching memory.
+ */
+template <class Record, typename DoF, int Cardinality2D, int Cardinality3D>
+INLINE_METHOD void peano4::data::PooledRecord<Record, DoF, Cardinality2D, Cardinality3D>::clearValues() {
+  if (_isBlank) {
+    return;
+  }
+  std::memset(data(), 0, BytesPerRecord);
+  _isBlank = true;
+}
+
+/**
+ * Returns whether the entity behind @p marker keeps its data on the local
+ * rank. The grid topology alone decides, so a solver-state guard belongs to
+ * send() and receiveAndMerge() of the derived type.
+ */
+template <class Record, typename DoF, int Cardinality2D, int Cardinality3D>
+template <class Marker>
+INLINE_METHOD bool peano4::data::PooledRecord<Record, DoF, Cardinality2D, Cardinality3D>::load(const Marker& marker) {
+  return not marker.hasBeenRefined();
+}
+
+template <class Record, typename DoF, int Cardinality2D, int Cardinality3D>
+void peano4::data::PooledRecord<Record, DoF, Cardinality2D, Cardinality3D>::releaseOwnStorage() noexcept {
+  if (_ownsStorage) {
+    tarch::freeMemory(_data, tarch::MemoryLocation::Heap);
+    _ownsStorage = false;
+  }
+  _data       = nullptr;
+  _isPoolSlot = false;
+  _isBlank    = true;
+}
+
+/**
+ * Copies @p other without replacing storage bound to a pool slot. A blank
+ * source clears the target.
+ */
+template <class Record, typename DoF, int Cardinality2D, int Cardinality3D>
+void peano4::data::PooledRecord<Record, DoF, Cardinality2D, Cardinality3D>::adoptValuesOf(const PooledRecord& other) {
+  if (other._data == nullptr or other._isBlank) {
+    if (_isPoolSlot) {
+      clearValues();
+    } else {
+      releaseOwnStorage();
+    }
+    return;
+  }
+  std::memcpy(data(), other._data, BytesPerRecord);
+}
+
+/**
+ * Packs the stack values and starts a non-blocking byte send. Only values
+ * enter the message; a blank record sends zeros without reading its storage.
+ */
+template <class Record, typename DoF, int Cardinality2D, int Cardinality3D>
+void peano4::data::PooledRecord<Record, DoF, Cardinality2D, Cardinality3D>::startSend(
+  peano4::grid::Stack<Record>&            stack,
+  peano4::grid::StackExchangeJob<Record>& job
+) {
+  const std::size_t numberOfElements = stack.size();
+  assertion(numberOfElements > 0, numberOfElements);
+  constexpr auto MaximumMessageBytes = static_cast<std::size_t>(std::numeric_limits<int>::max());
+  if (numberOfElements > MaximumMessageBytes / BytesPerRecord) {
+    tarch::terminateWithError("An MPI data message exceeds the supported 32-bit byte count.");
+  }
+  const auto messageBytes = static_cast<int>(numberOfElements * BytesPerRecord);
+  job.dataBuffer.resize(numberOfElements * static_cast<std::size_t>(Cardinality));
+  for (std::size_t element = 0; element < numberOfElements; element++) {
+    const PooledRecord& record = stack[element];
+    DoFType* const      target = job.dataBuffer.data() + element * static_cast<std::size_t>(Cardinality);
+    if (record._data == nullptr or record._isBlank) {
+      std::memset(target, 0, BytesPerRecord);
+    } else {
+      std::memcpy(target, record._data, BytesPerRecord);
+    }
+  }
+  [[maybe_unused]] const int result =
+    tarch::mpi::isend(job.dataBuffer.data(), messageBytes, MPI_BYTE, job.rank, job.tag, job.comm, &job.requests[0]);
+  assertion(result == MPI_SUCCESS, job.rank, job.tag);
+}
+
+/**
+ * Allocates the message buffer and starts a non-blocking byte receive.
+ */
+template <class Record, typename DoF, int Cardinality2D, int Cardinality3D>
+void peano4::data::PooledRecord<Record, DoF, Cardinality2D, Cardinality3D>::startReceive(
+  peano4::grid::Stack<Record>&            stack,
+  peano4::grid::StackExchangeJob<Record>& job,
+  const int                               numberOfElements
+) {
+  assertion(numberOfElements > 0, numberOfElements);
+  constexpr auto                     MaximumMessageBytes = static_cast<std::size_t>(std::numeric_limits<int>::max());
+  const auto                         elementCount        = static_cast<std::size_t>(numberOfElements);
+  [[maybe_unused]] const std::size_t stackSize           = stack.size();
+  assertion(stackSize == elementCount, stackSize, elementCount);
+  if (elementCount > MaximumMessageBytes / BytesPerRecord) {
+    tarch::terminateWithError("An MPI data message exceeds the supported 32-bit byte count.");
+  }
+  const auto messageBytes = static_cast<int>(elementCount * BytesPerRecord);
+  job.dataBuffer.resize(elementCount * static_cast<std::size_t>(Cardinality));
+  [[maybe_unused]] const int result =
+    tarch::mpi::irecv(job.dataBuffer.data(), messageBytes, MPI_BYTE, job.rank, job.tag, job.comm, &job.requests[0]);
+  assertion(result == MPI_SUCCESS, job.rank, job.tag);
+}
+
+/**
+ * Tests the request and unpacks a completed receive into the stack.
+ */
+template <class Record, typename DoF, int Cardinality2D, int Cardinality3D>
+bool peano4::data::PooledRecord<Record, DoF, Cardinality2D, Cardinality3D>::tryToFinishSendOrReceive(
+  peano4::grid::Stack<Record>&            stack,
+  peano4::grid::StackExchangeJob<Record>& job
+) {
+  int                        flag   = 0;
+  [[maybe_unused]] const int result = tarch::mpi::test(&job.requests[0], &flag, MPI_STATUS_IGNORE);
+  assertion(result == MPI_SUCCESS, job.rank, job.tag);
+  if (flag == 0) {
+    return false;
+  }
+  if (job.mode == peano4::grid::StackExchangeJob<Record>::Mode::Receive) {
+    const std::size_t                  numberOfElements = stack.size();
+    [[maybe_unused]] const std::size_t bufferSize       = job.dataBuffer.size();
+    assertion(bufferSize == numberOfElements * static_cast<std::size_t>(Cardinality), bufferSize, numberOfElements);
+    for (std::size_t element = 0; element < numberOfElements; element++) {
+      PooledRecord& record = stack[element];
+      std::memcpy(
+        record.data(),
+        job.dataBuffer.data() + element * static_cast<std::size_t>(Cardinality),
+        BytesPerRecord
+      );
+    }
+  }
+  return true;
+}

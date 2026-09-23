@@ -2,19 +2,28 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "FiniteVolumeTest.h"
 
+#include "exahype2/Enumeration.h"
 #include "exahype2/fv/FiniteVolume.h"
 #include "exahype2/fv/limiter/SlopeLimiter.h"
+#include "exahype2/fv/particles/ParticleUpdate.h"
 #include "exahype2/fv/reconstruction/Constant.h"
 #include "exahype2/fv/reconstruction/LimitedLinear.h"
 #include "exahype2/fv/reconstruction/WENO.h"
 #include "exahype2/fv/timestepping/SingleStep.h"
 #include "exahype2/fv/weno/NonlinearWeights.h"
-#include "exahype2/Enumeration.h"
+#include "peano4/Constants.h"
 
 namespace {
-  // Exposes every term the kernel can evaluate through a small PDE. The exact
-  // form does not matter: the kernel only calls the stateless functors, and the
-  // invariant tests keep the extra terms off.
+  struct TestParticle final {
+    [[nodiscard]] tarch::la::Vector<DIMENSIONS, double> getX() const { return x; }
+    void                 setX(const tarch::la::Vector<DIMENSIONS, double>& position) { x = position; }
+    [[nodiscard]] double getData(const int index) const { return data[index]; }
+    void                 setData(const int index, const double value) { data[index] = value; }
+
+    tarch::la::Vector<DIMENSIONS, double> x{0.0};
+    std::array<double, 16>                data{};
+  };
+
   template <int NumberOfUnknowns>
   struct TestSolver {
     static constexpr double AdvectionSpeed    = 0.7;
@@ -74,9 +83,7 @@ namespace {
       [[maybe_unused]] const double                                 timeStepSize,
       [[maybe_unused]] const int                                    normal
     ) {
-      // The eigenvalue covers the joint advection of the flux and the
-      // non-conservative product, so the Rusanov diffusion stays sufficient
-      // whichever terms a test enables.
+      // The wave speed bounds the combined conservative and non-conservative advection.
       return AdvectionSpeed + NcpAdvectionSpeed;
     }
 
@@ -129,6 +136,65 @@ namespace {
   constexpr int NumberOfAuxiliaryVariables = 0;
   constexpr int NumberOfData               = NumberOfUnknowns + NumberOfAuxiliaryVariables;
 
+  struct TimeDependentAdvectionSolver final : TestSolver<NumberOfUnknowns> {
+    template <typename ComputePrecision>
+    static void flux(
+      const ComputePrecision* NOALIAS const                         state,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
+      const double                                                  timeStamp,
+      [[maybe_unused]] const double                                 timeStepSize,
+      const int                                                     normal,
+      ComputePrecision* NOALIAS const                               fluxes
+    ) {
+      const auto speed = static_cast<ComputePrecision>(normal == 0 ? 1.0 + timeStamp : 0.0);
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        fluxes[unknown] = speed * state[unknown];
+      }
+    }
+
+    template <typename ComputePrecision>
+    static double maxEigenvalue(
+      [[maybe_unused]] const ComputePrecision* NOALIAS const        state,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& volumeCentre,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
+      const double                                                  timeStamp,
+      [[maybe_unused]] const double                                 timeStepSize,
+      const int                                                     normal
+    ) {
+      return normal == 0 ? 1.0 + timeStamp : 0.0;
+    }
+  };
+
+  struct NonconservativeAdvectionSolver final : TestSolver<NumberOfUnknowns> {
+    template <typename ComputePrecision>
+    static double solveRiemannProblem(
+      const ComputePrecision* NOALIAS const                         leftState,
+      const ComputePrecision* NOALIAS const                         rightState,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& faceCentre,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& volumeSize,
+      [[maybe_unused]] const double                                 timeStamp,
+      [[maybe_unused]] const double                                 timeStepSize,
+      [[maybe_unused]] const int                                    normal,
+      ComputePrecision* NOALIAS const                               leftGoingFlux,
+      ComputePrecision* NOALIAS const                               rightGoingFlux
+    ) {
+      constexpr double WaveSpeed =
+        TestSolver<NumberOfUnknowns>::AdvectionSpeed + TestSolver<NumberOfUnknowns>::NcpAdvectionSpeed;
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        const auto stateJump   = rightState[unknown] - leftState[unknown];
+        const auto centralFlux = static_cast<ComputePrecision>(0.5 * TestSolver<NumberOfUnknowns>::AdvectionSpeed)
+          * (leftState[unknown] + rightState[unknown]);
+        const auto diffusion = static_cast<ComputePrecision>(0.5 * WaveSpeed) * stateJump;
+        const auto nonconservativeProduct =
+          static_cast<ComputePrecision>(0.5 * TestSolver<NumberOfUnknowns>::NcpAdvectionSpeed) * stateJump;
+        leftGoingFlux[unknown]  = centralFlux - diffusion + nonconservativeProduct;
+        rightGoingFlux[unknown] = centralFlux - diffusion - nonconservativeProduct;
+      }
+      return WaveSpeed;
+    }
+  };
+
   template <int VolumesPerAxis>
   constexpr int numberOfVolumesInPatch() {
     int product = 1;
@@ -138,8 +204,6 @@ namespace {
     return product;
   }
 
-  // A face's halo overlap holds 2 * HaloWidth layers along the normal and
-  // VolumesPerAxis layers along every other axis.
   template <int VolumesPerAxis, int HaloWidth>
   constexpr int faceOverlapStorageSize() {
     int cells = 2 * HaloWidth;
@@ -159,8 +223,7 @@ namespace {
     return volumeIndex;
   }
 
-  // The patch spans the unit cube, so the centre of a volume follows from its
-  // index alone. Indices outside the patch give the centres of halo volumes.
+  // The patch spans the unit cube. Halo indices can lie outside it.
   template <int VolumesPerAxis>
   tarch::la::Vector<DIMENSIONS, double> volumeCentreOf(const tarch::la::Vector<DIMENSIONS, int>& volumeIndex) {
     tarch::la::Vector<DIMENSIONS, double> centre;
@@ -179,11 +242,7 @@ namespace {
     return linear;
   }
 
-  // Profiles that only depend on the first coordinate solve the PDE the
-  // TestSolver induces exactly: the advection along the other directions
-  // leaves them invariant, so this travelling coordinate is an analytic
-  // oracle. The speed is AdvectionSpeed for the flux alone and grows by
-  // NcpAdvectionSpeed when the non-conservative product is active.
+  // The profiles vary only along the first coordinate.
   double travellingCoordinate(
     const tarch::la::Vector<DIMENSIONS, double>& position,
     const double                                 time,
@@ -211,9 +270,6 @@ namespace {
     return 1.5 + 0.25 * std::sin(2.0 * std::numbers::pi_v<double> * travellingCoordinate(position, time, jointSpeed));
   }
 
-  // Enumerates every overlap voxel of every face and hands the functor the
-  // index of the volume the voxel mirrors, the face number, and the serialised
-  // position inside that face's overlap storage.
   template <int VolumesPerAxis, int HaloWidth, typename Functor>
   void forEachOverlapVoxel(Functor functor) {
     for (int normal = 0; normal < DIMENSIONS; normal++) {
@@ -245,8 +301,6 @@ namespace {
     }
   }
 
-  // Fills every overlap voxel of every face from the exact profile at the given
-  // time, which acts as an exact boundary condition around the patch.
   template <int VolumesPerAxis, int HaloWidth, typename Profile>
   void fillHaloFromProfile(std::vector<std::vector<double>>& faceInStorage, const Profile profile, const double time) {
     forEachOverlapVoxel<VolumesPerAxis, HaloWidth>(
@@ -261,8 +315,6 @@ namespace {
     );
   }
 
-  // Fills every overlap voxel by wrapping its volume index around the patch, so
-  // the patch behaves as a torus and every face flux has a matching partner.
   template <int VolumesPerAxis, int HaloWidth>
   void fillHaloPeriodically(std::vector<std::vector<double>>& faceInStorage, const std::vector<double>& q) {
     forEachOverlapVoxel<VolumesPerAxis, HaloWidth>(
@@ -280,12 +332,14 @@ namespace {
     );
   }
 
-  // Advances the profile with the requested reconstruction over the given
-  // number of time steps, feeding exact halo data before every step, and
-  // returns the patch state at the final time.
-  template <typename Reconstruction, int VolumesPerAxis, bool EvaluateNonconservativeProduct, typename Profile>
+  template <
+    typename Reconstruction,
+    int  VolumesPerAxis,
+    bool EvaluateNonconservativeProduct,
+    typename Profile,
+    typename SolverType        = TestSolver<NumberOfUnknowns>,
+    bool EvaluateCustomRiemann = false>
   std::vector<double> advectProfile(const Profile profile, const int numberOfTimeSteps, const double timeStepSize) {
-    using Solver                   = TestSolver<NumberOfUnknowns>;
     constexpr int HaloWidth        = Reconstruction::HaloSize;
     const int     patchStorageSize = numberOfVolumesInPatch<VolumesPerAxis>() * NumberOfData;
     const int     faceStorageSize  = faceOverlapStorageSize<VolumesPerAxis, HaloWidth>();
@@ -299,11 +353,11 @@ namespace {
     }
 
     std::vector<double>              qNext(patchStorageSize, 0.0);
-    std::vector<std::vector<double>> faceInStorage(TWO_TIMES_D, std::vector<double>(faceStorageSize, 0.0));
-    std::vector<std::vector<double>> faceOutStorage(TWO_TIMES_D, std::vector<double>(faceStorageSize, 0.0));
-    const double*                    faceInputPatches[TWO_TIMES_D];
-    double*                          faceOutputPatches[TWO_TIMES_D];
-    for (int face = 0; face < TWO_TIMES_D; face++) {
+    std::vector<std::vector<double>> faceInStorage(peano4::FacesPerCell, std::vector<double>(faceStorageSize, 0.0));
+    std::vector<std::vector<double>> faceOutStorage(peano4::FacesPerCell, std::vector<double>(faceStorageSize, 0.0));
+    const double*                    faceInputPatches[peano4::FacesPerCell];
+    double*                          faceOutputPatches[peano4::FacesPerCell];
+    for (int face = 0; face < peano4::FacesPerCell; face++) {
       faceInputPatches[face]  = faceInStorage[face].data();
       faceOutputPatches[face] = faceOutStorage[face].data();
     }
@@ -317,7 +371,7 @@ namespace {
       exahype2::fv::applyFiniteVolume<
         Reconstruction,
         exahype2::fv::timestepping::SingleStep,
-        Solver,
+        SolverType,
         VolumesPerAxis,
         NumberOfUnknowns,
         NumberOfAuxiliaryVariables,
@@ -325,7 +379,7 @@ namespace {
         EvaluateNonconservativeProduct,
         false,
         false,
-        false,
+        EvaluateCustomRiemann,
         false,
         true,
         double,
@@ -357,14 +411,12 @@ namespace {
     double errorSum = 0.0;
     for (int volume = 0; volume < numberOfVolumesInPatch<VolumesPerAxis>(); volume++) {
       const double exact = profile(volumeCentreOf<VolumesPerAxis>(volumeIndexOf<VolumesPerAxis>(volume)), endTime);
-      errorSum += std::abs(q[volume * NumberOfData] - exact);
+      errorSum += std::abs(q[static_cast<std::size_t>(volume) * NumberOfData] - exact);
     }
     return errorSum / numberOfVolumesInPatch<VolumesPerAxis>();
   }
 
-  // Returns the deterministic state of one logical volume, defined for halo
-  // indices outside the patch as well, so halo layouts of different widths can
-  // be filled with the same neighbour values.
+  // Halo widths use the same field at corresponding volume indices.
   double logicalState(const tarch::la::Vector<DIMENSIONS, int>& volumeIndex, const int unknown) {
     double phase = 0.7 * (unknown + 1);
     for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
@@ -373,11 +425,8 @@ namespace {
     return 1.0 + 0.25 * std::sin(phase);
   }
 
-  // Advances the same logical field with the first-order scheme and with the
-  // limited reconstruction under zero slopes, then returns the largest
-  // difference over the patch and the reported eigenvalues. A vanishing result
-  // means zero slopes degenerate to the first-order splitting, including the
-  // non-conservative product.
+  // A vanishing result means zero slopes degenerate to the first-order
+  // splitting, including the non-conservative product.
   template <bool EvaluateFlux, bool EvaluateNonconservativeProduct>
   double zeroSlopeVersusConstantMaxDifference() {
     using Solver               = TestSolver<NumberOfUnknowns>;
@@ -393,10 +442,22 @@ namespace {
 
     const int constantFaceStorageSize = faceOverlapStorageSize<NumberOfVolumesPerAxis, HaloSize>();
     const int limitedFaceStorageSize  = faceOverlapStorageSize<NumberOfVolumesPerAxis, ZeroSlope::HaloSize>();
-    std::vector<std::vector<double>> constantFaceIn(TWO_TIMES_D, std::vector<double>(constantFaceStorageSize, 0.0));
-    std::vector<std::vector<double>> limitedFaceIn(TWO_TIMES_D, std::vector<double>(limitedFaceStorageSize, 0.0));
-    std::vector<std::vector<double>> constantFaceOut(TWO_TIMES_D, std::vector<double>(constantFaceStorageSize, 0.0));
-    std::vector<std::vector<double>> limitedFaceOut(TWO_TIMES_D, std::vector<double>(limitedFaceStorageSize, 0.0));
+    std::vector<std::vector<double>> constantFaceIn(
+      peano4::FacesPerCell,
+      std::vector<double>(constantFaceStorageSize, 0.0)
+    );
+    std::vector<std::vector<double>> limitedFaceIn(
+      peano4::FacesPerCell,
+      std::vector<double>(limitedFaceStorageSize, 0.0)
+    );
+    std::vector<std::vector<double>> constantFaceOut(
+      peano4::FacesPerCell,
+      std::vector<double>(constantFaceStorageSize, 0.0)
+    );
+    std::vector<std::vector<double>> limitedFaceOut(
+      peano4::FacesPerCell,
+      std::vector<double>(limitedFaceStorageSize, 0.0)
+    );
 
     forEachOverlapVoxel<NumberOfVolumesPerAxis, HaloSize>(
       [&constantFaceIn](const tarch::la::Vector<DIMENSIONS, int>& volumeIndex, const int face, const int overlapIndex) {
@@ -415,11 +476,11 @@ namespace {
 
     std::vector<double> qOutConstant(patchStorageSize, 0.0);
     std::vector<double> qOutLimited(patchStorageSize, 0.0);
-    const double*       constantFaceInputPatches[TWO_TIMES_D];
-    const double*       limitedFaceInputPatches[TWO_TIMES_D];
-    double*             constantFaceOutputPatches[TWO_TIMES_D];
-    double*             limitedFaceOutputPatches[TWO_TIMES_D];
-    for (int face = 0; face < TWO_TIMES_D; face++) {
+    const double*       constantFaceInputPatches[peano4::FacesPerCell];
+    const double*       limitedFaceInputPatches[peano4::FacesPerCell];
+    double*             constantFaceOutputPatches[peano4::FacesPerCell];
+    double*             limitedFaceOutputPatches[peano4::FacesPerCell];
+    for (int face = 0; face < peano4::FacesPerCell; face++) {
       constantFaceInputPatches[face]  = constantFaceIn[face].data();
       limitedFaceInputPatches[face]   = limitedFaceIn[face].data();
       constantFaceOutputPatches[face] = constantFaceOut[face].data();
@@ -489,9 +550,6 @@ namespace {
     return maxDifference;
   }
 
-  // Reproduces the default boundary extrapolation in a solver's reconstruct
-  // method, so the reconstruction hook must leave every result unchanged. Any
-  // deviation means the kernel wired the hook wrongly.
   struct MimickingReconstructionSolver final : TestSolver<NumberOfUnknowns> {
     template <typename ComputePrecision>
     static void reconstruct(
@@ -511,9 +569,6 @@ namespace {
     }
   };
 
-  // Reproduces the Minmod policy in a solver's limitedDifference method, so the
-  // limiter hook must leave every result identical to the plain Minmod
-  // reconstruction. Any deviation means the kernel wired the hook wrongly.
   struct MimickingMinmodSolver final : TestSolver<NumberOfUnknowns> {
     template <typename ComputePrecision>
     static ComputePrecision limitedDifference(
@@ -532,10 +587,7 @@ namespace {
     }
   };
 
-  // Advances the logical field with the given solver over the requested number
-  // of time steps, wrapping the halo around the patch, and returns the final
-  // patch state.
-  template <typename Solver, int VolumesPerAxis>
+  template <typename SolverType, int VolumesPerAxis>
   std::vector<double> advanceLogicalField(const int numberOfTimeSteps, const double timeStepSize) {
     using SecondOrderReconstruction = exahype2::fv::reconstruction::LimitedLinear<exahype2::fv::limiter::Minmod>;
     constexpr int HaloWidth         = SecondOrderReconstruction::HaloSize;
@@ -554,11 +606,11 @@ namespace {
     }
 
     std::vector<double>              qNext(patchStorageSize, 0.0);
-    std::vector<std::vector<double>> faceInStorage(TWO_TIMES_D, std::vector<double>(faceStorageSize, 0.0));
-    std::vector<std::vector<double>> faceOutStorage(TWO_TIMES_D, std::vector<double>(faceStorageSize, 0.0));
-    const double*                    faceInputPatches[TWO_TIMES_D];
-    double*                          faceOutputPatches[TWO_TIMES_D];
-    for (int face = 0; face < TWO_TIMES_D; face++) {
+    std::vector<std::vector<double>> faceInStorage(peano4::FacesPerCell, std::vector<double>(faceStorageSize, 0.0));
+    std::vector<std::vector<double>> faceOutStorage(peano4::FacesPerCell, std::vector<double>(faceStorageSize, 0.0));
+    const double*                    faceInputPatches[peano4::FacesPerCell];
+    double*                          faceOutputPatches[peano4::FacesPerCell];
+    for (int face = 0; face < peano4::FacesPerCell; face++) {
       faceInputPatches[face]  = faceInStorage[face].data();
       faceOutputPatches[face] = faceOutStorage[face].data();
     }
@@ -583,7 +635,7 @@ namespace {
       exahype2::fv::applyFiniteVolume<
         SecondOrderReconstruction,
         exahype2::fv::timestepping::SingleStep,
-        Solver,
+        SolverType,
         VolumesPerAxis,
         NumberOfUnknowns,
         NumberOfAuxiliaryVariables,
@@ -612,9 +664,8 @@ namespace {
 
   constexpr int SodUnknowns = DIMENSIONS + 2;
 
-  // Evaluates the Euler terms of the Sod shock tube along the first axis. The
-  // momenta occupy the slots after the density and the energy sits last, so the
-  // layout follows the dimensions of the build.
+  // The momenta occupy the slots after the density and the energy sits last, so
+  // the layout follows the dimensions of the build.
   struct SodSolver final {
     static constexpr double Gamma = 1.4;
 
@@ -672,10 +723,9 @@ namespace {
     state[DIMENSIONS + 1] = (left ? 1.0 : 0.1) / (SodSolver::Gamma - 1.0);
   }
 
-  // Advances the Sod tube with the Minmod limiter. The first-axis halo carries
-  // the untouched far field and the other halos copy the nearest interior
-  // volume, which is exact while the waves stay inside the patch and the
-  // solution does not vary along those axes.
+  // The first-axis halo carries the untouched far field and the other halos copy
+  // the nearest interior volume, which is exact while the waves stay inside the
+  // patch and the solution does not vary along those axes.
   template <int VolumesPerAxis>
   std::vector<double> advanceSodTube(const int numberOfTimeSteps, const double timeStepSize) {
     using MinmodReconstruction = exahype2::fv::reconstruction::LimitedLinear<exahype2::fv::limiter::Minmod>;
@@ -690,15 +740,18 @@ namespace {
 
     std::vector<double> q(patchStorageSize);
     for (int volume = 0; volume < numberOfVolumesInPatch<VolumesPerAxis>(); volume++) {
-      sodInitialState(volumeCentreOf<VolumesPerAxis>(volumeIndexOf<VolumesPerAxis>(volume)), &q[volume * SodUnknowns]);
+      sodInitialState(
+        volumeCentreOf<VolumesPerAxis>(volumeIndexOf<VolumesPerAxis>(volume)),
+        &q[static_cast<std::size_t>(volume) * SodUnknowns]
+      );
     }
 
     std::vector<double>              qNext(patchStorageSize, 0.0);
-    std::vector<std::vector<double>> faceInStorage(TWO_TIMES_D, std::vector<double>(faceStorageSize, 0.0));
-    std::vector<std::vector<double>> faceOutStorage(TWO_TIMES_D, std::vector<double>(faceStorageSize, 0.0));
-    const double*                    faceInputPatches[TWO_TIMES_D];
-    double*                          faceOutputPatches[TWO_TIMES_D];
-    for (int face = 0; face < TWO_TIMES_D; face++) {
+    std::vector<std::vector<double>> faceInStorage(peano4::FacesPerCell, std::vector<double>(faceStorageSize, 0.0));
+    std::vector<std::vector<double>> faceOutStorage(peano4::FacesPerCell, std::vector<double>(faceStorageSize, 0.0));
+    const double*                    faceInputPatches[peano4::FacesPerCell];
+    double*                          faceOutputPatches[peano4::FacesPerCell];
+    for (int face = 0; face < peano4::FacesPerCell; face++) {
       faceInputPatches[face]  = faceInStorage[face].data();
       faceOutputPatches[face] = faceOutStorage[face].data();
     }
@@ -710,7 +763,7 @@ namespace {
       forEachOverlapVoxel<VolumesPerAxis, HaloWidth>(
         [&faceInStorage,
          &q](const tarch::la::Vector<DIMENSIONS, int>& volumeIndex, const int face, const int overlapIndex) {
-          double* const target = &faceInStorage[face][overlapIndex * SodUnknowns];
+          double* const target = &faceInStorage[face][static_cast<std::size_t>(overlapIndex) * SodUnknowns];
           const int     normal = face % DIMENSIONS;
           if (normal == 0) {
             sodInitialState(volumeCentreOf<VolumesPerAxis>(volumeIndex), target);
@@ -824,11 +877,11 @@ namespace {
     }
 
     std::vector<double>              qNext(patchStorageSize, 0.0);
-    std::vector<std::vector<double>> faceInStorage(TWO_TIMES_D, std::vector<double>(faceStorageSize, 0.0));
-    std::vector<std::vector<double>> faceOutStorage(TWO_TIMES_D, std::vector<double>(faceStorageSize, 0.0));
-    const double*                    faceInputPatches[TWO_TIMES_D];
-    double*                          faceOutputPatches[TWO_TIMES_D];
-    for (int face = 0; face < TWO_TIMES_D; face++) {
+    std::vector<std::vector<double>> faceInStorage(peano4::FacesPerCell, std::vector<double>(faceStorageSize, 0.0));
+    std::vector<std::vector<double>> faceOutStorage(peano4::FacesPerCell, std::vector<double>(faceStorageSize, 0.0));
+    const double*                    faceInputPatches[peano4::FacesPerCell];
+    double*                          faceOutputPatches[peano4::FacesPerCell];
+    for (int face = 0; face < peano4::FacesPerCell; face++) {
       faceInputPatches[face]  = faceInStorage[face].data();
       faceOutputPatches[face] = faceOutStorage[face].data();
     }
@@ -882,11 +935,13 @@ void exahype2::fv::tests::FiniteVolumeTest::run() {
   testMethod(testZeroTimeStepPreservesState);
   testMethod(testUniformStateIsPreserved);
   testMethod(testLimitedLinearPreservesUniformState);
+  testMethod(testLimitedLinearIntegratesTimeDependentAdvection);
   testMethod(testLimitedLinearAverageConvergesAtSecondOrder);
   testMethod(testConstantConvergesAtFirstOrder);
   testMethod(testLimitedLinearMinmodKeepsStepInBounds);
   testMethod(testLimitedLinearZeroSlopesMatchConstant);
   testMethod(testLimitedLinearNcpAdvectionConvergesAtSecondOrder);
+  testMethod(testLimitedLinearCustomRiemannIncludesVolumeNonconservativeProduct);
   testMethod(testPeriodicAdvectionConservesMass);
   testMethod(testSodShockTubeReachesStarStates);
   testMethod(testReconstructionHookReproducingDefaultChangesNothing);
@@ -895,8 +950,11 @@ void exahype2::fv::tests::FiniteVolumeTest::run() {
   testMethod(testWENOReconstructsSmoothProfileAtFifthOrder);
   testMethod(testWENOAdvectionConvergesAtSecondOrder);
   testMethod(testWENOPeriodicAdvectionConservesMass);
+  testMethod(testParticleUpdateAdvancesWithExplicitEuler);
+  testMethod(testParticleAccessorsMatchAttributeOffsets);
 }
 
+/** Checks that a time step of size zero leaves the patch unchanged. */
 void exahype2::fv::tests::FiniteVolumeTest::testZeroTimeStepPreservesState() {
   const int           patchStorageSize = numberOfVolumesInPatch<NumberOfVolumesPerAxis>() * NumberOfData;
   std::vector<double> qIn(patchStorageSize);
@@ -906,16 +964,16 @@ void exahype2::fv::tests::FiniteVolumeTest::testZeroTimeStepPreservesState() {
   }
 
   std::vector<std::vector<double>> faceInStorage(
-    TWO_TIMES_D,
+    peano4::FacesPerCell,
     std::vector<double>(faceOverlapStorageSize<NumberOfVolumesPerAxis, HaloSize>(), 0.5)
   );
   std::vector<std::vector<double>> faceOutStorage(
-    TWO_TIMES_D,
+    peano4::FacesPerCell,
     std::vector<double>(faceOverlapStorageSize<NumberOfVolumesPerAxis, HaloSize>(), 0.0)
   );
-  const double* faceInputPatches[TWO_TIMES_D];
-  double*       faceOutputPatches[TWO_TIMES_D];
-  for (int face = 0; face < TWO_TIMES_D; face++) {
+  const double* faceInputPatches[peano4::FacesPerCell];
+  double*       faceOutputPatches[peano4::FacesPerCell];
+  for (int face = 0; face < peano4::FacesPerCell; face++) {
     faceInputPatches[face]  = faceInStorage[face].data();
     faceOutputPatches[face] = faceOutStorage[face].data();
   }
@@ -945,6 +1003,7 @@ void exahype2::fv::tests::FiniteVolumeTest::testZeroTimeStepPreservesState() {
   }
 }
 
+/** Checks that the finite-volume update keeps a uniform state uniform. */
 void exahype2::fv::tests::FiniteVolumeTest::testUniformStateIsPreserved() {
   const int           patchStorageSize = numberOfVolumesInPatch<NumberOfVolumesPerAxis>() * NumberOfData;
   const double        uniformValue     = 1.23;
@@ -952,16 +1011,16 @@ void exahype2::fv::tests::FiniteVolumeTest::testUniformStateIsPreserved() {
   std::vector<double> qOut(patchStorageSize, 0.0);
 
   std::vector<std::vector<double>> faceInStorage(
-    TWO_TIMES_D,
+    peano4::FacesPerCell,
     std::vector<double>(faceOverlapStorageSize<NumberOfVolumesPerAxis, HaloSize>(), uniformValue)
   );
   std::vector<std::vector<double>> faceOutStorage(
-    TWO_TIMES_D,
+    peano4::FacesPerCell,
     std::vector<double>(faceOverlapStorageSize<NumberOfVolumesPerAxis, HaloSize>(), 0.0)
   );
-  const double* faceInputPatches[TWO_TIMES_D];
-  double*       faceOutputPatches[TWO_TIMES_D];
-  for (int face = 0; face < TWO_TIMES_D; face++) {
+  const double* faceInputPatches[peano4::FacesPerCell];
+  double*       faceOutputPatches[peano4::FacesPerCell];
+  for (int face = 0; face < peano4::FacesPerCell; face++) {
     faceInputPatches[face]  = faceInStorage[face].data();
     faceOutputPatches[face] = faceOutStorage[face].data();
   }
@@ -995,6 +1054,7 @@ void exahype2::fv::tests::FiniteVolumeTest::testUniformStateIsPreserved() {
   );
 }
 
+/** Checks that the limited linear reconstruction keeps a uniform state uniform. */
 void exahype2::fv::tests::FiniteVolumeTest::testLimitedLinearPreservesUniformState() {
   using UniformReconstruction = exahype2::fv::reconstruction::LimitedLinear<exahype2::fv::limiter::VanAlbada>;
   const int patchStorageSize  = numberOfVolumesInPatch<NumberOfVolumesPerAxis>() * NumberOfData;
@@ -1004,11 +1064,14 @@ void exahype2::fv::tests::FiniteVolumeTest::testLimitedLinearPreservesUniformSta
   std::vector<double> qIn(patchStorageSize, uniformValue);
   std::vector<double> qOut(patchStorageSize, 0.0);
 
-  std::vector<std::vector<double>> faceInStorage(TWO_TIMES_D, std::vector<double>(faceStorageSize, uniformValue));
-  std::vector<std::vector<double>> faceOutStorage(TWO_TIMES_D, std::vector<double>(faceStorageSize, 0.0));
-  const double*                    faceInputPatches[TWO_TIMES_D];
-  double*                          faceOutputPatches[TWO_TIMES_D];
-  for (int face = 0; face < TWO_TIMES_D; face++) {
+  std::vector<std::vector<double>> faceInStorage(
+    peano4::FacesPerCell,
+    std::vector<double>(faceStorageSize, uniformValue)
+  );
+  std::vector<std::vector<double>> faceOutStorage(peano4::FacesPerCell, std::vector<double>(faceStorageSize, 0.0));
+  const double*                    faceInputPatches[peano4::FacesPerCell];
+  double*                          faceOutputPatches[peano4::FacesPerCell];
+  for (int face = 0; face < peano4::FacesPerCell; face++) {
     faceInputPatches[face]  = faceInStorage[face].data();
     faceOutputPatches[face] = faceOutStorage[face].data();
   }
@@ -1040,6 +1103,29 @@ void exahype2::fv::tests::FiniteVolumeTest::testLimitedLinearPreservesUniformSta
     returnedEigenvalue,
     TestSolver<NumberOfUnknowns>::AdvectionSpeed + TestSolver<NumberOfUnknowns>::NcpAdvectionSpeed
   );
+}
+
+/** Checks the exact displacement of a linear profile under time-dependent advection. */
+void exahype2::fv::tests::FiniteVolumeTest::testLimitedLinearIntegratesTimeDependentAdvection() {
+  using Reconstruction          = exahype2::fv::reconstruction::LimitedLinear<exahype2::fv::limiter::Average>;
+  constexpr double TimeStepSize = 0.01;
+  const auto       profile      = [](const tarch::la::Vector<DIMENSIONS, double>& position, const double time) {
+    return 1.5 + position(0) - time - 0.5 * time * time;
+  };
+  const auto solution =
+    advectProfile<Reconstruction, NumberOfVolumesPerAxis, false, decltype(profile), TimeDependentAdvectionSolver>(
+      profile,
+      1,
+      TimeStepSize
+    );
+
+  for (int volume = 0; volume < numberOfVolumesInPatch<NumberOfVolumesPerAxis>(); volume++) {
+    const auto   centre   = volumeCentreOf<NumberOfVolumesPerAxis>(volumeIndexOf<NumberOfVolumesPerAxis>(volume));
+    const double expected = profile(centre, TimeStepSize);
+    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+      validateNumericalEqualsWithParams2(solution[volume * NumberOfData + unknown], expected, volume, unknown);
+    }
+  }
 }
 
 /** Measures the limited-linear order against an analytic smooth-advection solution. */
@@ -1075,8 +1161,9 @@ void exahype2::fv::tests::FiniteVolumeTest::testLimitedLinearMinmodKeepsStepInBo
   const std::vector<double> q = advectProfile<MinmodReconstruction, VolumesPerAxis, false>(stepProfile, 8, 0.02 / 3.0);
 
   for (int volume = 0; volume < numberOfVolumesInPatch<VolumesPerAxis>(); volume++) {
-    validateWithParams2(q[volume * NumberOfData] >= -1e-12, volume, q[volume * NumberOfData]);
-    validateWithParams2(q[volume * NumberOfData] <= 1.0 + 1e-12, volume, q[volume * NumberOfData]);
+    const double profileValue = q[static_cast<std::size_t>(volume) * NumberOfData];
+    validateWithParams2(profileValue >= -1e-12, volume, profileValue);
+    validateWithParams2(profileValue <= 1.0 + 1e-12, volume, profileValue);
   }
 
   // The total variation along the advection direction never exceeds the single
@@ -1085,8 +1172,8 @@ void exahype2::fv::tests::FiniteVolumeTest::testLimitedLinearMinmodKeepsStepInBo
   for (int row = 0; row < numberOfRows; row++) {
     double totalVariation = 0.0;
     for (int volume = 0; volume + 1 < VolumesPerAxis; volume++) {
-      const double left  = q[(row * VolumesPerAxis + volume) * NumberOfData];
-      const double right = q[(row * VolumesPerAxis + volume + 1) * NumberOfData];
+      const double left  = q[static_cast<std::size_t>(row * VolumesPerAxis + volume) * NumberOfData];
+      const double right = q[static_cast<std::size_t>(row * VolumesPerAxis + volume + 1) * NumberOfData];
       totalVariation += std::abs(right - left);
     }
     validateWithParams2(totalVariation <= 1.0 + 1e-12, row, totalVariation);
@@ -1112,6 +1199,30 @@ void exahype2::fv::tests::FiniteVolumeTest::testLimitedLinearNcpAdvectionConverg
   validateWithParams3(order > 1.7, coarseError, fineError, order);
 }
 
+/** Checks that a custom Riemann solver retains non-conservative advection inside each volume. */
+void exahype2::fv::tests::FiniteVolumeTest::testLimitedLinearCustomRiemannIncludesVolumeNonconservativeProduct() {
+  using Reconstruction          = exahype2::fv::reconstruction::LimitedLinear<exahype2::fv::limiter::Average>;
+  constexpr double TimeStepSize = 0.01;
+  const auto       profile      = [](const tarch::la::Vector<DIMENSIONS, double>& position, const double time) {
+    return 1.5 + position(0)
+      - (TestSolver<NumberOfUnknowns>::AdvectionSpeed + TestSolver<NumberOfUnknowns>::NcpAdvectionSpeed) * time;
+  };
+  const auto solution =
+    advectProfile<Reconstruction, NumberOfVolumesPerAxis, true, decltype(profile), NonconservativeAdvectionSolver, true>(
+      profile,
+      1,
+      TimeStepSize
+    );
+
+  for (int volume = 0; volume < numberOfVolumesInPatch<NumberOfVolumesPerAxis>(); volume++) {
+    const auto   centre   = volumeCentreOf<NumberOfVolumesPerAxis>(volumeIndexOf<NumberOfVolumesPerAxis>(volume));
+    const double expected = profile(centre, TimeStepSize);
+    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+      validateNumericalEqualsWithParams2(solution[volume * NumberOfData + unknown], expected, volume, unknown);
+    }
+  }
+}
+
 /** Confirms periodic face fluxes conserve the patch's total mass. */
 void exahype2::fv::tests::FiniteVolumeTest::testPeriodicAdvectionConservesMass() {
   using MinmodReconstruction = exahype2::fv::reconstruction::LimitedLinear<exahype2::fv::limiter::Minmod>;
@@ -1123,10 +1234,6 @@ void exahype2::fv::tests::FiniteVolumeTest::testPeriodicAdvectionConservesMass()
 
 /** Confirms the shock-capturing path reaches the Sod tube's known star-region states. */
 void exahype2::fv::tests::FiniteVolumeTest::testSodShockTubeReachesStarStates() {
-  // The tube varies along the first axis alone, so a cubic patch repeats the
-  // same profile once per transverse volume. Three dimensions therefore use
-  // fewer volumes per axis: enough to resolve the star plateaus the samples
-  // read, and wide enough that the shared step stays stable.
   constexpr int    VolumesPerAxis = DIMENSIONS == 2 ? 54 : 36;
   constexpr int    Steps          = 116;
   constexpr double TimeStepSize   = 0.00175;
@@ -1134,8 +1241,8 @@ void exahype2::fv::tests::FiniteVolumeTest::testSodShockTubeReachesStarStates() 
   const std::vector<double> q = advanceSodTube<VolumesPerAxis>(Steps, TimeStepSize);
 
   for (int volume = 0; volume < numberOfVolumesInPatch<VolumesPerAxis>(); volume++) {
-    const double density  = q[volume * SodUnknowns];
-    const double pressure = SodSolver::pressureOf(&q[volume * SodUnknowns]);
+    const double density  = q[static_cast<std::size_t>(volume) * SodUnknowns];
+    const double pressure = SodSolver::pressureOf(&q[static_cast<std::size_t>(volume) * SodUnknowns]);
     validateWithParams2(density > 0.0, volume, density);
     validateWithParams2(pressure > 0.0, volume, pressure);
     validateWithParams2(density <= 1.0 + 1e-6, volume, density);
@@ -1149,15 +1256,12 @@ void exahype2::fv::tests::FiniteVolumeTest::testSodShockTubeReachesStarStates() 
   constexpr double StarDensityLeft  = 0.42632;
   constexpr double StarDensityRight = 0.26557;
 
-  // A sample is a coordinate, so it names the plateau it reads and follows
-  // whichever resolution is in force. The first axis runs fastest, so its
-  // volumes lead the patch.
+  // The first axis runs fastest, so its volumes lead the patch.
   const auto volumeAt = [](const double position) { return static_cast<int>(position * VolumesPerAxis); };
   const auto probe    = [&q](const int volumeAlongFirstAxis, const int unknown) {
     return q[volumeAlongFirstAxis * SodUnknowns + unknown];
   };
-  // The left plateau lies between the rarefaction tail and the contact. Both
-  // of its ends smear, so the samples sit in the middle.
+  // The left plateau lies between the rarefaction tail and the contact.
   for (const double position : {0.54, 0.58}) {
     validateWithParams2(
       std::abs(probe(volumeAt(position), 0) - StarDensityLeft) < 0.03,
@@ -1177,7 +1281,7 @@ void exahype2::fv::tests::FiniteVolumeTest::testSodShockTubeReachesStarStates() 
   // either side of it must give the same star value.
   for (const double position : {0.58, 0.76}) {
     const double velocity = probe(volumeAt(position), 1) / probe(volumeAt(position), 0);
-    const double pressure = SodSolver::pressureOf(&q[volumeAt(position) * SodUnknowns]);
+    const double pressure = SodSolver::pressureOf(&q[static_cast<std::size_t>(volumeAt(position)) * SodUnknowns]);
     validateWithParams2(std::abs(velocity - StarVelocity) < 0.05, position, velocity);
     validateWithParams2(std::abs(pressure - StarPressure) < 0.03, position, pressure);
   }
@@ -1232,11 +1336,11 @@ void exahype2::fv::tests::FiniteVolumeTest::testWENOPreservesUniformState() {
   std::vector<double> qIn(patchStorageSize, uniformValue);
   std::vector<double> qOut(patchStorageSize, 0.0);
 
-  std::vector<std::vector<double>> faceInStorage(TWO_TIMES_D, std::vector<double>(faceStorageSize, uniformValue));
-  std::vector<std::vector<double>> faceOutStorage(TWO_TIMES_D, std::vector<double>(faceStorageSize, 0.0));
-  const double*                    faceInputPatches[TWO_TIMES_D];
-  double*                          faceOutputPatches[TWO_TIMES_D];
-  for (int face = 0; face < TWO_TIMES_D; face++) {
+  std::vector<std::vector<double>> faceInStorage(peano4::FacesPerCell, std::vector<double>(faceStorageSize, uniformValue));
+  std::vector<std::vector<double>> faceOutStorage(peano4::FacesPerCell, std::vector<double>(faceStorageSize, 0.0));
+  const double*                    faceInputPatches[peano4::FacesPerCell];
+  double*                          faceOutputPatches[peano4::FacesPerCell];
+  for (int face = 0; face < peano4::FacesPerCell; face++) {
     faceInputPatches[face]  = faceInStorage[face].data();
     faceOutputPatches[face] = faceOutStorage[face].data();
   }
@@ -1304,4 +1408,131 @@ void exahype2::fv::tests::FiniteVolumeTest::testWENOPeriodicAdvectionConservesMa
   const auto [massBefore, massAfter] = periodicAdvectionMass<WENOReconstruction, 27>();
 
   validateWithParams2(std::abs(massAfter - massBefore) <= 1e-11 * std::abs(massBefore), massBefore, massAfter);
+}
+
+/**
+ * Checks that a particle without force keeps its velocity and moves by the velocity times the
+ * time step size.
+ */
+void exahype2::fv::tests::FiniteVolumeTest::testParticleUpdateAdvancesWithExplicitEuler() {
+  const int  originalForceMethod         = exahype2::fv::particles::forces::globalForceMethod;
+  const int  originalVoxelsPerAxis       = exahype2::fv::particles::interpolation::globalVoxelsPerAxis;
+  const int  originalUnknownsPerVoxel    = exahype2::fv::particles::interpolation::globalUnknownsPerVoxel;
+  const int  originalInterpolationMethod = exahype2::fv::particles::interpolation::globalInterpolationMethod;
+  const auto originalDomainOffset        = exahype2::fv::particles::utils::domainOffset;
+  const auto originalDomainSize          = exahype2::fv::particles::utils::domainSize;
+  const auto originalPeriodicity         = exahype2::fv::particles::utils::isPeriodic;
+
+  TestParticle particle;
+  particle.x = tarch::la::Vector<DIMENSIONS, double>(0.25);
+
+  particle.data[exahype2::fv::particles::utils::ParticleVelocityAttributeOffset] = 2.0;
+
+  exahype2::fv::particles::forces::disableAllForces();
+  exahype2::fv::particles::interpolation::setGlobalInterpolationParameters(1, 1, 0);
+  exahype2::fv::particles::utils::setGlobalParameters(
+    tarch::la::Vector<DIMENSIONS, double>(0.0),
+    tarch::la::Vector<DIMENSIONS, double>(1.0),
+    tarch::la::Vector<DIMENSIONS, int>(1)
+  );
+
+  peano4::dataview::CellMarker marker{};
+  marker.centre              = tarch::la::Vector<DIMENSIONS, double>(0.5);
+  marker.h                   = tarch::la::Vector<DIMENSIONS, double>(1.0);
+  const double cellValues[1] = {0.0};
+
+  exahype2::fv::particles::updateParticleState<0>(particle, marker, cellValues, 0.1, 1);
+  for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
+    const double expectedPosition = dimension == 0 ? 0.45 : 0.25;
+    const double expectedVelocity = dimension == 0 ? 2.0 : 0.0;
+    validateNumericalEquals(particle.x(dimension), expectedPosition);
+    validateNumericalEquals(
+      particle.data[exahype2::fv::particles::utils::ParticleVelocityAttributeOffset + dimension],
+      expectedVelocity
+    );
+    validateNumericalEquals(
+      particle.data[exahype2::fv::particles::utils::ParticleAccelerationAttributeOffset + dimension],
+      0.0
+    );
+  }
+
+  exahype2::fv::particles::forces::setForceMethod(originalForceMethod);
+  exahype2::fv::particles::interpolation::setGlobalInterpolationParameters(
+    originalVoxelsPerAxis,
+    originalUnknownsPerVoxel,
+    originalInterpolationMethod
+  );
+  exahype2::fv::particles::utils::setGlobalParameters(originalDomainOffset, originalDomainSize, originalPeriodicity);
+}
+
+/**
+ * Checks that the particle accessors read and write the data entries their offsets name and
+ * leave the interpolated fluid velocity untouched.
+ */
+void exahype2::fv::tests::FiniteVolumeTest::testParticleAccessorsMatchAttributeOffsets() {
+  TestParticle particle;
+
+  tarch::la::Vector<DIMENSIONS, double> velocity;
+  tarch::la::Vector<DIMENSIONS, double> acceleration;
+
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    velocity(axis)     = 1.0 + axis;
+    acceleration(axis) = -1.0 - axis;
+
+    particle.data[exahype2::fv::particles::utils::FluidVelocityAttributeOffset + axis] = 10.0 + axis;
+  }
+  particle.data[exahype2::fv::particles::utils::FluidDensityAttributeOffset] = 7.0;
+
+  exahype2::fv::particles::utils::setVelocity(particle, velocity);
+  exahype2::fv::particles::utils::setAcceleration(particle, acceleration);
+  exahype2::fv::particles::utils::setMass(particle, 3.0);
+  exahype2::fv::particles::utils::setRadius(particle, 0.5);
+
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    validateNumericalEquals(
+      particle.data[exahype2::fv::particles::utils::FluidVelocityAttributeOffset + axis],
+      10.0 + axis
+    );
+    validateNumericalEquals(
+      particle.data[exahype2::fv::particles::utils::ParticleVelocityAttributeOffset + axis],
+      1.0 + axis
+    );
+    validateNumericalEquals(
+      particle.data[exahype2::fv::particles::utils::ParticleAccelerationAttributeOffset + axis],
+      -1.0 - axis
+    );
+  }
+
+  validateNumericalEquals(exahype2::fv::particles::utils::getInterpolatedRho(particle), 7.0);
+  validateNumericalEquals(exahype2::fv::particles::utils::getMass(particle), 3.0);
+  validateNumericalEquals(exahype2::fv::particles::utils::getRadius(particle), 0.5);
+  validateNumericalEquals(
+    exahype2::fv::particles::utils::computeKineticEnergy(particle),
+    0.5 * 3.0 * tarch::la::dot(velocity, velocity)
+  );
+
+  const auto state    = exahype2::fv::particles::utils::getParticleState(particle);
+  const auto momentum = exahype2::fv::particles::utils::computeMomentum(particle);
+
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    validateNumericalEquals(state.velocity(axis), velocity(axis));
+    validateNumericalEquals(state.acceleration(axis), acceleration(axis));
+    validateNumericalEquals(momentum(axis), 3.0 * velocity(axis));
+  }
+
+  exahype2::fv::particles::utils::resetAcceleration(particle);
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    validateNumericalEquals(
+      particle.data[exahype2::fv::particles::utils::ParticleAccelerationAttributeOffset + axis],
+      0.0
+    );
+  }
+
+  exahype2::fv::particles::utils::setParticleState(particle, state);
+  for (int axis = 0; axis < DIMENSIONS; axis++) {
+    validateNumericalEquals(
+      particle.data[exahype2::fv::particles::utils::ParticleAccelerationAttributeOffset + axis],
+      acceleration(axis)
+    );
+  }
 }

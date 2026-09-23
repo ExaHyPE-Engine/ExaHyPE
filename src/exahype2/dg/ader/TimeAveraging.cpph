@@ -1,0 +1,101 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+
+TARGET_DECLARE
+/**
+ * Overwrites the time averages of the state, the flux and the source with the temporal quadrature
+ * of the space-time predictor. The averaged flux holds one block per axis in cell node order.
+ */
+template <
+  int  NumberOfDofsPerAxis,
+  int  NumberOfUnknowns,
+  int  NumberOfAuxiliaryVariables,
+  bool EvaluateFlux,
+  bool AccumulatesSource,
+  typename ComputePrecision,
+  typename PicardPrecision>
+INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::averagePredictorOverTime(
+  ComputePrecision* NOALIAS const                       timeAveragedState,
+  [[maybe_unused]] ComputePrecision* NOALIAS const      timeAveragedFlux,
+  [[maybe_unused]] ComputePrecision* NOALIAS const      timeAveragedSource,
+  const PicardPrecision* NOALIAS const                  spaceTimeState,
+  [[maybe_unused]] const PicardPrecision* NOALIAS const spaceTimeFlux,
+  [[maybe_unused]] const PicardPrecision* NOALIAS const spaceTimeSource,
+  const ComputePrecision* NOALIAS const                 quadratureWeights
+) {
+  using CellLayout                  = Layout<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables>;
+  constexpr int StateStride         = CellLayout::PaddedNumberOfData;
+  constexpr int UnknownStride       = CellLayout::PaddedNumberOfUnknowns;
+  constexpr int AveragedAxisStride  = UnknownStride * CellLayout::NodesPerCell;
+  constexpr int SpaceTimeAxisStride = UnknownStride * CellLayout::SpaceTimeNodes;
+
+  using AccumulatePrecision = std::common_type_t<ComputePrecision, PicardPrecision>;
+
+  for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+    ComputePrecision                  stateAverage[StateStride]               = {};
+    [[maybe_unused]] ComputePrecision fluxAverage[DIMENSIONS * UnknownStride] = {};
+    [[maybe_unused]] ComputePrecision sourceAverage[UnknownStride]            = {};
+
+    for (int timeNode = 0; timeNode < NumberOfDofsPerAxis; timeNode++) {
+      const int  spaceTimeNode = timeNode * CellLayout::NodesPerCell + cellNode;
+      const auto weight        = static_cast<AccumulatePrecision>(quadratureWeights[timeNode]);
+      SIMD()
+      for (int value = 0; value < StateStride; value++) {
+        stateAverage[value] = static_cast<ComputePrecision>(
+          static_cast<AccumulatePrecision>(stateAverage[value])
+          + weight * static_cast<AccumulatePrecision>(spaceTimeState[spaceTimeNode * StateStride + value])
+        );
+      }
+
+      if constexpr (EvaluateFlux) {
+        UNROLL(DIMENSIONS)
+        for (int axis = 0; axis < DIMENSIONS; axis++) {
+          SIMD()
+          for (int unknown = 0; unknown < UnknownStride; unknown++) {
+            fluxAverage[axis * UnknownStride + unknown] = static_cast<ComputePrecision>(
+              static_cast<AccumulatePrecision>(fluxAverage[axis * UnknownStride + unknown])
+              + weight
+                * static_cast<AccumulatePrecision>(
+                  spaceTimeFlux[spaceTimeNode * UnknownStride + unknown + axis * SpaceTimeAxisStride]
+                )
+            );
+          }
+        }
+      }
+
+      if constexpr (AccumulatesSource) {
+        SIMD()
+        for (int unknown = 0; unknown < UnknownStride; unknown++) {
+          sourceAverage[unknown] = static_cast<ComputePrecision>(
+            static_cast<AccumulatePrecision>(sourceAverage[unknown])
+            + weight * static_cast<AccumulatePrecision>(spaceTimeSource[spaceTimeNode * UnknownStride + unknown])
+          );
+        }
+      }
+    }
+
+    SIMD()
+    for (int value = 0; value < StateStride; value++) {
+      timeAveragedState[cellNode * StateStride + value] = stateAverage[value];
+    }
+
+    if constexpr (EvaluateFlux) {
+      UNROLL(DIMENSIONS)
+      for (int axis = 0; axis < DIMENSIONS; axis++) {
+        SIMD()
+        for (int unknown = 0; unknown < UnknownStride; unknown++) {
+          timeAveragedFlux[cellNode * UnknownStride + unknown + axis * AveragedAxisStride] =
+            fluxAverage[axis * UnknownStride + unknown];
+        }
+      }
+    }
+
+    if constexpr (AccumulatesSource) {
+      SIMD()
+      for (int unknown = 0; unknown < UnknownStride; unknown++) {
+        timeAveragedSource[cellNode * UnknownStride + unknown] = sourceAverage[unknown];
+      }
+    }
+  }
+}
+TARGET_DECLARE_END

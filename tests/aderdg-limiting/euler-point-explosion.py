@@ -50,11 +50,11 @@ boundary_conditions = """
 refinement_criterion = f"""
   return ::exahype2::refineOnDetail(
     Q,
-    Order + 1,
+    DGOrder + 1,
     NumberOfUnknowns + NumberOfAuxiliaryVariables,
     2.0e-2,
-    9.0,
-    kernels::ADERDGSolver::Quadrature<double>::nodes,
+    ::exahype2::DefaultCoarsenSafetyFactor,
+    kernels::ADERDGSolver::Quadrature<double>::QuadraturePoints1D,
     [](const double* const values) {{ return values[Shortcuts::rho]; }},
     [](const double* const values) {{
       constexpr double Gamma = {gamma};
@@ -75,17 +75,17 @@ refinement_criterion = f"""
   );
 """
 
-solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
+solver = exahype2.dg.ader.Solver(
     name="ADERDGSolver",
     order=order,
     unknowns=unknowns,
     auxiliary_variables=0,
-    time_step_relaxation=0.5,
+    time_stepping=exahype2.TimeStepping.Adaptive(0.5),
 )
-solver.set_implementation(
+solver.set_pde_terms(
     flux=euler.flux(gamma),
     max_eigenvalue=euler.max_eigenvalue(gamma),
-    initial_conditions=initial_conditions,
+    initial_condition=initial_conditions,
     boundary_conditions=boundary_conditions,
     refinement_criterion=refinement_criterion,
 )

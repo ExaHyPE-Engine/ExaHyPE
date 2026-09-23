@@ -47,43 +47,36 @@ project = exahype2.Project(
 if project.dimensions != 2:
     raise ValueError("The solitary-wave application is two-dimensional.")
 
-aderdg_solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
+aderdg_solver = exahype2.dg.ader.Solver(
     name="ADERDGSolver",
     order=dg_order,
     unknowns={"h": 1, "hu": project.dimensions, "b": 1},
     auxiliary_variables=0,
-    time_step_relaxation=0.5,
+    time_stepping=exahype2.TimeStepping.Adaptive(0.5),
+    basis=exahype2.dg.GaussLegendre,
+    linear=False,
 )
 
-aderdg_solver.set_implementation(
-    initial_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
-    boundary_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
-    refinement_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation,
-    flux=exahype2.solvers.PDETerms.User_Defined_Implementation,
-    max_eigenvalue=exahype2.solvers.PDETerms.User_Defined_Implementation,
-    ncp=exahype2.solvers.PDETerms.User_Defined_Implementation,
-    riemann_solver=exahype2.solvers.PDETerms.User_Defined_Implementation,
+aderdg_solver.set_pde_terms(
+    initial_condition=True,
+    boundary_conditions=True,
+    refinement_criterion=True,
+    flux=True,
+    max_eigenvalue=True,
+    ncp=True,
+    riemann_solver=True,
 )
-aderdg_solver.add_kernel_optimisations(
-    is_linear=False,
-    polynomials=exahype2.solvers.aderdg.Polynomials.Gauss_Legendre,
+aderdg_solver.set_pde_terms(
+    subcell_riemann_solver=True,
+    physical_admissibility=True,
 )
-aderdg_solver.add_subcell_limiter(
-    limiter_solver=exahype2.solvers.fv.godunov.subcell_scheme(
-        riemann_solver=exahype2.solvers.PDETerms.User_Defined_Implementation
-    ),
-    physical_admissibility_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation,
-)
+aderdg_solver.add_subcell_limiter(exahype2.fv.Godunov())
 
 project.add_solver(aderdg_solver)
 
-project.constants.export_constexpr_with_type("g", str(9.81), "double")
-project.constants.export_constexpr_with_type("hThreshold", str(1e-5), "double")
+project.add_constant("g", 9.81)
+project.add_constant("hThreshold", 1e-5)
 
 project.output.makefile.add_include_directory("../../../..")
-project.output.makefile.add_cpp_file("../../AugmentedState.cpp")
-project.output.makefile.add_cpp_file("../../Limiting.cpp")
-project.output.makefile.add_cpp_file("../../ShallowWater.cpp")
-project.output.makefile.add_cpp_file("../../WellBalancedRusanov.cpp")
 project.output.makefile.add_cpp_file("ADERDGSolver.cpp")
 project.generate_and_build()

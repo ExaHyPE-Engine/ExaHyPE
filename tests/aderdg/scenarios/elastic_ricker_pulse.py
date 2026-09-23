@@ -11,12 +11,13 @@ from equations import Elastic
 
 class ElasticRickerPulse(Scenario):
     """
-    Scenario analogous to Käser, Herrmann & de la Puente https://doi.org/10.1111/j.1365-246X.2008.03781.x (Chapter 2,2, p. 992)
+    Scenario analogous to Käser, Herrmann & de la Puente https://doi.org/10.1111/j.1365-246X.2008.03781.x (Chapter 2.2, p. 992)
 
-    While an analytical solution is available, the quadrature struggles to properly measure the error whenever the signal is not
-    at the center of a cell.
-    A better way to measure the error is to use time-frequency misfit analysis (like Käser et. al. above).
-    To do this one would use tracing to measure the results at a point in the domain, then compute the misfits using e.g. osby.
+    An analytical solution is available, but the quadrature measures the error inaccurately whenever the
+    signal sits away from the centre of a cell.
+    Time-frequency misfit analysis measures the error accurately (like Käser et al. above).
+    It takes a tracer that records the results at a point in the domain and a misfit computation over
+    that record, for example with ObsPy.
 
     A tutorial on computing misfits can be found at https://docs.obspy.org/tutorial/code_snippets/time_frequency_misfit.html
     """
@@ -41,21 +42,20 @@ class ElasticRickerPulse(Scenario):
   constexpr auto cp   = 1;
   constexpr auto cs   = 1;
 
-  // The pulse is centered in the middle of the leftmost cell.
-  // Since it is near the left edge of the domain, part of it has to
-  // be on the right side of the domain because of periodic boundaries.
+  // The pulse is centred in the leftmost cell. It reaches the left edge of the
+  // domain, so the periodic boundary places part of it on the right edge.
   const auto tau  = 1.25*std::numbers::pi*(x[0]-h[0]/2);
   const auto tau2 = 1.25*std::numbers::pi*(x[0]-DomainSize[0]-h[0]/2);
-  const auto val_x = (1-2*tau*tau)*std::exp(-tau*tau) + (1-2*tau2*tau2)*std::exp(-tau2*tau2);
-  constexpr auto val_y = 0.;
+  const auto amplitudeX = (1-2*tau*tau)*std::exp(-tau*tau) + (1-2*tau2*tau2)*std::exp(-tau2*tau2);
+  constexpr auto amplitudeY = 0.;
   // Stresses
-  Q[Shortcuts::sigma+0] = -val_x*(lambda+2*mu)  + val_y*lambda;         //xx
-  Q[Shortcuts::sigma+1] = -val_x*lambda         + val_y*(lambda+2*mu);  //yy
-  Q[Shortcuts::sigma+2] = -val_x*mu + val_y*mu;                         //xy
+  Q[Shortcuts::sigma+0] = -amplitudeX*(lambda+2*mu)  + amplitudeY*lambda;         //xx
+  Q[Shortcuts::sigma+1] = -amplitudeX*lambda         + amplitudeY*(lambda+2*mu);  //yy
+  Q[Shortcuts::sigma+2] = -amplitudeX*mu + amplitudeY*mu;                         //xy
 
   // Velocities
-  Q[Shortcuts::v+0] = val_x*cp + val_y*cs; //vx
-  Q[Shortcuts::v+1] = val_y*cp + val_x*cs; //vy
+  Q[Shortcuts::v+0] = amplitudeX*cp + amplitudeY*cs; //vx
+  Q[Shortcuts::v+1] = amplitudeY*cp + amplitudeX*cs; //vy
 
   // Auxiliary variables
   Q[Shortcuts::rho] = rho;  //rho
@@ -65,24 +65,19 @@ class ElasticRickerPulse(Scenario):
 
     def analytical_solution(self):
         return """
-  // Lamé parameters
-  constexpr auto mu     =  1;
-  constexpr auto lambda = -1;
-
   // Constant auxiliary parameters
-  constexpr auto rho  = 1;
   constexpr auto cp   = 1;
   constexpr auto cs   = 1;
 
-  // Computing the cell size as it is not available in the analytical sol
-  const double minAdmissiblePatchSize = ::runner::RuntimeParameters::getInstance().getMinAdmissiblePatchSize(DomainSize);
-  const double depth = (std::log(30.0 / minAdmissiblePatchSize) + std::log(3.0) - 1.0) / std::log(3.0);
-  const double h = 30./std::pow(3,depth);
+  // Width of a cell on the finest level. The pulse starts centred in the leftmost cell.
+  const double h = ::runner::RuntimeParameters::divideBySubdivisionFactorPower(
+    DomainSize[0], ::runner::RuntimeParameters::getInstance().getMaxGridLevels()
+  );
 
   auto distance = std::fmod( (x[0]-t-h/2), DomainSize[0]);
   const auto tau  = 1.25*std::numbers::pi*(distance);
-  const auto val_x = (1-2*tau*tau)*std::exp(-tau*tau);
-  constexpr auto val_y = 0.;
+  const auto amplitudeX = (1-2*tau*tau)*std::exp(-tau*tau);
+  constexpr auto amplitudeY = 0.;
 
   // Stresses
   solution[Shortcuts::sigma+0] = Q[Shortcuts::sigma+0];
@@ -90,6 +85,6 @@ class ElasticRickerPulse(Scenario):
   solution[Shortcuts::sigma+2] = Q[Shortcuts::sigma+2];
 
   // Velocities
-  solution[Shortcuts::v+0] = val_x*cp + val_y*cs; //vx
+  solution[Shortcuts::v+0] = amplitudeX*cp + amplitudeY*cs; //vx
   solution[Shortcuts::v+1] = Q[Shortcuts::v+1];
 """

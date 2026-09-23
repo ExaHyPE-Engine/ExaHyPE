@@ -2,24 +2,24 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 template <int... Indices, typename Particle>
-void exahype2::fv::particles::interpolation::projectValues_piecewiseConstant(
-  const peano4::datamanagement::CellMarker& marker,
-  int                                       voxelsPerAxis,
-  int                                       unknownsPerVoxel,
-  const double* NOALIAS                     Q,
-  Particle&                                 particle,
-  tarch::la::Vector<DIMENSIONS, double>     pos
+void exahype2::fv::particles::interpolation::projectValuesPiecewiseConstant(
+  const peano4::dataview::CellMarker&   marker,
+  int                                   voxelsPerAxis,
+  int                                   unknownsPerVoxel,
+  const double* NOALIAS                 Q,
+  Particle&                             particle,
+  tarch::la::Vector<DIMENSIONS, double> pos
 ) {
-  [&]<std::size_t... I>(std::index_sequence<I...>) {
+  [&]<std::size_t... UnknownIndex>([[maybe_unused]] std::index_sequence<UnknownIndex...> unknownIndices) {
     (particle.setData(
        Indices,
-       ::exahype2::fv::particles::interpolation::internal::projectValueOntoParticle_piecewiseConstant(
+       exahype2::fv::particles::interpolation::projectValueOntoParticlePiecewiseConstant(
          marker,
          voxelsPerAxis,
          unknownsPerVoxel,
          Q,
          pos,
-         static_cast<int>(I)
+         static_cast<int>(UnknownIndex)
        )
      ),
      ...);
@@ -27,19 +27,25 @@ void exahype2::fv::particles::interpolation::projectValues_piecewiseConstant(
 }
 
 template <int... Indices, typename Particle>
-void exahype2::fv::particles::interpolation::projectValues_piecewiseLinear(
-  const peano4::datamanagement::CellMarker& marker,
-  int                                       voxelsPerAxis,
-  int                                       unknownsPerVoxel,
-  const double* NOALIAS                     Q,
-  Particle&                                 particle,
-  tarch::la::Vector<DIMENSIONS, double>     pos
+void exahype2::fv::particles::interpolation::projectValuesPiecewiseLinear(
+  const peano4::dataview::CellMarker&   marker,
+  int                                   voxelsPerAxis,
+  int                                   unknownsPerVoxel,
+  const double* NOALIAS                 Q,
+  Particle&                             particle,
+  tarch::la::Vector<DIMENSIONS, double> pos
 ) {
-  [&]<std::size_t... I>(std::index_sequence<I...>) {
+  [&]<std::size_t... UnknownIndex>([[maybe_unused]] std::index_sequence<UnknownIndex...> unknownIndices) {
     (particle.setData(
        Indices,
-       ::exahype2::fv::particles::interpolation::internal::
-         projectValueOntoParticle_piecewiseLinear(marker, voxelsPerAxis, unknownsPerVoxel, Q, pos, static_cast<int>(I))
+       exahype2::fv::particles::interpolation::projectValueOntoParticlePiecewiseLinear(
+         marker,
+         voxelsPerAxis,
+         unknownsPerVoxel,
+         Q,
+         pos,
+         static_cast<int>(UnknownIndex)
+       )
      ),
      ...);
   }(std::make_index_sequence<sizeof...(Indices)>{});
@@ -47,39 +53,30 @@ void exahype2::fv::particles::interpolation::projectValues_piecewiseLinear(
 
 template <int... Indices, typename Particle>
 void exahype2::fv::particles::interpolation::applyInterpolation(
-  Particle&                                 particle,
-  tarch::la::Vector<DIMENSIONS, double>     pos,
-  const peano4::datamanagement::CellMarker& marker,
-  const double* NOALIAS                     Q
+  Particle&                             particle,
+  tarch::la::Vector<DIMENSIONS, double> pos,
+  const peano4::dataview::CellMarker&   marker,
+  const double* NOALIAS                 Q
 ) {
-  switch (_interpolationMethod) {
+  switch (globalInterpolationMethod) {
   case 0:
     break;
-  case 1:
-    exahype2::fv::particles::interpolation::projectValues_piecewiseConstant<Indices...>(
-      marker,
-      _voxelsPerAxis,
-      _unknownsPerVoxel,
-      Q,
-      particle,
-      pos
-    );
-    break;
   case 2:
-    exahype2::fv::particles::interpolation::projectValues_piecewiseLinear<Indices...>(
+    exahype2::fv::particles::interpolation::projectValuesPiecewiseLinear<Indices...>(
       marker,
-      _voxelsPerAxis,
-      _unknownsPerVoxel,
+      globalVoxelsPerAxis,
+      globalUnknownsPerVoxel,
       Q,
       particle,
       pos
     );
     break;
+  case 1:
   default:
-    exahype2::fv::particles::interpolation::projectValues_piecewiseConstant<Indices...>(
+    exahype2::fv::particles::interpolation::projectValuesPiecewiseConstant<Indices...>(
       marker,
-      _voxelsPerAxis,
-      _unknownsPerVoxel,
+      globalVoxelsPerAxis,
+      globalUnknownsPerVoxel,
       Q,
       particle,
       pos
@@ -89,15 +86,15 @@ void exahype2::fv::particles::interpolation::applyInterpolation(
 }
 
 template <int... Indices, typename Particle>
-void exahype2::fv::particles::interpolation::handleMidpoints(
-  const peano4::datamanagement::CellMarker&    marker,
+void exahype2::fv::particles::interpolation::interpolateMidpoints(
+  const peano4::dataview::CellMarker&          marker,
   const double* NOALIAS                        Q,
   Particle&                                    particle,
   const tarch::la::Vector<DIMENSIONS, double>& midpointPosition
 ) {
   auto interpolationPosition = midpointPosition;
   if (not marker.isContained(interpolationPosition)) {
-    const auto volumeSize = marker.getH() / static_cast<double>(_voxelsPerAxis);
+    const auto volumeSize = marker.getH() / static_cast<double>(globalVoxelsPerAxis);
     for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
       const double firstVolumeCentre = marker.getOffset()(dimension) + 0.5 * volumeSize(dimension);
       const double lastVolumeCentre =

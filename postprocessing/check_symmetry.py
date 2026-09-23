@@ -1,36 +1,5 @@
-#!/usr/bin/env python3
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-"""Check a solution output for mirror symmetry, snapshot by snapshot.
-
-The input is read through the :mod:`solution_io` readers, so any plotter output
-format works: VTKHDF, HDF5/XDMF, NetCDF/UGRID or VTU. For every snapshot and
-every requested mirror the mesh is reflected about the symmetry centre and
-matched against itself cell by cell:
-
-  * Topology: every cell must have a mirror partner of the same size, so an
-    adaptive mesh must refine and coarsen symmetrically.
-  * Data: the field values of mirror partners must agree. Components of vector
-    fields normal to the mirror plane flip sign, an axis swap exchanges them, and
-    tensor fields transform with the reflection on both indices.
-
-Every field needs a kind (scalar, vector or tensor) to transform correctly. The
-plotters store geometric vectors with 3 components and tensors with 9; raw 2D
-outputs may carry 2-component vectors. Those widths default to vector and tensor;
-every other layout (including packed state vectors) defaults to per-component
-scalars. The width heuristic cannot see the semantics, so ``--vector-fields``,
-``--tensor-fields`` and ``--scalar-fields`` override the default per field name
-and should be passed whenever the layout is known.
-
-Cells are matched by a nearest-neighbour query on (centre, size), which needs no
-uniform lattice and tolerates the float32 rounding of stored coordinates: distinct
-cells are separated by at least a subcell width, far above that rounding. Node
-fields are compared per cell with the nodes brought into mirrored order, so nodal
-(DG) output works like cell-centred (FV) output.
-
-Exit status: 0 if every snapshot is symmetric, 1 on the first violation, 2 if the
-input cannot be read.
-"""
 
 from __future__ import annotations
 
@@ -89,8 +58,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--skip-fields",
         nargs="+",
-        default=["Subdomain"],
-        help="Fields to ignore (default: Subdomain, which depends on the domain decomposition)",
+        default=["Subdomain", "Subtree", "CurvePosition"],
+        help="Fields to ignore (default: Subdomain, Subtree and CurvePosition, which depend on "
+        "the domain decomposition and on the curve order)",
     )
     parser.add_argument(
         "--vector-fields",
@@ -224,7 +194,7 @@ def check_snapshot(
         np.column_stack([mirrored_centres, mirrored_sizes])
     )
 
-    # Geometry tolerance per pair: far above the float32 storage rounding of the
+    # Geometry tolerance per pair: Far above the float32 storage rounding of the
     # coordinates and far below the cell's own width, so a cell displaced by a
     # fraction of its size never passes, however small the cell.
     per_cell_tolerance = 1.0e-3 * sizes.min(axis=1)
@@ -248,7 +218,7 @@ def check_snapshot(
             values = mirror_values(values, mirror, kind)
         if centering == "cell":
             return values.reshape(len(centres), -1)
-        # Nodal data: bring each cell's nodes into a canonical order through the node
+        # Nodal data: Bring each cell's nodes into a canonical order through the node
         # offsets from the cell centre, quantised well below the node spacing.
         base = mirrored_centres if transformed else centres
         offsets = (

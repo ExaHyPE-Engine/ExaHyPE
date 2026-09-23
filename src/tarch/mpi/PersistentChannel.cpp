@@ -19,8 +19,9 @@ tarch::mpi::PersistentChannel::PersistentChannel(tarch::mpi::PersistentChannel&&
   other._buffer  = nullptr;
 }
 
-tarch::mpi::PersistentChannel&
-tarch::mpi::PersistentChannel::operator=(tarch::mpi::PersistentChannel&& other) noexcept {
+tarch::mpi::PersistentChannel& tarch::mpi::PersistentChannel::operator=(
+  tarch::mpi::PersistentChannel&& other
+) noexcept {
   if (this != &other) {
     freeRequest();
     _request       = other._request;
@@ -37,32 +38,32 @@ tarch::mpi::PersistentChannel::operator=(tarch::mpi::PersistentChannel&& other) 
 }
 
 void tarch::mpi::PersistentChannel::startSend(
-  const void*    buffer,
-  const int      byteCount,
-  const int      rank,
-  const int      tag,
-  const MPI_Comm communicator
+  const void* buffer,
+  const int   byteCount,
+  const int   rank,
+  const int   tag,
+  MPI_Comm    communicator
 ) {
   start(buffer, byteCount, rank, tag, communicator, true);
 }
 
 void tarch::mpi::PersistentChannel::startReceive(
-  void*          buffer,
-  const int      byteCount,
-  const int      rank,
-  const int      tag,
-  const MPI_Comm communicator
+  void*     buffer,
+  const int byteCount,
+  const int rank,
+  const int tag,
+  MPI_Comm  communicator
 ) {
   start(buffer, byteCount, rank, tag, communicator, false);
 }
 
 void tarch::mpi::PersistentChannel::start(
-  const void*    buffer,
-  const int      byteCount,
-  const int      rank,
-  const int      tag,
-  const MPI_Comm communicator,
-  const bool     outgoing
+  const void* buffer,
+  const int   byteCount,
+  const int   rank,
+  const int   tag,
+  MPI_Comm    communicator,
+  const bool  outgoing
 ) {
   const bool transferUnchanged = _request != MPI_REQUEST_NULL and buffer == _buffer and byteCount == _byteCount
     and rank == _rank and tag == _tag and communicator == _communicator and outgoing == _outgoing;
@@ -74,7 +75,7 @@ void tarch::mpi::PersistentChannel::start(
     if (result != MPI_SUCCESS) {
       tarch::terminateWithError(
         std::string(outgoing ? "MPI_Send_init" : "MPI_Recv_init")
-          + " failed: " + tarch::mpi::MPIReturnValueToString(result),
+          + " failed: " + tarch::mpi::mpiReturnValueToString(result),
         result
       );
     }
@@ -88,7 +89,7 @@ void tarch::mpi::PersistentChannel::start(
 
   const int result = MPI_Start(&_request);
   if (result != MPI_SUCCESS) {
-    tarch::terminateWithError(std::string("MPI_Start failed: ") + tarch::mpi::MPIReturnValueToString(result), result);
+    tarch::terminateWithError(std::string("MPI_Start failed: ") + tarch::mpi::mpiReturnValueToString(result), result);
   }
 }
 

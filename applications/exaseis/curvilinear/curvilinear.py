@@ -1,5 +1,6 @@
 import argparse
-import os, sys
+import os
+import sys
 
 import exahype2
 
@@ -8,10 +9,8 @@ import CurvilinearElastic
 sys.path.insert(0, os.path.abspath(".."))
 import Scenario
 
-available_scenarios = {
-    "LOH1": Scenario.LOH1(),
-    "Zugspitze": Scenario.Zugspitze()
-}
+available_scenarios = {"LOH1": Scenario.LOH1(), "Zugspitze": Scenario.Zugspitze()}
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
@@ -21,17 +20,22 @@ def parse_arguments():
         action="store_true",
         help="show this help message and continue with project help",
     )
-    parser.add_argument("-s", "--scenario", choices=available_scenarios.keys(), default="LOH1")
+    parser.add_argument(
+        "-s", "--scenario", choices=available_scenarios.keys(), default="LOH1"
+    )
     parser.add_argument("-et", "--end-time", type=float, default=None)
     parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=5)
     parser.add_argument("-l", "--grid-levels", type=int, default=None)
     parser.add_argument("-p", "--precision", type=str, default="fp64")
-    parser.add_argument("-ut", "--use-tracers", type=bool, default=True)
+    parser.add_argument(
+        "-ut", "--use-tracers", action=argparse.BooleanOptionalAction, default=True
+    )
     args, _ = parser.parse_known_args()
     if args.help:
         parser.print_help()
         print()
     return args
+
 
 args = parse_arguments()
 my_scenario = available_scenarios[args.scenario]
@@ -56,54 +60,57 @@ project = exahype2.Project(
 if project.dimensions != 3:
     raise ValueError("The curvilinear ExaSeis application is three-dimensional.")
 
-theSolver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
+theSolver = exahype2.dg.ader.Solver(
     name="ElasticSolver",
     order=order,
     unknowns={"v": 3, "sigma": 6},
     auxiliary_variables={
-      "rho": 1, "cp": 1, "cs": 1,
-      "jacobian": 1, "metric_derivative": 9,
-      "curve_grid": 3
+        "rho": 1,
+        "cp": 1,
+        "cs": 1,
+        "jacobian": 1,
+        "metric_derivative": 9,
+        "curve_grid": 3,
     },
-    time_step_relaxation=0.9
-)
-
-theSolver.add_kernel_optimisations(
-    is_linear=True,
-    polynomials=exahype2.solvers.aderdg.ADERDG.Polynomials.Gauss_Lobatto,
+    time_stepping=exahype2.TimeStepping.Adaptive(0.9),
+    basis=exahype2.dg.GaussLobatto,
+    linear=True,
+    precision=args.precision,
+    point_sources=1,
     initialise_patches=True,
-    precision=args.precision
 )
 
-theSolver.set_implementation(
-  initial_conditions    = CurvilinearElastic.initial(my_scenario.initial_conditions()),
-  boundary_conditions   = CurvilinearElastic.boundary(),
-  max_eigenvalue        = CurvilinearElastic.eigenvalue(),
-  refinement_criterion  = CurvilinearElastic.refinement_criterion(),
-  flux                  = CurvilinearElastic.flux(),
-  ncp                   = CurvilinearElastic.ncp(),
-  material_parameters   = CurvilinearElastic.multiplyMaterialParameterMatrix(),
-  riemann_solver        = CurvilinearElastic.riemann_solver(),
-  number_of_point_sources = 1,
-  point_source = my_scenario.point_source(),
-  init_point_source_location = my_scenario.init_point_source()
+theSolver.set_pde_terms(
+    initial_condition=CurvilinearElastic.initial(my_scenario.initial_conditions()),
+    boundary_conditions=CurvilinearElastic.boundary(),
+    max_eigenvalue=CurvilinearElastic.eigenvalue(),
+    refinement_criterion=CurvilinearElastic.refinement_criterion(),
+    flux=CurvilinearElastic.flux(),
+    ncp=CurvilinearElastic.ncp(),
+    material_parameters=CurvilinearElastic.multiplyMaterialParameterMatrix(),
+    riemann_solver=CurvilinearElastic.riemann_solver(),
+    point_source=my_scenario.point_source(),
+    point_source_locations=my_scenario.init_point_source(),
 )
 
-theSolver._abstract_solver_user_declarations += CurvilinearElastic.abstractDeclarations()
-theSolver._abstract_solver_user_definitions  += CurvilinearElastic.abstractUserDefinitions()
-theSolver._start_grid_initialisation_implementation += CurvilinearElastic.init_grid_step_implementation(my_scenario.domain_perturbations())
-theSolver.add_user_solver_includes(CurvilinearElastic.userIncludes())
+theSolver.add_declarations(CurvilinearElastic.abstractDeclarations())
+theSolver.add_definitions(CurvilinearElastic.abstractUserDefinitions())
+theSolver.on_start_grid_initialisation(
+    CurvilinearElastic.init_grid_step_implementation(my_scenario.domain_perturbations())
+)
+theSolver.add_includes(*CurvilinearElastic.userIncludes())
 
 project.add_solver(theSolver)
 
 if args.use_tracers:
     project.add_action_set_to_timestepping(
-      exahype2.tracer.CurviTracer(
-        coordinates=my_scenario.tracer_coordinates,
-        solver=theSolver,
-        filename=args.scenario+"-o"+str(order)+"-"+str(args.precision),
-        time_delta_between_two_snapshots=0.01,
-        output_precision=10
-    ))
+        exahype2.particles.CurviTracer(
+            coordinates=my_scenario.tracer_coordinates,
+            solver=theSolver,
+            filename=args.scenario + "-o" + str(order) + "-" + str(args.precision),
+            time_delta_between_two_snapshots=0.01,
+            output_precision=10,
+        )
+    )
 
 project.generate_and_build()

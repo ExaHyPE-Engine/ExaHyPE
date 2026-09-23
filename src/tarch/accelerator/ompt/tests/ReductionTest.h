@@ -8,7 +8,7 @@ namespace tarch::accelerator::ompt::tests {
   class ReductionTest;
 } // namespace tarch::accelerator::ompt::tests
 
-class tarch::accelerator::ompt::tests::ReductionTest final: public tarch::tests::TestCase {
+class tarch::accelerator::ompt::tests::ReductionTest final : public tarch::tests::TestCase {
 private:
   void testParallelReduction();
 

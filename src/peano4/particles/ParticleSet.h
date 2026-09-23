@@ -19,17 +19,17 @@ namespace peano4::particles {
 template <typename T>
 class peano4::particles::ParticleSet {
 public:
-  typedef T             DoFType;
-  typedef std::list<T*> ParticleList;
+  using DoFType      = T;
+  using ParticleList = std::list<T*>;
 
 #if PEANO_DEBUG
-  void                                  setDebugX(const tarch::la::Vector<DIMENSIONS, double>& data);
-  void                                  setDebugH(const tarch::la::Vector<DIMENSIONS, double>& data);
-  tarch::la::Vector<DIMENSIONS, double> getDebugX() const;
-  tarch::la::Vector<DIMENSIONS, double> getDebugH() const;
+  void                                                setDebugX(const tarch::la::Vector<DIMENSIONS, double>& data);
+  void                                                setDebugH(const tarch::la::Vector<DIMENSIONS, double>& data);
+  [[nodiscard]] tarch::la::Vector<DIMENSIONS, double> getDebugX() const;
+  [[nodiscard]] tarch::la::Vector<DIMENSIONS, double> getDebugH() const;
 #endif
 
-  std::string toString(bool addBrackets = true) const;
+  [[nodiscard]] std::string toString(bool addBrackets = true) const;
 
   static void clearReassignmentStatistics();
 
@@ -47,7 +47,6 @@ public:
   static void updateLiftDropStatistics(
     int numberOfLiftsInThisTree,
     int numberOfDropsInThisTree,
-    int numberOfReassignmentsInThisTree,
     int numberOfLiftsIntoSieveSetInThisTree,
     int numberOfDropsFromSieveSetInThisTree,
     int numberOfDropsIntoHorizontalTreeDecomposition
@@ -65,14 +64,14 @@ public:
   static bool registeredAnyResorting();
 
   static void finishedTraversal(
-    const tarch::la::Vector<DIMENSIONS, double> domainOffset,
-    const tarch::la::Vector<DIMENSIONS, double> domainSize,
-    const std::bitset<DIMENSIONS>               periodicBC
+    tarch::la::Vector<DIMENSIONS, double> domainOffset,
+    tarch::la::Vector<DIMENSIONS, double> domainSize,
+    std::bitset<DIMENSIONS>               periodicBoundaries
   );
 
   static SieveParticles<T> cloneParticlesToBeSieved();
 
-  static ParticleList getParticlesToBeSievedIntoVertex(const peano4::datamanagement::VertexMarker& marker);
+  static ParticleList getParticlesToBeSievedIntoVertex(const peano4::dataview::VertexMarker& marker);
   static bool         hasParticlesToBeSievedIntoVertices();
 
   static int getNumberOfParticlesThatHaveBeSievedIntoVertices();
@@ -85,7 +84,6 @@ protected:
   // Reassignment counters accumulated by updateLiftDropStatistics().
   static int _numberOfLifts;
   static int _numberOfDrops;
-  static int _numberOfReassignments;
   static int _numberOfLiftsIntoSieveSet;
   static int _numberOfDropsFromSieveSet;
   static int _numberOfDropsIntoHorizontalTreeDecomposition;

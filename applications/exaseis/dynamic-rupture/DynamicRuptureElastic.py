@@ -1,32 +1,35 @@
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
 def algebraic_source():
-  return """
+    return """
   std::fill_n(S, NumberOfAuxiliaryVariables, 0);
 
-  S[Shortcuts::u+0] = -Q[Shortcuts::v+0];
-  S[Shortcuts::u+1] = -Q[Shortcuts::v+1];
-  S[Shortcuts::u+2] = -Q[Shortcuts::v+2];
+  S[Shortcuts::u+0] = Q[Shortcuts::v+0];
+  S[Shortcuts::u+1] = Q[Shortcuts::v+1];
+  S[Shortcuts::u+2] = Q[Shortcuts::v+2];
 """
 
+
 def riemann_solver():
-  return """
-  applications::exahype2::exaseis::riemannSolverDynamicRupture<VariableShortcuts{{SOLVER_NAME}}, {{CORRECTOR_COMPUTATION_PRECISION}}, (Order+1), NumberOfUnknowns, (NumberOfUnknowns+NumberOfAuxiliaryVariables), 1>(
+    return """
+  applications::exahype2::exaseis::riemannSolverDynamicRupture<VariableShortcuts{{SOLVER_NAME}}, {{CORRECTOR_COMPUTATION_PRECISION}}, (DGOrder + 1), NumberOfUnknowns, (NumberOfUnknowns+NumberOfAuxiliaryVariables), 1>(
     FL, FR, QL, QR, t, dt, x, h, direction, isBoundaryFace, faceIndex, faultNormal, faultPosition
   );
 """
 
+
 def userIncludes():
-  return """
-#include "tarch/reader/NetCDFFieldSampler.h"
+    return [
+        "tarch/reader/NetCDFFieldSampler.h",
+        "DynamicRuptureParameters.h",
+        "../riemannSolvers/riemannsolverDynamicRupture.h",
+        "exahype2/Curvi.h",
+        "exahype2/dg/DGUtils.h",
+    ]
 
-#include "DynamicRuptureParameters.h"
-#include "../riemannSolvers/riemannsolverDynamicRupture.h"
-
-#include "exahype2/Curvi.h"
-#include "exahype2/dg/DGUtils.h"
-"""
 
 def abstractDeclarations():
-  return """
+    return """
 protected:
   // Normal on which the fault lies, i.e. if this axis is x, then
   // the fault is on a y-z plane.
@@ -46,8 +49,9 @@ public:
   }
 """
 
+
 def abstractUserDefinitions():
-  return """
+    return """
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::faultNormal;
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::faultPosition;
 """

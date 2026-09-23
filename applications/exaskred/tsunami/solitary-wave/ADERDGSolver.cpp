@@ -169,7 +169,7 @@ bool applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
   const int                                    numberOfStates,
   const tarch::la::Vector<DIMENSIONS, double>& x,
   const tarch::la::Vector<DIMENSIONS, double>& h
-) const {
+) {
   (void)x;
   (void)h;
 
@@ -213,7 +213,7 @@ void applications::exahype2::exaskred::ADERDGSolver::riemannSolver(
       return g;
     };
   ::applications::exahype2::exaskred::riemann::
-    wellBalancedRusanov<Shortcuts, Shortcuts::b, NumberOfUnknowns, NumberOfAuxiliaryVariables, Order>(
+    wellBalancedRusanov<Shortcuts, Shortcuts::b, NumberOfUnknowns, NumberOfAuxiliaryVariables, DGOrder>(
       QL,
       QR,
       x,

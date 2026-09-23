@@ -34,9 +34,10 @@ public:
 
   INLINE_METHOD bool supportsSubtreeTaskReplication() const override;
 
-  INLINE_METHOD void initialiseSerialSlot() override;
   INLINE_METHOD void resizePoolForTree(std::size_t cellCount, std::size_t faceCount, std::size_t vertexCount) override;
-  INLINE_METHOD void migratePoolForTree(
+  INLINE_METHOD void bindPool() override;
+  INLINE_METHOD std::size_t getPooledPayloadBytes() const override;
+  INLINE_METHOD void        migratePoolForTree(
     const std::vector<std::pair<int, int>>& cellSlotPairs,
     const std::vector<std::pair<int, int>>& faceSlotPairs,
     const std::vector<std::pair<int, int>>& vertexSlotPairs,
@@ -68,7 +69,6 @@ public:
     const std::vector<int>&              faceFrozenSlotBases,
     const std::vector<int>&              vertexFrozenSlotBases
   ) override;
-  INLINE_METHOD void prepareLocalSlots(int numberOfSlots) override;
 
   INLINE_METHOD void clear();
 

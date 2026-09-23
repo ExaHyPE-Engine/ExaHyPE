@@ -76,25 +76,25 @@ flux = """
 refinement_criterion = """
   return ::exahype2::refineOnDetail(
     Q,
-    Order + 1,
+    DGOrder + 1,
     NumberOfUnknowns + NumberOfAuxiliaryVariables,
     1.0e-2,
-    9.0,
-    kernels::ADERDGSolver::Quadrature<double>::nodes,
+    ::exahype2::DefaultCoarsenSafetyFactor,
+    kernels::ADERDGSolver::Quadrature<double>::QuadraturePoints1D,
     [](const double* const values) { return 1.0 + values[Shortcuts::rho]; }
   );
 """
 
-solver = exahype2.solvers.aderdg.GlobalAdaptiveTimeStep(
+solver = exahype2.dg.ader.Solver(
     name="ADERDGSolver",
     order=(args.degrees_of_freedom - 1),
-    time_step_relaxation=0.9,
     unknowns={"rho": 1},
     auxiliary_variables=0,
+    time_stepping=exahype2.TimeStepping.Adaptive(0.9),
 )
 
-solver.set_implementation(
-    initial_conditions=initial_conditions,
+solver.set_pde_terms(
+    initial_condition=initial_conditions,
     boundary_conditions=boundary_conditions,
     refinement_criterion=refinement_criterion,
     max_eigenvalue="return 1.0;",

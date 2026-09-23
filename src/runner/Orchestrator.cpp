@@ -4,6 +4,7 @@
 
 #include "runner/Phase.h"
 #include "runner/ReportBox.h"
+#include "runner/phases/AllocateMemory.h"
 #include "runner/phases/Configuration.h"
 #include "runner/phases/DynamicAMR.h"
 #include "runner/phases/FinalSummary.h"
@@ -31,6 +32,7 @@ runner::Orchestrator::Orchestrator(const std::vector<runner::Step>& steps) {
 bool runner::Orchestrator::run(runner::PhaseContext& context) {
   runner::Configuration      configuration(context);
   runner::GridConstruction   gridConstruction(context, _createGridStep);
+  runner::AllocateMemory     allocateMemory(context);
   runner::DynamicAMR         dynamicAMR(context, _dynamicAMRStep);
   runner::GridInitialisation gridInitialisation(context, _initGridStep, dynamicAMR);
   runner::TimeLoop           timeLoop(context, _timeStepStep, _plotStep, dynamicAMR);
@@ -39,6 +41,10 @@ bool runner::Orchestrator::run(runner::PhaseContext& context) {
   phases.push_back(&configuration);
   if (_createGridStep >= 0) {
     phases.push_back(&gridConstruction);
+  }
+  // A run without initialisation and time stepping never touches solver data.
+  if (_initGridStep >= 0 or _timeStepStep >= 0) {
+    phases.push_back(&allocateMemory);
   }
   if (_initGridStep >= 0) {
     phases.push_back(&gridInitialisation);

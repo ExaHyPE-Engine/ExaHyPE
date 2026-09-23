@@ -14,7 +14,7 @@ def parse_arguments():
         help="Show this help message and continue with project help.",
     )
     parser.add_argument("-et", "--end-time", type=float, default=2.0)
-    parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=4)
+    parser.add_argument("-dofs", "--degrees-of-freedom", type=int, default=5)
     parser.add_argument("-l", "--grid-levels", type=int, default=None)
     parser.add_argument("-lmin", "--min-grid-levels", type=int, default=2)
     parser.add_argument("-lmax", "--max-grid-levels", type=int, default=4)
@@ -43,20 +43,21 @@ project = exahype2.Project(
     max_grid_levels=args.max_grid_levels,
 )
 
-solver = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep(
+solver = exahype2.dg.rk.Solver(
     name="RKDGSolver",
     rk_order=2,
-    polynomials=exahype2.solvers.GaussLegendreBasis(args.degrees_of_freedom),
-    time_step_relaxation=0.9,
+    dg_order=args.degrees_of_freedom - 1,
     unknowns={"p": 1, "u": project.dimensions},
     auxiliary_variables=0,
+    time_stepping=exahype2.TimeStepping.Adaptive(0.9),
+    linear=True,
 )
 
 # Placing the source on the domain diagonal preserves axis-permutation symmetry
 # in the solution and refinement pattern. Unit offsets keep the detail
 # indicators well scaled at the ambient state.
-solver.set_implementation(
-    initial_conditions="""
+solver.set_pde_terms(
+    initial_condition="""
   const tarch::la::Vector<DIMENSIONS, double> sourceCentre(-0.7);
   const double distanceSquared = tarch::la::norm2Squared(x - sourceCentre);
   constexpr double Sigma = 0.1;
@@ -78,8 +79,8 @@ solver.set_implementation(
     DGOrder + 1,
     NumberOfUnknowns + NumberOfAuxiliaryVariables,
     1.0e-2,
-    9.0,
-    QuadraturePoints1D,
+    ::exahype2::DefaultCoarsenSafetyFactor,
+    kernels::RKDGSolver::Quadrature<double>::QuadraturePoints1D,
     [](const double* const values) { return 1.0 + values[Shortcuts::p]; },
     [](const double* const values) {
       double velocitySquared = 0.0;
@@ -90,7 +91,7 @@ solver.set_implementation(
     }
   );
 """,
-    eigenvalues="return WAVE_SPEED;",
+    max_eigenvalue="return WAVE_SPEED;",
     flux="""
   static constexpr double K0 = RHO * WAVE_SPEED * WAVE_SPEED;
 

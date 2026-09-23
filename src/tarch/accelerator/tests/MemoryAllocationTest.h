@@ -4,24 +4,20 @@
 
 #include "tarch/tests/TestCase.h"
 
-namespace tarch {
-  namespace accelerator {
-    namespace tests {
-      class MemoryAllocationTest;
-    } // namespace tests
-  } // namespace accelerator
-} // namespace tarch
+namespace tarch::accelerator::tests {
+  class MemoryAllocationTest;
+} // namespace tarch::accelerator::tests
 
-class tarch::accelerator::tests::MemoryAllocationTest final: public tarch::tests::TestCase {
+class tarch::accelerator::tests::MemoryAllocationTest final : public tarch::tests::TestCase {
+public:
+  MemoryAllocationTest();
+
+  void run() override;
+
 private:
   void testAllocateRawData();
   void testAllocateMemory();
+  void testZeroedHeapMemory();
   void testLocationSpecificAllocators();
   void testLocationSpecificCopyFunctions();
-
-public:
-  MemoryAllocationTest();
-  ~MemoryAllocationTest() override = default;
-
-  void run() override;
 };

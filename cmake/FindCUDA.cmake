@@ -12,12 +12,11 @@ if(TARGET PeanoOptions)
   )
   target_compile_options(PeanoOptions INTERFACE
     -fPIC
-    $<$<COMPILE_LANGUAGE:CUDA>:-gencode arch=compute_${CMAKE_CUDA_ARCHITECTURES},code=sm_${CMAKE_CUDA_ARCHITECTURES}>
-    $<$<COMPILE_LANGUAGE:CUDA>:-Wno-gnu-line-marker>
     $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-Wno-gnu-line-marker>
     $<$<COMPILE_LANGUAGE:CUDA>:--extended-lambda>
     $<$<COMPILE_LANGUAGE:CUDA>:--expt-relaxed-constexpr>
+    $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=${OpenMP_CXX_FLAGS}>
   )
-  target_compile_features(PeanoOptions INTERFACE cuda_std_17)
+  target_compile_features(PeanoOptions INTERFACE cuda_std_20)
   target_compile_definitions(PeanoOptions INTERFACE PEANO_WITH_GPU_BACKEND_CUDA PEANO_WITH_GPU_BACKEND)
 endif()

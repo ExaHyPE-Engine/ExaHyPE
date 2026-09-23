@@ -25,8 +25,8 @@ namespace {
     };
   }
 
-  // The storm centre runs along the great circle between the two track points at a
-  // fixed speed, and the disturbance is carried rigidly with it.
+  // The storm centre moves at a fixed speed along the straight line between the two
+  // projected track points, and the disturbance moves rigidly with it.
   std::pair<double, double> stormCentre(const double t) {
     namespace exaskred    = applications::exahype2::exaskred;
     const auto projection = gulfProjection();
@@ -93,7 +93,7 @@ namespace {
   }
 
   /**
-   * Gradient of the atmospheric pressure in metric coordinates.
+   * Returns the gradient of the atmospheric pressure in metric coordinates.
    *
    * The anomaly is defined in a frame that travels with the storm and is rotated
    * onto its track, both of which are linear maps of the geographic offsets. Their
@@ -253,10 +253,10 @@ void applications::exahype2::exaskred::ADERDGSolver::nonconservativeProduct(
 }
 
 /**
- * Rotation, bed drag and the atmospheric pressure gradient.
+ * Writes the rotation, the bed drag and the atmospheric pressure gradient into S.
  *
  * The basin spans thirteen degrees of latitude, so the Coriolis parameter follows
- * the latitude of the point rather than a single value for the whole domain.
+ * the latitude of the point.
  */
 void applications::exahype2::exaskred::ADERDGSolver::sourceTerm(
   const double* const NOALIAS                                   Q,
@@ -327,15 +327,14 @@ double applications::exahype2::exaskred::ADERDGSolver::solveRiemannProblem(
  * has no wet and dry structure to fall back on.
  *
  * The augmented Riemann solver the subcell scheme uses carries the inundation
- * cases, so a cell has to reach that scheme before its water column thins, not
- * after.
+ * cases, so a cell has to reach that scheme before its water column thins.
  */
 bool applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
   const double* const NOALIAS                  Q,
   const int                                    numberOfStates,
   const tarch::la::Vector<DIMENSIONS, double>& x,
   const tarch::la::Vector<DIMENSIONS, double>& h
-) const {
+) {
   const double minimumWaterHeight = RuntimeParameters::getMinimumWaterHeight();
   if (numberOfStates == 1) {
     return ::applications::exahype2::exaskred::limiting::
@@ -343,15 +342,16 @@ bool applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
   }
 
   // A boundary condition is not a solution of the equations, and beyond the survey
-  // the bed is a constant continuation of its rim rather than a measured one. Both
-  // stand on the robust scheme.
+  // the bed continues its rim at a constant depth.
   const auto rasterOffset = RuntimeParameters::getBathymetryOffset();
   const auto rasterSize   = RuntimeParameters::getBathymetrySize();
   for (int dimension = 0; dimension < DIMENSIONS; dimension++) {
-    if (x(dimension) - 0.5 * h(dimension) <= DomainOffset[dimension]
-        or x(dimension) + 0.5 * h(dimension) >= DomainOffset[dimension] + DomainSize[dimension]
-        or x(dimension) - 0.5 * h(dimension) <= rasterOffset(dimension)
-        or x(dimension) + 0.5 * h(dimension) >= rasterOffset(dimension) + rasterSize(dimension)) {
+    if (
+      x(dimension) - 0.5 * h(dimension) <= DomainOffset[dimension]
+      or x(dimension) + 0.5 * h(dimension) >= DomainOffset[dimension] + DomainSize[dimension]
+      or x(dimension) - 0.5 * h(dimension) <= rasterOffset(dimension)
+      or x(dimension) + 0.5 * h(dimension) >= rasterOffset(dimension) + rasterSize(dimension)
+    ) {
       return false;
     }
   }
@@ -365,7 +365,7 @@ bool applications::exahype2::exaskred::ADERDGSolver::isPhysicallyAdmissible(
 void applications::exahype2::exaskred::ADERDGSolver::mapDmpObservables(
   double* const NOALIAS       observables,
   const double* const NOALIAS Q
-) const {
+) {
   for (int observable = 0; observable < NumberOfDMPObservables; observable++) {
     observables[observable] = Q[observable];
   }
@@ -409,7 +409,7 @@ void applications::exahype2::exaskred::ADERDGSolver::riemannSolver(
     };
 
   ::applications::exahype2::exaskred::riemann::
-    wellBalancedRusanov<Shortcuts, Shortcuts::b, NumberOfUnknowns, NumberOfAuxiliaryVariables, Order>(
+    wellBalancedRusanov<Shortcuts, Shortcuts::b, NumberOfUnknowns, NumberOfAuxiliaryVariables, DGOrder>(
       QL,
       QR,
       x,

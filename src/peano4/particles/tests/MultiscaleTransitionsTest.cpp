@@ -2,474 +2,293 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "MultiscaleTransitionsTest.h"
 
+#include "peano4/Constants.h"
+#include "peano4/dataview/CellMarker.h"
+#include "peano4/dataview/VertexMarker.h"
+#include "peano4/grid/GridTraversalEvent.h"
 #include "peano4/particles/MultiscaleTransitions.h"
-#include "peano4/particles/tests/TestParticle.h"
+#include "peano4/particles/particles.h"
+#include "peano4/sfc/ActiveCurve.h"
+#include "tarch/la/Vector.h"
 
-#ifdef UseTestSpecificCompilerSettings
-#pragma optimize("", off)
-#endif
+namespace {
+  constexpr int           SubdivisionFactor = peano4::sfc::ActiveCurve::SubdivisionFactor;
+  constexpr double        MeshSize          = 1.0 / (SubdivisionFactor * SubdivisionFactor);
+  constexpr int           LastVertex        = peano4::VerticesPerCell - 1;
+  constexpr std::uint8_t  AllVertices       = (1U << peano4::VerticesPerCell) - 1U;
+  constexpr std::uint32_t AllAdjacentCells  = (1U << peano4::CellsPerNeighbourhood) - 1U;
+  constexpr double        FittingRadius     = 0.25 * MeshSize;
+  constexpr double        OversizedRadius   = MeshSize;
+
+  /**
+   * Returns an unrefined cell at the origin corner of its parent, with every
+   * vertex, every adjacent cell and the parent cell local.
+   */
+  peano4::grid::GridTraversalEvent leafCellEvent() {
+    peano4::grid::GridTraversalEvent event;
+    event.setX(tarch::la::Vector<DIMENSIONS, double>(0.5 * MeshSize));
+    event.setH(tarch::la::Vector<DIMENSIONS, double>(MeshSize));
+    event.setRelativePositionToFather(tarch::la::Vector<DIMENSIONS, int>(0));
+    event.setIsVertexLocal(AllVertices);
+    event.setIsParentVertexLocal(AllVertices);
+    event.setIsAdjacentCellLocal(AllAdjacentCells);
+    event.setIsCellLocal(true);
+    event.setIsParentCellLocal(true);
+    return event;
+  }
+
+  /**
+   * Returns the point that lies offsetInMeshWidths cell widths away from the
+   * cell's origin corner along every axis.
+   */
+  tarch::la::Vector<DIMENSIONS, double> pointInCell(const double offsetInMeshWidths) {
+    return tarch::la::Vector<DIMENSIONS, double>(offsetInMeshWidths * MeshSize);
+  }
+} // namespace
 
 peano4::particles::tests::MultiscaleTransitionsTest::MultiscaleTransitionsTest() :
   TestCase("peano4::particles::tests::MultiscaleTransitionsTest") {}
 
-void peano4::particles::tests::MultiscaleTransitionsTest::testSievePredicate() {
-#if DIMENSIONS == 2
-  const peano4::particles::tests::TestParticle particle({0.721487, 0.624479}, 0.0001);
-  peano4::datamanagement::VertexMarker          marker;
-
-  marker._cellCentre = {0.685185, 0.648148};
-  marker._h          = {0.037037, 0.037037};
-  marker._isHanging  = 0;
-  marker._select     = 1;
-  marker._isAdjacentCellLocal.set();
-
-  const tarch::la::Vector<DIMENSIONS, double> cornerVertex1 = {
-    marker._cellCentre(0) + 0.5 * marker._h(0),
-    marker._cellCentre(1) - 0.5 * marker._h(1)
-  };
-
-  validateWithParams6(
-    peano4::particles::sieveParticle(particle, marker),
-    marker.toString(),
-    particle._x,
-    cornerVertex1,
-    marker._h / 2.0,
-    tarch::la::abs(marker._cellCentre - particle._x),
-    tarch::la::abs(cornerVertex1 - particle._x)
-  );
-#endif
-}
-
-void peano4::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticleAssociatedWithVertex01() {
-#if DIMENSIONS == 2
-  peano4::datamanagement::VertexMarker marker;
-
-  const double meshSize = 0.111111;
-
-  marker._cellCentre                      = {0.611111, 0.166667};
-  marker._h                               = {meshSize, meshSize};
-  marker._isHanging                       = 0;
-  marker._hasBeenRefined                  = 1 + 2 + 4 + 8;
-  marker._willBeRefined                   = 1 + 2 + 4 + 8;
-  marker._isParentVertexLocal             = 1 + 2 + 4 + 8;
-  marker._isParentCellLocal               = true;
-  marker.relativePositionWithinFatherCell = {0, 0};
-  marker._isAdjacentCellLocal.set();
-
-  const tarch::la::Vector<DIMENSIONS, double>          x            = {0.554725, 0.166678};
-  const double                                         searchRadius = 0.0185185;
-  peano4::particles::ParticleReassociationInstruction liftInstruction;
-  bool                                                 drop;
-
-  // The bottom left vertex owns the particle.
-  marker._select  = 0;
-  liftInstruction = peano4::particles::liftParticleAssociatedWithVertex(
-    true, // ParallelState=Local
-    searchRadius,
-    x,
-    marker
-  );
-  drop = peano4::particles::dropParticle(searchRadius, x, marker);
-
-  validateWithParams6(not drop, marker.toString(), x, liftInstruction, drop, (x - marker.getX()), searchRadius);
-
-  // The top left vertex owns the particle.
-  marker._select  = 2;
-  liftInstruction = peano4::particles::liftParticleAssociatedWithVertex(
-    true, // ParallelState=Local
-    searchRadius,
-    x,
-    marker
-  );
-  drop = peano4::particles::dropParticle(searchRadius, x, marker);
-
-  validateWithParams6(
-    liftInstruction == peano4::particles::ParticleReassociationInstructionKeep,
-    marker.toString(),
-    x,
-    liftInstruction,
-    drop,
-    (x - marker.getX()),
-    searchRadius
-  );
-  validateWithParams6(drop, marker.toString(), x, liftInstruction, drop, (x - marker.getX()), searchRadius);
-#endif
-}
-
 void peano4::particles::tests::MultiscaleTransitionsTest::run() {
-  testMethod(testSievePredicate);
-  testMethod(testLiftDropOfParticleAssociatedWithVertex01);
-  testMethod(testLiftDropOfParticleAssociatedWithVertex02);
-  testMethod(testLiftDropOfParticleAssociatedWithVertex03);
-  testMethod(testLiftDropOfParticleAssociatedWithVertex04);
+  testMethod(testVertexKeepsAndDropsAParticleWithinItsReach);
+  testMethod(testVertexLiftsAParticleBeyondItsReachToTheParentVertex);
+  testMethod(testLiftSievesGloballyWithoutALocalParent);
+  testMethod(testRemoteParticleIsKept);
+  testMethod(testSieveWaitsForTheLevelTheParticleFitsInto);
+  testMethod(testReassociationWithinCell);
+  testMethod(testAdjacentCellsOwningParticle);
 }
 
-void peano4::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticleAssociatedWithVertex02() {
-#if DIMENSIONS == 2
-  peano4::datamanagement::VertexMarker marker;
+/**
+ * A particle within half a cell width of its vertex stays with that vertex:
+ * The vertex keeps it, drops it from the next coarser level and sieves it
+ * from the global sieve set.
+ */
+void peano4::particles::tests::MultiscaleTransitionsTest::testVertexKeepsAndDropsAParticleWithinItsReach() {
+  const peano4::dataview::VertexMarker originVertex(leafCellEvent(), 0);
+  const auto                           particle = pointInCell(0.25);
 
-  const double meshSize = 0.037037;
-
-  marker._cellCentre                      = {0.537037, 0.12963};
-  marker._h                               = {meshSize, meshSize};
-  marker._isHanging                       = 0;
-  marker._hasBeenRefined                  = 0;
-  marker._willBeRefined                   = 0;
-  marker._isParentVertexLocal             = 1 + 2 + 4 + 8;
-  marker._isParentCellLocal               = true;
-  marker.relativePositionWithinFatherCell = {2, 0};
-  marker._select                          = 2;
-  marker._isAdjacentCellLocal.set();
-
-  const tarch::la::Vector<DIMENSIONS, double>          x            = {0.504975, 0.1667};
-  const double                                         searchRadius = 0.0185185;
-  peano4::particles::ParticleReassociationInstruction liftInstruction;
-  bool                                                 drop;
-
-  // The top left vertex owns the particle, and the particle sits further left
-  // and further up than that vertex, so the routine lifts it.
-  liftInstruction = peano4::particles::liftParticleAssociatedWithVertex(
-    true, // ParallelState=Local
-    searchRadius,
-    x,
-    marker
-  );
-  drop = peano4::particles::dropParticle(searchRadius, x, marker);
-
-  validateWithParams7(
-    liftInstruction == 3,
-    marker.toString(),
-    x,
-    marker.getX(),
-    liftInstruction,
-    drop,
-    (x - marker.getX()),
-    searchRadius
-  );
-  validateWithParams6(not drop, marker.toString(), x, liftInstruction, drop, (x - marker.getX()), searchRadius);
-#endif
-}
-
-void peano4::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticleAssociatedWithVertex03() {
-#if DIMENSIONS == 2
-  peano4::datamanagement::VertexMarker marker;
-
-  const double meshSize = 1.0 / 3.0 / 3.0;
-
-  marker._cellCentre                      = {0.5 * meshSize, 3.5 * meshSize};
-  marker._h                               = {meshSize, meshSize};
-  marker._isLocal                         = 0b1111;
-  marker._isHanging                       = 0b0000;
-  marker._hasBeenRefined                  = 0b0000;
-  marker._willBeRefined                   = 0b0000;
-  marker._isParentVertexLocal             = 0b1111;
-  marker._isParentCellLocal               = true;
-  marker.relativePositionWithinFatherCell = {0, 0};
-  marker._isAdjacentCellLocal             = 0b110110000;
-
-  double                                               searchRadius = 0.00555556;
-  const tarch::la::Vector<DIMENSIONS, double>          x            = {0.0555708, 0.322228};
-  peano4::particles::ParticleReassociationInstruction liftInstruction;
-
-  // Vertex 0 lifts the particle globally.
-  marker._select  = 0;
-  liftInstruction = peano4::particles::liftParticleAssociatedWithVertex(true, searchRadius, x, marker);
   validateEqualsWithParams1(
-    liftInstruction,
-    peano4::particles::ParticleReassociationInstructionSieveGlobally,
-    marker.toString()
-  );
-
-  // Vertex 1 keeps the particle.
-  marker._select  = 1;
-  liftInstruction = peano4::particles::liftParticleAssociatedWithVertex(true, searchRadius, x, marker);
-  validateEqualsWithParams5(
-    liftInstruction,
+    peano4::particles::liftParticleAssociatedWithVertex(true, FittingRadius, particle, originVertex),
     peano4::particles::ParticleReassociationInstructionKeep,
-    peano4::particles::internal::fitsIntoLevel(searchRadius, marker),
-    marker.isContainedInAdjacentCells(
-      x,
-      0.5,
-      peano4::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(marker)
-        * tarch::la::NUMERICAL_ZERO_DIFFERENCE
-    ),
-    2.0 * searchRadius,
-    peano4::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(marker)
-      * tarch::la::NUMERICAL_ZERO_DIFFERENCE,
-    marker.toString()
+    originVertex.toString()
   );
-
-  // Vertex 0 does not drop the particle.
-  marker._select = 0;
-  validateWithParams5(
-    not peano4::particles::dropParticle(searchRadius, x, marker),
-    peano4::particles::liftParticleAssociatedWithVertex(true, searchRadius, x, marker),
-    peano4::particles::internal::fitsIntoLevel(searchRadius, marker),
-    peano4::particles::internal::relativeGrabOwnershipSpatialSortingTolerance(marker)
-      * tarch::la::NUMERICAL_ZERO_DIFFERENCE,
-    peano4::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(marker)
-      * tarch::la::NUMERICAL_ZERO_DIFFERENCE,
-    marker.toString()
+  validateWithParams1(peano4::particles::dropParticle(FittingRadius, particle, originVertex), originVertex.toString());
+  validateWithParams1(peano4::particles::sieveParticle(FittingRadius, particle, originVertex), originVertex.toString());
+  validateWithParams1(
+    not peano4::particles::particleWillBeDroppedFurther(FittingRadius, originVertex),
+    originVertex.toString()
   );
-
-  // Vertex 1 drops the particle.
-  marker._select = 1;
-  validateWithParams5(
-    peano4::particles::dropParticle(searchRadius, x, marker),
-    peano4::particles::liftParticleAssociatedWithVertex(true, searchRadius, x, marker),
-    peano4::particles::internal::fitsIntoLevel(searchRadius, marker),
-    peano4::particles::internal::relativeGrabOwnershipSpatialSortingTolerance(marker)
-      * tarch::la::NUMERICAL_ZERO_DIFFERENCE,
-    peano4::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(marker)
-      * tarch::la::NUMERICAL_ZERO_DIFFERENCE,
-    marker.toString()
-  );
-
-  // Repeat the checks from the boundary cell below on the other rank.
-  marker._cellCentre(1) -= meshSize;
-  marker._isAdjacentCellLocal.flip();
-
-  // Vertex 2 does not drop the particle.
-  marker._select = 2;
-  validateWithParams1(not peano4::particles::dropParticle(searchRadius, x, marker), marker.toString());
-
-  // Vertex 3 drops the particle.
-  marker._select = 3;
-  validateWithParams1(peano4::particles::dropParticle(searchRadius, x, marker), marker.toString());
-
-  // Move to the cell to the left and grow the particle beyond the mesh size.
-  marker._cellCentre(0) -= meshSize;
-  searchRadius = 0.0555556;
-
-  // Vertex 0 lifts the particle globally.
-  marker._select  = 0;
-  liftInstruction = peano4::particles::liftParticleAssociatedWithVertex(true, searchRadius, x, marker);
-  validateEqualsWithParams1(
-    liftInstruction,
-    peano4::particles::ParticleReassociationInstructionSieveGlobally,
-    marker.toString()
-  );
-
-  // Vertex 1 lifts the particle globally too.
-  marker._select  = 1;
-  liftInstruction = peano4::particles::liftParticleAssociatedWithVertex(true, searchRadius, x, marker);
-  validateEqualsWithParams5(
-    liftInstruction,
-    peano4::particles::ParticleReassociationInstructionSieveGlobally,
-    peano4::particles::internal::fitsIntoLevel(searchRadius, marker),
-    marker.isContainedInAdjacentCells(
-      x,
-      0.5,
-      peano4::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(marker)
-        * tarch::la::NUMERICAL_ZERO_DIFFERENCE
-    ),
-    2.0 * searchRadius,
-    peano4::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(marker)
-      * tarch::la::NUMERICAL_ZERO_DIFFERENCE,
-    marker.toString()
-  );
-
-  // Move on to the next coarser mesh level.
-  marker._cellCentre = {1.5 * meshSize, 1.5 * meshSize};
-  marker._select     = 2;
-  marker._h          = {3.0 * meshSize, 3.0 * meshSize};
-
-  validateWithParams5(
-    peano4::particles::sieveParticle(searchRadius, x, marker),
-    peano4::particles::internal::fitsIntoLevel(searchRadius, marker),
-    marker.isContainedInAdjacentCells(
-      x,
-      0.5,
-      peano4::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(marker)
-        * tarch::la::NUMERICAL_ZERO_DIFFERENCE
-    ),
-    2.0 * searchRadius,
-    peano4::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(marker)
-      * tarch::la::NUMERICAL_ZERO_DIFFERENCE,
-    marker.toString()
-  );
-
-#endif
 }
 
-void peano4::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticleAssociatedWithVertex04() {
-#if DIMENSIONS == 2
-  peano4::datamanagement::VertexMarker marker;
+/**
+ * A particle beyond half a cell width of its vertex leaves that vertex. The
+ * lift names the parent vertex closest to the particle, and the vertex of the
+ * same cell that is within reach keeps and drops the particle instead.
+ */
+void peano4::particles::tests::MultiscaleTransitionsTest::testVertexLiftsAParticleBeyondItsReachToTheParentVertex() {
+  const auto                           event = leafCellEvent();
+  const peano4::dataview::VertexMarker originVertex(event, 0);
+  const peano4::dataview::VertexMarker oppositeVertex(event, LastVertex);
+  const auto                           particle = pointInCell(0.75);
 
-  const double meshSize = 1.0 / 3.0;
-
-  marker._cellCentre                      = {0.166667, 0.5};
-  marker._h                               = {meshSize, meshSize};
-  marker._isHanging                       = 0;
-  marker._hasBeenRefined                  = 0;
-  marker._willBeRefined                   = 0;
-  marker._isParentVertexLocal             = 0b1011;
-  marker._isParentCellLocal               = true;
-  marker.relativePositionWithinFatherCell = {2, 0};
-  marker._select                          = 2;
-  marker._isAdjacentCellLocal             = 0b000100110;
-
-  const tarch::la::Vector<DIMENSIONS, double>          x = {4.99999996463071805231e-01, 5.00000003548028204570e-01};
-  const double                                         searchRadius = 0.15;
-  peano4::particles::ParticleReassociationInstruction liftInstruction;
-
-  // Vertex 1 lifts the particle globally.
-  marker._select  = 1;
-  liftInstruction = peano4::particles::liftParticleAssociatedWithVertex(true, searchRadius, x, marker);
+  // The cell sits at the origin corner of its parent, so the particle lies
+  // below the parent's centre along every axis: Parent vertex 0 takes it.
   validateEqualsWithParams1(
-    liftInstruction,
-    peano4::particles::ParticleReassociationInstructionSieveGlobally,
-    marker.toString()
+    peano4::particles::liftParticleAssociatedWithVertex(true, FittingRadius, particle, originVertex),
+    0,
+    originVertex.toString()
+  );
+  validateWithParams1(
+    not peano4::particles::dropParticle(FittingRadius, particle, originVertex),
+    originVertex.toString()
   );
 
-  validateWithParams5(
-    not peano4::particles::sieveParticle(searchRadius, x, marker),
-    peano4::particles::internal::fitsIntoLevel(searchRadius, marker),
-    marker.isContainedInAdjacentCells(
-      x,
-      0.5,
-      peano4::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(marker)
-        * tarch::la::NUMERICAL_ZERO_DIFFERENCE
-    ),
-    2.0 * searchRadius,
-    peano4::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(marker)
-      * tarch::la::NUMERICAL_ZERO_DIFFERENCE,
-    marker.toString()
+  validateEqualsWithParams1(
+    peano4::particles::liftParticleAssociatedWithVertex(true, FittingRadius, particle, oppositeVertex),
+    peano4::particles::ParticleReassociationInstructionKeep,
+    oppositeVertex.toString()
+  );
+  validateWithParams1(
+    peano4::particles::dropParticle(FittingRadius, particle, oppositeVertex),
+    oppositeVertex.toString()
   );
 
-  marker._select = 3;
-  validateWithParams5(
-    peano4::particles::sieveParticle(searchRadius, x, marker),
-    peano4::particles::internal::fitsIntoLevel(searchRadius, marker),
-    marker.isContainedInAdjacentCells(
-      x,
-      0.5,
-      peano4::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(marker)
-        * tarch::la::NUMERICAL_ZERO_DIFFERENCE
-    ),
-    2.0 * searchRadius,
-    peano4::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(marker)
-      * tarch::la::NUMERICAL_ZERO_DIFFERENCE,
-    marker.toString()
+  // A search radius the cell cannot hold lifts the particle even from the
+  // vertex within reach.
+  validateEqualsWithParams1(
+    peano4::particles::liftParticleAssociatedWithVertex(true, OversizedRadius, particle, oppositeVertex),
+    0,
+    oppositeVertex.toString()
   );
-
-  // Move on to the cell to the right.
-  marker._cellCentre(0) += meshSize;
-  marker._isAdjacentCellLocal = 0b000110111;
-
-  marker._select = 0;
-  validateWithParams5(
-    not peano4::particles::sieveParticle(searchRadius, x, marker),
-    peano4::particles::internal::fitsIntoLevel(searchRadius, marker),
-    marker.isContainedInAdjacentCells(
-      x,
-      0.5,
-      peano4::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(marker)
-        * tarch::la::NUMERICAL_ZERO_DIFFERENCE
-    ),
-    2.0 * searchRadius,
-    peano4::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(marker)
-      * tarch::la::NUMERICAL_ZERO_DIFFERENCE,
-    marker.toString()
+  validateWithParams1(
+    not peano4::particles::dropParticle(OversizedRadius, particle, oppositeVertex),
+    oppositeVertex.toString()
   );
-
-  marker._select = 2;
-  validateWithParams5(
-    peano4::particles::sieveParticle(searchRadius, x, marker),
-    peano4::particles::internal::fitsIntoLevel(searchRadius, marker),
-    marker.isContainedInAdjacentCells(
-      x,
-      0.5,
-      peano4::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(marker)
-        * tarch::la::NUMERICAL_ZERO_DIFFERENCE
-    ),
-    2.0 * searchRadius,
-    peano4::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(marker)
-      * tarch::la::NUMERICAL_ZERO_DIFFERENCE,
-    marker.toString()
-  );
-
-  // Move on to the diagonal top right cell.
-  marker._cellCentre(1) += meshSize;
-  marker._isAdjacentCellLocal = 0b000000110;
-
-  marker._select = 0;
-  validateWithParams5(
-    peano4::particles::sieveParticle(searchRadius, x, marker),
-    peano4::particles::internal::fitsIntoLevel(searchRadius, marker),
-    marker.isContainedInAdjacentCells(
-      x,
-      0.5,
-      peano4::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(marker)
-        * tarch::la::NUMERICAL_ZERO_DIFFERENCE
-    ),
-    2.0 * searchRadius,
-    peano4::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(marker)
-      * tarch::la::NUMERICAL_ZERO_DIFFERENCE,
-    marker.toString()
-  );
-
-  // Repeat the checks on the other rank, starting with the left cell.
-  marker._cellCentre          = {0.166667, 0.5};
-  marker._isAdjacentCellLocal = 0b000100110;
-  marker._isAdjacentCellLocal.flip();
-
-  marker._select = 1;
-  validateWithParams5(
-    not peano4::particles::sieveParticle(searchRadius, x, marker),
-    peano4::particles::internal::fitsIntoLevel(searchRadius, marker),
-    marker.isContainedInAdjacentCells(
-      x,
-      0.5,
-      peano4::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(marker)
-        * tarch::la::NUMERICAL_ZERO_DIFFERENCE
-    ),
-    2.0 * searchRadius,
-    peano4::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(marker)
-      * tarch::la::NUMERICAL_ZERO_DIFFERENCE,
-    marker.toString()
-  );
-
-  marker._select = 3;
-  validateWithParams5(
-    peano4::particles::sieveParticle(searchRadius, x, marker),
-    peano4::particles::internal::fitsIntoLevel(searchRadius, marker),
-    marker.isContainedInAdjacentCells(
-      x,
-      0.5,
-      peano4::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(marker)
-        * tarch::la::NUMERICAL_ZERO_DIFFERENCE
-    ),
-    2.0 * searchRadius,
-    peano4::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(marker)
-      * tarch::la::NUMERICAL_ZERO_DIFFERENCE,
-    marker.toString()
-  );
-
-  // Move on to the diagonal top right cell.
-  marker._cellCentre(0) += meshSize;
-  marker._cellCentre(1) += meshSize;
-  marker._isAdjacentCellLocal = 0b000000110;
-  marker._isAdjacentCellLocal.flip();
-
-  marker._select = 0;
-  validateWithParams5(
-    peano4::particles::sieveParticle(searchRadius, x, marker),
-    peano4::particles::internal::fitsIntoLevel(searchRadius, marker),
-    marker.isContainedInAdjacentCells(
-      x,
-      0.5,
-      peano4::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(marker)
-        * tarch::la::NUMERICAL_ZERO_DIFFERENCE
-    ),
-    2.0 * searchRadius,
-    peano4::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(marker)
-      * tarch::la::NUMERICAL_ZERO_DIFFERENCE,
-    marker.toString()
-  );
-#endif
 }
 
-#ifdef UseTestSpecificCompilerSettings
-#pragma optimize("", on)
-#endif
+/**
+ * A lift that cannot hand the particle to a local parent vertex sends it to
+ * the global sieve set: When the parent cell is remote, and when the particle
+ * has left the parent cell.
+ */
+void peano4::particles::tests::MultiscaleTransitionsTest::testLiftSievesGloballyWithoutALocalParent() {
+  auto event = leafCellEvent();
+  event.setIsParentCellLocal(false);
+  const peano4::dataview::VertexMarker vertexWithRemoteParent(event, 0);
+  validateEqualsWithParams1(
+    peano4::particles::liftParticleAssociatedWithVertex(true, FittingRadius, pointInCell(0.75), vertexWithRemoteParent),
+    peano4::particles::ParticleReassociationInstructionSieveGlobally,
+    vertexWithRemoteParent.toString()
+  );
+
+  const peano4::dataview::VertexMarker originVertex(leafCellEvent(), 0);
+  const auto                           particleOutsideParent = pointInCell(SubdivisionFactor + 0.25);
+  validateEqualsWithParams1(
+    peano4::particles::liftParticleAssociatedWithVertex(true, FittingRadius, particleOutsideParent, originVertex),
+    peano4::particles::ParticleReassociationInstructionSieveGlobally,
+    originVertex.toString()
+  );
+}
+
+/** A particle that is not local stays where it is, whatever its search radius. */
+void peano4::particles::tests::MultiscaleTransitionsTest::testRemoteParticleIsKept() {
+  const peano4::dataview::VertexMarker originVertex(leafCellEvent(), 0);
+  validateEqualsWithParams1(
+    peano4::particles::liftParticleAssociatedWithVertex(false, OversizedRadius, pointInCell(4.0), originVertex),
+    peano4::particles::ParticleReassociationInstructionKeep,
+    originVertex.toString()
+  );
+}
+
+/**
+ * A refined vertex sieves only particles that do not fit into the next finer
+ * level; a particle that fits the children is dropped further instead.
+ */
+void peano4::particles::tests::MultiscaleTransitionsTest::testSieveWaitsForTheLevelTheParticleFitsInto() {
+  auto event = leafCellEvent();
+  event.setHasBeenRefined(AllVertices);
+  const peano4::dataview::VertexMarker refinedVertex(event, 0);
+  const auto                           refinedCell = event.getCellMarker();
+  const auto                           particle    = pointInCell(0.25);
+
+  const double radiusFittingTheChildren = 0.25 * MeshSize / SubdivisionFactor;
+  validateWithParams1(
+    not peano4::particles::sieveParticle(radiusFittingTheChildren, particle, refinedVertex),
+    refinedVertex.toString()
+  );
+  validateWithParams1(
+    peano4::particles::particleWillBeDroppedFurther(radiusFittingTheChildren, refinedVertex),
+    refinedVertex.toString()
+  );
+  validateWithParams1(
+    peano4::particles::particleWillBeDroppedFurther(radiusFittingTheChildren, refinedCell),
+    refinedCell.toString()
+  );
+
+  const double radiusFittingThisLevelOnly = 0.4 * MeshSize;
+  validateWithParams1(
+    peano4::particles::sieveParticle(radiusFittingThisLevelOnly, particle, refinedVertex),
+    refinedVertex.toString()
+  );
+  validateWithParams1(
+    not peano4::particles::particleWillBeDroppedFurther(radiusFittingThisLevelOnly, refinedVertex),
+    refinedVertex.toString()
+  );
+  validateWithParams1(
+    not peano4::particles::particleWillBeDroppedFurther(radiusFittingThisLevelOnly, refinedCell),
+    refinedCell.toString()
+  );
+}
+
+/**
+ * Within a cell, a particle moves to the vertex closest to it, stays where it
+ * is when it already has that vertex, and is lifted to the parent vertex when
+ * its search radius exceeds the cell.
+ */
+void peano4::particles::tests::MultiscaleTransitionsTest::testReassociationWithinCell() {
+  auto       event    = leafCellEvent();
+  const auto cell     = event.getCellMarker();
+  const auto particle = pointInCell(0.75);
+
+  validateEqualsWithParams1(
+    peano4::particles::getParticleReassociationInstructionWithinCellWithIntraCellReassignment(
+      true,
+      FittingRadius,
+      particle,
+      cell,
+      0
+    ),
+    LastVertex,
+    cell.toString()
+  );
+  validateEqualsWithParams1(
+    peano4::particles::getParticleReassociationInstructionWithinCellWithIntraCellReassignment(
+      true,
+      FittingRadius,
+      particle,
+      cell,
+      LastVertex
+    ),
+    peano4::particles::ParticleReassociationInstructionKeep,
+    cell.toString()
+  );
+  validateEqualsWithParams1(
+    peano4::particles::getParticleReassociationInstructionWithinCellWithIntraCellReassignment(
+      true,
+      OversizedRadius,
+      particle,
+      cell,
+      LastVertex
+    ),
+    peano4::VerticesPerCell,
+    cell.toString()
+  );
+  validateEqualsWithParams1(
+    peano4::particles::getParticleReassociationInstructionWithinCellWithIntraCellReassignment(
+      false,
+      OversizedRadius,
+      particle,
+      cell,
+      0
+    ),
+    peano4::particles::ParticleReassociationInstructionKeep,
+    cell.toString()
+  );
+
+  event.setIsParentCellLocal(false);
+  const auto cellWithRemoteParent = event.getCellMarker();
+  validateEqualsWithParams1(
+    peano4::particles::getParticleReassociationInstructionWithinCellWithIntraCellReassignment(
+      true,
+      OversizedRadius,
+      particle,
+      cellWithRemoteParent,
+      LastVertex
+    ),
+    peano4::particles::ParticleReassociationInstructionSieveGlobally,
+    cellWithRemoteParent.toString()
+  );
+
+  validateNumericalEquals(
+    peano4::particles::relativeSpatialOwnershipTolerance(cell),
+    peano4::particles::ReleaseOwnershipSpatialSortingTolerance * MeshSize * tarch::la::NUMERICAL_ZERO_DIFFERENCE
+  );
+}
+
+/**
+ * Of the cells around a vertex, exactly the one that contains the particle
+ * claims it; the cell index follows the direction of the particle from the
+ * vertex along every axis.
+ */
+void peano4::particles::tests::MultiscaleTransitionsTest::testAdjacentCellsOwningParticle() {
+  const peano4::dataview::VertexMarker originVertex(leafCellEvent(), 0);
+
+  const auto owningCellsAbove = peano4::particles::getAdjacentCellsOwningParticle(pointInCell(0.25), originVertex);
+  validateEqualsWithParams1(owningCellsAbove.count(), 1U, owningCellsAbove);
+  validateWithParams1(owningCellsAbove[LastVertex], owningCellsAbove);
+
+  const auto owningCellsBelow = peano4::particles::getAdjacentCellsOwningParticle(pointInCell(-0.25), originVertex);
+  validateEqualsWithParams1(owningCellsBelow.count(), 1U, owningCellsBelow);
+  validateWithParams1(owningCellsBelow[0], owningCellsBelow);
+}

@@ -11,7 +11,11 @@ namespace exahype2::tests {
 class exahype2::tests::EnumerationTest final : public tarch::tests::TestCase {
 public:
   EnumerationTest();
-  ~EnumerationTest() override = default;
+  EnumerationTest(const EnumerationTest&)            = delete;
+  EnumerationTest(EnumerationTest&&)                 = delete;
+  EnumerationTest& operator=(const EnumerationTest&) = delete;
+  EnumerationTest& operator=(EnumerationTest&&)      = delete;
+  ~EnumerationTest() override                        = default;
 
   void run() override;
 

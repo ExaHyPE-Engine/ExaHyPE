@@ -8,7 +8,7 @@ namespace tarch::la::tests {
   class MatrixVectorTest;
 } // namespace tarch::la::tests
 
-class tarch::la::tests::MatrixVectorTest final: public tarch::tests::TestCase {
+class tarch::la::tests::MatrixVectorTest final : public tarch::tests::TestCase {
 private:
   void testMultiplication();
   void testAdditionalMatrixVectorOperations();

@@ -8,15 +8,15 @@ set(PEANO_ASSERTS_DEFINITIONS -DPEANO_ASSERTIONS=1 -DPEANO_DEBUG=0          CACH
 set(PEANO_DEBUG_DEFINITIONS   -DPEANO_ASSERTIONS=1 -DPEANO_DEBUG=1          CACHE INTERNAL "" FORCE)
 
 set(PEANO_C_FLAGS_RELEASE       -O3 -fomit-frame-pointer    CACHE INTERNAL "")
-set(PEANO_C_FLAGS_ASSERTS       -g -O3                      CACHE INTERNAL "")
+set(PEANO_C_FLAGS_ASSERTS       -g -O2                      CACHE INTERNAL "")
 set(PEANO_C_FLAGS_DEBUG         -g -O0                      CACHE INTERNAL "")
 
 set(PEANO_CXX_FLAGS_RELEASE     -O3 -fomit-frame-pointer    CACHE INTERNAL "")
-set(PEANO_CXX_FLAGS_ASSERTS     -g -O3                      CACHE INTERNAL "")
+set(PEANO_CXX_FLAGS_ASSERTS     -g -O2                      CACHE INTERNAL "")
 set(PEANO_CXX_FLAGS_DEBUG       -g -O0                      CACHE INTERNAL "")
 
 set(PEANO_Fortran_FLAGS_RELEASE -O3                         CACHE INTERNAL "")
-set(PEANO_Fortran_FLAGS_ASSERTS -g -O3                      CACHE INTERNAL "")
+set(PEANO_Fortran_FLAGS_ASSERTS -g -O2                      CACHE INTERNAL "")
 set(PEANO_Fortran_FLAGS_DEBUG   -g -O0                      CACHE INTERNAL "")
 
 set(PEANO_EXTRA_C_FLAGS       "" CACHE STRING "Extra C flags (semicolon-separated)")
@@ -40,7 +40,8 @@ function(peano_apply_flags)
     -Wunused-but-set-variable
     -Wformat=2
     -Wcast-qual
-    -Wdouble-promotion
+    # -Wdouble-promotion
+    -Werror
   )
   set(PEANO_CXX_WARNINGS
     ${PEANO_C_WARNINGS}
@@ -51,20 +52,26 @@ function(peano_apply_flags)
     -W
     -Wall
     -Wextra
+    -Werror
   )
 
   # CUDA routes host warnings through -Xcompiler because they do not reach nvcc or ptxas device
   # compilation. An NVHPC host requires PEANO_NVHPC_WARNINGS.
   set(PEANO_CUDA_WARNINGS "")
+  # nvcc hands the host compiler a generated file with GNU line markers, which GCC flags under
+  # -Wpedantic without a dedicated switch to silence them.
   foreach(_peano_warning ${PEANO_CXX_WARNINGS})
-    list(APPEND PEANO_CUDA_WARNINGS "-Xcompiler=${_peano_warning}")
+    if(NOT _peano_warning STREQUAL "-Wpedantic")
+      list(APPEND PEANO_CUDA_WARNINGS "-Xcompiler=${_peano_warning}")
+    endif()
   endforeach()
 
   list(APPEND PEANO_CUDA_WARNINGS
-    -Wreorder                          # Diagnose device member initialisation order.
+    -Wreorder # Diagnose device member initialisation order.
     -Wdefault-stream-launch
     -Wext-lambda-captures-this
-    -Xptxas=--warn-on-spills           # Diagnose device register spills.
+    -Xptxas=--warn-on-spills # Diagnose device register spills.
+    -Xcompiler=-Wno-overlength-strings
   )
 
   target_compile_options(PeanoOptions INTERFACE
@@ -81,6 +88,10 @@ function(peano_apply_flags)
     $<$<COMPILE_LANG_AND_ID:C,NVHPC,PGI>:-Kieee>
     $<$<COMPILE_LANG_AND_ID:CXX,NVHPC,PGI>:-Kieee>
     $<$<COMPILE_LANG_AND_ID:Fortran,NVHPC,PGI>:-Kieee>
+    # NVHPC's automatic inlining drops stores of the kernels that stage a narrower storage
+    # precision through the compute precision.
+    $<$<COMPILE_LANG_AND_ID:C,NVHPC,PGI>:-Mnoautoinline>
+    $<$<COMPILE_LANG_AND_ID:CXX,NVHPC,PGI>:-Mnoautoinline>
     # IntelLLVM precise semantics preserve exact grid arithmetic and the symmetry of
     # interpolation and restriction. Explicit contraction confines fused operations to
     # individual expressions and supports FENV_ACCESS.
@@ -88,6 +99,10 @@ function(peano_apply_flags)
     $<$<COMPILE_LANG_AND_ID:C,IntelLLVM>:-ffp-contract=on>
     $<$<COMPILE_LANG_AND_ID:CXX,IntelLLVM>:-ffp-model=precise>
     $<$<COMPILE_LANG_AND_ID:CXX,IntelLLVM>:-ffp-contract=on>
+    # GCC fuses operations across statements by default, so two code paths of one kernel
+    # round differently.
+    $<$<COMPILE_LANG_AND_ID:C,GNU>:-ffp-contract=on>
+    $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-ffp-contract=on>
   )
 
   target_compile_options(PeanoOptions INTERFACE
@@ -143,6 +158,29 @@ function(peano_apply_flags)
       $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang,IntelLLVM>:-fno-omit-frame-pointer>
       $<$<COMPILE_LANG_AND_ID:C,GNU,Clang,AppleClang,IntelLLVM>:-g>
       $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang,IntelLLVM>:-g>
+    )
+  endif()
+
+  target_compile_options(PeanoOptions INTERFACE
+    $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-Wno-free-nonheap-object>
+    $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-Wno-array-bounds>
+    $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-Wno-null-dereference>
+    $<$<AND:$<COMPILE_LANGUAGE:CUDA>,$<CXX_COMPILER_ID:GNU>>:-Xcompiler=-Wno-free-nonheap-object>
+    $<$<AND:$<COMPILE_LANGUAGE:CUDA>,$<CXX_COMPILER_ID:GNU>>:-Xcompiler=-Wno-array-bounds>
+    $<$<AND:$<COMPILE_LANGUAGE:CUDA>,$<CXX_COMPILER_ID:GNU>>:-Xcompiler=-Wno-null-dereference>
+  )
+
+  if(PEANO_WITH_GPU_ARCH MATCHES "^sm_")
+    target_compile_options(PeanoOptions INTERFACE
+      $<$<COMPILE_LANG_AND_ID:C,Clang,AppleClang,IntelLLVM>:-Wno-unknown-cuda-version>
+      $<$<COMPILE_LANG_AND_ID:CXX,Clang,AppleClang,IntelLLVM>:-Wno-unknown-cuda-version>
+    )
+  endif()
+
+  if(NOT PEANO_WITH_SANITIZER STREQUAL "none" OR PEANO_WITH_FPE)
+    target_compile_options(PeanoOptions INTERFACE
+      $<$<COMPILE_LANG_AND_ID:C,Clang,AppleClang,IntelLLVM>:-Wno-pass-failed>
+      $<$<COMPILE_LANG_AND_ID:CXX,Clang,AppleClang,IntelLLVM>:-Wno-pass-failed>
     )
   endif()
 endfunction()

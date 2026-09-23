@@ -30,9 +30,9 @@ public:
   void testApplyFiniteVolumeWithLimitedLinearReconstruction();
   void testApplyFiniteVolumeWithWENOReconstruction();
   void testApplyFiniteVolumeWithCustomRiemannSolver();
-  void testHandleBoundaryWithOneHaloLayer();
-  void testHandleBoundaryWithTwoHaloLayers();
-  void testHandleBoundaryWithThreeHaloLayers();
+  void testApplyBoundaryConditionsOnFaceWithOneHaloLayer();
+  void testApplyBoundaryConditionsOnFaceWithTwoHaloLayers();
+  void testApplyBoundaryConditionsOnFaceWithThreeHaloLayers();
 
   template <
     typename Reconstruction,
@@ -44,7 +44,7 @@ public:
   void runApplyFiniteVolume();
 
   template <int HaloSize>
-  void runHandleBoundary();
+  void runApplyBoundaryConditionsOnFace();
 
 private:
   void validateBuffersMatch(

@@ -1,0 +1,50 @@
+# This file is part of the Peano project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
+
+.PHONY: all solver clean help distclean maintainer-clean
+
+CMAKE_APPLICATION_BUILD_DIR := {{BUILD_SUBDIR}}
+CMAKE_APPLICATION_CONFIGURE_STAMP := $(CMAKE_APPLICATION_BUILD_DIR)/.configured
+CMAKE_CONFIGURE_ARGS :=
+CMAKE_BUILD_JOBS = $(firstword $(patsubst -j%,%,$(filter -j%,$(MAKEFLAGS))))
+
+{% if CMAKE_GENERATOR is defined and CMAKE_GENERATOR != "" -%}
+CMAKE_CONFIGURE_ARGS += -G "{{CMAKE_GENERATOR}}"
+{% endif -%}
+{% if CMAKE_GENERATOR_PLATFORM is defined and CMAKE_GENERATOR_PLATFORM != "" -%}
+CMAKE_CONFIGURE_ARGS += -A "{{CMAKE_GENERATOR_PLATFORM}}"
+{% endif -%}
+{% if CMAKE_GENERATOR_TOOLSET is defined and CMAKE_GENERATOR_TOOLSET != "" -%}
+CMAKE_CONFIGURE_ARGS += -T "{{CMAKE_GENERATOR_TOOLSET}}"
+{% endif -%}
+
+CMAKE_BUILD_PARALLEL_LEVEL ?= $(CMAKE_BUILD_JOBS)
+# Only export when non-empty: cmake --build treats a defined-but-empty
+# CMAKE_BUILD_PARALLEL_LEVEL as unlimited -j, which would make a bare `make`
+# compile on all cores.
+ifneq ($(strip $(CMAKE_BUILD_PARALLEL_LEVEL)),)
+export CMAKE_BUILD_PARALLEL_LEVEL
+endif
+
+CMAKE_BUILD_PARALLEL_ARGS = $(if $(strip $(CMAKE_BUILD_PARALLEL_LEVEL)),--parallel $(strip $(CMAKE_BUILD_PARALLEL_LEVEL)),)
+
+all: solver
+
+$(CMAKE_APPLICATION_CONFIGURE_STAMP): CMakeLists.txt Makefile
+	cmake -S . -B $(CMAKE_APPLICATION_BUILD_DIR) $(CMAKE_CONFIGURE_ARGS)
+	cmake -E touch $(CMAKE_APPLICATION_CONFIGURE_STAMP)
+
+solver: $(CMAKE_APPLICATION_CONFIGURE_STAMP)
+	+cmake --build $(CMAKE_APPLICATION_BUILD_DIR) $(CMAKE_BUILD_PARALLEL_ARGS)
+
+clean:
+	@test ! -f $(CMAKE_APPLICATION_BUILD_DIR)/CMakeCache.txt || cmake --build $(CMAKE_APPLICATION_BUILD_DIR) --target clean
+
+help: $(CMAKE_APPLICATION_CONFIGURE_STAMP)
+	cmake --build $(CMAKE_APPLICATION_BUILD_DIR) --target help
+
+distclean:
+	cmake -E rm -rf -- {{GENERATED_SUBDIR}} $(CMAKE_APPLICATION_BUILD_DIR)
+	cmake -E rm -f -- __peano_nonexistent__ {{EXECUTABLENAME}} .gitignore Makefile CMakeLists.txt
+
+maintainer-clean: distclean

@@ -13,22 +13,21 @@ Some hands-on descriptions of the numerics can be found in @ref page_tutorials_e
 
 ExaHyPE's Finite Volume scheme is based upon block-structured Cartesian meshes.
 All Finite Volume solvers work with blockstructured AMR: They embed @f$ p \times p@f$ patches
-into the octants (cells of the spacetree). To avoid confusion, I prefer to
-use the term volume for the cells within the patch, as cell would be
-ambiguous given that we construct the host mesh from spacetree cells.
+into the octants (cells of the spacetree). To avoid confusion, we use the
+term volume for the cells within the patch, as cell would be ambiguous
+given that we construct the host mesh from spacetree cells.
 
 
 @image html documentation/exahype2/solvers/block-structured.png
 
-With the Finite Volume methods, we only have single-shot methods at the moment.
-That is, Peano runs over the octants of the mesh, i.e. the patches.
-Per patch, it calls and ExaHyPE update kernel, which takes the patch and moves it forwards in time by a given @f$ \Delta t @f$.
-ExaHyPE is shipped with several update schemes. You can obviously also write your own
+Peano runs over the octants of the mesh, i.e. the patches.
+Per patch, it calls an ExaHyPE update kernel, which takes the patch and moves it forwards in time by a given @f$ \Delta t @f$.
+ExaHyPE is shipped with several update schemes. You can also write your own
 numerical scheme manually.
 
 ## Storage scheme
 
-Every patch has to depends upon its neighbouring, i.e. face-connected patches.
+Every patch depends upon its neighbouring, i.e. face-connected patches.
 To be able to do this, ExaHyPE passes a @f$ (p+2N)^d @f$ patch into a kernel, where @f$ p @f$ is the number of volumes per patch, @f$ d @f$ is the dimension,
 and @f$ N \geq 1 @f$ is halo size.
 Different Finite Volume schemes have different halo sizes.
@@ -45,14 +44,14 @@ Here are some details about the data used within the kernels:
   They contain garbage. Example: In a @f$ 7 \times 7 @f$ patch world with @f$ N=2 @f$, we have
   49 volumes in the core centre, surrounded by @f$ 2d \cdot (N \cdot p^{d-1}) = 4 \cdot (2 \cdot 7) @f$ face-connected values.
   The @f$ 4 \cdot (2 \cdot 2 ) @f$ corners of the halo do not hold any meaningful data.
-  Nevertheless, we let @f$ Q_{in} @f$ holds a @f$ (7+2\cdot 2) @f$ volumes
+  Nevertheless, we let @f$ Q_{in} @f$ hold @f$ (7+2\cdot 2)^2 @f$ volumes.
 - The volumes within @f$ Q_{in} @f$ and @f$ Q_{out} @f$ are ordered lexicographically.
-- The data are stores as array of structs (AoS).
+- The data are stored as an array of structs (AoS).
 - If a PDE is described by @f$ K_{pde} @f$  real values subject to the wave equations and @f$ K_{aux} @f$ auxiliary variables
   (material parameters), then the @f$ Q_{in} @f$ contains @f$ K_{pde} + K_{aux} @f$ values (degrees of freedom) per volume.
   The @f$ Q_{out} @f$ however contains only the @f$ K_{pde} + K_{aux} @f$ values, too, but the @f$ K_{aux} @f$ material parameters do not evolve in time and therefore are the same as in @f$ Q_{in} @f$.
 - Besides @f$ Q_{in} @f$ and @f$ Q_{out} @f$ a kernel is given the current time @f$ t @f$ and the time step size @f$ \Delta t @f$.
-- We never write a kernel for only one patch. We always write kernels that can advanced multiple patches in one go.
+- We never write a kernel for only one patch. We always write kernels that advance multiple patches in one go.
   So the "update one patch" is a special case.
 
 ## Data structures
@@ -61,12 +60,12 @@ Each Finite Volume solver embeds @f$N \times N@f$ patches
 into the octants (cells of the spacetree).
 ExaHyPE is built on top of Peano, and Peano realises a strict element-wise
 traversal, i.e. there's no way to access the neighbour cell of a cell
-directly. However, we can hijack the faces.
+directly. However, we can use the faces.
 
-The idea here is that we embed a @f$ 2N@f$ @f$ (d = 2) @f$ or
+We embed a @f$ 2N@f$ @f$ (d = 2) @f$ or
 @f$2N^2 @f$ @f$ (d=3) @f$, respectively, patches into each face. Let
-this auxiliary patch overlap the adjacent cells. Then, we effectively
-have a halo of one cell available within each cell: We know the cell
+this auxiliary patch overlap the adjacent cells. Then we have a halo of
+one cell available within each cell: We know the cell
 data. We also have access to the @f$ 2d @f$ faces where each hosts a
 degenerated patch. One layer of this patch is a copy of our own data,
 i.e. does not give us additional information. The other layer of the
@@ -78,50 +77,28 @@ information from the neighbour patch.
 
 Projecting the patches onto the face data structures and back is a
 mechanical task. Therefore, we offer action sets to relieve you from the
-pain to recode it over and over again. Using them, you add the
-projections to your algorithmic steps, and the API then automatically
-injects these features (aspects) into your code:
+pain to recode it over and over again. The solver adds them to its
+algorithmic steps:
 
 @image html documentation/exahype2/solvers/ProjectPatchOntoFaces.png
 
 The image above illustrates what `ProjectPatchOntoFaces` does: It knows
 the dimensions of both the patches and the face auxiliary data
-structures and thus can ensure that the right data is copied from the
-cell into the @f$2^d@f$ faces when we leave a cell throughout the grid
-traversal.
-
-
-### Augment patch with halo
-
-The action set `ReconstructPatch` works slightly
-different yet can be read, from a patch projection point of view, as
-transpose of `ProjectPatchOntoFaces`: It reconstructs the data into a
-separate patch, the `reconstructedPatch`, which is accessed through
-`fineGridCell` plus the name you gave this reconstructed patch. This
-auxiliary patch has the dimensions
-@f$N+2 \times N+2 \times N+2@f$. The action set copies over the cell's
-patch data into this auxiliary patch and uses the faces to supplement it
-with halo data around it. So that, in the end, you get the original patch
-data plus the cells around it in one big patch.
+structures and copies the right data from the cell into the @f$2^d@f$
+faces when we leave a cell throughout the grid traversal.
 
 
 ## Code organisation
 
 The @ref page_exahype2_blockstructured "patch operations" offer most of the
 basic data structures and action sets.
-The actual patches can either be embedded as plain arrays into each cell, or
-they can be held as arrays on the heap and the cells hold (smart) pointers
-to these heap objects.
-It depends on your use case which variant is faster.
 
 
-On the Python API side, the class `exahype2.solvers.fv.FV` is the base class
-of all Finite Volume solvers.
-Its class documentation holds a lot of background information on the solver
-design and data flows.
-The production FV solvers are currently single-sweep solvers. Some solver
-variants can additionally generate fused compute kernels for accelerator-oriented
-benchmark and integration paths via their `fuse_compute_kernels` option.
+On the Python API side, the class `exahype2.fv.Solver` describes a Finite
+Volume solver.
+The scheme of a solver, `exahype2.fv.Godunov` or `exahype2.fv.MusclHancock`,
+picks the reconstruction and the time stepping of the compute kernel. Every
+Finite Volume solver advances its patches in one grid sweep.
 
 ## Implementation
 
@@ -141,7 +118,6 @@ number = {4},
 issn = {0098-3500},
 url = {https://doi.org/10.1145/3406835},
 doi = {10.1145/3406835},
-abstract = {The numerical solution of partial differential equations is at the heart of many grand challenges in supercomputing. Solvers based on high-order discontinuous Galerkin (DG) discretisation have been shown to scale on large supercomputers with excellent performance and efficiency if the implementation exploits all levels of parallelism and is tailored to the specific architecture. However, every year new supercomputers emerge and the list of hardware-specific considerations grows simultaneously with the list of desired features in a DG code. Thus, we believe that a sustainable DG code needs an abstraction layer to implement the numerical scheme in a suitable language. We explore the possibility to abstract the numerical scheme as small tensor operations, describe them in a domain-specific language (DSL) resembling the Einstein notation, and to map them to small General Matrix-Matrix Multiplication routines. The compiler for our DSL implements classic optimisations that are used for large tensor contractions, and we present novel optimisation techniques such as equivalent sparsity patterns and optimal index permutations for temporary tensors. Our application examples, which include the earthquake simulation software SeisSol, show that the generated kernels achieve over 50\% peak performance of a recent 48-core Skylake system while the DSL considerably simplifies the implementation.},
 journal = {ACM Trans. Math. Softw.},
 month = oct,
 articleno = {34},
@@ -156,34 +132,34 @@ This does not work in ExaHyPE 1:1 as we support non-linear PDEs in the generic k
 However, we can use similar operator concatenation ideas.
 
 
-We demonstate the data flow by means of the simplified numerical flux which only takes the average.
+We demonstrate the data flow by means of the simplified numerical flux which only takes the average.
 This algorithm consists of a strict sequence of steps:
 
 - We evaluate @f$ S(Q) @f$ per voxel. The output is stored in a @f$ p \times p \times p @f$ patch where each volume holds @f$ K_{pde} @f$ values.
   The output is called @f$ Q_{S} @f$.
-- We evaluate @f$ F(Q)_x @f$ per voxel. That the flux in one direction. The output is stored in a @f$ (p+2N) \times p \times p @f$ patch where each volume holds @f$ K_{pde} @f$ values.
-  The output is called @f$ Q_{F_x} @f$. Note that this is the core patch extended by the halo in one direction!
-- We evaluate @f$ F(Q)_y @f$ per voxel. That the flux in one direction. The output is stored in a @f$ p \times (p+2N) \times p @f$ patch where each volume holds @f$ K_{pde} @f$ values.
-  The output is called @f$ Q_{F_y} @f$. Note that this is the core patch extended by the halo in one direction!
-- We evaluate @f$ F(Q)_z @f$ per voxel. That the flux in one direction. The output is stored in a @f$ p \times p \times (p+2N) @f$ patch where each volume holds @f$ K_{pde} @f$ values.
-  The output is called @f$ Q_{F_z} @f$. Note that this is the core patch extended by the halo in one direction!
+- We evaluate @f$ F(Q)_x @f$ per voxel. That is the flux in one direction. The output is stored in a @f$ (p+2N) \times p \times p @f$ patch where each volume holds @f$ K_{pde} @f$ values.
+  The output is called @f$ Q_{F_x} @f$. It is the core patch extended by the halo in one direction.
+- We evaluate @f$ F(Q)_y @f$ per voxel. That is the flux in one direction. The output is stored in a @f$ p \times (p+2N) \times p @f$ patch where each volume holds @f$ K_{pde} @f$ values.
+  The output is called @f$ Q_{F_y} @f$. It is the core patch extended by the halo in one direction.
+- We evaluate @f$ F(Q)_z @f$ per voxel. That is the flux in one direction. The output is stored in a @f$ p \times p \times (p+2N) @f$ patch where each volume holds @f$ K_{pde} @f$ values.
+  The output is called @f$ Q_{F_z} @f$. It is the core patch extended by the halo in one direction.
 
 Now all temporary data are available. We prepare the output and then add the
-PDE contributions. This part is basically a stencil variant. Or we can write it
+PDE contributions. This part is a stencil variant. Or we can write it
 down as a tensor-vector product which is added to @f$ Q_{out} @f$:
 
-- We copy over @f$ Q_{in} @f$ into @f$ Q_{out} @f$. Per voxel, we have o copy @f$ K_{pde} + K_{aux} @f$ unknowns.
+- We copy over @f$ Q_{in} @f$ into @f$ Q_{out} @f$. Per voxel, we have to copy @f$ K_{pde} + K_{aux} @f$ unknowns.
 - Add to each voxel @f$ Q_{in}[x,y,z] @f$ the value @f$ \Delta t \cdot Q_{S}[x,y,z] @f$. This loop runs over @f$ K_{pde} @f$ unknowns only. The @f$ K_{aux} @f$ entries are not touched.
 - Add to each voxel @f$ Q_{in}[x,y,z] @f$ the value @f$ \frac{\Delta t}{2h} \cdot (Q_{F_x}[x-1,y,z]+Q_{F_x}[x,y,z]+Q_{F_x}[x,y,z]+Q_{F_x}[x+1,y,z])@f$. This loop runs over @f$ K_{pde} @f$ unknowns only. The @f$ K_{aux} @f$ entries are not touched.
 - Add to each voxel @f$ Q_{in}[x,y,z] @f$ the value @f$ \frac{\Delta t}{2h} \cdot (Q_{F_y}[x,y-1,z]+2Q_{F_y}[x,y,z]+Q_{F_y}[x,y+1,z])@f$. This loop runs over @f$ K_{pde} @f$ unknowns only. The @f$ K_{aux} @f$ entries are not touched.
 - Add to each voxel @f$ Q_{in}[x,y,z] @f$ the value @f$ \frac{\Delta t}{2h} \cdot (Q_{F_z}[x,y,z-1]+2Q_{F_z}[x,y,z]+Q_{F_z}[x,y,z+1])@f$. This loop runs over @f$ K_{pde} @f$ unknowns only. The @f$ K_{aux} @f$ entries are not touched.
 
 The extension to Rusanov for example is straightforward, as long as we take into account that our "stencil" here has to incorporate the max function.
-Below is schematic illustration of the data flow:
+Below is a schematic illustration of the data flow:
 
 @image html documentation/exahype2/numerics/data-flow-finite-volumes.png
 
-Note that the scheme as well as the description lack an important detail:
+The scheme as well as the description lack one detail:
 Every single step is to be done over a set of patches, as we update multiple patches in one go.
 In the kernels, we write down this logic as a sequence of operators applied to the whole set of patches in one sweep.
 

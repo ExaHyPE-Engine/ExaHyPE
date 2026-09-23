@@ -2,48 +2,109 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "RiemannTest.h"
 
-#include "exahype2/Enumeration.h"
 #include "exahype2/dg/DGUtils.h"
 #include "exahype2/dg/Riemann.h"
-#include "exahype2/dg/tests/TestUtils.h"
-#include "peano4/grid/GridTraversalEvent.h"
 
 namespace {
-  // A two-point Gauss-Legendre basis on the unit interval. The matrices below match what
-  // exahype2.solvers.LagrangeBasisWithDiagonalMassMatrix generates for polynomial order one.
-  constexpr int    NodesPerAxis = 2;
-  constexpr double Node0        = 0.5 - 0.5 / 1.7320508075688772;
-  constexpr double Node1        = 0.5 + 0.5 / 1.7320508075688772;
+  constexpr int NumberOfDofsPerAxis = 2;
+  constexpr int NumberOfUnknowns    = 2;
+  constexpr int FaceNodes           = exahype2::dg::NodesPerFace<NumberOfDofsPerAxis>;
 
-  double shapeFunction(const int node, const double x) {
-    return node == 0 ? (Node1 - x) / (Node1 - Node0) : (x - Node0) / (Node1 - Node0);
-  }
+  // Reports the first entry of the state as the wave speed, so a test can steer
+  // the eigenvalue of each side from the data it hands in.
+  struct FirstEntryEigenvalueSolver final {
+    static double maxEigenvalue(
+      const double* NOALIAS const                                   state,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] double                                       t,
+      [[maybe_unused]] double                                       dt,
+      [[maybe_unused]] int                                          normal
+    ) {
+      return state[0];
+    }
 
-  std::array<double, 3 * NodesPerAxis * NodesPerAxis> interpolationMatrix() {
-    std::array<double, 3 * NodesPerAxis * NodesPerAxis> result{};
-    for (int block = 0; block < 3; block++) {
-      for (int fine = 0; fine < NodesPerAxis; fine++) {
-        const double fineNode = ((fine == 0 ? Node0 : Node1) + block) / 3.0;
-        for (int coarse = 0; coarse < NodesPerAxis; coarse++) {
-          result[block * NodesPerAxis * NodesPerAxis + fine * NodesPerAxis + coarse] = shapeFunction(coarse, fineNode);
-        }
+    // Accumulation verifies that the kernel clears callback outputs at every node.
+    static void flux(
+      const double* NOALIAS const                                   state,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] double                                       t,
+      [[maybe_unused]] double                                       dt,
+      [[maybe_unused]] int                                          normal,
+      double* NOALIAS const                                         fluxValues
+    ) {
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        fluxValues[unknown] += state[unknown];
       }
     }
-    return result;
-  }
 
-  double nodePosition(const int node) { return node == 0 ? Node0 : Node1; }
-
-  // An affine trace over the tangential axes of a face is representable in the order-one
-  // basis, so the face transfers have to reproduce it exactly up to roundoff.
-  double affineTrace(const tarch::la::Vector<DIMENSIONS, double>& tangentialPosition, const int normal) {
-    double result = 1.0;
-    for (int d = 0; d < DIMENSIONS; d++) {
-      if (d != normal) {
-        result += (2.0 + d) * tangentialPosition(d);
+    static void nonconservativeProduct(
+      [[maybe_unused]] const double* NOALIAS const                  state,
+      const double* NOALIAS const                                   stateJump,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] double                                       t,
+      [[maybe_unused]] double                                       dt,
+      [[maybe_unused]] int                                          normal,
+      double* NOALIAS const                                         productValues
+    ) {
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        productValues[unknown] += stateJump[unknown];
       }
     }
-    return result;
+
+    // Doubles whatever it is handed, which is enough to show the matrix ran.
+    static void multiplyMaterialParameterMatrix(
+      [[maybe_unused]] const double* NOALIAS const                  state,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] double                                       t,
+      [[maybe_unused]] double                                       dt,
+      [[maybe_unused]] int                                          normal,
+      double* NOALIAS const                                         values
+    ) {
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        values[unknown] *= 2.0;
+      }
+    }
+  };
+
+  // Reads the jump of the first auxiliary variable, the way the bathymetry
+  // enters the shallow-water equations.
+  struct AuxiliaryJumpSolver final {
+    static double maxEigenvalue(
+      const double* NOALIAS const                                   state,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] double                                       t,
+      [[maybe_unused]] double                                       dt,
+      [[maybe_unused]] int                                          normal
+    ) {
+      return state[0];
+    }
+
+    static void nonconservativeProduct(
+      [[maybe_unused]] const double* NOALIAS const                  state,
+      const double* NOALIAS const                                   stateJump,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& x,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& h,
+      [[maybe_unused]] double                                       t,
+      [[maybe_unused]] double                                       dt,
+      [[maybe_unused]] int                                          normal,
+      double* NOALIAS const                                         productValues
+    ) {
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        productValues[unknown] += (1.0 + unknown) * stateJump[NumberOfUnknowns];
+      }
+    }
+  };
+
+  // Weights that sum to one, so a uniform state averages to itself.
+  void fillNormalisedWeights(double (&faceQuadratureWeights)[FaceNodes]) {
+    for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
+      faceQuadratureWeights[faceNode] = 1.0 / FaceNodes;
+    }
   }
 } // namespace
 
@@ -51,399 +112,361 @@ exahype2::dg::tests::RiemannTest::RiemannTest() :
   tarch::tests::TestCase("exahype2::dg::tests::RiemannTest") {}
 
 void exahype2::dg::tests::RiemannTest::run() {
-  testMethod(testProjectVolumetricDataOntoFacesForConstantSolutionOrder3);
-  testMethod(testProjectVolumetricDataOntoFacesForConstantSolutionOrder0);
-  testMethod(testInterpolateProjectedFacePolynomialReproducesPolynomials);
-  testMethod(testInterpolateRiemannSolutionReproducesPolynomials);
+  testMethod(testEqualStatesAverageTheTwoFluxes);
+  testMethod(testJumpTermScalesWithTheLargerWaveSpeed);
+  testMethod(testBothSidesSeeTheSameFluxWithoutANonconservativeProduct);
+  testMethod(testNonconservativeProductSplitsTheTwoSides);
+  testMethod(testNonconservativeProductReadsTheAuxiliaryJump);
+  testMethod(testLinearFormBuildsTheFluxFromTheStateJump);
+  testMethod(testLinearFormAddsTheNonconservativeProduct);
+  testMethod(testLinearFormAppliesTheMaterialParameterMatrix);
 }
 
-/**
- * The coarse-to-fine trace interpolation reproduces the coarse polynomial.
- */
-void exahype2::dg::tests::RiemannTest::testInterpolateProjectedFacePolynomialReproducesPolynomials() {
-  constexpr int Order              = NodesPerAxis - 1;
-  constexpr int Unknowns           = 2;
-  constexpr int AuxiliaryVariables = 1;
-  constexpr int Stride             = Unknowns + AuxiliaryVariables;
+void exahype2::dg::tests::RiemannTest::testEqualStatesAverageTheTwoFluxes() {
+  constexpr int NumberOfAuxiliaryVariables = 0;
+  constexpr int NumberOfData               = NumberOfUnknowns + NumberOfAuxiliaryVariables;
 
-#if DIMENSIONS == 2
-  constexpr int FaceSize = NodesPerAxis * 2 * Stride;
-#else
-  constexpr int FaceSize = NodesPerAxis * NodesPerAxis * 2 * Stride;
-#endif
+  double faceQuadratureWeights[FaceNodes];
+  fillNormalisedWeights(faceQuadratureWeights);
 
-  const auto interpolation = interpolationMatrix();
+  double leftFlux[FaceNodes * NumberOfUnknowns];
+  double rightFlux[FaceNodes * NumberOfUnknowns];
+  double leftState[FaceNodes * NumberOfData];
+  double rightState[FaceNodes * NumberOfData];
+  for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
+    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+      leftFlux[faceNode * NumberOfUnknowns + unknown]  = 1.0 + unknown;
+      rightFlux[faceNode * NumberOfUnknowns + unknown] = 3.0 + unknown;
+    }
+    for (int value = 0; value < NumberOfData; value++) {
+      leftState[faceNode * NumberOfData + value]  = 2.0;
+      rightState[faceNode * NumberOfData + value] = 2.0;
+    }
+  }
 
-  for (int faceNumber = 0; faceNumber < 2 * DIMENSIONS; faceNumber++) {
-    const int normal     = faceNumber % DIMENSIONS;
-    const int coarseSide = faceNumber < DIMENSIONS ? 0 : 1;
+  const tarch::la::Vector<DIMENSIONS, double> faceCentre(0.5);
+  const tarch::la::Vector<DIMENSIONS, double> cellSize(1.0);
 
-    std::array<double, FaceSize> coarseGridFaceQ{};
-    peano4::dForEachExclusive(NodesPerAxis, normal, 0, [&](const tarch::la::Vector<DIMENSIONS, int>& dof) {
-      tarch::la::Vector<DIMENSIONS, double> position(0.0);
-      for (int d = 0; d < DIMENSIONS; d++) {
-        if (d != normal) {
-          position(d) = nodePosition(dof(d));
-        }
-      }
-      for (int side = 0; side < 2; side++) {
-        auto shiftedDoF    = dof;
-        shiftedDoF(normal) = side;
-        const int offset   = exahype2::serialiseVoxelIndexInOverlap(shiftedDoF, NodesPerAxis, 1, normal) * Stride;
-        coarseGridFaceQ[offset]     = affineTrace(position, normal) + side;
-        coarseGridFaceQ[offset + 1] = 4.0 - side;
-        coarseGridFaceQ[offset + 2] = -1.0;
-      }
-    });
+  exahype2::dg::solveRiemannProblem<
+    FirstEntryEigenvalueSolver,
+    NumberOfDofsPerAxis,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    false,
+    double>(leftFlux, rightFlux, leftState, rightState, faceQuadratureWeights, faceCentre, cellSize, 0.0, 1.0, 0);
 
-    peano4::grid::GridTraversalEvent event;
-    peano4::dForEach(3, [&](const tarch::la::Vector<DIMENSIONS, int>& subCellIndex) {
-      if (subCellIndex(normal) != (faceNumber < DIMENSIONS ? 0 : 2)) {
-        return;
-      }
-      event.setRelativePositionToFather(subCellIndex);
-      auto faceMarker = event.getFaceMarker();
-      faceMarker.select(faceNumber);
+  for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
+    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+      validateNumericalEquals(leftFlux[faceNode * NumberOfUnknowns + unknown], 2.0 + unknown);
+      validateNumericalEquals(rightFlux[faceNode * NumberOfUnknowns + unknown], 2.0 + unknown);
+    }
+  }
+}
 
-      std::array<double, FaceSize> fineGridFaceQ{};
-      fineGridFaceQ.fill(7.0);
-      interpolateProjectedFacePolynomial(
-        faceMarker,
-        Order,
-        1,
-        Unknowns,
-        AuxiliaryVariables,
-        interpolation.data(),
-        coarseGridFaceQ.data(),
-        fineGridFaceQ.data()
+void exahype2::dg::tests::RiemannTest::testJumpTermScalesWithTheLargerWaveSpeed() {
+  constexpr int NumberOfAuxiliaryVariables = 0;
+  constexpr int NumberOfData               = NumberOfUnknowns + NumberOfAuxiliaryVariables;
+
+  double faceQuadratureWeights[FaceNodes];
+  fillNormalisedWeights(faceQuadratureWeights);
+
+  double leftFlux[FaceNodes * NumberOfUnknowns]  = {};
+  double rightFlux[FaceNodes * NumberOfUnknowns] = {};
+  double leftState[FaceNodes * NumberOfData];
+  double rightState[FaceNodes * NumberOfData];
+  for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
+    const int firstEntry       = faceNode * NumberOfData;
+    leftState[firstEntry]      = 3.0;
+    leftState[firstEntry + 1]  = 1.0;
+    rightState[firstEntry]     = 5.0;
+    rightState[firstEntry + 1] = 4.0;
+  }
+
+  const tarch::la::Vector<DIMENSIONS, double> faceCentre(0.5);
+  const tarch::la::Vector<DIMENSIONS, double> cellSize(1.0);
+
+  exahype2::dg::solveRiemannProblem<
+    FirstEntryEigenvalueSolver,
+    NumberOfDofsPerAxis,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    false,
+    double>(leftFlux, rightFlux, leftState, rightState, faceQuadratureWeights, faceCentre, cellSize, 0.0, 1.0, 0);
+
+  // The right side averages to 5, the left one to 3, so the larger speed wins.
+  constexpr double ExpectedMaxEigenvalue = 5.0;
+  for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
+    const int firstEntry = faceNode * NumberOfUnknowns;
+    validateNumericalEquals(leftFlux[firstEntry], 0.5 * ExpectedMaxEigenvalue * (3.0 - 5.0));
+    validateNumericalEquals(leftFlux[firstEntry + 1], 0.5 * ExpectedMaxEigenvalue * (1.0 - 4.0));
+  }
+}
+
+void exahype2::dg::tests::RiemannTest::testBothSidesSeeTheSameFluxWithoutANonconservativeProduct() {
+  constexpr int NumberOfAuxiliaryVariables = 1;
+  constexpr int NumberOfData               = NumberOfUnknowns + NumberOfAuxiliaryVariables;
+
+  double faceQuadratureWeights[FaceNodes];
+  fillNormalisedWeights(faceQuadratureWeights);
+
+  double leftFlux[FaceNodes * NumberOfUnknowns];
+  double rightFlux[FaceNodes * NumberOfUnknowns];
+  double leftState[FaceNodes * NumberOfData];
+  double rightState[FaceNodes * NumberOfData];
+  for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
+    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+      leftFlux[faceNode * NumberOfUnknowns + unknown]  = 0.5 * faceNode + unknown;
+      rightFlux[faceNode * NumberOfUnknowns + unknown] = 1.5 * faceNode - unknown;
+    }
+    for (int value = 0; value < NumberOfData; value++) {
+      leftState[faceNode * NumberOfData + value]  = 1.0 + 0.25 * value;
+      rightState[faceNode * NumberOfData + value] = 2.0 - 0.25 * value;
+    }
+  }
+
+  const tarch::la::Vector<DIMENSIONS, double> faceCentre(0.5);
+  const tarch::la::Vector<DIMENSIONS, double> cellSize(1.0);
+
+  exahype2::dg::solveRiemannProblem<
+    FirstEntryEigenvalueSolver,
+    NumberOfDofsPerAxis,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    false,
+    double>(leftFlux, rightFlux, leftState, rightState, faceQuadratureWeights, faceCentre, cellSize, 0.0, 1.0, 0);
+
+  for (int entry = 0; entry < FaceNodes * NumberOfUnknowns; entry++) {
+    validateNumericalEquals(leftFlux[entry], rightFlux[entry]);
+  }
+}
+
+void exahype2::dg::tests::RiemannTest::testNonconservativeProductSplitsTheTwoSides() {
+  constexpr int NumberOfAuxiliaryVariables = 0;
+  constexpr int NumberOfData               = NumberOfUnknowns + NumberOfAuxiliaryVariables;
+
+  double faceQuadratureWeights[FaceNodes];
+  fillNormalisedWeights(faceQuadratureWeights);
+
+  double leftFlux[FaceNodes * NumberOfUnknowns]  = {};
+  double rightFlux[FaceNodes * NumberOfUnknowns] = {};
+  double leftState[FaceNodes * NumberOfData];
+  double rightState[FaceNodes * NumberOfData];
+  for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
+    for (int value = 0; value < NumberOfData; value++) {
+      leftState[faceNode * NumberOfData + value]  = 1.0;
+      rightState[faceNode * NumberOfData + value] = 1.0 + value;
+    }
+  }
+
+  const tarch::la::Vector<DIMENSIONS, double> faceCentre(0.5);
+  const tarch::la::Vector<DIMENSIONS, double> cellSize(1.0);
+
+  exahype2::dg::solveRiemannProblem<
+    FirstEntryEigenvalueSolver,
+    NumberOfDofsPerAxis,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    true,
+    double>(leftFlux, rightFlux, leftState, rightState, faceQuadratureWeights, faceCentre, cellSize, 0.0, 1.0, 0);
+
+  // The stub returns the state jump, which the kernel adds on one side and
+  // subtracts on the other, so the two sides differ by exactly that jump.
+  for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
+    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+      const double stateJump =
+        rightState[faceNode * NumberOfData + unknown] - leftState[faceNode * NumberOfData + unknown];
+      validateNumericalEquals(
+        leftFlux[faceNode * NumberOfUnknowns + unknown] - rightFlux[faceNode * NumberOfUnknowns + unknown],
+        stateJump
       );
-
-      peano4::dForEachExclusive(NodesPerAxis, normal, 0, [&](const tarch::la::Vector<DIMENSIONS, int>& dof) {
-        tarch::la::Vector<DIMENSIONS, double> position(0.0);
-        for (int d = 0; d < DIMENSIONS; d++) {
-          if (d != normal) {
-            position(d) = (nodePosition(dof(d)) + subCellIndex(d)) / 3.0;
-          }
-        }
-        for (int side = 0; side < 2; side++) {
-          auto shiftedDoF    = dof;
-          shiftedDoF(normal) = side;
-          const int offset   = exahype2::serialiseVoxelIndexInOverlap(shiftedDoF, NodesPerAxis, 1, normal) * Stride;
-          if (side == coarseSide) {
-            validateNumericalEqualsWithParams3(
-              fineGridFaceQ[offset],
-              affineTrace(position, normal) + side,
-              faceNumber,
-              side,
-              dof
-            );
-            validateNumericalEqualsWithParams3(fineGridFaceQ[offset + 1], 4.0 - side, faceNumber, side, dof);
-            validateNumericalEqualsWithParams3(fineGridFaceQ[offset + 2], -1.0, faceNumber, side, dof);
-          } else {
-            // The fine cell's own half carries its projection and stays untouched.
-            validateNumericalEqualsWithParams3(fineGridFaceQ[offset], 7.0, faceNumber, side, dof);
-          }
-        }
-      });
-    });
+    }
   }
 }
 
 /**
- * The transition flux a fine cell consumes reproduces the coarse polynomial.
+ * The buffer the nonconservative product reads carries the jump of every
+ * auxiliary variable next to the jump of the unknowns.
  */
-void exahype2::dg::tests::RiemannTest::testInterpolateRiemannSolutionReproducesPolynomials() {
-  constexpr int    Order              = NodesPerAxis - 1;
-  constexpr int    Unknowns           = 2;
-  constexpr int    AuxiliaryVariables = 1;
-  constexpr int    ProjectionStride   = Unknowns + AuxiliaryVariables;
-  constexpr double MaxEigenvalue      = 2.0;
-  constexpr double RestrictedTrace    = 3.0;
-  constexpr double Perturbation       = 0.25;
+void exahype2::dg::tests::RiemannTest::testNonconservativeProductReadsTheAuxiliaryJump() {
+  constexpr int NumberOfAuxiliaryVariables = 1;
+  constexpr int NumberOfData               = NumberOfUnknowns + NumberOfAuxiliaryVariables;
 
-#if DIMENSIONS == 2
-  constexpr int NodesPerFaceLayer = NodesPerAxis;
-#else
-  constexpr int NodesPerFaceLayer = NodesPerAxis * NodesPerAxis;
-#endif
-  constexpr int FluxFaceSize       = NodesPerFaceLayer * 2 * Unknowns;
-  constexpr int ProjectionFaceSize = NodesPerFaceLayer * 2 * ProjectionStride;
+  double faceQuadratureWeights[FaceNodes];
+  fillNormalisedWeights(faceQuadratureWeights);
 
-  const auto interpolation = interpolationMatrix();
+  double leftFlux[FaceNodes * NumberOfUnknowns]  = {};
+  double rightFlux[FaceNodes * NumberOfUnknowns] = {};
+  double leftState[FaceNodes * NumberOfData];
+  double rightState[FaceNodes * NumberOfData];
+  for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
+    const int firstEntry = faceNode * NumberOfData;
+    // The unknowns carry no jump, so only the auxiliary variable can reach the flux.
+    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+      leftState[firstEntry + unknown]  = 1.0;
+      rightState[firstEntry + unknown] = 1.0;
+    }
+    leftState[firstEntry + NumberOfUnknowns]  = 2.0 + faceNode;
+    rightState[firstEntry + NumberOfUnknowns] = 5.0 + 2.0 * faceNode;
+  }
 
-  for (int faceNumber = 0; faceNumber < 2 * DIMENSIONS; faceNumber++) {
-    const int    normal             = faceNumber % DIMENSIONS;
-    const int    coarseSideLayer    = faceNumber < DIMENSIONS ? 0 : 1;
-    const double penaltyOrientation = faceNumber < DIMENSIONS ? 1.0 : -1.0;
+  const tarch::la::Vector<DIMENSIONS, double> faceCentre(0.5);
+  const tarch::la::Vector<DIMENSIONS, double> cellSize(1.0);
 
-    // The coarse flux polynomial lives in the layer the coarse neighbour's face
-    // integral consumes; the opposite layer carries unrelated data. The coarse
-    // projection's fine-side layer holds the restricted fine trace, here a
-    // constant, whose interpolation is the same constant.
-    std::array<double, FluxFaceSize>       coarseRiemannSolution{};
-    std::array<double, ProjectionFaceSize> coarseProjection{};
-    peano4::dForEachExclusive(NodesPerAxis, normal, 0, [&](const tarch::la::Vector<DIMENSIONS, int>& dof) {
-      tarch::la::Vector<DIMENSIONS, double> position(0.0);
-      for (int d = 0; d < DIMENSIONS; d++) {
-        if (d != normal) {
-          position(d) = nodePosition(dof(d));
-        }
-      }
-      for (int side = 0; side < 2; side++) {
-        auto shiftedDoF    = dof;
-        shiftedDoF(normal) = side;
-        const int slot = exahype2::serialiseVoxelIndexInOverlap(shiftedDoF, NodesPerAxis, 1, normal);
-        coarseRiemannSolution[slot * Unknowns]        = side == coarseSideLayer ? affineTrace(position, normal) : 9.0;
-        coarseRiemannSolution[slot * Unknowns + 1]    = side == coarseSideLayer ? 4.0 : 9.0;
-        coarseProjection[slot * ProjectionStride]     = RestrictedTrace;
-        coarseProjection[slot * ProjectionStride + 1] = RestrictedTrace;
-        coarseProjection[slot * ProjectionStride + 2] = -1.0;
-      }
-    });
+  exahype2::dg::solveRiemannProblem<
+    AuxiliaryJumpSolver,
+    NumberOfDofsPerAxis,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    true,
+    double>(leftFlux, rightFlux, leftState, rightState, faceQuadratureWeights, faceCentre, cellSize, 0.0, 1.0, 0);
 
-    peano4::dForEach(3, [&](const tarch::la::Vector<DIMENSIONS, int>& subCellIndex) {
-      if (subCellIndex(normal) != (faceNumber < DIMENSIONS ? 0 : 2)) {
-        return;
-      }
-
-      // The fine trace matches the restriction's image except at the first node
-      // of the first unknown, whose perturbation only the penalty can pick up.
-      const int                              fineSideLayer = 1 - coarseSideLayer;
-      std::array<double, ProjectionFaceSize> fineProjection{};
-      for (int node = 0; node < 2 * NodesPerFaceLayer; node++) {
-        fineProjection[node * ProjectionStride]     = RestrictedTrace;
-        fineProjection[node * ProjectionStride + 1] = RestrictedTrace;
-        fineProjection[node * ProjectionStride + 2] = -1.0;
-      }
-      tarch::la::Vector<DIMENSIONS, int> perturbedDoF(0);
-      perturbedDoF(normal) = fineSideLayer;
-      const int perturbedSlot =
-        exahype2::serialiseVoxelIndexInOverlap(perturbedDoF, NodesPerAxis, 1, normal);
-      fineProjection[perturbedSlot * ProjectionStride] += Perturbation;
-
-      std::array<double, FluxFaceSize> fineRiemannSolution{};
-      fineRiemannSolution.fill(7.0);
-      interpolateRiemannSolution(
-        faceNumber,
-        subCellIndex,
-        Order,
-        Unknowns,
-        AuxiliaryVariables,
-        MaxEigenvalue,
-        interpolation.data(),
-        coarseRiemannSolution.data(),
-        coarseProjection.data(),
-        fineProjection.data(),
-        fineRiemannSolution.data()
+  for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
+    const double auxiliaryJump =
+      rightState[faceNode * NumberOfData + NumberOfUnknowns] - leftState[faceNode * NumberOfData + NumberOfUnknowns];
+    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+      const double halfProduct = 0.5 * (1.0 + unknown) * auxiliaryJump;
+      validateNumericalEqualsWithParams2(
+        leftFlux[faceNode * NumberOfUnknowns + unknown],
+        halfProduct,
+        faceNode,
+        unknown
       );
-
-      peano4::dForEachExclusive(NodesPerAxis, normal, 0, [&](const tarch::la::Vector<DIMENSIONS, int>& dof) {
-        tarch::la::Vector<DIMENSIONS, double> position(0.0);
-        for (int d = 0; d < DIMENSIONS; d++) {
-          if (d != normal) {
-            position(d) = (nodePosition(dof(d)) + subCellIndex(d)) / 3.0;
-          }
-        }
-        for (int side = 0; side < 2; side++) {
-          auto shiftedDoF    = dof;
-          shiftedDoF(normal) = side;
-          const int slot = exahype2::serialiseVoxelIndexInOverlap(shiftedDoF, NodesPerAxis, 1, normal);
-          if (side == coarseSideLayer) {
-            // The coarse side's layer of the hanging face stays untouched.
-            validateNumericalEqualsWithParams3(fineRiemannSolution[slot * Unknowns], 7.0, faceNumber, side, dof);
-            validateNumericalEqualsWithParams3(fineRiemannSolution[slot * Unknowns + 1], 7.0, faceNumber, side, dof);
-          } else {
-            const double penalty =
-              slot == perturbedSlot ? -penaltyOrientation * 0.5 * MaxEigenvalue * Perturbation : 0.0;
-            validateNumericalEqualsWithParams3(
-              fineRiemannSolution[slot * Unknowns],
-              affineTrace(position, normal) + penalty,
-              faceNumber,
-              side,
-              dof
-            );
-            validateNumericalEqualsWithParams3(fineRiemannSolution[slot * Unknowns + 1], 4.0, faceNumber, side, dof);
-          }
-        }
-      });
-    });
+      validateNumericalEqualsWithParams2(
+        rightFlux[faceNode * NumberOfUnknowns + unknown],
+        -halfProduct,
+        faceNode,
+        unknown
+      );
+    }
   }
 }
 
-/**
- * Project a constant order-3 solution onto the faces.
- */
-void exahype2::dg::tests::RiemannTest::testProjectVolumetricDataOntoFacesForConstantSolutionOrder3() {
-  const int order        = 3;
-  const int nodesPerAxis = order + 1;
-#if DIMENSIONS == 2
-  const int nodesPerCell = nodesPerAxis * nodesPerAxis;
-#else
-  const int nodesPerCell = nodesPerAxis * nodesPerAxis * nodesPerAxis;
-#endif
-  const int nodesPerFace = nodesPerCell / nodesPerAxis;
+void exahype2::dg::tests::RiemannTest::testLinearFormBuildsTheFluxFromTheStateJump() {
+  constexpr int NumberOfAuxiliaryVariables = 0;
+  constexpr int NumberOfData               = NumberOfUnknowns + NumberOfAuxiliaryVariables;
 
-  double cellQin[2 * nodesPerCell];
-  for (int i = 0; i < 2 * nodesPerCell; i++) {
-    cellQin[i] = i % 2 == 0 ? 1.0 : -1.0;
+  double faceQuadratureWeights[FaceNodes];
+  fillNormalisedWeights(faceQuadratureWeights);
+
+  // Nonzero incoming values prove the linear form starts from a clean slate.
+  double leftFlux[FaceNodes * NumberOfUnknowns];
+  double rightFlux[FaceNodes * NumberOfUnknowns];
+  double leftState[FaceNodes * NumberOfData];
+  double rightState[FaceNodes * NumberOfData];
+  for (int entry = 0; entry < FaceNodes * NumberOfUnknowns; entry++) {
+    leftFlux[entry]  = 9.0;
+    rightFlux[entry] = -9.0;
+  }
+  for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
+    for (int value = 0; value < NumberOfData; value++) {
+      leftState[faceNode * NumberOfData + value]  = 1.0;
+      rightState[faceNode * NumberOfData + value] = 3.0;
+    }
   }
 
-  double QxL[2 * nodesPerFace * 2];
-  double QxR[2 * nodesPerFace * 2];
-  double QyL[2 * nodesPerFace * 2];
-  double QyR[2 * nodesPerFace * 2];
-#if DIMENSIONS == 3
-  double QzL[2 * nodesPerFace * 2];
-  double QzR[2 * nodesPerFace * 2];
-#endif
+  const tarch::la::Vector<DIMENSIONS, double> faceCentre(0.5);
+  const tarch::la::Vector<DIMENSIONS, double> cellSize(1.0);
 
-  for (int i = 0; i < 2 * nodesPerFace * 2; i++) {
-    QxL[i] = 0.0;
-    QxR[i] = 0.0;
-    QyL[i] = 0.0;
-    QyR[i] = 0.0;
-#if DIMENSIONS == 3
-    QzL[i] = 0.0;
-    QzR[i] = 0.0;
-#endif
+  exahype2::dg::solveLinearRiemannProblem<
+    FirstEntryEigenvalueSolver,
+    NumberOfDofsPerAxis,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    true,
+    false,
+    false,
+    double>(leftFlux, rightFlux, leftState, rightState, faceQuadratureWeights, faceCentre, cellSize, 0.0, 1.0, 0);
+
+  // Half the jump is one, the stub flux returns it unchanged, and the wave
+  // speed is the averaged first entry, which is three.
+  constexpr double ExpectedFlux          = 1.0;
+  constexpr double ExpectedMaxEigenvalue = 3.0;
+  constexpr double ExpectedHalfStateJump = 1.0;
+  for (int entry = 0; entry < FaceNodes * NumberOfUnknowns; entry++) {
+    validateNumericalEquals(leftFlux[entry], ExpectedFlux - ExpectedMaxEigenvalue * ExpectedHalfStateJump);
+    validateNumericalEquals(rightFlux[entry], ExpectedFlux + ExpectedMaxEigenvalue * ExpectedHalfStateJump);
   }
-
-  projectVolumetricDataOntoFaces(
-    cellQin,
-    order,
-    1, // unknowns
-    1, // auxiliary variables
-    BasisFunctionValuesLeftP3,
-    QxL,
-    QxR,
-    QyL,
-    QyR
-#if DIMENSIONS == 3
-    ,
-    QzL,
-    QzR
-#endif
-  );
-
-  validateNumericalEquals(QxL[0], 0.0);
-  validateNumericalEquals(QxL[1], 0.0);
-  validateNumericalEquals(QxL[2], 1.0);
-  validateNumericalEquals(QxL[3], -1.0);
-  validateNumericalEquals(QxL[4], 0.0);
-  validateNumericalEquals(QxL[5], 0.0);
-  validateNumericalEquals(QxL[6], 1.0);
-  validateNumericalEquals(QxL[7], -1.0);
-  validateNumericalEquals(QxL[8], 0.0);
-  validateNumericalEquals(QxL[9], 0.0);
-#if DIMENSIONS == 3
-  validateNumericalEquals(QxL[20], 0.0);
-  validateNumericalEquals(QxL[21], 0.0);
-  validateNumericalEquals(QxL[22], 1.0);
-  validateNumericalEquals(QxL[23], -1.0);
-#endif
-
-  validateNumericalEquals(QxR[0], 1.0);
-  validateNumericalEquals(QxR[1], -1.0);
-  validateNumericalEquals(QxR[2], 0.0);
-  validateNumericalEquals(QxR[3], 0.0);
-  validateNumericalEquals(QxR[4], 1.0);
-  validateNumericalEquals(QxR[5], -1.0);
-  validateNumericalEquals(QxR[6], 0.0);
-  validateNumericalEquals(QxR[7], 0.0);
-  validateNumericalEquals(QxR[8], 1.0);
-  validateNumericalEquals(QxR[9], -1.0);
-
-  validateNumericalEquals(QyL[0], 0.0);
-  validateNumericalEquals(QyL[1], 0.0);
-  validateNumericalEquals(QyL[2], 0.0);
-  validateNumericalEquals(QyL[3], 0.0);
-  validateNumericalEquals(QyL[4], 0.0);
-  validateNumericalEquals(QyL[5], 0.0);
-  validateNumericalEquals(QyL[10], 1.0);
-  validateNumericalEquals(QyL[11], -1.0);
-  validateNumericalEquals(QyL[12], 1.0);
-  validateNumericalEquals(QyL[13], -1.0);
-#if DIMENSIONS == 3
-  validateEquals(exahype2::serialiseVoxelIndexInOverlap({0, 0, 0}, 3 + 1, 1, 1) * 2 + 0, 0);
-  validateEquals(exahype2::serialiseVoxelIndexInOverlap({0, 0, 0}, 3 + 1, 1, 1) * 2 + 1, 1);
-  validateEquals(exahype2::serialiseVoxelIndexInOverlap({1, 0, 0}, 3 + 1, 1, 1) * 2 + 0, 2);
-  validateEquals(exahype2::serialiseVoxelIndexInOverlap({1, 0, 0}, 3 + 1, 1, 1) * 2 + 1, 3);
-  validateEquals(exahype2::serialiseVoxelIndexInOverlap({0, 1, 0}, 3 + 1, 1, 1) * 2 + 0, 8);
-  validateEquals(exahype2::serialiseVoxelIndexInOverlap({0, 1, 0}, 3 + 1, 1, 1) * 2 + 1, 9);
-  validateEquals(exahype2::serialiseVoxelIndexInOverlap({1, 1, 0}, 3 + 1, 1, 1) * 2 + 0, 10);
-  validateEquals(exahype2::serialiseVoxelIndexInOverlap({1, 1, 0}, 3 + 1, 1, 1) * 2 + 1, 11);
-  validateEquals(exahype2::serialiseVoxelIndexInOverlap({2, 1, 0}, 3 + 1, 1, 1) * 2 + 0, 12);
-  validateEquals(exahype2::serialiseVoxelIndexInOverlap({2, 1, 0}, 3 + 1, 1, 1) * 2 + 1, 13);
-  validateEquals(exahype2::serialiseVoxelIndexInOverlap({3, 1, 0}, 3 + 1, 1, 1) * 2 + 0, 14);
-  validateEquals(exahype2::serialiseVoxelIndexInOverlap({3, 1, 0}, 3 + 1, 1, 1) * 2 + 1, 15);
-  validateEquals(exahype2::serialiseVoxelIndexInOverlap({0, 0, 1}, 3 + 1, 1, 1) * 2 + 0, 16);
-  validateEquals(exahype2::serialiseVoxelIndexInOverlap({0, 0, 1}, 3 + 1, 1, 1) * 2 + 1, 17);
-
-  validateNumericalEquals(QyL[16], 0.0);
-  validateNumericalEquals(QyL[17], 0.0);
-  validateNumericalEquals(QyL[18], 0.0);
-  validateNumericalEquals(QyL[19], 0.0);
-  validateNumericalEquals(QyL[20], 0.0);
-  validateNumericalEquals(QyL[21], 0.0);
-  validateNumericalEquals(QyL[24], 1.0);
-  validateNumericalEquals(QyL[25], -1.0);
-  validateNumericalEquals(QyL[26], 1.0);
-  validateNumericalEquals(QyL[27], -1.0);
-#endif
-
-#if DIMENSIONS == 3
-  validateNumericalEquals(QzL[0], 0.0);
-  validateNumericalEquals(QzL[1], 0.0);
-  validateNumericalEquals(QzL[2], 0.0);
-  validateNumericalEquals(QzL[3], 0.0);
-  validateNumericalEquals(QzL[4], 0.0);
-  validateNumericalEquals(QzL[5], 0.0);
-  validateNumericalEquals(QzL[32], 1.0);
-  validateNumericalEquals(QzL[33], -1.0);
-
-  validateNumericalEquals(QzR[0], 1.0);
-  validateNumericalEquals(QzR[1], -1.0);
-#endif
 }
 
-/**
- * Project a constant solution onto the faces for the order-0 Euler setup.
- */
-void exahype2::dg::tests::RiemannTest::testProjectVolumetricDataOntoFacesForConstantSolutionOrder0() {
-  double QIn[]     = {0.1, 0.2, 0.3, 0.4, 0.5};
-  double leftQ[]   = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-  double rightQ[]  = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-  double bottomQ[] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-  double topQ[]    = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-#if DIMENSIONS == 3
-  double frontQ[] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-  double backQ[]  = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-#endif
+void exahype2::dg::tests::RiemannTest::testLinearFormAddsTheNonconservativeProduct() {
+  constexpr int NumberOfAuxiliaryVariables = 0;
+  constexpr int NumberOfData               = NumberOfUnknowns + NumberOfAuxiliaryVariables;
 
-#if DIMENSIONS == 2
-  ::exahype2::dg::projectVolumetricDataOntoFaces(QIn, 0, 5, 0, BasisFunctionValuesLeftP0, leftQ, rightQ, bottomQ, topQ);
-#endif
+  double faceQuadratureWeights[FaceNodes];
+  fillNormalisedWeights(faceQuadratureWeights);
 
-#if DIMENSIONS == 3
-  ::exahype2::dg::projectVolumetricDataOntoFaces(
-    QIn,
-    0,
-    5,
-    0,
-    BasisFunctionValuesLeftP0,
-    leftQ,
-    rightQ,
-    bottomQ,
-    topQ,
-    frontQ,
-    backQ
-  );
-#endif
+  double leftFlux[FaceNodes * NumberOfUnknowns]  = {};
+  double rightFlux[FaceNodes * NumberOfUnknowns] = {};
+  double leftState[FaceNodes * NumberOfData];
+  double rightState[FaceNodes * NumberOfData];
+  for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
+    for (int value = 0; value < NumberOfData; value++) {
+      leftState[faceNode * NumberOfData + value]  = 1.0;
+      rightState[faceNode * NumberOfData + value] = 3.0;
+    }
+  }
 
-  validateNumericalEquals(leftQ[0], 0.0);
-  validateNumericalEquals(leftQ[1], 0.0);
-  validateNumericalEquals(leftQ[2], 0.0);
-  validateNumericalEquals(leftQ[3], 0.0);
-  validateNumericalEquals(leftQ[4], 0.0);
-  validateNumericalEquals(leftQ[5], 0.1);
+  const tarch::la::Vector<DIMENSIONS, double> faceCentre(0.5);
+  const tarch::la::Vector<DIMENSIONS, double> cellSize(1.0);
+
+  exahype2::dg::solveLinearRiemannProblem<
+    FirstEntryEigenvalueSolver,
+    NumberOfDofsPerAxis,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    true,
+    true,
+    false,
+    double>(leftFlux, rightFlux, leftState, rightState, faceQuadratureWeights, faceCentre, cellSize, 0.0, 1.0, 0);
+
+  // Flux and nonconservative product both return half the jump, so the central
+  // part doubles while the dissipation stays as it was.
+  constexpr double ExpectedCentralFlux   = 2.0;
+  constexpr double ExpectedMaxEigenvalue = 3.0;
+  constexpr double ExpectedHalfStateJump = 1.0;
+  for (int entry = 0; entry < FaceNodes * NumberOfUnknowns; entry++) {
+    validateNumericalEquals(leftFlux[entry], ExpectedCentralFlux - ExpectedMaxEigenvalue * ExpectedHalfStateJump);
+    validateNumericalEquals(rightFlux[entry], ExpectedCentralFlux + ExpectedMaxEigenvalue * ExpectedHalfStateJump);
+  }
+}
+
+void exahype2::dg::tests::RiemannTest::testLinearFormAppliesTheMaterialParameterMatrix() {
+  constexpr int NumberOfAuxiliaryVariables = 0;
+  constexpr int NumberOfData               = NumberOfUnknowns + NumberOfAuxiliaryVariables;
+
+  double faceQuadratureWeights[FaceNodes];
+  fillNormalisedWeights(faceQuadratureWeights);
+
+  double leftFlux[FaceNodes * NumberOfUnknowns]  = {};
+  double rightFlux[FaceNodes * NumberOfUnknowns] = {};
+  double leftState[FaceNodes * NumberOfData];
+  double rightState[FaceNodes * NumberOfData];
+  for (int faceNode = 0; faceNode < FaceNodes; faceNode++) {
+    for (int value = 0; value < NumberOfData; value++) {
+      leftState[faceNode * NumberOfData + value]  = 1.0;
+      rightState[faceNode * NumberOfData + value] = 3.0;
+    }
+  }
+
+  const tarch::la::Vector<DIMENSIONS, double> faceCentre(0.5);
+  const tarch::la::Vector<DIMENSIONS, double> cellSize(1.0);
+
+  exahype2::dg::solveLinearRiemannProblem<
+    FirstEntryEigenvalueSolver,
+    NumberOfDofsPerAxis,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    true,
+    false,
+    true,
+    double>(leftFlux, rightFlux, leftState, rightState, faceQuadratureWeights, faceCentre, cellSize, 0.0, 1.0, 0);
+
+  // The material parameter matrix doubles the flux the stub produced.
+  constexpr double ExpectedCentralFlux   = 2.0;
+  constexpr double ExpectedMaxEigenvalue = 3.0;
+  constexpr double ExpectedHalfStateJump = 1.0;
+  for (int entry = 0; entry < FaceNodes * NumberOfUnknowns; entry++) {
+    validateNumericalEquals(leftFlux[entry], ExpectedCentralFlux - ExpectedMaxEigenvalue * ExpectedHalfStateJump);
+    validateNumericalEquals(rightFlux[entry], ExpectedCentralFlux + ExpectedMaxEigenvalue * ExpectedHalfStateJump);
+  }
 }
