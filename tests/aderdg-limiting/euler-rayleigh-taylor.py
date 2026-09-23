@@ -9,7 +9,7 @@ gamma = 1.4
 
 project = exahype2.Project(
     namespace=["tests", "exahype2", "aderdg"],
-    project_name="EulerRayleighTaylor",
+    project_name=f"EulerRayleighTaylor-{arguments.limiter_solver}",
     dimensions=2,
     size=[1.0, 2.0, 1.0],
     offset=[0.0, 0.0, 0.0],

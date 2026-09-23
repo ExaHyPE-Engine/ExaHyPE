@@ -5,6 +5,7 @@ import functools
 from exahype2.fv.patch_data import create_patch_and_halo
 from exahype2.fv.scheme import Godunov
 from exahype2.fv.scheme import MusclHancock
+from exahype2.fv.scheme import Weno
 
 from .actionsets.correct_and_flag import CorrectAndFlag
 from .actionsets.dynamic_amr import DynamicAMR
@@ -57,10 +58,10 @@ class SubcellLimiting:
         """
         if self.subcell_limiter_is_enabled:
             raise RuntimeError("The subcell limiter is already configured.")
-        if not isinstance(scheme, (Godunov, MusclHancock)):
+        if not isinstance(scheme, (Godunov, MusclHancock, Weno)):
             raise TypeError(
-                "The subcell limiter scheme is exahype2.fv.Godunov() or "
-                "exahype2.fv.MusclHancock(...)."
+                "The subcell limiter scheme is exahype2.fv.Godunov(), "
+                "exahype2.fv.MusclHancock(...) or exahype2.fv.Weno(...)."
             )
         if self.precision.storage not in ("float", "double"):
             raise ValueError(

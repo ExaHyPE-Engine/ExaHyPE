@@ -19,7 +19,7 @@ def standard_arguments(
     parser.add_argument("-lmax", "--max-grid-levels", type=int, default=max_grid_levels)
     parser.add_argument(
         "--limiter-solver",
-        choices=("godunov", "muscl-hancock"),
+        choices=("godunov", "muscl-hancock", "weno"),
         default="godunov",
     )
     parser.add_argument(
@@ -203,6 +203,8 @@ def dmp_observables(gamma):
 def subcell_scheme(limiter_solver_name):
     if limiter_solver_name == "muscl-hancock":
         return exahype2.fv.MusclHancock()
+    if limiter_solver_name == "weno":
+        return exahype2.fv.Weno()
     return exahype2.fv.Godunov()
 
 
