@@ -8,6 +8,7 @@ namespace {
   constexpr int    NumberOfDofsPerAxis        = 3;
   constexpr int    NumberOfUnknowns           = 2;
   constexpr int    NumberOfAuxiliaryVariables = 1;
+  constexpr double TimeStamp                  = 0.5;
   constexpr double TimeStepSize               = 0.25;
 
   using CellLayout = exahype2::dg::ader::Layout<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables>;
@@ -82,6 +83,21 @@ namespace {
       }
     }
   }
+
+  struct SourceIsStateSolver final {
+    static void sourceTerm(
+      const double* NOALIAS const                                   state,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
+      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
+      [[maybe_unused]] const double                                 timeStamp,
+      [[maybe_unused]] const double                                 timeStepSize,
+      double* NOALIAS const                                         sourceValues
+    ) {
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        sourceValues[unknown] = state[unknown];
+      }
+    }
+  };
 } // namespace
 
 exahype2::dg::ader::tests::VolumeIntegralTest::VolumeIntegralTest() :
@@ -243,14 +259,14 @@ void exahype2::dg::ader::tests::VolumeIntegralTest::testTheSourceScalesWithTheTi
 }
 
 void exahype2::dg::ader::tests::VolumeIntegralTest::testTheLinearIntegralSubtractsTheSumOverTheAxes() {
-  double timeAveragedFlux[DIMENSIONS * AxisStride] = {};
-  double timeAveragedSource[AxisStride]            = {};
+  double timeAveragedFlux[DIMENSIONS * AxisStride]                                    = {};
+  double timeAveragedState[CellLayout::NodesPerCell * CellLayout::PaddedNumberOfData] = {};
   for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
     for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
       for (int axis = 0; axis < DIMENSIONS; axis++) {
         timeAveragedFlux[axis * AxisStride + cellNode * CellLayout::PaddedNumberOfUnknowns + unknown] = 1.0 + axis;
       }
-      timeAveragedSource[cellNode * CellLayout::PaddedNumberOfUnknowns + unknown] = 4.0;
+      timeAveragedState[cellNode * CellLayout::PaddedNumberOfData + unknown] = 4.0;
     }
   }
 
@@ -261,30 +277,36 @@ void exahype2::dg::ader::tests::VolumeIntegralTest::testTheLinearIntegralSubtrac
   fillCellState(withoutFlux);
   fillCellState(withoutSource);
 
+  const tarch::la::Vector<DIMENSIONS, double> cellCentre(1.0);
+  const tarch::la::Vector<DIMENSIONS, double> cellSize(0.5);
+
   exahype2::dg::ader::subtractTimeAveragedVolumeIntegral<
+    SourceIsStateSolver,
     NumberOfDofsPerAxis,
     NumberOfUnknowns,
     NumberOfAuxiliaryVariables,
     true,
     true,
     double,
-    double>(withBothTerms, timeAveragedFlux, timeAveragedSource, TimeStepSize);
+    double>(withBothTerms, timeAveragedFlux, timeAveragedState, cellCentre, cellSize, TimeStamp, TimeStepSize);
   exahype2::dg::ader::subtractTimeAveragedVolumeIntegral<
+    SourceIsStateSolver,
     NumberOfDofsPerAxis,
     NumberOfUnknowns,
     NumberOfAuxiliaryVariables,
     false,
     true,
     double,
-    double>(withoutFlux, timeAveragedFlux, timeAveragedSource, TimeStepSize);
+    double>(withoutFlux, timeAveragedFlux, timeAveragedState, cellCentre, cellSize, TimeStamp, TimeStepSize);
   exahype2::dg::ader::subtractTimeAveragedVolumeIntegral<
+    SourceIsStateSolver,
     NumberOfDofsPerAxis,
     NumberOfUnknowns,
     NumberOfAuxiliaryVariables,
     true,
     false,
     double,
-    double>(withoutSource, timeAveragedFlux, timeAveragedSource, TimeStepSize);
+    double>(withoutSource, timeAveragedFlux, timeAveragedState, cellCentre, cellSize, TimeStamp, TimeStepSize);
 
   double sumOverAxes = 0.0;
   for (int axis = 0; axis < DIMENSIONS; axis++) {

@@ -9,7 +9,7 @@ namespace exahype2::dg::ader::tests {
 } // namespace exahype2::dg::ader::tests
 
 /**
- * Checks the temporal quadrature that turns the space-time predictor into the time averages of a cell.
+ * Checks the temporal quadrature that turns the space-time predictor into the time-averaged state of a cell.
  */
 class exahype2::dg::ader::tests::TimeAveragingTest final : public tarch::tests::TestCase {
 public:
@@ -29,22 +29,12 @@ private:
   void testTheAverageOfAConstantIsThatConstant();
 
   /**
-   * The average overwrites the state, the flux and the source of the target and adds nothing to them.
+   * Every time slice enters the average with the weight of its time node.
    */
-  void testTheTargetIsOverwrittenNotAccumulated();
+  void testEveryTimeSliceEntersWithItsWeight();
 
   /**
-   * The averaged flux holds one block per axis, and every block runs in cell node order.
+   * The average overwrites the first time slice and leaves the later ones untouched.
    */
-  void testEveryAxisBlockKeepsCellNodeOrder();
-
-  /**
-   * A switched-off flux and a switched-off source leave their target buffers untouched.
-   */
-  void testSwitchedOffTermsAreLeftAlone();
-
-  /**
-   * A predictor stored in a narrower precision than the target averages into the wider one.
-   */
-  void testAPicardPrecisionBelowTheComputePrecisionIsAveraged();
+  void testTheLaterTimeSlicesKeepTheirValues();
 };

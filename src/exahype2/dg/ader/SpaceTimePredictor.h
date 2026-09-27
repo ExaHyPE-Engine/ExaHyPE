@@ -6,6 +6,7 @@
 #include "exahype2/dg/ader/CauchyKovalewski.h"
 #include "exahype2/dg/ader/LinearPredictorTerms.h"
 #include "exahype2/dg/ader/PicardIteration.h"
+#include "exahype2/dg/ader/PicardOutcome.h"
 #include "exahype2/dg/ader/PointSourceContribution.h"
 #include "exahype2/dg/ader/PredictorScratch.h"
 #include "exahype2/dg/ader/SpaceTimeTerms.h"
@@ -31,16 +32,13 @@ namespace exahype2::dg::ader {
     bool EvaluateDiffusiveSource,
     typename StoragePrecision,
     typename ComputePrecision,
-    typename PicardPrecision,
     typename FacePrecision>
   INLINE_METHOD GPU_CALLABLE_METHOD int spaceTimePredictor(
     FacePrecision* const NOALIAS                 faceState[peano4::FacesPerCell],
     FacePrecision* const NOALIAS                 faceFlux[peano4::FacesPerCell],
     StoragePrecision* NOALIAS                    cellState,
-    ComputePrecision* NOALIAS                    timeAveragedScratch,
-    PicardPrecision* NOALIAS                     picardScratch,
+    ComputePrecision* NOALIAS                    scratch,
     const BasisTables<ComputePrecision>&         tables,
-    const BasisTables<PicardPrecision>&          picardTables,
     const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
     const tarch::la::Vector<DIMENSIONS, double>& cellSize,
     double                                       timeStamp,

@@ -184,35 +184,4 @@ INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::applyMaterialParamete
     }
   }
 }
-
-/**
- * Adds the source of a linear system at every node into the zeroed source buffer.
- */
-template <
-  typename SolverType,
-  int NumberOfDofsPerAxis,
-  int NumberOfUnknowns,
-  int NumberOfAuxiliaryVariables,
-  typename ComputePrecision>
-INLINE_METHOD GPU_CALLABLE_METHOD void exahype2::dg::ader::evaluateLinearSource(
-  ComputePrecision* NOALIAS const              source,
-  const ComputePrecision* NOALIAS const        state,
-  const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-  const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-  const double                                 timeStamp,
-  const double                                 timeStepSize
-) {
-  using CellLayout = Layout<NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables>;
-
-  for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
-    SolverType::sourceTerm(
-      state + cellNode * CellLayout::PaddedNumberOfData,
-      cellCentre,
-      cellSize,
-      timeStamp,
-      timeStepSize,
-      source + cellNode * CellLayout::PaddedNumberOfUnknowns
-    );
-  }
-}
 TARGET_DECLARE_END

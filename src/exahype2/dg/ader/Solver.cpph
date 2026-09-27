@@ -420,6 +420,7 @@ void exahype2::dg::ader::
     if (isLastGridSweepOfTimeStep()) {
       closeTimeStep();
       this->commitTimeStepStatistics();
+      reportUnconvergedPredictions();
     }
   }
 }
@@ -665,6 +666,67 @@ long exahype2::dg::ader::
   Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::
     getNumberOfTroubledCells() const {
   return _numberOfTroubledCellsThisTimeStep.load(std::memory_order_relaxed);
+}
+
+template <
+  typename Derived,
+  int Order,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping,
+  bool SubcellLimiter,
+  int  PointSources>
+void exahype2::dg::ader::
+  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::
+    markPredictionAsUnconverged() {
+  _numberOfUnconvergedPredictions.fetch_add(1, std::memory_order_relaxed);
+}
+
+template <
+  typename Derived,
+  int Order,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping,
+  bool SubcellLimiter,
+  int  PointSources>
+long exahype2::dg::ader::
+  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::
+    getNumberOfUnconvergedPredictions() {
+  return _numberOfUnconvergedPredictions.load(std::memory_order_relaxed);
+}
+
+/**
+ * Sums the unconverged predictions of all ranks since the last report and warns once per time step.
+ */
+template <
+  typename Derived,
+  int Order,
+  int Unknowns,
+  int AuxiliaryVariables,
+  typename TimeStepping,
+  bool SubcellLimiter,
+  int  PointSources>
+void exahype2::dg::ader::
+  Solver<Derived, Order, Unknowns, AuxiliaryVariables, TimeStepping, SubcellLimiter, PointSources>::
+    reportUnconvergedPredictions() {
+  const long localPredictions  = _numberOfUnconvergedPredictions.exchange(0, std::memory_order_relaxed);
+  long       globalPredictions = 0;
+  tarch::mpi::allreduce(
+    &localPredictions,
+    &globalPredictions,
+    1,
+    MPI_LONG,
+    MPI_SUM,
+    tarch::mpi::Rank::getInstance().getCommunicator()
+  );
+  if (globalPredictions > 0 and tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+    logWarning(
+      "The Picard iteration of " << globalPredictions << " cells stopped at its sweep limit with a residual above "
+                                 << PicardResidualTolerance << " at t = " << this->getMinTimeStamp()
+                                 << "; the cells continue with the last iterate."
+    );
+  }
 }
 
 /**

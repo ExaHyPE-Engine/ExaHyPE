@@ -26,7 +26,6 @@ namespace exahype2::dg::ader {
     bool EvaluateMaterialParameters,
     bool EvaluatePointSources,
     typename ComputePrecision,
-    typename PicardPrecision,
     typename StoragePrecision,
     typename FacePrecision>
   INLINE_METHOD int runSpaceTimePredictor(
@@ -35,7 +34,6 @@ namespace exahype2::dg::ader {
     FacePrecision* const*                fluxEstimates,
     StoragePrecision* NOALIAS            cellState,
     const BasisTables<ComputePrecision>& tables,
-    const BasisTables<PicardPrecision>&  picardTables,
     double                               timeStamp,
     double                               timeStepSize
   );

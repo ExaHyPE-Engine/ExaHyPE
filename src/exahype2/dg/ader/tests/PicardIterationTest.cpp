@@ -14,7 +14,7 @@ namespace {
 
   constexpr int StateStride    = CellLayout::PaddedNumberOfData;
   constexpr int UnknownStride  = CellLayout::PaddedNumberOfUnknowns;
-  constexpr int FluxAxisStride = CellLayout::SpaceTimeNodes * UnknownStride;
+  constexpr int FluxAxisStride = CellLayout::NodesPerCell * UnknownStride;
 
   // Gauss-Legendre nodes and weights of three points on the unit interval.
   const double QuadratureNodes[NumberOfDofsPerAxis] = {0.5 * (1.0 - std::sqrt(0.6)), 0.5, 0.5 * (1.0 + std::sqrt(0.6))};
@@ -297,14 +297,11 @@ void exahype2::dg::ader::tests::PicardIterationTest::testALinearFluxSubtractsIts
   // interpolant is the slope itself.
   double spaceTimeFlux[DIMENSIONS * FluxAxisStride] = {};
   for (int axis = 0; axis < DIMENSIONS; axis++) {
-    for (int timeNode = 0; timeNode < NumberOfDofsPerAxis; timeNode++) {
-      for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
-        const int    spaceTimeNode = timeNode * CellLayout::NodesPerCell + cellNode;
-        const double reference     = QuadratureNodes[nodeIndexOf(cellNode)(axis)];
-        for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-          spaceTimeFlux[axis * FluxAxisStride + spaceTimeNode * UnknownStride + unknown] =
-            (1.0 + unknown) * (2.0 + Slope * (1.0 + axis) * reference);
-        }
+    for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
+      const double reference = QuadratureNodes[nodeIndexOf(cellNode)(axis)];
+      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+        spaceTimeFlux[axis * FluxAxisStride + cellNode * UnknownStride + unknown] =
+          (1.0 + unknown) * (2.0 + Slope * (1.0 + axis) * reference);
       }
     }
   }

@@ -107,19 +107,6 @@ namespace {
         values[unknown] *= 2.0 + direction;
       }
     }
-
-    static void sourceTerm(
-      const double* NOALIAS const                                   state,
-      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellCentre,
-      [[maybe_unused]] const tarch::la::Vector<DIMENSIONS, double>& cellSize,
-      [[maybe_unused]] const double                                 timeStamp,
-      [[maybe_unused]] const double                                 timeStepSize,
-      double* NOALIAS const                                         sourceValues
-    ) {
-      for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-        sourceValues[unknown] += 3.0 * state[unknown];
-      }
-    }
   };
 
   double varyingStateEntry(const int cellNode, const int value) { return 1.0 + 0.125 * (cellNode + value); }
@@ -156,7 +143,6 @@ void exahype2::dg::ader::tests::LinearPredictorTermsTest::run() {
   testMethod(testAConstantStateLeavesTheNonconservativeProductAtZero);
   testMethod(testALinearStateGivesTheExactNonconservativeProduct);
   testMethod(testTheMaterialParameterMatrixActsOnEveryAxis);
-  testMethod(testTheSourceFillsEveryNode);
 }
 
 void exahype2::dg::ader::tests::LinearPredictorTermsTest::testTheFluxFillsEveryNodeAndAxis() {
@@ -318,41 +304,6 @@ void exahype2::dg::ader::tests::LinearPredictorTermsTest::testTheMaterialParamet
           unknown
         );
       }
-    }
-  }
-}
-
-void exahype2::dg::ader::tests::LinearPredictorTermsTest::testTheSourceFillsEveryNode() {
-  double state[StateSize];
-  fillVaryingState(state);
-
-  double source[AxisStride] = {};
-
-  const tarch::la::Vector<DIMENSIONS, double> cellCentre(1.0);
-  const tarch::la::Vector<DIMENSIONS, double> cellSize(0.5);
-
-  exahype2::dg::ader::
-    evaluateLinearSource<MarkerSolver, NumberOfDofsPerAxis, NumberOfUnknowns, NumberOfAuxiliaryVariables, double>(
-      source,
-      state,
-      cellCentre,
-      cellSize,
-      TimeStamp,
-      TimeStepSize
-    );
-
-  for (int cellNode = 0; cellNode < CellLayout::NodesPerCell; cellNode++) {
-    const int base = cellNode * CellLayout::PaddedNumberOfUnknowns;
-    for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
-      validateNumericalEqualsWithParams2(
-        source[base + unknown],
-        3.0 * varyingStateEntry(cellNode, unknown),
-        cellNode,
-        unknown
-      );
-    }
-    for (int unknown = NumberOfUnknowns; unknown < CellLayout::PaddedNumberOfUnknowns; unknown++) {
-      validateNumericalEqualsWithParams2(source[base + unknown], 0.0, cellNode, unknown);
     }
   }
 }

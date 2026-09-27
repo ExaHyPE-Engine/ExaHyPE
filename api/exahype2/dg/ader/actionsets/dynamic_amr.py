@@ -66,7 +66,6 @@ class AdaptiveMeshFaceCoupling(exahype2.actionsets.SolverActionSet):
       fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates,
       fineGridCell{{UNKNOWN_IDENTIFIER}}_old.data(),
       {{PREDICTOR_TABLES}},
-      {{PICARD_TABLES}},
       timeStepSize,
       [&](
         auto* const                                  leftFluxEstimates,
@@ -240,8 +239,7 @@ class DynamicAMRTransfer(AdaptiveMeshFaceCoupling):
       fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates,
       fineGridCell{{UNKNOWN_IDENTIFIER}}.data(),
       fineGridCell{{UNKNOWN_IDENTIFIER}}_old.data(),
-      {{PREDICTOR_TABLES}},
-      {{PICARD_TABLES}}
+      {{PREDICTOR_TABLES}}
     );
 {%- endif %}
   }
